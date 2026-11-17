@@ -4,6 +4,7 @@ import { projectAliveTeamNames, stopLogicalTeam, permanentlyDeleteLogicalTeam, r
 
 import type { TeamMetaFile } from '../../../src/main/services/team/TeamMetaStore';
 import type { TeamSummary } from '../../../src/shared/types/team';
+import type { PersistedTeamWorkContext } from '../../../src/features/team-project-context/main';
 
 const owner: TeamMetaFile = {
   version: 1,
@@ -11,12 +12,12 @@ const owner: TeamMetaFile = {
   createdAt: 1,
   projectContextMode: 'per_project',
 };
-const entry = {
+const entry: PersistedTeamWorkContext = {
   id: '11111111-1111-4111-8111-111111111111',
   executionTeamName: 'ptc-a',
   projectKey: '/TEST/A',
   projectPath: '/TEST/A',
-  state: 'ready' as const,
+  state: 'ready',
 };
 
 function fixture(mode?: 'shared' | 'per_project') {
@@ -192,6 +193,21 @@ describe('project team lifecycle projection', () => {
     );
     expect(result.success).toBe(true);
     expect(actions).toEqual(['restore:ptc-a', 'restore:builders']);
+  });
+
+  it('does not suppress healthy alive states when one team metadata is unreadable', async () => {
+    const f = fixture('per_project');
+    const meta = {
+      getMeta: vi.fn(async (name: string) =>
+        name === 'bad-team' ? null : { ...owner, projectContextMode: 'per_project' as const }),
+      metadataFileExists: vi.fn(async (name: string) => name === 'bad-team'),
+    };
+    const teams = [{ teamName: 'bad-team' }, { teamName: 'builders' }] as TeamSummary[];
+    const projected = await projectAliveTeamNames(
+      ['ptc-a', 'other-team'], teams, meta, f.registry as never
+    );
+    expect(projected).toContain('builders');
+    expect(projected).toContain('other-team');
   });
 
   it('projects only verified native aliases to the logical team in the UI alive list', async () => {

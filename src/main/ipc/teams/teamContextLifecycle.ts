@@ -1,5 +1,6 @@
 import { TeamProjectContextRegistry, TeamProjectContextRuntimeResolver } from '@features/team-project-context/main';
 import { TeamMetaStore } from '@main/services/team/TeamMetaStore';
+import { createLogger } from '@shared/utils/logger';
 import { JsonScheduleRepository } from '@main/services/schedule/JsonScheduleRepository';
 import { getTeamsBasePath } from '@main/utils/pathDecoder';
 import { promises as fs } from 'node:fs';
@@ -12,7 +13,7 @@ interface LifecycleReader {
   metadataFileExists(teamName: string): Promise<boolean>;
 }
 
-type Registry = Pick<TeamProjectContextRegistry, 'list'>;
+const logger = createLogger('TeamProjectContextLifecycle');
 
 function contextReader(
   meta: LifecycleReader,
@@ -194,12 +195,18 @@ export async function projectAliveTeamNames(
 ): Promise<string[]> {
   const projected = new Set(physicalAlive);
   for (const team of visibleTeams) {
-    if (await contextReader(meta, registry).getMode(team.teamName) !== 'per_project') continue;
-    const entries = await registry.list(team.teamName);
-    for (const row of entries) {
-      if (row.state !== 'ready') continue;
-      if (!projected.delete(row.executionTeamName)) continue;
-      projected.add(team.teamName);
+    try {
+      if (await contextReader(meta, registry).getMode(team.teamName) !== 'per_project') continue;
+      const entries = await registry.list(team.teamName);
+      for (const row of entries) {
+        if (row.state !== 'ready') continue;
+        if (!projected.delete(row.executionTeamName)) continue;
+        projected.add(team.teamName);
+      }
+    } catch (error) {
+      // One unreadable logical team must not suppress healthy teams' alive
+      // status. Keep any unverified physical aliases visible as themselves.
+      logger.warn('Cannot project team runtime names', { teamName: team.teamName, error });
     }
   }
   return Array.from(projected);
