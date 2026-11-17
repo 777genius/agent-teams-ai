@@ -281,7 +281,9 @@ jobs:
             src/renderer/components/team/teamProcessLiveness.ts \
             src/renderer/components/team/ProcessesSection.tsx \
             src/renderer/components/team/TeamDetailView.tsx \
-            scripts/legacy-agent-host/desktop-native-process-ui.ts
+            scripts/legacy-agent-host/desktop-native-process-ui.ts \
+            scripts/legacy-agent-host/desktop-task-board-cross-team-ui-smoke.ts \
+            scripts/legacy-agent-host/desktop-task-notification-ui-smoke.ts
           pnpm typecheck:workspace
           node node_modules/@typescript/native/bin/tsc --noEmit -p test/features/agent-backend/tsconfig.json
           pnpm lint:ci:files src/main src/preload src/shared src/types --cache-location .eslintcache-main
@@ -1027,6 +1029,118 @@ jobs:
               codexLogin ? receipt.codexLoginUi : lifecycle ? receipt.emulatedLifecycleUiProof : mode === 'emulated-management-ui' ? receipt.emulatedManagementUiProof : selection ? receipt.emulatedSelectionUiProof :
               processes ? receipt.nativeProcessUi : runtime ? receipt.emulatedRuntimeUiProof : receipt.reviewUiProof;
             assert.equal(proof.status, 'PASS'); assert.ok(proof.steps.length > 0);
+            if (mode === 'task-board-ui') {
+              const originalNotification = receipt.taskNotificationUiProof;
+              const trash = receipt.taskTrashRestoreUiProof;
+              const markRead = receipt.taskNotificationMarkReadUiProof;
+              assert.equal(originalNotification.status, 'PASS');
+              assert.equal(originalNotification.navigate, 'PASS');
+              assert.equal(originalNotification.delete, 'PASS');
+              assert.equal(trash.status, 'PASS');
+              assert.equal(markRead.status, 'PASS');
+              assert.equal(markRead.markRead, 'PASS');
+              const notificationSource = sha('scripts/legacy-agent-host/desktop-task-notification-ui-smoke.ts');
+              assert.equal(originalNotification.sourceSha256, notificationSource);
+              assert.equal(markRead.sourceSha256, notificationSource);
+              const originalIds = [trash.taskId, proof.createReceipt.effects.taskId].sort();
+              assert.equal(new Set(originalIds).size, 2);
+              assert.equal(markRead.originalTaskId, proof.createReceipt.effects.taskId);
+              assert.equal(originalNotification.taskId, markRead.originalTaskId);
+              assert.equal(markRead.originalNotificationId, originalNotification.notificationId);
+              assert.equal(markRead.ownerSelectionKey, originalNotification.target.teamName);
+              assert.equal(markRead.ownerSelectionKey, 'host-team:' + encodeURIComponent(markRead.handleId));
+              assert.deepEqual(markRead.originalTaskIds, originalIds);
+              assert.deepEqual(markRead.taskIdsBeforeSetup, originalIds);
+              assert.match(markRead.taskId, /^[a-f0-9-]{36}$/);
+              assert.ok(!originalIds.includes(markRead.taskId));
+              const finalIds = [...originalIds, markRead.taskId].sort();
+              assert.deepEqual(markRead.taskIdsAfterSetup, finalIds);
+              assert.deepEqual(markRead.taskIdsAfterAction, finalIds);
+              assert.equal(proof.groupAssociation.status, 'PASS');
+              assert.equal(markRead.groupChatId, proof.groupAssociation.groupChatId);
+              assert.deepEqual(markRead.groupTaskIdsBeforeSetup, originalIds);
+              assert.deepEqual(markRead.groupTaskIdsAfterSetup, originalIds);
+              const setup = markRead.setupCommand, canonical = markRead.setupReceipt;
+              assert.match(setup.commandId, /^TEST-notification-mark-read-[a-f0-9-]{36}$/);
+              assert.equal(setup.operation, 'task.create');
+              assert.deepEqual(Object.keys(setup.payload), ['subject']);
+              assert.match(setup.payload.subject, /^TEST unread notification TEST-notification-mark-read-/);
+              assert.equal(markRead.setupResponse.ok, true);
+              assert.equal(markRead.setupResponse.value.phase, 'completed');
+              assert.equal(markRead.setupResponse.value.commandId, setup.commandId);
+              assert.equal(markRead.setupResponse.value.operation, 'task.create');
+              assert.equal(markRead.setupResponse.value.taskSubmissionNoEffect, undefined);
+              assert.deepEqual(markRead.setupResponse.value.taskSubmission, setup);
+              assert.equal(markRead.setupResponse.value.task.id, markRead.taskId);
+              assert.equal(canonical.phase, 'completed');
+              assert.equal(canonical.family, undefined);
+              assert.equal(canonical.principalId, 'TEST-human');
+              assert.equal(canonical.commandId, setup.commandId);
+              assert.deepEqual(canonical.command, setup);
+              assert.deepEqual(canonical.binding, proof.createReceipt.binding);
+              assert.equal(canonical.binding.teamName, 'test-desktop-backend');
+              assert.equal(canonical.effects.taskId, markRead.taskId);
+              assert.equal(canonical.result.id, markRead.taskId);
+              assert.equal(markRead.createCommandIdsBeforeSetup.length, 2);
+              assert.deepEqual(markRead.createCommandIdsAfterSetup,
+                [...markRead.createCommandIdsBeforeSetup, setup.commandId].sort());
+              assert.equal(markRead.commandHashesBeforeAction.length, markRead.commandHashesBeforeSetup.length + 1);
+              assert.match(markRead.setupReceiptFile, /^[a-f0-9]{64}\.json$/);
+              assert.deepEqual(markRead.commandHashesBeforeAction.filter(row => row.name !== markRead.setupReceiptFile),
+                markRead.commandHashesBeforeSetup);
+              assert.deepEqual(markRead.commandHashesBeforeAction.find(row => row.name === markRead.setupReceiptFile),
+                { name: markRead.setupReceiptFile, sha256: markRead.setupReceiptSha256 });
+              assert.deepEqual(markRead.taskHashesBeforeAction.filter(row => row.name !== markRead.taskId + '.json'),
+                markRead.taskHashesBeforeSetup);
+              assert.deepEqual(markRead.commandHashesAfterAction, markRead.commandHashesBeforeAction);
+              assert.deepEqual(markRead.taskHashesAfterAction, markRead.taskHashesBeforeAction);
+              assert.equal(markRead.boardSha256AfterAction, markRead.boardSha256BeforeAction);
+              const taskDirectory = join(root, 'hoststore/tasks/test-desktop-backend');
+              const commandDirectory = join(root, 'hoststore/teams/test-desktop-backend/.host-owner/commands');
+              const canonicalHashes = directory => {
+                const names = readdirSync(directory).filter(name => name.endsWith('.json')).sort();
+                assert.ok(names.length <= 128);
+                assert.ok(names.every(name => /^[A-Za-z0-9_-]+\.json$/.test(name)));
+                return names.map(name => ({ name, sha256: sha(join(directory, name)) }));
+              };
+              assert.deepEqual(canonicalHashes(taskDirectory), markRead.taskHashesAfterAction);
+              assert.deepEqual(canonicalHashes(commandDirectory), markRead.commandHashesAfterAction);
+              assert.equal(sha(join(root, 'hoststore/teams/test-desktop-backend/kanban-state.json')),
+                markRead.boardSha256AfterAction);
+              assert.deepEqual(JSON.parse(readFileSync(join(commandDirectory, markRead.setupReceiptFile), 'utf8')), canonical);
+              const tasks = readRecords(taskDirectory);
+              assert.deepEqual(tasks.map(task => task.id).sort(), finalIds);
+              assert.deepEqual(tasks.filter(task => task.groupChatId === markRead.groupChatId).map(task => task.id).sort(), originalIds);
+              const created = tasks.find(task => task.id === markRead.taskId);
+              assert.equal(created.subject, setup.payload.subject);
+              assert.equal(created.status, 'pending');
+              assert.equal(created.owner, undefined);
+              assert.equal(created.groupChatId, undefined);
+              for (const key of ['blockedBy', 'blocks', 'related']) assert.deepEqual(created[key] ?? [], []);
+              assert.match(markRead.notificationId, /^[a-f0-9-]{36}$/);
+              assert.notEqual(markRead.notificationId, originalNotification.notificationId);
+              const unread = markRead.beforeNotification;
+              assert.equal(unread.id, markRead.notificationId);
+              assert.equal(unread.teamEventType, 'task_created');
+              assert.equal(unread.target.kind, 'task');
+              assert.equal(unread.target.teamName, markRead.ownerSelectionKey);
+              assert.equal(unread.target.taskId, markRead.taskId);
+              assert.equal(unread.isRead, false);
+              assert.deepEqual(markRead.afterNotification, { ...unread, isRead: true });
+              assert.equal(new Set(markRead.notificationIdsBeforeAction).size, markRead.notificationIdsBeforeAction.length);
+              assert.deepEqual(markRead.notificationIdsAfterAction, markRead.notificationIdsBeforeAction);
+              const byId = values => [...values].sort((a, b) => String(a.id).localeCompare(String(b.id)));
+              assert.deepEqual(byId(markRead.neighborsAfterAction), byId(markRead.neighborsBeforeAction));
+              assert.equal(markRead.steps.filter(step => step.fixtureAction === 'captured TEST owner notification Task setup' &&
+                step.state === 'attempted' && step.commandId === setup.commandId).length, 1);
+              assert.equal(markRead.steps.filter(step => step.action === 'mouseClick' &&
+                step.label === 'original notification Mark as read once' && step.state === 'attempted').length, 1);
+              assert.deepEqual(markRead.runtimeSessionsBeforeSetup, []);
+              assert.deepEqual(markRead.runtimeSessions, []);
+              assert.deepEqual(originalNotification.runtimeSessions, []);
+              assert.deepEqual(readRecords(join(root, 'hoststore/runtime-sessions'), true), []);
+              assert.equal(markRead.retainedSetupTask, true);
+            }
             if (skills) {
               assert.equal(proof.finalJournal.length, 5);
               assert.equal(proof.nativeTrash.completed.phase, 'completed');

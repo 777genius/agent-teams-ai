@@ -315,6 +315,10 @@ export const desktopProofSupplementarySources = [
   'src/features/agent-backend/main/composition/captureHostPromptSuggestions.ts',
   'src/features/native-prompt-suggestions/main/index.ts',
   'test/features/agent-backend/recoverCapturedHost.test.ts',
+  'scripts/legacy-agent-host/desktop-task-notification-ui-smoke.ts',
+  'src/renderer/store/viewedTeamNotificationSync.ts',
+  'src/renderer/store/slices/notificationSlice.ts',
+  'src/renderer/store/team/teamGlobalTaskNotifications.ts',
 ];
 
 /** Exact finite Windows same-Main recovery and original Processes UI construction inputs. */
