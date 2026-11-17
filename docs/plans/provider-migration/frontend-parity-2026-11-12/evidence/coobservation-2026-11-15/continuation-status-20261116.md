@@ -302,3 +302,14 @@ R1 `b34a76fffb93d5216cd689893186376963ef8654` has full root/guard/semantic/bindi
 Selected future delta: the existing captured-SDK catalog predicate and exact three-case test suffix; one original-deadline admission gate in actual waitRead; a whole10-case Node module appended by literal awaited import after the full original139 body. Prospective149/43 are separate from unchanged85. No new execution or test PASS is claimed. Full canonical/type/build/GUI/native gates remain open.
 
 PR1218 remains fixed at head9c9/base779. Observations5–7 are retained in `e685147a4ce2b7e7bec7e2396b0d2841d9f31821`; all five active runs are still queued as of04:06:01UTC. Two terminal Draft skips remain skips. Queue cause is unknown. No source checkout, new139/85 GREEN or Desktop cleanup has been observed.
+
+
+## Captured catalog and UI deadline source correction — 2026-11-17
+
+The exact five source/test postimages in `1318b887473a61e1cbfb3960812fbc84e3b4df13` completed source R2 with 35 root, 43 guard, 46 semantic and 99 binding checks. The complete reports, four before bodies, five after bodies, and canonical11/12 vectors were read; all independent reports were fully self-read. The accepted R1 authorship gate is `29040a4faa87137bfa070c71651147b2da4f2102`.
+
+The catalog accepts the existing captured `claude-sdk` source through the unchanged Anthropic offer pipeline. Generic UI reads refuse fulfilled observations at or after the original deadline before calling readiness or issuing another polling wait. The full original139 Node and40 catalog test bodies remain exact prefixes. Ten finite deadline tests are included by an awaited literal import; three catalog cases are appended. The prospective full inventories are149 and43, with the separate renderer85 unchanged.
+
+This publication selects exactly four source/test modifications and one new test. It changes no workflow, dependency, provider archive, policy, exception or timeout budget. Production5020, exceptions141 and cap800 remain; the catalog stays982 lines under its frozen983 cap. Seven other critical source rows, including the previous three producer corrections, remain unchanged.
+
+This is source publication, with actual publication readbacks still pending at record creation. The new10/149/43 have not run; frozen CI on9c9 can validate only its earlier source. Root must complete the actual source readbacks and separate exact executable-control R2/publication/readbacks before the fresh standalone10 RED/GREEN. No old attempt is restored or replayed, and no whole E2E, vendor, native, default or release qualification is granted.

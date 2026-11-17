@@ -11284,3 +11284,14 @@ Root30, guard32, semantic52 and binding73 static checks are complete against thi
 Accepted opened-event retention is commit `935ed8dd0b0f3f95cbbc7ed6d691009efa2c47da`, root review `7b1e84798593f4e30e0b717f157bf75fe8ae2c85` and independent review `ebc1cd39f61dbaf9a6823a6655031ad0181d851f`. New retained queue observations5–7 still show only the same five attempt1 PR1218 workflows queued as of04:06:01UTC; no test step or checkout is observed. Both CI refs and PR metadata remain fixed. No original9/frozen run was polled or mutated.
 
 The catalog adds `narrowCatalogWaitReadStage` and `narrowCatalogWaitReadR1EvidenceFiles` while preserving every one of its75 parent fields, all27bundles and totals. The entire parent plan/status bodies remain prefixes. Current source census8798/workflows42/production5020/cap800/exceptions141 remains unchanged; prospective one-test addition would make8799 non-document leaves without a new production file.
+
+
+## Captured catalog and UI deadline source correction — 2026-11-17
+
+The exact five source/test postimages in `1318b887473a61e1cbfb3960812fbc84e3b4df13` completed source R2 with 35 root, 43 guard, 46 semantic and 99 binding checks. The complete reports, four before bodies, five after bodies, and canonical11/12 vectors were read; all independent reports were fully self-read. The accepted R1 authorship gate is `29040a4faa87137bfa070c71651147b2da4f2102`.
+
+The catalog accepts the existing captured `claude-sdk` source through the unchanged Anthropic offer pipeline. Generic UI reads refuse fulfilled observations at or after the original deadline before calling readiness or issuing another polling wait. The full original139 Node and40 catalog test bodies remain exact prefixes. Ten finite deadline tests are included by an awaited literal import; three catalog cases are appended. The prospective full inventories are149 and43, with the separate renderer85 unchanged.
+
+This publication selects exactly four source/test modifications and one new test. It changes no workflow, dependency, provider archive, policy, exception or timeout budget. Production5020, exceptions141 and cap800 remain; the catalog stays982 lines under its frozen983 cap. Seven other critical source rows, including the previous three producer corrections, remain unchanged.
+
+This is source publication, with actual publication readbacks still pending at record creation. The new10/149/43 have not run; frozen CI on9c9 can validate only its earlier source. Root must complete the actual source readbacks and separate exact executable-control R2/publication/readbacks before the fresh standalone10 RED/GREEN. No old attempt is restored or replayed, and no whole E2E, vendor, native, default or release qualification is granted.

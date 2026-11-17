@@ -1,0 +1,448 @@
+{
+  "schemaVersion": 1,
+  "kind": "narrow-catalog-waitread-five-postimage-source-r2-proposal",
+  "at": "2026-11-17 04:40:08 UTC",
+  "repository": "777genius/agent-teams-ai",
+  "workingBranch": "fix/frontend-parity-coobservation-c714-20261115",
+  "r1": {
+    "bytes": 20973,
+    "sha256": "e35155efe24474cfe0ff5d5ab90aa7b9f96bfe56eff99ad8aec10902aecf0016",
+    "gitBlob": "b34a76fffb93d5216cd689893186376963ef8654"
+  },
+  "r1ActualAuthorshipGate": {
+    "bytes": 3516,
+    "sha256": "ae46b4e2997a5a5185fada08711e4f291be723b53c1afdd05af2bd89ebcd11fd",
+    "gitBlob": "29040a4faa87137bfa070c71651147b2da4f2102"
+  },
+  "sourceBasis": {
+    "commit": "811d1108e8a766c8c1307008243c3291ccec3e04",
+    "tree": "2f29171a9f9dea3f160790dec597511a42166ce5",
+    "docsTree": "2a7f111a00c4fdf7f28c1af38bc3c07151901ed7",
+    "parent": "935ed8dd0b0f3f95cbbc7ed6d691009efa2c47da",
+    "rootActual": {
+      "bytes": 56695,
+      "sha256": "a4d2cc44cb306a7484d902112471ce80425b98a947c198f13d802cbab7ed08cd",
+      "gitBlob": "909984719f5bbb8c5cc4a38b1376ccd261636175"
+    },
+    "independentActual": {
+      "bytes": 194094,
+      "sha256": "786582e9d4ffaea97e5a622886446340fc95ab6f81c653da2db44b1ea4cabdbf",
+      "gitBlob": "215eea05560e776521465e5ab6081ffbe0affb2f"
+    }
+  },
+  "authoredBy": "root",
+  "authoredAt": "2026-11-17 04:27:26 UTC",
+  "gateClosedAt": "2026-11-17 04:25:08 UTC",
+  "sourceRows": [
+    {
+      "role": "controls",
+      "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "mode": "100644",
+      "before": {
+        "bytes": 28974,
+        "sha256": "7626e479a6662242009cb050e7e5af612a29e4205d62666d15274d5c30f91386",
+        "gitBlob": "ed57cb0fe7d57ef076a591621289eb77667c63ad"
+      },
+      "after": {
+        "bytes": 29017,
+        "sha256": "ffd9bbb822dbdc30da7cb8daa881fcbebd384ba2bf9bdd87c804c511166fa02b",
+        "gitBlob": "5286c036a63a14e98925711a224df202c9a7caa7"
+      },
+      "physicalLines": 495
+    },
+    {
+      "role": "nodeAggregate",
+      "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+      "mode": "100644",
+      "before": {
+        "bytes": 164965,
+        "sha256": "852bedb85c83dbc4b488dffb4a9ffebbe398adc53e85f5a3cea8ca36b146cbf7",
+        "gitBlob": "896c587e077da56a98a314a175fb3cba0353d6ee"
+      },
+      "after": {
+        "bytes": 165022,
+        "sha256": "fed1ee2429b0e1a7ccd592c127d7afc30bb69e0c10a1f8c673e240c1bc9dd581",
+        "gitBlob": "12c73fbc683dc297033bd8b6472e9dbee60b9b8a"
+      },
+      "physicalLines": 2702
+    },
+    {
+      "role": "catalog",
+      "path": "src/renderer/utils/teamModelAvailability.ts",
+      "mode": "100644",
+      "before": {
+        "bytes": 32055,
+        "sha256": "6e216e10c07e953472afb74045c3a976e9f4a1d4fcd3e9f5d46dc789d19022e6",
+        "gitBlob": "167751c56f74c2869b8b3d9b128002d5bd642bcb"
+      },
+      "after": {
+        "bytes": 32077,
+        "sha256": "b1da0ea7199e69eb042e5beb16dfafa91c4d7b9360db41a3f9ba16424ca2fd43",
+        "gitBlob": "ac6e66775bd5efaf81cecb9a2f22a3437b4343ad"
+      },
+      "physicalLines": 982
+    },
+    {
+      "role": "catalogTests",
+      "path": "test/renderer/utils/teamModelAvailability.test.ts",
+      "mode": "100644",
+      "before": {
+        "bytes": 49687,
+        "sha256": "0e37baae735529c11d2ed43432b132b516d252af8bb3084714c7082d7d4c4db8",
+        "gitBlob": "1a58c9c686010d5b5ded00f8e2b5064e4ab78c32"
+      },
+      "after": {
+        "bytes": 56775,
+        "sha256": "b08fe4a650ea9d23f4d8fa4b4ece157d9cd2f87e87e42b25c3c53934ed9974c8",
+        "gitBlob": "6cf34a11e7a1bc6f33208bad00adb57ee5656cd6"
+      },
+      "physicalLines": 1611
+    },
+    {
+      "role": "deadlineTests",
+      "path": "scripts/legacy-agent-host/desktop-ui-controls-deadline.test.ts",
+      "mode": "100644",
+      "before": null,
+      "after": {
+        "bytes": 7883,
+        "sha256": "29836f914218edb4876b6a4e157e7cdc68f63cdf414084cdd41683965c734eda",
+        "gitBlob": "6a9f8ad7481cd5910befcc6c7ff5992eef03965b"
+      },
+      "physicalLines": 202
+    }
+  ],
+  "beforeVector": {
+    "identity": {
+      "bytes": 2552,
+      "sha256": "647b7a268b8b8921d875327e3394726916d54cc3c10c1bb8d2e2e9538db2d496",
+      "gitBlob": "ae0aa3e814cb90d9568cef5f35be6a0d8f46a361"
+    },
+    "rows": 11,
+    "codec": "path-sorted compact UTF8 JSON records with keys bytes,gitBlob,mode,path,sha256; no newline"
+  },
+  "afterVector": {
+    "identity": {
+      "bytes": 2784,
+      "sha256": "6a212eb715b312ae74c25e58078fd26b1247695d94f5c47536dc2a20aed49ce1",
+      "gitBlob": "fff972049718ae5ddaa7000e17341fade490233e"
+    },
+    "rows": 12,
+    "codec": "same"
+  },
+  "criticalNineBasis": {
+    "identity": {
+      "bytes": 2118,
+      "sha256": "6007c5c7ba2f74c43bd9b73c50cae2319eacbf712c233cc0d67b3efbb4c6894d",
+      "gitBlob": "3887991d5dbd25dbec5c8656e8e03d423ea502b7"
+    },
+    "rows": 9,
+    "qualification": "Historical calculated9 identity remains a reference, not a separately retrievable blob; these new11/12 vectors were explicitly retained as real Git blobs."
+  },
+  "exactEdits": {
+    "controls": {
+      "before": {
+        "bytes": 28974,
+        "sha256": "7626e479a6662242009cb050e7e5af612a29e4205d62666d15274d5c30f91386",
+        "gitBlob": "ed57cb0fe7d57ef076a591621289eb77667c63ad"
+      },
+      "after": {
+        "bytes": 29017,
+        "sha256": "ffd9bbb822dbdc30da7cb8daa881fcbebd384ba2bf9bdd87c804c511166fa02b",
+        "gitBlob": "5286c036a63a14e98925711a224df202c9a7caa7"
+      },
+      "description": "Insert only if (Date.now() >= deadline) break; immediately after fulfilled evaluate and before existing isReady.",
+      "bytesAdded": 43,
+      "physicalLinesAdded": 1,
+      "allOtherBytesIdentical": true
+    },
+    "nodeAggregate": {
+      "before": {
+        "bytes": 164965,
+        "sha256": "852bedb85c83dbc4b488dffb4a9ffebbe398adc53e85f5a3cea8ca36b146cbf7",
+        "gitBlob": "896c587e077da56a98a314a175fb3cba0353d6ee"
+      },
+      "after": {
+        "bytes": 165022,
+        "sha256": "fed1ee2429b0e1a7ccd592c127d7afc30bb69e0c10a1f8c673e240c1bc9dd581",
+        "gitBlob": "12c73fbc683dc297033bd8b6472e9dbee60b9b8a"
+      },
+      "originalWholeBodyExactPrefix": true,
+      "suffix": "\nawait import('./desktop-ui-controls-deadline.test.ts');\n",
+      "bytesAdded": 57,
+      "originalRegistrations": 139,
+      "newModuleRegistrations": 10,
+      "futureTotal": 149,
+      "qualification": "Static registration inclusion; completion/runtime remains unobserved for149."
+    },
+    "catalog": {
+      "before": {
+        "bytes": 32055,
+        "sha256": "6e216e10c07e953472afb74045c3a976e9f4a1d4fcd3e9f5d46dc789d19022e6",
+        "gitBlob": "167751c56f74c2869b8b3d9b128002d5bd642bcb"
+      },
+      "after": {
+        "bytes": 32077,
+        "sha256": "b1da0ea7199e69eb042e5beb16dfafa91c4d7b9360db41a3f9ba16424ca2fd43",
+        "gitBlob": "ac6e66775bd5efaf81cecb9a2f22a3437b4343ad"
+      },
+      "existingIncomingCommit": "5c55a4a2008f4a6131d265344d384b39415ad055",
+      "onlyExistingPredicateLineChanged": true,
+      "bytesAdded": 22,
+      "physicalLinesAdded": 0
+    },
+    "catalogTests": {
+      "before": {
+        "bytes": 49687,
+        "sha256": "0e37baae735529c11d2ed43432b132b516d252af8bb3084714c7082d7d4c4db8",
+        "gitBlob": "1a58c9c686010d5b5ded00f8e2b5064e4ab78c32"
+      },
+      "after": {
+        "bytes": 56775,
+        "sha256": "b08fe4a650ea9d23f4d8fa4b4ece157d9cd2f87e87e42b25c3c53934ed9974c8",
+        "gitBlob": "6cf34a11e7a1bc6f33208bad00adb57ee5656cd6"
+      },
+      "exactExistingIncomingBody": true,
+      "ownWholeBodyExactPrefix": true,
+      "bytesAdded": 7088,
+      "existingExpandedCases": 40,
+      "appendedCases": 3,
+      "futureCases": 43
+    }
+  },
+  "deadlineTests": {
+    "identity": {
+      "bytes": 7883,
+      "sha256": "29836f914218edb4876b6a4e157e7cdc68f63cdf414084cdd41683965c734eda",
+      "gitBlob": "6a9f8ad7481cd5910befcc6c7ff5992eef03965b"
+    },
+    "path": "scripts/legacy-agent-host/desktop-ui-controls-deadline.test.ts",
+    "physicalLines": 202,
+    "expectedTitles": [
+      "generic UI read refuses its first fulfilled value exactly at the original deadline",
+      "generic UI read refuses its first fulfilled value after the original deadline",
+      "generic UI read refuses a later fulfilled value exactly at the original deadline",
+      "generic UI read refuses a later fulfilled value after the original deadline",
+      "generic UI read does not admit or poll again after a late false observation",
+      "generic UI read preserves a timely first value and its exact identity",
+      "generic UI read preserves its original cadence and a timely later value",
+      "generic UI read honors a supplied budget at its strict boundary",
+      "generic UI hover refuses a third stable point arriving at the original deadline",
+      "generic UI hover preserves one movement after three timely stable points"
+    ],
+    "expectedOldPredictions": [
+      {
+        "title": "generic UI read refuses its first fulfilled value exactly at the original deadline",
+        "oldPrediction": "FAIL"
+      },
+      {
+        "title": "generic UI read refuses its first fulfilled value after the original deadline",
+        "oldPrediction": "FAIL"
+      },
+      {
+        "title": "generic UI read refuses a later fulfilled value exactly at the original deadline",
+        "oldPrediction": "FAIL"
+      },
+      {
+        "title": "generic UI read refuses a later fulfilled value after the original deadline",
+        "oldPrediction": "FAIL"
+      },
+      {
+        "title": "generic UI read does not admit or poll again after a late false observation",
+        "oldPrediction": "FAIL"
+      },
+      {
+        "title": "generic UI read preserves a timely first value and its exact identity",
+        "oldPrediction": "PASS"
+      },
+      {
+        "title": "generic UI read preserves its original cadence and a timely later value",
+        "oldPrediction": "PASS"
+      },
+      {
+        "title": "generic UI read honors a supplied budget at its strict boundary",
+        "oldPrediction": "FAIL"
+      },
+      {
+        "title": "generic UI hover refuses a third stable point arriving at the original deadline",
+        "oldPrediction": "FAIL"
+      },
+      {
+        "title": "generic UI hover preserves one movement after three timely stable points",
+        "oldPrediction": "PASS"
+      }
+    ],
+    "imports": [
+      "node:assert/strict",
+      "node:test",
+      "./desktop-ui-controls.ts"
+    ],
+    "framework": "Actual node:test, no shim; actual exported createDesktopUiControls.",
+    "fixture": "Date-only Node test mock, records original global setTimeout calls and invokes the original real timer with the unchanged requested delay. Callback advances the controlled Date by that requested delay. Finite evaluate frames set nondecreasing settlement time. All mock installation, controls creation and awaited operation are enclosed by try/finally; restoreAll and timers.reset precede pending-timer assertion. No global mock is installed during module evaluation.",
+    "perTestTimeoutMs": 5000,
+    "sourceSideEffects": [
+      "In-test Date/time mock and original real100ms polling timers only",
+      "Captured finite evaluate/send/ownership/step arrays"
+    ],
+    "noFilesystemNetworkVendorOrChildProcessCalls": true,
+    "sevenOldFailuresThreePreservationArePredictions": true
+  },
+  "preR2FixtureCorrection": {
+    "before": {
+      "bytes": 7807,
+      "sha256": "eb22197750d0747e5b6103621c03a73ce2db8ac80891ce6f15de35c1019e26f2",
+      "gitBlob": "faa10f5ec4c190ef6fc5604027f681616e5bc3f7"
+    },
+    "after": {
+      "bytes": 7883,
+      "sha256": "29836f914218edb4876b6a4e157e7cdc68f63cdf414084cdd41683965c734eda",
+      "gitBlob": "6a9f8ad7481cd5910befcc6c7ff5992eef03965b"
+    },
+    "reason": "Move the existing fixture try boundary before Date/timer mock installation and UI setup, so every selected global mutation is covered by finally restoration. No behavioral case, clock budget, real polling wait or source/control execution changed.",
+    "executed": false
+  },
+  "preservation": {
+    "unchangedPriorSourceRows": [
+      {
+        "bytes": 24759,
+        "gitBlob": "cf93da72a198dac636658e512093eef7828b5927",
+        "mode": "100644",
+        "path": "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+        "sha256": "d15b7eea14c0951194310aee34ddc5c477879c759a97a4e2f4e9fce1f956ce9b"
+      },
+      {
+        "bytes": 45795,
+        "gitBlob": "5026f0ec6165bb092717ddc989043848a25081dc",
+        "mode": "100644",
+        "path": "scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+        "sha256": "2c5931f5c7fa1dc8bb7858201c1b8afdbae9683faf4a2ad9fce067f116f3f94b"
+      },
+      {
+        "bytes": 36260,
+        "gitBlob": "4700a0052d3c58a2b3d9bc66e6803220688050fd",
+        "mode": "100644",
+        "path": "scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts",
+        "sha256": "26357f37b146fc171bbceadb624bde4a7f4e459d2073ae23a651e757817b2d38"
+      },
+      {
+        "bytes": 8457,
+        "gitBlob": "3c7b4bb53f4259ac0795d3f92fb715887acb554f",
+        "mode": "100644",
+        "path": "scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+        "sha256": "2da55bb40a5689ace0e922dc4867d7c73278d9a1cd200ea8c4602ca68f82da3b"
+      },
+      {
+        "bytes": 33036,
+        "gitBlob": "8d175c98158b3bd71192aef7b1929484b2b681b6",
+        "mode": "100644",
+        "path": "scripts/legacy-agent-host/desktop-task-review-cycle-ui-smoke.ts",
+        "sha256": "4fa52cfad9347065680ef62a3ba6420762408a78a93b77e96ac3a2e16e68bdc9"
+      },
+      {
+        "bytes": 74340,
+        "gitBlob": "c2faa156015707bc5fbd7f8123a7ffd9c4faa486",
+        "mode": "100644",
+        "path": "src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts",
+        "sha256": "647ac5732bfd6b5cb57834adb4ad22c32ee5dfb018a934c92f982efd9daa531c"
+      },
+      {
+        "bytes": 187890,
+        "gitBlob": "76495189c992fcda47cd7a43a0c697190b5acbb3",
+        "mode": "100644",
+        "path": "test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts",
+        "sha256": "b6f11896e60014aac785968d42390afde38716d47de9bba9562522235db048c9"
+      }
+    ],
+    "renderer85Unchanged": {
+      "path": "test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts",
+      "bytes": 187890,
+      "sha256": "b6f11896e60014aac785968d42390afde38716d47de9bba9562522235db048c9",
+      "gitBlob": "76495189c992fcda47cd7a43a0c697190b5acbb3",
+      "cases": 85
+    },
+    "allOriginal139BytesRetained": true,
+    "allOriginal40CatalogCaseBytesRetained": true,
+    "sourceBudget": {
+      "productionFiles": 5020,
+      "lineCap": 800,
+      "exceptions": 141,
+      "catalogPhysicalLines": 982,
+      "catalogFrozenCap": 983,
+      "controlsAfter": 495,
+      "newTestAfter": 202,
+      "noPolicyBaselineIgnoreChanges": true
+    },
+    "expectedNonDocDelta": {
+      "modified": 4,
+      "added": 1,
+      "deleted": 0,
+      "modesChanged": 0,
+      "leavesBefore": 8798,
+      "leavesAfter": 8799
+    },
+    "workflowCount": 42,
+    "workflowChanges": 0,
+    "dependencyOrProviderPackageChanges": 0,
+    "noBroadIncomingMerge": true
+  },
+  "reviewRequirements": [
+    "Complete all5 postimage bodies and4 preimage bodies, exact forward/inverse diffs and actual source basis",
+    "Complete original139/40 byte-prefix checks and source counts; whole85 and previous3 producer fixes unchanged",
+    "Actual post-await refusal before stateful readiness, unchanged error/currentness/cadence/diagnostic semantics",
+    "Every new10 registration/case/count and actual hover behavior; no skip/only/filter, no detached tests",
+    "Fixture mock restoration on all exits and ordinary timer settlement; only real original100ms waits, no native or network side effects",
+    "Top-level awaited literal import inclusion is not completion of all older tests; no module-evaluation mock mutation",
+    "5020/141/800 and frozen cap983/no utility growth; newtest excluded by unchanged policy",
+    "No source materialization/runtime or CI mutation before separate executable-control R2 and actual publication gates"
+  ],
+  "publication": "After full root+independent source R2, root may publish exactly these5 source/test leaves plus their docs evidence, immediately push with expected current parent and force:false, then complete full root+independent actual source publication readbacks. Existing current CI remains on frozen9c9/base779 and cannot validate this later source.",
+  "runtime": "This source R2 does not select or approve any executable runner/binding. A separate exact control R2/publication/actual gate is still required for the one fresh standalone10 RED/GREEN. Whole149/43/85/canonical/E2E remain unqualified by this proposal.",
+  "ciFrozen": {
+    "pr": 1218,
+    "headBranch": "ci/frontend-parity-c714-20261117-head",
+    "head": "9c9c73190840592963142d36562ea07d2b5d2d71",
+    "baseBranch": "ci/frontend-parity-c714-20261117-base",
+    "base": "77993819c233737f1e2b4c11c8ca1a5d360bcbe3",
+    "syntheticMerge": "7baf8533f00c4cfa3ef5493753fd6169d5b81247",
+    "activeIds": [
+      44008782844,
+      44008782843,
+      44008782909,
+      44008782832
+    ],
+    "terminalSkipIds": [
+      44008782825,
+      44008782932
+    ],
+    "latestObserved": "2026-11-17 04:20:32 UTC",
+    "latestStatus": "Observation8: four runs still active; Announcements terminal success; CodeQL and OpenCode diagnostics terminal skipped. Completed job logs include whole139 pass and Darwin-x64 strictP09 failure. Artifact/source/cleanup joins and complete active-run outcomes remain open.",
+    "mustRemain": "Both CI snapshot refs and PR metadata stay fixed while active. No new PR/ref/event/rerun/cancel/dispatch or Ready action is selected here. Working branch evidence/source publication is separate; recheck exact working ref and absence of an open head PR before committing source.",
+    "terminalSuccessIds": [
+      44008782869
+    ],
+    "observationPacket": {
+      "bytes": 408939,
+      "sha256": "819f1bd3f0bc50b6278e5e7fe7f297bcaf56f5426168b9fbc7fa0bc2b2e4b58d",
+      "gitBlob": "40d8a9980519dc8c4d24588019320c9d632f3297"
+    },
+    "sourceProposalQualification": "Frozen source refs do not mean frozen CI status. This bounded observation is historical as of the stated timestamp; no current CI claim is made beyond it."
+  },
+  "status": {
+    "sourcePostimagesAuthored": true,
+    "sourcePostimagesRetainedAsBareBlobs": true,
+    "sourcePostimagesAppliedToBranch": false,
+    "newStandaloneTestsExecuted": false,
+    "executableControlsAuthored": false,
+    "newRuntimeExecuted": false,
+    "wholeE2EQualified": false
+  },
+  "proposalMetadataCorrection": {
+    "supersedes": {
+      "bytes": 18045,
+      "sha256": "4adb2aa053c8e5fd82fc3e4276f8c950471345d85c7afea1147af91b0295b813",
+      "gitBlob": "f5af38aa25e295faec95eaac0e7a49ccda10fea1"
+    },
+    "reason": "Replace a stale copied03:52 queued-only CI-status paragraph with already-retained observation8; exact5source/test postimages, vectors, R1 and runtime boundary remain byte-identical.",
+    "sourceChange": false,
+    "execution": false
+  }
+}

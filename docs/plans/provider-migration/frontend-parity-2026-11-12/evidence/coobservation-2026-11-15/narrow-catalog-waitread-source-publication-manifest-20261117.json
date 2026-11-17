@@ -1,0 +1,243 @@
+{
+  "schemaVersion": 1,
+  "kind": "narrow-catalog-waitread-source-publication-manifest",
+  "at": "2026-11-17 04:54:39 UTC",
+  "repository": "777genius/agent-teams-ai",
+  "branch": "fix/frontend-parity-coobservation-c714-20261115",
+  "parent": "811d1108e8a766c8c1307008243c3291ccec3e04",
+  "parentTree": "2f29171a9f9dea3f160790dec597511a42166ce5",
+  "parentDocsTree": "2a7f111a00c4fdf7f28c1af38bc3c07151901ed7",
+  "subject": {
+    "bytes": 19187,
+    "sha256": "8bb84de228b570dfc121233893d32209a9389da44aa1747c7924dff936fa4c1a",
+    "gitBlob": "1318b887473a61e1cbfb3960812fbc84e3b4df13"
+  },
+  "reviews": {
+    "root": {
+      "bytes": 21842,
+      "sha256": "946eb6f3f4204ed4a9aaf6fb22f5685190b43ce7213cb034c5c3964b6ab7a246",
+      "gitBlob": "eebdf11f15dcf6b9d702e5bf03eca1da0abbd4c8"
+    },
+    "guard": {
+      "bytes": 59944,
+      "sha256": "aafc30e914ab2216e9aa5773693255fa6348e48f2ab08498240955419840c7c2",
+      "gitBlob": "2713afbe41128762206eb483f5a35eb7ab022235"
+    },
+    "semantic": {
+      "bytes": 76698,
+      "sha256": "d913e7f840b7dea7bcebebc4629a06ba25098e63bb67ac12250abbf21f50b5f3",
+      "gitBlob": "794f343d6e42763478412dccee4c1f96446b8c88"
+    },
+    "binding": {
+      "bytes": 164282,
+      "sha256": "717c8139e675faec949c4af55462da90b52d8866e3f160fc839e857ad35074a2",
+      "gitBlob": "5da4688ff3bab4e284c15ca8d801887e455d952d"
+    }
+  },
+  "reviewsClosedAt": "2026-11-17 04:53:44 UTC",
+  "sourceFiles": [
+    {
+      "role": "controls",
+      "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "mode": "100644",
+      "bytes": 29017,
+      "sha256": "ffd9bbb822dbdc30da7cb8daa881fcbebd384ba2bf9bdd87c804c511166fa02b",
+      "gitBlob": "5286c036a63a14e98925711a224df202c9a7caa7",
+      "before": {
+        "bytes": 28974,
+        "sha256": "7626e479a6662242009cb050e7e5af612a29e4205d62666d15274d5c30f91386",
+        "gitBlob": "ed57cb0fe7d57ef076a591621289eb77667c63ad"
+      }
+    },
+    {
+      "role": "nodeAggregate",
+      "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+      "mode": "100644",
+      "bytes": 165022,
+      "sha256": "fed1ee2429b0e1a7ccd592c127d7afc30bb69e0c10a1f8c673e240c1bc9dd581",
+      "gitBlob": "12c73fbc683dc297033bd8b6472e9dbee60b9b8a",
+      "before": {
+        "bytes": 164965,
+        "sha256": "852bedb85c83dbc4b488dffb4a9ffebbe398adc53e85f5a3cea8ca36b146cbf7",
+        "gitBlob": "896c587e077da56a98a314a175fb3cba0353d6ee"
+      }
+    },
+    {
+      "role": "catalog",
+      "path": "src/renderer/utils/teamModelAvailability.ts",
+      "mode": "100644",
+      "bytes": 32077,
+      "sha256": "b1da0ea7199e69eb042e5beb16dfafa91c4d7b9360db41a3f9ba16424ca2fd43",
+      "gitBlob": "ac6e66775bd5efaf81cecb9a2f22a3437b4343ad",
+      "before": {
+        "bytes": 32055,
+        "sha256": "6e216e10c07e953472afb74045c3a976e9f4a1d4fcd3e9f5d46dc789d19022e6",
+        "gitBlob": "167751c56f74c2869b8b3d9b128002d5bd642bcb"
+      }
+    },
+    {
+      "role": "catalogTests",
+      "path": "test/renderer/utils/teamModelAvailability.test.ts",
+      "mode": "100644",
+      "bytes": 56775,
+      "sha256": "b08fe4a650ea9d23f4d8fa4b4ece157d9cd2f87e87e42b25c3c53934ed9974c8",
+      "gitBlob": "6cf34a11e7a1bc6f33208bad00adb57ee5656cd6",
+      "before": {
+        "bytes": 49687,
+        "sha256": "0e37baae735529c11d2ed43432b132b516d252af8bb3084714c7082d7d4c4db8",
+        "gitBlob": "1a58c9c686010d5b5ded00f8e2b5064e4ab78c32"
+      }
+    },
+    {
+      "role": "deadlineTests",
+      "path": "scripts/legacy-agent-host/desktop-ui-controls-deadline.test.ts",
+      "mode": "100644",
+      "bytes": 7883,
+      "sha256": "29836f914218edb4876b6a4e157e7cdc68f63cdf414084cdd41683965c734eda",
+      "gitBlob": "6a9f8ad7481cd5910befcc6c7ff5992eef03965b",
+      "before": null
+    }
+  ],
+  "evidenceFiles": [
+    {
+      "role": "sourceProposal",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/narrow-catalog-waitread-source-r2-20261117.json",
+      "mode": "100644",
+      "bytes": 19187,
+      "sha256": "8bb84de228b570dfc121233893d32209a9389da44aa1747c7924dff936fa4c1a",
+      "gitBlob": "1318b887473a61e1cbfb3960812fbc84e3b4df13"
+    },
+    {
+      "role": "rootR2Review",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/narrow-catalog-waitread-source-r2-root-review-20261117.json",
+      "mode": "100644",
+      "bytes": 21842,
+      "sha256": "946eb6f3f4204ed4a9aaf6fb22f5685190b43ce7213cb034c5c3964b6ab7a246",
+      "gitBlob": "eebdf11f15dcf6b9d702e5bf03eca1da0abbd4c8"
+    },
+    {
+      "role": "guardR2Review",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/narrow-catalog-waitread-source-r2-guard-review-20261117.json",
+      "mode": "100644",
+      "bytes": 59944,
+      "sha256": "aafc30e914ab2216e9aa5773693255fa6348e48f2ab08498240955419840c7c2",
+      "gitBlob": "2713afbe41128762206eb483f5a35eb7ab022235"
+    },
+    {
+      "role": "semanticR2Review",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/narrow-catalog-waitread-source-r2-semantic-review-20261117.json",
+      "mode": "100644",
+      "bytes": 76698,
+      "sha256": "d913e7f840b7dea7bcebebc4629a06ba25098e63bb67ac12250abbf21f50b5f3",
+      "gitBlob": "794f343d6e42763478412dccee4c1f96446b8c88"
+    },
+    {
+      "role": "bindingR2Review",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/narrow-catalog-waitread-source-r2-binding-review-20261117.json",
+      "mode": "100644",
+      "bytes": 164282,
+      "sha256": "717c8139e675faec949c4af55462da90b52d8866e3f160fc839e857ad35074a2",
+      "gitBlob": "5da4688ff3bab4e284c15ca8d801887e455d952d"
+    },
+    {
+      "role": "beforeVector",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/narrow-catalog-waitread-source-before-vector-20261117.json",
+      "mode": "100644",
+      "bytes": 2552,
+      "sha256": "647b7a268b8b8921d875327e3394726916d54cc3c10c1bb8d2e2e9538db2d496",
+      "gitBlob": "ae0aa3e814cb90d9568cef5f35be6a0d8f46a361"
+    },
+    {
+      "role": "afterVector",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/narrow-catalog-waitread-source-after-vector-20261117.json",
+      "mode": "100644",
+      "bytes": 2784,
+      "sha256": "6a212eb715b312ae74c25e58078fd26b1247695d94f5c47536dc2a20aed49ce1",
+      "gitBlob": "fff972049718ae5ddaa7000e17341fade490233e"
+    },
+    {
+      "role": "r1RootActual",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/narrow-catalog-waitread-r1-root-actual-publication-20261117.json",
+      "mode": "100644",
+      "bytes": 56695,
+      "sha256": "a4d2cc44cb306a7484d902112471ce80425b98a947c198f13d802cbab7ed08cd",
+      "gitBlob": "909984719f5bbb8c5cc4a38b1376ccd261636175"
+    },
+    {
+      "role": "r1IndependentActual",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/narrow-catalog-waitread-r1-independent-actual-publication-20261117.json",
+      "mode": "100644",
+      "bytes": 194094,
+      "sha256": "786582e9d4ffaea97e5a622886446340fc95ab6f81c653da2db44b1ea4cabdbf",
+      "gitBlob": "215eea05560e776521465e5ab6081ffbe0affb2f"
+    },
+    {
+      "role": "r1AuthorshipGate",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/narrow-catalog-waitread-r1-authorship-gate-20261117.json",
+      "mode": "100644",
+      "bytes": 3516,
+      "sha256": "ae46b4e2997a5a5185fada08711e4f291be723b53c1afdd05af2bd89ebcd11fd",
+      "gitBlob": "29040a4faa87137bfa070c71651147b2da4f2102"
+    }
+  ],
+  "modifiedDocuments": [
+    {
+      "role": "plan",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/29-reconciled-acceptance-and-custody-followups-2026-11-15.md",
+      "mode": "100644",
+      "bytes": 2578570,
+      "sha256": "abd2200b9d3091d9d4da22ba7c4fd19e580a65269de3ddb98862bad07341d476",
+      "gitBlob": "e8c9f25ed840d8d7ce929cef049c22276ea67d37"
+    },
+    {
+      "role": "status",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/continuation-status-20261116.md",
+      "mode": "100644",
+      "bytes": 55279,
+      "sha256": "1aa2c4cac818719b398f19b1e34998084859f4f07d2c911c24c76b4ff3ad38d6",
+      "gitBlob": "3473cda9f2cee1e585e835ea89fc56576623f3b0"
+    },
+    {
+      "role": "catalog",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1213-retention-catalog-20261116.json",
+      "mode": "100644",
+      "bytes": 446551,
+      "sha256": "97d452c0da5ec8f87d8d9cb9f0dccd59101e441b3e28008642505de2661dff1f",
+      "gitBlob": "acc84233167402aa8a6b19b6ae1325994a913cbf"
+    }
+  ],
+  "manifestPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/narrow-catalog-waitread-source-publication-manifest-20261117.json",
+  "expectedDelta": {
+    "changed": 19,
+    "added": 12,
+    "modified": 7,
+    "deleted": 0,
+    "modesChanged": 0,
+    "sourceModified": 4,
+    "sourceAdded": 1,
+    "docsAdded": 11,
+    "docsModified": 3,
+    "workflowsChanged": 0
+  },
+  "expectedCensus": {
+    "parentLeaves": 11963,
+    "parentDocs": 3165,
+    "parentNonDocs": 8798,
+    "leaves": 11975,
+    "docs": 3176,
+    "nonDocs": 8799,
+    "workflows": 42
+  },
+  "catalogPreservation": {
+    "parentFields": 77,
+    "unchangedFields": 76,
+    "replacedField": "narrowCatalogWaitReadStage",
+    "archiveKey": "priorNarrowCatalogWaitReadStageAtSourcePublication",
+    "evidenceKey": "narrowCatalogWaitReadSourceEvidenceFiles",
+    "fieldsAfter": 79,
+    "completeBundles": 27,
+    "totalsUnchanged": true,
+    "planAndStatusFullPrefixesPreserved": true
+  },
+  "qualification": "Source-only four edits/one newtest plus evidence. Actual root+independent readbacks and separate executable-control R2/publication/readbacks remain required before staging or execution. FrozenCI refs/PR untouched."
+}

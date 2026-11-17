@@ -2698,3 +2698,5 @@ test('original review correction admits current authority with one original inse
   assert.deepEqual(refused.trace, ['read', 'scroll', 'focus', 'insert']);
   assert.deepEqual(refused.budgets, [30_000]); assert.equal(refused.reads(), 1);
 });
+
+await import('./desktop-ui-controls-deadline.test.ts');
