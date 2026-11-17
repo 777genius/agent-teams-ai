@@ -118,6 +118,7 @@ describe('ProjectScopedTeamDetailView project switching', () => {
     await settle();
     expect(openTeamTab).toHaveBeenCalledWith('builders', '/TEST/a');
     expect(host.querySelector('[data-team]')).toBeNull();
+    expect(host.querySelector('[data-testid="mode-picker"]')).toBeNull();
   });
 
   it('keeps the pre-feature shared team name unchanged', async () => {
