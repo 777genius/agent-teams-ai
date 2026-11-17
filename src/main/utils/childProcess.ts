@@ -673,17 +673,9 @@ async function execCliUnclassified(
   return { stdout: String(shellResult.stdout), stderr: String(shellResult.stderr) };
 }
 
-/**
- * Spawn a known native executable without cmd.exe fallback. The original
- * ChildProcess handle is required for Windows Job ownership and safe Stop.
- * Keep the shared CLI defaults and shutdown tracking.
- */
-export function spawnCliDirectExecutable(
-  binaryPath: string,
-  args: string[],
-  options: SpawnOptions = {}
-): ReturnType<typeof spawn> {
-  return trackCliProcess(spawn(binaryPath, args, { ...withCliProcessDefaults(options), shell: false }));
+/** Native wrapper handle: never replace the executable with cmd.exe. */
+export function spawnCliDirectExecutable(exe: string, args: string[], opts: SpawnOptions = {}) {
+  return trackCliProcess(spawn(exe, args, { ...withCliProcessDefaults(opts), shell: false }));
 }
 
 /**
