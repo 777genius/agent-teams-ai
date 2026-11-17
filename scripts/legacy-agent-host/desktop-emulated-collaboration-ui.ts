@@ -97,7 +97,7 @@ export async function runDesktopEmulatedCollaborationUi(cdp: UiCdpPort, options:
   await ui.observeInput(); await ui.clickSidebar(fixture.uiSeed.subject);
   await ui.click('button', 'open original saved Team Launch', 'Launch');
   const settings = record(await ui.waitRead(`(()=>{const rows=[...document.querySelectorAll('[role="dialog"] button[aria-controls]')]
-    .filter(e=>e.textContent.includes('Optional launch settings')&&e.textContent.includes('sonnet'));
+    .filter(e=>e.textContent.includes('Optional launch settings')&&e.textContent.includes(${literal(fixture.emulatedRuntime.savedModel)}));
     return rows.length===1?{id:rows[0].getAttribute('aria-controls'),expanded:rows[0].getAttribute('aria-expanded')}:null})()`, 'saved launch settings hydrate'));
   if (settings.expanded !== 'true') await ui.click(`[role="dialog"] button[aria-controls=${literal(settings.id)}]`, 'expand original saved launch settings');
   await ui.waitRead(`(() => {

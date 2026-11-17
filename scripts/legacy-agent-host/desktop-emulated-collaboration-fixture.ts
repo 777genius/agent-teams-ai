@@ -79,9 +79,10 @@ ${provider === 'codex' ? "if(process.argv.length===3&&process.argv[2]==='--versi
   const profile = JSON.parse(await readFile(fixture.profilePath, 'utf8')) as TeamHostProfile;
   assert.equal(profile.runtime, undefined); assert.equal(profile.management, undefined);
   const team = profile.teams[0]!;
+  const claudeModel = 'TEST-claude-sonnet';
   team.members = [{ memberId: 'alice-id', name: 'alice', role: 'lead' },
     { memberId: 'bob-id', name: 'bob', role: 'member', settings: { providerId: 'codex', model: 'TEST-model' } }];
-  team.savedSettings = { cwd: join(fixture.root, 'workspace'), providerId: 'anthropic', model: 'sonnet', effort: 'low',
+  team.savedSettings = { cwd: join(fixture.root, 'workspace'), providerId: 'anthropic', model: claudeModel, effort: 'low',
     fastMode: 'off', prompt: '', skipPermissions: false, syncModelsWithLead: false };
   const templates = selections.map(({ provider, memberName, executable, peers }) => {
     const memberId = `${memberName}-id`, principalId = `${memberName}-session`, environment = peers[0]!.environment;
@@ -91,7 +92,7 @@ ${provider === 'codex' ? "if(process.argv.length===3&&process.argv[2]==='--versi
     }
     return runtimeMemberProfileSchema.parse({ provider, teamId: team.binding.teamId, memberId, principalId,
       sessionId: `TEST-collaboration-${provider}-session`, generation: 1, configRevision: `TEST-collaboration-${provider}-runtime`,
-      cwd: team.savedSettings!.cwd, model: provider === 'claude' ? 'sonnet' : 'TEST-model',
+      cwd: team.savedSettings!.cwd, model: provider === 'claude' ? claudeModel : 'TEST-model',
       accountBinding: 'TEST-no-vendor-account', executable, environment,
       ...(provider === 'claude' ? { configNamespace: 'custom-directory', nativeTools: ['Read', 'Write', 'AskUserQuestion'],
         autoAllowedTools: [], nativeOptions: { permissionMode: 'default', settingSources: [], effort: 'low', fastMode: false } }
@@ -133,7 +134,7 @@ ${provider === 'codex' ? "if(process.argv.length===3&&process.argv[2]==='--versi
   } finally { lease.release(); }
   return { ...fixture, uiSeed, emulatedRuntime: { provider: 'claude' as const, variant: 'collaboration' as const,
     sources, executable: selections[0]!.executable, peers: selections.flatMap(row => row.peers), versionSentinel,
-    savedModel: 'sonnet', installer: undefined, observedPeerPids: [] as number[],
+    savedModel: claudeModel, installer: undefined, observedPeerPids: [] as number[],
     commandPrefix: `${fixture.node} ${selections[0]!.executable.path} `, collaboration: { selections, endpoints, project } } };
 }
 export type DesktopEmulatedCollaborationFixture = Awaited<ReturnType<typeof prepareDesktopEmulatedCollaborationFixture>>;

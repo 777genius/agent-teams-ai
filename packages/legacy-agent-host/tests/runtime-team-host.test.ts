@@ -3720,7 +3720,7 @@ async function sourceReadinessDeadlineFixture(input: {
   const { stripTypeScriptTypes } = await import('node:module');
   const source = readFileSync(new URL('../../../tools/owned-process-broker/nativeEmulatedSourceScenario.ts', import.meta.url), 'utf8').replace(/\r\n/gu, '\n');
   const begin = 'async function poll(', end = 'function validateSourceRefusal(';
-  const callBegin = "        await poll(async () => { view = await first.rpc(team, 'runtime.read',";
+  const callBegin = "        await poll(async () => { view = await epoch.rpc(team, 'runtime.read',";
   const callEnd = "\n      } finally {\n        console.log(JSON.stringify({ kind: 'TEST_SOURCE_READINESS'";
   for (const marker of [begin, end, callBegin, callEnd]) assert.equal(source.split(marker).length, 2);
   const pollSource = stripTypeScriptTypes(source.slice(source.indexOf(begin), source.indexOf(end)));
@@ -3734,17 +3734,17 @@ async function sourceReadinessDeadlineFixture(input: {
   }) as Poll;
   const readiness: Record<string, unknown> = { readCount: 0, elapsedMs: 0, lastRuntimeRead: null };
   const run = Function('environment', `'use strict';
-    const {poll,first,team,image,runtimeDigest,readiness,readinessStarted,performance,memberReadinessDeadline}=environment;
+    const {poll,epoch,team,action,runtimeDigest,readiness,readinessStarted,performance,memberReadinessDeadline}=environment;
     let view={},lastRuntimeViewDigest;
     return (async()=>{${callerSource}})();`) as (environment: Record<string, unknown>) => Promise<void>;
   return {
-    run: () => run({ team: 0, image: 'A', runtimeDigest, readiness, readinessStarted: input.now,
+    run: () => run({ team: 0, action: 'A', runtimeDigest, readiness, readinessStarted: input.now,
       performance, memberReadinessDeadline: input.deadline,
       poll: (check: () => Promise<boolean>, message: string, budget?: number, deadline?: number) => {
         assert.equal(message, 'Original source Team readiness'); argumentsSeen.push([budget, deadline]);
         now += input.handoffPause ?? 0;
         return actualPoll(check, message, budget, deadline);
-      }, first: { rpc: async (team: number, method: string, command: string, payload: unknown) => {
+      }, epoch: { rpc: async (team: number, method: string, command: string, payload: unknown) => {
         assert.equal(team, 0); assert.equal(method, 'runtime.read'); assert.equal(command, 'TEST-ready-A');
         assert.equal(JSON.stringify(payload), '{"memberId":"alice-id"}');
         const index = reads++; now += input.readCosts?.[index] ?? 0;
