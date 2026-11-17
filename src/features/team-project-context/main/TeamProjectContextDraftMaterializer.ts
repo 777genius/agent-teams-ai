@@ -55,13 +55,13 @@ export class TeamProjectContextDraftMaterializer {
     }
     const source = await this.teamStore.getSavedRequest(address.logicalTeamName);
     if (!source) throw new Error('The team configuration is unavailable');
-    if (!address.projectPath?.trim()) throw new Error('Choose a project for this team');
+    if (!resolved.projectPath?.trim()) throw new Error('Choose a project for this team');
 
     try {
       await this.teamStore.createTeamConfig({
         ...source,
         teamName: resolved.executionTeamName,
-        cwd: address.projectPath,
+        cwd: resolved.projectPath,
         // Runtime aliases are ordinary native teams, not logical definitions.
         projectContextMode: 'shared',
       });

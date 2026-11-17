@@ -58,18 +58,23 @@ export class TeamProjectContextCreateCoordinator {
       if (!reserved.workContextId || reserved.mode !== 'per_project') {
         throw new Error('Expected a reserved project-specific team context');
       }
+      const canonicalAddress: TeamWorkContextAddress = {
+        logicalTeamName: request.teamName,
+        projectPath: reserved.projectPath,
+      };
       let begun = false;
       try {
         await this.ports.assertOtherContextsStopped(
           request.teamName, reserved.executionTeamName
         );
-        const materialized = await this.ports.ensurePhysicalDraft(address);
+        const materialized = await this.ports.ensurePhysicalDraft(canonicalAddress);
         if (materialized.executionTeamName !== reserved.executionTeamName) {
           throw new Error('Project context changed during team creation');
         }
         const physicalRequest: TeamCreateRequest = {
           ...request,
           teamName: reserved.executionTeamName,
+          cwd: reserved.projectPath,
           projectContextMode: 'shared',
         };
         const reportProgress = (progress: TeamProvisioningProgress): void => {
@@ -77,7 +82,7 @@ export class TeamProjectContextCreateCoordinator {
           if (progress.state === 'ready') {
             // A spawn ACK does not authorize history access; check native config,
             // task directory and profile ownership before publishing ready.
-            void this.ports.confirmReady(address, reserved.executionTeamName)
+            void this.ports.confirmReady(canonicalAddress, reserved.executionTeamName)
               .then(() => onProgress(logicalProgress))
               .catch((error: unknown) => {
                 onProgress({

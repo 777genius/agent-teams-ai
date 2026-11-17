@@ -64,7 +64,7 @@ describe('TeamProjectContextCreateCoordinator', () => {
     await expect(f.create.create(request, onProgress)).resolves.toEqual({ runId: 'run-a' });
     expect(f.ports.createLogicalDraft).toHaveBeenCalledWith(request);
     expect(f.ports.createNativeTeam).toHaveBeenCalledWith({
-      ...request, teamName: context.executionTeamName, projectContextMode: 'shared',
+      ...request, teamName: context.executionTeamName, cwd: context.projectPath, projectContextMode: 'shared',
     }, expect.any(Function));
     f.emit(progress('spawning'));
     expect(onProgress).toHaveBeenCalledWith(expect.objectContaining({
@@ -77,6 +77,23 @@ describe('TeamProjectContextCreateCoordinator', () => {
         teamName: 'builders', state: 'ready',
       }));
     });
+  });
+
+  it('uses canonical context path when the user-supplied path is a symlink alias', async () => {
+    const f = fixture();
+    const aliasRequest = { ...request, cwd: '/links/a' };
+    await f.create.create(aliasRequest, vi.fn());
+    expect(f.ports.reserve).toHaveBeenCalledWith({
+      logicalTeamName: 'builders',
+      projectPath: '/links/a',
+    });
+    expect(f.ports.ensurePhysicalDraft).toHaveBeenCalledWith({
+      logicalTeamName: 'builders',
+      projectPath: '/sandbox/a',
+    });
+    expect(f.ports.createNativeTeam).toHaveBeenCalledWith(
+      expect.objectContaining({ cwd: '/sandbox/a' }), expect.any(Function)
+    );
   });
 
   it('releases only empty reservations on failed admission', async () => {

@@ -129,6 +129,23 @@ describe('project-scoped desktop team creation boundary (sandbox disk + fake nat
     }));
   });
 
+  it('pins physical launch cwd to the resolved canonical directory rather than a symlink', async () => {
+    if (process.platform === 'win32') return;
+    const f = await fixture();
+    const alias = path.join(path.dirname(f.projectPath), 'project-alias');
+    await fs.symlink(f.projectPath, alias, 'dir');
+    const request: TeamCreateRequest = {
+      teamName: 'builders', cwd: alias, members: [], projectContextMode: 'per_project',
+    };
+    await createTeamWithProjectContext(request, f.onProgress, f.ports);
+    expect(f.started[0]?.cwd).toBe(await fs.realpath(f.projectPath));
+    const meta = JSON.parse(await fs.readFile(
+      path.join(getTeamsBasePath(), f.started[0]!.teamName, 'team.meta.json'),
+      'utf8'
+    )) as { cwd: string };
+    expect(meta.cwd).toBe(await fs.realpath(f.projectPath));
+  });
+
   it('preserves the native team name and paths in shared mode', async () => {
     const f = await fixture();
     await createTeamWithProjectContext({

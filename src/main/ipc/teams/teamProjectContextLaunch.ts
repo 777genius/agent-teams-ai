@@ -29,24 +29,28 @@ export async function prepareTeamContextLaunch(
   const address = { logicalTeamName: request.teamName, projectPath: request.cwd };
   const reserved = await parts.resolver.reserveForProvisioning(address);
   if (!reserved.workContextId) throw new Error('Missing project context identity');
+  const canonicalAddress = {
+    logicalTeamName: address.logicalTeamName,
+    projectPath: reserved.projectPath,
+  };
 
   try {
     await parts.gate.assertOtherContextsStopped(
       address.logicalTeamName, reserved.executionTeamName
     );
-    const physical = await parts.materializer.ensureProjectDraft(address);
+    const physical = await parts.materializer.ensureProjectDraft(canonicalAddress);
     if (physical.executionTeamName !== reserved.executionTeamName) {
       throw new Error('Project context changed during launch admission');
     }
     return {
-      request: { ...request, teamName: physical.executionTeamName },
+      request: { ...request, cwd: reserved.projectPath, teamName: physical.executionTeamName },
       mapProgress: (progress, deliver) => {
         const logicalProgress = { ...progress, teamName: address.logicalTeamName };
         if (progress.state !== 'ready') {
           deliver(logicalProgress);
           return;
         }
-        void parts.resolver.confirmProvisionedContext(address, physical.executionTeamName)
+        void parts.resolver.confirmProvisionedContext(canonicalAddress, physical.executionTeamName)
           .then(() => deliver(logicalProgress))
           .catch((error: unknown) => {
             deliver({
