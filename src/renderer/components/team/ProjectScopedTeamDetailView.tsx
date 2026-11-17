@@ -74,11 +74,17 @@ export function ProjectScopedTeamDetailView({
   const key = `${teamName}\u0000${selectedProjectPath ?? ''}`;
   const [result, setResult] = useState<ViewResult | null>(null);
   const [launching, setLaunching] = useState(false);
+  const [awaitingReadyKey, setAwaitingReadyKey] = useState<string | null>(null);
 
   const refresh = useCallback(async (isCurrent: () => boolean): Promise<void> => {
     try {
       const context = await api.teams.getProjectContextView(teamName, selectedProjectPath);
-      if (isCurrent()) setResult({ key, context });
+      if (isCurrent()) {
+        setResult({ key, context });
+        if (context.state === 'ready') {
+          setAwaitingReadyKey((current) => current === key ? null : current);
+        }
+      }
     } catch (error) {
       if (isCurrent()) {
         setResult({ key, error: error instanceof Error ? error.message : String(error) });
@@ -92,7 +98,7 @@ export function ProjectScopedTeamDetailView({
     void refresh(() => alive);
     // Poll only while native provisioning is pending or immediately after an
     // explicit launch. A ready context requires no persistent background timer.
-    const shouldPoll = isActive && (state === 'pending' || launching);
+    const shouldPoll = isActive && (state === 'pending' || awaitingReadyKey === key);
     const timer = shouldPoll
       ? setInterval(() => { void refresh(() => alive); }, POLL_INTERVAL_MS)
       : null;
@@ -100,7 +106,7 @@ export function ProjectScopedTeamDetailView({
       alive = false;
       if (timer !== null) clearInterval(timer);
     };
-  }, [isActive, state, launching, refresh]);
+  }, [isActive, state, awaitingReadyKey, key, refresh]);
 
   const context = result?.key === key ? result.context : undefined;
   const error = result?.key === key ? result.error : undefined;
@@ -108,10 +114,12 @@ export function ProjectScopedTeamDetailView({
   const start = useCallback(async (): Promise<void> => {
     if (!selectedProjectPath || launching) return;
     setLaunching(true);
+    setAwaitingReadyKey(key);
     try {
       await api.teams.launchTeam({ teamName, cwd: selectedProjectPath });
       await refresh(() => true);
     } catch (reason) {
+      setAwaitingReadyKey(null);
       setResult({
         key,
         error: reason instanceof Error ? reason.message : String(reason),
@@ -145,12 +153,15 @@ export function ProjectScopedTeamDetailView({
   let message = t('projectContextView.loading');
   if (error) message = error;
   else if (context?.state === 'needs_project') message = t('projectContextView.selectProject');
-  else if (context?.state === 'empty') message = t('projectContextView.empty');
+  else if (context?.state === 'empty') {
+    message = t(awaitingReadyKey === key ? 'projectContextView.pending' : 'projectContextView.empty');
+  }
   else if (context?.state === 'pending') message = t('projectContextView.pending');
 
   const canStart =
     Boolean(selectedProjectPath) &&
     !launching &&
+    awaitingReadyKey !== key &&
     !error &&
     (context?.state === 'empty' || context?.state === 'pending');
 
