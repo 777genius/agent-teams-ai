@@ -19,7 +19,7 @@ persisted values). Use the shared Tooltip and an accessible button label.
 Support both board layouts and avoid triggering column dragging when using the
 button.
 
-Persist `reviewFlow: 'agent_approval' | 'human_approval'` and optional
+Persist `reviewFlow: 'agent_approval' | 'human_approval' | 'lead_then_human'` and optional
 `reviewFlowPrompt: string` (trimmed, at most 1000 characters, empty clears it)
 with the team's kanban configuration, not in renderer local storage. Missing
 `reviewFlow` means `agent_approval` (the existing behavior, the default). The flow
@@ -197,10 +197,12 @@ one controller-enforced step between the reviewer and Done.
 - The Lead finishes the sign-off with the same tools: `review_complete` (task goes to
   Done, awaiting the user) or `review_request_changes` (task returns to the owner, and
   the next review request starts a full cycle again from the reviewer).
-- Decisions are bound to a named actor. In `lead_then_human`, `review_complete` and
-  `review_request_changes` require an explicit `from` (no inference, no `team-lead`
-  default), and only an explicit `from` that resolves to the assigned reviewer of the
-  current cycle (the Lead, for the sign-off) may decide it. This is the app's normal
+- Decisions are bound to a named actor. `review_complete` and `review_request_changes`
+  require an explicit `from` (no inference, no `team-lead` default) in `lead_then_human`,
+  and also for any open sign-off cycle after the team switched to another flow. The
+  explicit `from` must resolve to the assigned reviewer of the open cycle (the Lead, for
+  the sign-off); the Lead may also act as any reviewer (existing rule), and a cycle with
+  no assigned reviewer can be decided by any named member. This is the app's normal
   trust model for named actors, not an authentication boundary: an agent that names
   itself as the Lead is not distinguished from the Lead. The stage-1 reviewer's old
   request id is rejected as stale.
@@ -209,10 +211,13 @@ one controller-enforced step between the reviewer and Done.
   `reviewRequestId` (the stage-1 id the caller passed) and returns the new id as
   `leadSignoffRequestId`. Anyone else, or a later cycle, gets the stale-request error.
 - Stage 2 is skipped when the explicit deciding actor is the Lead (`actor_is_lead`), when
-  the task owner as of the stage-1 review request is the Lead (`owner_is_lead`; a later
-  owner change does not skip it), or when no Lead can be resolved (`no_lead`). The cycle
-  then closes as in `human_approval` and the `review_complete` payload carries
-  `leadSignoffSkipped` with that reason.
+  the Lead submitted the work (`work_by_lead`: the actor of the latest completion before
+  the stage-1 review request; an unknown submitter never skips, and reassigning the owner
+  changes nothing), or when no Lead can be resolved (`no_lead`). The cycle then closes as
+  in `human_approval`; the `review_complete` payload and the `review_completed` history
+  event carry `leadSignoffSkipped` with that reason.
+- The Lead may sign off tasks that others submitted, even if they are assigned to it
+  later; the lead briefing always files an open sign-off under `Awaiting your sign-off:`.
 - The user can approve or reject at any time, including while the Lead has not yet
   signed off. If the Lead is away the task simply waits; the user confirms manually.
 - The Lead always sees its pending sign-offs: the lead briefing has an

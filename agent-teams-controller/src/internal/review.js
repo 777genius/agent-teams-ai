@@ -503,6 +503,7 @@ function approveReview(context, taskId, flags = {}) {
     if (kanban.isHumanApprovalFlow(context)) {
       throw new Error('Human approval required: reviewer must use review_complete');
     }
+    leadSignoff.assertExplicitActor(context, currentTask, flags, 'review_approve');
     const nextFrom = getReviewDecisionActor(context, currentTask, flags, 'approve review');
     const nextNote =
       typeof flags.note === 'string' && flags.note.trim() ? flags.note.trim() : 'Approved';
@@ -640,7 +641,6 @@ function requestChangesWithAuthority(context, taskId, flags, fromHuman) {
         throw new Error('Human rejection requires active Review or reviewed Done');
       }
     } else if (kanban.isHumanApprovalFlow(context)) {
-      leadSignoff.assertExplicitActor(context, flags, 'review_request_changes');
       const expectedId = typeof flags.expectedReviewRequestId === 'string'
         ? flags.expectedReviewRequestId.trim() : '';
       const currentId = getLatestReviewRequestEvent(currentTask)?.id;
@@ -648,6 +648,7 @@ function requestChangesWithAuthority(context, taskId, flags, fromHuman) {
         throw new Error('Stale review request: review_request_changes requires current expectedReviewRequestId');
       }
     }
+    if (!fromHuman) leadSignoff.assertExplicitActor(context, currentTask, flags, 'review_request_changes');
     const nextFrom = fromHuman
       ? 'user'
       : getReviewDecisionActor(context, currentTask, flags, 'request changes');

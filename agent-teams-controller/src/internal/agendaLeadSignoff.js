@@ -20,7 +20,7 @@ function isLeadSignoffItem(item) {
 /** Extra briefing lines that let the Lead act on a sign-off without any earlier message. */
 function leadSignoffLineSuffix(item) {
   if (!isLeadSignoffItem(item) || !item.reviewRequestId) return '';
-  return `\n  Sign-off: call review_start, then review_complete (or review_request_changes) with expectedReviewRequestId="${item.reviewRequestId}". Only the human gives final acceptance.`;
+  return `\n  Sign-off: call review_start, then review_complete (or review_request_changes) with expectedReviewRequestId="${item.reviewRequestId}". Pass your own name as an explicit "from" on both. Only the human gives final acceptance.`;
 }
 
 module.exports = { isLeadSignoffItem, leadSignoffLineSuffix, reviewCycleFields };

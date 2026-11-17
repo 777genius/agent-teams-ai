@@ -165,7 +165,7 @@ describe('lead_then_human review flow', () => {
 
   it.each([
     ['the Lead reviews first', { reviewer: 'alice' }, 'alice', 'actor_is_lead'],
-    ['the Lead owns the task', { owner: 'alice' }, 'carol', 'owner_is_lead'],
+    ['the Lead submitted the work', { owner: 'alice' }, 'carol', 'work_by_lead'],
   ])('closes the cycle directly when %s', (_label, options, actor, reason) => {
     const { task, cycle } = reviewedByCarol(options);
     expect(board.completeReview(task.id, { from: actor, expectedReviewRequestId: cycle }))
@@ -307,23 +307,92 @@ describe('lead_then_human review flow', () => {
     });
   });
 
-  it('judges the owner as of the review request, not as of the decision', () => {
-    const task = board.createTask({ subject: 'Reassigned', owner: 'bob' });
+  describe('who counts as having done the work', () => {
+    const reassignedToLead = (when) => {
+      const task = board.createTask({ subject: 'Reassigned', owner: 'bob' });
+      board.completeTask(task.id, 'bob');
+      if (when === 'before') board.setTaskOwner(task.id, 'alice', 'bob');
+      board.requestReview(task.id, { from: 'bob', reviewer: 'carol' });
+      const cycle = events(task.id, 'review_requested').at(-1).id;
+      board.startReview(task.id, { from: 'carol' });
+      if (when === 'during') board.setTaskOwner(task.id, 'alice', 'bob');
+      return { task, cycle };
+    };
+
+    it.each(['before', 'during'])('does not skip the sign-off when the owner is reassigned to the Lead %s the review', (when) => {
+      const { task, cycle } = reassignedToLead(when);
+      expect(board.completeReview(task.id, { from: 'carol', expectedReviewRequestId: cycle }))
+        .toMatchObject({ stage: 'lead_signoff', column: 'review' });
+    });
+
+    it('does not skip it for a second cycle after the owner became the Lead during the first', () => {
+      const task = board.createTask({ subject: 'Mid-review reassigned', owner: 'bob' });
+      board.completeTask(task.id, 'bob');
+      board.requestReview(task.id, { from: 'alice', reviewer: 'carol' });
+      const first = board.startReview(task.id, { from: 'carol' }).reviewRequestId;
+      board.completeReview(task.id, { from: 'carol', expectedReviewRequestId: first });
+      board.setTaskOwner(task.id, 'alice', 'bob');
+      board.requestReview(task.id, { from: 'bob', reviewer: 'carol' });
+      const second = board.startReview(task.id, { from: 'carol' }).reviewRequestId;
+      expect(board.completeReview(task.id, { from: 'carol', expectedReviewRequestId: second }))
+        .toMatchObject({ stage: 'lead_signoff', column: 'review' });
+    });
+
+    it('never skips when the submitter is unknown, and records the reason when it does skip', () => {
+      const anonymous = board.createTask({ subject: 'No actor', owner: 'alice' });
+      board.completeTask(anonymous.id);
+      board.requestReview(anonymous.id, { from: 'alice', reviewer: 'carol' });
+      const cycle = events(anonymous.id, 'review_requested').at(-1).id;
+      board.startReview(anonymous.id, { from: 'carol' });
+      expect(board.completeReview(anonymous.id, { from: 'carol', expectedReviewRequestId: cycle }))
+        .toMatchObject({ stage: 'lead_signoff' });
+
+      const own = reviewedByCarol({ owner: 'alice' });
+      board.completeReview(own.task.id, { from: 'carol', expectedReviewRequestId: own.cycle });
+      expect(events(own.task.id, 'review_completed')[0].leadSignoffSkipped).toBe('work_by_lead');
+    });
+  });
+
+  it('files an open sign-off under "Awaiting your sign-off" even when the owner is the Lead', async () => {
+    const task = board.createTask({ subject: 'Mid-review reassigned', owner: 'bob' });
     board.completeTask(task.id, 'bob');
     board.requestReview(task.id, { from: 'alice', reviewer: 'carol' });
-    const cycle = events(task.id, 'review_requested').at(-1).id;
-    board.startReview(task.id, { from: 'carol' });
+    const cycle = board.startReview(task.id, { from: 'carol' }).reviewRequestId;
     board.setTaskOwner(task.id, 'alice', 'bob');
-    expect(board.completeReview(task.id, { from: 'carol', expectedReviewRequestId: cycle }))
-      .toMatchObject({ stage: 'lead_signoff', column: 'review' });
+    board.completeReview(task.id, { from: 'carol', expectedReviewRequestId: cycle });
+    const signoff = events(task.id, 'review_requested').at(-1).id;
 
-    const owned = board.createTask({ subject: 'Lead work', owner: 'alice' });
-    board.completeTask(owned.id, 'alice');
-    board.requestReview(owned.id, { from: 'alice', reviewer: 'carol' });
-    const ownedCycle = events(owned.id, 'review_requested').at(-1).id;
-    board.startReview(owned.id, { from: 'carol' });
-    board.setTaskOwner(owned.id, 'bob', 'alice');
-    expect(board.completeReview(owned.id, { from: 'carol', expectedReviewRequestId: ownedCycle }))
-      .toMatchObject({ column: 'done', leadSignoffSkipped: 'owner_is_lead' });
+    const briefing = await board.leadBriefing();
+    expect(briefing).toContain('Awaiting your sign-off:');
+    expect(briefing).toContain(`expectedReviewRequestId="${signoff}"`);
+    expect(briefing).toContain('explicit "from"');
+    expect(briefing).not.toContain('self_review_invalid');
+    expect(briefing).not.toContain('Needs reviewer assignment');
+  });
+
+  it('keeps the Lead-only sign-off hint out of the members\' briefings', async () => {
+    const { task, cycle } = reviewedByCarol();
+    board.completeReview(task.id, { from: 'carol', expectedReviewRequestId: cycle });
+    for (const member of ['bob', 'carol']) {
+      expect(String(await board.taskBriefing(member))).not.toContain('Sign-off: call review_start');
+    }
+    expect(await board.leadBriefing()).toContain('Sign-off: call review_start');
+  });
+
+  it('keeps requiring an explicit actor for an open sign-off after the flow was switched', () => {
+    const { task, cycle } = reviewedByCarol();
+    board.completeReview(task.id, { from: 'carol', expectedReviewRequestId: cycle });
+    const signoff = events(task.id, 'review_requested').at(-1).id;
+
+    board.setReviewFlowSettings({ reviewFlow: 'human_approval' });
+    expect(() => board.completeReview(task.id, { expectedReviewRequestId: signoff }))
+      .toThrow(/requires an explicit "from"/);
+    expect(() => board.requestChanges(task.id, { comment: 'x', expectedReviewRequestId: signoff }))
+      .toThrow(/requires an explicit "from"/);
+    board.setReviewFlowSettings({ reviewFlow: 'agent_approval' });
+    expect(() => board.approveReview(task.id, {})).toThrow(/requires an explicit "from"/);
+    expect(board.getTask(task.id).reviewState).toBe('review');
+    expect(board.completeReview(task.id, { from: 'alice', expectedReviewRequestId: signoff }))
+      .toMatchObject({ reviewState: 'reviewed' });
   });
 });

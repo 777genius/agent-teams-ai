@@ -354,8 +354,10 @@ function buildAgendaItem(task, boardState) {
   const hasMissingOwner = !hasOwnerField;
   const hasInvalidOwner = hasOwnerField && !ownerActor;
   const reviewActor = reviewerResult.actor;
+  const cycleFields = leadSignoff.reviewCycleFields(task, reviewStateResult.state);
   const reviewActorIsInvalid = reviewStateResult.state === 'review' && !reviewActor;
-  const hasSelfReview = Boolean(ownerActor && reviewActor && areSameActors(ownerActor, reviewActor));
+  const hasSelfReview = Boolean(ownerActor && reviewActor && areSameActors(ownerActor, reviewActor)) &&
+    cycleFields.reviewStage !== 'lead_signoff';
 
   const brokenDependencyIds = [];
   const waitingDependencyIds = [];
@@ -484,7 +486,7 @@ function buildAgendaItem(task, boardState) {
     queueCategory,
     reasonCode,
     ...(normalizeName(task.owner) ? { owner: task.owner } : {}),
-    ...leadSignoff.reviewCycleFields(task, reviewStateResult.state),
+    ...cycleFields,
     reviewer:
       reviewActor && reviewActor.kind === 'member'
         ? reviewActor.memberName
@@ -693,7 +695,7 @@ function formatAgendaLine(item) {
   if (item.needsClarification) {
     meta.push(`clarification=${item.needsClarification}`);
   }
-  return `- ${formatTaskLabel(item)} [status=${item.status}${reviewSuffix}] ${truncateText(item.subject, MAX_SUBJECT_CHARS)} (${meta.join(', ')})${leadSignoff.leadSignoffLineSuffix(item)}`;
+  return `- ${formatTaskLabel(item)} [status=${item.status}${reviewSuffix}] ${truncateText(item.subject, MAX_SUBJECT_CHARS)} (${meta.join(', ')})`;
 }
 
 function appendExpandedTaskContext(lines, item) {
@@ -876,7 +878,7 @@ function formatLeadBriefing(paths, teamName) {
     lines.push('', title);
     const sectionItems = items.slice(0, MAX_LEAD_SECTION_ITEMS);
     for (const item of sectionItems) {
-      lines.push(formatAgendaLine(item));
+      lines.push(formatAgendaLine(item) + leadSignoff.leadSignoffLineSuffix(item));
     }
     appendOmittedLine(lines, title.replace(/:$/, ''), sectionItems.length, items.length);
   }

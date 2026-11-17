@@ -212,6 +212,8 @@ export interface TaskReviewCompletedEvent extends TaskHistoryEventBase {
   to: 'reviewed';
   reviewRequestId: string;
   note?: string;
+  /** lead_then_human only: why the lead's sign-off stage was skipped for this cycle. */
+  leadSignoffSkipped?: 'actor_is_lead' | 'work_by_lead' | 'no_lead';
 }
 
 export interface TaskReviewStartedEvent extends TaskHistoryEventBase {

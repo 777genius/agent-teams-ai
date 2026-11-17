@@ -21,7 +21,7 @@ function createReviewHumanActions({
       const expectedId = typeof flags.expectedReviewRequestId === 'string'
         ? flags.expectedReviewRequestId.trim() : '';
       if (!expectedId) throw new Error('review_complete requires expectedReviewRequestId');
-      leadSignoff.assertExplicitActor(context, flags, 'review_complete');
+      leadSignoff.assertExplicitActor(context, task, flags, 'review_complete');
       // A retry by the reviewer who handed off reports the sign-off request, not "stale".
       const handedOff = leadSignoff.findHandoff(context, task, expectedId, flags.from);
       if (handedOff) {
@@ -92,6 +92,7 @@ function createReviewHumanActions({
         current.historyEvents = tasks.appendHistoryEvent(current.historyEvents, {
           type: 'review_completed', from: 'review', to: 'reviewed',
           reviewRequestId: expectedId, note, actor, timestamp,
+          ...(plan.skipped ? { leadSignoffSkipped: plan.skipped } : {}),
         });
         current.reviewState = 'reviewed';
         return current;

@@ -2,6 +2,7 @@ const kanban = require('./kanban.js');
 const messages = require('./messages.js');
 const runtimeHelpers = require('./runtimeHelpers.js');
 const tasks = require('./tasks.js');
+const reviewStateHelpers = require('./reviewState.js');
 const { buildReviewRequestMessage } = require('./reviewRequestMessage.js');
 
 /**
@@ -25,40 +26,45 @@ function createLeadSignoff({
 
   /**
    * Review decisions of this flow are attributed to a named actor. Inferring one (the assigned
-   * reviewer, or the Lead as a last resort) would let a reviewer or an owner act as the Lead.
+   * reviewer, or the Lead as a last resort) would let a reviewer or an owner act as the Lead. The
+   * rule also holds for an open sign-off cycle after the team switched to another flow.
    */
-  function assertExplicitActor(context, flags, toolName) {
-    if (!kanban.isLeadSignoffFlow(context)) return;
+  function assertExplicitActor(context, task, flags, toolName) {
+    const signoffOpen = reviewStateHelpers.getCurrentReviewStage(task) === 'lead_signoff';
+    if (!signoffOpen && !kanban.isLeadSignoffFlow(context)) return;
     if (typeof flags.from !== 'string' || !flags.from.trim()) {
-      throw new Error(`${toolName} requires an explicit "from" (the acting member) when reviewFlow is lead_then_human`);
+      throw new Error(`${toolName} requires an explicit "from" (the acting member) for a Lead sign-off or when reviewFlow is lead_then_human`);
     }
   }
 
-  /** Owner when the review was requested: later owner changes must not move the sign-off. */
-  function ownerAtRequest(task, request) {
+  /**
+   * Who submitted the work for this review: the actor of the latest completion before the request.
+   * Owners can be reassigned by anyone, so ownership says nothing about who did the work.
+   */
+  function submittedBy(task, request) {
     const history = Array.isArray(task.historyEvents) ? task.historyEvents : [];
-    const index = history.findIndex((event) => event && event.id === request.id);
-    if (index >= 0) {
-      for (let i = index - 1; i >= 0; i -= 1) {
-        if (history[i] && history[i].type === 'owner_changed') return history[i].to || null;
+    const found = history.findIndex((event) => event && event.id === request.id);
+    for (let i = (found >= 0 ? found : history.length) - 1; i >= 0; i -= 1) {
+      const event = history[i];
+      if (event && event.type === 'status_changed' && event.to === 'completed') {
+        return typeof event.actor === 'string' && event.actor.trim() ? event.actor.trim() : null;
       }
-      const later = history.slice(index + 1).find((event) => event && event.type === 'owner_changed');
-      if (later) return later.from || null;
     }
-    return task.owner || null;
+    return null;
   }
 
   /**
    * How a completed review continues in `lead_then_human`: `{ leadName }` hands off to the Lead,
-   * `{ skipped }` closes the cycle as in `human_approval` (the Lead's own review, or review of
-   * Lead-owned work, already is the sign-off; without a Lead nobody can be asked), and
+   * `{ skipped }` closes the cycle as in `human_approval` (the Lead's own review, or review of work
+   * the Lead submitted, already is the sign-off; without a Lead nobody can be asked), and
    * `{ skipped: null }` means the flow does not apply (other flows, or this IS the sign-off).
+   * An unknown submitter never skips the step.
    */
   function planCompletion(context, task, actor, request) {
     if (!kanban.isLeadSignoffFlow(context) || request.stage === 'lead_signoff') return { skipped: null };
     if (isLeadActor(context, actor)) return { skipped: 'actor_is_lead' };
-    const owner = ownerAtRequest(task, request);
-    if (owner && isLeadActor(context, owner)) return { skipped: 'owner_is_lead' };
+    const submitter = submittedBy(task, request);
+    if (submitter && isLeadActor(context, submitter)) return { skipped: 'work_by_lead' };
     const leadName = resolveLeadName(context);
     return leadName ? { leadName } : { skipped: 'no_lead' };
   }

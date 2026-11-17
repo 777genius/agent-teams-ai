@@ -116,7 +116,8 @@ export function registerReviewTools(server: Pick<FastMCP, 'addTool'>) {
 
   server.addTool({
     name: 'review_request_changes',
-    description: 'Request changes on a task under review',
+    description:
+      'Request changes on a task under review. With reviewFlow lead_then_human (or for an open Lead sign-off cycle) from is REQUIRED and expectedReviewRequestId must be the current cycle id.',
     parameters: z.object({
       ...toolContextSchema,
       taskId: z.string().min(1),

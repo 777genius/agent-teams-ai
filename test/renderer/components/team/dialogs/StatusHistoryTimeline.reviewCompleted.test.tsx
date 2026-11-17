@@ -56,4 +56,35 @@ describe('review completion in task workflow timeline', () => {
       await Promise.resolve();
     });
   });
+
+  it('labels the lead sign-off request and shows the reviewer note that goes with it', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const events: TaskHistoryEvent[] = [
+      {
+        id: 'request-1', type: 'review_requested', from: 'none', to: 'review',
+        reviewer: 'carol', timestamp: '2026-11-16T00:00:00.000Z',
+      },
+      {
+        id: 'signoff-1', type: 'review_requested', from: 'review', to: 'review',
+        reviewer: 'team-lead', stage: 'lead_signoff', afterReviewRequestId: 'request-1',
+        actor: 'carol', note: 'Checked the migration path twice.',
+        timestamp: '2026-11-16T00:01:00.000Z',
+      },
+    ];
+    await act(async () => {
+      root.render(<WorkflowTimeline events={events} memberColorMap={new Map()} />);
+      await Promise.resolve();
+    });
+    expect(host.textContent).toContain('taskDetail.workflowTimeline.leadSignoffRequested');
+    expect(host.textContent).toContain('Checked the migration path twice.');
+    // The reviewer's own request keeps the regular label and never shows a note of its own.
+    expect(host.textContent?.match(/taskDetail\.workflowTimeline\.reviewRequested/g)).toHaveLength(1);
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
 });
