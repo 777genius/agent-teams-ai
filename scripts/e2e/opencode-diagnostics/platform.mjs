@@ -217,7 +217,11 @@ const windowsObserverLimit = 1024 * 1024;
 /** A fixed read-only interpreter loop; stdin carries sequence numbers, never PowerShell source. */
 export function windowsProcessObserverScript(port) {
   assertCdpPort(port);
-  return "$ErrorActionPreference='Stop'; [Console]::OutputEncoding = [Text.UTF8Encoding]::new($false); " +
+  // First-use CIM module progress is emitted as CLIXML on stderr by Windows
+  // PowerShell. Disable that presentation stream before importing any module;
+  // genuine stderr still fails the worker and never becomes an observation.
+  return "$ErrorActionPreference='Stop'; $ProgressPreference='SilentlyContinue'; " +
+    '[Console]::OutputEncoding = [Text.UTF8Encoding]::new($false); ' +
     "$sequence=0; while ($null -ne ($line=[Console]::ReadLine())) { " +
     "$sequence++; if ($line -cne [string]$sequence) { throw 'Invalid TEST observation sequence' }; " +
     '$observation = & { ' + windowsObservationScript(port) + ' }; ' +

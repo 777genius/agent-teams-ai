@@ -422,7 +422,7 @@ export function projectDesktopProofReceiptSummary(evidence: Record<string, unkno
       ? { selectionTargetFailure: projectDesktopSelectionTargetFailure(evidence) } : {}),
     ...(mixedMode && evidence.status !== 'PASS'
       ? { mixedSettingsFailure: projectDesktopMixedSettingsFailure(evidence) } : {}),
-    ...(['emulated-import-ui', 'emulated-opencode-runtime-ui', 'emulated-claude-runtime-ui',
+    ...(['emulated-import-ui', 'emulated-import-lifecycle-ui', 'emulated-opencode-runtime-ui', 'emulated-claude-runtime-ui',
       'emulated-claude-lifecycle-ui', 'emulated-collaboration-ui'].includes(mode) && evidence.status !== 'PASS'
       ? { emulatedReadinessFailure: projectDesktopEmulatedReadinessFailure(evidence) } : {}),
     ...(['task-board-ui', 'task-board-cross-team-ui'].includes(mode) && evidence.status !== 'PASS'

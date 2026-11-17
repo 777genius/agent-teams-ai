@@ -566,6 +566,9 @@ test('persistent Windows query owner keeps one child and delivers fresh ordered 
     { kind: 'snapshot', sequence: 1, observation: { processes: first, listeners: [11] } },
     { kind: 'snapshot', sequence: 2, observation: { processes: second, listeners: [22] } }]);
   const script = Buffer.from(f.launches[0][1].at(-1), 'base64').toString('utf16le');
+  const progress = script.indexOf("$ProgressPreference='SilentlyContinue'");
+  assert.ok(progress >= 0 && progress < script.indexOf('while ('),
+    'Windows module progress is disabled before any original query reaches stderr');
   assert.ok(script.indexOf('while (') < script.indexOf('Get-CimInstance Win32_Process'));
   assert.ok(script.indexOf('Get-CimInstance Win32_Process') < script.indexOf('MSFT_NetTCPConnection'));
   assert.ok(script.includes('LocalPort = 43127 AND State = 2'));

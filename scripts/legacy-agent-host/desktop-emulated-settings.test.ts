@@ -334,7 +334,7 @@ test('receipt summaries retain only the original nested mixed Settings owner', (
 
 type RuntimeReadinessProcessFactory = import('../../packages/legacy-agent-host/dist/adapters/providers/capturedNativeProcessFactory.js').CapturedNativeProcessFactory;
 
-async function runtimeReadinessFixture(t: TestContext, createProcess?: RuntimeReadinessProcessFactory) {
+async function runtimeReadinessFixture(t: TestContext, createProcess?: RuntimeReadinessProcessFactory, importLifecycle = false) {
   const root = await realpath(await mkdtemp(join(tmpdir(), 'TEST-desktop-runtime-readiness-')));
   const closeOwners: Array<() => Promise<void | boolean>> = [];
   const own = <T extends { close(): Promise<void | boolean> }>(owner: T): T => {
@@ -374,7 +374,8 @@ async function runtimeReadinessFixture(t: TestContext, createProcess?: RuntimeRe
       TMPDIR: join(peerRoot, 'tmp'), PATH: dirname(node) + ':/usr/bin:/bin', SHELL: '/bin/sh',
       TEST_EMULATED_DESKTOP_PROVIDER: '1', TEST_PEER_SCENARIO: 'desktop-ui-v1', TEST_PEER_PROVIDER: 'claude',
       TEST_PEER_ROLE: 'management', TEST_DESKTOP_PEER_ROOT: peerRoot,
-      TEST_DESKTOP_PEER_WORKSPACE: join(root, 'workspace'), TEST_PEER_EFFECTS: effectsPath },
+      TEST_DESKTOP_PEER_WORKSPACE: join(root, 'workspace'), TEST_PEER_EFFECTS: effectsPath,
+      ...(importLifecycle ? { TEST_DESKTOP_IMPORT_LIFECYCLE: 'current-solo-v1' } : {}) },
   });
   const sentinels = ['.credentials.json', 'settings.json'].map(name => ({
     path: join(peerRoot, 'config', name), bytes: JSON.stringify({ TEST_neighbor: name, unchanged: true }) + '\n',
@@ -460,7 +461,8 @@ test('shared finite runtime auth refuses other argv, roles, namespaces and a cha
   await f.assertSentinels();
 });
 
-test('shared finite SDK metadata and one resolved model probe preserve effort, context and original custody', { timeout: 15000 }, async t => {
+for (const selectedModel of ['TEST-claude-sonnet', 'claude-sonnet-4-6'])
+test('shared finite SDK metadata and one resolved model probe preserve effort, context and original custody: ' + selectedModel, { timeout: 15000 }, async t => {
   const { CapturedProcess } = await import('../../packages/legacy-agent-host/dist/adapters/providers/CapturedProcess.js');
   const launches: Array<{ role: string | undefined; command: string; args: string[]; cwd: string | undefined }> = [];
   const stops: Array<{ role: string | undefined; clean: boolean }> = [];
@@ -483,11 +485,11 @@ test('shared finite SDK metadata and one resolved model probe preserve effort, c
       },
     };
   };
-  const f = await runtimeReadinessFixture(t, createProcess);
+  const f = await runtimeReadinessFixture(t, createProcess, selectedModel === 'claude-sonnet-4-6');
   const metadata = await f.management.read({ profileId: f.profile.profileId, configRevision: f.profile.configRevision });
   assert.equal(metadata.models.length, 1);
-  assert.equal(metadata.models[0]!.modelId, 'sonnet');
-  assert.equal(metadata.models[0]!.resolvedModel, 'TEST-claude-sonnet');
+  assert.equal(metadata.models[0]!.modelId, selectedModel === 'claude-sonnet-4-6' ? selectedModel : 'sonnet');
+  assert.equal(metadata.models[0]!.resolvedModel, selectedModel);
   assert.deepEqual(metadata.models[0]!.supportedEffortLevels, ['low', 'medium', 'high']);
   assert.equal((await f.effects()).filter(row => row.event === 'input').length, 0);
   assert.deepEqual([...f.store.list()], [], 'metadata does not establish model execution');
@@ -496,7 +498,7 @@ test('shared finite SDK metadata and one resolved model probe preserve effort, c
     sessionId: 'TEST-session', generation: 1, configRevision: 'TEST-runtime-readiness-selection',
     executable: f.profile.executable, cwd: f.profile.cwd, accountBinding: f.profile.accountBinding,
     environment: { ...f.profile.environment, TEST_PEER_ROLE: 'runtime' },
-    model: 'TEST-claude-sonnet', configNamespace: 'custom-directory', nativeTools: [], autoAllowedTools: [],
+    model: selectedModel, configNamespace: 'custom-directory', nativeTools: [], autoAllowedTools: [],
     nativeOptions: { settingSources: [...f.profile.settingSources!], effort: 'low', context: 'one-million' },
     limits: { queuedInputs: 1, inputBytes: 65536, outputBytes: 65536, outputEvents: 32,
       pendingInteractions: 1, timeoutMs: 5000 },
@@ -514,7 +516,7 @@ test('shared finite SDK metadata and one resolved model probe preserve effort, c
     assertWriter: () => {}, select: (id, revision) => f.management.target(id, revision),
     prepare: (input, current) => f.management.prepareProbe(input, current) }));
   const input = { profileId: probeProfile.profileId, configRevision: probeProfile.configRevision,
-    commandId: 'TEST-resolved-runtime-probe', providerId: 'anthropic', modelId: 'TEST-claude-sonnet',
+    commandId: 'TEST-resolved-runtime-probe', providerId: 'anthropic', modelId: selectedModel,
     effort: 'low', modelContext: 'one-million' as const };
   const identity = { profileId: input.profileId, configRevision: input.configRevision, commandId: input.commandId };
   probes.start(input);
