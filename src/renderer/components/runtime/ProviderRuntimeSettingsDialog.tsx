@@ -19,6 +19,7 @@ import {
   resolveCodexRuntimeSelection,
 } from '@features/codex-runtime-profile/renderer';
 import { useAppTranslation } from '@features/localization/renderer';
+import { NativeNextPromptProviderSetting } from '@features/native-prompt-suggestions/renderer';
 import { RuntimeProviderManagementPanel } from '@features/runtime-provider-management/renderer';
 import { api } from '@renderer/api';
 import { ProviderBrandLogo } from '@renderer/components/common/ProviderBrandLogo';
@@ -2452,6 +2453,11 @@ export const ProviderRuntimeSettingsDialog = ({
                         : anthropicFastModeDisabledReason}
                     </div>
                   </div>
+                ) : null}
+
+                {selectedProvider.providerId === 'anthropic' ||
+                selectedProvider.providerId === 'codex' ? (
+                  <NativeNextPromptProviderSetting providerId={selectedProvider.providerId} />
                 ) : null}
 
                 {selectedProvider.providerId === 'codex' ? (

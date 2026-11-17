@@ -75,6 +75,7 @@ import {
   registerOrganizationsIpc,
   removeOrganizationsIpc,
 } from '@features/organizations/main';
+import { selectNativeNextPromptProviders } from '@features/native-prompt-suggestions/main';
 import * as projectFolderFeature from '@features/project-folder/main';
 import {
   createRecentProjectsFeature,
@@ -1747,7 +1748,7 @@ async function initializeServices(): Promise<void> {
   initializeAgentBackendConnection(contextRegistry, {
     getMainWindow: () => mainWindow,
     rendererIndexPath: resolveRendererIndexPath(__dirname),
-    nativeNextPromptEnabled: configManager.getConfig().general.nativeNextPromptSuggestionsEnabled === true,
+    nativeNextPromptProviders: selectNativeNextPromptProviders(configManager.getConfig().providerConnections),
     // Fail closed for browser SSE: /api/events broadcasts to every connected
     // client without per-owner authorization. Never publish private human-DM
     // follow-ups there until a scoped authenticated SSE transport exists.

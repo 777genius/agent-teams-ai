@@ -34,7 +34,7 @@ import { RuntimeOwnerError } from '../runtime/contracts.js';
 import { TeamLaunchError } from '../team-launch/contracts.js';
 import { runtimeProfileSchema } from './runtimeProfile.js';
 import { RuntimeTeamCoordinator } from './RuntimeTeamCoordinator.js';
-import type { CapturedPromptSuggestionNotice } from './createCapturedPromptSuggestionBinding.js';
+import { type CapturedPromptSuggestionNotice, PROMPT_SUGGESTION_PROVIDERS, type PromptSuggestionProvider } from './createCapturedPromptSuggestionBinding.js';
 import { hasRetainedTeamRuntime } from './RuntimeTeamCaptures.js';
 import { providerManagementProfileSchema } from '../management/profile.js';
 import type { ProviderManagementCoordinator } from './ProviderManagementCoordinator.js';
@@ -86,13 +86,13 @@ export function createTeamHost(
   streams: Pick<HostServerOptions, 'input' | 'output' | 'limits'>,
   composition?: { createProvider?(context: MemberProviderContext): MemberProvider;
     createScheduledProvider?(context: ScheduledRunProviderContext): ScheduledRunProvider;
-    /** Separate captured app preference, evaluated only when the Host is constructed. */
-    promptSuggestionsEnabled?: boolean }
+    /** Separate captured app preference per provider, evaluated only when the Host is constructed. */
+    promptSuggestionProviders?: readonly PromptSuggestionProvider[] }
 ): HostServer {
   const profile = structuredClone(teamHostProfileSchema.parse(rawProfile));
   // CLI/Main owns this app-level preference. Profile remains digest-bound and
   // existing sessions are never interrupted to apply a change.
-  const promptSuggestionsEnabled = composition?.promptSuggestionsEnabled ?? profile.promptSuggestions?.enabled ?? false;
+  const promptSuggestionProviders: readonly PromptSuggestionProvider[] = composition?.promptSuggestionProviders ?? (profile.promptSuggestions?.enabled ? PROMPT_SUGGESTION_PROVIDERS : []);
   assertAccountNamespaces([
     ...(profile.runtime?.members ?? []),
     ...(profile.runtime?.providerTemplates ?? []),
@@ -287,8 +287,8 @@ export function createTeamHost(
         crossTeam: (team, principal, binding, current) =>
           crossTeam.memberPort(team, principal, binding, current),
         assertWriter: () => lease.assertCurrent(),
-        ...(promptSuggestionsEnabled
-          ? { promptSuggestionsEnabled: true, onPromptSuggestion: (notice: CapturedPromptSuggestionNotice) =>
+        ...(promptSuggestionProviders.length > 0
+          ? { promptSuggestionProviders, onPromptSuggestion: (notice: CapturedPromptSuggestionNotice) =>
               emitPromptSuggestion?.(notice) }
           : {}),
         ...(composition?.createProvider ? { createProvider: composition.createProvider } : {}),
@@ -774,7 +774,7 @@ export function createTeamHost(
     };
     emitPromptSuggestion = (notice) => {
       // Auxiliary, bounded, best-effort notification; never changes Team/Runtime result.
-      if (!sealed && promptSuggestionsEnabled)
+      if (!sealed && promptSuggestionProviders.length > 0)
         server.notifyData('runtime.prompt-suggestion.updated', json(notice));
     };
     runtime?.kick(); // Resume original durable obligations on startup, without opening/adopting native sessions.

@@ -29,8 +29,13 @@ export function createClaudeMemberProvider(context: MemberProviderContext): Memb
     memberId: selectedBinding.memberId,
     generation: selectedBinding.generation,
   });
+  // Claude only emits next-prompt suggestions while its own account/time dependent rollout flag is on.
+  // When the user's setting selected Claude for this Host, request them explicitly in the launch environment.
+  const environment = context.promptSuggestions
+    ? { ...profile.environment, CLAUDE_CODE_ENABLE_PROMPT_SUGGESTION: 'true' }
+    : { ...profile.environment };
   const custody = new CapturedProcess(
-    profile,
+    { ...profile, environment },
     () => context.canAllocate() && capturedMcpSourceCurrent(profile),
     context.processCustody,
     () =>
@@ -57,7 +62,7 @@ export function createClaudeMemberProvider(context: MemberProviderContext): Memb
     model: profile.model,
     accountBinding: profile.accountBinding,
     configRevision: profile.configRevision,
-    environment: { ...profile.environment },
+    environment: { ...environment },
     ...(profile.extraArgs ? { extraArgs: [...profile.extraArgs] } : {}),
     ...(profile.configNamespace ? { configNamespace: profile.configNamespace } : {}),
     nativeOptions: {

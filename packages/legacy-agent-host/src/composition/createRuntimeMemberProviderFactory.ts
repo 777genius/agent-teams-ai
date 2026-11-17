@@ -1,7 +1,10 @@
 import type { TeamMcpGroupPort } from '../mcp/groupChatTools.js';
 import { createMemberAttachmentPort } from './createMemberAttachmentPort.js';
 import { createCapturedPromptSuggestionBinding } from './createCapturedPromptSuggestionBinding.js';
-import type { CapturedPromptSuggestionNotice } from './createCapturedPromptSuggestionBinding.js';
+import type {
+  CapturedPromptSuggestionNotice,
+  PromptSuggestionProvider,
+} from './createCapturedPromptSuggestionBinding.js';
 import type { TeamMcpNativeMemberCreationPort } from '../mcp/nativeMemberCreationContracts.js';
 import { createClaudeMemberProvider } from '../adapters/providers/ClaudeMemberProvider.js';
 import { createCodexMemberProvider } from '../adapters/providers/CodexMemberProvider.js';
@@ -78,8 +81,8 @@ export function createRuntimeMemberProviderFactory(options: {
   readCheckpoint: RuntimeOwner['readCheckpoint'];
   observe: RuntimeOwner['observeProviderActivity'];
   onProgress(entry: MemberEntry): void;
-  /** Captured Host opt-in, default off; no per-role restrictions. */
-  promptSuggestionsEnabled?: boolean;
+  /** Captured Host opt-in per provider; no per-role restrictions. */
+  promptSuggestionProviders?: readonly PromptSuggestionProvider[];
   onPromptSuggestion?: (notice: CapturedPromptSuggestionNotice) => void;
 }): RuntimeOwnerOptions['driverFactory'] {
   const beforeTeamAuthority = options.beforeTeamAuthority;
@@ -218,8 +221,9 @@ export function createRuntimeMemberProviderFactory(options: {
           observe: options.observe,
         });
         const promptSuggestions =
-          options.promptSuggestionsEnabled === true && options.onPromptSuggestion &&
-          (entry.profile.provider === 'claude' || entry.profile.provider === 'codex')
+          options.onPromptSuggestion &&
+          (entry.profile.provider === 'claude' || entry.profile.provider === 'codex') &&
+          options.promptSuggestionProviders?.includes(entry.profile.provider)
             ? createCapturedPromptSuggestionBinding({
                 entry,
                 isCurrent: authority.isCurrent,

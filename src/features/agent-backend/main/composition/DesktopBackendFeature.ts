@@ -55,7 +55,7 @@ import type {
   TeamRegistryRecord,
 } from '@agent-teams/legacy-agent-host/team-registry/contracts';
 import type { ApplicationCommandRunner } from '@features/application-command-ledger';
-import type { NativeNextPromptCandidate } from '@features/native-prompt-suggestions/contracts';
+import type { NativeNextPromptCandidate, NativeNextPromptProvider } from '@features/native-prompt-suggestions/contracts';
 import type { TeamCreateRequest } from '@shared/types/team';
 
 type InitializationPhase =
@@ -81,8 +81,8 @@ export interface DesktopBackendFeatureOptions {
   modelIntents?: TeamModelProbeIntents;
   /** Ephemeral, validated Host output; the Main shell owns IPC and HTTP publication. */
   onNativePromptSuggestion?: (value: NativeNextPromptCandidate) => void;
-  /** Immutable for each captured Host launch; global settings take effect on app restart. */
-  nativeNextPromptEnabled?: boolean;
+  /** Immutable for each captured Host launch; provider settings take effect on app restart. */
+  nativeNextPromptProviders?: readonly NativeNextPromptProvider[];
 }
 
 export class DesktopBackendFeature {
@@ -189,7 +189,7 @@ export class DesktopBackendFeature {
               raw, hostTeamSelectionKey(selected.handleId), selected.scope.teamId, selected.scope.runId
             );
             if (projected) this.options.onNativePromptSuggestion?.(projected);
-          }, this.options.nativeNextPromptEnabled === true),
+          }, this.options.nativeNextPromptProviders ?? []),
         };
         router.registerOwner(captured);
         this.clients.set(ownerKey(owner), captured);

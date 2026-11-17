@@ -362,6 +362,7 @@ export function useSettingsHandlers({
           anthropic: {
             authMode: 'auto',
             fastModeDefault: false,
+            nativeNextPromptSuggestionsEnabled: true,
             compatibleEndpoint: {
               enabled: false,
               baseUrl: '',
@@ -369,6 +370,7 @@ export function useSettingsHandlers({
           },
           codex: {
             preferredAuthMode: 'auto',
+            nativeNextPromptSuggestionsEnabled: true,
             customProvider: {
               enabled: false,
               baseUrl: '',

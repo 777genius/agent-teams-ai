@@ -27,6 +27,8 @@ import {
   validateHostProfile,
 } from './selectedHostProfile';
 
+import type { NativeNextPromptProvider } from '@features/native-prompt-suggestions/contracts';
+
 let startupProbeCount = 0;
 export const observeCapturedHostStartup = (
   phase:
@@ -116,7 +118,7 @@ export class CapturedHostClient {
   constructor(
     profile: SelectedHostProfile,
     private readonly onNativePromptSuggestion?: (value: unknown) => void,
-    private readonly capturedNativeNextPromptEnabled = false
+    private readonly capturedNativeNextPromptProviders: readonly NativeNextPromptProvider[] = []
   ) {
     this.profile = captureHostProfile(profile);
   }
@@ -139,7 +141,7 @@ export class CapturedHostClient {
           ...this.profile.env,
           // Only trusted Main captures this setting. It overrides any legacy
           // profile flag at process startup, never while a session is active.
-          AGENT_TEAMS_NATIVE_NEXT_PROMPT_ENABLED: this.capturedNativeNextPromptEnabled ? '1' : '0',
+          AGENT_TEAMS_NATIVE_NEXT_PROMPT_PROVIDERS: this.capturedNativeNextPromptProviders.join(','),
         },
         stdio: ['pipe', 'pipe', 'pipe'],
         windowsHide: true,

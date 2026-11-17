@@ -167,13 +167,16 @@ export async function prepareDesktopBackendFixture(
     'data',
   ])
     await mkdir(join(root, directory), { mode: 0o700 });
-  // Native suggestions are on by default in the product. Offline fixtures pin them off so unrelated
-  // proofs never make extra model requests; only the suggestion UI proof opts in.
+  // Native suggestions are on by default in the product. Offline fixtures pin both providers off so
+  // unrelated proofs never make extra model requests; only the suggestion UI proof opts in.
+  const suggestions = { nativeNextPromptSuggestionsEnabled: nativeNextPromptUi };
   await writeFile(
     join(root, 'claude/agent-teams-config.json'),
-    JSON.stringify({ general: {
-      ...(options.seedUiTask || options.seedUiPreferences ? { appLocale: 'en', agentLanguage: 'en', theme: 'dark' } : {}),
-      nativeNextPromptSuggestionsEnabled: nativeNextPromptUi } }),
+    JSON.stringify({
+      general: options.seedUiTask || options.seedUiPreferences
+        ? { appLocale: 'en', agentLanguage: 'en', theme: 'dark' } : {},
+      providerConnections: { anthropic: suggestions, codex: suggestions },
+    }),
     { mode: 0o600 }
   );
   // The outer and nested pnpm invocations use the same selected Corepack bytes
