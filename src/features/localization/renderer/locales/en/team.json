@@ -126,6 +126,7 @@
     }
   },
   "projectContextView": {
+    "modeChange": {"title":"Change team history mode?","description":"Stop the team first. Existing tasks, conversations and sessions remain where they are; histories are never combined or deleted.","confirm":"Change mode"},
     "loading": "Loading team project history…",
     "selectProject": "Select a project in the sidebar to view this team's tasks and chats.",
     "empty": "No tasks or conversations in this project yet. Start the team to create a separate history.",

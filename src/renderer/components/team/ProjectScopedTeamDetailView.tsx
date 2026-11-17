@@ -8,6 +8,7 @@ import { useShallow } from 'zustand/react/shallow';
 
 import { resolveTeamProjectSelection } from './teamProjectSelection';
 import { TeamDetailView } from './TeamDetailView';
+import { TeamHistoryModePicker } from './TeamHistoryModePicker';
 
 import type { TeamProjectContextView } from '@features/team-project-context/contracts';
 
@@ -176,12 +177,28 @@ export function ProjectScopedTeamDetailView({
 
   if (context?.state === 'ready') {
     if (context.mode === 'shared') {
-      return <TeamDetailView teamName={teamName} isActive={isActive} isPaneFocused={isPaneFocused} />;
+      return (
+        <div className="flex min-h-0 flex-1 flex-col">
+          <div className="border-b border-border px-4 py-2">
+            <TeamHistoryModePicker
+              teamName={teamName} mode="shared"
+              onChanged={() => refresh(() => activeKeyRef.current === key)}
+            />
+          </div>
+          <div className="flex min-h-0 flex-1">
+            <TeamDetailView teamName={teamName} isActive={isActive} isPaneFocused={isPaneFocused} />
+          </div>
+        </div>
+      );
     }
     return (
       <div className="flex min-h-0 flex-1 flex-col">
-        <div className="border-b border-border px-4 py-2 text-xs text-text-muted">
-          {logicalDisplayName} · {selectedProjectPath}
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border px-4 py-2 text-xs text-text-muted">
+          <span>{logicalDisplayName} · {selectedProjectPath}</span>
+          <TeamHistoryModePicker
+            teamName={teamName} mode="per_project"
+            onChanged={() => refresh(() => activeKeyRef.current === key)}
+          />
         </div>
         <div className="flex min-h-0 flex-1">
           <TeamDetailView
@@ -211,7 +228,16 @@ export function ProjectScopedTeamDetailView({
     (context?.state === 'empty' || context?.state === 'pending');
 
   return (
-    <div className="flex flex-1 flex-col items-center justify-center gap-3 p-6 text-center">
+    <div className="flex min-h-0 flex-1 flex-col">
+      {context && (
+        <div className="border-b border-border px-4 py-2">
+          <TeamHistoryModePicker
+            teamName={teamName} mode={context.mode}
+            onChanged={() => refresh(() => activeKeyRef.current === key)}
+          />
+        </div>
+      )}
+      <div className="flex flex-1 flex-col items-center justify-center gap-3 p-6 text-center">
       <h2 className="text-base font-semibold">{logicalDisplayName}</h2>
       <p className="max-w-lg text-sm text-text-muted" role={error ? 'alert' : 'status'}>
         {message}
@@ -226,6 +252,7 @@ export function ProjectScopedTeamDetailView({
           {t('projectContextView.retry')}
         </Button>
       )}
+      </div>
     </div>
   );
 }

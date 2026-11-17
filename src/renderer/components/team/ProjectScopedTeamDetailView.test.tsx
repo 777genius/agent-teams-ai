@@ -31,6 +31,9 @@ vi.mock('./TeamDetailView', () => ({
   TeamDetailView: ({ teamName }: { teamName: string }) =>
     React.createElement('div', { 'data-testid': 'team-detail', 'data-team': teamName }),
 }));
+vi.mock('./TeamHistoryModePicker', () => ({
+  TeamHistoryModePicker: () => React.createElement('div', { 'data-testid': 'mode-picker' }),
+}));
 
 import { ProjectScopedTeamDetailView } from './ProjectScopedTeamDetailView';
 
