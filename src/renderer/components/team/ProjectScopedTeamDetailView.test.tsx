@@ -2,7 +2,7 @@ import React, { act } from 'react';
 import { createRoot } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { state, getView, launchTeam } = vi.hoisted(() => {
+const { state, getView, launchTeam, openTeamTab } = vi.hoisted(() => {
   const state = {
     repositoryGroups: [],
     projects: [
@@ -17,11 +17,14 @@ const { state, getView, launchTeam } = vi.hoisted(() => {
       builders: { displayName: 'Builders' },
     },
   };
-  return { state, getView: vi.fn(), launchTeam: vi.fn() };
+  return { state, getView: vi.fn(), launchTeam: vi.fn(), openTeamTab: vi.fn() };
 });
 
 vi.mock('@renderer/store', () => ({
-  useStore: (selector: (store: typeof state) => unknown) => selector(state),
+  useStore: Object.assign(
+    (selector: (store: typeof state) => unknown) => selector(state),
+    { getState: () => ({ ...state, openTeamTab }) }
+  ),
 }));
 vi.mock('@renderer/api', () => ({ api: { teams: { getProjectContextView: getView, launchTeam, onProvisioningProgress: () => () => undefined } } }));
 vi.mock('@features/localization/renderer', () => ({
@@ -62,6 +65,7 @@ describe('ProjectScopedTeamDetailView project switching', () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     getView.mockReset();
     launchTeam.mockReset();
+    openTeamTab.mockReset();
     state.selectedProjectId = 'project-a';
     state.activeProjectId = 'project-a';
     host = document.createElement('div');
@@ -99,6 +103,21 @@ describe('ProjectScopedTeamDetailView project switching', () => {
     expect(host.querySelector('[data-team]')?.getAttribute('data-team')).toBe('ptc-a');
     expect(getView).toHaveBeenCalledWith('builders', '/TEST/a');
     expect(getView).toHaveBeenCalledWith('builders', '/TEST/b');
+  });
+
+  it('redirects physical runtime deep links to the verified logical team and project', async () => {
+    getView.mockResolvedValue({
+      mode: 'per_project',
+      state: 'redirect',
+      logicalTeamName: 'builders',
+      projectPath: '/TEST/a',
+    });
+    await act(async () => root.render(
+      React.createElement(ProjectScopedTeamDetailView, { teamName: 'ptc-a' })
+    ));
+    await settle();
+    expect(openTeamTab).toHaveBeenCalledWith('builders', '/TEST/a');
+    expect(host.querySelector('[data-team]')).toBeNull();
   });
 
   it('keeps the pre-feature shared team name unchanged', async () => {
