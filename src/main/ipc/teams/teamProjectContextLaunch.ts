@@ -67,3 +67,27 @@ export async function prepareTeamContextLaunch(
     throw error;
   }
 }
+
+/** Preserve physical runtime status for controllers; map only UI notifications. */
+export function buildTeamProgressReporter(
+  noteRuntime: (progress: TeamProvisioningProgress) => void,
+  sendToUi: (progress: TeamProvisioningProgress) => void,
+  mapper?: ProjectContextProgressMapper
+): (progress: TeamProvisioningProgress) => void {
+  return (progress) => {
+    noteRuntime(progress);
+    if (mapper) mapper(progress, sendToUi);
+    else sendToUi(progress);
+  };
+}
+
+/** Resolve only when needed, preserving the existing native launch path. */
+export async function withPreparedContextLaunch<T>(
+  request: TeamLaunchRequest,
+  ports: ProjectTeamRuntimePorts,
+  invoke: (request: TeamLaunchRequest, mapper?: ProjectContextProgressMapper) => Promise<T>
+): Promise<T | null> {
+  const selected = await prepareTeamContextLaunch(request, ports);
+  if (selected.request.teamName === request.teamName) return null;
+  return invoke(selected.request, selected.mapProgress);
+}

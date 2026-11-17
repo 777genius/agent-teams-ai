@@ -21,6 +21,9 @@ import { addMainBreadcrumb } from '@main/sentry';
 import { setCurrentMainOp } from '@main/services/infrastructure/EventLoopLagMonitor';
 import { markTeamEngaged } from '@main/services/infrastructure/teamWatchScope';
 import { createTeamWithProjectContext } from './teams/teamProjectContextCreate';
+import { buildTeamProgressReporter, withPreparedContextLaunch } from './teams/teamProjectContextLaunch';
+import { withTeamLaunchAdmission } from './teams/teamLaunchAdmission';
+import type { ProjectContextProgressMapper } from './teams/teamProjectContextLaunch';
 import { OpenCodeRetainedPrimaryRestartError } from '@main/services/team/provisioning/OpenCodeRetainedPrimaryRestartError';
 import {
   getTeamDataWorkerClient,
@@ -703,7 +706,11 @@ export function registerTeamHandlers(ipcMain: IpcMain): void {
   ipcMain.handle(TEAM_INITIALIZE_GIT_REPOSITORY, handleInitializeGitRepository);
   ipcMain.handle(TEAM_CREATE_INITIAL_GIT_COMMIT, handleCreateInitialGitCommit);
   ipcMain.handle(TEAM_CREATE, handleCreateTeam);
-  ipcMain.handle(TEAM_LAUNCH, handleLaunchTeam);
+  ipcMain.handle(TEAM_LAUNCH, (event, request) =>
+    withTeamLaunchAdmission(request, getTeamDataService(), () =>
+      handleLaunchTeamUnlocked(event, request)
+    )
+  );
   ipcMain.handle(TEAM_PROVISIONING_STATUS, handleProvisioningStatus);
   ipcMain.handle(TEAM_LAUNCH_FAILURE_DIAGNOSTICS, handleLaunchFailureDiagnostics);
   ipcMain.handle(TEAM_CANCEL_PROVISIONING, handleCancelProvisioning);
@@ -2093,29 +2100,20 @@ async function handleCreateTeam(
   });
 }
 
-async function handleLaunchTeam(
-  event: IpcMainInvokeEvent,
-  request: unknown
-): Promise<IpcResult<TeamLaunchResponse>> {
-  const name =
-    request && typeof request === 'object'
-      ? (request as Partial<TeamLaunchRequest>).teamName
-      : undefined;
-  const validation = validateTeamName(name);
-  if (!validation.valid) return { success: false, error: validation.error ?? 'Invalid teamName' };
-  return getTeamDataService().runConfigurationOperation(validation.value!, () =>
-    handleLaunchTeamUnlocked(event, request)
-  );
-}
-
 async function handleLaunchTeamUnlocked(
   event: IpcMainInvokeEvent,
-  request: unknown
+  request: unknown,
+  mapProgress?: ProjectContextProgressMapper
 ): Promise<IpcResult<TeamLaunchResponse>> {
   if (!request || typeof request !== 'object') {
     return { success: false, error: 'Invalid team launch request' };
   }
   const progressTargetWindow = BrowserWindow.fromWebContents(event.sender);
+  const reportProgress = buildTeamProgressReporter(
+    (p) => launchIoGovernor?.noteProvisioningProgress(p),
+    (p) => sendProvisioningProgress(progressTargetWindow, p),
+    mapProgress
+  );
 
   const payload = request as Partial<TeamLaunchRequest>;
   try {
@@ -2175,8 +2173,17 @@ async function handleLaunchTeamUnlocked(
     return { success: false, error: providerBackendValidation.error };
   }
 
-  // Redirect metadata-only drafts through createTeam so TeamCreate can run.
   const tn = validatedTeamName.value!;
+  try {
+    const rerouted = await withPreparedContextLaunch(
+      { ...payload, teamName: tn, cwd } as TeamLaunchRequest,
+      { data: getTeamDataService(), runtime: getTeamRuntimeApi(), run: getTeamProvisioningRunApi() },
+      (selected, mapper) => handleLaunchTeamUnlocked(event, selected, mapper)
+    );
+    if (rerouted) return rerouted;
+  } catch (error) {
+    return teamReadFailureResult(error);
+  }
   const configPath = path.join(getTeamsBasePath(), tn, 'config.json');
   let isDraft = false;
   try {
@@ -2287,10 +2294,7 @@ async function handleLaunchTeamUnlocked(
       markTeamEngaged(tn);
       try {
         const create = (): Promise<TeamCreateResponse> =>
-          getTeamProvisioningStartApi().createTeam(createRequest, (progress) => {
-            launchIoGovernor?.noteProvisioningProgress(progress);
-            sendProvisioningProgress(progressTargetWindow, progress);
-          });
+          getTeamProvisioningStartApi().createTeam(createRequest, reportProgress);
         const response = teamBackupService
           ? await teamBackupService.withTeamIdentityFence(tn, create)
           : await create();
@@ -2398,10 +2402,7 @@ async function handleLaunchTeamUnlocked(
             typeof payload.worktree === 'string' ? payload.worktree.trim() || undefined : undefined,
           extraCliArgs: extraCliArgs.value,
         },
-        (progress) => {
-          launchIoGovernor?.noteProvisioningProgress(progress);
-          sendProvisioningProgress(progressTargetWindow, progress);
-        }
+        reportProgress
       );
       invalidateTeamRosterSnapshotCaches(validatedTeamName.value!);
       return response;
