@@ -1,4 +1,5 @@
 import { spawnSync } from 'node:child_process';
+import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { BACKPORTS, installedBackportPackages, verifyBackport } from './transitive-security.ts';
@@ -25,8 +26,40 @@ function advisoryId(value) {
   return fromUrl;
 }
 
-// Exceptions require exact advisories/packages AND independently verified installed code.
-export function assessAuditReport(report, { npm = false, backported = [] } = {}) {
+const ACCEPTED_RISKS_FILE = new URL('./audit-accepted-risks.json', import.meta.url);
+// Time-boxed acceptances for advisories that have no patched release yet. Each entry names the
+// exact advisory, package and installed versions, so a new advisory, a new package or a new
+// version still fails the audit; an expired entry stops applying and the audit fails again.
+export function loadAcceptedRisks({ now = new Date(), file = ACCEPTED_RISKS_FILE } = {}) {
+  const entries = JSON.parse(readFileSync(file, 'utf8'));
+  assert(Array.isArray(entries), 'accepted risks must be a list');
+  const active = [];
+  for (const entry of entries) {
+    assert(object(entry), 'malformed accepted risk');
+    assert(/^GHSA(-[a-z0-9]{4}){3}$/.test(entry.advisory), 'accepted risk needs a GHSA id');
+    assert(typeof entry.package === 'string' && entry.package, 'accepted risk needs a package');
+    assert(
+      Array.isArray(entry.versions) &&
+        entry.versions.length > 0 &&
+        entry.versions.every((version) => typeof version === 'string' && /^\d/.test(version)),
+      'accepted risk needs exact versions'
+    );
+    assert(/^\d{4}-\d{2}-\d{2}$/.test(entry.expires), 'accepted risk needs an expires date');
+    assert(
+      typeof entry.reason === 'string' && entry.reason.length > 20,
+      'accepted risk needs a reason'
+    );
+    const end = Date.parse(`${entry.expires}T23:59:59Z`);
+    assert(Number.isFinite(end), 'accepted risk has an invalid expires date');
+    if (now.getTime() <= end) active.push(entry);
+    else console.error(`Accepted risk ${entry.advisory} expired on ${entry.expires}`);
+  }
+  return active;
+}
+
+// Exceptions require exact advisories/packages AND independently verified installed code,
+// or an unexpired accepted risk that names the advisory, package and every installed version.
+export function assessAuditReport(report, { npm = false, backported = [], accepted = [] } = {}) {
   assert(object(report) && !report.error && !report.errors, 'error or missing report');
   const entries = npm ? report.vulnerabilities : report.advisories;
   assert(object(entries), 'missing vulnerability map');
@@ -84,6 +117,17 @@ export function assessAuditReport(report, { npm = false, backported = [] } = {})
     const allowed =
       high.length > 0 &&
       high.every((item) => {
+        const risk = accepted.find((candidate) => candidate.advisory === advisoryId(item));
+        // pnpm reports every installed version; npm does not, so npm never takes this path.
+        if (
+          risk &&
+          !npm &&
+          item.module_name === risk.package &&
+          Array.isArray(item.findings) &&
+          item.findings.length > 0 &&
+          item.findings.every((finding) => risk.versions.includes(finding.version))
+        )
+          return true;
         const spec = BACKPORTS.find((candidate) => candidate.advisory === advisoryId(item));
         if (!spec || !backported.includes(spec.name)) return false;
         if (npm) return item.name === spec.name && item.dependency === spec.name;
@@ -143,16 +187,22 @@ export function auditDependencies({ npm = false, cwd = process.cwd() } = {}) {
     for (const target of targets) verifyBackport(spec.name, target);
     backported.push(spec.name);
   }
-  const assessed = assessAuditReport(report, { npm, backported });
+  const accepted = loadAcceptedRisks();
+  const assessed = assessAuditReport(report, { npm, backported, accepted });
   // Retain the full raw report so advisories below the chosen threshold remain visible.
   process.stdout.write(`${JSON.stringify(report, null, 2)}\n`);
   if (assessed.excepted.length) {
     const advisories = BACKPORTS.filter((spec) => backported.includes(spec.name)).map(
       (spec) => spec.advisory
     );
-    console.log(
-      `Verified local security backports: ${advisories.join(', ')} (${assessed.excepted.join(', ')})`
-    );
+    if (advisories.length)
+      console.log(
+        `Verified local security backports: ${advisories.join(', ')} (${assessed.excepted.join(', ')})`
+      );
+    for (const risk of accepted)
+      console.log(
+        `Accepted risk until ${risk.expires}: ${risk.advisory} (${risk.package} ${risk.versions.join(', ')})`
+      );
   }
   if (assessed.blocked.length)
     throw new Error(`Unresolved HIGH/CRITICAL vulnerabilities: ${assessed.blocked.join(', ')}`);
