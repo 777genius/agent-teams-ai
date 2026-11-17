@@ -2803,6 +2803,11 @@ export default interface Resources {
           "label": "Show dock icon"
         },
         "title": "Startup"
+      },
+      "nativeNextPrompt": {
+        "description": "Uses extra Claude or Codex model requests. Applies to new teammate sessions after restarting Agent Teams.",
+        "label": "Suggest a next message",
+        "title": "Next-message suggestions"
       }
     },
     "notificationTriggers": {
@@ -5198,6 +5203,11 @@ export default interface Resources {
         "online": "online",
         "onlineTitle": "Online",
         "thisTeam": "This team"
+      },
+      "suggestions": {
+        "dismiss": "Dismiss suggestion",
+        "insert": "Insert",
+        "tab": "Tab"
       }
     },
     "messages": {

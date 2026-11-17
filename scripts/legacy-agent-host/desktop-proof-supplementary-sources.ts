@@ -1,3 +1,5 @@
+import { desktopNativeNextPromptSources } from './desktop-native-next-prompt-sources.ts';
+
 /** Existing finite process proof closure; spread at its original roster position. */
 export const desktopProofProcessSources = [
   'src/main/bootstrapStandardOutput.ts',
@@ -301,6 +303,12 @@ export const desktopProofSupplementarySources = [
   'test/renderer/features/runtime-provider-management/RuntimeProviderManagementPanelView.test.ts',
   'test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts',
   'src/renderer/utils/teamModelAvailability.ts',
+  ...desktopNativeNextPromptSources,
+  'packages/legacy-agent-host/src/composition/teamHostProfile.ts',
+  'src/features/agent-backend/main/infrastructure/CapturedHostNotificationBuffer.ts',
+  'src/features/agent-backend/main/composition/captureHostPromptSuggestions.ts',
+  'src/features/native-prompt-suggestions/main/index.ts',
+  'test/features/agent-backend/recoverCapturedHost.test.ts',
 ];
 
 /** Exact finite Windows same-Main recovery and original Processes UI construction inputs. */

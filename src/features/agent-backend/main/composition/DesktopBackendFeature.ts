@@ -35,6 +35,7 @@ import { type CapturedConnectionUnavailable, readCapturedConnectionAvailability,
   readCapturedOwnerAvailability } from '../infrastructure/readCapturedConnectionAvailability';
 import { CapturedStoppedTeamImport } from '../infrastructure/stopped-import/CapturedStoppedTeamImport';
 
+import { captureHostPromptSuggestions } from './captureHostPromptSuggestions';
 import { recoverCapturedHost } from './recoverCapturedHost';
 
 import type { BackendHandle } from '../../contracts';
@@ -58,6 +59,7 @@ import type {
   TeamRegistryRecord,
 } from '@agent-teams/legacy-agent-host/team-registry/contracts';
 import type { ApplicationCommandRunner } from '@features/application-command-ledger';
+import type { NativeNextPromptCandidate } from '@features/native-prompt-suggestions/contracts';
 import type { TeamCreateRequest } from '@shared/types/team';
 
 type InitializationPhase =
@@ -81,6 +83,10 @@ export interface DesktopBackendFeatureOptions {
   /** Existing durable Main ledger is supplied before renderer work admission. */
   commandRunner?: () => ApplicationCommandRunner | null;
   modelIntents?: TeamModelProbeIntents;
+  /** Ephemeral validated Host output; Main owns IPC/HTTP publication. */
+  onNativePromptSuggestion?: (value: NativeNextPromptCandidate) => void;
+  /** Captured at application composition, including explicit Host recovery. */
+  nativeNextPromptEnabled?: boolean;
 }
 
 export class DesktopBackendFeature {
@@ -96,6 +102,7 @@ export class DesktopBackendFeature {
   private readonly retiredHandles = new Set<string>();
   private readonly registryReads = new Map<string, Promise<CapturedConnectionUnavailable[]>>();
   private readonly creationChecks = new ForegroundModelChecks();
+  private readonly hostClientOptions: ReturnType<typeof captureHostPromptSuggestions>;
 
   constructor(private readonly options: DesktopBackendFeatureOptions) {
     // Selection is captured before any asynchronous access; callers cannot swap its path/hash.
@@ -103,6 +110,13 @@ export class DesktopBackendFeature {
       ...options,
       descriptor: options.descriptor ? Object.freeze({ ...options.descriptor }) : null,
     };
+    this.hostClientOptions = captureHostPromptSuggestions({
+      definitions: () => this.handleDefinitions(),
+      currentClient: key => this.clients.get(key)?.client,
+      isCurrent: () => !this.sealed && this.state === 'ready',
+      publish: this.options.onNativePromptSuggestion,
+      enabled: this.options.nativeNextPromptEnabled === true,
+    });
     this.store = options.bindings ?? new FileHandleBindingStore(options.bindingDirectory);
     const target = async (
       handle: BackendHandle,
@@ -149,6 +163,7 @@ export class DesktopBackendFeature {
         selection: this.options.descriptor, descriptor: () => this.descriptor,
         router: () => this.router, definitions: () => this.handleDefinitions(), clients: this.clients,
         isCurrent: () => !this.sealed && this.state === 'ready',
+        clientOptions: this.hostClientOptions,
       })
     );
   }
@@ -177,7 +192,9 @@ export class DesktopBackendFeature {
           ownerId: owner.ownerId,
           revision: owner.revision,
           storageRoot: owner.storageRoot,
-          client: new CapturedHostClient(owner.profile, nativeCustody),
+          client: new CapturedHostClient(
+            owner.profile, nativeCustody, undefined, this.hostClientOptions(owner)
+          ),
           ...(nativeCustody ? { nativeCustody } : {}),
         };
         router.registerOwner(captured);

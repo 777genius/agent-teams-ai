@@ -4,7 +4,6 @@ import { TextDecoder } from 'node:util';
 
 import {
   DEFAULT_HOST_LIMITS,
-  HOST_GAP_METHOD,
   HOST_PROTOCOL_VERSION,
   type HostHandshake,
   type HostLimits,
@@ -43,6 +42,7 @@ import { resolveElectronNodeLaunch } from '@main/utils/electronNodeLaunch';
 import { observeLinuxChildLaunchFailure, remainingLinuxChildLaunchTime, spawnWithLinuxChildLaunch } from '@main/utils/linuxChildLaunch';
 import { createLogger } from '@shared/utils/logger';
 
+import { CapturedHostNotificationBuffer } from './CapturedHostNotificationBuffer';
 import { decodeClaudeCloseDiagnostics } from './decodeClaudeCloseDiagnostics';
 import {
   capturedHostProfileDigest,
@@ -99,6 +99,11 @@ interface PendingRequest {
   timer: ReturnType<typeof setTimeout>;
 }
 
+export interface CapturedHostClientOptions {
+  readonly onNativePromptSuggestion?: (value: unknown, source: CapturedHostClient) => void;
+  readonly nativeNextPromptEnabled?: boolean;
+}
+
 export interface CapturedHostShutdown {
   /** Only this captured child is observed; provider custody is never inferred. */
   childExit: 'confirmed' | 'unknown';
@@ -124,9 +129,8 @@ export class CapturedHostClient {
   private pending = new Map<string, PendingRequest>();
   private frame = Buffer.alloc(0);
   private frameBytes = 0;
-  private notifications: RpcNotification[] = [];
-  private notificationBytes = 0;
-  private notificationGap = false;
+  private readonly notifications: CapturedHostNotificationBuffer;
+  private readonly capturedNativeNextPromptEnabled: boolean;
   private writeBytes = 0;
   private writeCount = 0;
   private writeTimers = new Set<ReturnType<typeof setTimeout>>();
@@ -161,9 +165,15 @@ export class CapturedHostClient {
   constructor(
     profile: SelectedHostProfile,
     private readonly nativeOwner?: HostCustodyOwner,
-    private readonly startupRemainingMs?: () => number
+    private readonly startupRemainingMs?: () => number,
+    promptOptions: CapturedHostClientOptions = {}
   ) {
     this.profile = captureHostProfile(profile);
+    this.capturedNativeNextPromptEnabled = promptOptions.nativeNextPromptEnabled === true;
+    const onNativePromptSuggestion = promptOptions.onNativePromptSuggestion;
+    this.notifications = new CapturedHostNotificationBuffer(
+      onNativePromptSuggestion ? raw => onNativePromptSuggestion(raw, this) : undefined
+    );
   }
 
   recoveryState(owner: HostCustodyOwner): 'ready' | 'closed' | 'held' {
@@ -188,7 +198,11 @@ export class CapturedHostClient {
       remainingHostStartup(this.profile, this.startupRemainingMs);
       const child = spawnWithLinuxChildLaunch(launch.command, launch.args, {
         cwd: this.profile.cwd,
-        env: { ...this.profile.env },
+        env: {
+          ...this.profile.env,
+          // Trusted Main captures this value once, including explicit recovery.
+          AGENT_TEAMS_NATIVE_NEXT_PROMPT_ENABLED: this.capturedNativeNextPromptEnabled ? '1' : '0',
+        },
         stdio: ['pipe', 'pipe', 'pipe'],
         windowsHide: true,
       });
@@ -685,18 +699,7 @@ export class CapturedHostClient {
       } else {
         if (typeof message.method !== 'string' || !('params' in message))
           throw new Error('notification');
-        if (message.method === HOST_GAP_METHOD) this.notificationGap = true;
-        else if (
-          this.notifications.length >= this.limits.maxDataNotifications ||
-          this.notificationBytes + frame.length > this.limits.maxDataBytes
-        ) {
-          this.notifications = [];
-          this.notificationBytes = 0;
-          this.notificationGap = true;
-        } else {
-          this.notifications.push(message as unknown as RpcNotification);
-          this.notificationBytes += frame.length;
-        }
+        this.notifications.receive(message as unknown as RpcNotification, frame.length, this.limits);
       }
       return true;
     } catch {
@@ -707,11 +710,7 @@ export class CapturedHostClient {
 
   /** Pulling keeps slow UI work out of provider response/control processing. */
   takeNotifications(): { notifications: RpcNotification[]; gap: boolean } {
-    const result = { notifications: this.notifications, gap: this.notificationGap };
-    this.notifications = [];
-    this.notificationBytes = 0;
-    this.notificationGap = false;
-    return result;
+    return this.notifications.take();
   }
 
   private fail(error: HostClientError): void {

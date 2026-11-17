@@ -1747,6 +1747,10 @@ async function initializeServices(): Promise<void> {
   initializeAgentBackendConnection(contextRegistry, {
     getMainWindow: () => mainWindow,
     rendererIndexPath: resolveRendererIndexPath(__dirname),
+    nativeNextPromptEnabled: configManager.getConfig().general.nativeNextPromptSuggestionsEnabled === true,
+    // Fail closed for browser SSE: /api/events broadcasts to every connected
+    // client without per-owner authorization. Never publish private human-DM
+    // follow-ups there until a scoped authenticated SSE transport exists.
   });
   // An inherited endpoint belongs to a previous process, not this Host's server.
   await startupStage(clearTeamControlApiState);

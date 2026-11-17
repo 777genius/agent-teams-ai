@@ -1,10 +1,10 @@
 import { assertBackendRequestGuard, BackendRoutingError, ownerKey } from '../application/backendBinding';
-import { CapturedHostClient } from '../infrastructure/CapturedHostClient';
+import { CapturedHostClient, type CapturedHostClientOptions } from '../infrastructure/CapturedHostClient';
 import { readMainWindowsCustodySource } from '../infrastructure/CapturedWindowsCustody';
 import { loadDesktopBackendDescriptor } from '../infrastructure/loadDesktopBackendDescriptor';
 
 import type { BackendHostRecoveryRequest, BackendHostRecoveryResult } from '../../contracts/operations';
-import type { BackendRequestGuard } from '../application/backendBinding';
+import type { BackendOwnerRef, BackendRequestGuard } from '../application/backendBinding';
 import type { BackendOwnerRouter, CapturedBackendOwner } from '../application/BackendOwnerRouter';
 import type {
   DesktopBackendDescriptor,
@@ -18,6 +18,7 @@ interface CapturedHostRecoveryComposition {
   definitions(): readonly DesktopBackendDescriptor['handles'][number][];
   clients: Map<string, CapturedBackendOwner>;
   isCurrent(): boolean;
+  clientOptions(owner: BackendOwnerRef): CapturedHostClientOptions;
 }
 
 /** No initialization or automatic start: only the original explicit recovery conversation. */
@@ -43,6 +44,7 @@ export async function recoverCapturedHost(
   if (!owner || JSON.stringify(owner.profile) !== JSON.stringify(profile) ||
     owner.storageRoot !== original.storageRoot)
     throw new BackendRoutingError('hold');
+  const promptOptions = options.clientOptions(definition.owner);
   let selected = original;
   const isCurrent = (client: CapturedHostClient) => {
     const definitions = options.definitions().filter(row => row.handleId === request.handle.handleId);
@@ -64,7 +66,7 @@ export async function recoverCapturedHost(
         throw new BackendRoutingError('hold');
       assertCurrent();
     },
-    create: remaining => new CapturedHostClient(profile, nativeCustody, remaining),
+    create: remaining => new CapturedHostClient(profile, nativeCustody, remaining, promptOptions),
     install(previous, candidate) {
       assertBackendRequestGuard(guard);
       if (!isCurrent(previous)) throw new BackendRoutingError('hold');

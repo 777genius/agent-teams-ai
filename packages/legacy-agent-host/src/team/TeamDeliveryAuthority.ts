@@ -2,10 +2,12 @@ import { assertGroupOriginal } from '../group-chats/groupDelivery.js';
 import { assertTeamExecutionAllowed, teamExecutionAllowed } from './teamLifecycleAdmission.js';
 import { TeamOwnerError } from './contracts.js';
 import { digest, safeSegment } from './identity.js';
+import { verifiedHumanDirectSuggestionSource } from './verifiedHumanDirectSuggestionSource.js';
 import { deliveryIdentity, memberBinding } from './DeliveryRecovery.js';
 import { readProductCommand } from './commandEntries.js';
 import { formatTeamMessage } from './formatTeamMessage.js';
 import type { TeamStore, TeamRuntimeBindings } from './ports.js';
+import type { JsonValue } from '../contracts.js';
 import type { OwnerState } from './ownerState.js';
 import type { TaskRecovery } from './TaskRecovery.js';
 import type {
@@ -37,6 +39,8 @@ export function authorizeTeamGrant(
 export function createTeamDeliveryAuthority(options: {
   binding: TeamBinding;
   store: TeamStore;
+  /** Original inbox reader remains Team-owned; no second message ledger. */
+  readInbox?: (memberName: string) => JsonValue[];
   state(): OwnerState;
   authorize(principalId: string, permission: 'read' | 'message.write'): TeamGrant;
   runtimeBindings?: TeamRuntimeBindings | undefined;
@@ -238,6 +242,34 @@ export function createTeamDeliveryAuthority(options: {
     }
   }
 
+  /** Trusted Host-only read, fully fenced on original saved Team/Runtime delivery facts. */
+  function isOriginalHumanDirect(raw: ImmutableDelivery): boolean {
+    return options.store.fenced(() => {
+      try {
+        if (!options.readInbox) return false;
+        safeSegment(raw.deliveryId);
+        const intent = options.store.read<DeliveryIntent>(`outbox/${raw.deliveryId}.json`);
+        if (
+          !intent ||
+          digest(deliveryIdentity(raw)) !== digest(deliveryIdentity(intent)) ||
+          !deliveryAuthorized(intent)
+        ) return false;
+        const members = options.state().members;
+        const member = members.find((item) => item.memberId === intent.binding.memberId);
+        if (!member) return false;
+        return verifiedHumanDirectSuggestionSource({
+          intent,
+          receipt: readProductCommand(options.store, intent.commandId),
+          grant: options.authorize(intent.principalId, 'read'),
+          members,
+          inbox: options.readInbox(member.name),
+        }) !== null;
+      } catch {
+        return false;
+      }
+    });
+  }
+
   function crossTeamOriginalAuthorized(intent: CapturedCrossTeamIntent): boolean {
     try {
       return options.crossTeamSourceAuthority?.(intent) === true;
@@ -249,6 +281,7 @@ export function createTeamDeliveryAuthority(options: {
     runtimeAccess,
     authorizeMember,
     authorizeIntent,
+    isOriginalHumanDirect,
     /** Only TeamOwner's closed synchronous operation supplies this fresh full state. */
     providerAuthorized: (state: OwnerState, grant: TeamGrant, binding: RuntimeMemberBinding) =>
       memberAuthorizedInState(state, binding, 'dispatch') &&

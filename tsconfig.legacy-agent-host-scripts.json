@@ -11,6 +11,7 @@
   },
   "include": [
     "scripts/legacy-agent-host/**/*.ts",
+    "scripts/legacy-agent-host/verify-native-suggestions-adopted-pin.mts",
     "scripts/ci/prefill-legacy-host-macos-node.mts",
     "packages/legacy-agent-host/scripts/buildLinuxProcessNativeArtifact.ts",
     "packages/legacy-agent-host/scripts/qualifyLinuxProcessNative.ts",

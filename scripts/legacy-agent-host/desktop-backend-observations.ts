@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 import { closeSync, constants, openSync, readlinkSync, readSync } from 'node:fs';
-import { readdir } from 'node:fs/promises';
+import { readdir, realpath } from 'node:fs/promises';
 import { createConnection } from 'node:net';
 import { basename, join } from 'node:path';
 import { fileDigest } from './desktop-backend-fixture.ts';
@@ -14,6 +14,27 @@ export interface ProcessIdentity {
 }
 export const selectedCdpPort = Number(process.env.LEGACY_DESKTOP_CDP_PORT ?? 9222);
 assert.ok(Number.isInteger(selectedCdpPort) && selectedCdpPort >= 1024 && selectedCdpPort <= 65535);
+
+/** The original captured runtime identity checks, shared by every Desktop proof mode. */
+export async function assertDesktopRuntimePins(fixture: {
+  node: string; pins: { nodeSha256: string; hostEntrySha256: string;
+    corepackPackageSha256: string; corepackLibrarySha256: string };
+}, pnpm: string): Promise<string> {
+  const pnpmSha256 = await fileDigest(pnpm);
+  const selectedNode = await realpath(process.execPath);
+  assert.equal(selectedNode, fixture.node, 'harness runs with the captured standalone Node');
+  for (const [actual, expected] of [
+    [fixture.pins.nodeSha256, process.env.LEGACY_DESKTOP_NODE_SHA256],
+    [fixture.pins.hostEntrySha256, process.env.LEGACY_DESKTOP_HOST_ENTRY_SHA256],
+    [pnpmSha256, process.env.LEGACY_DESKTOP_PNPM_SHA256],
+    [fixture.pins.corepackPackageSha256, process.env.LEGACY_DESKTOP_COREPACK_PACKAGE_SHA256],
+    [fixture.pins.corepackLibrarySha256, process.env.LEGACY_DESKTOP_COREPACK_LIBRARY_SHA256],
+  ]) {
+    assert.match(expected ?? '', /^[a-f0-9]{64}$/);
+    assert.equal(actual, expected);
+  }
+  return pnpmSha256;
+}
 /** Preserve explicit TEST admission before even probing the selected renderer port. */
 export function assertDesktopProofEnvironment(linuxModeAllowed: boolean): void {
   assert.equal(process.env.LEGACY_DESKTOP_BACKEND_GO, '1', 'root must authorize actual pnpm dev:mcp launch');

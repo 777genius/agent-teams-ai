@@ -34,6 +34,7 @@ export function assertSafeRuntimeProjection(value: unknown): void {
         'diagnostic',
         'attachmentCapabilities',
         'sessionCommands',
+        'nativePromptCurrent', // read-only boolean; no original operation ref exposure
       ].includes(key)
     ),
     'runtime RPC exposes only its explicit safe projection'
@@ -45,6 +46,8 @@ export function assertSafeRuntimeProjection(value: unknown): void {
         Object.keys(input).every((key) => ['inputId', 'phase', 'terminal'].includes(key))
       )
   );
+  if (Object.hasOwn(safe, 'nativePromptCurrent'))
+    assert.equal(typeof safe.nativePromptCurrent, 'boolean');
   if (Object.hasOwn(safe, 'attachmentCapabilities')) {
     const capabilities = record(safe.attachmentCapabilities);
     assert.deepEqual(Object.keys(capabilities).sort(), ['documents', 'images', 'textFiles']);

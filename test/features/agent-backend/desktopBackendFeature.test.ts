@@ -1119,3 +1119,125 @@ it('native health starts only the granted default owner and reports actual hands
     code: 'ENOENT',
   });
 });
+
+
+type CapturedTestPrompt = Parameters<NonNullable<
+  ConstructorParameters<typeof DesktopBackendFeature>[0]['onNativePromptSuggestion']
+>>[0];
+
+function originalPrompt(teamId: string) {
+  return { provider: 'codex', teamId, runId: 'run-1', memberId: 'member-1', memberName: 'Worker',
+    generation: 'gen-1', suggestionId: 'TEST-suggestion', messageId: 'TEST-message',
+    inputId: 'TEST-input', operationRef: 'TEST-operation', completedTurnRef: 'TEST-turn',
+    text: 'Review the original changes' };
+}
+
+it('wires actual initial Host prompts through captured settings and the selected owner projection', async () => {
+  const setup = await fixture();
+  const owners = await Promise.all(setup.descriptor.owners.map(async owner => {
+    const original = await readFile(owner.profile.hostEntry, 'utf8');
+    const marker = "'team.execute': { lane:'work', handle: (request) => {";
+    expect(original.split(marker)).toHaveLength(2);
+    const candidate = originalPrompt(`team-${owner.ownerId}`);
+    const foreign = originalPrompt(`team-${owner.ownerId === 'A' ? 'B' : 'A'}`);
+    const rows = [null, [], { ...candidate, runId: 'foreign-run' }, foreign,
+      { ...candidate, memberId: 'foreign-member' }, { ...candidate, provider: 'opencode' },
+      { ...candidate, inputId: '' }, candidate];
+    const source = original.replace(marker, `${marker}
+      for (const row of ${JSON.stringify(rows)}) server.notifyData('runtime.prompt-suggestion.updated', row);
+      writeFileSync(${JSON.stringify(join(owner.storageRoot, 'prompt-enabled'))},
+        process.env.AGENT_TEAMS_NATIVE_NEXT_PROMPT_ENABLED);
+    `);
+    await writeFile(owner.profile.hostEntry, source);
+    return { ...owner, profile: { ...owner.profile,
+      env: { ...owner.profile.env, AGENT_TEAMS_NATIVE_NEXT_PROMPT_ENABLED: '0' },
+      hostEntrySha256: createHash('sha256').update(source).digest('hex') } };
+  }));
+  const published: CapturedTestPrompt[] = [];
+  const replaced = vi.fn();
+  const options: ConstructorParameters<typeof DesktopBackendFeature>[0] = {
+    descriptor: await selected({ ...setup.descriptor, owners }),
+    bindingDirectory: setup.bindingDirectory,
+    nativeNextPromptEnabled: true,
+    onNativePromptSuggestion: value => { published.push(value); },
+  };
+  const desktop = feature(options);
+  Object.assign(options, { nativeNextPromptEnabled: false, onNativePromptSuggestion: replaced });
+  await desktop.initialize();
+  for (const owner of owners) {
+    expect(await desktop.facade.invoke(request(`opaque-${owner.ownerId}`, `TEST-prompt-${owner.ownerId}`)))
+      .toMatchObject({ ok: true });
+    await vi.waitFor(() => {
+      expect(published.filter(row => row.teamId === `team-${owner.ownerId}`)).toHaveLength(1);
+    });
+    expect(await readFile(join(owner.storageRoot, 'prompt-enabled'), 'utf8')).toBe('1');
+  }
+  expect(published.map(row => ({ ownerHandle: row.ownerHandle, teamId: row.teamId,
+    runId: row.runId, memberId: row.memberId, conversationRef: row.conversationRef }))).toEqual([
+    { ownerHandle: hostTeamSelectionKey('opaque-A'), teamId: 'team-A', runId: 'run-1',
+      memberId: 'member-1', conversationRef: 'direct:worker' },
+    { ownerHandle: hostTeamSelectionKey('opaque-B'), teamId: 'team-B', runId: 'run-1',
+      memberId: 'member-1', conversationRef: 'direct:worker' },
+  ]);
+  expect(published.every(Object.isFrozen)).toBe(true);
+  expect(replaced).not.toHaveBeenCalled();
+});
+
+it('binds prompt publication to the current client, original roster and one matching handle', async () => {
+  const { captureHostPromptSuggestions } = await import(
+    '../../../src/features/agent-backend/main/composition/captureHostPromptSuggestions'
+  );
+  const { CapturedHostClient } = await import('../../../src/features/agent-backend/main');
+  const { ownerKey } = await import('../../../src/features/agent-backend/main/application/backendBinding');
+  const setup = await fixture();
+  const owner = setup.descriptor.owners[0]!;
+  const original = new CapturedHostClient(owner.profile);
+  const successor = new CapturedHostClient(owner.profile);
+  const handle = setup.descriptor.handles[0]!;
+  let definitions: DesktopBackendDescriptor['handles'] = [handle];
+  let current: typeof original | undefined = original;
+  let ready = true;
+  const published: CapturedTestPrompt[] = [];
+  const replacement = vi.fn();
+  const input = {
+    definitions: () => definitions,
+    currentClient: (key: string) => key === ownerKey(owner) ? current : undefined,
+    isCurrent: () => ready,
+    publish: (value: CapturedTestPrompt) => { published.push(value); },
+    enabled: true,
+  };
+  const optionsFor = captureHostPromptSuggestions(input);
+  const originalOptions = optionsFor(owner);
+  Object.assign(input, { publish: replacement, enabled: false });
+  const nextOptions = optionsFor(owner);
+  const oldSink = originalOptions.onNativePromptSuggestion;
+  const nextSink = nextOptions.onNativePromptSuggestion;
+  if (!oldSink || !nextSink) throw new Error('TEST captured prompt sink missing');
+  const candidate = originalPrompt('team-A');
+  expect(originalOptions.nativeNextPromptEnabled).toBe(true);
+  expect(nextOptions.nativeNextPromptEnabled).toBe(true);
+  oldSink(candidate, original);
+  expect(published).toHaveLength(1);
+  definitions = [handle, handle];
+  oldSink(candidate, original);
+  expect(published).toHaveLength(2);
+  definitions = [handle, { ...handle, handleId: 'opaque-second-A' }];
+  oldSink(candidate, original);
+  definitions = [{ ...handle, members: [] }];
+  oldSink(candidate, original);
+  definitions = [handle];
+  current = successor;
+  oldSink(candidate, original);
+  expect(published).toHaveLength(2);
+  nextSink(candidate, successor);
+  expect(published).toHaveLength(3);
+  ready = false;
+  nextSink(candidate, successor);
+  ready = true;
+  current = undefined;
+  nextSink(candidate, successor);
+  expect(published).toHaveLength(3);
+  expect(replacement).not.toHaveBeenCalled();
+  expect((await original.shutdown()).childExit).toBe('confirmed');
+  expect((await successor.shutdown()).childExit).toBe('confirmed');
+});

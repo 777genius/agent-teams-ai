@@ -13,7 +13,7 @@ import { TeamOwnerStore } from '../adapters/team/TeamOwnerStore.js';
 import { admitTeamNamespace } from '../adapters/team/admitTeamNamespace.js';
 import { createRuntimeHostMethods } from './createRuntimeHostMethods.js';
 import { createHostCrossTeamComposition } from './createHostCrossTeamComposition.js';
-import { createProcessCustody, processCustodyProfileSchema } from './processCustody.js';
+import { createProcessCustody } from './processCustody.js';
 import { HostWindowsLaunch } from '../owned-process/HostWindowsLaunch.js';
 import { HOST_CUSTODY_LAUNCH_MS } from '../owned-process/hostCustody.js';
 import { createTeamProcessComposition } from './createTeamProcessComposition.js';
@@ -34,16 +34,17 @@ import { TEAM_HOST_DISPOSE_TIMEOUT_MS } from '../contracts.js';
 import { TeamOwnerError } from '../team/contracts.js';
 import { RuntimeOwnerError } from '../runtime/contracts.js';
 import { TeamLaunchError } from '../team-launch/contracts.js';
-import { runtimeProfileSchema } from './runtimeProfile.js';
 import { RuntimeTeamCoordinator } from './RuntimeTeamCoordinator.js';
+import type { CapturedPromptSuggestionNotice } from './createCapturedPromptSuggestionBinding.js';
 import { hasRetainedTeamRuntime } from './RuntimeTeamCaptures.js';
-import { providerManagementProfileSchema } from '../management/profile.js';
 import type { ProviderManagementCoordinator } from './ProviderManagementCoordinator.js';
 import { assertAccountNamespaces } from './assertAccountNamespaces.js';
 import { ManagementCommandError } from '../management/commandRecords.js';
 import { executeTeamModelProbe } from './teamLaunchModelProbe.js';
 import { replaceRosterPayloadSchema } from '../team/rosterSchema.js';
 import { CreateTeamLaunchCoordinator } from './CreateTeamLaunchCoordinator.js';
+import { teamHostProfileSchema } from './teamHostProfile.js';
+import type { TeamHostProfile } from './teamHostProfile.js';
 
 import type { HostMethod, HostServer, HostServerOptions } from '../index.js';
 import type { JsonValue } from '../contracts.js';
@@ -52,29 +53,11 @@ import type { TeamCommand } from '../team/contracts.js';
 import type { HostedTeam } from './RuntimeTeamCoordinator.js';
 import type { MemberProvider, MemberProviderContext } from '../adapters/providers/MemberProvider.js';
 import type { ScheduledRunProvider, ScheduledRunProviderContext } from '../adapters/providers/ScheduledRunProvider.js';
+export { teamHostProfileSchema } from './teamHostProfile.js';
+export type { TeamHostProfile } from './teamHostProfile.js';
 
 const id = z.string().min(1).max(256);
 const segment = z.string().regex(/^[a-zA-Z0-9][a-zA-Z0-9_-]{0,127}$/);
-
-/** Private captured composition data, never an IPC/tool argument or renderer DTO. */
-export const teamHostProfileSchema = z
-  .object({
-    schemaVersion: z.literal(1),
-    owner: hostOwnerSchema,
-    principalId: id,
-    reviewTransport: z.literal('review-v1').optional(),
-    runtime: runtimeProfileSchema.optional(),
-    processCustody: processCustodyProfileSchema.optional(),
-    management: z.array(providerManagementProfileSchema).max(16).optional(),
-    creation: z
-      .object({ contextIds: z.array(id).min(1).max(256) })
-      .strict()
-      .optional(),
-    teams: z.array(hostedTeamDefinitionSchema).max(256),
-  })
-  .strict();
-
-export type TeamHostProfile = z.infer<typeof teamHostProfileSchema>;
 
 /**
  * Captured product owner and optional real provider Runtime. Aggregate bootstrap
@@ -83,10 +66,15 @@ export type TeamHostProfile = z.infer<typeof teamHostProfileSchema>;
 export function createTeamHost(
   rawProfile: TeamHostProfile,
   streams: Pick<HostServerOptions, 'input' | 'output' | 'limits'>,
-  composition?: { createProvider(context: MemberProviderContext): MemberProvider;
-    createScheduledProvider?(context: ScheduledRunProviderContext): ScheduledRunProvider }
+  composition?: { createProvider?(context: MemberProviderContext): MemberProvider;
+    createScheduledProvider?(context: ScheduledRunProviderContext): ScheduledRunProvider;
+    /** Separate captured app preference, evaluated only when the Host is constructed. */
+    promptSuggestionsEnabled?: boolean }
 ): HostServer {
   const profile = structuredClone(teamHostProfileSchema.parse(rawProfile));
+  // CLI/Main owns this app-level preference. Profile remains digest-bound and
+  // existing sessions are never interrupted to apply a change.
+  const promptSuggestionsEnabled = composition?.promptSuggestionsEnabled ?? profile.promptSuggestions?.enabled ?? false;
   assertAccountNamespaces([
     ...(profile.runtime?.members ?? []),
     ...(profile.runtime?.providerTemplates ?? []),
@@ -98,6 +86,7 @@ export function createTeamHost(
   let management: ProviderManagementCoordinator | undefined;
   let scheduledRuns: ReturnType<typeof createHostScheduledRunComposition> | undefined;
   let emitOAuthProgress: ((snapshot: ProviderOAuthSnapshot) => void) | undefined;
+  let emitPromptSuggestion: ((notice: CapturedPromptSuggestionNotice) => void) | undefined;
   try {
     const processCustody = createProcessCustody(profile.processCustody);
     const retainedWindowsLaunch = profile.processCustody && 'kind' in profile.processCustody
@@ -286,7 +275,11 @@ export function createTeamHost(
         crossTeam: (team, principal, binding, current) =>
           crossTeam.memberPort(team, principal, binding, current),
         assertWriter: () => lease.assertCurrent(),
-        ...(composition ? { createProvider: composition.createProvider } : {}),
+        ...(promptSuggestionsEnabled
+          ? { promptSuggestionsEnabled: true, onPromptSuggestion: (notice: CapturedPromptSuggestionNotice) =>
+              emitPromptSuggestion?.(notice) }
+          : {}),
+        ...(composition?.createProvider ? { createProvider: composition.createProvider } : {}),
       });
     const creationLaunch =
       registry && runtime && management
@@ -767,6 +760,11 @@ export function createTeamHost(
     });
     emitOAuthProgress = (snapshot) => {
       if (!sealed) server.notifyData('management.oauth.progress', json(snapshot));
+    };
+    emitPromptSuggestion = (notice) => {
+      // Auxiliary, bounded, best-effort notification; never changes Team/Runtime result.
+      if (!sealed && promptSuggestionsEnabled)
+        server.notifyData('runtime.prompt-suggestion.updated', json(notice));
     };
     runtime?.kick(); // Resume original durable obligations on startup, without opening/adopting native sessions.
     return server;

@@ -217,7 +217,12 @@ export interface BackendOperationPayloads
   'host.recovery.capture': Record<string, never>;
   'host.recovery.start': { capability: string };
   'runtime.open': { memberId: string; expectedGeneration?: string };
-  'runtime.read': { memberId: string; expectedGeneration?: string };
+  'runtime.read': {
+    memberId: string;
+    expectedGeneration?: string;
+    /** Optional read-only Host proof of the original native suggestion input. */
+    nativePromptProof?: { inputId: string; operationRef: string };
+  };
   'runtime.activity.snapshot': { memberId: string; expectedGeneration?: string };
   'runtime.activity.feed': { memberId: string; cursor: string; expectedGeneration?: string };
   'runtime.dispatch': { memberId: string; expectedGeneration?: string };
@@ -354,6 +359,8 @@ export interface BackendRuntimeSnapshot {
   custody: 'owned' | 'released' | 'unknown';
   nativeReady: boolean;
   attached: boolean;
+  /** Only present for an explicitly requested read-only original operation proof. */
+  nativePromptCurrent?: boolean;
   inputs: { inputId: string; phase: string; terminal?: 'succeeded' | 'failed' | 'cancelled' }[];
   interactions: {
     interactionRef: string;

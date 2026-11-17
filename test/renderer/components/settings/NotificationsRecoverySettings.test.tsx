@@ -93,6 +93,7 @@ function makeSafeConfig(): SafeConfig & AppConfig {
       theme: 'system',
       defaultTab: 'dashboard',
       multimodelEnabled: true,
+      nativeNextPromptSuggestionsEnabled: false,
       claudeRootPath: null,
       agentLanguage: 'system',
       appLocale: 'system',

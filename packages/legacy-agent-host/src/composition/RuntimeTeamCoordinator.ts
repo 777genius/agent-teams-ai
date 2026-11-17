@@ -57,10 +57,6 @@ import { RuntimeOwner } from '../runtime/RuntimeOwner.js';
 import { RuntimeOwnerError } from '../runtime/contracts.js';
 import { deliveryFingerprint, normalizeBinding, runtimeDigest } from '../runtime/identity.js';
 
-import type {
-  MemberProviderContext,
-  MemberProvider,
-} from '../adapters/providers/MemberProvider.js';
 import type { TeamHostProfile } from './TeamHost.js';
 import type { JsonValue } from '../contracts.js';
 import type { RuntimeBinding, RuntimeSessionRecord } from '../runtime/contracts.js';
@@ -113,9 +109,10 @@ export class RuntimeTeamCoordinator {
         binding: RuntimeBinding,
         isCurrent: () => boolean
       ): TeamMcpCrossTeamPort;
-      /** Explicit composition seam for controlled Session tests; CLI always selects real D. */
-      createProvider?(context: MemberProviderContext): MemberProvider;
-    }
+    } & Pick<
+      Parameters<typeof createRuntimeMemberProviderFactory>[0],
+      'createProvider' | 'promptSuggestionsEnabled' | 'onPromptSuggestion'
+    >
   ) {
     const store = new FileRuntimeStore(options.profile.owner.storageRoot);
     const initialProfile = options.profile.runtime?.initialModelAdmissions?.length
@@ -182,6 +179,7 @@ export class RuntimeTeamCoordinator {
         ...(options.processCustody ? { processCustody: options.processCustody } : {}),
         ...(options.retainedWindowsLaunch ? { retainedWindowsLaunch: options.retainedWindowsLaunch } : {}),
         ...(options.createProvider ? { createProvider: options.createProvider } : {}),
+        ...(options.promptSuggestionsEnabled && options.onPromptSuggestion ? { promptSuggestionsEnabled: true, onPromptSuggestion: options.onPromptSuggestion } : {}),
         groups: (entry, capture, current) => options.groups?.(entry, capture, current),
         crossTeam: (entry, isCurrent) =>
           options.crossTeam?.(entry.team, entry.profile.principalId, entry.delivery, isCurrent),

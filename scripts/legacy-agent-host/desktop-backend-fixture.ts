@@ -115,6 +115,10 @@ export async function prepareDesktopBackendFixture(
     options.claudeCheckpointDonor || options.diagnosticHostEntry || options.capturedMcpNonce ||
     options.nativeGroupChats || options.nativeChatAttachments || options.nativeReviewUi || options.reviewUi || options.approvalUi))
     throw new Error('Saved-only donor requires its original isolated Claude Create fixture');
+  const nativeNextPromptUi = process.env.LEGACY_DESKTOP_NATIVE_NEXT_PROMPT_UI === '1';
+  if (nativeNextPromptUi && (!options.nativeClaude?.modelUrl || !options.seedUiTask ||
+      options.nativeOpenCodeV2 || options.nativeChatAttachments || options.nativeGroupChats))
+    throw new Error('Native next-prompt UI requires one captured localhost Claude conversation fixture');
   const linuxChildExec = readDesktopLinuxChildExecInput();
   const node =
     options.candidateRuntime?.nodeExecutable ??
@@ -168,7 +172,8 @@ export async function prepareDesktopBackendFixture(
   if (options.seedUiTask || options.seedUiPreferences)
     await writeFile(
       join(root, 'claude/agent-teams-config.json'),
-      JSON.stringify({ general: { appLocale: 'en', agentLanguage: 'en', theme: 'dark' } }),
+      JSON.stringify({ general: { appLocale: 'en', agentLanguage: 'en', theme: 'dark',
+        ...(nativeNextPromptUi ? { nativeNextPromptSuggestionsEnabled: true } : {}) } }),
       { mode: 0o600 }
     );
   // The outer and nested pnpm invocations use the same selected Corepack bytes
@@ -295,6 +300,15 @@ export async function prepareDesktopBackendFixture(
         throw new Error('Only a captured local TEST model server is permitted');
     }
     const team = profile.teams[0]!;
+    if (nativeNextPromptUi && process.env.LEGACY_DESKTOP_NATIVE_NEXT_PROMPT_UI_EDIT_GUARDS === '1') {
+      // Match the original configured Launch selection in prepareDesktopNativeStop.
+      team.savedSettings = {
+        cwd: join(root, 'workspace'),
+        providerId: 'anthropic',
+        model: 'claude-opus-4-6',
+        effort: 'medium',
+      };
+    }
     if (options.nativeChatAttachments) {
       // Ordinary Launch saves this intent; this TEST uses explicit prelaunch setup instead.
       // Match that setup's selected Claude model/effort before any SDK allocation.

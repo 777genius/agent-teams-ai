@@ -4,6 +4,7 @@ import { pathToFileURL } from 'node:url';
 
 import {
   hostTeamSelectionKey,
+  parseHostTeamSelectionKey,
   STOPPED_TEAM_IMPORT_CHANNEL,
   TeamCreationRefusal,
 } from '@features/agent-backend/contracts';
@@ -22,13 +23,15 @@ import {
   registerCapturedReviewWatchIpc,
 } from '@features/agent-backend/main';
 import { InternalStorageOperationInterruptedError } from '@features/internal-storage/main';
-import { FileCodexAuthIntentStore } from '@features/runtime-provider-management/main';
-import { createCapturedCodexFeatures } from '@features/runtime-provider-management/main';
+import { NATIVE_NEXT_PROMPT_UPDATED } from '@features/native-prompt-suggestions/contracts';
 import {
+  createCapturedCodexFeatures,
   createCapturedRuntimeProviderManagementClient,
+  FileCodexAuthIntentStore,
   FileProviderOAuthIntentStore,
 } from '@features/runtime-provider-management/main';
 import { TeamLaunchStateStore } from '@main/services/team/TeamLaunchStateStore';
+import { safeSendToRenderer } from '@main/utils/safeWebContentsSend';
 import { createLogger } from '@shared/utils/logger';
 import { shell } from 'electron';
 
@@ -56,6 +59,7 @@ import type {
 } from '@features/agent-backend/main';
 import type { ApplicationCommandRunner } from '@features/application-command-ledger';
 import type { CodexAccountAuthMode } from '@features/codex-account/contracts';
+import type { NativeNextPromptCandidate } from '@features/native-prompt-suggestions/contracts';
 import type { RuntimeProviderOAuthProgressDto } from '@features/runtime-provider-management/contracts';
 import type {
   TeamCreateConfigResponse,
@@ -74,6 +78,9 @@ interface BackendShellOptions {
   userDataPath: string;
   /** Captured main-process environment, never renderer arguments. */
   env: Readonly<Record<string, string | undefined>>;
+  publishHttpNativePromptSuggestion?: (candidate: NativeNextPromptCandidate) => void;
+  /** Global opt-in captured from trusted Main config before first Host spawn. */
+  nativeNextPromptEnabled?: boolean;
 }
 
 function withoutHash(value: string): string | null {
@@ -606,6 +613,22 @@ export function registerDesktopAgentBackend(options: BackendShellOptions): void 
     bindingDirectory: join(options.userDataPath, 'agent-backend', 'bindings'),
     modelIntents: new FileTeamModelProbeIntents(join(options.userDataPath, 'agent-backend', 'team-model-intents'), options.userDataPath),
     commandRunner: () => desktopCommandRunner,
+    nativeNextPromptEnabled: options.nativeNextPromptEnabled === true,
+    onNativePromptSuggestion(candidate) {
+      const current = options.captureActiveSelection();
+      if (!current.isCurrent() || active?.feature !== feature || !active.selected) return;
+      let handleId: string;
+      try { handleId = parseHostTeamSelectionKey(candidate.ownerHandle); }
+      catch { return; }
+      if (!feature.authorizeHandle(current.contextId, { handleId })) return;
+      const window = options.getMainWindow();
+      const contents = window && !window.isDestroyed() ? window.webContents : null;
+      if (contents && !contents.isDestroyed() && withoutHash(contents.getURL()) === withoutHash(expectedRendererUrl)) {
+        safeSendToRenderer(window, NATIVE_NEXT_PROMPT_UPDATED, candidate);
+      }
+      try { options.publishHttpNativePromptSuggestion?.(candidate); }
+      catch { /* Auxiliary transport may drop an offer; original work is unaffected. */ }
+    },
     onInitializationFailure: (phase, code) =>
       createLogger('IPC:AgentBackend').warn('Captured backend initialization held', {
         phase,

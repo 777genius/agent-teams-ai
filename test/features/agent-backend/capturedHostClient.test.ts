@@ -1044,3 +1044,118 @@ describe('captured legacy host client over real subprocess stdio', () => {
     });
   });
 });
+
+
+describe('captured native prompt notifications', () => {
+  const methods = `
+    prompt: { lane: 'work', handle: params => {
+      server.notifyData('runtime.prompt-suggestion.updated', params); return 'done';
+    } },
+    mixed: { lane: 'work', handle: params => {
+      server.notifyData('event', params);
+      server.notifyData('runtime.prompt-suggestion.updated', params); return 'done';
+    } },
+    enabled: { lane: 'control', handle: () => process.env.AGENT_TEAMS_NATIVE_NEXT_PROMPT_ENABLED },
+  `;
+
+  it.each([undefined, false, true] as const)(
+    'captures enablement %s and publisher before caller mutation or Host startup', async enabled => {
+      const selected = await fixture(methods);
+      const profile = { ...selected, env: { ...selected.env,
+        AGENT_TEAMS_NATIVE_NEXT_PROMPT_ENABLED: enabled === true ? '0' : '1' } };
+      const seen: { value: unknown; source: CapturedHostClient }[] = [];
+      let arrived!: () => void;
+      const notification = new Promise<void>(resolve => { arrived = resolve; });
+      const options: NonNullable<ConstructorParameters<typeof CapturedHostClient>[3]> = {
+        ...(enabled === undefined ? {} : { nativeNextPromptEnabled: enabled }),
+        onNativePromptSuggestion(value, source) { seen.push({ value, source }); arrived(); },
+      };
+      const transport = new CapturedHostClient(profile, undefined, undefined, options);
+      clients.push(transport);
+      const replacement = vi.fn();
+      Object.assign(options, {
+        nativeNextPromptEnabled: enabled !== true, onNativePromptSuggestion: replacement,
+      });
+      await transport.start();
+      expect(await transport.request('enabled', undefined, { control: true }))
+        .toBe(enabled === true ? '1' : '0');
+      expect(await transport.request('prompt', { original: 'TEST-prompt' })).toBe('done');
+      await notification;
+      expect(seen).toEqual([{ value: { original: 'TEST-prompt' }, source: transport }]);
+      expect(replacement).not.toHaveBeenCalled();
+      expect(transport.takeNotifications()).toEqual({ notifications: [], gap: false });
+      expect((await transport.shutdown()).childExit).toBe('confirmed');
+    }
+  );
+
+  it('delivers every prompt outside the pull buffer and isolates a throwing publisher', async () => {
+    const seen: { value: unknown; source: CapturedHostClient }[] = [];
+    let arrived: (() => void) | undefined;
+    const transport: CapturedHostClient = new CapturedHostClient(await fixture(methods), undefined, undefined, {
+      onNativePromptSuggestion(value, source) {
+        seen.push({ value, source });
+        arrived?.();
+        throw new Error('TEST auxiliary publisher failure');
+      },
+    });
+    clients.push(transport);
+    const { limits } = await transport.start();
+    for (const method of ['prompt', 'mixed']) {
+      for (let index = 0; index <= limits.maxDataNotifications; index++) {
+        const notification = new Promise<void>(resolve => { arrived = resolve; });
+        expect(await transport.request(method, { method, index })).toBe('done');
+        await notification;
+      }
+      const pulled = transport.takeNotifications();
+      expect(pulled.notifications.length).toBeLessThanOrEqual(limits.maxDataNotifications);
+      expect(pulled.notifications.every(row => row.method === 'event')).toBe(true);
+      if (method === 'prompt') expect(pulled.notifications).toEqual([]);
+      expect(pulled.gap).toBe(method === 'mixed');
+      expect(transport.takeNotifications()).toEqual({ notifications: [], gap: false });
+    }
+    expect(seen).toHaveLength(2 * (limits.maxDataNotifications + 1));
+    expect(seen.every(row => row.source === transport)).toBe(true);
+    expect(await transport.request('control', undefined, { control: true })).toBe('control-progress');
+    expect((await transport.shutdown()).childExit).toBe('confirmed');
+  });
+
+  it('retains ordinary prompt buffering when no callback is configured', async () => {
+    const transport = client(await fixture(methods));
+    await transport.start();
+    expect(await transport.request('prompt', { original: 'TEST-pull' })).toBe('done');
+    const collected: ReturnType<CapturedHostClient['takeNotifications']> = { notifications: [], gap: false };
+    await vi.waitFor(() => {
+      const pulled = transport.takeNotifications();
+      collected.notifications.push(...pulled.notifications);
+      collected.gap ||= pulled.gap;
+      expect(collected.notifications).toHaveLength(1);
+    });
+    expect(collected).toEqual({ notifications: [{ jsonrpc: '2.0',
+      method: 'runtime.prompt-suggestion.updated', params: { original: 'TEST-pull' } }], gap: false });
+    expect(transport.takeNotifications()).toEqual({ notifications: [], gap: false });
+    expect(await transport.request('control', undefined, { control: true })).toBe('control-progress');
+  });
+
+  it('keeps negotiated byte/count limits, gap precedence and destructive take semantics', async () => {
+    const { CapturedHostNotificationBuffer } = await import(
+      '../../../src/features/agent-backend/main/infrastructure/CapturedHostNotificationBuffer'
+    );
+    const { HOST_GAP_METHOD } = await import('@agent-teams/legacy-agent-host/contracts');
+    const buffer = new CapturedHostNotificationBuffer();
+    const event = { jsonrpc: '2.0' as const, method: 'event', params: { index: 1 } };
+    const limits = { ...DEFAULT_HOST_LIMITS, maxDataNotifications: 2, maxDataBytes: 100 };
+    buffer.receive(event, 60, limits);
+    buffer.receive(event, 41, limits);
+    expect(buffer.take()).toEqual({ notifications: [], gap: true });
+    expect(buffer.take()).toEqual({ notifications: [], gap: false });
+    buffer.receive(event, 40, limits);
+    buffer.receive(event, 40, limits);
+    buffer.receive({ ...event, method: HOST_GAP_METHOD }, 101, limits);
+    expect(buffer.take()).toEqual({ notifications: [event, event], gap: true });
+    buffer.receive(event, 40, limits);
+    buffer.receive(event, 40, { ...limits, maxDataNotifications: 1 });
+    expect(buffer.take()).toEqual({ notifications: [], gap: true });
+    buffer.receive(event, 100, limits);
+    expect(buffer.take()).toEqual({ notifications: [event], gap: false });
+  });
+});

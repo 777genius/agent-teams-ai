@@ -43,6 +43,8 @@ import { runDesktopF08ReadTimingProof, runDesktopHostRoutingProof } from './desk
 import { startDesktopCodexQuestionModel } from './desktop-codex-question-model.ts';
 import { prepareDesktopCodexQuestionFixture, prepareDesktopCodexQuestionLaunch, waitDesktopCodexQuestionRenderer } from './desktop-codex-question-fixture.ts';
 import { runDesktopCodexQuestionUiSmoke } from './desktop-codex-question-ui-smoke.ts';
+import { addDesktopSuggestionEvidence, startDesktopNativeNextPromptMixedModels, prepareDesktopNativeNextPromptMixedFixture } from './desktop-native-next-prompt-mixed-fixture.ts';
+import { runDesktopNativeNextPromptMixedUi } from './desktop-native-next-prompt-mixed-ui.ts';
 import { prepareDesktopBackendFixture } from './desktop-backend-fixture.ts';
 import { runDesktopApprovalUiSmoke } from './desktop-approval-ui-smoke.ts';
 import { runDesktopSkillsUiSmoke } from './desktop-skills-ui-smoke.ts';
@@ -71,11 +73,11 @@ import {
   attachRendererDiagnostics,
   runDesktopTeamUiSmoke,
 } from './desktop-team-ui-smoke.ts';
-import { fileDigest } from './desktop-backend-fixture.ts';
 import {
   assertDesktopProofEnvironment,
   assertNoNativeHostChildren,
   assertOwnedCdpListener,
+  assertDesktopRuntimePins,
   command,
   groupMembers,
   portOccupied,
@@ -93,6 +95,7 @@ import {
 import { runDesktopBackendBridgeProof } from './desktop-backend-bridge-proof.ts';
 
 let questionModel: Awaited<ReturnType<typeof startDesktopCodexQuestionModel>> | undefined;
+let suggestionMixedModels: Awaited<ReturnType<typeof startDesktopNativeNextPromptMixedModels>> | undefined;
 let mixedModels: DesktopMixedModels | undefined;
 let conversationModel: Awaited<ReturnType<typeof startNativeTeamModel>> | undefined;
 let codexResumeModel: Awaited<ReturnType<typeof startCodexModel>> | undefined;
@@ -126,9 +129,11 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
   assert.ok(quitScenario === undefined || (mode === 'native-quit-ui' && quitScenario === 'pending-open'), 'explicit TEST Quit scenario');
   const startupDiagnosticMode = mode === 'startup-diagnostic-ui';
   const questionUiMode = mode === 'codex-question-ui';
+  const suggestionMixedMode = mode === 'native-next-prompt-mixed-ui';
   const scheduleUiMode = process.env.LEGACY_DESKTOP_SCHEDULE_UI === '1';
   const donorSavedOnly = process.env.LEGACY_DESKTOP_DONOR_SAVED_ONLY === '1';
   if (questionUiMode) questionModel = await startDesktopCodexQuestionModel();
+  if (suggestionMixedMode) suggestionMixedModels = await startDesktopNativeNextPromptMixedModels();
   const packedCapturePath = process.env.LEGACY_DESKTOP_PACKED_CAPTURE_PATH;
   const packed = packedCapturePath ? await readCapturedCandidateElectron({ path: packedCapturePath, sha256: process.env.LEGACY_DESKTOP_PACKED_CAPTURE_SHA256! }) : undefined;
   const permittedSentinelObservation = (row: Record<string, unknown>) => (mode === 'skills-ui' && isSkillsMetadataRefusal(row)) || (!packed ? row.allowed === true : row.executable === 'shell-env' ? row.allowed === true : row.allowed === false && row.argc === 1 && Array.isArray(row.flags) && row.flags.length === 1 && row.flags[0] === '--version');
@@ -138,7 +143,7 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
   if (donorSavedOnly) assert.ok(mode === 'stopped-import-ui' && !packed && !process.env.LEGACY_DESKTOP_STOPPED_IMPORT_LAUNCH, 'one actual donor saved-only scope');
   if (process.env.LEGACY_DESKTOP_OPENCODE_MCP_UI === '1') assert.ok(!packed && !packedRelaunchMode, 'captured MCP uses the existing source Launch scope');
   const { mixedMode, extensionsUiMode, capturedMcpUiMode, capturedMcpModel: selectedCapturedMcpModel, mixedModels: selectedMixedModels, processUiMode, controlledProcessMode, processReadbackMode, processModel, nativeReviewMode, nativeReviewReadbackMode, nativeReviewContinuationMode, readbackMode, reviewUiMode, reviewReadbackMode, legacyImportMode, conversationMode, taskBoardUiMode, approvalUiMode, nativeStopMode, uiMode, launchDialogMode, createConfigMode, model, codexResumeMode, codexResumeModel: selectedCodexResumeModel, openCodeLifecycleMode, openCodeLifecycleModel: selectedOpenCodeModel, openCodeReviewModel: selectedOpenCodeReviewModel } =
-    await prepareDesktopProofMode(questionUiMode || startupDiagnosticMode || emulatedManagementMode || emulatedRuntimeMode ? 'team-ui' : mode, () => fixture.root, () => processFixtureBashCommand(fixture));
+    await prepareDesktopProofMode(questionUiMode || suggestionMixedMode || startupDiagnosticMode || emulatedManagementMode || emulatedRuntimeMode ? 'team-ui' : mode, () => fixture.root, () => processFixtureBashCommand(fixture));
   conversationModel = model; mixedModels = selectedMixedModels;
   codexResumeModel = selectedCodexResumeModel;
   openCodeLifecycleModel = selectedOpenCodeModel; openCodeReviewModel = selectedOpenCodeReviewModel;
@@ -146,12 +151,13 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
   const nativeInputs = codexAccountMode ? await captureDesktopCodexAccountInput(process.env.LEGACY_DESKTOP_CODEX_PATH!)
     : !finiteMembership && (mixedMode || codexResumeMode) ? await captureDesktopCodexNativeInputs(process.env.LEGACY_DESKTOP_CODEX_PATH!) : [];
   const pnpm = await realpath(process.env.LEGACY_DESKTOP_PNPM_PATH ?? '/opt/homebrew/bin/pnpm');
+  const suggestionFixture = suggestionMixedMode ? await prepareDesktopNativeNextPromptMixedFixture(repo, pnpm, suggestionMixedModels!) : undefined;
   const emulatedManagementFixture = emulatedManagementMode ? await prepareDesktopEmulatedManagementFixture(repo, pnpm, mode === 'emulated-codex-login-ui' ? 'codex-login' : undefined) : undefined;
   const emulatedRuntimeFixture = mode === 'emulated-extensions-ui' ? await prepareDesktopEmulatedExtensionsFixture(repo, pnpm)
     : mode === 'emulated-import-ui' ? await prepareDesktopEmulatedImportFixture(repo, pnpm)
     : emulatedRuntimeProvider ? await prepareDesktopEmulatedRuntimeFixture(repo, pnpm, emulatedRuntimeProvider, mode === 'emulated-collaboration-ui' ? 'collaboration' : mode === 'emulated-claude-lifecycle-ui' ? 'lifecycle' : mode === 'emulated-selection-ui' ? 'selection' : mode === 'emulated-installer-ui' ? 'installer' : undefined) : undefined;
   const finiteBase = finiteMembership ? await prepareDesktopFiniteMembershipFixture(repo, pnpm) : undefined;
-  const baseFixture: Awaited<ReturnType<typeof prepareDesktopProofFixture>> = finiteBase ?? emulatedRuntimeFixture ?? emulatedManagementFixture ?? (questionUiMode ? await prepareDesktopBackendFixture(repo, {
+  const baseFixture: Awaited<ReturnType<typeof prepareDesktopProofFixture>> = finiteBase ?? emulatedRuntimeFixture ?? emulatedManagementFixture ?? suggestionFixture ?? (questionUiMode ? await prepareDesktopBackendFixture(repo, {
     seedUiTask: true, pnpmEntry: pnpm, nativeClaude: { path: process.env.LEGACY_DESKTOP_CLAUDE_PATH!,
       sha256: 'ea3ea3c08d2a9634a4651e687fcf900d410c489bce2b00f22bd7352b91ba704f', modelUrl: questionModel!.url },
   }) : await prepareDesktopProofFixture(repo, mode, pnpm, {
@@ -193,23 +199,11 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
   const activitySource = baseFixture.activitySource;
   const checkpointUpgrade = baseFixture.claudeCheckpointUpgrade;
   const require = createRequire(import.meta.url);
-  if (!packed && (codexAccountMode || questionUiMode || processUiMode || nativeReviewMode || nativeStopMode || readbackMode || launchDialogMode || createConfigMode || legacyImportMode))
+  if (!packed && (codexAccountMode || questionUiMode || suggestionMixedMode || processUiMode || nativeReviewMode || nativeStopMode || readbackMode || launchDialogMode || createConfigMode || legacyImportMode))
     await verifyDesktopNativeStopArtifact(repo);
   const cdpLibrary = require('../e2e/comment-notification/cdp.mjs') as CdpLibrary;
   assert.equal(typeof cdpLibrary.CdpClient.connect, 'function');
-  const pnpmSha256 = await fileDigest(pnpm);
-  const selectedNode = await realpath(process.execPath);
-  assert.equal(selectedNode, fixture.node, 'harness runs with the captured standalone Node');
-  for (const [actual, expected] of [
-    [fixture.pins.nodeSha256, process.env.LEGACY_DESKTOP_NODE_SHA256],
-    [fixture.pins.hostEntrySha256, process.env.LEGACY_DESKTOP_HOST_ENTRY_SHA256],
-    [pnpmSha256, process.env.LEGACY_DESKTOP_PNPM_SHA256],
-    [fixture.pins.corepackPackageSha256, process.env.LEGACY_DESKTOP_COREPACK_PACKAGE_SHA256],
-    [fixture.pins.corepackLibrarySha256, process.env.LEGACY_DESKTOP_COREPACK_LIBRARY_SHA256],
-  ]) {
-    assert.match(expected ?? '', /^[a-f0-9]{64}$/);
-    assert.equal(actual, expected);
-  }
+  const pnpmSha256 = await assertDesktopRuntimePins(fixture, pnpm);
   let electron: string;
   if (packed) electron = packed.executable;
   else {
@@ -251,6 +245,7 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
     evidence.scope = 'Actual Codex app-server finite MCP elicitation through original Composer/Question Sheet, accept and deny, canonical reply and original Stop; explicit TEST setup, localhost inference';
     evidence.excluded = ['vendor model/auth qualification', 'ordinary Launch dialog', 'full M06/M07/M08', 'Stage2'];
   }
+  if (suggestionMixedMode) addDesktopSuggestionEvidence(evidence, suggestionMixedModels!);
   if (oversizedCommentSeed) evidence.oversizedCommentSeed = oversizedCommentSeed;
   if (packed) {
     evidence.packedCandidate = packed;
@@ -382,7 +377,7 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
         remainingMs: startupBudgetMs - (performance.now() - startupStarted),
         assertOwnedRenderer: () => assertOwnedCdpListener(group),
       });
-    if (questionUiMode)
+    if (questionUiMode || suggestionMixedMode)
       await waitDesktopCodexQuestionRenderer(cdp, { url: String(target.url),
         remainingStartupMs: startupBudgetMs - (performance.now() - startupStarted),
         assertOwnedRenderer: () => assertOwnedCdpListener(group), evidence });
@@ -430,6 +425,11 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
           .fixturePins = await verifyDesktopEmulatedRuntimeFixture(emulatedRuntimeFixture);
     } else if (emulatedManagementFixture) {
       await runDesktopEmulatedManagementUi(cdp, { fixture: emulatedManagementFixture, evidence, assertOwnedRenderer: () => assertOwnedCdpListener(group) });
+    } else if (suggestionMixedMode) {
+      assert.ok(suggestionFixture && suggestionMixedModels);
+      const setup = await runDesktopNativeNextPromptMixedUi(cdp, { fixture: suggestionFixture,
+        models: suggestionMixedModels, group, evidence, assertOwnedRenderer: () => assertOwnedCdpListener(group) });
+      hostPid = setup.hostPid; nativeChildren = setup.nativeChildren;
     } else if (questionUiMode) {
       assert.ok(fixture.uiSeed && questionModel);
       await runDesktopCodexQuestionUiSmoke(cdp, { root: fixture.root, seed: fixture.uiSeed, evidence, model: questionModel,
@@ -657,7 +657,7 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
     const metadataFailure = readDesktopMetadataLineageFailure(error);
     if (metadataFailure) evidence.metadataObservationFailure = metadataFailure;
     if (uiMode && cdp) await captureDesktopRendererFailure(cdp, { group, root: fixture.root, screenshotName: artifacts.failureScreenshot, evidence });
-    if ((nativeStopMode || questionUiMode) && evidence.nativeSetup) {
+    if ((nativeStopMode || questionUiMode || suggestionMixedMode) && evidence.nativeSetup) {
       try {
         evidence.nativeBeforeFailureQuit = captureDesktopNativeStopPresence(evidence.nativeSetup);
       } catch {
@@ -793,6 +793,7 @@ try {
 } finally {
   try { await controlledProcess?.cleanup(); } catch (error) { if (!originalFailure) throw error; }
   await questionModel?.close();
+  await suggestionMixedModels?.close();
   await (capturedMcpModel ?? openCodeReviewModel ?? openCodeLifecycleModel ?? codexResumeModel ?? conversationModel)?.close();
   await mixedModels?.close();
 }

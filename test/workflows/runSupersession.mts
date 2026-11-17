@@ -69,6 +69,10 @@ export const RUN_SUPERSESSION_POLICY = {
     'release-publication-guard',
     'stage-existing-partial-draft',
   ],
+  // Native feature workflows preserve their existing distinct concurrency contracts:
+  // Host cancels same-PR/ref runs, while vendor reproduction has no workflow group
+  // and serializes only its separate archive-publication job.
+  native: ['native-prompt-suggestions-host', 'native-prompt-suggestions-vendor-once'],
   // Manual-only Mac updater runs, reusable workflows and ReviewRouter: no workflow-level group.
   unmanaged: [
     'opencode-packaged-e2e',
