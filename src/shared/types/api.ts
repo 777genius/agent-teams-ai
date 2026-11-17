@@ -117,6 +117,7 @@ import type {
   UpdateKanbanPatch,
 } from './team';
 import type { TeamMemberRestartResult } from './teamMemberRestart';
+import type { TeamProjectContextViewApi } from '@features/team-project-context/contracts';
 import type { TerminalAPI } from './terminal';
 import type { TmuxAPI } from './tmux';
 import type { WaterfallData } from './visualization';
@@ -448,7 +449,7 @@ export interface HttpServerAPI {
 // Teams API
 // =============================================================================
 
-export interface TeamsAPI extends TeamMemberSettingsApi, TeamReadLegacyApi {
+export interface TeamsAPI extends TeamMemberSettingsApi, TeamReadLegacyApi, TeamProjectContextViewApi {
   readRecovery?: TeamReadRecoveryApi;
   list: () => Promise<TeamSummary[]>;
   getTaskChangePresence: (teamName: string) => Promise<Record<string, TaskChangePresenceState>>;

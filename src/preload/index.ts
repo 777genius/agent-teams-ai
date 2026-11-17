@@ -15,6 +15,10 @@ import { createTeamGroupChatsBridge } from '@features/team-group-chats/preload';
 import { createTeamImportBridge } from '@features/team-import/preload';
 import { createTeamMemberSettingsBridge } from '@features/team-provisioning/preload';
 import { createTeamReadRecoveryBridge } from '@features/team-read-recovery/preload';
+import {
+  TEAM_PROJECT_CONTEXT_VIEW_CHANNEL,
+  type TeamProjectContextView,
+} from '@features/team-project-context/contracts';
 import { createTerminalWorkspaceBridge } from '@features/terminal-workspace/preload';
 import { createTmuxInstallerBridge } from '@features/tmux-installer/preload';
 import { createTokenUsageBridge } from '@features/token-usage/preload';
@@ -925,6 +929,10 @@ const electronAPI: ElectronAPI = {
     list: async () => {
       return invokeIpcWithResult<TeamSummary[]>(TEAM_LIST);
     },
+    getProjectContextView: async (logicalName: string, projectPath?: string | null) =>
+      invokeIpcWithResult<TeamProjectContextView>(
+        TEAM_PROJECT_CONTEXT_VIEW_CHANNEL, logicalName, projectPath ?? null
+      ),
     getData: async (teamName: string, options?: TeamGetDataOptions) => {
       if (options === undefined) {
         return invokeIpcWithResult<TeamViewSnapshot>(TEAM_GET_DATA, teamName);

@@ -18,3 +18,10 @@ export type TeamProjectContextView =
     };
 
 export const TEAM_PROJECT_CONTEXT_VIEW_CHANNEL = 'team:projectContextView';
+
+export interface TeamProjectContextViewApi {
+  getProjectContextView(
+    logicalTeamName: string,
+    projectPath?: string | null
+  ): Promise<TeamProjectContextView>;
+}
