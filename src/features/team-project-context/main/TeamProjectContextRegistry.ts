@@ -27,6 +27,7 @@ export interface PersistedTeamWorkContext {
 interface TeamProjectContextIndex {
   version: 1;
   logicalTeamName: string;
+  deleting?: boolean;
   contexts: PersistedTeamWorkContext[];
 }
 
@@ -114,7 +115,15 @@ function validateIndex(value: unknown, logicalTeamName: string): TeamProjectCont
     executionNames.add(row.executionTeamName);
     contexts.push(row as unknown as PersistedTeamWorkContext);
   }
-  return { version: 1, logicalTeamName, contexts };
+  if (source.deleting !== undefined && typeof source.deleting !== 'boolean') {
+    throw new TeamProjectContextUnavailableError('Invalid project-context deletion state');
+  }
+  return {
+    version: 1,
+    logicalTeamName,
+    ...(source.deleting ? { deleting: true } : {}),
+    contexts,
+  };
 }
 
 /**
@@ -184,6 +193,30 @@ export class TeamProjectContextRegistry {
       mode: 0o600,
       directoryMode: 0o700,
     });
+  }
+
+  /** Block new reservations before a multi-context permanent deletion starts. */
+  async beginPermanentDeletion(logicalTeamName: string): Promise<void> {
+    await this.assertOwnedDirectory(logicalTeamName);
+    await withFileLock(this.indexPath(logicalTeamName), async () => {
+      await this.assertOwnedDirectory(logicalTeamName);
+      const index = await this.readIndex(logicalTeamName);
+      if (index.deleting) return;
+      index.deleting = true;
+      await this.writeIndex(index);
+    }, { preventLiveOwnerTakeover: true });
+  }
+
+  /** Undo the admission fence only if deletion preflight has not removed data. */
+  async cancelPermanentDeletion(logicalTeamName: string): Promise<void> {
+    await this.assertOwnedDirectory(logicalTeamName);
+    await withFileLock(this.indexPath(logicalTeamName), async () => {
+      await this.assertOwnedDirectory(logicalTeamName);
+      const index = await this.readIndex(logicalTeamName);
+      if (!index.deleting) return;
+      delete index.deleting;
+      await this.writeIndex(index);
+    }, { preventLiveOwnerTakeover: true });
   }
 
   /** A retained index may outlive the selected history mode. */
@@ -312,6 +345,11 @@ export class TeamProjectContextRegistry {
     return withFileLock(this.indexPath(logicalTeamName), async () => {
       await this.assertOwnedDirectory(logicalTeamName);
       const index = await this.readIndex(logicalTeamName);
+      if (index.deleting) {
+        throw new TeamProjectContextUnavailableError(
+          'Team permanent deletion is in progress; new project contexts are disabled'
+        );
+      }
       const existing = index.contexts.find((c) => c.projectKey === projectKey);
       if (existing) {
         if (existing.state === 'ready') await this.assertOwnedDirectory(existing.executionTeamName);

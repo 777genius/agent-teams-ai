@@ -50,6 +50,20 @@ async function simulateNativeProvisioning(f: Awaited<ReturnType<typeof fixture>>
 }
 
 describe('TeamProjectContextRegistry', () => {
+  it('atomically prevents project creation while permanent deletion is in progress', async () => {
+    const f = await fixture();
+    const first = await f.registry.reserve('logical-team', f.workspaceA);
+    await f.registry.beginPermanentDeletion('logical-team');
+    await expect(f.registry.reserve('logical-team', f.workspaceB))
+      .rejects.toThrow('permanent deletion is in progress');
+    await expect(f.registry.reserve('logical-team', f.workspaceA))
+      .rejects.toThrow('permanent deletion is in progress');
+    expect(await f.registry.listRetained('logical-team')).toEqual([first]);
+    await f.registry.cancelPermanentDeletion('logical-team');
+    const other = await f.registry.reserve('logical-team', f.workspaceB);
+    expect(other.id).not.toBe(first.id);
+  });
+
   it('keeps retained contexts discoverable after switching history mode', async () => {
     const f = await fixture();
     expect(await f.registry.hasRetainedIndex('logical-team')).toBe(false);
