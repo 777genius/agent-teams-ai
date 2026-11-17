@@ -41,7 +41,7 @@ export function createProjectContextRuntimeParts(ports: ProjectTeamRuntimePorts)
   const resolver = new TeamProjectContextRuntimeResolver(new TeamMetaStore(), registry);
   const materializer = new TeamProjectContextDraftMaterializer(resolver, {
     getSavedRequest: (teamName) => ports.data.getSavedRequest(teamName),
-    createTeamConfig: (config) => ports.data.createTeamConfig(config),
+    createTeamConfig: (config, options) => ports.data.createTeamConfig(config, options),
     assertOwnedAlias: async (teamName) => {
       const owner = await readTeamOwnerProfileScope(path.join(getTeamsBasePath(), teamName));
       if (owner !== resolveThisAppProfileScope()) {

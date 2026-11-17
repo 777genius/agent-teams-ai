@@ -1,6 +1,3 @@
-import { claimTeamForThisProfile } from '@main/services/team/provisioning/TeamProvisioningProfileOwnership';
-import { getTeamsBasePath } from '@main/utils/pathDecoder';
-
 import type {
   ResolvedTeamWorkContext,
   TeamWorkContextAddress,
@@ -9,7 +6,9 @@ import type { TeamCreateConfigRequest, TeamCreateRequest } from '@shared/types';
 
 interface SavedTeamRequestPort {
   getSavedRequest(teamName: string): Promise<TeamCreateRequest | null>;
-  createTeamConfig(request: TeamCreateConfigRequest): Promise<void>;
+  createTeamConfig(
+    request: TeamCreateConfigRequest, options: { claimOwnerOnCreate: true }
+  ): Promise<void>;
   /** Called only for an already materialized reserved alias. */
   assertOwnedAlias(teamName: string): Promise<void>;
 }
@@ -30,14 +29,7 @@ interface ContextResolverPort {
 export class TeamProjectContextDraftMaterializer {
   constructor(
     private readonly context: ContextResolverPort,
-    private readonly teamStore: SavedTeamRequestPort,
-    private readonly claimNewAlias: (teamName: string) => Promise<void> = async (teamName) => {
-      await claimTeamForThisProfile({
-        teamsBasePath: getTeamsBasePath(),
-        teamName,
-        reason: 'create',
-      });
-    }
+    private readonly teamStore: SavedTeamRequestPort
   ) {}
 
   async ensureProjectDraft(address: TeamWorkContextAddress): Promise<ResolvedTeamWorkContext> {
@@ -64,7 +56,7 @@ export class TeamProjectContextDraftMaterializer {
         cwd: resolved.projectPath,
         // Runtime aliases are ordinary native teams, not logical definitions.
         projectContextMode: 'shared',
-      });
+      }, { claimOwnerOnCreate: true });
     } catch (error) {
       // createDraftTeamConfig rolls back its own failed filesystem creation.
       // Do not release if any native artifacts survived or ownership is unclear.
@@ -75,9 +67,6 @@ export class TeamProjectContextDraftMaterializer {
       }
       throw error;
     }
-    // Claim only the newly created draft. On failure the native launch must
-    // not proceed, and the reserved index may be reconciled explicitly.
-    await this.claimNewAlias(resolved.executionTeamName);
     return resolved;
   }
 }

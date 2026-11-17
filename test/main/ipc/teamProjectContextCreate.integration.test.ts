@@ -36,7 +36,9 @@ async function fixture() {
   const started: TeamCreateRequest[] = [];
   const onProgress = vi.fn<(progress: TeamProvisioningProgress) => void>();
   const data = {
-    async createTeamConfig(request: TeamCreateConfigRequest): Promise<void> {
+    async createTeamConfig(
+      request: TeamCreateConfigRequest, options?: { claimOwnerOnCreate?: boolean }
+    ): Promise<void> {
       const name = request.teamName;
       const teamDir = path.join(getTeamsBasePath(), name);
       const taskDir = path.join(getTasksBasePath(), name);
@@ -46,7 +48,7 @@ async function fixture() {
         version: 1, cwd: request.cwd ?? '', createdAt: 1,
         projectContextMode: request.projectContextMode,
       }));
-      if (request.projectContextMode === 'per_project') {
+      if (request.projectContextMode === 'per_project' || options?.claimOwnerOnCreate) {
         await claimTeamForThisProfile({
           teamsBasePath: getTeamsBasePath(), teamName: name, reason: 'create',
         });

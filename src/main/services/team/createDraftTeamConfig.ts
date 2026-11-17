@@ -18,7 +18,8 @@ import type { TeamCreateConfigRequest } from '@shared/types';
 
 export async function createDraftTeamConfig(
   request: TeamCreateConfigRequest,
-  stores: { teamMetaStore: TeamMetaStore; membersMetaStore: TeamMembersMetaStore }
+  stores: { teamMetaStore: TeamMetaStore; membersMetaStore: TeamMembersMetaStore },
+  options: { claimOwnerOnCreate?: boolean } = {}
 ): Promise<void> {
   request = parseCreateTeamRequest(request);
   const teamsBasePath = getTeamsBasePath();
@@ -60,7 +61,7 @@ export async function createDraftTeamConfig(
     const contextMode = parseNewTeamProjectContextMode(request.projectContextMode);
     // Per-project contexts must be owned before their first materialization.
     // Shared-mode teams continue using the legacy draft creation path.
-    if (contextMode === 'per_project') {
+    if (contextMode === 'per_project' || options.claimOwnerOnCreate === true) {
       await claimTeamForThisProfile({
         teamsBasePath,
         teamName: request.teamName,

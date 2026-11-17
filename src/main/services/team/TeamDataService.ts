@@ -3510,12 +3510,15 @@ export class TeamDataService {
     });
   }
 
-  createTeamConfig(request: TeamCreateConfigRequest): Promise<void> {
+  createTeamConfig(
+    request: TeamCreateConfigRequest,
+    options?: { claimOwnerOnCreate?: boolean }
+  ): Promise<void> {
     return this.runConfigurationOperation(request.teamName, () =>
       createDraftTeamConfig(request, {
         teamMetaStore: this.teamMetaStore,
         membersMetaStore: this.membersMetaStore,
-      })
+      }, options)
     );
   }
 

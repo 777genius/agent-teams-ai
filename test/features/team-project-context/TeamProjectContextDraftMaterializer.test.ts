@@ -27,8 +27,7 @@ function fixture(result: ResolvedTeamWorkContext = reserved) {
     createTeamConfig: vi.fn(async () => undefined),
     assertOwnedAlias: vi.fn(async () => undefined),
   };
-  const claim = vi.fn(async () => undefined);
-  return { materializer: new TeamProjectContextDraftMaterializer(context, store, claim), context, store, claim };
+  return { materializer: new TeamProjectContextDraftMaterializer(context, store), context, store };
 }
 
 describe('TeamProjectContextDraftMaterializer', () => {
@@ -42,7 +41,7 @@ describe('TeamProjectContextDraftMaterializer', () => {
       teamName: 'ptc-sandbox', cwd: '/sandbox/b', members: [{ name: 'alice' }],
       prompt: 'rules', projectContextMode: 'shared',
     });
-    expect(f.claim).toHaveBeenCalledWith('ptc-sandbox');
+    expect(f.store.createTeamConfig.mock.calls[0]?.[1]).toEqual({ claimOwnerOnCreate: true });
   });
 
   it('releases an empty reservation when native draft creation rejects', async () => {
@@ -54,7 +53,7 @@ describe('TeamProjectContextDraftMaterializer', () => {
     expect(f.context.releaseUnusedReservation).toHaveBeenCalledWith(
       'builders', 'ptc-sandbox', reserved.workContextId
     );
-    expect(f.claim).not.toHaveBeenCalled();
+
   });
 
   it('does not create a second draft for an existing owned alias', async () => {
@@ -69,7 +68,7 @@ describe('TeamProjectContextDraftMaterializer', () => {
     });
     expect(f.store.assertOwnedAlias).toHaveBeenCalledWith('ptc-sandbox');
     expect(f.store.createTeamConfig).not.toHaveBeenCalled();
-    expect(f.claim).not.toHaveBeenCalled();
+
   });
 
   it('leaves legacy shared teams on existing team paths with no second draft', async () => {
