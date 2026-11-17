@@ -1116,7 +1116,7 @@ export class TeamDataService {
     const selection = resolveTeamRuntimeSelection(meta);
     const resolvedProviderId = selection.status === 'selected' ? selection.providerId : undefined;
     return {
-      teamName,
+      teamName, projectContextMode: meta.projectContextMode,
       displayName: meta.displayName,
       description: meta.description,
       color: meta.color,
