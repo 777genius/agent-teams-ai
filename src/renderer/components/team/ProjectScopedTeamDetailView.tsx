@@ -200,7 +200,7 @@ export function ProjectScopedTeamDetailView({
             onChanged={() => refresh(() => activeKeyRef.current === key)}
           />
         </div>
-        <div className="flex min-h-0 flex-1">
+        <div className="flex min-h-0 flex-1" data-team-name={context.executionTeamName}>
           <TeamDetailView
             key={context.workContextId}
             teamName={context.executionTeamName}

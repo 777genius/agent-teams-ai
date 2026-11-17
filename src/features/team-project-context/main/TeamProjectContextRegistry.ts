@@ -95,11 +95,21 @@ function validateIndex(value: unknown, logicalTeamName: string): TeamProjectCont
       throw new TeamProjectContextUnavailableError('Invalid project-context entry');
     }
     const row = item as Record<string, unknown>;
+    // Windows paths have case-insensitive identity. Old stored indexes or
+    // imported fixtures may preserve mixed-case realpath spelling, whereas
+    // newly resolved project keys are lowercase. Normalize only the lookup
+    // key in memory; do not rewrite the saved manifest on a read.
+    const projectKey =
+      typeof row.projectKey === 'string'
+        ? (process.platform === 'win32'
+            ? path.win32.normalize(row.projectKey).toLowerCase()
+            : row.projectKey)
+        : null;
     if (
       typeof row.id !== 'string' ||
       !/^[a-f0-9-]{36}$/.test(row.id) ||
-      typeof row.projectKey !== 'string' ||
-      !path.isAbsolute(row.projectKey) ||
+      projectKey === null ||
+      !path.isAbsolute(projectKey) ||
       typeof row.projectPath !== 'string' ||
       !path.isAbsolute(row.projectPath) ||
       typeof row.executionTeamName !== 'string' ||
@@ -107,14 +117,14 @@ function validateIndex(value: unknown, logicalTeamName: string): TeamProjectCont
       row.executionTeamName.length > 64 ||
       row.executionTeamName === logicalTeamName ||
       (row.state !== 'reserved' && row.state !== 'ready') ||
-      projectKeys.has(row.projectKey) ||
+      projectKeys.has(projectKey) ||
       executionNames.has(row.executionTeamName)
     ) {
       throw new TeamProjectContextUnavailableError('Invalid or duplicate project-context entry');
     }
-    projectKeys.add(row.projectKey);
+    projectKeys.add(projectKey);
     executionNames.add(row.executionTeamName);
-    contexts.push(row as unknown as PersistedTeamWorkContext);
+    contexts.push({ ...row, projectKey } as PersistedTeamWorkContext);
   }
   if (source.deleting !== undefined && typeof source.deleting !== 'boolean') {
     throw new TeamProjectContextUnavailableError('Invalid project-context deletion state');

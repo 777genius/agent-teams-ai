@@ -278,9 +278,9 @@ async function verifyNative(f: Fixture) {
   assert(state.teamNames.includes(f.logical), 'Logical team absent from renderer team list');
   assert(!state.teamNames.includes(f.nativeA) && !state.teamNames.includes(f.nativeB),
     'Verified owned aliases leaked into visible team list');
-  assert.equal(state.a.state, 'ready');
+  assert.equal(state.a.state, 'ready', `Project A native view: ${JSON.stringify(state.a)}`);
   assert.equal(state.a.executionTeamName, f.nativeA);
-  assert.equal(state.b.state, 'ready');
+  assert.equal(state.b.state, 'ready', `Project B native view: ${JSON.stringify(state.b)}`);
   assert.equal(state.b.executionTeamName, f.nativeB);
   assert.equal(state.empty.state, 'empty');
   assert(state.taskA.includes('PROJECT_A_TASK_ONLY') && !state.taskA.includes('PROJECT_B_TASK_ONLY'));
