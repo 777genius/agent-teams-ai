@@ -39,8 +39,11 @@ vi.mock('@features/localization/renderer', () => ({
   useAppTranslation: () => ({ t: (key: string) => key }),
 }));
 vi.mock('./TeamDetailView', () => ({
-  TeamDetailView: ({ teamName }: { teamName: string }) =>
-    React.createElement('div', { 'data-testid': 'team-detail', 'data-team': teamName }),
+  TeamDetailView: ({ teamName, retainedHistory }: { teamName: string; retainedHistory?: boolean }) =>
+    React.createElement('div', {
+      'data-testid': 'team-detail', 'data-team': teamName,
+      'data-retained': String(retainedHistory === true),
+    }),
 }));
 vi.mock('./TeamHistoryModePicker', () => ({
   TeamHistoryModePicker: () => React.createElement('div', { 'data-testid': 'mode-picker' }),
@@ -159,6 +162,7 @@ describe('ProjectScopedTeamDetailView project switching', () => {
     await settle();
     expect(getView).toHaveBeenCalledWith('ptc-a', '/TEST/a');
     expect(host.querySelector('[data-team]')?.getAttribute('data-team')).toBe('ptc-a');
+    expect(host.querySelector('[data-team]')?.getAttribute('data-retained')).toBe('true');
     expect(openTeamTab).not.toHaveBeenCalled();
     expect(updateTabLabel).toHaveBeenCalledWith(
       'alias-tab', expect.stringContaining('builders')

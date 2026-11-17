@@ -148,6 +148,30 @@ describe('TeamProjectContextRegistry', () => {
       .rejects.toMatchObject({ code: 'ENOENT' });
   });
 
+  it('opens saved, owned project history after its worktree folder was deleted', async () => {
+    const f = await fixture();
+    const reserved = await f.registry.reserve('logical-team', f.workspaceA);
+    await simulateNativeProvisioning(f, reserved.executionTeamName);
+    const ready = await f.registry.confirmReady(
+      'logical-team', f.workspaceA, reserved.executionTeamName
+    );
+    await writeFile(path.join(f.tasksBasePath, ready.executionTeamName, '7.json'), '{"subject":"saved"}');
+    await rm(f.workspaceA, { recursive: true });
+    expect(await f.registry.inspect('logical-team', f.workspaceA)).toEqual(ready);
+    expect(await f.registry.find('logical-team', f.workspaceA)).toEqual(ready);
+    expect(await readFile(path.join(f.tasksBasePath, ready.executionTeamName, '7.json'), 'utf8'))
+      .toContain('saved');
+    await expect(f.registry.reserve('logical-team', f.workspaceA)).rejects.toMatchObject({
+      code: 'ENOENT',
+    });
+  });
+
+  it('does not use a missing-directory fallback for permission or malformed-path errors', async () => {
+    const f = await fixture();
+    await expect(f.registry.inspect('logical-team', 'relative/workspace'))
+      .rejects.toThrow('absolute project folder');
+  });
+
   it('coalesces concurrent creation into one durable context', async () => {
     const f = await fixture();
     const rows = await Promise.all(

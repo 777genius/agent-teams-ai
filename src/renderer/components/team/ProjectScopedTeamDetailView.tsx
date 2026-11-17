@@ -232,6 +232,7 @@ export function ProjectScopedTeamDetailView({
             teamName={context.executionTeamName}
             logicalTeamName={context.logicalTeamName}
             teamDisplayName={context.logicalTeamName}
+            retainedHistory
             isActive={isActive}
             isPaneFocused={isPaneFocused}
           />

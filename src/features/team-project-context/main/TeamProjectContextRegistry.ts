@@ -77,6 +77,29 @@ async function canonicalProjectPath(value: string): Promise<string> {
   return process.platform === 'win32' ? path.normalize(canonical).toLowerCase() : canonical;
 }
 
+/**
+ * Already persisted history must remain addressable after a worktree or
+ * project folder is deleted. Only missing paths get a lexical lookup key;
+ * new provisioning still requires an existing real directory.
+ */
+async function historicalProjectPathKey(value: string): Promise<string> {
+  if (typeof value !== 'string' || !path.isAbsolute(value)) {
+    throw new TeamProjectContextUnavailableError('Choose an absolute project folder');
+  }
+  try {
+    return await canonicalProjectPath(value);
+  } catch (error) {
+    if (
+      (error as NodeJS.ErrnoException).code !== 'ENOENT' &&
+      (error as NodeJS.ErrnoException).code !== 'ENOTDIR'
+    ) {
+      throw error;
+    }
+    const normalized = path.normalize(value);
+    return process.platform === 'win32' ? normalized.toLowerCase() : normalized;
+  }
+}
+
 function validateIndex(value: unknown, logicalTeamName: string): TeamProjectContextIndex {
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
     throw new TeamProjectContextUnavailableError('Invalid project-context index');
@@ -362,7 +385,7 @@ export class TeamProjectContextRegistry {
     projectPath: string
   ): Promise<PersistedTeamWorkContext | null> {
     await this.assertOwnedDirectory(logicalTeamName);
-    const projectKey = await canonicalProjectPath(projectPath);
+    const projectKey = await historicalProjectPathKey(projectPath);
     const index = await this.readIndex(logicalTeamName);
     if (index.deleting || index.softDeleting) {
       throw new TeamProjectContextUnavailableError('Team is being deleted or moved to trash');

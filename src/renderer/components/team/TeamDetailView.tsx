@@ -382,6 +382,8 @@ interface TeamDetailViewProps {
   teamName: string;
   logicalTeamName?: string;
   teamDisplayName?: string;
+  /** Retained history is read-only for runtime launch; navigate to the current team instead. */
+  retainedHistory?: boolean;
   isActive?: boolean;
   isPaneFocused?: boolean;
 }
@@ -735,7 +737,6 @@ const LeadLoadBridge = memo(function LeadLoadBridge({
     }))
   );
   // const [isContextButtonHovered, setIsContextButtonHovered] = useState(false);
-
   const setContextPanelVisible = useCallback(
     (visible: boolean) => {
       if (!tabId) return;
@@ -750,7 +751,6 @@ const LeadLoadBridge = memo(function LeadLoadBridge({
     },
     [setSelectedContextPhaseForTab, tabId]
   );
-
   const leadSessionDetail = leadTabData?.sessionDetail ?? null;
   const leadConversation = leadTabData?.conversation ?? null;
   const leadSessionContextStats = leadTabData?.sessionContextStats ?? null;
@@ -1069,7 +1069,6 @@ const TeamMessagesPanelBridge = memo(function TeamMessagesPanelBridge({
     syncTeamPendingReplyRefresh,
     teamName,
   ]);
-
   const handlePendingReplyChange = useCallback(
     (updater: PendingRepliesUpdater) => {
       setPendingRepliesForTeam(teamName, updater);
@@ -1125,7 +1124,6 @@ const TeamSidebarRailBridge = memo(function TeamSidebarRailBridge({
     syncTeamPendingReplyRefresh,
     teamName,
   ]);
-
   const handlePendingReplyChange = useCallback(
     (updater: PendingRepliesUpdater) => {
       setPendingRepliesForTeam(teamName, updater);
@@ -1175,7 +1173,6 @@ const SendMessageDialogBridge = memo(function SendMessageDialogBridge({
       lastSendMessageResult: s.lastSendMessageResult,
     }))
   );
-
   const handleSend = useCallback<SendMessageDialogOnSend>(
     async (member, text, summary, attachments, actionMode, taskRefs) => {
       const sentAtMs = Date.now();
@@ -1290,6 +1287,7 @@ export const TeamDetailView = memo(function TeamDetailView({
   teamName,
   logicalTeamName,
   teamDisplayName,
+  retainedHistory = false,
   isActive = true,
   isPaneFocused = false,
 }: TeamDetailViewProps): React.JSX.Element {
@@ -1416,12 +1414,10 @@ export const TeamDetailView = memo(function TeamDetailView({
     open: false,
     mode: 'task',
   });
-
   const [activeTeamsForLaunch, setActiveTeamsForLaunch] = useState<
     { teamName: string; displayName: string; projectPath: string }[]
   >([]);
   const launchDialogOpen = launchDialogState.open;
-
   const [sessions, setSessions] = useState<Session[]>([]);
   const [sessionsLoading, setSessionsLoading] = useState(false);
   const [sessionsError, setSessionsError] = useState<string | null>(null);
@@ -1431,7 +1427,6 @@ export const TeamDetailView = memo(function TeamDetailView({
     columns: new Set(),
   });
   const [kanbanSort, setKanbanSort] = useState<KanbanSortState>({ field: 'updatedAt' });
-
   const {
     data,
     members,
@@ -1544,7 +1539,6 @@ export const TeamDetailView = memo(function TeamDetailView({
       selectReviewFile: s.selectReviewFile,
     }))
   );
-
   const tabId = useOptionalTabId();
   const focusReviewLifecycleHost = useCallback((): void => {
     if (tabId) useStore.getState().setActiveTab(tabId);
@@ -1598,7 +1592,6 @@ export const TeamDetailView = memo(function TeamDetailView({
     [teamName, teamSummaryColor, teamSummaryDisplayName]
   );
   const canTrackVisualizeButton = data?.teamName === teamName;
-
   const { isResizing: isMessagesPanelResizing, handleProps: messagesPanelHandleProps } =
     useResizablePanel({
       width: messagesPanelWidth,
@@ -1614,7 +1607,6 @@ export const TeamDetailView = memo(function TeamDetailView({
     maxHeight: SIDEBAR_LOGS_MAX_HEIGHT,
     side: 'bottom',
   });
-
   const changeMessagesPanelMode = useCallback(
     (mode: TeamMessagesPanelMode) => {
       collapseExpandedChat();
@@ -1686,7 +1678,6 @@ export const TeamDetailView = memo(function TeamDetailView({
       resizeObserver?.disconnect();
     };
   }, [canTrackVisualizeButton, graphOpen]);
-
   const [kanbanSearch, setKanbanSearch] = useState('');
 
   const handleOpenTaskFileInEditor = useTaskDetailEditorHost({
@@ -2077,6 +2068,12 @@ export const TeamDetailView = memo(function TeamDetailView({
 
   const [projectLaunchError, setProjectLaunchError] = useState<string | null>(null);
   const openLaunchDialog = useCallback((mode: TeamLaunchDialogMode) => {
+    if (retainedHistory && logicalTeamName) {
+      // Retained work is historical; never launch the newly shared logical
+      // runtime while the user is viewing a different physical history.
+      useStore.getState().openTeamTab(logicalTeamName);
+      return;
+    }
     if (logicalTeamName) {
       void (async () => {
         setProjectLaunchError(null);
@@ -2088,7 +2085,7 @@ export const TeamDetailView = memo(function TeamDetailView({
       return;
     }
     setLaunchDialogState({ open: true, mode });
-  }, [logicalTeamName, teamName, data?.config.projectPath, launchTeam]);
+  }, [logicalTeamName, retainedHistory, teamName, data?.config.projectPath, launchTeam]);
 
   const closeLaunchDialog = useCallback(() => {
     setLaunchDialogState((prev) => ({ ...prev, open: false }));
@@ -2098,11 +2095,15 @@ export const TeamDetailView = memo(function TeamDetailView({
   }, [openLaunchDialog]);
   const handleLaunchDialogSubmit = useCallback(
     async (request: TeamLaunchRequest): Promise<void> => {
+      if (retainedHistory && logicalTeamName) {
+        useStore.getState().openTeamTab(logicalTeamName);
+        return;
+      }
       await launchTeam(logicalTeamName
         ? { ...request, teamName: logicalTeamName, cwd: data?.config.projectPath ?? request.cwd }
         : request);
     },
-    [launchTeam, logicalTeamName, data?.config.projectPath]
+    [launchTeam, logicalTeamName, retainedHistory, data?.config.projectPath]
   );
   const validateMemberSettingsRelaunch = useCallback(async (): Promise<void> => {
     const { memberSettingsDraft, baselineMembers } = launchDialogState;
@@ -3089,7 +3090,7 @@ export const TeamDetailView = memo(function TeamDetailView({
                 </div>
               </div>
 
-              {!data.isAlive && !isTeamProvisioning ? (
+              {!retainedHistory && !data.isAlive && !isTeamProvisioning ? (
                 <TeamOfflineStatusBanner
                   teamName={teamName}
                   onLaunch={() => openLaunchDialog('launch')}
