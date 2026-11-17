@@ -71,6 +71,33 @@ describe('project team lifecycle projection', () => {
     expect(stop).toHaveBeenCalledTimes(1);
   });
 
+  it('stops verified physical runs before soft-deleting a per-project logical team', async () => {
+    const f = fixture('per_project');
+    const order: string[] = [];
+    const stop = vi.fn(async (name: string) => {
+      order.push('stop:' + name);
+      return { success: true as const, data: undefined };
+    });
+    const perform = vi.fn(async () => {
+      order.push('delete:builders');
+      return { success: true as const, data: undefined };
+    });
+    const { deleteLogicalTeamWithContexts } = await import('../../../src/main/ipc/teams/teamContextLifecycle');
+    const result = await deleteLogicalTeamWithContexts('builders', stop, perform, f.meta, f.registry as never);
+    expect(result.success).toBe(true);
+    expect(order).toEqual(['stop:ptc-a', 'delete:builders']);
+  });
+
+  it('does not soft-delete an unfinished project context', async () => {
+    const f = fixture('per_project');
+    f.registry.list.mockResolvedValue([{ ...entry, state: 'reserved' }]);
+    const perform = vi.fn(async () => ({ success: true as const, data: undefined }));
+    const { deleteLogicalTeamWithContexts } = await import('../../../src/main/ipc/teams/teamContextLifecycle');
+    const result = await deleteLogicalTeamWithContexts('builders', vi.fn(), perform, f.meta, f.registry as never);
+    expect(result.success).toBe(false);
+    expect(perform).not.toHaveBeenCalled();
+  });
+
   it('projects only verified native aliases to the logical team in the UI alive list', async () => {
     const f = fixture('per_project');
     const teams = [{ teamName: 'builders' }] as TeamSummary[];
