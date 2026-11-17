@@ -1,0 +1,922 @@
+{
+  "schemaVersion": 1,
+  "kind": "C714_COLLABORATION_MODEL_WINDOWS_SETTLEMENT_SOURCE_R2_GUARD_REVIEW",
+  "repository": "777genius/agent-teams-ai",
+  "reviewer": "/root/producer_r2_guard",
+  "reviewedAt": "2026-11-17 16:42:49 UTC",
+  "subject": {
+    "bytes": 14910,
+    "sha256": "b487874d966ee11243375f8d94703eeb95890f52ea4af951663d8b410a854bb3",
+    "gitBlob": "778051d3e082b7768437d4437cd11db661531be5"
+  },
+  "decision": "ACCEPT_EXACT_SOURCE_R2_ONLY",
+  "accepted": true,
+  "blockers": [],
+  "checkCount": 38,
+  "checks": [
+    {
+      "id": "G01",
+      "status": "PASS_STATIC_SOURCE_R2",
+      "title": "Exact corrected subject",
+      "detail": "The complete final 778051d3 proposal is the reviewed subject. Its byte length, SHA256 and Git object identity independently match the retained body; the superseded 3b52 proposal is not the acceptance subject.",
+      "evidence": {
+        "bytes": 14910,
+        "sha256": "b487874d966ee11243375f8d94703eeb95890f52ea4af951663d8b410a854bb3",
+        "gitBlob": "778051d3e082b7768437d4437cd11db661531be5"
+      }
+    },
+    {
+      "id": "G02",
+      "status": "PASS_STATIC_SOURCE_R2",
+      "title": "Closed original R1 publication precedes source authorship",
+      "detail": "The full gate is accepted at 16:33:36 UTC; this source proposal records authorship at 16:34:16 UTC. The gate binds the same R1, two allowed paths and c54dd6 parent. This review reuses that closed actual gate rather than claiming a new reread of its entire historical pointer closure.",
+      "evidence": {
+        "gate": {
+          "bytes": 5408,
+          "sha256": "c310ec4cd9baee649d4881b3a0d26201006887ff9256c21f0c7bcbc6baef5a9a",
+          "gitBlob": "28d0ea99655abe371da7d1b14dab3a1d561b7cf3"
+        },
+        "closedAt": "2026-11-17 16:33:36 UTC",
+        "authoredAt": "2026-11-17 16:34:16 UTC",
+        "actualChecks": 56
+      }
+    },
+    {
+      "id": "G03",
+      "status": "PASS_STATIC_SOURCE_R2",
+      "title": "Accepted R1 guard boundary retained",
+      "detail": "The complete selected R1 and the previously fully self-read corrected guard report select these same two edits, preserve the original final assertions and distinguish source proof from unretained failed runtime state.",
+      "evidence": {
+        "r1": {
+          "bytes": 11958,
+          "sha256": "e8f489a0c9902a98a77b3ed897ce5ab91e654294ecbfae68c2baea439ec9de6b",
+          "gitBlob": "203e6dd6e1e124d55339ff890c74d94ce95f1558"
+        },
+        "priorGuard": {
+          "role": "guard",
+          "pin": {
+            "bytes": 55569,
+            "sha256": "8e79594865cd4f647d9db279dfd31d2caab73ed32e8342eba044795036064558",
+            "gitBlob": "4c2c7232bc1a4d7538e14eb35d2068a2072052e2"
+          },
+          "checks": 41,
+          "selfReadConfirmed": true,
+          "selfReadAt": "2026-11-17 16:15:25 UTC"
+        }
+      }
+    },
+    {
+      "id": "G04",
+      "status": "PASS_STATIC_SOURCE_R2",
+      "title": "Current immutable parent source joins",
+      "detail": "Fresh immutable path fetches at c54dd6 match all eight complete source identities from the accepted R1 basis. Existing full reads are reused only after whole-body identity equality; there is no branch-head assumption.",
+      "evidence": {
+        "parent": {
+          "commit": "c54dd6b37688a52fe21a1de11e8a685877c7ac0a",
+          "root": "ef76a35c09bdddb54c357439c868db1eebe4f1c0",
+          "docs": "c05a3e10740ee77be2d072b47a984707674afef4",
+          "branch": "fix/frontend-parity-coobservation-c714-20261115"
+        },
+        "sourceBodies": 8,
+        "totalBytes": 223304,
+        "allExact": true
+      }
+    },
+    {
+      "id": "G05",
+      "status": "PASS_STATIC_SOURCE_R2",
+      "title": "Exactly two complete postimages",
+      "detail": "The proposal has only the selected workflow and TEST native fixture. Both full after bodies were read, hashed and compared to their entire preimages. There are no added paths, imports, helpers, production code, dependency changes or test edits in these postimages.",
+      "evidence": {
+        "selectedFiles": [
+          {
+            "path": ".github/workflows/host-emulated-acceptance.yml",
+            "mode": "100644",
+            "before": {
+              "bytes": 96872,
+              "sha256": "5379894007246368728c518c08222be329d58bb2755dc80235709a033017805d",
+              "gitBlob": "9ec6dfb68e98480a12224528e2637153f4274a6b"
+            },
+            "after": {
+              "bytes": 96896,
+              "sha256": "a61c9ae8e2c294c1f284081b946c050c6fd2042a09789fddfd7caec5e6eaf5cb",
+              "gitBlob": "0d54287979a1741519b41b00e1ee521d5cd83046"
+            },
+            "beforePhysicalLines": 1248,
+            "afterPhysicalLines": 1248,
+            "inverseExact": true
+          },
+          {
+            "path": "tools/owned-process-broker/nativeWindowsAppFixture.ts",
+            "mode": "100644",
+            "before": {
+              "bytes": 31223,
+              "sha256": "4c037ffe4be03b64ef9e5d9172246a9744f3fc1cf55b48af630811a4c580eaa2",
+              "gitBlob": "0b1bbc3ef47cd55ac3e23c13890fce281de01c98"
+            },
+            "after": {
+              "bytes": 31509,
+              "sha256": "32b0abb41931312ebf024791e10a7c88da4b377a000f985137ac01cd8a7a13a8",
+              "gitBlob": "c4e356ba85e5f32febb47342610c2f06e27b76bc"
+            },
+            "beforePhysicalLines": 485,
+            "afterPhysicalLines": 491,
+            "inverseExact": true
+          }
+        ],
+        "wholeBeforeAfterBytes": 256500
+      }
+    },
+    {
+      "id": "G06",
+      "status": "PASS_STATIC_SOURCE_R2",
+      "title": "Workflow full inverse",
+      "detail": "Only physical lines 729 and 764 differ. Each original and replacement literal occurs exactly once. Replacing the two expected model values restores all 96,872 original bytes, including all formatting and final newline.",
+      "evidence": {
+        "sites": [
+          {
+            "line": 729,
+            "beforeUnique": 1,
+            "afterUnique": 1,
+            "beforeExactLine": true,
+            "afterExactLine": true
+          },
+          {
+            "line": 764,
+            "beforeUnique": 1,
+            "afterUnique": 1,
+            "beforeExactLine": true,
+            "afterExactLine": true
+          }
+        ],
+        "changedLines": [
+          {
+            "line": 729,
+            "before": "                ['anthropic', 'sonnet'], ['codex', 'TEST-model'], ['test-provider', 'TEST-model'], ['test-provider', 'TEST-model'],",
+            "after": "                ['anthropic', 'TEST-claude-sonnet'], ['codex', 'TEST-model'], ['test-provider', 'TEST-model'], ['test-provider', 'TEST-model'],"
+          },
+          {
+            "line": 764,
+            "before": "                [['anthropic', 'sonnet', 'low'], ['codex', 'TEST-model', undefined]]);",
+            "after": "                [['anthropic', 'TEST-claude-sonnet', 'low'], ['codex', 'TEST-model', undefined]]);"
+          }
+        ],
+        "fullInverseExact": true,
+        "inversePin": {
+          "bytes": 96872,
+          "sha256": "5379894007246368728c518c08222be329d58bb2755dc80235709a033017805d",
+          "gitBlob": "9ec6dfb68e98480a12224528e2637153f4274a6b"
+        }
+      }
+    },
+    {
+      "id": "G07",
+      "status": "PASS_STATIC_SOURCE_R2",
+      "title": "Workflow expectation matches the actual fixture",
+      "detail": "The unchanged collaboration fixture explicitly saves TEST-claude-sonnet with low effort for anthropic and selects TEST-claude-sonnet in the Claude runtime/template model. Its returned savedModel is the same literal. The verifier now checks that existing exact TEST value; it does not admit an alias or change a provider/model parser.",
+      "evidence": {
+        "source": "6d267c1531fd741c4abee8b27ef501f28098d782",
+        "lines": [
+          84,
+          94,
+          136
+        ]
+      }
+    },
+    {
+      "id": "G08",
+      "status": "PASS_STATIC_SOURCE_R2",
+      "title": "Both complete ordered verifier comparisons preserved",
+      "detail": "The four provider/model tuples and the two initial provider/model/effort tuples remain deep-equality comparisons with identical order/cardinality. Anthropic provider identity, low effort, Codex TEST-model and undefined effort, and both test-provider tuples are unchanged."
+    },
+    {
+      "id": "G09",
+      "status": "PASS_STATIC_SOURCE_R2",
+      "title": "Workflow authority and execution unchanged",
+      "detail": "The complete workflow read and whole inverse preserve events, permissions, explicit-head checkout, matrix, conditions, commands, safe frontend exclusions, timeouts, artifact retention and aggregation. No schedule, test filter, process invocation, retry or no-real-vendor route is changed."
+    },
+    {
+      "id": "G10",
+      "status": "PASS_STATIC_SOURCE_R2",
+      "title": "Fixture full inverse",
+      "detail": "The old 278-byte three-line block and new 564-byte nine-line block each occur once at byte offset 27,208. Replacing the new block with the old restores all 31,223 original bytes. Prefix and suffix are literal-identical.",
+      "evidence": {
+        "oldBlockCount": 1,
+        "newBlockCount": 1,
+        "startOffsetSame": true,
+        "startOffset": 27208,
+        "prefixExact": true,
+        "suffixExact": true,
+        "fullInverseExact": true,
+        "inversePin": {
+          "bytes": 31223,
+          "sha256": "4c037ffe4be03b64ef9e5d9172246a9744f3fc1cf55b48af630811a4c580eaa2",
+          "gitBlob": "0b1bbc3ef47cd55ac3e23c13890fce281de01c98"
+        },
+        "oldBlockPin": {
+          "bytes": 278,
+          "sha256": "e483fce7bfdbdd4f926afa63274b94cfc9b7ccc8e563f27f4ce42e28de1d3754",
+          "gitBlob": "5bbc38fe70ef1434f70a88b3c7cdf971bb41ea11"
+        },
+        "newBlockPin": {
+          "bytes": 564,
+          "sha256": "db76e5845de647689c71031ea865e515667cacf735bf4a4e67eb3e3abb66318a",
+          "gitBlob": "ef40a45c17a5f7917206615161da9023f7d60332"
+        },
+        "oldLines": 485,
+        "newLines": 491,
+        "awaitCountBefore": 24,
+        "awaitCountAfter": 24
+      }
+    },
+    {
+      "id": "G11",
+      "status": "PASS_STATIC_SOURCE_R2",
+      "title": "Physical line and scope ratchets",
+      "detail": "The fixture increases from 485 to 491 physical lines under the same 800 cap. The workflow remains 1,248 physical lines. The accepted inventory totals 5,020 production files, 141 exceptions, 8,799 non-doc leaves and 42 workflows are inherited from the closed basis, not represented as a new repository census."
+    },
+    {
+      "id": "G12",
+      "status": "PASS_STATIC_SOURCE_R2",
+      "title": "Original admission remains",
+      "detail": "beginStop still requires recovered phase, one admission per role, the original remaining deadline of at most 10,000 ms, primary-before-neighbor ordering and no prior selected service exit. completeStop still requires the original selected row and an unfinished stop."
+    },
+    {
+      "id": "G13",
+      "status": "PASS_STATIC_SOURCE_R2",
+      "title": "Complete receipt validation precedes pending classification",
+      "detail": "The unchanged bounded scan parses and validates complete process receipts before returning candidates, requires the exact Team binding and original registrations/terminate namespace, and retains original file type, path, size and count constraints. The new branch cannot bypass validation.",
+      "evidence": {
+        "fixture": "c4e356ba85e5f32febb47342610c2f06e27b76bc",
+        "validator": "dd1a705e054e5fe7df4addf97aa48bf4d0638444"
+      }
+    },
+    {
+      "id": "G14",
+      "status": "PASS_STATIC_SOURCE_R2",
+      "title": "Original operation and selected-reference uniqueness",
+      "detail": "The loop still checks remaining time and peer state before each original receipt scan, selects operation=terminate with the exact original processRef, and rejects more than one candidate before any pending classification."
+    },
+    {
+      "id": "G15",
+      "status": "PASS_STATIC_SOURCE_R2",
+      "title": "Only completed observed-absent may enter new branch",
+      "detail": "Both top-level and state phases must be completed and native observation must be observed-absent. Other candidates retain the exact original absent/prepared/held-only assertion. Requested/refused/rejected and unrelated terminal states are not silently retried."
+    },
+    {
+      "id": "G16",
+      "status": "PASS_STATIC_SOURCE_R2",
+      "title": "Strict missing-versus-present distinction",
+      "detail": "Only nativeSettlement === undefined remains pending in the completed branch. Present null, false, zero or empty string leave the loop and fail the unchanged required settle-intent assertion; truthy malformed values are rejected by the existing full validator. They cannot be converted into an indefinite pending condition."
+    },
+    {
+      "id": "G17",
+      "status": "PASS_STATIC_SOURCE_R2",
+      "title": "Selected principal guard before waiting",
+      "detail": "A completed/missing-settlement candidate must still belong to principalId human. A foreign principal fails immediately before the existing delay."
+    },
+    {
+      "id": "G18",
+      "status": "PASS_STATIC_SOURCE_R2",
+      "title": "Full selected capture guard before waiting",
+      "detail": "The candidate capture is deep-equal to the original selected capture, retaining epoch/provider generation/native PID birth/registrar/source authority through the unchanged version-5 contract. There is no PID-only identity test or cached replacement authority."
+    },
+    {
+      "id": "G19",
+      "status": "PASS_STATIC_SOURCE_R2",
+      "title": "Original row identity guard before waiting",
+      "detail": "The candidate original.id must equal the selected original view.id. The full validator already binds original.capturedNative to capture and requires original/capture/processRef for a terminate receipt."
+    },
+    {
+      "id": "G20",
+      "status": "PASS_STATIC_SOURCE_R2",
+      "title": "Native stop-intent authority remains mandatory",
+      "detail": "The unchanged validator requires the original version-5 nativeIntent, valid stop operation, full exact capture and service source. The three new selected guards combine with that existing validation; they do not replace it.",
+      "evidence": {
+        "validatorLines": [
+          217,
+          221,
+          272,
+          274
+        ]
+      }
+    },
+    {
+      "id": "G21",
+      "status": "PASS_STATIC_SOURCE_R2",
+      "title": "Unsupported settlement flags cannot wait",
+      "detail": "Existing validation rejects nativeSettlementNotDispatched or nativeSettlementConfirmed when settlement is absent/falsy; either defined flag must be true and satisfy its existing intent/state constraints. A missing settlement cannot claim confirmed or not-dispatched and enter the new pending path.",
+      "evidence": {
+        "validatorLines": [
+          297,
+          303
+        ]
+      }
+    },
+    {
+      "id": "G22",
+      "status": "PASS_STATIC_SOURCE_R2",
+      "title": "Present not-dispatched remains final refusal",
+      "detail": "A valid settlement carrying nativeSettlementNotDispatched=true still leaves the loop and fails the unchanged final assertion that this flag is undefined. Other malformed or foreign settlement intents fail schema/capture/service-source validation."
+    },
+    {
+      "id": "G23",
+      "status": "PASS_STATIC_SOURCE_R2",
+      "title": "Original deadline and poll interval preserved",
+      "detail": "The same monotonic stop.deadline, remaining checks and existing delay(Math.min(25, remaining(stop.deadline))) remain. There is no deadline reset, new timer, new await callsite or timeout increase. Repeated observations stay within the original loop and its original 10-second allowance.",
+      "evidence": {
+        "awaitCountBefore": 24,
+        "awaitCountAfter": 24,
+        "patchHasAwait": false
+      }
+    },
+    {
+      "id": "G24",
+      "status": "PASS_STATIC_SOURCE_R2",
+      "title": "No command or action replay",
+      "detail": "The patch adds only property inspection and three assertions. It issues no stop/settle command, receipt write, native query, UI click, Host launch, model call or retry. Existing observation callsites may be revisited only by the unchanged bounded poll."
+    },
+    {
+      "id": "G25",
+      "status": "PASS_STATIC_SOURCE_R2",
+      "title": "Unchanged complete final assertion block",
+      "detail": "The complete final block is byte-identical and independently hashes to the proposal's 2,549-byte derived identity. It checks selected human/capture/original identity, stop+settle operations, exact service source/capture and distinct operation refs, no not-dispatched flag, observed absence and signalAccepted unknown.",
+      "evidence": {
+        "equal": true,
+        "pin": {
+          "bytes": 2549,
+          "sha256": "5b427eed97616ff4a6fbefbd11cb1d711a432398d6bb024e1912c7046c98ff90",
+          "gitBlob": "931668734da53fd402e354214029aae154e6c39d"
+        },
+        "expected": {
+          "bytes": 2549,
+          "sha256": "5b427eed97616ff4a6fbefbd11cb1d711a432398d6bb024e1912c7046c98ff90",
+          "gitBlob": "931668734da53fd402e354214029aae154e6c39d"
+        }
+      }
+    },
+    {
+      "id": "G26",
+      "status": "PASS_STATIC_SOURCE_R2",
+      "title": "Original row result and witness requirements preserved",
+      "detail": "The unchanged final block verifies result id/PID, absent/canTerminate=false, stoppedAt and changed processRef; then requires the exact retained original witness to observe absent and wait with exit 0 within the same deadline."
+    },
+    {
+      "id": "G27",
+      "status": "PASS_STATIC_SOURCE_R2",
+      "title": "Neighbor and finite peer preservation",
+      "detail": "Primary completion still observes the original neighbor alive. Exactly one selected finite-peer service-exit row must carry the selected target PID and code 1; natural expiry/duplicate/wrong PID cannot substitute. Neighbor completion still observes the original provider alive."
+    },
+    {
+      "id": "G28",
+      "status": "PASS_STATIC_SOURCE_R2",
+      "title": "Completion follows all currentness checks",
+      "detail": "Pins, peer state, runtime identity and remaining deadline are still checked before selected.view is updated and stop.completed becomes true. A new missing-settlement observation itself never marks a stop complete."
+    },
+    {
+      "id": "G29",
+      "status": "PASS_STATIC_SOURCE_R2",
+      "title": "Original Quit and ordinary cleanup unchanged",
+      "detail": "The complete afterQuit method plus original object terminator is byte-identical and matches 1,053 bytes. It still requires both completed UI stops, provider exit 0, all three exact original witnesses exiting 0/null, writer-lock absence, pins/peer/runtime/deadline, one connection/registration and two service exits. Catch/close and original disposal remain unchanged.",
+      "evidence": {
+        "equal": true,
+        "pin": {
+          "bytes": 1053,
+          "sha256": "ee1af903cdf8ad88c0e01d0325aef9e68405920b25383a5d7e3d07e72d0ccc53",
+          "gitBlob": "c84bedaa47e161a60438e795cdd26b22a839b9df"
+        },
+        "expected": {
+          "bytes": 1053,
+          "sha256": "ee1af903cdf8ad88c0e01d0325aef9e68405920b25383a5d7e3d07e72d0ccc53",
+          "gitBlob": "c84bedaa47e161a60438e795cdd26b22a839b9df"
+        },
+        "boundary": "Includes complete afterQuit method plus the original object terminator (15 physical lines).",
+        "matchesExpected": true
+      }
+    },
+    {
+      "id": "G30",
+      "status": "PASS_STATIC_SOURCE_R2",
+      "title": "Source-proved persistence window",
+      "detail": "Unchanged WindowsTeamProcessCommands persists completed observed-absent at lines 225–228 and can separately prepare/assign/persist settlement intent at lines 248–251 before awaiting native settlement. Unchanged TeamProcessCommands.persist fingerprints and validates before writing. This supports waiting for a missing intent without changing the producer.",
+      "evidence": {
+        "producer": "b41629b7ed483f1ab9f42e2e234933999647e7bd",
+        "persist": "e25f31210e8ccd5ed1fb2637b6b45efe49a6f3c3"
+      }
+    },
+    {
+      "id": "G31",
+      "status": "PASS_STATIC_SOURCE_R2",
+      "title": "Persistence and confirmation limits kept",
+      "detail": "The unchanged producer can return early on expiry or blocking requested work. This review does not claim missing intent will eventually appear. The unchanged final fixture requires valid settlement intent and witness/custody checks, but does not newly require nativeSettlementConfirmed===true; no stronger native acknowledgement guarantee is invented."
+    },
+    {
+      "id": "G32",
+      "status": "PASS_STATIC_SOURCE_R2",
+      "title": "Whole cases and repaired extraction helper preserved",
+      "detail": "The source changes do not touch native UI's original eight cases, repaired native-receipt test 8d12, its twelve local registrations and single awaited whole-platform import containing fourteen cases, or frozen whole 149/43/85. No mirrored test or added execution route is claimed."
+    },
+    {
+      "id": "G33",
+      "status": "PASS_STATIC_SOURCE_R2",
+      "title": "Corrected import-case metadata accepted",
+      "detail": "The final proposal uses diagnosticImportedWholePlatformCases=14 and explicitly says one complete import. This removes the former ambiguous fourteen-import label. Acceptance binds the corrected final proposal and unchanged two after bodies.",
+      "evidence": {
+        "at": "2026-11-17 16:35:26 UTC",
+        "supersedes": {
+          "bytes": 14155,
+          "sha256": "a9d9834f0d150e5a4b5f6dfa9ee3020fab6dd8311ce20f459bfdf1ab5560d23c",
+          "gitBlob": "3b52dd476aac711aac259bae74831fe10b0a90c1"
+        },
+        "changedField": "casePreservation.diagnosticWholeFileImports renamed diagnosticImportedWholePlatformCases",
+        "reason": "The original whole-platform import contains fourteen cases; it is not fourteen file imports. Source postimages, authoredAt, selected scope and decisions are unchanged.",
+        "source": {
+          "bytes": 9961,
+          "sha256": "9fd198e4a618d888eb1a8501d901e29833fa8ea74f53d1071c4b88599563d69c",
+          "gitBlob": "438d60e47e1940ffc30b005ef7c97bd26a0ff8d4"
+        }
+      }
+    },
+    {
+      "id": "G34",
+      "status": "PASS_STATIC_SOURCE_R2",
+      "title": "Historical failures remain failures",
+      "detail": "The original collaboration first model expectation failed and the second was unreached. The failed Windows selected stop row was not retained in stops[], so strict missing field versus malformed falsy field and eventual settlement in that run remain unknown. Neither old outcome is relabeled by this source review."
+    },
+    {
+      "id": "G35",
+      "status": "PASS_STATIC_SOURCE_R2",
+      "title": "No unrelated qualification inflation",
+      "detail": "ARM Retry/source readiness, Claude moved-target, OpenCode V2 management and Darwin listener/P09 failures remain outside this two-file repair. The source does not widen budgets or drop their original assertions."
+    },
+    {
+      "id": "G36",
+      "status": "PASS_STATIC_SOURCE_R2",
+      "title": "Frozen refs and terminal runs preserved",
+      "detail": "CI3 still means PR1223/head86f; all selected current refs/metadata and terminal run exclusions remain. This review performed no live lookup, poll, download, retry, rerun, cancel, dispatch, ref/PR action, or old-attempt recovery.",
+      "evidence": {
+        "sourceHead": "86f52244b5375834a4040cbc63803d68cc708087",
+        "pr": 1223,
+        "refsAndMetadataFrozen": true,
+        "terminalExcludedForever": [
+          44092933980,
+          44092933718,
+          44092933835,
+          44092933888,
+          44092934051,
+          44092933827,
+          44092933972,
+          44092933912
+        ],
+        "noRetryRerunCancelDispatch": true,
+        "oldRuntimeResultsDoNotQualifyThesePostimages": true
+      }
+    },
+    {
+      "id": "G37",
+      "status": "PASS_STATIC_SOURCE_R2",
+      "title": "Independent root report joined without substitution",
+      "detail": "After completing independent source reads and inverses, the full 24,523-byte root review was fetched/read/hashed and its same-subject/source/final-block conclusions agree. Its checks are not counted as independent guard checks.",
+      "evidence": {
+        "bytes": 24523,
+        "sha256": "18a290eb6546c2ccef13c307fdd4315f70f366aa4ffe39b1a265da0dc6ab1ba3",
+        "gitBlob": "eae08bc8057b29fc63c47202ab31fe698b5cef63"
+      }
+    },
+    {
+      "id": "G38",
+      "status": "PASS_STATIC_SOURCE_R2",
+      "title": "Source-only acceptance and existing sequence",
+      "detail": "No concrete guard blocker remains in these exact two postimages. This accepts only SOURCE R2 for the already selected publication procedure. No source has been compiled/evaluated/imported/executed by this review, no runtime PASS is claimed, and no additional gate or venue is created."
+    }
+  ],
+  "priorR1": {
+    "bytes": 11958,
+    "sha256": "e8f489a0c9902a98a77b3ed897ce5ab91e654294ecbfae68c2baea439ec9de6b",
+    "gitBlob": "203e6dd6e1e124d55339ff890c74d94ce95f1558"
+  },
+  "priorGuard": {
+    "role": "guard",
+    "pin": {
+      "bytes": 55569,
+      "sha256": "8e79594865cd4f647d9db279dfd31d2caab73ed32e8342eba044795036064558",
+      "gitBlob": "4c2c7232bc1a4d7538e14eb35d2068a2072052e2"
+    },
+    "checks": 41,
+    "selfReadConfirmed": true,
+    "selfReadAt": "2026-11-17 16:15:25 UTC"
+  },
+  "closedActualGate": {
+    "bytes": 5408,
+    "sha256": "c310ec4cd9baee649d4881b3a0d26201006887ff9256c21f0c7bcbc6baef5a9a",
+    "gitBlob": "28d0ea99655abe371da7d1b14dab3a1d561b7cf3"
+  },
+  "parent": {
+    "commit": "c54dd6b37688a52fe21a1de11e8a685877c7ac0a",
+    "root": "ef76a35c09bdddb54c357439c868db1eebe4f1c0",
+    "docs": "c05a3e10740ee77be2d072b47a984707674afef4",
+    "branch": "fix/frontend-parity-coobservation-c714-20261115"
+  },
+  "selectedFiles": [
+    {
+      "path": ".github/workflows/host-emulated-acceptance.yml",
+      "mode": "100644",
+      "before": {
+        "bytes": 96872,
+        "sha256": "5379894007246368728c518c08222be329d58bb2755dc80235709a033017805d",
+        "gitBlob": "9ec6dfb68e98480a12224528e2637153f4274a6b"
+      },
+      "after": {
+        "bytes": 96896,
+        "sha256": "a61c9ae8e2c294c1f284081b946c050c6fd2042a09789fddfd7caec5e6eaf5cb",
+        "gitBlob": "0d54287979a1741519b41b00e1ee521d5cd83046"
+      },
+      "beforePhysicalLines": 1248,
+      "afterPhysicalLines": 1248,
+      "inverseExact": true
+    },
+    {
+      "path": "tools/owned-process-broker/nativeWindowsAppFixture.ts",
+      "mode": "100644",
+      "before": {
+        "bytes": 31223,
+        "sha256": "4c037ffe4be03b64ef9e5d9172246a9744f3fc1cf55b48af630811a4c580eaa2",
+        "gitBlob": "0b1bbc3ef47cd55ac3e23c13890fce281de01c98"
+      },
+      "after": {
+        "bytes": 31509,
+        "sha256": "32b0abb41931312ebf024791e10a7c88da4b377a000f985137ac01cd8a7a13a8",
+        "gitBlob": "c4e356ba85e5f32febb47342610c2f06e27b76bc"
+      },
+      "beforePhysicalLines": 485,
+      "afterPhysicalLines": 491,
+      "inverseExact": true
+    }
+  ],
+  "completePrimarySourceIndex": [
+    {
+      "repository": "777genius/agent-teams-ai",
+      "path": ".github/workflows/host-emulated-acceptance.yml",
+      "ref": "c54dd6b37688a52fe21a1de11e8a685877c7ac0a",
+      "pin": {
+        "bytes": 96872,
+        "sha256": "5379894007246368728c518c08222be329d58bb2755dc80235709a033017805d",
+        "gitBlob": "9ec6dfb68e98480a12224528e2637153f4274a6b"
+      },
+      "fullRead": true,
+      "readMethod": "Fresh immutable current-parent whole body fetch/hash; complete source read reused from accepted R1 only where the body identity is exact, with current relevant source sections reread."
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "path": "tools/owned-process-broker/nativeWindowsAppFixture.ts",
+      "ref": "c54dd6b37688a52fe21a1de11e8a685877c7ac0a",
+      "pin": {
+        "bytes": 31223,
+        "sha256": "4c037ffe4be03b64ef9e5d9172246a9744f3fc1cf55b48af630811a4c580eaa2",
+        "gitBlob": "0b1bbc3ef47cd55ac3e23c13890fce281de01c98"
+      },
+      "fullRead": true,
+      "readMethod": "Fresh immutable current-parent whole body fetch/hash; complete source read reused from accepted R1 only where the body identity is exact, with current relevant source sections reread."
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "path": "packages/legacy-agent-host/src/process/WindowsTeamProcessCommands.ts",
+      "ref": "c54dd6b37688a52fe21a1de11e8a685877c7ac0a",
+      "pin": {
+        "bytes": 29443,
+        "sha256": "4edbb21876753230e69a0c603061dd6493e9c48d4d2014df79150c37f24a772f",
+        "gitBlob": "b41629b7ed483f1ab9f42e2e234933999647e7bd"
+      },
+      "fullRead": true,
+      "readMethod": "Fresh immutable current-parent whole body fetch/hash; complete source read reused from accepted R1 only where the body identity is exact, with current relevant source sections reread."
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "path": "packages/legacy-agent-host/src/process/validateProcessRecords.ts",
+      "ref": "c54dd6b37688a52fe21a1de11e8a685877c7ac0a",
+      "pin": {
+        "bytes": 14676,
+        "sha256": "c6b9ebf49e82a17f55683605c0bc1041d530b6c90da3f2774e8c1e3685d035d1",
+        "gitBlob": "dd1a705e054e5fe7df4addf97aa48bf4d0638444"
+      },
+      "fullRead": true,
+      "readMethod": "Fresh immutable current-parent whole body fetch/hash; complete source read reused from accepted R1 only where the body identity is exact, with current relevant source sections reread."
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "path": "scripts/legacy-agent-host/desktop-emulated-collaboration-fixture.ts",
+      "ref": "c54dd6b37688a52fe21a1de11e8a685877c7ac0a",
+      "pin": {
+        "bytes": 16591,
+        "sha256": "bd4b8bec56e93cd7c17ec04d5c09b93a8115097af57224d28e954c3f06cdb0c8",
+        "gitBlob": "6d267c1531fd741c4abee8b27ef501f28098d782"
+      },
+      "fullRead": true,
+      "readMethod": "Fresh immutable current-parent whole body fetch/hash; complete source read reused from accepted R1 only where the body identity is exact, with current relevant source sections reread."
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "path": "packages/legacy-agent-host/src/process/TeamProcessCommands.ts",
+      "ref": "c54dd6b37688a52fe21a1de11e8a685877c7ac0a",
+      "pin": {
+        "bytes": 20767,
+        "sha256": "d90bd81ed7743afdd836225d3944e6b98348697268e8a45963f22201e6a8b0ff",
+        "gitBlob": "e25f31210e8ccd5ed1fb2637b6b45efe49a6f3c3"
+      },
+      "fullRead": true,
+      "readMethod": "Fresh immutable current-parent whole body fetch/hash; complete source read reused from accepted R1 only where the body identity is exact, with current relevant source sections reread."
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "path": "packages/legacy-agent-host/src/process/registeredProcessContracts.ts",
+      "ref": "c54dd6b37688a52fe21a1de11e8a685877c7ac0a",
+      "pin": {
+        "bytes": 6572,
+        "sha256": "6a8250e5f1f82ad39ac223d6f515a336cf4f26daef53a782348737d47e40c8a1",
+        "gitBlob": "83caa9c3f1a2f57eca67b329dd5e8ec7065a1f79"
+      },
+      "fullRead": true,
+      "readMethod": "Fresh immutable current-parent whole body fetch/hash; complete source read reused from accepted R1 only where the body identity is exact, with current relevant source sections reread."
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "path": "packages/legacy-agent-host/src/owned-process/retainedServiceContracts.ts",
+      "ref": "c54dd6b37688a52fe21a1de11e8a685877c7ac0a",
+      "pin": {
+        "bytes": 7160,
+        "sha256": "1bc2aae1bea9690c868512f676e507db6e9bc5fa92d69d981fa556b4ebdbce38",
+        "gitBlob": "690d366bacb01c2ff92c09ea1d5c4d457fb27c93"
+      },
+      "fullRead": true,
+      "readMethod": "Fresh immutable current-parent whole body fetch/hash; complete source read reused from accepted R1 only where the body identity is exact, with current relevant source sections reread."
+    }
+  ],
+  "completeNewPostimages": [
+    {
+      "repository": "777genius/agent-teams-ai",
+      "path": ".github/workflows/host-emulated-acceptance.yml",
+      "pin": {
+        "bytes": 96896,
+        "sha256": "a61c9ae8e2c294c1f284081b946c050c6fd2042a09789fddfd7caec5e6eaf5cb",
+        "gitBlob": "0d54287979a1741519b41b00e1ee521d5cd83046"
+      },
+      "fullRead": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "path": "tools/owned-process-broker/nativeWindowsAppFixture.ts",
+      "pin": {
+        "bytes": 31509,
+        "sha256": "32b0abb41931312ebf024791e10a7c88da4b377a000f985137ac01cd8a7a13a8",
+        "gitBlob": "c4e356ba85e5f32febb47342610c2f06e27b76bc"
+      },
+      "fullRead": true
+    }
+  ],
+  "exactDelta": {
+    "workflow": {
+      "sites": [
+        {
+          "line": 729,
+          "beforeUnique": 1,
+          "afterUnique": 1,
+          "beforeExactLine": true,
+          "afterExactLine": true
+        },
+        {
+          "line": 764,
+          "beforeUnique": 1,
+          "afterUnique": 1,
+          "beforeExactLine": true,
+          "afterExactLine": true
+        }
+      ],
+      "changedLines": [
+        {
+          "line": 729,
+          "before": "                ['anthropic', 'sonnet'], ['codex', 'TEST-model'], ['test-provider', 'TEST-model'], ['test-provider', 'TEST-model'],",
+          "after": "                ['anthropic', 'TEST-claude-sonnet'], ['codex', 'TEST-model'], ['test-provider', 'TEST-model'], ['test-provider', 'TEST-model'],"
+        },
+        {
+          "line": 764,
+          "before": "                [['anthropic', 'sonnet', 'low'], ['codex', 'TEST-model', undefined]]);",
+          "after": "                [['anthropic', 'TEST-claude-sonnet', 'low'], ['codex', 'TEST-model', undefined]]);"
+        }
+      ],
+      "fullInverseExact": true,
+      "inversePin": {
+        "bytes": 96872,
+        "sha256": "5379894007246368728c518c08222be329d58bb2755dc80235709a033017805d",
+        "gitBlob": "9ec6dfb68e98480a12224528e2637153f4274a6b"
+      }
+    },
+    "fixture": {
+      "oldBlockCount": 1,
+      "newBlockCount": 1,
+      "startOffsetSame": true,
+      "startOffset": 27208,
+      "prefixExact": true,
+      "suffixExact": true,
+      "fullInverseExact": true,
+      "inversePin": {
+        "bytes": 31223,
+        "sha256": "4c037ffe4be03b64ef9e5d9172246a9744f3fc1cf55b48af630811a4c580eaa2",
+        "gitBlob": "0b1bbc3ef47cd55ac3e23c13890fce281de01c98"
+      },
+      "oldBlockPin": {
+        "bytes": 278,
+        "sha256": "e483fce7bfdbdd4f926afa63274b94cfc9b7ccc8e563f27f4ce42e28de1d3754",
+        "gitBlob": "5bbc38fe70ef1434f70a88b3c7cdf971bb41ea11"
+      },
+      "newBlockPin": {
+        "bytes": 564,
+        "sha256": "db76e5845de647689c71031ea865e515667cacf735bf4a4e67eb3e3abb66318a",
+        "gitBlob": "ef40a45c17a5f7917206615161da9023f7d60332"
+      },
+      "oldLines": 485,
+      "newLines": 491,
+      "awaitCountBefore": 24,
+      "awaitCountAfter": 24
+    },
+    "finalAndQuit": {
+      "finalBlock": {
+        "equal": true,
+        "pin": {
+          "bytes": 2549,
+          "sha256": "5b427eed97616ff4a6fbefbd11cb1d711a432398d6bb024e1912c7046c98ff90",
+          "gitBlob": "931668734da53fd402e354214029aae154e6c39d"
+        },
+        "expected": {
+          "bytes": 2549,
+          "sha256": "5b427eed97616ff4a6fbefbd11cb1d711a432398d6bb024e1912c7046c98ff90",
+          "gitBlob": "931668734da53fd402e354214029aae154e6c39d"
+        }
+      },
+      "afterQuit": {
+        "equal": true,
+        "pin": {
+          "bytes": 1053,
+          "sha256": "ee1af903cdf8ad88c0e01d0325aef9e68405920b25383a5d7e3d07e72d0ccc53",
+          "gitBlob": "c84bedaa47e161a60438e795cdd26b22a839b9df"
+        },
+        "expected": {
+          "bytes": 1053,
+          "sha256": "ee1af903cdf8ad88c0e01d0325aef9e68405920b25383a5d7e3d07e72d0ccc53",
+          "gitBlob": "c84bedaa47e161a60438e795cdd26b22a839b9df"
+        },
+        "boundary": "Includes complete afterQuit method plus the original object terminator (15 physical lines).",
+        "matchesExpected": true
+      },
+      "allAwaitCallsitesOutsidePatchIdentical": true,
+      "workflowPhysicalLines": 1248,
+      "methodCorrection": "Initial data-only afterQuit slice excluded the seven-byte object terminator and was 1046 bytes; corrected boundary includes the same terminator as the proposal and equals 1053 bytes. Both slices were before/after identical; no source discrepancy."
+    }
+  },
+  "staticCandidateClassification": [
+    {
+      "candidate": "absent",
+      "result": "Original bounded pending path; no new authority."
+    },
+    {
+      "candidate": "validated prepared or held",
+      "result": "Original bounded pending path."
+    },
+    {
+      "candidate": "completed/observed-absent, settlement missing, selected human/capture/original",
+      "result": "New bounded pending path; same original delay/deadline."
+    },
+    {
+      "candidate": "completed/observed-absent, settlement missing, foreign principal/capture/original",
+      "result": "Immediate selected-identity assertion failure."
+    },
+    {
+      "candidate": "settlement missing/falsy with defined confirmed or not-dispatched flag",
+      "result": "Full validator refuses before selection/pending branch."
+    },
+    {
+      "candidate": "completed/observed-absent, settlement null/false/zero/empty string and no flags",
+      "result": "Strictly present; unchanged final settle-intent assertion fails."
+    },
+    {
+      "candidate": "truthy malformed/foreign settlement",
+      "result": "Existing full validator refuses."
+    },
+    {
+      "candidate": "valid present settlement, not-dispatched true",
+      "result": "Unchanged final not-dispatched assertion fails."
+    },
+    {
+      "candidate": "valid selected present settlement, no unsupported flag",
+      "result": "All original final result/witness/peer/currentness/Quit checks still required; no automatic PASS."
+    },
+    {
+      "candidate": "more than one selected terminate receipt",
+      "result": "Original at-most-one assertion fails."
+    },
+    {
+      "candidate": "other terminal or requested state",
+      "result": "Original absent/prepared/held-only assertion fails."
+    },
+    {
+      "candidate": "missing settlement until original deadline",
+      "result": "Original remaining(deadline) failure; no reset/retry/PASS."
+    }
+  ],
+  "readCoverage": {
+    "fullFinalProposal": true,
+    "fullR1": true,
+    "fullGate": true,
+    "currentParentSourceBodies": 8,
+    "currentParentSourceBytes": 223304,
+    "fullSelectedBeforeAfterBodies": 4,
+    "fullSelectedBeforeAfterBytes": 256500,
+    "fullAfterBytes": 128405,
+    "uniqueCurrentBeforePlusAfterBytes": 351709,
+    "fullRootReview": {
+      "bytes": 24523,
+      "sha256": "18a290eb6546c2ccef13c307fdd4315f70f366aa4ffe39b1a265da0dc6ab1ba3",
+      "gitBlob": "eae08bc8057b29fc63c47202ab31fe698b5cef63"
+    },
+    "workflowAfterReadChunks": [
+      [
+        0,
+        24000
+      ],
+      [
+        24000,
+        48000
+      ],
+      [
+        48000,
+        72000
+      ],
+      [
+        72000,
+        96896
+      ]
+    ],
+    "fixtureAfterReadChunks": [
+      [
+        0,
+        15000
+      ],
+      [
+        15000,
+        31509
+      ]
+    ],
+    "truncationRepair": "An initial combined metadata/fixture output truncated; the complete fixture was subsequently read again in two untruncated contiguous chunks. Full-body receipt and hash checks always used the complete tool-returned body.",
+    "historicalPointerClosure": "Accepted closed R1 gate reused; no redundant 791-pointer census or new gate."
+  },
+  "methods": {
+    "targetCodeEvaluated": false,
+    "targetCodeCompiled": false,
+    "targetCodeImported": false,
+    "pureDataOnly": true,
+    "approvedIdentityHelper": {
+      "gitBlob": "e4a4568d589e1254b88ade1a5f87d53924e7c2e8",
+      "bytes": 3982,
+      "sha256": "cd3d5b96a5508215010923078469cc718282f17d765f6af493913c157bdf3db7"
+    },
+    "bareReportIsOnlyWrite": true,
+    "localShellOrRuntime": false,
+    "liveCIOrArtifactDownload": false,
+    "sourceControlRefPrMutation": false
+  },
+  "scopePreservation": {
+    "production": 5020,
+    "cap": 800,
+    "exceptions": 141,
+    "nonDocLeaves": 8799,
+    "workflows": 42,
+    "dependenciesChanged": 0,
+    "broadWorkflowChanges": 0,
+    "deadlineChanges": 0,
+    "assertionsRemoved": 0,
+    "casesRemoved": 0,
+    "oldAttemptsSpentForever": true,
+    "noRealClaudeOrCodex": true,
+    "noMainMergeReadyReleaseStage2": true,
+    "frozenPrs": [
+      1206,
+      1207,
+      1208,
+      1211,
+      1212,
+      1213
+    ]
+  },
+  "qualification": {
+    "sourceReviewOnly": true,
+    "actualPublicationReadback": false,
+    "runtimeExecuted": false,
+    "actualGreen": false,
+    "nativeQualification": false,
+    "wholeE2E": false,
+    "failedSelectedStopReceiptAvailable": false,
+    "eventualSettlementProved": false,
+    "strongerConfirmedSettlementRequirementInvented": false
+  },
+  "nextExistingStep": "Root completes the already selected four-review source publication/immediate push and actual readback sequence. A later distinct fixed-source CI admission is outside this review; no new gate is requested.",
+  "selfReadPlan": "After retention, send exact Git/bytes/SHA pin immediately; freshly fetch this complete report and verify identity/literal equality, then completely self-read it before confirmation."
+}
