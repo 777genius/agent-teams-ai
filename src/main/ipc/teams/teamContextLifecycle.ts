@@ -73,7 +73,11 @@ export async function deleteLogicalTeamWithContexts(
   meta: LifecycleReader = new TeamMetaStore(),
   registry: TeamProjectContextRegistry = TeamProjectContextRegistry.fromCurrentApp(),
   hasActiveSchedules: (names: readonly string[]) => Promise<boolean> = (names) =>
-    hasTeamSchedules(names, false)
+    hasTeamSchedules(names, false),
+  restore?: {
+    physical(name: string): Promise<void>;
+    logical(): Promise<IpcResult<void>>;
+  }
 ): Promise<IpcResult<void>> {
   if (typeof teamName !== 'string' || !teamName.trim()) return deleteLogical();
   try {
@@ -95,14 +99,53 @@ export async function deleteLogicalTeamWithContexts(
       await registry.cancelSoftDelete(teamName);
       throw error;
     }
-    for (const context of contexts) {
-      const stopped = await stopPhysical(context.executionTeamName);
-      if (!stopped.success) return stopped;
-      // Prevent orphaned physical context routes from continuing to accept
-      // work while their logical team is in the trash.
-      await softDeletePhysical(context.executionTeamName);
+    const attempted: string[] = [];
+    let logicalAttempted = false;
+    try {
+      for (const context of contexts) {
+        const stopped = await stopPhysical(context.executionTeamName);
+        if (!stopped.success) throw new Error(stopped.error ?? 'Project stop failed');
+        // A failed native metadata write might still have taken effect.
+        attempted.push(context.executionTeamName);
+        await softDeletePhysical(context.executionTeamName);
+      }
+      logicalAttempted = true;
+      const deleted = await deleteLogical();
+      if (!deleted.success) throw new Error(deleted.error ?? 'Logical trash failed');
+      return deleted;
+    } catch (error) {
+      const rollbackFailures: string[] = [];
+      if (logicalAttempted) {
+        try {
+          if (!restore) throw new Error('Logical restore is unavailable');
+          const result = await restore.logical();
+          if (!result.success) throw new Error(result.error ?? 'Logical restore failed');
+        } catch (reason) {
+          rollbackFailures.push('logical: ' + String(reason));
+        }
+      }
+      for (const alias of attempted.reverse()) {
+        try {
+          if (!restore) throw new Error('Project restore is unavailable');
+          await restore.physical(alias);
+        } catch (reason) {
+          rollbackFailures.push(alias + ': ' + String(reason));
+        }
+      }
+      if (rollbackFailures.length === 0) {
+        try {
+          await registry.cancelSoftDelete(teamName);
+        } catch (reason) {
+          rollbackFailures.push('fence: ' + String(reason));
+        }
+      }
+      return {
+        success: false,
+        error: String(error) + (rollbackFailures.length
+          ? '; rollback incomplete, team remains fenced: ' + rollbackFailures.join(', ')
+          : ''),
+      };
     }
-    return deleteLogical();
   } catch (error) {
     return { success: false, error: error instanceof Error ? error.message : String(error) };
   }

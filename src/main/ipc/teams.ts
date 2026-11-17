@@ -733,7 +733,7 @@ export function registerTeamHandlers(ipcMain: IpcMain): void {
   ipcMain.handle(TEAM_UPDATE_TASK_STATUS, handleUpdateTaskStatus);
   ipcMain.handle(TEAM_UPDATE_TASK_OWNER, handleUpdateTaskOwner);
   ipcMain.handle(TEAM_UPDATE_TASK_FIELDS, handleUpdateTaskFields);
-  ipcMain.handle(TEAM_DELETE_TEAM, (e, n) => deleteLogicalTeamWithContexts(n, (t) => handleStopTeam(e, t), (t) => getTeamDataService().deleteTeam(t), () => handleDeleteTeam(e, n)));
+  ipcMain.handle(TEAM_DELETE_TEAM, (e, n) => deleteLogicalTeamWithContexts(n, (t) => handleStopTeam(e, t), (t) => getTeamDataService().deleteTeam(t), () => handleDeleteTeam(e, n), undefined, undefined, undefined, { physical: (t) => getTeamDataService().restoreTeam(t), logical: () => handleRestoreTeam(e, n) }));
   ipcMain.handle(TEAM_RESTORE, (e, n) => restoreLogicalTeamWithContexts(n, (t) => getTeamDataService().restoreTeam(t), () => handleRestoreTeam(e, n)));
   ipcMain.handle(TEAM_PERMANENTLY_DELETE, (event, name) =>
     permanentlyDeleteLogicalTeam(name, {

@@ -145,6 +145,45 @@ describe('project team lifecycle projection', () => {
     expect(f.registry.cancelSoftDelete).toHaveBeenCalledWith('builders');
   });
 
+  it('rolls back prior aliases and clears the trash fence on partial failure', async () => {
+    const f = fixture('per_project');
+    const second = { ...entry, id: '22222222-2222-4222-8222-222222222222', executionTeamName: 'ptc-b' };
+    f.registry.list.mockResolvedValue([entry, second]);
+    const actions: string[] = [];
+    const { deleteLogicalTeamWithContexts } = await import('../../../src/main/ipc/teams/teamContextLifecycle');
+    const result = await deleteLogicalTeamWithContexts('builders',
+      async (name) => name === 'ptc-b'
+        ? { success: false as const, error: 'stop denied' }
+        : { success: true as const, data: undefined },
+      async (name) => { actions.push('trash:' + name); },
+      async () => ({ success: true as const, data: undefined }),
+      f.meta, f.registry as never, async () => false,
+      {
+        physical: async (name) => { actions.push('restore:' + name); },
+        logical: async () => ({ success: true as const, data: undefined }),
+      });
+    expect(result.success).toBe(false);
+    expect(actions).toEqual(['trash:ptc-a', 'restore:ptc-a']);
+    expect(f.registry.cancelSoftDelete).toHaveBeenCalledWith('builders');
+  });
+
+  it('compensates failed logical trash and keeps fence if rollback is incomplete', async () => {
+    const f = fixture('per_project');
+    const { deleteLogicalTeamWithContexts } = await import('../../../src/main/ipc/teams/teamContextLifecycle');
+    const restoreLogical = vi.fn(async () => ({ success: true as const, data: undefined }));
+    const result = await deleteLogicalTeamWithContexts('builders',
+      async () => ({ success: true as const, data: undefined }),
+      async () => undefined,
+      async () => ({ success: false as const, error: 'trash failed' }),
+      f.meta, f.registry as never, async () => false, {
+        physical: async () => { throw new Error('restore failed'); },
+        logical: restoreLogical,
+      });
+    expect(result.error).toContain('rollback incomplete');
+    expect(restoreLogical).toHaveBeenCalledOnce();
+    expect(f.registry.cancelSoftDelete).not.toHaveBeenCalled();
+  });
+
   it('deletes owned physical context first and logical definition last', async () => {
     const f = fixture('per_project');
     const actions: string[] = [];
