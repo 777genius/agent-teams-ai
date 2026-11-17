@@ -360,8 +360,6 @@ export interface AppConfig {
     defaultTab: 'dashboard' | 'last-session';
     /** Whether to use the multimodel runtime instead of the stock Claude CLI */
     multimodelEnabled: boolean;
-    /** Explicit opt-in: extra Claude/Codex inference, captured only for fresh Host sessions. */
-    nativeNextPromptSuggestionsEnabled?: boolean;
     /** Optional custom Claude root folder (auto-detected when null) */
     claudeRootPath: string | null;
     /** Agent communication language ('system' = use OS locale) */
@@ -382,6 +380,8 @@ export interface AppConfig {
     anthropic: {
       authMode: 'auto' | 'oauth' | 'api_key';
       fastModeDefault: boolean;
+      /** Next-prompt suggestions for Claude teammates; extra inference, captured at Host start. */
+      nativeNextPromptSuggestionsEnabled: boolean;
       compatibleEndpoint: {
         enabled: boolean;
         baseUrl: string;
@@ -389,6 +389,8 @@ export interface AppConfig {
     };
     codex: {
       preferredAuthMode: 'auto' | 'chatgpt' | 'api_key';
+      /** Next-prompt suggestions for Codex teammates; extra inference, captured at Host start. */
+      nativeNextPromptSuggestionsEnabled: boolean;
       customProvider: {
         enabled: boolean;
         baseUrl: string;

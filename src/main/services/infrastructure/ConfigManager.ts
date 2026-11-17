@@ -10,6 +10,7 @@
  */
 
 import { normalizeAppLocalePreference } from '@features/localization';
+import { type NativeNextPromptFlag, withNativeNextPromptFlags } from '@features/native-prompt-suggestions/main';
 import { atomicWriteAsync } from '@main/utils/atomicWrite';
 import { getAppliedElectronDevClaudeRootOverride } from '@main/utils/electronDevPathOverrides';
 import { getClaudeBasePath, setClaudeBasePathOverride } from '@main/utils/pathDecoder';
@@ -296,11 +297,11 @@ export interface ProviderConnectionsConfig {
     authMode: ProviderConnectionAuthMode;
     fastModeDefault: boolean;
     compatibleEndpoint: AnthropicCompatibleEndpointConfig;
-  };
+  } & NativeNextPromptFlag;
   codex: {
     preferredAuthMode: CodexAccountAuthMode;
     customProvider: CodexCustomProviderConfig;
-  };
+  } & NativeNextPromptFlag;
 }
 
 export interface DisplayConfig {
@@ -394,7 +395,6 @@ const DEFAULT_CONFIG: AppConfig = {
     theme: 'dark',
     defaultTab: 'dashboard',
     multimodelEnabled: true,
-    nativeNextPromptSuggestionsEnabled: false,
     claudeRootPath: null,
     agentLanguage: 'system',
     appLocale: 'system',
@@ -408,6 +408,7 @@ const DEFAULT_CONFIG: AppConfig = {
     anthropic: {
       authMode: 'auto',
       fastModeDefault: false,
+      nativeNextPromptSuggestionsEnabled: true,
       compatibleEndpoint: {
         enabled: false,
         baseUrl: '',
@@ -415,6 +416,7 @@ const DEFAULT_CONFIG: AppConfig = {
     },
     codex: {
       preferredAuthMode: 'auto',
+      nativeNextPromptSuggestionsEnabled: true,
       customProvider: {
         enabled: false,
         baseUrl: '',
@@ -652,8 +654,6 @@ export class ConfigManager {
       ...(loaded.general ?? {}),
     };
     mergedGeneral.multimodelEnabled = true;
-    // Existing or tampered config cannot enable extra model usage by type coercion.
-    mergedGeneral.nativeNextPromptSuggestionsEnabled = loaded.general?.nativeNextPromptSuggestionsEnabled === true;
     mergedGeneral.claudeRootPath = normalizeConfiguredClaudeRootPath(mergedGeneral.claudeRootPath);
     mergedGeneral.appLocale = normalizeAppLocalePreference(mergedGeneral.appLocale);
     // Merge triggers: preserve existing triggers, add missing builtin ones
@@ -735,7 +735,7 @@ export class ConfigManager {
         maxAttempts: Math.min(5, Math.max(1, Math.round(loadedRecovery.maxAttempts ?? 2))),
       },
       general: mergedGeneral,
-      providerConnections: {
+      providerConnections: withNativeNextPromptFlags({
         anthropic: {
           ...DEFAULT_CONFIG.providerConnections.anthropic,
           ...(loaded.providerConnections?.anthropic ?? {}),
@@ -752,7 +752,7 @@ export class ConfigManager {
             loaded.providerConnections?.codex?.customProvider
           ),
         },
-      },
+      }, loaded.providerConnections, DEFAULT_CONFIG.providerConnections),
       runtime: {
         providerBackends: {
           ...DEFAULT_CONFIG.runtime.providerBackends,
@@ -872,7 +872,7 @@ export class ConfigManager {
 
     if (section === 'providerConnections') {
       const connectionUpdate = data as Partial<ProviderConnectionsConfig>;
-      return {
+      return withNativeNextPromptFlags({
         ...connectionUpdate,
         anthropic: {
           ...this.config.providerConnections.anthropic,
@@ -893,7 +893,7 @@ export class ConfigManager {
             this.config.providerConnections.codex.customProvider
           ),
         },
-      } as unknown as Partial<AppConfig[K]>;
+      }, connectionUpdate, this.config.providerConnections) as unknown as Partial<AppConfig[K]>;
     }
 
     if (!Object.prototype.hasOwnProperty.call(data, 'claudeRootPath')) {

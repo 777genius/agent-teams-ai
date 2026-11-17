@@ -43,6 +43,7 @@ import { observeLinuxChildLaunchFailure, remainingLinuxChildLaunchTime, spawnWit
 import { createLogger } from '@shared/utils/logger';
 
 import { CapturedHostNotificationBuffer } from './CapturedHostNotificationBuffer';
+import { captureNativePromptSettings, type NativePromptSettingsSelection } from './CapturedNativePromptOptions';
 import { decodeClaudeCloseDiagnostics } from './decodeClaudeCloseDiagnostics';
 import {
   capturedHostProfileDigest,
@@ -99,9 +100,8 @@ interface PendingRequest {
   timer: ReturnType<typeof setTimeout>;
 }
 
-export interface CapturedHostClientOptions {
+export interface CapturedHostClientOptions extends NativePromptSettingsSelection {
   readonly onNativePromptSuggestion?: (value: unknown, source: CapturedHostClient) => void;
-  readonly nativeNextPromptEnabled?: boolean;
 }
 
 export interface CapturedHostShutdown {
@@ -130,7 +130,7 @@ export class CapturedHostClient {
   private frame = Buffer.alloc(0);
   private frameBytes = 0;
   private readonly notifications: CapturedHostNotificationBuffer;
-  private readonly capturedNativeNextPromptEnabled: boolean;
+  private readonly capturedNativePromptEnvironment: Readonly<Record<string, string>>;
   private writeBytes = 0;
   private writeCount = 0;
   private writeTimers = new Set<ReturnType<typeof setTimeout>>();
@@ -169,7 +169,7 @@ export class CapturedHostClient {
     promptOptions: CapturedHostClientOptions = {}
   ) {
     this.profile = captureHostProfile(profile);
-    this.capturedNativeNextPromptEnabled = promptOptions.nativeNextPromptEnabled === true;
+    this.capturedNativePromptEnvironment = captureNativePromptSettings(promptOptions).environment;
     const onNativePromptSuggestion = promptOptions.onNativePromptSuggestion;
     this.notifications = new CapturedHostNotificationBuffer(
       onNativePromptSuggestion ? raw => onNativePromptSuggestion(raw, this) : undefined
@@ -200,8 +200,8 @@ export class CapturedHostClient {
         cwd: this.profile.cwd,
         env: {
           ...this.profile.env,
-          // Trusted Main captures this value once, including explicit recovery.
-          AGENT_TEAMS_NATIVE_NEXT_PROMPT_ENABLED: this.capturedNativeNextPromptEnabled ? '1' : '0',
+          // Trusted Main captures these settings once, including explicit recovery.
+          ...this.capturedNativePromptEnvironment,
         },
         stdio: ['pipe', 'pipe', 'pipe'],
         windowsHide: true,

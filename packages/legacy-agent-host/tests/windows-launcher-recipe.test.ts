@@ -11,8 +11,10 @@ import { captureWindowsLauncher, capturedWindowsCommandLine, matchesCapturedWind
 import { buildWindowsShellFallbackCommand, quoteWindowsCmdArg } from '../dist/owned-process/windowsCliLauncher.js';
 import { HostWindowsLaunch } from '../dist/owned-process/HostWindowsLaunch.js';
 import { WindowsCapturedProcess } from '../dist/adapters/providers/WindowsCapturedProcess.js';
+import { createClaudeMemberProvider } from '../dist/adapters/providers/ClaudeMemberProvider.js';
 
 import type { NativeProcessProfile } from '../dist/composition/nativeProcessProfile.js';
+import type { RuntimeMemberProfile } from '../dist/composition/runtimeProfile.js';
 import type { OwnedLaunchPort, PreparedOwnedProcess, TreeReceipt } from '../dist/owned-process/contract.js';
 
 const hash = (value: string) => createHash('sha256').update(value).digest('hex');
@@ -305,6 +307,61 @@ test('retained Windows port shares one immutable original selection only with it
   assert.equal(port.originalLauncher(reordered), captured);
   assert.equal(connections, 0, 'Selection association never invokes the original Main transport');
 });
+
+for (const suggestions of [false, true]) {
+  test(`Claude suggestion preference ${suggestions} shares the exact captured Windows launch environment`, async t => {
+    const f = fixture(t, '@echo off\r\n"%_prog%" "%~dp0cli.cjs" %*\r\n');
+    f.profile.windowsBroker = stagedBroker(t, f.files);
+    f.files.set(f.profile.cwd, 'TEST directory');
+    const stat = fs.statSync;
+    t.mock.method(fs, 'statSync', ((file, options) => String(file) === f.profile.cwd
+      ? { isDirectory: () => true } : stat(file, options)) as typeof fs.statSync);
+    syncBuiltinESMExports();
+    const profile: RuntimeMemberProfile = {
+      ...f.profile, provider: 'claude', teamId: 'TEST-team', memberId: 'alice',
+      principalId: 'TEST-principal', sessionId: 'TEST-session', generation: 1,
+      configRevision: 'TEST-revision', model: 'TEST-model', accountBinding: 'TEST-account',
+      environment: { ...f.profile.environment, HOME: f.profile.cwd, CLAUDE_CONFIG_DIR: f.profile.cwd,
+        CLAUDE_CODE_ENABLE_PROMPT_SUGGESTION: 'false' },
+      nativeTools: [], autoAllowedTools: [],
+      limits: { queuedInputs: 1, inputBytes: 1024, outputBytes: 1024, outputEvents: 10,
+        pendingInteractions: 1, timeoutMs: 1000 },
+    };
+    const original = structuredClone(profile);
+    const retained = new HostWindowsLaunch(() => assert.fail('TEST construction cannot allocate a process'));
+    const port = retained.port.bind(retained);
+    let retainedProfile: NativeProcessProfile | undefined;
+    t.mock.method(retained, 'port', (...args: Parameters<typeof retained.port>) => {
+      retainedProfile = args[0];
+      assert.ok(Object.isFrozen(retainedProfile) && Object.isFrozen(retainedProfile.environment));
+      return port(...args);
+    });
+    const provider = createClaudeMemberProvider({
+      profile, retainedWindowsLaunch: retained,
+      request: { tenantId: 'TEST-tenant', projectId: 'TEST-project', sessionId: profile.sessionId,
+        generation: 1, configRevision: profile.configRevision, requiredCapabilities: ['session.conversation'] },
+      endpoint: { url: 'http://127.0.0.1:1/TEST', bearerToken: 'TEST-private',
+        binding: { backendId: 'TEST-backend', teamId: profile.teamId, teamName: 'test-team',
+          runId: 'TEST-run', memberId: profile.memberId, generation: '1' },
+        revoke() {}, async close() {} },
+      connection: { execute() { assert.fail('TEST no input'); }, lookup: () => undefined,
+        getTask() { assert.fail('TEST no task'); }, listTasks: () => [] },
+      instructions: 'TEST no vendor process', isCurrent: () => true, canAllocate: () => true,
+      readCheckpoint: async () => undefined, onProgress() {},
+      ...(suggestions ? { promptSuggestions: { eligible: () => false,
+        offer() { assert.fail('TEST no suggestion'); } } } : {}),
+    });
+    try {
+      assert.equal(retainedProfile?.environment.CLAUDE_CODE_ENABLE_PROMPT_SUGGESTION,
+        suggestions ? 'true' : 'false');
+      assert.deepEqual(profile, original, 'Captured launch preference never rewrites the saved provider profile');
+      assert.equal(provider.isReady(), false);
+    } finally {
+      provider.seal();
+      assert.equal(await provider.cleanup(), true, 'No original native process was allocated');
+    }
+  });
+}
 
 for (const boundary of ['launch', 'prepare', 'install-owner'] as const) {
   for (const changed of [wrapper, interpreter, script]) {

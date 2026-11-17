@@ -111,7 +111,7 @@ export class RuntimeTeamCoordinator {
       ): TeamMcpCrossTeamPort;
     } & Pick<
       Parameters<typeof createRuntimeMemberProviderFactory>[0],
-      'createProvider' | 'promptSuggestionsEnabled' | 'onPromptSuggestion'
+      'createProvider' | 'promptSuggestionProviders' | 'onPromptSuggestion'
     >
   ) {
     const store = new FileRuntimeStore(options.profile.owner.storageRoot);
@@ -179,7 +179,7 @@ export class RuntimeTeamCoordinator {
         ...(options.processCustody ? { processCustody: options.processCustody } : {}),
         ...(options.retainedWindowsLaunch ? { retainedWindowsLaunch: options.retainedWindowsLaunch } : {}),
         ...(options.createProvider ? { createProvider: options.createProvider } : {}),
-        ...(options.promptSuggestionsEnabled && options.onPromptSuggestion ? { promptSuggestionsEnabled: true, onPromptSuggestion: options.onPromptSuggestion } : {}),
+        ...(options.promptSuggestionProviders?.length && options.onPromptSuggestion ? { promptSuggestionProviders: options.promptSuggestionProviders, onPromptSuggestion: options.onPromptSuggestion } : {}),
         groups: (entry, capture, current) => options.groups?.(entry, capture, current),
         crossTeam: (entry, isCurrent) =>
           options.crossTeam?.(entry.team, entry.profile.principalId, entry.delivery, isCurrent),

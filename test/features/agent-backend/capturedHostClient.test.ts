@@ -1056,7 +1056,29 @@ describe('captured native prompt notifications', () => {
       server.notifyData('runtime.prompt-suggestion.updated', params); return 'done';
     } },
     enabled: { lane: 'control', handle: () => process.env.AGENT_TEAMS_NATIVE_NEXT_PROMPT_ENABLED },
+    providers: { lane: 'control', handle: () => ({
+      selected: process.env.AGENT_TEAMS_NATIVE_NEXT_PROMPT_PROVIDERS,
+      legacy: process.env.AGENT_TEAMS_NATIVE_NEXT_PROMPT_ENABLED,
+    }) },
   `;
+
+  it.each([[], ['claude'], ['codex'], ['claude', 'codex']].map(providers => ({ providers })))(
+    'captures provider list $providers before mutation and overrides both profile flags', async ({ providers: selectedProviders }) => {
+      const selected = await fixture(methods);
+      const profile = { ...selected, env: { ...selected.env,
+        AGENT_TEAMS_NATIVE_NEXT_PROMPT_ENABLED: '1', AGENT_TEAMS_NATIVE_NEXT_PROMPT_PROVIDERS: 'claude,codex' } };
+      const providers = [...selectedProviders] as ('claude' | 'codex')[];
+      const options = { nativeNextPromptEnabled: true, nativeNextPromptProviders: providers };
+      const transport = new CapturedHostClient(profile, undefined, undefined, options);
+      clients.push(transport);
+      providers.splice(0, providers.length, 'claude');
+      await transport.start();
+      expect(await transport.request('providers', undefined, { control: true })).toEqual({
+        selected: selectedProviders.join(','), legacy: '0',
+      });
+      expect((await transport.shutdown()).childExit).toBe('confirmed');
+    }
+  );
 
   it.each([undefined, false, true] as const)(
     'captures enablement %s and publisher before caller mutation or Host startup', async enabled => {

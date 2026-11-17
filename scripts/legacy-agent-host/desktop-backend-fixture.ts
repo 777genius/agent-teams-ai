@@ -92,6 +92,8 @@ export async function prepareDesktopBackendFixture(
     nativeCodex?: { path: string; sha256: string };
     nativeClaude?: { path: string; sha256: string; modelUrl?: string };
     nativeOpenCodeV2?: DesktopOpenCodeV2Selection;
+    /** Last in-memory profile edit before it is seeded, validated and pinned (real-vendor proof). */
+    profileTransform?: (context: { profile: TeamHostProfile; root: string; node: string }) => Promise<void>;
     nativeOpenCodeSourceSelection?: DesktopOpenCodeSourceSelection;
     capturedMcpNonce?: string;
   }
@@ -169,13 +171,18 @@ export async function prepareDesktopBackendFixture(
     'data',
   ])
     await mkdir(join(root, directory), { mode: 0o700 });
-  if (options.seedUiTask || options.seedUiPreferences)
-    await writeFile(
-      join(root, 'claude/agent-teams-config.json'),
-      JSON.stringify({ general: { appLocale: 'en', agentLanguage: 'en', theme: 'dark',
-        ...(nativeNextPromptUi ? { nativeNextPromptSuggestionsEnabled: true } : {}) } }),
-      { mode: 0o600 }
-    );
+  // Native suggestions are on by default in the product. Offline fixtures pin both providers off so
+  // unrelated proofs never make extra model requests; only the suggestion UI proof opts in.
+  const suggestions = { nativeNextPromptSuggestionsEnabled: nativeNextPromptUi };
+  await writeFile(
+    join(root, 'claude/agent-teams-config.json'),
+    JSON.stringify({
+      general: options.seedUiTask || options.seedUiPreferences
+        ? { appLocale: 'en', agentLanguage: 'en', theme: 'dark' } : {},
+      providerConnections: { anthropic: suggestions, codex: suggestions },
+    }),
+    { mode: 0o600 }
+  );
   // The outer and nested pnpm invocations use the same selected Corepack bytes
   // and private HOME/cache. PATH must never select an unrelated global shim.
   const pnpmStubSource = options.candidateRuntime
@@ -547,6 +554,7 @@ export async function prepareDesktopBackendFixture(
     // It receives no runtime binding, provider allocation or principal grant.
     members.push({ memberId: 'TEST-board-peer-id', name: 'board-peer', role: 'member' });
   }
+  await options.profileTransform?.({ profile, root, node });
   if (options.seedUiTask) {
     const lease = acquireProfileWriterLease(owner.storageRoot);
     try {

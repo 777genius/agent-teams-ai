@@ -47,47 +47,17 @@ import type {
 } from '../application/backendBinding';
 import type { CapturedBackendOwner } from '../application/BackendOwnerRouter';
 import type { CapturedTeamModelRequest } from '../application/prepareCapturedTeamModels';
-import type { TeamModelProbeIntents } from '../application/TeamModelProbeIntents';
 import type { CapturedProviderManagement } from '../infrastructure/CapturedProviderManagement';
-import type {
-  DesktopBackendDescriptor,
-  DesktopBackendDescriptorSelection,
-} from '../infrastructure/loadDesktopBackendDescriptor';
+import type { DesktopBackendDescriptor } from '../infrastructure/loadDesktopBackendDescriptor';
+import type { DesktopBackendFeatureOptions, InitializationPhase } from './DesktopBackendOptions';
 import type { RuntimeSourceSummary } from '@agent-teams/legacy-agent-host/runtime-sources';
 import type {
   CreateTeamRegistryPayload,
   TeamRegistryRecord,
 } from '@agent-teams/legacy-agent-host/team-registry/contracts';
-import type { ApplicationCommandRunner } from '@features/application-command-ledger';
-import type { NativeNextPromptCandidate } from '@features/native-prompt-suggestions/contracts';
 import type { TeamCreateRequest } from '@shared/types/team';
 
-type InitializationPhase =
-  | 'descriptor'
-  | 'owner-registration'
-  | 'handle-read'
-  | 'handle-publication'
-  | 'default-owner';
-
-export interface DesktopBackendFeatureOptions {
-  /** Null is the safe default: no descriptor, handles or process launch. */
-  descriptor: DesktopBackendDescriptorSelection | null;
-  bindingDirectory: string;
-  /** Private composition diagnostics; never serializes paths, payloads or raw errors. */
-  onInitializationFailure?: (
-    phase: InitializationPhase,
-    code: BackendRoutingError['code'] | 'unexpected'
-  ) => void;
-  /** Existing durable storage port, useful for composing the app's chosen persistence. */
-  bindings?: HandleBindingStore;
-  /** Existing durable Main ledger is supplied before renderer work admission. */
-  commandRunner?: () => ApplicationCommandRunner | null;
-  modelIntents?: TeamModelProbeIntents;
-  /** Ephemeral validated Host output; Main owns IPC/HTTP publication. */
-  onNativePromptSuggestion?: (value: NativeNextPromptCandidate) => void;
-  /** Captured at application composition, including explicit Host recovery. */
-  nativeNextPromptEnabled?: boolean;
-}
+export type { DesktopBackendFeatureOptions } from './DesktopBackendOptions';
 
 export class DesktopBackendFeature {
   readonly facade: BackendOperationsFacade;
@@ -116,6 +86,7 @@ export class DesktopBackendFeature {
       isCurrent: () => !this.sealed && this.state === 'ready',
       publish: this.options.onNativePromptSuggestion,
       enabled: this.options.nativeNextPromptEnabled === true,
+      providers: this.options.nativeNextPromptProviders,
     });
     this.store = options.bindings ?? new FileHandleBindingStore(options.bindingDirectory);
     const target = async (

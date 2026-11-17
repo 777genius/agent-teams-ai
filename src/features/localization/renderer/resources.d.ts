@@ -2803,11 +2803,6 @@ export default interface Resources {
           "label": "Show dock icon"
         },
         "title": "Startup"
-      },
-      "nativeNextPrompt": {
-        "description": "Uses extra Claude or Codex model requests. Applies to new teammate sessions after restarting Agent Teams.",
-        "label": "Suggest a next message",
-        "title": "Next-message suggestions"
       }
     },
     "notificationTriggers": {
@@ -3379,6 +3374,11 @@ export default interface Resources {
         "preferFast": "Prefer Fast",
         "title": "Fast mode default",
         "unavailableForRuntime": "Fast mode is currently unavailable for this Anthropic runtime."
+      },
+      "nativeNextPrompt": {
+        "description": "Suggests a next message in the composer after this provider's teammates reply. Uses extra model requests on your account. On by default; turn it off here. Applies to new teammate sessions after restarting Agent Teams.",
+        "error": "Could not save the setting.",
+        "title": "Next-message suggestions"
       },
       "progress": {
         "applyingConnectionChanges": "Applying connection changes...",
@@ -5196,6 +5196,11 @@ export default interface Resources {
         "reusedCrossTeamRequest": "Reused recent cross-team request",
         "teamOffline": "offline"
       },
+      "suggestions": {
+        "dismiss": "Dismiss suggestion",
+        "insert": "Insert",
+        "tab": "Tab"
+      },
       "teamSelector": {
         "current": "current",
         "offline": "offline",
@@ -5203,11 +5208,6 @@ export default interface Resources {
         "online": "online",
         "onlineTitle": "Online",
         "thisTeam": "This team"
-      },
-      "suggestions": {
-        "dismiss": "Dismiss suggestion",
-        "insert": "Insert",
-        "tab": "Tab"
       }
     },
     "messages": {

@@ -119,7 +119,8 @@ export async function runDesktopNativeNextPromptMixedUi(
   await ui.observeInput();
   assert.equal(
     await cdp.evaluate(`window.electronAPI.config.get().then(config =>
-    config.general.nativeNextPromptSuggestionsEnabled === true)`),
+    config.providerConnections.anthropic.nativeNextPromptSuggestionsEnabled === true &&
+    config.providerConnections.codex.nativeNextPromptSuggestionsEnabled === true)`),
     true,
     'original Electron Main loaded the private TEST opt-in before provider allocation'
   );

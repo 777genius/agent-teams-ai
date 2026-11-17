@@ -131,7 +131,7 @@ export async function runDesktopComposerUiSmoke(
   if (nativeNextPromptUi) {
     // The real Electron config, not the fixture's written file, owns billing opt-in.
     assert.equal(await cdp.evaluate(`window.electronAPI.config.get().then(
-      config => config.general.nativeNextPromptSuggestionsEnabled === true
+      config => config.providerConnections.anthropic.nativeNextPromptSuggestionsEnabled === true
     )`), true, 'original Electron Main config captured native suggestion opt-in');
     // TEST-only passive observation of the existing scoped preload channel.
     // Capture booleans, never private suggestion content or credentials.

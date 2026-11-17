@@ -59,7 +59,7 @@ import type {
 } from '@features/agent-backend/main';
 import type { ApplicationCommandRunner } from '@features/application-command-ledger';
 import type { CodexAccountAuthMode } from '@features/codex-account/contracts';
-import type { NativeNextPromptCandidate } from '@features/native-prompt-suggestions/contracts';
+import type { NativeNextPromptCandidate, NativeNextPromptProvider } from '@features/native-prompt-suggestions/contracts';
 import type { RuntimeProviderOAuthProgressDto } from '@features/runtime-provider-management/contracts';
 import type {
   TeamCreateConfigResponse,
@@ -79,8 +79,8 @@ interface BackendShellOptions {
   /** Captured main-process environment, never renderer arguments. */
   env: Readonly<Record<string, string | undefined>>;
   publishHttpNativePromptSuggestion?: (candidate: NativeNextPromptCandidate) => void;
-  /** Global opt-in captured from trusted Main config before first Host spawn. */
-  nativeNextPromptEnabled?: boolean;
+  /** Per-provider opt-ins captured from trusted Main config before first Host spawn. */
+  nativeNextPromptProviders?: readonly NativeNextPromptProvider[];
 }
 
 function withoutHash(value: string): string | null {
@@ -613,7 +613,7 @@ export function registerDesktopAgentBackend(options: BackendShellOptions): void 
     bindingDirectory: join(options.userDataPath, 'agent-backend', 'bindings'),
     modelIntents: new FileTeamModelProbeIntents(join(options.userDataPath, 'agent-backend', 'team-model-intents'), options.userDataPath),
     commandRunner: () => desktopCommandRunner,
-    nativeNextPromptEnabled: options.nativeNextPromptEnabled === true,
+    nativeNextPromptProviders: options.nativeNextPromptProviders ?? [],
     onNativePromptSuggestion(candidate) {
       const current = options.captureActiveSelection();
       if (!current.isCurrent() || active?.feature !== feature || !active.selected) return;
