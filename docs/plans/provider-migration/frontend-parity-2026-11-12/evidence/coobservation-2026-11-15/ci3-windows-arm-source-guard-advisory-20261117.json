@@ -1,0 +1,1014 @@
+{
+  "schemaVersion": 1,
+  "kind": "C714_CI3_WIN32_ARM64_ORIGINAL_CODEX_SOURCE_A_FAILURE_GUARD_ADVISORY",
+  "repository": "777genius/agent-teams-ai",
+  "reviewer": "/root/producer_r2_guard",
+  "at": "2026-11-17 14:08:11 UTC",
+  "decision": "ORIGINAL_TEAM_A_READINESS_FAILED_WITH_RECORDED_ORIGINAL_HANDLE_CLEANUP_CONFIRMED_CAUSE_NOT_PROVEN",
+  "subject": {
+    "sourceHead": "86f52244b5375834a4040cbc63803d68cc708087",
+    "runId": 44092933972,
+    "attempt": 1,
+    "jobId": 134072511664,
+    "artifactId": 14335005585
+  },
+  "qualification": {
+    "originalResult": "INCOMPLETE / CI job failure",
+    "originalFailingBoundary": "15-second Team-A nativeReady poll, pre-read assertion",
+    "cleanup": "Original source witnesses7/7, scenario cleanup and outer controller ordinary drain are separately confirmed in retained evidence",
+    "sourceRepairSelected": false,
+    "sourceDefectProven": false,
+    "wholeWindowsQualified": false,
+    "desktopQualified": false,
+    "releaseQualified": false
+  },
+  "checkCount": 27,
+  "checks": [
+    {
+      "id": "A01",
+      "result": "PASS_BOUNDED_EVIDENCE",
+      "topic": "Immutable artifact and receipt custody",
+      "evidence": "All four task-specified Git bodies rehash to their exact supplied byte/SHA256/Git identities. The capture has14 UTF8 members totaling257713 bytes; every complete member body independently rehashes to its retained tuple. Both separately fetched receipts equal the corresponding complete capture member literally."
+    },
+    {
+      "id": "A02",
+      "result": "PASS_BOUNDED_EVIDENCE",
+      "topic": "Archive scope and independent-read limit",
+      "evidence": "Root's capture records the original33886-byte archive SHA25648445394..., archive Git identity d86d707b..., API digest match and all member CRC checks. This reviewer did not redownload or execute/unpack the archive. Independent checks cover the complete capture/member text identities and exact failure evidence, with root's binary/CRC capture explicitly attributed."
+    },
+    {
+      "id": "A03",
+      "result": "PASS_BOUNDED_EVIDENCE",
+      "topic": "Exact job/source/platform binding",
+      "evidence": "The original log explicitly checks out86f52244, records git log -1 to that SHA and binds HOST_PROCESS_SOURCE_HEAD. source-head.txt and both receipts repeat86f. Capture binds run44092933972/job134072511664/artifact14335005585. The source receipt identifies win32-arm64 and Node v24.21.0."
+    },
+    {
+      "id": "A04",
+      "result": "PASS_BOUNDED_EVIDENCE",
+      "topic": "Failure belongs to a later genuine snapshot",
+      "evidence": "This failure is later than the earlier13:46:35 observation4 setup/install snapshot. The fresh standalone R1 guard report's historical queued/setup statements remain correctly scoped to observation4. No earlier packet or review is rewritten."
+    },
+    {
+      "id": "A05",
+      "result": "PASS_BOUNDED_EVIDENCE",
+      "topic": "Full failed-source log joins original job log",
+      "evidence": "All37 nonblank lines of the complete15086-byte windows-source-codex.log occur in order in the full retained job log after only timestamp/ANSI/newline normalization. This derived comparison changes no evidence. Exact failed command, assertion stack, controller result and upload metadata are read."
+    },
+    {
+      "id": "A06",
+      "result": "PASS_BOUNDED_EVIDENCE",
+      "topic": "Original failing assertion",
+      "evidence": "AssertionError ERR_ASSERTION 'Original source Team readiness' comes from nativeEmulatedSourceScenario.ts:62, called by launch:498, Team-A:553 and ProviderGate:208. Line62 is the original poll's pre-read monotonic cutoff assertion. It is not an installation error or the later packaged Windows Retry10s assertion."
+    },
+    {
+      "id": "A07",
+      "result": "PASS_BOUNDED_EVIDENCE",
+      "topic": "Original fifteen-second readiness contract",
+      "evidence": "poll creates its original performance.now()+15000 cutoff, checks before and after every awaited read and waits25ms between false reads. No late result is admitted. The last observed sample records105 reads and14973.2414ms; the next pre-read check fails after the original delay/elapsed time. This is not a request to increase or reset that budget."
+    },
+    {
+      "id": "A08",
+      "result": "PASS_BOUNDED_EVIDENCE",
+      "topic": "Reached original source obligations",
+      "evidence": "The source log stages are exactly publish-A then Team-A. Source publication A's finite version Job completed and the pending admission/revocation counts are1/1. Roster read/replace, launch capture and original team.launch.start returned before the readiness poll. The final receipt remains INCOMPLETE at Team-A."
+    },
+    {
+      "id": "A09",
+      "result": "PASS_BOUNDED_EVIDENCE",
+      "topic": "Last matched runtime view",
+      "evidence": "The last read is for the captured alice-id generation and sourceA/revision, with attached=true,custody=owned,phase=allocated,sealed=false,nativeReady=false. The matched private projection shows bindingMatches=true and recordReady=false. Allocated is also the phase used by a ready record; phase name alone is not the failure diagnosis."
+    },
+    {
+      "id": "A10",
+      "result": "PASS_BOUNDED_EVIDENCE",
+      "topic": "Short-circuit fields are not negative findings",
+      "evidence": "projectRuntimeMember computes nativeReady with ordered short-circuit checks. Because recordReady is false, providerReady and ownerCurrent are null, meaning not evaluated in that projection. They do not establish false provider readiness, lost ownership or an authorization refusal."
+    },
+    {
+      "id": "A11",
+      "result": "PASS_BOUNDED_EVIDENCE",
+      "topic": "Bounded Codex progress observation",
+      "evidence": "The validated ledger is joined by source, bindingDigest, launchId, mainEpoch and last viewDigest. Its13 events include catalog invocations2/3/4 returningtrue, open invocation1 after-await, readiness invocation5 before-await and catalog invocation6 before-await. No later event for6 is present in that sample. The record explicitly says atomicWithFailure=false; no forever-hang or exact failure-time claim follows."
+    },
+    {
+      "id": "A12",
+      "result": "PASS_BOUNDED_EVIDENCE",
+      "topic": "No concrete first refusal identified",
+      "evidence": "The validated first-refusal ledger is empty, so the receipt correctly publishes status unknown/reason empty. This does not prove all internal operations succeeded or rule out errors outside that closed observer vocabulary."
+    },
+    {
+      "id": "A13",
+      "result": "PASS_BOUNDED_EVIDENCE",
+      "topic": "No later source case inferred",
+      "evidence": "Team-A's readiness assertion prevents its later source-job/live-peer/connection assertions and TEST_UI_BOOT input. publish-B, B management/model probe, Team-B, standalone, retained foreground cleanup scenario and cold replay remain unreached. Configured versions A/B0.162.0 are fixture constants; they are not proof of two executed version probes."
+    },
+    {
+      "id": "A14",
+      "result": "PASS_BOUNDED_EVIDENCE",
+      "topic": "Full original physical custody evidence",
+      "evidence": "One epoch records7 allocated/prepared/resumed roots and captured original witnesses. All7 final jobs have stopped/drained/released=true and originalHandleAbsent=true. Source scenario cleanup=true follows its mandatory cleanup loop and final effects/source-pin checks; no confirmed-no-local-dispatch substitute is used for these physical jobs."
+    },
+    {
+      "id": "A15",
+      "result": "PASS_BOUNDED_EVIDENCE",
+      "topic": "Initial false handle field is pre-wait state",
+      "evidence": "Scenario lines338-343 log TEST_SOURCE_CLEANUP before lines345-348 require original physical Stop/drain/release, await the original witness exit0 and set handleAbsent=true. Stdout false for slots1-6 means that variable had not yet been confirmed by this wait; it is not a fresh OS 'alive' observation or a final failed cleanup receipt. Slot0 was already confirmed during publish-A."
+    },
+    {
+      "id": "A16",
+      "result": "PASS_BOUNDED_EVIDENCE",
+      "topic": "Final receipt is after original witness waits",
+      "evidence": "evidence.epochs is constructed in finally at lines722-728 after epoch.close() returns; it therefore captures the later true handle flags. Source cleanup is assigned from the actual cleanup error collection. No cleanup AggregateError replaced the original readiness assertion in this run."
+    },
+    {
+      "id": "A17",
+      "result": "PASS_BOUNDED_EVIDENCE",
+      "topic": "Witness holds the original process handle",
+      "evidence": "capturedQueryableWitness launches the pinned native fixture with query-wait-gated and original PID/birth before forwarding preparation/resume. The C++ mode opens the handle once, checks its birth, emits captured and accepts only finite Q or W commands. W waits the same handle up to the original15s, closes it and returns0 only for WAIT_OBJECT_0. It does not reopen a PID to claim absence."
+    },
+    {
+      "id": "A18",
+      "result": "PASS_BOUNDED_EVIDENCE",
+      "topic": "Controller accounting is a distinct boundary",
+      "evidence": "The controller logs drained/rootExitCode1/activeProcesses0. Its code preserves the120s parent wait, ordinary root-handle exit and fresh zero Job membership, then removes the private sandbox. It returns104 whenever root exit is nonzero even with ordinary drain. This run's explicit controller exit104 and root1 preserve the original failure."
+    },
+    {
+      "id": "A19",
+      "result": "PASS_BOUNDED_EVIDENCE",
+      "topic": "Generic workflow message does not override receipts",
+      "evidence": "The PowerShell step throws 'Original codex source controller did not confirm cleanup' for any nonzero controller exit. Here104 reflects the nonzero original root result; the narrower source/witness and controller evidence separately support cleanup. The text is not evidence that originalHandleAbsent remained false."
+    },
+    {
+      "id": "A20",
+      "result": "PASS_BOUNDED_EVIDENCE",
+      "topic": "Outer gate cleanup is separately limited",
+      "evidence": "ProviderGate finally terminates/waits its owned sentinel and records top-level cleanup=true. That field alone does not prove every source job or the test passed; the scenario's7 final witnesses and controller evidence provide their separate boundaries. Overall status stays INCOMPLETE."
+    },
+    {
+      "id": "A21",
+      "result": "PASS_BOUNDED_EVIDENCE",
+      "topic": "Finite TEST route, no real-vendor qualification",
+      "evidence": "SourceProfile pins the current Node and generated A/B entries/wrappers, asserts the exact TEST desktop namespace/role, verifies selected helper hashes and dispatches the selected finite helper. The sole version branch emits a configured literal; no real Claude/Codex binary is selected by this fixture. Receipts explicitly retain realProviderExecuted=false and desktop/releaseQualified=false. Upstream/peer route details supplied by the semantic reviewer are attributed separately."
+    },
+    {
+      "id": "A22",
+      "result": "PASS_BOUNDED_EVIDENCE",
+      "topic": "Source file hashes are Windows-newline identities",
+      "evidence": "The6 selected source files pinned by the receipt and the2 read provider/projection files each match the complete current Git body after exact LF-to-CRLF conversion. Raw Git SHA256 differs because bytes differ by newline convention; no source change or missing match is concealed. Controller and native witness source identities are separately pinned."
+    },
+    {
+      "id": "A23",
+      "result": "PASS_BOUNDED_EVIDENCE",
+      "topic": "Late physical slot observation has a precise limit",
+      "evidence": "Slot6 has entryStart=entryEnd=6 and no thread/start marker. Source sets entryStart after original-handle capture and entryEnd at release. The generated entry verifies Node/hash and namespace/helper hashes before writing its entry journal record. Resume returned121.0419ms before first close entry. This establishes no entry additions in that interval; it does not identify why, prove protocol failure, or create an invocation6-to-slot6 identity that the evidence lacks."
+    },
+    {
+      "id": "A24",
+      "result": "PASS_BOUNDED_EVIDENCE",
+      "topic": "Prior wrapper PASS is a separate bounded result",
+      "evidence": "The earlier complete wrappers receipt is PASS for its5 finite wrapper cases and codex/opencode provider route checks, with cleanup=true. It is a different invocation. Its pass does not establish sourceA readiness, any B obligation, packaged GUI readiness or whole Windows qualification."
+    },
+    {
+      "id": "A25",
+      "result": "PASS_BOUNDED_EVIDENCE",
+      "topic": "Failure propagation and artifact preservation",
+      "evidence": "The original source-Codex step fails, so subsequent default-success Claude/OpenCode source steps and the final completed-receipts/source-freeze step do not qualify. The always upload preserves14 files, including the incomplete original receipt. No missing later receipt is promoted to PASS."
+    },
+    {
+      "id": "A26",
+      "result": "PASS_BOUNDED_EVIDENCE",
+      "topic": "No supported minimal repair selected",
+      "evidence": "The evidence narrows failure to the original readiness cutoff while a guarded catalog-related readiness path was still pending at the last joined projection. It does not distinguish startup/hash/OS scheduling, catalog completion, terminal/disposal latency or another internal pending stage sufficiently to prove a repairable defect. No retry, cache, skipped catalog check, timeout increase, weakened predicate or substitute source is proposed."
+    },
+    {
+      "id": "A27",
+      "result": "PASS_BOUNDED_EVIDENCE",
+      "topic": "Read-only and scope boundary",
+      "evidence": "No shell/local/runtime, compilation/import/evaluation of target source, new OS/model/network request, live CI/artifact download, retry/ref/PR/source/control mutation occurred. Only immutable Git/retained data reads, pure data checks and this bare advisory retention were used. This creates no new gate or execution authority."
+    }
+  ],
+  "evidence": {
+    "jobLog": {
+      "pin": {
+        "bytes": 364157,
+        "sha256": "095c6ff5de8c5c97e633266f1560a206c8f019c0aba670dea7b7398a85a8e4da",
+        "gitBlob": "f6dd9da504cc6f123b7b3a2e8a768b54b08fe033"
+      },
+      "read": "Complete364157-byte body fetched/rehashed. Exact source checkout/binding, entire failed source invocation/log segment, previous wrapper segment and terminal upload/cleanup segment read. Other earlier native-case output is retained context, not a new broad qualification audit."
+    },
+    "capture": {
+      "pin": {
+        "bytes": 343132,
+        "sha256": "28f2ca80bdfed26f8c04ad4c1c141dbe02af9e5f855b30164725ab87d6a0cb2d",
+        "gitBlob": "602b54b272d0a44d0baca819c372f50aa1303c6a"
+      },
+      "read": "Complete capture parsed; entire14-member index and all257713 member bytes rehashed. Full relevant source/wrapper receipts and logs read. Root's archive byte/API-digest/CRC verification is attributed, not independently rerun."
+    },
+    "sourceReceipt": {
+      "pin": {
+        "bytes": 25212,
+        "sha256": "e2656d0ec61562bd5f771a00b8286b40a3e67d02efbc9573a1d8ea1864cbe4ac",
+        "gitBlob": "2d6713f4af5a1469107397f93ec080bd439d8495"
+      },
+      "read": "Complete25212-byte body read in two contiguous untruncated slices and joined literally to archive member."
+    },
+    "wrappersReceipt": {
+      "pin": {
+        "bytes": 2908,
+        "sha256": "677b14e963a8759193c124e6c2c764fec86069bcb8ce6031e3735c131e574ba7",
+        "gitBlob": "f042dec2bc85a37b98a5a20b55eea236be0c5369"
+      },
+      "read": "Complete2908-byte body read and joined literally to archive member."
+    },
+    "archive": {
+      "bytes": 33886,
+      "sha256": "48445394115b52a7d3ad0e99d6e4047df15f1eb4d7ef0550d662a4c7a76c42ed",
+      "gitBlob": "d86d707bf6bc893850a2be01d85e1c8be288d0e7",
+      "apiDigestMatched": true,
+      "allMembersCrcVerified": true,
+      "verificationAuthority": "root original offline capture"
+    },
+    "members": [
+      {
+        "path": "agent-teams-ai/agent-teams-ai/native-evidence/binary-sha256.txt",
+        "bytes": 1741,
+        "sha256": "fac2cfb085f3f6fe5a72e19f902b8f8495d8e84e57554109953dadde2c67ac44",
+        "gitBlob": "2fe9fcf5f32e36b541e5027604b89bd349bc18ee",
+        "independentFullBodyHashMatch": true
+      },
+      {
+        "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/host-contracts.log",
+        "bytes": 20520,
+        "sha256": "16b01a459abcc3a2f9817ca68e0d5e4bcd11b19292b543d9d477cd3629cdf0a9",
+        "gitBlob": "bb54ebfad5d2c31b0f5770f959adea9e107275eb",
+        "independentFullBodyHashMatch": true
+      },
+      {
+        "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/protocol.log",
+        "bytes": 757,
+        "sha256": "be4f29e348e437aa4f45aa66596e467a4e7538d5b258fafbb18d805f6d4ed940",
+        "gitBlob": "51263928627a25b407b0c22de0944396158aa5d1",
+        "independentFullBodyHashMatch": true
+      },
+      {
+        "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/retained-main.log",
+        "bytes": 9885,
+        "sha256": "e4c58e636a6e496cc58718553895967d456519492b78526315d2449268318479",
+        "gitBlob": "e5fd6af20d1e916e54288c7c0fc9627ab6b68f84",
+        "independentFullBodyHashMatch": true
+      },
+      {
+        "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/source-head.txt",
+        "bytes": 41,
+        "sha256": "c6e83faca47c66153afed1e4b9891f856af87557ce95c1e8182e52db41d3c5e5",
+        "gitBlob": "fa471e932cea3bab5fa1f93968605b7d21ed6e71",
+        "independentFullBodyHashMatch": true
+      },
+      {
+        "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-binary-sha256.txt",
+        "bytes": 1741,
+        "sha256": "fac2cfb085f3f6fe5a72e19f902b8f8495d8e84e57554109953dadde2c67ac44",
+        "gitBlob": "2fe9fcf5f32e36b541e5027604b89bd349bc18ee",
+        "independentFullBodyHashMatch": true
+      },
+      {
+        "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-emulated-provider-receipt.json",
+        "bytes": 2908,
+        "sha256": "677b14e963a8759193c124e6c2c764fec86069bcb8ce6031e3735c131e574ba7",
+        "gitBlob": "f042dec2bc85a37b98a5a20b55eea236be0c5369",
+        "independentFullBodyHashMatch": true
+      },
+      {
+        "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-electron.log",
+        "bytes": 89098,
+        "sha256": "0839a9d7514a44a33501ac7dd076f4ac9027b23c2502481e6040e7eef7c6b335",
+        "gitBlob": "77f74a4caaf6f44cfda3660784477eb10166b901",
+        "independentFullBodyHashMatch": true
+      },
+      {
+        "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-emulated-provider.log",
+        "bytes": 1278,
+        "sha256": "4c49bad255d0a7c7007f3f8f6a51cfc14d98c0f8ff1f334bf359333b83224ec0",
+        "gitBlob": "499333aa1e738d23e2dd7e6636c2b2529c7b156c",
+        "independentFullBodyHashMatch": true
+      },
+      {
+        "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-manifest.json",
+        "bytes": 195,
+        "sha256": "b017db3183a667e962668ea79613e8ca2c33a721373f6cdd9081bcb2b516dacc",
+        "gitBlob": "3518cc651189580cdffdab2057f67fa9f7248541",
+        "independentFullBodyHashMatch": true
+      },
+      {
+        "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-node24.log",
+        "bytes": 89019,
+        "sha256": "7cbec7d3e4f24908f50622714cd7f1f0b1032396e3580e1b808966fb09690eea",
+        "gitBlob": "bbe5847d89b34781b4f87352b066daa2a33e7d94",
+        "independentFullBodyHashMatch": true
+      },
+      {
+        "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-scoped-manifest.json",
+        "bytes": 232,
+        "sha256": "033210e2324eaa9e5d58639971d25c945ffa581ab7a1fd0fae4c1749e71e5195",
+        "gitBlob": "251411b444fbdd01f3fa1cffd463599ae6aff71e",
+        "independentFullBodyHashMatch": true
+      },
+      {
+        "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-source-codex-receipt.json",
+        "bytes": 25212,
+        "sha256": "e2656d0ec61562bd5f771a00b8286b40a3e67d02efbc9573a1d8ea1864cbe4ac",
+        "gitBlob": "2d6713f4af5a1469107397f93ec080bd439d8495",
+        "independentFullBodyHashMatch": true
+      },
+      {
+        "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-source-codex.log",
+        "bytes": 15086,
+        "sha256": "367802915199f0f66d09c326bfddfa97357e481c31967b07c6545801d7956fc1",
+        "gitBlob": "9ccd4ecaf7d5c013c207eda79de488230067554e",
+        "independentFullBodyHashMatch": true
+      }
+    ],
+    "sourceLogJoin": {
+      "sourceLogAllNonblankLinesJoinFullJobLogInOrder": true,
+      "beginLine": 2187,
+      "endLine": 2225,
+      "sourceNonblankLines": 37,
+      "derivedOnly": true
+    },
+    "sourcesFullyRead": [
+      {
+        "repository": "777genius/agent-teams-ai",
+        "commit": "86f52244b5375834a4040cbc63803d68cc708087",
+        "path": "tools/owned-process-broker/nativeEmulatedSourceScenario.ts",
+        "mode": "100644",
+        "bytes": 60524,
+        "sha256": "07007c2c67a27fbab6bd4906982b9460a634928ca80f7349abd47fa7eb747447",
+        "gitBlob": "f2af726dd2f352a1ecc0fa40753b76e72d008e14"
+      },
+      {
+        "repository": "777genius/agent-teams-ai",
+        "commit": "86f52244b5375834a4040cbc63803d68cc708087",
+        "path": "tools/owned-process-broker/nativeEmulatedProviderGate.ts",
+        "mode": "100644",
+        "bytes": 15213,
+        "sha256": "5ecad2b6f6c7f5819e0e18430b5625a9a86ef1120e7e99f595dbd3ad73126bbd",
+        "gitBlob": "31a6c30bd3962500e20e99786353cb9ec418adaf"
+      },
+      {
+        "repository": "777genius/agent-teams-ai",
+        "commit": "86f52244b5375834a4040cbc63803d68cc708087",
+        "path": "tools/owned-process-broker/nativeEmulatedSourceProfile.ts",
+        "mode": "100644",
+        "bytes": 27229,
+        "sha256": "964c9b512a8cdb81053ddbd316cb74fb230bf57730541ad9550b102733c82f8a",
+        "gitBlob": "740f654c9c04318779fb4fd9f15b79b76711e53f"
+      },
+      {
+        "repository": "777genius/agent-teams-ai",
+        "commit": "86f52244b5375834a4040cbc63803d68cc708087",
+        "path": "tools/owned-process-broker/nativeEmulatedSourceReadiness.ts",
+        "mode": "100644",
+        "bytes": 14011,
+        "sha256": "4d95aa3c8c58d15554689224a3b8da78522932349370d88bdc609428fea24a30",
+        "gitBlob": "24aeae90de179269ff616a725d38ccc49374094b"
+      },
+      {
+        "repository": "777genius/agent-teams-ai",
+        "commit": "86f52244b5375834a4040cbc63803d68cc708087",
+        "path": "tools/owned-process-broker/nativeGateContext.ts",
+        "mode": "100644",
+        "bytes": 7278,
+        "sha256": "7e9096550ed0b90589a91978f8621572424d5b6c24137c13c641f3dde7897200",
+        "gitBlob": "27c6da3bac59ac276c40e79f7c4e1c548adb9d31"
+      },
+      {
+        "repository": "777genius/agent-teams-ai",
+        "commit": "86f52244b5375834a4040cbc63803d68cc708087",
+        "path": "tools/owned-process-broker/nativeGateEvents.ts",
+        "mode": "100644",
+        "bytes": 1367,
+        "sha256": "2f06d37ad0ea51fda654501d4c08a6066a1914a9cfe59c2d73d4f29db4c8ba7d",
+        "gitBlob": "1dbbf60801213f80f97cb9b0b0031acdf41d738a"
+      },
+      {
+        "repository": "777genius/agent-teams-ai",
+        "commit": "86f52244b5375834a4040cbc63803d68cc708087",
+        "path": "tools/owned-process-broker/gateController.cpp",
+        "mode": "100644",
+        "bytes": 5935,
+        "sha256": "45d1ce375fbbcce05bc37f885071f8331387bd87c6b9c5fce1b075be56a32532",
+        "gitBlob": "ebc96f50b2a901aae4b97b3b4dcb484f449170a5"
+      },
+      {
+        "repository": "777genius/agent-teams-ai",
+        "commit": "86f52244b5375834a4040cbc63803d68cc708087",
+        "path": "packages/legacy-agent-host/src/adapters/providers/CodexMemberProvider.ts",
+        "mode": "100644",
+        "bytes": 15002,
+        "sha256": "75184e7328f9449a9f449994f0cd5dbbd2e954bd0170b79c2fbd236fec66e9c4",
+        "gitBlob": "f1d7efcb34f5c91953b474828bf09dbf3c092e98"
+      },
+      {
+        "repository": "777genius/agent-teams-ai",
+        "commit": "86f52244b5375834a4040cbc63803d68cc708087",
+        "path": "packages/legacy-agent-host/src/composition/projectRuntimeMember.ts",
+        "mode": "100644",
+        "bytes": 3398,
+        "sha256": "352c62fcce347599a89658a5dc98d3d05d35d4a6d26618cc87faa6ece2f995df",
+        "gitBlob": "65d53a2beff3b3a36d554601dcf57d67b086aa0f"
+      },
+      {
+        "repository": "777genius/agent-teams-ai",
+        "commit": "86f52244b5375834a4040cbc63803d68cc708087",
+        "path": "tools/owned-process-broker/nativeFixture.cpp",
+        "mode": "100644",
+        "bytes": 15038,
+        "sha256": "42749224f0194fd70f4b3df50f5fc64fbb2e11c58801c629463387cb4a4a1e25",
+        "gitBlob": "a42f7513e9a5d2732c5c9f65fa1cc6cf1c970062"
+      }
+    ],
+    "sourceBodyBytes": 164995,
+    "workflow": {
+      "repository": "777genius/agent-teams-ai",
+      "commit": "86f52244b5375834a4040cbc63803d68cc708087",
+      "path": ".github/workflows/host-process-acceptance.yml",
+      "mode": "100644",
+      "bytes": 34313,
+      "sha256": "71b16b1b1fd1f0c88d3cb15a18cdfcce08b2b18908d3a5ce755330b4b2aeedf1",
+      "gitBlob": "70202d22a5840401a00025cd60b797c514f3e455",
+      "read": "Prior complete unchanged workflow body reused by identity; source-Codex command,104 propagation,later step order and always-upload reread."
+    },
+    "windowsNewlineJoins": [
+      {
+        "path": "tools/owned-process-broker/nativeEmulatedSourceScenario.ts",
+        "gitPin": {
+          "bytes": 60524,
+          "sha256": "07007c2c67a27fbab6bd4906982b9460a634928ca80f7349abd47fa7eb747447",
+          "gitBlob": "f2af726dd2f352a1ecc0fa40753b76e72d008e14"
+        },
+        "observedFileSha256": "00a56256f522300e3c21ba4e9348f7a160d9f61da0d86e9fbf492e20d89c3f05",
+        "exactLf": false,
+        "exactCrlf": true,
+        "derivedCrlfBytes": 61323,
+        "derivedCrlfSha256": "00a56256f522300e3c21ba4e9348f7a160d9f61da0d86e9fbf492e20d89c3f05"
+      },
+      {
+        "path": "tools/owned-process-broker/nativeEmulatedProviderGate.ts",
+        "gitPin": {
+          "bytes": 15213,
+          "sha256": "5ecad2b6f6c7f5819e0e18430b5625a9a86ef1120e7e99f595dbd3ad73126bbd",
+          "gitBlob": "31a6c30bd3962500e20e99786353cb9ec418adaf"
+        },
+        "observedFileSha256": "421200fecd4c91a5c4c19a0dd765e795b2007beec1116a338c359988da2de3ce",
+        "exactLf": false,
+        "exactCrlf": true,
+        "derivedCrlfBytes": 15444,
+        "derivedCrlfSha256": "421200fecd4c91a5c4c19a0dd765e795b2007beec1116a338c359988da2de3ce"
+      },
+      {
+        "path": "tools/owned-process-broker/nativeEmulatedSourceProfile.ts",
+        "gitPin": {
+          "bytes": 27229,
+          "sha256": "964c9b512a8cdb81053ddbd316cb74fb230bf57730541ad9550b102733c82f8a",
+          "gitBlob": "740f654c9c04318779fb4fd9f15b79b76711e53f"
+        },
+        "observedFileSha256": "1c2babaf2394a5b41f0e2d030639decd0300150f03b742e4219171e57a9e5180",
+        "exactLf": false,
+        "exactCrlf": true,
+        "derivedCrlfBytes": 27551,
+        "derivedCrlfSha256": "1c2babaf2394a5b41f0e2d030639decd0300150f03b742e4219171e57a9e5180"
+      },
+      {
+        "path": "tools/owned-process-broker/nativeEmulatedSourceReadiness.ts",
+        "gitPin": {
+          "bytes": 14011,
+          "sha256": "4d95aa3c8c58d15554689224a3b8da78522932349370d88bdc609428fea24a30",
+          "gitBlob": "24aeae90de179269ff616a725d38ccc49374094b"
+        },
+        "observedFileSha256": "213bb449f3febdf0eeb06b52a436a649f38ea89123ed702264514ba5000239b5",
+        "exactLf": false,
+        "exactCrlf": true,
+        "derivedCrlfBytes": 14192,
+        "derivedCrlfSha256": "213bb449f3febdf0eeb06b52a436a649f38ea89123ed702264514ba5000239b5"
+      },
+      {
+        "path": "tools/owned-process-broker/nativeGateContext.ts",
+        "gitPin": {
+          "bytes": 7278,
+          "sha256": "7e9096550ed0b90589a91978f8621572424d5b6c24137c13c641f3dde7897200",
+          "gitBlob": "27c6da3bac59ac276c40e79f7c4e1c548adb9d31"
+        },
+        "observedFileSha256": "3f868f0e0c0066bf7a0ecb169dd897274e11d50479c6cfba8aed11f31760dfb6",
+        "exactLf": false,
+        "exactCrlf": true,
+        "derivedCrlfBytes": 7470,
+        "derivedCrlfSha256": "3f868f0e0c0066bf7a0ecb169dd897274e11d50479c6cfba8aed11f31760dfb6"
+      },
+      {
+        "path": "tools/owned-process-broker/nativeGateEvents.ts",
+        "gitPin": {
+          "bytes": 1367,
+          "sha256": "2f06d37ad0ea51fda654501d4c08a6066a1914a9cfe59c2d73d4f29db4c8ba7d",
+          "gitBlob": "1dbbf60801213f80f97cb9b0b0031acdf41d738a"
+        },
+        "observedFileSha256": "d8c7b487bbaac95d4fb25080ce57d8d3d36c04c9a2a7297157993dd98698e0c4",
+        "exactLf": false,
+        "exactCrlf": true,
+        "derivedCrlfBytes": 1406,
+        "derivedCrlfSha256": "d8c7b487bbaac95d4fb25080ce57d8d3d36c04c9a2a7297157993dd98698e0c4"
+      },
+      {
+        "path": "tools/owned-process-broker/gateController.cpp",
+        "gitPin": {
+          "bytes": 5935,
+          "sha256": "45d1ce375fbbcce05bc37f885071f8331387bd87c6b9c5fce1b075be56a32532",
+          "gitBlob": "ebc96f50b2a901aae4b97b3b4dcb484f449170a5"
+        },
+        "observedFileSha256": null,
+        "exactLf": false,
+        "exactCrlf": false,
+        "derivedCrlfBytes": 6043,
+        "derivedCrlfSha256": "604a73ce8f1e31c3ee094a1ceb7a866c71270590ba40f94c70d7f0c1a7543518"
+      },
+      {
+        "path": "packages/legacy-agent-host/src/adapters/providers/CodexMemberProvider.ts",
+        "gitPin": {
+          "bytes": 15002,
+          "sha256": "75184e7328f9449a9f449994f0cd5dbbd2e954bd0170b79c2fbd236fec66e9c4",
+          "gitBlob": "f1d7efcb34f5c91953b474828bf09dbf3c092e98"
+        },
+        "observedFileSha256": "6b6da99e3aa6b1b66f959960e35224073e8ca99f462ecc8061d640756a2d7490",
+        "derivedCrlfBytes": 15350,
+        "derivedCrlfSha256": "6b6da99e3aa6b1b66f959960e35224073e8ca99f462ecc8061d640756a2d7490",
+        "exactCrlf": true
+      },
+      {
+        "path": "packages/legacy-agent-host/src/composition/projectRuntimeMember.ts",
+        "gitPin": {
+          "bytes": 3398,
+          "sha256": "352c62fcce347599a89658a5dc98d3d05d35d4a6d26618cc87faa6ece2f995df",
+          "gitBlob": "65d53a2beff3b3a36d554601dcf57d67b086aa0f"
+        },
+        "observedFileSha256": "1d319cb57b85ef47d22b0e4a99ee4960cbada129cd85d08fa924c79b672bf079",
+        "derivedCrlfBytes": 3475,
+        "derivedCrlfSha256": "1d319cb57b85ef47d22b0e4a99ee4960cbada129cd85d08fa924c79b672bf079",
+        "exactCrlf": true
+      }
+    ],
+    "semanticReviewerAttribution": {
+      "reviewer": "/root/producer_r2_semantic",
+      "sourcePins": [
+        {
+          "repository": "777genius/agent-teams-ai",
+          "commit": "86f52244b5375834a4040cbc63803d68cc708087",
+          "path": "packages/legacy-agent-host/src/adapters/providers/readCodexMcpCatalog.ts",
+          "gitBlob": "7230804bd10e8a521cb3e1b1e9760920e9ebcef5",
+          "bytes": 2224,
+          "sha256": "1cb3368063310cde3d3824709dcbb941738e65b8beee283c005fbd493d84ae0c"
+        },
+        {
+          "repository": "agent-teams-ai/old-provider-implementations",
+          "commit": "c79b81bf002eaac95436da71c7049d7f309906a9",
+          "path": "packages/provider-implementations/src/features/provider-session-implementation/adapters/codex-protocol/driver-factory.ts",
+          "gitBlob": "daeeb1f64df310c895aa2df1c84f66d04a3d33b8",
+          "bytes": 2933,
+          "sha256": "7446362f7a05fee6807acbed8905138986342b8ef777afa7be1fc04a9c263d83"
+        },
+        {
+          "repository": "agent-teams-ai/old-provider-implementations",
+          "commit": "c79b81bf002eaac95436da71c7049d7f309906a9",
+          "path": "packages/provider-implementations/src/features/provider-session-implementation/adapters/codex-protocol/driver-session.ts",
+          "gitBlob": "c77809d097940bed17cebc13b849f57f13a0db0b",
+          "bytes": 19978,
+          "sha256": "5086b0b6551da1775330366a82a83c28785cd3183fadfef74d81dbc67c670388"
+        },
+        {
+          "repository": "agent-teams-ai/old-provider-implementations",
+          "commit": "c79b81bf002eaac95436da71c7049d7f309906a9",
+          "path": "packages/provider-implementations/src/features/provider-session-implementation/adapters/codex-protocol/mcp-catalog-probe.ts",
+          "gitBlob": "e84d4ae0f62c84132be9eb784232f9f913ff259f",
+          "bytes": 4836,
+          "sha256": "bdfdf6e90710e8065f8f5d89160a8f8d419764c849c4d2648474b38b3436e9d4"
+        }
+      ],
+      "read": "Complete independent source reads reported by semantic reviewer. Guard does not count these four bodies as its own fresh independent reads.",
+      "finding": "Host configuration, upstream open and upstream post-open readiness each perform the observed completed catalog checks. The next Host wrapped readiness starts another fresh catalog check. The catalog operation is exact mcp/list/--json and includes complete output/terminal success plus disposal/confirmStopped before returning. The selected finite peer has no deliberate delay/mismatch in that branch. Pending6 cannot be localized to decoding or assigned to a job slot by evidence that lacks that correlation.",
+      "limits": "No cache or removal of these checks is justified merely to fit the outer15s; current-source/MCP authority remains unchanged. Semantic's separate bounded report may be joined independently without altering this advisory."
+    }
+  },
+  "actualFacts": {
+    "sourceHead": "86f52244b5375834a4040cbc63803d68cc708087",
+    "platform": "win32-arm64",
+    "nodeVersion": "v24.21.0",
+    "status": "INCOMPLETE",
+    "stage": "Team-A",
+    "lastLaunchReadiness": {
+      "source": {
+        "sourceId": "70f14df45874dc69b48e816d416ebdc9d9148a487699a2c423682bdd3c93a528",
+        "revision": "c898fd4238289c32edc22a26e9658dbcc7044788e991be63723891798d338262"
+      },
+      "image": "A",
+      "launchId": "faed95fc-2132-54f1-aad3-c38a59bc4a41",
+      "readCount": 105,
+      "elapsedMs": 14973.2414,
+      "lastRuntimeRead": {
+        "viewDigest": "39f940b75a038e05c628b9d1142aab9a92bec4aa69e298f194bf35ca476ac495",
+        "memberId": "alice-id",
+        "generation": "capture-8c4bb2ea-dc48-52bb-ae92-41d7dce103d5",
+        "phase": "allocated",
+        "sealed": false,
+        "custody": "owned",
+        "nativeReady": false,
+        "attached": true
+      }
+    },
+    "runtimeProjection": {
+      "status": "observed",
+      "atomicWithFailure": false,
+      "viewDigest": "39f940b75a038e05c628b9d1142aab9a92bec4aa69e298f194bf35ca476ac495",
+      "bindingMatches": true,
+      "recordReady": false,
+      "providerReady": null,
+      "ownerCurrent": null,
+      "nativeReady": false
+    },
+    "codexReadinessObservation": {
+      "schemaVersion": 1,
+      "status": "observed",
+      "atomicWithFailure": false,
+      "samplePoint": "last-original-projection-with-matching-view-digest",
+      "source": {
+        "sourceId": "70f14df45874dc69b48e816d416ebdc9d9148a487699a2c423682bdd3c93a528",
+        "revision": "c898fd4238289c32edc22a26e9658dbcc7044788e991be63723891798d338262"
+      },
+      "bindingDigest": "17a5c6bd5f602d58e88f67d090cbb84eb9b9bb02a1e9e966b954ee1da14e38f2",
+      "viewDigest": "39f940b75a038e05c628b9d1142aab9a92bec4aa69e298f194bf35ca476ac495",
+      "mainEpoch": "214dd41a-65f4-4973-98b3-9a75aafe7635",
+      "launchId": "faed95fc-2132-54f1-aad3-c38a59bc4a41",
+      "observedEventCount": 13,
+      "events": [
+        [
+          1,
+          1,
+          "open",
+          "before-await",
+          null
+        ],
+        [
+          2,
+          2,
+          "catalog",
+          "before-await",
+          null
+        ],
+        [
+          3,
+          2,
+          "catalog",
+          "after-await",
+          null
+        ],
+        [
+          4,
+          2,
+          "catalog",
+          "returned",
+          true
+        ],
+        [
+          5,
+          3,
+          "catalog",
+          "before-await",
+          null
+        ],
+        [
+          6,
+          3,
+          "catalog",
+          "after-await",
+          null
+        ],
+        [
+          7,
+          3,
+          "catalog",
+          "returned",
+          true
+        ],
+        [
+          8,
+          4,
+          "catalog",
+          "before-await",
+          null
+        ],
+        [
+          9,
+          4,
+          "catalog",
+          "after-await",
+          null
+        ],
+        [
+          10,
+          4,
+          "catalog",
+          "returned",
+          true
+        ],
+        [
+          11,
+          1,
+          "open",
+          "after-await",
+          null
+        ],
+        [
+          12,
+          5,
+          "readiness",
+          "before-await",
+          null
+        ],
+        [
+          13,
+          6,
+          "catalog",
+          "before-await",
+          null
+        ]
+      ]
+    },
+    "firstRefusal": {
+      "status": "unknown",
+      "reason": "empty"
+    },
+    "configuredVersions": {
+      "A": "0.162.0",
+      "B": "0.162.0"
+    },
+    "configuredVersionsAreNotBothObservedExecutions": true,
+    "pending": {
+      "admitted": 1,
+      "revoked": 1
+    },
+    "serviceOperations": 0,
+    "firstCloseEntryMs": 24794.348599999998,
+    "finalJobs": [
+      {
+        "slot": 0,
+        "capability": "5bf548f4-677e-4bf4-95ba-ade7a98a1d46",
+        "root": {
+          "pid": 6584,
+          "birth": "01dd769b1a4ab026"
+        },
+        "source": null,
+        "resumed": true,
+        "stopped": true,
+        "drained": true,
+        "released": true,
+        "originalHandleAbsent": true,
+        "entryStart": 0,
+        "entryEnd": 1,
+        "threadEphemeral": []
+      },
+      {
+        "slot": 1,
+        "capability": "af1f3b6d-6036-49ca-9cde-7a6cbe3ec1c0",
+        "root": {
+          "pid": 7644,
+          "birth": "01dd769b1c682c0e"
+        },
+        "source": {
+          "sourceId": "70f14df45874dc69b48e816d416ebdc9d9148a487699a2c423682bdd3c93a528",
+          "revision": "c898fd4238289c32edc22a26e9658dbcc7044788e991be63723891798d338262"
+        },
+        "resumed": true,
+        "stopped": true,
+        "drained": true,
+        "released": true,
+        "originalHandleAbsent": true,
+        "entryStart": 1,
+        "entryEnd": 2,
+        "threadEphemeral": []
+      },
+      {
+        "slot": 2,
+        "capability": "2580001a-5ead-4be5-9305-4634049fd13c",
+        "root": {
+          "pid": 7432,
+          "birth": "01dd769b1ee0123b"
+        },
+        "source": {
+          "sourceId": "70f14df45874dc69b48e816d416ebdc9d9148a487699a2c423682bdd3c93a528",
+          "revision": "c898fd4238289c32edc22a26e9658dbcc7044788e991be63723891798d338262"
+        },
+        "resumed": true,
+        "stopped": true,
+        "drained": true,
+        "released": true,
+        "originalHandleAbsent": true,
+        "entryStart": 2,
+        "entryEnd": 3,
+        "threadEphemeral": []
+      },
+      {
+        "slot": 3,
+        "capability": "a18eaa14-3db2-4348-b26e-3c8089484ec6",
+        "root": {
+          "pid": 1464,
+          "birth": "01dd769b208a18ab"
+        },
+        "source": {
+          "sourceId": "70f14df45874dc69b48e816d416ebdc9d9148a487699a2c423682bdd3c93a528",
+          "revision": "c898fd4238289c32edc22a26e9658dbcc7044788e991be63723891798d338262"
+        },
+        "resumed": true,
+        "stopped": true,
+        "drained": true,
+        "released": true,
+        "originalHandleAbsent": true,
+        "entryStart": 3,
+        "entryEnd": 6,
+        "threadEphemeral": [
+          false
+        ]
+      },
+      {
+        "slot": 4,
+        "capability": "9d15563b-9d99-4380-9cb2-9bdf729584e9",
+        "root": {
+          "pid": 8748,
+          "birth": "01dd769b2251c9b4"
+        },
+        "source": {
+          "sourceId": "70f14df45874dc69b48e816d416ebdc9d9148a487699a2c423682bdd3c93a528",
+          "revision": "c898fd4238289c32edc22a26e9658dbcc7044788e991be63723891798d338262"
+        },
+        "resumed": true,
+        "stopped": true,
+        "drained": true,
+        "released": true,
+        "originalHandleAbsent": true,
+        "entryStart": 4,
+        "entryEnd": 5,
+        "threadEphemeral": []
+      },
+      {
+        "slot": 5,
+        "capability": "7dbdec0c-2f82-4fbb-997c-a31443dbf776",
+        "root": {
+          "pid": 8328,
+          "birth": "01dd769b247dd3f6"
+        },
+        "source": {
+          "sourceId": "70f14df45874dc69b48e816d416ebdc9d9148a487699a2c423682bdd3c93a528",
+          "revision": "c898fd4238289c32edc22a26e9658dbcc7044788e991be63723891798d338262"
+        },
+        "resumed": true,
+        "stopped": true,
+        "drained": true,
+        "released": true,
+        "originalHandleAbsent": true,
+        "entryStart": 5,
+        "entryEnd": 6,
+        "threadEphemeral": []
+      },
+      {
+        "slot": 6,
+        "capability": "0fa1cba3-99d1-4559-8eb7-5c7250140bf2",
+        "root": {
+          "pid": 10008,
+          "birth": "01dd769b26539997"
+        },
+        "source": {
+          "sourceId": "70f14df45874dc69b48e816d416ebdc9d9148a487699a2c423682bdd3c93a528",
+          "revision": "c898fd4238289c32edc22a26e9658dbcc7044788e991be63723891798d338262"
+        },
+        "resumed": true,
+        "stopped": true,
+        "drained": true,
+        "released": true,
+        "originalHandleAbsent": true,
+        "entryStart": 6,
+        "entryEnd": 6,
+        "threadEphemeral": []
+      }
+    ],
+    "preWitnessCleanupRows": [
+      {
+        "jobSlot": 0,
+        "originalHandleAbsent": true,
+        "stopped": true,
+        "drained": true,
+        "released": true
+      },
+      {
+        "jobSlot": 1,
+        "originalHandleAbsent": false,
+        "stopped": true,
+        "drained": true,
+        "released": true
+      },
+      {
+        "jobSlot": 2,
+        "originalHandleAbsent": false,
+        "stopped": true,
+        "drained": true,
+        "released": true
+      },
+      {
+        "jobSlot": 3,
+        "originalHandleAbsent": false,
+        "stopped": true,
+        "drained": true,
+        "released": true
+      },
+      {
+        "jobSlot": 4,
+        "originalHandleAbsent": false,
+        "stopped": true,
+        "drained": true,
+        "released": true
+      },
+      {
+        "jobSlot": 5,
+        "originalHandleAbsent": false,
+        "stopped": true,
+        "drained": true,
+        "released": true
+      },
+      {
+        "jobSlot": 6,
+        "originalHandleAbsent": false,
+        "stopped": true,
+        "drained": true,
+        "released": true
+      }
+    ],
+    "finalScenarioCleanup": true,
+    "outerSentinelCleanup": true,
+    "controller": {
+      "gateController": "drained",
+      "rootExitCode": 1,
+      "activeProcesses": 0
+    },
+    "controllerExitCode": 104,
+    "sourceStages": [
+      "publish-A",
+      "Team-A"
+    ],
+    "timestamps": {
+      "sourceStepStart": "2026-11-17T13:53:53.5701845Z",
+      "sandbox": "2026-11-17T13:53:53.9618356Z",
+      "readiness": "2026-11-17T13:54:23.3904689Z",
+      "primaryAssertion": "2026-11-17T13:54:24.5776676Z",
+      "controllerDrained": "2026-11-17T13:54:24.5928355Z",
+      "controllerExit": "2026-11-17T13:54:24.6084033Z"
+    }
+  },
+  "causeAssessment": {
+    "proven": "The original monotonic Team-A readiness guard expires while no joined view has nativeReady=true. The last matching private projection stops at recordReady=false, with Codex open completed and another catalog verification pending in the wrapped readiness path.",
+    "notProven": [
+      "A protocol failure or malformed catalog response",
+      "A source/MCP authority mismatch",
+      "An exact OS or executable-startup defect",
+      "A specific catalog invocation-to-physical-job correlation",
+      "That all work after the last matching projection remained pending at the exact throw instant",
+      "That changing timing, caching or removing verification would preserve the original authority"
+    ],
+    "latePhysicalSlot": {
+      "slot": 6,
+      "pid": 10008,
+      "birth": "01dd769b26539997",
+      "entryStart": 6,
+      "entryEnd": 6,
+      "resumeReturnedAtEpochMs": 24673.3067,
+      "firstCloseEntryAtEpochMs": 24794.348599999998,
+      "intervalMs": 121.04189999999653,
+      "meaning": "No entry-journal additions between the captured pre-resume boundary and release for this slot. Generated entry journals only after original Node/hash/namespace/helper checks. No particular pre-journal internal stage or failure is proven."
+    },
+    "missingDecisiveEvidence": "The retained receipt exposes bounded stages/booleans/counts, not the pending invocation's full internal stage timing or a token binding that invocation to one physical Job. The controller has already removed its private sandbox; this advisory does not reconstruct or rerun it."
+  },
+  "unreached": [
+    "Team-A post-readiness live/source/connected assertions",
+    "Team-A TEST_UI_BOOT input",
+    "publish-B and its actual version probe",
+    "B management metadata/model probe and replay",
+    "Team-B",
+    "B standalone",
+    "the original foreground-revocation/retained cleanup assertions",
+    "cold read and replay",
+    "subsequent Claude/OpenCode source workflow steps",
+    "final all-platform-receipts and whole-source-after qualification step"
+  ],
+  "limits": [
+    "Original readiness failure remains a failure although its cleanup later confirms original handles absent.",
+    "Controller activeProcesses0 cannot replace original PID/birth/HANDLE evidence; here the final receipt independently records each original witness's successful completion.",
+    "The first unsuccessful oversized print was truncated; it was not counted as a full read. Both full receipt slices and all complete critical source bodies were subsequently read without truncation.",
+    "All source comparisons are data-only. No source/controller/provider code was evaluated, compiled, imported or executed by this reviewer.",
+    "Nothing in this advisory alters the fresh standalone recovery R1 or its immutable historical CI snapshot. No new execution/admission/publication gate, workaround, deadline, retry, source/control postimage or CI action is selected."
+  ],
+  "retentionProtocol": "Announce exact bare blob pin immediately after retention, then fresh full self-readback."
+}

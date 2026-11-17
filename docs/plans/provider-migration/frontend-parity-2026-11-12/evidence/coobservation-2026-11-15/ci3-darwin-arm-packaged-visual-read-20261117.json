@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "kind": "C714_CI3_DARWIN_ARM_PACKAGED_ROOT_VISUAL_READ",
+  "artifactId": 14336782083,
+  "capture": {
+    "bytes": 3396622,
+    "sha256": "f6cb6cb9f0ad357539d6dddf8f2bf8e1247497f3439d915daf820dc10ecbce88",
+    "gitBlob": "443c24ae6d62988dd7c3680c7a08e3235a8fe177"
+  },
+  "at": "2026-11-17 14:36:48 UTC",
+  "images": [
+    {
+      "index": 1,
+      "kind": "automatic-app-relaunch-successor",
+      "observed": "Fresh rendered main/home view with Providers status loading indicators, task sidebar contains persisted TEST Host sidebar seed, no team selected and no recent projects. Screenshot alone does not establish settled provider state or process cleanup."
+    },
+    {
+      "index": 2,
+      "kind": "team-launch",
+      "observed": "Team launched - lead online, all four progress stages green. Alice labeled Anthropic / TEST-claude-sonnet, TEST boot ready in chat, persisted task visible in board and sidebar."
+    },
+    {
+      "index": 3,
+      "kind": "team-stopped",
+      "observed": "Team offline with Launch button, Alice offline, same TEST model and task/chat content persisted."
+    }
+  ],
+  "qualification": "Images visually corroborate bounded launch/stopped/successor UI observations only; outcome and cleanup depend on complete receipt."
+}

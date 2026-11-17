@@ -1,0 +1,139 @@
+{
+  "schemaVersion": 1,
+  "kind": "C714_FRESH_STANDALONE_CI3_CONTROL_R2_ACTUAL_GATE",
+  "repository": "777genius/agent-teams-ai",
+  "closedAt": "2026-11-17 14:37:13 UTC",
+  "accepted": true,
+  "decision": "ACCEPT_EXACT_ACTUAL_CONTROL_R2_PUBLICATION_FOR_EXISTING_EXTERNAL_ADMISSION_ONLY",
+  "subject": {
+    "bytes": 31811,
+    "sha256": "8fdf7d0248b19ca1beedfb9218411bc31b21f4345a719a42827cba095cb08295",
+    "gitBlob": "47bcc9f514079504369b47a72d9468ddb3bcdab8"
+  },
+  "manifest": {
+    "bytes": 19534,
+    "sha256": "966c8d6b01134b16ef2fbe5f95a3d5462c5bf80c1ca99220b7331e2a26e667a8",
+    "gitBlob": "9eb3400fdc4e32b7b7a238810b9e4be2a2cc216e"
+  },
+  "actualCommit": "d035cefd235501daf2066d3b7725db35bfb00bf7",
+  "actualTree": "17e034751c1c1c5199aa147b2dababa5787ae6cf",
+  "actualDocsTree": "177dcd82ad978d16ddebfd6cf2c25342ae7f8b53",
+  "soleParent": "59723bc7058d31dd51730f4088eaf66df2735d4b",
+  "branch": "fix/frontend-parity-coobservation-c714-20261115",
+  "pushedAt": "2026-11-17 14:25:25 UTC",
+  "rootActual": {
+    "bytes": 413021,
+    "sha256": "dd37cfc672aa3bd6685eaf783146a21eae1317ac731654370190f027cc4827ff",
+    "gitBlob": "50e2be6fce599e665df5f34be0ae7e33ea61e496"
+  },
+  "independentActual": {
+    "bytes": 285251,
+    "sha256": "e50f8a5266cbd9e05a271623b80ac25d712b75332e221868e3d907645cdaefaf",
+    "gitBlob": "6f2cea2ae65cdce59f4019b240b93d1aeef439ca"
+  },
+  "fullReadbacksAccepted": true,
+  "rootSelfReadConfirmed": true,
+  "independentSelfReadConfirmed": true,
+  "independentSelfReadAt": "2026-11-17 14:32:16 UTC",
+  "rootChecks": 23,
+  "independentChecks": 40,
+  "totalActualChecks": 63,
+  "currentBodyCount": 14,
+  "currentBodyBytes": 5046859,
+  "parentBodyCount": 3,
+  "parentBodyBytes": 3618519,
+  "sourceBodyCount": 3,
+  "sourceBodyBytes": 63739,
+  "exactDelta": {
+    "changed": 14,
+    "added": 11,
+    "modified": 3,
+    "deleted": 0,
+    "modesChanged": 0,
+    "sourceChanged": 0,
+    "workflowsChanged": 0
+  },
+  "currentPointerCount": 520,
+  "currentPointerBytes": 79683628,
+  "unresolvedTextPointers": [],
+  "unresolvedBlockers": [],
+  "derivedApiIdentities": [
+    {
+      "pin": {
+        "gitBlob": "92ac3b00d5efa1d0caf64a78b1d967b65f5fc606",
+        "bytes": 1174,
+        "sha256": "34586dc041d7df39f5ff85099b535945da5ccc6d2cbe011334cb857a3174f829"
+      },
+      "source": "S3C:actualAPIbody:parentCommit"
+    },
+    {
+      "pin": {
+        "gitBlob": "cd4416a1fd89b38a3ab4231dd30f020480e86d80",
+        "bytes": 12410,
+        "sha256": "e6a9d04b64cc348ab5d9d26440f08327bc65a2c242ef251241c042e30a82a6fa"
+      },
+      "source": "S3C:actualAPIbody:parentRoot"
+    }
+  ],
+  "unreadBinaryMetadataReferences": [
+    {
+      "repository": "777genius/agent-teams-ai",
+      "pin": {
+        "gitBlob": "f05a05edba53aa07364d9bbd5510f468dfe7ebe3",
+        "bytes": 186398,
+        "sha256": "a3ee7632c9685fafb4ccc57cb5548503c476fc9ed608bd13438ed74e5329f9d8"
+      },
+      "locations": [
+        "file:r1ActualGate.unreadBinaryMetadataReferences.0.pin",
+        "file:r1RootActual.unreadBinaryMetadataReferences.0.pin",
+        "file:r1RootActual.checks.18.evidence.0.pin",
+        "file:r1IndependentActual.unreadBinaryMetadataReferences.0.pin",
+        "file:r1IndependentActual.checks.38.evidence.tuple.pin"
+      ],
+      "classification": "Existing metadata-only unread binary TGZ; no retry or qualification."
+    }
+  ],
+  "controls": {
+    "runner": {
+      "bytes": 25796,
+      "sha256": "72b743e8cde32af416f0a3d14f0dd7284fd817c2408e42b3c24e2b0f52c1aa8f",
+      "gitBlob": "72fe3f4f791550c3402d0bae54d154aabe06e63c"
+    },
+    "binding": {
+      "bytes": 107643,
+      "sha256": "b44db6175efc66890593fe75189e0de9b16dee90672547e87cfd5f22e3d5ab8a",
+      "gitBlob": "7f69d9936a35f5e3612470076e13d2d9308da40a"
+    },
+    "scope": "/workspace/scratch/c714-waitread-ci3-20261117",
+    "stage": "/workspace/scratch/c714-waitread-ci3-controls-20261117",
+    "attemptToken": "c714-waitread-ci3-20261117-original-one-shot"
+  },
+  "precedingSourceR1ActualGate": {
+    "bytes": 10359,
+    "sha256": "050ba8ff411a13b9dab6a2a6d85db55667039150be087426aa3bf847e81ffc61",
+    "gitBlob": "b7ad77e3f8b1d45cba44e862e4728ed40639cc98"
+  },
+  "preservation": {
+    "nonDocRootEntries": 53,
+    "nonDocLeaves": 8799,
+    "production": 5020,
+    "cap": 800,
+    "exceptions": 141,
+    "workflows": 42,
+    "catalogBefore": 105,
+    "catalogAfter": 107,
+    "allPriorValues": true,
+    "bundles": 27,
+    "totals": true,
+    "fullDocumentPrefixes": true,
+    "commonAppendixBytes": 2940
+  },
+  "qualification": {
+    "controlPublicationOnly": true,
+    "standaloneInvoked": false,
+    "standaloneRuntimeQualified": false,
+    "wholeE2EQualified": false
+  },
+  "nextExistingSequence": "Root external admission matching actual control publication; full retention/readback; fresh exclusive stage then one original supervisor invocation only. Original attempts remain spent. No additional review gate.",
+  "ci": "PR1223 fixed refs and metadata unchanged; live CI failures and incomplete jobs remain separate evidence."
+}

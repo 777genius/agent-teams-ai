@@ -1,0 +1,51 @@
+{
+  "schemaVersion": 1,
+  "kind": "C714_CI3_FULL_ARTIFACT_BYTE_CAPTURE",
+  "repository": "777genius/agent-teams-ai",
+  "artifactId": 14337338225,
+  "runId": 44092934079,
+  "jobId": 134072512912,
+  "sourceHead": "86f52244b5375834a4040cbc63803d68cc708087",
+  "readAt": "2026-11-17T14:54:10.548086+00:00",
+  "artifactApiMetadata": {
+    "id": 14337338225,
+    "node_id": "MDg6QXJ0aWZhY3QxNDMzNzMzODIyNQ==",
+    "name": "opencode-v2-published-http-persist-ubuntu",
+    "size_in_bytes": 877,
+    "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14337338225",
+    "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14337338225/zip",
+    "expired": false,
+    "digest": "sha256:5c499a3cc70ebf0aebaa18b22c417c2103f9ca6edce5e36478b5b7664ceba6be",
+    "created_at": "2026-11-17T14:41:28Z",
+    "updated_at": "2026-11-17T14:41:28Z",
+    "expires_at": "2026-11-24T14:41:27Z",
+    "workflow_run": {
+      "id": 44092934079,
+      "repository_id": 1163183284,
+      "head_repository_id": 1163183284,
+      "head_branch": "ci/frontend-parity-c714-20261117-3-head",
+      "head_sha": "86f52244b5375834a4040cbc63803d68cc708087"
+    }
+  },
+  "archive": {
+    "bytes": 877,
+    "sha256": "5c499a3cc70ebf0aebaa18b22c417c2103f9ca6edce5e36478b5b7664ceba6be",
+    "gitBlob": "d5ff3ba47e07165fcea69d28c5a21001ca94fb85",
+    "base64": "UEsDBBQACAAIAC11cV0AAAAAAAAAAAAAAAAdAAAAb3BlbmNvZGUtdjItaHR0cC1wZXJzaXN0Lmpzb26dVdFuGjEQfOcrTjy3EQGSIN5IIE2ktlCORKqqylrsPXAxtuv1XYKq/ntl3xE4AonU12NmPDueNX8aSdJcSS2a/aQ5G6Uz9thmd7PZhA0fpoPrzyM2vE9vxo+j6ffmh4AlkzuOdwiR0bvMLtrtbnd+0bm66HW60G11W3zOLzu9Vkdc9ji/avVavauSW6AjaXQgts9aZ+3z8vPvHJTMJAbFDBRh/GqBr2CBYqSQe2f0t6OotRGoZrnTE2cK1HUFZzgS3eTkjdgc55NHS81+8qORJEmVgM3nStISBSN0BTrmEBSD3C9Re8nBoygjcghiE2fYUrVhuT6CBB6c1KHgZYGMlqgUyxQsmEW3lhQSYmSV9Ewbz7wxiqHOjOO4Ru2PaRweuc49eGk0MYe/kHsUNdZuvoq/d7BDMirMDFowbbRDq6A+Y0zDohZS1zzjsyRPbI6Zcci4USKoeXB1zybLJJegymAISzJ3GK1jgdoHVZJ06DtKvrYcUiptomDGxaztIXdHK4UZqCfYECuICdQbRrkrZIF02rfIHcwV1m1LEVL3J/ihDtaZtfVHAny5hCiYeljgOUsn92WrAjV2m/nc6Rr9ACo1UrhovkS+itdmnjQKxhWCzm0Qqi6xkSQ/Y+mrn5r9xLu83IMyn4d6kYao0ON026FX8LRMYfJyF2Mn0E0RxBz46mUjD1mh8bcKFjteGuo+nsd1O3LOga0d75MD7U/72wGnVa1PedpHWrUpJb+aaQzu5CBQoBjEHo0LdE4KpAGdnHv0bJXk0g9Rb64RPO3x3zyimnINUgdgsJZyY1EMMh/ijl07pXDrkJbVRe3U0qquN0aJdwT+j+RB7YW6b/SNOgVSPOk9fLWLYXNG4cEIL/j5ntKXsDnbHoa/Gw7W5656E5pLQ34gKm+TJRAGDFn50VjU+6jUyul2x2qzNv42/gFQSwcINuCKMsECAAA7BwAAUEsBAi0DFAAIAAgALXVxXTbgijLBAgAAOwcAAB0AAAAAAAAAAAAgAKSBAAAAAG9wZW5jb2RlLXYyLWh0dHAtcGVyc2lzdC5qc29uUEsFBgAAAAABAAEASwAAAAwDAAAAAA==",
+    "allMembersCrcVerified": true
+  },
+  "members": [
+    {
+      "path": "opencode-v2-http-persist.json",
+      "bytes": 1851,
+      "sha256": "a17837849c01b4253c479cfd56d0254cd9c59b5b7758b057ef35342f22bc3238",
+      "gitBlob": "dc34f537ab78553db1968602cb8711d02a73adb1",
+      "crc32": "328ae036",
+      "compressedBytes": 705,
+      "crcVerified": true,
+      "encoding": "utf-8",
+      "body": "{\n  \"kind\": \"TEST_V2_HTTP_DURABLE_DISCOVERY\",\n  \"sourceHead\": \"86f52244b5375834a4040cbc63803d68cc708087\",\n  \"version\": \"2.0.21\",\n  \"qualified\": false,\n  \"packagedElectronQualified\": false,\n  \"modelTurnProven\": false,\n  \"processCustodyQualified\": false,\n  \"steps\": [\n    \"TEST_published_server_real_authenticated_HTTP_ready\",\n    \"TEST_no_unauthenticated_HTTP_access\",\n    \"TEST_native_shell_flag_permission_split_not_tool_enforcement\",\n    \"TEST_native_unauthenticated_mutations_rejected\",\n    \"TEST_published_native_permission_resolver_and_nonreplay\",\n    \"TEST_real_pending_permission_exists_before_cold_restart\",\n    \"TEST_official_HTTP_session_created_event_persisted\",\n    \"TEST_cold_native_permission_not_replayed_or_accepted\",\n    \"TEST_native_persisted_always_vs_deny_survives_cold_restart\",\n    \"TEST_durable_HTTP_session_identity_survives_cold_restart_no_prompt\",\n    \"TEST_real_published_HTTP_Stage1_SPI_ready_no_model_turn\",\n    \"TEST_Stage1_SPI_readiness_recheck_and_owned_cleanup_no_replay\"\n  ],\n  \"cleanup\": true,\n  \"nativeUnauthenticatedDeleteRejected\": true,\n  \"nativeSessionPermissionOrderReadbackProven\": true,\n  \"nativeShellFlagPermissionSplitObserved\": true,\n  \"nativeUnauthenticatedPermissionGrantRejected\": true,\n  \"nativePermissionResolverProven\": true,\n  \"nativePermissionReplyRejectNoReplayProven\": true,\n  \"nativeSavedAlwaysOverridesAskProven\": true,\n  \"nativeExplicitDenyBeatsSavedAlwaysProven\": true,\n  \"nativeSavedGrantRemainsProjectScopedAfterRestartProven\": true,\n  \"nativeFreshSessionSavedGrantSurvivesColdRestartProven\": true,\n  \"nativeSavedGrantSurvivesColdRestartProven\": true,\n  \"nativeStalePermissionAfterRestartRejected\": true,\n  \"nativeStaleGrantAfterRestartRejected\": true,\n  \"durableHTTPEvents\": 1,\n  \"nativeModelReadback\": \"captured\",\n  \"hostAdmissionPhase\": \"spi-opened\",\n  \"hostSpiReadinessProven\": true\n}\n"
+    }
+  ],
+  "qualification": "Complete retained archive bytes and member identities only; case outcomes require full receipt/log review. No member was executed."
+}

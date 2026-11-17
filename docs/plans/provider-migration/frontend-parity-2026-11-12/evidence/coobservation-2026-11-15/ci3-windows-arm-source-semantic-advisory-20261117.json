@@ -1,0 +1,632 @@
+{
+  "schemaVersion": 1,
+  "kind": "C714_CI3_WINDOWS_ARM_CODEX_SOURCE_A_SEMANTIC_FAILURE_ADVISORY",
+  "at": "2026-11-17 14:07:11 UTC",
+  "repository": "777genius/agent-teams-ai",
+  "reviewer": "/root/producer_r2_semantic",
+  "sourceHead": "86f52244b5375834a4040cbc63803d68cc708087",
+  "decision": "EXACT_FAILURE_BOUNDARY_IDENTIFIED_NO_REPAIR_OR_QUALIFICATION_SELECTED",
+  "authority": {
+    "immutableGitAndRetainedEvidenceOnly": true,
+    "pureDataOnly": true,
+    "noTargetSourceEvaluation": true,
+    "noLocalRuntime": true,
+    "noLiveCiOrArtifactDownload": true,
+    "noSourceRefPrMutation": true,
+    "bareAdvisoryOnly": true
+  },
+  "inputs": {
+    "jobLog": {
+      "bytes": 364157,
+      "sha256": "095c6ff5de8c5c97e633266f1560a206c8f019c0aba670dea7b7398a85a8e4da",
+      "gitBlob": "f6dd9da504cc6f123b7b3a2e8a768b54b08fe033"
+    },
+    "capture": {
+      "bytes": 343132,
+      "sha256": "28f2ca80bdfed26f8c04ad4c1c141dbe02af9e5f855b30164725ab87d6a0cb2d",
+      "gitBlob": "602b54b272d0a44d0baca819c372f50aa1303c6a"
+    },
+    "fullReceipt": {
+      "bytes": 25212,
+      "sha256": "e2656d0ec61562bd5f771a00b8286b40a3e67d02efbc9573a1d8ea1864cbe4ac",
+      "gitBlob": "2d6713f4af5a1469107397f93ec080bd439d8495"
+    },
+    "fullSourceMember": {
+      "bytes": 15086,
+      "sha256": "367802915199f0f66d09c326bfddfa97357e481c31967b07c6545801d7956fc1",
+      "gitBlob": "9ccd4ecaf7d5c013c207eda79de488230067554e"
+    },
+    "archive": {
+      "artifactId": 14335005585,
+      "bytes": 33886,
+      "sha256": "48445394115b52a7d3ad0e99d6e4047df15f1eb4d7ef0550d662a4c7a76c42ed",
+      "rootCapturedAndCrcVerified": true,
+      "reviewerDownloadedOrExtracted": false
+    },
+    "completeFourteenMemberRehash": {
+      "count": 14,
+      "allExact": true,
+      "bytes": 257713
+    },
+    "sourceLogJoin": {
+      "normalization": "Strip each ISO job timestamp prefix and ANSI SGR; normalize CRLF to LF only.",
+      "exactWholeMemberIncluded": true,
+      "offset": 271585
+    }
+  },
+  "readScope": "Complete25212-byte receipt and15086-byte original source-member log read. Whole364157-byte job log fetched/rehashed; exact header, selected command/failure/artifact sections read and complete source member joined after only timestamp/ANSI/CRLF normalization. All14 retained text members fully rehashed; unrelated prior native Node/Electron logs are not represented as freshly semantically audited here. Eleven listed source bodies fully read. No binary/archive code executed.",
+  "completePrimarySourceReads": [
+    {
+      "repository": "777genius/agent-teams-ai",
+      "ref": "86f52244b5375834a4040cbc63803d68cc708087",
+      "path": "packages/legacy-agent-host/package.json",
+      "pin": {
+        "bytes": 12355,
+        "sha256": "4e567d64af0c5a0d85e155e90fd4eec9a6ca720e89edfe9923d7e4cc9a1b4f81",
+        "gitBlob": "42093f5cb1be431e383a2bbf97223a2bd8d54b49"
+      },
+      "completeBodyRead": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "ref": "86f52244b5375834a4040cbc63803d68cc708087",
+      "path": "packages/legacy-agent-host/src/adapters/providers/CodexMemberProvider.ts",
+      "pin": {
+        "bytes": 15002,
+        "sha256": "75184e7328f9449a9f449994f0cd5dbbd2e954bd0170b79c2fbd236fec66e9c4",
+        "gitBlob": "f1d7efcb34f5c91953b474828bf09dbf3c092e98"
+      },
+      "completeBodyRead": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "ref": "86f52244b5375834a4040cbc63803d68cc708087",
+      "path": "packages/legacy-agent-host/src/adapters/providers/readCodexMcpCatalog.ts",
+      "pin": {
+        "bytes": 2224,
+        "sha256": "1cb3368063310cde3d3824709dcbb941738e65b8beee283c005fbd493d84ae0c",
+        "gitBlob": "7230804bd10e8a521cb3e1b1e9760920e9ebcef5"
+      },
+      "completeBodyRead": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "ref": "86f52244b5375834a4040cbc63803d68cc708087",
+      "path": "tools/owned-process-broker/fixtures/providerPeer.mjs",
+      "pin": {
+        "bytes": 9569,
+        "sha256": "e34c78358e85d3e841e4f9fb7941e77ce9b5f8b757dac434c3fe5ec5dbfdccdd",
+        "gitBlob": "44c8cba99e4932905da77539a59c904a39da4e36"
+      },
+      "completeBodyRead": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "ref": "86f52244b5375834a4040cbc63803d68cc708087",
+      "path": "tools/owned-process-broker/fixtures/providerDesktopPeer.mjs",
+      "pin": {
+        "bytes": 39026,
+        "sha256": "94cc5c1faed9d9d6d82d6db8e5fb7e36f292fa7335ff60ffc0648009a0d2b43a",
+        "gitBlob": "76f5d1953816fd125f576a966c42caefcfc297e2"
+      },
+      "completeBodyRead": true
+    },
+    {
+      "repository": "agent-teams-ai/old-provider-implementations",
+      "ref": "c79b81bf002eaac95436da71c7049d7f309906a9",
+      "path": "packages/provider-implementations/src/features/provider-session-implementation/adapters/codex-protocol/driver-session.ts",
+      "pin": {
+        "bytes": 19978,
+        "sha256": "5086b0b6551da1775330366a82a83c28785cd3183fadfef74d81dbc67c670388",
+        "gitBlob": "c77809d097940bed17cebc13b849f57f13a0db0b"
+      },
+      "completeBodyRead": true
+    },
+    {
+      "repository": "agent-teams-ai/old-provider-implementations",
+      "ref": "c79b81bf002eaac95436da71c7049d7f309906a9",
+      "path": "packages/provider-implementations/src/features/provider-session-implementation/adapters/codex-protocol/driver-factory.ts",
+      "pin": {
+        "bytes": 2933,
+        "sha256": "7446362f7a05fee6807acbed8905138986342b8ef777afa7be1fc04a9c263d83",
+        "gitBlob": "daeeb1f64df310c895aa2df1c84f66d04a3d33b8"
+      },
+      "completeBodyRead": true
+    },
+    {
+      "repository": "agent-teams-ai/old-provider-implementations",
+      "ref": "c79b81bf002eaac95436da71c7049d7f309906a9",
+      "path": "packages/provider-implementations/src/features/provider-session-implementation/adapters/codex-protocol/driver-config.ts",
+      "pin": {
+        "bytes": 12692,
+        "sha256": "7162d3b7c01cb27a451519337de0991c3399fedbd8e38ad3a9d8c5016172bd6a",
+        "gitBlob": "05c9433802596c434644c02e6c2df20360696ae4"
+      },
+      "completeBodyRead": true
+    },
+    {
+      "repository": "agent-teams-ai/old-provider-implementations",
+      "ref": "c79b81bf002eaac95436da71c7049d7f309906a9",
+      "path": "packages/provider-implementations/src/features/provider-session-implementation/adapters/codex-protocol/mcp-catalog-probe.ts",
+      "pin": {
+        "bytes": 4836,
+        "sha256": "bdfdf6e90710e8065f8f5d89160a8f8d419764c849c4d2648474b38b3436e9d4",
+        "gitBlob": "e84d4ae0f62c84132be9eb784232f9f913ff259f"
+      },
+      "completeBodyRead": true
+    },
+    {
+      "repository": "agent-teams-ai/old-provider-implementations",
+      "ref": "c79b81bf002eaac95436da71c7049d7f309906a9",
+      "path": "packages/provider-implementations/src/features/provider-session-implementation/adapters/codex-protocol/mcp-catalog.ts",
+      "pin": {
+        "bytes": 5017,
+        "sha256": "bd21e777cd2e2caec2c3b411f25477da06f36841a0338a2f567de0535d1077b7",
+        "gitBlob": "c260cedfe4fc1bfe3ea9eb2d9da70dfd64752ac2"
+      },
+      "completeBodyRead": true
+    },
+    {
+      "repository": "agent-teams-ai/old-provider-implementations",
+      "ref": "c79b81bf002eaac95436da71c7049d7f309906a9",
+      "path": "packages/provider-implementations/src/features/provider-session-implementation/adapters/codex-protocol/mcp-status.ts",
+      "pin": {
+        "bytes": 9164,
+        "sha256": "dd91485ea6ffd09e5f93bb5d3b92156dc7784c6184b7c1548a724affc4a15173",
+        "gitBlob": "967ad7ea14474cc830dd6fb2c52a05637ac8508c"
+      },
+      "completeBodyRead": true
+    }
+  ],
+  "findings": [
+    {
+      "id": "F01",
+      "status": "OBSERVED",
+      "claim": "The retained evidence binds one original Windows ARM Host job and exact frozen source.",
+      "evidence": {
+        "runId": 44092933972,
+        "jobId": 134072511664,
+        "artifactId": 14335005585,
+        "sourceHead": "86f52244b5375834a4040cbc63803d68cc708087",
+        "platform": "win32-arm64",
+        "node": "v24.21.0",
+        "runnerImage": "windows-11-vs2026-arm64",
+        "imageVersion": "20261112.217.1",
+        "operatingSystem": "Microsoft Windows11 10.0.26200 Enterprise"
+      },
+      "limit": "Only immutable retained evidence was read. No live CI request, artifact download, local/runtime operation or replay occurred."
+    },
+    {
+      "id": "F02",
+      "status": "OBSERVED",
+      "claim": "The original assertion failed while waiting for Team-A source readiness.",
+      "evidence": {
+        "message": "Original source Team readiness",
+        "stack": "nativeEmulatedSourceScenario.ts poll:62 → launch:498 → scenario:553 → nativeEmulatedProviderGate.ts:208/231",
+        "status": "INCOMPLETE",
+        "stage": "Team-A",
+        "lastLaunchReadiness": {
+          "source": {
+            "sourceId": "70f14df45874dc69b48e816d416ebdc9d9148a487699a2c423682bdd3c93a528",
+            "revision": "c898fd4238289c32edc22a26e9658dbcc7044788e991be63723891798d338262"
+          },
+          "image": "A",
+          "launchId": "faed95fc-2132-54f1-aad3-c38a59bc4a41",
+          "readCount": 105,
+          "elapsedMs": 14973.2414,
+          "lastRuntimeRead": {
+            "viewDigest": "39f940b75a038e05c628b9d1142aab9a92bec4aa69e298f194bf35ca476ac495",
+            "memberId": "alice-id",
+            "generation": "capture-8c4bb2ea-dc48-52bb-ae92-41d7dce103d5",
+            "phase": "allocated",
+            "sealed": false,
+            "custody": "owned",
+            "nativeReady": false,
+            "attached": true
+          }
+        }
+      },
+      "limit": "The last original observation elapsed14973.2414ms is below the original15000ms cutoff. It is not a successful observation at the cutoff. No deadline extension or retry is justified by this fact."
+    },
+    {
+      "id": "F03",
+      "status": "OBSERVED",
+      "claim": "The saved projection is allocated, unsealed and not ready; it does not prove a negative provider result.",
+      "evidence": {
+        "runtimeProjection": {
+          "status": "observed",
+          "atomicWithFailure": false,
+          "viewDigest": "39f940b75a038e05c628b9d1142aab9a92bec4aa69e298f194bf35ca476ac495",
+          "bindingMatches": true,
+          "recordReady": false,
+          "providerReady": null,
+          "ownerCurrent": null,
+          "nativeReady": false
+        },
+        "codexReadinessObservation": {
+          "schemaVersion": 1,
+          "status": "observed",
+          "atomicWithFailure": false,
+          "samplePoint": "last-original-projection-with-matching-view-digest",
+          "source": {
+            "sourceId": "70f14df45874dc69b48e816d416ebdc9d9148a487699a2c423682bdd3c93a528",
+            "revision": "c898fd4238289c32edc22a26e9658dbcc7044788e991be63723891798d338262"
+          },
+          "bindingDigest": "17a5c6bd5f602d58e88f67d090cbb84eb9b9bb02a1e9e966b954ee1da14e38f2",
+          "viewDigest": "39f940b75a038e05c628b9d1142aab9a92bec4aa69e298f194bf35ca476ac495",
+          "mainEpoch": "214dd41a-65f4-4973-98b3-9a75aafe7635",
+          "launchId": "faed95fc-2132-54f1-aad3-c38a59bc4a41",
+          "observedEventCount": 13,
+          "events": [
+            [
+              1,
+              1,
+              "open",
+              "before-await",
+              null
+            ],
+            [
+              2,
+              2,
+              "catalog",
+              "before-await",
+              null
+            ],
+            [
+              3,
+              2,
+              "catalog",
+              "after-await",
+              null
+            ],
+            [
+              4,
+              2,
+              "catalog",
+              "returned",
+              true
+            ],
+            [
+              5,
+              3,
+              "catalog",
+              "before-await",
+              null
+            ],
+            [
+              6,
+              3,
+              "catalog",
+              "after-await",
+              null
+            ],
+            [
+              7,
+              3,
+              "catalog",
+              "returned",
+              true
+            ],
+            [
+              8,
+              4,
+              "catalog",
+              "before-await",
+              null
+            ],
+            [
+              9,
+              4,
+              "catalog",
+              "after-await",
+              null
+            ],
+            [
+              10,
+              4,
+              "catalog",
+              "returned",
+              true
+            ],
+            [
+              11,
+              1,
+              "open",
+              "after-await",
+              null
+            ],
+            [
+              12,
+              5,
+              "readiness",
+              "before-await",
+              null
+            ],
+            [
+              13,
+              6,
+              "catalog",
+              "before-await",
+              null
+            ]
+          ]
+        }
+      },
+      "limit": "providerReady=null and ownerCurrent=null are unknown/not-evaluated fields, not false. The sample explicitly says atomicWithFailure=false and binds the last original matching view digest."
+    },
+    {
+      "id": "F04",
+      "status": "SOURCE_JOINED",
+      "claim": "The saved diagnostic order matches three completed catalog checks followed by a fourth pending check.",
+      "evidence": {
+        "order": [
+          "Host factory open invocation1 before-await",
+          "catalog2 before/after/returned true",
+          "catalog3 before/after/returned true",
+          "catalog4 before/after/returned true",
+          "Host open1 after-await",
+          "wrapped readiness5 before-await",
+          "catalog6 before-await"
+        ],
+        "observedEvents": 13,
+        "returnedOrThrewForCatalog6": false
+      },
+      "limit": "The source observation is bounded and non-atomic. No missing post-sample event is invented and no later completion is inferred."
+    },
+    {
+      "id": "F05",
+      "status": "SOURCE_JOINED",
+      "claim": "The four sequential calls have identifiable source boundaries.",
+      "evidence": [
+        {
+          "call": "catalog2",
+          "boundary": "Host CodexMemberProvider resolveConfiguration calls verifyCatalog before allocating the persistent app-server process and returning CodexDriverConfig."
+        },
+        {
+          "call": "catalog3",
+          "boundary": "D CodexDriverSession.open initializes the app-server, re-verifies the configured catalog and matches native MCP configuration before startThread/resumeThread."
+        },
+        {
+          "call": "catalog4",
+          "boundary": "D createCodexDriverFactory.open performs mandatory native-tool readiness after thread creation; checkReadiness re-verifies catalog, native configuration, exact thread tool policy and Host probe before returning the opened driver."
+        },
+        {
+          "call": "catalog6 nested in readiness5",
+          "boundary": "After native.open resolves, Host wraps the session. The caller's first wrapped checkReadiness again delegates to source.checkReadiness; Host ready becomes proof.ok && current() only after that awaits."
+        }
+      ],
+      "limit": "This identifies source order, not a proof that a particular call is redundant or caused the timeout. A separate source/test freshness analysis is still needed before any coalescing proposal."
+    },
+    {
+      "id": "F06",
+      "status": "SOURCE_JOINED",
+      "claim": "A catalog await covers more than decoding a finite response.",
+      "evidence": {
+        "host": "readCodexMcpCatalog creates the actual captured process port, forwards exact request.command/args/cwd/signal, reads its stdout, resolves terminal from error/close, and disposes by stdin.end plus custody.confirmStopped.",
+        "provider": "readCodexConfiguredMcpCatalog launches exactly ['mcp','list','--json']; accepts only a current authorized complete ≤1MiB UTF-8 result after terminal exit0/no signal; finally aborts and awaits bounded disposal before returning.",
+        "limits": "Selected runtime profile timeout90000ms is distinct from the scenario's original readiness15000ms. Host clamps catalog timeout to≤180000; catalog disposal uses min(timeout,5000)."
+      },
+      "limit": "The retained catalog6 before-await lacks a launch/read/terminal/dispose stage discriminator. Neither inner timeout nor cleanup time may be relabeled as the outer readiness budget."
+    },
+    {
+      "id": "F07",
+      "status": "SOURCE_JOINED",
+      "claim": "The selected finite TEST peer has an exact immediate catalog response branch, not an intentional readiness delay.",
+      "evidence": {
+        "entry": "providerPeer only imports the exact hashed providerDesktopPeer when TEST_EMULATED_DESKTOP_PROVIDER=1 and the Windows-provider marker is absent.",
+        "branch": "For provider codex and argv beginning mcp, providerDesktopPeer requires exact ['mcp','list','--json'], empty private CODEX_HOME and absent Team token, records bounded launch/catalog effects, awaits stdout write callback for '[]\\n', then exits0.",
+        "decoder": "The upstream decoder accepts that empty configured catalog and derives its canonical digest; live auth fields are excluded from configuration fingerprint."
+      },
+      "limit": "This source branch does not prove the last child reached it or wrote/flushed anything. It does not authorize real Codex, arbitrary argv, namespace widening, caching or omission of currentness checks."
+    },
+    {
+      "id": "F08",
+      "status": "OBSERVED_WITH_INFERENCE_LIMIT",
+      "claim": "The final original slot has a narrow startup observation but no exact catalog-invocation join.",
+      "evidence": {
+        "lastJobSlot": 6,
+        "entryStart": 6,
+        "entryEnd": 6,
+        "resumeReturnedMs": 24673.3067,
+        "firstCloseEntryMs": 24794.348599999998,
+        "intervalMs": 121.0418999999962,
+        "originalSourcePreparations": "Slots0–6 all recorded complete with root and witness captured. Runtime-origin slots1–6 carry the same source/revision."
+      },
+      "limit": "The receipt has no per-invocation token linking diagnostic catalog6 to native jobSlot6. Equal journal counts and a short remaining interval cannot establish whether startup/hash/import, transport, EOF, terminal or disposal was the bottleneck."
+    },
+    {
+      "id": "F09",
+      "status": "OBSERVED",
+      "claim": "Final cleanup evidence and the failed scenario remain distinct.",
+      "evidence": {
+        "receiptCleanup": true,
+        "scenarioCleanup": true,
+        "finalJobs": [
+          {
+            "slot": 0,
+            "root": {
+              "pid": 6584,
+              "birth": "01dd769b1a4ab026"
+            },
+            "resumed": true,
+            "stopped": true,
+            "drained": true,
+            "released": true,
+            "originalHandleAbsent": true
+          },
+          {
+            "slot": 1,
+            "root": {
+              "pid": 7644,
+              "birth": "01dd769b1c682c0e"
+            },
+            "resumed": true,
+            "stopped": true,
+            "drained": true,
+            "released": true,
+            "originalHandleAbsent": true
+          },
+          {
+            "slot": 2,
+            "root": {
+              "pid": 7432,
+              "birth": "01dd769b1ee0123b"
+            },
+            "resumed": true,
+            "stopped": true,
+            "drained": true,
+            "released": true,
+            "originalHandleAbsent": true
+          },
+          {
+            "slot": 3,
+            "root": {
+              "pid": 1464,
+              "birth": "01dd769b208a18ab"
+            },
+            "resumed": true,
+            "stopped": true,
+            "drained": true,
+            "released": true,
+            "originalHandleAbsent": true
+          },
+          {
+            "slot": 4,
+            "root": {
+              "pid": 8748,
+              "birth": "01dd769b2251c9b4"
+            },
+            "resumed": true,
+            "stopped": true,
+            "drained": true,
+            "released": true,
+            "originalHandleAbsent": true
+          },
+          {
+            "slot": 5,
+            "root": {
+              "pid": 8328,
+              "birth": "01dd769b247dd3f6"
+            },
+            "resumed": true,
+            "stopped": true,
+            "drained": true,
+            "released": true,
+            "originalHandleAbsent": true
+          },
+          {
+            "slot": 6,
+            "root": {
+              "pid": 10008,
+              "birth": "01dd769b26539997"
+            },
+            "resumed": true,
+            "stopped": true,
+            "drained": true,
+            "released": true,
+            "originalHandleAbsent": true
+          }
+        ],
+        "controller": {
+          "gateController": "drained",
+          "rootExitCode": 1,
+          "activeProcesses": 0
+        },
+        "controllerExit": 104,
+        "workflowStepExit": 1
+      },
+      "limit": "Earlier streamed cleanup records for slots1–6 had originalHandleAbsent=false; the later final receipt records true for all7. This advisory preserves both observation times. The independent guard owns full controller/witness proof. Cleanup success does not turn Team-A into a PASS."
+    },
+    {
+      "id": "F10",
+      "status": "SOURCE_JOINED",
+      "claim": "The key current Git sources match the retained Windows source hashes under exact line-ending conversion.",
+      "evidence": [
+        {
+          "path": "packages/legacy-agent-host/src/adapters/providers/CodexMemberProvider.ts",
+          "gitLfIdentity": {
+            "bytes": 15002,
+            "sha256": "75184e7328f9449a9f449994f0cd5dbbd2e954bd0170b79c2fbd236fec66e9c4",
+            "gitBlob": "f1d7efcb34f5c91953b474828bf09dbf3c092e98"
+          },
+          "observedWindowsSha256": "6b6da99e3aa6b1b66f959960e35224073e8ca99f462ecc8061d640756a2d7490",
+          "derivedCrlfBytes": 15350,
+          "derivedCrlfSha256": "6b6da99e3aa6b1b66f959960e35224073e8ca99f462ecc8061d640756a2d7490",
+          "matched": true
+        },
+        {
+          "path": "tools/owned-process-broker/fixtures/providerPeer.mjs",
+          "gitLfIdentity": {
+            "bytes": 9569,
+            "sha256": "e34c78358e85d3e841e4f9fb7941e77ce9b5f8b757dac434c3fe5ec5dbfdccdd",
+            "gitBlob": "44c8cba99e4932905da77539a59c904a39da4e36"
+          },
+          "observedWindowsSha256": "039f2e29a17d40cb21a287770eb41354191f495f06e8e9f350eb8a3453e7bddc",
+          "derivedCrlfBytes": 9722,
+          "derivedCrlfSha256": "039f2e29a17d40cb21a287770eb41354191f495f06e8e9f350eb8a3453e7bddc",
+          "matched": true
+        },
+        {
+          "path": "tools/owned-process-broker/fixtures/providerDesktopPeer.mjs",
+          "gitLfIdentity": {
+            "bytes": 39026,
+            "sha256": "94cc5c1faed9d9d6d82d6db8e5fb7e36f292fa7335ff60ffc0648009a0d2b43a",
+            "gitBlob": "76f5d1953816fd125f576a966c42caefcfc297e2"
+          },
+          "observedWindowsSha256": "1ea2bf4ba7cb932bdd3b59ad33d3761fdaa07edae4f53d550f4b4de72ba23e2d",
+          "derivedCrlfBytes": 39588,
+          "derivedCrlfSha256": "1ea2bf4ba7cb932bdd3b59ad33d3761fdaa07edae4f53d550f4b4de72ba23e2d",
+          "matched": true
+        }
+      ],
+      "limit": "The CRLF identities are derived data, not separately retained Git objects. Complete package manifest still selects host-logs-thinking-c79b81bf. Upstream immutable source is joined to that declared/previously accepted source pin; this task does not newly unpack or attest the physical installed archive."
+    },
+    {
+      "id": "F11",
+      "status": "LIMIT_RETAINED",
+      "claim": "The evidence does not establish a particular repair or a failure of the finite protocol.",
+      "evidence": {
+        "observed": "Three source-policy catalog checks returned true and native.open resolved; a later catalog await was pending at the matching-view sample.",
+        "notEstablished": [
+          "The failing substage of catalog6",
+          "An exact catalog6→jobSlot6/child/output/exit association",
+          "The child startup/hash/import completion before the original cutoff",
+          "A mismatched catalog payload, native MCP response or TEST protocol refusal",
+          "A persistent hang rather than still-pending work at the original cutoff",
+          "Semantic redundancy sufficient to remove or reuse one of the checks"
+        ]
+      },
+      "limit": "No timeout increase, second launch, fixture shrink, replay, extra input, authority weakening, cached-ready substitution or UNKNOWN→PASS is selected."
+    },
+    {
+      "id": "F12",
+      "status": "LIMIT_RETAINED",
+      "claim": "Reached scope is publish-A and Team-A only; future proof must preserve the original scenario.",
+      "evidence": {
+        "reachedStages": [
+          "publish-A",
+          "Team-A"
+        ],
+        "unreached": [
+          "publish-B",
+          "Team-B",
+          "later source switching/restart/revocation assertions"
+        ],
+        "configuredVersions": {
+          "A": "0.162.0",
+          "B": "0.162.0"
+        },
+        "versionsMeaning": "Configured A/B constants are not evidence that both version probes ran; only A publication was reached.",
+        "qualification": {
+          "realProviderExecuted": false,
+          "desktopQualified": false,
+          "releaseQualified": false,
+          "fullE2E": false
+        }
+      },
+      "next": "Before a source repair can be justified, prove what fresh state each check establishes and whether a reused result retains all source/binding/owner/fence/native-MCP guarantees. If runtime causality is needed, the smallest missing evidence is the original bounded invocation/child stage association, not another unconstrained sampler or retry."
+    }
+  ],
+  "findingCount": 12,
+  "conclusion": "The failure is the unchanged original15s Team-A readiness assertion while a fresh catalog validation is pending; three earlier catalog validations and D open had returned. The retained observation cannot assign that pending call to a specific child/substage or prove a safe omitted check. The finite peer source provides no deterministic protocol mismatch. Keep original failure, non-atomic sample, cleanup timing and all unqualified scope. Root's requested source/test analysis of possible safe reuse is the next bounded task; no implementation is selected by this advisory."
+}

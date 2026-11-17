@@ -1,0 +1,471 @@
+{
+  "schemaVersion": 1,
+  "kind": "read-only-codex-catalog-reuse-feasibility-advisory",
+  "author": "/root/producer_r2_semantic",
+  "preparedAtUtc": "2026-11-17 14:14:57 UTC",
+  "subject": {
+    "mainRepository": "777genius/agent-teams-ai",
+    "sourceCommit": "86f52244b5375834a4040cbc63803d68cc708087",
+    "upstreamRepository": "agent-teams-ai/old-provider-implementations",
+    "upstreamCommit": "c79b81bf002eaac95436da71c7049d7f309906a9",
+    "question": "Can any of the four original sequential catalog observations be reused or coalesced while preserving the current readiness, source, owner, fence, case and deadline requirements?",
+    "priorFailureAdvisory": {
+      "repository": "777genius/agent-teams-ai",
+      "gitBlob": "50b4119a9008aebca9c4fe0a21cec90dd3a81b3b",
+      "bytes": 26486,
+      "sha256": "2714419c0fd5fab1b69080bc666d02b957e2c0c2d8c553ac0b0b6688952d98df",
+      "fullSelfReadAtUtc": "2026-11-17 14:07:48 UTC"
+    },
+    "unchangedPackageBinding": {
+      "repository": "777genius/agent-teams-ai",
+      "path": "packages/legacy-agent-host/package.json",
+      "gitBlob": "42093f5cb1be431e383a2bbf97223a2bd8d54b49",
+      "bytes": 12355,
+      "sha256": "4e567d64af0c5a0d85e155e90fd4eec9a6ca720e89edfe9923d7e4cc9a1b4f81",
+      "meaning": "Complete package body previously read in the linked failure advisory; selects the host-logs-thinking-c79b81bf provider archives. This advisory does not perform a new archive unpack or runtime attestation."
+    }
+  },
+  "authority": {
+    "permitted": "Immutable Git/source/retained evidence reads and pure data/hash comparison; this bare advisory only.",
+    "performed": "Complete reads and identity joins of the 17 listed source/test bodies; prior retained failure evidence reused with exact identities.",
+    "notPerformed": [
+      "target source execution or compilation",
+      "shell/local filesystem/process work",
+      "runtime or vendor invocation",
+      "CI reads, polling, downloads or actions",
+      "source/control/ref/PR mutation",
+      "postimage authorship",
+      "new venue or approval gate"
+    ],
+    "rootRemainsSoleAuthorAndExecutor": true
+  },
+  "decision": {
+    "status": "NO_SAFE_EXISTING_COALESCING_SEAM_PROVED",
+    "summary": "The repeated catalog function is used at distinct admission/readiness boundaries. The current first Host post-open readiness call must remain fresh: complete existing actual-provider tests explicitly change or fail the catalog after factory.open and require the first checkReadiness to await and reject that new observation. A same-binding cached success would violate those cases. D's two checks are separately required by its current test and protect pre-thread configuration and post-thread tools.",
+    "candidateSelected": false,
+    "sourceFixAuthored": false,
+    "executionSelected": false,
+    "doesNotEstablish": "This does not prove that every implementation must always perform four subprocess catalog reads. It proves that merely caching one success under the currently available identities and contracts does not preserve the selected behavior, and that the retained failure does not establish which underlying operation consumed its time.",
+    "casesAndDeadlines": "No existing case, assertion, original 15-second outer readiness wait, 25 ms poll cadence, inner provider bound, cleanup requirement or authority check is removed or changed."
+  },
+  "completePrimarySources": [
+    {
+      "repository": "777genius/agent-teams-ai",
+      "ref": "86f52244b5375834a4040cbc63803d68cc708087",
+      "path": "packages/legacy-agent-host/src/adapters/providers/CodexMemberProvider.ts",
+      "bytes": 15002,
+      "sha256": "75184e7328f9449a9f449994f0cd5dbbd2e954bd0170b79c2fbd236fec66e9c4",
+      "gitBlob": "f1d7efcb34f5c91953b474828bf09dbf3c092e98",
+      "read": "complete source body read; target source not executed"
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "ref": "86f52244b5375834a4040cbc63803d68cc708087",
+      "path": "packages/legacy-agent-host/src/adapters/providers/readCodexMcpCatalog.ts",
+      "bytes": 2224,
+      "sha256": "1cb3368063310cde3d3824709dcbb941738e65b8beee283c005fbd493d84ae0c",
+      "gitBlob": "7230804bd10e8a521cb3e1b1e9760920e9ebcef5",
+      "read": "complete source body read; target source not executed"
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "ref": "86f52244b5375834a4040cbc63803d68cc708087",
+      "path": "packages/legacy-agent-host/src/mcp-catalog/capturedSource.ts",
+      "bytes": 1706,
+      "sha256": "a7ac5e82dc98a759e4a0e3fde32158b2ae2d35700ae416a74e4f1eff5bd3e502",
+      "gitBlob": "49561e08ed6a2f2c9098479b08530178462eacef",
+      "read": "complete source body read; target source not executed"
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "ref": "86f52244b5375834a4040cbc63803d68cc708087",
+      "path": "packages/legacy-agent-host/src/runtime/RuntimeOwner.ts",
+      "bytes": 30469,
+      "sha256": "478bead841e1344f55a77ff16852f7359826b459f6d5986859c5a454f3fc476d",
+      "gitBlob": "a566efc5987b6859d004a8531cb8e6bac80bec30",
+      "read": "complete source body read; target source not executed"
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "ref": "86f52244b5375834a4040cbc63803d68cc708087",
+      "path": "packages/legacy-agent-host/src/runtime/prepareSessionOpen.ts",
+      "bytes": 1964,
+      "sha256": "d481256476fc8b28f9c677f0f7560bd4946fee2d6fb130235a2db3c3c0c96833",
+      "gitBlob": "f02e7aaa2b12d337c43c25aec58a1c113b96728b",
+      "read": "complete source body read; target source not executed"
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "ref": "86f52244b5375834a4040cbc63803d68cc708087",
+      "path": "packages/legacy-agent-host/tests/codex-member-provider.test.ts",
+      "bytes": 50451,
+      "sha256": "821423f25d0b70fe9e7824c8f85b8d031a24cd9d85944732a81b8fc05794d8fe",
+      "gitBlob": "e56cdabf97cfe2596b7622719237811560624bd6",
+      "read": "complete source body read; target source not executed"
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "ref": "86f52244b5375834a4040cbc63803d68cc708087",
+      "path": "packages/legacy-agent-host/tests/runtime-owner.test.ts",
+      "bytes": 33069,
+      "sha256": "39c6c8442d4c5c8e3437f304dfc454f749e26d29d01fe6142378d5105e8b65a7",
+      "gitBlob": "db52890e4bf4835b461fd4f4da70c76fc3a133b4",
+      "read": "complete source body read; target source not executed"
+    },
+    {
+      "repository": "agent-teams-ai/old-provider-implementations",
+      "ref": "c79b81bf002eaac95436da71c7049d7f309906a9",
+      "path": "packages/provider-implementations/src/features/provider-session-implementation/adapters/codex-protocol/driver-session.ts",
+      "bytes": 19978,
+      "sha256": "5086b0b6551da1775330366a82a83c28785cd3183fadfef74d81dbc67c670388",
+      "gitBlob": "c77809d097940bed17cebc13b849f57f13a0db0b",
+      "read": "complete source body read; target source not executed"
+    },
+    {
+      "repository": "agent-teams-ai/old-provider-implementations",
+      "ref": "c79b81bf002eaac95436da71c7049d7f309906a9",
+      "path": "packages/provider-implementations/src/features/provider-session-implementation/adapters/codex-protocol/driver-factory.ts",
+      "bytes": 2933,
+      "sha256": "7446362f7a05fee6807acbed8905138986342b8ef777afa7be1fc04a9c263d83",
+      "gitBlob": "daeeb1f64df310c895aa2df1c84f66d04a3d33b8",
+      "read": "complete source body read; target source not executed"
+    },
+    {
+      "repository": "agent-teams-ai/old-provider-implementations",
+      "ref": "c79b81bf002eaac95436da71c7049d7f309906a9",
+      "path": "packages/provider-implementations/src/features/provider-session-implementation/adapters/codex-protocol/driver-config.ts",
+      "bytes": 12692,
+      "sha256": "7162d3b7c01cb27a451519337de0991c3399fedbd8e38ad3a9d8c5016172bd6a",
+      "gitBlob": "05c9433802596c434644c02e6c2df20360696ae4",
+      "read": "complete source body read; target source not executed"
+    },
+    {
+      "repository": "agent-teams-ai/old-provider-implementations",
+      "ref": "c79b81bf002eaac95436da71c7049d7f309906a9",
+      "path": "packages/provider-implementations/src/features/provider-session-implementation/adapters/codex-protocol/mcp-catalog-probe.ts",
+      "bytes": 4836,
+      "sha256": "bdfdf6e90710e8065f8f5d89160a8f8d419764c849c4d2648474b38b3436e9d4",
+      "gitBlob": "e84d4ae0f62c84132be9eb784232f9f913ff259f",
+      "read": "complete source body read; target source not executed"
+    },
+    {
+      "repository": "agent-teams-ai/old-provider-implementations",
+      "ref": "c79b81bf002eaac95436da71c7049d7f309906a9",
+      "path": "packages/provider-implementations/src/features/provider-session-implementation/adapters/codex-protocol/mcp-catalog.ts",
+      "bytes": 5017,
+      "sha256": "bd21e777cd2e2caec2c3b411f25477da06f36841a0338a2f567de0535d1077b7",
+      "gitBlob": "c260cedfe4fc1bfe3ea9eb2d9da70dfd64752ac2",
+      "read": "complete source body read; target source not executed"
+    },
+    {
+      "repository": "agent-teams-ai/old-provider-implementations",
+      "ref": "c79b81bf002eaac95436da71c7049d7f309906a9",
+      "path": "packages/provider-implementations/src/features/provider-session-implementation/adapters/codex-protocol/mcp-status.ts",
+      "bytes": 9164,
+      "sha256": "dd91485ea6ffd09e5f93bb5d3b92156dc7784c6184b7c1548a724affc4a15173",
+      "gitBlob": "967ad7ea14474cc830dd6fb2c52a05637ac8508c",
+      "read": "complete source body read; target source not executed"
+    },
+    {
+      "repository": "agent-teams-ai/old-provider-implementations",
+      "ref": "c79b81bf002eaac95436da71c7049d7f309906a9",
+      "path": "packages/provider-implementations/src/features/provider-session-implementation/adapters/codex-protocol/app-server.ts",
+      "bytes": 18920,
+      "sha256": "c67a29bd8ad0977162b67fd72fb84a1f5c024ed8593fe9871f472cad653e243f",
+      "gitBlob": "afa07b021da75b9e0707681d45cfacb7d99212c6",
+      "read": "complete source body read; target source not executed"
+    },
+    {
+      "repository": "agent-teams-ai/old-provider-implementations",
+      "ref": "c79b81bf002eaac95436da71c7049d7f309906a9",
+      "path": "packages/provider-implementations/tests/features/provider-session-implementation/codex-protocol/mcp-readiness.test.ts",
+      "bytes": 7302,
+      "sha256": "8604c7fb180bd4b0a1453ea5c4dadc975dbf0d2e6a18b2ec75a53e48f7b91612",
+      "gitBlob": "05df90f4e84d0d4b53200b007c934f89b8114437",
+      "read": "complete source body read; target source not executed"
+    },
+    {
+      "repository": "agent-teams-ai/old-provider-implementations",
+      "ref": "c79b81bf002eaac95436da71c7049d7f309906a9",
+      "path": "packages/provider-implementations/tests/features/provider-session-implementation/codex-protocol/driver-factory.test.ts",
+      "bytes": 5041,
+      "sha256": "07ff01a4042cecf4163a168123fa564ef5750fa723b62ebf2e443981ac97d5ad",
+      "gitBlob": "7bad3ffd0f4c9c66eceff5df87469902c6fe0bd0",
+      "read": "complete source body read; target source not executed"
+    },
+    {
+      "repository": "agent-teams-ai/old-provider-implementations",
+      "ref": "c79b81bf002eaac95436da71c7049d7f309906a9",
+      "path": "packages/provider-implementations/tests/features/provider-session-implementation/codex-protocol/mcp-policy.test.ts",
+      "bytes": 14485,
+      "sha256": "a9715539f2d2ab7b7659606aecba6264cffb8f19d5646bcd42d476625016af37",
+      "gitBlob": "b618a0169d83f201f7a38ef0084170cf0b894c3c",
+      "read": "complete source body read; target source not executed"
+    }
+  ],
+  "completePrimarySourceCount": 17,
+  "completePrimarySourceBytes": 235253,
+  "observationBoundaries": [
+    {
+      "ordinal": 1,
+      "owner": "Host CodexMemberProvider.resolveConfiguration",
+      "source": "f1d7efcb34f5c91953b474828bf09dbf3c092e98",
+      "anchor": "resolveConfiguration; verifyCatalog; before custody.launch",
+      "freshFact": "The selected original native configured/plugin catalog still has the captured policy digest before the app-server process is allocated.",
+      "otherGuards": "Sealed/allocated state, current context, canAllocate, exact request, captured app MCP source, and repeated post-await admission checks remain in force.",
+      "concreteCounterexample": "The existing changed-original-native-census test returns a different digest and requires zero app-server launches and zero native frames.",
+      "whyPriorStateIsInsufficient": "The profile's captured digest is the comparison target. It is not proof that mutable original native metadata still matches it now."
+    },
+    {
+      "ordinal": 2,
+      "owner": "D CodexDriverSession.open",
+      "source": "c77809d097940bed17cebc13b849f57f13a0db0b",
+      "anchor": "open lines 74-77, after initialize and before startThread/resumeThread",
+      "freshFact": "Catalog still matches after the app-server initialization interval; actual initialized app-server config/read matches the selected policy before thread allocation.",
+      "otherGuards": "Original bounded verification, exact merged policy and captured native thread parameters; a mismatch throws and factory cleanup follows.",
+      "concreteCounterexample": "The existing D policy test requires config/read before thread/start and a later Host test supplies foreign merged config and requires no thread/start.",
+      "whyPriorStateIsInsufficient": "Pre-launch metadata says nothing about the subsequent initialized process's merged configuration or a catalog change during initialization."
+    },
+    {
+      "ordinal": 3,
+      "owner": "D createCodexDriverFactory mandatory post-open checkReadiness",
+      "sources": [
+        "daeeb1f64df310c895aa2df1c84f66d04a3d33b8",
+        "c77809d097940bed17cebc13b849f57f13a0db0b"
+      ],
+      "anchor": "mandatoryNativeTools branch after driver.open",
+      "freshFact": "On the newly owned thread, catalog and actual merged configuration match, the complete selected/disabled/required MCP tool census matches, Host probe succeeds, and the session remains usable.",
+      "otherGuards": "The actual thread must exist; exact bounded status pages and current Host probe are required. Failed readiness closes the driver before factory rejection.",
+      "concreteCounterexample": "D mcp-policy.test.ts asserts two catalog checks during factory.open. mcp-readiness.test.ts rejects wrong/hidden/disconnected/malformed/pending-timeout tool states despite a healthy injected Host probe.",
+      "whyPriorStateIsInsufficient": "The thread and its actual native MCP readiness did not exist at the pre-thread check."
+    },
+    {
+      "ordinal": 4,
+      "owner": "Host RuntimeOwner.allocate through wrapped driver.checkReadiness",
+      "sources": [
+        "a566efc5987b6859d004a8531cb8e6bac80bec30",
+        "f1d7efcb34f5c91953b474828bf09dbf3c092e98"
+      ],
+      "anchor": "RuntimeOwner.allocate after factory return, attachment, allocated/owned publication, observer start and sealed-state check",
+      "freshFact": "A new D readiness result is obtained after the returned session is attached to the Host. The Host provider sets its own ready flag only after that result and its currentness check; RuntimeOwner publishes nativeReady only if readiness and required capabilities pass and the record remains allocated/unsealed.",
+      "otherGuards": "The same source's currentness, captured process running state, app MCP selection, record phase/seal, capability requirements, and future per-input D readiness remain separate.",
+      "concreteCounterexample": "The current actual-provider same/different/throws cases change the catalog immediately after factory.open, then perform the first wrapped checkReadiness. Only same may be ready. The exact four-call diagnostic-preservation case also remains part of the existing whole file.",
+      "whyPriorStateIsInsufficient": "A successful D factory return contains no consumable readiness receipt, no native mutation epoch, and no lock protecting the subsequent Host publication interval."
+    }
+  ],
+  "transactionAnalysis": {
+    "sourceOpenFlow": [
+      "RuntimeOwner.open runs prepareSessionOpen in a synchronous Runtime fence and persists opening intent before allocation.",
+      "The fenced call returns before allocate awaits options.driverFactory.open.",
+      "After factory.open resolves, allocate attaches the exact returned session, validates sessionRef, and separately publishes sessionRef/custody/allocated or closing state. Current admission or authority loss marks the record sealed.",
+      "It starts the existing observer. A sealed record goes to original owned cleanup.",
+      "It then awaits opened.driver.checkReadiness and separately publishes nativeReady under the current allocated/unsealed record guard plus required-capability inclusion.",
+      "No one synchronous fence spans native initialization, thread creation, D post-open readiness and the later Host readiness publication."
+    ],
+    "factoryContract": "The full current D factory returns exactly { driver, capabilities }; success implies its earlier mandatory check passed, but no proof object, validity interval, native metadata version or single-consumption token is returned.",
+    "capturedSourceMeaning": "capturedMcpSourceCurrent reads and normalizes the selected captured app/Claude MCP catalog source and deep-compares capturedMcpServers. It does not attest all original native Codex configured/plugin metadata, native config/read or thread server status.",
+    "sealedMeaning": "A sealed provider/record prevents further admission. A sealed source identity or identical request/digest is not an immutable lease on all native configuration and live thread state.",
+    "noAtomicityClaim": "The current checks themselves are finite observations rather than a continuously atomic native snapshot. This advisory neither invents atomicity for them nor uses their existing finite nature to justify deleting a later observation."
+  },
+  "decisiveExistingTests": [
+    {
+      "repository": "777genius/agent-teams-ai",
+      "path": "packages/legacy-agent-host/tests/codex-member-provider.test.ts",
+      "gitBlob": "e56cdabf97cfe2596b7622719237811560624bd6",
+      "title": "original Codex open and readiness retain captured await boundaries without extra provider work",
+      "staticAssertions": [
+        "factory.open followed by first checkReadiness is successful",
+        "catalogs === 4",
+        "one app-server launch; zero turns",
+        "passive subscription produces exactly the same catalogs/currentness/frames/launch work"
+      ],
+      "significance": "An optimization that silently reduces or adds catalog work would change an explicit existing assertion. This is a static reading, not a new test execution."
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "path": "packages/legacy-agent-host/tests/codex-member-provider.test.ts",
+      "gitBlob": "e56cdabf97cfe2596b7622719237811560624bd6",
+      "titlePattern": "original Codex catalogue {same,different,throws} retains the pending boundary and original readiness result",
+      "staticAssertions": [
+        "Open succeeds first with the original catalog",
+        "held flag is changed only after open",
+        "the first subsequent readiness call enters another actual injected catalog read and increments catalogs by exactly one",
+        "same returns ready; different and throws do not",
+        "before release the retained phases contain readiness-before-await and catalog-before-await, without fabricated completion",
+        "zero turns and original cleanup are retained"
+      ],
+      "significance": "This directly distinguishes a fresh first post-open observation from cached success under the same source/binding/owner. No new invented counterexample is necessary."
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "path": "packages/legacy-agent-host/tests/codex-member-provider.test.ts",
+      "gitBlob": "e56cdabf97cfe2596b7622719237811560624bd6",
+      "title": "changed original native census refuses before app-server allocation and without a thread",
+      "staticAssertions": [
+        "a different original catalog digest rejects factory.open",
+        "app-server launches === 0",
+        "native frames === 0"
+      ],
+      "significance": "The first Host check cannot simply be deferred into D's later process/thread checks."
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "path": "packages/legacy-agent-host/tests/codex-member-provider.test.ts",
+      "gitBlob": "e56cdabf97cfe2596b7622719237811560624bd6",
+      "title": "captured appOnly launches veto original plugin names and exact native gate precedes thread allocation",
+      "staticAssertions": [
+        "actual config/read precedes thread/start",
+        "captured plugin names are vetoed",
+        "later unexpected MCP server makes readiness false",
+        "foreign merged environment fails before thread creation"
+      ],
+      "significance": "Equal catalog source identity does not replace the live process configuration and complete thread MCP checks."
+    },
+    {
+      "repository": "agent-teams-ai/old-provider-implementations",
+      "path": "packages/provider-implementations/tests/features/provider-session-implementation/codex-protocol/mcp-policy.test.ts",
+      "gitBlob": "b618a0169d83f201f7a38ef0084170cf0b894c3c",
+      "title": "actual driver orders catalog/config admission before thread/start and holds later drift before any turn",
+      "staticAssertions": [
+        "checkCount === 2 for factory.open",
+        "config/read occurs before thread/start",
+        "thread/start occurs before MCP server status",
+        "catalog drift before submit returns known-not-sent dependency-unavailable with no new native write"
+      ],
+      "significance": "D pre-thread and mandatory post-thread checks, plus later input readiness, are part of the current selected behavior."
+    },
+    {
+      "repository": "agent-teams-ai/old-provider-implementations",
+      "path": "packages/provider-implementations/tests/features/provider-session-implementation/codex-protocol/mcp-readiness.test.ts",
+      "gitBlob": "05df90f4e84d0d4b53200b007c934f89b8114437",
+      "selectedCoverage": [
+        "actual owned thread and raw tool names",
+        "bounded pagination/startup checks",
+        "wrong tools/server/status/malformed/cursor/page/timeout refusal",
+        "tool floor rechecked before each input",
+        "foreign or released thread rejection",
+        "captured request before await"
+      ],
+      "significance": "Do not replace live native checks with a healthy Host-only predicate."
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "path": "packages/legacy-agent-host/tests/runtime-owner.test.ts",
+      "gitBlob": "db52890e4bf4835b461fd4f4da70c76fc3a133b4",
+      "selectedCoverage": [
+        "opening intent precedes native allocation",
+        "stop during pending factory.open fences the late native result and cleans it",
+        "current authority gates admission and dispatch",
+        "nativeReady alone cannot bypass required dispatch proof",
+        "unknown cleanup retains custody debt"
+      ],
+      "significance": "A successful D open cannot itself authorize Host readiness, input or cleanup. These are separate current records/authorities."
+    }
+  ],
+  "findings": [
+    {
+      "id": "C01",
+      "status": "SUPPORTED_SOURCE",
+      "finding": "All 17 complete source/test bodies have exact immutable blob/byte/SHA joins; their total is 235,253 bytes.",
+      "evidence": "completePrimarySources"
+    },
+    {
+      "id": "C02",
+      "status": "SUPPORTED_SOURCE",
+      "finding": "The selected Host/D path has three catalog checks before factory.open returns and one new catalog check during the first Host readiness call.",
+      "evidence": [
+        "CodexMemberProvider.resolveConfiguration",
+        "CodexDriverSession.open",
+        "createCodexDriverFactory mandatory post-open branch",
+        "RuntimeOwner.allocate"
+      ]
+    },
+    {
+      "id": "C03",
+      "status": "SUPPORTED_SOURCE",
+      "finding": "Pre-allocation, pre-thread, post-thread and post-attachment checks guard distinct boundaries, even though they share verifyCatalog.",
+      "evidence": "observationBoundaries"
+    },
+    {
+      "id": "C04",
+      "status": "SUPPORTED_SOURCE",
+      "finding": "The Runtime fence does not hold native metadata immutable across those awaits. State publications and native observations are separate.",
+      "evidence": "RuntimeOwner.open/allocate/publish and prepareSessionOpen"
+    },
+    {
+      "id": "C05",
+      "status": "SUPPORTED_SOURCE",
+      "finding": "Current D return data has no explicit reusable native readiness proof or mutation epoch.",
+      "evidence": "driver-factory.ts return { driver, capabilities }"
+    },
+    {
+      "id": "C06",
+      "status": "SUPPORTED_SOURCE",
+      "finding": "Captured app MCP source equality is narrower than original native Codex catalog/config/status equality.",
+      "evidence": "capturedSource.ts; mcp-catalog.ts; app-server.ts"
+    },
+    {
+      "id": "C07",
+      "status": "SUPPORTED_SOURCE",
+      "finding": "Existing first post-open same/different/throws cases provide a concrete counterexample to ordinary success caching while identities remain the same.",
+      "evidence": "codex-member-provider.test.ts lines 1090-1121"
+    },
+    {
+      "id": "C08",
+      "status": "SUPPORTED_SOURCE",
+      "finding": "The current exact four-call assertion and D's exact two-call assertion would be changed by simple coalescing.",
+      "evidence": "codex-member-provider.test.ts line 1062; mcp-policy.test.ts line 105"
+    },
+    {
+      "id": "C09",
+      "status": "SUPPORTED_SOURCE",
+      "finding": "D's native config/read and thread MCP status calls are fresh protocol requests; a catalog digest alone does not substitute for them.",
+      "evidence": "app-server.ts matchesMcpConfiguration/listMcpServerStatus; driver-session.ts checkReadiness"
+    },
+    {
+      "id": "C10",
+      "status": "SUPPORTED_SOURCE",
+      "finding": "Every later input still requires D readiness before turn/start; Host-ready and native-ready flags do not grant unrestricted input authority.",
+      "evidence": "driver-session.ts run; RuntimeOwner.dispatchNext"
+    },
+    {
+      "id": "C11",
+      "status": "BOUNDARY_RETAINED",
+      "finding": "The failed Windows receipt identifies catalog invocation 6 as outstanding only in its saved non-atomic projection. It does not prove whether launch, stdout, exit or disposal was the expensive component.",
+      "evidence": "priorFailureAdvisory 50b4119a"
+    },
+    {
+      "id": "C12",
+      "status": "BOUNDARY_RETAINED",
+      "finding": "Four calls alone do not prove the 15-second deadline failure was caused by redundant work; no repaired runtime outcome is asserted.",
+      "evidence": "priorFailureAdvisory and current source"
+    },
+    {
+      "id": "C13",
+      "status": "NO_EXISTING_SAFE_REUSE_PROOF",
+      "finding": "No source-proved minimal coalescing fix preserves all current cases/guards under the available contract. The no-change conclusion is scoped to simple reuse within current contracts, not an impossibility theorem for a redesigned provider protocol.",
+      "evidence": "C03-C10"
+    },
+    {
+      "id": "C14",
+      "status": "NO_ACTION",
+      "finding": "No source/control candidate, new test implementation, runtime attempt, venue, approval gate or replay was authored or selected.",
+      "evidence": "authority"
+    }
+  ],
+  "boundedNextDecision": {
+    "safeImmediateAdvice": "Preserve the four original checks and their failure behavior. Do not infer native catalog immutability from source/binding equality, bypass the first Host readiness observation, or treat D factory success as Host input authority.",
+    "exactMissingReuseInvariant": "A legitimate reuse design would have to establish that the very native catalog/config/thread facts used by D remain valid through the Host publication boundary, including changes/errors/abort/owner revocation that the current first-post-open tests detect. Current source supplies neither such a native validity witness nor an atomic interval. This statement identifies the missing semantic proof; it does not select a new API, test or gate.",
+    "exactMissingPerformanceFact": "The retained failure has no direct per-invocation correlation from catalog invocation 6 to a particular native preparation plus its launch/first-stdout/terminal/disposal subintervals. Therefore it cannot distinguish startup/hash/controller latency from native metadata work or cleanup. Any later evidence capture remains root-selected and must preserve original behavior and budgets.",
+    "meaningfulExistingDiscriminators": "The complete current Host same/different/throws cases, exact-four work equality, pre-allocation refusal, D pre/post-thread ordering and per-input drift checks already discriminate a naive cache. They must remain intact; this advisory does not append or replace them."
+  },
+  "limits": [
+    "Source-only feasibility; no test or target source was executed.",
+    "Readiness observations are finite and not mutually atomic with the retained failure.",
+    "No claim that a prepared slot is catalog invocation 6 without a matching invocation token.",
+    "No claim that original A/B configured version constants prove both publication probes ran.",
+    "No new runtime, GUI, native or whole-suite qualification.",
+    "Original test case inventories, process authority, deadlines, cleanup and unknown-state behavior remain unchanged.",
+    "No change to the frozen CI3 source or refs."
+  ]
+}
