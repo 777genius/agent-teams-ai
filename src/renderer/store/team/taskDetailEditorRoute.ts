@@ -43,7 +43,7 @@ export function queueTaskDetailEditor(
   )
     return false;
   const scope = captureTaskDetailReadScope(identity.teamName, identity.contextId);
-  before.openTeamTab(identity.teamName);
+  before.openTeamTab(identity.teamName, undefined, intent.filePath);
   const state = get();
   if (
     state.isContextSwitching ||

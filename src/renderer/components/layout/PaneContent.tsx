@@ -193,6 +193,7 @@ const PaneTabSlot = ({ tab, isActive, isPaneFocused }: PaneTabSlotProps): React.
             <TabUIProvider tabId={tab.id}>
               <TeamDetailView
                 teamName={tab.teamName ?? ''}
+                retainedSharedHistory={tab.retainedSharedHistory === true}
                 isActive={isActive}
                 isPaneFocused={isPaneFocused}
               />

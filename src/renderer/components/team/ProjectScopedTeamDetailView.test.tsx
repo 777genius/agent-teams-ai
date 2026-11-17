@@ -147,6 +147,27 @@ describe('ProjectScopedTeamDetailView project switching', () => {
     expect(host.querySelector('[data-testid="mode-picker"]')).toBeNull();
   });
 
+  it('keeps old shared tasks readable after switching their logical team to per-project mode', async () => {
+    getView.mockResolvedValue({
+      mode: 'per_project', state: 'ready',
+      executionTeamName: 'ptc-current', workContextId: 'current-project',
+      projectPath: '/TEST/a',
+    });
+    await act(async () => root.render(
+      React.createElement(ProjectScopedTeamDetailView, {
+        teamName: 'builders', retainedSharedHistory: true,
+      })
+    ));
+    await settle();
+    expect(host.querySelector('[data-team]')?.getAttribute('data-team')).toBe('builders');
+    expect(host.querySelector('[data-team]')?.getAttribute('data-retained')).toBe('true');
+    expect(host.querySelector('[data-team-name="ptc-current"]')).toBeNull();
+    expect(host.textContent).toContain('projectContextView.retainedHistory');
+    const button = host.querySelector('button');
+    await act(async () => button?.click());
+    expect(openTeamTab).toHaveBeenCalledWith('builders');
+  });
+
   it('keeps a retained native task/chat history open after the logical team switches to shared', async () => {
     getView.mockResolvedValue({
       mode: 'per_project',

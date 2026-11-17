@@ -2314,8 +2314,14 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
       state.selectedTeamName === teamName ? state.selectedTeamData?.config.name : undefined;
     const displayName = teamSummary?.displayName || selectedTeamDisplayName || teamName;
 
+    const retainedSharedHistory = Boolean(
+      _taskId && state.teamByName[teamName]?.projectContextMode === 'per_project'
+    );
     const allTabs = state.getAllPaneTabs();
-    const existing = allTabs.find((tab) => isOrdinaryTeamTab(tab) && tab.teamName === teamName);
+    const existing = allTabs.find(
+      (tab) => isOrdinaryTeamTab(tab) && tab.teamName === teamName &&
+        Boolean(tab.retainedSharedHistory) === retainedSharedHistory
+    );
     if (existing) {
       state.setActiveTab(existing.id);
       // Sync label in case display name changed
@@ -2325,8 +2331,9 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
     } else {
       state.openTab({
         type: 'team',
-        label: displayName,
+        label: retainedSharedHistory ? displayName + ' · Shared history' : displayName,
         teamName,
+        ...(retainedSharedHistory ? { retainedSharedHistory: true } : {}),
       });
     }
   },

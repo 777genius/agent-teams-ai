@@ -16,6 +16,8 @@ import type { TeamLaunchRequest } from '@shared/types';
 
 interface Props {
   teamName: string;
+  /** Route from an old shared task after this team was switched to per-project mode. */
+  retainedSharedHistory?: boolean;
   isActive?: boolean;
   isPaneFocused?: boolean;
 }
@@ -37,6 +39,7 @@ const LaunchTeamDialog = lazy(() =>
  */
 export function ProjectScopedTeamDetailView({
   teamName,
+  retainedSharedHistory = false,
   isActive = true,
   isPaneFocused = true,
 }: Props): React.JSX.Element {
@@ -209,6 +212,31 @@ export function ProjectScopedTeamDetailView({
     }
   }, [launchingKey, refresh, teamName]);
 
+  if (retainedSharedHistory && context?.mode === 'per_project' &&
+      context.state !== 'redirect' && context.state !== 'retained') {
+    // The task identity still belongs to the pre-isolation physical team,
+    // even though all NEW work now goes to a project-specific runtime.
+    return (
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+        <div className="flex items-center justify-between gap-2 border-b border-border px-4 py-2 text-xs text-text-muted">
+          <span>{logicalDisplayName} · {t('projectContextView.retainedHistory')}</span>
+          <Button size="sm" variant="outline" onClick={() => useStore.getState().openTeamTab(teamName)}>
+            {t('projectContextView.openCurrent')}
+          </Button>
+        </div>
+        <div className="flex min-h-0 min-w-0 flex-1" data-team-name={teamName}>
+          <TeamDetailView
+            teamName={teamName}
+            logicalTeamName={teamName}
+            retainedHistory
+            isActive={isActive}
+            isPaneFocused={isPaneFocused}
+          />
+        </div>
+      </div>
+    );
+  }
+
   if (context?.state === 'retained') {
     // Only a backend-verified, owned historical alias can reach this branch.
     // The logical team's selected mode still controls all future launches.
@@ -248,7 +276,10 @@ export function ProjectScopedTeamDetailView({
           <div className="border-b border-border px-4 py-2">
             <TeamHistoryModePicker
               teamName={teamName} mode="shared"
-              onChanged={() => refresh(() => activeKeyRef.current === key)}
+              onChanged={async () => {
+                await useStore.getState().fetchTeams();
+                await refresh(() => activeKeyRef.current === key);
+              }}
             />
           </div>
           <div className="flex min-h-0 min-w-0 flex-1">
@@ -263,7 +294,10 @@ export function ProjectScopedTeamDetailView({
           <span>{logicalDisplayName} · {selectedProjectPath}</span>
           <TeamHistoryModePicker
             teamName={teamName} mode="per_project"
-            onChanged={() => refresh(() => activeKeyRef.current === key)}
+            onChanged={async () => {
+                await useStore.getState().fetchTeams();
+                await refresh(() => activeKeyRef.current === key);
+              }}
           />
         </div>
         <div className="flex min-h-0 min-w-0 flex-1" data-team-name={context.executionTeamName}>
@@ -301,7 +335,10 @@ export function ProjectScopedTeamDetailView({
         <div className="border-b border-border px-4 py-2">
           <TeamHistoryModePicker
             teamName={teamName} mode={context.mode}
-            onChanged={() => refresh(() => activeKeyRef.current === key)}
+            onChanged={async () => {
+                await useStore.getState().fetchTeams();
+                await refresh(() => activeKeyRef.current === key);
+              }}
           />
         </div>
       )}
