@@ -618,3 +618,128 @@ test('Windows primary failure is emitted once before cleanup without replacing t
     () => { finished++; }), value => value === formatterFailure);
   assert.equal(writes, 0); assert.equal(finished, 1);
 });
+
+test('Windows final Retry requires both complete original rows in one current sample', { timeout: 5000 }, async () => {
+  const source = (await readFile(new URL('../../tools/owned-process-broker/nativeWindowsAppGate.mjs', import.meta.url), 'utf8')).replace(/\r\n/gu, '\n');
+  const start = '  proof.afterRetryPublic = await readProcesses();\n';
+  const end = '  proof.sameMainAfterRetry = captureCensus().find(row => row.pid === main.pid);';
+  assert.equal(source.split(start).length, 2); assert.equal(source.split(end).length, 2);
+  const from = source.indexOf(start) + start.length, to = source.indexOf(end, from); assert(to > from);
+  const compile = (block: string) => Function('assert', 'ui', 'original', 'processOwner', 'remaining', 'object',
+    'return (async () => {' + block + '\n})();');
+  const execute = compile(source.slice(from, to));
+  const oldSequential = compile("  for (const row of original.rows) {\n" +
+    "    const owner = object(await ui.waitRead(processOwner(row), 'same original process refs after Retry', remaining()));\n" +
+    "    assert.deepEqual(owner.process, { ...row, observation: 'same-live', canTerminate: true });\n  }\n");
+  const selectedStart = 'const processOwner = (row, stopped = false) =>';
+  const selectedEnd = '\nconst readProcesses = async () => {';
+  assert.equal(source.split(selectedStart).length, 2); assert.equal(source.split(selectedEnd).length, 2);
+  const selectedFrom = source.indexOf(selectedStart), selectedTo = source.indexOf(selectedEnd, selectedFrom);
+  assert(selectedTo > selectedFrom);
+  const selectedTeam = 'TEST-original-owner-qualified-team';
+  const processOwner = Function('desktopProcessOwnerExpression', 'selection',
+    source.slice(selectedFrom, selectedTo) + '\nreturn processOwner;')(desktopProcessOwnerExpression, selectedTeam);
+  const rows = Object.freeze([Object.freeze({ ...wireOriginal }), Object.freeze({ ...wireNeighbor })]);
+  const liveRows = rows.map(row => ({ ...row, observation: 'same-live', canTerminate: true }));
+  const object = (value: unknown) => {
+    assert(value && typeof value === 'object' && !Array.isArray(value)); return value as Record<string, unknown>;
+  };
+  const frame = (processes: Record<string, unknown>[], teamName = selectedTeam) => ({ processes, teamName });
+  const unavailable = new Error('TEST final-row sample unavailable');
+  const observe = (frames: (ReturnType<typeof frame> | Error)[], options: {
+    execute?: typeof execute; guardError?: Error; remainingError?: Error;
+    forcedResult?: { value: unknown }; late?: boolean;
+  } = {}) => {
+    const counts = { waits: 0, reads: 0, guards: 0, remaining: 0, sends: 0, steps: 0 };
+    const comparisons: { actual: unknown; expected: unknown }[] = [];
+    const controls = createDesktopUiControls({
+      async evaluate(expression: string): Promise<unknown> {
+        const current = frames[counts.reads++];
+        if (!current) throw unavailable;
+        if (current instanceof Error) throw current;
+        if (options.late) await delay(60);
+        const section = { querySelectorAll: () => [],
+          __reactFiber$TEST: { memoizedProps: { ...current, isTeamAlive: false }, alternate: null, return: null } };
+        const document = { querySelector(selector: string) {
+          assert.equal(selector, '[data-section-id="processes"]'); return section;
+        } };
+        return Function('document', 'return ' + expression)(document);
+      },
+      async send() { counts.sends++; return assert.fail('TEST final-row observation sends no input'); },
+    }, {
+      assertOwnedRenderer() { counts.guards++; if (options.guardError) throw options.guardError; },
+      step() { counts.steps++; },
+    });
+    const budget = options.late ? 30 : 2000;
+    const checkedAssert = { ok: assert.ok, equal: assert.equal, deepEqual(actual: unknown, expected: unknown) {
+      comparisons.push({ actual, expected }); assert.deepEqual(actual, expected);
+    } };
+    return {
+      run: () => (options.execute ?? execute)(checkedAssert, {
+        waitRead(expression: string, label: string, actualBudget: number) {
+          counts.waits++; assert.equal(label, 'same original process refs after Retry');
+          assert.equal(actualBudget, budget);
+          // Consumer-boundary fault injection; the healthy expression does not return these payloads.
+          if (options.forcedResult) return Promise.resolve(options.forcedResult.value);
+          return controls.waitRead(expression, label, actualBudget);
+        },
+      }, { rows }, processOwner, () => {
+        counts.remaining++; if (options.remainingError) throw options.remainingError; return budget;
+      }, object),
+      counts, comparisons,
+    };
+  };
+  const split = [frame([liveRows[0]!]), frame([liveRows[1]!])];
+  const old = observe(split, { execute: oldSequential }); await old.run();
+  assert.deepEqual(old.counts, { waits: 2, reads: 2, guards: 2, remaining: 2, sends: 0, steps: 0 });
+  assert.equal(old.comparisons.length, 2, 'the old loop really accepts disjoint samples with full row assertions');
+  const separate = observe(split);
+  await assert.rejects(separate.run(), error => error === unavailable);
+  assert.deepEqual(separate.counts, { waits: 1, reads: 3, guards: 3, remaining: 1, sends: 0, steps: 0 });
+  assert.deepEqual(separate.comparisons, []);
+  const together = observe([frame(liveRows)]); await together.run();
+  assert.deepEqual(together.counts, { waits: 1, reads: 1, guards: 1, remaining: 1, sends: 0, steps: 0 });
+  assert.deepEqual(together.comparisons, rows.map((row, index) => ({
+    actual: liveRows[index], expected: { ...row, observation: 'same-live', canTerminate: true },
+  })));
+  const laterTogether = observe([...split, frame(liveRows)]); await laterTogether.run();
+  assert.deepEqual(laterTogether.counts, { waits: 1, reads: 3, guards: 3, remaining: 1, sends: 0, steps: 0 });
+  assert.deepEqual(laterTogether.comparisons, together.comparisons);
+  for (const invalid of [
+    frame(liveRows, 'TEST-foreign-owner-qualified-team'),
+    frame([{ ...liveRows[0]!, id: 'TEST-wrong-id' }, liveRows[1]!]),
+    frame([{ ...liveRows[0]!, processRef: 'TEST-replacement-ref' }, liveRows[1]!]),
+    frame([liveRows[0]!, { ...liveRows[1]!, processRef: 'TEST-replacement-neighbor-ref' }]),
+    frame([liveRows[0]!, liveRows[0]!, liveRows[1]!]),
+    frame([liveRows[0]!, liveRows[1]!, liveRows[1]!]),
+    frame([]),
+  ]) await assert.rejects(observe([invalid]).run(), error => error === unavailable);
+  for (const change of [
+    { pid: 789 }, { label: 'TEST changed neighbor' }, { registeredAt: '2026-10-30T00:00:00Z' },
+    { observation: 'absent' }, { canTerminate: false },
+  ]) {
+    const changed = observe([frame([liveRows[0]!, { ...liveRows[1]!, ...change }])]);
+    await assert.rejects(changed.run(), { code: 'ERR_ASSERTION' });
+    assert.equal(changed.comparisons.length, 2);
+    assert.deepEqual(changed.comparisons[0], together.comparisons[0]);
+    assert.deepEqual(changed.comparisons[1]!.expected, together.comparisons[1]!.expected);
+  }
+  const guard = new Error('TEST original owner changed'), cutoff = new Error('TEST original phase expired');
+  const blocked = observe([frame(liveRows)], { guardError: guard });
+  await assert.rejects(blocked.run(), error => error === guard);
+  assert.deepEqual(blocked.counts, { waits: 1, reads: 0, guards: 1, remaining: 1, sends: 0, steps: 0 });
+  const expired = observe([frame(liveRows)], { remainingError: cutoff });
+  await assert.rejects(expired.run(), error => error === cutoff);
+  assert.deepEqual(expired.counts, { waits: 0, reads: 0, guards: 0, remaining: 1, sends: 0, steps: 0 });
+  const evaluation = new Error('TEST final renderer evaluation failed');
+  await assert.rejects(observe([evaluation]).run(), error => error === evaluation);
+  const late = observe([frame(liveRows)], { late: true });
+  await assert.rejects(late.run(), /UI read timed out: same original process refs after Retry; no mutation retry/u);
+  assert.deepEqual(late.comparisons, [], 'a ready pair returned after the original wait cutoff is not consumed');
+  assert.deepEqual(late.counts, { waits: 1, reads: 1, guards: 1, remaining: 1, sends: 0, steps: 0 });
+  const owners = liveRows.map(process => ({ process }));
+  for (const value of [null, {}, [], [owners[0]], [...owners, owners[0]], [owners[0], null],
+    [owners[0], []], [owners[0], {}], [owners[0], { process: null }]]) {
+    await assert.rejects(observe([], { forcedResult: { value } }).run(), { code: 'ERR_ASSERTION' });
+  }
+});

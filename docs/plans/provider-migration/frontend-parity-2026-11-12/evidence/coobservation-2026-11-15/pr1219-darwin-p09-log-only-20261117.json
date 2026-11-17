@@ -1,0 +1,580 @@
+{
+  "schemaVersion": 1,
+  "kind": "PR1219_DARWIN_ATTEMPT1_RETAINED_LOG_P09_FAILURE_CLASSIFICATION",
+  "reviewer": "/root/producer_r2_semantic",
+  "recordedAt": "2026-11-17 08:36:05 UTC",
+  "status": "LOG_ONLY_CLASSIFICATION_COMPLETE_NO_NEW_QUALIFICATION",
+  "conclusion": {
+    "outcome": "Both fresh Darwin jobs fail the unchanged strict P09 original-path test after their earlier bounded custody and embedded Host steps complete. The observed failure signatures repeat PR1218 on the same already-admitted architecture/build pairs.",
+    "x64": "Compiler-default baseline kernel-image-validity reports errno13/codeSigningError-67062; the surfaced first assertion is native.ts:476, 13 !== 0. Both later signed mutation failures are also logged.",
+    "arm64": "The surfaced assertion is native.ts:496: actual LIB\\nBIN:A\\nMAIN:A\\n must equal empty markers after successful mutation. Both after-check and writer-open diagnostics retain the same failing outcome.",
+    "allFourSignedMutations": "mutationAfterCheckErrno=0, resumed=true, three A markers, exitCode0/exitSignal0, originalReaped/groupAbsent/cleanup=true. These are failures under the original successful-mutation branch, not ETXTBSY success or native qualification.",
+    "newGate": false,
+    "sourceOrControlChangeSelected": false,
+    "replaySelected": false
+  },
+  "authority": {
+    "repository": "777genius/agent-teams-ai",
+    "pr": 1219,
+    "run": 44042341120,
+    "attempt": 1,
+    "runAndJobIdAuthority": "Root's immutable capture assignment; the run is also visible in both artifact-upload URLs. No live job/run metadata was queried.",
+    "selectedSourceHead": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+    "allowedWork": "Immutable retained Git blobs, existing primary-source identity joins and pure in-memory analysis; bare advisory retention only.",
+    "performed": {
+      "shell": false,
+      "localReads": false,
+      "targetRuntime": false,
+      "realClaudeOrCodex": false,
+      "sourceControlAuthors": false,
+      "refPrCiMutations": false,
+      "liveCiPolling": false,
+      "artifactDownload": false
+    },
+    "rootSoleAuthorExecutor": true
+  },
+  "evidence": {
+    "fullLogs": [
+      {
+        "arch": "x64",
+        "jobId": 133899667333,
+        "identity": {
+          "bytes": 119136,
+          "sha256": "2cdcf5021c70c2780371386a00d4d9f9389c200a668b49755ecbc886829bc218",
+          "gitBlob": "db8cd08074436aa40a79918cf59fbe08093f3ec3"
+        },
+        "lines": 1323,
+        "fullBodyRead": true
+      },
+      {
+        "arch": "arm64",
+        "jobId": 133899667453,
+        "identity": {
+          "bytes": 110467,
+          "sha256": "ce10c274e3b893cae63f7c270d53e7deac3778c47c15cd7d1d239ef5429b2c62",
+          "gitBlob": "d5cc16b9906b7857291988afabf6f2089ef48cf9"
+        },
+        "lines": 1225,
+        "fullBodyRead": true
+      }
+    ],
+    "completeLogBytes": 229603,
+    "comparisonAdvisory": {
+      "bytes": 46778,
+      "sha256": "f2d5afe40801a17e6b8ed5f16c3c62ed0062420422839eab27efee9091a50514",
+      "gitBlob": "694a22327a3ae7d0f91cd591cc95048d0d672e5a"
+    },
+    "comparisonRead": "Exact full prior body fetched and hash-verified; its completed earlier full self-read is reused. Relevant conclusion, original outcomes, source identities, exact operations and causal limits reread here.",
+    "directOracle": {
+      "path": "packages/legacy-agent-host/tests/registered-process-executable.native.ts",
+      "identity": {
+        "bytes": 27709,
+        "sha256": "b249d30a6168eb015658f35f5524ed4314cd7c4093afe5a14690a1ba6743df2e",
+        "gitBlob": "f1e1d1145898e201723be343fa8768d73332fcb1"
+      },
+      "sourceHead": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+      "freshCompleteFetchHash": true,
+      "rereadLines": "318-547",
+      "priorFullBodyReadReused": true
+    },
+    "unchangedSourcesFromPriorFull9dJoin": [
+      {
+        "path": "packages/legacy-agent-host/tests/fixtures/posix-exec-native.c",
+        "commit": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+        "identity": {
+          "bytes": 21219,
+          "sha256": "085eeb378d9b500490300dcf1c595bf13e7979c1218f2f37f4ba6e18787441e9",
+          "gitBlob": "19aca56c55a666654b04827b3c2446d2ad03ad8d"
+        },
+        "lines": 412,
+        "fullBodyRead": true,
+        "unchangedFromFrozenSource": true
+      },
+      {
+        "path": "packages/legacy-agent-host/tests/registered-process-executable.native.ts",
+        "commit": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+        "identity": {
+          "bytes": 27709,
+          "sha256": "b249d30a6168eb015658f35f5524ed4314cd7c4093afe5a14690a1ba6743df2e",
+          "gitBlob": "f1e1d1145898e201723be343fa8768d73332fcb1"
+        },
+        "lines": 547,
+        "fullBodyRead": true,
+        "unchangedFromFrozenSource": true
+      },
+      {
+        "path": "packages/legacy-agent-host/native/registered-process-darwin.c",
+        "commit": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+        "identity": {
+          "bytes": 15524,
+          "sha256": "a2f6d70bd04251308a1f70fe4374fe5fd343feb6939db3df7d030f03d7d1e6b5",
+          "gitBlob": "4f300228b8f28b870586794564ae63ccf1dee41f"
+        },
+        "lines": 309,
+        "fullBodyRead": true,
+        "unchangedFromFrozenSource": true
+      }
+    ],
+    "tupleAdmission": {
+      "path": "packages/legacy-agent-host/src/process/qualifiedDarwinBuild.ts",
+      "commit": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+      "identity": {
+        "bytes": 480,
+        "sha256": "8127557453bfbf2dad146bd4b1ba4cc17b99f81d3f2f907af9edcffde0b3927f",
+        "gitBlob": "ca10512904b6abc3f110d4ebb852a7a0baf62548"
+      },
+      "fullBodyRead": true,
+      "body": "/** Finite process-custody tuples; native Host, Desktop and packaged proofs remain separate. */\nexport type QualifiedDarwinBuild = '24G90' | '24G624' | '24H232' | '24G830';\nexport function isQualifiedDarwinBuild(\n  value: unknown,\n  architecture: string = process.arch\n): value is QualifiedDarwinBuild {\n  return (\n    value === '24G90' ||\n    value === '24G624' ||\n    (value === '24H232' && architecture === 'arm64') ||\n    (value === '24G830' && architecture === 'x64')\n  );\n}\n"
+    },
+    "sourceReadLimit": "No source delta was authored. The current immutable9d identities are the prior full-source basis; the oracle was freshly rehashed and its complete P09 test body reread. This task does not reopen the older Apple/XNU research or attest installed binaries."
+  },
+  "tuples": [
+    {
+      "arch": "x64",
+      "jobId": 133899667333,
+      "sourceHead": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+      "os": "macOS15.7.9",
+      "osBuild": "24G830",
+      "uname": "Darwin x86_64",
+      "runnerImage": "macos-15",
+      "runnerImageVersion": "20260824.0482.1",
+      "node": "v24.21.0",
+      "originalTupleAlreadyAdmitted": true,
+      "loggedProductAdmitted": "1",
+      "p09EmbeddedCandidateBuild": "",
+      "timeRange": {
+        "first": "2026-11-17T08:02:46.2884170Z",
+        "p09Failure": "2026-11-17T08:14:17.2967110Z",
+        "last": "2026-11-17T08:14:21.9772970Z"
+      },
+      "stageRuntime": "0.0.160",
+      "bunSha256": "c35307c7d45d65c5a385a58c4a6cb0bb9499e4e626abdee207c177a77ba666ab",
+      "processCustodyManifestSha256": "160c3052dda74b45ed6d78e8f1553091f52587399e5912590c01484b6b37e10e",
+      "embeddedManifestSha256": "7690030a5aba3026544e65f000475dd20f83213383e9bfddad3d98c1134a65fb",
+      "sourceAndTupleLogLines": "37,57-59,116-120,237-240,269-289,960-963,997-1004,1196-1214",
+      "exactFailure": {
+        "test": "POSIX original-path pre-user image gate keeps explicit mutation counterexamples",
+        "registeredAt": "packages/legacy-agent-host/tests/registered-process-executable.native.ts:318:1",
+        "surfacedAssertion": "registered-process-executable.native.ts:476:18",
+        "operator": "strictEqual",
+        "actual": 13,
+        "expected": 0,
+        "case": "compiler-default:baseline",
+        "stage": "kernel-image-validity",
+        "codeSigningError": -67062,
+        "logLines": "1215-1246",
+        "testDurationMs": 4796.687196,
+        "processExitCode": 1,
+        "meaning": "The original compiler-default kernel-image witness refuses before a valid selected-image proof. The error is from signing validity, not evidence that adjusting ordinary file permission bits repairs it."
+      },
+      "newDiagnostics": [
+        {
+          "line": 1215,
+          "time": "2026-11-17T08:14:15.5644850Z",
+          "value": {
+            "kind": "TEST_POSIX_IMAGE_WITNESS_FAILURE",
+            "case": "compiler-default:baseline",
+            "stage": "kernel-image-validity",
+            "errno": 13,
+            "codeSigningError": -67062
+          }
+        },
+        {
+          "line": 1216,
+          "time": "2026-11-17T08:14:16.0674720Z",
+          "value": {
+            "kind": "TEST_POSIX_MUTATION_FAILURE",
+            "case": "adhoc-test-only:after-check",
+            "stage": "exit",
+            "errno": 0,
+            "execErrno": 0,
+            "stoppedBeforeUser": true,
+            "payloadMarkersAbsentBeforeGate": true,
+            "kernelImageObserved": true,
+            "imageMatched": true,
+            "resumed": true,
+            "mutationAfterCheckErrno": 0,
+            "codeSigningFlags": 570425345,
+            "codeSigningError": 0,
+            "exitCode": 0,
+            "exitSignal": 0,
+            "originalReaped": true,
+            "originalGroupAbsent": true,
+            "cleanup": true,
+            "markers": {
+              "count": 3,
+              "library": true,
+              "constructorA": true,
+              "constructorB": false,
+              "mainA": true,
+              "mainB": false
+            }
+          }
+        },
+        {
+          "line": 1217,
+          "time": "2026-11-17T08:14:16.1604080Z",
+          "value": {
+            "kind": "TEST_POSIX_MUTATION_FAILURE",
+            "case": "adhoc-test-only:writer-open",
+            "stage": "exit",
+            "errno": 0,
+            "execErrno": 0,
+            "stoppedBeforeUser": true,
+            "payloadMarkersAbsentBeforeGate": true,
+            "kernelImageObserved": true,
+            "imageMatched": true,
+            "resumed": true,
+            "mutationAfterCheckErrno": 0,
+            "codeSigningFlags": 570425345,
+            "codeSigningError": 0,
+            "exitCode": 0,
+            "exitSignal": 0,
+            "originalReaped": true,
+            "originalGroupAbsent": true,
+            "cleanup": true,
+            "markers": {
+              "count": 3,
+              "library": true,
+              "constructorA": true,
+              "constructorB": false,
+              "mainA": true,
+              "mainB": false
+            }
+          }
+        }
+      ]
+    },
+    {
+      "arch": "arm64",
+      "jobId": 133899667453,
+      "sourceHead": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+      "os": "macOS15.8.2",
+      "osBuild": "24H232",
+      "uname": "Darwin arm64",
+      "runnerImage": "macos-15-arm64",
+      "runnerImageVersion": "20261104.0514.1",
+      "node": "v24.21.0",
+      "originalTupleAlreadyAdmitted": true,
+      "loggedProductAdmitted": "1",
+      "p09EmbeddedCandidateBuild": "",
+      "timeRange": {
+        "first": "2026-11-17T08:18:21.7000930Z",
+        "p09Failure": "2026-11-17T08:23:55.2980830Z",
+        "last": "2026-11-17T08:24:02.4889370Z"
+      },
+      "stageRuntime": "0.0.160",
+      "bunSha256": "0a2237cdcfa0d16ef501d9acca9f0026309ef348bea7393a64e8d1e3609565cc",
+      "processCustodyManifestSha256": "89b0baf9c4fb0a9b408824ebd6936a756846b4072a02097d9460b3ea4fca0c55",
+      "embeddedManifestSha256": "a6091937d1c8686b7e1f125b2ef69c52146867b208517eb0fab4cb7ea18c2204",
+      "sourceAndTupleLogLines": "38,58-60,117-121,226-229,258-278,861-864,898-905,1097-1115",
+      "exactFailure": {
+        "test": "POSIX original-path pre-user image gate keeps explicit mutation counterexamples",
+        "registeredAt": "packages/legacy-agent-host/tests/registered-process-executable.native.ts:318:1",
+        "surfacedAssertion": "registered-process-executable.native.ts:496:24",
+        "operator": "strictEqual",
+        "actual": "LIB\nBIN:A\nMAIN:A\n",
+        "expected": "",
+        "message": "no selected library or payload constructor may run after byte mutation",
+        "logLines": "1116-1148",
+        "testDurationMs": 3502.066375,
+        "processExitCode": 1,
+        "meaning": "A successful mutation followed by any selected library/constructor/main marker violates the strict branch. That the output is A rather than B does not make the case pass. The separately logged exitCode0/signal0 also does not meet the branch's later signal-termination requirement."
+      },
+      "newDiagnostics": [
+        {
+          "line": 1116,
+          "time": "2026-11-17T08:23:54.2472360Z",
+          "value": {
+            "kind": "TEST_POSIX_MUTATION_FAILURE",
+            "case": "adhoc-test-only:after-check",
+            "stage": "exit",
+            "errno": 0,
+            "execErrno": 0,
+            "stoppedBeforeUser": true,
+            "payloadMarkersAbsentBeforeGate": true,
+            "kernelImageObserved": true,
+            "imageMatched": true,
+            "resumed": true,
+            "mutationAfterCheckErrno": 0,
+            "codeSigningFlags": 570425345,
+            "codeSigningError": 0,
+            "exitCode": 0,
+            "exitSignal": 0,
+            "originalReaped": true,
+            "originalGroupAbsent": true,
+            "cleanup": true,
+            "markers": {
+              "count": 3,
+              "library": true,
+              "constructorA": true,
+              "constructorB": false,
+              "mainA": true,
+              "mainB": false
+            }
+          }
+        },
+        {
+          "line": 1117,
+          "time": "2026-11-17T08:23:54.3718600Z",
+          "value": {
+            "kind": "TEST_POSIX_MUTATION_FAILURE",
+            "case": "adhoc-test-only:writer-open",
+            "stage": "exit",
+            "errno": 0,
+            "execErrno": 0,
+            "stoppedBeforeUser": true,
+            "payloadMarkersAbsentBeforeGate": true,
+            "kernelImageObserved": true,
+            "imageMatched": true,
+            "resumed": true,
+            "mutationAfterCheckErrno": 0,
+            "codeSigningFlags": 570425345,
+            "codeSigningError": 0,
+            "exitCode": 0,
+            "exitSignal": 0,
+            "originalReaped": true,
+            "originalGroupAbsent": true,
+            "cleanup": true,
+            "markers": {
+              "count": 3,
+              "library": true,
+              "constructorA": true,
+              "constructorB": false,
+              "mainA": true,
+              "mainB": false
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "earlierAndLaterScope": {
+    "orderedStages": [
+      {
+        "stage": "Six Node source/test files",
+        "x64Lines": "858-941",
+        "arm64Lines": "759-842",
+        "each": {
+          "tests": 58,
+          "pass": 57,
+          "fail": 0,
+          "skipped": 1
+        },
+        "skip": "Linux builder refuses an existing or linked output leaf before any compiler dispatch"
+      },
+      {
+        "stage": "Bounded Darwin executable measurement",
+        "x64Lines": "981-1055",
+        "arm64Lines": "882-956",
+        "each": {
+          "tests": 2,
+          "pass": 1,
+          "fail": 0,
+          "skipped": 1
+        },
+        "passed": "Darwin audit-bound executable measurement rejects replacement and preserves sibling custody",
+        "skip": "P09 is intentionally not selected in this earlier invocation; it runs later with its explicit GO flag."
+      },
+      {
+        "stage": "Private desktop Host-descriptor fixture",
+        "x64Lines": "1056-1088",
+        "arm64Lines": "957-989",
+        "each": {
+          "tests": 1,
+          "pass": 1,
+          "fail": 0,
+          "skipped": 0
+        },
+        "passed": "Desktop captures embedded delivery and native management in its original private Host descriptor"
+      },
+      {
+        "stage": "Embedded2.1.4 native tools/MCP/approval/cold Host Resume",
+        "x64Lines": "1089-1187",
+        "arm64Lines": "990-1088",
+        "each": {
+          "tests": 1,
+          "pass": 1,
+          "fail": 0,
+          "skipped": 0
+        },
+        "passed": "embedded2.1.4 performs native tools,MCP,once approval and cold Host Resume without replay"
+      },
+      {
+        "stage": "Strict P09 separate original invocation",
+        "x64Lines": "1188-1246",
+        "arm64Lines": "1089-1148",
+        "each": {
+          "tests": 1,
+          "pass": 0,
+          "fail": 1,
+          "cancelled": 0,
+          "skipped": 0,
+          "todo": 0
+        }
+      }
+    ],
+    "receiptAssertionsVisible": "Between bounded tests and later P09, each job runs the displayed receipt assertions and advances without an error. They assert source/tuple/digest binding, cleanup and finite TEST model selection11 requests. Bounded custody explicitly requires productQualified=false; Host assertions retain vendorAuthQualified=false,desktopQualified=false,releaseQualified=false.",
+    "inferenceLimit": "These are log-observed test/validator results. Their full receipt fields, process identities, trace census, tool effects, Stop/Resume and cleanup details have not been freshly artifact-joined here.",
+    "separateFullNativeQualification": false
+  },
+  "sourceExplanation": {
+    "minimumStrictContract": "For signed after-check/writer-open, actual ETXTBSY may retain normalA. Otherwise mutationAfterCheckErrno must be0, markers must be empty, exitCode must be-1 and exitSignal>0. EPERM/EACCES are not substitutions.",
+    "writeZeroMeaning": "mutationAfterCheckErrno=0 records successful completion of the mutation routine, including its copy/truncate/fsync path in the unchanged C fixture. It is not a zero-byte write syscall result.",
+    "differenceBetweenMutationCases": "after-check opens the selected path for the rewrite after the image comparison; writer-open uses the write descriptor already opened before spawn. Both retain the one original child and original resume operation.",
+    "firstFailureRetention": "The unchanged source catches each assertion and uses failure??=error, continues collecting bounded cases, writes the receipt in finally, then throws the retained first failure. Hence the x64 baseline exception is compatible with its later two mutation-failure diagnostics; ARM's marker assertion is the first retained failure.",
+    "cleanupBoundary": "Each of the four displayed signed mutation diagnostic objects reports originalReaped=true,originalGroupAbsent=true,cleanup=true. No full fresh20-actor/all10case cleanup census is claimed. Runner 'Cleaning up orphan processes' is not a substitute receipt.",
+    "missingCausality": "The new logs add no post-write original-FD digest, mapped-page/fault trace or continuous byte-custody witness. A markers do not prove execution of B or identify a cache/signing mechanism. The prior concrete invariant and unknown fix remain unchanged.",
+    "noRunnerExcuse": "The same two OS/architecture pairs were already admitted and are again logged PRODUCT_ADMITTED=1. A missing matching tuple or simply moving runners is not an explanation that cures these failures."
+  },
+  "freshVersusRepeated": {
+    "fresh": "Distinct PR1219 run44042341120 attempt1 jobs, timestamps, temp roots and artifact IDs; the logs checkout9d rather than prior9c9.",
+    "repeated": "All five displayed failure diagnostics have equal corresponding prior semantic fields. The three decisive source bodies at9d remain exactly the prior unchanged full-body identities.",
+    "exactDiagnosticComparisons": [
+      {
+        "arch": "x64",
+        "case": "compiler-default:baseline",
+        "currentLine": 1215,
+        "commonFields": 3,
+        "valuesMatch": true,
+        "markersMatch": true
+      },
+      {
+        "arch": "x64",
+        "case": "adhoc-test-only:after-check",
+        "currentLine": 1216,
+        "commonFields": 16,
+        "valuesMatch": true,
+        "markersMatch": true
+      },
+      {
+        "arch": "x64",
+        "case": "adhoc-test-only:writer-open",
+        "currentLine": 1217,
+        "commonFields": 16,
+        "valuesMatch": true,
+        "markersMatch": true
+      },
+      {
+        "arch": "arm64",
+        "case": "adhoc-test-only:after-check",
+        "currentLine": 1116,
+        "commonFields": 16,
+        "valuesMatch": true,
+        "markersMatch": true
+      },
+      {
+        "arch": "arm64",
+        "case": "adhoc-test-only:writer-open",
+        "currentLine": 1117,
+        "commonFields": 16,
+        "valuesMatch": true,
+        "markersMatch": true
+      }
+    ],
+    "priorRun": 44008782832,
+    "priorPr": 1218,
+    "priorSource": "9c9c73190840592963142d36562ea07d2b5d2d71",
+    "noTransferredFreshCensus": "The prior full receipts established x64 6PASS/3INCOMPLETE/1COUNTEREXAMPLE and ARM7PASS/2INCOMPLETE/1COUNTEREXAMPLE. Those counts are historical only; the new logs expose selected failures, not the complete ten fresh observations or all post-case identity/tool checks."
+  },
+  "currentProductLock": {
+    "visible": "Exact checked-out9d; stage-runtime release0.0.160; per-platform Bun SHA, embedded graph manifest SHA and generated process-custody manifest SHA.",
+    "notVisible": "Neither complete job log contains the static-preflight .current-product-lock checkout, current-main/product commit or runtime.lock.json digest. No new current-product-lock SHA is inferred from the source-head environment or from prior run evidence.",
+    "boundary": "This classification neither alleges a new lock mismatch nor claims a fresh current-main lock join. It needs no extra gate or fresh query."
+  },
+  "artifactLimit": {
+    "x64": {
+      "logLines": "1247-1302",
+      "name": "opencode-v2-embedded-native-darwin-x64",
+      "artifactId": 14311641521,
+      "reportedFiles": 4,
+      "reportedZipBytes": 10561,
+      "reportedZipSha256": "a66350502a640055bbe00c16d0c7b6fcf311e9a4ab364391ead9ce99fc65daed"
+    },
+    "arm64": {
+      "logLines": "1149-1204",
+      "name": "opencode-v2-embedded-native-darwin-arm64",
+      "artifactId": 14310744244,
+      "reportedFiles": 4,
+      "reportedZipBytes": 10541,
+      "reportedZipSha256": "d0066025c92ae7ff73969889c9bbd3d7f902538042b4134877302ff51c0246af"
+    },
+    "downloaded": false,
+    "crcVerifiedHere": false,
+    "memberBodiesReadHere": false,
+    "meaning": "Upload logs report completed four-file artifacts. These identities are upload-reported only; no ZIP or full receipt content was downloaded, parsed or qualified by this review."
+  },
+  "checkCount": 12,
+  "checks": [
+    {
+      "id": 1,
+      "name": "Both complete retained logs read and matched exact blob/length/SHA",
+      "result": "PASS_EVIDENCE",
+      "bytes": 229603
+    },
+    {
+      "id": 2,
+      "name": "Exact9d checkout and Node24.21 source observed in both",
+      "result": "PASS_EVIDENCE"
+    },
+    {
+      "id": 3,
+      "name": "Both admitted Darwin tuples repeated, not candidate admission failure",
+      "result": "PASS_EVIDENCE"
+    },
+    {
+      "id": 4,
+      "name": "x64 first native.ts476 failure identified without hiding later mutations",
+      "result": "PASS_EVIDENCE"
+    },
+    {
+      "id": 5,
+      "name": "ARM native.ts496 marker assertion identified",
+      "result": "PASS_EVIDENCE"
+    },
+    {
+      "id": 6,
+      "name": "Four signed mutation diagnostics retain successful mutation,A markers,normal exit and cleanup",
+      "result": "PASS_EVIDENCE"
+    },
+    {
+      "id": 7,
+      "name": "Displayed failure semantic fields equal the retained prior findings",
+      "result": "PASS_EVIDENCE"
+    },
+    {
+      "id": 8,
+      "name": "Unchanged exact oracle preserves strict alternatives and first-failure retention",
+      "result": "PASS_STATIC"
+    },
+    {
+      "id": 9,
+      "name": "Earlier bounded successes and later P09 failure/skips kept distinct",
+      "result": "PASS_EVIDENCE"
+    },
+    {
+      "id": 10,
+      "name": "Current-product lock visibility limit explicit",
+      "result": "PASS_EVIDENCE"
+    },
+    {
+      "id": 11,
+      "name": "New full receipt/census/archive qualification not invented",
+      "result": "PASS_EVIDENCE"
+    },
+    {
+      "id": 12,
+      "name": "No source/control/runtime/liveCI action,waiver,timeout change,replay or new gate",
+      "result": "PASS_SCOPE"
+    }
+  ],
+  "failedReviewChecks": [],
+  "nativeQualification": false,
+  "limitations": [
+    "The test outcomes include real logged failures; PASS_EVIDENCE labels describe correct evidence classification, not native runtime success.",
+    "No fresh whole ten-case census or complete physical/cleanup receipts are asserted before the original new artifacts are reviewed.",
+    "Prior source-supported continuous-custody defect remains unresolved; this classification does not select or author a fix.",
+    "Current source/CI selection remains immutable9d. Windows source R2 remains a separate assigned review."
+  ],
+  "selfReadback": "Pending bare retention and immediate pin delivery, then complete literal/hash/parsed readback and full self-read with no edits."
+}

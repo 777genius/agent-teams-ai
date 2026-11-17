@@ -1,0 +1,832 @@
+{
+  "schemaVersion": 1,
+  "kind": "windows-selected-port-retry-pair-r1-actual-gate",
+  "at": "2026-11-17 08:30:59 UTC",
+  "repository": "777genius/agent-teams-ai",
+  "branch": "fix/frontend-parity-coobservation-c714-20261115",
+  "verdict": "ACCEPT_EXACT_R1_PUBLICATION_FOR_ROOT_AUTHORSHIP_OF_SELECTED_FOUR_POSTIMAGES_ONLY",
+  "commit": "d693c62d59c2bc6a6866dcc0293c111380ed88c5",
+  "parent": "65cd08dc15e3735cb579578d475938fd0a3fb135",
+  "tree": "433024c7d4fcd1bafaac928e90bd4195ff025b6a",
+  "docsTree": "df613ae7d4f89f5aeb543a208fbc3388055a908d",
+  "subject": {
+    "bytes": 25565,
+    "sha256": "06c9e63f24c25dcbd6a39df9c6ac3d0c34cf6fc402791ff9e0a2e7a857128ff5",
+    "gitBlob": "77e02e33a6db38b6083316f96c65cd02177354cb"
+  },
+  "manifest": {
+    "bytes": 15257,
+    "sha256": "cc57feba4a49361dcaaaf426718587dcc4709b4bebd3e1d8e327804089b30357",
+    "gitBlob": "40cbe80d0338dedf3bf9c6e165c171c2d14d58f1"
+  },
+  "reviews": [
+    {
+      "role": "rootReview",
+      "pin": {
+        "bytes": 17709,
+        "sha256": "a532f223fdd5da0773483b618dc7116cca2d888c7584f74337493971fb36f960",
+        "gitBlob": "5b459d31e5f6d2bc4f5c203eb66c5752a39cec11"
+      },
+      "checks": 37,
+      "decision": "ACCEPT_EXACT_NARROW_WINDOWS_R1_STATIC_ONLY",
+      "completeRead": true,
+      "selfReadConfirmed": true
+    },
+    {
+      "role": "guardReview",
+      "pin": {
+        "bytes": 35639,
+        "sha256": "63d7cb8b87acbedd3d99e08c682e57e5430a30b1399585484e2474ea1add4580",
+        "gitBlob": "08793ef3e50620c5fbbb138b69f46823b55b5cff"
+      },
+      "checks": 34,
+      "decision": "ACCEPT_EXACT_WINDOWS_R1_GUARD_SCOPE_ONLY_NO_POSTIMAGE_OR_RUNTIME_ACCEPTANCE",
+      "completeRead": true,
+      "selfReadConfirmed": true
+    },
+    {
+      "role": "semanticReview",
+      "pin": {
+        "bytes": 35885,
+        "sha256": "0c96120b2225ce3ca1290b3c6da2e0fb8c739fee7f7c66af18e6d6dc970acfa7",
+        "gitBlob": "fc41c456218ebf1e9c528cb621d0f8c3a9fe6fa2"
+      },
+      "checks": 31,
+      "decision": "ACCEPT_EXACT_R1_PLAN_STATIC_ONLY",
+      "completeRead": true,
+      "selfReadConfirmed": true
+    },
+    {
+      "role": "bindingReview",
+      "pin": {
+        "bytes": 62498,
+        "sha256": "75f67ca17a2e7c6047c20857cffb84f6236b104ddd2db68a62328c1d7f2eb8b1",
+        "gitBlob": "25337ae574861505bed80251f3070d8e2ddbb1bb"
+      },
+      "checks": 42,
+      "decision": "ACCEPT_EXACT_NARROW_WINDOWS_R1_STATIC_ONLY",
+      "completeRead": true,
+      "selfReadConfirmed": true
+    }
+  ],
+  "rootActual": {
+    "bytes": 84465,
+    "sha256": "9f4739eb0fd8b29478e91e17e0c0eb6e245ec6b3363bd04de8451b4f6ff26c2a",
+    "gitBlob": "c639a1cd00bf1b61f784821b0cdc34f7e4aead52"
+  },
+  "independentActual": {
+    "bytes": 205346,
+    "sha256": "a9fae5eb4662bf35d888c53e0c12b801f3c931ccc2b87ec1776a8b937fc836b0",
+    "gitBlob": "feb316c6522d8a62681d658cf63de4e414d5f04c"
+  },
+  "fullRootReadback": true,
+  "fullIndependentReadback": true,
+  "independentFullSelfReadback": {
+    "at": "2026-11-17 08:30:39 UTC",
+    "agent": "/root/red_publication_recovery",
+    "pin": {
+      "bytes": 205346,
+      "sha256": "a9fae5eb4662bf35d888c53e0c12b801f3c931ccc2b87ec1776a8b937fc836b0",
+      "gitBlob": "feb316c6522d8a62681d658cf63de4e414d5f04c"
+    },
+    "checks": 46,
+    "literalEqual": true,
+    "message": "Full 205346-byte self read confirmed by reviewer; all identities and 46 checks match; unresolved arrays empty."
+  },
+  "staticChecks": 144,
+  "actualChecks": {
+    "root": 40,
+    "independent": 46,
+    "total": 86
+  },
+  "currentPointerClosure": {
+    "root": [
+      {
+        "pin": {
+          "gitBlob": "77e02e33a6db38b6083316f96c65cd02177354cb",
+          "bytes": 25565,
+          "sha256": "06c9e63f24c25dcbd6a39df9c6ac3d0c34cf6fc402791ff9e0a2e7a857128ff5"
+        },
+        "paths": [
+          "manifest.subject",
+          "manifest.evidenceFiles.0",
+          "catalog.windowsSelectedPortRetryPairR1Stage.subject",
+          "catalog.windowsSelectedPortRetryPairR1Stage.evidenceFiles.0",
+          "catalog.windowsSelectedPortRetryPairR1EvidenceFiles.0"
+        ],
+        "actual": {
+          "bytes": 25565,
+          "sha256": "06c9e63f24c25dcbd6a39df9c6ac3d0c34cf6fc402791ff9e0a2e7a857128ff5",
+          "gitBlob": "77e02e33a6db38b6083316f96c65cd02177354cb"
+        },
+        "method": "full current/accepted complete immutable body rehashed",
+        "passed": true
+      },
+      {
+        "pin": {
+          "gitBlob": "5b459d31e5f6d2bc4f5c203eb66c5752a39cec11",
+          "bytes": 17709,
+          "sha256": "a532f223fdd5da0773483b618dc7116cca2d888c7584f74337493971fb36f960"
+        },
+        "paths": [
+          "manifest.reviews.0.pin",
+          "manifest.evidenceFiles.1",
+          "catalog.windowsSelectedPortRetryPairR1Stage.reviews.0.pin",
+          "catalog.windowsSelectedPortRetryPairR1Stage.evidenceFiles.1",
+          "catalog.windowsSelectedPortRetryPairR1EvidenceFiles.1"
+        ],
+        "actual": {
+          "bytes": 17709,
+          "sha256": "a532f223fdd5da0773483b618dc7116cca2d888c7584f74337493971fb36f960",
+          "gitBlob": "5b459d31e5f6d2bc4f5c203eb66c5752a39cec11"
+        },
+        "method": "full current/accepted complete immutable body rehashed",
+        "passed": true
+      },
+      {
+        "pin": {
+          "gitBlob": "08793ef3e50620c5fbbb138b69f46823b55b5cff",
+          "bytes": 35639,
+          "sha256": "63d7cb8b87acbedd3d99e08c682e57e5430a30b1399585484e2474ea1add4580"
+        },
+        "paths": [
+          "manifest.reviews.1.pin",
+          "manifest.evidenceFiles.2",
+          "catalog.windowsSelectedPortRetryPairR1Stage.reviews.1.pin",
+          "catalog.windowsSelectedPortRetryPairR1Stage.evidenceFiles.2",
+          "catalog.windowsSelectedPortRetryPairR1EvidenceFiles.2"
+        ],
+        "actual": {
+          "bytes": 35639,
+          "sha256": "63d7cb8b87acbedd3d99e08c682e57e5430a30b1399585484e2474ea1add4580",
+          "gitBlob": "08793ef3e50620c5fbbb138b69f46823b55b5cff"
+        },
+        "method": "full current/accepted complete immutable body rehashed",
+        "passed": true
+      },
+      {
+        "pin": {
+          "gitBlob": "fc41c456218ebf1e9c528cb621d0f8c3a9fe6fa2",
+          "bytes": 35885,
+          "sha256": "0c96120b2225ce3ca1290b3c6da2e0fb8c739fee7f7c66af18e6d6dc970acfa7"
+        },
+        "paths": [
+          "manifest.reviews.2.pin",
+          "manifest.evidenceFiles.3",
+          "catalog.windowsSelectedPortRetryPairR1Stage.reviews.2.pin",
+          "catalog.windowsSelectedPortRetryPairR1Stage.evidenceFiles.3",
+          "catalog.windowsSelectedPortRetryPairR1EvidenceFiles.3"
+        ],
+        "actual": {
+          "bytes": 35885,
+          "sha256": "0c96120b2225ce3ca1290b3c6da2e0fb8c739fee7f7c66af18e6d6dc970acfa7",
+          "gitBlob": "fc41c456218ebf1e9c528cb621d0f8c3a9fe6fa2"
+        },
+        "method": "full current/accepted complete immutable body rehashed",
+        "passed": true
+      },
+      {
+        "pin": {
+          "gitBlob": "25337ae574861505bed80251f3070d8e2ddbb1bb",
+          "bytes": 62498,
+          "sha256": "75f67ca17a2e7c6047c20857cffb84f6236b104ddd2db68a62328c1d7f2eb8b1"
+        },
+        "paths": [
+          "manifest.reviews.3.pin",
+          "manifest.evidenceFiles.4",
+          "catalog.windowsSelectedPortRetryPairR1Stage.reviews.3.pin",
+          "catalog.windowsSelectedPortRetryPairR1Stage.evidenceFiles.4",
+          "catalog.windowsSelectedPortRetryPairR1EvidenceFiles.4"
+        ],
+        "actual": {
+          "bytes": 62498,
+          "sha256": "75f67ca17a2e7c6047c20857cffb84f6236b104ddd2db68a62328c1d7f2eb8b1",
+          "gitBlob": "25337ae574861505bed80251f3070d8e2ddbb1bb"
+        },
+        "method": "full current/accepted complete immutable body rehashed",
+        "passed": true
+      },
+      {
+        "pin": {
+          "gitBlob": "e869a398b712541b17eef73ba5a44af49b00f70d",
+          "bytes": 9510,
+          "sha256": "7709fd167750dac768b1a826ff81904077a1afe936bbd5865b4041e126ffb599"
+        },
+        "paths": [
+          "manifest.knownSourceAnchor.actualGate",
+          "manifest.evidenceFiles.10",
+          "catalog.windowsSelectedPortRetryPairR1Stage.sourceAnchor.actualGate",
+          "catalog.windowsSelectedPortRetryPairR1Stage.evidenceFiles.10",
+          "catalog.windowsSelectedPortRetryPairR1EvidenceFiles.10"
+        ],
+        "actual": {
+          "bytes": 9510,
+          "sha256": "7709fd167750dac768b1a826ff81904077a1afe936bbd5865b4041e126ffb599",
+          "gitBlob": "e869a398b712541b17eef73ba5a44af49b00f70d"
+        },
+        "method": "full current/accepted complete immutable body rehashed",
+        "passed": true
+      },
+      {
+        "pin": {
+          "gitBlob": "757184208b6b39432f5f957011c0a2d40d5b344d",
+          "bytes": 76668,
+          "sha256": "8ef246ec40b9c443ddd13bad6b385e80fd60b1881b7eb2b342aba14bd74c56c3"
+        },
+        "paths": [
+          "manifest.knownSourceAnchor.rootActual",
+          "manifest.evidenceFiles.8",
+          "catalog.windowsSelectedPortRetryPairR1Stage.sourceAnchor.rootActual",
+          "catalog.windowsSelectedPortRetryPairR1Stage.evidenceFiles.8",
+          "catalog.windowsSelectedPortRetryPairR1EvidenceFiles.8"
+        ],
+        "actual": {
+          "bytes": 76668,
+          "sha256": "8ef246ec40b9c443ddd13bad6b385e80fd60b1881b7eb2b342aba14bd74c56c3",
+          "gitBlob": "757184208b6b39432f5f957011c0a2d40d5b344d"
+        },
+        "method": "full current/accepted complete immutable body rehashed",
+        "passed": true
+      },
+      {
+        "pin": {
+          "gitBlob": "cc54c9d831a28eadf9e411fd8d53134fbcd6f881",
+          "bytes": 123197,
+          "sha256": "ecc5f229c0073fd48c218205e4feb0928e70f2a41a4ff53d60088e320ae0cef4"
+        },
+        "paths": [
+          "manifest.knownSourceAnchor.independentActual",
+          "manifest.evidenceFiles.9",
+          "catalog.windowsSelectedPortRetryPairR1Stage.sourceAnchor.independentActual",
+          "catalog.windowsSelectedPortRetryPairR1Stage.evidenceFiles.9",
+          "catalog.windowsSelectedPortRetryPairR1EvidenceFiles.9"
+        ],
+        "actual": {
+          "bytes": 123197,
+          "sha256": "ecc5f229c0073fd48c218205e4feb0928e70f2a41a4ff53d60088e320ae0cef4",
+          "gitBlob": "cc54c9d831a28eadf9e411fd8d53134fbcd6f881"
+        },
+        "method": "full current/accepted complete immutable body rehashed",
+        "passed": true
+      },
+      {
+        "pin": {
+          "gitBlob": "3aa070295059b9e1dd280ee36836712878b0b72c",
+          "bytes": 7050,
+          "sha256": "4a55ae270a3549fd97c712db801cf2378102e7974597c8ed2c3fe3b240e937cb"
+        },
+        "paths": [
+          "manifest.knownSourceAnchor.sourceGate",
+          "catalog.windowsSelectedPortRetryPairR1Stage.sourceAnchor.sourceGate"
+        ],
+        "actual": {
+          "bytes": 7050,
+          "sha256": "4a55ae270a3549fd97c712db801cf2378102e7974597c8ed2c3fe3b240e937cb",
+          "gitBlob": "3aa070295059b9e1dd280ee36836712878b0b72c"
+        },
+        "method": "full current/accepted complete immutable body rehashed",
+        "passed": true
+      },
+      {
+        "pin": {
+          "gitBlob": "71d5629149e8f499a45b54a99922145ee3cae09e",
+          "bytes": 12335,
+          "sha256": "32a6424daf52342445fd11febc7ea5d59fb1940209a677f063e5fcd5e65c8f2e"
+        },
+        "paths": [
+          "manifest.sourcePreimages.0",
+          "catalog.windowsSelectedPortRetryPairR1Stage.completePreimages.0"
+        ],
+        "actual": {
+          "bytes": 12335,
+          "sha256": "32a6424daf52342445fd11febc7ea5d59fb1940209a677f063e5fcd5e65c8f2e",
+          "gitBlob": "71d5629149e8f499a45b54a99922145ee3cae09e"
+        },
+        "method": "full current/accepted complete immutable body rehashed",
+        "passed": true
+      },
+      {
+        "pin": {
+          "gitBlob": "d04bcf2af48a696c71821f0346d5abdc2807ce9c",
+          "bytes": 16835,
+          "sha256": "52ef1c0770d96f93e25c6b6166b2efc133381ff8bd34410543e0e69f3641a697"
+        },
+        "paths": [
+          "manifest.sourcePreimages.1",
+          "catalog.windowsSelectedPortRetryPairR1Stage.completePreimages.1"
+        ],
+        "actual": {
+          "bytes": 16835,
+          "sha256": "52ef1c0770d96f93e25c6b6166b2efc133381ff8bd34410543e0e69f3641a697",
+          "gitBlob": "d04bcf2af48a696c71821f0346d5abdc2807ce9c"
+        },
+        "method": "full current/accepted complete immutable body rehashed",
+        "passed": true
+      },
+      {
+        "pin": {
+          "gitBlob": "ad04222bf2e8e84fa96cc96f24aa6f9d4b284b6b",
+          "bytes": 37692,
+          "sha256": "03504561bde7c7db7456fba26b72eb8d9238b7a22a17e2a5f5d2bab7001ab0aa"
+        },
+        "paths": [
+          "manifest.sourcePreimages.2",
+          "catalog.windowsSelectedPortRetryPairR1Stage.completePreimages.2"
+        ],
+        "actual": {
+          "bytes": 37692,
+          "sha256": "03504561bde7c7db7456fba26b72eb8d9238b7a22a17e2a5f5d2bab7001ab0aa",
+          "gitBlob": "ad04222bf2e8e84fa96cc96f24aa6f9d4b284b6b"
+        },
+        "method": "full current/accepted complete immutable body rehashed",
+        "passed": true
+      },
+      {
+        "pin": {
+          "gitBlob": "076fbd26bac85c4195312a83c1ae78067a8d742e",
+          "bytes": 41888,
+          "sha256": "67dfdf895b1f45750cd87a979680432f5285b9debfe5dcf8a8fcb1409289d8e5"
+        },
+        "paths": [
+          "manifest.sourcePreimages.3",
+          "catalog.windowsSelectedPortRetryPairR1Stage.completePreimages.3"
+        ],
+        "actual": {
+          "bytes": 41888,
+          "sha256": "67dfdf895b1f45750cd87a979680432f5285b9debfe5dcf8a8fcb1409289d8e5",
+          "gitBlob": "076fbd26bac85c4195312a83c1ae78067a8d742e"
+        },
+        "method": "full current/accepted complete immutable body rehashed",
+        "passed": true
+      },
+      {
+        "pin": {
+          "gitBlob": "33dc8b23aab16c1786c3484347da3382a6ab0ee5",
+          "bytes": 39388,
+          "sha256": "68e439d5fe2674f430b93ad4729a53adc6144ee01dd241357ed0ba0bc4ab568b"
+        },
+        "paths": [
+          "manifest.evidenceFiles.5",
+          "catalog.windowsSelectedPortRetryPairR1Stage.advisoryOnly.windowsFeasibility",
+          "catalog.windowsSelectedPortRetryPairR1Stage.evidenceFiles.5",
+          "catalog.windowsSelectedPortRetryPairR1EvidenceFiles.5"
+        ],
+        "actual": {
+          "bytes": 39388,
+          "sha256": "68e439d5fe2674f430b93ad4729a53adc6144ee01dd241357ed0ba0bc4ab568b",
+          "gitBlob": "33dc8b23aab16c1786c3484347da3382a6ab0ee5"
+        },
+        "method": "full current/accepted complete immutable body rehashed",
+        "passed": true
+      },
+      {
+        "pin": {
+          "gitBlob": "694a22327a3ae7d0f91cd591cc95048d0d672e5a",
+          "bytes": 46778,
+          "sha256": "f2d5afe40801a17e6b8ed5f16c3c62ed0062420422839eab27efee9091a50514"
+        },
+        "paths": [
+          "manifest.evidenceFiles.6",
+          "catalog.windowsSelectedPortRetryPairR1Stage.advisoryOnly.darwinFollowup",
+          "catalog.windowsSelectedPortRetryPairR1Stage.evidenceFiles.6",
+          "catalog.windowsSelectedPortRetryPairR1EvidenceFiles.6"
+        ],
+        "actual": {
+          "bytes": 46778,
+          "sha256": "f2d5afe40801a17e6b8ed5f16c3c62ed0062420422839eab27efee9091a50514",
+          "gitBlob": "694a22327a3ae7d0f91cd591cc95048d0d672e5a"
+        },
+        "method": "full current/accepted complete immutable body rehashed",
+        "passed": true
+      },
+      {
+        "pin": {
+          "gitBlob": "aa697ba29de7175b9c1fb267bbfd77e6ebf07f9b",
+          "bytes": 13740,
+          "sha256": "ae288f8950b5b9daa9d5869ca4b16d44e4bb8552604517928588a2e783038a52"
+        },
+        "paths": [
+          "manifest.evidenceFiles.7",
+          "catalog.windowsSelectedPortRetryPairR1Stage.advisoryOnly.coldReconsideration",
+          "catalog.windowsSelectedPortRetryPairR1Stage.evidenceFiles.7",
+          "catalog.windowsSelectedPortRetryPairR1EvidenceFiles.7"
+        ],
+        "actual": {
+          "bytes": 13740,
+          "sha256": "ae288f8950b5b9daa9d5869ca4b16d44e4bb8552604517928588a2e783038a52",
+          "gitBlob": "aa697ba29de7175b9c1fb267bbfd77e6ebf07f9b"
+        },
+        "method": "full current/accepted complete immutable body rehashed",
+        "passed": true
+      },
+      {
+        "pin": {
+          "gitBlob": "df645b8eac669fbd71f243bfd64bd915a871583f",
+          "bytes": 34918,
+          "sha256": "4e54d76f0058e1024d6e9e9088962bfb167c491e2eb7a45b40d1607629a9c3d8"
+        },
+        "paths": [
+          "manifest.evidenceFiles.11",
+          "catalog.windowsSelectedPortRetryPairR1Stage.evidenceFiles.11",
+          "catalog.windowsSelectedPortRetryPairR1EvidenceFiles.11"
+        ],
+        "actual": {
+          "bytes": 34918,
+          "sha256": "4e54d76f0058e1024d6e9e9088962bfb167c491e2eb7a45b40d1607629a9c3d8",
+          "gitBlob": "df645b8eac669fbd71f243bfd64bd915a871583f"
+        },
+        "method": "full current/accepted complete immutable body rehashed",
+        "passed": true
+      },
+      {
+        "pin": {
+          "gitBlob": "45f21a0ccfd99cde885b92d04a6fcdd11d73b432",
+          "bytes": 1678327,
+          "sha256": "db87c4862770dca1bb3432e08a304de8adc465e9b762f60cfa966a23d561f082"
+        },
+        "paths": [
+          "manifest.evidenceFiles.12",
+          "catalog.windowsSelectedPortRetryPairR1Stage.currentCi.initialCapture",
+          "catalog.windowsSelectedPortRetryPairR1Stage.evidenceFiles.12",
+          "catalog.windowsSelectedPortRetryPairR1EvidenceFiles.12"
+        ],
+        "actual": {
+          "bytes": 1678327,
+          "sha256": "db87c4862770dca1bb3432e08a304de8adc465e9b762f60cfa966a23d561f082",
+          "gitBlob": "45f21a0ccfd99cde885b92d04a6fcdd11d73b432"
+        },
+        "method": "full current/accepted complete immutable body rehashed",
+        "passed": true
+      },
+      {
+        "pin": {
+          "gitBlob": "d70eb8522cc6bbafaf5fea8e0ce354deb839d9f8",
+          "bytes": 89607,
+          "sha256": "3f339eb8a7926613e22dd4a290480f62922695bac6f978b4b78951b8a9856c7c"
+        },
+        "paths": [
+          "manifest.evidenceFiles.13",
+          "catalog.windowsSelectedPortRetryPairR1Stage.currentCi.initialReview",
+          "catalog.windowsSelectedPortRetryPairR1Stage.evidenceFiles.13",
+          "catalog.windowsSelectedPortRetryPairR1EvidenceFiles.13"
+        ],
+        "actual": {
+          "bytes": 89607,
+          "sha256": "3f339eb8a7926613e22dd4a290480f62922695bac6f978b4b78951b8a9856c7c",
+          "gitBlob": "d70eb8522cc6bbafaf5fea8e0ce354deb839d9f8"
+        },
+        "method": "full current/accepted complete immutable body rehashed",
+        "passed": true
+      },
+      {
+        "pin": {
+          "gitBlob": "e5c9ab2452e910510a13386fa9f91c002b2cbb81",
+          "bytes": 285909,
+          "sha256": "a549ea35a7d35d1141a67cc6a9df8c4e1c363c107e3165a5d88e5a866cdc3701"
+        },
+        "paths": [
+          "manifest.evidenceFiles.14",
+          "catalog.windowsSelectedPortRetryPairR1Stage.currentCi.observationPacket",
+          "catalog.windowsSelectedPortRetryPairR1Stage.evidenceFiles.14",
+          "catalog.windowsSelectedPortRetryPairR1EvidenceFiles.14"
+        ],
+        "actual": {
+          "bytes": 285909,
+          "sha256": "a549ea35a7d35d1141a67cc6a9df8c4e1c363c107e3165a5d88e5a866cdc3701",
+          "gitBlob": "e5c9ab2452e910510a13386fa9f91c002b2cbb81"
+        },
+        "method": "full current/accepted complete immutable body rehashed",
+        "passed": true
+      },
+      {
+        "pin": {
+          "gitBlob": "a7d62b28d668446982415929aa47fbbf58d3ebd3",
+          "bytes": 119712,
+          "sha256": "e7f9799cc99b3f516f25da0039a7e30d542b37b7f8f23232d0aa80f66cb452d2"
+        },
+        "paths": [
+          "manifest.evidenceFiles.15",
+          "catalog.windowsSelectedPortRetryPairR1Stage.observedWindowsStatic.fullLog",
+          "catalog.windowsSelectedPortRetryPairR1Stage.evidenceFiles.15",
+          "catalog.windowsSelectedPortRetryPairR1EvidenceFiles.15"
+        ],
+        "actual": {
+          "bytes": 119712,
+          "sha256": "e7f9799cc99b3f516f25da0039a7e30d542b37b7f8f23232d0aa80f66cb452d2",
+          "gitBlob": "a7d62b28d668446982415929aa47fbbf58d3ebd3"
+        },
+        "method": "full current/accepted complete immutable body rehashed",
+        "passed": true
+      },
+      {
+        "pin": {
+          "gitBlob": "f92beaac04a935a029a66ba980f30ba548f026b6",
+          "bytes": 2596491,
+          "sha256": "6c34aade765ce8da00e364b067b26fa572f784d25aba9f06ad214bdadde49acf"
+        },
+        "paths": [
+          "manifest.modifiedDocuments.0.before"
+        ],
+        "actual": {
+          "bytes": 2596491,
+          "sha256": "6c34aade765ce8da00e364b067b26fa572f784d25aba9f06ad214bdadde49acf",
+          "gitBlob": "f92beaac04a935a029a66ba980f30ba548f026b6"
+        },
+        "method": "full current/accepted complete immutable body rehashed",
+        "passed": true
+      },
+      {
+        "pin": {
+          "gitBlob": "a27b044c697366d37a153c9d1c23a84ea3ff5842",
+          "bytes": 2601874,
+          "sha256": "8a7c57076c5db3e18be7fb7df763b72772e5c3b03a88ef1ffbdc5da6b4e7ef39"
+        },
+        "paths": [
+          "manifest.modifiedDocuments.0.after"
+        ],
+        "actual": {
+          "bytes": 2601874,
+          "sha256": "8a7c57076c5db3e18be7fb7df763b72772e5c3b03a88ef1ffbdc5da6b4e7ef39",
+          "gitBlob": "a27b044c697366d37a153c9d1c23a84ea3ff5842"
+        },
+        "method": "full current/accepted complete immutable body rehashed",
+        "passed": true
+      },
+      {
+        "pin": {
+          "gitBlob": "04d599381ffaac944a82d36b9e17e9c13fb7b9c3",
+          "bytes": 5383,
+          "sha256": "eddc2210e634596479b044f5a82301f93f1f87b915c5de00594f6104b2f5e8b8"
+        },
+        "paths": [
+          "manifest.modifiedDocuments.0.appendIdentity",
+          "manifest.modifiedDocuments.1.appendIdentity",
+          "manifest.appendSectionIdentity"
+        ],
+        "actual": {
+          "bytes": 5383,
+          "sha256": "eddc2210e634596479b044f5a82301f93f1f87b915c5de00594f6104b2f5e8b8",
+          "gitBlob": "04d599381ffaac944a82d36b9e17e9c13fb7b9c3"
+        },
+        "method": "Derived from complete identical actual document suffixes; not separate retained blob",
+        "passed": true
+      },
+      {
+        "pin": {
+          "gitBlob": "2894072ed49cbe582281a4e6ad48e1cc45767688",
+          "bytes": 73200,
+          "sha256": "913e4310cf465a94a56fb76e254a7e9047a28614d396b588b78b8614bd917a5e"
+        },
+        "paths": [
+          "manifest.modifiedDocuments.1.before"
+        ],
+        "actual": {
+          "bytes": 73200,
+          "sha256": "913e4310cf465a94a56fb76e254a7e9047a28614d396b588b78b8614bd917a5e",
+          "gitBlob": "2894072ed49cbe582281a4e6ad48e1cc45767688"
+        },
+        "method": "full current/accepted complete immutable body rehashed",
+        "passed": true
+      },
+      {
+        "pin": {
+          "gitBlob": "53b3a1c41dc3ffc458289f5a3adef416abd9ef87",
+          "bytes": 78583,
+          "sha256": "946dffd92f4f36e08f82ea560d8d08043f498765e405d2f3a850748bdab6ebf8"
+        },
+        "paths": [
+          "manifest.modifiedDocuments.1.after"
+        ],
+        "actual": {
+          "bytes": 78583,
+          "sha256": "946dffd92f4f36e08f82ea560d8d08043f498765e405d2f3a850748bdab6ebf8",
+          "gitBlob": "53b3a1c41dc3ffc458289f5a3adef416abd9ef87"
+        },
+        "method": "full current/accepted complete immutable body rehashed",
+        "passed": true
+      },
+      {
+        "pin": {
+          "gitBlob": "956cf8e3b7cb328de0bdf43936146adb71444a5c",
+          "bytes": 524540,
+          "sha256": "42466d768baf1d8eea69fb62e60d10a8ee464dc2932c536dbabae8cdc198bbfc"
+        },
+        "paths": [
+          "manifest.modifiedDocuments.2.before"
+        ],
+        "actual": {
+          "bytes": 524540,
+          "sha256": "42466d768baf1d8eea69fb62e60d10a8ee464dc2932c536dbabae8cdc198bbfc",
+          "gitBlob": "956cf8e3b7cb328de0bdf43936146adb71444a5c"
+        },
+        "method": "full current/accepted complete immutable body rehashed",
+        "passed": true
+      },
+      {
+        "pin": {
+          "gitBlob": "a4306c48a735176359a5e22f5907e440750860aa",
+          "bytes": 550343,
+          "sha256": "4cb5ea229f48fd75aecc0cd42c0de47128894b5fbc7d103dc6bf51381b66aba4"
+        },
+        "paths": [
+          "manifest.modifiedDocuments.2.after"
+        ],
+        "actual": {
+          "bytes": 550343,
+          "sha256": "4cb5ea229f48fd75aecc0cd42c0de47128894b5fbc7d103dc6bf51381b66aba4",
+          "gitBlob": "a4306c48a735176359a5e22f5907e440750860aa"
+        },
+        "method": "full current/accepted complete immutable body rehashed",
+        "passed": true
+      },
+      {
+        "pin": {
+          "gitBlob": "91f190fd22a5be75b65d637083f52636fb02bb8b",
+          "bytes": 3481,
+          "sha256": "bda2f1d6949052dcfc78abcd28dec24c5d7cce2c3a8abc1dcbb123e987e34da2"
+        },
+        "paths": [
+          "catalog.windowsSelectedPortRetryPairR1Stage.preservation.all13CurrentParityVector"
+        ],
+        "actual": {
+          "bytes": 3481,
+          "sha256": "bda2f1d6949052dcfc78abcd28dec24c5d7cce2c3a8abc1dcbb123e987e34da2",
+          "gitBlob": "91f190fd22a5be75b65d637083f52636fb02bb8b"
+        },
+        "method": "full current/accepted complete immutable body rehashed",
+        "passed": true
+      },
+      {
+        "pin": {
+          "gitBlob": "5286c036a63a14e98925711a224df202c9a7caa7",
+          "bytes": 29017,
+          "sha256": "ffd9bbb822dbdc30da7cb8daa881fcbebd384ba2bf9bdd87c804c511166fa02b"
+        },
+        "paths": [
+          "catalog.windowsSelectedPortRetryPairR1Stage.preservation.unchangedCurrentControls"
+        ],
+        "actual": {
+          "bytes": 29017,
+          "sha256": "ffd9bbb822dbdc30da7cb8daa881fcbebd384ba2bf9bdd87c804c511166fa02b",
+          "gitBlob": "5286c036a63a14e98925711a224df202c9a7caa7"
+        },
+        "method": "full current/accepted complete immutable body rehashed",
+        "passed": true
+      },
+      {
+        "pin": {
+          "gitBlob": "12f4a7b122843acea95e8c37f876917331842a4a",
+          "bytes": 22604,
+          "sha256": "ebb52ab95cdbf0ddc86ce44b534a3c7255c7e8454e5cadb2cbb83278daa53a0f"
+        },
+        "paths": [
+          "catalog.windowsSelectedPortRetryPairR1Stage.preservation.unchangedOwnerSelector"
+        ],
+        "actual": {
+          "bytes": 22604,
+          "sha256": "ebb52ab95cdbf0ddc86ce44b534a3c7255c7e8454e5cadb2cbb83278daa53a0f",
+          "gitBlob": "12f4a7b122843acea95e8c37f876917331842a4a"
+        },
+        "method": "full current/accepted complete immutable body rehashed",
+        "passed": true
+      },
+      {
+        "pin": {
+          "bytes": 57508,
+          "gitBlob": "ba917dc0650ef48acbaf5646059550accb42d237",
+          "sha256": "905ca483abf73b19c2efb60180d8f6bbdefc1e8d8e744aa1377f66ecaf212456"
+        },
+        "paths": [
+          "proposal.evidence.optimization"
+        ],
+        "actual": {
+          "bytes": 57508,
+          "sha256": "905ca483abf73b19c2efb60180d8f6bbdefc1e8d8e744aa1377f66ecaf212456",
+          "gitBlob": "ba917dc0650ef48acbaf5646059550accb42d237"
+        },
+        "method": "fresh complete immutable Git body",
+        "passed": true
+      },
+      {
+        "pin": {
+          "bytes": 82021,
+          "gitBlob": "4a8ee1f31e1ce056b06515e842ed0d68fb5ea917",
+          "sha256": "7a6dfd9d48f634d1e5434456ff4e787d0795baa01eecd092b2c6877025f352d3"
+        },
+        "paths": [
+          "proposal.evidence.originalFailure"
+        ],
+        "actual": {
+          "bytes": 82021,
+          "sha256": "7a6dfd9d48f634d1e5434456ff4e787d0795baa01eecd092b2c6877025f352d3",
+          "gitBlob": "4a8ee1f31e1ce056b06515e842ed0d68fb5ea917"
+        },
+        "method": "full current/accepted complete immutable body rehashed",
+        "passed": true
+      },
+      {
+        "pin": {
+          "bytes": 750631,
+          "gitBlob": "a5032a87abfe9c9a7a91227e31408993d6ee073a",
+          "sha256": "cf9c74713f42fbad360375ff883711a9b8baf8a434b8b39fd4beb412d6b635c9"
+        },
+        "paths": [
+          "proposal.evidence.originalReceipt"
+        ],
+        "actual": {
+          "bytes": 750631,
+          "sha256": "cf9c74713f42fbad360375ff883711a9b8baf8a434b8b39fd4beb412d6b635c9",
+          "gitBlob": "a5032a87abfe9c9a7a91227e31408993d6ee073a"
+        },
+        "method": "full current/accepted complete immutable body rehashed",
+        "passed": true
+      }
+    ],
+    "independentCount": 35,
+    "additionalEmbeddedLock": {
+      "pin": {
+        "bytes": 6127,
+        "sha256": "fa614f6dcc672b47342a838300f4c1c7b82ae0f05899c108af17838c58c53a87",
+        "gitBlob": "1757d79786da78e739a322e8bba81cd3dc88dcaa"
+      },
+      "locations": [
+        "newObservationPacket.separateProductLock.lock"
+      ],
+      "actual": {
+        "bytes": 6127,
+        "sha256": "fa614f6dcc672b47342a838300f4c1c7b82ae0f05899c108af17838c58c53a87",
+        "gitBlob": "1757d79786da78e739a322e8bba81cd3dc88dcaa"
+      },
+      "method": "Complete raw lock source body embedded in the new observation packet; root-tree anchored",
+      "passed": true
+    },
+    "unresolved": []
+  },
+  "actualBodyReadbacks": {
+    "currentCount": 20,
+    "currentBytes": 5941107,
+    "parentCount": 3,
+    "parentBytes": 3194231,
+    "exactDelta": {
+      "added": 17,
+      "modified": 3,
+      "deleted": 0
+    }
+  },
+  "preservation": {
+    "all53NonDocRootEntries": true,
+    "catalogOldFields": 87,
+    "catalogNewFields": 89,
+    "all27BundlesAndTotals": true,
+    "planStatusFullPrefixes": true,
+    "sourcePreimages": [
+      {
+        "path": "scripts/e2e/opencode-diagnostics/platform.mjs",
+        "mode": "100644",
+        "bytes": 12335,
+        "sha256": "32a6424daf52342445fd11febc7ea5d59fb1940209a677f063e5fcd5e65c8f2e",
+        "gitBlob": "71d5629149e8f499a45b54a99922145ee3cae09e"
+      },
+      {
+        "path": "scripts/e2e/opencode-diagnostics/platform.test.mjs",
+        "mode": "100644",
+        "bytes": 16835,
+        "sha256": "52ef1c0770d96f93e25c6b6166b2efc133381ff8bd34410543e0e69f3641a697",
+        "gitBlob": "d04bcf2af48a696c71821f0346d5abdc2807ce9c"
+      },
+      {
+        "path": "tools/owned-process-broker/nativeWindowsAppGate.mjs",
+        "mode": "100644",
+        "bytes": 37692,
+        "sha256": "03504561bde7c7db7456fba26b72eb8d9238b7a22a17e2a5f5d2bab7001ab0aa",
+        "gitBlob": "ad04222bf2e8e84fa96cc96f24aa6f9d4b284b6b"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-native-process-ui.test.ts",
+        "mode": "100644",
+        "bytes": 41888,
+        "sha256": "67dfdf895b1f45750cd87a979680432f5285b9debfe5dcf8a8fcb1409289d8e5",
+        "gitBlob": "076fbd26bac85c4195312a83c1ae78067a8d742e"
+      }
+    ],
+    "all13ParityVectorEntries": true,
+    "productionFiles": 5020,
+    "nonDocLeaves": 8799,
+    "workflows": 42,
+    "fileCap": 800,
+    "exceptions": 141
+  },
+  "authority": "This records the already-required root and independent actual R1 closure. It adds no new execution or review gate.",
+  "authorizedNext": "Root authors only B, A1 and their two selected test-file postimages against the exact four current preimages; exact source R2 reviews and actual publication readbacks precede any separately selected execution venue.",
+  "sourcePostimagesAuthored": false,
+  "runtimeAuthorized": false,
+  "runtimeExecuted": false,
+  "currentPr1219": {
+    "fixedSource": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+    "metadataAndSnapshotRefsFrozen": true,
+    "workingEvidenceBranchSeparate": true
+  },
+  "environment": "No usable local execution environment; no availability notice. No local read/write/stage/scope, target compilation or invocation.",
+  "qualification": "Documentation actual checks only. No Windows native performance, new whole14/8 test outcome, all-provider E2E, native custody, artifact ZIP or standalone RED/GREEN qualification.",
+  "selfReadbackProtocol": "After creation root fetches the complete immutable blob and compares all bytes, SHA256 and Git identity."
+}

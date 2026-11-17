@@ -1,0 +1,819 @@
+{
+  "schemaVersion": 1,
+  "kind": "WINDOWS_SELECTED_PORT_FINAL_RETRY_SOURCE_R2_SEMANTIC_REVIEW",
+  "reviewer": "/root/producer_r2_semantic",
+  "recordedAt": "2026-11-17 08:42:03 UTC",
+  "decision": "ACCEPT_EXACT_FOUR_POSTIMAGE_SOURCE_R2_STATIC_ONLY",
+  "subject": {
+    "bytes": 42133,
+    "sha256": "d4cd670c434e83a6b9cf215f031c1ad5b587f66a0eba7a04a37c3d41da887f1b",
+    "gitBlob": "b5538bd991246d7ac099db3403f13c2118546bb3"
+  },
+  "blockers": [],
+  "scope": {
+    "repository": "777genius/agent-teams-ai",
+    "rootSoleAuthorApplierExecutor": true,
+    "reviewActions": "Immutable Git reads, pure in-memory byte/identity comparisons and bare report retention only.",
+    "noTargetCompileImportEvaluation": true,
+    "noShellOrLocalRead": true,
+    "noRuntime": true,
+    "noLiveCiPolling": true,
+    "noRefPrCiMutation": true,
+    "noHypotheticalImplementation": "This accepts the four exact retained bodies below. Publication and runtime are separate from this source review.",
+    "newGate": false
+  },
+  "authority": {
+    "r1": {
+      "bytes": 25565,
+      "sha256": "06c9e63f24c25dcbd6a39df9c6ac3d0c34cf6fc402791ff9e0a2e7a857128ff5",
+      "gitBlob": "77e02e33a6db38b6083316f96c65cd02177354cb"
+    },
+    "r1SemanticReview": {
+      "gitBlob": "fc41c456218ebf1e9c528cb621d0f8c3a9fe6fa2",
+      "bytes": 35885,
+      "sha256": "0c96120b2225ce3ca1290b3c6da2e0fb8c739fee7f7c66af18e6d6dc970acfa7"
+    },
+    "currentAnchor": {
+      "commit": "d693c62d59c2bc6a6866dcc0293c111380ed88c5",
+      "root": "433024c7d4fcd1bafaac928e90bd4195ff025b6a",
+      "docs": "df613ae7d4f89f5aeb543a208fbc3388055a908d",
+      "parent": "65cd08dc15e3735cb579578d475938fd0a3fb135",
+      "scriptsTree": "c3f4fe5a62dd79a743b6ffc0d07341ac68a25f73",
+      "toolsTree": "9356c03e96405eb578158f06d6fdcbc89d105bd6",
+      "nonDocsEquivalentTo": "9d79abcf1f5c498687c2e5c443e3edf220070aa6"
+    },
+    "actualGate": {
+      "bytes": 32056,
+      "sha256": "5575685a2e92770fa70a999ff9e34f8de8b25f2fce9d524b108c2e956da78b2f",
+      "gitBlob": "27a1cd9204ccf9019a606c7835ddab4caf4797aa"
+    },
+    "gateVerdict": "ACCEPT_EXACT_R1_PUBLICATION_FOR_ROOT_AUTHORSHIP_OF_SELECTED_FOUR_POSTIMAGES_ONLY",
+    "gateClosedAt": "2026-11-17 08:30:59 UTC",
+    "rootAuthorshipAfter": "2026-11-17 08:33:13 UTC",
+    "gateRead": "Complete32056-byte gate freshly fetched, rehashed and fully read; exact subject, commit, four preimages, closed root/independent actual reports and permitted next action join the proposal.",
+    "gateActualReportLimit": "Their accepted full actual-publication closures are carried from the closed gate; this semantic source review does not claim a second fresh complete audit of all historical docs/pointers.",
+    "existingSequenceOnly": [
+      "Root and independent guard/semantic/binding reviews of this exact narrow R1, complete readbacks.",
+      "Publish only R1/evidence documentation with immediate push; full root and independent actual publication readbacks.",
+      "Root may then author only the selected four source/test postimages, exact inverses, before/after vectors and meaningful tests. No runtime is selected by source authorship.",
+      "Exact R2 source/body reviews and publication with immediate push; full root and independent actual readbacks.",
+      "A matching actually available authorized execution venue is selected separately, with full provider/event/workflow/source review as necessary. No automatic current PR1219 mutation, dispatch, new branches, standalone replay or alternative runtime."
+    ]
+  },
+  "completeBodies": [
+    {
+      "path": "scripts/e2e/opencode-diagnostics/platform.mjs",
+      "mode": "100644",
+      "before": {
+        "bytes": 12335,
+        "sha256": "32a6424daf52342445fd11febc7ea5d59fb1940209a677f063e5fcd5e65c8f2e",
+        "gitBlob": "71d5629149e8f499a45b54a99922145ee3cae09e"
+      },
+      "after": {
+        "bytes": 12389,
+        "sha256": "6e499f20f4bd2c27b7cf82b21a1f72fc548e79a18af9ef1f4a1bbdb6ee9c6c34",
+        "gitBlob": "c58df0899e23711e4367c0c1f9bf46570f794fb4"
+      },
+      "beforeRead": "Fresh full-body fetch/hash and literal equality with the completely read accepted R1 preimage; that prior complete read is reused.",
+      "afterRead": "Fresh full-body fetch/hash and complete postimage read.",
+      "afterLines": 312,
+      "wholeCases": null
+    },
+    {
+      "path": "scripts/e2e/opencode-diagnostics/platform.test.mjs",
+      "mode": "100644",
+      "before": {
+        "bytes": 16835,
+        "sha256": "52ef1c0770d96f93e25c6b6166b2efc133381ff8bd34410543e0e69f3641a697",
+        "gitBlob": "d04bcf2af48a696c71821f0346d5abdc2807ce9c"
+      },
+      "after": {
+        "bytes": 20830,
+        "sha256": "05197a044bf390abad3d4bbc55ffa8ef66035fa73bbfa36199b4b28685de3b26",
+        "gitBlob": "11c6c2fbd2f76471d0c78e35dea8636b278e6b72"
+      },
+      "beforeRead": "Fresh full-body fetch/hash and literal equality with the completely read accepted R1 preimage; that prior complete read is reused.",
+      "afterRead": "Fresh full-body fetch/hash and complete postimage read.",
+      "afterLines": 391,
+      "wholeCases": 14
+    },
+    {
+      "path": "tools/owned-process-broker/nativeWindowsAppGate.mjs",
+      "mode": "100644",
+      "before": {
+        "bytes": 37692,
+        "sha256": "03504561bde7c7db7456fba26b72eb8d9238b7a22a17e2a5f5d2bab7001ab0aa",
+        "gitBlob": "ad04222bf2e8e84fa96cc96f24aa6f9d4b284b6b"
+      },
+      "after": {
+        "bytes": 37970,
+        "sha256": "b5c17e7acccc63b40db707fa4f0aaf02b535b7c45da11f6fc21c8ac8f37133cb",
+        "gitBlob": "62056c6c2d45e1b51f34fd572cf3614e1eff93a3"
+      },
+      "beforeRead": "Fresh full-body fetch/hash and literal equality with the completely read accepted R1 preimage; that prior complete read is reused.",
+      "afterRead": "Fresh full-body fetch/hash and complete postimage read.",
+      "afterLines": 653,
+      "wholeCases": null
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-native-process-ui.test.ts",
+      "mode": "100644",
+      "before": {
+        "bytes": 41888,
+        "sha256": "67dfdf895b1f45750cd87a979680432f5285b9debfe5dcf8a8fcb1409289d8e5",
+        "gitBlob": "076fbd26bac85c4195312a83c1ae78067a8d742e"
+      },
+      "after": {
+        "bytes": 50377,
+        "sha256": "cbfbf6f7607913c84a8d1d7c2ab2889ab37949f944183a8deea02a70081535ac",
+        "gitBlob": "b4bbd33777a065e21eed91d6997e36c1570003cd"
+      },
+      "beforeRead": "Fresh full-body fetch/hash and literal equality with the completely read accepted R1 preimage; that prior complete read is reused.",
+      "afterRead": "Fresh full-body fetch/hash and complete postimage read.",
+      "afterLines": 745,
+      "wholeCases": 8
+    }
+  ],
+  "wholeByteVerification": {
+    "beforeBytes": 108750,
+    "afterBytes": 121566,
+    "totalAddedBytes": 12816,
+    "method": "Remove each exact appended suffix if selected, reverse its one exact substitution if selected, then require literal equality of the whole preimage. Independently construct the selected forward string and require whole postimage equality. No target source is executed.",
+    "results": [
+      {
+        "path": "scripts/e2e/opencode-diagnostics/platform.mjs",
+        "beforeFullReadReused": true,
+        "oldLiteralOccurrences": 1,
+        "newLiteralOccurrences": 1,
+        "appendMatch": true,
+        "appendIdentity": null,
+        "inverseLiteralMatch": true,
+        "forwardLiteralMatch": true,
+        "prefixMatch": null,
+        "beforeLines": 312,
+        "afterLines": 312,
+        "originalCaseCount": 0,
+        "resultCaseCount": 0
+      },
+      {
+        "path": "scripts/e2e/opencode-diagnostics/platform.test.mjs",
+        "beforeFullReadReused": true,
+        "oldLiteralOccurrences": 1,
+        "newLiteralOccurrences": 1,
+        "appendMatch": true,
+        "appendIdentity": {
+          "bytes": 3939,
+          "sha256": "1728b692431373fc162cc3354194af55776b179f3683cbf0267a9127a432d249",
+          "gitBlob": "b634cb443361cb18f9ee15a1f204b2ae0dfc686d"
+        },
+        "inverseLiteralMatch": true,
+        "forwardLiteralMatch": true,
+        "prefixMatch": null,
+        "beforeLines": 331,
+        "afterLines": 391,
+        "originalCaseCount": 12,
+        "resultCaseCount": 14
+      },
+      {
+        "path": "tools/owned-process-broker/nativeWindowsAppGate.mjs",
+        "beforeFullReadReused": true,
+        "oldLiteralOccurrences": 1,
+        "newLiteralOccurrences": 1,
+        "appendMatch": true,
+        "appendIdentity": null,
+        "inverseLiteralMatch": true,
+        "forwardLiteralMatch": true,
+        "prefixMatch": null,
+        "beforeLines": 647,
+        "afterLines": 653,
+        "originalCaseCount": 0,
+        "resultCaseCount": 0
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-native-process-ui.test.ts",
+        "beforeFullReadReused": true,
+        "oldLiteralOccurrences": 0,
+        "newLiteralOccurrences": 0,
+        "appendMatch": true,
+        "appendIdentity": {
+          "bytes": 8489,
+          "sha256": "33ee56e5f4b7dc09a089c8d3147a4acca7562af102fa4817dc0c0db918c5b071",
+          "gitBlob": "7023532a0df8c077c179dc5b7c555a2df355777d"
+        },
+        "inverseLiteralMatch": true,
+        "forwardLiteralMatch": true,
+        "prefixMatch": true,
+        "beforeLines": 620,
+        "afterLines": 745,
+        "originalCaseCount": 7,
+        "resultCaseCount": 8
+      }
+    ],
+    "derivedAppendPins": "The3939-byte platform suffix and8489-byte UI suffix hashes are derived identities, explicitly not separately retained blobs.",
+    "globalPublicationLimit": "The proposed four-file delta has no additional bytes in these files. Global tree/census and other-leaf preservation are the publication contract and accepted before-tree basis; this bare source review does not claim a future commit already exists."
+  },
+  "B": {
+    "sourcePath": "scripts/e2e/opencode-diagnostics/platform.mjs",
+    "line": 11,
+    "exactSourceLiteral": "  `Get-CimInstance -Namespace 'Root\\\\StandardCimv2' -ClassName MSFT_NetTCPConnection -Filter \"LocalPort = ${port} AND State = 2\" | Select-Object -ExpandProperty OwningProcess`;",
+    "emittedSpecification": "Get-CimInstance -Namespace 'Root\\StandardCimv2' -ClassName MSFT_NetTCPConnection -Filter \"LocalPort = ${port} AND State = 2\" | Select-Object -ExpandProperty OwningProcess",
+    "decoding": "Only the source string's doubled backslash was decoded as data for comparison. No template/function/module was evaluated.",
+    "selection": "One local Get-CimInstance query uses explicit Root\\StandardCimv2/MSFT_NetTCPConnection with LocalPort=the already validated supplied integer and State=2. It projects every OwningProcess without address-family, local-address, owner or PID restriction.",
+    "callers": "The original listeners(port) and windowsProcessListenerSnapshot(port,execute) both use this one template. The complete Win32_Process census remains unchanged; combined reads still use one fresh interpreter, processes first and listeners second.",
+    "identityAndOrdering": "Controller/driver/Main PID,birth,parent,lineage/orphan checks are unchanged. Querying an owner PID is not retained signal authority. One ordered interpreter is not an atomic OS snapshot.",
+    "errors": "The original PowerShell wrapper retains NoProfile,NonInteractive,EncodedCommand,global ErrorActionPreference=Stop,30000ms subprocess timeout. Any thrown error reaches the caller before JSON/owner parsing. No partial stdout acceptance, error-to-empty, suppressed stderr, fallback, retry, cached process side or persistent interpreter.",
+    "empty": "A successful complete zero-record query still emits no owners. Existing string-envelope handling and parseListeners yield[]. Active ownership rejects an empty list; availability/drain keep their original independent empty meaning.",
+    "malformed": "Strict envelope object, exact keys, string types, JSON validity and positive-integer listener parsing remain literal. Duplicate PIDs deduplicate; distinct foreign owners remain present and are refused by existing authority checks.",
+    "unselected": "windowsCleanupEvidence's separate all-state9222 query is unchanged. The current change does not alter its meaning or claim to test it through the new two injected cases.",
+    "limit": "The documented CIM schema supports the requested predicate. Source and injected tests do not establish actual provider enumeration, IPv4/IPv6 output, permission/error implementation, speed or current Windows recovery. Synchronous PowerShell can still return after the phase budget; original post-return phase checks remain authoritative."
+  },
+  "A1": {
+    "sourcePath": "tools/owned-process-broker/nativeWindowsAppGate.mjs",
+    "exactOldFragment": "  for (const row of original.rows) {\n    const owner = object(await ui.waitRead(processOwner(row), 'same original process refs after Retry', remaining()));\n    assert.deepEqual(owner.process, { ...row, observation: 'same-live', canTerminate: true });\n  }\n",
+    "exactNewFragment": "  const retryRows = await ui.waitRead('(() => { const rows=[' +\n    original.rows.map(row => processOwner(row)).join(',') +\n    ']; return rows.every(Boolean) ? rows : null; })()',\n  'same original process refs after Retry', remaining());\n  assert.ok(Array.isArray(retryRows));\n  assert.equal(retryRows.length, original.rows.length);\n  for (const [index, row] of original.rows.entries()) {\n    const owner = object(retryRows[index]);\n    assert.deepEqual(owner.process, { ...row, observation: 'same-live', canTerminate: true });\n  }\n",
+    "location": {
+      "query": {
+        "offset": 599,
+        "line": 10,
+        "occurrences": 1
+      },
+      "finalPair": {
+        "offset": 32048,
+        "line": 546,
+        "occurrences": 1
+      },
+      "bindingBeforePair": {
+        "offset": 31913,
+        "line": 543,
+        "occurrences": 1
+      },
+      "sameMainAfterPair": {
+        "offset": 32581,
+        "line": 556,
+        "occurrences": 1
+      },
+      "platformAppend": {
+        "offset": 16890,
+        "line": 333,
+        "occurrences": 1
+      },
+      "nativeAppend": {
+        "offset": 41889,
+        "line": 622,
+        "occurrences": 1
+      }
+    },
+    "beforeContext": "The actual one Retry click and original ready wait complete first, followed by originalBinding(), within(fixture.afterRetry(activeDeadline)) once and the public readProcesses() once. The new pair is exactly between that public assignment and sameMainAfterRetry.",
+    "expression": "The same original processOwner(row) calls are concatenated into one synchronous array evaluation, returning that array only when every entry is truthy. No source/Host mutation or extra input is introduced.",
+    "consumer": "Array type and original.rows.length are asserted, then each indexed entry is object-checked and its entire process object deep-compared with the corresponding original row plus same-live/canTerminate:true in original order. The normal two-row path still performs both comparisons.",
+    "controlledChange": "For an immediately available pair, two former waits/remaining calls/ownership samples become one wait with one remaining call and one original per-poll guard. If unavailable, each later poll keeps its own fresh guard. The original absolute phase cutoff is not renewed.",
+    "selectorLimits": "The unchanged selector scans the selected Processes section and fiber/alternate props for exact selection,id,original ref; it accepts exactly one matching row within a candidate props array. Pairing means one evaluation, not one globally unique fiber, one committed React tree or an atomic OS/Host observation.",
+    "deadlines": "Current controls5286 compute the supplied deadline, guard before each evaluate, reject a fulfilled value at/after expiry before readiness and retain100ms cadence and only original transient-context retries. The new consumer does not cancel pending CDP work or turn a late pair into success.",
+    "unchanged": "All original seven Retry click ownership boundaries, one physical Retry, native/public binding checks, ready six-field validator, sameMain check,screenshot,two original UI Kills,ordinary Quit,source/input freeze and cleanup remain byte-identical.",
+    "limit": "This does not repair the earlier ARM Host-exit/Refresh boundary. Any benefit from fewer final observation calls or selected-port querying remains unmeasured."
+  },
+  "tests": {
+    "platform": {
+      "beforeCases": 12,
+      "afterCases": 14,
+      "originalOnlyEdit": "One existing expected listener-query literal.",
+      "appendLines": 60,
+      "appendBytes": 3939,
+      "originalTitles": [
+        "test('OS process and listener output parsing fails closed', () => {",
+        "test('one fresh Windows interpreter retains ordered original process and listener observations', () => {",
+        "test('combined Windows observations reject malformed envelopes and preserve executor failure', () => {",
+        "test('ownership rejects stale launchers, reused child PIDs and unrelated listeners', () => {",
+        "test('native shims quote absolute paths with spaces and reject expansion syntax', () => {",
+        "test('isolated CDP port stays bound to the selected dev launcher', async () => {",
+        "test('environment drops inherited provider/config and runtime overrides', () => {",
+        "test('real fixture permits diagnostic queries only, and Unix shim handles spaces', async () => {",
+        "test('timeout fixture stays live until its owning test terminates it', async () => {",
+        "test('Windows cleanup evidence retains current PID through independent read-only queries', { skip: process.platform !== 'win32' }, () => {",
+        "test('Windows phase observations use the original phase clocks and cannot bypass admission', () => {",
+        "test('Windows census observations preserve original results, refusals and bounded diagnostics', () => {"
+      ],
+      "addedTitles": [
+        "test('selected Windows port query retains complete fresh process and owner observations', () => {",
+        "test('Windows listener executor failures never admit partial output or fall back', () => {"
+      ],
+      "semantics": [
+        "Actual windowsProcessListenerSnapshot runs with default9222 and nondefault43127; its complete generated script is compared, including the unchanged process query and ordering.",
+        "Four complete changing results exercise duplicate owned PIDs, mixed foreign owners, reused child birth and foreign-only ownership through actual parsing and ownership exports.",
+        "Three original error objects carry complete or partial stdout plus stderr/status, or timeout signal/code. The test requires exactly one call, exact error identity and preserved enumerable fields; no result is accepted.",
+        "Existing empty-success, invalid port before acquisition, malformed envelope/PID, stale/reused identities and native/fixture cases stay intact."
+      ],
+      "staticPrediction": "The existing exact old-query expectation must change with B; the first appended wiring case discriminates the old query. The second error case preserves the old failure contract. None was executed here.",
+      "limit": "Exact command text is wiring evidence, not a native CIM performance or address-family proof. Whole14 remains unexecuted and absent from current selected Draft unit commands."
+    },
+    "nativeUi": {
+      "beforeCases": 7,
+      "afterCases": 8,
+      "originalPrefixBytes": 41888,
+      "originalPrefixLines": 620,
+      "appendBytes": 8489,
+      "appendLines": 125,
+      "totalLines": 745,
+      "timeoutMs": 5000,
+      "originalTitles": [
+        "test('post-Stop observer continues past stale original and pending alternate to fresh stopped props', () => {",
+        "test('initial original-ref observation remains exact and cannot select a replacement ref', () => {",
+        "test('background acceptance waits for atomic service publication without masking corrupt readiness', async () => {",
+        "test('captured no-provider Processes fixture rejects mixed inputs before allocating and seeds no Runtime', {",
+        "test('Windows outage membership requires both original process owners in one renderer sample', async () => {",
+        "test('Windows Retry retains same-evaluation operands without changing the original wait', async () => {",
+        "test('Windows primary failure is emitted once before cleanup without replacing the original error', async () => {"
+      ],
+      "addedTitle": "test('Windows final Retry requires both complete original rows in one current sample', { timeout: 5000 }, async () => {",
+      "actualNewSeam": "The test reads the actual nativeWindowsAppGate source, requires each boundary anchor exactly once and extracts the actual final block. It also extracts the unchanged actual processOwner wrapper and calls the actual imported desktopProcessOwnerExpression and createDesktopUiControls. It does not import the executable gate or run its setup.",
+      "counterfactual": {
+        "exactPinnedOldLoop": true,
+        "identity": {
+          "bytes": 255,
+          "sha256": "7aaeee083bac07f979b343d5e9d9aa1fb6eb9f4dc130e372c7cc360db392a31c",
+          "gitBlob": "682c9fc427db290816452d26c68140cb15477002"
+        },
+        "derivedNotSeparatelyRetained": true,
+        "method": "Decoded only the three quoted counterfactual string fragments as data and compared their concatenation to the exact255-byte preimage. No Function/eval/import of target code occurred in this review."
+      },
+      "frameOwnership": "The fake renderer selects its frame once inside evaluate before evaluating either selector. Both querySelector calls see the same section/frame. Each scenario creates independent counters/controls; document,Date and production globals are not modified.",
+      "cases": [
+        {
+          "scenario": "Primary-only then neighbor-only",
+          "oldPrediction": "Two real-control waits accept their separate rows and make both full assertions.",
+          "newPrediction": "Each pair evaluates null; the third finite evaluate throws the exact unavailable sentinel. One wait,three reads/guards,one remaining call,zero comparisons."
+        },
+        {
+          "scenario": "Both originals together",
+          "newPrediction": "One wait/read/guard/remaining call; exactly two complete comparisons in original order."
+        },
+        {
+          "scenario": "Primary-only,neighbor-only,then both",
+          "newPrediction": "Reach the third pair sample; same complete comparisons; no early split-frame success."
+        },
+        {
+          "scenario": "Foreign team,wrong id,either replacement ref,either duplicate,empty props",
+          "newPrediction": "Original selector returns an unavailable operand; finite next evaluate refuses. Duplicate semantics remain per candidate props array."
+        },
+        {
+          "scenario": "Matching id/ref but changed neighbor pid,label,registeredAt,observation,canTerminate",
+          "newPrediction": "First full row comparison passes; the second whole-value comparison fails, with its original expected row retained."
+        },
+        {
+          "scenario": "Ownership guard failure",
+          "newPrediction": "One wait,one remaining,one guard;zero evaluate/input."
+        },
+        {
+          "scenario": "remaining() failure",
+          "newPrediction": "One remaining call;zero wait/guard/evaluate/input."
+        },
+        {
+          "scenario": "Renderer evaluation error",
+          "newPrediction": "Same original nontransient error identity propagates."
+        },
+        {
+          "scenario": "Pair fulfilled after original cutoff",
+          "newPrediction": "Actual controls await60ms under30ms supplied budget, reject with original timeout text,one guard/read and zero consumed comparisons."
+        },
+        {
+          "scenario": "Malformed pair/owner injection",
+          "newPrediction": "Explicit direct wait-result injection bypasses the healthy expression to exercise array,length,object and full process assertions. It is not a claim that the actual paired DOM expression emits those malformed values."
+        }
+      ],
+      "boundedness": "False frames use the unchanged100ms cadence then a finite sentinel. The ordinary synthetic budget is2000ms; the sole delayed evaluate is60ms under30ms. The appended whole test timeout is5000ms and its125lines are below the180line allowance. All sends are refused and step counters stay zero. No global mock/clock restoration is needed because none is installed.",
+      "staticOnly": "The complete test body and counterfactual have been read, not executed. This report predicts the intended discrimination; it does not claim old RED,new GREEN or whole8 PASS.",
+      "unchangedOldScope": "All old seven cases, imports and captured no-provider fixture skip are literal. Existing source-slice outage/readiness/failure tests remain separate and unchanged. Whole-file eager dependency and actual native-fixture requirements are not removed."
+    }
+  },
+  "preservation": {
+    "helperPins": {
+      "controls": {
+        "bytes": 29017,
+        "sha256": "ffd9bbb822dbdc30da7cb8daa881fcbebd384ba2bf9bdd87c804c511166fa02b",
+        "gitBlob": "5286c036a63a14e98925711a224df202c9a7caa7"
+      },
+      "ownerSelector": {
+        "bytes": 22604,
+        "sha256": "ebb52ab95cdbf0ddc86ce44b534a3c7255c7e8454e5cadb2cbb83278daa53a0f",
+        "gitBlob": "12f4a7b122843acea95e8c37f876917331842a4a"
+      }
+    },
+    "parityVector": {
+      "bytes": 3481,
+      "sha256": "bda2f1d6949052dcfc78abcd28dec24c5d7cce2c3a8abc1dcbb123e987e34da2",
+      "gitBlob": "91f190fd22a5be75b65d637083f52636fb02bb8b"
+    },
+    "all13PathsOutsideEdits": true,
+    "whole149": "12c73fbc683dc297033bd8b6472e9dbee60b9b8a remains unchanged; original139prefix+10.",
+    "whole43": "6cf34a11e7a1bc6f33208bad00adb57ee5656cd6 remains unchanged.",
+    "whole85": "76495189c992fcda47cd7a43a0c697190b5acbb3 remains unchanged.",
+    "budgets": {
+      "phaseMs": 10000,
+      "controllerMs": 120000,
+      "javascriptOuterMs": 300000,
+      "powershellMs": 30000,
+      "genericWaitMs": 30000,
+      "pollMs": 100,
+      "change": false
+    },
+    "providerLimit": "No real Claude/Codex,including version probes. No provider/runtime/workflow/dependency change.",
+    "existingCounts": {
+      "nonDocLeaves": 8799,
+      "production": 5020,
+      "exceptions": 141,
+      "sourceCap": 800,
+      "workflows": 42
+    },
+    "currentCi": "PR1219 remains fixed9d and cannot qualify these four future bodies. No polling was performed. The proposal's observation4 run list is a retained snapshot, not a new live-status assertion.",
+    "separateOutcomes": "Whole14/8,nativeWindows query/performance/10s recovery,149/43/85,exactNode24.22.1 standalone,DarwinP09,cold-renderer,ordinary native cleanup and full E2E are distinct. No new result is inferred.",
+    "publication": "Exact reviewed source-only bodies may proceed through the existing root publication and root/independent actual-readback sequence. Future execution requires its existing separately selected available venue; this review adds no gate or automatic action."
+  },
+  "assemblyNote": "Proposal discloses a pure-data string-builder error before postimage creation, corrected without source/external effect. The reviewed retained bodies and exact inverses are the acceptance subject; no target code was evaluated to repair or verify them.",
+  "checkCount": 38,
+  "checks": [
+    {
+      "id": 1,
+      "name": "Exact complete b5538 source proposal read and rehashed",
+      "result": "PASS_STATIC",
+      "evidence": {
+        "bytes": 42133,
+        "sha256": "d4cd670c434e83a6b9cf215f031c1ad5b587f66a0eba7a04a37c3d41da887f1b",
+        "gitBlob": "b5538bd991246d7ac099db3403f13c2118546bb3"
+      }
+    },
+    {
+      "id": 2,
+      "name": "Exact accepted R1 is the full previously read77e02 body",
+      "result": "PASS_STATIC",
+      "evidence": {
+        "bytes": 25565,
+        "sha256": "06c9e63f24c25dcbd6a39df9c6ac3d0c34cf6fc402791ff9e0a2e7a857128ff5",
+        "gitBlob": "77e02e33a6db38b6083316f96c65cd02177354cb"
+      }
+    },
+    {
+      "id": 3,
+      "name": "Closed27a1 actual gate precedes root source authorship",
+      "result": "PASS_STATIC",
+      "evidence": {
+        "gate": {
+          "bytes": 32056,
+          "sha256": "5575685a2e92770fa70a999ff9e34f8de8b25f2fce9d524b108c2e956da78b2f",
+          "gitBlob": "27a1cd9204ccf9019a606c7835ddab4caf4797aa"
+        },
+        "closedAt": "2026-11-17 08:30:59 UTC",
+        "authoredAfter": "2026-11-17 08:33:13 UTC",
+        "anchor": "d693c62d59c2bc6a6866dcc0293c111380ed88c5"
+      }
+    },
+    {
+      "id": 4,
+      "name": "All eight complete before/after source bodies independently rehashed",
+      "result": "PASS_STATIC",
+      "evidence": {
+        "beforeBytes": 108750,
+        "afterBytes": 121566
+      }
+    },
+    {
+      "id": 5,
+      "name": "Fresh complete preimages literally equal the accepted full R1 reads",
+      "result": "PASS_STATIC",
+      "evidence": {
+        "files": 4,
+        "reusedFullReads": true
+      }
+    },
+    {
+      "id": 6,
+      "name": "All four complete postimages read",
+      "result": "PASS_STATIC",
+      "evidence": {
+        "files": 4,
+        "bytes": 121566
+      }
+    },
+    {
+      "id": 7,
+      "name": "Whole-byte forward and inverse edits recover every original byte",
+      "result": "PASS_STATIC",
+      "evidence": {
+        "files": 4,
+        "unexpectedDelta": false
+      }
+    },
+    {
+      "id": 8,
+      "name": "Only selected four paths and original modes are proposed",
+      "result": "PASS_STATIC",
+      "evidence": {
+        "mode": "100644",
+        "noAddDeleteRename": true
+      }
+    },
+    {
+      "id": 9,
+      "name": "All four postimages remain within their selected line caps",
+      "result": "PASS_STATIC",
+      "evidence": {
+        "platform": 312,
+        "platformTests": 391,
+        "nativeGate": 653,
+        "nativeUiTests": 745,
+        "cap": 800
+      }
+    },
+    {
+      "id": 10,
+      "name": "Actual JavaScript escaping produces the selected PowerShell namespace",
+      "result": "PASS_STATIC",
+      "evidence": {
+        "namespace": "Root\\StandardCimv2",
+        "sourceHasTwoBackslashes": true,
+        "noTargetEvaluation": true
+      }
+    },
+    {
+      "id": 11,
+      "name": "Query keeps supplied validated port, ListenState2 and only owner projection",
+      "result": "PASS_STATIC",
+      "evidence": {
+        "local": true,
+        "noOwnerAddressFamilyFilter": true
+      }
+    },
+    {
+      "id": 12,
+      "name": "Whole original Win32_Process query and ordered fresh invocation unchanged",
+      "result": "PASS_STATIC",
+      "evidence": {
+        "processBeforeListener": true,
+        "noCache": true,
+        "noAtomicityClaim": true
+      }
+    },
+    {
+      "id": 13,
+      "name": "All returned owners remain visible; only duplicate PIDs deduplicate",
+      "result": "PASS_STATIC",
+      "evidence": {
+        "foreignOwnersRefusedByOriginalConsumers": true
+      }
+    },
+    {
+      "id": 14,
+      "name": "Successful empty output remains distinct from malformed envelopes",
+      "result": "PASS_STATIC",
+      "evidence": {
+        "activeOwnershipRejectsEmpty": true,
+        "availabilityDrainSemanticsUnchanged": true
+      }
+    },
+    {
+      "id": 15,
+      "name": "Interpreter failure propagates before parsing partial output",
+      "result": "PASS_STATIC",
+      "evidence": {
+        "globalErrorActionStop": true,
+        "sameThrownError": true,
+        "noFallbackOrRetry": true
+      }
+    },
+    {
+      "id": 16,
+      "name": "A1 edit and test extraction have unique original final-row anchors",
+      "result": "PASS_STATIC",
+      "evidence": {
+        "offset": 32048,
+        "line": 546,
+        "occurrences": 1
+      }
+    },
+    {
+      "id": 17,
+      "name": "Actual paired expression reuses the existing outage composition",
+      "result": "PASS_STATIC",
+      "evidence": {
+        "oneEvaluation": true,
+        "originalOwnerWrapper": true
+      }
+    },
+    {
+      "id": 18,
+      "name": "Shape, length and both complete ordered row comparisons retained",
+      "result": "PASS_STATIC",
+      "evidence": {
+        "expected": "{...row,observation:'same-live',canTerminate:true}",
+        "notIdentityOnly": true
+      }
+    },
+    {
+      "id": 19,
+      "name": "Final row proof remains after binding, native and public reads",
+      "result": "PASS_STATIC",
+      "evidence": {
+        "beforeLines": "543-545",
+        "pairLines": "546-555",
+        "sameMainLine": 556
+      }
+    },
+    {
+      "id": 20,
+      "name": "Actual owner selector remains byte-identical and has its original scope",
+      "result": "PASS_STATIC",
+      "evidence": {
+        "bytes": 22604,
+        "sha256": "ebb52ab95cdbf0ddc86ce44b534a3c7255c7e8454e5cadb2cbb83278daa53a0f",
+        "gitBlob": "12f4a7b122843acea95e8c37f876917331842a4a"
+      }
+    },
+    {
+      "id": 21,
+      "name": "Actual controls keep per-poll ownership, post-await cutoff and cadence",
+      "result": "PASS_STATIC",
+      "evidence": {
+        "bytes": 29017,
+        "sha256": "ffd9bbb822dbdc30da7cb8daa881fcbebd384ba2bf9bdd87c804c511166fa02b",
+        "gitBlob": "5286c036a63a14e98925711a224df202c9a7caa7"
+      }
+    },
+    {
+      "id": 22,
+      "name": "All original Retry click/input guards remain literal",
+      "result": "PASS_STATIC",
+      "evidence": {
+        "normalStablePathGuards": 7,
+        "noInputCallChanged": true
+      }
+    },
+    {
+      "id": 23,
+      "name": "Original phase budgets, sameMain, Stops and ordinary cleanup unchanged",
+      "result": "PASS_STATIC",
+      "evidence": {
+        "phaseMs": 10000,
+        "controllerMs": 120000,
+        "javascriptOuterMs": 300000,
+        "powershellMs": 30000,
+        "genericWaitMs": 30000,
+        "pollMs": 100,
+        "change": false
+      }
+    },
+    {
+      "id": 24,
+      "name": "All12 original platform cases retained with one expected-query literal update",
+      "result": "PASS_STATIC",
+      "evidence": {
+        "before": 12,
+        "after": 14
+      }
+    },
+    {
+      "id": 25,
+      "name": "Two appended platform cases exercise actual exports and failure identity",
+      "result": "PASS_STATIC",
+      "evidence": {
+        "newCases": 2,
+        "defaultAnd43127": true,
+        "partialOutputNoAcceptance": true
+      }
+    },
+    {
+      "id": 26,
+      "name": "Whole original7-case native UI body is a literal prefix",
+      "result": "PASS_STATIC",
+      "evidence": {
+        "bytes": 41888,
+        "lines": 620,
+        "afterCases": 8
+      }
+    },
+    {
+      "id": 27,
+      "name": "Old counterfactual is exactly the pinned255-byte preimage loop",
+      "result": "PASS_STATIC",
+      "evidence": {
+        "exact": true,
+        "derivedIdentity": {
+          "bytes": 255,
+          "sha256": "7aaeee083bac07f979b343d5e9d9aa1fb6eb9f4dc130e372c7cc360db392a31c",
+          "gitBlob": "682c9fc427db290816452d26c68140cb15477002"
+        },
+        "notSeparatelyRetained": true
+      }
+    },
+    {
+      "id": 28,
+      "name": "New regression executes the actual final block and current owner wrapper",
+      "result": "PASS_STATIC",
+      "evidence": {
+        "actualSliceExact": true,
+        "noCopiedNewAlgorithm": true
+      }
+    },
+    {
+      "id": 29,
+      "name": "Each controlled frame advances once per actual evaluate",
+      "result": "PASS_STATIC",
+      "evidence": {
+        "pairSelectorsShareFrame": true,
+        "noGlobalDocumentMutation": true
+      }
+    },
+    {
+      "id": 30,
+      "name": "Split/together/later-together predictions discriminate old acceptance",
+      "result": "PASS_STATIC",
+      "evidence": {
+        "staticOnly": true,
+        "actualControls": true
+      }
+    },
+    {
+      "id": 31,
+      "name": "Changed neighbor nonidentity fields reach the second whole-row assertion",
+      "result": "PASS_STATIC",
+      "evidence": {
+        "fields": [
+          "pid",
+          "label",
+          "registeredAt",
+          "observation",
+          "canTerminate"
+        ],
+        "firstComparisonPreserved": true
+      }
+    },
+    {
+      "id": 32,
+      "name": "Guard/cutoff/evaluation failures and actual late fulfilled result refuse",
+      "result": "PASS_STATIC",
+      "evidence": {
+        "lateDelayMs": 60,
+        "lateReadBudgetMs": 30,
+        "noConsumedLatePair": true
+      }
+    },
+    {
+      "id": 33,
+      "name": "Malformed pair tests are explicit consumer-boundary injections",
+      "result": "PASS_STATIC",
+      "evidence": {
+        "notClaimedHealthyExpressionOutputs": true
+      }
+    },
+    {
+      "id": 34,
+      "name": "New test is finite125lines and5000ms without global clock mocks",
+      "result": "PASS_STATIC",
+      "evidence": {
+        "appendLines": 125,
+        "totalLines": 745,
+        "timeoutMs": 5000,
+        "normalSyntheticReadBudgetMs": 2000
+      }
+    },
+    {
+      "id": 35,
+      "name": "Original imports, captured-fixture skip and whole-file runtime requirements preserved",
+      "result": "PASS_STATIC",
+      "evidence": {
+        "noNewImport": true,
+        "noStandaloneOrBuiltinOnlyClaim": true
+      }
+    },
+    {
+      "id": 36,
+      "name": "All13 current parity rows and149/43/85 remain outside the edit set",
+      "result": "PASS_STATIC",
+      "evidence": {
+        "bytes": 3481,
+        "sha256": "bda2f1d6949052dcfc78abcd28dec24c5d7cce2c3a8abc1dcbb123e987e34da2",
+        "gitBlob": "91f190fd22a5be75b65d637083f52636fb02bb8b"
+      }
+    },
+    {
+      "id": 37,
+      "name": "Current fixed9d CI and platform-unit coverage gap remain distinct",
+      "result": "PASS_STATIC",
+      "evidence": {
+        "pr": 1219,
+        "currentHead": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+        "currentJobsDoNotRunPlatformWhole14": true
+      }
+    },
+    {
+      "id": 38,
+      "name": "Source acceptance adds no runtime/native/performance qualification or gate",
+      "result": "PASS_STATIC",
+      "evidence": {
+        "targetExecution": false,
+        "sourceOnly": true,
+        "newGate": false
+      }
+    }
+  ],
+  "failedChecks": [],
+  "selfReadback": "Pending bare retention and immediate pin delivery, then full fetched literal/hash/parsed comparison and complete self-read without editing this body."
+}
