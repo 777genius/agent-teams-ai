@@ -28,6 +28,9 @@ function fixture(mode?: 'shared' | 'per_project') {
   const registry = {
     list: vi.fn(async () => [entry]),
     listRetained: vi.fn(async () => [] as (typeof entry)[]),
+    hasRetainedIndex: vi.fn(async () => mode === 'per_project'),
+    beginSoftDelete: vi.fn(async () => undefined),
+    cancelSoftDelete: vi.fn(async () => undefined),
   };
   return { meta, registry };
 }
@@ -109,6 +112,25 @@ describe('project team lifecycle projection', () => {
     expect(order).toEqual(['stop:ptc-a', 'trash:ptc-a', 'delete:builders']);
   });
 
+  it('prevents new reservations before an existing project is moved to trash', async () => {
+    const f = fixture('per_project');
+    let fenced = false;
+    f.registry.beginSoftDelete.mockImplementation(async () => { fenced = true; });
+    const result = await (await import('../../../src/main/ipc/teams/teamContextLifecycle'))
+      .deleteLogicalTeamWithContexts(
+        'builders',
+        async () => ({ success: true as const, data: undefined }),
+        async () => undefined,
+        async () => {
+          expect(fenced).toBe(true);
+          return { success: true as const, data: undefined };
+        },
+        f.meta, f.registry as never, async () => false
+      );
+    expect(result.success).toBe(true);
+    expect(f.registry.cancelSoftDelete).not.toHaveBeenCalled();
+  });
+
   it('does not soft-delete an unfinished project context', async () => {
     const f = fixture('per_project');
     f.registry.list.mockResolvedValue([{ ...entry, state: 'reserved' }]);
@@ -120,6 +142,7 @@ describe('project team lifecycle projection', () => {
     );
     expect(result.success).toBe(false);
     expect(perform).not.toHaveBeenCalled();
+    expect(f.registry.cancelSoftDelete).toHaveBeenCalledWith('builders');
   });
 
   it('deletes owned physical context first and logical definition last', async () => {
@@ -235,6 +258,7 @@ describe('project team lifecycle projection', () => {
     );
     expect(result.success).toBe(true);
     expect(actions).toEqual(['restore:ptc-a', 'restore:builders']);
+    expect(f.registry.cancelSoftDelete).toHaveBeenCalledWith('builders');
   });
 
   it('does not suppress healthy alive states when one team metadata is unreadable', async () => {

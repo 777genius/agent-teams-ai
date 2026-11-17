@@ -77,13 +77,23 @@ export async function deleteLogicalTeamWithContexts(
 ): Promise<IpcResult<void>> {
   if (typeof teamName !== 'string' || !teamName.trim()) return deleteLogical();
   try {
-    const contexts = await ownedHistoryContexts(teamName, meta, registry);
-    if (contexts.length === 0) return deleteLogical();
-    if (contexts.some((row) => row.state !== 'ready')) {
-      throw new Error('Cannot delete a team with an unreconciled project context');
+    const mode = await contextReader(meta, registry).getMode(teamName);
+    if (mode === 'shared' && !(await registry.hasRetainedIndex(teamName))) {
+      return deleteLogical();
     }
-    if (await hasActiveSchedules([teamName, ...contexts.map((c) => c.executionTeamName)])) {
-      throw new Error('Pause active schedules before moving the team to trash');
+    await registry.beginSoftDelete(teamName);
+    let contexts: Awaited<ReturnType<TeamProjectContextRegistry['list']>>;
+    try {
+      contexts = await ownedHistoryContexts(teamName, meta, registry);
+      if (contexts.some((row) => row.state !== 'ready')) {
+        throw new Error('Cannot delete a team with an unreconciled project context');
+      }
+      if (await hasActiveSchedules([teamName, ...contexts.map((c) => c.executionTeamName)])) {
+        throw new Error('Pause active schedules before moving the team to trash');
+      }
+    } catch (error) {
+      await registry.cancelSoftDelete(teamName);
+      throw error;
     }
     for (const context of contexts) {
       const stopped = await stopPhysical(context.executionTeamName);
@@ -204,14 +214,17 @@ export async function restoreLogicalTeamWithContexts(
   if (typeof teamName !== 'string' || !teamName.trim()) return restoreLogical();
   try {
     const contexts = await ownedHistoryContexts(teamName, meta, registry);
-    if (contexts.length === 0) return restoreLogical();
     if (contexts.some((row) => row.state !== 'ready')) {
       throw new Error('Cannot restore a team with an unreconciled project context');
     }
     for (const row of contexts) {
       await restorePhysical(row.executionTeamName);
     }
-    return restoreLogical();
+    const restored = await restoreLogical();
+    if (restored.success && await registry.hasRetainedIndex(teamName)) {
+      await registry.cancelSoftDelete(teamName);
+    }
+    return restored;
   } catch (error) {
     return { success: false, error: error instanceof Error ? error.message : String(error) };
   }
