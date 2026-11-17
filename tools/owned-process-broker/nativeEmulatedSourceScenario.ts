@@ -1,7 +1,7 @@
 /** TEST original Main source admission through Host/D and separately retained Windows Jobs. */
 import assert from 'node:assert/strict';
 import type { ChildProcess } from 'node:child_process';
-import { existsSync, lstatSync, readFileSync, writeFileSync } from 'node:fs';
+import { lstatSync, readFileSync, writeFileSync } from 'node:fs';
 import { mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { performance } from 'node:perf_hooks';
@@ -32,9 +32,13 @@ import { createNativeGateEvents } from './nativeGateEvents';
 import { fileHash } from './nativeEmulatedProfile';
 import { finiteSourceProbe, prepareEmulatedSourceProfile } from './nativeEmulatedSourceProfile';
 import { nativeEmulatedSourceCold } from './nativeEmulatedSourceCold';
-import { readEmulatedSourceActionProbe, observeEmulatedSourcePeerReadiness } from './nativeEmulatedSourceReadiness';
+import { readEmulatedSourceActionProbe, observeEmulatedSourcePeerReadiness,
+  readEmulatedCodexReadinessObservation, readEmulatedSourceJournal as journal,
+  validateEmulatedSourceRefusal, unwrapEmulatedSourceResult as unwrap,
+  type EmulatedSourceCustodyTiming as CustodyTiming } from './nativeEmulatedSourceReadiness';
 
-import type { HostCustodyOwner, RuntimeSourceProcessOrigin } from '@agent-teams/legacy-agent-host/owned-process';
+import { sameOwner } from '@agent-teams/legacy-agent-host/owned-process';
+import type { HostCustodyOwner, ProcessOwner, RuntimeSourceProcessOrigin, TreeReceipt } from '@agent-teams/legacy-agent-host/owned-process';
 import type { RuntimeSourcePublishIntent, RuntimeSourceSummary } from '@agent-teams/legacy-agent-host/runtime-sources';
 import type { JsonValue } from '../../packages/legacy-agent-host/dist/contracts.js';
 import type { ScheduledRunInput } from '../../packages/legacy-agent-host/dist/composition/scheduledRunContracts.js';
@@ -46,17 +50,6 @@ const object = (raw: unknown): Record<string, unknown> => {
 const json = (raw: unknown): JsonValue => JSON.parse(JSON.stringify(raw)) as JsonValue;
 const text = (raw: unknown): string => { assert.equal(typeof raw, 'string'); return raw as string; };
 const rows = (raw: unknown): Record<string, unknown>[] => { assert.ok(Array.isArray(raw)); return raw.map(object); };
-const unwrap = (raw: unknown): Record<string, unknown> => {
-  const reply = object(raw); assert.equal(reply.ok, true, `TEST original Host refused: ${String(reply.code)}`);
-  return object(reply.value);
-};
-function journal(path: string): Record<string, unknown>[] {
-  if (!existsSync(path)) return [];
-  const stat = lstatSync(path); assert.ok(stat.isFile() && !stat.isSymbolicLink() && stat.size <= 1024 * 1024);
-  const value = readFileSync(path, 'utf8'); if (!value) return [];
-  assert.ok(value.endsWith('\n'));
-  return value.trimEnd().split('\n').map(line => object(JSON.parse(line)));
-}
 async function poll(check: () => Promise<boolean>, message: string, budget = 15000, absoluteDeadline?: number): Promise<void> {
   const deadline = absoluteDeadline ?? performance.now() + budget;
   for (;;) {
@@ -68,69 +61,12 @@ async function poll(check: () => Promise<boolean>, message: string, budget = 150
   }
 }
 function validateSourceRefusal(value: Record<string, unknown>, persisted: boolean) {
-  assert.ok(value && typeof value === 'object' && !Array.isArray(value) && [Object.prototype, null].includes(Object.getPrototypeOf(value)));
-  assert.ok(Object.getOwnPropertySymbols(value).length === 0 && Object.values(Object.getOwnPropertyDescriptors(value)).every(row => 'value' in row));
-  const hash = (raw: unknown) => typeof raw === 'string' && /^[a-f0-9]{64}$/.test(raw), clock = (raw: unknown) => typeof raw === 'number' && Number.isSafeInteger(raw) && raw >= 0;
-  const fields: Record<string, string> = { native: 'capability phase reason dispatched staged rootCaptured deadlineExpired',
-    consumer: 'actionDigest groupDigest bindingDigest consumerId phase reason cutoff observedAt currentCalls',
-    'opencode-open': 'bindingDigest phase reason',
-    reference: 'commandDigest contextDigest phase reason probeCutoff probeNow scopeCutoff scopeNow preparationCutoff preparationNow', limit: '' };
-  assert.ok(typeof value.kind === 'string' && Object.hasOwn(fields, value.kind));
-  const keys = fields[value.kind]; assert.ok(typeof keys === 'string'); assert.deepEqual(Object.keys(value).sort(), ['kind', ...keys.split(' ').filter(Boolean), ...(persisted ? ['ordinal'] : [])].sort());
-  if (persisted) assert.ok(typeof value.ordinal === 'number' && Number.isInteger(value.ordinal) && value.ordinal >= 1 && value.ordinal <= 65); if (value.kind === 'limit') { assert.equal(persisted, true); return; }
-  assert.ok(typeof value.phase === 'string' && typeof value.reason === 'string');
-  if (value.kind === 'native') {
-    assert.ok(typeof value.capability === 'string' && /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/.test(value.capability));
-    assert.ok('capture staging allocate launch-chunk launch-commit post-commit prepare post-prepare resume'.split(' ').includes(value.phase));
-    assert.ok('sealed current-false current-threw launch-deadline refused unknown result-mismatch preparation-failed'.split(' ').includes(value.reason));
-    assert.ok(['dispatched', 'staged', 'rootCaptured'].every(key => typeof value[key] === 'boolean'));
-    assert.equal(value.deadlineExpired, value.reason === 'launch-deadline' ? true : null);
-  } else if (value.kind === 'opencode-open') {
-    assert.ok(hash(value.bindingDigest)); assert.equal(value.reason, 'threw');
-    assert.ok('configuration server-launch native-ready startup-authority startup-configuration startup-delay session-authority session-create driver-readiness'.split(' ').includes(value.phase));
-  } else {
-    assert.ok(value.reason === 'held' || value.reason === 'threw'); const consumer = value.kind === 'consumer';
-    if (consumer) {
-      const timing = object(value.currentCalls);
-      assert.ok(timing && typeof timing === 'object' && !Array.isArray(timing) && [Object.prototype, null].includes(Object.getPrototypeOf(timing)));
-      assert.ok(Object.getOwnPropertySymbols(timing).length === 0 && Object.values(Object.getOwnPropertyDescriptors(timing)).every(row => 'value' in row));
-      assert.deepEqual(Object.keys(timing).sort(), ['count', 'lastMs', 'maxMs', 'totalMs', 'truncated', ...(Object.hasOwn(timing, 'regions') ? ['regions'] : [])].sort());
-      assert.ok(clock(timing.count) && (timing.count as number) <= 4096 && clock(timing.totalMs) && clock(timing.maxMs) && (timing.maxMs as number) <= (timing.totalMs as number));
-      assert.equal(typeof timing.truncated, 'boolean');
-      assert.ok(timing.lastMs === null || clock(timing.lastMs) && (timing.lastMs as number) <= (timing.maxMs as number));
-      if (timing.count === 0) assert.ok(timing.totalMs === 0 && timing.maxMs === 0 && timing.lastMs === null);
-      else if (!timing.truncated) assert.notEqual(timing.lastMs, null);
-      if (Object.hasOwn(timing, 'regions')) {
-        const regions = object(timing.regions);
-        assert.ok(regions && typeof regions === 'object' && !Array.isArray(regions) && [Object.prototype, null].includes(Object.getPrototypeOf(regions)));
-        assert.ok(Object.getOwnPropertySymbols(regions).length === 0 && Object.values(Object.getOwnPropertyDescriptors(regions)).every(row => 'value' in row));
-        const names = ['initialAuthority', 'readConsumer', 'reference', 'finalAuthority', ...(Object.hasOwn(regions, 'referenceAccountCount') ? ['referenceAccount', 'referenceAccountAuthority'] : [])];
-        assert.deepEqual(Object.keys(regions).sort(), names.flatMap(name => [name + 'Count', name + 'Ms']).sort());
-        for (const name of names) {
-          const count = regions[name + 'Count'], milliseconds = regions[name + 'Ms'];
-          assert.ok(clock(count) && (count as number) <= (timing.count as number) && clock(milliseconds) && (count !== 0 || milliseconds === 0));
-        }
-      }
-    }
-    assert.ok((consumer ? ['actionDigest', 'groupDigest', 'bindingDigest', 'consumerId'] : ['commandDigest', 'contextDigest']).every(key => hash(value[key])));
-    assert.ok((consumer ? 'initial-authority read-consumer identity continuation requirements cutoff reference equality final-authority' :
-      'read inspect admission target scope retired completion probe-expiry scope-cutoff preparation-expiry origin purpose readiness account projection').split(' ').includes(value.phase));
-    for (const [cutoff, now] of (consumer ? [['cutoff', 'observedAt']] : [['probeCutoff', 'probeNow'], ['scopeCutoff', 'scopeNow'], ['preparationCutoff', 'preparationNow']]) as [string, string][])
-      assert.ok(value[cutoff] === null ? value[now] === null : clock(value[cutoff]) && clock(value[now]));
-  }
+  validateEmulatedSourceRefusal(value, persisted);
 }
 
 type Witness = Awaited<ReturnType<typeof capturedQueryableWitness>>;
 type CustodyPhase = 'allocate' | 'prepare' | 'resume' | 'stop' | 'drain' | 'release';
 type StagingPhase = 'launch-chunk' | 'launch-commit';
-interface CustodyTiming {
-  calls: number;
-  settled: number;
-  returned: number;
-  totalMs: number;
-  firstStartMs: number | null;
-  lastEndMs: number | null;
-}
 const custodyTiming = (): CustodyTiming => ({
   calls: 0, settled: 0, returned: 0, totalMs: 0, firstStartMs: null, lastEndMs: null,
 });
@@ -143,6 +79,10 @@ const stagingTimings = (): Record<StagingPhase, CustodyTiming> => ({
 });
 export interface Job {
   capability: string;
+  allocatedOwner?: ProcessOwner;
+  noDispatchStops: Map<string, { receipt: TreeReceipt; attemptRef: string; drained: boolean }>;
+  noDispatchRelease?: { receiptRef: string; receipt: TreeReceipt; attemptRef: string };
+  cleanupEvidence?: Record<string, unknown>;
   timings: Record<CustodyPhase, CustodyTiming>;
   stagingTimings: Record<StagingPhase, CustodyTiming>;
   origin?: RuntimeSourceProcessOrigin;
@@ -196,6 +136,17 @@ export async function nativeEmulatedSourceScenario(sandbox: string, broker: stri
       attach(context) {
         const original = physical.attach(context);
         return { ...original, async handle(call) {
+          const allocatedOwner = (() => { try { return call.operation === 'allocate' ? {
+            teamIncarnation: call.owner.teamIncarnation, runId: call.owner.runId,
+            laneId: call.owner.laneId, processGeneration: call.owner.processGeneration,
+          } : undefined; } catch { return undefined; } })();
+          const cleanupBefore = (() => { try {
+            if (call.operation !== 'drain' && call.operation !== 'release') return undefined;
+            const job = jobs.find(value => value.capability === call.capability);
+            if (call.operation === 'drain') return { stops: [...(job?.noDispatchStops.values() ?? [])] };
+            const retained = job?.noDispatchStops.get(call.receiptRef);
+            return retained?.drained ? { released: { ...retained, receiptRef: call.receiptRef } } : undefined;
+          } catch { return undefined; } })();
           const preparation = call.operation === 'prepare'
             ? { phase: 'owner' as 'owner' | 'witness' | 'complete', started: performance.now() } : undefined;
           const phase = call.operation === 'allocate' || call.operation === 'prepare' ||
@@ -225,7 +176,8 @@ export async function nativeEmulatedSourceScenario(sandbox: string, broker: stri
             }
             if (call.operation === 'allocate') {
               assert.ok(jobs.length < 64 && !jobs.some(value => value.capability === call.capability));
-              jobs.push({ capability: call.capability, timings: timings!, stagingTimings: stagingTimings(),
+              jobs.push({ capability: call.capability, timings: timings!, stagingTimings: stagingTimings(), noDispatchStops: new Map(),
+                ...(result.operation === 'allocate' && result.state === 'allocated' && allocatedOwner ? { allocatedOwner } : {}),
                 ...(call.runtimeSourceOrigin ? { origin: structuredClone(call.runtimeSourceOrigin) } : {}),
                 resumed: false, stopped: false, drained: false, released: false, handleAbsent: false, threadEphemeral: [], wire: '' });
             }
@@ -247,6 +199,19 @@ export async function nativeEmulatedSourceScenario(sandbox: string, broker: stri
               if (job.root && job.witness && job.entryStart !== undefined && !job.handleAbsent)
                 job.entryEnd ??= entries().length;
             }
+            try {
+              if (call.operation === 'stop' && result.operation === 'stop' && result.state === 'confirmed' &&
+                result.receiptRef && result.receipt && job.allocatedOwner && sameOwner(result.receipt.owner, job.allocatedOwner) &&
+                result.receipt.attemptId === call.attemptRef && result.receipt.coverage === 'no-local-dispatch' && result.receipt.rootExited === false &&
+                !job.noDispatchStops.has(result.receiptRef) && job.noDispatchStops.size < 64)
+                job.noDispatchStops.set(result.receiptRef, { receipt: result.receipt, attemptRef: call.attemptRef, drained: false });
+              if (call.operation === 'drain' && result.operation === 'drain' && result.state === 'complete')
+                for (const retained of cleanupBefore?.stops ?? []) retained.drained = true;
+              if (call.operation === 'release' && result.operation === 'release' && result.state === 'released') {
+                const retained = cleanupBefore?.released;
+                if (retained) job.noDispatchRelease = retained;
+              }
+            } catch { /* Observation failure cannot replace the original native result or receipt authority. */ }
             if (call.operation.startsWith('service-')) counts.service++;
             if (provider === 'codex' && call.operation === 'write') {
               job.wire += Buffer.from(call.bytes, 'base64').toString('utf8');
@@ -308,16 +273,40 @@ export async function nativeEmulatedSourceScenario(sandbox: string, broker: stri
         available = false;
         for (const [jobSlot, job] of jobs.entries()) {
           try {
+            delete job.cleanupEvidence;
+            try {
+              const owner = job.allocatedOwner, released = job.noDispatchRelease, receipt = released?.receipt;
+              if (owner && released && receipt && sameOwner(owner, receipt.owner) &&
+                receipt.coverage === 'no-local-dispatch' && receipt.rootExited === false && receipt.attemptId === released.attemptRef &&
+                job.root === undefined && job.witness === undefined && job.entryStart === undefined && job.entryEnd === undefined &&
+                job.resumed === false && job.handleAbsent === false && job.stopped === true && job.drained === true && job.released === true &&
+                [job.timings.allocate.calls, job.timings.allocate.settled, job.timings.allocate.returned].every(value => value === 1) &&
+                [job.timings.prepare, job.timings.resume].every(value => value.calls === 0 && value.settled === 0 && value.returned === 0) &&
+                [physical.mainEpoch, job.capability, owner.teamIncarnation, owner.runId, owner.laneId, released.attemptRef,
+                  released.receiptRef, receipt.attemptId].every(value => typeof value === 'string' && /^[A-Za-z0-9._:-]{1,128}$/.test(value)) &&
+                typeof owner.processGeneration === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(owner.processGeneration) &&
+                typeof receipt.proofDigest === 'string' && /^[0-9a-f]{64}$/.test(receipt.proofDigest)) {
+                const cleanupEvidence = { kind: 'confirmed-no-local-dispatch', mainEpoch: physical.mainEpoch, capability: job.capability,
+                  allocatedOwner: { ...owner }, stop: { state: 'confirmed', attemptRef: released.attemptRef, receiptRef: released.receiptRef,
+                    receipt: { owner: { ...owner }, attemptId: receipt.attemptId, coverage: receipt.coverage,
+                      rootExited: receipt.rootExited, proofDigest: receipt.proofDigest } },
+                  drain: { state: 'complete', afterStopReceiptRef: released.receiptRef }, release: { state: 'released', receiptRef: released.receiptRef },
+                  observedCalls: { allocate: { calls: 1, settled: 1, returned: 1 }, prepare: { calls: 0, settled: 0, returned: 0 },
+                    resume: { calls: 0, settled: 0, returned: 0 } }, witnessCaptured: false };
+                if (Buffer.byteLength(JSON.stringify(cleanupEvidence), 'utf8') <= 4096) job.cleanupEvidence = cleanupEvidence;
+              }
+            } catch { /* Missing evidence keeps the original physical-or-unconfirmed cleanup assertion. */ }
             console.log(JSON.stringify({ kind: 'TEST_SOURCE_CLEANUP', provider, mainEpoch: physical.mainEpoch,
               jobSlot, source: job.origin ? sourceRef(job.origin) : null,
               rootCaptured: job.root !== undefined, witnessCaptured: job.witness !== undefined,
               resumed: job.resumed, stopped: job.stopped, drained: job.drained, released: job.released,
               originalHandleAbsent: job.handleAbsent, custodyTimings: job.timings,
-              stagingTimings: job.stagingTimings, firstCloseEntryMs }));
-            const custodyConfirmed = job.root && job.witness && (job.resumed || failure !== undefined) && job.stopped && job.drained && job.released;
-            assert.equal(await job.witness?.wait(), 0);
+              stagingTimings: job.stagingTimings, firstCloseEntryMs, ...(job.cleanupEvidence ? { cleanupEvidence: job.cleanupEvidence } : {}) }));
+            if (job.cleanupEvidence) continue;
+            assert.ok(job.root && job.witness && (job.resumed || failure !== undefined) && job.stopped && job.drained && job.released,
+              'Every original physical Job retains confirmed Stop/drain/release');
+            assert.equal(await job.witness.wait(), 0);
             job.handleAbsent = true;
-            assert.ok(custodyConfirmed, 'Every original physical Job retains confirmed Stop/drain/release');
           } catch (error) { failures.push(error); }
         }
         assert.equal(counts.service, 0, 'Source metadata/probes/standalone do not register Team services');
@@ -729,7 +718,7 @@ export async function nativeEmulatedSourceScenario(sandbox: string, broker: stri
         origin: job.origin ?? null, root: job.root ?? null, resumed: job.resumed, stopped: job.stopped,
         drained: job.drained, released: job.released, originalHandleAbsent: job.handleAbsent,
         entryStart: job.entryStart ?? null, entryEnd: job.entryEnd ?? null,
-        threadEphemeral: job.threadEphemeral })) }));
+        threadEphemeral: job.threadEphemeral, ...(job.cleanupEvidence ? { cleanupEvidence: job.cleanupEvidence } : {}) })) }));
     evidence.cleanup = errors.length === 0;
     // Original Job/HANDLE cleanup above is mandatory; these are only gate-owned observer children.
     for (const child of observedChildren) if (child.exitCode === null && child.signalCode === null) child.kill();
@@ -759,6 +748,13 @@ export async function nativeEmulatedSourceScenario(sandbox: string, broker: stri
     } catch { evidence.runtimeProjection = { status: 'unknown', reason: 'missing-invalid-overflow-conflicting-or-unjoined' }; }
     // TEST_RUNTIME_PROJECTION_READER_END
     if (failure) try {
+      evidence.codexReadinessObservation = readEmulatedCodexReadinessObservation({
+        provider, ledgerPath: fixture.runtimeProjectionLedger + '.codex-readiness',
+        epochs: epochs.map(epoch => ({ mainEpoch: epoch.physical.mainEpoch, projectionHostExit: epoch.projectionHostExit })),
+        runtimeProjection: evidence.runtimeProjection, lastRuntimeViewDigest,
+        lastLaunchReadiness: evidence.lastLaunchReadiness, diagnosticLaunches });
+    } catch { /* Preserve the original failure if separate diagnostic publication is unavailable. */ }
+    if (failure) try {
       const stat = lstatSync(fixture.refusals); assert.ok(stat.isFile() && !stat.isSymbolicLink() && stat.size <= 65536);
       const raw = readFileSync(fixture.refusals, 'utf8'); assert.ok(raw === '' || raw.endsWith('\n'));
       assert.ok(Buffer.byteLength(raw) + Buffer.byteLength(JSON.stringify({ kind: 'limit', ordinal: 65 }) + '\n') <= 65536);
@@ -777,9 +773,12 @@ export async function nativeEmulatedSourceScenario(sandbox: string, broker: stri
           const matches = diagnosticLaunches.filter(value => value.bindingDigests.includes(text(row.bindingDigest)));
           assert.equal(matches.length, 1); return { ...row, launchId: matches[0]!.launchId, source: matches[0]!.source };
         }
-        if (row.kind === 'native') { const matches = epochs.flatMap(epoch => epoch.jobs).filter(job => job.capability === row.capability);
-          assert.equal(matches.length, 1); assert.ok(matches[0]!.origin); const { capability: _capability, ...observed } = row;
-          return { ...observed, source: sourceRef(matches[0]!.origin) }; }
+        if (row.kind === 'native') { const matches = epochs.flatMap(epoch => epoch.jobs.map((job, jobSlot) => ({ epoch, job, jobSlot })))
+          .filter(value => value.job.capability === row.capability);
+          assert.equal(matches.length, 1); const match = matches[0]!; assert.ok(match.job.origin);
+          const mainEpoch = match.epoch.physical.mainEpoch; assert.ok(typeof mainEpoch === 'string' && mainEpoch.length > 0 && mainEpoch.length <= 256 && !mainEpoch.includes('\0'));
+          return { ...row, mainEpoch, jobSlot: match.jobSlot, source: sourceRef(match.job.origin) };
+        }
         const matches = row.kind === 'consumer' ? consumers.filter(value => value.row === row) :
           consumers.filter(value => value.row.groupDigest === runtimeDigest({ commandDigest: row.commandDigest, contextDigest: row.contextDigest }));
         assert.ok(matches.length > 0); assert.equal(new Set(matches.map(value => JSON.stringify(value.launch))).size, 1);

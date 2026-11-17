@@ -883,7 +883,8 @@ test('absent leader observation never renews the original deadline or accepts a 
   assert.equal(late.reason, 'original-observation-deadline');
 });
 
-function emulatedObserverFixture(t: TestContext, mode: string) {
+function emulatedObserverFixture(t: TestContext, mode: string,
+  emptyPhase?: 'before-first-team-read' | 'after-team-read') {
   const root = fs.realpathSync(fs.mkdtempSync(join(tmpdir(), 'TEST-peer-observation Я 路径-')));
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
   const executable = { path: join(root, 'TEST-peer.mjs'), sha256: digest('TEST never executed\n') };
@@ -910,16 +911,13 @@ function emulatedObserverFixture(t: TestContext, mode: string) {
   const originalCommand = fixture.emulatedRuntime.commandPrefix + 'mcp list --json';
   const launch = { event: 'launch', provider: 'codex', role: 'management', pid: 4200, parentPid: 4101 };
   const journal = join(root, 'effects.ndjson'), row = JSON.stringify(launch) + '\n';
-  fs.writeFileSync(journal, mode === 'later-row' || mode === 'missing' ? '' : mode === 'duplicate' ? row + row : row);
-  if (mode.startsWith('no-child-')) fs.writeFileSync(journal,
-    mode === 'no-child-failure' ? JSON.stringify({ ...launch, event: 'failure' }) + '\n'
-      : mode === 'no-child-malformed' ? '{\n' : '');
-  if (mode === 'no-child-provider-mismatch')
-    fs.writeFileSync(journal, JSON.stringify({ ...launch, provider: 'claude' }) + '\n');
-  if (mode === 'zero-host-failure')
-    fs.writeFileSync(journal, JSON.stringify({ ...launch, event: 'failure' }) + '\n');
-  if (mode === 'zero-host-clean') fs.writeFileSync(journal, '');
-  let now = 0, censusReads = 0, journalReads = 0;
+  const journalText = emptyPhase === undefined
+    ? mode === 'later-row' || mode === 'missing' ? '' : mode === 'duplicate' ? row + row : row
+    : mode === 'healthy-empty' ? '' : mode === 'retained-failure'
+      ? JSON.stringify({ ...launch, event: 'failure' }) + '\n' : mode === 'malformed-json'
+        ? '{"event":\n' : JSON.stringify({ ...launch, provider: mode === 'wrong-provider-claude' ? 'claude' : 'opencode' }) + '\n';
+  fs.writeFileSync(journal, journalText);
+  let now = 0, censusReads = 0, journalReads = 0, signalCalls = 0;
   t.mock.method(performance, 'now', () => now);
   const readFile = fsp.readFile;
   t.mock.method(fsp, 'readFile', async (...args: Parameters<typeof readFile>) => {
@@ -928,9 +926,13 @@ function emulatedObserverFixture(t: TestContext, mode: string) {
       journalReads++;
       if (mode === 'later-row' && journalReads === 1) fs.writeFileSync(journal, row);
       if (mode === 'late' || mode === 'missing' && journalReads === 2) now = 3000;
-      if (mode === 'no-child-late') now = 3000;
     }
     return value;
+  });
+  const openSync = fs.openSync;
+  t.mock.method(fs, 'openSync', (...args: Parameters<typeof openSync>) => {
+    if (String(args[0]).startsWith('/proc/')) throw Object.assign(new Error('TEST no real process read'), { code: 'ENOENT' });
+    return openSync(...args);
   });
   const readFileSync = fs.readFileSync;
   t.mock.method(fs, 'readFileSync', (...args: Parameters<typeof readFileSync>) => {
@@ -944,27 +946,27 @@ function emulatedObserverFixture(t: TestContext, mode: string) {
     if (args.includes('pid=,ppid=,pgid=,lstart=,command=')) {
       censusReads++; assert.ok(options?.timeout && options.timeout <= 3000);
       assert.equal(options.env?.LC_ALL, process.platform === 'linux' ? 'C.UTF-8' : 'en_US.UTF-8');
-      const host = '4100 4000 4100 Sun Nov 15 00:00:00 2026 /TEST/electron\n4101 4100 4100 Sun Nov 15 00:00:00 2026 /TEST/node /TEST/host.js\n';
-      if (mode.startsWith('zero-host-')) return host.split('\n')[0]! + '\n';
-      if (censusReads > 1 && mode === 'exit') return host;
-      if (mode.startsWith('no-child-')) return host;
+      const host = '4100 4000 4100 Sun Nov 15 00:00:00 2026 /TEST/electron\n' +
+        (emptyPhase === 'before-first-team-read' ? '' : '4101 4100 4100 Sun Nov 15 00:00:00 2026 /TEST/node /TEST/host.js\n');
+      if (emptyPhase !== undefined || censusReads > 1 && mode === 'exit') return host;
       const birth = censusReads > 1 && mode === 'reuse' ? '00:00:01' : '00:00:00';
       const parent = censusReads > 1 && mode === 'reparent' ? 4999 : 4101;
       const argv = censusReads > 1 && mode === 'argv' ? originalCommand + ' --other' : originalCommand;
       return host + `4200 ${parent} 4200 Sun Nov 15 ${birth} 2026 ${argv}\n`;
     }
-    if (args[0] === '-ax') return '4100 4000 4100\n4101 4100 4100\n4200 4101 4200\n';
+    if (args[0] === '-ax') return '4100 4000 4100\n' +
+      (emptyPhase === 'before-first-team-read' ? '' : '4101 4100 4100\n') +
+      (emptyPhase === undefined ? '4200 4101 4200\n' : '');
     assert.equal(args[0], '-p');
     return args[1] === '4101' ? '/TEST/node /TEST/host.js' : args[1] === '4200'
       ? mode === 'exit' ? '' : originalCommand : '/TEST/electron';
   });
-  t.mock.method(process, 'kill', () => assert.fail('observation never signals or adopts a PID'));
+  t.mock.method(process, 'kill', () => { signalCalls++; return assert.fail('observation never signals or adopts a PID'); });
   syncBuiltinESMExports();
   t.after(() => { t.mock.restoreAll(); syncBuiltinESMExports(); });
-  return { fixture, observe: () => observeDesktopEmulatedRuntimeChildren(4100,
-    fixture as unknown as Parameters<typeof observeDesktopEmulatedRuntimeChildren>[1],
-    mode.startsWith('zero-host-') ? 'before-first-team-read' : 'after-team-read'),
-    reads: () => ({ censusReads, journalReads }) };
+  return { fixture, journal, journalText, observe: () => observeDesktopEmulatedRuntimeChildren(4100,
+    fixture as unknown as Parameters<typeof observeDesktopEmulatedRuntimeChildren>[1], emptyPhase ?? 'after-team-read'),
+    reads: () => ({ censusReads, journalReads, signalCalls }) };
 }
 
 for (const mode of ['later-row', 'exit'])
@@ -983,37 +985,368 @@ test(`original peer observation refuses ${mode} without admitting the census PID
   assert.deepEqual(f.fixture.emulatedRuntime.observedPeerPids, []);
 });
 
-test('original peer observation accepts a valid empty journal with no current children', async t => {
-  const f = emulatedObserverFixture(t, 'no-child-empty');
-  await f.observe();
-  assert.deepEqual(f.fixture.emulatedRuntime.observedPeerPids, []);
+for (const phase of ['before-first-team-read', 'after-team-read'] as const)
+for (const mode of ['healthy-empty', 'retained-failure', 'malformed-json', 'wrong-provider'])
+test(`empty peer observation validates the original ${mode} journal ${phase}`, async t => {
+  const f = emulatedObserverFixture(t, mode, phase);
+  const observed = f.fixture.emulatedRuntime.observedPeerPids;
+  observed.push(4300);
+  if (mode === 'healthy-empty') await f.observe();
+  else if (mode === 'retained-failure') await assert.rejects(f.observe(), {
+    code: 'ERR_ASSERTION', actual: true, expected: false,
+    message: /TEST protocol refusal cannot become a passing UI proof/u,
+  });
+  else if (mode === 'malformed-json') await assert.rejects(f.observe(), SyntaxError);
+  else await assert.rejects(f.observe(), { code: 'ERR_ASSERTION', actual: 'opencode', expected: 'codex' });
   assert.equal(f.reads().censusReads, 1);
-  assert.equal(f.reads().journalReads, 1);
+  assert.equal(f.reads().journalReads, 1, 'the original journal is read even without a current child');
+  assert.equal(f.reads().signalCalls, 0, 'journal validation creates no signal authority');
+  assert.equal(fs.readFileSync(f.journal, 'utf8'), f.journalText, 'observation appends no effect');
+  assert.equal(f.fixture.emulatedRuntime.observedPeerPids, observed);
+  assert.deepEqual(observed, [4300], 'empty or refused observations preserve the original PID inventory');
 });
 
-for (const [mode, error] of [
-  ['no-child-failure', /TEST protocol refusal cannot become a passing UI proof/u],
-  ['no-child-malformed', SyntaxError],
-  ['no-child-late', /Original peer journal validation exceeded its deadline/u],
+for (const [label, mode, phase] of [
+  ['no-child-provider-mismatch', 'wrong-provider-claude', 'after-team-read'],
+  ['zero-host-failure', 'retained-failure', 'before-first-team-read'],
+  ['zero-host-clean', 'healthy-empty', 'before-first-team-read'],
 ] as const)
-test(`original peer observation validates ${mode} before returning without children`, async t => {
-  const f = emulatedObserverFixture(t, mode);
-  await assert.rejects(f.observe(), error);
-  assert.deepEqual(f.fixture.emulatedRuntime.observedPeerPids, []);
-  assert.deepEqual(f.reads(), { censusReads: 1, journalReads: 1 });
+test(`empty peer census preserves ${label} through the original journal oracle`, async t => {
+  const f = emulatedObserverFixture(t, mode, phase);
+  const observed = f.fixture.emulatedRuntime.observedPeerPids;
+  if (mode === 'wrong-provider-claude')
+    await assert.rejects(f.observe(), { code: 'ERR_ASSERTION', actual: 'claude', expected: 'codex' });
+  else if (mode === 'retained-failure') await assert.rejects(f.observe(), {
+    code: 'ERR_ASSERTION', actual: true, expected: false,
+    message: /TEST protocol refusal cannot become a passing UI proof/u,
+  });
+  else await f.observe();
+  assert.equal(f.fixture.emulatedRuntime.observedPeerPids, observed);
+  assert.deepEqual(observed, []);
+  assert.deepEqual(f.reads(), { censusReads: 1, journalReads: 1, signalCalls: 0 });
+  assert.equal(fs.readFileSync(f.journal, 'utf8'), f.journalText);
 });
 
-for (const mode of ['no-child-provider-mismatch', 'zero-host-failure'])
-test(`empty peer census refuses ${mode} through the original journal oracle`, async t => {
-  const f = emulatedObserverFixture(t, mode);
-  await assert.rejects(f.observe());
-  assert.deepEqual(f.fixture.emulatedRuntime.observedPeerPids, []);
-  assert.deepEqual(f.reads(), { censusReads: 1, journalReads: 1 });
+function capturedLinuxNodeTuple() {
+  const birth = 'Mon Nov 16 06:10:25 2026';
+  return { platform: 'linux' as NodeJS.Platform, expectedIdentity: birth + ' /TEST/node /TEST/pnpm.js dev:mcp',
+    observedIdentity: birth + ' [MainThread] <defunct>', state: 'Z', childPid: 44001, group: 44001,
+    leader: { pid: 44001, ppid: process.pid, pgid: 44001 }, parentPid: process.pid };
+}
+
+test('captured Linux original Node wrapper admits only its exact retained MainThread zombie tuple', t => {
+  t.mock.method(process, 'kill', () => assert.fail('the identity predicate never signals'));
+  assert.equal(isCapturedOriginalNodeZombie(capturedLinuxNodeTuple()), true);
 });
 
-test('empty peer census validates its journal with no current Host before the first Team read', async t => {
-  const f = emulatedObserverFixture(t, 'zero-host-clean');
-  await f.observe();
-  assert.deepEqual(f.fixture.emulatedRuntime.observedPeerPids, []);
-  assert.deepEqual(f.reads(), { censusReads: 1, journalReads: 1 });
+test('Linux wrapper identity refuses changed custody, birth, invocation and other platform display forms', t => {
+  let signals = 0; t.mock.method(process, 'kill', () => { signals++; return true; });
+  const base = capturedLinuxNodeTuple();
+  for (const change of [
+    { state: 'S' }, { state: '' }, { childPid: undefined }, { childPid: 44002 },
+    { group: 0 }, { group: -1 }, { group: Number.MAX_SAFE_INTEGER + 1 },
+    { leader: undefined }, { leader: { ...base.leader, pid: 44002 } },
+    { leader: { ...base.leader, ppid: base.parentPid + 1 } }, { leader: { ...base.leader, pgid: 44002 } },
+    { observedIdentity: base.observedIdentity.replace('06:10:25', '06:10:26') },
+    { expectedIdentity: base.expectedIdentity.replace('/node ', '/other ') },
+    { expectedIdentity: base.expectedIdentity.replace('dev:mcp', 'dev:other') },
+    { observedIdentity: base.observedIdentity.replace('[MainThread] <defunct>', '(node)') },
+    { observedIdentity: base.observedIdentity.replace('[MainThread] <defunct>', '<defunct>') },
+    { observedIdentity: base.observedIdentity + ' extra' },
+    { platform: 'darwin' as const }, { platform: 'win32' as const }, { platform: 'freebsd' as const },
+    { expectedIdentity: 'Mon Nov 16 06:10:25 2026 /TEST/Agent Teams AI.app/Contents/MacOS/Agent Teams AI --remote-debugging-port=9222',
+      observedIdentity: 'Mon Nov 16 06:10:25 2026 (Agent Teams AI)' },
+  ]) assert.equal(isCapturedOriginalNodeZombie({ ...base, ...change }), false, JSON.stringify(change));
+  assert.equal(signals, 0);
+});
+
+type LinuxEpochMode = 'valid' | 'state' | 'birth' | 'child' | 'group' | 'parent' | 'leader' |
+  'invocation' | 'display' | 'group-debt' | 'host-debt' | 'port-debt';
+
+async function finiteLinuxOwnerEpoch(t: TestContext, mode: LinuxEpochMode) {
+  const { finishDesktopOwnerRoutingEpoch } = await import('./desktop-owner-routing-epoch.ts');
+  const { selectedCdpPort } = await import('./desktop-backend-observations.ts');
+  const net = createRequire(import.meta.url)('node:net') as typeof import('node:net');
+  const platform = Object.getOwnPropertyDescriptor(process, 'platform'); assert.ok(platform);
+  Object.defineProperty(process, 'platform', { ...platform, value: 'linux' });
+  t.after(() => { Object.defineProperty(process, 'platform', platform); t.mock.restoreAll(); syncBuiltinESMExports(); });
+  const base = capturedLinuxNodeTuple(), group = mode === 'group' ? 0 : base.group;
+  const app = { pid: mode === 'child' ? 44002 : base.childPid, exitCode: null, signalCode: null };
+  const epoch: Record<string, unknown> = { cdpListener: 45001 }, hosts = [{ pid: 46001 }];
+  const state = mode === 'state' ? 'S' : base.state;
+  const observed = mode === 'birth' ? base.observedIdentity.replace('06:10:25', '06:10:26')
+    : mode === 'display' ? base.observedIdentity.replace('[MainThread] <defunct>', '(node)') : base.observedIdentity;
+  const expected = mode === 'invocation' ? base.expectedIdentity.replace('/node ', '/other ') : base.expectedIdentity;
+  const counts = { tables: 0, states: 0, identities: 0, owned: 0, close: 0, disconnect: 0,
+    signals: 0, sockets: 0, destroys: 0 };
+  const delays: number[] = [], cleared: number[] = [], signals: { pid: number; signal: unknown }[] = [];
+  const timers = new Map<object, number>(); let now = 0;
+  t.mock.method(Date, 'now', () => now);
+  t.mock.method(globalThis, 'setTimeout', (callback: () => void, delay: number) => {
+    delays.push(delay); const token = { delay, serial: delays.length }; timers.set(token, delay);
+    if (delay === 100) { now += counts.signals ? 30_000 : 3000; queueMicrotask(callback); }
+    else assert.equal(delay, 3000, 'only the two original bounded close/disconnect timers');
+    return token as unknown as NodeJS.Timeout;
+  });
+  t.mock.method(globalThis, 'clearTimeout', (token: NodeJS.Timeout) => {
+    const delay = timers.get(token); assert.equal(delay, 3000); cleared.push(delay!); timers.delete(token);
+  });
+  const originalMembers = () => [
+    { pid: 44001, ppid: mode === 'parent' ? process.pid + 1 : process.pid, pgid: 44001 },
+    { pid: 44002, ppid: 44001, pgid: 44001 }, { pid: 44003, ppid: 44002, pgid: 44001 },
+    { pid: 44004, ppid: 44003, pgid: 44001 },
+  ];
+  t.mock.method(childProcess, 'execFileSync', (file: string, args: readonly string[], options: unknown) => {
+    assert.equal(file, '/bin/ps'); assert.deepEqual(options, { encoding: 'utf8', timeout: 3000 });
+    if (args[0] === '-ax') {
+      assert.deepEqual(args, ['-ax', '-o', 'pid=,ppid=,pgid=']); counts.tables++;
+      let rows = counts.signals && mode !== 'group-debt' ? [] : originalMembers();
+      if (mode === 'leader' && counts.tables === 6) rows = rows.filter(row => row.pid !== 44001);
+      if (counts.signals && mode === 'host-debt') rows.push({ pid: 46001, ppid: 1, pgid: 99001 });
+      return [{ pid: 99001, ppid: 1, pgid: 99001 }, ...rows].map(row => `${row.pid} ${row.ppid} ${row.pgid}`).join('\n');
+    }
+    assert.deepEqual(args.slice(0, 3), ['-p', String(group), '-o']);
+    if (args[3] === 'stat=') { counts.states++; return state; }
+    assert.equal(args[3], 'lstart=,command='); counts.identities++; return observed;
+  });
+  t.mock.method(process, 'kill', (pid: number, signal: unknown) => {
+    counts.signals++; signals.push({ pid, signal }); assert.deepEqual({ pid, signal }, { pid: -44001, signal: 'SIGTERM' });
+    assert.equal(counts.signals, 1, 'only the existing one guarded group signal'); return true;
+  });
+  t.mock.method(net, 'createConnection', (options: unknown) => {
+    counts.sockets++; assert.deepEqual(options, { host: '127.0.0.1', port: selectedCdpPort });
+    const socket = Object.assign(new EventEmitter(), {
+      destroy(): EventEmitter { counts.destroys++; return socket; },
+      setTimeout(delay: number): EventEmitter {
+        assert.equal(delay, 1000); queueMicrotask(() => socket.emit(mode === 'port-debt' ? 'connect' : 'error', new Error('TEST absent')));
+        return socket;
+      },
+    });
+    return socket;
+  });
+  syncBuiltinESMExports();
+  let error: unknown;
+  try {
+    await finishDesktopOwnerRoutingEpoch({ app: app as unknown as Parameters<typeof finishDesktopOwnerRoutingEpoch>[0]['app'],
+      group, appIdentity: expected, hosts, epoch, assertOwned() { counts.owned++; }, cdp: {
+        async evaluate(expression: string) { counts.close++; assert.equal(expression, 'window.electronAPI.windowControls.close()'); return undefined; },
+        async close() { counts.disconnect++; },
+      } as Parameters<typeof finishDesktopOwnerRoutingEpoch>[0]['cdp'] });
+  } catch (caught) { error = caught; }
+  return { error, epoch, counts, signals, delays, cleared, now, originalMembers: originalMembers() };
+}
+
+function assertOriginalEpochClose(f: Awaited<ReturnType<typeof finiteLinuxOwnerEpoch>>) {
+  assert.deepEqual([f.counts.owned, f.counts.close, f.counts.disconnect], [1, 1, 1]);
+  assert.deepEqual(f.cleared, [3000, 3000]);
+  assert.deepEqual(f.epoch.failureQuit, { attempted: true,
+    scope: 'Close only the verified TEST window before stopping its dev wrapper', reply: 'acknowledged', listenerAbsent: true });
+  const cleanup = f.epoch.cleanup as Record<string, unknown>;
+  assert.equal(cleanup.quitAttempted, true); assert.equal(cleanup.appExitCode, null); assert.equal(cleanup.appSignalCode, null);
+}
+
+test('actual owner epoch cleans the captured Linux zombie group only after original close and fresh identity guards', async t => {
+  const f = await finiteLinuxOwnerEpoch(t, 'valid'); assertOriginalEpochClose(f);
+  if (f.error) {
+    assert.match(String(f.error), /original epoch invocation identity remains current/);
+    assert.deepEqual([f.counts.tables, f.counts.states, f.counts.identities, f.counts.signals, f.counts.sockets], [6, 2, 1, 0, 0]);
+    assert.deepEqual((f.epoch.cleanup as Record<string, unknown>).remaining, f.originalMembers);
+  }
+  assert.equal(f.error, undefined, 'the exact captured Linux tuple must reach the original guarded cleanup');
+  assert.deepEqual(f.counts, { tables: 8, states: 2, identities: 1, owned: 1, close: 1, disconnect: 1,
+    signals: 1, sockets: 1, destroys: 1 });
+  assert.deepEqual(f.signals, [{ pid: -44001, signal: 'SIGTERM' }]); assert.deepEqual(f.delays, [3000, 3000, 100]);
+  assert.equal(f.now, 3000); assert.deepEqual(f.epoch.originalZombieGuard, { group: 44001, state: 'Z', status: 'verified-original-zombie' });
+  const cleanup = f.epoch.cleanup as Record<string, unknown>;
+  assert.deepEqual(cleanup.remaining, []); assert.equal(cleanup.hostsAbsent, true); assert.equal(cleanup.signalAttempted, true);
+  assert.equal((f.epoch.originalAppReap as Record<string, unknown>).settled, false);
+  assert.equal((f.epoch.originalAppReap as Record<string, unknown>).reason, 'ineligible-original-defunct-observation');
+});
+
+for (const mode of ['state', 'birth', 'child', 'group', 'parent', 'leader', 'invocation', 'display'] as const)
+test('actual Linux owner cleanup retains debt and zero signals for wrong ' + mode, async t => {
+  const f = await finiteLinuxOwnerEpoch(t, mode); assertOriginalEpochClose(f);
+  assert.match(String(f.error), mode === 'group' ? /Captured app group must be positive/ : /original epoch invocation identity remains current/);
+  assert.equal(f.counts.signals, 0); assert.deepEqual(f.signals, []); assert.equal(f.counts.sockets, 0);
+  const cleanup = f.epoch.cleanup as Record<string, unknown>;
+  assert.equal(cleanup.signalAttempted, false); assert.equal(cleanup.hostsAbsent, null);
+  assert.equal(typeof f.epoch.cleanupFailure, 'string');
+});
+
+for (const [mode, message] of [
+  ['group-debt', /no next configuration while the captured epoch group remains/],
+  ['host-debt', /every captured owner Host is absent before the next epoch/],
+  ['port-debt', /true !== false/],
+] as const)
+test('actual Linux owner cleanup keeps final ' + mode + ' as failure after its one guarded signal', async t => {
+  const f = await finiteLinuxOwnerEpoch(t, mode); assertOriginalEpochClose(f);
+  assert.match(String(f.error), message); assert.deepEqual(f.signals, [{ pid: -44001, signal: 'SIGTERM' }]);
+  assert.equal(f.counts.tables, 8); assert.equal(f.counts.states, 2); assert.equal(f.counts.identities, 1);
+  assert.equal(f.counts.sockets, mode === 'port-debt' ? 1 : 0); assert.equal(f.counts.destroys, f.counts.sockets);
+  assert.deepEqual(f.delays, mode === 'group-debt' ? [3000, 3000, 100, 100] : [3000, 3000, 100]);
+  assert.equal(f.now, mode === 'group-debt' ? 33_000 : 3000);
+  const cleanup = f.epoch.cleanup as Record<string, unknown>;
+  assert.equal(cleanup.signalAttempted, true); assert.equal(cleanup.hostsAbsent, mode !== 'host-debt');
+  assert.deepEqual(cleanup.remaining, mode === 'group-debt' ? f.originalMembers : []);
+});
+
+
+// Read the real pure projection. The packaged CLI main is never imported by these cases.
+const {
+  projectDesktopEmulatedReadinessFailure,
+  projectDesktopProofReceiptSummary,
+} = await import('./desktop-proof-evidence.ts');
+
+function retainedDialogProjection(value: unknown) {
+  const result = projectDesktopEmulatedReadinessFailure(value);
+  assert.equal(result.status, 'available');
+  assert.ok('retainedDialogs' in result);
+  return result;
+}
+
+test('retained dialog readiness distinguishes saved Launch states and duplicate matches without a readiness verdict', () => {
+  const result = retainedDialogProjection({ rendererFailureSnapshot: { dialogs: [
+    { text: 'All selected providers are ready; model could not be verified; permission blocked',
+      buttons: [{ text: 'Launch team', disabled: true }] },
+    { text: 'Runtime environment unavailable; provider status is still loading',
+      buttons: [{ text: 'Launch team', disabled: false }, { text: 'Launch team', disabled: true },
+        { text: 'Launch team' }, { text: 'Launch team', disabled: 'false' },
+        { text: ' Launch team ', disabled: false }, { text: 'Launch teamwork', disabled: false }] },
+    { text: '', buttons: [] },
+  ] } });
+  assert.equal(result.storeRecorded, false);
+  assert.deepEqual(result.provisioning.items, []);
+  const sample = result.retainedDialogs;
+  assert.equal(sample.source, 'retained-post-failure-partial-dialog-sample');
+  assert.deepEqual([sample.atomicWithFailedWait, sample.completeDom, sample.actualTruncationKnown], [false, false, false]);
+  assert.equal(sample.count, 3); assert.equal(sample.atCaptureLimit, true); assert.equal(sample.overflow, false);
+  assert.deepEqual(sample.items[0].buttons.launchTeam, { matches: 1, enabled: 0, disabled: 1, unknown: 0 });
+  assert.deepEqual(sample.items[1].buttons.launchTeam, { matches: 4, enabled: 1, disabled: 1, unknown: 2 });
+  assert.deepEqual(sample.items[2].buttons.launchTeam, { matches: 0, enabled: 0, disabled: 0, unknown: 0 });
+  assert.deepEqual(sample.items[0].text.terms, ['permission', 'model', 'provider', 'ready', 'blocked']);
+  assert.equal(sample.items[0].text.selectedProvidersReady, true);
+  assert.equal(sample.items[0].text.modelUnverified, true);
+  assert.equal(sample.items[1].text.runtimeUnavailable, true);
+  assert.equal(sample.items[1].text.providerStatusLoading, true);
+  assert.equal('ready' in sample, false, 'saved facts do not resolve the original expired wait');
+});
+
+test('retained dialog projection bounds malformed samples independently and preserves the original final overflow fallback', () => {
+  for (const value of [undefined, null, {}, { rendererFailureSnapshot: { unavailable: true } },
+    { rendererFailureSnapshot: { dialogs: {} } }]) {
+    const result = retainedDialogProjection(value);
+    assert.equal(result.retainedDialogs.count, null);
+    assert.equal(result.retainedDialogs.atCaptureLimit, null);
+    assert.deepEqual(result.retainedDialogs.items, []);
+  }
+  const malformed = retainedDialogProjection({ rendererFailureSnapshot: { dialogs: [
+    null, { buttons: {} }, { buttons: [null, {}, { text: 7 }, { text: 'Launch team', disabled: null }] },
+  ] } }).retainedDialogs;
+  assert.equal(malformed.items[0].recorded, false);
+  assert.equal(malformed.items[1].buttons.recorded, false);
+  assert.deepEqual(malformed.items[1].buttons.launchTeam, { matches: null, enabled: null, disabled: null, unknown: null });
+  assert.equal(malformed.items[2].buttons.unknownEntries, 3);
+  assert.deepEqual(malformed.items[2].buttons.launchTeam, { matches: 1, enabled: 0, disabled: 0, unknown: 1 });
+  const atCap = Array.from({ length: 24 }, () => ({ text: 'Launch team', disabled: true }));
+  const cap = retainedDialogProjection({ rendererFailureSnapshot: { dialogs: [{ text: 'm'.repeat(8000), buttons: atCap }] } });
+  assert.equal(cap.retainedDialogs.items[0].buttons.atCaptureLimit, true);
+  assert.equal(cap.retainedDialogs.items[0].buttons.overflow, false);
+  assert.equal(cap.retainedDialogs.items[0].text.bounded, true);
+  const buttons = [...atCap, {}];
+  Object.defineProperty(buttons, '24', { get() { assert.fail('outside retained button traversal'); } });
+  const dialogs = [{ text: 'm'.repeat(8001), buttons }, {}, {}, {}];
+  Object.defineProperty(dialogs, '3', { get() { assert.fail('outside retained dialog traversal'); } });
+  const overflow = retainedDialogProjection({ rendererFailureSnapshot: { dialogs } }).retainedDialogs;
+  assert.equal(overflow.count, 4); assert.equal(overflow.items.length, 3);
+  assert.equal(overflow.overflow, true); assert.equal(overflow.atCaptureLimit, false);
+  assert.equal(overflow.items[0].buttons.count, 25);
+  assert.equal(overflow.items[0].buttons.overflow, true);
+  assert.equal(overflow.items[0].buttons.atCaptureLimit, false);
+  assert.equal(overflow.items[0].buttons.launchTeam.matches, 24);
+  assert.equal(overflow.items[0].text.bounded, false);
+  assert.deepEqual(overflow.items[0].text.terms, []);
+  const terms = 'authentication credential permission model probe runtime source profile owner grant context capture preparation provider ready loading unavailable unsupported missing mismatch changed expired stale busy blocked rejected refused failed invalid timeout timed out cancelled';
+  const large = { rendererFailureSnapshot: { store: { provisioning: Array.from({ length: 8 }, () => ({
+    error: terms, progress: { error: terms, message: terms },
+  })) } } };
+  assert.deepEqual(projectDesktopEmulatedReadinessFailure(large), { schemaVersion: 1, status: 'unavailable', reason: 'overflow' });
+});
+
+test('retained dialog projection avoids getters, aliases, mutations and private values with fixed opaque failure output', () => {
+  const secret = 'TEST_PRIVATE_DIALOG_credential@example.invalid/token';
+  const input = { rendererFailureSnapshot: { dialogs: [{ text: secret, id: secret, rect: { x: 999 },
+    buttons: [{ text: 'Launch team', disabled: false, id: secret, rect: { x: 888 } }, { text: secret }] }] } };
+  const original = JSON.stringify(input);
+  Object.freeze(input.rendererFailureSnapshot.dialogs[0].buttons[0]);
+  Object.freeze(input.rendererFailureSnapshot.dialogs[0].buttons);
+  Object.freeze(input.rendererFailureSnapshot.dialogs[0]);
+  Object.freeze(input.rendererFailureSnapshot.dialogs);
+  Object.freeze(input.rendererFailureSnapshot);
+  Object.freeze(input);
+  const result = retainedDialogProjection(input);
+  assert.doesNotMatch(JSON.stringify(result), /TEST_PRIVATE_DIALOG_|example\.invalid|token|999|888/);
+  result.retainedDialogs.items[0].text.terms.push('TEST-output-only');
+  assert.equal(JSON.stringify(input), original);
+  let getterCalls = 0;
+  const accessor = () => { getterCalls++; throw new Error(secret); };
+  const button = Object.defineProperties({}, { text: { get: accessor }, disabled: { get: accessor } });
+  const dialog = Object.defineProperties({ buttons: [button, Object.defineProperty({ text: 'Launch team' }, 'disabled', { get: accessor })] },
+    { text: { get: accessor } });
+  const retained = retainedDialogProjection({ rendererFailureSnapshot: { dialogs: [dialog] } });
+  assert.equal(retained.retainedDialogs.items[0].buttons.unknownEntries, 1);
+  assert.deepEqual(retained.retainedDialogs.items[0].buttons.launchTeam, { matches: 1, enabled: 0, disabled: 0, unknown: 1 });
+  retainedDialogProjection(Object.defineProperty({}, 'rendererFailureSnapshot', { get: accessor }));
+  retainedDialogProjection({ rendererFailureSnapshot: Object.defineProperty({}, 'dialogs', { get: accessor }) });
+  retainedDialogProjection({ rendererFailureSnapshot: { dialogs: [Object.defineProperty({}, 'buttons', { get: accessor })] } });
+  assert.equal(getterCalls, 0);
+  const noOrdinaryGet = new Proxy({ rendererFailureSnapshot: { dialogs: [] } }, { get: accessor });
+  assert.equal(retainedDialogProjection(noOrdinaryGet).retainedDialogs.count, 0);
+  const opaque = new Proxy({}, { getOwnPropertyDescriptor: accessor });
+  assert.deepEqual(projectDesktopEmulatedReadinessFailure(opaque),
+    { schemaVersion: 1, status: 'unavailable', reason: 'projection-failed' });
+  assert.equal(getterCalls, 1, 'only the explicit descriptor trap ran; no getter or coercion');
+});
+
+test('actual receipt summary routes all five non-PASS readiness modes and preserves PASS and unrelated summaries', () => {
+  const evidence = { status: 'INCOMPLETE', rendererFailureSnapshot: { dialogs: [{ buttons: [{ text: 'Launch team', disabled: true }] }] } };
+  for (const mode of ['emulated-import-ui', 'emulated-opencode-runtime-ui', 'emulated-claude-runtime-ui',
+    'emulated-claude-lifecycle-ui', 'emulated-collaboration-ui']) {
+    for (const status of ['INCOMPLETE', 'FAIL']) {
+      const selected = { ...evidence, status };
+      assert.deepEqual(projectDesktopProofReceiptSummary(selected, { receiptPath: '/TEST/receipt.json', mode, mixedMode: false }),
+        { status, receipt: '/TEST/receipt.json', emulatedReadinessFailure: projectDesktopEmulatedReadinessFailure(selected) });
+    }
+    assert.deepEqual(projectDesktopProofReceiptSummary({ ...evidence, status: 'PASS' },
+      { receiptPath: '/TEST/receipt.json', mode, mixedMode: false }), { status: 'PASS', receipt: '/TEST/receipt.json' });
+  }
+  for (const mode of ['team-ui', 'emulated-extensions-ui']) {
+    assert.deepEqual(projectDesktopProofReceiptSummary(evidence, { receiptPath: '/TEST/receipt.json', mode, mixedMode: false }),
+      { status: 'INCOMPLETE', receipt: '/TEST/receipt.json' });
+  }
+});
+
+test('actual packaged final summary composes the same failure projection without executing its CLI main', () => {
+  const source = fs.readFileSync(new URL('./desktop-packaged-relaunch-smoke.ts', import.meta.url), 'utf8');
+  const start = '    console.log(JSON.stringify({ kind: evidence.kind, status: evidence.status, receipt: receiptPath, root: fixture.root,';
+  const end = '\n  }\n  if (originalFailure) throw originalFailure;';
+  assert.equal(source.split(start).length, 2);
+  assert.equal(source.split(end).length, 2);
+  const from = source.indexOf(start), until = source.indexOf(end, from);
+  assert.ok(until > from);
+  const fragment = source.slice(from, until);
+  assert.ok(source.lastIndexOf('await writeFile(receiptPath,', from) < from);
+  assert.ok(source.lastIndexOf('await writeFile(receiptPath,', from) >= 0);
+  assert.match(source.slice(until), /if \(originalFailure\) throw originalFailure;[\s\S]*assert\.equal\(evidence\.status, 'PASS'/);
+  const compose = new Function('evidence', 'receiptPath', 'fixture', 'projectDesktopEmulatedReadinessFailure', 'console', fragment);
+  for (const status of ['PASS', 'INCOMPLETE', 'FAIL']) {
+    const evidence = { kind: 'TEST_PACKAGED_RELAUNCH', status,
+      rendererFailureSnapshot: { dialogs: [{ text: 'model unavailable', buttons: [{ text: 'Launch team', disabled: true }] }] } };
+    const before = JSON.stringify(evidence), output: string[] = [];
+    compose(evidence, '/TEST/receipt.json', { root: '/TEST/root' }, projectDesktopEmulatedReadinessFailure,
+      { log(value: string) { output.push(value); } });
+    assert.equal(output.length, 1);
+    assert.deepEqual(JSON.parse(output[0]), { kind: evidence.kind, status, receipt: '/TEST/receipt.json', root: '/TEST/root',
+      ...(status !== 'PASS' ? { emulatedReadinessFailure: projectDesktopEmulatedReadinessFailure(evidence) } : {}) });
+    assert.equal(JSON.stringify(evidence), before);
+  }
 });

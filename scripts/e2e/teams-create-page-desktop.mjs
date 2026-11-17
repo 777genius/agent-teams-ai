@@ -367,6 +367,140 @@ async function startApp(fixture) {
   return { port, renderer, inspectorWebSocketDebuggerUrl };
 }
 
+function installTaskTabObservation(browser, document, element, identity) {
+  const slot = '__teamsTaskTabObservation';
+  if (Object.getOwnPropertyDescriptor(browser, slot)) return false;
+  const data = (value, key, optional = false) => {
+    if (!value || typeof value !== 'object' || ![Object.prototype, null].includes(Object.getPrototypeOf(value)))
+      throw new Error('Unavailable diagnostic data');
+    const descriptor = Object.getOwnPropertyDescriptor(value, key);
+    if (!descriptor && optional) return undefined;
+    if (!descriptor || !('value' in descriptor) || descriptor.value === undefined) throw new Error('Unavailable diagnostic field');
+    return descriptor.value;
+  };
+  const id = value => {
+    if (typeof value !== 'string' || value.length > 256 || !value.trim()) throw new Error('Unavailable diagnostic identity');
+    return value;
+  };
+  const list = (value, limit) => {
+    if (!Array.isArray(value) || Object.getPrototypeOf(value) !== Array.prototype)
+      throw new Error('Unavailable diagnostic collection');
+    const length = Object.getOwnPropertyDescriptor(value, 'length')?.value;
+    if (!Number.isInteger(length) || length < 0 || length > limit) throw new Error('Unavailable diagnostic size');
+    const rows = [];
+    for (let index = 0; index < length; index++) {
+      const descriptor = Object.getOwnPropertyDescriptor(value, String(index));
+      if (!descriptor || !('value' in descriptor)) throw new Error('Unavailable diagnostic row');
+      rows.push(descriptor.value);
+    }
+    return rows;
+  };
+  const record = { version: 1, before: null, first: null, last: null, samples: 0,
+    samplesCapped: false, events: [], eventsCapped: false, finished: 'pending' };
+  const listeners = [];
+  let context, key, beforeOwner, disposed = false;
+  const dispose = status => {
+    if (disposed) return;
+    disposed = true; record.finished = status;
+    for (const [kind, listener, capture] of listeners)
+      try { document.removeEventListener(kind, listener, capture); } catch { /* Diagnostic only. */ }
+    listeners.length = 0; element = null;
+  };
+  const snapshot = (state, initial = false) => { try {
+    if (!context || !key) return null;
+    const global = data(state, 'globalTaskDetail');
+    const globalIdentity = global == null ? null : ['contextId', 'teamName', 'taskId'].map(field => id(data(global, field)).trim());
+    const globalDialog = globalIdentity === null ? 'absent' :
+      globalIdentity[0] === context && globalIdentity[1] === identity.teamName && globalIdentity[2] === identity.taskId ? 'target' : 'other';
+    const session = data(data(state, 'taskDetailSessionById'), key, true), detail = data(data(state, 'taskDetailById'), key, true);
+    const owner = session === undefined ? undefined : data(session, 'ownerSurfaceId');
+    if (owner !== undefined && owner !== null) id(owner);
+    const revision = session === undefined ? null : data(session, 'ownerRevision');
+    if (session !== undefined && (!Number.isInteger(revision) || revision < 0 || revision > 2147483647)) return null;
+    const layout = data(state, 'paneLayout'), focused = data(layout, 'focusedPaneId'), rootActive = data(state, 'activeTabId');
+    if (focused != null) id(focused);
+    if (rootActive != null) id(rootActive);
+    let targetTabs = 0, activeTargetTabs = 0, focusedTarget = false, rootActiveTarget = false, ownerMatchesTarget = false;
+    for (const pane of list(data(layout, 'panes'), 8)) {
+      const paneId = id(data(pane, 'id')), active = data(pane, 'activeTabId');
+      if (active != null) id(active);
+      for (const tab of list(data(pane, 'tabs'), 32)) {
+        const tabId = id(data(tab, 'id')), task = data(tab, 'taskDetail', true);
+        if (task == null) continue;
+        const taskIdentity = [id(data(tab, 'teamName')).trim(), id(data(task, 'contextId')).trim(), id(data(task, 'taskId')).trim()];
+        if (taskIdentity[0] !== identity.teamName || taskIdentity[1] !== context || taskIdentity[2] !== identity.taskId) continue;
+        targetTabs++; activeTargetTabs += tabId === active ? 1 : 0;
+        focusedTarget ||= paneId === focused && tabId === active;
+        rootActiveTarget ||= tabId === rootActive; ownerMatchesTarget ||= tabId === owner;
+      }
+    }
+    const activeContext = id(data(state, 'activeContextId')).trim(), switching = data(state, 'isContextSwitching');
+    if (typeof switching !== 'boolean') return null;
+    if (detail !== undefined && typeof data(detail, 'phase') !== 'string') return null;
+    if (initial) beforeOwner = owner;
+    return { contextMatches: activeContext === context, switching, globalDialog,
+      detailReady: detail === undefined ? false : data(detail, 'phase') === 'ready', sessionPresent: session !== undefined,
+      ownerPresent: owner != null, ownerChanged: owner == null || beforeOwner == null ? null : owner !== beforeOwner,
+      ownerMatchesTarget, ownerRevision: revision, targetTabs, activeTargetTabs, focusedTarget, rootActiveTarget };
+  } catch { return null; } };
+  const observe = (event, kind, phase) => { try {
+    if (disposed) return;
+    if (record.events.length >= 8) { record.eventsCapped = true; return; }
+    let sameMeasured = false, taskTabTarget = false, inDialog = false, node = event.target, count = 0;
+    try {
+      for (; node && count < 16; count++, node = node.parentElement) {
+        sameMeasured ||= node === element;
+        taskTabTarget ||= node.hasAttribute('data-task-detail-open-tab') === true;
+        inDialog ||= node.getAttribute('role') === 'dialog';
+        if (sameMeasured && taskTabTarget && inDialog) { node = null; break; }
+      }
+      if (node) { if (!sameMeasured) sameMeasured = null; if (!taskTabTarget) taskTabTarget = null; if (!inDialog) inDialog = null; }
+    } catch { sameMeasured = null; taskTabTarget = null; inDialog = null; }
+    const trusted = event.isTrusted, connected = element?.isConnected, prevented = event.defaultPrevented;
+    record.events.push({ kind, phase, trusted: typeof trusted === 'boolean' ? trusted : null,
+      sameMeasured, taskTabTarget, inDialog, measuredConnected: typeof connected === 'boolean' ? connected : null,
+      prevented: typeof prevented === 'boolean' ? prevented : null });
+  } catch { /* A failed observation cannot affect input delivery. */ } };
+  const recorder = Object.freeze({
+    sample(state, activeTab, visible, result) { try {
+      if (disposed) return;
+      if (record.samples < 65535) record.samples++; else record.samplesCapped = true;
+      const sample = { state: snapshot(state), predicate: {
+        activeTab: typeof activeTab === 'boolean' ? activeTab : null, visible: typeof visible === 'boolean' ? visible : null,
+        result: result === true ? 'true' : result === false ? 'false' : result === null ? 'null' : result === undefined ? 'undefined' : 'other',
+      } };
+      record.first ??= sample; record.last = sample;
+      if (result) dispose('success');
+    } catch { /* Preserve the original predicate result. */ } },
+    read() { try {
+      dispose('failure');
+      const raw = JSON.stringify(record);
+      return raw.length <= 4096 && /^[\x20-\x7e]*$/.test(raw) ? JSON.parse(raw) : null;
+    } catch { return null; } },
+  });
+  try {
+    identity = { teamName: id(data(identity, 'teamName')).trim(), taskId: id(data(identity, 'taskId')).trim() };
+    const store = Object.getOwnPropertyDescriptor(browser, '__agentTeamsDevStore');
+    if (!store || !('value' in store) || !store.value) return false;
+    const getState = Object.getOwnPropertyDescriptor(store.value, 'getState');
+    if (!getState || !('value' in getState) || typeof getState.value !== 'function') return false;
+    const initial = Reflect.apply(getState.value, store.value, []);
+    try {
+      const global = data(initial, 'globalTaskDetail');
+      if (id(data(global, 'teamName')).trim() === identity.teamName && id(data(global, 'taskId')).trim() === identity.taskId) {
+        context = id(data(global, 'contextId')).trim(); key = JSON.stringify([context, identity.teamName, identity.taskId]);
+      }
+    } catch { /* The before identity remains unavailable. */ }
+    record.before = snapshot(initial, true);
+    Object.defineProperty(browser, slot, { value: recorder });
+    for (const kind of ['pointerdown', 'pointerup', 'click']) for (const capture of [true, false]) {
+      const listener = event => observe(event, kind, capture ? 'capture' : 'bubble');
+      listeners.push([kind, listener, capture]); document.addEventListener(kind, listener, { capture, passive: true });
+    }
+    return true;
+  } catch { dispose('setup-failed'); return false; }
+}
+
 class CdpClient {
   constructor(socket) {
     this.socket = socket;
@@ -445,7 +579,10 @@ class CdpClient {
     let lastTransientError = null;
     while (Date.now() < deadline) {
       try {
-        if (await this.evaluate(`Boolean(${expression})`)) return;
+        if (await this.evaluate(`Boolean(${expression})`)) {
+          try { if (label === 'fully hydrated visible localized task detail in active native tab') this.taskTabObservationInstalled = false; } catch { /* Diagnostic only. */ }
+          return;
+        }
         lastTransientError = null;
       } catch (error) {
         if (
@@ -464,18 +601,25 @@ class CdpClient {
     );
   }
 
-  async click(expression) {
+  async click(expression, taskTab = null) {
     const cutoff = Date.now() + 30_000;
     const remaining = () => Math.max(0, cutoff - Date.now());
     await this.waitFor(expression, expression, remaining());
     assert(Date.now() < cutoff, `E2E click target deadline: ${expression}`);
+    let taskTabObservation = '';
+    try {
+      const team = taskTab && Object.getOwnPropertyDescriptor(taskTab, 'teamName'), task = taskTab && Object.getOwnPropertyDescriptor(taskTab, 'taskId');
+      if (team && task && 'value' in team && 'value' in task && typeof team.value === 'string' && typeof task.value === 'string' &&
+          team.value.length <= 256 && task.value.length <= 256)
+        taskTabObservation = `if (target) { try { target.taskTabObserved = (${installTaskTabObservation.toString()})(window, document, element, ${JSON.stringify({ teamName: team.value, taskId: task.value })}); } catch {} }`;
+    } catch { /* An unavailable diagnostic cannot prevent the original measurement/input. */ }
     await this.evaluate(`(() => {
       const element = ${expression};
       if (element && !element.disabled) {
         element.scrollIntoView({ block: 'center', inline: 'nearest', behavior: 'instant' });
       }
     })()`);
-    const hitTarget = `(() => {
+    const hitTarget = (observation = '') => `(() => {
       const element = ${expression};
       if (!element?.isConnected || element.disabled) return null;
       for (let ancestor = element; ancestor; ancestor = ancestor.parentElement) {
@@ -485,12 +629,15 @@ class CdpClient {
       const x = rect.left + rect.width / 2;
       const y = rect.top + rect.height / 2;
       const hit = document.elementFromPoint(x, y);
-      return rect.width > 0 && rect.height > 0 &&
+      const target = rect.width > 0 && rect.height > 0 &&
         x >= 0 && x < window.innerWidth && y >= 0 && y < window.innerHeight &&
         hit && element.contains(hit) ? { x, y } : null;
+      ${observation}
+      return target;
     })()`;
-    await this.waitFor(hitTarget, `settled exact E2E click target: ${expression}`, remaining());
-    const target = await this.evaluate(hitTarget);
+    await this.waitFor(hitTarget(), `settled exact E2E click target: ${expression}`, remaining());
+    const target = await this.evaluate(hitTarget(taskTabObservation));
+    try { if (taskTab) this.taskTabObservationInstalled = target?.taskTabObserved === true; } catch { /* Diagnostic only. */ }
     assert(Date.now() < cutoff, `E2E click target deadline: ${expression}`);
     assert(target, `Missing/disabled/hidden E2E click target: ${expression}`);
     await this.send('Input.dispatchMouseEvent', {
@@ -709,6 +856,7 @@ async function dumpRenderer(client, label) {
         dialog: Boolean(dialog),
         creationPageName: document.querySelector('[data-testid="create-team-page"] #team-name')?.value ?? null,
         bodyText: (document.body?.innerText ?? '').slice(0, 800),
+        ${client.taskTabObservationInstalled === true ? "taskTabObservation: (() => { try { return window.__teamsTaskTabObservation.read(); } catch { return null; } })()," : ''}
       };
     })()`);
     process.stderr.write(`${JSON.stringify(snapshot, null, 2)}\n`);
@@ -1228,7 +1376,7 @@ async function exerciseTraditionalChineseMcpUi(fixture, log) {
     'localized task detail dialog and open-tab action', 60_000
   );
   await captureScreenshot(cdp, fixture, 'zh-tw-task-detail-dialog');
-  await cdp.click("document.querySelector('[role=dialog] [data-task-detail-open-tab]')");
+  await cdp.click("document.querySelector('[role=dialog] [data-task-detail-open-tab]')", { teamName: fixture.teamName, taskId: '77' });
   await cdp.waitFor(
     `(() => {
       const s = window.__agentTeamsDevStore.getState();
@@ -1236,10 +1384,12 @@ async function exerciseTraditionalChineseMcpUi(fixture, log) {
         t.id === p.activeTabId && t.taskDetail && t.teamName === ${JSON.stringify(fixture.teamName)}));
       const page = document.querySelector('[data-task-detail-page][data-task-detail-task-id="77"]');
       const visible = page && page.getClientRects().length > 0 && page.getBoundingClientRect().height > 0;
-      return !s.globalTaskDetail && activeTab && visible &&
+      const result = !s.globalTaskDetail && activeTab && visible &&
         page.getAttribute('data-task-detail-team') === ${JSON.stringify(fixture.teamName)} &&
         page.getAttribute('data-origin-current') === 'true' &&
         page.querySelector('h1')?.textContent?.includes('TEST zh-TW task detail');
+      try { if (${cdp.taskTabObservationInstalled === true}) window.__teamsTaskTabObservation.sample(s, activeTab, visible, result); } catch { /* Diagnostic only. */ }
+      return result;
     })()`,
     'fully hydrated visible localized task detail in active native tab', 60_000
   );

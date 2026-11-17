@@ -19,8 +19,8 @@ import {
   retainPackagedLineage, packagedOrphanObservation, packagedDrainSnapshot, closePackagedBrowser,
 } from '../../scripts/e2e/opencode-diagnostics/packaged.mjs';
 import {
-  assertPortAvailable, processes, ownedTree, sameIdentity, listeners, windowsProcessListenerSnapshot,
-  windowsProcessSnapshot, windowsQueryChildren,
+  assertPortAvailable, processes, ownedTree, sameIdentity, createWindowsProcessObserver,
+  windowsQueryChildren,
 } from '../../scripts/e2e/opencode-diagnostics/platform.mjs';
 import { readPackagedOpenCodeV2 } from '../../scripts/legacy-agent-host/packaged-opencode-v2-inputs.ts';
 import { captureDesktopSourceHashes, verifyDesktopSourceFreeze } from '../../scripts/legacy-agent-host/desktop-source-freeze.ts';
@@ -39,36 +39,14 @@ const object = value => {
 const sha = bytes => createHash('sha256').update(bytes).digest('hex');
 const hash = path => sha(readFileSync(path));
 const errorText = error => error instanceof Error ? (error.stack ?? error.message).slice(0,4000) : String(error).slice(0,1000);
-// Preserve already-observed failure facts before outer custody can terminate cleanup.
-const windowsUiFailureLine = (phase, error, retryUi, censusReads, censusReadsTruncated) => {
-  const original = { kind: 'TEST_WINDOWS_PACKAGED_UI_FAILURE', phase, error: error.slice(0, 128) };
-  const fallback = JSON.stringify(original) + '\n';
+// Summarize only existing current-phase observations, independently of the original failure line.
+const windowsCensusFailureLine = (phase, censusReads, censusReadsTruncated) => {
+  const fallback = JSON.stringify({ kind: 'TEST_WINDOWS_PACKAGED_CENSUS_FAILURE', phase, status: 'unknown' }) + '\n';
   try {
     const rounded = value => {
       assert.ok(typeof value === 'number' && Number.isFinite(value) && value >= 0);
-      const result = Math.round(value);
-      assert.ok(Number.isSafeInteger(result));
-      return result;
+      const result = Math.round(value); assert.ok(Number.isSafeInteger(result)); return result;
     };
-    let retry = null;
-    if (retryUi !== undefined) {
-      assert.ok(retryUi && typeof retryUi === 'object' && !Array.isArray(retryUi));
-      assert.ok(retryUi.stages && typeof retryUi.stages === 'object' && !Array.isArray(retryUi.stages));
-      const stages = {};
-      for (const key of ['clickReturnedMs', 'writerObservedMs', 'hostCheckedMs', 'uiReadyMs']) {
-        const value = retryUi.stages[key];
-        stages[key] = value === null ? null : rounded(value);
-      }
-      assert.ok(Number.isSafeInteger(retryUi.returnedReads) && retryUi.returnedReads >= 0 && retryUi.returnedReads <= 500);
-      assert.equal(typeof retryUi.countTruncated, 'boolean');
-      let last = null;
-      if (retryUi.last !== null) {
-        assert.ok(retryUi.last && typeof retryUi.last === 'object' && !Array.isArray(retryUi.last));
-        assert.ok(['surface-missing', 'refresh-not-enabled', 'retry-present', 'alert-present', 'ready', 'invalid'].includes(retryUi.last.result));
-        last = { atMs: retryUi.last.atMs === null ? null : rounded(retryUi.last.atMs), result: retryUi.last.result };
-      }
-      retry = { stages, returnedReads: retryUi.returnedReads, countTruncated: retryUi.countTruncated, last };
-    }
     assert.ok(Array.isArray(censusReads) && censusReads.length <= 512);
     assert.equal(typeof censusReadsTruncated, 'boolean');
     const census = { counts: { 'process-census': 0, 'process-listener-snapshot': 0 },
@@ -78,15 +56,13 @@ const windowsUiFailureLine = (phase, error, retryUi, censusReads, censusReadsTru
       if (row.phase !== phase) continue;
       assert.ok(row.operation === 'process-census' || row.operation === 'process-listener-snapshot');
       rounded(row.startMs); rounded(row.endMs);
-      assert.ok(row.endMs >= row.startMs);
-      assert.equal(typeof row.returned, 'boolean');
+      assert.ok(row.endMs >= row.startMs); assert.equal(typeof row.returned, 'boolean');
       const elapsed = rounded(row.endMs - row.startMs);
-      census.counts[row.operation]++;
-      census.totalMs = rounded(census.totalMs + elapsed);
+      census.counts[row.operation]++; census.totalMs = rounded(census.totalMs + elapsed);
       census.maxMs = Math.max(census.maxMs, elapsed); census.lastMs = elapsed;
       if (!row.returned) census.failedReads++;
     }
-    const line = JSON.stringify({ ...original, retryUi: retry, census }) + '\n';
+    const line = JSON.stringify({ kind: 'TEST_WINDOWS_PACKAGED_CENSUS_FAILURE', phase, status: 'observed', census }) + '\n';
     return Buffer.byteLength(line, 'utf8') <= 1024 ? line : fallback;
   } catch { return fallback; }
 };
@@ -166,7 +142,7 @@ const proof = {
   phases: [], uiSteps: [], screenshots: [], appLog: logPath,
   censusReads: [], censusReadsTruncated: false, queryExplanations: [],
 };
-let app, cdp, appLog, main, hostA, hostB, writerA, exit, exitPromise, binding;
+let app, cdp, appLog, main, hostA, hostB, writerA, exit, exitPromise, binding, censusObserver;
 let lineage = [], startedAt, outerDeadline, activeDeadline, activePhase = 'prepare';
 let acceptingExit = false, completed = false, primaryError;
 let quitStarted = false, shutdownResult;
@@ -203,6 +179,10 @@ const check = () => {
     fixture.assertPeer();
     assert.equal(exit, undefined, 'Original packaged Main must remain alive');
   }
+};
+const freshWindowsObservation = () => {
+  assert.ok(censusObserver, 'Original Windows query owner was created');
+  return censusObserver.snapshot(Math.min(30000, remaining()));
 };
 const poll = async (read, label) => {
   void label;
@@ -267,12 +247,12 @@ const observeCensus = (operation, read) => {
 };
 const captureCensus = () => {
   check();
-  const observation = observeCensus('process-census', windowsProcessSnapshot);
+  const observation = observeCensus('process-census', freshWindowsObservation);
   return validateCensus(observation.processes, observation.observer);
 };
 const assertOwnedRenderer = () => {
   check();
-  const observation = observeCensus('process-listener-snapshot', () => windowsProcessListenerSnapshot(9222, undefined, true));
+  const observation = observeCensus('process-listener-snapshot', freshWindowsObservation);
   const snapshot = validateCensus(observation.processes, observation.observer), ids = observation.listeners;
   assert.ok(ids.length > 0 && ids.every(pid => snapshot.some(current =>
     current.pid === pid && lineage.some(original => original.pid === pid && original.birth === current.birth))),
@@ -388,7 +368,7 @@ const quit = async () => {
         assertOwnership: async () => {
           const current = captureCensus();
           sameIdentity(main, current.find(row => row.pid === main.pid));
-          const ids = listeners();
+          const ids = freshWindowsObservation().listeners;
           assert.ok(ids.length > 0 && ids.every(pid => lineage.some(row => row.pid === pid &&
             current.some(value => value.pid === pid && value.birth === row.birth))));
         },
@@ -400,7 +380,7 @@ const quit = async () => {
   if (exitPromise) proof.appExit = await within(() => exitPromise);
   assert.deepEqual(proof.appExit, { code: 0, signal: null }, 'Actual product Main exits successfully');
   const final = await poll(async () => {
-    const current = captureCensus(), ids = listeners();
+    const current = captureCensus(), ids = freshWindowsObservation().listeners;
     const state = packagedDrainSnapshot(lineage, current, ids);
     if (!state.drained) return false;
     return { ...state, census: current, lineage };
@@ -418,6 +398,7 @@ try {
   await assertPortAvailable();
   startedAt = performance.now(); outerDeadline = startedAt + 300000;
   begin('packaged-App-startup', 120000);
+  censusObserver = createWindowsProcessObserver();
   appLog = createWriteStream(logPath, { flags: 'wx' });
   appLog.on('error', error => { proof.appLogFailure = errorText(error); });
   app = spawn(artifact.app.path, ['--remote-debugging-port=9222'], {
@@ -430,11 +411,11 @@ try {
     app.once('close', (code, signal) => { exit = { code, signal }; resolve(exit); });
   });
   assert.ok(Number.isInteger(app.pid) && app.pid > 1);
-  main = await poll(async () => processes().find(row => row.pid === app.pid) ?? false, 'original actual Main birth');
+  main = await poll(async () => freshWindowsObservation().processes.find(row => row.pid === app.pid) ?? false, 'original actual Main birth');
   assert.equal(String(main.executable).toLowerCase(), artifact.app.path.toLowerCase());
   proof.originalMain = main;
   await poll(async () => {
-    const current = captureCensus(), ids = listeners();
+    const current = captureCensus(), ids = freshWindowsObservation().listeners;
     if (!ids.length) return false;
     assert.ok(ids.every(pid => lineage.some(row => row.pid === pid &&
       current.some(value => value.pid === pid && value.birth === row.birth))));
@@ -523,25 +504,41 @@ try {
     'const buttons=[...surface.querySelectorAll("button")]; if(errors.length!==1||!buttons.some(b=>b.textContent.trim()==="Refresh"&&!b.disabled)' +
     '||!buttons.some(b=>b.textContent.trim()==="Retry"&&!b.disabled))return null;return errors[0];})()',
   'genuine closed Host read marker with separate controls', remaining());
-  for (const row of original.rows)
-    assert.equal(object(await ui.waitRead(processOwner(row), 'original rows retained during outage', remaining())).process.processRef, row.processRef);
+  const retainedRows = await ui.waitRead('(() => { const rows=[' +
+    original.rows.map(row => processOwner(row)).join(',') +
+    ']; return rows.every(Boolean) ? rows : null; })()',
+  'original rows retained during outage', remaining());
+  assert.ok(Array.isArray(retainedRows));
+  assert.equal(retainedRows.length, original.rows.length);
+  for (const [index, row] of original.rows.entries())
+    assert.equal(object(retainedRows[index]).process.processRef, row.processRef);
 
   assertHostBirths();
   begin('one-explicit-same-Main-Retry', 10000);
-  const retryUi = { stages: { clickReturnedMs: null, writerObservedMs: null, hostCheckedMs: null, uiReadyMs: null },
-    returnedReads: 0, countTruncated: false, last: null };
-  const recordRetryUi = (stage, value) => {
+  let retryUiSampleCount = 0, retryUiLast = null, retryUiLastAtMs = null;
+  const retryUiBase = { schemaVersion: 1, source: 'original-recovery-wait', atomicWithFailure: false };
+  const retryUiStages = { clickReturnedMs: null, writerObservedMs: null, hostCheckedMs: null, uiReadyMs: null };
+  const publishRetryUi = () => {
     try {
-      proof.retryUi = retryUi;
-      const elapsed = Math.round(performance.now() - startedAt - proof.phases.at(-1).atMs);
-      const atMs = Number.isSafeInteger(elapsed) && elapsed >= 0 ? elapsed : null;
-      if (stage === 'sample') {
-        if (retryUi.returnedReads < 500) retryUi.returnedReads++;
-        else retryUi.countTruncated = true;
-        retryUi.last = { atMs, result: ['surface-missing', 'refresh-not-enabled', 'retry-present', 'alert-present', 'ready'].includes(value) ? value : 'invalid' };
-      } else retryUi.stages[stage] = atMs;
-    } catch { /* Passive diagnostics never replace an original action, refusal or cleanup. */ }
+      const observation = { ...retryUiBase, stages: { ...retryUiStages }, sampleCount: Math.min(128, retryUiSampleCount),
+        sampleCountCapped: retryUiSampleCount > 128, lastAtMs: retryUiLastAtMs,
+        last: retryUiLast === null ? null : { ...retryUiLast } };
+      if (Buffer.byteLength(JSON.stringify(observation), 'utf8') <= 512) proof.retryUiObservation = observation;
+    } catch { /* Passive observation cannot change the original readiness result. */ }
   };
+  const recordRetryUi = (stage, last) => {
+    let atMs = null;
+    try {
+      const elapsed = Math.round(performance.now() - startedAt - proof.phases.at(-1).atMs);
+      if (Number.isSafeInteger(elapsed) && elapsed >= 0) atMs = elapsed;
+    } catch { /* Failed timing does not discard valid facts or decide readiness. */ }
+    if (stage === 'sample') {
+      if (retryUiSampleCount < 129) retryUiSampleCount++;
+      retryUiLast = last; retryUiLastAtMs = atMs;
+    } else retryUiStages[stage] = atMs;
+    publishRetryUi();
+  };
+  publishRetryUi();
   proof.counts.retryClicks++;
   await ui.click(surface + ' button', 'explicit product Retry once', 'Retry');
   recordRetryUi('clickReturnedMs');
@@ -556,19 +553,54 @@ try {
   proof.successorHost = { identity: hostB, writer: successorWriter };
   assertHostBirths();
   recordRetryUi('hostCheckedMs');
-  await ui.waitRead('(() => {const s=document.querySelector(' + desktopJsLiteral(surface) + ');if(!s)return "surface-missing";' +
-    'const b=[...s.querySelectorAll("button")];if(!b.some(x=>x.textContent.trim()==="Refresh"&&!x.disabled))return "refresh-not-enabled";' +
-    'if(b.some(x=>x.textContent.trim()==="Retry"))return "retry-present";' +
-    'if(s.querySelector(\'[role="alert"]\'))return "alert-present";return "ready";})()',
+  await ui.waitRead('(() => {const s=document.querySelector(' + desktopJsLiteral(surface) +
+    ');let firstRefresh=null,refresh="not-observed",retryPresent=null,alertPresent=null;' +
+    'if(!s)return {surfacePresent:false,refresh,firstRefreshBusy:null,retryPresent,alertPresent,ready:false};' +
+    'const b=[...s.querySelectorAll("button")];refresh="absent";' +
+    'const ready=b.some(x=>{if(x.textContent.trim()!=="Refresh")return false;if(!firstRefresh)firstRefresh=x;' +
+    'const enabled=!x.disabled;refresh=enabled?"enabled":"disabled";return enabled;})' +
+    '&&!(retryPresent=b.some(x=>x.textContent.trim()==="Retry"))&&!(alertPresent=!!s.querySelector(\'[role="alert"]\'));' +
+    'let firstRefreshBusy=null;try{if(firstRefresh){const busy=firstRefresh.getAttribute("aria-busy");' +
+    'firstRefreshBusy=busy==="true"?true:busy==="false"?false:null;}}catch{}' +
+    'return {surfacePresent:true,refresh,firstRefreshBusy,retryPresent,alertPresent,ready};})()',
   'original refreshed Team after positive product recovery', remaining(), value => {
-    recordRetryUi('sample', value); return value === 'ready';
+    let last, ready;
+    try {
+      if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
+      const prototype = Object.getPrototypeOf(value);
+      if (prototype !== Object.prototype && prototype !== null) return false;
+      const names = ['surfacePresent', 'refresh', 'firstRefreshBusy', 'retryPresent', 'alertPresent', 'ready'];
+      const keys = Reflect.ownKeys(value);
+      if (keys.length !== names.length || names.some(name => !keys.includes(name))) return false;
+      const fields = names.map(name => Object.getOwnPropertyDescriptor(value, name));
+      if (fields.some(field => !field || !Object.hasOwn(field, 'value'))) return false;
+      const [surfacePresent, refresh, firstRefreshBusy, retryPresent, alertPresent, observedReady] = fields.map(field => field.value);
+      if (typeof surfacePresent !== 'boolean' || typeof observedReady !== 'boolean' ||
+        !['not-observed', 'absent', 'disabled', 'enabled'].includes(refresh) ||
+        ![firstRefreshBusy, retryPresent, alertPresent].every(field => field === null || typeof field === 'boolean')) return false;
+      if (!surfacePresent && (refresh !== 'not-observed' || firstRefreshBusy !== null || retryPresent !== null || alertPresent !== null) ||
+        surfacePresent && refresh === 'not-observed' || refresh === 'absent' && firstRefreshBusy !== null) return false;
+      if (refresh !== 'enabled' ? retryPresent !== null || alertPresent !== null :
+        typeof retryPresent !== 'boolean' || (retryPresent ? alertPresent !== null : typeof alertPresent !== 'boolean')) return false;
+      ready = surfacePresent && refresh === 'enabled' && retryPresent === false && alertPresent === false;
+      if (observedReady !== ready) return false;
+      last = { surfacePresent, refresh, firstRefreshBusy, retryPresent, alertPresent, ready };
+    } catch { return false; }
+    recordRetryUi('sample', last);
+    return ready;
   });
   recordRetryUi('uiReadyMs');
   await originalBinding();
   await within(() => fixture.afterRetry(activeDeadline));
   proof.afterRetryPublic = await readProcesses();
-  for (const row of original.rows) {
-    const owner = object(await ui.waitRead(processOwner(row), 'same original process refs after Retry', remaining()));
+  const retryRows = await ui.waitRead('(() => { const rows=[' +
+    original.rows.map(row => processOwner(row)).join(',') +
+    ']; return rows.every(Boolean) ? rows : null; })()',
+  'same original process refs after Retry', remaining());
+  assert.ok(Array.isArray(retryRows));
+  assert.equal(retryRows.length, original.rows.length);
+  for (const [index, row] of original.rows.entries()) {
+    const owner = object(retryRows[index]);
     assert.deepEqual(owner.process, { ...row, observation: 'same-live', canTerminate: true });
   }
   proof.sameMainAfterRetry = captureCensus().find(row => row.pid === main.pid);
@@ -600,15 +632,24 @@ try {
   primaryError = error;
   proof.error = errorText(error);
   try {
-    const line = windowsUiFailureLine(activePhase, proof.error, proof.retryUi,
-      proof.censusReads, proof.censusReadsTruncated);
+    const failureText = proof.error;
+    if (typeof failureText === 'string') {
+      const line = JSON.stringify({ kind: 'TEST_WINDOWS_PACKAGED_UI_FAILURE', phase: activePhase,
+        error: failureText.slice(0, 1024), errorTruncated: failureText.length > 1024,
+        retryUiObservation: proof.retryUiObservation ?? null }) + '\n';
+      writeSync(1, Buffer.byteLength(line, 'utf8') <= 8192 ? line :
+        '{"kind":"TEST_WINDOWS_PACKAGED_UI_FAILURE","reason":"projection-limit"}\n');
+    }
+  } catch { /* The original failure and cleanup remain authoritative. */ }
+  try {
+    const line = windowsCensusFailureLine(activePhase, proof.censusReads, proof.censusReadsTruncated);
     if (Buffer.byteLength(line, 'utf8') <= 1024) writeSync(1, line);
   } catch { /* Keep the original failure and continue original cleanup after a diagnostic write error. */ }
 } finally {
   if (app && !quitStarted) {
     try {
       if (!main && app.pid) {
-        const snapshot = processes(), current = snapshot.find(row => row.pid === app.pid);
+        const snapshot = freshWindowsObservation().processes, current = snapshot.find(row => row.pid === app.pid);
         if (current) {
           main = current; lineage = retainPackagedLineage([], ownedTree(snapshot, current)).records;
         }
@@ -621,6 +662,14 @@ try {
   cdp?.close();
   try { await fixture.close(activeDeadline); }
   catch (error) { proof.fixtureCloseFailure = errorText(error); proof.cleanup = false; }
+  if (censusObserver) {
+    try {
+      const left = Math.floor(Math.min(outerDeadline, activeDeadline) - performance.now());
+      proof.censusObserver = await censusObserver.close(Math.max(0, Math.min(30000, left)));
+      remaining();
+    }
+    catch (error) { proof.censusObserverFailure = errorText(error); proof.cleanup = false; }
+  }
   if (appLog) await new Promise(resolve => appLog.end(resolve));
   try { proof.peer = fixture.peerEvidence(); }
   catch (error) { proof.peerEvidenceFailure = errorText(error); }
@@ -640,7 +689,7 @@ try {
   await verifyDesktopSourceFreeze(repository, sources, sourceHashes, proof);
   if (completed && !primaryError && proof.cleanup && proof.packagedAndNativeInputsUnchanged &&
     !proof.sourceFreezeFailure && !proof.appLogFailure && !proof.fixtureCloseFailure && !proof.peerEvidenceFailure &&
-    !proof.hostBirthFailure) {
+    !proof.hostBirthFailure && proof.censusObserver?.closed === true && !proof.censusObserverFailure) {
     try {
       assert.deepEqual(proof.counts, { mainStarts: 1, initialRuntimeOpen: 1, businessInput: 1,
         refreshClicks: 1, retryClicks: 1, uiStops: 2, quit: 1 });

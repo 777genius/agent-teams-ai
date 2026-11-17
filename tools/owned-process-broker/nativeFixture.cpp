@@ -269,7 +269,7 @@ int wmain(int argc,wchar_t** argv) {
   const bool branch=mode==L"branch"||mode==L"branch-first"||mode==L"branch-race";
   if(!branch) std::printf("{\"root\":{\"pid\":%lu,\"birth\":\"%016llx\"}}\n",
     GetCurrentProcessId(),static_cast<unsigned long long>(birth(GetCurrentProcess())));
-  if(mode==L"service-pair") {
+  if(mode==L"service-race") {
     if(!applicationBreakpoint(EXCEPTION_BREAKPOINT)) {
       prerequisiteFailure(PrerequisiteStage::RootBreakpoint); return 62;
     }
@@ -296,6 +296,8 @@ int wmain(int argc,wchar_t** argv) {
     wchar_t i386Fixture[32768]{};
     const auto i386Length=GetEnvironmentVariableW(L"OWNED_PROCESS_TEST_I386_FIXTURE",i386Fixture,32768);
     if(i386Length>=32768||(i386Length&&!i386ApplicationChild(i386Fixture))) return 63;
+  }
+  if(mode==L"service-pair") {
     // Sequential original HANDLE exits exceed the debug registry's64 live cap.
     // This is cumulative churn, never80 simultaneously owned live children.
     for(DWORD index=0;index<80;++index) {

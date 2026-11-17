@@ -87,7 +87,18 @@ function projectHostProbeCloseFailure(value: unknown) {
     const reason = choice(own('reason'), ['unconfirmed', 'threw', 'identity']);
     if (typeof probeDigest !== 'string' || !/^[a-f0-9]{64}$/.test(probeDigest) ||
         !runState || !outcome || !errorClass || !stage || !reason) return undefined;
-    return { probeDigest, runState, outcome, errorClass, stage, reason };
+    // Optional opaque error metadata must never discard a valid original close observation.
+    const runCodes: { runErrorCode?: string | null; runCauseCode?: string | null } = {};
+    for (const key of ['runErrorCode', 'runCauseCode'] as const) {
+      try {
+        const field = Object.getOwnPropertyDescriptor(value, key);
+        if (field) {
+          const selected = choice('value' in field ? field.value : undefined, codes);
+          runCodes[key] = selected === 'unknown' ? null : selected;
+        }
+      } catch { runCodes[key] = null; }
+    }
+    return { probeDigest, runState, outcome, errorClass, stage, reason, ...runCodes };
   } catch { return undefined; }
 }
 
@@ -124,7 +135,9 @@ export function createPassiveNativeDiagnosticCapture() {
             exitCode: integer(value.exitCode, 255), signal: choice(value.signal, signals),
             ...(failure ? { deadlineExpired: failure.deadlineExpired, aborted: failure.aborted } : {}),
             ...(failedClose ? { probeDigest: failedClose.probeDigest, runState: failedClose.runState,
-              outcome: failedClose.outcome, errorClass: failedClose.errorClass } : {}) };
+              outcome: failedClose.outcome, errorClass: failedClose.errorClass,
+              ...('runErrorCode' in failedClose ? { runErrorCode: failedClose.runErrorCode } : {}),
+              ...('runCauseCode' in failedClose ? { runCauseCode: failedClose.runCauseCode } : {}) } : {}) };
           const size = Buffer.byteLength(JSON.stringify(entry)) + 1;
           if (size > reservedLineBytes) continue;
           const reserve = (readObserved ? 0 : reservedLineBytes) + (metadataObserved ? 0 : reservedLineBytes) +

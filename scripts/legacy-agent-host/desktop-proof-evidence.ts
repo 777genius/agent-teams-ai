@@ -341,6 +341,37 @@ export function projectDesktopEmulatedReadinessFailure(value: unknown) {
         modelUnverified: field.includes('could not be verified') || field.includes('check failed') };
     };
     const snapshot = own(value, 'rendererFailureSnapshot'), store = own(snapshot, 'store');
+    // This is a partial saved sample, taken after the original readiness wait failed.
+    const dialogs = own(snapshot, 'dialogs');
+    const dialogLength = Array.isArray(dialogs) ? own(dialogs, 'length') : missing;
+    const dialogCount = typeof dialogLength === 'number' && Number.isSafeInteger(dialogLength) && dialogLength >= 0
+      ? dialogLength : null;
+    const dialogItems = [];
+    if (dialogCount !== null) for (let index = 0; index < Math.min(dialogCount, 3); index++) {
+      const dialog = own(dialogs, String(index)), buttons = own(dialog, 'buttons');
+      const buttonLength = Array.isArray(buttons) ? own(buttons, 'length') : missing;
+      const buttonCount = typeof buttonLength === 'number' && Number.isSafeInteger(buttonLength) && buttonLength >= 0
+        ? buttonLength : null;
+      let matches = 0, enabled = 0, disabled = 0, unknown = 0, unknownEntries = 0;
+      if (buttonCount !== null) for (let buttonIndex = 0; buttonIndex < Math.min(buttonCount, 24); buttonIndex++) {
+        const button = own(buttons, String(buttonIndex)), text = own(button, 'text');
+        if (typeof text !== 'string') unknownEntries++;
+        if (text !== 'Launch team') continue;
+        matches++;
+        const state = own(button, 'disabled');
+        if (state === false) enabled++;
+        else if (state === true) disabled++;
+        else unknown++;
+      }
+      dialogItems.push({ recorded: record(dialog), text: textFacts(own(dialog, 'text')),
+        buttons: { recorded: Array.isArray(buttons), count: buttonCount === null ? null : Math.min(buttonCount, 25),
+          atCaptureLimit: buttonCount === null ? null : buttonCount === 24,
+          overflow: buttonCount === null ? null : buttonCount > 24,
+          unknownEntries: buttonCount === null ? null : unknownEntries,
+          launchTeam: { matches: buttonCount === null ? null : matches,
+            enabled: buttonCount === null ? null : enabled, disabled: buttonCount === null ? null : disabled,
+            unknown: buttonCount === null ? null : unknown } } });
+    }
     const imported = own(value, 'stoppedImportUiProof'), hydration = own(imported, 'hydrationFailureDiagnostics');
     const entries = own(store, 'provisioning');
     const length = Array.isArray(entries) ? own(entries, 'length') : missing;
@@ -360,6 +391,11 @@ export function projectDesktopEmulatedReadinessFailure(value: unknown) {
     const result = { schemaVersion: 1, status: 'available',
       snapshotRecorded: record(snapshot), snapshotUnavailable: boolean(own(snapshot, 'unavailable')),
       storeRecorded: record(store), selectedTeamError: textFacts(own(store, 'selectedTeamError')),
+      retainedDialogs: { source: 'retained-post-failure-partial-dialog-sample',
+        atomicWithFailedWait: false, completeDom: false, actualTruncationKnown: false,
+        count: dialogCount === null ? null : Math.min(dialogCount, 4),
+        atCaptureLimit: dialogCount === null ? null : dialogCount === 3,
+        overflow: dialogCount === null ? null : dialogCount > 3, items: dialogItems },
       importRecorded: record(imported), hydrationRecorded: record(hydration),
       hydration: { text: textFacts(own(hydration, 'text')),
         permissions: choice(own(hydration, 'permissions'), ['checked', 'unchecked', 'indeterminate']) },
@@ -386,7 +422,8 @@ export function projectDesktopProofReceiptSummary(evidence: Record<string, unkno
       ? { selectionTargetFailure: projectDesktopSelectionTargetFailure(evidence) } : {}),
     ...(mixedMode && evidence.status !== 'PASS'
       ? { mixedSettingsFailure: projectDesktopMixedSettingsFailure(evidence) } : {}),
-    ...(['emulated-import-ui', 'emulated-opencode-runtime-ui'].includes(mode) && evidence.status !== 'PASS'
+    ...(['emulated-import-ui', 'emulated-opencode-runtime-ui', 'emulated-claude-runtime-ui',
+      'emulated-claude-lifecycle-ui', 'emulated-collaboration-ui'].includes(mode) && evidence.status !== 'PASS'
       ? { emulatedReadinessFailure: projectDesktopEmulatedReadinessFailure(evidence) } : {}),
     ...(['task-board-ui', 'task-board-cross-team-ui'].includes(mode) && evidence.status !== 'PASS'
       ? { taskBoardFailure: projectDesktopTaskBoardFailure(evidence) } : {}),

@@ -1,14 +1,16 @@
 import assert from 'node:assert/strict';
-import { execFileSync } from 'node:child_process';
+import { execFileSync, spawn } from 'node:child_process';
 import net from 'node:net';
-import { existsSync } from 'node:fs';
+import { existsSync, realpathSync } from 'node:fs';
 import path from 'node:path';
+import { performance } from 'node:perf_hooks';
+import { isMainThread, MessageChannel, receiveMessageOnPort, Worker, workerData } from 'node:worker_threads';
 
 const windows = process.platform === 'win32';
 const windowsProcessQuery =
   "@(Get-CimInstance Win32_Process -Property ProcessId,ParentProcessId,CreationDate,ExecutablePath | Where-Object CreationDate | ForEach-Object { [pscustomobject]@{pid=[int]$_.ProcessId; parent=[int]$_.ParentProcessId; birth=$_.CreationDate.ToUniversalTime().ToString('o'); executable=$_.ExecutablePath} }) | ConvertTo-Json -Compress";
 const windowsListenerQuery = port =>
-  `Get-NetTCPConnection -State Listen | Where-Object LocalPort -eq ${port} | Select-Object -ExpandProperty OwningProcess`;
+  `Get-CimInstance -Namespace 'Root\\StandardCimv2' -ClassName MSFT_NetTCPConnection -Filter "LocalPort = ${port} AND State = 2" | Select-Object -ExpandProperty OwningProcess`;
 export function powershell(script) {
   return execFileSync(
     path.join(
@@ -185,21 +187,14 @@ export function listeners(port = 9222) {
     throw e;
   }
 }
-/** Fresh ordered observations, not an atomic snapshot or retained authority. */
-export function windowsProcessListenerSnapshot(port = 9222, execute = powershell, captureObserver = false) {
-  assertCdpPort(port);
-  assert.equal(typeof captureObserver, 'boolean');
-  const output = execute(
-    `$TESTProcessOutput = ${windowsProcessQuery};\n` +
-    // Empty listeners can only refuse the live guard; standalone absence queries stay unchanged.
-    `$TESTListenerOutput = Get-CimInstance -Namespace root/StandardCimv2 ` +
-    `-ClassName MSFT_NetTCPConnection -Filter "State = 2 AND LocalPort = ${port}" ` +
-    '-Property OwningProcess | Select-Object -ExpandProperty OwningProcess;\n' +
+const windowsObservationScript = (port, captureObserver = false) =>
+  `$TESTProcessOutput = ${windowsProcessQuery};\n` +
+    `$TESTListenerOutput = ${windowsListenerQuery(port)};\n` +
     '[pscustomobject]@{ processes = [string]$TESTProcessOutput; ' +
     'listeners = [string]($TESTListenerOutput -join [Environment]::NewLine)' +
     (captureObserver ? '; observerPid = [int]$PID' : '') +
-    ' } | ConvertTo-Json -Compress'
-  );
+    ' } | ConvertTo-Json -Compress';
+function parseWindowsObservation(output, captureObserver = false) {
   const value = JSON.parse(output.replace(/^\uFEFF/, '').trim());
   assert.ok(value && typeof value === 'object' && !Array.isArray(value), 'Invalid Windows observation envelope');
   assert.deepEqual(Object.keys(value).sort(), captureObserver ? ['listeners', 'observerPid', 'processes'] : ['listeners', 'processes']);
@@ -210,6 +205,196 @@ export function windowsProcessListenerSnapshot(port = 9222, execute = powershell
     ...(captureObserver ? { observer: windowsQueryObserver(snapshot, value.observerPid) } : {}),
   };
 }
+/** Fresh ordered observations, not an atomic snapshot or retained authority. */
+export function windowsProcessListenerSnapshot(port = 9222, execute = powershell, captureObserver = false) {
+  assertCdpPort(port);
+  assert.equal(typeof captureObserver, 'boolean');
+  return parseWindowsObservation(execute(windowsObservationScript(port, captureObserver)), captureObserver);
+}
+
+const windowsObserverKind = 'TEST_WINDOWS_PROCESS_OBSERVER_V1';
+const windowsObserverLimit = 1024 * 1024;
+/** A fixed read-only interpreter loop; stdin carries sequence numbers, never PowerShell source. */
+export function windowsProcessObserverScript(port) {
+  assertCdpPort(port);
+  return "$ErrorActionPreference='Stop'; [Console]::OutputEncoding = [Text.UTF8Encoding]::new($false); " +
+    "$sequence=0; while ($null -ne ($line=[Console]::ReadLine())) { " +
+    "$sequence++; if ($line -cne [string]$sequence) { throw 'Invalid TEST observation sequence' }; " +
+    '$observation = & { ' + windowsObservationScript(port) + ' }; ' +
+    '[Console]::WriteLine(([pscustomobject]@{ sequence=$sequence; observation=[string]$observation } | ConvertTo-Json -Compress)); ' +
+    '[Console]::Out.Flush(); }';
+}
+/** The worker alone owns the original child, its streams, timer and close observation. */
+export function serveWindowsProcessObserver(channel, wake, options, createChild = spawn) {
+  const publish = value => {
+    channel.postMessage(value);
+    Atomics.add(wake, 0, 1); Atomics.notify(wake, 0);
+  };
+  let child, pending, timer, failed = false, closing = false, closed = false, stopping = false, sequence = 0;
+  let buffered = Buffer.alloc(0);
+  const stopChild = () => {
+    if (child && !closed && !stopping) {
+      stopping = true; child.stdin.end(); child.kill();
+    }
+  };
+  const fail = () => {
+    if (!failed) { failed = true; publish({ kind: 'failure' }); }
+    clearTimeout(timer);
+    stopChild();
+  };
+  const receive = message => {
+    try {
+      assert.ok(message && typeof message === 'object' && !Array.isArray(message));
+      if (message.kind === 'close') {
+        assert.deepEqual(Object.keys(message), ['kind']);
+        closing = true; clearTimeout(timer);
+        stopChild();
+        return;
+      }
+      assert.deepEqual(Object.keys(message).sort(), ['kind', 'sequence', 'timeoutMs']);
+      assert.equal(message.kind, 'read');
+      assert.ok(!failed && !closing && !closed && pending === undefined);
+      assert.ok(Number.isSafeInteger(message.sequence) && message.sequence === sequence + 1);
+      assert.ok(Number.isSafeInteger(message.timeoutMs) && message.timeoutMs > 0 && message.timeoutMs <= 30000);
+      sequence = message.sequence; pending = sequence;
+      timer = setTimeout(fail, message.timeoutMs);
+      child.stdin.write(String(sequence) + '\n', error => { if (error) fail(); });
+    } catch { fail(); }
+  };
+  try {
+    child = createChild(options.executable,
+      ['-NoProfile', '-NonInteractive', '-EncodedCommand',
+        Buffer.from(windowsProcessObserverScript(options.port), 'utf16le').toString('base64')],
+      { stdio: ['pipe', 'pipe', 'pipe'], windowsHide: true });
+    child.once('spawn', () => publish({ kind: 'ready', pid: child.pid }));
+    child.once('error', fail); child.stdin.on('error', fail);
+    child.stderr.on('data', fail);
+    child.stdout.on('data', part => {
+      try {
+        assert.ok(!failed && !closing && pending !== undefined);
+        assert.ok(buffered.length + part.length <= windowsObserverLimit);
+        buffered = Buffer.concat([buffered, part]);
+        const end = buffered.indexOf(10);
+        if (end < 0) return;
+        assert.equal(end, buffered.length - 1, 'Only one complete original observation is accepted');
+        const value = JSON.parse(buffered.toString('utf8').trim());
+        assert.deepEqual(Object.keys(value).sort(), ['observation', 'sequence']);
+        assert.equal(value.sequence, pending); assert.equal(typeof value.observation, 'string');
+        const observation = parseWindowsObservation(value.observation);
+        buffered = Buffer.alloc(0); clearTimeout(timer); pending = undefined;
+        publish({ kind: 'snapshot', sequence, observation });
+      } catch { fail(); }
+    });
+    child.once('close', (code, signal) => {
+      closed = true; clearTimeout(timer);
+      if (!closing) fail();
+      publish({ kind: 'closed', pid: child.pid ?? null, code, signal, expected: closing && !failed });
+      channel.off('message', receive); channel.close();
+    });
+    channel.on('message', receive);
+  } catch {
+    fail();
+    if (!child) {
+      publish({ kind: 'closed', pid: null, code: null, signal: null, expected: false });
+      channel.close();
+    }
+  }
+}
+
+/** Synchronous fresh reads preserve the UI guard contract; no observation is reused. */
+export function createWindowsProcessObservationClient({
+  channel, wake, executable, driverPid, exited, receive = receiveMessageOnPort,
+  now = () => performance.now(), wait = Atomics.wait,
+}) {
+  let pid, identity, sequence = 0, failed = false, closing = false;
+  const duration = milliseconds => {
+    assert.ok(Number.isSafeInteger(milliseconds) && milliseconds > 0 && milliseconds <= 30000);
+    return now() + milliseconds;
+  };
+  const next = deadline => {
+    for (;;) {
+      const left = Math.floor(deadline - now());
+      assert.ok(left > 0, 'Original Windows observation deadline');
+      const version = Atomics.load(wake, 0), packet = receive(channel);
+      if (packet) {
+        const value = packet.message;
+        assert.ok(value && typeof value === 'object' && !Array.isArray(value));
+        assert.notEqual(value.kind, 'failure', 'Original Windows observation worker failed');
+        return value;
+      }
+      wait(wake, 0, version, left);
+    }
+  };
+  return {
+    snapshot(milliseconds) {
+      assert.ok(!failed && !closing, 'Original Windows observer is closed or failed');
+      const deadline = duration(milliseconds);
+      try {
+        if (pid === undefined) {
+          const ready = next(deadline);
+          assert.deepEqual(Object.keys(ready).sort(), ['kind', 'pid']); assert.equal(ready.kind, 'ready');
+          assert.ok(Number.isSafeInteger(ready.pid) && ready.pid > 1); pid = ready.pid;
+        }
+        const left = Math.floor(deadline - now()); assert.ok(left > 0, 'Original Windows observation deadline');
+        channel.postMessage({ kind: 'read', sequence: ++sequence, timeoutMs: left });
+        const response = next(deadline);
+        assert.deepEqual(Object.keys(response).sort(), ['kind', 'observation', 'sequence']);
+        assert.equal(response.kind, 'snapshot'); assert.equal(response.sequence, sequence);
+        const observation = response.observation;
+        assert.deepEqual(Object.keys(observation).sort(), ['listeners', 'processes']);
+        assert.ok(Array.isArray(observation.processes) && observation.processes.length <= 10000);
+        assert.ok(Array.isArray(observation.listeners));
+        const owners = observation.processes.filter(row => row.pid === pid);
+        assert.equal(owners.length, 1, 'Original query child appears exactly once in every fresh census');
+        const owner = owners[0];
+        assert.equal(owner.parent, driverPid); assert.equal(typeof owner.birth, 'string');
+        assert.ok(owner.birth.length > 0); assert.equal(typeof owner.executable, 'string');
+        assert.equal(owner.executable.toLowerCase(), executable.toLowerCase());
+        if (identity) sameIdentity(identity, owner); else identity = { ...owner };
+        assert.ok(now() < deadline, 'Original Windows observation deadline');
+        return { ...observation, observer: { pid: owner.pid, parent: owner.parent, birth: owner.birth } };
+      } catch (error) { failed = true; throw error; }
+    },
+    async close(milliseconds) {
+      closing = true;
+      channel.postMessage({ kind: 'close' });
+      let timer;
+      try {
+        const deadline = duration(milliseconds);
+        const result = await Promise.race([exited, new Promise((_, reject) => {
+          timer = setTimeout(() => reject(new Error('Original Windows observer close deadline')), Math.max(1, deadline - now()));
+        })]);
+        assert.equal(result.code, 0, 'Original observation worker exited normally');
+        assert.equal(result.error, undefined, 'Original observation worker did not fail');
+        let closed;
+        for (let packet = receive(channel); packet; packet = receive(channel)) {
+          if (packet.message?.kind === 'ready' && pid === undefined) pid = packet.message.pid;
+          if (packet.message?.kind === 'closed') { assert.equal(closed, undefined); closed = packet.message; }
+        }
+        assert.ok(closed, 'Original PowerShell child close was positively observed');
+        assert.equal(closed.pid, pid); assert.equal(closed.expected, true);
+        assert.ok(now() < deadline, 'Original Windows observer close deadline');
+        return { identity: identity ?? null, pid, closed: true };
+      } finally { clearTimeout(timer); channel.close(); }
+    },
+  };
+}
+export function createWindowsProcessObserver(port = 9222) {
+  assert.equal(process.platform, 'win32'); assertCdpPort(port);
+  const executable = realpathSync.native(path.join(process.env.SystemRoot || 'C:\\Windows',
+    'System32/WindowsPowerShell/v1.0/powershell.exe'));
+  const { port1, port2 } = new MessageChannel(), wake = new Int32Array(new SharedArrayBuffer(4));
+  const worker = new Worker(new URL(import.meta.url), {
+    workerData: { kind: windowsObserverKind, channel: port2, wake, executable, port }, transferList: [port2],
+  });
+  let error;
+  worker.once('error', value => { error = value; });
+  const exited = new Promise(resolve => worker.once('exit', code => resolve({ code, error })));
+  return createWindowsProcessObservationClient({ channel: port1, wake, executable, driverPid: process.pid, exited });
+}
+if (!isMainThread && workerData?.kind === windowsObserverKind)
+  serveWindowsProcessObserver(workerData.channel, workerData.wake, workerData);
+
 export function assertListenerOwnership(ids, owned) {
   assert(
     ids.length && ids.every((pid) => owned.some((p) => p.pid === pid && p.pid !== owned[0].pid)),

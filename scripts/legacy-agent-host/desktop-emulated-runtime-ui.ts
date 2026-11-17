@@ -6,19 +6,17 @@ import { readNativeHostCostProof } from '../../packages/legacy-agent-host/tests/
 import { fileDigest } from './desktop-backend-fixture.ts';
 import { processTable } from './desktop-backend-observations.ts';
 import { openDesktopEmulatedBootChat } from './desktop-emulated-boot-chat.ts';
-import { readDesktopEmulatedRuntimeEffects, verifyDesktopEmulatedRuntimeFixture } from './desktop-emulated-runtime-fixture.ts';
+import { readDesktopEmulatedRuntimeEffects, verifyDesktopEmulatedRuntimeFixture, type prepareDesktopEmulatedRuntimeFixture } from './desktop-emulated-runtime-fixture.ts';
 import { readDesktopNativeStopSessions } from './desktop-native-stop-fixture.ts';
 import { sendDesktopNativeCommandFromComposer } from './desktop-native-commands-ui-proof.ts';
 import { json, record, rows } from './desktop-resume-records.ts';
 import { revealDesktopReply } from './desktop-reply-visibility.ts';
 import { EDITED_SCHEDULE_LABEL, LEGACY_SCHEDULE_ID, LEGACY_SCHEDULE_LABEL } from './desktop-schedule-fixture.ts';
-import { createDesktopUiControls, desktopJsLiteral as literal } from './desktop-ui-controls.ts';
+import { createDesktopUiControls, desktopJsLiteral as literal, type UiCdpPort } from './desktop-ui-controls.ts';
 import { runDesktopEmulatedSelectionUi } from './desktop-emulated-selection-ui.ts';
 import { runDesktopEmulatedLifecycleUi } from './desktop-emulated-lifecycle-ui.ts';
 import { runDesktopEmulatedCollaborationUi } from './desktop-emulated-collaboration-ui.ts';
 import { isDesktopEmulatedCollaborationFixture } from './desktop-emulated-collaboration-fixture.ts';
-import type { prepareDesktopEmulatedRuntimeFixture } from './desktop-emulated-runtime-fixture.ts';
-import type { UiCdpPort } from './desktop-ui-controls.ts';
 
 type Row = Record<string, unknown>;
 const array = (value: unknown): Row[] => { assert.ok(Array.isArray(value)); return value.map(record); };
@@ -162,13 +160,16 @@ export async function runDesktopEmulatedRuntimeUi(cdp: UiCdpPort, options: {
     await ui.scrollTo(selector + ' [data-host-log-content] p', 'actual rich output', text, 12, { requireCenterHit: true });
     return record(await ui.waitRead(`(()=>{const e=document.querySelector(${literal(selector)});
       if(!e)return null;
+      const sourceTitle=${literal(sourceTitle ?? null)};
+      const sources=sourceTitle===null?[]:[...document.querySelectorAll(${literal(scope + ' button[aria-expanded="true"]')})]
+        .filter(button=>button.textContent.trim()===sourceTitle);
+      if(sourceTitle!==null&&(sources.length!==1||!sources[0].getClientRects().length||
+        document.querySelectorAll(${literal(selector)}).length!==1||e.dataset.hostLogEventId!==${literal(event.eventId)}||
+        e.dataset.hostLogSequence!==${literal(String(event.sequence))}||e.dataset.hostLogKind!==${literal(record(event.data).kind)}))return null;
       const bodies=[...e.querySelectorAll('[data-host-log-content] p')].filter(p=>p.textContent.trim()===${literal(text)});
       if(bodies.length!==1||!bodies[0].getClientRects().length)return null;
-      ${sourceTitle === undefined ? '' : `const sources=[...document.querySelectorAll(${literal(scope + ' button[aria-expanded="true"]')})]
-        .filter(node=>node.textContent.trim()===${literal(sourceTitle)});
-      if(sources.length!==1)return null;
-      const source=sources[0].textContent.trim();`}
-      return {eventId:e.dataset.hostLogEventId,sequence:Number(e.dataset.hostLogSequence),text:bodies[0].textContent.trim()${sourceTitle === undefined ? '' : ',source'}}})()`,
+      return {eventId:e.dataset.hostLogEventId,sequence:Number(e.dataset.hostLogSequence),text:bodies[0].textContent.trim(),
+        ...(sourceTitle===null?{}:{source:sources[0].textContent.trim()})}})()`,
       'actual retained output is visible inside Logs'));
   };
   const leadBinding = record((await session()).binding), leadSourceId = runtimeDigest(leadBinding);
@@ -450,6 +451,10 @@ export async function runDesktopEmulatedRuntimeUi(cdp: UiCdpPort, options: {
     assert.equal(stats.compactions, 1);
   }
   proof.stats = stats;
+  await ui.scrollTo(
+    'div[role="button"][tabindex="0"][class~="group/member"] span',
+    'reveal original member detail name', 'alice', 12, { requireCenterHit: true }
+  );
   await ui.clickExpression(`(()=>{const rows=[...document.querySelectorAll('div[role="button"][tabindex="0"][class~="group/member"]')].filter(e=>[...e.querySelectorAll('span')].some(n=>n.textContent.trim()==='alice'));
     if(rows.length!==1)return null;const e=rows[0],names=[...e.querySelectorAll('span')].filter(n=>n.textContent.trim()==='alice');if(names.length!==1)return null;
     const n=names[0],r=n.getBoundingClientRect(),x=r.x+r.width/2,y=r.y+r.height/2,hit=document.elementFromPoint(x,y);
@@ -640,7 +645,7 @@ export async function runDesktopEmulatedRuntimeUi(cdp: UiCdpPort, options: {
   await ui.scrollTo('button[aria-label="Back to chats"]', 'original scheduled conversation list');
   await ui.click('button[aria-label="Back to chats"]', 'return to original chats before scheduled reply');
   await ui.scrollTo('button[aria-label^="alice,"]', 'original scheduled lead chat');
-  await ui.click('button[aria-label^="alice,"]', 'show original scheduled reply'); await visible('TEST scheduled reply');
+  await ui.click('button[aria-label^="alice,"]', 'show original scheduled reply', undefined, 'TEST scheduled '); await visible('TEST scheduled reply');
   await openSection();
   await ui.scrollTo(`${scheduleRow(edited)} button[aria-label=${literal(edited)}]`, 'original schedule history');
   await ui.click(`${scheduleRow(edited)} button[aria-label=${literal(edited)}]`, 'expand original schedule history');

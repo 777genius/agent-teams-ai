@@ -46,34 +46,39 @@ export function createDesktopUiControls(
       window.__TEST_desktopInputEvents=[];
       window.__TEST_desktopDragEvents=[];
       const describe=el=>el instanceof Element?{tag:el.tagName,id:el.id,ariaLabel:el.getAttribute('aria-label'),className:String(el.className).slice(0,120)}:null;
-      // Passive click identity only; these observations never navigate or authorize a retry.
-      const hostTeamKey=value=>typeof value==='string'&&value.length>10&&value.length<=256&&
-        value.startsWith('host-team:')&&!/[\\u0000-\\u001f\\u007f]/u.test(value)?value:null;
-      const teamNavigationState=()=>{
-        try{
-          const state=window.__agentTeamsDevStore?.getState(),tabs=state?.openTabs,selected=state?.selectedTeamName;
-          if(!state||(selected!==null&&hostTeamKey(selected)===null)||!Array.isArray(tabs)||tabs.length>64)return null;
-          const id=state.activeTabId;
-          if(typeof id!=='string'||!id||id.length>256)return null;
-          const active=tabs.filter(tab=>tab&&typeof tab==='object'&&tab.id===id);
-          if(active.length!==1)return null;
-          const type=active[0].type,team=type==='team'||type==='graph';
-          if(typeof type!=='string'||!type||type.length>32)return null;
-          const activeTeamKey=team?hostTeamKey(active[0].teamName):null;
-          if(team&&activeTeamKey===null)return null;
-          return {selectedTeamKey:selected,activeSurface:team?type:type==='teams'?'teams':'other',activeTeamKey};
-        }catch{return null;}
-      };
-      const boundedTeamNavigation=value=>{
-        try{return new TextEncoder().encode(JSON.stringify(value)).byteLength<=4096?value:null;}catch{return null;}
-      };
       const teamNavigation=e=>{
-        try{
-          if(e.isTrusted!==true)return null;
-          const targetTeamKey=hostTeamKey(e.target instanceof Element?
-            e.target.closest('[data-team-name]')?.getAttribute('data-team-name'):null);
-          return targetTeamKey===null?null:boundedTeamNavigation({targetTeamKey,before:teamNavigationState()});
-        }catch{return null;}
+        const own=(value,key)=>{if(!value||(typeof value!=='object'&&typeof value!=='function'))throw Error();const d=Object.getOwnPropertyDescriptor(value,key);if(!d||!('value'in d))throw Error();return d.value;};
+        const id=value=>typeof value==='string'&&value.length>0&&value.length<=128&&!/[^A-Za-z0-9_.:-]/.test(value);
+        const key=value=>{if(typeof value!=='string'||value.length>256||!value.startsWith('host-team:'))return false;const handle=decodeURIComponent(value.slice(10));return handle.length>0&&handle.length<=256&&!handle.includes('\\0')&&'host-team:'+encodeURIComponent(handle)===value;};
+        const sample=()=>{
+          try{
+            const store=own(window,'__agentTeamsDevStore'),getState=own(store,'getState');if(typeof getState!=='function')throw Error();
+            const state=getState.call(store),layout=own(state,'paneLayout'),focused=own(layout,'focusedPaneId'),panes=own(layout,'panes'),selected=own(state,'selectedTeamName');
+            if(!id(focused)||!(selected===null||key(selected))||!Array.isArray(panes))throw Error();
+            const paneCount=own(panes,'length');if(!Number.isSafeInteger(paneCount)||paneCount<1||paneCount>4)throw Error();
+            const seen=new Set();let pane=null;
+            for(let index=0;index<paneCount;index++){const item=own(panes,index),paneId=own(item,'id');if(!id(paneId)||seen.has(paneId))throw Error();seen.add(paneId);if(paneId===focused)pane=item;}
+            if(!pane)throw Error();const active=own(pane,'activeTabId'),tabs=own(pane,'tabs');
+            if(!(active===null||id(active))||!Array.isArray(tabs))throw Error();
+            const tabCount=own(tabs,'length');if(!Number.isSafeInteger(tabCount)||tabCount<0||tabCount>128)throw Error();
+            let tab=null,tabType=null,tabTeam=null;
+            if(active!==null){
+              for(let index=0;index<tabCount;index++){const item=own(tabs,index),tabId=own(item,'id');if(!id(tabId))throw Error();if(tabId===active){if(tab)throw Error();tab=item;}}
+              if(!tab)throw Error();const type=own(tab,'type');if(typeof type!=='string'||!type)throw Error();tabType=type==='team'?'team':'other';
+              if(tabType==='team'){tabTeam=own(tab,'teamName');if(!key(tabTeam))throw Error();}
+            }
+            return {status:'available',focusedPaneId:focused,activeTabId:active,activeTabType:tabType,activeTabTeamName:tabTeam,selectedTeamName:selected};
+          }catch{return {status:'unavailable'};}
+        };
+        let target=null;
+        try{const card=e.target instanceof Element?e.target.closest('[data-team-name]'):null;if(card&&card.matches('.team-row-zebra-card')){const name=card.getAttribute('data-team-name');target=key(name)?name:undefined;}}catch{target=undefined;}
+        let observation=target===null?null:typeof target==='string'?{schemaVersion:1,status:'available',source:'original-passive-input',atomicWithNavigation:false,targetTeamName:target,before:null,microtask:null,afterDispatch:null}:{schemaVersion:1,status:'unavailable',reason:'target'};
+        return (row,phase)=>{
+          try{
+            if(observation?.status==='available')observation=Object.freeze({...observation,[phase]:Object.freeze(sample())});
+            row.teamNavigation=JSON.stringify(observation).length<=4096?observation:{schemaVersion:1,status:'unavailable',reason:'projection-limit'};
+          }catch{}
+        };
       };
       const taskClarification=e=>{
         try{
@@ -154,6 +159,7 @@ export function createDesktopUiControls(
       };
       for(const type of ['pointerdown','pointerup','pointercancel','pointermove','click','keydown','keyup','focusin','focusout'])document.addEventListener(type,e=>{
         if(type==='pointermove'&&!e.buttons)return;
+        const navigation=type==='pointerdown'||type==='pointerup'||type==='click'?teamNavigation(e):null;
         const dragging=type==='pointermove'||type==='pointercancel';
         const rows=dragging?window.__TEST_desktopDragEvents:window.__TEST_desktopInputEvents;if(rows.length>=(dragging?32:96))rows.shift();
         const el=e.target instanceof Element?e.target.closest('button'):null;
@@ -165,12 +171,10 @@ export function createDesktopUiControls(
           activeSortable:[...document.querySelectorAll('[aria-roledescription="sortable"][aria-pressed="true"]')].map(el=>({taskId:el.querySelector('.kanban-task-card')?.getAttribute('data-task-id'),transform:el.style.transform})),
           dragAnnouncement:[...document.querySelectorAll('[id^="DndLiveRegion-"]')].map(el=>el.textContent)};
         if(type==='pointerdown'||type==='pointerup'||type==='click')row.taskClarification=taskClarification(e);
-        if(type==='click')row.teamNavigation=teamNavigation(e);
+        if(navigation)navigation(row,'before');
         rows.push(row);queueMicrotask(()=>{row.defaultPreventedAfterMicrotask=e.defaultPrevented;row.focusAfterMicrotask=describe(document.activeElement);
-          if(row.teamNavigation)row.teamNavigation=boundedTeamNavigation({...row.teamNavigation,afterMicrotask:teamNavigationState()});
-          setTimeout(()=>{row.defaultPreventedAfterDispatch=e.defaultPrevented;row.focusAfterDispatch=describe(document.activeElement);
-            if(row.teamNavigation)row.teamNavigation=boundedTeamNavigation({...row.teamNavigation,afterDispatch:teamNavigationState()});
-          },0);});
+          if(navigation)navigation(row,'microtask');
+          setTimeout(()=>{row.defaultPreventedAfterDispatch=e.defaultPrevented;row.focusAfterDispatch=describe(document.activeElement);if(navigation)navigation(row,'afterDispatch');},0);});
       },{capture:true,passive:true});return true;
     })()`);
     assert.equal(
@@ -190,6 +194,7 @@ export function createDesktopUiControls(
       options.assertOwnedRenderer();
       try {
         const value = await cdp.evaluate(expression);
+        if (Date.now() >= deadline) break;
         if (isReady(value)) return value;
       } catch (error) {
         if (
@@ -204,11 +209,12 @@ export function createDesktopUiControls(
     throw new Error(`UI read timed out: ${label}; no mutation retry`);
   };
   // Each expression is a read-only DOM lookup returning at most one exact target.
-  const target = (selector: string, text?: string): string => `(() => {
+  const target = (selector: string, text?: string, requiredContent?: string): string => `(() => {
     const elements = [...document.querySelectorAll(${desktopJsLiteral(selector)})].filter(e => {
       const r=e.getBoundingClientRect(); return r.width>0&&r.height>0${text === undefined ? '' : `&&e.textContent.trim()===${desktopJsLiteral(text)}`};
     });
-    if(elements.length!==1)return {unavailableTarget:true,matches:Math.min(elements.length,256)};
+    if(elements.length!==1)return {unavailableTarget:true,matches:Math.min(elements.length,256)};${requiredContent === undefined ? '' : `
+    if(!elements[0].textContent.includes(${desktopJsLiteral(requiredContent)}))return {unavailableTarget:true,matches:1};`}
     const e=elements[0], r=e.getBoundingClientRect(), x=r.x+r.width/2,y=r.y+r.height/2;
     const hit=document.elementFromPoint(x,y), disabled=e.matches(':disabled');
     if(!hit||!(hit===e||e.contains(hit))||disabled)return {
@@ -421,8 +427,8 @@ export function createDesktopUiControls(
       clickCount: 1,
     });
   };
-  const click = (selector: string, label: string, text?: string): Promise<void> =>
-    clickExpression(target(selector, text), label, selector, text);
+  const click = (selector: string, label: string, text?: string, requiredContent?: string): Promise<void> =>
+    clickExpression(target(selector, text, requiredContent), label, selector, text);
   const hoverExpression = async (expression: string, label: string): Promise<void> => {
     let previous: { x: number; y: number } | undefined, stable = 0;
     // Canonical effects can settle before their renderer layout. Sample the

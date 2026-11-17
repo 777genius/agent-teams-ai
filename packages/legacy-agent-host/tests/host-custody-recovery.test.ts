@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { channel } from 'node:diagnostics_channel';
 import { test } from 'node:test';
 import { performance } from 'node:perf_hooks';
 import { PassThrough } from 'node:stream';
@@ -204,4 +205,136 @@ test('incomplete native drain replies before the original queued Host deadline a
       signal.abort(); transport.seal(); for (const stream of streams) stream.destroy();
     }
   }
+});
+
+
+async function resumeGuardFixture() {
+  let guard = 0, failAt = 0, throwing = false, refusalReply = false, ownerInstalls = 0, nativeResumes = 0;
+  const failure = new Error('TEST original currentness error'), order: string[] = [], wire: string[] = [];
+  const streams = [new PassThrough(), new PassThrough(), new PassThrough()];
+  let held: PreparedOwnedProcess | undefined, receipt: TreeReceipt | undefined, capability: string | undefined;
+  const primitive: OwnedLaunchPort = {
+    allocate(owner) {
+      held = {
+        owner, root: { pid: 421, birth: '0000000000001234' },
+        stdin: streams[0]!, stdout: streams[1]!, stderr: streams[2]!,
+        diagnostics: () => ({ writeCompleted: true }),
+        observeRootExit: () => () => {}, observeTransportFailure: () => () => {},
+        async resume(expected, install) { assert.deepEqual(expected, owner); nativeResumes++; order.push('native'); await install(); },
+        async stop(request) {
+          assert.deepEqual(request.expectedOwner, owner);
+          receipt = { owner, attemptId: request.attemptId, coverage: 'job-membership', rootExited: true, proofDigest: 'e'.repeat(64) };
+          return { kind: 'confirmed', receipt };
+        },
+        async drain() { return { kind: 'complete' }; },
+        async release(original, coverage) { assert.equal(original, receipt); assert.equal(coverage, 'job-membership'); },
+        abandonControl() { assert.fail('Original native cleanup remains required'); },
+      };
+      return held;
+    },
+    async prepare(original) { assert.equal(original, held); return { kind: 'prepared', process: held! }; },
+  };
+  const broker = { path: 'C:\\TEST\\broker.exe', sha256: 'b'.repeat(64), arch: 'x64' as const, protocol: 1 as const };
+  const owner = new RetainedWindowsCustody({ profileId: 'TEST-profile', profileDigest: binding.profileDigest,
+    selectBroker: () => broker, async verifyLaunch() {}, createPort: () => primitive });
+  const signal = new AbortController(), wireBinding = { ...binding, mainEpoch: owner.mainEpoch };
+  const main = owner.attach({ profileId: 'TEST-profile', binding: wireBinding, signal: signal.signal,
+    hostExited: new Promise<void>(() => {}) });
+  const transport = new HostCustodyClient({ hostIncarnation: binding.hostIncarnation, timeoutMs: 1000, limits: DEFAULT_HOST_LIMITS,
+    send(frame) {
+      const request = hostCustodyRequestSchema.parse(frame), call = request.params.call;
+      if (call.operation === 'allocate') capability = call.capability;
+      if (call.operation === 'resume') { wire.push(call.capability); order.push('wire'); }
+      void (call.operation === 'resume' && refusalReply ? Promise.resolve(undefined) : Promise.resolve(main.handle(call))).then(value => {
+        const reply = { jsonrpc: '2.0', id: frame.id, result: { binding: wireBinding,
+          reply: value === undefined ? { status: 'refused' } : { status: 'completed', value } } };
+        transport.receive(reply, Buffer.byteLength(JSON.stringify(reply)));
+      });
+      return true;
+    },
+  });
+  assert.equal(transport.bind(wireBinding), true);
+  const profile = { provider: 'codex', cwd: 'C:\\TEST', environment: {}, windowsBroker: broker,
+    executable: { path: 'C:\\TEST\\finite.exe', sha256: 'c'.repeat(64) } };
+  const port = new HostWindowsLaunch(() => transport).port(profile, () => {
+    if (!failAt) return true;
+    guard++; order.push('current-' + guard);
+    if (guard === failAt) { if (throwing) throw failure; return false; }
+    return true;
+  });
+  const pending = port.allocate({ teamIncarnation: 'TEST-team', runId: 'TEST-run', laneId: 'TEST-member',
+    processGeneration: '00112233-4455-6677-8899-aabbccddeeff' });
+  assert.equal((await port.prepare(pending, { executable: profile.executable.path,
+    commandLine: 'finite.exe', cwd: profile.cwd, environment: [] })).kind, 'prepared');
+  assert.ok(capability); assert.equal(wire.length, 0); assert.equal(nativeResumes, 0);
+  return {
+    failure, order, wire, capability,
+    counts: () => ({ guard, ownerInstalls, nativeResumes }),
+    resume(index: number, throwCurrent = false, refuse = false) {
+      failAt = index; throwing = throwCurrent; refusalReply = refuse;
+      return (pending as PreparedOwnedProcess).resume(pending.owner, async () => { ownerInstalls++; order.push('owner'); });
+    },
+    async close() {
+      failAt = 0;
+      try {
+        const stopped = await pending.stop({ expectedOwner: pending.owner, attemptId: 'TEST-original-stop',
+          mode: 'force', deadlineMs: performance.now() + 1000 });
+        assert.equal(stopped.kind, 'confirmed'); if (stopped.kind !== 'confirmed') assert.fail();
+        assert.deepEqual(await pending.drain(performance.now() + 1000), { kind: 'complete' });
+        await pending.release(stopped.receipt, 'job-membership'); assert.equal(await owner.close(), true);
+      } finally { signal.abort(); transport.seal(); for (const stream of streams) stream.destroy(); }
+    },
+  };
+}
+
+for (const [index, site] of ['before-owner', 'after-owner', 'request-builder', 'after-reply'].entries())
+  for (const throwing of [false, true])
+    test('original Windows resume refusal identifies ' + site + (throwing ? ' throwing' : ' false') + ' without extra guards', async () => {
+      const diagnostic = channel('agent-teams.legacy-host.first-refusal'), observed: unknown[] = [];
+      const receive = (value: unknown) => { observed.push(value); };
+      diagnostic.subscribe(receive);
+      const f = await resumeGuardFixture();
+      try {
+        await assert.rejects(f.resume(index + 1, throwing), error => {
+          if (throwing && index !== 2) return error === f.failure;
+          assert.ok(error instanceof Error); assert.match(error.message, /Original Main custody unavailable/); return true;
+        });
+        assert.deepEqual(f.counts(), { guard: index + 1, ownerInstalls: index > 0 ? 1 : 0, nativeResumes: index === 3 ? 1 : 0 });
+        const expected = ['current-1', ...(index > 0 ? ['owner', 'current-2'] : []),
+          ...(index > 1 ? ['current-3'] : []), ...(index > 2 ? ['wire', 'native', 'current-4'] : [])];
+        assert.deepEqual(f.order, expected); assert.deepEqual(f.wire, index === 3 ? [f.capability] : []);
+        assert.equal(observed.length, 1);
+        const row = observed[0] as Record<string, unknown>;
+        assert.equal(row.kind, 'native'); assert.equal(row.phase, 'resume'); assert.equal(row.capability, f.capability);
+        assert.equal(row.reason, throwing ? 'current-threw' : 'current-false');
+        assert.equal(row.dispatched, true); assert.equal(row.staged, true); assert.equal(row.rootCaptured, true);
+        assert.equal(row.deadlineExpired, null);
+        assert.equal(row.checkSite, site, 'the original refusal must retain its own guard site');
+      } finally { diagnostic.unsubscribe(receive); await f.close(); }
+    });
+
+test('a refused original resume reply has no guard-site attribution and performs no native resume', async () => {
+  const diagnostic = channel('agent-teams.legacy-host.first-refusal'), observed: unknown[] = [];
+  const receive = (value: unknown) => { observed.push(value); };
+  diagnostic.subscribe(receive);
+  const f = await resumeGuardFixture();
+  try {
+    await assert.rejects(f.resume(5, false, true), /Original Main custody unavailable/);
+    assert.deepEqual(f.counts(), { guard: 3, ownerInstalls: 1, nativeResumes: 0 });
+    assert.deepEqual(f.wire, [f.capability]); assert.equal(observed.length, 1);
+    const row = observed[0] as Record<string, unknown>;
+    assert.equal(row.reason, 'refused'); assert.equal(row.phase, 'resume'); assert.equal(row.capability, f.capability);
+    assert.equal(row.checkSite, null, 'a request refusal is not attributed to a currentness guard');
+  } finally { diagnostic.unsubscribe(receive); await f.close(); }
+});
+
+test('failure of the original refusal publisher cannot replace a currentness throw or add resume work', async t => {
+  const diagnostic = channel('agent-teams.legacy-host.first-refusal'), receive = () => {};
+  diagnostic.subscribe(receive);
+  const f = await resumeGuardFixture();
+  try {
+    t.mock.method(diagnostic, 'publish', () => { throw new Error('TEST observer failure'); });
+    await assert.rejects(f.resume(1, true), error => error === f.failure);
+    assert.deepEqual(f.counts(), { guard: 1, ownerInstalls: 0, nativeResumes: 0 }); assert.deepEqual(f.wire, []);
+  } finally { diagnostic.unsubscribe(receive); await f.close(); }
 });

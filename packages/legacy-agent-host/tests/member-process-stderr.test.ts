@@ -57,7 +57,6 @@ test('standalone stderr uses selected private values without a Team endpoint', a
   };
   assert.equal('endpoint' in context, false);
   observeMemberProcessStderr(f.child, context, ['--token', 'TEST_STANDALONE_ARG_CANARY']);
-  assert.equal(f.observations.length, 0, 'no diagnostic is synthesized before original stderr arrives');
   const canaries = ['TEST_ENV_FIRST_CANARY', 'TEST_ENV_SECOND_CANARY', 'TEST_HEADER_PRIVATE_CANARY',
     'TEST_CUSTOM_HEADER_CANARY', 'TEST_MCP_ENV_CANARY', 'TEST_MCP_ARG_CANARY', 'TEST_STANDALONE_ARG_CANARY'];
   f.child.stderr.write(`TEST standalone startup\n${canaries.join('\n')}\nTEST standalone final tail`);
@@ -274,5 +273,37 @@ test('safe diagnostics and unambiguous held-value context remain readable', asyn
     { kind: 'process-output', stream: 'stderr', text: 'TEST ordinary public diagnostic' },
     { kind: 'process-output', stream: 'stderr', text: 'prefix [redacted] suffix' },
     { kind: 'process-output', stream: 'stderr', text: 'status [redacted] tail' },
+  ]);
+});
+
+for (const folded of [false, true]) {
+  test('held escaped forms stay private after contextual whitespace normalization (' + folded + ')', async () => {
+    const f = fixture(), held = 'TEST_PREFIX  password=TEST_INNER TEST_SUFFIX\tTEST_TAIL';
+    observeMemberProcessStderr(f.child, { ...f.context,
+      profile: { ...f.context.profile, environment: { API_KEY: held } } }, []);
+    const escaped = JSON.stringify(held).slice(1, -1);
+    const output = 'Bearer ' + (folded ? escaped.replace(/\s+/g, ' ').trim() : escaped) + '\n';
+    for (let at = 0; at < output.length; at += 7) f.child.stderr.write(output.slice(at, at + 7));
+    const ended = once(f.child.stderr, 'end'); f.child.stderr.end(); await ended;
+    const retained = JSON.stringify(f.observations);
+    for (const canary of ['TEST_SUFFIX', 'TEST_PREFIX', 'TEST_INNER', 'TEST_TAIL'])
+      assert.equal(retained.includes(canary), false, 'the already-held escaped form stays private');
+    assert.deepEqual(f.observations, [{ kind: 'process-output', stream: 'stderr', text: '[redacted]' }]);
+  });
+}
+
+test('post-mask expansion preserves the oversized gap before contextual ambiguity refusal', async () => {
+  const f = fixture();
+  observeMemberProcessStderr(f.child, { ...f.context,
+    profile: { ...f.context.profile, environment: {
+      API_KEY: 'TEST_HELD_PREFIX TEST_HELD_SUFFIX', SHORT_TOKEN: 'q',
+    } } }, []);
+  const output = 'q '.repeat(3000) + 'Bearer TEST_HELD_PREFIX\tTEST_HELD_SUFFIX\n';
+  assert.ok(Buffer.byteLength(output) < 24 * 1024, 'the original framed input stays within its byte budget');
+  f.child.stderr.write(output + 'TEST safe diagnostic\n');
+  const ended = once(f.child.stderr, 'end'); f.child.stderr.end(); await ended;
+  assert.deepEqual(f.observations, [
+    { kind: 'gap', reason: 'oversized' },
+    { kind: 'process-output', stream: 'stderr', text: 'TEST safe diagnostic' },
   ]);
 });

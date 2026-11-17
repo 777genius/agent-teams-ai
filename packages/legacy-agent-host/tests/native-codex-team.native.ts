@@ -156,7 +156,7 @@ test(
       assert.equal(process.version, 'v24.21.0');
       assert.equal(expectedProviderSha, nativeSuggestions
         ? '26f8fc7083dbc470dd9d3a656e24873b73c78af3da3ffeea802a09a98f253e3c'
-        : '24040cc82613d8472bbead0643bd6eb1a8132227019a825bf0815af396c56267');
+        : 'b045b19866c522fddaf7b879f7c37b5fbe00d7880f8798d80e0b99cc69b9751a');
       await runCodexCandidate({ root, selectedNode, providerArtifact, deadline: candidateDeadline,
         owner, delivery, endpoint, model, selectModel: value => { candidateModel = value; },
         current: () => current(delivery), cleanup: setupCleanup,
