@@ -7,6 +7,7 @@ import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 
 import { ExternalAgentConnectionSettings } from '@features/external-agent-connection/renderer';
 import { useAppTranslation } from '@features/localization/renderer';
+import { ReviewFlowSection } from '@features/review-flow/renderer';
 import { api, isElectronMode } from '@renderer/api';
 import { useStore } from '@renderer/store';
 import { Loader2 } from 'lucide-react';
@@ -230,6 +231,8 @@ export const SettingsContent = ({
               onStatusChangeStatusesUpdate={handlers.handleStatusChangeStatusesUpdate}
             />
           )}
+
+          {activeSection === 'reviewFlow' && isElectronMode() && <ReviewFlowSection />}
 
           {activeSection === 'advanced' && (
             <AdvancedSection

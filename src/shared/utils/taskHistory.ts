@@ -29,6 +29,8 @@ export function getDerivedReviewStateFromHistory(
       event.type === 'review_requested' ||
       event.type === 'review_changes_requested' ||
       event.type === 'review_approved' ||
+      event.type === 'review_completed' ||
+      event.type === 'human_approved' ||
       event.type === 'review_started'
     ) {
       return event.to;
@@ -43,6 +45,8 @@ export function getDerivedReviewStateFromHistory(
           previous.type === 'review_requested' ||
           previous.type === 'review_changes_requested' ||
           previous.type === 'review_approved' ||
+          previous.type === 'review_completed' ||
+          previous.type === 'human_approved' ||
           previous.type === 'review_started'
         ) {
           return previous.to === 'needsFix' ? 'needsFix' : 'none';

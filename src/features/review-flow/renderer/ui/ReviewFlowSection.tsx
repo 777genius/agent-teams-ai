@@ -1,0 +1,125 @@
+import { useMemo, useState } from 'react';
+
+import { useAppTranslation } from '@features/localization/renderer';
+
+import { useKnownTeams, useReviewFlowOverview } from '../state/useReviewFlow';
+import {
+  buildOverrideRows,
+  buildScopeOptions,
+  buildUnreadableRows,
+  countFollowingDefault,
+  DEFAULT_SCOPE_VALUE,
+  resolveScopePolicy,
+  scopeFromValue,
+} from '../view-model/reviewFlowViewModel';
+
+import { ReviewFlowDefaultsErrorBanner } from './ReviewFlowDefaultsErrorBanner';
+import { ReviewFlowLoadGate } from './ReviewFlowLoadGate';
+import { ReviewFlowPolicyEditor } from './ReviewFlowPolicyEditor';
+import { ReviewFlowScopePicker } from './ReviewFlowScopePicker';
+import { ReviewFlowTeamList } from './ReviewFlowTeamList';
+import { FLOW_TEXT_KEYS } from './reviewFlowText';
+
+import type { ReviewFlowSettings } from '../../contracts/types';
+
+const TEST_ID_PREFIX = 'review-flow-settings';
+
+/** The "Review flow" page of the app settings: the default for all teams and per-team overrides. */
+export const ReviewFlowSection = (): React.JSX.Element => {
+  const { t } = useAppTranslation('team');
+  const overview = useReviewFlowOverview({ revalidate: true });
+  const teams = useKnownTeams();
+  const [scopeValue, setScopeValue] = useState(DEFAULT_SCOPE_VALUE);
+
+  const { defaults, defaultsError, overrides, unreadableTeams } = overview;
+  const scope = scopeFromValue(scopeValue);
+  const options = useMemo(
+    () => buildScopeOptions(teams, overrides, unreadableTeams, t('reviewFlow.scope.defaultOption')),
+    [teams, overrides, unreadableTeams, t]
+  );
+  const overrideRows = useMemo(
+    () =>
+      buildOverrideRows(teams, overrides).map((row) => ({
+        teamName: row.teamName,
+        displayName: row.displayName,
+        detail: t(FLOW_TEXT_KEYS[row.settings.reviewFlow].label),
+      })),
+    [teams, overrides, t]
+  );
+  const unreadableRows = useMemo(
+    () => buildUnreadableRows(teams, unreadableTeams),
+    [teams, unreadableTeams]
+  );
+  const policy = resolveScopePolicy(scope, defaults, overrides);
+  const repair =
+    scope.kind === 'default' ? defaultsError !== null : unreadableTeams.includes(scope.teamName);
+
+  const handleSave = (settings: ReviewFlowSettings | null): Promise<void> => {
+    if (scope.kind === 'team') return overview.saveTeamOverride(scope.teamName, settings);
+    // The default is always a value; only a team can go back to following it.
+    return settings ? overview.saveDefaults(settings) : Promise.resolve();
+  };
+  const resetTeam = (teamName: string): Promise<void> => overview.saveTeamOverride(teamName, null);
+  const errorText = (message: string): string => t('reviewFlow.feedback.error', { message });
+  const resetLabel = t('reviewFlow.overrides.reset');
+  const resetAriaLabel = (team: string): string => t('reviewFlow.overrides.resetLabel', { team });
+
+  return (
+    <div className="space-y-5" data-testid="review-flow-settings-page">
+      <header className="space-y-1">
+        <h2 className="text-lg font-semibold text-[var(--color-text)]">{t('reviewFlow.title')}</h2>
+        <p className="text-sm text-[var(--color-text-muted)]">{t('reviewFlow.intro')}</p>
+      </header>
+      <ReviewFlowLoadGate
+        status={overview.status}
+        error={overview.error}
+        onRetry={() => void overview.load({ force: true })}
+      >
+        <div className="space-y-5">
+          {defaultsError ? (
+            <ReviewFlowDefaultsErrorBanner
+              message={defaultsError}
+              editing={scope.kind === 'default'}
+              onFix={scope.kind === 'team' ? () => setScopeValue(DEFAULT_SCOPE_VALUE) : undefined}
+            />
+          ) : null}
+          <ReviewFlowScopePicker options={options} value={scopeValue} onChange={setScopeValue} />
+          <ReviewFlowPolicyEditor
+            scope={scope}
+            policy={policy}
+            defaults={defaults}
+            followingTeamCount={countFollowingDefault(teams, overrides)}
+            repair={repair}
+            onSave={handleSave}
+            testIdPrefix={TEST_ID_PREFIX}
+          />
+          {scope.kind === 'default' ? (
+            <>
+              <ReviewFlowTeamList
+                testIdPrefix="review-flow-unreadable"
+                heading={t('reviewFlow.unreadable.heading', { count: unreadableRows.length })}
+                rows={unreadableRows}
+                resetLabel={resetLabel}
+                resetAriaLabel={resetAriaLabel}
+                errorText={errorText}
+                onSelect={setScopeValue}
+                onReset={resetTeam}
+              />
+              <ReviewFlowTeamList
+                testIdPrefix="review-flow-overrides"
+                heading={t('reviewFlow.overrides.heading', { count: overrideRows.length })}
+                rows={overrideRows}
+                emptyText={t('reviewFlow.overrides.empty')}
+                resetLabel={resetLabel}
+                resetAriaLabel={resetAriaLabel}
+                errorText={errorText}
+                onSelect={setScopeValue}
+                onReset={resetTeam}
+              />
+            </>
+          ) : null}
+        </div>
+      </ReviewFlowLoadGate>
+    </div>
+  );
+};

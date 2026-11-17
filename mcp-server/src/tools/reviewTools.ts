@@ -86,6 +86,33 @@ export function registerReviewTools(server: Pick<FastMCP, 'addTool'>) {
     },
   });
 
+
+  server.addTool({
+    name: 'review_complete',
+    description: 'Complete AI review to Done without human approval (requires the original cycle ID)',
+    parameters: z.object({
+      ...toolContextSchema,
+      taskId: z.string().min(1),
+      expectedReviewRequestId: z.string().min(1),
+      from: z.string().optional(),
+      note: z.string().optional(),
+      leadSessionId: z.string().optional(),
+    }),
+    execute: async ({ teamName, claudeDir, taskId, expectedReviewRequestId, from, note, leadSessionId }) => {
+      assertConfiguredTeam(teamName, claudeDir);
+      return await Promise.resolve(
+        jsonTextContent(
+          getController(teamName, claudeDir).taskBoard.completeReview(taskId, {
+            expectedReviewRequestId,
+            ...(from ? { from } : {}),
+            ...(note ? { note } : {}),
+            ...(leadSessionId ? { leadSessionId } : {}),
+          }) as Record<string, unknown>
+        )
+      );
+    },
+  });
+
   server.addTool({
     name: 'review_request_changes',
     description: 'Request changes on a task under review',
@@ -94,10 +121,11 @@ export function registerReviewTools(server: Pick<FastMCP, 'addTool'>) {
       taskId: z.string().min(1),
       from: z.string().optional(),
       comment: z.string().optional(),
+      expectedReviewRequestId: z.string().optional(),
       leadSessionId: z.string().optional(),
       taskRefs: z.array(taskRefSchema).optional(),
     }),
-    execute: async ({ teamName, claudeDir, taskId, from, comment, leadSessionId, taskRefs }) => {
+    execute: async ({ teamName, claudeDir, taskId, from, comment, expectedReviewRequestId, leadSessionId, taskRefs }) => {
       assertConfiguredTeam(teamName, claudeDir);
       return await Promise.resolve(
         jsonTextContent(
@@ -105,6 +133,7 @@ export function registerReviewTools(server: Pick<FastMCP, 'addTool'>) {
             getController(teamName, claudeDir).taskBoard.requestChanges(taskId, {
               ...(from ? { from } : {}),
               ...(comment ? { comment } : {}),
+              ...(expectedReviewRequestId ? { expectedReviewRequestId } : {}),
               ...(leadSessionId ? { leadSessionId } : {}),
               ...(taskRefs?.length ? { taskRefs } : {}),
             }) as Record<string, unknown>
