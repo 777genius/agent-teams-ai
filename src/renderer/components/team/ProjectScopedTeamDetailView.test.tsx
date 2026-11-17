@@ -23,7 +23,14 @@ const { state, getView, launchTeam, openTeamTab } = vi.hoisted(() => {
 vi.mock('@renderer/store', () => ({
   useStore: Object.assign(
     (selector: (store: typeof state) => unknown) => selector(state),
-    { getState: () => ({ ...state, openTeamTab }) }
+    {
+      getState: () => ({
+        ...state,
+        activeTabId: 'alias-tab',
+        getAllPaneTabs: () => [{ id: 'alias-tab', type: 'team', teamName: 'ptc-a' }],
+        openTeamTab,
+      }),
+    }
   ),
 }));
 vi.mock('@renderer/api', () => ({ api: { teams: { getProjectContextView: getView, launchTeam, onProvisioningProgress: () => () => undefined } } }));
