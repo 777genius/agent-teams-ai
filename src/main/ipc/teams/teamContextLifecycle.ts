@@ -231,7 +231,10 @@ export async function projectAliveTeamNames(
       const entries = await registry.list(team.teamName);
       for (const row of entries) {
         if (row.state !== 'ready') continue;
-        if (!projected.delete(row.executionTeamName)) continue;
+        if (!projected.has(row.executionTeamName)) continue;
+        // Keep the exact physical identity for the existing project-scoped
+        // Tasks/Messages view and any active-runtime actions. Also expose the
+        // logical name for the one visible team row in the teams list.
         projected.add(team.teamName);
       }
     } catch (error) {

@@ -306,6 +306,7 @@ describe('project team lifecycle projection', () => {
     expect(projected).toEqual(expect.arrayContaining([
       'builders', 'ptc-unowned', 'other-team',
     ]));
-    expect(projected).not.toContain('ptc-a');
+    // The native view must still recognize its physical runtime as alive.
+    expect(projected).toContain('ptc-a');
   });
 });
