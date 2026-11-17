@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { projectAliveTeamNames, stopLogicalTeam } from '../../../src/main/ipc/teams/teamContextLifecycle';
+import { projectAliveTeamNames, stopLogicalTeam, permanentlyDeleteLogicalTeam } from '../../../src/main/ipc/teams/teamContextLifecycle';
 
 import type { TeamMetaFile } from '../../../src/main/services/team/TeamMetaStore';
 import type { TeamSummary } from '../../../src/shared/types/team';
@@ -96,6 +96,74 @@ describe('project team lifecycle projection', () => {
     const result = await deleteLogicalTeamWithContexts('builders', vi.fn(), perform, f.meta, f.registry as never);
     expect(result.success).toBe(false);
     expect(perform).not.toHaveBeenCalled();
+  });
+
+  it('deletes owned physical context first and logical definition last', async () => {
+    const f = fixture('per_project');
+    const actions: string[] = [];
+    const registry = {
+      listForPermanentDeletion: vi.fn(async () => [entry]),
+      forgetPermanentlyDeletedContext: vi.fn(async () => {
+        actions.push('forget');
+        return true;
+      }),
+    };
+    const result = await permanentlyDeleteLogicalTeam('builders', {
+      meta: f.meta,
+      registry: registry as never,
+      isNativePresent: vi.fn(async () => true),
+      stopNative: vi.fn(async () => {
+        actions.push('stop');
+        return { success: true as const, data: undefined };
+      }),
+      deleteNative: vi.fn(async () => { actions.push('delete:ptc-a'); }),
+      deleteLogical: vi.fn(async () => {
+        actions.push('delete:builders');
+        return { success: true as const, data: undefined };
+      }),
+    });
+    expect(result.success).toBe(true);
+    expect(actions).toEqual(['stop', 'delete:ptc-a', 'forget', 'delete:builders']);
+  });
+
+  it('does not purge the logical team if a physical deletion fails mid-transaction', async () => {
+    const f = fixture('per_project');
+    const forget = vi.fn(async () => true);
+    const logical = vi.fn(async () => ({ success: true as const, data: undefined }));
+    const result = await permanentlyDeleteLogicalTeam('builders', {
+      meta: f.meta,
+      registry: {
+        listForPermanentDeletion: vi.fn(async () => [entry]),
+        forgetPermanentlyDeletedContext: forget,
+      } as never,
+      isNativePresent: vi.fn(async () => true),
+      stopNative: vi.fn(async () => ({ success: true as const, data: undefined })),
+      deleteNative: vi.fn(async () => { throw new Error('disk busy'); }),
+      deleteLogical: logical,
+    });
+    expect(result).toMatchObject({ success: false, error: 'disk busy' });
+    expect(logical).not.toHaveBeenCalled();
+    expect(forget).not.toHaveBeenCalled();
+  });
+
+  it('recovers an alias already removed by an interrupted earlier delete', async () => {
+    const f = fixture('per_project');
+    const del = vi.fn(async () => undefined);
+    const forget = vi.fn(async () => true);
+    const result = await permanentlyDeleteLogicalTeam('builders', {
+      meta: f.meta,
+      registry: {
+        listForPermanentDeletion: vi.fn(async () => [entry]),
+        forgetPermanentlyDeletedContext: forget,
+      } as never,
+      isNativePresent: vi.fn(async () => false),
+      stopNative: vi.fn(),
+      deleteNative: del,
+      deleteLogical: vi.fn(async () => ({ success: true as const, data: undefined })),
+    });
+    expect(result.success).toBe(true);
+    expect(del).not.toHaveBeenCalled();
+    expect(forget).toHaveBeenCalledWith('builders', 'ptc-a', entry.id);
   });
 
   it('projects only verified native aliases to the logical team in the UI alive list', async () => {
