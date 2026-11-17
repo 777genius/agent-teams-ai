@@ -1,0 +1,954 @@
+{
+  "schemaVersion": 1,
+  "kind": "narrow-catalog-waitread-source-root-actual-publication-review",
+  "at": "2026-11-17 04:57:29 UTC",
+  "repository": "777genius/agent-teams-ai",
+  "branch": "fix/frontend-parity-coobservation-c714-20261115",
+  "verdict": "ACCEPT_ACTUAL_SOURCE_PUBLICATION_SUBJECT_TO_FULL_INDEPENDENT_ACTUAL_READBACK",
+  "publication": {
+    "commit": "674d32a84644f87544910c28bb4d2a4214958fb5",
+    "tree": "076131eff684e011ae87907e66d31e7eb9e50d30",
+    "docsTree": "aa84bfbe10b38d452428f27817610b53754ff66b",
+    "parent": "811d1108e8a766c8c1307008243c3291ccec3e04",
+    "manifest": {
+      "bytes": 10191,
+      "sha256": "985a2aac30472edd989588fa7aef19f05691947449662bbfc026fe8bad7f55a7",
+      "gitBlob": "918732824008d48d2cd5367c285fb5b776a9a96e"
+    },
+    "immediateNonForcePush": true
+  },
+  "subject": {
+    "bytes": 19187,
+    "sha256": "8bb84de228b570dfc121233893d32209a9389da44aa1747c7924dff936fa4c1a",
+    "gitBlob": "1318b887473a61e1cbfb3960812fbc84e3b4df13"
+  },
+  "sourceRows": [
+    {
+      "role": "controls",
+      "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "mode": "100644",
+      "before": {
+        "bytes": 28974,
+        "sha256": "7626e479a6662242009cb050e7e5af612a29e4205d62666d15274d5c30f91386",
+        "gitBlob": "ed57cb0fe7d57ef076a591621289eb77667c63ad"
+      },
+      "after": {
+        "bytes": 29017,
+        "sha256": "ffd9bbb822dbdc30da7cb8daa881fcbebd384ba2bf9bdd87c804c511166fa02b",
+        "gitBlob": "5286c036a63a14e98925711a224df202c9a7caa7"
+      },
+      "physicalLines": 495
+    },
+    {
+      "role": "nodeAggregate",
+      "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+      "mode": "100644",
+      "before": {
+        "bytes": 164965,
+        "sha256": "852bedb85c83dbc4b488dffb4a9ffebbe398adc53e85f5a3cea8ca36b146cbf7",
+        "gitBlob": "896c587e077da56a98a314a175fb3cba0353d6ee"
+      },
+      "after": {
+        "bytes": 165022,
+        "sha256": "fed1ee2429b0e1a7ccd592c127d7afc30bb69e0c10a1f8c673e240c1bc9dd581",
+        "gitBlob": "12c73fbc683dc297033bd8b6472e9dbee60b9b8a"
+      },
+      "physicalLines": 2702
+    },
+    {
+      "role": "catalog",
+      "path": "src/renderer/utils/teamModelAvailability.ts",
+      "mode": "100644",
+      "before": {
+        "bytes": 32055,
+        "sha256": "6e216e10c07e953472afb74045c3a976e9f4a1d4fcd3e9f5d46dc789d19022e6",
+        "gitBlob": "167751c56f74c2869b8b3d9b128002d5bd642bcb"
+      },
+      "after": {
+        "bytes": 32077,
+        "sha256": "b1da0ea7199e69eb042e5beb16dfafa91c4d7b9360db41a3f9ba16424ca2fd43",
+        "gitBlob": "ac6e66775bd5efaf81cecb9a2f22a3437b4343ad"
+      },
+      "physicalLines": 982
+    },
+    {
+      "role": "catalogTests",
+      "path": "test/renderer/utils/teamModelAvailability.test.ts",
+      "mode": "100644",
+      "before": {
+        "bytes": 49687,
+        "sha256": "0e37baae735529c11d2ed43432b132b516d252af8bb3084714c7082d7d4c4db8",
+        "gitBlob": "1a58c9c686010d5b5ded00f8e2b5064e4ab78c32"
+      },
+      "after": {
+        "bytes": 56775,
+        "sha256": "b08fe4a650ea9d23f4d8fa4b4ece157d9cd2f87e87e42b25c3c53934ed9974c8",
+        "gitBlob": "6cf34a11e7a1bc6f33208bad00adb57ee5656cd6"
+      },
+      "physicalLines": 1611
+    },
+    {
+      "role": "deadlineTests",
+      "path": "scripts/legacy-agent-host/desktop-ui-controls-deadline.test.ts",
+      "mode": "100644",
+      "before": null,
+      "after": {
+        "bytes": 7883,
+        "sha256": "29836f914218edb4876b6a4e157e7cdc68f63cdf414084cdd41683965c734eda",
+        "gitBlob": "6a9f8ad7481cd5910befcc6c7ff5992eef03965b"
+      },
+      "physicalLines": 202
+    }
+  ],
+  "completeDelta": [
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/29-reconciled-acceptance-and-custody-followups-2026-11-15.md",
+      "before": "4d22253a261834c73b93afb6d80150fee50b913c",
+      "after": "e8c9f25ed840d8d7ce929cef049c22276ea67d37",
+      "kind": "modified"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/continuation-status-20261116.md",
+      "before": "33d87090a811e22479b3ddf877cd216597533184",
+      "after": "3473cda9f2cee1e585e835ea89fc56576623f3b0",
+      "kind": "modified"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1213-retention-catalog-20261116.json",
+      "before": "77e86be37dd9244b12e8779ae3648102d6dc662e",
+      "after": "acc84233167402aa8a6b19b6ae1325994a913cbf",
+      "kind": "modified"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/narrow-catalog-waitread-r1-authorship-gate-20261117.json",
+      "before": null,
+      "after": "29040a4faa87137bfa070c71651147b2da4f2102",
+      "kind": "added"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/narrow-catalog-waitread-r1-independent-actual-publication-20261117.json",
+      "before": null,
+      "after": "215eea05560e776521465e5ab6081ffbe0affb2f",
+      "kind": "added"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/narrow-catalog-waitread-r1-root-actual-publication-20261117.json",
+      "before": null,
+      "after": "909984719f5bbb8c5cc4a38b1376ccd261636175",
+      "kind": "added"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/narrow-catalog-waitread-source-after-vector-20261117.json",
+      "before": null,
+      "after": "fff972049718ae5ddaa7000e17341fade490233e",
+      "kind": "added"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/narrow-catalog-waitread-source-before-vector-20261117.json",
+      "before": null,
+      "after": "ae0aa3e814cb90d9568cef5f35be6a0d8f46a361",
+      "kind": "added"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/narrow-catalog-waitread-source-publication-manifest-20261117.json",
+      "before": null,
+      "after": "918732824008d48d2cd5367c285fb5b776a9a96e",
+      "kind": "added"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/narrow-catalog-waitread-source-r2-20261117.json",
+      "before": null,
+      "after": "1318b887473a61e1cbfb3960812fbc84e3b4df13",
+      "kind": "added"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/narrow-catalog-waitread-source-r2-binding-review-20261117.json",
+      "before": null,
+      "after": "5da4688ff3bab4e284c15ca8d801887e455d952d",
+      "kind": "added"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/narrow-catalog-waitread-source-r2-guard-review-20261117.json",
+      "before": null,
+      "after": "2713afbe41128762206eb483f5a35eb7ab022235",
+      "kind": "added"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/narrow-catalog-waitread-source-r2-root-review-20261117.json",
+      "before": null,
+      "after": "eebdf11f15dcf6b9d702e5bf03eca1da0abbd4c8",
+      "kind": "added"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/narrow-catalog-waitread-source-r2-semantic-review-20261117.json",
+      "before": null,
+      "after": "794f343d6e42763478412dccee4c1f96446b8c88",
+      "kind": "added"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+      "before": "896c587e077da56a98a314a175fb3cba0353d6ee",
+      "after": "12c73fbc683dc297033bd8b6472e9dbee60b9b8a",
+      "kind": "modified"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "before": "ed57cb0fe7d57ef076a591621289eb77667c63ad",
+      "after": "5286c036a63a14e98925711a224df202c9a7caa7",
+      "kind": "modified"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-ui-controls-deadline.test.ts",
+      "before": null,
+      "after": "6a9f8ad7481cd5910befcc6c7ff5992eef03965b",
+      "kind": "added"
+    },
+    {
+      "path": "src/renderer/utils/teamModelAvailability.ts",
+      "before": "167751c56f74c2869b8b3d9b128002d5bd642bcb",
+      "after": "ac6e66775bd5efaf81cecb9a2f22a3437b4343ad",
+      "kind": "modified"
+    },
+    {
+      "path": "test/renderer/utils/teamModelAvailability.test.ts",
+      "before": "1a58c9c686010d5b5ded00f8e2b5064e4ab78c32",
+      "after": "6cf34a11e7a1bc6f33208bad00adb57ee5656cd6",
+      "kind": "modified"
+    }
+  ],
+  "actualBodyReadbacks": [
+    {
+      "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "bytes": 29017,
+      "sha256": "ffd9bbb822dbdc30da7cb8daa881fcbebd384ba2bf9bdd87c804c511166fa02b",
+      "gitBlob": "5286c036a63a14e98925711a224df202c9a7caa7",
+      "completeLiteralRead": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+      "bytes": 165022,
+      "sha256": "fed1ee2429b0e1a7ccd592c127d7afc30bb69e0c10a1f8c673e240c1bc9dd581",
+      "gitBlob": "12c73fbc683dc297033bd8b6472e9dbee60b9b8a",
+      "completeLiteralRead": true
+    },
+    {
+      "path": "src/renderer/utils/teamModelAvailability.ts",
+      "bytes": 32077,
+      "sha256": "b1da0ea7199e69eb042e5beb16dfafa91c4d7b9360db41a3f9ba16424ca2fd43",
+      "gitBlob": "ac6e66775bd5efaf81cecb9a2f22a3437b4343ad",
+      "completeLiteralRead": true
+    },
+    {
+      "path": "test/renderer/utils/teamModelAvailability.test.ts",
+      "bytes": 56775,
+      "sha256": "b08fe4a650ea9d23f4d8fa4b4ece157d9cd2f87e87e42b25c3c53934ed9974c8",
+      "gitBlob": "6cf34a11e7a1bc6f33208bad00adb57ee5656cd6",
+      "completeLiteralRead": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-ui-controls-deadline.test.ts",
+      "bytes": 7883,
+      "sha256": "29836f914218edb4876b6a4e157e7cdc68f63cdf414084cdd41683965c734eda",
+      "gitBlob": "6a9f8ad7481cd5910befcc6c7ff5992eef03965b",
+      "completeLiteralRead": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/narrow-catalog-waitread-source-r2-20261117.json",
+      "bytes": 19187,
+      "sha256": "8bb84de228b570dfc121233893d32209a9389da44aa1747c7924dff936fa4c1a",
+      "gitBlob": "1318b887473a61e1cbfb3960812fbc84e3b4df13",
+      "completeLiteralRead": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/narrow-catalog-waitread-source-r2-root-review-20261117.json",
+      "bytes": 21842,
+      "sha256": "946eb6f3f4204ed4a9aaf6fb22f5685190b43ce7213cb034c5c3964b6ab7a246",
+      "gitBlob": "eebdf11f15dcf6b9d702e5bf03eca1da0abbd4c8",
+      "completeLiteralRead": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/narrow-catalog-waitread-source-r2-guard-review-20261117.json",
+      "bytes": 59944,
+      "sha256": "aafc30e914ab2216e9aa5773693255fa6348e48f2ab08498240955419840c7c2",
+      "gitBlob": "2713afbe41128762206eb483f5a35eb7ab022235",
+      "completeLiteralRead": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/narrow-catalog-waitread-source-r2-semantic-review-20261117.json",
+      "bytes": 76698,
+      "sha256": "d913e7f840b7dea7bcebebc4629a06ba25098e63bb67ac12250abbf21f50b5f3",
+      "gitBlob": "794f343d6e42763478412dccee4c1f96446b8c88",
+      "completeLiteralRead": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/narrow-catalog-waitread-source-r2-binding-review-20261117.json",
+      "bytes": 164282,
+      "sha256": "717c8139e675faec949c4af55462da90b52d8866e3f160fc839e857ad35074a2",
+      "gitBlob": "5da4688ff3bab4e284c15ca8d801887e455d952d",
+      "completeLiteralRead": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/narrow-catalog-waitread-source-before-vector-20261117.json",
+      "bytes": 2552,
+      "sha256": "647b7a268b8b8921d875327e3394726916d54cc3c10c1bb8d2e2e9538db2d496",
+      "gitBlob": "ae0aa3e814cb90d9568cef5f35be6a0d8f46a361",
+      "completeLiteralRead": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/narrow-catalog-waitread-source-after-vector-20261117.json",
+      "bytes": 2784,
+      "sha256": "6a212eb715b312ae74c25e58078fd26b1247695d94f5c47536dc2a20aed49ce1",
+      "gitBlob": "fff972049718ae5ddaa7000e17341fade490233e",
+      "completeLiteralRead": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/narrow-catalog-waitread-r1-root-actual-publication-20261117.json",
+      "bytes": 56695,
+      "sha256": "a4d2cc44cb306a7484d902112471ce80425b98a947c198f13d802cbab7ed08cd",
+      "gitBlob": "909984719f5bbb8c5cc4a38b1376ccd261636175",
+      "completeLiteralRead": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/narrow-catalog-waitread-r1-independent-actual-publication-20261117.json",
+      "bytes": 194094,
+      "sha256": "786582e9d4ffaea97e5a622886446340fc95ab6f81c653da2db44b1ea4cabdbf",
+      "gitBlob": "215eea05560e776521465e5ab6081ffbe0affb2f",
+      "completeLiteralRead": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/narrow-catalog-waitread-r1-authorship-gate-20261117.json",
+      "bytes": 3516,
+      "sha256": "ae46b4e2997a5a5185fada08711e4f291be723b53c1afdd05af2bd89ebcd11fd",
+      "gitBlob": "29040a4faa87137bfa070c71651147b2da4f2102",
+      "completeLiteralRead": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/29-reconciled-acceptance-and-custody-followups-2026-11-15.md",
+      "bytes": 2578570,
+      "sha256": "abd2200b9d3091d9d4da22ba7c4fd19e580a65269de3ddb98862bad07341d476",
+      "gitBlob": "e8c9f25ed840d8d7ce929cef049c22276ea67d37",
+      "completeLiteralRead": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/continuation-status-20261116.md",
+      "bytes": 55279,
+      "sha256": "1aa2c4cac818719b398f19b1e34998084859f4f07d2c911c24c76b4ff3ad38d6",
+      "gitBlob": "3473cda9f2cee1e585e835ea89fc56576623f3b0",
+      "completeLiteralRead": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1213-retention-catalog-20261116.json",
+      "bytes": 446551,
+      "sha256": "97d452c0da5ec8f87d8d9cb9f0dccd59101e441b3e28008642505de2661dff1f",
+      "gitBlob": "acc84233167402aa8a6b19b6ae1325994a913cbf",
+      "completeLiteralRead": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/narrow-catalog-waitread-source-publication-manifest-20261117.json",
+      "bytes": 10191,
+      "sha256": "985a2aac30472edd989588fa7aef19f05691947449662bbfc026fe8bad7f55a7",
+      "gitBlob": "918732824008d48d2cd5367c285fb5b776a9a96e",
+      "completeLiteralRead": true
+    }
+  ],
+  "parentBodyReadbacks": [
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/29-reconciled-acceptance-and-custody-followups-2026-11-15.md",
+      "bytes": 2576766,
+      "sha256": "41e9c9e32030891b56496a921e28466838a78eb751bb90d88bb655d16b99a7b2",
+      "gitBlob": "4d22253a261834c73b93afb6d80150fee50b913c",
+      "completeLiteralRead": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/continuation-status-20261116.md",
+      "bytes": 53475,
+      "sha256": "bac9616dcadc34f3eb841139d852f69889a6d583f6167d1e03cf1466bbfc8fcd",
+      "gitBlob": "33d87090a811e22479b3ddf877cd216597533184",
+      "completeLiteralRead": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1213-retention-catalog-20261116.json",
+      "bytes": 434963,
+      "sha256": "0d63c05135568e5e3ddd6e2941f22360da86480d87d3e10a3012e0a249b90315",
+      "gitBlob": "77e86be37dd9244b12e8779ae3648102d6dc662e",
+      "completeLiteralRead": true
+    }
+  ],
+  "currentPointerJoins": [
+    {
+      "role": "sourceProposal",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/narrow-catalog-waitread-source-r2-20261117.json",
+      "bytes": 19187,
+      "sha256": "8bb84de228b570dfc121233893d32209a9389da44aa1747c7924dff936fa4c1a",
+      "gitBlob": "1318b887473a61e1cbfb3960812fbc84e3b4df13"
+    },
+    {
+      "role": "rootR2Review",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/narrow-catalog-waitread-source-r2-root-review-20261117.json",
+      "bytes": 21842,
+      "sha256": "946eb6f3f4204ed4a9aaf6fb22f5685190b43ce7213cb034c5c3964b6ab7a246",
+      "gitBlob": "eebdf11f15dcf6b9d702e5bf03eca1da0abbd4c8"
+    },
+    {
+      "role": "guardR2Review",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/narrow-catalog-waitread-source-r2-guard-review-20261117.json",
+      "bytes": 59944,
+      "sha256": "aafc30e914ab2216e9aa5773693255fa6348e48f2ab08498240955419840c7c2",
+      "gitBlob": "2713afbe41128762206eb483f5a35eb7ab022235"
+    },
+    {
+      "role": "semanticR2Review",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/narrow-catalog-waitread-source-r2-semantic-review-20261117.json",
+      "bytes": 76698,
+      "sha256": "d913e7f840b7dea7bcebebc4629a06ba25098e63bb67ac12250abbf21f50b5f3",
+      "gitBlob": "794f343d6e42763478412dccee4c1f96446b8c88"
+    },
+    {
+      "role": "bindingR2Review",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/narrow-catalog-waitread-source-r2-binding-review-20261117.json",
+      "bytes": 164282,
+      "sha256": "717c8139e675faec949c4af55462da90b52d8866e3f160fc839e857ad35074a2",
+      "gitBlob": "5da4688ff3bab4e284c15ca8d801887e455d952d"
+    },
+    {
+      "role": "beforeVector",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/narrow-catalog-waitread-source-before-vector-20261117.json",
+      "bytes": 2552,
+      "sha256": "647b7a268b8b8921d875327e3394726916d54cc3c10c1bb8d2e2e9538db2d496",
+      "gitBlob": "ae0aa3e814cb90d9568cef5f35be6a0d8f46a361"
+    },
+    {
+      "role": "afterVector",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/narrow-catalog-waitread-source-after-vector-20261117.json",
+      "bytes": 2784,
+      "sha256": "6a212eb715b312ae74c25e58078fd26b1247695d94f5c47536dc2a20aed49ce1",
+      "gitBlob": "fff972049718ae5ddaa7000e17341fade490233e"
+    },
+    {
+      "role": "r1RootActual",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/narrow-catalog-waitread-r1-root-actual-publication-20261117.json",
+      "bytes": 56695,
+      "sha256": "a4d2cc44cb306a7484d902112471ce80425b98a947c198f13d802cbab7ed08cd",
+      "gitBlob": "909984719f5bbb8c5cc4a38b1376ccd261636175"
+    },
+    {
+      "role": "r1IndependentActual",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/narrow-catalog-waitread-r1-independent-actual-publication-20261117.json",
+      "bytes": 194094,
+      "sha256": "786582e9d4ffaea97e5a622886446340fc95ab6f81c653da2db44b1ea4cabdbf",
+      "gitBlob": "215eea05560e776521465e5ab6081ffbe0affb2f"
+    },
+    {
+      "role": "r1AuthorshipGate",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/narrow-catalog-waitread-r1-authorship-gate-20261117.json",
+      "bytes": 3516,
+      "sha256": "ae46b4e2997a5a5185fada08711e4f291be723b53c1afdd05af2bd89ebcd11fd",
+      "gitBlob": "29040a4faa87137bfa070c71651147b2da4f2102"
+    }
+  ],
+  "checks": [
+    {
+      "name": "Actual commit, sole parent, tree and pushed working ref",
+      "result": "PASS",
+      "evidence": {
+        "commit": "674d32a84644f87544910c28bb4d2a4214958fb5",
+        "parent": "811d1108e8a766c8c1307008243c3291ccec3e04",
+        "tree": "076131eff684e011ae87907e66d31e7eb9e50d30",
+        "immediatePush": true
+      }
+    },
+    {
+      "name": "Exact source R2 and all full reviews closed before publication",
+      "result": "PASS",
+      "evidence": {
+        "subject": {
+          "bytes": 19187,
+          "sha256": "8bb84de228b570dfc121233893d32209a9389da44aa1747c7924dff936fa4c1a",
+          "gitBlob": "1318b887473a61e1cbfb3960812fbc84e3b4df13"
+        },
+        "closedAt": "2026-11-17 04:53:44 UTC",
+        "reviews": {
+          "root": {
+            "bytes": 21842,
+            "sha256": "946eb6f3f4204ed4a9aaf6fb22f5685190b43ce7213cb034c5c3964b6ab7a246",
+            "gitBlob": "eebdf11f15dcf6b9d702e5bf03eca1da0abbd4c8"
+          },
+          "guard": {
+            "bytes": 59944,
+            "sha256": "aafc30e914ab2216e9aa5773693255fa6348e48f2ab08498240955419840c7c2",
+            "gitBlob": "2713afbe41128762206eb483f5a35eb7ab022235"
+          },
+          "semantic": {
+            "bytes": 76698,
+            "sha256": "d913e7f840b7dea7bcebebc4629a06ba25098e63bb67ac12250abbf21f50b5f3",
+            "gitBlob": "794f343d6e42763478412dccee4c1f96446b8c88"
+          },
+          "binding": {
+            "bytes": 164282,
+            "sha256": "717c8139e675faec949c4af55462da90b52d8866e3f160fc839e857ad35074a2",
+            "gitBlob": "5da4688ff3bab4e284c15ca8d801887e455d952d"
+          }
+        }
+      }
+    },
+    {
+      "name": "Complete actual subtree anchored: docs",
+      "result": "PASS",
+      "evidence": {
+        "sha": "aa84bfbe10b38d452428f27817610b53754ff66b",
+        "entries": 3582,
+        "leaves": 3176
+      }
+    },
+    {
+      "name": "Complete actual subtree anchored: scripts",
+      "result": "PASS",
+      "evidence": {
+        "sha": "f1826293c131ca539219eac5c3f293ace5ff1244",
+        "entries": 635,
+        "leaves": 601
+      }
+    },
+    {
+      "name": "Complete actual subtree anchored: src",
+      "result": "PASS",
+      "evidence": {
+        "sha": "9ed817aaf1b2959381ea7d9262ed04f538247750",
+        "entries": 5445,
+        "leaves": 4659
+      }
+    },
+    {
+      "name": "Complete actual subtree anchored: test",
+      "result": "PASS",
+      "evidence": {
+        "sha": "69d3a76e739605a29aa7a0d04981d24f3918d856",
+        "entries": 1980,
+        "leaves": 1695
+      }
+    },
+    {
+      "name": "Complete actual19-path delta equals precommit manifest",
+      "result": "PASS",
+      "evidence": {
+        "added": 12,
+        "modified": 7,
+        "sourceModified": 4,
+        "sourceAdded": 1,
+        "docsModified": 3,
+        "docsAdded": 11,
+        "deleted": 0,
+        "modesChanged": 0
+      }
+    },
+    {
+      "name": "All50 other non-doc root entries unchanged",
+      "result": "PASS",
+      "evidence": {
+        "entries": 50,
+        "rootEntries": 54,
+        "workflows": 42,
+        "workflowRootUnchanged": true,
+        "dependencyAndVendorRootsUnchanged": true
+      }
+    },
+    {
+      "name": "All19 actual bodies complete literal and three-field readbacks",
+      "result": "PASS",
+      "evidence": {
+        "bodies": 19,
+        "bytes": 3982959
+      }
+    },
+    {
+      "name": "All3 complete parent documentation bodies read",
+      "result": "PASS",
+      "evidence": {
+        "bodies": 3,
+        "bytes": 3065204
+      }
+    },
+    {
+      "name": "All76 unrelated parent catalog fields preserved",
+      "result": "PASS",
+      "evidence": {
+        "parentFields": 77,
+        "preservedUnchanged": 76
+      }
+    },
+    {
+      "name": "Old narrow stage archived exactly; only two keys added",
+      "result": "PASS",
+      "evidence": {
+        "archiveKey": "priorNarrowCatalogWaitReadStageAtSourcePublication",
+        "evidenceKey": "narrowCatalogWaitReadSourceEvidenceFiles",
+        "fields": 79
+      }
+    },
+    {
+      "name": "All27 complete bundles and totals unchanged",
+      "result": "PASS",
+      "evidence": {
+        "bundles": 27,
+        "totals": {
+          "bundles": 27,
+          "outerBytes": 17894693,
+          "payloadInstances": 219,
+          "payloadBytes": 15911913
+        }
+      }
+    },
+    {
+      "name": "Complete plan prefix and exact appended scope preserved",
+      "result": "PASS",
+      "evidence": {
+        "parent": {
+          "bytes": 2576766,
+          "sha256": "41e9c9e32030891b56496a921e28466838a78eb751bb90d88bb655d16b99a7b2",
+          "gitBlob": "4d22253a261834c73b93afb6d80150fee50b913c"
+        },
+        "actual": {
+          "bytes": 2578570,
+          "sha256": "abd2200b9d3091d9d4da22ba7c4fd19e580a65269de3ddb98862bad07341d476",
+          "gitBlob": "e8c9f25ed840d8d7ce929cef049c22276ea67d37"
+        },
+        "appendedBytes": 1804
+      }
+    },
+    {
+      "name": "Complete status prefix and exact appended scope preserved",
+      "result": "PASS",
+      "evidence": {
+        "parent": {
+          "bytes": 53475,
+          "sha256": "bac9616dcadc34f3eb841139d852f69889a6d583f6167d1e03cf1466bbfc8fcd",
+          "gitBlob": "33d87090a811e22479b3ddf877cd216597533184"
+        },
+        "actual": {
+          "bytes": 55279,
+          "sha256": "1aa2c4cac818719b398f19b1e34998084859f4f07d2c911c24c76b4ff3ad38d6",
+          "gitBlob": "3473cda9f2cee1e585e835ea89fc56576623f3b0"
+        },
+        "appendedBytes": 1804
+      }
+    },
+    {
+      "name": "Actual current source stage and evidence list exactly selected",
+      "result": "PASS",
+      "evidence": {
+        "stage": "narrow-catalog-waitread-source-reviewed-awaiting-actual-publication-readbacks",
+        "evidenceRows": 10,
+        "runtimeClaims": {
+          "newDeadline10": "UNEXECUTED",
+          "newAggregate149": "UNEXECUTED",
+          "newCatalog43": "UNEXECUTED",
+          "renderer85Green": "NOT_YET_ACCEPTED",
+          "wholeE2EQualified": false
+        }
+      }
+    },
+    {
+      "name": "Exact source postimage actual leaf and complete body: scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "result": "PASS",
+      "evidence": {
+        "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+        "bytes": 29017,
+        "sha256": "ffd9bbb822dbdc30da7cb8daa881fcbebd384ba2bf9bdd87c804c511166fa02b",
+        "gitBlob": "5286c036a63a14e98925711a224df202c9a7caa7",
+        "mode": "100644"
+      }
+    },
+    {
+      "name": "Exact source postimage actual leaf and complete body: scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+      "result": "PASS",
+      "evidence": {
+        "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+        "bytes": 165022,
+        "sha256": "fed1ee2429b0e1a7ccd592c127d7afc30bb69e0c10a1f8c673e240c1bc9dd581",
+        "gitBlob": "12c73fbc683dc297033bd8b6472e9dbee60b9b8a",
+        "mode": "100644"
+      }
+    },
+    {
+      "name": "Exact source postimage actual leaf and complete body: src/renderer/utils/teamModelAvailability.ts",
+      "result": "PASS",
+      "evidence": {
+        "path": "src/renderer/utils/teamModelAvailability.ts",
+        "bytes": 32077,
+        "sha256": "b1da0ea7199e69eb042e5beb16dfafa91c4d7b9360db41a3f9ba16424ca2fd43",
+        "gitBlob": "ac6e66775bd5efaf81cecb9a2f22a3437b4343ad",
+        "mode": "100644"
+      }
+    },
+    {
+      "name": "Exact source postimage actual leaf and complete body: test/renderer/utils/teamModelAvailability.test.ts",
+      "result": "PASS",
+      "evidence": {
+        "path": "test/renderer/utils/teamModelAvailability.test.ts",
+        "bytes": 56775,
+        "sha256": "b08fe4a650ea9d23f4d8fa4b4ece157d9cd2f87e87e42b25c3c53934ed9974c8",
+        "gitBlob": "6cf34a11e7a1bc6f33208bad00adb57ee5656cd6",
+        "mode": "100644"
+      }
+    },
+    {
+      "name": "Exact source postimage actual leaf and complete body: scripts/legacy-agent-host/desktop-ui-controls-deadline.test.ts",
+      "result": "PASS",
+      "evidence": {
+        "path": "scripts/legacy-agent-host/desktop-ui-controls-deadline.test.ts",
+        "bytes": 7883,
+        "sha256": "29836f914218edb4876b6a4e157e7cdc68f63cdf414084cdd41683965c734eda",
+        "gitBlob": "6a9f8ad7481cd5910befcc6c7ff5992eef03965b",
+        "mode": "100644"
+      }
+    },
+    {
+      "name": "Full139 aggregate prefix plus57-byte import preserved",
+      "result": "PASS",
+      "evidence": {
+        "before": 139,
+        "added": 10,
+        "prospective": 149,
+        "runtimeObserved": false
+      }
+    },
+    {
+      "name": "Full40 catalog prefix plus exact7088-byte3cases preserved",
+      "result": "PASS",
+      "evidence": {
+        "before": 40,
+        "added": 3,
+        "prospective": 43,
+        "runtimeObserved": false
+      }
+    },
+    {
+      "name": "All12 exact after-vector rows join actual source tree",
+      "result": "PASS",
+      "evidence": {
+        "vector": {
+          "bytes": 2784,
+          "sha256": "6a212eb715b312ae74c25e58078fd26b1247695d94f5c47536dc2a20aed49ce1",
+          "gitBlob": "fff972049718ae5ddaa7000e17341fade490233e"
+        },
+        "rows": 12
+      }
+    },
+    {
+      "name": "Seven frozen critical source rows including whole85 remain unchanged",
+      "result": "PASS",
+      "evidence": {
+        "rows": 7,
+        "renderer85": {
+          "path": "test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts",
+          "bytes": 187890,
+          "sha256": "b6f11896e60014aac785968d42390afde38716d47de9bba9562522235db048c9",
+          "gitBlob": "76495189c992fcda47cd7a43a0c697190b5acbb3",
+          "cases": 85
+        },
+        "previous3Fixes": true
+      }
+    },
+    {
+      "name": "All10 current evidence file pointers resolve to full actual bodies",
+      "result": "PASS",
+      "evidence": {
+        "joins": [
+          {
+            "role": "sourceProposal",
+            "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/narrow-catalog-waitread-source-r2-20261117.json",
+            "bytes": 19187,
+            "sha256": "8bb84de228b570dfc121233893d32209a9389da44aa1747c7924dff936fa4c1a",
+            "gitBlob": "1318b887473a61e1cbfb3960812fbc84e3b4df13"
+          },
+          {
+            "role": "rootR2Review",
+            "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/narrow-catalog-waitread-source-r2-root-review-20261117.json",
+            "bytes": 21842,
+            "sha256": "946eb6f3f4204ed4a9aaf6fb22f5685190b43ce7213cb034c5c3964b6ab7a246",
+            "gitBlob": "eebdf11f15dcf6b9d702e5bf03eca1da0abbd4c8"
+          },
+          {
+            "role": "guardR2Review",
+            "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/narrow-catalog-waitread-source-r2-guard-review-20261117.json",
+            "bytes": 59944,
+            "sha256": "aafc30e914ab2216e9aa5773693255fa6348e48f2ab08498240955419840c7c2",
+            "gitBlob": "2713afbe41128762206eb483f5a35eb7ab022235"
+          },
+          {
+            "role": "semanticR2Review",
+            "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/narrow-catalog-waitread-source-r2-semantic-review-20261117.json",
+            "bytes": 76698,
+            "sha256": "d913e7f840b7dea7bcebebc4629a06ba25098e63bb67ac12250abbf21f50b5f3",
+            "gitBlob": "794f343d6e42763478412dccee4c1f96446b8c88"
+          },
+          {
+            "role": "bindingR2Review",
+            "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/narrow-catalog-waitread-source-r2-binding-review-20261117.json",
+            "bytes": 164282,
+            "sha256": "717c8139e675faec949c4af55462da90b52d8866e3f160fc839e857ad35074a2",
+            "gitBlob": "5da4688ff3bab4e284c15ca8d801887e455d952d"
+          },
+          {
+            "role": "beforeVector",
+            "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/narrow-catalog-waitread-source-before-vector-20261117.json",
+            "bytes": 2552,
+            "sha256": "647b7a268b8b8921d875327e3394726916d54cc3c10c1bb8d2e2e9538db2d496",
+            "gitBlob": "ae0aa3e814cb90d9568cef5f35be6a0d8f46a361"
+          },
+          {
+            "role": "afterVector",
+            "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/narrow-catalog-waitread-source-after-vector-20261117.json",
+            "bytes": 2784,
+            "sha256": "6a212eb715b312ae74c25e58078fd26b1247695d94f5c47536dc2a20aed49ce1",
+            "gitBlob": "fff972049718ae5ddaa7000e17341fade490233e"
+          },
+          {
+            "role": "r1RootActual",
+            "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/narrow-catalog-waitread-r1-root-actual-publication-20261117.json",
+            "bytes": 56695,
+            "sha256": "a4d2cc44cb306a7484d902112471ce80425b98a947c198f13d802cbab7ed08cd",
+            "gitBlob": "909984719f5bbb8c5cc4a38b1376ccd261636175"
+          },
+          {
+            "role": "r1IndependentActual",
+            "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/narrow-catalog-waitread-r1-independent-actual-publication-20261117.json",
+            "bytes": 194094,
+            "sha256": "786582e9d4ffaea97e5a622886446340fc95ab6f81c653da2db44b1ea4cabdbf",
+            "gitBlob": "215eea05560e776521465e5ab6081ffbe0affb2f"
+          },
+          {
+            "role": "r1AuthorshipGate",
+            "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/narrow-catalog-waitread-r1-authorship-gate-20261117.json",
+            "bytes": 3516,
+            "sha256": "ae46b4e2997a5a5185fada08711e4f291be723b53c1afdd05af2bd89ebcd11fd",
+            "gitBlob": "29040a4faa87137bfa070c71651147b2da4f2102"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Actual root R2 same exact subject and full checks",
+      "result": "PASS",
+      "evidence": {
+        "report": {
+          "bytes": 21842,
+          "sha256": "946eb6f3f4204ed4a9aaf6fb22f5685190b43ce7213cb034c5c3964b6ab7a246",
+          "gitBlob": "eebdf11f15dcf6b9d702e5bf03eca1da0abbd4c8"
+        },
+        "checks": 35
+      }
+    },
+    {
+      "name": "Actual guard R2 same exact subject and full checks",
+      "result": "PASS",
+      "evidence": {
+        "report": {
+          "bytes": 59944,
+          "sha256": "aafc30e914ab2216e9aa5773693255fa6348e48f2ab08498240955419840c7c2",
+          "gitBlob": "2713afbe41128762206eb483f5a35eb7ab022235"
+        },
+        "checks": 43
+      }
+    },
+    {
+      "name": "Actual semantic R2 same exact subject and full checks",
+      "result": "PASS",
+      "evidence": {
+        "report": {
+          "bytes": 76698,
+          "sha256": "d913e7f840b7dea7bcebebc4629a06ba25098e63bb67ac12250abbf21f50b5f3",
+          "gitBlob": "794f343d6e42763478412dccee4c1f96446b8c88"
+        },
+        "checks": 46
+      }
+    },
+    {
+      "name": "Actual binding R2 same exact subject and full checks",
+      "result": "PASS",
+      "evidence": {
+        "report": {
+          "bytes": 164282,
+          "sha256": "717c8139e675faec949c4af55462da90b52d8866e3f160fc839e857ad35074a2",
+          "gitBlob": "5da4688ff3bab4e284c15ca8d801887e455d952d"
+        },
+        "checks": 99
+      }
+    },
+    {
+      "name": "Actual manifest complete exact literal and parent/delta binding",
+      "result": "PASS",
+      "evidence": {
+        "manifest": {
+          "bytes": 10191,
+          "sha256": "985a2aac30472edd989588fa7aef19f05691947449662bbfc026fe8bad7f55a7",
+          "gitBlob": "918732824008d48d2cd5367c285fb5b776a9a96e"
+        },
+        "expectedDelta": {
+          "changed": 19,
+          "added": 12,
+          "modified": 7,
+          "deleted": 0,
+          "modesChanged": 0,
+          "sourceModified": 4,
+          "sourceAdded": 1,
+          "docsAdded": 11,
+          "docsModified": 3,
+          "workflowsChanged": 0
+        }
+      }
+    },
+    {
+      "name": "Exact full repository partition census",
+      "result": "PASS",
+      "evidence": {
+        "leaves": 11975,
+        "docs": 3176,
+        "nonDocs": 8799,
+        "workflows": 42,
+        "method": "Complete affected subtrees plus identical50 other root entries and accepted full parent partition; no truncated root-recursive response or physical-worktree claim."
+      }
+    },
+    {
+      "name": "Source policy and actual production deltas preserved",
+      "result": "PASS",
+      "evidence": {
+        "productionFiles": 5020,
+        "exceptions": 141,
+        "cap": 800,
+        "catalogLines": 982,
+        "catalogFrozenCap": 983,
+        "controls": 495,
+        "newTest": 202,
+        "noNewProductionPath": true,
+        "canonicalGuardExecuted": false
+      }
+    },
+    {
+      "name": "Frozen CI refs remain exact",
+      "result": "PASS",
+      "evidence": {
+        "head": "9c9c73190840592963142d36562ea07d2b5d2d71",
+        "base": "77993819c233737f1e2b4c11c8ca1a5d360bcbe3",
+        "noPrMetadataOrEventMutation": true
+      }
+    },
+    {
+      "name": "No execution/materialization/whole-suite result falsely included",
+      "result": "PASS",
+      "evidence": {
+        "sourcePublication": true,
+        "runtimeGate": false,
+        "futureExecutableR2": true,
+        "oldSpentAttemptsUnchanged": true
+      }
+    }
+  ],
+  "checkCount": 35,
+  "failedChecks": [],
+  "unresolvedPointers": [],
+  "blockers": [],
+  "runtimeAuthorized": false,
+  "independentActualStillRequired": true,
+  "selfReadbackProtocol": "Complete literal equality, bytes/SHA256/Git identity, parsed checks and content read after bare retention; no source/runtime invocation."
+}

@@ -1,0 +1,1094 @@
+{
+  "schemaVersion": 1,
+  "kind": "independent-guard-retained-opencode-member-detail-failure-advisory",
+  "reviewer": "/root/producer_r2_guard",
+  "at": "2026-11-17 05:02:33 UTC",
+  "repository": "777genius/agent-teams-ai",
+  "subject": {
+    "gitBlob": "40f983754899ade7491929f28abeaba4e96ac2b6",
+    "bytes": 217614,
+    "sha256": "4df660534b4ac26644349a5f412d6ab03807b3fa10b648798c25c423abcde655"
+  },
+  "verdict": "BOUNDED_DIAGNOSIS_COMPLETE_SUPPORTED_HARNESS_REVEAL_CANDIDATE",
+  "qualification": "This is a read-only causal advisory on one retained failed OpenCode TEST-peer UI flow. It accepts the failure accounting and identifies a narrowly supported harness correction shape. It does not accept a source postimage, approve controls, authorize execution, prove the proposed fix, or qualify any native provider.",
+  "executiveFinding": {
+    "certain": "The original driver failed inside the initial readPoint for 'open original member detail', before any member-detail hover or mouse press/release. The custom expression never supplied an accepted target before the original 30000ms read window ended. Earlier UI prefix evidence remains real but the overall receipt and job are failed/incomplete.",
+    "concreteSourceDefect": "The driver asks for the viewport-hit-testable center of the exact Alice name without first revealing that name. clickExpression does not scroll. The member roster is above Kanban in a separately scrollable main panel. The retained failure image shows that panel scrolled into Kanban, with the member roster and team header outside the visible area.",
+    "supportedInference": "Omitted viewport preparation is the leading source-backed explanation and a concrete robustness defect in this harness flow. An offscreen or clipped name center fails elementFromPoint/descendant eligibility indefinitely while the underlying roster can be ready.",
+    "notProven": "The selected custom expression returns only null on all refusal paths. The receipt does not contain failed row/name counts, rectangles, clipping boundary, target center or hit identity. It therefore cannot prove that one particular DOM branch, rather than another unrecorded refusal or allowed transient context error, occurred on every read.",
+    "narrowShape": "Reveal the same unique Alice member-name target through the existing bounded physical scrollTo helper immediately before the unchanged clickExpression. Preserve target identity, unique-row/name checks, nested-button exclusion, hit ownership, post-hover stabilization, final ownership/geometry checks and one press/release. No timeout increase, blind click, action retry, direct handler/store/API invocation, selector relaxation or product component change is supported."
+  },
+  "retainedObservation": {
+    "packetAt": "2026-11-17 04:52:04 UTC",
+    "observationAt": "2026-11-17 04:49:34 UTC",
+    "observationIndex": 10,
+    "pr": 1218,
+    "head": "9c9c73190840592963142d36562ea07d2b5d2d71",
+    "base": "77993819c233737f1e2b4c11c8ca1a5d360bcbe3",
+    "runId": 44008782843,
+    "runAttempt": 1,
+    "jobId": 133790458853,
+    "jobName": "Offline Host Desktop (linux-x64, opencode)",
+    "jobStatus": "completed",
+    "jobConclusion": "failure",
+    "jobStartedAt": "2026-11-17T04:42:25Z",
+    "jobCompletedAt": "2026-11-17T04:47:36Z",
+    "runSnapshot": {
+      "status": "queued",
+      "conclusion": null
+    },
+    "note": "All metadata is the retained observation10 snapshot. No live CI reads, new status inference or polling occurred.",
+    "exactJobJoin": true,
+    "log": {
+      "gitBlob": "4c44b1350d3d830c03a2dcff30e768e7c0e9ab50",
+      "bytes": 204038,
+      "sha256": "0045c4bf3d426f58bb99dc6ffcf6e0ec0877e073776ee7e24e18c7ea1031711c"
+    },
+    "commandEvidence": {
+      "checkout": "Retained complete log lines38,109-120,200-220 select and print frozen head9c9; original verification step compares HEAD to HOST_EMULATED_SOURCE_HEAD.",
+      "mode": "LEGACY_DESKTOP_PROOF_MODE=emulated-opencode-runtime-ui",
+      "platform": "linux-x64",
+      "command": "xvfb-run --auto-servernum --server-args='-screen 0 1600x1000x24 -nolisten tcp' bash -euo pipefail -c 'export LEGACY_DESKTOP_TEST_DISPLAY=\"$DISPLAY\" LEGACY_DESKTOP_TEST_XAUTHORITY=\"$XAUTHORITY\"; exec node scripts/legacy-agent-host/desktop-backend-smoke.ts'",
+      "sourceRange": "complete log lines1110-1160",
+      "runtimeVersionInRetainedLog": "Node.js v24.21.0",
+      "flowExit": 1,
+      "verifierExit": 1,
+      "verifierFailure": "original UI flow and cleanup must pass",
+      "uploadSuccess": true
+    }
+  },
+  "transportAndReadCoverage": {
+    "packetBytes": 217614,
+    "packetMethod": "Complete literal JSON fetched and hash checked. Top-level semantic fields, complete selected job and all archive-member metadata read. Nested raw attempt/jobs decoded; selected job equals retained22-job row. Other jobs were not re-audited.",
+    "artifact": {
+      "artifactId": 14300850599,
+      "name": "host-emulated-linux-x64-9c9c73190840592963142d36562ea07d2b5d2d71-opencode",
+      "runId": 44008782843,
+      "bytes": 1318115,
+      "sha256": "64054cfc3f098e463a2310956347d009c3132355a80d43025579b651d5d2a766",
+      "fileCount": 22,
+      "uncompressedBytes": 2550910
+    },
+    "captureAttestation": {
+      "zipBytesAndDigestVerified": true,
+      "complete22MemberCensus": true,
+      "allMemberBytesCRCVerified": true,
+      "all14TextBodiesRetained": true,
+      "allTextBytes": 995756
+    },
+    "independentTextFetches": 14,
+    "independentTextBytes": 995756,
+    "completeJobLogBytes": 204038,
+    "textVerification": "All14 complete artifact text bodies plus the complete1999-line job log were freshly fetched from immutable Git blobs and independently checked for full bytes, SHA256 and Git object identity.",
+    "semanticReadBoundary": "All13 non-receipt artifact text bodies were read completely. The933199-byte receipt was parsed completely; all1757 before/after source rows were checked by exact data comparison, all proof steps were searched/count-checked with the complete ordered click/wheel labels read, and all fields governing the failure, readiness, commands, stats, screenshot, cleanup and peer effects were read. Repetitive input-event focus records and all unrelated resource URLs were not presented as a new full semantic audit. The whole job log is retained/hash verified; checkout, exact command/mode, failed status/frames, verifier failure and upload sections were read rather than re-auditing installation chatter or every embedded workflow program.",
+    "zipBoundary": "Root's retained packet reports ZIP length/digest and all22 member CRC/length verification. Reviewer independently joined text blobs and upload log metadata; did not re-decompress or re-CRC the ZIP.",
+    "screenshotBoundary": "Reviewer independently viewed the retained local ui-failure.png at the packet's exact member path. PNG digest/membership relies on the root's retained archive verification. No new browser, app or screenshot capture was performed.",
+    "members": [
+      {
+        "path": "TEST-desktop-backend-jN6Pjs/TEST-peer-opencode-scope/effects.ndjson",
+        "bytes": 4544,
+        "sha256": "4921149ee3db8e02502e41d95603eb7671b820f11150b55d2d72f779370b9c9a",
+        "gitBlob": "88a4f5d7fb2062151e95cb899052c405f7ccfa20",
+        "crc32": 3696181973,
+        "utf8": true,
+        "retainedAsGitBlob": true
+      },
+      {
+        "path": "TEST-desktop-backend-jN6Pjs/desktop-backend-receipt.json",
+        "bytes": 933199,
+        "sha256": "cbceb4ff668648488f99232506d9b521d732d91ef8c672d3df20146f2efa6382",
+        "gitBlob": "35750c1358882851fbd36dfd78f7c026eefe0e95",
+        "crc32": 3124589790,
+        "utf8": true,
+        "retainedAsGitBlob": true
+      },
+      {
+        "path": "TEST-desktop-backend-jN6Pjs/desktop-app.log",
+        "bytes": 27076,
+        "sha256": "325f15c860b09ff6dba5f0a17aab7efd13b9a4ebb705da00cb50c8f849a06ba5",
+        "gitBlob": "6949f84620ffd6c8de5b46c54b74c04919f36899",
+        "crc32": 1655559633,
+        "utf8": true,
+        "retainedAsGitBlob": true
+      },
+      {
+        "path": "TEST-desktop-backend-jN6Pjs/desktop-descriptor.json",
+        "bytes": 2653,
+        "sha256": "c54336d1b90b34f5627c4406af5be40d4ff2b28e9c9d894e117de088bdfba7a9",
+        "gitBlob": "aa0627dceb0c8330192465896172a756b80fb78d",
+        "crc32": 3302426336,
+        "utf8": true,
+        "retainedAsGitBlob": true
+      },
+      {
+        "path": "TEST-desktop-backend-jN6Pjs/host-profile.json",
+        "bytes": 9801,
+        "sha256": "f5b996c731a3fc1b2470388dd10ba08cd49d8522294e673c07181f4b9193b77b",
+        "gitBlob": "dfdb62f568ce8cd352b7bff688072cc0f62398df",
+        "crc32": 274930236,
+        "utf8": true,
+        "retainedAsGitBlob": true
+      },
+      {
+        "path": "TEST-desktop-backend-jN6Pjs/hoststore/management-commands/26abb50a9f6baa8313561f000c9fe3e69d0ecba6b1d5f819e174816ba375ba08.json",
+        "bytes": 5775,
+        "sha256": "c1a02f26a5844e2396f3b27ca9d35927872fe18b4d67f0838e446650f87ab2f5",
+        "gitBlob": "30296ee7ffc38e331d47fc6ea86cf3b572799433",
+        "crc32": 3189110145,
+        "utf8": true,
+        "retainedAsGitBlob": true
+      },
+      {
+        "path": "TEST-desktop-backend-jN6Pjs/hoststore/runtime-checkpoints/cp1-cbfb5fbd6c3fbcb7a3b91d3ce3c00367d4a06583cb0e167df43c27430846ad05.json",
+        "bytes": 2480,
+        "sha256": "7bad58bcb992acf9bc4ff61abf99035829fb81e0d1079880e1c63fecc73aafe7",
+        "gitBlob": "874f948177602779dcb7cebb46e93a6d6ec58101",
+        "crc32": 2286656268,
+        "utf8": true,
+        "retainedAsGitBlob": true
+      },
+      {
+        "path": "TEST-desktop-backend-jN6Pjs/hoststore/teams/test-desktop-backend/inboxes/alice.json",
+        "bytes": 993,
+        "sha256": "1a18c73d7d7ccce6f949c1630e55bf9f3002bc771c25a46330a3afc0a7617da0",
+        "gitBlob": "57c9657ae332bac3cceac9e323cecc2e3ee24529",
+        "crc32": 2574482887,
+        "utf8": true,
+        "retainedAsGitBlob": true
+      },
+      {
+        "path": "TEST-desktop-backend-jN6Pjs/sentinel-invocations.ndjson",
+        "bytes": 96,
+        "sha256": "4c23d75324f12a8f316a659a7eb9c203f1f38ef27793dd974a30ba59a8963253",
+        "gitBlob": "6364a862f901e4ca8d4ecccb4d90cdd842a44162",
+        "crc32": 2680405428,
+        "utf8": true,
+        "retainedAsGitBlob": true
+      },
+      {
+        "path": "TEST-desktop-backend-jN6Pjs/ui-emulated-runtime-allow-pending.png",
+        "bytes": 120490,
+        "sha256": "5608bd89bcbcb43c12a204911bc0fbf47d5fa6511a493481cd1d5f5e388eaab9",
+        "gitBlob": "344cda24006e21ad9fcaabd6e9ceef67326a4f76",
+        "crc32": 2258326091,
+        "utf8": false,
+        "retainedAsGitBlob": false
+      },
+      {
+        "path": "TEST-desktop-backend-jN6Pjs/ui-emulated-runtime-completed.png",
+        "bytes": 134802,
+        "sha256": "d4387197f61241ea87fa293e8b4bcc133dc3d1a211591a4648c4c6873beb545f",
+        "gitBlob": "28857b2f02082424bc708a356ae2f77adde39f4b",
+        "crc32": 910636250,
+        "utf8": false,
+        "retainedAsGitBlob": false
+      },
+      {
+        "path": "TEST-desktop-backend-jN6Pjs/ui-emulated-runtime-deny-pending.png",
+        "bytes": 116161,
+        "sha256": "2ed35da5b5bc8ae33f660fdaa15046cdec3d8645d31b81fff9db29b20874e1c3",
+        "gitBlob": "c1556be3368478a49cf9f695aa8c3f174460a7c7",
+        "crc32": 535548778,
+        "utf8": false,
+        "retainedAsGitBlob": false
+      },
+      {
+        "path": "TEST-desktop-backend-jN6Pjs/ui-emulated-runtime-launch.png",
+        "bytes": 115136,
+        "sha256": "0e6ee94662afbb67a40076ab1eb26285d0711a612f5c49df56622ada9141b947",
+        "gitBlob": "4b4c2345970389aa3264bfcca40370d6d1fc7642",
+        "crc32": 1642978009,
+        "utf8": false,
+        "retainedAsGitBlob": false
+      },
+      {
+        "path": "TEST-desktop-backend-jN6Pjs/ui-emulated-runtime-lead-logs.png",
+        "bytes": 59979,
+        "sha256": "00a9e560836ed2f1c38fe3a1a0ac5f6ab3fad0771b16d283430dfae1ad231acd",
+        "gitBlob": "71dbf234bfa137086de77d4ba8dcfc6848aea1e2",
+        "crc32": 1753635636,
+        "utf8": false,
+        "retainedAsGitBlob": false
+      },
+      {
+        "path": "TEST-desktop-backend-jN6Pjs/ui-emulated-runtime-partial.png",
+        "bytes": 106627,
+        "sha256": "95fcee92d014785a3a722831b63b8fa1ad07c50a98f756118c03f46c0a6f76d4",
+        "gitBlob": "cacd87f9eadfcd92e3584fbb49028ff36cfd2cfc",
+        "crc32": 259126586,
+        "utf8": false,
+        "retainedAsGitBlob": false
+      },
+      {
+        "path": "TEST-desktop-backend-jN6Pjs/ui-failure.png",
+        "bytes": 111351,
+        "sha256": "c4c496d1f46ad7425752a5c6f0d27f374a158a20be07edeffb43dd822ed3ae26",
+        "gitBlob": "bd64f523a7633a912ee86828acd9afb67c30c24c",
+        "crc32": 1972500755,
+        "utf8": false,
+        "retainedAsGitBlob": false
+      },
+      {
+        "path": "TEST-desktop-backend-jN6Pjs/ui-seed-receipt.json",
+        "bytes": 2335,
+        "sha256": "bbce0826c3fa32dd57ed1b134df84e193325d0adbbab51d9f2d55bd71c8db737",
+        "gitBlob": "6c30ab11c62eca6cf7b31d3225d3874bf8d786bc",
+        "crc32": 1539118535,
+        "utf8": true,
+        "retainedAsGitBlob": true
+      },
+      {
+        "path": "TEST-emulated-ui-inputs-8w7irZ/linux-child-exec/linux-child-exec",
+        "bytes": 790608,
+        "sha256": "8fc3e5a748a55218d0b9eff7a7a7db6f249b246a6be940464da26456fe511c45",
+        "gitBlob": "5cfafbff2cdf51422a2eebbb4f3c143e7c7bc807",
+        "crc32": 3977027915,
+        "utf8": false,
+        "retainedAsGitBlob": false
+      },
+      {
+        "path": "TEST-emulated-ui-inputs-8w7irZ/linux-child-exec/manifest.json",
+        "bytes": 2408,
+        "sha256": "e67ba493cc10e1fd124f6c7437b6f86e1eba46746ce73e51088d67eb095b2734",
+        "gitBlob": "f83d4686d6bbdb2273c73eb4b4489e0a163e6517",
+        "crc32": 3765380163,
+        "utf8": true,
+        "retainedAsGitBlob": true
+      },
+      {
+        "path": "host-emulated-emulated-opencode-runtime-ui.log",
+        "bytes": 2322,
+        "sha256": "f5ee363aaaa6fc1f76f002bb655d91c9bd147f89e30dba2786c768525ac82616",
+        "gitBlob": "ff9b352f0b8c9df2d72dc6fdec129e13b202481c",
+        "crc32": 3769746248,
+        "utf8": true,
+        "retainedAsGitBlob": true
+      },
+      {
+        "path": "host-emulated-inputs.json",
+        "bytes": 1803,
+        "sha256": "16220a888a4f5314d4d9eda66cda5ec52dc52bd6f641f3978b6b77b751eaaca5",
+        "gitBlob": "1874c4eae68931159fd16856f0233f58541854dc",
+        "crc32": 2668918057,
+        "utf8": true,
+        "retainedAsGitBlob": true
+      },
+      {
+        "path": "host-emulated-linux-child-exec-selection.json",
+        "bytes": 271,
+        "sha256": "6cef192e94057b6f3cf1529e93a89e251fe6e7993a27fa5e5cfa4f308e993c00",
+        "gitBlob": "65e4fe753f64bcdbe94fc0d6050b3d8d907133d6",
+        "crc32": 3919737765,
+        "utf8": true,
+        "retainedAsGitBlob": true
+      }
+    ]
+  },
+  "primarySourceBasis": {
+    "commit": "9c9c73190840592963142d36562ea07d2b5d2d71",
+    "parent": "cba4af86044e89c9ff3cce25f05dc5424bf06329",
+    "rootTree": "ebd6c383f34c6fd4331b6f0a3da5b90597b5cc1f",
+    "rootEntries": 54,
+    "sourceTrees": [
+      {
+        "path": "scripts",
+        "tree": "800c50d1b9cd5e538bd889a1f24475084ef5ff57",
+        "entries": 634,
+        "leaves": 600
+      },
+      {
+        "path": "src",
+        "tree": "56bda382944632ec0cc1d2fa94cf574bed0e73c5",
+        "entries": 5445,
+        "leaves": 4659
+      },
+      {
+        "path": "test",
+        "tree": "92519c914f57ec6cee13c2e4b0b2be568a56f641",
+        "entries": 1980,
+        "leaves": 1695
+      }
+    ],
+    "method": "Fresh immutable9c9 Git commit/root reads join the same complete, untruncated source subtrees already fully retained/read during source R2. Every named primary source leaf mode/size/blob joins those trees; no moving ref or current-CI lookup.",
+    "sources": [
+      {
+        "path": "scripts/legacy-agent-host/desktop-emulated-runtime-ui.ts",
+        "bytes": 69194,
+        "sha256": "bed27eab54593e30f76ef3121e1d1effdaa53ca9b872ecbbf52b6c2fd619087e",
+        "gitBlob": "43ab487464098fed0425ffd51441a38abc206f3b",
+        "gitTreeJoin": true,
+        "receiptSelected": true,
+        "beforeReceiptSha": "bed27eab54593e30f76ef3121e1d1effdaa53ca9b872ecbbf52b6c2fd619087e",
+        "afterReceiptSha": "bed27eab54593e30f76ef3121e1d1effdaa53ca9b872ecbbf52b6c2fd619087e",
+        "selectedReceiptJoin": true
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+        "bytes": 28974,
+        "sha256": "7626e479a6662242009cb050e7e5af612a29e4205d62666d15274d5c30f91386",
+        "gitBlob": "ed57cb0fe7d57ef076a591621289eb77667c63ad",
+        "gitTreeJoin": true,
+        "receiptSelected": true,
+        "beforeReceiptSha": "7626e479a6662242009cb050e7e5af612a29e4205d62666d15274d5c30f91386",
+        "afterReceiptSha": "7626e479a6662242009cb050e7e5af612a29e4205d62666d15274d5c30f91386",
+        "selectedReceiptJoin": true
+      },
+      {
+        "path": "src/renderer/components/team/members/MemberCard.tsx",
+        "bytes": 61541,
+        "sha256": "d30f788d27d42d32420e321f70122b790350d28ba7f8ce7432601756658904c6",
+        "gitBlob": "c916a79ec44540cace8bb19364d2ce71618000a3",
+        "gitTreeJoin": true,
+        "receiptSelected": false,
+        "beforeReceiptSha": null,
+        "afterReceiptSha": null,
+        "selectedReceiptJoin": null
+      },
+      {
+        "path": "src/renderer/components/team/members/MemberList.tsx",
+        "bytes": 50857,
+        "sha256": "44667d8ebbc61d6e31b4c774f2cac45f8c2ab86abec576b471ebf3d8791b8380",
+        "gitBlob": "f24cf3c0121f70d32849665f938432e51829be07",
+        "gitTreeJoin": true,
+        "receiptSelected": true,
+        "beforeReceiptSha": "44667d8ebbc61d6e31b4c774f2cac45f8c2ab86abec576b471ebf3d8791b8380",
+        "afterReceiptSha": "44667d8ebbc61d6e31b4c774f2cac45f8c2ab86abec576b471ebf3d8791b8380",
+        "selectedReceiptJoin": true
+      },
+      {
+        "path": "src/renderer/components/team/members/MemberDetailDialog.tsx",
+        "bytes": 19444,
+        "sha256": "bf6556d0ed227332da361a66924968dc1e94a33c6690812e9f7676ce2d014f65",
+        "gitBlob": "1711243898d348bc77dfec3479a36341345228e8",
+        "gitTreeJoin": true,
+        "receiptSelected": true,
+        "beforeReceiptSha": "bf6556d0ed227332da361a66924968dc1e94a33c6690812e9f7676ce2d014f65",
+        "afterReceiptSha": "bf6556d0ed227332da361a66924968dc1e94a33c6690812e9f7676ce2d014f65",
+        "selectedReceiptJoin": true
+      },
+      {
+        "path": "src/renderer/components/team/TeamDetailView.tsx",
+        "bytes": 137728,
+        "sha256": "ea327a3b17e896013d88693deea9f0844ae7d52733dd9be23ffdfabe38c62f82",
+        "gitBlob": "e1fe249d7e5f760f80f87e93918b0ff253b3f450",
+        "gitTreeJoin": true,
+        "receiptSelected": true,
+        "beforeReceiptSha": "ea327a3b17e896013d88693deea9f0844ae7d52733dd9be23ffdfabe38c62f82",
+        "afterReceiptSha": "ea327a3b17e896013d88693deea9f0844ae7d52733dd9be23ffdfabe38c62f82",
+        "selectedReceiptJoin": true
+      },
+      {
+        "path": "src/renderer/components/team/CollapsibleTeamSection.tsx",
+        "bytes": 7926,
+        "sha256": "db8ad2dba3b3e1e98f8a84ad88237e1156b02193e2923c168f3e9d1c4e9f000d",
+        "gitBlob": "44d3fe74a1b9e6f720b8638a402f5d3721fe12eb",
+        "gitTreeJoin": true,
+        "receiptSelected": false,
+        "beforeReceiptSha": null,
+        "afterReceiptSha": null,
+        "selectedReceiptJoin": null
+      },
+      {
+        "path": "src/renderer/components/team/kanban/useTeamTaskFilters.ts",
+        "bytes": 3707,
+        "sha256": "06c41d79a22dd5d0c93320d2890c5fd340b2de74ebf7a953f190473f3ef3b948",
+        "gitBlob": "5a932e8e75a84d26643797b0b196b9b075493133",
+        "gitTreeJoin": true,
+        "receiptSelected": false,
+        "beforeReceiptSha": null,
+        "afterReceiptSha": null,
+        "selectedReceiptJoin": null
+      },
+      {
+        "path": "src/renderer/utils/memberHelpers.ts",
+        "bytes": 56915,
+        "sha256": "f6ec6a72eaf247aa434e1c7b46b7fa0476e986ef9830dcd1255768e49cd6b7ed",
+        "gitBlob": "2358402acc9d8e2df81f339fa036a9de7cf82df4",
+        "gitTreeJoin": true,
+        "receiptSelected": true,
+        "beforeReceiptSha": "f6ec6a72eaf247aa434e1c7b46b7fa0476e986ef9830dcd1255768e49cd6b7ed",
+        "afterReceiptSha": "f6ec6a72eaf247aa434e1c7b46b7fa0476e986ef9830dcd1255768e49cd6b7ed",
+        "selectedReceiptJoin": true
+      }
+    ],
+    "readCoverage": {
+      "completeFreshBodies": [
+        "scripts/legacy-agent-host/desktop-emulated-runtime-ui.ts",
+        "src/renderer/components/team/members/MemberCard.tsx",
+        "src/renderer/components/team/members/MemberList.tsx",
+        "src/renderer/components/team/members/MemberDetailDialog.tsx",
+        "src/renderer/components/team/CollapsibleTeamSection.tsx",
+        "src/renderer/components/team/kanban/useTeamTaskFilters.ts"
+      ],
+      "priorCompleteBodyReused": "desktop-ui-controls.ts ed57 is the complete previously read/freshly hash-joined source R2 preimage. The entire waitRead/target/clickExpression/hoverExpression/scrollTo flow was re-read for this diagnosis.",
+      "scopedExactBodies": [
+        {
+          "path": "src/renderer/components/team/TeamDetailView.tsx",
+          "method": "Complete137728-byte blob fetched/hashed. Scoped member-list/detail bridges, select/close handlers, scroll/navigation sites, active layout, roster-before-Kanban and dialog mount branches were read. Unrelated review/edit/task business handlers were not claimed as freshly fully re-audited."
+        },
+        {
+          "path": "src/renderer/utils/memberHelpers.ts",
+          "method": "Complete56915-byte blob fetched/hashed. Exact displayMemberName function at43-47 read; only team-lead and user are substituted, so alice remains alice. Other member-helper policies not re-audited."
+        }
+      ],
+      "incidentalRead": {
+        "path": "src/renderer/components/team/members/RosterParticipantFrame.tsx",
+        "gitBlob": "82ebcc4e4a03a732dd1afc601d360cc9811c727b",
+        "bytes": 2555,
+        "sha256": "40c412fac7f6e6eb88816d4b95ac64e3dc9d5351d6cab66522b3a13882db35d6",
+        "qualification": "Complete display-only shell was read during target discovery; it is not substituted for actual MemberCard route evidence."
+      }
+    }
+  },
+  "physicalSourceReceiptJoin": {
+    "recordedHead": "9c9c73190840592963142d36562ea07d2b5d2d71",
+    "recordedDirty": false,
+    "selectedBeforeRows": 1757,
+    "selectedAfterRows": 1757,
+    "beforeUniquePaths": 1757,
+    "afterUniquePaths": 1757,
+    "fullOrderedVectorsEqual": true,
+    "allHashFieldsWellFormed": true,
+    "primaryNamedPhysicalJoins": 6,
+    "namedSelectedPaths": [
+      "scripts/legacy-agent-host/desktop-emulated-runtime-ui.ts",
+      "scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "src/renderer/components/team/members/MemberList.tsx",
+      "src/renderer/components/team/members/MemberDetailDialog.tsx",
+      "src/renderer/components/team/TeamDetailView.tsx",
+      "src/renderer/utils/memberHelpers.ts"
+    ],
+    "nonSelectedPrimaryPaths": [
+      "src/renderer/components/team/members/MemberCard.tsx",
+      "src/renderer/components/team/CollapsibleTeamSection.tsx",
+      "src/renderer/components/team/kanban/useTeamTaskFilters.ts"
+    ],
+    "boundary": "This is a1757-path selected physical-source snapshot, not a fresh all8798 repository census. MemberCard and the two supporting layout/navigation modules have immutable Git identities but no selected physical hash row in this receipt. Compiled main/preload hash records are present, but no full compiled/renderer-source attestation is invented."
+  },
+  "actualFailure": {
+    "receipt": {
+      "gitBlob": "35750c1358882851fbd36dfd78f7c026eefe0e95",
+      "bytes": 933199,
+      "sha256": "cbceb4ff668648488f99232506d9b521d732d91ef8c672d3df20146f2efa6382"
+    },
+    "mode": "emulated-opencode-runtime-ui",
+    "status": "INCOMPLETE",
+    "proofStatus": "INCOMPLETE",
+    "failure": "UI read timed out: open original member detail; no mutation retry",
+    "frames": [
+      "scripts/legacy-agent-host/desktop-ui-controls.ts:208:11",
+      "scripts/legacy-agent-host/desktop-ui-controls.ts:265:23",
+      "scripts/legacy-agent-host/desktop-ui-controls.ts:299:17",
+      "scripts/legacy-agent-host/desktop-emulated-runtime-ui.ts:453:3",
+      "scripts/legacy-agent-host/desktop-backend-smoke.ts:421:12",
+      "scripts/legacy-agent-host/desktop-backend-smoke.ts:781:29"
+    ],
+    "sourceControlFlow": [
+      {
+        "path": "scripts/legacy-agent-host/desktop-emulated-runtime-ui.ts",
+        "line": 453,
+        "meaning": "After completing provider-specific catalog checks and backend stats, invoke clickExpression on the original member-name DOM expression."
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+        "line": 299,
+        "meaning": "Initial let point = await readPoint(label). No hover/press/release for this action has yet been sent."
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+        "line": 265,
+        "meaning": "Await waitRead(readExpression, phase,30000,predicate). Custom expression does not emit unavailableTarget facts."
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+        "line": 208,
+        "meaning": "Original timeout error after no accepted target within read window. No mutation retry."
+      }
+    ],
+    "selectedOriginalExpression": "  await ui.clickExpression(`(()=>{const rows=[...document.querySelectorAll('div[role=\"button\"][tabindex=\"0\"][class~=\"group/member\"]')].filter(e=>[...e.querySelectorAll('span')].some(n=>n.textContent.trim()==='alice'));\n    if(rows.length!==1)return null;const e=rows[0],names=[...e.querySelectorAll('span')].filter(n=>n.textContent.trim()==='alice');if(names.length!==1)return null;\n    const n=names[0],r=n.getBoundingClientRect(),x=r.x+r.width/2,y=r.y+r.height/2,hit=document.elementFromPoint(x,y);\n    return r.width&&r.height&&hit&&!hit.closest('button')&&(hit===e||e.contains(hit))?{x,y,tag:e.tagName}:null})()`, 'open original member detail');",
+    "gateBranches": [
+      "Find div elements with role=button, tabindex=0 and group/member class, containing an exactly alice span.",
+      "Require exactly one matching member row.",
+      "Require exactly one exactly alice span inside that row.",
+      "Read that name span's bounding rectangle and compute its center.",
+      "Require nonzero width/height, a hit at the center, no closest native button, and the hit to equal/belong to the member row.",
+      "Return the point only on full eligibility; all refusals return null."
+    ],
+    "readLimit": "No failed target snapshot or per-read values were retained. The error proves no accepted target before expiry, not which null branch was taken or whether allowed transient CDP context errors occurred.",
+    "steps": {
+      "allSteps": 123,
+      "clicks": 60,
+      "wheels": 2,
+      "memberDetailSteps": 0
+    },
+    "finalSteps": [
+      {
+        "action": "mouseMoved",
+        "label": "hover focus original input",
+        "selector": ".message-composer-flat-layout textarea",
+        "target": {
+          "x": 169.5,
+          "y": 353,
+          "text": "",
+          "tag": "TEXTAREA"
+        }
+      },
+      {
+        "action": "mouseClick",
+        "label": "focus original input",
+        "selector": ".message-composer-flat-layout textarea",
+        "target": {
+          "x": 169.5,
+          "y": 353,
+          "text": "",
+          "tag": "TEXTAREA"
+        },
+        "state": "attempted"
+      },
+      {
+        "action": "mouseMoved",
+        "label": "hover focus original input",
+        "selector": ".message-composer-flat-layout textarea",
+        "target": {
+          "x": 169.5,
+          "y": 353,
+          "text": "/",
+          "tag": "TEXTAREA"
+        }
+      },
+      {
+        "action": "mouseClick",
+        "label": "focus original input",
+        "selector": ".message-composer-flat-layout textarea",
+        "target": {
+          "x": 169.5,
+          "y": 353,
+          "text": "/",
+          "tag": "TEXTAREA"
+        },
+        "state": "attempted"
+      }
+    ],
+    "fullStepLabelsRead": true,
+    "firstTargetDispatchReached": false,
+    "screenshot": {
+      "member": "TEST-desktop-backend-jN6Pjs/ui-failure.png",
+      "bytes": 111351,
+      "sha256": "c4c496d1f46ad7425752a5c6f0d27f374a158a20be07edeffb43dd822ed3ae26",
+      "derivedGitBlob": "bd64f523a7633a912ee86828acd9afb67c30c24c",
+      "retainedAsGitBlob": false,
+      "viewedByReviewer": true,
+      "observed": "1400x900 retained image: Alice conversation/empty composer and captured-runtime Logs on left; Kanban task columns and lower Changes section in center with main-panel scrollbar down; Tasks sidebar on right; no dialog, no visible Team member roster/header."
+    },
+    "snapshot": {
+      "readyState": "complete",
+      "uiDidInit": true,
+      "documentFocused": true,
+      "visibility": "visible",
+      "dialogs": [],
+      "selectedTeamName": "host-team:TEST-desktop-handle-TEST-desktop-backend-jN6Pjs",
+      "selectedRawMemberCapabilities": {
+        "source": "selected",
+        "state": "available",
+        "count": 1,
+        "overflow": false,
+        "members": [
+          {
+            "valid": true,
+            "provider": "opencode",
+            "capturedOwner": true,
+            "attachments": null,
+            "textAttachments": null,
+            "catalog": {
+              "state": "available",
+              "count": 0,
+              "overflow": false,
+              "hasCost": false
+            }
+          }
+        ]
+      },
+      "provisioning": [
+        {
+          "teamName": "host-team:TEST-desktop-handle-TEST-desktop-backend-jN6Pjs",
+          "currentProvisioningRunId": "host-run:%5B%22TEST-desktop-handle-TEST-desktop-backend-jN6Pjs%22%2C%226a95b344-c256-5053-8818-389df71e2264%22%2C%22144f74042fda56466d34799ddd1af70b4d2564c0b2f53dab99b453ca888e112e%22%5D",
+          "currentRuntimeRunId": "host-run:%5B%22TEST-desktop-handle-TEST-desktop-backend-jN6Pjs%22%2C%226a95b344-c256-5053-8818-389df71e2264%22%2C%22144f74042fda56466d34799ddd1af70b4d2564c0b2f53dab99b453ca888e112e%22%5D",
+          "startedAtFloor": "2026-11-17T04:46:04.471Z",
+          "error": null,
+          "ignoredProvisioning": false,
+          "ignoredRuntime": false,
+          "progress": {
+            "runId": "host-run:%5B%22TEST-desktop-handle-TEST-desktop-backend-jN6Pjs%22%2C%226a95b344-c256-5053-8818-389df71e2264%22%2C%22144f74042fda56466d34799ddd1af70b4d2564c0b2f53dab99b453ca888e112e%22%5D",
+            "teamName": "host-team:TEST-desktop-handle-TEST-desktop-backend-jN6Pjs",
+            "state": "ready",
+            "message": "Team is ready.",
+            "startedAt": "2026-11-17T04:46:05.067Z",
+            "updatedAt": "2026-11-17T04:46:49.109Z",
+            "configReady": true,
+            "launchDiagnostics": [
+              {
+                "id": "host-launch:alice-id:initial-4f2f6c3979d8426ce4bd7ada2a1d026868cc4d0f677365186740dbee9ecd7562",
+                "memberName": "alice",
+                "code": "bootstrap_confirmed",
+                "label": "context-applied",
+                "severity": "info",
+                "observedAt": "2026-11-17T04:46:49.109Z"
+              }
+            ]
+          }
+        }
+      ],
+      "commandComposer": {
+        "observedAfterFailure": true,
+        "atomicWithInput": false,
+        "textareaCount": 1,
+        "textareaOverflow": false,
+        "single": {
+          "focused": true,
+          "connected": true,
+          "disabled": false,
+          "readOnly": false,
+          "bareSlash": false,
+          "length": 0,
+          "lengthOverflow": false,
+          "cursorStart": 0,
+          "cursorEnd": 0
+        },
+        "listboxCount": 0,
+        "listboxOverflow": false,
+        "optionCount": 0,
+        "optionOverflow": false,
+        "hasCostOption": false
+      }
+    },
+    "unavailableFacts": [
+      "Exact member-row and name-span counts during the failing read.",
+      "Exact member/name rectangle, scrollTop, ancestor clipping rectangle and elementFromPoint hit identity.",
+      "Whether Team section was open at the precise failing evaluation.",
+      "The event or layout transition that put the center panel at its later scroll position.",
+      "Any all-read timing/context-error trace for this target."
+    ]
+  },
+  "actualPrefixAndRemainingScope": {
+    "completedAccordingToReceiptAndSequentialSource": [
+      "One original saved Team launch capture and TEST boot result.",
+      "Lead conversation stream partial and completed result.",
+      "Captured Lead Logs/Thinking, search/filter/fullscreen/copy behavior.",
+      "TEST approval deny and allow with retained peer effects.",
+      "Tools-only and Tools-excluded original log filters with zero added business/provider actions.",
+      "OpenCode unsupported native slash-command catalog and expected null usage counters."
+    ],
+    "commands": [
+      {
+        "text": "TEST_UI_STREAM",
+        "commandId": "d8884ab0-7fdd-4fb5-919e-91593abc8ee3",
+        "inputId": "a28e80d9-c481-5068-8842-e52c0c68a37c"
+      },
+      {
+        "text": "TEST_UI_APPROVAL_DENY",
+        "commandId": "0330db13-d39b-429b-a55e-8982ba0fd246",
+        "inputId": "0cfbca91-8273-538e-8261-47c288b0967d"
+      },
+      {
+        "text": "TEST_UI_APPROVAL_ALLOW",
+        "commandId": "f8afa76c-7a32-4416-aeab-dd758e40ecd5",
+        "inputId": "cfeb5e84-1795-5708-b4ad-1be6d42394f9"
+      }
+    ],
+    "leadLogs": {
+      "partial": {
+        "eventId": "3524d4735064ee969bb36fe0f5066604088c92daffd92963b4895342ee92b161:13",
+        "sequence": 13,
+        "text": "TEST stream partial"
+      },
+      "complete": {
+        "eventId": "3524d4735064ee969bb36fe0f5066604088c92daffd92963b4895342ee92b161:15",
+        "sequence": 15,
+        "text": "TEST stream partial complete"
+      },
+      "fullscreen": {
+        "eventId": "3524d4735064ee969bb36fe0f5066604088c92daffd92963b4895342ee92b161:15",
+        "sequence": 15,
+        "text": "TEST stream partial complete"
+      },
+      "actualClipboard": true,
+      "thinking": {
+        "partialEventId": "3524d4735064ee969bb36fe0f5066604088c92daffd92963b4895342ee92b161:14",
+        "completeEventId": "3524d4735064ee969bb36fe0f5066604088c92daffd92963b4895342ee92b161:16",
+        "messageRef": "msg_1e7d3a9b5000TTTTTTTTTTTTT2",
+        "block": 1
+      },
+      "stderr": null,
+      "defaultLeadRoute": true,
+      "filtersAndSearch": true,
+      "addedInputs": 0,
+      "addedBusinessCommands": 0
+    },
+    "leadLogTools": {
+      "inputId": "cfeb5e84-1795-5708-b4ad-1be6d42394f9",
+      "toolRef": "msg_1e7d43206000TTTTTTTTTTTTT4:TEST-call-4",
+      "eventIds": [
+        "3524d4735064ee969bb36fe0f5066604088c92daffd92963b4895342ee92b161:36",
+        "3524d4735064ee969bb36fe0f5066604088c92daffd92963b4895342ee92b161:42"
+      ],
+      "addedInputs": 0,
+      "addedBusinessCommands": 0,
+      "addedProviderActions": 0
+    },
+    "catalog": [],
+    "unsupportedBaseline": [
+      "structured questions",
+      "native slash commands",
+      "native usage counters"
+    ],
+    "stats": {
+      "kind": "host_activity_stats",
+      "memberName": "alice",
+      "scope": "retained_runtime_activity",
+      "generations": 1,
+      "observedMessages": 4,
+      "compactions": 0,
+      "toolUsage": {
+        "bash": 2
+      },
+      "inputTokens": null,
+      "outputTokens": null,
+      "costUsd": null,
+      "gaps": [],
+      "computedAt": "2026-11-17T04:46:56.728Z"
+    },
+    "peerEffectsArtifact": {
+      "gitBlob": "88a4f5d7fb2062151e95cb899052c405f7ccfa20",
+      "bytes": 4544,
+      "sha256": "4921149ee3db8e02502e41d95603eb7671b820f11150b55d2d72f779370b9c9a"
+    },
+    "peerRows": 23,
+    "peerEffectsLiteralJoin": true,
+    "peerInputMarkers": [
+      "TEST_MODEL_PROBE",
+      "TEST_UI_BOOT",
+      "TEST_UI_STREAM",
+      "TEST_UI_APPROVAL_DENY",
+      "TEST_UI_APPROVAL_ALLOW"
+    ],
+    "notReached": [
+      "Member-dialog Logs and Stats observations/screenshots",
+      "Renderer reload and no-replay checks",
+      "New schedule creation, dispatch, real cron occurrence and deletion",
+      "Task Activity/detail/log stream checks",
+      "Planned held input and original Team Stop proof"
+    ],
+    "distinction": "Backend team.activity.stats.read completed before the failed dialog click. This does not prove the later Member Stats UI. Original app Quit in failure cleanup is distinct from the unreached planned Team Stop proof."
+  },
+  "causalAnalysis": {
+    "uiProducer": "MemberCard default passive=false preserves the exact div role/button/tabIndex/group-member shape and name span. MemberList calls that actual component, passes the selected member handler and does not request passive mode. displayMemberName('alice') returns alice.",
+    "consumerRoute": "TeamDetailView handleSelectMember stores the original member and clears the initial-view override. The detail bridge passes liveMember or selected member to MemberDetailDialog. open is selectedMember!==null, and original Logs/Stats tabs are present in the complete dialog source. No evidence supports changing that product route.",
+    "layout": "TeamDetailView contentRef is size-full overflow-y-auto. The Team member section is rendered before Kanban. The sidebar chat/log rail is separate. A currently readable chat/log does not imply that the member row in the main scroller is hit-testable.",
+    "noAutomaticReveal": "clickExpression sends Page.bringToFront, then readPoint. Its later pointer-enter/stable/final checks only occur after a usable point exists. The function never calls scrollTo or a DOM scrolling primitive. The driver does not call scrollTo for this member action.",
+    "timeoutCausality": "Keeping the same clipped target and performing passive reads cannot reveal it. Increasing the timeout would not address the missing preparation. The existing generic expiry-gate candidate is also orthogonal: it changes late fulfilled-value acceptance but leaves a null target null.",
+    "confidence": "Supported and specific harness defect; strong screenshot/layout agreement. Exact runtime branch attribution remains unproven because the failed expression has no retained target geometry.",
+    "rejectedUnsupportedDiagnoses": [
+      "A renamed MemberCard selector or missing Logs/Stats tabs.",
+      "OpenCode bootstrap/provider readiness failure as the direct error at this point.",
+      "A runtime timeout budget that merely needs to be enlarged.",
+      "Failure of the separately reviewed catalog or fulfilled-read expiry source fixes.",
+      "A proven cause for how the panel acquired its prior scroll offset."
+    ]
+  },
+  "prospectiveCorrectionAndProof": {
+    "status": "ADVISORY_ONLY_NO_SOURCE_POSTIMAGE_AUTHORED",
+    "smallestSourceShape": "Add one explicit viewport-preparation call at the selected member-detail boundary in desktop-emulated-runtime-ui.ts. It must reveal the same unique Alice name within the existing member-card shape via the existing scrollTo implementation; then execute the original clickExpression literally unchanged.",
+    "targetChoice": "Reveal the name span that the original point expression will measure, not the whole variable-height card or a nested quick-action button. A precisely scoped selector plus exact alice text must preserve refusal on ambiguity. Use the existing center-hit option if needed to prove actual visibility; never remove the original center/descendant/nested-button checks.",
+    "unchangedLimits": {
+      "targetReadMs": 30000,
+      "continuingReadTickMs": 100,
+      "defaultMaxWheelEvents": 12,
+      "scrollMaxAcceptedInputRange": "1..32 by existing helper; do not raise selected default",
+      "maxWheelDeltaMagnitude": 600,
+      "clickReplay": 0,
+      "originalOnePressReleasePair": 1,
+      "originalEqualStableSamples": 2,
+      "originalStableSampleCap": 15
+    },
+    "noNecessaryProductChange": true,
+    "sourceSize": {
+      "driverBeforeLines": 794,
+      "productionLimit": 800,
+      "rule": "Keep the exact final driver at or below the existing800-line limit. No cap/baseline/ignore change is part of this candidate."
+    },
+    "requiredPreimageBindings": [
+      {
+        "path": "scripts/legacy-agent-host/desktop-emulated-runtime-ui.ts",
+        "gitBlob": "43ab487464098fed0425ffd51441a38abc206f3b",
+        "bytes": 69194,
+        "sha256": "bed27eab54593e30f76ef3121e1d1effdaa53ca9b872ecbbf52b6c2fd619087e",
+        "qualification": "Current exact failure driver; bind the then-current published source before authoring any later fix."
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+        "gitBlob": "ed57cb0fe7d57ef076a591621289eb77667c63ad",
+        "bytes": 28974,
+        "sha256": "7626e479a6662242009cb050e7e5af612a29e4205d62666d15274d5c30f91386",
+        "qualification": "Controls actually exercised by this retained run."
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+        "gitBlob": "5286c036a63a14e98925711a224df202c9a7caa7",
+        "bytes": 29017,
+        "sha256": "ffd9bbb822dbdc30da7cb8daa881fcbebd384ba2bf9bdd87c804c511166fa02b",
+        "qualification": "Separate accepted SOURCE R2 expiry-gate candidate; if root later publishes/adopts it, regression/control bindings must use that actual published body. Its bare acceptance is not execution proof."
+      }
+    ],
+    "regressions": [
+      {
+        "id": "R1_CLIPPED_NAME_DISCRIMINATOR",
+        "condition": "Actual main scroller is down into Kanban while exactly one Alice member name exists above its clipping boundary.",
+        "required": "Exercise the actual chosen flow/actual controls. Old direct-click flow must refuse before any press/release; proposed flow must dispatch only bounded reveal wheels, obtain an eligible exact name center, then one original click and reach the original dialog. A source-string presence assertion alone is not a behavioral regression."
+      },
+      {
+        "id": "R2_ALREADY_VISIBLE_PRESERVATION",
+        "condition": "The same name is already visible and hit-testable.",
+        "required": "No wheel is necessary; preserve ordinary hover/stabilization/ownership/final-point checks and exactly one click. Do not create extra business commands/provider inputs."
+      },
+      {
+        "id": "R3_AMBIGUOUS_OR_ABSENT_TARGET",
+        "condition": "Zero or multiple exact member/name matches.",
+        "required": "Do not choose the first result or another member. Preserve bounded refusal and zero member-detail press/release."
+      },
+      {
+        "id": "R4_COVERED_OR_NESTED_ACTION",
+        "condition": "Name center is covered, or hit resolves to a nested native button, or final ownership/geometry changes.",
+        "required": "Do not bypass original hit/descendant/button/owner checks. A finite reveal may be attempted only under the existing helper's bounds; no blind click or uncertain-action retry."
+      },
+      {
+        "id": "R5_REACH_EXISTING_UNCHANGED_OBLIGATIONS",
+        "condition": "A later separately authorized original OpenCode TEST-peer run with exact source/control bindings.",
+        "required": "Keep the original Member Logs/Stats, reload, schedule, Task Activity and Stop obligations. Preserve failure artifacts and actual cleanup. Passing a small geometry fixture cannot stand in for the original whole flow."
+      }
+    ],
+    "existingTestContext": {
+      "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+      "gitBlob": "896c587e077da56a98a314a175fb3cba0353d6ee",
+      "bytes": 164965,
+      "sha256": "852bedb85c83dbc4b488dffb4a9ffebbe398adc53e85f5a3cea8ca36b146cbf7",
+      "relevantCases": "Existing original-click final owner/target refusal tests at1194-1224 and actual scroll helper covered/default cases at1227-1276 establish meaningful finite DOM-control testing patterns. They do not themselves exercise this missing driver call.",
+      "authorization": "No test authored or run here. Existing139 and later149/85 suites stay under their existing selected scopes; no new filtering or counts are implied."
+    },
+    "evidenceGapIfRootWantsBranchProof": "A later properly selected observation could retain only bounded closed facts for the same failing point read: row/name counts, target-center eligibility, viewport/clipping eligibility, hit-present/descendant/nested-button booleans and section-open state. No raw private DOM text or new post-failure action is needed. This is an optional diagnostic shape, not a gate invented by this advisory.",
+    "selectionBoundary": "This member-reveal candidate is outside the completed b34a/1318 five-source catalog+expiry proposal. It must not be silently folded into that accepted subject or any frozen live-CI snapshot."
+  },
+  "cleanupAndAuthority": {
+    "failureQuit": {
+      "attempted": true,
+      "scope": "Close only the verified TEST window before stopping its dev wrapper",
+      "reply": "acknowledged",
+      "listenerAbsent": true
+    },
+    "requestedQuitExit": {
+      "initialExitCode": 0,
+      "initialSignalCode": null,
+      "exitCode": 0,
+      "signalCode": null
+    },
+    "beforeHarnessCleanup": [],
+    "cleanup": {
+      "processGroup": 4290,
+      "remaining": [],
+      "appExitCode": 0,
+      "appSignalCode": null,
+      "capturedHostObserved": false,
+      "capturedHostAbsent": null,
+      "hostExitCode": "not exposed by main-owned transport; no separate Host exit code recorded"
+    },
+    "finitePeerCleanup": {
+      "originalPeerPids": [
+        5317,
+        5505,
+        5618
+      ],
+      "remaining": [],
+      "absent": true
+    },
+    "sentinel": {
+      "invocations": [
+        {
+          "executable": "claude-multimodel",
+          "allowed": true,
+          "argc": 1,
+          "command": null,
+          "flags": [
+            "--version"
+          ]
+        }
+      ],
+      "preQuitCount": null,
+      "postQuitOrCleanupInvocations": null,
+      "refusedInvocations": [],
+      "qualification": "Only finite sentinel version checks and the isolated shell-environment fixture are admitted; any native/control fallback before or after Quit makes this provider-emulation proof incomplete."
+    },
+    "sentinelQualification": "Recorded claude-multimodel --version is the admitted finite sentinel in this emulated fixture, not evidence of a real Claude/Codex executable. No reviewer vendor probe was run. This advisory does not expand native qualification.",
+    "limits": "Empty recorded process-group/peer remainders and app exit0 are bounded retained facts. capturedHostObserved=false, capturedHostAbsent=null and no separate Host exit code remain unchanged. Overall flow and verifier are failed."
+  },
+  "checks": [
+    {
+      "id": "G01_EXACT_RETAINED_PACKET",
+      "status": "PASS_DATA_OR_STATIC",
+      "detail": "Complete packet fetched and independently byte/SHA256/Git-blob verified; no live CI read."
+    },
+    {
+      "id": "G02_EXACT_FAILURE_JOB",
+      "status": "PASS_DATA_OR_STATIC",
+      "detail": "Retained target job is completed/failure at frozen 9c9; retained run-level queued/null is not promoted to completion."
+    },
+    {
+      "id": "G03_RETAINED_JOB_JOIN",
+      "status": "PASS_DATA_OR_STATIC",
+      "detail": "Selected complete job object equals the row in the retained complete 22-job response."
+    },
+    {
+      "id": "G04_ALL_TEXT_PAYLOADS",
+      "status": "PASS_DATA_OR_STATIC",
+      "detail": "Complete job log and all 14 artifact text blobs fetched and independently hashed. Artifact text totals 995756 bytes."
+    },
+    {
+      "id": "G05_ARCHIVE_METADATA_JOIN",
+      "status": "PASS_DATA_OR_STATIC",
+      "detail": "Retained 22-member census and root ZIP/CRC verification are distinguished from reviewer text-blob verification; upload log agrees on ID14300850599,1318115 bytes and ZIP SHA."
+    },
+    {
+      "id": "G06_RECEIPT_FAILURE_IDENTITY",
+      "status": "PASS_DATA_OR_STATIC",
+      "detail": "Original receipt and proof remain INCOMPLETE, not a late promotion or retry."
+    },
+    {
+      "id": "G07_EXACT_SOURCE_BASIS",
+      "status": "PASS_DATA_OR_STATIC",
+      "detail": "Immutable 9c9 commit/root and complete already-read scripts/src subtrees join every eight primary source pins."
+    },
+    {
+      "id": "G08_SELECTED_SOURCE_PRESERVATION",
+      "status": "PASS_DATA_OR_STATIC",
+      "detail": "All1757 unique selected source rows before/after compare equal. This is the selected census, not all8798 repository files."
+    },
+    {
+      "id": "G09_NAMED_PHYSICAL_SOURCE_JOINS",
+      "status": "PASS_DATA_OR_STATIC",
+      "detail": "Driver, controls, MemberList, MemberDetailDialog and TeamDetailView hashes match both receipt vectors. MemberCard and two supporting components have Git pins but no row in this selected receipt census."
+    },
+    {
+      "id": "G10_INITIAL_TARGET_READ",
+      "status": "PASS_DATA_OR_STATIC",
+      "detail": "Exact frames locate the first readPoint(label), before hover or member-detail click dispatch."
+    },
+    {
+      "id": "G11_NO_MEMBER_DETAIL_ACTION",
+      "status": "PASS_DATA_OR_STATIC",
+      "detail": "All123 proof steps contain60 mouse moves,60 click attempts,two wheels and one observation; none belong to member detail."
+    },
+    {
+      "id": "G12_ORIGINAL_DRIVER_FULL_BODY",
+      "status": "PASS_DATA_OR_STATIC",
+      "detail": "Full driver read. After stats it directly calls the custom member-name hit-test; no reveal/scroll precedes that call."
+    },
+    {
+      "id": "G13_CUSTOM_NULL_DIAGNOSTIC_LIMIT",
+      "status": "PASS_DATA_OR_STATIC",
+      "detail": "Every refusal in the selected expression is bare null, so the generic unavailableTarget fact retention cannot explain row count/name count/geometry/hit."
+    },
+    {
+      "id": "G14_CONTROLS_NO_AUTOSCROLL",
+      "status": "PASS_DATA_OR_STATIC",
+      "detail": "Full previously read controls preimage is byte joined. clickExpression only brings front and reads; scrollTo is separate, bounded and physical-wheel based."
+    },
+    {
+      "id": "G15_ORIGINAL_CLICK_GUARDS",
+      "status": "PASS_DATA_OR_STATIC",
+      "detail": "Original pointer-enter re-read, equal geometry samples, owner checks, final target equality and single press/release remain the required correction boundary."
+    },
+    {
+      "id": "G16_MEMBER_MARKUP_CONTINUITY",
+      "status": "PASS_DATA_OR_STATIC",
+      "detail": "Complete MemberCard preserves div/group-member/tabIndex/name markup; full MemberList supplies click handler and does not set passive."
+    },
+    {
+      "id": "G17_MEMBER_DIALOG_ROUTE",
+      "status": "PASS_DATA_OR_STATIC",
+      "detail": "Scoped exact TeamDetailView bridge/handler/layout paths plus complete dialog show ordinary member selection opens the original Logs/Stats dialog."
+    },
+    {
+      "id": "G18_ROSTER_ABOVE_KANBAN",
+      "status": "PASS_DATA_OR_STATIC",
+      "detail": "Roster is above Kanban inside the contentRef overflow-y-auto container, separately from the sidebar chat/log rail."
+    },
+    {
+      "id": "G19_SCREENSHOT_BOUNDARY",
+      "status": "PASS_DATA_OR_STATIC",
+      "detail": "Reviewer independently viewed exact retained local failure PNG; visible center is scrolled into Kanban and roster/header are out of view; snapshot reports zero dialogs."
+    },
+    {
+      "id": "G20_COMPLETED_PREFIX",
+      "status": "PASS_DATA_OR_STATIC",
+      "detail": "Receipt and sequential source show completed lead stream/log/filter/approval/tool/catalog/stats prefix before the target read. These are not whole-flow PASS."
+    },
+    {
+      "id": "G21_PEER_JOURNAL_JOIN",
+      "status": "PASS_DATA_OR_STATIC",
+      "detail": "Full23-row peer artifact equals retained cleanup effects and shows finite TEST boot/stream/deny/allow outcomes."
+    },
+    {
+      "id": "G22_UNREACHED_TAIL",
+      "status": "PASS_DATA_OR_STATIC",
+      "detail": "Member-dialog Logs/Stats, reload, scheduling, Task Activity and planned Team Stop are not claimed; flow stopped before member click."
+    },
+    {
+      "id": "G23_BOUNDED_CLEANUP",
+      "status": "PASS_DATA_OR_STATIC",
+      "detail": "Recorded app/group and finite-peer cleanup evidence is retained; separate captured Host absence/exit remains unknown."
+    },
+    {
+      "id": "G24_EXPIRY_PATCH_SEPARATE",
+      "status": "PASS_DATA_OR_STATIC",
+      "detail": "The separately reviewed fulfilled-read expiry line neither reveals a clipped target nor changes the expression's null branch. This failure is not evidence against its source-only review."
+    },
+    {
+      "id": "G25_SMALLEST_PROPOSAL_SCOPE",
+      "status": "PASS_DATA_OR_STATIC",
+      "detail": "Candidate is an explicit bounded reveal of the same unique Alice name immediately before the same original custom click; preserve default wheel/read budgets and refuse ambiguity/occlusion. No source body authored."
+    },
+    {
+      "id": "G26_DISCRIMINATING_TEST_OBLIGATIONS",
+      "status": "PASS_DATA_OR_STATIC",
+      "detail": "Future regression must exercise the actual selected action/control flow with initially clipped geometry; old direct-click path must fail without press, proposed path must wheel then click once. Visible/ambiguous/covered/owner-change cases preserve refusal."
+    },
+    {
+      "id": "G27_CAUSAL_LIMITS_EXPLICIT",
+      "status": "PASS_DATA_OR_STATIC",
+      "detail": "Missing member DOM counts, rectangles, clipping ancestor and hit identity prevent a proven one-branch cause. Prior scroll trigger and broad provider qualification remain unasserted."
+    },
+    {
+      "id": "G28_NO_NEW_EXECUTION_OR_GATE",
+      "status": "PASS_DATA_OR_STATIC",
+      "detail": "Only immutable Git/evidence reads, local retained PNG viewing, pure comparisons and this bare report; no source/control edits, shell/runtime, vendor probe, retry, CI poll, ref/PR action or new gate."
+    }
+  ],
+  "failedDataChecks": [],
+  "unresolvedCausalFacts": "The exact null branch and the earlier scroll trigger are unknown; proposed correction has no new execution result.",
+  "reviewerActions": {
+    "immutableGitAndRetainedEvidenceReads": true,
+    "pureIdentityAndDataComparison": true,
+    "retainedLocalPngView": true,
+    "approvedEvaluatedHelper": "e4a4568d589e1254b88ade1a5f87d53924e7c2e8",
+    "sourceBodiesEvaluated": false,
+    "shell": false,
+    "projectRuntime": false,
+    "sourceOrTestAuthorship": false,
+    "controlsAuthorship": false,
+    "worktreeOrStaging": false,
+    "refPrCiMutation": false,
+    "liveCiPolling": false,
+    "retry": false,
+    "newGate": false,
+    "onlyWrite": "This bare advisory report blob."
+  },
+  "retentionProtocol": "Retain report, immediately send exact blob/bytes/SHA pin, then freshly fetch/hash/read the whole report before final confirmation."
+}

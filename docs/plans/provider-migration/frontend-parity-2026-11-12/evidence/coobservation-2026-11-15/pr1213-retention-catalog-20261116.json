@@ -10283,5 +10283,590 @@
       "sha256": "ae46b4e2997a5a5185fada08711e4f291be723b53c1afdd05af2bd89ebcd11fd",
       "gitBlob": "29040a4faa87137bfa070c71651147b2da4f2102"
     }
+  ],
+  "narrowWaitReadControlStage": {
+    "schemaVersion": 1,
+    "kind": "narrow-waitread-executable-controls-stage",
+    "at": "2026-11-17 05:33:05 UTC",
+    "status": "CONTROL_R2_ACCEPTED_PUBLICATION_PENDING_ACTUAL_READBACK",
+    "subject": {
+      "bytes": 21995,
+      "sha256": "0dd648c1a839758e864e39b177b15d5fa44bcfcb221e258b0817e5c6da82d431",
+      "gitBlob": "3fc2c894069f5a75936ec6379494d4e0df62db1a"
+    },
+    "runner": {
+      "bytes": 25389,
+      "sha256": "da237b7e53a07e47c1625b9b577514a62498fe4816bfa5966c461e5ef4117c9c",
+      "gitBlob": "5e19889942d3e28f215c76f1e55ba81fd12f3ced"
+    },
+    "binding": {
+      "bytes": 105210,
+      "sha256": "99ef94654b99dfb0e2fc2e5f1767f3b185b14a73ab5b437ff5a7b405886b4a90",
+      "gitBlob": "a206a4432f4e9f77f682b91d340c191826b5f25b"
+    },
+    "r1": {
+      "bytes": 20973,
+      "sha256": "e35155efe24474cfe0ff5d5ab90aa7b9f96bfe56eff99ad8aec10902aecf0016",
+      "gitBlob": "b34a76fffb93d5216cd689893186376963ef8654"
+    },
+    "r1ActualAuthorshipGate": {
+      "bytes": 3516,
+      "sha256": "ae46b4e2997a5a5185fada08711e4f291be723b53c1afdd05af2bd89ebcd11fd",
+      "gitBlob": "29040a4faa87137bfa070c71651147b2da4f2102"
+    },
+    "source": {
+      "commit": "674d32a84644f87544910c28bb4d2a4214958fb5",
+      "tree": "076131eff684e011ae87907e66d31e7eb9e50d30",
+      "docsTree": "aa84bfbe10b38d452428f27817610b53754ff66b",
+      "sourceR2": {
+        "bytes": 19187,
+        "sha256": "8bb84de228b570dfc121233893d32209a9389da44aa1747c7924dff936fa4c1a",
+        "gitBlob": "1318b887473a61e1cbfb3960812fbc84e3b4df13"
+      },
+      "rootActual": {
+        "bytes": 38412,
+        "sha256": "31f2f3ef4a927c5df94fa24026df7902250465460d63a846f6448a962ab976cf",
+        "gitBlob": "2a0f528e7114df488f724f68f2fa3cd441f7c0db"
+      },
+      "independentActual": {
+        "bytes": 273972,
+        "sha256": "2e4bd570f108edb73985a5736133dad3225d8fe200c26711c0cb72f1882298ca",
+        "gitBlob": "fae658e2a0de927842196c3d99ecaecc0b213df3"
+      },
+      "actualGate": {
+        "bytes": 5512,
+        "sha256": "6a7448cf1d88673af3c65741c51e2faf07703a99dfee37bf4fccd5383a943bf7",
+        "gitBlob": "be45f8ee4cd349456d196f6cfb1a1038c218c80c"
+      },
+      "accepted": true
+    },
+    "reviews": {
+      "root": {
+        "bytes": 20665,
+        "sha256": "0eaeeae487ed062955b37ef5b4568606e790d1db70f08248417b9efcfd70b706",
+        "gitBlob": "356ee2d4a963741f952381811af6d8ff5f323a0f"
+      },
+      "guard": {
+        "bytes": 43121,
+        "sha256": "5e62b021a9dd3399914296f2b84d5fa73ea1199d59031e9624bd2c912962a839",
+        "gitBlob": "82799ba22fb1147b90d0ed1df1b4f06ce735a510"
+      },
+      "semantic": {
+        "bytes": 43030,
+        "sha256": "0321bd9d9d6315a0268bd3e34b2418aa6bbafb3926e8667c19b0a1c622ca27f9",
+        "gitBlob": "1d7d97c7d6bf0f91a179621099388162a09b8f2b"
+      },
+      "binding": {
+        "bytes": 65475,
+        "sha256": "9f12a0e71cb2774426acbedaf63623ccf429ba38fe2e143e5c88dff45cda6e8a",
+        "gitBlob": "45c83247c6e946ce2f117cdfb6622cf4b03144e4"
+      }
+    },
+    "reviewsClosedAt": "2026-11-17 05:33:05 UTC",
+    "checks": {
+      "root": 39,
+      "guard": 53,
+      "semantic": 39,
+      "binding": 52,
+      "total": 183
+    },
+    "fullReportReadbacksAccepted": true,
+    "exactExecutionScope": {
+      "scope": "/workspace/scratch/c714-waitread-20261117",
+      "stage": "/workspace/scratch/c714f5bce554/narrow-waitread-controls-20261117",
+      "exclusiveStagingPerformed": false,
+      "sourceMaterialized": false,
+      "supervisorInvoked": false,
+      "phases": [
+        {
+          "label": "RED",
+          "exitCode": 1,
+          "tests": [
+            {
+              "number": 1,
+              "title": "generic UI read refuses its first fulfilled value exactly at the original deadline",
+              "result": "FAIL",
+              "signature": "missing-rejection"
+            },
+            {
+              "number": 2,
+              "title": "generic UI read refuses its first fulfilled value after the original deadline",
+              "result": "FAIL",
+              "signature": "missing-rejection"
+            },
+            {
+              "number": 3,
+              "title": "generic UI read refuses a later fulfilled value exactly at the original deadline",
+              "result": "FAIL",
+              "signature": "missing-rejection"
+            },
+            {
+              "number": 4,
+              "title": "generic UI read refuses a later fulfilled value after the original deadline",
+              "result": "FAIL",
+              "signature": "missing-rejection"
+            },
+            {
+              "number": 5,
+              "title": "generic UI read does not admit or poll again after a late false observation",
+              "result": "FAIL",
+              "signature": "late-false-readiness"
+            },
+            {
+              "number": 6,
+              "title": "generic UI read preserves a timely first value and its exact identity",
+              "result": "PASS",
+              "signature": null
+            },
+            {
+              "number": 7,
+              "title": "generic UI read preserves its original cadence and a timely later value",
+              "result": "PASS",
+              "signature": null
+            },
+            {
+              "number": 8,
+              "title": "generic UI read honors a supplied budget at its strict boundary",
+              "result": "FAIL",
+              "signature": "missing-rejection"
+            },
+            {
+              "number": 9,
+              "title": "generic UI hover refuses a third stable point arriving at the original deadline",
+              "result": "FAIL",
+              "signature": "missing-rejection"
+            },
+            {
+              "number": 10,
+              "title": "generic UI hover preserves one movement after three timely stable points",
+              "result": "PASS",
+              "signature": null
+            }
+          ]
+        },
+        {
+          "label": "GREEN",
+          "exitCode": 0,
+          "tests": [
+            {
+              "number": 1,
+              "title": "generic UI read refuses its first fulfilled value exactly at the original deadline",
+              "result": "PASS",
+              "signature": null
+            },
+            {
+              "number": 2,
+              "title": "generic UI read refuses its first fulfilled value after the original deadline",
+              "result": "PASS",
+              "signature": null
+            },
+            {
+              "number": 3,
+              "title": "generic UI read refuses a later fulfilled value exactly at the original deadline",
+              "result": "PASS",
+              "signature": null
+            },
+            {
+              "number": 4,
+              "title": "generic UI read refuses a later fulfilled value after the original deadline",
+              "result": "PASS",
+              "signature": null
+            },
+            {
+              "number": 5,
+              "title": "generic UI read does not admit or poll again after a late false observation",
+              "result": "PASS",
+              "signature": null
+            },
+            {
+              "number": 6,
+              "title": "generic UI read preserves a timely first value and its exact identity",
+              "result": "PASS",
+              "signature": null
+            },
+            {
+              "number": 7,
+              "title": "generic UI read preserves its original cadence and a timely later value",
+              "result": "PASS",
+              "signature": null
+            },
+            {
+              "number": 8,
+              "title": "generic UI read honors a supplied budget at its strict boundary",
+              "result": "PASS",
+              "signature": null
+            },
+            {
+              "number": 9,
+              "title": "generic UI hover refuses a third stable point arriving at the original deadline",
+              "result": "PASS",
+              "signature": null
+            },
+            {
+              "number": 10,
+              "title": "generic UI hover preserves one movement after three timely stable points",
+              "result": "PASS",
+              "signature": null
+            }
+          ]
+        }
+      ],
+      "redFiles": [
+        {
+          "path": "package.json",
+          "mode": "100644",
+          "pin": {
+            "bytes": 26839,
+            "sha256": "c92407a9a5dad6f9d6a6eb8ea7c456195d396679bb4b9dfd15b6c06b726d1084",
+            "gitBlob": "f80ec83172d0aec0dec8a8ab055426b4fca4a1f7"
+          }
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-ui-controls-deadline.test.ts",
+          "mode": "100644",
+          "pin": {
+            "bytes": 7883,
+            "sha256": "29836f914218edb4876b6a4e157e7cdc68f63cdf414084cdd41683965c734eda",
+            "gitBlob": "6a9f8ad7481cd5910befcc6c7ff5992eef03965b"
+          }
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+          "mode": "100644",
+          "pin": {
+            "bytes": 28974,
+            "sha256": "7626e479a6662242009cb050e7e5af612a29e4205d62666d15274d5c30f91386",
+            "gitBlob": "ed57cb0fe7d57ef076a591621289eb77667c63ad"
+          }
+        }
+      ],
+      "greenControls": {
+        "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+        "mode": "100644",
+        "pin": {
+          "bytes": 29017,
+          "sha256": "ffd9bbb822dbdc30da7cb8daa881fcbebd384ba2bf9bdd87c804c511166fa02b",
+          "gitBlob": "5286c036a63a14e98925711a224df202c9a7caa7"
+        }
+      },
+      "sourceBytes": {
+        "RED": 63696,
+        "GREEN": 63739
+      },
+      "node": {
+        "path": "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+        "realpath": "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+        "bytes": 126939688,
+        "sha256": "61ab14cd750fc24d5db53490ec5fc40f756e4b6e136b78cf7004265471d9bd1d",
+        "device": "27",
+        "inode": "9223372036854818252",
+        "uid": "65534",
+        "gid": "65534",
+        "mode": "0o755",
+        "mtimeNs": "1794515386000000000",
+        "ctimeNs": "1794515386000000000",
+        "versionPreviouslyObserved": "v24.22.1"
+      },
+      "command": [
+        "--test",
+        "--test-reporter=tap",
+        "scripts/legacy-agent-host/desktop-ui-controls-deadline.test.ts"
+      ],
+      "invocationCountAllowedAfterGate": 1
+    },
+    "existingNextSteps": [
+      "Publish exact reviewed controls/evidence with immediate expected-parent nonforce push",
+      "Full root and independent actual publication readbacks",
+      "Retain and fully read exact immutable admission data",
+      "One exclusive staging and one original conditional RED/GREEN invocation"
+    ],
+    "currentCi": {
+      "observation": {
+        "bytes": 472281,
+        "sha256": "0ab0aa6eab554964ad2bbe7667f0f282cdb5f9dbf33517428944fde10fd2e056",
+        "gitBlob": "dfccf6db59fdc58e297760e958eebf65b60bc2d0"
+      },
+      "asOf": "2026-11-17 05:24:09 UTC",
+      "rows": [
+        {
+          "id": 44008782844,
+          "path": ".github/workflows/electron-packaged-ci.yml",
+          "attempt": 1,
+          "status": "in_progress",
+          "conclusion": null,
+          "jobs": 6,
+          "jobStatuses": {
+            "completed:success": 2,
+            "in_progress:null": 4
+          },
+          "running": [
+            {
+              "id": 133811711598,
+              "name": "packaged smoke (linux-x64)",
+              "step": "Package unsigned test bundle"
+            },
+            {
+              "id": 133811711677,
+              "name": "packaged smoke (win32-arm64)",
+              "step": "Package unsigned test bundle"
+            },
+            {
+              "id": 133811711774,
+              "name": "packaged smoke (win32-x64)",
+              "step": "Package unsigned test bundle"
+            },
+            {
+              "id": 133811711789,
+              "name": "packaged smoke (darwin-x64)",
+              "step": "Build app"
+            }
+          ],
+          "failed": []
+        },
+        {
+          "id": 44008782843,
+          "path": ".github/workflows/host-emulated-acceptance.yml",
+          "attempt": 1,
+          "status": "queued",
+          "conclusion": null,
+          "jobs": 22,
+          "jobStatuses": {
+            "completed:success": 12,
+            "completed:failure": 1,
+            "queued:null": 8,
+            "in_progress:null": 1
+          },
+          "running": [
+            {
+              "id": 133790458962,
+              "name": "Offline frontend tests (2/4)",
+              "step": "Run the complete safe frontend shard"
+            }
+          ],
+          "failed": [
+            {
+              "id": 133790458853,
+              "name": "Offline Host Desktop (linux-x64, opencode)",
+              "conclusion": "failure"
+            }
+          ]
+        },
+        {
+          "id": 44008782909,
+          "path": ".github/workflows/ci.yml",
+          "attempt": 1,
+          "status": "queued",
+          "conclusion": null,
+          "jobs": 15,
+          "jobStatuses": {
+            "completed:success": 1,
+            "completed:skipped": 12,
+            "in_progress:null": 1,
+            "queued:null": 1
+          },
+          "running": [
+            {
+              "id": 133811768427,
+              "name": "Fast feedback",
+              "step": "Test feedback policy"
+            }
+          ],
+          "failed": []
+        }
+      ],
+      "pr": 1218,
+      "head": "9c9c73190840592963142d36562ea07d2b5d2d71",
+      "base": "77993819c233737f1e2b4c11c8ca1a5d360bcbe3",
+      "terminalStage1": "7 successful jobs,2 failed strict Darwin P09 jobs; both complete artifacts reviewed; no new native fix selected.",
+      "boundedLifecycleAcceptance": {
+        "bytes": 70735,
+        "sha256": "dcdf5b18f476cc96e738fdd0bbaec7d5e9fff0272260aab1fc3ed6a0de47a82d",
+        "gitBlob": "eeb68c573617611eea7d7d9dea6ad6c3274f14cf"
+      },
+      "originalOpenCodeFailure": {
+        "bytes": 217614,
+        "sha256": "4df660534b4ac26644349a5f412d6ab03807b3fa10b648798c25c423abcde655",
+        "gitBlob": "40f983754899ade7491929f28abeaba4e96ac2b6"
+      },
+      "memberRevealAdvisory": {
+        "bytes": 54913,
+        "sha256": "f5e6d95df688e87b5588f7bd3aac52d7c82ab05536312c901a04ef9572906d6c",
+        "gitBlob": "6bf023a459f4c63770528ff1f1da357008709a96"
+      },
+      "limitation": "Frozen9c9 runtime facts do not execute later674 source or these new controls. New successful job observations are separate from complete artifact acceptance."
+    },
+    "unchanged": {
+      "allSourceAndNonDocs": true,
+      "all42Workflows": true,
+      "all79ParentCatalogValues": true,
+      "all27CompleteBundlesAndTotals": true,
+      "fullPlanAndStatusPrefixes": true,
+      "oldSpentAttempts": true,
+      "frozenPrs": true
+    },
+    "qualification": {
+      "standalone10Executed": false,
+      "whole149": false,
+      "catalog43": false,
+      "renderer85": false,
+      "canonicalValidation": false,
+      "wholeE2E": false,
+      "nativeOrVendor": false
+    },
+    "stageMeaning": "Exact control R2 is accepted and ready for actual-publication checks. This record is created before actual publication acceptance and is not an execution admission."
+  },
+  "narrowWaitReadControlEvidenceFiles": [
+    {
+      "role": "runner",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/narrow-waitread-supervisor-20261117.cjs",
+      "mode": "100644",
+      "bytes": 25389,
+      "sha256": "da237b7e53a07e47c1625b9b577514a62498fe4816bfa5966c461e5ef4117c9c",
+      "gitBlob": "5e19889942d3e28f215c76f1e55ba81fd12f3ced"
+    },
+    {
+      "role": "binding",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/narrow-waitread-binding-20261117.json",
+      "mode": "100644",
+      "bytes": 105210,
+      "sha256": "99ef94654b99dfb0e2fc2e5f1767f3b185b14a73ab5b437ff5a7b405886b4a90",
+      "gitBlob": "a206a4432f4e9f77f682b91d340c191826b5f25b"
+    },
+    {
+      "role": "proposal",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/narrow-waitread-control-r2-20261117.json",
+      "mode": "100644",
+      "bytes": 21995,
+      "sha256": "0dd648c1a839758e864e39b177b15d5fa44bcfcb221e258b0817e5c6da82d431",
+      "gitBlob": "3fc2c894069f5a75936ec6379494d4e0df62db1a"
+    },
+    {
+      "role": "rootR2",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/narrow-waitread-control-r2-root-review-20261117.json",
+      "mode": "100644",
+      "bytes": 20665,
+      "sha256": "0eaeeae487ed062955b37ef5b4568606e790d1db70f08248417b9efcfd70b706",
+      "gitBlob": "356ee2d4a963741f952381811af6d8ff5f323a0f"
+    },
+    {
+      "role": "guardR2",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/narrow-waitread-control-r2-guard-review-20261117.json",
+      "mode": "100644",
+      "bytes": 43121,
+      "sha256": "5e62b021a9dd3399914296f2b84d5fa73ea1199d59031e9624bd2c912962a839",
+      "gitBlob": "82799ba22fb1147b90d0ed1df1b4f06ce735a510"
+    },
+    {
+      "role": "semanticR2",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/narrow-waitread-control-r2-semantic-review-20261117.json",
+      "mode": "100644",
+      "bytes": 43030,
+      "sha256": "0321bd9d9d6315a0268bd3e34b2418aa6bbafb3926e8667c19b0a1c622ca27f9",
+      "gitBlob": "1d7d97c7d6bf0f91a179621099388162a09b8f2b"
+    },
+    {
+      "role": "bindingR2",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/narrow-waitread-control-r2-binding-review-20261117.json",
+      "mode": "100644",
+      "bytes": 65475,
+      "sha256": "9f12a0e71cb2774426acbedaf63623ccf429ba38fe2e143e5c88dff45cda6e8a",
+      "gitBlob": "45c83247c6e946ce2f117cdfb6622cf4b03144e4"
+    },
+    {
+      "role": "sourceRootActual",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/narrow-catalog-waitread-source-root-actual-publication-20261117.json",
+      "mode": "100644",
+      "bytes": 38412,
+      "sha256": "31f2f3ef4a927c5df94fa24026df7902250465460d63a846f6448a962ab976cf",
+      "gitBlob": "2a0f528e7114df488f724f68f2fa3cd441f7c0db"
+    },
+    {
+      "role": "sourceIndependentActual",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/narrow-catalog-waitread-source-independent-actual-publication-20261117.json",
+      "mode": "100644",
+      "bytes": 273972,
+      "sha256": "2e4bd570f108edb73985a5736133dad3225d8fe200c26711c0cb72f1882298ca",
+      "gitBlob": "fae658e2a0de927842196c3d99ecaecc0b213df3"
+    },
+    {
+      "role": "sourceActualGate",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/narrow-catalog-waitread-source-actual-gate-20261117.json",
+      "mode": "100644",
+      "bytes": 5512,
+      "sha256": "6a7448cf1d88673af3c65741c51e2faf07703a99dfee37bf4fccd5383a943bf7",
+      "gitBlob": "be45f8ee4cd349456d196f6cfb1a1038c218c80c"
+    },
+    {
+      "role": "ciObservation11",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1218-executed-observation11-20261117.json",
+      "mode": "100644",
+      "bytes": 392370,
+      "sha256": "1482955a34ebbae4763bba4468670f75e4b62845a255c44f4037c34fa783215f",
+      "gitBlob": "4f692ff71efa0df4cc3feeab5b472983fe3873df"
+    },
+    {
+      "role": "ciObservation12",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1218-executed-observation12-20261117.json",
+      "mode": "100644",
+      "bytes": 472281,
+      "sha256": "0ab0aa6eab554964ad2bbe7667f0f282cdb5f9dbf33517428944fde10fd2e056",
+      "gitBlob": "dfccf6db59fdc58e297760e958eebf65b60bc2d0"
+    },
+    {
+      "role": "darwinArtifactCapture",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1218-darwin-full-artifact-capture-20261117.json",
+      "mode": "100644",
+      "bytes": 8040,
+      "sha256": "31f88c8677ca5c513c62c98e67762622aaea758eff1b49145ec8fee6b7e2a7ac",
+      "gitBlob": "d65e3130e273e8042c419c22c9bfa98b8479c6bc"
+    },
+    {
+      "role": "darwinArtifactReview",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1218-darwin-full-artifact-review-20261117.json",
+      "mode": "100644",
+      "bytes": 167792,
+      "sha256": "41e2c54a72903d2ffa8a9aa71566613390a67de47cb4bf79769215db202ddb34",
+      "gitBlob": "62aee67d8c0e4135566ade54abeb1f747407387f"
+    },
+    {
+      "role": "lifecycleArtifactCapture",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1218-linux-lifecycle-full-artifact-capture-20261117.json",
+      "mode": "100644",
+      "bytes": 23852,
+      "sha256": "00657aaac7b76b7631559e92e10221404761c322503032a58f9e37b94359995b",
+      "gitBlob": "aa282d6e5ea70bff0200d90c4127517899d2bbb8"
+    },
+    {
+      "role": "lifecycleArtifactReview",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1218-linux-lifecycle-full-artifact-review-20261117.json",
+      "mode": "100644",
+      "bytes": 70735,
+      "sha256": "dcdf5b18f476cc96e738fdd0bbaec7d5e9fff0272260aab1fc3ed6a0de47a82d",
+      "gitBlob": "eeb68c573617611eea7d7d9dea6ad6c3274f14cf"
+    },
+    {
+      "role": "opencodeFailureCapture",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1218-opencode-original-failure-capture-20261117.json",
+      "mode": "100644",
+      "bytes": 217614,
+      "sha256": "4df660534b4ac26644349a5f412d6ab03807b3fa10b648798c25c423abcde655",
+      "gitBlob": "40f983754899ade7491929f28abeaba4e96ac2b6"
+    },
+    {
+      "role": "opencodeMemberAdvisory",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1218-opencode-member-detail-advisory-20261117.json",
+      "mode": "100644",
+      "bytes": 54913,
+      "sha256": "f5e6d95df688e87b5588f7bd3aac52d7c82ab05536312c901a04ef9572906d6c",
+      "gitBlob": "6bf023a459f4c63770528ff1f1da357008709a96"
+    },
+    {
+      "role": "codexExtensionsCapture",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1218-codex-extensions-full-artifact-capture-20261117.json",
+      "mode": "100644",
+      "bytes": 50231,
+      "sha256": "62589878d785bbbcb481245ea77b856eb751af91a3a6f8cfe587206452e70132",
+      "gitBlob": "cc6773845a1641858cfb0e59a4319d7f56aa194b"
+    }
   ]
 }

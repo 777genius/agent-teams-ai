@@ -1,0 +1,839 @@
+{
+  "schemaVersion": 1,
+  "kind": "independent-narrow-waitread-executable-control-r2-guard-review",
+  "reviewer": "/root/producer_r2_guard",
+  "repository": "777genius/agent-teams-ai",
+  "readOnlyAuthority": {
+    "sourceControlAuthor": "root only",
+    "reviewer": "immutable Git/source/evidence reads, pure data identities and comparisons, bare review blob only"
+  },
+  "originalR1": {
+    "bytes": 20973,
+    "sha256": "e35155efe24474cfe0ff5d5ab90aa7b9f96bfe56eff99ad8aec10902aecf0016",
+    "gitBlob": "b34a76fffb93d5216cd689893186376963ef8654"
+  },
+  "acceptedSourceGate": {
+    "bytes": 5512,
+    "sha256": "6a7448cf1d88673af3c65741c51e2faf07703a99dfee37bf4fccd5383a943bf7",
+    "gitBlob": "be45f8ee4cd349456d196f6cfb1a1038c218c80c"
+  },
+  "acceptedOwnSourceReview": {
+    "bytes": 59944,
+    "sha256": "aafc30e914ab2216e9aa5773693255fa6348e48f2ab08498240955419840c7c2",
+    "gitBlob": "2713afbe41128762206eb483f5a35eb7ab022235"
+  },
+  "sourceBasis": {
+    "commit": "674d32a84644f87544910c28bb4d2a4214958fb5",
+    "parent": "811d1108e8a766c8c1307008243c3291ccec3e04",
+    "root": "076131eff684e011ae87907e66d31e7eb9e50d30",
+    "docs": "aa84bfbe10b38d452428f27817610b53754ff66b",
+    "scripts": "f1826293c131ca539219eac5c3f293ace5ff1244",
+    "legacyScripts": "f4d54d07af7c08bd38800906395feb226accf465",
+    "package": {
+      "path": "package.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "f80ec83172d0aec0dec8a8ab055426b4fca4a1f7",
+      "size": 26839,
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/f80ec83172d0aec0dec8a8ab055426b4fca4a1f7"
+    },
+    "selectedSourceJoins": [
+      {
+        "path": "scripts/legacy-agent-host/desktop-ui-controls-deadline.test.ts",
+        "mode": "100644",
+        "gitBlob": "6a9f8ad7481cd5910befcc6c7ff5992eef03965b",
+        "bytes": 7883,
+        "bodyPin": {
+          "bytes": 7883,
+          "sha256": "29836f914218edb4876b6a4e157e7cdc68f63cdf414084cdd41683965c734eda",
+          "gitBlob": "6a9f8ad7481cd5910befcc6c7ff5992eef03965b"
+        }
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+        "mode": "100644",
+        "gitBlob": "5286c036a63a14e98925711a224df202c9a7caa7",
+        "bytes": 29017,
+        "bodyPin": {
+          "bytes": 29017,
+          "sha256": "ffd9bbb822dbdc30da7cb8daa881fcbebd384ba2bf9bdd87c804c511166fa02b",
+          "gitBlob": "5286c036a63a14e98925711a224df202c9a7caa7"
+        }
+      }
+    ]
+  },
+  "fullBodyReadEvidence": {
+    "initial": "Complete original proposal/runner/binding/R1/source-gate fetched, identity-checked and read; binding read losslessly as all outer fields plus all four complete decoded source bodies. Initial runner was not accepted.",
+    "correctionOne": "Complete corrected proposal a4f1607d and runner d3183349 fetched/hash-checked and read fully. Complete binding5629 hash-checked, all outer fields read and all four bodies compared literally to the full already-read independently fetched originals. Only runner identity changed. This candidate was superseded before acceptance for two exact control-flow defects.",
+    "embeddedBodies": [
+      {
+        "path": "package.json",
+        "bytes": 26839,
+        "sha256": "c92407a9a5dad6f9d6a6eb8ea7c456195d396679bb4b9dfd15b6c06b726d1084",
+        "gitBlob": "f80ec83172d0aec0dec8a8ab055426b4fca4a1f7",
+        "bodyLiteralEqual": true
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-ui-controls-deadline.test.ts",
+        "bytes": 7883,
+        "sha256": "29836f914218edb4876b6a4e157e7cdc68f63cdf414084cdd41683965c734eda",
+        "gitBlob": "6a9f8ad7481cd5910befcc6c7ff5992eef03965b",
+        "bodyLiteralEqual": true
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+        "bytes": 28974,
+        "sha256": "7626e479a6662242009cb050e7e5af612a29e4205d62666d15274d5c30f91386",
+        "gitBlob": "ed57cb0fe7d57ef076a591621289eb77667c63ad",
+        "bodyLiteralEqual": true
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+        "bytes": 29017,
+        "sha256": "ffd9bbb822dbdc30da7cb8daa881fcbebd384ba2bf9bdd87c804c511166fa02b",
+        "gitBlob": "5286c036a63a14e98925711a224df202c9a7caa7",
+        "bodyLiteralEqual": true
+      }
+    ],
+    "totalEmbeddedBytes": 92713,
+    "primarySourceJoin": "Fresh immutable commit674d and complete root/scripts/legacy tree responses join package and both published executable source/test inputs. These are scoped path joins, not a new full8799-leaf source audit.",
+    "sourceGateBoundary": "Accepted be45 source actual gate read complete; its root and independent actual report identities are joined as gate evidence, not claimed freshly fully re-audited in this control review.",
+    "localMetadataBoundary": "Physical Node identity, absent-stage/scope observations and filesystem behavior were not probed by this reviewer. They remain exact prospective root acceptance checks.",
+    "final": "Complete final21995-byte proposal and25389-byte/424-line runner were fetched, rehashed and read fully in contiguous untruncated parts. Complete105210-byte binding was fetched/rehashed/parsed; every outer field and complete nested phase table was read. Its four decoded source bodies were rehashed and compared literally to all four independent primary blobs already fetched and read in full for this review. Both prior-to-final binding comparisons differ only at runner identity.",
+    "finalBindingDelta": {
+      "fromOriginal": [
+        "runner"
+      ],
+      "fromV2": [
+        "runner"
+      ],
+      "allBodies": [
+        {
+          "path": "package.json",
+          "pin": {
+            "bytes": 26839,
+            "sha256": "c92407a9a5dad6f9d6a6eb8ea7c456195d396679bb4b9dfd15b6c06b726d1084",
+            "gitBlob": "f80ec83172d0aec0dec8a8ab055426b4fca4a1f7"
+          },
+          "literalEqualToPrimary": true,
+          "identityEqual": true
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-ui-controls-deadline.test.ts",
+          "pin": {
+            "bytes": 7883,
+            "sha256": "29836f914218edb4876b6a4e157e7cdc68f63cdf414084cdd41683965c734eda",
+            "gitBlob": "6a9f8ad7481cd5910befcc6c7ff5992eef03965b"
+          },
+          "literalEqualToPrimary": true,
+          "identityEqual": true
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+          "pin": {
+            "bytes": 28974,
+            "sha256": "7626e479a6662242009cb050e7e5af612a29e4205d62666d15274d5c30f91386",
+            "gitBlob": "ed57cb0fe7d57ef076a591621289eb77667c63ad"
+          },
+          "literalEqualToPrimary": true,
+          "identityEqual": true
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+          "pin": {
+            "bytes": 29017,
+            "sha256": "ffd9bbb822dbdc30da7cb8daa881fcbebd384ba2bf9bdd87c804c511166fa02b",
+            "gitBlob": "5286c036a63a14e98925711a224df202c9a7caa7"
+          },
+          "literalEqualToPrimary": true,
+          "identityEqual": true
+        }
+      ]
+    },
+    "completeReadAt": "2026-11-17 05:26:11 UTC",
+    "notExecuted": "No runner/parser/fixture/source function was evaluated. Only the previously approved pure identity helper and pure data comparisons were evaluated."
+  },
+  "exactSourceTransition": {
+    "at": 14002,
+    "insertion": "        if (Date.now() >= deadline) break;\n",
+    "bytes": 43,
+    "exact": true
+  },
+  "existingExternalGates": [
+    "Full exact root and independent control R2 acceptance.",
+    "Root docs-only publication with exact expected parent674d and immediate non-force push.",
+    "Complete root and independent actual readbacks of that exact publication.",
+    "Root's fully read immutable admission data containing actual publication identities; its exact SHA256 supplied on original invocation argv.",
+    "One exclusive stage with only the three admitted files, followed by one original supervisor invocation. No earlier staging or execution is approved by this static report."
+  ],
+  "runtimeScope": {
+    "red": "Entire new ten-case fixture with old controls and actual package; not a historical repository checkout.",
+    "green": "Same entire ten-case fixture and package, only published43-byte controls insertion.",
+    "noQualification": [
+      "whole149 Node aggregate",
+      "catalog43 Vitest",
+      "renderer85",
+      "canonical typecheck/build/lint/source-size check",
+      "GUI/E2E",
+      "native/provider readiness",
+      "real Claude/Codex"
+    ],
+    "noAdditionalScope": "No OpenCode scroll-reveal postimage, no other producer fixes, no dependency installation, fake Vitest runner or old-attempt replay."
+  },
+  "at": "2026-11-17 05:26:11 UTC",
+  "subject": {
+    "bytes": 21995,
+    "sha256": "0dd648c1a839758e864e39b177b15d5fa44bcfcb221e258b0817e5c6da82d431",
+    "gitBlob": "3fc2c894069f5a75936ec6379494d4e0df62db1a"
+  },
+  "exactExecutableControls": {
+    "runner": {
+      "bytes": 25389,
+      "sha256": "da237b7e53a07e47c1625b9b577514a62498fe4816bfa5966c461e5ef4117c9c",
+      "gitBlob": "5e19889942d3e28f215c76f1e55ba81fd12f3ced"
+    },
+    "runnerPhysicalLines": 424,
+    "binding": {
+      "bytes": 105210,
+      "sha256": "99ef94654b99dfb0e2fc2e5f1767f3b185b14a73ab5b437ff5a7b405886b4a90",
+      "gitBlob": "a206a4432f4e9f77f682b91d340c191826b5f25b"
+    }
+  },
+  "decision": {
+    "verdict": "ACCEPT_EXACT_EXECUTABLE_CONTROL_R2_STATIC_WITH_EXISTING_EXTERNAL_GATES",
+    "blockers": [],
+    "meaning": "The exact final controls satisfy the bounded accepted R1 within the explicit sampled-process/synchronous-I/O limits below. This static acceptance enables the already-selected publication/readback sequence; it is not runtime admission, observed RED/GREEN or broader qualification.",
+    "physicallyStaged": false,
+    "executedByReviewer": false,
+    "actualRuntimeOutcome": null
+  },
+  "resolvedFindings": [
+    {
+      "id": "FAILURE_PROCESS_IDENTITY_RETENTION",
+      "foundIn": {
+        "bytes": 22516,
+        "sha256": "25bdca688583fb00dffffe51c3679e0e4a1e49e7e8a4162d3a66d0f5e7c39045",
+        "gitBlob": "7d0603e1fa3a84ceac994b02361012eaef0e22ba"
+      },
+      "status": "RESOLVED_IN_FINAL",
+      "finding": "Initial failure paths cleared active without retaining full observed executable/argv/uid identities; initial samples retained only pid/start/state.",
+      "resolution": "Final runner saves full sampling rows before validation, stores cleanup snapshots and all unowned rows/errors, and copies the full local observed map in cleanup finally, including on cleanup exceptions.",
+      "finalLines": "169–230 and272–274"
+    },
+    {
+      "id": "ABSOLUTE_OUTER_ADMISSION",
+      "foundIn": {
+        "bytes": 23488,
+        "sha256": "8bc697076671921904d5a1690e898f70e25a38ff604b2bec869a02e58d3f640f",
+        "gitBlob": "d3183349eda16e2bed1f14bead985d09204b4533"
+      },
+      "status": "RESOLVED_IN_FINAL",
+      "finding": "A delayed135s timer callback could allow scope/transition/spawn after absolute elapsed deadline; only final PASS had a synchronous elapsed check.",
+      "resolution": "Same original monotonic135s cutoff now precedes scope creation, each source materialization, transition, fixed-controls open/write and each spawn. An expired pre-spawn path retains refusal evidence without a child.",
+      "finalLines": "161–164,242–250,349–360,369–382"
+    },
+    {
+      "id": "CLEANUP_BUDGET_RESTART",
+      "foundIn": {
+        "bytes": 23488,
+        "sha256": "8bc697076671921904d5a1690e898f70e25a38ff604b2bec869a02e58d3f640f",
+        "gitBlob": "d3183349eda16e2bed1f14bead985d09204b4533"
+      },
+      "status": "RESOLVED_IN_FINAL",
+      "finding": "Cleanup exception could reach outer cleanup again and create a fresh4s interval.",
+      "resolution": "Original active record stores cleanupStarted/deadline once. Reentry shares the same deadline, records invocation count/snapshots, retains original TERM/KILL attempt state and cannot replay either attempt. Finally preserves full identities even on exception.",
+      "finalLines": "169–230,407–409"
+    },
+    {
+      "id": "ROOT_METADATA_AND_IO_QUALIFICATION",
+      "status": "RESOLVED_IN_FINAL",
+      "finding": "Earlier descendant-only censuses did not include WORK/STAGE root metadata; hard timer wording needed a synchronous-I/O limit.",
+      "resolution": "Initial/per-phase/final source and control root metadata is retained and compared; initial roots require0755. Proposal explicitly distinguishes deadline-based admission from kernel preemption."
+    }
+  ],
+  "supersededCandidates": [
+    {
+      "proposal": {
+        "bytes": 18581,
+        "sha256": "f2940b62d922241e42bc3c4717eb27e0d98d442994b63a15092e7d6bbb07e33a",
+        "gitBlob": "cb6c8918ce5cb37b91b02e5571455b3021aacaa0"
+      },
+      "runner": {
+        "bytes": 22516,
+        "sha256": "25bdca688583fb00dffffe51c3679e0e4a1e49e7e8a4162d3a66d0f5e7c39045",
+        "gitBlob": "7d0603e1fa3a84ceac994b02361012eaef0e22ba"
+      },
+      "binding": {
+        "bytes": 105210,
+        "sha256": "b1e98af1469e2e0c9331484500988cca12f110155e82bedbdc5674f960d13ecb",
+        "gitBlob": "1f3069d54c8dbfa7a9dfb442d58688a08aae6217"
+      },
+      "accepted": false,
+      "executed": false
+    },
+    {
+      "proposal": {
+        "bytes": 19936,
+        "sha256": "40e035a52d17e1afecf21cd4fcc44187f53d189fc187984b9ee62f861880bccb",
+        "gitBlob": "a4f1607d979806c47b2afadae95c5fac5a1bcc60"
+      },
+      "runner": {
+        "bytes": 23488,
+        "sha256": "8bc697076671921904d5a1690e898f70e25a38ff604b2bec869a02e58d3f640f",
+        "gitBlob": "d3183349eda16e2bed1f14bead985d09204b4533"
+      },
+      "binding": {
+        "bytes": 105210,
+        "sha256": "cd2a867b20c18f3fa00643fc0a2cf9dd04782f41c47e4d6db620b2f8c3a165c8",
+        "gitBlob": "5629a7f1df3e3ebde76b51d7ffb91779555fd2a4"
+      },
+      "accepted": false,
+      "executed": false
+    }
+  ],
+  "selectedInvocation": {
+    "scope": "/workspace/scratch/c714-waitread-20261117",
+    "stage": "/workspace/scratch/c714f5bce554/narrow-waitread-controls-20261117",
+    "attemptToken": "c714-waitread-20261117-original-one-shot",
+    "supervisor": "exec -c /opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node /workspace/scratch/c714f5bce554/narrow-waitread-controls-20261117/waitread-supervisor.cjs <exact-binding-sha256> <exact-actual-admission-sha256>",
+    "shell": {
+      "shell": "bash",
+      "login": false,
+      "workdir": "/"
+    },
+    "childExecutable": {
+      "path": "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+      "realpath": "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+      "bytes": 126939688,
+      "sha256": "61ab14cd750fc24d5db53490ec5fc40f756e4b6e136b78cf7004265471d9bd1d",
+      "device": "27",
+      "inode": "9223372036854818252",
+      "uid": "65534",
+      "gid": "65534",
+      "mode": "0o755",
+      "mtimeNs": "1794515386000000000",
+      "ctimeNs": "1794515386000000000",
+      "versionPreviouslyObserved": "v24.22.1"
+    },
+    "testArgv": [
+      "--test",
+      "--test-reporter=tap",
+      "scripts/legacy-agent-host/desktop-ui-controls-deadline.test.ts"
+    ],
+    "childEnvironment": {
+      "PATH": "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin",
+      "LANG": "C.UTF-8",
+      "TZ": "UTC"
+    },
+    "parentEnvironment": "Empty via root's original bash exec -c; supervisor requires cwd/, exact execPath/filename, no execArgv and zero environment keys.",
+    "sourceLeavesPerPhase": 3,
+    "redBytes": 63696,
+    "greenBytes": 63739,
+    "allEmbeddedBytes": 92713,
+    "stageFiles": [
+      "execution-admission.json",
+      "waitread-binding.json",
+      "waitread-supervisor.cjs"
+    ],
+    "stagingBoundary": "Root-only after actual gates; exclusive directory and regular0644 files; exact complete staged bodies and modes must be read before invocation. Staging is data transfer only, with no source materialization or target execution.",
+    "sourceMaterialization": "Supervisor alone creates the fresh isolated source and evidence sibling after admission. Three source files are exclusive writes, ancestors reject symlinks, source regular files require nlink1/mode0644 and directories0755.",
+    "dependencyBoundary": "No package manager/install/build/lifecycle script, external dependency loader, Host dist, GUI, real provider, network, custom reporter or fake compatibility runner. package.json is the complete actual repository file, not a custom substitute."
+  },
+  "completeAdmissionTrace": [
+    {
+      "step": "external controls publication",
+      "evidence": "Exact root/independent R2, docs-only publication at expected parent674d, immediate non-force push and complete actual readbacks; original admission record pins those exact results. This report does not claim those future events happened."
+    },
+    {
+      "step": "supervisor input admission",
+      "evidence": "Exact argv count/hash shapes; fixed Node path/runner path/cwd; empty environment; no symlink ancestors; exact three control files, complete runner/binding/admission hashes; exact source/runner/attempt/gate joins; actual metadata fields and accepted flags; full Node byte/stat identity."
+    },
+    {
+      "step": "exclusive source scope",
+      "evidence": "Synchronous original supervisor deadline check then recursive:false scope creation. Existing path or any refusal is spent. Source/evidence siblings created, three exact source bodies written only under same deadline. Whole source census, actual package type:module and source root mode verified."
+    },
+    {
+      "step": "RED child",
+      "evidence": "Complete source/root/Node before snapshots, raw output files opened exclusively, absolute outer deadline immediately before spawn. Exact Node argv/env, detached POSIX session/group, no shell. Capture complete raw output and sample owned identities."
+    },
+    {
+      "step": "RED acceptance",
+      "evidence": "Ordinary close/EOF within60s, exact exit1/no signal, empty original group/session, saved original PID/start absence and complete original leader. Raw TAP must be exactly the ten named cases with7 expected assertion failures and3 preservation passes; source/root/Node/control metadata and bytes unchanged."
+    },
+    {
+      "step": "source transition",
+      "evidence": "Only after RED status PASS_EXPECTED_DISCRIMINATOR. Same absolute outer deadline checked at transition and immediately before controls open/write. Full prior RED census equality and published fixed body identity. O_NOFOLLOW, original device/inode/nlink, one rewrite+truncate+fsync. All other source rows including package/test/directories stay equal."
+    },
+    {
+      "step": "GREEN child and acceptance",
+      "evidence": "Same phase routine; same fixture/package and only exact published controls. Entire ten-case TAP allPASS, exit0/no signal, ordinary complete absence, unchanged per-phase source/root/Node/controls. No retry or alternate test selection."
+    },
+    {
+      "step": "final receipt",
+      "evidence": "Final complete source/control/root/Node joins, same original135s bound, exact selected-scope status. Receipt written exclusively. Retention failure or interruption remains unqualified/outer1; selected success alone yields outer0. Actual outer result and complete evidence remain to be observed by root."
+    }
+  ],
+  "expectedCases": [
+    {
+      "label": "RED",
+      "exitCode": 1,
+      "tests": [
+        {
+          "number": 1,
+          "title": "generic UI read refuses its first fulfilled value exactly at the original deadline",
+          "result": "FAIL",
+          "signature": "missing-rejection"
+        },
+        {
+          "number": 2,
+          "title": "generic UI read refuses its first fulfilled value after the original deadline",
+          "result": "FAIL",
+          "signature": "missing-rejection"
+        },
+        {
+          "number": 3,
+          "title": "generic UI read refuses a later fulfilled value exactly at the original deadline",
+          "result": "FAIL",
+          "signature": "missing-rejection"
+        },
+        {
+          "number": 4,
+          "title": "generic UI read refuses a later fulfilled value after the original deadline",
+          "result": "FAIL",
+          "signature": "missing-rejection"
+        },
+        {
+          "number": 5,
+          "title": "generic UI read does not admit or poll again after a late false observation",
+          "result": "FAIL",
+          "signature": "late-false-readiness"
+        },
+        {
+          "number": 6,
+          "title": "generic UI read preserves a timely first value and its exact identity",
+          "result": "PASS",
+          "signature": null
+        },
+        {
+          "number": 7,
+          "title": "generic UI read preserves its original cadence and a timely later value",
+          "result": "PASS",
+          "signature": null
+        },
+        {
+          "number": 8,
+          "title": "generic UI read honors a supplied budget at its strict boundary",
+          "result": "FAIL",
+          "signature": "missing-rejection"
+        },
+        {
+          "number": 9,
+          "title": "generic UI hover refuses a third stable point arriving at the original deadline",
+          "result": "FAIL",
+          "signature": "missing-rejection"
+        },
+        {
+          "number": 10,
+          "title": "generic UI hover preserves one movement after three timely stable points",
+          "result": "PASS",
+          "signature": null
+        }
+      ]
+    },
+    {
+      "label": "GREEN",
+      "exitCode": 0,
+      "tests": [
+        {
+          "number": 1,
+          "title": "generic UI read refuses its first fulfilled value exactly at the original deadline",
+          "result": "PASS",
+          "signature": null
+        },
+        {
+          "number": 2,
+          "title": "generic UI read refuses its first fulfilled value after the original deadline",
+          "result": "PASS",
+          "signature": null
+        },
+        {
+          "number": 3,
+          "title": "generic UI read refuses a later fulfilled value exactly at the original deadline",
+          "result": "PASS",
+          "signature": null
+        },
+        {
+          "number": 4,
+          "title": "generic UI read refuses a later fulfilled value after the original deadline",
+          "result": "PASS",
+          "signature": null
+        },
+        {
+          "number": 5,
+          "title": "generic UI read does not admit or poll again after a late false observation",
+          "result": "PASS",
+          "signature": null
+        },
+        {
+          "number": 6,
+          "title": "generic UI read preserves a timely first value and its exact identity",
+          "result": "PASS",
+          "signature": null
+        },
+        {
+          "number": 7,
+          "title": "generic UI read preserves its original cadence and a timely later value",
+          "result": "PASS",
+          "signature": null
+        },
+        {
+          "number": 8,
+          "title": "generic UI read honors a supplied budget at its strict boundary",
+          "result": "PASS",
+          "signature": null
+        },
+        {
+          "number": 9,
+          "title": "generic UI hover refuses a third stable point arriving at the original deadline",
+          "result": "PASS",
+          "signature": null
+        },
+        {
+          "number": 10,
+          "title": "generic UI hover preserves one movement after three timely stable points",
+          "result": "PASS",
+          "signature": null
+        }
+      ]
+    }
+  ],
+  "assertionsAndFixture": {
+    "staticOnly": true,
+    "expectedRed": "Cases1–4,8,9 fail missing expected rejection because old waitRead admits a fulfilled timely-looking value at/after the original boundary. Case5 first throws the expected timeout but fails deepStrictEqual because false entered readiness. Cases6,7,10 preserve timely behavior.",
+    "expectedGreen": "The single published post-await expiry guard prevents predicate/admission/tick after an expired fulfilled value; all10 are expected to pass.",
+    "testIntegrity": "Latest6a9f fixture exactly matches published body. All10 remain unconditional full-module cases, timeout5000. Its finite test CDP only asserts/returns frames and records synthetic sends; no DOM evaluation, transport, app or provider is run. It calls actual exported controls, not a copied implementation.",
+    "timerIntegrity": "Fixture mocks Date only and records global setTimeout requests while invoking the original real timer. Original100ms waits settle; finally restores mocked globals and checks pending timer count. Parent is a distinct Node process using hrtime, so child Date control cannot extend parent bounds.",
+    "tap": "Unchanged parser requires header,10 ordered top-level subtest titles/results,1..10 plan,exact10 tests/0 suites and0cancel/skip/todo. RED failures must carry ERR_ASSERTION/testCodeFailure and exact operator/message category; case5 requires actual[0]=false and empty expected. No nested substitute or bailout is accepted.",
+    "parserLimit": "This is source review of the exact real Node TAP acceptance path, not an executed compatibility proof or a substitute TAP emitter. Any unexpected actual report shape/classification spends the attempt; raw evidence is retained."
+  },
+  "ownershipAndCleanup": {
+    "capture": "Original child pid/start/group/session captured. Full /proc group-or-session census samples retain state,ppid,group,session,start,uid,exe,argv before validation. Admitted rows require original group AND session, same uid and exact Node executable.",
+    "absentVsUnknown": "Missing original pid or changed start means that recorded original is absent. Unknown inspections refuse. A known zombie may reuse only its prior complete pid/start identity after current group/session checks. All unknown/unowned cleanup rows remain evidence.",
+    "ordinarySuccess": "No cleanup signal is needed or allowed to manufacture success. Child close/EOF and exact exit/no signal must be observed, original group/session must be empty and all observed original identities absent before the phase can pass.",
+    "originalCleanupInterval": "On active-phase error, a single4s monotonic start/deadline is stored on the original active record. TERM attempt then KILL attempt respect the original250ms relation and same remaining interval. Reentry after an exception records continuation only, never renews the interval or repeats either attempted signal pass.",
+    "signalScope": "Each signal target must be a saved original pid with unchanged start and unchanged original group/session; the deadline is checked before signalling. No broad group kill and no signal to unowned/unknown/reused/escaped process is authorized.",
+    "evidenceOnFailure": "Complete polling rows, cleanup snapshots/unowned errors, signal attempts, remaining census, close status and remaining original identities are retained as available. The captured local a reference supplies full observed identities in finally even if active was cleared or cleanup threw. Source/control failure censuses and errors remain explicit.",
+    "classification": "Every triggered cleanup, timeout, refusal, capture failure, ownership failure, malformed TAP, source mutation or unknown result remains INCOMPLETE_SPENT/REFUSED…SPENT. No GREEN admission after failed RED and no source/phase replay.",
+    "custodyLimit": "25ms sampled identity/group/session observations plus eventual original-identity absence are not continuous kernel executable custody, global process census, or native qualification. Failed/inaccessible evidence remains unknown; this report does not promise cleanup of an unowned/escaped process."
+  },
+  "sourceAndCensus": {
+    "fields": "Captured stat fields are type,device,inode,mode,uid,gid,nlink,bytes,mtimeNs,ctimeNs; file bodies have byte count,SHA256,Git blob. atime is not claimed.",
+    "roots": "WORK/STAGE root metadata included separately; initial0755 checked, per-phase and final comparisons retained. Source descendants are exactly package,fixture,controls and scripts/legacy directories. Controls stage is exactly the3 admitted files.",
+    "preserved": "No test/package changes between phases. In-place controls write is the only allowed source-path transition. Control stage remains byte/stat-identical. Node binary full127MB identity is rechecked before/after phases and at outer boundaries.",
+    "limits": "Physical source/stage existence and actual metadata are not claimed by this static review. The full application8799-leaf preservation and42 workflow acceptance are inherited from the read accepted source actual gate, not fabricated from the isolated three-file census.",
+    "frozen": "PR1218 head9c9/base779, old spent scopes, frozen PRs, source file-size policies, whole149/43/85 and other suites remain unchanged/unqualified by this review."
+  },
+  "budgets": {
+    "perTestMs": 5000,
+    "originalUiReadDefaultMs": 30000,
+    "originalUiReadTickMs": 100,
+    "customTestBudgetMs": 73,
+    "phaseSupervisorMs": 60000,
+    "outerSupervisorMs": 135000,
+    "failureCleanupMs": 4000,
+    "cleanupTermToKillMs": 250,
+    "processObservationTickMs": 25,
+    "rawOutputBytes": 8388608,
+    "qualification": "Per-test and UI budgets are unchanged. Parent monotonic clocks are outside child Date mocks. Outer135s deadline permits only bounded4s failure cleanup; no later phase after timeout. Full raw output is retained; exceeding bound fails, without truncating to manufacture pass. Synchronous filesystem calls are not kernel-preempted by the timer; monotonic elapsed checks refuse a late PASS. The60s phase bound covers original child close/EOF observation; outer135s covers remaining control work before final admission. The absolute monotonic outer cutoff is checked synchronously immediately before scope creation, every source materialization, RED-to-GREEN transition, fixed-controls open/write, and every child spawn; a pending timer callback cannot admit a later phase. Cleanup stores one original start/deadline on the original active process; exceptional reentry uses only its remaining interval and never replays a TERM/KILL attempt."
+  },
+  "limitations": [
+    "Synchronous filesystem/proc operations and current in-flight writes are not kernel-preempted by JavaScript timers. Explicit monotonic admission checks prevent knowingly starting subsequent admitted work after the original outer deadline; final elapsed checks refuse a late PASS.",
+    "Cleanup polling/signal actions use one original interval; synchronous final diagnostic I/O can outlive a timer tick. No claim of hard OS-level process cancellation or continuous executable custody is made.",
+    "Actual Node compatibility, execution outcomes, full raw evidence, ordinary cleanup and separate outer result are unobserved until root performs the one gated invocation.",
+    "No full149 aggregate,43 catalog,85 renderer, canonical validation, GUI/E2E or native qualification follows from static controls acceptance or from a future standalone10 pass.",
+    "No optional root/sibling static report is being counted as independent proof in this report; the exact primary inputs and own scoped joins support its checks."
+  ],
+  "checks": [
+    {
+      "id": "INPUT_IDENTITIES",
+      "status": "PASS_STATIC",
+      "detail": "Complete final proposal3fc2, runner5e198 and bindinga206, plus complete accepted source gatebe45 and R1b34a, match exact bytes/SHA256/Git identities."
+    },
+    {
+      "id": "PUBLISHED_SOURCE_GATE",
+      "status": "PASS_STATIC",
+      "detail": "Proposal/binding select accepted source674d32a8 root076131, not frozen CI snapshot."
+    },
+    {
+      "id": "R1_PIN",
+      "status": "PASS_STATIC",
+      "detail": "Exact accepted b34a R1."
+    },
+    {
+      "id": "SOURCE_R2_PIN",
+      "status": "PASS_STATIC",
+      "detail": "Corrected accepted SOURCE R21318b887."
+    },
+    {
+      "id": "OLD_CONTROLS",
+      "status": "PASS_STATIC",
+      "detail": "RED uses exact old controls ed57 with the new whole ten-case module."
+    },
+    {
+      "id": "FIXED_CONTROLS",
+      "status": "PASS_STATIC",
+      "detail": "GREEN uses exact published 5286 controls."
+    },
+    {
+      "id": "FIXTURE",
+      "status": "PASS_STATIC",
+      "detail": "Latest published 6a9f fixture, no initial faa10."
+    },
+    {
+      "id": "ALL_FOUR_BODY_JOINS",
+      "status": "PASS_STATIC",
+      "detail": "Every complete embedded body equals independently fetched Git blob."
+    },
+    {
+      "id": "THREE_SOURCE_LEAVES",
+      "status": "PASS_STATIC",
+      "detail": "Three exact RED files; total63696 bytes."
+    },
+    {
+      "id": "GREEN_TOTAL",
+      "status": "PASS_STATIC",
+      "detail": "Same package/fixture; only controls changes by43bytes."
+    },
+    {
+      "id": "PHASE_TABLE",
+      "status": "PASS_STATIC",
+      "detail": "Proposal and binding ten-case RED and GREEN tables equal."
+    },
+    {
+      "id": "R1_TITLES",
+      "status": "PASS_STATIC",
+      "detail": "All ten ordered titles join R1."
+    },
+    {
+      "id": "OUTCOMES",
+      "status": "PASS_STATIC",
+      "detail": "Static7FAIL3PASS discriminator then10PASS; no observed execution yet."
+    },
+    {
+      "id": "BUILTIN_IMPORTS",
+      "status": "PASS_STATIC",
+      "detail": "Controls value graph imports only node:assert/strict; fixture adds node:test and exact relative controls."
+    },
+    {
+      "id": "PURE_PACKAGE_USE",
+      "status": "PASS_STATIC",
+      "detail": "Actual repository package provides module mode; direct Node command runs no lifecycle/dependency scripts."
+    },
+    {
+      "id": "ROOT_TREE_PACKAGE",
+      "status": "PASS_STATIC",
+      "detail": "Fresh immutable674d→076131 root tree joins actual package manifest."
+    },
+    {
+      "id": "TREE_SELECTED_SOURCES",
+      "status": "PASS_STATIC",
+      "detail": "Fresh complete root/scripts/legacy trees join both published controls and deadline fixture."
+    },
+    {
+      "id": "LITERAL_43_BYTE_TRANSITION",
+      "status": "PASS_STATIC",
+      "detail": "The full GREEN body is old controls plus exact43-byte insertion at byte14002; no other source byte changes."
+    },
+    {
+      "id": "NODE_PIN_EXACT_STRINGS",
+      "status": "PASS_STATIC",
+      "detail": "Metadata is bound to exact decimal strings; rounded historical inode is not used for acceptance."
+    },
+    {
+      "id": "COMMAND_UNFILTERED",
+      "status": "PASS_STATIC",
+      "detail": "Entire new module; TAP output option only; no filters/skip/shard/retry/concurrency or test timeout override."
+    },
+    {
+      "id": "ENVIRONMENT",
+      "status": "PASS_STATIC",
+      "detail": "Parent empty environment asserted; child exactly PATH/LANG/TZ. NODE_OPTIONS/preloads/dependency install excluded."
+    },
+    {
+      "id": "WALL_BUDGETS",
+      "status": "PASS_STATIC",
+      "detail": "60s phase,135s supervisor and4s failure cleanup; test5000/read30000/tick100 remain exact; supervisor monotonic clock separate from child Date mock."
+    },
+    {
+      "id": "FIXED_SCOPE_AND_STAGE",
+      "status": "PASS_STATIC",
+      "detail": "One exact fresh scope and one exact stage; collision refuses; source/evidence siblings distinct."
+    },
+    {
+      "id": "NO_REPLAY_CLASSIFICATION",
+      "status": "PASS_STATIC",
+      "detail": "Failure/refusal/unknown remains spent; no second invocation or old-attempt restoration selected."
+    },
+    {
+      "id": "EXTERNAL_ACTUAL_GATE",
+      "status": "PASS_STATIC",
+      "detail": "Exact control publication and complete actual readbacks remain external prerequisites; later admission data is hashed on original argv, not dynamically generated behavior."
+    },
+    {
+      "id": "UNQUALIFIED_SCOPES",
+      "status": "PASS_STATIC",
+      "detail": "No full-suite/canonical/native/GUI qualification promotion."
+    },
+    {
+      "id": "FROZEN_CI",
+      "status": "PASS_STATIC",
+      "detail": "Frozen CI refs remain external immutable snapshots, separate from selected674d source publication."
+    },
+    {
+      "id": "CORRECTED_BINDING_ONLY_RUNNER_CHANGED",
+      "status": "PASS_STATIC",
+      "detail": "Final whole binding differs from both superseded candidates only in runner identity; all four complete embedded bodies and every behavioral field remain unchanged."
+    },
+    {
+      "id": "FINAL_CROSS_PINS",
+      "status": "PASS_STATIC",
+      "detail": "Final runner5e198, bindinga206 and proposal3fc2 pins join; neither superseded candidate is accepted."
+    },
+    {
+      "id": "SOURCE_VECTOR_PINS",
+      "status": "PASS_STATIC",
+      "detail": "Both exact source vectors remain accepted ae0aa3/fff972."
+    },
+    {
+      "id": "CORRECTION_AFTER_SOURCE_GATE",
+      "status": "PASS_STATIC",
+      "detail": "Original and corrected control authorship follow accepted source actual gate; no execution or staging performed."
+    },
+    {
+      "id": "ADMISSION_HASH_CROSS_PIN",
+      "status": "PASS_STATIC",
+      "detail": "Future actual admission schema pins the final corrected bodies; actual publication identities remain external."
+    },
+    {
+      "id": "PROCESS_SAMPLES_BEFORE_VALIDATION",
+      "status": "PASS_STATIC",
+      "detail": "All full rows, including a refusing row, are retained before admitting/validating a sample."
+    },
+    {
+      "id": "CLEANUP_INITIAL_AND_UNKNOWN",
+      "status": "PASS_STATIC",
+      "detail": "Original and exceptional-continuation complete cleanup snapshots and every unowned/error row are retained."
+    },
+    {
+      "id": "FAILURE_IDENTITIES_RETAINED",
+      "status": "PASS_STATIC",
+      "detail": "Cleanup finally copies the captured local active record's full observed identity map on normal and exceptional exits; local a survives active=null. All full polling samples also precede admission."
+    },
+    {
+      "id": "OWNERSHIP_MEMBERSHIP",
+      "status": "PASS_STATIC",
+      "detail": "Members must join original detached group and session, same uid, exact Node executable; unknown inspection refuses."
+    },
+    {
+      "id": "ZOMBIE_POLICY",
+      "status": "PASS_STATIC",
+      "detail": "A zombie can reuse only a previously complete same pid/start identity with group/session checks, not fabricate a fresh identity."
+    },
+    {
+      "id": "CLEANUP_SIGNAL_SCOPE",
+      "status": "PASS_STATIC",
+      "detail": "Only saved same-start processes still in original group/session are signalled; no negative-group broad kill."
+    },
+    {
+      "id": "ORDINARY_EXIT_ADMISSION",
+      "status": "PASS_STATIC",
+      "detail": "Success requires ordinary child close/EOF, exact exit/no signal, complete original leader, empty group/session and absence of all saved original pid/start identities."
+    },
+    {
+      "id": "RAW_CAPTURE_UNTRUNCATED",
+      "status": "PASS_STATIC",
+      "detail": "Both raw streams are written in full; overflow/capture failure prevents acceptance. Filesystem errors/partial evidence remain failure, not truncated PASS."
+    },
+    {
+      "id": "TAP_ALL_TEN",
+      "status": "PASS_STATIC",
+      "detail": "Full ten ordered results/headers, exact plan and counters, no nested substitute/bail-out/skip/todo/cancel; assertion signatures required for all expected RED failures."
+    },
+    {
+      "id": "SOURCE_AND_CONTROL_CENSUSES",
+      "status": "PASS_STATIC",
+      "detail": "All source leaves/directories and all three control files have whole identities and exact metadata comparisons during each phase."
+    },
+    {
+      "id": "ROOT_METADATA",
+      "status": "PASS_STATIC",
+      "detail": "Source/control root metadata is retained; initial modes0755; phase and final root comparisons prevent unnoticed root changes."
+    },
+    {
+      "id": "RED_BEFORE_TRANSITION",
+      "status": "PASS_STATIC",
+      "detail": "No controls write or GREEN invocation before complete admitted RED, ordinary absence, raw results and source/Node/control checks."
+    },
+    {
+      "id": "EXACT_INODE_TRANSITION",
+      "status": "PASS_STATIC",
+      "detail": "Only original controls inode is rewritten with published body; all other source rows remain fully equal; same fixture/package reused."
+    },
+    {
+      "id": "MONOTONIC_TIMEOUT_SCOPE",
+      "status": "PASS_STATIC",
+      "detail": "Same absolute135s supervisor cutoff now checks admission boundaries synchronously;60s close bound and135s final admission remain independent of child Date. Synchronous I/O itself is not kernel-preempted."
+    },
+    {
+      "id": "NO_SUCCESS_FROM_CLEANUP",
+      "status": "PASS_STATIC",
+      "detail": "Any error/refusal/cleanup path remains unqualified/spent; receipt retention failure also causes outer1."
+    },
+    {
+      "id": "NO_PROJECT_OR_VENDOR_EXECUTION",
+      "status": "PASS_STATIC",
+      "detail": "Only selected Node test child is spawned; no shell/app/Host/dependency install/real Claude or Codex/version paths."
+    },
+    {
+      "id": "REVIEW_EFFECTS",
+      "status": "PASS_STATIC",
+      "detail": "Reviewer only fetched immutable Git data and compared retained bytes; no runner evaluation, shell, filesystem probes/staging, target execution, ref/PR/CI action or live polling."
+    },
+    {
+      "id": "ABSOLUTE_OUTER_ADMISSION",
+      "status": "PASS_STATIC",
+      "detail": "One original outer monotonic origin is checked directly before scope creation, each source write, RED→GREEN transition, fixed controls open/write and every child spawn; pending timer delivery cannot admit a later phase."
+    },
+    {
+      "id": "PRE_SPAWN_REFUSAL",
+      "status": "PASS_STATIC",
+      "detail": "Expired pre-spawn admission closes both raw descriptors, records empty raw files and refusal phase, then throws before any child process."
+    },
+    {
+      "id": "ONE_CLEANUP_INTERVAL",
+      "status": "PASS_STATIC",
+      "detail": "Cleanup start/deadline are initialized once on original active record; exceptional reentry retains same interval, invocation count and snapshots, never renews four seconds."
+    },
+    {
+      "id": "NO_SIGNAL_REPLAY",
+      "status": "PASS_STATIC",
+      "detail": "TERM and KILL attempt state is set before signalling; same-start/session/group checks and original deadline apply per PID. Continuation cannot replay either signal pass or extend the250ms relation."
+    }
+  ],
+  "failedChecks": [],
+  "blockers": [],
+  "reviewerEffects": {
+    "immutableGitReads": true,
+    "pureDataComparisons": true,
+    "approvedIdentityHelperOnly": true,
+    "sourceOrControlAuthorship": false,
+    "targetOrRunnerExecution": false,
+    "shell": false,
+    "localEnvironmentProbe": false,
+    "filesystemStaging": false,
+    "refPrCiMutation": false,
+    "liveCiPolling": false,
+    "onlyWrite": "This permitted bare Git review-report blob; no commit/ref change."
+  },
+  "retentionProtocol": "Retain exact complete report as bare blob, send pin immediately, then freshly fetch/hash/full-read all report bytes before confirming final. A later self-readback confirmation is external to this immutable body."
+}

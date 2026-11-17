@@ -1,0 +1,153 @@
+{
+  "schemaVersion": 1,
+  "kind": "narrow-catalog-waitread-source-actual-gate",
+  "at": "2026-11-17 05:05:24 UTC",
+  "repository": "777genius/agent-teams-ai",
+  "branch": "fix/frontend-parity-coobservation-c714-20261115",
+  "sourceR2": {
+    "bytes": 19187,
+    "sha256": "8bb84de228b570dfc121233893d32209a9389da44aa1747c7924dff936fa4c1a",
+    "gitBlob": "1318b887473a61e1cbfb3960812fbc84e3b4df13"
+  },
+  "sourceR2ClosedAt": "2026-11-17 04:53:44 UTC",
+  "commit": "674d32a84644f87544910c28bb4d2a4214958fb5",
+  "parent": "811d1108e8a766c8c1307008243c3291ccec3e04",
+  "tree": "076131eff684e011ae87907e66d31e7eb9e50d30",
+  "docsTree": "aa84bfbe10b38d452428f27817610b53754ff66b",
+  "manifest": {
+    "bytes": 10191,
+    "sha256": "985a2aac30472edd989588fa7aef19f05691947449662bbfc026fe8bad7f55a7",
+    "gitBlob": "918732824008d48d2cd5367c285fb5b776a9a96e"
+  },
+  "rootActual": {
+    "bytes": 38412,
+    "sha256": "31f2f3ef4a927c5df94fa24026df7902250465460d63a846f6448a962ab976cf",
+    "gitBlob": "2a0f528e7114df488f724f68f2fa3cd441f7c0db"
+  },
+  "independentActual": {
+    "bytes": 273972,
+    "sha256": "2e4bd570f108edb73985a5736133dad3225d8fe200c26711c0cb72f1882298ca",
+    "gitBlob": "fae658e2a0de927842196c3d99ecaecc0b213df3"
+  },
+  "rootActualChecks": 35,
+  "independentActualChecks": 116,
+  "currentPointerJoins": 30,
+  "rootFullReadIndependent": true,
+  "independentFullReadRoot": true,
+  "sourceRows": [
+    {
+      "role": "controls",
+      "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "mode": "100644",
+      "before": {
+        "bytes": 28974,
+        "sha256": "7626e479a6662242009cb050e7e5af612a29e4205d62666d15274d5c30f91386",
+        "gitBlob": "ed57cb0fe7d57ef076a591621289eb77667c63ad"
+      },
+      "after": {
+        "bytes": 29017,
+        "sha256": "ffd9bbb822dbdc30da7cb8daa881fcbebd384ba2bf9bdd87c804c511166fa02b",
+        "gitBlob": "5286c036a63a14e98925711a224df202c9a7caa7"
+      },
+      "physicalLines": 495
+    },
+    {
+      "role": "nodeAggregate",
+      "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+      "mode": "100644",
+      "before": {
+        "bytes": 164965,
+        "sha256": "852bedb85c83dbc4b488dffb4a9ffebbe398adc53e85f5a3cea8ca36b146cbf7",
+        "gitBlob": "896c587e077da56a98a314a175fb3cba0353d6ee"
+      },
+      "after": {
+        "bytes": 165022,
+        "sha256": "fed1ee2429b0e1a7ccd592c127d7afc30bb69e0c10a1f8c673e240c1bc9dd581",
+        "gitBlob": "12c73fbc683dc297033bd8b6472e9dbee60b9b8a"
+      },
+      "physicalLines": 2702
+    },
+    {
+      "role": "catalog",
+      "path": "src/renderer/utils/teamModelAvailability.ts",
+      "mode": "100644",
+      "before": {
+        "bytes": 32055,
+        "sha256": "6e216e10c07e953472afb74045c3a976e9f4a1d4fcd3e9f5d46dc789d19022e6",
+        "gitBlob": "167751c56f74c2869b8b3d9b128002d5bd642bcb"
+      },
+      "after": {
+        "bytes": 32077,
+        "sha256": "b1da0ea7199e69eb042e5beb16dfafa91c4d7b9360db41a3f9ba16424ca2fd43",
+        "gitBlob": "ac6e66775bd5efaf81cecb9a2f22a3437b4343ad"
+      },
+      "physicalLines": 982
+    },
+    {
+      "role": "catalogTests",
+      "path": "test/renderer/utils/teamModelAvailability.test.ts",
+      "mode": "100644",
+      "before": {
+        "bytes": 49687,
+        "sha256": "0e37baae735529c11d2ed43432b132b516d252af8bb3084714c7082d7d4c4db8",
+        "gitBlob": "1a58c9c686010d5b5ded00f8e2b5064e4ab78c32"
+      },
+      "after": {
+        "bytes": 56775,
+        "sha256": "b08fe4a650ea9d23f4d8fa4b4ece157d9cd2f87e87e42b25c3c53934ed9974c8",
+        "gitBlob": "6cf34a11e7a1bc6f33208bad00adb57ee5656cd6"
+      },
+      "physicalLines": 1611
+    },
+    {
+      "role": "deadlineTests",
+      "path": "scripts/legacy-agent-host/desktop-ui-controls-deadline.test.ts",
+      "mode": "100644",
+      "before": null,
+      "after": {
+        "bytes": 7883,
+        "sha256": "29836f914218edb4876b6a4e157e7cdc68f63cdf414084cdd41683965c734eda",
+        "gitBlob": "6a9f8ad7481cd5910befcc6c7ff5992eef03965b"
+      },
+      "physicalLines": 202
+    }
+  ],
+  "beforeVector": {
+    "bytes": 2552,
+    "sha256": "647b7a268b8b8921d875327e3394726916d54cc3c10c1bb8d2e2e9538db2d496",
+    "gitBlob": "ae0aa3e814cb90d9568cef5f35be6a0d8f46a361"
+  },
+  "afterVector": {
+    "bytes": 2784,
+    "sha256": "6a212eb715b312ae74c25e58078fd26b1247695d94f5c47536dc2a20aed49ce1",
+    "gitBlob": "fff972049718ae5ddaa7000e17341fade490233e"
+  },
+  "publication": {
+    "changedPaths": 19,
+    "sourceModifications": 4,
+    "sourceAdditions": 1,
+    "docsModifications": 3,
+    "docsAdditions": 11,
+    "actualBodyBytes": 3982959,
+    "parentDocBytes": 3065204,
+    "leaves": 11975,
+    "docs": 3176,
+    "nonDocs": 8799,
+    "workflows": 42,
+    "other50RootEntriesUnchanged": true
+  },
+  "decision": "Accept exactly the five published source/test postimages and their complete documentation publication. Earlier closed R1 permits root control authorship. Executable-control R2, publication/immediate push and full root+independent actual readbacks are still required before physical staging or a fresh bounded standalone10 execution.",
+  "executableControlsApproved": false,
+  "sourcePhysicallyStaged": false,
+  "newRuntimeExecuted": false,
+  "oldSpentAttemptsRemainSpent": true,
+  "whole149Qualified": false,
+  "catalog43Qualified": false,
+  "renderer85GreenQualified": false,
+  "wholeE2EQualified": false,
+  "frozenCi": {
+    "pr": 1218,
+    "head": "9c9c73190840592963142d36562ea07d2b5d2d71",
+    "base": "77993819c233737f1e2b4c11c8ca1a5d360bcbe3"
+  }
+}
