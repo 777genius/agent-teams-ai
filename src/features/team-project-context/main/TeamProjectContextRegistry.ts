@@ -472,6 +472,11 @@ export class TeamProjectContextRegistry {
     return withFileLock(this.indexPath(logicalTeamName), async () => {
       await this.assertOwnedDirectory(logicalTeamName);
       const index = await this.readIndex(logicalTeamName);
+      if (index.deleting || index.softDeleting) {
+        throw new TeamProjectContextUnavailableError(
+          'Cannot confirm a project context while the team is being deleted'
+        );
+      }
       const row = index.contexts.find((c) => c.projectKey === projectKey);
       if (!row || row.executionTeamName !== executionTeamName) {
         throw new TeamProjectContextUnavailableError('Unrecognized project context confirmation');
