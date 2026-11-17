@@ -2317,6 +2317,7 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
     const retainedSharedHistory = Boolean(
       _taskId && state.teamByName[teamName]?.projectContextMode === 'per_project'
     );
+    const label = retainedSharedHistory ? displayName + ' · Shared history' : displayName;
     const allTabs = state.getAllPaneTabs();
     const existing = allTabs.find(
       (tab) => isOrdinaryTeamTab(tab) && tab.teamName === teamName &&
@@ -2324,14 +2325,11 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
     );
     if (existing) {
       state.setActiveTab(existing.id);
-      // Sync label in case display name changed
-      if (existing.label !== displayName) {
-        state.updateTabLabel(existing.id, displayName);
-      }
+      if (existing.label !== label) state.updateTabLabel(existing.id, label);
     } else {
       state.openTab({
         type: 'team',
-        label: retainedSharedHistory ? displayName + ' · Shared history' : displayName,
+        label,
         teamName,
         ...(retainedSharedHistory ? { retainedSharedHistory: true } : {}),
       });
