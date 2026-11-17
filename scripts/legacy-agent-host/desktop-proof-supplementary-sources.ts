@@ -300,6 +300,7 @@ export const desktopProofSupplementarySources = [
   'src/shared/utils/opencodeModelRef.ts',
   'test/renderer/features/runtime-provider-management/RuntimeProviderManagementPanelView.test.ts',
   'test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts',
+  'src/renderer/utils/teamModelAvailability.ts',
 ];
 
 /** Exact finite Windows same-Main recovery and original Processes UI construction inputs. */

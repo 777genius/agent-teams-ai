@@ -265,7 +265,7 @@ export async function runDesktopLiveMembershipUiSmoke(cdp: UiCdpPort, options: {
   await ui.scrollTo(leadToggle, 'original explicit lead model');
   if (!await cdp.evaluate('Boolean(document.querySelector(' + literal(create + ' #lead-effort') + '))'))
     await ui.click(leadToggle, 'expand original lead model');
-  const opus = create + ' [data-testid="team-model-selector-model-option"][aria-label^=' + literal(finite ? 'Sonnet 4.6' : 'Opus 4.6') + ']';
+  const opus = create + ' [data-testid="team-model-selector-model-option"][aria-label^=' + literal(finite ? 'TEST Claude Sonnet' : 'Opus 4.6') + ']';
   await ui.scrollTo(opus, finite ? 'finite initial Sonnet choice' : 'original Opus4.6 choice'); await ui.click(opus, finite ? 'select finite initial Sonnet' : 'select original Opus4.6');
   await ui.scrollTo(create + ' button', 'original Medium effort', 'Medium');
   await ui.click(create + ' button', 'select original Medium effort', 'Medium');
@@ -294,7 +294,7 @@ export async function runDesktopLiveMembershipUiSmoke(cdp: UiCdpPort, options: {
   assert.deepEqual(rows(saved.members).map(row => [row.name, row.role]), [['team-lead', 'lead'], ['bob', 'member']]);
   assert.equal(record(saved.savedSettings).cwd, workspace);
   assert.equal(record(saved.savedSettings).providerId, 'anthropic');
-  assert.equal(record(saved.savedSettings).model, finite ? 'sonnet' : 'claude-opus-4-6');
+  assert.equal(record(saved.savedSettings).model, finite ? 'TEST-claude-sonnet' : 'claude-opus-4-6');
   assert.equal(record(saved.savedSettings).effort, 'medium');
   assert.equal(record(saved.savedSettings).prompt, '');
   assert.equal(record(saved.savedSettings).skipPermissions, true);

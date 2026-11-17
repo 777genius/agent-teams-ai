@@ -324,7 +324,7 @@ function hasAnthropicFirstPartyRuntimeCatalog(
 ): boolean {
   return (
     providerStatus?.modelCatalog?.providerId === 'anthropic' &&
-    providerStatus.modelCatalog.source === 'anthropic-models-api' &&
+    ['anthropic-models-api', 'claude-sdk'].includes(providerStatus.modelCatalog.source) &&
     providerStatus.modelCatalog.status !== 'unavailable'
   );
 }
