@@ -1,3 +1,4 @@
+import { parseNewTeamProjectContextMode } from '@features/team-project-context/core';
 import {
   validateTeammateName,
   validateTeamName,
@@ -371,6 +372,7 @@ export function parseCreateTeamRequest(body: unknown): TeamCreateConfigRequest {
 
   const request: TeamCreateConfigRequest = {
     teamName,
+    projectContextMode: parseNewTeamProjectContextMode(payload.projectContextMode),
     runtimeSelectionVersion,
     members: parseCreateMembers(payload.members, providerId ?? 'anthropic'),
     ...(displayName ? { displayName } : {}),

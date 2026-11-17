@@ -10,6 +10,7 @@ import {
   validateAgentAttachmentSerializedIpcPayload,
 } from '@features/agent-attachments/main';
 import { readNativeInboxAttachmentCapability } from '@features/member-work-sync/main';
+import { parseNewTeamProjectContextMode } from '@features/team-project-context/core';
 import { persistNodeMemberSettingsRelaunch } from '@features/team-provisioning/main';
 import {
   classifyTeamReadWorkerFailure,
@@ -1784,6 +1785,12 @@ async function validateProvisioningRequest(
   }
 
   const payload = request as Partial<TeamCreateRequest>;
+  let projectContextMode: TeamCreateRequest['projectContextMode'];
+  try {
+    projectContextMode = parseNewTeamProjectContextMode(payload.projectContextMode);
+  } catch {
+    return { valid: false, error: 'projectContextMode must be shared or per_project' };
+  }
   if (payload.runtimeSelectionVersion !== undefined && payload.runtimeSelectionVersion !== 1)
     return {
       valid: false,
@@ -1961,6 +1968,7 @@ async function validateProvisioningRequest(
     value: {
       runtimeSelectionVersion: normalizeRuntimeSelectionVersion(payload.runtimeSelectionVersion),
       teamName,
+      projectContextMode,
       displayName: payload.displayName?.trim() || undefined,
       description: payload.description?.trim() || undefined,
       color: typeof payload.color === 'string' ? payload.color.trim() || undefined : undefined,
