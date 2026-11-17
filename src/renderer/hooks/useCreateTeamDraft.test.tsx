@@ -73,6 +73,46 @@ describe('useCreateTeamDraft', () => {
     localStorage.clear();
   });
 
+  it('defaults new and legacy unsent create drafts to per-project and persists an explicit shared selection', async () => {
+    loadSnapshotMock.mockResolvedValue(null);
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    let root = createRoot(host);
+    let current: ReturnType<typeof useCreateTeamDraft> | null = null;
+    await renderLoadedDraft(root, (draft) => {
+      current = draft;
+    });
+    expect(current?.projectContextMode).toBe('per_project');
+    act(() => {
+      current?.setProjectContextMode('shared');
+    });
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+    const saved = saveSnapshotMock.mock.calls.at(-1)?.[0];
+    expect(saved.projectContextMode).toBe('shared');
+
+    loadSnapshotMock.mockResolvedValue(saved);
+    root = createRoot(host);
+    await renderLoadedDraft(root, (draft) => {
+      current = draft;
+    });
+    expect(current?.projectContextMode).toBe('shared');
+    act(() => root.unmount());
+
+    loadSnapshotMock.mockResolvedValue({
+      ...saved,
+      projectContextMode: undefined,
+    });
+    root = createRoot(host);
+    await renderLoadedDraft(root, (draft) => {
+      current = draft;
+    });
+    expect(current?.projectContextMode).toBe('per_project');
+    act(() => root.unmount());
+  });
+
   it('migrates stored sync=false snapshots into create-team preferences', async () => {
     loadSnapshotMock.mockResolvedValue({
       version: 1,
