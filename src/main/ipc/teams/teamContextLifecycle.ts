@@ -105,7 +105,7 @@ export async function permanentlyDeleteLogicalTeam(
   }
 ): Promise<IpcResult<void>> {
   if (typeof logicalTeamName !== 'string' || !logicalTeamName.trim()) {
-    return ports.deleteLogical(true);
+    return ports.deleteLogical(false);
   }
   const meta = ports.meta ?? new TeamMetaStore();
   const registry = ports.registry ?? TeamProjectContextRegistry.fromCurrentApp();
@@ -145,7 +145,7 @@ export async function permanentlyDeleteLogicalTeam(
       );
       if (!forgotten) throw new Error('Context mapping changed during permanent deletion');
     }
-    return ports.deleteLogical(false);
+    return ports.deleteLogical(true);
   } catch (error) {
     return { success: false, error: error instanceof Error ? error.message : String(error) };
   }
