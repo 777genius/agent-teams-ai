@@ -49,7 +49,7 @@ export class TeamProjectContextRuntimeResolver {
     private readonly registry: ContextRegistry
   ) {}
 
-  private async getMode(teamName: string): Promise<TeamProjectContextMode> {
+  async getMode(teamName: string): Promise<TeamProjectContextMode> {
     const meta = await this.metaReader.getMeta(teamName);
     if (meta === null && await this.metaReader.metadataFileExists(teamName)) {
       throw new Error('Team metadata is unreadable; refusing shared-history fallback');
