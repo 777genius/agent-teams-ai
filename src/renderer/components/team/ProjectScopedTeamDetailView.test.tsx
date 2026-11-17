@@ -2,7 +2,7 @@ import React, { act } from 'react';
 import { createRoot } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { state, getView, launchTeam, openTeamTab } = vi.hoisted(() => {
+const { state, getView, launchTeam, openTeamTab, updateTabLabel } = vi.hoisted(() => {
   const state = {
     repositoryGroups: [],
     projects: [
@@ -17,7 +17,7 @@ const { state, getView, launchTeam, openTeamTab } = vi.hoisted(() => {
       builders: { displayName: 'Builders' },
     },
   };
-  return { state, getView: vi.fn(), launchTeam: vi.fn(), openTeamTab: vi.fn() };
+  return { state, getView: vi.fn(), launchTeam: vi.fn(), openTeamTab: vi.fn(), updateTabLabel: vi.fn() };
 });
 
 vi.mock('@renderer/store', () => ({
@@ -29,6 +29,7 @@ vi.mock('@renderer/store', () => ({
         activeTabId: 'alias-tab',
         getAllPaneTabs: () => [{ id: 'alias-tab', type: 'team', teamName: 'ptc-a' }],
         openTeamTab,
+        updateTabLabel,
       }),
     }
   ),
@@ -87,6 +88,7 @@ describe('ProjectScopedTeamDetailView project switching', () => {
     getView.mockReset();
     launchTeam.mockReset();
     openTeamTab.mockReset();
+    updateTabLabel.mockReset();
     state.selectedProjectId = 'project-a';
     state.activeProjectId = 'project-a';
     host = document.createElement('div');
@@ -140,6 +142,31 @@ describe('ProjectScopedTeamDetailView project switching', () => {
     expect(openTeamTab).toHaveBeenCalledWith('builders', '/TEST/a');
     expect(host.querySelector('[data-team]')).toBeNull();
     expect(host.querySelector('[data-testid="mode-picker"]')).toBeNull();
+  });
+
+  it('keeps a retained native task/chat history open after the logical team switches to shared', async () => {
+    getView.mockResolvedValue({
+      mode: 'per_project',
+      state: 'retained',
+      logicalTeamName: 'builders',
+      executionTeamName: 'ptc-a',
+      workContextId: 'context-ptc-a',
+      projectPath: '/TEST/a',
+    });
+    await act(async () => root.render(
+      React.createElement(ProjectScopedTeamDetailView, { teamName: 'ptc-a' })
+    ));
+    await settle();
+    expect(getView).toHaveBeenCalledWith('ptc-a', '/TEST/a');
+    expect(host.querySelector('[data-team]')?.getAttribute('data-team')).toBe('ptc-a');
+    expect(openTeamTab).not.toHaveBeenCalled();
+    expect(updateTabLabel).toHaveBeenCalledWith(
+      'alias-tab', expect.stringContaining('builders')
+    );
+    expect(host.textContent).toContain('projectContextView.retainedHistory');
+    const button = host.querySelector('button');
+    await act(async () => button?.click());
+    expect(openTeamTab).toHaveBeenCalledWith('builders');
   });
 
   it('keeps the pre-feature shared team name unchanged', async () => {

@@ -3946,6 +3946,9 @@ export default interface Resources {
       "tooltipTitle": "Context limit"
     },
       "projectContextView": {
+      "retainedHistory": "Retained project history",
+      "openCurrent": "Open current team history",
+
       "modeChange": {
         "title": "Change team history mode?",
         "description": "Stop the team first. Existing tasks, conversations and sessions remain where they are; histories are never combined or deleted.",

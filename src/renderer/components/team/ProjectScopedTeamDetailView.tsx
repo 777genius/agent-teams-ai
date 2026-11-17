@@ -157,6 +157,19 @@ export function ProjectScopedTeamDetailView({
 
   const context = result?.key === key ? result.context : undefined;
   const error = result?.key === key ? result.error : undefined;
+  const retainedOwner = context?.state === 'retained' ? context.logicalTeamName : null;
+  useEffect(() => {
+    if (!isActive || !retainedOwner) return;
+    const state = useStore.getState();
+    const current = state.getAllPaneTabs().find(
+      (tab) => tab.id === state.activeTabId && tab.type === 'team' && tab.teamName === teamName
+    );
+    if (current) {
+      state.updateTabLabel(
+        current.id, `${retainedOwner} · ${t('projectContextView.retainedHistory')}`
+      );
+    }
+  }, [isActive, retainedOwner, teamName, t]);
   const redirectTeam = context?.state === 'redirect' ? context.logicalTeamName : null;
   const redirectProject = context?.state === 'redirect' ? context.projectPath : null;
   useEffect(() => {
@@ -195,6 +208,37 @@ export function ProjectScopedTeamDetailView({
       setLaunchingKey((current) => current === targetKey ? null : current);
     }
   }, [launchingKey, refresh, teamName]);
+
+  if (context?.state === 'retained') {
+    // Only a backend-verified, owned historical alias can reach this branch.
+    // The logical team's selected mode still controls all future launches.
+    return (
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border px-4 py-2 text-xs text-text-muted">
+          <span>
+            {context.logicalTeamName} · {t('projectContextView.retainedHistory')} · {context.projectPath}
+          </span>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => useStore.getState().openTeamTab(context.logicalTeamName)}
+          >
+            {t('projectContextView.openCurrent')}
+          </Button>
+        </div>
+        <div className="flex min-h-0 min-w-0 flex-1" data-team-name={context.executionTeamName}>
+          <TeamDetailView
+            key={context.workContextId}
+            teamName={context.executionTeamName}
+            logicalTeamName={context.logicalTeamName}
+            teamDisplayName={context.logicalTeamName}
+            isActive={isActive}
+            isPaneFocused={isPaneFocused}
+          />
+        </div>
+      </div>
+    );
+  }
 
   if (context?.state === 'ready') {
     if (context.mode === 'shared') {

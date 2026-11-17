@@ -126,6 +126,9 @@
     }
   },
   "projectContextView": {
+      "retainedHistory": "Retained project history",
+      "openCurrent": "Open current team history",
+
     "modeChange": {"title":"Change team history mode?","description":"Stop the team first. Existing tasks, conversations and sessions remain where they are; histories are never combined or deleted.","confirm":"Change mode"},
     "loading": "Loading team project history…",
     "selectProject": "Select a project in the sidebar to view this team's tasks and chats.",

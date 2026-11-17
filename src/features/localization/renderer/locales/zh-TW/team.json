@@ -126,6 +126,9 @@
     }
   },
   "projectContextView": {
+      "retainedHistory": "保留的專案歷史紀錄",
+      "openCurrent": "開啟目前的團隊歷史",
+
     "modeChange": {
       "title": "要變更團隊歷史紀錄模式嗎？",
       "description": "請先停止團隊。現有任務、對話和工作階段會保留在原本的位置；歷史紀錄不會合併或刪除。",
