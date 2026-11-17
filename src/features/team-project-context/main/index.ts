@@ -12,3 +12,5 @@ export type {
   ResolvedTeamWorkContext,
   TeamWorkContextAddress,
 } from './TeamProjectContextRuntimeResolver';
+
+export { TeamProjectContextDraftMaterializer } from './TeamProjectContextDraftMaterializer';

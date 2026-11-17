@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { TeamProjectContextDraftMaterializer } from '../../../src/features/team-project-context/main/TeamProjectContextDraftMaterializer';
 
 import type { ResolvedTeamWorkContext } from '../../../src/features/team-project-context/main';
+import type { TeamCreateRequest } from '../../../src/shared/types/team';
 
 const reserved: ResolvedTeamWorkContext = {
   mode: 'per_project',
@@ -16,7 +17,7 @@ const reserved: ResolvedTeamWorkContext = {
 function fixture(result: ResolvedTeamWorkContext = reserved) {
   const context = { reserveForProvisioning: vi.fn(async () => result) };
   const store = {
-    getSavedRequest: vi.fn(async (name: string) =>
+    getSavedRequest: vi.fn(async (name: string): Promise<TeamCreateRequest | null> =>
       name === 'builders'
         ? { teamName: 'builders', cwd: '/sandbox/a', members: [{ name: 'alice' }], prompt: 'rules' }
         : null),
