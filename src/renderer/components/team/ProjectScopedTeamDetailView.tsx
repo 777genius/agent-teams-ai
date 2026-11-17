@@ -199,21 +199,21 @@ export function ProjectScopedTeamDetailView({
   if (context?.state === 'ready') {
     if (context.mode === 'shared') {
       return (
-        <div className="flex min-h-0 flex-1 flex-col">
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col">
           <div className="border-b border-border px-4 py-2">
             <TeamHistoryModePicker
               teamName={teamName} mode="shared"
               onChanged={() => refresh(() => activeKeyRef.current === key)}
             />
           </div>
-          <div className="flex min-h-0 flex-1">
+          <div className="flex min-h-0 min-w-0 flex-1">
             <TeamDetailView teamName={teamName} isActive={isActive} isPaneFocused={isPaneFocused} />
           </div>
         </div>
       );
     }
     return (
-      <div className="flex min-h-0 flex-1 flex-col">
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col">
         <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border px-4 py-2 text-xs text-text-muted">
           <span>{logicalDisplayName} · {selectedProjectPath}</span>
           <TeamHistoryModePicker
@@ -221,7 +221,7 @@ export function ProjectScopedTeamDetailView({
             onChanged={() => refresh(() => activeKeyRef.current === key)}
           />
         </div>
-        <div className="flex min-h-0 flex-1" data-team-name={context.executionTeamName}>
+        <div className="flex min-h-0 min-w-0 flex-1" data-team-name={context.executionTeamName}>
           <TeamDetailView
             key={context.workContextId}
             teamName={context.executionTeamName}
@@ -251,7 +251,7 @@ export function ProjectScopedTeamDetailView({
     (context?.state === 'empty' || context?.state === 'pending');
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col">
+    <div className="flex min-h-0 min-w-0 flex-1 flex-col">
       {context && context.state !== 'redirect' && (
         <div className="border-b border-border px-4 py-2">
           <TeamHistoryModePicker
