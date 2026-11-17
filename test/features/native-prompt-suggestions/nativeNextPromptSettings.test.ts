@@ -30,22 +30,27 @@ function fixture(raw?: unknown) {
   return { file, manager: track(file) };
 }
 
-describe('native suggestion opt-in, disabled by default', () => {
-  it('never enables extra inference from missing or non-boolean persisted values', () => {
-    const { manager } = fixture({ general: { nativeNextPromptSuggestionsEnabled: 'true' } });
+describe('native suggestions setting, enabled by default', () => {
+  it('is on when missing, honours a saved false, and never coerces a malformed value', () => {
+    expect(fixture().manager.getConfig().general.nativeNextPromptSuggestionsEnabled).toBe(true);
+    for (const malformed of ['false', 0, null, {}]) {
+      const { manager } = fixture({ general: { nativeNextPromptSuggestionsEnabled: malformed } });
+      expect(manager.getConfig().general.nativeNextPromptSuggestionsEnabled).toBe(true);
+    }
+    const { manager } = fixture({ general: { nativeNextPromptSuggestionsEnabled: false } });
     expect(manager.getConfig().general.nativeNextPromptSuggestionsEnabled).toBe(false);
   });
 
   it('persists only an explicit boolean and new session captures can read it', async () => {
     const { manager, file } = fixture();
-    expect(manager.getConfig().general.nativeNextPromptSuggestionsEnabled).toBe(false);
-    const enabled = manager.updateConfig('general', { nativeNextPromptSuggestionsEnabled: true });
-    expect(enabled.general.nativeNextPromptSuggestionsEnabled).toBe(true);
-    await manager.waitForPersistence();
-    expect(track(file).getConfig().general.nativeNextPromptSuggestionsEnabled).toBe(true);
-    manager.updateConfig('general', { nativeNextPromptSuggestionsEnabled: false });
+    expect(manager.getConfig().general.nativeNextPromptSuggestionsEnabled).toBe(true);
+    const disabled = manager.updateConfig('general', { nativeNextPromptSuggestionsEnabled: false });
+    expect(disabled.general.nativeNextPromptSuggestionsEnabled).toBe(false);
     await manager.waitForPersistence();
     expect(track(file).getConfig().general.nativeNextPromptSuggestionsEnabled).toBe(false);
+    manager.updateConfig('general', { nativeNextPromptSuggestionsEnabled: true });
+    await manager.waitForPersistence();
+    expect(track(file).getConfig().general.nativeNextPromptSuggestionsEnabled).toBe(true);
   });
 
   it('refuses forged renderer settings with type coercion', () => {

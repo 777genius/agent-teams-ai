@@ -26,3 +26,15 @@ suggestion text to this SSE endpoint, even when a browser subscribes to the
 feature channel. Electron IPC is scoped to the currently authorized renderer.
 Do not re-enable HTTP publication until a per-owner/context authenticated SSE
 route (including disconnect/revocation isolation) has actual E2E evidence.
+
+## Default (2026-11-17)
+
+The `general.nativeNextPromptSuggestionsEnabled` setting is **on by default** (Settings → General).
+Earlier plan documents describe it as default-off; they are historical. A saved `false` is kept, and a
+malformed saved value falls back to the default. Claude's suggestions are extra inference on the user's
+own subscription, so the switch stays visible and can be turned off at any time.
+
+The composer needs the member's Host id to show a row. It comes from the connection's own member
+bindings (by name) and is refined by the roster read, so a failing `team.roster.read` no longer hides
+suggestions. Suggestions are produced by the vendor, not by us: weaker models (Claude Haiku in our
+measurements) may never offer one. See `scripts/e2e/native-prompt-suggestions-real/README.md`.

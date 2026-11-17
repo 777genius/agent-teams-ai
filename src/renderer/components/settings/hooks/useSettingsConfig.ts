@@ -209,7 +209,8 @@ export function useSettingsConfig(): UseSettingsConfigReturn {
         theme: displayConfig?.general?.theme ?? 'dark',
         defaultTab: displayConfig?.general?.defaultTab ?? 'dashboard',
         multimodelEnabled: displayConfig?.general?.multimodelEnabled ?? true,
-        nativeNextPromptSuggestionsEnabled: displayConfig?.general?.nativeNextPromptSuggestionsEnabled === true,
+        nativeNextPromptSuggestionsEnabled:
+          displayConfig?.general?.nativeNextPromptSuggestionsEnabled ?? true,
         claudeRootPath: displayConfig?.general?.claudeRootPath ?? null,
         agentLanguage: displayConfig?.general?.agentLanguage ?? 'system',
         appLocale: displayConfig?.general?.appLocale ?? 'system',

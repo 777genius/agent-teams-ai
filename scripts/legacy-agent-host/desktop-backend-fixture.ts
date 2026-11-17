@@ -167,13 +167,15 @@ export async function prepareDesktopBackendFixture(
     'data',
   ])
     await mkdir(join(root, directory), { mode: 0o700 });
-  if (options.seedUiTask || options.seedUiPreferences)
-    await writeFile(
-      join(root, 'claude/agent-teams-config.json'),
-      JSON.stringify({ general: { appLocale: 'en', agentLanguage: 'en', theme: 'dark',
-        ...(nativeNextPromptUi ? { nativeNextPromptSuggestionsEnabled: true } : {}) } }),
-      { mode: 0o600 }
-    );
+  // Native suggestions are on by default in the product. Offline fixtures pin them off so unrelated
+  // proofs never make extra model requests; only the suggestion UI proof opts in.
+  await writeFile(
+    join(root, 'claude/agent-teams-config.json'),
+    JSON.stringify({ general: {
+      ...(options.seedUiTask || options.seedUiPreferences ? { appLocale: 'en', agentLanguage: 'en', theme: 'dark' } : {}),
+      nativeNextPromptSuggestionsEnabled: nativeNextPromptUi } }),
+    { mode: 0o600 }
+  );
   // The outer and nested pnpm invocations use the same selected Corepack bytes
   // and private HOME/cache. PATH must never select an unrelated global shim.
   const pnpmStubSource = options.candidateRuntime

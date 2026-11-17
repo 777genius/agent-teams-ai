@@ -394,7 +394,7 @@ const DEFAULT_CONFIG: AppConfig = {
     theme: 'dark',
     defaultTab: 'dashboard',
     multimodelEnabled: true,
-    nativeNextPromptSuggestionsEnabled: false,
+    nativeNextPromptSuggestionsEnabled: true, // on by default; a saved boolean is kept, malformed falls back
     claudeRootPath: null,
     agentLanguage: 'system',
     appLocale: 'system',
@@ -652,8 +652,8 @@ export class ConfigManager {
       ...(loaded.general ?? {}),
     };
     mergedGeneral.multimodelEnabled = true;
-    // Existing or tampered config cannot enable extra model usage by type coercion.
-    mergedGeneral.nativeNextPromptSuggestionsEnabled = loaded.general?.nativeNextPromptSuggestionsEnabled === true;
+    if (typeof mergedGeneral.nativeNextPromptSuggestionsEnabled !== 'boolean')
+      mergedGeneral.nativeNextPromptSuggestionsEnabled = DEFAULT_CONFIG.general.nativeNextPromptSuggestionsEnabled;
     mergedGeneral.claudeRootPath = normalizeConfiguredClaudeRootPath(mergedGeneral.claudeRootPath);
     mergedGeneral.appLocale = normalizeAppLocalePreference(mergedGeneral.appLocale);
     // Merge triggers: preserve existing triggers, add missing builtin ones
