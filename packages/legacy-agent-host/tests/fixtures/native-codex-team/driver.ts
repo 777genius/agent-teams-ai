@@ -87,6 +87,14 @@ const digest = (value: string) => createHash('sha256').update(value, 'utf8').dig
 export async function nativeCodexDriver(options: {
   root: string; binary: string; modelUrl: string; endpoint: TeamMcpEndpoint;
   candidate?: Candidate;
+  /** Optional original Host-like observation port, never a Session SPI change. */
+  promptSuggestions?: {
+    eligible(input: Readonly<{ inputId: string; operationRef: string }>): boolean;
+    offer(value: Readonly<{
+      provider: 'claude' | 'codex'; sessionRef: string; inputId: string;
+      operationRef: string; nativeSessionRef: string; nativeTurnRef?: string; text: string;
+    }>): void | Promise<void>;
+  };
   currentBinding(): boolean;
   onCapturedChild(child: ChildProcess): void;
 }) {
@@ -327,6 +335,7 @@ ${REQUIRED_TOOLS.map(name => `[mcp_servers.team.tools.${name}]\napproval_mode = 
       sessionId: `TEST-codex-${basename(root)}`, generation: candidate?.phase === 'resume' ? 2 : 1 },
     configRevision: candidate ? 'TEST-codex-0.169.0-config' : 'TEST-codex-config-1', protocolRevision: candidate?.version ?? '0.162.0',
     trustedBinding: `TEST-bob-${basename(root)}`, accountBinding: 'TEST-dummy-codex-account',
+    ...(options.promptSuggestions ? { promptSuggestions: options.promptSuggestions } : {}),
     transport, initialize: { clientInfo: { name: 'TEST-native-team', version: '1' }, capabilities: { experimentalApi: true } },
     threadParams: { cwd: workspace, model, approvalPolicy: candidate ? 'on-request' : 'never', sandbox: 'workspace-write',
       developerInstructions: `${CONTEXT_MARKER}. You are bob in test-codex-team; work only in ${workspace}.` },

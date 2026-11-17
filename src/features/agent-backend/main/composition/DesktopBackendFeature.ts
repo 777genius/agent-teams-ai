@@ -5,9 +5,11 @@ import {
   crossTeamOwnerResourceRef,
   crossTeamTeamResourceRef,
 } from '@agent-teams/legacy-agent-host/cross-team';
+import { projectHostPromptSuggestion } from '@features/native-prompt-suggestions/main';
 import { captureManagedProviderRuntimePreferences } from '@features/runtime-provider-management/main';
 import { createdTeamSelectionSignature } from '@shared/utils/createdTeamReadiness';
 
+import { hostTeamSelectionKey } from '../../contracts/teamSelection';
 import { BackendOperationsFacade } from '../adapters/input/BackendOperationsFacade';
 import {
   assertBackendRequestGuard,
@@ -53,6 +55,7 @@ import type {
   TeamRegistryRecord,
 } from '@agent-teams/legacy-agent-host/team-registry/contracts';
 import type { ApplicationCommandRunner } from '@features/application-command-ledger';
+import type { NativeNextPromptCandidate } from '@features/native-prompt-suggestions/contracts';
 import type { TeamCreateRequest } from '@shared/types/team';
 
 type InitializationPhase =
@@ -76,6 +79,10 @@ export interface DesktopBackendFeatureOptions {
   /** Existing durable Main ledger is supplied before renderer work admission. */
   commandRunner?: () => ApplicationCommandRunner | null;
   modelIntents?: TeamModelProbeIntents;
+  /** Ephemeral, validated Host output; the Main shell owns IPC and HTTP publication. */
+  onNativePromptSuggestion?: (value: NativeNextPromptCandidate) => void;
+  /** Immutable for each captured Host launch; global settings take effect on app restart. */
+  nativeNextPromptEnabled?: boolean;
 }
 
 export class DesktopBackendFeature {
@@ -164,7 +171,25 @@ export class DesktopBackendFeature {
           ownerId: owner.ownerId,
           revision: owner.revision,
           storageRoot: owner.storageRoot,
-          client: new CapturedHostClient(owner.profile),
+          client: new CapturedHostClient(owner.profile, (raw) => {
+            if (this.sealed || this.state !== 'ready') return;
+            const value = raw && typeof raw === 'object' && !Array.isArray(raw) ? raw as Record<string, unknown> : null;
+            if (typeof value?.teamId !== 'string') return;
+            const matches = this.handleDefinitions().filter((entry) =>
+              ownerKey(entry.owner) === ownerKey(owner) &&
+              entry.scope.teamId === value.teamId && entry.scope.runId === value.runId
+            );
+            // Deduplicate only equivalent descriptor handles; otherwise reject.
+            const unique = new Map(matches.map((entry) => [entry.handleId, entry]));
+            if (unique.size !== 1) return;
+            const selected = unique.values().next().value!;
+            // Original roster remains authoritative.
+            if (!selected.members.some(member => member.memberId === value.memberId)) return;
+            const projected = projectHostPromptSuggestion(
+              raw, hostTeamSelectionKey(selected.handleId), selected.scope.teamId, selected.scope.runId
+            );
+            if (projected) this.options.onNativePromptSuggestion?.(projected);
+          }, this.options.nativeNextPromptEnabled === true),
         };
         router.registerOwner(captured);
         this.clients.set(ownerKey(owner), captured);

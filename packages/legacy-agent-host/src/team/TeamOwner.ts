@@ -179,6 +179,7 @@ export class TeamOwner {
     this.deliveryAuthority = createTeamDeliveryAuthority({
       binding: this.binding,
       store: this.store,
+      readInbox: (memberName) => this.policy.readInbox(memberName),
       state: () => this.state(),
       authorize: (principal, permission) => this.authorize(principal, permission),
       runtimeBindings: this.runtimeBindings,
@@ -410,6 +411,7 @@ export class TeamOwner {
     return this.deliveryAuthority.authorizeIntent(raw, action);
   }
 
+  isOriginalHumanDirectDelivery(raw: ImmutableDelivery): boolean { return this.deliveryAuthority.isOriginalHumanDirect(raw); }
   private finishBootstrap(state: OwnerState): void {
     const expected = {
       name: this.binding.teamName,

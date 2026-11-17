@@ -9,12 +9,14 @@ import type { ProviderManagementCoordinator } from './ProviderManagementCoordina
 import { assertRuntimeWorktree } from './runtimeWorktreeCapture.js';
 import { captureRuntimeControlAuthority } from './runtimeControlAuthority.js';
 import { resolveRuntimeControlEntry } from './resolveRuntimeControlEntry.js';
+import { checkCapturedPromptOperation } from './checkCapturedPromptOperation.js';
 import { interactionPreviewInput } from './HostInteractionControls.js';
 import {
   runtimeMember as member,
   runtimeControlId as id,
   runtimeActivityCursor as activityCursor,
   runtimeInteraction as interaction,
+  runtimeReadWithPromptProof,
 } from './runtimeControlValues.js';
 import { decodeActivityCursor } from './runtimeActivityProjection.js';
 import { restoreMemberSession } from './restoreMemberSession.js';
@@ -94,7 +96,9 @@ export async function executeCapturedRuntimeControl(
                 ? member.extend({ checkpointId: id }).strict().parse(raw)
                 : operation === 'activity.feed'
                   ? member.extend({ cursor: activityCursor }).strict().parse(raw)
-                  : member.parse(raw);
+                  : operation === 'read'
+                    ? runtimeReadWithPromptProof.parse(raw)
+                    : member.parse(raw);
   const entry = resolveRuntimeControlEntry({
     entries: options.entries.values(),
     capturedTeam: options.capturedTeams.get(teamId),
@@ -304,5 +308,16 @@ export async function executeCapturedRuntimeControl(
       : entry.team.owner.authorizeRuntimeAccess(options.principalId, entry.binding, 'control'))
   )
     throw new RuntimeOwnerError('forbidden');
-  return options.projection(entry, record);
+  const projected = options.projection(entry, record);
+  if (operation !== 'read') return projected;
+  const proof = runtimeReadWithPromptProof.parse(raw).nativePromptProof;
+  if (!proof) return projected;
+  if (!projected || typeof projected !== 'object' || Array.isArray(projected))
+    return { nativePromptCurrent: false };
+  return {
+    ...projected,
+    nativePromptCurrent: checkCapturedPromptOperation({
+      entry, record, projection: projected, hostIncarnation: options.hostIncarnation, proof,
+    }),
+  };
 }

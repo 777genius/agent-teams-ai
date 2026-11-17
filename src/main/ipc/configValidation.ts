@@ -458,6 +458,7 @@ function validateGeneralSection(data: unknown): ValidationSuccess<'general'> | V
     'theme',
     'defaultTab',
     'multimodelEnabled',
+    'nativeNextPromptSuggestionsEnabled',
     'claudeRootPath',
     'agentLanguage',
     'appLocale',
@@ -474,7 +475,7 @@ function validateGeneralSection(data: unknown): ValidationSuccess<'general'> | V
       return { valid: false, error: `general.${key} is not a valid setting` };
     }
 
-    switch (key as keyof GeneralConfig) {
+    switch (key) {
       case 'launchAtLogin':
         if (typeof value !== 'boolean') {
           return { valid: false, error: `general.${key} must be a boolean` };
@@ -501,12 +502,6 @@ function validateGeneralSection(data: unknown): ValidationSuccess<'general'> | V
           };
         }
         result.defaultTab = value;
-        break;
-      case 'multimodelEnabled':
-        if (typeof value !== 'boolean') {
-          return { valid: false, error: 'general.multimodelEnabled must be a boolean' };
-        }
-        result.multimodelEnabled = value;
         break;
       case 'claudeRootPath':
         if (value === null) {
@@ -547,6 +542,8 @@ function validateGeneralSection(data: unknown): ValidationSuccess<'general'> | V
         }
         result.appLocale = value;
         break;
+      case 'nativeNextPromptSuggestionsEnabled':
+      case 'multimodelEnabled':
       case 'autoExpandAIGroups':
       case 'useNativeTitleBar':
       case 'telemetryEnabled':
@@ -554,13 +551,7 @@ function validateGeneralSection(data: unknown): ValidationSuccess<'general'> | V
         if (typeof value !== 'boolean') {
           return { valid: false, error: `general.${key} must be a boolean` };
         }
-        result[
-          key as
-            | 'autoExpandAIGroups'
-            | 'useNativeTitleBar'
-            | 'telemetryEnabled'
-            | 'externalAgentCdpEnabled'
-        ] = value;
+        result[key] = value;
         break;
       default:
         return { valid: false, error: `Unsupported general key: ${key}` };

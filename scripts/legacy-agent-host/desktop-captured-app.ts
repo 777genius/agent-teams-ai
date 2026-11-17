@@ -221,7 +221,8 @@ export async function verifyCapturedDesktopBinding(options: {
       assert.equal(matches.length, 1); assert.deepEqual(matches[0], retained);
     }
   } else {
-    assert.equal(connections.bindings.length, ['task-board-cross-team-ui', 'cross-team-ui'].includes(mode) ? 3 : 1);
+    assert.equal(connections.bindings.length, ['task-board-cross-team-ui', 'cross-team-ui'].includes(mode)
+      ? 3 : mode === 'native-next-prompt-mixed-ui' ? 2 : 1);
   }
   const binding = object(connections.bindings.find((value) => object(object(value).handle).handleId === fixture.handleId));
   assert.deepEqual(binding.handle, { handleId: fixture.handleId });

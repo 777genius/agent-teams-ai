@@ -151,6 +151,7 @@ import type {
   MemberWorkSyncStatusRequest,
   MemberWorkSyncTeamMetrics,
 } from '@features/member-work-sync/contracts';
+import type { NativeNextPromptApi } from '@features/native-prompt-suggestions/contracts';
 import type { OrganizationsElectronApi } from '@features/organizations/contracts';
 import type { ProjectFolderElectronApi } from '@features/project-folder/contracts';
 import type { RecentProjectsElectronApi } from '@features/recent-projects/contracts';
@@ -1048,6 +1049,9 @@ export interface ElectronAPI
 
   // Member log stream API
   memberLogStream: MemberLogStreamApi;
+
+  // Optional until the captured Host advertises this native feature.
+  nativePromptSuggestions?: NativeNextPromptApi;
 
   // Organization map API
   organizations: OrganizationsElectronApi;

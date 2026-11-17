@@ -14,6 +14,20 @@ import type { CodexEvidenceCapture } from '../../evidence/codexCaptureContracts.
 import type { OpenCodeEvidenceCapture } from '../../evidence/opencodeCaptureContracts.js';
 import type { NativeSessionCommandCapability } from '../../team/nativeSessionCommand.js';
 
+/** Host-authenticated, optional native observation; never transports a product command. */
+export interface MemberPromptSuggestionBinding {
+  readonly eligible: (input: Readonly<{ inputId: string; operationRef: string }>) => boolean;
+  readonly offer: (candidate: Readonly<{
+    provider: 'claude' | 'codex';
+    sessionRef: string;
+    inputId: string;
+    operationRef: string;
+    nativeSessionRef: string;
+    nativeTurnRef?: string;
+    text: string;
+  }>) => void;
+}
+
 export interface MemberProviderContext {
   profile: RuntimeMemberProfile;
   processCustody?: RegisteredProcessRootSource;
@@ -21,6 +35,7 @@ export interface MemberProviderContext {
   endpoint: TeamMcpEndpoint;
   connection: TeamMcpConnection;
   instructions: string;
+  promptSuggestions?: MemberPromptSuggestionBinding;
   subagents?: import('@agent-teams/provider-implementations/claude').ClaudeSubagentPort;
   attachments?: NonNullable<ClaudeConfig['attachments']>;
   toolEvidence?: ToolEvidenceCapture;

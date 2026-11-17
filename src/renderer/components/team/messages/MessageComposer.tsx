@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
 import { useDirectMessageQueue } from '@features/manual-message-queue/renderer';
+import { useComposerNativeNextPrompt } from '@features/native-prompt-suggestions/renderer';
 import { normalizeConversationParticipant } from '@features/team-direct-chats/renderer';
 import { api } from '@renderer/api';
 import { AttachmentCatalogRefresh } from '@renderer/components/team/attachments/AttachmentCatalogRefresh';
@@ -76,6 +77,7 @@ import {
 } from './useComposerDraftAddressRequest';
 import { useComposerSubmissionFeedback } from './useComposerSubmissionFeedback';
 import { useComposerFocus, useComposerTextarea } from './useComposerTextarea';
+import { useFileRestrictionNotice } from './useFileRestrictionNotice';
 import { useFloatingComposerWidth } from './useFloatingComposerWidth';
 import { useMessageComposerDraft } from './useMessageComposerDraft';
 import { useMessageComposerRevisionCancel } from './useMessageComposerRevisionCancel';
@@ -226,8 +228,6 @@ const MemberMessageComposer = ({
   const [isDragOver, setIsDragOver] = useState(false);
   const dragCounterRef = useRef(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [fileRestrictionError, setFileRestrictionError] = useState<string | null>(null);
-  const fileRestrictionTimerRef = useRef(0);
   const dismissMentionsRef = useRef<(() => void) | null>(null);
 
   // Cross-team state
@@ -626,6 +626,19 @@ const MemberMessageComposer = ({
     disabled: isContextSwitching || sending || isLaunchBlocking,
     isCrossTeam,
   });
+  const isCompactLayout = layout === 'compact';
+  const nativeSuggestion = useComposerNativeNextPrompt({
+    teamName, recipient: effectiveRecipient,
+    memberId: selectedMember?.runtimeOwner === 'captured-host' ? selectedMember.hostMemberId : undefined,
+    draft, focusComposerTextarea,
+    editable: draft.address.target.kind === 'direct' && !groupChatSelected &&
+      !isCrossTeam && !!isTeamAlive && !sending && !isContextSwitching &&
+      !isLaunchBlocking && draft.isLoaded && !draft.isRestoring,
+    editingQueueOrRevision: activeRevision !== null || revisionPreparation != null,
+    compact: isCompactLayout,
+    labels: [t('messageComposer.suggestions.insert'), t('messageComposer.suggestions.dismiss'),
+      t('messageComposer.suggestions.tab')],
+  });
   const handleCycleActionMode = useCallback(() => {
     if (sending) return;
     const modes: ActionMode[] = canDelegate ? ['do', 'ask', 'delegate'] : ['do', 'ask'];
@@ -633,21 +646,9 @@ const MemberMessageComposer = ({
     setActionMode(modes[(idx + 1) % modes.length]);
   }, [actionMode, canDelegate, sending, setActionMode]);
 
-  const showFileRestrictionError = useCallback(
-    (reason?: string) => {
-      setFileRestrictionError(
-        reason ??
-          attachmentRestrictionReason ??
-          attachmentPayloadRestrictionReason ??
-          t('messageComposer.attachments.restrictions.leadOnly')
-      );
-      window.clearTimeout(fileRestrictionTimerRef.current);
-      fileRestrictionTimerRef.current = window.setTimeout(() => {
-        setFileRestrictionError(null);
-      }, 4000);
-    },
-    [attachmentPayloadRestrictionReason, attachmentRestrictionReason, t]
-  );
+  const { fileRestrictionError, setFileRestrictionError, showFileRestrictionError } =
+    useFileRestrictionNotice(t('messageComposer.attachments.restrictions.leadOnly'),
+      attachmentRestrictionReason, attachmentPayloadRestrictionReason);
 
   const { validateFiles: validateSelectedAttachmentFiles, validatePayloads } =
     useAttachmentValidation(selectedMember, resolveDeclaration, showFileRestrictionError);
@@ -656,6 +657,7 @@ const MemberMessageComposer = ({
     if (!canSend) return;
     if (!validatePayloads(draft.attachments)) return;
     dismissMentionsRef.current?.();
+    nativeSuggestion.invalidate();
     onSubmitIntent?.();
     const attemptId = createPendingSendId();
     const submissionAddressKey = draft.addressKey;
@@ -762,6 +764,7 @@ const MemberMessageComposer = ({
     focusComposerTextarea,
     onRevisionComplete,
     onSubmitIntent,
+    nativeSuggestion,
     submissionFeedback,
     taskSuggestions,
     teamName,
@@ -788,11 +791,6 @@ const MemberMessageComposer = ({
     [canAttach, draftAddFiles, showFileRestrictionError, validateSelectedAttachmentFiles]
   );
 
-  // Cleanup restriction error timer on unmount
-  useEffect(() => {
-    const ref = fileRestrictionTimerRef;
-    return () => window.clearTimeout(ref.current);
-  }, []);
 
   const handleDragEnter = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -866,7 +864,6 @@ const MemberMessageComposer = ({
   const remaining = MAX_TEXT_LENGTH - trimmed.length;
   const hasAttachmentPreviewContent =
     draft.attachments.length > 0 || Boolean(draft.attachmentError ?? fileRestrictionError);
-  const isCompactLayout = layout === 'compact';
   const floatingAdaptiveStyle = useFloatingComposerWidth({
     enabled: widthMode === 'floating-adaptive',
     text: draft.text,
@@ -1095,6 +1092,7 @@ const MemberMessageComposer = ({
         }}
       />
       {manualQueue.list}
+      {nativeSuggestion.row}
       <div className="relative">
         <DropZoneOverlay
           active={isDragOver}
@@ -1117,7 +1115,9 @@ const MemberMessageComposer = ({
           }
           value={draft.text}
           readOnly={draft.isRestoring}
-          onValueChange={draft.setText}
+          onCompositionStart={nativeSuggestion.onCompositionStart}
+          onCompositionEnd={nativeSuggestion.onCompositionEnd}
+          onValueChange={nativeSuggestion.onValueChange}
           suggestions={mentionSuggestions}
           teamSuggestions={teamMentionSuggestions}
           taskSuggestions={taskSuggestions}
@@ -1129,6 +1129,8 @@ const MemberMessageComposer = ({
           projectPath={projectPath}
           onFileChipInsert={draft.addChip}
           onShiftTab={handleCycleActionMode}
+          onNativeNextPromptTab={nativeSuggestion.onTab}
+          onNativeNextPromptEscape={nativeSuggestion.onEscape}
           dismissMentionsRef={dismissMentionsRef}
           extraTips={[t('messageComposer.input.slashTip')]}
           minRows={isCompactLayout ? 1 : 2}

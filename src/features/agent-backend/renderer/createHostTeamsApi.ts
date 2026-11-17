@@ -362,6 +362,7 @@ export function createHostTeamsApi(
         const settings = configuredMembers.map((member) => ({
           ...member.settings,
           name: member.name,
+          hostMemberId: member.memberId,
           configuredSettingsFingerprint: member.settingsFingerprint,
           ...(member.role === 'lead' && saved
             ? {
