@@ -766,9 +766,7 @@ export function buildTeamCtlOpsInstructions(teamName: string, leadName: string):
       `  When reviewFlow is agent_approval, call review_approve EXACTLY ONCE per review. Include feedback in the note field. Do not call it twice.`,
       `- Complete AI review when reviewFlow is human_approval or lead_then_human: review_complete { teamName: "${teamName}", taskId: "<id>", from: "${leadName}", expectedReviewRequestId: "<reviewRequestId from the reviewed cycle>", note?: "<note>" }`,
       `  Read reviewFlow and reviewFlowPrompt with kanban_get at decision time; follow reviewFlowPrompt (the owner's extra review instructions, which never change who may approve). Save reviewRequestId from the review request or review_start. Never fetch a newer ID at completion. review_complete returns the task to Done; only a human can approve it. When reviewFlow is lead_then_human, a reviewer's review_complete hands the task to YOU for sign-off: you get a NEW reviewRequestId (leadSignoffRequestId in the reviewer's result) (message "Lead sign-off requested" and the "Awaiting your sign-off" section of your lead briefing, which lists your open sign-offs, up to 50). Call review_start, then review_complete (or review_request_changes) with that NEW ID and an explicit from (your own name; with lead_then_human review_complete and review_request_changes always need an explicit from); request changes restarts a full review cycle. Never sign off your own work.`,
-      `- Request changes: review_request_changes { teamName: "${teamName}", taskId: "<id>", from: "${leadName}", comment: "<what to fix>"` +
-        `, expectedReviewRequestId: "<original reviewRequestId>"` +
-        ` } when reviewFlow is human_approval or lead_then_human; omit expectedReviewRequestId only when agent_approval.`,
+      `- Request changes: review_request_changes { teamName: "${teamName}", taskId: "<id>", from: "${leadName}", comment: "<what to fix>", expectedReviewRequestId: "<original reviewRequestId>" } when reviewFlow is human_approval or lead_then_human; omit expectedReviewRequestId only when agent_approval.`,
       `CRITICAL: Review is a state transition on the EXISTING work task. When implementation for task #X needs review, move #X through the review flow with review_request/review_start/(review_complete or review_approve)/review_request_changes. Do NOT create a new separate task just to represent that review.`,
       `CRITICAL: Only send task #X into review when a concrete reviewer exists for #X. If no reviewer exists yet, keep #X completed until you assign/decide the reviewer. Do NOT use review_request just to park the task in REVIEW without an actual reviewer.`,
       `CRITICAL: Comments saying "approved" or "LGTM" do NOT change review state. When reviewFlow is agent_approval call review_approve; when human_approval or lead_then_human call review_complete with the original reviewRequestId. An agent never grants human acceptance.`,
@@ -1026,10 +1024,9 @@ export function buildDeterministicLaunchHydrationPrompt(
   const startLabel = isResume ? 'Team Start (resume)' : 'Team Start';
   const startupLabel = isResume ? 'resume/bootstrap' : 'launch/bootstrap';
   const headerModeLabel = isResume ? 'Deterministic resume' : 'Deterministic launch';
-  const userPromptBlock =
-    !request.bootstrapOnly && request.prompt?.trim()
-      ? `\nOriginal user instructions to apply now:\n${request.prompt.trim()}\n`
-      : '';
+  const userPromptBlock = !request.bootstrapOnly && request.prompt?.trim()
+    ? `\nOriginal user instructions to apply now:\n${request.prompt.trim()}\n`
+    : '';
   const hasOriginalUserPrompt = Boolean(userPromptBlock);
   const taskBoardSnapshot = buildTaskBoardSnapshot(tasks);
   const persistentContext = buildPersistentLeadContext({

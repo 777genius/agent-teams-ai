@@ -421,9 +421,7 @@ export class TeamTaskActivityIntervalService {
 
   private evictOldestTaskFileCacheEntry(): boolean {
     const oldestKey = this.taskFileCache.keys().next().value;
-    if (oldestKey === undefined) {
-      return false;
-    }
+    if (oldestKey === undefined) return false;
     this.deleteCachedTaskFile(oldestKey);
     return true;
   }
