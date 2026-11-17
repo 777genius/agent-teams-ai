@@ -18,6 +18,7 @@ const deferredJobs = {
   'anthropic-env-portability': 'environment',
   'sentry-owned-process-native': 'native',
   'windows-backfill-diagnostic': 'packaged-backfill',
+  'teams-create-page-desktop-e2e': 'creation-page',
 };
 const workflow = (name: string) =>
   readFileSync(new URL(`../../.github/workflows/${name}.yml`, import.meta.url), 'utf8');
