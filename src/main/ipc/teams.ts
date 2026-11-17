@@ -2240,6 +2240,8 @@ async function handleLaunchTeamUnlocked(
     const createRequest: TeamCreateRequest = {
       teamName: tn,
       runtimeSelectionVersion,
+      // A saved draft is an EXISTING team, not a new creation. Missing mode is legacy shared.
+      projectContextMode: savedRequest.projectContextMode ?? 'shared',
       displayName: savedRequest.displayName,
       description: savedRequest.description,
       color: savedRequest.color,
