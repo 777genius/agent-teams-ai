@@ -319,6 +319,9 @@ export const desktopProofSupplementarySources = [
   'src/renderer/store/viewedTeamNotificationSync.ts',
   'src/renderer/store/slices/notificationSlice.ts',
   'src/renderer/store/team/teamGlobalTaskNotifications.ts',
+  'src/renderer/components/team/members/MembersEditorSection.tsx',
+  'src/renderer/components/team/members/TeamRosterEditorSection.tsx',
+  'src/features/localization/renderer/locales/en/team.json',
 ];
 
 /** Exact finite Windows same-Main recovery and original Processes UI construction inputs. */

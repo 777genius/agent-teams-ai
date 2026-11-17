@@ -276,8 +276,8 @@ export async function runDesktopLiveMembershipUiSmoke(cdp: UiCdpPort, options: {
   await checked(cdp, ui, create + ' #create-skip-permissions', true);
   await replace(cdp, ui, create + ' #team-prompt', '', 'empty original launch prompt');
   await checked(cdp, ui, create + ' #launch-team', false);
-  await ui.scrollTo(create + ' button', 'original member JSON editor', 'Edit as JSON');
-  await ui.click(create + ' button', 'open original member JSON editor', 'Edit as JSON');
+  await ui.scrollTo(create + ' button[aria-label="Edit as JSON"]', 'original member JSON editor');
+  await ui.click(create + ' button[aria-label="Edit as JSON"]', 'open original member JSON editor');
   await ui.scrollTo(create + ' .cm-editor', 'original member JSON input');
   await ui.click(create + ' .cm-editor .cm-content .cm-line:first-child', 'focus original member JSON input');
   await cdp.send('Input.dispatchKeyEvent', { type: 'keyDown', key: 'a', code: 'KeyA', modifiers: 4, commands: ['selectAll'] });
