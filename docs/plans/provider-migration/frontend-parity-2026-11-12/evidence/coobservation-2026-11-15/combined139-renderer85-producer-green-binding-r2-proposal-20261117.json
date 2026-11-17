@@ -1,0 +1,734 @@
+{
+  "schemaVersion": 1,
+  "kind": "c714-immutable-three-producer-materialization-and-green-binding-r2-proposal",
+  "author": "root",
+  "authoredAtUtc": "2026-11-17 02:02:33 UTC",
+  "preparedFromCommit": "b83da2bb72ada6e9fb3a426cb2a7d62b30ec4871",
+  "preparedFromTree": "5ef5abf3c6aadd53340f457ea7f77e6b69f84878",
+  "scope": "Control data only under the already accepted R1 and unchanged runner. This one immutable binding governs source-only materialize green and later run green, with independent materialization review/publication/full readbacks external between them.",
+  "sourcePublicationGate": {
+    "bytes": 6536,
+    "sha256": "1333882f719c6b832223e038043b9b82491d8168e9cf5effa64c12b0cf4741a2",
+    "gitBlob": "63fe55b3f050783b80bda34e3261564600186592"
+  },
+  "sourcePublicationGateClosedAtUtc": "2026-11-17 02:00:49 UTC",
+  "r1": {
+    "bytes": 139634,
+    "sha256": "b9524cd8f0f1251f034337f4eb8fbc6606adc1d1c987d993580be06b9a078a75",
+    "gitBlob": "8ce89328171e58ec3e0631dce9607ee7e1eba54e"
+  },
+  "publishedR1": "9365591561744e36ac4e85da9cc41a92b88c2477",
+  "runner": {
+    "bytes": 104131,
+    "sha256": "20958434e304d6d67657abad910d7c891f5a9086164e73d19cc8764348fc83f5",
+    "gitBlob": "c81f72a8ed14a93b3557fdf889f9ad6cebc25140"
+  },
+  "baselineBinding": {
+    "bytes": 6399172,
+    "sha256": "be265da9b130091d251295f937a7ab09b1db0e03f2c4a02d985839134e0379ec",
+    "gitBlob": "9f9ddcf0f9f62cce1a31f204ae786a8e2d3d2267"
+  },
+  "binding": {
+    "bytes": 8262787,
+    "sha256": "56d2bb56ff1135fbc606d375b2b8debd8c5f3feaaa8b61904aa584c4dc38435c",
+    "gitBlob": "ea852a05538a51710c13a0cd86a8bd1e3fa1c056"
+  },
+  "bindingLocalPath": "/workspace/scratch/c714-post-transport-20261117/controls/green-binding.json",
+  "changedExistingFields": [
+    {
+      "key": "kind",
+      "beforeDataIdentity": {
+        "bytes": 76,
+        "sha256": "5eff11d23fdc0d6f001e2d91c21ede44320472866197e182bc683a77be9a9588",
+        "gitBlob": "0047ec6ac3aeb509ab408f5d912f78e8b118ce6c"
+      },
+      "afterDataIdentity": {
+        "bytes": 108,
+        "sha256": "a23ddfc75f4835ccf0e92a8dc573454c6a887b779afbbabe3007eb56d0b1c5d6",
+        "gitBlob": "518fe970eb17d1fedc9c5a24a6e186cf2dd62fbe"
+      }
+    },
+    {
+      "key": "phase",
+      "beforeDataIdentity": {
+        "bytes": 5,
+        "sha256": "4bc9274d8758b867e8c071a6082c68a2eb1668fc5ad34f631f96bf94f354c1e1",
+        "gitBlob": "03fa49738bd672cc5ef76bbaa11a2f6545761fb6"
+      },
+      "afterDataIdentity": {
+        "bytes": 7,
+        "sha256": "7f3e916bf628c503cac5f6babcf2dc37b7c8f2e7e8350e0e2a77c80caee95765",
+        "gitBlob": "d151d1e95870ed8a809643bf00ca34d569f56759"
+      }
+    },
+    {
+      "key": "bindingLocalPath",
+      "beforeDataIdentity": {
+        "bytes": 75,
+        "sha256": "1c31d4bc819cc6c614e001c086a526eadd2957f920a26bcd668c06a898da251c",
+        "gitBlob": "211b51ecd4c1f7b1fbfc284d123a0d2c722a10d6"
+      },
+      "afterDataIdentity": {
+        "bytes": 77,
+        "sha256": "43e6a15a5fb36caadd193b19b382f6e602d9f4b2fc672fcd9780fb5860901bc6",
+        "gitBlob": "99f722b22702895c4f5a0fd51e0672e0610f6ab5"
+      }
+    },
+    {
+      "key": "publishedSubject",
+      "beforeDataIdentity": {
+        "bytes": 241,
+        "sha256": "d3819e95821a75375bc0575249b03faf72c16fccd3072a232a9fb5fc05d42277",
+        "gitBlob": "7651d541424fbd29113a0305b23834b6a481afd5"
+      },
+      "afterDataIdentity": {
+        "bytes": 358,
+        "sha256": "48f2e21e0f09a40a1c3879b7dd2a72c5a9388218b80b473a6327ae1ededd2da6",
+        "gitBlob": "2307508891e9dae3bae09ff381b4845a71e4fe3c"
+      }
+    },
+    {
+      "key": "actualPublishedSubjectReadbackEvidence",
+      "beforeDataIdentity": {
+        "bytes": 312,
+        "sha256": "9058ba684d5367a722a473d514d2137a5d5aa9b088c75b5a7dbd89d9946b8786",
+        "gitBlob": "ee56c654f8d000872c4b7d6c253f142c1c4f4e30"
+      },
+      "afterDataIdentity": {
+        "bytes": 313,
+        "sha256": "c6724b69bf8ff64beac9aa9493b30593839c178fe9c12611686b20586ae9a994",
+        "gitBlob": "c8080eee1ee3c06f1a4af9e4d822bfc3637e14ae"
+      }
+    },
+    {
+      "key": "acceptedReviewBodies",
+      "beforeDataIdentity": {
+        "bytes": 4894302,
+        "sha256": "de270bcaba23b8b74ff7404336da495542ba03503a90d866f26f9f466710ee39",
+        "gitBlob": "3bb5820782abea44f12b22ff00f022beac234b7d"
+      },
+      "afterDataIdentity": {
+        "bytes": 6579593,
+        "sha256": "8213a1bedb7a78b87246bc8519fb5897bb2e9b4a4c3754a8662b1e585b6283a2",
+        "gitBlob": "89b8645542767f2cb596957db894f853b3c73148"
+      }
+    },
+    {
+      "key": "beforeSourceOverlay",
+      "beforeDataIdentity": {
+        "bytes": 603020,
+        "sha256": "e3e958a2af853f32ff752b68f132d8ad8f56ea8f827a6244b3d03843b735d1bb",
+        "gitBlob": "255ed64f9cf7dd5ca509ab0ca5b4b2011340a372"
+      },
+      "afterDataIdentity": {
+        "bytes": 620741,
+        "sha256": "d2db1924a39abd1d0309fe37b40f5851a6a32471f39ef322eed9000c9237de7f",
+        "gitBlob": "00cdd5a4c081ae51f63dd27ea79f5c8a598cb6cc"
+      }
+    },
+    {
+      "key": "sourceOverlay",
+      "beforeDataIdentity": {
+        "bytes": 620741,
+        "sha256": "d2db1924a39abd1d0309fe37b40f5851a6a32471f39ef322eed9000c9237de7f",
+        "gitBlob": "00cdd5a4c081ae51f63dd27ea79f5c8a598cb6cc"
+      },
+      "afterDataIdentity": {
+        "bytes": 621017,
+        "sha256": "7972c6cbfdc6e0cb1d48b10ff2717b7cacdace5f0906db69244d44dad16b2db0",
+        "gitBlob": "42e7d5ca57a5fede877c21d09075d1c889a37392"
+      }
+    },
+    {
+      "key": "sourcePins",
+      "beforeDataIdentity": {
+        "bytes": 2118,
+        "sha256": "2a41fa75600693b18d439c27fb9d0159b2ee8428eaa823efa3946fde8ef5461d",
+        "gitBlob": "49c4e372e1ef518894375b0470a2a11acae8d6fb"
+      },
+      "afterDataIdentity": {
+        "bytes": 2118,
+        "sha256": "be4efda1db2b25ddf42a1cd853a5757f99f01ba2397b19c6d6c5b2679f2d80c3",
+        "gitBlob": "a7b24d52b2af56d9b5f16fd2f5266739cb1ee447"
+      }
+    },
+    {
+      "key": "sourceVectorIdentity",
+      "beforeDataIdentity": {
+        "bytes": 143,
+        "sha256": "b9ab7381bcd05456ae5a749480c4744c57d55f6d1efc5d7b70f4066486a4443b",
+        "gitBlob": "42e1c724f39dd25414e5515277aa90ccf1350b51"
+      },
+      "afterDataIdentity": {
+        "bytes": 143,
+        "sha256": "d9ef0653f0569b1be52efd254c9bcc331a95793e3573cc9dd961dbb3b12a178c",
+        "gitBlob": "fbabcd3472ab79b3c2ad0cfa262b29dfca644ea6"
+      }
+    },
+    {
+      "key": "materializePaths",
+      "beforeDataIdentity": {
+        "bytes": 149,
+        "sha256": "960daffbe651fb561b6d1b3b4169dfcd668963395c04d8cae3e6099d39bc46ce",
+        "gitBlob": "c192f2fef77a1511a0aa66603a48341b123f6136"
+      },
+      "afterDataIdentity": {
+        "bytes": 221,
+        "sha256": "af8df1d7588901fbc3ac745260e3956ed9df29db4e11065138f8ecde492c2da6",
+        "gitBlob": "7d078f34e5dc884990afc4d630a2886ce194f85b"
+      }
+    },
+    {
+      "key": "acceptedCombinedRed",
+      "beforeDataIdentity": {
+        "bytes": 4,
+        "sha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+        "gitBlob": "ec747fa47ddb81e9bf2d282011ed32aa4c59f932"
+      },
+      "afterDataIdentity": {
+        "bytes": 153396,
+        "sha256": "df12c6508242070cad9a850166bbf4e49ac61a16c91c76d7f327f0ccedc9e46b",
+        "gitBlob": "4ff86a7c9c12a333422b1135ee4d6df594932a29"
+      }
+    },
+    {
+      "key": "producerR2ReviewedAndPublished",
+      "beforeDataIdentity": {
+        "bytes": 5,
+        "sha256": "fcbcf165908dd18a9e49f7ff27810176db8e9f63b4352213741664245224f8aa",
+        "gitBlob": "02e4a84d62c4b0fe9cca60bba7b9799f78f1f7ed"
+      },
+      "afterDataIdentity": {
+        "bytes": 4,
+        "sha256": "b5bea41b6c623f7c09f1bf24dcae58ebab3c0cdd90ad966bc43a45b44867e12b",
+        "gitBlob": "f32a5804e292d30bedf68f62d32fb75d87e99fd9"
+      }
+    },
+    {
+      "key": "producerActualReadbackAccepted",
+      "beforeDataIdentity": {
+        "bytes": 5,
+        "sha256": "fcbcf165908dd18a9e49f7ff27810176db8e9f63b4352213741664245224f8aa",
+        "gitBlob": "02e4a84d62c4b0fe9cca60bba7b9799f78f1f7ed"
+      },
+      "afterDataIdentity": {
+        "bytes": 4,
+        "sha256": "b5bea41b6c623f7c09f1bf24dcae58ebab3c0cdd90ad966bc43a45b44867e12b",
+        "gitBlob": "f32a5804e292d30bedf68f62d32fb75d87e99fd9"
+      }
+    },
+    {
+      "key": "draftState",
+      "beforeDataIdentity": {
+        "bytes": 593,
+        "sha256": "a863cb6d4f589dc6d1aa4e38691ea944f200f642cca29912444ecbe14afb0e76",
+        "gitBlob": "4a0087083de026e90ec024e1bfe58eeb83b38430"
+      },
+      "afterDataIdentity": {
+        "bytes": 940,
+        "sha256": "e2dcb21b907714090b6164044bbcc01ed59c43558cbec69b74df81ed2a6aaf8f",
+        "gitBlob": "45a97999d18753ca75e8cc80307ba7220bf161f8"
+      }
+    },
+    {
+      "key": "historicalBeforeSourceOverlayQualification",
+      "beforeDataIdentity": {
+        "bytes": 289,
+        "sha256": "ccf304331d5d38bee509ee24cdeacb67c471cdc26dd02ccceccad9a2a20bc22d",
+        "gitBlob": "7ba2be46b813d65b02be5c59d33effadda3d8d80"
+      },
+      "afterDataIdentity": {
+        "bytes": 411,
+        "sha256": "0882ba5ecee6146748f0a7f843a5be0c2c4b2dbbdd4df0e047b2bd32767445eb",
+        "gitBlob": "54c3832f18705d67db43a7f8e814f0624f5328c9"
+      }
+    }
+  ],
+  "addedFields": [
+    "producerGreenTransitionProvenance",
+    "producerGreenControlAuthoredAtUtc"
+  ],
+  "unchangedExistingFields": [
+    "schemaVersion",
+    "publishedR1",
+    "publishedRecoveryR1",
+    "publishedTransportAmendment",
+    "combinedR1Identity",
+    "combinedR1Body",
+    "combinedR1ActualReadbackAccepted",
+    "combinedR1ActualReadbackEvidence",
+    "runnerLocalPath",
+    "runnerIdentity",
+    "actualPublishedSubjectReadbackAccepted",
+    "combinedInputImportAdmission",
+    "inputFiles",
+    "testIdentities",
+    "nodeNames",
+    "rendererNames",
+    "nodeRedFailureSites",
+    "rendererRedFailureSites",
+    "commandVectors",
+    "nativeMetadataArgv",
+    "outputRoots",
+    "tempRoots",
+    "rendererRawEnvironment",
+    "rendererEffectiveAbsentKeys",
+    "rendererAbsentPaths",
+    "rendererStaticPins",
+    "rendererStaticLinks",
+    "rendererNativePins",
+    "rendererEntryRelative",
+    "rollupLocalOverride",
+    "rendererDerivedConfig",
+    "materializationReceiptScope",
+    "acceptedCombinedGreen",
+    "behavioralAttempts",
+    "timing",
+    "executionScope",
+    "authorshipGate",
+    "historicalRecoveryProvenance",
+    "historicalTestMaterialization",
+    "historicalEvidenceBodies",
+    "historicalPredictionCorrection",
+    "correctedControlAuthoredAtUtc",
+    "dataReplicaRecovery",
+    "postTransportRecoveryProvenance",
+    "postTransportControlAuthoredAtUtc"
+  ],
+  "reviewRecords": {
+    "before": 58,
+    "after": 77,
+    "original58LiteralPreserved": true,
+    "appended": [
+      {
+        "role": "postTransportControlsRootActual",
+        "identity": {
+          "bytes": 54354,
+          "sha256": "9a43e5d60a312b823fc6371d80cb53d9d69b09eb89387b21a43d91d4db998d8b",
+          "gitBlob": "9f7e5b993977d82876f291937eecfbad54fa7ec0"
+        }
+      },
+      {
+        "role": "postTransportControlsIndependentActual",
+        "identity": {
+          "bytes": 100624,
+          "sha256": "56c645a2d9221b2717eb8e25dfc496b9a31464fac6c297a34dbdeeba68907dff",
+          "gitBlob": "5cbacb781c10f52c5cf5a032f8fdc03c24881d81"
+        }
+      },
+      {
+        "role": "postTransportCombinedRedObservedOuter",
+        "identity": {
+          "bytes": 13970,
+          "sha256": "341064fd92ead2afed314db220e095bae77a2b96af47580b30c35f495a0e80cd",
+          "gitBlob": "947cf5276c207149f87d67dd06a175b49c9f1b5b"
+        }
+      },
+      {
+        "role": "postTransportCombinedRedRootRuntimeReview",
+        "identity": {
+          "bytes": 50772,
+          "sha256": "b708a3eb026e85f1a733cbb1e4836c7e5cabf571bb3c68fbc74c9ac2a719c882",
+          "gitBlob": "19fcd35a9e8783dfa28c824d23a8df510209ca80"
+        }
+      },
+      {
+        "role": "postTransportCombinedRedGuardRuntimeReview",
+        "identity": {
+          "bytes": 261789,
+          "sha256": "d9e6e50a0678babd3d54551af2951fb57825b0fc51fa1e7682def558a52bfd32",
+          "gitBlob": "38bd0eb98cb500274a477c1c02bfef0156bee7d6"
+        }
+      },
+      {
+        "role": "postTransportCombinedRedSemanticRuntimeReview",
+        "identity": {
+          "bytes": 229314,
+          "sha256": "2e05bcc76671b35883fc04e072d46e0961c86c2d293de2582e0e0fe0196692da",
+          "gitBlob": "3cddc2bdb141d81c87c97d6059c56278b1118a55"
+        }
+      },
+      {
+        "role": "postTransportCombinedRedCompleteLargeBodyJoin",
+        "identity": {
+          "bytes": 8914,
+          "sha256": "e322edbfc50d1706db7838681e2d65abf4648180c4a4da3ba418d94fff5eac44",
+          "gitBlob": "aad388d47bc80c4dd09789ee76238ebd935e8cdd"
+        }
+      },
+      {
+        "role": "postTransportCombinedRedPublicationRootActual",
+        "identity": {
+          "bytes": 55348,
+          "sha256": "bbe57a54a25a38bee1d4f4de5fc1d036d81f6b2ecdb40b3d0088b274de6656c9",
+          "gitBlob": "9218839ef55406b01267605c040bc586c7d443be"
+        }
+      },
+      {
+        "role": "postTransportCombinedRedPublicationIndependentActual",
+        "identity": {
+          "bytes": 166393,
+          "sha256": "cbe1880831780d10a7131282ab2ecc37d81fbdede3c53a265c1749ea863c20f2",
+          "gitBlob": "e5c2c2d8c84c0d491e334f6d67774cf23c83948f"
+        }
+      },
+      {
+        "role": "threeProducerSourceAuthorshipGate",
+        "identity": {
+          "bytes": 4327,
+          "sha256": "3231731b2a22cb3903ccff6991341b54c673cd7064599b9aa7238fe07e3c6b18",
+          "gitBlob": "2780955d0a71956a75650ddf4d8a0ff0576faa57"
+        }
+      },
+      {
+        "role": "threeProducerSourceR2Proposal",
+        "identity": {
+          "bytes": 25372,
+          "sha256": "7def167b3384043abb2cea83e90c51ea332f2c12a9f4fc3ca1ddcf1531bab85c",
+          "gitBlob": "b0d4fb7c7ca2fc486fda6823ee3c3618171f8cdc"
+        }
+      },
+      {
+        "role": "threeProducerSourceR2Root",
+        "identity": {
+          "bytes": 17023,
+          "sha256": "30aa0b71c8c7cdb32d88db381e7396ec2e543ea977d80e93ee8297bd9f3304f3",
+          "gitBlob": "e4119f144e4a79e7c7b6a1598a33a70388df207f"
+        }
+      },
+      {
+        "role": "threeProducerSourceR2Guard",
+        "identity": {
+          "bytes": 245598,
+          "sha256": "0bdbb65827d3717684d09ea1e35a2528b2ea4ee36143e4d3abe3601bf8bb8022",
+          "gitBlob": "ce6997eef4cc5989fb1c5437a23ef490bc74377a"
+        }
+      },
+      {
+        "role": "threeProducerSourceR2Semantic",
+        "identity": {
+          "bytes": 70998,
+          "sha256": "3a3fe8dcf619204191b0db04023c5293fd24e433b74f2bf801f07bbc395d0f6c",
+          "gitBlob": "0c3db6a22e1f652ca30d085de23217fc52eb5e51"
+        }
+      },
+      {
+        "role": "threeProducerSourceR2Binding",
+        "identity": {
+          "bytes": 47779,
+          "sha256": "ce13ee532bbca6a6181f95a97815e6c122be0a0adb46220ba61fd8b7c4029faa",
+          "gitBlob": "c2357e52f57abe45cd77d1ff0844aaa16d1095a6"
+        }
+      },
+      {
+        "role": "threeProducerSourcePublicationManifest",
+        "identity": {
+          "bytes": 15180,
+          "sha256": "25dd8d8f0e59fb6be9e66eb6d7eba4e30103c2ed7d0d005c6cc2b8093fbac91f",
+          "gitBlob": "9ae8f0d2eaadc7e481a60ae594871c647d478c26"
+        }
+      },
+      {
+        "role": "threeProducerSourcePublicationRootActual",
+        "identity": {
+          "bytes": 67762,
+          "sha256": "72188509d6d08e0c84a355f30686b898f00bbd0f6a19cc5b723df405080dfad9",
+          "gitBlob": "8940b2ec5b87ecd8ed5d442d282687ee7ec22a00"
+        }
+      },
+      {
+        "role": "threeProducerSourcePublicationIndependentActual",
+        "identity": {
+          "bytes": 121833,
+          "sha256": "3fd7ec1c29e1d689175e0866821c1b397fdf5b8a41a2ee6d20d2756cfb58c917",
+          "gitBlob": "0915fd43d3324c43d32939214c7ac1d31545d164"
+        }
+      },
+      {
+        "role": "threeProducerBindingAuthorshipGate",
+        "identity": {
+          "bytes": 6536,
+          "sha256": "1333882f719c6b832223e038043b9b82491d8168e9cf5effa64c12b0cf4741a2",
+          "gitBlob": "63fe55b3f050783b80bda34e3261564600186592"
+        }
+      }
+    ],
+    "totalCompleteBodyBytes": 6093457
+  },
+  "source": {
+    "beforePins": [
+      {
+        "path": "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+        "mode": "100644",
+        "bytes": 24759,
+        "sha256": "d15b7eea14c0951194310aee34ddc5c477879c759a97a4e2f4e9fce1f956ce9b",
+        "gitBlob": "cf93da72a198dac636658e512093eef7828b5927"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+        "mode": "100644",
+        "bytes": 45707,
+        "sha256": "d8ee4090606876194393463e96411f89ed54a53bd3095df333a5d47c5c7fd159",
+        "gitBlob": "bd8bc728808eda00a45b300fd328d49e4e919bc2"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts",
+        "mode": "100644",
+        "bytes": 36260,
+        "sha256": "26357f37b146fc171bbceadb624bde4a7f4e459d2073ae23a651e757817b2d38",
+        "gitBlob": "4700a0052d3c58a2b3d9bc66e6803220688050fd"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+        "mode": "100644",
+        "bytes": 8457,
+        "sha256": "2da55bb40a5689ace0e922dc4867d7c73278d9a1cd200ea8c4602ca68f82da3b",
+        "gitBlob": "3c7b4bb53f4259ac0795d3f92fb715887acb554f"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-task-review-cycle-ui-smoke.ts",
+        "mode": "100644",
+        "bytes": 32845,
+        "sha256": "43e12eb3252e578061ea5840ae39d173ce0cd5a8ce6673c5c5ea06d97a8bedaa",
+        "gitBlob": "d65706646743798f2646421105f2f6a75819f143"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+        "mode": "100644",
+        "bytes": 164965,
+        "sha256": "852bedb85c83dbc4b488dffb4a9ffebbe398adc53e85f5a3cea8ca36b146cbf7",
+        "gitBlob": "896c587e077da56a98a314a175fb3cba0353d6ee"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+        "mode": "100644",
+        "bytes": 28974,
+        "sha256": "7626e479a6662242009cb050e7e5af612a29e4205d62666d15274d5c30f91386",
+        "gitBlob": "ed57cb0fe7d57ef076a591621289eb77667c63ad"
+      },
+      {
+        "path": "src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts",
+        "mode": "100644",
+        "bytes": 74351,
+        "sha256": "68abe01f665b263bd8581659ea306f366428fdccbb45246f08ec42e20b9ee575",
+        "gitBlob": "1176fd06b70f1b717ba83deb387f87b05b18b45b"
+      },
+      {
+        "path": "test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts",
+        "mode": "100644",
+        "bytes": 187890,
+        "sha256": "b6f11896e60014aac785968d42390afde38716d47de9bba9562522235db048c9",
+        "gitBlob": "76495189c992fcda47cd7a43a0c697190b5acbb3"
+      }
+    ],
+    "beforeVector": {
+      "bytes": 2118,
+      "sha256": "f2574559a378b3bc537fdcedbde161003c8344a5485dfff9322214f6fda2a90c",
+      "gitBlob": "f6446bdc2bbdb511206c729a1f03717871baea6d"
+    },
+    "afterPins": [
+      {
+        "path": "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+        "mode": "100644",
+        "bytes": 24759,
+        "sha256": "d15b7eea14c0951194310aee34ddc5c477879c759a97a4e2f4e9fce1f956ce9b",
+        "gitBlob": "cf93da72a198dac636658e512093eef7828b5927"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+        "mode": "100644",
+        "bytes": 45795,
+        "sha256": "2c5931f5c7fa1dc8bb7858201c1b8afdbae9683faf4a2ad9fce067f116f3f94b",
+        "gitBlob": "5026f0ec6165bb092717ddc989043848a25081dc"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts",
+        "mode": "100644",
+        "bytes": 36260,
+        "sha256": "26357f37b146fc171bbceadb624bde4a7f4e459d2073ae23a651e757817b2d38",
+        "gitBlob": "4700a0052d3c58a2b3d9bc66e6803220688050fd"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+        "mode": "100644",
+        "bytes": 8457,
+        "sha256": "2da55bb40a5689ace0e922dc4867d7c73278d9a1cd200ea8c4602ca68f82da3b",
+        "gitBlob": "3c7b4bb53f4259ac0795d3f92fb715887acb554f"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-task-review-cycle-ui-smoke.ts",
+        "mode": "100644",
+        "bytes": 33036,
+        "sha256": "4fa52cfad9347065680ef62a3ba6420762408a78a93b77e96ac3a2e16e68bdc9",
+        "gitBlob": "8d175c98158b3bd71192aef7b1929484b2b681b6"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+        "mode": "100644",
+        "bytes": 164965,
+        "sha256": "852bedb85c83dbc4b488dffb4a9ffebbe398adc53e85f5a3cea8ca36b146cbf7",
+        "gitBlob": "896c587e077da56a98a314a175fb3cba0353d6ee"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+        "mode": "100644",
+        "bytes": 28974,
+        "sha256": "7626e479a6662242009cb050e7e5af612a29e4205d62666d15274d5c30f91386",
+        "gitBlob": "ed57cb0fe7d57ef076a591621289eb77667c63ad"
+      },
+      {
+        "path": "src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts",
+        "mode": "100644",
+        "bytes": 74340,
+        "sha256": "647ac5732bfd6b5cb57834adb4ad22c32ee5dfb018a934c92f982efd9daa531c",
+        "gitBlob": "c2faa156015707bc5fbd7f8123a7ffd9c4faa486"
+      },
+      {
+        "path": "test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts",
+        "mode": "100644",
+        "bytes": 187890,
+        "sha256": "b6f11896e60014aac785968d42390afde38716d47de9bba9562522235db048c9",
+        "gitBlob": "76495189c992fcda47cd7a43a0c697190b5acbb3"
+      }
+    ],
+    "afterVector": {
+      "bytes": 2118,
+      "sha256": "6007c5c7ba2f74c43bd9b73c50cae2319eacbf712c233cc0d67b3efbb4c6894d",
+      "gitBlob": "3887991d5dbd25dbec5c8656e8e03d423ea502b7"
+    },
+    "exactThreeMaterializePaths": [
+      "scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+      "scripts/legacy-agent-host/desktop-task-review-cycle-ui-smoke.ts",
+      "src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts"
+    ],
+    "completeBeforeSourceBodies": 604208,
+    "completeAfterSourceBodies": 604476,
+    "fourFixedProducersAndTwoWholeTestsUnchanged": true,
+    "sourceRows": 8798,
+    "baseTrackedRows": 11567,
+    "workflowRows": 42,
+    "physicalOverlaysBefore": 6,
+    "physicalOverlaysAfter": 9
+  },
+  "acceptedCombinedRed": {
+    "phase": {
+      "bytes": 139946,
+      "sha256": "51867690fb9a707141b01ee3dff6d42d082a5ba7aceffd1f4f43eec8a428c9be",
+      "gitBlob": "bcc31247c2752b2017edba9adcd129a1c83cdd32"
+    },
+    "outer": {
+      "bytes": 13970,
+      "sha256": "341064fd92ead2afed314db220e095bae77a2b96af47580b30c35f495a0e80cd",
+      "gitBlob": "947cf5276c207149f87d67dd06a175b49c9f1b5b"
+    },
+    "publication": {
+      "commit": "77993819c233737f1e2b4c11c8ca1a5d360bcbe3",
+      "tree": "ada3f27db78fabc17a91e3904d41b8bc547c6dca",
+      "docsTree": "a1b92f625b548e7384ef13e0358c420d1e1f136d",
+      "manifest": {
+        "bytes": 12114,
+        "sha256": "de413d1bdef997d3c3e2d18b1e1b21fab0f6459cca566c82aae74b1423bbe210",
+        "gitBlob": "5e5167b45611cb7700bbcca2c07a0f910ca46ec6"
+      },
+      "root": {
+        "bytes": 55348,
+        "sha256": "bbe57a54a25a38bee1d4f4de5fc1d036d81f6b2ecdb40b3d0088b274de6656c9",
+        "gitBlob": "9218839ef55406b01267605c040bc586c7d443be"
+      },
+      "independent": {
+        "bytes": 166393,
+        "sha256": "cbe1880831780d10a7131282ab2ecc37d81fbdede3c53a265c1749ea863c20f2",
+        "gitBlob": "e5c2c2d8c84c0d491e334f6d67774cf23c83948f"
+      }
+    },
+    "observedOuterSupervisorExit": 0,
+    "independentReviewAccepted": true,
+    "actualPublicationReadbackAccepted": true
+  },
+  "publishedSubject": {
+    "commit": "b83da2bb72ada6e9fb3a426cb2a7d62b30ec4871",
+    "tree": "5ef5abf3c6aadd53340f457ea7f77e6b69f84878",
+    "qualification": "Exact published nine-row source vector: only the three independently reviewed producer postimages change; four fixed producers and complete139/85 test bodies remain identical. Publication is not physical application or GREEN acceptance."
+  },
+  "actualPublishedSubjectReadbackEvidence": {
+    "root": {
+      "bytes": 67762,
+      "sha256": "72188509d6d08e0c84a355f30686b898f00bbd0f6a19cc5b723df405080dfad9",
+      "gitBlob": "8940b2ec5b87ecd8ed5d442d282687ee7ec22a00"
+    },
+    "independent": {
+      "bytes": 121833,
+      "sha256": "3fd7ec1c29e1d689175e0866821c1b397fdf5b8a41a2ee6d20d2756cfb58c917",
+      "gitBlob": "0915fd43d3324c43d32939214c7ac1d31545d164"
+    }
+  },
+  "sourceR2": {
+    "bytes": 25372,
+    "sha256": "7def167b3384043abb2cea83e90c51ea332f2c12a9f4fc3ca1ddcf1531bab85c",
+    "gitBlob": "b0d4fb7c7ca2fc486fda6823ee3c3618171f8cdc"
+  },
+  "threeProducerSourcePostimages": [
+    {
+      "path": "scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+      "identity": {
+        "path": "scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+        "mode": "100644",
+        "bytes": 45795,
+        "sha256": "2c5931f5c7fa1dc8bb7858201c1b8afdbae9683faf4a2ad9fce067f116f3f94b",
+        "gitBlob": "5026f0ec6165bb092717ddc989043848a25081dc"
+      }
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-task-review-cycle-ui-smoke.ts",
+      "identity": {
+        "path": "scripts/legacy-agent-host/desktop-task-review-cycle-ui-smoke.ts",
+        "mode": "100644",
+        "bytes": 33036,
+        "sha256": "4fa52cfad9347065680ef62a3ba6420762408a78a93b77e96ac3a2e16e68bdc9",
+        "gitBlob": "8d175c98158b3bd71192aef7b1929484b2b681b6"
+      }
+    },
+    {
+      "path": "src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts",
+      "identity": {
+        "path": "src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts",
+        "mode": "100644",
+        "bytes": 74340,
+        "sha256": "647ac5732bfd6b5cb57834adb4ad22c32ee5dfb018a934c92f982efd9daa531c",
+        "gitBlob": "c2faa156015707bc5fbd7f8123a7ffd9c4faa486"
+      }
+    }
+  ],
+  "testIdentities": {
+    "node": {
+      "bytes": 164965,
+      "sha256": "852bedb85c83dbc4b488dffb4a9ffebbe398adc53e85f5a3cea8ca36b146cbf7",
+      "gitBlob": "896c587e077da56a98a314a175fb3cba0353d6ee"
+    },
+    "renderer": {
+      "bytes": 187890,
+      "sha256": "b6f11896e60014aac785968d42390afde38716d47de9bba9562522235db048c9",
+      "gitBlob": "76495189c992fcda47cd7a43a0c697190b5acbb3"
+    }
+  },
+  "immutableBindingSequence": {
+    "control": "Complete R2, publication with immediate push, full root and independent actual readbacks before staging.",
+    "materialization": "Stage only green-binding.json, preserve current runner/red-binding/replicas, invoke materialize green once. Exactly three source writes and source/supervisor metadata census. Runtime dependencies/compiled/provider/cache remain UNINSPECTED/false/null in this source-only phase.",
+    "materializationAcceptance": "Collect full actual source-only phase/metadata evidence and separately observed outer0. Complete independent actual review, publication and full readbacks before GREEN.",
+    "green": "Invoke run green once with the exact same binding bytes. Preserve all whole139/85 names, tests, commands, no retry, original clocks, native admission, raw/JSON evidence, captured cleanup and fresh complete runtime input before/after census.",
+    "validation": "Only after accepted/published/read-back GREEN author a separate immutable validation binding with full GREEN acceptance. No validation binding is authored here."
+  },
+  "oldAttempts": {
+    "original64038": "REFUSED/SPENT observedouter2; unchanged",
+    "corrected54393": "UNKNOWN/INCOMPLETE/SPENT; no finalouter/custody/cleanup recovered",
+    "postTransport53054": "COMPLETE accepted RED observedouter0; not replayed"
+  },
+  "sourceWorkingTreeWrites": 0,
+  "bindingStaged": false,
+  "materializationInvoked": false,
+  "greenInvoked": false,
+  "validationInvoked": false,
+  "runnerChanged": false,
+  "testsChanged": false,
+  "wholeE2EQualified": false
+}

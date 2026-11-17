@@ -1,0 +1,157 @@
+{
+  "schemaVersion": 1,
+  "kind": "c714-three-producer-actual-source-publication-gate",
+  "closedAtUtc": "2026-11-17 02:00:49 UTC",
+  "repository": "777genius/agent-teams-ai",
+  "branch": "fix/frontend-parity-coobservation-c714-20261115",
+  "actualCommit": "b83da2bb72ada6e9fb3a426cb2a7d62b30ec4871",
+  "actualTree": "5ef5abf3c6aadd53340f457ea7f77e6b69f84878",
+  "actualDocsTree": "ca906a27438211f8261ea22cf3b916599be3216e",
+  "soleParent": "77993819c233737f1e2b4c11c8ca1a5d360bcbe3",
+  "manifest": {
+    "bytes": 15180,
+    "sha256": "25dd8d8f0e59fb6be9e66eb6d7eba4e30103c2ed7d0d005c6cc2b8093fbac91f",
+    "gitBlob": "9ae8f0d2eaadc7e481a60ae594871c647d478c26"
+  },
+  "rootActual": {
+    "bytes": 67762,
+    "sha256": "72188509d6d08e0c84a355f30686b898f00bbd0f6a19cc5b723df405080dfad9",
+    "gitBlob": "8940b2ec5b87ecd8ed5d442d282687ee7ec22a00"
+  },
+  "independentActual": {
+    "bytes": 121833,
+    "sha256": "3fd7ec1c29e1d689175e0866821c1b397fdf5b8a41a2ee6d20d2756cfb58c917",
+    "gitBlob": "0915fd43d3324c43d32939214c7ac1d31545d164"
+  },
+  "completeRootReportReadAndRehashed": true,
+  "completeIndependentReportReadAndRehashed": true,
+  "rootChecks": 149,
+  "independentChecks": 187,
+  "currentPointerJoins": 29,
+  "subject": {
+    "sourceFiles": [
+      {
+        "path": "scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+        "identity": {
+          "bytes": 45795,
+          "sha256": "2c5931f5c7fa1dc8bb7858201c1b8afdbae9683faf4a2ad9fce067f116f3f94b",
+          "gitBlob": "5026f0ec6165bb092717ddc989043848a25081dc"
+        }
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-task-review-cycle-ui-smoke.ts",
+        "identity": {
+          "bytes": 33036,
+          "sha256": "4fa52cfad9347065680ef62a3ba6420762408a78a93b77e96ac3a2e16e68bdc9",
+          "gitBlob": "8d175c98158b3bd71192aef7b1929484b2b681b6"
+        }
+      },
+      {
+        "path": "src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts",
+        "identity": {
+          "bytes": 74340,
+          "sha256": "647ac5732bfd6b5cb57834adb4ad22c32ee5dfb018a934c92f982efd9daa531c",
+          "gitBlob": "c2faa156015707bc5fbd7f8123a7ffd9c4faa486"
+        }
+      }
+    ],
+    "beforeSourceVector": {
+      "bytes": 2118,
+      "sha256": "f2574559a378b3bc537fdcedbde161003c8344a5485dfff9322214f6fda2a90c",
+      "gitBlob": "f6446bdc2bbdb511206c729a1f03717871baea6d"
+    },
+    "sourceVector": {
+      "bytes": 2118,
+      "sha256": "6007c5c7ba2f74c43bd9b73c50cae2319eacbf712c233cc0d67b3efbb4c6894d",
+      "gitBlob": "3887991d5dbd25dbec5c8656e8e03d423ea502b7"
+    },
+    "sourcePins": [
+      {
+        "path": "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+        "mode": "100644",
+        "bytes": 24759,
+        "sha256": "d15b7eea14c0951194310aee34ddc5c477879c759a97a4e2f4e9fce1f956ce9b",
+        "gitBlob": "cf93da72a198dac636658e512093eef7828b5927"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+        "mode": "100644",
+        "bytes": 45795,
+        "sha256": "2c5931f5c7fa1dc8bb7858201c1b8afdbae9683faf4a2ad9fce067f116f3f94b",
+        "gitBlob": "5026f0ec6165bb092717ddc989043848a25081dc"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts",
+        "mode": "100644",
+        "bytes": 36260,
+        "sha256": "26357f37b146fc171bbceadb624bde4a7f4e459d2073ae23a651e757817b2d38",
+        "gitBlob": "4700a0052d3c58a2b3d9bc66e6803220688050fd"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+        "mode": "100644",
+        "bytes": 8457,
+        "sha256": "2da55bb40a5689ace0e922dc4867d7c73278d9a1cd200ea8c4602ca68f82da3b",
+        "gitBlob": "3c7b4bb53f4259ac0795d3f92fb715887acb554f"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-task-review-cycle-ui-smoke.ts",
+        "mode": "100644",
+        "bytes": 33036,
+        "sha256": "4fa52cfad9347065680ef62a3ba6420762408a78a93b77e96ac3a2e16e68bdc9",
+        "gitBlob": "8d175c98158b3bd71192aef7b1929484b2b681b6"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+        "mode": "100644",
+        "bytes": 164965,
+        "sha256": "852bedb85c83dbc4b488dffb4a9ffebbe398adc53e85f5a3cea8ca36b146cbf7",
+        "gitBlob": "896c587e077da56a98a314a175fb3cba0353d6ee"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+        "mode": "100644",
+        "bytes": 28974,
+        "sha256": "7626e479a6662242009cb050e7e5af612a29e4205d62666d15274d5c30f91386",
+        "gitBlob": "ed57cb0fe7d57ef076a591621289eb77667c63ad"
+      },
+      {
+        "path": "src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts",
+        "mode": "100644",
+        "bytes": 74340,
+        "sha256": "647ac5732bfd6b5cb57834adb4ad22c32ee5dfb018a934c92f982efd9daa531c",
+        "gitBlob": "c2faa156015707bc5fbd7f8123a7ffd9c4faa486"
+      },
+      {
+        "path": "test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts",
+        "mode": "100644",
+        "bytes": 187890,
+        "sha256": "b6f11896e60014aac785968d42390afde38716d47de9bba9562522235db048c9",
+        "gitBlob": "76495189c992fcda47cd7a43a0c697190b5acbb3"
+      }
+    ],
+    "tests": {
+      "node": {
+        "bytes": 164965,
+        "sha256": "852bedb85c83dbc4b488dffb4a9ffebbe398adc53e85f5a3cea8ca36b146cbf7",
+        "gitBlob": "896c587e077da56a98a314a175fb3cba0353d6ee"
+      },
+      "renderer": {
+        "bytes": 187890,
+        "sha256": "b6f11896e60014aac785968d42390afde38716d47de9bba9562522235db048c9",
+        "gitBlob": "76495189c992fcda47cd7a43a0c697190b5acbb3"
+      }
+    }
+  },
+  "sourcePostimagesPublished": true,
+  "sourceWorkingTreeWrites": 0,
+  "materializationInvoked": false,
+  "greenInvoked": false,
+  "validationInvoked": false,
+  "gateAccepted": true,
+  "gateOpensOnly": "Authorship of one immutable selected GREEN-phase binding under accepted R1 8ce89328171e58ec3e0631dce9607ee7e1eba54e and unchanged runner c81f72a8ed14a93b3557fdf889f9ad6cebc25140, for subsequent independent complete R2, publication and actual readback before source-only materialization. The identical binding must later govern GREEN after separately accepted and published materialization.",
+  "originalRed": "REFUSED/SPENT; unchanged",
+  "correctedRed": "UNKNOWN/INCOMPLETE/SPENT; unchanged",
+  "postTransportRed": "COMPLETE accepted RED; not replayed",
+  "wholeE2EQualified": false
+}
