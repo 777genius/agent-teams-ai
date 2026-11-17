@@ -203,6 +203,7 @@ import { getLaunchJoinMilestonesFromMembers, getLaunchJoinState } from './provis
 import { TeamChangesSection } from './TeamChangesSection';
 import { TeamLoadingSkeleton } from './TeamLoadingSkeleton';
 import { setPendingRepliesForTeam, useTeamPendingReplies } from './teamPendingRepliesStore';
+import { isTeamProcessAlive } from './teamProcessLiveness';
 import { TeamProvisioningBanner } from './TeamProvisioningBanner';
 import { loadTeamSessionMetadata } from './teamSessionFetchGuards';
 import { TeamSessionsSection } from './TeamSessionsSection';
@@ -3290,9 +3291,9 @@ export const TeamDetailView = memo(function TeamDetailView({
                   variant="flat"
                   title={t('processes.title')}
                   icon={<Terminal size={14} />}
-                  badge={data.isAlive ? data.processes.filter((p) => !p.stoppedAt).length : 0}
+                  badge={data.processes.filter((p) => isTeamProcessAlive(p, data.isAlive)).length}
                   headerExtra={
-                    data.isAlive && data.processes.some((p) => !p.stoppedAt) ? (
+                    data.processes.some((p) => isTeamProcessAlive(p, data.isAlive)) ? (
                       <span
                         className="pointer-events-none relative inline-flex size-2 shrink-0"
                         title={t('detail.status.active')}
