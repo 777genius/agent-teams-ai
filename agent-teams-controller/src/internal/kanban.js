@@ -155,6 +155,10 @@ function isHumanApprovalFlow(context) {
   return reviewFlow.isHumanApproval(getReviewFlowPolicy(context));
 }
 
+function isLeadSignoffFlow(context) {
+  return reviewFlow.isLeadSignoff(getReviewFlowPolicy(context));
+}
+
 /**
  * Kanban state as agents and policy checks must see it: the raw state plus the EFFECTIVE flow,
  * prompt and where they come from. Never write this view back; writers use getKanbanState.
@@ -194,6 +198,7 @@ module.exports = {
   getReviewFlowPolicy,
   getEffectiveKanbanState,
   isHumanApprovalFlow,
+  isLeadSignoffFlow,
   setReviewFlowSettings,
   clearKanban,
   listReviewers,

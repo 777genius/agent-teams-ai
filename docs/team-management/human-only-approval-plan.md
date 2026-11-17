@@ -182,6 +182,44 @@ review events, IPC and UI primitives over new services or persistence tables.
 Reassess changed-line estimates after auditing all review-state readers; no
 arbitrary line target should justify omitting a trust-boundary or regression test.
 
+## Lead sign-off before the human (`lead_then_human`)
+
+Some teams run Developer -> Reviewer -> Lead -> user. The `lead_then_human` flow
+keeps everything above (agents never approve; only the desktop user does) and adds
+one controller-enforced step between the reviewer and Done.
+
+- When the stage-1 reviewer calls `review_complete`, the controller does not move the
+  task to Done. Inside the same board lock it appends one `review_requested` history
+  event with `stage: 'lead_signoff'`, `reviewer: <lead>` and
+  `afterReviewRequestId: <stage-1 request id>`. The task stays in Review with the Lead
+  as the assigned reviewer. No new event type or state: all readers that already
+  understand a review cycle keep working.
+- The Lead finishes the sign-off with the same tools: `review_complete` (task goes to
+  Done, awaiting the user) or `review_request_changes` (task returns to the owner, and
+  the next review request starts a full cycle again from the reviewer).
+- Decisions are bound to a named actor. In `lead_then_human`, `review_complete` and
+  `review_request_changes` require an explicit `from` (no inference, no `team-lead`
+  default), and only an explicit `from` that resolves to the assigned reviewer of the
+  current cycle (the Lead, for the sign-off) may decide it. This is the app's normal
+  trust model for named actors, not an authentication boundary: an agent that names
+  itself as the Lead is not distinguished from the Lead. The stage-1 reviewer's old
+  request id is rejected as stale.
+- A retry of the stage-1 `review_complete` is idempotent only for the reviewer who
+  handed off and only while the sign-off is still the latest request; the answer keeps
+  `reviewRequestId` (the stage-1 id the caller passed) and returns the new id as
+  `leadSignoffRequestId`. Anyone else, or a later cycle, gets the stale-request error.
+- Stage 2 is skipped when the explicit deciding actor is the Lead (`actor_is_lead`), when
+  the task owner as of the stage-1 review request is the Lead (`owner_is_lead`; a later
+  owner change does not skip it), or when no Lead can be resolved (`no_lead`). The cycle
+  then closes as in `human_approval` and the `review_complete` payload carries
+  `leadSignoffSkipped` with that reason.
+- The user can approve or reject at any time, including while the Lead has not yet
+  signed off. If the Lead is away the task simply waits; the user confirms manually.
+- The Lead always sees its pending sign-offs: the lead briefing has an
+  `Awaiting your sign-off:` section (with each `expectedReviewRequestId`) and a
+  `leadSignoff=N` counter, derived from board state on every call, so it survives
+  context compaction.
+
 ## Separate bugfix
 
 Reviewer clarification suppression is independent: structured waiting on Lead or

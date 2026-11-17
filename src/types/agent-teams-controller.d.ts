@@ -117,7 +117,7 @@ declare module 'agent-teams-controller' {
     unlinkTask(taskId: string, targetId: string, linkType: string): unknown;
   }
 
-  export type ControllerReviewFlow = 'agent_approval' | 'human_approval';
+  export type ControllerReviewFlow = 'agent_approval' | 'human_approval' | 'lead_then_human';
 
   export interface ControllerReviewFlowSettings {
     reviewFlow: ControllerReviewFlow;

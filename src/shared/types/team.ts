@@ -181,6 +181,10 @@ export interface TaskReviewRequestedEvent extends TaskHistoryEventBase {
   to: 'review';
   reviewer?: string;
   note?: string;
+  /** Set on the second review cycle of the lead_then_human flow: the lead signs off after the reviewer. */
+  stage?: 'lead_signoff';
+  /** The reviewer's request this lead sign-off follows. */
+  afterReviewRequestId?: string;
 }
 
 export interface TaskReviewChangesRequestedEvent extends TaskHistoryEventBase {

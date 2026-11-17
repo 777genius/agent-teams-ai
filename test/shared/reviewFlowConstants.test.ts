@@ -3,6 +3,7 @@ import { createRequire } from 'node:module';
 import {
   DEFAULT_REVIEW_FLOW,
   isHumanApprovalFlow,
+  isLeadSignoffFlow,
   MAX_REVIEW_FLOW_PROMPT_LENGTH,
   parseReviewFlowSettings,
   resolveReviewFlowPolicy,
@@ -15,6 +16,7 @@ interface ControllerReviewFlow {
   MAX_REVIEW_FLOW_PROMPT_LENGTH: number;
   REVIEW_FLOWS: readonly string[];
   isHumanApproval: (policy: unknown) => boolean;
+  isLeadSignoff: (policy: unknown) => boolean;
   parseReviewFlowSettings: (raw: unknown) => { reviewFlow: string; reviewFlowPrompt: string };
   resolvePolicy: (
     defaults: { reviewFlow: string; reviewFlowPrompt: string },
@@ -73,16 +75,20 @@ describe('review flow rules shared by the controller and the TypeScript domain',
     expect(resolveReviewFlowPolicy(defaults, override).reviewFlowPrompt).toBe('');
   });
 
-  it('treat only human_approval as the human-only policy', () => {
+  it('treat both human flows as human-approved and only lead_then_human as lead sign-off', () => {
     for (const policy of [
       { reviewFlow: 'human_approval' },
+      { reviewFlow: 'lead_then_human' },
       { reviewFlow: 'agent_approval' },
       {},
       null,
     ]) {
       expect(controller.isHumanApproval(policy)).toBe(isHumanApprovalFlow(policy));
+      expect(controller.isLeadSignoff(policy)).toBe(isLeadSignoffFlow(policy));
     }
     expect(isHumanApprovalFlow({ reviewFlow: 'human_approval' })).toBe(true);
+    expect(isHumanApprovalFlow({ reviewFlow: 'lead_then_human' })).toBe(true);
+    expect(isLeadSignoffFlow({ reviewFlow: 'human_approval' })).toBe(false);
     expect(isHumanApprovalFlow(null)).toBe(false);
   });
 });

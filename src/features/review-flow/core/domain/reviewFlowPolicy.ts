@@ -1,14 +1,14 @@
-import type {
-  ReviewFlow,
-  ReviewFlowPolicy,
-  ReviewFlowSettings,
-} from '../../contracts/types';
+import type { ReviewFlow, ReviewFlowPolicy, ReviewFlowSettings } from '../../contracts/types';
 
 /**
  * Values are owned here for the TypeScript side. The controller (agent-teams-controller/src/internal/reviewFlow.js)
  * enforces the same rules for agents; a parity test keeps the two copies equal.
  */
-export const REVIEW_FLOWS: readonly ReviewFlow[] = ['agent_approval', 'human_approval'];
+export const REVIEW_FLOWS: readonly ReviewFlow[] = [
+  'agent_approval',
+  'human_approval',
+  'lead_then_human',
+];
 export const DEFAULT_REVIEW_FLOW: ReviewFlow = 'agent_approval';
 export const MAX_REVIEW_FLOW_PROMPT_LENGTH = 1000;
 
@@ -57,7 +57,8 @@ export type TeamReviewFlowState =
  * until the override is reset, so callers must not treat it as following the default.
  */
 export function inspectTeamReviewFlowState(state: unknown): TeamReviewFlowState {
-  if (!state || typeof state !== 'object' || Array.isArray(state)) return { kind: 'follows-default' };
+  if (!state || typeof state !== 'object' || Array.isArray(state))
+    return { kind: 'follows-default' };
   const { reviewFlow, reviewFlowPrompt } = state as Record<string, unknown>;
   if (reviewFlow === undefined) {
     return reviewFlowPrompt === undefined ? { kind: 'follows-default' } : { kind: 'invalid' };
@@ -71,15 +72,17 @@ export function resolveReviewFlowPolicy(
   defaults: ReviewFlowSettings,
   teamOverride: ReviewFlowSettings | null | undefined
 ): ReviewFlowPolicy {
-  return teamOverride
-    ? { ...teamOverride, source: 'team' }
-    : { ...defaults, source: 'default' };
+  return teamOverride ? { ...teamOverride, source: 'team' } : { ...defaults, source: 'default' };
 }
 
-export function isHumanApprovalFlow(
-  policy: { reviewFlow?: ReviewFlow | string } | null | undefined
-): boolean {
-  return policy?.reviewFlow === 'human_approval';
+/** True when the user, not an agent, gives the final approval (with or without a lead sign-off). */
+export function isHumanApprovalFlow(policy: { reviewFlow?: string } | null | undefined): boolean {
+  return policy?.reviewFlow === 'human_approval' || isLeadSignoffFlow(policy);
+}
+
+/** True when the lead must sign off after the reviewer, before the task reaches Done. */
+export function isLeadSignoffFlow(policy: { reviewFlow?: string } | null | undefined): boolean {
+  return policy?.reviewFlow === 'lead_then_human';
 }
 
 export function areReviewFlowSettingsEqual(a: ReviewFlowSettings, b: ReviewFlowSettings): boolean {
