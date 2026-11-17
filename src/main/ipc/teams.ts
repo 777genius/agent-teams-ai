@@ -10,6 +10,7 @@ import {
   validateAgentAttachmentSerializedIpcPayload,
 } from '@features/agent-attachments/main';
 import { readNativeInboxAttachmentCapability } from '@features/member-work-sync/main';
+import { createReviewFlowFeature, registerReviewFlowIpc, removeReviewFlowIpc } from '@features/review-flow/main';
 import { parseNewTeamProjectContextMode } from '@features/team-project-context/core';
 import {
   projectTeamSummaries,
@@ -41,7 +42,7 @@ import {
   validateBootstrapOnlyLaunchRequest,
 } from '@main/services/team/TeamRequestValidation';
 import { getAppIconPath } from '@main/utils/appIcon';
-import { getTeamsBasePath } from '@main/utils/pathDecoder';
+import { getClaudeBasePath, getTeamsBasePath } from '@main/utils/pathDecoder';
 import { isProcessAlive } from '@main/utils/processHealth';
 import { safeSendToRenderer } from '@main/utils/safeWebContentsSend';
 import { stripMarkdown } from '@main/utils/textFormatting';
@@ -335,7 +336,6 @@ import type { CliArgsValidationResult } from '@shared/utils/cliArgsParser';
 const logger = createLogger('IPC:teams');
 
 type VisibleDirectReplyProtocol = 'send_message' | 'agent_teams_message_send';
-
 function resolveVisibleDirectReplyProtocol(input: {
   providerId?: TeamProviderId;
   isLeadRecipient: boolean;
@@ -352,7 +352,6 @@ function resolveVisibleDirectReplyProtocol(input: {
   return 'send_message';
 }
 const TEAM_DATA_DRAFT_CLASSIFICATION_ACCESS_TIMEOUT_MS = 250;
-
 function isPlainObject(value: unknown): value is Record<string, unknown> {
   if (value == null || typeof value !== 'object') {
     return false;
@@ -360,7 +359,6 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
   const prototype = Object.getPrototypeOf(value);
   return prototype === Object.prototype || prototype === null;
 }
-
 function validateTeamGetDataOptions(
   value: unknown
 ): { valid: true; value: TeamGetDataOptions | undefined } | { valid: false; error: string } {
@@ -388,7 +386,6 @@ function validateTeamGetDataOptions(
     value: includeMemberBranches === false ? { includeMemberBranches: false } : undefined,
   };
 }
-
 function noteHeavyTeamDataWorkerFallback(operation: string): void {
   if (!app.isPackaged) {
     return;
@@ -398,16 +395,13 @@ function noteHeavyTeamDataWorkerFallback(operation: string): void {
     `[${operation}] team-data-worker unavailable in packaged runtime; falling back to main-thread execution for heavy message/activity path`
   );
 }
-
 function getWorkerErrorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
-
 function throwIfFatalTeamDataWorkerFailure(_operation: string, error: unknown): void {
   const failure = classifyTeamReadWorkerFailure(error, isTeamDataWorkerFatalError(error));
   if (failure) throw failure;
 }
-
 async function getNewestMessagesPageWithLiveOverlay(input: {
   teamName: string;
   limit: number;
@@ -698,6 +692,11 @@ export function initializeTeamHandlers(
 }
 
 export function registerTeamHandlers(ipcMain: IpcMain): void {
+  registerReviewFlowIpc(ipcMain, createReviewFlowFeature({
+    teamWriter: { setReviewFlowSettings: (teamName, settings) =>
+      getTeamDataService().setReviewFlowSettings(teamName, settings) },
+    getClaudeDir: getClaudeBasePath, getTeamsDir: getTeamsBasePath,
+  }));
   ipcMain.handle(TEAM_LIST, handleListTeams);
   registerTeamProjectContextViewHandler(ipcMain, () => ({
     data: getTeamDataService(), runtime: getTeamRuntimeApi(), run: getTeamProvisioningRunApi(),
@@ -809,6 +808,7 @@ export function registerTeamHandlers(ipcMain: IpcMain): void {
 }
 
 export function removeTeamHandlers(ipcMain: IpcMain): void {
+  removeReviewFlowIpc(ipcMain);
   ipcMain.removeHandler(TEAM_LIST);
   unregisterTeamProjectContextViewHandler(ipcMain);
   ipcMain.removeHandler(TEAM_GET_DATA);

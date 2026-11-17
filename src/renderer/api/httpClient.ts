@@ -68,6 +68,7 @@ import type { GatewayProviderApi } from '@features/gateway-provider/contracts';
 import type { MemberLogStreamApi } from '@features/member-log-stream/contracts';
 import type { ProjectFolderElectronApi } from '@features/project-folder/contracts';
 import type { DashboardRecentProjectsPayload } from '@features/recent-projects/contracts';
+import type { ReviewFlowElectronApi } from '@features/review-flow/contracts';
 import type {
   RuntimeProviderCompanionActionInput,
   RuntimeProviderCompanionInput,
@@ -162,7 +163,6 @@ import type {
 import type { AgentConfig, MemberWorkSyncElectronApi } from '@shared/types/api';
 import type { EditorAPI, ProjectAPI } from '@shared/types/editor';
 import type { TerminalAPI } from '@shared/types/terminal';
-
 function buildTokenUsageSnapshotRoute(request?: TokenUsageSnapshotRequest): string {
   const query = new URLSearchParams();
   if (request?.teamIds !== undefined) {
@@ -182,7 +182,6 @@ function buildTokenUsageSnapshotRoute(request?: TokenUsageSnapshotRequest): stri
   const suffix = query.toString();
   return suffix ? `${TOKEN_USAGE_SNAPSHOT_ROUTE}?${suffix}` : TOKEN_USAGE_SNAPSHOT_ROUTE;
 }
-
 function createBrowserCompanionStatus(
   input: RuntimeProviderCompanionInput,
   operation: 'status' | 'install' | 'connect' | 'action'
@@ -210,7 +209,6 @@ function createBrowserCompanionStatus(
     updatedAt: new Date().toISOString(),
   };
 }
-
 function createBrowserRuntimeProviderError(
   runtimeId: RuntimeProviderManagementRuntimeId,
   code: 'runtime-unhealthy' | 'unsupported-action'
@@ -225,12 +223,23 @@ function createBrowserRuntimeProviderError(
     },
   };
 }
-
 function gatewayUnavailable(): never {
   throw new Error('Gateway providers are available in the desktop app.');
 }
 
 export class HttpAPIClient implements ElectronAPI {
+  reviewFlow: ReviewFlowElectronApi = {
+    getOverview: async () => {
+      throw new Error('Review flow settings are only available in the desktop app');
+    },
+    setDefaults: async () => {
+      throw new Error('Review flow settings are only available in the desktop app');
+    },
+    setTeamOverride: async () => {
+      throw new Error('Review flow settings are only available in the desktop app');
+    },
+  };
+
   gatewayProvider: GatewayProviderApi = {
     listGatewayProfiles: async () => [],
     saveGatewayProfile: async () => gatewayUnavailable(),
@@ -1034,7 +1043,6 @@ export class HttpAPIClient implements ElectronAPI {
     getStatus: (): Promise<HttpServerStatus> =>
       Promise.resolve({ running: true, port: parseInt(new URL(this.baseUrl).port, 10) }),
   };
-
   teams: TeamsAPI = {
     getProjectContextView: async () => {
       throw new Error('Project-scoped local team history is only available in Electron mode');
