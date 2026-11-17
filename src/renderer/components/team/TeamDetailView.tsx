@@ -381,6 +381,7 @@ TaskDetailDialogHost.displayName = 'TaskDetailDialogHost';
 
 interface TeamDetailViewProps {
   teamName: string;
+  logicalTeamName?: string;
   isActive?: boolean;
   isPaneFocused?: boolean;
 }
@@ -403,7 +404,6 @@ function getSummaryKnownTeammateCount(summary: TeamSummary | undefined): number 
   if (!summary) {
     return 0;
   }
-
   const normalizedLeadName = summary.leadName?.trim().toLowerCase();
   const rosterNames = new Set<string>();
   for (const member of summary.members ?? []) {
@@ -421,7 +421,6 @@ function getSummaryKnownTeammateCount(summary: TeamSummary | undefined): number 
     }
     rosterNames.add(normalizedName);
   }
-
   const launchNames = new Set<string>();
   for (const rawName of [...(summary.missingMembers ?? []), ...(summary.skippedMembers ?? [])]) {
     const name = rawName.trim();
@@ -438,12 +437,10 @@ function getSummaryKnownTeammateCount(summary: TeamSummary | undefined): number 
     }
     launchNames.add(normalizedName);
   }
-
   const activeRosterCount = Math.max(summary.memberCount, rosterNames.size);
   if (activeRosterCount > 0) {
     return activeRosterCount;
   }
-
   return Math.max(
     summary.expectedMemberCount ?? 0,
     launchNames.size,
@@ -495,7 +492,6 @@ const TeamOfflineStatusBanner = memo(function TeamOfflineStatusBanner({
       };
     })
   );
-
   const message =
     summary?.teamLaunchState === 'partial_pending'
       ? summary.runtimeProcessPendingCount != null && summary.runtimeProcessPendingCount > 0
@@ -514,7 +510,6 @@ const TeamOfflineStatusBanner = memo(function TeamOfflineStatusBanner({
             })
           : t('detail.offline.partialFailed')
         : t('detail.offline.offline');
-
   return (
     <div
       role="status"
@@ -620,7 +615,6 @@ function buildMemberSpawnStatusMap(
   if (!memberSpawnStatuses) {
     return undefined;
   }
-
   const map = new Map<string, MemberSpawnStatusEntry>(Object.entries(memberSpawnStatuses));
   return map.size > 0 ? map : undefined;
 }
@@ -631,7 +625,6 @@ function buildTeamAgentRuntimeMap(
   if (!runtimeSnapshot) {
     return undefined;
   }
-
   const map = new Map<string, TeamAgentRuntimeEntry>(Object.entries(runtimeSnapshot));
   return map.size > 0 ? map : undefined;
 }
@@ -656,7 +649,6 @@ const TeamSpawnStatusWatcher = memo(function TeamSpawnStatusWatcher({
         fetchMemberSpawnStatuses: s.fetchMemberSpawnStatuses,
       }))
     );
-
   useEffect(() => {
     if (!isThisTabActive) return;
 
@@ -1300,6 +1292,7 @@ const TeamMemberDetailDialogBridge = memo(function TeamMemberDetailDialogBridge(
 
 export const TeamDetailView = memo(function TeamDetailView({
   teamName,
+  logicalTeamName,
   isActive = true,
   isPaneFocused = false,
 }: TeamDetailViewProps): React.JSX.Element {
@@ -2102,9 +2095,11 @@ export const TeamDetailView = memo(function TeamDetailView({
 
   const handleLaunchDialogSubmit = useCallback(
     async (request: TeamLaunchRequest): Promise<void> => {
-      await launchTeam(request);
+      await launchTeam(logicalTeamName
+        ? { ...request, teamName: logicalTeamName, cwd: data?.config.projectPath ?? request.cwd }
+        : request);
     },
-    [launchTeam]
+    [launchTeam, logicalTeamName, data?.config.projectPath]
   );
 
   const validateMemberSettingsRelaunch = useCallback(async (): Promise<void> => {
@@ -2126,6 +2121,9 @@ export const TeamDetailView = memo(function TeamDetailView({
       memberSettingsRelaunch?: import('@shared/types').ReplaceMembersRequest['memberSettingsRelaunch'],
       onMembersSaved?: () => void
     ): Promise<void> => {
+      if (logicalTeamName) {
+        throw new Error('Stop the project runtime before launching; team roster changes must be made on the logical team');
+      }
       await executeTeamRelaunch({
         teamName,
         isTeamAlive: data?.isAlive === true,
@@ -2169,6 +2167,7 @@ export const TeamDetailView = memo(function TeamDetailView({
       data?.members,
       data?.tasks,
       launchTeam,
+      logicalTeamName,
       teamName,
       validateMemberSettingsRelaunch,
     ]
@@ -2213,11 +2212,11 @@ export const TeamDetailView = memo(function TeamDetailView({
     setSelectedMemberView(null);
   }, []);
   const handleEditMember = useCallback((member: ResolvedTeamMember) => {
-    if (member.removedAt) return;
+    if (member.removedAt || logicalTeamName) return;
     setSelectedMember(null);
     setSelectedMemberView(null);
     setEditTarget({ kind: 'member', memberName: member.name });
-  }, []);
+  }, [logicalTeamName]);
   const closeSelectedMemberDialog = useCallback(() => {
     setSelectedMember(null);
     setSelectedMemberView(null);
@@ -2631,14 +2630,15 @@ export const TeamDetailView = memo(function TeamDetailView({
     void (async () => {
       try {
         if (!(await requestCloseChangeReviewLifecycleHost(reviewLifecycleHostId))) return;
-        if (!(await runTeamDeleteOnce(teamName, () => deleteTeam(teamName)))) return;
+        const name = logicalTeamName ?? teamName;
+        if (!(await runTeamDeleteOnce(name, () => deleteTeam(name)))) return;
         if (tabId) closeTab(tabId);
         openTeamsTab();
       } catch (deleteError) {
         showTeamDeleteError(t, deleteError);
       }
     })();
-  }, [teamName, deleteTeam, openTeamsTab, closeTab, tabId, reviewLifecycleHostId, t]);
+  }, [teamName, logicalTeamName, deleteTeam, openTeamsTab, closeTab, tabId, reviewLifecycleHostId, t]);
 
   const handleCreateTask = async (request: CreateTaskRequest): Promise<void> => {
     assertCreateTaskOriginCurrent();
@@ -2964,7 +2964,7 @@ export const TeamDetailView = memo(function TeamDetailView({
                         </TooltipContent>
                       </Tooltip>
                     )}
-                    <Tooltip>
+                    {!logicalTeamName && <Tooltip>
                       <TooltipTrigger asChild>
                         <Button
                           variant="ghost"
@@ -2986,9 +2986,9 @@ export const TeamDetailView = memo(function TeamDetailView({
                           ? t('detail.tooltips.editUnavailableProvisioning')
                           : t('detail.tooltips.editTeam')}
                       </TooltipContent>
-                    </Tooltip>
+                    </Tooltip>}
                     <TeamDeleteButton
-                      teamName={teamName}
+                      teamName={logicalTeamName ?? teamName}
                       placement="header"
                       label={t('list.moveToTrash.title')}
                       onClick={handleDeleteTeam}
@@ -3124,7 +3124,7 @@ export const TeamDetailView = memo(function TeamDetailView({
                   icon={<Users size={14} />}
                   badge={activeTeammateCount === 0 ? t('detail.solo') : activeTeammateCount}
                   defaultOpen
-                  afterBadge={
+                  afterBadge={!logicalTeamName && (
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <Button
@@ -3142,7 +3142,7 @@ export const TeamDetailView = memo(function TeamDetailView({
                       </TooltipTrigger>
                       <TooltipContent>{t('detail.actions.add')}</TooltipContent>
                     </Tooltip>
-                  }
+                  )}
                   action={
                     <div className="runtime-telemetry-legend flex items-center gap-3 pr-3 text-[11px] font-medium leading-none text-[var(--color-text-muted)] opacity-0 transition-opacity duration-150">
                       <span className="flex items-center gap-1.5">
@@ -3171,7 +3171,7 @@ export const TeamDetailView = memo(function TeamDetailView({
                       onMemberClick={handleSelectMember}
                       onSendMessage={handleSendMessageToMember}
                       onAssignTask={handleAssignTaskToMember}
-                      onEditMember={handleEditMember}
+                      onEditMember={logicalTeamName ? undefined : handleEditMember}
                       onOpenTask={handleOpenTaskById}
                       onRestartMember={handleRestartMember}
                       onSkipMemberForLaunch={handleSkipMemberForLaunch}
@@ -3390,8 +3390,8 @@ export const TeamDetailView = memo(function TeamDetailView({
                   closeSelectedMemberDialog();
                   openTaskDetailDialog(task);
                 }}
-                onEditMember={handleEditMember}
-                onRemoveMember={() => {
+                onEditMember={logicalTeamName ? undefined : handleEditMember}
+                onRemoveMember={logicalTeamName ? undefined : () => {
                   const name = selectedMember?.name;
                   if (!name) return;
                   setRemoveMemberConfirm(name);
@@ -3427,7 +3427,7 @@ export const TeamDetailView = memo(function TeamDetailView({
                 </Suspense>
               )}
 
-              {editTarget?.kind === 'team' && (
+              {!logicalTeamName && editTarget?.kind === 'team' && (
                 <EditTeamDialog
                   open
                   teamName={teamName}
@@ -3446,7 +3446,7 @@ export const TeamDetailView = memo(function TeamDetailView({
                 />
               )}
 
-              {editTarget?.kind === 'member' ? (
+              {!logicalTeamName && editTarget?.kind === 'member' ? (
                 <TeamMemberSettingsDialogBridge
                   teamName={teamName}
                   memberName={editTarget.memberName}
@@ -3460,7 +3460,7 @@ export const TeamDetailView = memo(function TeamDetailView({
                 />
               ) : null}
 
-              {addMemberDialogOpen && (
+              {!logicalTeamName && addMemberDialogOpen && (
                 <AddMemberDialog
                   open={addMemberDialogOpen}
                   teamName={teamName}
@@ -3495,7 +3495,7 @@ export const TeamDetailView = memo(function TeamDetailView({
                 />
               )}
 
-              {removeMemberConfirm !== null && (
+              {!logicalTeamName && removeMemberConfirm !== null && (
                 <Dialog
                   open={true}
                   onOpenChange={(open) => {
