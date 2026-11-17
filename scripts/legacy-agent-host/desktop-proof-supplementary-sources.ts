@@ -292,6 +292,10 @@ export const desktopProofSupplementarySources = [
   'test/renderer/components/cli/CliStatusVisibility.test.ts',
   'scripts/e2e/comment-notification/cdp.mjs',
   'src/features/team-task-detail/renderer/ui/TaskDetailHeader.tsx',
+  'src/features/runtime-provider-management/renderer/hooks/runtimeProviderManagementPresentation.ts',
+  'src/shared/utils/opencodeModelRef.ts',
+  'test/renderer/features/runtime-provider-management/RuntimeProviderManagementPanelView.test.ts',
+  'test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts',
 ];
 
 /** Exact finite Windows same-Main recovery and original Processes UI construction inputs. */
