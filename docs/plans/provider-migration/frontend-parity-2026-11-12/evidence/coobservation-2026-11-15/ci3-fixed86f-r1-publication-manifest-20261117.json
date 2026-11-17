@@ -1,0 +1,311 @@
+{
+  "schemaVersion": 1,
+  "kind": "C714_FIXED_86F_THIRD_CI_R1_PUBLICATION_MANIFEST",
+  "at": "2026-11-17 13:11:46 UTC",
+  "repository": "777genius/agent-teams-ai",
+  "branch": "fix/frontend-parity-coobservation-c714-20261115",
+  "parent": "86f52244b5375834a4040cbc63803d68cc708087",
+  "parentTree": "11ccb7c57cc49af613c62620a1d348bf6de8aa3d",
+  "parentDocsTree": "edf306377d1dcc641455b25367ba73d0dc398f3d",
+  "subject": {
+    "bytes": 88097,
+    "sha256": "86e51d82ac055045ce1682afd942f28a4f682be354acf629f7c02dc1929fbebe",
+    "gitBlob": "d9da20d5123dd4bfec6c400508e2409e783f346d"
+  },
+  "sourceActualGate": {
+    "bytes": 8975,
+    "sha256": "70cbc7861cf6b7781600a76eec8df62486be3ee1e657c2694db4c3b4d1357725",
+    "gitBlob": "246e59b55ed2d395524f40f466c1ef7c8362a553"
+  },
+  "reviews": [
+    {
+      "role": "rootReview",
+      "pin": {
+        "bytes": 71519,
+        "sha256": "ea03d37f9676a7618b01c61fd0c700af3f45703ed66523996f759ed191890ad3",
+        "gitBlob": "e095c058c9e2f02268dd6459083c1a03deb26ed0"
+      },
+      "checks": 42,
+      "decision": "ACCEPT_EXACT_CI_R1_FOR_DOCUMENTATION_PUBLICATION_ONLY",
+      "completeBodyRead": true,
+      "selfReadConfirmed": true
+    },
+    {
+      "role": "guardReview",
+      "pin": {
+        "bytes": 84373,
+        "sha256": "4e92f16494d4da7200cfa4ab9403b3e9cd658f7c27c97dba69c317ad67ba17c1",
+        "gitBlob": "b6ea038954d943981da7119f3f3c86dc77dfce77"
+      },
+      "checks": 45,
+      "decision": "ACCEPT_EXACT_CI3_R1_SCOPE_ONLY_PENDING_EXISTING_PUBLICATION_AND_ADMISSION",
+      "completeBodyRead": true,
+      "selfReadConfirmed": true
+    },
+    {
+      "role": "semanticReview",
+      "pin": {
+        "bytes": 63139,
+        "sha256": "96e065caee14e8b3194964887d7243b6b78ffc2832c868f452f467bf47bd93da",
+        "gitBlob": "a6f86825012567b7b3dca65a6cca42e80344d0bd"
+      },
+      "checks": 43,
+      "decision": "ACCEPT_EXACT_CI3_R1_STATIC_SEMANTICS_ONLY",
+      "completeBodyRead": true,
+      "selfReadConfirmed": true,
+      "wordingClarification": {
+        "field": "checks.S18.evidence",
+        "authorAt": "2026-11-17 13:05:23 UTC",
+        "meaning": "The phrase original139 bytes means the entire164965-byte139-case prefix plus57-byte import =165022 bytes and149expanded cases, as the complete R1 actual tuples state. It does not assert a139-byte prefix.",
+        "reportBodyChanged": false
+      }
+    },
+    {
+      "role": "bindingReview",
+      "pin": {
+        "bytes": 343813,
+        "sha256": "beba2aa568aa6cef0b293f971a389c1e85ec1e0157cfc16d0c58e9a40c6c3a7e",
+        "gitBlob": "5e3404934c98557891b0abde6dc7ea50cc99cec6"
+      },
+      "checks": 50,
+      "decision": "ACCEPT_EXACT_CI3_R1_BINDING_SCOPE_ONLY",
+      "completeBodyRead": true,
+      "selfReadConfirmed": true
+    }
+  ],
+  "reviewsClosedAt": "2026-11-17 13:11:46 UTC",
+  "reviewChecks": 180,
+  "fixedCiHead": "86f52244b5375834a4040cbc63803d68cc708087",
+  "fixedCiBase": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+  "evidenceFiles": [
+    {
+      "key": "r1",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-fixed86f-r1-20261117.json",
+      "mode": "100644",
+      "bytes": 88097,
+      "sha256": "86e51d82ac055045ce1682afd942f28a4f682be354acf629f7c02dc1929fbebe",
+      "gitBlob": "d9da20d5123dd4bfec6c400508e2409e783f346d"
+    },
+    {
+      "key": "rootReview",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-fixed86f-r1-root-review-20261117.json",
+      "mode": "100644",
+      "bytes": 71519,
+      "sha256": "ea03d37f9676a7618b01c61fd0c700af3f45703ed66523996f759ed191890ad3",
+      "gitBlob": "e095c058c9e2f02268dd6459083c1a03deb26ed0"
+    },
+    {
+      "key": "guardReview",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-fixed86f-r1-guard-review-20261117.json",
+      "mode": "100644",
+      "bytes": 84373,
+      "sha256": "4e92f16494d4da7200cfa4ab9403b3e9cd658f7c27c97dba69c317ad67ba17c1",
+      "gitBlob": "b6ea038954d943981da7119f3f3c86dc77dfce77"
+    },
+    {
+      "key": "semanticReview",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-fixed86f-r1-semantic-review-20261117.json",
+      "mode": "100644",
+      "bytes": 63139,
+      "sha256": "96e065caee14e8b3194964887d7243b6b78ffc2832c868f452f467bf47bd93da",
+      "gitBlob": "a6f86825012567b7b3dca65a6cca42e80344d0bd"
+    },
+    {
+      "key": "bindingReview",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-fixed86f-r1-binding-review-20261117.json",
+      "mode": "100644",
+      "bytes": 343813,
+      "sha256": "beba2aa568aa6cef0b293f971a389c1e85ec1e0157cfc16d0c58e9a40c6c3a7e",
+      "gitBlob": "5e3404934c98557891b0abde6dc7ea50cc99cec6"
+    },
+    {
+      "key": "sourceActualGate",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/claude-finite-runtime-readiness-source-r2-actual-gate-20261117.json",
+      "mode": "100644",
+      "bytes": 8975,
+      "sha256": "70cbc7861cf6b7781600a76eec8df62486be3ee1e657c2694db4c3b4d1357725",
+      "gitBlob": "246e59b55ed2d395524f40f466c1ef7c8362a553"
+    },
+    {
+      "key": "sourceRootActual",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/claude-finite-runtime-readiness-source-r2-root-actual-20261117.json",
+      "mode": "100644",
+      "bytes": 529929,
+      "sha256": "aa20d4251e2f1dfc57ad19ce0e800991e32b0c679191a6d98c819032745f98ba",
+      "gitBlob": "be4db6e26f2115322786800d67ab6c3570d1b752"
+    },
+    {
+      "key": "sourceIndependentActual",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/claude-finite-runtime-readiness-source-r2-independent-actual-20261117.json",
+      "mode": "100644",
+      "bytes": 663489,
+      "sha256": "60d09eaf5e039d00c35cd26d450304b2f1aea6258aaf7fa28fc45a92c26b95db",
+      "gitBlob": "a55ab6ae84ecd011476cf107dec4a4e871a40845"
+    },
+    {
+      "key": "actualPathCrossjoin",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-fixed86f-actual-source-workflow-crossjoin-20261117.json",
+      "mode": "100644",
+      "bytes": 48984,
+      "sha256": "b12a88c078f982733f7a5fecdc54eebe4e03f9d723d64454aded98cc78897ce5",
+      "gitBlob": "e0c1d26412717b90226c3fefa0932edbcc27a1fe"
+    },
+    {
+      "key": "comparison",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-fixed86f-complete-source-comparison-20261117.json",
+      "mode": "100644",
+      "bytes": 1157915,
+      "sha256": "ceb09d0f69370e9bacefee3dfa0afc273e3904b9193afccf9fa9613e979f9b9b",
+      "gitBlob": "f26308ac78e47a41ff8cd88f983944a8caeeb32e"
+    }
+  ],
+  "modifiedDocuments": [
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/29-reconciled-acceptance-and-custody-followups-2026-11-15.md",
+      "mode": "100644",
+      "before": {
+        "bytes": 2642411,
+        "sha256": "9fdfd11ea8268545b7b1bd33543e4f3a10e304aebf2d2d50fb573f6ffb96d0a9",
+        "gitBlob": "e920f84b284945727731966bdbb60862b8047da7"
+      },
+      "after": {
+        "bytes": 2647907,
+        "sha256": "f50c9ed8f3022e42cfdf8fb7899ec5abafbc8e02cfa44a45d2305902df9a37d2",
+        "gitBlob": "71fe4f38283bd7df928672149b80afb78b321c0d"
+      },
+      "literalPrefixPreserved": true,
+      "appendIdentity": {
+        "bytes": 5496,
+        "sha256": "5177f34a497d5879d5a545cc0482f447df8383e47f859ccfb16111d5032787fd",
+        "gitBlob": "95d48919e638234cb8bc33f6dcf1e91f2b3bc9fa",
+        "kind": "derived-identical-document-suffix-not-separately-retained-blob"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/continuation-status-20261116.md",
+      "mode": "100644",
+      "before": {
+        "bytes": 119120,
+        "sha256": "22e022d87c36e8da90fcd9e9daac98c74d8edcbc295ca67bf9a58aac943f7e65",
+        "gitBlob": "7a365269889a34508dd8d6e0e96ec1c8cbb2e148"
+      },
+      "after": {
+        "bytes": 124616,
+        "sha256": "c70eb80c9cb62ac121a7545348d4034205662651f88efdc0621beb852ffcbff4",
+        "gitBlob": "8227506d6c8ce6175b980d5e8f4c4c3640b163ff"
+      },
+      "literalPrefixPreserved": true,
+      "appendIdentity": {
+        "bytes": 5496,
+        "sha256": "5177f34a497d5879d5a545cc0482f447df8383e47f859ccfb16111d5032787fd",
+        "gitBlob": "95d48919e638234cb8bc33f6dcf1e91f2b3bc9fa",
+        "kind": "derived-identical-document-suffix-not-separately-retained-blob"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1213-retention-catalog-20261116.json",
+      "mode": "100644",
+      "before": {
+        "bytes": 761339,
+        "sha256": "ab22feb9074539f0a1e9af8af91aec7f5f88286a98e48e04187b2bd6d7e20d4c",
+        "gitBlob": "b3c7cbbae3d6067d4b9a38b13dc7745f41944561"
+      },
+      "after": {
+        "bytes": 789700,
+        "sha256": "7a90b434df11fd11557eae4c87e443ad02c44c1b5a0d85a1e0832c66405fdf7c",
+        "gitBlob": "ea1003d4c621d41d0c8d6bb171c92dbc3dd0cce7"
+      },
+      "all99ParentValuesPreserved": true,
+      "newKeys": [
+        "fixed86fThirdCiR1Stage",
+        "fixed86fThirdCiR1EvidenceFiles"
+      ]
+    }
+  ],
+  "manifestPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-fixed86f-r1-publication-manifest-20261117.json",
+  "expectedDelta": {
+    "changed": 14,
+    "added": 11,
+    "modified": 3,
+    "deleted": 0,
+    "modesChanged": 0,
+    "sourceChanged": 0,
+    "workflowsChanged": 0
+  },
+  "expectedCensus": {
+    "parentLeaves": 12193,
+    "parentDocs": 3394,
+    "parentNonDocs": 8799,
+    "leaves": 12204,
+    "docs": 3405,
+    "nonDocs": 8799,
+    "rootEntries": 54,
+    "unchangedNonDocRootEntries": 53,
+    "workflows": 42,
+    "production": 5020,
+    "exceptions": 141,
+    "sourceCap": 800
+  },
+  "catalogPreservation": {
+    "beforeFields": 99,
+    "afterFields": 101,
+    "allParentValuesIdentical": true,
+    "bundles": 27,
+    "totalsIdentical": true,
+    "newKeys": [
+      "fixed86fThirdCiR1Stage",
+      "fixed86fThirdCiR1EvidenceFiles"
+    ]
+  },
+  "appendSectionIdentity": {
+    "bytes": 5496,
+    "sha256": "5177f34a497d5879d5a545cc0482f447df8383e47f859ccfb16111d5032787fd",
+    "gitBlob": "95d48919e638234cb8bc33f6dcf1e91f2b3bc9fa",
+    "kind": "derived-identical-document-suffix-not-separately-retained-blob"
+  },
+  "noNewExecutableR2Needed": true,
+  "qualification": {
+    "staticR1Only": true,
+    "runtimeAdmitted": false,
+    "newTestsExecuted": false,
+    "newRunPasses": false,
+    "completeE2E": false,
+    "readyMergeReleaseDefaultStage2": false
+  },
+  "environment": {
+    "latestAvailabilityNotification": {
+      "at": "2026-11-17 12:19:47 UTC",
+      "kind": "environment-availability-notification",
+      "cwd": "/workspace/scratch/c714f5bce554",
+      "status": "availability notified, filesystem and process identity not probed",
+      "priorUnavailableRecordedAt": "2026-11-17 11:31:41 UTC",
+      "sourceR2At": "2026-11-17 12:15:30 UTC",
+      "priorUnavailableFieldHistorical": true,
+      "localProbePerformed": false,
+      "standaloneRebound": false,
+      "runtimeAdmitted": false,
+      "noCua": true,
+      "noSequenceChange": true
+    },
+    "filesystemAndProcessIdentityProbedSinceNotification": false,
+    "standaloneRunner": {
+      "bytes": 25819,
+      "sha256": "23db81a589330feffe20cfa8dc2a259041ca6dc0f84ec416db6dc046761abbf9",
+      "gitBlob": "19662be9d55c70166c8f2c2e74775e6b03098197"
+    },
+    "standaloneBinding": {
+      "bytes": 107295,
+      "sha256": "d8626f22a432926350c4d69c657313a61b935764dae972159a1a88fc03163b5b",
+      "gitBlob": "381c51a331b9d03f5aab87835af3dad5a6643d3c"
+    },
+    "standaloneInvoked": false,
+    "standaloneRebound": false,
+    "notReplacement": "Existing workflow-selected runtimes do not qualify or replace the separate Node24.22.1/inode-pinned RED/GREEN supervisor. Old attempts remain spent.",
+    "artifactAccess": "Actual new artifact bytes/member/CRC/receipt/image reads are required. Current availability notification is not proof of restored scratch or source/runtime identity; no target local execution is authorized here.",
+    "noCUA": true
+  },
+  "externalAdmissionAuthored": false,
+  "newRefsCreated": [],
+  "newPrNumber": null,
+  "newRunIds": []
+}

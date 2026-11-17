@@ -1,0 +1,92 @@
+{
+  "schemaVersion": 1,
+  "kind": "C714_CI3_ORIGINAL_ARTIFACT_DELIVERY_FAILURE",
+  "at": "2026-11-17 15:29:51 UTC",
+  "repository": "777genius/agent-teams-ai",
+  "first": {
+    "at": "2026-11-17 15:25:21 UTC",
+    "status": "HTTP403_BEFORE_ARCHIVE_BYTES",
+    "archiveBytesRead": 0,
+    "reasonBodyUnavailable": true,
+    "deliveryHost": "sdmntprnortheu.oaiusercontent.com",
+    "deliveryTimeFields": {
+      "se": "2026-11-17T15:24:18Z"
+    },
+    "retry": false,
+    "toolResult": {
+      "chunk_id": "f69316",
+      "wall_time_seconds": 0.184246061,
+      "exit_code": 1,
+      "original_token_count": 324,
+      "output": "Traceback (most recent call last):\n  File \"<string>\", line 9, in <module>\n  File \"/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/urllib/request.py\", line 215, in urlopen\n    return opener.open(url, data, timeout)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/urllib/request.py\", line 521, in open\n    response = meth(req, response)\n               ^^^^^^^^^^^^^^^^^^^\n  File \"/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/urllib/request.py\", line 630, in http_response\n    response = self.parent.error(\n               ^^^^^^^^^^^^^^^^^^\n  File \"/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/urllib/request.py\", line 559, in error\n    return self._call_chain(*args)\n           ^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/urllib/request.py\", line 492, in _call_chain\n    result = func(*args)\n             ^^^^^^^^^^^\n  File \"/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/urllib/request.py\", line 639, in http_error_default\n    raise HTTPError(req.full_url, code, msg, hdrs, fp)\nurllib.error.HTTPError: HTTP Error 403: Forbidden\n"
+    }
+  },
+  "remaining": [
+    {
+      "artifactId": 14339387616,
+      "networkByteRequestReached": false,
+      "expiry": "2026-11-17T15:24:18Z",
+      "classification": "Original batch aborted before this artifact. Existing delivery URL now expired; no byte request, refresh, or retry issued."
+    },
+    {
+      "artifactId": 14340275045,
+      "networkByteRequestReached": false,
+      "expiry": "2026-11-17T15:24:18Z",
+      "classification": "Original batch aborted before this artifact. Existing delivery URL now expired; no byte request, refresh, or retry issued."
+    },
+    {
+      "artifactId": 14340915639,
+      "networkByteRequestReached": false,
+      "expiry": "2026-11-17T15:24:17Z",
+      "classification": "Original batch aborted before this artifact. Existing delivery URL now expired; no byte request, refresh, or retry issued."
+    },
+    {
+      "artifactId": 14339642768,
+      "networkByteRequestReached": false,
+      "expiry": "2026-11-17T15:24:17Z",
+      "classification": "Original batch aborted before this artifact. Existing delivery URL now expired; no byte request, refresh, or retry issued."
+    },
+    {
+      "artifactId": 14338262768,
+      "networkByteRequestReached": false,
+      "expiry": "2026-11-17T15:24:17Z",
+      "classification": "Original batch aborted before this artifact. Existing delivery URL now expired; no byte request, refresh, or retry issued."
+    },
+    {
+      "artifactId": 14340365581,
+      "networkByteRequestReached": false,
+      "expiry": "2026-11-17T15:24:18Z",
+      "classification": "Original batch aborted before this artifact. Existing delivery URL now expired; no byte request, refresh, or retry issued."
+    },
+    {
+      "artifactId": 14339889758,
+      "networkByteRequestReached": false,
+      "expiry": "2026-11-17T15:24:18Z",
+      "classification": "Original batch aborted before this artifact. Existing delivery URL now expired; no byte request, refresh, or retry issued."
+    },
+    {
+      "artifactId": 14338674909,
+      "networkByteRequestReached": false,
+      "expiry": "2026-11-17T15:24:18Z",
+      "classification": "Original batch aborted before this artifact. Existing delivery URL now expired; no byte request, refresh, or retry issued."
+    },
+    {
+      "artifactId": 14338338759,
+      "networkByteRequestReached": false,
+      "expiry": "2026-11-17T15:24:19Z",
+      "classification": "Original batch aborted before this artifact. Existing delivery URL now expired; no byte request, refresh, or retry issued."
+    },
+    {
+      "artifactId": 14338313585,
+      "networkByteRequestReached": false,
+      "expiry": "2026-11-17T15:24:18Z",
+      "classification": "Original batch aborted before this artifact. Existing delivery URL now expired; no byte request, refresh, or retry issued."
+    }
+  ],
+  "sourceArtifactDownloadsIssuedOnce": true,
+  "originalGitHubArtifactApiExpiryNotReached": true,
+  "qualification": "One signed file-delivery request returned403 after its URL expiry; zero archive bytes were obtained for that artifact. The remaining ten loop iterations were never reached and their original delivery URLs expired. No new runtime action, GitHub rerun, artifact-download renewal or byte retry. Full31job logs remain retained; unavailable artifact bodies are not PASS evidence.",
+  "newByteFetchesIssued": 1,
+  "archiveBodiesRead": 0,
+  "unreachedByteFetches": 10
+}

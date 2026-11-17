@@ -1,0 +1,241 @@
+{
+  "schemaVersion": 1,
+  "kind": "C714_COMPILED_DIAGNOSTIC_BOUNDARY_REPAIR_SOURCE_R2",
+  "repository": "777genius/agent-teams-ai",
+  "at": "2026-11-17 15:21:18 UTC",
+  "author": "root",
+  "workingBranch": "fix/frontend-parity-coobservation-c714-20261115",
+  "precedingActualGate": {
+    "bytes": 6963,
+    "sha256": "810df6e2da2e3203f6a301600e07e8762237f9cf85edf665ff7e2a508de83f7b",
+    "gitBlob": "e590c53e6f676bd819855e46d36a7d4ec5255c88"
+  },
+  "parent": {
+    "commit": "0d99e3069ad2c3d7058f49f7b5dbb06999cae6a0",
+    "tree": "d724d89ea0db5a83d63073647dc9289cfb1ebd66",
+    "docsTree": "3d26a380f9550e4f1ef9fcd8fbab5bfa0086b222",
+    "rootActual": {
+      "bytes": 576683,
+      "sha256": "1ece9a1e89ee5a3217ed08552ceeed38e50e0da3efd78f04fb6bb2cc327fc17b",
+      "gitBlob": "e2d862f0b6d57eaef7373288851e139b510e184f"
+    },
+    "independentActual": {
+      "bytes": 559229,
+      "sha256": "927ef43e0dbcd4bec3161451a96140f02c1b4ea6376fb137c9b82221528751f8",
+      "gitBlob": "1080986575faf274d46963e48ba8083eecb18f30"
+    }
+  },
+  "r1": {
+    "bytes": 10289,
+    "sha256": "08b7fd228ee8b264930d89dd485743e71b90f79edf3d094d20562a8d4c6064bc",
+    "gitBlob": "3a4c7a35a30dd24594cdfecf45510274598527dc"
+  },
+  "r1StaticReviews": [
+    {
+      "role": "root",
+      "pin": {
+        "bytes": 16460,
+        "sha256": "0337f3effb698430cf75a21e77ee19c797dac1f3456ce8e4efaf9e4cb217272c",
+        "gitBlob": "d3686a86b3c66da48f1982cafabf40d933a75413"
+      },
+      "checks": 24,
+      "selfReadConfirmed": true,
+      "selfReadAt": "2026-11-17 14:46:50 UTC"
+    },
+    {
+      "role": "guard",
+      "pin": {
+        "bytes": 24590,
+        "sha256": "72a194c88014874d140b49aa163adc3f4ecc27c57b1c6cb12539ffd0044d990e",
+        "gitBlob": "b8a58f44e2c61f4dc46e94a063bd2405c9ded3e4"
+      },
+      "checks": 29,
+      "selfReadConfirmed": true,
+      "selfReadAt": "2026-11-17 14:54:38 UTC"
+    },
+    {
+      "role": "semantic",
+      "pin": {
+        "bytes": 31206,
+        "sha256": "7f8ddb40ea02b91f8187baa5cbec09038b20e932269f9528869b95badd71fda2",
+        "gitBlob": "a50322801ad26ef2d2a1c0c0c96dc76b1868b118"
+      },
+      "checks": 28,
+      "selfReadConfirmed": true,
+      "selfReadAt": "2026-11-17 14:49:26 UTC"
+    },
+    {
+      "role": "binding",
+      "pin": {
+        "bytes": 49014,
+        "sha256": "4236e8a9216f42b755ee90547e8a037e712e459875389312113b5ebb68cfab46",
+        "gitBlob": "acc5b1081c78285ff3c534eae1adfa982da047ef"
+      },
+      "checks": 36,
+      "selfReadConfirmed": true,
+      "selfReadAt": "2026-11-17 14:55:09 UTC"
+    }
+  ],
+  "allowedSourcePaths": [
+    "packages/legacy-agent-host/tests/opencode-v2-native-receipt.test.mjs"
+  ],
+  "source": {
+    "path": "packages/legacy-agent-host/tests/opencode-v2-native-receipt.test.mjs",
+    "mode": "100644",
+    "before": {
+      "bytes": 41559,
+      "sha256": "80b8075c5ed87d3bd5f6707c1e83f4983d275510d67fa4e0a352e1a3d7d958a0",
+      "gitBlob": "9988bebfff4408e81ab63da26fc463e7b8fa618b"
+    },
+    "after": {
+      "bytes": 41619,
+      "sha256": "e1e95d1dcf12408251bde11f4ab679b73de7c8a15b4a49105121b1e8a5a92b36",
+      "gitBlob": "8d12ee7a61d13740dbaddfe8177bfe80cb716335"
+    },
+    "physicalLinesBefore": 647,
+    "physicalLinesAfter": 647,
+    "completeInverseExact": true,
+    "logicalLinesChanged": 3,
+    "diff": [
+      {
+        "line": 357,
+        "before": "  const unique = pattern => {",
+        "after": "  const unique = (pattern, start = 0) => {"
+      },
+      {
+        "line": 358,
+        "before": "    const matches = [...compiled.matchAll(pattern)];",
+        "after": "    const matches = [...compiled.matchAll(pattern)].filter(match => match.index >= start);"
+      },
+      {
+        "line": 367,
+        "before": "  const publishEnd = unique(/^[ \\t]*return closing;\\r?$/gm);",
+        "after": "  const publishEnd = unique(/^[ \\t]*return closing;\\r?$/gm, publish);"
+      }
+    ],
+    "replacements": [
+      {
+        "before": "  const unique = pattern => {",
+        "after": "  const unique = (pattern, start = 0) => {"
+      },
+      {
+        "before": "    const matches = [...compiled.matchAll(pattern)];",
+        "after": "    const matches = [...compiled.matchAll(pattern)].filter(match => match.index >= start);"
+      },
+      {
+        "before": "  const publishEnd = unique(/^[ \\t]*return closing;\\r?$/gm);",
+        "after": "  const publishEnd = unique(/^[ \\t]*return closing;\\r?$/gm, publish);"
+      }
+    ]
+  },
+  "unchangedRuntimeSource": {
+    "path": "packages/legacy-agent-host/src/adapters/providers/OpenCodeV2ModelProbe.ts",
+    "pin": {
+      "bytes": 23312,
+      "sha256": "7c77d52a1f9dcc2b3c53d550514ba13c4256a5daca3a67f2c2c008e786e66ea2",
+      "gitBlob": "a5dc4221c8d3e35200c65b533dd0126479a0a3ab"
+    },
+    "fullyRead": true,
+    "changePermitted": false
+  },
+  "semantics": {
+    "lowerBound": "Inclusive original match.index; default zero",
+    "onlyScopedLookup": "publishEnd starts at the already uniquely identified publish boundary",
+    "exactlyOneAssertion": "unchanged",
+    "boundaryLocations": 6,
+    "orderingComparisons": 5,
+    "otherLookups": "five retain original global source domain",
+    "compiledSlices": "unchanged actual source slice ranges and original indices",
+    "serializedChild": "uses the same changed helper via original toString()",
+    "surrogateOrFallbackAdded": false
+  },
+  "preservedCaseInventory": {
+    "localTitles": [
+      "a failed native Host proof publishes only sanitized diagnostics and no raw paths",
+      "native receipt gate rejects forged digest, incomplete stages and cold restart uncertainty",
+      "receipt verifier CLI refuses lockfile-only artifacts with sanitized diagnostics",
+      "native V2 captured session readback cannot drift workspace or ordered permissions",
+      "native durable SSE proof accepts a bounded, owned and ordered history prefix",
+      "native durable SSE proof enforces frame-count budget with a distinct error",
+      "native durable SSE proof rejects foreign, incomplete and reordered events",
+      "cold native log proof compares retained event content, not only counts and watermark",
+      "raw native V2 variant readback cannot attest a missing or inherited default",
+      "actual ModelProbe run rejection keeps original identity and close classification with bounded own error codes",
+      "actual finite Node observer and parent retain producer error codes in the reserved close slot after trace exhaustion",
+      "actual close projection preserves legacy rows and opaque optional fields within original reservation and byte limits"
+    ],
+    "localRegistrations": 12,
+    "originalNineCasePrefix": "complete literal prefix unchanged",
+    "importedWholePlatformCases": 14,
+    "importLiteral": "await import('../../../scripts/e2e/opencode-diagnostics/platform.test.mjs');",
+    "allBodiesOutsideThreeLinesIdentical": true
+  },
+  "validationContract": {
+    "originalStaticCommand": "node --test packages/legacy-agent-host/tests/opencode-v2-static-preflight.test.ts packages/legacy-agent-host/tests/opencode-v2-static-capture.test.ts packages/legacy-agent-host/tests/opencode-v2-host-spi.test.ts packages/legacy-agent-host/tests/opencode-v2-native-receipt.test.mjs packages/legacy-agent-host/tests/opencode-v2-native-process-guard.test.mjs packages/legacy-agent-host/tests/opencode-v2-request-admission.test.ts packages/legacy-agent-host/tests/opencode-v1-version-receipt.test.ts packages/legacy-agent-host/tests/opencode-v1-version-source.test.ts",
+    "originalStaticCommandUnchanged": true,
+    "sourceReview": "Whole target body and exact three-line inverse, all preserved tests/helpers/imports, changed target's anchored tree entry and unchanged ModelProbe/product/workflow/dependency bodies.",
+    "runtime": "After exact source R2 actual acceptance, use the existing separate GitHub-only CI admission sequence for the new source. Preserve the complete original command and platform-specific original skip; do not rerun or mutate the frozen CI3 refs/jobs.",
+    "localExecutionSelected": false,
+    "testReductionAllowed": false,
+    "passClaimsBeforeActualResults": false
+  },
+  "preservation": {
+    "production": 5020,
+    "cap": 800,
+    "exceptions": 141,
+    "nonDocLeaves": 8799,
+    "workflows": 42,
+    "newSourceFiles": 0,
+    "deletedSourceFiles": 0,
+    "productSourceChanges": 0,
+    "workflowChanges": 0,
+    "dependencyChanges": 0,
+    "deadlineChanges": 0,
+    "caseRemovals": 0,
+    "assertionRemovals": 0,
+    "sourceChanges": 1,
+    "oldAttemptsSpentForever": true,
+    "noRealClaudeOrCodex": true,
+    "noMainMergeReadyReleaseStage2": true
+  },
+  "ci3": {
+    "pr": 1223,
+    "fixedHead": "86f52244b5375834a4040cbc63803d68cc708087",
+    "fixedBase": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+    "refsAndMetadataUnchanged": true,
+    "latestIndependentObservation": 14,
+    "activeRunIds": [
+      44092933873,
+      44092933912,
+      44092934079,
+      44092933810
+    ],
+    "terminalExcludedForever": [
+      44092933980,
+      44092933718,
+      44092933835,
+      44092933888,
+      44092934051,
+      44092933827,
+      44092933972
+    ],
+    "newFailuresSeparate": true
+  },
+  "publicationContract": {
+    "soleParent": "0d99e3069ad2c3d7058f49f7b5dbb06999cae6a0",
+    "onlyNonDocChange": "packages/legacy-agent-host/tests/opencode-v2-native-receipt.test.mjs",
+    "rootPlusThreeIndependentReviews": true,
+    "immediatePush": true,
+    "force": false,
+    "existingDocumentPrefixesAndAll109CatalogValuesPreserved": true,
+    "rootAndIndependentActualReadbacks": true
+  },
+  "qualification": {
+    "staticSourceCandidateOnly": true,
+    "sourcePublished": false,
+    "compiledOrExecuted": false,
+    "actualGreen": false,
+    "wholeE2E": false
+  },
+  "nextExistingSequence": "Four exact sourceR2 reviews; publication/immediate push; root and independent actual readbacks; then existing separate GitHub-only CI admission. No target execution or extra gate in this R2."
+}

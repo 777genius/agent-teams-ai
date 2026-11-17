@@ -1,0 +1,54 @@
+{
+  "schemaVersion": 1,
+  "kind": "C714_FRESH_STANDALONE_CI3_EXTERNAL_EXECUTION_ADMISSION",
+  "at": "2026-11-17 14:37:15 UTC",
+  "verdict": "ACCEPT_EXACT_CONTROL_PUBLICATION_FOR_ONE_FRESH_STANDALONE_ATTEMPT",
+  "bindingSha256": "b44db6175efc66890593fe75189e0de9b16dee90672547e87cfd5f22e3d5ab8a",
+  "runner": {
+    "bytes": 25796,
+    "sha256": "72b743e8cde32af416f0a3d14f0dd7284fd817c2408e42b3c24e2b0f52c1aa8f",
+    "gitBlob": "72fe3f4f791550c3402d0bae54d154aabe06e63c"
+  },
+  "sourceCommit": "59723bc7058d31dd51730f4088eaf66df2735d4b",
+  "sourceActualGate": {
+    "bytes": 10359,
+    "sha256": "050ba8ff411a13b9dab6a2a6d85db55667039150be087426aa3bf847e81ffc61",
+    "gitBlob": "b7ad77e3f8b1d45cba44e862e4728ed40639cc98"
+  },
+  "scope": "/workspace/scratch/c714-waitread-ci3-20261117",
+  "stage": "/workspace/scratch/c714-waitread-ci3-controls-20261117",
+  "attemptToken": "c714-waitread-ci3-20261117-original-one-shot",
+  "controlParent": "59723bc7058d31dd51730f4088eaf66df2735d4b",
+  "controlCommit": "d035cefd235501daf2066d3b7725db35bfb00bf7",
+  "controlTree": "17e034751c1c1c5199aa147b2dababa5787ae6cf",
+  "controlDocsTree": "177dcd82ad978d16ddebfd6cf2c25342ae7f8b53",
+  "controlProposal": "47bcc9f514079504369b47a72d9468ddb3bcdab8",
+  "rootActual": {
+    "bytes": 413021,
+    "sha256": "dd37cfc672aa3bd6685eaf783146a21eae1317ac731654370190f027cc4827ff",
+    "gitBlob": "50e2be6fce599e665df5f34be0ae7e33ea61e496"
+  },
+  "independentActual": {
+    "bytes": 285251,
+    "sha256": "e50f8a5266cbd9e05a271623b80ac25d712b75332e221868e3d907645cdaefaf",
+    "gitBlob": "6f2cea2ae65cdce59f4019b240b93d1aeef439ca"
+  },
+  "controlActualGate": {
+    "bytes": 5032,
+    "sha256": "e496e4530c6b135aa9ecbcc8b1f65dae2dd673ec8015abd59f50c7e04a7921de",
+    "gitBlob": "169fc7470c5725e73a1beab947a64f35c00653e6"
+  },
+  "fullReadbacksAccepted": true,
+  "originalAttemptsStillSpent": true,
+  "attemptCount": 1,
+  "selectedPhases": [
+    "RED",
+    "GREEN"
+  ],
+  "originalCaseCount": 10,
+  "phaseWallMs": 60000,
+  "supervisorWallMs": 135000,
+  "cleanupWallMs": 4000,
+  "outputLimitBytes": 8388608,
+  "qualification": "Admission only. Runtime result not yet observed; neither full E2E nor any real vendor/native qualification."
+}

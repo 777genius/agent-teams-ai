@@ -422,8 +422,14 @@ export async function prepareNativeWindowsAppFixture(options: {
           assert.ok(found.length <= 1, 'One original UI command for this exact processRef');
           const candidate = found[0];
           if (candidate?.phase === 'completed' && candidate.state.phase === 'completed' &&
-            candidate.state.native === 'observed-absent') { receipt = candidate; break; }
-          assert.ok(!candidate || candidate.phase === 'prepared' || candidate.phase === 'held');
+            candidate.state.native === 'observed-absent') {
+            if (candidate.nativeSettlement !== undefined) { receipt = candidate; break; }
+            assert.equal(candidate.principalId, 'human');
+            assert.deepEqual(candidate.capture, selected.capture);
+            assert.equal(candidate.original?.id, selected.view.id);
+          } else {
+            assert.ok(!candidate || candidate.phase === 'prepared' || candidate.phase === 'held');
+          }
           await delay(Math.min(25, remaining(stop.deadline)));
         }
         assert.equal(receipt.principalId, 'human'); assert.deepEqual(receipt.capture, selected.capture);

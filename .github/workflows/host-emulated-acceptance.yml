@@ -726,7 +726,7 @@ jobs:
                 assert.equal(probe.phase, 'completed'); assert.equal(probe.ok, true); assert.equal(probe.resourceHeld, false);
               }
               assert.deepEqual(probes.map(row => [row.providerId, row.modelId]).sort(), [
-                ['anthropic', 'sonnet'], ['codex', 'TEST-model'], ['test-provider', 'TEST-model'], ['test-provider', 'TEST-model'],
+                ['anthropic', 'TEST-claude-sonnet'], ['codex', 'TEST-model'], ['test-provider', 'TEST-model'], ['test-provider', 'TEST-model'],
               ]);
               assert.notEqual(proof.added.readiness.probe.commandId, proof.restored.readiness.probe.commandId);
               for (const value of [proof.added, proof.restored]) {
@@ -761,7 +761,7 @@ jobs:
               }
               const initialProbes = probes.filter(row => ![proof.added.readiness.probe.commandId, proof.restored.readiness.probe.commandId].includes(row.commandId));
               assert.deepEqual(initialProbes.map(row => [row.providerId, row.modelId, row.effort]).sort(),
-                [['anthropic', 'sonnet', 'low'], ['codex', 'TEST-model', undefined]]);
+                [['anthropic', 'TEST-claude-sonnet', 'low'], ['codex', 'TEST-model', undefined]]);
               assert.equal(proof.reload.historyRetained, true); assert.equal(proof.reload.noEffects, true);
               assert.equal(proof.effects.some(row => row.event === 'failure'), false);
             }

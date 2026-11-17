@@ -1,0 +1,207 @@
+{
+  "schemaVersion": 1,
+  "kind": "C714_COMPILED_DIAGNOSTIC_BOUNDARY_REPAIR_R1",
+  "at": "2026-11-17 14:43:26 UTC",
+  "repository": "777genius/agent-teams-ai",
+  "workingBranch": "fix/frontend-parity-coobservation-c714-20261115",
+  "author": "root",
+  "purpose": "Repair the two actually failed new ModelProbe diagnostic tests by selecting the final compiled return boundary only within the already uniquely identified failed-close publisher. Preserve every original case and boundary assertion.",
+  "authority": {
+    "user": "Finish frontend/Host/extracted-provider parity and end-to-end checks autonomously in parallel; push every commit immediately; no real Claude/Codex, including --version.",
+    "rootOnly": "Source/control authorship, publication, staging and execution remain root-only. Reviewers use immutable source/evidence and pure JavaScript; bare review blobs permitted.",
+    "noNewGate": "Use the existing source R1/four reviews/publication/actual readbacks then source R2/four reviews/publication/actual readbacks sequence. No candidate source bytes before R1 actual acceptance."
+  },
+  "currentBase": {
+    "commit": "d035cefd235501daf2066d3b7725db35bfb00bf7",
+    "tree": "17e034751c1c1c5199aa147b2dababa5787ae6cf",
+    "docsTree": "177dcd82ad978d16ddebfd6cf2c25342ae7f8b53",
+    "soleParent": "59723bc7058d31dd51730f4088eaf66df2735d4b",
+    "rootActual": {
+      "bytes": 413021,
+      "sha256": "dd37cfc672aa3bd6685eaf783146a21eae1317ac731654370190f027cc4827ff",
+      "gitBlob": "50e2be6fce599e665df5f34be0ae7e33ea61e496"
+    },
+    "independentActual": {
+      "bytes": 285251,
+      "sha256": "e50f8a5266cbd9e05a271623b80ac25d712b75332e221868e3d907645cdaefaf",
+      "gitBlob": "6f2cea2ae65cdce59f4019b240b93d1aeef439ca"
+    },
+    "nonDocSourceCommit": "86f52244b5375834a4040cbc63803d68cc708087",
+    "all53NonDocRootEntriesUnchanged": true
+  },
+  "evidence": {
+    "target": {
+      "path": "packages/legacy-agent-host/tests/opencode-v2-native-receipt.test.mjs",
+      "pin": {
+        "bytes": 41559,
+        "sha256": "80b8075c5ed87d3bd5f6707c1e83f4983d275510d67fa4e0a352e1a3d7d958a0",
+        "gitBlob": "9988bebfff4408e81ab63da26fc463e7b8fa618b"
+      },
+      "physicalLines": 647,
+      "fullyRead": true
+    },
+    "modelProbe": {
+      "path": "packages/legacy-agent-host/src/adapters/providers/OpenCodeV2ModelProbe.ts",
+      "pin": {
+        "bytes": 23312,
+        "sha256": "7c77d52a1f9dcc2b3c53d550514ba13c4256a5daca3a67f2c2c008e786e66ea2",
+        "gitBlob": "a5dc4221c8d3e35200c65b533dd0126479a0a3ab"
+      },
+      "fullyRead": true,
+      "changePermitted": false
+    },
+    "failedOriginalJob": {
+      "pr": 1223,
+      "runId": 44092934079,
+      "jobId": 134072512849,
+      "head": "86f52244b5375834a4040cbc63803d68cc708087",
+      "log": {
+        "bytes": 128517,
+        "sha256": "e8764cca247c632c3092464cb4eab1fc9627b22fbb32d559bdec6b27156ff46f",
+        "gitBlob": "fca9b76b3d0ff372cd046cc7a631fe980a279062"
+      },
+      "fullRead": true,
+      "actualResult": {
+        "tests": 242,
+        "passed": 239,
+        "failed": 2,
+        "skipped": 1,
+        "cancelled": 0,
+        "originalPosixFifoSkip": true
+      }
+    },
+    "boundedAdvisory": {
+      "bytes": 30454,
+      "sha256": "a2afbd4dc105053a753640d7092b31b727fdd330233fbd7fe94c546182c0cbbb",
+      "gitBlob": "42effae91d747256f512dd460a53a8a36f6eedbf"
+    },
+    "advisoryClarification": "Six boundary locations are connected by five ordering comparisons; all are retained.",
+    "precedingStandalone": {
+      "capture": {
+        "bytes": 574032,
+        "sha256": "6d52bf2dcada8587bf243c45aa78618a504d5f4cb14a6cef7268d99f91e84d6a",
+        "gitBlob": "d7545038ea874fef599d15341f7eedae07104a38"
+      },
+      "scope": "Original deadline regression only; RED7expected failures/3passes then GREEN10passes once. No authorization to replay or broaden it."
+    }
+  },
+  "finding": {
+    "firstFailure": "modelProbeDiagnosticFragments unique() scans the whole compiled file for return closing and observes two matches before the first diagnostic behavior case can run. TypeScript expands the existing early if(closing) return closing onto its own full line; the other match terminates the uniquely identified publisher.",
+    "secondFailure": "The finite subprocess serializes and uses the same helper before its harness/trace. Its observed exit1 instead of0 is consistent with the same shared extraction defect. The retained parent log does not expose the child's own stack, so the exact child stack is not claimed.",
+    "thirdDiagnosticCase": "The existing separate diagnostic source-scope assertion already passes.",
+    "notProductFailure": "No change to ModelProbe runtime behavior is selected by this evidence."
+  },
+  "selectedRepair": {
+    "allowedSourcePaths": [
+      "packages/legacy-agent-host/tests/opencode-v2-native-receipt.test.mjs"
+    ],
+    "changeSites": [
+      {
+        "line": 357,
+        "intent": "Give local unique helper an optional inclusive original-source offset, defaulting to zero."
+      },
+      {
+        "line": 358,
+        "intent": "Filter whole-file RegExp matches by each original match.index being at or after that offset; retain original indices and the exactly-one assertion."
+      },
+      {
+        "line": 367,
+        "intent": "Only the publishEnd lookup supplies the already uniquely selected publish offset. All other unique calls retain their default whole-source domain."
+      }
+    ],
+    "expectedChangedLogicalLines": 3,
+    "postimageAuthored": false,
+    "preserve": [
+      "All six unique boundary expressions and the complete five-comparison order relation.",
+      "All slices operate on the real compiled ModelProbe body with original indices.",
+      "The exactly-one assertion still rejects zero and duplicate boundaries inside the selected publisher range.",
+      "The full existing nine original native receipt tests, three new diagnostic registrations, and the full imported fourteen-case process-guard suite.",
+      "The unchanged serialized helper shared by the finite subprocess; no substitute implementation or surrogate fragment.",
+      "All diagnostic classification cases, getter/toString/Proxy constraints, original rejection object identity, traced-private-value absence and finite child ownership/cleanup.",
+      "All original argv, environments, timeouts, counts, skips, trace caps, fixture response sizes and product code.",
+      "No added test-only exception, removed assertion, snapshot broadening, native startup, parser fallback, or case filtering."
+    ],
+    "materiality": "The selected offset excludes the earlier idempotent return while requiring a unique final return after the publisher start. It does not select the first or last arbitrary match and does not relax uniqueness."
+  },
+  "validation": {
+    "originalStaticCommand": "node --test packages/legacy-agent-host/tests/opencode-v2-static-preflight.test.ts packages/legacy-agent-host/tests/opencode-v2-static-capture.test.ts packages/legacy-agent-host/tests/opencode-v2-host-spi.test.ts packages/legacy-agent-host/tests/opencode-v2-native-receipt.test.mjs packages/legacy-agent-host/tests/opencode-v2-native-process-guard.test.mjs packages/legacy-agent-host/tests/opencode-v2-request-admission.test.ts packages/legacy-agent-host/tests/opencode-v1-version-receipt.test.ts packages/legacy-agent-host/tests/opencode-v1-version-source.test.ts",
+    "originalStaticCommandUnchanged": true,
+    "sourceReview": "Whole target body and exact three-line inverse, all preserved tests/helpers/imports, changed target's anchored tree entry and unchanged ModelProbe/product/workflow/dependency bodies.",
+    "runtime": "After exact source R2 actual acceptance, use the existing separate GitHub-only CI admission sequence for the new source. Preserve the complete original command and platform-specific original skip; do not rerun or mutate the frozen CI3 refs/jobs.",
+    "localExecutionSelected": false,
+    "testReductionAllowed": false,
+    "passClaimsBeforeActualResults": false
+  },
+  "preservation": {
+    "production": 5020,
+    "cap": 800,
+    "exceptions": 141,
+    "nonDocLeaves": 8799,
+    "workflows": 42,
+    "targetRemainsBelow800": true,
+    "dependenciesChanged": 0,
+    "workflowsChanged": 0,
+    "productSourcesChanged": 0,
+    "standaloneReplay": false,
+    "oldAttemptsSpentForever": true,
+    "ci3": {
+      "pr": 1223,
+      "head": "86f52244b5375834a4040cbc63803d68cc708087",
+      "base": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+      "refsAndMetadataFrozen": true,
+      "activeRunIdsOnly": [
+        44092933873,
+        44092933827,
+        44092933972,
+        44092933912,
+        44092934079,
+        44092933810
+      ],
+      "terminalRunsNeverPoll": [
+        44092933980,
+        44092933718,
+        44092933835,
+        44092933888,
+        44092934051
+      ]
+    },
+    "frozenPrs": [
+      1206,
+      1207,
+      1208,
+      1211,
+      1212,
+      1213
+    ],
+    "olderTerminalGroups": [
+      "Original9",
+      "PR1218-all7",
+      "PR1219-all7"
+    ],
+    "noMainMergeReadyReleaseStage2OrBlanketNativeQualification": true
+  },
+  "publicationContract": {
+    "r1DocsOnly": true,
+    "rootAndThreeIndependentReviewsRequired": true,
+    "publishImmediatelyAfterCommit": true,
+    "forcePush": false,
+    "parentLease": "d035cefd235501daf2066d3b7725db35bfb00bf7",
+    "currentCatalogValuesBundlesTotalsPreserved": true,
+    "existingPlanStatusPrefixesPreserved": true,
+    "sourceR2SoleParentMustEqualActualR1Publication": true
+  },
+  "orderedGates": [
+    "Root R1 plus independent guard, semantic and binding reviews of these exact prospective constraints.",
+    "Publish R1 documentation and immediately push; fresh root and independent full actual publication readbacks.",
+    "Only then author the one-file three-line source R2 postimage; perform the existing four reviews.",
+    "Publish source R2 and immediately push; fresh root and independent actual readbacks.",
+    "Existing separate GitHub-only CI admission/execution sequence, no executable control R2 for unchanged structured API calls."
+  ],
+  "status": {
+    "r1Only": true,
+    "sourcePostimageAuthored": false,
+    "sourcePublished": false,
+    "runtimeExecuted": false,
+    "wholeE2EQualified": false
+  }
+}

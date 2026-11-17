@@ -1,0 +1,1221 @@
+{
+  "schemaVersion": 1,
+  "kind": "independent-compiled-diagnostic-boundary-repair-r1-binding-review",
+  "at": "2026-11-17 14:52:33 UTC",
+  "repository": "777genius/agent-teams-ai",
+  "reviewer": "/root/red_publication_recovery",
+  "subject": {
+    "gitBlob": "3a4c7a35a30dd24594cdfecf45510274598527dc",
+    "bytes": 10289,
+    "sha256": "08b7fd228ee8b264930d89dd485743e71b90f79edf3d094d20562a8d4c6064bc"
+  },
+  "accepted": true,
+  "decision": "ACCEPT_EXACT_NARROW_R1_BINDING_PLAN_ONLY",
+  "currentBase": {
+    "commit": "d035cefd235501daf2066d3b7725db35bfb00bf7",
+    "tree": "17e034751c1c1c5199aa147b2dababa5787ae6cf",
+    "docsTree": "177dcd82ad978d16ddebfd6cf2c25342ae7f8b53",
+    "soleParent": "59723bc7058d31dd51730f4088eaf66df2735d4b",
+    "rootActual": {
+      "bytes": 413021,
+      "sha256": "dd37cfc672aa3bd6685eaf783146a21eae1317ac731654370190f027cc4827ff",
+      "gitBlob": "50e2be6fce599e665df5f34be0ae7e33ea61e496"
+    },
+    "independentActual": {
+      "bytes": 285251,
+      "sha256": "e50f8a5266cbd9e05a271623b80ac25d712b75332e221868e3d907645cdaefaf",
+      "gitBlob": "6f2cea2ae65cdce59f4019b240b93d1aeef439ca"
+    },
+    "nonDocSourceCommit": "86f52244b5375834a4040cbc63803d68cc708087",
+    "all53NonDocRootEntriesUnchanged": true
+  },
+  "selectedPath": "packages/legacy-agent-host/tests/opencode-v2-native-receipt.test.mjs",
+  "target": {
+    "bytes": 41559,
+    "sha256": "80b8075c5ed87d3bd5f6707c1e83f4983d275510d67fa4e0a352e1a3d7d958a0",
+    "gitBlob": "9988bebfff4408e81ab63da26fc463e7b8fa618b"
+  },
+  "unchangedModelProbe": {
+    "bytes": 23312,
+    "sha256": "7c77d52a1f9dcc2b3c53d550514ba13c4256a5daca3a67f2c2c008e786e66ea2",
+    "gitBlob": "a5dc4221c8d3e35200c65b533dd0126479a0a3ab"
+  },
+  "treeJoins": [
+    {
+      "path": "packages/legacy-agent-host/tests/opencode-v2-native-receipt.test.mjs",
+      "pin": {
+        "bytes": 41559,
+        "sha256": "80b8075c5ed87d3bd5f6707c1e83f4983d275510d67fa4e0a352e1a3d7d958a0",
+        "gitBlob": "9988bebfff4408e81ab63da26fc463e7b8fa618b"
+      },
+      "actualCommit": "d035cefd235501daf2066d3b7725db35bfb00bf7",
+      "actualRoot": "17e034751c1c1c5199aa147b2dababa5787ae6cf",
+      "packagesTree": "dc592662ccd8e886de52da21c666ff3ac1d3d6f6",
+      "actualLeaf": {
+        "path": "legacy-agent-host/tests/opencode-v2-native-receipt.test.mjs",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "9988bebfff4408e81ab63da26fc463e7b8fa618b",
+        "size": 41559,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/9988bebfff4408e81ab63da26fc463e7b8fa618b"
+      },
+      "completeUntruncatedTree": true
+    },
+    {
+      "path": "packages/legacy-agent-host/src/adapters/providers/OpenCodeV2ModelProbe.ts",
+      "pin": {
+        "bytes": 23312,
+        "sha256": "7c77d52a1f9dcc2b3c53d550514ba13c4256a5daca3a67f2c2c008e786e66ea2",
+        "gitBlob": "a5dc4221c8d3e35200c65b533dd0126479a0a3ab"
+      },
+      "actualCommit": "d035cefd235501daf2066d3b7725db35bfb00bf7",
+      "actualRoot": "17e034751c1c1c5199aa147b2dababa5787ae6cf",
+      "packagesTree": "dc592662ccd8e886de52da21c666ff3ac1d3d6f6",
+      "actualLeaf": {
+        "path": "legacy-agent-host/src/adapters/providers/OpenCodeV2ModelProbe.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "a5dc4221c8d3e35200c65b533dd0126479a0a3ab",
+        "size": 23312,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/a5dc4221c8d3e35200c65b533dd0126479a0a3ab"
+      },
+      "completeUntruncatedTree": true
+    }
+  ],
+  "completeTargetTreeProof": {
+    "pin": {
+      "gitBlob": "fc20bc9458799881d3e6bcfe97ac9f2352f2fd98",
+      "bytes": 111967,
+      "sha256": "8b6264e88e62718e552674a91604b281778f9ea63db0a4960cbecd2a966cb2fa"
+    },
+    "commit": "d035cefd235501daf2066d3b7725db35bfb00bf7",
+    "root": "17e034751c1c1c5199aa147b2dababa5787ae6cf",
+    "packages": "dc592662ccd8e886de52da21c666ff3ac1d3d6f6",
+    "host": "42705885d7d26da9eeed9528609d4c5222e18763",
+    "tests": "5616e837a15fbaf6fcd7b0fd00d147142bc85544",
+    "targetLeaf": {
+      "path": "opencode-v2-native-receipt.test.mjs",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "9988bebfff4408e81ab63da26fc463e7b8fa618b",
+      "size": 41559,
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/9988bebfff4408e81ab63da26fc463e7b8fa618b"
+    },
+    "all4FullResponsesParsed": true,
+    "allUntruncated": true,
+    "fullTargetBodyLiteralEqual": true,
+    "independentRecursivePackagesLeafEqual": true
+  },
+  "sourceRootPreservation": {
+    "fixedSource": "86f52244b5375834a4040cbc63803d68cc708087",
+    "actualCurrent": "d035cefd235501daf2066d3b7725db35bfb00bf7",
+    "all53NonDocRootsIdentical": true,
+    "workflows": 42,
+    "production": 5020,
+    "nonDocLeaves": 8799,
+    "exceptions": 141,
+    "cap": 800
+  },
+  "originalPrefixJoin": {
+    "pin": {
+      "bytes": 19696,
+      "sha256": "c88b9eac003164e9ad2cbc5c8ef93e1b466dec295fe14c64062777975b449a09",
+      "gitBlob": "f274129ad8a77bed3094e48e31cc50f37ba4d478"
+    },
+    "wholePrefixIdentical": true,
+    "originalCases": 9,
+    "currentLocalCases": 12,
+    "importedCases": 14,
+    "totalSelectedCases": 26,
+    "wholeAwaitedImportPreserved": true
+  },
+  "originalCommandJoin": {
+    "command": "node --test packages/legacy-agent-host/tests/opencode-v2-static-preflight.test.ts packages/legacy-agent-host/tests/opencode-v2-static-capture.test.ts packages/legacy-agent-host/tests/opencode-v2-host-spi.test.ts packages/legacy-agent-host/tests/opencode-v2-native-receipt.test.mjs packages/legacy-agent-host/tests/opencode-v2-native-process-guard.test.mjs packages/legacy-agent-host/tests/opencode-v2-request-admission.test.ts packages/legacy-agent-host/tests/opencode-v1-version-receipt.test.ts packages/legacy-agent-host/tests/opencode-v1-version-source.test.ts",
+    "wholeCommandFiles": 8,
+    "sourceHead": "86f52244b5375834a4040cbc63803d68cc708087",
+    "actualNodeVersion": "v24.21.0",
+    "platform": "Windows x64 / windows-2022",
+    "workflow": {
+      "path": ".github/workflows/opencode-v2-stage1-preflight.yml",
+      "pin": {
+        "bytes": 36013,
+        "sha256": "fddd1aface758ef115a5e904151cb61dd78dca04d8f52fb99f4326ddaff53a14",
+        "gitBlob": "2f557dd4b74806e6a444c46656af07b52bc0fb4e"
+      }
+    },
+    "counts": {
+      "tests": 242,
+      "passed": 239,
+      "failed": 2,
+      "skipped": 1,
+      "cancelled": 0,
+      "todo": 0
+    },
+    "originalSkip": "﹣ V01 read-only measurement rejects a TEST-owned FIFO without blocking native preflight (0.3173ms) # POSIX FIFO only",
+    "exitCode": 1,
+    "failureSummaryDuplicatesExcluded": true
+  },
+  "selectedOriginalCaseJoins": [
+    {
+      "ordinal": 1,
+      "title": "a failed native Host proof publishes only sanitized diagnostics and no raw paths",
+      "outcome": "PASS",
+      "originalProgress": "✔ a failed native Host proof publishes only sanitized diagnostics and no raw paths (542.8092ms)"
+    },
+    {
+      "ordinal": 2,
+      "title": "native receipt gate rejects forged digest, incomplete stages and cold restart uncertainty",
+      "outcome": "PASS",
+      "originalProgress": "✔ native receipt gate rejects forged digest, incomplete stages and cold restart uncertainty (2.1836ms)"
+    },
+    {
+      "ordinal": 3,
+      "title": "receipt verifier CLI refuses lockfile-only artifacts with sanitized diagnostics",
+      "outcome": "PASS",
+      "originalProgress": "✔ receipt verifier CLI refuses lockfile-only artifacts with sanitized diagnostics (388.215ms)"
+    },
+    {
+      "ordinal": 4,
+      "title": "native V2 captured session readback cannot drift workspace or ordered permissions",
+      "outcome": "PASS",
+      "originalProgress": "✔ native V2 captured session readback cannot drift workspace or ordered permissions (1.0546ms)"
+    },
+    {
+      "ordinal": 5,
+      "title": "native durable SSE proof accepts a bounded, owned and ordered history prefix",
+      "outcome": "PASS",
+      "originalProgress": "✔ native durable SSE proof accepts a bounded, owned and ordered history prefix (7.6186ms)"
+    },
+    {
+      "ordinal": 6,
+      "title": "native durable SSE proof enforces frame-count budget with a distinct error",
+      "outcome": "PASS",
+      "originalProgress": "✔ native durable SSE proof enforces frame-count budget with a distinct error (4.1966ms)"
+    },
+    {
+      "ordinal": 7,
+      "title": "native durable SSE proof rejects foreign, incomplete and reordered events",
+      "outcome": "PASS",
+      "originalProgress": "✔ native durable SSE proof rejects foreign, incomplete and reordered events (3.1423ms)"
+    },
+    {
+      "ordinal": 8,
+      "title": "cold native log proof compares retained event content, not only counts and watermark",
+      "outcome": "PASS",
+      "originalProgress": "✔ cold native log proof compares retained event content, not only counts and watermark (2.1532ms)"
+    },
+    {
+      "ordinal": 9,
+      "title": "raw native V2 variant readback cannot attest a missing or inherited default",
+      "outcome": "PASS",
+      "originalProgress": "✔ raw native V2 variant readback cannot attest a missing or inherited default (0.6281ms)"
+    },
+    {
+      "ordinal": 10,
+      "title": "actual ModelProbe run rejection keeps original identity and close classification with bounded own error codes",
+      "outcome": "FAIL",
+      "originalProgress": "✖ actual ModelProbe run rejection keeps original identity and close classification with bounded own error codes (3.5522ms)"
+    },
+    {
+      "ordinal": 11,
+      "title": "actual finite Node observer and parent retain producer error codes in the reserved close slot after trace exhaustion",
+      "outcome": "FAIL",
+      "originalProgress": "✖ actual finite Node observer and parent retain producer error codes in the reserved close slot after trace exhaustion (146.6825ms)"
+    },
+    {
+      "ordinal": 12,
+      "title": "actual close projection preserves legacy rows and opaque optional fields within original reservation and byte limits",
+      "outcome": "PASS",
+      "originalProgress": "✔ actual close projection preserves legacy rows and opaque optional fields within original reservation and byte limits (10.5466ms)"
+    },
+    {
+      "ordinal": 13,
+      "title": "OS process and listener output parsing fails closed",
+      "outcome": "PASS",
+      "originalProgress": "✔ OS process and listener output parsing fails closed (1.2658ms)"
+    },
+    {
+      "ordinal": 14,
+      "title": "one fresh Windows interpreter retains ordered original process and listener observations",
+      "outcome": "PASS",
+      "originalProgress": "✔ one fresh Windows interpreter retains ordered original process and listener observations (2.614ms)"
+    },
+    {
+      "ordinal": 15,
+      "title": "combined Windows observations reject malformed envelopes and preserve executor failure",
+      "outcome": "PASS",
+      "originalProgress": "✔ combined Windows observations reject malformed envelopes and preserve executor failure (3.2279ms)"
+    },
+    {
+      "ordinal": 16,
+      "title": "ownership rejects stale launchers, reused child PIDs and unrelated listeners",
+      "outcome": "PASS",
+      "originalProgress": "✔ ownership rejects stale launchers, reused child PIDs and unrelated listeners (0.9454ms)"
+    },
+    {
+      "ordinal": 17,
+      "title": "native shims quote absolute paths with spaces and reject expansion syntax",
+      "outcome": "PASS",
+      "originalProgress": "✔ native shims quote absolute paths with spaces and reject expansion syntax (6.1181ms)"
+    },
+    {
+      "ordinal": 18,
+      "title": "isolated CDP port stays bound to the selected dev launcher",
+      "outcome": "PASS",
+      "originalProgress": "✔ isolated CDP port stays bound to the selected dev launcher (2179.3317ms)"
+    },
+    {
+      "ordinal": 19,
+      "title": "environment drops inherited provider/config and runtime overrides",
+      "outcome": "PASS",
+      "originalProgress": "✔ environment drops inherited provider/config and runtime overrides (0.6138ms)"
+    },
+    {
+      "ordinal": 20,
+      "title": "real fixture permits diagnostic queries only, and Unix shim handles spaces",
+      "outcome": "PASS",
+      "originalProgress": "✔ real fixture permits diagnostic queries only, and Unix shim handles spaces (817.7683ms)"
+    },
+    {
+      "ordinal": 21,
+      "title": "timeout fixture stays live until its owning test terminates it",
+      "outcome": "PASS",
+      "originalProgress": "✔ timeout fixture stays live until its owning test terminates it (55.6909ms)"
+    },
+    {
+      "ordinal": 22,
+      "title": "Windows cleanup evidence retains current PID through independent read-only queries",
+      "outcome": "PASS",
+      "originalProgress": "✔ Windows cleanup evidence retains current PID through independent read-only queries (2807.8885ms)"
+    },
+    {
+      "ordinal": 23,
+      "title": "Windows phase observations use the original phase clocks and cannot bypass admission",
+      "outcome": "PASS",
+      "originalProgress": "✔ Windows phase observations use the original phase clocks and cannot bypass admission (1.204ms)"
+    },
+    {
+      "ordinal": 24,
+      "title": "Windows census observations preserve original results, refusals and bounded diagnostics",
+      "outcome": "PASS",
+      "originalProgress": "✔ Windows census observations preserve original results, refusals and bounded diagnostics (0.7785ms)"
+    },
+    {
+      "ordinal": 25,
+      "title": "selected Windows port query retains complete fresh process and owner observations",
+      "outcome": "PASS",
+      "originalProgress": "✔ selected Windows port query retains complete fresh process and owner observations (0.8171ms)"
+    },
+    {
+      "ordinal": 26,
+      "title": "Windows listener executor failures never admit partial output or fall back",
+      "outcome": "PASS",
+      "originalProgress": "✔ Windows listener executor failures never admit partial output or fall back (0.2844ms)"
+    }
+  ],
+  "failureEvidence": {
+    "primaryLog": {
+      "bytes": 128517,
+      "sha256": "e8764cca247c632c3092464cb4eab1fc9627b22fbb32d559bdec6b27156ff46f",
+      "gitBlob": "fca9b76b3d0ff372cd046cc7a631fe980a279062"
+    },
+    "first": {
+      "sourceSiteLines": [
+        357,
+        358,
+        359,
+        367,
+        416
+      ],
+      "boundary": "/^[ \\t]*return closing;\\r?$/gm",
+      "actual": 2,
+      "expected": 1,
+      "firstFailureBlock": "test at packages\\legacy-agent-host\\tests\\opencode-v2-native-receipt.test.mjs:415:1\n✖ actual ModelProbe run rejection keeps original identity and close classification with bounded own error codes (3.5522ms)\n  AssertionError [ERR_ASSERTION]: one actual compiled diagnostic boundary: /^[ \\t]*return closing;\\r?$/gm\n  \n  2 !== 1\n  \n      at unique (file:///D:/a/agent-teams-ai/agent-teams-ai/packages/legacy-agent-host/tests/opencode-v2-native-receipt.test.mjs:359:12)\n      at modelProbeDiagnosticFragments (file:///D:/a/agent-teams-ai/agent-teams-ai/packages/legacy-agent-host/tests/opencode-v2-native-receipt.test.mjs:367:22)\n      at actualModelProbeDiagnosticFragments (file:///D:/a/agent-teams-ai/agent-teams-ai/packages/legacy-agent-host/tests/opencode-v2-native-receipt.test.mjs:387:10)\n      at TestContext.<anonymous> (file:///D:/a/agent-teams-ai/agent-teams-ai/packages/legacy-agent-host/tests/opencode-v2-native-receipt.test.mjs:416:21)\n      at Test.runInAsyncScope (node:async_hooks:227:14)\n      at Test.run (node:internal/test_runner/test:1402:25)\n      at Test.processPendingSubtests (node:internal/test_runner/test:974:18)\n      at Test.postRun (node:internal/test_runner/test:1542:19)\n      at Test.run (node:internal/test_runner/test:1467:12)\n      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {\n    generatedMessage: false,\n    code: 'ERR_ASSERTION',\n    actual: 2,\n    expected: 1,\n    operator: 'strictEqual',\n    diff: 'simple'\n  }\n",
+      "failedBeforeBehaviorMatrix": true
+    },
+    "second": {
+      "sourceSiteLines": [
+        518,
+        519,
+        520,
+        538,
+        539
+      ],
+      "actualExit": 1,
+      "expectedExit": 0,
+      "secondFailureBlock": "test at packages\\legacy-agent-host\\tests\\opencode-v2-native-receipt.test.mjs:504:1\n✖ actual finite Node observer and parent retain producer error codes in the reserved close slot after trace exhaustion (146.6825ms)\n  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:\n  \n  1 !== 0\n  \n      at TestContext.<anonymous> (file:///D:/a/agent-teams-ai/agent-teams-ai/packages/legacy-agent-host/tests/opencode-v2-native-receipt.test.mjs:539:12)\n      at Test.runInAsyncScope (node:async_hooks:227:14)\n      at Test.run (node:internal/test_runner/test:1402:25)\n      at Test.processPendingSubtests (node:internal/test_runner/test:974:18)\n      at Test.postRun (node:internal/test_runner/test:1542:19)\n      at Test.run (node:internal/test_runner/test:1467:12)\n      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {\n    generatedMessage: true,\n    code: 'ERR_ASSERTION',\n    actual: 1,\n    expected: 0,\n    operator: 'strictEqual',\n    diff: 'simple'\n  }",
+      "childOwnStackObserved": false,
+      "sharedExtractionCause": "Source-supported inference only; finite child stderr/stack not retained in the parent log."
+    }
+  },
+  "sourceBoundaryJoin": {
+    "returns": [
+      {
+        "index": 20026,
+        "line": 431,
+        "text": "return closing;"
+      },
+      {
+        "index": 23282,
+        "line": 511,
+        "text": "return closing;"
+      }
+    ],
+    "publishers": [
+      {
+        "index": 22518,
+        "line": 497,
+        "text": "      closing = (purposeBound ? closeCoordinationByDeadline(work, originalDeadline ?? deadline) : work)"
+      }
+    ],
+    "sixBoundaryLocations": 6,
+    "fiveOrderingComparisons": 5,
+    "firstEarlyBeforePublisher": true,
+    "onlyOneSourceReturnAfterPublisher": true,
+    "compiledBodyRetained": false,
+    "compiledOffsetsClaimed": false
+  },
+  "plannedLowerBoundReasoning": {
+    "kind": "pure-integer-reasoning-only-not-target-execution-or-new-test",
+    "cases": [
+      {
+        "originalMatchIndices": [
+          0
+        ],
+        "inclusiveFrom": 0,
+        "retainedOriginalIndices": [
+          0
+        ],
+        "exactlyOne": true
+      },
+      {
+        "originalMatchIndices": [
+          5,
+          30
+        ],
+        "inclusiveFrom": 20,
+        "retainedOriginalIndices": [
+          30
+        ],
+        "exactlyOne": true
+      },
+      {
+        "originalMatchIndices": [
+          5
+        ],
+        "inclusiveFrom": 20,
+        "retainedOriginalIndices": [],
+        "exactlyOne": false
+      },
+      {
+        "originalMatchIndices": [
+          5,
+          30,
+          40
+        ],
+        "inclusiveFrom": 20,
+        "retainedOriginalIndices": [
+          30,
+          40
+        ],
+        "exactlyOne": false
+      }
+    ],
+    "originalOffsetsPreserved": true,
+    "inclusiveZeroPreserved": true,
+    "zeroOrMultipleSuffixMatchesStillFail": true,
+    "sixBoundaryExpressionsUnchanged": true,
+    "fiveOrderComparisonsUnchanged": true,
+    "onlyPublishEndReceivesOffset": true,
+    "postimageNotAuthored": true
+  },
+  "selectedChangeSites": [
+    {
+      "line": 357,
+      "intent": "Give local unique helper an optional inclusive original-source offset, defaulting to zero."
+    },
+    {
+      "line": 358,
+      "intent": "Filter whole-file RegExp matches by each original match.index being at or after that offset; retain original indices and the exactly-one assertion."
+    },
+    {
+      "line": 367,
+      "intent": "Only the publishEnd lookup supplies the already uniquely selected publish offset. All other unique calls retain their default whole-source domain."
+    }
+  ],
+  "preservedContract": [
+    "All six unique boundary expressions and the complete five-comparison order relation.",
+    "All slices operate on the real compiled ModelProbe body with original indices.",
+    "The exactly-one assertion still rejects zero and duplicate boundaries inside the selected publisher range.",
+    "The full existing nine original native receipt tests, three new diagnostic registrations, and the full imported fourteen-case process-guard suite.",
+    "The unchanged serialized helper shared by the finite subprocess; no substitute implementation or surrogate fragment.",
+    "All diagnostic classification cases, getter/toString/Proxy constraints, original rejection object identity, traced-private-value absence and finite child ownership/cleanup.",
+    "All original argv, environments, timeouts, counts, skips, trace caps, fixture response sizes and product code.",
+    "No added test-only exception, removed assertion, snapshot broadening, native startup, parser fallback, or case filtering."
+  ],
+  "directIdentityJoins": [
+    {
+      "role": "proposal",
+      "repository": "777genius/agent-teams-ai",
+      "pin": {
+        "gitBlob": "3a4c7a35a30dd24594cdfecf45510274598527dc",
+        "bytes": 10289,
+        "sha256": "08b7fd228ee8b264930d89dd485743e71b90f79edf3d094d20562a8d4c6064bc"
+      },
+      "fullBodyRead": true,
+      "completeIdentityJoined": true,
+      "method": "fresh complete R1/source/evidence read and hash"
+    },
+    {
+      "role": "target",
+      "repository": "777genius/agent-teams-ai",
+      "pin": {
+        "bytes": 41559,
+        "sha256": "80b8075c5ed87d3bd5f6707c1e83f4983d275510d67fa4e0a352e1a3d7d958a0",
+        "gitBlob": "9988bebfff4408e81ab63da26fc463e7b8fa618b"
+      },
+      "fullBodyRead": true,
+      "completeIdentityJoined": true,
+      "method": "fresh complete R1/source/evidence read and hash"
+    },
+    {
+      "role": "modelProbe",
+      "repository": "777genius/agent-teams-ai",
+      "pin": {
+        "bytes": 23312,
+        "sha256": "7c77d52a1f9dcc2b3c53d550514ba13c4256a5daca3a67f2c2c008e786e66ea2",
+        "gitBlob": "a5dc4221c8d3e35200c65b533dd0126479a0a3ab"
+      },
+      "fullBodyRead": true,
+      "completeIdentityJoined": true,
+      "method": "fresh complete R1/source/evidence read and hash"
+    },
+    {
+      "role": "failedLog",
+      "repository": "777genius/agent-teams-ai",
+      "pin": {
+        "bytes": 128517,
+        "sha256": "e8764cca247c632c3092464cb4eab1fc9627b22fbb32d559bdec6b27156ff46f",
+        "gitBlob": "fca9b76b3d0ff372cd046cc7a631fe980a279062"
+      },
+      "fullBodyRead": true,
+      "completeIdentityJoined": true,
+      "method": "fresh complete R1/source/evidence read and hash"
+    },
+    {
+      "role": "boundedAdvisory",
+      "repository": "777genius/agent-teams-ai",
+      "pin": {
+        "bytes": 30454,
+        "sha256": "a2afbd4dc105053a753640d7092b31b727fdd330233fbd7fe94c546182c0cbbb",
+        "gitBlob": "42effae91d747256f512dd460a53a8a36f6eedbf"
+      },
+      "fullBodyRead": true,
+      "completeIdentityJoined": true,
+      "method": "fresh complete R1/source/evidence read and hash"
+    },
+    {
+      "role": "currentRootActual",
+      "repository": "777genius/agent-teams-ai",
+      "pin": {
+        "gitBlob": "50e2be6fce599e665df5f34be0ae7e33ea61e496",
+        "bytes": 413021,
+        "sha256": "dd37cfc672aa3bd6685eaf783146a21eae1317ac731654370190f027cc4827ff"
+      },
+      "fullBodyRead": true,
+      "completeIdentityJoined": true,
+      "method": "exact accepted complete immutable body/hash reused"
+    },
+    {
+      "role": "currentIndependentActual",
+      "repository": "777genius/agent-teams-ai",
+      "pin": {
+        "bytes": 285251,
+        "sha256": "e50f8a5266cbd9e05a271623b80ac25d712b75332e221868e3d907645cdaefaf",
+        "gitBlob": "6f2cea2ae65cdce59f4019b240b93d1aeef439ca"
+      },
+      "fullBodyRead": true,
+      "completeIdentityJoined": true,
+      "method": "exact accepted complete immutable body/hash reused"
+    },
+    {
+      "role": "precedingStandalone",
+      "repository": "777genius/agent-teams-ai",
+      "pin": {
+        "gitBlob": "d7545038ea874fef599d15341f7eedae07104a38",
+        "bytes": 574032,
+        "sha256": "6d52bf2dcada8587bf243c45aa78618a504d5f4cb14a6cef7268d99f91e84d6a"
+      },
+      "fullBodyRead": true,
+      "completeIdentityJoined": true,
+      "method": "exact accepted complete immutable body/hash reused"
+    }
+  ],
+  "directIdentityCount": 8,
+  "directIdentityBytes": 1506435,
+  "supplementalEvidence": [
+    {
+      "role": "completeCurrentTargetTreeProof",
+      "pin": {
+        "gitBlob": "fc20bc9458799881d3e6bcfe97ac9f2352f2fd98",
+        "bytes": 111967,
+        "sha256": "8b6264e88e62718e552674a91604b281778f9ea63db0a4960cbecd2a966cb2fa"
+      },
+      "fullRead": true,
+      "wholeIdentityMatched": true
+    },
+    {
+      "role": "rootExactR1Review",
+      "pin": {
+        "gitBlob": "d3686a86b3c66da48f1982cafabf40d933a75413",
+        "bytes": 16460,
+        "sha256": "0337f3effb698430cf75a21e77ee19c797dac1f3456ce8e4efaf9e4cb217272c"
+      },
+      "fullRead": true,
+      "wholeIdentityMatched": true
+    }
+  ],
+  "rootReviewJoin": {
+    "pin": {
+      "gitBlob": "d3686a86b3c66da48f1982cafabf40d933a75413",
+      "bytes": 16460,
+      "sha256": "0337f3effb698430cf75a21e77ee19c797dac1f3456ce8e4efaf9e4cb217272c"
+    },
+    "subject": {
+      "bytes": 10289,
+      "sha256": "08b7fd228ee8b264930d89dd485743e71b90f79edf3d094d20562a8d4c6064bc",
+      "gitBlob": "3a4c7a35a30dd24594cdfecf45510274598527dc"
+    },
+    "fullBodyRead": true,
+    "wholeHashMatched": true,
+    "all24ChecksPass": true,
+    "directInputsExact": true,
+    "currentSourceAndTreeJoinExact": true,
+    "noPostimageOrRuntime": true
+  },
+  "checks": [
+    {
+      "id": "BM01",
+      "name": "Complete exact R1 subject matches the assigned immutable pin",
+      "status": "PASS_R1_PLAN",
+      "evidence": {
+        "subject": {
+          "gitBlob": "3a4c7a35a30dd24594cdfecf45510274598527dc",
+          "bytes": 10289,
+          "sha256": "08b7fd228ee8b264930d89dd485743e71b90f79edf3d094d20562a8d4c6064bc"
+        }
+      }
+    },
+    {
+      "id": "BM02",
+      "name": "Current base/root/docs and accepted actual reports bind the plan",
+      "status": "PASS_R1_PLAN",
+      "evidence": {
+        "base": "d035cefd235501daf2066d3b7725db35bfb00bf7",
+        "root": "17e034751c1c1c5199aa147b2dababa5787ae6cf",
+        "docs": "177dcd82ad978d16ddebfd6cf2c25342ae7f8b53",
+        "rootActual": {
+          "bytes": 413021,
+          "sha256": "dd37cfc672aa3bd6685eaf783146a21eae1317ac731654370190f027cc4827ff",
+          "gitBlob": "50e2be6fce599e665df5f34be0ae7e33ea61e496"
+        },
+        "independentActual": {
+          "bytes": 285251,
+          "sha256": "e50f8a5266cbd9e05a271623b80ac25d712b75332e221868e3d907645cdaefaf",
+          "gitBlob": "6f2cea2ae65cdce59f4019b240b93d1aeef439ca"
+        }
+      }
+    },
+    {
+      "id": "BM03",
+      "name": "The target and product preimages are complete and actual-root anchored",
+      "status": "PASS_R1_PLAN",
+      "evidence": [
+        {
+          "path": "packages/legacy-agent-host/tests/opencode-v2-native-receipt.test.mjs",
+          "pin": {
+            "bytes": 41559,
+            "sha256": "80b8075c5ed87d3bd5f6707c1e83f4983d275510d67fa4e0a352e1a3d7d958a0",
+            "gitBlob": "9988bebfff4408e81ab63da26fc463e7b8fa618b"
+          },
+          "actualCommit": "d035cefd235501daf2066d3b7725db35bfb00bf7",
+          "actualRoot": "17e034751c1c1c5199aa147b2dababa5787ae6cf",
+          "packagesTree": "dc592662ccd8e886de52da21c666ff3ac1d3d6f6",
+          "actualLeaf": {
+            "path": "legacy-agent-host/tests/opencode-v2-native-receipt.test.mjs",
+            "mode": "100644",
+            "type": "blob",
+            "sha": "9988bebfff4408e81ab63da26fc463e7b8fa618b",
+            "size": 41559,
+            "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/9988bebfff4408e81ab63da26fc463e7b8fa618b"
+          },
+          "completeUntruncatedTree": true
+        },
+        {
+          "path": "packages/legacy-agent-host/src/adapters/providers/OpenCodeV2ModelProbe.ts",
+          "pin": {
+            "bytes": 23312,
+            "sha256": "7c77d52a1f9dcc2b3c53d550514ba13c4256a5daca3a67f2c2c008e786e66ea2",
+            "gitBlob": "a5dc4221c8d3e35200c65b533dd0126479a0a3ab"
+          },
+          "actualCommit": "d035cefd235501daf2066d3b7725db35bfb00bf7",
+          "actualRoot": "17e034751c1c1c5199aa147b2dababa5787ae6cf",
+          "packagesTree": "dc592662ccd8e886de52da21c666ff3ac1d3d6f6",
+          "actualLeaf": {
+            "path": "legacy-agent-host/src/adapters/providers/OpenCodeV2ModelProbe.ts",
+            "mode": "100644",
+            "type": "blob",
+            "sha": "a5dc4221c8d3e35200c65b533dd0126479a0a3ab",
+            "size": 23312,
+            "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/a5dc4221c8d3e35200c65b533dd0126479a0a3ab"
+          },
+          "completeUntruncatedTree": true
+        }
+      ]
+    },
+    {
+      "id": "BM04",
+      "name": "Independent recursive tree and complete four-step root proof agree",
+      "status": "PASS_R1_PLAN",
+      "evidence": {
+        "pin": {
+          "gitBlob": "fc20bc9458799881d3e6bcfe97ac9f2352f2fd98",
+          "bytes": 111967,
+          "sha256": "8b6264e88e62718e552674a91604b281778f9ea63db0a4960cbecd2a966cb2fa"
+        },
+        "commit": "d035cefd235501daf2066d3b7725db35bfb00bf7",
+        "root": "17e034751c1c1c5199aa147b2dababa5787ae6cf",
+        "packages": "dc592662ccd8e886de52da21c666ff3ac1d3d6f6",
+        "host": "42705885d7d26da9eeed9528609d4c5222e18763",
+        "tests": "5616e837a15fbaf6fcd7b0fd00d147142bc85544",
+        "targetLeaf": {
+          "path": "opencode-v2-native-receipt.test.mjs",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "9988bebfff4408e81ab63da26fc463e7b8fa618b",
+          "size": 41559,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/9988bebfff4408e81ab63da26fc463e7b8fa618b"
+        },
+        "all4FullResponsesParsed": true,
+        "allUntruncated": true,
+        "fullTargetBodyLiteralEqual": true,
+        "independentRecursivePackagesLeafEqual": true
+      }
+    },
+    {
+      "id": "BM05",
+      "name": "Target is exactly41559 bytes and647 physical lines below800",
+      "status": "PASS_R1_PLAN",
+      "evidence": {
+        "pin": {
+          "bytes": 41559,
+          "sha256": "80b8075c5ed87d3bd5f6707c1e83f4983d275510d67fa4e0a352e1a3d7d958a0",
+          "gitBlob": "9988bebfff4408e81ab63da26fc463e7b8fa618b"
+        },
+        "physicalLines": 647,
+        "cap": 800
+      }
+    },
+    {
+      "id": "BM06",
+      "name": "ModelProbe remains the exact unchanged product body",
+      "status": "PASS_R1_PLAN",
+      "evidence": {
+        "path": "packages/legacy-agent-host/src/adapters/providers/OpenCodeV2ModelProbe.ts",
+        "pin": {
+          "bytes": 23312,
+          "sha256": "7c77d52a1f9dcc2b3c53d550514ba13c4256a5daca3a67f2c2c008e786e66ea2",
+          "gitBlob": "a5dc4221c8d3e35200c65b533dd0126479a0a3ab"
+        },
+        "selectedChange": false
+      }
+    },
+    {
+      "id": "BM07",
+      "name": "All53 non-doc root entries equal accepted fixed86f source",
+      "status": "PASS_R1_PLAN",
+      "evidence": {
+        "fixedSource": "86f52244b5375834a4040cbc63803d68cc708087",
+        "unchangedRootEntries": 53
+      }
+    },
+    {
+      "id": "BM08",
+      "name": "Whole original Windows job log supports exactly242 cases",
+      "status": "PASS_R1_PLAN",
+      "evidence": {
+        "log": {
+          "bytes": 128517,
+          "sha256": "e8764cca247c632c3092464cb4eab1fc9627b22fbb32d559bdec6b27156ff46f",
+          "gitBlob": "fca9b76b3d0ff372cd046cc7a631fe980a279062"
+        },
+        "job": 134072512849,
+        "head": "86f52244b5375834a4040cbc63803d68cc708087",
+        "counts": {
+          "tests": 242,
+          "passed": 239,
+          "failed": 2,
+          "skipped": 1,
+          "cancelled": 0,
+          "todo": 0
+        }
+      }
+    },
+    {
+      "id": "BM09",
+      "name": "Original command,Node version,platform and ordinary exit are kept distinct",
+      "status": "PASS_R1_PLAN",
+      "evidence": {
+        "wholeCommand": "node --test packages/legacy-agent-host/tests/opencode-v2-static-preflight.test.ts packages/legacy-agent-host/tests/opencode-v2-static-capture.test.ts packages/legacy-agent-host/tests/opencode-v2-host-spi.test.ts packages/legacy-agent-host/tests/opencode-v2-native-receipt.test.mjs packages/legacy-agent-host/tests/opencode-v2-native-process-guard.test.mjs packages/legacy-agent-host/tests/opencode-v2-request-admission.test.ts packages/legacy-agent-host/tests/opencode-v1-version-receipt.test.ts packages/legacy-agent-host/tests/opencode-v1-version-source.test.ts",
+        "commandFiles": 8,
+        "node": "v24.21.0",
+        "platform": "Windows x64 / windows-2022",
+        "exitCode": 1,
+        "failureSummaryNotCountedTwice": true
+      }
+    },
+    {
+      "id": "BM10",
+      "name": "First failure is the actual publishEnd uniqueness2 versus1",
+      "status": "PASS_R1_PLAN",
+      "evidence": {
+        "sourceLines": [
+          359,
+          367,
+          387,
+          416
+        ],
+        "boundary": "/^[ \\t]*return closing;\\r?$/gm",
+        "failedBeforeDiagnosticBehavior": true
+      }
+    },
+    {
+      "id": "BM11",
+      "name": "Second failure is bounded to observed child status1 versus0",
+      "status": "PASS_R1_PLAN",
+      "evidence": {
+        "statusAssertionLine": 539,
+        "childOwnStackObserved": false,
+        "sharedHelperExplanation": "Source-supported inference, not a retained child stack."
+      }
+    },
+    {
+      "id": "BM12",
+      "name": "Complete source has the legitimate early return and final publisher return",
+      "status": "PASS_R1_PLAN",
+      "evidence": {
+        "returns": [
+          {
+            "index": 20026,
+            "line": 431,
+            "text": "return closing;"
+          },
+          {
+            "index": 23282,
+            "line": 511,
+            "text": "return closing;"
+          }
+        ],
+        "publishers": [
+          {
+            "index": 22518,
+            "line": 497,
+            "text": "      closing = (purposeBound ? closeCoordinationByDeadline(work, originalDeadline ?? deadline) : work)"
+          }
+        ],
+        "sixBoundaryLocations": 6,
+        "fiveOrderingComparisons": 5,
+        "firstEarlyBeforePublisher": true,
+        "onlyOneSourceReturnAfterPublisher": true,
+        "compiledBodyRetained": false,
+        "compiledOffsetsClaimed": false
+      }
+    },
+    {
+      "id": "BM13",
+      "name": "The sole selected source path is the existing receipt test",
+      "status": "PASS_R1_PLAN",
+      "evidence": {
+        "path": "packages/legacy-agent-host/tests/opencode-v2-native-receipt.test.mjs",
+        "sourceAddsDeletes": 0,
+        "productChanges": 0
+      }
+    },
+    {
+      "id": "BM14",
+      "name": "Exactly three existing logical change sites are selected",
+      "status": "PASS_R1_PLAN",
+      "evidence": [
+        {
+          "line": 357,
+          "intent": "Give local unique helper an optional inclusive original-source offset, defaulting to zero."
+        },
+        {
+          "line": 358,
+          "intent": "Filter whole-file RegExp matches by each original match.index being at or after that offset; retain original indices and the exactly-one assertion."
+        },
+        {
+          "line": 367,
+          "intent": "Only the publishEnd lookup supplies the already uniquely selected publish offset. All other unique calls retain their default whole-source domain."
+        }
+      ]
+    },
+    {
+      "id": "BM15",
+      "name": "Default inclusive zero preserves an original boundary at index0",
+      "status": "PASS_R1_PLAN",
+      "evidence": {
+        "originalMatchIndices": [
+          0
+        ],
+        "inclusiveFrom": 0,
+        "retainedOriginalIndices": [
+          0
+        ],
+        "exactlyOne": true
+      }
+    },
+    {
+      "id": "BM16",
+      "name": "Original match offsets are retained without substring rebasing",
+      "status": "PASS_R1_PLAN",
+      "evidence": {
+        "mode": "Filter original complete compiled match records by original match.index; no target code authored or run."
+      }
+    },
+    {
+      "id": "BM17",
+      "name": "Zero or duplicate in-range matches still fail the exactly-one assertion",
+      "status": "PASS_R1_PLAN",
+      "evidence": {
+        "reasoningOnly": [
+          {
+            "originalMatchIndices": [
+              5
+            ],
+            "inclusiveFrom": 20,
+            "retainedOriginalIndices": [],
+            "exactlyOne": false
+          },
+          {
+            "originalMatchIndices": [
+              5,
+              30,
+              40
+            ],
+            "inclusiveFrom": 20,
+            "retainedOriginalIndices": [
+              30,
+              40
+            ],
+            "exactlyOne": false
+          }
+        ],
+        "noLastMatchShortcut": true,
+        "noExpectedCountTwoWaiver": true
+      }
+    },
+    {
+      "id": "BM18",
+      "name": "Only publishEnd receives the publisher offset",
+      "status": "PASS_R1_PLAN",
+      "evidence": {
+        "rangeLookup": "publishEnd",
+        "unchangedGlobalLookups": 5,
+        "globalPublisherUniqueness": true
+      }
+    },
+    {
+      "id": "BM19",
+      "name": "All six expressions and five ordering comparisons remain required",
+      "status": "PASS_R1_PLAN",
+      "evidence": {
+        "boundaryNames": [
+          "state",
+          "stateEnd",
+          "run",
+          "runEnd",
+          "publish",
+          "publishEnd"
+        ],
+        "orderingComparisons": 5,
+        "originalCompiledSlices": true
+      }
+    },
+    {
+      "id": "BM20",
+      "name": "The same helper is serialized into the finite child before its harness",
+      "status": "PASS_R1_PLAN",
+      "evidence": {
+        "serializationLines": [
+          518,
+          519
+        ],
+        "extractionLine": 520,
+        "substituteHelper": false
+      }
+    },
+    {
+      "id": "BM21",
+      "name": "The entire19696-byte original nine-case prefix is retained",
+      "status": "PASS_R1_PLAN",
+      "evidence": {
+        "pin": {
+          "bytes": 19696,
+          "sha256": "c88b9eac003164e9ad2cbc5c8ef93e1b466dec295fe14c64062777975b449a09",
+          "gitBlob": "f274129ad8a77bed3094e48e31cc50f37ba4d478"
+        },
+        "wholePrefixIdentical": true,
+        "originalCases": 9,
+        "currentLocalCases": 12,
+        "importedCases": 14,
+        "totalSelectedCases": 26,
+        "wholeAwaitedImportPreserved": true
+      }
+    },
+    {
+      "id": "BM22",
+      "name": "All twelve local registrations and whole fourteen-case import are preserved",
+      "status": "PASS_R1_PLAN",
+      "evidence": {
+        "localCases": 12,
+        "importedCases": 14,
+        "totalSelectedCases": 26,
+        "newCases": 0,
+        "removedCases": 0
+      }
+    },
+    {
+      "id": "BM23",
+      "name": "Original26 selected progress rows are attributed once without invented PASS",
+      "status": "PASS_R1_PLAN",
+      "evidence": {
+        "originalNinePass": 9,
+        "diagnosticFail": 2,
+        "thirdDiagnosticPass": 1,
+        "importedPlatformPass": 14,
+        "futureFixedRuntimeResult": false
+      }
+    },
+    {
+      "id": "BM24",
+      "name": "Original POSIX-FIFO skip remains explicit",
+      "status": "PASS_R1_PLAN",
+      "evidence": {
+        "originalSkip": "﹣ V01 read-only measurement rejects a TEST-owned FIFO without blocking native preflight (0.3173ms) # POSIX FIFO only",
+        "noSkipPromotion": true
+      }
+    },
+    {
+      "id": "BM25",
+      "name": "All diagnostic identity,privacy,legacy and bound assertions remain selected unchanged",
+      "status": "PASS_R1_PLAN",
+      "evidence": {
+        "sameOriginalRejectionIdentity": true,
+        "nineDiagnosticCodes": true,
+        "getterProxyRefusals": true,
+        "counterfactualOldCatchPublisher": true,
+        "rawPrivateDataAssertions": true,
+        "thirdCaseAssertionsPreserved": true
+      }
+    },
+    {
+      "id": "BM26",
+      "name": "Finite child and passive trace budgets remain unchanged",
+      "status": "PASS_R1_PLAN",
+      "evidence": {
+        "childTimeoutMs": 10000,
+        "childMaxBufferBytes": 262144,
+        "traceTotalBytes": 65536,
+        "rawLineBytes": 512,
+        "retainedRecordBytes": 513,
+        "retainedRows": 257,
+        "emittedMax": 355,
+        "parentMax": 499,
+        "unrelated8MiBControlsUnchanged": true
+      }
+    },
+    {
+      "id": "BM27",
+      "name": "Original full eight-file workflow command remains the validation route",
+      "status": "PASS_R1_PLAN",
+      "evidence": {
+        "workflow": {
+          "path": ".github/workflows/opencode-v2-stage1-preflight.yml",
+          "pin": {
+            "bytes": 36013,
+            "sha256": "fddd1aface758ef115a5e904151cb61dd78dca04d8f52fb99f4326ddaff53a14",
+            "gitBlob": "2f557dd4b74806e6a444c46656af07b52bc0fb4e"
+          }
+        },
+        "command": "node --test packages/legacy-agent-host/tests/opencode-v2-static-preflight.test.ts packages/legacy-agent-host/tests/opencode-v2-static-capture.test.ts packages/legacy-agent-host/tests/opencode-v2-host-spi.test.ts packages/legacy-agent-host/tests/opencode-v2-native-receipt.test.mjs packages/legacy-agent-host/tests/opencode-v2-native-process-guard.test.mjs packages/legacy-agent-host/tests/opencode-v2-request-admission.test.ts packages/legacy-agent-host/tests/opencode-v1-version-receipt.test.ts packages/legacy-agent-host/tests/opencode-v1-version-source.test.ts",
+        "testNameFilter": false,
+        "localExecutionSelected": false
+      }
+    },
+    {
+      "id": "BM28",
+      "name": "Production,inventories,workflows and dependencies remain preserved",
+      "status": "PASS_R1_PLAN",
+      "evidence": {
+        "production": 5020,
+        "cap": 800,
+        "exceptions": 141,
+        "nonDocLeaves": 8799,
+        "workflows": 42
+      }
+    },
+    {
+      "id": "BM29",
+      "name": "Standalone outcome remains bounded and spent without replay",
+      "status": "PASS_R1_PLAN",
+      "evidence": {
+        "capture": {
+          "gitBlob": "d7545038ea874fef599d15341f7eedae07104a38",
+          "bytes": 574032,
+          "sha256": "6d52bf2dcada8587bf243c45aa78618a504d5f4cb14a6cef7268d99f91e84d6a"
+        },
+        "acceptedOutcomeAdvisory": {
+          "bytes": 48694,
+          "sha256": "506cb2f6d5854e256963d7e0844465ad692d9b6c8539613d8ef117306ae2cd8d",
+          "gitBlob": "9a3fa7519f52d5e0be5d9d689792c5903b703e85"
+        },
+        "standalone10Only": true,
+        "replay": false
+      }
+    },
+    {
+      "id": "BM30",
+      "name": "Frozen CI3/current and prior PR exclusions remain independent",
+      "status": "PASS_R1_PLAN",
+      "evidence": {
+        "head": "86f52244b5375834a4040cbc63803d68cc708087",
+        "base": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+        "pr": 1223,
+        "liveReviewerCiReads": 0,
+        "currentFailureReclassification": false
+      }
+    },
+    {
+      "id": "BM31",
+      "name": "R1 documentation must preserve all current catalog values,bundles and prefixes",
+      "status": "PASS_R1_PLAN",
+      "evidence": {
+        "currentCatalogFields": 107,
+        "bundles": 27,
+        "prefixes": "Full current plan/status",
+        "immediatePush": true,
+        "force": false,
+        "parentLease": "d035cefd235501daf2066d3b7725db35bfb00bf7"
+      }
+    },
+    {
+      "id": "BM32",
+      "name": "Source authorship waits for the actual R1 publication with real future parent",
+      "status": "PASS_R1_PLAN",
+      "evidence": {
+        "sourcePostimageAuthored": false,
+        "futureSourceR2Parent": "The actual R1 docs publication, known only after its publication/readbacks.",
+        "noFutureShaInvented": true
+      }
+    },
+    {
+      "id": "BM33",
+      "name": "Existing R1 and R2 review/publication/actual sequence remains unchanged",
+      "status": "PASS_R1_PLAN",
+      "evidence": {
+        "existingSequence": [
+          "Root R1 plus independent guard, semantic and binding reviews of these exact prospective constraints.",
+          "Publish R1 documentation and immediately push; fresh root and independent full actual publication readbacks.",
+          "Only then author the one-file three-line source R2 postimage; perform the existing four reviews.",
+          "Publish source R2 and immediately push; fresh root and independent actual readbacks.",
+          "Existing separate GitHub-only CI admission/execution sequence, no executable control R2 for unchanged structured API calls."
+        ],
+        "newGateAdded": false
+      }
+    },
+    {
+      "id": "BM34",
+      "name": "Full direct source/evidence closure is complete without recursive history",
+      "status": "PASS_R1_PLAN",
+      "evidence": {
+        "directTuplesIncludingSubject": 8,
+        "directBytes": 1506435,
+        "supplementalFullTreeProof": {
+          "gitBlob": "fc20bc9458799881d3e6bcfe97ac9f2352f2fd98",
+          "bytes": 111967,
+          "sha256": "8b6264e88e62718e552674a91604b281778f9ea63db0a4960cbecd2a966cb2fa"
+        },
+        "supplementalRootReview": {
+          "gitBlob": "d3686a86b3c66da48f1982cafabf40d933a75413",
+          "bytes": 16460,
+          "sha256": "0337f3effb698430cf75a21e77ee19c797dac1f3456ce8e4efaf9e4cb217272c"
+        }
+      }
+    },
+    {
+      "id": "BM35",
+      "name": "Complete root R1 report matches exact subject and24 passing checks",
+      "status": "PASS_R1_PLAN",
+      "evidence": {
+        "pin": {
+          "gitBlob": "d3686a86b3c66da48f1982cafabf40d933a75413",
+          "bytes": 16460,
+          "sha256": "0337f3effb698430cf75a21e77ee19c797dac1f3456ce8e4efaf9e4cb217272c"
+        },
+        "subject": {
+          "bytes": 10289,
+          "sha256": "08b7fd228ee8b264930d89dd485743e71b90f79edf3d094d20562a8d4c6064bc",
+          "gitBlob": "3a4c7a35a30dd24594cdfecf45510274598527dc"
+        },
+        "fullBodyRead": true,
+        "wholeHashMatched": true,
+        "all24ChecksPass": true,
+        "directInputsExact": true,
+        "currentSourceAndTreeJoinExact": true,
+        "noPostimageOrRuntime": true
+      }
+    },
+    {
+      "id": "BM36",
+      "name": "Review is plan-only with no source/control/target execution or new gate",
+      "status": "PASS_R1_PLAN",
+      "evidence": {
+        "reviewerActions": "Immutable source/evidence reads and pure data comparisons; bare review retention/self-read only.",
+        "targetCompilationOrEvaluation": 0,
+        "localShell": 0,
+        "liveCiOrRefReads": 0,
+        "sourceOrControlAuthorship": 0
+      }
+    }
+  ],
+  "checkCount": 36,
+  "failedChecks": [],
+  "unresolvedPointers": [],
+  "unresolvedBlockers": [],
+  "limitations": [
+    "This is prospective R1 binding acceptance only. No one-file postimage was authored by this reviewer, and no compiler, imported helper or target code was executed.",
+    "The original Windows first case directly proves two whole-file return-closing matches. Exact emitted compiled text/offsets were not retained or reconstructed; the early-return explanation is grounded in complete source plus that log.",
+    "The finite child directly records status1, not its own stack/stderr. Its shared extractor runs before diagnostic publications; treating the same extractor as cause remains a source-supported inference.",
+    "Original two diagnostic cases remain failed and later assertions unqualified until genuine future complete-command results. The fourteen platform case passes do not establish native/GUI/provider qualification.",
+    "Later root-reported Ubuntu corroboration is outside this unchanged Windows-primary R1 review and was not needed to broaden the repair or add a gate.",
+    "Existing immutable full-body caches were used only where exact repository-scoped identities matched. No recursive historical evidence audit was added."
+  ],
+  "qualification": {
+    "r1PlanOnly": true,
+    "sourcePostimageAuthored": false,
+    "sourcePublished": false,
+    "newRuntimeResult": false,
+    "compiledTargetRead": false,
+    "childFailureStackObserved": false,
+    "wholeE2E": false
+  },
+  "nextExistingSequence": [
+    "Root R1 plus independent guard, semantic and binding reviews of these exact prospective constraints.",
+    "Publish R1 documentation and immediately push; fresh root and independent full actual publication readbacks.",
+    "Only then author the one-file three-line source R2 postimage; perform the existing four reviews.",
+    "Publish source R2 and immediately push; fresh root and independent actual readbacks.",
+    "Existing separate GitHub-only CI admission/execution sequence, no executable control R2 for unchanged structured API calls."
+  ],
+  "selfReadbackProtocol": "Retain bare review, send exact pin immediately, then freshly fetch and verify whole literal/hash/schema/subject/checks before confirming."
+}

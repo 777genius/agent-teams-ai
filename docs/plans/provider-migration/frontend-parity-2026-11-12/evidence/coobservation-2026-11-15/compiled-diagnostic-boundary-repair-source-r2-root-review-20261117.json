@@ -1,0 +1,444 @@
+{
+  "schemaVersion": 1,
+  "kind": "C714_COMPILED_DIAGNOSTIC_BOUNDARY_REPAIR_SOURCE_R2_ROOT_REVIEW",
+  "repository": "777genius/agent-teams-ai",
+  "reviewer": "root",
+  "at": "2026-11-17 15:23:59 UTC",
+  "subject": {
+    "bytes": 9961,
+    "sha256": "9fd198e4a618d888eb1a8501d901e29833fa8ea74f53d1071c4b88599563d69c",
+    "gitBlob": "438d60e47e1940ffc30b005ef7c97bd26a0ff8d4"
+  },
+  "precedingActualGate": {
+    "bytes": 6963,
+    "sha256": "810df6e2da2e3203f6a301600e07e8762237f9cf85edf665ff7e2a508de83f7b",
+    "gitBlob": "e590c53e6f676bd819855e46d36a7d4ec5255c88"
+  },
+  "accepted": true,
+  "decision": "ACCEPT_EXACT_THREE_LINE_SOURCE_R2_ONLY",
+  "checks": [
+    {
+      "id": "R01",
+      "name": "Exact whole R2 subject is retained and read",
+      "result": "PASS_STATIC_R2",
+      "evidence": {
+        "bytes": 9961,
+        "sha256": "9fd198e4a618d888eb1a8501d901e29833fa8ea74f53d1071c4b88599563d69c",
+        "gitBlob": "438d60e47e1940ffc30b005ef7c97bd26a0ff8d4"
+      }
+    },
+    {
+      "id": "R02",
+      "name": "Source authored only after closed actual R1 gate",
+      "result": "PASS_STATIC_R2",
+      "evidence": {
+        "gate": {
+          "bytes": 6963,
+          "sha256": "810df6e2da2e3203f6a301600e07e8762237f9cf85edf665ff7e2a508de83f7b",
+          "gitBlob": "e590c53e6f676bd819855e46d36a7d4ec5255c88"
+        },
+        "closedAt": "2026-11-17 15:21:15 UTC",
+        "authoredAt": "2026-11-17 15:21:18 UTC"
+      }
+    },
+    {
+      "id": "R03",
+      "name": "Actual R1 parent root and docs are exact",
+      "result": "PASS_STATIC_R2",
+      "evidence": {
+        "commit": "0d99e3069ad2c3d7058f49f7b5dbb06999cae6a0",
+        "tree": "d724d89ea0db5a83d63073647dc9289cfb1ebd66",
+        "docsTree": "3d26a380f9550e4f1ef9fcd8fbab5bfa0086b222",
+        "rootActual": {
+          "bytes": 576683,
+          "sha256": "1ece9a1e89ee5a3217ed08552ceeed38e50e0da3efd78f04fb6bb2cc327fc17b",
+          "gitBlob": "e2d862f0b6d57eaef7373288851e139b510e184f"
+        },
+        "independentActual": {
+          "bytes": 559229,
+          "sha256": "927ef43e0dbcd4bec3161451a96140f02c1b4ea6376fb137c9b82221528751f8",
+          "gitBlob": "1080986575faf274d46963e48ba8083eecb18f30"
+        }
+      }
+    },
+    {
+      "id": "R04",
+      "name": "Complete target preimage is anchored to actual unchanged packages",
+      "result": "PASS_STATIC_R2",
+      "evidence": {
+        "before": {
+          "bytes": 41559,
+          "sha256": "80b8075c5ed87d3bd5f6707c1e83f4983d275510d67fa4e0a352e1a3d7d958a0",
+          "gitBlob": "9988bebfff4408e81ab63da26fc463e7b8fa618b"
+        },
+        "currentSourceJoin": {
+          "path": "packages/legacy-agent-host/tests/opencode-v2-native-receipt.test.mjs",
+          "pin": {
+            "bytes": 41559,
+            "sha256": "80b8075c5ed87d3bd5f6707c1e83f4983d275510d67fa4e0a352e1a3d7d958a0",
+            "gitBlob": "9988bebfff4408e81ab63da26fc463e7b8fa618b"
+          },
+          "freshFullLiteralRead": true,
+          "rootPackagesUnchanged": "dc592662ccd8e886de52da21c666ff3ac1d3d6f6"
+        }
+      }
+    },
+    {
+      "id": "R05",
+      "name": "Whole after body is retained with exact identity",
+      "result": "PASS_STATIC_R2",
+      "evidence": {
+        "bytes": 41619,
+        "sha256": "e1e95d1dcf12408251bde11f4ab679b73de7c8a15b4a49105121b1e8a5a92b36",
+        "gitBlob": "8d12ee7a61d13740dbaddfe8177bfe80cb716335"
+      }
+    },
+    {
+      "id": "R06",
+      "name": "Exactly the three planned physical lines changed",
+      "result": "PASS_STATIC_R2",
+      "evidence": [
+        {
+          "line": 357,
+          "before": "  const unique = pattern => {",
+          "after": "  const unique = (pattern, start = 0) => {"
+        },
+        {
+          "line": 358,
+          "before": "    const matches = [...compiled.matchAll(pattern)];",
+          "after": "    const matches = [...compiled.matchAll(pattern)].filter(match => match.index >= start);"
+        },
+        {
+          "line": 367,
+          "before": "  const publishEnd = unique(/^[ \\t]*return closing;\\r?$/gm);",
+          "after": "  const publishEnd = unique(/^[ \\t]*return closing;\\r?$/gm, publish);"
+        }
+      ]
+    },
+    {
+      "id": "R07",
+      "name": "Complete inverse restores every original byte",
+      "result": "PASS_STATIC_R2",
+      "evidence": {
+        "inverse": {
+          "bytes": 41559,
+          "sha256": "80b8075c5ed87d3bd5f6707c1e83f4983d275510d67fa4e0a352e1a3d7d958a0",
+          "gitBlob": "9988bebfff4408e81ab63da26fc463e7b8fa618b"
+        },
+        "original": {
+          "bytes": 41559,
+          "sha256": "80b8075c5ed87d3bd5f6707c1e83f4983d275510d67fa4e0a352e1a3d7d958a0",
+          "gitBlob": "9988bebfff4408e81ab63da26fc463e7b8fa618b"
+        },
+        "allOtherBytesIdentical": true
+      }
+    },
+    {
+      "id": "R08",
+      "name": "Both source bodies remain647physical lines",
+      "result": "PASS_STATIC_R2",
+      "evidence": {
+        "before": 647,
+        "after": 647,
+        "cap": 800
+      }
+    },
+    {
+      "id": "R09",
+      "name": "Lower bound defaults to zero and preserves original indices",
+      "result": "PASS_STATIC_R2",
+      "evidence": "Inclusive original match.index; default zero"
+    },
+    {
+      "id": "R10",
+      "name": "Exactly-one assertion and original returned index are unchanged",
+      "result": "PASS_STATIC_R2",
+      "evidence": {
+        "zeroOrDuplicateSuffixStillRejected": true
+      }
+    },
+    {
+      "id": "R11",
+      "name": "Only publishEnd receives the already-unique publisher offset",
+      "result": "PASS_STATIC_R2",
+      "evidence": "publishEnd starts at the already uniquely identified publish boundary"
+    },
+    {
+      "id": "R12",
+      "name": "All six boundary locations and five comparisons are unchanged",
+      "result": "PASS_STATIC_R2",
+      "evidence": {
+        "locations": 6,
+        "comparisons": 5
+      }
+    },
+    {
+      "id": "R13",
+      "name": "Other five original boundary expressions remain global",
+      "result": "PASS_STATIC_R2",
+      "evidence": {
+        "otherCalls": 5,
+        "defaultStart": 0
+      }
+    },
+    {
+      "id": "R14",
+      "name": "Actual compiled source slices are unchanged",
+      "result": "PASS_STATIC_R2",
+      "evidence": {
+        "sliceCoordinates": "Original source offsets",
+        "surrogate": false
+      }
+    },
+    {
+      "id": "R15",
+      "name": "Actual runtime source supports exclusion of earlier idempotent return",
+      "result": "PASS_STATIC_R2",
+      "evidence": {
+        "source": {
+          "bytes": 23312,
+          "sha256": "7c77d52a1f9dcc2b3c53d550514ba13c4256a5daca3a67f2c2c008e786e66ea2",
+          "gitBlob": "a5dc4221c8d3e35200c65b533dd0126479a0a3ab"
+        },
+        "staticSourceReasoningOnly": true,
+        "compiledGreenUnobserved": true
+      }
+    },
+    {
+      "id": "R16",
+      "name": "Serialized child uses the same helper unchanged at its original call site",
+      "result": "PASS_STATIC_R2",
+      "evidence": {
+        "sharedHelper": true,
+        "newChildImplementation": false
+      }
+    },
+    {
+      "id": "R17",
+      "name": "All12local case registrations remain identical and ordered",
+      "result": "PASS_STATIC_R2",
+      "evidence": [
+        "a failed native Host proof publishes only sanitized diagnostics and no raw paths",
+        "native receipt gate rejects forged digest, incomplete stages and cold restart uncertainty",
+        "receipt verifier CLI refuses lockfile-only artifacts with sanitized diagnostics",
+        "native V2 captured session readback cannot drift workspace or ordered permissions",
+        "native durable SSE proof accepts a bounded, owned and ordered history prefix",
+        "native durable SSE proof enforces frame-count budget with a distinct error",
+        "native durable SSE proof rejects foreign, incomplete and reordered events",
+        "cold native log proof compares retained event content, not only counts and watermark",
+        "raw native V2 variant readback cannot attest a missing or inherited default",
+        "actual ModelProbe run rejection keeps original identity and close classification with bounded own error codes",
+        "actual finite Node observer and parent retain producer error codes in the reserved close slot after trace exhaustion",
+        "actual close projection preserves legacy rows and opaque optional fields within original reservation and byte limits"
+      ]
+    },
+    {
+      "id": "R18",
+      "name": "Entire original nine-case prefix remains byte-identical",
+      "result": "PASS_STATIC_R2",
+      "evidence": {
+        "prefixBytes": 20115,
+        "prefixLiteralPreserved": true
+      }
+    },
+    {
+      "id": "R19",
+      "name": "The complete existing14-case import is unchanged",
+      "result": "PASS_STATIC_R2",
+      "evidence": {
+        "importedWholeCases": 14,
+        "noWrapperOrSubset": true
+      }
+    },
+    {
+      "id": "R20",
+      "name": "Diagnostic matrices getter/proxy private-value and close assertions are identical",
+      "result": "PASS_STATIC_R2",
+      "evidence": {
+        "proof": "Complete three-line inverse; no test/harness statement outside helper altered"
+      }
+    },
+    {
+      "id": "R21",
+      "name": "Whole original eight-file command and skips remain required",
+      "result": "PASS_STATIC_R2",
+      "evidence": "node --test packages/legacy-agent-host/tests/opencode-v2-static-preflight.test.ts packages/legacy-agent-host/tests/opencode-v2-static-capture.test.ts packages/legacy-agent-host/tests/opencode-v2-host-spi.test.ts packages/legacy-agent-host/tests/opencode-v2-native-receipt.test.mjs packages/legacy-agent-host/tests/opencode-v2-native-process-guard.test.mjs packages/legacy-agent-host/tests/opencode-v2-request-admission.test.ts packages/legacy-agent-host/tests/opencode-v1-version-receipt.test.ts packages/legacy-agent-host/tests/opencode-v1-version-source.test.ts"
+    },
+    {
+      "id": "R22",
+      "name": "Original child authority deadlines cleanup and trace caps unchanged",
+      "result": "PASS_STATIC_R2",
+      "evidence": {
+        "changesOutsideThreeHelperLines": 0,
+        "localRuntimeSelected": false
+      }
+    },
+    {
+      "id": "R23",
+      "name": "One existing test file only and all product/dependency/workflow bodies unchanged",
+      "result": "PASS_STATIC_R2",
+      "evidence": {
+        "production": 5020,
+        "cap": 800,
+        "exceptions": 141,
+        "nonDocLeaves": 8799,
+        "workflows": 42,
+        "newSourceFiles": 0,
+        "deletedSourceFiles": 0,
+        "productSourceChanges": 0,
+        "workflowChanges": 0,
+        "dependencyChanges": 0,
+        "deadlineChanges": 0,
+        "caseRemovals": 0,
+        "assertionRemovals": 0,
+        "sourceChanges": 1,
+        "oldAttemptsSpentForever": true,
+        "noRealClaudeOrCodex": true,
+        "noMainMergeReadyReleaseStage2": true
+      }
+    },
+    {
+      "id": "R24",
+      "name": "CI3 fixed refs and terminal exclusions remain separate",
+      "result": "PASS_STATIC_R2",
+      "evidence": {
+        "pr": 1223,
+        "fixedHead": "86f52244b5375834a4040cbc63803d68cc708087",
+        "fixedBase": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+        "refsAndMetadataUnchanged": true,
+        "latestIndependentObservation": 14,
+        "activeRunIds": [
+          44092933873,
+          44092933912,
+          44092934079,
+          44092933810
+        ],
+        "terminalExcludedForever": [
+          44092933980,
+          44092933718,
+          44092933835,
+          44092933888,
+          44092934051,
+          44092933827,
+          44092933972
+        ],
+        "newFailuresSeparate": true
+      }
+    },
+    {
+      "id": "R25",
+      "name": "Existing publication sequence required with no prospective runtime PASS",
+      "result": "PASS_STATIC_R2",
+      "evidence": {
+        "soleParent": "0d99e3069ad2c3d7058f49f7b5dbb06999cae6a0",
+        "onlyNonDocChange": "packages/legacy-agent-host/tests/opencode-v2-native-receipt.test.mjs",
+        "rootPlusThreeIndependentReviews": true,
+        "immediatePush": true,
+        "force": false,
+        "existingDocumentPrefixesAndAll109CatalogValuesPreserved": true,
+        "rootAndIndependentActualReadbacks": true
+      }
+    }
+  ],
+  "checkCount": 25,
+  "failedChecks": [],
+  "unresolvedBlockers": [],
+  "source": {
+    "path": "packages/legacy-agent-host/tests/opencode-v2-native-receipt.test.mjs",
+    "mode": "100644",
+    "before": {
+      "bytes": 41559,
+      "sha256": "80b8075c5ed87d3bd5f6707c1e83f4983d275510d67fa4e0a352e1a3d7d958a0",
+      "gitBlob": "9988bebfff4408e81ab63da26fc463e7b8fa618b"
+    },
+    "after": {
+      "bytes": 41619,
+      "sha256": "e1e95d1dcf12408251bde11f4ab679b73de7c8a15b4a49105121b1e8a5a92b36",
+      "gitBlob": "8d12ee7a61d13740dbaddfe8177bfe80cb716335"
+    },
+    "physicalLinesBefore": 647,
+    "physicalLinesAfter": 647,
+    "completeInverseExact": true,
+    "logicalLinesChanged": 3,
+    "diff": [
+      {
+        "line": 357,
+        "before": "  const unique = pattern => {",
+        "after": "  const unique = (pattern, start = 0) => {"
+      },
+      {
+        "line": 358,
+        "before": "    const matches = [...compiled.matchAll(pattern)];",
+        "after": "    const matches = [...compiled.matchAll(pattern)].filter(match => match.index >= start);"
+      },
+      {
+        "line": 367,
+        "before": "  const publishEnd = unique(/^[ \\t]*return closing;\\r?$/gm);",
+        "after": "  const publishEnd = unique(/^[ \\t]*return closing;\\r?$/gm, publish);"
+      }
+    ],
+    "replacements": [
+      {
+        "before": "  const unique = pattern => {",
+        "after": "  const unique = (pattern, start = 0) => {"
+      },
+      {
+        "before": "    const matches = [...compiled.matchAll(pattern)];",
+        "after": "    const matches = [...compiled.matchAll(pattern)].filter(match => match.index >= start);"
+      },
+      {
+        "before": "  const publishEnd = unique(/^[ \\t]*return closing;\\r?$/gm);",
+        "after": "  const publishEnd = unique(/^[ \\t]*return closing;\\r?$/gm, publish);"
+      }
+    ]
+  },
+  "fullReadEvidence": {
+    "proposal": {
+      "bytes": 9961,
+      "sha256": "9fd198e4a618d888eb1a8501d901e29833fa8ea74f53d1071c4b88599563d69c",
+      "gitBlob": "438d60e47e1940ffc30b005ef7c97bd26a0ff8d4"
+    },
+    "before": {
+      "bytes": 41559,
+      "sha256": "80b8075c5ed87d3bd5f6707c1e83f4983d275510d67fa4e0a352e1a3d7d958a0",
+      "gitBlob": "9988bebfff4408e81ab63da26fc463e7b8fa618b"
+    },
+    "after": {
+      "bytes": 41619,
+      "sha256": "e1e95d1dcf12408251bde11f4ab679b73de7c8a15b4a49105121b1e8a5a92b36",
+      "gitBlob": "8d12ee7a61d13740dbaddfe8177bfe80cb716335"
+    },
+    "modelProbe": {
+      "bytes": 23312,
+      "sha256": "7c77d52a1f9dcc2b3c53d550514ba13c4256a5daca3a67f2c2c008e786e66ea2",
+      "gitBlob": "a5dc4221c8d3e35200c65b533dd0126479a0a3ab"
+    },
+    "r1": {
+      "bytes": 10289,
+      "sha256": "08b7fd228ee8b264930d89dd485743e71b90f79edf3d094d20562a8d4c6064bc",
+      "gitBlob": "3a4c7a35a30dd24594cdfecf45510274598527dc"
+    },
+    "r1Gate": {
+      "bytes": 6963,
+      "sha256": "810df6e2da2e3203f6a301600e07e8762237f9cf85edf665ff7e2a508de83f7b",
+      "gitBlob": "e590c53e6f676bd819855e46d36a7d4ec5255c88"
+    },
+    "rootActual": {
+      "bytes": 576683,
+      "sha256": "1ece9a1e89ee5a3217ed08552ceeed38e50e0da3efd78f04fb6bb2cc327fc17b",
+      "gitBlob": "e2d862f0b6d57eaef7373288851e139b510e184f"
+    },
+    "independentActual": {
+      "bytes": 559229,
+      "sha256": "927ef43e0dbcd4bec3161451a96140f02c1b4ea6376fb137c9b82221528751f8",
+      "gitBlob": "1080986575faf274d46963e48ba8083eecb18f30"
+    }
+  },
+  "limits": {
+    "noCompilation": true,
+    "noTargetExecution": true,
+    "noActualGreen": true,
+    "otherKnownFailuresRemain": true
+  },
+  "next": "Close other three exact R2 reviews, publish only selected test change with evidence and immediately push, then root and independent actual readbacks."
+}

@@ -1,0 +1,566 @@
+{
+  "schemaVersion": 1,
+  "kind": "CI3_STAGE1_WINDOWS_DIAGNOSTIC_FRAGMENT_EXTRACTION_ADVISORY",
+  "reviewer": "/root/producer_r2_guard",
+  "repository": "777genius/agent-teams-ai",
+  "preparedAt": "2026-11-17 14:16:38 UTC",
+  "decision": "CONCRETE_TEST_EXTRACTOR_DEFECT_CONFIRMED_MINIMAL_SUFFIX_BOUNDARY_CORRECTION_SUPPORTED_AT_PLAN_LEVEL_ONLY",
+  "scope": {
+    "sourceHead": "86f52244b5375834a4040cbc63803d68cc708087",
+    "pullRequest": 1223,
+    "attempt": 1,
+    "jobId": 134072512849,
+    "jobName": "Static V01 source test (windows-2022)",
+    "sourceAuthorAndExecutor": "/root",
+    "sourcePostimageAuthored": false,
+    "executionAuthorizedByThisAdvisory": false
+  },
+  "summary": "The first diagnostic case fails because the global compiled return-closing pattern is not unique. Restrict only its end search to the suffix beginning at the already-unique publisher, keeping exactly-one and original ordering. The finite child uses that same serialized helper; the log independently records only its exit 1, not its captured stderr. All original nine and all imported fourteen platform cases pass, plus the third diagnostic case; the whole command remains FAIL.",
+  "checks": [
+    {
+      "id": "W01",
+      "result": "PASS_BOUNDED_SOURCE_AND_RETAINED_EVIDENCE",
+      "topic": "Exact immutable evidence",
+      "evidence": "The complete original 128,517-byte job log fca9b76b was independently fetched, hashed and read in contiguous untruncated slices. No live job/run/artifact lookup or replay occurred."
+    },
+    {
+      "id": "W02",
+      "result": "PASS_BOUNDED_SOURCE_AND_RETAINED_EVIDENCE",
+      "topic": "Actual source and runtime tuple",
+      "evidence": "The log checks out 86f52244b5375834a4040cbc63803d68cc708087, verifies EXPECTED_PR_HEAD, and records Node v24.21.0 on Windows x64/windows-2022. The separate current-product-lock checkout is 03046d4616c7d2ce3a7111c0576f4c6e601ecda2; it does not replace the source checkout."
+    },
+    {
+      "id": "W03",
+      "result": "PASS_BOUNDED_SOURCE_AND_RETAINED_EVIDENCE",
+      "topic": "Build reached before tests",
+      "evidence": "The original pinned installation, Host build using node node_modules/@typescript/native/bin/tsc, and Host TEST typecheck complete before the failing command. This is not an installation failure. No independently retained compiled ModelProbe body is present in the supplied evidence."
+    },
+    {
+      "id": "W04",
+      "result": "PASS_BOUNDED_SOURCE_AND_RETAINED_EVIDENCE",
+      "topic": "Exact whole command",
+      "evidence": "The complete eight-file node --test command is literally equal to unchanged workflow line 106; there is no test-name filter, replacement command, extra retry or selected-file omission."
+    },
+    {
+      "id": "W05",
+      "result": "PASS_BOUNDED_SOURCE_AND_RETAINED_EVIDENCE",
+      "topic": "Whole command result",
+      "evidence": "The log records 242 tests: 239 pass, 2 fail, 1 original POSIX-FIFO-only skip, 0 cancelled and 0 todo, with command exit 1. Failure-summary repeats are not additional executions."
+    },
+    {
+      "id": "W06",
+      "result": "PASS_BOUNDED_SOURCE_AND_RETAINED_EVIDENCE",
+      "topic": "Original nine retained",
+      "evidence": "The current native receipt test begins with the exact 19,696 bytes of f274129a. Every one of its original nine titles appears once as passing in the original command progress."
+    },
+    {
+      "id": "W07",
+      "result": "PASS_BOUNDED_SOURCE_AND_RETAINED_EVIDENCE",
+      "topic": "Three diagnostic cases classified separately",
+      "evidence": "The original-run-rejection case and finite-observer case fail. The third actual close-projection/legacy/opaque-field/bounds case passes. Neither failed case is promoted to runtime proof of the selected diagnostic fields."
+    },
+    {
+      "id": "W08",
+      "result": "PASS_BOUNDED_SOURCE_AND_RETAINED_EVIDENCE",
+      "topic": "Whole imported platform suite reached",
+      "evidence": "The unchanged awaited import registers all 14 existing platform cases in this same entry. Each of the 14 exact titles occurs once as passing in the Windows log, including the Windows cleanup case and the two selected-port/error-preservation additions. This is bounded whole-test evidence, not GUI or native performance qualification."
+    },
+    {
+      "id": "W09",
+      "result": "PASS_BOUNDED_SOURCE_AND_RETAINED_EVIDENCE",
+      "topic": "Exact source leaves",
+      "evidence": "Complete test 9988bebf and ModelProbe a5dc4221 bodies rehash exactly and join the cached complete nontruncated 86f packages subtree dc592662ccd8e886de52da21c666ff3ac1d3d6f6 at their canonical paths."
+    },
+    {
+      "id": "W10",
+      "result": "PASS_BOUNDED_SOURCE_AND_RETAINED_EVIDENCE",
+      "topic": "Failure one is the extractor boundary",
+      "evidence": "At test lines 356–370, unique searches the entire compiled module and requires one match. The observed stack reaches publishEnd at line 367 and reports two return-closing matches rather than one; the first test fails at its initial extraction before any rejection matrix/harness operation."
+    },
+    {
+      "id": "W11",
+      "result": "PASS_BOUNDED_SOURCE_AND_RETAINED_EVIDENCE",
+      "topic": "Two legitimate source return sites",
+      "evidence": "The complete ModelProbe source has the idempotent if (closing) return closing at line 431, before the sole closing-assignment/publisher at line 497, and the intended final return at line 511. The compiler's expanded early statement explains why a standalone-line search observes two legitimate return sites. The exact compiled offsets/body were not retained or regenerated by this review."
+    },
+    {
+      "id": "W12",
+      "result": "PASS_BOUNDED_SOURCE_AND_RETAINED_EVIDENCE",
+      "topic": "Minimal lower-bound correction is source-supported",
+      "evidence": "A plan-level optional lower-bound offset on the existing unique helper, default 0 and inclusive, can restrict only publishEnd to matches at or after the already-unique publish index. Keep original match indices and the exactly-one assertion. No last-match shortcut, expected-count-two waiver or fallback selection is justified."
+    },
+    {
+      "id": "W13",
+      "result": "PASS_BOUNDED_SOURCE_AND_RETAINED_EVIDENCE",
+      "topic": "Fail-closed and index-zero preservation",
+      "evidence": "Default inclusive zero keeps a legitimate boundary at index 0 eligible. A missing final return or two return candidates within the selected suffix still fails the existing exactly-one assertion. The sole publisher remains globally unique; the original state<stateEnd<run<runEnd<publish<publishEnd order assertion and all slice boundaries remain."
+    },
+    {
+      "id": "W14",
+      "result": "PASS_BOUNDED_SOURCE_AND_RETAINED_EVIDENCE",
+      "topic": "No surrogate producer",
+      "evidence": "The proposed boundary correction continues reading the actual dist/adapters/providers/OpenCodeV2ModelProbe.js produced by the original Host build. State, run wrapper and failed-close publisher remain actual byte slices. It does not introduce a copied producer, new export, TypeScript runtime substitution or changed product code."
+    },
+    {
+      "id": "W15",
+      "result": "PASS_BOUNDED_SOURCE_AND_RETAINED_EVIDENCE",
+      "topic": "Finite child shares the helper",
+      "evidence": "Test lines 518–520 serialize modelProbeDiagnosticFragments.toString() and modelProbeDiagnosticHarness.toString(), then immediately extract from the same compiled URL. Extraction precedes the 300 diagnostic publications, run rejection, failed-close continuation and completion marker. Correcting the one shared helper therefore also corrects that child's selected boundary under the same compiled input."
+    },
+    {
+      "id": "W16",
+      "result": "PASS_BOUNDED_SOURCE_AND_RETAINED_EVIDENCE",
+      "topic": "Failure two's direct evidence limit",
+      "evidence": "The second case passes result.error===undefined and fails result.status===0 with actual 1 at line 539. Its signal assertion and later stderr/privacy/trace/receipt assertions are unreached. No child stack or captured stderr is emitted by the parent before that status assertion; the full log contains no finite-diagnostic-peer.mjs stack. The shared-extractor explanation is strongly source-supported, but an independently observed child stack is unavailable."
+    },
+    {
+      "id": "W17",
+      "result": "PASS_BOUNDED_SOURCE_AND_RETAINED_EVIDENCE",
+      "topic": "Original error and cleanup meaning preserved",
+      "evidence": "ModelProbe's rejection wrapper still rethrows the exact original error and preserves legacy held/invalid/conflict/busy classification. Its idempotent close, firstCloseFailure, pending request drain, driver/server/namespace cleanup and original deadlines require no change. The contemplated test helper change does not execute or alter those production paths."
+    },
+    {
+      "id": "W18",
+      "result": "PASS_BOUNDED_SOURCE_AND_RETAINED_EVIDENCE",
+      "topic": "Diagnostic vocabulary and privacy preserved",
+      "evidence": "Both own-data nullable runErrorCode/runCauseCode fields, nine allowed transport codes, opaque/getter refusal, absent legacy shape, exact rejection identity and counterfactual old catch/publisher assertions remain untouched. The third passing case directly covers the selected projection/byte constraints; the first two remain failed, not qualified."
+    },
+    {
+      "id": "W19",
+      "result": "PASS_BOUNDED_SOURCE_AND_RETAINED_EVIDENCE",
+      "topic": "Existing finite child bounds preserved",
+      "evidence": "Keep the same actual Node 24.21.0/platform admission, --import observer, finite generated child, 10,000 ms spawnSync timeout, 256 KiB maxBuffer, status/signal/marker checks and finally removal. No real native/vendor program or model/network request is added by the boundary correction."
+    },
+    {
+      "id": "W20",
+      "result": "PASS_BOUNDED_SOURCE_AND_RETAINED_EVIDENCE",
+      "topic": "Original trace reservation preserved",
+      "evidence": "Fresh hash-equal passive source retains 64 KiB total, 512-byte input lines, 513-byte retained/frame bound, three reserved failure observations plus trace-limit within 257 rows, and original first-close reservation. Existing tests retain 355-byte emitted and 499-byte parent maxima, saturation and oversized-input assertions. No raw stderr publication or additional observation is proposed."
+    },
+    {
+      "id": "W21",
+      "result": "PASS_BOUNDED_SOURCE_AND_RETAINED_EVIDENCE",
+      "topic": "Broader budgets remain frozen",
+      "evidence": "The requested existing 8 MiB envelope/output allowance is not reinterpreted as the finite child's buffer: that child remains 256 KiB, and the passive trace remains 64 KiB. The correction is confined to source-text selection in one existing test helper; all outside controls, production deadlines and broader input/output budgets remain unchanged."
+    },
+    {
+      "id": "W22",
+      "result": "PASS_BOUNDED_SOURCE_AND_RETAINED_EVIDENCE",
+      "topic": "Ordinary failure and cleanup remain failures",
+      "evidence": "The command exits 1 and ordinary GitHub post-job cleanup follows; its final orphan cleanup lists vctip. The finite test's finally removal is in the existing source, but no separate retained original-child custody receipt is advertised. Neither ordinary job cleanup nor the passing platform cleanup test turns the two failed diagnostic cases into PASS."
+    },
+    {
+      "id": "W23",
+      "result": "PASS_BOUNDED_SOURCE_AND_RETAINED_EVIDENCE",
+      "topic": "Meaningful future confirmation without new scope",
+      "evidence": "The existing real Host build plus unchanged whole eight-file command already distinguishes the old selector (observed failure) from the scoped selector and preserves all 3+9+14 cases. A future genuine run must still satisfy the original first two behavioral assertions; static plausibility is not a runtime PASS. No new testcase, workflow, venue, filter, gate, timeout or retry is selected here."
+    },
+    {
+      "id": "W24",
+      "result": "PASS_BOUNDED_SOURCE_AND_RETAINED_EVIDENCE",
+      "topic": "Read-only advisory boundary",
+      "evidence": "Only immutable Git/evidence reads, approved in-memory identity hashing and data comparisons were used. No target compilation/import/evaluation, shell/local/runtime probe, source/control authorship, ref/PR/CI action, artifact download or new authority was exercised."
+    }
+  ],
+  "evidence": {
+    "log": {
+      "bytes": 128517,
+      "sha256": "e8764cca247c632c3092464cb4eab1fc9627b22fbb32d559bdec6b27156ff46f",
+      "gitBlob": "fca9b76b3d0ff372cd046cc7a631fe980a279062",
+      "read": "Complete body independently fetched/rehashed and read without truncation.",
+      "source": "Root's once-captured original completed job log; no artifact advertised at observation 9, as reported by root."
+    },
+    "fullFreshSources": [
+      {
+        "repository": "777genius/agent-teams-ai",
+        "commit": "86f52244b5375834a4040cbc63803d68cc708087",
+        "mode": "100644",
+        "read": "Complete body freshly read; source never executed.",
+        "path": "packages/legacy-agent-host/tests/opencode-v2-native-receipt.test.mjs",
+        "bytes": 41559,
+        "sha256": "80b8075c5ed87d3bd5f6707c1e83f4983d275510d67fa4e0a352e1a3d7d958a0",
+        "gitBlob": "9988bebfff4408e81ab63da26fc463e7b8fa618b"
+      },
+      {
+        "repository": "777genius/agent-teams-ai",
+        "commit": "86f52244b5375834a4040cbc63803d68cc708087",
+        "mode": "100644",
+        "read": "Complete body freshly read; source never executed.",
+        "path": "packages/legacy-agent-host/src/adapters/providers/OpenCodeV2ModelProbe.ts",
+        "bytes": 23312,
+        "sha256": "7c77d52a1f9dcc2b3c53d550514ba13c4256a5daca3a67f2c2c008e786e66ea2",
+        "gitBlob": "a5dc4221c8d3e35200c65b533dd0126479a0a3ab"
+      },
+      {
+        "repository": "777genius/agent-teams-ai",
+        "commit": "86f52244b5375834a4040cbc63803d68cc708087",
+        "mode": "100644",
+        "read": "Complete body freshly read; source never executed.",
+        "path": "scripts/e2e/opencode-diagnostics/platform.test.mjs",
+        "bytes": 20830,
+        "sha256": "05197a044bf390abad3d4bbc55ffa8ef66035fa73bbfa36199b4b28685de3b26",
+        "gitBlob": "11c6c2fbd2f76471d0c78e35dea8636b278e6b72"
+      },
+      {
+        "repository": "777genius/agent-teams-ai",
+        "commit": "86f52244b5375834a4040cbc63803d68cc708087",
+        "mode": "100644",
+        "read": "Complete body freshly read; source never executed.",
+        "path": "packages/legacy-agent-host/tests/fixtures/native-host.ts",
+        "bytes": 15303,
+        "sha256": "ea11710ab1833e4cad906bad58def351b852c89ba1dee834c69849b3a1995d01",
+        "gitBlob": "bea17f976f5db7e9d6b471751ff7d871cd8ebcd5"
+      }
+    ],
+    "originalPrefix": {
+      "path": "packages/legacy-agent-host/tests/opencode-v2-native-receipt.test.mjs",
+      "bytes": 19696,
+      "sha256": "c88b9eac003164e9ad2cbc5c8ef93e1b466dec295fe14c64062777975b449a09",
+      "gitBlob": "f274129ad8a77bed3094e48e31cc50f37ba4d478",
+      "join": {
+        "exact": true,
+        "bytes": 19696,
+        "testLocalCount": 12
+      },
+      "read": "Complete original prefix is literally included in the freshly read current test; exact identity independently rehashed."
+    },
+    "passive": {
+      "repository": "777genius/agent-teams-ai",
+      "commit": "86f52244b5375834a4040cbc63803d68cc708087",
+      "path": "packages/legacy-agent-host/tests/fixtures/native-opencode-team/passive-diagnostics.ts",
+      "bytes": 37953,
+      "sha256": "a553197e108b574e9ff1c0e082014d4224baffeba21cec65a1b16f0fa17edbb6",
+      "gitBlob": "fbfe9b3ff5b0563b7a98301039ae3a3ae1cd68aa",
+      "read": "Complete fresh fetch/hash equals previously fully reviewed accepted source. Projection/capture lines 1–170 and observer/admission lines 436–578 freshly reread; unrelated CPU-profile code is reused by exact identity, not claimed as a new full audit."
+    },
+    "workflow": {
+      "repository": "777genius/agent-teams-ai",
+      "commit": "86f52244b5375834a4040cbc63803d68cc708087",
+      "path": ".github/workflows/opencode-v2-stage1-preflight.yml",
+      "bytes": 36013,
+      "sha256": "fddd1aface758ef115a5e904151cb61dd78dca04d8f52fb99f4326ddaff53a14",
+      "gitBlob": "2f557dd4b74806e6a444c46656af07b52bc0fb4e",
+      "read": "Accepted complete 42-workflow corpus reused by exact identity; this job's lines 1–125 freshly reread, including command and Linux-only upload condition."
+    },
+    "currentPathRows": [
+      {
+        "path": "legacy-agent-host/src/adapters/providers/OpenCodeV2ModelProbe.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "a5dc4221c8d3e35200c65b533dd0126479a0a3ab",
+        "size": 23312,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/a5dc4221c8d3e35200c65b533dd0126479a0a3ab"
+      },
+      {
+        "path": "legacy-agent-host/tests/opencode-v2-native-receipt.test.mjs",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "9988bebfff4408e81ab63da26fc463e7b8fa618b",
+        "size": 41559,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/9988bebfff4408e81ab63da26fc463e7b8fa618b"
+      }
+    ],
+    "sourceBoundaryData": {
+      "returns": [
+        {
+          "index": 20026,
+          "line": 431,
+          "text": "return closing;"
+        },
+        {
+          "index": 23282,
+          "line": 511,
+          "text": "return closing;"
+        }
+      ],
+      "publishers": [
+        {
+          "index": 22518,
+          "line": 497,
+          "text": "      closing = (purposeBound ? closeCoordinationByDeadline(work, originalDeadline ?? deadline) : work)"
+        }
+      ],
+      "intendedAfterCount": 1,
+      "earlyCount": 1,
+      "analysisOnly": true,
+      "compiledTargetNotProducedOrExecuted": true
+    }
+  },
+  "originalCommand": "node --test packages/legacy-agent-host/tests/opencode-v2-static-preflight.test.ts packages/legacy-agent-host/tests/opencode-v2-static-capture.test.ts packages/legacy-agent-host/tests/opencode-v2-host-spi.test.ts packages/legacy-agent-host/tests/opencode-v2-native-receipt.test.mjs packages/legacy-agent-host/tests/opencode-v2-native-process-guard.test.mjs packages/legacy-agent-host/tests/opencode-v2-request-admission.test.ts packages/legacy-agent-host/tests/opencode-v1-version-receipt.test.ts packages/legacy-agent-host/tests/opencode-v1-version-source.test.ts",
+  "commandAndCaseJoins": {
+    "command": "node --test packages/legacy-agent-host/tests/opencode-v2-static-preflight.test.ts packages/legacy-agent-host/tests/opencode-v2-static-capture.test.ts packages/legacy-agent-host/tests/opencode-v2-host-spi.test.ts packages/legacy-agent-host/tests/opencode-v2-native-receipt.test.mjs packages/legacy-agent-host/tests/opencode-v2-native-process-guard.test.mjs packages/legacy-agent-host/tests/opencode-v2-request-admission.test.ts packages/legacy-agent-host/tests/opencode-v1-version-receipt.test.ts packages/legacy-agent-host/tests/opencode-v1-version-source.test.ts",
+    "commandEqualsWorkflow": true,
+    "commandFileCount": 8,
+    "progress": {
+      "passed": 239,
+      "failed": 2,
+      "skipped": 1
+    },
+    "selected26": [
+      {
+        "index": 1,
+        "title": "a failed native Host proof publishes only sanitized diagnostics and no raw paths",
+        "rows": [
+          "✔ a failed native Host proof publishes only sanitized diagnostics and no raw paths (542.8092ms)"
+        ]
+      },
+      {
+        "index": 2,
+        "title": "native receipt gate rejects forged digest, incomplete stages and cold restart uncertainty",
+        "rows": [
+          "✔ native receipt gate rejects forged digest, incomplete stages and cold restart uncertainty (2.1836ms)"
+        ]
+      },
+      {
+        "index": 3,
+        "title": "receipt verifier CLI refuses lockfile-only artifacts with sanitized diagnostics",
+        "rows": [
+          "✔ receipt verifier CLI refuses lockfile-only artifacts with sanitized diagnostics (388.215ms)"
+        ]
+      },
+      {
+        "index": 4,
+        "title": "native V2 captured session readback cannot drift workspace or ordered permissions",
+        "rows": [
+          "✔ native V2 captured session readback cannot drift workspace or ordered permissions (1.0546ms)"
+        ]
+      },
+      {
+        "index": 5,
+        "title": "native durable SSE proof accepts a bounded, owned and ordered history prefix",
+        "rows": [
+          "✔ native durable SSE proof accepts a bounded, owned and ordered history prefix (7.6186ms)"
+        ]
+      },
+      {
+        "index": 6,
+        "title": "native durable SSE proof enforces frame-count budget with a distinct error",
+        "rows": [
+          "✔ native durable SSE proof enforces frame-count budget with a distinct error (4.1966ms)"
+        ]
+      },
+      {
+        "index": 7,
+        "title": "native durable SSE proof rejects foreign, incomplete and reordered events",
+        "rows": [
+          "✔ native durable SSE proof rejects foreign, incomplete and reordered events (3.1423ms)"
+        ]
+      },
+      {
+        "index": 8,
+        "title": "cold native log proof compares retained event content, not only counts and watermark",
+        "rows": [
+          "✔ cold native log proof compares retained event content, not only counts and watermark (2.1532ms)"
+        ]
+      },
+      {
+        "index": 9,
+        "title": "raw native V2 variant readback cannot attest a missing or inherited default",
+        "rows": [
+          "✔ raw native V2 variant readback cannot attest a missing or inherited default (0.6281ms)"
+        ]
+      },
+      {
+        "index": 10,
+        "title": "actual ModelProbe run rejection keeps original identity and close classification with bounded own error codes",
+        "rows": [
+          "✖ actual ModelProbe run rejection keeps original identity and close classification with bounded own error codes (3.5522ms)"
+        ]
+      },
+      {
+        "index": 11,
+        "title": "actual finite Node observer and parent retain producer error codes in the reserved close slot after trace exhaustion",
+        "rows": [
+          "✖ actual finite Node observer and parent retain producer error codes in the reserved close slot after trace exhaustion (146.6825ms)"
+        ]
+      },
+      {
+        "index": 12,
+        "title": "actual close projection preserves legacy rows and opaque optional fields within original reservation and byte limits",
+        "rows": [
+          "✔ actual close projection preserves legacy rows and opaque optional fields within original reservation and byte limits (10.5466ms)"
+        ]
+      },
+      {
+        "index": 13,
+        "title": "OS process and listener output parsing fails closed",
+        "rows": [
+          "✔ OS process and listener output parsing fails closed (1.2658ms)"
+        ]
+      },
+      {
+        "index": 14,
+        "title": "one fresh Windows interpreter retains ordered original process and listener observations",
+        "rows": [
+          "✔ one fresh Windows interpreter retains ordered original process and listener observations (2.614ms)"
+        ]
+      },
+      {
+        "index": 15,
+        "title": "combined Windows observations reject malformed envelopes and preserve executor failure",
+        "rows": [
+          "✔ combined Windows observations reject malformed envelopes and preserve executor failure (3.2279ms)"
+        ]
+      },
+      {
+        "index": 16,
+        "title": "ownership rejects stale launchers, reused child PIDs and unrelated listeners",
+        "rows": [
+          "✔ ownership rejects stale launchers, reused child PIDs and unrelated listeners (0.9454ms)"
+        ]
+      },
+      {
+        "index": 17,
+        "title": "native shims quote absolute paths with spaces and reject expansion syntax",
+        "rows": [
+          "✔ native shims quote absolute paths with spaces and reject expansion syntax (6.1181ms)"
+        ]
+      },
+      {
+        "index": 18,
+        "title": "isolated CDP port stays bound to the selected dev launcher",
+        "rows": [
+          "✔ isolated CDP port stays bound to the selected dev launcher (2179.3317ms)"
+        ]
+      },
+      {
+        "index": 19,
+        "title": "environment drops inherited provider/config and runtime overrides",
+        "rows": [
+          "✔ environment drops inherited provider/config and runtime overrides (0.6138ms)"
+        ]
+      },
+      {
+        "index": 20,
+        "title": "real fixture permits diagnostic queries only, and Unix shim handles spaces",
+        "rows": [
+          "✔ real fixture permits diagnostic queries only, and Unix shim handles spaces (817.7683ms)"
+        ]
+      },
+      {
+        "index": 21,
+        "title": "timeout fixture stays live until its owning test terminates it",
+        "rows": [
+          "✔ timeout fixture stays live until its owning test terminates it (55.6909ms)"
+        ]
+      },
+      {
+        "index": 22,
+        "title": "Windows cleanup evidence retains current PID through independent read-only queries",
+        "rows": [
+          "✔ Windows cleanup evidence retains current PID through independent read-only queries (2807.8885ms)"
+        ]
+      },
+      {
+        "index": 23,
+        "title": "Windows phase observations use the original phase clocks and cannot bypass admission",
+        "rows": [
+          "✔ Windows phase observations use the original phase clocks and cannot bypass admission (1.204ms)"
+        ]
+      },
+      {
+        "index": 24,
+        "title": "Windows census observations preserve original results, refusals and bounded diagnostics",
+        "rows": [
+          "✔ Windows census observations preserve original results, refusals and bounded diagnostics (0.7785ms)"
+        ]
+      },
+      {
+        "index": 25,
+        "title": "selected Windows port query retains complete fresh process and owner observations",
+        "rows": [
+          "✔ selected Windows port query retains complete fresh process and owner observations (0.8171ms)"
+        ]
+      },
+      {
+        "index": 26,
+        "title": "Windows listener executor failures never admit partial output or fall back",
+        "rows": [
+          "✔ Windows listener executor failures never admit partial output or fall back (0.2844ms)"
+        ]
+      }
+    ],
+    "exactOneProgressEach": true,
+    "skipRows": [
+      "﹣ V01 read-only measurement rejects a TEST-owned FIFO without blocking native preflight (0.3173ms) # POSIX FIFO only"
+    ],
+    "failedRows": [
+      "✖ actual ModelProbe run rejection keeps original identity and close classification with bounded own error codes (3.5522ms)",
+      "✖ actual finite Node observer and parent retain producer error codes in the reserved close slot after trace exhaustion (146.6825ms)"
+    ],
+    "childStackIncluded": false,
+    "boundaryFailureMentions": 1
+  },
+  "exactFailures": [
+    {
+      "testLine": 415,
+      "invocationLine": 416,
+      "helperLine": 367,
+      "uniqueLine": 359,
+      "readHelperLine": 387,
+      "actual": 2,
+      "expected": 1,
+      "operator": "strictEqual",
+      "errorCode": "ERR_ASSERTION",
+      "boundary": "/^[ \\t]*return closing;\\r?$/gm",
+      "failedBefore": "Producer rejection matrix and harness execution",
+      "logLines": [
+        1212,
+        1234
+      ]
+    },
+    {
+      "testLine": 504,
+      "statusAssertionLine": 539,
+      "actual": 1,
+      "expected": 0,
+      "operator": "strictEqual",
+      "errorCode": "ERR_ASSERTION",
+      "failedBefore": "Signal/marker/privacy/trace-limit/capture assertions",
+      "childStderrRetainedInLog": false,
+      "childStackDirectlyObserved": false,
+      "sharedHelperExplanation": "Source-backed inference: identical serialized helper reads the same compiled URL before all diagnostic publications. No child stack is invented.",
+      "logLines": [
+        1236,
+        1255
+      ]
+    }
+  ],
+  "minimalCorrectionRequirements": {
+    "selectedPathOnly": "packages/legacy-agent-host/tests/opencode-v2-native-receipt.test.mjs",
+    "planOnly": true,
+    "postimageAuthored": false,
+    "helper": "Existing unique accepts an optional inclusive lower-bound offset defaulting to zero; filter original match positions without rebasing; retain exactly-one assertion.",
+    "callSite": "Only publishEnd supplies the already-unique publish offset.",
+    "preserve": [
+      "All other unique calls and regexes",
+      "Global publisher uniqueness",
+      "All six boundary ordering checks and exact compiled slices",
+      "All 12 local test bodies/expectations including original 9 and appended 3",
+      "Whole unchanged platform14 awaited import",
+      "Actual compiled source rather than copied implementation",
+      "First rejection identity, normal success, legacy and getter/Proxy cases",
+      "Original counterfactual literals and hashes",
+      "Original observer, 10-second finite child and 256-KiB maxBuffer",
+      "Original trace reservations and 512/513/64-KiB bounds",
+      "All unrelated 8-MiB input/output controls, clocks, production cleanup and authority",
+      "No raw child stderr exposure or extra observation"
+    ],
+    "notJustified": [
+      "Changing expected match count to 2",
+      "Choosing the last match unconditionally",
+      "Removing the exactly-one or ordering checks",
+      "Changing ModelProbe close control flow to satisfy a test",
+      "Compiling/evaluating source during this advisory",
+      "Treating prospective fixes as runtime PASS"
+    ]
+  },
+  "limitations": [
+    "The compiled dist body and finite child stderr were not separately retained in the supplied evidence; no missing artifact or stack is fabricated.",
+    "The first case proves a current extractor failure, not an actual producer rejection-classification failure.",
+    "The second case cannot qualify its later observer/channel/trace assertions because it stops at status 1.",
+    "All14 imported platform test titles pass here, but that is not packaged GUI readiness, native performance, all-platform coverage or model/provider qualification.",
+    "No live CI, retries, new gate, executable/source postimage or execution venue is selected."
+  ],
+  "retentionProtocol": "Pin immediately after bare retention; then fresh full self-read."
+}

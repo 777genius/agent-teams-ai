@@ -1,0 +1,881 @@
+{
+  "schemaVersion": 1,
+  "kind": "C714_CI3_WINDOWS_X64_EMBEDDED_OPENCODE_V2_OUTCOME_SEMANTIC_REVIEW",
+  "reviewer": "/root/producer_r2_semantic",
+  "createdAtUtc": "2026-11-17 14:41:48 UTC",
+  "repository": "777genius/agent-teams-ai",
+  "decision": "SUPPORTED_BOUNDED_NATIVE_PASS",
+  "checkCount": 32,
+  "blockers": [],
+  "subject": {
+    "runId": 44092934079,
+    "jobId": 134072513174,
+    "pullRequest": 1223,
+    "sourceHead": "86f52244b5375834a4040cbc63803d68cc708087",
+    "jobName": "Embedded V2.1.4 original Host (win32-x64)",
+    "jobConclusionFromRoot": "SUCCESS",
+    "qualification": "Read-only review of the retained original evidence. No live API re-observation, execution, replay or new qualification gate."
+  },
+  "evidence": [
+    {
+      "role": "complete archive capture packet",
+      "bytes": 239214,
+      "sha256": "07478745c5becdb279cc5ad939a8af296b59b29420d12065ca94dff558f725ca",
+      "gitBlob": "21641f32e641af9e097a9e88b4356ffa14dbbbe0"
+    },
+    {
+      "role": "complete original decoded job log",
+      "bytes": 104429,
+      "sha256": "eae311289406da225fa7e5f405e370896a31d19114fb6e4add0ab21cb13e42ff",
+      "gitBlob": "bb2f065c29ce7ffba4a07396cdb28c24d545c7d6"
+    },
+    {
+      "role": "complete embedded UTF-8 member",
+      "path": "opencode-v2-embedded-inputs.json",
+      "bytes": 780,
+      "sha256": "067af37f13bf4125000a4e9ed9b0ca5cd1fbc0769f7d51833414f1577b7ecb12",
+      "gitBlob": "2876e7d82fa7d1faf86fc2c25244b988a902c231",
+      "identityKind": "derived from embedded archive member; not separately retained or fetched as a Git object",
+      "crc32": "8548ddb5",
+      "compressedBytes": 489
+    },
+    {
+      "role": "complete embedded UTF-8 member",
+      "path": "opencode-v2-windows-custody.json",
+      "bytes": 907,
+      "sha256": "cdc37c459c0ddc609bd0b380acff6cd1f61ed1e5bf4855755fbf436c536daff5",
+      "gitBlob": "24097b5043a0007706cb0b557bb6835af5fbb29e",
+      "identityKind": "derived from embedded archive member; not separately retained or fetched as a Git object",
+      "crc32": "3c9d374a",
+      "compressedBytes": 548
+    },
+    {
+      "role": "complete embedded UTF-8 member",
+      "path": "opencode-v2-embedded-host.json",
+      "bytes": 95030,
+      "sha256": "a6b4987b70804e6dd3aff6086464c976a4de064bfd7fb60c2db68fe6d1fd9693",
+      "gitBlob": "e9d6aa772b81c2185017fe18c2d9149f852e6df6",
+      "identityKind": "derived from embedded archive member; not separately retained or fetched as a Git object",
+      "crc32": "4dcbc4c5",
+      "compressedBytes": 5770
+    },
+    {
+      "role": "complete embedded UTF-8 member",
+      "path": "opencode-v2-embedded-host-auto.json",
+      "bytes": 94845,
+      "sha256": "bd3dad6bf2e6e89df0f544be4a68a97d2d57693f0aa5710ffac589a993aa9378",
+      "gitBlob": "db814f213de1e42216b1f5b65ebb5d0df0a6a429",
+      "identityKind": "derived from embedded archive member; not separately retained or fetched as a Git object",
+      "crc32": "2649aedf",
+      "compressedBytes": 5752
+    }
+  ],
+  "archive": {
+    "artifactId": 14334909525,
+    "bytes": 13207,
+    "sha256": "4a50e03cb4678932d6cbdda766ef07bdc65afa29bb5104843ad967caf6cc8816",
+    "gitBlob": "2503cbb3bcda0aba8d9ab7bdfd2e6d26ab411391",
+    "apiDigestMatched": true,
+    "allMembersCrcVerified": true,
+    "reviewBoundary": "Root's complete retained capture reports API digest and all-member CRC verification. Reviewer independently hashes the complete capture literal and every embedded text body and joins ZIP identity/size/member count to the complete original upload log. No independent ZIP inflation or artifact re-download was performed.",
+    "allTextMemberBytes": 191562
+  },
+  "sourceBasis": [
+    {
+      "repository": "777genius/agent-teams-ai",
+      "ref": "86f52244b5375834a4040cbc63803d68cc708087",
+      "path": "packages/legacy-agent-host/tests/opencode-v2-embedded-host.native.ts",
+      "bytes": 33259,
+      "sha256": "e7a295816da293ff4e26a775f898f1bc144ece55e995c3d05bed8e543f2803ff",
+      "gitBlob": "e4fd10d1c969bb5bf8a75e9789599a04dc0fc190",
+      "readCoverage": "Complete source body read as text, not executed."
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "ref": "86f52244b5375834a4040cbc63803d68cc708087",
+      "path": "packages/legacy-agent-host/tests/windows-job-custody.native.ts",
+      "bytes": 9536,
+      "sha256": "88ee29496c076870605d2e2c6849c92e9286a06809f00cb10444b033757f4687",
+      "gitBlob": "a224b47e942a337e823135d0cfca0fa11cd475bd",
+      "readCoverage": "Complete source body read as text, not executed."
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "ref": "86f52244b5375834a4040cbc63803d68cc708087",
+      "path": ".github/workflows/opencode-v2-stage1-preflight.yml",
+      "bytes": 36013,
+      "sha256": "fddd1aface758ef115a5e904151cb61dd78dca04d8f52fb99f4326ddaff53a14",
+      "gitBlob": "2f557dd4b74806e6a444c46656af07b52bc0fb4e",
+      "readCoverage": "Complete file fetched and hashed; complete selected embedded-v2-native-host job read, with unchanged workflow identity also previously reviewed in full workflow corpus. Other workflow jobs not reopened."
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "ref": "86f52244b5375834a4040cbc63803d68cc708087",
+      "path": "packages/legacy-agent-host/tests/fixtures/native-host.ts",
+      "bytes": 15303,
+      "sha256": "ea11710ab1833e4cad906bad58def351b852c89ba1dee834c69849b3a1995d01",
+      "gitBlob": "bea17f976f5db7e9d6b471751ff7d871cd8ebcd5",
+      "readCoverage": "Complete source body read as text, not executed."
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "ref": "86f52244b5375834a4040cbc63803d68cc708087",
+      "path": "packages/legacy-agent-host/tests/fixtures/native-opencode-team/model.ts",
+      "bytes": 38584,
+      "sha256": "f25659fe4c89e30072e9c2bc923fcdf6f1a3dd2efdca81387659e485170c74c3",
+      "gitBlob": "ff0aeba42e3a4e845428146969360dff91c25de8",
+      "readCoverage": "Complete source body read as text, not executed."
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "ref": "86f52244b5375834a4040cbc63803d68cc708087",
+      "path": "scripts/legacy-agent-host/prepare-opencode-v2-native.ts",
+      "bytes": 9450,
+      "sha256": "40c7b16a40c3efaf859dffcaa762d927d630d84945810782da2ca172c06fe16e",
+      "gitBlob": "b6fef813e23b8f18d7f8ebae5b14f5c0a104a30c",
+      "readCoverage": "Complete source body read as text, not executed."
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "ref": "86f52244b5375834a4040cbc63803d68cc708087",
+      "path": "packages/legacy-agent-host/src/contracts.ts",
+      "bytes": 5570,
+      "sha256": "c9c5686a8f6ccf6abfe2518edf713d34f48641b79ede32f070048c46c0ae4b3d",
+      "gitBlob": "5d5743e8728ff3f16dcc09ad822804e4952632e1",
+      "readCoverage": "Complete source body read as text, not executed."
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "ref": "86f52244b5375834a4040cbc63803d68cc708087",
+      "path": "runtime.lock.json",
+      "bytes": 6127,
+      "sha256": "fa614f6dcc672b47342a838300f4c1c7b82ae0f05899c108af17838c58c53a87",
+      "gitBlob": "1757d79786da78e739a322e8bba81cd3dc88dcaa",
+      "readCoverage": "Complete source body read as text, not executed."
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "ref": "86f52244b5375834a4040cbc63803d68cc708087",
+      "path": "packages/legacy-agent-host/tests/fixtures/native-message-image.ts",
+      "bytes": 5377,
+      "sha256": "e8cbeabf1968baabbeedbccad60f17c281e2f5aa64a444c3f5245f6ac04421e1",
+      "gitBlob": "1eeab2d4ba765c683b37a3d0cf5790b21aef919b",
+      "readCoverage": "Complete source body read as text, not executed."
+    }
+  ],
+  "outcome": {
+    "platform": "win32-x64",
+    "os": "Microsoft Windows Server 2022 10.0.20348 Datacenter",
+    "runnerImage": "windows-2022",
+    "runnerImageVersion": "20261112.366.7",
+    "nodeVersion": "v24.21.0",
+    "prerequisiteCommand": {
+      "files": [
+        "packages/legacy-agent-host/tests/opencode-v2-embedded-graph.test.ts",
+        "packages/legacy-agent-host/tests/registered-process-build-selection.test.ts",
+        "packages/legacy-agent-host/tests/windows-job-custody.test.ts",
+        "packages/legacy-agent-host/tests/opencode-v2-native-paths.test.ts",
+        "packages/legacy-agent-host/tests/owner-scoped-backup.test.ts",
+        "packages/legacy-agent-host/tests/member-attachment-delivery.test.ts"
+      ],
+      "tests": 58,
+      "pass": 57,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 1,
+      "todo": 0,
+      "skip": "Linux builder refuses an existing or linked output leaf before any compiler dispatch",
+      "scope": "Original log-reported six-file prerequisite results; no additional source-by-source unit audit or full-suite promotion."
+    },
+    "nativeCommands": [
+      {
+        "path": "packages/legacy-agent-host/tests/windows-job-custody.native.ts",
+        "tests": 1,
+        "pass": 1,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "caseElapsedMs": 11654.3863
+      },
+      {
+        "path": "packages/legacy-agent-host/tests/opencode-v2-embedded-host.native.ts",
+        "mode": "manual",
+        "tests": 1,
+        "pass": 1,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "caseElapsedMs": 106389.8275,
+        "receiptElapsedMs": 106387
+      },
+      {
+        "path": "packages/legacy-agent-host/tests/opencode-v2-embedded-host.native.ts",
+        "mode": "auto",
+        "tests": 1,
+        "pass": 1,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "caseElapsedMs": 96237.6541,
+        "receiptElapsedMs": 96235
+      }
+    ],
+    "sixStepTypes": [
+      "original_host_embedded_native_and_mcp_ready",
+      "native_model_tool_effect_permission_mcp_task_and_reply_completed_once",
+      "changed_project_config_did_not_retarget_running_native_session",
+      "original_uploaded_PNG_native_image_inference_and_public_readback",
+      "checkpoint_and_original_host_native_cleanup_confirmed",
+      "cold_host_restored_native_history_without_model_or_tool_replay"
+    ],
+    "manual": {
+      "status": "PASS",
+      "approvalMode": "manual",
+      "phaseElapsedMs": {
+        "original_host_embedded_native_and_mcp_ready": 26338,
+        "native_model_tool_effect_permission_mcp_task_and_reply_completed_once": 83977,
+        "changed_project_config_did_not_retarget_running_native_session": 83977,
+        "original_uploaded_PNG_native_image_inference_and_public_readback": 83977,
+        "checkpoint_and_original_host_native_cleanup_confirmed": 84700,
+        "cold_host_restored_native_history_without_model_or_tool_replay": 105673
+      },
+      "inputObservation": {
+        "reads": 352,
+        "last": {
+          "phase": "allocated",
+          "custody": "owned",
+          "nativeReady": true,
+          "attached": true,
+          "sealed": false,
+          "diagnostic": null,
+          "inputs": [
+            {
+              "phase": "terminal",
+              "terminal": "succeeded"
+            },
+            {
+              "phase": "terminal",
+              "terminal": "succeeded"
+            }
+          ],
+          "interactions": [
+            {
+              "kind": "permission",
+              "phase": "resolved"
+            },
+            {
+              "kind": "permission",
+              "phase": "resolved"
+            }
+          ]
+        }
+      },
+      "launchObservation": {
+        "openElapsedMs": 21744,
+        "afterOpen": {
+          "available": true,
+          "status": "ready",
+          "reason": "context-applied",
+          "elapsedSinceAttemptMs": 21128,
+          "capturedTimeoutMs": 120000,
+          "claimed": true,
+          "nativeReady": true,
+          "contextApplied": true,
+          "everReady": true,
+          "usable": true,
+          "controlAvailable": true,
+          "noAllocation": false
+        }
+      },
+      "modelRequests": 11,
+      "modelProgress": [
+        {
+          "elapsedMs": 26511,
+          "requests": 0
+        },
+        {
+          "elapsedMs": 31570,
+          "requests": 1
+        },
+        {
+          "elapsedMs": 31781,
+          "requests": 2
+        },
+        {
+          "elapsedMs": 32044,
+          "requests": 3
+        },
+        {
+          "elapsedMs": 32281,
+          "requests": 4
+        },
+        {
+          "elapsedMs": 55860,
+          "requests": 5
+        },
+        {
+          "elapsedMs": 56184,
+          "requests": 6
+        },
+        {
+          "elapsedMs": 56358,
+          "requests": 7
+        },
+        {
+          "elapsedMs": 56720,
+          "requests": 8
+        },
+        {
+          "elapsedMs": 66165,
+          "requests": 9
+        },
+        {
+          "elapsedMs": 81561,
+          "requests": 10
+        },
+        {
+          "elapsedMs": 81778,
+          "requests": 11
+        }
+      ],
+      "modelFailures": [],
+      "hosts": [
+        {
+          "exitCode": 0,
+          "signalCode": null,
+          "stdoutValid": true
+        },
+        {
+          "exitCode": 0,
+          "signalCode": null,
+          "stdoutValid": true
+        }
+      ],
+      "cleanup": true,
+      "cancelled": false,
+      "failureCode": null
+    },
+    "auto": {
+      "status": "PASS",
+      "approvalMode": "auto",
+      "phaseElapsedMs": {
+        "original_host_embedded_native_and_mcp_ready": 26237,
+        "native_model_tool_effect_permission_mcp_task_and_reply_completed_once": 73732,
+        "changed_project_config_did_not_retarget_running_native_session": 73732,
+        "original_uploaded_PNG_native_image_inference_and_public_readback": 73732,
+        "checkpoint_and_original_host_native_cleanup_confirmed": 74319,
+        "cold_host_restored_native_history_without_model_or_tool_replay": 95518
+      },
+      "inputObservation": {
+        "reads": 278,
+        "last": {
+          "phase": "allocated",
+          "custody": "owned",
+          "nativeReady": true,
+          "attached": true,
+          "sealed": false,
+          "diagnostic": null,
+          "inputs": [
+            {
+              "phase": "terminal",
+              "terminal": "succeeded"
+            },
+            {
+              "phase": "terminal",
+              "terminal": "succeeded"
+            }
+          ],
+          "interactions": []
+        }
+      },
+      "launchObservation": {
+        "openElapsedMs": 21796,
+        "afterOpen": {
+          "available": true,
+          "status": "ready",
+          "reason": "context-applied",
+          "elapsedSinceAttemptMs": 21208,
+          "capturedTimeoutMs": 120000,
+          "claimed": true,
+          "nativeReady": true,
+          "contextApplied": true,
+          "everReady": true,
+          "usable": true,
+          "controlAvailable": true,
+          "noAllocation": false
+        }
+      },
+      "modelRequests": 11,
+      "modelProgress": [
+        {
+          "elapsedMs": 26398,
+          "requests": 0
+        },
+        {
+          "elapsedMs": 31463,
+          "requests": 1
+        },
+        {
+          "elapsedMs": 31664,
+          "requests": 2
+        },
+        {
+          "elapsedMs": 31937,
+          "requests": 3
+        },
+        {
+          "elapsedMs": 32142,
+          "requests": 4
+        },
+        {
+          "elapsedMs": 46525,
+          "requests": 5
+        },
+        {
+          "elapsedMs": 46793,
+          "requests": 6
+        },
+        {
+          "elapsedMs": 47039,
+          "requests": 7
+        },
+        {
+          "elapsedMs": 47220,
+          "requests": 8
+        },
+        {
+          "elapsedMs": 56980,
+          "requests": 9
+        },
+        {
+          "elapsedMs": 71012,
+          "requests": 10
+        },
+        {
+          "elapsedMs": 71317,
+          "requests": 11
+        }
+      ],
+      "modelFailures": [],
+      "hosts": [
+        {
+          "exitCode": 0,
+          "signalCode": null,
+          "stdoutValid": true
+        },
+        {
+          "exitCode": 0,
+          "signalCode": null,
+          "stdoutValid": true
+        }
+      ],
+      "cleanup": true,
+      "cancelled": false,
+      "failureCode": null
+    }
+  },
+  "immutableInputs": {
+    "inputReceipt": {
+      "kind": "TEST_NATIVE_V2_EMBEDDED_INPUTS",
+      "status": "READY",
+      "sourceHead": "86f52244b5375834a4040cbc63803d68cc708087",
+      "platform": "win32-x64",
+      "nodeVersion": "v24.21.0",
+      "productQualified": false,
+      "stage": "prepared",
+      "baseArchiveSha256": "fafa3d891922cb3a5df6d1bd7dec80cc105352c619b39e298761657add677f49",
+      "runtimeSource": "e13edcd3d4ffbecc0272ae30195cc6b15b710ee7",
+      "bun": {
+        "path": "D:\\a\\agent-teams-ai\\agent-teams-ai\\resources\\runtime\\bun\\bun.exe",
+        "sha256": "095db4abae203d42f29fdec26da4a882fcde6333cdd84e40c0c7828c0cf543f6",
+        "version": "1.4.3"
+      },
+      "supportArchiveSha256": "9cea106d78a0482a0ea8bd05b0a7cb44c604fcf4f6de3fdac5549a5ba552787c",
+      "manifestSha256": "b15576ab97dca04f002f3b07972e49290f0933e0f66c51b7332703a5b76ad628"
+    },
+    "custodyReceipt": {
+      "kind": "TEST_WINDOWS_ORIGINAL_JOB_CUSTODY",
+      "status": "PASS",
+      "cleanup": true,
+      "sourceHead": "86f52244b5375834a4040cbc63803d68cc708087",
+      "platform": "win32-x64",
+      "nodeVersion": "v24.21.0",
+      "bunSha256": "095db4abae203d42f29fdec26da4a882fcde6333cdd84e40c0c7828c0cf543f6",
+      "manifestSha256": "b15576ab97dca04f002f3b07972e49290f0933e0f66c51b7332703a5b76ad628",
+      "hostBuild": {
+        "hostSourceDigest": "8af548348ab2a8f732c5471d28ca00696462d6ea8a57b718364e0d59c6a98e26",
+        "hostDistDigest": "c1deda42795d6769cc0f2d71ce9de79a56a928ff9954fdba64b6e3c7ca891997",
+        "providerDigest": "a3ee7632c9685fafb4ccc57cb5548503c476fc9ed608bd13438ed74e5329f9d8"
+      },
+      "productQualified": false,
+      "desktopQualified": false,
+      "captureBeforeInput": true,
+      "descendantSurvivedRootExit": true,
+      "originalJobCleanup": "confirmed",
+      "neighborSurvivedTargetStop": true,
+      "neighborJobCleanup": "confirmed"
+    },
+    "joinedHostDigests": {
+      "bun": "095db4abae203d42f29fdec26da4a882fcde6333cdd84e40c0c7828c0cf543f6",
+      "manifest": "b15576ab97dca04f002f3b07972e49290f0933e0f66c51b7332703a5b76ad628",
+      "node": "ba4e6d110e8c1592a1ecd390f6b05f3da124b13871a5be62b341a07a853c6c32",
+      "hostSource": "8af548348ab2a8f732c5471d28ca00696462d6ea8a57b718364e0d59c6a98e26",
+      "hostDist": "c1deda42795d6769cc0f2d71ce9de79a56a928ff9954fdba64b6e3c7ca891997",
+      "provider": "a3ee7632c9685fafb4ccc57cb5548503c476fc9ed608bd13438ed74e5329f9d8",
+      "windowsShell": "38f4384643b3fa0de714d2367b712c2e0fa1c89e2cfd131ae6b831ad962b1033"
+    },
+    "sourceAndArchiveBoundary": "Exact lock and original staging source join recorded base/support archive and engine-manifest identities. This review does not download or attest the native binary archive anew. Bun custody fixture uses actual selected Bun with controlled actor code; the two Host scenarios separately run the real embedded OpenCode 2.1.4 graph."
+  },
+  "caseSemantics": [
+    "Original source Host starts the selected embedded OpenCode 2.1.4 under pinned Bun 1.4.3 using the actual original Host/Runtime/MCP composition and a finite loopback Chat Completions oracle. No real Claude or Codex route is selected by these native commands.",
+    "Every model request must select TEST-model-B and high, contain selected member instructions, and retain project-A body/header and TEST-only credential despite editing the project file to project-B after original open. App default TEST-local/TEST-model-B is distinct from native default TEST-local/TEST-model.",
+    "Exactly two original business input intents are submitted. Each reaches succeeded, and reissuing its same command must return the exact original receipt. Manual mode grants exactly two distinct pending permission references once; auto mode permits no pending grant path.",
+    "The finite oracle only serves protocol responses. Actual native tools must create/own/start/comment/complete one task, send two ordered replies, append ONE then TWO to the workspace effect file, and expose native shell exit 7 as an error tool result.",
+    "The second input carries the original uploaded canonical 2x1 red/green PNG. Three actual model payloads for that turn must retain prior history and exact canonical bytes. Public readback verifies original attachment digest/base64 before and after restart. This is native attachment transport evidence, not general vision-model accuracy.",
+    "Checkpoint must publish; original Stop must reach closed/released custody; original Host close must observe exit zero, null signal and valid stdout. A cold Host must return identical original lookup/execute receipts and original input IDs before restoring a new ready generation.",
+    "Cold Restore must not add model requests or file effects during the original 250 ms observation; resumed Stop must release custody, and the second original Host closes normally. This bounded observation is not an eternal no-replay guarantee.",
+    "The separate Windows native custody test captures original Bun identity before input, observes a detached descendant continue after root exit, confirms original Job cleanup, observes the neighboring Job remain alive, and independently cleans that neighbor. Two confirmStopped calls exercise original-owner idempotence; final cleanup does not infer absence from root exit alone."
+  ],
+  "deadlinesAndLimits": {
+    "workflowMinutes": 25,
+    "windowsNativeHostOuterTestMs": 300000,
+    "windowsCustodyOuterTestMs": 240000,
+    "nativeRuntimeCapturedTimeoutMs": 120000,
+    "openRestoreRpcObservationMs": 180000,
+    "otherRpcTimeoutMs": 60000,
+    "eachOriginalBusinessInputLoopMs": 90000,
+    "inputReadCadenceMs": 25,
+    "runtimeLimits": {
+      "queuedInputs": 2,
+      "inputBytes": 8192,
+      "outputBytes": 1000000,
+      "outputEvents": 1500,
+      "pendingInteractions": 4
+    },
+    "custodyPredicateMs": 20000,
+    "custodyPredicateCadenceMs": 25,
+    "custodyActorWatchdogMs": 45000,
+    "custodyPostStopEffectObservationMs": 100,
+    "finiteModelRequestLimit": 16,
+    "finiteModelRequestBodyBytesStrictlyBelow": 2000000,
+    "finiteModelHttpRequestTimeoutMs": 15000,
+    "hostDisposalContractMaximumMs": 60000,
+    "hostEofObservation": "Captured valid handshake disposal timeout + 2,000 ms; before handshake 12,000 ms. On absent exit, original child SIGTERM then 12,000 ms observation. Successful close still requires exitCode=0, signalCode=null and valid stdout.",
+    "scope": "These are read from the unchanged original source. No deadline increase, retry, new sampler, gate or filter was authored or selected. Cumulative phaseElapsedMs fields are milestone times, not separate phase durations."
+  },
+  "diagnostics": {
+    "completeArraysRead": 508,
+    "modes": [
+      {
+        "mode": "manual",
+        "rows": 254,
+        "epochs": [
+          1
+        ],
+        "first": {
+          "epoch": 1,
+          "event": "child-spawn",
+          "atMs": 5957,
+          "child": 1,
+          "request": null,
+          "route": null,
+          "method": null,
+          "durationMs": null,
+          "status": null,
+          "contentEncoding": null,
+          "stage": null,
+          "code": null,
+          "exitCode": null,
+          "signal": null
+        },
+        "last": {
+          "epoch": 1,
+          "event": "trace-limit",
+          "atMs": 34847,
+          "child": null,
+          "request": null,
+          "route": null,
+          "method": null,
+          "durationMs": null,
+          "status": null,
+          "contentEncoding": null,
+          "stage": null,
+          "code": null,
+          "exitCode": null,
+          "signal": null
+        },
+        "capped": true,
+        "sourceHostCpuSummary": {
+          "epoch": 1,
+          "status": "available",
+          "scope": "original-source-host-including-cleanup",
+          "samplingIntervalUs": 10000,
+          "profileDurationUs": 81071329,
+          "sampledUs": 81071202,
+          "unsampledUs": 127,
+          "sampleCount": 7744,
+          "fileBytes": 4327133,
+          "fileOverLimit": false,
+          "rawDiscarded": true
+        }
+      },
+      {
+        "mode": "auto",
+        "rows": 254,
+        "epochs": [
+          1
+        ],
+        "first": {
+          "epoch": 1,
+          "event": "child-spawn",
+          "atMs": 5834,
+          "child": 1,
+          "request": null,
+          "route": null,
+          "method": null,
+          "durationMs": null,
+          "status": null,
+          "contentEncoding": null,
+          "stage": null,
+          "code": null,
+          "exitCode": null,
+          "signal": null
+        },
+        "last": {
+          "epoch": 1,
+          "event": "trace-limit",
+          "atMs": 35670,
+          "child": null,
+          "request": null,
+          "route": null,
+          "method": null,
+          "durationMs": null,
+          "status": null,
+          "contentEncoding": null,
+          "stage": null,
+          "code": null,
+          "exitCode": null,
+          "signal": null
+        },
+        "capped": true,
+        "sourceHostCpuSummary": {
+          "epoch": 1,
+          "status": "available",
+          "scope": "original-source-host-including-cleanup",
+          "samplingIntervalUs": 10000,
+          "profileDurationUs": 70823887,
+          "sampledUs": 70823726,
+          "unsampledUs": 161,
+          "sampleCount": 6756,
+          "fileBytes": 4184477,
+          "fileOverLimit": false,
+          "rawDiscarded": true
+        }
+      }
+    ],
+    "limits": "Both passive logs end with trace-limit around 35 seconds in epoch 1, before later feature completion. They do not show every later HTTP request or the cold epoch, and a request without a later retained response near the cap is not a failed request. CPU summaries are sampled attribution of the original first Host including cleanup; they are not exact phase timings or an independent root-cause proof."
+  },
+  "qualification": {
+    "supported": "This exact Windows x64 original-source embedded OpenCode V2.1.4 lane completed actual Windows Bun Job custody and both original manual/auto native Host scenarios, with the stated finite model oracle, exact input identities and cleanup assertions.",
+    "vendorAuthQualified": false,
+    "desktopQualified": false,
+    "releaseQualified": false,
+    "productQualifiedByInputOrCustody": false,
+    "coordination": {
+      "status": "unqualified",
+      "cleanup": null,
+      "reason": "Selected only for Linux x64 source scenario; absent on Windows by original source."
+    },
+    "notCovered": [
+      "Electron/renderer GUI behavior",
+      "packaged source-absence or relaunch proof",
+      "all-provider end-to-end parity",
+      "other OS or architecture lanes",
+      "Darwin strict P09 executable mutation custody",
+      "Linux-only model-probe/credential/permission-lifecycle/captured-external-MCP scenarios",
+      "whole149 Node/catalog43/runtime85 suites",
+      "exact Node24.22.1 paired standalone deadline run",
+      "external vendor credential/model inference qualification"
+    ],
+    "cleanupBoundary": "Original tested owners and their required native custody are confirmed by assertions and final receipts. The job log later records runner termination of a vctip build-tool orphan; this review does not claim global machine-wide no-orphans.",
+    "futureBehavior": "No extrapolation to future attempts or a broader release qualification."
+  },
+  "checks": [
+    {
+      "id": "01",
+      "result": "PASS_EVIDENCE_OR_SOURCE_BOUNDARY",
+      "detail": "Complete capture literal independently rehashed; all outer metadata and four full embedded text members read."
+    },
+    {
+      "id": "02",
+      "result": "PASS_EVIDENCE_OR_SOURCE_BOUNDARY",
+      "detail": "Complete original 1,147-line decoded job log independently rehashed and read from start to end."
+    },
+    {
+      "id": "03",
+      "result": "PASS_EVIDENCE_OR_SOURCE_BOUNDARY",
+      "detail": "All four UTF-8 member bodies independently hashed against packet-derived identities; total 191,562 bytes. Derived identities are not separately retained Git objects."
+    },
+    {
+      "id": "04",
+      "result": "PASS_EVIDENCE_OR_SOURCE_BOUNDARY",
+      "detail": "Exact run/job/head/platform/Node joins; log explicitly checks out head 86f."
+    },
+    {
+      "id": "05",
+      "result": "PASS_EVIDENCE_OR_SOURCE_BOUNDARY",
+      "detail": "Uploaded artifact ID, four-file count, 13,207-byte ZIP and SHA256 join retained capture."
+    },
+    {
+      "id": "06",
+      "result": "PASS_EVIDENCE_OR_SOURCE_BOUNDARY",
+      "detail": "Immutable runtime lock joins source e13edcd3, base/support archives, manifest and Bun 1.4.3."
+    },
+    {
+      "id": "07",
+      "result": "PASS_EVIDENCE_OR_SOURCE_BOUNDARY",
+      "detail": "Prepared inputs are staging evidence and explicitly do not confer product qualification."
+    },
+    {
+      "id": "08",
+      "result": "PASS_EVIDENCE_OR_SOURCE_BOUNDARY",
+      "detail": "Actual Windows original Job custody passes before-input capture, surviving descendant containment, targeted cleanup and surviving neighbor then neighbor cleanup."
+    },
+    {
+      "id": "09",
+      "result": "PASS_EVIDENCE_OR_SOURCE_BOUNDARY",
+      "detail": "Custody and prepared inputs select the same Bun/engine; bounded qualification flags stay false."
+    },
+    {
+      "id": "10",
+      "result": "PASS_EVIDENCE_OR_SOURCE_BOUNDARY",
+      "detail": "Manual original source Host scenario PASS, distinct from packaged or GUI scenarios."
+    },
+    {
+      "id": "11",
+      "result": "PASS_EVIDENCE_OR_SOURCE_BOUNDARY",
+      "detail": "Automatic approval original source Host scenario PASS."
+    },
+    {
+      "id": "12",
+      "result": "PASS_EVIDENCE_OR_SOURCE_BOUNDARY",
+      "detail": "Both receipts contain exactly the six original ordered step types; this is two native cases, not twelve independent test cases."
+    },
+    {
+      "id": "13",
+      "result": "PASS_EVIDENCE_OR_SOURCE_BOUNDARY",
+      "detail": "All seven manual/auto digests agree; Bun, manifest and source/dist/provider hashes also join custody receipt."
+    },
+    {
+      "id": "14",
+      "result": "PASS_EVIDENCE_OR_SOURCE_BOUNDARY",
+      "detail": "Selected model B/high, captured project-A config and app/native default distinction retained."
+    },
+    {
+      "id": "15",
+      "result": "PASS_EVIDENCE_OR_SOURCE_BOUNDARY",
+      "detail": "Manual retains two resolved permissions; auto retains none. Original source separately asserts exactly two versus zero original grants."
+    },
+    {
+      "id": "16",
+      "result": "PASS_EVIDENCE_OR_SOURCE_BOUNDARY",
+      "detail": "Last input sample records both successful terminal inputs in the still-owned ready generation; it is not the final cleanup sample."
+    },
+    {
+      "id": "17",
+      "result": "PASS_EVIDENCE_OR_SOURCE_BOUNDARY",
+      "detail": "Exactly eleven finite scripted localhost model requests and no oracle failures in each mode."
+    },
+    {
+      "id": "18",
+      "result": "PASS_EVIDENCE_OR_SOURCE_BOUNDARY",
+      "detail": "Both original Host epochs exit normally with valid stdout in both modes."
+    },
+    {
+      "id": "19",
+      "result": "PASS_EVIDENCE_OR_SOURCE_BOUNDARY",
+      "detail": "Final PASS is contingent on original scenario success, successful cleanup and no cancellation; original errors are rethrown by source."
+    },
+    {
+      "id": "20",
+      "result": "PASS_EVIDENCE_OR_SOURCE_BOUNDARY",
+      "detail": "Original launch observations retain the 120-second native deadline and ready/context-applied result."
+    },
+    {
+      "id": "21",
+      "result": "PASS_EVIDENCE_OR_SOURCE_BOUNDARY",
+      "detail": "Receipt elapsed totals 106,387/96,235 ms and ordered cumulative phase times fit original 300-second Windows outer tests; per-input deadlines remain a source assertion, not inferred from cumulative phase labels."
+    },
+    {
+      "id": "22",
+      "result": "PASS_EVIDENCE_OR_SOURCE_BOUNDARY",
+      "detail": "All 508 diagnostic rows read. Each is a capped epoch-1 prefix ending in trace-limit, not a complete two-epoch transport census."
+    },
+    {
+      "id": "23",
+      "result": "PASS_EVIDENCE_OR_SOURCE_BOUNDARY",
+      "detail": "Original actual native effects include ONE/TWO bytes plus a native shell exit-seven failure surfaced as a failed tool; finite oracle does not create product/workspace effects."
+    },
+    {
+      "id": "24",
+      "result": "PASS_EVIDENCE_OR_SOURCE_BOUNDARY",
+      "detail": "Original source asserts one completed owned task, one comment, two ordered replies and identical original-command readbacks."
+    },
+    {
+      "id": "25",
+      "result": "PASS_EVIDENCE_OR_SOURCE_BOUNDARY",
+      "detail": "Actual second-turn image payload must preserve exact canonical PNG and prior history; original public attachment bytes also survive cold Host restart. No general vision-model accuracy claim."
+    },
+    {
+      "id": "26",
+      "result": "PASS_EVIDENCE_OR_SOURCE_BOUNDARY",
+      "detail": "Cold recovery checks retained IDs/receipts, unattached historical state, new-generation readiness, released Stop custody, and the original bounded 250 ms no-replay observation."
+    },
+    {
+      "id": "27",
+      "result": "PASS_EVIDENCE_OR_SOURCE_BOUNDARY",
+      "detail": "Original source budgets unchanged: Windows outer 300 s; native startup/runtime limit 120 s; open/restore observation 180 s; other RPC 60 s; per-input loop 90 s/25 ms cadence; custody test 240 s with 20 s predicates."
+    },
+    {
+      "id": "28",
+      "result": "PASS_EVIDENCE_OR_SOURCE_BOUNDARY",
+      "detail": "Six-file prerequisite command reports 58 cases: 57 pass and one explicit Linux-only skip. Custody/manual/auto each separately report one pass, zero failures/cancellations/skips."
+    },
+    {
+      "id": "29",
+      "result": "PASS_EVIDENCE_OR_SOURCE_BOUNDARY",
+      "detail": "Linux-source-only coordination was not selected on Windows. Other Linux-only management/credential/permission/external-MCP jobs and non-Windows/POSIX cases are not qualified here."
+    },
+    {
+      "id": "30",
+      "result": "PASS_EVIDENCE_OR_SOURCE_BOUNDARY",
+      "detail": "No vendor-auth, Electron GUI, packaged release, all-provider E2E, other tuple, or whole149/catalog43/runtime85 promotion."
+    },
+    {
+      "id": "31",
+      "result": "PASS_EVIDENCE_OR_SOURCE_BOUNDARY",
+      "detail": "Root's retained archive capture reports full CRC and API digest verification. This reviewer independently verifies packet/member literals and the upload-log join, without re-downloading or independently inflating the ZIP."
+    },
+    {
+      "id": "32",
+      "result": "PASS_EVIDENCE_OR_SOURCE_BOUNDARY",
+      "detail": "Runner's final cleanup mentions the build tool vctip; this is preserved separately and prevents an unsupported global no-orphans claim."
+    }
+  ],
+  "authority": {
+    "actionsPerformed": [
+      "immutable retained Git reads",
+      "immutable exact-source reads",
+      "pure in-memory data/hash comparison",
+      "bare review retention only"
+    ],
+    "actionsNotPerformed": [
+      "target source evaluation/import/compilation",
+      "local filesystem or shell/process work",
+      "live CI polling/download/rerun",
+      "source/control/ref/PR mutation",
+      "new execution or venue selection"
+    ],
+    "rootSoleAuthorAndExecutor": true
+  }
+}

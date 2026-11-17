@@ -1,0 +1,455 @@
+{
+  "schemaVersion": 1,
+  "kind": "C714_FRESH_CI3_STANDALONE_CONTROL_R2_GUARD_REVIEW",
+  "preparedAt": "2026-11-17 14:21:12 UTC",
+  "reviewer": "/root/producer_r2_guard",
+  "repository": "777genius/agent-teams-ai",
+  "decision": "ACCEPT_EXACT_CONTROL_R2_STATIC_GUARD_SCOPE_ONLY",
+  "blockers": [],
+  "checkCount": 28,
+  "subject": {
+    "bytes": 31811,
+    "sha256": "8fdf7d0248b19ca1beedfb9218411bc31b21f4345a719a42827cba095cb08295",
+    "gitBlob": "47bcc9f514079504369b47a72d9468ddb3bcdab8"
+  },
+  "afters": {
+    "runner": {
+      "bytes": 25796,
+      "sha256": "72b743e8cde32af416f0a3d14f0dd7284fd817c2408e42b3c24e2b0f52c1aa8f",
+      "gitBlob": "72fe3f4f791550c3402d0bae54d154aabe06e63c"
+    },
+    "binding": {
+      "bytes": 107643,
+      "sha256": "b44db6175efc66890593fe75189e0de9b16dee90672547e87cfd5f22e3d5ab8a",
+      "gitBlob": "7f69d9936a35f5e3612470076e13d2d9308da40a"
+    }
+  },
+  "r1": {
+    "bytes": 23198,
+    "sha256": "d51a9c97849dae83885d8339cfbc77fb1a1803a509fd3ba27af6ae447b63a0ac",
+    "gitBlob": "7f214219f9c757b73c3fad164bf4db04223f9594"
+  },
+  "closedAuthorshipGate": {
+    "bytes": 10359,
+    "sha256": "050ba8ff411a13b9dab6a2a6d85db55667039150be087426aa3bf847e81ffc61",
+    "gitBlob": "b7ad77e3f8b1d45cba44e862e4728ed40639cc98"
+  },
+  "priorGuardR1": {
+    "bytes": 39019,
+    "sha256": "4a6e8b41b70b20656f3bfca62f37d35e778dac46fc636b60c5a97f70fc5f8ad1",
+    "gitBlob": "ac996b33768a1fcb7f73ea4639d2ae6a04a224b7"
+  },
+  "readCoverage": {
+    "proposal": "All31811 bytes freshly fetched/hashed/read in contiguous untruncated ranges.",
+    "runner": "All25796 bytes/429 physical lines freshly fetched/hashed/read.",
+    "binding": "All107643 bytes freshly fetched/hashed and completely parsed; full11261-byte nonbody projection read; all4 embedded bodies/92713 bytes compared literally and rehashed against previously fully read accepted bodies. Whole7883-byte fixture freshly reread. Source bodies were reused only on exact full literal and identity equality.",
+    "beforeRunner": "Complete19662 body from accepted prior full review reused and rehashed; complete all-byte inverse verified.",
+    "beforeBinding": "Complete381c body from accepted prior full review reused and rehashed; complete all-byte inverse verified.",
+    "r1": "Prior complete exactR1/guard full read reused by unchanged identity.",
+    "gate": "Complete10359-byte b7ad gate freshly fetched/hashed/read. Root/independent large historical actual reports are the closed gate's accepted evidence, not falsely counted as newly repeated full reads.",
+    "metadata": "Complete3143-byte original metadata evidence freshly reread; no local reprobe.",
+    "actualGit": "Fresh immutable59723 commit and complete54-entry root tree read; package/scripts/docs/.github anchors joined. No mutable-ref read.",
+    "targetEvaluation": false
+  },
+  "checks": [
+    {
+      "id": "G01",
+      "result": "PASS_STATIC_R2",
+      "topic": "Exact subject and after bodies",
+      "evidence": "Complete proposal47bcc9, runner72fe3 and binding7f69 were freshly fetched and independently byte/SHA256/Git hashed. Entire proposal and all429 physical runner lines were freshly read. Entire binding was parsed; all nonbody values were read, and all92713 embedded source bytes were compared literally with the accepted full before bodies."
+    },
+    {
+      "id": "G02",
+      "result": "PASS_STATIC_R2",
+      "topic": "Accepted R1 scope",
+      "evidence": "R1 7f214219 rehashes exactly and its previously completed full guard review ac996b33 is reused. The selected change is two runner path literals and13 binding paths only, with no application source change or new execution logic."
+    },
+    {
+      "id": "G03",
+      "result": "PASS_STATIC_R2",
+      "topic": "Closed actual authorship gate",
+      "evidence": "Complete gate b7ad77e3 was freshly read: exact R1 publication59723, root29+independent44 actual checks accepted, closed14:13:00. Proposal authorship14:14:04 follows this gate. No earlier hypothetical postimage is accepted."
+    },
+    {
+      "id": "G04",
+      "result": "PASS_STATIC_R2",
+      "topic": "Immutable actual parent",
+      "evidence": "Fresh immutable Git commit and full root-tree reads join59723bc7058d31dd51730f4088eaf66df2735d4b to d184c36463e367fb7e237a8d17fc441deeabdf76, docs2e62a0d6 and sole parent59e8d621. Package/scripts/.github anchors agree with the gate. No branch or live CI read was made."
+    },
+    {
+      "id": "G05",
+      "result": "PASS_STATIC_R2",
+      "topic": "Exact runner inverse",
+      "evidence": "Both old/new path strings occur exactly once at their respective positions. Reversing only these two substitutions reproduces the entire25819-byte19662 runner. New runner25796 bytes has429 physical lines; the historical430 split count included its terminal empty record."
+    },
+    {
+      "id": "G06",
+      "result": "PASS_STATIC_R2",
+      "topic": "Exact binding delta and byte inverse",
+      "evidence": "Recursive comparison gives exactly25 leaf changes under exactly the13 R1 paths. These are literally equal to the proposal's stated delta. Restoring the13 prior fields and serializing in the retained format reproduces the complete107295-byte381c binding."
+    },
+    {
+      "id": "G07",
+      "result": "PASS_STATIC_R2",
+      "topic": "Fresh roots and attempt",
+      "evidence": "SCOPE and STAGE are the selected distinct ci3 roots, with the unique ci3 original-one-shot token. Metadata d335 proves absence only at13:39:49, not a reservation. Exclusive future creation and exact-stage refusal remain; old roots/attempts remain spent and cannot be replayed."
+    },
+    {
+      "id": "G08",
+      "result": "PASS_STATIC_R2",
+      "topic": "Node pin rebinding only",
+      "evidence": "New expected inode9223372036854818268 matches the prior metadata-only observation; signed representation-9223372036854733348 maps exactly under the unchanged bounded64-bit conversion. All other Node path/realpath/bytes/hash/device/owner/mode/times are unchanged. No new version/probe execution is claimed."
+    },
+    {
+      "id": "G09",
+      "result": "PASS_STATIC_R2",
+      "topic": "All five Node checks preserved",
+      "evidence": "Whole runner retains all5 exactNode call sites: supervisor admission/final and phase before/after/failure. It retains signed64 and unsigned64 range checks, raw/canonical evidence, hash and all metadata comparisons. Future drift fails closed."
+    },
+    {
+      "id": "G10",
+      "result": "PASS_STATIC_R2",
+      "topic": "Current source and historical provenance distinct",
+      "evidence": "Binding sourceCommit/tree and both current gate fields use actual fresh R1 publication59723/b7ad. Original674 sourceR2/vectors, original source actual gate, selectedFixedInputs and source bodies remain unchanged. The meaning field explicitly distinguishes historical input provenance from actual control-parent authority."
+    },
+    {
+      "id": "G11",
+      "result": "PASS_STATIC_R2",
+      "topic": "Full source corpus unchanged",
+      "evidence": "All four embedded bodies and pins are literally identical to the accepted before binding: package26839, whole10 fixture7883, old controls28974, fixed controls29017. Each independently rehashes. Removing the unique43-byte post-await cutoff line from fixed controls reproduces the complete old controls."
+    },
+    {
+      "id": "G12",
+      "result": "PASS_STATIC_R2",
+      "topic": "Whole ten fixture reread",
+      "evidence": "The complete7883-byte fixture was freshly read. Only Date is mocked; original100ms real timers are observed and all restore/reset paths remain. Exact ten titles, supplied73ms boundary, late-false zero predicate/tick discrimination and actual third-stable-point hover remain unchanged."
+    },
+    {
+      "id": "G13",
+      "result": "PASS_STATIC_R2",
+      "topic": "Fixture and runtime limits",
+      "evidence": "The5s test bounds,30s original UI default and100ms poll are unchanged. Pending-timer assertion describes these finite awaited paths; it is not active cancellation of arbitrary pending CDP. No fake Vitest/Host/provider runtime is introduced."
+    },
+    {
+      "id": "G14",
+      "result": "PASS_STATIC_R2",
+      "topic": "Exact phase predictions",
+      "evidence": "Whole RED/GREEN phase objects are literally identical to prior binding. RED expects seven specific assertion failures plus three preservation passes with exit1; GREEN expects allten with exit0. These remain static predictions, not new observations."
+    },
+    {
+      "id": "G15",
+      "result": "PASS_STATIC_R2",
+      "topic": "External actual admission retained",
+      "evidence": "No admission is authored yet. The existing runtime requires exact binding and admission SHA arguments, runner identity, sourceCommit/gate/token/roots, actual control commit/tree/docs/proposal and actual root/independent report pins. controlParent must equal actual59723; fullReadbacksAccepted and originalAttemptsStillSpent must be true. Actual publication/readbacks remain the already-selected external prerequisite, with no guessed future SHA."
+    },
+    {
+      "id": "G16",
+      "result": "PASS_STATIC_R2",
+      "topic": "Exact staging and source census",
+      "evidence": "Stage permits exactly admission/binding/supervisor regular0644,nlink1 files; directories are0755, symlinks refused. Parent cwd/argv/execArgv/environment checks remain. Source census admits exactly the three files and two directories, retaining complete root/file metadata before/after."
+    },
+    {
+      "id": "G17",
+      "result": "PASS_STATIC_R2",
+      "topic": "Monotonic admission and unchanged budgets",
+      "evidence": "The original60s phase,135s supervisor,4s cleanup and8MiB combined raw-output limits are unchanged. All6 synchronous supervisor admission sites remain immediately before scope/materialization/transition/open/write/spawn. Existing timer and final monotonic checks remain; synchronous filesystem/hash work is not falsely described as hard-preemptible."
+    },
+    {
+      "id": "G18",
+      "result": "PASS_STATIC_R2",
+      "topic": "Child process authority",
+      "evidence": "Child launches only pinned Node with fixed test argv, detached session, shell:false and fixed PATH/LANG/TZ. Complete PID/start/group/session/uid/exe/argv observations are retained. Reused/unreadable/foreign ownership cannot authorize signaling or an accepted ordinary exit."
+    },
+    {
+      "id": "G19",
+      "result": "PASS_STATIC_R2",
+      "topic": "Full samples before validation",
+      "evidence": "Every normal process sample is appended before admission validation. Cleanup saves the complete initial snapshot and unowned-member diagnostics; its finally retains every observed identity even when cleanup fails. Failed ownership/capture paths remain reviewable."
+    },
+    {
+      "id": "G20",
+      "result": "PASS_STATIC_R2",
+      "topic": "Single original cleanup interval",
+      "evidence": "Cleanup start/deadline is stored once and preserved on reentry. TERM/KILL attempt state is not replayed; original250ms escalation spacing and remaining4s interval remain. Only previously admitted current PID/start/group/session identities can be signaled; no unrelated-process signaling is added."
+    },
+    {
+      "id": "G21",
+      "result": "PASS_STATIC_R2",
+      "topic": "Ordinary exit and retention",
+      "evidence": "PASS requires original child close with exact expected status/no signal, no spawn/capture/overflow/interruption error, empty original session/group and absence of every captured PID/start. Raw stdout/stderr and phase data remain retained; source/control/root/Node equality is checked before phase acceptance."
+    },
+    {
+      "id": "G22",
+      "result": "PASS_STATIC_R2",
+      "topic": "Strict TAP census",
+      "evidence": "The original parser still requires complete TAP header, exactlyten ordered subtest names/results, original assertion operator/signature for RED, one1..10 plan, exact counters and no cancellation/skip/todo/nested substitute/bailout. No filtering, expected-count reduction or alternate test suite is introduced."
+    },
+    {
+      "id": "G23",
+      "result": "PASS_STATIC_R2",
+      "topic": "RED to GREEN transition authority",
+      "evidence": "Only accepted complete RED plus ordinary cleanup admits transition. It recaptures full source, opens the original controls inode/device with O_NOFOLLOW, checks nlink1, checks original supervisor admission before write, and changes only controls to the already-published fixed bytes. Package/fixture/all other rows remain exact."
+    },
+    {
+      "id": "G24",
+      "result": "PASS_STATIC_R2",
+      "topic": "Failure/spent classification",
+      "evidence": "Any refusal, unexpected result, timeout, source drift, unknown cleanup, retention or output failure remains REFUSED_BEFORE_SCOPE_ADMISSION_SPENT or INCOMPLETE_SPENT. Failure source/control censuses are retained when available, errors remain errors, and no replay/fallback/qualification is granted."
+    },
+    {
+      "id": "G25",
+      "result": "PASS_STATIC_R2",
+      "topic": "Bounded qualification",
+      "evidence": "Default whole149/catalog43/renderer85/E2E flags remainfalse. Only a future complete expected standalone RED+GREEN sequence can set its narrow runtimeQualified flag. This scope does not compile/check the whole app, run the shared member driver/GUI/native suites, install dependencies or launch real Claude/Codex."
+    },
+    {
+      "id": "G26",
+      "result": "PASS_STATIC_R2",
+      "topic": "Existing preservation and CI separation",
+      "evidence": "No source/postimage/workflow/dependency/case/deadline change is selected beyond the exact control rebinding. Existing5020/800/141,8799 non-doc leaves,42 workflows and frozen suites remain external source invariants. PR1223 refs/metadata and existing terminal-run exclusions remain independent; no failure is reclassified by these controls."
+    },
+    {
+      "id": "G27",
+      "result": "PASS_STATIC_R2",
+      "topic": "Root-only process and no extra gate",
+      "evidence": "Root remains sole author/stager/executor. This accepts exact control R2 for the existing publication→actual readback→external admission→fresh stage→one invocation procedure only. No new optional test, R2 layer, native gate or execution venue is added."
+    },
+    {
+      "id": "G28",
+      "result": "PASS_STATIC_R2",
+      "topic": "Read-only review",
+      "evidence": "Only immutable Git/retained evidence reads and pure in-memory identity/delta checks were used. No source or control code was compiled, imported, evaluated or executed, no filesystem/shell/stage/runtime/ref/PR/CI mutation occurred, and no live CI/polling occurred."
+    }
+  ],
+  "inverseEvidence": {
+    "runner": {
+      "before": {
+        "bytes": 25819,
+        "sha256": "23db81a589330feffe20cfa8dc2a259041ca6dc0f84ec416db6dc046761abbf9",
+        "gitBlob": "19662be9d55c70166c8f2c2e74775e6b03098197"
+      },
+      "after": {
+        "bytes": 25796,
+        "sha256": "72b743e8cde32af416f0a3d14f0dd7284fd817c2408e42b3c24e2b0f52c1aa8f",
+        "gitBlob": "72fe3f4f791550c3402d0bae54d154aabe06e63c"
+      },
+      "edits": [
+        {
+          "before": "/workspace/scratch/c714f5bce554/narrow-waitread-inode64-controls-20261117",
+          "after": "/workspace/scratch/c714-waitread-ci3-controls-20261117",
+          "beforeCount": 1,
+          "afterCount": 1
+        },
+        {
+          "before": "/workspace/scratch/c714-waitread-inode64-20261117",
+          "after": "/workspace/scratch/c714-waitread-ci3-20261117",
+          "beforeCount": 1,
+          "afterCount": 1
+        }
+      ],
+      "inverseExact": true,
+      "physicalLines": 429
+    },
+    "binding": {
+      "before": {
+        "bytes": 107295,
+        "sha256": "d8626f22a432926350c4d69c657313a61b935764dae972159a1a88fc03163b5b",
+        "gitBlob": "381c51a331b9d03f5aab87835af3dad5a6643d3c"
+      },
+      "after": {
+        "bytes": 107643,
+        "sha256": "b44db6175efc66890593fe75189e0de9b16dee90672547e87cfd5f22e3d5ab8a",
+        "gitBlob": "7f69d9936a35f5e3612470076e13d2d9308da40a"
+      },
+      "inverseExact": true,
+      "allowedChangedPaths": [
+        "attemptToken",
+        "sourceCommit",
+        "sourceTree",
+        "sourceActualGate",
+        "r1",
+        "r1ActualGate",
+        "scope",
+        "stage",
+        "runner",
+        "node.inode",
+        "sourceAnchorEvidence.actualR1Root",
+        "sourceAnchorEvidence.actualR1Independent",
+        "sourceAnchorEvidence.meaning"
+      ],
+      "changedPaths": 13,
+      "changedLeaves": 25,
+      "actualLeafChangesExactlyEqualProposal": true
+    },
+    "embedded": [
+      {
+        "path": "package.json",
+        "phase": "RED",
+        "bytes": 26839,
+        "sha256": "c92407a9a5dad6f9d6a6eb8ea7c456195d396679bb4b9dfd15b6c06b726d1084",
+        "gitBlob": "f80ec83172d0aec0dec8a8ab055426b4fca4a1f7",
+        "fullLiteralEqualsAcceptedBefore": true
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-ui-controls-deadline.test.ts",
+        "phase": "RED",
+        "bytes": 7883,
+        "sha256": "29836f914218edb4876b6a4e157e7cdc68f63cdf414084cdd41683965c734eda",
+        "gitBlob": "6a9f8ad7481cd5910befcc6c7ff5992eef03965b",
+        "fullLiteralEqualsAcceptedBefore": true
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+        "phase": "RED",
+        "bytes": 28974,
+        "sha256": "7626e479a6662242009cb050e7e5af612a29e4205d62666d15274d5c30f91386",
+        "gitBlob": "ed57cb0fe7d57ef076a591621289eb77667c63ad",
+        "fullLiteralEqualsAcceptedBefore": true
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+        "phase": "GREEN",
+        "bytes": 29017,
+        "sha256": "ffd9bbb822dbdc30da7cb8daa881fcbebd384ba2bf9bdd87c804c511166fa02b",
+        "gitBlob": "5286c036a63a14e98925711a224df202c9a7caa7",
+        "fullLiteralEqualsAcceptedBefore": true
+      }
+    ],
+    "embeddedBytes": 92713
+  },
+  "actualJoins": {
+    "parent": true,
+    "docs": true,
+    "package": true,
+    "scripts": true,
+    "github": true,
+    "gateParent": true,
+    "gateR1": true,
+    "authorshipOrder": true,
+    "sourceGate": true,
+    "rootActualPin": true,
+    "indActualPin": true,
+    "nodePinMatchesObservation": true,
+    "signed64Canonical": true,
+    "exactNodeCallSites": 5,
+    "synchronousAdmissionCallSites": 6,
+    "phaseDefinitionsIdentical": true,
+    "fixed43ByteInverse": true,
+    "sourceOnlyImports": true
+  },
+  "parent": {
+    "commit": "59723bc7058d31dd51730f4088eaf66df2735d4b",
+    "tree": "d184c36463e367fb7e237a8d17fc441deeabdf76",
+    "docsTree": "2e62a0d62e7a490be29de271c7bffd888ffaf4dc",
+    "soleParent": "59e8d621717314d3fc3525af559a2a3beb9a7602",
+    "rootActual": {
+      "bytes": 430785,
+      "sha256": "0246e3c028aff5fc69a587f14bfaa7c091b43465417945b505375a6e6a64144f",
+      "gitBlob": "37339ab5bc478fcd158ad68cd334a880672f86a0"
+    },
+    "independentActual": {
+      "bytes": 642238,
+      "sha256": "b87c334066e1648506aa7d98b2bdcb0b49fc8b0e7233137ac4b7d27dec35dc17",
+      "gitBlob": "548faa37ceb7491afd9a38e837417cc1c33869ac"
+    },
+    "gateClosedAt": "2026-11-17 14:13:00 UTC",
+    "authoredAt": "2026-11-17 14:14:04 UTC"
+  },
+  "actualGitReadIdentities": {
+    "commitResponse": {
+      "bytes": 1174,
+      "sha256": "34586dc041d7df39f5ff85099b535945da5ccc6d2cbe011334cb857a3174f829",
+      "gitBlob": "92ac3b00d5efa1d0caf64a78b1d967b65f5fc606"
+    },
+    "rootResponse": {
+      "bytes": 12410,
+      "sha256": "e6a9d04b64cc348ab5d9d26440f08327bc65a2c242ef251241c042e30a82a6fa",
+      "gitBlob": "cd4416a1fd89b38a3ab4231dd30f020480e86d80"
+    },
+    "derivedIdentityNote": "These are identities of retained in-memory API response strings, not separately retained Git blob claims."
+  },
+  "metadataEvidence": {
+    "bytes": 3143,
+    "sha256": "eff46eb861c0fa5fcf0ca4963d2b9fb61b8ad08fd3dbe0d7742e573d914afffa",
+    "gitBlob": "d3351aede3fe4031408d518e48d161aa1d700a4c"
+  },
+  "executionContract": {
+    "scope": "/workspace/scratch/c714-waitread-ci3-20261117",
+    "stage": "/workspace/scratch/c714-waitread-ci3-controls-20261117",
+    "attemptToken": "c714-waitread-ci3-20261117-original-one-shot",
+    "stageFiles": [
+      "execution-admission.json",
+      "waitread-binding.json",
+      "waitread-supervisor.cjs"
+    ],
+    "sourceCommit": "59723bc7058d31dd51730f4088eaf66df2735d4b",
+    "controlPublicationMustHaveSoleParent": "59723bc7058d31dd51730f4088eaf66df2735d4b",
+    "argv": [
+      "--test",
+      "--test-reporter=tap",
+      "scripts/legacy-agent-host/desktop-ui-controls-deadline.test.ts"
+    ],
+    "parentEnvironment": "empty via bash exec -c; no NODE_OPTIONS/preloads/config/compile-cache environment",
+    "childEnvironment": {
+      "PATH": "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin",
+      "LANG": "C.UTF-8",
+      "TZ": "UTC"
+    },
+    "budgets": {
+      "phaseWallMs": 60000,
+      "supervisorWallMs": 135000,
+      "cleanupWallMs": 4000,
+      "outputLimitBytes": 8388608
+    },
+    "phases": [
+      {
+        "label": "RED",
+        "exitCode": 1,
+        "cases": 10,
+        "pass": 3,
+        "fail": 7
+      },
+      {
+        "label": "GREEN",
+        "exitCode": 0,
+        "cases": 10,
+        "pass": 10,
+        "fail": 0
+      }
+    ],
+    "actualControlPublication": null,
+    "actualAdmission": null,
+    "stageCreated": false,
+    "scopeCreated": false,
+    "invoked": false,
+    "runtimeResult": null
+  },
+  "preservation": {
+    "nodePinOnlyChangedField": "inode",
+    "expectedUnsignedInode": "9223372036854818268",
+    "expectedRawSigned64": "-9223372036854733348",
+    "exactNodeCallSites": 5,
+    "synchronousSupervisorAdmissionCallSites": 6,
+    "wholeSourceBodyInverse43Bytes": true,
+    "sourceEdits": 0,
+    "executionLogicChanges": 0,
+    "whole149": 149,
+    "catalog43": 43,
+    "renderer85": 85,
+    "standalone10": 10,
+    "workflows": 42,
+    "nonDocLeaves": 8799,
+    "production": 5020,
+    "cap": 800,
+    "exceptions": 141
+  },
+  "limits": [
+    "This is static control acceptance, not source staging, test execution, runtime PASS, proof of current path availability or Node custody at a future launch.",
+    "Metadata-only absence/inode observation is historical; future exact stage and runtime checks must still succeed under the already selected procedure.",
+    "Actual source anchor is the published R1 docs commit59723; original674 source provenance and unchanged86f fixed inputs remain separately recorded.",
+    "No old spent attempt is resumed. Existing CI evidence and failures remain independent.",
+    "Existing synchronous I/O and finite pending-CDP limits are preserved; no hard-preemption or broad cleanup guarantee is invented.",
+    "No optional gate or test is required by this review beyond the already accepted R1 procedure."
+  ],
+  "retentionProtocol": "Announce retained pin immediately, then fresh full self-read."
+}

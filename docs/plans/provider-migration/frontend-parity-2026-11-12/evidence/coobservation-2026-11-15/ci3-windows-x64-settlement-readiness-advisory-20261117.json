@@ -1,0 +1,771 @@
+{
+  "schemaVersion": 1,
+  "kind": "C714_CI3_PACKAGED_WINDOWS_X64_SETTLEMENT_READINESS_ADVISORY",
+  "repository": "777genius/agent-teams-ai",
+  "reviewer": "/root/producer_r2_semantic",
+  "preparedAt": "2026-11-17 15:54:40 UTC",
+  "decision": "Source-proved early observation defect; narrow existing wait correction supported for root R1. Original recorded run remains FAILED/INCOMPLETE with cleanup=false.",
+  "subject": {
+    "runId": 44092933873,
+    "jobId": 134098865077,
+    "artifactId": 14343770599,
+    "sourceHead": "86f52244b5375834a4040cbc63803d68cc708087",
+    "platform": "win32-x64",
+    "log": {
+      "bytes": 337630,
+      "sha256": "00131932da1d7a9a363509a786e636ad9f395b22d8a10c2a097156e5514a42cd",
+      "gitBlob": "6d72a5329cce7073469dabecf65782cc0a6522cb"
+    },
+    "capture": {
+      "bytes": 3251974,
+      "sha256": "7e99b7025640852a1ab86eeea675144643e039922bd71edd228c72140e3ad151",
+      "gitBlob": "af70fca5270a5eac8905eefc16d1f362e7af8db5"
+    }
+  },
+  "evidence": {
+    "members": [
+      {
+        "path": "agent-teams-ai/agent-teams-ai/resources/legacy-agent-host/opencode-v2-candidate.json",
+        "bytes": 1154517,
+        "sha256": "b69dd32713f17922b8b7c591221d7b9786d044fd25502cdd7a6e1075a51ec723",
+        "gitBlob": "e1757efd52c351208d8e7031ec1aa18ec241cd50",
+        "crc32": "ae3cf892",
+        "compressedBytes": 343392,
+        "crcVerified": true,
+        "encoding": "utf-8",
+        "identityKind": "derived from embedded member body, not a separately fetched Git object"
+      },
+      {
+        "path": "_temp/opencode-v2-packaged-inputs.json",
+        "bytes": 780,
+        "sha256": "067af37f13bf4125000a4e9ed9b0ca5cd1fbc0769f7d51833414f1577b7ecb12",
+        "gitBlob": "2876e7d82fa7d1faf86fc2c25244b988a902c231",
+        "crc32": "8548ddb5",
+        "compressedBytes": 489,
+        "crcVerified": true,
+        "encoding": "utf-8",
+        "identityKind": "derived from embedded member body, not a separately fetched Git object"
+      },
+      {
+        "path": "_temp/opencode-v2-packaged-native.json",
+        "bytes": 5383,
+        "sha256": "1288220a07d3fa7cbfcdf4a3b6ee35f5b4be2cc1e4507044f036cc1240a19721",
+        "gitBlob": "720c64d6b12dec8e409430c4f4a0d3c76189581c",
+        "crc32": "f7717b67",
+        "compressedBytes": 1944,
+        "crcVerified": true,
+        "encoding": "utf-8",
+        "identityKind": "derived from embedded member body, not a separately fetched Git object"
+      },
+      {
+        "path": "_temp/opencode-v2-packaged.json",
+        "bytes": 1186,
+        "sha256": "588acf2e11d54d94fcab0bedb6886510979902afbfc99ea7499e09312e66cb0f",
+        "gitBlob": "09aa223d52b1872b0c7a5d1035fae7bbda16125b",
+        "crc32": "336ae40f",
+        "compressedBytes": 622,
+        "crcVerified": true,
+        "encoding": "utf-8",
+        "identityKind": "derived from embedded member body, not a separately fetched Git object"
+      },
+      {
+        "path": "_temp/windows-same-main-process-ui.after-retry.png",
+        "bytes": 69765,
+        "sha256": "58a54e1fc0a6af3448e7bb827d68b90a8d3ee2259e20fc69c983ff3c8f25b0f3",
+        "gitBlob": "65426bd7f018af969e1255fa7c4761a89c304141",
+        "crc32": "f25df315",
+        "compressedBytes": 67469,
+        "crcVerified": true,
+        "encoding": "base64",
+        "identityKind": "derived from embedded member body, not a separately fetched Git object"
+      },
+      {
+        "path": "_temp/windows-same-main-process-ui.app.log",
+        "bytes": 4766,
+        "sha256": "30fb7cbfe1368590cd0834b7a651aaae9f8c4d1e058a27cc766cee203e595ab3",
+        "gitBlob": "d65d3ca24ddd09f58fec6a05b477c544a9c328a7",
+        "crc32": "d4b7bc57",
+        "compressedBytes": 773,
+        "crcVerified": true,
+        "encoding": "utf-8",
+        "identityKind": "derived from embedded member body, not a separately fetched Git object"
+      },
+      {
+        "path": "_temp/windows-same-main-process-ui.before-crash.png",
+        "bytes": 79748,
+        "sha256": "20fba95b1c8cbed7d4e3bf4ff8af86276c3741cff3ba792de568d6769fb0296a",
+        "gitBlob": "f3c32ef3dec74e3333484253873551b36506c55f",
+        "crc32": "1351c377",
+        "compressedBytes": 77468,
+        "crcVerified": true,
+        "encoding": "base64",
+        "identityKind": "derived from embedded member body, not a separately fetched Git object"
+      },
+      {
+        "path": "_temp/windows-same-main-process-ui.controller.log",
+        "bytes": 52606,
+        "sha256": "9b3f983096164eedca82a8875a57f4ad61cc15546f5660df24cb5fa636a51a91",
+        "gitBlob": "b979e4e96470240da6fe0b89c908f50390e739f5",
+        "crc32": "0a13826c",
+        "compressedBytes": 1518,
+        "crcVerified": true,
+        "encoding": "utf-8",
+        "identityKind": "derived from embedded member body, not a separately fetched Git object"
+      },
+      {
+        "path": "_temp/windows-same-main-process-ui.json",
+        "bytes": 756857,
+        "sha256": "1f8f22c2c473ea447e04a201e22ee1f81833c455e399db6a1643dcd82b702d00",
+        "gitBlob": "b1e3f7a2367d47fdf1720835821dd27690bbf5e3",
+        "crc32": "e15ca3b1",
+        "compressedBytes": 198806,
+        "crcVerified": true,
+        "encoding": "utf-8",
+        "identityKind": "derived from embedded member body, not a separately fetched Git object"
+      }
+    ],
+    "sources": [
+      {
+        "repository": "777genius/agent-teams-ai",
+        "ref": "86f52244b5375834a4040cbc63803d68cc708087",
+        "path": "tools/owned-process-broker/nativeWindowsAppFixture.ts",
+        "bytes": 31223,
+        "sha256": "4c037ffe4be03b64ef9e5d9172246a9744f3fc1cf55b48af630811a4c580eaa2",
+        "gitBlob": "0b1bbc3ef47cd55ac3e23c13890fce281de01c98",
+        "fullBodyRead": true
+      },
+      {
+        "repository": "777genius/agent-teams-ai",
+        "ref": "86f52244b5375834a4040cbc63803d68cc708087",
+        "path": "tools/owned-process-broker/nativeWindowsAppGate.mjs",
+        "bytes": 37970,
+        "sha256": "b5c17e7acccc63b40db707fa4f0aaf02b535b7c45da11f6fc21c8ac8f37133cb",
+        "gitBlob": "62056c6c2d45e1b51f34fd572cf3614e1eff93a3",
+        "fullBodyRead": true
+      },
+      {
+        "repository": "777genius/agent-teams-ai",
+        "ref": "86f52244b5375834a4040cbc63803d68cc708087",
+        "path": "packages/legacy-agent-host/src/process/WindowsTeamProcessCommands.ts",
+        "bytes": 29443,
+        "sha256": "4edbb21876753230e69a0c603061dd6493e9c48d4d2014df79150c37f24a772f",
+        "gitBlob": "b41629b7ed483f1ab9f42e2e234933999647e7bd",
+        "fullBodyRead": true
+      },
+      {
+        "repository": "777genius/agent-teams-ai",
+        "ref": "86f52244b5375834a4040cbc63803d68cc708087",
+        "path": "packages/legacy-agent-host/src/process/TeamProcessCommands.ts",
+        "bytes": 20767,
+        "sha256": "d90bd81ed7743afdd836225d3944e6b98348697268e8a45963f22201e6a8b0ff",
+        "gitBlob": "e25f31210e8ccd5ed1fb2637b6b45efe49a6f3c3",
+        "fullBodyRead": true
+      },
+      {
+        "repository": "777genius/agent-teams-ai",
+        "ref": "86f52244b5375834a4040cbc63803d68cc708087",
+        "path": "packages/legacy-agent-host/src/process/registeredProcessContracts.ts",
+        "bytes": 6572,
+        "sha256": "6a8250e5f1f82ad39ac223d6f515a336cf4f26daef53a782348737d47e40c8a1",
+        "gitBlob": "83caa9c3f1a2f57eca67b329dd5e8ec7065a1f79",
+        "fullBodyRead": true
+      },
+      {
+        "repository": "777genius/agent-teams-ai",
+        "ref": "86f52244b5375834a4040cbc63803d68cc708087",
+        "path": "packages/legacy-agent-host/src/process/validateProcessRecords.ts",
+        "bytes": 14676,
+        "sha256": "c6b9ebf49e82a17f55683605c0bc1041d530b6c90da3f2774e8c1e3685d035d1",
+        "gitBlob": "dd1a705e054e5fe7df4addf97aa48bf4d0638444",
+        "fullBodyRead": true
+      },
+      {
+        "repository": "777genius/agent-teams-ai",
+        "ref": "86f52244b5375834a4040cbc63803d68cc708087",
+        "path": "packages/legacy-agent-host/src/owned-process/retainedServiceContracts.ts",
+        "bytes": 7160,
+        "sha256": "1bc2aae1bea9690c868512f676e507db6e9bc5fa92d69d981fa556b4ebdbce38",
+        "gitBlob": "690d366bacb01c2ff92c09ea1d5c4d457fb27c93",
+        "fullBodyRead": true
+      },
+      {
+        "repository": "777genius/agent-teams-ai",
+        "ref": "86f52244b5375834a4040cbc63803d68cc708087",
+        "path": "scripts/legacy-agent-host/desktop-native-process-ui.test.ts",
+        "bytes": 50377,
+        "sha256": "cbfbf6f7607913c84a8d1d7c2ab2889ab37949f944183a8deea02a70081535ac",
+        "gitBlob": "b4bbd33777a065e21eed91d6997e36c1570003cd",
+        "fullBodyRead": true
+      }
+    ],
+    "fullSourceBytes": 198188,
+    "archive": {
+      "bytes": 694175,
+      "sha256": "5c29c646d7295783ef3ec42511c81ccb35fbd25a4984b37b0614c093ceb6b3d2",
+      "gitBlob": "ffd1d661d03ecf3a80483a9a7b49bbd283a70417",
+      "allMembersCrcVerified": true,
+      "limit": "Binary ZIP SHA/CRC are root's retained capture attestations. This reviewer did not redownload/decompress the archive or view its PNGs. All seven complete embedded UTF-8 strings were independently rehashed and their relevant complete records/source inventories parsed."
+    },
+    "reading": "Whole raw log hashed and all normalized lines read; repeated final controller stderr blocks read via complete line-indexed distinct-text census. Full fixture/gate/producer/persist/validator/contracts and whole native UI test read. Large manifest/source/census arrays traversed completely for identity/count/equality joins, not treated as executable bodies.",
+    "sourceJoin": {
+      "rows": 1798,
+      "unique": true,
+      "prePostIdentical": true,
+      "inputPins": 17,
+      "physicalCRLF": [
+        {
+          "path": "tools/owned-process-broker/nativeWindowsAppFixture.ts",
+          "bytes": 31708,
+          "sha256": "9be5af55b58539523c03194b62ebb68f5b1b5363c8c3994deee833d91fed7499"
+        },
+        {
+          "path": "tools/owned-process-broker/nativeWindowsAppGate.mjs",
+          "bytes": 38623,
+          "sha256": "f326a8b9122d0bcde8f6c46f3a49d8d5634b6d2e17f030eec0ea69e509a002a1"
+        },
+        {
+          "path": "packages/legacy-agent-host/src/process/registeredProcessContracts.ts",
+          "bytes": 6737,
+          "sha256": "5305c0d1748c3ca02d1ca0a38cd2b7a000bfb2ba74c79c5f1c5fa94557be8fb6"
+        },
+        {
+          "path": "packages/legacy-agent-host/src/process/validateProcessRecords.ts",
+          "bytes": 14980,
+          "sha256": "c7b72634ea315db732419bfce3c1c792f2b8b0543a11d73c7d638e019cd396b7"
+        }
+      ],
+      "limit": "Complete 1,798-row before/after manifest is equal; this does not claim 1,798 source body rereads. Current WindowsTeamProcessCommands is fully read at exact86f. Candidate separately records dist/process/WindowsTeamProcessCommands.js SHA2566f63b3cf4e15a944a9864e577442477c904bb0a2bee460b5fe1686b9c5c94b6e, without that compiled body."
+    },
+    "packageInventory": {
+      "packages": 120,
+      "files": 8131,
+      "uniquePaths": 8131,
+      "allHashesAndExecutableFlagsValid": true
+    }
+  },
+  "outcome": {
+    "status": "INCOMPLETE",
+    "cleanup": false,
+    "counts": {
+      "mainStarts": 1,
+      "initialRuntimeOpen": 1,
+      "businessInput": 1,
+      "refreshClicks": 1,
+      "retryClicks": 1,
+      "uiStops": 1,
+      "quit": 1
+    },
+    "phases": [
+      {
+        "phase": "packaged-App-startup",
+        "atMs": 0.06820000000152504,
+        "budgetMs": 120000
+      },
+      {
+        "phase": "one-initial-Runtime-Open",
+        "atMs": 5520.940200000001,
+        "budgetMs": 45000
+      },
+      {
+        "phase": "one-original-business-input-and-UI",
+        "atMs": 10553.720700000002,
+        "budgetMs": 35000
+      },
+      {
+        "phase": "actual-Host-A-exit-and-metadata-Refresh",
+        "atMs": 27900.491100000003,
+        "budgetMs": 10000
+      },
+      {
+        "phase": "one-explicit-same-Main-Retry",
+        "atMs": 32978.581099999996,
+        "budgetMs": 10000
+      },
+      {
+        "phase": "original-UI-Kill-primary",
+        "atMs": 41931.4706,
+        "budgetMs": 10000
+      },
+      {
+        "phase": "original-product-Quit",
+        "atMs": 48306.7675,
+        "budgetMs": 30000
+      }
+    ],
+    "recovery": {
+      "schemaVersion": 1,
+      "source": "original-recovery-wait",
+      "atomicWithFailure": false,
+      "stages": {
+        "clickReturnedMs": 3435,
+        "writerObservedMs": 5227,
+        "hostCheckedMs": 5642,
+        "uiReadyMs": 6809
+      },
+      "sampleCount": 2,
+      "sampleCountCapped": false,
+      "lastAtMs": 6809,
+      "last": {
+        "surfacePresent": true,
+        "refresh": "enabled",
+        "firstRefreshBusy": false,
+        "retryPresent": false,
+        "alertPresent": false,
+        "ready": true
+      }
+    },
+    "originalMain": {
+      "pid": 3440,
+      "parent": 7832,
+      "birth": "2026-11-17T15:33:22.8434040Z",
+      "executable": "D:\\a\\agent-teams-ai\\agent-teams-ai\\release\\win-unpacked\\AgentTeamsAI.exe"
+    },
+    "originalHost": {
+      "pid": 7136,
+      "parent": 3440,
+      "birth": "2026-11-17T15:33:26.0297930Z",
+      "executable": "D:\\a\\agent-teams-ai\\agent-teams-ai\\release\\win-unpacked\\resources\\legacy-agent-host\\node\\v24.21.0\\win32-x64\\node.exe"
+    },
+    "successorHost": {
+      "pid": 4668,
+      "parent": 3440,
+      "birth": "2026-11-17T15:33:59.5504340Z",
+      "executable": "D:\\a\\agent-teams-ai\\agent-teams-ai\\release\\win-unpacked\\resources\\legacy-agent-host\\node\\v24.21.0\\win32-x64\\node.exe"
+    },
+    "sameMainAfterRetry": {
+      "pid": 3440,
+      "parent": 7832,
+      "birth": "2026-11-17T15:33:22.8434040Z",
+      "executable": "D:\\a\\agent-teams-ai\\agent-teams-ai\\release\\win-unpacked\\AgentTeamsAI.exe"
+    },
+    "actualHostSuccessors": 1,
+    "fullBeforeAfterPublicRowsEqual": true,
+    "originalHostAbsentIn145RowCensus": true,
+    "firstKill": {
+      "phase": "original-UI-Kill-primary",
+      "budgetMs": 10000,
+      "startMs": 41931.4706,
+      "clickAttemptMs": 48185.1942,
+      "nextQuitPhaseMs": 48306.7675,
+      "error": "AssertionError [ERR_ASSERTION]: The expression evaluated to a falsy value:\n\n  assert.ok(receipt.nativeSettlement?.command.operation === 'settle')\n\n    at Object.completeStop (D:\\a\\agent-teams-ai\\agent-teams-ai\\tools\\owned-process-broker\\nativeWindowsAppFixture.ts:432:16)\n    at async within (file:///D:/a/agent-teams-ai/agent-teams-ai/tools/owned-process-broker/nativeWindowsAppGate.mjs:141:20)\n    at async file:///D:/a/agent-teams-ai/agent-teams-ai/tools/owned-process-broker/nativeWindowsAppGate.mjs:568:21",
+      "stopsReturned": 0,
+      "serviceExitObservations": 1,
+      "timingLimit": "Approximate click-attempt to Quit phase interval121.5733ms is not a direct receipt-read/settlement-preparation measurement. Failure occurred before original Kill cutoff."
+    },
+    "cleanupEvidence": {
+      "quit": {
+        "attempted": true,
+        "endpoint": "ws://127.0.0.1:9222/devtools/browser/db0e9bcb-2681-43de-9b1f-c8564d9550b5",
+        "command": {
+          "at": 1794929653888,
+          "id": 1,
+          "method": "Browser.close"
+        },
+        "socketClosed": {
+          "at": 1794929655209,
+          "afterSend": true
+        },
+        "acknowledgement": "socket-closed"
+      },
+      "appExit": {
+        "code": 0,
+        "signal": null
+      },
+      "finalCensus": {
+        "rows": 132,
+        "lineageRows": 19,
+        "ownedRemaining": [],
+        "listenerPids": [],
+        "drained": true,
+        "allOriginalLineagePidBirthPairsAbsent": true
+      },
+      "controller": {
+        "gateController": "drained",
+        "rootExitCode": 1,
+        "activeProcesses": 0
+      },
+      "cleanupFailure": "AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:\n\n1 !== 2\n\n    at Object.afterQuit (D:\\a\\agent-teams-ai\\agent-teams-ai\\tools\\owned-process-broker\\nativeWindowsAppFixture.ts:467:16)\n    at file:///D:/a/agent-teams-ai/agent-teams-ai/tools/owned-process-broker/nativeWindowsAppGate.mjs:604:56\n    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)\n    at async within (file:///D:/a/agent-teams-ai/agent-teams-ai/tools/owned-process-broker/nativeWindowsAppGate.mjs:141:20)\n    at async file:///D:/a/agent-teams-ai/agent-teams-ai/tools/owned-process-broker/nativeWindowsAppGate.mjs:604:29",
+      "xmlConversionMessages": 104,
+      "limit": "afterQuit stops.size failed before its provider wait,three witness exits,writer lock absence,final original runtime/input and two service-exit assertions. App exit0 and controller drain do not change cleanup=false."
+    },
+    "peer": {
+      "provider": "codex",
+      "connected": 1,
+      "registrations": 1,
+      "serviceExitObservations": 1,
+      "failures": 0,
+      "metadata": {
+        "events": 0,
+        "claudeVersions": 0,
+        "codexVersions": 0,
+        "refused": 0
+      },
+      "modelRequests": 0,
+      "probes": 0,
+      "realVendorExecutions": 0
+    },
+    "modelRequests": 0,
+    "modelProbes": 0,
+    "realVendorExecutions": 0,
+    "originalRuntimeGenerations": null,
+    "packagedAndNativeInputsUnchanged": true,
+    "elapsedMs": 70517.741,
+    "precedingOpenCode": {
+      "wrapper": "PASS",
+      "native": "PASS",
+      "version": "2.1.4",
+      "cleanup": true,
+      "modelOrigin": "localhost-scripted",
+      "modelRequests": 11,
+      "hostExits": [
+        {
+          "code": 0,
+          "signal": null
+        },
+        {
+          "code": 0,
+          "signal": null
+        }
+      ],
+      "desktopJourneyQualified": false,
+      "vendorAuthQualified": false,
+      "releaseQualified": false,
+      "limit": "Earlier six-step native packaged result and source/bundle/runtime restoration are separate. No same-Main GUI success follows from them."
+    }
+  },
+  "sourceProof": {
+    "producerStages": [
+      {
+        "source": "TeamProcessCommands.ts:77–82",
+        "proof": "persist maps state to phase,recomputes fingerprint,validates,and writes commands/<digest(commandId)>.json."
+      },
+      {
+        "source": "WindowsTeamProcessCommands.ts:197–231",
+        "proof": "completeStop re-enters owner/authority and original receipt,establishes original absence,writes stopped row metadata,persists completed/observed-absent/signalAccepted unknown,then separately persists result for a matching row."
+      },
+      {
+        "source": "WindowsTeamProcessCommands.ts:233–273",
+        "proof": "settle follows on the same completed receipt. It can return before preparation if the original budget is expired,already confirmed,or a same-capture requested Stop remains. Otherwise prepareControl(settle) and nativeSettlement persistence precede native.run/lookup await. Confirmed/no-dispatch fields follow its outcome."
+      },
+      {
+        "source": "WindowsTeamProcessCommands.ts:468–508",
+        "proof": "terminate and lookup call settle(completeStop(...)); lookup also settles an existing completed original. Completion and intent publication are not one atomic externally visible record."
+      },
+      {
+        "source": "registeredProcessContracts.ts:135–140",
+        "proof": "Settlement is optional after durable original absence; unknown intent has lookup-only authority. No-dispatch/confirmed are separate fields."
+      },
+      {
+        "source": "TeamProcessCommands.ts:243–267",
+        "proof": "Lifecycle assertReleased separately refuses a completed Windows Stop without nativeSettlementConfirmed. Completed public absence is not complete release qualification."
+      }
+    ],
+    "observerStages": [
+      {
+        "source": "nativeWindowsAppFixture.ts:211–223",
+        "proof": "Bounded complete receipt scan validates schema/fingerprint/Team and permitted inventory; the already-read data provides all pending-branch checks."
+      },
+      {
+        "source": "nativeWindowsAppFixture.ts:415–427",
+        "proof": "Selects <=1 terminate by original processRef,but breaks at completed/completed/observed-absent before requiring settlement. Other pending branch accepts only prepared/held."
+      },
+      {
+        "source": "nativeWindowsAppFixture.ts:429–464",
+        "proof": "Immediately requires selected identity and Stop+settle intents,then result,original HANDLE witnesses,neighbor/provider liveness,ledger and frozen runtime. This is later than the current acceptance predicate."
+      }
+    ],
+    "causalConclusion": "A separately durable completed-without-settlement record is permitted by the current producer. The fixture can accept that earlier record and immediately assert a later field; that observer bug is source-proved. Current evidence does not establish whether settlement later appeared or a corrected run would pass.",
+    "missingFacts": [
+      "Failed terminate commandId/fingerprint/full serialized record",
+      "Any later nativeSettlement publication,not-dispatch or confirmation",
+      "Which early-return/normal producer path applied after this record",
+      "Exact duration between completion and settlement writes"
+    ],
+    "noUnsupportedRepair": "Do not change producer completion/settlement/authority,add a native command,waive settle/absence,extend deadline,or infer XML transport causation."
+  },
+  "minimalPlan": {
+    "path": "tools/owned-process-broker/nativeWindowsAppFixture.ts",
+    "function": "returned completeStop(role),existing polling loop",
+    "fixturePhysicalLinesBefore": 485,
+    "requirements": [
+      "Keep the same remaining(stop.deadline),assertPeer(),validated processReceipts read,original processRef filter and found.length<=1.",
+      "Keep current completed/completed/observed-absent classification. Only nativeSettlement===undefined on that valid stage is eligible to remain pending.",
+      "Before waiting on the newly tolerated completed record,assert human principal,full selected capture and selected original row id. The validator does not supply those three selected identities.",
+      "Exact validator supplies original.capturedNative equality,Stop intent operation/capture/source and both settlement flags undefined when nativeSettlement is missing. Equivalent explicit assertions may be retained for clarity; no new read is needed.",
+      "Present null/false/malformed settlement is not missing and must reach unchanged final assertions or validator failure. Known no-dispatch,foreign selected identity,duplicate candidate,rejected/other terminal state must not be delayed as pending readiness.",
+      "Route the tolerated intermediate to the original Math.min(25,remaining(stop.deadline)) delay,then the same loop. An early continue must not bypass this delay.",
+      "Preserve the prepared/held assertion for the original noncompleted branch. Simply strengthening the break predicate without distinguishing the completed intermediate would still fail that assertion.",
+      "When settlement is present,keep the existing break and ALL post-loop assertions verbatim. Continue to require successful original witnesses,neighbor/provider isolation,ledger and frozen-input/runtime checks before marking completed.",
+      "No new deadline,loop,receipt path,command,input,native lookup/run/retry or changed UI behavior. No eventual PASS is inferred."
+    ],
+    "validatorGuarantees": [
+      {
+        "source": "validateProcessRecords.ts:154–195",
+        "fields": "schema/family/phase/state/fingerprint",
+        "guarantee": "Completed observed-absent is only admitted for terminate with a valid signalAccepted representation."
+      },
+      {
+        "source": "validateProcessRecords.ts:206–223",
+        "fields": "capture/original/processRef",
+        "guarantee": "Capture is valid and original.capturedNative equals it. Selected capture and original.id still require fixture assertions."
+      },
+      {
+        "source": "validateProcessRecords.ts:242–275",
+        "fields": "nativeIntent",
+        "guarantee": "Windows terminate intent required;operation stop,full capture and serviceSource equal receipt.capture."
+      },
+      {
+        "source": "validateProcessRecords.ts:286–296",
+        "fields": "truthy nativeSettlement",
+        "guarantee": "Exact settle schema and full capture/source/terminal relationship; missing allowed. Falsy present malformed data must not be classified as missing."
+      },
+      {
+        "source": "validateProcessRecords.ts:297–303",
+        "fields": "nativeSettlementNotDispatched/nativeSettlementConfirmed",
+        "guarantee": "Any defined flag must be literal true with a truthy settlement and correct completed Windows Stop. Therefore nativeSettlement===undefined forces both fields undefined under validation."
+      },
+      {
+        "source": "nativeWindowsAppFixture.ts:211–223",
+        "fields": "Team/inventory",
+        "guarantee": "Exact Team,bounded directory/receipt inventory,only original registration commands or terminates,total<=2+stops.size. No selected human/capture/id guarantee is added here."
+      }
+    ],
+    "finalRequirements": [
+      {
+        "lines": "429–431",
+        "requirement": "human principal,selected full capture,selected original capturedNative/id,original Stop intent",
+        "stage": "immutable original selection;first three selected identities also checked before newly tolerated wait"
+      },
+      {
+        "lines": "432–439",
+        "requirement": "settle intent,both intent serviceSources/full captures,distinct operationRefs,no-dispatch undefined",
+        "stage": "settlement-intent publication;not an ACK/confirmed qualification"
+      },
+      {
+        "lines": "440–445",
+        "requirement": "completed observed-absent,signalAccepted unknown,result exact id/pid,absent,canTerminatefalse,stoppedAt string,rotatedref",
+        "stage": "completion/result published before settlement preparation;wrong/missing result after intent remains failure"
+      },
+      {
+        "lines": "446–449",
+        "requirement": "original target witness absent and exit0;primary neighbor witness alive",
+        "stage": "independent original HANDLE checks remain after receipt"
+      },
+      {
+        "lines": "450–459",
+        "requirement": "one post-admission original label/PID service-exit with code1",
+        "stage": "same original cutoff/25ms ledger poll"
+      },
+      {
+        "lines": "461–464",
+        "requirement": "neighbor provider alive,pins/peer/original runtime+cutoff;only then markcompleted",
+        "stage": "unchanged later success prerequisites"
+      },
+      {
+        "lines": "467–478",
+        "requirement": "both completed Stops,providerexit0,three original witness exits,writerlock absent,original runtime/input,two service-exits",
+        "stage": "unchanged cleanup;current run fails stops.size"
+      }
+    ],
+    "existingTest": {
+      "path": "scripts/legacy-agent-host/desktop-native-process-ui.test.ts",
+      "gitBlob": "b4bbd33777a065e21eed91d6997e36c1570003cd",
+      "bytes": 50377,
+      "sha256": "cbfbf6f7607913c84a8d1d7c2ab2889ab37949f944183a8deea02a70081535ac",
+      "registrations": 8,
+      "completeRead": true,
+      "seam": "Existing tests uniquely select actual gate source fragments and execute them with controlled dependencies;existing helpers exercise actual UI code. None covers completeStop's durable publication stage.",
+      "meaningfulRegression": [
+        "Actual selected fixture source sees same-original held -> completed/no-settlement -> settlement-bearing record;must not return or fail at lawful intermediate,while old implementation fails.",
+        "Persistent missing settlement reaches same finite cutoff with no renewed deadline.",
+        "Wrong principal/capture/id,duplicate receipt,other terminal state,malformed present settlement and no-dispatch remain failures,not pending samples.",
+        "Fully ready original still executes unchanged intent/result/witness/neighbor/ledger checks;inject a later mismatch to demonstrate reachability."
+      ],
+      "limit": "Design only,no test authored/compiled/evaluated/run. Actual source must be exercised,not copied classifier/source-string-only checks. Root selects exact append-only test boundary,without changing existing8."
+    },
+    "preservedBudgets": {
+      "outerMs": 300000,
+      "killEachMs": 10000,
+      "receiptPollMs": 25,
+      "hostExitRefreshMs": 10000,
+      "retryMs": 10000,
+      "quitMs": 30000
+    },
+    "noNewGate": true
+  },
+  "scopeLimits": [
+    "Current x64 result remains failed and cleanupfalse despite drain observations.",
+    "New ARM Retry deadline failure is separate and not reviewed/fixed here.",
+    "No broader vendor/native/GUI/wholeE2E qualification.",
+    "Original source and all frozen controls/tests remain unchanged by this advisory."
+  ],
+  "checks": [
+    {
+      "id": "E01",
+      "status": "PASS_EVIDENCE",
+      "finding": "Full 3,251,974-byte capture independently hashes to af70fca5270a5eac8905eefc16d1f362e7af8db5 and the supplied SHA-256."
+    },
+    {
+      "id": "E02",
+      "status": "PASS_EVIDENCE",
+      "finding": "Full 337,630-byte job log independently hashes to 6d72a5329cce7073469dabecf65782cc0a6522cb. All normalized lines read; the repeated final controller blocks use a complete indexed distinct-line census."
+    },
+    {
+      "id": "E03",
+      "status": "PASS_EVIDENCE",
+      "finding": "All seven embedded UTF-8 bodies individually hash to their declared derived identities; total 1,976,095 bytes. Derived member Git IDs were not separately fetched."
+    },
+    {
+      "id": "E04",
+      "status": "PASS_EVIDENCE",
+      "finding": "Capture, metadata, log and UI receipt join job134098865077/run44092933873/source86f52244b5375834a4040cbc63803d68cc708087/win32-x64."
+    },
+    {
+      "id": "E05",
+      "status": "PASS_EVIDENCE",
+      "finding": "All 1,798 ordered source hash rows have unique paths and valid SHA-256 values; the complete after-flow array is identical. Seventeen input pins and unchanged-input=true are retained."
+    },
+    {
+      "id": "E06",
+      "status": "PASS_EVIDENCE",
+      "finding": "Full fixture, gate, receipt-contract and validator Git bodies reproduce their four recorded physical Windows CRLF hashes."
+    },
+    {
+      "id": "E07",
+      "status": "PASS_EVIDENCE",
+      "finding": "Full candidate manifest parsed:120 packages/8,131 unique package-file paths; each file hash/executable field is valid. This is metadata, not independently re-read packaged file bodies."
+    },
+    {
+      "id": "E08",
+      "status": "PASS_EVIDENCE",
+      "finding": "Same original Main PID/birth retained through Retry; Host A absent in the complete145-row exit census; one distinct Host successor under same Main."
+    },
+    {
+      "id": "E09",
+      "status": "PASS_EVIDENCE",
+      "finding": "Complete two-row public process projections before crash/after Retry are equal, with original references, same-live and canTerminate=true. Final paired Retry assertions reached before Kill."
+    },
+    {
+      "id": "E10",
+      "status": "PASS_EVIDENCE",
+      "finding": "Original recovery wait ready at6,809ms/two samples, stages3,435/5,227/5,642ms; non-atomic retained recovery observation."
+    },
+    {
+      "id": "E11",
+      "status": "PASS_EVIDENCE",
+      "finding": "One original primary Kill attempted; failure is fixture432 required nativeSettlement.operation=settle after completed/observed-absent acceptance, not recovery readiness."
+    },
+    {
+      "id": "E12",
+      "status": "LIMIT",
+      "finding": "Failed terminate record is not retained:stops=[] and no commands member. Exact commandId/fingerprint/later settlement history unknown."
+    },
+    {
+      "id": "E13",
+      "status": "PASS_EVIDENCE",
+      "finding": "Scenario INCOMPLETE/cleanup=false; one Stop admission and one service-exit observation. Neighbor Kill and successful completeStop proofs unreached."
+    },
+    {
+      "id": "E14",
+      "status": "PASS_EVIDENCE",
+      "finding": "One Browser.close, app exit0/null, final132-row census drained/no owned rows/no listeners; all19 original lineage PID/birth pairs absent."
+    },
+    {
+      "id": "E15",
+      "status": "PASS_EVIDENCE",
+      "finding": "Controller drained/rootExitCode1/activeProcesses0. afterQuit fails stops.size1!==2 before provider/witness/writer-lock final checks; physical drain does not qualify scenario cleanup."
+    },
+    {
+      "id": "E16",
+      "status": "LIMIT",
+      "finding": "104 PowerShell XML error-stream conversion messages retained; no causal attribution to settlement is established."
+    },
+    {
+      "id": "S01",
+      "status": "PASS_STATIC",
+      "finding": "Eight scoped full source/test bodies independently hashed/read,total198,188B."
+    },
+    {
+      "id": "S02",
+      "status": "PASS_STATIC",
+      "finding": "Team persist recomputes phase/fingerprint,validates,writes same command path. Windows completeStop publishes completed absence and then result before settlement preparation."
+    },
+    {
+      "id": "S03",
+      "status": "PASS_STATIC",
+      "finding": "Separate settle revalidates authority/original/budget,may return before preparation,and otherwise persists a new settle intent before native await. Confirmation/no-dispatch are later writes."
+    },
+    {
+      "id": "S04",
+      "status": "SOURCE_PROVED_DEFECT",
+      "finding": "Current fixture breaks at completed absence and immediately assumes later settlement intent. Producer permits durable completed-without-settlement stage, so observer readiness is early."
+    },
+    {
+      "id": "S05",
+      "status": "PASS_STATIC",
+      "finding": "Validator binds terminate Stop operation/capture/source,original capturedNative,phase/fingerprint and Team/capture consistency; fixture scan also binds Team/inventory."
+    },
+    {
+      "id": "S06",
+      "status": "PASS_STATIC",
+      "finding": "Missing nativeSettlement implies both settlement flags undefined under exact validator297–303; known no-dispatch is not a valid missing-field stage."
+    },
+    {
+      "id": "S07",
+      "status": "PASS_STATIC",
+      "finding": "Validator does not bind human principal,fixture-selected full capture or original row id; these three must be asserted before newly tolerating missing settlement."
+    },
+    {
+      "id": "S08",
+      "status": "CANDIDATE_ONLY",
+      "finding": "Tolerate only nativeSettlement===undefined on validated,selected completed/observed-absent. Present null/false/malformed and other terminal corruption remain immediate failures."
+    },
+    {
+      "id": "S09",
+      "status": "CANDIDATE_ONLY",
+      "finding": "Same original loop/read/processRef/cardinality/deadline/25ms delay; no new input,lookup,Stop,settle,retry or budget."
+    },
+    {
+      "id": "S10",
+      "status": "CANDIDATE_ONLY",
+      "finding": "Every final identity,intent/result,witness,neighbor/provider,ledger,pin/runtime assertion remains verbatim and required."
+    },
+    {
+      "id": "S11",
+      "status": "PASS_STATIC",
+      "finding": "Intent presence is not nativeSettlementConfirmed; preserve original oracle without adding an ACK qualification claim."
+    },
+    {
+      "id": "S12",
+      "status": "PASS_STATIC",
+      "finding": "Whole native UI test has eight original registrations and actual-source fragment seams; none exercises fixture.completeStop publication boundary."
+    },
+    {
+      "id": "S13",
+      "status": "CANDIDATE_ONLY",
+      "finding": "Meaningful regression should exercise actual uniquely selected source,delayed publication,same-cutoff failure,and immediate corruption refusals; no copied classifier."
+    },
+    {
+      "id": "L01",
+      "status": "LIMIT",
+      "finding": "Earlier packaged OpenCode native/wrapper PASS is separate from failed same-Main GUI; desktop/vendor/release qualification remains false."
+    },
+    {
+      "id": "L02",
+      "status": "LIMIT",
+      "finding": "New separately reported ARM Retry cutoff failure is unreviewed here and not fixed by this candidate."
+    },
+    {
+      "id": "A01",
+      "status": "PASS_AUTHORITY",
+      "finding": "Immutable Git/evidence/pure data only; no local/runtime/source/control/ref/PR/CI action,download renewal or live polling."
+    },
+    {
+      "id": "A02",
+      "status": "PASS_AUTHORITY",
+      "finding": "Advisory/candidate scope only,no postimage,no runtime reproduction,no execution selection,no new gate."
+    }
+  ],
+  "checkCount": 33,
+  "authority": "Read-only immutable Git/source/evidence and pure in-memory data/hash review. Only this bare advisory is authored. No local/filesystem/process/runtime/import/compile/source/control/ref/PR/CI action,artifact download renewal,live polling or hypothetical postimage."
+}

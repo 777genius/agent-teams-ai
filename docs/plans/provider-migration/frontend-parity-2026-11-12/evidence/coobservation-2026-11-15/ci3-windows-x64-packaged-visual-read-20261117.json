@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "kind": "C714_CI3_WINDOWS_PACKAGED_SCREENSHOT_READ",
+  "repository": "777genius/agent-teams-ai",
+  "at": "2026-11-17 15:47:03 UTC",
+  "artifactId": 14343770599,
+  "capture": {
+    "bytes": 3251974,
+    "sha256": "7e99b7025640852a1ab86eeea675144643e039922bd71edd228c72140e3ad151",
+    "gitBlob": "af70fca5270a5eac8905eefc16d1f362e7af8db5"
+  },
+  "images": [
+    {
+      "path": "_temp/windows-same-main-process-ui.after-retry.png",
+      "gitBlob": "65426bd7f018af969e1255fa7c4761a89c304141",
+      "bytes": 69765,
+      "sha256": "58a54e1fc0a6af3448e7bb827d68b90a8d3ee2259e20fc69c983ff3c8f25b0f3",
+      "observed": "Original test team persists after Retry; Refresh is enabled, saved task and TEST registered both services remain visible; launch/stop banner absent."
+    },
+    {
+      "path": "_temp/windows-same-main-process-ui.before-crash.png",
+      "gitBlob": "f3c32ef3dec74e3333484253873551b36506c55f",
+      "bytes": 79748,
+      "sha256": "20fba95b1c8cbed7d4e3bf4ff8af86276c3741cff3ba792de568d6769fb0296a",
+      "observed": "Original test team is visibly Running with Stop, all four launch stages green, lead online, and TEST registered both services message."
+    }
+  ],
+  "qualification": "Visual screenshot observations only; no atomic operation/state proof, native settlement, final cleanup, or whole GUI PASS inferred."
+}

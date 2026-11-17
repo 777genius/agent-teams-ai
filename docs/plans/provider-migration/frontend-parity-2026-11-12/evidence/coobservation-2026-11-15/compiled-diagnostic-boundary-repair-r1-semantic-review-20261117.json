@@ -1,0 +1,590 @@
+{
+  "schemaVersion": 1,
+  "kind": "C714_COMPILED_DIAGNOSTIC_BOUNDARY_REPAIR_R1_SEMANTIC_REVIEW",
+  "reviewer": "/root/producer_r2_semantic",
+  "repository": "777genius/agent-teams-ai",
+  "preparedAt": "2026-11-17 14:48:05 UTC",
+  "subject": {
+    "bytes": 10289,
+    "sha256": "08b7fd228ee8b264930d89dd485743e71b90f79edf3d094d20562a8d4c6064bc",
+    "gitBlob": "3a4c7a35a30dd24594cdfecf45510274598527dc"
+  },
+  "decision": "ACCEPT_R1_CONSTRAINTS_ONLY_NO_BLOCKER",
+  "checkCount": 28,
+  "blockers": [],
+  "summary": "The one-file, three-logical-line constraint is a source-supported repair plan for the observed compiled-boundary extraction defect. An inclusive original-index lower bound only on publishEnd excludes the earlier idempotent return while preserving exactly-one refusal, global publisher uniqueness, every compiled slice, all six locations and five ordering comparisons. This is R1 acceptance only: no postimage was authored or accepted, and no future runtime result is inferred.",
+  "authority": {
+    "rootSoleSourceControlAuthorAndExecutor": true,
+    "review": "Immutable Git and retained evidence plus pure in-memory text/data/hash analysis; bare report retention only.",
+    "noTargetEvaluationOrCompilation": true,
+    "noLocalRuntimeOrCiAction": true,
+    "noNewGate": true
+  },
+  "currentAnchor": {
+    "commit": "d035cefd235501daf2066d3b7725db35bfb00bf7",
+    "tree": "17e034751c1c1c5199aa147b2dababa5787ae6cf",
+    "parents": [
+      "59723bc7058d31dd51730f4088eaf66df2735d4b"
+    ],
+    "sourceHead": "86f52244b5375834a4040cbc63803d68cc708087",
+    "targetPath": "packages/legacy-agent-host/tests/opencode-v2-native-receipt.test.mjs",
+    "currentTarget": {
+      "bytes": 41559,
+      "sha256": "80b8075c5ed87d3bd5f6707c1e83f4983d275510d67fa4e0a352e1a3d7d958a0",
+      "gitBlob": "9988bebfff4408e81ab63da26fc463e7b8fa618b"
+    },
+    "currentModelProbe": {
+      "bytes": 23312,
+      "sha256": "7c77d52a1f9dcc2b3c53d550514ba13c4256a5daca3a67f2c2c008e786e66ea2",
+      "gitBlob": "a5dc4221c8d3e35200c65b533dd0126479a0a3ab"
+    },
+    "directPathBodiesEqualFrozenBasis": true,
+    "scope": "Fresh current immutable commit metadata and these two complete exact path bodies. The proposal's earlier full publication reports and repository-wide census are inherited evidence, not re-audited here."
+  },
+  "inputs": [
+    {
+      "role": "subject",
+      "repository": "777genius/agent-teams-ai",
+      "bytes": 10289,
+      "sha256": "08b7fd228ee8b264930d89dd485743e71b90f79edf3d094d20562a8d4c6064bc",
+      "gitBlob": "3a4c7a35a30dd24594cdfecf45510274598527dc",
+      "read": "Whole body fetched, independently hashed and fully read."
+    },
+    {
+      "role": "target",
+      "repository": "777genius/agent-teams-ai",
+      "path": "packages/legacy-agent-host/tests/opencode-v2-native-receipt.test.mjs",
+      "bytes": 41559,
+      "sha256": "80b8075c5ed87d3bd5f6707c1e83f4983d275510d67fa4e0a352e1a3d7d958a0",
+      "gitBlob": "9988bebfff4408e81ab63da26fc463e7b8fa618b",
+      "read": "Whole body fetched, independently hashed and fully read."
+    },
+    {
+      "role": "modelProbe",
+      "repository": "777genius/agent-teams-ai",
+      "path": "packages/legacy-agent-host/src/adapters/providers/OpenCodeV2ModelProbe.ts",
+      "bytes": 23312,
+      "sha256": "7c77d52a1f9dcc2b3c53d550514ba13c4256a5daca3a67f2c2c008e786e66ea2",
+      "gitBlob": "a5dc4221c8d3e35200c65b533dd0126479a0a3ab",
+      "read": "Whole body fetched, independently hashed and fully read."
+    },
+    {
+      "role": "importedPlatform",
+      "repository": "777genius/agent-teams-ai",
+      "path": "scripts/e2e/opencode-diagnostics/platform.test.mjs",
+      "bytes": 20830,
+      "sha256": "05197a044bf390abad3d4bbc55ffa8ef66035fa73bbfa36199b4b28685de3b26",
+      "gitBlob": "11c6c2fbd2f76471d0c78e35dea8636b278e6b72",
+      "read": "Whole body fetched, independently hashed and fully read."
+    },
+    {
+      "role": "originalJobLog",
+      "repository": "777genius/agent-teams-ai",
+      "bytes": 128517,
+      "sha256": "e8764cca247c632c3092464cb4eab1fc9627b22fbb32d559bdec6b27156ff46f",
+      "gitBlob": "fca9b76b3d0ff372cd046cc7a631fe980a279062",
+      "read": "Whole body fetched, independently hashed and fully read."
+    },
+    {
+      "role": "boundedAdvisory",
+      "repository": "777genius/agent-teams-ai",
+      "bytes": 30454,
+      "sha256": "a2afbd4dc105053a753640d7092b31b727fdd330233fbd7fe94c546182c0cbbb",
+      "gitBlob": "42effae91d747256f512dd460a53a8a36f6eedbf",
+      "read": "Whole body fetched, independently hashed and fully read."
+    },
+    {
+      "role": "unchangedWorkflow",
+      "repository": "777genius/agent-teams-ai",
+      "path": ".github/workflows/opencode-v2-stage1-preflight.yml",
+      "bytes": 36013,
+      "sha256": "fddd1aface758ef115a5e904151cb61dd78dca04d8f52fb99f4326ddaff53a14",
+      "gitBlob": "2f557dd4b74806e6a444c46656af07b52bc0fb4e",
+      "read": "Whole cached body identity verified; accepted complete workflow read reused, selected static job lines 1–125 reread."
+    }
+  ],
+  "checks": [
+    {
+      "id": "S01",
+      "result": "PASS_STATIC_R1",
+      "topic": "Exact complete R1",
+      "evidence": "The 10,289-byte subject is exactly 3a4c7a35a30dd24594cdfecf45510274598527dc / SHA256 08b7fd228ee8b264930d89dd485743e71b90f79edf3d094d20562a8d4c6064bc. This accepts prospective constraints only; no source postimage exists or was constructed by this reviewer."
+    },
+    {
+      "id": "S02",
+      "result": "PASS_STATIC_R1",
+      "topic": "Current immutable source anchor",
+      "evidence": "Fresh immutable d035 commit metadata matches tree 17e034751c1c1c5199aa147b2dababa5787ae6cf and sole parent 59723bc7058d31dd51730f4088eaf66df2735d4b. Fresh file reads at d035 reproduce complete target 9988bebf and production ModelProbe a5dc exactly. Prior publication reviews remain inherited evidence, not a new whole-publication audit here."
+    },
+    {
+      "id": "S03",
+      "result": "PASS_STATIC_R1",
+      "topic": "Whole current bodies",
+      "evidence": "The entire 41,559-byte target, 23,312-byte production source, 20,830-byte imported platform test, 128,517-byte original job log and 30,454-byte guard advisory were independently fetched, hashed and read. No missing compiled body was synthesized."
+    },
+    {
+      "id": "S04",
+      "result": "PASS_STATIC_R1",
+      "topic": "Real original failing tuple",
+      "evidence": "The log records frozen 86f, Windows Server 2022/windows-2022 x64, Node v24.21.0 and a successful original Host build/typecheck before the failed command. Separate current-product-lock checkout 03046d4616c7d2ce3a7111c0576f4c6e601ecda2 does not replace the source head."
+    },
+    {
+      "id": "S05",
+      "result": "PASS_STATIC_R1",
+      "topic": "Unfiltered original command and result",
+      "evidence": "The exact eight-file command equals the unchanged workflow command. Before the repeated failure summary, progress contains 239 passing, two failing and one skipped registration; final counters total 242, with zero cancelled/todo and command exit 1. Repeated failure-summary titles are not extra executions."
+    },
+    {
+      "id": "S06",
+      "result": "PASS_STATIC_R1",
+      "topic": "First failure is extractor failure",
+      "evidence": "The retained stack reports two matches where exactly one was required for the anchored return-closing regex, at unique line 359 / publishEnd line 367 / actual fragment read line 387 / case invocation line 416. The first rejection matrix has not run when this assertion fails."
+    },
+    {
+      "id": "S07",
+      "result": "PASS_STATIC_R1",
+      "topic": "Two legitimate source sites and intended publisher",
+      "evidence": "Complete production source contains early idempotent return closing at line 431 and final return at line 511, with one closing assignment/publisher at line 497. Those locations support the compiler-expansion explanation. The exact emitted compiled bytes/offsets were not retained or regenerated in this review."
+    },
+    {
+      "id": "S08",
+      "result": "PASS_STATIC_R1",
+      "topic": "Minimum one-file scope",
+      "evidence": "Only the local helper signature, its match collection/filter line, and the publishEnd call may change. The planned three logical lines are currently 357, 358 and 367 in the 647-line test. The production file, all imports, other helper logic, test bodies and workflows are outside the edit."
+    },
+    {
+      "id": "S09",
+      "result": "PASS_STATIC_R1",
+      "topic": "Inclusive default offset preserves original domains",
+      "evidence": "For every other boundary, default offset zero retains all original nonnegative RegExp match positions, including a legitimate match at zero. Only publishEnd receives the already globally unique publisher offset; it is not an arbitrary supplied runtime coordinate."
+    },
+    {
+      "id": "S10",
+      "result": "PASS_STATIC_R1",
+      "topic": "Original indices remain suitable for slices",
+      "evidence": "Filtering match records by their original match.index retains the same string-coordinate system used by compiled.slice. It does not rebase matches through a sliced substring, transform newline bytes or alter the underlying compiled source."
+    },
+    {
+      "id": "S11",
+      "result": "PASS_STATIC_R1",
+      "topic": "Exactly-one remains a refusal",
+      "evidence": "No retained final-return match still fails; two or more final-return matches at or after the publisher still fail. The design does not choose the first or last match, accept count two, introduce fallback selection or swallow the assertion."
+    },
+    {
+      "id": "S12",
+      "result": "PASS_STATIC_R1",
+      "topic": "All six boundaries and five comparisons remain",
+      "evidence": "state, stateEnd, run, runEnd and publish remain globally unique; publishEnd alone has a justified lower bound. The entire state < stateEnd < run < runEnd < publish < publishEnd relation remains, so all original ranges and ordering checks survive."
+    },
+    {
+      "id": "S13",
+      "result": "PASS_STATIC_R1",
+      "topic": "Real compiled fragments remain under test",
+      "evidence": "The helper still reads the actual dist/adapters/providers/OpenCodeV2ModelProbe.js emitted by the original Host build and returns the actual state declarations, run wrapper and failed-close publisher slices. No copied classifier, full provider constructor, surrogate module, test-specific product export or runtime source replacement is introduced."
+    },
+    {
+      "id": "S14",
+      "result": "PASS_STATIC_R1",
+      "topic": "Same helper in the finite child",
+      "evidence": "The finite subprocess serializes modelProbeDiagnosticFragments.toString() and the existing harness, then extracts from the same compiled URL before publications/rejection/finish/marker. The single local helper change therefore reaches both selected uses without a second implementation."
+    },
+    {
+      "id": "S15",
+      "result": "PASS_STATIC_R1",
+      "topic": "Second failure attribution is bounded",
+      "evidence": "The second case reaches result.error === undefined and then fails status 1 versus expected 0 at line 539. Its own stderr/stack is not in the retained parent log. Shared extraction is a strong source-backed explanation, not an independently observed child stack or proof every later assertion would pass."
+    },
+    {
+      "id": "S16",
+      "result": "PASS_STATIC_R1",
+      "topic": "Complete original nine-case prefix",
+      "evidence": "The first 19,696 bytes of the current target rehash to f274129ad8a77bed3094e48e31cc50f37ba4d478 / c88b9eac003164e9ad2cbc5c8ef93e1b466dec295fe14c64062777975b449a09. All nine original titles pass once in the log. The selected edits occur after that complete prefix."
+    },
+    {
+      "id": "S17",
+      "result": "PASS_STATIC_R1",
+      "topic": "All twelve local registrations preserved",
+      "evidence": "Current target has exactly twelve top-level test registrations: nine originals plus the three selected diagnostic cases. No registration, input matrix, expectation, skip or name filter is altered. The current third diagnostic case already passes; the first two remain failed evidence."
+    },
+    {
+      "id": "S18",
+      "result": "PASS_STATIC_R1",
+      "topic": "Whole fourteen-case platform import preserved",
+      "evidence": "The file ends with exactly one unconditional awaited import of the complete unchanged platform test. All fourteen literal titles pass once in this Windows log, including actual Windows cleanup evidence and the selected-port/error cases. This is registration/result evidence, not a new native or GUI qualification."
+    },
+    {
+      "id": "S19",
+      "result": "PASS_STATIC_R1",
+      "topic": "Original rejection and cleanup classification",
+      "evidence": "Existing actual-fragment tests retain exact thrown object/value identity, success/false states, held/invalid/conflict/busy classification, separate driver-close/unconfirmed meaning, own nullable code fields, opaque reflection behavior and coordination exclusions. Product close/idempotence/lease/deadline logic cannot change to satisfy extraction."
+    },
+    {
+      "id": "S20",
+      "result": "PASS_STATIC_R1",
+      "topic": "Counterfactual and privacy assertions retained",
+      "evidence": "Both original run/publisher literals and their SHA256 assertions remain. Their old-field absence counterfactual, no getter/toString/private-value output constraints, original subscriber cleanup and separate actual passive projections remain required."
+    },
+    {
+      "id": "S21",
+      "result": "PASS_STATIC_R1",
+      "topic": "Finite subprocess authority and bounds unchanged",
+      "evidence": "The existing actual Node v24.21.0/platform admission, --import passive observer, generated TEST child, 10,000 ms spawnSync timeout, 256 KiB maxBuffer, exact status/signal/stdout marker and finally cleanup remain. The correction introduces no native/vendor program, network command or new fixture."
+    },
+    {
+      "id": "S22",
+      "result": "PASS_STATIC_R1",
+      "topic": "Trace bounds and failure reservation unchanged",
+      "evidence": "Existing source/test assertions retain the 300 finite diagnostic publications, 64 KiB trace cap, 512-byte emitted line bound, 513-byte retained row bound, at most 257 observations, reserved failed-close slot, 355/499 exact bound checks and oversized-input behavior. Broader 8 MiB controls are not substituted for the child buffer."
+    },
+    {
+      "id": "S23",
+      "result": "PASS_STATIC_R1",
+      "topic": "Meaningful existing verification",
+      "evidence": "The unchanged real Host build plus the same whole eight-file command already demonstrates the old extraction defect. A future genuine run of those unchanged cases must proceed through the first two original behavioral assertion sets. Static reasoning alone does not establish prospective runtime success."
+    },
+    {
+      "id": "S24",
+      "result": "PASS_STATIC_R1",
+      "topic": "No replay or frozen-lane mutation",
+      "evidence": "The R1 leaves standalone deadline proof, its spent attempts and every frozen CI3/older ref/run untouched. Its separate future GitHub-only admission sequence is a plan, not an action selected or performed by this review."
+    },
+    {
+      "id": "S25",
+      "result": "PASS_STATIC_R1",
+      "topic": "Existing publication sequence only",
+      "evidence": "Root retains sole authorship/execution. Exact R1 reviews and docs publication/actual readbacks precede one-file source authorship; exact source R2 reviews/publication/actual readbacks precede a separately admitted future run. No additional executable R2 is invented for unchanged structured GitHub API calls."
+    },
+    {
+      "id": "S26",
+      "result": "PASS_STATIC_R1",
+      "topic": "No broad qualification or speculative product fix",
+      "evidence": "The proposal correctly leaves the original command failed and makes no ModelProbe product behavior repair, native startup, GUI, vendor-auth, release or whole-E2E claim. This review does not reinterpret a possible later failure as already solved."
+    },
+    {
+      "id": "S27",
+      "result": "PASS_STATIC_R1",
+      "topic": "Original authority and source caps",
+      "evidence": "The selected target stays below 800 physical lines with no new file, dependency, workflow, production-source, timeout, case or filter change. Existing broader source counts are preserved proposal constraints, not a freshly repeated repository census."
+    },
+    {
+      "id": "S28",
+      "result": "PASS_STATIC_R1",
+      "topic": "Read-only review boundary",
+      "evidence": "Only immutable Git reads, retained text/data parsing, approved identity hashing and this bare report retention are used. No target source evaluation/compilation/import, local shell/process action, new source/control bytes, artifact download, live CI read, ref or PR mutation occurred."
+    }
+  ],
+  "semanticProof": {
+    "sourceLocations": {
+      "returnClosing": [
+        {
+          "offset": 20026,
+          "line": 431
+        },
+        {
+          "offset": 23282,
+          "line": 511
+        }
+      ],
+      "publisher": [
+        {
+          "offset": 22518,
+          "line": 497
+        }
+      ],
+      "coordinateSystem": "Original source string offsets, not compiled offsets or filesystem byte offsets.",
+      "compiledBodyStatus": "The exact emitted compiled body is not independently retained in this supplied evidence. The first actual failure proves two compiled regex matches; full TypeScript source supports the early/final return explanation."
+    },
+    "domain": "For the final-return regex, consider the original match positions. The selected lookup requires exactly one position at or after the already uniquely identified publisher. The default zero used by all other lookups retains their whole-source domain.",
+    "edgeBehavior": [
+      {
+        "shape": "A valid match at original position zero with default offset zero",
+        "result": "Remains eligible; no truthiness or exclusive-offset loss."
+      },
+      {
+        "shape": "One early idempotent return before the publisher and one intended return after it",
+        "result": "Only the semantically relevant final-return candidate remains eligible."
+      },
+      {
+        "shape": "No return at or after the publisher",
+        "result": "Existing exactly-one assertion still fails."
+      },
+      {
+        "shape": "Two or more returns at or after the publisher",
+        "result": "Existing exactly-one assertion still fails; no first/last shortcut."
+      },
+      {
+        "shape": "Missing/duplicate publisher or any earlier state/run boundary",
+        "result": "Its unchanged global exactly-one assertion still fails."
+      },
+      {
+        "shape": "Boundary order changes or final return does not follow publisher",
+        "result": "Unchanged five-comparison relation still fails."
+      }
+    ],
+    "edgeAnalysisOnly": true,
+    "noSyntheticSourceOrHelperExecuted": true,
+    "selectionLimit": "This remains the existing lexical anchored-fragment seam, not a new AST parser or proof for arbitrary compiler rewrites. Extra later matching returns fail conservatively. The original real-build command remains the runtime discriminator.",
+    "preservedRelation": "state < stateEnd && stateEnd < run && run < runEnd && runEnd < publish && publish < publishEnd",
+    "preservedSlices": [
+      "compiled.slice(state, stateEnd)",
+      "compiled.slice(run, runEnd)",
+      "compiled.slice(publish, publishEnd)"
+    ],
+    "selectedCurrentLines": [
+      {
+        "line": 357,
+        "text": "  const unique = pattern => {"
+      },
+      {
+        "line": 358,
+        "text": "    const matches = [...compiled.matchAll(pattern)];"
+      },
+      {
+        "line": 367,
+        "text": "  const publishEnd = unique(/^[ \\t]*return closing;\\r?$/gm);"
+      }
+    ],
+    "serializedChild": "The original finite child uses this same helper's toString plus the same existing harness and compiled URL. Extraction precedes every diagnostic publication, rejection/finish operation and completion marker."
+  },
+  "originalEvidence": {
+    "pr": 1223,
+    "runId": 44092934079,
+    "jobId": 134072512849,
+    "jobName": "Static V01 source test (windows-2022)",
+    "head": "86f52244b5375834a4040cbc63803d68cc708087",
+    "node": "v24.21.0",
+    "platform": "win32-x64",
+    "runnerImage": "windows-2022 / 20261112.366.7",
+    "currentProductCommit": "03046d4616c7d2ce3a7111c0576f4c6e601ecda2",
+    "command": "node --test packages/legacy-agent-host/tests/opencode-v2-static-preflight.test.ts packages/legacy-agent-host/tests/opencode-v2-static-capture.test.ts packages/legacy-agent-host/tests/opencode-v2-host-spi.test.ts packages/legacy-agent-host/tests/opencode-v2-native-receipt.test.mjs packages/legacy-agent-host/tests/opencode-v2-native-process-guard.test.mjs packages/legacy-agent-host/tests/opencode-v2-request-admission.test.ts packages/legacy-agent-host/tests/opencode-v1-version-receipt.test.ts packages/legacy-agent-host/tests/opencode-v1-version-source.test.ts",
+    "commandUnfilteredAndEqualWorkflow": true,
+    "wholeCommand": {
+      "tests": 242,
+      "pass": 239,
+      "fail": 2,
+      "skip": 1,
+      "cancelled": 0,
+      "todo": 0,
+      "exit": 1
+    },
+    "skip": "V01 read-only measurement rejects a TEST-owned FIFO without blocking native preflight — POSIX FIFO only.",
+    "firstFailure": {
+      "case": "actual ModelProbe run rejection keeps original identity and close classification with bounded own error codes",
+      "actual": 2,
+      "expected": 1,
+      "operator": "strictEqual",
+      "code": "ERR_ASSERTION",
+      "helperLine": 359,
+      "lookupLine": 367,
+      "caseLine": 416,
+      "classification": "Direct retained extractor failure before producer rejection matrix."
+    },
+    "secondFailure": {
+      "case": "actual finite Node observer and parent retain producer error codes in the reserved close slot after trace exhaustion",
+      "actual": 1,
+      "expected": 0,
+      "operator": "strictEqual",
+      "code": "ERR_ASSERTION",
+      "statusAssertionLine": 539,
+      "resultErrorAssertionReachedAndPassed": true,
+      "childStackRetained": false,
+      "classification": "Shared-extractor explanation is source-supported inference; parent log independently proves only status mismatch. Later signal/marker/privacy/trace assertions are unreached."
+    },
+    "ordinaryCleanup": "Original command stays FAIL. The job then performs ordinary post-job cleanup and lists compiler vctip as an orphan to terminate; this is not a separate proof of finite-child custody or diagnostic success."
+  },
+  "preservedCaseInventory": {
+    "targetPhysicalLines": 647,
+    "localRegistrations": 12,
+    "originalPrefix": {
+      "bytes": 19696,
+      "sha256": "c88b9eac003164e9ad2cbc5c8ef93e1b466dec295fe14c64062777975b449a09",
+      "gitBlob": "f274129ad8a77bed3094e48e31cc50f37ba4d478",
+      "originalRegistrations": 9,
+      "identityDerivedFromCompleteCurrentPrefix": true
+    },
+    "importedRegistrations": 14,
+    "totalSelectedRegistrations": 26,
+    "literalAwaitedImportCount": 1,
+    "allSelectedOriginalProgressOnce": true,
+    "cases": [
+      {
+        "index": 1,
+        "title": "a failed native Host proof publishes only sanitized diagnostics and no raw paths",
+        "originalResult": "PASS"
+      },
+      {
+        "index": 2,
+        "title": "native receipt gate rejects forged digest, incomplete stages and cold restart uncertainty",
+        "originalResult": "PASS"
+      },
+      {
+        "index": 3,
+        "title": "receipt verifier CLI refuses lockfile-only artifacts with sanitized diagnostics",
+        "originalResult": "PASS"
+      },
+      {
+        "index": 4,
+        "title": "native V2 captured session readback cannot drift workspace or ordered permissions",
+        "originalResult": "PASS"
+      },
+      {
+        "index": 5,
+        "title": "native durable SSE proof accepts a bounded, owned and ordered history prefix",
+        "originalResult": "PASS"
+      },
+      {
+        "index": 6,
+        "title": "native durable SSE proof enforces frame-count budget with a distinct error",
+        "originalResult": "PASS"
+      },
+      {
+        "index": 7,
+        "title": "native durable SSE proof rejects foreign, incomplete and reordered events",
+        "originalResult": "PASS"
+      },
+      {
+        "index": 8,
+        "title": "cold native log proof compares retained event content, not only counts and watermark",
+        "originalResult": "PASS"
+      },
+      {
+        "index": 9,
+        "title": "raw native V2 variant readback cannot attest a missing or inherited default",
+        "originalResult": "PASS"
+      },
+      {
+        "index": 10,
+        "title": "actual ModelProbe run rejection keeps original identity and close classification with bounded own error codes",
+        "originalResult": "FAIL"
+      },
+      {
+        "index": 11,
+        "title": "actual finite Node observer and parent retain producer error codes in the reserved close slot after trace exhaustion",
+        "originalResult": "FAIL"
+      },
+      {
+        "index": 12,
+        "title": "actual close projection preserves legacy rows and opaque optional fields within original reservation and byte limits",
+        "originalResult": "PASS"
+      },
+      {
+        "index": 13,
+        "title": "OS process and listener output parsing fails closed",
+        "originalResult": "PASS"
+      },
+      {
+        "index": 14,
+        "title": "one fresh Windows interpreter retains ordered original process and listener observations",
+        "originalResult": "PASS"
+      },
+      {
+        "index": 15,
+        "title": "combined Windows observations reject malformed envelopes and preserve executor failure",
+        "originalResult": "PASS"
+      },
+      {
+        "index": 16,
+        "title": "ownership rejects stale launchers, reused child PIDs and unrelated listeners",
+        "originalResult": "PASS"
+      },
+      {
+        "index": 17,
+        "title": "native shims quote absolute paths with spaces and reject expansion syntax",
+        "originalResult": "PASS"
+      },
+      {
+        "index": 18,
+        "title": "isolated CDP port stays bound to the selected dev launcher",
+        "originalResult": "PASS"
+      },
+      {
+        "index": 19,
+        "title": "environment drops inherited provider/config and runtime overrides",
+        "originalResult": "PASS"
+      },
+      {
+        "index": 20,
+        "title": "real fixture permits diagnostic queries only, and Unix shim handles spaces",
+        "originalResult": "PASS"
+      },
+      {
+        "index": 21,
+        "title": "timeout fixture stays live until its owning test terminates it",
+        "originalResult": "PASS"
+      },
+      {
+        "index": 22,
+        "title": "Windows cleanup evidence retains current PID through independent read-only queries",
+        "originalResult": "PASS"
+      },
+      {
+        "index": 23,
+        "title": "Windows phase observations use the original phase clocks and cannot bypass admission",
+        "originalResult": "PASS"
+      },
+      {
+        "index": 24,
+        "title": "Windows census observations preserve original results, refusals and bounded diagnostics",
+        "originalResult": "PASS"
+      },
+      {
+        "index": 25,
+        "title": "selected Windows port query retains complete fresh process and owner observations",
+        "originalResult": "PASS"
+      },
+      {
+        "index": 26,
+        "title": "Windows listener executor failures never admit partial output or fall back",
+        "originalResult": "PASS"
+      }
+    ],
+    "meaning": "The original nine and fourteen suites already passed in this exact Windows run. All twelve local registrations and all fourteen imported registrations must remain. The two diagnostic failures remain failures until a genuine later run completes their full original assertions."
+  },
+  "boundaries": {
+    "allowedSourcePaths": [
+      "packages/legacy-agent-host/tests/opencode-v2-native-receipt.test.mjs"
+    ],
+    "allowedLogicalLines": 3,
+    "productionChanges": 0,
+    "workflowChanges": 0,
+    "dependencyChanges": 0,
+    "newFiles": 0,
+    "newCases": 0,
+    "removedCases": 0,
+    "filtersOrRetries": 0,
+    "finiteChild": {
+      "node": "v24.21.0",
+      "timeoutMs": 10000,
+      "maxBufferBytes": 262144,
+      "originalArgvAndPlatformAdmission": true
+    },
+    "passive": {
+      "finitePublications": 300,
+      "totalBytes": 65536,
+      "maxEmittedLineWithoutNewlineBytes": 512,
+      "maxRetainedRowWithNewlineBytes": 513,
+      "maxRows": 257,
+      "expectedMaxSelectedFrameBytes": 355,
+      "expectedMaxParentRecordBytes": 499,
+      "failedCloseReservationUnchanged": true
+    },
+    "otherControls": "All original production/UI/standalone deadlines and broader trace/output budgets remain outside this one-file change. No 8 MiB control is substituted for the finite child's 256 KiB maxBuffer.",
+    "retainedPrivacyAndIdentity": "The exact original thrown object/value, run error versus close reason, own-data allowlist/null behavior, missing legacy fields, getter/toString/Proxy refusal, actual passive projection and private-value absence assertions remain unchanged.",
+    "testEffects": "The existing tests retain their original bounded finite Node/OS/fixture effects when genuinely run. This reviewer does not execute them; the planned edit adds no new effect."
+  },
+  "existingSequence": [
+    "Exact R1 reviews, docs-only publication and immediate push, then root and independent actual readbacks.",
+    "Only afterward root authors the one-file source postimage; the existing exact source R2 review verifies the complete body and three-line inverse.",
+    "Source publication and immediate push, followed by root and independent actual readbacks.",
+    "A separately admitted future genuine CI run preserves the original whole command; no frozen CI3 ref/run is changed or replayed."
+  ],
+  "limitations": [
+    "Acceptance applies only to the exact R1 constraints, not hypothetical implementation bytes or prospective runtime PASS.",
+    "The compiled ModelProbe body and finite child's own stderr/stack were not supplied as independently retained artifacts; neither was invented or regenerated.",
+    "The first failure does not demonstrate a production diagnostic-classification defect. The second's shared extraction cause remains a source-backed inference.",
+    "The earlier standalone RED/GREEN capture is contextual and outside this review's outcome scope; this review neither re-audits nor authorizes replay of that attempt.",
+    "The earlier complete publication reviews and source-count census are not duplicated. Current target/product path identity is directly re-established.",
+    "No native GUI, vendor-auth, release, broad E2E, or later diagnostic success is inferred from this plan or the existing passing subsets."
+  ],
+  "retentionProtocol": "Send the bare report pin immediately after retention, then fresh complete Git self-read with literal/hash/parsed equality and full text read."
+}

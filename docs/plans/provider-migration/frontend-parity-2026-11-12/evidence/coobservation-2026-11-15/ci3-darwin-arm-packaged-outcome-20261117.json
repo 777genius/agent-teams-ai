@@ -1,0 +1,1443 @@
+{
+ "schemaVersion": 1,
+ "kind": "C714_CI3_DARWIN_ARM_PACKAGED_IMMUTABLE_OUTCOME_GUARD_ADVISORY",
+ "createdAt": "2026-11-17 14:49:42 UTC",
+ "repository": "777genius/agent-teams-ai",
+ "reviewer": "/root/producer_r2_guard",
+ "decision": "ACCEPT_TWO_BOUNDED_ACTUAL_OUTCOMES_WITH_EXPLICIT_LIMITS",
+ "subject": {
+  "capture": {
+   "bytes": 3396622,
+   "sha256": "f6cb6cb9f0ad357539d6dddf8f2bf8e1247497f3439d915daf820dc10ecbce88",
+   "gitBlob": "443c24ae6d62988dd7c3680c7a08e3235a8fe177"
+  },
+  "jobLog": {
+   "bytes": 167675,
+   "sha256": "99cafdd24da045b844df9022e1c3816db524046d43ce418134b6c4b2b59c19ac",
+   "gitBlob": "e2cd57ace23f93aae797d8d39c2dd53019ba46b2"
+  },
+  "pr": 1223,
+  "runId": 44092933873,
+  "jobId": 134098865037,
+  "sourceHead": "86f52244b5375834a4040cbc63803d68cc708087",
+  "platform": "darwin-arm64",
+  "attempt": 1
+ },
+ "summary": {
+  "packagedOpenCode": "Actual packaged OpenCode V2.1.4/manual-approval Host scenario PASS. All six original steps, eleven localhost scripted model requests, original effect/image/permission/task/reply checks, original Stop/checkpoint, cold new Host Restore and 250 ms no-replay observation completed. Two Hosts report exit 0/no signal/valid stdout; native cleanup and original wrapper restoration are confirmed.",
+  "packagedElectron": "Actual packaged macOS Electron with the strict finite Claude SDK peer PASS for one original Launch/boot/Stop, automatic app.relaunch, observer-only successor binding and one public successor Quit. Original app exit is 0/no signal. The successor Quit reply is unconfirmed, but original listener/PID/Host/writer-lock absence predicates pass; its exit status is unavailable and naturalExitQualified remains false.",
+  "limitations": "No full cold Resume/active Quit in the Electron flow, real Claude/Codex execution, vendor authentication/inference, Linux-only source coordination, general native/release qualification, Darwin P09 continuous byte custody, or final whole workflow conclusion is established.",
+  "concreteContradictionsFound": []
+ },
+ "readMethod": {
+  "capture": "Complete raw UTF8 capture fetched and identity-verified, including embedded archive base64 and every member index. All six UTF8 bodies independently hashed. Full non-census receipt fields and six small/semantic bodies read; complete large candidate inventory and selected-source arrays parsed and each row validated, with all before/after rows compared.",
+  "jobLog": "Complete 167,675 raw bytes fetched and identity-verified. Full 110,401-character view read contiguously after removal only of ANSI and leading ISO timestamp prefixes; no log entries dropped. Original bytes retained.",
+  "sources": "Complete bodies fetched/identity-verified for indexed source entries; fresh full-body and relevant-function reads are explicitly distinguished from exact prior-review reuse in the source index. Target source was not evaluated, imported, compiled or executed.",
+  "archiveAndPng": "Root's ZIP digest/CRC verification and three visual inspections are attributed. Reviewer did not download/decode/re-extract ZIP, fetch derived binary identities as UTF8, or infer cleanup from images."
+ },
+ "archive": {
+  "bytes": 1065507,
+  "sha256": "33b5d64d5561d4ed3688b6a18eba4f231711788a012798ea5337830bf425206f",
+  "derivedGitBlob": "ef16d0a22b752bed823f4542bfc64d437b7fedfd",
+  "apiDigestMatchedByRoot": true,
+  "allMembersCrcVerifiedByRoot": true,
+  "derivedMembersNotSeparatelyRetained": true
+ },
+ "members": [
+  {
+   "path": "agent-teams-ai/agent-teams-ai/resources/legacy-agent-host/opencode-v2-candidate.json",
+   "bytes": 1154733,
+   "sha256": "a69a7ed50ec431518e6c2aa7da16a3e511dbcad41b74f2a6aa019b04cac9a70f",
+   "gitBlob": "e5606e6e47f14662fcde3f7a27a3cda26e3e4d82",
+   "crc32": "6fa5d5cb",
+   "compressedBytes": 343469,
+   "encoding": "utf-8"
+  },
+  {
+   "path": "_temp/TEST-desktop-backend-8nBzsR/ui-automatic-app-relaunch-successor.png",
+   "bytes": 138434,
+   "sha256": "65d152c93300287c8965a43a8c744aa19f23aa373b0166abf7d37fdfa093b525",
+   "gitBlob": "e387dcf9704addf9a8be1324605d185cb5767cf9",
+   "crc32": "d5b7ff04",
+   "compressedBytes": 126126,
+   "encoding": "binary-preserved-in-archive-base64",
+   "localImagePath": "/workspace/scratch/c714-ci3-artifact-read-20261117/14336782083/image-1.png",
+   "mimeType": "image/png"
+  },
+  {
+   "path": "_temp/TEST-desktop-backend-8nBzsR/ui-emulated-lifecycle-launch.png",
+   "bytes": 222494,
+   "sha256": "f51b87fb0f0ccf26e4676ffa7a818b9a0f03b0cd80dc4422de9c79e71eede498",
+   "gitBlob": "41aebda55dc3415b88de2b4b27f3ddf0ae43b04b",
+   "crc32": "5ccfc29e",
+   "compressedBytes": 212607,
+   "encoding": "binary-preserved-in-archive-base64",
+   "localImagePath": "/workspace/scratch/c714-ci3-artifact-read-20261117/14336782083/image-2.png",
+   "mimeType": "image/png"
+  },
+  {
+   "path": "_temp/TEST-desktop-backend-8nBzsR/ui-emulated-lifecycle-stopped.png",
+   "bytes": 200546,
+   "sha256": "a8c98e2cd023e1275c7cb9a2d8e73b391a1da987444924bd90bc3301475afcbf",
+   "gitBlob": "9847747429285d3e893f9b8415241488ad86b590",
+   "crc32": "00bfc803",
+   "compressedBytes": 190359,
+   "encoding": "binary-preserved-in-archive-base64",
+   "localImagePath": "/workspace/scratch/c714-ci3-artifact-read-20261117/14336782083/image-3.png",
+   "mimeType": "image/png"
+  },
+  {
+   "path": "_temp/opencode-v2-packaged-inputs.json",
+   "bytes": 2374,
+   "sha256": "b7215465f98bafac66f5ba792ed91e1335565d12b833ba1af8ad7efaad824fdc",
+   "gitBlob": "bf8be8c63958c640495293622a21439648f78a76",
+   "crc32": "670f8e10",
+   "compressedBytes": 1163,
+   "encoding": "utf-8"
+  },
+  {
+   "path": "_temp/opencode-v2-packaged-native.json",
+   "bytes": 5286,
+   "sha256": "d3c3082bd5b77a5f3bfa7ecf45aa4b1d591532cd75a74a5c1c7ac421c90053d0",
+   "gitBlob": "4e633ed8fe3ecdf1597571368e9abf6bed1abe7a",
+   "crc32": "5fcea2aa",
+   "compressedBytes": 1875,
+   "encoding": "utf-8"
+  },
+  {
+   "path": "_temp/opencode-v2-packaged.json",
+   "bytes": 1189,
+   "sha256": "0ac2a9475bcd6ecf4415f69c42775dc919a11d06d64fda9f27c0519a9f79f62f",
+   "gitBlob": "810a1029187a46c358ea488afefeb7f050f133bd",
+   "crc32": "6c72a59a",
+   "compressedBytes": 620,
+   "encoding": "utf-8"
+  },
+  {
+   "path": "_temp/packaged-app-relaunch.app.log",
+   "bytes": 3035,
+   "sha256": "2c319a84423ec40e47e77e24d73258c68902e9d05699941ca2898de800fc8058",
+   "gitBlob": "07ea0035034ddb0a271f572fc0450536b1599260",
+   "crc32": "6712f288",
+   "compressedBytes": 926,
+   "encoding": "utf-8"
+  },
+  {
+   "path": "_temp/packaged-app-relaunch.json",
+   "bytes": 672860,
+   "sha256": "af96d1bbbf5e611a52f43184604bcde3076653dbde04277ff590e02f3e5746e1",
+   "gitBlob": "86572fd7d8f965df570957332604d8f5af7f1a35",
+   "crc32": "4474f8c6",
+   "compressedBytes": 186584,
+   "encoding": "utf-8"
+  }
+ ],
+ "sources": [
+  {
+   "repository": "777genius/agent-teams-ai",
+   "ref": "86f52244b5375834a4040cbc63803d68cc708087",
+   "path": "scripts/legacy-agent-host/desktop-packaged-relaunch-smoke.ts",
+   "bytes": 13466,
+   "sha256": "11bb6faecf65ddb7f7a08d11c094d2116d28db4ede70511f9f2182e13a284056",
+   "gitBlob": "48a6e7ae2fce801ee2ae9fd29cb472000e599b1c",
+   "readScope": "full 184 physical lines",
+   "receiptSelectedCensusMatches": true
+  },
+  {
+   "repository": "777genius/agent-teams-ai",
+   "ref": "86f52244b5375834a4040cbc63803d68cc708087",
+   "path": "scripts/legacy-agent-host/run-packaged-opencode-v2.ts",
+   "bytes": 14137,
+   "sha256": "b6f0893cda4210adaa754d7b2af96f3ddd43dc9af64e0656a5736e26e79060e4",
+   "gitBlob": "44ccc655c11bb48dd354b10c09acb3d0e2d65c91",
+   "readScope": "full 257 physical lines",
+   "receiptSelectedCensusMatches": true
+  },
+  {
+   "repository": "777genius/agent-teams-ai",
+   "ref": "86f52244b5375834a4040cbc63803d68cc708087",
+   "path": "scripts/legacy-agent-host/packaged-opencode-v2-inputs.ts",
+   "bytes": 17320,
+   "sha256": "74444f48ffc2ddd4ca4bae52c9cbd7c2bddaa465508169d026e193661ce25787",
+   "gitBlob": "27cf4112a25dec299a21d6f802a5c08d55e36f2d",
+   "readScope": "full 298 physical lines",
+   "receiptSelectedCensusMatches": true
+  },
+  {
+   "repository": "777genius/agent-teams-ai",
+   "ref": "86f52244b5375834a4040cbc63803d68cc708087",
+   "path": "packages/legacy-agent-host/tests/opencode-v2-embedded-host.native.ts",
+   "bytes": 33259,
+   "sha256": "e7a295816da293ff4e26a775f898f1bc144ece55e995c3d05bed8e543f2803ff",
+   "gitBlob": "e4fd10d1c969bb5bf8a75e9789599a04dc0fc190",
+   "readScope": "full 499 physical lines",
+   "receiptSelectedCensusMatches": null
+  },
+  {
+   "repository": "777genius/agent-teams-ai",
+   "ref": "86f52244b5375834a4040cbc63803d68cc708087",
+   "path": "scripts/legacy-agent-host/desktop-captured-app.ts",
+   "bytes": 49613,
+   "sha256": "ce4d59cc5285eb78ed108dae13a44fae21d33cd73c544c720d512134f23b7f73",
+   "gitBlob": "865494ab5f5e45c5158fbf74ac858987fb322608",
+   "readScope": "full body identity; complete called entry/connect/backend/relaunch/cleanup functions and imports, lines 1–45 and 116–508; unused cold-restart continuation not newly audited",
+   "receiptSelectedCensusMatches": true
+  },
+  {
+   "repository": "777genius/agent-teams-ai",
+   "ref": "86f52244b5375834a4040cbc63803d68cc708087",
+   "path": "scripts/legacy-agent-host/desktop-emulated-lifecycle-ui.ts",
+   "bytes": 22845,
+   "sha256": "135cd81f2edde1f087b231d4dcbed83d8cc8beade5a0230a093e6cbfcb1923ee",
+   "gitBlob": "b33e5290e4ed86a48b902a24ffc80509f1c89236",
+   "readScope": "full body identity; lines 1–140, including complete originalStopOnly path; later Resume/active-Quit continuation unreached",
+   "receiptSelectedCensusMatches": true
+  },
+  {
+   "repository": "777genius/agent-teams-ai",
+   "ref": "86f52244b5375834a4040cbc63803d68cc708087",
+   "path": "scripts/legacy-agent-host/desktop-emulated-runtime-fixture.ts",
+   "bytes": 21993,
+   "sha256": "2f929c1f5cfd1a9a3c9ec16d35f7197856c79a61adf166d30eebb8a1bd086f67",
+   "gitBlob": "adf5b4c418195e0fc4ab38ba7fde2b3436a6b835",
+   "readScope": "full 280 physical lines",
+   "receiptSelectedCensusMatches": true
+  },
+  {
+   "repository": "777genius/agent-teams-ai",
+   "ref": "86f52244b5375834a4040cbc63803d68cc708087",
+   "path": "tools/owned-process-broker/fixtures/claudeProviderPeer.mjs",
+   "bytes": 33227,
+   "sha256": "dc9ba0c735ea763a24bb06d93590373cf1072d5737c7fba67a31df1356c44dd5",
+   "gitBlob": "1430de1a6666a22a7582d38a21273d61d2f745b7",
+   "readScope": "full body identity and prior accepted exact five-file R2; fresh lines 1–148 covering TEST admission/auth/parser; no repeat broad SDK protocol audit",
+   "receiptSelectedCensusMatches": true
+  },
+  {
+   "repository": "777genius/agent-teams-ai",
+   "ref": "86f52244b5375834a4040cbc63803d68cc708087",
+   "path": "scripts/legacy-agent-host/desktop-source-freeze.ts",
+   "bytes": 3208,
+   "sha256": "b7db02503f45ee10136de234f96d4a0999d2dfbbfb421fefb499dfe7a27ec8f9",
+   "gitBlob": "4ef2cc07ede3172aa594e0eac614a1d473a5f705",
+   "readScope": "full 68 physical lines",
+   "receiptSelectedCensusMatches": true
+  },
+  {
+   "repository": "777genius/agent-teams-ai",
+   "ref": "86f52244b5375834a4040cbc63803d68cc708087",
+   "path": "scripts/legacy-agent-host/desktop-backend-observations.ts",
+   "bytes": 33423,
+   "sha256": "2f98ed35ffb34f090d58b4021f54b1d92938f2ae6263312dd867654b923e80c8",
+   "gitBlob": "dca0c1710273411656e3284db0302449a00ddaf6",
+   "readScope": "full body identity; relevant environment/command/full process-listener observations, lines 1–160, 366–427 and 444–520",
+   "receiptSelectedCensusMatches": true
+  },
+  {
+   "repository": "777genius/agent-teams-ai",
+   "ref": "86f52244b5375834a4040cbc63803d68cc708087",
+   "path": "scripts/legacy-agent-host/desktop-emulated-lifecycle-records.ts",
+   "bytes": 4657,
+   "sha256": "454548d4a174a8d8e2a10bbe1b955e02fc45dee594b1796898ad33019f687058",
+   "gitBlob": "a53b2e82fd4230ada988fcf3e82d98981927a427",
+   "readScope": "full 66 physical lines",
+   "receiptSelectedCensusMatches": true
+  },
+  {
+   "repository": "777genius/agent-teams-ai",
+   "ref": "86f52244b5375834a4040cbc63803d68cc708087",
+   "path": "scripts/electron-builder/smokePackagedApp.cjs",
+   "bytes": 19905,
+   "sha256": "f90a08ed320efb158a9ebe4fc8b333f1f5b71b4624203f259378357d22712424",
+   "gitBlob": "ee0ccf4deb1d058cd593d8ae842d3fc3f12cdfde",
+   "readScope": "full body identity and prior accepted CI route proof; fresh lines 1–45 and 301–412 covering finite metadata fences",
+   "receiptSelectedCensusMatches": null
+  },
+  {
+   "repository": "777genius/agent-teams-ai",
+   "ref": "86f52244b5375834a4040cbc63803d68cc708087",
+   "path": "scripts/e2e/opencode-project-path-packaged.mjs",
+   "bytes": 3069,
+   "sha256": "88cf2a9320273f2f6dac9cccb20ddeb1f18640df8fb6493beb7ef51f5dc9ef25",
+   "gitBlob": "72af1c16a8ffd035f8f70dc519eaead13cd28bd4",
+   "readScope": "full 64 physical lines",
+   "receiptSelectedCensusMatches": null
+  },
+  {
+   "repository": "777genius/agent-teams-ai",
+   "ref": "86f52244b5375834a4040cbc63803d68cc708087",
+   "path": "packages/legacy-agent-host/tests/fixtures/native-host.ts",
+   "bytes": 15303,
+   "sha256": "ea11710ab1833e4cad906bad58def351b852c89ba1dee834c69849b3a1995d01",
+   "gitBlob": "bea17f976f5db7e9d6b471751ff7d871cd8ebcd5",
+   "readScope": "prior full exact body reused; fresh process launch and ordinary close functions at lines 91–175 and 301–389",
+   "receiptSelectedCensusMatches": true
+  },
+  {
+   "repository": "777genius/agent-teams-ai",
+   "ref": "86f52244b5375834a4040cbc63803d68cc708087",
+   "path": ".github/workflows/electron-packaged-ci.yml",
+   "gitBlob": "0938e9f31bad7520fec025ebde6aad8e071cfe69",
+   "bytes": 19532,
+   "sha256": "443502b3620450fc174440d6bdf6db3777e97b7f00d56d42e2fbd624b569b73f",
+   "readScope": "prior complete immutable 42-workflow corpus reused by exact body identity; fresh packaged job admission/checkout/commands/artifact clauses at lines 42–101 and 214–288",
+   "receiptSelectedCensusMatches": null
+  },
+  {
+   "repository": "777genius/agent-teams-ai",
+   "ref": "86f52244b5375834a4040cbc63803d68cc708087",
+   "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+   "gitBlob": "5286c036a63a14e98925711a224df202c9a7caa7",
+   "bytes": 29017,
+   "sha256": "ffd9bbb822dbdc30da7cb8daa881fcbebd384ba2bf9bdd87c804c511166fa02b",
+   "readScope": "prior complete accepted controls/source review reused; current entire selected-source census hash joined; no target evaluation",
+   "receiptSelectedCensusMatches": true
+  }
+ ],
+ "checks": [
+  {
+   "id": "C01",
+   "result": "PASS_BOUNDED_EVIDENCE",
+   "claim": "Exact retained capture is complete and immutable.",
+   "evidence": {
+    "bytes": 3396622,
+    "sha256": "f6cb6cb9f0ad357539d6dddf8f2bf8e1247497f3439d915daf820dc10ecbce88",
+    "gitBlob": "443c24ae6d62988dd7c3680c7a08e3235a8fe177",
+    "artifactId": 14336782083,
+    "runId": 44092933873,
+    "jobId": 134098865037,
+    "sourceHead": "86f52244b5375834a4040cbc63803d68cc708087",
+    "readAt": "2026-11-17T14:23:16.062006+00:00"
+   },
+   "limit": "The reviewer made no artifact download or live CI call."
+  },
+  {
+   "id": "C02",
+   "result": "PASS_BOUNDED_EVIDENCE",
+   "claim": "All six UTF8 members independently match all recorded bytes/SHA256/Git identities.",
+   "evidence": [
+    {
+     "path": "agent-teams-ai/agent-teams-ai/resources/legacy-agent-host/opencode-v2-candidate.json",
+     "match": true
+    },
+    {
+     "path": "_temp/opencode-v2-packaged-inputs.json",
+     "match": true
+    },
+    {
+     "path": "_temp/opencode-v2-packaged-native.json",
+     "match": true
+    },
+    {
+     "path": "_temp/opencode-v2-packaged.json",
+     "match": true
+    },
+    {
+     "path": "_temp/packaged-app-relaunch.app.log",
+     "match": true
+    },
+    {
+     "path": "_temp/packaged-app-relaunch.json",
+     "match": true
+    }
+   ],
+   "limit": "The nine member identities are derived archive identities, not claimed separately retained Git blobs."
+  },
+  {
+   "id": "C03",
+   "result": "PASS_BOUNDED_EVIDENCE",
+   "claim": "The whole candidate manifest has a valid complete 120-package/8,131-file inventory.",
+   "evidence": {
+    "packages": 120,
+    "files": 8131,
+    "packagePathsUnique": true,
+    "packagePathsBounded": true,
+    "fileRowsValid": true,
+    "filePathsUnique": true,
+    "dependencyTargets": true,
+    "textMembers": 6,
+    "textBytes": 1839477
+   },
+   "limit": "Every structured row was processed; this is no new physical package scan, binary hash read, build or native qualification."
+  },
+  {
+   "id": "C04",
+   "result": "PASS_BOUNDED_EVIDENCE",
+   "claim": "All 1,760 selected-source before/after rows match exactly.",
+   "evidence": {
+    "beforeRows": 1760,
+    "afterRows": 1760,
+    "allRowsEqual": true,
+    "uniqueBefore": true,
+    "uniqueAfter": true,
+    "validHashes": true,
+    "vectorIdentity": {
+     "bytes": 266853,
+     "sha256": "879d49ef121e26f03e5cbf01b6245a680d035ea5d6ba6adac1a44ead06eef35b",
+     "gitBlob": "0b972a3cf4ba187d4bf1e13a5f7b49e64908a08b"
+    }
+   },
+   "limit": "This is the original selected census, not a fresh whole-repository 8,799-file census. The derived canonical-vector Git identity is not a separately retained blob."
+  },
+  {
+   "id": "C05",
+   "result": "PASS_BOUNDED_EVIDENCE",
+   "claim": "Complete original job log is retained and fully read.",
+   "evidence": {
+    "bytes": 167675,
+    "sha256": "99cafdd24da045b844df9022e1c3816db524046d43ce418134b6c4b2b59c19ac",
+    "gitBlob": "e2cd57ace23f93aae797d8d39c2dd53019ba46b2"
+   },
+   "limit": "Reading normalized only ANSI/leading ISO timestamps; no log rows were filtered. All 110,401 resulting characters were read contiguously. Raw 167,675 bytes remain authoritative."
+  },
+  {
+   "id": "C06",
+   "result": "PASS_BOUNDED_EVIDENCE",
+   "claim": "Log, archive and receipt identity joins agree.",
+   "evidence": {
+    "exactlyOneWrapperReceipt": true,
+    "fullWrapperEqualsArtifact": true,
+    "artifactId": true,
+    "zipBytes": true,
+    "zipSha": true,
+    "nineFiles": true,
+    "noWorkflowErrorMarker": true,
+    "oneLifecyclePass": true,
+    "originalHead": true,
+    "normalizedFullReadChars": 110401,
+    "rawBytes": 167675
+   },
+   "limit": "Root's artifact CRC/API digest verification is attributed, not independently rerun by this reviewer."
+  },
+  {
+   "id": "C07",
+   "result": "PASS_BOUNDED_EVIDENCE",
+   "claim": "This packaged matrix job checked out the explicit source head.",
+   "evidence": {
+    "sourceHead": "86f52244b5375834a4040cbc63803d68cc708087",
+    "workflow": "0938e9f31bad7520fec025ebde6aad8e071cfe69",
+    "checkout": "github.event.pull_request.head.sha",
+    "matrix": "darwin-arm64",
+    "jobTimeoutMinutes": 90
+   },
+   "limit": "No assertion about another matrix tuple or the final workflow/run conclusion."
+  },
+  {
+   "id": "C08",
+   "result": "PASS_BOUNDED_EVIDENCE",
+   "claim": "All receipt-level source, Node, Host, manifest, app.asar, engine, Bun and provider hash joins match.",
+   "evidence": {
+    "sourceHeads": {
+     "value": "86f52244b5375834a4040cbc63803d68cc708087",
+     "occurrences": 6,
+     "allEqual": true
+    },
+    "platforms": {
+     "value": "darwin-arm64",
+     "occurrences": 5,
+     "allEqual": true
+    },
+    "nodeHashes": {
+     "value": "e4b5a3af0e05c75de2eae013904145f40fe7fc2a6e6f17510128bf45cca4e79b",
+     "occurrences": 4,
+     "allEqual": true
+    },
+    "hostEntryHashes": {
+     "value": "7ff0d33309b54969f7a5c5f88935d4593596e68670db21f08ee694c9d0c27add",
+     "occurrences": 4,
+     "allEqual": true
+    },
+    "manifestHashes": {
+     "value": "a69a7ed50ec431518e6c2aa7da16a3e511dbcad41b74f2a6aa019b04cac9a70f",
+     "occurrences": 4,
+     "allEqual": true
+    },
+    "asarHashes": {
+     "value": "0af39a8148313bf43cbbff5d9a8e2e2091468640a02086bba652efeb01ad12b9",
+     "occurrences": 5,
+     "allEqual": true
+    },
+    "engineManifest": {
+     "value": "a6091937d1c8686b7e1f125b2ef69c52146867b208517eb0fab4cb7ea18c2204",
+     "occurrences": 3,
+     "allEqual": true
+    },
+    "bunHash": {
+     "value": "0a2237cdcfa0d16ef501d9acca9f0026309ef348bea7393a64e8d1e3609565cc",
+     "occurrences": 3,
+     "allEqual": true
+    },
+    "custodyManifest": {
+     "value": "afb52333b1f61c01ea563928dfb0fcf1b83f3ce2fed478d01ee559ab2fa431e6",
+     "occurrences": 2,
+     "allEqual": true
+    },
+    "custodyBinary": {
+     "value": "6e0aa7ae073a36024ddc5b857789c51bee5dff90fb67dcd0a22f3615cab7135a",
+     "occurrences": 2,
+     "allEqual": true
+    },
+    "nativeReceiptHash": {
+     "value": "d3c3082bd5b77a5f3bfa7ecf45aa4b1d591532cd75a74a5c1c7ac421c90053d0",
+     "occurrences": 2,
+     "allEqual": true
+    },
+    "providerDigest": {
+     "value": "a3ee7632c9685fafb4ccc57cb5548503c476fc9ed608bd13438ed74e5329f9d8",
+     "occurrences": 3,
+     "allEqual": true
+    },
+    "harness": {
+     "value": "1890cad5057237154c0bcfd72c1c5cedb3e516057151d6bbafb1e76671d9d63e",
+     "occurrences": 2,
+     "allEqual": true
+    },
+    "hostSource": {
+     "value": "83e3304024dcfa67db7034c0316c3d9463d47659a44b8a8a04e0aedf3c660c67",
+     "occurrences": 2,
+     "allEqual": true
+    }
+   },
+   "limit": "The reviewer did not reconstruct treeHash from file-hash rows or independently execute packaged verification."
+  },
+  {
+   "id": "C09",
+   "result": "PASS_BOUNDED_EVIDENCE",
+   "claim": "Packaged inputs declare the exact captured tuple and preserve release limitations.",
+   "evidence": {
+    "kind": "TEST_NATIVE_V2_EMBEDDED_INPUTS",
+    "status": "READY",
+    "sourceHead": "86f52244b5375834a4040cbc63803d68cc708087",
+    "platform": "darwin-arm64",
+    "nodeVersion": "v24.21.0",
+    "productQualified": false,
+    "productTupleAdmitted": true
+   },
+   "limit": "Tuple admission and retained custody-binary identity do not establish Darwin P09 continuous executable-byte custody."
+  },
+  {
+   "id": "C10",
+   "result": "PASS_BOUNDED_EVIDENCE",
+   "claim": "The actual OpenCode native receipt is bound to packaged extraResources with source checkout and legacy runtime unavailable.",
+   "evidence": {
+    "executionOrigin": "packaged-extraResources",
+    "appAsarSha256": "0af39a8148313bf43cbbff5d9a8e2e2091468640a02086bba652efeb01ad12b9",
+    "candidateManifestSha256": "a69a7ed50ec431518e6c2aa7da16a3e511dbcad41b74f2a6aa019b04cac9a70f",
+    "harnessSha256": "1890cad5057237154c0bcfd72c1c5cedb3e516057151d6bbafb1e76671d9d63e",
+    "sourceCheckoutUnavailable": true,
+    "legacyRuntimeUnavailable": true,
+    "hostEntrySha256": "7ff0d33309b54969f7a5c5f88935d4593596e68670db21f08ee694c9d0c27add",
+    "nodeArchiveSha256": "bed7eea5325e1108f32ce5228ddd6a5f0f08a499ee42aa7442aea583702f6057",
+    "providerArtifacts": [
+     {
+      "name": "@agent-teams/provider-implementations",
+      "sha256": "a3ee7632c9685fafb4ccc57cb5548503c476fc9ed608bd13438ed74e5329f9d8"
+     },
+     {
+      "name": "@agent-teams/provider-session-contracts",
+      "sha256": "0ea08bacd3f19a54c065cfaebbe8ae0fb3a8e6770886402f435a96e97867d2bc"
+     }
+    ],
+    "packages": 120,
+    "files": 8131
+   },
+   "limit": "Package presence, including installed vendor binaries, is not execution evidence."
+  },
+  {
+   "id": "C11",
+   "result": "PASS_BOUNDED_EVIDENCE",
+   "claim": "The wrapper records one actual native child, a matching native receipt, confirmed native cleanup and restoration.",
+   "evidence": {
+    "kind": "TEST_PACKAGED_V2_QUALIFICATION",
+    "status": "PASS",
+    "sourceHead": "86f52244b5375834a4040cbc63803d68cc708087",
+    "platform": "darwin-arm64",
+    "cleanup": true,
+    "phase": "finished",
+    "desktopJourneyQualified": false,
+    "vendorAuthQualified": false,
+    "releaseQualified": false,
+    "cleanupObservation": {
+     "originalExitObserved": true,
+     "nativeReceiptParsed": true,
+     "nativeReceiptBound": true,
+     "nativeCleanupConfirmed": true,
+     "firstFailure": null,
+     "firstRestorationFailure": null
+    },
+    "appAsarSha256": "0af39a8148313bf43cbbff5d9a8e2e2091468640a02086bba652efeb01ad12b9",
+    "candidateManifestSha256": "a69a7ed50ec431518e6c2aa7da16a3e511dbcad41b74f2a6aa019b04cac9a70f",
+    "hostEntrySha256": "7ff0d33309b54969f7a5c5f88935d4593596e68670db21f08ee694c9d0c27add",
+    "nodeSha256": "e4b5a3af0e05c75de2eae013904145f40fe7fc2a6e6f17510128bf45cca4e79b",
+    "nativeExit": {
+     "code": 0,
+     "signal": null
+    },
+    "nativeReceiptSha256": "d3c3082bd5b77a5f3bfa7ecf45aa4b1d591532cd75a74a5c1c7ac421c90053d0",
+    "sourceCheckoutUnavailable": true,
+    "legacyRuntimeUnavailable": true,
+    "sourceRestored": true,
+    "bundleRestored": true,
+    "legacyRuntimeRestored": true
+   },
+   "limit": "A failed/unknown native cleanup path cannot be promoted to PASS; restoration is gated by the original cleanup contract."
+  },
+  {
+   "id": "C12",
+   "result": "PASS_BOUNDED_EVIDENCE",
+   "claim": "The six original OpenCode scenario steps are all present in source order.",
+   "evidence": {
+    "steps": [
+     "original_host_embedded_native_and_mcp_ready",
+     "native_model_tool_effect_permission_mcp_task_and_reply_completed_once",
+     "changed_project_config_did_not_retarget_running_native_session",
+     "original_uploaded_PNG_native_image_inference_and_public_readback",
+     "checkpoint_and_original_host_native_cleanup_confirmed",
+     "cold_host_restored_native_history_without_model_or_tool_replay"
+    ],
+    "cumulativeElapsedMs": {
+     "original_host_embedded_native_and_mcp_ready": 11117,
+     "native_model_tool_effect_permission_mcp_task_and_reply_completed_once": 17796,
+     "changed_project_config_did_not_retarget_running_native_session": 17796,
+     "original_uploaded_PNG_native_image_inference_and_public_readback": 17796,
+     "checkpoint_and_original_host_native_cleanup_confirmed": 17919,
+     "cold_host_restored_native_history_without_model_or_tool_replay": 26556
+    },
+    "elapsedMs": 29723,
+    "cancelled": false,
+    "failureCode": null
+   },
+   "limit": "These are cumulative elapsed values, not six independent durations."
+  },
+  {
+   "id": "C13",
+   "result": "PASS_BOUNDED_EVIDENCE",
+   "claim": "Original OpenCode readiness and all two business inputs completed.",
+   "evidence": {
+    "launchObservation": {
+     "openElapsedMs": 7479,
+     "afterOpen": {
+      "available": true,
+      "status": "ready",
+      "reason": "context-applied",
+      "elapsedSinceAttemptMs": 7316,
+      "capturedTimeoutMs": 120000,
+      "claimed": true,
+      "nativeReady": true,
+      "contextApplied": true,
+      "everReady": true,
+      "usable": true,
+      "controlAvailable": true,
+      "noAllocation": false
+     }
+    },
+    "inputObservation": {
+     "reads": 80,
+     "last": {
+      "phase": "allocated",
+      "custody": "owned",
+      "nativeReady": true,
+      "attached": true,
+      "sealed": false,
+      "diagnostic": null,
+      "inputs": [
+       {
+        "phase": "terminal",
+        "terminal": "succeeded"
+       },
+       {
+        "phase": "terminal",
+        "terminal": "succeeded"
+       }
+      ],
+      "interactions": [
+       {
+        "kind": "permission",
+        "phase": "resolved"
+       },
+       {
+        "kind": "permission",
+        "phase": "resolved"
+       }
+      ]
+     }
+    }
+   },
+   "limit": "The last input observation precedes Stop and is not itself a post-cleanup custody sample."
+  },
+  {
+   "id": "C14",
+   "result": "PASS_BOUNDED_EVIDENCE",
+   "claim": "The original model/configuration/default-selection obligations are preserved.",
+   "evidence": {
+    "modelSelection": {
+     "providerId": "TEST-local",
+     "modelId": "TEST-model-B",
+     "variant": "high"
+    },
+    "configurationSelection": {
+     "scope": "project",
+     "original": "project-A",
+     "later": "project-B"
+    },
+    "preferencesSelection": {
+     "nativeDefault": "TEST-local/TEST-model",
+     "appDefault": "TEST-local/TEST-model-B"
+    }
+   },
+   "limit": "Source asserts every request retains model B/high and project-A context/headers/auth after changing project-B; no vendor authentication claim."
+  },
+  {
+   "id": "C15",
+   "result": "PASS_BOUNDED_EVIDENCE",
+   "claim": "The finite local model interaction completed with the original count and no fixture failure.",
+   "evidence": {
+    "origin": "localhost-scripted",
+    "requests": 11,
+    "progress": [
+     {
+      "elapsedMs": 11146,
+      "requests": 0
+     },
+     {
+      "elapsedMs": 12932,
+      "requests": 1
+     },
+     {
+      "elapsedMs": 12980,
+      "requests": 2
+     },
+     {
+      "elapsedMs": 13036,
+      "requests": 3
+     },
+     {
+      "elapsedMs": 13100,
+      "requests": 4
+     },
+     {
+      "elapsedMs": 13813,
+      "requests": 5
+     },
+     {
+      "elapsedMs": 13860,
+      "requests": 6
+     },
+     {
+      "elapsedMs": 13915,
+      "requests": 7
+     },
+     {
+      "elapsedMs": 13971,
+      "requests": 8
+     },
+     {
+      "elapsedMs": 16668,
+      "requests": 9
+     },
+     {
+      "elapsedMs": 17132,
+      "requests": 10
+     },
+     {
+      "elapsedMs": 17180,
+      "requests": 11
+     }
+    ],
+    "failures": []
+   },
+   "limit": "Eleven localhost scripted requests are not an external inference, model-quality or general provider benchmark."
+  },
+  {
+   "id": "C16",
+   "result": "PASS_BOUNDED_EVIDENCE",
+   "claim": "Actual source requires and reports both business effects, image use/readback, permissions, task/comment and replies.",
+   "evidence": {
+    "source": "e4fd10d1c969bb5bf8a75e9789599a04dc0fc190",
+    "steps": [
+     "native_model_tool_effect_permission_mcp_task_and_reply_completed_once",
+     "changed_project_config_did_not_retarget_running_native_session",
+     "original_uploaded_PNG_native_image_inference_and_public_readback"
+    ],
+    "approvalMode": "manual",
+    "obligations": [
+     "two distinct ONE/TWO commands and exact ONE\\nTWO\\n file effects",
+     "one original PNG attached to TWO; exact canonical image bytes/public readback and three TWO image observations including prior-turn handling",
+     "two manual once grants and resolved permission interactions",
+     "one completed task owned by Carol, one comment, two exact replies",
+     "failed shell exit 7 surfaced as a tool error",
+     "same command re-execute/readback verifies idempotency"
+    ]
+   },
+   "limit": "These are original guarded assertions reached before PASS; same-intent idempotency checks are not an uncertain-operation retry."
+  },
+  {
+   "id": "C17",
+   "result": "PASS_BOUNDED_EVIDENCE",
+   "claim": "Checkpoint/Stop, cold new Host Restore and the no-replay observation all completed.",
+   "evidence": {
+    "steps": [
+     "checkpoint_and_original_host_native_cleanup_confirmed",
+     "cold_host_restored_native_history_without_model_or_tool_replay"
+    ],
+    "hostFacts": [
+     {
+      "exitCode": 0,
+      "signalCode": null,
+      "stdoutValid": true
+     },
+     {
+      "exitCode": 0,
+      "signalCode": null,
+      "stdoutValid": true
+     }
+    ],
+    "cleanup": true,
+    "noReplayObservationMs": 250
+   },
+   "limit": "The original receipt records two ordinary Host exit facts; it does not separately serialize every potential signal-attempt branch."
+  },
+  {
+   "id": "C18",
+   "result": "PASS_BOUNDED_EVIDENCE",
+   "claim": "The native packaged scenario keeps its explicit unqualified dimensions.",
+   "evidence": {
+    "coordination": {
+     "status": "unqualified",
+     "cleanup": null
+    },
+    "vendorAuthQualified": false,
+    "desktopQualified": false,
+    "releaseQualified": false
+   },
+   "limit": "Linux source-only coordination and passive diagnostic/CPU setup are not exercised by this packaged branch."
+  },
+  {
+   "id": "C19",
+   "result": "PASS_BOUNDED_EVIDENCE",
+   "claim": "The finite Electron proof uses the actual packaged executable and app.asar.",
+   "evidence": {
+    "status": "PASS",
+    "kind": "TEST_PACKAGED_APP_RELAUNCH",
+    "sourceHead": "86f52244b5375834a4040cbc63803d68cc708087",
+    "platform": "darwin-arm64",
+    "app": {
+     "pid": 10898,
+     "processGroup": 10898,
+     "identity": "Tue Nov 17 14:20:11 2026     /Users/runner/work/agent-teams-ai/agent-teams-ai/release/mac-arm64/Agent Teams AI.app/Contents/MacOS/Agent Teams AI --remote-debugging-port=9222",
+     "invocation": [
+      "/Users/runner/work/agent-teams-ai/agent-teams-ai/release/mac-arm64/Agent Teams AI.app/Contents/MacOS/Agent Teams AI",
+      "--remote-debugging-port=9222"
+     ]
+    },
+    "startup": {
+     "budgetMs": 180000,
+     "rationale": "Attempt3 measured main build41.75s and Electron launch about71s after invocation; former90s budget left about19s for app/CDP. Only dev startup/readiness budget extended.",
+     "clock": "monotonic performance.now elapsed milliseconds",
+     "timeline": [
+      {
+       "elapsedMs": 1,
+       "portOccupied": false,
+       "targetCount": null,
+       "matchingMainCount": null,
+       "processGroup": [
+        {
+         "pid": 10898,
+         "ppid": 10811,
+         "pgid": 10898,
+         "executable": "Agent Teams AI"
+        }
+       ],
+       "appExitCode": null,
+       "appSignalCode": null,
+       "spawnError": false
+      }
+     ]
+    },
+    "bundleProvenance": "Actual captured packed executable/app.asar and candidate runtime census; no source bundle fallback"
+   },
+   "limit": "Node 24.21.0 runs the harness; the log's Electron 44.10.1 embeds Node 24.22.1. Earlier build-tool Node 26.12.1 is distinct."
+  },
+  {
+   "id": "C20",
+   "result": "PASS_BOUNDED_EVIDENCE",
+   "claim": "The Electron proof has a finite TEST-only provider scope.",
+   "evidence": {
+    "scope": "Actual packaged macOS Electron and bundled Host, one finite SDK Launch/Stop, automatic app.relaunch and one successor public Quit",
+    "excluded": [
+     "Claude/Codex executable execution",
+     "vendor inference/authentication",
+     "full cold Resume/active Quit",
+     "release qualification"
+    ],
+    "fixturePins": {
+     "executable": {
+      "path": "/Users/runner/work/_temp/TEST-desktop-backend-8nBzsR/bin/TEST-claude-peer",
+      "sha256": "920346f3feed72735e8782e6db21825986029b22eee419a2634702075993b7b7"
+     },
+     "sources": [
+      {
+       "path": "/Users/runner/work/agent-teams-ai/agent-teams-ai/tools/owned-process-broker/fixtures/claudeProviderPeer.mjs",
+       "sha256": "dc9ba0c735ea763a24bb06d93590373cf1072d5737c7fba67a31df1356c44dd5"
+      }
+     ],
+     "provider": "claude",
+     "lifecycleVariant": "cold-resume-active-quit-v1",
+     "protocolRevision": "sdk-0.3.305",
+     "runtimeConfigured": true,
+     "managementConfigured": true,
+     "vendorsAllowed": false
+    },
+    "realVendorExecutions": 0,
+    "nativeProviderQualified": false,
+    "releaseQualified": false
+   },
+   "limit": "Fixture lifecycleVariant names a broader available fixture; the actual caller selects originalStopOnly and does not exercise its later Resume/active-Quit path."
+  },
+  {
+   "id": "C21",
+   "result": "PASS_BOUNDED_EVIDENCE",
+   "claim": "Original app/CDP/Host bindings were checked before original UI actions.",
+   "evidence": {
+    "cdpListener": 10898,
+    "rendererTarget": {
+     "id": "0AE8A7BAF3F0125357F49D046F59C912",
+     "url": "file:///Users/runner/work/agent-teams-ai/agent-teams-ai/release/mac-arm64/Agent%20Teams%20AI.app/Contents/Resources/app.asar/out/renderer/index.html"
+    },
+    "discoveryReadiness": {
+     "attempts": 1,
+     "transient": []
+    },
+    "discovery": {
+     "state": "ready",
+     "bindings": [
+      {
+       "handle": {
+        "handleId": "TEST-desktop-handle-TEST-desktop-backend-8nBzsR"
+       },
+       "label": "TEST private backend",
+       "ownerResourceRef": "4fd31e7583ab8883d10253f94d61fadf30ae2f0ef4657dd834cd7d496005ef4c",
+       "teamResourceRef": "880717e3-5480-511f-b4c9-5c1fde1cc86c",
+       "members": [
+        {
+         "memberId": "alice-id",
+         "label": "alice"
+        }
+       ]
+      }
+     ]
+    },
+    "hostChild": {
+     "pid": 10923,
+     "ppid": 10898,
+     "pgid": 10898,
+     "observedBeforeShutdown": true
+    },
+    "homePathProof": {
+     "defaultPath": "/Users/runner/work/_temp/TEST-desktop-backend-8nBzsR/home/.claude",
+     "resolvedPath": "/Users/runner/work/_temp/TEST-desktop-backend-8nBzsR/claude",
+     "customPath": null,
+     "canonicalDefaultPath": "/Users/runner/work/_temp/TEST-desktop-backend-8nBzsR/home/.claude"
+    }
+   },
+   "limit": "Discovery ready is the selected private backend binding, not proof that all provider panels are settled."
+  },
+  {
+   "id": "C22",
+   "result": "PASS_BOUNDED_EVIDENCE",
+   "claim": "The actual UI follows original controls with one Launch, one boot input and one Stop.",
+   "evidence": {
+    "retainedSteps": 20,
+    "orderedActionLabels": [
+     "hover sidebar row before measuring click",
+     "sidebar task",
+     "passive input delivery after sidebar click",
+     "hover Open team",
+     "Open team",
+     "hover original lifecycle saved Team Launch",
+     "original lifecycle saved Team Launch",
+     "hover expand original lifecycle saved settings",
+     "expand original lifecycle saved settings",
+     "original lifecycle input",
+     "hover focus original lifecycle input",
+     "focus original lifecycle input",
+     "original lifecycle Launch team",
+     "hover original lifecycle Launch once",
+     "original lifecycle Launch once",
+     "hover original lifecycle lead chat",
+     "original lifecycle lead chat",
+     "original lifecycle Team Stop",
+     "hover original lifecycle Stop once",
+     "original lifecycle Stop once"
+    ],
+    "status": "PASS",
+    "uiCommands": [],
+    "authority": "original read-only selectors, currentness/visibility/hover and trusted CDP input; no direct product mutation"
+   },
+   "limit": "Twenty retained UI action/observation rows do not include a later Composer continuation; empty commands is consistent with originalStopOnly."
+  },
+  {
+   "id": "C23",
+   "result": "PASS_BOUNDED_EVIDENCE",
+   "claim": "Both new management auth-status calls actually completed in this finite run.",
+   "evidence": {
+    "authEvents": [
+     {
+      "provider": "claude",
+      "role": "management",
+      "pid": 11046,
+      "event": "auth-status",
+      "command": [
+       "auth",
+       "status",
+       "--json"
+      ]
+     },
+     {
+      "provider": "claude",
+      "role": "management",
+      "pid": 11046,
+      "event": "exited",
+      "code": 0
+     },
+     {
+      "provider": "claude",
+      "role": "management",
+      "pid": 11179,
+      "event": "auth-status",
+      "command": [
+       "auth",
+       "status",
+       "--json"
+      ]
+     },
+     {
+      "provider": "claude",
+      "role": "management",
+      "pid": 11179,
+      "event": "exited",
+      "code": 0
+     }
+    ],
+    "peerSource": [
+     {
+      "path": "/Users/runner/work/agent-teams-ai/agent-teams-ai/tools/owned-process-broker/fixtures/claudeProviderPeer.mjs",
+      "sha256": "dc9ba0c735ea763a24bb06d93590373cf1072d5737c7fba67a31df1356c44dd5"
+     }
+    ]
+   },
+   "limit": "Exact auth/status/--json ran only through the private TEST peer; no real CLI or dummy API-key environment is established or needed."
+  },
+  {
+   "id": "C24",
+   "result": "PASS_BOUNDED_EVIDENCE",
+   "claim": "The finite original runtime observed exactly a model-probe input and one business boot input.",
+   "evidence": {
+    "inputs": [
+     {
+      "provider": "claude",
+      "role": "runtime",
+      "pid": 11182,
+      "event": "input",
+      "inputId": "57116a51-8331-44da-90cf-95c26577ab24",
+      "marker": "TEST_MODEL_PROBE",
+      "sessionId": "bd5194d4-b680-4132-b4f1-8988d2f94b26",
+      "wrapped": false
+     },
+     {
+      "provider": "claude",
+      "role": "runtime",
+      "pid": 11304,
+      "event": "input",
+      "inputId": "9cb1103d-2627-4b7c-84fd-4e93616bf3f1",
+      "marker": "TEST_UI_BOOT",
+      "sessionId": "07697e93-cad8-43b3-a8c8-df767bd76c50",
+      "wrapped": false
+     }
+    ],
+    "terminal": [
+     {
+      "provider": "claude",
+      "role": "runtime",
+      "pid": 11182,
+      "event": "terminal",
+      "inputId": "57116a51-8331-44da-90cf-95c26577ab24",
+      "marker": "Reply only OK. Do not use tools, access files or run commands.",
+      "outcome": "succeeded",
+      "text": "OK",
+      "usage": {
+       "input_tokens": 42,
+       "output_tokens": 18,
+       "cache_read_input_tokens": 0,
+       "cache_creation_input_tokens": 0
+      },
+      "cumulativeCostUsd": 0.0123
+     },
+     {
+      "provider": "claude",
+      "role": "runtime",
+      "pid": 11304,
+      "event": "terminal",
+      "inputId": "9cb1103d-2627-4b7c-84fd-4e93616bf3f1",
+      "marker": "TEST_UI_BOOT",
+      "outcome": "succeeded",
+      "text": "TEST boot ready",
+      "usage": {
+       "input_tokens": 42,
+       "output_tokens": 18,
+       "cache_read_input_tokens": 0,
+       "cache_creation_input_tokens": 0
+      },
+      "cumulativeCostUsd": 0.0123
+     }
+    ],
+    "peerLaunchPids": [
+     10986,
+     11046,
+     11083,
+     11179,
+     11182,
+     11304
+    ]
+   },
+   "limit": "A successful finite probe does not establish arbitrary SDK argv translation or external model authentication."
+  },
+  {
+   "id": "C25",
+   "result": "PASS_BOUNDED_EVIDENCE",
+   "claim": "Original Stop published the exact checkpoint and left the original session closed/released/sealed.",
+   "evidence": {
+    "reference": "cp1-b591d474511050eb5af4e88dbac99e5ad310b0dc6ec0002293cf0450679e2654",
+    "payloadFileSha256": "bd2f8a563216de94183e88842f9f80fe6260503c13d9e57bb28da007a7c34ca0",
+    "historySha256": "935f821cd25cfa1c402ed9bd8f9ad41ce508629b44139c9ffcb521e198d099a6",
+    "nativeSession": "07697e93-cad8-43b3-a8c8-df767bd76c50",
+    "originalPids": [
+     11304
+    ],
+    "session": {
+     "binding": {
+      "backendId": "TEST-desktop-owner-TEST-desktop-backend-8nBzsR",
+      "teamId": "TEST-desktop-team",
+      "runId": "f14407ba-243d-55d2-aba2-720c1747abac",
+      "memberId": "alice-id",
+      "generation": "capture-bcb2ab14-fcdf-5c8e-8322-016f1c7abb24"
+     },
+     "profileId": "TEST-desktop-profile-TEST-desktop-backend-8nBzsR",
+     "phase": "closed",
+     "custody": "released",
+     "sealed": true,
+     "nativeReady": false,
+     "closeClaimed": true,
+     "inputCount": 1,
+     "inputTerminal": "succeeded",
+     "checkpoints": [
+      {
+       "checkpointId": "stop-5701799f2543830711cb570592833fe5d8db1bbe034f5472dfedf278d8c7822e",
+       "fingerprint": "47cf9eddeb6cd6d1439ca576dfd9d87565961f7522cc3614f4280f2b9e43380e",
+       "hostIncarnation": "6c305233-84b1-4893-b687-2bb1406dce1a",
+       "status": "published",
+       "reference": "cp1-b591d474511050eb5af4e88dbac99e5ad310b0dc6ec0002293cf0450679e2654",
+       "historyDigest": "c760ca207389b2747f417abe9727458edfd66a91a58bd3d29689a6629b486f4f",
+       "payloadDigest": "c133e3b7bc926df61a006663d37fca7997c35ff3bdc8c0303e58ba4eefc5a6ee"
+      }
+     ]
+    }
+   },
+   "limit": "Checkpoint payload/history bindings are source-validated. This Electron path does not Restore that checkpoint into a new active session."
+  },
+  {
+   "id": "C26",
+   "result": "PASS_BOUNDED_EVIDENCE",
+   "claim": "One original app.relaunch was attempted and acknowledged after original Stop.",
+   "evidence": {
+    "relaunchAttempted": true,
+    "relaunchReply": "acknowledged",
+    "originalExit": {
+     "exitCode": 0,
+     "signalCode": null,
+     "HostExitCode": "unavailable",
+     "HostSignalCode": "unavailable"
+    },
+    "leaseAfterOriginalExit": null
+   },
+   "limit": "Original app exit is 0/no signal. Original Host exit code/signal are unavailable and must not be invented."
+  },
+  {
+   "id": "C27",
+   "result": "PASS_BOUNDED_EVIDENCE",
+   "claim": "The automatic successor is an observer-only identity with the same private HOME/backend/app.asar.",
+   "evidence": {
+    "successorIdentity": {
+     "pid": 11503,
+     "executable": "/Users/runner/work/agent-teams-ai/agent-teams-ai/release/mac-arm64/Agent Teams AI.app/Contents/MacOS/Agent Teams AI",
+     "argv": "/Users/runner/work/agent-teams-ai/agent-teams-ai/release/mac-arm64/Agent Teams AI.app/Contents/MacOS/Agent Teams AI --remote-debugging-port=9222",
+     "started": "Tue Nov 17 14:20:28 2026",
+     "observationOnly": true
+    },
+    "successorHomeBeforeBackend": {
+     "defaultPath": "/Users/runner/work/_temp/TEST-desktop-backend-8nBzsR/home/.claude",
+     "resolvedPath": "/Users/runner/work/_temp/TEST-desktop-backend-8nBzsR/claude",
+     "customPath": null
+    },
+    "discoveryState": "ready",
+    "discoveryAttempts": 1,
+    "rendererTarget": {
+     "id": "3F2312A73E6D73C18452871B85F90D72",
+     "url": "file:///Users/runner/work/agent-teams-ai/agent-teams-ai/release/mac-arm64/Agent%20Teams%20AI.app/Contents/Resources/app.asar/out/renderer/index.html"
+    },
+    "appAsar": {
+     "path": "/Users/runner/work/agent-teams-ai/agent-teams-ai/release/mac-arm64/Agent Teams AI.app/Contents/Resources/app.asar",
+     "sha256": "0af39a8148313bf43cbbff5d9a8e2e2091468640a02086bba652efeb01ad12b9"
+    },
+    "bundleProvenance": "Actual captured packed executable/app.asar and candidate runtime census; no source bundle fallback"
+   },
+   "limit": "No numeric PID signal authority or native custody is obtained from this observation."
+  },
+  {
+   "id": "C28",
+   "result": "PASS_BOUNDED_EVIDENCE",
+   "claim": "Writer ordering proves old Host absence and a distinct exclusive successor lease.",
+   "evidence": {
+    "originalHostAbsent": true,
+    "originalLease": {
+     "pid": 10923,
+     "token": "ca611095-735d-4de1-82f1-f3650b7a60ed",
+     "dev": 16777232,
+     "ino": 2668003
+    },
+    "newExclusiveLease": {
+     "pid": 11524,
+     "token": "f6852ab1-1e98-4fbd-a07c-743affc7dd22",
+     "dev": 16777232,
+     "ino": 2678830
+    },
+    "rule": "Existing no-replace PID/token publication forbids overlap; original release versus dead-owner recovery is not inferred from a missed absence sample"
+   },
+   "limit": "The source/receipt explicitly do not distinguish original release from dead-owner recovery using a missed absence sample."
+  },
+  {
+   "id": "C29",
+   "result": "PASS_BOUNDED_EVIDENCE",
+   "claim": "One public Quit was attempted for the successor, followed by all four required absence observations.",
+   "evidence": {
+    "successorQuitAttempted": true,
+    "reply": "unconfirmed; no retry or signal",
+    "absence": {
+     "listenerAbsent": true,
+     "observedPidAbsent": true,
+     "HostPidAbsent": true,
+     "writerLockAbsent": true,
+     "exitCode": "unavailable",
+     "signalCode": "unavailable",
+     "naturalExitQualified": false
+    }
+   },
+   "limit": "Reply is unconfirmed; there is no retry or signal. Exit/signal are unavailable and naturalExitQualified is false."
+  },
+  {
+   "id": "C30",
+   "result": "PASS_BOUNDED_EVIDENCE",
+   "claim": "Original captured-group/Host and all six finite peer PIDs are absent at final cleanup.",
+   "evidence": {
+    "beforeHarnessCleanup": [],
+    "cleanup": {
+     "remaining": [],
+     "capturedHostAbsent": true,
+     "hostPid": 10923
+    },
+    "peerPids": [
+     10986,
+     11046,
+     11083,
+     11179,
+     11182,
+     11304
+    ],
+    "remaining": [],
+    "absent": true,
+    "finalSentinelCensus": []
+   },
+   "limit": "Observer-only packed-relaunch cleanup fails closed on a remaining group; it cannot silently use old-group or successor numeric-PID signals."
+  },
+  {
+   "id": "C31",
+   "result": "PASS_BOUNDED_EVIDENCE",
+   "claim": "Finite peer evidence contains no failure and no additional original input after relaunch.",
+   "evidence": {
+    "effects": 23,
+    "launches": 6,
+    "authStatus": 2,
+    "authExit0": 2,
+    "failures": 0,
+    "originalInputs": 2,
+    "modelProbeInputs": 1,
+    "businessInputs": 1,
+    "additionalOriginalInputAfterRelaunch": 0
+   },
+   "limit": "The two retained inputs are one model probe plus one business input. Both source comparisons and final original journals guard against replay; no inference from a screenshot is used."
+  },
+  {
+   "id": "C32",
+   "result": "PASS_BOUNDED_EVIDENCE",
+   "claim": "Original deadline and failure boundaries remain those of the immutable source.",
+   "evidence": {
+    "wrapperOriginalMs": 480000,
+    "wrapperCancellationCleanupMs": 90000,
+    "capturedNativeMs": 120000,
+    "nativeOpenRestoreRpcMs": 180000,
+    "originalInputWaitMs": 90000,
+    "noReplayMs": 250,
+    "electronStartupMs": 180000,
+    "backendDiscoveryMs": 60000,
+    "guiEnabledLaunchMs": 90000,
+    "originalSessionCloseMs": 60000,
+    "relaunchObservationWindowMs": 180000,
+    "publicCallMs": 3000,
+    "successorQuitAbsenceMs": 20000,
+    "oldGroupFinalObservationMs": 3000
+   },
+   "limit": "No deadline was changed or retried. These synchronous-I/O/Date-poll implementations are not newly claimed hard preemptive wall-clock ceilings. Backend rebinding has its own original wait; the whole Electron flow is not claimed to fit one 180-second ceiling."
+  },
+  {
+   "id": "C33",
+   "result": "PASS_BOUNDED_EVIDENCE",
+   "claim": "Failure/cleanup paths keep bounded refusal and ordinary-exit requirements.",
+   "evidence": {
+    "wrapper": "480-second original child wait; timeout only requests EOF and waits original 90-second cleanup; cancellation cannot PASS; unknown cleanup keeps unavailable inputs",
+    "nativeHost": "advertised dispose deadline plus 2 seconds, or 12 seconds pre-handshake; possible SIGTERM then original 12 seconds; PASS requires code 0/no signal/valid stdout",
+    "relaunch": "one guarded public request and observation; no reply-confirmation retry, successor force-stop or manufactured natural-exit fact"
+   },
+   "limit": "No test execution or speculative timing improvement is performed by this reviewer."
+  },
+  {
+   "id": "C34",
+   "result": "PASS_BOUNDED_EVIDENCE",
+   "claim": "The job's preceding capture-boundary tests have the exact distinct recorded result.",
+   "evidence": {
+    "command": "node --test scripts/legacy-agent-host/candidate-closure.test.ts scripts/legacy-agent-host/packaged-opencode-v2-inputs.test.ts scripts/legacy-agent-host/stage-node.test.ts",
+    "tests": 26,
+    "passed": 25,
+    "failed": 0,
+    "skipped": 1,
+    "skip": "Windows unused ia32 FFI case"
+   },
+   "limit": "These 26 cases are not the separate native-receipt 26-case registration whose two diagnostic extraction failures occurred in another job."
+  },
+  {
+   "id": "C35",
+   "result": "PASS_BOUNDED_EVIDENCE",
+   "claim": "Other original job smokes are recorded only within their separate source-defined limits.",
+   "evidence": {
+    "managedGitUnit": "11/11",
+    "bundledUndiciUnit": "2/2",
+    "managedGitActual": "git/lfs/status/diff/worktree/clone/PATH PASS",
+    "MCP": "55 tools; separate root SIGTERM cleanup",
+    "genericApp": "ready/SQLite/stable 8155 ms; leader exit 0/no signal; owned cleanup remaining []; SIGTERM sent to five captured processes",
+    "projectPath": "explicit OpenCode status summary/full, model list and missing-project refusal PASS"
+   },
+   "limit": "The generic app smoke's signal cleanup is not relabeled ordinary-unsignaled cleanup, and none of these expand the Electron finite lifecycle scope."
+  },
+  {
+   "id": "C36",
+   "result": "PASS_BOUNDED_EVIDENCE",
+   "claim": "The log's Codex catalogue code 77 is consistent with the existing finite metadata fence.",
+   "evidence": {
+    "fenceSource": "ee0ccf4deb1d058cd593d8ae842d3fc3f12cdfde",
+    "behavior": "private TEST Claude/Codex metadata scripts serve only finite version output and refuse other requests with exit 77; explicit executable overrides; private CODEX_HOME; no real vendor fallback",
+    "projectDriver": "72af1c16a8ffd035f8f70dc519eaead13cd28bd4"
+   },
+   "limit": "The bundled orchestrator's explicit OpenCode provider route reuses prior exact source proof; this audit does not claim a new broad transitive vendor audit."
+  },
+  {
+   "id": "C37",
+   "result": "PASS_BOUNDED_EVIDENCE",
+   "claim": "All relevant actual source identities join without new source writes.",
+   "evidence": {
+    "sourceFiles": 16,
+    "sourceBytes": 333974,
+    "receiptCensusDirectJoins": 12,
+    "mismatches": []
+   },
+   "limit": "Sixteen source entries have explicit read-scope annotations; unused continuations are not falsely described as fresh full audits."
+  },
+  {
+   "id": "C38",
+   "result": "PASS_BOUNDED_EVIDENCE",
+   "claim": "The full archived application log is compatible with the bounded selected outcome.",
+   "evidence": {
+    "member": "07ea0035034ddb0a271f572fc0450536b1599260",
+    "bytes": 3035,
+    "observed": [
+     "remote debugging listener on 9222",
+     "NODE_OPTIONS warning",
+     "Sentry unconfigured",
+     "backupd sandbox/XPC warning",
+     "OpenCode getStatus routing unavailable",
+     "Codex account backend routing unavailable/not-dispatched",
+     "agent-backend handlers initially absent",
+     "no update available"
+    ]
+   },
+   "limit": "These warnings do not prove a different provider ready, nor a causal failure of the selected successful finite flow."
+  },
+  {
+   "id": "C39",
+   "result": "PASS_BOUNDED_EVIDENCE",
+   "claim": "Root's PNG observations remain visual observations only.",
+   "evidence": {
+    "observer": "root",
+    "successor": "main/home with persisted TEST sidebar seed; providers loading",
+    "launch": "all four green; Alice TEST-claude-sonnet and boot ready",
+    "stopped": "Team offline, Alice offline, same persisted task"
+   },
+   "limit": "No settled successor provider-state or process cleanup is inferred from screenshots; reviewer did not independently open them."
+  },
+  {
+   "id": "C40",
+   "result": "PASS_BOUNDED_EVIDENCE",
+   "claim": "Job success and broader workflow conclusions remain separated.",
+   "evidence": {
+    "observer": "root",
+    "observation": 12,
+    "observedAt": "2026-11-17 14:36:27 UTC",
+    "jobId": "134098865037",
+    "jobConclusion": "SUCCESS",
+    "workflowRunId": "44092933873",
+    "workflowRunConclusion": "NOT ESTABLISHED; other tuples queued at that observation"
+   },
+   "limit": "No live status was fetched by reviewer and no final aggregate conclusion is inferred."
+  },
+  {
+   "id": "C41",
+   "result": "PASS_BOUNDED_EVIDENCE",
+   "claim": "This report preserves the existing frozen authority and qualification boundaries.",
+   "evidence": {
+    "reviewer": "/root/producer_r2_guard",
+    "rootSoleExecutor": true,
+    "reviewActions": [
+     "immutable Git reads",
+     "pure identity/JSON/row comparisons",
+     "bare advisory blob retention"
+    ],
+    "performedRuntimeOrLocalActions": false,
+    "performedCIOrRefActions": false,
+    "sourceEdits": false,
+    "selectedNewGateOrVenue": false
+   },
+   "limit": "It is an outcome advisory, not source/control R2, approval for replay, Darwin P09 repair, full E2E/native/release qualification, or a new gate."
+  }
+ ],
+ "checkCount": 41,
+ "operationalLimits": [
+  "One original job and artifact; no replay, new runtime admission, live CI request, source/control edit or widened timeout.",
+  "Packaged fixture's legacy lifecycleVariant field advertises capabilities; actual originalStopOnly caller and explicit exclusions determine reached scope.",
+  "Selected-census equality does not prove all repository files or arbitrary filesystem paths unchanged.",
+  "Native cleanup receipts record original guarded assertions and exit facts; they do not establish every possible OS custody primitive.",
+  "Successor is observer-only. PID/start/argv and lock checks give evidence, not numeric-PID signal authority. No natural exit status is available for the successor.",
+  "Provider panels still loading in root's successor image do not contradict selected backend binding readiness and do not receive a settled-state PASS.",
+  "Package inventory may contain real vendor executable files; this audit relies on actual explicit finite TEST executable route and recorded effects, not absence of packages.",
+  "Signed/notarized release qualification was skipped by the original PR packaging job and is not claimed.",
+  "All existing failures in other jobs, including native-receipt extraction and Darwin P09, remain separate."
+ ],
+ "selfReadProtocol": "After retention send exact pin/bytes/SHA immediately; then fresh-fetch and read every report byte with exact identity and literal equality; send separate completion confirmation. The present document is not rewritten after retention."
+}

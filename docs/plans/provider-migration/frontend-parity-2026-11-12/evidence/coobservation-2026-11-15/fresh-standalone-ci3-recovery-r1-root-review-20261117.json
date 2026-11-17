@@ -1,0 +1,831 @@
+{
+  "schemaVersion": 1,
+  "kind": "ROOT_R1_FRESH_CI3_STANDALONE_REVIEW",
+  "repository": "777genius/agent-teams-ai",
+  "author": "/root",
+  "at": "2026-11-17 13:52:05 UTC",
+  "subject": {
+    "bytes": 23198,
+    "sha256": "d51a9c97849dae83885d8339cfbc77fb1a1803a509fd3ba27af6ae447b63a0ac",
+    "gitBlob": "7f214219f9c757b73c3fad164bf4db04223f9594"
+  },
+  "verdict": "ACCEPT_R1_FOR_DOCUMENTATION_PUBLICATION_ONLY",
+  "checks": [
+    {
+      "id": "R01",
+      "name": "Exact proposal was created and fully read back",
+      "result": "PASS_STATIC",
+      "evidence": {
+        "bytes": 23198,
+        "sha256": "d51a9c97849dae83885d8339cfbc77fb1a1803a509fd3ba27af6ae447b63a0ac",
+        "gitBlob": "7f214219f9c757b73c3fad164bf4db04223f9594"
+      }
+    },
+    {
+      "id": "R02",
+      "name": "All direct repository-scoped UTF8 evidence pins have full bodies",
+      "result": "PASS_STATIC",
+      "evidence": {
+        "count": 16,
+        "bytes": 1791552
+      }
+    },
+    {
+      "id": "R03",
+      "name": "Current immutable base and source gates closed before R1",
+      "result": "PASS_STATIC",
+      "evidence": {
+        "base": {
+          "bytes": 9265,
+          "sha256": "7c5683da8c6f883ab2b711989505cc566123358260dc3c97fa1adc71c1e62976",
+          "gitBlob": "3ac1c92c134848d826d60ea0257fadfe54957b95"
+        },
+        "source": {
+          "bytes": 8975,
+          "sha256": "70cbc7861cf6b7781600a76eec8df62486be3ee1e657c2694db4c3b4d1357725",
+          "gitBlob": "246e59b55ed2d395524f40f466c1ef7c8362a553"
+        }
+      }
+    },
+    {
+      "id": "R04",
+      "name": "Current base root retains all53 non-doc source entries from86f",
+      "result": "PASS_STATIC",
+      "evidence": {
+        "nonDocRootEntries": 53
+      }
+    },
+    {
+      "id": "R05",
+      "name": "Three exact fixed inputs join at both real roots",
+      "result": "PASS_STATIC",
+      "evidence": [
+        {
+          "path": "package.json",
+          "expected": {
+            "path": "package.json",
+            "mode": "100644",
+            "bytes": 26839,
+            "sha256": "c92407a9a5dad6f9d6a6eb8ea7c456195d396679bb4b9dfd15b6c06b726d1084",
+            "gitBlob": "f80ec83172d0aec0dec8a8ab055426b4fca4a1f7"
+          },
+          "actual": {
+            "path": "package.json",
+            "mode": "100644",
+            "type": "blob",
+            "sha": "f80ec83172d0aec0dec8a8ab055426b4fca4a1f7",
+            "size": 26839,
+            "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/f80ec83172d0aec0dec8a8ab055426b4fca4a1f7"
+          },
+          "atCommits": [
+            "86f52244b5375834a4040cbc63803d68cc708087",
+            "59e8d621717314d3fc3525af559a2a3beb9a7602"
+          ],
+          "rootAnchored": true,
+          "sharedScriptsTree": "9bd74c3db86d1380389d1bce24a7f7dafb9c66cc",
+          "sharedLegacyTree": "0dde19356dc8aee18cd9d77fff817ec3e109d198"
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+          "expected": {
+            "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+            "mode": "100644",
+            "bytes": 29017,
+            "sha256": "ffd9bbb822dbdc30da7cb8daa881fcbebd384ba2bf9bdd87c804c511166fa02b",
+            "gitBlob": "5286c036a63a14e98925711a224df202c9a7caa7"
+          },
+          "actual": {
+            "path": "desktop-ui-controls.ts",
+            "mode": "100644",
+            "type": "blob",
+            "sha": "5286c036a63a14e98925711a224df202c9a7caa7",
+            "size": 29017,
+            "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/5286c036a63a14e98925711a224df202c9a7caa7"
+          },
+          "atCommits": [
+            "86f52244b5375834a4040cbc63803d68cc708087",
+            "59e8d621717314d3fc3525af559a2a3beb9a7602"
+          ],
+          "rootAnchored": true,
+          "sharedScriptsTree": "9bd74c3db86d1380389d1bce24a7f7dafb9c66cc",
+          "sharedLegacyTree": "0dde19356dc8aee18cd9d77fff817ec3e109d198"
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-ui-controls-deadline.test.ts",
+          "expected": {
+            "path": "scripts/legacy-agent-host/desktop-ui-controls-deadline.test.ts",
+            "mode": "100644",
+            "bytes": 7883,
+            "sha256": "29836f914218edb4876b6a4e157e7cdc68f63cdf414084cdd41683965c734eda",
+            "gitBlob": "6a9f8ad7481cd5910befcc6c7ff5992eef03965b"
+          },
+          "actual": {
+            "path": "desktop-ui-controls-deadline.test.ts",
+            "mode": "100644",
+            "type": "blob",
+            "sha": "6a9f8ad7481cd5910befcc6c7ff5992eef03965b",
+            "size": 7883,
+            "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/6a9f8ad7481cd5910befcc6c7ff5992eef03965b"
+          },
+          "atCommits": [
+            "86f52244b5375834a4040cbc63803d68cc708087",
+            "59e8d621717314d3fc3525af559a2a3beb9a7602"
+          ],
+          "rootAnchored": true,
+          "sharedScriptsTree": "9bd74c3db86d1380389d1bce24a7f7dafb9c66cc",
+          "sharedLegacyTree": "0dde19356dc8aee18cd9d77fff817ec3e109d198"
+        }
+      ]
+    },
+    {
+      "id": "R06",
+      "name": "Complete embedded body equals pinned identity: package.json f80ec83172d0aec0dec8a8ab055426b4fca4a1f7",
+      "result": "PASS_STATIC",
+      "evidence": {
+        "path": "package.json",
+        "pin": {
+          "bytes": 26839,
+          "sha256": "c92407a9a5dad6f9d6a6eb8ea7c456195d396679bb4b9dfd15b6c06b726d1084",
+          "gitBlob": "f80ec83172d0aec0dec8a8ab055426b4fca4a1f7"
+        },
+        "mode": "100644"
+      }
+    },
+    {
+      "id": "R07",
+      "name": "Complete embedded body equals pinned identity: scripts/legacy-agent-host/desktop-ui-controls-deadline.test.ts 6a9f8ad7481cd5910befcc6c7ff5992eef03965b",
+      "result": "PASS_STATIC",
+      "evidence": {
+        "path": "scripts/legacy-agent-host/desktop-ui-controls-deadline.test.ts",
+        "pin": {
+          "bytes": 7883,
+          "sha256": "29836f914218edb4876b6a4e157e7cdc68f63cdf414084cdd41683965c734eda",
+          "gitBlob": "6a9f8ad7481cd5910befcc6c7ff5992eef03965b"
+        },
+        "mode": "100644"
+      }
+    },
+    {
+      "id": "R08",
+      "name": "Complete embedded body equals pinned identity: scripts/legacy-agent-host/desktop-ui-controls.ts ed57cb0fe7d57ef076a591621289eb77667c63ad",
+      "result": "PASS_STATIC",
+      "evidence": {
+        "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+        "pin": {
+          "bytes": 28974,
+          "sha256": "7626e479a6662242009cb050e7e5af612a29e4205d62666d15274d5c30f91386",
+          "gitBlob": "ed57cb0fe7d57ef076a591621289eb77667c63ad"
+        },
+        "mode": "100644"
+      }
+    },
+    {
+      "id": "R09",
+      "name": "Complete embedded body equals pinned identity: scripts/legacy-agent-host/desktop-ui-controls.ts 5286c036a63a14e98925711a224df202c9a7caa7",
+      "result": "PASS_STATIC",
+      "evidence": {
+        "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+        "pin": {
+          "bytes": 29017,
+          "sha256": "ffd9bbb822dbdc30da7cb8daa881fcbebd384ba2bf9bdd87c804c511166fa02b",
+          "gitBlob": "5286c036a63a14e98925711a224df202c9a7caa7"
+        },
+        "mode": "100644"
+      }
+    },
+    {
+      "id": "R10",
+      "name": "Exact43-byte inverse restores all historical RED controls",
+      "result": "PASS_STATIC",
+      "evidence": {
+        "offset": 14002,
+        "insert": "        if (Date.now() >= deadline) break;\n",
+        "bytes": 43,
+        "fullInverseEqualsRed": true
+      }
+    },
+    {
+      "id": "R11",
+      "name": "RED and GREEN preserve full ordered ten-case inventories",
+      "result": "PASS_STATIC",
+      "evidence": {
+        "redFailures": 7,
+        "redPasses": 3,
+        "greenPasses": 10
+      }
+    },
+    {
+      "id": "R12",
+      "name": "Exact existing argv and environment are retained",
+      "result": "PASS_STATIC",
+      "evidence": {
+        "argv": [
+          "--test",
+          "--test-reporter=tap",
+          "scripts/legacy-agent-host/desktop-ui-controls-deadline.test.ts"
+        ],
+        "parentEnvironment": "empty via bash exec -c; no NODE_OPTIONS/preloads/config/compile-cache environment",
+        "childEnvironment": {
+          "PATH": "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin",
+          "LANG": "C.UTF-8",
+          "TZ": "UTC"
+        }
+      }
+    },
+    {
+      "id": "R13",
+      "name": "Original budgets remain60s/135s/4s/8MiB/test5s/UI30s/poll100ms",
+      "result": "PASS_STATIC",
+      "evidence": {
+        "phaseWallMs": 60000,
+        "supervisorWallMs": 135000,
+        "cleanupWallMs": 4000,
+        "outputLimitBytes": 8388608,
+        "perTestMs": 5000,
+        "originalUiDefaultMs": 30000,
+        "originalPollMs": 100
+      }
+    },
+    {
+      "id": "R14",
+      "name": "Metadata-only probe did not invoke Node or create source/stage",
+      "result": "PASS_STATIC",
+      "evidence": {
+        "bytes": 3143,
+        "sha256": "eff46eb861c0fa5fcf0ca4963d2b9fb61b8ad08fd3dbe0d7742e573d914afffa",
+        "gitBlob": "d3351aede3fe4031408d518e48d161aa1d700a4c"
+      }
+    },
+    {
+      "id": "R15",
+      "name": "Observed binary bytes/hash and all recorded non-inode pin fields unchanged",
+      "result": "PASS_STATIC",
+      "evidence": {
+        "node": {
+          "path": "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+          "realpath": "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+          "bytes": 126939688,
+          "sha256": "61ab14cd750fc24d5db53490ec5fc40f756e4b6e136b78cf7004265471d9bd1d",
+          "device": "27",
+          "inode": "9223372036854818268",
+          "uid": "65534",
+          "gid": "65534",
+          "mode": "0o755",
+          "mtimeNs": "1794515386000000000",
+          "ctimeNs": "1794515386000000000",
+          "versionPreviouslyObserved": "v24.22.1"
+        },
+        "versionClaim": "Previously observed version only"
+      }
+    },
+    {
+      "id": "R16",
+      "name": "New inode exact signed64/unsigned64 roundtrip is representable",
+      "result": "PASS_STATIC",
+      "evidence": {
+        "signed": "-9223372036854733348",
+        "unsigned": "9223372036854818268"
+      }
+    },
+    {
+      "id": "R17",
+      "name": "Fresh distinct paths differ from all selected old binding paths",
+      "result": "PASS_STATIC",
+      "evidence": {
+        "scope": "/workspace/scratch/c714-waitread-ci3-20261117",
+        "stage": "/workspace/scratch/c714-waitread-ci3-controls-20261117"
+      }
+    },
+    {
+      "id": "R18",
+      "name": "Each selected supervisor path literal occurs exactly once",
+      "result": "PASS_STATIC",
+      "evidence": {
+        "baseline": {
+          "bytes": 25819,
+          "sha256": "23db81a589330feffe20cfa8dc2a259041ca6dc0f84ec416db6dc046761abbf9",
+          "gitBlob": "19662be9d55c70166c8f2c2e74775e6b03098197"
+        },
+        "exactlyTwoUniqueLiteralReplacements": [
+          {
+            "before": "/workspace/scratch/c714f5bce554/narrow-waitread-inode64-controls-20261117",
+            "after": "/workspace/scratch/c714-waitread-ci3-controls-20261117"
+          },
+          {
+            "before": "/workspace/scratch/c714-waitread-inode64-20261117",
+            "after": "/workspace/scratch/c714-waitread-ci3-20261117"
+          }
+        ],
+        "executionLogicChanges": 0,
+        "inodeLogic": "Keep the existing signed64 metadata read, range checks, BigInt.asUintN(64) comparison and raw/canonical evidence exactly. Change only the binding's observed unsigned inode pin; do not replace the conversion logic or weaken any metadata/hash check."
+      }
+    },
+    {
+      "id": "R19",
+      "name": "Plan forbids any other execution logic change",
+      "result": "PASS_STATIC",
+      "evidence": {
+        "retainedInodeComparison": true,
+        "sourceControlCensuses": true,
+        "originalAdmissionCutoffs": true
+      }
+    },
+    {
+      "id": "R20",
+      "name": "Original exact source/control readbacks and process ownership remain",
+      "result": "PASS_STATIC",
+      "evidence": {
+        "originalSupervisor": {
+          "bytes": 25819,
+          "sha256": "23db81a589330feffe20cfa8dc2a259041ca6dc0f84ec416db6dc046761abbf9",
+          "gitBlob": "19662be9d55c70166c8f2c2e74775e6b03098197"
+        }
+      }
+    },
+    {
+      "id": "R21",
+      "name": "One retained cleanup deadline and no TERM/KILL replay remain",
+      "result": "PASS_STATIC",
+      "evidence": {
+        "cleanupWallMs": 4000,
+        "termGraceMs": 250
+      }
+    },
+    {
+      "id": "R22",
+      "name": "The R1 actual publication is the future immutable source/parent anchor",
+      "result": "PASS_STATIC",
+      "evidence": {
+        "noFutureShaInvented": true,
+        "frozenCiSourceSeparate": true
+      }
+    },
+    {
+      "id": "R23",
+      "name": "Only the specified13 binding field paths may change",
+      "result": "PASS_STATIC",
+      "evidence": [
+        "attemptToken",
+        "sourceCommit",
+        "sourceTree",
+        "sourceActualGate",
+        "r1",
+        "r1ActualGate",
+        "scope",
+        "stage",
+        "runner",
+        "node.inode",
+        "sourceAnchorEvidence.actualR1Root",
+        "sourceAnchorEvidence.actualR1Independent",
+        "sourceAnchorEvidence.meaning"
+      ]
+    },
+    {
+      "id": "R24",
+      "name": "Historical source attribution/vectors and all embedded source bodies remain",
+      "result": "PASS_STATIC",
+      "evidence": {
+        "originalSource": "674d32a84644f87544910c28bb4d2a4214958fb5",
+        "originalR2": {
+          "bytes": 19187,
+          "sha256": "8bb84de228b570dfc121233893d32209a9389da44aa1747c7924dff936fa4c1a",
+          "gitBlob": "1318b887473a61e1cbfb3960812fbc84e3b4df13"
+        }
+      }
+    },
+    {
+      "id": "R25",
+      "name": "No source postimage, control postimage, stage or runtime exists under this new plan",
+      "result": "PASS_STATIC",
+      "evidence": {
+        "r1Authored": true,
+        "controlPostimagesAuthored": false,
+        "sourcePostimagesAuthored": false,
+        "newStageCreated": false,
+        "newScopeCreated": false,
+        "newRuntimeInvoked": false,
+        "standaloneRuntimeQualified": false,
+        "fullE2EQualified": false
+      }
+    },
+    {
+      "id": "R26",
+      "name": "Existing R1/R2 reviews, immediate pushes, actual reads and external admission remain sequential",
+      "result": "PASS_STATIC",
+      "evidence": [
+        "Root plus independent guard/semantic/binding R1 reviews; retain full bodies and identities.",
+        "Docs-only exact-parent publication/immediate push; full root and independent actual tree/leaf/body/source-join readbacks; close R1 actual gate.",
+        "Root authors exactly two supervisor literal replacements and specified binding provenance/inode changes; complete existing four control R2 reviews.",
+        "Publish exact reviewed controls and evidence with immediate expected-parent push; full root and independent actual readbacks; external admission bound to actual commit/parent/tree/docs/proposal/reports.",
+        "Stage exact3 files, verify actual metadata/censuses and current Node; invoke one supervisor once, retain complete original results and bounded independent result review."
+      ]
+    },
+    {
+      "id": "R27",
+      "name": "Original attempts stay spent with no hidden retry",
+      "result": "PASS_STATIC",
+      "evidence": {
+        "scope": "Fresh attempt only",
+        "noReplay": true
+      }
+    },
+    {
+      "id": "R28",
+      "name": "Standalone limits remain narrower than full E2E",
+      "result": "PASS_STATIC",
+      "evidence": {
+        "red": "New whole10 fixture plus old controls; not a historical full-tree checkout. Exactly7 expected assertion failures plus3 preservation passes.",
+        "green": "The same whole10 fixture/package with only the published43-byte controls insertion;10 passes.",
+        "anyOther": "INCOMPLETE_SPENT or REFUSED_BEFORE_SCOPE_ADMISSION_SPENT; no source/phase replay, filtering or retry.",
+        "scope": "Only standalone deadline/hover regressions from the exact three files. This does not execute or qualify the separately changed shared member driver, typecheck, whole149/catalog43/renderer85/canonical/GUI/provider/native/E2E."
+      }
+    },
+    {
+      "id": "R29",
+      "name": "No real Claude/Codex, dependency installation, browser or GUI launch selected",
+      "result": "PASS_STATIC",
+      "evidence": {
+        "allowedExecution": "Two exact finite builtin-Node test children under one supervisor after gates"
+      }
+    },
+    {
+      "id": "R30",
+      "name": "CI3 live refs/metadata remain frozen and only active six observed",
+      "result": "PASS_STATIC",
+      "evidence": {
+        "pr": 1223,
+        "headRef": "ci/frontend-parity-c714-20261117-3-head",
+        "head": "86f52244b5375834a4040cbc63803d68cc708087",
+        "baseRef": "ci/frontend-parity-c714-20261117-3-base",
+        "base": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+        "merge": "9314c0ae24985707992399b3ec263e667b4a0cd8",
+        "latestPacket": {
+          "bytes": 297085,
+          "sha256": "f03bde72d0e17a317d5aba188bffd762b644c02f8c101a22712015fa3235c5ec",
+          "gitBlob": "5dc802f90b7118dbba8deeba3c7bb4aacee1a84e"
+        },
+        "latestObservation": 4,
+        "observedAt": "2026-11-17 13:46:35 UTC",
+        "activeRunIds": [
+          44092933873,
+          44092933827,
+          44092933972,
+          44092933912,
+          44092934079,
+          44092933810
+        ],
+        "terminalRunIds": [
+          44092933980,
+          44092933718,
+          44092933835,
+          44092933888,
+          44092934051
+        ],
+        "status": "All6 workflow statuses still queued; WindowsARM64 Host process job has begun setup/install. No completed test results or artifacts yet. Five Draft-skipped families terminal, excluded forever.",
+        "freeze": "CI head/base refs and PR metadata unchanged while active. No rerun/cancel/dispatch, Ready, push/rebase/force, label/title/body/base event. Documentation branch may advance independently. Never poll Original9, PR1218 all7, PR1219 all7, or the five terminal CI3 runs.",
+        "evidence": "Publish retained actual admission, one-shot action envelopes and complete original capture packets with their immutable identities. Discovery empty PR arrays are distinct from all11 exact PR associations in attempt1 bodies. Do not rewrite prior packets."
+      }
+    },
+    {
+      "id": "R31",
+      "name": "Current CI evidence remains setup/queue status, not runtime success",
+      "result": "PASS_STATIC",
+      "evidence": {
+        "packet": {
+          "bytes": 297085,
+          "sha256": "f03bde72d0e17a317d5aba188bffd762b644c02f8c101a22712015fa3235c5ec",
+          "gitBlob": "5dc802f90b7118dbba8deeba3c7bb4aacee1a84e"
+        },
+        "observationAt": "2026-11-17 13:46:35 UTC"
+      }
+    },
+    {
+      "id": "R32",
+      "name": "Frozen source counts, cases and workflow set are untouched",
+      "result": "PASS_STATIC",
+      "evidence": {
+        "sourceEdits": 0,
+        "sourceAddsDeletesRenamesModes": 0,
+        "noDependencyWorkflowOrBudgetChange": true,
+        "productionFiles": 5020,
+        "productionLineCap": 800,
+        "exceptions": 141,
+        "nonDocLeaves": 8799,
+        "workflows": 42,
+        "whole149": 149,
+        "catalog43": 43,
+        "renderer85": 85,
+        "standalone10": 10,
+        "documents": "Keep full existing plan/status prefixes, all101 current catalog values,27 bundles and original totals. Append this fresh R1 and retained CI3 actual progress without historical rewrites.",
+        "frozenPRs": [
+          1206,
+          1207,
+          1208,
+          1211,
+          1212,
+          1213
+        ],
+        "prohibitions": [
+          "No main/default merge, Ready, release/default activation or Stage2.",
+          "No real Claude/Codex, including --version.",
+          "No blanket native/vendor qualification or UNKNOWN/UNREACHED/SKIP/CANCELLED promotion.",
+          "No Browser/CUA or restoration of an old absent scope.",
+          "No claim that metadata, static review, source publication or CI queue state is a runtime PASS."
+        ]
+      }
+    },
+    {
+      "id": "R33",
+      "name": "Append-only current documentation history is preserved",
+      "result": "PASS_STATIC",
+      "evidence": {
+        "existingCatalogKeys": 101,
+        "noHistoricalRewrite": true
+      }
+    }
+  ],
+  "checksPassed": 33,
+  "blockers": [],
+  "fullReadEvidence": [
+    {
+      "repository": "777genius/agent-teams-ai",
+      "pin": {
+        "bytes": 9265,
+        "sha256": "7c5683da8c6f883ab2b711989505cc566123358260dc3c97fa1adc71c1e62976",
+        "gitBlob": "3ac1c92c134848d826d60ea0257fadfe54957b95"
+      },
+      "locations": [
+        "r1.currentBase.actualGate"
+      ],
+      "fullRead": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "pin": {
+        "bytes": 538486,
+        "sha256": "2a14a68f07748713468dda86e2e6165b53b0b09a0d489a043b6264bc2a28f940",
+        "gitBlob": "8386d8007ed28320dd2c01d6edc0be0f9c087692"
+      },
+      "locations": [
+        "r1.currentBase.rootActual"
+      ],
+      "fullRead": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "pin": {
+        "bytes": 678736,
+        "sha256": "f2f13c8411fcf5cdaa0150e71307d8e72d88d4169a3853fba0614455427e2b85",
+        "gitBlob": "18c873be55b9e6a83e892e7f3664bbbc3853156e"
+      },
+      "locations": [
+        "r1.currentBase.independentActual"
+      ],
+      "fullRead": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "pin": {
+        "bytes": 8975,
+        "sha256": "70cbc7861cf6b7781600a76eec8df62486be3ee1e657c2694db4c3b4d1357725",
+        "gitBlob": "246e59b55ed2d395524f40f466c1ef7c8362a553"
+      },
+      "locations": [
+        "r1.currentSource.actualGate"
+      ],
+      "fullRead": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "pin": {
+        "bytes": 26839,
+        "sha256": "c92407a9a5dad6f9d6a6eb8ea7c456195d396679bb4b9dfd15b6c06b726d1084",
+        "gitBlob": "f80ec83172d0aec0dec8a8ab055426b4fca4a1f7"
+      },
+      "locations": [
+        "r1.currentSource.selectedFixedInputs.0",
+        "r1.selectedFreshStandalone.redFiles.0.pin"
+      ],
+      "fullRead": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "pin": {
+        "bytes": 29017,
+        "sha256": "ffd9bbb822dbdc30da7cb8daa881fcbebd384ba2bf9bdd87c804c511166fa02b",
+        "gitBlob": "5286c036a63a14e98925711a224df202c9a7caa7"
+      },
+      "locations": [
+        "r1.currentSource.selectedFixedInputs.1",
+        "r1.selectedFreshStandalone.greenControls.pin"
+      ],
+      "fullRead": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "pin": {
+        "bytes": 7883,
+        "sha256": "29836f914218edb4876b6a4e157e7cdc68f63cdf414084cdd41683965c734eda",
+        "gitBlob": "6a9f8ad7481cd5910befcc6c7ff5992eef03965b"
+      },
+      "locations": [
+        "r1.currentSource.selectedFixedInputs.2",
+        "r1.selectedFreshStandalone.redFiles.1.pin"
+      ],
+      "fullRead": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "pin": {
+        "bytes": 107295,
+        "sha256": "d8626f22a432926350c4d69c657313a61b935764dae972159a1a88fc03163b5b",
+        "gitBlob": "381c51a331b9d03f5aab87835af3dad5a6643d3c"
+      },
+      "locations": [
+        "r1.historicalBasis.previousBinding"
+      ],
+      "fullRead": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "pin": {
+        "bytes": 25819,
+        "sha256": "23db81a589330feffe20cfa8dc2a259041ca6dc0f84ec416db6dc046761abbf9",
+        "gitBlob": "19662be9d55c70166c8f2c2e74775e6b03098197"
+      },
+      "locations": [
+        "r1.historicalBasis.previousSupervisor",
+        "r1.selectedFreshStandalone.supervisorDelta.baseline"
+      ],
+      "fullRead": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "pin": {
+        "bytes": 3143,
+        "sha256": "eff46eb861c0fa5fcf0ca4963d2b9fb61b8ad08fd3dbe0d7742e573d914afffa",
+        "gitBlob": "d3351aede3fe4031408d518e48d161aa1d700a4c"
+      },
+      "locations": [
+        "r1.metadataOnlyObservation.pin"
+      ],
+      "fullRead": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "pin": {
+        "bytes": 297085,
+        "sha256": "f03bde72d0e17a317d5aba188bffd762b644c02f8c101a22712015fa3235c5ec",
+        "gitBlob": "5dc802f90b7118dbba8deeba3c7bb4aacee1a84e"
+      },
+      "locations": [
+        "r1.ci3.latestPacket"
+      ],
+      "fullRead": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "pin": {
+        "bytes": 19187,
+        "sha256": "8bb84de228b570dfc121233893d32209a9389da44aa1747c7924dff936fa4c1a",
+        "gitBlob": "1318b887473a61e1cbfb3960812fbc84e3b4df13"
+      },
+      "locations": [
+        "r1.historicalBasis.sourceR2"
+      ],
+      "fullRead": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "pin": {
+        "bytes": 2552,
+        "sha256": "647b7a268b8b8921d875327e3394726916d54cc3c10c1bb8d2e2e9538db2d496",
+        "gitBlob": "ae0aa3e814cb90d9568cef5f35be6a0d8f46a361"
+      },
+      "locations": [
+        "r1.historicalBasis.sourceBeforeVector"
+      ],
+      "fullRead": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "pin": {
+        "bytes": 2784,
+        "sha256": "6a212eb715b312ae74c25e58078fd26b1247695d94f5c47536dc2a20aed49ce1",
+        "gitBlob": "fff972049718ae5ddaa7000e17341fade490233e"
+      },
+      "locations": [
+        "r1.historicalBasis.sourceAfterVector"
+      ],
+      "fullRead": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "pin": {
+        "bytes": 5512,
+        "sha256": "6a7448cf1d88673af3c65741c51e2faf07703a99dfee37bf4fccd5383a943bf7",
+        "gitBlob": "be45f8ee4cd349456d196f6cfb1a1038c218c80c"
+      },
+      "locations": [
+        "r1.historicalBasis.originalSourceActualGate"
+      ],
+      "fullRead": true
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "pin": {
+        "bytes": 28974,
+        "sha256": "7626e479a6662242009cb050e7e5af612a29e4205d62666d15274d5c30f91386",
+        "gitBlob": "ed57cb0fe7d57ef076a591621289eb77667c63ad"
+      },
+      "locations": [
+        "r1.selectedFreshStandalone.redFiles.2.pin"
+      ],
+      "fullRead": true
+    }
+  ],
+  "sourceLeafJoins": [
+    {
+      "path": "package.json",
+      "expected": {
+        "path": "package.json",
+        "mode": "100644",
+        "bytes": 26839,
+        "sha256": "c92407a9a5dad6f9d6a6eb8ea7c456195d396679bb4b9dfd15b6c06b726d1084",
+        "gitBlob": "f80ec83172d0aec0dec8a8ab055426b4fca4a1f7"
+      },
+      "actual": {
+        "path": "package.json",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "f80ec83172d0aec0dec8a8ab055426b4fca4a1f7",
+        "size": 26839,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/f80ec83172d0aec0dec8a8ab055426b4fca4a1f7"
+      },
+      "atCommits": [
+        "86f52244b5375834a4040cbc63803d68cc708087",
+        "59e8d621717314d3fc3525af559a2a3beb9a7602"
+      ],
+      "rootAnchored": true,
+      "sharedScriptsTree": "9bd74c3db86d1380389d1bce24a7f7dafb9c66cc",
+      "sharedLegacyTree": "0dde19356dc8aee18cd9d77fff817ec3e109d198"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "expected": {
+        "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+        "mode": "100644",
+        "bytes": 29017,
+        "sha256": "ffd9bbb822dbdc30da7cb8daa881fcbebd384ba2bf9bdd87c804c511166fa02b",
+        "gitBlob": "5286c036a63a14e98925711a224df202c9a7caa7"
+      },
+      "actual": {
+        "path": "desktop-ui-controls.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "5286c036a63a14e98925711a224df202c9a7caa7",
+        "size": 29017,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/5286c036a63a14e98925711a224df202c9a7caa7"
+      },
+      "atCommits": [
+        "86f52244b5375834a4040cbc63803d68cc708087",
+        "59e8d621717314d3fc3525af559a2a3beb9a7602"
+      ],
+      "rootAnchored": true,
+      "sharedScriptsTree": "9bd74c3db86d1380389d1bce24a7f7dafb9c66cc",
+      "sharedLegacyTree": "0dde19356dc8aee18cd9d77fff817ec3e109d198"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-ui-controls-deadline.test.ts",
+      "expected": {
+        "path": "scripts/legacy-agent-host/desktop-ui-controls-deadline.test.ts",
+        "mode": "100644",
+        "bytes": 7883,
+        "sha256": "29836f914218edb4876b6a4e157e7cdc68f63cdf414084cdd41683965c734eda",
+        "gitBlob": "6a9f8ad7481cd5910befcc6c7ff5992eef03965b"
+      },
+      "actual": {
+        "path": "desktop-ui-controls-deadline.test.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "6a9f8ad7481cd5910befcc6c7ff5992eef03965b",
+        "size": 7883,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/6a9f8ad7481cd5910befcc6c7ff5992eef03965b"
+      },
+      "atCommits": [
+        "86f52244b5375834a4040cbc63803d68cc708087",
+        "59e8d621717314d3fc3525af559a2a3beb9a7602"
+      ],
+      "rootAnchored": true,
+      "sharedScriptsTree": "9bd74c3db86d1380389d1bce24a7f7dafb9c66cc",
+      "sharedLegacyTree": "0dde19356dc8aee18cd9d77fff817ec3e109d198"
+    }
+  ],
+  "inverseDelta": {
+    "offset": 14002,
+    "insert": "        if (Date.now() >= deadline) break;\n",
+    "bytes": 43,
+    "fullInverseEqualsRed": true
+  },
+  "qualification": "Static R1 review only. No postimage, staging, admission, Node invocation or runtime success. Existing source/control publication and actual-readback sequence remains required."
+}

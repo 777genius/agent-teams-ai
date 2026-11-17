@@ -1,0 +1,358 @@
+{
+  "schemaVersion": 1,
+  "kind": "C714_COMPILED_DIAGNOSTIC_BOUNDARY_REPAIR_SOURCE_R2_SEMANTIC_REVIEW",
+  "repository": "777genius/agent-teams-ai",
+  "reviewer": "/root/producer_r2_semantic",
+  "authoredAt": "2026-11-17 15:24:09 UTC",
+  "subject": {
+    "bytes": 9961,
+    "sha256": "9fd198e4a618d888eb1a8501d901e29833fa8ea74f53d1071c4b88599563d69c",
+    "gitBlob": "438d60e47e1940ffc30b005ef7c97bd26a0ff8d4"
+  },
+  "decision": "ACCEPT_EXACT_SOURCE_R2_STATIC_ONLY",
+  "blockers": [],
+  "qualification": {
+    "sourceOnly": true,
+    "targetSourceEvaluated": false,
+    "typescriptCompiled": false,
+    "targetTestsExecuted": false,
+    "newGreenProved": false,
+    "sourcePublicationAcceptedByThisReport": false,
+    "noAdditionalGate": true
+  },
+  "authority": "Root remains sole source/control author, publisher and executor. This review used immutable Git reads, complete source/data comparisons and this bare report retention only. No local filesystem/process action, source evaluation, compilation, runtime, live CI access, polling, download, ref or PR action was performed.",
+  "fullInputIdentities": [
+    {
+      "role": "proposal",
+      "repository": "777genius/agent-teams-ai",
+      "bytes": 9961,
+      "sha256": "9fd198e4a618d888eb1a8501d901e29833fa8ea74f53d1071c4b88599563d69c",
+      "gitBlob": "438d60e47e1940ffc30b005ef7c97bd26a0ff8d4"
+    },
+    {
+      "role": "R1",
+      "repository": "777genius/agent-teams-ai",
+      "bytes": 10289,
+      "sha256": "08b7fd228ee8b264930d89dd485743e71b90f79edf3d094d20562a8d4c6064bc",
+      "gitBlob": "3a4c7a35a30dd24594cdfecf45510274598527dc"
+    },
+    {
+      "role": "gate",
+      "repository": "777genius/agent-teams-ai",
+      "bytes": 6963,
+      "sha256": "810df6e2da2e3203f6a301600e07e8762237f9cf85edf665ff7e2a508de83f7b",
+      "gitBlob": "e590c53e6f676bd819855e46d36a7d4ec5255c88"
+    },
+    {
+      "role": "before",
+      "repository": "777genius/agent-teams-ai",
+      "bytes": 41559,
+      "sha256": "80b8075c5ed87d3bd5f6707c1e83f4983d275510d67fa4e0a352e1a3d7d958a0",
+      "gitBlob": "9988bebfff4408e81ab63da26fc463e7b8fa618b"
+    },
+    {
+      "role": "after",
+      "repository": "777genius/agent-teams-ai",
+      "bytes": 41619,
+      "sha256": "e1e95d1dcf12408251bde11f4ab679b73de7c8a15b4a49105121b1e8a5a92b36",
+      "gitBlob": "8d12ee7a61d13740dbaddfe8177bfe80cb716335"
+    },
+    {
+      "role": "modelProbe",
+      "repository": "777genius/agent-teams-ai",
+      "bytes": 23312,
+      "sha256": "7c77d52a1f9dcc2b3c53d550514ba13c4256a5daca3a67f2c2c008e786e66ea2",
+      "gitBlob": "a5dc4221c8d3e35200c65b533dd0126479a0a3ab"
+    }
+  ],
+  "fullInputBytes": 133703,
+  "scope": {
+    "path": "packages/legacy-agent-host/tests/opencode-v2-native-receipt.test.mjs",
+    "mode": "100644",
+    "actualR1Parent": "0d99e3069ad2c3d7058f49f7b5dbb06999cae6a0",
+    "actualR1Tree": "d724d89ea0db5a83d63073647dc9289cfb1ebd66",
+    "actualR1DocsTree": "3d26a380f9550e4f1ef9fcd8fbab5bfa0086b222",
+    "gateClosedAt": "2026-11-17 15:21:15 UTC",
+    "sourceAuthorshipRecordedAt": "2026-11-17 15:21:18 UTC",
+    "unchangedNonDocBasis": "86f52244b5375834a4040cbc63803d68cc708087",
+    "gateBasis": "The complete accepted actual-R1 gate is joined to this exact R1, parent/root/docs and preimage. Its 65 actual checks are attributed to the root and independent actual reports; this semantic review does not reperform that historical publication audit.",
+    "sourceChangeCount": 1,
+    "logicalLinesChanged": 3,
+    "byteIncrease": 60,
+    "physicalLinesBefore": 647,
+    "physicalLinesAfter": 647,
+    "cap": 800,
+    "noNewSourceFile": true,
+    "productSourceChange": false,
+    "dependencyChange": false,
+    "workflowChange": false
+  },
+  "byteProof": {
+    "exactBefore": {
+      "bytes": 41559,
+      "sha256": "80b8075c5ed87d3bd5f6707c1e83f4983d275510d67fa4e0a352e1a3d7d958a0",
+      "gitBlob": "9988bebfff4408e81ab63da26fc463e7b8fa618b"
+    },
+    "exactAfter": {
+      "bytes": 41619,
+      "sha256": "e1e95d1dcf12408251bde11f4ab679b73de7c8a15b4a49105121b1e8a5a92b36",
+      "gitBlob": "8d12ee7a61d13740dbaddfe8177bfe80cb716335"
+    },
+    "differences": [
+      {
+        "line": 357,
+        "before": "  const unique = pattern => {",
+        "after": "  const unique = (pattern, start = 0) => {"
+      },
+      {
+        "line": 358,
+        "before": "    const matches = [...compiled.matchAll(pattern)];",
+        "after": "    const matches = [...compiled.matchAll(pattern)].filter(match => match.index >= start);"
+      },
+      {
+        "line": 367,
+        "before": "  const publishEnd = unique(/^[ \\t]*return closing;\\r?$/gm);",
+        "after": "  const publishEnd = unique(/^[ \\t]*return closing;\\r?$/gm, publish);"
+      }
+    ],
+    "individualLineByteIncreases": [
+      {
+        "line": 357,
+        "bytes": 13
+      },
+      {
+        "line": 358,
+        "bytes": 38
+      },
+      {
+        "line": 367,
+        "bytes": 9
+      }
+    ],
+    "inverse": "Each complete after-line has one unique occurrence. Replacing those three exact lines with their original counterparts restores all 41,559 bytes, Git blob and SHA256 exactly. No target function was executed to establish the inverse.",
+    "restoredIdentity": {
+      "bytes": 41559,
+      "sha256": "80b8075c5ed87d3bd5f6707c1e83f4983d275510d67fa4e0a352e1a3d7d958a0",
+      "gitBlob": "9988bebfff4408e81ab63da26fc463e7b8fa618b"
+    },
+    "unchangedOldNineCasePrefix": {
+      "bytes": 19698,
+      "sha256": "d8cbc536209962fe43cf69aa7fa2e0b285770dc181b29d45e9ba6f168e1ceace",
+      "literalEqual": true,
+      "identityKind": "Derived prefix only; not a separately retained Git object."
+    },
+    "allOtherBytesEqual": true
+  },
+  "exactChangedHelperAsRead": "function modelProbeDiagnosticFragments(compiled) {\n  const unique = (pattern, start = 0) => {\n    const matches = [...compiled.matchAll(pattern)].filter(match => match.index >= start);\n    assert.equal(matches.length, 1, 'one actual compiled diagnostic boundary: ' + pattern);\n    return matches[0].index;\n  };\n  const state = unique(/^[ \\t]*let runState\\s*=\\s*['\"]not-started['\"];\\r?$/gm);\n  const stateEnd = unique(/^[ \\t]*let coordinationResult(?:\\s*=\\s*undefined)?;\\r?$/gm);\n  const run = unique(/^[ \\t]*run:\\s*\\(signal,\\s*originalDeadline\\)\\s*=>\\s*\\{\\r?$/gm);\n  const runEnd = unique(/^[ \\t]*close:\\s*(?:originalDeadline|\\(originalDeadline\\))\\s*=>\\s*\\{\\r?$/gm);\n  const publish = unique(/^[ \\t]*closing\\s*=\\s*\\(purposeBound\\s*\\?\\s*closeCoordinationByDeadline\\([^\\n]+$/gm);\n  const publishEnd = unique(/^[ \\t]*return closing;\\r?$/gm, publish);\n  assert.ok(state < stateEnd && stateEnd < run && run < runEnd && runEnd < publish && publish < publishEnd);\n  return { state: compiled.slice(state, stateEnd), run: compiled.slice(run, runEnd),\n    publish: compiled.slice(publish, publishEnd) };\n}\n",
+  "semanticProof": {
+    "defaultDomain": "The local helper's default start=0 preserves the entire original match domain: actual String.matchAll matches have nonnegative original indices. All five other calls omit the second argument.",
+    "selectedDomain": "Only publishEnd passes the already uniquely selected numeric publish index. Filtering uses match.index >= start against matches from the original complete compiled string.",
+    "noRebasing": "The string is not sliced before matching. Returned indices remain indices in compiled, so the three original compiled.slice ranges are unchanged.",
+    "uniqueness": "The exactly-one assertion is unchanged and runs after filtering. Zero qualifying returns and multiple qualifying returns still fail. The repair does not select an arbitrary first or last return.",
+    "sixBoundaries": [
+      "state",
+      "stateEnd",
+      "run",
+      "runEnd",
+      "publish",
+      "publishEnd"
+    ],
+    "fiveOrderingComparisons": [
+      "state < stateEnd",
+      "stateEnd < run",
+      "run < runEnd",
+      "runEnd < publish",
+      "publish < publishEnd"
+    ],
+    "regexes": "All six regular expressions, global/multiline flags, whitespace/CRLF handling and assertion messages are literal-identical to the preimage.",
+    "ordering": "The complete original five-comparison conjunction is unchanged. Inclusive filtering does not replace the strict publish < publishEnd check.",
+    "sourceGrounding": "The fully read unchanged OpenCodeV2ModelProbe.ts contains its early idempotent if(closing) return closing before the publisher assignment and the final return closing after it. The accepted original R1 evidence records the compiler-expanded two whole-file matches. This source-only review does not regenerate compiled output or assert a new observed match count.",
+    "failureAttribution": "The selected change addresses the demonstrated global-domain ambiguity. The finite child's earlier exit 1 is consistent with its shared extractor; no unseen child stack is invented. The first diagnostic behavior test and the finite child still require an actual later execution to qualify their results.",
+    "actualInput": "actualModelProbeDiagnosticFragments still reads the actual ../dist/adapters/providers/OpenCodeV2ModelProbe.js. No surrogate compiled body, fallback parser or copied replacement classifier was introduced.",
+    "serializedChild": "The finite child still embeds modelProbeDiagnosticFragments.toString() exactly once and modelProbeDiagnosticHarness.toString(). It receives the same changed helper, reads the same real compiled module and retains the original harness. There is no second divergent implementation.",
+    "helperBoundary": "The optional start is private to this local helper. Its only supplied value is the unique publish boundary. No new external offset input or authority is admitted."
+  },
+  "preservation": {
+    "originalLocalTitles": [
+      "a failed native Host proof publishes only sanitized diagnostics and no raw paths",
+      "native receipt gate rejects forged digest, incomplete stages and cold restart uncertainty",
+      "receipt verifier CLI refuses lockfile-only artifacts with sanitized diagnostics",
+      "native V2 captured session readback cannot drift workspace or ordered permissions",
+      "native durable SSE proof accepts a bounded, owned and ordered history prefix",
+      "native durable SSE proof enforces frame-count budget with a distinct error",
+      "native durable SSE proof rejects foreign, incomplete and reordered events",
+      "cold native log proof compares retained event content, not only counts and watermark",
+      "raw native V2 variant readback cannot attest a missing or inherited default",
+      "actual ModelProbe run rejection keeps original identity and close classification with bounded own error codes",
+      "actual finite Node observer and parent retain producer error codes in the reserved close slot after trace exhaustion",
+      "actual close projection preserves legacy rows and opaque optional fields within original reservation and byte limits"
+    ],
+    "localRegistrations": 12,
+    "originalNinePrefixPreserved": true,
+    "originalThreeDiagnosticRegistrationsPreserved": true,
+    "platformEntry": "// Whole existing platform suite: preserve every original case and its original platform skip.\nawait import('../../../scripts/e2e/opencode-diagnostics/platform.test.mjs');\n",
+    "importedWholePlatformRegistrations": 14,
+    "aggregateRegistrationScope": "The complete original 12 local registrations and unconditional awaited whole-platform import remain. The existing imported suite contributes 14 registrations, including its original platform-dependent skip. Registration inclusion is not a claim that 26 cases have newly passed.",
+    "originalStaticCommand": "node --test packages/legacy-agent-host/tests/opencode-v2-static-preflight.test.ts packages/legacy-agent-host/tests/opencode-v2-static-capture.test.ts packages/legacy-agent-host/tests/opencode-v2-host-spi.test.ts packages/legacy-agent-host/tests/opencode-v2-native-receipt.test.mjs packages/legacy-agent-host/tests/opencode-v2-native-process-guard.test.mjs packages/legacy-agent-host/tests/opencode-v2-request-admission.test.ts packages/legacy-agent-host/tests/opencode-v1-version-receipt.test.ts packages/legacy-agent-host/tests/opencode-v1-version-source.test.ts",
+    "originalStaticCommandEqualsR1": true,
+    "immutableProduct": {
+      "path": "packages/legacy-agent-host/src/adapters/providers/OpenCodeV2ModelProbe.ts",
+      "bytes": 23312,
+      "sha256": "7c77d52a1f9dcc2b3c53d550514ba13c4256a5daca3a67f2c2c008e786e66ea2",
+      "gitBlob": "a5dc4221c8d3e35200c65b533dd0126479a0a3ab"
+    },
+    "rejectionIdentity": "The tests still assert caught === original error/value, including ordinary values, functions, getters and opaque Proxy descriptor failures. Source extraction changes no run wrapper or publisher statement.",
+    "positiveCodeClassification": "All nine allowed error codes, direct versus one-level own cause selection, separate errorClass, absent fields for fulfilled run states and original close stage/reason expectations remain unchanged.",
+    "privacyAndLegacy": "No getters or toString coercion are added. Inherited/unknown/malformed/optional fields and legacy absent-field behavior retain their original tests. Private messages, names, stacks, paths and secrets remain forbidden in projections.",
+    "counterfactual": "The original exact catch and publisher literal bodies and their hashes are unchanged. The counterfactual retains only its original lost-code comparison and is not substituted for the actual producer in positive checks.",
+    "child": "The existing exact Node v24.21.0/platform admission, actual --import observer, spawnSync original argv, 10,000 ms timeout, 256 KiB maxBuffer, stderr flush, exit/status/signal assertions and finally root removal are unchanged.",
+    "trace": "The 300-event saturation fixture, one trace-limit row, reserved close slot, <=257 entries, <=512 emitted line bytes, <=513 parent record bytes and <=64 KiB total bounds remain. The asserted 355-byte emitted and 499-byte parent maxima remain unchanged.",
+    "originalComponentIO": "The awaited platform suite retains its existing component IO, ownership and original platform skip. This review introduces no new execution and does not relabel that suite as pure data.",
+    "originalBehavior": "All original input, request, native allocation, custody, cleanup, authority, deadline and phase behavior resides in unchanged source. This candidate changes only how the diagnostic tests select one compiled fragment's endpoint."
+  },
+  "findings": [
+    {
+      "id": "S01",
+      "status": "PASS_STATIC_SOURCE",
+      "finding": "Exact complete 9,961-byte proposal identity verified and read."
+    },
+    {
+      "id": "S02",
+      "status": "PASS_STATIC_SOURCE",
+      "finding": "Complete selected R1 and actual-R1 gate identities and scope join."
+    },
+    {
+      "id": "S03",
+      "status": "PASS_STATIC_SOURCE",
+      "finding": "Gate closed at 15:21:15; recorded postimage authorship at 15:21:18 is later."
+    },
+    {
+      "id": "S04",
+      "status": "PASS_STATIC_SOURCE",
+      "finding": "Actual parent/root/docs/preimage in proposal equal the accepted gate."
+    },
+    {
+      "id": "S05",
+      "status": "PASS_STATIC_SOURCE",
+      "finding": "Both complete target bodies are hash-verified; the complete after body was read."
+    },
+    {
+      "id": "S06",
+      "status": "PASS_STATIC_SOURCE",
+      "finding": "Exactly logical lines 357, 358 and 367 differ, adding 13+38+9=60 bytes."
+    },
+    {
+      "id": "S07",
+      "status": "PASS_STATIC_SOURCE",
+      "finding": "Whole-byte inverse exactly restores the original 41,559-byte preimage."
+    },
+    {
+      "id": "S08",
+      "status": "PASS_STATIC_SOURCE",
+      "finding": "Both files have 647 physical lines and remain under the existing 800-line cap."
+    },
+    {
+      "id": "S09",
+      "status": "PASS_STATIC_SOURCE",
+      "finding": "Complete original nine-case prefix is literal-identical."
+    },
+    {
+      "id": "S10",
+      "status": "PASS_STATIC_SOURCE",
+      "finding": "All 12 local test names/registrations and the whole-platform awaited import are unchanged."
+    },
+    {
+      "id": "S11",
+      "status": "PASS_STATIC_SOURCE",
+      "finding": "Default zero retains the whole-source domain for the five unscoped lookups."
+    },
+    {
+      "id": "S12",
+      "status": "PASS_STATIC_SOURCE",
+      "finding": "Only publishEnd supplies the already unique publish offset."
+    },
+    {
+      "id": "S13",
+      "status": "PASS_STATIC_SOURCE",
+      "finding": "The lower bound is inclusive and uses original match.index; no rebasing occurs."
+    },
+    {
+      "id": "S14",
+      "status": "PASS_STATIC_SOURCE",
+      "finding": "Exactly-one assertion still rejects missing and duplicate matches in the selected domain."
+    },
+    {
+      "id": "S15",
+      "status": "PASS_STATIC_SOURCE",
+      "finding": "All six original boundary regexes and all five ordering comparisons remain."
+    },
+    {
+      "id": "S16",
+      "status": "PASS_STATIC_SOURCE",
+      "finding": "All three slices still select the actual compiled source using original indices."
+    },
+    {
+      "id": "S17",
+      "status": "PASS_STATIC_SOURCE",
+      "finding": "Unchanged full ModelProbe source supports the early-return versus final-return distinction."
+    },
+    {
+      "id": "S18",
+      "status": "PASS_STATIC_SOURCE",
+      "finding": "The finite child serializes the same repaired helper; no duplicate implementation or fallback is added."
+    },
+    {
+      "id": "S19",
+      "status": "PASS_STATIC_SOURCE",
+      "finding": "Actual producer rejection identity and independent close classification checks remain."
+    },
+    {
+      "id": "S20",
+      "status": "PASS_STATIC_SOURCE",
+      "finding": "Getter/Proxy/coercion/privacy/legacy/optional-field cases remain byte-identical."
+    },
+    {
+      "id": "S21",
+      "status": "PASS_STATIC_SOURCE",
+      "finding": "Both original counterfactual literal bodies and hash assertions remain."
+    },
+    {
+      "id": "S22",
+      "status": "PASS_STATIC_SOURCE",
+      "finding": "Exact finite child admission, argv, timeout, maxBuffer and ownership/finally behavior remain."
+    },
+    {
+      "id": "S23",
+      "status": "PASS_STATIC_SOURCE",
+      "finding": "Trace exhaustion, reserved close slot and every original output/count/byte bound remain."
+    },
+    {
+      "id": "S24",
+      "status": "PASS_STATIC_SOURCE",
+      "finding": "The complete original eight-file static command equals the R1 command."
+    },
+    {
+      "id": "S25",
+      "status": "PASS_STATIC_SOURCE",
+      "finding": "No product, workflow, dependency, authority, deadline or case mutation is included."
+    },
+    {
+      "id": "S26",
+      "status": "PASS_STATIC_SOURCE",
+      "finding": "Current source remains unpublished and no compilation, new GREEN or whole-E2E result is inferred."
+    },
+    {
+      "id": "S27",
+      "status": "PASS_STATIC_SOURCE",
+      "finding": "Existing source R2 publication/actual-readback/later CI sequence is retained without a new gate."
+    },
+    {
+      "id": "S28",
+      "status": "PASS_STATIC_SOURCE",
+      "finding": "New Linux Claude/collaboration and Windows readiness findings remain outside this one-file repair."
+    }
+  ],
+  "checkCount": 28,
+  "runtimeLimit": "Static acceptance is limited to this exact proposal and exact after-body. The historical 242-case result is not rerun or relabelled. Actual compile shape, diagnostic case behavior and the unchanged full command remain subject to genuine later results under the existing selected process.",
+  "selfReadProtocol": "Send the retained pin immediately, then fetch this exact report and fully reread/hash it before confirming completion. No self-read is preclaimed inside this report."
+}

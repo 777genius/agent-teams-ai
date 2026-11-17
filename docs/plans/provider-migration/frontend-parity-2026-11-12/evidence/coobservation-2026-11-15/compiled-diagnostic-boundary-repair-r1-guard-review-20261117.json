@@ -1,0 +1,424 @@
+{
+  "schemaVersion": 1,
+  "kind": "C714_COMPILED_DIAGNOSTIC_BOUNDARY_REPAIR_R1_GUARD_REVIEW",
+  "repository": "777genius/agent-teams-ai",
+  "reviewer": "/root/producer_r2_guard",
+  "at": "2026-11-17 14:54:23 UTC",
+  "subject": {
+    "bytes": 10289,
+    "sha256": "08b7fd228ee8b264930d89dd485743e71b90f79edf3d094d20562a8d4c6064bc",
+    "gitBlob": "3a4c7a35a30dd24594cdfecf45510274598527dc"
+  },
+  "decision": "ACCEPT_EXACT_NARROW_R1_PLAN_ONLY",
+  "accepted": true,
+  "blockers": [],
+  "summary": "The selected inclusive original-index lower bound is a narrow source-supported correction for the observed compiled-boundary ambiguity. It preserves global publisher uniqueness, all six locations/five comparisons, actual compiled fragments, the one serialized helper, complete original test registrations and all existing custody/privacy/time/output constraints. It neither changes ModelProbe runtime behavior nor claims either failed diagnostic test has passed.",
+  "readEvidence": {
+    "subject": {
+      "bytes": 10289,
+      "sha256": "08b7fd228ee8b264930d89dd485743e71b90f79edf3d094d20562a8d4c6064bc",
+      "gitBlob": "3a4c7a35a30dd24594cdfecf45510274598527dc",
+      "read": "complete fresh body and identity"
+    },
+    "currentCommit": {
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/commits/d035cefd235501daf2066d3b7725db35bfb00bf7",
+      "commit": "d035cefd235501daf2066d3b7725db35bfb00bf7",
+      "root": "17e034751c1c1c5199aa147b2dababa5787ae6cf",
+      "docs": "177dcd82ad978d16ddebfd6cf2c25342ae7f8b53",
+      "soleParent": "59723bc7058d31dd51730f4088eaf66df2735d4b",
+      "read": "fresh full immutable commit plus complete retained root rows",
+      "responseIdentity": {
+        "bytes": 1165,
+        "sha256": "93ae47870deda64b0a9383da9130216516fede43c4bdc459151bcc526e74a8f0",
+        "gitBlob": "d84944f101d1c1d2c3d5a11fae3969a6592f2608"
+      }
+    },
+    "targetTreeProof": {
+      "bytes": 111967,
+      "sha256": "8b6264e88e62718e552674a91604b281778f9ea63db0a4960cbecd2a966cb2fa",
+      "gitBlob": "fc20bc9458799881d3e6bcfe97ac9f2352f2fd98",
+      "read": "complete bytes fetched/rehashed; all four nontruncated structured tree bodies parsed and rows validated; exact parent-child chain and target full body joined"
+    },
+    "nonDocJoin": {
+      "sourceRoot": "11ccb7c57cc49af613c62620a1d348bf6de8aa3d",
+      "currentRoot": "17e034751c1c1c5199aa147b2dababa5787ae6cf",
+      "count": 53,
+      "allEqual": true
+    },
+    "target": {
+      "repository": "777genius/agent-teams-ai",
+      "commit": "d035cefd235501daf2066d3b7725db35bfb00bf7",
+      "path": "packages/legacy-agent-host/tests/opencode-v2-native-receipt.test.mjs",
+      "bytes": 41559,
+      "sha256": "80b8075c5ed87d3bd5f6707c1e83f4983d275510d67fa4e0a352e1a3d7d958a0",
+      "gitBlob": "9988bebfff4408e81ab63da26fc463e7b8fa618b",
+      "physicalLines": 647,
+      "read": "exact full body reused from own fully read advisory; complete current body rehashed; whole appended helpers/cases 346–647 freshly reread"
+    },
+    "modelProbe": {
+      "repository": "777genius/agent-teams-ai",
+      "commit": "86f52244b5375834a4040cbc63803d68cc708087",
+      "path": "packages/legacy-agent-host/src/adapters/providers/OpenCodeV2ModelProbe.ts",
+      "bytes": 23312,
+      "sha256": "7c77d52a1f9dcc2b3c53d550514ba13c4256a5daca3a67f2c2c008e786e66ea2",
+      "gitBlob": "a5dc4221c8d3e35200c65b533dd0126479a0a3ab",
+      "read": "exact full body reused and rehashed; actual rejection/close continuation freshly reread; no mutation permitted"
+    },
+    "ownAcceptedAdvisory": {
+      "bytes": 30454,
+      "sha256": "a2afbd4dc105053a753640d7092b31b727fdd330233fbd7fe94c546182c0cbbb",
+      "gitBlob": "42effae91d747256f512dd460a53a8a36f6eedbf",
+      "fullSelfReadAt": "2026-11-17 14:17:00 UTC",
+      "read": "own prior complete full-read retained evidence reused; exact whole report rehashed; relevant requirements and failure limits freshly joined"
+    },
+    "originalWindowsLog": {
+      "bytes": 128517,
+      "sha256": "e8764cca247c632c3092464cb4eab1fc9627b22fbb32d559bdec6b27156ff46f",
+      "gitBlob": "fca9b76b3d0ff372cd046cc7a631fe980a279062",
+      "read": "own prior complete independently fetched/rehashed/untruncated read reused under identical blob identity",
+      "result": {
+        "tests": 242,
+        "passed": 239,
+        "failed": 2,
+        "skipped": 1,
+        "cancelled": 0,
+        "originalPosixFifoSkip": true
+      }
+    },
+    "rootR1Review": {
+      "bytes": 16460,
+      "sha256": "0337f3effb698430cf75a21e77ee19c797dac1f3456ce8e4efaf9e4cb217272c",
+      "gitBlob": "d3686a86b3c66da48f1982cafabf40d933a75413",
+      "read": "complete fresh full body",
+      "checks": 24
+    },
+    "unchangedAdditionalSourcePins": [
+      {
+        "repository": "777genius/agent-teams-ai",
+        "commit": "86f52244b5375834a4040cbc63803d68cc708087",
+        "mode": "100644",
+        "read": "prior exact full source body and immutable 86f path proof reused; no new broad audit",
+        "path": "scripts/e2e/opencode-diagnostics/platform.test.mjs",
+        "bytes": 20830,
+        "sha256": "05197a044bf390abad3d4bbc55ffa8ef66035fa73bbfa36199b4b28685de3b26",
+        "gitBlob": "11c6c2fbd2f76471d0c78e35dea8636b278e6b72"
+      },
+      {
+        "repository": "777genius/agent-teams-ai",
+        "commit": "86f52244b5375834a4040cbc63803d68cc708087",
+        "mode": "100644",
+        "read": "prior exact full source body and immutable 86f path proof reused; no new broad audit",
+        "path": "packages/legacy-agent-host/tests/fixtures/native-host.ts",
+        "bytes": 15303,
+        "sha256": "ea11710ab1833e4cad906bad58def351b852c89ba1dee834c69849b3a1995d01",
+        "gitBlob": "bea17f976f5db7e9d6b471751ff7d871cd8ebcd5"
+      }
+    ],
+    "unchangedPassive": {
+      "repository": "777genius/agent-teams-ai",
+      "commit": "86f52244b5375834a4040cbc63803d68cc708087",
+      "path": "packages/legacy-agent-host/tests/fixtures/native-opencode-team/passive-diagnostics.ts",
+      "bytes": 37953,
+      "sha256": "a553197e108b574e9ff1c0e082014d4224baffeba21cec65a1b16f0fa17edbb6",
+      "gitBlob": "fbfe9b3ff5b0563b7a98301039ae3a3ae1cd68aa",
+      "read": "prior exact accepted body/selected projection and observer review reused; all 53 current non-doc root entries join 86f"
+    },
+    "unchangedWorkflow": {
+      "repository": "777genius/agent-teams-ai",
+      "commit": "86f52244b5375834a4040cbc63803d68cc708087",
+      "path": ".github/workflows/opencode-v2-stage1-preflight.yml",
+      "bytes": 36013,
+      "sha256": "fddd1aface758ef115a5e904151cb61dd78dca04d8f52fb99f4326ddaff53a14",
+      "gitBlob": "2f557dd4b74806e6a444c46656af07b52bc0fb4e",
+      "read": "prior complete immutable corpus and original eight-file command join reused; same .github root d95091ab0edb488d6e418ffa789d0f07c447ecda"
+    },
+    "acceptedPriorPublicationPins": {
+      "root": {
+        "bytes": 413021,
+        "sha256": "dd37cfc672aa3bd6685eaf783146a21eae1317ac731654370190f027cc4827ff",
+        "gitBlob": "50e2be6fce599e665df5f34be0ae7e33ea61e496"
+      },
+      "independent": {
+        "bytes": 285251,
+        "sha256": "e50f8a5266cbd9e05a271623b80ac25d712b75332e221868e3d907645cdaefaf",
+        "gitBlob": "6f2cea2ae65cdce59f4019b240b93d1aeef439ca"
+      },
+      "qualification": "accepted parent authority per root; no fresh full report reread claimed"
+    },
+    "precedingStandalone": {
+      "capture": {
+        "bytes": 574032,
+        "sha256": "6d52bf2dcada8587bf243c45aa78618a504d5f4cb14a6cef7268d99f91e84d6a",
+        "gitBlob": "d7545038ea874fef599d15341f7eedae07104a38"
+      },
+      "scope": "Original deadline regression only; RED7expected failures/3passes then GREEN10passes once. No authorization to replay or broaden it.",
+      "qualification": "historical retained deadline result only; no new runtime claim or replay permission"
+    }
+  },
+  "sourceFacts": {
+    "originalPrefix": {
+      "bytes": 19696,
+      "sha256": "c88b9eac003164e9ad2cbc5c8ef93e1b466dec295fe14c64062777975b449a09",
+      "gitBlob": "f274129ad8a77bed3094e48e31cc50f37ba4d478"
+    },
+    "physicalLines": 647,
+    "localTestTitles": [
+      "a failed native Host proof publishes only sanitized diagnostics and no raw paths",
+      "native receipt gate rejects forged digest, incomplete stages and cold restart uncertainty",
+      "receipt verifier CLI refuses lockfile-only artifacts with sanitized diagnostics",
+      "native V2 captured session readback cannot drift workspace or ordered permissions",
+      "native durable SSE proof accepts a bounded, owned and ordered history prefix",
+      "native durable SSE proof enforces frame-count budget with a distinct error",
+      "native durable SSE proof rejects foreign, incomplete and reordered events",
+      "cold native log proof compares retained event content, not only counts and watermark",
+      "raw native V2 variant readback cannot attest a missing or inherited default",
+      "actual ModelProbe run rejection keeps original identity and close classification with bounded own error codes",
+      "actual finite Node observer and parent retain producer error codes in the reserved close slot after trace exhaustion",
+      "actual close projection preserves legacy rows and opaque optional fields within original reservation and byte limits"
+    ],
+    "localTests": 12,
+    "importedPlatformCases": 14,
+    "totalRegistrations": 26,
+    "helperExactlyOneAssertion": true,
+    "originalOrderConjunction": true,
+    "boundaryLocations": 6,
+    "orderComparisons": 5,
+    "originalSourceReturnRows": [
+      {
+        "line": 431,
+        "text": "      if (closing) return closing;"
+      },
+      {
+        "line": 511,
+        "text": "      return closing;"
+      }
+    ],
+    "originalPublisherRows": [
+      {
+        "line": 497,
+        "text": "      closing = (purposeBound ? closeCoordinationByDeadline(work, originalDeadline ?? deadline) : work)"
+      }
+    ],
+    "compiledDistNotRetainedOrRegeneratedHere": true,
+    "serializedHelperShared": true,
+    "wholePlatformImport": true
+  },
+  "selectedPlan": {
+    "path": "packages/legacy-agent-host/tests/opencode-v2-native-receipt.test.mjs",
+    "changeSites": [
+      {
+        "line": 357,
+        "intent": "Give local unique helper an optional inclusive original-source offset, defaulting to zero."
+      },
+      {
+        "line": 358,
+        "intent": "Filter whole-file RegExp matches by each original match.index being at or after that offset; retain original indices and the exactly-one assertion."
+      },
+      {
+        "line": 367,
+        "intent": "Only the publishEnd lookup supplies the already uniquely selected publish offset. All other unique calls retain their default whole-source domain."
+      }
+    ],
+    "logicalLines": 3,
+    "otherUniqueCallsGlobal": 5,
+    "onlyRangedCall": "publishEnd",
+    "inclusiveZero": true,
+    "originalIndices": true,
+    "exactlyOneAssertion": true,
+    "sourcePostimageAuthored": false
+  },
+  "originalWholeCommand": "node --test packages/legacy-agent-host/tests/opencode-v2-static-preflight.test.ts packages/legacy-agent-host/tests/opencode-v2-static-capture.test.ts packages/legacy-agent-host/tests/opencode-v2-host-spi.test.ts packages/legacy-agent-host/tests/opencode-v2-native-receipt.test.mjs packages/legacy-agent-host/tests/opencode-v2-native-process-guard.test.mjs packages/legacy-agent-host/tests/opencode-v2-request-admission.test.ts packages/legacy-agent-host/tests/opencode-v1-version-receipt.test.ts packages/legacy-agent-host/tests/opencode-v1-version-source.test.ts",
+  "checks": [
+    {
+      "id": "G01",
+      "result": "PASS_STATIC_R1",
+      "topic": "Exact whole prospective R1",
+      "evidence": "Complete 10,289-byte subject 3a4c7a35 was fetched, parsed, independently rehashed and read. Acceptance below applies only to that plan; no source postimage exists or is approved."
+    },
+    {
+      "id": "G02",
+      "result": "PASS_STATIC_R1",
+      "topic": "Root-only authority",
+      "evidence": "The plan keeps source/control authorship, staging, publication and execution with root. Reviewers may use immutable source/evidence, pure data and bare report blobs only. No local/CI/runtime execution was performed here."
+    },
+    {
+      "id": "G03",
+      "result": "PASS_STATIC_R1",
+      "topic": "Actual current parent",
+      "evidence": "Fresh immutable Git commit d035cefd235501daf2066d3b7725db35bfb00bf7 has root 17e034751c1c1c5199aa147b2dababa5787ae6cf and sole parent 59723bc7058d31dd51730f4088eaf66df2735d4b. Its docs entry is 177dcd82ad978d16ddebfd6cf2c25342ae7f8b53, equal to the R1."
+    },
+    {
+      "id": "G04",
+      "result": "PASS_STATIC_R1",
+      "topic": "Complete target tree chain",
+      "evidence": "The full retained root/packages/Host/tests API bodies have 54/3/9/189 rows and truncated=false. Their parent links lead to the exact canonical 100644 target blob 9988bebf, size 41,559. No contents/path substitute is used."
+    },
+    {
+      "id": "G05",
+      "result": "PASS_STATIC_R1",
+      "topic": "Unchanged current source anchor",
+      "evidence": "Fresh complete 86f root 11ccb7c57cc49af613c62620a1d348bf6de8aa3d and the current root have exactly the same 53 non-doc name/mode/type/SHA rows, including packages, scripts, .github, src, test, dependencies and lockfiles."
+    },
+    {
+      "id": "G06",
+      "result": "PASS_STATIC_R1",
+      "topic": "Exact full source preimages",
+      "evidence": "Current target full body is 9988bebfff4408e81ab63da26fc463e7b8fa618b (41,559 bytes, 647 physical lines); ModelProbe a5dc4221c8d3e35200c65b533dd0126479a0a3ab (23,312 bytes). Both equal the previously fully read advisory source and rehash exactly. All appended test/helper lines 346–647 and actual close lines 414–514 were freshly reread."
+    },
+    {
+      "id": "G07",
+      "result": "PASS_STATIC_R1",
+      "topic": "Observed first failure",
+      "evidence": "The prior complete Windows job log proves the first diagnostic case fails at actual compiled-boundary extraction: expected one return-closing match, actual two. It never reaches the selected diagnostic behavioral matrix. Current source has legitimate early idempotent return at line 431 and final publisher return at line 511, separated by the publisher at line 497."
+    },
+    {
+      "id": "G08",
+      "result": "PASS_STATIC_R1",
+      "topic": "Second failure limit",
+      "evidence": "The finite observer child serializes this same helper and extracts the same compiled body before its harness/trace. Its actual parent observation is exit 1 instead of 0. Shared extraction explains a supported likely mechanism, but the retained log does not expose child stderr/stack; no exact unseen child stack or completed trace assertions are claimed."
+    },
+    {
+      "id": "G09",
+      "result": "PASS_STATIC_R1",
+      "topic": "No production defect invented",
+      "evidence": "The retained evidence selects a test extractor boundary repair. ModelProbe runtime code, original close path, diagnostics source, first-close reason, result classification and process custody remain unmodified."
+    },
+    {
+      "id": "G10",
+      "result": "PASS_STATIC_R1",
+      "topic": "One path and three logical edit sites",
+      "evidence": "The only selected path is packages/legacy-agent-host/tests/opencode-v2-native-receipt.test.mjs. The plan changes the local unique signature, its match-domain filter and only publishEnd's argument. No test/import/helper file is added."
+    },
+    {
+      "id": "G11",
+      "result": "PASS_STATIC_R1",
+      "topic": "Inclusive default preserves zero",
+      "evidence": "The proposed optional offset defaults to zero and uses original match.index >= offset. A legitimate index-zero boundary remains eligible. No truthiness exclusion, relative-slice rebasing or default undefined/NaN domain is selected."
+    },
+    {
+      "id": "G12",
+      "result": "PASS_STATIC_R1",
+      "topic": "Publisher remains globally unique",
+      "evidence": "The publish lookup still uses the original whole-file expression and existing exactly-one assertion. Only publishEnd receives that already-proved source offset; all five other boundary lookups remain global."
+    },
+    {
+      "id": "G13",
+      "result": "PASS_STATIC_R1",
+      "topic": "End uniqueness still fails closed",
+      "evidence": "Within the suffix beginning at publish, zero or multiple return-closing candidates still fail the same exactly-one assertion. The plan does not accept two matches, select an arbitrary first/last match, weaken the expression, or suppress assertion failure."
+    },
+    {
+      "id": "G14",
+      "result": "PASS_STATIC_R1",
+      "topic": "All six boundaries and five comparisons",
+      "evidence": "State, stateEnd, run, runEnd, publish, publishEnd all remain; the literal state < stateEnd < run < runEnd < publish < publishEnd conjunction remains five comparisons. The R1 expressly corrects the earlier wording that could conflate locations and comparisons."
+    },
+    {
+      "id": "G15",
+      "result": "PASS_STATIC_R1",
+      "topic": "Actual compiled source slices",
+      "evidence": "State/run/publisher slices retain original whole-file indices into actual dist/adapters/providers/OpenCodeV2ModelProbe.js from the original Host build. There is no copied producer, substituted TypeScript source, new export, surrogate branch or target evaluation by this review."
+    },
+    {
+      "id": "G16",
+      "result": "PASS_STATIC_R1",
+      "topic": "One shared serialized helper",
+      "evidence": "modelProbeDiagnosticFragments.toString() is serialized into the original finite child and invoked before trace emission. The selected local optional argument is self-contained and used by the same helper in both consumers; no separate child implementation or new dependency is required."
+    },
+    {
+      "id": "G17",
+      "result": "PASS_STATIC_R1",
+      "topic": "Original nine-prefix custody",
+      "evidence": "The first 19,696 bytes rehash to f274129ad8a77bed3094e48e31cc50f37ba4d478 with SHA c88b9eac003164e9ad2cbc5c8ef93e1b466dec295fe14c64062777975b449a09. The plan requires all these original nine tests unchanged."
+    },
+    {
+      "id": "G18",
+      "result": "PASS_STATIC_R1",
+      "topic": "All three diagnostic cases preserved",
+      "evidence": "All twelve local registrations stay intact. Own code/cause-code vocabulary, original rejection object identity, first-close reason, normal true/false legacy shape, getter/Proxy/toString privacy, exact counterfactual literals/hashes, projection reservation and byte limits remain required."
+    },
+    {
+      "id": "G19",
+      "result": "PASS_STATIC_R1",
+      "topic": "Finite child bounds and cleanup preserved",
+      "evidence": "The actual finite observer test still admits exact Node v24.21.0 and supported tuples; uses existing Node --import observer, one finite generated TEST child, timeout 10,000 ms/maxBuffer 256 KiB; requires no error, exit 0/no signal and exact completion marker; removes its private temp root in finally. No native Host/provider/model/network request is introduced by this repair."
+    },
+    {
+      "id": "G20",
+      "result": "PASS_STATIC_R1",
+      "topic": "Original trace/privacy caps preserved",
+      "evidence": "Original >250 and <=257 diagnostic-line checks, 512-byte child line bound, 513-byte parent record bound, 64-KiB totals, single reserved close slot and trace-limit row survive. Original unrelated 8-MiB budgets are not selected for editing. No raw child stderr is newly published."
+    },
+    {
+      "id": "G21",
+      "result": "PASS_STATIC_R1",
+      "topic": "Whole unchanged platform14 import",
+      "evidence": "The exact awaited whole-file import remains last. It registers all 14 platform cases with their original platform skips and finite fixture/OS query behavior. The plan does not replace this with a selected subset or label a skip PASS."
+    },
+    {
+      "id": "G22",
+      "result": "PASS_STATIC_R1",
+      "topic": "Whole original eight-file command",
+      "evidence": "The R1's full command is literally equal to the previously independently joined workflow/log command. It has eight explicit test files, no test-name filter or altered argv. The selected test has 12 local + 14 imported registrations, not 26 new cases."
+    },
+    {
+      "id": "G23",
+      "result": "PASS_STATIC_R1",
+      "topic": "Actual failures remain failures",
+      "evidence": "Original Windows command result is 242 total, 239 PASS, 2 FAIL, one original POSIX-only skip, zero cancelled. Original nine and imported 14 plus the third diagnostic case pass in that log. Neither of the two failed diagnostic cases is promoted to runtime success by this R1."
+    },
+    {
+      "id": "G24",
+      "result": "PASS_STATIC_R1",
+      "topic": "No old attempt replay",
+      "evidence": "The standalone captured RED7F/3P then GREEN10P belongs only to its original deadline scope and is spent. This repair neither changes its runner/binding nor authorizes another invocation. All prior frozen/terminal PR groups remain excluded."
+    },
+    {
+      "id": "G25",
+      "result": "PASS_STATIC_R1",
+      "topic": "CI cohort is not a live status grant",
+      "evidence": "The six-ID activeRunIdsOnly list identifies the selected CI3 cohort at the plan's historical point. It grants no action to this reviewer and cannot override the existing no-terminal-poll rule when any member becomes terminal. PR1223 head/base/ref metadata remain frozen; future validation requires the already-selected separate admission sequence."
+    },
+    {
+      "id": "G26",
+      "result": "PASS_STATIC_R1",
+      "topic": "Caps and product/workflow freeze",
+      "evidence": "One existing 647-line test stays below 800 under the three-line plan. Production 5,020, 141 frozen exceptions, 8,799 non-doc leaves, all 42 workflows/dependencies and all product sources remain unchanged. No new permissions, real Claude/Codex including version probes, skip/waiver or native qualification is selected."
+    },
+    {
+      "id": "G27",
+      "result": "PASS_STATIC_R1",
+      "topic": "Existing publication sequence only",
+      "evidence": "Root plus guard/semantic/binding R1 reviews precede docs publication/immediate push and full actual readbacks. Only after that may root author the one source postimage for existing R2 reviews/publication/actual readbacks. The source R2 parent must equal the actual R1 publication, not today's d035. No extra gate or executable-control R2 is invented."
+    },
+    {
+      "id": "G28",
+      "result": "PASS_STATIC_R1",
+      "topic": "Root cross-review joined without replacing independence",
+      "evidence": "Complete 16,460-byte root report d3686a86 was read/rehashed; its 24 checks and decision are consistent with the independent source and authority analysis. Current publication report pins are carried as accepted prior authority, not falsely claimed freshly reread in full here."
+    },
+    {
+      "id": "G29",
+      "result": "PASS_STATIC_R1",
+      "topic": "No prospective runtime assertion",
+      "evidence": "This accepts only the exact finite repair plan. Exact future source inverse and all untouched bytes belong to subsequent R2; actual compiled boundary and both previously failed cases require a genuine authorized later command. No target compilation/import/test, local observation, CI action, source authoring or postimage was performed."
+    }
+  ],
+  "checkCount": 29,
+  "temporalClarifications": [
+    "Root reported a later Ubuntu Static failure with the same two diagnostic case names and total 242=238 PASS+2 FAIL+2 original skips. That newer log was not independently read for this R1; it is corroborative parent information, not a new evidence claim or expanded repair.",
+    "The immutable six-ID CI3 cohort list does not imply all six remain active now. Existing terminal-run no-poll rules prevail; this review performs no poll.",
+    "Current Darwin P09 and all unrelated native/GUI failures remain separate and unresolved by this test-only change."
+  ],
+  "limits": {
+    "staticOnly": true,
+    "postimageAccepted": false,
+    "actualGreenClaim": false,
+    "secondChildStackUnobserved": true,
+    "sourceAuthorAndExecutor": "root",
+    "reviewerExecutedTarget": false,
+    "reviewerMutatedSourceOrRefsOrCI": false,
+    "extraGate": false
+  },
+  "selfReadProtocol": "Retain bare report, immediately send exact pin/bytes/SHA/check count, then fresh-fetch and read the complete report with literal and identity verification; send separate confirmation."
+}

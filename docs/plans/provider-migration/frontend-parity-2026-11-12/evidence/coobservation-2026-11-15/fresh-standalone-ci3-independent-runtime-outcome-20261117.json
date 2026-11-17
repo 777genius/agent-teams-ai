@@ -1,0 +1,1476 @@
+{
+  "schemaVersion": 1,
+  "kind": "independent-bounded-standalone-ci3-runtime-outcome-advisory",
+  "at": "2026-11-17 14:46:23 UTC",
+  "repository": "777genius/agent-teams-ai",
+  "reviewer": "/root/red_publication_recovery",
+  "accepted": true,
+  "decision": "ACCEPT_RETAINED_ORIGINAL_STANDALONE10_RED_GREEN_OUTCOME_ONLY",
+  "subject": {
+    "gitBlob": "d7545038ea874fef599d15341f7eedae07104a38",
+    "bytes": 574032,
+    "sha256": "6d52bf2dcada8587bf243c45aa78618a504d5f4cb14a6cef7268d99f91e84d6a"
+  },
+  "authorityJoin": {
+    "controlActualGate": {
+      "gitBlob": "169fc7470c5725e73a1beab947a64f35c00653e6",
+      "bytes": 5032,
+      "sha256": "e496e4530c6b135aa9ecbcc8b1f65dae2dd673ec8015abd59f50c7e04a7921de"
+    },
+    "admission": {
+      "gitBlob": "0f94c0437b0a146b4a00d690222133fb490e653c",
+      "bytes": 2212,
+      "sha256": "b095b605ba41cc2d9ba2ecb6717c398fcd3f43c1a1d728248ac6c4f103b502c5"
+    },
+    "gateChecks": 63,
+    "gateClosedAt": "2026-11-17 14:37:13 UTC",
+    "admissionAt": "2026-11-17 14:37:15 UTC",
+    "invocationAt": "2026-11-17 14:38:58 UTC",
+    "sourceCommit": "59723bc7058d31dd51730f4088eaf66df2735d4b",
+    "controlCommit": "d035cefd235501daf2066d3b7725db35bfb00bf7",
+    "actualSourceParent": "59723bc7058d31dd51730f4088eaf66df2735d4b",
+    "acceptedRootActual": {
+      "bytes": 413021,
+      "sha256": "dd37cfc672aa3bd6685eaf783146a21eae1317ac731654370190f027cc4827ff",
+      "gitBlob": "50e2be6fce599e665df5f34be0ae7e33ea61e496"
+    },
+    "acceptedIndependentActual": {
+      "bytes": 285251,
+      "sha256": "e50f8a5266cbd9e05a271623b80ac25d712b75332e221868e3d907645cdaefaf",
+      "gitBlob": "6f2cea2ae65cdce59f4019b240b93d1aeef439ca"
+    }
+  },
+  "sourceCommit": "59723bc7058d31dd51730f4088eaf66df2735d4b",
+  "controlCommit": "d035cefd235501daf2066d3b7725db35bfb00bf7",
+  "attemptToken": "c714-waitread-ci3-20261117-original-one-shot",
+  "controls": {
+    "runner": {
+      "bytes": 25796,
+      "sha256": "72b743e8cde32af416f0a3d14f0dd7284fd817c2408e42b3c24e2b0f52c1aa8f",
+      "gitBlob": "72fe3f4f791550c3402d0bae54d154aabe06e63c"
+    },
+    "binding": {
+      "bytes": 107643,
+      "sha256": "b44db6175efc66890593fe75189e0de9b16dee90672547e87cfd5f22e3d5ab8a",
+      "gitBlob": "7f69d9936a35f5e3612470076e13d2d9308da40a"
+    }
+  },
+  "externalAdmission": {
+    "gitBlob": "0f94c0437b0a146b4a00d690222133fb490e653c",
+    "bytes": 2212,
+    "sha256": "b095b605ba41cc2d9ba2ecb6717c398fcd3f43c1a1d728248ac6c4f103b502c5"
+  },
+  "invocation": {
+    "command": "exec -c /opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node /workspace/scratch/c714-waitread-ci3-controls-20261117/waitread-supervisor.cjs b44db6175efc66890593fe75189e0de9b16dee90672547e87cfd5f22e3d5ab8a b095b605ba41cc2d9ba2ecb6717c398fcd3f43c1a1d728248ac6c4f103b502c5",
+    "issuedAt": "2026-11-17 14:38:58 UTC",
+    "initialToolResult": {
+      "chunk_id": "1d3293",
+      "wall_time_seconds": 1.000956126,
+      "session_id": 48297,
+      "original_token_count": 0,
+      "output": ""
+    },
+    "finalToolResult": {
+      "chunk_id": "9d1aa0",
+      "wall_time_seconds": 0.000025111,
+      "exit_code": 0,
+      "original_token_count": 85,
+      "output": "{\"status\":\"PASS_BOUNDED_STANDALONE_RED_GREEN\",\"receipt\":\"/workspace/scratch/c714-waitread-ci3-20261117/evidence/receipt.json\",\"phases\":[{\"label\":\"RED\",\"status\":\"PASS_EXPECTED_DISCRIMINATOR\",\"exit\":{\"code\":1,\"signal\":null}},{\"label\":\"GREEN\",\"status\":\"PASS_FIXED_STANDALONE10\",\"exit\":{\"code\":0,\"signal\":null}}],\"error\":null,\"refusal\":null}\n"
+    },
+    "invocations": 1,
+    "retries": 0,
+    "attemptSpent": true
+  },
+  "stagingTransportFailure": {
+    "at": "2026-11-17 14:38:38 UTC",
+    "stage": "executor process creation before Python/staging/supervisor",
+    "error": "CreateProcess: exec-server rejected request (-32603): Argument list too long (os error 7)",
+    "processCreated": false,
+    "scopeCreated": false,
+    "stageCreated": false,
+    "supervisorInvoked": false,
+    "remedy": "Use two bounded Python transfer commands for the same reviewed bytes; original supervisor invocation remains unspent."
+  },
+  "stagingIdentityJoins": [
+    {
+      "path": "execution-admission.json",
+      "pin": {
+        "gitBlob": "0f94c0437b0a146b4a00d690222133fb490e653c",
+        "bytes": 2212,
+        "sha256": "b095b605ba41cc2d9ba2ecb6717c398fcd3f43c1a1d728248ac6c4f103b502c5"
+      },
+      "metadataPreservedThroughReceipt": true,
+      "regular0644SingleLink": true
+    },
+    {
+      "path": "waitread-binding.json",
+      "pin": {
+        "bytes": 107643,
+        "sha256": "b44db6175efc66890593fe75189e0de9b16dee90672547e87cfd5f22e3d5ab8a",
+        "gitBlob": "7f69d9936a35f5e3612470076e13d2d9308da40a"
+      },
+      "metadataPreservedThroughReceipt": true,
+      "regular0644SingleLink": true
+    },
+    {
+      "path": "waitread-supervisor.cjs",
+      "pin": {
+        "bytes": 25796,
+        "sha256": "72b743e8cde32af416f0a3d14f0dd7284fd817c2408e42b3c24e2b0f52c1aa8f",
+        "gitBlob": "72fe3f4f791550c3402d0bae54d154aabe06e63c"
+      },
+      "metadataPreservedThroughReceipt": true,
+      "regular0644SingleLink": true
+    }
+  ],
+  "fullMemberJoins": [
+    {
+      "path": "evidence/GREEN.phase.json",
+      "pin": {
+        "bytes": 96721,
+        "sha256": "16e81b7e8fbe7957e292b3fd00e1726ae5ad7683050a5f66c246eb4f5b08aedd",
+        "gitBlob": "563a5a808e22daac9825894d76656a3a7fd023b4"
+      },
+      "fullBodyHashMatched": true,
+      "scopeInventoryMatched": true,
+      "identityDerivedFromCapturedBody": true
+    },
+    {
+      "path": "evidence/GREEN.stderr.txt",
+      "pin": {
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+      },
+      "fullBodyHashMatched": true,
+      "scopeInventoryMatched": true,
+      "identityDerivedFromCapturedBody": true
+    },
+    {
+      "path": "evidence/GREEN.stdout.tap",
+      "pin": {
+        "bytes": 2328,
+        "sha256": "e92164163605dd964614f70450e03584126485ecdcad3f58240de186ae20c51a",
+        "gitBlob": "ba139046c40b785aabfbd6ba1a3560bd885362c2"
+      },
+      "fullBodyHashMatched": true,
+      "scopeInventoryMatched": true,
+      "identityDerivedFromCapturedBody": true
+    },
+    {
+      "path": "evidence/RED.phase.json",
+      "pin": {
+        "bytes": 103130,
+        "sha256": "a84292445609c9ad706ae015745e098731fa1af3e766514e9d3d81aa792205f2",
+        "gitBlob": "68384dac31e13c92cf7c423f50f83f5a158e1882"
+      },
+      "fullBodyHashMatched": true,
+      "scopeInventoryMatched": true,
+      "identityDerivedFromCapturedBody": true
+    },
+    {
+      "path": "evidence/RED.stderr.txt",
+      "pin": {
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+      },
+      "fullBodyHashMatched": true,
+      "scopeInventoryMatched": true,
+      "identityDerivedFromCapturedBody": true
+    },
+    {
+      "path": "evidence/RED.stdout.tap",
+      "pin": {
+        "bytes": 9297,
+        "sha256": "f3f7649e4d15d642ade00bf5b298e2860d95a993ed470d35fd12ac38e639a991",
+        "gitBlob": "b53cd3852ecc222fa34a7f47215162981c722f5a"
+      },
+      "fullBodyHashMatched": true,
+      "scopeInventoryMatched": true,
+      "identityDerivedFromCapturedBody": true
+    },
+    {
+      "path": "evidence/admission.json",
+      "pin": {
+        "bytes": 1174,
+        "sha256": "534fce4dc4b134b654eace03c0b961490f1a11ebe8a3e42b338175fa2c76d6b8",
+        "gitBlob": "1e9228ee1fb9822ec20de4d510ee79e31d8139a2"
+      },
+      "fullBodyHashMatched": true,
+      "scopeInventoryMatched": true,
+      "identityDerivedFromCapturedBody": true
+    },
+    {
+      "path": "evidence/receipt.json",
+      "pin": {
+        "bytes": 237141,
+        "sha256": "bfe1adcb264d14689d5b11237255634fa53c8aa5ecbbdfd65ac37f608db661b6",
+        "gitBlob": "5e501311adb0afa7b1b511cf433e4f60a7be250d"
+      },
+      "fullBodyHashMatched": true,
+      "scopeInventoryMatched": true,
+      "identityDerivedFromCapturedBody": true
+    },
+    {
+      "path": "evidence/transition.json",
+      "pin": {
+        "bytes": 4937,
+        "sha256": "a7c93b026a3a5c9756b1eed40fc758959075c295dc9114403f413ee9d8ead8b4",
+        "gitBlob": "4ae965e4aa683e4cfb2e0e43387ec8595f4bf2b8"
+      },
+      "fullBodyHashMatched": true,
+      "scopeInventoryMatched": true,
+      "identityDerivedFromCapturedBody": true
+    },
+    {
+      "path": "source/package.json",
+      "pin": {
+        "bytes": 26839,
+        "sha256": "c92407a9a5dad6f9d6a6eb8ea7c456195d396679bb4b9dfd15b6c06b726d1084",
+        "gitBlob": "f80ec83172d0aec0dec8a8ab055426b4fca4a1f7"
+      },
+      "fullBodyHashMatched": true,
+      "scopeInventoryMatched": true,
+      "identityDerivedFromCapturedBody": true
+    },
+    {
+      "path": "source/scripts/legacy-agent-host/desktop-ui-controls-deadline.test.ts",
+      "pin": {
+        "bytes": 7883,
+        "sha256": "29836f914218edb4876b6a4e157e7cdc68f63cdf414084cdd41683965c734eda",
+        "gitBlob": "6a9f8ad7481cd5910befcc6c7ff5992eef03965b"
+      },
+      "fullBodyHashMatched": true,
+      "scopeInventoryMatched": true,
+      "identityDerivedFromCapturedBody": true
+    },
+    {
+      "path": "source/scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "pin": {
+        "bytes": 29017,
+        "sha256": "ffd9bbb822dbdc30da7cb8daa881fcbebd384ba2bf9bdd87c804c511166fa02b",
+        "gitBlob": "5286c036a63a14e98925711a224df202c9a7caa7"
+      },
+      "fullBodyHashMatched": true,
+      "scopeInventoryMatched": true,
+      "identityDerivedFromCapturedBody": true
+    }
+  ],
+  "fullMemberCount": 12,
+  "fullMemberBytes": 518467,
+  "scopeInventoryJoin": {
+    "files": 12,
+    "fullFileBytes": 518467,
+    "rawMemberInstancesIncludingTwoEmptyStderr": true,
+    "directories": 4,
+    "exactPaths": [
+      "evidence/GREEN.phase.json",
+      "evidence/GREEN.stderr.txt",
+      "evidence/GREEN.stdout.tap",
+      "evidence/RED.phase.json",
+      "evidence/RED.stderr.txt",
+      "evidence/RED.stdout.tap",
+      "evidence/admission.json",
+      "evidence/receipt.json",
+      "evidence/transition.json",
+      "source/package.json",
+      "source/scripts/legacy-agent-host/desktop-ui-controls-deadline.test.ts",
+      "source/scripts/legacy-agent-host/desktop-ui-controls.ts"
+    ],
+    "noExtraFilesOrLinks": true,
+    "allMembersDerivedFromCompleteCapture": true
+  },
+  "phaseJoins": [
+    {
+      "label": "RED",
+      "status": "PASS_EXPECTED_DISCRIMINATOR",
+      "exit": {
+        "code": 1,
+        "signal": null
+      },
+      "elapsedMs": 1134.780341,
+      "counters": {
+        "tests": 10,
+        "suites": 0,
+        "pass": 3,
+        "fail": 7,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0
+      },
+      "stdout": {
+        "bytes": 9297,
+        "sha256": "f3f7649e4d15d642ade00bf5b298e2860d95a993ed470d35fd12ac38e639a991",
+        "gitBlob": "b53cd3852ecc222fa34a7f47215162981c722f5a"
+      },
+      "stderr": {
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+      },
+      "completePhaseJsonMatchesReceipt": true,
+      "wholeSourceBeforeAfterEqual": true,
+      "wholeNodeBeforeAfterEqual": true,
+      "ordinaryCloseAndOwnedPidCleanup": true
+    },
+    {
+      "label": "GREEN",
+      "status": "PASS_FIXED_STANDALONE10",
+      "exit": {
+        "code": 0,
+        "signal": null
+      },
+      "elapsedMs": 1126.932058,
+      "counters": {
+        "tests": 10,
+        "suites": 0,
+        "pass": 10,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0
+      },
+      "stdout": {
+        "bytes": 2328,
+        "sha256": "e92164163605dd964614f70450e03584126485ecdcad3f58240de186ae20c51a",
+        "gitBlob": "ba139046c40b785aabfbd6ba1a3560bd885362c2"
+      },
+      "stderr": {
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+      },
+      "completePhaseJsonMatchesReceipt": true,
+      "wholeSourceBeforeAfterEqual": true,
+      "wholeNodeBeforeAfterEqual": true,
+      "ordinaryCloseAndOwnedPidCleanup": true
+    }
+  ],
+  "caseJoins": [
+    {
+      "phase": "RED",
+      "number": 1,
+      "title": "generic UI read refuses its first fulfilled value exactly at the original deadline",
+      "outcome": "FAIL",
+      "signature": "missing-rejection",
+      "fullRawTapMatched": true
+    },
+    {
+      "phase": "RED",
+      "number": 2,
+      "title": "generic UI read refuses its first fulfilled value after the original deadline",
+      "outcome": "FAIL",
+      "signature": "missing-rejection",
+      "fullRawTapMatched": true
+    },
+    {
+      "phase": "RED",
+      "number": 3,
+      "title": "generic UI read refuses a later fulfilled value exactly at the original deadline",
+      "outcome": "FAIL",
+      "signature": "missing-rejection",
+      "fullRawTapMatched": true
+    },
+    {
+      "phase": "RED",
+      "number": 4,
+      "title": "generic UI read refuses a later fulfilled value after the original deadline",
+      "outcome": "FAIL",
+      "signature": "missing-rejection",
+      "fullRawTapMatched": true
+    },
+    {
+      "phase": "RED",
+      "number": 5,
+      "title": "generic UI read does not admit or poll again after a late false observation",
+      "outcome": "FAIL",
+      "signature": "late-false-readiness",
+      "fullRawTapMatched": true
+    },
+    {
+      "phase": "RED",
+      "number": 6,
+      "title": "generic UI read preserves a timely first value and its exact identity",
+      "outcome": "PASS",
+      "signature": null,
+      "fullRawTapMatched": true
+    },
+    {
+      "phase": "RED",
+      "number": 7,
+      "title": "generic UI read preserves its original cadence and a timely later value",
+      "outcome": "PASS",
+      "signature": null,
+      "fullRawTapMatched": true
+    },
+    {
+      "phase": "RED",
+      "number": 8,
+      "title": "generic UI read honors a supplied budget at its strict boundary",
+      "outcome": "FAIL",
+      "signature": "missing-rejection",
+      "fullRawTapMatched": true
+    },
+    {
+      "phase": "RED",
+      "number": 9,
+      "title": "generic UI hover refuses a third stable point arriving at the original deadline",
+      "outcome": "FAIL",
+      "signature": "missing-rejection",
+      "fullRawTapMatched": true
+    },
+    {
+      "phase": "RED",
+      "number": 10,
+      "title": "generic UI hover preserves one movement after three timely stable points",
+      "outcome": "PASS",
+      "signature": null,
+      "fullRawTapMatched": true
+    },
+    {
+      "phase": "GREEN",
+      "number": 1,
+      "title": "generic UI read refuses its first fulfilled value exactly at the original deadline",
+      "outcome": "PASS",
+      "signature": null,
+      "fullRawTapMatched": true
+    },
+    {
+      "phase": "GREEN",
+      "number": 2,
+      "title": "generic UI read refuses its first fulfilled value after the original deadline",
+      "outcome": "PASS",
+      "signature": null,
+      "fullRawTapMatched": true
+    },
+    {
+      "phase": "GREEN",
+      "number": 3,
+      "title": "generic UI read refuses a later fulfilled value exactly at the original deadline",
+      "outcome": "PASS",
+      "signature": null,
+      "fullRawTapMatched": true
+    },
+    {
+      "phase": "GREEN",
+      "number": 4,
+      "title": "generic UI read refuses a later fulfilled value after the original deadline",
+      "outcome": "PASS",
+      "signature": null,
+      "fullRawTapMatched": true
+    },
+    {
+      "phase": "GREEN",
+      "number": 5,
+      "title": "generic UI read does not admit or poll again after a late false observation",
+      "outcome": "PASS",
+      "signature": null,
+      "fullRawTapMatched": true
+    },
+    {
+      "phase": "GREEN",
+      "number": 6,
+      "title": "generic UI read preserves a timely first value and its exact identity",
+      "outcome": "PASS",
+      "signature": null,
+      "fullRawTapMatched": true
+    },
+    {
+      "phase": "GREEN",
+      "number": 7,
+      "title": "generic UI read preserves its original cadence and a timely later value",
+      "outcome": "PASS",
+      "signature": null,
+      "fullRawTapMatched": true
+    },
+    {
+      "phase": "GREEN",
+      "number": 8,
+      "title": "generic UI read honors a supplied budget at its strict boundary",
+      "outcome": "PASS",
+      "signature": null,
+      "fullRawTapMatched": true
+    },
+    {
+      "phase": "GREEN",
+      "number": 9,
+      "title": "generic UI hover refuses a third stable point arriving at the original deadline",
+      "outcome": "PASS",
+      "signature": null,
+      "fullRawTapMatched": true
+    },
+    {
+      "phase": "GREEN",
+      "number": 10,
+      "title": "generic UI hover preserves one movement after three timely stable points",
+      "outcome": "PASS",
+      "signature": null,
+      "fullRawTapMatched": true
+    }
+  ],
+  "ownershipJoins": [
+    {
+      "label": "RED",
+      "leader": {
+        "pid": 9,
+        "start": "893773",
+        "group": 9,
+        "session": 9,
+        "ppid": 2,
+        "uid": "1000",
+        "exe": "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node"
+      },
+      "worker": {
+        "pid": 15,
+        "start": "893778",
+        "ppid": 9,
+        "group": 9,
+        "session": 9,
+        "uid": "1000",
+        "exe": "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node"
+      },
+      "samples": 38,
+      "processRows": 74,
+      "uniqueIdentities": 2,
+      "admittedZombiePriorIdentityReuse": 0,
+      "fullObservedMapMatched": true,
+      "remaining": [],
+      "originalPidsRemaining": [],
+      "signalsTriggered": false
+    },
+    {
+      "label": "GREEN",
+      "leader": {
+        "pid": 22,
+        "start": "893939",
+        "group": 22,
+        "session": 22,
+        "ppid": 2,
+        "uid": "1000",
+        "exe": "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node"
+      },
+      "worker": {
+        "pid": 28,
+        "start": "893944",
+        "ppid": 22,
+        "group": 22,
+        "session": 22,
+        "uid": "1000",
+        "exe": "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node"
+      },
+      "samples": 37,
+      "processRows": 70,
+      "uniqueIdentities": 2,
+      "admittedZombiePriorIdentityReuse": 1,
+      "fullObservedMapMatched": true,
+      "remaining": [],
+      "originalPidsRemaining": [],
+      "signalsTriggered": false
+    }
+  ],
+  "nodeCustodyJoin": {
+    "path": "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+    "bytes": 126939688,
+    "sha256": "61ab14cd750fc24d5db53490ec5fc40f756e4b6e136b78cf7004265471d9bd1d",
+    "rawSigned64": "-9223372036854733348",
+    "canonicalUnsigned64": "9223372036854818268",
+    "allOtherIdentityFieldsPreserved": true,
+    "wholeReceiptAndEachPhaseBeforeAfterIdentical": true,
+    "stagingPythonCanonicalRepresentationJoined": true
+  },
+  "sourceTransition": {
+    "wholeTransitionFileEqualsReceipt": true,
+    "wholeRedBeforeAfterEqualsInitial": true,
+    "wholeGreenBeforeAfterEqualsFinal": true,
+    "sourceRootMetadataUnchanged": true,
+    "onlyChangedPath": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+    "oldIdentity": {
+      "bytes": 28974,
+      "sha256": "7626e479a6662242009cb050e7e5af612a29e4205d62666d15274d5c30f91386",
+      "gitBlob": "ed57cb0fe7d57ef076a591621289eb77667c63ad"
+    },
+    "newIdentity": {
+      "bytes": 29017,
+      "sha256": "ffd9bbb822dbdc30da7cb8daa881fcbebd384ba2bf9bdd87c804c511166fa02b",
+      "gitBlob": "5286c036a63a14e98925711a224df202c9a7caa7"
+    },
+    "changedBytes": 43,
+    "sameOriginalInode": "534080",
+    "stableMetadataFields": [
+      "type",
+      "device",
+      "inode",
+      "mode",
+      "uid",
+      "gid",
+      "nlink"
+    ],
+    "originalMetadata": {
+      "type": "file",
+      "device": "27",
+      "inode": "534080",
+      "mode": 420,
+      "uid": "1000",
+      "gid": "1000",
+      "nlink": "1",
+      "bytes": 28974,
+      "mtimeNs": "1794926338569000094",
+      "ctimeNs": "1794926338569000094"
+    },
+    "newMetadata": {
+      "type": "file",
+      "device": "27",
+      "inode": "534080",
+      "mode": 420,
+      "uid": "1000",
+      "gid": "1000",
+      "nlink": "1",
+      "bytes": 29017,
+      "mtimeNs": "1794926339927434197",
+      "ctimeNs": "1794926339927434197"
+    }
+  },
+  "finalSourceJoins": [
+    {
+      "path": "package.json",
+      "pin": {
+        "bytes": 26839,
+        "sha256": "c92407a9a5dad6f9d6a6eb8ea7c456195d396679bb4b9dfd15b6c06b726d1084",
+        "gitBlob": "f80ec83172d0aec0dec8a8ab055426b4fca4a1f7"
+      },
+      "completeBodyEqualsExactBinding": true,
+      "metadata": {
+        "type": "file",
+        "device": "27",
+        "inode": "534076",
+        "mode": 420,
+        "uid": "1000",
+        "gid": "1000",
+        "nlink": "1",
+        "bytes": 26839,
+        "mtimeNs": "1794926338563456424",
+        "ctimeNs": "1794926338563456424"
+      }
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-ui-controls-deadline.test.ts",
+      "pin": {
+        "bytes": 7883,
+        "sha256": "29836f914218edb4876b6a4e157e7cdc68f63cdf414084cdd41683965c734eda",
+        "gitBlob": "6a9f8ad7481cd5910befcc6c7ff5992eef03965b"
+      },
+      "completeBodyEqualsExactBinding": true,
+      "metadata": {
+        "type": "file",
+        "device": "27",
+        "inode": "534079",
+        "mode": 420,
+        "uid": "1000",
+        "gid": "1000",
+        "nlink": "1",
+        "bytes": 7883,
+        "mtimeNs": "1794926338563456424",
+        "ctimeNs": "1794926338563456424"
+      }
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "pin": {
+        "bytes": 29017,
+        "sha256": "ffd9bbb822dbdc30da7cb8daa881fcbebd384ba2bf9bdd87c804c511166fa02b",
+        "gitBlob": "5286c036a63a14e98925711a224df202c9a7caa7"
+      },
+      "completeBodyEqualsExactBinding": true,
+      "metadata": {
+        "type": "file",
+        "device": "27",
+        "inode": "534080",
+        "mode": 420,
+        "uid": "1000",
+        "gid": "1000",
+        "nlink": "1",
+        "bytes": 29017,
+        "mtimeNs": "1794926339927434197",
+        "ctimeNs": "1794926339927434197"
+      }
+    }
+  ],
+  "controlsBeforeAfterLiteralEqual": true,
+  "controlsRootBeforeAfterLiteralEqual": true,
+  "receipt": {
+    "bytes": 237141,
+    "sha256": "bfe1adcb264d14689d5b11237255634fa53c8aa5ecbbdfd65ac37f608db661b6",
+    "gitBlob": "5e501311adb0afa7b1b511cf433e4f60a7be250d"
+  },
+  "supervisorElapsedMs": 3319.89634,
+  "finishedAt": "2026-11-17T14:39:01.724Z",
+  "checks": [
+    {
+      "id": "BL01",
+      "name": "Complete immutable capture/gate/admission bodies match exact identities",
+      "status": "PASS_RETAINED_RUNTIME_EVIDENCE",
+      "evidence": {
+        "capture": {
+          "gitBlob": "d7545038ea874fef599d15341f7eedae07104a38",
+          "bytes": 574032,
+          "sha256": "6d52bf2dcada8587bf243c45aa78618a504d5f4cb14a6cef7268d99f91e84d6a"
+        },
+        "gate": {
+          "gitBlob": "169fc7470c5725e73a1beab947a64f35c00653e6",
+          "bytes": 5032,
+          "sha256": "e496e4530c6b135aa9ecbcc8b1f65dae2dd673ec8015abd59f50c7e04a7921de"
+        },
+        "admission": {
+          "gitBlob": "0f94c0437b0a146b4a00d690222133fb490e653c",
+          "bytes": 2212,
+          "sha256": "b095b605ba41cc2d9ba2ecb6717c398fcd3f43c1a1d728248ac6c4f103b502c5"
+        }
+      }
+    },
+    {
+      "id": "BL02",
+      "name": "Closed actual control gate joins both complete accepted reports",
+      "status": "PASS_RETAINED_RUNTIME_EVIDENCE",
+      "evidence": {
+        "root": {
+          "bytes": 413021,
+          "sha256": "dd37cfc672aa3bd6685eaf783146a21eae1317ac731654370190f027cc4827ff",
+          "gitBlob": "50e2be6fce599e665df5f34be0ae7e33ea61e496"
+        },
+        "independent": {
+          "bytes": 285251,
+          "sha256": "e50f8a5266cbd9e05a271623b80ac25d712b75332e221868e3d907645cdaefaf",
+          "gitBlob": "6f2cea2ae65cdce59f4019b240b93d1aeef439ca"
+        },
+        "actualChecks": 63
+      }
+    },
+    {
+      "id": "BL03",
+      "name": "Gate then external admission precede the sole original invocation",
+      "status": "PASS_RETAINED_RUNTIME_EVIDENCE",
+      "evidence": {
+        "controlActualGate": {
+          "gitBlob": "169fc7470c5725e73a1beab947a64f35c00653e6",
+          "bytes": 5032,
+          "sha256": "e496e4530c6b135aa9ecbcc8b1f65dae2dd673ec8015abd59f50c7e04a7921de"
+        },
+        "admission": {
+          "gitBlob": "0f94c0437b0a146b4a00d690222133fb490e653c",
+          "bytes": 2212,
+          "sha256": "b095b605ba41cc2d9ba2ecb6717c398fcd3f43c1a1d728248ac6c4f103b502c5"
+        },
+        "gateChecks": 63,
+        "gateClosedAt": "2026-11-17 14:37:13 UTC",
+        "admissionAt": "2026-11-17 14:37:15 UTC",
+        "invocationAt": "2026-11-17 14:38:58 UTC",
+        "sourceCommit": "59723bc7058d31dd51730f4088eaf66df2735d4b",
+        "controlCommit": "d035cefd235501daf2066d3b7725db35bfb00bf7",
+        "actualSourceParent": "59723bc7058d31dd51730f4088eaf66df2735d4b",
+        "acceptedRootActual": {
+          "bytes": 413021,
+          "sha256": "dd37cfc672aa3bd6685eaf783146a21eae1317ac731654370190f027cc4827ff",
+          "gitBlob": "50e2be6fce599e665df5f34be0ae7e33ea61e496"
+        },
+        "acceptedIndependentActual": {
+          "bytes": 285251,
+          "sha256": "e50f8a5266cbd9e05a271623b80ac25d712b75332e221868e3d907645cdaefaf",
+          "gitBlob": "6f2cea2ae65cdce59f4019b240b93d1aeef439ca"
+        }
+      }
+    },
+    {
+      "id": "BL04",
+      "name": "Admission binds the exact published controls and actual source/parent",
+      "status": "PASS_RETAINED_RUNTIME_EVIDENCE",
+      "evidence": {
+        "controlCommit": "d035cefd235501daf2066d3b7725db35bfb00bf7",
+        "controlTree": "17e034751c1c1c5199aa147b2dababa5787ae6cf",
+        "controlDocsTree": "177dcd82ad978d16ddebfd6cf2c25342ae7f8b53",
+        "sourceCommit": "59723bc7058d31dd51730f4088eaf66df2735d4b",
+        "controlParent": "59723bc7058d31dd51730f4088eaf66df2735d4b",
+        "runner": {
+          "bytes": 25796,
+          "sha256": "72b743e8cde32af416f0a3d14f0dd7284fd817c2408e42b3c24e2b0f52c1aa8f",
+          "gitBlob": "72fe3f4f791550c3402d0bae54d154aabe06e63c"
+        },
+        "binding": {
+          "bytes": 107643,
+          "sha256": "b44db6175efc66890593fe75189e0de9b16dee90672547e87cfd5f22e3d5ab8a",
+          "gitBlob": "7f69d9936a35f5e3612470076e13d2d9308da40a"
+        }
+      }
+    },
+    {
+      "id": "BL05",
+      "name": "Full embedded admission body is the exact retained admission literal",
+      "status": "PASS_RETAINED_RUNTIME_EVIDENCE",
+      "evidence": {
+        "pin": {
+          "gitBlob": "0f94c0437b0a146b4a00d690222133fb490e653c",
+          "bytes": 2212,
+          "sha256": "b095b605ba41cc2d9ba2ecb6717c398fcd3f43c1a1d728248ac6c4f103b502c5"
+        },
+        "wholeLiteralEqual": true
+      }
+    },
+    {
+      "id": "BL06",
+      "name": "Initial E2BIG transfer rejection is recorded before process creation",
+      "status": "PASS_RETAINED_RUNTIME_EVIDENCE",
+      "evidence": {
+        "at": "2026-11-17 14:38:38 UTC",
+        "stage": "executor process creation before Python/staging/supervisor",
+        "error": "CreateProcess: exec-server rejected request (-32603): Argument list too long (os error 7)",
+        "processCreated": false,
+        "scopeCreated": false,
+        "stageCreated": false,
+        "supervisorInvoked": false,
+        "remedy": "Use two bounded Python transfer commands for the same reviewed bytes; original supervisor invocation remains unspent."
+      }
+    },
+    {
+      "id": "BL07",
+      "name": "Completed exclusive stage contains exactly the same three reviewed files",
+      "status": "PASS_RETAINED_RUNTIME_EVIDENCE",
+      "evidence": {
+        "stage": "/workspace/scratch/c714-waitread-ci3-controls-20261117",
+        "scopeAbsentBeforeSupervisor": true,
+        "files": [
+          {
+            "path": "execution-admission.json",
+            "pin": {
+              "gitBlob": "0f94c0437b0a146b4a00d690222133fb490e653c",
+              "bytes": 2212,
+              "sha256": "b095b605ba41cc2d9ba2ecb6717c398fcd3f43c1a1d728248ac6c4f103b502c5"
+            },
+            "metadataPreservedThroughReceipt": true,
+            "regular0644SingleLink": true
+          },
+          {
+            "path": "waitread-binding.json",
+            "pin": {
+              "bytes": 107643,
+              "sha256": "b44db6175efc66890593fe75189e0de9b16dee90672547e87cfd5f22e3d5ab8a",
+              "gitBlob": "7f69d9936a35f5e3612470076e13d2d9308da40a"
+            },
+            "metadataPreservedThroughReceipt": true,
+            "regular0644SingleLink": true
+          },
+          {
+            "path": "waitread-supervisor.cjs",
+            "pin": {
+              "bytes": 25796,
+              "sha256": "72b743e8cde32af416f0a3d14f0dd7284fd817c2408e42b3c24e2b0f52c1aa8f",
+              "gitBlob": "72fe3f4f791550c3402d0bae54d154aabe06e63c"
+            },
+            "metadataPreservedThroughReceipt": true,
+            "regular0644SingleLink": true
+          }
+        ]
+      }
+    },
+    {
+      "id": "BL08",
+      "name": "Staging did not invoke Node or the supervisor",
+      "status": "PASS_RETAINED_RUNTIME_EVIDENCE",
+      "evidence": {
+        "nodeExecuted": false,
+        "supervisorInvoked": false,
+        "transportRemedy": "Two bounded data-transfer commands reported by the capture; the complete final staging record matches the original reviewed bytes."
+      }
+    },
+    {
+      "id": "BL09",
+      "name": "Only one exact supervisor command was invoked without retry",
+      "status": "PASS_RETAINED_RUNTIME_EVIDENCE",
+      "evidence": {
+        "command": "exec -c /opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node /workspace/scratch/c714-waitread-ci3-controls-20261117/waitread-supervisor.cjs b44db6175efc66890593fe75189e0de9b16dee90672547e87cfd5f22e3d5ab8a b095b605ba41cc2d9ba2ecb6717c398fcd3f43c1a1d728248ac6c4f103b502c5",
+        "initialSessionId": 48297,
+        "invocations": 1,
+        "retries": 0
+      }
+    },
+    {
+      "id": "BL10",
+      "name": "Final tool result observes outer exit0 and bounded success",
+      "status": "PASS_RETAINED_RUNTIME_EVIDENCE",
+      "evidence": {
+        "exitCode": 0,
+        "output": {
+          "status": "PASS_BOUNDED_STANDALONE_RED_GREEN",
+          "receipt": "/workspace/scratch/c714-waitread-ci3-20261117/evidence/receipt.json",
+          "phases": [
+            {
+              "label": "RED",
+              "status": "PASS_EXPECTED_DISCRIMINATOR",
+              "exit": {
+                "code": 1,
+                "signal": null
+              }
+            },
+            {
+              "label": "GREEN",
+              "status": "PASS_FIXED_STANDALONE10",
+              "exit": {
+                "code": 0,
+                "signal": null
+              }
+            }
+          ],
+          "error": null,
+          "refusal": null
+        }
+      }
+    },
+    {
+      "id": "BL11",
+      "name": "All12 actual captured files are complete and independently hashed",
+      "status": "PASS_RETAINED_RUNTIME_EVIDENCE",
+      "evidence": {
+        "files": 12,
+        "bytes": 518467,
+        "memberPinsDerivedFromActualBodies": true,
+        "noIndividualMemberGitFetches": true
+      }
+    },
+    {
+      "id": "BL12",
+      "name": "Complete scope inventory has only12 files and4 directories",
+      "status": "PASS_RETAINED_RUNTIME_EVIDENCE",
+      "evidence": {
+        "files": 12,
+        "fullFileBytes": 518467,
+        "rawMemberInstancesIncludingTwoEmptyStderr": true,
+        "directories": 4,
+        "exactPaths": [
+          "evidence/GREEN.phase.json",
+          "evidence/GREEN.stderr.txt",
+          "evidence/GREEN.stdout.tap",
+          "evidence/RED.phase.json",
+          "evidence/RED.stderr.txt",
+          "evidence/RED.stdout.tap",
+          "evidence/admission.json",
+          "evidence/receipt.json",
+          "evidence/transition.json",
+          "source/package.json",
+          "source/scripts/legacy-agent-host/desktop-ui-controls-deadline.test.ts",
+          "source/scripts/legacy-agent-host/desktop-ui-controls.ts"
+        ],
+        "noExtraFilesOrLinks": true,
+        "allMembersDerivedFromCompleteCapture": true
+      }
+    },
+    {
+      "id": "BL13",
+      "name": "Receipt and both standalone phaseJSON files agree completely",
+      "status": "PASS_RETAINED_RUNTIME_EVIDENCE",
+      "evidence": {
+        "receipt": {
+          "bytes": 237141,
+          "sha256": "bfe1adcb264d14689d5b11237255634fa53c8aa5ecbbdfd65ac37f608db661b6",
+          "gitBlob": "5e501311adb0afa7b1b511cf433e4f60a7be250d"
+        },
+        "red": {
+          "bytes": 103130,
+          "sha256": "a84292445609c9ad706ae015745e098731fa1af3e766514e9d3d81aa792205f2",
+          "gitBlob": "68384dac31e13c92cf7c423f50f83f5a158e1882"
+        },
+        "green": {
+          "bytes": 96721,
+          "sha256": "16e81b7e8fbe7957e292b3fd00e1726ae5ad7683050a5f66c246eb4f5b08aedd",
+          "gitBlob": "563a5a808e22daac9825894d76656a3a7fd023b4"
+        }
+      }
+    },
+    {
+      "id": "BL14",
+      "name": "Full RED TAP contains precisely ten ordered original cases",
+      "status": "PASS_RETAINED_RUNTIME_EVIDENCE",
+      "evidence": {
+        "stdout": {
+          "bytes": 9297,
+          "sha256": "f3f7649e4d15d642ade00bf5b298e2860d95a993ed470d35fd12ac38e639a991",
+          "gitBlob": "b53cd3852ecc222fa34a7f47215162981c722f5a"
+        },
+        "counters": {
+          "tests": 10,
+          "suites": 0,
+          "pass": 3,
+          "fail": 7,
+          "cancelled": 0,
+          "skipped": 0,
+          "todo": 0
+        }
+      }
+    },
+    {
+      "id": "BL15",
+      "name": "RED failures are exactly the seven expected assertions",
+      "status": "PASS_RETAINED_RUNTIME_EVIDENCE",
+      "evidence": {
+        "failureCases": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          8,
+          9
+        ],
+        "missingRejectionCases": [
+          1,
+          2,
+          3,
+          4,
+          8,
+          9
+        ],
+        "lateFalseReadinessCase": 5,
+        "errorCode": "ERR_ASSERTION",
+        "failureType": "testCodeFailure"
+      }
+    },
+    {
+      "id": "BL16",
+      "name": "RED preservation cases6,7,10 pass",
+      "status": "PASS_RETAINED_RUNTIME_EVIDENCE",
+      "evidence": {
+        "passCases": [
+          6,
+          7,
+          10
+        ]
+      }
+    },
+    {
+      "id": "BL17",
+      "name": "Full GREEN TAP contains all ten original cases passing",
+      "status": "PASS_RETAINED_RUNTIME_EVIDENCE",
+      "evidence": {
+        "stdout": {
+          "bytes": 2328,
+          "sha256": "e92164163605dd964614f70450e03584126485ecdcad3f58240de186ae20c51a",
+          "gitBlob": "ba139046c40b785aabfbd6ba1a3560bd885362c2"
+        },
+        "counters": {
+          "tests": 10,
+          "suites": 0,
+          "pass": 10,
+          "fail": 0,
+          "cancelled": 0,
+          "skipped": 0,
+          "todo": 0
+        }
+      }
+    },
+    {
+      "id": "BL18",
+      "name": "Both whole TAP plans/counters have zero skip,cancel,todo and no substitute or bailout",
+      "status": "PASS_RETAINED_RUNTIME_EVIDENCE",
+      "evidence": {
+        "plans": [
+          "1..10",
+          "1..10"
+        ],
+        "wholeOrderedTitlesMatched": true,
+        "nestedSubstitute": false,
+        "bailout": false
+      }
+    },
+    {
+      "id": "BL19",
+      "name": "Raw stderr is empty and both outputs remain below the original8MiB cap",
+      "status": "PASS_RETAINED_RUNTIME_EVIDENCE",
+      "evidence": {
+        "redStdout": 9297,
+        "greenStdout": 2328,
+        "stderr": [
+          0,
+          0
+        ],
+        "outputLimitBytes": 8388608
+      }
+    },
+    {
+      "id": "BL20",
+      "name": "Both phases use exact whole-file argv,cwd and fixed child environment",
+      "status": "PASS_RETAINED_RUNTIME_EVIDENCE",
+      "evidence": {
+        "argv": [
+          "--test",
+          "--test-reporter=tap",
+          "scripts/legacy-agent-host/desktop-ui-controls-deadline.test.ts"
+        ],
+        "cwd": "/workspace/scratch/c714-waitread-ci3-20261117/source",
+        "environment": {
+          "PATH": "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin",
+          "LANG": "C.UTF-8",
+          "TZ": "UTC"
+        }
+      }
+    },
+    {
+      "id": "BL21",
+      "name": "Ordinary phase exits are RED1 and GREEN0 without signals",
+      "status": "PASS_RETAINED_RUNTIME_EVIDENCE",
+      "evidence": {
+        "red": {
+          "code": 1,
+          "signal": null
+        },
+        "green": {
+          "code": 0,
+          "signal": null
+        }
+      }
+    },
+    {
+      "id": "BL22",
+      "name": "All75 process samples and144 rows reconstruct the exact observed identity maps",
+      "status": "PASS_RETAINED_RUNTIME_EVIDENCE",
+      "evidence": {
+        "samples": 75,
+        "rows": 144,
+        "uniqueOwnedIdentities": 4
+      }
+    },
+    {
+      "id": "BL23",
+      "name": "Each phase has one captured Node leader and its one Node test worker",
+      "status": "PASS_RETAINED_RUNTIME_EVIDENCE",
+      "evidence": [
+        {
+          "label": "RED",
+          "leader": {
+            "pid": 9,
+            "start": "893773",
+            "group": 9,
+            "session": 9,
+            "ppid": 2,
+            "uid": "1000",
+            "exe": "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node"
+          },
+          "worker": {
+            "pid": 15,
+            "start": "893778",
+            "ppid": 9,
+            "group": 9,
+            "session": 9,
+            "uid": "1000",
+            "exe": "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node"
+          },
+          "samples": 38,
+          "processRows": 74,
+          "uniqueIdentities": 2,
+          "admittedZombiePriorIdentityReuse": 0,
+          "fullObservedMapMatched": true,
+          "remaining": [],
+          "originalPidsRemaining": [],
+          "signalsTriggered": false
+        },
+        {
+          "label": "GREEN",
+          "leader": {
+            "pid": 22,
+            "start": "893939",
+            "group": 22,
+            "session": 22,
+            "ppid": 2,
+            "uid": "1000",
+            "exe": "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node"
+          },
+          "worker": {
+            "pid": 28,
+            "start": "893944",
+            "ppid": 22,
+            "group": 22,
+            "session": 22,
+            "uid": "1000",
+            "exe": "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node"
+          },
+          "samples": 37,
+          "processRows": 70,
+          "uniqueIdentities": 2,
+          "admittedZombiePriorIdentityReuse": 1,
+          "fullObservedMapMatched": true,
+          "remaining": [],
+          "originalPidsRemaining": [],
+          "signalsTriggered": false
+        }
+      ]
+    },
+    {
+      "id": "BL24",
+      "name": "The one GREEN zombie sample uses the already captured exact prior identity",
+      "status": "PASS_RETAINED_RUNTIME_EVIDENCE",
+      "evidence": {
+        "phase": "GREEN",
+        "pid": 22,
+        "start": "893939",
+        "rule": "Existing unchanged supervisor permits its final Z/ENOENT inspection only with a complete previously accepted same pid/start/group/session identity.",
+        "newRelaxation": false
+      }
+    },
+    {
+      "id": "BL25",
+      "name": "Both original process groups exit ordinarily with no surviving captured PIDs",
+      "status": "PASS_RETAINED_RUNTIME_EVIDENCE",
+      "evidence": {
+        "cleanupTriggered": [
+          false,
+          false
+        ],
+        "ordinaryExit": [
+          true,
+          true
+        ],
+        "remaining": [
+          [],
+          []
+        ],
+        "originalPidsRemaining": [
+          [],
+          []
+        ]
+      }
+    },
+    {
+      "id": "BL26",
+      "name": "Node full hash and metadata remain exact before and after staging and both phases",
+      "status": "PASS_RETAINED_RUNTIME_EVIDENCE",
+      "evidence": {
+        "path": "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+        "bytes": 126939688,
+        "sha256": "61ab14cd750fc24d5db53490ec5fc40f756e4b6e136b78cf7004265471d9bd1d",
+        "rawSigned64": "-9223372036854733348",
+        "canonicalUnsigned64": "9223372036854818268",
+        "allOtherIdentityFieldsPreserved": true,
+        "wholeReceiptAndEachPhaseBeforeAfterIdentical": true,
+        "stagingPythonCanonicalRepresentationJoined": true
+      }
+    },
+    {
+      "id": "BL27",
+      "name": "Signed64 raw inode joins the selected unsigned64 bits without weakening identity",
+      "status": "PASS_RETAINED_RUNTIME_EVIDENCE",
+      "evidence": {
+        "rawSigned64": "-9223372036854733348",
+        "canonicalUnsigned64": "9223372036854818268",
+        "normalization": "Exact preserved BigInt.asUintN(64) identity rule."
+      }
+    },
+    {
+      "id": "BL28",
+      "name": "Controls and staging-directory metadata are unchanged through completion",
+      "status": "PASS_RETAINED_RUNTIME_EVIDENCE",
+      "evidence": {
+        "fullThreeFileCensusEqual": true,
+        "controlRootEqual": true
+      }
+    },
+    {
+      "id": "BL29",
+      "name": "Source before/after custody is complete for both phases and the root directory",
+      "status": "PASS_RETAINED_RUNTIME_EVIDENCE",
+      "evidence": {
+        "initialRedSourceEqualsRedAfter": true,
+        "greenBeforeEqualsFinalSource": true,
+        "sourceRootEqual": true
+      }
+    },
+    {
+      "id": "BL30",
+      "name": "Transition changes only the reviewed43 bytes on the same controls inode",
+      "status": "PASS_RETAINED_RUNTIME_EVIDENCE",
+      "evidence": {
+        "wholeTransitionFileEqualsReceipt": true,
+        "wholeRedBeforeAfterEqualsInitial": true,
+        "wholeGreenBeforeAfterEqualsFinal": true,
+        "sourceRootMetadataUnchanged": true,
+        "onlyChangedPath": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+        "oldIdentity": {
+          "bytes": 28974,
+          "sha256": "7626e479a6662242009cb050e7e5af612a29e4205d62666d15274d5c30f91386",
+          "gitBlob": "ed57cb0fe7d57ef076a591621289eb77667c63ad"
+        },
+        "newIdentity": {
+          "bytes": 29017,
+          "sha256": "ffd9bbb822dbdc30da7cb8daa881fcbebd384ba2bf9bdd87c804c511166fa02b",
+          "gitBlob": "5286c036a63a14e98925711a224df202c9a7caa7"
+        },
+        "changedBytes": 43,
+        "sameOriginalInode": "534080",
+        "stableMetadataFields": [
+          "type",
+          "device",
+          "inode",
+          "mode",
+          "uid",
+          "gid",
+          "nlink"
+        ],
+        "originalMetadata": {
+          "type": "file",
+          "device": "27",
+          "inode": "534080",
+          "mode": 420,
+          "uid": "1000",
+          "gid": "1000",
+          "nlink": "1",
+          "bytes": 28974,
+          "mtimeNs": "1794926338569000094",
+          "ctimeNs": "1794926338569000094"
+        },
+        "newMetadata": {
+          "type": "file",
+          "device": "27",
+          "inode": "534080",
+          "mode": 420,
+          "uid": "1000",
+          "gid": "1000",
+          "nlink": "1",
+          "bytes": 29017,
+          "mtimeNs": "1794926339927434197",
+          "ctimeNs": "1794926339927434197"
+        }
+      }
+    },
+    {
+      "id": "BL31",
+      "name": "All three final full source bodies equal the published fixed binding inputs",
+      "status": "PASS_RETAINED_RUNTIME_EVIDENCE",
+      "evidence": [
+        {
+          "path": "package.json",
+          "pin": {
+            "bytes": 26839,
+            "sha256": "c92407a9a5dad6f9d6a6eb8ea7c456195d396679bb4b9dfd15b6c06b726d1084",
+            "gitBlob": "f80ec83172d0aec0dec8a8ab055426b4fca4a1f7"
+          }
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-ui-controls-deadline.test.ts",
+          "pin": {
+            "bytes": 7883,
+            "sha256": "29836f914218edb4876b6a4e157e7cdc68f63cdf414084cdd41683965c734eda",
+            "gitBlob": "6a9f8ad7481cd5910befcc6c7ff5992eef03965b"
+          }
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+          "pin": {
+            "bytes": 29017,
+            "sha256": "ffd9bbb822dbdc30da7cb8daa881fcbebd384ba2bf9bdd87c804c511166fa02b",
+            "gitBlob": "5286c036a63a14e98925711a224df202c9a7caa7"
+          }
+        }
+      ]
+    },
+    {
+      "id": "BL32",
+      "name": "Fixture finally restores mocks and requires original polling timers settled",
+      "status": "PASS_RETAINED_RUNTIME_EVIDENCE",
+      "evidence": {
+        "fixture": {
+          "bytes": 7883,
+          "sha256": "29836f914218edb4876b6a4e157e7cdc68f63cdf414084cdd41683965c734eda",
+          "gitBlob": "6a9f8ad7481cd5910befcc6c7ff5992eef03965b"
+        },
+        "wholeFileExecuted": true,
+        "newTimerTimeoutFailure": false
+      }
+    },
+    {
+      "id": "BL33",
+      "name": "Every observed duration is within original unchanged budgets",
+      "status": "PASS_RETAINED_RUNTIME_EVIDENCE",
+      "evidence": {
+        "supervisorElapsedMs": 3319.89634,
+        "phaseElapsedMs": [
+          1134.780341,
+          1126.932058
+        ],
+        "budgets": {
+          "phase": 60000,
+          "supervisor": 135000,
+          "cleanup": 4000
+        }
+      }
+    },
+    {
+      "id": "BL34",
+      "name": "All previous spent attempts remain spent and this sole attempt is spent",
+      "status": "PASS_RETAINED_RUNTIME_EVIDENCE",
+      "evidence": {
+        "originalAttemptsStillSpent": true,
+        "currentInvocations": 1,
+        "retries": 0,
+        "replayAuthorized": false
+      }
+    },
+    {
+      "id": "BL35",
+      "name": "Observed success is restricted to standalone10 RED/GREEN",
+      "status": "PASS_RETAINED_RUNTIME_EVIDENCE",
+      "evidence": {
+        "standalone10RedGreen": true,
+        "whole149": false,
+        "catalog43": false,
+        "renderer85": false,
+        "wholeE2E": false,
+        "nativeOrRealVendor": false
+      }
+    },
+    {
+      "id": "BL36",
+      "name": "The advisory performed no live/local/runtime action and creates no new gate",
+      "status": "PASS_RETAINED_RUNTIME_EVIDENCE",
+      "evidence": {
+        "immutableGitReads": true,
+        "pureInMemoryReview": true,
+        "localShell": 0,
+        "targetExecution": 0,
+        "liveCiRefPrReads": 0,
+        "sourceOrControlMutation": 0,
+        "newExecutionGate": false
+      }
+    }
+  ],
+  "checkCount": 36,
+  "failedChecks": [],
+  "unresolvedPointers": [],
+  "unresolvedBlockers": [],
+  "qualification": {
+    "standalone10RedGreen": true,
+    "redExpectedAssertionFailures": 7,
+    "redPreservationPasses": 3,
+    "greenPasses": 10,
+    "skipped": 0,
+    "cancelled": 0,
+    "todo": 0,
+    "outerExit": 0,
+    "phaseExits": [
+      1,
+      0
+    ],
+    "ordinaryOwnedProcessCleanup": true,
+    "whole149": false,
+    "catalog43": false,
+    "renderer85": false,
+    "gui": false,
+    "provider": false,
+    "nativeOrRealVendor": false,
+    "wholeE2E": false
+  },
+  "limitations": [
+    "This is a read-only outcome advisory over the root's retained immutable capture, not a new execution/admission gate and not a rerun.",
+    "All12 member identities were derived from their complete captured bodies; member Git-like hashes are not claims that individual member blobs were separately retained.",
+    "Node executable bytes/metadata were verified by the original admitted supervisor and retained custody records; this reviewer did not read a local binary or run Node. The selected binary's version provenance remains v24.22.1, previously observed and bound by its exact SHA256.",
+    "The first E2BIG transfer rejection and two-command transfer remedy are retained root observations. The full final staging record and sole invocation outcomes were independently joined; no transport retry of the target supervisor occurred.",
+    "Observed ownership proof concerns the captured original detached Node groups and pid/start identities. No global host-process census or unrelated-process claim is made.",
+    "The standalone result does not qualify whole149, catalog43, renderer85, GUI/provider/native execution or all E2E."
+  ],
+  "selfReadbackProtocol": "Retain advisory, send pin immediately, then freshly fetch and verify the entire report literal/hash/schema/counts before confirmation."
+}

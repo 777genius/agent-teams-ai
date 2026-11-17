@@ -1,0 +1,824 @@
+{
+  "schemaVersion": 1,
+  "kind": "CI3_OPENCODE_V2_MANAGEMENT_PENDING_VIEW_BOUNDED_ADVISORY",
+  "reviewer": "/root/producer_r2_guard",
+  "repository": "777genius/agent-teams-ai",
+  "createdAtUtc": "2026-11-17 15:44:55 UTC",
+  "decision": "ANALYSIS_COMPLETE_FUNCTIONAL_REPAIR_NOT_ESTABLISHED",
+  "summary": "The original CI3 management UI reaches the first Models/default-inheritance wait after its reject-key and replacement-key path, then fails closed at the unchanged 30-second read. The same eight DOM booleans recur with the same relevant source bytes as the prior PR1219 failure. The current log cannot identify which full-view stage is pending or superseded, and the expired current artifact leaves original cleanup and final source/input evidence unknown. No functional repair or deadline change is justified.",
+  "scope": {
+    "sourceHead": "86f52244b5375834a4040cbc63803d68cc708087",
+    "pullRequest": 1223,
+    "attempt": 1,
+    "workflow": "Host emulated-provider CI3 cohort; lane name and exact log are the operative evidence",
+    "lane": "opencode-v2-management",
+    "platform": "linux-x64",
+    "runId": 44092933810,
+    "jobId": null,
+    "jobIdQualification": "No job ID is invented; this review is bound to the complete exact supplied job-log blob and its retained CI3 cohort/run.",
+    "mode": "Immutable evidence and exact source only; no new execution or repair selection.",
+    "excluded": [
+      "New source/control postimages",
+      "Live CI/PR/ref reads or mutations",
+      "Artifact retrieval after expiry",
+      "Local/shell/runtime execution",
+      "Additional model or metadata requests",
+      "Retries or deadline increases",
+      "GUI/default/model-test/native/full-E2E PASS"
+    ]
+  },
+  "evidence": {
+    "log": {
+      "repository": "777genius/agent-teams-ai",
+      "bytes": 133008,
+      "sha256": "c7bc42330d01884db5bff7f745102db259c385cdc36dee5cfc12525b83d52f11",
+      "gitBlob": "32d667765fd2fb51fe66ab2ee902d66049154819",
+      "lines": 1397,
+      "fullBodyFetched": true,
+      "fullTextRead": true,
+      "readPresentation": "Raw complete body retained and hashed. Lines1–1179 read with timestamp/ANSI-only normalization; lines1180–1397 read raw. All textual lines accounted for; no filtering of test/failure content."
+    },
+    "priorAdvisory": {
+      "repository": "777genius/agent-teams-ai",
+      "bytes": 43208,
+      "sha256": "9ba28de33527725cc0ff1977380906353b35110ca1efa1aece7ff4d396559294",
+      "gitBlob": "c4ff18a6c7710937408a5dd80a54156178a483e8",
+      "sourceHead": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+      "pullRequest": 1219,
+      "jobId": 133899668739,
+      "fullBodyFetchedAndRead": true,
+      "usage": "Exact prior source analysis and comparative symptom only. Earlier actual receipt/cleanup facts are not current evidence."
+    },
+    "currentSrcTree": "9ed817aaf1b2959381ea7d9262ed04f538247750",
+    "sourceIndex": [
+      {
+        "repository": "777genius/agent-teams-ai",
+        "commit": "86f52244b5375834a4040cbc63803d68cc708087",
+        "path": "scripts/legacy-agent-host/desktop-opencode-v2-management-ui.ts",
+        "gitBlob": "7f224d52e429bbdecb173d65b470a2ac154de475",
+        "bytes": 20435,
+        "sha256": "4aa1e0c6944d0154f4cee2eaa3cef4390ffdcc25cad93cac40488c1d7c2fa8d6",
+        "lineCount": 278,
+        "currentIdentityBasis": "Fresh complete immutable source body fetched and rehashed at 86f.",
+        "previousReadScope": "Full complete source body read.",
+        "currentReadScope": "Full complete body freshly read."
+      },
+      {
+        "repository": "777genius/agent-teams-ai",
+        "commit": "86f52244b5375834a4040cbc63803d68cc708087",
+        "path": "src/features/runtime-provider-management/renderer/RuntimeProviderManagementPanel.tsx",
+        "gitBlob": "32403fc3f01c93153e1325dd1bf1a6b17fa64499",
+        "bytes": 12020,
+        "sha256": "fdeae416c9017d9b377625a32ee4487b8391cc8b6041fb09c2ee292b71f9db31",
+        "lineCount": 306,
+        "currentIdentityBasis": "Fresh complete immutable source body fetched and rehashed at 86f.",
+        "previousReadScope": "Full complete source body read.",
+        "currentReadScope": "Listed decisive current slices read; prior stated scope reused only for the exact unchanged body.",
+        "currentFreshLineRanges": [
+          [
+            50,
+            155
+          ],
+          [
+            160,
+            205
+          ]
+        ]
+      },
+      {
+        "repository": "777genius/agent-teams-ai",
+        "commit": "86f52244b5375834a4040cbc63803d68cc708087",
+        "path": "src/features/runtime-provider-management/main/adapters/output/CapturedRuntimeProviderManagementClient.ts",
+        "gitBlob": "6849549eacb871ea1342a37f4cecd27ed7795c32",
+        "bytes": 23900,
+        "sha256": "fe9b1bdc4e4dfb4eba417e1bb4a3b29987cbd1ccfdbf9766582e2d49a7a53568",
+        "lineCount": 580,
+        "currentIdentityBasis": "Fresh complete immutable source body fetched and rehashed at 86f.",
+        "previousReadScope": "Full complete source body read.",
+        "currentReadScope": "Listed decisive current slices read; prior stated scope reused only for the exact unchanged body.",
+        "currentFreshLineRanges": [
+          [
+            95,
+            212
+          ],
+          [
+            225,
+            309
+          ]
+        ]
+      },
+      {
+        "repository": "777genius/agent-teams-ai",
+        "commit": "86f52244b5375834a4040cbc63803d68cc708087",
+        "path": "src/features/runtime-provider-management/main/adapters/output/capturedManagementPreferences.ts",
+        "gitBlob": "9a680f0ed4f847ae4612809e342a25ca448036be",
+        "bytes": 2201,
+        "sha256": "32fa7f106d94bea044cf9a4db3df7056c4e626312ec079e18409e1056af9ef23",
+        "lineCount": 57,
+        "currentIdentityBasis": "Current complete src tree leaf joins the exact prior blob and byte count; prior verified body identity reused.",
+        "previousReadScope": "Full complete source body read.",
+        "currentReadScope": "Prior stated read scope reused only after exact current body/tree identity join; no fresh complete semantic reread claimed.",
+        "currentFreshLineRanges": []
+      },
+      {
+        "repository": "777genius/agent-teams-ai",
+        "commit": "86f52244b5375834a4040cbc63803d68cc708087",
+        "path": "src/features/runtime-provider-management/core/domain/index.ts",
+        "gitBlob": "4d18cdaded0b6a3114c2db914c03e1cb51bbf571",
+        "bytes": 352,
+        "sha256": "3bb1993efa06838cb40da05115e297578f0645e4e4b47d60a4c4299c6abd60fc",
+        "lineCount": 8,
+        "currentIdentityBasis": "Current complete src tree leaf joins the exact prior blob and byte count; prior verified body identity reused.",
+        "previousReadScope": "Full complete source body read.",
+        "currentReadScope": "Prior stated read scope reused only after exact current body/tree identity join; no fresh complete semantic reread claimed.",
+        "currentFreshLineRanges": []
+      },
+      {
+        "repository": "777genius/agent-teams-ai",
+        "commit": "86f52244b5375834a4040cbc63803d68cc708087",
+        "path": "src/features/runtime-provider-management/core/domain/providerManagementView.ts",
+        "gitBlob": "ff2da0ec82edd2fb58682a8aadf75585fe63c23a",
+        "bytes": 3772,
+        "sha256": "2d127e0195beaa942a0e667b243cbe63b1c71b934224638e3636ca34fec9975c",
+        "lineCount": 130,
+        "currentIdentityBasis": "Fresh complete immutable source body fetched and rehashed at 86f.",
+        "previousReadScope": "Full complete source body read.",
+        "currentReadScope": "Full complete body freshly read."
+      },
+      {
+        "repository": "777genius/agent-teams-ai",
+        "commit": "86f52244b5375834a4040cbc63803d68cc708087",
+        "path": "src/features/runtime-provider-management/renderer/hooks/runtimeProviderManagementPresentation.ts",
+        "gitBlob": "907fb16a613785324fdbd342c2993e08c8209a55",
+        "bytes": 6481,
+        "sha256": "5e1015def1c50a2c2982617336d7e8ed46495295b5769aed8a5b2b885f53f1a0",
+        "lineCount": 161,
+        "currentIdentityBasis": "Current complete src tree leaf joins the exact prior blob and byte count; prior verified body identity reused.",
+        "previousReadScope": "Full complete source body read.",
+        "currentReadScope": "Prior stated read scope reused only after exact current body/tree identity join; no fresh complete semantic reread claimed.",
+        "currentFreshLineRanges": []
+      },
+      {
+        "repository": "777genius/agent-teams-ai",
+        "commit": "86f52244b5375834a4040cbc63803d68cc708087",
+        "path": "src/features/runtime-provider-management/renderer/hooks/refreshRuntimeProviderConnection.ts",
+        "gitBlob": "a3a6ee5182d48416eef42766b846e4a3921d714d",
+        "bytes": 5385,
+        "sha256": "b5b887dacbc987d3ccabfa1be2d5f7befa54d8a30cc79b2d90ac43c0adbf4450",
+        "lineCount": 126,
+        "currentIdentityBasis": "Current complete src tree leaf joins the exact prior blob and byte count; prior verified body identity reused.",
+        "previousReadScope": "Full complete source body read.",
+        "currentReadScope": "Prior stated read scope reused only after exact current body/tree identity join; no fresh complete semantic reread claimed.",
+        "currentFreshLineRanges": []
+      },
+      {
+        "repository": "777genius/agent-teams-ai",
+        "commit": "86f52244b5375834a4040cbc63803d68cc708087",
+        "path": "src/features/runtime-provider-management/renderer/ui/OpenCodeDefaultModelInheritanceCard.tsx",
+        "gitBlob": "07d575e38c62d86503b80b913ae892616449341f",
+        "bytes": 10989,
+        "sha256": "c4dd21bc1bf5a79d5c88b1d20d592e358126c88adf40d1f2dc589b451fde2814",
+        "lineCount": 275,
+        "currentIdentityBasis": "Current complete src tree leaf joins the exact prior blob and byte count; prior verified body identity reused.",
+        "previousReadScope": "Full complete source body read.",
+        "currentReadScope": "Prior stated read scope reused only after exact current body/tree identity join; no fresh complete semantic reread claimed.",
+        "currentFreshLineRanges": []
+      },
+      {
+        "repository": "777genius/agent-teams-ai",
+        "commit": "86f52244b5375834a4040cbc63803d68cc708087",
+        "path": "src/features/runtime-provider-management/main/infrastructure/FileManagedProviderPreferences.ts",
+        "gitBlob": "cefb5f79158f10edff53380d6f6707ef49558b66",
+        "bytes": 6485,
+        "sha256": "458753e693d6f69f0db661886dddec1a6c68806e1e156efd0c0f5c7de424bd3b",
+        "lineCount": 186,
+        "currentIdentityBasis": "Current complete src tree leaf joins the exact prior blob and byte count; prior verified body identity reused.",
+        "previousReadScope": "Full complete source body read.",
+        "currentReadScope": "Prior stated read scope reused only after exact current body/tree identity join; no fresh complete semantic reread claimed.",
+        "currentFreshLineRanges": []
+      },
+      {
+        "repository": "777genius/agent-teams-ai",
+        "commit": "86f52244b5375834a4040cbc63803d68cc708087",
+        "path": "src/main/composition/createDesktopProviderManagementFeatures.ts",
+        "gitBlob": "9777f8c6bdcbdb247d24d09ae7b0b51499bbe130",
+        "bytes": 2467,
+        "sha256": "95400848c91bb3e54ac15e10584ee49ef14a0178df5e80ca68748016c58776dc",
+        "lineCount": 55,
+        "currentIdentityBasis": "Current complete src tree leaf joins the exact prior blob and byte count; prior verified body identity reused.",
+        "previousReadScope": "Full complete source body read.",
+        "currentReadScope": "Prior stated read scope reused only after exact current body/tree identity join; no fresh complete semantic reread claimed.",
+        "currentFreshLineRanges": []
+      },
+      {
+        "repository": "777genius/agent-teams-ai",
+        "commit": "86f52244b5375834a4040cbc63803d68cc708087",
+        "path": "src/features/agent-backend/main/infrastructure/CapturedProviderManagement.ts",
+        "gitBlob": "60b08011e5aa2df1a6d2215155d7dabf0b2b15af",
+        "bytes": 5433,
+        "sha256": "8ea983e9aec5c56ca5e2438a39e4272c0133ae6c2d4839bbcb6926afb605b760",
+        "lineCount": 164,
+        "currentIdentityBasis": "Current complete src tree leaf joins the exact prior blob and byte count; prior verified body identity reused.",
+        "previousReadScope": "Full complete source body read.",
+        "currentReadScope": "Prior stated read scope reused only after exact current body/tree identity join; no fresh complete semantic reread claimed.",
+        "currentFreshLineRanges": []
+      },
+      {
+        "repository": "777genius/agent-teams-ai",
+        "commit": "86f52244b5375834a4040cbc63803d68cc708087",
+        "path": "packages/legacy-agent-host/src/composition/createProviderManagementMethods.ts",
+        "gitBlob": "708d880bb9be0dcaae978b97b0686b548b7873a3",
+        "bytes": 4523,
+        "sha256": "7854ee3a07c27b95294b2e49fd5b4d39cffa00c8040eb6de15d1c231a1b3d927",
+        "lineCount": 88,
+        "currentIdentityBasis": "Fresh complete immutable source body fetched and rehashed at 86f.",
+        "previousReadScope": "Full complete source body read.",
+        "currentReadScope": "Prior stated read scope reused only after exact current body/tree identity join; no fresh complete semantic reread claimed.",
+        "currentFreshLineRanges": []
+      },
+      {
+        "repository": "777genius/agent-teams-ai",
+        "commit": "86f52244b5375834a4040cbc63803d68cc708087",
+        "path": "packages/legacy-agent-host/src/composition/ProviderManagementCoordinator.ts",
+        "gitBlob": "3e0d1ae7a3aa852fb5772821f7df1059edd7cead",
+        "bytes": 36898,
+        "sha256": "e54fda9c30ec3d53f20027d59faf81f59c75fd3ad3987593bd4cd64315a17d3a",
+        "lineCount": 719,
+        "currentIdentityBasis": "Fresh complete immutable source body fetched and rehashed at 86f.",
+        "previousReadScope": "Full complete source body read.",
+        "currentReadScope": "Listed decisive current slices read; prior stated scope reused only for the exact unchanged body.",
+        "currentFreshLineRanges": [
+          [
+            599,
+            686
+          ]
+        ]
+      },
+      {
+        "repository": "777genius/agent-teams-ai",
+        "commit": "86f52244b5375834a4040cbc63803d68cc708087",
+        "path": "packages/legacy-agent-host/src/adapters/providers/OpenCodeV2ManagementHost.ts",
+        "gitBlob": "384b4c00a05d5886cce267ae76166c93d5892262",
+        "bytes": 21840,
+        "sha256": "0d97f35fcb8ffab937b25ff6656509f51267d43f7d9a5018928f7ea194c91f42",
+        "lineCount": 402,
+        "currentIdentityBasis": "Fresh complete immutable source body fetched and rehashed at 86f.",
+        "previousReadScope": "Full complete source body read.",
+        "currentReadScope": "Listed decisive current slices read; prior stated scope reused only for the exact unchanged body.",
+        "currentFreshLineRanges": [
+          [
+            205,
+            324
+          ]
+        ]
+      },
+      {
+        "repository": "777genius/agent-teams-ai",
+        "commit": "86f52244b5375834a4040cbc63803d68cc708087",
+        "path": "runtime.lock.json",
+        "gitBlob": "1757d79786da78e739a322e8bba81cd3dc88dcaa",
+        "bytes": 6127,
+        "sha256": "fa614f6dcc672b47342a838300f4c1c7b82ae0f05899c108af17838c58c53a87",
+        "lineCount": 197,
+        "currentIdentityBasis": "Fresh complete immutable source body fetched and rehashed at 86f.",
+        "previousReadScope": "Full complete source body read.",
+        "currentReadScope": "Prior stated read scope reused only after exact current body/tree identity join; no fresh complete semantic reread claimed.",
+        "currentFreshLineRanges": []
+      },
+      {
+        "repository": "777genius/agent-teams-ai",
+        "commit": "86f52244b5375834a4040cbc63803d68cc708087",
+        "path": "scripts/legacy-agent-host/desktop-opencode-v2-management-smoke.ts",
+        "gitBlob": "6f8e3da7ba0cda6a13d5cfbafd1ecaf58ac738dd",
+        "bytes": 12302,
+        "sha256": "91bfb3b90c18e38af200e23d167811e526b339d1525ccc502db43759a5e6bf77",
+        "lineCount": 168,
+        "currentIdentityBasis": "Fresh complete immutable source body fetched and rehashed at 86f.",
+        "previousReadScope": "Full complete source body read.",
+        "currentReadScope": "Full complete body freshly read."
+      },
+      {
+        "repository": "777genius/agent-teams-ai",
+        "commit": "86f52244b5375834a4040cbc63803d68cc708087",
+        "path": "scripts/legacy-agent-host/desktop-opencode-v2-management-fixture.ts",
+        "gitBlob": "35518a67d9e6e9c987395bef9b4cb1012ac77bb2",
+        "bytes": 8880,
+        "sha256": "cc7a6d5aaf57a1a35608025819847b43f43a418558858e95baf4a39bcc564112",
+        "lineCount": 107,
+        "currentIdentityBasis": "Fresh complete immutable source body fetched and rehashed at 86f.",
+        "previousReadScope": "Full complete source body read.",
+        "currentReadScope": "Full complete body freshly read."
+      },
+      {
+        "repository": "777genius/agent-teams-ai",
+        "commit": "86f52244b5375834a4040cbc63803d68cc708087",
+        "path": "scripts/legacy-agent-host/desktop-opencode-v2-fixture.ts",
+        "gitBlob": "9d6a158fe27134c6f0559ea058f2ecfa5ad478d1",
+        "bytes": 7577,
+        "sha256": "22a46aa137e87c4f1a282aae5518e9aada69ce8b947169457d3aadde3b2ace1d",
+        "lineCount": 177,
+        "currentIdentityBasis": "Fresh complete immutable source body fetched and rehashed at 86f.",
+        "previousReadScope": "Full complete source body read.",
+        "currentReadScope": "Listed decisive current slices read; prior stated scope reused only for the exact unchanged body.",
+        "currentFreshLineRanges": [
+          [
+            145,
+            177
+          ]
+        ]
+      },
+      {
+        "repository": "777genius/agent-teams-ai",
+        "commit": "86f52244b5375834a4040cbc63803d68cc708087",
+        "path": "src/features/runtime-provider-management/main/index.ts",
+        "gitBlob": "a58cdadd06501bf80beb8c7bb5ed1f9c4583b5df",
+        "bytes": 2281,
+        "sha256": "3ea5d059925c604f2800a670319c778cc105d7a31785337910586c7d3199f763",
+        "lineCount": 48,
+        "currentIdentityBasis": "Current complete src tree leaf joins the exact prior blob and byte count; prior verified body identity reused.",
+        "previousReadScope": "Full complete source body read.",
+        "currentReadScope": "Prior stated read scope reused only after exact current body/tree identity join; no fresh complete semantic reread claimed.",
+        "currentFreshLineRanges": []
+      },
+      {
+        "repository": "777genius/agent-teams-ai",
+        "commit": "86f52244b5375834a4040cbc63803d68cc708087",
+        "path": "src/features/runtime-provider-management/main/composition/createRuntimeProviderManagementFeature.ts",
+        "gitBlob": "017399a48a4ee62332eb994afcf50b9c967ad674",
+        "bytes": 9591,
+        "sha256": "c00cbde468308d94fd9ebae79f97d2a22d58bb1f72d00ecdc8f348a8c4778bb2",
+        "lineCount": 219,
+        "currentIdentityBasis": "Current complete src tree leaf joins the exact prior blob and byte count; prior verified body identity reused.",
+        "previousReadScope": "Full complete source body read.",
+        "currentReadScope": "Prior stated read scope reused only after exact current body/tree identity join; no fresh complete semantic reread claimed.",
+        "currentFreshLineRanges": []
+      },
+      {
+        "repository": "777genius/agent-teams-ai",
+        "commit": "86f52244b5375834a4040cbc63803d68cc708087",
+        "path": "src/features/agent-backend/main/application/refreshCapturedRuntimeConfiguration.ts",
+        "gitBlob": "0efed1ce0f5fd1d879b1ef473ec475c77cc6d8a9",
+        "bytes": 2816,
+        "sha256": "fa97bff889ab288fed4eb983a2f1a3ffb528f8cbd98935c4fe6151732ea0322e",
+        "lineCount": 60,
+        "currentIdentityBasis": "Current complete src tree leaf joins the exact prior blob and byte count; prior verified body identity reused.",
+        "previousReadScope": "Full complete source body read.",
+        "currentReadScope": "Prior stated read scope reused only after exact current body/tree identity join; no fresh complete semantic reread claimed.",
+        "currentFreshLineRanges": []
+      },
+      {
+        "repository": "777genius/agent-teams-ai",
+        "commit": "86f52244b5375834a4040cbc63803d68cc708087",
+        "path": "src/features/runtime-provider-management/renderer/ui/RuntimeProviderManagementPanelView.tsx",
+        "gitBlob": "176344903eaee49ced9607a29f28a3c556e59f6e",
+        "bytes": 97366,
+        "sha256": "11871dd43b1c704230c83e722577ba4cdd4f4fd6c2eebce89cab02457b52b81a",
+        "lineCount": 2584,
+        "currentIdentityBasis": "Fresh complete immutable source body fetched and rehashed at 86f.",
+        "previousReadScope": "Full body fetched and identity verified; imports/initial helpers and complete exported component lines 2113–2584 read. Unrelated directory-row/forms helpers not fully reread.",
+        "currentReadScope": "Listed decisive current slices read; prior stated scope reused only for the exact unchanged body.",
+        "currentFreshLineRanges": [
+          [
+            2113,
+            2195
+          ],
+          [
+            2260,
+            2445
+          ]
+        ]
+      },
+      {
+        "repository": "777genius/agent-teams-ai",
+        "commit": "86f52244b5375834a4040cbc63803d68cc708087",
+        "path": "src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts",
+        "gitBlob": "c2faa156015707bc5fbd7f8123a7ffd9c4faa486",
+        "bytes": 74340,
+        "sha256": "647ac5732bfd6b5cb57834adb4ad22c32ee5dfb018a934c92f982efd9daa531c",
+        "lineCount": 2068,
+        "currentIdentityBasis": "Fresh complete immutable source body fetched and rehashed at 86f.",
+        "previousReadScope": "Full body fetched and identity verified; state/currentness/refresh lines1–520, enable/directory effects651–799, refresh actions931–990 and complete submitConnect1222–1420 read. Frozen exact c2faa body; unrelated model test/default mutation branches not reread.",
+        "currentReadScope": "Listed decisive current slices read; prior stated scope reused only for the exact unchanged body.",
+        "currentFreshLineRanges": [
+          [
+            431,
+            520
+          ],
+          [
+            1300,
+            1387
+          ]
+        ]
+      },
+      {
+        "repository": "777genius/agent-teams-ai",
+        "commit": "86f52244b5375834a4040cbc63803d68cc708087",
+        "path": "src/features/agent-backend/main/infrastructure/CapturedHostClient.ts",
+        "gitBlob": "6a1c96ed27c412c822e25df22eda858d20bbc6b8",
+        "bytes": 32767,
+        "sha256": "4cc91e2d53dee212b8f41b70611a37880f000d7225329bb51d21f9b56816b138",
+        "lineCount": 800,
+        "currentIdentityBasis": "Current complete src tree leaf joins the exact prior blob and byte count; prior verified body identity reused.",
+        "previousReadScope": "Full body fetched and identity verified; exact request/send/timeout lines274–367 read, other members searched for deadline/management boundaries only.",
+        "currentReadScope": "Prior stated read scope reused only after exact current body/tree identity join; no fresh complete semantic reread claimed.",
+        "currentFreshLineRanges": []
+      },
+      {
+        "repository": "777genius/agent-teams-ai",
+        "commit": "86f52244b5375834a4040cbc63803d68cc708087",
+        "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+        "gitBlob": "5286c036a63a14e98925711a224df202c9a7caa7",
+        "bytes": 29017,
+        "sha256": "ffd9bbb822dbdc30da7cb8daa881fcbebd384ba2bf9bdd87c804c511166fa02b",
+        "lineCount": 495,
+        "currentIdentityBasis": "Fresh complete immutable source body fetched and rehashed at 86f.",
+        "previousReadScope": "Full body fetched and identity verified; exact waitRead lines186–209 read and equals frozen5286 post-await deadline implementation.",
+        "currentReadScope": "Listed decisive current slices read; prior stated scope reused only for the exact unchanged body.",
+        "currentFreshLineRanges": [
+          [
+            180,
+            211
+          ]
+        ]
+      },
+      {
+        "repository": "777genius/agent-teams-ai",
+        "commit": "86f52244b5375834a4040cbc63803d68cc708087",
+        "path": "src/main/ipc/agentBackend.ts",
+        "gitBlob": "084739af2f190dd10565b41f76f592a7b49ea36a",
+        "bytes": 30204,
+        "sha256": "8ef04885251a1033bd6a9ba947e810969e66a9cde48ee5db716e3688cdbb05d7",
+        "lineCount": 777,
+        "currentIdentityBasis": "Current complete src tree leaf joins the exact prior blob and byte count; prior verified body identity reused.",
+        "previousReadScope": "Full body fetched and identity verified; exact getDesktopProviderManagementPort lines413–460 read.",
+        "currentReadScope": "Prior stated read scope reused only after exact current body/tree identity join; no fresh complete semantic reread claimed.",
+        "currentFreshLineRanges": []
+      },
+      {
+        "repository": "777genius/agent-teams-ai",
+        "commit": "86f52244b5375834a4040cbc63803d68cc708087",
+        "path": "src/features/agent-backend/main/composition/DesktopBackendFeature.ts",
+        "gitBlob": "ecde3d53f56e879a52abd7312e646c9497bff106",
+        "bytes": 35368,
+        "sha256": "7188000ca255e8de0f1e1bacd00e61f9194dcb0fe74cb97ce0b18cc258367f48",
+        "lineCount": 783,
+        "currentIdentityBasis": "Current complete src tree leaf joins the exact prior blob and byte count; prior verified body identity reused.",
+        "previousReadScope": "Full body fetched and identity verified; imports and complete captureProviderManagement/current-source/preferences/shutdown section555–783 read.",
+        "currentReadScope": "Prior stated read scope reused only after exact current body/tree identity join; no fresh complete semantic reread claimed.",
+        "currentFreshLineRanges": []
+      },
+      {
+        "repository": "777genius/agent-teams-ai",
+        "commit": "86f52244b5375834a4040cbc63803d68cc708087",
+        "path": "scripts/legacy-agent-host/verify-desktop-v2-management-receipt.ts",
+        "gitBlob": "b7d447d7acea4c55fcb578b922194a528440e3b1",
+        "bytes": 18828,
+        "sha256": "1693e23f265b2d1e4024c5553e1577827ebe8e98c8a7e347346e6aa229bb7e72",
+        "lineCount": 219,
+        "currentIdentityBasis": "Fresh complete immutable source body fetched and rehashed.",
+        "currentReadScope": "Listed decisive current slices read; prior stated scope reused only for the exact unchanged body.",
+        "currentFreshLineRanges": [
+          [
+            58,
+            79
+          ]
+        ]
+      }
+    ],
+    "artifact": {
+      "artifactId": 14340275045,
+      "runId": 44092933810,
+      "advertisedFiles": 19,
+      "advertisedZipBytes": 847455,
+      "advertisedZipSha256": "8d8cf36073b1edd838868df3f10e49fd8d0bc648a167c46a205001203a789d0d",
+      "uploadCompletedAt": "2026-11-17T14:55:35.707Z",
+      "retrievalStatus": "UNREAD_URL_EXPIRED_BEFORE_BYTE_GET",
+      "archiveBytesRead": 0,
+      "crcVerified": false,
+      "memberCensusRead": false,
+      "currentReceiptRead": false,
+      "currentAppLogRead": false,
+      "currentDomRead": false,
+      "currentPngRead": false,
+      "qualification": "Counts and digest are printed uploader evidence only; no archive content or cleanup inference."
+    }
+  },
+  "observed": {
+    "originalCommand": "set -euo pipefail\nunset LEGACY_DESKTOP_EMULATED_ONLY\nxvfb-run --auto-servernum --server-args='-screen 0 1600x1000x24 -nolisten tcp' \\\n  bash -euo pipefail -c 'export LEGACY_DESKTOP_TEST_DISPLAY=\"$DISPLAY\" LEGACY_DESKTOP_TEST_XAUTHORITY=\"$XAUTHORITY\"; exec node scripts/legacy-agent-host/desktop-opencode-v2-management-smoke.ts' \\\n  2>&1 | tee \"$RUNNER_TEMP/host-emulated-opencode-v2-management-ui.log\"",
+    "preflight": {
+      "wholeEightFileNodeCommand": {
+        "tests": 247,
+        "pass": 247,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0
+      },
+      "separateInstallTests": {
+        "tests": 7,
+        "pass": 7,
+        "fail": 0
+      },
+      "qualification": "Log aggregate only; no independent new per-title audit or GUI qualification."
+    },
+    "receiptPath": "/home/runner/work/_temp/TEST-desktop-backend-q6sDUQ/desktop-backend-receipt.json",
+    "preparedAt": "2026-11-17T14:50:44.3957915Z",
+    "modelsFailureAt": "2026-11-17T14:55:26.9043423Z",
+    "modelsTabFailure": {
+      "inheritanceCard": false,
+      "modelsTabActive": true,
+      "modelsTabDisabled": false,
+      "refreshSpinner": true,
+      "legacyModelsPanel": true,
+      "projectContextSelector": true,
+      "publicError": false,
+      "publicWarning": false
+    },
+    "projectionLimit": "Last accepted object observation from the original wait predicate, not a continuous trace or a direct view/request-state sample. A late fulfilled CDP result can be rejected before this predicate runs.",
+    "finalSummaryAt": "2026-11-17T14:55:32.5305630Z",
+    "finalSummaryStatus": "INCOMPLETE",
+    "uiCommandExit": 1,
+    "error": "UI read timed out: original default inheritance; no mutation retry",
+    "stack": [
+      "scripts/legacy-agent-host/desktop-ui-controls.ts:209",
+      "scripts/legacy-agent-host/desktop-opencode-v2-management-ui.ts:138 (modelsTab)",
+      "scripts/legacy-agent-host/desktop-opencode-v2-management-ui.ts:219 (first modelsTab call)",
+      "scripts/legacy-agent-host/desktop-opencode-v2-management-smoke.ts:102",
+      "scripts/legacy-agent-host/desktop-opencode-v2-management-smoke.ts:168"
+    ],
+    "verifier": {
+      "path": "scripts/legacy-agent-host/verify-desktop-v2-management-receipt.ts",
+      "line": 69,
+      "actual": "INCOMPLETE",
+      "expected": "PASS",
+      "exit": 1,
+      "qualification": "Failure is before current receipt loading at verifier line 73; it supplies no full receipt joins."
+    },
+    "loggedInputs": {
+      "nodeVersion": "v24.21.0",
+      "nodeSha256": "7fde7b8afa198da66257f42ee2001d874c7355631e6d1579a5fb5ef1f246df4c",
+      "hostEntrySha256": "7ff0d33309b54969f7a5c5f88935d4593596e68670db21f08ee694c9d0c27add",
+      "pnpmSha256": "7c2a67995976b5b592b611d8b236e3b0633bd654fb49aedd96c6eb7ce04c9cbb",
+      "bunSha256": "45598a2814020c231575487a560e47d397d6902355d7e08171a2e56221a6d675",
+      "embeddedManifestSha256": "30fef1cda05763154901c6349b010bd3ea530c0da9454514d721284288db98ce",
+      "linuxChildExecManifestSha256": "e67ba493cc10e1fd124f6c7437b6f86e1eba46746ce73e51088d67eb095b2734",
+      "qualification": "Logged preparation/selected-input evidence; no independent current binary or after-cleanup census."
+    },
+    "reachedByExactControlFlow": [
+      "Original Settings/Providers/OpenCode Manage route and API-key form",
+      "reject-key original intent and rejection-visible/auth-file checks",
+      "connect-key original intent and Connected/form-closed/auth-file checks",
+      "No selected-key text or OAuth-code input in the observed body",
+      "Original rejected/connected screenshot calls returned; current image bytes unavailable",
+      "model.assertPassive(2)",
+      "Original single Models scroll/click and first card wait"
+    ],
+    "unreached": [
+      "selectProject('workspace') after the first modelsTab await",
+      "global-default intent",
+      "project-default intent",
+      "project-test intent",
+      "Later default inheritance/other-project/clear/reload observations",
+      "Final five-intent UI/source/command/prefs/credential proof",
+      "Ordinary successful UI PASS close path"
+    ],
+    "currentCleanup": {
+      "failureQuit": null,
+      "appExitCode": null,
+      "appSignalCode": null,
+      "hostAbsent": null,
+      "groupRemaining": null,
+      "nativeRemaining": null,
+      "sourceAfter": null,
+      "inputAfter": null,
+      "finiteModelCompleteAfterCleanup": null,
+      "modelServerClosed": null,
+      "qualification": "UNKNOWN from current retained evidence. Finally is source-reachable and final INCOMPLETE summary is logged, but no cleanup values were printed. Old PR1219 observations cannot fill these fields."
+    }
+  },
+  "sourceTrace": {
+    "renderer": "OpenCode panel starts on Providers with loadViewOnEnable false. Connection success may retain a null full view and refresh only directory/external status until viewRequestedRef becomes true. Models selection triggers the original refresh only when view is absent and not already loading.",
+    "currentness": "refresh marks viewRequested, increments the request sequence, captures project context, and applies response/error/finally only when the request is still current. The exact accepted hook finally fix is present.",
+    "viewRoute": "loadView -> capture selected management target -> catalog -> selectedPreferences -> current-target validation -> full response; renderer then presents the current response and clears current loading.",
+    "nativeRoute": "Captured provider request -> Host catalog per-profile serialized queue -> target selection/confirmed replacement if needed -> original V2 metadata owner -> native client identity/plugins/permissions/MCP/credential/directory/activation/currentness/projection/disposal -> result-current. No model prompt is used to warm metadata.",
+    "cardRoute": "supportsScopedDefaultModelInheritance requires complete field shape and supported stable bundled runtime; false renders the legacy panel. Null pending view therefore produces the same fallback as a view missing required fields.",
+    "originalBudgets": {
+      "guiInheritanceWaitMs": 30000,
+      "guiPollMs": 100,
+      "metadataProfileMs": 120000,
+      "modelProbeProfileMs": 120000,
+      "credentialDefaultIntentMs": 250000,
+      "initialSettingsAndKeyInputWaitMs": 150000
+    },
+    "budgetInterpretation": "The GUI can expire while an original metadata operation remains within its own accepted budget. This is a source-supported possibility, not proof of the current cause and not authorization to change either budget.",
+    "noConcreteRepair": "The data does not distinguish a slow original load stage, a queued/closing metadata owner, a superseded request, a preferences-stage issue or an incompletely shaped response. No specific mutation is selected."
+  },
+  "causalAssessment": {
+    "established": "A recurring fail-closed first Models/default-inheritance boundary with the same relevant source bytes and the same bounded DOM symptom.",
+    "notEstablished": [
+      "Which original loadView request was current",
+      "Whether loadView started on the click or was already pending",
+      "Exact queue/native/capture/preferences/render stage",
+      "Request issue/settle timestamps and selected context/runtime generation",
+      "Any later completion or error after the 30-second UI cutoff",
+      "A native protocol or credential failure",
+      "A permanently missing preferences binding",
+      "A new silent-loading/currentness regression",
+      "Successful current native cleanup or source/input freeze"
+    ],
+    "minimalEvidenceOpportunity": {
+      "selected": false,
+      "description": "If root separately chooses evidence-producing work, retain only bounded nonsecret lifecycle/stage/currentness information already associated with the same original loadView/captured target and any existing metadata failure event. It must distinguish issued/current/superseded/settled and the last pending stage without adding reads, child processes, metadata/model requests or mutation replays.",
+      "preserve": [
+        "Same original request and capture/owner authority",
+        "Original30-second read and 120-second metadata budgets",
+        "Original inheritance predicate and full five-intent flow",
+        "No credential/body/header/path/error-text projection",
+        "Existing bounded failure vocabulary/trace limits",
+        "Ordinary child/process cleanup and source/input checks"
+      ],
+      "qualification": "Design requirement only. No new observer/source API, fixture, test, control, venue or gate is authored or approved by this advisory."
+    }
+  },
+  "checks": [
+    {
+      "id": "EVIDENCE_IDENTITY",
+      "status": "PASS_BOUNDED_EVIDENCE",
+      "finding": "The complete 133,008-byte retained log rehashes to the supplied SHA256 and Git blob. Its whole textual contents were read: early lines 1–1179 via a timestamp/ANSI-only presentation and original raw lines 1180–1397. No log lines were omitted.",
+      "evidence": "log"
+    },
+    {
+      "id": "FROZEN_SOURCE",
+      "status": "PASS_BOUNDED_EVIDENCE",
+      "finding": "The log names source 86f52244b5375834a4040cbc63803d68cc708087 and the linux-x64/opencode-v2-management lane. The checkout assertion and original input preparation use this exact head. No new source is being assessed as executed.",
+      "evidence": "log"
+    },
+    {
+      "id": "ORIGINAL_COMMAND",
+      "status": "PASS_BOUNDED_EVIDENCE",
+      "finding": "The original xvfb/node desktop-opencode-v2-management-smoke.ts command is retained complete. Its one invocation ends with exit 1; no retry or alternative flow appears in this job log.",
+      "evidence": "log lines 1182–1229"
+    },
+    {
+      "id": "PREFLIGHT_LIMIT",
+      "status": "PASS_BOUNDED_EVIDENCE",
+      "finding": "The eight-file Node command reports 247 tests / 247 pass / zero failures, skips or cancellations; the separate dependency-install test reports 7/7. These preflight results do not qualify the later UI operation or substitute for its receipt.",
+      "evidence": "log, complete preflight section"
+    },
+    {
+      "id": "EXACT_LAST_PROJECTION",
+      "status": "PASS_BOUNDED_EVIDENCE",
+      "finding": "The single TEST_V2_MANAGEMENT_MODELS_WAIT_FAILURE row has inheritanceCard false, modelsTabActive true, modelsTabDisabled false, refreshSpinner true, legacyModelsPanel true, projectContextSelector true, publicError false and publicWarning false.",
+      "evidence": "log line 1215; UI lines 133–163"
+    },
+    {
+      "id": "ORIGINAL_READ_DEADLINE",
+      "status": "PASS_BOUNDED_EVIDENCE",
+      "finding": "The failed wait retains exactly 30,000 ms, strict post-await deadline rejection, original 100 ms cadence, owned-renderer assertion, and original non-context read-error identity. No additional click or timeout adjustment is supported.",
+      "evidence": "UI 138–158; controls 186–209"
+    },
+    {
+      "id": "FIRST_MODELS_BOUNDARY",
+      "status": "PASS_BOUNDED_EVIDENCE",
+      "finding": "The exact stack identifies modelsTab at UI138, called at UI219, then smoke102/168 and controls209. This is the first inheritance read, before selectProject('workspace'). It is not a later default-selection or reload failure.",
+      "evidence": "log 1217–1228; UI 199–239"
+    },
+    {
+      "id": "TWO_INTENTS_REACHED",
+      "status": "PASS_BOUNDED_EVIDENCE",
+      "finding": "By the unchanged sequential UI source, reaching line 219 follows reject-key and connect-key, their original command/finite-model assertions, auth-file checks, visible connection check, and model.assertPassive(2). This is control-flow evidence of reached checks; the current raw command/effect IDs and full receipt are unavailable.",
+      "evidence": "UI complete body, especially originalStep and 199–219"
+    },
+    {
+      "id": "LATER_OBLIGATIONS_UNREACHED",
+      "status": "PASS_BOUNDED_EVIDENCE",
+      "finding": "Global-default, project-default, explicit project-test, later project-inheritance/clear/reload, and final five-intent UI qualification are downstream of the failed await and were not reached on this path. No model/default-test completion is claimed.",
+      "evidence": "UI 219–278"
+    },
+    {
+      "id": "DEFERRED_VIEW",
+      "status": "PASS_BOUNDED_EVIDENCE",
+      "finding": "The panel supplies loadViewOnEnable:false; successful connection updates provider/directory state and skips a full-view refresh when viewRequestedRef is false. A connected card therefore does not prove that the complete Models view has already loaded.",
+      "evidence": "Panel165–186; hook1332–1361; exact prior replaceProvider read"
+    },
+    {
+      "id": "MODELS_DISPATCH",
+      "status": "PASS_BOUNDED_EVIDENCE",
+      "finding": "The Models tab handler starts refresh only when no view and no loading are present. A tab can remain active while the existing original refresh is pending. The last DOM sample does not reveal which invocation owns loading.",
+      "evidence": "View2269–2278"
+    },
+    {
+      "id": "RENDER_SELECTION",
+      "status": "PASS_BOUNDED_EVIDENCE",
+      "finding": "The inheritance card requires a non-null view with configuredModels, projectPath, projectDefaultModel, allProjectsDefaultModel and defaultModelSource, plus stable bundled runtime >= 0.0.75. Current lock 0.0.160 passes the version condition. The missing card is not evidence that bundled runtime version is unsupported.",
+      "evidence": "domain108–130; runtime.lock; View2174–2178,2333–2371"
+    },
+    {
+      "id": "LEGACY_AND_SPINNER",
+      "status": "PASS_BOUNDED_EVIDENCE",
+      "finding": "The LegacyConfiguredModelsPanel is the fallback whenever the support predicate is false, including an absent/pending full view. The Models refresh spinner is state.loading. These DOM booleans are compatible with a pending load and are not a direct view object, request-generation, or failure-stage observation.",
+      "evidence": "View2323–2371"
+    },
+    {
+      "id": "CURRENTNESS_PRESERVED",
+      "status": "PASS_BOUNDED_EVIDENCE",
+      "finding": "The actual hook increments viewLoadRequestSeq, captures project context, suppresses stale responses, and clears loading only for the current request in finally. The accepted silent-load fix is already present. This log does not prove a new currentness/finally bug or identify a superseding request.",
+      "evidence": "hook451–511"
+    },
+    {
+      "id": "LOAD_VIEW_CHAIN",
+      "status": "PASS_BOUNDED_EVIDENCE",
+      "finding": "Captured loadView awaits capture, catalog, selectedPreferences and current-target validation before returning the full view. There is no stage-bearing successful/pending response in the log. Awaited capture/reconciliation, queued catalog/native work, preferences, and renderer settlement remain distinguishable source stages but unobserved current substages.",
+      "evidence": "CapturedRuntimeProviderManagementClient95–181,225–232; exact prior capture-port reads"
+    },
+    {
+      "id": "PREFERENCE_BINDING",
+      "status": "PASS_BOUNDED_EVIDENCE",
+      "finding": "The fixture explicitly supplies private global/project preference roots for global, workspace and workspace-other descriptors. The current capture/preferences source identities are unchanged. A universally missing preference binding or changed default-scope schema is not established by this failure.",
+      "evidence": "management fixture52–81; prior capture/preferences trace, current exact identities"
+    },
+    {
+      "id": "SERIAL_METADATA_AUTHORITY",
+      "status": "PASS_BOUNDED_EVIDENCE",
+      "finding": "Coordinator catalog reads serialize per selected profile and preserve current target and absolute original deadline. Replacing a mismatched catalog owner requires confirmed close; failed reads retire only after cleanup. Removing, caching or bypassing these checks is not supported.",
+      "evidence": "Coordinator599–686"
+    },
+    {
+      "id": "TIMEOUT_MISMATCH_LIMIT",
+      "status": "PASS_BOUNDED_EVIDENCE",
+      "finding": "The fixture selects original timeoutMs 120000 / modelProbeTimeoutMs 120000. The original GUI card wait is 30000. This allows a still-pending metadata operation to coexist with GUI expiry, but the log does not measure the pending stage or prove completion after 30 s. It does not justify inflating either budget or weakening the predicate.",
+      "evidence": "V2fixture151–176; UI138–158; Coordinator611–627"
+    },
+    {
+      "id": "METADATA_FAILURE_PROJECTION",
+      "status": "PASS_BOUNDED_EVIDENCE",
+      "finding": "The host has an existing bounded metadata failure channel with stage/reason/elapsed/deadline/aborted, and read stages native-client, identity, plugins, permissions, MCP, credential, directory/activation, currentness, projection and dispose. It never warms metadata with a prompt. No corresponding current failure-stage observation appears in the retained job log.",
+      "evidence": "OpenCodeV2ManagementHost205–324; complete log"
+    },
+    {
+      "id": "FAIL_CLOSED_OUTCOME",
+      "status": "PASS_BOUNDED_EVIDENCE",
+      "finding": "The harness emits INCOMPLETE, throws the original inheritance timeout and exits1. The ordinary verifier then fails actual INCOMPLETE versus required PASS at its unchanged line 69 and exits1. Neither command converts this into partial PASS.",
+      "evidence": "log1216–1278; smoke119–164; verifier65–79"
+    },
+    {
+      "id": "ARTIFACT_UNREAD",
+      "status": "PASS_BOUNDED_EVIDENCE",
+      "finding": "The uploader advertises 19 files, 847455 ZIP bytes and the stated archive digest for artifact14340275045. Root reports its URL expired before byte GET. No archive bytes, CRC, member census, receipt, app log, DOM or PNG from that artifact were read in this advisory.",
+      "evidence": "log1279–1377; root capture-availability statement"
+    },
+    {
+      "id": "CLEANUP_UNKNOWN",
+      "status": "PASS_BOUNDED_EVIDENCE",
+      "finding": "The source finally attempts ordinary cleanup and writes the final summary, but status remains INCOMPLETE on both good and failed cleanup paths. The log has no current app exit/nativeRemaining/Host absence/group/source-after/input-after/model-server-close values. Generic runner orphan cleanup is not original custody proof.",
+      "evidence": "smoke119–165; log final summary and final runner cleanup"
+    },
+    {
+      "id": "INPUT_AND_SOURCE_LIMIT",
+      "status": "PASS_BOUNDED_EVIDENCE",
+      "finding": "The log contains selected Node/Host/pnpm/Bun/manifest/native launcher identities and a prepared receipt path. These are logged preparation evidence, not independent current after-cleanup hash/census proof. No immutable source drift or successful cleanup is inferred without the receipt.",
+      "evidence": "log full input preparation and UI environment"
+    },
+    {
+      "id": "PRIOR_SOURCE_JOIN",
+      "status": "PASS_BOUNDED_EVIDENCE",
+      "finding": "All 28 relevant prior source-index entries join exactly at 86f by fresh complete body hashes or the complete current src tree. Original prior read scopes are preserved transparently; the current verifier is a29th narrowly read source. No broad source/CI audit is repeated.",
+      "evidence": "sourceIndex; prior advisory c4ff18a6; current src tree 9ed817aa"
+    },
+    {
+      "id": "COMPARISON_LIMIT",
+      "status": "PASS_BOUNDED_EVIDENCE",
+      "finding": "Prior PR1219 displayed the same eight booleans and the same first Models boundary. Its full receipt proved facts not available here; those old cleanup/input/receipt facts are not transferred into CI3. The recurrence narrows the symptom, not the exact causal substage.",
+      "evidence": "prior report observed/sourceTrace; current log"
+    },
+    {
+      "id": "REPAIR_NOT_ESTABLISHED",
+      "status": "PASS_BOUNDED_EVIDENCE",
+      "finding": "No specific product or harness repair can be selected from this evidence while preserving the original authority, deadline and five-intent flow. Wrong click, unsupported bundled version, permanently absent preferences, native protocol failure and specific loading/currentness defect are not proved.",
+      "evidence": "bounded causal assessment"
+    },
+    {
+      "id": "MINIMAL_MISSING_EVIDENCE",
+      "status": "PASS_BOUNDED_EVIDENCE",
+      "finding": "The decisive gap is the same original loadView request's issued/current/superseded/settled state and pending stage, joined to the original selected profile/context and bounded nonsecret failure reason. This is a possible future evidence-producing design requirement only; no observer/source change, extra native request, retry or gate is selected here.",
+      "evidence": "source-supported diagnostic opportunity"
+    },
+    {
+      "id": "AUTHORITY",
+      "status": "PASS_BOUNDED_EVIDENCE",
+      "finding": "Work used immutable Git/retained text and pure identity/data checks only. No shell, target execution/import/compilation, live CI/artifact download, source/control/ref/PR mutation, retry, vendor probe or new gate occurred. Only this bounded advisory blob is retained.",
+      "evidence": "review authority"
+    }
+  ],
+  "checkCount": 28,
+  "limitations": [
+    "Immutable log-only current outcome classification, not an original artifact/receipt/native qualification.",
+    "Whole current source bodies were fetched where stated; prior semantic read scopes are reused only after exact blob/byte identity joins. Large source files are not relabeled as newly fully read.",
+    "No current artifact body/CRC/DOM/PNG/app log was available; none was downloaded or reconstructed.",
+    "Two reached intents are inferred from exact sequential code and stack; actual current command IDs/effect objects are unavailable.",
+    "Passing preflight and previously accepted frontend unit suites do not make this GUI run PASS.",
+    "Old PR1219 cleanup/input facts remain historical and are not transferred.",
+    "No functional repair, timeout increase, retry, skip, reduced assertion, cached metadata authority, or new gate is selected.",
+    "Only immutable Git/data review and this bare report retention occurred."
+  ]
+}
