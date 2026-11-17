@@ -17,12 +17,11 @@ import {
 } from '../../../src/main/services/team/provisioning/TeamProvisioningProfileOwnership';
 
 const roots: string[] = [];
-async function fixture(hasContext = true) {
+async function fixture(hasContext = true, name = 'builders') {
   const root = await fs.mkdtemp(path.join(os.tmpdir(), 'logical-team-definition-backup-'));
   roots.push(root);
   setClaudeBasePathOverride(path.join(root, 'claude'));
   setAppDataBasePath(path.join(root, 'app'));
-  const name = 'builders';
   const logical = path.join(getTeamsBasePath(), name);
   const tasks = path.join(getTasksBasePath(), name);
   const alias = 'ptc-project-a';
@@ -92,6 +91,18 @@ describe('logical per-project team definition backup', () => {
     expect(await fs.readFile(path.join(f.logical, 'project-contexts.json'), 'utf8')).toBe(original);
     expect(await readTeamOwnerProfileScope(f.logical)).toBe(resolveThisAppProfileScope());
     expect(await recoverMissingProjectTeamDefinition(f.name)).toBe(false);
+  });
+
+  it('backs up and restores a historical logical team name longer than 64 characters', async () => {
+    const name = 'legacy-' + 'a'.repeat(85);
+    const f = await fixture(true, name);
+    expect(await backupProjectTeamDefinition(name)).toBe(true);
+    await fs.rm(f.logical, { recursive: true });
+    await fs.rm(f.tasks, { recursive: true });
+    expect(await recoverMissingProjectTeamDefinition(name)).toBe(true);
+    expect(await readTeamOwnerProfileScope(f.logical)).toBe(resolveThisAppProfileScope());
+    expect(await fs.readFile(path.join(f.logical, 'project-contexts.json'), 'utf8'))
+      .toContain(f.alias);
   });
 
   it('allows exactly one recovery publisher when two processes race for the name', async () => {

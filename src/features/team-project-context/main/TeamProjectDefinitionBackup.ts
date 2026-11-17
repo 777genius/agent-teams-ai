@@ -8,6 +8,7 @@ import {
   TEAM_PROFILE_OWNER_MARKER_FILE,
 } from '@main/services/team/provisioning/TeamProvisioningProfileOwnership';
 import { atomicWriteAsync } from '@main/utils/atomicWrite';
+import { validateTeamName } from '@main/services/team/TeamIdentifierValidation';
 import {
   getBackupsBasePath,
   getTasksBasePath,
@@ -20,7 +21,7 @@ const FILES = ['team.meta.json', 'members.meta.json', TEAM_PROFILE_OWNER_MARKER_
 const CONTEXT_INDEX = 'project-contexts.json';
 const MAX_FILE_BYTES = 1024 * 1024;
 const MAX_SNAPSHOT_BYTES = 4 * 1024 * 1024;
-const SAFE_NAME = /^[a-z0-9](?:[a-z0-9-]{0,62}[a-z0-9])?$/;
+const SAFE_ALIAS_NAME = /^[a-z0-9](?:[a-z0-9-]{0,62}[a-z0-9])?$/;
 
 interface DefinitionSnapshot {
   version: 1;
@@ -30,7 +31,10 @@ interface DefinitionSnapshot {
 }
 
 function checkedName(value: string): string {
-  if (!SAFE_NAME.test(value)) throw new Error('Unsafe logical team backup identifier');
+  const validation = validateTeamName(value);
+  if (!validation.valid || validation.value !== value) {
+    throw new Error('Unsafe logical team backup identifier');
+  }
   return value;
 }
 
@@ -184,7 +188,7 @@ export async function recoverMissingProjectTeamDefinition(teamName: string): Pro
   if (parsed.contexts.length === 0) return false;
   for (const row of parsed.contexts) {
     const alias = row.executionTeamName;
-    if (typeof alias !== 'string' || !SAFE_NAME.test(alias) || alias === teamName ||
+    if (typeof alias !== 'string' || !SAFE_ALIAS_NAME.test(alias) || alias === teamName ||
         row.state !== 'ready') return false;
     const aliasDir = path.join(getTeamsBasePath(), alias);
     if (await readTeamOwnerProfileScope(aliasDir) !== snapshot.profileScope) return false;
@@ -261,7 +265,7 @@ export async function recoverMissingProjectTeamDefinitions(): Promise<number> {
   for (const name of names) {
     if (!name.endsWith('.json')) continue;
     const teamName = name.slice(0, -5);
-    if (!SAFE_NAME.test(teamName)) continue;
+    if (!validateTeamName(teamName).valid) continue;
     try {
       if (await recoverMissingProjectTeamDefinition(teamName)) recovered++;
     } catch {
