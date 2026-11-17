@@ -16,9 +16,8 @@ import {
 } from '@renderer/components/ui/tooltip';
 import { Info } from 'lucide-react';
 
-import type { JSX } from 'react';
-
 import type { TeamProjectContextMode } from '@shared/types';
+import type { JSX } from 'react';
 
 interface Props {
   projectContextMode: TeamProjectContextMode;

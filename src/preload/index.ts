@@ -14,13 +14,13 @@ import { createReviewFlowBridge } from '@features/review-flow/preload';
 import { createRuntimeProviderManagementBridge } from '@features/runtime-provider-management/preload';
 import { createTeamGroupChatsBridge } from '@features/team-group-chats/preload';
 import { createTeamImportBridge } from '@features/team-import/preload';
-import { createTeamMemberSettingsBridge } from '@features/team-provisioning/preload';
-import { createTeamReadRecoveryBridge } from '@features/team-read-recovery/preload';
 import {
   TEAM_PROJECT_CONTEXT_VIEW_CHANNEL,
   TEAM_PROJECT_CONTEXT_SET_MODE_CHANNEL,
   type TeamProjectContextView,
 } from '@features/team-project-context/contracts';
+import { createTeamMemberSettingsBridge } from '@features/team-provisioning/preload';
+import { createTeamReadRecoveryBridge } from '@features/team-read-recovery/preload';
 import { createTerminalWorkspaceBridge } from '@features/terminal-workspace/preload';
 import { createTmuxInstallerBridge } from '@features/tmux-installer/preload';
 import { createTokenUsageBridge } from '@features/token-usage/preload';

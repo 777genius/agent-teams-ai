@@ -1,9 +1,10 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
 import * as fs from 'node:fs/promises';
 import * as os from 'node:os';
 import * as path from 'node:path';
 
 import { setClaudeBasePathOverride } from '@main/utils/pathDecoder';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+
 import { TeamMetaStore } from '../TeamMetaStore';
 
 const roots: string[] = [];

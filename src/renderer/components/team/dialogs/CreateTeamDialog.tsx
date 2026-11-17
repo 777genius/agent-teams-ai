@@ -31,7 +31,6 @@ import {
   validateMemberNameInline,
 } from '@renderer/components/team/members/MembersEditorSection';
 import { TeamRosterEditorSection } from '@renderer/components/team/members/TeamRosterEditorSection';
-import { TeamHistoryAndLaunchControls } from './TeamHistoryAndLaunchControls';
 import { AutoResizeTextarea } from '@renderer/components/ui/auto-resize-textarea';
 import { Button } from '@renderer/components/ui/button';
 import { Checkbox } from '@renderer/components/ui/checkbox';
@@ -193,6 +192,7 @@ import {
 import { resolveConfigOnlyCwd } from './resolveConfigOnlyCwd';
 import { CreateTeamProviderStatusStrip } from './RetryOpenCodeStatus';
 import { SkipPermissionsCheckbox } from './SkipPermissionsCheckbox';
+import { TeamHistoryAndLaunchControls } from './TeamHistoryAndLaunchControls';
 import {
   analyzeTeammateRuntimeCompatibility,
   useTmuxRuntimeReadiness,

@@ -117,7 +117,6 @@ import type {
   UpdateKanbanPatch,
 } from './team';
 import type { TeamMemberRestartResult } from './teamMemberRestart';
-import type { TeamProjectContextViewApi } from '@features/team-project-context/contracts';
 import type { TerminalAPI } from './terminal';
 import type { TmuxAPI } from './tmux';
 import type { WaterfallData } from './visualization';
@@ -148,6 +147,7 @@ import type { ReviewFlowElectronApi } from '@features/review-flow/contracts';
 import type { RuntimeProviderManagementApi } from '@features/runtime-provider-management/contracts';
 import type { TeamGroupChatsAPI } from '@features/team-group-chats/contracts';
 import type { TeamImportApi } from '@features/team-import/contracts';
+import type { TeamProjectContextViewApi } from '@features/team-project-context/contracts';
 import type { TeamMemberSettingsApi } from '@features/team-provisioning/contracts';
 import type {
   TeamReadLegacyApi,

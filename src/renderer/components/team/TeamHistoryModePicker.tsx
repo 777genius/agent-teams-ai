@@ -1,6 +1,7 @@
 import { useId, useState } from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
+import { api } from '@renderer/api';
 import { confirm } from '@renderer/components/common/ConfirmDialog';
 import { Label } from '@renderer/components/ui/label';
 import {
@@ -10,7 +11,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@renderer/components/ui/select';
-import { api } from '@renderer/api';
 
 import type { TeamProjectContextMode } from '@shared/types';
 

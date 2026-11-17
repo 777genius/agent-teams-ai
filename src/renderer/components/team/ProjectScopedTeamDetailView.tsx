@@ -1,14 +1,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
-import { Button } from '@renderer/components/ui/button';
 import { api } from '@renderer/api';
+import { Button } from '@renderer/components/ui/button';
 import { useStore } from '@renderer/store';
 import { useShallow } from 'zustand/react/shallow';
 
-import { resolveTeamProjectSelection } from './teamProjectSelection';
 import { TeamDetailView } from './TeamDetailView';
 import { TeamHistoryModePicker } from './TeamHistoryModePicker';
+import { resolveTeamProjectSelection } from './teamProjectSelection';
 
 import type { TeamProjectContextView } from '@features/team-project-context/contracts';
 
