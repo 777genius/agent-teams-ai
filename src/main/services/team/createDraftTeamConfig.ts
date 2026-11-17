@@ -57,20 +57,23 @@ export async function createDraftTeamConfig(
     await fs.promises.mkdir(tasksDir, { mode: 0o700 });
     tasksDirectoryCreated = true;
     await fs.promises.mkdir(path.join(teamDir, 'inboxes'), { mode: 0o700 });
-    // Context manifests are app-owned: claim newly created drafts before any
-    // per-project context can be materialized. Never claim pre-existing teams.
-    await claimTeamForThisProfile({
-      teamsBasePath,
-      teamName: request.teamName,
-      reason: 'create',
-    });
+    const contextMode = parseNewTeamProjectContextMode(request.projectContextMode);
+    // Per-project contexts must be owned before their first materialization.
+    // Shared-mode teams continue using the legacy draft creation path.
+    if (contextMode === 'per_project') {
+      await claimTeamForThisProfile({
+        teamsBasePath,
+        teamName: request.teamName,
+        reason: 'create',
+      });
+    }
 
     const joinedAt = Date.now();
     // Save team-level metadata to team.meta.json (NOT config.json).
     // config.json is CLI territory — created by TeamCreate during provisioning.
     // team.meta.json preserves user's configuration for the Launch flow.
     const metadata: Omit<TeamMetaFile, 'version'> = {
-      projectContextMode: parseNewTeamProjectContextMode(request.projectContextMode),
+      projectContextMode: contextMode,
       runtimeSelectionVersion: request.runtimeSelectionVersion,
       displayName: request.displayName,
       description: request.description,
