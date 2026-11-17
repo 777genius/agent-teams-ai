@@ -272,6 +272,37 @@ export class TeamProjectContextRegistry {
    * Confirm only after the existing native provisioning flow has created an
    * owned, valid physical team and task directory. No inferred success.
    */
+  /**
+   * Release a failed draft reservation only when absolutely no native artifact
+   * exists. The caller must hold the logical team's operation admission lock
+   * and prove that no provisioning run is active. Never delete ready contexts.
+   */
+  async releaseUnusedReservation(
+    logicalTeamName: string,
+    executionTeamName: string,
+    expectedContextId: string
+  ): Promise<boolean> {
+    await this.assertOwnedDirectory(logicalTeamName);
+    return withFileLock(this.indexPath(logicalTeamName), async () => {
+      await this.assertOwnedDirectory(logicalTeamName);
+      const index = await this.readIndex(logicalTeamName);
+      const row = index.contexts.find(
+        (entry) =>
+          entry.executionTeamName === executionTeamName && entry.id === expectedContextId
+      );
+      if (!row || row.state !== 'reserved') return false;
+      if (
+        (await exists(path.join(this.paths.teamsBasePath, row.executionTeamName))) ||
+        (await exists(path.join(this.paths.tasksBasePath, row.executionTeamName)))
+      ) {
+        return false;
+      }
+      index.contexts = index.contexts.filter((entry) => entry.id !== row.id);
+      await this.writeIndex(index);
+      return true;
+    }, { preventLiveOwnerTakeover: true });
+  }
+
   async confirmReady(
     logicalTeamName: string,
     projectPath: string,

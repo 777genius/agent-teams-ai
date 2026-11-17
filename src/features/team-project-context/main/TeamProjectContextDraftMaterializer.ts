@@ -16,6 +16,11 @@ interface SavedTeamRequestPort {
 
 interface ContextResolverPort {
   reserveForProvisioning(address: TeamWorkContextAddress): Promise<ResolvedTeamWorkContext>;
+  releaseUnusedReservation(
+    logicalTeamName: string,
+    executionTeamName: string,
+    expectedContextId: string
+  ): Promise<boolean>;
 }
 
 /**
@@ -52,13 +57,24 @@ export class TeamProjectContextDraftMaterializer {
     if (!source) throw new Error('The team configuration is unavailable');
     if (!address.projectPath?.trim()) throw new Error('Choose a project for this team');
 
-    await this.teamStore.createTeamConfig({
-      ...source,
-      teamName: resolved.executionTeamName,
-      cwd: address.projectPath,
-      // Runtime aliases are ordinary native teams, not logical definitions.
-      projectContextMode: 'shared',
-    });
+    try {
+      await this.teamStore.createTeamConfig({
+        ...source,
+        teamName: resolved.executionTeamName,
+        cwd: address.projectPath,
+        // Runtime aliases are ordinary native teams, not logical definitions.
+        projectContextMode: 'shared',
+      });
+    } catch (error) {
+      // createDraftTeamConfig rolls back its own failed filesystem creation.
+      // Do not release if any native artifacts survived or ownership is unclear.
+      if (resolved.workContextId) {
+        await this.context.releaseUnusedReservation(
+          address.logicalTeamName, resolved.executionTeamName, resolved.workContextId
+        ).catch(() => false);
+      }
+      throw error;
+    }
     // Claim only the newly created draft. On failure the native launch must
     // not proceed, and the reserved index may be reconciled explicitly.
     await this.claimNewAlias(resolved.executionTeamName);

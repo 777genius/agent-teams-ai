@@ -101,6 +101,36 @@ describe('TeamProjectContextRegistry', () => {
       .rejects.toBeInstanceOf(TeamProjectContextUnavailableError);
   });
 
+  it('releases only empty failed reservations and allows A to retry after B', async () => {
+    const f = await fixture();
+    const a = await f.registry.reserve('logical-team', f.workspaceA);
+    expect(await f.registry.releaseUnusedReservation(
+      'logical-team', a.executionTeamName, 'stale-id'
+    )).toBe(false);
+    expect(await f.registry.releaseUnusedReservation(
+      'logical-team', a.executionTeamName, a.id
+    )).toBe(true);
+    const b = await f.registry.reserve('logical-team', f.workspaceB);
+    const retriedA = await f.registry.reserve('logical-team', f.workspaceA);
+    expect(b.executionTeamName).not.toBe(retriedA.executionTeamName);
+    expect(retriedA.id).not.toBe(a.id);
+    await simulateNativeProvisioning(f, b.executionTeamName);
+    await f.registry.confirmReady('logical-team', f.workspaceB, b.executionTeamName);
+    expect(await f.registry.releaseUnusedReservation(
+      'logical-team', b.executionTeamName, b.id
+    )).toBe(false);
+  });
+
+  it('keeps failed reservations if any physical task or team directory exists', async () => {
+    const f = await fixture();
+    const a = await f.registry.reserve('logical-team', f.workspaceA);
+    await mkdir(path.join(f.tasksBasePath, a.executionTeamName));
+    expect(await f.registry.releaseUnusedReservation(
+      'logical-team', a.executionTeamName, a.id
+    )).toBe(false);
+    expect(await f.registry.list('logical-team')).toEqual([a]);
+  });
+
   it('fails closed for a foreign-owned logical team', async () => {
     const f = await fixture();
     const foreign = new TeamProjectContextRegistry({

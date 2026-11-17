@@ -25,7 +25,7 @@ interface TeamMetaReader {
   getMeta(teamName: string): Promise<TeamMetaFile | null>;
 }
 
-type ContextRegistry = Pick<TeamProjectContextRegistry, 'find' | 'reserve' | 'confirmReady'>;
+type ContextRegistry = Pick<TeamProjectContextRegistry, 'find' | 'reserve' | 'confirmReady' | 'releaseUnusedReservation'>;
 
 function physical(logicalTeamName: string, context: PersistedTeamWorkContext): ResolvedTeamWorkContext {
   return {
@@ -101,6 +101,20 @@ export class TeamProjectContextRuntimeResolver {
       this.requireProjectPath(address)
     );
     return physical(address.logicalTeamName, reserved);
+  }
+
+  /**
+   * Only the draft-failure path may discard a reservation, and only when
+   * its physical files were never created. Safe no-op for ready contexts.
+   */
+  releaseUnusedReservation(
+    logicalTeamName: string,
+    executionTeamName: string,
+    expectedContextId: string
+  ): Promise<boolean> {
+    return this.registry.releaseUnusedReservation(
+      logicalTeamName, executionTeamName, expectedContextId
+    );
   }
 
   async confirmProvisionedContext(

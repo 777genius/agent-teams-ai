@@ -15,7 +15,10 @@ const reserved: ResolvedTeamWorkContext = {
 };
 
 function fixture(result: ResolvedTeamWorkContext = reserved) {
-  const context = { reserveForProvisioning: vi.fn(async () => result) };
+  const context = {
+    reserveForProvisioning: vi.fn(async () => result),
+    releaseUnusedReservation: vi.fn(async () => true),
+  };
   const store = {
     getSavedRequest: vi.fn(async (name: string): Promise<TeamCreateRequest | null> =>
       name === 'builders'
@@ -25,7 +28,7 @@ function fixture(result: ResolvedTeamWorkContext = reserved) {
     assertOwnedAlias: vi.fn(async () => undefined),
   };
   const claim = vi.fn(async () => undefined);
-  return { materializer: new TeamProjectContextDraftMaterializer(context, store, claim), store, claim };
+  return { materializer: new TeamProjectContextDraftMaterializer(context, store, claim), context, store, claim };
 }
 
 describe('TeamProjectContextDraftMaterializer', () => {
@@ -40,6 +43,18 @@ describe('TeamProjectContextDraftMaterializer', () => {
       prompt: 'rules', projectContextMode: 'shared',
     });
     expect(f.claim).toHaveBeenCalledWith('ptc-sandbox');
+  });
+
+  it('releases an empty reservation when native draft creation rejects', async () => {
+    const f = fixture();
+    f.store.createTeamConfig.mockRejectedValue(new Error('disk full'));
+    await expect(f.materializer.ensureProjectDraft({
+      logicalTeamName: 'builders', projectPath: '/sandbox/b',
+    })).rejects.toThrow('disk full');
+    expect(f.context.releaseUnusedReservation).toHaveBeenCalledWith(
+      'builders', 'ptc-sandbox', reserved.workContextId
+    );
+    expect(f.claim).not.toHaveBeenCalled();
   });
 
   it('does not create a second draft for an existing owned alias', async () => {

@@ -18,6 +18,7 @@ function fixture(meta: TeamMetaFile | null, found: PersistedTeamWorkContext | nu
   const registry = {
     find: vi.fn(async () => found),
     reserve: vi.fn(async () => ({ ...record, state: 'reserved' as const })),
+    releaseUnusedReservation: vi.fn(async () => true),
     confirmReady: vi.fn(async () => record),
   };
   return { resolver: new TeamProjectContextRuntimeResolver(reader, registry), registry };
