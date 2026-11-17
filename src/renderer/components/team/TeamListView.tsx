@@ -61,8 +61,8 @@ import { useShallow } from 'zustand/react/shallow';
 import { assignCreatedTeamToOrganization } from './dialogs/assignCreatedTeamToOrganization';
 import { CreateTeamPageLoadingFallback } from './dialogs/CreateTeamPageLoadingFallback';
 import { LaunchTeamDialogLoadingFallback } from './dialogs/LaunchTeamDialogLoadingFallback';
-import { loadExistingTeamLaunchDialog } from './dialogs/stoppedTeamLaunch';
 import { executeTeamRelaunch } from './dialogs/teamRelaunchFlow';
+import { useExistingTeamLaunchDialog } from './dialogs/useExistingTeamLaunchDialog';
 import { TeamAggregateReadNotice } from './TeamAggregateReadNotice';
 import { buildCopiedTeamMembers } from './teamCopyData';
 import { TeamDeleteButton } from './TeamDeleteButton';
@@ -91,7 +91,6 @@ import type { OrganizationPlacementSelection } from '@features/organizations/con
 import type { TeamManagementCommittedChange } from '@features/team-prompt-management/contracts';
 import type { TeamStatus } from '@renderer/utils/teamListStatus';
 import type {
-  ResolvedTeamMember,
   TeamCreateRequest,
   TeamLaunchRequest,
   TeamSummary,
@@ -930,32 +929,9 @@ export const TeamListView = memo(function TeamListView({
   );
 
   const [launchingTeamName, setLaunchingTeamName] = useState<string | null>(null);
-  const [launchDialogOpen, setLaunchDialogOpen] = useState(false);
-  const [launchDialogMode, setLaunchDialogMode] = useState<TeamLaunchDialogMode>('launch');
-  const [launchDialogTeamName, setLaunchDialogTeamName] = useState('');
-  const [launchDialogMembers, setLaunchDialogMembers] = useState<ResolvedTeamMember[]>([]);
-  const [launchDialogDefaultPath, setLaunchDialogDefaultPath] = useState<string | undefined>();
-
-  const handleLaunchTeam = useCallback(
-    async (
-      teamName: string,
-      projectPath: string | undefined,
-      mode: TeamLaunchDialogMode,
-      e: React.MouseEvent
-    ) => {
-      e.stopPropagation();
-      if (!projectPath) return;
-      const target = await loadExistingTeamLaunchDialog(teamName, projectPath, mode);
-      if (!target) return;
-      if (target.teamName !== teamName) void fetchTeams();
-      setLaunchDialogMode(target.mode);
-      setLaunchDialogTeamName(target.teamName);
-      setLaunchDialogMembers(target.members);
-      setLaunchDialogDefaultPath(target.projectPath);
-      setLaunchDialogOpen(true);
-    },
-    [fetchTeams]
-  );
+  const { launchDialogOpen, setLaunchDialogOpen, launchDialogMode, launchDialogTeamName,
+    launchDialogMembers, launchDialogDefaultPath, retainedLegacyLaunch, handleLaunchTeam } =
+    useExistingTeamLaunchDialog(fetchTeams);
 
   const handleLaunchSubmit = useCallback(
     async (request: TeamLaunchRequest) => {
@@ -1179,7 +1155,7 @@ export const TeamListView = memo(function TeamListView({
         <LaunchTeamDialog
           mode="relaunch"
           open={launchDialogOpen}
-          teamName={launchDialogTeamName}
+          teamName={launchDialogTeamName} retainedLegacyLaunch={retainedLegacyLaunch}
           members={launchDialogMembers}
           defaultProjectPath={launchDialogDefaultPath}
           provisioningError={provisioningErrorByTeam[launchDialogTeamName] ?? null}
@@ -1192,7 +1168,7 @@ export const TeamListView = memo(function TeamListView({
         <LaunchTeamDialog
           mode="launch"
           open={launchDialogOpen}
-          teamName={launchDialogTeamName}
+          teamName={launchDialogTeamName} retainedLegacyLaunch={retainedLegacyLaunch}
           members={launchDialogMembers}
           defaultProjectPath={launchDialogDefaultPath}
           provisioningError={provisioningErrorByTeam[launchDialogTeamName] ?? null}

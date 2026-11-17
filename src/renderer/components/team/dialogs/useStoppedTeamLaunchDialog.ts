@@ -1,9 +1,14 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useState } from 'react';
 
+import {
+  closeRetainedLegacyLaunch,
+  type RetainedLegacyLaunchChoice,
+} from '@features/agent-backend/renderer';
 import { api } from '@renderer/api';
 import { useStore } from '@renderer/store';
 
 import { showStoppedTeamLaunchHold, stoppedTeamLaunchSelection } from './stoppedTeamLaunch';
+import { useRetainedLaunchOwner } from './useRetainedLaunchOwner';
 
 import type { TeamLaunchDialogMode } from './LaunchTeamDialog.types';
 import type { MemberSettingsRelaunchDraft } from '@features/team-provisioning/renderer';
@@ -13,6 +18,7 @@ interface State {
   mode: TeamLaunchDialogMode;
   memberSettingsDraft?: MemberSettingsRelaunchDraft;
   baselineMembers?: ResolvedTeamMember[];
+  retainedLegacyLaunch?: RetainedLegacyLaunchChoice;
 }
 export function useStoppedTeamLaunchDialog(teamName: string) {
   const [launchDialogState, setLaunchDialogState] = useState<State>({
@@ -24,24 +30,47 @@ export function useStoppedTeamLaunchDialog(teamName: string) {
     members: ResolvedTeamMember[];
     cwd?: string;
   }>();
-  const original = useRef(teamName);
-  original.current = teamName;
+  const owner = useRetainedLaunchOwner(teamName);
   const openLaunchDialog = useCallback(
-    (mode: TeamLaunchDialogMode) => {
+    (
+      mode: TeamLaunchDialogMode,
+      settings?: Pick<State, 'memberSettingsDraft' | 'baselineMembers'>
+    ) => {
+      const intent = owner.begin();
+      let choice: RetainedLegacyLaunchChoice | undefined;
       void (async () => {
         try {
           const state = useStore.getState();
           const selected = state.selectedTeamData;
           const draft =
             state.selectedTeamName === teamName && state.selectedTeamError === 'TEAM_DRAFT';
+          let original: Awaited<ReturnType<typeof api.teams.getData>> | undefined;
           const target = await stoppedTeamLaunchSelection(
             teamName,
-            selected?.teamName === teamName ? selected.isAlive : draft ? false : undefined
+            selected?.teamName === teamName ? selected.isAlive : draft ? false : undefined,
+            (selectedChoice) => {
+              choice = selectedChoice;
+            },
+            intent.signal,
+            {
+              mode,
+              ...settings,
+              onOriginalData: (data) => {
+                original = data;
+              },
+            }
           );
-          if (original.current !== teamName) return;
+          if (!owner.current(intent)) {
+            void closeRetainedLegacyLaunch(choice);
+            return;
+          }
           if (target !== teamName) {
             const data = await api.teams.getData(target, { includeMemberBranches: false });
-            if (original.current !== teamName) return;
+            if (!owner.current(intent)) {
+              void closeRetainedLegacyLaunch(choice);
+              return;
+            }
+            owner.adopt(choice);
             setLaunchTarget({
               teamName: target,
               members: data.members.map((member) => ({
@@ -53,22 +82,43 @@ export function useStoppedTeamLaunchDialog(teamName: string) {
               cwd: data.config.projectPath,
             });
             void useStore.getState().fetchTeams();
-            setLaunchDialogState({ open: true, mode: 'launch' });
+            setLaunchDialogState({ open: true, mode: 'launch', ...settings });
           } else {
-            setLaunchTarget(undefined);
-            setLaunchDialogState({ open: true, mode });
+            owner.adopt(choice);
+            setLaunchTarget(
+              original
+                ? {
+                    teamName,
+                    cwd: original.config.projectPath,
+                    members: original.members.map((member) => ({
+                      ...member,
+                      status: member.currentTaskId ? 'active' : 'idle',
+                      messageCount: 0,
+                      lastActiveAt: null,
+                    })),
+                  }
+                : undefined
+            );
+            setLaunchDialogState({
+              open: true,
+              mode: choice ? 'launch' : mode,
+              ...settings,
+              retainedLegacyLaunch: choice,
+            });
           }
         } catch (error) {
-          showStoppedTeamLaunchHold(error);
+          void closeRetainedLegacyLaunch(choice);
+          if (owner.current(intent)) showStoppedTeamLaunchHold(error);
         }
       })();
     },
-    [teamName]
+    [owner, teamName]
   );
   const closeLaunchDialog = useCallback(() => {
-    setLaunchDialogState((prev) => ({ ...prev, open: false }));
+    owner.close();
+    setLaunchDialogState((prev) => ({ ...prev, open: false, retainedLegacyLaunch: undefined }));
     setLaunchTarget(undefined);
-  }, []);
+  }, [owner]);
   const handleRestartTeam = useCallback(() => openLaunchDialog('relaunch'), [openLaunchDialog]);
   return {
     launchDialogState,

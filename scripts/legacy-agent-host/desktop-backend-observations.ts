@@ -45,7 +45,7 @@ export function assertDesktopProofEnvironment(linuxModeAllowed: boolean): void {
     const controlled = mode === 'process-cold-ui' && process.env.LEGACY_PROCESS_COLD_UI_GO === '1' &&
       /^\/(?:[^/]+\/)*TEST-[^/]+\/[^\0\r\n]+\.json$/u.test(process.env.LEGACY_DESKTOP_PROCESS_CAPTURE_PATH ?? '') &&
       /^[a-f0-9]{64}$/u.test(process.env.LEGACY_DESKTOP_PROCESS_CAPTURE_SHA256 ?? '');
-    assert.ok(controlled || ['team-ui', 'task-board-ui', 'task-board-cross-team-ui', 'skills-ui', 'emulated-management-ui', 'emulated-codex-login-ui', 'emulated-codex-runtime-ui', 'emulated-claude-runtime-ui', 'emulated-claude-lifecycle-ui', 'emulated-collaboration-ui', 'emulated-extensions-ui', 'emulated-import-ui', 'emulated-import-lifecycle-ui', 'emulated-opencode-runtime-ui', 'emulated-selection-ui', 'emulated-installer-ui', 'review-ui', 'review-readback-ui'].includes(mode ?? ''),
+    assert.ok(controlled || ['team-ui', 'task-board-ui', 'task-board-cross-team-ui', 'skills-ui', 'emulated-management-ui', 'emulated-codex-login-ui', 'emulated-codex-runtime-ui', 'emulated-claude-runtime-ui', 'emulated-claude-lifecycle-ui', 'emulated-collaboration-ui', 'emulated-extensions-ui', 'emulated-import-ui', 'emulated-import-lifecycle-ui', 'emulated-retained-original-ui', 'emulated-opencode-runtime-ui', 'emulated-selection-ui', 'emulated-installer-ui', 'review-ui', 'review-readback-ui'].includes(mode ?? ''),
       'provider-emulation admits only the original offline controls and exact pinned TEST provider modes');
     if (controlled) {
       assert.equal(process.platform, 'linux'); assert.equal(process.arch, 'x64');

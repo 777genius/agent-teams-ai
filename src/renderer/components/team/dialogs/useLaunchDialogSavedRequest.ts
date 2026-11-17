@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { isHostTeamSelectionKey } from '@features/agent-backend/contracts';
+import { useRetainedLegacyLaunch } from '@features/agent-backend/renderer';
 import { api } from '@renderer/api';
 import { useStore } from '@renderer/store';
 import {
@@ -21,17 +22,18 @@ interface Source {
 
 /** One existing-dialog source query. Loading/error never means proven absent owner settings. */
 export function useLaunchDialogSavedRequest(open: boolean, launch: boolean, teamName: string) {
+  const retained = useRetainedLegacyLaunch();
   const contextId = useStore((state) => state.activeContextId);
   const switching = useStore((state) => state.isContextSwitching);
   const epoch = captureContextScopedRequestEpoch();
-  const scope = open && launch ? JSON.stringify([teamName, contextId, switching, epoch]) : null;
+  const scope = open && launch ? JSON.stringify([teamName, contextId, switching, epoch, retained?.choice.scopeId]) : null;
   const lifetime = useRef({ scope: null as string | null, revision: 0 });
   if (lifetime.current.scope !== scope) {
     lifetime.current = { scope, revision: lifetime.current.revision + 1 };
   }
   const host = launch && isHostTeamSelectionKey(teamName);
   const identity = `${lifetime.current.revision}:${scope}`;
-  const key = host ? identity : teamName;
+  const key = host || retained ? identity : teamName;
   const [source, setSource] = useState<Source>();
   const reset = useCallback(() => setSource(undefined), []);
 
@@ -44,7 +46,7 @@ export function useLaunchDialogSavedRequest(open: boolean, launch: boolean, team
       deadline = setTimeout(() => reject(new Error('Saved source read timed out')), READ_BUDGET_MS);
     });
     void Promise.race([
-      Promise.resolve().then(() => (teamName ? api.teams.getSavedRequest(teamName) : null)),
+      Promise.resolve().then(() => (retained ? retained.read() : teamName ? api.teams.getSavedRequest(teamName) : null)),
       timeout,
     ])
       .then((request) => {
@@ -61,7 +63,7 @@ export function useLaunchDialogSavedRequest(open: boolean, launch: boolean, team
           setSource({
             scope: identity,
             request: null,
-            ...(host
+            ...(host || retained
               ? { error: 'Saved Team configuration unavailable. Close and reopen Launch.' }
               : String(error).includes('RUNTIME_SELECTION_UNSUPPORTED')
                 ? {
@@ -76,18 +78,18 @@ export function useLaunchDialogSavedRequest(open: boolean, launch: boolean, team
       cancelled = true;
       clearTimeout(deadline);
     };
-  }, [scope, identity, teamName, switching, epoch, host]);
+  }, [scope, identity, teamName, switching, epoch, host, retained]);
 
   const current = open && !switching && source?.scope === identity;
   return useMemo(
     () => ({
       key,
-      host,
+      host: host || !!retained,
       ready: current && source !== undefined && !source.error,
       request: current ? (source?.request ?? null) : null,
       error: current ? source?.error : undefined,
       reset,
     }),
-    [key, host, current, source, reset]
+    [key, host, retained, current, source, reset]
   );
 }

@@ -12,6 +12,10 @@ import { configManager } from '../infrastructure/ConfigManager';
 
 import { applyOpenCodeAutoUpdatePolicy } from './openCodeAutoUpdatePolicy';
 import {
+  applyOriginalRuntimeExecutableEnv,
+  readOriginalRuntimeScope,
+} from './OriginalRuntimeScope';
+import {
   applyConfiguredRuntimeBackendsEnv,
   applyProviderRuntimeEnv,
   resolveRuntimeProviderId,
@@ -58,6 +62,8 @@ export function buildRuntimeBaseEnv(options: BuildRuntimeBaseEnvOptions = {}): {
   env: NodeJS.ProcessEnv;
   resolvedProviderId: CliProviderId | null;
 } {
+  const original = readOriginalRuntimeScope();
+  if (original) options = { ...options, shellEnv: { ...original.shellEnv } };
   const shellEnv = options.shellEnv ?? {};
   const enrichedEnv = buildEnrichedEnv(options.binaryPath);
   const mergedPath = options.mergePathFallbacks
@@ -74,6 +80,7 @@ export function buildRuntimeBaseEnv(options: BuildRuntimeBaseEnvOptions = {}): {
   const appConfig = configManager.getConfig();
   applyConfiguredRuntimeBackendsEnv(env, appConfig.runtime);
   Object.assign(env, options.env ?? {});
+  applyOriginalRuntimeExecutableEnv(env);
   // Cache location is app-owned projection only; runtime's embedded descriptor is authority.
   env[OPENCODE_V2_SUPPORT_ROOT_ENV] = getOpenCodeV2SupportRoot();
   if (mergedPath) {

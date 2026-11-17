@@ -1,9 +1,10 @@
 import assert from 'node:assert/strict';
 import { test, type TestContext } from 'node:test';
+import { runInNewContext } from 'node:vm';
 
-import { createDesktopUiControls } from './desktop-ui-controls.ts';
+import { createDesktopUiControls, desktopAnimationFramesExpression } from './desktop-ui-controls.ts';
 
-type Frame = { settlesAt: number; value: unknown };
+type Frame = { settlesAt: number; value: unknown; animationFrames?: true };
 const offeredValue = { kind: 'TEST-read-value' };
 const point = { x: 100, y: 100 };
 
@@ -49,9 +50,10 @@ async function withReadFixture(
     });
     const ui = createDesktopUiControls({
       async evaluate(actual: string) {
-        assert.equal(actual, expression, 'the exact original read expression is retained');
         const frame = frames[reads.length];
         assert.ok(frame, 'no read after the finite original observations');
+        assert.equal(actual, frame.animationFrames ? desktopAnimationFramesExpression(30_000 - Date.now()) : expression,
+          'only the original read or its explicitly requested remaining-budget frame observation is allowed');
         reads.push(actual);
         assert.ok(frame.settlesAt >= Date.now(), 'the fixture clock never moves backward');
         t.mock.timers.setTime(frame.settlesAt);
@@ -207,6 +209,124 @@ const readyClickFrames: readonly Frame[] = [
   { settlesAt: 100, value: point },
   { settlesAt: 200, value: point },
 ];
+
+test('opt-in frame observation uses two actual callbacks and releases its deadline timer', async () => {
+  const frames = new Map<number, () => void>(), timers = new Map<number, () => void>();
+  let id = 0, settled = false;
+  const pending = runInNewContext(desktopAnimationFramesExpression(1234), {
+    document: { visibilityState: 'visible' },
+    requestAnimationFrame(callback: () => void) { const next = ++id; frames.set(next, callback); return next; },
+    cancelAnimationFrame(key: number) { frames.delete(key); },
+    setTimeout(callback: () => void, delay: number) { assert.equal(delay, 1234); const next = ++id; timers.set(next, callback); return next; },
+    clearTimeout(key: number) { timers.delete(key); },
+  }) as Promise<boolean>;
+  void pending.then(() => { settled = true; });
+  const tick = () => {
+    assert.equal(frames.size, 1);
+    const [key, callback] = [...frames][0]!;
+    frames.delete(key); callback();
+  };
+  tick();
+  await Promise.resolve();
+  assert.equal(settled, false, 'one callback cannot stand in for the two-frame observation');
+  assert.equal(timers.size, 1);
+  tick();
+  assert.equal(await pending, true);
+  assert.equal(frames.size, 0);
+  assert.equal(timers.size, 0);
+});
+
+test('frame observation timeout cancels its original pending callback without accepting a late frame', async () => {
+  const frames = new Map<number, () => void>(), timers = new Map<number, () => void>();
+  let id = 0;
+  const pending = runInNewContext(desktopAnimationFramesExpression(50), {
+    document: { visibilityState: 'visible' },
+    requestAnimationFrame(callback: () => void) { const next = ++id; frames.set(next, callback); return next; },
+    cancelAnimationFrame(key: number) { frames.delete(key); },
+    setTimeout(callback: () => void, delay: number) { assert.equal(delay, 50); const next = ++id; timers.set(next, callback); return next; },
+    clearTimeout(key: number) { timers.delete(key); },
+  }) as Promise<boolean>;
+  const late = [...frames.values()][0]!;
+  [...timers.values()][0]!();
+  assert.equal(await pending, false);
+  late();
+  assert.equal(frames.size, 0);
+  assert.equal(timers.size, 0);
+});
+
+test('frame observation refuses a hidden renderer before scheduling callbacks', async () => {
+  const refused = () => assert.fail('Hidden renderer cannot schedule frame or timer work');
+  assert.equal(await runInNewContext(desktopAnimationFramesExpression(50), {
+    document: { visibilityState: 'hidden' }, requestAnimationFrame: refused,
+    cancelAnimationFrame: refused, setTimeout: refused, clearTimeout: refused,
+  }), false);
+});
+
+test('opt-in renderer frames precede the original final target lookup and exactly one click', { timeout: 5000 }, async t => {
+  await withReadFixture(t, [
+    ...readyClickFrames,
+    { settlesAt: 250, value: true, animationFrames: true },
+    { settlesAt: 251, value: point },
+  ], async f => {
+    await f.ui.clickExpression(f.expression, f.label, undefined, undefined, { waitForRenderFrames: true });
+    assert.equal(f.reads.length, 6);
+    assert.equal(f.reads.at(-1), f.expression, 'fresh original owner/geometry/hit lookup follows the frame observation');
+    assert.equal(f.steps.filter(row => row.observation === 'two original renderer frames before final target read').length, 1);
+    assert.deepEqual(f.sends.filter(command => ['mousePressed', 'mouseReleased'].includes(String(command.params?.type))).map(command => command.params), [
+      { type: 'mousePressed', x: 100, y: 100, button: 'left', clickCount: 1 },
+      { type: 'mouseReleased', x: 100, y: 100, button: 'left', clickCount: 1 },
+    ]);
+  });
+});
+
+for (const settlesAt of [30_000, 30_001]) {
+  test(`opt-in frame result at ${settlesAt} cannot extend the original target deadline`, { timeout: 5000 }, async t => {
+    await withReadFixture(t, [...readyClickFrames, { settlesAt, value: true, animationFrames: true }], async f => {
+      await assert.rejects(f.ui.clickExpression(f.expression, f.label, undefined, undefined, { waitForRenderFrames: true }), /UI read timed out/);
+      assert.equal(f.reads.length, 5, 'late frames do not admit one more target read');
+      assert.equal(f.sends.some(command => command.params?.type === 'mousePressed'), false);
+      assert.equal(f.sends.some(command => command.params?.type === 'mouseReleased'), false);
+    });
+  });
+}
+
+test('failed frame observation cannot dispatch the original click or retry the barrier', { timeout: 5000 }, async t => {
+  await withReadFixture(t, [...readyClickFrames, { settlesAt: 250, value: false, animationFrames: true }], async f => {
+    await assert.rejects(f.ui.clickExpression(f.expression, f.label, undefined, undefined, { waitForRenderFrames: true }), /render frames did not settle/);
+    assert.equal(f.reads.length, 5);
+    assert.equal(f.sends.some(command => command.params?.type === 'mousePressed'), false);
+  });
+});
+
+test('a target that becomes unavailable after render frames still refuses before any click', { timeout: 5000 }, async t => {
+  await withReadFixture(t, [...readyClickFrames,
+    { settlesAt: 250, value: true, animationFrames: true },
+    { settlesAt: 251, value: { unavailableTarget: true } },
+  ], async f => {
+    await assert.rejects(f.ui.clickExpression(f.expression, f.label, undefined, undefined, { waitForRenderFrames: true }), /Original UI target unavailable/);
+    assert.equal(f.reads.length, 6);
+    assert.equal(f.sends.some(command => command.params?.type === 'mousePressed'), false);
+  });
+});
+
+test('renderer revocation during its frame observation refuses before the final read and click', { timeout: 5000 }, async () => {
+  const refusal = new Error('TEST original frame owner revoked'), expression = 'TEST-original-frame-target';
+  let current = true, reads = 0;
+  const sends: { method: string; params?: Record<string, unknown> }[] = [];
+  const ui = createDesktopUiControls({
+    async evaluate(actual) {
+      reads++;
+      if (actual === expression) return point;
+      assert.ok(actual.startsWith('new Promise(resolve => {'));
+      current = false;
+      return true;
+    },
+    async send(method, params) { sends.push({ method, params }); return {}; },
+  }, { assertOwnedRenderer() { if (!current) throw refusal; }, step() {} });
+  await assert.rejects(ui.clickExpression(expression, 'TEST frame owner', undefined, undefined, { waitForRenderFrames: true }), error => error === refusal);
+  assert.equal(reads, 5);
+  assert.equal(sends.some(command => command.params?.type === 'mousePressed'), false);
+});
 
 test('original final click waits passively for the same pending owner without repeating input', { timeout: 5000 }, async t => {
   await withReadFixture(t, [

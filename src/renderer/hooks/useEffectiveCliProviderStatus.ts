@@ -1,5 +1,6 @@
 import { useEffect, useMemo } from 'react';
 
+import { useRetainedLegacyLaunch, useRetainedLegacyRuntimeStatus } from '@features/agent-backend/renderer';
 import {
   isCodexAccountSnapshotPending,
   mergeCodexCliStatusWithSnapshot,
@@ -160,10 +161,14 @@ export function useEffectiveCliProviderStatus(
   providerId: CliProviderId | undefined,
   options: { projectPath?: string | null } = {}
 ): EffectiveCliProviderStatusSnapshot {
+  const retained = useRetainedLegacyLaunch();
+  const original = useRetainedLegacyRuntimeStatus(options.projectPath);
   const multimodelEnabled = useStore((s) => s.appConfig?.general?.multimodelEnabled ?? true);
-  const cliStatus = useStore((s) => s.cliStatus);
-  const cliStatusLoading = useStore((s) => s.cliStatusLoading);
-  const scopedProviderStatus = useStore((s) => {
+  const storedCliStatus = useStore((s) => s.cliStatus);
+  const cliStatus = retained ? original.status : storedCliStatus;
+  const storedLoading = useStore((s) => s.cliStatusLoading);
+  const cliStatusLoading = retained ? original.loading : storedLoading;
+  const storedProviderStatus = useStore((s) => {
     if (!providerId || !options.projectPath?.trim()) {
       return null;
     }
@@ -173,6 +178,7 @@ export function useEffectiveCliProviderStatus(
     );
   });
 
+  const scopedProviderStatus = retained ? (original.status?.providers.find((p) => p.providerId === providerId) ?? null) : storedProviderStatus;
   const loadingCliStatus = useMemo(
     () =>
       !cliStatus && cliStatusLoading && multimodelEnabled

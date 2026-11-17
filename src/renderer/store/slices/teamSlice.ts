@@ -1618,7 +1618,7 @@ export interface TeamSlice extends SidebarLogsHeightSlice, DeletedTaskFeed {
   restoreTeam: (teamName: string) => Promise<void>;
   permanentlyDeleteTeam: (teamName: string) => Promise<void>;
   createTeam: (request: TeamCreateRequest) => Promise<TeamCreateResponse>;
-  launchTeam: (request: TeamLaunchRequest) => Promise<string>;
+  launchTeam: (request: TeamLaunchRequest, dispatch?: typeof api.teams.launchTeam) => Promise<string>;
   cancelProvisioning: (runId: string) => Promise<void>;
   getProvisioningStatus: (runId: string) => Promise<TeamProvisioningProgress>;
   clearMissingProvisioningRun: (runId: string) => void;
@@ -4175,7 +4175,6 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
       request,
       analyticsStartedAtMs
     );
-    // Ensure provisioning progress subscription is active (defensive).
     get().subscribeProvisioningProgress();
     invalidateTeamLocalStateEpoch(request.teamName);
     clearPendingReplyRefreshTimer(request.teamName);
@@ -4389,7 +4388,7 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
     }
   },
 
-  launchTeam: async (request: TeamLaunchRequest) => {
+  launchTeam: async (request: TeamLaunchRequest, dispatch = api.teams.launchTeam) => {
     const analyticsStartedAtMs = Date.now();
     const existingTeamData = selectTeamDataForName(get(), request.teamName);
     const launchAnalyticsContext = buildTeamLaunchAnalyticsContext(
@@ -4501,7 +4500,7 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
     }
     let responseRunId: string | null = null;
     try {
-      const response = await unwrapIpc('team:launch', () => api.teams.launchTeam(request));
+      const response = await unwrapIpc('team:launch', () => dispatch(request));
       if (response.launchStatus === 'unconfirmed')
         throw new Error(
           'Team saved. Launch was not confirmed. Check this team before launching again.'

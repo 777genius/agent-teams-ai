@@ -1,5 +1,7 @@
 import { useCallback, useSyncExternalStore } from 'react';
 
+import { useRetainedLegacyLaunch } from '@features/agent-backend/renderer';
+
 import type { RuntimeProviderDirectoryEntryDto } from '../contracts';
 
 export interface RuntimeProviderDirectoryCacheSnapshot {
@@ -470,6 +472,7 @@ export function useRuntimeProviderDirectoryCache(
 export function useRuntimeProviderDirectoryCacheWithGlobalFallback(
   projectPath?: string | null
 ): RuntimeProviderDirectoryCacheSnapshot | null {
+  const retained = useRetainedLegacyLaunch();
   const scopeKey = getScopeKey(projectPath);
   const subscribe = useCallback(
     (listener: () => void) => {
@@ -485,7 +488,8 @@ export function useRuntimeProviderDirectoryCacheWithGlobalFallback(
   );
   const getSnapshot = useCallback(() => getSnapshotWithGlobalFallback(scopeKey), [scopeKey]);
 
-  return useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
+  const snapshot = useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
+  return retained ? null : snapshot;
 }
 
 /** The last settled revision survives hook unmounts; changes invalidate every scope. */

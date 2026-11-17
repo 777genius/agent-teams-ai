@@ -23,6 +23,21 @@ export interface UiCdpPort {
   evaluate(expression: string): Promise<unknown>;
   send(method: string, params?: Record<string, unknown>): Promise<unknown>;
 }
+
+/** Observe two visible renderer frames without changing focus, DOM, or input. */
+export function desktopAnimationFramesExpression(remainingMs: number): string {
+  assert.ok(Number.isFinite(remainingMs) && remainingMs > 0 && remainingMs <= 30_000);
+  return `new Promise(resolve => {
+    if(document.visibilityState!=='visible'){resolve(false);return;}
+    let frame=0,finished=false;
+    const finish=value=>{if(finished)return;finished=true;clearTimeout(timer);cancelAnimationFrame(frame);resolve(value);};
+    const timer=setTimeout(()=>finish(false),${remainingMs});
+    frame=requestAnimationFrame(()=>{
+      if(finished)return;
+      frame=requestAnimationFrame(()=>finish(document.visibilityState==='visible'));
+    });
+  })`;
+}
 const record = (value: unknown): Record<string, unknown> => {
   assert.ok(value && typeof value === 'object' && !Array.isArray(value));
   return value as Record<string, unknown>;
@@ -246,7 +261,7 @@ export function createDesktopUiControls(
     label: string,
     selector?: string,
     text?: string,
-    readiness?: { waitForFinalReadiness: true }
+    readiness?: { waitForFinalReadiness?: true; waitForRenderFrames?: true }
   ): Promise<void> => {
     await cdp.send('Page.bringToFront');
     // Every passive phase spends the original first-read budget, including a
@@ -385,6 +400,13 @@ export function createDesktopUiControls(
       options.assertOwnedRenderer();
       remainingPointSamples--;
       assertReadDeadline();
+      if (readiness?.waitForRenderFrames) {
+        const observed = await cdp.evaluate(desktopAnimationFramesExpression(readDeadline - Date.now()));
+        options.assertOwnedRenderer();
+        assertReadDeadline();
+        assert.equal(observed, true, 'Original UI target render frames did not settle');
+        step({ observation: 'two original renderer frames before final target read', label });
+      }
       let finalValue = await cdp.evaluate(expression);
       // A null owner observation is still pending, unlike an explicit unavailable
       // target or transport rejection. Re-read only this original expression.
@@ -540,7 +562,7 @@ export function createDesktopUiControls(
     return true;
   })()`;
   // Subject span selection is exact, and the click targets its ordinary button.
-  const clickSidebar = async (subject: string): Promise<void> => {
+  const clickSidebar = async (subject: string, readiness?: { waitForRenderFrames: true }): Promise<void> => {
     await cdp.send('Page.bringToFront');
     // The dev renderer can expose its bridge while modules and the first Team
     // snapshot are still loading. Only this initial read gets a startup budget;
@@ -602,7 +624,7 @@ export function createDesktopUiControls(
         '({focused:document.hasFocus(),visibility:document.visibilityState,events:window.__TEST_desktopInputEvents})'
       ),
     });
-    await click('[role="dialog"] button', 'Open team', 'Open team');
+    await clickExpression(target('[role="dialog"] button', 'Open team'), 'Open team', '[role="dialog"] button', 'Open team', readiness);
   };
   return { observeInput, waitRead, click, clickExpression, clickSidebar, scrollTo, hoverExpression };
 }

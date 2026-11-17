@@ -707,7 +707,7 @@ export async function runDesktopF08ReadTimingProof(
       'no intervening selected peer rollback'
     );
     await cdp.evaluate('window.__TEST_f08.watchTarget=null;true');
-    await ui.clickSidebar(options.seed.subject);
+    await ui.clickSidebar(options.seed.subject, { waitForRenderFrames: true });
     await ui.waitRead(state(selection), 'source remains readable through original Team controls');
     await ui.waitRead(
       `(() => {const s=window.__agentTeamsDevStore.getState();return s.selectedTeamData?.tasks.find(t=>t.id===${desktopJsLiteral(options.seed.taskId)})?.comments?.filter(c=>c.text===${desktopJsLiteral(text)}).length===1;})()`,

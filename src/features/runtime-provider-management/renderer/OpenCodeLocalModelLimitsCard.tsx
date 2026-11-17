@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 
+import { useRetainedLegacyLaunch } from '@features/agent-backend/renderer';
 import { useAppTranslation } from '@features/localization/renderer';
 import { api } from '@renderer/api';
 import { Button } from '@renderer/components/ui/button';
@@ -36,6 +37,8 @@ export const OpenCodeLocalModelLimitsCard = ({
   model,
   projectPath,
 }: OpenCodeLocalModelLimitsCardProps): React.JSX.Element | null => {
+  const retained = useRetainedLegacyLaunch();
+  const management = retained?.management;
   const { t } = useAppTranslation('team');
   const normalizedModel = model.trim();
   const normalizedProjectPath = projectPath?.trim() || '';
@@ -43,7 +46,7 @@ export const OpenCodeLocalModelLimitsCard = ({
     () => resolveOpenCodeLocalProviderId(normalizedModel),
     [normalizedModel]
   );
-  const selectionKey = `${normalizedProjectPath}\u0000${normalizedModel}`;
+  const selectionKey = `${retained?.choice.scopeId ?? ''}\u0000${normalizedProjectPath}\u0000${normalizedModel}`;
   const currentSelectionKeyRef = useRef(selectionKey);
   currentSelectionKeyRef.current = selectionKey;
   const loadSequenceRef = useRef(0);
@@ -69,7 +72,7 @@ export const OpenCodeLocalModelLimitsCard = ({
       projectPath: normalizedProjectPath,
       providerId,
       modelId: normalizedModel,
-    })
+    }, retained?.management.loadModels)
       .then((response) => {
         if (
           cancelled ||
@@ -88,7 +91,7 @@ export const OpenCodeLocalModelLimitsCard = ({
     return () => {
       cancelled = true;
     };
-  }, [normalizedModel, normalizedProjectPath, providerId, selectionKey]);
+  }, [normalizedModel, normalizedProjectPath, providerId, retained, selectionKey]);
 
   useEffect(() => {
     setContextValue(suggestion?.contextTokens ? String(suggestion.contextTokens) : '');
@@ -125,7 +128,7 @@ export const OpenCodeLocalModelLimitsCard = ({
     setSuccessMessage(null);
     setErrorMessage(null);
     try {
-      const response = await api.runtimeProviderManagement.configureModelLimits({
+      const response = await (management ?? api.runtimeProviderManagement).configureModelLimits({
         runtimeId: 'opencode',
         providerId: suggestion.providerId,
         modelId: suggestion.modelId,
@@ -159,7 +162,7 @@ export const OpenCodeLocalModelLimitsCard = ({
             : current
         );
         setSuccessMessage(t('openCodeLocalModelLimits.verified'));
-        invalidateOpenCodeProjectModels(normalizedProjectPath, suggestion.providerId);
+        if (!retained) invalidateOpenCodeProjectModels(normalizedProjectPath, suggestion.providerId);
       } else {
         setErrorMessage(response.result.message);
       }

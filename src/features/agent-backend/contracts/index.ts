@@ -28,6 +28,7 @@ export * from './creation';
 export type * from './launch';
 export * from './operations';
 export type { ProcessStopSelection } from './processes';
+export * from './retainedLegacyLaunch';
 export type * from './review';
 export * from './reviewWatch';
 export type * from './roster';

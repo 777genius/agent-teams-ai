@@ -1,5 +1,7 @@
 import { spawnCli } from '@main/utils/childProcess';
 
+import { withOriginalRuntimeLaunchAdmission } from '../runtime/OriginalRuntimeScope';
+
 import {
   applyLeadRuntimeSettingsToTeamMeta,
   assessLeadRuntimeRestart,
@@ -307,11 +309,16 @@ export class TeamProvisioningService extends TeamProvisioningOpenCodeAggregatePr
     request: TeamLaunchRequest,
     onProgress: (progress: TeamProvisioningProgress) => void
   ): Promise<TeamLaunchResponse> {
-    return this.withLaunchAdmission(async () => {
-      await this.waitForOpenCodeAggregatePrimaryRestart(request.teamName);
-      await this.waitForMemberLifecycleOperations(request.teamName);
-      return this.requestAdmissionBoundary.launchTeam(request, onProgress);
-    });
+    return withOriginalRuntimeLaunchAdmission(request.teamName, (assertCurrent) =>
+      this.withLaunchAdmission(async () => {
+        assertCurrent();
+        await this.waitForOpenCodeAggregatePrimaryRestart(request.teamName);
+        assertCurrent();
+        await this.waitForMemberLifecycleOperations(request.teamName);
+        assertCurrent();
+        return this.requestAdmissionBoundary.launchTeam(request, onProgress);
+      })
+    );
   }
 }
 

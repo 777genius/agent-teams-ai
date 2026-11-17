@@ -7,6 +7,7 @@ import { prepareDesktopEmulatedExtensionsFixture } from './desktop-emulated-exte
 import { prepareDesktopEmulatedImportFixture } from './desktop-emulated-import-fixture.ts';
 import { runDesktopEmulatedImportUi } from './desktop-emulated-import-ui.ts';
 import { prepareDesktopFiniteStoppedImportFixture, produceDesktopFiniteStoppedTeam, runDesktopFiniteStoppedImportUi } from './desktop-finite-stopped-import-ui.ts';
+import { prepareDesktopRetainedOriginalFixture, isDesktopRetainedOriginalFixture, closeDesktopRetainedOriginalCatalog, runDesktopRetainedOriginalUi, finishDesktopRetainedOriginalCleanup } from './desktop-retained-original-ui.ts';
 import { restartDesktopEmulatedRuntimeApp } from './desktop-emulated-lifecycle-boundary.ts';
 import { verifyDesktopEmulatedLifecycleQuit } from './desktop-emulated-lifecycle-ui.ts';
 import { runDesktopScheduleUiProof } from './desktop-schedule-ui-proof.ts';
@@ -117,7 +118,7 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
   assertDesktopProofEnvironment(mode === 'process-cold-ui' || codexAccountMode || finiteMembership);
   const emulatedOnly = process.env.LEGACY_DESKTOP_EMULATED_ONLY === '1';
   const emulatedManagementMode = ['emulated-management-ui', 'emulated-codex-login-ui'].includes(mode);
-  const emulatedRuntimeProvider = ['emulated-codex-runtime-ui', 'emulated-selection-ui', 'emulated-installer-ui'].includes(mode) ? 'codex' : ['emulated-claude-runtime-ui', 'emulated-claude-lifecycle-ui', 'emulated-collaboration-ui', 'emulated-extensions-ui', 'emulated-import-ui', 'emulated-import-lifecycle-ui'].includes(mode) ? 'claude' : mode === 'emulated-opencode-runtime-ui' ? 'opencode' : undefined;
+  const emulatedRuntimeProvider = ['emulated-codex-runtime-ui', 'emulated-selection-ui', 'emulated-installer-ui'].includes(mode) ? 'codex' : ['emulated-claude-runtime-ui', 'emulated-claude-lifecycle-ui', 'emulated-collaboration-ui', 'emulated-extensions-ui', 'emulated-import-ui', 'emulated-import-lifecycle-ui', 'emulated-retained-original-ui'].includes(mode) ? 'claude' : mode === 'emulated-opencode-runtime-ui' ? 'opencode' : undefined;
   const emulatedRuntimeMode = emulatedRuntimeProvider !== undefined;
   if (emulatedManagementMode || emulatedRuntimeMode) assert.equal(emulatedOnly, true, 'TEST providers require provider-emulation admission');
   assert.equal(
@@ -153,7 +154,7 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
   const pnpm = await realpath(process.env.LEGACY_DESKTOP_PNPM_PATH ?? '/opt/homebrew/bin/pnpm');
   const suggestionFixture = suggestionMixedMode ? await prepareDesktopNativeNextPromptMixedFixture(repo, pnpm, suggestionMixedModels!) : undefined;
   const emulatedManagementFixture = emulatedManagementMode ? await prepareDesktopEmulatedManagementFixture(repo, pnpm, mode === 'emulated-codex-login-ui' ? 'codex-login' : undefined) : undefined;
-  const emulatedRuntimeFixture = mode === 'emulated-extensions-ui' ? await prepareDesktopEmulatedExtensionsFixture(repo, pnpm)
+  const emulatedRuntimeFixture = mode === 'emulated-retained-original-ui' ? await prepareDesktopRetainedOriginalFixture(repo, pnpm) : mode === 'emulated-extensions-ui' ? await prepareDesktopEmulatedExtensionsFixture(repo, pnpm)
     : mode === 'emulated-import-ui' ? await prepareDesktopEmulatedImportFixture(repo, pnpm)
     : mode === 'emulated-import-lifecycle-ui' ? await prepareDesktopFiniteStoppedImportFixture(repo, pnpm)
     : emulatedRuntimeProvider ? await prepareDesktopEmulatedRuntimeFixture(repo, pnpm, emulatedRuntimeProvider, mode === 'emulated-collaboration-ui' ? 'collaboration' : mode === 'emulated-claude-lifecycle-ui' ? 'lifecycle' : mode === 'emulated-selection-ui' ? 'selection' : mode === 'emulated-installer-ui' ? 'installer' : undefined) : undefined;
@@ -413,7 +414,8 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
       hostPid = setup.hostPid;
     }
     if (emulatedRuntimeFixture) {
-      if (mode === 'emulated-extensions-ui') await runDesktopNativeExtensionsUiSmoke(cdp, {
+      if (isDesktopRetainedOriginalFixture(emulatedRuntimeFixture)) await runDesktopRetainedOriginalUi(cdp, { fixture: emulatedRuntimeFixture, evidence, group, electron, assertOwnedRenderer: () => assertOwnedCdpListener(group) });
+      else if (mode === 'emulated-extensions-ui') await runDesktopNativeExtensionsUiSmoke(cdp, {
         root: fixture.root, evidence, assertOwnedRenderer: () => assertOwnedCdpListener(group) });
       else if (mode === 'emulated-import-ui' || mode === 'emulated-import-lifecycle-ui') await (mode === 'emulated-import-lifecycle-ui' ? runDesktopFiniteStoppedImportUi : runDesktopEmulatedImportUi)(cdp, {
         fixture: emulatedRuntimeFixture, evidence, electron, assertOwnedRenderer: () => assertOwnedCdpListener(group),
@@ -718,6 +720,7 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
         evidence.emulatedRuntimeCleanup = cleanup; if (!cleanup.absent) evidence.status = 'INCOMPLETE';
       } catch { evidence.emulatedRuntimeCleanup = { absent: false, observationFailed: true }; evidence.status = 'INCOMPLETE'; }
     }
+    if (emulatedRuntimeFixture && isDesktopRetainedOriginalFixture(emulatedRuntimeFixture)) await finishDesktopRetainedOriginalCleanup(repo, emulatedRuntimeFixture, evidence);
     try {
       const census = (await readFile(fixture.sentinelLog, 'utf8').catch(error => { if (packed && error?.code === 'ENOENT') return ''; throw error; }))
         .trim()
@@ -793,5 +796,5 @@ try {
   await questionModel?.close();
   await suggestionMixedModels?.close();
   await (capturedMcpModel ?? openCodeReviewModel ?? openCodeLifecycleModel ?? codexResumeModel ?? conversationModel)?.close();
-  await mixedModels?.close();
+  await Promise.all([mixedModels?.close(), closeDesktopRetainedOriginalCatalog()]);
 }

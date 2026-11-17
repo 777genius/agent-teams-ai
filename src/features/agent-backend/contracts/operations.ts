@@ -46,6 +46,7 @@ import type {
   BackendResumePreparation,
   BackendResumePrepareRequest,
 } from './restorations';
+import type { RetainedLegacyLaunchApi } from './retainedLegacyLaunch';
 import type { BackendReviewOperationPayloads, BackendReviewValue } from './review';
 import type { AgentBackendReviewWatchApi } from './reviewWatch';
 import type {
@@ -535,7 +536,11 @@ export type BackendOperationResult =
     };
 
 export interface AgentBackendApi
-  extends AgentBackendConnectionsApi, Partial<AgentBackendReviewWatchApi>, StoppedTeamImportApi {
+  extends
+    AgentBackendConnectionsApi,
+    Partial<AgentBackendReviewWatchApi>,
+    StoppedTeamImportApi,
+    RetainedLegacyLaunchApi {
   invoke(request: BackendOperationRequest): Promise<BackendOperationResult>;
 }
 

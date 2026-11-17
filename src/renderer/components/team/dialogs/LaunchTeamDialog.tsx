@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { isHostTeamSelectionKey } from '@features/agent-backend/contracts';
+import { RetainedLegacyLaunchScope, useRetainedLegacyLaunch, useRetainedLegacyRuntimeStatus } from '@features/agent-backend/renderer';
 import {
   reconcileAnthropicRuntimeSelections,
   resolveAnthropicFastMode,
@@ -117,6 +118,7 @@ import {
   resolveMemberDraftRuntime,
   resolveResolvedMemberRuntime,
 } from './launchTeamDialogHelpers';
+import { LaunchTeamProjectSelector } from './LaunchTeamProjectSelector';
 import {
   clearInheritedMemberModelsUnavailableForProvider,
   getDialogMemberModelIssues,
@@ -134,7 +136,6 @@ import {
   resolvePreferredProjectPathSelection,
 } from './projectPathOptions';
 import { loadProjectPathProjects, syntheticProjectFromPath } from './projectPathProjects';
-import { ProjectPathSelector } from './ProjectPathSelector';
 import { createLaunchGuard, useAuthorityGatedCliStatus } from './providerLaunchAuthority';
 import { ProviderLaunchAuthorityNotice } from './ProviderLaunchAuthorityNotice';
 import { isSameProviderPrepareAttempt } from './providerPrepareAttemptIdentity';
@@ -215,17 +216,27 @@ const LAUNCH_AUTHORITY_BLOCKER_ID = 'launch-team-launch-authority-blocker';
 
 export type { LaunchTeamDialogProps, TeamLaunchDialogMode } from './LaunchTeamDialog.types';
 
-export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Element => {
+export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Element => (
+  <RetainedLegacyLaunchScope choice={props.mode === 'schedule' ? undefined : props.retainedLegacyLaunch}>
+    <LaunchTeamDialogContent {...props} />
+  </RetainedLegacyLaunchScope>
+);
+const LaunchTeamDialogContent = (props: LaunchTeamDialogProps): React.JSX.Element => {
   const { open, onClose } = props;
+  const retained = useRetainedLegacyLaunch();
+  const originalStatus = useRetainedLegacyRuntimeStatus(retained?.choice.projectPath ?? (props.mode === 'schedule' ? null : props.defaultProjectPath), open);
   const { isLight } = useTheme();
   const { t } = useAppTranslation('team');
   const multimodelEnabled = useStore((s) => s.appConfig?.general?.multimodelEnabled ?? true);
   const anthropicProviderFastModeDefault = useStore(
     (s) => s.appConfig?.providerConnections?.anthropic.fastModeDefault ?? false
   );
-  const cliStatus = useStore((s) => s.cliStatus);
-  const cliStatusLoading = useStore((s) => s.cliStatusLoading);
-  const cliProviderStatusLoading = useStore((s) => s.cliProviderStatusLoading);
+  const storedCliStatus = useStore((s) => s.cliStatus);
+  const cliStatus = retained ? originalStatus.status : storedCliStatus;
+  const storedCliStatusLoading = useStore((s) => s.cliStatusLoading);
+  const cliStatusLoading = retained ? originalStatus.loading : storedCliStatusLoading;
+  const storedProviderLoading = useStore((s) => s.cliProviderStatusLoading);
+  const cliProviderStatusLoading = useMemo(() => retained ? {} : storedProviderLoading, [retained, storedProviderLoading]);
   const isLaunchMode = props.mode === 'launch' || props.mode === 'relaunch';
   const isRelaunch = props.mode === 'relaunch';
   const loadingCliStatus = useMemo(
@@ -1582,7 +1593,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
       return;
     }
 
-    if (typeof api.teams.prepareProvisioning !== 'function') {
+    if (typeof (retained?.prepareProvisioning ?? api.teams.prepareProvisioning) !== 'function') {
       prepareRequestSeqRef.current += 1;
       lastPrepareProviderSignatureByIdRef.current.clear();
       prepareProviderRequestSeqByIdRef.current.clear();
@@ -1738,7 +1749,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
               providerId: plan.providerId,
               selectedModelIds: plan.selectedModelIds,
               selectedModelChecks: plan.selectedModelChecks,
-              prepareProvisioning: bindTeamProvisioningContext(api.teams.prepareProvisioning, {
+              prepareProvisioning: bindTeamProvisioningContext(retained?.prepareProvisioning ?? api.teams.prepareProvisioning, {
                 kind: 'team',
                 teamName: effectiveTeamName,
                 selectedModelChecks: plan.selectedModelChecks,
@@ -1814,6 +1825,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
       );
     })();
   }, [
+    retained,
     open,
     isLaunchMode,
     continuationMode,
@@ -2638,27 +2650,12 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
               onConfirmedChange={(confirmed) => setSavedPromptReview((current) => current && ({ ...current, confirmed }))} />
           ) : null}
 
-          {!usesSavedTeamRuntime ? <ProjectPathSelector
-            cwdMode={cwdMode}
-            onCwdModeChange={(value) => {
-              markLaunchEdited();
-              setCwdMode(value);
-            }}
-            selectedProjectPath={selectedProjectPath}
-            onSelectedProjectPathChange={(value) => {
-              markLaunchEdited();
-              setSelectedProjectPath(value);
-            }}
-            customCwd={customCwd}
-            onCustomCwdChange={(value) => {
-              markLaunchEdited();
-              setCustomCwd(value);
-            }}
-            projects={projects}
-            projectsLoading={projectsLoading}
-            projectsError={projectsError}
-            onProjectsDropdownOpen={requestProjectListLoad}
-            customFolder={customProjectFolder}
+          {!usesSavedTeamRuntime ? <LaunchTeamProjectSelector
+            cwdMode={cwdMode} onCwdModeChange={setCwdMode}
+            selectedProjectPath={selectedProjectPath} onSelectedProjectPathChange={setSelectedProjectPath}
+            customCwd={customCwd} onCustomCwdChange={setCustomCwd} markEdited={markLaunchEdited}
+            projects={projects} projectsLoading={projectsLoading} projectsError={projectsError}
+            onProjectsDropdownOpen={requestProjectListLoad} customFolder={customProjectFolder}
           /> : null}
 
           {isLaunchMode ? (
@@ -3208,7 +3205,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
       </DialogContent>
       </OpenCodeSourceDirectoryProvider>
       <ProvisioningProviderRuntimeSettingsDialog
-        openProviderId={providerSettingsProviderId}
+        openProviderId={retained ? null : providerSettingsProviderId}
         onOpenProviderIdChange={(providerId) => setProviderSettingsProviderId(providerId)}
         providers={effectiveCliStatus?.providers ?? []}
         projectPath={effectiveCwd || null}

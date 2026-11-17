@@ -219,6 +219,7 @@ export function capturePreparedModelReference(options: {
   context: string;
   kind?: 'native';
   isCurrent(): boolean;
+  withAccountRead?: <T>(read: () => T) => T;
   observeAccount?(account: ReturnType<typeof captureOpenCodeProbeAccount>): void;
 }): ModelReadinessReference {
   return readPreparedModelReference(options);
@@ -238,6 +239,7 @@ function readPreparedModelReference(options: Parameters<typeof capturePreparedMo
       (original.purpose === undefined && original.readinessScope?.kind !== 'native') ||
       modelReadinessMechanismDigest(candidate) !== original.readinessScope?.mechanismDigest) held();
   return options.management.probes.captureReadinessReference(options.commandId, options.context, saved => {
+    const inspect = () => {
     let inspected: ReturnType<typeof captureOpenCodeProbeAccountInspection> = undefined;
     if (saved.readiness || saved.readinessScope?.accountDigest !== undefined || saved.nativeFileKeyWitness !== undefined) {
       const endAccount = accountTiming?.();
@@ -259,6 +261,8 @@ function readPreparedModelReference(options: Parameters<typeof capturePreparedMo
     return { target: options.management.readinessTarget(candidate),
       originCurrent: (!origin || origin.isCurrent()) && options.isCurrent(),
       ...(account ? { accountDigest: account.digest } : {}) };
+    };
+    return options.withAccountRead ? options.withAccountRead(inspect) : inspect();
   });
 }
 
@@ -336,6 +340,7 @@ export async function prepareCapturedLaunchReadiness(options: {
 export function inspectMemberModelReadiness(options: {
   management?: Pick<ProviderManagementCoordinator, 'probes' | 'readinessTarget'>;
   launch: TeamLaunchOwner; entry: MemberEntry; assertCurrent(): void;
+  withAccountRead?: <T>(read: () => T) => T;
   hostIncarnation: string; phase?: 'preclaim' | 'allocation';
 }): { assertCurrent(): void; consumerId: string; kind: 'preparation' | 'continuation' | 'initial';
   reference?: ModelReadinessReference; assertReadinessCredential?(scopeDigest: string): void } {
@@ -412,6 +417,7 @@ export function inspectMemberModelReadiness(options: {
       boundary?.('reference');
       const observed = readPreparedModelReference({ management: options.management, profile: entry.profile,
         commandId: current.reference.commandId, context: current.reference.context,
+        ...(options.withAccountRead ? { withAccountRead: options.withAccountRead } : {}),
         ...(current.reference.purpose === 'ordinary' ? { kind: 'native' as const } : {}),
         observeAccount: value => { if (value) observedAccount.value = value; else delete observedAccount.value; },
         isCurrent: () => {
@@ -475,7 +481,10 @@ export function inspectMemberModelReadiness(options: {
       assertReadinessCredential(scopeDigest: string) {
         current();
         const account = observedAccount.value;
-        if (!account || !account.isCurrent() || account.nativeCredentialScopeDigest !== scopeDigest) held();
+        if (!account) held();
+        const read = () => account.isCurrent();
+        if (!(options.withAccountRead ? options.withAccountRead(read) : read()) ||
+            account.nativeCredentialScopeDigest !== scopeDigest) held();
       },
     } : {}) };
 }

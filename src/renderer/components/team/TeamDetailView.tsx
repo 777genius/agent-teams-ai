@@ -2165,14 +2165,10 @@ export const TeamDetailView = memo(function TeamDetailView({
   const handleChangeLeadRuntime = useCallback(
     (memberSettingsDraft?: MemberSettingsRelaunchDraft) => {
       setEditTarget(null);
-      setLaunchDialogState({
-        open: true,
-        mode: data?.isAlive && !isTeamProvisioning ? 'relaunch' : 'launch',
-        memberSettingsDraft,
-        baselineMembers: membersWithLiveBranches,
-      });
+      const settings = { memberSettingsDraft, baselineMembers: membersWithLiveBranches };
+      openLaunchDialog(data?.isAlive && !isTeamProvisioning ? 'relaunch' : 'launch', settings);
     },
-    [data?.isAlive, isTeamProvisioning, membersWithLiveBranches, setLaunchDialogState]
+    [data?.isAlive, isTeamProvisioning, membersWithLiveBranches, openLaunchDialog]
   );
   const handleRestartMember = useCallback(
     async (memberName: string, expectedSecondary?: boolean): Promise<void> => {
@@ -3740,7 +3736,7 @@ export const TeamDetailView = memo(function TeamDetailView({
             onClose={closeLaunchDialog}
             onLaunch={launchTeam}
             onRelaunch={handleRelaunchDialogSubmit}
-            memberSettingsDraft={launchDialogState.memberSettingsDraft}
+            memberSettingsDraft={launchDialogState.memberSettingsDraft} retainedLegacyLaunch={launchDialogState.retainedLegacyLaunch}
             validateMemberSettings={validateMemberSettingsRelaunch}
           />
         </Suspense>

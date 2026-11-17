@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef } from 'react';
 
+import { useRetainedLegacyLaunch, useRetainedLegacyRuntimeStatus } from '@features/agent-backend/renderer';
 import { api } from '@renderer/api';
 import { useStore } from '@renderer/store';
 import { getCliProviderStatusScopeKey } from '@renderer/store/slices/cliInstallerSlice';
@@ -18,6 +19,9 @@ export function useProviderReadinessRevalidation(
   cliStatus: CliInstallationStatus | null,
   options?: { projectPath?: string | null }
 ): void {
+  const retained = useRetainedLegacyLaunch();
+  useRetainedLegacyRuntimeStatus(options?.projectPath, enabled);
+  enabled = enabled && !retained;
   const projectPath = options?.projectPath?.trim() || null;
   const scopedStatuses = useStore((s) => (projectPath ? s.cliProviderStatusByScope : null));
   const fetchProvider = useStore((s) => s.fetchCliProviderStatus);

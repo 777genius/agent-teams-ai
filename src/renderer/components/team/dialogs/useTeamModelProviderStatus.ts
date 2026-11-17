@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 
+import { useRetainedLegacyLaunch } from '@features/agent-backend/renderer';
 import { useEffectiveCliProviderStatus } from '@renderer/hooks/useEffectiveCliProviderStatus';
 import { useProviderReadinessRevalidation } from '@renderer/hooks/useProviderReadinessRevalidation';
 import { useStore } from '@renderer/store';
@@ -15,6 +16,7 @@ export function useTeamModelProviderStatus(
   projectPath: string | null | undefined,
   prefetch = false
 ): ReturnType<typeof useEffectiveCliProviderStatus> & { scopesAnthropic: boolean } {
+  const retained = useRetainedLegacyLaunch();
   const scopedPath = projectPath?.trim() || null;
   const fetchProviderStatus = useStore((state) => state.fetchCliProviderStatus);
   const scopeRevision = useStore((state) => state.cliProviderStatusScopeRevision);
@@ -23,7 +25,7 @@ export function useTeamModelProviderStatus(
       state.cliStatus?.providers.find((provider) => provider.providerId === 'anthropic')
         ?.effectiveDefaultModel
   );
-  const scopesAnthropic = providerId === 'anthropic' && globalAnthropicDefault !== undefined;
+  const scopesAnthropic = providerId === 'anthropic' && (!!retained || globalAnthropicDefault !== undefined);
   const cliStatus = useStore((state) => state.cliStatus);
   const hasScopedAnthropicStatus = useStore((state) =>
     Boolean(
@@ -35,13 +37,14 @@ export function useTeamModelProviderStatus(
     projectPath: scopesAnthropic || providerId === 'opencode' ? scopedPath : null,
   });
   useEffect(() => {
-    if (!prefetch || !scopesAnthropic || !scopedPath) return;
+    if (retained || !prefetch || !scopesAnthropic || !scopedPath) return;
     void fetchProviderStatus?.('anthropic', {
       projectPath: scopedPath,
       silent: true,
       checkReason: 'launch_preflight',
     });
   }, [
+    retained,
     prefetch,
     fetchProviderStatus,
     globalAnthropicDefault,
@@ -53,7 +56,7 @@ export function useTeamModelProviderStatus(
   // it has settled, revalidate the exact project's catalog at its own expiry;
   // refreshing global status cannot replace project-scoped launch evidence.
   useProviderReadinessRevalidation(
-    prefetch && scopesAnthropic && Boolean(scopedPath) && hasScopedAnthropicStatus,
+    !retained && prefetch && scopesAnthropic && Boolean(scopedPath) && hasScopedAnthropicStatus,
     ANTHROPIC_PROVIDER_IDS,
     cliStatus,
     { projectPath: scopedPath }

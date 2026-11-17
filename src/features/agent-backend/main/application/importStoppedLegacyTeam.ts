@@ -1,10 +1,9 @@
-import { createHash } from 'node:crypto';
-
 import { hostTeamSelectionKey } from '../../contracts';
 import { LegacyStoppedImportHold } from '../infrastructure/stopped-import/createLegacyStoppedTeamSource';
 import { prepareStoppedLegacyImport } from '../infrastructure/stopped-import/prepareStoppedLegacyImport';
 
 import { assertBackendRequestGuard } from './backendBinding';
+import { stoppedLegacyImportCommandId } from './createRetainedLegacyLaunchScope';
 
 import type {
   StoppedTeamImportAction,
@@ -48,11 +47,7 @@ export async function importStoppedLegacyTeam(options: {
       if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
     }
     // Stable identity excludes mutable file content. Lost ACK/reopen always recovers this same command.
-    const commandId = `stopped-import-${createHash('sha256')
-      .update(
-        JSON.stringify([source?.sourceOwnerId, source?.sourceId, options.contextId, input.teamName])
-      )
-      .digest('hex')}`;
+    const commandId = stoppedLegacyImportCommandId(source, options.contextId, input.teamName);
     const guard = options.guard;
     assertBackendRequestGuard(guard);
     const target = await options.feature.captureStoppedImport(options.contextId, guard);

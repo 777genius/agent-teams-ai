@@ -514,7 +514,7 @@ ipcRenderer.on(
 // =============================================================================
 
 const electronAPI: ElectronAPI = {
-  agentBackend: createAgentBackendBridge(ipcRenderer, ipcRenderer, ipcRenderer),
+  agentBackend: createAgentBackendBridge(ipcRenderer, ipcRenderer, ipcRenderer, ipcRenderer),
   externalAgentConnection: createExternalAgentConnectionBridge(ipcRenderer),
   appCloseCoordination: createAppCloseCoordinationBridge(ipcRenderer),
   ...createCodexAccountBridge({

@@ -1,14 +1,17 @@
 import { configureDesktopStoppedImportOwners } from '../ipc/agentBackend';
 
+import { captureDesktopRetainedLegacyRuntime } from './captureDesktopRetainedLegacyRuntime';
+
 import type { ServiceContext } from '../services/infrastructure/ServiceContext';
 import type { ServiceContextRegistry } from '../services/infrastructure/ServiceContextRegistry';
+import type { RetainedLegacyRuntimeOwners } from './captureDesktopRetainedLegacyRuntime';
 import type { MemberWorkSyncFeatureFacade } from '@features/member-work-sync/main';
 
 type Owners = Parameters<typeof configureDesktopStoppedImportOwners>[0];
 type ContextOwners = readonly [
   backup: Owners['backup'] | null,
-  provisioning: Owners['provisioning'],
-  data: Owners['data'],
+  provisioning: Owners['provisioning'] & RetainedLegacyRuntimeOwners['provisioning'],
+  data: Owners['data'] & RetainedLegacyRuntimeOwners['data'],
   registry: Pick<ServiceContextRegistry, 'get' | 'getActive'>,
   workSync?: Pick<MemberWorkSyncFeatureFacade, 'withStoppedImportFence'> | null,
 ];
@@ -26,11 +29,21 @@ export function createDesktopStoppedImportContext(read: () => ContextOwners) {
             )
           : backup.withTeamIdentityFence(name, operation),
     };
-    configureDesktopStoppedImportOwners({ backup: sourceBackup, provisioning, data }, (id) => {
-      const registry = read()[3];
-      return (
-        id === context.id && registry.get('local') === context && registry.getActive() === context
-      );
-    });
+    configureDesktopStoppedImportOwners(
+      { backup: sourceBackup, provisioning, data },
+      (id) => {
+        const registry = read()[3];
+        return (
+          id === context.id && registry.get('local') === context && registry.getActive() === context
+        );
+      },
+      (source, current, onProgress, projectPath) =>
+        captureDesktopRetainedLegacyRuntime(
+          source,
+          current,
+          { provisioning, data, onProgress },
+          projectPath
+        )
+    );
   };
 }

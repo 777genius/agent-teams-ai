@@ -153,6 +153,7 @@ import { useOpenCodeProjectDefaultModel } from './useOpenCodeDefaultRouteLabel';
 import { usePublishOpenCodeProviderScopedStatus } from './useOpenCodeProviderScopedModelAuthority';
 import { useTeamDefaultModelTooltip } from './useTeamDefaultModelTooltip';
 import { useTeamModelProviderStatus } from './useTeamModelProviderStatus';
+import { useTeamModelSelectorRuntime } from './useTeamModelSelectorRuntime';
 export {
   computeEffectiveTeamModel,
   formatTeamModelSummary,
@@ -962,20 +963,11 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
     'opencode',
     { projectPath: openCodeCatalogScopeKey || null }
   );
-  const cliStatusLoading = useStore((s) => s.cliStatusLoading);
-  const cliProviderStatusLoading = useStore((s) => s.cliProviderStatusLoading ?? {});
-  const cliProviderStatusScopeRevision = useStore((s) => s.cliProviderStatusScopeRevision);
-  const invalidateCliProviderModelCatalog = useStore((s) => s.invalidateCliProviderModelCatalog);
-  const fetchCliProviderStatus = useStore((s) => s.fetchCliProviderStatus);
-  const openCodeRuntimeStatus = useStore((s) => s.openCodeRuntimeStatus);
-  const openCodeRuntimeStatusLoading = useStore((s) => s.openCodeRuntimeStatusLoading);
-  const openCodeRuntimeError = useStore((s) => s.openCodeRuntimeError);
-  const fetchOpenCodeRuntimeStatus = useStore((s) => s.fetchOpenCodeRuntimeStatus);
-  const codexRuntimeStatus = useStore((s) => s.codexRuntimeStatus);
-  const codexRuntimeStatusLoading = useStore((s) => s.codexRuntimeStatusLoading);
-  const codexRuntimeError = useStore((s) => s.codexRuntimeError);
-  const fetchCodexRuntimeStatus = useStore((s) => s.fetchCodexRuntimeStatus);
-  const installCodexRuntime = useStore((s) => s.installCodexRuntime);
+  const { cliStatusLoading, cliProviderStatusLoading, cliProviderStatusScopeRevision,
+    invalidateCliProviderModelCatalog, fetchCliProviderStatus, openCodeRuntimeStatus,
+    openCodeRuntimeStatusLoading, openCodeRuntimeError, fetchOpenCodeRuntimeStatus,
+    codexRuntimeStatus, codexRuntimeStatusLoading, codexRuntimeError, fetchCodexRuntimeStatus,
+    installCodexRuntime } = useTeamModelSelectorRuntime(openCodeCatalogScopeKey);
   const [codexRuntimeDialogOpen, setCodexRuntimeDialogOpen] = useState(false);
   const multimodelAvailable =
     multimodelEnabled || effectiveCliStatus?.flavor === 'agent_teams_orchestrator';

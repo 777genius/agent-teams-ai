@@ -241,7 +241,7 @@ export class HttpAPIClient implements ElectronAPI {
       () => this.baseUrl,
       (route, request) => this.post<void>(route, request)
     ),
-    (route, request) => this.post(route, request)
+    (route, request) => this.post(route, request), (route, request) => this.post(route, request)
   );
   gatewayProvider: GatewayProviderApi = {
     listGatewayProfiles: async () => [],

@@ -37,6 +37,7 @@ import type { ProcessCustody } from './processCustody.js';
 import type { HostWindowsLaunch } from '../owned-process/HostWindowsLaunch.js';
 import type { RuntimeSourceProcessOrigin } from './runtimeSourceProcessOrigin.js';
 import { consumeMemberModelReadiness } from './prepareTeamModelReadiness.js';
+import { captureTeamAccountRead } from './captureTeamAccountRead.js';
 import type { ProviderManagementCoordinator } from './ProviderManagementCoordinator.js';
 import type { TeamLaunchOwner } from '../team-launch/TeamLaunchOwner.js';
 
@@ -137,9 +138,11 @@ export function createRuntimeMemberProviderFactory(options: {
         if (entry.profile.provider !== 'opencode') return undefined;
         const launch = options.readinessLaunch?.(entry);
         if (!launch) throw new RuntimeOwnerError('hold');
+        const assertCurrent = () => { authority.assertCurrent(); assertAllocation(); };
         return consumeMemberModelReadiness({ ...(options.modelReadiness ? { management: options.modelReadiness } : {}),
           launch, entry, hostIncarnation: options.hostIncarnation,
-          assertCurrent: () => { authority.assertCurrent(); assertAllocation(); } });
+          assertCurrent, withAccountRead: captureTeamAccountRead({ entry,
+            principalId: entry.profile.principalId, assertCurrent }) });
       })();
       const setupCurrent = () => {
         try {

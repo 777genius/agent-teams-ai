@@ -28,4 +28,14 @@ export {
   isWindowsHostTeamSelection,
 } from './HostBackendRetryAction';
 export { HostReviewOperationError } from './HostReviewOperationError';
+export {
+  closeRetainedLegacyLaunch,
+  createRetainedLegacyLaunchClient,
+  openRetainedLegacyLaunch,
+  type RetainedLegacyLaunchChoice,
+  RetainedLegacyLaunchError,
+} from './retainedLegacyLaunch';
+export { useRetainedLegacyLaunch, useRetainedLegacyProjectRebind } from './RetainedLegacyLaunchContext';
+export { RetainedLegacyLaunchScope } from './RetainedLegacyLaunchScope';
 export { acknowledgeHostTaskSubmission } from './retainedTaskSubmissions';
+export { useRetainedLegacyAccount, useRetainedLegacyInstallers, useRetainedLegacyRuntimeStatus } from './useRetainedLegacyRuntime';
