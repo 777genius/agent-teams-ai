@@ -333,6 +333,38 @@ async function verifyUi(f: Fixture) {
   await cdp.screenshot(path.join(f.screenshots, 'history-after-reload.png'));
 }
 
+async function verifyRetainedAfterModeChange(f: Fixture) {
+  assert(cdp);
+  const result = await cdp.evaluate('(async () => {' +
+    'const f = ' + JSON.stringify(f) + ';' +
+    'await window.electronAPI.teams.setProjectContextMode(f.logical, "shared");' +
+    'const current = await window.electronAPI.teams.getProjectContextView(f.logical, f.projectA);' +
+    'const old = await window.electronAPI.teams.getProjectContextView(f.nativeA, f.projectA);' +
+    'return { current, old };' +
+    '})()') as {
+      current: { mode: string; state: string; executionTeamName?: string };
+      old: { mode: string; state: string; executionTeamName?: string; logicalTeamName?: string };
+    };
+  assert.deepEqual(result.current, {
+    mode: 'shared', state: 'ready', executionTeamName: f.logical,
+  }, 'The shared mode must govern new work after switching');
+  assert.equal(result.old.state, 'retained', 'Previously isolated project history was lost');
+  assert.equal(result.old.executionTeamName, f.nativeA);
+  assert.equal(result.old.logicalTeamName, f.logical);
+
+  // Open via the original physical task identity, as global task deep links do.
+  await cdp.evaluate('(() => window.__agentTeamsDevStore.getState().openTeamTab(' +
+    JSON.stringify(f.nativeA) + ', ' + JSON.stringify(f.projectA) + '))()');
+  await waitFor('document.querySelector(' +
+    JSON.stringify('[data-team-name="' + f.nativeA + '"]') +
+    ')?.textContent?.includes("PROJECT_A_TASK_ONLY")',
+    'retained project A task through real Electron after switching to shared');
+  assert.equal(await cdp.evaluate('Boolean(document.querySelector(' +
+    JSON.stringify('[data-team-name="' + f.nativeB + '"]') + '))'), false,
+    'Old project B leaked into retained A history');
+  await cdp.screenshot(path.join(f.screenshots, 'history-retained-after-shared.png'));
+}
+
 async function run() {
   const f = await fixture();
   let success = false;
@@ -345,6 +377,7 @@ async function run() {
     assert.equal(await readFile(f.indexPath, 'utf8'), beforeIndex,
       'Read-only project navigation mutated durable context mapping');
     await verifyUi(f);
+    await verifyRetainedAfterModeChange(f);
     // Even in CI, never launch an actual provider or substitute test credentials.
     const audit = (await readFile(f.audit, 'utf8')).trim().split('\n').filter(Boolean)
       .map((line) => JSON.parse(line) as string[]);
