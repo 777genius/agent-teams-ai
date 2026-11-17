@@ -272,7 +272,11 @@ export class TeamProjectContextRegistry {
    */
   async isOwnedExecutionAlias(executionTeamName: string): Promise<boolean> {
     if (!executionTeamName.startsWith('ptc-')) return false;
-    const entries = await fs.readdir(this.paths.teamsBasePath, { withFileTypes: true });
+    const entries = await fs.readdir(this.paths.teamsBasePath, { withFileTypes: true })
+      .catch((error: NodeJS.ErrnoException) => {
+        if (error.code === 'ENOENT') return [];
+        throw error;
+      });
     for (const entry of entries) {
       if (!entry.isDirectory() || entry.name === executionTeamName) continue;
       if (!validateTeamName(entry.name).valid) continue;

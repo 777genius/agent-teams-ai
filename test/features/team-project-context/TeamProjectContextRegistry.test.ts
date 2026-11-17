@@ -285,6 +285,16 @@ describe('TeamProjectContextRegistry', () => {
     expect(await f.registry.isOwnedExecutionAlias('ordinary-team')).toBe(false);
   });
 
+  it('allows ordinary schedule targets before the native teams root exists', async () => {
+    const f = await fixture();
+    const missingRoot = new TeamProjectContextRegistry({
+      teamsBasePath: path.join(f.root, 'absent-teams'),
+      tasksBasePath: f.tasksBasePath,
+      profileScope: 'test-profile',
+    });
+    expect(await missingRoot.isOwnedExecutionAlias('ptc-ordinary-name')).toBe(false);
+  });
+
   it('accepts long legacy identifiers and trailing hyphens for retained-index checks', async () => {
     const f = await fixture();
     const legacyName = 'legacy-' + 'a'.repeat(90) + '-';
