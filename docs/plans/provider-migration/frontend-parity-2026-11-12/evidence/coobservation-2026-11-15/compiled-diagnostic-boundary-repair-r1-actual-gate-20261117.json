@@ -1,0 +1,165 @@
+{
+  "schemaVersion": 1,
+  "kind": "C714_COMPILED_DIAGNOSTIC_BOUNDARY_REPAIR_R1_ACTUAL_AUTHORSHIP_GATE",
+  "repository": "777genius/agent-teams-ai",
+  "closedAt": "2026-11-17 15:21:15 UTC",
+  "accepted": true,
+  "decision": "ACCEPT_EXACT_ACTUAL_R1_PUBLICATION_FOR_THE_SELECTED_ONE_FILE_THREE_LINE_SOURCE_R2_ONLY",
+  "subject": {
+    "bytes": 10289,
+    "sha256": "08b7fd228ee8b264930d89dd485743e71b90f79edf3d094d20562a8d4c6064bc",
+    "gitBlob": "3a4c7a35a30dd24594cdfecf45510274598527dc"
+  },
+  "manifest": {
+    "bytes": 29698,
+    "sha256": "9760a40c47b980e6a77e1822f05a340cee8e5c0ce22bfc558c05a1f7c8632aca",
+    "gitBlob": "60139f2e029840f0994c178c51106878a4b83f2c"
+  },
+  "actualCommit": "0d99e3069ad2c3d7058f49f7b5dbb06999cae6a0",
+  "actualTree": "d724d89ea0db5a83d63073647dc9289cfb1ebd66",
+  "actualDocsTree": "3d26a380f9550e4f1ef9fcd8fbab5bfa0086b222",
+  "soleParent": "d035cefd235501daf2066d3b7725db35bfb00bf7",
+  "branch": "fix/frontend-parity-coobservation-c714-20261115",
+  "pushedAt": "2026-11-17 15:04:08 UTC",
+  "rootActual": {
+    "bytes": 576683,
+    "sha256": "1ece9a1e89ee5a3217ed08552ceeed38e50e0da3efd78f04fb6bb2cc327fc17b",
+    "gitBlob": "e2d862f0b6d57eaef7373288851e139b510e184f"
+  },
+  "independentActual": {
+    "bytes": 559229,
+    "sha256": "927ef43e0dbcd4bec3161451a96140f02c1b4ea6376fb137c9b82221528751f8",
+    "gitBlob": "1080986575faf274d46963e48ba8083eecb18f30"
+  },
+  "fullReadbacksAccepted": true,
+  "rootSelfReadConfirmed": true,
+  "independentSelfReadConfirmed": true,
+  "independentSelfReadAt": "2026-11-17 15:19:47 UTC",
+  "rootChecks": 23,
+  "independentChecks": 42,
+  "totalActualChecks": 65,
+  "currentBodyCount": 59,
+  "currentBodyBytes": 33988520,
+  "parentBodyCount": 3,
+  "parentBodyBytes": 3658214,
+  "sourceBodyCount": 2,
+  "sourceBodyBytes": 64871,
+  "exactDelta": {
+    "changed": 59,
+    "added": 56,
+    "modified": 3,
+    "deleted": 0,
+    "modesChanged": 0,
+    "sourceChanged": 0,
+    "workflowsChanged": 0
+  },
+  "currentPointerCount": 727,
+  "currentPointerBytes": 132748197,
+  "currentUtf8PointerCount": 708,
+  "currentUtf8PointerBytes": 127400454,
+  "currentBinaryPointerCount": 19,
+  "currentBinaryPointerBytes": 5347743,
+  "unresolvedTextPointers": [],
+  "unresolvedBlockers": [],
+  "unreadBinaryMetadataReferences": [
+    {
+      "repository": "777genius/agent-teams-ai",
+      "pin": {
+        "gitBlob": "f05a05edba53aa07364d9bbd5510f468dfe7ebe3",
+        "bytes": 186398,
+        "sha256": "a3ee7632c9685fafb4ccc57cb5548503c476fc9ed608bd13438ed74e5329f9d8"
+      },
+      "locations": [
+        "file:controlActualGate.unreadBinaryMetadataReferences.0.pin",
+        "file:controlIndependentActual.checks.34.evidence.pin",
+        "file:controlIndependentActual.unreadBinaryMetadataReferences.0.pin",
+        "file:controlRootActual.checks.17.evidence.0.pin",
+        "file:controlRootActual.unreadBinaryMetadataReferences.0.pin"
+      ],
+      "classification": "Original separate unread TGZ metadata exception, no new binary fetch/retry or qualification."
+    }
+  ],
+  "sourceAnchor": {
+    "commit": "0d99e3069ad2c3d7058f49f7b5dbb06999cae6a0",
+    "tree": "d724d89ea0db5a83d63073647dc9289cfb1ebd66",
+    "target": {
+      "path": "packages/legacy-agent-host/tests/opencode-v2-native-receipt.test.mjs",
+      "pin": {
+        "bytes": 41559,
+        "sha256": "80b8075c5ed87d3bd5f6707c1e83f4983d275510d67fa4e0a352e1a3d7d958a0",
+        "gitBlob": "9988bebfff4408e81ab63da26fc463e7b8fa618b"
+      },
+      "physicalLines": 647,
+      "fullyRead": true
+    },
+    "modelProbe": {
+      "path": "packages/legacy-agent-host/src/adapters/providers/OpenCodeV2ModelProbe.ts",
+      "pin": {
+        "bytes": 23312,
+        "sha256": "7c77d52a1f9dcc2b3c53d550514ba13c4256a5daca3a67f2c2c008e786e66ea2",
+        "gitBlob": "a5dc4221c8d3e35200c65b533dd0126479a0a3ab"
+      },
+      "fullyRead": true,
+      "changePermitted": false
+    },
+    "wholeNonDocSourceUnchangedFrom": "86f52244b5375834a4040cbc63803d68cc708087",
+    "targetTreeProof": {
+      "bytes": 111967,
+      "sha256": "8b6264e88e62718e552674a91604b281778f9ea63db0a4960cbecd2a966cb2fa",
+      "gitBlob": "fc20bc9458799881d3e6bcfe97ac9f2352f2fd98"
+    }
+  },
+  "permittedNext": {
+    "allowedSourcePaths": [
+      "packages/legacy-agent-host/tests/opencode-v2-native-receipt.test.mjs"
+    ],
+    "changeSites": [
+      {
+        "line": 357,
+        "intent": "Give local unique helper an optional inclusive original-source offset, defaulting to zero."
+      },
+      {
+        "line": 358,
+        "intent": "Filter whole-file RegExp matches by each original match.index being at or after that offset; retain original indices and the exactly-one assertion."
+      },
+      {
+        "line": 367,
+        "intent": "Only the publishEnd lookup supplies the already uniquely selected publish offset. All other unique calls retain their default whole-source domain."
+      }
+    ],
+    "expectedChangedLogicalLines": 3,
+    "postimageAuthored": false,
+    "preserve": [
+      "All six unique boundary expressions and the complete five-comparison order relation.",
+      "All slices operate on the real compiled ModelProbe body with original indices.",
+      "The exactly-one assertion still rejects zero and duplicate boundaries inside the selected publisher range.",
+      "The full existing nine original native receipt tests, three new diagnostic registrations, and the full imported fourteen-case process-guard suite.",
+      "The unchanged serialized helper shared by the finite subprocess; no substitute implementation or surrogate fragment.",
+      "All diagnostic classification cases, getter/toString/Proxy constraints, original rejection object identity, traced-private-value absence and finite child ownership/cleanup.",
+      "All original argv, environments, timeouts, counts, skips, trace caps, fixture response sizes and product code.",
+      "No added test-only exception, removed assertion, snapshot broadening, native startup, parser fallback, or case filtering."
+    ],
+    "materiality": "The selected offset excludes the earlier idempotent return while requiring a unique final return after the publisher start. It does not select the first or last arbitrary match and does not relax uniqueness."
+  },
+  "sourceR2SoleParentMustEqual": "0d99e3069ad2c3d7058f49f7b5dbb06999cae6a0",
+  "preservation": {
+    "production": 5020,
+    "cap": 800,
+    "exceptions": 141,
+    "nonDocLeaves": 8799,
+    "workflows": 42,
+    "unchangedNonDocRoots": 53,
+    "all107PriorCatalogValues": true,
+    "bundles": 27,
+    "originalTotals": true,
+    "fullDocumentPrefixes": true
+  },
+  "qualification": {
+    "actualR1DocumentationOnly": true,
+    "sourcePostimageAuthored": false,
+    "sourcePublished": false,
+    "sourceRuntimeQualified": false,
+    "wholeE2E": false
+  },
+  "pending": "Existing sourceR2 four reviews, exact publication/immediate push and root/independent actual readbacks; later separate CI admission. No additional gate."
+}

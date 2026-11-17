@@ -354,8 +354,8 @@ const diagnosticRunCodes = ['ABORT_ERR', 'ECONNRESET', 'ECONNREFUSED', 'EPIPE', 
   'UND_ERR_ABORTED', 'UND_ERR_SOCKET', 'UND_ERR_HEADERS_TIMEOUT', 'UND_ERR_BODY_TIMEOUT'];
 
 function modelProbeDiagnosticFragments(compiled) {
-  const unique = pattern => {
-    const matches = [...compiled.matchAll(pattern)];
+  const unique = (pattern, start = 0) => {
+    const matches = [...compiled.matchAll(pattern)].filter(match => match.index >= start);
     assert.equal(matches.length, 1, 'one actual compiled diagnostic boundary: ' + pattern);
     return matches[0].index;
   };
@@ -364,7 +364,7 @@ function modelProbeDiagnosticFragments(compiled) {
   const run = unique(/^[ \t]*run:\s*\(signal,\s*originalDeadline\)\s*=>\s*\{\r?$/gm);
   const runEnd = unique(/^[ \t]*close:\s*(?:originalDeadline|\(originalDeadline\))\s*=>\s*\{\r?$/gm);
   const publish = unique(/^[ \t]*closing\s*=\s*\(purposeBound\s*\?\s*closeCoordinationByDeadline\([^\n]+$/gm);
-  const publishEnd = unique(/^[ \t]*return closing;\r?$/gm);
+  const publishEnd = unique(/^[ \t]*return closing;\r?$/gm, publish);
   assert.ok(state < stateEnd && stateEnd < run && run < runEnd && runEnd < publish && publish < publishEnd);
   return { state: compiled.slice(state, stateEnd), run: compiled.slice(run, runEnd),
     publish: compiled.slice(publish, publishEnd) };

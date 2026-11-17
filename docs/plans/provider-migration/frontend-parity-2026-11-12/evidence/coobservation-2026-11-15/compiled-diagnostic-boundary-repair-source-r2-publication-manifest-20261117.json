@@ -1,0 +1,300 @@
+{
+  "schemaVersion": 1,
+  "kind": "C714_COMPILED_DIAGNOSTIC_BOUNDARY_SOURCE_R2_PUBLICATION_MANIFEST",
+  "at": "2026-11-17 15:37:29 UTC",
+  "repository": "777genius/agent-teams-ai",
+  "branch": "fix/frontend-parity-coobservation-c714-20261115",
+  "parent": "0d99e3069ad2c3d7058f49f7b5dbb06999cae6a0",
+  "parentTree": "d724d89ea0db5a83d63073647dc9289cfb1ebd66",
+  "parentDocsTree": "3d26a380f9550e4f1ef9fcd8fbab5bfa0086b222",
+  "subject": {
+    "bytes": 9961,
+    "sha256": "9fd198e4a618d888eb1a8501d901e29833fa8ea74f53d1071c4b88599563d69c",
+    "gitBlob": "438d60e47e1940ffc30b005ef7c97bd26a0ff8d4"
+  },
+  "precedingActualGate": {
+    "bytes": 6963,
+    "sha256": "810df6e2da2e3203f6a301600e07e8762237f9cf85edf665ff7e2a508de83f7b",
+    "gitBlob": "e590c53e6f676bd819855e46d36a7d4ec5255c88"
+  },
+  "reviews": [
+    {
+      "role": "root",
+      "pin": {
+        "bytes": 15985,
+        "sha256": "67c38f0a95430512e6e96ec0172171f1fce2233baa37270758656243abaea42c",
+        "gitBlob": "d3d6358a0d499ea5365a12d838c898599bb040c7"
+      },
+      "checks": 25,
+      "selfReadConfirmed": true,
+      "selfReadAt": "2026-11-17 15:24:00 UTC"
+    },
+    {
+      "role": "guard",
+      "pin": {
+        "bytes": 28794,
+        "sha256": "ef5a5a2347933eff9e8c933cd0c1c6814ad4e5d6b916e92df1dbc7e716be20ce",
+        "gitBlob": "3590da2be5d3febf4358a1a8e451255a8678e2ea"
+      },
+      "checks": 30,
+      "selfReadConfirmed": true,
+      "selfReadAt": "2026-11-17 15:26:52 UTC"
+    },
+    {
+      "role": "semantic",
+      "pin": {
+        "bytes": 19833,
+        "sha256": "775fc097ad8935b9de0c42c9add09c345d9b9f2d58e190c3fb282158ba181f11",
+        "gitBlob": "9891f9e967758393fe4fd9dbb63956b569f0149f"
+      },
+      "checks": 28,
+      "selfReadConfirmed": true,
+      "selfReadAt": "2026-11-17 15:25:37 UTC"
+    },
+    {
+      "role": "binding",
+      "pin": {
+        "bytes": 44512,
+        "sha256": "e91d891894e3f0aa6e3ab2b0426743fb6cc5d1d6c9c35041aae16f0f2398e7dd",
+        "gitBlob": "d69e9afa0f3e1a746b6f07f40b3e5f1d2463670b"
+      },
+      "checks": 32,
+      "selfReadConfirmed": true,
+      "selfReadAt": "2026-11-17 15:26:18 UTC"
+    }
+  ],
+  "reviewChecks": 115,
+  "reviewsClosedAt": "2026-11-17 15:29:51 UTC",
+  "sourceChanges": [
+    {
+      "path": "packages/legacy-agent-host/tests/opencode-v2-native-receipt.test.mjs",
+      "mode": "100644",
+      "before": {
+        "bytes": 41559,
+        "sha256": "80b8075c5ed87d3bd5f6707c1e83f4983d275510d67fa4e0a352e1a3d7d958a0",
+        "gitBlob": "9988bebfff4408e81ab63da26fc463e7b8fa618b"
+      },
+      "after": {
+        "bytes": 41619,
+        "sha256": "e1e95d1dcf12408251bde11f4ab679b73de7c8a15b4a49105121b1e8a5a92b36",
+        "gitBlob": "8d12ee7a61d13740dbaddfe8177bfe80cb716335"
+      },
+      "physicalLinesBefore": 647,
+      "physicalLinesAfter": 647,
+      "completeInverseExact": true,
+      "logicalLinesChanged": 3,
+      "diff": [
+        {
+          "line": 357,
+          "before": "  const unique = pattern => {",
+          "after": "  const unique = (pattern, start = 0) => {"
+        },
+        {
+          "line": 358,
+          "before": "    const matches = [...compiled.matchAll(pattern)];",
+          "after": "    const matches = [...compiled.matchAll(pattern)].filter(match => match.index >= start);"
+        },
+        {
+          "line": 367,
+          "before": "  const publishEnd = unique(/^[ \\t]*return closing;\\r?$/gm);",
+          "after": "  const publishEnd = unique(/^[ \\t]*return closing;\\r?$/gm, publish);"
+        }
+      ],
+      "replacements": [
+        {
+          "before": "  const unique = pattern => {",
+          "after": "  const unique = (pattern, start = 0) => {"
+        },
+        {
+          "before": "    const matches = [...compiled.matchAll(pattern)];",
+          "after": "    const matches = [...compiled.matchAll(pattern)].filter(match => match.index >= start);"
+        },
+        {
+          "before": "  const publishEnd = unique(/^[ \\t]*return closing;\\r?$/gm);",
+          "after": "  const publishEnd = unique(/^[ \\t]*return closing;\\r?$/gm, publish);"
+        }
+      ]
+    }
+  ],
+  "evidenceFiles": [
+    {
+      "key": "proposal",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/compiled-diagnostic-boundary-repair-source-r2-20261117.json",
+      "mode": "100644",
+      "bytes": 9961,
+      "sha256": "9fd198e4a618d888eb1a8501d901e29833fa8ea74f53d1071c4b88599563d69c",
+      "gitBlob": "438d60e47e1940ffc30b005ef7c97bd26a0ff8d4"
+    },
+    {
+      "key": "rootReview",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/compiled-diagnostic-boundary-repair-source-r2-root-review-20261117.json",
+      "mode": "100644",
+      "bytes": 15985,
+      "sha256": "67c38f0a95430512e6e96ec0172171f1fce2233baa37270758656243abaea42c",
+      "gitBlob": "d3d6358a0d499ea5365a12d838c898599bb040c7"
+    },
+    {
+      "key": "guardReview",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/compiled-diagnostic-boundary-repair-source-r2-guard-review-20261117.json",
+      "mode": "100644",
+      "bytes": 28794,
+      "sha256": "ef5a5a2347933eff9e8c933cd0c1c6814ad4e5d6b916e92df1dbc7e716be20ce",
+      "gitBlob": "3590da2be5d3febf4358a1a8e451255a8678e2ea"
+    },
+    {
+      "key": "semanticReview",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/compiled-diagnostic-boundary-repair-source-r2-semantic-review-20261117.json",
+      "mode": "100644",
+      "bytes": 19833,
+      "sha256": "775fc097ad8935b9de0c42c9add09c345d9b9f2d58e190c3fb282158ba181f11",
+      "gitBlob": "9891f9e967758393fe4fd9dbb63956b569f0149f"
+    },
+    {
+      "key": "bindingReview",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/compiled-diagnostic-boundary-repair-source-r2-binding-review-20261117.json",
+      "mode": "100644",
+      "bytes": 44512,
+      "sha256": "e91d891894e3f0aa6e3ab2b0426743fb6cc5d1d6c9c35041aae16f0f2398e7dd",
+      "gitBlob": "d69e9afa0f3e1a746b6f07f40b3e5f1d2463670b"
+    },
+    {
+      "key": "r1ActualGate",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/compiled-diagnostic-boundary-repair-r1-actual-gate-20261117.json",
+      "mode": "100644",
+      "bytes": 6963,
+      "sha256": "810df6e2da2e3203f6a301600e07e8762237f9cf85edf665ff7e2a508de83f7b",
+      "gitBlob": "e590c53e6f676bd819855e46d36a7d4ec5255c88"
+    },
+    {
+      "key": "r1RootActual",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/compiled-diagnostic-boundary-repair-r1-root-actual-20261117.json",
+      "mode": "100644",
+      "bytes": 576683,
+      "sha256": "1ece9a1e89ee5a3217ed08552ceeed38e50e0da3efd78f04fb6bb2cc327fc17b",
+      "gitBlob": "e2d862f0b6d57eaef7373288851e139b510e184f"
+    },
+    {
+      "key": "r1IndependentActual",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/compiled-diagnostic-boundary-repair-r1-independent-actual-20261117.json",
+      "mode": "100644",
+      "bytes": 559229,
+      "sha256": "927ef43e0dbcd4bec3161451a96140f02c1b4ea6376fb137c9b82221528751f8",
+      "gitBlob": "1080986575faf274d46963e48ba8083eecb18f30"
+    },
+    {
+      "key": "macPngByteProof",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-darwin-arm-packaged-png-byte-proof-20261117.json",
+      "mode": "100644",
+      "bytes": 750343,
+      "sha256": "af6bb55bbbd783cce51fbda5f2871b11cf66df1a64edf3af1faa2a2055bdde68",
+      "gitBlob": "1a8ecb474b9590bbf55f17099cfe203033c22103"
+    }
+  ],
+  "modifiedDocuments": [
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/29-reconciled-acceptance-and-custody-followups-2026-11-15.md",
+      "mode": "100644",
+      "before": {
+        "bytes": 2658105,
+        "sha256": "f4fcaf9717ec27b45d37e9c6cc86aabf0a07828076bdbd60d69174d5885e1113",
+        "gitBlob": "5edb98ae654836aea34059687f27e582c5298bf9"
+      },
+      "after": {
+        "bytes": 2660918,
+        "sha256": "a8037503c09ab7263d49a8ec5394976f9bf2f9162441ba2c36d06ab23a626286",
+        "gitBlob": "72d5ad0d4304265bc7bb68d28a0cdc5c2dbbc891"
+      },
+      "literalPrefixPreserved": true,
+      "appendIdentity": {
+        "bytes": 2813,
+        "sha256": "810a7268418b0a031a8bb8bb170889d2acc558fa1d215718bb91903f67b940d7",
+        "gitBlob": "9311f5705577e781ba89ce53c2189b57b17b4a49",
+        "kind": "derived-identical-document-suffix-not-separately-retained-blob"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/continuation-status-20261116.md",
+      "mode": "100644",
+      "before": {
+        "bytes": 134814,
+        "sha256": "103b81df651bb8e2e83c7fa745596208ab41b4ef635c742d45d88d1258b32484",
+        "gitBlob": "71bcd2d05e898e8aece7cc2223af7bd091950a44"
+      },
+      "after": {
+        "bytes": 137627,
+        "sha256": "ce11c9b1726f84e6d06a620b97e6324098efcd64017a67b99892e8f39b52415c",
+        "gitBlob": "d4ed25f2901c51dc4ff79f7a0e8e306eef0ba4e0"
+      },
+      "literalPrefixPreserved": true,
+      "appendIdentity": {
+        "bytes": 2813,
+        "sha256": "810a7268418b0a031a8bb8bb170889d2acc558fa1d215718bb91903f67b940d7",
+        "gitBlob": "9311f5705577e781ba89ce53c2189b57b17b4a49",
+        "kind": "derived-identical-document-suffix-not-separately-retained-blob"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1213-retention-catalog-20261116.json",
+      "mode": "100644",
+      "before": {
+        "bytes": 924332,
+        "sha256": "98d5500a315d6eb721c950d868b0cffabd97351d3451be0cddb2ccd5ee5dd406",
+        "gitBlob": "12f5964e8ac2a38a917e46f5828431db01ba469a"
+      },
+      "after": {
+        "bytes": 940465,
+        "sha256": "8a36358518e27761be0d2781341a313edc4100318c255e383e6b37145e3643ec",
+        "gitBlob": "5335110bd11989b209742bb42285c933d789b1b7"
+      },
+      "all109ParentValuesPreserved": true,
+      "newKeys": [
+        "compiledDiagnosticBoundaryRepairSourceR2Stage",
+        "compiledDiagnosticBoundaryRepairSourceR2EvidenceFiles"
+      ]
+    }
+  ],
+  "manifestPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/compiled-diagnostic-boundary-repair-source-r2-publication-manifest-20261117.json",
+  "expectedDelta": {
+    "changed": 14,
+    "added": 10,
+    "modified": 4,
+    "deleted": 0,
+    "modeChanges": 0,
+    "sourceChanged": 1,
+    "productChanged": 0,
+    "workflowChanged": 0,
+    "docsChanged": 13,
+    "docsAdded": 10,
+    "docsModified": 3
+  },
+  "expectedCensus": {
+    "totalLeaves": 12299,
+    "docLeaves": 3500,
+    "nonDocLeaves": 8799,
+    "production": 5020,
+    "cap": 800,
+    "exceptions": 141,
+    "workflows": 42
+  },
+  "catalogPreservation": {
+    "parentKeys": 109,
+    "newKeys": 111,
+    "allPriorValues": true,
+    "bundles": 27,
+    "totals": true
+  },
+  "appendSectionIdentity": {
+    "bytes": 2813,
+    "sha256": "810a7268418b0a031a8bb8bb170889d2acc558fa1d215718bb91903f67b940d7",
+    "gitBlob": "9311f5705577e781ba89ce53c2189b57b17b4a49",
+    "derived": true
+  },
+  "qualification": {
+    "sourcePublishedByThisCommit": true,
+    "actualReadbacksPending": true,
+    "compiledOrExecuted": false,
+    "actualGreen": false,
+    "wholeE2E": false
+  },
+  "nextExistingSequence": "Four exact sourceR2 reviews; publication/immediate push; root and independent actual readbacks; then existing separate GitHub-only CI admission. No target execution or extra gate in this R2."
+}

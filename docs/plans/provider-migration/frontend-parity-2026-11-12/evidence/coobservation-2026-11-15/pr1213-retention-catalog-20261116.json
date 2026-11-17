@@ -20582,5 +20582,329 @@
       "sha256": "f244ac350031928f786f1957d4c98ff6947490b99e381565028b248bead7e849",
       "gitBlob": "0f95c8703a5a6b5731392043785907f551f83e89"
     }
+  },
+  "compiledDiagnosticBoundaryRepairSourceR2Stage": {
+    "schemaVersion": 1,
+    "kind": "C714_COMPILED_DIAGNOSTIC_BOUNDARY_SOURCE_R2_PUBLICATION",
+    "at": "2026-11-17 15:37:29 UTC",
+    "status": "EXACT_REVIEWED_SOURCE_ONLY_NO_NEW_RUNTIME_RESULT",
+    "subject": {
+      "bytes": 9961,
+      "sha256": "9fd198e4a618d888eb1a8501d901e29833fa8ea74f53d1071c4b88599563d69c",
+      "gitBlob": "438d60e47e1940ffc30b005ef7c97bd26a0ff8d4"
+    },
+    "precedingActualGate": {
+      "bytes": 6963,
+      "sha256": "810df6e2da2e3203f6a301600e07e8762237f9cf85edf665ff7e2a508de83f7b",
+      "gitBlob": "e590c53e6f676bd819855e46d36a7d4ec5255c88"
+    },
+    "reviews": [
+      {
+        "role": "root",
+        "pin": {
+          "bytes": 15985,
+          "sha256": "67c38f0a95430512e6e96ec0172171f1fce2233baa37270758656243abaea42c",
+          "gitBlob": "d3d6358a0d499ea5365a12d838c898599bb040c7"
+        },
+        "checks": 25,
+        "selfReadConfirmed": true,
+        "selfReadAt": "2026-11-17 15:24:00 UTC"
+      },
+      {
+        "role": "guard",
+        "pin": {
+          "bytes": 28794,
+          "sha256": "ef5a5a2347933eff9e8c933cd0c1c6814ad4e5d6b916e92df1dbc7e716be20ce",
+          "gitBlob": "3590da2be5d3febf4358a1a8e451255a8678e2ea"
+        },
+        "checks": 30,
+        "selfReadConfirmed": true,
+        "selfReadAt": "2026-11-17 15:26:52 UTC"
+      },
+      {
+        "role": "semantic",
+        "pin": {
+          "bytes": 19833,
+          "sha256": "775fc097ad8935b9de0c42c9add09c345d9b9f2d58e190c3fb282158ba181f11",
+          "gitBlob": "9891f9e967758393fe4fd9dbb63956b569f0149f"
+        },
+        "checks": 28,
+        "selfReadConfirmed": true,
+        "selfReadAt": "2026-11-17 15:25:37 UTC"
+      },
+      {
+        "role": "binding",
+        "pin": {
+          "bytes": 44512,
+          "sha256": "e91d891894e3f0aa6e3ab2b0426743fb6cc5d1d6c9c35041aae16f0f2398e7dd",
+          "gitBlob": "d69e9afa0f3e1a746b6f07f40b3e5f1d2463670b"
+        },
+        "checks": 32,
+        "selfReadConfirmed": true,
+        "selfReadAt": "2026-11-17 15:26:18 UTC"
+      }
+    ],
+    "reviewChecks": 115,
+    "reviewsClosedAt": "2026-11-17 15:29:51 UTC",
+    "parent": "0d99e3069ad2c3d7058f49f7b5dbb06999cae6a0",
+    "parentTree": "d724d89ea0db5a83d63073647dc9289cfb1ebd66",
+    "source": {
+      "path": "packages/legacy-agent-host/tests/opencode-v2-native-receipt.test.mjs",
+      "mode": "100644",
+      "before": {
+        "bytes": 41559,
+        "sha256": "80b8075c5ed87d3bd5f6707c1e83f4983d275510d67fa4e0a352e1a3d7d958a0",
+        "gitBlob": "9988bebfff4408e81ab63da26fc463e7b8fa618b"
+      },
+      "after": {
+        "bytes": 41619,
+        "sha256": "e1e95d1dcf12408251bde11f4ab679b73de7c8a15b4a49105121b1e8a5a92b36",
+        "gitBlob": "8d12ee7a61d13740dbaddfe8177bfe80cb716335"
+      },
+      "physicalLinesBefore": 647,
+      "physicalLinesAfter": 647,
+      "completeInverseExact": true,
+      "logicalLinesChanged": 3,
+      "diff": [
+        {
+          "line": 357,
+          "before": "  const unique = pattern => {",
+          "after": "  const unique = (pattern, start = 0) => {"
+        },
+        {
+          "line": 358,
+          "before": "    const matches = [...compiled.matchAll(pattern)];",
+          "after": "    const matches = [...compiled.matchAll(pattern)].filter(match => match.index >= start);"
+        },
+        {
+          "line": 367,
+          "before": "  const publishEnd = unique(/^[ \\t]*return closing;\\r?$/gm);",
+          "after": "  const publishEnd = unique(/^[ \\t]*return closing;\\r?$/gm, publish);"
+        }
+      ],
+      "replacements": [
+        {
+          "before": "  const unique = pattern => {",
+          "after": "  const unique = (pattern, start = 0) => {"
+        },
+        {
+          "before": "    const matches = [...compiled.matchAll(pattern)];",
+          "after": "    const matches = [...compiled.matchAll(pattern)].filter(match => match.index >= start);"
+        },
+        {
+          "before": "  const publishEnd = unique(/^[ \\t]*return closing;\\r?$/gm);",
+          "after": "  const publishEnd = unique(/^[ \\t]*return closing;\\r?$/gm, publish);"
+        }
+      ]
+    },
+    "semantics": {
+      "lowerBound": "Inclusive original match.index; default zero",
+      "onlyScopedLookup": "publishEnd starts at the already uniquely identified publish boundary",
+      "exactlyOneAssertion": "unchanged",
+      "boundaryLocations": 6,
+      "orderingComparisons": 5,
+      "otherLookups": "five retain original global source domain",
+      "compiledSlices": "unchanged actual source slice ranges and original indices",
+      "serializedChild": "uses the same changed helper via original toString()",
+      "surrogateOrFallbackAdded": false
+    },
+    "preservedCaseInventory": {
+      "localTitles": [
+        "a failed native Host proof publishes only sanitized diagnostics and no raw paths",
+        "native receipt gate rejects forged digest, incomplete stages and cold restart uncertainty",
+        "receipt verifier CLI refuses lockfile-only artifacts with sanitized diagnostics",
+        "native V2 captured session readback cannot drift workspace or ordered permissions",
+        "native durable SSE proof accepts a bounded, owned and ordered history prefix",
+        "native durable SSE proof enforces frame-count budget with a distinct error",
+        "native durable SSE proof rejects foreign, incomplete and reordered events",
+        "cold native log proof compares retained event content, not only counts and watermark",
+        "raw native V2 variant readback cannot attest a missing or inherited default",
+        "actual ModelProbe run rejection keeps original identity and close classification with bounded own error codes",
+        "actual finite Node observer and parent retain producer error codes in the reserved close slot after trace exhaustion",
+        "actual close projection preserves legacy rows and opaque optional fields within original reservation and byte limits"
+      ],
+      "localRegistrations": 12,
+      "originalNineCasePrefix": "complete literal prefix unchanged",
+      "importedWholePlatformCases": 14,
+      "importLiteral": "await import('../../../scripts/e2e/opencode-diagnostics/platform.test.mjs');",
+      "allBodiesOutsideThreeLinesIdentical": true
+    },
+    "preservation": {
+      "production": 5020,
+      "cap": 800,
+      "exceptions": 141,
+      "nonDocLeaves": 8799,
+      "workflows": 42,
+      "newSourceFiles": 0,
+      "deletedSourceFiles": 0,
+      "productSourceChanges": 0,
+      "workflowChanges": 0,
+      "dependencyChanges": 0,
+      "deadlineChanges": 0,
+      "caseRemovals": 0,
+      "assertionRemovals": 0,
+      "sourceChanges": 1,
+      "oldAttemptsSpentForever": true,
+      "noRealClaudeOrCodex": true,
+      "noMainMergeReadyReleaseStage2": true
+    },
+    "publication": {
+      "immediatePush": true,
+      "force": false,
+      "rootAndIndependentActualReadbacksRequired": true
+    },
+    "validationContract": {
+      "originalStaticCommand": "node --test packages/legacy-agent-host/tests/opencode-v2-static-preflight.test.ts packages/legacy-agent-host/tests/opencode-v2-static-capture.test.ts packages/legacy-agent-host/tests/opencode-v2-host-spi.test.ts packages/legacy-agent-host/tests/opencode-v2-native-receipt.test.mjs packages/legacy-agent-host/tests/opencode-v2-native-process-guard.test.mjs packages/legacy-agent-host/tests/opencode-v2-request-admission.test.ts packages/legacy-agent-host/tests/opencode-v1-version-receipt.test.ts packages/legacy-agent-host/tests/opencode-v1-version-source.test.ts",
+      "originalStaticCommandUnchanged": true,
+      "sourceReview": "Whole target body and exact three-line inverse, all preserved tests/helpers/imports, changed target's anchored tree entry and unchanged ModelProbe/product/workflow/dependency bodies.",
+      "runtime": "After exact source R2 actual acceptance, use the existing separate GitHub-only CI admission sequence for the new source. Preserve the complete original command and platform-specific original skip; do not rerun or mutate the frozen CI3 refs/jobs.",
+      "localExecutionSelected": false,
+      "testReductionAllowed": false,
+      "passClaimsBeforeActualResults": false
+    },
+    "ci3": {
+      "pr": 1223,
+      "head": "86f52244b5375834a4040cbc63803d68cc708087",
+      "base": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+      "refsAndMetadataFrozen": true,
+      "originalJobsAreNotResultsOfThisSourceCorrection": true
+    },
+    "qualification": {
+      "actualGreen": false,
+      "wholeE2E": false,
+      "compiledOrExecuted": false,
+      "sourceCorrectionOnly": true
+    },
+    "next": "Complete actual publication readbacks, then the existing separate GitHub-only CI admission for a new fixed source; no retry or mutation of CI3.",
+    "evidenceFiles": {
+      "proposal": {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/compiled-diagnostic-boundary-repair-source-r2-20261117.json",
+        "mode": "100644",
+        "bytes": 9961,
+        "sha256": "9fd198e4a618d888eb1a8501d901e29833fa8ea74f53d1071c4b88599563d69c",
+        "gitBlob": "438d60e47e1940ffc30b005ef7c97bd26a0ff8d4"
+      },
+      "rootReview": {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/compiled-diagnostic-boundary-repair-source-r2-root-review-20261117.json",
+        "mode": "100644",
+        "bytes": 15985,
+        "sha256": "67c38f0a95430512e6e96ec0172171f1fce2233baa37270758656243abaea42c",
+        "gitBlob": "d3d6358a0d499ea5365a12d838c898599bb040c7"
+      },
+      "guardReview": {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/compiled-diagnostic-boundary-repair-source-r2-guard-review-20261117.json",
+        "mode": "100644",
+        "bytes": 28794,
+        "sha256": "ef5a5a2347933eff9e8c933cd0c1c6814ad4e5d6b916e92df1dbc7e716be20ce",
+        "gitBlob": "3590da2be5d3febf4358a1a8e451255a8678e2ea"
+      },
+      "semanticReview": {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/compiled-diagnostic-boundary-repair-source-r2-semantic-review-20261117.json",
+        "mode": "100644",
+        "bytes": 19833,
+        "sha256": "775fc097ad8935b9de0c42c9add09c345d9b9f2d58e190c3fb282158ba181f11",
+        "gitBlob": "9891f9e967758393fe4fd9dbb63956b569f0149f"
+      },
+      "bindingReview": {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/compiled-diagnostic-boundary-repair-source-r2-binding-review-20261117.json",
+        "mode": "100644",
+        "bytes": 44512,
+        "sha256": "e91d891894e3f0aa6e3ab2b0426743fb6cc5d1d6c9c35041aae16f0f2398e7dd",
+        "gitBlob": "d69e9afa0f3e1a746b6f07f40b3e5f1d2463670b"
+      },
+      "r1ActualGate": {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/compiled-diagnostic-boundary-repair-r1-actual-gate-20261117.json",
+        "mode": "100644",
+        "bytes": 6963,
+        "sha256": "810df6e2da2e3203f6a301600e07e8762237f9cf85edf665ff7e2a508de83f7b",
+        "gitBlob": "e590c53e6f676bd819855e46d36a7d4ec5255c88"
+      },
+      "r1RootActual": {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/compiled-diagnostic-boundary-repair-r1-root-actual-20261117.json",
+        "mode": "100644",
+        "bytes": 576683,
+        "sha256": "1ece9a1e89ee5a3217ed08552ceeed38e50e0da3efd78f04fb6bb2cc327fc17b",
+        "gitBlob": "e2d862f0b6d57eaef7373288851e139b510e184f"
+      },
+      "r1IndependentActual": {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/compiled-diagnostic-boundary-repair-r1-independent-actual-20261117.json",
+        "mode": "100644",
+        "bytes": 559229,
+        "sha256": "927ef43e0dbcd4bec3161451a96140f02c1b4ea6376fb137c9b82221528751f8",
+        "gitBlob": "1080986575faf274d46963e48ba8083eecb18f30"
+      },
+      "macPngByteProof": {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-darwin-arm-packaged-png-byte-proof-20261117.json",
+        "mode": "100644",
+        "bytes": 750343,
+        "sha256": "af6bb55bbbd783cce51fbda5f2871b11cf66df1a64edf3af1faa2a2055bdde68",
+        "gitBlob": "1a8ecb474b9590bbf55f17099cfe203033c22103"
+      }
+    }
+  },
+  "compiledDiagnosticBoundaryRepairSourceR2EvidenceFiles": {
+    "proposal": {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/compiled-diagnostic-boundary-repair-source-r2-20261117.json",
+      "mode": "100644",
+      "bytes": 9961,
+      "sha256": "9fd198e4a618d888eb1a8501d901e29833fa8ea74f53d1071c4b88599563d69c",
+      "gitBlob": "438d60e47e1940ffc30b005ef7c97bd26a0ff8d4"
+    },
+    "rootReview": {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/compiled-diagnostic-boundary-repair-source-r2-root-review-20261117.json",
+      "mode": "100644",
+      "bytes": 15985,
+      "sha256": "67c38f0a95430512e6e96ec0172171f1fce2233baa37270758656243abaea42c",
+      "gitBlob": "d3d6358a0d499ea5365a12d838c898599bb040c7"
+    },
+    "guardReview": {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/compiled-diagnostic-boundary-repair-source-r2-guard-review-20261117.json",
+      "mode": "100644",
+      "bytes": 28794,
+      "sha256": "ef5a5a2347933eff9e8c933cd0c1c6814ad4e5d6b916e92df1dbc7e716be20ce",
+      "gitBlob": "3590da2be5d3febf4358a1a8e451255a8678e2ea"
+    },
+    "semanticReview": {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/compiled-diagnostic-boundary-repair-source-r2-semantic-review-20261117.json",
+      "mode": "100644",
+      "bytes": 19833,
+      "sha256": "775fc097ad8935b9de0c42c9add09c345d9b9f2d58e190c3fb282158ba181f11",
+      "gitBlob": "9891f9e967758393fe4fd9dbb63956b569f0149f"
+    },
+    "bindingReview": {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/compiled-diagnostic-boundary-repair-source-r2-binding-review-20261117.json",
+      "mode": "100644",
+      "bytes": 44512,
+      "sha256": "e91d891894e3f0aa6e3ab2b0426743fb6cc5d1d6c9c35041aae16f0f2398e7dd",
+      "gitBlob": "d69e9afa0f3e1a746b6f07f40b3e5f1d2463670b"
+    },
+    "r1ActualGate": {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/compiled-diagnostic-boundary-repair-r1-actual-gate-20261117.json",
+      "mode": "100644",
+      "bytes": 6963,
+      "sha256": "810df6e2da2e3203f6a301600e07e8762237f9cf85edf665ff7e2a508de83f7b",
+      "gitBlob": "e590c53e6f676bd819855e46d36a7d4ec5255c88"
+    },
+    "r1RootActual": {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/compiled-diagnostic-boundary-repair-r1-root-actual-20261117.json",
+      "mode": "100644",
+      "bytes": 576683,
+      "sha256": "1ece9a1e89ee5a3217ed08552ceeed38e50e0da3efd78f04fb6bb2cc327fc17b",
+      "gitBlob": "e2d862f0b6d57eaef7373288851e139b510e184f"
+    },
+    "r1IndependentActual": {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/compiled-diagnostic-boundary-repair-r1-independent-actual-20261117.json",
+      "mode": "100644",
+      "bytes": 559229,
+      "sha256": "927ef43e0dbcd4bec3161451a96140f02c1b4ea6376fb137c9b82221528751f8",
+      "gitBlob": "1080986575faf274d46963e48ba8083eecb18f30"
+    },
+    "macPngByteProof": {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-darwin-arm-packaged-png-byte-proof-20261117.json",
+      "mode": "100644",
+      "bytes": 750343,
+      "sha256": "af6bb55bbbd783cce51fbda5f2871b11cf66df1a64edf3af1faa2a2055bdde68",
+      "gitBlob": "1a8ecb474b9590bbf55f17099cfe203033c22103"
+    }
   }
 }
