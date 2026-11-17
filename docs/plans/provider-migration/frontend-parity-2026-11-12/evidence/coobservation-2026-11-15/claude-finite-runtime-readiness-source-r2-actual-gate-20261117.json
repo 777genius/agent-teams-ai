@@ -1,0 +1,243 @@
+{
+  "schemaVersion": 1,
+  "kind": "C714_CLAUDE_FINITE_RUNTIME_READINESS_SOURCE_R2_ACTUAL_GATE",
+  "closedAt": "2026-11-17 12:43:15 UTC",
+  "repository": "777genius/agent-teams-ai",
+  "branch": "fix/frontend-parity-coobservation-c714-20261115",
+  "commit": "86f52244b5375834a4040cbc63803d68cc708087",
+  "parent": "01ed56f756b385b91afcffcb31dafe7750bb4162",
+  "root": "11ccb7c57cc49af613c62620a1d348bf6de8aa3d",
+  "docs": "edf306377d1dcc641455b25367ba73d0dc398f3d",
+  "scripts": "9bd74c3db86d1380389d1bce24a7f7dafb9c66cc",
+  "tools": "7360460b475db2e174c65f5ba0eeb075f06622b1",
+  "test": "511ca68c4ed50372a2b5387af31f1d9876843925",
+  "manifest": {
+    "bytes": 26806,
+    "sha256": "f3d8bdab6ae45cefb393efa91ff167ce0d203b3c14fe1f10bf5c9cac746be4ff",
+    "gitBlob": "9ac60a9f699bf188f296c991101af7502a6723d9"
+  },
+  "sourceR2": {
+    "bytes": 56517,
+    "sha256": "59133615a781c82b97a5e2ed132ff5d5a9795b6d1b400d4d520761b31ca5b561",
+    "gitBlob": "682377734948765268a3cd07b4b966a97abac1e4"
+  },
+  "sourceStaticChecks": 185,
+  "rootActual": {
+    "bytes": 529929,
+    "sha256": "aa20d4251e2f1dfc57ad19ce0e800991e32b0c679191a6d98c819032745f98ba",
+    "gitBlob": "be4db6e26f2115322786800d67ab6c3570d1b752"
+  },
+  "independentActual": {
+    "bytes": 663489,
+    "sha256": "60d09eaf5e039d00c35cd26d450304b2f1aea6258aaf7fa28fc45a92c26b95db",
+    "gitBlob": "a55ab6ae84ecd011476cf107dec4a4e871a40845"
+  },
+  "actualChecks": 85,
+  "rootChecks": 40,
+  "independentChecks": 45,
+  "allFullBodiesRead": true,
+  "allReviewerSelfReadsConfirmed": true,
+  "currentBodies": {
+    "count": 17,
+    "bytes": 5310424
+  },
+  "parentBodies": {
+    "count": 8,
+    "bytes": 3574833
+  },
+  "completeRepositoryScopedUtf8Pointers": {
+    "count": 442,
+    "bytes": 59442623,
+    "unresolved": 0
+  },
+  "unreadBinaryMetadataReferences": [
+    {
+      "repository": "777genius/agent-teams-ai",
+      "pin": {
+        "bytes": 186398,
+        "sha256": "a3ee7632c9685fafb4ccc57cb5548503c476fc9ed608bd13438ed74e5329f9d8",
+        "gitBlob": "f05a05edba53aa07364d9bbd5510f468dfe7ebe3"
+      },
+      "locations": [
+        "manifest.unreadBinaryMetadataReferences.0.declaredPin",
+        "stage.unreadBinaryMetadataReferences.0.declaredPin",
+        "file:r1ActualGate.unreadBinaryMetadataReferences.0.declaredPin",
+        "file:r1RootActual.unreadBinaryMetadataReferences.0.declaredPin",
+        "file:r1IndependentActual.unreadBinaryMetadataReferences.0.pin"
+      ],
+      "class": "unchanged explicitly unread main-repository binary metadata; no bytes obtained, no retry, no qualification"
+    }
+  ],
+  "pointerScopeCorrections": [
+    {
+      "originalInheritedRepository": "agent-teams-ai/old-provider-implementations",
+      "repository": "777genius/agent-teams-ai",
+      "pin": {
+        "bytes": 142190,
+        "sha256": "b952be67487d5e9c0a6f8197e6cc078e244a01add2a91b3155a5f1529e61f28a",
+        "gitBlob": "89d96582bcf07df9a6c3f510d9f9b9fd3f41e1b2"
+      },
+      "locations": [
+        "file:r1IndependentActual.currentPointerJoins.67.acceptedReport"
+      ],
+      "kind": "C714_CLAUDE_FINITE_RUNTIME_READINESS_R1_INDEPENDENT_BINDING_REVIEW",
+      "reason": "acceptedReport identifies the retained main-repository review/proof, whose complete body explicitly declares repository. The surrounding repository scopes the distinct external source-body tuple; no source/report body or evidence is modified."
+    },
+    {
+      "originalInheritedRepository": "nodejs/node",
+      "repository": "777genius/agent-teams-ai",
+      "pin": {
+        "bytes": 626538,
+        "sha256": "264313dda69d9918a80d2e9edda76e9ce134ef3401b6e7db8645324c3fa69bd7",
+        "gitBlob": "4d9e68e8ec72b694892f5bda9ffcf3d42c120add"
+      },
+      "locations": [
+        "file:r1IndependentActual.currentPointerJoins.139.acceptedReport"
+      ],
+      "kind": "C714_RETAINED_FAILURE_DIAGNOSTICS_R1_INDEPENDENT_ACTUAL_PUBLICATION_REVIEW",
+      "reason": "acceptedReport identifies the retained main-repository review/proof, whose complete body explicitly declares repository. The surrounding repository scopes the distinct external source-body tuple; no source/report body or evidence is modified."
+    }
+  ],
+  "exactDelta": {
+    "docsAdded": 9,
+    "docsModified": 3,
+    "sourceModified": 5,
+    "total": 17,
+    "deleted": 0,
+    "modesChanged": 0
+  },
+  "census": {
+    "total": 12193,
+    "docs": 3394,
+    "nonDoc": 8799,
+    "rootEntries": 54,
+    "otherRootUnchanged": 50
+  },
+  "sourceChanges": [
+    {
+      "path": "scripts/legacy-agent-host/desktop-emulated-runtime-fixture.ts",
+      "mode": "100644",
+      "before": {
+        "bytes": 21981,
+        "sha256": "d0d00254e7e39ab8b5163e02cc93754775a8efe56ff28b8c87f07d02e0292c7e",
+        "gitBlob": "7b5edfbd4967debe454387c7a8b6246e67216dc8"
+      },
+      "after": {
+        "bytes": 21993,
+        "sha256": "2f929c1f5cfd1a9a3c9ec16d35f7197856c79a61adf166d30eebb8a1bd086f67",
+        "gitBlob": "adf5b4c418195e0fc4ab38ba7fde2b3436a6b835"
+      }
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-emulated-collaboration-fixture.ts",
+      "mode": "100644",
+      "before": {
+        "bytes": 16555,
+        "sha256": "8340911817fb4228e8d948425a1f85796fba16d244b6763b04e307ed6f290713",
+        "gitBlob": "97e14385a298a38a9b81b8805dc3f6d2da66545c"
+      },
+      "after": {
+        "bytes": 16591,
+        "sha256": "bd4b8bec56e93cd7c17ec04d5c09b93a8115097af57224d28e954c3f06cdb0c8",
+        "gitBlob": "6d267c1531fd741c4abee8b27ef501f28098d782"
+      }
+    },
+    {
+      "path": "tools/owned-process-broker/fixtures/claudeProviderPeer.mjs",
+      "mode": "100644",
+      "before": {
+        "bytes": 32221,
+        "sha256": "c443b410efbe4910839b02662fa1767b60e428936c012d729b26eeb82f182a87",
+        "gitBlob": "920b40fa594f7aa65e11d1ec1f31d2aa69581a01"
+      },
+      "after": {
+        "bytes": 33227,
+        "sha256": "dc9ba0c735ea763a24bb06d93590373cf1072d5737c7fba67a31df1356c44dd5",
+        "gitBlob": "1430de1a6666a22a7582d38a21273d61d2f745b7"
+      }
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-emulated-settings.test.ts",
+      "mode": "100644",
+      "before": {
+        "bytes": 24968,
+        "sha256": "771daf9353d767afc0cf6696779f37c07bbd404ad967845d230d6fd46a9bf0c6",
+        "gitBlob": "bd427fbe8bdcba5a80674d220becd75d8bd6ef57"
+      },
+      "after": {
+        "bytes": 40000,
+        "sha256": "58978cb43fac34697163fa9c30c6d3b14e26cf91e051a05085eab3d476260d61",
+        "gitBlob": "c1a42df62de987b1632365400f7359f65510dff3"
+      }
+    },
+    {
+      "path": "test/features/runtime-provider-management/capturedClaudeStatus.test.ts",
+      "mode": "100644",
+      "before": {
+        "bytes": 8570,
+        "sha256": "37d0b61e60dd4f175c9c2d34e1f8aa399becac018e970655dd7f5595713f2fb6",
+        "gitBlob": "6e84953e1d1a08b705b4000f47d8d51177047ff3"
+      },
+      "after": {
+        "bytes": 11410,
+        "sha256": "e781760fcaf1aeb3a04694ab8d5c213017add94853a8835b096b4f9f79f81279",
+        "gitBlob": "bf0a54d585ef1dcd94a2649cebd75cb20da43339"
+      }
+    }
+  ],
+  "preserved": {
+    "priorCatalogValues": 97,
+    "newCatalogKeys": 2,
+    "originalBundles": 27,
+    "commonAppendBytes": 7484,
+    "protectedSources": 23,
+    "fourWindowsPostimages": true,
+    "sixDiagnosticPostimages": true,
+    "frozen13": true,
+    "whole149": true,
+    "catalog43": true,
+    "runtime85": true,
+    "sdkManagement5": true,
+    "productionFiles": 5020,
+    "cap": 800,
+    "exceptions": 141,
+    "workflows": 42
+  },
+  "historicalCI": {
+    "pr": 1219,
+    "sourceHead": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+    "allSevenTerminal": true,
+    "active": [],
+    "noFurtherPolling": true
+  },
+  "environment": {
+    "availabilityNotification": {
+      "at": "2026-11-17 12:19:47 UTC",
+      "kind": "environment-availability-notification",
+      "cwd": "/workspace/scratch/c714f5bce554",
+      "status": "availability notified, filesystem and process identity not probed",
+      "priorUnavailableRecordedAt": "2026-11-17 11:31:41 UTC",
+      "sourceR2At": "2026-11-17 12:15:30 UTC",
+      "priorUnavailableFieldHistorical": true,
+      "localProbePerformed": false,
+      "standaloneRebound": false,
+      "runtimeAdmitted": false,
+      "noCua": true,
+      "noSequenceChange": true
+    },
+    "noLocalProbeOrTargetExecution": true,
+    "standaloneUninvokedAndUnrebound": true
+  },
+  "qualification": {
+    "sourcePostimagesPublished": true,
+    "sourceCompiled": false,
+    "sourceExecuted": false,
+    "newTestsExecuted": false,
+    "newExecutionVenueSelected": false,
+    "runtimeAdmitted": false,
+    "completeE2E": false,
+    "readyMergeReleaseDefaultStage2": false
+  },
+  "decision": "CLOSE_EXACT_SOURCE_PUBLICATION_ACTUAL_GATE_ONLY",
+  "next": "Root may now select and review a concrete new execution venue under the existing CI R1/publication/actual/external-admission sequence. No executable control R2 is added for unchanged structured GitHub actions; no execution is admitted by this gate itself."
+}

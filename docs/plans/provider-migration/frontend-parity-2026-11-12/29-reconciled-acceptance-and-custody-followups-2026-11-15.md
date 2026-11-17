@@ -11612,3 +11612,37 @@ PR1219's seven runs remain terminal on old source `9d79abcf1f5c498687c2e5c443e3e
 Environment unavailability in the immutable proposal describes its authorship time. A later availability notification was recorded at 2026-11-17 12:19:47 UTC; no filesystem/process identity probe, standalone rebinding or runtime admission followed it. The old standalone attempt remains spent; no standalone target test has been invoked or rebound, and no current inode is qualified.
 
 Root immediately pushes every created commit with the exact expected parent and force:false. Existing root and independent full source-publication actual readbacks must close before a separately selected execution venue/admission. The retained fifteen-path Draft venue advisory is not itself a selection. Other old GUI/native/cold-renderer failures remain unresolved; original waits, cases, cleanup and UNKNOWN semantics stay binding. No Ready, main/default merge, release/default activation, Stage2 or complete E2E claim.
+
+
+## 2026-11-17 — Fixed 86f third CI venue R1, static publication
+
+The Claude finite auth/resolved-model repair is published at `86f52244b5375834a4040cbc63803d68cc708087`. Its exact source actual gate `246e59b55ed2d395524f40f466c1ef7c8362a553` closed at 2026-11-17 12:43:15 UTC with 85 actual publication checks (40 root + 45 independent). This is source-publication evidence, not a new runtime PASS.
+
+The concrete CI R1 `d9da20d5123dd4bfec6c400508e2409e783f346d` (88097 bytes; SHA256 86e51d82ac055045ce1682afd942f28a4f682be354acf629f7c02dc1929fbebe) selects the fixed head above against its real ancestor `9d79abcf1f5c498687c2e5c443e3edf220070aa6`. The complete immutable comparison has seven commits, 178 changed paths, 163 documentation changes and exactly 15 source modifications: four Windows, six diagnostic/regression and five Claude files. No source add/delete/mode, dependency or workflow change is introduced by this venue.
+
+### Exact completed R1 reviews
+
+- rootReview: e095c058c9e2f02268dd6459083c1a03deb26ed0; 71519 bytes; SHA256 ea03d37f9676a7618b01c61fd0c700af3f45703ed66523996f759ed191890ad3; 42 static checks; complete body and self-read confirmed.
+- guardReview: b6ea038954d943981da7119f3f3c86dc77dfce77; 84373 bytes; SHA256 4e92f16494d4da7200cfa4ab9403b3e9cd658f7c27c97dba69c317ad67ba17c1; 45 static checks; complete body and self-read confirmed.
+- semanticReview: a6f86825012567b7b3dca65a6cca42e80344d0bd; 63139 bytes; SHA256 96e065caee14e8b3194964887d7243b6b78ffc2832c868f452f467bf47bd93da; 43 static checks; complete body and self-read confirmed.
+- bindingReview: 5e3404934c98557891b0abde6dc7ea50cc99cec6; 343813 bytes; SHA256 beba2aa568aa6cef0b293f971a389c1e85ec1e0157cfc16d0c58e9a40c6c3a7e; 50 static checks; complete body and self-read confirmed.
+
+All four reviews (180 static checks) close at 2026-11-17 13:11:46 UTC. The exact 65 directly referenced repository-scoped UTF-8 identities total 7,519,625 bytes and are fully read. The current extracted provider source at c79b and the bundled OpenCode CLI source at e13 remain distinct.
+
+### Proposed one-shot execution and capture
+
+The exact proposed aliases are `ci/frontend-parity-c714-20261117-3-base` and `ci/frontend-parity-c714-20261117-3-head`. They have not yet been probed or created. A later admitted preflight must confirm their absence. Each ref creation and the single same-repository Draft PR creation has maximumAttempts=1; a refused or transport-unknown issued action remains spent and is resolved by exact readback, never replayed or renamed. Both snapshot refs and PR metadata remain fixed while selected runs are active. Later evidence commits do not change the fixed CI source.
+
+The unchanged 42 workflow bodies contain 751,430 bytes. The actual paths select 11 event-eligible families: five wholly skipped by explicit Draft guards and six prospective executable workflows with 48 jobs under their normal prerequisites. Those are static counts, not observed allocation or success. Per-job checkouts are 42 explicit head, five default event/merge and one aggregate without checkout. Announcements explicitly checks out head; Packaged scope/gate use default event checkout while its five smoke jobs use head. This corrects the earlier workflow-wide advisory labels without changing their path or job counts. Stage1 separately records the actual current-main runtime lock input.
+
+The existing complete tests remain selected: whole149 UI cases within the eight-file Node command, all four safe frontend shards with catalog43/runtime85 and captured Claude status7, settings11, backend observations39, native UI8 and native receipt26 (including original platform14). Original skips remain non-PASS. Original GUI/process/packaged cases, deadlines, provider guards, source cap800, production5020, exceptions141, nonDoc8799 and all42 workflows remain unchanged.
+
+Claude and Codex remain finite TEST peers, including metadata/version paths. Actual OpenCode uses only the existing pinned permitted paths. The original Draft Full qualification failure and explicit Draft skips stay separate from every other failure. Full attempt/job/log/artifact/receipt/image/source/runtime/custody/cleanup evidence is required; an index, partial TAP or passing subset cannot qualify a failed matrix. Cold-renderer, Darwin P09, OpenCode credential cleanup and V2 Settings failures remain open until exact evidence resolves them.
+
+### Current boundary
+
+This commit is documentation only. It preserves every prior plan/status byte, all 99 catalog values, all 27 bundles, original totals and all 53 non-doc root entries. It adds only the two catalog keys `fixed86fThirdCiR1Stage` and `fixed86fThirdCiR1EvidenceFiles`. Its exact file manifest is `docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ci3-fixed86f-r1-publication-manifest-20261117.json`.
+
+No new CI ref, PR, run ID, target execution or runtime admission exists yet. Original9 and PR1218/PR1219 all seven runs each stay terminal and unpolled; frozen PR1206/1207/1208/1211/1212/1213 remain untouched. The environment availability notification has not rebound or executed the separate Node24.22.1 standalone supervisor. No CUA, new executable R2, Ready, merge, release, default activation, Stage2 or complete-E2E claim is introduced.
+
+Next: immediately push this documentation commit, finish full root and independent actual publication readbacks, then retain exact external admission before the one-shot new-ref/Draft-PR actions.
