@@ -1,0 +1,2631 @@
+{
+  "schemaVersion": 1,
+  "kind": "bounded-incoming-app-pr1192-increment-and-integration-source-advisory",
+  "reviewer": "/root/producer_r2_semantic",
+  "at": "2026-11-17T03:37:04Z",
+  "repository": "777genius/agent-teams-ai",
+  "verdict": "SOURCE_ADVISORY_ONLY_UNSELECTED_UNEXECUTED",
+  "authority": {
+    "rootSoleAuthorApplierExecutor": true,
+    "assignment": "Read PR1192 source metadata once; compare only increment since 75cf; identify smallest current production-source candidates and integration dependencies against frozen own9c9. No adoption or launch gate.",
+    "allowed": [
+      "Git/source/evidence reads",
+      "pure JS identity, comparison and static literal analysis",
+      "bare advisory blob retention"
+    ],
+    "performedShell": false,
+    "performedRuntime": false,
+    "performedNativeProbe": false,
+    "performedCiReadOrPoll": false,
+    "performedRefOrPrOrSourceMutation": false,
+    "realClaudeOrCodexExecuted": false,
+    "currentSnapshotRefsRemainFrozen": true
+  },
+  "subject": {
+    "ownFrozenCiHead": "9c9c73190840592963142d36562ea07d2b5d2d71",
+    "incomingPriorHead": "75cf2dcbfe2b540325ea50a022cb5195306a8c59",
+    "incomingObservedHead": "5c55a4a2008f4a6131d265344d384b39415ad055",
+    "incomingObservedBase": "301d00f46db3389ff6e3042afd04c5b064a26270",
+    "sourceMetadataReadCount": 1,
+    "metadataObservation": {
+      "number": 1192,
+      "state": "open",
+      "draft": true,
+      "title": "fix: complete Host frontend parity with emulated provider checks",
+      "updatedAt": "2026-11-17T03:09:52Z",
+      "headRef": "fix/frontend-parity-completion-20261113",
+      "baseRef": "feat/provider-host-frontend-parity-20261112",
+      "headRepository": "777genius/agent-teams-ai",
+      "baseRepository": "777genius/agent-teams-ai",
+      "prWideCommits": 739,
+      "prWideChangedFiles": 2832,
+      "qualifier": "PR-wide counts are not the bounded increment inventory; no PR/CI qualification is inferred."
+    },
+    "metadataRawIdentity": {
+      "bytes": 83431,
+      "sha256": "9fed24ce6f0c7ee6c5873c0dedf8e40cef1a90f26bafe9f712dfcad4ea2ba0c8",
+      "gitBlob": "0de51ec93a702842299231e3946152c6c7b3c853"
+    }
+  },
+  "priorAcceptedBasis": {
+    "latestReport": {
+      "bytes": 345710,
+      "sha256": "42e1483d832195946da1772abd172ffb903c6c3f1466925dd856bb33ea79c348",
+      "gitBlob": "530b81573d701849da6249e92195572dc450959a"
+    },
+    "coveredHead": "75cf2dcbfe2b540325ea50a022cb5195306a8c59",
+    "older1efAssessmentNotTreatedAsLatest": true,
+    "method": "Complete retained report fetched/hash-verified; settled source groups reused rather than re-audited. Relevant source increments independently read below.",
+    "ownCorpus": {
+      "gitBlob": "9011bb095b3249421eb114231fd0ce26878f5624",
+      "bytes": 1423178,
+      "sha256": "0257ec7c26f1d5d358c9bd6841540b8098d265f49af5f588be260a6bfb42065f"
+    },
+    "ownThreeFixReport": {
+      "gitBlob": "0c3db6a22e1f652ca30d085de23217fc52eb5e51",
+      "bytes": 70998,
+      "sha256": "3a3fe8dcf619204191b0db04023c5293fd24e433b74f2bf801f07bbc395d0f6c"
+    }
+  },
+  "increment": {
+    "request": "https://api.github.com/repos/777genius/agent-teams-ai/compare/75cf2dcbfe2b540325ea50a022cb5195306a8c59...5c55a4a2008f4a6131d265344d384b39415ad055?per_page=100&page=1",
+    "rawResponseIdentity": {
+      "bytes": 1313691,
+      "sha256": "aaf95f4044c11e58ae4b2730c4ea1a3250a05d0ccdd765792ede928e7e62d348",
+      "gitBlob": "f4b8f48293c77cbd3521c9647f893114e4d00df9"
+    },
+    "rawResponseSeparateBlobRetained": false,
+    "status": "ahead",
+    "aheadBy": 25,
+    "behindBy": 0,
+    "totalCommits": 25,
+    "returnedCommitCount": 25,
+    "reportedPaths": 174,
+    "reportedNonDocPaths": 137,
+    "reportedDocPaths": 37,
+    "patchMissingCount": 61,
+    "limits": "Complete returned commit/path inventory is below the compare file cap; this advisory does not substitute a fresh recursive whole-tree census or semantic audit of all 137 non-document leaves. Missing patch/zero line statistics do not mean unchanged content.",
+    "commits": [
+      {
+        "sha": "4659b73dd568b14cd05bf1ce32ae9073c3287780",
+        "parents": [
+          "75cf2dcbfe2b540325ea50a022cb5195306a8c59"
+        ],
+        "subject": "docs(e2e): select original desktop setup boundary repair"
+      },
+      {
+        "sha": "b0cdd1759ad9e591a5f88528b65c3b1407c1d92e",
+        "parents": [
+          "4659b73dd568b14cd05bf1ce32ae9073c3287780"
+        ],
+        "subject": "fix(e2e): keep configured desktop setup within its original window"
+      },
+      {
+        "sha": "901082d109e4098b8402a278ae2b7878b6fdc679",
+        "parents": [
+          "b0cdd1759ad9e591a5f88528b65c3b1407c1d92e"
+        ],
+        "subject": "docs(migration): select bounded Windows readiness and cleanup corrections"
+      },
+      {
+        "sha": "5a49d66c4ab90e18906f5121deb898a72a154c0b",
+        "parents": [
+          "901082d109e4098b8402a278ae2b7878b6fdc679"
+        ],
+        "subject": "fix(migration): bound V1 inspection and retain failed suspended-root cleanup"
+      },
+      {
+        "sha": "dc05c0f799308e137b57420aec6c79888c07e221",
+        "parents": [
+          "5a49d66c4ab90e18906f5121deb898a72a154c0b"
+        ],
+        "subject": "docs: select bounded desktop target settling completion"
+      },
+      {
+        "sha": "d4259ace0f265f5b2b060e485d291b8aaf426e9f",
+        "parents": [
+          "dc05c0f799308e137b57420aec6c79888c07e221"
+        ],
+        "subject": "test: finish bounded target settling before desktop clicks"
+      },
+      {
+        "sha": "26c477bcfdffa4f4ae5aef8c06bb0854cf5dcf74",
+        "parents": [
+          "d4259ace0f265f5b2b060e485d291b8aaf426e9f"
+        ],
+        "subject": "docs(migration): select pure provider activity source clock"
+      },
+      {
+        "sha": "afb38eaad48b3b3b388a65359b8aafbc9a21f9da",
+        "parents": [
+          "26c477bcfdffa4f4ae5aef8c06bb0854cf5dcf74"
+        ],
+        "subject": "fix(renderer): use a shared source clock for provider activity"
+      },
+      {
+        "sha": "c70e254000b237c067ebe79a443e930d32b53146",
+        "parents": [
+          "afb38eaad48b3b3b388a65359b8aafbc9a21f9da"
+        ],
+        "subject": "docs: bind observed Desktop target and Task refresh corrections"
+      },
+      {
+        "sha": "20441967f35c93a5b3ef368ac8d3d0c5ee8eef65",
+        "parents": [
+          "c70e254000b237c067ebe79a443e930d32b53146"
+        ],
+        "subject": "fix(desktop): preserve nested scroll and exact original UI targets"
+      },
+      {
+        "sha": "92cbb0ab873981808d2188a64e20aaabbf189ab2",
+        "parents": [
+          "20441967f35c93a5b3ef368ac8d3d0c5ee8eef65"
+        ],
+        "subject": "docs: bound original outer-scroll direction correction"
+      },
+      {
+        "sha": "12d01df13271def88d7a1dd86da6ec70ca243902",
+        "parents": [
+          "92cbb0ab873981808d2188a64e20aaabbf189ab2"
+        ],
+        "subject": "fix: reveal offscreen inner scrollports in their original direction"
+      },
+      {
+        "sha": "b3ddf344cbfdb13b152036f5a865c0d3c29365b4",
+        "parents": [
+          "12d01df13271def88d7a1dd86da6ec70ca243902"
+        ],
+        "subject": "docs: bind original OpenCode setup observation window"
+      },
+      {
+        "sha": "73d4faf441cfe23ef2cb979cf1b04d33a6c3e4f7",
+        "parents": [
+          "b3ddf344cbfdb13b152036f5a865c0d3c29365b4"
+        ],
+        "subject": "docs: select finite cold restore and fresh launch completion"
+      },
+      {
+        "sha": "39999ddcc0973fef6d1944886c4749f36db51125",
+        "parents": [
+          "73d4faf441cfe23ef2cb979cf1b04d33a6c3e4f7"
+        ],
+        "subject": "test(desktop): share the original OpenCode setup observation window"
+      },
+      {
+        "sha": "26b44d7b1a7a77678ccfbb451c23ea60bbd755e0",
+        "parents": [
+          "39999ddcc0973fef6d1944886c4749f36db51125"
+        ],
+        "subject": "test(runtime): prove cold checkpoint history and independent fresh launch"
+      },
+      {
+        "sha": "c94e63d68f43393bec42cbaa94826b12b2a9b6cd",
+        "parents": [
+          "26b44d7b1a7a77678ccfbb451c23ea60bbd755e0"
+        ],
+        "subject": "docs(settings): select truthful credential verification copy"
+      },
+      {
+        "sha": "d0ecd8d8dcff8d6927df18a4b6d03cc9b5fdb56e",
+        "parents": [
+          "c94e63d68f43393bec42cbaa94826b12b2a9b6cd"
+        ],
+        "subject": "docs: select finite owner-loss and runtime generation acceptance"
+      },
+      {
+        "sha": "4a2136c494ae012dda8b3dfaded893e16028e0c7",
+        "parents": [
+          "d0ecd8d8dcff8d6927df18a4b6d03cc9b5fdb56e"
+        ],
+        "subject": "fix: keep credential verification messages consistent with storage"
+      },
+      {
+        "sha": "301d00f46db3389ff6e3042afd04c5b064a26270",
+        "parents": [
+          "def734338f13bcc3209e78079a0cedbc48f05a5b"
+        ],
+        "subject": "feat(native-suggestions): native Claude/Codex next-message prompts (#1197)"
+      },
+      {
+        "sha": "15853ce6f67c5afd3cc3f7c75585dfb7f981be89",
+        "parents": [
+          "4a2136c494ae012dda8b3dfaded893e16028e0c7"
+        ],
+        "subject": "test(host): prove finite owner loss and clean Codex restart"
+      },
+      {
+        "sha": "692ba3fe103c8a6d5df3062abf7e5f2b04d1b753",
+        "parents": [
+          "15853ce6f67c5afd3cc3f7c75585dfb7f981be89"
+        ],
+        "subject": "docs(migration): bind captured Claude catalog parity plan"
+      },
+      {
+        "sha": "3fc8054864c320c0489782cf1ab829b06dceea73",
+        "parents": [
+          "692ba3fe103c8a6d5df3062abf7e5f2b04d1b753"
+        ],
+        "subject": "fix(renderer): consume captured Claude SDK model catalog"
+      },
+      {
+        "sha": "e53ed0aded02c4af20a9b573c7808861f072bf8f",
+        "parents": [
+          "3fc8054864c320c0489782cf1ab829b06dceea73"
+        ],
+        "subject": "docs(migration): select bounded integration of accepted native suggestions"
+      },
+      {
+        "sha": "5c55a4a2008f4a6131d265344d384b39415ad055",
+        "parents": [
+          "e53ed0aded02c4af20a9b573c7808861f072bf8f",
+          "301d00f46db3389ff6e3042afd04c5b064a26270"
+        ],
+        "subject": "fix(agent-backend): preserve frontend parity across native suggestions base"
+      }
+    ],
+    "paths": [
+      {
+        "path": ".github/workflows/host-emulated-acceptance.yml",
+        "status": "modified",
+        "gitBlob": "5160de39d0fc93eeeb559b885840ec23d059dff5",
+        "patchPresent": true
+      },
+      {
+        "path": ".github/workflows/host-process-acceptance.yml",
+        "status": "modified",
+        "gitBlob": "77971d912790262a76069c101b905a5357fc9198",
+        "patchPresent": true
+      },
+      {
+        "path": ".github/workflows/native-prompt-suggestions-host.yml",
+        "status": "added",
+        "gitBlob": "a46404bc643a592d7ebb8fe06bd3f5298d057885",
+        "patchPresent": true
+      },
+      {
+        "path": ".github/workflows/native-prompt-suggestions-vendor-once.yml",
+        "status": "added",
+        "gitBlob": "8e0a122bf28b77104e53e24f13afd9f20af8efd5",
+        "patchPresent": true
+      },
+      {
+        "path": ".gitignore",
+        "status": "modified",
+        "gitBlob": "562517e09717f2f3f4b35a2f2d105063fe3fc842",
+        "patchPresent": true
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/63-original-desktop-e2e-boundaries-2026-11-16.md",
+        "status": "added",
+        "gitBlob": "b54e3a8a5680141a3a7b0889661d4de1888b35ba",
+        "patchPresent": true
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/64-windows-readiness-cleanup-2026-11-16.md",
+        "status": "added",
+        "gitBlob": "0289cb5a2f9836bb1b941bbc2adfb03efe8b9859",
+        "patchPresent": true
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/65-desktop-single-click-settling-2026-11-16.md",
+        "status": "added",
+        "gitBlob": "2a7225baa3a2e91d86fed40551c528565ee1441e",
+        "patchPresent": true
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/68-provider-activity-source-clock-2026-11-16.md",
+        "status": "added",
+        "gitBlob": "37031fed3759250351e17ed3be27c4c95a6efb92",
+        "patchPresent": true
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/69-original-desktop-target-and-task-refresh-2026-11-16.md",
+        "status": "added",
+        "gitBlob": "60144b1fd149dff87abf055b58e314fe502147da",
+        "patchPresent": true
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/70-original-outer-scroll-direction-2026-11-16.md",
+        "status": "added",
+        "gitBlob": "623dfacbe90ccbd8f3a4a5730fdce4e6ddecc2c8",
+        "patchPresent": true
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/71-original-setup-observation-window-2026-11-16.md",
+        "status": "added",
+        "gitBlob": "f71a56bccb29bfa198309209eb16c895b88b671f",
+        "patchPresent": true
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/72-original-finite-cold-resume-fresh-2026-11-16.md",
+        "status": "added",
+        "gitBlob": "ca85b023f287e59c1a17e78b4874a2dc64eb736f",
+        "patchPresent": true
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/73-original-finite-owner-loss-2026-11-16.md",
+        "status": "added",
+        "gitBlob": "74694e251c53303e9dffa7d52f44103fe5eed04e",
+        "patchPresent": true
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/74-truthful-credential-verification-copy-2026-11-17.md",
+        "status": "added",
+        "gitBlob": "3600ab86bd3e979bf0a3fc0ef614fdf241dce73a",
+        "patchPresent": true
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/75-captured-claude-sdk-model-catalog-2026-11-17.md",
+        "status": "added",
+        "gitBlob": "3326448953cd5f163facc87fa82e6a9b73ee7856",
+        "patchPresent": true
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/76-incorporate-native-suggestions-base-2026-11-17.md",
+        "status": "added",
+        "gitBlob": "0b02400bac5b2ed2540bec03f9ce1ca576298862",
+        "patchPresent": true
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/plan63-original-desktop-boundaries-2026-11-16/prospective-r1.json",
+        "status": "added",
+        "gitBlob": "49f7aa9b83bd8e89d01fd51887c5d83f4ab8df38",
+        "patchPresent": true
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/plan63-original-desktop-boundaries-2026-11-16/prospective-r2.json",
+        "status": "added",
+        "gitBlob": "0bfd86463c740c5102f51b91fd48248271bd821f",
+        "patchPresent": true
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/plan64-windows-readiness-cleanup-2026-11-16/prospective-r1.json",
+        "status": "added",
+        "gitBlob": "bcee79d4477745fb88fc3a545158ff81adac762b",
+        "patchPresent": true
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/plan64-windows-readiness-cleanup-2026-11-16/prospective-r2.json",
+        "status": "added",
+        "gitBlob": "44a5268ac83de5a14629664d302e80722d16374e",
+        "patchPresent": true
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/plan65-desktop-single-click-settling-2026-11-16/prospective-r1.json",
+        "status": "added",
+        "gitBlob": "edc8fa077426636ff71ed5950586352c79bd3c86",
+        "patchPresent": true
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/plan65-desktop-single-click-settling-2026-11-16/prospective-r2.json",
+        "status": "added",
+        "gitBlob": "9a1ef703f7701a44f5652046e59c100cbe2effac",
+        "patchPresent": true
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/plan68-provider-activity-clock-2026-11-16/prospective-r1.json",
+        "status": "added",
+        "gitBlob": "4a286c6dbbc02b5e6b22e625f41521ace287e976",
+        "patchPresent": true
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/plan68-provider-activity-clock-2026-11-16/prospective-r2.json",
+        "status": "added",
+        "gitBlob": "20f7e3753e5f48aec8ce18dfcbc5aa2e7418d775",
+        "patchPresent": true
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/plan69-desktop-ui-boundaries-2026-11-16/prospective-r1.json",
+        "status": "added",
+        "gitBlob": "e4811e1c9d8ea1426aa9a74b2a4eab79f7314ef3",
+        "patchPresent": true
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/plan69-desktop-ui-boundaries-2026-11-16/prospective-r2.json",
+        "status": "added",
+        "gitBlob": "4c37ab544eead324baa23ac439710c14f1553c43",
+        "patchPresent": true
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/plan70-outer-scroll-direction-2026-11-16/prospective-r1.json",
+        "status": "added",
+        "gitBlob": "28c76551c86d7f2afdd0c95416d1acc264592348",
+        "patchPresent": true
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/plan70-outer-scroll-direction-2026-11-16/prospective-r2.json",
+        "status": "added",
+        "gitBlob": "ed3dfbf487d521b6cde76e5d3acb551674b2deca",
+        "patchPresent": true
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/plan71-original-setup-window-2026-11-16/prospective-r1.json",
+        "status": "added",
+        "gitBlob": "a0879118334cac4cdd615a43929b8b9b56c14bca",
+        "patchPresent": true
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/plan71-original-setup-window-2026-11-16/prospective-r2.json",
+        "status": "added",
+        "gitBlob": "bd009f34bdb097596268f08b377c4ec555c3114e",
+        "patchPresent": true
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/plan72-finite-cold-resume-fresh-2026-11-16/prospective-r1.json",
+        "status": "added",
+        "gitBlob": "e2d3bf3d54cfb2b78fc3d300603fff5e06ba0034",
+        "patchPresent": true
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/plan72-finite-cold-resume-fresh-2026-11-16/prospective-r2.json",
+        "status": "added",
+        "gitBlob": "60956f92eb5bc3156e7eebcd2525ce3b571bca8a",
+        "patchPresent": true
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/plan73-finite-owner-loss-2026-11-16/prospective-r1.json",
+        "status": "added",
+        "gitBlob": "8b9e7f29fbe861bbd2675626fd4f27a8419c4d97",
+        "patchPresent": true
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/plan73-finite-owner-loss-2026-11-16/prospective-r2.json",
+        "status": "added",
+        "gitBlob": "8d6b1ba372e0468f069177726ae8307575236bcd",
+        "patchPresent": true
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/plan74-truthful-credential-verification-copy-2026-11-17/prospective-r1.json",
+        "status": "added",
+        "gitBlob": "d014e99acb034d71fae6711d6ff2a9f1cf5b8113",
+        "patchPresent": true
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/plan74-truthful-credential-verification-copy-2026-11-17/prospective-r2.json",
+        "status": "added",
+        "gitBlob": "ca59650a3cbd65c2d413a2ace5a21d287fce8982",
+        "patchPresent": true
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/plan75-captured-claude-sdk-catalog-2026-11-17/prospective-r1.json",
+        "status": "added",
+        "gitBlob": "a9e36812df20393a1024a1c47ef4bcc2c0fe415e",
+        "patchPresent": true
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/plan75-captured-claude-sdk-catalog-2026-11-17/prospective-r2.json",
+        "status": "added",
+        "gitBlob": "48200ba220b12b83f4b78feec46ebd6e9e7b5346",
+        "patchPresent": true
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/plan76-base-integration-2026-11-17/prospective-r1.json",
+        "status": "added",
+        "gitBlob": "c4f303b394907039cc8e09fd25824302a6ca8223",
+        "patchPresent": true
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/plan76-base-integration-2026-11-17/prospective-r2.json",
+        "status": "added",
+        "gitBlob": "52032bd800f103c02ec5ea0e6c827001916a8227",
+        "patchPresent": true
+      },
+      {
+        "path": "docs/plans/provider-migration/native-prompt-suggestions-consumer-2026-11-14.md",
+        "status": "added",
+        "gitBlob": "93cc9266a8b0b5dddc073ab7001140187fac7e20",
+        "patchPresent": true
+      },
+      {
+        "path": "packages/legacy-agent-host/package.json",
+        "status": "modified",
+        "gitBlob": "0afca52d625a85158f6423c154de007b59554419",
+        "patchPresent": true
+      },
+      {
+        "path": "packages/legacy-agent-host/src/adapters/providers/ClaudeMemberProvider.ts",
+        "status": "modified",
+        "gitBlob": "d86239ac31173519bc9daa1d173cafec4362ab66",
+        "patchPresent": true
+      },
+      {
+        "path": "packages/legacy-agent-host/src/adapters/providers/CodexMemberProvider.ts",
+        "status": "modified",
+        "gitBlob": "f2b642d9329db16cb58bb4723c91adc6d3222911",
+        "patchPresent": true
+      },
+      {
+        "path": "packages/legacy-agent-host/src/adapters/providers/MemberProvider.ts",
+        "status": "modified",
+        "gitBlob": "1ac4e64fd2cbe12783907fb8dd2d6109b7130c30",
+        "patchPresent": true
+      },
+      {
+        "path": "packages/legacy-agent-host/src/cli.ts",
+        "status": "modified",
+        "gitBlob": "ed2b6f201a74c19800d0570977f36258e2c64cc8",
+        "patchPresent": true
+      },
+      {
+        "path": "packages/legacy-agent-host/src/composition/RuntimeTeamCoordinator.ts",
+        "status": "modified",
+        "gitBlob": "67fd5be49797569631a6ec26e631068bdd7adfef",
+        "patchPresent": true
+      },
+      {
+        "path": "packages/legacy-agent-host/src/composition/TeamHost.ts",
+        "status": "modified",
+        "gitBlob": "98fdd1c66ba139c9887ac54cf9166944c033fdd4",
+        "patchPresent": true
+      },
+      {
+        "path": "packages/legacy-agent-host/src/composition/checkCapturedPromptOperation.ts",
+        "status": "added",
+        "gitBlob": "33b5495bbce5daa1315239bb990f52dd05ebcb82",
+        "patchPresent": true
+      },
+      {
+        "path": "packages/legacy-agent-host/src/composition/createCapturedPromptSuggestionBinding.ts",
+        "status": "added",
+        "gitBlob": "bdb1945768fea646c824c885995d2a9f1be51f28",
+        "patchPresent": true
+      },
+      {
+        "path": "packages/legacy-agent-host/src/composition/createRuntimeMemberProviderFactory.ts",
+        "status": "modified",
+        "gitBlob": "413c91b7579a3ff274bae48ec5d9a8a98a2cf920",
+        "patchPresent": true
+      },
+      {
+        "path": "packages/legacy-agent-host/src/composition/executeCapturedRuntimeControl.ts",
+        "status": "modified",
+        "gitBlob": "59f10586f828dc8cd4800696e189ee3f6d7b208d",
+        "patchPresent": true
+      },
+      {
+        "path": "packages/legacy-agent-host/src/composition/prepareTeamModelReadiness.ts",
+        "status": "modified",
+        "gitBlob": "c7267693d9c352dfda12e778f4a1e405e3785ee4",
+        "patchPresent": true
+      },
+      {
+        "path": "packages/legacy-agent-host/src/composition/runtimeControlValues.ts",
+        "status": "modified",
+        "gitBlob": "8301805145a53fa205f676f8657c37c018a51747",
+        "patchPresent": true
+      },
+      {
+        "path": "packages/legacy-agent-host/src/composition/teamHostProfile.ts",
+        "status": "added",
+        "gitBlob": "5a3339cc0e238e9634851bdc071c84c98be526fe",
+        "patchPresent": true
+      },
+      {
+        "path": "packages/legacy-agent-host/src/team/TeamDeliveryAuthority.ts",
+        "status": "modified",
+        "gitBlob": "3c6f9c58c5ce2bc9695e66ed389982e4f494ef92",
+        "patchPresent": true
+      },
+      {
+        "path": "packages/legacy-agent-host/src/team/TeamOwner.ts",
+        "status": "modified",
+        "gitBlob": "10d9c6d06d023d78100a6edaae9f2bedc819cb74",
+        "patchPresent": true
+      },
+      {
+        "path": "packages/legacy-agent-host/src/team/verifiedHumanDirectSuggestionSource.ts",
+        "status": "added",
+        "gitBlob": "fac0bb146909374570920f5dd35309eb95ec1f38",
+        "patchPresent": true
+      },
+      {
+        "path": "packages/legacy-agent-host/tests/fixtures/native-claude-team/model.ts",
+        "status": "modified",
+        "gitBlob": "7bd361956a65caf622bc3483769189fac34e3436",
+        "patchPresent": true
+      },
+      {
+        "path": "packages/legacy-agent-host/tests/fixtures/native-codex-team/driver.ts",
+        "status": "modified",
+        "gitBlob": "fe7b8efdf0926b4345f222e9d6331c13a2a826f5",
+        "patchPresent": true
+      },
+      {
+        "path": "packages/legacy-agent-host/tests/fixtures/native-codex-team/model.ts",
+        "status": "modified",
+        "gitBlob": "65e1110cf1cc2436046a0eb61859739b2529bc2e",
+        "patchPresent": true
+      },
+      {
+        "path": "packages/legacy-agent-host/tests/fixtures/native-codex-team/suggestion-config.ts",
+        "status": "added",
+        "gitBlob": "2fcd01e72a0c8fa887e16d4637ed865c30291913",
+        "patchPresent": true
+      },
+      {
+        "path": "packages/legacy-agent-host/tests/fixtures/native-codex-team/suggestion-model.ts",
+        "status": "added",
+        "gitBlob": "ccec1f01eab1525c1b1840785d9b4d5fcdc18af9",
+        "patchPresent": true
+      },
+      {
+        "path": "packages/legacy-agent-host/tests/fixtures/native-host.ts",
+        "status": "modified",
+        "gitBlob": "0f72e8c88afee4a37ba8abf5b2dca12c8e82c181",
+        "patchPresent": true
+      },
+      {
+        "path": "packages/legacy-agent-host/tests/native-codex-team.native.ts",
+        "status": "modified",
+        "gitBlob": "99d7815879eb68f01495e93107049ded63e80ea6",
+        "patchPresent": true
+      },
+      {
+        "path": "packages/legacy-agent-host/tests/native-prompt-suggestions-binding.test.ts",
+        "status": "added",
+        "gitBlob": "33d2df3b870823a632c4b595939d162ec77602f3",
+        "patchPresent": true
+      },
+      {
+        "path": "packages/legacy-agent-host/tests/native-prompt-suggestions-codex-host.native.ts",
+        "status": "added",
+        "gitBlob": "390d08efef186bc6999de39d147726aac4390197",
+        "patchPresent": true
+      },
+      {
+        "path": "packages/legacy-agent-host/tests/native-prompt-suggestions-host.native.ts",
+        "status": "added",
+        "gitBlob": "b23661abf4d205be415daba642d03c0e2d952c41",
+        "patchPresent": true
+      },
+      {
+        "path": "packages/legacy-agent-host/tests/saved-team-model-probe.test.ts",
+        "status": "modified",
+        "gitBlob": "d9f580cc3bc0ceffc2619b52947e218f4891b018",
+        "patchPresent": true
+      },
+      {
+        "path": "packages/legacy-agent-host/tests/team/verifiedHumanDirectSuggestionSource.test.ts",
+        "status": "added",
+        "gitBlob": "ccd04fdd8fd7056939f2d2e0fbdaecd8c7da96f3",
+        "patchPresent": true
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-backend-fixture.ts",
+        "status": "modified",
+        "gitBlob": "549b23feef6384c9585da7e2dfa45e6aa28cc210",
+        "patchPresent": true
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-backend-observations.ts",
+        "status": "modified",
+        "gitBlob": "cb1ffea3d8d122dd9643c1c5e0199737682bc736",
+        "patchPresent": true
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-backend-smoke.ts",
+        "status": "modified",
+        "gitBlob": "a311c7420a17ed1df8e230caae69e49c15f74fa5",
+        "patchPresent": true
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-captured-app.ts",
+        "status": "modified",
+        "gitBlob": "6ba86c03f9083799a8ed6d663c2ecb1e80ceb2bf",
+        "patchPresent": true
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-composer-ui-smoke.ts",
+        "status": "modified",
+        "gitBlob": "d4e04c55adc2ef44500832922d956ece50eb0928",
+        "patchPresent": true
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+        "status": "modified",
+        "gitBlob": "6fd01f62356f098647cb454440790d7664ddaa3e",
+        "patchPresent": true
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-native-next-prompt-edit-guards-ui.ts",
+        "status": "added",
+        "gitBlob": "788538685b9a65ae6be760499d7243c0fc14d84c",
+        "patchPresent": true
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-native-next-prompt-mixed-fixture.ts",
+        "status": "added",
+        "gitBlob": "88ec37055348a0afb32d9a721e9329c9744612e9",
+        "patchPresent": true
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-native-next-prompt-mixed-ui.ts",
+        "status": "added",
+        "gitBlob": "be964869f632f0bccad9c8d7b4de51dee6d0f6ff",
+        "patchPresent": true
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-native-next-prompt-sources.ts",
+        "status": "added",
+        "gitBlob": "9c1472f6e111af15c4e31bca86519885b946c987",
+        "patchPresent": true
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-native-next-prompt-ui.ts",
+        "status": "added",
+        "gitBlob": "e68665d84b1ca523ba4dd789bf7259ae61b0df99",
+        "patchPresent": true
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-native-stop-fixture.ts",
+        "status": "modified",
+        "gitBlob": "809ab441a0c8e44edcae623b5601eeb9c69be582",
+        "patchPresent": true
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-opencode-v2-management-ui.ts",
+        "status": "modified",
+        "gitBlob": "f16a8a7d06ad99a1f5234e421fdcd43be8f4a289",
+        "patchPresent": true
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-proof-mode.ts",
+        "status": "modified",
+        "gitBlob": "cbd9b2f284e542267c89caccc87eec89a07de647",
+        "patchPresent": true
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts",
+        "status": "modified",
+        "gitBlob": "d6e3dbe4b6c5f6def5aeba21671456291ce1396b",
+        "patchPresent": true
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-retained-opencode-app.ts",
+        "status": "modified",
+        "gitBlob": "02d20844eb0b4ba46cf027510aefabc0fc5aaebf",
+        "patchPresent": true
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts",
+        "status": "modified",
+        "gitBlob": "7707de6f387471609df97f0e1d93b93fbd4a1f77",
+        "patchPresent": true
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+        "status": "modified",
+        "gitBlob": "770835e3f57cf174535b066f17c2b9f40d160b58",
+        "patchPresent": true
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+        "status": "modified",
+        "gitBlob": "4f79628eb550fb2522f797437211510951a1581a",
+        "patchPresent": true
+      },
+      {
+        "path": "scripts/legacy-agent-host/verify-native-suggestions-adopted-pin.mts",
+        "status": "added",
+        "gitBlob": "a12e61d506823991b91ae70c5e7e0344ca8052f4",
+        "patchPresent": true
+      },
+      {
+        "path": "src/features/agent-backend/contracts/operations.ts",
+        "status": "modified",
+        "gitBlob": "75a320284d915a83455eaf8d64da1d83606ff78c",
+        "patchPresent": true
+      },
+      {
+        "path": "src/features/agent-backend/main/adapters/input/runtimeOperationValues.ts",
+        "status": "modified",
+        "gitBlob": "812fd0774e77931648be54c072db5fff26c3e6cc",
+        "patchPresent": true
+      },
+      {
+        "path": "src/features/agent-backend/main/adapters/output/projectBackendResult.ts",
+        "status": "modified",
+        "gitBlob": "4906738e1f79011905abc2b0968ccf981033cd27",
+        "patchPresent": true
+      },
+      {
+        "path": "src/features/agent-backend/main/composition/DesktopBackendFeature.ts",
+        "status": "modified",
+        "gitBlob": "7cd84be538c4d36dfa55af1dc8b9ee1855fbff51",
+        "patchPresent": true
+      },
+      {
+        "path": "src/features/agent-backend/main/composition/captureHostPromptSuggestions.ts",
+        "status": "added",
+        "gitBlob": "06583c47f0101c13c949740ff324c39e92da5674",
+        "patchPresent": true
+      },
+      {
+        "path": "src/features/agent-backend/main/composition/recoverCapturedHost.ts",
+        "status": "modified",
+        "gitBlob": "b7d1c281362e3b3efe40b840db01442e1217cc57",
+        "patchPresent": true
+      },
+      {
+        "path": "src/features/agent-backend/main/infrastructure/CapturedHostClient.ts",
+        "status": "modified",
+        "gitBlob": "59397fb3ba4c85d8de126bc0d60f9bcdb00c59ac",
+        "patchPresent": true
+      },
+      {
+        "path": "src/features/agent-backend/main/infrastructure/CapturedHostNotificationBuffer.ts",
+        "status": "added",
+        "gitBlob": "93ea37d5cea2fb5d7b6c430f48416a35b8c84b10",
+        "patchPresent": true
+      },
+      {
+        "path": "src/features/agent-backend/renderer/createHostTeamsApi.ts",
+        "status": "modified",
+        "gitBlob": "bad0a18f7749717dc2bf2ddba051c4d55b7b6c38",
+        "patchPresent": true
+      },
+      {
+        "path": "src/features/localization/renderer/locales/en/settings.json",
+        "status": "modified",
+        "gitBlob": "f96cc2b6bb33c40fd7a6a941462f9501fecfe113",
+        "patchPresent": true
+      },
+      {
+        "path": "src/features/localization/renderer/locales/en/team.json",
+        "status": "modified",
+        "gitBlob": "e2507954e3a109cd1a44e9c199ad7ce5e10b0120",
+        "patchPresent": true
+      },
+      {
+        "path": "src/features/localization/renderer/locales/ru/settings.json",
+        "status": "modified",
+        "gitBlob": "bdddd7e92afc76504cbc133c1f236251d381266d",
+        "patchPresent": true
+      },
+      {
+        "path": "src/features/localization/renderer/locales/ru/team.json",
+        "status": "modified",
+        "gitBlob": "3796b805e4755b71a670a47c755ac00067ae9718",
+        "patchPresent": true
+      },
+      {
+        "path": "src/features/localization/renderer/locales/uk/settings.json",
+        "status": "modified",
+        "gitBlob": "f856b6d05b71af5dacd86cb1c891110e6869bdc2",
+        "patchPresent": true
+      },
+      {
+        "path": "src/features/localization/renderer/locales/uk/team.json",
+        "status": "modified",
+        "gitBlob": "566f43975c5e2512f95b28604d51db1582266421",
+        "patchPresent": true
+      },
+      {
+        "path": "src/features/localization/renderer/resources.d.ts",
+        "status": "modified",
+        "gitBlob": "e84ce5d7f1c34fcc696f6f4afec0c65e20db54a2",
+        "patchPresent": true
+      },
+      {
+        "path": "src/features/native-prompt-suggestions/README.md",
+        "status": "added",
+        "gitBlob": "ddc1a077dffd11f2b2ea85b6dffaf894d920a1fe",
+        "patchPresent": true
+      },
+      {
+        "path": "src/features/native-prompt-suggestions/contracts/channel.ts",
+        "status": "added",
+        "gitBlob": "e984cdc71ccd724b0a51c24edf9161f2e52a32fd",
+        "patchPresent": true
+      },
+      {
+        "path": "src/features/native-prompt-suggestions/contracts/index.ts",
+        "status": "added",
+        "gitBlob": "cea63a6f93c40db7fbf4fc6bf18af8904c381453",
+        "patchPresent": true
+      },
+      {
+        "path": "src/features/native-prompt-suggestions/core/domain/ownerHandle.ts",
+        "status": "added",
+        "gitBlob": "2dd52d1f635981334e49e85f6c5eb63179cc73ef",
+        "patchPresent": true
+      },
+      {
+        "path": "src/features/native-prompt-suggestions/core/domain/policy.ts",
+        "status": "added",
+        "gitBlob": "51a8ca1f003497da88968553676d318b8c833536",
+        "patchPresent": true
+      },
+      {
+        "path": "src/features/native-prompt-suggestions/main/index.ts",
+        "status": "added",
+        "gitBlob": "2786b1a99a454678b3abd9087944359ed322dca4",
+        "patchPresent": true
+      },
+      {
+        "path": "src/features/native-prompt-suggestions/main/projectHostPromptSuggestion.ts",
+        "status": "added",
+        "gitBlob": "09c7f6cd8f874f022d01a758d513901eb4166de9",
+        "patchPresent": false
+      },
+      {
+        "path": "src/features/native-prompt-suggestions/preload/createNativeNextPromptBridge.ts",
+        "status": "added",
+        "gitBlob": "883d19979a56388b351100df73c26192e220cd60",
+        "patchPresent": false
+      },
+      {
+        "path": "src/features/native-prompt-suggestions/preload/index.ts",
+        "status": "added",
+        "gitBlob": "5e9019dd0d17d4938564f1568ae114b9715443e3",
+        "patchPresent": false
+      },
+      {
+        "path": "src/features/native-prompt-suggestions/renderer/hooks/useComposerNativeNextPrompt.tsx",
+        "status": "added",
+        "gitBlob": "2435ad2154d6a631976c61b8982f1b517189356f",
+        "patchPresent": false
+      },
+      {
+        "path": "src/features/native-prompt-suggestions/renderer/hooks/useNativeNextPrompt.ts",
+        "status": "added",
+        "gitBlob": "a4f9839568948cfafc62ee4fddb0fe6e4458edc8",
+        "patchPresent": false
+      },
+      {
+        "path": "src/features/native-prompt-suggestions/renderer/hooks/verifyCurrentNativeSuggestion.ts",
+        "status": "added",
+        "gitBlob": "8c34174e718ec81a0960581a836859686a9dc758",
+        "patchPresent": false
+      },
+      {
+        "path": "src/features/native-prompt-suggestions/renderer/index.ts",
+        "status": "added",
+        "gitBlob": "14ae005f55cdec39f8a88d04f5950b46568f4088",
+        "patchPresent": false
+      },
+      {
+        "path": "src/features/native-prompt-suggestions/renderer/ui/NativeNextPromptRow.tsx",
+        "status": "added",
+        "gitBlob": "49134f5c297e58fbf746cc476658a522feeda029",
+        "patchPresent": false
+      },
+      {
+        "path": "src/features/runtime-provider-management/renderer/hooks/runtimeProviderManagementPresentation.ts",
+        "status": "modified",
+        "gitBlob": "1738fe12e51e14b9a5288313b8a253d1fdf3823e",
+        "patchPresent": false
+      },
+      {
+        "path": "src/features/runtime-provider-management/renderer/ui/RuntimeProviderManagementPanelView.tsx",
+        "status": "modified",
+        "gitBlob": "1a1d9fea7f488068c31a4c7f587d6db565d6e914",
+        "patchPresent": false
+      },
+      {
+        "path": "src/features/team-task-detail/renderer/ui/TaskDetailHeader.tsx",
+        "status": "modified",
+        "gitBlob": "e9d5580a90239d0748f6b5f374d04fd827b40dce",
+        "patchPresent": false
+      },
+      {
+        "path": "src/main/index.ts",
+        "status": "modified",
+        "gitBlob": "9f0d0d75b25e7a15f185ec8b51fa747d99def240",
+        "patchPresent": false
+      },
+      {
+        "path": "src/main/ipc/agentBackend.ts",
+        "status": "modified",
+        "gitBlob": "3a6f138e2c2e271b0464ad216124778d79f58c8b",
+        "patchPresent": false
+      },
+      {
+        "path": "src/main/ipc/configValidation.ts",
+        "status": "modified",
+        "gitBlob": "df249ef8282b30268d876d2a3487e7ce5fd1a39c",
+        "patchPresent": false
+      },
+      {
+        "path": "src/main/ipc/handlers.ts",
+        "status": "modified",
+        "gitBlob": "dc4c9a1cd9fd5a9c43b5c48805b242de83d321ef",
+        "patchPresent": false
+      },
+      {
+        "path": "src/main/services/infrastructure/ConfigManager.ts",
+        "status": "modified",
+        "gitBlob": "c6a44b41a37c2ef819aad6ec3179e2f91a1b8d45",
+        "patchPresent": false
+      },
+      {
+        "path": "src/preload/index.ts",
+        "status": "modified",
+        "gitBlob": "ce9b8d04996aa26addbc74493a0dd8a0644d8294",
+        "patchPresent": false
+      },
+      {
+        "path": "src/renderer/api/httpClient.ts",
+        "status": "modified",
+        "gitBlob": "862936a32ec1bc8f3f5f58f59cf3337f4ae86175",
+        "patchPresent": false
+      },
+      {
+        "path": "src/renderer/components/common/ProviderActivityStatusStrip.tsx",
+        "status": "modified",
+        "gitBlob": "4f265722685593616cf3a6196319c79d50420489",
+        "patchPresent": false
+      },
+      {
+        "path": "src/renderer/components/settings/components/SettingsToggle.tsx",
+        "status": "modified",
+        "gitBlob": "347848d6d8a515b7d488870297e45ebb9ed24b1f",
+        "patchPresent": false
+      },
+      {
+        "path": "src/renderer/components/settings/hooks/useSettingsConfig.ts",
+        "status": "modified",
+        "gitBlob": "f68e9e71ffaf3f6e07e2fc1b208433723d568f8a",
+        "patchPresent": false
+      },
+      {
+        "path": "src/renderer/components/settings/sections/GeneralSection.tsx",
+        "status": "modified",
+        "gitBlob": "5611eaf498b1ae691a5d9f4e3af63093a16d13b2",
+        "patchPresent": false
+      },
+      {
+        "path": "src/renderer/components/team/messages/MessageComposer.tsx",
+        "status": "modified",
+        "gitBlob": "d28edae4bf4bd6b37cb597bf7f595ff6dcfdfa36",
+        "patchPresent": false
+      },
+      {
+        "path": "src/renderer/components/team/messages/useFileRestrictionNotice.ts",
+        "status": "added",
+        "gitBlob": "2b2c2ac7d67eb3583a7c7744eb47850cf28bda53",
+        "patchPresent": false
+      },
+      {
+        "path": "src/renderer/components/ui/MentionableTextarea.tsx",
+        "status": "modified",
+        "gitBlob": "7df28fcab633b18452da1227cee4b39fdc236ebe",
+        "patchPresent": false
+      },
+      {
+        "path": "src/renderer/components/ui/mentionableSegments.ts",
+        "status": "added",
+        "gitBlob": "107e093413ecdcb01c5f6d62d9bec2af9a62ffed",
+        "patchPresent": false
+      },
+      {
+        "path": "src/renderer/hooks/useConservativeNow.ts",
+        "status": "added",
+        "gitBlob": "7ffb941aea601cc0387b4c6d1edd509dd8612633",
+        "patchPresent": false
+      },
+      {
+        "path": "src/renderer/hooks/useEffectiveCliProviderStatus.ts",
+        "status": "modified",
+        "gitBlob": "28aead9d64d31b04ee52a4b86ddac4a1df672d93",
+        "patchPresent": false
+      },
+      {
+        "path": "src/renderer/utils/teamModelAvailability.ts",
+        "status": "modified",
+        "gitBlob": "ac6e66775bd5efaf81cecb9a2f22a3437b4343ad",
+        "patchPresent": false
+      },
+      {
+        "path": "src/renderer/utils/teamProviderRuntimeStatusLoading.ts",
+        "status": "modified",
+        "gitBlob": "d0de113b7e79381e786f032e4cdf1a7dd8f0e9ab",
+        "patchPresent": false
+      },
+      {
+        "path": "src/shared/types/api.ts",
+        "status": "modified",
+        "gitBlob": "7b9df143e3d5f6b7c6b2190c451607cc1ebc6afd",
+        "patchPresent": false
+      },
+      {
+        "path": "src/shared/types/notifications.ts",
+        "status": "modified",
+        "gitBlob": "344a1a1643eae270cf71ee60d1538e2eec670b49",
+        "patchPresent": false
+      },
+      {
+        "path": "src/shared/types/team.ts",
+        "status": "modified",
+        "gitBlob": "f378f4082aa3a2226ff5b908672c5495cd68fa4a",
+        "patchPresent": false
+      },
+      {
+        "path": "test/features/agent-backend/capturedHostClient.test.ts",
+        "status": "modified",
+        "gitBlob": "e2f77a85f0b4a01332c000e3f524f7397a85df0c",
+        "patchPresent": false
+      },
+      {
+        "path": "test/features/agent-backend/desktopBackendFeature.test.ts",
+        "status": "modified",
+        "gitBlob": "072a22e0e1d05ea0ddaa2fc5f52331184e0fc98b",
+        "patchPresent": false
+      },
+      {
+        "path": "test/features/agent-backend/recoverCapturedHost.test.ts",
+        "status": "added",
+        "gitBlob": "b2ef2a92e915be9709e31b1edbc95e18641b5022",
+        "patchPresent": false
+      },
+      {
+        "path": "test/features/agent-backend/runtimeActivityFacade.test.ts",
+        "status": "modified",
+        "gitBlob": "f53a9048e4fc25bfa9eb9842abe7b632abd62843",
+        "patchPresent": false
+      },
+      {
+        "path": "test/features/native-prompt-suggestions/hostRuntimeReadOperation.test.ts",
+        "status": "added",
+        "gitBlob": "b87e7ac68c7f1ac6206cdcf3b22a305ec81c3587",
+        "patchPresent": false
+      },
+      {
+        "path": "test/features/native-prompt-suggestions/nativeNextPromptHook.test.tsx",
+        "status": "added",
+        "gitBlob": "fcce2044c2faac242c12dbb523b7d9a98302b3b7",
+        "patchPresent": false
+      },
+      {
+        "path": "test/features/native-prompt-suggestions/nativeNextPromptPolicy.test.ts",
+        "status": "added",
+        "gitBlob": "436fe77873d67da3d484eaf9957e35e9fe58b4e2",
+        "patchPresent": false
+      },
+      {
+        "path": "test/features/native-prompt-suggestions/nativeNextPromptSettings.test.ts",
+        "status": "added",
+        "gitBlob": "d0f505085b7d8129aaf59b63a3dfcc020c1bc315",
+        "patchPresent": false
+      },
+      {
+        "path": "test/features/native-prompt-suggestions/projectHostPromptSuggestion.test.ts",
+        "status": "added",
+        "gitBlob": "6995c0638a7796976fb58ceb914b2a4b2d5651bd",
+        "patchPresent": false
+      },
+      {
+        "path": "test/features/native-prompt-suggestions/verifyCurrentNativeSuggestion.test.ts",
+        "status": "added",
+        "gitBlob": "7ff1aefb99f790824b726b8b01d90cf77779ea19",
+        "patchPresent": false
+      },
+      {
+        "path": "test/renderer/components/common/ProviderActivityStatusStrip.test.ts",
+        "status": "modified",
+        "gitBlob": "602b117c3de6068b309653a2d9847d7d8a990753",
+        "patchPresent": false
+      },
+      {
+        "path": "test/renderer/components/settings/NotificationsRecoverySettings.test.tsx",
+        "status": "modified",
+        "gitBlob": "4c003fbaa7603b2fae5c0eea0249ea59e97f4295",
+        "patchPresent": false
+      },
+      {
+        "path": "test/renderer/features/runtime-provider-management/RuntimeProviderManagementPanelView.test.ts",
+        "status": "modified",
+        "gitBlob": "da2e37eab24475daf2ce3314ad697b241bc8d88e",
+        "patchPresent": false
+      },
+      {
+        "path": "test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts",
+        "status": "modified",
+        "gitBlob": "c909fed61c0800843bb8af5f25af9e21a31efef7",
+        "patchPresent": false
+      },
+      {
+        "path": "test/renderer/utils/teamModelAvailability.test.ts",
+        "status": "modified",
+        "gitBlob": "6cf34a11e7a1bc6f33208bad00adb57ee5656cd6",
+        "patchPresent": false
+      },
+      {
+        "path": "test/workflows/runSupersession.mts",
+        "status": "modified",
+        "gitBlob": "3dcbd80f67c20eacf8ad947a344cb41ccbb5b32a",
+        "patchPresent": false
+      },
+      {
+        "path": "tools/owned-process-broker/nativeEmulatedOwnerLossScenario.ts",
+        "status": "added",
+        "gitBlob": "8fb3cb0f34230df7849fe5efa23dddf1f39db191",
+        "patchPresent": false
+      },
+      {
+        "path": "tools/owned-process-broker/nativeEmulatedProfile.ts",
+        "status": "modified",
+        "gitBlob": "19c40bcef71744dc9d5e89f438143f8d3b3c1a61",
+        "patchPresent": false
+      },
+      {
+        "path": "tools/owned-process-broker/nativeEmulatedProviderGate.ts",
+        "status": "modified",
+        "gitBlob": "ebc72cf0728a673da7cf434f901dc70a4f91de07",
+        "patchPresent": false
+      },
+      {
+        "path": "tools/owned-process-broker/nativeEmulatedSourceCold.ts",
+        "status": "added",
+        "gitBlob": "17e28384acb148daf9d3111d36aa7f61441e366b",
+        "patchPresent": false
+      },
+      {
+        "path": "tools/owned-process-broker/nativeEmulatedSourceProfile.ts",
+        "status": "modified",
+        "gitBlob": "0df0e08a0180c48a74aaca8d79cebe7fbe06d032",
+        "patchPresent": false
+      },
+      {
+        "path": "tools/owned-process-broker/nativeEmulatedSourceScenario.ts",
+        "status": "modified",
+        "gitBlob": "9cdcd52b268695af3b5fc78c5420bf427a8779ce",
+        "patchPresent": false
+      },
+      {
+        "path": "tools/owned-process-broker/tsconfig.json",
+        "status": "modified",
+        "gitBlob": "cc34157fc25db1dd3befd9dedff386484b0abf1d",
+        "patchPresent": false
+      },
+      {
+        "path": "tsconfig.legacy-agent-host-scripts.json",
+        "status": "modified",
+        "gitBlob": "f037bd6b7d39a05897284210c178f3b2b965d1d8",
+        "patchPresent": false
+      },
+      {
+        "path": "vendor/provider-migration/native-prompt-suggestions-18a1c276/agent-teams-provider-implementations-0.0.0.tgz",
+        "status": "added",
+        "gitBlob": "efd2ad9ecf49858564d99fe4c1ac45add21b6e55",
+        "patchPresent": false
+      },
+      {
+        "path": "vendor/provider-migration/native-prompt-suggestions-18a1c276/source-receipt.json",
+        "status": "added",
+        "gitBlob": "38fad10f15470ec3d2d566f5b5b0c701a04575c1",
+        "patchPresent": false
+      },
+      {
+        "path": "vendor/provider-migration/native-prompt-suggestions-74991c21/agent-teams-provider-implementations-0.0.0.tgz",
+        "status": "added",
+        "gitBlob": "37144bb9ea187787bcc29b38b1382d68c279fdf8",
+        "patchPresent": false
+      },
+      {
+        "path": "vendor/provider-migration/native-prompt-suggestions-74991c21/source-receipt.json",
+        "status": "added",
+        "gitBlob": "8c552bf4a3ff4c49b19a644d1be9b0b8aa729c70",
+        "patchPresent": false
+      }
+    ],
+    "mergeImplication": "5c55 merges e53ed0ad and new base301d; 301d itself descends from prior base def734 and introduces native prompt suggestions. Current increment is 25 commits / 174 paths, not an isolated one-line merge candidate."
+  },
+  "prioritizedCandidates": [
+    {
+      "priority": 1,
+      "name": "Consume existing captured Claude SDK catalog in shared renderer model availability",
+      "selected": false,
+      "productionPath": "src/renderer/utils/teamModelAvailability.ts",
+      "before": {
+        "ref": "9c9c73190840592963142d36562ea07d2b5d2d71",
+        "bytes": 32055,
+        "sha256": "6e216e10c07e953472afb74045c3a976e9f4a1d4fcd3e9f5d46dc789d19022e6",
+        "gitBlob": "167751c56f74c2869b8b3d9b128002d5bd642bcb"
+      },
+      "incomingAfter": {
+        "ref": "5c55a4a2008f4a6131d265344d384b39415ad055",
+        "bytes": 32077,
+        "sha256": "b1da0ea7199e69eb042e5beb16dfafa91c4d7b9360db41a3f9ba16424ca2fd43",
+        "gitBlob": "ac6e66775bd5efaf81cecb9a2f22a3437b4343ad"
+      },
+      "actualPublishedDelta": {
+        "removed": "    providerStatus.modelCatalog.source === 'anthropic-models-api' &&",
+        "added": "    ['anthropic-models-api', 'claude-sdk'].includes(providerStatus.modelCatalog.source) &&",
+        "wholeBodyExactSingleReplacement": true
+      },
+      "testPath": "test/renderer/utils/teamModelAvailability.test.ts",
+      "testBefore": {
+        "ref": "9c9c73190840592963142d36562ea07d2b5d2d71",
+        "bytes": 49687,
+        "sha256": "0e37baae735529c11d2ed43432b132b516d252af8bb3084714c7082d7d4c4db8",
+        "gitBlob": "1a58c9c686010d5b5ded00f8e2b5064e4ab78c32"
+      },
+      "testIncomingAfter": {
+        "ref": "5c55a4a2008f4a6131d265344d384b39415ad055",
+        "bytes": 56775,
+        "sha256": "b08fe4a650ea9d23f4d8fa4b4ece157d9cd2f87e87e42b25c3c53934ed9974c8",
+        "gitBlob": "6cf34a11e7a1bc6f33208bad00adb57ee5656cd6"
+      },
+      "testDelta": {
+        "wholeOwnBodyExactPrefix": true,
+        "addedBytes": 7088,
+        "newCases": 3,
+        "existingCasesRemovedOrChanged": false
+      },
+      "reason": "Own utility accepts only anthropic-models-api in its first-party predicate while own captured producer, DTO and selector already support claude-sdk. This isolated actual source line admits SDK rows to existing options/normalization/availability behavior.",
+      "semantics": "Anthropic provider guard and unavailable-catalog refusal remain. Visible launchModel (or nonempty id fallback), hidden-row filtering, unavailable-row state, alias refusal, curated fallback for no usable catalog, and separate freshness/authentication/execution/launch authority remain owned by existing code. No real Claude invocation is required to inspect or exercise the typed pure renderer fixtures.",
+      "newRegressionCases": [
+        "Resolved SDK offer is used without promoting alias, authentication or verification facts",
+        "Hidden/unavailable rows remain refused; all-unavailable nonempty offer set does not become curated availability",
+        "Unavailable, empty, all-hidden or blank-valued catalogs retain existing curated fallback"
+      ],
+      "existingOwnDependencies": [
+        {
+          "path": "src/features/runtime-provider-management/main/adapters/output/capturedClaudeMetadata.ts",
+          "bytes": 7477,
+          "sha256": "c4d8333cc5b562b7eb8de8398bde8275d579fdb7775c59c3d1ae5123e88cfdc8",
+          "gitBlob": "c0bd14811e8cd76dd34bcf42afac2785769e37ad",
+          "fact": "Existing captured metadata decoder emits claude-sdk item/catalog source, exact profile/config/currentness and resolved launch value; teamLaunch=false."
+        },
+        {
+          "path": "src/features/runtime-provider-management/main/adapters/output/CapturedRuntimeProviderStatusClient.ts",
+          "bytes": 15353,
+          "sha256": "606098a4895f1715ea58677cfff11337790d5bbcf1be3fcdf3efcdf171b59aab",
+          "gitBlob": "500b04c5a0b9e15bc8f4401d5f7bdc0d4267e2a6",
+          "fact": "Existing Anthropic captured route calls readCapturedClaudeStatus then currentness guard."
+        },
+        {
+          "path": "src/shared/types/cliInstaller.ts",
+          "bytes": 18202,
+          "sha256": "ce28995162a32167226dd7c7fb9e68ffc8b068d6bf1b8ec88355f76ceaae9c0e",
+          "gitBlob": "af81c3af93ae2a0e53a635daf16530a604c0fe39",
+          "fact": "Existing closed catalog-source union already includes claude-sdk."
+        },
+        {
+          "path": "src/renderer/components/team/dialogs/TeamModelSelector.tsx",
+          "bytes": 157938,
+          "sha256": "919572aefbd5b4f8f56eb0c6a0953e8ac1efff9868861ff32655e73b58994d38",
+          "gitBlob": "e54fd44a11644202b3c3d0c17a0c85b66e9f1520",
+          "fact": "Existing hydration predicate recognizes claude-sdk and uses shared model option/normalization utility."
+        }
+      ],
+      "doesNotRequire": [
+        "Native prompt suggestions base merge",
+        "Host provider package upgrade",
+        "Incoming P11 finite runner variant",
+        "Incoming runtime-provider hook extraction",
+        "Any incoming native workflow"
+      ],
+      "nextDecision": "Root may separately evaluate a narrow source/test R1 using these exact existing bodies. This report authors no postimage, selects no adoption, and grants no runtime/CI action."
+    },
+    {
+      "priority": 2,
+      "name": "Remove unsupported credential-rollback assurances from renderer messages",
+      "selected": false,
+      "paths": [
+        "src/features/runtime-provider-management/renderer/hooks/runtimeProviderManagementPresentation.ts",
+        "src/features/runtime-provider-management/renderer/ui/RuntimeProviderManagementPanelView.tsx"
+      ],
+      "actualDelta": "Three error messages stop asserting the new credential was not kept; one progress message stops promising temporary save/removal/restoration. Own full bodies equal incoming75cf preimages.",
+      "scope": "Presentation only. Does not add rollback, repair authentication, or authorize credential mutation. Separate future review can preserve current hooks/tests."
+    },
+    {
+      "priority": 3,
+      "name": "Keep task header first row at minimum height",
+      "selected": false,
+      "path": "src/features/team-task-detail/renderer/ui/TaskDetailHeader.tsx",
+      "actualDelta": "Own-to-incoming whole body differs only by adding min-h-8 to the existing first header-row div.",
+      "scope": "Small layout candidate, not evidence of GUI readiness or a replacement for exact target/currentness tests."
+    }
+  ],
+  "windowsReadiness": {
+    "increment": "Exactly one early condition changes inside captureOpenCodeProbeAccountInspection: skip the duplicate early nativeCurrent call only for the private synchronous V1 member-reference bracket; non-bracket current() remains.",
+    "before": {
+      "bytes": 48528,
+      "sha256": "7a7419587a39e8f7473aea264903e0bb02bee694a79a5a3bfe2151953cf2b95c",
+      "gitBlob": "3de70853104e4c49685d870fc4977458f529bfea"
+    },
+    "after": {
+      "bytes": 48510,
+      "sha256": "1537bb171c82f1f6203dd435be34359d64e37bb2f8556a2404540363cc22441a",
+      "gitBlob": "c7267693d9c352dfda12e778f4a1e405e3785ee4"
+    },
+    "own": {
+      "bytes": 43732,
+      "sha256": "89fbe1d8736a5797aa3198df213b89d5861a07012675e91aff78d1302459cf14",
+      "gitBlob": "b9dd573db23b3033b5f3db7024b317681ce31499"
+    },
+    "guards": "Bracket remains limited to a member target, non-V2 profile, an original saved probe without nativeFileKeyWitness, and declared configured-key policy. Captured source/config and final no-configuration/no-key/no-fileProof guard remain; final nativeCurrent then memberTarget then policy.isCurrent remain. Ordinary account currentness and expiry refusal remain. No deadline is extended.",
+    "integrationDependency": "Own source predates incoming timing diagnostics and earlier owner-check grouping: own-to-current is 18 hunks, not this one incoming increment line. A wholesale file replacement would mix already-settled incoming changes and diagnostics. Any selected optimization must separately establish that complete owner/source checks remain on this own branch.",
+    "cleanup": {
+      "path": "tools/owned-process-broker/nativeEmulatedSourceScenario.ts",
+      "own": {
+        "bytes": 60524,
+        "sha256": "07007c2c67a27fbab6bd4906982b9460a634928ca80f7349abd47fa7eb747447",
+        "gitBlob": "f2af726dd2f352a1ecc0fa40753b76e72d008e14"
+      },
+      "current": {
+        "bytes": 59238,
+        "sha256": "b494c6a22ddb8b0ebb84b52f7aa97e4bf93e3c787be3b4eae2277b705db2454f",
+        "gitBlob": "9cdcd52b268695af3b5fc78c5420bf427a8779ce"
+      },
+      "suspendedRootDelta": "Incoming permits resumed=false only when an original scenario failure is already recorded, still requiring original root+witness+confirmed Stop/drain/release, zero witness wait result, and handle absence. This admits cleanup of the originally suspended root; it does not make readiness successful.",
+      "criticalPreservation": "Own no-local-dispatch cleanup has an exact allocated-owner/attempt/receipt join, coverage=no-local-dispatch, rootExited=false, no captured root/witness/entry, zero prepare/resume calls, confirmed Stop/drain/release and bounded cleanupEvidence. Incoming whole file lacks that branch. Preserve it in any later selected adaptation.",
+      "otherIncomingChanges": "The same incoming file also imports nativeEmulatedSourceCold, generalizes launch to a selected epoch and adds cold checkpoint/fresh-launch behavior. Those are separate lifecycle additions and not part of a minimal readiness correction."
+    },
+    "runtimeLimit": "No Windows observation was performed or imported as PASS. Earlier environment-membership and OpenCode HOME/XDG coordination remain the settled incoming-only dependencies from530b. They are absent from this increment, not newly solved. Strict Darwin P09 and original 15s/10s readiness failures are not qualified by these source facts."
+  },
+  "existingFixesAndTests": {
+    "protectedOwnVector": [
+      {
+        "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+        "ref": "9c9c73190840592963142d36562ea07d2b5d2d71",
+        "bytes": 28974,
+        "sha256": "7626e479a6662242009cb050e7e5af612a29e4205d62666d15274d5c30f91386",
+        "gitBlob": "ed57cb0fe7d57ef076a591621289eb77667c63ad",
+        "basis": "Accepted own corpus 9011bb, non-documents unchanged at frozen 9c9"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+        "ref": "9c9c73190840592963142d36562ea07d2b5d2d71",
+        "bytes": 24759,
+        "sha256": "d15b7eea14c0951194310aee34ddc5c477879c759a97a4e2f4e9fce1f956ce9b",
+        "gitBlob": "cf93da72a198dac636658e512093eef7828b5927",
+        "basis": "Accepted own corpus 9011bb, non-documents unchanged at frozen 9c9"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+        "ref": "9c9c73190840592963142d36562ea07d2b5d2d71",
+        "bytes": 8457,
+        "sha256": "2da55bb40a5689ace0e922dc4867d7c73278d9a1cd200ea8c4602ca68f82da3b",
+        "gitBlob": "3c7b4bb53f4259ac0795d3f92fb715887acb554f",
+        "basis": "Accepted own corpus 9011bb, non-documents unchanged at frozen 9c9"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts",
+        "ref": "9c9c73190840592963142d36562ea07d2b5d2d71",
+        "bytes": 36260,
+        "sha256": "26357f37b146fc171bbceadb624bde4a7f4e459d2073ae23a651e757817b2d38",
+        "gitBlob": "4700a0052d3c58a2b3d9bc66e6803220688050fd",
+        "basis": "Accepted own corpus 9011bb, non-documents unchanged at frozen 9c9"
+      },
+      {
+        "path": "src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts",
+        "ref": "9c9c73190840592963142d36562ea07d2b5d2d71",
+        "bytes": 74340,
+        "sha256": "647ac5732bfd6b5cb57834adb4ad22c32ee5dfb018a934c92f982efd9daa531c",
+        "gitBlob": "c2faa156015707bc5fbd7f8123a7ffd9c4faa486",
+        "basis": "Accepted own corpus 9011bb, non-documents unchanged at frozen 9c9"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+        "ref": "9c9c73190840592963142d36562ea07d2b5d2d71",
+        "bytes": 45795,
+        "sha256": "2c5931f5c7fa1dc8bb7858201c1b8afdbae9683faf4a2ad9fce067f116f3f94b",
+        "gitBlob": "5026f0ec6165bb092717ddc989043848a25081dc",
+        "basis": "Accepted own corpus 9011bb, non-documents unchanged at frozen 9c9"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-task-review-cycle-ui-smoke.ts",
+        "ref": "9c9c73190840592963142d36562ea07d2b5d2d71",
+        "bytes": 33036,
+        "sha256": "4fa52cfad9347065680ef62a3ba6420762408a78a93b77e96ac3a2e16e68bdc9",
+        "gitBlob": "8d175c98158b3bd71192aef7b1929484b2b681b6",
+        "basis": "Accepted own corpus 9011bb, non-documents unchanged at frozen 9c9"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+        "ref": "9c9c73190840592963142d36562ea07d2b5d2d71",
+        "bytes": 164965,
+        "sha256": "852bedb85c83dbc4b488dffb4a9ffebbe398adc53e85f5a3cea8ca36b146cbf7",
+        "gitBlob": "896c587e077da56a98a314a175fb3cba0353d6ee",
+        "basis": "Accepted own corpus 9011bb, non-documents unchanged at frozen 9c9"
+      },
+      {
+        "path": "test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts",
+        "ref": "9c9c73190840592963142d36562ea07d2b5d2d71",
+        "bytes": 187890,
+        "sha256": "b6f11896e60014aac785968d42390afde38716d47de9bba9562522235db048c9",
+        "gitBlob": "76495189c992fcda47cd7a43a0c697190b5acbb3",
+        "basis": "Accepted own corpus 9011bb, non-documents unchanged at frozen 9c9"
+      }
+    ],
+    "p11": {
+      "pollSpanByteIdentical": true,
+      "pollSpanIdentity": {
+        "bytes": 480,
+        "sha256": "a8b74e0af90872abc585387846af421d433b10a6e273b21e3d5b6f41e89d517d",
+        "gitBlob": "5e4fb9a27300b28d58cdf4f77e875864693969b7"
+      },
+      "meaning": "Both original 90-second post-await assertions remain. Incoming full P11 additionally carries earlier finite-peer branches and current finite Claude label/model changes; whole-file adoption is unnecessary for the isolated catalog utility."
+    },
+    "review": {
+      "ownPredicate": "value !== null && typeof value === object && !Array.isArray(value) && canEditNow === true",
+      "incomingPredicate": "Boolean(value && typeof value === object && !Array.isArray(value) && canEditNow === true)",
+      "meaning": "Same admitted ordinary value set; current own reviewed bytes and original30s budget should remain. No need to replace the function to gain this existing fix."
+    },
+    "hook": {
+      "ownPublishedFix": "Current request's finally clears loading for silent and visible refresh; stale/newer/unmounted guards remain.",
+      "incomingArchitecture": "Whole useRuntimeProviderManagement delegates to runtimeProviderViewRefresh with passive diagnostic bookkeeping. Currentness/loading semantics survive there, but this is a separate extraction with an additional module and tests.",
+      "preserveOwnWholeHookAnd85Tests": true
+    },
+    "node": {
+      "method": "No test evaluation. Every top-level registration expression and its literal loop alternatives were read and expanded as data; all cases have unique names.",
+      "ownCases": 139,
+      "priorIncomingCases": 69,
+      "currentIncomingCases": 87,
+      "currentCommonTitles": 46,
+      "currentOwnOnlyTitles": 93,
+      "currentIncomingOnlyTitles": 41,
+      "historicalRelation": "133 vs69:44/89/25. After own six additions,139 vs75cf69:50/89/19. Incoming click revalidation rewrites remove four formerly common names, producing current46/93/41.",
+      "common": [
+        "captured UI discovery waits for Main admission and actual mount while early diagnostics remain active",
+        "the original remaining startup deadline rejects a pending snapshot without late discovery or a reset",
+        "packed file readiness executes the actual diagnostic expression using exact href instead of Electron opaque origin",
+        "HTTP readiness keeps exact origin and document path guards when the runtime location origin is untrusted",
+        "isolated shell fixture emits the actual framed environment and refuses shell effects",
+        "original in-progress Task comment prerequisite requires its exact stage without an assignment control",
+        "Task attachment comment waits for its original focused owner after one click before inserting text",
+        "original Task assignment prerequisite refuses receipt-only, pending and stale renderer state",
+        "original Task assignment prerequisite rejects a foreign context, Team, Task or rebound surface",
+        "original desktop click waits for stable target geometry, without repeating input",
+        "original Task hover waits through layout and unavailability before its one physical move",
+        "original desktop click refuses a constantly moving target before dispatch",
+        "original owner-qualified click rereads its full expression through unavailability at unchanged coordinates",
+        "login failure facts retain only bounded original attempts and confirmed milestones",
+        "finite readiness failure summaries keep only bounded states and never private snapshot data",
+        "Taskboard failure summaries compare retained identities without exposing private snapshot values",
+        "installer failure summaries preserve original wait sites and attempts without inferring installation effects",
+        "installer failure projection does not invoke input getters and leaves oversized observations unknown",
+        "installer CDP and cleanup projection retains only exact finite observations",
+        "Selection target summaries retain the exact original phase and six closed facts",
+        "Selection target projection rejects unknown or malformed facts without exposing text or invoking getters",
+        "Taskboard focus diagnostics preserve last samples and bounded transitions without exposing private input",
+        "original default scroll preserves a disabled control before its readiness wait",
+        "original scroll opt-in reveals a covered checkbox with one bounded wheel",
+        "original clarification lookup admits its retained read without completing the assignment prerequisite",
+        "original clarification lookup refuses changed owner, revision, refresh and retained-read joins",
+        "original owner availability admits three captured A Teams through its actual first DOM read",
+        "original owner availability retains singleton, subset and duplicate-row cardinality semantics",
+        "original owner availability refuses foreign identities and preserves its existing aggregate guards",
+        "original owner availability refuses invalid captured discovery before navigation",
+        "owner availability admits every captured A Team through the actual first observation",
+        "owner availability refuses healthy B in unavailable A rows",
+        "owner availability refuses captured foreign owner in unavailable A rows",
+        "owner availability refuses unknown Team in unavailable A rows",
+        "owner availability refuses malformed Team in unavailable A rows",
+        "owner availability refuses missing selected A before original navigation",
+        "owner availability refuses non-string A handle before original navigation",
+        "owner availability refuses empty A handle before original navigation",
+        "owner availability refuses duplicate A handle before original navigation",
+        "owner availability refuses over-bound capture before original navigation",
+        "P11 keeps the original 90-second cutoff for first result at the exact cutoff",
+        "P11 keeps the original 90-second cutoff for first result after the cutoff",
+        "P11 keeps the original 90-second cutoff for polled result after the cutoff",
+        "P11 actual poll retains timely acceptance, original cadence, currentness and read-error identity",
+        "original review correction refuses missing or false live edit authority before any input action",
+        "original review correction admits current authority with one original insertion and submit"
+      ],
+      "ownOnly": [
+        "original desktop click refuses a target unavailable during the final ownership check",
+        "original desktop click refuses a target moved during the final ownership check",
+        "original desktop click rechecks owner after its pending final target read",
+        "original desktop click rechecks cutoff after its pending final target read",
+        "passive input keeps its actual Team target and three separate original navigation samples",
+        "passive navigation preserves non-card events, the original ring bounds and null or non-Team state",
+        "passive navigation refuses malformed target and store facts without losing original callbacks",
+        "passive navigation remains bounded and cannot interrupt original writes on diagnostic failure",
+        "passive navigation uses only the callable store own method and ignores unrelated card surfaces",
+        "the selected provider receipt digest matches the actual manifest-selected archive bytes",
+        "provider receipt legacy, current and equal-dual implementation digests preserve manifest authority",
+        "every present provider implementation digest must be valid and both recognized fields must agree",
+        "provider receipt shape, package selection and original file or JSON errors remain strict",
+        "saved Launch uses three stable actual DOM samples before its original settings action",
+        "saved Launch resets exact geometry when the original button shifts by a quarter pixel",
+        "saved Launch restarts its three samples after changed identity",
+        "saved Launch restarts its three samples after changed expanded state",
+        "saved Launch restarts its three samples after changed horizontal position",
+        "saved Launch restarts its three samples after changed width",
+        "saved Launch restarts its three samples after changed height",
+        "saved Launch resets its original readiness after absent target",
+        "saved Launch resets its original readiness after ambiguous target",
+        "saved Launch resets its original readiness after wrong model",
+        "saved Launch resets its original readiness after absent identity",
+        "saved Launch resets its original readiness after empty identity",
+        "saved Launch resets its original readiness after invalid expansion",
+        "saved Launch resets its original readiness after missing owning dialog",
+        "saved Launch resets its original readiness after nonfinite x",
+        "saved Launch resets its original readiness after nonfinite y",
+        "saved Launch resets its original readiness after zero width",
+        "saved Launch resets its original readiness after negative height",
+        "saved Launch resets its original readiness after running own animation",
+        "saved Launch resets its original readiness after paused own animation",
+        "saved Launch resets its original readiness after pending own animation",
+        "saved Launch allows finished own animation without inspecting descendant spinners or model status",
+        "saved Launch allows idle own animation without inspecting descendant spinners or model status",
+        "saved Launch exhausts its one original deadline with no matching model and no settings action",
+        "saved Launch exhausts its one original deadline with unsettled own dialog and no settings action",
+        "original conversation waits for its own reply before one click at the hydrated coordinates",
+        "default conversation click retains its original final geometry refusal without a preview predicate",
+        "original conversation refuses body-only reply within its unchanged first read deadline",
+        "original conversation refuses neighbor-only reply within its unchanged first read deadline",
+        "original conversation refuses different required reply within its unchanged first read deadline",
+        "original conversation refuses empty preview within its unchanged first read deadline",
+        "original conversation refuses missing target within its unchanged first read deadline",
+        "original conversation refuses zero-size target within its unchanged first read deadline",
+        "original conversation refuses disabled target within its unchanged first read deadline",
+        "original conversation refuses covered target within its unchanged first read deadline",
+        "original conversation refuses two eligible rows with only the second ready within its unchanged first read deadline",
+        "original conversation serializes its required preview as literal data",
+        "original conversation rereads a revoked preview at unchanged final coordinates before input",
+        "original conversation still refuses final owner despite a ready preview",
+        "original conversation still refuses final movement despite a ready preview",
+        "actual openChat forwards TEST boot ready for alice",
+        "actual openChat forwards TEST stream partial for alice",
+        "actual openChat forwards TEST boot ready for team-lead",
+        "actual openChat forwards TEST stream partial for team-lead",
+        "original Cross Close target admits the ready cleared Task when canResolveClarification is false",
+        "original Cross Close target refuses retained user clarification",
+        "original Cross Close target refuses retained external clarification",
+        "original Cross Close target refuses null clarification",
+        "original Cross Close target refuses full-detail refreshPending",
+        "original Cross Close target refuses full-detail loading",
+        "original Cross Close target refuses current detail error",
+        "original Cross Close target refuses current deletionIntent",
+        "original Cross Close target refuses full Task deletedAt",
+        "original Cross Close target refuses full Task deleted status",
+        "original Cross Close target refuses non-ready full-detail phase",
+        "original Cross Close target refuses foreign full Task ID",
+        "original Cross Close target refuses foreign detail identity",
+        "original Cross Close target refuses changed active context",
+        "original Cross Close target refuses different selected Team",
+        "original Cross Close target refuses rebound controller surface",
+        "original Cross Close target refuses missing stored session",
+        "original Cross Close target refuses different stored session owner surface",
+        "original Cross Close target refuses changed stored owner revision",
+        "original Cross Close target refuses current canEditNow false",
+        "original Cross Close target refuses non-owning controller",
+        "original Cross Close target refuses scoped Team refresh",
+        "original Cross Close target refuses unavailable accepted Team metadata",
+        "original Cross Close target refuses disabled assignment control",
+        "original Cross Close target refuses expanded assignment control",
+        "original Cross Close target refuses another assignee",
+        "original Cross Close target refuses missing assignment control",
+        "original Cross Close target refuses duplicate assignment controls",
+        "actual original Cross Close waits for same-Task cleared readiness before one pair at settled coordinates",
+        "actual original Cross Close retains the first-read deadline while renderer readiness is pending",
+        "actual original Cross Close cannot use a foreign dialog or an absent ineligible own control",
+        "actual original Cross Close refuses duplicate eligible controls before disabled or hit narrowing",
+        "actual original Cross Close refuses disabled covered and absent-hit controls",
+        "actual original Cross Close rereads revoked same-Task readiness at unchanged final coordinates",
+        "actual original Cross Close preserves final renderer ownership refusal without a press",
+        "actual original Cross Close preserves final exact geometry refusal without replay"
+      ],
+      "incomingOnly": [
+        "view-load diagnostics retain and echo the same bounded current-document projection without new reads",
+        "view-load diagnostics do not reuse the initial document fence after navigation",
+        "view-load diagnostics do not reuse the initial document fence after cleared",
+        "view-load diagnostics do not reuse the initial document fence after destroyed",
+        "throwing diagnostic stdout preserves the retained row and the original startup refusal",
+        "original desktop click revalidates a target unavailable during the final ownership check",
+        "original desktop click revalidates a target moved during the final ownership check",
+        "original desktop click revalidates a target tag-changed during the final ownership check",
+        "original desktop click revalidates a target nonfinite during the final ownership check",
+        "original scroll reveals an offscreen inner scroller (below) before scrolling its clipped target",
+        "original scroll reveals an offscreen inner scroller (above) before scrolling its clipped target",
+        "original desktop click rechecks owner after its pending final target read (moved=false)",
+        "original desktop click rechecks cutoff after its pending final target read (moved=false)",
+        "original desktop click rechecks owner after its pending final target read (moved=true)",
+        "original desktop click rechecks cutoff after its pending final target read (moved=true)",
+        "original desktop click preserves a final transport rejection without more reads or input",
+        "original Selection final Stop joins physical absence with its exact stopped UI within the same poll budget",
+        "Selection stopped convergence refuses wrong identity, unaccepted progress, visible progress and exhausted observation budget",
+        "the existing passive click recorder distinguishes the actual Team from later navigation without new actions",
+        "repeated final click movement exhausts the original shared observations without a press",
+        "geometry metadata getters cannot replace the original unavailable-target refusal when stdout throws",
+        "the actual generated target expression keeps the same eligible click when optional geometry APIs fail",
+        "original first A and B conversation waits for its exact preview before one physical click in the shared budget",
+        "original initial conversation rejects observations crossing the same cutoff without a late press or replay",
+        "original initial conversation refuses missing wrong or duplicate terminal previews before opening a chat",
+        "original lifecycle runtime and collaboration retain their boot budgets and navigation before one chat click",
+        "finite V2 P11 admission rejects mixed selectors before any fixture or process observation",
+        "finite V2 P11 Linux projection keeps exact kernel identity and refuses changed or foreign children",
+        "finite V2 terminal completion retains the original scenario Error after successful original final assertions",
+        "finite V2 terminal completion retains original finally precedence and refuses incomplete successful work",
+        "original native setup carries one live OpenCode window through actual global metadata and one configured start",
+        "original native setup never replenishes the start window and clamps ordinary reads to its smaller remainder",
+        "actual global metadata awaits one deferred response and refuses a successful response at the common cutoff",
+        "original setup rejects exact and late successful observations before a following request or accepted setup",
+        "pending-open setup checks the same cutoff after session native and digest observations",
+        "pending-open keeps original session identity empty-input and native actor predicates",
+        "owned guards and the original polling tick cannot dispatch after the setup cutoff",
+        "rejected original setup awaits and guards retain their exact Error even after the common cutoff",
+        "configured setup retains its original probe assertions and finally error precedence",
+        "legacy native setup keeps undefined CDP overrides and its separate 45-second post-start readiness window",
+        "standalone actual global metadata retains its default CDP override without selecting a setup window"
+      ],
+      "incrementAddedNames": [
+        "original desktop click revalidates a target unavailable during the final ownership check",
+        "original desktop click revalidates a target moved during the final ownership check",
+        "original desktop click revalidates a target tag-changed during the final ownership check",
+        "original desktop click revalidates a target nonfinite during the final ownership check",
+        "original scroll reveals an offscreen inner scroller (below) before scrolling its clipped target",
+        "original scroll reveals an offscreen inner scroller (above) before scrolling its clipped target",
+        "original desktop click rechecks owner after its pending final target read (moved=false)",
+        "original desktop click rechecks cutoff after its pending final target read (moved=false)",
+        "original desktop click rechecks owner after its pending final target read (moved=true)",
+        "original desktop click rechecks cutoff after its pending final target read (moved=true)",
+        "original desktop click preserves a final transport rejection without more reads or input",
+        "repeated final click movement exhausts the original shared observations without a press",
+        "original native setup carries one live OpenCode window through actual global metadata and one configured start",
+        "original native setup never replenishes the start window and clamps ordinary reads to its smaller remainder",
+        "actual global metadata awaits one deferred response and refuses a successful response at the common cutoff",
+        "original setup rejects exact and late successful observations before a following request or accepted setup",
+        "pending-open setup checks the same cutoff after session native and digest observations",
+        "pending-open keeps original session identity empty-input and native actor predicates",
+        "owned guards and the original polling tick cannot dispatch after the setup cutoff",
+        "rejected original setup awaits and guards retain their exact Error even after the common cutoff",
+        "configured setup retains its original probe assertions and finally error precedence",
+        "legacy native setup keeps undefined CDP overrides and its separate 45-second post-start readiness window",
+        "standalone actual global metadata retains its default CDP override without selecting a setup window"
+      ],
+      "incrementRemovedNames": [
+        "original desktop click refuses a target unavailable during the final ownership check",
+        "original desktop click refuses a target moved during the final ownership check",
+        "original desktop click rechecks owner after its pending final target read",
+        "original desktop click rechecks cutoff after its pending final target read",
+        "final click movement retains five original geometry reads and one closed diagnostic without a press"
+      ],
+      "limit": "Title equality is not assertion/body/semantic equality. Neither title union nor wholesale suite replacement is selected."
+    },
+    "renderer": {
+      "ownCases": 85,
+      "incomingCases": 90,
+      "ownIdentity": {
+        "bytes": 187890,
+        "sha256": "b6f11896e60014aac785968d42390afde38716d47de9bba9562522235db048c9",
+        "gitBlob": "76495189c992fcda47cd7a43a0c697190b5acbb3"
+      },
+      "incomingIdentity": {
+        "bytes": 195756,
+        "sha256": "32a6465ed0c29d9bb52cf1dd5edc54290e0245f663685b1f53fe1883fcd22dd2",
+        "gitBlob": "c909fed61c0800843bb8af5f25af9e21a31efef7"
+      },
+      "method": "Read literal registration arrays and titles only; no target-source/test execution.",
+      "limit": "Incoming90 includes passive diagnostic/extracted-operation cases; own85 must remain complete. No running result, skipped count or runtime PASS is inferred."
+    },
+    "controlConflict": "Incoming desktop-ui-controls changes bounded final-geometry resampling and outer scrolling, but replacing it would also remove own requiredContent click argument/target predicate and replace own pane-layout, getter-safe three-phase passive navigation schema with a different openTabs-based click-only schema. Existing own launch/conversation/Cross Close and passive-input cases cannot be discarded or silently reinterpreted."
+  },
+  "sourceClock": {
+    "path": "src/renderer/hooks/useConservativeNow.ts",
+    "identity": {
+      "bytes": 788,
+      "sha256": "88241cd1d6a346a6e58a7494faf07234cac432dbc50c160b2c83b1faf716ab02",
+      "gitBlob": "7ffb941aea601cc0387b4c6d1edd509dd8612633"
+    },
+    "finding": "Initial/source-mismatch snapshot uses Infinity; layout effect captures Date.now for the matching source before paint. Activity derives all selected readiness/display decisions from one source-qualified time.",
+    "ownDependency": "Own ProviderActivityStatusStrip additionally lacks the incoming hasCapturedTeamReadiness prop/callback path; current incoming body is not a standalone one-line own change. The helper does not itself establish native authority or timer-based expiry. Keep this cluster separate from the catalog predicate."
+  },
+  "providerPackageBoundary": {
+    "mapping": [
+      {
+        "name": "@agent-teams/provider-implementations",
+        "own": "file:../../vendor/provider-migration/host-logs-thinking-c79b81bf/agent-teams-provider-implementations-0.0.0.tgz",
+        "incoming": "file:../../vendor/provider-migration/v2-settled-fetch-c930d3c8/agent-teams-provider-implementations-0.0.0.tgz"
+      },
+      {
+        "name": "@agent-teams/provider-session-contracts",
+        "own": "file:../../vendor/provider-migration/host-logs-thinking-c79b81bf/agent-teams-provider-session-contracts-0.0.0.tgz",
+        "incoming": "file:../../vendor/provider-migration/host-logs-thinking-9423f600/agent-teams-provider-session-contracts-0.0.0.tgz"
+      }
+    ],
+    "rootPackageAndLockAndWorkspaceUnchangedInIncrement": true,
+    "incomingHostPackageDelta": "Only adds tests/team/*.test.ts to the existing Host test command in this increment.",
+    "newNativePromptArchives": "18a1c276 and74991c21 tarballs/receipts appear in the base merge but are not selected by current Host dependencies; their receipt qualification booleans are false.",
+    "providerPr8": "Independent guard reports PR8 remains8d471 with no source increment; root accepted51bc14de578871ec2fd82194b0c040164522ead1. This advisory independently verifies own/incoming manifests, not the provider PR metadata or tgz byte contents.",
+    "limitations": "No archive download/decompression, current full lock resolution, installation, build, native launch or package adoption performed."
+  },
+  "forbiddenWorkflowRisk": {
+    "workflowPath": ".github/workflows/native-prompt-suggestions-host.yml",
+    "workflowIdentity": {
+      "bytes": 3032,
+      "sha256": "8ef8f2f0fcd942c696c9dd79688eac995f008a5b9789500bb22339a619c69d62",
+      "gitBlob": "a46404bc643a592d7ebb8fe06bd3f5298d057885"
+    },
+    "driverPath": "packages/legacy-agent-host/tests/native-prompt-suggestions-host.native.ts",
+    "driverIdentity": {
+      "bytes": 17738,
+      "sha256": "329e9e588a8ef13d77bcc21a0e2d58203196267419e346f837031f609671aae8",
+      "gitBlob": "b23661abf4d205be415daba642d03c0e2d952c41"
+    },
+    "trigger": "New path-filtered pull_request workflow and input-free workflow_dispatch; listed Host binding/factory/test paths or workflow itself can match.",
+    "guard": "Job excludes only canonical PR1192 with exact source/base repository and branch names. No general Draft guard.",
+    "actualDriver": "Resolves actual @anthropic-ai/claude-agent-sdk Linux x64/Darwin ARM64 Claude executable, binds its file hash/path into original Host profile, calls team.launch.start, observes nativeReady and sends two human messages. Localhost model and TEST key do not eliminate the real executable.",
+    "implication": "Wholesale adoption into own/new PR would not inherit PR1192's exception and can expose a forbidden real-Claude route. Do not adopt that workflow/native feature as part of the isolated renderer change. This report does not waive or alter tests/guards and does not select an alternate diff to evade tests.",
+    "currentFrozenCiImpact": "None; current immutable PR1218 snapshot source/workflows remain unchanged. No CI status/run was read in this task."
+  },
+  "preciseScope": {
+    "selectedIncomingWholeStrings": [
+      {
+        "path": "packages/legacy-agent-host/package.json",
+        "ref": "5c55a4a2008f4a6131d265344d384b39415ad055",
+        "bytes": 12374,
+        "sha256": "5086e030c0785c2d76be6c943af2eefc252e2066eec45c1721a96276b1510496",
+        "gitBlob": "0afca52d625a85158f6423c154de007b59554419",
+        "wholeBodyIdentityVerified": true,
+        "changedInIncrement": true,
+        "semanticReadScope": "Selected complete functions and all relevant comparison hunks; not an exhaustive transitive audit"
+      },
+      {
+        "path": "packages/legacy-agent-host/src/composition/prepareTeamModelReadiness.ts",
+        "ref": "5c55a4a2008f4a6131d265344d384b39415ad055",
+        "bytes": 48510,
+        "sha256": "1537bb171c82f1f6203dd435be34359d64e37bb2f8556a2404540363cc22441a",
+        "gitBlob": "c7267693d9c352dfda12e778f4a1e405e3785ee4",
+        "wholeBodyIdentityVerified": true,
+        "changedInIncrement": true,
+        "semanticReadScope": "Selected complete functions and all relevant comparison hunks; not an exhaustive transitive audit"
+      },
+      {
+        "path": "tools/owned-process-broker/nativeEmulatedSourceScenario.ts",
+        "ref": "5c55a4a2008f4a6131d265344d384b39415ad055",
+        "bytes": 59238,
+        "sha256": "b494c6a22ddb8b0ebb84b52f7aa97e4bf93e3c787be3b4eae2277b705db2454f",
+        "gitBlob": "9cdcd52b268695af3b5fc78c5420bf427a8779ce",
+        "wholeBodyIdentityVerified": true,
+        "changedInIncrement": true,
+        "semanticReadScope": "Selected complete functions and all relevant comparison hunks; not an exhaustive transitive audit"
+      },
+      {
+        "path": "src/renderer/utils/teamModelAvailability.ts",
+        "ref": "5c55a4a2008f4a6131d265344d384b39415ad055",
+        "bytes": 32077,
+        "sha256": "b1da0ea7199e69eb042e5beb16dfafa91c4d7b9360db41a3f9ba16424ca2fd43",
+        "gitBlob": "ac6e66775bd5efaf81cecb9a2f22a3437b4343ad",
+        "wholeBodyIdentityVerified": true,
+        "changedInIncrement": true,
+        "semanticReadScope": "Selected complete functions and all relevant comparison hunks; not an exhaustive transitive audit"
+      },
+      {
+        "path": "src/renderer/hooks/useConservativeNow.ts",
+        "ref": "5c55a4a2008f4a6131d265344d384b39415ad055",
+        "bytes": 788,
+        "sha256": "88241cd1d6a346a6e58a7494faf07234cac432dbc50c160b2c83b1faf716ab02",
+        "gitBlob": "7ffb941aea601cc0387b4c6d1edd509dd8612633",
+        "wholeBodyIdentityVerified": true,
+        "changedInIncrement": true,
+        "semanticReadScope": "Selected complete functions and all relevant comparison hunks; not an exhaustive transitive audit"
+      },
+      {
+        "path": "src/renderer/components/common/ProviderActivityStatusStrip.tsx",
+        "ref": "5c55a4a2008f4a6131d265344d384b39415ad055",
+        "bytes": 14132,
+        "sha256": "8cb1d8d89a77343bf0832e7c7875e4d5ea4d8779a84156b10af377ecd9aad836",
+        "gitBlob": "4f265722685593616cf3a6196319c79d50420489",
+        "wholeBodyIdentityVerified": true,
+        "changedInIncrement": true,
+        "semanticReadScope": "Selected complete functions and all relevant comparison hunks; not an exhaustive transitive audit"
+      },
+      {
+        "path": "src/features/team-task-detail/renderer/ui/TaskDetailHeader.tsx",
+        "ref": "5c55a4a2008f4a6131d265344d384b39415ad055",
+        "bytes": 17075,
+        "sha256": "8d32dd960c841554fd59180308fc36e5b60def8e813803b087a5d44044072070",
+        "gitBlob": "e9d5580a90239d0748f6b5f374d04fd827b40dce",
+        "wholeBodyIdentityVerified": true,
+        "changedInIncrement": true,
+        "semanticReadScope": "Selected complete functions and all relevant comparison hunks; not an exhaustive transitive audit"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+        "ref": "5c55a4a2008f4a6131d265344d384b39415ad055",
+        "bytes": 47601,
+        "sha256": "5b2feb8629d03c92a5c004f8cb5923715e34060342c74f44418ed2897e193bf3",
+        "gitBlob": "6fd01f62356f098647cb454440790d7664ddaa3e",
+        "wholeBodyIdentityVerified": true,
+        "changedInIncrement": true,
+        "semanticReadScope": "Selected complete functions and all relevant comparison hunks; not an exhaustive transitive audit"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-task-review-cycle-ui-smoke.ts",
+        "ref": "5c55a4a2008f4a6131d265344d384b39415ad055",
+        "bytes": 33010,
+        "sha256": "8c7221ec684dfb04bf92c2d5ffdb3fedcdf80b130f824d01899474f29e0acdb7",
+        "gitBlob": "df76ce10ba52725b11fea48659b4cb516fc6fddf",
+        "wholeBodyIdentityVerified": true,
+        "changedInIncrement": false,
+        "semanticReadScope": "Selected complete functions and all relevant comparison hunks; not an exhaustive transitive audit"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+        "ref": "5c55a4a2008f4a6131d265344d384b39415ad055",
+        "bytes": 32310,
+        "sha256": "fd1ffb5544d0016f485976fdebd6e8dd078033a60554b70ad0b513953f720b78",
+        "gitBlob": "4f79628eb550fb2522f797437211510951a1581a",
+        "wholeBodyIdentityVerified": true,
+        "changedInIncrement": true,
+        "semanticReadScope": "Selected complete functions and all relevant comparison hunks; not an exhaustive transitive audit"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+        "ref": "5c55a4a2008f4a6131d265344d384b39415ad055",
+        "bytes": 193022,
+        "sha256": "484161ebe89f1caa3a5a39197b9476dc94bd530d5b72d009048eee59fde19fc7",
+        "gitBlob": "770835e3f57cf174535b066f17c2b9f40d160b58",
+        "wholeBodyIdentityVerified": true,
+        "changedInIncrement": true,
+        "semanticReadScope": "Selected relevant tests and complete static registration inventory where reported; no execution"
+      },
+      {
+        "path": "src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts",
+        "ref": "5c55a4a2008f4a6131d265344d384b39415ad055",
+        "bytes": 72914,
+        "sha256": "346f753b0bf13234c21299631fca1c1cf15a3373ab1d62c59d058acc363237d2",
+        "gitBlob": "48a951b2ddec9970fcaa1efa64be061e8e00b3d2",
+        "wholeBodyIdentityVerified": true,
+        "changedInIncrement": false,
+        "semanticReadScope": "Selected complete functions and all relevant comparison hunks; not an exhaustive transitive audit"
+      },
+      {
+        "path": "src/features/runtime-provider-management/renderer/hooks/runtimeProviderViewRefresh.ts",
+        "ref": "5c55a4a2008f4a6131d265344d384b39415ad055",
+        "bytes": 5660,
+        "sha256": "89707a4d23754519902d2a9413410e7468e41584fa1104bc4fb304ee8a889ea2",
+        "gitBlob": "e8fbf803614d4fecc90b8e8f34c64b9e6350a81f",
+        "wholeBodyIdentityVerified": true,
+        "changedInIncrement": false,
+        "semanticReadScope": "Selected complete functions and all relevant comparison hunks; not an exhaustive transitive audit"
+      },
+      {
+        "path": "src/features/runtime-provider-management/renderer/hooks/runtimeProviderManagementPresentation.ts",
+        "ref": "5c55a4a2008f4a6131d265344d384b39415ad055",
+        "bytes": 6382,
+        "sha256": "47c561887a1ea9a499f131a073c805be07a9a17343c1115b32ec173dcdf894c9",
+        "gitBlob": "1738fe12e51e14b9a5288313b8a253d1fdf3823e",
+        "wholeBodyIdentityVerified": true,
+        "changedInIncrement": true,
+        "semanticReadScope": "Selected complete functions and all relevant comparison hunks; not an exhaustive transitive audit"
+      },
+      {
+        "path": "src/features/runtime-provider-management/renderer/ui/RuntimeProviderManagementPanelView.tsx",
+        "ref": "5c55a4a2008f4a6131d265344d384b39415ad055",
+        "bytes": 97263,
+        "sha256": "8ecaf61b5d708b6cd7b85ca29b277908f489f2751794ce7efb514fd5b46e8c27",
+        "gitBlob": "1a1d9fea7f488068c31a4c7f587d6db565d6e914",
+        "wholeBodyIdentityVerified": true,
+        "changedInIncrement": true,
+        "semanticReadScope": "Selected complete functions and all relevant comparison hunks; not an exhaustive transitive audit"
+      },
+      {
+        "path": "test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts",
+        "ref": "5c55a4a2008f4a6131d265344d384b39415ad055",
+        "bytes": 195756,
+        "sha256": "32a6465ed0c29d9bb52cf1dd5edc54290e0245f663685b1f53fe1883fcd22dd2",
+        "gitBlob": "c909fed61c0800843bb8af5f25af9e21a31efef7",
+        "wholeBodyIdentityVerified": true,
+        "changedInIncrement": true,
+        "semanticReadScope": "Selected relevant tests and complete static registration inventory where reported; no execution"
+      },
+      {
+        "path": "test/renderer/utils/teamModelAvailability.test.ts",
+        "ref": "5c55a4a2008f4a6131d265344d384b39415ad055",
+        "bytes": 56775,
+        "sha256": "b08fe4a650ea9d23f4d8fa4b4ece157d9cd2f87e87e42b25c3c53934ed9974c8",
+        "gitBlob": "6cf34a11e7a1bc6f33208bad00adb57ee5656cd6",
+        "wholeBodyIdentityVerified": true,
+        "changedInIncrement": true,
+        "semanticReadScope": "Selected relevant tests and complete static registration inventory where reported; no execution"
+      },
+      {
+        "path": "packages/legacy-agent-host/src/composition/createCapturedPromptSuggestionBinding.ts",
+        "ref": "5c55a4a2008f4a6131d265344d384b39415ad055",
+        "bytes": 6367,
+        "sha256": "36618777d58a7ee7251fa234686eabb090d36554f0f8d873e8cf0ab0b569353c",
+        "gitBlob": "bdb1945768fea646c824c885995d2a9f1be51f28",
+        "wholeBodyIdentityVerified": true,
+        "changedInIncrement": true,
+        "semanticReadScope": "Selected complete functions and all relevant comparison hunks; not an exhaustive transitive audit"
+      },
+      {
+        "path": "packages/legacy-agent-host/src/composition/checkCapturedPromptOperation.ts",
+        "ref": "5c55a4a2008f4a6131d265344d384b39415ad055",
+        "bytes": 2896,
+        "sha256": "35c74da6464cf5fe7082b02812a23ae6f8317710a5cb3d12b3d2272c3e725313",
+        "gitBlob": "33b5495bbce5daa1315239bb990f52dd05ebcb82",
+        "wholeBodyIdentityVerified": true,
+        "changedInIncrement": true,
+        "semanticReadScope": "Selected complete functions and all relevant comparison hunks; not an exhaustive transitive audit"
+      },
+      {
+        "path": "src/features/agent-backend/main/composition/captureHostPromptSuggestions.ts",
+        "ref": "5c55a4a2008f4a6131d265344d384b39415ad055",
+        "bytes": 2374,
+        "sha256": "a7012ed27f082b27ad9df8bb89e43a335634d45867a34adb836fce104955f789",
+        "gitBlob": "06583c47f0101c13c949740ff324c39e92da5674",
+        "wholeBodyIdentityVerified": true,
+        "changedInIncrement": true,
+        "semanticReadScope": "Selected complete functions and all relevant comparison hunks; not an exhaustive transitive audit"
+      },
+      {
+        "path": "src/features/agent-backend/main/infrastructure/CapturedHostNotificationBuffer.ts",
+        "ref": "5c55a4a2008f4a6131d265344d384b39415ad055",
+        "bytes": 1559,
+        "sha256": "4218aace3645c17ab0962dbef02e123a0ba908f4a161b582e797eeb629399b27",
+        "gitBlob": "93ea37d5cea2fb5d7b6c430f48416a35b8c84b10",
+        "wholeBodyIdentityVerified": true,
+        "changedInIncrement": true,
+        "semanticReadScope": "Selected complete functions and all relevant comparison hunks; not an exhaustive transitive audit"
+      },
+      {
+        "path": "packages/legacy-agent-host/tests/native-prompt-suggestions-host.native.ts",
+        "ref": "5c55a4a2008f4a6131d265344d384b39415ad055",
+        "bytes": 17738,
+        "sha256": "329e9e588a8ef13d77bcc21a0e2d58203196267419e346f837031f609671aae8",
+        "gitBlob": "b23661abf4d205be415daba642d03c0e2d952c41",
+        "wholeBodyIdentityVerified": true,
+        "changedInIncrement": true,
+        "semanticReadScope": "Selected complete functions and all relevant comparison hunks; not an exhaustive transitive audit"
+      },
+      {
+        "path": ".github/workflows/native-prompt-suggestions-host.yml",
+        "ref": "5c55a4a2008f4a6131d265344d384b39415ad055",
+        "bytes": 3032,
+        "sha256": "8ef8f2f0fcd942c696c9dd79688eac995f008a5b9789500bb22339a619c69d62",
+        "gitBlob": "a46404bc643a592d7ebb8fe06bd3f5298d057885",
+        "wholeBodyIdentityVerified": true,
+        "changedInIncrement": true,
+        "semanticReadScope": "Selected complete functions and all relevant comparison hunks; not an exhaustive transitive audit"
+      },
+      {
+        "path": "vendor/provider-migration/native-prompt-suggestions-74991c21/source-receipt.json",
+        "ref": "5c55a4a2008f4a6131d265344d384b39415ad055",
+        "bytes": 1505,
+        "sha256": "19ac2de5327a06b3a67c59cf9ffda8f73daee2b07b195f1243ec00c7e4639db9",
+        "gitBlob": "8c552bf4a3ff4c49b19a644d1be9b0b8aa729c70",
+        "wholeBodyIdentityVerified": true,
+        "changedInIncrement": true,
+        "semanticReadScope": "Selected complete functions and all relevant comparison hunks; not an exhaustive transitive audit"
+      },
+      {
+        "path": "vendor/provider-migration/native-prompt-suggestions-18a1c276/source-receipt.json",
+        "ref": "5c55a4a2008f4a6131d265344d384b39415ad055",
+        "bytes": 1505,
+        "sha256": "ffde6c1c214e141f4be5ad8b4bbd0e5e6d03b1bd4519d7e74fa96c40e8121c2a",
+        "gitBlob": "38fad10f15470ec3d2d566f5b5b0c701a04575c1",
+        "wholeBodyIdentityVerified": true,
+        "changedInIncrement": true,
+        "semanticReadScope": "Selected complete functions and all relevant comparison hunks; not an exhaustive transitive audit"
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/64-windows-readiness-cleanup-2026-11-16.md",
+        "ref": "5c55a4a2008f4a6131d265344d384b39415ad055",
+        "bytes": 10586,
+        "sha256": "a454bcc85f27a7358586eed9b22716e202d3cf84eef1d06d60b7cd7f35104553",
+        "gitBlob": "0289cb5a2f9836bb1b941bbc2adfb03efe8b9859",
+        "wholeBodyIdentityVerified": true,
+        "changedInIncrement": true,
+        "semanticReadScope": "Contextual authored plan; not operational authority or runtime evidence"
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/75-captured-claude-sdk-model-catalog-2026-11-17.md",
+        "ref": "5c55a4a2008f4a6131d265344d384b39415ad055",
+        "bytes": 17692,
+        "sha256": "e1a86a2b4d59dd4ff44ea62008be3a529d8bd3d8633d107995de9927c4874897",
+        "gitBlob": "3326448953cd5f163facc87fa82e6a9b73ee7856",
+        "wholeBodyIdentityVerified": true,
+        "changedInIncrement": true,
+        "semanticReadScope": "Contextual authored plan; not operational authority or runtime evidence"
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/76-incorporate-native-suggestions-base-2026-11-17.md",
+        "ref": "5c55a4a2008f4a6131d265344d384b39415ad055",
+        "bytes": 12742,
+        "sha256": "5438a25fc1ddcbdd5538f534a98e47daa5faaede7bc89dd2ed5cfc2f1997c1f1",
+        "gitBlob": "0b02400bac5b2ed2540bec03f9ce1ca576298862",
+        "wholeBodyIdentityVerified": true,
+        "changedInIncrement": true,
+        "semanticReadScope": "Contextual authored plan; not operational authority or runtime evidence"
+      }
+    ],
+    "selectedOwnWholeStrings": [
+      {
+        "path": "packages/legacy-agent-host/package.json",
+        "ref": "9c9c73190840592963142d36562ea07d2b5d2d71",
+        "bytes": 12355,
+        "sha256": "4e567d64af0c5a0d85e155e90fd4eec9a6ca720e89edfe9923d7e4cc9a1b4f81",
+        "gitBlob": "42093f5cb1be431e383a2bbf97223a2bd8d54b49",
+        "wholeBodyIdentityVerified": true
+      },
+      {
+        "path": "packages/legacy-agent-host/src/composition/prepareTeamModelReadiness.ts",
+        "ref": "9c9c73190840592963142d36562ea07d2b5d2d71",
+        "bytes": 43732,
+        "sha256": "89fbe1d8736a5797aa3198df213b89d5861a07012675e91aff78d1302459cf14",
+        "gitBlob": "b9dd573db23b3033b5f3db7024b317681ce31499",
+        "wholeBodyIdentityVerified": true
+      },
+      {
+        "path": "tools/owned-process-broker/nativeEmulatedSourceScenario.ts",
+        "ref": "9c9c73190840592963142d36562ea07d2b5d2d71",
+        "bytes": 60524,
+        "sha256": "07007c2c67a27fbab6bd4906982b9460a634928ca80f7349abd47fa7eb747447",
+        "gitBlob": "f2af726dd2f352a1ecc0fa40753b76e72d008e14",
+        "wholeBodyIdentityVerified": true
+      },
+      {
+        "path": "src/renderer/utils/teamModelAvailability.ts",
+        "ref": "9c9c73190840592963142d36562ea07d2b5d2d71",
+        "bytes": 32055,
+        "sha256": "6e216e10c07e953472afb74045c3a976e9f4a1d4fcd3e9f5d46dc789d19022e6",
+        "gitBlob": "167751c56f74c2869b8b3d9b128002d5bd642bcb",
+        "wholeBodyIdentityVerified": true
+      },
+      {
+        "path": "test/renderer/utils/teamModelAvailability.test.ts",
+        "ref": "9c9c73190840592963142d36562ea07d2b5d2d71",
+        "bytes": 49687,
+        "sha256": "0e37baae735529c11d2ed43432b132b516d252af8bb3084714c7082d7d4c4db8",
+        "gitBlob": "1a58c9c686010d5b5ded00f8e2b5064e4ab78c32",
+        "wholeBodyIdentityVerified": true
+      },
+      {
+        "path": "src/renderer/components/common/ProviderActivityStatusStrip.tsx",
+        "ref": "9c9c73190840592963142d36562ea07d2b5d2d71",
+        "bytes": 13472,
+        "sha256": "811837bbe5e72a83efb79ed6a015d688fab997624eb3f0a57c69000ea8c9e7d9",
+        "gitBlob": "bd2eb01e2c72650724d4d1f2f63b95a90ed8b92e",
+        "wholeBodyIdentityVerified": true
+      },
+      {
+        "path": "src/features/team-task-detail/renderer/ui/TaskDetailHeader.tsx",
+        "ref": "9c9c73190840592963142d36562ea07d2b5d2d71",
+        "bytes": 17067,
+        "sha256": "9aa3aabc0d50852af7010fc9dfd1834905c6c078ac4bfe691e789f002ac05bd1",
+        "gitBlob": "68499fd50746417a48883f73ca1d25592c644089",
+        "wholeBodyIdentityVerified": true
+      },
+      {
+        "path": "src/features/runtime-provider-management/renderer/hooks/runtimeProviderManagementPresentation.ts",
+        "ref": "9c9c73190840592963142d36562ea07d2b5d2d71",
+        "bytes": 6481,
+        "sha256": "5e1015def1c50a2c2982617336d7e8ed46495295b5769aed8a5b2b885f53f1a0",
+        "gitBlob": "907fb16a613785324fdbd342c2993e08c8209a55",
+        "wholeBodyIdentityVerified": true
+      },
+      {
+        "path": "src/features/runtime-provider-management/renderer/ui/RuntimeProviderManagementPanelView.tsx",
+        "ref": "9c9c73190840592963142d36562ea07d2b5d2d71",
+        "bytes": 97366,
+        "sha256": "11871dd43b1c704230c83e722577ba4cdd4f4fd6c2eebce89cab02457b52b81a",
+        "gitBlob": "176344903eaee49ced9607a29f28a3c556e59f6e",
+        "wholeBodyIdentityVerified": true
+      },
+      {
+        "path": "src/shared/types/cliInstaller.ts",
+        "ref": "9c9c73190840592963142d36562ea07d2b5d2d71",
+        "bytes": 18202,
+        "sha256": "ce28995162a32167226dd7c7fb9e68ffc8b068d6bf1b8ec88355f76ceaae9c0e",
+        "gitBlob": "af81c3af93ae2a0e53a635daf16530a604c0fe39",
+        "wholeBodyIdentityVerified": true
+      },
+      {
+        "path": "src/renderer/components/team/dialogs/TeamModelSelector.tsx",
+        "ref": "9c9c73190840592963142d36562ea07d2b5d2d71",
+        "bytes": 157938,
+        "sha256": "919572aefbd5b4f8f56eb0c6a0953e8ac1efff9868861ff32655e73b58994d38",
+        "gitBlob": "e54fd44a11644202b3c3d0c17a0c85b66e9f1520",
+        "wholeBodyIdentityVerified": true
+      }
+    ],
+    "catalogOwnFeatureTree": {
+      "gitTree": "b7f0ef1778d71ff6acba422092f298900a08ec1e",
+      "entryCount": 218,
+      "truncated": false,
+      "entryPaths": [
+        "main/adapters/output/capturedClaudeMetadata.ts",
+        "main/adapters/output/CapturedRuntimeProviderStatusClient.ts"
+      ]
+    },
+    "readMethod": "Complete strings fetched and hashed. Semantic work is limited to selected complete functions, actual difference hunks, registration inventories and identified dependency boundaries. This does not approve every line in all137 non-document paths.",
+    "unchangedSettled": [
+      "Incoming Windows association/environment/custody modules absent from this increment",
+      "Incoming P11/Review/hook earlier finite/currentness designs remain separate from own exact reviewed fixes",
+      "Host manifests retain separate ownc79 versus incomingc930/9423 package selections",
+      "Native package/archive and provider qualification remain unclaimed"
+    ],
+    "retrievalCorrections": "Initial guessed paths for captureHostPromptSuggestions, CapturedHostNotificationBuffer and TeamModelSelector returned404; exact paths were resolved from actual increment/search metadata and read. A default-branch search served only path discovery; every decisive source fact is pinned to observed incoming or own immutable commit/blob. Missing patch data triggered complete selected body reads, never an unchanged assumption."
+  },
+  "checkCount": 39,
+  "checks": [
+    {
+      "name": "One-time PR snapshot binds requested repository and observed current head/base",
+      "result": "PASS",
+      "evidence": {
+        "head": "5c55a4a2008f4a6131d265344d384b39415ad055",
+        "base": "301d00f46db3389ff6e3042afd04c5b064a26270",
+        "state": "open",
+        "draft": true
+      }
+    },
+    {
+      "name": "Prior latest 530b report actual whole-byte identity",
+      "result": "PASS",
+      "evidence": {
+        "bytes": 345710,
+        "sha256": "42e1483d832195946da1772abd172ffb903c6c3f1466925dd856bb33ea79c348",
+        "gitBlob": "530b81573d701849da6249e92195572dc450959a"
+      }
+    },
+    {
+      "name": "Increment is only 75cf to 5c55",
+      "result": "PASS",
+      "evidence": {
+        "bytes": 1313691,
+        "sha256": "aaf95f4044c11e58ae4b2730c4ea1a3250a05d0ccdd765792ede928e7e62d348",
+        "gitBlob": "f4b8f48293c77cbd3521c9647f893114e4d00df9"
+      }
+    },
+    {
+      "name": "All reported increment paths are present once",
+      "result": "PASS",
+      "evidence": {
+        "nonDoc": 137,
+        "docs": 37
+      }
+    },
+    {
+      "name": "Current head records the observed base integration",
+      "result": "PASS",
+      "evidence": [
+        "e53ed0aded02c4af20a9b573c7808861f072bf8f",
+        "301d00f46db3389ff6e3042afd04c5b064a26270"
+      ]
+    },
+    {
+      "name": "New base has prior def734 as its sole parent",
+      "result": "PASS",
+      "evidence": "301d00f46db3389ff6e3042afd04c5b064a26270"
+    },
+    {
+      "name": "All selected incoming complete strings rehash",
+      "result": "PASS",
+      "evidence": {
+        "count": 28
+      }
+    },
+    {
+      "name": "All selected direct own complete strings rehash",
+      "result": "PASS",
+      "evidence": {
+        "count": 11
+      }
+    },
+    {
+      "name": "Own catalog utility is exactly incoming prior preimage",
+      "result": "PASS",
+      "evidence": {
+        "bytes": 32055,
+        "sha256": "6e216e10c07e953472afb74045c3a976e9f4a1d4fcd3e9f5d46dc789d19022e6",
+        "gitBlob": "167751c56f74c2869b8b3d9b128002d5bd642bcb"
+      }
+    },
+    {
+      "name": "Catalog current delta is exactly one existing predicate line",
+      "result": "PASS",
+      "evidence": {
+        "before": {
+          "bytes": 32055,
+          "sha256": "6e216e10c07e953472afb74045c3a976e9f4a1d4fcd3e9f5d46dc789d19022e6",
+          "gitBlob": "167751c56f74c2869b8b3d9b128002d5bd642bcb"
+        },
+        "after": {
+          "bytes": 32077,
+          "sha256": "b1da0ea7199e69eb042e5beb16dfafa91c4d7b9360db41a3f9ba16424ca2fd43",
+          "gitBlob": "ac6e66775bd5efaf81cecb9a2f22a3437b4343ad"
+        }
+      }
+    },
+    {
+      "name": "Catalog source still requires Anthropic and non-unavailable catalog",
+      "result": "PASS",
+      "evidence": {
+        "before": {
+          "bytes": 32055,
+          "sha256": "6e216e10c07e953472afb74045c3a976e9f4a1d4fcd3e9f5d46dc789d19022e6",
+          "gitBlob": "167751c56f74c2869b8b3d9b128002d5bd642bcb"
+        },
+        "after": {
+          "bytes": 32077,
+          "sha256": "b1da0ea7199e69eb042e5beb16dfafa91c4d7b9360db41a3f9ba16424ca2fd43",
+          "gitBlob": "ac6e66775bd5efaf81cecb9a2f22a3437b4343ad"
+        },
+        "changes": [
+          {
+            "beforeStart": 327,
+            "afterStart": 327,
+            "removed": [
+              "    providerStatus.modelCatalog.source === 'anthropic-models-api' &&"
+            ],
+            "added": [
+              "    ['anthropic-models-api', 'claude-sdk'].includes(providerStatus.modelCatalog.source) &&"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "Entire own catalog test body survives as exact prefix",
+      "result": "PASS",
+      "evidence": {
+        "before": {
+          "bytes": 49687,
+          "sha256": "0e37baae735529c11d2ed43432b132b516d252af8bb3084714c7082d7d4c4db8",
+          "gitBlob": "1a58c9c686010d5b5ded00f8e2b5064e4ab78c32"
+        },
+        "after": {
+          "bytes": 56775,
+          "sha256": "b08fe4a650ea9d23f4d8fa4b4ece157d9cd2f87e87e42b25c3c53934ed9974c8",
+          "gitBlob": "6cf34a11e7a1bc6f33208bad00adb57ee5656cd6"
+        },
+        "appendBytes": 7088
+      }
+    },
+    {
+      "name": "Catalog append contains three new existing-suite cases",
+      "result": "PASS",
+      "evidence": {
+        "newCases": 3,
+        "addedBytes": 7088
+      }
+    },
+    {
+      "name": "Catalog regressions keep display separate from authentication and verification",
+      "result": "PASS",
+      "evidence": {
+        "file": "test/renderer/utils/teamModelAvailability.test.ts"
+      }
+    },
+    {
+      "name": "Own DTO already includes claude-sdk source",
+      "result": "PASS",
+      "evidence": {
+        "path": "src/shared/types/cliInstaller.ts"
+      }
+    },
+    {
+      "name": "Own selector is the existing SDK-aware selector",
+      "result": "PASS",
+      "evidence": {
+        "path": "src/renderer/components/team/dialogs/TeamModelSelector.tsx"
+      }
+    },
+    {
+      "name": "Own captured producer and status consumer match complete pinned bodies",
+      "result": "PASS",
+      "evidence": {
+        "featureTree": "b7f0ef1778d71ff6acba422092f298900a08ec1e"
+      }
+    },
+    {
+      "name": "Readiness increment is one early bracket condition only",
+      "result": "PASS",
+      "evidence": {
+        "before": {
+          "bytes": 48528,
+          "sha256": "7a7419587a39e8f7473aea264903e0bb02bee694a79a5a3bfe2151953cf2b95c",
+          "gitBlob": "3de70853104e4c49685d870fc4977458f529bfea"
+        },
+        "after": {
+          "bytes": 48510,
+          "sha256": "1537bb171c82f1f6203dd435be34359d64e37bb2f8556a2404540363cc22441a",
+          "gitBlob": "c7267693d9c352dfda12e778f4a1e405e3785ee4"
+        }
+      }
+    },
+    {
+      "name": "Closing bracket source/policy checks remain",
+      "result": "PASS",
+      "evidence": {
+        "currentness": "Final account.source currentness and policy currentness retained"
+      }
+    },
+    {
+      "name": "Current readiness retains exact expiry refusal",
+      "result": "PASS",
+      "evidence": {
+        "deadline": "No deadline extension identified in the selected one-line delta"
+      }
+    },
+    {
+      "name": "Incoming suspended-root cleanup still requires root witness stop drain release",
+      "result": "PASS",
+      "evidence": {
+        "scope": "Original failure cleanup only"
+      }
+    },
+    {
+      "name": "Whole cleanup replacement would drop own exact no-dispatch evidence",
+      "result": "PASS",
+      "evidence": {
+        "notSelected": true
+      }
+    },
+    {
+      "name": "Own no-dispatch branch requires zero prepare/resume calls",
+      "result": "PASS",
+      "evidence": {
+        "scope": "Static exact predicate, not a new runtime qualification"
+      }
+    },
+    {
+      "name": "Own and incoming P11 original poll span are byte-identical",
+      "result": "PASS",
+      "evidence": {
+        "spanIdentity": {
+          "bytes": 480,
+          "sha256": "a8b74e0af90872abc585387846af421d433b10a6e273b21e3d5b6f41e89d517d",
+          "gitBlob": "5e4fb9a27300b28d58cdf4f77e875864693969b7"
+        },
+        "preservesTwoPostAwaitAssertions": true
+      }
+    },
+    {
+      "name": "Review wait authority implementations differ only in predicate spelling",
+      "result": "PASS",
+      "evidence": {
+        "own": "Non-null non-array object; canEditNow === true",
+        "incoming": "Boolean wrapper over same shape and strict true property",
+        "preserveOwnBytes": true
+      }
+    },
+    {
+      "name": "Incoming hook extraction retains current-request-only loading clear",
+      "result": "PASS",
+      "evidence": {
+        "notRequiredForOwnAlreadyPublishedFix": true
+      }
+    },
+    {
+      "name": "Own complete Node inventory remains 139 unique cases",
+      "result": "PASS",
+      "evidence": {
+        "identity": {
+          "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+          "ref": "9c9c73190840592963142d36562ea07d2b5d2d71",
+          "bytes": 164965,
+          "sha256": "852bedb85c83dbc4b488dffb4a9ffebbe398adc53e85f5a3cea8ca36b146cbf7",
+          "gitBlob": "896c587e077da56a98a314a175fb3cba0353d6ee",
+          "basis": "Accepted own corpus 9011bb, non-documents unchanged at frozen 9c9"
+        }
+      }
+    },
+    {
+      "name": "Prior/current incoming Node literal expansions are complete for reported registration forms",
+      "result": "PASS",
+      "evidence": {
+        "method": "Static expansion of every captured top-level test registration; all dynamic forms explicitly mapped"
+      }
+    },
+    {
+      "name": "Current Node title relation reconciles to both totals",
+      "result": "PASS",
+      "evidence": {
+        "historical133Vs69": "44 common, 89 own-only, 25 incoming-only",
+        "current139Vs87": "46 common, 93 own-only, 41 incoming-only"
+      }
+    },
+    {
+      "name": "Complete renderer static inventory remains own85/incoming90",
+      "result": "PASS",
+      "evidence": {
+        "method": "Read literal registration arrays and titles only; no target-source/test execution."
+      }
+    },
+    {
+      "name": "Root package, workspace lock and workspace manifest unchanged in reported increment",
+      "result": "PASS",
+      "evidence": {
+        "freshArchiveAudit": false
+      }
+    },
+    {
+      "name": "Incoming Host retains c930 implementations and 9423 contracts",
+      "result": "PASS",
+      "evidence": [
+        {
+          "name": "@agent-teams/provider-implementations",
+          "own": "file:../../vendor/provider-migration/host-logs-thinking-c79b81bf/agent-teams-provider-implementations-0.0.0.tgz",
+          "incoming": "file:../../vendor/provider-migration/v2-settled-fetch-c930d3c8/agent-teams-provider-implementations-0.0.0.tgz"
+        },
+        {
+          "name": "@agent-teams/provider-session-contracts",
+          "own": "file:../../vendor/provider-migration/host-logs-thinking-c79b81bf/agent-teams-provider-session-contracts-0.0.0.tgz",
+          "incoming": "file:../../vendor/provider-migration/host-logs-thinking-9423f600/agent-teams-provider-session-contracts-0.0.0.tgz"
+        }
+      ]
+    },
+    {
+      "name": "Own Host still selects c79 for both provider packages",
+      "result": "PASS",
+      "evidence": [
+        {
+          "name": "@agent-teams/provider-implementations",
+          "own": "file:../../vendor/provider-migration/host-logs-thinking-c79b81bf/agent-teams-provider-implementations-0.0.0.tgz",
+          "incoming": "file:../../vendor/provider-migration/v2-settled-fetch-c930d3c8/agent-teams-provider-implementations-0.0.0.tgz"
+        },
+        {
+          "name": "@agent-teams/provider-session-contracts",
+          "own": "file:../../vendor/provider-migration/host-logs-thinking-c79b81bf/agent-teams-provider-session-contracts-0.0.0.tgz",
+          "incoming": "file:../../vendor/provider-migration/host-logs-thinking-9423f600/agent-teams-provider-session-contracts-0.0.0.tgz"
+        }
+      ]
+    },
+    {
+      "name": "New native prompt suggestion archives are not selected by current Host dependencies",
+      "result": "PASS",
+      "evidence": [
+        {
+          "name": "@agent-teams/provider-implementations",
+          "own": "file:../../vendor/provider-migration/host-logs-thinking-c79b81bf/agent-teams-provider-implementations-0.0.0.tgz",
+          "incoming": "file:../../vendor/provider-migration/v2-settled-fetch-c930d3c8/agent-teams-provider-implementations-0.0.0.tgz"
+        },
+        {
+          "name": "@agent-teams/provider-session-contracts",
+          "own": "file:../../vendor/provider-migration/host-logs-thinking-c79b81bf/agent-teams-provider-session-contracts-0.0.0.tgz",
+          "incoming": "file:../../vendor/provider-migration/host-logs-thinking-9423f600/agent-teams-provider-session-contracts-0.0.0.tgz"
+        }
+      ]
+    },
+    {
+      "name": "New Host native workflow has only exact PR1192 exception",
+      "result": "PASS",
+      "evidence": {
+        "bytes": 3032,
+        "sha256": "8ef8f2f0fcd942c696c9dd79688eac995f008a5b9789500bb22339a619c69d62",
+        "gitBlob": "a46404bc643a592d7ebb8fe06bd3f5298d057885"
+      }
+    },
+    {
+      "name": "Native workflow passes complete real-Claude driver operand",
+      "result": "PASS",
+      "evidence": {
+        "bytes": 17738,
+        "sha256": "329e9e588a8ef13d77bcc21a0e2d58203196267419e346f837031f609671aae8",
+        "gitBlob": "b23661abf4d205be415daba642d03c0e2d952c41"
+      }
+    },
+    {
+      "name": "Driver resolves actual Claude SDK executable and selects it in Host profile",
+      "result": "PASS",
+      "evidence": {
+        "localhostInferenceDoesNotRemoveNativeClaude": true
+      }
+    },
+    {
+      "name": "Presentation-only copy candidates have exact own preimages",
+      "result": "PASS",
+      "evidence": {
+        "noCredentialMutationChange": true
+      }
+    },
+    {
+      "name": "Task header candidate is one min-height class in own-to-incoming body",
+      "result": "PASS",
+      "evidence": {
+        "visualExecution": false
+      }
+    }
+  ],
+  "failedChecks": [],
+  "decision": {
+    "mergeSelected": false,
+    "cherryPickSelected": false,
+    "sourceAdoptionSelected": false,
+    "postimageAuthored": false,
+    "runtimeSelected": false,
+    "ciActionSelected": false,
+    "rootMayEvaluateSeparateNarrowR1": true,
+    "minimumConcreteCandidate": "Existing published one-line teamModelAvailability predicate plus exact append-only catalog regression suite; preserve frozen own139/85 and own cleanup/control semantics."
+  }
+}

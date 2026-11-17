@@ -1,0 +1,1056 @@
+{
+  "schemaVersion": 1,
+  "kind": "generic-waitRead-post-observe-deadline-source-advisory",
+  "reviewer": "/root/producer_r2_semantic",
+  "at": "2026-11-17T03:50:42Z",
+  "repository": "777genius/agent-teams-ai",
+  "ownCommit": "9c9c73190840592963142d36562ea07d2b5d2d71",
+  "verdict": "CONCRETE_SOURCE_DEFECT_WITH_UNCOVERED_GENERIC_LATE_SUCCESS; NO_RUNTIME_RED_OR_POSTIMAGE",
+  "authority": {
+    "rootSoleAuthorApplierExecutor": true,
+    "readOnlyAssignment": "Inspect exact own generic waitRead, exact scoped callers, entire frozen Node139 source and current incoming coverage; propose minimum semantics and finite regression shapes only.",
+    "shell": false,
+    "targetSourceEvaluation": false,
+    "testExecution": false,
+    "nativeExecution": false,
+    "ciReadOrPolling": false,
+    "sourceRefPrOrWorkflowMutation": false,
+    "bareAdvisoryRetentionOnly": true
+  },
+  "sourceBasis": {
+    "ownControl": {
+      "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "bytes": 28974,
+      "sha256": "7626e479a6662242009cb050e7e5af612a29e4205d62666d15274d5c30f91386",
+      "gitBlob": "ed57cb0fe7d57ef076a591621289eb77667c63ad",
+      "physicalLines": 494,
+      "fullBodyReadAndHashVerified": true
+    },
+    "ownNode": {
+      "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+      "bytes": 164965,
+      "sha256": "852bedb85c83dbc4b488dffb4a9ffebbe398adc53e85f5a3cea8ca36b146cbf7",
+      "gitBlob": "896c587e077da56a98a314a175fb3cba0353d6ee",
+      "physicalLines": 2700,
+      "wholeBodyReadAndHashVerified": true,
+      "expandedCases": 139,
+      "topLevelRegistrationExpressions": 70
+    },
+    "ownRenderer": {
+      "path": "test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts",
+      "bytes": 187890,
+      "sha256": "b6f11896e60014aac785968d42390afde38716d47de9bba9562522235db048c9",
+      "gitBlob": "76495189c992fcda47cd7a43a0c697190b5acbb3",
+      "cases": 85,
+      "unchanged": true
+    },
+    "incomingCurrentControl": {
+      "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "ref": "5c55a4a2008f4a6131d265344d384b39415ad055",
+      "bytes": 32310,
+      "sha256": "fd1ffb5544d0016f485976fdebd6e8dd078033a60554b70ad0b513953f720b78",
+      "gitBlob": "4f79628eb550fb2522f797437211510951a1581a"
+    },
+    "incomingNode": {
+      "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+      "ref": "5c55a4a2008f4a6131d265344d384b39415ad055",
+      "bytes": 193022,
+      "sha256": "484161ebe89f1caa3a5a39197b9476dc94bd530d5b72d009048eee59fde19fc7",
+      "gitBlob": "770835e3f57cf174535b066f17c2b9f40d160b58",
+      "cases": 87
+    },
+    "incomingBoot": {
+      "path": "scripts/legacy-agent-host/desktop-emulated-boot-chat.ts",
+      "bytes": 1589,
+      "sha256": "ddb388b182f3b037ef88d2cdfe8a2e480fe0db05f61909e6dbc6cedbce566205",
+      "gitBlob": "00e61ff3a6228c33a59790f9ff997111a487d3e5",
+      "body": "import assert from 'node:assert/strict';\nimport { createDesktopUiControls, desktopJsLiteral as literal } from './desktop-ui-controls.ts';\nimport type { UiCdpPort } from './desktop-ui-controls.ts';\n\ntype Controls = ReturnType<typeof createDesktopUiControls>;\n\n/** Admit the rendered BOOT preview and open its chat within the original reply budget. */\nexport async function openDesktopEmulatedBootChat(cdp: UiCdpPort, options: {\n  selector: string; timeoutMs: 30_000 | 60_000; replyLabel: string;\n  assertOwnedRenderer(): void; step(value: Record<string, unknown>): void;\n  beforePreview?(controls: Controls): Promise<void>;\n  open(controls: Controls): Promise<void>;\n}) {\n  const deadline = Date.now() + options.timeoutMs;\n  const current = () => {\n    options.assertOwnedRenderer();\n    assert.ok(Date.now() < deadline, 'original initial conversation deadline');\n  };\n  const controls = createDesktopUiControls(cdp, { assertOwnedRenderer: current, step: options.step });\n  if (options.beforePreview) {\n    current(); await options.beforePreview(controls); current();\n  }\n  await controls.waitRead(`(() => { const rows = [...document.querySelectorAll(${literal(options.selector)})];\n    return rows.length === 1 && [...rows[0].querySelectorAll('span')]\n      .filter(span => span.textContent.trim() === 'TEST boot ready').length === 1; })()`,\n    'original lead BOOT preview', deadline - Date.now());\n  current();\n  await options.open(controls);\n  await controls.waitRead(`document.body.innerText.includes('TEST boot ready')`,\n    options.replyLabel, deadline - Date.now());\n  current();\n}\n"
+    },
+    "main": {
+      "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.ts",
+      "bytes": 27829,
+      "sha256": "9ea0a2063cae525d80b8a79eac4fcb79062d47fe81f9f2b72d843662a3e92abf",
+      "gitBlob": "9aa43a43d6186c62bc92dae60dab4fe57cc63fe6"
+    },
+    "previousBoundedIncomingAdvisory": {
+      "gitBlob": "7b8dec59f17e2886c24a52fd4faa030e7df8fa99",
+      "bytes": 126069,
+      "sha256": "24fdef84a14ad724a4a73f60dc6f74d680f725d1427a85b83b466628ab3711b2"
+    }
+  },
+  "finding": {
+    "exactObservedFunction": {
+      "startLine": 186,
+      "endLine": 209,
+      "bytes": 793,
+      "sha256": "a1b1d26ea3873cf48398642707799c26e672be2dcb1b59b146b425baae8c7d6c",
+      "gitBlob": "8e9e8df6ea7a3a9eb06536beb4c6056cfaa93262",
+      "body": "  const waitRead = async (\n    expression: string,\n    label: string,\n    timeoutMs = 30_000,\n    isReady: (value: unknown) => boolean = Boolean\n  ): Promise<unknown> => {\n    const deadline = Date.now() + timeoutMs;\n    while (Date.now() < deadline) {\n      options.assertOwnedRenderer();\n      try {\n        const value = await cdp.evaluate(expression);\n        if (isReady(value)) return value;\n      } catch (error) {\n        if (\n          !/execution context was destroyed|cannot find (?:default )?execution context|cannot find context with specified id/i.test(\n            String(error)\n          )\n        )\n          throw error;\n      }\n      await new Promise<void>((done) => setTimeout(done, 100));\n    }\n    throw new Error(`UI read timed out: ${label}; no mutation retry`);\n  };\n",
+      "derivedFragmentSeparatelyRetained": false
+    },
+    "controlFlow": "deadline is computed once; while checks Date.now before ownership guard and asynchronous evaluate; a fulfilled value immediately enters isReady and can be returned. There is no Date.now check between settlement and readiness admission.",
+    "counterexample": "Start at0 with30,000ms budget. First read returnsfalse at0; original100ms wait enters another iteration at100. Second read resolves to an accepted value at30,000 or30,001. The source returns it even though the same deadline has expired. This example does not require a single CDP request to exceed30s: the second request lasts29,900/29,901ms.",
+    "equality": "Existing loop contract is strict Date.now() < deadline; equality is already expired. Acceptance at equality is therefore an inconsistency, not a permitted inclusive boundary.",
+    "independence": "P11 private poll already has two post-await checks. Its local reads and tests do not change or exercise this generic function. A later generic readiness gate used even by P11 UI steps remains distinct.",
+    "inferenceBoundary": "This is a deterministic source-level path deduction. No current/old CI log, reproduction, runtime RED, test PASS, or new execution is claimed.",
+    "pendingScope": "The defect here is admission of fulfilled late results. Active cancellation/preemption of a still-pending CDP operation, a new total multi-step click deadline, clock replacement, and additional post-guard dispatch checks are outside this bounded requirement."
+  },
+  "callers": {
+    "completeInternalDirectCalls": [
+      {
+        "line": 265,
+        "owner": "clickExpression.readPoint",
+        "budget": "30,000 ms for each original phase invocation",
+        "predicate": "Reject unavailableTarget while retaining closed diagnostic facts; otherwise Boolean(value)",
+        "followingEffect": "Initial accepted point can lead to one hover; subsequent per-phase reads and final direct geometry/currentness guards precede one press/release."
+      },
+      {
+        "line": 362,
+        "owner": "hoverExpression",
+        "budget": "30,000 ms",
+        "predicate": "Three equal eligible finite x/y observations",
+        "followingEffect": "One original mouseMoved after the accepted third observation and existing owner guard."
+      },
+      {
+        "line": 388,
+        "owner": "scrollTo",
+        "budget": "default30,000 ms per original observation",
+        "predicate": "defaultBoolean over returned visibility/point object",
+        "followingEffect": "visible=true returns; visible=false can lead to the original bounded mouseWheel. No single overall scroll deadline is defined here."
+      },
+      {
+        "line": 434,
+        "owner": "clickSidebar canonical seed prerequisite",
+        "budget": "90,000 ms",
+        "predicate": "defaultBoolean",
+        "followingEffect": "Moves to the existing visible-row observation."
+      },
+      {
+        "line": 442,
+        "owner": "clickSidebar visible row",
+        "budget": "default30,000 ms",
+        "predicate": "defaultBoolean",
+        "followingEffect": "Existing owner guard, then one hover."
+      },
+      {
+        "line": 455,
+        "owner": "clickSidebar hovered row",
+        "budget": "default30,000 ms",
+        "predicate": "defaultBoolean",
+        "followingEffect": "Starts existing geometry stabilization samples."
+      },
+      {
+        "line": 459,
+        "owner": "clickSidebar geometry samples",
+        "budget": "default30,000 ms per original call",
+        "predicate": "defaultBoolean",
+        "followingEffect": "Existing stability assertion/currentness guard, then one press/release."
+      }
+    ],
+    "scopedExternalCompleteFilePins": [
+      {
+        "path": "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+        "bytes": 24759,
+        "sha256": "d15b7eea14c0951194310aee34ddc5c477879c759a97a4e2f4e9fce1f956ce9b",
+        "gitBlob": "cf93da72a198dac636658e512093eef7828b5927",
+        "callLines": [
+          45,
+          58,
+          72,
+          77,
+          108,
+          112,
+          117,
+          187,
+          195,
+          205,
+          211,
+          215,
+          224,
+          228,
+          232,
+          244,
+          245
+        ],
+        "callCount": 17
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts",
+        "bytes": 36260,
+        "sha256": "26357f37b146fc171bbceadb624bde4a7f4e459d2073ae23a651e757817b2d38",
+        "gitBlob": "4700a0052d3c58a2b3d9bc66e6803220688050fd",
+        "callLines": [
+          154,
+          163,
+          256,
+          261,
+          271,
+          304,
+          324,
+          383,
+          389,
+          394,
+          438,
+          445,
+          464,
+          475,
+          486,
+          487,
+          496,
+          542,
+          551,
+          596,
+          632,
+          653,
+          666,
+          744,
+          751
+        ],
+        "callCount": 25
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+        "bytes": 45795,
+        "sha256": "2c5931f5c7fa1dc8bb7858201c1b8afdbae9683faf4a2ad9fce067f116f3f94b",
+        "gitBlob": "5026f0ec6165bb092717ddc989043848a25081dc",
+        "callLines": [
+          261,
+          274,
+          279,
+          307,
+          308,
+          314,
+          320,
+          413,
+          415,
+          436,
+          450,
+          462,
+          492,
+          546
+        ],
+        "callCount": 14
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-task-review-cycle-ui-smoke.ts",
+        "bytes": 33036,
+        "sha256": "4fa52cfad9347065680ef62a3ba6420762408a78a93b77e96ac3a2e16e68bdc9",
+        "gitBlob": "8d175c98158b3bd71192aef7b1929484b2b681b6",
+        "callLines": [
+          322,
+          335,
+          348,
+          387,
+          401,
+          415,
+          486,
+          492,
+          538,
+          545,
+          685,
+          705,
+          713,
+          740
+        ],
+        "callCount": 14
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.ts",
+        "bytes": 27829,
+        "sha256": "9ea0a2063cae525d80b8a79eac4fcb79062d47fe81f9f2b72d843662a3e92abf",
+        "gitBlob": "9aa43a43d6186c62bc92dae60dab4fe57cc63fe6",
+        "callLines": [
+          73,
+          79,
+          86,
+          92,
+          104,
+          150,
+          156,
+          171
+        ],
+        "callCount": 8
+      }
+    ],
+    "scopedExternalCallCount": 78,
+    "scope": "Seven lexical direct waitRead calls in the complete helper plus all78 lexical public calls in the five pinned current producer files. This is an exact bounded caller inventory, not a new repository-wide transitive census.",
+    "consequentialExamples": [
+      {
+        "path": "scripts/legacy-agent-host/desktop-task-review-cycle-ui-smoke.ts",
+        "lines": [
+          414,
+          435
+        ],
+        "fact": "Strict canEditNow=true descriptor still relies on generic30s wait. A ready descriptor settling late can be accepted before the existing scroll/focus/insert/submit sequence. The earlier authority predicate fix does not enforce post-observe time."
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+        "lines": [
+          74,
+          95
+        ],
+        "fact": "Third equal eligible saved-settings observation can arrive late; current generic helper calls the stateful stability predicate and can authorize the original expand-settings click."
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts",
+        "lines": [
+          153,
+          177
+        ],
+        "fact": "measuredClick reads a point through generic waitRead; its later owner check does not itself recheck that wait invocation's absolute deadline."
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+        "lines": [
+          307,
+          320
+        ],
+        "fact": "Launch-dialog, preflight, close and native-readiness UI waits call generic waitRead despite the separate fixed private90s poll."
+      }
+    ],
+    "ownershipQualification": "Existing caller guards may independently reject an expired broader scenario or stale renderer. They do not universally imply that each local30/60/90s wait deadline still holds after its awaited observation. Subsequent input remains subject to its existing guards; this report does not claim an observed unauthorized native action.",
+    "perInvocationBoundary": "Existing click/readPoint and sidebar phases start separate original waitRead invocations. The minimum correction does not combine them, replenish a current invocation, or create a new shared budget."
+  },
+  "testCoverage": {
+    "method": "Whole Node139 string identity and complete static registration inventory joined. All12 createDesktopUiControls construction sites and all mocked-clock/deferred/budget paths were cross-referenced with their full fixture/test bodies; no target source was evaluated. Existing incoming87 source and relevant actual BOOT helper read similarly.",
+    "directGenericLateSuccessRegressionPresentInOwn139": false,
+    "directGenericLateSuccessRegressionPresentInIncoming87": false,
+    "coverage": [
+      {
+        "id": "own-startup",
+        "source": "ownNode",
+        "lines": [
+          31,
+          86
+        ],
+        "target": "attachRendererDiagnostics / Main/UI startup boundary",
+        "facts": "Deferred startup snapshot remains pending past its separately enforced remaining startup deadline; later resolution cannot trigger discovery.",
+        "genericLateSuccessCovered": false,
+        "reason": "Does not invoke createDesktopUiControls.waitRead."
+      },
+      {
+        "id": "own-saved-launch",
+        "source": "ownNode",
+        "lines": [
+          1968,
+          2099
+        ],
+        "target": "Actual generic waitRead through original saved-Launch source prefix",
+        "facts": "Finite DOM frames and 100ms fake timer; two perpetual-invalid cases assert exactly300reads/300guards/300ticks at30,000ms and no settings action. Timely stable/invalid-reset cases are also covered.",
+        "genericLateSuccessCovered": false,
+        "reason": "evaluate does not advance the clock across the deadline; time advances only after each non-ready observation, so no fulfilled ready result arrives at/after deadline."
+      },
+      {
+        "id": "own-conversation",
+        "source": "ownNode",
+        "lines": [
+          2105,
+          2215
+        ],
+        "target": "Actual click/readPoint/generic waitRead with requiredContent",
+        "facts": "Invalid original preview cases exhaust300reads/ticks; timely preview produces one input sequence; final direct lookup rechecks revoked preview and geometry.",
+        "genericLateSuccessCovered": false,
+        "reason": "Same fake-clock advancement only in100ms waits; final direct lookup is a separate branch."
+      },
+      {
+        "id": "own-cross-close",
+        "source": "ownNode",
+        "lines": [
+          2327,
+          2551
+        ],
+        "target": "Actual original Cross Close and generic readPoint wait",
+        "facts": "Pending/ineligible/foreign/duplicate/disabled cases exhaust unchanged first-read deadline; accepted ready controls use exact existing sequence; revoked owner/geometry refusals remain.",
+        "genericLateSuccessCovered": false,
+        "reason": "CDP evaluation never changes the clock to the generic deadline while returning a ready result."
+      },
+      {
+        "id": "own-final-target",
+        "source": "ownNode",
+        "lines": [
+          1279,
+          1321
+        ],
+        "target": "clickExpression final direct cdp.evaluate and post-read ownership guard",
+        "facts": "A deferred fifth target read crosses an injected1ms external cutoff or loses ownership; exact supplied refusal is preserved and no press/release follows.",
+        "genericLateSuccessCovered": false,
+        "reason": "The deferred fifth lookup is ownControl line324, outside waitRead; the rejection comes from the existing external owner guard."
+      },
+      {
+        "id": "own-membership",
+        "source": "ownNode",
+        "lines": [
+          2553,
+          2614
+        ],
+        "target": "Extracted original membership producer private poll",
+        "facts": "Three exact/late ready observations at90,000/90,001 and timing/cadence/error controls cover the already fixed P11 producer.",
+        "genericLateSuccessCovered": false,
+        "reason": "The fixture extracts const poll from desktop-live-membership-ui-smoke.ts; it does not invoke generic waitRead."
+      },
+      {
+        "id": "own-review",
+        "source": "ownNode",
+        "lines": [
+          2616,
+          2700
+        ],
+        "target": "Actual Review correction source prefix and actual generic waitRead",
+        "facts": "Rejects null/missing/false/numeric/array authority; accepts current or false-then-current with exactly one original input sequence; retains read and insert error identity.",
+        "genericLateSuccessCovered": false,
+        "reason": "No finite deadline crossing is introduced. Budget30,000 is asserted, but observations settle immediately or after the ordinary100ms wait."
+      },
+      {
+        "id": "incoming-boot",
+        "source": "incomingNode",
+        "lines": [
+          2460,
+          2647
+        ],
+        "target": "Actual generic waitRead inside incoming openDesktopEmulatedBootChat",
+        "facts": "Preview and reply return successful values at the shared cutoff. The helper itself remains unchanged and returns those values; the surrounding current() immediately after each waitRead then throws original initial conversation deadline.",
+        "genericLateSuccessCovered": false,
+        "scenarioLateSuccessCovered": true,
+        "reason": "It proves the outer conversation boundary, not rejection by generic waitRead. Expected error text is the outer guard's. Earlier generic timeout would change the asserted error source; this is an incoming integration consideration, not a reason to preserve the bug."
+      },
+      {
+        "id": "incoming-new-native-setup",
+        "source": "incomingNode",
+        "lines": [
+          2779,
+          3105
+        ],
+        "target": "Extracted prepareDesktopNativeStop/captureDesktopOpenCodeGlobalMetadata in desktop-native-stop-fixture.ts",
+        "facts": "Eleven new cases cover exact/late successful setup observations, retained shared180s setup budget, pending-open observations, guard/tick crossings, original errors and45s legacy readiness.",
+        "genericLateSuccessCovered": false,
+        "reason": "The extracted setup functions and fixture environment do not call createDesktopUiControls.waitRead. Different explicit observation/currentness boundary."
+      },
+      {
+        "id": "other-own-generic-users",
+        "source": "ownNode",
+        "lines": [
+          613,
+          713,
+          1194,
+          1277,
+          1660,
+          1836
+        ],
+        "target": "Existing click/hover/scroll/passive recorder cases",
+        "facts": "Timely moving/stable targets, temporary unavailability, final geometry changes, bounded scroll and passive observation semantics.",
+        "genericLateSuccessCovered": false,
+        "reason": "No ready generic CDP observation is held across its own wait deadline."
+      }
+    ],
+    "incomingCompatibility": "Incoming BOOT late preview/reply cases genuinely traverse the generic helper, then rely on the immediately following enclosing current() for refusal. A future earlier generic timeout can change their expected error text. Preserve that distinction in any separate future integration; no incoming suite, caller, source or workflow adoption is selected.",
+    "completeOwnCaseInventory": [
+      "captured UI discovery waits for Main admission and actual mount while early diagnostics remain active",
+      "the original remaining startup deadline rejects a pending snapshot without late discovery or a reset",
+      "packed file readiness executes the actual diagnostic expression using exact href instead of Electron opaque origin",
+      "HTTP readiness keeps exact origin and document path guards when the runtime location origin is untrusted",
+      "isolated shell fixture emits the actual framed environment and refuses shell effects",
+      "original in-progress Task comment prerequisite requires its exact stage without an assignment control",
+      "Task attachment comment waits for its original focused owner after one click before inserting text",
+      "original Task assignment prerequisite refuses receipt-only, pending and stale renderer state",
+      "original Task assignment prerequisite rejects a foreign context, Team, Task or rebound surface",
+      "original desktop click waits for stable target geometry, without repeating input",
+      "original Task hover waits through layout and unavailability before its one physical move",
+      "original desktop click refuses a constantly moving target before dispatch",
+      "original owner-qualified click rereads its full expression through unavailability at unchanged coordinates",
+      "login failure facts retain only bounded original attempts and confirmed milestones",
+      "finite readiness failure summaries keep only bounded states and never private snapshot data",
+      "Taskboard failure summaries compare retained identities without exposing private snapshot values",
+      "installer failure summaries preserve original wait sites and attempts without inferring installation effects",
+      "installer failure projection does not invoke input getters and leaves oversized observations unknown",
+      "installer CDP and cleanup projection retains only exact finite observations",
+      "Selection target summaries retain the exact original phase and six closed facts",
+      "Selection target projection rejects unknown or malformed facts without exposing text or invoking getters",
+      "Taskboard focus diagnostics preserve last samples and bounded transitions without exposing private input",
+      "original desktop click refuses a target unavailable during the final ownership check",
+      "original desktop click refuses a target moved during the final ownership check",
+      "original default scroll preserves a disabled control before its readiness wait",
+      "original scroll opt-in reveals a covered checkbox with one bounded wheel",
+      "original desktop click rechecks owner after its pending final target read",
+      "original desktop click rechecks cutoff after its pending final target read",
+      "original clarification lookup admits its retained read without completing the assignment prerequisite",
+      "original clarification lookup refuses changed owner, revision, refresh and retained-read joins",
+      "original owner availability admits three captured A Teams through its actual first DOM read",
+      "original owner availability retains singleton, subset and duplicate-row cardinality semantics",
+      "original owner availability refuses foreign identities and preserves its existing aggregate guards",
+      "original owner availability refuses invalid captured discovery before navigation",
+      "owner availability admits every captured A Team through the actual first observation",
+      "owner availability refuses healthy B in unavailable A rows",
+      "owner availability refuses captured foreign owner in unavailable A rows",
+      "owner availability refuses unknown Team in unavailable A rows",
+      "owner availability refuses malformed Team in unavailable A rows",
+      "owner availability refuses missing selected A before original navigation",
+      "owner availability refuses non-string A handle before original navigation",
+      "owner availability refuses empty A handle before original navigation",
+      "owner availability refuses duplicate A handle before original navigation",
+      "owner availability refuses over-bound capture before original navigation",
+      "passive input keeps its actual Team target and three separate original navigation samples",
+      "passive navigation preserves non-card events, the original ring bounds and null or non-Team state",
+      "passive navigation refuses malformed target and store facts without losing original callbacks",
+      "passive navigation remains bounded and cannot interrupt original writes on diagnostic failure",
+      "passive navigation uses only the callable store own method and ignores unrelated card surfaces",
+      "the selected provider receipt digest matches the actual manifest-selected archive bytes",
+      "provider receipt legacy, current and equal-dual implementation digests preserve manifest authority",
+      "every present provider implementation digest must be valid and both recognized fields must agree",
+      "provider receipt shape, package selection and original file or JSON errors remain strict",
+      "saved Launch uses three stable actual DOM samples before its original settings action",
+      "saved Launch resets exact geometry when the original button shifts by a quarter pixel",
+      "saved Launch restarts its three samples after changed identity",
+      "saved Launch restarts its three samples after changed expanded state",
+      "saved Launch restarts its three samples after changed horizontal position",
+      "saved Launch restarts its three samples after changed width",
+      "saved Launch restarts its three samples after changed height",
+      "saved Launch resets its original readiness after absent target",
+      "saved Launch resets its original readiness after ambiguous target",
+      "saved Launch resets its original readiness after wrong model",
+      "saved Launch resets its original readiness after absent identity",
+      "saved Launch resets its original readiness after empty identity",
+      "saved Launch resets its original readiness after invalid expansion",
+      "saved Launch resets its original readiness after missing owning dialog",
+      "saved Launch resets its original readiness after nonfinite x",
+      "saved Launch resets its original readiness after nonfinite y",
+      "saved Launch resets its original readiness after zero width",
+      "saved Launch resets its original readiness after negative height",
+      "saved Launch resets its original readiness after running own animation",
+      "saved Launch resets its original readiness after paused own animation",
+      "saved Launch resets its original readiness after pending own animation",
+      "saved Launch allows finished own animation without inspecting descendant spinners or model status",
+      "saved Launch allows idle own animation without inspecting descendant spinners or model status",
+      "saved Launch exhausts its one original deadline with no matching model and no settings action",
+      "saved Launch exhausts its one original deadline with unsettled own dialog and no settings action",
+      "original conversation waits for its own reply before one click at the hydrated coordinates",
+      "default conversation click retains its original final geometry refusal without a preview predicate",
+      "original conversation refuses body-only reply within its unchanged first read deadline",
+      "original conversation refuses neighbor-only reply within its unchanged first read deadline",
+      "original conversation refuses different required reply within its unchanged first read deadline",
+      "original conversation refuses empty preview within its unchanged first read deadline",
+      "original conversation refuses missing target within its unchanged first read deadline",
+      "original conversation refuses zero-size target within its unchanged first read deadline",
+      "original conversation refuses disabled target within its unchanged first read deadline",
+      "original conversation refuses covered target within its unchanged first read deadline",
+      "original conversation refuses two eligible rows with only the second ready within its unchanged first read deadline",
+      "original conversation serializes its required preview as literal data",
+      "original conversation rereads a revoked preview at unchanged final coordinates before input",
+      "original conversation still refuses final owner despite a ready preview",
+      "original conversation still refuses final movement despite a ready preview",
+      "actual openChat forwards TEST boot ready for alice",
+      "actual openChat forwards TEST stream partial for alice",
+      "actual openChat forwards TEST boot ready for team-lead",
+      "actual openChat forwards TEST stream partial for team-lead",
+      "original Cross Close target admits the ready cleared Task when canResolveClarification is false",
+      "original Cross Close target refuses retained user clarification",
+      "original Cross Close target refuses retained external clarification",
+      "original Cross Close target refuses null clarification",
+      "original Cross Close target refuses full-detail refreshPending",
+      "original Cross Close target refuses full-detail loading",
+      "original Cross Close target refuses current detail error",
+      "original Cross Close target refuses current deletionIntent",
+      "original Cross Close target refuses full Task deletedAt",
+      "original Cross Close target refuses full Task deleted status",
+      "original Cross Close target refuses non-ready full-detail phase",
+      "original Cross Close target refuses foreign full Task ID",
+      "original Cross Close target refuses foreign detail identity",
+      "original Cross Close target refuses changed active context",
+      "original Cross Close target refuses different selected Team",
+      "original Cross Close target refuses rebound controller surface",
+      "original Cross Close target refuses missing stored session",
+      "original Cross Close target refuses different stored session owner surface",
+      "original Cross Close target refuses changed stored owner revision",
+      "original Cross Close target refuses current canEditNow false",
+      "original Cross Close target refuses non-owning controller",
+      "original Cross Close target refuses scoped Team refresh",
+      "original Cross Close target refuses unavailable accepted Team metadata",
+      "original Cross Close target refuses disabled assignment control",
+      "original Cross Close target refuses expanded assignment control",
+      "original Cross Close target refuses another assignee",
+      "original Cross Close target refuses missing assignment control",
+      "original Cross Close target refuses duplicate assignment controls",
+      "actual original Cross Close waits for same-Task cleared readiness before one pair at settled coordinates",
+      "actual original Cross Close retains the first-read deadline while renderer readiness is pending",
+      "actual original Cross Close cannot use a foreign dialog or an absent ineligible own control",
+      "actual original Cross Close refuses duplicate eligible controls before disabled or hit narrowing",
+      "actual original Cross Close refuses disabled covered and absent-hit controls",
+      "actual original Cross Close rereads revoked same-Task readiness at unchanged final coordinates",
+      "actual original Cross Close preserves final renderer ownership refusal without a press",
+      "actual original Cross Close preserves final exact geometry refusal without replay",
+      "P11 keeps the original 90-second cutoff for first result at the exact cutoff",
+      "P11 keeps the original 90-second cutoff for first result after the cutoff",
+      "P11 keeps the original 90-second cutoff for polled result after the cutoff",
+      "P11 actual poll retains timely acceptance, original cadence, currentness and read-error identity",
+      "original review correction refuses missing or false live edit authority before any input action",
+      "original review correction admits current authority with one original insertion and submit"
+    ],
+    "preserve": "All current139 Node cases and85 renderer cases remain complete and unchanged. New finite cases, if later selected/authored by root, should add coverage without deleting or rewriting existing oracles."
+  },
+  "minimumSemanticRequirement": {
+    "text": "For each fulfilled cdp.evaluate in a waitRead invocation, admit the observation to its readiness predicate only while the same original absolute deadline still satisfies strict Date.now() < deadline after the await. If expired, end that wait through its existing timeout diagnostic rather than returning a late value.",
+    "preserve": [
+      "Original timeoutMs default30,000 and caller-supplied budgets",
+      "One absolute deadline computed per invocation",
+      "Existing expression and readiness predicate semantics for timely results",
+      "Original100ms cadence while continuing within the original budget",
+      "Existing owner guard placement, error identity and recognized execution-context replacement handling",
+      "Existing UI read timed out label and no mutation retry diagnostic",
+      "No extra read, readiness contribution, input step or acceptance after a late fulfilled observation",
+      "Original requiredContent target/click contract, passive navigation schema and current three published producer fixes"
+    ],
+    "reasonForBeforePredicate": "Several exact callers use stateful readiness predicates, notably stable target/settings sample counts. An expired observation must not advance those counters or be admitted as a successful sample.",
+    "implementationNotAuthored": true,
+    "noHypotheticalPostimageApproved": true
+  },
+  "finiteRegressionShapes": {
+    "executionStatus": "UNEXECUTED; semantic shapes only",
+    "mechanism": "Use actual exported createDesktopUiControls with a finite fake CDP port and controlled Date.now. Hold/release the original evaluation promise after setting the clock. Observe actual results, predicate calls, owner checks, read count, original100ms waits and absence of input. Do not run a copied waitRead/P11 algorithm or use real sleeps/vendor binaries.",
+    "cases": [
+      {
+        "id": "late-first-exact",
+        "priority": "required distinguishing regression",
+        "observations": [
+          {
+            "read": 1,
+            "settlesAtMs": 30000,
+            "value": "same truthy object"
+          }
+        ],
+        "expected": "Reject through existing UI read timeout diagnostic with original label; no result acceptance, readiness-predicate call, further CDP read,100ms wait,step or input.",
+        "counts": {
+          "reads": 1,
+          "guards": 1,
+          "predicateCalls": 0,
+          "waits": []
+        },
+        "currentSourcePrediction": "Returns the object. Source deduction only; no runtime RED executed."
+      },
+      {
+        "id": "late-first-after",
+        "priority": "required distinguishing regression",
+        "observations": [
+          {
+            "read": 1,
+            "settlesAtMs": 30001,
+            "value": "same truthy object"
+          }
+        ],
+        "expected": "Same refusal and no follow-on work as exact-boundary case.",
+        "counts": {
+          "reads": 1,
+          "guards": 1,
+          "predicateCalls": 0,
+          "waits": []
+        },
+        "currentSourcePrediction": "Returns the object."
+      },
+      {
+        "id": "late-polled",
+        "priority": "required distinguishing regression",
+        "observations": [
+          {
+            "read": 1,
+            "settlesAtMs": 0,
+            "value": false
+          },
+          {
+            "read": 2,
+            "startsAfterOrdinaryTickMs": 100,
+            "settlesAtMs": [
+              30000,
+              30001
+            ],
+            "value": "same truthy object"
+          }
+        ],
+        "expected": "Reject at the original deadline after the second fulfilled read; first false observation alone reached predicate; retain exactly one100ms wait and no replay.",
+        "counts": {
+          "reads": 2,
+          "guards": 2,
+          "predicateCalls": 1,
+          "waits": [
+            100
+          ]
+        },
+        "currentSourcePrediction": "Returns the second object despite expiry."
+      },
+      {
+        "id": "late-not-ready",
+        "priority": "small boundary companion",
+        "observations": [
+          {
+            "read": 1,
+            "settlesAtMs": 30000,
+            "value": false
+          }
+        ],
+        "expected": "The late result does not enter a stateful readiness predicate or schedule another wait. Preserve original timeout text.",
+        "counts": {
+          "reads": 1,
+          "guards": 1,
+          "predicateCalls": 0,
+          "waits": []
+        },
+        "currentSourcePrediction": "Calls predicate and incurs one100ms wait before the next loop condition throws."
+      },
+      {
+        "id": "timely",
+        "priority": "preservation controls",
+        "observations": [
+          {
+            "variant": "immediate",
+            "read": 1,
+            "settlesAtMs": 29999,
+            "value": "same truthy object"
+          },
+          {
+            "variant": "after one false",
+            "read": 1,
+            "settlesAtMs": 0,
+            "value": false
+          },
+          {
+            "variant": "after one false",
+            "read": 2,
+            "settlesAtMs": 101,
+            "value": "same truthy object"
+          }
+        ],
+        "expected": "Return the exact original value identity; preserve one immediate read/no wait or two reads/one100ms wait, original expression, owner checks, readiness semantics and no generic input actions."
+      },
+      {
+        "id": "custom-budget",
+        "priority": "parameter preservation",
+        "observations": [
+          {
+            "timeoutMs": 73,
+            "settlesAtMs": 72,
+            "value": true
+          },
+          {
+            "timeoutMs": 73,
+            "settlesAtMs": 73,
+            "value": true
+          }
+        ],
+        "expected": "Honor the supplied timeout: timely succeeds, exact boundary refuses. Do not hardcode30s or alter existing60/90s callers."
+      },
+      {
+        "id": "errors-and-ownership",
+        "priority": "preservation controls",
+        "observations": [
+          {
+            "kind": "non-transient evaluate rejection",
+            "settlesAtMs": 30001,
+            "error": "unique original Error object"
+          },
+          {
+            "kind": "isReady throws",
+            "settlesAtMs": 1,
+            "error": "unique ordinary predicate Error"
+          },
+          {
+            "kind": "owner guard throws before evaluate",
+            "error": "unique original owner Error"
+          }
+        ],
+        "expected": "Retain exact original rejection object and no new retry. The evaluate rejection is not converted into a deadline error; guard failure makes zero CDP calls. Existing catch classification remains unchanged."
+      },
+      {
+        "id": "context-recovery",
+        "priority": "preservation control",
+        "observations": [
+          {
+            "read": 1,
+            "settlesAtMs": 0,
+            "error": "existing recognized execution-context replacement error"
+          },
+          {
+            "read": 2,
+            "settlesAtMs": 101,
+            "value": true
+          }
+        ],
+        "expected": "Retain existing recognized-context recovery, same expression/absolute deadline and one100ms wait, without broadening the whitelist. An already-late recognized error must not lead to another read; its existing catch/tick semantics are outside the fulfilled-result change."
+      },
+      {
+        "id": "actual-hover-consumer",
+        "priority": "one meaningful original caller regression",
+        "observations": [
+          {
+            "read": 1,
+            "settlesAtMs": 0,
+            "value": {
+              "x": 100,
+              "y": 100
+            }
+          },
+          {
+            "read": 2,
+            "settlesAtMs": 100,
+            "value": {
+              "x": 100,
+              "y": 100
+            }
+          },
+          {
+            "read": 3,
+            "settlesAtMs": 30000,
+            "value": {
+              "x": 100,
+              "y": 100
+            }
+          }
+        ],
+        "expected": "Use actual createDesktopUiControls.hoverExpression. The third equal eligible point arriving at the deadline must not trigger the one mouseMoved. Require no Input dispatch or step,3original reads,2ordinary100ms waits, and preserve a timely-third counterpart with exactly one move.",
+        "currentSourcePrediction": "Third point reaches the stateful predicate, makes stable=3, returns and permits the following original move under a still-current owner. No runtime execution performed."
+      }
+    ],
+    "minimumCore": "Exact-boundary first success, after-boundary first success, and late later success distinguish the bug; timely/cadence/error/context controls preserve behavior. One actual hover consumer demonstrates the user-input consequence without replacing the helper or adopting an incoming scenario."
+  },
+  "exclusions": {
+    "newR1": false,
+    "newRunner": false,
+    "newPostimage": false,
+    "sourceFixApplied": false,
+    "testsAuthored": false,
+    "ciAction": false,
+    "oldAttemptReplayed": false,
+    "realClaudeCodex": false,
+    "nativeWorkflowAdoption": false,
+    "snapshotRefMovement": false,
+    "qualificationChange": false
+  },
+  "checkCount": 26,
+  "checks": [
+    {
+      "name": "Exact full own helper identity",
+      "result": "PASS",
+      "evidence": {
+        "bytes": 28974,
+        "sha256": "7626e479a6662242009cb050e7e5af612a29e4205d62666d15274d5c30f91386",
+        "gitBlob": "ed57cb0fe7d57ef076a591621289eb77667c63ad"
+      }
+    },
+    {
+      "name": "Exact full frozen Node139 identity",
+      "result": "PASS",
+      "evidence": {
+        "bytes": 164965,
+        "sha256": "852bedb85c83dbc4b488dffb4a9ffebbe398adc53e85f5a3cea8ca36b146cbf7",
+        "gitBlob": "896c587e077da56a98a314a175fb3cba0353d6ee"
+      }
+    },
+    {
+      "name": "All139 own static case names remain complete and unique",
+      "result": "PASS",
+      "evidence": {
+        "declarations": 70,
+        "expandedCases": 139
+      }
+    },
+    {
+      "name": "Entire own helper has494 physical lines",
+      "result": "PASS",
+      "evidence": {
+        "fullSourceRead": true
+      }
+    },
+    {
+      "name": "Unique generic waitRead source boundary",
+      "result": "PASS",
+      "evidence": {
+        "bytes": 793,
+        "sha256": "a1b1d26ea3873cf48398642707799c26e672be2dcb1b59b146b425baae8c7d6c",
+        "gitBlob": "8e9e8df6ea7a3a9eb06536beb4c6056cfaa93262"
+      }
+    },
+    {
+      "name": "Readiness return immediately follows fulfilled await with no clock check",
+      "result": "PASS",
+      "evidence": {
+        "ownLines": [
+          196,
+          197
+        ]
+      }
+    },
+    {
+      "name": "Only two current clock reads in exact generic function",
+      "result": "PASS",
+      "evidence": {
+        "locations": "deadline initialization and loop-entry condition only"
+      }
+    },
+    {
+      "name": "Original deadline remains per invocation and caller-configurable",
+      "result": "PASS",
+      "evidence": {
+        "defaultMs": 30000
+      }
+    },
+    {
+      "name": "Original100ms cadence and timeout diagnostic identified",
+      "result": "PASS",
+      "evidence": {
+        "originalBehavior": true
+      }
+    },
+    {
+      "name": "Original currentness guard and non-transient rejection paths remain distinct",
+      "result": "PASS",
+      "evidence": {
+        "noPostimage": true
+      }
+    },
+    {
+      "name": "Generic waitRead is exposed on the returned controls object",
+      "result": "PASS",
+      "evidence": {
+        "publicApi": true
+      }
+    },
+    {
+      "name": "Seven internal direct call sites mapped",
+      "result": "PASS",
+      "evidence": {
+        "lines": [
+          265,
+          362,
+          388,
+          434,
+          442,
+          455,
+          459
+        ]
+      }
+    },
+    {
+      "name": "Selected public caller inventory is78 sites across5 complete body pins",
+      "result": "PASS",
+      "evidence": {
+        "notARepositoryWideCallerCensus": true
+      }
+    },
+    {
+      "name": "All12 own actual control factory call sites identified",
+      "result": "PASS",
+      "evidence": {
+        "lines": [
+          632,
+          649,
+          680,
+          696,
+          1202,
+          1243,
+          1287,
+          1698,
+          1988,
+          2129,
+          2364,
+          2644
+        ]
+      }
+    },
+    {
+      "name": "Saved Launch clock advances only in existing100ms timer within its fixture",
+      "result": "PASS",
+      "evidence": {
+        "timer": "waits.push(delay); now += delay; queueMicrotask(callback)"
+      }
+    },
+    {
+      "name": "Conversation and Cross Close invalid cases assert exhausted deadline",
+      "result": "PASS",
+      "evidence": {
+        "lateReadyCovered": false
+      }
+    },
+    {
+      "name": "Own final deferred fifth lookup is outside generic waitRead",
+      "result": "PASS",
+      "evidence": {
+        "ownLines": [
+          324
+        ],
+        "testLines": [
+          1291
+        ]
+      }
+    },
+    {
+      "name": "P11 tests extract separate already-fixed poll",
+      "result": "PASS",
+      "evidence": {
+        "genericCoverage": false
+      }
+    },
+    {
+      "name": "Own Review authority tests contain no mocked deadline crossing",
+      "result": "PASS",
+      "evidence": {
+        "actualGenericButTimely": true
+      }
+    },
+    {
+      "name": "Both incoming75cf and current5c55 generic functions are byte-identical",
+      "result": "PASS",
+      "evidence": {
+        "incomingControl": {
+          "bytes": 32310,
+          "sha256": "fd1ffb5544d0016f485976fdebd6e8dd078033a60554b70ad0b513953f720b78",
+          "gitBlob": "4f79628eb550fb2522f797437211510951a1581a"
+        }
+      }
+    },
+    {
+      "name": "Incoming complete Node inventory has87 unique cases",
+      "result": "PASS",
+      "evidence": {
+        "bytes": 193022,
+        "sha256": "484161ebe89f1caa3a5a39197b9476dc94bd530d5b72d009048eee59fde19fc7",
+        "gitBlob": "770835e3f57cf174535b066f17c2b9f40d160b58"
+      }
+    },
+    {
+      "name": "Incoming BOOT wrapper places currentness guard after both awaits",
+      "result": "PASS",
+      "evidence": {
+        "bytes": 1589,
+        "sha256": "ddb388b182f3b037ef88d2cdfe8a2e480fe0db05f61909e6dbc6cedbce566205",
+        "gitBlob": "00e61ff3a6228c33a59790f9ff997111a487d3e5"
+      }
+    },
+    {
+      "name": "Incoming BOOT test expects the enclosing guard error",
+      "result": "PASS",
+      "evidence": {
+        "lateScenarioCoveredButGenericBugMasked": true
+      }
+    },
+    {
+      "name": "New native setup fixture does not call generic waitRead",
+      "result": "PASS",
+      "evidence": {
+        "separateExtractedSource": "desktop-native-stop-fixture.ts"
+      }
+    },
+    {
+      "name": "Own requiredContent API remains exact",
+      "result": "PASS",
+      "evidence": {
+        "noEdits": true
+      }
+    },
+    {
+      "name": "Own passive navigation and renderer85 remain pinned",
+      "result": "PASS",
+      "evidence": {
+        "noEdits": true,
+        "rendererCases": 85
+      }
+    }
+  ],
+  "failedChecks": [],
+  "decision": "Root can evaluate a separate narrow R1 for generic fulfilled-result admission and finite regressions. This report itself selects no implementation or execution."
+}

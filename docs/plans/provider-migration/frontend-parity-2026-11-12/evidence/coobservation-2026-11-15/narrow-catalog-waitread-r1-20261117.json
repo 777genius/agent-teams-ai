@@ -1,0 +1,446 @@
+{
+  "schemaVersion": 1,
+  "kind": "narrow-captured-catalog-and-ui-read-deadline-r1",
+  "at": "2026-11-17 04:04:53 UTC",
+  "repository": "777genius/agent-teams-ai",
+  "workingBranch": "fix/frontend-parity-coobservation-c714-20261115",
+  "purpose": "Close two independently established source omissions while preserving the full existing regression suites and frozen selected CI. Consume already-supported captured Claude SDK catalog rows; refuse fulfilled generic UI observations that arrive at or after their original deadline.",
+  "authority": {
+    "rootOnly": [
+      "source/test/control authorship",
+      "application or staging",
+      "runtime execution",
+      "Git ref/PR/CI mutation"
+    ],
+    "independentReviewers": "Read-only repository/evidence review; may retain report blobs only. No shell/runtime/source/ref/PR/CI changes.",
+    "userAuthorization": "User requested autonomous end-to-end parity work in parallel and immediate push of every commit. This plan does not authorize default-branch merge/release/Ready/Stage2 or real Claude/Codex."
+  },
+  "basis": {
+    "commit": "935ed8dd0b0f3f95cbbc7ed6d691009efa2c47da",
+    "tree": "06ec0aa08b8e8e0efd306d6f58d3c885049d31b4",
+    "docsTree": "6ccda6dc08689c8e55da721b9761d94d933ef9f5",
+    "parent": "9c9c73190840592963142d36562ea07d2b5d2d71",
+    "rootActual": {
+      "bytes": 53161,
+      "sha256": "3ebeb6b009e4de828099550161a2160360f522b583df704327d4b43fe0b37247",
+      "gitBlob": "7b1e84798593f4e30e0b717f157bf75fe8ae2c85"
+    },
+    "independentActual": {
+      "bytes": 223719,
+      "sha256": "bed437ac7d407dc9132ce7ba34ff360e80d078e1e9e8eeb30d7e9c5e8e881bdc",
+      "gitBlob": "ebc1cd39f61dbaf9a6823a6655031ad0181d851f"
+    },
+    "actualReadbacksAcceptedAt": "2026-11-17 03:59:20 UTC",
+    "nonDocLeaves": 8798,
+    "workflowLeaves": 42,
+    "productionFiles": 5020,
+    "lineCap": 800,
+    "frozenExceptions": 141,
+    "appAdvisory": {
+      "bytes": 126069,
+      "sha256": "24fdef84a14ad724a4a73f60dc6f74d680f725d1427a85b83b466628ab3711b2",
+      "gitBlob": "7b8dec59f17e2886c24a52fd4faa030e7df8fa99"
+    },
+    "catalogAdvisory": {
+      "bytes": 48970,
+      "sha256": "3516082b456bbc8a48907005441316612ed285ac0a705f9e8f98139e5f171903",
+      "gitBlob": "b5c90cb7d5c3d018c6475bae2207ca3932cb6732"
+    },
+    "catalogSupersededAdvisory": {
+      "identity": {
+        "bytes": 48842,
+        "sha256": "2eb3d8d5429304e55a4a7cde15d4b6c986611e8e409f94d791b103dda0339e96",
+        "gitBlob": "60982ac5f74fb96fcb9dcd4ea3835b21f681488b"
+      },
+      "qualification": "Superseded only for exact captureGuard callback wording; no source or runtime action occurred under it."
+    },
+    "waitReadAdvisory": {
+      "bytes": 49935,
+      "sha256": "5b106b029096b02b288db395cdb05c8f367cd16444c2f015e79c9f28098f9134",
+      "gitBlob": "a3660453344deb2c4e91cdc8e951c44f9d501817"
+    },
+    "wholeNodeFeasibility": {
+      "bytes": 59294,
+      "sha256": "cdbaf093a3a94966ef8e1452c029a0c85a9d9b1a0a4702414eb8ed00b4a50c56",
+      "gitBlob": "d5a26fd663b828ab99461fe2b6466e1f059f8e6a"
+    }
+  },
+  "sourceBefore": [
+    {
+      "role": "controls",
+      "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "mode": "100644",
+      "bytes": 28974,
+      "sha256": "7626e479a6662242009cb050e7e5af612a29e4205d62666d15274d5c30f91386",
+      "gitBlob": "ed57cb0fe7d57ef076a591621289eb77667c63ad"
+    },
+    {
+      "role": "nodeAggregate",
+      "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+      "mode": "100644",
+      "bytes": 164965,
+      "sha256": "852bedb85c83dbc4b488dffb4a9ffebbe398adc53e85f5a3cea8ca36b146cbf7",
+      "gitBlob": "896c587e077da56a98a314a175fb3cba0353d6ee"
+    },
+    {
+      "role": "catalog",
+      "path": "src/renderer/utils/teamModelAvailability.ts",
+      "mode": "100644",
+      "bytes": 32055,
+      "sha256": "6e216e10c07e953472afb74045c3a976e9f4a1d4fcd3e9f5d46dc789d19022e6",
+      "gitBlob": "167751c56f74c2869b8b3d9b128002d5bd642bcb"
+    },
+    {
+      "role": "catalogTests",
+      "path": "test/renderer/utils/teamModelAvailability.test.ts",
+      "mode": "100644",
+      "bytes": 49687,
+      "sha256": "0e37baae735529c11d2ed43432b132b516d252af8bb3084714c7082d7d4c4db8",
+      "gitBlob": "1a58c9c686010d5b5ded00f8e2b5064e4ab78c32"
+    }
+  ],
+  "newTestPath": "scripts/legacy-agent-host/desktop-ui-controls-deadline.test.ts",
+  "newTestBefore": {
+    "exists": false,
+    "provedBy": "Complete actual scripts subtree with 634 total entries and 600 leaves, retained from unchanged source publication and joined to current935 root scripts tree."
+  },
+  "selectedSourceSemantics": {
+    "catalog": {
+      "path": "src/renderer/utils/teamModelAvailability.ts",
+      "incomingCommit": "5c55a4a2008f4a6131d265344d384b39415ad055",
+      "candidate": {
+        "bytes": 32077,
+        "sha256": "b1da0ea7199e69eb042e5beb16dfafa91c4d7b9360db41a3f9ba16424ca2fd43",
+        "gitBlob": "ac6e66775bd5efaf81cecb9a2f22a3437b4343ad"
+      },
+      "change": "Accept claude-sdk alongside anthropic-models-api in the existing first-party Anthropic catalog source predicate; leave providerId===anthropic and status!==unavailable in force.",
+      "exactDifference": "One existing line; +22 bytes and zero added physical lines/imports/helpers.",
+      "candidateTests": {
+        "bytes": 56775,
+        "sha256": "b08fe4a650ea9d23f4d8fa4b4ece157d9cd2f87e87e42b25c3c53934ed9974c8",
+        "gitBlob": "6cf34a11e7a1bc6f33208bad00adb57ee5656cd6"
+      },
+      "testDelta": "Exact existing own whole40-case test file is a byte prefix; append7088 bytes comprising3 existing incoming cases.",
+      "casePrediction": {
+        "oldWhole40": "not rerun here",
+        "newDiscriminating": 2,
+        "newPreservation": 1,
+        "totalAfter": 43
+      },
+      "meaning": "UI offered-model availability only. No authentication, verification, fresh authority, teamLaunch, oneShot or native/provider readiness promotion. Resolved offers, aliases, hidden/unavailable rows and curated fallback retain reviewed semantics.",
+      "noAdditionalIncomingAdoption": true
+    },
+    "waitRead": {
+      "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "change": "Immediately after each fulfilled original cdp.evaluate and before calling isReady, check the same existing absolute deadline with strict Date.now()<deadline. On expiry leave the original loop and use its existing timeout throw; do not call the predicate, accept the value, read again or schedule another100ms tick for that expired fulfilled observation.",
+      "minimality": "One post-await expiry gate only. No new clock origin, callback, import, async branch, retry or transport race.",
+      "preserve": [
+        "default30000 and every supplied timeout",
+        "single original absolute deadline",
+        "original100ms cadence for continuing timely observations",
+        "original owner guard placement",
+        "same expression and same timely isReady predicate behavior",
+        "original non-transient error identity",
+        "unchanged recognized execution-context error whitelist",
+        "existing UI read timed out diagnostic with original label and no mutation retry",
+        "requiredContent target/click contract",
+        "passive navigation and task clarification evidence",
+        "all existing producer fixes"
+      ],
+      "outsideScope": [
+        "active preemption of a still-pending CDP request",
+        "new total multi-step click deadline",
+        "additional post-ownership dispatch guards",
+        "changes to rejected-request catch/tick semantics",
+        "claim that current Desktop/native readiness failures are resolved"
+      ]
+    }
+  },
+  "newDeadlineTests": {
+    "path": "scripts/legacy-agent-host/desktop-ui-controls-deadline.test.ts",
+    "mode": "100644",
+    "imports": [
+      "node:assert/strict",
+      "node:test",
+      "./desktop-ui-controls.ts"
+    ],
+    "cases": [
+      {
+        "id": "late-first-exact",
+        "title": "generic UI read refuses its first fulfilled value exactly at the original deadline",
+        "oldPrediction": "FAIL",
+        "reads": 1,
+        "predicates": 0,
+        "ticks": [],
+        "boundaryMs": 30000
+      },
+      {
+        "id": "late-first-after",
+        "title": "generic UI read refuses its first fulfilled value after the original deadline",
+        "oldPrediction": "FAIL",
+        "reads": 1,
+        "predicates": 0,
+        "ticks": [],
+        "boundaryMs": 30001
+      },
+      {
+        "id": "late-polled-exact",
+        "title": "generic UI read refuses a later fulfilled value exactly at the original deadline",
+        "oldPrediction": "FAIL",
+        "reads": 2,
+        "predicates": 1,
+        "ticks": [
+          100
+        ],
+        "boundaryMs": 30000
+      },
+      {
+        "id": "late-polled-after",
+        "title": "generic UI read refuses a later fulfilled value after the original deadline",
+        "oldPrediction": "FAIL",
+        "reads": 2,
+        "predicates": 1,
+        "ticks": [
+          100
+        ],
+        "boundaryMs": 30001
+      },
+      {
+        "id": "late-not-ready",
+        "title": "generic UI read does not admit or poll again after a late false observation",
+        "oldPrediction": "FAIL",
+        "reads": 1,
+        "predicates": 0,
+        "ticks": [],
+        "boundaryMs": 30000
+      },
+      {
+        "id": "timely-first",
+        "title": "generic UI read preserves a timely first value and its exact identity",
+        "oldPrediction": "PASS",
+        "reads": 1,
+        "predicates": 1,
+        "ticks": [],
+        "boundaryMs": 29999
+      },
+      {
+        "id": "timely-polled",
+        "title": "generic UI read preserves its original cadence and a timely later value",
+        "oldPrediction": "PASS",
+        "reads": 2,
+        "predicates": 2,
+        "ticks": [
+          100
+        ],
+        "boundaryMs": 101
+      },
+      {
+        "id": "custom-budget",
+        "title": "generic UI read honors a supplied budget at its strict boundary",
+        "oldPrediction": "FAIL",
+        "subcases": [
+          {
+            "budget": 73,
+            "settles": 72,
+            "outcome": "same value"
+          },
+          {
+            "budget": 73,
+            "settles": 73,
+            "outcome": "original timeout"
+          }
+        ]
+      },
+      {
+        "id": "hover-late",
+        "title": "generic UI hover refuses a third stable point arriving at the original deadline",
+        "oldPrediction": "FAIL",
+        "reads": 3,
+        "ticks": [
+          100,
+          100
+        ],
+        "boundaryMs": 30000,
+        "inputDispatches": 0,
+        "steps": 0
+      },
+      {
+        "id": "hover-timely",
+        "title": "generic UI hover preserves one movement after three timely stable points",
+        "oldPrediction": "PASS",
+        "reads": 3,
+        "ticks": [
+          100,
+          100
+        ],
+        "boundaryMs": 29999,
+        "inputDispatches": 1,
+        "steps": 1
+      }
+    ],
+    "wholeCaseCount": 10,
+    "perTestTimeoutMs": 5000,
+    "fixture": "Finite TEST CDP evaluate/send plus controlled Date.now and recording of original100ms polling requests. Use actual exported createDesktopUiControls, not a copied waitRead/hover implementation. Restore all modified globals in finally. Reads, guards, readiness calls, ticks, steps and sends are asserted. No real elapsed30s wait, native agents, model calls, network, DOM app state or user projects.",
+    "expectedOldPredictionOnly": {
+      "pass": 3,
+      "fail": 7
+    },
+    "expectedFixedPredictionOnly": {
+      "pass": 10,
+      "fail": 0
+    },
+    "predictionQualification": "Static expected outcomes only until complete new execution evidence is observed. No runtime RED/GREEN is currently claimed."
+  },
+  "aggregateIntegration": {
+    "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+    "method": "Append one literal top-level await import of ./desktop-ui-controls-deadline.test.ts after the complete original whole139 body. Keep every existing byte as the exact prefix and every existing case/timeout/assertion unchanged.",
+    "existingCases": 139,
+    "addedCases": 10,
+    "totalFutureCases": 149,
+    "why": "The current Host workflow explicitly selects this aggregate file. Its literal import includes the same whole new deadline module in future aggregate runs without workflow edits. A standalone10-case run is not a149-case pass.",
+    "rootR2Required": "Verify exact full prefix, unique expanded149 inventory, import resolves to exact new module, module has exactly10 unconditional top-level cases and no only/skip/filter; inspect top-level await ordering and absence of detached registration."
+  },
+  "preservation": {
+    "unchangedRenderer": {
+      "path": "test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts",
+      "bytes": 187890,
+      "sha256": "b6f11896e60014aac785968d42390afde38716d47de9bba9562522235db048c9",
+      "gitBlob": "76495189c992fcda47cd7a43a0c697190b5acbb3",
+      "cases": 85
+    },
+    "unchangedPublishedProducerFiles": [
+      "scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+      "scripts/legacy-agent-host/desktop-task-review-cycle-ui-smoke.ts",
+      "src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts"
+    ],
+    "unchangedOtherPublishedSources": [
+      "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+      "scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+      "scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts"
+    ],
+    "sourceDelta": {
+      "modified": 4,
+      "added": 1,
+      "deleted": 0,
+      "renamed": 0,
+      "modesChanged": 0,
+      "paths": [
+        "scripts/legacy-agent-host/desktop-ui-controls.ts",
+        "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+        "src/renderer/utils/teamModelAvailability.ts",
+        "test/renderer/utils/teamModelAvailability.test.ts",
+        "scripts/legacy-agent-host/desktop-ui-controls-deadline.test.ts"
+      ]
+    },
+    "afterNonDocLeaves": 8799,
+    "workflowChanges": 0,
+    "workflowCount": 42,
+    "sourceBudget": "No new production file; existing renderer utility has no line growth. Existing494-line TEST controls gains only the gate. New deadline test module is a test, kept under800lines as well. No baseline/ignore/exception/policy change.",
+    "dependencies": "No package manifest, lockfile, vendor archive, SDK package, Host profile or dependency adoption. No broad incoming merge or cherry-pick."
+  },
+  "runtimeBoundary": {
+    "selectedByThisR1": "Only future fully reviewed and fully published isolated whole10-case deadline RED/GREEN, after separate exact executable-control R2 and actual readbacks. No execution or materialization before those gates.",
+    "candidateFreshScope": "/workspace/scratch/c714-waitread-20261117",
+    "scopeExistsObservation": "NOT_YET_CHECKED; exclusive creation refusal must spend the attempt, no restore or reuse.",
+    "requiredExactRepositoryFiles": [
+      "package.json",
+      "scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "scripts/legacy-agent-host/desktop-ui-controls-deadline.test.ts"
+    ],
+    "nodeCandidate": {
+      "path": "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+      "versionObserved": "v24.22.1",
+      "bytes": 126939688,
+      "sha256": "61ab14cd750fc24d5db53490ec5fc40f756e4b6e136b78cf7004265471d9bd1d",
+      "qualification": "Metadata read only; must be bound and revalidated before/after any new execution. It does not replace pinned CI Node versions."
+    },
+    "wholeFileCommandShape": [
+      "exact bound Node binary",
+      "--test",
+      "scripts/legacy-agent-host/desktop-ui-controls-deadline.test.ts"
+    ],
+    "futureControlsMustBind": [
+      "exclusive new roots and exact original source input bytes",
+      "all runtime files/Node binary/config/package and executable runner identities",
+      "one complete source-before phase and one source-after phase with exact10-case inventory",
+      "full raw stdout/stderr, exact exits, per-test results and original phase classification",
+      "finite parent supervisor wall bound independently of per-test clocks",
+      "captured process/session ownership and ordinary exit/cleanup",
+      "complete before/after file censuses and mutation allowlists",
+      "no silent retry/recovery/filtering, no reused old attempts, refusal/unknown remains spent",
+      "full control source review and actual publication readbacks before staging or invocation"
+    ],
+    "notEstablished": [
+      "fresh root admission",
+      "complete runnable full149 aggregate environment",
+      "installed genuine Vitest/Vite/happy-dom",
+      "whole43 catalog runtime RED/GREEN",
+      "whole85 renderer GREEN",
+      "canonical pinned typecheck/build/lint/source-size guard",
+      "Desktop E2E/Windows readiness/Darwin strict custody/native vendor qualification"
+    ],
+    "whySeparate": "Current old source root is absent. Eager whole139 requires missing Host dist and external packages; standalone new10 imports only the actual UI controls and Node builtins. No fake Vitest shim, replacement of application E2E, or old local sequence replay is permitted.",
+    "fullSuitesRemainRequired": [
+      "whole149 Node aggregate in a complete environment",
+      "whole43 catalog Vitest with unchanged config/setup and genuine dependencies",
+      "whole85 renderer file",
+      "existing broader E2E/validation scopes"
+    ]
+  },
+  "orderedGates": [
+    "Root and independent guard, semantic and binding R1 reviews of this whole plan, its actual source preimages, relevant advisories and constraints.",
+    "Root docs-only R1/review publication, immediate expected-parent push, then full root and independent actual readbacks. Only then may root author the selected source/tests and bounded executable controls.",
+    "Full source/test R2 and separate executable-control R2 by root plus independent reviewers, including complete original-prefix and semantic-delta checks. No execution at this stage.",
+    "Root publish reviewed source/tests/controls and review evidence; immediate expected-parent push; full root and independent actual readbacks. Future control binding records exact actual immutable identities.",
+    "Only after exact runtime gate may root perform one exclusive new staging, one whole10 RED and one whole10 GREEN under accepted controls, retaining failure/unknown outcomes. Each later phase admission requires complete prior evidence as defined by final control R2.",
+    "Retain complete actual runtime evidence and honest remaining gates. Whole149/43/85/canonical/GUI results remain open until separately observed."
+  ],
+  "ciFrozen": {
+    "pr": 1218,
+    "headBranch": "ci/frontend-parity-c714-20261117-head",
+    "head": "9c9c73190840592963142d36562ea07d2b5d2d71",
+    "baseBranch": "ci/frontend-parity-c714-20261117-base",
+    "base": "77993819c233737f1e2b4c11c8ca1a5d360bcbe3",
+    "syntheticMerge": "7baf8533f00c4cfa3ef5493753fd6169d5b81247",
+    "activeIds": [
+      44008782844,
+      44008782843,
+      44008782909,
+      44008782832,
+      44008782869
+    ],
+    "terminalSkipIds": [
+      44008782825,
+      44008782932
+    ],
+    "latestObserved": "2026-11-17 03:52:16 UTC",
+    "latestStatus": "All5active QUEUED; no runtime result.",
+    "mustRemain": "Both CI snapshot refs and PR metadata stay fixed while active. No new PR/ref/event/rerun/cancel/dispatch or Ready action is selected here. Working branch evidence/source publication is separate; recheck exact working ref and absence of an open head PR before committing source."
+  },
+  "prohibitions": [
+    "No real Claude/Codex invocation, including version/probe.",
+    "No frozen PR1206/1207/1208/1211/1212/1213 mutation or original9 polling.",
+    "No main/default merge, release, Stage2, broad vendor/native qualification.",
+    "No old absent-root restoration/replay or UNKNOWN/SKIP/CANCELLED promotion.",
+    "No browser or Computer Use app GUI path; any future app GUI must use dev:mcp and TEST state.",
+    "No broad workflow/exclusion/dependency/budget changes.",
+    "Every commit is immediately pushed with force:false and exact expected parent."
+  ],
+  "status": {
+    "r1Authored": true,
+    "sourcePostimagesAuthored": false,
+    "testPostimagesAuthored": false,
+    "controlsAuthored": false,
+    "newRootCreated": false,
+    "newRuntimeExecuted": false,
+    "wholeE2EQualified": false
+  },
+  "preReviewCorrection": {
+    "supersededInitialDoc": {
+      "bytes": 20284,
+      "sha256": "19915fd18cb270de768b37302bd2487bcdf36422c3917945b3bb81479a395bbc",
+      "gitBlob": "ef0563d3a85c3237b95f6f70a735b17444940e25"
+    },
+    "reason": "Replace ambiguous 633/634 subtree wording with exact complete tree and leaf counts; add the fully root-read bounded Node feasibility report. No source/test/control postimage, runtime or external action occurred."
+  }
+}

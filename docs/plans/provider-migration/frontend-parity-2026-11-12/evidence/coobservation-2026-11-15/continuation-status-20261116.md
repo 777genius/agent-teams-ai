@@ -293,3 +293,12 @@ Actual R1 gate `082178036bc188dabaeb82d1d2a91e8840f2b13e` and external intent `a
 All seven attempt1 runs bind directly to PR1218 in their complete attempt metadata. Host44008782843, Packaged44008782844, CI44008782909, Stage144008782832 and Announcements44008782869 remain QUEUED at the latest retained03:34:31 UTC observation. CodeQL44008782825 and OpenCodeDesktop44008782932 are completed expected Draft skips; their one-job/zero-artifact captures are final and are not polled further. The initial39-job snapshot is not the final dependent-job census.
 
 No current Node139/renderer85/Desktop result, source checkout or cleanup PASS is available. Queue cause remains UNKNOWN. Static Windows/Darwin/provider follow-ups add bounded evidence, not source adoption or native qualification. The old local materialization remains REFUSED/SPENT; its GREEN/validation are still UNREACHED. Continue only the five bound active runs under the unchanged R1 capture contract. Whole E2E remains incomplete.
+
+
+## 2026-11-17 — narrow catalog/deadline R1 accepted statically
+
+R1 `b34a76fffb93d5216cd689893186376963ef8654` has full root/guard/semantic/binding review (30/32/52/73 checks). Exact accepted source basis is `935ed8dd0b0f3f95cbbc7ed6d691009efa2c47da`. Pending actual readbacks of this docs publication still precede all new source/test/control authorship.
+
+Selected future delta: the existing captured-SDK catalog predicate and exact three-case test suffix; one original-deadline admission gate in actual waitRead; a whole10-case Node module appended by literal awaited import after the full original139 body. Prospective149/43 are separate from unchanged85. No new execution or test PASS is claimed. Full canonical/type/build/GUI/native gates remain open.
+
+PR1218 remains fixed at head9c9/base779. Observations5–7 are retained in `e685147a4ce2b7e7bec7e2396b0d2841d9f31821`; all five active runs are still queued as of04:06:01UTC. Two terminal Draft skips remain skips. Queue cause is unknown. No source checkout, new139/85 GREEN or Desktop cleanup has been observed.

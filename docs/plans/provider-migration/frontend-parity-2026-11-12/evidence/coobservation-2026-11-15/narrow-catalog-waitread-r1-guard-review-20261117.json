@@ -1,0 +1,744 @@
+{
+  "schemaVersion": 1,
+  "kind": "independent-guard-review-exact-narrow-catalog-waitread-r1",
+  "reviewer": "/root/producer_r2_guard",
+  "at": "2026-11-17 04:14:33 UTC",
+  "repository": "777genius/agent-teams-ai",
+  "subject": {
+    "bytes": 20973,
+    "sha256": "e35155efe24474cfe0ff5d5ab90aa7b9f96bfe56eff99ad8aec10902aecf0016",
+    "gitBlob": "b34a76fffb93d5216cd689893186376963ef8654"
+  },
+  "verdict": "R1_ACCEPTABLE_WITH_NO_CONCRETE_STATIC_BLOCKER; NO_R2_POSTIMAGE_OR_RUNTIME_APPROVAL",
+  "reviewScope": "Complete exact prospective R1; all four complete preimages; existing exact catalog candidates and corrected own advisory; original helper/consumer error and deadline paths; complete original aggregate and prospective registration boundary; exact selected runtime/ownership/publication/frozen constraints.",
+  "authority": {
+    "rootSoleAuthorApplierExecutor": true,
+    "reviewerActions": [
+      "Immutable Git blob/file/tree/commit reads",
+      "Pure in-memory data/hash joins",
+      "Bare review report retention"
+    ],
+    "sourceOrControlAuthored": false,
+    "shell": false,
+    "targetSourceEvaluated": false,
+    "runtimeOrVendorProbed": false,
+    "ciReadOrPolled": false,
+    "refOrPrMutation": false,
+    "hypotheticalR2Approved": false,
+    "identityHelperOnly": {
+      "bytes": 3982,
+      "gitBlob": "e4a4568d589e1254b88ade1a5f87d53924e7c2e8",
+      "sha256": "cd3d5b96a5508215010923078469cc718282f17d765f6af493913c157bdf3db7"
+    }
+  },
+  "basis": {
+    "commit": "935ed8dd0b0f3f95cbbc7ed6d691009efa2c47da",
+    "tree": "06ec0aa08b8e8e0efd306d6f58d3c885049d31b4",
+    "docsTree": "6ccda6dc08689c8e55da721b9761d94d933ef9f5",
+    "soleParent": "9c9c73190840592963142d36562ea07d2b5d2d71",
+    "rootEntries": [
+      {
+        "path": ".github",
+        "mode": "040000",
+        "type": "tree",
+        "sha": "d95091ab0edb488d6e418ffa789d0f07c447ecda",
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees/d95091ab0edb488d6e418ffa789d0f07c447ecda"
+      },
+      {
+        "path": "docs",
+        "mode": "040000",
+        "type": "tree",
+        "sha": "6ccda6dc08689c8e55da721b9761d94d933ef9f5",
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees/6ccda6dc08689c8e55da721b9761d94d933ef9f5"
+      },
+      {
+        "path": "package.json",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "f80ec83172d0aec0dec8a8ab055426b4fca4a1f7",
+        "size": 26839,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/f80ec83172d0aec0dec8a8ab055426b4fca4a1f7"
+      },
+      {
+        "path": "scripts",
+        "mode": "040000",
+        "type": "tree",
+        "sha": "800c50d1b9cd5e538bd889a1f24475084ef5ff57",
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees/800c50d1b9cd5e538bd889a1f24475084ef5ff57"
+      },
+      {
+        "path": "src",
+        "mode": "040000",
+        "type": "tree",
+        "sha": "56bda382944632ec0cc1d2fa94cf574bed0e73c5",
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees/56bda382944632ec0cc1d2fa94cf574bed0e73c5"
+      },
+      {
+        "path": "test",
+        "mode": "040000",
+        "type": "tree",
+        "sha": "92519c914f57ec6cee13c2e4b0b2be568a56f641",
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees/92519c914f57ec6cee13c2e4b0b2be568a56f641"
+      },
+      {
+        "path": "vitest.config.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "c57faa53a1bb869b4379bf888194806ef7e228e3",
+        "size": 1187,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/c57faa53a1bb869b4379bf888194806ef7e228e3"
+      }
+    ],
+    "acceptedActualEvidence": {
+      "root": {
+        "bytes": 53161,
+        "sha256": "3ebeb6b009e4de828099550161a2160360f522b583df704327d4b43fe0b37247",
+        "gitBlob": "7b1e84798593f4e30e0b717f157bf75fe8ae2c85"
+      },
+      "independent": {
+        "bytes": 223719,
+        "sha256": "bed437ac7d407dc9132ce7ba34ff360e80d078e1e9e8eeb30d7e9c5e8e881bdc",
+        "gitBlob": "ebc1cd39f61dbaf9a6823a6655031ad0181d851f"
+      },
+      "readScope": "Complete report strings fetched/hash-verified; relevant commit/tree/docs/non-doc-root/census/qualification fields read. This guard review does not redo their accepted full documentation-publication audit."
+    },
+    "currentImmutableCommitDirectlyRead": true,
+    "scriptsTree": {
+      "sha": "800c50d1b9cd5e538bd889a1f24475084ef5ff57",
+      "recursive": true,
+      "truncated": false,
+      "entries": 634,
+      "leaves": 600,
+      "selectedRows": [
+        {
+          "path": "legacy-agent-host/desktop-team-ui-smoke.test.ts",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "896c587e077da56a98a314a175fb3cba0353d6ee",
+          "size": 164965,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/896c587e077da56a98a314a175fb3cba0353d6ee"
+        },
+        {
+          "path": "legacy-agent-host/desktop-ui-controls.ts",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "ed57cb0fe7d57ef076a591621289eb77667c63ad",
+          "size": 28974,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/ed57cb0fe7d57ef076a591621289eb77667c63ad"
+        }
+      ],
+      "newTestAbsent": true,
+      "interveningPackageJsonAbsent": true
+    },
+    "exactPreimages": [
+      {
+        "role": "controls",
+        "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+        "mode": "100644",
+        "bytes": 28974,
+        "sha256": "7626e479a6662242009cb050e7e5af612a29e4205d62666d15274d5c30f91386",
+        "gitBlob": "ed57cb0fe7d57ef076a591621289eb77667c63ad",
+        "wholeBodyRead": true,
+        "identityMatch": true
+      },
+      {
+        "role": "nodeAggregate",
+        "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+        "mode": "100644",
+        "bytes": 164965,
+        "sha256": "852bedb85c83dbc4b488dffb4a9ffebbe398adc53e85f5a3cea8ca36b146cbf7",
+        "gitBlob": "896c587e077da56a98a314a175fb3cba0353d6ee",
+        "wholeBodyRead": true,
+        "identityMatch": true
+      },
+      {
+        "role": "catalog",
+        "path": "src/renderer/utils/teamModelAvailability.ts",
+        "mode": "100644",
+        "bytes": 32055,
+        "sha256": "6e216e10c07e953472afb74045c3a976e9f4a1d4fcd3e9f5d46dc789d19022e6",
+        "gitBlob": "167751c56f74c2869b8b3d9b128002d5bd642bcb",
+        "wholeBodyRead": true,
+        "identityMatch": true
+      },
+      {
+        "role": "catalogTests",
+        "path": "test/renderer/utils/teamModelAvailability.test.ts",
+        "mode": "100644",
+        "bytes": 49687,
+        "sha256": "0e37baae735529c11d2ed43432b132b516d252af8bb3084714c7082d7d4c4db8",
+        "gitBlob": "1a58c9c686010d5b5ded00f8e2b5064e4ab78c32",
+        "wholeBodyRead": true,
+        "identityMatch": true
+      }
+    ],
+    "directBasisPathJoins": [
+      {
+        "path": "src/renderer/utils/teamModelAvailability.ts",
+        "basis": "935ed8dd0b0f3f95cbbc7ed6d691009efa2c47da",
+        "bytes": 32055,
+        "sha256": "6e216e10c07e953472afb74045c3a976e9f4a1d4fcd3e9f5d46dc789d19022e6",
+        "gitBlob": "167751c56f74c2869b8b3d9b128002d5bd642bcb",
+        "wholeExpectedBodyEqual": true
+      },
+      {
+        "path": "test/renderer/utils/teamModelAvailability.test.ts",
+        "basis": "935ed8dd0b0f3f95cbbc7ed6d691009efa2c47da",
+        "bytes": 49687,
+        "sha256": "0e37baae735529c11d2ed43432b132b516d252af8bb3084714c7082d7d4c4db8",
+        "gitBlob": "1a58c9c686010d5b5ded00f8e2b5064e4ab78c32",
+        "wholeExpectedBodyEqual": true
+      },
+      {
+        "path": "test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts",
+        "basis": "935ed8dd0b0f3f95cbbc7ed6d691009efa2c47da",
+        "bytes": 187890,
+        "sha256": "b6f11896e60014aac785968d42390afde38716d47de9bba9562522235db048c9",
+        "gitBlob": "76495189c992fcda47cd7a43a0c697190b5acbb3",
+        "wholeExpectedBodyEqual": true
+      }
+    ],
+    "unchangedRenderer": {
+      "path": "test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts",
+      "bytes": 187890,
+      "sha256": "b6f11896e60014aac785968d42390afde38716d47de9bba9562522235db048c9",
+      "gitBlob": "76495189c992fcda47cd7a43a0c697190b5acbb3",
+      "cases": 85,
+      "wholeBodyIdentityVerified": true,
+      "semanticReadScope": "Preservation pin only; no new renderer85 execution or exhaustive re-audit."
+    }
+  },
+  "joinedAdvisories": {
+    "catalog": {
+      "bytes": 48970,
+      "sha256": "3516082b456bbc8a48907005441316612ed285ac0a705f9e8f98139e5f171903",
+      "gitBlob": "b5c90cb7d5c3d018c6475bae2207ca3932cb6732",
+      "scope": "Prior same-session complete corrected report/self-readback and exact underlying four source bodies reused unchanged; full18-module source import graph remains qualified as source only."
+    },
+    "waitRead": {
+      "bytes": 49935,
+      "sha256": "5b106b029096b02b288db395cdb05c8f367cd16444c2f015e79c9f28098f9134",
+      "gitBlob": "a3660453344deb2c4e91cdc8e951c44f9d501817",
+      "scope": "Exact source preimage pins, full actual waitRead fragment, defect/fix requirement, finite regression shapes, scoped caller/coverage matrix, full139 names and checks read; direct full controls/aggregate source reread independently."
+    },
+    "nodeFeasibility": {
+      "bytes": 59294,
+      "sha256": "cdbaf093a3a94966ef8e1452c029a0c85a9d9b1a0a4702414eb8ed00b4a50c56",
+      "gitBlob": "d5a26fd663b828ab99461fe2b6466e1f059f8e6a",
+      "scope": "Exact full body identity joined; answer, entry imports, decisive dependency edges, runner distinction and limitations read. No new Host transitive audit."
+    }
+  },
+  "findings": {
+    "catalog": "R1 carries the corrected b5c90 semantics without enlargement: the existing one-line candidate enables already-supported claude-sdk UI catalogs, with 40 original cases preserved plus2 discriminating and1 fallback-preservation case. Auth/verification/capabilities/freshness remain distinct.",
+    "deadline": "A single check after fulfilled evaluate and before isReady closes the original own-deadline admission gap. Strict equality is expired under the original while condition. Leaving the loop preserves the original timeout throw and avoids a new tick/predicate/read for that expired fulfilled observation.",
+    "errors": "The selected edit does not move the ownership check, replace the caught-error whitelist, change rejected evaluate timing, or replace non-transient/predicate error identity. Late rejected recognized context errors may retain their original tick; active pending-read preemption remains outside this fix.",
+    "predictions": "Seven expected old failures and three expected old passes are consistent source deductions. Late-false distinguishes predicate/tick traces even though both variants ultimately reject; custom73 contains two conditions in one planned case; hover exercises the real third-stable-point path.",
+    "entryBoundary": "Original aggregate is full164965B/2700lines, has70 registration expressions expanding to139 named cases and no new module import. The planned awaited literal import belongs after that exact complete byte prefix. It awaits module registration/evaluation, not all tests' completion. The exact149 runtime result remains open.",
+    "standaloneBoundary": "Current controls module is Node-builtin-only and has no top-level transport action. Root package type is module and there is no intervening scripts package. Planned new tests import actual controls plus node:assert/strict and node:test. This supports the narrow source shape, not an already-established Node execution environment or hypothetical new test body.",
+    "frozenBoundary": "Working docs/source publication may advance only under ordered gates and exact expected-parent pushes. Frozen selected CI head9c9/base779 and PR1218 remain distinct. No CI status was refreshed or inferred from the retained queue snapshot.",
+    "blockers": []
+  },
+  "plannedDeadlineCaseReview": [
+    {
+      "id": "late-first-exact",
+      "title": "generic UI read refuses its first fulfilled value exactly at the original deadline",
+      "oldPrediction": "FAIL",
+      "boundaryMs": 30000,
+      "reads": 1,
+      "predicates": 0,
+      "ticks": [],
+      "scope": "Prospective semantic requirement; not authored or executed"
+    },
+    {
+      "id": "late-first-after",
+      "title": "generic UI read refuses its first fulfilled value after the original deadline",
+      "oldPrediction": "FAIL",
+      "boundaryMs": 30001,
+      "reads": 1,
+      "predicates": 0,
+      "ticks": [],
+      "scope": "Prospective semantic requirement; not authored or executed"
+    },
+    {
+      "id": "late-polled-exact",
+      "title": "generic UI read refuses a later fulfilled value exactly at the original deadline",
+      "oldPrediction": "FAIL",
+      "boundaryMs": 30000,
+      "reads": 2,
+      "predicates": 1,
+      "ticks": [
+        100
+      ],
+      "scope": "Prospective semantic requirement; not authored or executed"
+    },
+    {
+      "id": "late-polled-after",
+      "title": "generic UI read refuses a later fulfilled value after the original deadline",
+      "oldPrediction": "FAIL",
+      "boundaryMs": 30001,
+      "reads": 2,
+      "predicates": 1,
+      "ticks": [
+        100
+      ],
+      "scope": "Prospective semantic requirement; not authored or executed"
+    },
+    {
+      "id": "late-not-ready",
+      "title": "generic UI read does not admit or poll again after a late false observation",
+      "oldPrediction": "FAIL",
+      "boundaryMs": 30000,
+      "reads": 1,
+      "predicates": 0,
+      "ticks": [],
+      "scope": "Prospective semantic requirement; not authored or executed"
+    },
+    {
+      "id": "timely-first",
+      "title": "generic UI read preserves a timely first value and its exact identity",
+      "oldPrediction": "PASS",
+      "boundaryMs": 29999,
+      "reads": 1,
+      "predicates": 1,
+      "ticks": [],
+      "scope": "Prospective semantic requirement; not authored or executed"
+    },
+    {
+      "id": "timely-polled",
+      "title": "generic UI read preserves its original cadence and a timely later value",
+      "oldPrediction": "PASS",
+      "boundaryMs": 101,
+      "reads": 2,
+      "predicates": 2,
+      "ticks": [
+        100
+      ],
+      "scope": "Prospective semantic requirement; not authored or executed"
+    },
+    {
+      "id": "custom-budget",
+      "title": "generic UI read honors a supplied budget at its strict boundary",
+      "oldPrediction": "FAIL",
+      "subcases": [
+        {
+          "budget": 73,
+          "settles": 72,
+          "outcome": "same value"
+        },
+        {
+          "budget": 73,
+          "settles": 73,
+          "outcome": "original timeout"
+        }
+      ],
+      "scope": "Prospective semantic requirement; not authored or executed"
+    },
+    {
+      "id": "hover-late",
+      "title": "generic UI hover refuses a third stable point arriving at the original deadline",
+      "oldPrediction": "FAIL",
+      "boundaryMs": 30000,
+      "reads": 3,
+      "ticks": [
+        100,
+        100
+      ],
+      "inputDispatches": 0,
+      "steps": 0,
+      "scope": "Prospective semantic requirement; not authored or executed"
+    },
+    {
+      "id": "hover-timely",
+      "title": "generic UI hover preserves one movement after three timely stable points",
+      "oldPrediction": "PASS",
+      "boundaryMs": 29999,
+      "reads": 3,
+      "ticks": [
+        100,
+        100
+      ],
+      "inputDispatches": 1,
+      "steps": 1,
+      "scope": "Prospective semantic requirement; not authored or executed"
+    }
+  ],
+  "registrationAccounting": {
+    "originalBlob": {
+      "role": "nodeAggregate",
+      "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+      "mode": "100644",
+      "bytes": 164965,
+      "sha256": "852bedb85c83dbc4b488dffb4a9ffebbe398adc53e85f5a3cea8ca36b146cbf7",
+      "gitBlob": "896c587e077da56a98a314a175fb3cba0353d6ee"
+    },
+    "oldPhysicalLines": 2700,
+    "oldRegistrationExpressions": 70,
+    "oldExpandedCaseCount": 139,
+    "newPlannedNames": [
+      "generic UI read refuses its first fulfilled value exactly at the original deadline",
+      "generic UI read refuses its first fulfilled value after the original deadline",
+      "generic UI read refuses a later fulfilled value exactly at the original deadline",
+      "generic UI read refuses a later fulfilled value after the original deadline",
+      "generic UI read does not admit or poll again after a late false observation",
+      "generic UI read preserves a timely first value and its exact identity",
+      "generic UI read preserves its original cadence and a timely later value",
+      "generic UI read honors a supplied budget at its strict boundary",
+      "generic UI hover refuses a third stable point arriving at the original deadline",
+      "generic UI hover preserves one movement after three timely stable points"
+    ],
+    "prospectiveUniqueExpandedCount": 149,
+    "unionHasNoDuplicateNames": true,
+    "aggregateFutureWholePrefixRequired": true,
+    "newModuleCurrentAbsenceProven": true,
+    "actualNewModuleIdentity": null,
+    "actualAggregatePostimageIdentity": null,
+    "actualRuntimeCounts": null,
+    "sourceOnlyQualification": "Original registration census is checked against the full body and accepted a366 inventory. Future unconditional registration, exact import bytes, single inclusion and no detached registration must be checked against actual R2 bodies."
+  },
+  "executionScope": {
+    "selected": "Future isolated whole10 deadline RED/GREEN only, under exact reviewed/published controls after full actual readbacks.",
+    "candidateFreshScope": "/workspace/scratch/c714-waitread-20261117",
+    "scopeExists": "NOT_CHECKED_BY_REVIEWER",
+    "commandShape": [
+      "exact bound Node binary",
+      "--test",
+      "scripts/legacy-agent-host/desktop-ui-controls-deadline.test.ts"
+    ],
+    "requiredRepositoryFiles": [
+      "package.json",
+      "scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "scripts/legacy-agent-host/desktop-ui-controls-deadline.test.ts"
+    ],
+    "packageIdentity": {
+      "bytes": 26839,
+      "sha256": "c92407a9a5dad6f9d6a6eb8ea7c456195d396679bb4b9dfd15b6c06b726d1084",
+      "gitBlob": "f80ec83172d0aec0dec8a8ab055426b4fca4a1f7"
+    },
+    "nodeCandidate": {
+      "path": "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+      "versionObserved": "v24.22.1",
+      "bytes": 126939688,
+      "sha256": "61ab14cd750fc24d5db53490ec5fc40f756e4b6e136b78cf7004265471d9bd1d",
+      "qualification": "Metadata read only; must be bound and revalidated before/after any new execution. It does not replace pinned CI Node versions."
+    },
+    "nodeCandidateQualification": "R1-recorded root metadata only; reviewer performed no Node version/hash execution or local file probe.",
+    "perTestTimeoutMs": 5000,
+    "parentWallBound": "Must be independently finite in actual controls; no exact supervisor implementation is approved by this R1 review.",
+    "whole10PredictedBefore": {
+      "pass": 3,
+      "fail": 7
+    },
+    "whole10PredictedAfter": {
+      "pass": 10,
+      "fail": 0
+    },
+    "actualRed": null,
+    "actualGreen": null,
+    "actualOuterExit": null,
+    "futureR2ObligationsAlreadyInR1": [
+      "Inspect complete actual5path postimages and exact original139 prefix, corrected catalog delta and no other source edits.",
+      "Inspect actual new10 unconditional registrations, finite real-factory fixtures, per-test5000ms bounds, asserted read/predicate/tick/guard/step/send behavior and cleanup of modified globals.",
+      "Ensure global clock/timer modifications occur in bounded test execution and are restored in finally; module import must register tests without detached work or leaking fake globals.",
+      "Inspect exact awaited import placement/resolution and unique149 expanded inventory; do not equate registration with completion.",
+      "Inspect separate exact executable controls for fresh-root exclusivity, bound Node/config/source/runner identities, finite wall supervision, process ownership, full output/exits, censuses and no retry/recovery."
+    ],
+    "largerScopesOpen": [
+      "whole149 Node aggregate in a complete environment",
+      "whole43 catalog Vitest with unchanged config/setup and genuine dependencies",
+      "whole85 renderer file",
+      "existing broader E2E/validation scopes"
+    ],
+    "exclusions": [
+      "No whole149/43/85 or canonical command is selected for this narrow local execution.",
+      "No old root restoration, spent-attempt reuse, fallback test engine or vendor execution.",
+      "No standalone10 pass may be reported as aggregate149, catalog43, renderer85, native or Desktop qualification."
+    ]
+  },
+  "orderedGates": [
+    "Root and independent guard, semantic and binding R1 reviews of this whole plan, its actual source preimages, relevant advisories and constraints.",
+    "Root docs-only R1/review publication, immediate expected-parent push, then full root and independent actual readbacks. Only then may root author the selected source/tests and bounded executable controls.",
+    "Full source/test R2 and separate executable-control R2 by root plus independent reviewers, including complete original-prefix and semantic-delta checks. No execution at this stage.",
+    "Root publish reviewed source/tests/controls and review evidence; immediate expected-parent push; full root and independent actual readbacks. Future control binding records exact actual immutable identities.",
+    "Only after exact runtime gate may root perform one exclusive new staging, one whole10 RED and one whole10 GREEN under accepted controls, retaining failure/unknown outcomes. Each later phase admission requires complete prior evidence as defined by final control R2.",
+    "Retain complete actual runtime evidence and honest remaining gates. Whole149/43/85/canonical/GUI results remain open until separately observed."
+  ],
+  "sourceAndFrozenConstraints": {
+    "selectedDelta": {
+      "modified": 4,
+      "added": 1,
+      "deleted": 0,
+      "renamed": 0,
+      "modesChanged": 0,
+      "paths": [
+        "scripts/legacy-agent-host/desktop-ui-controls.ts",
+        "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+        "src/renderer/utils/teamModelAvailability.ts",
+        "test/renderer/utils/teamModelAvailability.test.ts",
+        "scripts/legacy-agent-host/desktop-ui-controls-deadline.test.ts"
+      ]
+    },
+    "existingNonDocLeaves": 8798,
+    "plannedAfterNonDocLeaves": 8799,
+    "workflows": 42,
+    "workflowChanges": 0,
+    "sourceBudget": {
+      "productionLineCap": 800,
+      "frozenExceptionCount": 141,
+      "noBaselineIgnoreExceptionOrPolicyEdit": true,
+      "controlsBeforeLines": 494,
+      "catalogBeforeAfterLines": 982,
+      "newTestUnder800": true,
+      "noNewProductionFile": true
+    },
+    "unchangedPublishedProducers": [
+      "scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+      "scripts/legacy-agent-host/desktop-task-review-cycle-ui-smoke.ts",
+      "src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts"
+    ],
+    "unchangedOtherPublishedSources": [
+      "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+      "scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+      "scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts"
+    ],
+    "whole85Pin": {
+      "path": "test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts",
+      "bytes": 187890,
+      "sha256": "b6f11896e60014aac785968d42390afde38716d47de9bba9562522235db048c9",
+      "gitBlob": "76495189c992fcda47cd7a43a0c697190b5acbb3",
+      "cases": 85
+    },
+    "dependenciesUnchanged": "No package manifest, lockfile, vendor archive, SDK package, Host profile or dependency adoption; no broad incoming merge/cherry-pick.",
+    "frozenCI": {
+      "pr": 1218,
+      "headBranch": "ci/frontend-parity-c714-20261117-head",
+      "head": "9c9c73190840592963142d36562ea07d2b5d2d71",
+      "baseBranch": "ci/frontend-parity-c714-20261117-base",
+      "base": "77993819c233737f1e2b4c11c8ca1a5d360bcbe3",
+      "syntheticMerge": "7baf8533f00c4cfa3ef5493753fd6169d5b81247",
+      "latestStatusNotRefreshed": true,
+      "noRunReadByReviewer": true,
+      "metadataAndRefsRemainFixed": true
+    },
+    "publication": "Every commit immediately pushed with force:false and exact expected parent; working ref and absence of open head PR rechecked by root before source commit.",
+    "prohibitions": [
+      "No real Claude/Codex invocation, including version/probe.",
+      "No frozen PR1206/1207/1208/1211/1212/1213 mutation or original9 polling.",
+      "No main/default merge, release, Stage2, broad vendor/native qualification.",
+      "No old absent-root restoration/replay or UNKNOWN/SKIP/CANCELLED promotion.",
+      "No browser or Computer Use app GUI path; any future app GUI must use dev:mcp and TEST state.",
+      "No broad workflow/exclusion/dependency/budget changes.",
+      "Every commit is immediately pushed with force:false and exact expected parent."
+    ],
+    "currentStatus": {
+      "r1Authored": true,
+      "sourcePostimagesAuthored": false,
+      "testPostimagesAuthored": false,
+      "controlsAuthored": false,
+      "newRootCreated": false,
+      "newRuntimeExecuted": false,
+      "wholeE2EQualified": false
+    }
+  },
+  "methodNotes": [
+    "One combined contextual-output call was truncated; all decisive source sections were subsequently read contiguously, including the entire164965-byte aggregate. Retained actual-publication reports are explicitly scoped to relevant anchor joins, not a repeated full audit.",
+    "A raw lexical test( count yielded71 because it included one RegExp.test(dependency) member call. Excluding that inspected member call gives70 Node registration expressions, joined with the source-expanded139-name inventory.",
+    "No literal implementation of the proposed waitRead gate, new test module or aggregate import was authored/evaluated by reviewer."
+  ],
+  "checkCount": 32,
+  "checks": [
+    {
+      "name": "Exact whole R1",
+      "result": "PASS_STATIC",
+      "statement": "Complete 20973-byte R1 body was read and independently hash-verified.",
+      "evidence": "subject"
+    },
+    {
+      "name": "Immutable basis",
+      "result": "PASS_STATIC",
+      "statement": "Direct Git commit read proves commit935, sole parent9c9 and root06ec; accepted actual reports join the same docs/root anchors.",
+      "evidence": "basis"
+    },
+    {
+      "name": "Exact four preimages",
+      "result": "PASS_STATIC",
+      "statement": "All four selected existing source/test preimages were fully read and hashed; controls/aggregate join the fresh scripts tree, catalog/test join direct reads at commit935.",
+      "evidence": "basis.exactPreimages; basis.directBasisPathJoins"
+    },
+    {
+      "name": "New path absence",
+      "result": "PASS_STATIC",
+      "statement": "Complete immutable scripts subtree has 634 entries and 600 non-tree leaves, is untruncated and contains no prospective deadline test path.",
+      "evidence": "basis.scriptsTree"
+    },
+    {
+      "name": "Corrected advisory join",
+      "result": "PASS_STATIC",
+      "statement": "R1 binds the final corrected b5c90 catalog advisory and marks 60982 superseded only for callback wording.",
+      "evidence": "joinedAdvisories.catalog"
+    },
+    {
+      "name": "Catalog minimality",
+      "result": "PASS_STATIC",
+      "statement": "R1 selects the already-read exact incoming utility and test strings, preserving the single predicate delta, whole original test prefix and source-line budget.",
+      "evidence": "subject R1 selectedSourceSemantics.catalog; joinedAdvisories.catalog"
+    },
+    {
+      "name": "Catalog authority",
+      "result": "PASS_STATIC",
+      "statement": "Catalog use remains UI offered-model availability; authentication, verification, freshness and native launch capabilities are not promoted.",
+      "evidence": "joinedAdvisories.catalog"
+    },
+    {
+      "name": "Catalog refusal and fallback",
+      "result": "PASS_STATIC",
+      "statement": "Resolved offers, alias membership, hidden/unavailable refusal and curated fallback for no usable catalog retain the exact reviewed behavior.",
+      "evidence": "findings.catalog; subject R1 selectedSourceSemantics.catalog.meaning"
+    },
+    {
+      "name": "Catalog prediction qualification",
+      "result": "PASS_STATIC",
+      "statement": "Two new cases distinguish the old predicate and one preserves fallback; all40 original cases remain and prospective whole count43 is source-defined only.",
+      "evidence": "subject R1 selectedSourceSemantics.catalog.casePrediction"
+    },
+    {
+      "name": "Exact waitRead seam",
+      "result": "PASS_STATIC",
+      "statement": "Own generic helper has one absolute deadline, pre-await loop guard, then fulfilled evaluate immediately followed by isReady without a post-await time check.",
+      "evidence": "basis.exactPreimages[controls]; joinedAdvisories.waitRead; original waitRead lines186-209"
+    },
+    {
+      "name": "Selected fulfilled-only correction",
+      "result": "PASS_STATIC",
+      "statement": "R1 requires the same strict deadline immediately after fulfilled evaluate and before any predicate; expiry leaves the loop for the existing timeout error with no new tick/read.",
+      "evidence": "findings.deadline; subject R1 selectedSourceSemantics.waitRead"
+    },
+    {
+      "name": "Stateful predicate boundary",
+      "result": "PASS_STATIC",
+      "statement": "Before-predicate placement prevents expired observations from incrementing stable-sample state, including the actual hover consumer.",
+      "evidence": "findings.deadline; original hoverExpression lines358-378"
+    },
+    {
+      "name": "Original budget and cadence",
+      "result": "PASS_STATIC",
+      "statement": "Default30000, caller-supplied budgets and original100ms timely continuation are preserved; no new deadline origin or shared multi-step budget is selected.",
+      "evidence": "subject R1 selectedSourceSemantics.waitRead.preserve"
+    },
+    {
+      "name": "Original errors and ownership",
+      "result": "PASS_STATIC",
+      "statement": "Original owner guard placement, non-transient error identity, recognized context-error classification and rejected-request catch/tick semantics remain unchanged.",
+      "evidence": "findings.errors; original waitRead lines193-208"
+    },
+    {
+      "name": "Seven old failures predicted",
+      "result": "PASS_STATIC",
+      "statement": "The four exact/after first/later cases, late-false, custom-budget boundary and late hover are consistent old-source failure predictions.",
+      "evidence": "plannedDeadlineCaseReview; executionScope.whole10PredictedBefore"
+    },
+    {
+      "name": "Three preservation cases predicted",
+      "result": "PASS_STATIC",
+      "statement": "Timely first, timely later and timely third-hover cases preserve original success; this is not observed test evidence.",
+      "evidence": "plannedDeadlineCaseReview; executionScope.whole10PredictedBefore"
+    },
+    {
+      "name": "Late-false discriminator",
+      "result": "PASS_STATIC",
+      "statement": "Both old and selected behavior may ultimately time out for false, but zero predicate calls and zero extra100ms ticks distinguish the selected fulfilled-expiry rule.",
+      "evidence": "plannedDeadlineCaseReview[id=late-not-ready]; findings.predictions"
+    },
+    {
+      "name": "Custom budget remains one case",
+      "result": "PASS_STATIC",
+      "statement": "The73ms test has timely72 and expired73 assertions inside one declared case; prospective module requires exactly10 unconditional top-level registrations.",
+      "evidence": "plannedDeadlineCaseReview[id=custom-budget]; registrationAccounting"
+    },
+    {
+      "name": "Finite actual consumer fixture",
+      "result": "PASS_STATIC",
+      "statement": "R1 requires actual exported createDesktopUiControls with finite TEST evaluate/send; it does not select a copied helper, real DOM, browser process, provider or network.",
+      "evidence": "subject R1 newDeadlineTests.fixture; executionScope"
+    },
+    {
+      "name": "Current helper import boundary",
+      "result": "PASS_STATIC",
+      "statement": "Complete controls module imports only node:assert/strict, has no top-level transport or native side effect, and is exposed through the actual factory; planned new test imports only this module and Node builtins.",
+      "evidence": "basis.exactPreimages[controls]; basis.scriptsTree; executionScope.packageIdentity"
+    },
+    {
+      "name": "Whole139 prefix preservation",
+      "result": "PASS_STATIC",
+      "statement": "R1 preserves every original aggregate byte, existing timeout and oracle, then appends one literal awaited import of the exact whole new module.",
+      "evidence": "registrationAccounting; subject R1 aggregateIntegration"
+    },
+    {
+      "name": "Prospective149 uniqueness",
+      "result": "PASS_STATIC",
+      "statement": "The139 accepted source-defined original names plus the10 concrete planned names are distinct; actual future registration and reporting remain R2/runtime obligations.",
+      "evidence": "registrationAccounting"
+    },
+    {
+      "name": "Awaited-import nuance",
+      "result": "PASS_STATIC",
+      "statement": "Awaiting module import provides source registration inclusion; it is not evidence that tests completed or that the future Node runner reported149. R1 explicitly retains full-source ordering/uniqueness review.",
+      "evidence": "findings.entryBoundary; executionScope.futureR2ObligationsAlreadyInR1"
+    },
+    {
+      "name": "Whole85 preservation",
+      "result": "PASS_STATIC",
+      "statement": "R1's untouched renderer85 pin matches the complete immutable body and a direct path read at commit935.",
+      "evidence": "basis.unchangedRenderer; basis.directBasisPathJoins"
+    },
+    {
+      "name": "Exact scope and source budget",
+      "result": "PASS_STATIC",
+      "statement": "Plan selects exactly four modifications and one new test; no production-file addition, workflow/dependency change or exception-policy change. Controls starts494lines; catalog stays982lines.",
+      "evidence": "sourceAndFrozenConstraints"
+    },
+    {
+      "name": "Future runtime is only whole10",
+      "result": "PASS_STATIC",
+      "statement": "Only future isolated whole10 RED/GREEN is selected, after exact executable-control R2/publication gates; whole149/43/85/canonical/GUI remain explicitly open.",
+      "evidence": "executionScope"
+    },
+    {
+      "name": "No aggregate dependency conflation",
+      "result": "PASS_STATIC",
+      "statement": "Full139 eager imports include Host-dependent modules and build/package requirements; R1 does not treat controls-only source reachability as a complete aggregate environment.",
+      "evidence": "joinedAdvisories.nodeFeasibility; findings.standaloneBoundary"
+    },
+    {
+      "name": "Fresh-root and spent-attempt rules",
+      "result": "PASS_STATIC",
+      "statement": "Candidate root existence is unobserved; exclusive creation failure/refusal/unknown spends the attempt and no old absent-root restoration or retry is selected.",
+      "evidence": "executionScope; subject R1 runtimeBoundary"
+    },
+    {
+      "name": "Executable controls still open",
+      "result": "PASS_STATIC",
+      "statement": "R1 demands exact Node/file/config/runner identities, full raw output, per-test inventory, exits, independent wall bound, ownership, before/after census and allowed mutations. None is approved as a hypothetical implementation here.",
+      "evidence": "executionScope.futureR2ObligationsAlreadyInR1; subject R1 runtimeBoundary.futureControlsMustBind"
+    },
+    {
+      "name": "Ordered publication gates",
+      "result": "PASS_STATIC",
+      "statement": "Root and independent R1 review and actual docs publication precede authorship; full source/test R2 and separate control R2 precede source/control publication, actual readbacks and any staging/execution.",
+      "evidence": "orderedGates"
+    },
+    {
+      "name": "Ownership and frozen CI",
+      "result": "PASS_STATIC",
+      "statement": "Root is sole author/executor. Working935 is distinct from frozen PR1218 head9c9/base779; no new run/PR/ref/event is selected and no CI read was performed by reviewer.",
+      "evidence": "authority; sourceAndFrozenConstraints"
+    },
+    {
+      "name": "No vendor or completion promotion",
+      "result": "PASS_STATIC",
+      "statement": "Real Claude/Codex even version are prohibited; no default merge/release/Ready/Stage2, old-scope promotion, fake Vitest or GUI replacement is selected.",
+      "evidence": "sourceAndFrozenConstraints; executionScope.exclusions"
+    }
+  ],
+  "failedChecks": [],
+  "disposition": "The exact R1 is sufficiently bounded and internally consistent to proceed through its own review/publication/actual-readback gates. This conclusion approves no hypothetical R2 postimage, executable-control body, staging or runtime invocation, and introduces no additional R1 gate or broader scope."
+}
