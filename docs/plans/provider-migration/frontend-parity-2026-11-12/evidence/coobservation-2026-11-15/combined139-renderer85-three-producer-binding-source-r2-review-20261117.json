@@ -1,0 +1,1038 @@
+{
+  "schemaVersion": 1,
+  "kind": "combined139-renderer85-three-producer-source-r2-binding-preservation-review",
+  "reviewer": "/root/red_publication_recovery",
+  "at": "2026-11-17 01:48:30 UTC",
+  "verdict": "ACCEPTED_EXACT_THREE_PRODUCER_SOURCE_R2_FOR_PUBLICATION_ONLY",
+  "accepted": true,
+  "repository": "777genius/agent-teams-ai",
+  "branch": "fix/frontend-parity-coobservation-c714-20261115",
+  "preparedFromCommit": "77993819c233737f1e2b4c11c8ca1a5d360bcbe3",
+  "preparedFromTree": "ada3f27db78fabc17a91e3904d41b8bc547c6dca",
+  "r1": {
+    "bytes": 139634,
+    "sha256": "b9524cd8f0f1251f034337f4eb8fbc6606adc1d1c987d993580be06b9a078a75",
+    "gitBlob": "8ce89328171e58ec3e0631dce9607ee7e1eba54e"
+  },
+  "proposal": {
+    "bytes": 25372,
+    "sha256": "7def167b3384043abb2cea83e90c51ea332f2c12a9f4fc3ca1ddcf1531bab85c",
+    "gitBlob": "b0d4fb7c7ca2fc486fda6823ee3c3618171f8cdc"
+  },
+  "producerAuthorshipGate": {
+    "bytes": 4327,
+    "sha256": "3231731b2a22cb3903ccff6991341b54c673cd7064599b9aa7238fe07e3c6b18",
+    "gitBlob": "2780955d0a71956a75650ddf4d8a0ff0576faa57"
+  },
+  "subject": {
+    "files": [
+      {
+        "path": "scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+        "identity": {
+          "bytes": 45795,
+          "sha256": "2c5931f5c7fa1dc8bb7858201c1b8afdbae9683faf4a2ad9fce067f116f3f94b",
+          "gitBlob": "5026f0ec6165bb092717ddc989043848a25081dc"
+        }
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-task-review-cycle-ui-smoke.ts",
+        "identity": {
+          "bytes": 33036,
+          "sha256": "4fa52cfad9347065680ef62a3ba6420762408a78a93b77e96ac3a2e16e68bdc9",
+          "gitBlob": "8d175c98158b3bd71192aef7b1929484b2b681b6"
+        }
+      },
+      {
+        "path": "src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts",
+        "identity": {
+          "bytes": 74340,
+          "sha256": "647ac5732bfd6b5cb57834adb4ad22c32ee5dfb018a934c92f982efd9daa531c",
+          "gitBlob": "c2faa156015707bc5fbd7f8123a7ffd9c4faa486"
+        }
+      }
+    ],
+    "beforeSourcePins": [
+      {
+        "path": "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+        "mode": "100644",
+        "bytes": 24759,
+        "sha256": "d15b7eea14c0951194310aee34ddc5c477879c759a97a4e2f4e9fce1f956ce9b",
+        "gitBlob": "cf93da72a198dac636658e512093eef7828b5927"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+        "mode": "100644",
+        "bytes": 45707,
+        "sha256": "d8ee4090606876194393463e96411f89ed54a53bd3095df333a5d47c5c7fd159",
+        "gitBlob": "bd8bc728808eda00a45b300fd328d49e4e919bc2"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts",
+        "mode": "100644",
+        "bytes": 36260,
+        "sha256": "26357f37b146fc171bbceadb624bde4a7f4e459d2073ae23a651e757817b2d38",
+        "gitBlob": "4700a0052d3c58a2b3d9bc66e6803220688050fd"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+        "mode": "100644",
+        "bytes": 8457,
+        "sha256": "2da55bb40a5689ace0e922dc4867d7c73278d9a1cd200ea8c4602ca68f82da3b",
+        "gitBlob": "3c7b4bb53f4259ac0795d3f92fb715887acb554f"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-task-review-cycle-ui-smoke.ts",
+        "mode": "100644",
+        "bytes": 32845,
+        "sha256": "43e12eb3252e578061ea5840ae39d173ce0cd5a8ce6673c5c5ea06d97a8bedaa",
+        "gitBlob": "d65706646743798f2646421105f2f6a75819f143"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+        "mode": "100644",
+        "bytes": 164965,
+        "sha256": "852bedb85c83dbc4b488dffb4a9ffebbe398adc53e85f5a3cea8ca36b146cbf7",
+        "gitBlob": "896c587e077da56a98a314a175fb3cba0353d6ee"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+        "mode": "100644",
+        "bytes": 28974,
+        "sha256": "7626e479a6662242009cb050e7e5af612a29e4205d62666d15274d5c30f91386",
+        "gitBlob": "ed57cb0fe7d57ef076a591621289eb77667c63ad"
+      },
+      {
+        "path": "src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts",
+        "mode": "100644",
+        "bytes": 74351,
+        "sha256": "68abe01f665b263bd8581659ea306f366428fdccbb45246f08ec42e20b9ee575",
+        "gitBlob": "1176fd06b70f1b717ba83deb387f87b05b18b45b"
+      },
+      {
+        "path": "test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts",
+        "mode": "100644",
+        "bytes": 187890,
+        "sha256": "b6f11896e60014aac785968d42390afde38716d47de9bba9562522235db048c9",
+        "gitBlob": "76495189c992fcda47cd7a43a0c697190b5acbb3"
+      }
+    ],
+    "sourcePins": [
+      {
+        "path": "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+        "mode": "100644",
+        "bytes": 24759,
+        "sha256": "d15b7eea14c0951194310aee34ddc5c477879c759a97a4e2f4e9fce1f956ce9b",
+        "gitBlob": "cf93da72a198dac636658e512093eef7828b5927"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+        "mode": "100644",
+        "bytes": 45795,
+        "sha256": "2c5931f5c7fa1dc8bb7858201c1b8afdbae9683faf4a2ad9fce067f116f3f94b",
+        "gitBlob": "5026f0ec6165bb092717ddc989043848a25081dc"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts",
+        "mode": "100644",
+        "bytes": 36260,
+        "sha256": "26357f37b146fc171bbceadb624bde4a7f4e459d2073ae23a651e757817b2d38",
+        "gitBlob": "4700a0052d3c58a2b3d9bc66e6803220688050fd"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+        "mode": "100644",
+        "bytes": 8457,
+        "sha256": "2da55bb40a5689ace0e922dc4867d7c73278d9a1cd200ea8c4602ca68f82da3b",
+        "gitBlob": "3c7b4bb53f4259ac0795d3f92fb715887acb554f"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-task-review-cycle-ui-smoke.ts",
+        "mode": "100644",
+        "bytes": 33036,
+        "sha256": "4fa52cfad9347065680ef62a3ba6420762408a78a93b77e96ac3a2e16e68bdc9",
+        "gitBlob": "8d175c98158b3bd71192aef7b1929484b2b681b6"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+        "mode": "100644",
+        "bytes": 164965,
+        "sha256": "852bedb85c83dbc4b488dffb4a9ffebbe398adc53e85f5a3cea8ca36b146cbf7",
+        "gitBlob": "896c587e077da56a98a314a175fb3cba0353d6ee"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+        "mode": "100644",
+        "bytes": 28974,
+        "sha256": "7626e479a6662242009cb050e7e5af612a29e4205d62666d15274d5c30f91386",
+        "gitBlob": "ed57cb0fe7d57ef076a591621289eb77667c63ad"
+      },
+      {
+        "path": "src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts",
+        "mode": "100644",
+        "bytes": 74340,
+        "sha256": "647ac5732bfd6b5cb57834adb4ad22c32ee5dfb018a934c92f982efd9daa531c",
+        "gitBlob": "c2faa156015707bc5fbd7f8123a7ffd9c4faa486"
+      },
+      {
+        "path": "test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts",
+        "mode": "100644",
+        "bytes": 187890,
+        "sha256": "b6f11896e60014aac785968d42390afde38716d47de9bba9562522235db048c9",
+        "gitBlob": "76495189c992fcda47cd7a43a0c697190b5acbb3"
+      }
+    ],
+    "beforeSourceVector": {
+      "bytes": 2118,
+      "sha256": "f2574559a378b3bc537fdcedbde161003c8344a5485dfff9322214f6fda2a90c",
+      "gitBlob": "f6446bdc2bbdb511206c729a1f03717871baea6d"
+    },
+    "sourceVector": {
+      "bytes": 2118,
+      "sha256": "6007c5c7ba2f74c43bd9b73c50cae2319eacbf712c233cc0d67b3efbb4c6894d",
+      "gitBlob": "3887991d5dbd25dbec5c8656e8e03d423ea502b7"
+    },
+    "tests": {
+      "node": {
+        "bytes": 164965,
+        "sha256": "852bedb85c83dbc4b488dffb4a9ffebbe398adc53e85f5a3cea8ca36b146cbf7",
+        "gitBlob": "896c587e077da56a98a314a175fb3cba0353d6ee"
+      },
+      "renderer": {
+        "bytes": 187890,
+        "sha256": "b6f11896e60014aac785968d42390afde38716d47de9bba9562522235db048c9",
+        "gitBlob": "76495189c992fcda47cd7a43a0c697190b5acbb3"
+      }
+    }
+  },
+  "method": {
+    "fullProposalAndGateReadAndRehashed": true,
+    "fullR1ReadAndRehashed": true,
+    "fullNinePreimageBodiesReadAndRehashed": true,
+    "fullThreePostimageBodiesReadAndRehashed": true,
+    "sourcePreimageBytes": 604208,
+    "sourcePostimageBytes": 153171,
+    "actualParentPathJoins": 9,
+    "exactForwardEditReconstruction": true,
+    "exactOffsetReverseReconstruction": true,
+    "allOutsideEditBytesPreserved": true,
+    "fullBeforeAndAfterCanonicalVectorsIndependentlyRecomputed": true,
+    "fullRootStaticReviewReadAndRehashed": true,
+    "runtimeInvoked": false,
+    "targetCodeEvaluated": false,
+    "shellInvoked": false,
+    "sourceWrites": 0,
+    "refWrites": 0,
+    "ciActions": 0,
+    "qualification": "Read-only source and binding/preservation R2. No current physical working-tree census, behavioral test result, typed build, lint or E2E acceptance is inferred."
+  },
+  "authorshipChronology": {
+    "gateAt": "2026-11-17 01:40:00 UTC",
+    "retainedDataAuthoringObservationAt": "2026-11-17 01:42:33 UTC",
+    "completeProposalRetainedAt": "2026-11-17 01:43:09 UTC",
+    "gatePrecedesAllReportedSourceAuthorship": true,
+    "exactIndividualCreationTimesOfFirstTwoBlobsNotRetained": true,
+    "inverseVerifierCorrection": {
+      "reported": {
+        "at": "2026-11-17 01:42:33 UTC",
+        "gateAt": "2026-11-17 01:40:00 UTC",
+        "files": [
+          {
+            "path": "scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+            "retainedInAuthoringStore": true,
+            "pin": {
+              "bytes": 45795,
+              "sha256": "2c5931f5c7fa1dc8bb7858201c1b8afdbae9683faf4a2ad9fce067f116f3f94b",
+              "gitBlob": "5026f0ec6165bb092717ddc989043848a25081dc"
+            }
+          },
+          {
+            "path": "scripts/legacy-agent-host/desktop-task-review-cycle-ui-smoke.ts",
+            "retainedInAuthoringStore": true,
+            "pin": {
+              "bytes": 33036,
+              "sha256": "4fa52cfad9347065680ef62a3ba6420762408a78a93b77e96ac3a2e16e68bdc9",
+              "gitBlob": "8d175c98158b3bd71192aef7b1929484b2b681b6"
+            }
+          },
+          {
+            "path": "src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts",
+            "retainedInAuthoringStore": false,
+            "pin": null
+          }
+        ],
+        "failure": "Data-only inverse checker required the replacement hook condition to be globally unique, but existing other hook conditions share that text. Two source blobs retained; hook/proposal not yet retained. No target runtime, physical source, test, control or branch mutation. Fixing verification to use exact recorded edit offsets."
+      },
+      "assessment": "The first two postimage bodies were already retained after the gate. The correction changed only the data inverse check from global replacement-text uniqueness to exact recorded offsets. Independent forward and reverse complete-body reconstruction here confirms all three exact postimages; no retry of any selected runtime or source application is claimed."
+    },
+    "redActualPublication": {
+      "commit": "77993819c233737f1e2b4c11c8ca1a5d360bcbe3",
+      "tree": "ada3f27db78fabc17a91e3904d41b8bc547c6dca",
+      "docsTree": "a1b92f625b548e7384ef13e0358c420d1e1f136d",
+      "root": {
+        "bytes": 55348,
+        "sha256": "bbe57a54a25a38bee1d4f4de5fc1d036d81f6b2ecdb40b3d0088b274de6656c9",
+        "gitBlob": "9218839ef55406b01267605c040bc586c7d443be"
+      },
+      "independent": {
+        "bytes": 166393,
+        "sha256": "cbe1880831780d10a7131282ab2ecc37d81fbdede3c53a265c1749ea863c20f2",
+        "gitBlob": "e5c2c2d8c84c0d491e334f6d67774cf23c83948f"
+      }
+    },
+    "rootActualFullReadReusedFromThisReviewThread": {
+      "bytes": 55348,
+      "sha256": "bbe57a54a25a38bee1d4f4de5fc1d036d81f6b2ecdb40b3d0088b274de6656c9",
+      "gitBlob": "9218839ef55406b01267605c040bc586c7d443be"
+    },
+    "independentActualFullReadAndSelfReadback": {
+      "bytes": 166393,
+      "sha256": "cbe1880831780d10a7131282ab2ecc37d81fbdede3c53a265c1749ea863c20f2",
+      "gitBlob": "e5c2c2d8c84c0d491e334f6d67774cf23c83948f"
+    }
+  },
+  "actualParentSourceTreeAnchors": [
+    {
+      "rootPath": "scripts",
+      "sha": "144090e99c2d91d49073e0ea17d7cf6be9ea053e",
+      "entries": 634,
+      "blobRows": 600,
+      "truncated": false
+    },
+    {
+      "rootPath": "src",
+      "sha": "ed69e62618e57d88c2e5237f98074a1ff8853e6f",
+      "entries": 5445,
+      "blobRows": 4659,
+      "truncated": false
+    },
+    {
+      "rootPath": "test",
+      "sha": "92519c914f57ec6cee13c2e4b0b2be568a56f641",
+      "entries": 1980,
+      "blobRows": 1695,
+      "truncated": false
+    }
+  ],
+  "treeReadQualification": {
+    "wholeRootRecursiveReadSucceeded": false,
+    "observedError": "Git API whole-root recursive retrieval returned Transport closed.",
+    "safeReadOnlyFallback": "Complete recursive scripts, src and test subtree bodies were fetched, each anchored to the exact previously verified77993819 root tree, with truncated=false. All nine actual-parent source paths/modes/blob identities were verified through these complete subtree maps.",
+    "unchangedRootAndCensusProof": "The previously accepted complete actual77993819 publication and inherited8798non-doc/42workflow census remain exact. This source R2 proposes only three existing-file replacements and adds no source/config/workflow/policy path."
+  },
+  "fullPreimageReadbacks": [
+    {
+      "path": "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+      "mode": "100644",
+      "bytes": 24759,
+      "sha256": "d15b7eea14c0951194310aee34ddc5c477879c759a97a4e2f4e9fce1f956ce9b",
+      "gitBlob": "cf93da72a198dac636658e512093eef7828b5927",
+      "fullBodyReadAndRehashed": true,
+      "actualParentTreeLeaf": "cf93da72a198dac636658e512093eef7828b5927"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+      "mode": "100644",
+      "bytes": 45707,
+      "sha256": "d8ee4090606876194393463e96411f89ed54a53bd3095df333a5d47c5c7fd159",
+      "gitBlob": "bd8bc728808eda00a45b300fd328d49e4e919bc2",
+      "fullBodyReadAndRehashed": true,
+      "actualParentTreeLeaf": "bd8bc728808eda00a45b300fd328d49e4e919bc2"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts",
+      "mode": "100644",
+      "bytes": 36260,
+      "sha256": "26357f37b146fc171bbceadb624bde4a7f4e459d2073ae23a651e757817b2d38",
+      "gitBlob": "4700a0052d3c58a2b3d9bc66e6803220688050fd",
+      "fullBodyReadAndRehashed": true,
+      "actualParentTreeLeaf": "4700a0052d3c58a2b3d9bc66e6803220688050fd"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+      "mode": "100644",
+      "bytes": 8457,
+      "sha256": "2da55bb40a5689ace0e922dc4867d7c73278d9a1cd200ea8c4602ca68f82da3b",
+      "gitBlob": "3c7b4bb53f4259ac0795d3f92fb715887acb554f",
+      "fullBodyReadAndRehashed": true,
+      "actualParentTreeLeaf": "3c7b4bb53f4259ac0795d3f92fb715887acb554f"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-task-review-cycle-ui-smoke.ts",
+      "mode": "100644",
+      "bytes": 32845,
+      "sha256": "43e12eb3252e578061ea5840ae39d173ce0cd5a8ce6673c5c5ea06d97a8bedaa",
+      "gitBlob": "d65706646743798f2646421105f2f6a75819f143",
+      "fullBodyReadAndRehashed": true,
+      "actualParentTreeLeaf": "d65706646743798f2646421105f2f6a75819f143"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+      "mode": "100644",
+      "bytes": 164965,
+      "sha256": "852bedb85c83dbc4b488dffb4a9ffebbe398adc53e85f5a3cea8ca36b146cbf7",
+      "gitBlob": "896c587e077da56a98a314a175fb3cba0353d6ee",
+      "fullBodyReadAndRehashed": true,
+      "actualParentTreeLeaf": "896c587e077da56a98a314a175fb3cba0353d6ee"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "mode": "100644",
+      "bytes": 28974,
+      "sha256": "7626e479a6662242009cb050e7e5af612a29e4205d62666d15274d5c30f91386",
+      "gitBlob": "ed57cb0fe7d57ef076a591621289eb77667c63ad",
+      "fullBodyReadAndRehashed": true,
+      "actualParentTreeLeaf": "ed57cb0fe7d57ef076a591621289eb77667c63ad"
+    },
+    {
+      "path": "src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts",
+      "mode": "100644",
+      "bytes": 74351,
+      "sha256": "68abe01f665b263bd8581659ea306f366428fdccbb45246f08ec42e20b9ee575",
+      "gitBlob": "1176fd06b70f1b717ba83deb387f87b05b18b45b",
+      "fullBodyReadAndRehashed": true,
+      "actualParentTreeLeaf": "1176fd06b70f1b717ba83deb387f87b05b18b45b"
+    },
+    {
+      "path": "test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts",
+      "mode": "100644",
+      "bytes": 187890,
+      "sha256": "b6f11896e60014aac785968d42390afde38716d47de9bba9562522235db048c9",
+      "gitBlob": "76495189c992fcda47cd7a43a0c697190b5acbb3",
+      "fullBodyReadAndRehashed": true,
+      "actualParentTreeLeaf": "76495189c992fcda47cd7a43a0c697190b5acbb3"
+    }
+  ],
+  "fullPostimageAndInverseReadbacks": [
+    {
+      "path": "scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+      "preimage": {
+        "bytes": 45707,
+        "sha256": "d8ee4090606876194393463e96411f89ed54a53bd3095df333a5d47c5c7fd159",
+        "gitBlob": "bd8bc728808eda00a45b300fd328d49e4e919bc2"
+      },
+      "postimage": {
+        "bytes": 45795,
+        "sha256": "2c5931f5c7fa1dc8bb7858201c1b8afdbae9683faf4a2ad9fce067f116f3f94b",
+        "gitBlob": "5026f0ec6165bb092717ddc989043848a25081dc"
+      },
+      "preimageLines": 570,
+      "postimageLines": 572,
+      "cap": 800,
+      "edits": [
+        {
+          "offset": 5691,
+          "removed": {
+            "bytes": 69,
+            "sha256": "0adccd0c7d853dbd37433ba7894bb3d4f63d4ef10773dfdc2c2d0e539160ecbe",
+            "gitBlob": "d4e0199d7e73809b71dfc3f2b76f1af9cbc0bff6"
+          },
+          "added": {
+            "bytes": 112,
+            "sha256": "de7f2ca237f32dcbdfc773577530ab4556cd1a3cb535f2e816b300f68611a548",
+            "gitBlob": "0d6b0741a77ce34cd0630ac78a829495428f8d9e"
+          },
+          "exactSpanJoined": true
+        },
+        {
+          "offset": 5856,
+          "removed": {
+            "bytes": 104,
+            "sha256": "d483ce71179e9bb55c0c8db027102bcec457d876a21b024c4abed9bbc93ee4b5",
+            "gitBlob": "8aa2e4509dfb1cd1f613cbc2299f85a78dfcc11b"
+          },
+          "added": {
+            "bytes": 149,
+            "sha256": "dea724bd8f3a043912b13e570378bcecd5c4ce984b272fb11568e642bcdf9458",
+            "gitBlob": "bf5773cd7b6dc066bc34405199f545f1a2d3e8cb"
+          },
+          "exactSpanJoined": true
+        }
+      ],
+      "fullForwardExact": true,
+      "fullInverseExact": true,
+      "offsetCodec": "Exact JavaScript string offsets in the fully decoded UTF-8 source; complete byte identities independently rehashed."
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-task-review-cycle-ui-smoke.ts",
+      "preimage": {
+        "bytes": 32845,
+        "sha256": "43e12eb3252e578061ea5840ae39d173ce0cd5a8ce6673c5c5ea06d97a8bedaa",
+        "gitBlob": "d65706646743798f2646421105f2f6a75819f143"
+      },
+      "postimage": {
+        "bytes": 33036,
+        "sha256": "4fa52cfad9347065680ef62a3ba6420762408a78a93b77e96ac3a2e16e68bdc9",
+        "gitBlob": "8d175c98158b3bd71192aef7b1929484b2b681b6"
+      },
+      "preimageLines": 788,
+      "postimageLines": 794,
+      "cap": 800,
+      "edits": [
+        {
+          "offset": 17215,
+          "removed": {
+            "bytes": 119,
+            "sha256": "489d4a378e651681701ce1ad8671cb804d5a76e96d6cfff869c3a06ccab0afc8",
+            "gitBlob": "d6280a34384bb329d9e7b84698cee62af90245bf"
+          },
+          "added": {
+            "bytes": 310,
+            "sha256": "ec6d5ce70aa7bc491e7a9f325f721fdf86b534d8a0c76d744ce9f3be5fc43790",
+            "gitBlob": "70321976d4c567083d9d9e4b7d4835785e053fe6"
+          },
+          "exactSpanJoined": true
+        }
+      ],
+      "fullForwardExact": true,
+      "fullInverseExact": true,
+      "offsetCodec": "Exact JavaScript string offsets in the fully decoded UTF-8 source; complete byte identities independently rehashed."
+    },
+    {
+      "path": "src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts",
+      "preimage": {
+        "bytes": 74351,
+        "sha256": "68abe01f665b263bd8581659ea306f366428fdccbb45246f08ec42e20b9ee575",
+        "gitBlob": "1176fd06b70f1b717ba83deb387f87b05b18b45b"
+      },
+      "postimage": {
+        "bytes": 74340,
+        "sha256": "647ac5732bfd6b5cb57834adb4ad22c32ee5dfb018a934c92f982efd9daa531c",
+        "gitBlob": "c2faa156015707bc5fbd7f8123a7ffd9c4faa486"
+      },
+      "preimageLines": 2068,
+      "postimageLines": 2068,
+      "cap": 2068,
+      "edits": [
+        {
+          "offset": 21419,
+          "removed": {
+            "bytes": 36,
+            "sha256": "cba9564e19adffb199815aeabf20514dc6b0ee4581918dfaaefef07bc1f36fdd",
+            "gitBlob": "de1a0189ff8a7e20359f2b1c413238b66e678840"
+          },
+          "added": {
+            "bytes": 25,
+            "sha256": "9c202d426593ba1e1f6edaab02998d59b33973dbb7c5abd0597fa4c5cdc5c0e2",
+            "gitBlob": "775d8c2bc28a221a353467d5287d043024d9a34a"
+          },
+          "exactSpanJoined": true
+        }
+      ],
+      "fullForwardExact": true,
+      "fullInverseExact": true,
+      "offsetCodec": "Exact JavaScript string offsets in the fully decoded UTF-8 source; complete byte identities independently rehashed."
+    }
+  ],
+  "exactEdits": [
+    {
+      "path": "scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+      "edits": [
+        {
+          "before": "    const cutoff = Date.now() + 90_000; let value = await observe();\n",
+          "after": "    const cutoff = Date.now() + 90_000; let value = await observe();\n    assert.ok(Date.now() < cutoff, label);\n",
+          "beforeIdentity": {
+            "bytes": 69,
+            "sha256": "0adccd0c7d853dbd37433ba7894bb3d4f63d4ef10773dfdc2c2d0e539160ecbe",
+            "gitBlob": "d4e0199d7e73809b71dfc3f2b76f1af9cbc0bff6"
+          },
+          "afterIdentity": {
+            "bytes": 112,
+            "sha256": "de7f2ca237f32dcbdfc773577530ab4556cd1a3cb535f2e816b300f68611a548",
+            "gitBlob": "0d6b0741a77ce34cd0630ac78a829495428f8d9e"
+          },
+          "offsetInSequentialPreimage": 5691
+        },
+        {
+          "before": "      current(); await new Promise<void>(resolve => setTimeout(resolve, 100)); value = await observe();\n",
+          "after": "      current(); await new Promise<void>(resolve => setTimeout(resolve, 100)); value = await observe();\n      assert.ok(Date.now() < cutoff, label);\n",
+          "beforeIdentity": {
+            "bytes": 104,
+            "sha256": "d483ce71179e9bb55c0c8db027102bcec457d876a21b024c4abed9bbc93ee4b5",
+            "gitBlob": "8aa2e4509dfb1cd1f613cbc2299f85a78dfcc11b"
+          },
+          "afterIdentity": {
+            "bytes": 149,
+            "sha256": "dea724bd8f3a043912b13e570378bcecd5c4ce984b272fb11568e642bcdf9458",
+            "gitBlob": "bf5773cd7b6dc066bc34405199f545f1a2d3e8cb"
+          },
+          "offsetInSequentialPreimage": 5856
+        }
+      ],
+      "allowedDelta": "Only the existing local poll body between its unique declaration and existing workspace declaration. Check the same original Date.now cutoff immediately after each of the two existing awaited observations and before accepting/continuing. No new/reset/extended deadline, timer, observation, catch, retry, call site, import, finite-provider branch or other source region. Preserve original assertion label, direct read-error identity, currentness call and100ms cadence."
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-task-review-cycle-ui-smoke.ts",
+      "edits": [
+        {
+          "before": "      desktopTaskCommentInputExpression(options.handleId, taskId),\n      'exact current correction Task/owner/surface'\n",
+          "after": "      desktopTaskCommentInputExpression(options.handleId, taskId),\n      'exact current correction Task/owner/surface',\n      30_000,\n      (value) =>\n        value !== null &&\n        typeof value === 'object' &&\n        !Array.isArray(value) &&\n        (value as Record<string, unknown>).canEditNow === true\n",
+          "beforeIdentity": {
+            "bytes": 119,
+            "sha256": "489d4a378e651681701ce1ad8671cb804d5a76e96d6cfff869c3a06ccab0afc8",
+            "gitBlob": "d6280a34384bb329d9e7b84698cee62af90245bf"
+          },
+          "afterIdentity": {
+            "bytes": 310,
+            "sha256": "ec6d5ce70aa7bc491e7a9f325f721fdf86b534d8a0c76d744ce9f3be5fc43790",
+            "gitBlob": "70321976d4c567083d9d9e4b7d4835785e053fe6"
+          },
+          "offsetInSequentialPreimage": 17215
+        }
+      ],
+      "allowedDelta": "Only add the exact readiness predicate and explicitly preserve the existing30_000 default at the original waitRead inside the unique commentTarget correction span. The predicate accepts only a non-null non-array object whose canEditNow property is exactly true. Preserve original expression, label, selector validation and scroll/focus/insert/submit order, original errors and no replay. No new helper/import/file, no copied readiness producer and no mutation outside that argument list."
+    },
+    {
+      "path": "src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts",
+      "edits": [
+        {
+          "before": "if (!silent && requestIsCurrent()) {",
+          "after": "if (requestIsCurrent()) {",
+          "beforeIdentity": {
+            "bytes": 36,
+            "sha256": "cba9564e19adffb199815aeabf20514dc6b0ee4581918dfaaefef07bc1f36fdd",
+            "gitBlob": "de1a0189ff8a7e20359f2b1c413238b66e678840"
+          },
+          "afterIdentity": {
+            "bytes": 25,
+            "sha256": "9c202d426593ba1e1f6edaab02998d59b33973dbb7c5abd0597fa4c5cdc5c0e2",
+            "gitBlob": "775d8c2bc28a221a353467d5287d043024d9a34a"
+          },
+          "offsetInSequentialPreimage": 21419
+        }
+      ],
+      "allowedDelta": "Only remove !silent && from the original getView finally condition if (!silent && requestIsCurrent()). Preserve its exact currentness check, setLoading(false), surrounding try/catch/finally, all requests/state/errors and every other source byte. No growth, diagnostic publisher/helper/import or new file."
+    }
+  ],
+  "frozenSourceAndTests": [
+    {
+      "path": "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+      "mode": "100644",
+      "bytes": 24759,
+      "sha256": "d15b7eea14c0951194310aee34ddc5c477879c759a97a4e2f4e9fce1f956ce9b",
+      "gitBlob": "cf93da72a198dac636658e512093eef7828b5927",
+      "fullPreimageReadAndRehashed": true,
+      "exactAfterPinAndBodyPreserved": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts",
+      "mode": "100644",
+      "bytes": 36260,
+      "sha256": "26357f37b146fc171bbceadb624bde4a7f4e459d2073ae23a651e757817b2d38",
+      "gitBlob": "4700a0052d3c58a2b3d9bc66e6803220688050fd",
+      "fullPreimageReadAndRehashed": true,
+      "exactAfterPinAndBodyPreserved": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+      "mode": "100644",
+      "bytes": 8457,
+      "sha256": "2da55bb40a5689ace0e922dc4867d7c73278d9a1cd200ea8c4602ca68f82da3b",
+      "gitBlob": "3c7b4bb53f4259ac0795d3f92fb715887acb554f",
+      "fullPreimageReadAndRehashed": true,
+      "exactAfterPinAndBodyPreserved": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+      "mode": "100644",
+      "bytes": 164965,
+      "sha256": "852bedb85c83dbc4b488dffb4a9ffebbe398adc53e85f5a3cea8ca36b146cbf7",
+      "gitBlob": "896c587e077da56a98a314a175fb3cba0353d6ee",
+      "fullPreimageReadAndRehashed": true,
+      "exactAfterPinAndBodyPreserved": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "mode": "100644",
+      "bytes": 28974,
+      "sha256": "7626e479a6662242009cb050e7e5af612a29e4205d62666d15274d5c30f91386",
+      "gitBlob": "ed57cb0fe7d57ef076a591621289eb77667c63ad",
+      "fullPreimageReadAndRehashed": true,
+      "exactAfterPinAndBodyPreserved": true
+    },
+    {
+      "path": "test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts",
+      "mode": "100644",
+      "bytes": 187890,
+      "sha256": "b6f11896e60014aac785968d42390afde38716d47de9bba9562522235db048c9",
+      "gitBlob": "76495189c992fcda47cd7a43a0c697190b5acbb3",
+      "fullPreimageReadAndRehashed": true,
+      "exactAfterPinAndBodyPreserved": true
+    }
+  ],
+  "canonicalVectorCodec": {
+    "description": "Sorted path array; record keys sorted; compact JSON UTF-8 without terminal LF. Derived vector identity is not a standalone Git blob.",
+    "beforeIdentity": {
+      "bytes": 2118,
+      "sha256": "f2574559a378b3bc537fdcedbde161003c8344a5485dfff9322214f6fda2a90c",
+      "gitBlob": "f6446bdc2bbdb511206c729a1f03717871baea6d"
+    },
+    "afterIdentity": {
+      "bytes": 2118,
+      "sha256": "6007c5c7ba2f74c43bd9b73c50cae2319eacbf712c233cc0d67b3efbb4c6894d",
+      "gitBlob": "3887991d5dbd25dbec5c8656e8e03d423ea502b7"
+    },
+    "beforeBody": "[{\"bytes\":24759,\"gitBlob\":\"cf93da72a198dac636658e512093eef7828b5927\",\"mode\":\"100644\",\"path\":\"scripts/legacy-agent-host/desktop-emulated-selection-ui.ts\",\"sha256\":\"d15b7eea14c0951194310aee34ddc5c477879c759a97a4e2f4e9fce1f956ce9b\"},{\"bytes\":45707,\"gitBlob\":\"bd8bc728808eda00a45b300fd328d49e4e919bc2\",\"mode\":\"100644\",\"path\":\"scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts\",\"sha256\":\"d8ee4090606876194393463e96411f89ed54a53bd3095df333a5d47c5c7fd159\"},{\"bytes\":36260,\"gitBlob\":\"4700a0052d3c58a2b3d9bc66e6803220688050fd\",\"mode\":\"100644\",\"path\":\"scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts\",\"sha256\":\"26357f37b146fc171bbceadb624bde4a7f4e459d2073ae23a651e757817b2d38\"},{\"bytes\":8457,\"gitBlob\":\"3c7b4bb53f4259ac0795d3f92fb715887acb554f\",\"mode\":\"100644\",\"path\":\"scripts/legacy-agent-host/desktop-task-comment-input-target.ts\",\"sha256\":\"2da55bb40a5689ace0e922dc4867d7c73278d9a1cd200ea8c4602ca68f82da3b\"},{\"bytes\":32845,\"gitBlob\":\"d65706646743798f2646421105f2f6a75819f143\",\"mode\":\"100644\",\"path\":\"scripts/legacy-agent-host/desktop-task-review-cycle-ui-smoke.ts\",\"sha256\":\"43e12eb3252e578061ea5840ae39d173ce0cd5a8ce6673c5c5ea06d97a8bedaa\"},{\"bytes\":164965,\"gitBlob\":\"896c587e077da56a98a314a175fb3cba0353d6ee\",\"mode\":\"100644\",\"path\":\"scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts\",\"sha256\":\"852bedb85c83dbc4b488dffb4a9ffebbe398adc53e85f5a3cea8ca36b146cbf7\"},{\"bytes\":28974,\"gitBlob\":\"ed57cb0fe7d57ef076a591621289eb77667c63ad\",\"mode\":\"100644\",\"path\":\"scripts/legacy-agent-host/desktop-ui-controls.ts\",\"sha256\":\"7626e479a6662242009cb050e7e5af612a29e4205d62666d15274d5c30f91386\"},{\"bytes\":74351,\"gitBlob\":\"1176fd06b70f1b717ba83deb387f87b05b18b45b\",\"mode\":\"100644\",\"path\":\"src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts\",\"sha256\":\"68abe01f665b263bd8581659ea306f366428fdccbb45246f08ec42e20b9ee575\"},{\"bytes\":187890,\"gitBlob\":\"76495189c992fcda47cd7a43a0c697190b5acbb3\",\"mode\":\"100644\",\"path\":\"test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts\",\"sha256\":\"b6f11896e60014aac785968d42390afde38716d47de9bba9562522235db048c9\"}]",
+    "afterBody": "[{\"bytes\":24759,\"gitBlob\":\"cf93da72a198dac636658e512093eef7828b5927\",\"mode\":\"100644\",\"path\":\"scripts/legacy-agent-host/desktop-emulated-selection-ui.ts\",\"sha256\":\"d15b7eea14c0951194310aee34ddc5c477879c759a97a4e2f4e9fce1f956ce9b\"},{\"bytes\":45795,\"gitBlob\":\"5026f0ec6165bb092717ddc989043848a25081dc\",\"mode\":\"100644\",\"path\":\"scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts\",\"sha256\":\"2c5931f5c7fa1dc8bb7858201c1b8afdbae9683faf4a2ad9fce067f116f3f94b\"},{\"bytes\":36260,\"gitBlob\":\"4700a0052d3c58a2b3d9bc66e6803220688050fd\",\"mode\":\"100644\",\"path\":\"scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts\",\"sha256\":\"26357f37b146fc171bbceadb624bde4a7f4e459d2073ae23a651e757817b2d38\"},{\"bytes\":8457,\"gitBlob\":\"3c7b4bb53f4259ac0795d3f92fb715887acb554f\",\"mode\":\"100644\",\"path\":\"scripts/legacy-agent-host/desktop-task-comment-input-target.ts\",\"sha256\":\"2da55bb40a5689ace0e922dc4867d7c73278d9a1cd200ea8c4602ca68f82da3b\"},{\"bytes\":33036,\"gitBlob\":\"8d175c98158b3bd71192aef7b1929484b2b681b6\",\"mode\":\"100644\",\"path\":\"scripts/legacy-agent-host/desktop-task-review-cycle-ui-smoke.ts\",\"sha256\":\"4fa52cfad9347065680ef62a3ba6420762408a78a93b77e96ac3a2e16e68bdc9\"},{\"bytes\":164965,\"gitBlob\":\"896c587e077da56a98a314a175fb3cba0353d6ee\",\"mode\":\"100644\",\"path\":\"scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts\",\"sha256\":\"852bedb85c83dbc4b488dffb4a9ffebbe398adc53e85f5a3cea8ca36b146cbf7\"},{\"bytes\":28974,\"gitBlob\":\"ed57cb0fe7d57ef076a591621289eb77667c63ad\",\"mode\":\"100644\",\"path\":\"scripts/legacy-agent-host/desktop-ui-controls.ts\",\"sha256\":\"7626e479a6662242009cb050e7e5af612a29e4205d62666d15274d5c30f91386\"},{\"bytes\":74340,\"gitBlob\":\"c2faa156015707bc5fbd7f8123a7ffd9c4faa486\",\"mode\":\"100644\",\"path\":\"src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts\",\"sha256\":\"647ac5732bfd6b5cb57834adb4ad22c32ee5dfb018a934c92f982efd9daa531c\"},{\"bytes\":187890,\"gitBlob\":\"76495189c992fcda47cd7a43a0c697190b5acbb3\",\"mode\":\"100644\",\"path\":\"test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts\",\"sha256\":\"b6f11896e60014aac785968d42390afde38716d47de9bba9562522235db048c9\"}]",
+    "derivedIdentityNotStandaloneGitBlob": true
+  },
+  "sourceScopeAssessment": {
+    "P11": {
+      "path": "scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+      "originalCutoffMilliseconds": 90000,
+      "addedPostObservationDeadlineChecks": 2,
+      "strictComparison": "Date.now() < cutoff",
+      "originalAwaitedObservationCountPreserved": 2,
+      "originalCurrentnessCallAnd100msCadencePreserved": true,
+      "originalReadRejectionIdentityPreservedByNoCatch": true,
+      "originalFinalAcceptanceAssertionAndLabelPreserved": true,
+      "uniqueOriginalPollSpanOnly": true,
+      "noNewDeadlineObservationTimerRetryOrCallsite": true
+    },
+    "review": {
+      "path": "scripts/legacy-agent-host/desktop-task-review-cycle-ui-smoke.ts",
+      "originalTimeoutMilliseconds": 30000,
+      "changesOnlyExistingWaitReadArgumentList": true,
+      "expressionAndLabelPreserved": true,
+      "predicate": "non-null && typeof object && not Array && canEditNow === true",
+      "selectorValidationAndScrollFocusInsertSubmitPreserved": true,
+      "originalReadAndInsertErrorPathsUnchanged": true,
+      "noInputReplayOrNewHelper": true,
+      "genericWaitReadBodyLiteralUnchanged": true,
+      "qualification": "Static contract reasoning only; all frozen null/empty/false/nonboolean/array/current/insertion-error variants still require the selected whole GREEN."
+    },
+    "hook": {
+      "path": "src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts",
+      "removedLiteral": "!silent && ",
+      "removedBytes": 11,
+      "selectedFinallyOnly": true,
+      "requestIsCurrentAndSetLoadingFalsePreserved": true,
+      "allOtherBytesIdentical": true,
+      "lineCountUnchanged": 2068,
+      "qualification": "Static source change matches the three accepted silent-refresh RED failures. Stale/newer/unmounted controls and later assertions remain for whole GREEN."
+    }
+  },
+  "preservation": {
+    "selectedProducerPaths": [
+      "scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+      "scripts/legacy-agent-host/desktop-task-review-cycle-ui-smoke.ts",
+      "src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts"
+    ],
+    "selectedProducerCount": 3,
+    "selectedSourceRows": 9,
+    "frozenProducerCount": 4,
+    "frozenWholeTests": 2,
+    "nodeCases": 139,
+    "rendererCases": 85,
+    "newSourceFiles": 0,
+    "newImports": 0,
+    "newHelpers": 0,
+    "runnerChanged": false,
+    "phaseBindingAuthored": false,
+    "productionFilesExpected": 5020,
+    "productionCap": 800,
+    "exceptionCountExpected": 141,
+    "producerPostimageLines": {
+      "p11": 572,
+      "review": 794,
+      "hook": 2068
+    },
+    "existingHookExceptionUnchanged": true,
+    "qualification": "Policy and count preservation are by exact selected source construction and unchanged file set/config; selected runtime source-size validation remains required."
+  },
+  "parallelRootStatic": {
+    "identity": {
+      "bytes": 17023,
+      "sha256": "30aa0b71c8c7cdb32d88db381e7396ec2e543ea977d80e93ee8297bd9f3304f3",
+      "gitBlob": "e4119f144e4a79e7c7b6a1598a33a70388df207f"
+    },
+    "fullBodyReadAndRehashed": true,
+    "exactProposalGateR1AndSourceSubjectJoined": true,
+    "checks": 55,
+    "allChecksPassed": true,
+    "failedChecks": [],
+    "unresolvedBlockers": []
+  },
+  "checks": [
+    {
+      "name": "Exact selected source R1 and proposal identity",
+      "passed": true
+    },
+    {
+      "name": "Complete gate literal and identity exact",
+      "passed": true
+    },
+    {
+      "name": "Exact actual RED publication and both accepted actual reports",
+      "passed": true
+    },
+    {
+      "name": "Source authorship gate is closed after complete actual report",
+      "passed": true
+    },
+    {
+      "name": "Proposal and first retained-authoring observation follow closed gate",
+      "passed": true
+    },
+    {
+      "name": "Authoring verifier correction is honestly limited to data checking",
+      "passed": true
+    },
+    {
+      "name": "Current branch still exact source preimage publication",
+      "passed": true
+    },
+    {
+      "name": "Complete anchored source subtree scripts",
+      "passed": true
+    },
+    {
+      "name": "Complete anchored source subtree src",
+      "passed": true
+    },
+    {
+      "name": "Complete anchored source subtree test",
+      "passed": true
+    },
+    {
+      "name": "Full actual-parent source preimage scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+      "passed": true
+    },
+    {
+      "name": "Full actual-parent source preimage scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+      "passed": true
+    },
+    {
+      "name": "Full actual-parent source preimage scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts",
+      "passed": true
+    },
+    {
+      "name": "Full actual-parent source preimage scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+      "passed": true
+    },
+    {
+      "name": "Full actual-parent source preimage scripts/legacy-agent-host/desktop-task-review-cycle-ui-smoke.ts",
+      "passed": true
+    },
+    {
+      "name": "Full actual-parent source preimage scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+      "passed": true
+    },
+    {
+      "name": "Full actual-parent source preimage scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "passed": true
+    },
+    {
+      "name": "Full actual-parent source preimage src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts",
+      "passed": true
+    },
+    {
+      "name": "Full actual-parent source preimage test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts",
+      "passed": true
+    },
+    {
+      "name": "Nine rows exactly match accepted RED vector and phase source pins",
+      "passed": true
+    },
+    {
+      "name": "Only three exact selected producer paths",
+      "passed": true
+    },
+    {
+      "name": "Full exact producer postimage scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+      "passed": true
+    },
+    {
+      "name": "Exact preselected delta contract scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+      "passed": true
+    },
+    {
+      "name": "Exact edit span identities scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts #1",
+      "passed": true
+    },
+    {
+      "name": "Exact sequential edit preimage position scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts #1",
+      "passed": true
+    },
+    {
+      "name": "Exact edit span identities scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts #2",
+      "passed": true
+    },
+    {
+      "name": "Exact sequential edit preimage position scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts #2",
+      "passed": true
+    },
+    {
+      "name": "Complete forward replay reproduces all postimage bytes scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+      "passed": true
+    },
+    {
+      "name": "Exact inverse location scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+      "passed": true
+    },
+    {
+      "name": "Exact inverse location scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+      "passed": true
+    },
+    {
+      "name": "Complete inverse reproduces every preimage byte scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+      "passed": true
+    },
+    {
+      "name": "Source cap and line count scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+      "passed": true
+    },
+    {
+      "name": "Full exact producer postimage scripts/legacy-agent-host/desktop-task-review-cycle-ui-smoke.ts",
+      "passed": true
+    },
+    {
+      "name": "Exact preselected delta contract scripts/legacy-agent-host/desktop-task-review-cycle-ui-smoke.ts",
+      "passed": true
+    },
+    {
+      "name": "Exact edit span identities scripts/legacy-agent-host/desktop-task-review-cycle-ui-smoke.ts #1",
+      "passed": true
+    },
+    {
+      "name": "Exact sequential edit preimage position scripts/legacy-agent-host/desktop-task-review-cycle-ui-smoke.ts #1",
+      "passed": true
+    },
+    {
+      "name": "Complete forward replay reproduces all postimage bytes scripts/legacy-agent-host/desktop-task-review-cycle-ui-smoke.ts",
+      "passed": true
+    },
+    {
+      "name": "Exact inverse location scripts/legacy-agent-host/desktop-task-review-cycle-ui-smoke.ts",
+      "passed": true
+    },
+    {
+      "name": "Complete inverse reproduces every preimage byte scripts/legacy-agent-host/desktop-task-review-cycle-ui-smoke.ts",
+      "passed": true
+    },
+    {
+      "name": "Source cap and line count scripts/legacy-agent-host/desktop-task-review-cycle-ui-smoke.ts",
+      "passed": true
+    },
+    {
+      "name": "Full exact producer postimage src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts",
+      "passed": true
+    },
+    {
+      "name": "Exact preselected delta contract src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts",
+      "passed": true
+    },
+    {
+      "name": "Exact edit span identities src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts #1",
+      "passed": true
+    },
+    {
+      "name": "Exact sequential edit preimage position src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts #1",
+      "passed": true
+    },
+    {
+      "name": "Complete forward replay reproduces all postimage bytes src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts",
+      "passed": true
+    },
+    {
+      "name": "Exact inverse location src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts",
+      "passed": true
+    },
+    {
+      "name": "Complete inverse reproduces every preimage byte src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts",
+      "passed": true
+    },
+    {
+      "name": "Source cap and line count src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts",
+      "passed": true
+    },
+    {
+      "name": "Exact nine-row after vector changes only selected three pins",
+      "passed": true
+    },
+    {
+      "name": "Complete no-LF canonical source vector preimage",
+      "passed": true
+    },
+    {
+      "name": "Complete no-LF canonical source vector postimage",
+      "passed": true
+    },
+    {
+      "name": "Exactly six complete frozen source bodies are unchanged",
+      "passed": true
+    },
+    {
+      "name": "Both whole test identities are frozen to accepted 139/85 tests",
+      "passed": true
+    },
+    {
+      "name": "P11 changes only unique original poll span",
+      "passed": true
+    },
+    {
+      "name": "P11 exact two post-observation assertions and unchanged original clock",
+      "passed": true
+    },
+    {
+      "name": "Review changes only unique selected correction span",
+      "passed": true
+    },
+    {
+      "name": "Review exact predicate and preserved original30s argument",
+      "passed": true
+    },
+    {
+      "name": "The shared readiness implementation remains frozen",
+      "passed": true
+    },
+    {
+      "name": "Hook removes only the eleven selected bytes",
+      "passed": true
+    },
+    {
+      "name": "Hook finalization still contains exact request guard and loading clear",
+      "passed": true
+    },
+    {
+      "name": "No new file, helper or import is in the exact edit set",
+      "passed": true
+    },
+    {
+      "name": "Source-size policy and frozen exception count unchanged by construction",
+      "passed": true
+    },
+    {
+      "name": "Proposal claims source authorship only, no application/publication/behavioral PASS",
+      "passed": true
+    },
+    {
+      "name": "Complete root static report joins exact proposal gate and postimages",
+      "passed": true
+    },
+    {
+      "name": "Complete root static report all55checks pass with no premature application",
+      "passed": true
+    }
+  ],
+  "checkCount": 65,
+  "failedChecks": [],
+  "unresolvedBlockers": [],
+  "sourceWorkingTreeWritesByReviewer": 0,
+  "runtimeInvokedByReviewer": false,
+  "producerPostimagesPublished": false,
+  "producerPostimagesApplied": false,
+  "greenExecuted": false,
+  "validationExecuted": false,
+  "oldAttempts": {
+    "53054": "COMPLETE accepted expected RED; outer0; spent",
+    "54393": "UNKNOWN/INCOMPLETE/SPENT; old outer/termination/custody/cleanup unknown",
+    "64038": "REFUSED/SPENT; outer2"
+  },
+  "disposition": "Exact three whole source postimages are accepted for immediate-push publication subject to the complete parallel source R2 set. Complete actual root and independent source publication readbacks precede any application. The same selected R1 and unchanged runner remain; one later immutable materialization/GREEN binding must complete its own R2/publication/readbacks.",
+  "limits": [
+    "Independent source R2 acceptance is not GREEN or E2E qualification.",
+    "RED-first failures do not qualify later unreachable branches; complete139/85 GREEN remains required.",
+    "No new test materialization, repair, replay, partial resume, realClaude/Codex runtime, workflow/policy change or broad source refactor is selected.",
+    "Only exact planned postimages are reviewed; future actual publication and physical materialization must verify their own complete boundaries and gates."
+  ]
+}

@@ -1,0 +1,89 @@
+{
+  "schemaVersion": 1,
+  "kind": "c714-three-producer-source-only-materialization-invocation-intent",
+  "at": "2026-11-17 02:22:22 UTC",
+  "argv": [
+    "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python3",
+    "/workspace/scratch/c714-post-transport-20261117/controls/combined-runner.py",
+    "/workspace/scratch/c714-post-transport-20261117/controls/green-binding.json",
+    "56d2bb56ff1135fbc606d375b2b8debd8c5f3feaaa8b61904aa584c4dc38435c",
+    "materialize",
+    "green"
+  ],
+  "shell": "bash",
+  "login": false,
+  "workdir": "/",
+  "binding": {
+    "bytes": 8262787,
+    "sha256": "56d2bb56ff1135fbc606d375b2b8debd8c5f3feaaa8b61904aa584c4dc38435c",
+    "gitBlob": "ea852a05538a51710c13a0cd86a8bd1e3fa1c056"
+  },
+  "runner": {
+    "bytes": 104131,
+    "sha256": "20958434e304d6d67657abad910d7c891f5a9086164e73d19cc8764348fc83f5",
+    "gitBlob": "c81f72a8ed14a93b3557fdf889f9ad6cebc25140"
+  },
+  "r1": {
+    "bytes": 139634,
+    "sha256": "b9524cd8f0f1251f034337f4eb8fbc6606adc1d1c987d993580be06b9a078a75",
+    "gitBlob": "8ce89328171e58ec3e0631dce9607ee7e1eba54e"
+  },
+  "publication": "9a37963441396d6eddaf507e57e504e21503878c",
+  "publicationGate": {
+    "bytes": 7095,
+    "sha256": "b50ae2a0bb3d61f67716688361cf36ca3e23954f9c37106e6350ddd27997a7bb",
+    "gitBlob": "0bf466496fc388dabe652eb4121229dd981b8f16"
+  },
+  "stagingIntent": {
+    "bytes": 14258,
+    "sha256": "0b26402f1f5a182fb1b482072b5d2ca3e398fa8e033a33695cc5bde6aed2ec99",
+    "gitBlob": "dbf620ef39ab35952f13a7972be1292cc33e4705"
+  },
+  "stagingReceipt": {
+    "bytes": 11570,
+    "sha256": "be71e278da80f76e3c0f3ed62c616cf4262627f237d2cec63829f2310d079c16",
+    "gitBlob": "dd48b15ec75ae4f5d12b84617159f3b152bacdbb"
+  },
+  "stagingOuter": {
+    "bytes": 26602,
+    "sha256": "5820ae411b46929282dd0119d98b65acd79879e7d2043de3eb3ee0418e314670",
+    "gitBlob": "85c0b89906a819d5a93d88fd7613587361ef7c72"
+  },
+  "stagingObservedOuterExit": 0,
+  "beforeVector": {
+    "bytes": 2118,
+    "sha256": "f2574559a378b3bc537fdcedbde161003c8344a5485dfff9322214f6fda2a90c",
+    "gitBlob": "f6446bdc2bbdb511206c729a1f03717871baea6d"
+  },
+  "afterVector": {
+    "bytes": 2118,
+    "sha256": "6007c5c7ba2f74c43bd9b73c50cae2319eacbf712c233cc0d67b3efbb4c6894d",
+    "gitBlob": "3887991d5dbd25dbec5c8656e8e03d423ea502b7"
+  },
+  "selectedWriteSet": [
+    "scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+    "scripts/legacy-agent-host/desktop-task-review-cycle-ui-smoke.ts",
+    "src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts"
+  ],
+  "testIdentities": {
+    "node": {
+      "bytes": 164965,
+      "sha256": "852bedb85c83dbc4b488dffb4a9ffebbe398adc53e85f5a3cea8ca36b146cbf7",
+      "gitBlob": "896c587e077da56a98a314a175fb3cba0353d6ee"
+    },
+    "renderer": {
+      "bytes": 187890,
+      "sha256": "b6f11896e60014aac785968d42390afde38716d47de9bba9562522235db048c9",
+      "gitBlob": "76495189c992fcda47cd7a43a0c697190b5acbb3"
+    }
+  },
+  "attempts": 1,
+  "sourceOnly": true,
+  "fullRuntimeInputsRequested": false,
+  "fullRuntimeInputsPreserved": null,
+  "targetTestsInvoked": false,
+  "phaseRoot": "/workspace/scratch/c714-post-transport-20261117/evidence/materialize-producers",
+  "noReplay": true,
+  "requiredNext": "Complete actual source-only receipt/metadata/boundary evidence and separately observed outer0, independent review, publication and full actual readbacks before run green with IDENTICAL binding bytes.",
+  "wholeE2EQualified": false
+}

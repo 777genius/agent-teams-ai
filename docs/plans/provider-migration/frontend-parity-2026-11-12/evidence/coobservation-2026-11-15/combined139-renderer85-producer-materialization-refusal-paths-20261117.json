@@ -1,0 +1,144 @@
+{
+  "kind": "c714-materialization-refusal-current-path-observation",
+  "at": "2026-11-17T02:23:32.563915+00:00",
+  "paths": [
+    {
+      "path": "/workspace/scratch/c714-fresh-20261116",
+      "lexists": false,
+      "isDir": false,
+      "isFile": false,
+      "isSymlink": false
+    },
+    {
+      "path": "/workspace/scratch/c714-fresh-20261116/source",
+      "lexists": false,
+      "isDir": false,
+      "isFile": false,
+      "isSymlink": false
+    },
+    {
+      "path": "/workspace/scratch/c714-fresh-20261116/toolchain",
+      "lexists": false,
+      "isDir": false,
+      "isFile": false,
+      "isSymlink": false
+    },
+    {
+      "path": "/workspace/scratch/c714-fresh-20261116/evidence",
+      "lexists": false,
+      "isDir": false,
+      "isFile": false,
+      "isSymlink": false
+    },
+    {
+      "path": "/workspace/scratch/c714-post-transport-20261117",
+      "lexists": true,
+      "isDir": true,
+      "isFile": false,
+      "isSymlink": false,
+      "device": 27,
+      "inode": 3961079,
+      "mode": "0o700",
+      "uid": 1000,
+      "immediateEntries": [
+        "controls",
+        "evidence",
+        "replicas"
+      ]
+    },
+    {
+      "path": "/workspace/scratch/c714-post-transport-20261117/controls",
+      "lexists": true,
+      "isDir": true,
+      "isFile": false,
+      "isSymlink": false,
+      "device": 27,
+      "inode": 3961080,
+      "mode": "0o700",
+      "uid": 1000,
+      "immediateEntries": [
+        "combined-runner.py",
+        "green-binding.json",
+        "red-binding.json"
+      ]
+    },
+    {
+      "path": "/workspace/scratch/c714-post-transport-20261117/replicas",
+      "lexists": true,
+      "isDir": true,
+      "isFile": false,
+      "isSymlink": false,
+      "device": 27,
+      "inode": 3961081,
+      "mode": "0o700",
+      "uid": 1000,
+      "immediateEntries": [
+        "bootstrap-binding.json",
+        "fresh-current-input-boundary.json",
+        "historical-original-binding.json",
+        "historical-original-runner.py",
+        "historical-test-materialization-receipt.json",
+        "provider-archives-fresh-review.json"
+      ]
+    },
+    {
+      "path": "/workspace/scratch/c714-post-transport-20261117/evidence",
+      "lexists": true,
+      "isDir": true,
+      "isFile": false,
+      "isSymlink": false,
+      "device": 27,
+      "inode": 3969246,
+      "mode": "0o700",
+      "uid": 1000,
+      "immediateEntries": [
+        "owner.json",
+        "red"
+      ]
+    },
+    {
+      "path": "/workspace/scratch/c714-post-transport-20261117/evidence/materialize-producers",
+      "lexists": false,
+      "isDir": false,
+      "isFile": false,
+      "isSymlink": false
+    },
+    {
+      "path": "/workspace/scratch/c714-post-transport-20261117/evidence/green",
+      "lexists": false,
+      "isDir": false,
+      "isFile": false,
+      "isSymlink": false
+    },
+    {
+      "path": "/workspace/scratch/c714-post-transport-20261117/evidence/validation",
+      "lexists": false,
+      "isDir": false,
+      "isFile": false,
+      "isSymlink": false
+    }
+  ],
+  "completeCurrentControlReadbacks": [
+    {
+      "path": "/workspace/scratch/c714-post-transport-20261117/controls/combined-runner.py",
+      "bytes": 104131,
+      "sha256": "20958434e304d6d67657abad910d7c891f5a9086164e73d19cc8764348fc83f5",
+      "gitBlob": "c81f72a8ed14a93b3557fdf889f9ad6cebc25140"
+    },
+    {
+      "path": "/workspace/scratch/c714-post-transport-20261117/controls/red-binding.json",
+      "bytes": 6399172,
+      "sha256": "be265da9b130091d251295f937a7ab09b1db0e03f2c4a02d985839134e0379ec",
+      "gitBlob": "9f9ddcf0f9f62cce1a31f204ae786a8e2d3d2267"
+    },
+    {
+      "path": "/workspace/scratch/c714-post-transport-20261117/controls/green-binding.json",
+      "bytes": 8262787,
+      "sha256": "56d2bb56ff1135fbc606d375b2b8debd8c5f3feaaa8b61904aa584c4dc38435c",
+      "gitBlob": "ea852a05538a51710c13a0cd86a8bd1e3fa1c056"
+    }
+  ],
+  "sourceWritten": false,
+  "runtimeInvoked": false,
+  "qualification": "Read-only point-in-time observations after observed outer1; no reconstruction, replay, current source census, or continuity inference."
+}

@@ -1,0 +1,99 @@
+{
+  "kind": "post-transport-recovery-red-producer-authorship-gate-closed",
+  "at": "2026-11-17 01:40:00 UTC",
+  "commit": "77993819c233737f1e2b4c11c8ca1a5d360bcbe3",
+  "tree": "ada3f27db78fabc17a91e3904d41b8bc547c6dca",
+  "docsTree": "a1b92f625b548e7384ef13e0358c420d1e1f136d",
+  "r1": {
+    "bytes": 139634,
+    "sha256": "b9524cd8f0f1251f034337f4eb8fbc6606adc1d1c987d993580be06b9a078a75",
+    "gitBlob": "8ce89328171e58ec3e0631dce9607ee7e1eba54e"
+  },
+  "runner": {
+    "bytes": 104131,
+    "sha256": "20958434e304d6d67657abad910d7c891f5a9086164e73d19cc8764348fc83f5",
+    "gitBlob": "c81f72a8ed14a93b3557fdf889f9ad6cebc25140"
+  },
+  "binding": {
+    "bytes": 6399172,
+    "sha256": "be265da9b130091d251295f937a7ab09b1db0e03f2c4a02d985839134e0379ec",
+    "gitBlob": "9f9ddcf0f9f62cce1a31f204ae786a8e2d3d2267"
+  },
+  "acceptedRed": {
+    "phaseReceipt": {
+      "bytes": 139946,
+      "sha256": "51867690fb9a707141b01ee3dff6d42d082a5ba7aceffd1f4f43eec8a428c9be",
+      "gitBlob": "bcc31247c2752b2017edba9adcd129a1c83cdd32"
+    },
+    "packet": {
+      "bytes": 441196,
+      "sha256": "ebce8cffde715538fc340a07304678a0c563700c72b3eea3de035dd86b7fca5f",
+      "gitBlob": "ca4e84b2c1a41a1c848a62c4c3ad6be1a8af65c8"
+    },
+    "outer": {
+      "bytes": 13970,
+      "sha256": "341064fd92ead2afed314db220e095bae77a2b96af47580b30c35f495a0e80cd",
+      "gitBlob": "947cf5276c207149f87d67dd06a175b49c9f1b5b"
+    },
+    "observedOuter": 0,
+    "rootReview": {
+      "bytes": 50772,
+      "sha256": "b708a3eb026e85f1a733cbb1e4836c7e5cabf571bb3c68fbc74c9ac2a719c882",
+      "gitBlob": "19fcd35a9e8783dfa28c824d23a8df510209ca80"
+    },
+    "guardReview": {
+      "bytes": 261789,
+      "sha256": "d9e6e50a0678babd3d54551af2951fb57825b0fc51fa1e7682def558a52bfd32",
+      "gitBlob": "38bd0eb98cb500274a477c1c02bfef0156bee7d6"
+    },
+    "semanticReview": {
+      "bytes": 229314,
+      "sha256": "2e05bcc76671b35883fc04e072d46e0961c86c2d293de2582e0e0fe0196692da",
+      "gitBlob": "3cddc2bdb141d81c87c97d6059c56278b1118a55"
+    },
+    "fullInputJoin": {
+      "bytes": 8914,
+      "sha256": "e322edbfc50d1706db7838681e2d65abf4648180c4a4da3ba418d94fff5eac44",
+      "gitBlob": "aad388d47bc80c4dd09789ee76238ebd935e8cdd"
+    }
+  },
+  "rootActual": {
+    "bytes": 55348,
+    "sha256": "bbe57a54a25a38bee1d4f4de5fc1d036d81f6b2ecdb40b3d0088b274de6656c9",
+    "gitBlob": "9218839ef55406b01267605c040bc586c7d443be"
+  },
+  "independentActual": {
+    "bytes": 166393,
+    "sha256": "cbe1880831780d10a7131282ab2ecc37d81fbdede3c53a265c1749ea863c20f2",
+    "gitBlob": "e5c2c2d8c84c0d491e334f6d67774cf23c83948f"
+  },
+  "rootFullReadIndependent": true,
+  "independentFullReadRoot": true,
+  "independentSelfReadbackConfirmed": true,
+  "sourcePreimageVector": {
+    "bytes": 2118,
+    "sha256": "f2574559a378b3bc537fdcedbde161003c8344a5485dfff9322214f6fda2a90c",
+    "gitBlob": "f6446bdc2bbdb511206c729a1f03717871baea6d"
+  },
+  "testIdentities": {
+    "node": {
+      "bytes": 164965,
+      "sha256": "852bedb85c83dbc4b488dffb4a9ffebbe398adc53e85f5a3cea8ca36b146cbf7",
+      "gitBlob": "896c587e077da56a98a314a175fb3cba0353d6ee"
+    },
+    "renderer": {
+      "bytes": 187890,
+      "sha256": "b6f11896e60014aac785968d42390afde38716d47de9bba9562522235db048c9",
+      "gitBlob": "76495189c992fcda47cd7a43a0c697190b5acbb3"
+    }
+  },
+  "allowedNow": "Root may author only the three exact producer postimages already selected by R1: P11 post-observation original deadline assertions; Review original waitRead exact live edit predicate with30_000; Hook only removal of !silent && . Full independent producer R2, immediate publication and complete actual readbacks precede application. Tests, four fixed producers, runner, clocks, captures and cleanup remain frozen.",
+  "producerPostimagesAuthoredBeforeGate": false,
+  "sourceWritesSinceRed": 0,
+  "testRematerialization": false,
+  "greenExecuted": false,
+  "wholeE2EQualified": false,
+  "priorUnknownReportIdentityQualification": "An earlier publication reviewer reported completion but its report identity was not received before tool cache/agent registry reset. That unretained completion was not used to open this gate; the full independent e5c2c2d8 report is used.",
+  "old64038": "REFUSED/SPENT; observedouter2",
+  "old54393": "UNKNOWN/INCOMPLETE/SPENT; old outer/termination/custody/cleanup unknown"
+}

@@ -1,0 +1,195 @@
+{
+  "schemaVersion": 1,
+  "kind": "c714-immutable-green-binding-source-free-staging-intent",
+  "at": "2026-11-17 02:21:38 UTC",
+  "publicationGate": {
+    "bytes": 7095,
+    "sha256": "b50ae2a0bb3d61f67716688361cf36ca3e23954f9c37106e6350ddd27997a7bb",
+    "gitBlob": "0bf466496fc388dabe652eb4121229dd981b8f16"
+  },
+  "publication": "9a37963441396d6eddaf507e57e504e21503878c",
+  "selectedPython": "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python3",
+  "plan": {
+    "kind": "c714-source-free-immutable-green-binding-staging",
+    "bindingLocalPath": "/workspace/scratch/c714-post-transport-20261117/controls/green-binding.json",
+    "binding": {
+      "bytes": 8262787,
+      "sha256": "56d2bb56ff1135fbc606d375b2b8debd8c5f3feaaa8b61904aa584c4dc38435c",
+      "gitBlob": "ea852a05538a51710c13a0cd86a8bd1e3fa1c056"
+    },
+    "runnerPath": "/workspace/scratch/c714-post-transport-20261117/controls/combined-runner.py",
+    "runner": {
+      "bytes": 104131,
+      "sha256": "20958434e304d6d67657abad910d7c891f5a9086164e73d19cc8764348fc83f5",
+      "gitBlob": "c81f72a8ed14a93b3557fdf889f9ad6cebc25140"
+    },
+    "redBindingPath": "/workspace/scratch/c714-post-transport-20261117/controls/red-binding.json",
+    "redBinding": {
+      "bytes": 6399172,
+      "sha256": "be265da9b130091d251295f937a7ab09b1db0e03f2c4a02d985839134e0379ec",
+      "gitBlob": "9f9ddcf0f9f62cce1a31f204ae786a8e2d3d2267"
+    },
+    "scopeRoot": "/workspace/scratch/c714-post-transport-20261117",
+    "controlRoot": "/workspace/scratch/c714-post-transport-20261117/controls",
+    "replicaRoot": "/workspace/scratch/c714-post-transport-20261117/replicas",
+    "replicas": [
+      {
+        "path": "/workspace/scratch/c714-post-transport-20261117/replicas/bootstrap-binding.json",
+        "identity": {
+          "bytes": 2790411,
+          "sha256": "6c917133945366fdb46a5655437d1f4fdabdd2906fdf94d7c6082eaf51e82131",
+          "gitBlob": "37bd0dcb54d3bac498b6530a08e1f24d4a984609"
+        }
+      },
+      {
+        "path": "/workspace/scratch/c714-post-transport-20261117/replicas/fresh-current-input-boundary.json",
+        "identity": {
+          "bytes": 3654,
+          "sha256": "a64029a2dfffecffe8a50535b50b009cdc29ee8c9d1cc3a62ab8c693852b010a",
+          "gitBlob": "f8dd300b5842bae00ef3967e997b98d51a34a578"
+        }
+      },
+      {
+        "path": "/workspace/scratch/c714-post-transport-20261117/replicas/provider-archives-fresh-review.json",
+        "identity": {
+          "bytes": 789090,
+          "sha256": "7e83285776675d6a95a08182948d1d3590384f9406f2f408b3fac0cfaaabe925",
+          "gitBlob": "aea94f43ce13a48e4e8e0c065926cbff2a2aa344"
+        }
+      },
+      {
+        "path": "/workspace/scratch/c714-post-transport-20261117/replicas/historical-original-runner.py",
+        "identity": {
+          "bytes": 89953,
+          "sha256": "95cdbc1f16f770878f8ac8862f4a3ef1dde3667d180e3cdca39f3ca3d7e7058d",
+          "gitBlob": "906d8b49218f64037b71a7642bfa1bd4254befbd"
+        }
+      },
+      {
+        "path": "/workspace/scratch/c714-post-transport-20261117/replicas/historical-original-binding.json",
+        "identity": {
+          "bytes": 4898503,
+          "sha256": "5b44dba9bac95dae81abcb01f569d55ce49e506d643a2c148b5b5d6ec0c7ede9",
+          "gitBlob": "f7c78d18f79cf7781aad840ae35f7464faa7542d"
+        }
+      },
+      {
+        "path": "/workspace/scratch/c714-post-transport-20261117/replicas/historical-test-materialization-receipt.json",
+        "identity": {
+          "bytes": 92391,
+          "sha256": "3434b0dbd687c9514ca7e0fe35f19c3728624cd77b2b3eceb04bde4bba11819d",
+          "gitBlob": "f542dde38b84f533e5658aeafe5a06642c1dcca9"
+        }
+      }
+    ],
+    "transport": {
+      "schemaVersion": 1,
+      "kind": "c714-immutable-green-binding-lossless-transport-parts",
+      "binding": {
+        "bytes": 8262787,
+        "sha256": "56d2bb56ff1135fbc606d375b2b8debd8c5f3feaaa8b61904aa584c4dc38435c",
+        "gitBlob": "ea852a05538a51710c13a0cd86a8bd1e3fa1c056"
+      },
+      "bindingLocalPath": "/workspace/scratch/c714-post-transport-20261117/controls/green-binding.json",
+      "codec": "Concatenate complete ordered UTF-8 text part bodies with NO separator, newline, trimming, decoding transformation or JSON interpretation. Part boundaries never split UTF-16 surrogate pairs; Git/SHA256 identities are of UTF-8 bytes. Reassembled entire bytes must match binding identity.",
+      "parts": [
+        {
+          "ordinal": 0,
+          "utf16Start": 0,
+          "utf16End": 2800000,
+          "identity": {
+            "bytes": 2801279,
+            "sha256": "98639f464306184d3131ed36e625ae6e88e156a96aeb57e31787a1be2ea5f916",
+            "gitBlob": "441fd0ecb053bf9191332e635ff764cd511c4d0e"
+          }
+        },
+        {
+          "ordinal": 1,
+          "utf16Start": 2800000,
+          "utf16End": 5600000,
+          "identity": {
+            "bytes": 2800142,
+            "sha256": "16214d8009f81bea6e90fdc12de912a36542024aaa2451d0d7bc9f5ae8954957",
+            "gitBlob": "58fc694520738dae1507e0545fd5d18f7344fe89"
+          }
+        },
+        {
+          "ordinal": 2,
+          "utf16Start": 5600000,
+          "utf16End": 8261344,
+          "identity": {
+            "bytes": 2661366,
+            "sha256": "197b6c989795fad2a4d46205aaca86aa79391ece81eb267205e85bf3b18f233f",
+            "gitBlob": "92de54c81f85a21da8b4ff9346f89d9c55bd5d79"
+          }
+        }
+      ],
+      "partsCount": 3,
+      "totalUtf8Bytes": 8262787,
+      "originalBindingUnchanged": true,
+      "transportOnly": true,
+      "reason": "The GitHub connector returns Transport closed with no body for the exact 8,262,787-byte retained binding; the smaller baseline and other evidence remain readable. These bare literal parts allow complete independent read/reconstruction/hash without changing controls, source, execution scope, or gates.",
+      "bindingWasStaged": false,
+      "sourceWasApplied": false,
+      "runtimeWasInvoked": false
+    },
+    "sourceWrites": 0,
+    "existingControlFilesMustRemainExact": true,
+    "newBindingExclusiveCreate": true,
+    "selectedRunnerNotInvokedByStaging": true,
+    "publicationGate": {
+      "bytes": 7095,
+      "sha256": "b50ae2a0bb3d61f67716688361cf36ca3e23954f9c37106e6350ddd27997a7bb",
+      "gitBlob": "0bf466496fc388dabe652eb4121229dd981b8f16"
+    },
+    "publication": "9a37963441396d6eddaf507e57e504e21503878c",
+    "partFiles": [
+      {
+        "ordinal": 0,
+        "path": "/workspace/scratch/c714f5bce554/continuation-checkpoints-20261116/green-binding-transfer-part-0-20261117.json",
+        "identity": {
+          "bytes": 2801279,
+          "sha256": "98639f464306184d3131ed36e625ae6e88e156a96aeb57e31787a1be2ea5f916",
+          "gitBlob": "441fd0ecb053bf9191332e635ff764cd511c4d0e"
+        }
+      },
+      {
+        "ordinal": 1,
+        "path": "/workspace/scratch/c714f5bce554/continuation-checkpoints-20261116/green-binding-transfer-part-1-20261117.json",
+        "identity": {
+          "bytes": 2800142,
+          "sha256": "16214d8009f81bea6e90fdc12de912a36542024aaa2451d0d7bc9f5ae8954957",
+          "gitBlob": "58fc694520738dae1507e0545fd5d18f7344fe89"
+        }
+      },
+      {
+        "ordinal": 2,
+        "path": "/workspace/scratch/c714f5bce554/continuation-checkpoints-20261116/green-binding-transfer-part-2-20261117.json",
+        "identity": {
+          "bytes": 2661366,
+          "sha256": "197b6c989795fad2a4d46205aaca86aa79391ece81eb267205e85bf3b18f233f",
+          "gitBlob": "92de54c81f85a21da8b4ff9346f89d9c55bd5d79"
+        }
+      }
+    ],
+    "gateLocalPath": "/workspace/scratch/c714f5bce554/continuation-checkpoints-20261116/three-producer-green-binding-actual-gate-closed-20261117.json",
+    "receiptPath": "/workspace/scratch/c714f5bce554/continuation-checkpoints-20261116/green-binding-source-free-staging-receipt-20261117.json",
+    "forbiddenPreexistingPhasePaths": [
+      "/workspace/scratch/c714-post-transport-20261117/evidence/materialize-producers",
+      "/workspace/scratch/c714-post-transport-20261117/evidence/green",
+      "/workspace/scratch/c714-post-transport-20261117/evidence/validation"
+    ]
+  },
+  "stagerCodeIdentity": {
+    "bytes": 5385,
+    "sha256": "ca06550adfc4f0c402a870a2227725bf17a224c6b15311ea605a5b4bfd4ecdad",
+    "gitBlob": "5b5e6ea9d8f559ba5019e6cfb503f76f79581016"
+  },
+  "stagerCode": "import os, stat, json, hashlib, pathlib, datetime, time\nPLAN = pathlib.Path('/workspace/scratch/c714f5bce554/continuation-checkpoints-20261116/green-binding-staging-plan-20261117.json')\nstarted = datetime.datetime.now(datetime.timezone.utc).isoformat()\nclock = time.monotonic()\nplan = json.loads(PLAN.read_text())\ndef identity(data):\n return {'bytes':len(data),'sha256':hashlib.sha256(data).hexdigest(),'gitBlob':hashlib.sha1(b'blob '+str(len(data)).encode()+b'\\0'+data).hexdigest()}\ndef owned_dir(value):\n p=pathlib.Path(value); s=p.lstat()\n assert stat.S_ISDIR(s.st_mode) and not p.is_symlink() and stat.S_IMODE(s.st_mode)==0o700 and s.st_uid==os.getuid() and p.resolve()==p, value\n return {'path':str(p),'device':s.st_dev,'inode':s.st_ino,'uid':s.st_uid,'mode':oct(stat.S_IMODE(s.st_mode))}\ndef owned_file(value,pin):\n p=pathlib.Path(value); a=p.lstat()\n assert stat.S_ISREG(a.st_mode) and not p.is_symlink() and stat.S_IMODE(a.st_mode)==0o600 and a.st_uid==os.getuid() and p.resolve()==p, value\n data=p.read_bytes(); b=p.lstat()\n assert (a.st_dev,a.st_ino,a.st_mode,a.st_uid,a.st_size,a.st_mtime_ns)==(b.st_dev,b.st_ino,b.st_mode,b.st_uid,b.st_size,b.st_mtime_ns), value\n assert identity(data)==pin, value\n return {'path':str(p),'identity':pin,'device':b.st_dev,'inode':b.st_ino,'uid':b.st_uid,'mode':oct(stat.S_IMODE(b.st_mode)),'size':b.st_size,'mtimeNs':b.st_mtime_ns}\ngate_path=pathlib.Path(plan['gateLocalPath'])\nassert gate_path.is_file() and not gate_path.is_symlink()\ngate_bytes=gate_path.read_bytes()\nassert identity(gate_bytes)==plan['publicationGate']\ngate=json.loads(gate_bytes)\nassert gate['gateAccepted'] is True and gate['actualCommit']==plan['publication']\nroots_before=[owned_dir(plan[k]) for k in ['scopeRoot','controlRoot','replicaRoot']]\ncontrols=pathlib.Path(plan['controlRoot']); replicas=pathlib.Path(plan['replicaRoot'])\nassert sorted(p.name for p in controls.iterdir())==['combined-runner.py','red-binding.json']\nassert sorted(p.name for p in replicas.iterdir())==sorted(pathlib.Path(r['path']).name for r in plan['replicas'])\nfor path in plan['forbiddenPreexistingPhasePaths']: assert not os.path.lexists(path), path\nbinding=pathlib.Path(plan['bindingLocalPath'])\nassert binding.parent==controls and not os.path.lexists(binding)\nrows=[{'path':plan['runnerPath'],'identity':plan['runner']},{'path':plan['redBindingPath'],'identity':plan['redBinding']},*plan['replicas']]\nbefore=[owned_file(r['path'],r['identity']) for r in rows]\nparts=[]; part_reads=[]\nfor row in sorted(plan['partFiles'],key=lambda r:r['ordinal']):\n p=pathlib.Path(row['path']); assert p.is_file() and not p.is_symlink()\n wrapper=json.loads(p.read_text()); assert wrapper['ordinal']==row['ordinal'] and wrapper['identity']==row['identity']\n data=wrapper['body'].encode('utf-8'); assert identity(data)==row['identity']\n parts.append(data); part_reads.append({'ordinal':row['ordinal'],'identity':identity(data),'path':str(p)})\ndata=b''.join(parts)\nassert identity(data)==plan['binding']\ncfg=json.loads(data)\nassert cfg['bindingLocalPath']==str(binding) and cfg['runnerLocalPath']==plan['runnerPath'] and cfg['runnerIdentity']==plan['runner'] and cfg['phase']=='green'\nassert cfg['producerR2ReviewedAndPublished'] is True and cfg['producerActualReadbackAccepted'] is True and cfg['acceptedCombinedGreen'] is None\nos.umask(0o077)\nfd=os.open(binding,os.O_WRONLY|os.O_CREAT|os.O_EXCL|os.O_NOFOLLOW,0o600)\ntry:\n view=memoryview(data)\n while view:\n  n=os.write(fd,view); assert n>0; view=view[n:]\n os.fsync(fd)\nfinally: os.close(fd)\nnew_file=owned_file(str(binding),plan['binding'])\nafter=[owned_file(r['path'],r['identity']) for r in rows]\nassert before==after\nroots_after=[owned_dir(plan[k]) for k in ['scopeRoot','controlRoot','replicaRoot']]\nassert roots_before==roots_after\nassert sorted(p.name for p in controls.iterdir())==['combined-runner.py','green-binding.json','red-binding.json']\nassert sorted(p.name for p in replicas.iterdir())==sorted(pathlib.Path(r['path']).name for r in plan['replicas'])\nfor path in plan['forbiddenPreexistingPhasePaths']: assert not os.path.lexists(path), path\nreceipt={'schemaVersion':1,'kind':'c714-source-free-immutable-green-binding-staging-receipt','startedAt':started,'finishedAt':datetime.datetime.now(datetime.timezone.utc).isoformat(),'durationSeconds':time.monotonic()-clock,'publicationGate':plan['publicationGate'],'publication':plan['publication'],'binding':plan['binding'],'runner':plan['runner'],'partReadbacks':part_reads,'rootsBefore':roots_before,'rootsAfter':roots_after,'existingControlsAndReplicasBefore':before,'existingControlsAndReplicasAfter':after,'newFile':new_file,'writtenSelectedPaths':[str(binding)],'existingFilesUnchanged':True,'completeBindingReadback':True,'sourceWrites':0,'runtimeInputWrites':0,'targetRunnerInvoked':False,'materializationInvoked':False,'greenInvoked':False,'validationInvoked':False,'wholeE2EQualified':False,'qualification':'Source-free point-in-time exclusive control staging only; no target source or runtime admission. Root must separately observe this staging supervisor exit, then invoke the selected unchanged runner once.'}\nout=json.dumps(receipt,indent=2)+'\\n'\nrp=pathlib.Path(plan['receiptPath'])\nrf=os.open(rp,os.O_WRONLY|os.O_CREAT|os.O_EXCL|os.O_NOFOLLOW,0o600)\ntry:\n with os.fdopen(rf,'w') as f: f.write(out); f.flush(); os.fsync(f.fileno())\nexcept BaseException:\n raise\nprint(out,end='')\n",
+  "selectedWriteSet": [
+    "/workspace/scratch/c714-post-transport-20261117/controls/green-binding.json"
+  ],
+  "sourceWrites": 0,
+  "targetRuntimeInvoked": false,
+  "qualification": "Internal data-transfer files and the staging receipt are outside target source and selected runtime phase roots. Only the exact selected new binding is created in controls. No existing control/replica, source/test or runtime payload is overwritten."
+}

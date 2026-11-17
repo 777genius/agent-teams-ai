@@ -1,0 +1,1331 @@
+{
+  "schemaVersion": 1,
+  "kind": "c714-three-producer-materialization-independent-guard-refusal-accounting",
+  "reviewer": "/root/producer_r2_guard",
+  "reviewedAtUtc": "2026-11-17 02:28:13 UTC",
+  "repository": "777genius/agent-teams-ai",
+  "branch": "fix/frontend-parity-coobservation-c714-20261115",
+  "verdict": "ACCEPT_OBSERVED_REFUSAL_ACCOUNTING_FOR_PUBLICATION_ONLY",
+  "acceptedAccounting": true,
+  "materializationAccepted": false,
+  "classification": "REFUSED_BEFORE_SOURCE_ROOT_ADMISSION_SPENT",
+  "subject": {
+    "refusal": {
+      "bytes": 5796,
+      "sha256": "7865c3e53095955d2ff2406faa0a7d1bedfb0d4fbca5770b02922615ba9127c5",
+      "gitBlob": "ba7c846e55a9e87aca99cba43b52baddef6b760a"
+    },
+    "pathObservation": {
+      "bytes": 4110,
+      "sha256": "2625f6aec302e50b5fb88183bdadd010bb90b03b4abdd3c4c99bd3ff777e2360",
+      "gitBlob": "814c9c40adec04824d9fa5a52c95e4b52d7d783a"
+    },
+    "materializationIntent": {
+      "bytes": 3489,
+      "sha256": "042c3ff0a2668e4bae8aeea9c178860eaa055c1739a3b0af5404dbd988f3f528",
+      "gitBlob": "d775e502038485469b3ab2f96569e5fd6b3ee98c"
+    },
+    "stagingIntent": {
+      "bytes": 14258,
+      "sha256": "0b26402f1f5a182fb1b482072b5d2ca3e398fa8e033a33695cc5bde6aed2ec99",
+      "gitBlob": "dbf620ef39ab35952f13a7972be1292cc33e4705"
+    },
+    "stagingReceipt": {
+      "bytes": 11570,
+      "sha256": "be71e278da80f76e3c0f3ed62c616cf4262627f237d2cec63829f2310d079c16",
+      "gitBlob": "dd48b15ec75ae4f5d12b84617159f3b152bacdbb"
+    },
+    "stagingOuter": {
+      "bytes": 26602,
+      "sha256": "5820ae411b46929282dd0119d98b65acd79879e7d2043de3eb3ee0418e314670",
+      "gitBlob": "85c0b89906a819d5a93d88fd7613587361ef7c72"
+    },
+    "publicationGate": {
+      "bytes": 7095,
+      "sha256": "b50ae2a0bb3d61f67716688361cf36ca3e23954f9c37106e6350ddd27997a7bb",
+      "gitBlob": "0bf466496fc388dabe652eb4121229dd981b8f16"
+    },
+    "bindingPublication": "9a37963441396d6eddaf507e57e504e21503878c",
+    "runner": {
+      "bytes": 104131,
+      "sha256": "20958434e304d6d67657abad910d7c891f5a9086164e73d19cc8764348fc83f5",
+      "gitBlob": "c81f72a8ed14a93b3557fdf889f9ad6cebc25140"
+    },
+    "binding": {
+      "bytes": 8262787,
+      "sha256": "56d2bb56ff1135fbc606d375b2b8debd8c5f3feaaa8b61904aa584c4dc38435c",
+      "gitBlob": "ea852a05538a51710c13a0cd86a8bd1e3fa1c056"
+    },
+    "r1": {
+      "bytes": 139634,
+      "sha256": "b9524cd8f0f1251f034337f4eb8fbc6606adc1d1c987d993580be06b9a078a75",
+      "gitBlob": "8ce89328171e58ec3e0631dce9607ee7e1eba54e"
+    },
+    "sourcePublication": {
+      "commit": "b83da2bb72ada6e9fb3a426cb2a7d62b30ec4871",
+      "tree": "5ef5abf3c6aadd53340f457ea7f77e6b69f84878",
+      "qualification": "Exact published nine-row source vector: only the three independently reviewed producer postimages change; four fixed producers and complete139/85 test bodies remain identical. Publication is not physical application or GREEN acceptance."
+    }
+  },
+  "method": {
+    "scope": "Bounded actual refusal accounting under the existing R1; no new requirements or recovery plan.",
+    "completeAssignedEvidenceBodies": 7,
+    "completeAssignedEvidenceBytes": 72920,
+    "completeRootRefusalReportBytes": 19849,
+    "fullRunnerPreviouslyRead": {
+      "bytes": 104131,
+      "physicalLines": 1717,
+      "functions": 52
+    },
+    "identityHelper": {
+      "bytes": 3982,
+      "sha256": "cd3d5b96a5508215010923078469cc718282f17d765f6af493913c157bdf3db7",
+      "gitBlob": "e4a4568d589e1254b88ade1a5f87d53924e7c2e8"
+    },
+    "tools": "Complete GitHub blob fetches; data-only JSON comparison and exact pinned pure JavaScript identity helper. The staging Python, selected runner and binding were read only as data; neither was executed by this reviewer.",
+    "readbackQualification": "All seven assigned evidence bodies were completely fetched and rehashed. Both copies of the full staging receipt in its outer tool observation equal the retained receipt byte-for-byte. The entire root refusal report was separately fetched, rehashed, read and joined. The gate records the already closed root/independent actual publication reviews; this report does not repeat their separate publication-tree review."
+  },
+  "completeBodyReadbacks": [
+    {
+      "role": "materialize_refusal",
+      "identity": {
+        "bytes": 5796,
+        "sha256": "7865c3e53095955d2ff2406faa0a7d1bedfb0d4fbca5770b02922615ba9127c5",
+        "gitBlob": "ba7c846e55a9e87aca99cba43b52baddef6b760a"
+      },
+      "completeBodyRead": true
+    },
+    {
+      "role": "materialize_path_observation",
+      "identity": {
+        "bytes": 4110,
+        "sha256": "2625f6aec302e50b5fb88183bdadd010bb90b03b4abdd3c4c99bd3ff777e2360",
+        "gitBlob": "814c9c40adec04824d9fa5a52c95e4b52d7d783a"
+      },
+      "completeBodyRead": true
+    },
+    {
+      "role": "materialize_intent",
+      "identity": {
+        "bytes": 3489,
+        "sha256": "042c3ff0a2668e4bae8aeea9c178860eaa055c1739a3b0af5404dbd988f3f528",
+        "gitBlob": "d775e502038485469b3ab2f96569e5fd6b3ee98c"
+      },
+      "completeBodyRead": true
+    },
+    {
+      "role": "green_stage_intent",
+      "identity": {
+        "bytes": 14258,
+        "sha256": "0b26402f1f5a182fb1b482072b5d2ca3e398fa8e033a33695cc5bde6aed2ec99",
+        "gitBlob": "dbf620ef39ab35952f13a7972be1292cc33e4705"
+      },
+      "completeBodyRead": true
+    },
+    {
+      "role": "green_stage_receipt",
+      "identity": {
+        "bytes": 11570,
+        "sha256": "be71e278da80f76e3c0f3ed62c616cf4262627f237d2cec63829f2310d079c16",
+        "gitBlob": "dd48b15ec75ae4f5d12b84617159f3b152bacdbb"
+      },
+      "completeBodyRead": true
+    },
+    {
+      "role": "green_stage_outer",
+      "identity": {
+        "bytes": 26602,
+        "sha256": "5820ae411b46929282dd0119d98b65acd79879e7d2043de3eb3ee0418e314670",
+        "gitBlob": "85c0b89906a819d5a93d88fd7613587361ef7c72"
+      },
+      "completeBodyRead": true
+    },
+    {
+      "role": "green_binding_actual_gate",
+      "identity": {
+        "bytes": 7095,
+        "sha256": "b50ae2a0bb3d61f67716688361cf36ca3e23954f9c37106e6350ddd27997a7bb",
+        "gitBlob": "0bf466496fc388dabe652eb4121229dd981b8f16"
+      },
+      "completeBodyRead": true
+    },
+    {
+      "role": "parallelRootRefusalAccounting",
+      "identity": {
+        "bytes": 19849,
+        "sha256": "22f04f74ed43688d833ac6687da0dcfa1721d12bf22de2bcfae82705c69604f4",
+        "gitBlob": "7a30c61d3816a20810533e8e341780faea811088"
+      },
+      "completeBodyRead": true
+    }
+  ],
+  "observedOutcome": {
+    "selectedSupervisorInvoked": true,
+    "selectedAttemptSpent": true,
+    "replayed": false,
+    "observedOuterSupervisorExit": 1,
+    "finalToolChunk": "b6a241",
+    "fullFinalToolResult": {
+      "chunk_id": "b6a241",
+      "wall_time_seconds": 0.420282123,
+      "exit_code": 1,
+      "original_token_count": 88,
+      "output": "Traceback (most recent call last):\n  File \"/workspace/scratch/c714-post-transport-20261117/controls/combined-runner.py\", line 1098, in <module>\n    assert ROOT.is_dir() and not ROOT.is_symlink() and REPO.is_dir() and not REPO.is_symlink()\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError\n"
+    },
+    "materializationArgv": [
+      "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python3",
+      "/workspace/scratch/c714-post-transport-20261117/controls/combined-runner.py",
+      "/workspace/scratch/c714-post-transport-20261117/controls/green-binding.json",
+      "56d2bb56ff1135fbc606d375b2b8debd8c5f3feaaa8b61904aa584c4dc38435c",
+      "materialize",
+      "green"
+    ],
+    "stagingOuterExit": 0,
+    "stagingFinalToolChunk": "64dc1b",
+    "phaseReceipt": null,
+    "fullSourceBoundaryObserved": false,
+    "metadataCommandsReached": false,
+    "primaryInvocationsReached": false,
+    "sourceWritesBySelectedInvocation": 0,
+    "inputsPreserved": null,
+    "fullRuntimeInputsPreserved": null,
+    "sourceAndSupervisorMetadataPreserved": null,
+    "green": "UNREACHED",
+    "validation": "UNREACHED",
+    "wholeE2EQualified": false
+  },
+  "controlFlow": {
+    "runner": {
+      "bytes": 104131,
+      "sha256": "20958434e304d6d67657abad910d7c891f5a9086164e73d19cc8764348fc83f5",
+      "gitBlob": "c81f72a8ed14a93b3557fdf889f9ad6cebc25140"
+    },
+    "anchors": {
+      "entry": 1061,
+      "assertion": 1098,
+      "inputLoop": 1149,
+      "phaseCreate": 1424,
+      "receiptCreate": 1465,
+      "preflight": 1487,
+      "writeLoop": 1496,
+      "sourceWrite": 1502
+    },
+    "exactFailureAssertion": "assert ROOT.is_dir() and not ROOT.is_symlink() and REPO.is_dir() and not REPO.is_symlink()",
+    "admissionExcerpt": "binding_path, binding_sha, action, command = sys.argv[1:]\nassert action in ['run', 'materialize']\nbinding_file = pathlib.Path(binding_path)\nassert binding_file.is_file() and not binding_file.is_symlink()\nbinding_bytes = binding_file.read_bytes()\nassert hashlib.sha256(binding_bytes).hexdigest() == binding_sha\ncfg = json.loads(binding_bytes)\nassert pathlib.Path(__file__).resolve() == pathlib.Path(cfg['runnerLocalPath'])\nassert binding_file.resolve() == pathlib.Path(cfg['bindingLocalPath'])\nassert not pathlib.Path(__file__).is_symlink()\nassert identity(pathlib.Path(__file__).read_bytes()) == cfg['runnerIdentity']\nassert cfg['publishedR1'] == R1\nassert identity(cfg['combinedR1Body'].encode()) == cfg['combinedR1Identity']\nassert cfg['combinedR1Identity']['gitBlob'] == R1_BLOB\ncombined_r1 = json.loads(cfg['combinedR1Body'])\nassert cfg['combinedR1ActualReadbackAccepted'] is True\nassert cfg['actualPublishedSubjectReadbackAccepted'] is True\nassert cfg['combinedInputImportAdmission']['accepted'] is True\nassert cfg['combinedInputImportAdmission']['sourceCommit'] == SOURCE_COMMIT\nassert cfg['combinedInputImportAdmission']['sourceTree'] == SOURCE_TREE\nassert cfg['testIdentities'] == TEST_IDENTITIES\nphase = cfg['phase']\nassert phase in ['red', 'green']\nassert command in (['red'] if phase == 'red' else ['green', 'validation-package'])\nassert action != 'materialize' or command == phase\nassert not (action == 'materialize' and phase == 'red'), 'test materialization is historical and closed'\nphase_id = ('materialize-tests' if phase == 'red' else 'materialize-producers') if action == 'materialize' else (\n    'validation' if command == 'validation-package' else phase)\nOUT = OUTROOT / phase_id\nTASK_TMP = OUT / 'tmp'\nassert cfg['outputRoots'] == {key: str(OUTROOT / key) for key in\n    ['materialize-tests', 'red', 'materialize-producers', 'green', 'validation']}\nassert cfg['tempRoots'] == {key: str(OUTROOT / key / 'tmp') for key in cfg['outputRoots']}\nassert str(OUTROOT) == combined_r1['execution']['outputRoot']\nassert str(pathlib.Path(cfg['runnerLocalPath']).parent) == combined_r1['execution']['controlRoot']\nassert str(binding_file.parent) == combined_r1['execution']['controlRoot']\nassert set(cfg['inputFiles']) == set(INPUT_PATHS)\nassert ROOT.is_dir() and not ROOT.is_symlink() and REPO.is_dir() and not REPO.is_symlink()\nfor name in ['toolchain', 'bin', 'evidence', 'tmp', 'store', 'cache', 'state', 'config', 'data']:\n    assert (ROOT / name).is_dir() and not (ROOT / name).is_symlink(), name + ' root alias'\nreplica_recovery = combined_r1['dataReplicaRecovery']",
+    "reasoning": [
+      "The captured traceback names the exact accepted runner path and line1098. Complete retained c81 bytes contain the same compound ROOT/REPO directory/no-symlink assertion at that exact line.",
+      "Before this point the module reads and checks the selected binding and runner, embedded R1, action/phase and declared control paths. Function definitions are not calls. The actual input-file loop starts at1149; source metadata is reached only from the later snapshot call.",
+      "The failed assertion precedes phase/output creation at1424, receipt creation at1465, source-before snapshot at1487, the three-path materialization loop at1496 and target writes at1502. No selected source write, metadata child, primary child or source boundary follows this failure.",
+      "The exception occurs before the protected phase try/finally and phase receipt initialization. The observed Python supervisor exit1 and traceback are the actual terminal result; no ordinary phase exit2, completion receipt or cleanup/preservation result is fabricated.",
+      "Zero source writes is a control-flow conclusion about this selected invocation. It does not establish preservation, existence, completeness or custody of the unavailable source tree or runtime inputs."
+    ]
+  },
+  "sourceFreeStaging": {
+    "intent": {
+      "bytes": 14258,
+      "sha256": "0b26402f1f5a182fb1b482072b5d2ca3e398fa8e033a33695cc5bde6aed2ec99",
+      "gitBlob": "dbf620ef39ab35952f13a7972be1292cc33e4705"
+    },
+    "code": {
+      "bytes": 5385,
+      "sha256": "ca06550adfc4f0c402a870a2227725bf17a224c6b15311ea605a5b4bfd4ecdad",
+      "gitBlob": "5b5e6ea9d8f559ba5019e6cfb503f76f79581016"
+    },
+    "fullCodeReadAsDataOnly": true,
+    "gateClosedAtUtc": "2026-11-17 02:20:32 UTC",
+    "startedAt": "2026-11-17T02:21:49.018614+00:00",
+    "finishedAt": "2026-11-17T02:21:49.504469+00:00",
+    "partReadbacks": [
+      {
+        "ordinal": 0,
+        "identity": {
+          "bytes": 2801279,
+          "sha256": "98639f464306184d3131ed36e625ae6e88e156a96aeb57e31787a1be2ea5f916",
+          "gitBlob": "441fd0ecb053bf9191332e635ff764cd511c4d0e"
+        },
+        "path": "/workspace/scratch/c714f5bce554/continuation-checkpoints-20261116/green-binding-transfer-part-0-20261117.json"
+      },
+      {
+        "ordinal": 1,
+        "identity": {
+          "bytes": 2800142,
+          "sha256": "16214d8009f81bea6e90fdc12de912a36542024aaa2451d0d7bc9f5ae8954957",
+          "gitBlob": "58fc694520738dae1507e0545fd5d18f7344fe89"
+        },
+        "path": "/workspace/scratch/c714f5bce554/continuation-checkpoints-20261116/green-binding-transfer-part-1-20261117.json"
+      },
+      {
+        "ordinal": 2,
+        "identity": {
+          "bytes": 2661366,
+          "sha256": "197b6c989795fad2a4d46205aaca86aa79391ece81eb267205e85bf3b18f233f",
+          "gitBlob": "92de54c81f85a21da8b4ff9346f89d9c55bd5d79"
+        },
+        "path": "/workspace/scratch/c714f5bce554/continuation-checkpoints-20261116/green-binding-transfer-part-2-20261117.json"
+      }
+    ],
+    "fullBindingReadback": {
+      "bytes": 8262787,
+      "sha256": "56d2bb56ff1135fbc606d375b2b8debd8c5f3feaaa8b61904aa584c4dc38435c",
+      "gitBlob": "ea852a05538a51710c13a0cd86a8bd1e3fa1c056"
+    },
+    "exactSelectedWrite": [
+      "/workspace/scratch/c714-post-transport-20261117/controls/green-binding.json"
+    ],
+    "existing8FilesBeforeAfterLiteralEqual": true,
+    "existing8Files": [
+      {
+        "path": "/workspace/scratch/c714-post-transport-20261117/controls/combined-runner.py",
+        "identity": {
+          "bytes": 104131,
+          "sha256": "20958434e304d6d67657abad910d7c891f5a9086164e73d19cc8764348fc83f5",
+          "gitBlob": "c81f72a8ed14a93b3557fdf889f9ad6cebc25140"
+        },
+        "device": 27,
+        "inode": 3961082,
+        "uid": 1000,
+        "mode": "0o600",
+        "size": 104131,
+        "mtimeNs": 1794877158187294700
+      },
+      {
+        "path": "/workspace/scratch/c714-post-transport-20261117/controls/red-binding.json",
+        "identity": {
+          "bytes": 6399172,
+          "sha256": "be265da9b130091d251295f937a7ab09b1db0e03f2c4a02d985839134e0379ec",
+          "gitBlob": "9f9ddcf0f9f62cce1a31f204ae786a8e2d3d2267"
+        },
+        "device": 27,
+        "inode": 3961083,
+        "uid": 1000,
+        "mode": "0o600",
+        "size": 6399172,
+        "mtimeNs": 1794877158190969600
+      },
+      {
+        "path": "/workspace/scratch/c714-post-transport-20261117/replicas/bootstrap-binding.json",
+        "identity": {
+          "bytes": 2790411,
+          "sha256": "6c917133945366fdb46a5655437d1f4fdabdd2906fdf94d7c6082eaf51e82131",
+          "gitBlob": "37bd0dcb54d3bac498b6530a08e1f24d4a984609"
+        },
+        "device": 27,
+        "inode": 3961084,
+        "uid": 1000,
+        "mode": "0o600",
+        "size": 2790411,
+        "mtimeNs": 1794877158255015000
+      },
+      {
+        "path": "/workspace/scratch/c714-post-transport-20261117/replicas/fresh-current-input-boundary.json",
+        "identity": {
+          "bytes": 3654,
+          "sha256": "a64029a2dfffecffe8a50535b50b009cdc29ee8c9d1cc3a62ab8c693852b010a",
+          "gitBlob": "f8dd300b5842bae00ef3967e997b98d51a34a578"
+        },
+        "device": 27,
+        "inode": 3961085,
+        "uid": 1000,
+        "mode": "0o600",
+        "size": 3654,
+        "mtimeNs": 1794877158274223000
+      },
+      {
+        "path": "/workspace/scratch/c714-post-transport-20261117/replicas/provider-archives-fresh-review.json",
+        "identity": {
+          "bytes": 789090,
+          "sha256": "7e83285776675d6a95a08182948d1d3590384f9406f2f408b3fac0cfaaabe925",
+          "gitBlob": "aea94f43ce13a48e4e8e0c065926cbff2a2aa344"
+        },
+        "device": 27,
+        "inode": 3961086,
+        "uid": 1000,
+        "mode": "0o600",
+        "size": 789090,
+        "mtimeNs": 1794877158275687000
+      },
+      {
+        "path": "/workspace/scratch/c714-post-transport-20261117/replicas/historical-original-runner.py",
+        "identity": {
+          "bytes": 89953,
+          "sha256": "95cdbc1f16f770878f8ac8862f4a3ef1dde3667d180e3cdca39f3ca3d7e7058d",
+          "gitBlob": "906d8b49218f64037b71a7642bfa1bd4254befbd"
+        },
+        "device": 27,
+        "inode": 3961087,
+        "uid": 1000,
+        "mode": "0o600",
+        "size": 89953,
+        "mtimeNs": 1794877158282866700
+      },
+      {
+        "path": "/workspace/scratch/c714-post-transport-20261117/replicas/historical-original-binding.json",
+        "identity": {
+          "bytes": 4898503,
+          "sha256": "5b44dba9bac95dae81abcb01f569d55ce49e506d643a2c148b5b5d6ec0c7ede9",
+          "gitBlob": "f7c78d18f79cf7781aad840ae35f7464faa7542d"
+        },
+        "device": 27,
+        "inode": 3961088,
+        "uid": 1000,
+        "mode": "0o600",
+        "size": 4898503,
+        "mtimeNs": 1794877158285041400
+      },
+      {
+        "path": "/workspace/scratch/c714-post-transport-20261117/replicas/historical-test-materialization-receipt.json",
+        "identity": {
+          "bytes": 92391,
+          "sha256": "3434b0dbd687c9514ca7e0fe35f19c3728624cd77b2b3eceb04bde4bba11819d",
+          "gitBlob": "f542dde38b84f533e5658aeafe5a06642c1dcca9"
+        },
+        "device": 27,
+        "inode": 3961089,
+        "uid": 1000,
+        "mode": "0o600",
+        "size": 92391,
+        "mtimeNs": 1794877158314175000
+      }
+    ],
+    "rootsBeforeAfterLiteralEqual": true,
+    "roots": [
+      {
+        "path": "/workspace/scratch/c714-post-transport-20261117",
+        "device": 27,
+        "inode": 3961079,
+        "uid": 1000,
+        "mode": "0o700"
+      },
+      {
+        "path": "/workspace/scratch/c714-post-transport-20261117/controls",
+        "device": 27,
+        "inode": 3961080,
+        "uid": 1000,
+        "mode": "0o700"
+      },
+      {
+        "path": "/workspace/scratch/c714-post-transport-20261117/replicas",
+        "device": 27,
+        "inode": 3961081,
+        "uid": 1000,
+        "mode": "0o700"
+      }
+    ],
+    "newBindingFile": {
+      "path": "/workspace/scratch/c714-post-transport-20261117/controls/green-binding.json",
+      "identity": {
+        "bytes": 8262787,
+        "sha256": "56d2bb56ff1135fbc606d375b2b8debd8c5f3feaaa8b61904aa584c4dc38435c",
+        "gitBlob": "ea852a05538a51710c13a0cd86a8bd1e3fa1c056"
+      },
+      "device": 27,
+      "inode": 3985209,
+      "uid": 1000,
+      "mode": "0o600",
+      "size": 8262787,
+      "mtimeNs": 1794882109431755800
+    },
+    "separateObservedOuterExit": 0,
+    "separateFinalToolChunk": "64dc1b",
+    "entireFinalOutputEqualsRetainedReceipt": true,
+    "sourceWrites": 0,
+    "runtimeInputWrites": 0,
+    "targetRunnerInvokedByStaging": false,
+    "interpretation": "Successful source-free staging establishes the exact new control file and matching point-in-time existing controls/replicas. It did not admit or reconstruct ROOT/REPO. Its outer0 is separate from and cannot replace the materialization outer1."
+  },
+  "pointInTimeObservation": {
+    "identity": {
+      "bytes": 4110,
+      "sha256": "2625f6aec302e50b5fb88183bdadd010bb90b03b4abdd3c4c99bd3ff777e2360",
+      "gitBlob": "814c9c40adec04824d9fa5a52c95e4b52d7d783a"
+    },
+    "at": "2026-11-17T02:23:32.563915+00:00",
+    "paths": [
+      {
+        "path": "/workspace/scratch/c714-fresh-20261116",
+        "lexists": false,
+        "isDir": false,
+        "isFile": false,
+        "isSymlink": false
+      },
+      {
+        "path": "/workspace/scratch/c714-fresh-20261116/source",
+        "lexists": false,
+        "isDir": false,
+        "isFile": false,
+        "isSymlink": false
+      },
+      {
+        "path": "/workspace/scratch/c714-fresh-20261116/toolchain",
+        "lexists": false,
+        "isDir": false,
+        "isFile": false,
+        "isSymlink": false
+      },
+      {
+        "path": "/workspace/scratch/c714-fresh-20261116/evidence",
+        "lexists": false,
+        "isDir": false,
+        "isFile": false,
+        "isSymlink": false
+      },
+      {
+        "path": "/workspace/scratch/c714-post-transport-20261117",
+        "lexists": true,
+        "isDir": true,
+        "isFile": false,
+        "isSymlink": false,
+        "device": 27,
+        "inode": 3961079,
+        "mode": "0o700",
+        "uid": 1000,
+        "immediateEntries": [
+          "controls",
+          "evidence",
+          "replicas"
+        ]
+      },
+      {
+        "path": "/workspace/scratch/c714-post-transport-20261117/controls",
+        "lexists": true,
+        "isDir": true,
+        "isFile": false,
+        "isSymlink": false,
+        "device": 27,
+        "inode": 3961080,
+        "mode": "0o700",
+        "uid": 1000,
+        "immediateEntries": [
+          "combined-runner.py",
+          "green-binding.json",
+          "red-binding.json"
+        ]
+      },
+      {
+        "path": "/workspace/scratch/c714-post-transport-20261117/replicas",
+        "lexists": true,
+        "isDir": true,
+        "isFile": false,
+        "isSymlink": false,
+        "device": 27,
+        "inode": 3961081,
+        "mode": "0o700",
+        "uid": 1000,
+        "immediateEntries": [
+          "bootstrap-binding.json",
+          "fresh-current-input-boundary.json",
+          "historical-original-binding.json",
+          "historical-original-runner.py",
+          "historical-test-materialization-receipt.json",
+          "provider-archives-fresh-review.json"
+        ]
+      },
+      {
+        "path": "/workspace/scratch/c714-post-transport-20261117/evidence",
+        "lexists": true,
+        "isDir": true,
+        "isFile": false,
+        "isSymlink": false,
+        "device": 27,
+        "inode": 3969246,
+        "mode": "0o700",
+        "uid": 1000,
+        "immediateEntries": [
+          "owner.json",
+          "red"
+        ]
+      },
+      {
+        "path": "/workspace/scratch/c714-post-transport-20261117/evidence/materialize-producers",
+        "lexists": false,
+        "isDir": false,
+        "isFile": false,
+        "isSymlink": false
+      },
+      {
+        "path": "/workspace/scratch/c714-post-transport-20261117/evidence/green",
+        "lexists": false,
+        "isDir": false,
+        "isFile": false,
+        "isSymlink": false
+      },
+      {
+        "path": "/workspace/scratch/c714-post-transport-20261117/evidence/validation",
+        "lexists": false,
+        "isDir": false,
+        "isFile": false,
+        "isSymlink": false
+      }
+    ],
+    "completeCurrentControlReadbacks": [
+      {
+        "path": "/workspace/scratch/c714-post-transport-20261117/controls/combined-runner.py",
+        "bytes": 104131,
+        "sha256": "20958434e304d6d67657abad910d7c891f5a9086164e73d19cc8764348fc83f5",
+        "gitBlob": "c81f72a8ed14a93b3557fdf889f9ad6cebc25140"
+      },
+      {
+        "path": "/workspace/scratch/c714-post-transport-20261117/controls/red-binding.json",
+        "bytes": 6399172,
+        "sha256": "be265da9b130091d251295f937a7ab09b1db0e03f2c4a02d985839134e0379ec",
+        "gitBlob": "9f9ddcf0f9f62cce1a31f204ae786a8e2d3d2267"
+      },
+      {
+        "path": "/workspace/scratch/c714-post-transport-20261117/controls/green-binding.json",
+        "bytes": 8262787,
+        "sha256": "56d2bb56ff1135fbc606d375b2b8debd8c5f3feaaa8b61904aa584c4dc38435c",
+        "gitBlob": "ea852a05538a51710c13a0cd86a8bd1e3fa1c056"
+      }
+    ],
+    "qualification": "The later read-only observation reports ROOT,source,toolchain,evidence and materialize-producers/GREEN/validation roots absent. Current post-transport controls,replicas and historical RED evidence are present. Matching directory and file observations are point-in-time only. The traceback establishes a failed compound assertion; it does not independently identify which operand first failed or establish disappearance onset, cause, actor, or historical custody.",
+    "causeOfDisappearance": "UNKNOWN",
+    "timeOfDisappearance": "UNKNOWN"
+  },
+  "chronology": {
+    "gateClosedAtUtc": "2026-11-17 02:20:32 UTC",
+    "stagingIntentAtUtc": "2026-11-17 02:21:38 UTC",
+    "stagingStartedAt": "2026-11-17T02:21:49.018614+00:00",
+    "stagingFinishedAt": "2026-11-17T02:21:49.504469+00:00",
+    "materializationIntentAtUtc": "2026-11-17 02:22:22 UTC",
+    "pathObservationAt": "2026-11-17T02:23:32.563915+00:00",
+    "refusalEnvelopeAtUtc": "2026-11-17 02:24:38 UTC",
+    "qualification": "Intent and observation timestamps are retained as recorded; no exact unrecorded invocation start or disappearance time is inferred."
+  },
+  "acceptanceBoundaries": {
+    "phaseAccepted": false,
+    "sourceOnlyMaterializationAccepted": false,
+    "greenAccepted": false,
+    "validationAccepted": false,
+    "fullSourcePreservation": null,
+    "fullRuntimePreservation": null,
+    "wholeE2EQualified": false,
+    "stagingAcceptedOnlyWithinSourceFreeControlScope": true,
+    "materializationAttemptSpentDespiteNoPhaseDirectory": true,
+    "prohibitedContinuation": "No replay or partial resume, no source/runtime reconstruction or restoration in place, no manufactured phase receipt, and no GREEN/validation under this spent local sequence.",
+    "originalExternalGate": "The existing successful-materialization/outer0/independent acceptance/publication/full readback prerequisite for GREEN has not been satisfied. The immutable binding remains the published accepted control artifact, not evidence of a completed phase."
+  },
+  "historicalResults": {
+    "postTransportRed": "The prior complete accepted RED53054 remains historical and complete; it does not supply a current physical input census or authorize a replay.",
+    "original64038": "REFUSED/SPENT observedouter2, unchanged",
+    "corrected54393": "UNKNOWN/INCOMPLETE/SPENT, unchanged"
+  },
+  "parallelRootJoin": {
+    "identity": {
+      "bytes": 19849,
+      "sha256": "22f04f74ed43688d833ac6687da0dcfa1721d12bf22de2bcfae82705c69604f4",
+      "gitBlob": "7a30c61d3816a20810533e8e341780faea811088"
+    },
+    "completeReadAndRehash": true,
+    "all29ChecksPassed": true,
+    "subjectEvidenceAndObservationJoined": true,
+    "agreedClassification": "REFUSED_BEFORE_SOURCE_ROOT_ADMISSION_SPENT",
+    "agreedMaterializationOuter": 1,
+    "agreedStagingOuter": 0,
+    "unresolvedAccountingBlockers": [],
+    "missingRootCauseRemainsUnknown": true
+  },
+  "reviewerDataCheckCorrection": {
+    "initial": {
+      "name": "staging all3 exact full transport readback pins",
+      "passed": false,
+      "reason": "Reviewer initially used JSON object insertion-order equality for plan/readback part rows whose field order differs."
+    },
+    "corrected": true,
+    "subjectChanged": false
+  },
+  "checks": [
+    {
+      "name": "complete retained evidence body materialize_refusal",
+      "passed": true,
+      "detail": {
+        "bytes": 5796,
+        "sha256": "7865c3e53095955d2ff2406faa0a7d1bedfb0d4fbca5770b02922615ba9127c5",
+        "gitBlob": "ba7c846e55a9e87aca99cba43b52baddef6b760a"
+      }
+    },
+    {
+      "name": "complete retained evidence body materialize_path_observation",
+      "passed": true,
+      "detail": {
+        "bytes": 4110,
+        "sha256": "2625f6aec302e50b5fb88183bdadd010bb90b03b4abdd3c4c99bd3ff777e2360",
+        "gitBlob": "814c9c40adec04824d9fa5a52c95e4b52d7d783a"
+      }
+    },
+    {
+      "name": "complete retained evidence body materialize_intent",
+      "passed": true,
+      "detail": {
+        "bytes": 3489,
+        "sha256": "042c3ff0a2668e4bae8aeea9c178860eaa055c1739a3b0af5404dbd988f3f528",
+        "gitBlob": "d775e502038485469b3ab2f96569e5fd6b3ee98c"
+      }
+    },
+    {
+      "name": "complete retained evidence body green_stage_intent",
+      "passed": true,
+      "detail": {
+        "bytes": 14258,
+        "sha256": "0b26402f1f5a182fb1b482072b5d2ca3e398fa8e033a33695cc5bde6aed2ec99",
+        "gitBlob": "dbf620ef39ab35952f13a7972be1292cc33e4705"
+      }
+    },
+    {
+      "name": "complete retained evidence body green_stage_receipt",
+      "passed": true,
+      "detail": {
+        "bytes": 11570,
+        "sha256": "be71e278da80f76e3c0f3ed62c616cf4262627f237d2cec63829f2310d079c16",
+        "gitBlob": "dd48b15ec75ae4f5d12b84617159f3b152bacdbb"
+      }
+    },
+    {
+      "name": "complete retained evidence body green_stage_outer",
+      "passed": true,
+      "detail": {
+        "bytes": 26602,
+        "sha256": "5820ae411b46929282dd0119d98b65acd79879e7d2043de3eb3ee0418e314670",
+        "gitBlob": "85c0b89906a819d5a93d88fd7613587361ef7c72"
+      }
+    },
+    {
+      "name": "complete retained evidence body green_binding_actual_gate",
+      "passed": true,
+      "detail": {
+        "bytes": 7095,
+        "sha256": "b50ae2a0bb3d61f67716688361cf36ca3e23954f9c37106e6350ddd27997a7bb",
+        "gitBlob": "0bf466496fc388dabe652eb4121229dd981b8f16"
+      }
+    },
+    {
+      "name": "complete unchanged runner identity",
+      "passed": true,
+      "detail": {
+        "bytes": 104131,
+        "sha256": "20958434e304d6d67657abad910d7c891f5a9086164e73d19cc8764348fc83f5",
+        "gitBlob": "c81f72a8ed14a93b3557fdf889f9ad6cebc25140"
+      }
+    },
+    {
+      "name": "same accepted binding and R1",
+      "passed": true,
+      "detail": {
+        "binding": {
+          "bytes": 8262787,
+          "sha256": "56d2bb56ff1135fbc606d375b2b8debd8c5f3feaaa8b61904aa584c4dc38435c",
+          "gitBlob": "ea852a05538a51710c13a0cd86a8bd1e3fa1c056"
+        },
+        "r1": {
+          "bytes": 139634,
+          "sha256": "b9524cd8f0f1251f034337f4eb8fbc6606adc1d1c987d993580be06b9a078a75",
+          "gitBlob": "8ce89328171e58ec3e0631dce9607ee7e1eba54e"
+        }
+      }
+    },
+    {
+      "name": "exact invocation argv shell and workdir",
+      "passed": true,
+      "detail": [
+        "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python3",
+        "/workspace/scratch/c714-post-transport-20261117/controls/combined-runner.py",
+        "/workspace/scratch/c714-post-transport-20261117/controls/green-binding.json",
+        "56d2bb56ff1135fbc606d375b2b8debd8c5f3feaaa8b61904aa584c4dc38435c",
+        "materialize",
+        "green"
+      ]
+    },
+    {
+      "name": "one selected invocation spent no replay",
+      "passed": true,
+      "detail": true
+    },
+    {
+      "name": "separate observed materialization outer1 and exact chunk",
+      "passed": true,
+      "detail": {
+        "chunk_id": "b6a241",
+        "wall_time_seconds": 0.420282123,
+        "exit_code": 1,
+        "original_token_count": 88,
+        "output": "Traceback (most recent call last):\n  File \"/workspace/scratch/c714-post-transport-20261117/controls/combined-runner.py\", line 1098, in <module>\n    assert ROOT.is_dir() and not ROOT.is_symlink() and REPO.is_dir() and not REPO.is_symlink()\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError\n"
+      }
+    },
+    {
+      "name": "traceback exact retained runner line1098 assertion",
+      "passed": true,
+      "detail": {
+        "line": 1098,
+        "assertion": "assert ROOT.is_dir() and not ROOT.is_symlink() and REPO.is_dir() and not REPO.is_symlink()"
+      }
+    },
+    {
+      "name": "exact source root and repo constants",
+      "passed": true,
+      "detail": {
+        "root": "/workspace/scratch/c714-fresh-20261116",
+        "repo": "/workspace/scratch/c714-fresh-20261116/source"
+      }
+    },
+    {
+      "name": "early assertion precedes input phase census and write entry",
+      "passed": true,
+      "detail": {
+        "entry": 1061,
+        "assertion": 1098,
+        "inputLoop": 1149,
+        "phaseCreate": 1424,
+        "receiptCreate": 1465,
+        "preflight": 1487,
+        "writeLoop": 1496,
+        "sourceWrite": 1502
+      }
+    },
+    {
+      "name": "phase protected try is unreached",
+      "passed": true,
+      "detail": "The assertion is module admission before phase receipt and protected phase try/finally; no manufactured receipt or normal supervisor exit2 is substituted."
+    },
+    {
+      "name": "all reported phase actions unreachable",
+      "passed": true,
+      "detail": {
+        "inputFileLoop": true,
+        "metadataCommands": true,
+        "sourceBeforeBoundary": true,
+        "sourceWrites": true,
+        "sourceAfterBoundary": true,
+        "primaryInvocations": true,
+        "green": true,
+        "validation": true
+      }
+    },
+    {
+      "name": "zero selected-runner source writes correctly bounded",
+      "passed": true,
+      "detail": "Derived from the exact retained runner control flow: line1098 assertion precedes inputFiles reading, output-root/phase creation, every metadata/primary spawn and the materialization write loop. Current absence confirms the selected source root and phase outputs are absent; no full physical source census or preservation claim follows."
+    },
+    {
+      "name": "unknown preservation remains null and no acceptance",
+      "passed": true,
+      "detail": {
+        "inputsPreserved": null,
+        "fullRuntimeInputsPreserved": null,
+        "sourceAndSupervisorMetadataPreserved": null
+      }
+    },
+    {
+      "name": "refusal envelope joins exact intent stage gate and observation",
+      "passed": true,
+      "detail": true
+    },
+    {
+      "name": "gate exact accepted control publication and subject",
+      "passed": true,
+      "detail": {
+        "commit": "9a37963441396d6eddaf507e57e504e21503878c",
+        "tree": "be29c27287629d087ac7426a6eecc5f42bc750c6",
+        "gate": {
+          "bytes": 7095,
+          "sha256": "b50ae2a0bb3d61f67716688361cf36ca3e23954f9c37106e6350ddd27997a7bb",
+          "gitBlob": "0bf466496fc388dabe652eb4121229dd981b8f16"
+        }
+      }
+    },
+    {
+      "name": "gate records completed required actual readbacks",
+      "passed": true,
+      "detail": {
+        "root": {
+          "bytes": 108913,
+          "sha256": "2cfe625d223e099d1d3642c254b7913ee11e59c0098d2bc20df492169fcd50ff",
+          "gitBlob": "a23b2fbe580fd610653cb1452e48c67a7007c69f"
+        },
+        "independent": {
+          "bytes": 153895,
+          "sha256": "3b2b57d8b96388235c4a03271984783a0801032a67cb7530ffdf047cf8922656",
+          "gitBlob": "2aec11137769eef832609bdaeb6acc94774ce005"
+        }
+      }
+    },
+    {
+      "name": "gate before source-free stage and invocation intent",
+      "passed": true,
+      "detail": {
+        "gate": "2026-11-17 02:20:32 UTC",
+        "stageIntent": "2026-11-17 02:21:38 UTC",
+        "stageStarted": "2026-11-17T02:21:49.018614+00:00",
+        "stageFinished": "2026-11-17T02:21:49.504469+00:00",
+        "invocationIntent": "2026-11-17 02:22:22 UTC",
+        "pathObservation": "2026-11-17T02:23:32.563915+00:00"
+      }
+    },
+    {
+      "name": "exact staging source-free plan pins",
+      "passed": true,
+      "detail": true
+    },
+    {
+      "name": "complete stager code identity and read as data",
+      "passed": true,
+      "detail": {
+        "bytes": 5385,
+        "sha256": "ca06550adfc4f0c402a870a2227725bf17a224c6b15311ea605a5b4bfd4ecdad",
+        "gitBlob": "5b5e6ea9d8f559ba5019e6cfb503f76f79581016"
+      }
+    },
+    {
+      "name": "stager only selected control exclusive create",
+      "passed": true,
+      "detail": [
+        "/workspace/scratch/c714-post-transport-20261117/controls/green-binding.json"
+      ]
+    },
+    {
+      "name": "staging receipt gate source publication subject joins",
+      "passed": true,
+      "detail": true
+    },
+    {
+      "name": "staging all3 exact full transport readback pins",
+      "passed": true,
+      "detail": {
+        "parts": [
+          {
+            "ordinal": 0,
+            "identity": {
+              "bytes": 2801279,
+              "sha256": "98639f464306184d3131ed36e625ae6e88e156a96aeb57e31787a1be2ea5f916",
+              "gitBlob": "441fd0ecb053bf9191332e635ff764cd511c4d0e"
+            },
+            "path": "/workspace/scratch/c714f5bce554/continuation-checkpoints-20261116/green-binding-transfer-part-0-20261117.json"
+          },
+          {
+            "ordinal": 1,
+            "identity": {
+              "bytes": 2800142,
+              "sha256": "16214d8009f81bea6e90fdc12de912a36542024aaa2451d0d7bc9f5ae8954957",
+              "gitBlob": "58fc694520738dae1507e0545fd5d18f7344fe89"
+            },
+            "path": "/workspace/scratch/c714f5bce554/continuation-checkpoints-20261116/green-binding-transfer-part-1-20261117.json"
+          },
+          {
+            "ordinal": 2,
+            "identity": {
+              "bytes": 2661366,
+              "sha256": "197b6c989795fad2a4d46205aaca86aa79391ece81eb267205e85bf3b18f233f",
+              "gitBlob": "92de54c81f85a21da8b4ff9346f89d9c55bd5d79"
+            },
+            "path": "/workspace/scratch/c714f5bce554/continuation-checkpoints-20261116/green-binding-transfer-part-2-20261117.json"
+          }
+        ],
+        "comparison": "Explicit ordinal, path, bytes, SHA256 and Git-blob identity; JSON object field order has no semantic bearing."
+      }
+    },
+    {
+      "name": "staging exact8 existing files preserved",
+      "passed": true,
+      "detail": [
+        {
+          "path": "/workspace/scratch/c714-post-transport-20261117/controls/combined-runner.py",
+          "identity": {
+            "bytes": 104131,
+            "sha256": "20958434e304d6d67657abad910d7c891f5a9086164e73d19cc8764348fc83f5",
+            "gitBlob": "c81f72a8ed14a93b3557fdf889f9ad6cebc25140"
+          }
+        },
+        {
+          "path": "/workspace/scratch/c714-post-transport-20261117/controls/red-binding.json",
+          "identity": {
+            "bytes": 6399172,
+            "sha256": "be265da9b130091d251295f937a7ab09b1db0e03f2c4a02d985839134e0379ec",
+            "gitBlob": "9f9ddcf0f9f62cce1a31f204ae786a8e2d3d2267"
+          }
+        },
+        {
+          "path": "/workspace/scratch/c714-post-transport-20261117/replicas/bootstrap-binding.json",
+          "identity": {
+            "bytes": 2790411,
+            "sha256": "6c917133945366fdb46a5655437d1f4fdabdd2906fdf94d7c6082eaf51e82131",
+            "gitBlob": "37bd0dcb54d3bac498b6530a08e1f24d4a984609"
+          }
+        },
+        {
+          "path": "/workspace/scratch/c714-post-transport-20261117/replicas/fresh-current-input-boundary.json",
+          "identity": {
+            "bytes": 3654,
+            "sha256": "a64029a2dfffecffe8a50535b50b009cdc29ee8c9d1cc3a62ab8c693852b010a",
+            "gitBlob": "f8dd300b5842bae00ef3967e997b98d51a34a578"
+          }
+        },
+        {
+          "path": "/workspace/scratch/c714-post-transport-20261117/replicas/provider-archives-fresh-review.json",
+          "identity": {
+            "bytes": 789090,
+            "sha256": "7e83285776675d6a95a08182948d1d3590384f9406f2f408b3fac0cfaaabe925",
+            "gitBlob": "aea94f43ce13a48e4e8e0c065926cbff2a2aa344"
+          }
+        },
+        {
+          "path": "/workspace/scratch/c714-post-transport-20261117/replicas/historical-original-runner.py",
+          "identity": {
+            "bytes": 89953,
+            "sha256": "95cdbc1f16f770878f8ac8862f4a3ef1dde3667d180e3cdca39f3ca3d7e7058d",
+            "gitBlob": "906d8b49218f64037b71a7642bfa1bd4254befbd"
+          }
+        },
+        {
+          "path": "/workspace/scratch/c714-post-transport-20261117/replicas/historical-original-binding.json",
+          "identity": {
+            "bytes": 4898503,
+            "sha256": "5b44dba9bac95dae81abcb01f569d55ce49e506d643a2c148b5b5d6ec0c7ede9",
+            "gitBlob": "f7c78d18f79cf7781aad840ae35f7464faa7542d"
+          }
+        },
+        {
+          "path": "/workspace/scratch/c714-post-transport-20261117/replicas/historical-test-materialization-receipt.json",
+          "identity": {
+            "bytes": 92391,
+            "sha256": "3434b0dbd687c9514ca7e0fe35f19c3728624cd77b2b3eceb04bde4bba11819d",
+            "gitBlob": "f542dde38b84f533e5658aeafe5a06642c1dcca9"
+          }
+        }
+      ]
+    },
+    {
+      "name": "staging6 replica pins exactly accepted binding",
+      "passed": true,
+      "detail": [
+        {
+          "path": "/workspace/scratch/c714-post-transport-20261117/replicas/bootstrap-binding.json",
+          "identity": {
+            "bytes": 2790411,
+            "sha256": "6c917133945366fdb46a5655437d1f4fdabdd2906fdf94d7c6082eaf51e82131",
+            "gitBlob": "37bd0dcb54d3bac498b6530a08e1f24d4a984609"
+          }
+        },
+        {
+          "path": "/workspace/scratch/c714-post-transport-20261117/replicas/fresh-current-input-boundary.json",
+          "identity": {
+            "bytes": 3654,
+            "sha256": "a64029a2dfffecffe8a50535b50b009cdc29ee8c9d1cc3a62ab8c693852b010a",
+            "gitBlob": "f8dd300b5842bae00ef3967e997b98d51a34a578"
+          }
+        },
+        {
+          "path": "/workspace/scratch/c714-post-transport-20261117/replicas/provider-archives-fresh-review.json",
+          "identity": {
+            "bytes": 789090,
+            "sha256": "7e83285776675d6a95a08182948d1d3590384f9406f2f408b3fac0cfaaabe925",
+            "gitBlob": "aea94f43ce13a48e4e8e0c065926cbff2a2aa344"
+          }
+        },
+        {
+          "path": "/workspace/scratch/c714-post-transport-20261117/replicas/historical-original-runner.py",
+          "identity": {
+            "bytes": 89953,
+            "sha256": "95cdbc1f16f770878f8ac8862f4a3ef1dde3667d180e3cdca39f3ca3d7e7058d",
+            "gitBlob": "906d8b49218f64037b71a7642bfa1bd4254befbd"
+          }
+        },
+        {
+          "path": "/workspace/scratch/c714-post-transport-20261117/replicas/historical-original-binding.json",
+          "identity": {
+            "bytes": 4898503,
+            "sha256": "5b44dba9bac95dae81abcb01f569d55ce49e506d643a2c148b5b5d6ec0c7ede9",
+            "gitBlob": "f7c78d18f79cf7781aad840ae35f7464faa7542d"
+          }
+        },
+        {
+          "path": "/workspace/scratch/c714-post-transport-20261117/replicas/historical-test-materialization-receipt.json",
+          "identity": {
+            "bytes": 92391,
+            "sha256": "3434b0dbd687c9514ca7e0fe35f19c3728624cd77b2b3eceb04bde4bba11819d",
+            "gitBlob": "f542dde38b84f533e5658aeafe5a06642c1dcca9"
+          }
+        }
+      ]
+    },
+    {
+      "name": "staging owned existing file points valid and complete hashes",
+      "passed": true,
+      "detail": true
+    },
+    {
+      "name": "staging3 owned root observations match before after",
+      "passed": true,
+      "detail": [
+        {
+          "path": "/workspace/scratch/c714-post-transport-20261117",
+          "device": 27,
+          "inode": 3961079,
+          "uid": 1000,
+          "mode": "0o700"
+        },
+        {
+          "path": "/workspace/scratch/c714-post-transport-20261117/controls",
+          "device": 27,
+          "inode": 3961080,
+          "uid": 1000,
+          "mode": "0o700"
+        },
+        {
+          "path": "/workspace/scratch/c714-post-transport-20261117/replicas",
+          "device": 27,
+          "inode": 3961081,
+          "uid": 1000,
+          "mode": "0o700"
+        }
+      ]
+    },
+    {
+      "name": "staging exact new whole binding and sole selected write",
+      "passed": true,
+      "detail": {
+        "path": "/workspace/scratch/c714-post-transport-20261117/controls/green-binding.json",
+        "identity": {
+          "bytes": 8262787,
+          "sha256": "56d2bb56ff1135fbc606d375b2b8debd8c5f3feaaa8b61904aa584c4dc38435c",
+          "gitBlob": "ea852a05538a51710c13a0cd86a8bd1e3fa1c056"
+        },
+        "device": 27,
+        "inode": 3985209,
+        "uid": 1000,
+        "mode": "0o600",
+        "size": 8262787,
+        "mtimeNs": 1794882109431755800
+      }
+    },
+    {
+      "name": "staging no source/runtime input or target invocation",
+      "passed": true,
+      "detail": true
+    },
+    {
+      "name": "separate source-free staging outer0 full receipt literal join",
+      "passed": true,
+      "detail": {
+        "chunk": "64dc1b",
+        "outer": 0,
+        "receipt": {
+          "bytes": 11570,
+          "sha256": "be71e278da80f76e3c0f3ed62c616cf4262627f237d2cec63829f2310d079c16",
+          "gitBlob": "dd48b15ec75ae4f5d12b84617159f3b152bacdbb"
+        }
+      }
+    },
+    {
+      "name": "successful stage outer0 never substitutes for materialize outer1",
+      "passed": true,
+      "detail": {
+        "stageOuter": 0,
+        "materializeOuter": 1
+      }
+    },
+    {
+      "name": "point-in-time11 unique observed paths",
+      "passed": true,
+      "detail": 11
+    },
+    {
+      "name": "source root source child toolchain evidence and new phases observed absent",
+      "passed": true,
+      "detail": [
+        "/workspace/scratch/c714-fresh-20261116",
+        "/workspace/scratch/c714-fresh-20261116/source",
+        "/workspace/scratch/c714-fresh-20261116/toolchain",
+        "/workspace/scratch/c714-fresh-20261116/evidence",
+        "/workspace/scratch/c714-post-transport-20261117/evidence/materialize-producers",
+        "/workspace/scratch/c714-post-transport-20261117/evidence/green",
+        "/workspace/scratch/c714-post-transport-20261117/evidence/validation"
+      ]
+    },
+    {
+      "name": "current scope control replica evidence directories remain observed",
+      "passed": true,
+      "detail": true
+    },
+    {
+      "name": "post-refusal3 complete control pins match accepted controls",
+      "passed": true,
+      "detail": [
+        {
+          "path": "/workspace/scratch/c714-post-transport-20261117/controls/combined-runner.py",
+          "bytes": 104131,
+          "sha256": "20958434e304d6d67657abad910d7c891f5a9086164e73d19cc8764348fc83f5",
+          "gitBlob": "c81f72a8ed14a93b3557fdf889f9ad6cebc25140"
+        },
+        {
+          "path": "/workspace/scratch/c714-post-transport-20261117/controls/red-binding.json",
+          "bytes": 6399172,
+          "sha256": "be265da9b130091d251295f937a7ab09b1db0e03f2c4a02d985839134e0379ec",
+          "gitBlob": "9f9ddcf0f9f62cce1a31f204ae786a8e2d3d2267"
+        },
+        {
+          "path": "/workspace/scratch/c714-post-transport-20261117/controls/green-binding.json",
+          "bytes": 8262787,
+          "sha256": "56d2bb56ff1135fbc606d375b2b8debd8c5f3feaaa8b61904aa584c4dc38435c",
+          "gitBlob": "ea852a05538a51710c13a0cd86a8bd1e3fa1c056"
+        }
+      ]
+    },
+    {
+      "name": "post-refusal root ownership matches staging point observations",
+      "passed": true,
+      "detail": "Matching point observations only, not continuous custody."
+    },
+    {
+      "name": "historical RED directory only no new phase directory",
+      "passed": true,
+      "detail": [
+        "owner.json",
+        "red"
+      ]
+    },
+    {
+      "name": "absence timing and cause remain unknown",
+      "passed": true,
+      "detail": "UNKNOWN; no claim about when, why, or another executor's custody"
+    },
+    {
+      "name": "no new source census or metadata lifecycle synthesized",
+      "passed": true,
+      "detail": true
+    },
+    {
+      "name": "existing R1 spends failed preflight without replay",
+      "passed": true,
+      "detail": "Selected materialization invocation is spent even though it failed before phase-directory creation; no replay/resume/reconstruction authorized."
+    },
+    {
+      "name": "GREEN and validation remain unreached and unaccepted",
+      "passed": true,
+      "detail": true
+    },
+    {
+      "name": "complete root refusal report identity and full read",
+      "passed": true,
+      "detail": {
+        "bytes": 19849,
+        "sha256": "22f04f74ed43688d833ac6687da0dcfa1721d12bf22de2bcfae82705c69604f4",
+        "gitBlob": "7a30c61d3816a20810533e8e341780faea811088"
+      }
+    },
+    {
+      "name": "root29checks all pass with no accounting blocker",
+      "passed": true,
+      "detail": 29
+    },
+    {
+      "name": "root full refusal envelope and point observation literal data join",
+      "passed": true,
+      "detail": true
+    },
+    {
+      "name": "root subject exact controls and all7 assigned evidence joins",
+      "passed": true,
+      "detail": {
+        "runner": {
+          "bytes": 104131,
+          "sha256": "20958434e304d6d67657abad910d7c891f5a9086164e73d19cc8764348fc83f5",
+          "gitBlob": "c81f72a8ed14a93b3557fdf889f9ad6cebc25140"
+        },
+        "binding": {
+          "bytes": 8262787,
+          "sha256": "56d2bb56ff1135fbc606d375b2b8debd8c5f3feaaa8b61904aa584c4dc38435c",
+          "gitBlob": "ea852a05538a51710c13a0cd86a8bd1e3fa1c056"
+        },
+        "r1": {
+          "bytes": 139634,
+          "sha256": "b9524cd8f0f1251f034337f4eb8fbc6606adc1d1c987d993580be06b9a078a75",
+          "gitBlob": "8ce89328171e58ec3e0631dce9607ee7e1eba54e"
+        },
+        "bindingPublication": "9a37963441396d6eddaf507e57e504e21503878c",
+        "publicationGate": {
+          "bytes": 7095,
+          "sha256": "b50ae2a0bb3d61f67716688361cf36ca3e23954f9c37106e6350ddd27997a7bb",
+          "gitBlob": "0bf466496fc388dabe652eb4121229dd981b8f16"
+        },
+        "stagingIntent": {
+          "bytes": 14258,
+          "sha256": "0b26402f1f5a182fb1b482072b5d2ca3e398fa8e033a33695cc5bde6aed2ec99",
+          "gitBlob": "dbf620ef39ab35952f13a7972be1292cc33e4705"
+        },
+        "stagingReceipt": {
+          "bytes": 11570,
+          "sha256": "be71e278da80f76e3c0f3ed62c616cf4262627f237d2cec63829f2310d079c16",
+          "gitBlob": "dd48b15ec75ae4f5d12b84617159f3b152bacdbb"
+        },
+        "stagingOuter": {
+          "bytes": 26602,
+          "sha256": "5820ae411b46929282dd0119d98b65acd79879e7d2043de3eb3ee0418e314670",
+          "gitBlob": "85c0b89906a819d5a93d88fd7613587361ef7c72"
+        },
+        "materializationIntent": {
+          "bytes": 3489,
+          "sha256": "042c3ff0a2668e4bae8aeea9c178860eaa055c1739a3b0af5404dbd988f3f528",
+          "gitBlob": "d775e502038485469b3ab2f96569e5fd6b3ee98c"
+        },
+        "materializationRefusal": {
+          "bytes": 5796,
+          "sha256": "7865c3e53095955d2ff2406faa0a7d1bedfb0d4fbca5770b02922615ba9127c5",
+          "gitBlob": "ba7c846e55a9e87aca99cba43b52baddef6b760a"
+        },
+        "currentPathObservation": {
+          "bytes": 4110,
+          "sha256": "2625f6aec302e50b5fb88183bdadd010bb90b03b4abdd3c4c99bd3ff777e2360",
+          "gitBlob": "814c9c40adec04824d9fa5a52c95e4b52d7d783a"
+        },
+        "observedMaterializationOuter": 1,
+        "observedStagingOuter": 0,
+        "classification": "REFUSED_BEFORE_SOURCE_ROOT_ADMISSION_SPENT"
+      }
+    },
+    {
+      "name": "root independently identified same exact control-flow anchors",
+      "passed": true,
+      "detail": {
+        "exactRunner": {
+          "bytes": 104131,
+          "sha256": "20958434e304d6d67657abad910d7c891f5a9086164e73d19cc8764348fc83f5",
+          "gitBlob": "c81f72a8ed14a93b3557fdf889f9ad6cebc25140"
+        },
+        "failureLine": 1098,
+        "exactAssertion": "assert ROOT.is_dir() and not ROOT.is_symlink() and REPO.is_dir() and not REPO.is_symlink()",
+        "inputLoop": 1149,
+        "ownerCreation": 1412,
+        "sourceBeforeSnapshot": 1487,
+        "materializationWriteLoop": 1496,
+        "scope": "Module-level admission fails before all selected phase outputs and metadata/primary/source activity. This is not a universal process-custody or historical filesystem-continuity claim."
+      }
+    },
+    {
+      "name": "root verdict separates refused accounting from materialization acceptance",
+      "passed": true,
+      "detail": "ACCEPT_OBSERVED_REFUSAL_ACCOUNTING_NO_MATERIALIZATION_ACCEPTANCE"
+    }
+  ],
+  "checkCount": 52,
+  "failedChecks": [],
+  "unresolvedAccountingBlockers": [],
+  "unresolvedUnderlyingConditions": [
+    {
+      "condition": "Selected ROOT/REPO unavailable at later observation; source admission failed.",
+      "cause": "UNKNOWN",
+      "currentCompleteSourceAndRuntimeBoundary": "UNOBSERVED",
+      "resolutionAuthorizedByThisReport": false
+    }
+  ],
+  "requiredNext": "Publish and immediately push the independently reviewed refused/spent outcome, then complete the already required actual readbacks. This report authorizes no new R1, environment recovery, replay, target runtime, CI mutation, source write or future venue selection.",
+  "reviewerActions": {
+    "shellInvocations": 0,
+    "sourceWrites": 0,
+    "controlWrites": 0,
+    "targetRunnerInvocations": 0,
+    "targetTests": 0,
+    "retries": 0,
+    "reconstruction": false,
+    "refMutations": 0,
+    "ciOrPrMutations": 0,
+    "bareReviewReportRetentionOnly": true
+  }
+}

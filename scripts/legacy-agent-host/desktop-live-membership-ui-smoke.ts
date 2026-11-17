@@ -88,8 +88,10 @@ export async function runDesktopLiveMembershipUiSmoke(cdp: UiCdpPort, options: {
   let ui = createDesktopUiControls(cdp, { assertOwnedRenderer: current, step });
   const poll = async <T>(observe: () => Promise<T>, accepts: (value: T) => boolean, label: string) => {
     const cutoff = Date.now() + 90_000; let value = await observe();
+    assert.ok(Date.now() < cutoff, label);
     while (!accepts(value) && Date.now() < cutoff) {
       current(); await new Promise<void>(resolve => setTimeout(resolve, 100)); value = await observe();
+      assert.ok(Date.now() < cutoff, label);
     }
     assert.ok(accepts(value), label); return value;
   };

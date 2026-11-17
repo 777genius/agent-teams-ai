@@ -1,0 +1,4247 @@
+{
+  "schemaVersion": 1,
+  "kind": "post-transport-recovery-red-independent-actual-publication-readback",
+  "reviewer": "/root/red_publication_recovery",
+  "at": "2026-11-17 01:39:08 UTC",
+  "repository": "777genius/agent-teams-ai",
+  "branch": "fix/frontend-parity-coobservation-c714-20261115",
+  "verdict": "ACCEPTED_EXACT_NEW_RED_OUTCOME_ACTUAL_PUBLICATION",
+  "accepted": true,
+  "actualCommit": "77993819c233737f1e2b4c11c8ca1a5d360bcbe3",
+  "actualTree": "ada3f27db78fabc17a91e3904d41b8bc547c6dca",
+  "actualDocsTree": "a1b92f625b548e7384ef13e0358c420d1e1f136d",
+  "soleParent": "1eff2aef92a5952618cb600604160c3a3024b2dd",
+  "parentTree": "10345c00d2e260245594ed2b1cca4b0eefdde42f",
+  "parentDocsTree": "256de64227a513df688d8af07bc089718f5f8e64",
+  "actualBranchHead": "77993819c233737f1e2b4c11c8ca1a5d360bcbe3",
+  "manifest": {
+    "bytes": 12114,
+    "sha256": "de413d1bdef997d3c3e2d18b1e1b21fab0f6459cca566c82aae74b1423bbe210",
+    "gitBlob": "5e5167b45611cb7700bbcca2c07a0f910ca46ec6"
+  },
+  "subject": {
+    "runner": {
+      "bytes": 104131,
+      "sha256": "20958434e304d6d67657abad910d7c891f5a9086164e73d19cc8764348fc83f5",
+      "gitBlob": "c81f72a8ed14a93b3557fdf889f9ad6cebc25140"
+    },
+    "binding": {
+      "bytes": 6399172,
+      "sha256": "be265da9b130091d251295f937a7ab09b1db0e03f2c4a02d985839134e0379ec",
+      "gitBlob": "9f9ddcf0f9f62cce1a31f204ae786a8e2d3d2267"
+    },
+    "packet": {
+      "bytes": 441196,
+      "sha256": "ebce8cffde715538fc340a07304678a0c563700c72b3eea3de035dd86b7fca5f",
+      "gitBlob": "ca4e84b2c1a41a1c848a62c4c3ad6be1a8af65c8"
+    },
+    "outer": {
+      "bytes": 13970,
+      "sha256": "341064fd92ead2afed314db220e095bae77a2b96af47580b30c35f495a0e80cd",
+      "gitBlob": "947cf5276c207149f87d67dd06a175b49c9f1b5b"
+    },
+    "phaseReceipt": {
+      "bytes": 139946,
+      "sha256": "51867690fb9a707141b01ee3dff6d42d082a5ba7aceffd1f4f43eec8a428c9be",
+      "gitBlob": "bcc31247c2752b2017edba9adcd129a1c83cdd32"
+    }
+  },
+  "method": {
+    "independentGitApiReads": true,
+    "fullCurrentChangedBodyCount": 15,
+    "fullCurrentChangedBodyBytes": 4011633,
+    "fullParentModifiedBodyCount": 3,
+    "fullParentModifiedBodyBytes": 2782174,
+    "completeActualRootAndDocsTrees": true,
+    "completeParentRootAndDocsTrees": true,
+    "fullRootActualReportReadAndRehashed": true,
+    "fullPublishedControlActualReportsReadAndRehashed": true,
+    "fullPublishedRuntimeReviewsReadAndRehashed": true,
+    "all72RuntimeLiteralBodiesReadAndRehashed": true,
+    "all63CurrentRuntimeJsonPointerOccurrencesResolved": true,
+    "wholeRuntimeBodiesAndPhysicalInputsExecutedByThisReviewer": false,
+    "largeBodiesReconstructedAgainByThisReviewer": false,
+    "priorCompleteLargeInputProofsReusedWithExactCurrentInstanceJoins": true,
+    "recursiveHistoricalReaudit": false,
+    "shellOrTargetRuntimeInvoked": false,
+    "sourceWrites": 0,
+    "refWrites": 0,
+    "ciActions": 0,
+    "lostPriorReviewerReportUsedAsEvidence": false,
+    "qualification": "This is a fresh independent actual-publication readback. Exact already accepted root/Guard/semantic runtime and immutable full-large-body proofs are read and joined without a new physical census, command invocation or historical reclassification."
+  },
+  "census": {
+    "parentLeaves": 11876,
+    "parentDocs": 3078,
+    "leaves": 11888,
+    "docs": 3090,
+    "nonDocs": 8798,
+    "workflows": 42,
+    "unchangedOtherRootEntries": 53,
+    "qualification": "Complete parent/current docs leaf maps were compared. The 8798 non-document and42 workflow census is inherited through all53 identical non-doc root entries and the accepted exact1eff parent control actual reports. No new physical filesystem census is claimed by this publication review."
+  },
+  "unchangedNonDocRootEntries": [
+    {
+      "path": ".coderabbit.yaml",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "cfdf47bf5d5759599f5383222ebfb8a385f09668",
+      "size": 669,
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/cfdf47bf5d5759599f5383222ebfb8a385f09668"
+    },
+    {
+      "path": ".dockerignore",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "c2d844c25fc61f06640f362de761e3f8d310c3b5",
+      "size": 694,
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/c2d844c25fc61f06640f362de761e3f8d310c3b5"
+    },
+    {
+      "path": ".gitattributes",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "924c7377f9ae4c068d106e74e17e964297d61e6e",
+      "size": 180,
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/924c7377f9ae4c068d106e74e17e964297d61e6e"
+    },
+    {
+      "path": ".github",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "d95091ab0edb488d6e418ffa789d0f07c447ecda",
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees/d95091ab0edb488d6e418ffa789d0f07c447ecda"
+    },
+    {
+      "path": ".gitignore",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "777569b186effad3a2bcbcb09cd770180c8c5e2c",
+      "size": 2867,
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/777569b186effad3a2bcbcb09cd770180c8c5e2c"
+    },
+    {
+      "path": ".husky",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "665211222b358904b557bd356a129f1ff938ca7e",
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees/665211222b358904b557bd356a129f1ff938ca7e"
+    },
+    {
+      "path": ".mcp.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "da61a538a43375404483bd1f810b6377da5cc72f",
+      "size": 296,
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/da61a538a43375404483bd1f810b6377da5cc72f"
+    },
+    {
+      "path": ".node-version",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "63f87c20ef9fd0ace28f8d0a3b74b5ef2e24feff",
+      "size": 8,
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/63f87c20ef9fd0ace28f8d0a3b74b5ef2e24feff"
+    },
+    {
+      "path": ".npmrc",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "b6f27f135954640c8cc5bfd7b8c9922ca6eb2aad",
+      "size": 19,
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/b6f27f135954640c8cc5bfd7b8c9922ca6eb2aad"
+    },
+    {
+      "path": ".nvmrc",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "63f87c20ef9fd0ace28f8d0a3b74b5ef2e24feff",
+      "size": 8,
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/63f87c20ef9fd0ace28f8d0a3b74b5ef2e24feff"
+    },
+    {
+      "path": ".oxfmtrc.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "b003c531d6e548a5939ceb0694f15296c92e5060",
+      "size": 847,
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/b003c531d6e548a5939ceb0694f15296c92e5060"
+    },
+    {
+      "path": ".oxlintrc.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "cc0d2441ebfedc93354e081b0cf61b6a2109dcc9",
+      "size": 596,
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/cc0d2441ebfedc93354e081b0cf61b6a2109dcc9"
+    },
+    {
+      "path": ".prettierignore",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "3d15b642e4d19c01f1c3ec61acc0ff367a0ccae2",
+      "size": 297,
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/3d15b642e4d19c01f1c3ec61acc0ff367a0ccae2"
+    },
+    {
+      "path": ".prettierrc.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "c96ec48e897a4ec478beb34716723e13d29068ed",
+      "size": 563,
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/c96ec48e897a4ec478beb34716723e13d29068ed"
+    },
+    {
+      "path": "AGENTS.md",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "0c8a4a63abf24c1510c934990a025ebc99c9e435",
+      "size": 8999,
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/0c8a4a63abf24c1510c934990a025ebc99c9e435"
+    },
+    {
+      "path": "AGENT_CRITICAL_GUARDRAILS.md",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "a9a087fa5216ede29c5900b3a10638fc1ec3e2f3",
+      "size": 2236,
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/a9a087fa5216ede29c5900b3a10638fc1ec3e2f3"
+    },
+    {
+      "path": "CLAUDE.md",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "88df8ee5ef8d951139b2a8eb9b518996babbcb3e",
+      "size": 16756,
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/88df8ee5ef8d951139b2a8eb9b518996babbcb3e"
+    },
+    {
+      "path": "LICENSE",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "929839bc0872222df278f9e53f15e1268ff4e0ec",
+      "size": 32433,
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/929839bc0872222df278f9e53f15e1268ff4e0ec"
+    },
+    {
+      "path": "README.md",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "dbf976c3418f0dee7ef84e4458e49af39110bdd5",
+      "size": 48099,
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/dbf976c3418f0dee7ef84e4458e49af39110bdd5"
+    },
+    {
+      "path": "agent-teams-controller",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "1ef9482608cbaa5b7f28dc42812820cba96b953e",
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees/1ef9482608cbaa5b7f28dc42812820cba96b953e"
+    },
+    {
+      "path": "bin",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "e6b29ba2f2fda222d5831b3c672e88b72f5f7383",
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees/e6b29ba2f2fda222d5831b3c672e88b72f5f7383"
+    },
+    {
+      "path": "docker",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "7e4007a72bc3fdba8d94e8f5eebc3586f110c16e",
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees/7e4007a72bc3fdba8d94e8f5eebc3586f110c16e"
+    },
+    {
+      "path": "electron.vite.config.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "9045260aab02891055e324607b83e1bb39c7110a",
+      "size": 13238,
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/9045260aab02891055e324607b83e1bb39c7110a"
+    },
+    {
+      "path": "eslint.config.js",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "7ca4b71fe3a357c00c110c9b75d3034e06e4b22c",
+      "size": 37840,
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/7ca4b71fe3a357c00c110c9b75d3034e06e4b22c"
+    },
+    {
+      "path": "eslint.fast.config.js",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "8a6d66ce8d2112b0891f6fc2f78a08c103b4ebfb",
+      "size": 7268,
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/8a6d66ce8d2112b0891f6fc2f78a08c103b4ebfb"
+    },
+    {
+      "path": "eslint.feature-overrides.mts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "9c6450d54b87ce33f7d799f900226c316e367937",
+      "size": 657,
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/9c6450d54b87ce33f7d799f900226c316e367937"
+    },
+    {
+      "path": "eslint.gateway-boundaries.mts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "4975b20df1353a9687fd479ab043beb025e967ba",
+      "size": 3786,
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/4975b20df1353a9687fd479ab043beb025e967ba"
+    },
+    {
+      "path": "i18next.config.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "a8c56bbba2f1003e93fcf9f57e0c5eec4bb37ff5",
+      "size": 1051,
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/a8c56bbba2f1003e93fcf9f57e0c5eec4bb37ff5"
+    },
+    {
+      "path": "landing",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "193513230f45a135704f1b34dbfa0792e6823e26",
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees/193513230f45a135704f1b34dbfa0792e6823e26"
+    },
+    {
+      "path": "legacy-host.lock.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "6916f66ea9e4a7e8299c3ffd328e226d009ebd79",
+      "size": 947,
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/6916f66ea9e4a7e8299c3ffd328e226d009ebd79"
+    },
+    {
+      "path": "managed-git.lock.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "2099dfe6b1e1c0ff0d64f45d6c8565b498af4333",
+      "size": 1026,
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/2099dfe6b1e1c0ff0d64f45d6c8565b498af4333"
+    },
+    {
+      "path": "mcp-server",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "6dcfc48486817e03cbf5cfeca34d0f9c6f495ba5",
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees/6dcfc48486817e03cbf5cfeca34d0f9c6f495ba5"
+    },
+    {
+      "path": "package.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "f80ec83172d0aec0dec8a8ab055426b4fca4a1f7",
+      "size": 26839,
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/f80ec83172d0aec0dec8a8ab055426b4fca4a1f7"
+    },
+    {
+      "path": "packages",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "3934729cd387940917b79992f2579bf6269d157c",
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees/3934729cd387940917b79992f2579bf6269d157c"
+    },
+    {
+      "path": "patches",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "8eb2e6aaa216638cbe6c072d79802733d43f500d",
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees/8eb2e6aaa216638cbe6c072d79802733d43f500d"
+    },
+    {
+      "path": "pnpm-lock.yaml",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "9d2ce04a1bbf743e49403d2520873134b08b68de",
+      "size": 956788,
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/9d2ce04a1bbf743e49403d2520873134b08b68de"
+    },
+    {
+      "path": "pnpm-workspace.yaml",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "a049a862742a85ba77faafea329fc221b3e500e4",
+      "size": 6946,
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/a049a862742a85ba77faafea329fc221b3e500e4"
+    },
+    {
+      "path": "postcss.config.cjs",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "85f717cc09ecb1153d6a4c0962284e09e4b8d6a9",
+      "size": 80,
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/85f717cc09ecb1153d6a4c0962284e09e4b8d6a9"
+    },
+    {
+      "path": "resources",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "69acacf60db94f62dbe4a99ed308aab59310e905",
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees/69acacf60db94f62dbe4a99ed308aab59310e905"
+    },
+    {
+      "path": "runtime.lock.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "1757d79786da78e739a322e8bba81cd3dc88dcaa",
+      "size": 6127,
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/1757d79786da78e739a322e8bba81cd3dc88dcaa"
+    },
+    {
+      "path": "scripts",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "144090e99c2d91d49073e0ea17d7cf6be9ea053e",
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees/144090e99c2d91d49073e0ea17d7cf6be9ea053e"
+    },
+    {
+      "path": "src",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "ed69e62618e57d88c2e5237f98074a1ff8853e6f",
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees/ed69e62618e57d88c2e5237f98074a1ff8853e6f"
+    },
+    {
+      "path": "tailwind.config.js",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "a52ebb338468d8fcef92837aa27aebd48c7206d7",
+      "size": 2941,
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/a52ebb338468d8fcef92837aa27aebd48c7206d7"
+    },
+    {
+      "path": "terminal-platform.lock.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "039a8a2a7b959b44bf3d483e37335fdc6774e8cb",
+      "size": 1914,
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/039a8a2a7b959b44bf3d483e37335fdc6774e8cb"
+    },
+    {
+      "path": "test",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "92519c914f57ec6cee13c2e4b0b2be568a56f641",
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees/92519c914f57ec6cee13c2e4b0b2be568a56f641"
+    },
+    {
+      "path": "tools",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "9356c03e96405eb578158f06d6fdcbc89d105bd6",
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees/9356c03e96405eb578158f06d6fdcbc89d105bd6"
+    },
+    {
+      "path": "tsconfig.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "568952f5025a88c16b0568c7279d8e85a4288b43",
+      "size": 1235,
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/568952f5025a88c16b0568c7279d8e85a4288b43"
+    },
+    {
+      "path": "tsconfig.legacy-agent-host-scripts.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "538fdfe23d7aa6bac6f18a483d5d364aef644a39",
+      "size": 646,
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/538fdfe23d7aa6bac6f18a483d5d364aef644a39"
+    },
+    {
+      "path": "tsconfig.node.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "c94c942012bef62695dc3b22b1a2b7229d047f59",
+      "size": 824,
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/c94c942012bef62695dc3b22b1a2b7229d047f59"
+    },
+    {
+      "path": "vendor",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "bb912d7d38fa18b29d0cbe90e76d06a2603b8b4f",
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees/bb912d7d38fa18b29d0cbe90e76d06a2603b8b4f"
+    },
+    {
+      "path": "vitest.config.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "c57faa53a1bb869b4379bf888194806ef7e228e3",
+      "size": 1187,
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/c57faa53a1bb869b4379bf888194806ef7e228e3"
+    },
+    {
+      "path": "vitest.critical.config.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "c32070bf9e1724892aa8cb695152e8f49f1293f0",
+      "size": 852,
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/c32070bf9e1724892aa8cb695152e8f49f1293f0"
+    },
+    {
+      "path": "vitest.opencode-proof.config.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "274de1c0955ad4f98d220857a94576ce6a50864b",
+      "size": 601,
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/274de1c0955ad4f98d220857a94576ce6a50864b"
+    }
+  ],
+  "completeDocsDelta": [
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/29-reconciled-acceptance-and-custody-followups-2026-11-15.md",
+      "before": {
+        "mode": "100644",
+        "gitBlob": "c419ee4d2121e28b525b5e52ae28a3646fb7f8df"
+      },
+      "after": {
+        "mode": "100644",
+        "gitBlob": "b4c035726a57b68ddfdf7e0fe8eebcbf5d84b10d"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-post-transport-recovery-control-actual-independent-publication-20261117.json",
+      "before": null,
+      "after": {
+        "mode": "100644",
+        "gitBlob": "5cbacb781c10f52c5cf5a032f8fdc03c24881d81"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-post-transport-recovery-control-actual-root-publication-20261117.json",
+      "before": null,
+      "after": {
+        "mode": "100644",
+        "gitBlob": "9f7e5b993977d82876f291937eecfbad54fa7ec0"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-post-transport-recovery-red-evidence-packet-20261117.json",
+      "before": null,
+      "after": {
+        "mode": "100644",
+        "gitBlob": "ca4e84b2c1a41a1c848a62c4c3ad6be1a8af65c8"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-post-transport-recovery-red-full-input-reconstruction-join-20261117.json",
+      "before": null,
+      "after": {
+        "mode": "100644",
+        "gitBlob": "aad388d47bc80c4dd09789ee76238ebd935e8cdd"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-post-transport-recovery-red-guard-review-20261117.json",
+      "before": null,
+      "after": {
+        "mode": "100644",
+        "gitBlob": "38bd0eb98cb500274a477c1c02bfef0156bee7d6"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-post-transport-recovery-red-outer-20261117.json",
+      "before": null,
+      "after": {
+        "mode": "100644",
+        "gitBlob": "947cf5276c207149f87d67dd06a175b49c9f1b5b"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-post-transport-recovery-red-publication-manifest-20261117.json",
+      "before": null,
+      "after": {
+        "mode": "100644",
+        "gitBlob": "5e5167b45611cb7700bbcca2c07a0f910ca46ec6"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-post-transport-recovery-red-root-review-20261117.json",
+      "before": null,
+      "after": {
+        "mode": "100644",
+        "gitBlob": "19fcd35a9e8783dfa28c824d23a8df510209ca80"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-post-transport-recovery-red-semantic-review-20261117.json",
+      "before": null,
+      "after": {
+        "mode": "100644",
+        "gitBlob": "3cddc2bdb141d81c87c97d6059c56278b1118a55"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-post-transport-recovery-staging-intent-20261117.json",
+      "before": null,
+      "after": {
+        "mode": "100644",
+        "gitBlob": "7e9bab21cb6580a324ee6f330f98a83d140ea5b2"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-post-transport-recovery-staging-outer-20261117.json",
+      "before": null,
+      "after": {
+        "mode": "100644",
+        "gitBlob": "dda19a73d4c36027e70edd9a602ae4fbdee775cd"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-post-transport-recovery-staging-receipt-20261117.json",
+      "before": null,
+      "after": {
+        "mode": "100644",
+        "gitBlob": "5767257560e858647f6314d36b6d2d4b7109ffb3"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/continuation-status-20261116.md",
+      "before": {
+        "mode": "100644",
+        "gitBlob": "b32c162be541825a56bd0225614d1c2599ab44b1"
+      },
+      "after": {
+        "mode": "100644",
+        "gitBlob": "6eccc39aa5580df54dc86f2917e67f980d5574de"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1213-retention-catalog-20261116.json",
+      "before": {
+        "mode": "100644",
+        "gitBlob": "40456ae51fdcf653749601bf3c840c8538d21539"
+      },
+      "after": {
+        "mode": "100644",
+        "gitBlob": "dc80f5b02f336f0aac80058a69d08a79b48314fb"
+      }
+    }
+  ],
+  "fullActualBodyReadbacks": [
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-post-transport-recovery-control-actual-root-publication-20261117.json",
+      "bytes": 54354,
+      "sha256": "9a43e5d60a312b823fc6371d80cb53d9d69b09eb89387b21a43d91d4db998d8b",
+      "gitBlob": "9f7e5b993977d82876f291937eecfbad54fa7ec0",
+      "fullBodyReadAndRehashed": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-post-transport-recovery-control-actual-independent-publication-20261117.json",
+      "bytes": 100624,
+      "sha256": "56c645a2d9221b2717eb8e25dfc496b9a31464fac6c297a34dbdeeba68907dff",
+      "gitBlob": "5cbacb781c10f52c5cf5a032f8fdc03c24881d81",
+      "fullBodyReadAndRehashed": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-post-transport-recovery-staging-intent-20261117.json",
+      "bytes": 11872,
+      "sha256": "b6e0901f227c8cb64f887d809224bfda88a37c48dd9c08a7959924381749c30b",
+      "gitBlob": "7e9bab21cb6580a324ee6f330f98a83d140ea5b2",
+      "fullBodyReadAndRehashed": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-post-transport-recovery-staging-receipt-20261117.json",
+      "bytes": 11043,
+      "sha256": "c1756a537d22715d6fceb028766118431e23ed6b6a4d73eca26d7eb046dd5d9e",
+      "gitBlob": "5767257560e858647f6314d36b6d2d4b7109ffb3",
+      "fullBodyReadAndRehashed": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-post-transport-recovery-staging-outer-20261117.json",
+      "bytes": 10974,
+      "sha256": "2818cefbe09ae13378d36d13b34ac8cf741ec4945bf02e1edbb1481785b5170e",
+      "gitBlob": "dda19a73d4c36027e70edd9a602ae4fbdee775cd",
+      "fullBodyReadAndRehashed": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-post-transport-recovery-red-outer-20261117.json",
+      "bytes": 13970,
+      "sha256": "341064fd92ead2afed314db220e095bae77a2b96af47580b30c35f495a0e80cd",
+      "gitBlob": "947cf5276c207149f87d67dd06a175b49c9f1b5b",
+      "fullBodyReadAndRehashed": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-post-transport-recovery-red-evidence-packet-20261117.json",
+      "bytes": 441196,
+      "sha256": "ebce8cffde715538fc340a07304678a0c563700c72b3eea3de035dd86b7fca5f",
+      "gitBlob": "ca4e84b2c1a41a1c848a62c4c3ad6be1a8af65c8",
+      "fullBodyReadAndRehashed": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-post-transport-recovery-red-full-input-reconstruction-join-20261117.json",
+      "bytes": 8914,
+      "sha256": "e322edbfc50d1706db7838681e2d65abf4648180c4a4da3ba418d94fff5eac44",
+      "gitBlob": "aad388d47bc80c4dd09789ee76238ebd935e8cdd",
+      "fullBodyReadAndRehashed": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-post-transport-recovery-red-root-review-20261117.json",
+      "bytes": 50772,
+      "sha256": "b708a3eb026e85f1a733cbb1e4836c7e5cabf571bb3c68fbc74c9ac2a719c882",
+      "gitBlob": "19fcd35a9e8783dfa28c824d23a8df510209ca80",
+      "fullBodyReadAndRehashed": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-post-transport-recovery-red-guard-review-20261117.json",
+      "bytes": 261789,
+      "sha256": "d9e6e50a0678babd3d54551af2951fb57825b0fc51fa1e7682def558a52bfd32",
+      "gitBlob": "38bd0eb98cb500274a477c1c02bfef0156bee7d6",
+      "fullBodyReadAndRehashed": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-post-transport-recovery-red-semantic-review-20261117.json",
+      "bytes": 229314,
+      "sha256": "2e05bcc76671b35883fc04e072d46e0961c86c2d293de2582e0e0fe0196692da",
+      "gitBlob": "3cddc2bdb141d81c87c97d6059c56278b1118a55",
+      "fullBodyReadAndRehashed": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/29-reconciled-acceptance-and-custody-followups-2026-11-15.md",
+      "bytes": 2560337,
+      "sha256": "1ea54bc9f596e274c1bd2e0207742b8c453efcfda7b57f345bf7395df2dbda83",
+      "gitBlob": "b4c035726a57b68ddfdf7e0fe8eebcbf5d84b10d",
+      "fullBodyReadAndRehashed": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/continuation-status-20261116.md",
+      "bytes": 46758,
+      "sha256": "e50f8e11d74d42feb4897f00050ef6f60b71e66ccbdecf8fef1698a48074844d",
+      "gitBlob": "6eccc39aa5580df54dc86f2917e67f980d5574de",
+      "fullBodyReadAndRehashed": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1213-retention-catalog-20261116.json",
+      "bytes": 197602,
+      "sha256": "3c8ec7dd7b8257e0df08e77a0c7cd43226a5d69f449614e8dc9baab03fbfc310",
+      "gitBlob": "dc80f5b02f336f0aac80058a69d08a79b48314fb",
+      "fullBodyReadAndRehashed": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-post-transport-recovery-red-publication-manifest-20261117.json",
+      "bytes": 12114,
+      "sha256": "de413d1bdef997d3c3e2d18b1e1b21fab0f6459cca566c82aae74b1423bbe210",
+      "gitBlob": "5e5167b45611cb7700bbcca2c07a0f910ca46ec6",
+      "fullBodyReadAndRehashed": true
+    }
+  ],
+  "fullParentModifiedBodyReadbacks": [
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/29-reconciled-acceptance-and-custody-followups-2026-11-15.md",
+      "bytes": 2556771,
+      "sha256": "2a782d7db69ed274360c7191611be83b24998248117d42220774d8080ba185ff",
+      "gitBlob": "c419ee4d2121e28b525b5e52ae28a3646fb7f8df",
+      "fullBodyReadAndRehashed": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/continuation-status-20261116.md",
+      "bytes": 45761,
+      "sha256": "ed5db2c90431dbbdb3db3efb9bcb25ce21b1e20d86a4354f846d92d7675a2309",
+      "gitBlob": "b32c162be541825a56bd0225614d1c2599ab44b1",
+      "fullBodyReadAndRehashed": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1213-retention-catalog-20261116.json",
+      "bytes": 179642,
+      "sha256": "ce0a8f0bad1e0b48e620912b1424b8dd90c7492c145d654dfc1901b285164017",
+      "gitBlob": "40456ae51fdcf653749601bf3c840c8538d21539",
+      "fullBodyReadAndRehashed": true
+    }
+  ],
+  "completeParentTextPrefixes": [
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/29-reconciled-acceptance-and-custody-followups-2026-11-15.md",
+      "prior": {
+        "bytes": 2556771,
+        "sha256": "2a782d7db69ed274360c7191611be83b24998248117d42220774d8080ba185ff",
+        "gitBlob": "c419ee4d2121e28b525b5e52ae28a3646fb7f8df"
+      },
+      "current": {
+        "bytes": 2560337,
+        "sha256": "1ea54bc9f596e274c1bd2e0207742b8c453efcfda7b57f345bf7395df2dbda83",
+        "gitBlob": "b4c035726a57b68ddfdf7e0fe8eebcbf5d84b10d"
+      },
+      "exactCompletePrefix": true,
+      "appendIdentity": {
+        "bytes": 3566,
+        "sha256": "230344d52fc81d3d0a561ee22fe2e95d890031674356bfc3c8515c694697fc6c",
+        "gitBlob": "fdaf58ef4967193a545980a68da0b36e9e744a1f"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/continuation-status-20261116.md",
+      "prior": {
+        "bytes": 45761,
+        "sha256": "ed5db2c90431dbbdb3db3efb9bcb25ce21b1e20d86a4354f846d92d7675a2309",
+        "gitBlob": "b32c162be541825a56bd0225614d1c2599ab44b1"
+      },
+      "current": {
+        "bytes": 46758,
+        "sha256": "e50f8e11d74d42feb4897f00050ef6f60b71e66ccbdecf8fef1698a48074844d",
+        "gitBlob": "6eccc39aa5580df54dc86f2917e67f980d5574de"
+      },
+      "exactCompletePrefix": true,
+      "appendIdentity": {
+        "bytes": 997,
+        "sha256": "f7ce0a75efb2c5d47bb37919661e040766d8b93890e0c3df8acbab20c3d5e7ca",
+        "gitBlob": "b06fe1f80a7267221a1074c91c36230edbffc024"
+      }
+    }
+  ],
+  "catalogPreservation": {
+    "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1213-retention-catalog-20261116.json",
+    "preservedParentFieldsOutsideCurrentStage": 62,
+    "allOriginalBundles": 27,
+    "totals": {
+      "bundles": 27,
+      "outerBytes": 17894693,
+      "payloadInstances": 219,
+      "payloadBytes": 15911913
+    },
+    "allOriginalBundlesAndTotalsLiteralEqual": true,
+    "archiveKey": "priorCombinedNodeRendererStageAtPostTransportRecoveryRed",
+    "entireParentStageArchivedWithoutRetrospectiveEdits": true,
+    "evidenceKey": "combined139Renderer85PostTransportRecoveryRedEvidenceFiles",
+    "onlyTheseTwoKeysAdded": true,
+    "currentEvidenceFiles": [
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-post-transport-recovery-control-actual-root-publication-20261117.json",
+        "bytes": 54354,
+        "sha256": "9a43e5d60a312b823fc6371d80cb53d9d69b09eb89387b21a43d91d4db998d8b",
+        "gitBlob": "9f7e5b993977d82876f291937eecfbad54fa7ec0"
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-post-transport-recovery-control-actual-independent-publication-20261117.json",
+        "bytes": 100624,
+        "sha256": "56c645a2d9221b2717eb8e25dfc496b9a31464fac6c297a34dbdeeba68907dff",
+        "gitBlob": "5cbacb781c10f52c5cf5a032f8fdc03c24881d81"
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-post-transport-recovery-staging-intent-20261117.json",
+        "bytes": 11872,
+        "sha256": "b6e0901f227c8cb64f887d809224bfda88a37c48dd9c08a7959924381749c30b",
+        "gitBlob": "7e9bab21cb6580a324ee6f330f98a83d140ea5b2"
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-post-transport-recovery-staging-receipt-20261117.json",
+        "bytes": 11043,
+        "sha256": "c1756a537d22715d6fceb028766118431e23ed6b6a4d73eca26d7eb046dd5d9e",
+        "gitBlob": "5767257560e858647f6314d36b6d2d4b7109ffb3"
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-post-transport-recovery-staging-outer-20261117.json",
+        "bytes": 10974,
+        "sha256": "2818cefbe09ae13378d36d13b34ac8cf741ec4945bf02e1edbb1481785b5170e",
+        "gitBlob": "dda19a73d4c36027e70edd9a602ae4fbdee775cd"
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-post-transport-recovery-red-outer-20261117.json",
+        "bytes": 13970,
+        "sha256": "341064fd92ead2afed314db220e095bae77a2b96af47580b30c35f495a0e80cd",
+        "gitBlob": "947cf5276c207149f87d67dd06a175b49c9f1b5b"
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-post-transport-recovery-red-evidence-packet-20261117.json",
+        "bytes": 441196,
+        "sha256": "ebce8cffde715538fc340a07304678a0c563700c72b3eea3de035dd86b7fca5f",
+        "gitBlob": "ca4e84b2c1a41a1c848a62c4c3ad6be1a8af65c8"
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-post-transport-recovery-red-full-input-reconstruction-join-20261117.json",
+        "bytes": 8914,
+        "sha256": "e322edbfc50d1706db7838681e2d65abf4648180c4a4da3ba418d94fff5eac44",
+        "gitBlob": "aad388d47bc80c4dd09789ee76238ebd935e8cdd"
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-post-transport-recovery-red-root-review-20261117.json",
+        "bytes": 50772,
+        "sha256": "b708a3eb026e85f1a733cbb1e4836c7e5cabf571bb3c68fbc74c9ac2a719c882",
+        "gitBlob": "19fcd35a9e8783dfa28c824d23a8df510209ca80"
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-post-transport-recovery-red-guard-review-20261117.json",
+        "bytes": 261789,
+        "sha256": "d9e6e50a0678babd3d54551af2951fb57825b0fc51fa1e7682def558a52bfd32",
+        "gitBlob": "38bd0eb98cb500274a477c1c02bfef0156bee7d6"
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-post-transport-recovery-red-semantic-review-20261117.json",
+        "bytes": 229314,
+        "sha256": "2e05bcc76671b35883fc04e072d46e0961c86c2d293de2582e0e0fe0196692da",
+        "gitBlob": "3cddc2bdb141d81c87c97d6059c56278b1118a55"
+      }
+    ]
+  },
+  "currentStage": {
+    "stage": "exact new combined RED independently accepted and published; actual outcome readbacks pending before producer authorship",
+    "r1": {
+      "bytes": 139634,
+      "sha256": "b9524cd8f0f1251f034337f4eb8fbc6606adc1d1c987d993580be06b9a078a75",
+      "gitBlob": "8ce89328171e58ec3e0631dce9607ee7e1eba54e"
+    },
+    "r1Publication": "9365591561744e36ac4e85da9cc41a92b88c2477",
+    "r1ActualGate": {
+      "kind": "post-transport-recovery-r1-control-authorship-gate-closed",
+      "at": "2026-11-17 00:27:36 UTC",
+      "r1": {
+        "bytes": 139634,
+        "sha256": "b9524cd8f0f1251f034337f4eb8fbc6606adc1d1c987d993580be06b9a078a75",
+        "gitBlob": "8ce89328171e58ec3e0631dce9607ee7e1eba54e"
+      },
+      "commit": "9365591561744e36ac4e85da9cc41a92b88c2477",
+      "tree": "1724877d45a44411d50dc74ad0dbb484d29baf42",
+      "docsTree": "a56582120c253cfc498934dd3f3cdc80f22f9516",
+      "root": {
+        "bytes": 32853,
+        "sha256": "4b353847c949f242095de78453d619f78ec03bca0ccbc87a91fb6c90cc579754",
+        "gitBlob": "99812b3efa965d202d67feca8b5d7948e0800b11"
+      },
+      "independent": {
+        "bytes": 68306,
+        "sha256": "3e2b87c35227e99abc32e5a95808895a1298df30267994f6278c1c63a806bae9",
+        "gitBlob": "d277c2271e3457882c895e927b76a8a32427f83a"
+      },
+      "rootFullReadIndependent": true,
+      "independentFullReadRoot": true,
+      "allowedNow": "Only minimal descendant runner/full binding authorship under exact R1 8ce893. Complete independent control R2, immediate publication and both full actual readbacks precede any selected root/control/replica creation or runtime. Producer postimages remain gated on accepted complete new RED and its publication/readbacks.",
+      "newControlsAuthoredBeforeGate": false,
+      "newSourcePostimagesAuthored": false,
+      "newReplicaFilesStaged": false,
+      "newRuntimeExecuted": false,
+      "original64038": "REFUSED/SPENT; observed outer2",
+      "corrected54393": "UNKNOWN/INCOMPLETE/SPENT; outer/termination/old custody and cleanup remain unknown; no replay or primary transfer"
+    },
+    "runner": {
+      "bytes": 104131,
+      "sha256": "20958434e304d6d67657abad910d7c891f5a9086164e73d19cc8764348fc83f5",
+      "gitBlob": "c81f72a8ed14a93b3557fdf889f9ad6cebc25140"
+    },
+    "binding": {
+      "bytes": 6399172,
+      "sha256": "be265da9b130091d251295f937a7ab09b1db0e03f2c4a02d985839134e0379ec",
+      "gitBlob": "9f9ddcf0f9f62cce1a31f204ae786a8e2d3d2267"
+    },
+    "proposal": {
+      "bytes": 66071,
+      "sha256": "b4e9fadeea673015aa1c3fd76c5c890b1c6833650806032b8eff39dd74866753",
+      "gitBlob": "c1a656dc11ebf298c3ac0da816ed3d6daf6e65b9"
+    },
+    "rootStatic": {
+      "bytes": 80403,
+      "sha256": "441381c474684c2556746c545b1b2272f802255476d9ef64110c00dc1f9b0a19",
+      "gitBlob": "463b42d217c939e767e11131bba2b95db3da08b3"
+    },
+    "independentReviews": {
+      "guard": {
+        "bytes": 89006,
+        "sha256": "dbc468fcd69f0e9dd787d8ab771898035eba5a0b86bf173ef75f76633b8dbcb0",
+        "gitBlob": "cd2e3cca0676a7a8c172983db898395b17bf1c9d"
+      },
+      "binding": {
+        "bytes": 103283,
+        "sha256": "7768e3f7b57338606022ab60a465d433277f6338623d73e1860de8b066f8fca8",
+        "gitBlob": "f80f679c38ae44282737dad4c1264f4fe2a9cf88"
+      },
+      "semantic": {
+        "bytes": 108528,
+        "sha256": "3d68dd58d14ddd7e6692f983f76e6f4ea7b16b183a297484a4b24fe3fe5e996b",
+        "gitBlob": "79ac44200a804c78576ba02ea35679c80fde95d2"
+      }
+    },
+    "r2ReviewsClosedAt": "2026-11-17 00:44:03 UTC",
+    "runnerAuthoredAt": "2026-11-17 00:28:47 UTC",
+    "bindingAuthoredAt": "2026-11-17 00:30:32 UTC",
+    "exactRunnerReplacements": 10,
+    "unchangedFullFunctions": 52,
+    "unchangedImportStatements": 17,
+    "bindingDelta": {
+      "changedInheritedGroups": 18,
+      "unchangedGroups": 40,
+      "addedGroups": 3,
+      "completeInverseExact": true
+    },
+    "original43ReviewRecordsLiteralIdentical": true,
+    "totalReviewBodies": 58,
+    "totalReviewBodyBytes": 4529571,
+    "unchangedOverlayInstances": 18,
+    "unchangedOverlayBytes": 1191075,
+    "currentTests": {
+      "node": {
+        "bytes": 164965,
+        "sha256": "852bedb85c83dbc4b488dffb4a9ffebbe398adc53e85f5a3cea8ca36b146cbf7",
+        "gitBlob": "896c587e077da56a98a314a175fb3cba0353d6ee"
+      },
+      "renderer": {
+        "bytes": 187890,
+        "sha256": "b6f11896e60014aac785968d42390afde38716d47de9bba9562522235db048c9",
+        "gitBlob": "76495189c992fcda47cd7a43a0c697190b5acbb3"
+      }
+    },
+    "currentSourceVector": {
+      "bytes": 2118,
+      "sha256": "f2574559a378b3bc537fdcedbde161003c8344a5485dfff9322214f6fda2a90c",
+      "gitBlob": "f6446bdc2bbdb511206c729a1f03717871baea6d"
+    },
+    "currentSource": {
+      "identity": {
+        "bytes": 2478745,
+        "sha256": "238e6f8dc2cd570845441ff537242103449056bcb68ad7089e169e2d530840c5",
+        "gitBlob": "499fe05449dfd5b2e4e46d4a4629c24b2fcc696d"
+      },
+      "sourceRows": 8798,
+      "physicalOverlays": 6,
+      "workflowLeaves": 42,
+      "fullC5IndexLeaves": 11567,
+      "qualification": "Exact new full physical before/after snapshots both equal499fe054; 8798source rows,11567tree/index,42workflows,6physical overlays. No producer postimages."
+    },
+    "selectedRoots": {
+      "scope": "/workspace/scratch/c714-post-transport-20261117",
+      "controls": "/workspace/scratch/c714-post-transport-20261117/controls",
+      "replicas": "/workspace/scratch/c714-post-transport-20261117/replicas",
+      "evidence": "/workspace/scratch/c714-post-transport-20261117/evidence"
+    },
+    "immutableReplicaCount": 6,
+    "immutableReplicaBytes": 8664002,
+    "currentInputCount": 8,
+    "relocatedInputNames": [
+      "setupBinding",
+      "currentBoundary",
+      "providers"
+    ],
+    "redUniqueControlCensus": 13,
+    "attempts": {
+      "materializeTests": 0,
+      "redPackage": 1,
+      "materializeProducers": 1,
+      "greenPackage": 1,
+      "validationPackage": 1
+    },
+    "original64038": {
+      "classification": "REFUSED/SPENT",
+      "observedOuter": 2,
+      "replayed": false
+    },
+    "corrected54393": {
+      "classification": "UNKNOWN/INCOMPLETE/SPENT",
+      "observedOuter": null,
+      "termination": null,
+      "executorContinuity": null,
+      "cleanupQualified": false,
+      "replayed": false,
+      "partialResume": false
+    },
+    "controlsAuthored": true,
+    "controlsR2Accepted": true,
+    "controlsStaged": true,
+    "newReplicaFilesStaged": true,
+    "newSourcePostimagesAuthored": false,
+    "currentRuntimeExecuted": true,
+    "acceptedCombinedRed": {
+      "identity": {
+        "bytes": 139946,
+        "sha256": "51867690fb9a707141b01ee3dff6d42d082a5ba7aceffd1f4f43eec8a428c9be",
+        "gitBlob": "bcc31247c2752b2017edba9adcd129a1c83cdd32"
+      },
+      "packet": {
+        "bytes": 441196,
+        "sha256": "ebce8cffde715538fc340a07304678a0c563700c72b3eea3de035dd86b7fca5f",
+        "gitBlob": "ca4e84b2c1a41a1c848a62c4c3ad6be1a8af65c8"
+      },
+      "outer": {
+        "bytes": 13970,
+        "sha256": "341064fd92ead2afed314db220e095bae77a2b96af47580b30c35f495a0e80cd",
+        "gitBlob": "947cf5276c207149f87d67dd06a175b49c9f1b5b"
+      },
+      "observedOuterSupervisorExit": 0,
+      "independentReviewAccepted": true,
+      "actualPublicationReadbackAccepted": false,
+      "phaseReceiptRetainedWithinPacket": true,
+      "root": {
+        "bytes": 50772,
+        "sha256": "b708a3eb026e85f1a733cbb1e4836c7e5cabf571bb3c68fbc74c9ac2a719c882",
+        "gitBlob": "19fcd35a9e8783dfa28c824d23a8df510209ca80"
+      },
+      "guard": {
+        "bytes": 261789,
+        "sha256": "d9e6e50a0678babd3d54551af2951fb57825b0fc51fa1e7682def558a52bfd32",
+        "gitBlob": "38bd0eb98cb500274a477c1c02bfef0156bee7d6"
+      },
+      "semantic": {
+        "bytes": 229314,
+        "sha256": "2e05bcc76671b35883fc04e072d46e0961c86c2d293de2582e0e0fe0196692da",
+        "gitBlob": "3cddc2bdb141d81c87c97d6059c56278b1118a55"
+      },
+      "fullInputJoin": {
+        "bytes": 8914,
+        "sha256": "e322edbfc50d1706db7838681e2d65abf4648180c4a4da3ba418d94fff5eac44",
+        "gitBlob": "aad388d47bc80c4dd09789ee76238ebd935e8cdd"
+      }
+    },
+    "acceptedCombinedGreen": null,
+    "producerAuthorshipGateOpened": false,
+    "wholeE2EQualified": false,
+    "next": "Complete root and independent full actual readbacks of this exact outcome publication before authoring the three already selected producer postimages. Then full producer R2/publication/actual readbacks, one immutable reviewed producer materialization/GREEN binding, one producer materialization, one whole GREEN and one separately bound validation. Original budgets and no-replay constraints remain; no new R1 or runner change is selected.",
+    "controlPublication": "1eff2aef92a5952618cb600604160c3a3024b2dd",
+    "controlActualGate": {
+      "kind": "post-transport-recovery-control-publication-staging-gate-closed",
+      "at": "2026-11-17 00:55:44 UTC",
+      "commit": "1eff2aef92a5952618cb600604160c3a3024b2dd",
+      "tree": "10345c00d2e260245594ed2b1cca4b0eefdde42f",
+      "docsTree": "256de64227a513df688d8af07bc089718f5f8e64",
+      "r1": {
+        "bytes": 139634,
+        "sha256": "b9524cd8f0f1251f034337f4eb8fbc6606adc1d1c987d993580be06b9a078a75",
+        "gitBlob": "8ce89328171e58ec3e0631dce9607ee7e1eba54e"
+      },
+      "runner": {
+        "bytes": 104131,
+        "sha256": "20958434e304d6d67657abad910d7c891f5a9086164e73d19cc8764348fc83f5",
+        "gitBlob": "c81f72a8ed14a93b3557fdf889f9ad6cebc25140"
+      },
+      "binding": {
+        "bytes": 6399172,
+        "sha256": "be265da9b130091d251295f937a7ab09b1db0e03f2c4a02d985839134e0379ec",
+        "gitBlob": "9f9ddcf0f9f62cce1a31f204ae786a8e2d3d2267"
+      },
+      "rootActual": {
+        "bytes": 54354,
+        "sha256": "9a43e5d60a312b823fc6371d80cb53d9d69b09eb89387b21a43d91d4db998d8b",
+        "gitBlob": "9f7e5b993977d82876f291937eecfbad54fa7ec0"
+      },
+      "independentActual": {
+        "bytes": 100624,
+        "sha256": "56c645a2d9221b2717eb8e25dfc496b9a31464fac6c297a34dbdeeba68907dff",
+        "gitBlob": "5cbacb781c10f52c5cf5a032f8fdc03c24881d81"
+      },
+      "rootFullReadIndependent": true,
+      "independentFullReadRoot": true,
+      "allowedNow": "Root may perform the one selected exclusive source-free staging of the exact active pair plus six immutable data replicas, then invoke the one complete newRED. Complete fresh physical before/after, unchanged clocks/capture/cleanup and separately observed outer remain mandatory. No test rematerialization, repair, replay, partial resume or producer postimages. Accepted newRED and publication/readbacks precede producer authorship.",
+      "selectedFilesStagedBeforeGate": false,
+      "newRuntimeExecutedBeforeGate": false,
+      "newSourcePostimagesAuthored": false,
+      "old54393": "UNKNOWN/INCOMPLETE/SPENT; outer/termination/custody/cleanup remain unknown",
+      "old64038": "REFUSED/SPENT; observedouter2"
+    },
+    "staging": {
+      "intent": {
+        "bytes": 11872,
+        "sha256": "b6e0901f227c8cb64f887d809224bfda88a37c48dd9c08a7959924381749c30b",
+        "gitBlob": "7e9bab21cb6580a324ee6f330f98a83d140ea5b2"
+      },
+      "receipt": {
+        "bytes": 11043,
+        "sha256": "c1756a537d22715d6fceb028766118431e23ed6b6a4d73eca26d7eb046dd5d9e",
+        "gitBlob": "5767257560e858647f6314d36b6d2d4b7109ffb3"
+      },
+      "outer": {
+        "bytes": 10974,
+        "sha256": "2818cefbe09ae13378d36d13b34ac8cf741ec4945bf02e1edbb1481785b5170e",
+        "gitBlob": "dda19a73d4c36027e70edd9a602ae4fbdee775cd"
+      }
+    },
+    "redReviewsClosedAt": "2026-11-17 01:24:03 UTC",
+    "redOutcome": {
+      "observedSession": 53054,
+      "outerExit": 0,
+      "totalInvocationSeconds": 130.2032738830021,
+      "preflightSeconds": 54.09297038999648,
+      "primaryPackageSeconds": 20.89086687099916,
+      "postflightSeconds": 55.21619509100128,
+      "node": {
+        "tests": 139,
+        "passed": 134,
+        "failed": 5,
+        "failedOrdinals": [
+          134,
+          135,
+          136,
+          138,
+          139
+        ],
+        "old133Passed": true,
+        "positive137Passed": true
+      },
+      "renderer": {
+        "tests": 85,
+        "passed": 82,
+        "failed": 3,
+        "failedOrdinals": [
+          81,
+          82,
+          83
+        ],
+        "old80Passed": true,
+        "positive84and85Passed": true
+      },
+      "fullRuntimeInputsPreserved": true,
+      "fullRuntimeInputBoundaries": {
+        "before": "COMPLETE",
+        "after": "COMPLETE"
+      },
+      "source": {
+        "trackedTreeAndIndex": 11567,
+        "nonDocs": 8798,
+        "workflows": 42,
+        "selectedBindingRecords": 9,
+        "physicalOverlays": 6
+      },
+      "dependency": {
+        "rows": 122773,
+        "regular": 117336,
+        "links": 5437
+      },
+      "compiledRows": 1454,
+      "providerMembers": {
+        "D": 253,
+        "SPI": 12
+      },
+      "controlPaths": 13,
+      "metadataCommands": 15,
+      "evidence": {
+        "files": 82,
+        "bytes": 90459854,
+        "literals": 72,
+        "literalBytes": 324864,
+        "largeInstances": 10,
+        "uniqueLargeBodies": 5
+      },
+      "cleanup": {
+        "unknownPrimaryLaunches": [],
+        "capturedSessionMembersAfter": [],
+        "newTestTempsRemaining": [],
+        "taskTmpEntriesAfter": [],
+        "viteTempAbsent": true,
+        "nodeDebtGatePassed": true,
+        "scope": "Captured primary sessions/groups and exact owned phase outputs; metadata sessions checked individually. No universal escaped-child/native custody claim."
+      },
+      "producerPostimagesAuthored": false,
+      "wholeE2EQualified": false
+    },
+    "redReviewBodiesFullyReadByRoot": true
+  },
+  "currentPublicationPointerJoins": [
+    {
+      "name": "manifest/catalog runner",
+      "identity": {
+        "bytes": 104131,
+        "sha256": "20958434e304d6d67657abad910d7c891f5a9086164e73d19cc8764348fc83f5",
+        "gitBlob": "c81f72a8ed14a93b3557fdf889f9ad6cebc25140"
+      },
+      "joined": true
+    },
+    {
+      "name": "manifest/catalog binding",
+      "identity": {
+        "bytes": 6399172,
+        "sha256": "be265da9b130091d251295f937a7ab09b1db0e03f2c4a02d985839134e0379ec",
+        "gitBlob": "9f9ddcf0f9f62cce1a31f204ae786a8e2d3d2267"
+      },
+      "joined": true
+    },
+    {
+      "name": "manifest/catalog packet",
+      "identity": {
+        "bytes": 441196,
+        "sha256": "ebce8cffde715538fc340a07304678a0c563700c72b3eea3de035dd86b7fca5f",
+        "gitBlob": "ca4e84b2c1a41a1c848a62c4c3ad6be1a8af65c8"
+      },
+      "joined": true
+    },
+    {
+      "name": "manifest/catalog outer",
+      "identity": {
+        "bytes": 13970,
+        "sha256": "341064fd92ead2afed314db220e095bae77a2b96af47580b30c35f495a0e80cd",
+        "gitBlob": "947cf5276c207149f87d67dd06a175b49c9f1b5b"
+      },
+      "joined": true
+    },
+    {
+      "name": "manifest/catalog phase",
+      "identity": {
+        "bytes": 139946,
+        "sha256": "51867690fb9a707141b01ee3dff6d42d082a5ba7aceffd1f4f43eec8a428c9be",
+        "gitBlob": "bcc31247c2752b2017edba9adcd129a1c83cdd32"
+      },
+      "joined": true
+    },
+    {
+      "name": "current accepted root review",
+      "identity": {
+        "bytes": 50772,
+        "sha256": "b708a3eb026e85f1a733cbb1e4836c7e5cabf571bb3c68fbc74c9ac2a719c882",
+        "gitBlob": "19fcd35a9e8783dfa28c824d23a8df510209ca80"
+      },
+      "joined": true
+    },
+    {
+      "name": "current accepted Guard review",
+      "identity": {
+        "bytes": 261789,
+        "sha256": "d9e6e50a0678babd3d54551af2951fb57825b0fc51fa1e7682def558a52bfd32",
+        "gitBlob": "38bd0eb98cb500274a477c1c02bfef0156bee7d6"
+      },
+      "joined": true
+    },
+    {
+      "name": "current accepted semantic review",
+      "identity": {
+        "bytes": 229314,
+        "sha256": "2e05bcc76671b35883fc04e072d46e0961c86c2d293de2582e0e0fe0196692da",
+        "gitBlob": "3cddc2bdb141d81c87c97d6059c56278b1118a55"
+      },
+      "joined": true
+    },
+    {
+      "name": "current accepted full-input join",
+      "identity": {
+        "bytes": 8914,
+        "sha256": "e322edbfc50d1706db7838681e2d65abf4648180c4a4da3ba418d94fff5eac44",
+        "gitBlob": "aad388d47bc80c4dd09789ee76238ebd935e8cdd"
+      },
+      "joined": true
+    },
+    {
+      "name": "full current control gate",
+      "identity": {
+        "kind": "post-transport-recovery-control-publication-staging-gate-closed",
+        "at": "2026-11-17 00:55:44 UTC",
+        "commit": "1eff2aef92a5952618cb600604160c3a3024b2dd",
+        "tree": "10345c00d2e260245594ed2b1cca4b0eefdde42f",
+        "docsTree": "256de64227a513df688d8af07bc089718f5f8e64",
+        "r1": {
+          "bytes": 139634,
+          "sha256": "b9524cd8f0f1251f034337f4eb8fbc6606adc1d1c987d993580be06b9a078a75",
+          "gitBlob": "8ce89328171e58ec3e0631dce9607ee7e1eba54e"
+        },
+        "runner": {
+          "bytes": 104131,
+          "sha256": "20958434e304d6d67657abad910d7c891f5a9086164e73d19cc8764348fc83f5",
+          "gitBlob": "c81f72a8ed14a93b3557fdf889f9ad6cebc25140"
+        },
+        "binding": {
+          "bytes": 6399172,
+          "sha256": "be265da9b130091d251295f937a7ab09b1db0e03f2c4a02d985839134e0379ec",
+          "gitBlob": "9f9ddcf0f9f62cce1a31f204ae786a8e2d3d2267"
+        },
+        "rootActual": {
+          "bytes": 54354,
+          "sha256": "9a43e5d60a312b823fc6371d80cb53d9d69b09eb89387b21a43d91d4db998d8b",
+          "gitBlob": "9f7e5b993977d82876f291937eecfbad54fa7ec0"
+        },
+        "independentActual": {
+          "bytes": 100624,
+          "sha256": "56c645a2d9221b2717eb8e25dfc496b9a31464fac6c297a34dbdeeba68907dff",
+          "gitBlob": "5cbacb781c10f52c5cf5a032f8fdc03c24881d81"
+        },
+        "rootFullReadIndependent": true,
+        "independentFullReadRoot": true,
+        "allowedNow": "Root may perform the one selected exclusive source-free staging of the exact active pair plus six immutable data replicas, then invoke the one complete newRED. Complete fresh physical before/after, unchanged clocks/capture/cleanup and separately observed outer remain mandatory. No test rematerialization, repair, replay, partial resume or producer postimages. Accepted newRED and publication/readbacks precede producer authorship.",
+        "selectedFilesStagedBeforeGate": false,
+        "newRuntimeExecutedBeforeGate": false,
+        "newSourcePostimagesAuthored": false,
+        "old54393": "UNKNOWN/INCOMPLETE/SPENT; outer/termination/custody/cleanup remain unknown",
+        "old64038": "REFUSED/SPENT; observedouter2"
+      },
+      "joined": true
+    },
+    {
+      "name": "control root report",
+      "identity": {
+        "bytes": 54354,
+        "sha256": "9a43e5d60a312b823fc6371d80cb53d9d69b09eb89387b21a43d91d4db998d8b",
+        "gitBlob": "9f7e5b993977d82876f291937eecfbad54fa7ec0"
+      },
+      "joined": true
+    },
+    {
+      "name": "control independent report",
+      "identity": {
+        "bytes": 100624,
+        "sha256": "56c645a2d9221b2717eb8e25dfc496b9a31464fac6c297a34dbdeeba68907dff",
+        "gitBlob": "5cbacb781c10f52c5cf5a032f8fdc03c24881d81"
+      },
+      "joined": true
+    },
+    {
+      "name": "staging intent",
+      "identity": {
+        "bytes": 11872,
+        "sha256": "b6e0901f227c8cb64f887d809224bfda88a37c48dd9c08a7959924381749c30b",
+        "gitBlob": "7e9bab21cb6580a324ee6f330f98a83d140ea5b2"
+      },
+      "joined": true
+    },
+    {
+      "name": "staging receipt",
+      "identity": {
+        "bytes": 11043,
+        "sha256": "c1756a537d22715d6fceb028766118431e23ed6b6a4d73eca26d7eb046dd5d9e",
+        "gitBlob": "5767257560e858647f6314d36b6d2d4b7109ffb3"
+      },
+      "joined": true
+    },
+    {
+      "name": "staging outer",
+      "identity": {
+        "bytes": 10974,
+        "sha256": "2818cefbe09ae13378d36d13b34ac8cf741ec4945bf02e1edbb1481785b5170e",
+        "gitBlob": "dda19a73d4c36027e70edd9a602ae4fbdee775cd"
+      },
+      "joined": true
+    },
+    {
+      "name": "staging intent control authority",
+      "identity": {
+        "kind": "post-transport-recovery-control-publication-staging-gate-closed",
+        "at": "2026-11-17 00:55:44 UTC",
+        "commit": "1eff2aef92a5952618cb600604160c3a3024b2dd",
+        "tree": "10345c00d2e260245594ed2b1cca4b0eefdde42f",
+        "docsTree": "256de64227a513df688d8af07bc089718f5f8e64",
+        "r1": {
+          "bytes": 139634,
+          "sha256": "b9524cd8f0f1251f034337f4eb8fbc6606adc1d1c987d993580be06b9a078a75",
+          "gitBlob": "8ce89328171e58ec3e0631dce9607ee7e1eba54e"
+        },
+        "runner": {
+          "bytes": 104131,
+          "sha256": "20958434e304d6d67657abad910d7c891f5a9086164e73d19cc8764348fc83f5",
+          "gitBlob": "c81f72a8ed14a93b3557fdf889f9ad6cebc25140"
+        },
+        "binding": {
+          "bytes": 6399172,
+          "sha256": "be265da9b130091d251295f937a7ab09b1db0e03f2c4a02d985839134e0379ec",
+          "gitBlob": "9f9ddcf0f9f62cce1a31f204ae786a8e2d3d2267"
+        },
+        "rootActual": {
+          "bytes": 54354,
+          "sha256": "9a43e5d60a312b823fc6371d80cb53d9d69b09eb89387b21a43d91d4db998d8b",
+          "gitBlob": "9f7e5b993977d82876f291937eecfbad54fa7ec0"
+        },
+        "independentActual": {
+          "bytes": 100624,
+          "sha256": "56c645a2d9221b2717eb8e25dfc496b9a31464fac6c297a34dbdeeba68907dff",
+          "gitBlob": "5cbacb781c10f52c5cf5a032f8fdc03c24881d81"
+        },
+        "rootFullReadIndependent": true,
+        "independentFullReadRoot": true,
+        "allowedNow": "Root may perform the one selected exclusive source-free staging of the exact active pair plus six immutable data replicas, then invoke the one complete newRED. Complete fresh physical before/after, unchanged clocks/capture/cleanup and separately observed outer remain mandatory. No test rematerialization, repair, replay, partial resume or producer postimages. Accepted newRED and publication/readbacks precede producer authorship.",
+        "selectedFilesStagedBeforeGate": false,
+        "newRuntimeExecutedBeforeGate": false,
+        "newSourcePostimagesAuthored": false,
+        "old54393": "UNKNOWN/INCOMPLETE/SPENT; outer/termination/custody/cleanup remain unknown",
+        "old64038": "REFUSED/SPENT; observedouter2"
+      },
+      "joined": true
+    },
+    {
+      "name": "staging receipt control authority",
+      "identity": {
+        "kind": "post-transport-recovery-control-publication-staging-gate-closed",
+        "at": "2026-11-17 00:55:44 UTC",
+        "commit": "1eff2aef92a5952618cb600604160c3a3024b2dd",
+        "tree": "10345c00d2e260245594ed2b1cca4b0eefdde42f",
+        "docsTree": "256de64227a513df688d8af07bc089718f5f8e64",
+        "r1": {
+          "bytes": 139634,
+          "sha256": "b9524cd8f0f1251f034337f4eb8fbc6606adc1d1c987d993580be06b9a078a75",
+          "gitBlob": "8ce89328171e58ec3e0631dce9607ee7e1eba54e"
+        },
+        "runner": {
+          "bytes": 104131,
+          "sha256": "20958434e304d6d67657abad910d7c891f5a9086164e73d19cc8764348fc83f5",
+          "gitBlob": "c81f72a8ed14a93b3557fdf889f9ad6cebc25140"
+        },
+        "binding": {
+          "bytes": 6399172,
+          "sha256": "be265da9b130091d251295f937a7ab09b1db0e03f2c4a02d985839134e0379ec",
+          "gitBlob": "9f9ddcf0f9f62cce1a31f204ae786a8e2d3d2267"
+        },
+        "rootActual": {
+          "bytes": 54354,
+          "sha256": "9a43e5d60a312b823fc6371d80cb53d9d69b09eb89387b21a43d91d4db998d8b",
+          "gitBlob": "9f7e5b993977d82876f291937eecfbad54fa7ec0"
+        },
+        "independentActual": {
+          "bytes": 100624,
+          "sha256": "56c645a2d9221b2717eb8e25dfc496b9a31464fac6c297a34dbdeeba68907dff",
+          "gitBlob": "5cbacb781c10f52c5cf5a032f8fdc03c24881d81"
+        },
+        "rootFullReadIndependent": true,
+        "independentFullReadRoot": true,
+        "allowedNow": "Root may perform the one selected exclusive source-free staging of the exact active pair plus six immutable data replicas, then invoke the one complete newRED. Complete fresh physical before/after, unchanged clocks/capture/cleanup and separately observed outer remain mandatory. No test rematerialization, repair, replay, partial resume or producer postimages. Accepted newRED and publication/readbacks precede producer authorship.",
+        "selectedFilesStagedBeforeGate": false,
+        "newRuntimeExecutedBeforeGate": false,
+        "newSourcePostimagesAuthored": false,
+        "old54393": "UNKNOWN/INCOMPLETE/SPENT; outer/termination/custody/cleanup remain unknown",
+        "old64038": "REFUSED/SPENT; observedouter2"
+      },
+      "joined": true
+    },
+    {
+      "name": "staging outer actual receipt",
+      "identity": {
+        "bytes": 11043,
+        "sha256": "c1756a537d22715d6fceb028766118431e23ed6b6a4d73eca26d7eb046dd5d9e",
+        "gitBlob": "5767257560e858647f6314d36b6d2d4b7109ffb3"
+      },
+      "joined": true
+    },
+    {
+      "name": "RED outer runner",
+      "identity": {
+        "bytes": 104131,
+        "sha256": "20958434e304d6d67657abad910d7c891f5a9086164e73d19cc8764348fc83f5",
+        "gitBlob": "c81f72a8ed14a93b3557fdf889f9ad6cebc25140"
+      },
+      "joined": true
+    },
+    {
+      "name": "RED outer binding",
+      "identity": {
+        "bytes": 6399172,
+        "sha256": "be265da9b130091d251295f937a7ab09b1db0e03f2c4a02d985839134e0379ec",
+        "gitBlob": "9f9ddcf0f9f62cce1a31f204ae786a8e2d3d2267"
+      },
+      "joined": true
+    },
+    {
+      "name": "RED outer control gate",
+      "identity": {
+        "kind": "post-transport-recovery-control-publication-staging-gate-closed",
+        "at": "2026-11-17 00:55:44 UTC",
+        "commit": "1eff2aef92a5952618cb600604160c3a3024b2dd",
+        "tree": "10345c00d2e260245594ed2b1cca4b0eefdde42f",
+        "docsTree": "256de64227a513df688d8af07bc089718f5f8e64",
+        "r1": {
+          "bytes": 139634,
+          "sha256": "b9524cd8f0f1251f034337f4eb8fbc6606adc1d1c987d993580be06b9a078a75",
+          "gitBlob": "8ce89328171e58ec3e0631dce9607ee7e1eba54e"
+        },
+        "runner": {
+          "bytes": 104131,
+          "sha256": "20958434e304d6d67657abad910d7c891f5a9086164e73d19cc8764348fc83f5",
+          "gitBlob": "c81f72a8ed14a93b3557fdf889f9ad6cebc25140"
+        },
+        "binding": {
+          "bytes": 6399172,
+          "sha256": "be265da9b130091d251295f937a7ab09b1db0e03f2c4a02d985839134e0379ec",
+          "gitBlob": "9f9ddcf0f9f62cce1a31f204ae786a8e2d3d2267"
+        },
+        "rootActual": {
+          "bytes": 54354,
+          "sha256": "9a43e5d60a312b823fc6371d80cb53d9d69b09eb89387b21a43d91d4db998d8b",
+          "gitBlob": "9f7e5b993977d82876f291937eecfbad54fa7ec0"
+        },
+        "independentActual": {
+          "bytes": 100624,
+          "sha256": "56c645a2d9221b2717eb8e25dfc496b9a31464fac6c297a34dbdeeba68907dff",
+          "gitBlob": "5cbacb781c10f52c5cf5a032f8fdc03c24881d81"
+        },
+        "rootFullReadIndependent": true,
+        "independentFullReadRoot": true,
+        "allowedNow": "Root may perform the one selected exclusive source-free staging of the exact active pair plus six immutable data replicas, then invoke the one complete newRED. Complete fresh physical before/after, unchanged clocks/capture/cleanup and separately observed outer remain mandatory. No test rematerialization, repair, replay, partial resume or producer postimages. Accepted newRED and publication/readbacks precede producer authorship.",
+        "selectedFilesStagedBeforeGate": false,
+        "newRuntimeExecutedBeforeGate": false,
+        "newSourcePostimagesAuthored": false,
+        "old54393": "UNKNOWN/INCOMPLETE/SPENT; outer/termination/custody/cleanup remain unknown",
+        "old64038": "REFUSED/SPENT; observedouter2"
+      },
+      "joined": true
+    },
+    {
+      "name": "RED outer staging receipt",
+      "identity": {
+        "bytes": 11043,
+        "sha256": "c1756a537d22715d6fceb028766118431e23ed6b6a4d73eca26d7eb046dd5d9e",
+        "gitBlob": "5767257560e858647f6314d36b6d2d4b7109ffb3"
+      },
+      "joined": true
+    },
+    {
+      "name": "RED outer staging result",
+      "identity": {
+        "bytes": 10974,
+        "sha256": "2818cefbe09ae13378d36d13b34ac8cf741ec4945bf02e1edbb1481785b5170e",
+        "gitBlob": "dda19a73d4c36027e70edd9a602ae4fbdee775cd"
+      },
+      "joined": true
+    },
+    {
+      "name": "packet outer",
+      "identity": {
+        "bytes": 13970,
+        "sha256": "341064fd92ead2afed314db220e095bae77a2b96af47580b30c35f495a0e80cd",
+        "gitBlob": "947cf5276c207149f87d67dd06a175b49c9f1b5b"
+      },
+      "joined": true
+    },
+    {
+      "name": "packet runner",
+      "identity": {
+        "bytes": 104131,
+        "sha256": "20958434e304d6d67657abad910d7c891f5a9086164e73d19cc8764348fc83f5",
+        "gitBlob": "c81f72a8ed14a93b3557fdf889f9ad6cebc25140"
+      },
+      "joined": true
+    },
+    {
+      "name": "packet binding",
+      "identity": {
+        "bytes": 6399172,
+        "sha256": "be265da9b130091d251295f937a7ab09b1db0e03f2c4a02d985839134e0379ec",
+        "gitBlob": "9f9ddcf0f9f62cce1a31f204ae786a8e2d3d2267"
+      },
+      "joined": true
+    },
+    {
+      "name": "packet publicationGate",
+      "identity": {
+        "kind": "post-transport-recovery-control-publication-staging-gate-closed",
+        "at": "2026-11-17 00:55:44 UTC",
+        "commit": "1eff2aef92a5952618cb600604160c3a3024b2dd",
+        "tree": "10345c00d2e260245594ed2b1cca4b0eefdde42f",
+        "docsTree": "256de64227a513df688d8af07bc089718f5f8e64",
+        "r1": {
+          "bytes": 139634,
+          "sha256": "b9524cd8f0f1251f034337f4eb8fbc6606adc1d1c987d993580be06b9a078a75",
+          "gitBlob": "8ce89328171e58ec3e0631dce9607ee7e1eba54e"
+        },
+        "runner": {
+          "bytes": 104131,
+          "sha256": "20958434e304d6d67657abad910d7c891f5a9086164e73d19cc8764348fc83f5",
+          "gitBlob": "c81f72a8ed14a93b3557fdf889f9ad6cebc25140"
+        },
+        "binding": {
+          "bytes": 6399172,
+          "sha256": "be265da9b130091d251295f937a7ab09b1db0e03f2c4a02d985839134e0379ec",
+          "gitBlob": "9f9ddcf0f9f62cce1a31f204ae786a8e2d3d2267"
+        },
+        "rootActual": {
+          "bytes": 54354,
+          "sha256": "9a43e5d60a312b823fc6371d80cb53d9d69b09eb89387b21a43d91d4db998d8b",
+          "gitBlob": "9f7e5b993977d82876f291937eecfbad54fa7ec0"
+        },
+        "independentActual": {
+          "bytes": 100624,
+          "sha256": "56c645a2d9221b2717eb8e25dfc496b9a31464fac6c297a34dbdeeba68907dff",
+          "gitBlob": "5cbacb781c10f52c5cf5a032f8fdc03c24881d81"
+        },
+        "rootFullReadIndependent": true,
+        "independentFullReadRoot": true,
+        "allowedNow": "Root may perform the one selected exclusive source-free staging of the exact active pair plus six immutable data replicas, then invoke the one complete newRED. Complete fresh physical before/after, unchanged clocks/capture/cleanup and separately observed outer remain mandatory. No test rematerialization, repair, replay, partial resume or producer postimages. Accepted newRED and publication/readbacks precede producer authorship.",
+        "selectedFilesStagedBeforeGate": false,
+        "newRuntimeExecutedBeforeGate": false,
+        "newSourcePostimagesAuthored": false,
+        "old54393": "UNKNOWN/INCOMPLETE/SPENT; outer/termination/custody/cleanup remain unknown",
+        "old64038": "REFUSED/SPENT; observedouter2"
+      },
+      "joined": true
+    },
+    {
+      "name": "packet stagingReceipt",
+      "identity": {
+        "bytes": 11043,
+        "sha256": "c1756a537d22715d6fceb028766118431e23ed6b6a4d73eca26d7eb046dd5d9e",
+        "gitBlob": "5767257560e858647f6314d36b6d2d4b7109ffb3"
+      },
+      "joined": true
+    },
+    {
+      "name": "packet stagingOuter",
+      "identity": {
+        "bytes": 10974,
+        "sha256": "2818cefbe09ae13378d36d13b34ac8cf741ec4945bf02e1edbb1481785b5170e",
+        "gitBlob": "dda19a73d4c36027e70edd9a602ae4fbdee775cd"
+      },
+      "joined": true
+    },
+    {
+      "name": "packet stagingIntent",
+      "identity": {
+        "bytes": 11872,
+        "sha256": "b6e0901f227c8cb64f887d809224bfda88a37c48dd9c08a7959924381749c30b",
+        "gitBlob": "7e9bab21cb6580a324ee6f330f98a83d140ea5b2"
+      },
+      "joined": true
+    },
+    {
+      "name": "current full large reconstruction packet",
+      "identity": {
+        "bytes": 441196,
+        "sha256": "ebce8cffde715538fc340a07304678a0c563700c72b3eea3de035dd86b7fca5f",
+        "gitBlob": "ca4e84b2c1a41a1c848a62c4c3ad6be1a8af65c8"
+      },
+      "joined": true
+    },
+    {
+      "name": "current full large reconstruction outer",
+      "identity": {
+        "bytes": 13970,
+        "sha256": "341064fd92ead2afed314db220e095bae77a2b96af47580b30c35f495a0e80cd",
+        "gitBlob": "947cf5276c207149f87d67dd06a175b49c9f1b5b"
+      },
+      "joined": true
+    },
+    {
+      "name": "current phase complete body",
+      "identity": {
+        "bytes": 139946,
+        "sha256": "51867690fb9a707141b01ee3dff6d42d082a5ba7aceffd1f4f43eec8a428c9be",
+        "gitBlob": "bcc31247c2752b2017edba9adcd129a1c83cdd32"
+      },
+      "joined": true
+    },
+    {
+      "name": "outer final phase pointer",
+      "identity": {
+        "bytes": 139946,
+        "sha256": "51867690fb9a707141b01ee3dff6d42d082a5ba7aceffd1f4f43eec8a428c9be",
+        "gitBlob": "bcc31247c2752b2017edba9adcd129a1c83cdd32"
+      },
+      "joined": true
+    },
+    {
+      "name": "phase runner",
+      "identity": {
+        "bytes": 104131,
+        "sha256": "20958434e304d6d67657abad910d7c891f5a9086164e73d19cc8764348fc83f5",
+        "gitBlob": "c81f72a8ed14a93b3557fdf889f9ad6cebc25140"
+      },
+      "joined": true
+    },
+    {
+      "name": "phase binding",
+      "identity": {
+        "bytes": 6399172,
+        "sha256": "be265da9b130091d251295f937a7ab09b1db0e03f2c4a02d985839134e0379ec",
+        "gitBlob": "9f9ddcf0f9f62cce1a31f204ae786a8e2d3d2267"
+      },
+      "joined": true
+    },
+    {
+      "name": "phase source vector",
+      "identity": {
+        "bytes": 2118,
+        "sha256": "f2574559a378b3bc537fdcedbde161003c8344a5485dfff9322214f6fda2a90c",
+        "gitBlob": "f6446bdc2bbdb511206c729a1f03717871baea6d"
+      },
+      "joined": true
+    },
+    {
+      "name": "phase test identities",
+      "identity": {
+        "node": {
+          "bytes": 164965,
+          "sha256": "852bedb85c83dbc4b488dffb4a9ffebbe398adc53e85f5a3cea8ca36b146cbf7",
+          "gitBlob": "896c587e077da56a98a314a175fb3cba0353d6ee"
+        },
+        "renderer": {
+          "bytes": 187890,
+          "sha256": "b6f11896e60014aac785968d42390afde38716d47de9bba9562522235db048c9",
+          "gitBlob": "76495189c992fcda47cd7a43a0c697190b5acbb3"
+        }
+      },
+      "joined": true
+    },
+    {
+      "name": "Guard exact subject runner",
+      "identity": {
+        "bytes": 104131,
+        "sha256": "20958434e304d6d67657abad910d7c891f5a9086164e73d19cc8764348fc83f5",
+        "gitBlob": "c81f72a8ed14a93b3557fdf889f9ad6cebc25140"
+      },
+      "joined": true
+    },
+    {
+      "name": "Guard exact subject binding",
+      "identity": {
+        "bytes": 6399172,
+        "sha256": "be265da9b130091d251295f937a7ab09b1db0e03f2c4a02d985839134e0379ec",
+        "gitBlob": "9f9ddcf0f9f62cce1a31f204ae786a8e2d3d2267"
+      },
+      "joined": true
+    },
+    {
+      "name": "Guard exact subject packet",
+      "identity": {
+        "bytes": 441196,
+        "sha256": "ebce8cffde715538fc340a07304678a0c563700c72b3eea3de035dd86b7fca5f",
+        "gitBlob": "ca4e84b2c1a41a1c848a62c4c3ad6be1a8af65c8"
+      },
+      "joined": true
+    },
+    {
+      "name": "Guard exact subject outer",
+      "identity": {
+        "bytes": 13970,
+        "sha256": "341064fd92ead2afed314db220e095bae77a2b96af47580b30c35f495a0e80cd",
+        "gitBlob": "947cf5276c207149f87d67dd06a175b49c9f1b5b"
+      },
+      "joined": true
+    },
+    {
+      "name": "Guard exact subject phaseReceipt",
+      "identity": {
+        "bytes": 139946,
+        "sha256": "51867690fb9a707141b01ee3dff6d42d082a5ba7aceffd1f4f43eec8a428c9be",
+        "gitBlob": "bcc31247c2752b2017edba9adcd129a1c83cdd32"
+      },
+      "joined": true
+    },
+    {
+      "name": "semantic exact subject runner",
+      "identity": {
+        "bytes": 104131,
+        "sha256": "20958434e304d6d67657abad910d7c891f5a9086164e73d19cc8764348fc83f5",
+        "gitBlob": "c81f72a8ed14a93b3557fdf889f9ad6cebc25140"
+      },
+      "joined": true
+    },
+    {
+      "name": "semantic exact subject binding",
+      "identity": {
+        "bytes": 6399172,
+        "sha256": "be265da9b130091d251295f937a7ab09b1db0e03f2c4a02d985839134e0379ec",
+        "gitBlob": "9f9ddcf0f9f62cce1a31f204ae786a8e2d3d2267"
+      },
+      "joined": true
+    },
+    {
+      "name": "semantic exact subject packet",
+      "identity": {
+        "bytes": 441196,
+        "sha256": "ebce8cffde715538fc340a07304678a0c563700c72b3eea3de035dd86b7fca5f",
+        "gitBlob": "ca4e84b2c1a41a1c848a62c4c3ad6be1a8af65c8"
+      },
+      "joined": true
+    },
+    {
+      "name": "semantic exact subject outer",
+      "identity": {
+        "bytes": 13970,
+        "sha256": "341064fd92ead2afed314db220e095bae77a2b96af47580b30c35f495a0e80cd",
+        "gitBlob": "947cf5276c207149f87d67dd06a175b49c9f1b5b"
+      },
+      "joined": true
+    },
+    {
+      "name": "semantic exact subject phaseReceipt",
+      "identity": {
+        "bytes": 139946,
+        "sha256": "51867690fb9a707141b01ee3dff6d42d082a5ba7aceffd1f4f43eec8a428c9be",
+        "gitBlob": "bcc31247c2752b2017edba9adcd129a1c83cdd32"
+      },
+      "joined": true
+    },
+    {
+      "name": "root runtime report packet",
+      "identity": {
+        "bytes": 441196,
+        "sha256": "ebce8cffde715538fc340a07304678a0c563700c72b3eea3de035dd86b7fca5f",
+        "gitBlob": "ca4e84b2c1a41a1c848a62c4c3ad6be1a8af65c8"
+      },
+      "joined": true
+    },
+    {
+      "name": "root runtime report outer",
+      "identity": {
+        "bytes": 13970,
+        "sha256": "341064fd92ead2afed314db220e095bae77a2b96af47580b30c35f495a0e80cd",
+        "gitBlob": "947cf5276c207149f87d67dd06a175b49c9f1b5b"
+      },
+      "joined": true
+    },
+    {
+      "name": "root runtime report phaseReceipt",
+      "identity": {
+        "bytes": 139946,
+        "sha256": "51867690fb9a707141b01ee3dff6d42d082a5ba7aceffd1f4f43eec8a428c9be",
+        "gitBlob": "bcc31247c2752b2017edba9adcd129a1c83cdd32"
+      },
+      "joined": true
+    },
+    {
+      "name": "root runtime report largeBodyJoin",
+      "identity": {
+        "bytes": 8914,
+        "sha256": "e322edbfc50d1706db7838681e2d65abf4648180c4a4da3ba418d94fff5eac44",
+        "gitBlob": "aad388d47bc80c4dd09789ee76238ebd935e8cdd"
+      },
+      "joined": true
+    },
+    {
+      "name": "root runtime report controls",
+      "identity": {
+        "bytes": 104131,
+        "sha256": "20958434e304d6d67657abad910d7c891f5a9086164e73d19cc8764348fc83f5",
+        "gitBlob": "c81f72a8ed14a93b3557fdf889f9ad6cebc25140"
+      },
+      "joined": true
+    },
+    {
+      "name": "root runtime report binding",
+      "identity": {
+        "bytes": 6399172,
+        "sha256": "be265da9b130091d251295f937a7ab09b1db0e03f2c4a02d985839134e0379ec",
+        "gitBlob": "9f9ddcf0f9f62cce1a31f204ae786a8e2d3d2267"
+      },
+      "joined": true
+    }
+  ],
+  "currentPublicationPointerCount": 54,
+  "runtimePacket": {
+    "identity": {
+      "bytes": 441196,
+      "sha256": "ebce8cffde715538fc340a07304678a0c563700c72b3eea3de035dd86b7fca5f",
+      "gitBlob": "ca4e84b2c1a41a1c848a62c4c3ad6be1a8af65c8"
+    },
+    "allFiles": 82,
+    "totalFileBytes": 90459854,
+    "fullLiteralFiles": 72,
+    "fullLiteralBytes": 324864,
+    "largeInstances": 10,
+    "uniqueLargeBodies": 5,
+    "phaseRoot": "/workspace/scratch/c714-post-transport-20261117/evidence/red"
+  },
+  "literalManifestReadbacks": [
+    {
+      "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/phase-receipt.json",
+      "name": "phase-receipt.json",
+      "bytes": 139946,
+      "sha256": "51867690fb9a707141b01ee3dff6d42d082a5ba7aceffd1f4f43eec8a428c9be",
+      "gitBlob": "bcc31247c2752b2017edba9adcd129a1c83cdd32",
+      "fullBodyReadAndRehashed": true
+    },
+    {
+      "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-after-metadata-10-receipt.json",
+      "name": "red-after-metadata-10-receipt.json",
+      "bytes": 1694,
+      "sha256": "6fa6872362f43f00e8a2dc3eecb33577c77bb08228ae9f18dc4decdfce00898b",
+      "gitBlob": "3d517debf0a96f4346f1b4e24a86ae80b0d1457d",
+      "fullBodyReadAndRehashed": true
+    },
+    {
+      "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-after-metadata-10-start.json",
+      "name": "red-after-metadata-10-start.json",
+      "bytes": 882,
+      "sha256": "87f2ceda31deda8e2e73a834a3881ef8e03f5c6c7173453e78d2d59441c77de7",
+      "gitBlob": "d1c2c9068199b8219d7aecd81ab563b4bcc476a9",
+      "fullBodyReadAndRehashed": true
+    },
+    {
+      "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-after-metadata-10.log",
+      "name": "red-after-metadata-10.log",
+      "bytes": 41,
+      "sha256": "9c371a356a3a359ffbb33207199647d0a03af173fe40f7459f27f9d393d09bb1",
+      "gitBlob": "77766cd27c7b10a8e1912acaf123f5bf5c804b1b",
+      "fullBodyReadAndRehashed": true
+    },
+    {
+      "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-after-metadata-10.stderr",
+      "name": "red-after-metadata-10.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+      "fullBodyReadAndRehashed": true
+    },
+    {
+      "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-after-metadata-11-receipt.json",
+      "name": "red-after-metadata-11-receipt.json",
+      "bytes": 1719,
+      "sha256": "fa0812258d0d9b9332bed15d3baf4a0f8cd47c0614da2de077c12eb2953be66b",
+      "gitBlob": "8eea2399c42e9ce1c12a88ad74bae6b33c38dc8d",
+      "fullBodyReadAndRehashed": true
+    },
+    {
+      "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-after-metadata-11-start.json",
+      "name": "red-after-metadata-11-start.json",
+      "bytes": 903,
+      "sha256": "1a0dae82fda37866f1ba9387dad81d449a9d708e3194684f387e150b108d1cbb",
+      "gitBlob": "2169fed5f3ea39ae6e85ab830476033261211d69",
+      "fullBodyReadAndRehashed": true
+    },
+    {
+      "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-after-metadata-11.stderr",
+      "name": "red-after-metadata-11.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+      "fullBodyReadAndRehashed": true
+    },
+    {
+      "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-after-metadata-12-receipt.json",
+      "name": "red-after-metadata-12-receipt.json",
+      "bytes": 1714,
+      "sha256": "bb2ed199239a097810a379813404b8cf0787984a1adebd8fbf07101f365e203e",
+      "gitBlob": "5374ee95d6cde6ff851adb172909eb384869a70d",
+      "fullBodyReadAndRehashed": true
+    },
+    {
+      "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-after-metadata-12-start.json",
+      "name": "red-after-metadata-12-start.json",
+      "bytes": 903,
+      "sha256": "0fd6b6868c0db43bec1367aff57c92fe0079f73b638539cd3a8b242e63ed8ccc",
+      "gitBlob": "372b0b58a6da54e1f9e0b855cf55afec5f319e60",
+      "fullBodyReadAndRehashed": true
+    },
+    {
+      "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-after-metadata-12.log",
+      "name": "red-after-metadata-12.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+      "fullBodyReadAndRehashed": true
+    },
+    {
+      "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-after-metadata-12.stderr",
+      "name": "red-after-metadata-12.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+      "fullBodyReadAndRehashed": true
+    },
+    {
+      "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-after-metadata-13-receipt.json",
+      "name": "red-after-metadata-13-receipt.json",
+      "bytes": 1724,
+      "sha256": "742f4932bfc163997be636806a0143e26d248c44d04e49830c1a7a2bed0f4964",
+      "gitBlob": "dec396b022aa779c44fb0a8aee3bf3276448a213",
+      "fullBodyReadAndRehashed": true
+    },
+    {
+      "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-after-metadata-13-start.json",
+      "name": "red-after-metadata-13-start.json",
+      "bytes": 914,
+      "sha256": "16bae99a02e55ce030a6aa9d7f05bdf709acd4074ece351f54ee97c0b855fbdf",
+      "gitBlob": "18854f4b60237a5f130133997ee9c5fd4d9b27d2",
+      "fullBodyReadAndRehashed": true
+    },
+    {
+      "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-after-metadata-13.log",
+      "name": "red-after-metadata-13.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+      "fullBodyReadAndRehashed": true
+    },
+    {
+      "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-after-metadata-13.stderr",
+      "name": "red-after-metadata-13.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+      "fullBodyReadAndRehashed": true
+    },
+    {
+      "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-after-metadata-14-receipt.json",
+      "name": "red-after-metadata-14-receipt.json",
+      "bytes": 1704,
+      "sha256": "8f1eedabb07013b9e78b315d47326db855c410ec55225acb0239c891a8050a63",
+      "gitBlob": "34b256c2fd37441a90a86382274b7dad781f653c",
+      "fullBodyReadAndRehashed": true
+    },
+    {
+      "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-after-metadata-14-start.json",
+      "name": "red-after-metadata-14-start.json",
+      "bytes": 887,
+      "sha256": "b6ea9ac36e0e38550a5c00ebcfa804db5eb4be954a9585463b134b8d6082cf95",
+      "gitBlob": "cd6fb75c039ba27ef1c20f61f382a9e7948560a3",
+      "fullBodyReadAndRehashed": true
+    },
+    {
+      "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-after-metadata-14.stderr",
+      "name": "red-after-metadata-14.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+      "fullBodyReadAndRehashed": true
+    },
+    {
+      "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-after-metadata-15-receipt.json",
+      "name": "red-after-metadata-15-receipt.json",
+      "bytes": 1711,
+      "sha256": "45b2ed33562842757f8461408a8d1b2e828e2e76bfd1f489c855d5658a2251c5",
+      "gitBlob": "ed73c540c6f5dae8d98e89b8f583a4c84efffb60",
+      "fullBodyReadAndRehashed": true
+    },
+    {
+      "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-after-metadata-15-start.json",
+      "name": "red-after-metadata-15-start.json",
+      "bytes": 899,
+      "sha256": "1cb40518521aad61163aeb80b2a9a21db28dd01e3a241f34caf4fe33238ca740",
+      "gitBlob": "5af8d2478597d725c6351f911ea41b052fe07659",
+      "fullBodyReadAndRehashed": true
+    },
+    {
+      "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-after-metadata-15.log",
+      "name": "red-after-metadata-15.log",
+      "bytes": 372,
+      "sha256": "1c7f849fbf69eeafbc32b149725885f28946c2728c9eb88718a2edcf314e1b88",
+      "gitBlob": "4fae9729a55e3202b79d0658abaf25745f9d8cf8",
+      "fullBodyReadAndRehashed": true
+    },
+    {
+      "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-after-metadata-15.stderr",
+      "name": "red-after-metadata-15.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+      "fullBodyReadAndRehashed": true
+    },
+    {
+      "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-after-metadata-9-receipt.json",
+      "name": "red-after-metadata-9-receipt.json",
+      "bytes": 1685,
+      "sha256": "98a97766b629570434fa5576c50f13f73c2faece7ea35210f7a850e4db005fa2",
+      "gitBlob": "97f84f4f7cedf834b3a80e181739da24eb54b258",
+      "fullBodyReadAndRehashed": true
+    },
+    {
+      "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-after-metadata-9-start.json",
+      "name": "red-after-metadata-9-start.json",
+      "bytes": 875,
+      "sha256": "0d6d0d9aaee5d718ab64dbe0d9a86c7979e8d15dbe58a696130d96ec537b4e65",
+      "gitBlob": "6605e80f77a2058f9e8c6b24223eaa711b0f71ac",
+      "fullBodyReadAndRehashed": true
+    },
+    {
+      "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-after-metadata-9.log",
+      "name": "red-after-metadata-9.log",
+      "bytes": 41,
+      "sha256": "611a63d25e7d7d2bd3a393c3700c243d34d9a585df0cf3e5785c8ffb2bad9007",
+      "gitBlob": "509038c53ad1ea4996d45ea7b8e7eca29f7835ab",
+      "fullBodyReadAndRehashed": true
+    },
+    {
+      "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-after-metadata-9.stderr",
+      "name": "red-after-metadata-9.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+      "fullBodyReadAndRehashed": true
+    },
+    {
+      "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-before-metadata-1-receipt.json",
+      "name": "red-before-metadata-1-receipt.json",
+      "bytes": 1686,
+      "sha256": "adaa93ab8725221b3449f3eb2334cf2f23541d502007e63f0f0d8d948c42ff18",
+      "gitBlob": "a57d23ebabc5dcde5bb544637d505baeca7b053c",
+      "fullBodyReadAndRehashed": true
+    },
+    {
+      "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-before-metadata-1-start.json",
+      "name": "red-before-metadata-1-start.json",
+      "bytes": 875,
+      "sha256": "00482409ce7494344cc4fefdb7ca1f0b9464ac2341c45d07ad5ac2530590beb7",
+      "gitBlob": "7eead16f18cf73836fcaeedb1b495c18b0e7b672",
+      "fullBodyReadAndRehashed": true
+    },
+    {
+      "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-before-metadata-1.log",
+      "name": "red-before-metadata-1.log",
+      "bytes": 41,
+      "sha256": "611a63d25e7d7d2bd3a393c3700c243d34d9a585df0cf3e5785c8ffb2bad9007",
+      "gitBlob": "509038c53ad1ea4996d45ea7b8e7eca29f7835ab",
+      "fullBodyReadAndRehashed": true
+    },
+    {
+      "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-before-metadata-1.stderr",
+      "name": "red-before-metadata-1.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+      "fullBodyReadAndRehashed": true
+    },
+    {
+      "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-before-metadata-2-receipt.json",
+      "name": "red-before-metadata-2-receipt.json",
+      "bytes": 1692,
+      "sha256": "249ed051860b7059eef6cca2ca88a4edd82782992d36d0aed267a49965b9642a",
+      "gitBlob": "2f3410f052dd241c66fd4b57b909d110b241b64b",
+      "fullBodyReadAndRehashed": true
+    },
+    {
+      "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-before-metadata-2-start.json",
+      "name": "red-before-metadata-2-start.json",
+      "bytes": 882,
+      "sha256": "a45ea842af1d6ec4ddb0f2eecd04f4553ec69c60d433456d4eee3703f7709713",
+      "gitBlob": "90d653c836572bce2e4018b09068723c6c1c901e",
+      "fullBodyReadAndRehashed": true
+    },
+    {
+      "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-before-metadata-2.log",
+      "name": "red-before-metadata-2.log",
+      "bytes": 41,
+      "sha256": "9c371a356a3a359ffbb33207199647d0a03af173fe40f7459f27f9d393d09bb1",
+      "gitBlob": "77766cd27c7b10a8e1912acaf123f5bf5c804b1b",
+      "fullBodyReadAndRehashed": true
+    },
+    {
+      "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-before-metadata-2.stderr",
+      "name": "red-before-metadata-2.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+      "fullBodyReadAndRehashed": true
+    },
+    {
+      "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-before-metadata-3-receipt.json",
+      "name": "red-before-metadata-3-receipt.json",
+      "bytes": 1717,
+      "sha256": "a0745c1c5b9f9c8e7543879e469c8fca4e346fb339d5125e0ccafb7c767ed2c0",
+      "gitBlob": "2b30aabd0bb3ea9324d5e912a3acce776e636e47",
+      "fullBodyReadAndRehashed": true
+    },
+    {
+      "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-before-metadata-3-start.json",
+      "name": "red-before-metadata-3-start.json",
+      "bytes": 903,
+      "sha256": "85ab434e6176b601124122de5bd3bd2179c6d727f51d7fb22276d32ee9811075",
+      "gitBlob": "252a946c4376a4ca537b7fe27d8111cb38e98661",
+      "fullBodyReadAndRehashed": true
+    },
+    {
+      "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-before-metadata-3.stderr",
+      "name": "red-before-metadata-3.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+      "fullBodyReadAndRehashed": true
+    },
+    {
+      "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-before-metadata-4-receipt.json",
+      "name": "red-before-metadata-4-receipt.json",
+      "bytes": 1711,
+      "sha256": "e25cd37fda0fe85fe5cbbf118137c5b94f9777a4ef5a236b833ae687a1190b89",
+      "gitBlob": "414b8bc8569a26d2877e8aecab356e2dfe386bf9",
+      "fullBodyReadAndRehashed": true
+    },
+    {
+      "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-before-metadata-4-start.json",
+      "name": "red-before-metadata-4-start.json",
+      "bytes": 903,
+      "sha256": "9eeab774e76970eb2e6eceb4d858522c59950a99ab6626e0af887d218cf3d285",
+      "gitBlob": "448203dafb93abe5ad673fb9dc925f621733fe08",
+      "fullBodyReadAndRehashed": true
+    },
+    {
+      "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-before-metadata-4.log",
+      "name": "red-before-metadata-4.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+      "fullBodyReadAndRehashed": true
+    },
+    {
+      "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-before-metadata-4.stderr",
+      "name": "red-before-metadata-4.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+      "fullBodyReadAndRehashed": true
+    },
+    {
+      "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-before-metadata-5-receipt.json",
+      "name": "red-before-metadata-5-receipt.json",
+      "bytes": 1722,
+      "sha256": "d96fcacbedb11b15d1cf1386dde517d5778b67b7320fb3032f8a34c80400c7a6",
+      "gitBlob": "7e934fdabf3bc3091ec795e0d08f7438e54222ba",
+      "fullBodyReadAndRehashed": true
+    },
+    {
+      "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-before-metadata-5-start.json",
+      "name": "red-before-metadata-5-start.json",
+      "bytes": 914,
+      "sha256": "798b3712049a2eab688ea8e5ecb5167db7262db1115a2aeb7f716eb564495c68",
+      "gitBlob": "ac7eaaddd84778e20d8f29de5718ace1f759d130",
+      "fullBodyReadAndRehashed": true
+    },
+    {
+      "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-before-metadata-5.log",
+      "name": "red-before-metadata-5.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+      "fullBodyReadAndRehashed": true
+    },
+    {
+      "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-before-metadata-5.stderr",
+      "name": "red-before-metadata-5.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+      "fullBodyReadAndRehashed": true
+    },
+    {
+      "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-before-metadata-6-receipt.json",
+      "name": "red-before-metadata-6-receipt.json",
+      "bytes": 1701,
+      "sha256": "e4961a96b84d1dfb1c01dfa0dd3e9f940a1ed14c9a4907e0d5d76db5111c148e",
+      "gitBlob": "8e66cc2fbb097fc6fe8b358a68545ba85cebaf05",
+      "fullBodyReadAndRehashed": true
+    },
+    {
+      "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-before-metadata-6-start.json",
+      "name": "red-before-metadata-6-start.json",
+      "bytes": 887,
+      "sha256": "f51854abf159c8fbdb6bd5f13583a6391e3b35a12fb018c6eb3bf1c06ac78b7e",
+      "gitBlob": "12285c0e23176fd2cabedc1d7d7bbf89ebe0e60b",
+      "fullBodyReadAndRehashed": true
+    },
+    {
+      "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-before-metadata-6.stderr",
+      "name": "red-before-metadata-6.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+      "fullBodyReadAndRehashed": true
+    },
+    {
+      "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-before-metadata-7-receipt.json",
+      "name": "red-before-metadata-7-receipt.json",
+      "bytes": 1710,
+      "sha256": "d5af5e69cc6e899324ba6af061637e4e511cd9b26ccb6d6b94ab73d096679157",
+      "gitBlob": "0a59e823997e36b4552b7b2218ceb801cb710fce",
+      "fullBodyReadAndRehashed": true
+    },
+    {
+      "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-before-metadata-7-start.json",
+      "name": "red-before-metadata-7-start.json",
+      "bytes": 899,
+      "sha256": "362e54b35402000540ebef366d15c019d5f722fec15708b6d3860ea200b363e5",
+      "gitBlob": "41eee263a2cfd936eb9b217eba3ea1839f19e71a",
+      "fullBodyReadAndRehashed": true
+    },
+    {
+      "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-before-metadata-7.log",
+      "name": "red-before-metadata-7.log",
+      "bytes": 372,
+      "sha256": "1c7f849fbf69eeafbc32b149725885f28946c2728c9eb88718a2edcf314e1b88",
+      "gitBlob": "4fae9729a55e3202b79d0658abaf25745f9d8cf8",
+      "fullBodyReadAndRehashed": true
+    },
+    {
+      "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-before-metadata-7.stderr",
+      "name": "red-before-metadata-7.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+      "fullBodyReadAndRehashed": true
+    },
+    {
+      "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-native-metadata-8-receipt.json",
+      "name": "red-native-metadata-8-receipt.json",
+      "bytes": 2699,
+      "sha256": "c33a6010ca5b6fe9aa2f5504e71148485e34146783fec491d01bf37b7661f24b",
+      "gitBlob": "5a279e4a0dc17d8cf65f05e6cdceba8ef9890bc4",
+      "fullBodyReadAndRehashed": true
+    },
+    {
+      "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-native-metadata-8-start.json",
+      "name": "red-native-metadata-8-start.json",
+      "bytes": 1887,
+      "sha256": "5431afacd2985d09ca865c62408d08f7b0918ab18b42c130f95330a07972c4dd",
+      "gitBlob": "10d9cc5469d60070a7fdeb591b27e8d4a2c9c77c",
+      "fullBodyReadAndRehashed": true
+    },
+    {
+      "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-native-metadata-8.log",
+      "name": "red-native-metadata-8.log",
+      "bytes": 391,
+      "sha256": "5feb3118fc317ab05ced98da5dc9ec1666e4b9fc4bb729c04a752b7910fea838",
+      "gitBlob": "eb64ef76ecd02a50b3e389cc385eea743fe13cb4",
+      "fullBodyReadAndRehashed": true
+    },
+    {
+      "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-native-metadata-8.stderr",
+      "name": "red-native-metadata-8.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+      "fullBodyReadAndRehashed": true
+    },
+    {
+      "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-native-route-admission.json",
+      "name": "red-native-route-admission.json",
+      "bytes": 4350,
+      "sha256": "808ef902859e6c34fdc8bedbba0d0b13c5667ce4a9b28f14393a6533707d5a95",
+      "gitBlob": "5ee71ac876a45056b63a8788143af578e8da025e",
+      "fullBodyReadAndRehashed": true
+    },
+    {
+      "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-node-1-receipt.json",
+      "name": "red-node-1-receipt.json",
+      "bytes": 1493,
+      "sha256": "1aa1484785db24981be9f0f764d9cd8c560801cac730aa556332b0641e7585be",
+      "gitBlob": "bf39ac175f5268cdef3e81764f639b0ea533ce76",
+      "fullBodyReadAndRehashed": true
+    },
+    {
+      "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-node-1-start.json",
+      "name": "red-node-1-start.json",
+      "bytes": 974,
+      "sha256": "e5a2d6a38085d2a2c2a8159d3ed9ae7757a5323f82e7f912b5614dc573c897c4",
+      "gitBlob": "de06230c6c3ec6de82047c758a585f3177ad1d2c",
+      "fullBodyReadAndRehashed": true
+    },
+    {
+      "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-node-1.log",
+      "name": "red-node-1.log",
+      "bytes": 17331,
+      "sha256": "6b51be634a1c4486ad7e487529943747c5a79faf32e02ffbe70cec56bb7026f4",
+      "gitBlob": "c6cf3d83a698a4a63e85e8f8ff33471a30916ffe",
+      "fullBodyReadAndRehashed": true
+    },
+    {
+      "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-node-semantics.json",
+      "name": "red-node-semantics.json",
+      "bytes": 32721,
+      "sha256": "d0fc5d22dfb5223f60dbef480b7f896e8d1e55fa4d722760d1f905cf5e1a6e2e",
+      "gitBlob": "5f74a06ff1aa1329621f90f9a0bce0b93caa71f6",
+      "fullBodyReadAndRehashed": true
+    },
+    {
+      "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-node-tmp-gate.json",
+      "name": "red-node-tmp-gate.json",
+      "bytes": 349,
+      "sha256": "e7ab4e295e2a885af926247f0dcd67ea03bcffd483d899d4e0c16a3a198e05b7",
+      "gitBlob": "c526ecce61873ead31fbc5c8a17c2855463fe48a",
+      "fullBodyReadAndRehashed": true
+    },
+    {
+      "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-renderer-1-receipt.json",
+      "name": "red-renderer-1-receipt.json",
+      "bytes": 2655,
+      "sha256": "8deb3e3760e9b1b83c01e0d9264ff91c48219a0756c0c4765c230077f78d3dbf",
+      "gitBlob": "fc0f6a243bbca33429d0679b3441a6c329452919",
+      "fullBodyReadAndRehashed": true
+    },
+    {
+      "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-renderer-1-start.json",
+      "name": "red-renderer-1-start.json",
+      "bytes": 2132,
+      "sha256": "4b3f4c6dfdd99ad6411774f68fa9e3750e77674eb7849f52b3f9d1fca9542215",
+      "gitBlob": "2f82eaac520b197825a3cff9b0e01b9743abc038",
+      "fullBodyReadAndRehashed": true
+    },
+    {
+      "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-renderer-1.log",
+      "name": "red-renderer-1.log",
+      "bytes": 12192,
+      "sha256": "26ff4a883cebd3a6eeaee658b850b290a5942a45db14357df5387d69b6554de4",
+      "gitBlob": "bc4499f3ed88260418bf227fab9f5c327eaf5d46",
+      "fullBodyReadAndRehashed": true
+    },
+    {
+      "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-renderer-output-ownership.json",
+      "name": "red-renderer-output-ownership.json",
+      "bytes": 716,
+      "sha256": "72fc21af4b3b6c3ecc1447a138ab7657f464e54be5eb8dca2fbe472ced15327d",
+      "gitBlob": "1625e4b2a995906e8b8933097fcd16e906ef7dd2",
+      "fullBodyReadAndRehashed": true
+    },
+    {
+      "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-renderer-semantics.json",
+      "name": "red-renderer-semantics.json",
+      "bytes": 37405,
+      "sha256": "bc6b4bb7e51e11556dfd4f65ca2ce07f84909cb8b04d94b1b9f63b7448306ae1",
+      "gitBlob": "2b15bbf586cdb07929b363b4064f874f3115436a",
+      "fullBodyReadAndRehashed": true
+    },
+    {
+      "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-renderer-tmp-surviving-transients.json",
+      "name": "red-renderer-tmp-surviving-transients.json",
+      "bytes": 341,
+      "sha256": "170285b8c01b6bddbcf866c658af989a5b1a5e6405ea718c47dcaa2d9bbe08a1",
+      "gitBlob": "da01f0203f23ba3db3d220ad1d74579e30061955",
+      "fullBodyReadAndRehashed": true
+    },
+    {
+      "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-vite-config-surviving-transients.json",
+      "name": "red-vite-config-surviving-transients.json",
+      "bytes": 345,
+      "sha256": "965c3b3d21ad75060b50fc8b5e046b339e42eb32ea9bacecbbc18895ff327c72",
+      "gitBlob": "9450900afcff0d08478fbed2ebda16560f347074",
+      "fullBodyReadAndRehashed": true
+    },
+    {
+      "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red.attempt",
+      "name": "red.attempt",
+      "bytes": 33,
+      "sha256": "0e78ff314affd46a342b3d1f404be9c20ce1ecfab361226e7c97358ae6f8f98b",
+      "gitBlob": "b4f2e72e80a3815821d9963aba66437d18eaec6f",
+      "fullBodyReadAndRehashed": true
+    },
+    {
+      "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/renderer-results.json",
+      "name": "renderer-results.json",
+      "bytes": 29580,
+      "sha256": "29625263630c0baa70b120a8bc38bee28e21830107ba2fd79f9e545eeab0b05d",
+      "gitBlob": "3b6051dfcf671de4ccd687b4ea49765ddaac44b3",
+      "fullBodyReadAndRehashed": true
+    }
+  ],
+  "allCurrentRuntimeJsonPointerJoins": [
+    {
+      "where": "phase-receipt.json.suiteCommands[0].primaryReceipt",
+      "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-node-1-receipt.json",
+      "identity": {
+        "bytes": 1493,
+        "sha256": "1aa1484785db24981be9f0f764d9cd8c560801cac730aa556332b0641e7585be",
+        "gitBlob": "bf39ac175f5268cdef3e81764f639b0ea533ce76"
+      },
+      "joined": true
+    },
+    {
+      "where": "phase-receipt.json.suiteCommands[0].record.raw",
+      "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-node-1.log",
+      "identity": {
+        "bytes": 17331,
+        "sha256": "6b51be634a1c4486ad7e487529943747c5a79faf32e02ffbe70cec56bb7026f4",
+        "gitBlob": "c6cf3d83a698a4a63e85e8f8ff33471a30916ffe"
+      },
+      "joined": true
+    },
+    {
+      "where": "phase-receipt.json.suiteCommands[0].invocationRecords[0].record.raw",
+      "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-node-1.log",
+      "identity": {
+        "bytes": 17331,
+        "sha256": "6b51be634a1c4486ad7e487529943747c5a79faf32e02ffbe70cec56bb7026f4",
+        "gitBlob": "c6cf3d83a698a4a63e85e8f8ff33471a30916ffe"
+      },
+      "joined": true
+    },
+    {
+      "where": "phase-receipt.json.suiteCommands[0].invocationRecords[0].finalReceipt",
+      "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-node-1-receipt.json",
+      "identity": {
+        "bytes": 1493,
+        "sha256": "1aa1484785db24981be9f0f764d9cd8c560801cac730aa556332b0641e7585be",
+        "gitBlob": "bf39ac175f5268cdef3e81764f639b0ea533ce76"
+      },
+      "joined": true
+    },
+    {
+      "where": "phase-receipt.json.suiteCommands[0].semanticReceipt",
+      "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-node-semantics.json",
+      "identity": {
+        "bytes": 32721,
+        "sha256": "d0fc5d22dfb5223f60dbef480b7f896e8d1e55fa4d722760d1f905cf5e1a6e2e",
+        "gitBlob": "5f74a06ff1aa1329621f90f9a0bce0b93caa71f6"
+      },
+      "joined": true
+    },
+    {
+      "where": "phase-receipt.json.suiteCommands[1].primaryReceipt",
+      "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-renderer-1-receipt.json",
+      "identity": {
+        "bytes": 2655,
+        "sha256": "8deb3e3760e9b1b83c01e0d9264ff91c48219a0756c0c4765c230077f78d3dbf",
+        "gitBlob": "fc0f6a243bbca33429d0679b3441a6c329452919"
+      },
+      "joined": true
+    },
+    {
+      "where": "phase-receipt.json.suiteCommands[1].record.raw",
+      "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-renderer-1.log",
+      "identity": {
+        "bytes": 12192,
+        "sha256": "26ff4a883cebd3a6eeaee658b850b290a5942a45db14357df5387d69b6554de4",
+        "gitBlob": "bc4499f3ed88260418bf227fab9f5c327eaf5d46"
+      },
+      "joined": true
+    },
+    {
+      "where": "phase-receipt.json.suiteCommands[1].invocationRecords[0].record.raw",
+      "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-renderer-1.log",
+      "identity": {
+        "bytes": 12192,
+        "sha256": "26ff4a883cebd3a6eeaee658b850b290a5942a45db14357df5387d69b6554de4",
+        "gitBlob": "bc4499f3ed88260418bf227fab9f5c327eaf5d46"
+      },
+      "joined": true
+    },
+    {
+      "where": "phase-receipt.json.suiteCommands[1].invocationRecords[0].finalReceipt",
+      "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-renderer-1-receipt.json",
+      "identity": {
+        "bytes": 2655,
+        "sha256": "8deb3e3760e9b1b83c01e0d9264ff91c48219a0756c0c4765c230077f78d3dbf",
+        "gitBlob": "fc0f6a243bbca33429d0679b3441a6c329452919"
+      },
+      "joined": true
+    },
+    {
+      "where": "phase-receipt.json.suiteCommands[1].semanticReceipt",
+      "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-renderer-semantics.json",
+      "identity": {
+        "bytes": 37405,
+        "sha256": "bc6b4bb7e51e11556dfd4f65ca2ce07f84909cb8b04d94b1b9f63b7448306ae1",
+        "gitBlob": "2b15bbf586cdb07929b363b4064f874f3115436a"
+      },
+      "joined": true
+    },
+    {
+      "where": "phase-receipt.json.primaryInvocations[0].record.raw",
+      "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-node-1.log",
+      "identity": {
+        "bytes": 17331,
+        "sha256": "6b51be634a1c4486ad7e487529943747c5a79faf32e02ffbe70cec56bb7026f4",
+        "gitBlob": "c6cf3d83a698a4a63e85e8f8ff33471a30916ffe"
+      },
+      "joined": true
+    },
+    {
+      "where": "phase-receipt.json.primaryInvocations[0].finalReceipt",
+      "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-node-1-receipt.json",
+      "identity": {
+        "bytes": 1493,
+        "sha256": "1aa1484785db24981be9f0f764d9cd8c560801cac730aa556332b0641e7585be",
+        "gitBlob": "bf39ac175f5268cdef3e81764f639b0ea533ce76"
+      },
+      "joined": true
+    },
+    {
+      "where": "phase-receipt.json.primaryInvocations[1].record.raw",
+      "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-renderer-1.log",
+      "identity": {
+        "bytes": 12192,
+        "sha256": "26ff4a883cebd3a6eeaee658b850b290a5942a45db14357df5387d69b6554de4",
+        "gitBlob": "bc4499f3ed88260418bf227fab9f5c327eaf5d46"
+      },
+      "joined": true
+    },
+    {
+      "where": "phase-receipt.json.primaryInvocations[1].finalReceipt",
+      "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-renderer-1-receipt.json",
+      "identity": {
+        "bytes": 2655,
+        "sha256": "8deb3e3760e9b1b83c01e0d9264ff91c48219a0756c0c4765c230077f78d3dbf",
+        "gitBlob": "fc0f6a243bbca33429d0679b3441a6c329452919"
+      },
+      "joined": true
+    },
+    {
+      "where": "phase-receipt.json.before.source",
+      "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-before-source.json",
+      "identity": {
+        "bytes": 2478745,
+        "sha256": "238e6f8dc2cd570845441ff537242103449056bcb68ad7089e169e2d530840c5",
+        "gitBlob": "499fe05449dfd5b2e4e46d4a4629c24b2fcc696d"
+      },
+      "joined": true
+    },
+    {
+      "where": "phase-receipt.json.before.dependencies",
+      "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-before-dependencies.json",
+      "identity": {
+        "bytes": 39168001,
+        "sha256": "d1783002ecd168fcfb0b691addc2d0a3486d6cc1c10859d0c775034fec27659b",
+        "gitBlob": "8fb1a488520c95d3651098a81ad0160c6b049cf7"
+      },
+      "joined": true
+    },
+    {
+      "where": "phase-receipt.json.before.compiled",
+      "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-before-compiled.json",
+      "identity": {
+        "bytes": 400300,
+        "sha256": "bdd4a09c5c64a85736b19c40eea927536b9dece4c968a19bed5c95150216ad85",
+        "gitBlob": "224ff561f65772393140302de26b584bf08b06d9"
+      },
+      "joined": true
+    },
+    {
+      "where": "phase-receipt.json.nodeTmpGate",
+      "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-node-tmp-gate.json",
+      "identity": {
+        "bytes": 349,
+        "sha256": "e7ab4e295e2a885af926247f0dcd67ea03bcffd483d899d4e0c16a3a198e05b7",
+        "gitBlob": "c526ecce61873ead31fbc5c8a17c2855463fe48a"
+      },
+      "joined": true
+    },
+    {
+      "where": "phase-receipt.json.nativeRouteAdmission",
+      "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-native-route-admission.json",
+      "identity": {
+        "bytes": 4350,
+        "sha256": "808ef902859e6c34fdc8bedbba0d0b13c5667ce4a9b28f14393a6533707d5a95",
+        "gitBlob": "5ee71ac876a45056b63a8788143af578e8da025e"
+      },
+      "joined": true
+    },
+    {
+      "where": "phase-receipt.json.rendererTransientCleanup.vite.survivingCapture",
+      "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-vite-config-surviving-transients.json",
+      "identity": {
+        "bytes": 345,
+        "sha256": "965c3b3d21ad75060b50fc8b5e046b339e42eb32ea9bacecbbc18895ff327c72",
+        "gitBlob": "9450900afcff0d08478fbed2ebda16560f347074"
+      },
+      "joined": true
+    },
+    {
+      "where": "phase-receipt.json.rendererTransientCleanup.tmp.survivingCapture",
+      "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-renderer-tmp-surviving-transients.json",
+      "identity": {
+        "bytes": 341,
+        "sha256": "170285b8c01b6bddbcf866c658af989a5b1a5e6405ea718c47dcaa2d9bbe08a1",
+        "gitBlob": "da01f0203f23ba3db3d220ad1d74579e30061955"
+      },
+      "joined": true
+    },
+    {
+      "where": "phase-receipt.json.after.source",
+      "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-after-source.json",
+      "identity": {
+        "bytes": 2478745,
+        "sha256": "238e6f8dc2cd570845441ff537242103449056bcb68ad7089e169e2d530840c5",
+        "gitBlob": "499fe05449dfd5b2e4e46d4a4629c24b2fcc696d"
+      },
+      "joined": true
+    },
+    {
+      "where": "phase-receipt.json.after.dependencies",
+      "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-after-dependencies.json",
+      "identity": {
+        "bytes": 39168001,
+        "sha256": "d1783002ecd168fcfb0b691addc2d0a3486d6cc1c10859d0c775034fec27659b",
+        "gitBlob": "8fb1a488520c95d3651098a81ad0160c6b049cf7"
+      },
+      "joined": true
+    },
+    {
+      "where": "phase-receipt.json.after.compiled",
+      "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-after-compiled.json",
+      "identity": {
+        "bytes": 400300,
+        "sha256": "bdd4a09c5c64a85736b19c40eea927536b9dece4c968a19bed5c95150216ad85",
+        "gitBlob": "224ff561f65772393140302de26b584bf08b06d9"
+      },
+      "joined": true
+    },
+    {
+      "where": "red-after-metadata-10-receipt.json.raw",
+      "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-after-metadata-10.log",
+      "identity": {
+        "bytes": 41,
+        "sha256": "9c371a356a3a359ffbb33207199647d0a03af173fe40f7459f27f9d393d09bb1",
+        "gitBlob": "77766cd27c7b10a8e1912acaf123f5bf5c804b1b"
+      },
+      "joined": true
+    },
+    {
+      "where": "red-after-metadata-10-receipt.json.rawStderr",
+      "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-after-metadata-10.stderr",
+      "identity": {
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+      },
+      "joined": true
+    },
+    {
+      "where": "red-after-metadata-11-receipt.json.raw",
+      "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-after-metadata-11.log",
+      "identity": {
+        "bytes": 1527575,
+        "sha256": "685f26dde16dc6e1032335d05a227d1ced76cef07db52ec9dae03df1ddcf9e8f",
+        "gitBlob": "43b9f4fd5f6ce74221ee18fdb1765839397af6ec"
+      },
+      "joined": true
+    },
+    {
+      "where": "red-after-metadata-11-receipt.json.rawStderr",
+      "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-after-metadata-11.stderr",
+      "identity": {
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+      },
+      "joined": true
+    },
+    {
+      "where": "red-after-metadata-12-receipt.json.raw",
+      "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-after-metadata-12.log",
+      "identity": {
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+      },
+      "joined": true
+    },
+    {
+      "where": "red-after-metadata-12-receipt.json.rawStderr",
+      "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-after-metadata-12.stderr",
+      "identity": {
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+      },
+      "joined": true
+    },
+    {
+      "where": "red-after-metadata-13-receipt.json.raw",
+      "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-after-metadata-13.log",
+      "identity": {
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+      },
+      "joined": true
+    },
+    {
+      "where": "red-after-metadata-13-receipt.json.rawStderr",
+      "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-after-metadata-13.stderr",
+      "identity": {
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+      },
+      "joined": true
+    },
+    {
+      "where": "red-after-metadata-14-receipt.json.raw",
+      "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-after-metadata-14.log",
+      "identity": {
+        "bytes": 1492874,
+        "sha256": "07ccf6af3b7849e0f8259ffb9164537ab8f26e83f4a112cfd06c66a1f0c0b8db",
+        "gitBlob": "bb3caf365d224fcdddc50ea0dab2b751cd54f6d8"
+      },
+      "joined": true
+    },
+    {
+      "where": "red-after-metadata-14-receipt.json.rawStderr",
+      "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-after-metadata-14.stderr",
+      "identity": {
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+      },
+      "joined": true
+    },
+    {
+      "where": "red-after-metadata-15-receipt.json.raw",
+      "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-after-metadata-15.log",
+      "identity": {
+        "bytes": 372,
+        "sha256": "1c7f849fbf69eeafbc32b149725885f28946c2728c9eb88718a2edcf314e1b88",
+        "gitBlob": "4fae9729a55e3202b79d0658abaf25745f9d8cf8"
+      },
+      "joined": true
+    },
+    {
+      "where": "red-after-metadata-15-receipt.json.rawStderr",
+      "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-after-metadata-15.stderr",
+      "identity": {
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+      },
+      "joined": true
+    },
+    {
+      "where": "red-after-metadata-9-receipt.json.raw",
+      "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-after-metadata-9.log",
+      "identity": {
+        "bytes": 41,
+        "sha256": "611a63d25e7d7d2bd3a393c3700c243d34d9a585df0cf3e5785c8ffb2bad9007",
+        "gitBlob": "509038c53ad1ea4996d45ea7b8e7eca29f7835ab"
+      },
+      "joined": true
+    },
+    {
+      "where": "red-after-metadata-9-receipt.json.rawStderr",
+      "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-after-metadata-9.stderr",
+      "identity": {
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+      },
+      "joined": true
+    },
+    {
+      "where": "red-before-metadata-1-receipt.json.raw",
+      "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-before-metadata-1.log",
+      "identity": {
+        "bytes": 41,
+        "sha256": "611a63d25e7d7d2bd3a393c3700c243d34d9a585df0cf3e5785c8ffb2bad9007",
+        "gitBlob": "509038c53ad1ea4996d45ea7b8e7eca29f7835ab"
+      },
+      "joined": true
+    },
+    {
+      "where": "red-before-metadata-1-receipt.json.rawStderr",
+      "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-before-metadata-1.stderr",
+      "identity": {
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+      },
+      "joined": true
+    },
+    {
+      "where": "red-before-metadata-2-receipt.json.raw",
+      "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-before-metadata-2.log",
+      "identity": {
+        "bytes": 41,
+        "sha256": "9c371a356a3a359ffbb33207199647d0a03af173fe40f7459f27f9d393d09bb1",
+        "gitBlob": "77766cd27c7b10a8e1912acaf123f5bf5c804b1b"
+      },
+      "joined": true
+    },
+    {
+      "where": "red-before-metadata-2-receipt.json.rawStderr",
+      "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-before-metadata-2.stderr",
+      "identity": {
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+      },
+      "joined": true
+    },
+    {
+      "where": "red-before-metadata-3-receipt.json.raw",
+      "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-before-metadata-3.log",
+      "identity": {
+        "bytes": 1527575,
+        "sha256": "685f26dde16dc6e1032335d05a227d1ced76cef07db52ec9dae03df1ddcf9e8f",
+        "gitBlob": "43b9f4fd5f6ce74221ee18fdb1765839397af6ec"
+      },
+      "joined": true
+    },
+    {
+      "where": "red-before-metadata-3-receipt.json.rawStderr",
+      "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-before-metadata-3.stderr",
+      "identity": {
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+      },
+      "joined": true
+    },
+    {
+      "where": "red-before-metadata-4-receipt.json.raw",
+      "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-before-metadata-4.log",
+      "identity": {
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+      },
+      "joined": true
+    },
+    {
+      "where": "red-before-metadata-4-receipt.json.rawStderr",
+      "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-before-metadata-4.stderr",
+      "identity": {
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+      },
+      "joined": true
+    },
+    {
+      "where": "red-before-metadata-5-receipt.json.raw",
+      "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-before-metadata-5.log",
+      "identity": {
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+      },
+      "joined": true
+    },
+    {
+      "where": "red-before-metadata-5-receipt.json.rawStderr",
+      "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-before-metadata-5.stderr",
+      "identity": {
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+      },
+      "joined": true
+    },
+    {
+      "where": "red-before-metadata-6-receipt.json.raw",
+      "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-before-metadata-6.log",
+      "identity": {
+        "bytes": 1492874,
+        "sha256": "07ccf6af3b7849e0f8259ffb9164537ab8f26e83f4a112cfd06c66a1f0c0b8db",
+        "gitBlob": "bb3caf365d224fcdddc50ea0dab2b751cd54f6d8"
+      },
+      "joined": true
+    },
+    {
+      "where": "red-before-metadata-6-receipt.json.rawStderr",
+      "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-before-metadata-6.stderr",
+      "identity": {
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+      },
+      "joined": true
+    },
+    {
+      "where": "red-before-metadata-7-receipt.json.raw",
+      "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-before-metadata-7.log",
+      "identity": {
+        "bytes": 372,
+        "sha256": "1c7f849fbf69eeafbc32b149725885f28946c2728c9eb88718a2edcf314e1b88",
+        "gitBlob": "4fae9729a55e3202b79d0658abaf25745f9d8cf8"
+      },
+      "joined": true
+    },
+    {
+      "where": "red-before-metadata-7-receipt.json.rawStderr",
+      "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-before-metadata-7.stderr",
+      "identity": {
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+      },
+      "joined": true
+    },
+    {
+      "where": "red-native-metadata-8-receipt.json.raw",
+      "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-native-metadata-8.log",
+      "identity": {
+        "bytes": 391,
+        "sha256": "5feb3118fc317ab05ced98da5dc9ec1666e4b9fc4bb729c04a752b7910fea838",
+        "gitBlob": "eb64ef76ecd02a50b3e389cc385eea743fe13cb4"
+      },
+      "joined": true
+    },
+    {
+      "where": "red-native-metadata-8-receipt.json.rawStderr",
+      "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-native-metadata-8.stderr",
+      "identity": {
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+      },
+      "joined": true
+    },
+    {
+      "where": "red-native-route-admission.json.metadataReceipt",
+      "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-native-metadata-8-receipt.json",
+      "identity": {
+        "bytes": 2699,
+        "sha256": "c33a6010ca5b6fe9aa2f5504e71148485e34146783fec491d01bf37b7661f24b",
+        "gitBlob": "5a279e4a0dc17d8cf65f05e6cdceba8ef9890bc4"
+      },
+      "joined": true
+    },
+    {
+      "where": "red-native-route-admission.json.record.raw",
+      "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-native-metadata-8.log",
+      "identity": {
+        "bytes": 391,
+        "sha256": "5feb3118fc317ab05ced98da5dc9ec1666e4b9fc4bb729c04a752b7910fea838",
+        "gitBlob": "eb64ef76ecd02a50b3e389cc385eea743fe13cb4"
+      },
+      "joined": true
+    },
+    {
+      "where": "red-native-route-admission.json.record.rawStderr",
+      "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-native-metadata-8.stderr",
+      "identity": {
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+      },
+      "joined": true
+    },
+    {
+      "where": "red-node-1-receipt.json.raw",
+      "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-node-1.log",
+      "identity": {
+        "bytes": 17331,
+        "sha256": "6b51be634a1c4486ad7e487529943747c5a79faf32e02ffbe70cec56bb7026f4",
+        "gitBlob": "c6cf3d83a698a4a63e85e8f8ff33471a30916ffe"
+      },
+      "joined": true
+    },
+    {
+      "where": "red-node-semantics.json.raw",
+      "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-node-1.log",
+      "identity": {
+        "bytes": 17331,
+        "sha256": "6b51be634a1c4486ad7e487529943747c5a79faf32e02ffbe70cec56bb7026f4",
+        "gitBlob": "c6cf3d83a698a4a63e85e8f8ff33471a30916ffe"
+      },
+      "joined": true
+    },
+    {
+      "where": "red-renderer-1-receipt.json.raw",
+      "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-renderer-1.log",
+      "identity": {
+        "bytes": 12192,
+        "sha256": "26ff4a883cebd3a6eeaee658b850b290a5942a45db14357df5387d69b6554de4",
+        "gitBlob": "bc4499f3ed88260418bf227fab9f5c327eaf5d46"
+      },
+      "joined": true
+    },
+    {
+      "where": "red-renderer-output-ownership.json.nodeTmpGate",
+      "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-node-tmp-gate.json",
+      "identity": {
+        "bytes": 349,
+        "sha256": "e7ab4e295e2a885af926247f0dcd67ea03bcffd483d899d4e0c16a3a198e05b7",
+        "gitBlob": "c526ecce61873ead31fbc5c8a17c2855463fe48a"
+      },
+      "joined": true
+    },
+    {
+      "where": "red-renderer-semantics.json.raw",
+      "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-renderer-1.log",
+      "identity": {
+        "bytes": 12192,
+        "sha256": "26ff4a883cebd3a6eeaee658b850b290a5942a45db14357df5387d69b6554de4",
+        "gitBlob": "bc4499f3ed88260418bf227fab9f5c327eaf5d46"
+      },
+      "joined": true
+    },
+    {
+      "where": "red-renderer-semantics.json.result",
+      "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/renderer-results.json",
+      "identity": {
+        "bytes": 29580,
+        "sha256": "29625263630c0baa70b120a8bc38bee28e21830107ba2fd79f9e545eeab0b05d",
+        "gitBlob": "3b6051dfcf671de4ccd687b4ea49765ddaac44b3"
+      },
+      "joined": true
+    }
+  ],
+  "currentLargeInstanceJoins": [
+    {
+      "identity": {
+        "bytes": 400300,
+        "sha256": "bdd4a09c5c64a85736b19c40eea927536b9dece4c968a19bed5c95150216ad85",
+        "gitBlob": "224ff561f65772393140302de26b584bf08b06d9"
+      },
+      "instances": [
+        {
+          "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-after-compiled.json",
+          "name": "red-after-compiled.json",
+          "mode": 420,
+          "device": 27,
+          "inode": 3969702,
+          "uid": 1000,
+          "gid": 1000,
+          "bytes": 400300,
+          "sha256": "bdd4a09c5c64a85736b19c40eea927536b9dece4c968a19bed5c95150216ad85",
+          "gitBlob": "224ff561f65772393140302de26b584bf08b06d9"
+        },
+        {
+          "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-before-compiled.json",
+          "name": "red-before-compiled.json",
+          "mode": 420,
+          "device": 27,
+          "inode": 3969282,
+          "uid": 1000,
+          "gid": 1000,
+          "bytes": 400300,
+          "sha256": "bdd4a09c5c64a85736b19c40eea927536b9dece4c968a19bed5c95150216ad85",
+          "gitBlob": "224ff561f65772393140302de26b584bf08b06d9"
+        }
+      ],
+      "acceptedFullBodyProof": {
+        "bytes": 8914,
+        "sha256": "e322edbfc50d1706db7838681e2d65abf4648180c4a4da3ba418d94fff5eac44",
+        "gitBlob": "aad388d47bc80c4dd09789ee76238ebd935e8cdd"
+      },
+      "acceptedFullGuardReview": {
+        "bytes": 261789,
+        "sha256": "d9e6e50a0678babd3d54551af2951fb57825b0fc51fa1e7682def558a52bfd32",
+        "gitBlob": "38bd0eb98cb500274a477c1c02bfef0156bee7d6"
+      },
+      "reconstructedAgainByThisReviewer": false
+    },
+    {
+      "identity": {
+        "bytes": 39168001,
+        "sha256": "d1783002ecd168fcfb0b691addc2d0a3486d6cc1c10859d0c775034fec27659b",
+        "gitBlob": "8fb1a488520c95d3651098a81ad0160c6b049cf7"
+      },
+      "instances": [
+        {
+          "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-after-dependencies.json",
+          "name": "red-after-dependencies.json",
+          "mode": 420,
+          "device": 27,
+          "inode": 3969701,
+          "uid": 1000,
+          "gid": 1000,
+          "bytes": 39168001,
+          "sha256": "d1783002ecd168fcfb0b691addc2d0a3486d6cc1c10859d0c775034fec27659b",
+          "gitBlob": "8fb1a488520c95d3651098a81ad0160c6b049cf7"
+        },
+        {
+          "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-before-dependencies.json",
+          "name": "red-before-dependencies.json",
+          "mode": 420,
+          "device": 27,
+          "inode": 3969281,
+          "uid": 1000,
+          "gid": 1000,
+          "bytes": 39168001,
+          "sha256": "d1783002ecd168fcfb0b691addc2d0a3486d6cc1c10859d0c775034fec27659b",
+          "gitBlob": "8fb1a488520c95d3651098a81ad0160c6b049cf7"
+        }
+      ],
+      "acceptedFullBodyProof": {
+        "bytes": 8914,
+        "sha256": "e322edbfc50d1706db7838681e2d65abf4648180c4a4da3ba418d94fff5eac44",
+        "gitBlob": "aad388d47bc80c4dd09789ee76238ebd935e8cdd"
+      },
+      "acceptedFullGuardReview": {
+        "bytes": 261789,
+        "sha256": "d9e6e50a0678babd3d54551af2951fb57825b0fc51fa1e7682def558a52bfd32",
+        "gitBlob": "38bd0eb98cb500274a477c1c02bfef0156bee7d6"
+      },
+      "reconstructedAgainByThisReviewer": false
+    },
+    {
+      "identity": {
+        "bytes": 1527575,
+        "sha256": "685f26dde16dc6e1032335d05a227d1ced76cef07db52ec9dae03df1ddcf9e8f",
+        "gitBlob": "43b9f4fd5f6ce74221ee18fdb1765839397af6ec"
+      },
+      "instances": [
+        {
+          "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-after-metadata-11.log",
+          "name": "red-after-metadata-11.log",
+          "mode": 420,
+          "device": 27,
+          "inode": 3969322,
+          "uid": 1000,
+          "gid": 1000,
+          "bytes": 1527575,
+          "sha256": "685f26dde16dc6e1032335d05a227d1ced76cef07db52ec9dae03df1ddcf9e8f",
+          "gitBlob": "43b9f4fd5f6ce74221ee18fdb1765839397af6ec"
+        },
+        {
+          "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-before-metadata-3.log",
+          "name": "red-before-metadata-3.log",
+          "mode": 420,
+          "device": 27,
+          "inode": 3969261,
+          "uid": 1000,
+          "gid": 1000,
+          "bytes": 1527575,
+          "sha256": "685f26dde16dc6e1032335d05a227d1ced76cef07db52ec9dae03df1ddcf9e8f",
+          "gitBlob": "43b9f4fd5f6ce74221ee18fdb1765839397af6ec"
+        }
+      ],
+      "acceptedFullBodyProof": {
+        "bytes": 8914,
+        "sha256": "e322edbfc50d1706db7838681e2d65abf4648180c4a4da3ba418d94fff5eac44",
+        "gitBlob": "aad388d47bc80c4dd09789ee76238ebd935e8cdd"
+      },
+      "acceptedFullGuardReview": {
+        "bytes": 261789,
+        "sha256": "d9e6e50a0678babd3d54551af2951fb57825b0fc51fa1e7682def558a52bfd32",
+        "gitBlob": "38bd0eb98cb500274a477c1c02bfef0156bee7d6"
+      },
+      "reconstructedAgainByThisReviewer": false
+    },
+    {
+      "identity": {
+        "bytes": 1492874,
+        "sha256": "07ccf6af3b7849e0f8259ffb9164537ab8f26e83f4a112cfd06c66a1f0c0b8db",
+        "gitBlob": "bb3caf365d224fcdddc50ea0dab2b751cd54f6d8"
+      },
+      "instances": [
+        {
+          "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-after-metadata-14.log",
+          "name": "red-after-metadata-14.log",
+          "mode": 420,
+          "device": 27,
+          "inode": 3969334,
+          "uid": 1000,
+          "gid": 1000,
+          "bytes": 1492874,
+          "sha256": "07ccf6af3b7849e0f8259ffb9164537ab8f26e83f4a112cfd06c66a1f0c0b8db",
+          "gitBlob": "bb3caf365d224fcdddc50ea0dab2b751cd54f6d8"
+        },
+        {
+          "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-before-metadata-6.log",
+          "name": "red-before-metadata-6.log",
+          "mode": 420,
+          "device": 27,
+          "inode": 3969273,
+          "uid": 1000,
+          "gid": 1000,
+          "bytes": 1492874,
+          "sha256": "07ccf6af3b7849e0f8259ffb9164537ab8f26e83f4a112cfd06c66a1f0c0b8db",
+          "gitBlob": "bb3caf365d224fcdddc50ea0dab2b751cd54f6d8"
+        }
+      ],
+      "acceptedFullBodyProof": {
+        "bytes": 8914,
+        "sha256": "e322edbfc50d1706db7838681e2d65abf4648180c4a4da3ba418d94fff5eac44",
+        "gitBlob": "aad388d47bc80c4dd09789ee76238ebd935e8cdd"
+      },
+      "acceptedFullGuardReview": {
+        "bytes": 261789,
+        "sha256": "d9e6e50a0678babd3d54551af2951fb57825b0fc51fa1e7682def558a52bfd32",
+        "gitBlob": "38bd0eb98cb500274a477c1c02bfef0156bee7d6"
+      },
+      "reconstructedAgainByThisReviewer": false
+    },
+    {
+      "identity": {
+        "bytes": 2478745,
+        "sha256": "238e6f8dc2cd570845441ff537242103449056bcb68ad7089e169e2d530840c5",
+        "gitBlob": "499fe05449dfd5b2e4e46d4a4629c24b2fcc696d"
+      },
+      "instances": [
+        {
+          "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-after-source.json",
+          "name": "red-after-source.json",
+          "mode": 420,
+          "device": 27,
+          "inode": 3969700,
+          "uid": 1000,
+          "gid": 1000,
+          "bytes": 2478745,
+          "sha256": "238e6f8dc2cd570845441ff537242103449056bcb68ad7089e169e2d530840c5",
+          "gitBlob": "499fe05449dfd5b2e4e46d4a4629c24b2fcc696d"
+        },
+        {
+          "path": "/workspace/scratch/c714-post-transport-20261117/evidence/red/red-before-source.json",
+          "name": "red-before-source.json",
+          "mode": 420,
+          "device": 27,
+          "inode": 3969280,
+          "uid": 1000,
+          "gid": 1000,
+          "bytes": 2478745,
+          "sha256": "238e6f8dc2cd570845441ff537242103449056bcb68ad7089e169e2d530840c5",
+          "gitBlob": "499fe05449dfd5b2e4e46d4a4629c24b2fcc696d"
+        }
+      ],
+      "acceptedFullBodyProof": {
+        "bytes": 8914,
+        "sha256": "e322edbfc50d1706db7838681e2d65abf4648180c4a4da3ba418d94fff5eac44",
+        "gitBlob": "aad388d47bc80c4dd09789ee76238ebd935e8cdd"
+      },
+      "acceptedFullGuardReview": {
+        "bytes": 261789,
+        "sha256": "d9e6e50a0678babd3d54551af2951fb57825b0fc51fa1e7682def558a52bfd32",
+        "gitBlob": "38bd0eb98cb500274a477c1c02bfef0156bee7d6"
+      },
+      "reconstructedAgainByThisReviewer": false
+    }
+  ],
+  "acceptedRuntimeReviewJoins": {
+    "root": {
+      "identity": {
+        "bytes": 50772,
+        "sha256": "b708a3eb026e85f1a733cbb1e4836c7e5cabf571bb3c68fbc74c9ac2a719c882",
+        "gitBlob": "19fcd35a9e8783dfa28c824d23a8df510209ca80"
+      },
+      "checks": 227,
+      "allPassed": true,
+      "fullBodyReadAndRehashed": true,
+      "exactSubjectsJoined": true
+    },
+    "guard": {
+      "identity": {
+        "bytes": 261789,
+        "sha256": "d9e6e50a0678babd3d54551af2951fb57825b0fc51fa1e7682def558a52bfd32",
+        "gitBlob": "38bd0eb98cb500274a477c1c02bfef0156bee7d6"
+      },
+      "checks": 123,
+      "allPassed": true,
+      "fullBodyReadAndRehashed": true,
+      "exactSubjectsJoined": true,
+      "fullInputAndLifetimeScope": true
+    },
+    "semantic": {
+      "identity": {
+        "bytes": 229314,
+        "sha256": "2e05bcc76671b35883fc04e072d46e0961c86c2d293de2582e0e0fe0196692da",
+        "gitBlob": "3cddc2bdb141d81c87c97d6059c56278b1118a55"
+      },
+      "checks": 263,
+      "allPassed": true,
+      "fullBodyReadAndRehashed": true,
+      "exactSubjectsJoined": true
+    },
+    "fullLargeInputJoin": {
+      "identity": {
+        "bytes": 8914,
+        "sha256": "e322edbfc50d1706db7838681e2d65abf4648180c4a4da3ba418d94fff5eac44",
+        "gitBlob": "aad388d47bc80c4dd09789ee76238ebd935e8cdd"
+      },
+      "fullReportReadAndRehashed": true,
+      "completeUniqueBodyBytes": 45067495,
+      "newActualInstances": 10,
+      "exactIdentityAndInstanceJoins": true,
+      "fullLargeBodiesReconstructedAgainByThisReviewer": false
+    }
+  },
+  "observedOutcome": {
+    "sessionId": 53054,
+    "invocationCount": 1,
+    "observedOuterExit": 0,
+    "finalToolChunk": "d46e14",
+    "primaryChildExits": {
+      "node": 1,
+      "renderer": 1
+    },
+    "phaseReceipt": {
+      "bytes": 139946,
+      "sha256": "51867690fb9a707141b01ee3dff6d42d082a5ba7aceffd1f4f43eec8a428c9be",
+      "gitBlob": "bcc31247c2752b2017edba9adcd129a1c83cdd32"
+    },
+    "nodeSummary": {
+      "tests": 139,
+      "suites": 0,
+      "pass": 134,
+      "fail": 5,
+      "cancelled": 0,
+      "skipped": 0,
+      "todo": 0,
+      "durationMs": 11855.818035
+    },
+    "rendererSummary": {
+      "numTotalTests": 85,
+      "numPassedTests": 82,
+      "numFailedTests": 3,
+      "numPendingTests": 0,
+      "numTodoTests": 0,
+      "numTotalTestSuites": 2,
+      "numPassedTestSuites": 0,
+      "numFailedTestSuites": 2,
+      "numPendingTestSuites": 0
+    },
+    "allOriginal133NodeAnd80RendererPassed": true,
+    "positiveControls137And84And85Passed": true,
+    "fullRuntimeInputBoundaries": {
+      "before": "COMPLETE",
+      "after": "COMPLETE"
+    },
+    "fullRuntimeInputsPreserved": true,
+    "capturedCleanup": {
+      "unknownPrimaryLaunches": [],
+      "capturedSessionMembersAfter": [],
+      "newTestTempsRemaining": [],
+      "taskTmpEntriesAfter": [],
+      "viteTempAbsent": true,
+      "nodeDebtGatePassed": true,
+      "scope": "Captured primary sessions/groups and exact owned phase outputs; metadata sessions checked individually. No universal escaped-child/native custody claim."
+    },
+    "remainingBranchesInFailedCasesQualified": false,
+    "old64038": {
+      "classification": "REFUSED/SPENT",
+      "observedOuter": 2,
+      "replayed": false
+    },
+    "old54393": {
+      "classification": "UNKNOWN/INCOMPLETE/SPENT",
+      "observedOuter": null,
+      "termination": null,
+      "executorContinuity": null,
+      "cleanupQualified": false,
+      "replayed": false,
+      "partialResume": false
+    },
+    "qualification": "Expected finite TEST RED only. Primary exit1 is not mistaken for failed supervisor accounting; separate supervisor outer0 is retained. Failed cases qualify reached first assertions only; no GREEN/GUI/native/vendor/fullE2E claim."
+  },
+  "chronology": {
+    "controlPublicationGate": "2026-11-17 00:55:44 UTC",
+    "exclusiveStagingStartedAt": "2026-11-17T00:59:17.846988+00:00",
+    "exclusiveStagingFinishedAt": "2026-11-17T00:59:18.316678+00:00",
+    "newRedStartedAt": "2026-11-17T01:04:39.625747+00:00",
+    "newRedFinishedAt": "2026-11-17T01:06:49.839076+00:00",
+    "reviewsClosedAt": "2026-11-17 01:24:03 UTC",
+    "outcomeCommitAt": "2026-11-17T01:24:19Z",
+    "independentActualAt": "2026-11-17 01:39:08 UTC",
+    "strictRequiredOrderJoined": true
+  },
+  "parallelRootActual": {
+    "identity": {
+      "bytes": 55348,
+      "sha256": "bbe57a54a25a38bee1d4f4de5fc1d036d81f6b2ecdb40b3d0088b274de6656c9",
+      "gitBlob": "9218839ef55406b01267605c040bc586c7d443be"
+    },
+    "fullBodyReadAndRehashed": true,
+    "actualCommit": "77993819c233737f1e2b4c11c8ca1a5d360bcbe3",
+    "actualTree": "ada3f27db78fabc17a91e3904d41b8bc547c6dca",
+    "actualDocsTree": "a1b92f625b548e7384ef13e0358c420d1e1f136d",
+    "soleParent": "1eff2aef92a5952618cb600604160c3a3024b2dd",
+    "subject": {
+      "runner": {
+        "bytes": 104131,
+        "sha256": "20958434e304d6d67657abad910d7c891f5a9086164e73d19cc8764348fc83f5",
+        "gitBlob": "c81f72a8ed14a93b3557fdf889f9ad6cebc25140"
+      },
+      "binding": {
+        "bytes": 6399172,
+        "sha256": "be265da9b130091d251295f937a7ab09b1db0e03f2c4a02d985839134e0379ec",
+        "gitBlob": "9f9ddcf0f9f62cce1a31f204ae786a8e2d3d2267"
+      },
+      "packet": {
+        "bytes": 441196,
+        "sha256": "ebce8cffde715538fc340a07304678a0c563700c72b3eea3de035dd86b7fca5f",
+        "gitBlob": "ca4e84b2c1a41a1c848a62c4c3ad6be1a8af65c8"
+      },
+      "outer": {
+        "bytes": 13970,
+        "sha256": "341064fd92ead2afed314db220e095bae77a2b96af47580b30c35f495a0e80cd",
+        "gitBlob": "947cf5276c207149f87d67dd06a175b49c9f1b5b"
+      },
+      "phaseReceipt": {
+        "bytes": 139946,
+        "sha256": "51867690fb9a707141b01ee3dff6d42d082a5ba7aceffd1f4f43eec8a428c9be",
+        "gitBlob": "bcc31247c2752b2017edba9adcd129a1c83cdd32"
+      }
+    },
+    "all127ChecksPassed": true,
+    "all33CurrentPointerJoinsPassed": true,
+    "all15ActualReadbacksExactlyEqual": true,
+    "exactCompleteDeltaAndCensusInheritanceEqual": true,
+    "failedChecks": [],
+    "unresolvedPointers": [],
+    "unresolvedBlockers": []
+  },
+  "checks": [
+    {
+      "name": "Exact current commit, branch ref, tree and sole parent",
+      "passed": true
+    },
+    {
+      "name": "Full root/docs tree authority without truncation",
+      "passed": true
+    },
+    {
+      "name": "All 53 non-doc root entries unchanged",
+      "passed": true
+    },
+    {
+      "name": "Complete docs leaf censuses",
+      "passed": true
+    },
+    {
+      "name": "Same doc directory paths and modes",
+      "passed": true
+    },
+    {
+      "name": "Exact 15-doc delta, 12 additions, 3 modifications, no deletion/mode change",
+      "passed": true
+    },
+    {
+      "name": "Actual delta equals complete publication manifest file set",
+      "passed": true
+    },
+    {
+      "name": "Full actual file docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-post-transport-recovery-control-actual-root-publication-20261117.json",
+      "passed": true
+    },
+    {
+      "name": "Full actual file docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-post-transport-recovery-control-actual-independent-publication-20261117.json",
+      "passed": true
+    },
+    {
+      "name": "Full actual file docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-post-transport-recovery-staging-intent-20261117.json",
+      "passed": true
+    },
+    {
+      "name": "Full actual file docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-post-transport-recovery-staging-receipt-20261117.json",
+      "passed": true
+    },
+    {
+      "name": "Full actual file docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-post-transport-recovery-staging-outer-20261117.json",
+      "passed": true
+    },
+    {
+      "name": "Full actual file docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-post-transport-recovery-red-outer-20261117.json",
+      "passed": true
+    },
+    {
+      "name": "Full actual file docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-post-transport-recovery-red-evidence-packet-20261117.json",
+      "passed": true
+    },
+    {
+      "name": "Full actual file docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-post-transport-recovery-red-full-input-reconstruction-join-20261117.json",
+      "passed": true
+    },
+    {
+      "name": "Full actual file docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-post-transport-recovery-red-root-review-20261117.json",
+      "passed": true
+    },
+    {
+      "name": "Full actual file docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-post-transport-recovery-red-guard-review-20261117.json",
+      "passed": true
+    },
+    {
+      "name": "Full actual file docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-post-transport-recovery-red-semantic-review-20261117.json",
+      "passed": true
+    },
+    {
+      "name": "Full actual file docs/plans/provider-migration/frontend-parity-2026-11-12/29-reconciled-acceptance-and-custody-followups-2026-11-15.md",
+      "passed": true
+    },
+    {
+      "name": "Full actual file docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/continuation-status-20261116.md",
+      "passed": true
+    },
+    {
+      "name": "Full actual file docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1213-retention-catalog-20261116.json",
+      "passed": true
+    },
+    {
+      "name": "Full actual file docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-post-transport-recovery-red-publication-manifest-20261117.json",
+      "passed": true
+    },
+    {
+      "name": "Complete parent modified body docs/plans/provider-migration/frontend-parity-2026-11-12/29-reconciled-acceptance-and-custody-followups-2026-11-15.md",
+      "passed": true
+    },
+    {
+      "name": "Complete parent modified body docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/continuation-status-20261116.md",
+      "passed": true
+    },
+    {
+      "name": "Complete parent modified body docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1213-retention-catalog-20261116.json",
+      "passed": true
+    },
+    {
+      "name": "Exact complete Markdown parent prefix docs/plans/provider-migration/frontend-parity-2026-11-12/29-reconciled-acceptance-and-custody-followups-2026-11-15.md",
+      "passed": true
+    },
+    {
+      "name": "Exact complete Markdown parent prefix docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/continuation-status-20261116.md",
+      "passed": true
+    },
+    {
+      "name": "Entire current parent stage archived without retrospective edits",
+      "passed": true
+    },
+    {
+      "name": "Unchanged parent catalog field kind",
+      "passed": true
+    },
+    {
+      "name": "Unchanged parent catalog field schemaVersion",
+      "passed": true
+    },
+    {
+      "name": "Unchanged parent catalog field parentCandidate",
+      "passed": true
+    },
+    {
+      "name": "Unchanged parent catalog field source",
+      "passed": true
+    },
+    {
+      "name": "Unchanged parent catalog field baselineIndex",
+      "passed": true
+    },
+    {
+      "name": "Unchanged parent catalog field baselineActualPublication",
+      "passed": true
+    },
+    {
+      "name": "Unchanged parent catalog field baselineIndependentPublication",
+      "passed": true
+    },
+    {
+      "name": "Unchanged parent catalog field late06ActualPublication",
+      "passed": true
+    },
+    {
+      "name": "Unchanged parent catalog field late06IndependentPublication",
+      "passed": true
+    },
+    {
+      "name": "Unchanged parent catalog field bundles",
+      "passed": true
+    },
+    {
+      "name": "Unchanged parent catalog field conversationBinding",
+      "passed": true
+    },
+    {
+      "name": "Unchanged parent catalog field localEnvironment",
+      "passed": true
+    },
+    {
+      "name": "Unchanged parent catalog field remainingRuntimeBudgets",
+      "passed": true
+    },
+    {
+      "name": "Unchanged parent catalog field totals",
+      "passed": true
+    },
+    {
+      "name": "Unchanged parent catalog field incomingDeliveryAudit",
+      "passed": true
+    },
+    {
+      "name": "Unchanged parent catalog field environmentObservations",
+      "passed": true
+    },
+    {
+      "name": "Unchanged parent catalog field historicalLocalEnvironment",
+      "passed": true
+    },
+    {
+      "name": "Unchanged parent catalog field freshConversationBinding",
+      "passed": true
+    },
+    {
+      "name": "Unchanged parent catalog field originalCiFinal",
+      "passed": true
+    },
+    {
+      "name": "Unchanged parent catalog field freshRecoveryCheckpoint",
+      "passed": true
+    },
+    {
+      "name": "Unchanged parent catalog field originalArtifactAnalyses",
+      "passed": true
+    },
+    {
+      "name": "Unchanged parent catalog field totalsQualification",
+      "passed": true
+    },
+    {
+      "name": "Unchanged parent catalog field freshRecoveryEvidenceFiles",
+      "passed": true
+    },
+    {
+      "name": "Unchanged parent catalog field freshRunnerR2",
+      "passed": true
+    },
+    {
+      "name": "Unchanged parent catalog field currentConversationStage",
+      "passed": true
+    },
+    {
+      "name": "Unchanged parent catalog field originalP09ArtifactReview",
+      "passed": true
+    },
+    {
+      "name": "Unchanged parent catalog field priorConversationStageAtProducerPublication",
+      "passed": true
+    },
+    {
+      "name": "Unchanged parent catalog field crossCloseProspectiveScope",
+      "passed": true
+    },
+    {
+      "name": "Unchanged parent catalog field incomingDeliveryUpdates",
+      "passed": true
+    },
+    {
+      "name": "Unchanged parent catalog field currentCrossCloseStage",
+      "passed": true
+    },
+    {
+      "name": "Unchanged parent catalog field priorCrossCloseStageAtTestPublication",
+      "passed": true
+    },
+    {
+      "name": "Unchanged parent catalog field priorCrossCloseStageAtRedControlsPublication",
+      "passed": true
+    },
+    {
+      "name": "Unchanged parent catalog field priorCrossCloseStageAtGreenBindingPublication",
+      "passed": true
+    },
+    {
+      "name": "Unchanged parent catalog field priorCrossCloseStageAtRecoveryR1Publication",
+      "passed": true
+    },
+    {
+      "name": "Unchanged parent catalog field crossValidationRecoveryEvidenceFiles",
+      "passed": true
+    },
+    {
+      "name": "Unchanged parent catalog field incomingDeliveryLatestSourceAssessment",
+      "passed": true
+    },
+    {
+      "name": "Unchanged parent catalog field priorCrossCloseStageAtRecoveryControlsPublication",
+      "passed": true
+    },
+    {
+      "name": "Unchanged parent catalog field crossValidationRecoveryControlEvidenceFiles",
+      "passed": true
+    },
+    {
+      "name": "Unchanged parent catalog field priorCrossCloseStageAtRecoveryCompletion",
+      "passed": true
+    },
+    {
+      "name": "Unchanged parent catalog field crossValidationRecoveryCompletionEvidenceFiles",
+      "passed": true
+    },
+    {
+      "name": "Unchanged parent catalog field combined139Renderer85R1EvidenceFiles",
+      "passed": true
+    },
+    {
+      "name": "Unchanged parent catalog field priorCombinedNodeRendererStageAtTestPublication",
+      "passed": true
+    },
+    {
+      "name": "Unchanged parent catalog field combined139Renderer85TestEvidenceFiles",
+      "passed": true
+    },
+    {
+      "name": "Unchanged parent catalog field priorCombinedNodeRendererStageAtControlsPublication",
+      "passed": true
+    },
+    {
+      "name": "Unchanged parent catalog field combined139Renderer85ControlEvidenceFiles",
+      "passed": true
+    },
+    {
+      "name": "Unchanged parent catalog field priorCombinedNodeRendererStageAtTestMaterialization",
+      "passed": true
+    },
+    {
+      "name": "Unchanged parent catalog field combined139Renderer85TestMaterializationEvidenceFiles",
+      "passed": true
+    },
+    {
+      "name": "Unchanged parent catalog field priorCombinedNodeRendererStageAtRefusedRed",
+      "passed": true
+    },
+    {
+      "name": "Unchanged parent catalog field combined139Renderer85RefusedRedEvidenceFiles",
+      "passed": true
+    },
+    {
+      "name": "Unchanged parent catalog field incomingDeliveryAtRefusedCombinedRed",
+      "passed": true
+    },
+    {
+      "name": "Unchanged parent catalog field priorCombinedNodeRendererStageAtCorrectedTitleR1",
+      "passed": true
+    },
+    {
+      "name": "Unchanged parent catalog field combined139Renderer85CorrectedTitleR1EvidenceFiles",
+      "passed": true
+    },
+    {
+      "name": "Unchanged parent catalog field incomingDSourceFollowup",
+      "passed": true
+    },
+    {
+      "name": "Unchanged parent catalog field canonicalDependencyFollowup",
+      "passed": true
+    },
+    {
+      "name": "Unchanged parent catalog field priorCombinedNodeRendererStageAtCorrectedControls",
+      "passed": true
+    },
+    {
+      "name": "Unchanged parent catalog field combined139Renderer85CorrectedControlEvidenceFiles",
+      "passed": true
+    },
+    {
+      "name": "Unchanged parent catalog field priorCombinedNodeRendererStageAtCorrectedRedIncomplete",
+      "passed": true
+    },
+    {
+      "name": "Unchanged parent catalog field combined139Renderer85CorrectedRedIncompleteEvidenceFiles",
+      "passed": true
+    },
+    {
+      "name": "Unchanged parent catalog field priorCombinedNodeRendererStageAtPostTransportRecoveryR1",
+      "passed": true
+    },
+    {
+      "name": "Unchanged parent catalog field combined139Renderer85PostTransportRecoveryR1EvidenceFiles",
+      "passed": true
+    },
+    {
+      "name": "Unchanged parent catalog field priorCombinedNodeRendererStageAtPostTransportRecoveryControls",
+      "passed": true
+    },
+    {
+      "name": "Unchanged parent catalog field combined139Renderer85PostTransportRecoveryControlEvidenceFiles",
+      "passed": true
+    },
+    {
+      "name": "Exactly 62 other catalog fields preserved",
+      "passed": true
+    },
+    {
+      "name": "Only selected archive and evidence-map fields added",
+      "passed": true
+    },
+    {
+      "name": "All 27 complete original bundles and totals identical",
+      "passed": true
+    },
+    {
+      "name": "Current catalog evidence map equals exact 11 manifest entries",
+      "passed": true
+    },
+    {
+      "name": "Manifest names actual parent/tree/census/delta",
+      "passed": true
+    },
+    {
+      "name": "Full root actual report exact current publication",
+      "passed": true
+    },
+    {
+      "name": "Full root actual 127 checks and 33 pointer joins accepted",
+      "passed": true
+    },
+    {
+      "name": "Root complete 15 actual body readbacks equal this independent read",
+      "passed": true
+    },
+    {
+      "name": "Root complete tree delta and unchanged-root inheritance match",
+      "passed": true
+    },
+    {
+      "name": "Current pointer manifest/catalog runner",
+      "passed": true
+    },
+    {
+      "name": "Current pointer manifest/catalog binding",
+      "passed": true
+    },
+    {
+      "name": "Current pointer manifest/catalog packet",
+      "passed": true
+    },
+    {
+      "name": "Current pointer manifest/catalog outer",
+      "passed": true
+    },
+    {
+      "name": "Current pointer manifest/catalog phase",
+      "passed": true
+    },
+    {
+      "name": "Current pointer current accepted root review",
+      "passed": true
+    },
+    {
+      "name": "Current pointer current accepted Guard review",
+      "passed": true
+    },
+    {
+      "name": "Current pointer current accepted semantic review",
+      "passed": true
+    },
+    {
+      "name": "Current pointer current accepted full-input join",
+      "passed": true
+    },
+    {
+      "name": "Current pointer full current control gate",
+      "passed": true
+    },
+    {
+      "name": "Current pointer control root report",
+      "passed": true
+    },
+    {
+      "name": "Current pointer control independent report",
+      "passed": true
+    },
+    {
+      "name": "Prior exact control publication readback authority preserved",
+      "passed": true
+    },
+    {
+      "name": "Current pointer staging intent",
+      "passed": true
+    },
+    {
+      "name": "Current pointer staging receipt",
+      "passed": true
+    },
+    {
+      "name": "Current pointer staging outer",
+      "passed": true
+    },
+    {
+      "name": "Current pointer staging intent control authority",
+      "passed": true
+    },
+    {
+      "name": "Current pointer staging receipt control authority",
+      "passed": true
+    },
+    {
+      "name": "Current pointer staging outer actual receipt",
+      "passed": true
+    },
+    {
+      "name": "Full staging tool result exactly matches complete stage receipt",
+      "passed": true
+    },
+    {
+      "name": "Exclusive source-free staging exact declared outcome",
+      "passed": true
+    },
+    {
+      "name": "Exact eight file readbacks and directory modes",
+      "passed": true
+    },
+    {
+      "name": "Staging intent remains one data-only operation",
+      "passed": true
+    },
+    {
+      "name": "Current pointer RED outer runner",
+      "passed": true
+    },
+    {
+      "name": "Current pointer RED outer binding",
+      "passed": true
+    },
+    {
+      "name": "Current pointer RED outer control gate",
+      "passed": true
+    },
+    {
+      "name": "Current pointer RED outer staging receipt",
+      "passed": true
+    },
+    {
+      "name": "Current pointer RED outer staging result",
+      "passed": true
+    },
+    {
+      "name": "Separate one-shot terminal RED outer zero observed",
+      "passed": true
+    },
+    {
+      "name": "Exact selected RED argv and shell options",
+      "passed": true
+    },
+    {
+      "name": "Current pointer packet outer",
+      "passed": true
+    },
+    {
+      "name": "Current pointer packet runner",
+      "passed": true
+    },
+    {
+      "name": "Current pointer packet binding",
+      "passed": true
+    },
+    {
+      "name": "Current pointer packet publicationGate",
+      "passed": true
+    },
+    {
+      "name": "Current pointer packet stagingReceipt",
+      "passed": true
+    },
+    {
+      "name": "Current pointer packet stagingOuter",
+      "passed": true
+    },
+    {
+      "name": "Current pointer packet stagingIntent",
+      "passed": true
+    },
+    {
+      "name": "Complete actual evidence census 82 files",
+      "passed": true
+    },
+    {
+      "name": "All 72 complete literal bodies rehashed",
+      "passed": true
+    },
+    {
+      "name": "All 10 large file instances exact and disjoint",
+      "passed": true
+    },
+    {
+      "name": "Current pointer current full large reconstruction packet",
+      "passed": true
+    },
+    {
+      "name": "Current pointer current full large reconstruction outer",
+      "passed": true
+    },
+    {
+      "name": "Accepted full-large proof joins every new instance without reusing old outcomes",
+      "passed": true
+    },
+    {
+      "name": "Current pointer current phase complete body",
+      "passed": true
+    },
+    {
+      "name": "Current pointer outer final phase pointer",
+      "passed": true
+    },
+    {
+      "name": "All current runtime JSON pointers resolve exactly",
+      "passed": true
+    },
+    {
+      "name": "Current pointer phase runner",
+      "passed": true
+    },
+    {
+      "name": "Current pointer phase binding",
+      "passed": true
+    },
+    {
+      "name": "Current pointer phase source vector",
+      "passed": true
+    },
+    {
+      "name": "Current pointer phase test identities",
+      "passed": true
+    },
+    {
+      "name": "Phase is one complete expected RED",
+      "passed": true
+    },
+    {
+      "name": "Phase has no failed lifecycle or unaccepted command",
+      "passed": true
+    },
+    {
+      "name": "Separate outer summary equals every phase field it reports",
+      "passed": true
+    },
+    {
+      "name": "Original clocks and empty final cleanup preserved",
+      "passed": true
+    },
+    {
+      "name": "Complete published semantic identities and expected statuses",
+      "passed": true
+    },
+    {
+      "name": "Full Node raw case rows equal retained semantics",
+      "passed": true
+    },
+    {
+      "name": "Root/Guard/semantic complete review checks are accepted",
+      "passed": true
+    },
+    {
+      "name": "Current pointer Guard exact subject runner",
+      "passed": true
+    },
+    {
+      "name": "Current pointer Guard exact subject binding",
+      "passed": true
+    },
+    {
+      "name": "Current pointer Guard exact subject packet",
+      "passed": true
+    },
+    {
+      "name": "Current pointer Guard exact subject outer",
+      "passed": true
+    },
+    {
+      "name": "Current pointer Guard exact subject phaseReceipt",
+      "passed": true
+    },
+    {
+      "name": "Current pointer semantic exact subject runner",
+      "passed": true
+    },
+    {
+      "name": "Current pointer semantic exact subject binding",
+      "passed": true
+    },
+    {
+      "name": "Current pointer semantic exact subject packet",
+      "passed": true
+    },
+    {
+      "name": "Current pointer semantic exact subject outer",
+      "passed": true
+    },
+    {
+      "name": "Current pointer semantic exact subject phaseReceipt",
+      "passed": true
+    },
+    {
+      "name": "Current pointer root runtime report packet",
+      "passed": true
+    },
+    {
+      "name": "Current pointer root runtime report outer",
+      "passed": true
+    },
+    {
+      "name": "Current pointer root runtime report phaseReceipt",
+      "passed": true
+    },
+    {
+      "name": "Current pointer root runtime report largeBodyJoin",
+      "passed": true
+    },
+    {
+      "name": "Current pointer root runtime report controls",
+      "passed": true
+    },
+    {
+      "name": "Current pointer root runtime report binding",
+      "passed": true
+    },
+    {
+      "name": "Source nine binding records and six physical changes remain distinct",
+      "passed": true
+    },
+    {
+      "name": "Source/metadata/dependency/provider preservation is the already accepted runtime proof",
+      "passed": true
+    },
+    {
+      "name": "Chronology control gate then staging then RED then review publication",
+      "passed": true
+    },
+    {
+      "name": "Publication-time producer gate and GREEN remain unclaimed",
+      "passed": true
+    },
+    {
+      "name": "Original refused and unknown attempts stay permanently distinct",
+      "passed": true
+    },
+    {
+      "name": "Full actual parent commit names exact accepted parent root",
+      "passed": true
+    },
+    {
+      "name": "Final branch ref remains exact outcome publication",
+      "passed": true
+    }
+  ],
+  "checkCount": 179,
+  "failedChecks": [],
+  "unresolvedPointers": [],
+  "unresolvedBlockers": [],
+  "producerPostimagesAuthored": false,
+  "producerAuthorshipGateOpenedByReviewer": false,
+  "disposition": "Exact actual published NEW RED outcome accepted. Root must read and rehash this full report and explicitly close the existing producer-authorship gate before authoring the three already selected producer postimages. This report does not authorize staging, application, replay or a new runtime outside the accepted R1/R2 sequence.",
+  "limits": [
+    "Publication-time archived/current-stage statements remain historical snapshots and are not rewritten by this report.",
+    "Original64038 remains refused/spent with observedouter2. Corrected54393 remains unknown/incomplete/spent with no recovered outer/termination/custody/cleanup.",
+    "Full large input reconstruction and fresh physical runtime boundary/lifetime acceptance are reused only through exact accepted complete root and Guard reports for the same new packet, with all10 current instance identities joined.",
+    "No shell, selected runtime, source application, ref update, CI polling/dispatch, real Claude/Codex execution or external message occurred in this review."
+  ]
+}

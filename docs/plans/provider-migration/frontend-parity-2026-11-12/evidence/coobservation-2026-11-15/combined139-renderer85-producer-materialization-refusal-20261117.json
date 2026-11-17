@@ -1,0 +1,120 @@
+{
+  "schemaVersion": 1,
+  "kind": "c714-three-producer-materialization-observed-refusal-envelope",
+  "at": "2026-11-17 02:24:38 UTC",
+  "classification": "REFUSED_BEFORE_SOURCE_ROOT_ADMISSION_SPENT",
+  "selectedSupervisorInvoked": true,
+  "selectedAttemptSpent": true,
+  "replayed": false,
+  "observedOuterSupervisorExit": 1,
+  "finalToolResult": {
+    "chunk_id": "b6a241",
+    "wall_time_seconds": 0.420282123,
+    "exit_code": 1,
+    "original_token_count": 88,
+    "output": "Traceback (most recent call last):\n  File \"/workspace/scratch/c714-post-transport-20261117/controls/combined-runner.py\", line 1098, in <module>\n    assert ROOT.is_dir() and not ROOT.is_symlink() and REPO.is_dir() and not REPO.is_symlink()\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError\n"
+  },
+  "toolObservations": [
+    {
+      "chunk_id": "b6a241",
+      "wall_time_seconds": 0.420282123,
+      "exit_code": 1,
+      "original_token_count": 88,
+      "output": "Traceback (most recent call last):\n  File \"/workspace/scratch/c714-post-transport-20261117/controls/combined-runner.py\", line 1098, in <module>\n    assert ROOT.is_dir() and not ROOT.is_symlink() and REPO.is_dir() and not REPO.is_symlink()\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError\n"
+    }
+  ],
+  "invocationIntent": {
+    "bytes": 3489,
+    "sha256": "042c3ff0a2668e4bae8aeea9c178860eaa055c1739a3b0af5404dbd988f3f528",
+    "gitBlob": "d775e502038485469b3ab2f96569e5fd6b3ee98c"
+  },
+  "argv": [
+    "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python3",
+    "/workspace/scratch/c714-post-transport-20261117/controls/combined-runner.py",
+    "/workspace/scratch/c714-post-transport-20261117/controls/green-binding.json",
+    "56d2bb56ff1135fbc606d375b2b8debd8c5f3feaaa8b61904aa584c4dc38435c",
+    "materialize",
+    "green"
+  ],
+  "runner": {
+    "bytes": 104131,
+    "sha256": "20958434e304d6d67657abad910d7c891f5a9086164e73d19cc8764348fc83f5",
+    "gitBlob": "c81f72a8ed14a93b3557fdf889f9ad6cebc25140"
+  },
+  "binding": {
+    "bytes": 8262787,
+    "sha256": "56d2bb56ff1135fbc606d375b2b8debd8c5f3feaaa8b61904aa584c4dc38435c",
+    "gitBlob": "ea852a05538a51710c13a0cd86a8bd1e3fa1c056"
+  },
+  "r1": {
+    "bytes": 139634,
+    "sha256": "b9524cd8f0f1251f034337f4eb8fbc6606adc1d1c987d993580be06b9a078a75",
+    "gitBlob": "8ce89328171e58ec3e0631dce9607ee7e1eba54e"
+  },
+  "bindingPublication": "9a37963441396d6eddaf507e57e504e21503878c",
+  "publicationGate": {
+    "bytes": 7095,
+    "sha256": "b50ae2a0bb3d61f67716688361cf36ca3e23954f9c37106e6350ddd27997a7bb",
+    "gitBlob": "0bf466496fc388dabe652eb4121229dd981b8f16"
+  },
+  "stagingIntent": {
+    "bytes": 14258,
+    "sha256": "0b26402f1f5a182fb1b482072b5d2ca3e398fa8e033a33695cc5bde6aed2ec99",
+    "gitBlob": "dbf620ef39ab35952f13a7972be1292cc33e4705"
+  },
+  "stagingReceipt": {
+    "bytes": 11570,
+    "sha256": "be71e278da80f76e3c0f3ed62c616cf4262627f237d2cec63829f2310d079c16",
+    "gitBlob": "dd48b15ec75ae4f5d12b84617159f3b152bacdbb"
+  },
+  "stagingOuter": {
+    "bytes": 26602,
+    "sha256": "5820ae411b46929282dd0119d98b65acd79879e7d2043de3eb3ee0418e314670",
+    "gitBlob": "85c0b89906a819d5a93d88fd7613587361ef7c72"
+  },
+  "stagingObservedOuterExit": 0,
+  "failure": {
+    "type": "AssertionError",
+    "runnerLine": 1098,
+    "exactAssertion": "assert ROOT.is_dir() and not ROOT.is_symlink() and REPO.is_dir() and not REPO.is_symlink()",
+    "root": "/workspace/scratch/c714-fresh-20261116",
+    "repo": "/workspace/scratch/c714-fresh-20261116/source",
+    "pointInTimeObservation": {
+      "bytes": 4110,
+      "sha256": "2625f6aec302e50b5fb88183bdadd010bb90b03b4abdd3c4c99bd3ff777e2360",
+      "gitBlob": "814c9c40adec04824d9fa5a52c95e4b52d7d783a"
+    },
+    "rootAndSourceObservedAbsent": true,
+    "causeOfDisappearance": "UNKNOWN; no claim about when, why, or another executor's custody",
+    "phaseRoot": "/workspace/scratch/c714-post-transport-20261117/evidence/materialize-producers",
+    "phaseRootObservedAbsent": true,
+    "phaseReceipt": null
+  },
+  "unreached": {
+    "inputFileLoop": true,
+    "metadataCommands": true,
+    "sourceBeforeBoundary": true,
+    "sourceWrites": true,
+    "sourceAfterBoundary": true,
+    "primaryInvocations": true,
+    "green": true,
+    "validation": true
+  },
+  "sourceWritesBySelectedRunner": 0,
+  "sourceWriteQualification": "Derived from the exact retained runner control flow: line1098 assertion precedes inputFiles reading, output-root/phase creation, every metadata/primary spawn and the materialization write loop. Current absence confirms the selected source root and phase outputs are absent; no full physical source census or preservation claim follows.",
+  "fullSourceBoundaryObserved": false,
+  "fullRuntimeInputsInspected": false,
+  "inputsPreserved": null,
+  "fullRuntimeInputsPreserved": null,
+  "sourceAndSupervisorMetadataPreserved": null,
+  "phaseAccepted": false,
+  "greenAccepted": false,
+  "validationAccepted": false,
+  "wholeE2EQualified": false,
+  "existingHistoricalResults": {
+    "postTransportRed": "The prior complete accepted RED53054 remains historical and complete; it does not supply a current physical input census or authorize a replay.",
+    "original64038": "REFUSED/SPENT observedouter2, unchanged",
+    "corrected54393": "UNKNOWN/INCOMPLETE/SPENT, unchanged"
+  },
+  "requiredNext": "Retain and independently review/publish/read back this refused/spent invocation. Do not re-invoke this materialization, manufacture a phase receipt, restore inputs in place, or run GREEN/validation under this spent local sequence. A separate prospective venue requires its own concrete review and authority; current CI investigation is read-only advisory."
+}

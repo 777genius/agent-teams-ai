@@ -257,3 +257,30 @@ Next: actual control publication readbacks, then one exclusive source-free stagi
 One new full invocation53054 completed with independently observed supervisor outer0. Expected RED: Node139=134pass/5fail, renderer85=82pass/3fail. All old133/80 and positive controls137/84/85 passed. Full fresh inputs before/after matched; all captured processes finalized, Node debt and owned renderer temporary output cleanup were empty. All82 evidence files/90,459,854 bytes are retained with complete lossless large-body joins. No source change or test rematerialization occurred.
 
 Root19fcd35a, Guard38bd0eb9 and semantic3cddc2bd accept the exact RED; root fully read both independent reports. Packetca4e84b2, outer947cf527, phasebcc31247 and full input joinaad388d4 retain the result. Actual outcome publication readbacks remain before any producer authorship. Original64038 stays refused/outer2 and54393 stays unknown/spent. GREEN and broader E2E remain open; no deadline extension, replay, real Claude/Codex execution or source change.
+
+## 2026-11-17 — exact three producer fixes published
+
+After full accepted RED publication readbacks (root9218839e, independente5c2c2d8), the authorship gate closed01:40:00 UTC. Proposalb0d4fb7c and all three exact postimages passed root55/Guard81/semantic97/binding65 source R2 checks. P11 gains two original-cutoff checks after its existing awaits; Review requires current canEditNow===true within its original30_000 wait; the hook removes only !silent && from the current-request finally guard. Full inverses are exact; four fixed producers and both139/85 test bodies stay unchanged. Files remain572/794/2068lines.
+
+Source postimages5026f0ec/8d175c98/c2faa156 and published vector3887991d are retained. No test-workspace source application or GREEN execution occurred. Complete actual source publication readbacks and then a reviewed immutable materialization/GREEN binding precede the selected application and whole GREEN. Accepted RED53054 remains complete; old64038refused/outer2 and54393unknown/spent remain distinct. Broader E2E remains open.
+
+## 2026-11-17 — immutable producer/GREEN controls published
+
+Source publication b83da2bb passed full root/independent actual readbacks; gate63fe55b3 closed 2026-11-17 02:00:49 UTC. Immutable bindingea852a05 uses unchanged runnerc81/R18ce, exact RED before-vectorf644 and published producer after-vector388. Root204/Guard201/semantic252/binding234 complete R2 checks pass, and root read all three full independent reports. All58 inherited review records, both139/85 test bodies and four fixed producers stay identical. The whole8,262,787-byte binding and all3 lossless transport parts are retained.
+
+Full actual binding publication readbacks remain before staging. One source-only materialization and its complete independent acceptance/publication/readbacks must precede GREEN with the same immutable binding bytes. A later validation binding remains gated on accepted/published/read-back GREEN. No source application or new runtime result is asserted. Broader E2E remains open.
+
+## 2026-11-17 — local materialization refused; no source application
+
+After full binding actual readbacks, source-free GREEN-binding staging succeeded with observedouter0. The one subsequent materialize green invocation ended with observedouter1 at unchanged runnerline1098 because its selected ROOT/REPO admission failed. Read-only observation found the selected source root absent; cause/time UNKNOWN. No phase receipt, source/metadata boundary or source write was reached. Refusalba7c846e and path observation814c9c40 are retained; root29/Guard52 checks accept accounting only.
+
+The local attempt is permanently SPENT. Source/input preservation remains unknown/null; GREEN and validation remain UNREACHED. Published source fixes stay retained in Git. Full actual refusal publication readbacks precede a separately selected fresh venue; current CI investigation is advisory only, with no new run/PR/ref selected. Do not replay or restore in place. Whole E2E remains open.
+
+
+## 2026-11-17 03:05:35 UTC — exact fresh isolated Draft CI R1 retained
+
+R1 `7237425e51bda9feb7d0ded4e424fe72745680c1` is accepted by root and all three independent reviews. This publication retains those complete reports plus the 42-workflow/9-source corpus, provider-entry/coverage/event advisories, and the prior local-refusal actual reports/gate. Source and workflow bytes are unchanged; whole139/85 files remain exact.
+
+Next, after full actual-publication root/independent readbacks, externally bind this actual publication commit to the fresh immutable CI-head ref, create the exact ancestor-base ref, read both back, and open the one reviewed Draft PR. Working evidence pushes stay separate, so active CI runs will not be replaced by synchronize. No new ref/PR/run has been created yet.
+
+Expected selection: five active workflow families, two Draft-skipped families; CI's Draft full-qualification failure remains intentional policy. Host Process is not selected. Actual job/test/artifact/cleanup outcomes are unobserved, not PASS. The refused local attempt remains spent, source root unavailable at its last observation, and GREEN/validation remain unexecuted. No broader qualification, real Claude/Codex execution, frozen/old-run mutation, release or merge is selected.

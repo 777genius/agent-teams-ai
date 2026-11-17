@@ -1,0 +1,164 @@
+{
+  "schemaVersion": 1,
+  "kind": "c714-producer-green-binding-actual-publication-gate",
+  "closedAtUtc": "2026-11-17 02:20:32 UTC",
+  "repository": "777genius/agent-teams-ai",
+  "branch": "fix/frontend-parity-coobservation-c714-20261115",
+  "actualCommit": "9a37963441396d6eddaf507e57e504e21503878c",
+  "actualTree": "be29c27287629d087ac7426a6eecc5f42bc750c6",
+  "actualDocsTree": "3e7b4912a1c160546f172802132057ecccc740ab",
+  "soleParent": "b83da2bb72ada6e9fb3a426cb2a7d62b30ec4871",
+  "manifest": {
+    "bytes": 16036,
+    "sha256": "5b003267c6b854ef029ff6c4537a777373dcc3215b3dd69a726974f4e697bc32",
+    "gitBlob": "1d9c7818ab2f44ca398f34502cc29b0e58332a63"
+  },
+  "rootActual": {
+    "bytes": 108913,
+    "sha256": "2cfe625d223e099d1d3642c254b7913ee11e59c0098d2bc20df492169fcd50ff",
+    "gitBlob": "a23b2fbe580fd610653cb1452e48c67a7007c69f"
+  },
+  "independentActual": {
+    "bytes": 153895,
+    "sha256": "3b2b57d8b96388235c4a03271984783a0801032a67cb7530ffdf047cf8922656",
+    "gitBlob": "2aec11137769eef832609bdaeb6acc94774ce005"
+  },
+  "rootReadBothEntireActualReports": true,
+  "independentReadEntireRootActualReport": true,
+  "subject": {
+    "binding": {
+      "bytes": 8262787,
+      "sha256": "56d2bb56ff1135fbc606d375b2b8debd8c5f3feaaa8b61904aa584c4dc38435c",
+      "gitBlob": "ea852a05538a51710c13a0cd86a8bd1e3fa1c056"
+    },
+    "baselineBinding": {
+      "bytes": 6399172,
+      "sha256": "be265da9b130091d251295f937a7ab09b1db0e03f2c4a02d985839134e0379ec",
+      "gitBlob": "9f9ddcf0f9f62cce1a31f204ae786a8e2d3d2267"
+    },
+    "runner": {
+      "bytes": 104131,
+      "sha256": "20958434e304d6d67657abad910d7c891f5a9086164e73d19cc8764348fc83f5",
+      "gitBlob": "c81f72a8ed14a93b3557fdf889f9ad6cebc25140"
+    },
+    "r1": {
+      "bytes": 139634,
+      "sha256": "b9524cd8f0f1251f034337f4eb8fbc6606adc1d1c987d993580be06b9a078a75",
+      "gitBlob": "8ce89328171e58ec3e0631dce9607ee7e1eba54e"
+    },
+    "proposal": {
+      "bytes": 28238,
+      "sha256": "9df788ded4a212545e21352c16a556e9d9d72f221bb0823b45c64efd32839faf",
+      "gitBlob": "486aac82a04b969d6ba14df6929eeddca3e43c59"
+    },
+    "sourcePublicationGate": {
+      "bytes": 6536,
+      "sha256": "1333882f719c6b832223e038043b9b82491d8168e9cf5effa64c12b0cf4741a2",
+      "gitBlob": "63fe55b3f050783b80bda34e3261564600186592"
+    },
+    "publishedSubject": {
+      "commit": "b83da2bb72ada6e9fb3a426cb2a7d62b30ec4871",
+      "tree": "5ef5abf3c6aadd53340f457ea7f77e6b69f84878",
+      "qualification": "Exact published nine-row source vector: only the three independently reviewed producer postimages change; four fixed producers and complete139/85 test bodies remain identical. Publication is not physical application or GREEN acceptance."
+    },
+    "bindingLocalPath": "/workspace/scratch/c714-post-transport-20261117/controls/green-binding.json",
+    "beforeSourceVector": {
+      "bytes": 2118,
+      "sha256": "f2574559a378b3bc537fdcedbde161003c8344a5485dfff9322214f6fda2a90c",
+      "gitBlob": "f6446bdc2bbdb511206c729a1f03717871baea6d"
+    },
+    "sourceVector": {
+      "bytes": 2118,
+      "sha256": "6007c5c7ba2f74c43bd9b73c50cae2319eacbf712c233cc0d67b3efbb4c6894d",
+      "gitBlob": "3887991d5dbd25dbec5c8656e8e03d423ea502b7"
+    },
+    "sourcePins": [
+      {
+        "path": "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+        "mode": "100644",
+        "bytes": 24759,
+        "sha256": "d15b7eea14c0951194310aee34ddc5c477879c759a97a4e2f4e9fce1f956ce9b",
+        "gitBlob": "cf93da72a198dac636658e512093eef7828b5927"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+        "mode": "100644",
+        "bytes": 45795,
+        "sha256": "2c5931f5c7fa1dc8bb7858201c1b8afdbae9683faf4a2ad9fce067f116f3f94b",
+        "gitBlob": "5026f0ec6165bb092717ddc989043848a25081dc"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts",
+        "mode": "100644",
+        "bytes": 36260,
+        "sha256": "26357f37b146fc171bbceadb624bde4a7f4e459d2073ae23a651e757817b2d38",
+        "gitBlob": "4700a0052d3c58a2b3d9bc66e6803220688050fd"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+        "mode": "100644",
+        "bytes": 8457,
+        "sha256": "2da55bb40a5689ace0e922dc4867d7c73278d9a1cd200ea8c4602ca68f82da3b",
+        "gitBlob": "3c7b4bb53f4259ac0795d3f92fb715887acb554f"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-task-review-cycle-ui-smoke.ts",
+        "mode": "100644",
+        "bytes": 33036,
+        "sha256": "4fa52cfad9347065680ef62a3ba6420762408a78a93b77e96ac3a2e16e68bdc9",
+        "gitBlob": "8d175c98158b3bd71192aef7b1929484b2b681b6"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+        "mode": "100644",
+        "bytes": 164965,
+        "sha256": "852bedb85c83dbc4b488dffb4a9ffebbe398adc53e85f5a3cea8ca36b146cbf7",
+        "gitBlob": "896c587e077da56a98a314a175fb3cba0353d6ee"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+        "mode": "100644",
+        "bytes": 28974,
+        "sha256": "7626e479a6662242009cb050e7e5af612a29e4205d62666d15274d5c30f91386",
+        "gitBlob": "ed57cb0fe7d57ef076a591621289eb77667c63ad"
+      },
+      {
+        "path": "src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts",
+        "mode": "100644",
+        "bytes": 74340,
+        "sha256": "647ac5732bfd6b5cb57834adb4ad22c32ee5dfb018a934c92f982efd9daa531c",
+        "gitBlob": "c2faa156015707bc5fbd7f8123a7ffd9c4faa486"
+      },
+      {
+        "path": "test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts",
+        "mode": "100644",
+        "bytes": 187890,
+        "sha256": "b6f11896e60014aac785968d42390afde38716d47de9bba9562522235db048c9",
+        "gitBlob": "76495189c992fcda47cd7a43a0c697190b5acbb3"
+      }
+    ],
+    "testIdentities": {
+      "node": {
+        "bytes": 164965,
+        "sha256": "852bedb85c83dbc4b488dffb4a9ffebbe398adc53e85f5a3cea8ca36b146cbf7",
+        "gitBlob": "896c587e077da56a98a314a175fb3cba0353d6ee"
+      },
+      "renderer": {
+        "bytes": 187890,
+        "sha256": "b6f11896e60014aac785968d42390afde38716d47de9bba9562522235db048c9",
+        "gitBlob": "76495189c992fcda47cd7a43a0c697190b5acbb3"
+      }
+    }
+  },
+  "rootChecks": 135,
+  "independentChecks": 174,
+  "currentPointerJoins": 27,
+  "gateAccepted": true,
+  "allowedNext": "Root source-free exclusive staging of exact green-binding.json in the existing selected control root, then the one selected source-only materialize green under unchanged c81 runner. No existing control/replica/test/runtime input is overwritten. Complete independently accepted materialization/observed outer0/publication/full actual readbacks remain EXTERNAL prerequisites before run green with IDENTICAL binding bytes.",
+  "bindingStaged": false,
+  "sourceWorkingTreeWrites": 0,
+  "materializationInvoked": false,
+  "greenInvoked": false,
+  "validationInvoked": false,
+  "wholeE2EQualified": false
+}
