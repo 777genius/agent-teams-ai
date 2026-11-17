@@ -372,8 +372,11 @@ async function main() {
   assert.equal(existsSync(receiptPath), false);
   const paths = [wholeBroker, actor, scopedBroker].map(path => realpathSync(path));
   const pins = paths.map(path => ({ path, sha256: fileHash(path) }));
-  const sentinel = spawn(paths[1]!, [sourceProvider === undefined ? 'sentinel' : 'source-sentinel'],
-    { stdio: [sourceProvider === undefined ? 'ignore' : 'pipe', 'pipe', 'pipe'], windowsHide: true });
+  // Both native test lanes run inside the original controller's 120s Job.
+  // Keep the unrelated sentinel alive until the original parent closes it;
+  // its old 60s sleep could end before the later recovery scenario.
+  const sentinel = spawn(paths[1]!, ['source-sentinel'],
+    { stdio: ['pipe', 'pipe', 'pipe'], windowsHide: true });
   const exited = new Promise<number | null>((resolveExit, reject) => { sentinel.once('exit', resolveExit); sentinel.once('error', reject); });
   void exited.catch(() => undefined);
   const providers: Record<string, unknown>[] = [], wrappers: string[] = [], sourceScenarios: Record<string, unknown>[] = [];
