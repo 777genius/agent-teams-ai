@@ -275,3 +275,12 @@ Full actual binding publication readbacks remain before staging. One source-only
 After full binding actual readbacks, source-free GREEN-binding staging succeeded with observedouter0. The one subsequent materialize green invocation ended with observedouter1 at unchanged runnerline1098 because its selected ROOT/REPO admission failed. Read-only observation found the selected source root absent; cause/time UNKNOWN. No phase receipt, source/metadata boundary or source write was reached. Refusalba7c846e and path observation814c9c40 are retained; root29/Guard52 checks accept accounting only.
 
 The local attempt is permanently SPENT. Source/input preservation remains unknown/null; GREEN and validation remain UNREACHED. Published source fixes stay retained in Git. Full actual refusal publication readbacks precede a separately selected fresh venue; current CI investigation is advisory only, with no new run/PR/ref selected. Do not replay or restore in place. Whole E2E remains open.
+
+
+## 2026-11-17 03:05:35 UTC — exact fresh isolated Draft CI R1 retained
+
+R1 `7237425e51bda9feb7d0ded4e424fe72745680c1` is accepted by root and all three independent reviews. This publication retains those complete reports plus the 42-workflow/9-source corpus, provider-entry/coverage/event advisories, and the prior local-refusal actual reports/gate. Source and workflow bytes are unchanged; whole139/85 files remain exact.
+
+Next, after full actual-publication root/independent readbacks, externally bind this actual publication commit to the fresh immutable CI-head ref, create the exact ancestor-base ref, read both back, and open the one reviewed Draft PR. Working evidence pushes stay separate, so active CI runs will not be replaced by synchronize. No new ref/PR/run has been created yet.
+
+Expected selection: five active workflow families, two Draft-skipped families; CI's Draft full-qualification failure remains intentional policy. Host Process is not selected. Actual job/test/artifact/cleanup outcomes are unobserved, not PASS. The refused local attempt remains spent, source root unavailable at its last observation, and GREEN/validation remain unexecuted. No broader qualification, real Claude/Codex execution, frozen/old-run mutation, release or merge is selected.
