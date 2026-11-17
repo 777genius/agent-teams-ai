@@ -1,0 +1,515 @@
+{
+  "schemaVersion": 1,
+  "kind": "c714-claude-lifecycle-readiness-actual-member-supplement",
+  "createdAtUtc": "2026-11-17 11:24:16 UTC",
+  "reviewer": "/root/producer_r2_semantic",
+  "repository": "777genius/agent-teams-ai",
+  "decision": "ACTUAL_SELECTED_PROFILE_AND_MODEL_MISMATCH_CONFIRMED_NO_NEW_AUTH_OUTCOME",
+  "authority": "Read-only source/evidence advisory; root alone chooses any later concrete R1 and authors/applies/executes. The already retained main report remains unchanged; this supplement adds five newly supplied original artifact members only.",
+  "joins": {
+    "mainAdvisory": {
+      "bytes": 49553,
+      "sha256": "c3495c546eba5ceb05d13e5d1e4b053c70206ff86e04a8aafdf0c4d9b51aa10d",
+      "gitBlob": "347935edb7a19e68b51459f225909f2f015037c7"
+    },
+    "mainAdvisoryFullSelfRead": true,
+    "sourceHead": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+    "pr": 1219,
+    "runId": 44042341273,
+    "jobId": 133899668413,
+    "receipt": {
+      "bytes": 784414,
+      "sha256": "06f4e40ca5785eee90b831e6e4387b7d9f4881137524f30384c6800f6c88da75",
+      "gitBlob": "ef0809bb111639f21584c7d573f8371310f305af"
+    },
+    "archive": {
+      "artifactId": 14320153728,
+      "bytes": 698075,
+      "sha256": "441a844d1399c23644099395328c854d93011c98030d6c23713ec9fb3f2451bd",
+      "rootVerifiedExtractionAndCRC": true,
+      "reviewerDownloaded": false
+    }
+  },
+  "completeNewMembers": [
+    {
+      "key": "profile",
+      "bytes": 7322,
+      "sha256": "c4470fa66686e0030b0eac0fe988733de94c63ffe541dfb59b3c709604fbe96b",
+      "gitBlob": "1032b3185dbff199dd24534b2af0cc57814db44f",
+      "completeBodyRead": true
+    },
+    {
+      "key": "effects",
+      "bytes": 2070,
+      "sha256": "39dcb6dbef320a274d08a114606eeacb38d5dbd43c2c2a2febd109184b6d6037",
+      "gitBlob": "86d637f8336e632bcbe05c89eb62ba1b53f2ddbe",
+      "completeBodyRead": true
+    },
+    {
+      "key": "command",
+      "bytes": 956,
+      "sha256": "b33da71cc459aa45845102b759ea8628d32bc70f82f5fa1378167856d46b772c",
+      "gitBlob": "dd8f86cbabfa814df113f70d6fe1991440ce88f8",
+      "completeBodyRead": true
+    },
+    {
+      "key": "descriptor",
+      "bytes": 2641,
+      "sha256": "7e8c0a2a86e4e753b4d6c999d9af104111784fa962c55131f075e98cfe33bb42",
+      "gitBlob": "58d05d6111bd027de82dd894f164c33870648082",
+      "completeBodyRead": true
+    },
+    {
+      "key": "seed",
+      "bytes": 2335,
+      "sha256": "20cfdb1372d37de073bde33487569457564bbd0dd74fb593dd38a0fcb3eb0482",
+      "gitBlob": "6a01cdfae9068654cc95b4bbdd665f041b318125",
+      "completeBodyRead": true
+    }
+  ],
+  "actualMapping": {
+    "owner": {
+      "ownerId": "TEST-desktop-owner-TEST-desktop-backend-g9FwgL",
+      "revision": "TEST-desktop-revision-1",
+      "storageRoot": "/home/runner/work/_temp/TEST-desktop-backend-g9FwgL/hoststore",
+      "profileId": "TEST-desktop-profile-TEST-desktop-backend-g9FwgL",
+      "protocolVersion": 1,
+      "buildId": "TEST-desktop-real-host",
+      "nodeSha256": "7fde7b8afa198da66257f42ee2001d874c7355631e6d1579a5fb5ef1f246df4c",
+      "hostEntrySha256": "7ff0d33309b54969f7a5c5f88935d4593596e68670db21f08ee694c9d0c27add"
+    },
+    "descriptorProfile": {
+      "profileId": "TEST-desktop-profile-TEST-desktop-backend-g9FwgL",
+      "nodeExecutable": "/opt/hostedtoolcache/node/24.21.0/x64/bin/node",
+      "nodeVersion": "v24.21.0",
+      "nodeSha256": "7fde7b8afa198da66257f42ee2001d874c7355631e6d1579a5fb5ef1f246df4c",
+      "hostEntry": "/home/runner/work/agent-teams-ai/agent-teams-ai/packages/legacy-agent-host/dist/cli.js",
+      "hostEntrySha256": "7ff0d33309b54969f7a5c5f88935d4593596e68670db21f08ee694c9d0c27add",
+      "profilePath": "/home/runner/work/_temp/TEST-desktop-backend-g9FwgL/host-profile.json",
+      "profileSha256": "c4470fa66686e0030b0eac0fe988733de94c63ffe541dfb59b3c709604fbe96b"
+    },
+    "managementRoutes": [
+      {
+        "runtimeId": "claude",
+        "owner": {
+          "ownerId": "TEST-desktop-owner-TEST-desktop-backend-g9FwgL",
+          "revision": "TEST-desktop-revision-1"
+        },
+        "contextId": "local",
+        "projectPath": null,
+        "profileId": "TEST-emulated-claude-management",
+        "configRevision": "TEST-emulated-claude-management"
+      },
+      {
+        "runtimeId": "claude",
+        "owner": {
+          "ownerId": "TEST-desktop-owner-TEST-desktop-backend-g9FwgL",
+          "revision": "TEST-desktop-revision-1"
+        },
+        "contextId": "local",
+        "projectPath": "/home/runner/work/_temp/TEST-desktop-backend-g9FwgL/workspace",
+        "profileId": "TEST-emulated-claude-management",
+        "configRevision": "TEST-emulated-claude-management"
+      }
+    ],
+    "managementProfile": {
+      "cwd": "/home/runner/work/_temp/TEST-desktop-backend-g9FwgL/workspace",
+      "environment": {
+        "HOME": "/home/runner/work/_temp/TEST-desktop-backend-g9FwgL/TEST-peer-claude-scope/home",
+        "TMPDIR": "/home/runner/work/_temp/TEST-desktop-backend-g9FwgL/TEST-peer-claude-scope/tmp",
+        "CLAUDE_CONFIG_DIR": "/home/runner/work/_temp/TEST-desktop-backend-g9FwgL/TEST-peer-claude-scope/config",
+        "XDG_CONFIG_HOME": "/home/runner/work/_temp/TEST-desktop-backend-g9FwgL/TEST-peer-claude-scope/config",
+        "XDG_DATA_HOME": "/home/runner/work/_temp/TEST-desktop-backend-g9FwgL/TEST-peer-claude-scope/data",
+        "XDG_CACHE_HOME": "/home/runner/work/_temp/TEST-desktop-backend-g9FwgL/TEST-peer-claude-scope/cache",
+        "PATH": "/opt/hostedtoolcache/node/24.21.0/x64/bin:/usr/bin:/bin",
+        "SHELL": "/bin/sh",
+        "TEST_EMULATED_DESKTOP_PROVIDER": "1",
+        "TEST_PEER_SCENARIO": "desktop-ui-v1",
+        "TEST_PEER_PROVIDER": "claude",
+        "TEST_PEER_ROLE": "management",
+        "TEST_DESKTOP_PEER_ROOT": "/home/runner/work/_temp/TEST-desktop-backend-g9FwgL/TEST-peer-claude-scope",
+        "TEST_PEER_EFFECTS": "/home/runner/work/_temp/TEST-desktop-backend-g9FwgL/TEST-peer-claude-scope/effects.ndjson",
+        "TEST_DESKTOP_PEER_WORKSPACE": "/home/runner/work/_temp/TEST-desktop-backend-g9FwgL/workspace"
+      },
+      "executable": {
+        "path": "/home/runner/work/_temp/TEST-desktop-backend-g9FwgL/bin/TEST-claude-peer",
+        "sha256": "3619fea584d5e90ebb80a3f2ea660df54f7adc7380b2f6fc88e135574a0d380d"
+      },
+      "provider": "claude",
+      "sdkRevision": "0.3.305",
+      "modelProbeTimeoutMs": 30000,
+      "profileId": "TEST-emulated-claude-management",
+      "accountBinding": "TEST-no-vendor-account",
+      "configRevision": "TEST-emulated-claude-management",
+      "configNamespace": "custom-directory",
+      "settingSources": [],
+      "timeoutMs": 15000
+    },
+    "selectedModelRows": {
+      "saved": [
+        {
+          "teamId": "TEST-desktop-team",
+          "providerId": "anthropic",
+          "model": "sonnet",
+          "effort": "low"
+        }
+      ],
+      "runtime": [
+        {
+          "teamId": "TEST-desktop-team",
+          "memberId": "alice-id",
+          "model": "sonnet",
+          "role": "runtime",
+          "executable": {
+            "path": "/home/runner/work/_temp/TEST-desktop-backend-g9FwgL/bin/TEST-claude-peer",
+            "sha256": "3619fea584d5e90ebb80a3f2ea660df54f7adc7380b2f6fc88e135574a0d380d"
+          }
+        }
+      ],
+      "templates": [
+        {
+          "teamId": "TEST-desktop-team",
+          "memberId": "alice-id",
+          "model": "sonnet",
+          "role": "runtime",
+          "executable": {
+            "path": "/home/runner/work/_temp/TEST-desktop-backend-g9FwgL/bin/TEST-claude-peer",
+            "sha256": "3619fea584d5e90ebb80a3f2ea660df54f7adc7380b2f6fc88e135574a0d380d"
+          }
+        }
+      ]
+    },
+    "durableProbe": {
+      "schemaVersion": 1,
+      "commandId": "team-preflight-5d7edbf6beb9ca90bcc62e4392376826605198d96009073820a733218eb7ba98",
+      "profileId": "team-probe-3722250172cb39813807748eef269afb76793aa980787ae974aebccd46c2440e",
+      "configRevision": "team-probe-3722250172cb39813807748eef269afb76793aa980787ae974aebccd46c2440e",
+      "providerId": "anthropic",
+      "fingerprint": "0fadbe64484ca622e80850f5687d0336661070ce52a780dc4327129477e0a579",
+      "selectionDigest": "051ea16e5e8d97dacf86404bc588dd8b08d8fa7dd11705953735a16a609142e3",
+      "resourceId": "1ff04af6940312d98969b62787fb1d50464aa09c9171693726f3ebbcf742c0f7",
+      "resourceHeld": false,
+      "kind": "model.probe",
+      "modelId": "sonnet",
+      "effort": "low",
+      "modelContext": "one-million",
+      "context": "f7d6e70330604cf8f31051d3aa607d8a19e4debabdfaee30656ca1c58ef6ed6e",
+      "phase": "completed",
+      "expiresAt": 1794911876618,
+      "ok": true,
+      "digest": "b380eb9db42e04d3be1394feedb926acf8690504f3335eeb95023daa7adf9b01"
+    },
+    "effects": [
+      {
+        "provider": "claude",
+        "role": "management",
+        "pid": 5038,
+        "event": "launch",
+        "parentPid": 4238,
+        "sessionId": "63953b1e-9ee1-4947-a435-62ff0c94344c",
+        "restored": false
+      },
+      {
+        "provider": "claude",
+        "role": "management",
+        "pid": 5038,
+        "event": "started",
+        "sessionId": "63953b1e-9ee1-4947-a435-62ff0c94344c",
+        "restored": false
+      },
+      {
+        "provider": "claude",
+        "role": "management",
+        "pid": 5038,
+        "event": "initialized",
+        "sessionId": "63953b1e-9ee1-4947-a435-62ff0c94344c",
+        "restored": false,
+        "commands": [
+          "compact",
+          "usage",
+          "code-review",
+          "test-desktop-skill"
+        ]
+      },
+      {
+        "provider": "claude",
+        "role": "management",
+        "pid": 5225,
+        "event": "launch",
+        "parentPid": 4238,
+        "sessionId": "7fef230c-12c1-4bac-93be-b46ad770a15a",
+        "restored": false
+      },
+      {
+        "provider": "claude",
+        "role": "management",
+        "pid": 5225,
+        "event": "started",
+        "sessionId": "7fef230c-12c1-4bac-93be-b46ad770a15a",
+        "restored": false
+      },
+      {
+        "provider": "claude",
+        "role": "management",
+        "pid": 5225,
+        "event": "initialized",
+        "sessionId": "7fef230c-12c1-4bac-93be-b46ad770a15a",
+        "restored": false,
+        "commands": [
+          "compact",
+          "usage",
+          "code-review",
+          "test-desktop-skill"
+        ]
+      },
+      {
+        "provider": "claude",
+        "role": "runtime",
+        "pid": 5342,
+        "event": "launch",
+        "parentPid": 4238,
+        "sessionId": "89ba5578-0fc2-482d-98e2-776ee17ae1c9",
+        "restored": false
+      },
+      {
+        "provider": "claude",
+        "role": "runtime",
+        "pid": 5342,
+        "event": "started",
+        "sessionId": "89ba5578-0fc2-482d-98e2-776ee17ae1c9",
+        "restored": false
+      },
+      {
+        "provider": "claude",
+        "role": "runtime",
+        "pid": 5342,
+        "event": "initialized",
+        "sessionId": "89ba5578-0fc2-482d-98e2-776ee17ae1c9",
+        "restored": false,
+        "commands": [
+          "compact",
+          "usage",
+          "code-review",
+          "test-desktop-skill"
+        ]
+      },
+      {
+        "provider": "claude",
+        "role": "runtime",
+        "pid": 5342,
+        "event": "input",
+        "inputId": "b39b7517-2795-4a92-ac43-eb855fde0dd5",
+        "marker": "TEST_MODEL_PROBE",
+        "sessionId": "89ba5578-0fc2-482d-98e2-776ee17ae1c9",
+        "wrapped": false
+      },
+      {
+        "provider": "claude",
+        "role": "runtime",
+        "pid": 5342,
+        "event": "terminal",
+        "inputId": "b39b7517-2795-4a92-ac43-eb855fde0dd5",
+        "marker": "Reply only OK. Do not use tools, access files or run commands.",
+        "outcome": "succeeded",
+        "text": "OK",
+        "usage": {
+          "input_tokens": 42,
+          "output_tokens": 18,
+          "cache_read_input_tokens": 0,
+          "cache_creation_input_tokens": 0
+        },
+        "cumulativeCostUsd": 0.0123
+      }
+    ],
+    "seed": {
+      "commandId": "TEST-ui-offline-seed",
+      "operation": "task.create",
+      "binding": {
+        "backendId": "TEST-desktop-owner-TEST-desktop-backend-g9FwgL",
+        "teamId": "TEST-desktop-team",
+        "teamName": "test-desktop-backend"
+      },
+      "phase": "completed",
+      "createdAt": "2026-11-17T10:35:24.404Z"
+    },
+    "receiptCleanup": {
+      "processGroup": 3871,
+      "remaining": [],
+      "appExitCode": 0,
+      "appSignalCode": null,
+      "capturedHostObserved": false,
+      "capturedHostAbsent": null,
+      "hostExitCode": "not exposed by main-owned transport; no separate Host exit code recorded"
+    },
+    "receiptPeerCleanup": {
+      "originalPeerPids": [
+        5038,
+        5225,
+        5342
+      ],
+      "remaining": [],
+      "absent": true
+    }
+  },
+  "sourceBoundaryReferences": [
+    {
+      "path": "scripts/legacy-agent-host/desktop-emulated-runtime-fixture.ts",
+      "ref": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+      "bytes": 21981,
+      "sha256": "d0d00254e7e39ab8b5163e02cc93754775a8efe56ff28b8c87f07d02e0292c7e",
+      "gitBlob": "7b5edfbd4967debe454387c7a8b6246e67216dc8",
+      "readScope": "complete; reused immutable source read from main advisory"
+    },
+    {
+      "path": "tools/owned-process-broker/fixtures/claudeProviderPeer.mjs",
+      "ref": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+      "bytes": 32221,
+      "sha256": "c443b410efbe4910839b02662fa1767b60e428936c012d729b26eeb82f182a87",
+      "gitBlob": "920b40fa594f7aa65e11d1ec1f31d2aa69581a01",
+      "readScope": "complete; reused immutable source read from main advisory"
+    },
+    {
+      "path": "packages/legacy-agent-host/src/adapters/providers/ClaudeAuthConversation.ts",
+      "ref": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+      "bytes": 10334,
+      "sha256": "709d66ffc366f0b83d9af0a49a1b9126bda1e33e72f796da0458356349b18880",
+      "gitBlob": "a4d47563cffaed2ea48381887e47820ed727422e",
+      "readScope": "complete; reused immutable source read from main advisory"
+    },
+    {
+      "path": "packages/legacy-agent-host/src/adapters/providers/claudeAuthStatus.ts",
+      "ref": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+      "bytes": 2618,
+      "sha256": "588b932ed1427203a6ff27690787799cb43cb5f7aaee115f7aaab4d4cc1cd388",
+      "gitBlob": "3ce5814e42e72d0a46f229791dfec25668e22896",
+      "readScope": "complete; reused immutable source read from main advisory"
+    },
+    {
+      "path": "src/features/runtime-provider-management/main/adapters/output/capturedClaudeMetadata.ts",
+      "ref": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+      "bytes": 7477,
+      "sha256": "c4d8333cc5b562b7eb8de8398bde8275d579fdb7775c59c3d1ae5123e88cfdc8",
+      "gitBlob": "c0bd14811e8cd76dd34bcf42afac2785769e37ad",
+      "readScope": "complete; reused immutable source read from main advisory"
+    },
+    {
+      "path": "src/renderer/utils/teamModelAvailability.ts",
+      "ref": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+      "bytes": 32077,
+      "sha256": "b1da0ea7199e69eb042e5beb16dfafa91c4d7b9360db41a3f9ba16424ca2fd43",
+      "gitBlob": "ac6e66775bd5efaf81cecb9a2f22a3437b4343ad",
+      "readScope": "complete; reused immutable source read from main advisory"
+    },
+    {
+      "path": "test/renderer/utils/teamModelAvailability.test.ts",
+      "ref": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+      "bytes": 56775,
+      "sha256": "b08fe4a650ea9d23f4d8fa4b4ece157d9cd2f87e87e42b25c3c53934ed9974c8",
+      "gitBlob": "6cf34a11e7a1bc6f33208bad00adb57ee5656cd6",
+      "readScope": "complete; reused immutable source read from main advisory"
+    },
+    {
+      "path": "src/renderer/components/team/dialogs/capturedTeamLaunchReadiness.ts",
+      "ref": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+      "bytes": 1376,
+      "sha256": "5a3e24af0a051afe0e8736e4d79e21239ef23b3aeb7a972c59fe5e79655db09e",
+      "gitBlob": "7a78f0791a54d09bcdda9c466b4df9c8b3b569d1",
+      "readScope": "complete; reused immutable source read from main advisory"
+    }
+  ],
+  "checks": [
+    {
+      "id": "S01",
+      "status": "PASS_RETAINED_JOIN",
+      "detail": "All five newly supplied immutable members were fully read and exact Git blob/byte/SHA256 verified, without archive download, local reads, source execution or CI calls."
+    },
+    {
+      "id": "S02",
+      "status": "PASS_RETAINED_JOIN",
+      "detail": "Actual host-profile SHA256 equals both the original full receipt profile pin and descriptor LEGACY_AGENT_HOST_PROFILE_SHA256."
+    },
+    {
+      "id": "S03",
+      "status": "PASS_RETAINED_JOIN",
+      "detail": "Actual descriptor SHA256 equals the original receipt descriptor pin; owner/revision, Node SHA and Host-entry SHA join the original profile and receipt."
+    },
+    {
+      "id": "S04",
+      "status": "PASS_RETAINED_JOIN",
+      "detail": "The descriptor contains both global and exact-workspace Claude management mappings to TEST-emulated-claude-management, same original owner/revision and configRevision."
+    },
+    {
+      "id": "S05",
+      "status": "PASS_RETAINED_JOIN",
+      "detail": "Actual runtime member, provider template and management profile all use the same TEST-claude-peer absolute path and SHA256 3619fea584d5e90ebb80a3f2ea660df54f7adc7380b2f6fc88e135574a0d380d."
+    },
+    {
+      "id": "S06",
+      "status": "PASS_RETAINED_JOIN",
+      "detail": "Management is provider claude, role management, custom-directory with exact scope/config, sdkRevision0.3.305, timeout15000ms/modelProbeTimeout30000ms. This is the actual finite selected route, not a real vendor fallback."
+    },
+    {
+      "id": "S07",
+      "status": "PASS_RETAINED_JOIN",
+      "detail": "Actual savedSettings.model, runtime member model and provider-template model all equal sonnet, confirming the fixture/catalog mismatch independently of the saved error text."
+    },
+    {
+      "id": "S08",
+      "status": "PASS_RETAINED_JOIN",
+      "detail": "All eleven effects rows are JSON-literal equal to the original receipt cleanup effects; there are two management SDK launch/start/initialize sequences and one runtime sequence followed by the original TEST_MODEL_PROBE input and matching succeeded/OK terminal."
+    },
+    {
+      "id": "S09",
+      "status": "PASS_RETAINED_JOIN",
+      "detail": "The durable command is model.probe for sonnet, effort low/context one-million, phase completed, ok true, resourceHeld false. Its team-preflight/team-probe IDs are preserved and are distinct from the configured management profile ID."
+    },
+    {
+      "id": "S10",
+      "status": "PASS_RETAINED_JOIN",
+      "detail": "The seed is a completed TEST-ui-offline-seed task.create under the same owner/team binding. It is not a Launch team submit, auth-status command or lifecycle boot input."
+    },
+    {
+      "id": "S11",
+      "status": "PASS_RETAINED_JOIN",
+      "detail": "The original receipt still has zero lifecycle business commands and the original enabled-Launch wait failure; none of the additional members records a later submit or second epoch."
+    },
+    {
+      "id": "S12",
+      "status": "PASS_RETAINED_JOIN",
+      "detail": "The effects contain no auth result. Since the whole SDK peer rejects positional argv before installing journal/exit handlers, no auth row does not establish that no auth process was attempted."
+    },
+    {
+      "id": "S13",
+      "status": "SUPPORTED_STATIC",
+      "detail": "The exact original auth argv/schema and selected SDK-only peer incompatibility remain as established in the fully self-read main advisory. Actual profile routing strengthens the concrete selected-path join, while raw auth response/exit/first guard failure remains unknown."
+    },
+    {
+      "id": "S14",
+      "status": "SUPPORTED_STATIC",
+      "detail": "The accepted model utility/test contract remains unchanged: id sonnet projects to offered launchModel TEST-claude-sonnet, and catalog43 explicitly rejects sonnet alias selection. Candidate advice remains select the exact offered launchModel in the finite fixture, not broaden production alias acceptance."
+    },
+    {
+      "id": "S15",
+      "status": "LIMIT",
+      "detail": "A completed durable model-probe command is stronger than only peer OK, but these five members still do not retain the full original renderer provider-status DTO, current capturedTeamReadiness or final intent/configuration acceptance. They do not qualify final launch authority or prove the exact missing final guard."
+    },
+    {
+      "id": "S16",
+      "status": "LIMIT",
+      "detail": "No source/control postimage, exact repair file set, runtime, retry, deadline change, test/workflow omission, native qualification, other-lane causal conclusion, new gate or execution venue is selected."
+    }
+  ],
+  "checkCount": 16,
+  "outcomeCounts": {
+    "PASS_RETAINED_JOIN": 12,
+    "SUPPORTED_STATIC": 2,
+    "LIMIT": 2
+  },
+  "remainingUnknowns": [
+    "Actual auth-status stdout/exit/error stage and first failed guard are still not retained.",
+    "Durable model.probe ok does not establish final captured Team readiness, renderer currentness or launch acceptance.",
+    "No exact causal conclusion for the separately observed globalTasks mutation-boundary message or any other lane.",
+    "Correcting both concrete fixture mismatches does not imply the entire original lifecycle will pass."
+  ],
+  "candidateAdviceUnchanged": "Preserve whole catalog43 and all current/hidden/unavailable/authority guards. Any root-selected later R1 must choose the exact offered TEST-claude-sonnet value and provide only bounded finite management auth-status behavior through the original captured executable/namespace/custody. Original 90-second wait, no mutation retry, all149/43/85 and later lifecycle obligations remain intact."
+}

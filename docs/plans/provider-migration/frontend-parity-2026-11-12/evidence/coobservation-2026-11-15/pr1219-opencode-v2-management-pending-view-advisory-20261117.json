@@ -1,0 +1,807 @@
+{
+  "schemaVersion": 1,
+  "kind": "bounded-read-only-opencode-v2-management-failure-guard-advisory",
+  "reviewer": "/root/producer_r2_guard",
+  "repository": "777genius/agent-teams-ai",
+  "createdAtUtc": "2026-11-17 11:16:58 UTC",
+  "decision": "ANALYSIS_COMPLETE; FUNCTIONAL_REPAIR_NOT_ESTABLISHED",
+  "summary": "The original fixed9d OpenCode V2 Settings journey reached rejected-key and replacement-key proof, then failed its first30-second inheritance-card wait while the Models refresh indicator remained active. Exact source shows this legacy-panel presentation is also the deferred/pending-view path. The retained evidence does not identify why the current view failed to settle. No functional source fix, timeout change, mutation retry, new test run or gate is selected.",
+  "authority": {
+    "rootSoleSourceControlAuthorAndExecutor": true,
+    "allowed": "Immutable Git/retained evidence reads, pure memory comparisons/approved identity helper, bare report retention.",
+    "performed": "Read-only fetches and data comparisons; this bare report only.",
+    "runtimeExecution": false,
+    "sourceMutation": false,
+    "controlMutation": false,
+    "localShell": false,
+    "liveCiRead": false,
+    "retry": false,
+    "newGate": false,
+    "relationshipToClosedDiagnosticsSourceR2": "Independent advisory. Closed formal source R2 c356b7/f5955b remains accepted and is not reopened."
+  },
+  "evidence": {
+    "sourceCommit": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+    "jobId": 133899668739,
+    "runId": 44042341273,
+    "attempt": 1,
+    "receipt": {
+      "bytes": 692149,
+      "sha256": "c2c24bf0d46d1210a4e398991650b200d882cd89fed5a2c6a1e734a9bdb99d55",
+      "gitBlob": "06c92df2434742231da32ab75e5473a3c90c5358",
+      "readScope": "Complete body fetched, hashed and parsed; all noncensus fields semantically read in bounded groups; both complete1769-row source arrays compared as data."
+    },
+    "jobLog": {
+      "bytes": 113950,
+      "sha256": "46ba5acbb76d3df8099619015227b13395e819f3d4648049f1b812f039cb4f14",
+      "gitBlob": "174d4082f5229ea379836a48d63ace7833bc2a9e",
+      "readScope": "Complete body fetched and hash-verified; checkout/header, original command/failure/verifier/upload/cleanup sections read. Unrelated setup and all individual preliminary test rows were not fully reread."
+    },
+    "appLog": {
+      "bytes": 11213,
+      "sha256": "467f71a3490760eb5d2e243226465243df049e04c93b6acf2a77eb56f3f8e226",
+      "gitBlob": "e22d34cde2f6cd68878e763e32d6528aa7d3ebd1",
+      "readScope": "Complete11213-byte body read.",
+      "archiveMember": "TEST-desktop-backend-ME3hLE/desktop-backend-app.log"
+    },
+    "archive": {
+      "artifactId": 14321355567,
+      "sha256": "f4f952a394eabf4f06a96b8525958ac557cf28377e71a3f2cbbf55b22d629cad",
+      "bytesFromJobLog": 847314,
+      "custody": "Root separately verified original archive bytes and CRC and viewed the failure PNG. This reviewer joins retained receipt/app log and job upload identity; did not separately fetch/decompress archive or view PNG.",
+      "failurePngSha256": "6bd6dd6e457da4c688d9af55ee8eaeb977c35bcaf6dc47f5b1421d990677b869"
+    },
+    "helper": {
+      "gitBlob": "e4a4568d589e1254b88ade1a5f87d53924e7c2e8",
+      "bytes": 3982,
+      "sha256": "cd3d5b96a5508215010923078469cc718282f17d765f6af493913c157bdf3db7"
+    },
+    "sourceIndex": [
+      {
+        "path": "scripts/legacy-agent-host/desktop-opencode-v2-management-ui.ts",
+        "bytes": 20435,
+        "sha256": "4aa1e0c6944d0154f4cee2eaa3cef4390ffdcc25cad93cac40488c1d7c2fa8d6",
+        "gitBlob": "7f224d52e429bbdecb173d65b470a2ac154de475",
+        "lineCount": 278,
+        "readScope": "Full complete source body read.",
+        "receiptBeforeAndAfterSha256": "4aa1e0c6944d0154f4cee2eaa3cef4390ffdcc25cad93cac40488c1d7c2fa8d6",
+        "exactReceiptJoin": true
+      },
+      {
+        "path": "src/features/runtime-provider-management/renderer/RuntimeProviderManagementPanel.tsx",
+        "bytes": 12020,
+        "sha256": "fdeae416c9017d9b377625a32ee4487b8391cc8b6041fb09c2ee292b71f9db31",
+        "gitBlob": "32403fc3f01c93153e1325dd1bf1a6b17fa64499",
+        "lineCount": 306,
+        "readScope": "Full complete source body read.",
+        "receiptBeforeAndAfterSha256": "fdeae416c9017d9b377625a32ee4487b8391cc8b6041fb09c2ee292b71f9db31",
+        "exactReceiptJoin": true
+      },
+      {
+        "path": "src/features/runtime-provider-management/main/adapters/output/CapturedRuntimeProviderManagementClient.ts",
+        "bytes": 23900,
+        "sha256": "fe9b1bdc4e4dfb4eba417e1bb4a3b29987cbd1ccfdbf9766582e2d49a7a53568",
+        "gitBlob": "6849549eacb871ea1342a37f4cecd27ed7795c32",
+        "lineCount": 580,
+        "readScope": "Full complete source body read.",
+        "receiptBeforeAndAfterSha256": "fe9b1bdc4e4dfb4eba417e1bb4a3b29987cbd1ccfdbf9766582e2d49a7a53568",
+        "exactReceiptJoin": true
+      },
+      {
+        "path": "src/features/runtime-provider-management/main/adapters/output/capturedManagementPreferences.ts",
+        "bytes": 2201,
+        "sha256": "32fa7f106d94bea044cf9a4db3df7056c4e626312ec079e18409e1056af9ef23",
+        "gitBlob": "9a680f0ed4f847ae4612809e342a25ca448036be",
+        "lineCount": 57,
+        "readScope": "Full complete source body read.",
+        "receiptBeforeAndAfterSha256": "32fa7f106d94bea044cf9a4db3df7056c4e626312ec079e18409e1056af9ef23",
+        "exactReceiptJoin": true
+      },
+      {
+        "path": "src/features/runtime-provider-management/core/domain/index.ts",
+        "bytes": 352,
+        "sha256": "3bb1993efa06838cb40da05115e297578f0645e4e4b47d60a4c4299c6abd60fc",
+        "gitBlob": "4d18cdaded0b6a3114c2db914c03e1cb51bbf571",
+        "lineCount": 8,
+        "readScope": "Full complete source body read.",
+        "receiptBeforeAndAfterSha256": null,
+        "exactReceiptJoin": false
+      },
+      {
+        "path": "src/features/runtime-provider-management/core/domain/providerManagementView.ts",
+        "bytes": 3772,
+        "sha256": "2d127e0195beaa942a0e667b243cbe63b1c71b934224638e3636ca34fec9975c",
+        "gitBlob": "ff2da0ec82edd2fb58682a8aadf75585fe63c23a",
+        "lineCount": 130,
+        "readScope": "Full complete source body read.",
+        "receiptBeforeAndAfterSha256": null,
+        "exactReceiptJoin": false
+      },
+      {
+        "path": "src/features/runtime-provider-management/renderer/hooks/runtimeProviderManagementPresentation.ts",
+        "bytes": 6481,
+        "sha256": "5e1015def1c50a2c2982617336d7e8ed46495295b5769aed8a5b2b885f53f1a0",
+        "gitBlob": "907fb16a613785324fdbd342c2993e08c8209a55",
+        "lineCount": 161,
+        "readScope": "Full complete source body read.",
+        "receiptBeforeAndAfterSha256": null,
+        "exactReceiptJoin": false
+      },
+      {
+        "path": "src/features/runtime-provider-management/renderer/hooks/refreshRuntimeProviderConnection.ts",
+        "bytes": 5385,
+        "sha256": "b5b887dacbc987d3ccabfa1be2d5f7befa54d8a30cc79b2d90ac43c0adbf4450",
+        "gitBlob": "a3a6ee5182d48416eef42766b846e4a3921d714d",
+        "lineCount": 126,
+        "readScope": "Full complete source body read.",
+        "receiptBeforeAndAfterSha256": null,
+        "exactReceiptJoin": false
+      },
+      {
+        "path": "src/features/runtime-provider-management/renderer/ui/OpenCodeDefaultModelInheritanceCard.tsx",
+        "bytes": 10989,
+        "sha256": "c4dd21bc1bf5a79d5c88b1d20d592e358126c88adf40d1f2dc589b451fde2814",
+        "gitBlob": "07d575e38c62d86503b80b913ae892616449341f",
+        "lineCount": 275,
+        "readScope": "Full complete source body read.",
+        "receiptBeforeAndAfterSha256": null,
+        "exactReceiptJoin": false
+      },
+      {
+        "path": "src/features/runtime-provider-management/main/infrastructure/FileManagedProviderPreferences.ts",
+        "bytes": 6485,
+        "sha256": "458753e693d6f69f0db661886dddec1a6c68806e1e156efd0c0f5c7de424bd3b",
+        "gitBlob": "cefb5f79158f10edff53380d6f6707ef49558b66",
+        "lineCount": 186,
+        "readScope": "Full complete source body read.",
+        "receiptBeforeAndAfterSha256": "458753e693d6f69f0db661886dddec1a6c68806e1e156efd0c0f5c7de424bd3b",
+        "exactReceiptJoin": true
+      },
+      {
+        "path": "src/main/composition/createDesktopProviderManagementFeatures.ts",
+        "bytes": 2467,
+        "sha256": "95400848c91bb3e54ac15e10584ee49ef14a0178df5e80ca68748016c58776dc",
+        "gitBlob": "9777f8c6bdcbdb247d24d09ae7b0b51499bbe130",
+        "lineCount": 55,
+        "readScope": "Full complete source body read.",
+        "receiptBeforeAndAfterSha256": "95400848c91bb3e54ac15e10584ee49ef14a0178df5e80ca68748016c58776dc",
+        "exactReceiptJoin": true
+      },
+      {
+        "path": "src/features/agent-backend/main/infrastructure/CapturedProviderManagement.ts",
+        "bytes": 5433,
+        "sha256": "8ea983e9aec5c56ca5e2438a39e4272c0133ae6c2d4839bbcb6926afb605b760",
+        "gitBlob": "60b08011e5aa2df1a6d2215155d7dabf0b2b15af",
+        "lineCount": 164,
+        "readScope": "Full complete source body read.",
+        "receiptBeforeAndAfterSha256": "8ea983e9aec5c56ca5e2438a39e4272c0133ae6c2d4839bbcb6926afb605b760",
+        "exactReceiptJoin": true
+      },
+      {
+        "path": "packages/legacy-agent-host/src/composition/createProviderManagementMethods.ts",
+        "bytes": 4523,
+        "sha256": "7854ee3a07c27b95294b2e49fd5b4d39cffa00c8040eb6de15d1c231a1b3d927",
+        "gitBlob": "708d880bb9be0dcaae978b97b0686b548b7873a3",
+        "lineCount": 88,
+        "readScope": "Full complete source body read.",
+        "receiptBeforeAndAfterSha256": "7854ee3a07c27b95294b2e49fd5b4d39cffa00c8040eb6de15d1c231a1b3d927",
+        "exactReceiptJoin": true
+      },
+      {
+        "path": "packages/legacy-agent-host/src/composition/ProviderManagementCoordinator.ts",
+        "bytes": 36898,
+        "sha256": "e54fda9c30ec3d53f20027d59faf81f59c75fd3ad3987593bd4cd64315a17d3a",
+        "gitBlob": "3e0d1ae7a3aa852fb5772821f7df1059edd7cead",
+        "lineCount": 719,
+        "readScope": "Full complete source body read.",
+        "receiptBeforeAndAfterSha256": "e54fda9c30ec3d53f20027d59faf81f59c75fd3ad3987593bd4cd64315a17d3a",
+        "exactReceiptJoin": true
+      },
+      {
+        "path": "packages/legacy-agent-host/src/adapters/providers/OpenCodeV2ManagementHost.ts",
+        "bytes": 21840,
+        "sha256": "0d97f35fcb8ffab937b25ff6656509f51267d43f7d9a5018928f7ea194c91f42",
+        "gitBlob": "384b4c00a05d5886cce267ae76166c93d5892262",
+        "lineCount": 402,
+        "readScope": "Full complete source body read.",
+        "receiptBeforeAndAfterSha256": "0d97f35fcb8ffab937b25ff6656509f51267d43f7d9a5018928f7ea194c91f42",
+        "exactReceiptJoin": true
+      },
+      {
+        "path": "runtime.lock.json",
+        "bytes": 6127,
+        "sha256": "fa614f6dcc672b47342a838300f4c1c7b82ae0f05899c108af17838c58c53a87",
+        "gitBlob": "1757d79786da78e739a322e8bba81cd3dc88dcaa",
+        "lineCount": 197,
+        "readScope": "Full complete source body read.",
+        "receiptBeforeAndAfterSha256": "fa614f6dcc672b47342a838300f4c1c7b82ae0f05899c108af17838c58c53a87",
+        "exactReceiptJoin": true
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-opencode-v2-management-smoke.ts",
+        "bytes": 12302,
+        "sha256": "91bfb3b90c18e38af200e23d167811e526b339d1525ccc502db43759a5e6bf77",
+        "gitBlob": "6f8e3da7ba0cda6a13d5cfbafd1ecaf58ac738dd",
+        "lineCount": 168,
+        "readScope": "Full complete source body read.",
+        "receiptBeforeAndAfterSha256": "91bfb3b90c18e38af200e23d167811e526b339d1525ccc502db43759a5e6bf77",
+        "exactReceiptJoin": true
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-opencode-v2-management-fixture.ts",
+        "bytes": 8880,
+        "sha256": "cc7a6d5aaf57a1a35608025819847b43f43a418558858e95baf4a39bcc564112",
+        "gitBlob": "35518a67d9e6e9c987395bef9b4cb1012ac77bb2",
+        "lineCount": 107,
+        "readScope": "Full complete source body read.",
+        "receiptBeforeAndAfterSha256": "cc7a6d5aaf57a1a35608025819847b43f43a418558858e95baf4a39bcc564112",
+        "exactReceiptJoin": true
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-opencode-v2-fixture.ts",
+        "bytes": 7577,
+        "sha256": "22a46aa137e87c4f1a282aae5518e9aada69ce8b947169457d3aadde3b2ace1d",
+        "gitBlob": "9d6a158fe27134c6f0559ea058f2ecfa5ad478d1",
+        "lineCount": 177,
+        "readScope": "Full complete source body read.",
+        "receiptBeforeAndAfterSha256": "22a46aa137e87c4f1a282aae5518e9aada69ce8b947169457d3aadde3b2ace1d",
+        "exactReceiptJoin": true
+      },
+      {
+        "path": "src/features/runtime-provider-management/main/index.ts",
+        "bytes": 2281,
+        "sha256": "3ea5d059925c604f2800a670319c778cc105d7a31785337910586c7d3199f763",
+        "gitBlob": "a58cdadd06501bf80beb8c7bb5ed1f9c4583b5df",
+        "lineCount": 48,
+        "readScope": "Full complete source body read.",
+        "receiptBeforeAndAfterSha256": "3ea5d059925c604f2800a670319c778cc105d7a31785337910586c7d3199f763",
+        "exactReceiptJoin": true
+      },
+      {
+        "path": "src/features/runtime-provider-management/main/composition/createRuntimeProviderManagementFeature.ts",
+        "bytes": 9591,
+        "sha256": "c00cbde468308d94fd9ebae79f97d2a22d58bb1f72d00ecdc8f348a8c4778bb2",
+        "gitBlob": "017399a48a4ee62332eb994afcf50b9c967ad674",
+        "lineCount": 219,
+        "readScope": "Full complete source body read.",
+        "receiptBeforeAndAfterSha256": null,
+        "exactReceiptJoin": false
+      },
+      {
+        "path": "src/features/agent-backend/main/application/refreshCapturedRuntimeConfiguration.ts",
+        "bytes": 2816,
+        "sha256": "fa97bff889ab288fed4eb983a2f1a3ffb528f8cbd98935c4fe6151732ea0322e",
+        "gitBlob": "0efed1ce0f5fd1d879b1ef473ec475c77cc6d8a9",
+        "lineCount": 60,
+        "readScope": "Full complete source body read.",
+        "receiptBeforeAndAfterSha256": "fa97bff889ab288fed4eb983a2f1a3ffb528f8cbd98935c4fe6151732ea0322e",
+        "exactReceiptJoin": true
+      },
+      {
+        "path": "src/features/runtime-provider-management/renderer/ui/RuntimeProviderManagementPanelView.tsx",
+        "bytes": 97366,
+        "sha256": "11871dd43b1c704230c83e722577ba4cdd4f4fd6c2eebce89cab02457b52b81a",
+        "gitBlob": "176344903eaee49ced9607a29f28a3c556e59f6e",
+        "lineCount": 2584,
+        "readScope": "Full body fetched and identity verified; imports/initial helpers and complete exported component lines 2113–2584 read. Unrelated directory-row/forms helpers not fully reread.",
+        "receiptBeforeAndAfterSha256": "11871dd43b1c704230c83e722577ba4cdd4f4fd6c2eebce89cab02457b52b81a",
+        "exactReceiptJoin": true
+      },
+      {
+        "path": "src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts",
+        "bytes": 74340,
+        "sha256": "647ac5732bfd6b5cb57834adb4ad22c32ee5dfb018a934c92f982efd9daa531c",
+        "gitBlob": "c2faa156015707bc5fbd7f8123a7ffd9c4faa486",
+        "lineCount": 2068,
+        "readScope": "Full body fetched and identity verified; state/currentness/refresh lines1–520, enable/directory effects651–799, refresh actions931–990 and complete submitConnect1222–1420 read. Frozen exact c2faa body; unrelated model test/default mutation branches not reread.",
+        "receiptBeforeAndAfterSha256": "647ac5732bfd6b5cb57834adb4ad22c32ee5dfb018a934c92f982efd9daa531c",
+        "exactReceiptJoin": true
+      },
+      {
+        "path": "src/features/agent-backend/main/infrastructure/CapturedHostClient.ts",
+        "bytes": 32767,
+        "sha256": "4cc91e2d53dee212b8f41b70611a37880f000d7225329bb51d21f9b56816b138",
+        "gitBlob": "6a1c96ed27c412c822e25df22eda858d20bbc6b8",
+        "lineCount": 800,
+        "readScope": "Full body fetched and identity verified; exact request/send/timeout lines274–367 read, other members searched for deadline/management boundaries only.",
+        "receiptBeforeAndAfterSha256": "4cc91e2d53dee212b8f41b70611a37880f000d7225329bb51d21f9b56816b138",
+        "exactReceiptJoin": true
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+        "bytes": 29017,
+        "sha256": "ffd9bbb822dbdc30da7cb8daa881fcbebd384ba2bf9bdd87c804c511166fa02b",
+        "gitBlob": "5286c036a63a14e98925711a224df202c9a7caa7",
+        "lineCount": 495,
+        "readScope": "Full body fetched and identity verified; exact waitRead lines186–209 read and equals frozen5286 post-await deadline implementation.",
+        "receiptBeforeAndAfterSha256": "ffd9bbb822dbdc30da7cb8daa881fcbebd384ba2bf9bdd87c804c511166fa02b",
+        "exactReceiptJoin": true
+      },
+      {
+        "path": "src/main/ipc/agentBackend.ts",
+        "bytes": 30204,
+        "sha256": "8ef04885251a1033bd6a9ba947e810969e66a9cde48ee5db716e3688cdbb05d7",
+        "gitBlob": "084739af2f190dd10565b41f76f592a7b49ea36a",
+        "lineCount": 777,
+        "readScope": "Full body fetched and identity verified; exact getDesktopProviderManagementPort lines413–460 read.",
+        "receiptBeforeAndAfterSha256": "8ef04885251a1033bd6a9ba947e810969e66a9cde48ee5db716e3688cdbb05d7",
+        "exactReceiptJoin": true
+      },
+      {
+        "path": "src/features/agent-backend/main/composition/DesktopBackendFeature.ts",
+        "bytes": 35368,
+        "sha256": "7188000ca255e8de0f1e1bacd00e61f9194dcb0fe74cb97ce0b18cc258367f48",
+        "gitBlob": "ecde3d53f56e879a52abd7312e646c9497bff106",
+        "lineCount": 783,
+        "readScope": "Full body fetched and identity verified; imports and complete captureProviderManagement/current-source/preferences/shutdown section555–783 read.",
+        "receiptBeforeAndAfterSha256": "7188000ca255e8de0f1e1bacd00e61f9194dcb0fe74cb97ce0b18cc258367f48",
+        "exactReceiptJoin": true
+      }
+    ],
+    "sourceCensus": {
+      "beforeRows": 1769,
+      "afterRows": 1769,
+      "uniquePaths": 1769,
+      "completeJsonRowsEqual": true,
+      "scope": "Selected1769-row source census from the original receipt, not all repository source or a fresh physical read."
+    }
+  },
+  "observed": {
+    "finalStatus": "INCOMPLETE",
+    "uiStatus": "INCOMPLETE",
+    "failure": {
+      "name": "Error",
+      "message": "UI read timed out: original default inheritance; no mutation retry"
+    },
+    "modelRequests": [
+      {
+        "step": "reject-key",
+        "model": "TEST-model",
+        "tools": 0,
+        "authorizationMatched": true,
+        "promptMatched": true,
+        "outcome": "refused"
+      },
+      {
+        "step": "connect-key",
+        "model": "TEST-model",
+        "tools": 0,
+        "authorizationMatched": true,
+        "promptMatched": true,
+        "outcome": "OK"
+      }
+    ],
+    "modelFailures": [],
+    "effectRows": [
+      {
+        "step": "reject-key",
+        "commandId": "99851983-524f-4cbc-a1ca-2d2bd60ff687",
+        "kind": "credential.set",
+        "phase": "held",
+        "resourceHeld": false,
+        "source": {
+          "commandId": "65024c46-8b1a-4f9d-b9a8-825e9b6deb40",
+          "sourceId": "d3462728cd9a390b3667a0a0ac7ddd442f397cf77bd791dd5317e237722575d6",
+          "revision": "3dec3a60fa9f60ee5223bdee4d29ce44adafef0cfb1c988d6fb8fada48323857",
+          "previousRevision": "8da6cba482541e34c21bc79626503dc54243832fc4282b5bc33399986f718233",
+          "profileId": "runtime-source:3dec3a60fa9f60ee5223bdee4d29ce44adafef0cfb1c988d6fb8fada48323857",
+          "configRevision": "runtime-source:3dec3a60fa9f60ee5223bdee4d29ce44adafef0cfb1c988d6fb8fada48323857",
+          "projectPath": null,
+          "defaultModelId": null
+        }
+      },
+      {
+        "step": "connect-key",
+        "commandId": "a449b72a-4fd4-4ce1-8c79-9007d01a64e7",
+        "kind": "credential.set",
+        "phase": "completed",
+        "resourceHeld": false,
+        "source": {
+          "commandId": "65024c46-8b1a-4f9d-b9a8-825e9b6deb40",
+          "sourceId": "d3462728cd9a390b3667a0a0ac7ddd442f397cf77bd791dd5317e237722575d6",
+          "revision": "3dec3a60fa9f60ee5223bdee4d29ce44adafef0cfb1c988d6fb8fada48323857",
+          "previousRevision": "8da6cba482541e34c21bc79626503dc54243832fc4282b5bc33399986f718233",
+          "profileId": "runtime-source:3dec3a60fa9f60ee5223bdee4d29ce44adafef0cfb1c988d6fb8fada48323857",
+          "configRevision": "runtime-source:3dec3a60fa9f60ee5223bdee4d29ce44adafef0cfb1c988d6fb8fada48323857",
+          "projectPath": null,
+          "defaultModelId": null
+        }
+      }
+    ],
+    "stepsCount": 23,
+    "finalModelsSteps": [
+      {
+        "monotonicMs": 262718,
+        "action": "mouseMoved",
+        "label": "hover original Models tab",
+        "selector": "[role=\"dialog\"] [role=\"tab\"][id$=\"-trigger-models\"]",
+        "target": {
+          "x": 269.5703125,
+          "y": 283,
+          "text": "Models",
+          "tag": "BUTTON"
+        }
+      },
+      {
+        "monotonicMs": 263785,
+        "action": "mouseClick",
+        "label": "original Models tab",
+        "selector": "[role=\"dialog\"] [role=\"tab\"][id$=\"-trigger-models\"]",
+        "target": {
+          "x": 269.5703125,
+          "y": 205,
+          "text": "Models",
+          "tag": "BUTTON"
+        },
+        "state": "attempted"
+      }
+    ],
+    "modelsTabFailure": {
+      "inheritanceCard": false,
+      "modelsTabActive": true,
+      "modelsTabDisabled": false,
+      "refreshSpinner": true,
+      "legacyModelsPanel": true,
+      "projectContextSelector": true,
+      "publicError": false,
+      "publicWarning": false
+    },
+    "lastObservationLimit": "No statement that these booleans held continuously, that no earlier error appeared, or that view=null. The retained object does not contain the view/request sequence/currentness/async stage.",
+    "reached": [
+      "Original Settings/Providers/Manage inputs",
+      "Original rejected credential command and visible rejection",
+      "Original replacement credential command and Connected presentation",
+      "Exact TEST credential file and nonexposure checks before Models",
+      "First original Models selection"
+    ],
+    "unreached": [
+      "First project-context selection after Models",
+      "Global default model choice/test and persisted preference proof",
+      "Project default and explicit project-model test",
+      "Other-project inheritance checks",
+      "Clear project override",
+      "Renderer reload and final default/credential readback",
+      "Full5-intent command/source-index/final model completeness assertions",
+      "Original UI proof PASS"
+    ],
+    "cleanup": {
+      "failureQuit": {
+        "attempted": true,
+        "scope": "Close only the verified TEST window before stopping its dev wrapper",
+        "reply": "acknowledged",
+        "listenerAbsent": true
+      },
+      "quitRequested": true,
+      "originalRequestedQuitExit": {
+        "initialExitCode": 0,
+        "initialSignalCode": null,
+        "exitCode": 0,
+        "signalCode": null
+      },
+      "beforeHarnessCleanup": [],
+      "cleanup": {
+        "remaining": [],
+        "capturedHostAbsent": true,
+        "hostPid": 4530
+      },
+      "nativeRemaining": [],
+      "nativeInputsEqual": true,
+      "linuxChildExecInputVerifiedAfterCleanup": true,
+      "finiteModelCompleteAfterCleanup": false,
+      "modelServerClosed": true
+    },
+    "inputScope": {
+      "generation": "v2",
+      "version": "2.1.4",
+      "bunSha256": "45598a2814020c231575487a560e47d397d6902355d7e08171a2e56221a6d675",
+      "manifestSha256": "30fef1cda05763154901c6349b010bd3ea530c0da9454514d721284288db98ce",
+      "profileSha256": "4fbe722d06509e919dc42aa97b06ffb0090c714729d571c84794897b861809fa",
+      "descriptorSha256": "6999f321b022d9cd0f6e6dc6796423f56cd377731f66793461dd870724256a88",
+      "runtimeConfigured": false,
+      "managementConfigured": true,
+      "managementProfiles": 2,
+      "codexOrClaudeExecutable": false
+    },
+    "vendorScopeLimit": "The original fixture/source/receipt selects native OpenCode2.1.4 with finite loopback model intents and no configured Claude/Codex executable. Allowed named version/shell sentinel rows are TEST-fixture evidence, not proof that a real Claude/Codex binary ran. This advisory performs no additional vendor/runtime execution or broad executable audit.",
+    "compiledBundleProvenance": "Actual compiled main/preload JS bytes hashed after owned app startup; no claim of reproducible source-to-bundle rebuild"
+  },
+  "sourceTrace": [
+    {
+      "boundary": "Renderer entry",
+      "pins": [
+        "32403fc3f01c93153e1325dd1bf1a6b17fa64499",
+        "176344903eaee49ced9607a29f28a3c556e59f6e"
+      ],
+      "finding": "The panel deliberately starts with Providers and defers the complete view. The Models tab requests it once if no view and not already loading. An active spinner directly indicates state.loading in the rendered View."
+    },
+    {
+      "boundary": "Inheritance guard",
+      "pins": [
+        "ff2da0ec82edd2fb58682a8aadf75585fe63c23a",
+        "1757d79786da78e739a322e8bba81cd3dc88dcaa",
+        "07d575e38c62d86503b80b913ae892616449341f"
+      ],
+      "finding": "All5 scoped fields are required; the stable0.0.160 bundled version is eligible. The inheritance marker is unconditional inside the selected card. Null project context alone is supported."
+    },
+    {
+      "boundary": "Hook",
+      "pins": [
+        "c2faa156015707bc5fbd7f8123a7ffd9c4faa486",
+        "907fb16a613785324fdbd342c2993e08c8209a55",
+        "a3a6ee5182d48416eef42766b846e4a3921d714d"
+      ],
+      "finding": "Successful connection can leave view=null. First requested view awaits the original API promise. Current request alone may set view/error and clear loading; silent/current completion fix is already present. The receipt cannot establish which request generation was current."
+    },
+    {
+      "boundary": "Captured Main",
+      "pins": [
+        "9777f8c6bdcbdb247d24d09ae7b0b51499bbe130",
+        "084739af2f190dd10565b41f76f592a7b49ea36a",
+        "017399a48a4ee62332eb994afcf50b9c967ad674",
+        "ecde3d53f56e879a52abd7312e646c9497bff106",
+        "0efed1ce0f5fd1d879b1ef473ec475c77cc6d8a9"
+      ],
+      "finding": "Capture preserves original descriptor/currentness/preferences and may await original source configuration reconciliation before management read. The selected captured port handles failures without falling back to another runtime."
+    },
+    {
+      "boundary": "View assembly",
+      "pins": [
+        "6849549eacb871ea1342a37f4cecd27ed7795c32",
+        "9a680f0ed4f847ae4612809e342a25ca448036be",
+        "cefb5f79158f10edff53380d6f6707ef49558b66"
+      ],
+      "finding": "Captured loadView awaits capture→current catalog→current preference store/read and only then emits the scoped view. Store roots are still checked; absent preference files yield empty preferences rather than lack of support."
+    },
+    {
+      "boundary": "Host/native metadata",
+      "pins": [
+        "60b08011e5aa2df1a6d2215155d7dabf0b2b15af",
+        "6a1c96ed27c412c822e25df22eda858d20bbc6b8",
+        "708d880bb9be0dcaae978b97b0686b548b7873a3",
+        "3e0d1ae7a3aa852fb5772821f7df1059edd7cead",
+        "384b4c00a05d5886cce267ae76166c93d5892262"
+      ],
+      "finding": "The catalog uses a work-lane RPC and serialized V2 profile metadata owner. Original queue/native deadline and custody/currentness checks remain. Metadata identity/plugin/permission/MCP/directory stages do not submit a model prompt. The existing failure channel records bounded stage/reason only when failure is observed."
+    },
+    {
+      "boundary": "Original harness",
+      "pins": [
+        "7f224d52e429bbdecb173d65b470a2ac154de475",
+        "5286c036a63a14e98925711a224df202c9a7caa7",
+        "6f8e3da7ba0cda6a13d5cfbafd1ecaf58ac738dd",
+        "35518a67d9e6e9c987395bef9b4cb1012ac77bb2",
+        "9d6a158fe27134c6f0559ea058f2ecfa5ad478d1"
+      ],
+      "finding": "The original Models read has30s, native management metadata has120s, and credential/default intents retain250s. These are separate existing deadlines, not a proposal to extend any of them. Failure triggers original quit and cleanup, leaves status INCOMPLETE and does not retry the mutation."
+    }
+  ],
+  "causalAssessment": {
+    "proven": "The first inheritance wait expired before a ready scoped inheritance view was observed. At the last accepted poll the actual Models tab displayed its refresh indicator and fallback legacy presentation.",
+    "compatibleButUnproved": [
+      "The first full view was still awaiting Main capture/source reconciliation, queued catalog/native metadata, or preference IO.",
+      "A prior load became stale or was superseded and the latest current load had not settled.",
+      "A returned view could lack scoped fields; the retained DOM booleans do not expose view contents. Exact fixture/capture source does preserve preference paths, so no unconditional path-loss defect was found."
+    ],
+    "excludedAsEstablishedCauses": [
+      "Bundled runtime version below the scoped-default threshold.",
+      "The Models click not reaching the Models tab.",
+      "A proved native-v2 unsupported flag.",
+      "A proved regression of the c2faa silent-load finally fix.",
+      "The unrelated codexAccount unavailable log lines.",
+      "A proved lack of preference files or a requirement to pre-create a default preference.",
+      "A proved native process leak or failed original app exit."
+    ],
+    "unknown": [
+      "Actual loadView request issue/settle timestamps",
+      "Request/context/runtime generation at failure",
+      "Whether capture/source reconciliation, Host queue/native metadata, preferences, or renderer publication was pending",
+      "Whether a current response eventually arrived after the GUI deadline",
+      "Per-stage cost and metadata-channel events for this particular request"
+    ],
+    "functionalRepair": "No concrete functional repair is sufficiently supported by this evidence. Do not replace the card predicate, bypass currentness, pre-create preferences, retry the original key/default intent, or extend the30s deadline based on this observation.",
+    "narrowExistingCodeOpportunity": "The View currently presents the legacy panel when the full view is absent/loading. An explicit loading presentation could remove that ambiguous UI state, but it would not repair or qualify this failed inheritance flow and is not selected here.",
+    "nextDiscriminatingEvidenceIfRootChooses": "Retain a bounded, nonsecret lifecycle projection for the original loadView/capture/catalog/preferences request and its current/stale settlement, or the existing native metadata failure stage/reason if one is emitted. It should observe the same original request, preserve its error/outcome and all original deadlines, and add no model/OS/network read or retry. This is an advisory possibility, not an approved implementation, test, venue or gate.",
+    "verificationBoundary": "Any future functional correction would need evidence that the original inheritance marker appears before its unchanged deadline and that all original downstream defaults/model-test/inheritance/reload and ordinary cleanup obligations succeed. This report supplies no such run result."
+  },
+  "checks": [
+    {
+      "number": 1,
+      "id": "IDENTITIES",
+      "status": "PASS_BOUNDED_EVIDENCE",
+      "finding": "The complete receipt, complete retained job-log body and complete archived app-log body hash to their supplied Git blob/byte/SHA256 identities. Only retained immutable bodies were fetched."
+    },
+    {
+      "number": 2,
+      "id": "FIXED_SOURCE",
+      "status": "PASS_BOUNDED_EVIDENCE",
+      "finding": "Receipt source.head, checkout log and source URL basis all identify9d79abcf1f5c498687c2e5c443e3edf220070aa6; receipt dirty=false. No later source publication is credited to this run."
+    },
+    {
+      "number": 3,
+      "id": "SOURCE_CENSUS",
+      "status": "PASS_BOUNDED_EVIDENCE",
+      "finding": "Both complete selected-source arrays contain1769 well-formed unique path/hash rows and are literally equal as JSON data; this is the receipt's selected census, not a new all-repository physical inventory."
+    },
+    {
+      "number": 4,
+      "id": "SOURCE_JOINS",
+      "status": "PASS_BOUNDED_EVIDENCE",
+      "finding": "All28 retrieved source bodies were fully byte-hashed;22 have exact before/after receipt SHA256 joins, and6 additional helper/composition bodies are fixed-commit primary source only. Read scopes are explicitly listed."
+    },
+    {
+      "number": 5,
+      "id": "APP_LOG",
+      "status": "PASS_BOUNDED_EVIDENCE",
+      "finding": "All11213 archived app-log bytes were read. The log contains no loadView/catalog/preference-stage completion or error that identifies this failure. Codex account unavailable/not-dispatched lines do not establish the cause of the OpenCode request."
+    },
+    {
+      "number": 6,
+      "id": "ORIGINAL_OUTCOME",
+      "status": "PASS_BOUNDED_EVIDENCE",
+      "finding": "Receipt and UI proof remain INCOMPLETE; job exits1, and original verifier rejects INCOMPLETE versus PASS. No cleanup or unit-test result is substituted for this failed journey."
+    },
+    {
+      "number": 7,
+      "id": "KEY_REJECTION",
+      "status": "PASS_BOUNDED_EVIDENCE",
+      "finding": "The reached reject-key effect is a credential.set held receipt with resourceHeld=false; the actual driver only appends it after original terminalRejection/probe-completed/verification-false assertions and source binding."
+    },
+    {
+      "number": 8,
+      "id": "KEY_REPLACEMENT",
+      "status": "PASS_BOUNDED_EVIDENCE",
+      "finding": "The reached connect-key effect is credential.set completed/resourceHeld=false. Before first Models selection, the driver confirms the original Connected presentation, exact TEST key file, nonexposure in DOM, no OAuth-code input, and passive request count2."
+    },
+    {
+      "number": 9,
+      "id": "FINITE_EFFECTS",
+      "status": "PASS_BOUNDED_EVIDENCE",
+      "finding": "The retained model server shows exactly reject-key/refused and connect-key/OK, tools0 and matching authority/prompt, with no model-server failures. FiniteModelCompleteAfterCleanup=false is preserved."
+    },
+    {
+      "number": 10,
+      "id": "SAME_KEY_SOURCE",
+      "status": "PASS_BOUNDED_EVIDENCE",
+      "finding": "Both effect rows carry the same runtime-source publication identity/revision and projectPath=null. This report joins those retained projections and reached source code; it does not claim an independent full raw command/archive audit."
+    },
+    {
+      "number": 11,
+      "id": "FAILED_BOUNDARY",
+      "status": "PASS_BOUNDED_EVIDENCE",
+      "finding": "The first modelsTab() call at driver219 fails within its original inheritance wait at138; selectProject('workspace') and all subsequent default/model-test/reload obligations are unreached."
+    },
+    {
+      "number": 12,
+      "id": "TAB_OBSERVATION",
+      "status": "PASS_BOUNDED_EVIDENCE",
+      "finding": "The last accepted boolean observation is Models active/not disabled, spinner/legacy panel/project selector present, inheritance/error/warning absent. It is a last poll observation, not a continuous30-second trace or full hook-state snapshot."
+    },
+    {
+      "number": 13,
+      "id": "READ_CLOCK",
+      "status": "PASS_BOUNDED_EVIDENCE",
+      "finding": "Actual controls5286 use the original absolute Date.now deadline, a post-await cutoff before the predicate and original100ms delay. The30,000ms inheritance wait is unchanged and the timeout rethrows without mutation retry."
+    },
+    {
+      "number": 14,
+      "id": "DEFERRED_VIEW",
+      "status": "PASS_BOUNDED_EVIDENCE",
+      "finding": "Panel32403f passes loadViewOnEnable=false. View176344 calls refresh on the Models transition only when view is absent and loading false. Connection directory work does not establish that a complete view has already loaded."
+    },
+    {
+      "number": 15,
+      "id": "CONNECT_VIEW_NULL",
+      "status": "PASS_BOUNDED_EVIDENCE",
+      "finding": "replaceProvider(null, connectedProvider) returns null. The connection refresh callback skips refreshView while viewRequestedRef is false, so a confirmed connection can legitimately precede the first complete management view."
+    },
+    {
+      "number": 16,
+      "id": "RENDER_BRANCH",
+      "status": "PASS_BOUNDED_EVIDENCE",
+      "finding": "The complete exported View component selects inheritance versus LegacyConfiguredModelsPanel solely through supportsScopedDefaultModelInheritance(state.view,bundledRuntimeVersion); its Models refresh spinner directly reflects state.loading."
+    },
+    {
+      "number": 17,
+      "id": "SUPPORT_PREDICATE",
+      "status": "PASS_BOUNDED_EVIDENCE",
+      "finding": "The actual predicate needs a nonnull view with configuredModels,projectPath,projectDefaultModel,allProjectsDefaultModel,defaultModelSource and stable bundled version>=0.0.75. It is not a native-v2 generation discriminator."
+    },
+    {
+      "number": 18,
+      "id": "LOCK_THRESHOLD",
+      "status": "PASS_BOUNDED_EVIDENCE",
+      "finding": "Exact runtime.lock1757d797 version0.0.160 satisfies the predicate's version threshold. No unsupported-bundled-version repair is supported by these sources."
+    },
+    {
+      "number": 19,
+      "id": "CARD_MARKER",
+      "status": "PASS_BOUNDED_EVIDENCE",
+      "finding": "The actual inheritance-card component emits data-testid=opencode-default-inheritance unconditionally when the component is selected. A global projectPath=null is supported and does not suppress the outer marker."
+    },
+    {
+      "number": 20,
+      "id": "REFRESH_CURRENTNESS",
+      "status": "PASS_BOUNDED_EVIDENCE",
+      "finding": "Actual hook refresh increments request sequence, captures project context, awaits one loadView call, rejects stale writes and clears loading only for a current request in finally. The accepted c2faa silent-load fix is present."
+    },
+    {
+      "number": 21,
+      "id": "CAPTURE_ROUTE",
+      "status": "PASS_BOUNDED_EVIDENCE",
+      "finding": "Desktop composition supplies the selected captured port; feature loadView delegates to port.loadView. Selected-backend capture failures return an error through the captured client, without choosing the optional CLI client after failure."
+    },
+    {
+      "number": 22,
+      "id": "CAPTURE_PREFERENCES",
+      "status": "PASS_BOUNDED_EVIDENCE",
+      "finding": "DesktopBackendFeature retains selected.preferences when replacing profile/config revision with a runtime-source summary. No unconditional preference-loss bug was found in that exact capture path."
+    },
+    {
+      "number": 23,
+      "id": "SOURCE_PREPARATION",
+      "status": "PASS_BOUNDED_EVIDENCE",
+      "finding": "Before capturing management, current-source preparation can await owner startup/current/recover/preference capture and a needed original configuration publication. It serializes preparation per original descriptor object with a32-pending bound; this run does not identify which stage was active at failure."
+    },
+    {
+      "number": 24,
+      "id": "LOADVIEW_ORDER",
+      "status": "PASS_BOUNDED_EVIDENCE",
+      "finding": "Captured loadView awaits capture, one current catalog, then selectedPreferences; only after those succeed does it return the complete scoped fields when the preference store is present. Error responses are generic and do not retain the internal stage."
+    },
+    {
+      "number": 25,
+      "id": "PREFERENCE_READ",
+      "status": "PASS_BOUNDED_EVIDENCE",
+      "finding": "FileManagedProviderPreferences uses original captured roots/currentness, bounded no-follow reads and empty defaults on ENOENT. Missing initial preference files therefore do not themselves remove scoped support when a store is captured."
+    },
+    {
+      "number": 26,
+      "id": "HOST_CATALOG",
+      "status": "PASS_BOUNDED_EVIDENCE",
+      "finding": "V2 catalog calls serialize on the original profile, keep original deadline across queue/host replacement, and preserve current target and owned-child retirement checks. No cache/deadline or ownership relaxation is proposed."
+    },
+    {
+      "number": 27,
+      "id": "NATIVE_METADATA",
+      "status": "PASS_BOUNDED_EVIDENCE",
+      "finding": "OpenCodeV2ManagementHost reads identity/plugins/permissions/MCP/directory with captured custody and no session/prompt. Metadata activation waits remain inside the original deadline; failures can publish a bounded stage/reason channel, but that channel is not present in this retained receipt/log."
+    },
+    {
+      "number": 28,
+      "id": "DISTINCT_BUDGETS",
+      "status": "PASS_BOUNDED_EVIDENCE",
+      "finding": "Exact TEST management profile sets timeoutMs and modelProbeTimeoutMs120000. A pending native/capture path at the GUI's30000ms boundary is permitted by these existing nested budgets; actual stage/cost is not proved and no budget increase is selected."
+    },
+    {
+      "number": 29,
+      "id": "CLEANUP",
+      "status": "PASS_BOUNDED_EVIDENCE",
+      "finding": "Original requested quit acknowledged/listener absent; initial/final app exit0 with no signal; beforeHarnessCleanup=[], Host absent, nativeRemaining=[], no remaining app group in retained cleanup. These observations do not turn the incomplete UI proof into PASS."
+    },
+    {
+      "number": 30,
+      "id": "INPUTS_AFTER",
+      "status": "PASS_BOUNDED_EVIDENCE",
+      "finding": "NativeV2InputAfterCleanup equals the before input object; selected-source hashes are equal; linux child-exec verification and modelServerClosed are true. Compiled bundle hashes are observed artifact identities, not reproducible source-to-bundle proof."
+    },
+    {
+      "number": 31,
+      "id": "CAUSAL_LIMIT",
+      "status": "PASS_BOUNDED_EVIDENCE",
+      "finding": "Observed legacy+spinner is compatible with a pending or superseded view load and does not prove a capability, preference, or stale-finally bug. The evidence lacks request generation/stage/response timing needed to choose a functional repair."
+    },
+    {
+      "number": 32,
+      "id": "NO_ACTION",
+      "status": "PASS_BOUNDED_EVIDENCE",
+      "finding": "No source/control authorship, import/compile/target execution, shell, native executable, local probe, live CI read/poll/retry, ref or PR mutation occurred. This report is advisory only and does not create a gate."
+    }
+  ],
+  "checkCount": 32,
+  "limitations": [
+    "No complete raw command-member or PNG/ZIP audit by this reviewer; root's custody/visual verification is attributed.",
+    "No complete manual reread of unrelated job setup/test rows, unrelated large View/Hook/IPC/client members, or all1769 source-array text lines; full retained byte identities and data comparisons are explicit.",
+    "No code execution, timing measurement, functional fix selection, runtime PASS, adoption or release/native qualification.",
+    "The source census is selected1769 rows; it must not be relabeled as fresh all8799/all-repository physical preservation.",
+    "All original failed-run status and unexecuted downstream obligations remain open."
+  ]
+}

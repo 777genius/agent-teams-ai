@@ -1,0 +1,493 @@
+{
+  "schemaVersion": 1,
+  "kind": "bounded-collaboration-claude-fixture-model-auth-source-advisory",
+  "reviewer": "/root/producer_r2_guard",
+  "repository": "777genius/agent-teams-ai",
+  "createdAtUtc": "2026-11-17 11:37:17 UTC",
+  "subject": {
+    "currentCommit": "ea1cc84228bfe79d1b64c38600d2d50049d1a8d0",
+    "currentTree": "f77c67b7996ec0d262d3f97769eeb943c4b87b43",
+    "fixedCiCommit": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+    "task": "Independently inspect the original collaboration fixture for selected Claude peer, saved/runtime/template model versus offered launch model, and management auth executable; give narrow possible TEST-only correction and existing test seams."
+  },
+  "decision": {
+    "sourceFinding": "TWO_DIRECT_COLLABORATION_FIXTURE_CONTRACT_MISMATCHES",
+    "candidate": "Align the collaboration fixture's saved/runtime/template/report model with TEST-claude-sonnet and supply only the missing finite auth-status contract in the same selected TEST peer if parent selects that shared repair.",
+    "runtimeResult": "UNEXECUTED",
+    "sourcePostimageAuthored": false,
+    "fixSelected": false,
+    "newGate": false,
+    "blockersToReadOnlyAdvisory": [],
+    "checks": 20
+  },
+  "scopeAndAuthority": {
+    "rootSoleAuthorApplierStagerExecutor": true,
+    "allowed": "Immutable Git and retained evidence reads; pure in-memory data/hash comparison; this bare report only.",
+    "forbiddenActionsPerformed": [],
+    "noVendorProbe": true,
+    "noLiveCiRead": true,
+    "noDeadlineOrAuthorityChange": true,
+    "frozenWholeSuites": [
+      "149 Node parity cases",
+      "43 teamModelAvailability renderer cases",
+      "85 useRuntimeProviderManagement renderer cases"
+    ],
+    "qualification": "Source compatibility finding only. No original application flow, real auth, runtime probe, model execution, native platform, cleanup or performance PASS is newly established."
+  },
+  "sources": [
+    {
+      "repository": "777genius/agent-teams-ai",
+      "path": "scripts/legacy-agent-host/desktop-emulated-collaboration-fixture.ts",
+      "ref": "ea1cc84228bfe79d1b64c38600d2d50049d1a8d0",
+      "bytes": 16555,
+      "sha256": "8340911817fb4228e8d948425a1f85796fba16d244b6763b04e307ed6f290713",
+      "gitBlob": "97e14385a298a38a9b81b8805dc3f6d2da66545c",
+      "lines": 199,
+      "fixed9dFullBodyEquality": true,
+      "fixed9dSelectedSourceCensusSHA256Match": true,
+      "semanticRead": "Complete source body semantically read in this advisory."
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "path": "tools/owned-process-broker/fixtures/claudeProviderPeer.mjs",
+      "ref": "ea1cc84228bfe79d1b64c38600d2d50049d1a8d0",
+      "bytes": 32221,
+      "sha256": "c443b410efbe4910839b02662fa1767b60e428936c012d729b26eeb82f182a87",
+      "gitBlob": "920b40fa594f7aa65e11d1ec1f31d2aa69581a01",
+      "lines": 463,
+      "fixed9dFullBodyEquality": true,
+      "fixed9dSelectedSourceCensusSHA256Match": true,
+      "semanticRead": "Complete source body semantically read in this advisory."
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "path": "scripts/legacy-agent-host/desktop-emulated-collaboration-ui.ts",
+      "ref": "ea1cc84228bfe79d1b64c38600d2d50049d1a8d0",
+      "bytes": 34086,
+      "sha256": "d02a551bd97ea876b20bf39bd5c66fc6eda109198aad61f4c9dcf2a65981e29f",
+      "gitBlob": "aff6e19ec4cf492841aa667442c1b7d71541c7c5",
+      "lines": 377,
+      "fixed9dFullBodyEquality": true,
+      "fixed9dSelectedSourceCensusSHA256Match": true,
+      "semanticRead": "Original launch setup/input/preflight boundary lines 1-145 read; full source body fetched/hashed and current-versus-fixed9d equality checked."
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "path": "packages/legacy-agent-host/src/adapters/providers/ClaudeManagementHost.ts",
+      "ref": "ea1cc84228bfe79d1b64c38600d2d50049d1a8d0",
+      "bytes": 6977,
+      "sha256": "62e74e6cbdf1bdb94d828b84b31eff58e9a36a5b2290c6578a3b266dd19da568",
+      "gitBlob": "12d3ce0c8b8423cc86abbe1f39feb0cdd46562d2",
+      "lines": 173,
+      "fixed9dFullBodyEquality": null,
+      "fixed9dSelectedSourceCensusSHA256Match": true,
+      "semanticRead": "Complete source body semantically read in this advisory."
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "path": "packages/legacy-agent-host/src/adapters/providers/ClaudeAuthConversation.ts",
+      "ref": "ea1cc84228bfe79d1b64c38600d2d50049d1a8d0",
+      "bytes": 10334,
+      "sha256": "709d66ffc366f0b83d9af0a49a1b9126bda1e33e72f796da0458356349b18880",
+      "gitBlob": "a4d47563cffaed2ea48381887e47820ed727422e",
+      "lines": 275,
+      "fixed9dFullBodyEquality": null,
+      "fixed9dSelectedSourceCensusSHA256Match": true,
+      "semanticRead": "Complete source body semantically read in this advisory."
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "path": "packages/legacy-agent-host/src/composition/ClaudeAuthenticationCoordinator.ts",
+      "ref": "ea1cc84228bfe79d1b64c38600d2d50049d1a8d0",
+      "bytes": 7797,
+      "sha256": "c5004da14dbf88f92a8a56984f7d0c6e31f4cff27e1f00f3b3f2a5e382f35a81",
+      "gitBlob": "5f129052b232eed045304284167bc9258141b720",
+      "lines": 193,
+      "fixed9dFullBodyEquality": null,
+      "fixed9dSelectedSourceCensusSHA256Match": true,
+      "semanticRead": "Complete source body semantically read in this advisory."
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "path": "src/features/runtime-provider-management/main/adapters/output/capturedClaudeMetadata.ts",
+      "ref": "ea1cc84228bfe79d1b64c38600d2d50049d1a8d0",
+      "bytes": 7477,
+      "sha256": "c4d8333cc5b562b7eb8de8398bde8275d579fdb7775c59c3d1ae5123e88cfdc8",
+      "gitBlob": "c0bd14811e8cd76dd34bcf42afac2785769e37ad",
+      "lines": 186,
+      "fixed9dFullBodyEquality": null,
+      "fixed9dSelectedSourceCensusSHA256Match": true,
+      "semanticRead": "Complete source body semantically read in this advisory."
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "path": "src/features/runtime-provider-management/main/adapters/output/capturedClaudeAuthentication.ts",
+      "ref": "ea1cc84228bfe79d1b64c38600d2d50049d1a8d0",
+      "bytes": 3092,
+      "sha256": "c4ca2ee17177e804122d551d55c80b91c8fbba59b9bbc87465819cad130cb4e7",
+      "gitBlob": "7ee86041e36d33033ede953ba05e76244f9586ca",
+      "lines": 99,
+      "fixed9dFullBodyEquality": null,
+      "fixed9dSelectedSourceCensusSHA256Match": true,
+      "semanticRead": "Complete source body semantically read in this advisory."
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "path": "src/renderer/utils/teamModelAvailability.ts",
+      "ref": "ea1cc84228bfe79d1b64c38600d2d50049d1a8d0",
+      "bytes": 32077,
+      "sha256": "b1da0ea7199e69eb042e5beb16dfafa91c4d7b9360db41a3f9ba16424ca2fd43",
+      "gitBlob": "ac6e66775bd5efaf81cecb9a2f22a3437b4343ad",
+      "lines": 982,
+      "fixed9dFullBodyEquality": true,
+      "fixed9dSelectedSourceCensusSHA256Match": null,
+      "semanticRead": "Relevant authoritative-catalog, visibility, availability and refusal branches read; full body retained/identity verified; prior accepted utility is unchanged."
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "path": "src/renderer/components/team/dialogs/memberModelScope.ts",
+      "ref": "ea1cc84228bfe79d1b64c38600d2d50049d1a8d0",
+      "bytes": 12942,
+      "sha256": "0033354db6b28e7b69eaa8f10db35332883707b9a6576c80e55c78f997a670a8",
+      "gitBlob": "d24060b3c0440b4ed6cf62c87e83098529d951c4",
+      "lines": 380,
+      "fixed9dFullBodyEquality": true,
+      "fixed9dSelectedSourceCensusSHA256Match": null,
+      "semanticRead": "Complete source body semantically read in this advisory."
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "path": "src/renderer/components/team/dialogs/LaunchTeamDialog.tsx",
+      "ref": "ea1cc84228bfe79d1b64c38600d2d50049d1a8d0",
+      "bytes": 132317,
+      "sha256": "af7b6f9da352008ef014dad120b868090626e071cd5d94037fd03385e2234d40",
+      "gitBlob": "4bd95a0f2e5636a21d1f0d83dd45f228b054b048",
+      "lines": 3219,
+      "fixed9dFullBodyEquality": null,
+      "fixed9dSelectedSourceCensusSHA256Match": true,
+      "semanticRead": "Relevant imports, model validation, authority guard and disabled-button consumer ranges read, not a whole-dialog semantic audit."
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "path": "scripts/legacy-agent-host/desktop-emulated-settings.test.ts",
+      "ref": "ea1cc84228bfe79d1b64c38600d2d50049d1a8d0",
+      "bytes": 24968,
+      "sha256": "771daf9353d767afc0cf6696779f37c07bbd404ad967845d230d6fd46a9bf0c6",
+      "gitBlob": "bd427fbe8bdcba5a80674d220becd75d8bd6ef57",
+      "lines": 333,
+      "fixed9dFullBodyEquality": null,
+      "fixed9dSelectedSourceCensusSHA256Match": true,
+      "semanticRead": "Complete source body semantically read in this advisory."
+    }
+  ],
+  "sourceTotals": {
+    "distinctCurrentBodies": 12,
+    "bytes": 320843,
+    "identityMethod": "Approved 3982-byte pure UTF8 identity helper; no target source evaluation."
+  },
+  "sourceContinuity": {
+    "completeCurrentAndFixed9dEqualityPaths": [
+      "scripts/legacy-agent-host/desktop-emulated-collaboration-fixture.ts",
+      "tools/owned-process-broker/fixtures/claudeProviderPeer.mjs",
+      "scripts/legacy-agent-host/desktop-emulated-collaboration-ui.ts",
+      "src/renderer/utils/teamModelAvailability.ts",
+      "src/renderer/components/team/dialogs/memberModelScope.ts"
+    ],
+    "retainedFixed9dCensusJoin": {
+      "receiptBlob": "06c92df2434742231da32ab75e5473a3c90c5358",
+      "sha256": "c2c24bf0d46d1210a4e398991650b200d882cd89fed5a2c6a1e734a9bdb99d55",
+      "role": "Previously fully read immutable selectedSourceHashesBeforeApp census, used only as path/SHA continuity evidence, not as collaboration runtime evidence.",
+      "matchedPaths": [
+        "scripts/legacy-agent-host/desktop-emulated-collaboration-fixture.ts",
+        "tools/owned-process-broker/fixtures/claudeProviderPeer.mjs",
+        "scripts/legacy-agent-host/desktop-emulated-collaboration-ui.ts",
+        "packages/legacy-agent-host/src/adapters/providers/ClaudeManagementHost.ts",
+        "packages/legacy-agent-host/src/adapters/providers/ClaudeAuthConversation.ts",
+        "packages/legacy-agent-host/src/composition/ClaudeAuthenticationCoordinator.ts",
+        "src/features/runtime-provider-management/main/adapters/output/capturedClaudeMetadata.ts",
+        "src/features/runtime-provider-management/main/adapters/output/capturedClaudeAuthentication.ts",
+        "src/renderer/components/team/dialogs/LaunchTeamDialog.tsx",
+        "scripts/legacy-agent-host/desktop-emulated-settings.test.ts"
+      ]
+    },
+    "absentCensusRows": "teamModelAvailability and memberModelScope are outside that selected census; both were instead fetched at fixed9d and compared as complete bodies. Null in source rows means that specific join method was not used, not a mismatch.",
+    "commitMetadataLimit": "Current commit metadata/tree and selected non-doc path list were parsed. An initial overly broad commit response was truncated and is not claimed as a full commit-diff read."
+  },
+  "literalEvidence": [
+    {
+      "path": "scripts/legacy-agent-host/desktop-emulated-collaboration-fixture.ts",
+      "lines": "20-26",
+      "text": "export const collaborationPeerSources = [\n  'tools/owned-process-broker/fixtures/claudeProviderPeer.mjs',\n  'tools/owned-process-broker/fixtures/providerPeer.mjs',\n  'tools/owned-process-broker/fixtures/providerDesktopPeer.mjs',\n  'tools/owned-process-broker/fixtures/providerCollaboration.mjs',\n  'packages/legacy-agent-host/dist/adapters/providers/OpenCodeMcpPolicyPlugin.js',\n] as const;"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-emulated-collaboration-fixture.ts",
+      "lines": "38-60",
+      "text": "  const selections = await Promise.all(providers.map(async (provider, index) => {\n    const root = join(fixture.root, `TEST-peer-${provider}-scope`), memberName = ['alice', 'bob', 'carol'][index]!;\n    for (const name of ['', 'home', 'tmp', 'config', 'data', 'cache']) await mkdir(join(root, name), { mode: 0o700 });\n    const wrapper = `${desktopNodeScriptHeader(fixture.node)}import assert from 'node:assert/strict';\nimport {createHash} from 'node:crypto';import {readFileSync,realpathSync} from 'node:fs';\nfor(const source of ${JSON.stringify(sources)}){assert.equal(realpathSync(source.path),source.path);assert.equal(createHash('sha256').update(readFileSync(source.path)).digest('hex'),source.sha256)}\n${provider === 'codex' ? \"if(process.argv.length===3&&process.argv[2]==='--version')process.stdout.write('codex-cli 0.162.0\\\\n');else \" : ''}await import(${JSON.stringify(pathToFileURL(sources[provider === 'claude' ? 0 : 1]!.path).href)});\n`;\n    const path = join(fixture.root, 'bin', `TEST-${provider}-collaboration${provider === 'claude' ? '' : '.mjs'}`);\n    await writeFile(path, wrapper, { mode: 0o700, flag: 'wx' });\n    const executable = { path, sha256: digest(wrapper) };\n    const peers = (['runtime', 'management'] as const).map(role => ({ provider, root, role,\n      environment: {\n        HOME: join(root, 'home'), TMPDIR: join(root, 'tmp'),\n        XDG_CONFIG_HOME: join(root, 'config'), XDG_DATA_HOME: join(root, 'data'), XDG_CACHE_HOME: join(root, 'cache'),\n        PATH: `${dirname(fixture.node)}:/usr/bin:/bin`, SHELL: '/bin/sh',\n        TEST_EMULATED_DESKTOP_PROVIDER: '1', TEST_PEER_SCENARIO: 'desktop-ui-v1', TEST_PEER_PROVIDER: provider,\n        TEST_PEER_ROLE: role, TEST_DESKTOP_PEER_ROOT: root, TEST_PEER_EFFECTS: join(root, 'effects.ndjson'),\n        TEST_DESKTOP_PEER_WORKSPACE: join(fixture.root, 'workspace'),\n        TEST_DESKTOP_COLLABORATION: 'mixed-v1', TEST_DESKTOP_COLLABORATION_MEMBER: memberName,\n        TEST_PEER_COLLABORATION_SHA256: sources[3]!.sha256,\n        ...(provider === 'claude' ? { CLAUDE_CONFIG_DIR: join(root, 'config') }\n          : { TEST_PEER_HELPER_SHA256: sources[2]!.sha256 }),"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-emulated-collaboration-fixture.ts",
+      "lines": "79-109",
+      "text": "  const profile = JSON.parse(await readFile(fixture.profilePath, 'utf8')) as TeamHostProfile;\n  assert.equal(profile.runtime, undefined); assert.equal(profile.management, undefined);\n  const team = profile.teams[0]!;\n  team.members = [{ memberId: 'alice-id', name: 'alice', role: 'lead' },\n    { memberId: 'bob-id', name: 'bob', role: 'member', settings: { providerId: 'codex', model: 'TEST-model' } }];\n  team.savedSettings = { cwd: join(fixture.root, 'workspace'), providerId: 'anthropic', model: 'sonnet', effort: 'low',\n    fastMode: 'off', prompt: '', skipPermissions: false, syncModelsWithLead: false };\n  const templates = selections.map(({ provider, memberName, executable, peers }) => {\n    const memberId = `${memberName}-id`, principalId = `${memberName}-session`, environment = peers[0]!.environment;\n    if (provider !== 'opencode') {\n      team.members.find(row => row.memberId === memberId)!.delivery = { ...team.binding, runId: team.scope.runId, memberId, generation: '1' };\n      team.grants.push({ principalId, memberName, permissions: ['read', 'task.write', 'message.write'] });\n    }\n    return runtimeMemberProfileSchema.parse({ provider, teamId: team.binding.teamId, memberId, principalId,\n      sessionId: `TEST-collaboration-${provider}-session`, generation: 1, configRevision: `TEST-collaboration-${provider}-runtime`,\n      cwd: team.savedSettings!.cwd, model: provider === 'claude' ? 'sonnet' : 'TEST-model',\n      accountBinding: 'TEST-no-vendor-account', executable, environment,\n      ...(provider === 'claude' ? { configNamespace: 'custom-directory', nativeTools: ['Read', 'Write', 'AskUserQuestion'],\n        autoAllowedTools: [], nativeOptions: { permissionMode: 'default', settingSources: [], effort: 'low', fastMode: false } }\n        : provider === 'codex' ? { protocolRevision: '0.162.0', nativeOptions: { approvalPolicy: 'on-request', sandbox: 'read-only' } }\n          : { protocolRevision: '1.19.4', endpoint: endpoints.runtime, nativeOptions: { providerId: 'test-provider', agent: 'build', toolApprovalMode: 'manual' } }),\n      limits: { queuedInputs: 2, inputBytes: 65536, outputBytes: 1_000_000, outputEvents: 1500, pendingInteractions: 4, timeoutMs: 90_000 },\n    });\n  });\n  profile.runtime = { members: templates.slice(0, 2), providerTemplates: templates };\n  profile.management = selections.map(({ provider, executable, peers }) => providerManagementProfileSchema.parse({ provider,\n    profileId: `TEST-collaboration-${provider}-management`, configRevision: `TEST-collaboration-${provider}-management`,\n    accountBinding: 'TEST-no-vendor-account', cwd: team.savedSettings!.cwd, executable, environment: peers[1]!.environment,\n    ...(provider === 'claude' ? { sdkRevision: '0.3.305', configNamespace: 'custom-directory', settingSources: [] }\n      : provider === 'codex' ? { protocolRevision: '0.162.0' } : { endpoint: endpoints.management }),\n    timeoutMs: 15000, modelProbeTimeoutMs: 30000 }));"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-emulated-collaboration-fixture.ts",
+      "lines": "122-137",
+      "text": "  const lease = acquireProfileWriterLease(profile.owner.storageRoot);\n  let uiSeed;\n  try {\n    lease.assertCurrent();\n    const owner = createFilesystemTeamOwner({ root: profile.owner.storageRoot, binding: team.binding,\n      members: team.members, grants: team.grants, savedSettings: team.savedSettings });\n    const connection = owner.connect(profile.principalId), subject = 'TEST mixed collaboration sidebar seed', commandId = 'TEST-collaboration-seed';\n    const receipt = connection.execute({ commandId, operation: 'task.create', payload: { subject } });\n    assert.equal(receipt.phase, 'completed'); const tasks = connection.listTasks(); assert.equal(tasks.length, 1);\n    uiSeed = { taskId: tasks[0]!.id, subject, commandId };\n    await writeFile(join(fixture.root, 'ui-seed-receipt.json'), JSON.stringify(receipt, null, 2), { mode: 0o600, flag: 'wx' });\n  } finally { lease.release(); }\n  return { ...fixture, uiSeed, emulatedRuntime: { provider: 'claude' as const, variant: 'collaboration' as const,\n    sources, executable: selections[0]!.executable, peers: selections.flatMap(row => row.peers), versionSentinel,\n    savedModel: 'sonnet', installer: undefined, observedPeerPids: [] as number[],\n    commandPrefix: `${fixture.node} ${selections[0]!.executable.path} `, collaboration: { selections, endpoints, project } } };"
+    },
+    {
+      "path": "tools/owned-process-broker/fixtures/claudeProviderPeer.mjs",
+      "lines": "62-90",
+      "text": "const options = {};\nconst flags = new Set(['verbose', 'strict-mcp-config', 'include-partial-messages', 'no-session-persistence', 'allow-dangerously-skip-permissions']);\nconst values = new Set(['output-format', 'input-format', 'model', 'effort', 'tools', 'allowedTools', 'disallowedTools',\n  'setting-sources', 'permission-mode', 'permission-prompt-tool', 'session-id', 'resume', 'max-turns', 'max-budget-usd', 'betas', 'mcp-config', 'settings']);\nconst argv = process.argv.slice(2);\nassert.ok(argv.length <= 64 && Buffer.byteLength(JSON.stringify(argv)) <= 128 * 1024, 'argv');\nfor (let index = 0; index < argv.length; index++) {\n  const match = /^--([a-zA-Z-]+)(?:=([\\s\\S]*))?$/u.exec(argv[index]);\n  assert.ok(match && !Object.hasOwn(options, match[1]), 'argv');\n  const name = match[1];\n  if (flags.has(name)) { assert.equal(match[2], undefined, 'argv'); options[name] = true; }\n  else {\n    assert.ok(values.has(name), 'argv');\n    const value = match[2] ?? argv[++index];\n    assert.ok(typeof value === 'string' && !value.includes('\\0'), 'argv'); options[name] = value;\n  }\n}\nassert.equal(options['output-format'], 'stream-json', 'argv');\nassert.equal(options['input-format'], 'stream-json', 'argv');\nassert.equal(options.verbose, true, 'argv');\nassert.equal(options['strict-mcp-config'], true, 'argv');\nassert.ok(['default', 'acceptEdits', 'bypassPermissions', 'plan', 'dontAsk', 'auto'].includes(options['permission-mode']), 'argv');\nassert.ok(options['permission-prompt-tool'] === undefined || options['permission-prompt-tool'] === 'stdio', 'argv');\nassert.ok(options.effort === undefined || ['low', 'medium', 'high'].includes(options.effort), 'argv');\nassert.ok(options.model === undefined || ['sonnet', 'sonnet[1m]', 'TEST-claude-sonnet'].includes(options.model), 'argv');\nassert.ok(options['max-turns'] === undefined || ['1', '6', '8'].includes(options['max-turns']), 'argv');\nassert.ok(options['max-budget-usd'] === undefined || ['0.25', '0.5'].includes(options['max-budget-usd']), 'argv');\nassert.ok(options.betas === undefined || options.betas === 'context-1m-2025-08-07', 'argv');\nassert.ok(typeof options['setting-sources'] === 'string' && options['setting-sources'].split(',').every(value => ['', 'user', 'project', 'local'].includes(value)), 'argv');"
+    },
+    {
+      "path": "tools/owned-process-broker/fixtures/claudeProviderPeer.mjs",
+      "lines": "170-171",
+      "text": "const models = [{ value: 'sonnet', resolvedModel: 'TEST-claude-sonnet', displayName: 'TEST Claude Sonnet',\n  description: 'Subscription-free protocol emulation', supportsEffort: true, supportedEffortLevels: ['low', 'medium', 'high'], supportsFastMode: false }];"
+    },
+    {
+      "path": "tools/owned-process-broker/fixtures/claudeProviderPeer.mjs",
+      "lines": "343-350",
+      "text": "  initialized = true;\n  reply(frame.request_id, { commands, models, agents: [], output_style: 'default', available_output_styles: ['default'],\n    account: { apiProvider: 'firstParty', tokenSource: 'TEST-emulated', subscriptionType: 'TEST-emulated' },\n    ...(request.hooks ? { hooks_applied: true } : {}) });\n  send({ type: 'system', subtype: 'init', ...envelope(), cwd, model: 'TEST-claude-sonnet', tools: (options.tools ?? '').split(',').filter(Boolean),\n    mcp_servers: teamRuntime ? [{ name: 'team', status: 'connected' }] : [], permissionMode: options['permission-mode'],\n    slash_commands: commands.map(row => row.name), skills: ['test-desktop-skill'], plugins: [], output_style: 'default', apiKeySource: 'none',\n    claude_code_version: 'TEST-peer-sdk-0.3.305', capabilities: ['interrupt_receipt_v1'] });"
+    },
+    {
+      "path": "packages/legacy-agent-host/src/adapters/providers/ClaudeManagementHost.ts",
+      "lines": "67-104",
+      "text": "  async read(): Promise<ClaudeMetadataSnapshot> {\n    return this.run('metadata', async () => {\n      const metadata = await readClaudeMetadata(\n        {\n          cwd: this.profile.cwd,\n          executablePath: this.profile.executable.path,\n          environment: { ...this.profile.environment },\n          configNamespace: this.profile.configNamespace,\n          ...(this.profile.settingSources\n            ? { settingSources: [...this.profile.settingSources] }\n            : {}),\n          timeoutMs: this.profile.timeoutMs,\n          launch: this.custody.launch,\n          confirmStopped: () => this.close(),\n        },\n        this.abort.signal\n      );\n      // Owned cleanup sealed this Host; its original writer and roots must still be current.\n      if (!this.current(true)) throw new ManagementCommandError('held');\n      return {\n        profileId: this.profile.profileId,\n        configRevision: this.profile.configRevision,\n        account: {\n          apiProvider: metadata.account.apiProvider ?? null,\n          tokenSource: metadata.account.tokenSource ?? null,\n          apiKeySource: metadata.account.apiKeySource ?? null,\n          subscriptionType: metadata.account.subscriptionType ?? null,\n        },\n        models: metadata.models.map((row) => ({\n          modelId: row.value,\n          resolvedModel: row.resolvedModel ?? null,\n          displayName: row.displayName,\n          description: row.description,\n          supportedEffortLevels: row.supportedEffortLevels ?? [],\n          supportsFastMode: row.supportsFastMode ?? null,\n        })),\n      };\n    });"
+    },
+    {
+      "path": "packages/legacy-agent-host/src/adapters/providers/ClaudeAuthConversation.ts",
+      "lines": "233-264",
+      "text": "  private launch(args: string[], signal: AbortSignal): ObservableNativeProcess {\n    this.assertCurrent();\n    signal.throwIfAborted();\n    return this.custody.launch({\n      command: this.profile.executable.path,\n      args,\n      cwd: this.profile.cwd,\n      signal: AbortSignal.any([signal, this.abort.signal]),\n    });\n  }\n\n  private exit(child: ObservableNativeProcess): Promise<number | null> {\n    return new Promise((resolve, reject) => {\n      child.once('error', reject);\n      child.once('close', (code) => resolve(code));\n    });\n  }\n\n  private async status(signal: AbortSignal) {\n    const child = this.launch(['auth', 'status', '--json'], signal);\n    let stdout = '';\n    child.stdout.on('data', (chunk: Buffer) => {\n      stdout += chunk.toString('utf8');\n      if (Buffer.byteLength(stdout) > 64 * 1024) {\n        this.done.resolve(false);\n        void this.close();\n      }\n    });\n    const exitCode = await this.exit(child);\n    this.assertCurrent();\n    return parseClaudeAuthStatus(stdout, exitCode, this.configDirectory);\n  }"
+    },
+    {
+      "path": "src/features/runtime-provider-management/main/adapters/output/capturedClaudeMetadata.ts",
+      "lines": "105-125",
+      "text": "  // Native aliases can resolve to the same model (notably default/opus). One launch\n  // value gets one option; prefer a named alias to the redundant default label.\n  const rows = new Map<string, ClaudeMetadataSnapshot['models'][number]>();\n  for (const row of value.models) {\n    const key = row.resolvedModel ?? row.modelId;\n    if (!rows.has(key) || rows.get(key)?.modelId === 'default') rows.set(key, row);\n  }\n  const models = [...rows.values()].map((row) => ({\n    id: row.modelId,\n    launchModel: row.resolvedModel ?? row.modelId,\n    displayName: row.displayName,\n    hidden: false,\n    supportedReasoningEfforts: row.supportedEffortLevels,\n    defaultReasoningEffort: null,\n    ...(row.supportsFastMode === null ? {} : { supportsFastMode: row.supportsFastMode }),\n    // Initialization reports no modality or default-model authority.\n    inputModalities: [],\n    supportsPersonality: false,\n    isDefault: false,\n    upgrade: false,\n    source: 'claude-sdk' as const,"
+    },
+    {
+      "path": "src/features/runtime-provider-management/main/adapters/output/capturedClaudeMetadata.ts",
+      "lines": "132-155",
+      "text": "  const authentication = await readCapturedClaudeAuthentication(target).catch(() => null);\n  const nativeCapability = async (panel: 'plugins' | 'mcp') => {\n    try {\n      await captureNativeExtensionSelection(target, {\n        panel,\n        scope: projectPath ? 'project' : 'user',\n      });\n      return { status: 'supported' as const, ownership: 'provider-scoped' as const, reason: null };\n    } catch {\n      return extension;\n    }\n  };\n  const [plugins, mcp] = await Promise.all([nativeCapability('plugins'), nativeCapability('mcp')]);\n  const status: CliProviderStatus = {\n    ...createDefaultProviderStatus('anthropic'),\n    supported: true,\n    nativeAuthManagement: 'claude',\n    canLoginFromUi: authentication?.canLogin ?? false,\n    authenticated: authentication?.loggedIn ?? false,\n    authMethod: authentication?.loggedIn ? authentication.authMethod : null,\n    // The independent native auth read can replace auth truth without proving model execution.\n    verificationState: authentication === null ? 'unknown' : 'verified',\n    statusCheckOutcome: authentication === null ? 'model_only' : 'authoritative',\n    statusCheckErrorCode: authentication === null ? 'partial_response' : undefined,"
+    },
+    {
+      "path": "src/renderer/utils/teamModelAvailability.ts",
+      "lines": "322-329",
+      "text": "function hasAnthropicFirstPartyRuntimeCatalog(\n  providerStatus?: TeamModelRuntimeProviderStatus | null\n): boolean {\n  return (\n    providerStatus?.modelCatalog?.providerId === 'anthropic' &&\n    ['anthropic-models-api', 'claude-sdk'].includes(providerStatus.modelCatalog.source) &&\n    providerStatus.modelCatalog.status !== 'unavailable'\n  );"
+    },
+    {
+      "path": "src/renderer/utils/teamModelAvailability.ts",
+      "lines": "629-646",
+      "text": "    if (!providerStatus || !hasAnthropicRuntimeCatalog(providerStatus)) {\n      return isSupportedAnthropicTeamModel(model) ? 'available' : null;\n    }\n\n    const firstPartyCatalogModels = getAnthropicFirstPartyRuntimeModels(providerStatus);\n    if (firstPartyCatalogModels) {\n      if (!firstPartyCatalogModels.includes(model)) {\n        return null;\n      }\n      const catalogModel = getAnthropicCatalogModel(model, providerStatus);\n      if (!catalogModel || catalogModel.hidden) {\n        return null;\n      }\n      const runtimeAvailability = getModelAvailabilityMap(providerStatus).get(model)?.status;\n      return runtimeAvailability === 'unavailable' ? 'unavailable' : 'available';\n    }\n\n    return isSupportedAnthropicTeamModel(model) ? 'available' : null;"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-emulated-collaboration-ui.ts",
+      "lines": "91-111",
+      "text": "  await ui.observeInput(); await ui.clickSidebar(fixture.uiSeed.subject);\n  await ui.click('button', 'open original saved Team Launch', 'Launch');\n  const settings = record(await ui.waitRead(`(()=>{const rows=[...document.querySelectorAll('[role=\"dialog\"] button[aria-controls]')]\n    .filter(e=>e.textContent.includes('Optional launch settings')&&e.textContent.includes('sonnet'));\n    return rows.length===1?{id:rows[0].getAttribute('aria-controls'),expanded:rows[0].getAttribute('aria-expanded')}:null})()`, 'saved launch settings hydrate'));\n  if (settings.expanded !== 'true') await ui.click(`[role=\"dialog\"] button[aria-controls=${literal(settings.id)}]`, 'expand original saved launch settings');\n  await ui.waitRead(`(() => {\n    const rows=[...document.querySelectorAll('[role=\"dialog\"] .optional-settings-content')]\n      .filter(e=>e.id===${literal(settings.id)});\n    if(rows.length!==1)return false;\n    const content=rows[0], rect=content.getBoundingClientRect();\n    return content.getAttribute('data-state')==='open' && rect.width>0 && rect.height>0 &&\n      content.getAnimations().every(animation=>!animation.pending &&\n        (animation.playState==='finished'||animation.playState==='idle'));\n  })()`, 'original expanded launch settings settle');\n  await fill('[role=\"dialog\"] #dialog-prompt', 'TEST_UI_BOOT');\n  assert.equal(await cdp.evaluate(`document.querySelector('[role=\"dialog\"] #dialog-skip-permissions')?.getAttribute('data-state')`), 'unchecked');\n  await ui.scrollTo('[role=\"dialog\"] button', 'original Launch team', 'Launch team');\n  await ui.waitRead(`[...document.querySelectorAll('[role=\"dialog\"] button')].some(e=>e.textContent.trim()==='Launch team'&&!e.disabled)`, 'original mixed launch preflight', 90_000);\n  assert.equal(array((await records.owner()).runtimeCaptures ?? []).length, 0);\n  await ui.click('[role=\"dialog\"] button', 'launch original two-member team once', 'Launch team');"
+    }
+  ],
+  "minimalCandidateNotSelected": {
+    "fixturePath": "scripts/legacy-agent-host/desktop-emulated-collaboration-fixture.ts",
+    "fixtureLocations": [
+      {
+        "line": 84,
+        "field": "team.savedSettings.model",
+        "before": "sonnet",
+        "candidateValue": "TEST-claude-sonnet"
+      },
+      {
+        "line": 94,
+        "field": "Claude model in the shared templates expression (runtime member and provider template)",
+        "before": "sonnet",
+        "candidateValue": "TEST-claude-sonnet"
+      },
+      {
+        "line": 136,
+        "field": "returned emulatedRuntime.savedModel",
+        "before": "sonnet",
+        "candidateValue": "TEST-claude-sonnet"
+      }
+    ],
+    "peerPath": "tools/owned-process-broker/fixtures/claudeProviderPeer.mjs",
+    "peerRequirement": "If parent selects shared support, accept exactly the original finite management-role auth/status/--json shape within the existing TEST-only private-root and selected-source fences; retain refusal for runtime-role auth and all login/logout/version/extra/malformed commands. Keep its effect/process accounting and original SDK stream protocol intact. A production auth result must never be fabricated by the renderer or catalog adapter.",
+    "noNewShimRequirement": "The collaboration wrapper already selects this same peer for both roles. There is no need to route a new production executable or introduce a second management authority to address the source mismatch.",
+    "existingPeerModelAcceptance": "TEST-claude-sonnet is already in the peer's allowed stream model argv set. Metadata modelId/value sonnet may remain the descriptive alias while resolvedModel remains the exact offered TEST launch value.",
+    "preserve": [
+      "Other providers' models/executables/environments",
+      "Original two-member roster and three provider templates",
+      "15-second management and 30-second model-probe profile bounds",
+      "90-second UI enabled-Launch wait",
+      "All existing source-hash/realpath/profile/descriptor/currentness/custody and cleanup checks",
+      "Production authentication and catalog refusal behavior",
+      "Frozen whole149/43/85 test bodies",
+      "Original collaboration driver interactions and success obligations"
+    ],
+    "sizePreimages": {
+      "collaborationFixtureLines": 199,
+      "sharedPeerLines": 463,
+      "existingSettingsTestLines": 333,
+      "capIfSelectedByParent": 800
+    },
+    "noPredictionOfGuiPass": "Removing a known source mismatch does not qualify the original mixed roster launch or later collaboration messages/tasks/attachments/cleanup."
+  },
+  "existingTestSeamsAndMeaningfulProof": {
+    "ownFullReadTest": {
+      "path": "scripts/legacy-agent-host/desktop-emulated-settings.test.ts",
+      "blob": "bd427fbe8bdcba5a80674d220becd75d8bd6ef57",
+      "bytes": 24968,
+      "sha256": "771daf9353d767afc0cf6696779f37c07bbd404ad967845d230d6fd46a9bf0c6",
+      "currentBoundary": "fixture(t, kind) currently only extensions|saved-import; actual AuthConversation tests at 74-89 and Coordinator test at 91-105 provide finite owned-process patterns, but do not call the shared SDK peer auth route."
+    },
+    "peerReportedMetadataTest": {
+      "owner": "/root/producer_r2_semantic",
+      "path": "test/features/runtime-provider-management/capturedClaudeStatus.test.ts",
+      "blob": "6e84953e1d1a08b705b4000f47d8d51177047ff3",
+      "bytes": 8570,
+      "ownFreshRead": false,
+      "limit": "Semantic reviewer owns complete read, exact SHA and composition design; this report does not claim independent verification of that test body."
+    },
+    "candidateProofObligations": [
+      "Use the actual selected shared peer with the actual existing ClaudeAuthConversation/Coordinator and the same private role/environment/custody pattern. The old peer must refuse the original exact auth request; a selected future peer must produce the explicitly finite TEST status without login/logout/version/native-vendor operations.",
+      "Verify altered argv, runtime role and wrong private environment/root selections still refuse and cannot create management mutation receipts or native credential writes. Preserve original finite cleanup and no replay.",
+      "Compose actual capturedClaudeMetadata output into the unchanged teamModelAvailability functions: modelId sonnet, launchModel TEST-claude-sonnet, source claude-sdk; exact TEST value is accepted and the stale sonnet alias still returns a selection error. Do not relax frozen43 tests or use a copied catalog classifier.",
+      "Tie any fixture-value assertion to the actual collaboration source/constructed fixture seam selected by parent, so reverting saved/runtime/template/savedModel to sonnet is detected; avoid asserting only a copied test constant.",
+      "Any subsequent original GUI run retains its original wait, click, peer effects, roster/currentness and cleanup checks. This advisory neither creates that run nor substitutes source tests for it."
+    ],
+    "workflowScope": "No workflow or execution route was changed or re-audited in this task. Parent and semantic reviewer own the existing selected test-path mapping. No test was run here."
+  },
+  "causalLimits": {
+    "proven": "The original collaboration fixture independently has the same class of offered-launch-value mismatch and directly selects an executable lacking the Host's auth-status command.",
+    "conditionalConsequence": "Once this peer metadata is delivered as a ready non-compatible claude-sdk catalog, sonnet is outside the offered launch values and the unchanged model-validation path can block Launch. If the original auth read reaches the peer with valid prior guards, its first auth token is outside the accepted argv grammar.",
+    "notProven": [
+      "The exact renderer state at the historical collaboration timeout",
+      "That the catalog response was ready at that precise observation",
+      "That auth failure was the sole or first effective readiness blocker",
+      "That no independent Codex or roster/readiness problem remains",
+      "That the proposed TEST-only correction will yield a successful full GUI flow",
+      "Any model execution, native auth or cleanup result from new work"
+    ],
+    "lifecycleSeparation": "No lifecycle failure receipt or screenshot is used as proof of collaboration cause."
+  },
+  "checks": [
+    {
+      "id": "C01",
+      "status": "PASS_BOUNDED_SOURCE",
+      "subject": "Immutable collaboration fixture identity",
+      "evidence": "Complete current ea1 body equals separately fetched fixed9d body; 97e14385, 16,555 bytes. This is the collaboration fixture's own source, not an inferred lifecycle fixture."
+    },
+    {
+      "id": "C02",
+      "status": "PASS_BOUNDED_SOURCE",
+      "subject": "Selected peer identity",
+      "evidence": "The current/fixed9d selected peer is 920b40fa, 32,221 bytes; complete body read. Collaboration source list index zero and provider==='claude' wrapper dispatch bind it."
+    },
+    {
+      "id": "C03",
+      "status": "PASS_BOUNDED_SOURCE",
+      "subject": "Exact wrapper custody",
+      "evidence": "Every selected peer source is realpath/hash checked before import. The same selected executable is used by runtime/template and management entries; no PATH vendor fallback is present in this wrapper."
+    },
+    {
+      "id": "C04",
+      "status": "PASS_BOUNDED_SOURCE",
+      "subject": "Saved selection",
+      "evidence": "team.savedSettings explicitly selects providerId anthropic and model sonnet. Alice is lead; Bob has explicit codex/TEST-model. No alternative Claude saved model is selected."
+    },
+    {
+      "id": "C05",
+      "status": "PASS_BOUNDED_SOURCE",
+      "subject": "Runtime/template selection",
+      "evidence": "The shared templates expression selects model sonnet for Claude and TEST-model for others. Runtime members are templates.slice(0,2); providerTemplates is the same templates array."
+    },
+    {
+      "id": "C06",
+      "status": "PASS_BOUNDED_SOURCE",
+      "subject": "Returned fixture model",
+      "evidence": "emulatedRuntime.savedModel is sonnet. The concrete extra collaboration correction surface is these three value locations, including one shared runtime/template expression."
+    },
+    {
+      "id": "C07",
+      "status": "PASS_BOUNDED_SOURCE",
+      "subject": "Peer offered values",
+      "evidence": "The peer initializes one model with value sonnet and resolvedModel TEST-claude-sonnet. Its stream argv contract already permits TEST-claude-sonnet, so this model correction need not expand accepted model argv."
+    },
+    {
+      "id": "C08",
+      "status": "PASS_BOUNDED_SOURCE",
+      "subject": "Host metadata mapping",
+      "evidence": "Actual ClaudeManagementHost maps row.value to modelId and preserves row.resolvedModel. It uses the profile executable/environment and original finite timeout/custody."
+    },
+    {
+      "id": "C09",
+      "status": "PASS_BOUNDED_SOURCE",
+      "subject": "Captured catalog mapping",
+      "evidence": "Actual readCapturedClaudeStatus maps resolvedModel ?? modelId to launchModel and status.models. This peer's offered launch value is TEST-claude-sonnet, with source claude-sdk; modelId sonnet remains its alias metadata."
+    },
+    {
+      "id": "C10",
+      "status": "PASS_BOUNDED_SOURCE",
+      "subject": "Ready catalog authority",
+      "evidence": "Actual availability branches recognize claude-sdk as first-party, build visible launch values, and require selected models to be in that set. With this ready catalog, sonnet is refused and TEST-claude-sonnet is the offered value. No production fallback relaxation is proposed."
+    },
+    {
+      "id": "C11",
+      "status": "PASS_BOUNDED_SOURCE",
+      "subject": "Dialog consumer",
+      "evidence": "memberModelScope forwards getTeamModelSelectionError for the lead once its provider is not loading. LaunchTeamDialog consumes the resulting modelValidationError and includes it in isDisabled for launch mode. These exact relevant dialog slices were read; a new whole-dialog audit is not claimed."
+    },
+    {
+      "id": "C12",
+      "status": "PASS_BOUNDED_SOURCE",
+      "subject": "Management selection",
+      "evidence": "Collaboration management uses the same Claude wrapper, sdkRevision 0.3.305, custom-directory config namespace, selected management-role environment, timeoutMs 15000 and modelProbeTimeoutMs 30000."
+    },
+    {
+      "id": "C13",
+      "status": "PASS_BOUNDED_SOURCE",
+      "subject": "Original auth command",
+      "evidence": "Actual ClaudeAuthenticationCoordinator.read constructs ClaudeAuthConversation for the selected profile and calls read with the original profile timeout. Conversation.status launches ['auth','status','--json'] through profile.executable.path and retains original close/currentness."
+    },
+    {
+      "id": "C14",
+      "status": "PASS_BOUNDED_SOURCE",
+      "subject": "Missing peer auth branch",
+      "evidence": "Complete current peer has no auth-command branch. Its argv loop requires every argument to match a --flag form, so first argument auth is refused. This is a direct protocol mismatch, regardless of whether another earlier guard might also refuse a particular run."
+    },
+    {
+      "id": "C15",
+      "status": "PASS_BOUNDED_SOURCE",
+      "subject": "Independent auth truth preserved",
+      "evidence": "readCapturedClaudeAuthentication requests claude.auth and validates profile/config/currentness. readCapturedClaudeStatus catches unavailable auth into authenticated=false, verificationState unknown and statusCheckOutcome model_only; SDK account metadata is not substituted as auth proof."
+    },
+    {
+      "id": "C16",
+      "status": "PASS_BOUNDED_SOURCE",
+      "subject": "Original UI boundary preserved",
+      "evidence": "Original collaboration driver first hydrates Optional launch settings containing substring sonnet, then waits up to original 90000 ms for enabled Launch team before its single click. TEST-claude-sonnet still contains sonnet. No driver predicate or deadline change is needed for the proposed model value alignment."
+    },
+    {
+      "id": "C17",
+      "status": "PASS_BOUNDED_SOURCE",
+      "subject": "Existing finite test seam",
+      "evidence": "Entire desktop-emulated-settings.test.ts read. Existing tests use actual ClaudeAuthConversation/Coordinator, private TEST roots, exact executable hashes, finite child timeouts, effect assertions and cleanup. Current kind union is extensions|saved-import, and its wrapper dispatches to those peers plus settings auth; it does not currently prove the selected claudeProviderPeer auth route."
+    },
+    {
+      "id": "C18",
+      "status": "PASS_BOUNDED_SOURCE",
+      "subject": "No lifecycle causal substitution",
+      "evidence": "The source mismatch is independently established for collaboration. This advisory does not claim which blocker was rendered at the original failed observation, that auth was its sole failure, or that correcting these values will make the whole collaboration flow pass."
+    },
+    {
+      "id": "C19",
+      "status": "PASS_BOUNDED_SOURCE",
+      "subject": "Minimal TEST-only scope",
+      "evidence": "A possible coherent parent-selected repair includes the existing collaboration fixture's three Claude model locations plus the already shared selected TEST peer's finite auth-status support. Production auth/catalog/launch authority and frozen 149/43/85 remain untouched; this advisory selects no patch or execution."
+    },
+    {
+      "id": "C20",
+      "status": "PASS_BOUNDED_SOURCE",
+      "subject": "Read-only boundary",
+      "evidence": "No shell, local runtime, compilation/import/evaluation of target source, source/control/worktree/ref/PR/CI mutation, live polling, new vendor process, retry, deadline increase, test filter, new venue or gate was performed."
+    }
+  ],
+  "conclusion": "A coherent shared TEST-only repair can include the existing collaboration fixture, because its own source proves both contracts are inconsistent. Keep production authority and original GUI deadlines unchanged. Parent must select and author any concrete R1/postimages; this report is only the requested bounded source advisory."
+}

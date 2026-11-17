@@ -1,0 +1,115 @@
+{
+  "schemaVersion": 1,
+  "kind": "C714_RETAINED_FAILURE_DIAGNOSTICS_SOURCE_R2_ACTUAL_GATE",
+  "closedAt": "2026-11-17 11:32:42 UTC",
+  "repository": "777genius/agent-teams-ai",
+  "branch": "fix/frontend-parity-coobservation-c714-20261115",
+  "commit": "ea1cc84228bfe79d1b64c38600d2d50049d1a8d0",
+  "parent": "c88b4fe2632f2644bf734293db713fe8288b5139",
+  "root": "f77c67b7996ec0d262d3f97769eeb943c4b87b43",
+  "docs": "33719864fe3e911e1726e1971b8a19e62e7762c1",
+  "scripts": "d9f743733d3154d77dc2fefecaee9e4513414d17",
+  "packages": "dc592662ccd8e886de52da21c666ff3ac1d3d6f6",
+  "manifest": {
+    "bytes": 33954,
+    "sha256": "a282ae91c0b5f9e7999e31252abe920829912536da9a918359ed165c725c0808",
+    "gitBlob": "3068958aa320966f59a2358e3c178b4387449b72"
+  },
+  "sourceR2": {
+    "bytes": 48600,
+    "sha256": "ea41197152f40525912ca3bf8d41b84451f1c306bdb88a5ee051d83e8842891e",
+    "gitBlob": "c356b7f7c7dd7d9ab6e869ad9d3655c74ea8dbea"
+  },
+  "sourceStaticChecks": 194,
+  "rootActual": {
+    "bytes": 452491,
+    "sha256": "a79ab5a1523a81fe02b470ef8a31d2dffe3a3fc178f1d1d767f1607f933eab09",
+    "gitBlob": "bd5dccc5cbff574fa5365ccfda199ed133381449"
+  },
+  "independentActual": {
+    "bytes": 694722,
+    "sha256": "ad1e33931eccf395793317fc9258831ed6f8a7fc55bcf5a8f3f2e09fe490e76a",
+    "gitBlob": "71d404166be8f19dad1c0adc890acc63300afcbe"
+  },
+  "actualChecks": 89,
+  "rootChecks": 42,
+  "independentChecks": 47,
+  "allFullBodiesRead": true,
+  "allReviewerSelfReadsConfirmed": true,
+  "currentBodies": {
+    "count": 37,
+    "bytes": 11762471
+  },
+  "parentBodies": {
+    "count": 9,
+    "bytes": 3538559
+  },
+  "completeRepositoryScopedPointers": {
+    "count": 319,
+    "bytes": 47056269,
+    "unresolved": 0
+  },
+  "exactDelta": {
+    "docsAdded": 28,
+    "docsModified": 3,
+    "sourceModified": 6,
+    "total": 37,
+    "deleted": 0,
+    "modesChanged": 0
+  },
+  "census": {
+    "total": 12161,
+    "docs": 3362,
+    "nonDoc": 8799,
+    "rootEntries": 54,
+    "otherRootUnchanged": 51
+  },
+  "preserved": {
+    "priorCatalogValues": 93,
+    "newCatalogKeys": 2,
+    "originalBundles": 27,
+    "commonAppendBytes": 7535,
+    "fourWindowsPostimages": true,
+    "frozen13": true,
+    "whole149": true,
+    "catalog43": true,
+    "runtime85": true,
+    "productionFiles": 5020,
+    "cap": 800,
+    "exceptions": 141,
+    "workflows": 42
+  },
+  "historicalPublicationCI": {
+    "pr": 1219,
+    "sourceHead": "9d79abcf1f5c498687c2e5c443e3edf220070aa6",
+    "throughObservation": 15
+  },
+  "laterTerminalEvidence": {
+    "packet": {
+      "bytes": 214577,
+      "sha256": "1fd9ca0681ef00d5ddea2372130fec9d4bd16e8205751ec1e07f2ce0473b5018",
+      "gitBlob": "f1a13ab23806afb9d006f1647f6624a5eb784165"
+    },
+    "allSevenTerminal": true,
+    "active": [],
+    "noFurtherPolling": true
+  },
+  "environmentAtGate": {
+    "status": "unavailable",
+    "notificationRecordedAt": "2026-11-17 11:31:41 UTC",
+    "noFreshProbeOrExecution": true,
+    "historicalArchiveReadAndPublicationReportsUnchanged": true,
+    "standaloneInodeMismatchNotRebound": true
+  },
+  "qualification": {
+    "sourceCompiled": false,
+    "sourceExecuted": false,
+    "newExecutionVenueSelected": false,
+    "runtimeAdmitted": false,
+    "standaloneInvoked": false,
+    "completeE2E": false,
+    "readyMergeReleaseDefaultStage2": false
+  },
+  "decision": "CLOSE_EXACT_SOURCE_PUBLICATION_ACTUAL_GATE_ONLY",
+  "next": "Root may proceed with a concrete next source R1 and separately selected execution venue under the existing sequence. This gate does not execute, qualify or waive the original flows."
+}
