@@ -8,9 +8,9 @@ import {
   claimTeamForThisProfile,
   TEAM_PROFILE_OWNER_MARKER_FILE,
 } from '@main/services/team/provisioning/TeamProvisioningProfileOwnership';
+import { validateTeamName } from '@main/services/team/TeamIdentifierValidation';
 import { TeamMetaStore } from '@main/services/team/TeamMetaStore';
 import { getTeamsBasePath } from '@main/utils/pathDecoder';
-import { validateTeamName } from '@main/services/team/TeamIdentifierValidation';
 
 import { TEAM_PROJECT_CONTEXT_SET_MODE_CHANNEL } from '../contracts';
 
