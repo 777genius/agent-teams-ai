@@ -100,7 +100,8 @@ export async function deleteLogicalTeamWithContexts(
 
 interface PermanentDeleteRegistry extends Pick<
   TeamProjectContextRegistry,
-  'hasRetainedIndex' | 'listForPermanentDeletion' | 'forgetPermanentlyDeletedContext'
+  'hasRetainedIndex' | 'beginPermanentDeletion' | 'cancelPermanentDeletion' |
+  'listForPermanentDeletion' | 'forgetPermanentlyDeletedContext'
 > {}
 
 export async function permanentlyDeleteLogicalTeam(
@@ -129,13 +130,22 @@ export async function permanentlyDeleteLogicalTeam(
       return ports.deleteLogical(false);
     }
 
-    // The logical team remains present until all physical contexts are fully
-    // removed, enabling idempotent retries after an interrupted deletion.
-    const rows = await registry.listForPermanentDeletion(logicalTeamName);
-    const names = [logicalTeamName, ...rows.map((row) => row.executionTeamName)];
-    const anySchedules = ports.hasAnySchedules ?? ((ids: readonly string[]) => hasTeamSchedules(ids, true));
-    if (await anySchedules(names)) {
-      throw new Error('Remove team schedules before permanent deletion');
+    // Serialize reservation against the deletion snapshot. A crash leaves
+    // this durable fence in place so retry can resume without a new alias.
+    await registry.beginPermanentDeletion(logicalTeamName);
+    let rows: Awaited<ReturnType<PermanentDeleteRegistry['listForPermanentDeletion']>>;
+    try {
+      rows = await registry.listForPermanentDeletion(logicalTeamName);
+      const names = [logicalTeamName, ...rows.map((row) => row.executionTeamName)];
+      const anySchedules =
+        ports.hasAnySchedules ?? ((ids: readonly string[]) => hasTeamSchedules(ids, true));
+      if (await anySchedules(names)) {
+        throw new Error('Remove team schedules before permanent deletion');
+      }
+    } catch (error) {
+      // No physical deletion has started. Reopen admission if preflight fails.
+      await registry.cancelPermanentDeletion(logicalTeamName);
+      throw error;
     }
     for (const row of rows) {
       const exists = ports.isNativePresent

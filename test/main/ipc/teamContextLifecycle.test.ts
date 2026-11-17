@@ -126,6 +126,8 @@ describe('project team lifecycle projection', () => {
     const f = fixture('per_project');
     const actions: string[] = [];
     const registry = {
+      beginPermanentDeletion: vi.fn(async () => undefined),
+      cancelPermanentDeletion: vi.fn(async () => undefined),
       listForPermanentDeletion: vi.fn(async () => [entry]),
       forgetPermanentlyDeletedContext: vi.fn(async () => {
         actions.push('forget');
@@ -153,6 +155,27 @@ describe('project team lifecycle projection', () => {
     expect(result.success).toBe(true);
   });
 
+  it('fences creation during deletion and reopens only if schedule preflight fails', async () => {
+    const f = fixture('per_project');
+    const order: string[] = [];
+    const begin = vi.fn(async () => { order.push('begin'); });
+    const cancel = vi.fn(async () => { order.push('cancel'); });
+    const result = await permanentlyDeleteLogicalTeam('builders', {
+      meta: f.meta,
+      registry: {
+        beginPermanentDeletion: begin,
+        cancelPermanentDeletion: cancel,
+        listForPermanentDeletion: vi.fn(async () => [entry]),
+      } as never,
+      hasAnySchedules: vi.fn(async () => true),
+      deleteNative: vi.fn(),
+      stopNative: vi.fn(),
+      deleteLogical: vi.fn(async () => ({ success: true as const, data: undefined })),
+    });
+    expect(result).toMatchObject({ success: false });
+    expect(order).toEqual(['begin', 'cancel']);
+  });
+
   it('does not purge the logical team if a physical deletion fails mid-transaction', async () => {
     const f = fixture('per_project');
     const forget = vi.fn(async () => true);
@@ -160,6 +183,8 @@ describe('project team lifecycle projection', () => {
     const result = await permanentlyDeleteLogicalTeam('builders', {
       meta: f.meta,
       registry: {
+        beginPermanentDeletion: vi.fn(async () => undefined),
+        cancelPermanentDeletion: vi.fn(async () => undefined),
         listForPermanentDeletion: vi.fn(async () => [entry]),
         forgetPermanentlyDeletedContext: forget,
       } as never,
@@ -181,6 +206,8 @@ describe('project team lifecycle projection', () => {
     const result = await permanentlyDeleteLogicalTeam('builders', {
       meta: f.meta,
       registry: {
+        beginPermanentDeletion: vi.fn(async () => undefined),
+        cancelPermanentDeletion: vi.fn(async () => undefined),
         listForPermanentDeletion: vi.fn(async () => [entry]),
         forgetPermanentlyDeletedContext: forget,
       } as never,
@@ -232,6 +259,8 @@ describe('project team lifecycle projection', () => {
       meta: f.meta,
       registry: {
         hasRetainedIndex: vi.fn(async () => true),
+        beginPermanentDeletion: vi.fn(async () => undefined),
+        cancelPermanentDeletion: vi.fn(async () => undefined),
         listForPermanentDeletion: vi.fn(async () => [entry]),
         forgetPermanentlyDeletedContext: vi.fn(async () => {
           calls.push('forget');
