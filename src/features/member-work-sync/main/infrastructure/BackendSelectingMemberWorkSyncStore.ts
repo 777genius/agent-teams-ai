@@ -33,6 +33,10 @@ import {
   createJsonPreparedStatusBackend,
   createSqlitePreparedStatusBackend,
 } from './memberWorkSyncPreparedStatusBackend';
+import {
+  parsePendingPrimaryPurgeMarker,
+  type PendingPrimaryPurgeMarker,
+} from './memberWorkSyncPurgeMarker';
 import { MemberWorkSyncSafetyJsonReadError } from './memberWorkSyncSafetyJson';
 import { mergeMemberWorkSyncSnapshots } from './memberWorkSyncSnapshotMerge';
 import {
@@ -42,6 +46,7 @@ import {
   recordsToSnapshot,
   snapshotToRecords,
 } from './memberWorkSyncSqliteMappers';
+import { isStaleIncarnationError } from './memberWorkSyncStaleIncarnation';
 import { preflightMemberWorkSyncStatusSources } from './memberWorkSyncStatusPreflight';
 import {
   type MemberWorkSyncBackupCandidate,
@@ -77,15 +82,6 @@ import type { SqliteMemberWorkSyncStore } from './SqliteMemberWorkSyncStore';
 type FullStore = Required<MemberWorkSyncStatusStorePort> &
   Required<MemberWorkSyncReportStorePort> &
   Required<MemberWorkSyncOutboxStorePort>;
-
-interface PendingPrimaryPurgeMarker {
-  schemaVersion: 2;
-  teamName: string;
-  deletionIdentityId: string | null;
-  teamRootIdentity: DurablePathIdentity | null;
-  activeJsonStateCleared: boolean;
-  recoverySafe: boolean;
-}
 
 export interface BackendSelectingMemberWorkSyncStoreOptions {
   gateway: MemberWorkSyncStorageGateway;
@@ -129,25 +125,50 @@ export class BackendSelectingMemberWorkSyncStore
     // clear state or permit same-name recreation until that writer exits.
     await this.options.gateway.waitForSettling?.();
     const backend = await this.selector.select<'sqlite' | 'json'>('sqlite', 'json');
-    await this.replicaMutex.run(teamName, async () => {
-      const marker = await this.getOrCreatePendingPrimaryPurge(
-        teamName,
-        deletionIdentityId?.trim() || null
-      );
-      if (backend === 'sqlite') {
-        await this.writePendingPrimaryPurge(marker, false);
-        await this.applyPendingPrimaryPurge(teamName);
-      } else {
-        await this.jsonStore.purgeActiveState(teamName, {
-          establishPendingPrimaryPurge: () => this.writePendingPrimaryPurge(marker, false),
-          isPurgeGenerationCurrent: () => this.isPendingPrimaryPurgeGenerationCurrent(marker),
-          confirmActiveStateCleared: () => this.writePendingPrimaryPurge(marker, true),
-        });
-      }
-      this.sqlitePreparedTeams.delete(teamName);
-      this.jsonHydratedTeams.delete(teamName);
-      this.authorityPreparationFailures.delete(normalizeTeamKey(teamName));
+    await this.replicaMutex.run(teamName, () =>
+      this.purgeTeamLocked(teamName, backend, deletionIdentityId?.trim() || null)
+    );
+  }
+
+  /** Caller must hold replicaMutex for teamName. */
+  private async purgeTeamLocked(
+    teamName: string,
+    backend: 'sqlite' | 'json',
+    deletionIdentityId: string | null
+  ): Promise<void> {
+    const marker = await this.getOrCreatePendingPrimaryPurge(teamName, deletionIdentityId);
+    if (backend === 'sqlite') {
+      await this.writePendingPrimaryPurge(marker, false);
+      await this.applyPendingPrimaryPurge(teamName);
+    } else {
+      await this.jsonStore.purgeActiveState(teamName, {
+        establishPendingPrimaryPurge: () => this.writePendingPrimaryPurge(marker, false),
+        isPurgeGenerationCurrent: () => this.isPendingPrimaryPurgeGenerationCurrent(marker),
+        confirmActiveStateCleared: () => this.writePendingPrimaryPurge(marker, true),
+      });
+    }
+    this.sqlitePreparedTeams.delete(teamName);
+    this.jsonHydratedTeams.delete(teamName);
+    this.authorityPreparationFailures.delete(normalizeTeamKey(teamName));
+  }
+
+  /** Caller holds replicaMutex. Drops state written under an earlier identity of this team. */
+  private async purgeStaleIncarnationState(
+    teamName: string,
+    incarnation: string,
+    backend: 'sqlite' | 'json'
+  ): Promise<void> {
+    if (backend === 'sqlite') return this.purgeTeamLocked(teamName, backend, null);
+    // JSON fallback: no pending primary purge (it would block preparation until SQLite returns);
+    // stale primary rows are healed the same way once SQLite is back.
+    await this.jsonStore.purgeActiveState(teamName, {
+      establishPendingPrimaryPurge: () => Promise.resolve(),
+      isPurgeGenerationCurrent: () => Promise.resolve(true),
+      confirmActiveStateCleared: () => Promise.resolve(),
     });
+    await this.replica!.writeClean(teamName, emptySnapshot(), incarnation);
+    this.jsonHydratedTeams.delete(teamName);
+    this.authorityPreparationFailures.delete(normalizeTeamKey(teamName));
   }
 
   /** Privileged restore calls this under its lifecycle fence after quiesce/drain. */
@@ -186,163 +207,183 @@ export class BackendSelectingMemberWorkSyncStore
     const { teamName, incarnation } = identity;
     if (!this.options || !this.replica || !incarnation.trim())
       throw new MemberWorkSyncSafetyJsonReadError('unavailable');
-    const { gateway, paths, fallbackRequiresReplica } = this.options;
-    const replica = this.replica;
     const backend = await this.selector.select<'sqlite' | 'json'>('sqlite', 'json');
-    return this.replicaMutex.run(teamName, async () => {
-      const previousFailure = this.authorityPreparationFailures.get(normalizeTeamKey(teamName));
-      const age = previousFailure ? Date.now() - previousFailure.at : 0;
-      if (
-        !preflightOnly &&
-        previousFailure?.incarnation === incarnation &&
-        age >= 0 &&
-        age < 60_000
-      )
-        throw previousFailure.error;
-      if (!preflightOnly) this.authorityPreparationFailures.delete(normalizeTeamKey(teamName));
-      let prepared = false;
-      try {
-        if (await this.readPendingPrimaryPurge(teamName))
-          throw new MemberWorkSyncSafetyJsonReadError('unavailable');
-        const source = await replica.readForAuthorityPreparation(teamName, incarnation);
-        const candidate =
-          source.state === 'clean'
-            ? source.snapshot
-            : source.state === 'dirty'
-              ? source.candidate
-              : null;
-        if (candidate) validateMemberWorkSyncAuthoritySnapshot(identity, candidate);
-        const primary = backend === 'sqlite' ? await gateway.listTeamSnapshot(teamName) : null;
-        if (primary) validateMemberWorkSyncPrimaryRecords(identity, primary);
-        const canonical = primary ? recordsToSnapshot(teamName, primary) : emptySnapshot();
-        validateMemberWorkSyncAuthoritySnapshot(identity, canonical);
-        await preflightMemberWorkSyncStatusSources({
-          paths,
+    return this.replicaMutex.run(teamName, () =>
+      this.prepareLocked(backend, identity, operation, backup, preflightOnly, false)
+    );
+  }
+  /** Caller must hold replicaMutex for the team. `healed` allows one stale-state purge + retry. */
+  private async prepareLocked<T>(
+    backend: 'sqlite' | 'json',
+    identity: { teamName: string; incarnation: string; mutation: boolean },
+    operation: (backend: MemberWorkSyncPreparedStatusBackend) => Promise<T>,
+    backup: MemberWorkSyncBackupCandidate | undefined,
+    preflightOnly: boolean,
+    healed: boolean
+  ): Promise<T> {
+    const { teamName, incarnation } = identity;
+    const { gateway, paths, fallbackRequiresReplica, logger } = this.options!;
+    const replica = this.replica!;
+    const previousFailure = this.authorityPreparationFailures.get(normalizeTeamKey(teamName));
+    const age = previousFailure ? Date.now() - previousFailure.at : 0;
+    if (!preflightOnly && previousFailure?.incarnation === incarnation && age >= 0 && age < 60_000)
+      throw previousFailure.error;
+    if (!preflightOnly) this.authorityPreparationFailures.delete(normalizeTeamKey(teamName));
+    let prepared = false;
+    try {
+      if (await this.readPendingPrimaryPurge(teamName))
+        throw new MemberWorkSyncSafetyJsonReadError('unavailable');
+      const source = await replica.readForAuthorityPreparation(teamName, incarnation);
+      const candidate =
+        source.state === 'clean'
+          ? source.snapshot
+          : source.state === 'dirty'
+            ? source.candidate
+            : null;
+      if (candidate) validateMemberWorkSyncAuthoritySnapshot(identity, candidate);
+      const primary = backend === 'sqlite' ? await gateway.listTeamSnapshot(teamName) : null;
+      if (primary) validateMemberWorkSyncPrimaryRecords(identity, primary);
+      const canonical = primary ? recordsToSnapshot(teamName, primary) : emptySnapshot();
+      validateMemberWorkSyncAuthoritySnapshot(identity, canonical);
+      await preflightMemberWorkSyncStatusSources({
+        paths,
+        identity,
+        ...(primary ? { primaryStatuses: primary.statuses } : {}),
+      });
+      const reader = backup
+        ? new JsonMemberWorkSyncStore(paths, { strictIndexReads: true })
+        : this.jsonStore;
+      const active = await reader.readSnapshotForImport(teamName);
+      const archived = await reader.readArchivedSnapshotForImport(teamName);
+      for (const snapshot of [active, archived])
+        if (snapshot) validateMemberWorkSyncAuthoritySnapshot(identity, snapshot);
+      let history = mergeDomainSnapshots(archived ?? emptySnapshot(), active);
+      if (backup)
+        history = mergeMemberWorkSyncBackupHistory({
           identity,
-          ...(primary ? { primaryStatuses: primary.statuses } : {}),
+          backend,
+          recovered: this.selector.getBackendInfo()?.integrity === 'recovered',
+          canonical,
+          history,
+          backup,
         });
-        const reader = backup
-          ? new JsonMemberWorkSyncStore(paths, { strictIndexReads: true })
-          : this.jsonStore;
-        const active = await reader.readSnapshotForImport(teamName);
-        const archived = await reader.readArchivedSnapshotForImport(teamName);
-        for (const snapshot of [active, archived])
-          if (snapshot) validateMemberWorkSyncAuthoritySnapshot(identity, snapshot);
-        let history = mergeDomainSnapshots(archived ?? emptySnapshot(), active);
-        if (backup)
-          history = mergeMemberWorkSyncBackupHistory({
-            identity,
-            backend,
-            recovered: this.selector.getBackendInfo()?.integrity === 'recovered',
-            canonical,
-            history,
-            backup,
-          });
-        if (backend === 'json') {
-          if (source.state === 'dirty' || (fallbackRequiresReplica && source.state === 'absent'))
-            throw new MemberWorkSyncSafetyJsonReadError('unavailable');
-          const merged = mergeDomainSnapshots(candidate ?? emptySnapshot(), history);
-          if (preflightOnly)
-            return await operation(createJsonPreparedStatusBackend(teamName, this.jsonStore));
-          if (backup || candidate || active || archived)
-            await this.jsonStore.restoreReplicaSnapshot(teamName, merged);
-          for (const status of merged.statuses) {
-            const stored = await this.jsonStore.readCanonicalStatusSnapshot({
-              teamName,
-              memberName: status.memberName,
-            });
-            if (stored.state !== 'present')
-              throw new MemberWorkSyncSafetyJsonReadError('unavailable');
-            decodePreparedStatusValue(stored.payload, {
-              ...identity,
-              memberName: status.memberName,
-            });
-          }
-          if (backup) {
-            const actual = await this.jsonStore.readSnapshotForImport(teamName);
-            if (
-              !areSnapshotRecordSetsEquivalent(
-                snapshotToRecords(teamName, actual ?? emptySnapshot()),
-                snapshotToRecords(teamName, merged)
-              )
-            )
-              throw new MemberWorkSyncSafetyJsonReadError('unavailable');
-          }
-          prepared = true;
-          return await operation(createJsonPreparedStatusBackend(teamName, this.jsonStore));
-        }
-        if (source.state === 'dirty') {
-          if (this.selector.getBackendInfo()?.integrity === 'recovered')
-            throw new MemberWorkSyncSafetyJsonReadError('unavailable');
-          assertMemberWorkSyncDirtyContinuity(identity, canonical, candidate);
-        }
-        const merged = mergeDomainSnapshots(mergeDomainSnapshots(canonical, candidate), history);
-        const expected = mergeMemberWorkSyncSnapshots(
-          teamName,
-          primary!,
-          snapshotToRecords(teamName, merged)
-        );
-        validateMemberWorkSyncPrimaryRecords(identity, expected);
-        validateMemberWorkSyncAuthoritySnapshot(identity, recordsToSnapshot(teamName, expected));
+      if (backend === 'json') {
+        if (source.state === 'dirty' || (fallbackRequiresReplica && source.state === 'absent'))
+          throw new MemberWorkSyncSafetyJsonReadError('unavailable');
+        const merged = mergeDomainSnapshots(candidate ?? emptySnapshot(), history);
         if (preflightOnly)
-          return await operation(createSqlitePreparedStatusBackend(teamName, this.sqliteStore));
-        const importRequired = !areSnapshotRecordSetsEquivalent(primary!, expected);
-        const filesToArchive = active?.filesToArchive ?? [];
-        const finalizeRequired = importRequired || filesToArchive.length > 0;
-        const mutationRequired = identity.mutation || finalizeRequired;
-        if (mutationRequired) {
-          await replica.markDirtyWithRecoveryCandidate(
+          return await operation(createJsonPreparedStatusBackend(teamName, this.jsonStore));
+        if (backup || candidate || active || archived)
+          await this.jsonStore.restoreReplicaSnapshot(teamName, merged);
+        for (const status of merged.statuses) {
+          const stored = await this.jsonStore.readCanonicalStatusSnapshot({
             teamName,
-            incarnation,
-            recordsToSnapshot(teamName, expected)
-          );
-        }
-        if (importRequired) await gateway.importTeam(teamName, expected);
-        if (finalizeRequired) {
-          await this.sqliteStore.prepareCanonicalStatus(teamName, incarnation, {
-            records: expected,
-            filesToArchive,
+            memberName: status.memberName,
           });
-          const prepared = await gateway.listTeamSnapshot(teamName);
-          validateMemberWorkSyncPrimaryRecords(identity, prepared);
-          if (!areSnapshotRecordSetsEquivalent(prepared, expected))
+          if (stored.state !== 'present')
+            throw new MemberWorkSyncSafetyJsonReadError('unavailable');
+          decodePreparedStatusValue(stored.payload, {
+            ...identity,
+            memberName: status.memberName,
+          });
+        }
+        if (backup) {
+          const actual = await this.jsonStore.readSnapshotForImport(teamName);
+          if (
+            !areSnapshotRecordSetsEquivalent(
+              snapshotToRecords(teamName, actual ?? emptySnapshot()),
+              snapshotToRecords(teamName, merged)
+            )
+          )
             throw new MemberWorkSyncSafetyJsonReadError('unavailable');
         }
         prepared = true;
-        const result = await operation(
-          createSqlitePreparedStatusBackend(teamName, this.sqliteStore)
-        );
-        const publicationRequired =
-          mutationRequired ||
-          source.state !== 'clean' ||
-          !areSnapshotRecordSetsEquivalent(snapshotToRecords(teamName, source.snapshot), expected);
-        if (publicationRequired) {
-          const committed = await gateway.listTeamSnapshot(teamName);
-          validateMemberWorkSyncPrimaryRecords(identity, committed);
-          const snapshot = recordsToSnapshot(teamName, committed);
-          validateMemberWorkSyncAuthoritySnapshot(identity, snapshot);
-          await replica.writeClean(teamName, snapshot, incarnation);
-        }
-        return result;
-      } catch (error) {
-        if (
-          !preflightOnly &&
-          !prepared &&
-          !(error instanceof InternalStorageOperationInterruptedError)
-        ) {
-          if (this.authorityPreparationFailures.size >= 128) {
-            const oldest = this.authorityPreparationFailures.keys().next().value;
-            if (oldest !== undefined) this.authorityPreparationFailures.delete(oldest);
-          }
-          this.authorityPreparationFailures.set(normalizeTeamKey(teamName), {
-            incarnation,
-            at: Date.now(),
-            error,
-          });
-        }
-        throw error;
+        return await operation(createJsonPreparedStatusBackend(teamName, this.jsonStore));
       }
-    });
+      if (source.state === 'dirty') {
+        if (this.selector.getBackendInfo()?.integrity === 'recovered')
+          throw new MemberWorkSyncSafetyJsonReadError('unavailable');
+        assertMemberWorkSyncDirtyContinuity(identity, canonical, candidate);
+      }
+      const merged = mergeDomainSnapshots(mergeDomainSnapshots(canonical, candidate), history);
+      const expected = mergeMemberWorkSyncSnapshots(
+        teamName,
+        primary!,
+        snapshotToRecords(teamName, merged)
+      );
+      validateMemberWorkSyncPrimaryRecords(identity, expected);
+      validateMemberWorkSyncAuthoritySnapshot(identity, recordsToSnapshot(teamName, expected));
+      if (preflightOnly)
+        return await operation(createSqlitePreparedStatusBackend(teamName, this.sqliteStore));
+      const importRequired = !areSnapshotRecordSetsEquivalent(primary!, expected);
+      const filesToArchive = active?.filesToArchive ?? [];
+      const finalizeRequired = importRequired || filesToArchive.length > 0;
+      const mutationRequired = identity.mutation || finalizeRequired;
+      if (mutationRequired) {
+        await replica.markDirtyWithRecoveryCandidate(
+          teamName,
+          incarnation,
+          recordsToSnapshot(teamName, expected)
+        );
+      }
+      if (importRequired) await gateway.importTeam(teamName, expected);
+      if (finalizeRequired) {
+        await this.sqliteStore.prepareCanonicalStatus(teamName, incarnation, {
+          records: expected,
+          filesToArchive,
+        });
+        const prepared = await gateway.listTeamSnapshot(teamName);
+        validateMemberWorkSyncPrimaryRecords(identity, prepared);
+        if (!areSnapshotRecordSetsEquivalent(prepared, expected))
+          throw new MemberWorkSyncSafetyJsonReadError('unavailable');
+      }
+      prepared = true;
+      const result = await operation(createSqlitePreparedStatusBackend(teamName, this.sqliteStore));
+      const publicationRequired =
+        mutationRequired ||
+        source.state !== 'clean' ||
+        !areSnapshotRecordSetsEquivalent(snapshotToRecords(teamName, source.snapshot), expected);
+      if (publicationRequired) {
+        const committed = await gateway.listTeamSnapshot(teamName);
+        validateMemberWorkSyncPrimaryRecords(identity, committed);
+        const snapshot = recordsToSnapshot(teamName, committed);
+        validateMemberWorkSyncAuthoritySnapshot(identity, snapshot);
+        await replica.writeClean(teamName, snapshot, incarnation);
+      }
+      return result;
+    } catch (error) {
+      if (!healed && !preflightOnly && !backup && !prepared && isStaleIncarnationError(error)) {
+        // Rows from an earlier identity of this team (recreated or restored without a purge).
+        logger?.warn('member-work-sync purging stale-incarnation state', {
+          teamName,
+          incarnation,
+          reason: error.reason,
+        });
+        await this.purgeStaleIncarnationState(teamName, incarnation, backend);
+        return this.prepareLocked(backend, identity, operation, backup, preflightOnly, true);
+      }
+      if (
+        !preflightOnly &&
+        !prepared &&
+        !(error instanceof InternalStorageOperationInterruptedError)
+      ) {
+        logger?.warn('member-work-sync authority preparation failed', {
+          teamName,
+          incarnation,
+          error: String(error),
+        });
+        if (this.authorityPreparationFailures.size >= 128) {
+          const oldest = this.authorityPreparationFailures.keys().next().value;
+          if (oldest !== undefined) this.authorityPreparationFailures.delete(oldest);
+        }
+        this.authorityPreparationFailures.set(normalizeTeamKey(teamName), {
+          incarnation,
+          at: Date.now(),
+          error,
+        });
+      }
+      throw error;
+    }
   }
   private async run<T>(
     teamName: string,
@@ -526,53 +567,7 @@ export class BackendSelectingMemberWorkSyncStore
       if ((error as NodeJS.ErrnoException).code === 'ENOENT') return null;
       throw error;
     }
-    try {
-      const parsed = JSON.parse(raw) as Record<string, unknown>;
-      const deletionIdentityId =
-        typeof parsed.deletionIdentityId === 'string' && parsed.deletionIdentityId.trim()
-          ? parsed.deletionIdentityId.trim()
-          : null;
-      const teamRootIdentity = this.parseDurablePathIdentity(parsed.teamRootIdentity);
-      const recoverySafe =
-        parsed.schemaVersion === 2 &&
-        typeof parsed.teamName === 'string' &&
-        parsed.teamName.trim().toLowerCase() === teamName.trim().toLowerCase() &&
-        (deletionIdentityId !== null || teamRootIdentity !== null);
-      return {
-        schemaVersion: 2,
-        teamName: teamName.trim(),
-        deletionIdentityId,
-        teamRootIdentity,
-        activeJsonStateCleared: parsed.activeJsonStateCleared === true,
-        recoverySafe,
-      };
-    } catch {
-      return {
-        schemaVersion: 2,
-        teamName: teamName.trim(),
-        deletionIdentityId: null,
-        teamRootIdentity: null,
-        activeJsonStateCleared: false,
-        recoverySafe: false,
-      };
-    }
-  }
-
-  private parseDurablePathIdentity(value: unknown): DurablePathIdentity | null {
-    if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
-    const identity = value as Partial<DurablePathIdentity>;
-    return typeof identity.dev === 'number' &&
-      Number.isFinite(identity.dev) &&
-      typeof identity.ino === 'number' &&
-      Number.isFinite(identity.ino) &&
-      typeof identity.birthtimeMs === 'number' &&
-      Number.isFinite(identity.birthtimeMs)
-      ? {
-          dev: identity.dev,
-          ino: identity.ino,
-          birthtimeMs: identity.birthtimeMs,
-        }
-      : null;
+    return parsePendingPrimaryPurgeMarker(raw, teamName);
   }
 
   private async isPendingPrimaryPurgeGenerationCurrent(

@@ -67,7 +67,10 @@ afterEach(async () => {
   for (const core of cores.splice(0)) core.close();
   for (const root of roots.splice(0)) await rm(root, { recursive: true, force: true });
 });
-async function setup(kind: 'json' | 'sqlite' = 'sqlite') {
+async function setup(
+  kind: 'json' | 'sqlite' = 'sqlite',
+  logger?: { warn: (message: string, metadata?: Record<string, unknown>) => void }
+) {
   const root = await mkdtemp(join(tmpdir(), 'mws-prepared-sandbox-'));
   roots.push(root);
   const paths = new MemberWorkSyncStorePaths(join(root, 'teams'));
@@ -97,6 +100,7 @@ async function setup(kind: 'json' | 'sqlite' = 'sqlite') {
     gateway,
     paths,
     fallbackRequiresReplica: false,
+    logger,
   });
   const replica = new InternalStorageJsonReplica<MemberWorkSyncStoreSnapshot>(
     (team) => paths.getSqliteFallbackReplicaPath(team),
@@ -1044,5 +1048,45 @@ describe('prepared backend production storage path', () => {
       h.store.withPreparedBackend({ ...identity, incarnation: 'new-incarnation' }, vi.fn())
     ).rejects.toThrow('incarnation mismatch');
     expect(source).toHaveBeenCalledTimes(2);
+  });
+  describe('stale-incarnation self-heal', () => {
+    const stale = (): MemberWorkSyncStatus => ({
+      ...status(),
+      statusRevision: { ...status().statusRevision!, incarnation: 'old-inc' },
+    });
+
+    it.each(['json', 'sqlite'] as const)(
+      'drops rows left by an earlier team identity instead of failing every mutation: %s',
+      async (kind) => {
+        const warn = vi.fn();
+        const h = await setup(kind, { warn });
+        if (kind === 'json') await h.json.write(stale());
+        else {
+          const records = snapshotToRecords(identity.teamName, snapshot(stale()));
+          await h.gateway.importTeam(identity.teamName, records);
+        }
+        const read = (backend: { read(name: string): Promise<unknown> }) =>
+          backend.read(member.memberName);
+        await expect(
+          h.store.withPreparedBackend({ ...identity, mutation: true }, read)
+        ).resolves.toMatchObject({ state: 'absent' });
+        expect(warn).toHaveBeenCalledWith(
+          'member-work-sync purging stale-incarnation state',
+          expect.objectContaining({ teamName: identity.teamName, reason: 'incarnation_mismatch' })
+        );
+        // Healed once; the next preparation is a normal one.
+        await expect(h.store.withPreparedBackend(identity, read)).resolves.toMatchObject({
+          state: 'absent',
+        });
+      }
+    );
+
+    it('keeps backup restore fail-closed for a foreign-incarnation status', async () => {
+      const h = await setup('sqlite');
+      const imported = vi.spyOn(h.gateway, 'importTeam');
+      const backup = { identity, history: snapshot(stale()), replica: { state: 'absent' as const }, secretJson: null };
+      await expect(h.store.restoreValidatedBackup(backup)).rejects.toThrow();
+      expect(imported).not.toHaveBeenCalled();
+    });
   });
 });
