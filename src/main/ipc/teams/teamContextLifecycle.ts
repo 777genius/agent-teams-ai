@@ -1,5 +1,8 @@
 import { TeamProjectContextRegistry, TeamProjectContextRuntimeResolver } from '@features/team-project-context/main';
 import { TeamMetaStore } from '@main/services/team/TeamMetaStore';
+import { getTeamsBasePath } from '@main/utils/pathDecoder';
+import { promises as fs } from 'node:fs';
+import * as path from 'node:path';
 
 import type { IpcResult, TeamSummary } from '@shared/types';
 
@@ -69,6 +72,64 @@ export async function deleteLogicalTeamWithContexts(
       if (!stopped.success) return stopped;
     }
     return deleteLogical();
+  } catch (error) {
+    return { success: false, error: error instanceof Error ? error.message : String(error) };
+  }
+}
+
+interface PermanentDeleteRegistry extends Pick<
+  TeamProjectContextRegistry,
+  'listForPermanentDeletion' | 'forgetPermanentlyDeletedContext'
+> {}
+
+export async function permanentlyDeleteLogicalTeam(
+  logicalTeamName: unknown,
+  ports: {
+    stopNative(name: string): Promise<IpcResult<void>>;
+    deleteNative(name: string, draft: boolean): Promise<void>;
+    deleteLogical(): Promise<IpcResult<void>>;
+    meta?: LifecycleReader;
+    registry?: PermanentDeleteRegistry;
+    isNativePresent?(name: string): Promise<boolean>;
+  }
+): Promise<IpcResult<void>> {
+  if (typeof logicalTeamName !== 'string' || !logicalTeamName.trim()) {
+    return ports.deleteLogical();
+  }
+  const meta = ports.meta ?? new TeamMetaStore();
+  const registry = ports.registry ?? TeamProjectContextRegistry.fromCurrentApp();
+  try {
+    const mode = await contextReader(
+      meta, (registry as TeamProjectContextRegistry)
+    ).getMode(logicalTeamName);
+    if (mode === 'shared') return ports.deleteLogical();
+
+    // The logical team remains present until all physical contexts are fully
+    // removed, enabling idempotent retries after an interrupted deletion.
+    const rows = await registry.listForPermanentDeletion(logicalTeamName);
+    for (const row of rows) {
+      const exists = ports.isNativePresent
+        ? await ports.isNativePresent(row.executionTeamName)
+        : await fs.lstat(path.join(getTeamsBasePath(), row.executionTeamName)).then(
+            () => true,
+            (error: NodeJS.ErrnoException) => {
+              if (error.code === 'ENOENT') return false;
+              throw error;
+            }
+          );
+      if (exists) {
+        // Recheck ownership immediately before native stop/backup deletion.
+        await registry.listForPermanentDeletion(logicalTeamName);
+        const stopped = await ports.stopNative(row.executionTeamName);
+        if (!stopped.success) return stopped;
+        await ports.deleteNative(row.executionTeamName, row.state === 'reserved');
+      }
+      const forgotten = await registry.forgetPermanentlyDeletedContext(
+        logicalTeamName, row.executionTeamName, row.id
+      );
+      if (!forgotten) throw new Error('Context mapping changed during permanent deletion');
+    }
+    return ports.deleteLogical();
   } catch (error) {
     return { success: false, error: error instanceof Error ? error.message : String(error) };
   }
