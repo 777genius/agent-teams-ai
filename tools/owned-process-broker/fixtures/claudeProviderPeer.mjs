@@ -18,6 +18,12 @@ assert.equal(process.env.TEST_PEER_SCENARIO, 'desktop-ui-v1', 'environment');
 assert.equal(process.env.TEST_PEER_PROVIDER, 'claude', 'environment');
 const role = process.env.TEST_PEER_ROLE;
 assert.ok(role === 'management' || role === 'runtime', 'environment');
+const importLifecycle = process.env.TEST_DESKTOP_IMPORT_LIFECYCLE !== undefined;
+if (importLifecycle) {
+  assert.equal(process.env.TEST_DESKTOP_IMPORT_LIFECYCLE, 'current-solo-v1', 'environment');
+  assert.equal(process.env.TEST_DESKTOP_COLLABORATION, undefined, 'environment');
+}
+const selectedModel = importLifecycle ? 'claude-sonnet-4-6' : 'TEST-claude-sonnet';
 let collaboration;
 if (process.env.TEST_DESKTOP_COLLABORATION !== undefined) {
   assert.equal(process.env.TEST_DESKTOP_COLLABORATION, 'mixed-v1', 'environment');
@@ -65,6 +71,24 @@ const values = new Set(['output-format', 'input-format', 'model', 'effort', 'too
   'setting-sources', 'permission-mode', 'permission-prompt-tool', 'session-id', 'resume', 'max-turns', 'max-budget-usd', 'betas', 'mcp-config', 'settings']);
 const argv = process.argv.slice(2);
 assert.ok(argv.length <= 64 && Buffer.byteLength(JSON.stringify(argv)) <= 128 * 1024, 'argv');
+// The selected runtime peer also serves the original Host's finite auth-status read.
+if (argv[0] === 'auth') {
+  assert.deepEqual(argv, ['auth', 'status', '--json'], 'argv');
+  assert.equal(role, 'management', 'argv');
+  assert.equal(process.env.HOME, join(root, 'home'), 'environment');
+  assert.equal(configRoot, join(root, 'config'), 'environment');
+  assert.ok(lstatSync(process.env.HOME).isDirectory() && lstatSync(configRoot).isDirectory(), 'environment');
+  const output = JSON.stringify({ loggedIn: true, authMethod: 'api_key',
+    apiProvider: 'firstParty', configDirectory: configRoot }) + '\n';
+  assert.ok(Buffer.byteLength(output) <= 64 * 1024, 'limit');
+  effect({ event: 'launch', parentPid: process.ppid, command: argv });
+  effect({ event: 'auth-status', command: argv });
+  process.once('exit', code => effect({ event: 'exited', code }));
+  await new Promise((resolve, reject) => {
+    process.stdout.write(output, error => error ? reject(error) : resolve());
+  });
+  process.exit(0);
+}
 for (let index = 0; index < argv.length; index++) {
   const match = /^--([a-zA-Z-]+)(?:=([\s\S]*))?$/u.exec(argv[index]);
   assert.ok(match && !Object.hasOwn(options, match[1]), 'argv');
@@ -83,7 +107,7 @@ assert.equal(options['strict-mcp-config'], true, 'argv');
 assert.ok(['default', 'acceptEdits', 'bypassPermissions', 'plan', 'dontAsk', 'auto'].includes(options['permission-mode']), 'argv');
 assert.ok(options['permission-prompt-tool'] === undefined || options['permission-prompt-tool'] === 'stdio', 'argv');
 assert.ok(options.effort === undefined || ['low', 'medium', 'high'].includes(options.effort), 'argv');
-assert.ok(options.model === undefined || ['sonnet', 'sonnet[1m]', 'TEST-claude-sonnet'].includes(options.model), 'argv');
+assert.ok(options.model === undefined || (importLifecycle ? ['claude-sonnet-4-6'] : ['sonnet', 'sonnet[1m]', 'TEST-claude-sonnet']).includes(options.model), 'argv');
 assert.ok(options['max-turns'] === undefined || ['1', '6', '8'].includes(options['max-turns']), 'argv');
 assert.ok(options['max-budget-usd'] === undefined || ['0.25', '0.5'].includes(options['max-budget-usd']), 'argv');
 assert.ok(options.betas === undefined || options.betas === 'context-1m-2025-08-07', 'argv');
@@ -167,7 +191,7 @@ const review = `
 
       PR number: TEST_UI_REVIEW
     `;
-const models = [{ value: 'sonnet', resolvedModel: 'TEST-claude-sonnet', displayName: 'TEST Claude Sonnet',
+const models = [{ value: importLifecycle ? selectedModel : 'sonnet', resolvedModel: selectedModel, displayName: importLifecycle ? 'Sonnet 4.6' : 'TEST Claude Sonnet',
   description: 'Subscription-free protocol emulation', supportsEffort: true, supportedEffortLevels: ['low', 'medium', 'high'], supportsFastMode: false }];
 let initialized = false, active, streamTimer, frames = 0, bytes = 0, inputCount = 0, resultCount = 0;
 let mcp, nativeTools = [], hooks = {}, failed = false;
@@ -202,7 +226,7 @@ const reply = (id, response) => send({ type: 'control_response', response: { sub
 const envelope = input => ({ uuid: randomUUID(), session_id: session, parent_tool_use_id: null,
   ...(input ? { user_message_uuid: input.id } : {}) });
 const usage = { input_tokens: 42, output_tokens: 18, cache_read_input_tokens: 0, cache_creation_input_tokens: 0 };
-const message = (id, content) => ({ id, type: 'message', role: 'assistant', model: 'TEST-claude-sonnet', content,
+const message = (id, content) => ({ id, type: 'message', role: 'assistant', model: selectedModel, content,
   stop_reason: 'end_turn', stop_sequence: null, usage });
 const assistant = (input, content) => send({ type: 'assistant', ...envelope(input), message: message(input.messageId, content) });
 const partial = (input, text) => {
@@ -233,7 +257,7 @@ function finish(input, text, { interrupted = false, localCommand } = {}) {
   const resultUsage = counted ? usage : { ...usage, input_tokens: 0, output_tokens: 0 };
   const result = { type: 'result', subtype: interrupted ? 'error_during_execution' : 'success', ...envelope(input),
     duration_ms: 1, duration_api_ms: 0, is_error: interrupted, num_turns: counted ? 1 : 0, stop_reason: interrupted ? null : 'end_turn',
-    total_cost_usd: cost, usage: resultUsage, modelUsage: { 'TEST-claude-sonnet': { inputTokens: resultCount * 42, outputTokens: resultCount * 18,
+    total_cost_usd: cost, usage: resultUsage, modelUsage: { [selectedModel]: { inputTokens: resultCount * 42, outputTokens: resultCount * 18,
       cacheReadInputTokens: 0, cacheCreationInputTokens: 0, webSearchRequests: 0, costUSD: cost,
       contextWindow: options.betas || options.model === 'sonnet[1m]' ? 1000000 : 200000, maxOutputTokens: 8192 } },
     permission_denials: [], ...(interrupted ? { errors: ['TEST input interrupted'] } : { result: text }),
@@ -344,7 +368,7 @@ async function initialize(frame) {
   reply(frame.request_id, { commands, models, agents: [], output_style: 'default', available_output_styles: ['default'],
     account: { apiProvider: 'firstParty', tokenSource: 'TEST-emulated', subscriptionType: 'TEST-emulated' },
     ...(request.hooks ? { hooks_applied: true } : {}) });
-  send({ type: 'system', subtype: 'init', ...envelope(), cwd, model: 'TEST-claude-sonnet', tools: (options.tools ?? '').split(',').filter(Boolean),
+  send({ type: 'system', subtype: 'init', ...envelope(), cwd, model: selectedModel, tools: (options.tools ?? '').split(',').filter(Boolean),
     mcp_servers: teamRuntime ? [{ name: 'team', status: 'connected' }] : [], permissionMode: options['permission-mode'],
     slash_commands: commands.map(row => row.name), skills: ['test-desktop-skill'], plugins: [], output_style: 'default', apiKeySource: 'none',
     claude_code_version: 'TEST-peer-sdk-0.3.305', capabilities: ['interrupt_receipt_v1'] });

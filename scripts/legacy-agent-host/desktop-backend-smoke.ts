@@ -6,6 +6,7 @@ import { runDesktopEmulatedRuntimeUi } from './desktop-emulated-runtime-ui.ts';
 import { prepareDesktopEmulatedExtensionsFixture } from './desktop-emulated-extensions-fixture.ts';
 import { prepareDesktopEmulatedImportFixture } from './desktop-emulated-import-fixture.ts';
 import { runDesktopEmulatedImportUi } from './desktop-emulated-import-ui.ts';
+import { prepareDesktopFiniteStoppedImportFixture, produceDesktopFiniteStoppedTeam, runDesktopFiniteStoppedImportUi } from './desktop-finite-stopped-import-ui.ts';
 import { restartDesktopEmulatedRuntimeApp } from './desktop-emulated-lifecycle-boundary.ts';
 import { verifyDesktopEmulatedLifecycleQuit } from './desktop-emulated-lifecycle-ui.ts';
 import { runDesktopScheduleUiProof } from './desktop-schedule-ui-proof.ts';
@@ -116,7 +117,7 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
   assertDesktopProofEnvironment(mode === 'process-cold-ui' || codexAccountMode || finiteMembership);
   const emulatedOnly = process.env.LEGACY_DESKTOP_EMULATED_ONLY === '1';
   const emulatedManagementMode = ['emulated-management-ui', 'emulated-codex-login-ui'].includes(mode);
-  const emulatedRuntimeProvider = ['emulated-codex-runtime-ui', 'emulated-selection-ui', 'emulated-installer-ui'].includes(mode) ? 'codex' : ['emulated-claude-runtime-ui', 'emulated-claude-lifecycle-ui', 'emulated-collaboration-ui', 'emulated-extensions-ui', 'emulated-import-ui'].includes(mode) ? 'claude' : mode === 'emulated-opencode-runtime-ui' ? 'opencode' : undefined;
+  const emulatedRuntimeProvider = ['emulated-codex-runtime-ui', 'emulated-selection-ui', 'emulated-installer-ui'].includes(mode) ? 'codex' : ['emulated-claude-runtime-ui', 'emulated-claude-lifecycle-ui', 'emulated-collaboration-ui', 'emulated-extensions-ui', 'emulated-import-ui', 'emulated-import-lifecycle-ui'].includes(mode) ? 'claude' : mode === 'emulated-opencode-runtime-ui' ? 'opencode' : undefined;
   const emulatedRuntimeMode = emulatedRuntimeProvider !== undefined;
   if (emulatedManagementMode || emulatedRuntimeMode) assert.equal(emulatedOnly, true, 'TEST providers require provider-emulation admission');
   assert.equal(
@@ -154,6 +155,7 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
   const emulatedManagementFixture = emulatedManagementMode ? await prepareDesktopEmulatedManagementFixture(repo, pnpm, mode === 'emulated-codex-login-ui' ? 'codex-login' : undefined) : undefined;
   const emulatedRuntimeFixture = mode === 'emulated-extensions-ui' ? await prepareDesktopEmulatedExtensionsFixture(repo, pnpm)
     : mode === 'emulated-import-ui' ? await prepareDesktopEmulatedImportFixture(repo, pnpm)
+    : mode === 'emulated-import-lifecycle-ui' ? await prepareDesktopFiniteStoppedImportFixture(repo, pnpm)
     : emulatedRuntimeProvider ? await prepareDesktopEmulatedRuntimeFixture(repo, pnpm, emulatedRuntimeProvider, mode === 'emulated-collaboration-ui' ? 'collaboration' : mode === 'emulated-claude-lifecycle-ui' ? 'lifecycle' : mode === 'emulated-selection-ui' ? 'selection' : mode === 'emulated-installer-ui' ? 'installer' : undefined) : undefined;
   const finiteBase = finiteMembership ? await prepareDesktopFiniteMembershipFixture(repo, pnpm) : undefined;
   const baseFixture: Awaited<ReturnType<typeof prepareDesktopProofFixture>> = finiteBase ?? emulatedRuntimeFixture ?? emulatedManagementFixture ?? suggestionFixture ?? (questionUiMode ? await prepareDesktopBackendFixture(repo, {
@@ -262,11 +264,14 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
   const receiptPath = join(fixture.root, artifacts.receipt);
   await writeFile(receiptPath, JSON.stringify(evidence, null, 2), { mode: 0o600, flag: 'wx' });
   console.log(JSON.stringify({ phase: 'prepared', receipt: receiptPath }));
-  if (donorSavedOnly || (legacyImportMode && process.env.LEGACY_DESKTOP_STOPPED_IMPORT_LAUNCH === '1')) {
+  if (mode === 'emulated-import-lifecycle-ui' || donorSavedOnly || (legacyImportMode && process.env.LEGACY_DESKTOP_STOPPED_IMPORT_LAUNCH === '1')) {
     try {
-      assert.ok(conversationModel);
-      if (donorSavedOnly) await produceDesktopDonorSavedTeam({ fixture, model: conversationModel, cdpLibrary, evidence });
-      else await produceDesktopCurrentStoppedTeam({ repo, fixture, model: conversationModel, cdpLibrary, evidence });
+      if (mode === 'emulated-import-lifecycle-ui') await produceDesktopFiniteStoppedTeam({ repo, fixture: emulatedRuntimeFixture!, cdpLibrary, electron, evidence });
+      else {
+        assert.ok(conversationModel);
+        if (donorSavedOnly) await produceDesktopDonorSavedTeam({ fixture, model: conversationModel, cdpLibrary, evidence });
+        else await produceDesktopCurrentStoppedTeam({ repo, fixture, model: conversationModel, cdpLibrary, evidence });
+      }
       await verifyDesktopSourceFreeze(repo, desktopProofSources, selectedSourceHashes, evidence);
     } catch (error) {
       evidence.status = 'INCOMPLETE';
@@ -410,7 +415,7 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
     if (emulatedRuntimeFixture) {
       if (mode === 'emulated-extensions-ui') await runDesktopNativeExtensionsUiSmoke(cdp, {
         root: fixture.root, evidence, assertOwnedRenderer: () => assertOwnedCdpListener(group) });
-      else if (mode === 'emulated-import-ui') await runDesktopEmulatedImportUi(cdp, {
+      else if (mode === 'emulated-import-ui' || mode === 'emulated-import-lifecycle-ui') await (mode === 'emulated-import-lifecycle-ui' ? runDesktopFiniteStoppedImportUi : runDesktopEmulatedImportUi)(cdp, {
         fixture: emulatedRuntimeFixture, evidence, electron, assertOwnedRenderer: () => assertOwnedCdpListener(group),
         observeOwnedHost: () => {
           const hosts = groupMembers(group).filter(row => command(row.pid) === `${fixture.node} ${fixture.hostEntry}`);
@@ -419,8 +424,8 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
         } });
       else await runDesktopEmulatedRuntimeUi(cdp, { fixture: emulatedRuntimeFixture, evidence, assertOwnedRenderer: () => assertOwnedCdpListener(group),
         ...(mode === 'emulated-claude-lifecycle-ui' ? { restartSameProfile: restartEmulatedSameProfile } : {}) });
-      if (mode === 'emulated-extensions-ui' || mode === 'emulated-import-ui')
-        object(evidence[mode === 'emulated-extensions-ui' ? 'nativeExtensionsUi' : 'stoppedImportUiProof'])
+      if (mode === 'emulated-extensions-ui' || mode === 'emulated-import-ui' || mode === 'emulated-import-lifecycle-ui')
+        object(evidence[mode === 'emulated-extensions-ui' ? 'nativeExtensionsUi' : mode === 'emulated-import-lifecycle-ui' ? 'finiteStoppedImportUiProof' : 'stoppedImportUiProof'])
           .fixturePins = await verifyDesktopEmulatedRuntimeFixture(emulatedRuntimeFixture);
     } else if (emulatedManagementFixture) {
       await runDesktopEmulatedManagementUi(cdp, { fixture: emulatedManagementFixture, evidence, assertOwnedRenderer: () => assertOwnedCdpListener(group) });

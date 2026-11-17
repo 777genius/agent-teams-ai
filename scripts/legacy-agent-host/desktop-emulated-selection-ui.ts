@@ -75,9 +75,25 @@ export async function runDesktopEmulatedSelectionUi(cdp: UiCdpPort & { evaluate(
   };
   const openLaunch = async (selected: Team, chooseLow = false) => {
     await ui.click('button', 'open original saved Team Launch', 'Launch');
+    let previousSettings = '', stableSettings = 0;
     const settings = record(await ui.waitRead(`(()=>{const rows=[...document.querySelectorAll('[role="dialog"] button[aria-controls]')]
       .filter(e=>e.textContent.includes('Optional launch settings')&&e.textContent.includes(${literal(selected.model)}));
-      return rows.length===1?{id:rows[0].getAttribute('aria-controls'),expanded:rows[0].getAttribute('aria-expanded')}:null})()`, 'saved model hydrates original Launch'));
+      if(rows.length!==1)return null;
+      const button=rows[0],dialog=button.closest('[role="dialog"]');
+      if(!dialog)return null;
+      const rect=button.getBoundingClientRect();
+      const id=button.getAttribute('aria-controls'),expanded=button.getAttribute('aria-expanded');
+      if(typeof id!=='string'||!id.length||!['true','false'].includes(expanded)||
+        ![rect.x,rect.y,rect.width,rect.height].every(Number.isFinite)||rect.width<=0||rect.height<=0||
+        dialog.getAnimations().some(animation=>animation.pending||
+          animation.playState==='running'||animation.playState==='paused'))return null;
+      return {id,expanded,x:rect.x,y:rect.y,width:rect.width,height:rect.height}})()`,
+    'saved model hydrates original Launch', 30_000, value => {
+      const key = value ? JSON.stringify(value) ?? '' : '';
+      stableSettings = key ? key === previousSettings ? Math.min(3, stableSettings + 1) : 1 : 0;
+      previousSettings = key;
+      return stableSettings === 3;
+    }));
     if (settings.expanded !== 'true') await ui.click(`[role="dialog"] button[aria-controls=${literal(settings.id)}]`, 'expand original saved launch settings');
     const lead = '[role="dialog"] [data-role="lead-row"]';
     // Launch shares the expandable lead row with Create. #dialog-effort belongs
@@ -131,9 +147,10 @@ export async function runDesktopEmulatedSelectionUi(cdp: UiCdpPort & { evaluate(
     const name = live.memberName === 'team-lead' ? 'lead' : live.memberName;
     return `button[aria-label^=${literal(name + ',')}]`;
   };
-  const openChat = async (live: Live, controls = ui) => {
+  const openChat = async (live: Live, controls = ui, expectedReply?: string) => {
     const selector = leadSelector(live);
-    await controls.scrollTo(selector, 'original lead conversation'); await controls.click(selector, 'open original lead conversation');
+    await controls.scrollTo(selector, 'original lead conversation');
+    await controls.click(selector, 'open original lead conversation', undefined, expectedReply);
   };
   const openInitialChat = (live: Live) => openDesktopEmulatedBootChat(cdp, {
     selector: leadSelector(live), timeoutMs: 60_000, replyLabel: 'original visible reply TEST boot ready',
@@ -289,7 +306,7 @@ export async function runDesktopEmulatedSelectionUi(cdp: UiCdpPort & { evaluate(
     assertOwnedRenderer: options.assertOwnedRenderer, expectedStatus: record(record(proof.installer).installedStatus),
     assertPriorRuntime: async phase => { await assertSameLive(liveA, phase, true); await assertSameLive(liveB, phase, true); } });
 
-  await openTeam(a); await openChat(liveA);
+  await openTeam(a); await openChat(liveA, ui, 'TEST boot ready');
   const before = new Set((await a.commands()).map(row => row.commandId));
   await fill('.message-composer-flat-layout textarea', 'TEST_UI_STREAM');
   await ui.click('button.message-composer-send-button', 'send original held stream once', 'Send');
@@ -307,7 +324,8 @@ export async function runDesktopEmulatedSelectionUi(cdp: UiCdpPort & { evaluate(
   await openTeam(a);
   await ui.scrollTo('button[aria-label="Back to chats"]', 'original A conversation list after B Stop');
   await ui.click('button[aria-label="Back to chats"]', 'return to original A chats after B Stop');
-  await openChat(liveA); await visible('TEST stream partial');
+  await openChat(liveA, ui, 'TEST stream partial');
+  await visible('TEST stream partial');
   assert.equal(await cdp.evaluate(`document.body.innerText.includes('TEST stream partial complete')`), false);
   proof.aSurvivedScreenshot = await screenshot('a-survived');
   await writeFile(join(fixture.emulatedRuntime.peers[0]!.root, 'release-stream'), 'TEST release once\n', { mode: 0o600, flag: 'wx' });

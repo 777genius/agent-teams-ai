@@ -8,6 +8,7 @@ import { createTeamController } from '../../packages/legacy-agent-host/dist/adap
 import { readDesktopTaskBoardGroupSnapshot } from './desktop-task-board-group-page-read.ts';
 import { fileDigest } from './desktop-backend-fixture.ts';
 import {
+  clickDesktopTaskBoardClearedClose,
   desktopTaskBoardAssignmentReadyExpression,
   desktopTaskCommentInputExpression,
 } from './desktop-task-comment-input-target.ts';
@@ -471,7 +472,7 @@ export async function runDesktopTaskBoardUiSmoke(
     taskId,
     (payload) => payload.value === null
   );
-  await ui.click('[role="dialog"] button', 'close original Task detail', 'Close');
+  await clickDesktopTaskBoardClearedClose(ui, options.handleId, taskId, { contextId, surfaceId });
   await ui.waitRead(`!document.querySelector('[role="dialog"]')`, 'Task detail closed');
 
   await ui.click('button[aria-label="Columns view"]', 'switch existing board to Columns');

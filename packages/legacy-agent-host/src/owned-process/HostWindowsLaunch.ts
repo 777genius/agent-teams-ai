@@ -60,6 +60,7 @@ type LaunchPhase = 'capture' | 'staging' | 'allocate' | 'launch-chunk' | 'launch
   'post-commit' | 'prepare' | 'post-prepare' | 'resume';
 type LaunchRefusal = 'sealed' | 'current-false' | 'current-threw' | 'launch-deadline' |
   'refused' | 'unknown' | 'result-mismatch' | 'preparation-failed';
+type LaunchCheckSite = 'before-owner' | 'after-owner' | 'request-builder' | 'after-reply' | null;
 
 export interface RetainedWindowsLaunchPort extends OwnedLaunchPort {
   readonly registeredProcesses: WindowsRegisteredProcessPort;
@@ -286,20 +287,20 @@ class RemotePending implements PreparedOwnedProcess {
     throw new Error('Original Main retains physical cleanup');
   }
 
-  private readonly refuse = (reason: LaunchRefusal, deadlineExpired: true | null = null): void => {
+  private readonly refuse = (reason: LaunchRefusal, deadlineExpired: true | null = null, checkSite: LaunchCheckSite = null): void => {
     if (this.refusalObserved) return;
     this.refusalObserved = true;
     if (refusalChannel.hasSubscribers) try {
       refusalChannel.publish({ kind: 'native', capability: this.key, phase: this.phase, reason,
-        dispatched: this.dispatched, staged: this.staged, rootCaptured: this.rootIdentity !== undefined, deadlineExpired });
+        dispatched: this.dispatched, staged: this.staged, rootCaptured: this.rootIdentity !== undefined, deadlineExpired, checkSite });
     } catch { /* The original refusal remains authoritative. */ }
   };
-  private assertInput(preparing = false): void {
-    if (this.sealed) { if (preparing) this.refuse('sealed'); unavailable(); }
+  private assertInput(preparing = false, checkSite: LaunchCheckSite = null): void {
+    if (this.sealed) { if (preparing) this.refuse('sealed', null, checkSite); unavailable(); }
     let current: boolean;
-    try { current = this.current(); } catch (error) { if (preparing) this.refuse('current-threw'); throw error; }
-    if (!current) { if (preparing) this.refuse('current-false'); unavailable(); }
-    if (preparing && performance.now() >= this.deadline) { this.refuse('launch-deadline', true); unavailable(); }
+    try { current = this.current(); } catch (error) { if (preparing) this.refuse('current-threw', null, checkSite); throw error; }
+    if (!current) { if (preparing) this.refuse('current-false', null, checkSite); unavailable(); }
+    if (preparing && performance.now() >= this.deadline) { this.refuse('launch-deadline', true, checkSite); unavailable(); }
   }
 
   captureSpec(spec: ResolvedLaunchSpec): ResolvedLaunchSpec {
@@ -393,17 +394,17 @@ class RemotePending implements PreparedOwnedProcess {
     if (!sameOwner(expectedOwner, this.owner) || !this.rootIdentity || this.resumed) {
       this.refuse('preparation-failed'); unavailable();
     }
-    this.assertInput(true);
+    this.assertInput(true, 'before-owner');
     try { await installOwner(); } catch (error) { this.refuse('preparation-failed'); throw error; }
-    this.assertInput(true);
+    this.assertInput(true, 'after-owner');
     const result = await this.source.request(
       'resume', () => {
-        this.assertInput(true);
+        this.assertInput(true, 'request-builder');
         return { operation: 'resume', capability: this.key };
       }, this.deadline, this.refuse
     );
     if (result.operation !== 'resume') { this.refuse('result-mismatch'); unavailable(); }
-    this.assertInput(true);
+    this.assertInput(true, 'after-reply');
     this.resumed = true;
     this.readable('state');
   }

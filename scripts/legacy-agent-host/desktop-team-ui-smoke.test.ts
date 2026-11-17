@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { execFileSync } from 'node:child_process';
-import { mkdtemp, readFile, realpath, rm, writeFile } from 'node:fs/promises';
+import { createHash } from 'node:crypto';
+import { mkdir, mkdtemp, readFile, realpath, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { runInNewContext } from 'node:vm';
@@ -18,6 +19,7 @@ import { createDesktopUiControls } from './desktop-ui-controls.ts';
 import { projectDesktopCodexLoginFailure } from './desktop-codex-login-ui-proof.ts';
 import { projectDesktopCodexInstallerFailure, projectDesktopSelectionTargetFailure } from './desktop-backend-failures.ts';
 import { projectDesktopEmulatedReadinessFailure, projectDesktopProofReceiptSummary, projectDesktopTaskBoardFailure } from './desktop-proof-evidence.ts';
+import { readNativeProviderArtifact } from '../../packages/legacy-agent-host/tests/fixtures/native-provider-artifact.ts';
 
 function deferred<T>() {
   let resolve!: (value: T) => void;
@@ -1860,6 +1862,7 @@ for (const label of ['missing selected A', 'non-string A handle', 'empty A handl
   });
 }
 
+
 async function selectionStoppedConvergence(options: {
   modes?: string[]; tables?: boolean[]; guardMs?: number[]; readMs?: number[]; bindingMismatch?: boolean;
 } = {}) {
@@ -1977,142 +1980,976 @@ test('Selection stopped convergence refuses wrong identity, unaccepted progress,
 });
 
 
-test('the existing passive click recorder distinguishes the actual Team from later navigation without new actions', async () => {
-  const teamA = 'host-team:TEST-A', teamB = 'host-team:TEST-B';
-  type NavigationState = { selectedTeamName: string | null; activeTabId: string; openTabs: unknown[] };
-  const state = (selectedTeamName: string | null, activeTabId = 'list'): NavigationState => ({
-    selectedTeamName, activeTabId,
-    openTabs: [{ id: 'list', type: 'teams' }, { id: 'a', type: 'team', teamName: teamA },
-      { id: 'b', type: 'team', teamName: teamB }],
+type NavigationState = { paneLayout: { focusedPaneId: unknown; panes: Record<string, unknown>[] }; selectedTeamName: unknown; secret: string };
+function navigationState(team = hostTeamSelectionKey('TEST-A'), paneId = 'pane-1', tabId = 'tab-A'): NavigationState {
+  return { paneLayout: { focusedPaneId: paneId, panes: [{ id: paneId, activeTabId: tabId,
+    tabs: [{ id: tabId, type: 'team', teamName: team }] }] }, selectedTeamName: team, secret: 'TEST-private-unrelated-value' };
+}
+async function passiveNavigationFixture() {
+  const counts = { reads: 0, target: 0, attribute: 0, clock: 0, queries: 0, send: 0, evaluate: 0, micro: 0, timer: 0 };
+  const listeners = new Map<string, (event: Record<string, unknown>) => void>(), microtasks: (() => void)[] = [], timers: (() => void)[] = [];
+  let state: unknown = navigationState();
+  class TestElement {
+    tagName = 'DIV'; id = ''; className = 'team-row-zebra-card'; name: unknown = hostTeamSelectionKey('TEST-A');
+    card: TestElement | null = this; targetThrows = false; attributeThrows = false; isCard = true;
+    closest(selector: string): TestElement | null {
+      if (selector === '[data-team-name]') { counts.target++; if (this.targetThrows) throw new Error('TEST target read'); return this.card; }
+      assert.ok(['button', '.kanban-task-card', '[role="dialog"]'].includes(selector)); return null;
+    }
+    matches(selector: string) { assert.equal(selector, '.team-row-zebra-card'); return this.isCard; }
+    getAttribute(name: string): unknown {
+      if (name === 'data-team-name') { counts.attribute++; if (this.attributeThrows) throw new Error('TEST target attribute'); return this.name; }
+      assert.equal(name, 'aria-label'); return null;
+    }
+  }
+  const element = new TestElement();
+  const store: (() => never) & { getState(this: unknown): unknown } = Object.assign(() => assert.fail('never invoke the Zustand bound hook'), {
+    getState(this: unknown): unknown { assert.equal(this, store); counts.reads++; return state; },
   });
-  const setup = async () => {
-    const listeners = new Map<string, (event: Record<string, unknown>) => void>();
-    const microtasks: Array<() => void> = [], timers: Array<() => void> = [];
-    let current = state(teamA), failRead = false, failTarget = false;
-    const calls = { send: 0, evaluate: 0, stateReads: 0, microtasks: 0, timers: 0, business: 0 };
-    class Target {
-      tagName = 'DIV'; id = ''; className = 'TEST-card-body';
-      readonly team: string | null;
-      constructor(team: string | null) { this.team = team; }
-      getAttribute(name: string) { return name === 'data-team-name' ? this.team : null; }
-      closest(selector: string) {
-        if (selector === '[data-team-name]') {
-          if (failTarget) throw new Error('PRIVATE-target');
-          return this.team === null ? null : this;
-        }
-        assert.ok(['button', '[role="dialog"]', '.kanban-task-card'].includes(selector));
-        return null;
-      }
-    }
-    const passiveWindow: Record<string, unknown> = {
-      __agentTeamsDevStore: { getState: () => {
-        calls.stateReads++;
-        if (failRead) throw new Error('PRIVATE-store');
-        return current;
-      } },
-    };
-    const document = {
-      activeElement: new Target(null),
-      querySelectorAll(selector: string) {
-        assert.ok(['[aria-roledescription="sortable"][aria-pressed="true"]', '[id^="DndLiveRegion-"]'].includes(selector));
-        return [];
-      },
-      addEventListener(type: string, listener: (event: Record<string, unknown>) => void,
-        options: { capture: boolean; passive: boolean }) {
-        assert.equal(options.capture, true); assert.equal(options.passive, true);
-        assert.equal(listeners.has(type), false); listeners.set(type, listener);
-      },
-    };
-    const cdp = {
-      async send(method: string, params?: Record<string, unknown>) {
-        calls.send++;
-        assert.equal(method, 'Emulation.setFocusEmulationEnabled'); assert.deepEqual(params, { enabled: true });
-      },
-      async evaluate(expression: string) {
-        calls.evaluate++;
-        if (expression === 'document.visibilityState') return 'visible';
-        assert.equal(calls.evaluate, 1, 'execute only the actual existing observer installation');
-        return runInNewContext(expression, {
-          window: passiveWindow, document, Element: Target, TextEncoder,
-          performance: { now: () => 17 },
-          queueMicrotask: (callback: () => void) => { calls.microtasks++; microtasks.push(callback); },
-          setTimeout: (callback: () => void, delay: number) => {
-            assert.equal(delay, 0); calls.timers++; timers.push(callback);
-          },
-        });
-      },
-    };
-    await createDesktopUiControls(cdp, {
-      assertOwnedRenderer: () => assert.fail('observer does not add an ownership call'),
-      step: () => assert.fail('passive observer does not dispatch an action'),
-    }).observeInput();
-    assert.equal(listeners.size, 9); assert.equal(calls.send, 1); assert.equal(calls.evaluate, 2);
-    const rows = (name = '__TEST_desktopInputEvents') => passiveWindow[name] as Array<Record<string, unknown>>;
-    const fire = (team: string | null, type = 'click', trusted = true) => {
-      const blocked = () => { calls.business++; assert.fail('observer cannot change or redispatch input'); };
-      listeners.get(type)!({ type, target: new Target(team), isTrusted: trusted, clientX: 191, clientY: 228,
-        button: 0, buttons: type === 'pointermove' ? 1 : 0, defaultPrevented: false,
-        preventDefault: blocked, stopPropagation: blocked, stopImmediatePropagation: blocked, dispatchEvent: blocked });
-      return rows(type === 'pointermove' ? '__TEST_desktopDragEvents' : undefined).at(-1)!;
-    };
-    return { calls, rows, fire, update: (next: NavigationState) => { current = next; },
-      failRead: () => { failRead = true; }, failTarget: () => { failTarget = true; },
-      microtask: () => { assert.equal(microtasks.length, 1); microtasks.shift()!(); },
-      dispatch: () => { assert.equal(timers.length, 1); timers.shift()!(); },
-    };
+  const window: Record<string, unknown> = { __agentTeamsDevStore: store };
+  const document = {
+    activeElement: element as TestElement | null,
+    addEventListener(name: string, listener: (event: Record<string, unknown>) => void, options: unknown) {
+      assert.deepEqual(JSON.parse(JSON.stringify(options)), { capture: true, passive: true });
+      assert.equal(listeners.has(name), false); listeners.set(name, listener);
+    },
+    querySelectorAll(selector: string) {
+      assert.ok(['[aria-roledescription="sortable"][aria-pressed="true"]', '[id^="DndLiveRegion-"]'].includes(selector));
+      counts.queries++; return [];
+    },
   };
-  const normalized = (value: unknown) => JSON.parse(JSON.stringify(value)) as Record<string, unknown>;
-  for (const actualTarget of [teamA, teamB]) {
-    const f = await setup(), row = f.fire(actualTarget);
-    // The original physical step retains intended B separately; this observer records actual A or B.
-    assert.ok(row.teamNavigation, 'the original passive click must retain its actual Team ancestor');
-    assert.deepEqual(normalized(row.teamNavigation), { targetTeamKey: actualTarget,
-      before: { selectedTeamKey: teamA, activeSurface: 'teams', activeTeamKey: null } });
-    f.update(state(actualTarget, actualTarget === teamA ? 'a' : 'b')); f.microtask();
-    f.update(state(teamA, 'a')); f.dispatch();
-    const navigation = normalized(row.teamNavigation);
-    assert.deepEqual(navigation.afterMicrotask, { selectedTeamKey: actualTarget, activeSurface: 'team', activeTeamKey: actualTarget });
-    assert.deepEqual(navigation.afterDispatch, { selectedTeamKey: teamA, activeSurface: 'team', activeTeamKey: teamA });
-    assert.equal(navigation.targetTeamKey, actualTarget, 'a later selected Team cannot rewrite the actual clicked ancestor');
-    assert.deepEqual(f.calls, { send: 1, evaluate: 2, stateReads: 3, microtasks: 1, timers: 1, business: 0 });
-  }
-  for (const mode of ['read-throws', 'duplicate-tab', 'too-many-tabs', 'bad-selected', 'bad-target', 'target-throws', 'untrusted', 'no-card', 'utf8-cap']) {
-    const f = await setup();
-    let target: string | null = teamB;
-    if (mode === 'read-throws') f.failRead();
-    if (mode === 'target-throws') f.failTarget();
-    if (mode === 'duplicate-tab') f.update({ ...state(teamA), openTabs: [{ id: 'list', type: 'teams' }, { id: 'list', type: 'teams' }] });
-    if (mode === 'too-many-tabs') f.update({ ...state(teamA), openTabs: Array.from({ length: 65 }, () => ({ id: 'list', type: 'teams' })) });
-    if (mode === 'bad-selected') f.update(state('PRIVATE-selected'));
-    if (mode === 'bad-target') target = 'host-team:' + 'x'.repeat(247);
-    if (mode === 'no-card') target = null;
-    if (mode === 'utf8-cap') {
-      target = 'host-team:' + '文'.repeat(246);
-      f.update({ selectedTeamName: target, activeTabId: 'a', openTabs: [{ id: 'a', type: 'team', teamName: target }] });
-    }
-    const row = f.fire(target, 'click', mode !== 'untrusted'); f.microtask(); f.dispatch();
-    if (['read-throws', 'duplicate-tab', 'too-many-tabs', 'bad-selected'].includes(mode))
-      assert.deepEqual(normalized(row.teamNavigation), { targetTeamKey: teamB, before: null, afterMicrotask: null, afterDispatch: null });
-    else assert.equal(row.teamNavigation, null);
-    assert.equal(JSON.stringify(row).includes('PRIVATE-'), false);
-    assert.ok(Buffer.byteLength(JSON.stringify(row.teamNavigation), 'utf8') <= 4096);
-    assert.equal(f.calls.send, 1); assert.equal(f.calls.evaluate, 2); assert.equal(f.calls.microtasks, 1);
-    assert.equal(f.calls.timers, 1); assert.equal(f.calls.business, 0);
-  }
-  const bounded = await setup();
-  for (let i = 0; i < 100; i++) { bounded.fire(null); bounded.microtask(); bounded.dispatch(); }
-  for (let i = 0; i < 35; i++) { bounded.fire(null, 'pointermove'); bounded.microtask(); bounded.dispatch(); }
-  assert.equal(bounded.rows().length, 96); assert.equal(bounded.rows('__TEST_desktopDragEvents').length, 32);
-  assert.deepEqual(bounded.calls, { send: 1, evaluate: 2, stateReads: 0, microtasks: 135, timers: 135, business: 0 });
+  const json = { stringify(value: unknown): string { const text = JSON.stringify(value); assert.ok(typeof text === 'string'); return text; } };
+  const context = { window, document, Element: TestElement, HTMLButtonElement: TestElement, JSON: json,
+    performance: { now() { counts.clock++; return 123.4; } },
+    queueMicrotask(callback: () => void) { counts.micro++; microtasks.push(callback); },
+    setTimeout(callback: () => void, delay: number) { assert.equal(delay, 0); counts.timer++; timers.push(callback); return 1; } };
+  const ui = createDesktopUiControls({
+    async send(method, params) { counts.send++; assert.equal(method, 'Emulation.setFocusEmulationEnabled'); assert.deepEqual(params, { enabled: true }); return {}; },
+    async evaluate(expression) { counts.evaluate++; return expression === 'document.visibilityState' ? 'visible' : runInNewContext(expression, context); },
+  }, { assertOwnedRenderer() { assert.fail('observer adds no action-owner reads'); }, step() { assert.fail('observer adds no input action'); } });
+  await ui.observeInput();
+  assert.deepEqual([...listeners.keys()], ['pointerdown', 'pointerup', 'pointercancel', 'pointermove', 'click', 'keydown', 'keyup', 'focusin', 'focusout']);
+  assert.deepEqual([counts.send, counts.evaluate, counts.reads, counts.clock, counts.micro, counts.timer], [1, 2, 0, 0, 0, 0]);
+  const events = () => window.__TEST_desktopInputEvents as Record<string, unknown>[];
+  const dragEvents = () => window.__TEST_desktopDragEvents as Record<string, unknown>[];
+  const emit = (type = 'click', target: unknown = element, buttons = 0) => {
+    const event = { target, clientX: 191, clientY: 228, button: 0, buttons, key: 'TEST-key', code: 'TEST-code', isTrusted: true, defaultPrevented: false };
+    const listener = listeners.get(type); assert.ok(listener); listener(event);
+    return { event, row: (type === 'pointermove' || type === 'pointercancel' ? dragEvents() : events()).at(-1)! };
+  };
+  const micro = () => { const callback = microtasks.shift(); assert.ok(callback); callback(); };
+  const timer = () => { const callback = timers.shift(); assert.ok(callback); callback(); };
+  const flush = () => { while (microtasks.length) micro(); while (timers.length) timer(); };
+  return { counts, element, store, window, document, json, emit, micro, timer, flush, events, dragEvents, setState(value: unknown) { state = value; } };
+}
+const navigationPlain = (value: unknown): Record<string, unknown> => JSON.parse(JSON.stringify(value));
+const navigationSample = (team: string, pane = 'pane-1', tab = 'tab-A') => ({
+  status: 'available', focusedPaneId: pane, activeTabId: tab, activeTabType: 'team', activeTabTeamName: team, selectedTeamName: team,
 });
 
+test('passive input keeps its actual Team target and three separate original navigation samples', async () => {
+  const a = hostTeamSelectionKey('TEST-A'), b = hostTeamSelectionKey('TEST-B');
+  const f = await passiveNavigationFixture(); f.element.name = b;
+  const initial = navigationState(a, 'pane-1', 'tab-teams'); initial.paneLayout.panes[0]!.tabs = [{ id: 'tab-teams', type: 'teams' }]; f.setState(initial);
+  const teamsA = { status: 'available', focusedPaneId: 'pane-1', activeTabId: 'tab-teams', activeTabType: 'other', activeTabTeamName: null, selectedTeamName: a };
+  const { event, row } = f.emit('pointerdown');
+  assert.deepEqual(navigationPlain(row), { type: 'pointerdown', timeMs: 123, x: 191, y: 228, button: 0, buttons: 0,
+    key: 'TEST-key', code: 'TEST-code', trusted: true, buttonClass: null, target: { tag: 'DIV', id: '', ariaLabel: null, className: 'team-row-zebra-card' },
+    focusBefore: { tag: 'DIV', id: '', ariaLabel: null, className: 'team-row-zebra-card' }, defaultPreventedBefore: false,
+    sidebarRow: false, taskId: null, activeSortable: [], dragAnnouncement: [], taskClarification: null,
+    teamNavigation: { schemaVersion: 1, status: 'available', source: 'original-passive-input', atomicWithNavigation: false,
+      targetTeamName: b, before: teamsA, microtask: null, afterDispatch: null } });
+  assert.deepEqual([f.counts.reads, f.counts.target, f.counts.attribute, f.counts.clock, f.counts.micro, f.counts.timer], [1, 1, 1, 1, 1, 0]);
+  f.element.name = a; f.element.card = null; f.setState(navigationState(b)); event.defaultPrevented = true; f.micro();
+  assert.deepEqual(navigationPlain(row.teamNavigation).microtask, navigationSample(b));
+  f.setState(navigationState(a)); f.document.activeElement = null; f.timer();
+  const observation = navigationPlain(row.teamNavigation);
+  assert.equal(observation.targetTeamName, b); assert.deepEqual(observation.before, teamsA); assert.deepEqual(observation.afterDispatch, navigationSample(a));
+  assert.deepEqual([row.defaultPreventedAfterMicrotask, row.defaultPreventedAfterDispatch, row.focusAfterDispatch], [true, true, null]);
+  assert.deepEqual([f.counts.reads, f.counts.target, f.counts.attribute, f.counts.clock, f.counts.queries, f.counts.send, f.counts.evaluate, f.counts.micro, f.counts.timer], [3, 1, 1, 1, 2, 1, 2, 1, 1]);
+  assert.equal(JSON.stringify(observation).includes('TEST-private-unrelated-value'), false);
+  const g = await passiveNavigationFixture(); const original = g.emit().row; g.element.name = b; g.element.card = null; g.setState(navigationState(b)); g.flush();
+  assert.equal(navigationPlain(original.teamNavigation).targetTeamName, a); assert.deepEqual(navigationPlain(original.teamNavigation).afterDispatch, navigationSample(b));
+});
+
+test('passive navigation preserves non-card events, the original ring bounds and null or non-Team state', async () => {
+  const f = await passiveNavigationFixture(); f.element.card = null;
+  for (const type of ['pointerdown', 'pointerup', 'click']) { const { row } = f.emit(type); f.flush(); assert.equal(row.teamNavigation, null); }
+  assert.deepEqual([f.counts.reads, f.counts.target, f.counts.attribute], [0, 3, 0]);
+  for (const type of ['keydown', 'keyup', 'focusin', 'focusout', 'pointercancel']) { const { row } = f.emit(type); f.flush(); assert.equal(Object.hasOwn(row, 'teamNavigation'), false); }
+  const count = f.counts.clock; f.emit('pointermove'); assert.equal(f.counts.clock, count);
+  for (let index = 0; index < 100; index++) f.emit('keydown');
+  for (let index = 0; index < 35; index++) f.emit('pointermove', f.element, 1);
+  f.flush(); assert.equal(f.events().length, 96); assert.equal(f.dragEvents().length, 32); assert.equal(f.counts.reads, 0);
+  assert.deepEqual([f.counts.target, f.counts.attribute, f.counts.clock, f.counts.micro, f.counts.timer, f.counts.queries], [3, 0, 143, 143, 143, 286]);
+  assert.ok(f.dragEvents().every(row => !Object.hasOwn(row, 'teamNavigation')));
+  const g = await passiveNavigationFixture(), state = navigationState(); const pane = state.paneLayout.panes[0]!;
+  pane.activeTabId = null; state.selectedTeamName = null; g.setState(state);
+  const absent = g.emit().row; g.flush();
+  assert.deepEqual(navigationPlain(absent.teamNavigation).before, { status: 'available', focusedPaneId: 'pane-1', activeTabId: null, activeTabType: null, activeTabTeamName: null, selectedTeamName: null });
+  pane.activeTabId = 'tab-A'; pane.tabs = [{ id: 'tab-A', type: 'dashboard', get teamName() { return assert.fail('non-Team metadata is not read'); } }];
+  const other = g.emit().row; g.flush();
+  assert.deepEqual(navigationPlain(other.teamNavigation).before, { status: 'available', focusedPaneId: 'pane-1', activeTabId: 'tab-A', activeTabType: 'other', activeTabTeamName: null, selectedTeamName: null });
+});
+
+test('passive navigation refuses malformed target and store facts without losing original callbacks', async () => {
+  for (const name of [null, undefined, 12, 'host-team:', 'host-team:%', 'host-team:%41', 'host-team:%00', 'host-team:' + 'x'.repeat(247), { toString() { assert.fail('no target coercion'); } }]) {
+    const f = await passiveNavigationFixture(); f.element.name = name; const { row } = f.emit(); f.flush();
+    assert.deepEqual(navigationPlain(row.teamNavigation), { schemaVersion: 1, status: 'unavailable', reason: 'target' });
+    assert.equal(f.counts.reads, 0); assert.equal(Object.hasOwn(row, 'focusAfterDispatch'), true);
+  }
+  const throwing = await passiveNavigationFixture(); throwing.element.targetThrows = true; const target = throwing.emit().row; throwing.flush();
+  assert.deepEqual(navigationPlain(target.teamNavigation), { schemaVersion: 1, status: 'unavailable', reason: 'target' });
+  const attr = await passiveNavigationFixture(); attr.element.attributeThrows = true; const attrRow = attr.emit().row; attr.flush();
+  assert.deepEqual(navigationPlain(attrRow.teamNavigation), { schemaVersion: 1, status: 'unavailable', reason: 'target' }); assert.equal(attr.counts.reads, 0);
+  let accessorCalls = 0; const operandAccessor = (): never => { accessorCalls++; throw new Error('TEST operand accessor'); };
+  const mutations: ((state: NavigationState) => void)[] = [
+    s => { s.selectedTeamName = undefined; }, s => { s.selectedTeamName = 'host-team:%41'; },
+    s => { s.paneLayout.panes[0] = Object.create({ id: 'pane-1' }) as Record<string, unknown>; },
+    s => { const tab = (s.paneLayout.panes[0]!.tabs as Record<string, unknown>[])[0]!; tab.teamName = 'host-team:%00'; },
+    s => { s.paneLayout.focusedPaneId = 'pane\n'; }, s => { s.paneLayout.focusedPaneId = 'p'.repeat(129); },
+    s => { s.paneLayout.panes = []; }, s => { s.paneLayout.panes = Array.from({ length: 5 }, (_, i) => ({ id: 'p' + i })); },
+    s => { s.paneLayout.panes.push(s.paneLayout.panes[0]!); }, s => { s.paneLayout.focusedPaneId = 'missing'; },
+    s => { s.paneLayout.panes[0]!.activeTabId = 'missing'; },
+    s => { const p = s.paneLayout.panes[0]!, tabs = p.tabs as Record<string, unknown>[]; p.tabs = [...tabs, ...tabs]; },
+    s => { s.paneLayout.panes[0]!.tabs = Array.from({ length: 129 }, (_, i) => ({ id: 'tab-' + i })); },
+    s => { Object.defineProperty(s, 'selectedTeamName', { get: operandAccessor }); },
+    s => { Object.defineProperty(s.paneLayout, 'panes', { get: operandAccessor }); },
+    s => { Object.defineProperty(s.paneLayout.panes, '0', { get: operandAccessor }); },
+    s => { Object.defineProperty(s.paneLayout.panes[0]!, 'activeTabId', { get: operandAccessor }); },
+    s => { Object.defineProperty(s.paneLayout.panes[0]!.tabs as object, '0', { get: operandAccessor }); },
+    s => { const tab = (s.paneLayout.panes[0]!.tabs as Record<string, unknown>[])[0]!; Object.defineProperty(tab, 'type', { get: operandAccessor }); },
+  ];
+  for (const mutate of mutations) {
+    const f = await passiveNavigationFixture(), state = navigationState(); accessorCalls = 0; mutate(state); f.setState(state);
+    const { row } = f.emit(); f.flush(); const record = navigationPlain(row.teamNavigation);
+    for (const phase of ['before', 'microtask', 'afterDispatch']) assert.deepEqual(record[phase], { status: 'unavailable' });
+    assert.equal(f.counts.reads, 3); assert.equal(accessorCalls, 0, 'operand getters are never invoked'); assert.equal(Object.hasOwn(row, 'focusAfterDispatch'), true);
+  }
+  for (const invalid of [null, 'TEST-state', new Proxy({}, { getOwnPropertyDescriptor() { throw new Error('TEST reflection'); } })]) {
+    const f = await passiveNavigationFixture(); f.setState(invalid); const { row } = f.emit(); f.flush();
+    assert.deepEqual(navigationPlain(row.teamNavigation).before, { status: 'unavailable' }); assert.equal(Object.hasOwn(row, 'defaultPreventedAfterDispatch'), true);
+  }
+  for (const method of [null, 'TEST-method', () => { throw new Error('TEST store read'); }]) {
+    const f = await passiveNavigationFixture(); Object.defineProperty(f.store, 'getState', { value: method });
+    const { row } = f.emit(); f.flush(); assert.deepEqual(navigationPlain(row.teamNavigation).before, { status: 'unavailable' });
+  }
+  const missing = await passiveNavigationFixture(); delete missing.window.__agentTeamsDevStore;
+  const row = missing.emit().row; missing.flush(); assert.deepEqual(navigationPlain(row.teamNavigation).before, { status: 'unavailable' });
+});
+
+test('passive navigation remains bounded and cannot interrupt original writes on diagnostic failure', async () => {
+  const f = await passiveNavigationFixture(), key = hostTeamSelectionKey('x'.repeat(246)), id = 'p'.repeat(128);
+  f.element.name = key; const maximum = navigationState(key, id, id); const pane = maximum.paneLayout.panes[0]!;
+  (pane.tabs as Record<string, unknown>[]).push(...Array.from({ length: 127 }, (_, i) => ({ id: 'other-' + i })));
+  maximum.paneLayout.panes.push(...Array.from({ length: 3 }, (_, i) => ({ id: 'other-pane-' + i })));
+  f.setState(maximum); const { row } = f.emit(); f.flush();
+  const observation = navigationPlain(row.teamNavigation); assert.equal(Buffer.byteLength(JSON.stringify(observation), 'utf8'), 3101);
+  assert.deepEqual(observation.before, observation.microtask); assert.deepEqual(observation.before, observation.afterDispatch);
+  assert.deepEqual([f.counts.reads, f.counts.target, f.counts.attribute, f.counts.clock, f.counts.send, f.counts.evaluate], [3, 1, 1, 1, 1, 2]);
+  const g = await passiveNavigationFixture(); const captured = g.emit().row; let getter = 0, setter = 0;
+  Object.defineProperty(captured, 'teamNavigation', { configurable: true, get() { getter++; throw new Error('TEST read'); }, set() { setter++; throw new Error('TEST write'); } });
+  g.flush(); assert.deepEqual([getter, setter, g.counts.reads], [0, 2, 3]);
+  assert.equal(Object.hasOwn(captured, 'defaultPreventedAfterMicrotask'), true); assert.equal(Object.hasOwn(captured, 'focusAfterDispatch'), true);
+  const h = await passiveNavigationFixture(); h.json.stringify = () => { throw new Error('TEST serialization'); };
+  const failed = h.emit().row; h.flush(); assert.equal(Object.hasOwn(failed, 'teamNavigation'), false); assert.equal(Object.hasOwn(failed, 'focusAfterDispatch'), true);
+  const over = await passiveNavigationFixture(); over.json.stringify = () => 'x'.repeat(4097);
+  const limited = over.emit().row; over.flush();
+  assert.deepEqual(navigationPlain(limited.teamNavigation), { schemaVersion: 1, status: 'unavailable', reason: 'projection-limit' });
+  assert.equal(Object.hasOwn(limited, 'focusAfterDispatch'), true);
+});
+
+
+test('passive navigation uses only the callable store own method and ignores unrelated card surfaces', async () => {
+  const f = await passiveNavigationFixture(); f.element.isCard = false;
+  const nonCard = f.emit().row; f.flush(); assert.equal(nonCard.teamNavigation, null);
+  assert.deepEqual([f.counts.target, f.counts.attribute, f.counts.reads], [1, 0, 0]);
+  const nonElement = f.emit('click', null).row; f.flush(); assert.equal(nonElement.teamNavigation, null); assert.equal(f.counts.reads, 0);
+  for (const location of ['store', 'getState']) {
+    const g = await passiveNavigationFixture(); let getter = 0;
+    Object.defineProperty(location === 'store' ? g.window : g.store, location === 'store' ? '__agentTeamsDevStore' : 'getState',
+      { configurable: true, get() { getter++; throw new Error('TEST accessor'); } });
+    const row = g.emit().row; g.flush(); assert.equal(getter, 0);
+    assert.deepEqual(navigationPlain(row.teamNavigation).before, { status: 'unavailable' }); assert.equal(Object.hasOwn(row, 'focusAfterDispatch'), true);
+  }
+  const g = await passiveNavigationFixture();
+  g.window.__agentTeamsDevStore = new Proxy(g.store, { getOwnPropertyDescriptor() { throw new Error('TEST callable reflection'); } });
+  const row = g.emit().row; g.flush(); assert.deepEqual(navigationPlain(row.teamNavigation).before, { status: 'unavailable' });
+  assert.equal(Object.hasOwn(row, 'focusAfterDispatch'), true);
+});
+
+test('the selected provider receipt digest matches the actual manifest-selected archive bytes', async () => {
+  const repo = join(import.meta.dirname, '../..');
+  const manifest = JSON.parse(await readFile(join(repo, 'packages/legacy-agent-host/package.json'), 'utf8')) as {
+    dependencies: Record<string, unknown>;
+  };
+  const dependency = manifest.dependencies['@agent-teams/provider-implementations'];
+  assert.ok(typeof dependency === 'string' &&
+    /^file:\.\.\/\.\.\/vendor\/provider-migration\/[a-z0-9-]+\/agent-teams-provider-implementations-0\.0\.0\.tgz$/.test(dependency));
+  const path = dependency.slice('file:../../'.length);
+  const sha256 = createHash('sha256').update(await readFile(join(repo, path))).digest('hex');
+  assert.deepEqual(await readNativeProviderArtifact(repo), { path, sha256 });
+});
+
+test('provider receipt legacy, current and equal-dual implementation digests preserve manifest authority', async t => {
+  const repo = await mkdtemp(join(tmpdir(), 'TEST-provider-receipt-positive-'));
+  t.after(() => rm(repo, { recursive: true, force: true }));
+  const host = join(repo, 'packages/legacy-agent-host');
+  const vendor = join(repo, 'vendor/provider-migration/test-receipt');
+  await mkdir(host, { recursive: true }); await mkdir(vendor, { recursive: true });
+  const path = 'vendor/provider-migration/test-receipt/agent-teams-provider-implementations-0.0.0.tgz';
+  const sha256 = 'a1'.repeat(32), other = 'b2'.repeat(32);
+  await writeFile(join(host, 'package.json'), JSON.stringify({
+    dependencies: { '@agent-teams/provider-implementations': 'file:../../' + path },
+  }));
+  for (const implementation of [
+    { newSha256: sha256 },
+    { sha256, file: 'agent-teams-provider-implementations-0.0.0.tgz' },
+    { newSha256: sha256, sha256, oldSha256: other },
+    { newSha256: sha256, file: 'TEST-not-the-selected-archive.tgz', existingPath: 'TEST-unselected', oldSha256: other },
+  ]) {
+    for (const aliases of [
+      { 'provider-implementations': implementation },
+      { 'agent-teams-provider-implementations-0.0.0.tgz': implementation },
+      { 'provider-implementations': implementation, 'agent-teams-provider-implementations-0.0.0.tgz': { sha256 } },
+    ]) {
+      await writeFile(join(vendor, 'source-receipt.json'), JSON.stringify({
+        packages: { ...aliases, 'provider-session-contracts': { sha256: other } },
+      }));
+      assert.deepEqual(await readNativeProviderArtifact(repo), { path, sha256 });
+    }
+  }
+});
+
+test('every present provider implementation digest must be valid and both recognized fields must agree', async t => {
+  const repo = await mkdtemp(join(tmpdir(), 'TEST-provider-receipt-digest-'));
+  t.after(() => rm(repo, { recursive: true, force: true }));
+  const host = join(repo, 'packages/legacy-agent-host');
+  const vendor = join(repo, 'vendor/provider-migration/test-receipt');
+  await mkdir(host, { recursive: true }); await mkdir(vendor, { recursive: true });
+  const sha256 = 'a1'.repeat(32), other = 'b2'.repeat(32);
+  await writeFile(join(host, 'package.json'), JSON.stringify({ dependencies: {
+    '@agent-teams/provider-implementations': 'file:../../vendor/provider-migration/test-receipt/agent-teams-provider-implementations-0.0.0.tgz',
+  } }));
+  const refused: Record<string, unknown>[] = [{}, { oldSha256: sha256 }, { digest: sha256 },
+    { newSha256: sha256, sha256: other }];
+  for (const key of ['newSha256', 'sha256'] as const) {
+    const otherKey = key === 'newSha256' ? 'sha256' : 'newSha256';
+    for (const value of [null, '', 0, false, {}, [], 'A'.repeat(64), 'a'.repeat(63), 'a'.repeat(65), 'g'.repeat(64)]) {
+      refused.push({ [key]: value }, { [key]: value, [otherKey]: sha256 });
+    }
+  }
+  for (const implementation of refused) {
+    for (const alias of ['provider-implementations', 'agent-teams-provider-implementations-0.0.0.tgz']) {
+      const otherAlias = alias === 'provider-implementations' ? 'agent-teams-provider-implementations-0.0.0.tgz' : 'provider-implementations';
+      for (const both of [false, true]) {
+        await writeFile(join(vendor, 'source-receipt.json'), JSON.stringify({
+          packages: { [alias]: implementation, ...(both ? { [otherAlias]: { sha256 } } : {}),
+            'provider-session-contracts': { sha256 } },
+        }));
+        await assert.rejects(() => readNativeProviderArtifact(repo), { code: 'ERR_ASSERTION' }, JSON.stringify({ alias, both, implementation }));
+      }
+    }
+  }
+  for (const alias of ['provider-implementations', 'agent-teams-provider-implementations-0.0.0.tgz']) {
+    const otherAlias = alias === 'provider-implementations' ? 'agent-teams-provider-implementations-0.0.0.tgz' : 'provider-implementations';
+    for (const invalid of [null, [], sha256, { sha256: other }]) {
+      await writeFile(join(vendor, 'source-receipt.json'), JSON.stringify({
+        packages: { [alias]: invalid, [otherAlias]: { sha256 } },
+      }));
+      await assert.rejects(() => readNativeProviderArtifact(repo), { code: 'ERR_ASSERTION' });
+    }
+  }
+});
+
+test('provider receipt shape, package selection and original file or JSON errors remain strict', async t => {
+  const repo = await mkdtemp(join(tmpdir(), 'TEST-provider-receipt-shape-'));
+  t.after(() => rm(repo, { recursive: true, force: true }));
+  const host = join(repo, 'packages/legacy-agent-host');
+  const vendor = join(repo, 'vendor/provider-migration/test-receipt');
+  await mkdir(host, { recursive: true }); await mkdir(vendor, { recursive: true });
+  const manifestPath = join(host, 'package.json'), receiptPath = join(vendor, 'source-receipt.json');
+  const dependency = 'file:../../vendor/provider-migration/test-receipt/agent-teams-provider-implementations-0.0.0.tgz';
+  const sha256 = 'a1'.repeat(32);
+  const manifest = { dependencies: { '@agent-teams/provider-implementations': dependency } };
+  const receipt = { packages: { 'provider-implementations': { newSha256: sha256 } } };
+  await writeFile(manifestPath, JSON.stringify(manifest));
+  for (const invalid of [null, [], {}, { packages: null }, { packages: [] }, { packages: {} },
+    { packages: { 'provider-implementations': null } }, { packages: { 'provider-implementations': [] } },
+    { packages: { 'provider-implementations': sha256 } },
+    { packages: { 'provider-session-contracts': { newSha256: sha256, sha256 } } },
+    { packages: { '@agent-teams/provider-implementations': { newSha256: sha256 } } },
+    { packages: { 'provider-implementations': { digest: sha256 } } }]) {
+    await writeFile(receiptPath, JSON.stringify(invalid));
+    await assert.rejects(() => readNativeProviderArtifact(repo), { code: 'ERR_ASSERTION' });
+  }
+  await writeFile(receiptPath, JSON.stringify(receipt));
+  const invalidManifests: unknown[] = [null, [], {}, { dependencies: null }, { dependencies: [] },
+    { dependencies: {} }, { dependencies: { '@agent-teams/provider-session-contracts': dependency } }];
+  for (const invalid of [null, 7, '', 'https://example.invalid/TEST.tgz', '/TEST/archive.tgz',
+    dependency.replace('test-receipt', '../test-receipt'), dependency.replace('test-receipt', 'TEST-receipt'),
+    dependency.replace('0.0.0.tgz', '1.0.0.tgz'), dependency.replace('provider-implementations', 'provider-session-contracts')]) {
+    invalidManifests.push({ dependencies: { '@agent-teams/provider-implementations': invalid } });
+  }
+  for (const invalid of invalidManifests) {
+    await writeFile(manifestPath, JSON.stringify(invalid));
+    await assert.rejects(() => readNativeProviderArtifact(repo), { code: 'ERR_ASSERTION' });
+  }
+  await writeFile(manifestPath, JSON.stringify(manifest));
+  await writeFile(receiptPath, '{');
+  await assert.rejects(() => readNativeProviderArtifact(repo), SyntaxError);
+  await writeFile(receiptPath, JSON.stringify(receipt));
+  await writeFile(manifestPath, '{');
+  await assert.rejects(() => readNativeProviderArtifact(repo), SyntaxError);
+  await writeFile(manifestPath, JSON.stringify(manifest));
+  await rm(receiptPath);
+  await assert.rejects(() => readNativeProviderArtifact(repo), { code: 'ENOENT', path: receiptPath });
+  await rm(manifestPath);
+  await assert.rejects(() => readNativeProviderArtifact(repo), { code: 'ENOENT', path: manifestPath });
+});
+
+type SavedLaunchFrame = {
+  count?: number; model?: string; id?: string | null; expanded?: string | null; dialog?: boolean;
+  rect?: { x: number; y: number; width: number; height: number };
+  animations?: { pending: boolean; playState: string }[];
+};
+
+async function savedLaunchReadinessFixture(t: import('node:test').TestContext, frames: SavedLaunchFrame[]) {
+  const { record } = await import('./desktop-resume-records.ts');
+  const { desktopJsLiteral } = await import('./desktop-ui-controls.ts');
+  const source = await readFile(new URL('./desktop-emulated-selection-ui.ts', import.meta.url), 'utf8');
+  const first = "await ui.click('button', 'open original saved Team Launch', 'Launch');";
+  const last = "const lead = '[role=\"dialog\"] [data-role=\"lead-row\"]';";
+  assert.equal(source.split(first).length, 2, 'one actual saved-Launch action boundary');
+  assert.equal(source.split(last).length, 2, 'one actual end of the saved-settings prefix');
+  const begin = source.indexOf(first), end = source.indexOf(last, begin);
+  assert.ok(end > begin);
+  const prefix = source.slice(begin, end), model = 'TEST-model \'quoted\' <ready>';
+  let now = 0, reads = 0, owned = 0, queries = 0, animationReads = 0;
+  const waits: number[] = [], labels: string[] = [];
+  const clicks: { selector: string; label: string; text: string | undefined; read: number }[] = [];
+  t.mock.method(Date, 'now', () => now);
+  t.mock.method(globalThis, 'setTimeout', (callback: () => void, delay: number) => {
+    assert.equal(delay, 100, 'the original wait cadence is unchanged');
+    waits.push(delay); now += delay; queueMicrotask(callback);
+    return 1 as unknown as NodeJS.Timeout;
+  });
+  const actual = createDesktopUiControls({
+    async evaluate(expression: string) {
+      const frame = frames[Math.min(reads++, frames.length - 1)]!;
+      assert.ok(frame, 'finite DOM frames are present');
+      const dialog = { getAnimations(options?: { subtree?: boolean }) {
+        animationReads++; assert.equal(options?.subtree ?? false, false, 'no descendant spinner observation');
+        return frame.animations ?? [];
+      } };
+      const row = {
+        textContent: 'Optional launch settings ' + (frame.model ?? model),
+        getAttribute(name: string) {
+          assert.ok(name === 'aria-controls' || name === 'aria-expanded');
+          return name === 'aria-controls' ? frame.id === undefined ? 'TEST-settings' : frame.id
+            : frame.expanded === undefined ? 'false' : frame.expanded;
+        },
+        getBoundingClientRect: () => frame.rect ?? { x: 412, y: 368.75, width: 200, height: 32 },
+        closest(selector: string) { assert.equal(selector, '[role="dialog"]'); return frame.dialog === false ? null : dialog; },
+      };
+      const document = {
+        querySelectorAll(selector: string) {
+          queries++; assert.equal(selector, '[role="dialog"] button[aria-controls]');
+          return Array.from({ length: frame.count ?? 1 }, () => row);
+        },
+        get body() { return assert.fail('model preflight status must not gate editable launch settings'); },
+      };
+      return runInNewContext(expression, { document });
+    },
+    async send() { return assert.fail('the readiness fixture never dispatches browser input'); },
+  }, { assertOwnedRenderer() { owned++; }, step() { assert.fail('waitRead is observation only'); } });
+  const ui = {
+    async click(selector: string, label: string, text?: string) { clicks.push({ selector, label, text, read: reads }); },
+    waitRead(...args: Parameters<typeof actual.waitRead>) {
+      labels.push(args[1]); assert.equal(args[2] ?? 30_000, 30_000);
+      return actual.waitRead(...args);
+    },
+  };
+  return { run: () => runInNewContext('(async () => {\n' + prefix + '\n})()',
+    { ui, selected: { model }, record, literal: desktopJsLiteral }) as Promise<void>,
+  clicks, waits, labels, counts: () => ({ now, reads, owned, queries, animationReads }) };
+}
+
+function assertSavedLaunchBoundary(f: Awaited<ReturnType<typeof savedLaunchReadinessFixture>>, reads: number,
+  id = 'TEST-settings', expanded = false) {
+  assert.deepEqual(f.labels, ['saved model hydrates original Launch'], 'one original readiness wait');
+  assert.deepEqual(f.clicks, [
+    { selector: 'button', label: 'open original saved Team Launch', text: 'Launch', read: 0 },
+    ...expanded ? [] : [{ selector: `[role="dialog"] button[aria-controls=${JSON.stringify(id)}]`,
+      label: 'expand original saved launch settings', text: undefined, read: reads }],
+  ], 'the original settings action happens only after three equal eligible returned samples');
+  assert.equal(f.counts().reads, reads); assert.equal(f.counts().owned, reads);
+  assert.equal(f.counts().queries, reads);
+  assert.deepEqual(f.waits, Array.from({ length: reads - 1 }, () => 100));
+}
+
+test('saved Launch uses three stable actual DOM samples before its original settings action', async t => {
+  const f = await savedLaunchReadinessFixture(t, [{}]); await f.run();
+  assertSavedLaunchBoundary(f, 3); assert.equal(f.counts().animationReads, 3);
+});
+
+test('saved Launch resets exact geometry when the original button shifts by a quarter pixel', async t => {
+  const shifted = { rect: { x: 412, y: 368.5, width: 200, height: 32 } };
+  const f = await savedLaunchReadinessFixture(t, [{}, shifted]); await f.run();
+  assertSavedLaunchBoundary(f, 4);
+});
+
+for (const [label, changed, id, expanded] of [
+  ['identity', { id: 'TEST-next-settings' }, 'TEST-next-settings', false],
+  ['expanded state', { expanded: 'true' }, 'TEST-settings', true],
+  ['horizontal position', { rect: { x: 413, y: 368.75, width: 200, height: 32 } }, 'TEST-settings', false],
+  ['width', { rect: { x: 412, y: 368.75, width: 201, height: 32 } }, 'TEST-settings', false],
+  ['height', { rect: { x: 412, y: 368.75, width: 200, height: 33 } }, 'TEST-settings', false],
+] as const)
+test('saved Launch restarts its three samples after changed ' + label, async t => {
+  const f = await savedLaunchReadinessFixture(t, [{}, {}, changed]); await f.run();
+  assertSavedLaunchBoundary(f, 5, id, expanded);
+});
+
+for (const [label, invalid] of [
+  ['absent target', { count: 0 }], ['ambiguous target', { count: 2 }], ['wrong model', { model: 'TEST-other-model' }],
+  ['absent identity', { id: null }], ['empty identity', { id: '' }], ['invalid expansion', { expanded: null }],
+  ['missing owning dialog', { dialog: false }],
+  ['nonfinite x', { rect: { x: NaN, y: 368.75, width: 200, height: 32 } }],
+  ['nonfinite y', { rect: { x: 412, y: Infinity, width: 200, height: 32 } }],
+  ['zero width', { rect: { x: 412, y: 368.75, width: 0, height: 32 } }],
+  ['negative height', { rect: { x: 412, y: 368.75, width: 200, height: -1 } }],
+  ['running own animation', { animations: [{ pending: false, playState: 'running' }] }],
+  ['paused own animation', { animations: [{ pending: false, playState: 'paused' }] }],
+  ['pending own animation', { animations: [{ pending: true, playState: 'finished' }] }],
+] satisfies readonly (readonly [string, SavedLaunchFrame])[])
+test('saved Launch resets its original readiness after ' + label, async t => {
+  const f = await savedLaunchReadinessFixture(t, [{}, {}, invalid, {}]); await f.run();
+  assertSavedLaunchBoundary(f, 6);
+});
+
+for (const playState of ['finished', 'idle'])
+test('saved Launch allows ' + playState + ' own animation without inspecting descendant spinners or model status', async t => {
+  const f = await savedLaunchReadinessFixture(t, [{ animations: [{ pending: false, playState }] }]);
+  await f.run(); assertSavedLaunchBoundary(f, 3); assert.equal(f.counts().animationReads, 3);
+});
+
+for (const [label, frame] of [
+  ['no matching model', { model: 'TEST-other-model' }],
+  ['unsettled own dialog', { animations: [{ pending: false, playState: 'running' }] }],
+] satisfies readonly (readonly [string, SavedLaunchFrame])[])
+test('saved Launch exhausts its one original deadline with ' + label + ' and no settings action', async t => {
+  const f = await savedLaunchReadinessFixture(t, [frame]);
+  await assert.rejects(f.run(), /UI read timed out: saved model hydrates original Launch; no mutation retry/);
+  assert.deepEqual(f.labels, ['saved model hydrates original Launch']);
+  assert.deepEqual(f.clicks, [{ selector: 'button', label: 'open original saved Team Launch', text: 'Launch', read: 0 }]);
+  assert.equal(f.counts().reads, 300); assert.equal(f.counts().owned, 300); assert.equal(f.counts().queries, 300);
+  assert.equal(f.counts().now, 30_000); assert.deepEqual(f.waits, Array.from({ length: 300 }, () => 100));
+});
+
+type ConversationPreviewState = {
+  content: string; centerY: number; count: number; width: number; disabled: boolean;
+  covered: boolean; duplicateHit: boolean; bodyText: string; neighborText: string;
+};
+function conversationPreviewFixture(t: import('node:test').TestContext,
+  onOwned: (state: ConversationPreviewState, check: number) => void = () => undefined) {
+  const selector = 'button[aria-label^="alice,"]', label = 'TEST original conversation';
+  const state: ConversationPreviewState = { content: 'alice TEST boot ready', centerY: 178, count: 1,
+    width: 200, disabled: false, covered: false, duplicateHit: false, bodyText: '', neighborText: '' };
+  let now = 0, owned = 0, reads = 0, bodyReads = 0, front = 0;
+  const waits: number[] = [], expressions: string[] = [], events: Record<string, unknown>[] = [];
+  t.mock.method(Date, 'now', () => now);
+  t.mock.method(globalThis, 'setTimeout', (callback: () => void, delay: number) => {
+    assert.equal(delay, 100); waits.push(delay); now += delay; queueMicrotask(callback);
+    return 1 as unknown as NodeJS.Timeout;
+  });
+  const row = { get textContent() { return state.content; }, tagName: 'BUTTON',
+    getBoundingClientRect: () => ({ x: 69.5, y: state.centerY - 16, width: state.width, height: 32 }),
+    matches(actual: string) { assert.equal(actual, ':disabled'); return state.disabled; },
+    contains: () => false, getAttribute: () => null };
+  const duplicate = { ...row, textContent: 'alice TEST boot ready' };
+  const document = {
+    get body() { bodyReads++; return { textContent: state.content + state.bodyText + state.neighborText }; },
+    querySelectorAll(actual: string) {
+      assert.equal(actual, selector); return Array.from({ length: state.count }, (_, i) => i ? duplicate : row);
+    },
+    elementFromPoint: () => state.covered ? {} : state.duplicateHit ? duplicate : row,
+  };
+  const ui = createDesktopUiControls({
+    async evaluate(expression: string) {
+      reads++; expressions.push(expression);
+      return runInNewContext(expression, { document, innerWidth: 1000, innerHeight: 800,
+        getComputedStyle: () => ({ pointerEvents: 'auto' }) });
+    },
+    async send(method: string, params: Record<string, unknown> = {}) {
+      assert.ok(method === 'Page.bringToFront' || method === 'Input.dispatchMouseEvent');
+      if (method === 'Page.bringToFront') front++; else events.push({ ...params });
+      return {};
+    },
+  }, { assertOwnedRenderer() { onOwned(state, ++owned); }, step() {} });
+  return { state, events, expressions, waits,
+    run: (marker?: string) => Reflect.apply(ui.click, undefined, [selector, label, undefined, marker]) as Promise<void>,
+    counts: () => ({ now, owned, reads, bodyReads, front }) };
+}
+
+test('original conversation waits for its own reply before one click at the hydrated coordinates', async t => {
+  const f = conversationPreviewFixture(t, (state, check) => {
+    if (check === 6) { state.content = 'alice TEST boot ready'; state.centerY = 186.5; }
+  });
+  f.state.content = 'alice You: TEST_UI_BOOT'; await f.run('TEST boot ready');
+  assert.deepEqual(f.events.map(({ type, x, y }) => [type, x, y]),
+    [['mouseMoved', 169.5, 186.5], ['mousePressed', 169.5, 186.5], ['mouseReleased', 169.5, 186.5]]);
+  assert.deepEqual(f.counts(), { now: 700, owned: 12, reads: 10, bodyReads: 0, front: 1 });
+  assert.deepEqual(f.waits, Array.from({ length: 7 }, () => 100));
+  assert.ok(f.expressions.every(value => value === f.expressions[0]), 'same full predicate in every original phase');
+});
+
+test('default conversation click retains its original final geometry refusal without a preview predicate', async t => {
+  const f = conversationPreviewFixture(t, (state, check) => {
+    if (check >= 6 && (check - 6) % 4 === 0) state.centerY += 8.5;
+  });
+  await assert.rejects(f.run(), /Original UI target moved after ownership check/);
+  assert.deepEqual(f.events.map(({ type, x, y }) => [type, x, y]), [['mouseMoved', 169.5, 178]]);
+  assert.deepEqual(f.counts(), { now: 1000, owned: 22, reads: 17, bodyReads: 0, front: 1 });
+});
+
+for (const [label, invalid] of [
+  ['body-only reply', { content: 'alice You: TEST_UI_BOOT', bodyText: 'TEST boot ready' }],
+  ['neighbor-only reply', { content: 'alice You: TEST_UI_BOOT', neighborText: 'bob TEST boot ready' }],
+  ['different required reply', { content: 'alice TEST stream partial' }],
+  ['empty preview', { content: '' }], ['missing target', { count: 0 }], ['zero-size target', { width: 0 }],
+  ['disabled target', { disabled: true }], ['covered target', { covered: true }],
+  ['two eligible rows with only the second ready', { content: 'alice You: TEST_UI_BOOT', count: 2, duplicateHit: true }],
+] satisfies readonly (readonly [string, Partial<ConversationPreviewState>])[])
+test('original conversation refuses ' + label + ' within its unchanged first read deadline', async t => {
+  const f = conversationPreviewFixture(t); Object.assign(f.state, invalid);
+  await assert.rejects(f.run('TEST boot ready'), /UI target read failed: TEST original conversation/);
+  assert.deepEqual(f.events, [], 'no hover or physical click on an ineligible original target');
+  assert.deepEqual(f.counts(), { now: 30_000, owned: 300, reads: 300, bodyReads: 0, front: 1 });
+  assert.deepEqual(f.waits, Array.from({ length: 300 }, () => 100));
+  assert.ok(f.expressions.every(value => value === f.expressions[0]));
+});
+
+test('original conversation serializes its required preview as literal data', async t => {
+  const marker = 'TEST "quoted" \\ \u2028 </script> $' + '{notCode} ready';
+  const f = conversationPreviewFixture(t); f.state.content = 'alice ' + marker; await f.run(marker);
+  assert.deepEqual(f.events.map(({ type }) => type), ['mouseMoved', 'mousePressed', 'mouseReleased']);
+  assert.deepEqual(f.counts(), { now: 200, owned: 7, reads: 5, bodyReads: 0, front: 1 });
+});
+
+test('original conversation rereads a revoked preview at unchanged final coordinates before input', async t => {
+  const f = conversationPreviewFixture(t, (state, check) => {
+    if (check === 6) state.content = 'alice You: TEST_UI_BOOT';
+  });
+  await assert.rejects(f.run('TEST boot ready'), /Original UI target unavailable after ownership check/);
+  assert.deepEqual(f.events.map(({ type, x, y }) => [type, x, y]), [['mouseMoved', 169.5, 178]]);
+  assert.deepEqual(f.counts(), { now: 200, owned: 6, reads: 5, bodyReads: 0, front: 1 });
+  assert.ok(f.expressions.every(value => value === f.expressions[0]), 'final direct read includes the readiness literal');
+});
+
+for (const kind of ['owner', 'movement'] as const)
+test('original conversation still refuses final ' + kind + ' despite a ready preview', async t => {
+  const refusal = new Error('TEST original renderer owner lost');
+  const f = conversationPreviewFixture(t, (state, check) => {
+    if (check < 6 || (check - 6) % 4 !== 0) return;
+    if (kind === 'owner') throw refusal;
+    state.centerY += 8.5;
+  });
+  await assert.rejects(f.run('TEST boot ready'), error => {
+    if (kind === 'owner') assert.equal(error, refusal);
+    else assert.match(String(error), /Original UI target moved after ownership check/);
+    return true;
+  });
+  assert.deepEqual(f.events.map(({ type, x, y }) => [type, x, y]), [['mouseMoved', 169.5, 178]]);
+  assert.equal(f.counts().reads, kind === 'owner' ? 4 : 17);
+  assert.equal(f.counts().owned, kind === 'owner' ? 6 : 22);
+  assert.equal(f.counts().now, kind === 'owner' ? 200 : 1000);
+});
+
+for (const memberName of ['alice', 'team-lead'])
+for (const expectedReply of ['TEST boot ready', 'TEST stream partial'])
+test('actual openChat forwards ' + expectedReply + ' for ' + memberName, async () => {
+  const { desktopJsLiteral } = await import('./desktop-ui-controls.ts');
+  const { stripTypeScriptTypes } = await import('node:module');
+  const source = await readFile(new URL('./desktop-emulated-selection-ui.ts', import.meta.url), 'utf8');
+  const first = 'const leadSelector =', last = 'const assertSameLive =';
+  assert.equal(source.split(first).length, 2); assert.equal(source.split(last).length, 2);
+  const begin = source.indexOf(first), end = source.indexOf(last, begin); assert.ok(end > begin);
+  const actual = stripTypeScriptTypes(source.slice(begin, end));
+  const calls: { method: string; args: unknown[] }[] = [];
+  const run = runInNewContext('(async () => { ' + actual + ' return openChat(live, ui, expectedReply); })',
+    { live: { memberName }, expectedReply, literal: desktopJsLiteral, ui: {
+      async scrollTo(...args: unknown[]) { calls.push({ method: 'scrollTo', args }); },
+      async click(...args: unknown[]) { calls.push({ method: 'click', args }); },
+    } }) as () => Promise<void>;
+  await run();
+  const selector = 'button[aria-label^=' + desktopJsLiteral((memberName === 'team-lead' ? 'lead' : memberName) + ',') + ']';
+  assert.deepEqual(calls, [
+    { method: 'scrollTo', args: [selector, 'original lead conversation'] },
+    { method: 'click', args: [selector, 'open original lead conversation', undefined, expectedReply] },
+  ], 'one original scroll and one original click carrying the expected reply as data');
+});
+
+test('original selected stream verifies the opened partial reply before its screenshot and one release', async () => {
+  const { stripTypeScriptTypes } = await import('node:module');
+  const source = await readFile(new URL('./desktop-emulated-selection-ui.ts', import.meta.url), 'utf8');
+  const first = "  await openChat(liveA, ui, 'TEST stream partial');";
+  const last = '  const completed = await poll(liveA.session';
+  assert.equal(source.split(first).length, 2); assert.equal(source.split(last).length, 2);
+  const begin = source.indexOf(first), end = source.indexOf(last, begin); assert.ok(end > begin);
+  const actual = stripTypeScriptTypes(source.slice(begin, end));
+  for (const bodyReady of [true, false]) {
+    const calls: string[] = [], liveA = {}, ui = {}, proof: Record<string, unknown> = {};
+    const failure = new Error('TEST original partial reply not visible');
+    const run = () => runInNewContext('(async () => { ' + actual + ' })()', {
+      assert, liveA, ui, proof, join, fixture: { emulatedRuntime: { peers: [{ root: '/TEST-selected-peer' }] } },
+      async openChat(live: unknown, controls: unknown, reply: string) {
+        assert.equal(live, liveA); assert.equal(controls, ui); assert.equal(reply, 'TEST stream partial'); calls.push('open');
+      },
+      async visible(reply: string) {
+        assert.equal(reply, 'TEST stream partial'); calls.push('body'); if (!bodyReady) throw failure;
+      },
+      cdp: { async evaluate(expression: string) {
+        assert.equal(expression, "document.body.innerText.includes('TEST stream partial complete')");
+        calls.push('full-body-check'); return false;
+      } },
+      async screenshot(label: string) { assert.equal(label, 'a-survived'); calls.push('screenshot'); return 'TEST-screenshot'; },
+      async writeFile(path: string, text: string, options: { mode: number; flag: string }) {
+        assert.equal(path, join('/TEST-selected-peer', 'release-stream')); assert.equal(text, 'TEST release once\n');
+        assert.equal(options.mode, 0o600); assert.equal(options.flag, 'wx'); calls.push('release');
+      },
+    }) as Promise<void>;
+    if (bodyReady) {
+      await run(); assert.deepEqual(calls, ['open', 'body', 'full-body-check', 'screenshot', 'release']);
+      assert.deepEqual(proof, { aSurvivedScreenshot: 'TEST-screenshot' });
+    } else {
+      await assert.rejects(run(), error => error === failure);
+      assert.deepEqual(calls, ['open', 'body']); assert.deepEqual(proof, {});
+    }
+  }
+});
+
+
+type CrossCloseGeometry = {
+  centerY: number; width: number; height: number; count: number; text: string;
+  disabled: boolean; secondDisabled: boolean; covered: boolean; noHit: boolean;
+  descendantHit: boolean; foreignClose: boolean;
+};
+
+function crossCloseFixture(t?: import('node:test').TestContext) {
+  const identity = { contextId: 'TEST-context', teamName: 'host-team:TEST-owner', taskId: 'TEST-task' };
+  const captured = { contextId: identity.contextId, surfaceId: 'TEST-original-surface' };
+  const key = JSON.stringify([identity.contextId, identity.teamName, identity.taskId]);
+  const scope = { contextId: identity.contextId, teamName: identity.teamName, contextEpoch: 1, teamStateEpoch: 1 };
+  const controller = {
+    identity, surfaceId: captured.surfaceId, isOwner: true, canSubmit: true,
+    canEditNow: () => true, canResolveClarification: false, attachmentError: null,
+    session: { ownerSurfaceId: captured.surfaceId, ownerRevision: 1, commentText: '',
+      partRevisions: { commentText: 0, pendingAttachments: 0 }, submitPending: false,
+      submitError: null, pendingAttachments: [], pendingAttachmentPreparationIds: [] },
+  };
+  const detail = { identity: { ...identity }, phase: 'ready', loading: false, refreshPending: false,
+    error: null as unknown, deletionIntent: null as unknown,
+    full: { id: identity.taskId, owner: 'alice', status: 'pending',
+      needsClarification: undefined as unknown, deletedAt: undefined as unknown } };
+  const storedSession = { ...controller.session };
+  const state = { activeContextId: identity.contextId, selectedTeamName: identity.teamName,
+    isContextSwitching: false, taskDetailById: { [key]: detail },
+    taskDetailSessionById: { [key]: storedSession } as Record<string, typeof storedSession> };
+  const work = { refreshPending: false, teamUnavailable: false };
+  const geometry: CrossCloseGeometry = { centerY: 171.125, width: 40, height: 24, count: 1,
+    text: 'Close', disabled: false, secondDisabled: false, covered: false, noHit: false,
+    descendantHit: false, foreignClose: false };
+  const root = { return: null, stateNode: {} as { current: unknown } }; root.stateNode.current = root;
+  const dialogFiber = { return: root, memoizedProps: { open: true, teamName: identity.teamName,
+    task: { id: identity.taskId }, sessionController: controller } };
+  const trigger = { disabled: false, expanded: 'false', textContent: 'alice', tagName: 'BUTTON',
+    getAttribute: (name: string) => name === 'aria-expanded' ? trigger.expanded : null,
+    getBoundingClientRect: () => ({ x: 10, y: 10, width: 50, height: 20 }),
+    matches: () => trigger.disabled, contains: () => false };
+  const triggers = [trigger], descendant = {};
+  const closeButton = {
+    get textContent() { return geometry.text; }, tagName: 'BUTTON',
+    get disabled() { return geometry.disabled; },
+    getBoundingClientRect: () => ({ x: 1101, y: geometry.centerY - geometry.height / 2,
+      width: geometry.width, height: geometry.height }),
+    matches(selector: string) { assert.equal(selector, ':disabled'); return geometry.disabled; },
+    contains: (node: unknown) => node === descendant,
+    getAttribute: () => null,
+  };
+  const duplicate = { ...closeButton, textContent: 'Close',
+    get disabled() { return geometry.secondDisabled; },
+    matches(selector: string) { assert.equal(selector, ':disabled'); return geometry.secondDisabled; },
+    contains: () => false };
+  const foreignButton = { ...closeButton, textContent: 'Close', disabled: false,
+    getBoundingClientRect: () => ({ x: 1400, y: 100, width: 40, height: 24 }),
+    matches(selector: string) { assert.equal(selector, ':disabled'); return false; },
+    contains: () => false };
+  const ownButtons = () => [...triggers, ...Array.from({ length: geometry.count },
+    (_, index) => index === 0 ? closeButton : duplicate)];
+  const dialog = {
+    __reactFiber$TEST: dialogFiber, getClientRects: () => [1],
+    querySelectorAll(selector: string): unknown[] {
+      if (selector === 'textarea') return [input];
+      if (selector === 'button[role="combobox"]') return triggers;
+      assert.equal(selector, 'button'); return ownButtons();
+    },
+  };
+  const foreignDialog = { getClientRects: () => [1],
+    querySelectorAll: () => geometry.foreignClose ? [foreignButton] : [] };
+  const input = { id: 'TEST-original-comment', disabled: false, getClientRects: () => [1],
+    closest(selector: string) { assert.equal(selector, '[role="dialog"]'); return dialog; },
+    __reactFiber$TEST: { return: dialogFiber, memoizedProps: { controller, contextId: identity.contextId,
+      teamName: identity.teamName, taskId: identity.taskId, surfaceId: captured.surfaceId } } };
+  const document = {
+    getElementById(id: string) { assert.equal(id, input.id); return input; },
+    querySelectorAll(selector: string): unknown[] {
+      if (selector === '[role="dialog"]') return [dialog, foreignDialog];
+      if (selector === 'textarea') return [input];
+      assert.equal(selector, '[role="dialog"] button');
+      return [...ownButtons(), ...(geometry.foreignClose ? [foreignButton] : [])];
+    },
+    elementFromPoint() {
+      if (geometry.noHit) return null;
+      if (geometry.covered) return {};
+      if (geometry.foreignClose && geometry.count === 0) return foreignButton;
+      return geometry.descendantHit ? descendant : closeButton;
+    },
+  };
+  let now = 0, owned = 0, reads = 0, front = 0;
+  let ownedHook: (check: number) => void = () => undefined;
+  const waits: number[] = [], imports: string[] = [], expressions: string[] = [];
+  const events: Record<string, unknown>[] = [];
+  if (t) {
+    t.mock.method(Date, 'now', () => now);
+    t.mock.method(globalThis, 'setTimeout', (callback: () => void, delay: number) => {
+      assert.equal(delay, 100); waits.push(delay); now += delay; queueMicrotask(callback);
+      return 1 as unknown as NodeJS.Timeout;
+    });
+  }
+  const evaluate = async (expression: string) => {
+    reads++; expressions.push(expression);
+    return runInNewContext(expression.replaceAll('await import(', 'await __testImport('), {
+      window: { __agentTeamsDevStore: { getState: () => state } }, document,
+      innerWidth: 2000, innerHeight: 1000, getComputedStyle: () => ({ pointerEvents: 'auto' }),
+      async __testImport(path: string) {
+        imports.push(path);
+        if (path === '/store/slices/teamSlice.ts')
+          return { isTeamDataRefreshPending(team: string, getState: unknown) {
+            assert.equal(team, identity.teamName); assert.equal(typeof getState, 'function');
+            return work.refreshPending;
+          } };
+        assert.equal(path, '/store/team/taskDetailReadAuthority.ts');
+        return {
+          captureTaskDetailReadScope(teamName: string, contextId: string) {
+            assert.deepEqual({ teamName, contextId }, { teamName: identity.teamName, contextId: captured.contextId });
+            return { ...scope };
+          },
+          isTaskDetailTeamUnavailable(observed: unknown, team: string, observedScope: unknown) {
+            assert.equal(observed, state); assert.equal(team, identity.teamName);
+            assert.deepEqual(observedScope, scope); return work.teamUnavailable;
+          },
+        };
+      },
+    }) as Promise<Record<string, unknown> | null>;
+  };
+  const ui = createDesktopUiControls({ evaluate,
+    async send(method: string, params: Record<string, unknown> = {}) {
+      assert.ok(method === 'Page.bringToFront' || method === 'Input.dispatchMouseEvent');
+      if (method === 'Page.bringToFront') front++; else events.push({ ...params });
+      return {};
+    },
+  }, { assertOwnedRenderer() { ownedHook(++owned); }, step() {} });
+  return { identity, captured, key, controller, detail, storedSession, state, work, geometry,
+    trigger, triggers, ui, events, expressions, imports, waits,
+    setOwnedHook(callback: (check: number) => void) { ownedHook = callback; },
+    counts: () => ({ now, owned, reads, front }),
+    evaluateTarget: () => {
+      const expression = Reflect.apply(desktopTaskBoardAssignmentReadyExpression, undefined,
+        ['TEST-owner', identity.taskId, captured, 'clarification-cleared']) as string;
+      assert.equal(expression.match(/await import\(/g)?.length, 2, 'only the two original readonly imports');
+      return evaluate(expression);
+    },
+  };
+}
+
+async function runActualCrossClose(f: ReturnType<typeof crossCloseFixture>) {
+  const source = await readFile(new URL('./desktop-task-board-ui-smoke.ts', import.meta.url), 'utf8');
+  const first = '  proof.clarificationReceipt = await receiptFor(';
+  const last = '  await ui.waitRead(' + String.fromCharCode(96) +
+    '!document.querySelector(\'[role="dialog"]\')' + String.fromCharCode(96) + ', \'Task detail closed\');';
+  assert.equal(source.split(first).length, 2); assert.equal(source.split(last).length, 2);
+  const receiptBegin = source.indexOf(first), receiptEnd = source.indexOf('\n  );\n', receiptBegin);
+  const end = source.indexOf(last, receiptBegin);
+  assert.ok(receiptEnd > receiptBegin && end > receiptEnd);
+  const actual = source.slice(receiptEnd + '\n  );\n'.length, end).trim();
+  assert.ok(actual.length > 20 && actual.length < 512);
+  const call = /^await ([A-Za-z_$][\w$]*(?:\.[A-Za-z_$][\w$]*)?)\(([\s\S]*)\);$/.exec(actual);
+  assert.ok(call, 'exactly one awaited original Close call');
+  assert.match(call[2]!, /^(?:\s+|[A-Za-z_$][\w$]*|[.,{}]|'(?:[^'\\\r\n]|\\.)*'|"(?:[^"\\\r\n]|\\.)*")*$/,
+    'only literal strings, names, property reads and a captured-identity object; no nested or extra statement');
+  const helpers = await import('./desktop-task-comment-input-target.ts');
+  const imports = [...source.matchAll(/import\s*\{([^{}]*)\}\s*from\s*(['"])\.\/desktop-task-comment-input-target\.ts\2\s*;/g)];
+  assert.equal(imports.length, 1, 'one actual named helper import block');
+  const bindings: Record<string, unknown> = {};
+  for (const name of imports[0]![1]!.split(',').map(value => value.trim()).filter(Boolean)) {
+    assert.match(name, /^[A-Za-z_$][\w$]*$/, 'unsupported import binding');
+    assert.ok(!Object.hasOwn(bindings, name), 'duplicate import binding');
+    assert.ok(Object.hasOwn(helpers, name), 'unknown actual helper export');
+    const value = Reflect.get(helpers, name);
+    assert.equal(typeof value, 'function'); bindings[name] = value;
+  }
+  assert.ok(call[1] === 'ui.click' || Object.hasOwn(bindings, call[1]!), 'direct helper must be actually imported');
+  await runInNewContext('(async () => { ' + actual + ' })()', {
+    ...bindings, ui: f.ui, options: { handleId: 'TEST-owner' }, taskId: f.identity.taskId,
+    contextId: f.captured.contextId, surfaceId: f.captured.surfaceId,
+  });
+}
+
+test('original Cross Close target admits the ready cleared Task when canResolveClarification is false', async () => {
+  const f = crossCloseFixture();
+  const point = await f.evaluateTarget();
+  assert.ok(point);
+  assert.deepEqual([point.x, point.y, point.tag, point.text], [1121, 171.125, 'BUTTON', 'Close']);
+  assert.equal(f.controller.canResolveClarification, false);
+  assert.deepEqual(f.events, []);
+  assert.deepEqual(f.imports, ['/store/slices/teamSlice.ts', '/store/team/taskDetailReadAuthority.ts']);
+});
+
+for (const [label, change] of [
+  ['retained user clarification', f => { f.detail.full.needsClarification = 'user'; }],
+  ['retained external clarification', f => { f.detail.full.needsClarification = 'external'; }],
+  ['null clarification', f => { f.detail.full.needsClarification = null; }],
+  ['full-detail refreshPending', f => { f.detail.refreshPending = true; }],
+  ['full-detail loading', f => { f.detail.loading = true; }],
+  ['current detail error', f => { f.detail.error = 'TEST detail error'; }],
+  ['current deletionIntent', f => { f.detail.deletionIntent = { pending: true }; }],
+  ['full Task deletedAt', f => { f.detail.full.deletedAt = '2026-11-16T00:00:00.000Z'; }],
+  ['full Task deleted status', f => { f.detail.full.status = 'deleted'; }],
+  ['non-ready full-detail phase', f => { f.detail.phase = 'loading'; }],
+  ['foreign full Task ID', f => { f.detail.full.id = 'TEST-foreign-task'; }],
+  ['foreign detail identity', f => { f.detail.identity.taskId = 'TEST-foreign-task'; }],
+  ['changed active context', f => { f.state.activeContextId = 'TEST-foreign-context'; }],
+  ['different selected Team', f => { f.state.selectedTeamName = 'host-team:TEST-foreign'; }],
+  ['rebound controller surface', f => { f.controller.surfaceId = 'TEST-foreign-surface'; }],
+  ['missing stored session', f => { delete f.state.taskDetailSessionById[f.key]; }],
+  ['different stored session owner surface', f => { f.storedSession.ownerSurfaceId = 'TEST-foreign-surface'; }],
+  ['changed stored owner revision', f => { f.storedSession.ownerRevision++; }],
+  ['current canEditNow false', f => { f.controller.canEditNow = () => false; }],
+  ['non-owning controller', f => { f.controller.isOwner = false; }],
+  ['scoped Team refresh', f => { f.work.refreshPending = true; }],
+  ['unavailable accepted Team metadata', f => { f.work.teamUnavailable = true; }],
+  ['disabled assignment control', f => { f.trigger.disabled = true; }],
+  ['expanded assignment control', f => { f.trigger.expanded = 'true'; }],
+  ['another assignee', f => { f.trigger.textContent = 'bob'; }],
+  ['missing assignment control', f => { f.triggers.length = 0; }],
+  ['duplicate assignment controls', f => { f.triggers.push({ ...f.trigger }); }],
+] satisfies readonly (readonly [string, (f: ReturnType<typeof crossCloseFixture>) => void])[])
+test('original Cross Close target refuses ' + label, async () => {
+  const f = crossCloseFixture(); change(f);
+  assert.equal(await f.evaluateTarget(), null);
+  assert.deepEqual(f.events, [], 'readiness observation never performs an input action');
+});
+
+test('actual original Cross Close waits for same-Task cleared readiness before one pair at settled coordinates', async t => {
+  for (const descendantHit of [false, true]) {
+    t.mock.restoreAll();
+    const f = crossCloseFixture(t);
+    f.geometry.descendantHit = descendantHit; f.geometry.centerY = 167.125;
+    f.detail.full.needsClarification = 'user'; f.detail.loading = true; f.work.refreshPending = true;
+    f.setOwnedHook(check => {
+      if (check === 6) {
+        f.detail.full.needsClarification = undefined; f.detail.loading = false;
+        f.work.refreshPending = false; f.geometry.centerY = 171.125;
+      }
+    });
+    await runActualCrossClose(f);
+    assert.deepEqual(f.events.map(({ type, x, y }) => [type, x, y]),
+      [['mouseMoved', 1121, 171.125], ['mousePressed', 1121, 171.125], ['mouseReleased', 1121, 171.125]]);
+    assert.deepEqual(f.counts(), { now: 700, owned: 12, reads: 10, front: 1 });
+    assert.deepEqual(f.waits, Array.from({ length: 7 }, () => 100));
+    assert.ok(f.expressions.every(value => value === f.expressions[0]), 'one complete predicate in every phase');
+  }
+});
+
+function assertCrossCloseNoInputDeadline(f: ReturnType<typeof crossCloseFixture>) {
+  assert.deepEqual(f.events, []);
+  assert.deepEqual(f.counts(), { now: 30_000, owned: 300, reads: 300, front: 1 });
+  assert.deepEqual(f.waits, Array.from({ length: 300 }, () => 100));
+  assert.ok(f.expressions.every(value => value === f.expressions[0]), 'one unchanged first-read predicate');
+}
+
+test('actual original Cross Close retains the first-read deadline while renderer readiness is pending', async t => {
+  const f = crossCloseFixture(t); f.detail.refreshPending = true;
+  await assert.rejects(runActualCrossClose(f), /UI (?:read timed out|target read failed)/);
+  assertCrossCloseNoInputDeadline(f);
+});
+
+test('actual original Cross Close cannot use a foreign dialog or an absent ineligible own control', async t => {
+  for (const invalid of [
+    { count: 0, foreignClose: true }, { count: 0 }, { text: 'Close another task' },
+    { width: 0 }, { height: 0 },
+  ] satisfies Partial<CrossCloseGeometry>[]) {
+    t.mock.restoreAll(); const f = crossCloseFixture(t); Object.assign(f.geometry, invalid);
+    await assert.rejects(runActualCrossClose(f), /UI (?:read timed out|target read failed)/);
+    assertCrossCloseNoInputDeadline(f);
+  }
+});
+
+test('actual original Cross Close refuses duplicate eligible controls before disabled or hit narrowing', async t => {
+  for (const invalid of [
+    { count: 2 }, { count: 2, secondDisabled: true }, { count: 2, descendantHit: true },
+  ] satisfies Partial<CrossCloseGeometry>[]) {
+    t.mock.restoreAll(); const f = crossCloseFixture(t); Object.assign(f.geometry, invalid);
+    await assert.rejects(runActualCrossClose(f), /UI (?:read timed out|target read failed)/);
+    assertCrossCloseNoInputDeadline(f);
+  }
+});
+
+test('actual original Cross Close refuses disabled covered and absent-hit controls', async t => {
+  for (const invalid of [
+    { disabled: true }, { covered: true }, { noHit: true },
+  ] satisfies Partial<CrossCloseGeometry>[]) {
+    t.mock.restoreAll(); const f = crossCloseFixture(t); Object.assign(f.geometry, invalid);
+    await assert.rejects(runActualCrossClose(f), /UI (?:read timed out|target read failed)/);
+    assertCrossCloseNoInputDeadline(f);
+  }
+});
+
+test('actual original Cross Close rereads revoked same-Task readiness at unchanged final coordinates', async t => {
+  const f = crossCloseFixture(t);
+  f.setOwnedHook(check => { if (check === 6) f.detail.refreshPending = true; });
+  await assert.rejects(runActualCrossClose(f));
+  assert.deepEqual(f.events.map(({ type, x, y }) => [type, x, y]), [['mouseMoved', 1121, 171.125]]);
+  assert.deepEqual(f.counts(), { now: 200, owned: 6, reads: 5, front: 1 });
+  assert.ok(f.expressions.every(value => value === f.expressions[0]), 'the final direct read rechecks readiness');
+});
+
+test('actual original Cross Close preserves final renderer ownership refusal without a press', async t => {
+  const refusal = new Error('TEST original renderer ownership lost');
+  const f = crossCloseFixture(t);
+  f.setOwnedHook(check => { if (check === 6) throw refusal; });
+  await assert.rejects(runActualCrossClose(f), error => { assert.equal(error, refusal); return true; });
+  assert.deepEqual(f.events.map(({ type, x, y }) => [type, x, y]), [['mouseMoved', 1121, 171.125]]);
+  assert.deepEqual(f.counts(), { now: 200, owned: 6, reads: 4, front: 1 });
+});
+
+test('actual original Cross Close preserves final exact geometry refusal without replay', async t => {
+  const f = crossCloseFixture(t);
+  f.setOwnedHook(check => { if (check >= 6 && (check - 6) % 4 === 0) f.geometry.centerY += 4; });
+  await assert.rejects(runActualCrossClose(f), /Original UI target moved after ownership check/);
+  assert.deepEqual(f.events.map(({ type, x, y }) => [type, x, y]), [['mouseMoved', 1121, 171.125]]);
+  assert.deepEqual(f.counts(), { now: 1000, owned: 22, reads: 17, front: 1 });
+});
 
 async function originalLiveMembershipPoll() {
   const { stripTypeScriptTypes } = await import('node:module');
   const source = (await readFile(new URL('./desktop-live-membership-ui-smoke.ts', import.meta.url), 'utf8')).replace(/\r\n/gu, '\n');
   const begin = '  const poll = async <T>(', end = "  const workspace = join(fixture.root, 'workspace');";
   for (const marker of [begin, end]) assert.equal(source.split(marker).length, 2, 'one original P11 poll boundary');
-  const actual = stripTypeScriptTypes(source.slice(source.indexOf(begin), source.indexOf(end)));
+  const start = source.indexOf(begin), finish = source.indexOf(end);
+  assert.ok(finish > start, 'original source boundaries are ordered');
+  const actual = stripTypeScriptTypes(source.slice(start, finish));
   const makePoll = Function('environment', `'use strict';
     const {assert,current,Date,setTimeout}=environment;
     ${actual}
@@ -2378,7 +3215,9 @@ async function originalReviewCorrectionStage(observations: unknown[], insertFail
   const source = (await readFile(new URL('./desktop-task-review-cycle-ui-smoke.ts', import.meta.url), 'utf8')).replace(/\r\n/gu, '\n');
   const begin = '  const commentTarget = record(', end = "  await snapshotStage(await newReceipt(commentBefore, 'task.comment'), 'in_progress');";
   for (const marker of [begin, end]) assert.equal(source.split(marker).length, 2, 'one original correction input boundary');
-  const actual = stripTypeScriptTypes(source.slice(source.indexOf(begin), source.indexOf(end)));
+  const start = source.indexOf(begin), finish = source.indexOf(end);
+  assert.ok(finish > start, 'original source boundaries are ordered');
+  const actual = stripTypeScriptTypes(source.slice(start, finish));
   const selector = '[role="dialog"] textarea[id="TEST-original-correction-input"]';
   const original = { selector, canEditNow: true }, trace: string[] = [], budgets: number[] = [];
   let reads = 0;
@@ -2596,7 +3435,9 @@ test('original initial conversation rejects observations crossing the same cutof
   for (const expireAfter of ['preview', 'final-target', 'reply'] as const) {
     clock.now = 0;
     const f = await originalEmulatedBootChat({ clock, modes: ['current'], expireAfter });
-    await assert.rejects(f.run(), /original initial conversation deadline/);
+    await assert.rejects(f.run(), expireAfter === 'final-target'
+      ? /original initial conversation deadline/
+      : { message: `UI read timed out: ${expireAfter === 'preview' ? 'original lead BOOT preview' : 'original visible reply TEST boot ready'}; no mutation retry` });
     assert.equal(f.commands.filter(row => row.type === 'mousePressed').length, expireAfter === 'reply' ? 1 : 0);
     assert.equal(f.commands.filter(row => row.type === 'mouseReleased').length, expireAfter === 'reply' ? 1 : 0);
     assert.equal(f.values.length, 1); assert.equal(f.budgets[0]!.ms, 60_000);
@@ -2640,7 +3481,7 @@ test('original lifecycle runtime and collaboration retain their boot budgets and
     assert.ok(f.trace.indexOf('preview') < f.trace.lastIndexOf('mousePressed'));
     clock.now = 0;
     const expired = await originalEmulatedBootChat({ clock, scenario, backShown, modes: ['current'], expireAfter: 'preview' });
-    await assert.rejects(expired.run(), /original initial conversation deadline/);
+    await assert.rejects(expired.run(), { message: 'UI read timed out: original lead BOOT preview; no mutation retry' });
     assert.equal(expired.commands.filter(row => row.type === 'mousePressed').length, backShown ? 1 : 0);
     assert.equal(expired.commands.filter(row => row.type === 'mouseReleased').length, backShown ? 1 : 0);
   }
@@ -3103,3 +3944,4 @@ test('standalone actual global metadata retains its default CDP override without
   assert.deepEqual(f.trace, ['guard', 'global-catalog', 'guard', 'global-source', 'global-lineage', 'global-digest']);
   assert.deepEqual(f.countsOfPreparation(), { arms: 0, disarms: 0 }); assert.deepEqual(f.evidence, {});
 });
+await import('./desktop-ui-controls-deadline.test.ts');

@@ -23,6 +23,8 @@ import { captureOpenCodeConfigurationSource } from '../dist/adapters/providers/O
 import { FileManagementCommandStore } from '../dist/adapters/providers/FileManagementCommandStore.js';
 import { localModelReadinessPreparationSchema } from '../dist/management/commandRecords.js';
 import { managementDigest } from '../dist/management/identity.js';
+import { RetainedWindowsCustody, createWindowsOwnedLaunchPort, sameOwner } from '../dist/owned-process/index.js';
+import type { HostCustodyCall, HostCustodyOwner, HostCustodyResult, PendingOwnedProcess, TreeReceipt } from '../dist/owned-process/index.js';
 
 import type { TeamHostProfile } from '../dist/composition/TeamHost.js';
 import type { MemberEntry } from '../dist/composition/MemberEntry.js';
@@ -3712,6 +3714,595 @@ test('the original passive Runtime projection receiver writes only bounded exit 
     assert.doesNotMatch(JSON.stringify(evidence), /TEST-private|PRIVATE-|sessionRef|operationRef/);
     assert.ok(Buffer.byteLength(JSON.stringify(evidence)) <= 512);
   }
+});
+
+
+async function reservationCleanupFixture(t: TestContext,
+  alter?: (call: HostCustodyCall, result: HostCustodyResult) => HostCustodyResult) {
+  const source = readFileSync(new URL('../../../tools/owned-process-broker/nativeEmulatedSourceScenario.ts', import.meta.url), 'utf8').replace(/\r\n/g, '\n');
+  const part = (begin: string, end: string) => {
+    assert.equal(source.split(begin).length, 2); assert.equal(source.split(end).length, 2);
+    const start = source.indexOf(begin), stop = source.indexOf(end, start); assert.ok(stop > start);
+    return source.slice(start, stop);
+  };
+  let program = part('const custodyTiming =', 'export interface Job {') +
+    part('    const observed: HostCustodyOwner =', '    const client = new CapturedHostClient') +
+    'const holder = {\n' + part('      async close() {', '    };\n  };\n  const epochs:') + '\n}; ({ observed, close: holder.close });';
+  for (const [before, after] of [
+    ['(): CustodyTiming =>', '() =>'], ['(): Record<CustodyPhase, CustodyTiming> =>', '() =>'],
+    ['(): Record<StagingPhase, CustodyTiming> =>', '() =>'], ['const observed: HostCustodyOwner =', 'const observed ='],
+    ["'owner' as 'owner' | 'witness' | 'complete'", "'owner'"],
+    ['let result: Awaited<ReturnType<typeof original.handle>>;', 'let result;'],
+    ['timings: timings!', 'timings: timings'], ['const failures: unknown[] =', 'const failures ='],
+  ]) { assert.equal(program.split(before!).length, 2); program = program.replace(before!, after!); }
+  const owner = { teamIncarnation: 'TEST-reservation-team', runId: 'TEST-reservation-run', laneId: 'TEST-reservation-lane',
+    processGeneration: '00000000-0000-4000-8000-000000000001' };
+  const capability = 'TEST-original-reservation', hash = 'a'.repeat(64), originalResults: { call: HostCustodyCall; result: HostCustodyResult }[] = [];
+  let connections = 0, nativePrepares = 0, shutdowns = 0, witnessCaptures = 0;
+  const pending: PendingOwnedProcess[] = [], logs: string[] = [], jobs: Record<string, unknown>[] = [];
+  const native = new RetainedWindowsCustody({ profileId: 'TEST-profile', profileDigest: hash,
+    selectBroker(reference) { assert.equal(reference, hash); return { path: 'must-never-spawn.exe', sha256: hash, arch: 'x64', protocol: 1 }; },
+    async verifyLaunch() { assert.fail('no native launch verification before a staged prepare'); },
+    createPort() {
+      const port = createWindowsOwnedLaunchPort('must-never-spawn.exe', 'job-membership', {
+        available() { assert.fail('no native availability query'); },
+        connect() { connections++; return assert.fail('no native connection'); },
+      });
+      return { allocate(value) { const result = port.allocate(value); pending.push(result); return result; },
+        prepare(value, spec) { nativePrepares++; return port.prepare(value, spec); } };
+    } });
+  t.after(async () => { assert.equal(await native.close(), true); assert.equal(connections, 0); });
+  const physical = { mainEpoch: native.mainEpoch, close: () => native.close(),
+    attach(context: Parameters<HostCustodyOwner['attach']>[0]) {
+      const port = native.attach(context);
+      return { ...port, async handle(call: HostCustodyCall) {
+        const result = await port.handle(call); originalResults.push({ call, result });
+        return alter ? alter(call, result) : result;
+      } };
+    } };
+  const counts = { service: 0 }, client = { shutdown: async () => { shutdowns++; return { childExit: 'confirmed' }; } };
+  const context = { assert, Buffer, AggregateError, performance, structuredClone, sameOwner, physical, client, jobs, counts,
+    phaseClock: performance.now(), firstCloseEntryMs: null, projectionHostExit: null, available: true, closed: false, failure: undefined as unknown,
+    provider: 'codex', actor: 'TEST-no-actor', events: {}, track() { assert.fail('no observer child'); },
+    entries: () => [], sourceRef: (value: unknown) => value, console: { log: (value: string) => logs.push(value) },
+    capturedQueryableWitness() { witnessCaptures++; return assert.fail('no physical witness before prepare'); } };
+  const evaluated = runInNewContext('"use strict";\n' + program, context) as { observed: HostCustodyOwner; close(): Promise<void> };
+  const port = evaluated.observed.attach({ profileId: 'TEST-profile', signal: new AbortController().signal,
+    binding: { mainEpoch: native.mainEpoch, hostIncarnation: 'TEST-host', profileDigest: hash }, hostExited: new Promise<void>(() => {}) });
+  const send = async (call: HostCustodyCall) => {
+    const result = await port.handle(call); if (!alter) assert.equal(result, originalResults.at(-1)!.result); return result;
+  };
+  await send({ operation: 'allocate', capability, owner: { ...owner }, brokerRef: hash, executableSha256: hash,
+    launchSha256: hash, launchBytes: 1, budgetMs: 20000 });
+  const originalStop = () => {
+    const result = originalResults.findLast(row => row.result.operation === 'stop')?.result;
+    assert.ok(result?.operation === 'stop' && result.state === 'confirmed' && result.receipt && result.receiptRef);
+    return { receipt: result.receipt, receiptRef: result.receiptRef };
+  };
+  return { owner, capability, mainEpoch: native.mainEpoch, jobs, logs, client, counts, send, close: evaluated.close,
+    get stop() { return originalStop(); }, get pending() { assert.equal(pending.length, 1); return pending[0]!; },
+    failScenario(error: unknown) { context.failure = error; },
+    get totals() { return { connections, nativePrepares, shutdowns, witnessCaptures }; },
+    async finish(options: { omitDrain?: boolean; omitRelease?: boolean } = {}) {
+      await send({ operation: 'stop', capability, attemptRef: 'TEST-original-stop', budgetMs: 1000 });
+      if (!options.omitDrain) await send({ operation: 'drain', capability, budgetMs: 1000 });
+      if (!options.omitRelease) await send({ operation: 'release', capability, receiptRef: originalStop().receiptRef });
+    },
+    project() {
+      const evidence: Record<string, unknown> = {}, projection = part('    evidence.epochs = epochs.map(', '    evidence.cleanup =');
+      runInNewContext(projection, { evidence, epochs: [{ physical, pending: { admitted: 0, revoked: 0 }, counts,
+        firstCloseEntryMs: context.firstCloseEntryMs, jobs }] });
+      return JSON.parse(JSON.stringify(evidence.epochs)) as { jobs: Record<string, unknown>[] }[];
+    } };
+}
+function reservationCleanupEvidence(f: { owner: TreeReceipt['owner']; capability: string; mainEpoch: string;
+  stop: { receipt: TreeReceipt; receiptRef: string } }) {
+  return { kind: 'confirmed-no-local-dispatch', mainEpoch: f.mainEpoch, capability: f.capability, allocatedOwner: { ...f.owner },
+    stop: { state: 'confirmed', attemptRef: 'TEST-original-stop', receiptRef: f.stop.receiptRef, receipt: f.stop.receipt },
+    drain: { state: 'complete', afterStopReceiptRef: f.stop.receiptRef }, release: { state: 'released', receiptRef: f.stop.receiptRef },
+    observedCalls: { allocate: { calls: 1, settled: 1, returned: 1 }, prepare: { calls: 0, settled: 0, returned: 0 },
+      resume: { calls: 0, settled: 0, returned: 0 } }, witnessCaptured: false };
+}
+test('source Scenario distinguishes a genuinely released never-prepared reservation from physical HANDLE proof', async t => {
+  const f = await reservationCleanupFixture(t); await f.finish();
+  assert.deepEqual(f.totals, { connections: 0, nativePrepares: 0, shutdowns: 0, witnessCaptures: 0 });
+  assert.equal(f.stop.receipt.coverage, 'no-local-dispatch'); assert.equal(f.stop.receipt.rootExited, false);
+  await assert.rejects(f.pending.release({ ...f.stop.receipt }, 'job-membership'), /Receipt authority/);
+  await assert.rejects(f.pending.release(f.stop.receipt, 'no-local-dispatch'), /required coverage/);
+  let failure: unknown; try { await f.close(); } catch (error) { failure = error; }
+  if (failure instanceof AggregateError) assert.match(String(failure.errors[0]?.message), /Every original physical Job retains confirmed Stop\/drain\/release/);
+  assert.equal(failure, undefined, 'genuine no-local-dispatch cleanup has no physical root HANDLE to await');
+  const expected = reservationCleanupEvidence(f), row = f.project()[0]!.jobs[0]!;
+  assert.deepEqual(row.cleanupEvidence, expected); assert.ok(Buffer.byteLength(JSON.stringify(row.cleanupEvidence)) <= 4096);
+  assert.equal(row.root, null); assert.equal(row.resumed, false); assert.equal(row.originalHandleAbsent, false);
+  assert.equal(row.stopped, true); assert.equal(row.drained, true); assert.equal(row.released, true);
+  assert.deepEqual(JSON.parse(f.logs.at(-1)!).cleanupEvidence, expected);
+  await f.close(); assert.equal(f.totals.shutdowns, 1);
+  const refusal = async (value: Awaited<ReturnType<typeof reservationCleanupFixture>>) => {
+    await assert.rejects(value.close(), error => error instanceof AggregateError &&
+      error.errors.some(item => item?.code === 'ERR_ASSERTION'));
+    assert.equal(value.jobs[0]!.handleAbsent, false); assert.equal(value.project()[0]!.jobs[0]!.cleanupEvidence, undefined);
+  };
+  for (const mode of ['receipt', 'reference', 'owner', 'attempt', 'foreign-reference', 'coverage', 'unknown-stop', 'incomplete-drain', 'unknown-release', 'receipt-getter'] as const) {
+    const value = await reservationCleanupFixture(t, (_call, result) => {
+      if (result.operation === 'drain' && mode === 'incomplete-drain') return { ...result, state: 'incomplete' };
+      if (result.operation === 'release' && mode === 'unknown-release') return { ...result, state: 'unknown' };
+      if (result.operation !== 'stop' || !result.receipt) return result;
+      if (mode === 'receipt-getter') return Object.defineProperty({ ...result }, 'receipt', { get() { throw new Error('TEST observation getter'); } });
+      if (mode === 'receipt') return { operation: 'stop', state: 'confirmed', receiptRef: result.receiptRef };
+      if (mode === 'reference') return { operation: 'stop', state: 'confirmed', receipt: result.receipt };
+      if (mode === 'unknown-stop') return { operation: 'stop', state: 'unknown' };
+      if (mode === 'foreign-reference') return { ...result, receiptRef: 'TEST-foreign-ref' };
+      const receipt = { ...result.receipt, owner: { ...result.receipt.owner } };
+      if (mode === 'owner') receipt.owner.runId = 'TEST-foreign-run';
+      if (mode === 'attempt') receipt.attemptId = 'TEST-foreign-attempt';
+      if (mode === 'coverage') receipt.coverage = 'job-membership';
+      return { ...result, receipt };
+    });
+    await value.finish(); await refusal(value);
+  }
+  for (const mode of ['missing-drain', 'missing-release', 'drain-before-stop', 'close-only', 'prepare', 'resume']) {
+    const value = await reservationCleanupFixture(t);
+    if (mode === 'prepare' || mode === 'resume') await assert.rejects(value.send({ operation: mode, capability: value.capability }), /Original native custody unavailable/);
+    if (mode === 'drain-before-stop') await value.send({ operation: 'drain', capability: value.capability, budgetMs: 1000 });
+    if (mode !== 'close-only') await value.finish({ omitDrain: mode === 'missing-drain' || mode === 'drain-before-stop', omitRelease: mode === 'missing-release' });
+    await refusal(value); assert.equal(value.totals.nativePrepares, 0);
+  }
+  const foreign = await reservationCleanupFixture(t); await foreign.finish({ omitRelease: true });
+  await assert.rejects(foreign.send({ operation: 'release', capability: 'TEST-foreign-capability', receiptRef: foreign.stop.receiptRef }), /Original native custody unavailable/);
+  await refusal(foreign);
+  const handleError = new Error('TEST original handle rejection');
+  const failed = await reservationCleanupFixture(t, (call, result) => { if (call.operation === 'stop') throw handleError; return result; });
+  await assert.rejects(failed.send({ operation: 'stop', capability: failed.capability, attemptRef: 'TEST-original-stop', budgetMs: 1000 }), error => error === handleError);
+  await refusal(failed);
+  const captured = await reservationCleanupFixture(t, (call, result) => {
+    if (call.operation === 'allocate') call.owner.runId = 'TEST-mutated-after-native-allocation'; return result;
+  });
+  await captured.finish(); await captured.close();
+  assert.deepEqual(captured.project()[0]!.jobs[0]!.cleanupEvidence, reservationCleanupEvidence(captured));
+  for (const mode of ['physical', 'failed-unresumed', 'missing-root', 'missing-witness', 'unresumed', 'nonzero-witness', 'rejected-witness']) {
+    const value = await reservationCleanupFixture(t); await value.finish(); let waits = 0;
+    const original = new Error('TEST original HANDLE wait failure'), job = value.jobs[0]!;
+    Object.assign(job, { root: { pid: 4100, birth: '0000000000000001' }, resumed: true, entryStart: 0, entryEnd: 0,
+      witness: { async wait() { waits++; if (mode === 'rejected-witness') throw original; return mode === 'nonzero-witness' ? 1 : 0; } } });
+    if (mode === 'missing-root') delete job.root; if (mode === 'missing-witness') delete job.witness;
+    if (mode === 'unresumed' || mode === 'failed-unresumed') job.resumed = false;
+    if (mode === 'failed-unresumed') value.failScenario(new Error('TEST original resume refusal'));
+    if (mode === 'physical' || mode === 'failed-unresumed') { await value.close(); assert.equal(job.handleAbsent, true); assert.equal(waits, 1); }
+    else {
+      await assert.rejects(value.close(), error => error instanceof AggregateError &&
+        (mode === 'rejected-witness' ? error.errors.includes(original) : error.errors.some(item => item?.code === 'ERR_ASSERTION')));
+      assert.equal(job.handleAbsent, false); assert.equal(waits, ['nonzero-witness', 'rejected-witness'].includes(mode) ? 1 : 0);
+    }
+    assert.equal(value.project()[0]!.jobs[0]!.cleanupEvidence, undefined);
+  }
+  const shutdown = await reservationCleanupFixture(t); await shutdown.finish(); const original = new Error('TEST original shutdown failure');
+  shutdown.client.shutdown = () => Promise.reject(original);
+  await assert.rejects(shutdown.close(), error => error instanceof AggregateError && error.errors.includes(original));
+});
+
+test('full original Process verifier accepts only authority-bound no-dispatch evidence without losing any jobs', async t => {
+  const f = await reservationCleanupFixture(t); await f.finish();
+  const evidence = reservationCleanupEvidence(f), sourceHead = 'a'.repeat(40);
+  const physical = (capability: string) => ({ capability, root: { pid: 4100, birth: '0000000000000001' },
+    resumed: true, stopped: true, drained: true, released: true, originalHandleAbsent: true,
+    entryStart: 0, entryEnd: 0, threadEphemeral: [] });
+  const reservation = { ...physical(f.capability), root: null, resumed: false, originalHandleAbsent: false,
+    entryStart: null, entryEnd: null, cleanupEvidence: evidence };
+  const makeProof = (provider: string) => {
+    const source = { revision: 'TEST-B' }, cold = { currentB: true, retainedA: true, lookup: true,
+      physicalReplayAllocations: 0, originalInputsReplayed: false, sourcePublishPendingAdmission: { admitted: 1, revoked: 1 },
+      sdkPeerCheckpointRestored: provider === 'claude', originalNativeSessionRetained: true, source: { revision: 'TEST-A' } };
+    return { kind: 'TEST_WINDOWS_EMULATED_SOURCE_PARITY', provider, sourceHead, platform: 'win32-x64', nodeVersion: 'v24.21.0',
+      status: 'PASS', cleanup: true, realProviderExecuted: false, desktopQualified: false, releaseQualified: false,
+      sourceScenarios: [{ provider, status: 'PASS', stage: 'complete', cleanup: true, realProviderExecuted: false,
+        desktopQualified: false, releaseQualified: false, foreignScopeGrantRefusedBeforeAllocation: true,
+        selections: { A: { revision: 'TEST-A' }, B: source }, management: { metadataRead: true, modelProbeCompleted: true,
+          modelProbeInputs: 1, modelProbeReplayAllocated: false, metadataHostRetained: provider === 'opencode' },
+        teams: [{ source: { revision: 'TEST-A' } }, { source }], cold,
+        standalone: { supported: false, phase: 'completed', ephemeral: true, replayAllocated: false, source },
+        epochs: [{ mainEpoch: f.mainEpoch, serviceOperations: 0, jobs: [physical('TEST-physical-A'), physical('TEST-physical-B')] as Record<string, unknown>[] },
+          { mainEpoch: 'TEST-cold-Main', serviceOperations: 0, jobs: [physical('TEST-cold')] as Record<string, unknown>[] }] }] };
+  };
+  // Finite fixtures for every independent lane required by the merged whole-workflow verifier.
+  // Only source Job evidence is varied below; no native target or provider is launched here.
+  const emulatedProvider = (provider: string) => {
+    const rootCount = provider === 'codex' ? 2 : 1;
+    const roots = Array.from({ length: rootCount }, (_, index) => ({
+      capability: `TEST-${provider}-capability-${index}`, providerGeneration: `TEST-provider-generation-${index}`,
+      root: { pid: 5100 + index, birth: `TEST-birth-${index}` }, nativeInputs: index === 0 ? 1 : 0,
+      counts: { allocate: 1, prepare: 1, resume: 1, stop: 1, release: 1 },
+      order: ['allocate', 'prepare', 'resume', 'stop', 'release'],
+    }));
+    const previous = roots[0]!, successor = roots[1];
+    const before = { bindingGeneration: 'TEST-binding-before', configGeneration: 1 };
+    const after = { bindingGeneration: 'TEST-binding-after', configGeneration: 2 };
+    const commandId = 'TEST-healthy-restart';
+    const receipt = { commandId, sourceGeneration: before.bindingGeneration, current: true };
+    return { provider, status: 'PASS', stage: 'complete', errors: [], nativeReady: true, inputCompleted: true,
+      neighborSurvivedPrimary: true, providerSurvivedScopedStops: true, cleanup: true, registeredServices: 2, scopedStops: 2,
+      roots, operationOrder: roots.flatMap(root => root.order.map(operation => ({ capability: root.capability, operation }))),
+      counts: { allocate: rootCount, prepare: rootCount, resume: rootCount, release: rootCount, stop: rootCount,
+        serviceCapture: 2, serviceStop: 2, serviceSettle: 2 },
+      physical: { hostExited: true, mainCloseConfirmed: true, handleWaits: Array(rootCount + 2).fill(0) },
+      ...(successor ? { healthyRestart: { status: 'PASS', stage: 'complete', commandId, before, after,
+        sourceClosedBeforeAllocate: true, oldReleaseBeforeAllocate: true, oldRowsAbsent: true,
+        retirementSourceOrder: 'closeRuntimeMember→retireOriginal→installSelected→startSelected',
+        profileGenerationSource: 'executeMemberAction assigns the selected profile generation to config.generation',
+        prepared: { ...receipt, stage: 'prepared', selectedGeneration: null },
+        executed: { ...receipt, stage: 'selected', selectedGeneration: after.bindingGeneration,
+          source: { availability: 'observed', generation: before.bindingGeneration, phase: 'closed', custody: 'released', attached: false },
+          selected: { availability: 'observed', generation: after.bindingGeneration, phase: 'allocated', custody: 'owned', attached: true } },
+        sourcePins: ['nativeEmulatedProviderGate.ts', 'transitionRuntimeMember.ts', 'executeMemberAction.ts', 'RetainedWindowsServices.ts']
+          .map(path => ({ path: '/TEST/' + path, sha256: 'b'.repeat(64) })),
+        staleCapture: { capability: successor.capability, capture: { providerCapability: previous.capability,
+          providerGeneration: previous.providerGeneration, root: previous.root,
+          registrar: { generation: before.bindingGeneration }, target: { pid: 6101 } },
+          rejection: 'Original service custody unavailable', oldRootAbsent: true, newRootAlive: true, countsUnchanged: true },
+        oldRows: [6101, 6102].map(pid => ({ pid, observation: 'absent', canTerminate: false })),
+        successorInputs: 0, handleWaits: [0, 0, 0, 0],
+      } } : {}),
+    };
+  };
+  const emulatedOwnerLoss = (scenario: string, index: number) => {
+    const afterEffect = index === 1, count = afterEffect ? 1 : 0, handles = afterEffect ? 3 : 1;
+    const mainEpoch = `TEST-owner-loss-Main-${index}`, capability = `TEST-owner-loss-capability-${index}`;
+    const providerGeneration = 'TEST-original-provider-generation', root = { pid: 7100, birth: 'TEST-original-root-birth' };
+    const hosts = ['A', 'B'].map(epoch => ({ epoch, mainEpoch, hostIncarnation: `TEST-host-${epoch}`,
+      helloHostIncarnation: `TEST-host-${epoch}`, profileDigest: 'c'.repeat(64), exited: true,
+      shutdown: { childExit: 'confirmed', providerCustody: 'unresolved' } }));
+    const input = { phase: 'consumed', intent: { inputId: 'TEST-delivery', deliveryId: 'TEST-delivery' },
+      fingerprint: 'TEST-input-fingerprint', operationRef: 'TEST-original-operation' };
+    const original = { binding: { generation: 'TEST-original-binding' }, profileId: 'TEST-original-profile',
+      hostIncarnation: hosts[0]!.hostIncarnation, openFingerprint: 'TEST-original-open',
+      phase: afterEffect ? 'allocated' : 'opening', custody: afterEffect ? 'owned' : 'unknown', ...(afterEffect ? { input } : {}) };
+    const retained = { ...original, phase: 'held', custody: 'unknown', nativeReady: false, inputs: count, interactions: 0,
+      ...(afterEffect ? { input: { ...input, phase: 'unknown' } } : {}) };
+    const registeredServices = afterEffect ? [7201, 7202].map(pid => ({ pid, processRef: `TEST-process-${pid}` })) : [];
+    const commandReceipt = { phase: 'completed', effects: { deliveryId: input.intent.deliveryId } };
+    return { scenario, status: 'PASS', stage: 'complete', cleanup: true, sourceHead, pinsUnchanged: true,
+      realProviderExecuted: false, desktopQualified: false, releaseQualified: false,
+      mainEpoch, capability, providerGeneration, root, hosts,
+      budgets: { startupMs: 10000, requestMs: 15000, writeMs: 5000, profileShutdownMs: 1000, inputMs: 15000 },
+      counts: { allocated: 1, prepared: 1, resumeRequests: 1, resumeCompleted: count, resumeForwarded: count,
+        businessInputs: count, nativeTurnStarts: count, registeredRows: count,
+        serviceCapture: 2 * count, serviceCaptureACKs: 2 * count, completedEffects: 2 * count,
+        writeCompleted: count, writeForwarded: count },
+      openIntents: { original: 1, identicalReplay: afterEffect ? 0 : 1, reconcile: 1, numericPidProbe: 1,
+        commandLookup: count, processList: count },
+      barrier: { reached: true, pendingBeforeCrash: true, originalAttachmentCurrent: true,
+        originalHostExited: true, callbackSettled: true, crashMarkers: 1, terminalForwarded: false,
+        operation: afterEffect ? 'read' : 'resume', ...(afterEffect ? { nativeWriteAcknowledged: true,
+          stream: 'stdout', heldBytes: 1, originalMore: false, inputEntered: 100, inputCutoff: 15100, beforeLossObserved: 200,
+          terminal: { method: 'turn/completed', threadId: 'TEST-thread', turnId: 'TEST-turn' } } : {}) },
+      physical: { originalHandleAliveBeforeLoss: true, originalHandleAliveAfterLoss: true, originalHandleAliveAfterRefusals: true,
+        mainCloseConfirmed: true, originalHandleAbsent: true, sentinelSurvived: true, handlesAliveBeforeLoss: handles,
+        handlesAliveAfterLoss: handles, handlesAliveAfterRefusals: handles, handleWaits: Array(handles).fill(true) },
+      negatives: { 'stale-resume': 'refused', 'stale-write': 'refused', 'successor-resume': 'refused', 'successor-write': 'refused',
+        numericPid: { ok: false, code: 'invalid', outcome: 'rejected' } },
+      states: { beforeLoss: original, retained, afterCleanup: retained,
+        coldRead: { attached: false, nativeReady: false, custody: 'unknown' }, reconciled: { phase: 'held', custody: 'unknown' },
+        replay: { phase: 'held', custody: 'unknown', inputs: [] } },
+      allocationsAfterLoss: 0, nativeWritesAfterLoss: 0, errors: [], forwardedAtLoss: { write: count },
+      nativeTurn: { threadId: 'TEST-thread', requestId: 1 }, nativeTurnReply: { turnId: 'TEST-turn', requestId: 1 },
+      commandReceipt, commandLookup: commandReceipt, registeredServices,
+      originalProcessRows: registeredServices.map(row => ({ ...row, observation: 'same-live', canTerminate: true })),
+      captures: registeredServices.map(row => ({ mainEpoch, providerCapability: capability, providerGeneration, root,
+        registrar: original.binding, target: { pid: row.pid } })),
+      peerJournalRows: 0, openFailure: { code: 'transport-closed', outcome: 'unknown' },
+    };
+  };
+  const workflow = readFileSync(new URL('../../../.github/workflows/host-process-acceptance.yml', import.meta.url), 'utf8').replace(/\r\n/g, '\n');
+  const section = '      - name: Require completed original platform receipts and unchanged source';
+  const command = "          node --input-type=module <<'NODE'\n", end = '\n          NODE\n';
+  assert.equal(workflow.split(section).length, 2);
+  const start = workflow.indexOf(command, workflow.indexOf(section)), stop = workflow.indexOf(end, start);
+  assert.ok(start >= 0 && stop > start);
+  let script = workflow.slice(start + command.length, stop).split('\n').map(line => line.replace(/^ {10}/, '')).join('\n');
+  for (const declaration of ["import assert from 'node:assert/strict';", "import { readFileSync, writeFileSync } from 'node:fs';", "import { join } from 'node:path';"]) {
+    assert.equal(script.split(declaration).length, 2); script = script.replace(declaration, '');
+  }
+  const run = (proof = makeProof('codex')) => {
+    const files = new Map<string, string>(), writes: Record<string, unknown>[] = [];
+    const put = (name: string, value: unknown) => files.set(join('process-acceptance-evidence', name), JSON.stringify(value));
+    const controller = { gateController: 'drained', rootExitCode: 0, activeProcesses: 0 };
+    for (const name of ['windows-node24.log', 'windows-electron.log']) files.set(join('process-acceptance-evidence', name),
+      JSON.stringify({ gate: 'owned-process-native-scenarios-only', platform: 'win32', arch: 'x64',
+        results: ['captured-provider-native-argv-env-cwd-and-stop', 'TEST-only-debug-service-prebirth-nested-job-feasibility',
+          'TEST-only-direct-I386-root-startup-and-late-application-exceptions'] }) + '\n' + JSON.stringify(controller));
+    put('windows-emulated-provider-receipt.json', { kind: 'TEST_WINDOWS_EMULATED_PROVIDER_PARITY', status: 'PASS', cleanup: true,
+      sourceHead, platform: 'win32-x64', nodeVersion: 'v24.21.0', realProviderExecuted: false, desktopQualified: false, releaseQualified: false,
+      wrappers: ['npm-node', 'generated-bun', 'opaque-cmd', 'positional-bat', 'npm-native'],
+      providers: ['codex', 'opencode'].map(emulatedProvider),
+      ownerLoss: ['completed-install-before-physical-resume', 'completed-effects-before-runtime-completion'].map(emulatedOwnerLoss) });
+    put('windows-emulated-provider.log', controller);
+    for (const provider of ['codex', 'claude', 'opencode']) {
+      put('windows-source-' + provider + '-receipt.json', provider === 'codex' ? proof : makeProof(provider));
+      put('windows-source-' + provider + '.log', controller);
+    }
+    runInNewContext('"use strict";\n' + script, { assert, Buffer, join,
+      process: { platform: 'win32', arch: 'x64', version: 'v24.21.0', env: { HOST_PROCESS_SOURCE_HEAD: sourceHead, HOST_PROCESS_PLATFORM: 'win32-x64' } },
+      readFileSync(path: string, encoding: string) { assert.equal(encoding, 'utf8'); assert.ok(files.has(path)); return files.get(path)!; },
+      writeFileSync(path: string, value: string) { assert.equal(path, join('process-acceptance-evidence', 'scope.json')); writes.push(JSON.parse(value)); } });
+    assert.equal(writes.length, 1); assert.equal(writes[0]!.status, 'PASS'); return writes[0]!;
+  };
+  assert.equal(run().status, 'PASS', 'the complete original all-physical verifier fixture is valid');
+  const valid = makeProof('codex'); valid.sourceScenarios[0]!.epochs[0]!.jobs[1] = reservation;
+  const accepted = run(valid); // Baseline 123e fails here at the original resumed false !== true assertion.
+  const checked = accepted.native as { receipt?: { provider?: string; sourceScenarios: { epochs: { jobs: unknown[] }[] }[] } }[];
+  const preserved = checked.find(item => item.receipt?.provider === 'codex')!.receipt!.sourceScenarios[0]!.epochs[0]!.jobs;
+  assert.equal(preserved.length, 2); assert.deepEqual(preserved[1], reservation);
+  const replace = (root: Record<string, unknown>, path: string[], value: unknown, remove = false) => {
+    let parent = root; for (const key of path.slice(0, -1)) parent = parent[key] as Record<string, unknown>;
+    if (remove) delete parent[path.at(-1)!]; else parent[path.at(-1)!] = value;
+  };
+  const mutations: [string[], unknown, boolean?][] = [
+    [['cleanupEvidence'], null], [['cleanupEvidence'], null, true], [['cleanupEvidence', 'kind'], 'unknown'],
+    [['cleanupEvidence', 'extra'], true], [['cleanupEvidence', 'mainEpoch'], 'TEST-other-Main'],
+    [['cleanupEvidence', 'allocatedOwner', 'teamIncarnation'], 'a'.repeat(129)], [['cleanupEvidence', 'allocatedOwner', 'processGeneration'], 'not-a-uuid'],
+    [['cleanupEvidence', 'stop', 'receipt', 'owner', 'runId'], 'TEST-foreign-receipt-owner'], [['cleanupEvidence', 'stop', 'receipt', 'attemptId'], 'TEST-foreign-receipt-attempt'],
+    [['cleanupEvidence', 'stop', 'receiptRef'], 'TEST non-reference'], [['cleanupEvidence', 'stop', 'state'], 'unknown'],
+    [['cleanupEvidence', 'allocatedOwner', 'runId'], 'a'.repeat(4097)],
+    [['cleanupEvidence', 'capability'], 'TEST-other-capability'], [['cleanupEvidence', 'allocatedOwner', 'runId'], 'TEST-other-owner'],
+    [['cleanupEvidence', 'stop', 'attemptRef'], 'TEST-other-attempt'], [['cleanupEvidence', 'stop', 'receiptRef'], 'TEST-other-ref'],
+    [['cleanupEvidence', 'stop', 'receipt'], null, true], [['cleanupEvidence', 'stop', 'receipt', 'coverage'], 'job-membership'],
+    [['cleanupEvidence', 'stop', 'receipt', 'rootExited'], true], [['cleanupEvidence', 'stop', 'receipt', 'proofDigest'], 'not-a-digest'],
+    [['cleanupEvidence', 'drain', 'state'], 'incomplete'], [['cleanupEvidence', 'drain', 'afterStopReceiptRef'], 'TEST-other-ref'],
+    [['cleanupEvidence', 'release', 'state'], 'unknown'], [['cleanupEvidence', 'release', 'receiptRef'], 'TEST-other-ref'],
+    [['cleanupEvidence', 'observedCalls', 'allocate', 'returned'], 0], [['cleanupEvidence', 'observedCalls', 'prepare', 'calls'], 1],
+    [['cleanupEvidence', 'observedCalls', 'resume', 'calls'], 1], [['cleanupEvidence', 'observedCalls', 'prepare'], null, true],
+    [['cleanupEvidence', 'witnessCaptured'], true], [['root'], physical('TEST-root').root], [['entryStart'], 0], [['entryEnd'], 0],
+    [['resumed'], true], [['originalHandleAbsent'], true], [['stopped'], false], [['drained'], false], [['released'], false],
+  ];
+  for (const [path, value, remove] of mutations) {
+    const proof = JSON.parse(JSON.stringify(valid)) as ReturnType<typeof makeProof>;
+    replace(proof.sourceScenarios[0]!.epochs[0]!.jobs[1]!, path, value, remove);
+    assert.throws(() => run(proof), { code: 'ERR_ASSERTION' }, path.join('.'));
+  }
+  const maximum = JSON.parse(JSON.stringify(valid)) as ReturnType<typeof makeProof>, wide = 'a'.repeat(128);
+  maximum.sourceScenarios[0]!.epochs[0]!.mainEpoch = wide;
+  const maxRow = maximum.sourceScenarios[0]!.epochs[0]!.jobs[1]!; maxRow.capability = wide;
+  for (const path of [['mainEpoch'], ['capability'], ['stop', 'attemptRef'], ['stop', 'receiptRef'], ['stop', 'receipt', 'attemptId'],
+    ['drain', 'afterStopReceiptRef'], ['release', 'receiptRef']]) replace(maxRow, ['cleanupEvidence', ...path], wide);
+  for (const prefix of [['allocatedOwner'], ['stop', 'receipt', 'owner']])
+    for (const key of ['teamIncarnation', 'runId', 'laneId']) replace(maxRow, ['cleanupEvidence', ...prefix, key], wide);
+  assert.equal(Buffer.byteLength(JSON.stringify(maxRow.cleanupEvidence)), 2471); assert.equal(run(maximum).status, 'PASS');
+  for (const field of ['resumed', 'stopped', 'drained', 'released', 'originalHandleAbsent']) {
+    const proof = makeProof('codex'); delete proof.sourceScenarios[0]!.epochs[0]!.jobs[0]![field];
+    assert.throws(() => run(proof), { code: 'ERR_ASSERTION' }, 'ordinary physical ' + field);
+  }
+  for (const field of ['source', 'standalone']) {
+    const unknown = JSON.parse(JSON.stringify(valid)) as ReturnType<typeof makeProof>;
+    if (field === 'source') unknown.sourceScenarios[0]!.status = 'INCOMPLETE'; else unknown.sourceScenarios[0]!.standalone.phase = 'running';
+    assert.throws(() => run(unknown), { code: 'ERR_ASSERTION' }, 'cleanup never promotes the original ' + field + ' failure');
+  }
+});
+
+
+test('original exit projection is preserved beside a bounded source-bound Codex await ledger', () => {
+  const source = readFileSync(new URL('../../../tools/owned-process-broker/nativeEmulatedSourceProfile.ts', import.meta.url), 'utf8').replace(/\r\n/g, '\n');
+  const start = 'const projectionLedger = ${JSON.stringify(runtimeProjectionLedger)};\n';
+  const end = 'await import(${JSON.stringify(pathToFileURL(cli).href)});';
+  assert.equal(source.split(start).length, 2); assert.equal(source.split(end).length, 2);
+  const program = source.slice(source.indexOf(start) + start.length, source.indexOf(end));
+  const phaseName = 'agent-teams.legacy-host.codex-readiness', viewName = 'agent-teams.legacy-host.runtime-projection';
+  const nullRecord = (fields: Record<string, unknown>) => Object.assign(Object.create(null) as Record<string, unknown>, fields);
+  const event = (overrides: Record<string, unknown> = {}) => nullRecord({ schemaVersion: 1, bindingDigest: 'a'.repeat(64),
+    sourceId: 'b'.repeat(64), sourceRevision: 'c'.repeat(64), sequence: 1, invocation: 1,
+    operation: 'readiness', phase: 'before-await', result: null, ...overrides });
+  const view = (digest = 'd'.repeat(64)) => nullRecord({ viewDigest: digest, bindingMatches: true,
+    recordReady: false, providerReady: null, ownerCurrent: null, nativeReady: false });
+  const create = (fault: 'none' | 'write' | 'serialize' | 'subscribe' = 'none') => {
+    const subscribers = new Map<string, ((value: unknown) => void)[]>(), exits: (() => void)[] = [], writes = new Map<string, string>();
+    const calls: string[] = [];
+    runInNewContext(program, { assert, Buffer, projectionLedger: 'TEST-projection',
+      JSON: { parse: JSON.parse, stringify(value: unknown) {
+        if (fault === 'serialize' && value && typeof value === 'object' && Object.hasOwn(value, 'schemaVersion'))
+          throw new Error('PRIVATE-serialization');
+        return JSON.stringify(value);
+      } },
+      channel(name: string) {
+        assert.ok(name === phaseName || name === viewName);
+        return { subscribe(callback: (value: unknown) => void) {
+          calls.push(name);
+          if (fault === 'subscribe' && name === phaseName) throw new Error('PRIVATE-subscription');
+          subscribers.set(name, [...(subscribers.get(name) ?? []), callback]);
+        } };
+      },
+      process: { once(name: string, callback: () => void) { assert.equal(name, 'exit'); exits.push(callback); } },
+      writeFileSync(path: string, raw: string, options: unknown) {
+        assert.ok(path === 'TEST-projection' || path === 'TEST-projection.codex-readiness');
+        assert.equal(JSON.stringify(options), '{"mode":384,"flag":"wx"}');
+        if (fault === 'write' && path.endsWith('.codex-readiness')) throw new Error('PRIVATE-write');
+        assert.equal(writes.has(path), false, 'one exit write per ledger'); writes.set(path, raw);
+      } });
+    return { calls, writes, exits,
+      emit(name: string, value: unknown) { for (const callback of subscribers.get(name) ?? []) assert.doesNotThrow(() => callback(value)); },
+      finish() { for (const callback of exits) assert.doesNotThrow(callback); },
+    };
+  };
+  const baseline = create(); baseline.emit(viewName, view());
+  assert.equal(baseline.writes.size, 0); baseline.finish();
+  const originalRaw = baseline.writes.get('TEST-projection'); assert.ok(originalRaw);
+  assert.ok(Buffer.byteLength(originalRaw) <= 512);
+  assert.deepEqual(JSON.parse(originalRaw), { status: 'observed', rows: [['d'.repeat(64), true, false, null, null, false]] });
+  assert.ok(baseline.writes.has('TEST-projection.codex-readiness'),
+    'the original successful exit must also retain the separate Codex boundary ledger');
+  assert.equal(baseline.exits.length, 2); assert.equal(baseline.calls.filter(name => name === phaseName).length, 1);
+  assert.equal(baseline.calls.filter(name => name === viewName).length, 2);
+  const decode = (f: ReturnType<typeof create>) => JSON.parse(f.writes.get('TEST-projection.codex-readiness')!) as Record<string, unknown>;
+  assert.deepEqual(decode(baseline), { schemaVersion: 1, status: 'observed', contexts: [], events: [], views: [['d'.repeat(64), 0]] });
+  const unknown = { schemaVersion: 1, status: 'unknown', reason: 'invalid-overflow-or-observer-failure' };
+  const run = (values: unknown[], views = [view()]) => {
+    const f = create(); for (const value of values) f.emit(phaseName, value);
+    for (const value of views) f.emit(viewName, value);
+    f.finish(); assert.ok(Buffer.byteLength(f.writes.get('TEST-projection.codex-readiness')!) <= 8192);
+    assert.doesNotMatch(f.writes.get('TEST-projection.codex-readiness')!, /PRIVATE-|TEST-/); return f;
+  };
+  const valid = [event({ operation: 'open' }), event({ sequence: 2, invocation: 2, operation: 'catalog' }),
+    event({ sequence: 3, invocation: 2, operation: 'catalog', phase: 'after-await' }),
+    event({ sequence: 4, invocation: 2, operation: 'catalog', phase: 'returned', result: true }),
+    event({ sequence: 5, operation: 'open', phase: 'after-await' }),
+    event({ sequence: 6, invocation: 3 }), event({ sequence: 7, invocation: 3, phase: 'after-await' }),
+    event({ sequence: 8, invocation: 3, phase: 'returned', result: false })];
+  const good = run(valid), ledger = decode(good);
+  assert.deepEqual(ledger, { schemaVersion: 1, status: 'observed',
+    contexts: [['a'.repeat(64), 'b'.repeat(64), 'c'.repeat(64)]],
+    events: valid.map(row => [0, row.sequence, row.invocation, row.operation, row.phase, row.result]),
+    views: [['d'.repeat(64), 8]] });
+  const repeated = create(); repeated.emit(phaseName, valid[0]); repeated.emit(viewName, view());
+  for (const row of valid.slice(1)) repeated.emit(phaseName, row);
+  repeated.emit(viewName, view()); repeated.finish(); assert.deepEqual(decode(repeated), ledger);
+  for (const phases of [['before-await', 'threw'], ['before-await', 'after-await', 'threw']])
+    assert.equal(decode(run(phases.map((phase, index) => event({ sequence: index + 1, phase })))).status, 'observed');
+  let getterCalls = 0;
+  const getter = Object.defineProperty(event(), 'result', { get() { getterCalls++; throw new Error('PRIVATE-getter'); } });
+  const symbol = event(); Object.defineProperty(symbol, Symbol('PRIVATE-symbol'), { value: true });
+  const invalid = [null, [], event({ extra: 'PRIVATE-extra' }), event({ sequence: 2 }), event({ invocation: 2 }),
+    event({ result: false }), event({ operation: 'foreign' }), event({ phase: 'after-await' }), event({ sourceId: 'bad' }), getter, symbol,
+    new Proxy(Object.create(null) as Record<string, unknown>, { ownKeys() { throw new Error('PRIVATE-reflection'); } }),
+    nullRecord({ schemaVersion: 1, bindingDigest: 'a'.repeat(64), sourceId: 'b'.repeat(64), sourceRevision: 'c'.repeat(64), limit: true })];
+  for (const value of invalid) assert.deepEqual(decode(run([value, ...valid])), unknown);
+  assert.equal(getterCalls, 0);
+  for (const values of [[valid[0], valid[0]], [valid[0], event({ sequence: 3, phase: 'after-await' })],
+    [valid[0], event({ sequence: 2, operation: 'catalog', phase: 'after-await' })],
+    [...valid, event({ sequence: 9, invocation: 3, phase: 'returned', result: false })]])
+    assert.deepEqual(decode(run(values)), unknown);
+  const accessorView = Object.defineProperty(view(), 'recordReady', { get() { getterCalls++; return false; } });
+  for (const value of [accessorView, nullRecord({ ...view(), extra: true }), nullRecord({ ...view(), providerReady: true }),
+    nullRecord({ ...view(), nativeReady: true })]) {
+    const f = create(); f.emit(viewName, value); f.finish(); assert.deepEqual(decode(f), unknown);
+  }
+  assert.equal(getterCalls, 0);
+  const wide: Record<string, unknown>[] = [];
+  for (const digit of 'abcd') for (let invocation = 1; invocation <= 8; invocation++)
+    for (const [offset, phase] of ['before-await', 'after-await'].entries())
+      wide.push(event({ bindingDigest: digit.repeat(64), sourceId: 'b'.repeat(64), sourceRevision: 'c'.repeat(64),
+        sequence: (invocation - 1) * 2 + offset + 1, invocation, operation: 'open', phase }));
+  const atLimit = run(wide, [...'def0'].map(digit => view(digit.repeat(64))));
+  assert.equal((decode(atLimit).contexts as unknown[]).length, 4); assert.equal((decode(atLimit).events as unknown[]).length, 64);
+  assert.equal((decode(atLimit).views as unknown[]).length, 4);
+  assert.deepEqual(decode(run([...wide, event({ sequence: 17, invocation: 9, operation: 'open' })])), unknown);
+  assert.deepEqual(decode(run([...'abcde'].map(digit => event({ bindingDigest: digit.repeat(64) })))), unknown);
+  assert.deepEqual(decode(run(valid, [...'def01'].map(digit => view(digit.repeat(64))))), unknown);
+  const sixteen = Array.from({ length: 16 }, (_, index) => event({ sequence: index + 1, invocation: index + 1, operation: 'open' }));
+  assert.equal(decode(run(sixteen)).status, 'observed');
+  assert.deepEqual(decode(run([...sixteen, event({ sequence: 17, invocation: 17, operation: 'open' })])), unknown);
+  // Independent primitive widths conservatively bound every valid history; this is not a claimed executable sequence.
+  const width = { schemaVersion: 1, status: 'observed',
+    contexts: Array.from({ length: 4 }, () => ['f'.repeat(64), 'f'.repeat(64), 'f'.repeat(64)]),
+    events: Array.from({ length: 64 }, () => [3, 64, 16, 'readiness', 'before-await', false]),
+    views: Array.from({ length: 4 }, () => ['f'.repeat(64), 64]) };
+  assert.equal(Buffer.byteLength(JSON.stringify(width)), 3925); assert.ok(Buffer.byteLength(JSON.stringify(width)) < 8192);
+  for (const fault of ['write', 'serialize', 'subscribe'] as const) {
+    const f = create(fault); f.emit(viewName, view()); f.finish();
+    assert.equal(f.writes.get('TEST-projection'), originalRaw, 'failed new diagnostics preserve the original writer');
+    const raw = f.writes.get('TEST-projection.codex-readiness');
+    if (raw !== undefined) assert.deepEqual(JSON.parse(raw), unknown);
+  }
+
+  // Only reached after the old-source semantic failure above. Execute the actual new export, never a copied validator.
+  const readerSource = readFileSync(new URL('../../../tools/owned-process-broker/nativeEmulatedSourceReadiness.ts', import.meta.url), 'utf8').replace(/\r\n/g, '\n');
+  const exportStart = 'export function readEmulatedCodexReadinessObservation(';
+  assert.equal(readerSource.split(exportStart).length, 2);
+  let readerProgram = readerSource.slice(readerSource.indexOf(exportStart));
+  for (const [before, after] of [[exportStart, 'function readEmulatedCodexReadinessObservation('],
+    ['options: Record<string, unknown>', 'options'], ['value: unknown', 'value']] as const) {
+    assert.equal(readerProgram.split(before).length, 2); readerProgram = readerProgram.replace(before, after);
+  }
+  const root = mkdtempSync(join(tmpdir(), 'TEST-codex-phase-reader-')), path = join(root, 'projection.codex-readiness');
+  let serializationFails = false;
+  let stats = 0, reads = 0, ioFault: 'none' | 'stat' | 'read' | 'symlink' | 'oversize' = 'none';
+  const namespace = runInNewContext(readerProgram + '\n({ readEmulatedCodexReadinessObservation });', { assert, Buffer, Object, Array,
+    JSON: { parse: JSON.parse, stringify(value: unknown) { if (serializationFails) throw new Error('PRIVATE-serialization'); return JSON.stringify(value); } },
+    lstatSync(file: string) {
+      stats++; assert.equal(file, path);
+      if (ioFault === 'stat') throw new Error('PRIVATE-stat');
+      if (ioFault === 'symlink' || ioFault === 'oversize')
+        return { isFile: () => true, isSymbolicLink: () => ioFault === 'symlink', size: ioFault === 'oversize' ? 8193 : 1 };
+      return lstatSync(file);
+    },
+    readFileSync(file: string, encoding: 'utf8') {
+      reads++; assert.equal(file, path); assert.equal(encoding, 'utf8');
+      if (ioFault === 'read') throw new Error('PRIVATE-read');
+      return readFileSync(file, encoding);
+    },
+  }) as { readEmulatedCodexReadinessObservation(options: Record<string, unknown>): unknown };
+  const base = () => ({ provider: 'codex', ledgerPath: path, epochs: [{ mainEpoch: 'TEST-main', projectionHostExit: 'confirmed' }],
+    runtimeProjection: { status: 'observed', atomicWithFailure: false, ...view() }, lastRuntimeViewDigest: 'd'.repeat(64),
+    lastLaunchReadiness: { launchId: 'TEST-launch', source: { sourceId: 'b'.repeat(64), revision: 'c'.repeat(64) },
+      lastRuntimeRead: { viewDigest: 'd'.repeat(64) } },
+    diagnosticLaunches: [{ launchId: 'TEST-launch', source: { sourceId: 'b'.repeat(64), revision: 'c'.repeat(64) },
+      bindingDigests: ['a'.repeat(64)] }] });
+  const refused = { status: 'unknown', reason: 'missing-invalid-overflow-conflicting-or-unjoined' };
+  const read = (options: Record<string, unknown>, raw = JSON.stringify(ledger)) => {
+    stats = 0; reads = 0; writeFileSync(path, raw);
+    const result = namespace.readEmulatedCodexReadinessObservation(options);
+    const copied = JSON.parse(JSON.stringify(result)) as Record<string, unknown>;
+    assert.ok(Buffer.byteLength(JSON.stringify(copied)) <= 8192); assert.doesNotMatch(JSON.stringify(copied), /PRIVATE-|stack|argv|token/);
+    return copied;
+  };
+  try {
+    const accepted = read(base());
+    assert.equal(stats, 1); assert.equal(reads, 1);
+    assert.deepEqual(accepted, { schemaVersion: 1, status: 'observed', atomicWithFailure: false,
+      samplePoint: 'last-original-projection-with-matching-view-digest',
+      source: { sourceId: 'b'.repeat(64), revision: 'c'.repeat(64) }, bindingDigest: 'a'.repeat(64), viewDigest: 'd'.repeat(64),
+      mainEpoch: 'TEST-main', launchId: 'TEST-launch', observedEventCount: 8,
+      events: valid.map(row => [row.sequence, row.invocation, row.operation, row.phase, row.result]) });
+    const before = { ...ledger, views: [['d'.repeat(64), 1]] };
+    assert.deepEqual(read(base(), JSON.stringify(before)).events, [[1, 1, 'open', 'before-await', null]]);
+    const zero = { ...ledger, views: [['d'.repeat(64), 0]] };
+    assert.deepEqual(read(base(), JSON.stringify(zero)).events, [], 'zero observed callbacks does not invent a pending native call');
+    const invalidInputs = [
+      { ...base(), provider: 'opencode' }, { ...base(), epochs: [] }, { ...base(), epochs: [...base().epochs, ...base().epochs] },
+      { ...base(), epochs: [{ mainEpoch: 'TEST-main', projectionHostExit: 'unknown' }] },
+      { ...base(), epochs: [{ mainEpoch: 'TEST-main' }] }, { ...base(), runtimeProjection: { status: 'unknown' } },
+      { ...base(), runtimeProjection: { ...base().runtimeProjection, bindingMatches: false } },
+      { ...base(), lastRuntimeViewDigest: 'e'.repeat(64) }, { ...base(), lastLaunchReadiness: {} },
+      { ...base(), runtimeProjection: { ...base().runtimeProjection, viewDigest: 'e'.repeat(64) } },
+      { ...base(), runtimeProjection: { ...base().runtimeProjection, nativeReady: true } },
+      { ...base(), diagnosticLaunches: [] }, { ...base(), diagnosticLaunches: [...base().diagnosticLaunches, ...base().diagnosticLaunches] },
+      { ...base(), diagnosticLaunches: [{ ...base().diagnosticLaunches[0], launchId: 'FOREIGN' }] },
+      { ...base(), diagnosticLaunches: [{ ...base().diagnosticLaunches[0], source: { sourceId: 'f'.repeat(64), revision: 'c'.repeat(64) } }] },
+      { ...base(), epochs: [{ mainEpoch: '', projectionHostExit: 'confirmed' }] },
+      { ...base(), lastLaunchReadiness: { ...base().lastLaunchReadiness, launchId: 'x'.repeat(257) } },
+    ];
+    for (const input of invalidInputs) {
+      assert.deepEqual(read(input), refused); assert.equal(stats, 0, 'ineligible inputs must not touch the new file'); assert.equal(reads, 0);
+    }
+    for (const fault of ['stat', 'read', 'symlink', 'oversize'] as const) {
+      ioFault = fault; assert.deepEqual(read(base()), refused); assert.equal(stats, 1); assert.equal(reads, fault === 'read' ? 1 : 0);
+    }
+    ioFault = 'none';
+    const badLedgers = [null, [], { ...ledger, extra: true }, { ...ledger, status: 'unknown' },
+      { ...ledger, contexts: [] }, { ...ledger, contexts: [...(ledger.contexts as unknown[]), ...(ledger.contexts as unknown[])] },
+      { ...ledger, contexts: [['f'.repeat(64), 'b'.repeat(64), 'c'.repeat(64)]] },
+      { ...ledger, contexts: [['a'.repeat(64), 'f'.repeat(64), 'c'.repeat(64)]] },
+      { ...ledger, contexts: [['a'.repeat(64), 'b'.repeat(64), 'f'.repeat(64)]] },
+      { ...ledger, views: [['e'.repeat(64), 8]] }, { ...ledger, views: [['d'.repeat(64), 9]] },
+      { ...ledger, views: [['d'.repeat(64), 8], ['d'.repeat(64), 8]] },
+      { ...ledger, events: [[0, 2, 1, 'readiness', 'before-await', null]] },
+      { ...ledger, events: [[0, 1, 1, 'readiness', 'returned', true]] },
+      { ...ledger, events: [[4, 1, 1, 'readiness', 'before-await', null]] },
+      { ...ledger, events: [[0, 1, 17, 'readiness', 'before-await', null]] },
+      { ...ledger, events: [[0, 1, 1, 'readiness', 'before-await', false]] },
+      { ...ledger, contexts: Array.from({ length: 5 }, (_, index) => [String(index).repeat(64), 'b'.repeat(64), 'c'.repeat(64)]) }];
+    for (const invalid of badLedgers) assert.deepEqual(read(base(), JSON.stringify(invalid)), refused);
+    assert.deepEqual(read(base(), '{'), refused); assert.deepEqual(read(base(), ' '.repeat(8193)), refused);
+    rmSync(path); stats = 0; reads = 0;
+    assert.deepEqual(JSON.parse(JSON.stringify(namespace.readEmulatedCodexReadinessObservation(base()))), refused);
+    assert.equal(stats, 1); assert.equal(reads, 0);
+    const foreign = ['f'.repeat(64), 'e'.repeat(64), '0'.repeat(64)];
+    const mixed = { ...ledger, contexts: [foreign, ...(ledger.contexts as unknown[])], views: [['d'.repeat(64), 2]],
+      events: [[0, 1, 1, 'catalog', 'before-await', null], ...valid.map(row => [1, row.sequence, row.invocation, row.operation, row.phase, row.result])] };
+    const selected = read(base(), JSON.stringify(mixed)); assert.equal(selected.observedEventCount, 2);
+    assert.deepEqual(selected.events, [[1, 1, 'open', 'before-await', null]], 'cut off by original global ordinal before filtering the selected source');
+    serializationFails = true; assert.deepEqual(read(base()), refused); serializationFails = false;
+    const widest = base(); widest.epochs[0]!.mainEpoch = '\u0001'.repeat(256);
+    widest.lastLaunchReadiness.launchId = '\u0001'.repeat(256); widest.diagnosticLaunches[0]!.launchId = widest.lastLaunchReadiness.launchId;
+    assert.equal(read(widest).status, 'observed'); assert.ok(Buffer.byteLength(JSON.stringify(read(widest))) <= 8192);
+  } finally { rmSync(root, { recursive: true, force: true }); }
 });
 
 async function sourceReadinessDeadlineFixture(input: {

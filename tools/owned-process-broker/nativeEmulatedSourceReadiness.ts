@@ -1,5 +1,6 @@
 /** TEST readback of an original aggregate action; never writes or synthesizes readiness. */
 import assert from 'node:assert/strict';
+import { existsSync, lstatSync, readFileSync } from 'node:fs';
 
 import { FileManagementCommandStore } from '../../packages/legacy-agent-host/dist/adapters/providers/FileManagementCommandStore.js';
 import { TeamOwnerStore } from '../../packages/legacy-agent-host/dist/adapters/team/TeamOwnerStore.js';
@@ -138,4 +139,179 @@ export function observeEmulatedSourcePeerReadiness(
     try { evidence.sourcePeerReadiness = { status: 'unknown', provider }; }
     catch { /* Passive evidence cannot replace the original failure or pin check. */ }
   }
+}
+
+/** Bounded TEST source evidence decoding; none of these helpers allocate or change readiness. */
+const sourceRecord = (raw: unknown): Record<string, unknown> => {
+  assert.ok(raw && typeof raw === 'object' && !Array.isArray(raw)); return raw as Record<string, unknown>;
+};
+export const unwrapEmulatedSourceResult = (raw: unknown): Record<string, unknown> => {
+  const reply = sourceRecord(raw); assert.equal(reply.ok, true, `TEST original Host refused: ${String(reply.code)}`);
+  return sourceRecord(reply.value);
+};
+
+export function readEmulatedSourceJournal(path: string): Record<string, unknown>[] {
+  if (!existsSync(path)) return [];
+  const stat = lstatSync(path); assert.ok(stat.isFile() && !stat.isSymbolicLink() && stat.size <= 1024 * 1024);
+  const value = readFileSync(path, 'utf8'); if (!value) return [];
+  assert.ok(value.endsWith('\n'));
+  return value.trimEnd().split('\n').map(line => sourceRecord(JSON.parse(line)));
+}
+
+export interface EmulatedSourceCustodyTiming {
+  calls: number;
+  settled: number;
+  returned: number;
+  totalMs: number;
+  firstStartMs: number | null;
+  lastEndMs: number | null;
+}
+
+export function validateEmulatedSourceRefusal(value: Record<string, unknown>, persisted: boolean) {
+  assert.ok(value && typeof value === 'object' && !Array.isArray(value) && [Object.prototype, null].includes(Object.getPrototypeOf(value)));
+  assert.ok(Object.getOwnPropertySymbols(value).length === 0 && Object.values(Object.getOwnPropertyDescriptors(value)).every(row => 'value' in row));
+  const hash = (raw: unknown) => typeof raw === 'string' && /^[a-f0-9]{64}$/.test(raw), clock = (raw: unknown) => typeof raw === 'number' && Number.isSafeInteger(raw) && raw >= 0;
+  const fields: Record<string, string> = { native: 'capability phase reason dispatched staged rootCaptured deadlineExpired checkSite',
+    consumer: 'actionDigest groupDigest bindingDigest consumerId phase reason cutoff observedAt currentCalls',
+    'opencode-open': 'bindingDigest phase reason',
+    reference: 'commandDigest contextDigest phase reason probeCutoff probeNow scopeCutoff scopeNow preparationCutoff preparationNow', limit: '' };
+  assert.ok(typeof value.kind === 'string' && Object.hasOwn(fields, value.kind));
+  const keys = fields[value.kind]; assert.ok(typeof keys === 'string'); assert.deepEqual(Object.keys(value).sort(), ['kind', ...keys.split(' ').filter(Boolean), ...(persisted ? ['ordinal'] : [])].sort());
+  if (persisted) assert.ok(typeof value.ordinal === 'number' && Number.isInteger(value.ordinal) && value.ordinal >= 1 && value.ordinal <= 65); if (value.kind === 'limit') { assert.equal(persisted, true); return; }
+  assert.ok(typeof value.phase === 'string' && typeof value.reason === 'string');
+  if (value.kind === 'native') {
+    assert.ok(typeof value.capability === 'string' && /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/.test(value.capability));
+    assert.ok('capture staging allocate launch-chunk launch-commit post-commit prepare post-prepare resume'.split(' ').includes(value.phase));
+    assert.ok('sealed current-false current-threw launch-deadline refused unknown result-mismatch preparation-failed'.split(' ').includes(value.reason));
+    assert.ok(['dispatched', 'staged', 'rootCaptured'].every(key => typeof value[key] === 'boolean'));
+    assert.equal(value.deadlineExpired, value.reason === 'launch-deadline' ? true : null);
+    assert.ok(value.checkSite === null || typeof value.checkSite === 'string' && ['before-owner', 'after-owner', 'request-builder', 'after-reply'].includes(value.checkSite));
+    if (value.checkSite !== null) assert.ok(value.phase === 'resume' && ['sealed', 'current-false', 'current-threw', 'launch-deadline'].includes(value.reason));
+  } else if (value.kind === 'opencode-open') {
+    assert.ok(hash(value.bindingDigest)); assert.equal(value.reason, 'threw');
+    assert.ok('configuration server-launch native-ready startup-authority startup-configuration startup-delay session-authority session-create driver-readiness'.split(' ').includes(value.phase));
+  } else {
+    assert.ok(value.reason === 'held' || value.reason === 'threw'); const consumer = value.kind === 'consumer';
+    if (consumer) {
+      const timing = sourceRecord(value.currentCalls);
+      assert.ok(timing && typeof timing === 'object' && !Array.isArray(timing) && [Object.prototype, null].includes(Object.getPrototypeOf(timing)));
+      assert.ok(Object.getOwnPropertySymbols(timing).length === 0 && Object.values(Object.getOwnPropertyDescriptors(timing)).every(row => 'value' in row));
+      assert.deepEqual(Object.keys(timing).sort(), ['count', 'lastMs', 'maxMs', 'totalMs', 'truncated', ...(Object.hasOwn(timing, 'regions') ? ['regions'] : [])].sort());
+      assert.ok(clock(timing.count) && (timing.count as number) <= 4096 && clock(timing.totalMs) && clock(timing.maxMs) && (timing.maxMs as number) <= (timing.totalMs as number));
+      assert.equal(typeof timing.truncated, 'boolean');
+      assert.ok(timing.lastMs === null || clock(timing.lastMs) && (timing.lastMs as number) <= (timing.maxMs as number));
+      if (timing.count === 0) assert.ok(timing.totalMs === 0 && timing.maxMs === 0 && timing.lastMs === null);
+      else if (!timing.truncated) assert.notEqual(timing.lastMs, null);
+      if (Object.hasOwn(timing, 'regions')) {
+        const regions = sourceRecord(timing.regions);
+        assert.ok(regions && typeof regions === 'object' && !Array.isArray(regions) && [Object.prototype, null].includes(Object.getPrototypeOf(regions)));
+        assert.ok(Object.getOwnPropertySymbols(regions).length === 0 && Object.values(Object.getOwnPropertyDescriptors(regions)).every(row => 'value' in row));
+        const names = ['initialAuthority', 'readConsumer', 'reference', 'finalAuthority', ...(Object.hasOwn(regions, 'referenceAccountCount') ? ['referenceAccount', 'referenceAccountAuthority'] : [])];
+        assert.deepEqual(Object.keys(regions).sort(), names.flatMap(name => [name + 'Count', name + 'Ms']).sort());
+        for (const name of names) {
+          const count = regions[name + 'Count'], milliseconds = regions[name + 'Ms'];
+          assert.ok(clock(count) && (count as number) <= (timing.count as number) && clock(milliseconds) && (count !== 0 || milliseconds === 0));
+        }
+      }
+    }
+    assert.ok((consumer ? ['actionDigest', 'groupDigest', 'bindingDigest', 'consumerId'] : ['commandDigest', 'contextDigest']).every(key => hash(value[key])));
+    assert.ok((consumer ? 'initial-authority read-consumer identity continuation requirements cutoff reference equality final-authority' :
+      'read inspect admission target scope retired completion probe-expiry scope-cutoff preparation-expiry origin purpose readiness account projection').split(' ').includes(value.phase));
+    for (const [cutoff, now] of (consumer ? [['cutoff', 'observedAt']] : [['probeCutoff', 'probeNow'], ['scopeCutoff', 'scopeNow'], ['preparationCutoff', 'preparationNow']]) as [string, string][])
+      assert.ok(value[cutoff] === null ? value[now] === null : clock(value[cutoff]) && clock(value[now]));
+  }
+}
+
+/** TEST-only completed-exit observation; never substitutes for Runtime readiness or custody. */
+export function readEmulatedCodexReadinessObservation(options: Record<string, unknown>) {
+  const unavailable = { status: 'unknown', reason: 'missing-invalid-overflow-conflicting-or-unjoined' };
+  try {
+    const object = (value: unknown) => {
+      assert.ok(value && typeof value === 'object' && !Array.isArray(value));
+      assert.ok([Object.prototype, null].includes(Object.getPrototypeOf(value)) && Object.getOwnPropertySymbols(value).length === 0);
+      const descriptors = Object.getOwnPropertyDescriptors(value);
+      assert.ok(Object.values(descriptors).every(row => 'value' in row));
+      return Object.fromEntries(Object.entries(descriptors).map(([key, row]) => [key, row.value]));
+    };
+    const input = object(options), projection = object(input.runtimeProjection), launch = object(input.lastLaunchReadiness);
+    assert.equal(input.provider, 'codex'); assert.equal(typeof input.ledgerPath, 'string'); assert.ok(input.ledgerPath.length > 0);
+    assert.ok(Array.isArray(input.epochs) && input.epochs.length === 1);
+    const epoch = object(input.epochs[0]), source = object(launch.source), last = object(launch.lastRuntimeRead);
+    assert.equal(epoch.projectionHostExit, 'confirmed');
+    for (const id of [epoch.mainEpoch, launch.launchId]) assert.ok(typeof id === 'string' && id.length >= 1 && id.length <= 256 && !id.includes('\0'));
+    for (const digest of [source.sourceId, source.revision, input.lastRuntimeViewDigest])
+      assert.ok(typeof digest === 'string' && /^[a-f0-9]{64}$/.test(digest));
+    assert.equal(Object.keys(source).sort().join(' '), 'revision sourceId');
+    assert.equal(Object.keys(projection).sort().join(' '), 'atomicWithFailure bindingMatches nativeReady ownerCurrent providerReady recordReady status viewDigest');
+    assert.equal(projection.status, 'observed'); assert.equal(projection.atomicWithFailure, false);
+    assert.equal(projection.viewDigest, input.lastRuntimeViewDigest); assert.equal(last.viewDigest, input.lastRuntimeViewDigest);
+    const readiness = [projection.bindingMatches, projection.recordReady, projection.providerReady, projection.ownerCurrent, projection.nativeReady];
+    assert.equal(typeof readiness[0], 'boolean'); assert.equal(typeof readiness[4], 'boolean');
+    for (let index = 1; index <= 3; index++)
+      assert.ok(readiness.slice(0, index).every(value => value === true) ? typeof readiness[index] === 'boolean' : readiness[index] === null);
+    assert.equal(readiness[4], readiness.slice(0, 4).every(value => value === true)); assert.equal(readiness[0], true);
+    assert.ok(Array.isArray(input.diagnosticLaunches));
+    const launches = input.diagnosticLaunches.map(object).filter(row => row.launchId === launch.launchId); assert.equal(launches.length, 1);
+    const selected = launches[0]; assert.ok(selected);
+    const selectedSource = object(selected.source); assert.deepEqual(selectedSource, source);
+    assert.ok(Array.isArray(selected.bindingDigests) && selected.bindingDigests.length > 0);
+    assert.ok(selected.bindingDigests.every(value => typeof value === 'string' && /^[a-f0-9]{64}$/.test(value)));
+    assert.equal(new Set(selected.bindingDigests).size, selected.bindingDigests.length);
+    const stat = lstatSync(input.ledgerPath); assert.ok(stat.isFile() && !stat.isSymbolicLink() && stat.size >= 0 && stat.size <= 8192);
+    const raw = readFileSync(input.ledgerPath, 'utf8'); assert.ok(Buffer.byteLength(raw) <= 8192);
+    const ledger = object(JSON.parse(raw));
+    assert.equal(Object.keys(ledger).sort().join(' '), 'contexts events schemaVersion status views');
+    assert.equal(ledger.schemaVersion, 1); assert.equal(ledger.status, 'observed');
+    assert.ok(Array.isArray(ledger.contexts) && ledger.contexts.length <= 4);
+    assert.ok(Array.isArray(ledger.events) && ledger.events.length <= 64);
+    assert.ok(Array.isArray(ledger.views) && ledger.views.length <= 4);
+    const identities = new Set();
+    const contexts = ledger.contexts.map(tuple => {
+      assert.ok(Array.isArray(tuple) && tuple.length === 3);
+      assert.ok(tuple.every(value => typeof value === 'string' && /^[a-f0-9]{64}$/.test(value)));
+      const key = tuple.join(':'); assert.equal(identities.has(key), false); identities.add(key);
+      return [tuple[0], tuple[1], tuple[2]];
+    });
+    const states = contexts.map(() => ({ sequence: 0, invocations: new Map() }));
+    const events = ledger.events.map(tuple => {
+      assert.ok(Array.isArray(tuple) && tuple.length === 6);
+      const [contextIndex, sequence, invocation, operation, phase, result] = tuple;
+      assert.ok(Number.isInteger(contextIndex) && contextIndex >= 0 && contextIndex < contexts.length);
+      assert.ok(Number.isInteger(sequence) && sequence >= 1 && sequence <= 64 && Number.isInteger(invocation) && invocation >= 1 && invocation <= 16);
+      assert.ok(['open', 'catalog', 'readiness'].includes(operation) && ['before-await', 'after-await', 'returned', 'threw'].includes(phase));
+      assert.ok(phase === 'returned' ? operation !== 'open' && typeof result === 'boolean' : result === null);
+      const state = states[contextIndex]; assert.ok(state); assert.equal(sequence, state.sequence + 1);
+      const prior = state.invocations.get(invocation);
+      if (phase === 'before-await') {
+        assert.equal(prior, undefined); assert.equal(invocation, state.invocations.size + 1);
+      } else {
+        assert.ok(prior && prior[0] === operation);
+        assert.ok(phase === 'after-await' ? prior[1] === 'before-await'
+          : phase === 'returned' ? prior[1] === 'after-await'
+          : prior[1] === 'before-await' || prior[1] === 'after-await');
+      }
+      state.sequence = sequence; state.invocations.set(invocation, [operation, phase]);
+      return [contextIndex, sequence, invocation, operation, phase, result];
+    });
+    assert.ok(states.every(state => state.sequence > 0));
+    const digests = new Set();
+    const views = ledger.views.map(tuple => {
+      assert.ok(Array.isArray(tuple) && tuple.length === 2);
+      assert.ok(typeof tuple[0] === 'string' && /^[a-f0-9]{64}$/.test(tuple[0]));
+      assert.ok(Number.isInteger(tuple[1]) && tuple[1] >= 0 && tuple[1] <= events.length);
+      assert.equal(digests.has(tuple[0]), false); digests.add(tuple[0]); return [tuple[0], tuple[1]];
+    });
+    const matches = contexts.map((tuple, index) => ({ tuple, index })).filter(({ tuple }) =>
+      selected.bindingDigests.includes(tuple[0]) && tuple[1] === source.sourceId && tuple[2] === source.revision);
+    assert.equal(matches.length, 1); const context = matches[0]; assert.ok(context);
+    const matchingViews = views.filter(tuple => tuple[0] === input.lastRuntimeViewDigest);
+    assert.equal(matchingViews.length, 1); const view = matchingViews[0]; assert.ok(view);
+    const observedEventCount = view[1];
+    const result = { schemaVersion: 1, status: 'observed', atomicWithFailure: false,
+      samplePoint: 'last-original-projection-with-matching-view-digest',
+      source: { sourceId: source.sourceId, revision: source.revision }, bindingDigest: context.tuple[0], viewDigest: view[0],
+      mainEpoch: epoch.mainEpoch, launchId: launch.launchId, observedEventCount,
+      events: events.slice(0, observedEventCount).filter(tuple => tuple[0] === context.index).map(tuple => tuple.slice(1)) };
+    assert.ok(Buffer.byteLength(JSON.stringify(result)) <= 8192); return result;
+  } catch { return unavailable; }
 }

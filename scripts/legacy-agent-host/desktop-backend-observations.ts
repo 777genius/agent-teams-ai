@@ -45,7 +45,7 @@ export function assertDesktopProofEnvironment(linuxModeAllowed: boolean): void {
     const controlled = mode === 'process-cold-ui' && process.env.LEGACY_PROCESS_COLD_UI_GO === '1' &&
       /^\/(?:[^/]+\/)*TEST-[^/]+\/[^\0\r\n]+\.json$/u.test(process.env.LEGACY_DESKTOP_PROCESS_CAPTURE_PATH ?? '') &&
       /^[a-f0-9]{64}$/u.test(process.env.LEGACY_DESKTOP_PROCESS_CAPTURE_SHA256 ?? '');
-    assert.ok(controlled || ['team-ui', 'task-board-ui', 'task-board-cross-team-ui', 'skills-ui', 'emulated-management-ui', 'emulated-codex-login-ui', 'emulated-codex-runtime-ui', 'emulated-claude-runtime-ui', 'emulated-claude-lifecycle-ui', 'emulated-collaboration-ui', 'emulated-extensions-ui', 'emulated-import-ui', 'emulated-opencode-runtime-ui', 'emulated-selection-ui', 'emulated-installer-ui', 'review-ui', 'review-readback-ui'].includes(mode ?? ''),
+    assert.ok(controlled || ['team-ui', 'task-board-ui', 'task-board-cross-team-ui', 'skills-ui', 'emulated-management-ui', 'emulated-codex-login-ui', 'emulated-codex-runtime-ui', 'emulated-claude-runtime-ui', 'emulated-claude-lifecycle-ui', 'emulated-collaboration-ui', 'emulated-extensions-ui', 'emulated-import-ui', 'emulated-import-lifecycle-ui', 'emulated-opencode-runtime-ui', 'emulated-selection-ui', 'emulated-installer-ui', 'review-ui', 'review-readback-ui'].includes(mode ?? ''),
       'provider-emulation admits only the original offline controls and exact pinned TEST provider modes');
     if (controlled) {
       assert.equal(process.platform, 'linux'); assert.equal(process.arch, 'x64');
@@ -545,7 +545,8 @@ export async function settledGroupMembers(
  * macOS ps shows a just-exited Node child as "(node)" or "<defunct>" instead of its original
  * command. Authorize TEST process-group cleanup only while the captured leader
  * is still an unreaped zombie owned by this exact harness. A changed live
- * process, PID reuse, or an orphaned group must never pass this guard.
+ * process or orphaned group is refused; separate ps reads are not atomic identity.
+ * Linux admits only "[MainThread] <defunct>" under the same retained-child/birth checks.
  */
 export function isCapturedOriginalNodeZombie(input: {
   expectedIdentity: string;
@@ -557,7 +558,8 @@ export function isCapturedOriginalNodeZombie(input: {
   parentPid: number;
   platform?: NodeJS.Platform;
 }): boolean {
-  if ((input.platform ?? process.platform) !== 'darwin') return false;
+  const platform = input.platform ?? process.platform;
+  if (platform !== 'darwin' && platform !== 'linux') return false;
   if (!Number.isSafeInteger(input.group) || input.group <= 0 || input.childPid !== input.group)
     return false;
   if (
@@ -575,11 +577,12 @@ export function isCapturedOriginalNodeZombie(input: {
   // The original packed app has a different macOS zombie display name than
   // the dev Node wrapper. Bind that exception to its exact captured invocation.
   const originalNode =
-    (observed[2] === '(node)' || observed[2] === '<defunct>') &&
+    (platform === 'linux' ? observed[2] === '[MainThread] <defunct>' :
+      observed[2] === '(node)' || observed[2] === '<defunct>') &&
     /(?:^|\/)node\s+/.test(expected[2]!) &&
     /(?:^|\s)dev:mcp(?:\s|$)/.test(expected[2]!);
   const originalPackedApp =
-    observed[2] === '(Agent Teams AI)' &&
+    platform === 'darwin' && observed[2] === '(Agent Teams AI)' &&
     /(?:^|\/)Agent Teams AI\.app\/Contents\/MacOS\/Agent Teams AI --remote-debugging-port=9222$/.test(expected[2]!);
   return originalNode || originalPackedApp;
 }

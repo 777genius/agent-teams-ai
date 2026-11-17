@@ -16,7 +16,7 @@ import type { DesktopCdpLibrary, DesktopCdpPort } from './desktop-captured-app.t
 import { runDesktopEmulatedLifecycleUi } from './desktop-emulated-lifecycle-ui.ts';
 import { observeDesktopEmulatedRuntimeChildren, observeDesktopEmulatedRuntimeCleanup, prepareDesktopEmulatedRuntimeFixture,
   readDesktopEmulatedRuntimeEffects, verifyDesktopEmulatedRuntimeFixture } from './desktop-emulated-runtime-fixture.ts';
-import { desktopProofEvidence } from './desktop-proof-evidence.ts';
+import { desktopProofEvidence, projectDesktopEmulatedReadinessFailure } from './desktop-proof-evidence.ts';
 import { bounded } from './desktop-proof-bounds.ts';
 import { desktopProofSources } from './desktop-proof-sources.ts';
 import { captureDesktopSourceHashes, verifyDesktopSourceFreeze } from './desktop-source-freeze.ts';
@@ -83,8 +83,10 @@ async function main() {
     excluded: ['Claude/Codex executable execution', 'vendor inference/authentication', 'full cold Resume/active Quit', 'release qualification'],
     packedCandidate: { ...packed, capture, node: candidate.node, hostEntry: candidate.entry },
     fixturePins: pins, realVendorExecutions: 0, nativeProviderQualified: false, releaseQualified: false });
-  const sources = [...new Set([...desktopProofSources, 'scripts/legacy-agent-host/desktop-packaged-relaunch-smoke.ts',
-    'packages/legacy-agent-host/tests/opencode-v1-version-source.ts', 'scripts/e2e/comment-notification/cdp.mjs'])];
+  const sources = [...new Set([...desktopProofSources,
+    'scripts/legacy-agent-host/desktop-packaged-relaunch-smoke.ts',
+    'packages/legacy-agent-host/tests/opencode-v1-version-source.ts',
+    'scripts/e2e/comment-notification/cdp.mjs'])];
   const sourceHashes = await captureDesktopSourceHashes(repo, sources);
   evidence.selectedSourceHashesBeforeApp = sourceHashes;
   await writeFile(receiptPath, JSON.stringify(evidence, null, 2), { mode: 0o600, flag: 'wx' });
@@ -171,7 +173,9 @@ async function main() {
     await bounded(new Promise<void>(done => log.end(done)), 3000, 'close packaged relaunch log')
       .catch(() => { evidence.status = 'INCOMPLETE'; evidence.logCleanupFailed = true; });
     await writeFile(receiptPath, JSON.stringify(evidence, null, 2), { mode: 0o600 });
-    console.log(JSON.stringify({ kind: evidence.kind, status: evidence.status, receipt: receiptPath, root: fixture.root }));
+    console.log(JSON.stringify({ kind: evidence.kind, status: evidence.status, receipt: receiptPath, root: fixture.root,
+      ...(evidence.status !== 'PASS'
+        ? { emulatedReadinessFailure: projectDesktopEmulatedReadinessFailure(evidence) } : {}) }));
   }
   if (originalFailure) throw originalFailure;
   assert.equal(evidence.status, 'PASS', 'Original packaged relaunch and all cleanup must pass');

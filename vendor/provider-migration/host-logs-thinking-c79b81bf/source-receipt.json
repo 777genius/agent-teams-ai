@@ -1,0 +1,158 @@
+{
+  "schemaVersion": 1,
+  "sourceRepository": "agent-teams-ai/old-provider-implementations",
+  "sourceCommit": "c79b81bf002eaac95436da71c7049d7f309906a9",
+  "sourceTree": "5595f99535a7cabcb0cfeda053f988fd7e17a590",
+  "sourceParent": "8a2c75bdbfafdbfd0e3014f3a62b261357c9b6c5",
+  "publishedRepairR1": "3ac086d1c157645faa358f0578f8dc764c950d66",
+  "qualification": "source-and-packed-consumer-only",
+  "nativeHostQualified": false,
+  "packagedElectronQualified": false,
+  "applicationQualified": false,
+  "fullChecks": [
+    {
+      "node": "24.21.0",
+      "pnpm": "11.18.0",
+      "command": "pnpm check",
+      "result": "PASS",
+      "runId": 43774891918,
+      "attempt": 1,
+      "jobId": 132998860997,
+      "sourceTests": {
+        "total": 561,
+        "pass": 561,
+        "fail": 0,
+        "skip": 0,
+        "cancelled": 0,
+        "originalCases": 540,
+        "addedCases": 21
+      },
+      "packedConsumers": {
+        "sessionContracts": {
+          "pass": 1,
+          "fail": 0,
+          "skip": 0
+        },
+        "implementations": {
+          "pass": 1,
+          "fail": 0,
+          "skip": 0
+        }
+      },
+      "rawLog": {
+        "bytes": 108448,
+        "sha256": "98643ce6593124b44e563316e35a076f47159fe3af2feacaf672b4a0979c99a3"
+      },
+      "url": "https://github.com/agent-teams-ai/old-provider-implementations/actions/runs/43774891918/job/132998860997"
+    },
+    {
+      "node": "26.11.1",
+      "pnpm": "11.18.0",
+      "command": "pnpm check",
+      "result": "PASS",
+      "runId": 43774891918,
+      "attempt": 1,
+      "jobId": 132998860688,
+      "sourceTests": {
+        "total": 561,
+        "pass": 561,
+        "fail": 0,
+        "skip": 0,
+        "cancelled": 0,
+        "originalCases": 540,
+        "addedCases": 21
+      },
+      "packedConsumers": {
+        "sessionContracts": {
+          "pass": 1,
+          "fail": 0,
+          "skip": 0
+        },
+        "implementations": {
+          "pass": 1,
+          "fail": 0,
+          "skip": 0
+        }
+      },
+      "rawLog": {
+        "bytes": 102965,
+        "sha256": "843253fe86f1f35719a5f74ab1c0c9e690e2aa780351e4e6450343d3af43754c"
+      },
+      "url": "https://github.com/agent-teams-ai/old-provider-implementations/actions/runs/43774891918/job/132998860688"
+    }
+  ],
+  "sourceEvidence": {
+    "originalRedTree": "df0b4257b6937a3bec73432577c5c68fc4444595",
+    "resultingGreenTree": "a303aa84fa1f98e1da97caac902bd87c993f3abf",
+    "repository": "agent-teams-ai/old-provider-implementations",
+    "originalWorkflowBlob": "7e2bb17761d783b7d0ed298c62c56680a6636279",
+    "claudeProducer": "ad0a5e03d493bea0d2f9025afdea3717cea102a2",
+    "codexProducer": "afa07b021da75b9e0707681d45cfacb7d99212c6",
+    "claudeTest": "1004cc3a2a42cc265518d251bfb62f8c96db0c12",
+    "codexTest": "49df246079139e435506e8a09466dbe47c0b1ec0"
+  },
+  "checkedArtifact": {
+    "id": 14184699852,
+    "name": "opencode-v2-spi-consumer-checked-c79b81bf002eaac95436da71c7049d7f309906a9",
+    "bytes": 193546,
+    "sha256": "df8a1e825c2d2e7cd1578b3e7307f78977b2a6cff8771836cf90df644229a80c",
+    "url": "https://github.com/agent-teams-ai/old-provider-implementations/actions/runs/43774891918/artifacts/14184699852",
+    "runId": 43774891918,
+    "attempt": 1,
+    "producerJobId": 132998860997,
+    "verification": {
+      "actor": "root",
+      "verifiedAt": "2026-11-15T23:32:25.448270+00:00",
+      "exactSizeAndSha256": true,
+      "crcVerified": true,
+      "uniqueSafeMembers": 3
+    }
+  },
+  "checkedArtifactReceipt": {
+    "file": "checked-artifact-receipt.json",
+    "bytes": 597,
+    "sha256": "7a0fa91e187e337e315820cade9790b089c2c001f197594345aa6b11ac12575b",
+    "gitBlob": "2136bb2a37863e4182ff264bf012220a8ae1bc13",
+    "originalBytesUnchanged": true
+  },
+  "packages": {
+    "provider-implementations": {
+      "file": "agent-teams-provider-implementations-0.0.0.tgz",
+      "gitBlob": "f05a05edba53aa07364d9bbd5510f468dfe7ebe3",
+      "bytes": 186398,
+      "sha256": "a3ee7632c9685fafb4ccc57cb5548503c476fc9ed608bd13438ed74e5329f9d8",
+      "integrity": "sha512-1QxsR0b5zRvHBjE0oQFVTEadYmpUmO1ElixO0Y0L3EuVDUXxkvhlE8KXUR0sTRplYVNV37n8jZ7+pSDYCGS2jA==",
+      "regularPackageMembers": 253,
+      "uncompressedBytes": 796929,
+      "packageName": "@agent-teams/provider-implementations",
+      "version": "0.0.0",
+      "dependencies": {
+        "@agent-teams/provider-session-contracts": "0.0.0",
+        "@anthropic-ai/claude-agent-sdk": "0.3.305",
+        "zod": "4.6.7",
+        "@anthropic-ai/sdk": "0.122.0",
+        "@modelcontextprotocol/sdk": "1.32.0"
+      },
+      "peerDependenciesPresent": false
+    },
+    "provider-session-contracts": {
+      "file": "agent-teams-provider-session-contracts-0.0.0.tgz",
+      "gitBlob": "33c2944ff8a52a9c087fba9d3cab1daffe2604d8",
+      "bytes": 6230,
+      "sha256": "0ea08bacd3f19a54c065cfaebbe8ae0fb3a8e6770886402f435a96e97867d2bc",
+      "integrity": "sha512-ONExHCowcHR4vsD86pOF3t91KlqkpVt83g43OXNM1tI+8nae32WkTI+UrIuYjg45PuR6KKgfEIHz9pNXPMFC4g==",
+      "regularPackageMembers": 12,
+      "uncompressedBytes": 18153,
+      "packageName": "@agent-teams/provider-session-contracts",
+      "version": "0.0.0",
+      "dependencies": {}
+    }
+  },
+  "limits": [
+    "Original Node24 checked archive bytes; no local repack or mixed provider/SPI pair.",
+    "Both original source and packed-consumer CI jobs qualify the selected source; application adoption and its original gates are separate.",
+    "The repaired source does not inherit native qualification from an earlier provider commit.",
+    "No real Claude or Codex execution, including version queries, is authorized by these artifacts or receipts.",
+    "Historical donor and earlier checked archives remain unchanged."
+  ]
+}

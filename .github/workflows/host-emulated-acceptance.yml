@@ -48,7 +48,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        lane: [team, taskboard, skills, cross-team, collaboration, extensions, import, management, codex-login, codex, claude, claude-lifecycle, opencode, review, selection, processes]
+        lane: [team, taskboard, skills, cross-team, collaboration, extensions, import, import-lifecycle, management, codex-login, codex, claude, claude-lifecycle, opencode, review, selection, processes]
         include:
           - lane: installer
             runner: macos-15
@@ -126,6 +126,9 @@ jobs:
           pnpm --filter agent-teams-mcp build
           node --test scripts/legacy-agent-host/desktop-backend-observations.test.ts scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts scripts/legacy-agent-host/test-child-process-trace.test.ts scripts/legacy-agent-host/desktop-emulated-settings.test.ts scripts/legacy-agent-host/desktop-emulated-codex-catalog.test.ts scripts/legacy-agent-host/desktop-resume-records.test.ts scripts/legacy-agent-host/desktop-captured-app-exit.test.ts scripts/legacy-agent-host/desktop-opencode-v2-management-records.test.ts
           node --test test/scripts/installDependenciesWithRetry.test.mjs
+      - name: Verify finite legacy bootstrap ownership and refusal boundaries
+        if: matrix.lane == 'import-lifecycle'
+        run: node --test scripts/legacy-agent-host/desktop-finite-stopped-import.test.ts
       - name: Verify original Runtime and Team conversation contracts
         if: matrix.lane == 'team'
         run: |
@@ -428,8 +431,8 @@ jobs:
           xvfb-run --auto-servernum --server-args='-screen 0 1600x1000x24 -nolisten tcp' \
             bash -euo pipefail -c 'export LEGACY_DESKTOP_TEST_DISPLAY="$DISPLAY" LEGACY_DESKTOP_TEST_XAUTHORITY="$XAUTHORITY"; exec node scripts/legacy-agent-host/desktop-backend-smoke.ts' \
             2>&1 | tee "$RUNNER_TEMP/host-emulated-emulated-management-ui.log"
-      - name: Exercise original collaboration, Extensions and saved-import controls through finite peers
-        if: contains(fromJSON('["collaboration", "extensions", "import"]'), matrix.lane)
+      - name: Exercise original collaboration, Extensions and import controls through finite peers
+        if: contains(fromJSON('["collaboration", "extensions", "import", "import-lifecycle"]'), matrix.lane)
         env:
           LEGACY_DESKTOP_PROOF_MODE: emulated-${{ matrix.lane }}-ui
         run: |
@@ -937,6 +940,7 @@ jobs:
           import { basename, dirname, join } from 'node:path';
           import { isSkillsMetadataRefusal } from './scripts/legacy-agent-host/desktop-skills-fixture.ts';
           import { assertDesktopEmulatedImportModelChecks } from './scripts/legacy-agent-host/desktop-emulated-import-ui.ts';
+          import { validateDesktopFiniteStoppedImport } from './scripts/legacy-agent-host/desktop-finite-stopped-import-validation.ts';
           import { readDesktopStoppedImportSeed, stoppedImportSourceBytes } from './scripts/legacy-agent-host/desktop-stopped-import-fixture.ts';
           const inputs = JSON.parse(readFileSync(join(process.env.RUNNER_TEMP, 'host-emulated-inputs.json'), 'utf8'));
           assert.equal(inputs.sourceHead, process.env.HOST_EMULATED_SOURCE_HEAD);
@@ -963,6 +967,7 @@ jobs:
             collaboration: ['emulated-collaboration-ui'],
             extensions: ['emulated-extensions-ui'],
             import: ['emulated-import-ui'],
+            'import-lifecycle': ['emulated-import-lifecycle-ui'],
             management: ['emulated-management-ui'],
             'codex-login': ['emulated-codex-login-ui'],
             codex: ['emulated-codex-runtime-ui'],
@@ -1009,9 +1014,9 @@ jobs:
             const selection = mode === 'emulated-selection-ui' || installer, processes = mode === 'process-cold-ui';
             const lifecycle = mode === 'emulated-claude-lifecycle-ui';
             const collaboration = mode === 'emulated-collaboration-ui';
-            const extensions = mode === 'emulated-extensions-ui', savedImport = mode === 'emulated-import-ui';
+            const extensions = mode === 'emulated-extensions-ui', savedImport = mode === 'emulated-import-ui', finiteImport = mode === 'emulated-import-lifecycle-ui';
             // Settings fixtures pin a Runtime profile, while their wrappers permit management only.
-            const runtime = runtimeProvider !== undefined || selection || lifecycle || collaboration || extensions || savedImport;
+            const runtime = runtimeProvider !== undefined || selection || lifecycle || collaboration || extensions || savedImport || finiteImport;
             const codexLogin = mode === 'emulated-codex-login-ui';
             assert.deepEqual(receipt.emulation, { only: true, runtimeConfigured: runtime,
               managementConfigured: mode === 'emulated-management-ui' || codexLogin || runtime || skills, noNativeHostChildrenBeforeUi: true, noNativeHostChildren: true });
@@ -1025,10 +1030,15 @@ jobs:
             else assert.deepEqual(receipt.finalSentinelCensus.refusedInvocations, []);
             assert.ok(receipt.finalSentinelCensus.invocations.length > 0);
             const proof = mode === 'team-ui' ? receipt.userControlProof : taskboard ? receipt.taskBoardUiProof : skills ? receipt.skillsUiProof :
-              collaboration ? receipt.emulatedCollaborationUiProof : extensions ? receipt.nativeExtensionsUi : savedImport ? receipt.stoppedImportUiProof :
+              collaboration ? receipt.emulatedCollaborationUiProof : extensions ? receipt.nativeExtensionsUi : finiteImport ? receipt.finiteStoppedImportUiProof : savedImport ? receipt.stoppedImportUiProof :
               codexLogin ? receipt.codexLoginUi : lifecycle ? receipt.emulatedLifecycleUiProof : mode === 'emulated-management-ui' ? receipt.emulatedManagementUiProof : selection ? receipt.emulatedSelectionUiProof :
               processes ? receipt.nativeProcessUi : runtime ? receipt.emulatedRuntimeUiProof : receipt.reviewUiProof;
             assert.equal(proof.status, 'PASS'); assert.ok(proof.steps.length > 0);
+            if (finiteImport) {
+              const screenshots = await validateDesktopFiniteStoppedImport(root, receipt);
+              completed.push({ mode, receipt: last.receipt, screenshots: screenshots.map(row => row.sha256) });
+              continue;
+            }
             if (mode === 'task-board-ui') {
               const originalNotification = receipt.taskNotificationUiProof;
               const trash = receipt.taskTrashRestoreUiProof;
@@ -1730,7 +1740,7 @@ jobs:
           name: host-emulated-${{ matrix.platform || 'linux-x64' }}-${{ github.event.pull_request.head.sha || github.sha }}-${{ matrix.lane }}
           retention-days: 14
           if-no-files-found: warn
-          include-hidden-files: ${{ contains(fromJSON('["opencode-v2-management", "opencode-v2-review", "opencode-v2-quit-active", "opencode-v2-quit-pending-open", "opencode-v2-resume", "opencode-v2-chat-attachments"]'), matrix.lane) }}
+          include-hidden-files: ${{ matrix.lane == 'import-lifecycle' || contains(fromJSON('["opencode-v2-management", "opencode-v2-review", "opencode-v2-quit-active", "opencode-v2-quit-pending-open", "opencode-v2-resume", "opencode-v2-chat-attachments"]'), matrix.lane) }}
           path: |
             ${{ runner.temp }}/host-emulated-*.json
             ${{ runner.temp }}/host-emulated-*.log
@@ -1779,6 +1789,11 @@ jobs:
             ${{ runner.temp }}/TEST-desktop-backend-*/native-extensions-*.png
             ${{ runner.temp }}/TEST-desktop-backend-*/native-extensions-selection.json
             ${{ runner.temp }}/TEST-desktop-backend-*/stopped-import-ui-seed.json
+            ${{ runner.temp }}/TEST-desktop-backend-*/finite-stopped-import-*.json
+            ${{ runner.temp }}/TEST-desktop-backend-*/finite-stopped-import-*.log
+            ${{ runner.temp }}/TEST-desktop-backend-*/finite-legacy-peer.ndjson
+            ${{ runner.temp }}/TEST-desktop-backend-*/claude/projects/**/*.jsonl
+            ${{ runner.temp }}/TEST-desktop-backend-*/hoststore/teams/test-stopped-legacy/.host-owner/**
             ${{ runner.temp }}/TEST-desktop-backend-*/claude/teams/test-stopped-legacy/**
             ${{ runner.temp }}/TEST-desktop-backend-*/claude/tasks/test-stopped-legacy/**
             ${{ runner.temp }}/TEST-desktop-backend-*/userData/data/attachments/test-stopped-legacy/**

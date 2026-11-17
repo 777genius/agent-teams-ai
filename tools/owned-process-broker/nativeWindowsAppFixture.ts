@@ -424,9 +424,14 @@ export async function prepareNativeWindowsAppFixture(options: {
           if (candidate?.phase === 'completed' && candidate.state.phase === 'completed' &&
             candidate.state.native === 'observed-absent') {
             // Original Stop absence is durable before its settlement finishes.
+            assert.equal(candidate.principalId, 'human');
+            assert.deepEqual(candidate.capture, selected.capture);
+            assert.equal(candidate.original?.id, selected.view.id);
             assert.equal(candidate.nativeSettlementNotDispatched, undefined);
-            if (candidate.nativeSettlement?.command.operation === 'settle' &&
-              candidate.nativeSettlementConfirmed === true) { receipt = candidate; break; }
+            if (candidate.nativeSettlement !== undefined) {
+              assert.ok(candidate.nativeSettlement.command.operation === 'settle');
+              if (candidate.nativeSettlementConfirmed === true) { receipt = candidate; break; }
+            }
           } else {
             assert.ok(!candidate || candidate.phase === 'prepared' || candidate.phase === 'held');
           }
