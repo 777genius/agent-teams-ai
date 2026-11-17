@@ -2105,7 +2105,8 @@ async function handleCreateTeam(
 async function handleLaunchTeamUnlocked(
   event: IpcMainInvokeEvent,
   request: unknown,
-  mapProgress?: ProjectContextProgressMapper
+  mapProgress?: ProjectContextProgressMapper,
+  contextAlreadyResolved = false
 ): Promise<IpcResult<TeamLaunchResponse>> {
   if (!request || typeof request !== 'object') {
     return { success: false, error: 'Invalid team launch request' };
@@ -2176,10 +2177,10 @@ async function handleLaunchTeamUnlocked(
   }
 
   const tn = validatedTeamName.value!;
-  const rerouted = await withPreparedContextLaunch(
+  const rerouted = contextAlreadyResolved ? null : await withPreparedContextLaunch(
     { ...payload, teamName: tn, cwd } as TeamLaunchRequest,
     { data: getTeamDataService(), runtime: getTeamRuntimeApi(), run: getTeamProvisioningRunApi() },
-    (selected, mapper) => handleLaunchTeamUnlocked(event, selected, mapper)
+    (selected, mapper) => handleLaunchTeamUnlocked(event, selected, mapper, true)
   ).catch((error: unknown) => teamReadFailureResult<TeamLaunchResponse>(error));
   if (rerouted) return rerouted;
   const configPath = path.join(getTeamsBasePath(), tn, 'config.json');
