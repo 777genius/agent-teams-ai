@@ -25,7 +25,7 @@ import { addMainBreadcrumb } from '@main/sentry';
 import { setCurrentMainOp } from '@main/services/infrastructure/EventLoopLagMonitor';
 import { markTeamEngaged } from '@main/services/infrastructure/teamWatchScope';
 import { createTeamWithProjectContext } from './teams/teamProjectContextCreate';
-import { stopLogicalTeam, projectAliveTeamNames, deleteLogicalTeamWithContexts } from './teams/teamContextLifecycle';
+import { stopLogicalTeam, projectAliveTeamNames, deleteLogicalTeamWithContexts, permanentlyDeleteLogicalTeam } from './teams/teamContextLifecycle';
 import { buildTeamProgressReporter, withPreparedContextLaunch } from './teams/teamProjectContextLaunch';
 import { withTeamLaunchAdmission } from './teams/teamLaunchAdmission';
 import type { ProjectContextProgressMapper } from './teams/teamProjectContextLaunch';
@@ -734,7 +734,14 @@ export function registerTeamHandlers(ipcMain: IpcMain): void {
   ipcMain.handle(TEAM_UPDATE_TASK_FIELDS, handleUpdateTaskFields);
   ipcMain.handle(TEAM_DELETE_TEAM, (e, n) => deleteLogicalTeamWithContexts(n, (t) => handleStopTeam(e, t), () => handleDeleteTeam(e, n)));
   ipcMain.handle(TEAM_RESTORE, handleRestoreTeam);
-  ipcMain.handle(TEAM_PERMANENTLY_DELETE, handlePermanentlyDeleteTeam);
+  ipcMain.handle(TEAM_PERMANENTLY_DELETE, (event, name) =>
+    permanentlyDeleteLogicalTeam(name, {
+      stopNative: (alias) => handleStopTeam(event, alias),
+      deleteNative: (alias, draft) =>
+        getPermanentDeletionCoordinator().permanentlyDelete(alias, { draft }),
+      deleteLogical: () => handlePermanentlyDeleteTeam(event, name),
+    })
+  );
   ipcMain.handle(TEAM_PROCESS_SEND, handleProcessSend);
   ipcMain.handle(TEAM_PROCESS_ALIVE, handleProcessAlive);
   ipcMain.handle(TEAM_ALIVE_LIST, handleAliveList);
@@ -1434,7 +1441,6 @@ function runTeamConfigurationMutation(
     ? data.runConfigurationOperation(teamName, operation)
     : getTeamMemberLifecycleApi().runLiveRosterMutation(teamName, operation);
 }
-
 async function handleDeleteTeam(
   _event: IpcMainInvokeEvent,
   teamName: unknown
@@ -1453,7 +1459,6 @@ async function handleDeleteTeam(
     });
   });
 }
-
 async function handleRestoreTeam(
   _event: IpcMainInvokeEvent,
   teamName: unknown
@@ -1467,7 +1472,6 @@ async function handleRestoreTeam(
     getTeamDataWorkerClient().invalidateTeamConfig(validated.value!);
   });
 }
-
 async function handlePermanentlyDeleteTeam(
   _event: IpcMainInvokeEvent,
   teamName: unknown
@@ -1480,7 +1484,6 @@ async function handlePermanentlyDeleteTeam(
     await getPermanentDeletionCoordinator().permanentlyDelete(validated.value!);
   });
 }
-
 async function handleUpdateConfig(
   _event: IpcMainInvokeEvent,
   teamName: unknown,
@@ -2738,7 +2741,6 @@ async function handleGetMemberActivityMeta(
     return getTeamDataService().getMemberActivityMeta(vTeam.value!);
   });
 }
-
 async function handleSendMessage(
   _event: IpcMainInvokeEvent,
   teamName: unknown,
@@ -3175,7 +3177,6 @@ async function handleGetOpenCodeRuntimeDeliveryStatus(
     getTeamMessagingApi().getOpenCodeRuntimeDeliveryStatus(validatedTeamName.value!, safeMessageId)
   );
 }
-
 async function handleCreateTask(
   _event: IpcMainInvokeEvent,
   teamName: unknown,
@@ -4051,7 +4052,6 @@ async function handleStopTeam(
     assertEscalatedStopConfirmed(result);
   });
 }
-
 async function handleForceStopTeam(
   _event: IpcMainInvokeEvent,
   teamName: unknown
