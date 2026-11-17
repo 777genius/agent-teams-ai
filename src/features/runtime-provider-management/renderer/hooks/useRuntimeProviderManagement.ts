@@ -505,7 +505,7 @@ export function useRuntimeProviderManagement(
         setErrorDiagnostics(null);
         return false;
       } finally {
-        if (!silent && requestIsCurrent()) {
+        if (requestIsCurrent()) {
           setLoading(false);
         }
       }
