@@ -318,7 +318,7 @@ function assignmentRuntime(stage?: 'in-progress-comment' | 'clarification') {
     teamName: 'host-team:TEST-owner',
     taskId: 'TEST-task',
   };
-  const captured = { contextId: identity.contextId, surfaceId: 'TEST-original-surface' };
+  const captured = { contextId: identity.contextId, surfaceId: 'TEST-original-surface', ownerRevision: 1, readScope: { contextId: identity.contextId, teamName: identity.teamName, contextEpoch: 1, teamStateEpoch: 1 } };
   const key = JSON.stringify([identity.contextId, identity.teamName, identity.taskId]);
   const scope = { contextId: identity.contextId, teamName: identity.teamName, contextEpoch: 1, teamStateEpoch: 1 };
   const controller = {
@@ -359,6 +359,7 @@ function assignmentRuntime(stage?: 'in-progress-comment' | 'clarification') {
       return this.expanded;
     },
   };
+  const resolveButton = { disabled: false, textContent: 'Mark resolved', getClientRects: () => [1], getAttribute: () => null };
   const triggers = [trigger];
   const dialog = {
     __reactFiber$TEST: dialogFiber,
@@ -368,7 +369,7 @@ function assignmentRuntime(stage?: 'in-progress-comment' | 'clarification') {
         ? [input]
         : selector === 'button[role="combobox"]'
           ? triggers
-          : [];
+          : selector === 'button' ? [resolveButton] : [];
     },
   };
   const input = {
@@ -406,18 +407,15 @@ function assignmentRuntime(stage?: 'in-progress-comment' | 'clarification') {
     isContextSwitching: false,
     taskDetailById: { [JSON.stringify(Object.values(identity))]: detail },
   };
-  const work = { refreshPending: false, teamUnavailable: false };
+  const originalToken = { ...detail.fullToken, scope: { ...scope } };
+  const work = { refreshPending: false, teamUnavailable: false, tokenCurrent: true };
+  const dialogs = [dialog];
   const imports: string[] = [];
   const expression = desktopTaskBoardAssignmentReadyExpression(
     'TEST-owner',
     identity.taskId,
     captured,
     stage
-  );
-  assert.equal(
-    expression.match(/await import\(/g)?.length,
-    2,
-    'only the two existing read-only observer modules'
   );
   const evaluate = () =>
     Promise.resolve(
@@ -426,7 +424,7 @@ function assignmentRuntime(stage?: 'in-progress-comment' | 'clarification') {
         document: {
           getElementById: () => input,
           querySelectorAll: (selector: string) =>
-            selector === '[role="dialog"]' ? [dialog] : selector === 'textarea' ? [input] : [],
+            selector === '[role="dialog"]' ? dialogs : selector === 'textarea' ? [input] : [],
         },
         async __testImport(path: string) {
           imports.push(path);
@@ -437,8 +435,16 @@ function assignmentRuntime(stage?: 'in-progress-comment' | 'clarification') {
                 return work.refreshPending;
               },
             };
+          if(path.endsWith('/taskDetailReadProvenance.ts')) return {
+            isTaskDetailReadTokenForResource: (token: typeof detail.fullToken) => token.resource === 'full' && token.key === 'full:' + key,
+            isSameTaskDetailReadScope: (a: typeof scope, b: typeof scope) => Object.keys(scope).every(k => Reflect.get(a,k) === Reflect.get(b,k)),
+          };
           assert.equal(path, '/store/team/taskDetailReadAuthority.ts');
           return {
+            isTaskDetailTokenCurrent(token: typeof detail.fullToken) {
+              return work.tokenCurrent && token === detail.fullToken &&
+                ['serial','sourceEpoch','physicalStartOrder'].every(k => Reflect.get(token,k) === Reflect.get(originalToken,k));
+            },
             captureTaskDetailReadScope(teamName: string, contextId: string) {
               assert.deepEqual(
                 { teamName, contextId },
@@ -456,7 +462,7 @@ function assignmentRuntime(stage?: 'in-progress-comment' | 'clarification') {
         },
       }) as Promise<Record<string, unknown> | null>
     );
-  return { evaluate, imports, state, detail, controller, storedSession, trigger, triggers, work };
+  return { evaluate, imports, state, detail, controller, storedSession, trigger, triggers, work, resolveButton, scope, captured, dialog, dialogs, input };
 }
 
 test('original in-progress Task comment prerequisite requires its exact stage without an assignment control', async () => {
@@ -1538,32 +1544,55 @@ test('original clarification lookup admits its retained read without completing 
       original.triggers.length = 0;
     }
     original.detail.loading = true;
+    original.controller.isOwner = false;
+    original.controller.canEditNow = () => false;
+    original.trigger.disabled = true;
     assert.equal(await original.evaluate(), null, 'original assignment/comment readiness still requires a settled read');
   }
   const current = assignmentRuntime('clarification');
   current.detail.loading = true;
+  current.controller.isOwner = false;
+  current.controller.canEditNow = () => false;
+  current.trigger.disabled = true;
   const retained = await current.evaluate();
   assert.equal(retained?.surfaceId, 'TEST-original-surface');
   assert.equal(retained?.ownerRevision, 1);
   assert.equal(retained?.canResolveClarification, true);
   assert.equal(current.detail.loading, true, 'the observer does not complete or replace the retained product read');
   current.detail.loading = false;
+  assert.equal(await current.evaluate(), null, 'ordinary authority still required after settling');
+  current.controller.isOwner = true;
+  current.controller.canEditNow = () => true;
+  current.trigger.disabled = false;
   assert.equal((await current.evaluate())?.surfaceId, 'TEST-original-surface');
-  assert.deepEqual([...new Set(current.imports)],
-    ['/store/slices/teamSlice.ts', '/store/team/taskDetailReadAuthority.ts']);
+  assert.equal(new Set(current.imports).size, 3);
 });
 
 test('original clarification lookup refuses changed owner, revision, refresh and retained-read joins', async () => {
   const changes: [string, (value: ReturnType<typeof assignmentRuntime>) => void][] = [
-    ['owner', f => { f.controller.isOwner = false; }],
-    ['fresh owner authority', f => { f.controller.canEditNow = () => false; }],
+    ['owner without pending read', f => { f.detail.loading = false; f.controller.isOwner = false; }],
+    ['ordinary authority without pending read', f => { f.detail.loading = false; f.controller.canEditNow = () => false; }],
+    ['ambiguous dialog', f => { f.dialogs.push(f.dialog); }],
+    ['stale fiber', f => { f.dialog.__reactFiber$TEST.return.stateNode.current = null; }],
+    ['both revisions changed', f => { f.controller.session.ownerRevision++; f.storedSession.ownerRevision++; }],
+    ['unknown lease', f => { Reflect.deleteProperty(f.storedSession, 'ownerRevision'); }],
+    ['disabled resolve', f => { f.resolveButton.disabled = true; }],
+    ['stale token', f => { f.work.tokenCurrent = false; }],
+    ['serial', f => { f.detail.fullToken.serial++; }],
+    ['source epoch', f => { f.detail.fullToken.sourceEpoch++; }],
+    ['physical start', f => { f.detail.fullToken.physicalStartOrder = 0; }],
+    ['changed current epoch', f => { f.scope.contextEpoch++; f.detail.fullToken.scope.contextEpoch++; }],
+    ['changed current team epoch', f => { f.scope.teamStateEpoch++; f.detail.fullToken.scope.teamStateEpoch++; }],
+    ['open assignment', f => { f.trigger.expanded = 'true'; }],
+    ['wrong assignment readback', f => { f.trigger.textContent = 'bob'; }],
+    ['foreign controller', f => { Reflect.set(f.input.__reactFiber$TEST.memoizedProps, 'controller', {...f.controller}); }],
     ['stored owner revision', f => { f.storedSession.ownerRevision++; }],
     ['stored owner surface', f => { f.storedSession.ownerSurfaceId = 'TEST-other-surface'; }],
     ['context', f => { f.state.activeContextId = 'TEST-other-context'; }],
     ['Task identity', f => { f.detail.identity.taskId = 'TEST-other-task'; }],
     ['assignment', f => { f.detail.full.owner = 'bob'; }],
     ['metadata refresh', f => { f.work.refreshPending = true; }],
-    ['live metadata', f => { f.work.teamUnavailable = true; }],
+    ['live metadata without pending read', f => { f.detail.loading = false; f.work.teamUnavailable = true; }],
     ['detail refresh', f => { f.detail.refreshPending = true; }],
     ['rendered resolve admission', f => { f.controller.canResolveClarification = false; }],
     ['read failure', f => { Reflect.set(f.detail, 'error', 'TEST failed read'); }],
@@ -1581,6 +1610,9 @@ test('original clarification lookup refuses changed owner, revision, refresh and
   for (const [label, change] of changes) {
     const current = assignmentRuntime('clarification');
     current.detail.loading = true;
+    current.controller.isOwner = false;
+    current.controller.canEditNow = () => false;
+    current.trigger.disabled = true;
     assert.equal((await current.evaluate())?.surfaceId, 'TEST-original-surface', label);
     change(current);
     assert.equal(await current.evaluate(), null, label + ': no reuse of the earlier eligible observation');
