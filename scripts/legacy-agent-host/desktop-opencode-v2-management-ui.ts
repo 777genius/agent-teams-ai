@@ -204,7 +204,10 @@ export async function runDesktopV2ManagementUi(cdp: UiCdpPort, options: {
   await ui.waitRead(`Boolean(document.querySelector(${desktopJsLiteral(input)}))`, 'original API key input', 150_000);
   await replace(cdp, ui, input, desktopV2RejectedKey, 'rejected TEST key');
   await originalStep('reject-key', `${directoryRow} form button[type="submit"]`, 'submit rejected TEST key once');
-  await ui.waitRead(`Boolean(document.querySelector('[data-testid="runtime-provider-setup-submit-error"]'))`, 'original key rejection visible');
+  await ui.waitRead(`(() => {
+    const error = document.querySelector('[data-testid="runtime-provider-setup-submit-error"]');
+    return Boolean(error) && !/The new credential was not kept|the new credential is removed|the previous connection is restored/i.test(error.textContent ?? '');
+  })()`, 'original key rejection visible');
   assert.deepEqual(await privateJson(fixture.v2Management.authPath), { [desktopV2ProviderId]: { type: 'api', key: desktopV2RejectedKey } });
   proof.rejectionScreenshot = await screenshot('ui-v2-management-rejected-key.png');
   await replace(cdp, ui, input, desktopV2SelectedKey, 'replacement TEST key');

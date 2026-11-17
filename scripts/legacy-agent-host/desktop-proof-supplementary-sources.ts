@@ -296,6 +296,10 @@ export const desktopProofSupplementarySources = [
   'scripts/legacy-agent-host/desktop-oversized-comment-ui-smoke.ts',
   'scripts/legacy-agent-host/desktop-owner-routing-product-census.ts',
   'scripts/e2e/comment-notification/cdp.mjs',
+  'src/features/runtime-provider-management/renderer/hooks/runtimeProviderManagementPresentation.ts',
+  'src/shared/utils/opencodeModelRef.ts',
+  'test/renderer/features/runtime-provider-management/RuntimeProviderManagementPanelView.test.ts',
+  'test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts',
 ];
 
 /** Exact finite Windows same-Main recovery and original Processes UI construction inputs. */
