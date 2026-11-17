@@ -997,8 +997,7 @@ export class TeamProvisioningMemberLifecycleController {
         throw new Error(`Failed to spawn teammate process for ${agentId}: missing pid`);
       }
       const runtimePid = child.pid;
-      // Retain original libuv process handles on Windows. Numeric runtime PIDs
-      // alone can be reused, and a failed global WMI table is not kill authority.
+      // Keep original Windows process handles: PIDs can be reused and WMI is not kill authority.
       if (process.platform === 'win32') {
         const owned = (input.run.directMemberProcesses ??= new Set());
         owned.add(child);
@@ -1097,9 +1096,7 @@ export class TeamProvisioningMemberLifecycleController {
           bootstrapExpectedAfter,
           backendType: 'process',
           runtimePid,
-          ...(isOwnedWindowsTeamRuntimeWrapperProcess(child)
-            ? { runtimePidRole: 'wrapper' as const }
-            : {}),
+          ...(isOwnedWindowsTeamRuntimeWrapperProcess(child) ? { runtimePidRole: 'wrapper' as const } : {}),
           bootstrapRuntimeEventsPath: runtimePaths.eventsPath,
           bootstrapProofToken,
           bootstrapRunId: input.run.runId,
