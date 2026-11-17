@@ -7,8 +7,14 @@ import {
 } from '../contracts';
 import { TeamProjectContextRegistry } from './TeamProjectContextRegistry';
 import { TeamProjectContextRuntimeResolver } from './TeamProjectContextRuntimeResolver';
+import { registerTeamProjectContextModeHandler, unregisterTeamProjectContextModeHandler } from './TeamProjectContextModeIpc';
 
 import type { IpcMain } from 'electron';
+import type { TeamDataService } from '@main/services/team/TeamDataService';
+import type {
+  TeamProvisioningRunApi,
+  TeamRuntimeApi,
+} from '@main/services/team/contracts/TeamProvisioningApis';
 import type { IpcResult } from '@shared/types';
 
 /** Read-only; no project filesystem or native team is created from navigation. */
@@ -58,11 +64,27 @@ async function resolveContextView(
   }
 }
 
-export function registerTeamProjectContextViewHandler(ipcMain: IpcMain): void {
+export function registerTeamProjectContextViewHandler(
+  ipcMain: IpcMain,
+  getPorts?: () => {
+    data: Pick<TeamDataService, 'runConfigurationOperation'>;
+    runtime: Pick<TeamRuntimeApi, 'getRuntimeState'>;
+    run: Pick<TeamProvisioningRunApi, 'hasProvisioningRun'>;
+  }
+): void {
   ipcMain.handle(TEAM_PROJECT_CONTEXT_VIEW_CHANNEL, (_event, teamName, projectPath) =>
     resolveContextView(teamName, projectPath));
+  if (getPorts) {
+    registerTeamProjectContextModeHandler(ipcMain, {
+      withLogicalTeamLock: (name, operation) =>
+        getPorts().data.runConfigurationOperation(name, operation),
+      getRuntimeState: (name) => getPorts().runtime.getRuntimeState(name),
+      hasProvisioningRun: (name) => getPorts().run.hasProvisioningRun(name),
+    });
+  }
 }
 
 export function unregisterTeamProjectContextViewHandler(ipcMain: IpcMain): void {
   ipcMain.removeHandler(TEAM_PROJECT_CONTEXT_VIEW_CHANNEL);
+  unregisterTeamProjectContextModeHandler(ipcMain);
 }

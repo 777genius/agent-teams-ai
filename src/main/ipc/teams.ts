@@ -699,7 +699,9 @@ export function initializeTeamHandlers(
 
 export function registerTeamHandlers(ipcMain: IpcMain): void {
   ipcMain.handle(TEAM_LIST, handleListTeams);
-  registerTeamProjectContextViewHandler(ipcMain);
+  registerTeamProjectContextViewHandler(ipcMain, () => ({
+    data: getTeamDataService(), runtime: getTeamRuntimeApi(), run: getTeamProvisioningRunApi(),
+  }));
   ipcMain.handle(TEAM_GET_DATA, handleGetData);
   ipcMain.handle(TEAM_GET_TASK_CHANGE_PRESENCE, handleGetTaskChangePresence);
   ipcMain.handle(TEAM_SET_CHANGE_PRESENCE_TRACKING, handleSetChangePresenceTracking);
@@ -2178,16 +2180,12 @@ async function handleLaunchTeamUnlocked(
   }
 
   const tn = validatedTeamName.value!;
-  try {
-    const rerouted = await withPreparedContextLaunch(
-      { ...payload, teamName: tn, cwd } as TeamLaunchRequest,
-      { data: getTeamDataService(), runtime: getTeamRuntimeApi(), run: getTeamProvisioningRunApi() },
-      (selected, mapper) => handleLaunchTeamUnlocked(event, selected, mapper)
-    );
-    if (rerouted) return rerouted;
-  } catch (error) {
-    return teamReadFailureResult(error);
-  }
+  const rerouted = await withPreparedContextLaunch(
+    { ...payload, teamName: tn, cwd } as TeamLaunchRequest,
+    { data: getTeamDataService(), runtime: getTeamRuntimeApi(), run: getTeamProvisioningRunApi() },
+    (selected, mapper) => handleLaunchTeamUnlocked(event, selected, mapper)
+  ).catch((error: unknown) => teamReadFailureResult(error));
+  if (rerouted) return rerouted;
   const configPath = path.join(getTeamsBasePath(), tn, 'config.json');
   let isDraft = false;
   try {
