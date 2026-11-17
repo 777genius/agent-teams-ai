@@ -5,6 +5,7 @@ import {
   resolveThisAppProfileScope,
 } from '@main/services/team/provisioning/TeamProvisioningProfileOwnership';
 import { withFileLock } from '@main/services/team/fileLock';
+import { validateTeamName } from '@main/services/team/TeamIdentifierValidation';
 import { randomUUID } from 'node:crypto';
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
@@ -43,10 +44,11 @@ export class TeamProjectContextUnavailableError extends Error {
 }
 
 function checkedTeamName(teamName: string): string {
-  if (!TEAM_NAME.test(teamName) || teamName.length > 64) {
-    throw new TeamProjectContextUnavailableError('Invalid team identifier');
-  }
-  return teamName;
+  // Legacy shared team names have historically allowed 128 characters and
+  // a trailing hyphen; the generated alias constraint stays at 64 chars.
+  const checked = validateTeamName(teamName);
+  if (!checked.valid) throw new TeamProjectContextUnavailableError('Invalid team identifier');
+  return checked.value!;
 }
 
 async function exists(filePath: string): Promise<boolean> {

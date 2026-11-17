@@ -277,6 +277,14 @@ describe('TeamProjectContextRegistry', () => {
       .rejects.toBeInstanceOf(TeamProjectContextUnavailableError);
   });
 
+  it('accepts long legacy identifiers and trailing hyphens for retained-index checks', async () => {
+    const f = await fixture();
+    const legacyName = 'legacy-' + 'a'.repeat(90) + '-';
+    await mkdir(path.join(f.teamsBasePath, legacyName));
+    expect(await f.registry.hasRetainedIndex(legacyName)).toBe(false);
+    expect(await f.registry.listRetained(legacyName)).toEqual([]);
+  });
+
   it('rejects a corrupt index instead of silently reverting to shared storage', async () => {
     const f = await fixture();
     await writeFile(path.join(f.teamsBasePath, 'logical-team', 'project-contexts.json'), '{broken');

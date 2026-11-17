@@ -3276,15 +3276,14 @@ export const TeamDetailView = memo(function TeamDetailView({
                   projectPath={data.config.projectPath}
                 />
               </CollapsibleTeamSection>
-              <CollapsibleTeamSection
-                sectionId="schedules"
-                variant="flat"
-                title={t('schedule.title')}
-                icon={<Clock size={14} />}
-                defaultOpen={false}
-              >
-                <ScheduleSection teamName={teamName} />
-              </CollapsibleTeamSection>
+              {!logicalTeamName && (
+                <CollapsibleTeamSection
+                  sectionId="schedules" variant="flat" title={t('schedule.title')}
+                  icon={<Clock size={14} />} defaultOpen={false}
+                >
+                  <ScheduleSection teamName={teamName} />
+                </CollapsibleTeamSection>
+              )}
               <LiveRuntimeStatusBridge
                 teamName={teamName}
                 members={membersWithLiveBranches}

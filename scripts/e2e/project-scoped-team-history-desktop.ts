@@ -244,11 +244,14 @@ async function selectProject(f: Fixture, id: 'project-a' | 'project-b') {
     { id: 'project-b', name: 'B', path: f.projectB, sessions: [], createdAt: 1 },
     { id: 'project-empty', name: 'Empty', path: f.projectC, sessions: [], createdAt: 1 },
   ];
-  await cdp.evaluate('(() => { const store = window.__agentTeamsDevStore; store.setState(' +
-    JSON.stringify({
+  // The renderer may reload between startup and navigation on CI. Poll
+  // the actual state change until the live dev-store bridge is available.
+  await waitFor('(() => { const store = window.__agentTeamsDevStore;' +
+    'if (!store || typeof store.setState !== "function") return false;' +
+    'store.setState(' + JSON.stringify({
       projects, selectedRepositoryId: null, selectedWorktreeId: null,
       selectedProjectId: id, activeProjectId: id,
-    }) + '); return true; })()');
+    }) + '); return true; })()', 'select project ' + id, 60_000);
 }
 
 async function verifyNative(f: Fixture) {
@@ -292,8 +295,11 @@ async function verifyNative(f: Fixture) {
 async function verifyUi(f: Fixture) {
   assert(cdp);
   await selectProject(f, 'project-a');
-  await cdp.evaluate('(() => { const s = window.__agentTeamsDevStore.getState(); s.openTeamTab(' +
-    JSON.stringify(f.logical) + ', ' + JSON.stringify(f.projectA) + '); s.setMessagesPanelMode("sidebar"); })()');
+  await waitFor('(() => { const store = window.__agentTeamsDevStore;' +
+    'if (!store?.getState) return false; const s = store.getState();' +
+    'if (!s.openTeamTab || !s.setMessagesPanelMode) return false;' +
+    's.openTeamTab(' + JSON.stringify(f.logical) + ', ' + JSON.stringify(f.projectA) +
+    '); s.setMessagesPanelMode("sidebar"); return true; })()', 'open project team tab', 60_000);
 
   const visibleTask = (alias: string, task: string) =>
     'document.querySelector(' + JSON.stringify('[data-team-name="' + alias + '"]') +
