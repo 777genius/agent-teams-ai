@@ -1,6 +1,6 @@
 import { spawnSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { BACKPORTS, installedBackportPackages, verifyBackport } from './transitive-security.ts';
 
@@ -28,8 +28,9 @@ function advisoryId(value) {
 
 const ACCEPTED_RISKS_FILE = new URL('./audit-accepted-risks.json', import.meta.url);
 // Time-boxed acceptances for advisories that have no patched release yet. Each entry names the
-// exact advisory, package and installed versions, so a new advisory, a new package or a new
-// version still fails the audit; an expired entry stops applying and the audit fails again.
+// exact advisory, package, audit mode (pnpm or npm) and installed versions, so a new advisory, a
+// new package or a new version still fails the audit; an expired entry stops applying and the
+// audit fails again.
 export function loadAcceptedRisks({ now = new Date(), file = ACCEPTED_RISKS_FILE } = {}) {
   const entries = JSON.parse(readFileSync(file, 'utf8'));
   assert(Array.isArray(entries), 'accepted risks must be a list');
@@ -38,6 +39,7 @@ export function loadAcceptedRisks({ now = new Date(), file = ACCEPTED_RISKS_FILE
     assert(object(entry), 'malformed accepted risk');
     assert(/^GHSA(-[a-z0-9]{4}){3}$/.test(entry.advisory), 'accepted risk needs a GHSA id');
     assert(typeof entry.package === 'string' && entry.package, 'accepted risk needs a package');
+    assert(['pnpm', 'npm'].includes(entry.mode), 'accepted risk needs a pnpm or npm mode');
     assert(
       Array.isArray(entry.versions) &&
         entry.versions.length > 0 &&
@@ -57,9 +59,21 @@ export function loadAcceptedRisks({ now = new Date(), file = ACCEPTED_RISKS_FILE
   return active;
 }
 
+// npm reports list install paths but not versions; read them from the lockfile of the audited tree.
+function npmLockVersions(cwd) {
+  const lock = JSON.parse(readFileSync(join(cwd, 'package-lock.json'), 'utf8'));
+  assert(object(lock?.packages), 'missing npm lockfile packages');
+  return Object.fromEntries(
+    Object.entries(lock.packages).map(([path, entry]) => [path, object(entry) && entry.version])
+  );
+}
+
 // Exceptions require exact advisories/packages AND independently verified installed code,
-// or an unexpired accepted risk that names the advisory, package and every installed version.
-export function assessAuditReport(report, { npm = false, backported = [], accepted = [] } = {}) {
+// or an unexpired accepted risk that names the advisory, package, mode and every installed version.
+export function assessAuditReport(
+  report,
+  { npm = false, backported = [], accepted = [], lockVersions = {} } = {}
+) {
   assert(object(report) && !report.error && !report.errors, 'error or missing report');
   const entries = npm ? report.vulnerabilities : report.advisories;
   assert(object(entries), 'missing vulnerability map');
@@ -117,8 +131,10 @@ export function assessAuditReport(report, { npm = false, backported = [], accept
     const allowed =
       high.length > 0 &&
       high.every((item) => {
-        const risk = accepted.find((candidate) => candidate.advisory === advisoryId(item));
-        // pnpm reports every installed version; npm does not, so npm never takes this path.
+        const risk = accepted.find(
+          (candidate) =>
+            candidate.advisory === advisoryId(item) && candidate.mode === (npm ? 'npm' : 'pnpm')
+        );
         if (
           risk &&
           !npm &&
@@ -126,6 +142,18 @@ export function assessAuditReport(report, { npm = false, backported = [], accept
           Array.isArray(item.findings) &&
           item.findings.length > 0 &&
           item.findings.every((finding) => risk.versions.includes(finding.version))
+        )
+          return true;
+        // npm lists every installed copy of the vulnerable package as `nodes`; each one must be a
+        // listed version according to the lockfile, otherwise the risk does not apply.
+        if (
+          risk &&
+          npm &&
+          item.name === risk.package &&
+          item.dependency === risk.package &&
+          Array.isArray(entries[risk.package]?.nodes) &&
+          entries[risk.package].nodes.length > 0 &&
+          entries[risk.package].nodes.every((node) => risk.versions.includes(lockVersions[node]))
         )
           return true;
         const spec = BACKPORTS.find((candidate) => candidate.advisory === advisoryId(item));
@@ -188,7 +216,8 @@ export function auditDependencies({ npm = false, cwd = process.cwd() } = {}) {
     backported.push(spec.name);
   }
   const accepted = loadAcceptedRisks();
-  const assessed = assessAuditReport(report, { npm, backported, accepted });
+  const lockVersions = npm ? npmLockVersions(cwd) : {};
+  const assessed = assessAuditReport(report, { npm, backported, accepted, lockVersions });
   // Retain the full raw report so advisories below the chosen threshold remain visible.
   process.stdout.write(`${JSON.stringify(report, null, 2)}\n`);
   if (assessed.excepted.length) {
@@ -199,7 +228,7 @@ export function auditDependencies({ npm = false, cwd = process.cwd() } = {}) {
       console.log(
         `Verified local security backports: ${advisories.join(', ')} (${assessed.excepted.join(', ')})`
       );
-    for (const risk of accepted)
+    for (const risk of accepted.filter((candidate) => candidate.mode === (npm ? 'npm' : 'pnpm')))
       console.log(
         `Accepted risk until ${risk.expires}: ${risk.advisory} (${risk.package} ${risk.versions.join(', ')})`
       );
