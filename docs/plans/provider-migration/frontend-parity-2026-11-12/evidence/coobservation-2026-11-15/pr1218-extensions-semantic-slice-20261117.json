@@ -1,0 +1,585 @@
+{
+  "schemaVersion": 1,
+  "kind": "independent-bounded-extensions-ui-command-and-final-read-semantic-review",
+  "at": "2026-11-17 05:33:48 UTC",
+  "reviewer": "/root/producer_r2_semantic",
+  "repository": "777genius/agent-teams-ai",
+  "subject": {
+    "bytes": 50231,
+    "sha256": "62589878d785bbbcb481245ea77b856eb751af91a3a6f8cfe587206452e70132",
+    "gitBlob": "cc6773845a1641858cfb0e59a4319d7f56aa194b"
+  },
+  "sourceHead": "9c9c73190840592963142d36562ea07d2b5d2d71",
+  "runId": 44008782843,
+  "runAttempt": 1,
+  "artifactId": 14300601894,
+  "decision": "ACCEPT_BOUNDED_ORIGINAL_EXTENSIONS_FLOW_WITH_FINAL_READ_LIMIT",
+  "scope": "Parallel slice requested by Guard: original four-command semantics, complete nativeExtensionsUi observations, final reload/read/currentness limits. Guard remains owner of full33 text members, original jobs, Codex comparison, full physical census, process ownership and cleanup.",
+  "transportVersusSemanticRead": "Full packet50,231B and receipt712,244B fetched and independently hashed. This report does not claim full semantic review of all712,244 receipt bytes or other Codex/archive contents. The selected entire nativeExtensionsUi section, all four records, full selection/effects and six complete decisive source files were read.",
+  "receipt": {
+    "bytes": 712244,
+    "sha256": "bbfc812f51c41d38d71f20e6303a60846215e84add5a48031912c3b5babf292c",
+    "gitBlob": "3aa82bf8a213d9b35322e2d788ba7f8011a85d53"
+  },
+  "evidence": [
+    {
+      "key": "selection",
+      "bytes": 2221,
+      "sha256": "0373f9ab6e28e2340237debfdd4c50f3bd594f4eef910032a3a2d7fbc6327b57",
+      "gitBlob": "f48427bb8c557857bd2c9056744e79e32ea1e52e"
+    },
+    {
+      "key": "effects",
+      "bytes": 3855,
+      "sha256": "98d50675b613710981a09c297d54c3249c63f7f8a0353dd3ffb4fc277fcff73d",
+      "gitBlob": "a28efb5f7b888142ebe6e1f066b7d1576414f260"
+    },
+    {
+      "key": "command1",
+      "bytes": 881,
+      "sha256": "53f72450fa4ca3bc5bcffbbc46a5dd386dcb54135acc463e4977b1a9037fadd2",
+      "gitBlob": "cac735ea2ebaf59e00f4c1bc16d2365a9ba5f570"
+    },
+    {
+      "key": "command2",
+      "bytes": 882,
+      "sha256": "8fcb16cb2da83ce4998d5634c9a0375055a1e1e316dc1c5ec3ddb71e95b8bbff",
+      "gitBlob": "cba568bb3932a21dcd6109581ee80f9e7de521a8"
+    },
+    {
+      "key": "command3",
+      "bytes": 881,
+      "sha256": "99263c54554ab0aedf628e83f5d59972cd13edfac3518b739858f5d7858c8d2b",
+      "gitBlob": "1442d33ba13921fdca8b4a5d487c2d5ab81fc58e"
+    },
+    {
+      "key": "command4",
+      "bytes": 884,
+      "sha256": "87811b53e4f8692648dd149a856b31f63b9c7ecdd894708f09c440474f9a7d8f",
+      "gitBlob": "9c748a365e65452082cc6c8c8e1638d3d24117f6"
+    }
+  ],
+  "completeSourceBasis": [
+    {
+      "path": "scripts/legacy-agent-host/desktop-native-extensions-ui-smoke.ts",
+      "bytes": 22684,
+      "sha256": "808802cc0db27d5dfb2fae9f84e2fa96d9d45f1d7d9c1eb102893986f373aa24",
+      "gitBlob": "be330619d1a4b7eabd8837b311ff6aba3c479278",
+      "before": "808802cc0db27d5dfb2fae9f84e2fa96d9d45f1d7d9c1eb102893986f373aa24",
+      "after": "808802cc0db27d5dfb2fae9f84e2fa96d9d45f1d7d9c1eb102893986f373aa24"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-native-extensions-fixture.ts",
+      "bytes": 8992,
+      "sha256": "d858f203905cbb04d8833c05a87c13d330d8fa40d835db280d7392c8ce2003c2",
+      "gitBlob": "c559f808c9e7796850994c654c210b8748874c35",
+      "before": "d858f203905cbb04d8833c05a87c13d330d8fa40d835db280d7392c8ce2003c2",
+      "after": "d858f203905cbb04d8833c05a87c13d330d8fa40d835db280d7392c8ce2003c2"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-emulated-extensions-fixture.ts",
+      "bytes": 1965,
+      "sha256": "c82ad2dace7746b442cbdbecc7114a15d02423525617cb14626d955a4c1f3fd2",
+      "gitBlob": "6e64fc07a75bda0f7d54b9e1a743df9935fe059b",
+      "before": "c82ad2dace7746b442cbdbecc7114a15d02423525617cb14626d955a4c1f3fd2",
+      "after": "c82ad2dace7746b442cbdbecc7114a15d02423525617cb14626d955a4c1f3fd2"
+    },
+    {
+      "path": "tools/owned-process-broker/fixtures/claudeExtensionsPeer.mjs",
+      "bytes": 6007,
+      "sha256": "00f6e0e374bbbe53e04e617d84ec894c38bad066c7f2d8bb4f5733ab8d152f28",
+      "gitBlob": "4e62106b1b006180fda4eb7ac325ff35bb0a8f7d",
+      "before": "00f6e0e374bbbe53e04e617d84ec894c38bad066c7f2d8bb4f5733ab8d152f28",
+      "after": "00f6e0e374bbbe53e04e617d84ec894c38bad066c7f2d8bb4f5733ab8d152f28"
+    },
+    {
+      "path": "packages/legacy-agent-host/src/extensions/nativeCommands.ts",
+      "bytes": 3986,
+      "sha256": "78131340c6c8c70a28b568fbd83b0df4a1672d09aaf90f113895aef718504ab0",
+      "gitBlob": "795f0e0806444313dfc9d820cdcdf3c959fd4f4f",
+      "before": "78131340c6c8c70a28b568fbd83b0df4a1672d09aaf90f113895aef718504ab0",
+      "after": "78131340c6c8c70a28b568fbd83b0df4a1672d09aaf90f113895aef718504ab0"
+    },
+    {
+      "path": "src/main/services/extensions/install/McpInstallService.ts",
+      "bytes": 13593,
+      "sha256": "2ed906e4f05c8dbd602a8e1e28aa02c73bb74dae89bf50ecfb989272bdffa2cc",
+      "gitBlob": "958c7ba81f9f45b34a347670b82c268998b9d96e",
+      "before": "2ed906e4f05c8dbd602a8e1e28aa02c73bb74dae89bf50ecfb989272bdffa2cc",
+      "after": "2ed906e4f05c8dbd602a8e1e28aa02c73bb74dae89bf50ecfb989272bdffa2cc"
+    }
+  ],
+  "commands": [
+    {
+      "action": "plugin.install",
+      "command": {
+        "schemaVersion": 1,
+        "commandId": "3f5d2408-c8f1-4db0-9bfc-55d54537c854",
+        "profileId": "TEST-emulated-claude-management",
+        "configRevision": "TEST-emulated-claude-management",
+        "providerId": "anthropic",
+        "fingerprint": "896d07ec0d1d4ba6a705c8427a4e114f617039a9f345b532cbb7d53200c25566",
+        "selectionDigest": "97874a96476a83f01bb6320b6aff7ce453e0930ea66edc7be85b1d8e6f9189eb",
+        "resourceId": "701fdc267bc88045cd4fc67919414ce833948dd2051327fc9a08fd5c3c722e09",
+        "resourceHeld": false,
+        "kind": "extension.mutation",
+        "action": "plugin.install",
+        "scope": "user",
+        "targetId": "bb56621961b8ebedfe79f5b25af5138e074aa612d02f7573025992299dfd6a8d",
+        "intentDigest": "be23b6b48eb49524abe343282931e68efd66a8c0177986eecff482a826f1cb39",
+        "phase": "completed",
+        "finishedAtMs": 1794891085509,
+        "digest": "3a1be2295f963bff80b7b345bd49bf8434879ee7ae7ec1572518e6c4ac5d4fda"
+      },
+      "peerEffect": [
+        {
+          "provider": "claude",
+          "role": "management",
+          "pid": 5911,
+          "event": "extension-command",
+          "command": [
+            "plugin",
+            "install",
+            "-s",
+            "user",
+            "frontend-design@claude-plugins-official"
+          ],
+          "installedSha256": "4ce29d51f264b103e7dfa5762eab335a80c7cdb6122e90e2fced87be39f57213",
+          "settingsSha256": "deaf8ded9e14e460ad431e676bcb753c047014d6eb7e0233843684c401f63526"
+        }
+      ],
+      "oneEffect": true
+    },
+    {
+      "action": "plugin.uninstall",
+      "command": {
+        "schemaVersion": 1,
+        "commandId": "0da75a64-9729-4539-82b6-77c48fc3a280",
+        "profileId": "TEST-emulated-claude-management",
+        "configRevision": "TEST-emulated-claude-management",
+        "providerId": "anthropic",
+        "fingerprint": "c85f5837dac8c67473a670b997abc5069e689b3024b79642cf542fd1061aac6f",
+        "selectionDigest": "97874a96476a83f01bb6320b6aff7ce453e0930ea66edc7be85b1d8e6f9189eb",
+        "resourceId": "701fdc267bc88045cd4fc67919414ce833948dd2051327fc9a08fd5c3c722e09",
+        "resourceHeld": false,
+        "kind": "extension.mutation",
+        "action": "plugin.uninstall",
+        "scope": "user",
+        "targetId": "bb56621961b8ebedfe79f5b25af5138e074aa612d02f7573025992299dfd6a8d",
+        "intentDigest": "7c534f1ef46fb8d940c00bc5473407988e1ec4b6cb32adce7da82d0a44d18080",
+        "phase": "completed",
+        "finishedAtMs": 1794891088716,
+        "digest": "64243054afd43da7c1c0ad2ef242f1c74de8bef98f13ea71e5177e5ebf2a47dc"
+      },
+      "peerEffect": [
+        {
+          "provider": "claude",
+          "role": "management",
+          "pid": 6031,
+          "event": "extension-command",
+          "command": [
+            "plugin",
+            "uninstall",
+            "-s",
+            "user",
+            "frontend-design@claude-plugins-official"
+          ],
+          "installedSha256": "da491ca9d4edf03a7cde8c9c1786b6ad2ebcff7e4b50393c0c919b4ce800ac25",
+          "settingsSha256": "1eeddae26444bc9a209837fcb36789beb17d0e41c591f4fdf0161a39c074a57e"
+        }
+      ],
+      "oneEffect": true
+    },
+    {
+      "action": "mcp.install",
+      "command": {
+        "schemaVersion": 1,
+        "commandId": "0d006997-4095-4e73-9cde-95702ab115d1",
+        "profileId": "TEST-emulated-claude-management",
+        "configRevision": "TEST-emulated-claude-management",
+        "providerId": "anthropic",
+        "fingerprint": "26fa2caa029067ceb04bfc511b974881070dd78f48da56a3604cd472dce5ae32",
+        "selectionDigest": "97874a96476a83f01bb6320b6aff7ce453e0930ea66edc7be85b1d8e6f9189eb",
+        "resourceId": "701fdc267bc88045cd4fc67919414ce833948dd2051327fc9a08fd5c3c722e09",
+        "resourceHeld": false,
+        "kind": "extension.mutation",
+        "action": "mcp.install",
+        "scope": "global",
+        "targetId": "a82f668b02c298ddf75508bbcdd9fad9a17f0bb6e38aa5a118c227c0c06b3d50",
+        "intentDigest": "e16d7df920980cf2bbf51ca280637c3f33033d6a47e73ace0110562b6af4cb9a",
+        "phase": "completed",
+        "finishedAtMs": 1794891096376,
+        "digest": "bd87f872ff80ea2e7941df10955e3f678001c23ca27d52524b22ce7384f236cb"
+      },
+      "peerEffect": [
+        {
+          "provider": "claude",
+          "role": "management",
+          "pid": 6377,
+          "event": "extension-command",
+          "command": [
+            "mcp",
+            "add",
+            "-s",
+            "user",
+            "-t",
+            "http",
+            "test-native-extension-config-only",
+            "http://127.0.0.1:9/TEST-native-extension-config-only"
+          ],
+          "configSha256": "309206ae8fb4eb2e508cdf7c594e445a9adc95f76cee8473c161cb89b5754e10"
+        }
+      ],
+      "oneEffect": true
+    },
+    {
+      "action": "mcp.uninstall",
+      "command": {
+        "schemaVersion": 1,
+        "commandId": "b03a9a03-a9b8-4ec9-b62b-6d3b6812149d",
+        "profileId": "TEST-emulated-claude-management",
+        "configRevision": "TEST-emulated-claude-management",
+        "providerId": "anthropic",
+        "fingerprint": "a8aa343c3423ef60d356dc0391f89efdb49cca564702c607b4cda489d344ba92",
+        "selectionDigest": "97874a96476a83f01bb6320b6aff7ce453e0930ea66edc7be85b1d8e6f9189eb",
+        "resourceId": "701fdc267bc88045cd4fc67919414ce833948dd2051327fc9a08fd5c3c722e09",
+        "resourceHeld": false,
+        "kind": "extension.mutation",
+        "action": "mcp.uninstall",
+        "scope": "user",
+        "targetId": "3de8943566f25fd4a339889deb239db116c540f2548bdefe7f52159a251cf8ed",
+        "intentDigest": "9786fac4055d8e010715f7c6d4837dad439c3be7ebfffda465d620f9022f5049",
+        "phase": "completed",
+        "finishedAtMs": 1794891099558,
+        "digest": "e5f2729277d86f77bbfeca94d01eabe3cca12ca5ea0c6670553f8767bf49c2a9"
+      },
+      "peerEffect": [
+        {
+          "provider": "claude",
+          "role": "management",
+          "pid": 6548,
+          "event": "extension-command",
+          "command": [
+            "mcp",
+            "remove",
+            "-s",
+            "user",
+            "test-native-extension-config-only"
+          ],
+          "configSha256": "691f62624936af38f0e6b2ac6c8b43162a23696696f62d5037d9eb2b43bd73c5"
+        }
+      ],
+      "oneEffect": true
+    }
+  ],
+  "joins": {
+    "commandIdsExactOrdered": true,
+    "commandsDistinct": true,
+    "allCompleted": true,
+    "singleProfile": true,
+    "sameSelection": true,
+    "sameResource": true,
+    "perActionSingle": true,
+    "stepCounts": {
+      "mouseMoved": 20,
+      "mouseClick": 20,
+      "mouseWheel": 2
+    },
+    "mutationClickLabels": [
+      "native plugin install once",
+      "native plugin uninstall once",
+      "native MCP install once",
+      "native MCP uninstall once"
+    ],
+    "effectCount": 23,
+    "mutationEffectCount": 4,
+    "peerFailureCount": 0,
+    "pendingCount": 7,
+    "allPendingDisabled": true,
+    "selectedSourceJoinsAllTrue": true
+  },
+  "observations": {
+    "execution": "finite-protocol-peer",
+    "scope": "Existing Settings Advanced → Extensions; original Plugin and MCP mutations through the captured finite CLI protocol peer",
+    "excluded": [
+      "vendor inference",
+      "new disable controls",
+      "real user projects/config",
+      "UI lost-ACK transport injection",
+      "second actual workspace context",
+      "live MCP registry catalog/search qualification",
+      "vendor CLI qualification",
+      "plugin download or execution",
+      "live MCP server connection"
+    ],
+    "publicNetwork": [
+      "original Main official plugin catalog resolution; no vendor model or native CLI"
+    ],
+    "publicPluginCatalog": {
+      "pluginId": "frontend-design@claude-plugins-official",
+      "qualifiedName": "frontend-design@claude-plugins-official",
+      "source": "official",
+      "version": null
+    },
+    "installReadiness": {
+      "authenticated": true,
+      "pluginCapability": "supported",
+      "pluginCount": 317,
+      "pluginQuery": "frontend-design",
+      "contextSwitching": false,
+      "pluginLoading": false,
+      "pluginError": false
+    },
+    "pluginPendingDisabled": true,
+    "finitePluginInventoryRead": {
+      "command": [
+        "plugin",
+        "list"
+      ],
+      "executable": {
+        "path": "/home/runner/work/_temp/TEST-desktop-backend-5bFqnF/bin/TEST-claude-extensions-peer",
+        "sha256": "a5364ad99afe43e7217b6e43faa607d28ac02cad48ad3a1323bb08c7fdc65135"
+      },
+      "pid": 5979,
+      "parentPid": 4444,
+      "app": {
+        "pid": 4478,
+        "ppid": 4444,
+        "pgid": 4478
+      },
+      "exitCode": 0,
+      "signal": null,
+      "outputSha256": "fe23308c61b442602297c09723e9c26bfb1260f603dbcd53fb06ff6b60ec0023"
+    },
+    "nativeMcpConfigSha256": "309206ae8fb4eb2e508cdf7c594e445a9adc95f76cee8473c161cb89b5754e10",
+    "mcpMetadataFixture": {
+      "id": "test.local/native-extension-config-only",
+      "name": "test-native-extension-config-only",
+      "synthetic": true,
+      "sourceField": "schema-required display value only",
+      "claim": "catalog metadata only; native state and operation outcomes untouched"
+    },
+    "nativeMcpInventory": [
+      {
+        "name": "test-native-extension-config-only",
+        "scope": "user",
+        "targetKey": "http:http://127.0.0.1:9/TEST-native-extension-config-only"
+      },
+      {
+        "name": "test-native-extension-config-only",
+        "scope": "user",
+        "targetKey": "http:http://127.0.0.1:9/TEST-native-extension-config-only"
+      }
+    ],
+    "pendingObservations": [
+      {
+        "text": "Installing...",
+        "disabled": true,
+        "timeMs": 50387
+      },
+      {
+        "text": "Removing...",
+        "disabled": true,
+        "timeMs": 53606
+      },
+      {
+        "text": "Installing...",
+        "disabled": true,
+        "timeMs": 61328
+      },
+      {
+        "text": "Installing...",
+        "disabled": true,
+        "timeMs": 61485
+      },
+      {
+        "text": "Installing...",
+        "disabled": true,
+        "timeMs": 61582
+      },
+      {
+        "text": "Removing...",
+        "disabled": true,
+        "timeMs": 64515
+      },
+      {
+        "text": "Removing...",
+        "disabled": true,
+        "timeMs": 64676
+      }
+    ],
+    "completedOriginalCommandIds": [
+      "b03a9a03-a9b8-4ec9-b62b-6d3b6812149d",
+      "3f5d2408-c8f1-4db0-9bfc-55d54537c854",
+      "0d006997-4095-4e73-9cde-95702ab115d1",
+      "0da75a64-9729-4539-82b6-77c48fc3a280"
+    ],
+    "reloadObserved": true,
+    "neighborUnchanged": true,
+    "status": "PASS",
+    "finalReadState": {
+      "storePresent": true,
+      "contextSwitching": false,
+      "pluginLoading": false,
+      "pluginError": false,
+      "pluginErrorText": null,
+      "pluginCount": 0,
+      "expectedPlugin": false,
+      "pluginNames": [],
+      "pluginQuery": null,
+      "checkedFilterCount": 0,
+      "mcpQuery": null,
+      "cliLoading": false,
+      "anthropicLoading": false,
+      "installed": true,
+      "flavor": "agent_teams_orchestrator",
+      "authenticated": false,
+      "pluginCapability": "unsupported",
+      "pluginCardNames": [],
+      "mcpCardNames": []
+    }
+  },
+  "sourceSemantics": {
+    "nativeScopeAlias": "compileNativeExtensionCommand parses the finite schema then uses input.scope === 'global' ? 'user' : input.scope. requestedScope remains the original input in the returned description.",
+    "mcpTargetIdentity": "Install/uninstall records use different actions and requested scopes and have different targetId values. This review joins exact native argv, TEST name/url/private config and shared selection/resource; it does not invent targetId equality.",
+    "finiteBranch": "Native UI driver detects selection.execution and changes claims/exclusions; selected setup is empty. Finite plugin list uses selected explicit TEST executable and no shell. Unselected native fixture function can invoke a real native CLI; its existence is not selected-route execution.",
+    "customMetadata": "TEST row is added only after custom installation/diagnostic completion and browse settling, with duplicate check. It enables exact installed card management; it does not turn the target into a real official registry entry.",
+    "finalReadOrder": "Original removal and reload proof → disk absence/neighbor assertion → four durable completed record checks → PASS → finally direct stateExpression evaluation. FinalReadState is not an acceptance predicate for restored route/auth.",
+    "currentnessLimit": "stateExpression includes booleans, catalog/query/capability data, but no route/context identity/generation/provider request token. No final read-currentness or route restoration can be inferred from contextSwitching=false.",
+    "frozenControls": "The receipt still pins original desktop-ui-controls.ts ed57cb0fe7d57ef076a591621289eb77667c63ad, SHA7626e479a6662242009cb050e7e5af612a29e4205d62666d15274d5c30f91386. This evidence does not execute later674 fixed controls or standalone10."
+  },
+  "checkCount": 19,
+  "checks": [
+    {
+      "id": "E01",
+      "result": "PASS_BOUNDED_EVIDENCE",
+      "name": "Exact immutable subject and bounded artifact basis",
+      "evidence": "Complete packet and receipt transport bytes were fetched and independently byte/SHA-256/Git hashed. The semantic scope is the entire nativeExtensionsUi section, selected source-census rows, full selection/effects and four complete Host records; Guard owns the full 33-text/lifecycle audit."
+    },
+    {
+      "id": "E02",
+      "result": "PASS_BOUNDED_EVIDENCE",
+      "name": "Six complete decisive source files join frozen source9c9 and physical before/after rows",
+      "evidence": "All six full bodies read at exact 9c9c7319, independently hashed, and equal each corresponding receipt before/after SHA. Total source body bytes 57,227. No later source or workflow substituted."
+    },
+    {
+      "id": "E03",
+      "result": "PASS_BOUNDED_EVIDENCE",
+      "name": "Selected execution explicitly uses a finite peer",
+      "evidence": "Selection execution=finite-protocol-peer, setup=[] and exact TEST management profile/executable. Emulated preparation writes this selection and does not call prepareDesktopNativeExtensionsFixture's real native marketplace setup. Native fixture source is read to distinguish its unused native branch and shared constants."
+    },
+    {
+      "id": "E04",
+      "result": "PASS_BOUNDED_EVIDENCE",
+      "name": "Original visible route and exact public plugin selection are supported",
+      "evidence": "The 42 recorded helper steps include existing More→Settings→Advanced→Extensions→Plugins, exact official frontend-design card, then MCP Servers/Add Custom/detail. Exact catalog ID/source and one matching card are required by source before mutation. The steps are 20 mouseMoved,20 mouseClick,2 mouseWheel; they are not 42 distinct mutations."
+    },
+    {
+      "id": "E05",
+      "result": "PASS_BOUNDED_EVIDENCE",
+      "name": "Four explicit original UI mutations each occur once",
+      "evidence": "Recorded click labels are native plugin install once, native plugin uninstall once, native MCP install once and native MCP uninstall once. All remaining clicks are navigation, input focus or diagnostics. No fifth extension-command effect exists."
+    },
+    {
+      "id": "E06",
+      "result": "PASS_BOUNDED_EVIDENCE",
+      "name": "Four complete Host records match receipt original command IDs",
+      "evidence": "Four unique command IDs equal completedOriginalCommandIds in exact retained order. Each action occurs once, phase=completed, resourceHeld=false, same selected profile/configRevision/provider/selectionDigest/resourceId."
+    },
+    {
+      "id": "E07",
+      "result": "PASS_BOUNDED_EVIDENCE",
+      "name": "All four Host actions have exact finite-peer effects",
+      "evidence": "Exactly four extension-command rows in 23 total effects map in flow order to plugin install/uninstall and MCP add/remove. Peer PIDs5911/6031/6377/6548; no failure event. This is action/argv/config evidence, not a cryptographic commandId carried in peer effects."
+    },
+    {
+      "id": "E08",
+      "result": "PASS_BOUNDED_EVIDENCE",
+      "name": "MCP scope difference is an explicit source alias",
+      "evidence": "Ledger mcp.install requested scope=global compiles to nativeScope=user in nativeCommands.ts. Actual add and remove argv both use -s user; removal record scope=user. The differing install/remove target IDs are not asserted equal or called a defect."
+    },
+    {
+      "id": "E09",
+      "result": "PASS_BOUNDED_EVIDENCE",
+      "name": "MCP install is original custom configuration, not a registry install claim",
+      "evidence": "The driver uses Add Custom/HTTP URL and native config validation. McpInstallService.installCustom validates and returns native.execute when captured mutation is present. Subsequent synthetic metadata is used only to expose a card for the existing installed target; no public MCP registry provenance is claimed."
+    },
+    {
+      "id": "E10",
+      "result": "PASS_BOUNDED_EVIDENCE",
+      "name": "Synthetic catalog metadata is bounded and disclosed",
+      "evidence": "Only mcpBrowseCatalog gets one TEST row after browse/context switching settle; exact id/name duplication refuses. Installed inventory, diagnostics, native config, capability/admission and mutation receipts are not seeded by this statement. The fake source=official field is schema/display metadata only."
+    },
+    {
+      "id": "E11",
+      "result": "PASS_BOUNDED_EVIDENCE",
+      "name": "MCP status proves configured failed-connect display, not a live connection",
+      "evidence": "Finite peer mcp list emits Failed to connect for the exact configured HTTP target and absent after removal. Receipt inventory has two matching user-scope entries from the concatenated inventory collections; it is not evidence for two independently installed servers."
+    },
+    {
+      "id": "E12",
+      "result": "PASS_BOUNDED_EVIDENCE",
+      "name": "Plugin inventory read is separately identified",
+      "evidence": "Retained finitePluginInventoryRead is one explicit plugin list from the driver parent4444/PID5979, original app4478, pinned TEST executable, exit0/null. It is a verification read, not a fifth UI mutation or a vendor CLI."
+    },
+    {
+      "id": "E13",
+      "result": "PASS_BOUNDED_EVIDENCE",
+      "name": "Pending controls have finite positive observations only",
+      "evidence": "Seven retained pending observations are disabled=true: four Installing and three Removing; pluginPendingDisabled=true. This proves sampled transient disabled states, not continuous all-duration disabled coverage."
+    },
+    {
+      "id": "E14",
+      "result": "PASS_BOUNDED_EVIDENCE",
+      "name": "Successful completion checks original durable records and on-disk cleanup",
+      "evidence": "Source sets PASS only after completed unique four mutation rows, plugin disabled, MCP absent and neighbor digest unchanged. Receipt reloadObserved/neighborUnchanged are true, and exact complete command files independently support completed-record claims."
+    },
+    {
+      "id": "E15",
+      "result": "PASS_BOUNDED_EVIDENCE",
+      "name": "Reload success has a precise bounded meaning",
+      "evidence": "Source Page.reload checks changed performance.timeOrigin, readyState complete, electronAPI and no splash. Actual before/after timeOrigin numbers are not separately retained in this section; reloadObserved is the driver result, not independently recomputed timestamps."
+    },
+    {
+      "id": "E16",
+      "result": "PASS_BOUNDED_EVIDENCE",
+      "name": "Final read is observational and does not qualify restored route/auth",
+      "evidence": "finally evaluates finalReadState after PASS. No assertion waits for final Extensions navigation, authentication/capability recovery or an original provider request/generation. Final state has pluginCount0, authenticated=false, capability unsupported, no cards/query. No route identifier is recorded, so a specific final route or auth regression is not inferred."
+    },
+    {
+      "id": "E17",
+      "result": "PASS_BOUNDED_EVIDENCE",
+      "name": "Currentness claims remain limited to original guarded UI operations",
+      "evidence": "ui helpers receive assertOwnedRenderer and guarded interactions; exact public card and original durable commands support the prior flow. finalReadState uses direct evaluate without a new explicit owner assertion or provider-generation token, and contextSwitching=false alone is not a fresh provider-currentness proof."
+    },
+    {
+      "id": "E18",
+      "result": "PASS_BOUNDED_EVIDENCE",
+      "name": "Peer source supports a closed local extension protocol",
+      "evidence": "Complete claudeExtensionsPeer.mjs accepts six exact argv shapes, asserts TEST scope/environment, updates only private settings/installed metadata/native MCP config, rejects mutation replay and otherwise records failure/exit78. It imports builtins only and does not download/execute plugin/vendor code. This source review does not independently attest compiled wrapper/binary bytes."
+    },
+    {
+      "id": "E19",
+      "result": "PASS_BOUNDED_EVIDENCE",
+      "name": "Broad qualification and mutation authority remain separate",
+      "evidence": "This slice does not qualify real Claude/Codex, native/bundled providers, plugin execution/download, live MCP connectivity, Windows/Darwin, whole149/catalog43/renderer85, canonical/full E2E, or final Extensions restoration. No live CI read, runtime, source/control/ref/PR mutation or retry occurred."
+    }
+  ],
+  "limits": [
+    "Pending disabled states are sampled finite observations; current flow does not prove continuous disabled state or UI lost-ACK recovery.",
+    "Final false/unsupported state is preserved. It alone does not distinguish post-reload initial state from a persistent authentication/capability defect, because no settled final provider-generation oracle ran.",
+    "Three PNG identities are retained in the root artifact; this slice did not visually inspect or independently fetch PNG bytes.",
+    "Full archive CRC/binary custody, source1757 census and lifecycle ordinary exit are Guard/root tasks and are not reasserted solely by this slice.",
+    "No source fix, native waiver, retry, expanded test, venue or runtime invocation is selected."
+  ],
+  "actions": {
+    "immutableGitReads": true,
+    "pureIdentityDataAnalysis": true,
+    "bareReviewBlobOnly": true,
+    "shell": false,
+    "runtime": false,
+    "liveCiPolling": false,
+    "sourceControlRefPrCiMutation": false
+  },
+  "selfReadbackProtocol": "Retain exact bare report, send pin immediately, then full literal/hash/parsed/check readback; no edits after retention."
+}

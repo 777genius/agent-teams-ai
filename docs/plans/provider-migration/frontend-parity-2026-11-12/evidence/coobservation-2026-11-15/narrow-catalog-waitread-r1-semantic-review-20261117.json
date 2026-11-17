@@ -1,0 +1,1076 @@
+{
+  "schemaVersion": 1,
+  "kind": "independent-semantic-review-narrow-catalog-waitread-r1",
+  "reviewer": "/root/producer_r2_semantic",
+  "at": "2026-11-17 04:13:14 UTC",
+  "repository": "777genius/agent-teams-ai",
+  "subject": {
+    "bytes": 20973,
+    "sha256": "e35155efe24474cfe0ff5d5ab90aa7b9f96bfe56eff99ad8aec10902aecf0016",
+    "gitBlob": "b34a76fffb93d5216cd689893186376963ef8654"
+  },
+  "decision": "ACCEPT_EXACT_R1_SCOPE_AND_ACCEPTANCE_REQUIREMENTS_ONLY; NO CONCRETE STATIC BLOCKER",
+  "qualification": "This is a complete semantic review of the actual retained R1 document and its real preimages/existing catalog candidate. It does not approve an unauthored source/test/control implementation, materialization, invocation or runtime outcome. Root's existing ordered publication, source/control R2 and actual readback gates remain in force.",
+  "completeSubjectSections": [
+    "schemaVersion",
+    "kind",
+    "at",
+    "repository",
+    "workingBranch",
+    "purpose",
+    "authority",
+    "basis",
+    "sourceBefore",
+    "newTestPath",
+    "newTestBefore",
+    "selectedSourceSemantics",
+    "newDeadlineTests",
+    "aggregateIntegration",
+    "preservation",
+    "runtimeBoundary",
+    "orderedGates",
+    "ciFrozen",
+    "prohibitions",
+    "status",
+    "preReviewCorrection"
+  ],
+  "basisJoin": {
+    "sourceCommit": "935ed8dd0b0f3f95cbbc7ed6d691009efa2c47da",
+    "sourceTree": "06ec0aa08b8e8e0efd306d6f58d3c885049d31b4",
+    "parent": "9c9c73190840592963142d36562ea07d2b5d2d71",
+    "docsTree": "6ccda6dc08689c8e55da721b9761d94d933ef9f5",
+    "rootActual": {
+      "identity": {
+        "bytes": 53161,
+        "sha256": "3ebeb6b009e4de828099550161a2160360f522b583df704327d4b43fe0b37247",
+        "gitBlob": "7b1e84798593f4e30e0b717f157bf75fe8ae2c85"
+      },
+      "checks": 37,
+      "failedChecks": [],
+      "readScope": "Complete literal body fetched, rehashed and parsed; actual commit/tree/docs-only delta and qualification joined."
+    },
+    "independentActual": {
+      "identity": {
+        "bytes": 223719,
+        "sha256": "bed437ac7d407dc9132ce7ba34ff360e80d078e1e9e8eeb30d7e9c5e8e881bdc",
+        "gitBlob": "ebc1cd39f61dbaf9a6823a6655031ad0181d851f"
+      },
+      "checks": 117,
+      "failedChecks": [],
+      "unchangedNonDocumentRootEntries": 53,
+      "readScope": "Complete literal body fetched, rehashed and parsed; source basis, census, frozen vector and root actual full-read join reviewed. No historical CI polling or recursive rerun of the prior publication audit."
+    },
+    "actualPreimages": [
+      {
+        "role": "controls",
+        "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+        "mode": "100644",
+        "identity": {
+          "bytes": 28974,
+          "sha256": "7626e479a6662242009cb050e7e5af612a29e4205d62666d15274d5c30f91386",
+          "gitBlob": "ed57cb0fe7d57ef076a591621289eb77667c63ad"
+        },
+        "ref": "935ed8dd0b0f3f95cbbc7ed6d691009efa2c47da",
+        "readScope": "Complete exact body fetched and independently identity-verified; relevant complete control/test/catalog sections semantically reviewed."
+      },
+      {
+        "role": "nodeAggregate",
+        "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+        "mode": "100644",
+        "identity": {
+          "bytes": 164965,
+          "sha256": "852bedb85c83dbc4b488dffb4a9ffebbe398adc53e85f5a3cea8ca36b146cbf7",
+          "gitBlob": "896c587e077da56a98a314a175fb3cba0353d6ee"
+        },
+        "ref": "935ed8dd0b0f3f95cbbc7ed6d691009efa2c47da",
+        "readScope": "Complete exact body fetched and independently identity-verified; relevant complete control/test/catalog sections semantically reviewed."
+      },
+      {
+        "role": "catalog",
+        "path": "src/renderer/utils/teamModelAvailability.ts",
+        "mode": "100644",
+        "identity": {
+          "bytes": 32055,
+          "sha256": "6e216e10c07e953472afb74045c3a976e9f4a1d4fcd3e9f5d46dc789d19022e6",
+          "gitBlob": "167751c56f74c2869b8b3d9b128002d5bd642bcb"
+        },
+        "ref": "935ed8dd0b0f3f95cbbc7ed6d691009efa2c47da",
+        "readScope": "Complete exact body fetched and independently identity-verified; relevant complete control/test/catalog sections semantically reviewed."
+      },
+      {
+        "role": "catalogTests",
+        "path": "test/renderer/utils/teamModelAvailability.test.ts",
+        "mode": "100644",
+        "identity": {
+          "bytes": 49687,
+          "sha256": "0e37baae735529c11d2ed43432b132b516d252af8bb3084714c7082d7d4c4db8",
+          "gitBlob": "1a58c9c686010d5b5ded00f8e2b5064e4ab78c32"
+        },
+        "ref": "935ed8dd0b0f3f95cbbc7ed6d691009efa2c47da",
+        "readScope": "Complete exact body fetched and independently identity-verified; relevant complete control/test/catalog sections semantically reviewed."
+      }
+    ],
+    "newTestAbsence": {
+      "rootScriptsTree": "800c50d1b9cd5e538bd889a1f24475084ef5ff57",
+      "rawResponseIdentity": {
+        "bytes": 162740,
+        "sha256": "3899ff679a9fe8872a58aa8b57f520c4a469d3e245afdb7b08498a857170f797",
+        "gitBlob": "823808c41fc211196b68309603c4e33579c073b5"
+      },
+      "truncated": false,
+      "entries": 634,
+      "leaves": 600,
+      "path": "scripts/legacy-agent-host/desktop-ui-controls-deadline.test.ts",
+      "exists": false,
+      "qualification": "Complete immutable Git subtree read. This derived raw-response identity is not claimed to be a separately retained bare blob."
+    }
+  },
+  "priorAndParallelReviewJoins": {
+    "appAdvisory": {
+      "bytes": 126069,
+      "sha256": "24fdef84a14ad724a4a73f60dc6f74d680f725d1427a85b83b466628ab3711b2",
+      "gitBlob": "7b8dec59f17e2886c24a52fd4faa030e7df8fa99"
+    },
+    "waitReadAdvisory": {
+      "identity": {
+        "bytes": 49935,
+        "sha256": "5b106b029096b02b288db395cdb05c8f367cd16444c2f015e79c9f28098f9134",
+        "gitBlob": "a3660453344deb2c4e91cdc8e951c44f9d501817"
+      },
+      "completeSelfReadback": true
+    },
+    "wholeNodeFeasibility": {
+      "identity": {
+        "bytes": 59294,
+        "sha256": "cdbaf093a3a94966ef8e1452c029a0c85a9d9b1a0a4702414eb8ed00b4a50c56",
+        "gitBlob": "d5a26fd663b828ab99461fe2b6466e1f059f8e6a"
+      },
+      "completeSelfReadback": true
+    },
+    "catalogGuard": {
+      "identity": {
+        "bytes": 48970,
+        "sha256": "3516082b456bbc8a48907005441316612ed285ac0a705f9e8f98139e5f171903",
+        "gitBlob": "b5c90cb7d5c3d018c6475bae2207ca3932cb6732"
+      },
+      "checks": 29,
+      "failedChecks": [],
+      "classification": "Complete corrected b5c body joined; earlier609 wording is superseded as R1 states."
+    },
+    "rootR1Review": {
+      "identity": {
+        "bytes": 26616,
+        "sha256": "248b78e9a3f44dacc6467f5ff0e91a0e7755413d093fe4a61a84a28fc8d9e133",
+        "gitBlob": "e5ed91344d26c5904c97649c2b9896f93b5443ce"
+      },
+      "checks": 30,
+      "failedChecks": [],
+      "completeBodyRead": true,
+      "agreement": "Same selected source delta, same seven/three prediction, and same awaited registration versus prior-test completion qualification."
+    }
+  },
+  "waitReadAssessment": {
+    "actualOriginalFragment": {
+      "body": "  const waitRead = async (\n    expression: string,\n    label: string,\n    timeoutMs = 30_000,\n    isReady: (value: unknown) => boolean = Boolean\n  ): Promise<unknown> => {\n    const deadline = Date.now() + timeoutMs;\n    while (Date.now() < deadline) {\n      options.assertOwnedRenderer();\n      try {\n        const value = await cdp.evaluate(expression);\n        if (isReady(value)) return value;\n      } catch (error) {\n        if (\n          !/execution context was destroyed|cannot find (?:default )?execution context|cannot find context with specified id/i.test(\n            String(error)\n          )\n        )\n          throw error;\n      }\n      await new Promise<void>((done) => setTimeout(done, 100));\n    }\n    throw new Error(`UI read timed out: ${label}; no mutation retry`);\n  };\n",
+      "identity": {
+        "bytes": 793,
+        "sha256": "a1b1d26ea3873cf48398642707799c26e672be2dcb1b59b146b425baae8c7d6c",
+        "gitBlob": "8e9e8df6ea7a3a9eb06536beb4c6056cfaa93262"
+      },
+      "incomingSame": true,
+      "priorIncomingSame": true
+    },
+    "selectedRequirement": {
+      "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "change": "Immediately after each fulfilled original cdp.evaluate and before calling isReady, check the same existing absolute deadline with strict Date.now()<deadline. On expiry leave the original loop and use its existing timeout throw; do not call the predicate, accept the value, read again or schedule another100ms tick for that expired fulfilled observation.",
+      "minimality": "One post-await expiry gate only. No new clock origin, callback, import, async branch, retry or transport race.",
+      "preserve": [
+        "default30000 and every supplied timeout",
+        "single original absolute deadline",
+        "original100ms cadence for continuing timely observations",
+        "original owner guard placement",
+        "same expression and same timely isReady predicate behavior",
+        "original non-transient error identity",
+        "unchanged recognized execution-context error whitelist",
+        "existing UI read timed out diagnostic with original label and no mutation retry",
+        "requiredContent target/click contract",
+        "passive navigation and task clarification evidence",
+        "all existing producer fixes"
+      ],
+      "outsideScope": [
+        "active preemption of a still-pending CDP request",
+        "new total multi-step click deadline",
+        "additional post-ownership dispatch guards",
+        "changes to rejected-request catch/tick semantics",
+        "claim that current Desktop/native readiness failures are resolved"
+      ]
+    },
+    "reason": "The original function tests its absolute deadline only at loop admission. A request admitted in time can fulfill exactly at or after that deadline and invoke isReady/return. Checking that same deadline immediately after fulfillment and before isReady closes precisely that acceptance gap.",
+    "originalBranches": [
+      {
+        "branch": "fulfilled ready before original deadline",
+        "requiredBehavior": "Invoke the original predicate once and return its exact value identity if ready."
+      },
+      {
+        "branch": "fulfilled not-ready before original deadline",
+        "requiredBehavior": "Invoke the original predicate; retain original100ms continuation tick and loop admission."
+      },
+      {
+        "branch": "fulfilled ready at/after original deadline",
+        "requiredBehavior": "Do not invoke predicate or return. Exit original loop and throw original labeled timeout; no extra read/tick."
+      },
+      {
+        "branch": "fulfilled false/nonready at/after original deadline",
+        "requiredBehavior": "Do not contribute to stateful predicate; no extra tick. Same original timeout."
+      },
+      {
+        "branch": "non-transient rejected evaluate",
+        "requiredBehavior": "Retain original error identity through existing catch. The fulfilled-result gate is not reached, even if rejection is late."
+      },
+      {
+        "branch": "recognized execution-context rejection",
+        "requiredBehavior": "Retain exact existing whitelist and original100ms continuation behavior. This R1 does not change rejected-request deadline semantics."
+      },
+      {
+        "branch": "original owner guard throws before read",
+        "requiredBehavior": "No evaluate; same error path and guard placement."
+      },
+      {
+        "branch": "timely predicate throws",
+        "requiredBehavior": "Keep original catch behavior, including its current regex classification. This change does not redesign predicate-error handling."
+      },
+      {
+        "branch": "still-pending evaluate",
+        "requiredBehavior": "No claim of active timeout preemption; future parent wall bound is separate."
+      }
+    ],
+    "minimality": "Only one fulfilled-result expiry gate is selected. Full future byte-inverse/source R2 must establish every other control byte unchanged; error/cadence/target/navigation preservation is not a license for refactoring.",
+    "additionalRuntimeCoverageLimit": "The selected ten cases target fulfilled-result timing and actual hover consequences. They do not newly execute every rejected-request, owner-error or arbitrary predicate-error branch. The R1 preserves those branches by the selected minimal delta; whole149 remains a separate runtime obligation."
+  },
+  "tenCaseSemanticAnalysis": [
+    {
+      "id": "late-first-exact",
+      "old": "First read fulfills at 30000 after its initial in-budget loop admission; old isReady runs and returns the ready object. Expected refusal and zero predicate calls fail.",
+      "fixed": "Strict same-deadline check refuses before predicate; one read/guard, no tick.",
+      "declaredOldPrediction": "FAIL",
+      "qualification": "Source-only prediction for the R1 test shape; no test postimage or observed result."
+    },
+    {
+      "id": "late-first-after",
+      "old": "As above at 30001; the old pre-await admission does not constrain fulfillment time.",
+      "fixed": "Same original timeout; no post-cutoff predicate or tick.",
+      "declaredOldPrediction": "FAIL",
+      "qualification": "Source-only prediction for the R1 test shape; no test postimage or observed result."
+    },
+    {
+      "id": "late-polled-exact",
+      "old": "False first value at 0 contributes one predicate; one 100ms tick precedes the next request, which fulfills at 30000 and is accepted.",
+      "fixed": "The later fulfilled value is refused against the original deadline; predicate count stays one and ticks remain [100].",
+      "declaredOldPrediction": "FAIL",
+      "qualification": "Source-only prediction for the R1 test shape; no test postimage or observed result."
+    },
+    {
+      "id": "late-polled-after",
+      "old": "As above at 30001; the old method accepts a ready value after the original cutoff.",
+      "fixed": "Same refusal and original cadence; no reset deadline.",
+      "declaredOldPrediction": "FAIL",
+      "qualification": "Source-only prediction for the R1 test shape; no test postimage or observed result."
+    },
+    {
+      "id": "late-not-ready",
+      "old": "The old helper calls isReady(false) then schedules one 100ms tick before its next loop check times out. It may throw the same timeout, but expected zero predicate/tick side effects fail.",
+      "fixed": "Refusal occurs before stateful predicate and before scheduling another tick.",
+      "declaredOldPrediction": "FAIL",
+      "qualification": "Source-only prediction for the R1 test shape; no test postimage or observed result."
+    },
+    {
+      "id": "timely-first",
+      "old": "A ready object at 29999 is returned by identity after one predicate call.",
+      "fixed": "The same object is returned; no continuation tick.",
+      "declaredOldPrediction": "PASS",
+      "qualification": "Source-only prediction for the R1 test shape; no test postimage or observed result."
+    },
+    {
+      "id": "timely-polled",
+      "old": "A false observation at 0, one 100ms tick, then the ready object at 101 yields two predicate calls and returns its exact identity.",
+      "fixed": "Same original trace and successful identity.",
+      "declaredOldPrediction": "PASS",
+      "qualification": "Source-only prediction for the R1 test shape; no test postimage or observed result."
+    },
+    {
+      "id": "custom-budget",
+      "old": "For budget73, object at72 is accepted and object at73 is incorrectly accepted; boundary subcase fails.",
+      "fixed": "Budget73 uses its own unchanged absolute origin:72 accepted,73 refused. It is not a hardcoded30000 gate.",
+      "declaredOldPrediction": "FAIL",
+      "qualification": "Source-only prediction for the R1 test shape; no test postimage or observed result."
+    },
+    {
+      "id": "hover-late",
+      "old": "Three equal finite eligible points at0,100,30000 increment the internal stateful predicate to3. Old waitRead returns point; the unchanged post-wait owner guard then step and Input.dispatchMouseEvent(mouseMoved) occur.",
+      "fixed": "Third fulfilled point is rejected before incrementing stability. Three read guards, two100ms ticks, zero final owner guard/steps/sends.",
+      "declaredOldPrediction": "FAIL",
+      "qualification": "Source-only prediction for the R1 test shape; no test postimage or observed result."
+    },
+    {
+      "id": "hover-timely",
+      "old": "Three equal eligible points at0,100,29999 yield one post-wait guard, one step and one mouseMoved send.",
+      "fixed": "Same trace. Three read guards plus the final guard; two100ms ticks and one actual move.",
+      "declaredOldPrediction": "PASS",
+      "qualification": "Source-only prediction for the R1 test shape; no test postimage or observed result."
+    }
+  ],
+  "testFixtureReview": {
+    "wholeCaseCount": 10,
+    "oldStaticPrediction": {
+      "pass": 3,
+      "fail": 7
+    },
+    "fixedStaticPrediction": {
+      "pass": 10,
+      "fail": 0
+    },
+    "runtimeObserved": false,
+    "actualImplementationUse": "The future whole new module must import actual createDesktopUiControls and exercise its actual waitRead/hoverExpression. R1 forbids a copied polling or hover implementation.",
+    "defaultBudget": "Default30000 behavior must be exercised as the default; the supplied73 subcases separately prove the gate is not hardcoded.",
+    "timestep": "Start from a controlled initial origin; record exactly original100ms continuations. The later-result cases retain one original deadline across the first false observation and subsequent tick.",
+    "statefulPredicate": "Count all predicate calls, not only final outcomes. The late-false case must fail old code for its extra predicate/tick even though both paths can ultimately throw the same timeout.",
+    "hover": "The third equal finite point is the decisive state transition. Late third fulfillment must never increment readiness to stable3, reach the post-wait owner guard, record a step, or dispatch Input.dispatchMouseEvent. Timely third fulfillment preserves three read guards plus the final owner guard, one step and one mouseMoved.",
+    "fixtureIsolation": "Keep Date.now/timer overrides inside each awaited test fixture; restore originals in finally on both expected old failure and fixed success. No global mutation during module evaluation. Assert reads/guards/predicates/ticks/steps/sends as R1 requires; retain finite5s per-test limits and later independent real parent wall bound.",
+    "notYetReviewed": "No new test source exists yet. This report establishes meaningful expected scenarios and future review criteria, not correctness of a hypothetical fixture."
+  },
+  "aggregateAssessment": {
+    "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+    "existingWhole": {
+      "bytes": 164965,
+      "sha256": "852bedb85c83dbc4b488dffb4a9ffebbe398adc53e85f5a3cea8ca36b146cbf7",
+      "gitBlob": "896c587e077da56a98a314a175fb3cba0353d6ee"
+    },
+    "existingExpandedTitles": [
+      "captured UI discovery waits for Main admission and actual mount while early diagnostics remain active",
+      "the original remaining startup deadline rejects a pending snapshot without late discovery or a reset",
+      "packed file readiness executes the actual diagnostic expression using exact href instead of Electron opaque origin",
+      "HTTP readiness keeps exact origin and document path guards when the runtime location origin is untrusted",
+      "isolated shell fixture emits the actual framed environment and refuses shell effects",
+      "original in-progress Task comment prerequisite requires its exact stage without an assignment control",
+      "Task attachment comment waits for its original focused owner after one click before inserting text",
+      "original Task assignment prerequisite refuses receipt-only, pending and stale renderer state",
+      "original Task assignment prerequisite rejects a foreign context, Team, Task or rebound surface",
+      "original desktop click waits for stable target geometry, without repeating input",
+      "original Task hover waits through layout and unavailability before its one physical move",
+      "original desktop click refuses a constantly moving target before dispatch",
+      "original owner-qualified click rereads its full expression through unavailability at unchanged coordinates",
+      "login failure facts retain only bounded original attempts and confirmed milestones",
+      "finite readiness failure summaries keep only bounded states and never private snapshot data",
+      "Taskboard failure summaries compare retained identities without exposing private snapshot values",
+      "installer failure summaries preserve original wait sites and attempts without inferring installation effects",
+      "installer failure projection does not invoke input getters and leaves oversized observations unknown",
+      "installer CDP and cleanup projection retains only exact finite observations",
+      "Selection target summaries retain the exact original phase and six closed facts",
+      "Selection target projection rejects unknown or malformed facts without exposing text or invoking getters",
+      "Taskboard focus diagnostics preserve last samples and bounded transitions without exposing private input",
+      "original desktop click refuses a target unavailable during the final ownership check",
+      "original desktop click refuses a target moved during the final ownership check",
+      "original default scroll preserves a disabled control before its readiness wait",
+      "original scroll opt-in reveals a covered checkbox with one bounded wheel",
+      "original desktop click rechecks owner after its pending final target read",
+      "original desktop click rechecks cutoff after its pending final target read",
+      "original clarification lookup admits its retained read without completing the assignment prerequisite",
+      "original clarification lookup refuses changed owner, revision, refresh and retained-read joins",
+      "original owner availability admits three captured A Teams through its actual first DOM read",
+      "original owner availability retains singleton, subset and duplicate-row cardinality semantics",
+      "original owner availability refuses foreign identities and preserves its existing aggregate guards",
+      "original owner availability refuses invalid captured discovery before navigation",
+      "owner availability admits every captured A Team through the actual first observation",
+      "owner availability refuses healthy B in unavailable A rows",
+      "owner availability refuses captured foreign owner in unavailable A rows",
+      "owner availability refuses unknown Team in unavailable A rows",
+      "owner availability refuses malformed Team in unavailable A rows",
+      "owner availability refuses missing selected A before original navigation",
+      "owner availability refuses non-string A handle before original navigation",
+      "owner availability refuses empty A handle before original navigation",
+      "owner availability refuses duplicate A handle before original navigation",
+      "owner availability refuses over-bound capture before original navigation",
+      "passive input keeps its actual Team target and three separate original navigation samples",
+      "passive navigation preserves non-card events, the original ring bounds and null or non-Team state",
+      "passive navigation refuses malformed target and store facts without losing original callbacks",
+      "passive navigation remains bounded and cannot interrupt original writes on diagnostic failure",
+      "passive navigation uses only the callable store own method and ignores unrelated card surfaces",
+      "the selected provider receipt digest matches the actual manifest-selected archive bytes",
+      "provider receipt legacy, current and equal-dual implementation digests preserve manifest authority",
+      "every present provider implementation digest must be valid and both recognized fields must agree",
+      "provider receipt shape, package selection and original file or JSON errors remain strict",
+      "saved Launch uses three stable actual DOM samples before its original settings action",
+      "saved Launch resets exact geometry when the original button shifts by a quarter pixel",
+      "saved Launch restarts its three samples after changed identity",
+      "saved Launch restarts its three samples after changed expanded state",
+      "saved Launch restarts its three samples after changed horizontal position",
+      "saved Launch restarts its three samples after changed width",
+      "saved Launch restarts its three samples after changed height",
+      "saved Launch resets its original readiness after absent target",
+      "saved Launch resets its original readiness after ambiguous target",
+      "saved Launch resets its original readiness after wrong model",
+      "saved Launch resets its original readiness after absent identity",
+      "saved Launch resets its original readiness after empty identity",
+      "saved Launch resets its original readiness after invalid expansion",
+      "saved Launch resets its original readiness after missing owning dialog",
+      "saved Launch resets its original readiness after nonfinite x",
+      "saved Launch resets its original readiness after nonfinite y",
+      "saved Launch resets its original readiness after zero width",
+      "saved Launch resets its original readiness after negative height",
+      "saved Launch resets its original readiness after running own animation",
+      "saved Launch resets its original readiness after paused own animation",
+      "saved Launch resets its original readiness after pending own animation",
+      "saved Launch allows finished own animation without inspecting descendant spinners or model status",
+      "saved Launch allows idle own animation without inspecting descendant spinners or model status",
+      "saved Launch exhausts its one original deadline with no matching model and no settings action",
+      "saved Launch exhausts its one original deadline with unsettled own dialog and no settings action",
+      "original conversation waits for its own reply before one click at the hydrated coordinates",
+      "default conversation click retains its original final geometry refusal without a preview predicate",
+      "original conversation refuses body-only reply within its unchanged first read deadline",
+      "original conversation refuses neighbor-only reply within its unchanged first read deadline",
+      "original conversation refuses different required reply within its unchanged first read deadline",
+      "original conversation refuses empty preview within its unchanged first read deadline",
+      "original conversation refuses missing target within its unchanged first read deadline",
+      "original conversation refuses zero-size target within its unchanged first read deadline",
+      "original conversation refuses disabled target within its unchanged first read deadline",
+      "original conversation refuses covered target within its unchanged first read deadline",
+      "original conversation refuses two eligible rows with only the second ready within its unchanged first read deadline",
+      "original conversation serializes its required preview as literal data",
+      "original conversation rereads a revoked preview at unchanged final coordinates before input",
+      "original conversation still refuses final owner despite a ready preview",
+      "original conversation still refuses final movement despite a ready preview",
+      "actual openChat forwards TEST boot ready for alice",
+      "actual openChat forwards TEST stream partial for alice",
+      "actual openChat forwards TEST boot ready for team-lead",
+      "actual openChat forwards TEST stream partial for team-lead",
+      "original Cross Close target admits the ready cleared Task when canResolveClarification is false",
+      "original Cross Close target refuses retained user clarification",
+      "original Cross Close target refuses retained external clarification",
+      "original Cross Close target refuses null clarification",
+      "original Cross Close target refuses full-detail refreshPending",
+      "original Cross Close target refuses full-detail loading",
+      "original Cross Close target refuses current detail error",
+      "original Cross Close target refuses current deletionIntent",
+      "original Cross Close target refuses full Task deletedAt",
+      "original Cross Close target refuses full Task deleted status",
+      "original Cross Close target refuses non-ready full-detail phase",
+      "original Cross Close target refuses foreign full Task ID",
+      "original Cross Close target refuses foreign detail identity",
+      "original Cross Close target refuses changed active context",
+      "original Cross Close target refuses different selected Team",
+      "original Cross Close target refuses rebound controller surface",
+      "original Cross Close target refuses missing stored session",
+      "original Cross Close target refuses different stored session owner surface",
+      "original Cross Close target refuses changed stored owner revision",
+      "original Cross Close target refuses current canEditNow false",
+      "original Cross Close target refuses non-owning controller",
+      "original Cross Close target refuses scoped Team refresh",
+      "original Cross Close target refuses unavailable accepted Team metadata",
+      "original Cross Close target refuses disabled assignment control",
+      "original Cross Close target refuses expanded assignment control",
+      "original Cross Close target refuses another assignee",
+      "original Cross Close target refuses missing assignment control",
+      "original Cross Close target refuses duplicate assignment controls",
+      "actual original Cross Close waits for same-Task cleared readiness before one pair at settled coordinates",
+      "actual original Cross Close retains the first-read deadline while renderer readiness is pending",
+      "actual original Cross Close cannot use a foreign dialog or an absent ineligible own control",
+      "actual original Cross Close refuses duplicate eligible controls before disabled or hit narrowing",
+      "actual original Cross Close refuses disabled covered and absent-hit controls",
+      "actual original Cross Close rereads revoked same-Task readiness at unchanged final coordinates",
+      "actual original Cross Close preserves final renderer ownership refusal without a press",
+      "actual original Cross Close preserves final exact geometry refusal without replay",
+      "P11 keeps the original 90-second cutoff for first result at the exact cutoff",
+      "P11 keeps the original 90-second cutoff for first result after the cutoff",
+      "P11 keeps the original 90-second cutoff for polled result after the cutoff",
+      "P11 actual poll retains timely acceptance, original cadence, currentness and read-error identity",
+      "original review correction refuses missing or false live edit authority before any input action",
+      "original review correction admits current authority with one original insertion and submit"
+    ],
+    "newTitles": [
+      "generic UI read refuses its first fulfilled value exactly at the original deadline",
+      "generic UI read refuses its first fulfilled value after the original deadline",
+      "generic UI read refuses a later fulfilled value exactly at the original deadline",
+      "generic UI read refuses a later fulfilled value after the original deadline",
+      "generic UI read does not admit or poll again after a late false observation",
+      "generic UI read preserves a timely first value and its exact identity",
+      "generic UI read preserves its original cadence and a timely later value",
+      "generic UI read honors a supplied budget at its strict boundary",
+      "generic UI hover refuses a third stable point arriving at the original deadline",
+      "generic UI hover preserves one movement after three timely stable points"
+    ],
+    "prospectiveCounts": {
+      "old": 139,
+      "new": 10,
+      "total": 149,
+      "unique": 149
+    },
+    "exactPrefixRequired": true,
+    "oneLiteralTopLevelAwaitImport": true,
+    "registrationMeaning": "All original139 registrations occur in the preserved original body before the appended import expression. Awaiting that literal import attaches completion of the new module's registration to aggregate module evaluation. It does not assert that the original139 test callbacks have all finished before the imported module evaluates.",
+    "executionMeaning": "The existing entry declares no concurrency override. Normal node:test default sequential behavior supports per-test fixture isolation, but R2 must read the actual new body and runtime controls. Import/registration counts are source-derived; complete future aggregate149 execution is unresolved.",
+    "sameModule": "The standalone10 command selects the same complete module that the aggregate imports. No copied test body, filtering, only/skip, conditional registration or detached import is selected.",
+    "dependencyMeaning": "Appending the import leaves all current eager whole139 imports intact. Missing Host dist and external dependencies continue to block the full aggregate in a Node-only environment. A standalone10 result cannot qualify the149 aggregate.",
+    "primaryDocumentation": [
+      {
+        "url": "https://nodejs.org/download/release/v24.22.1/docs/api/esm.html",
+        "ref": "turn122view0",
+        "support": "ESM top-level await and dynamic import semantics."
+      },
+      {
+        "url": "https://nodejs.org/download/release/v24.22.1/docs/api/test.html",
+        "ref": "turn121view0",
+        "support": "Default per-test concurrency is false; imported modules can register tests under the root test file; test-file isolation is distinct from in-process async concurrency."
+      }
+    ]
+  },
+  "catalogAssessment": {
+    "existingIncomingCandidate": {
+      "bytes": 32077,
+      "sha256": "b1da0ea7199e69eb042e5beb16dfafa91c4d7b9360db41a3f9ba16424ca2fd43",
+      "gitBlob": "ac6e66775bd5efaf81cecb9a2f22a3437b4343ad"
+    },
+    "existingIncomingTestCandidate": {
+      "bytes": 56775,
+      "sha256": "b08fe4a650ea9d23f4d8fa4b4ece157d9cd2f87e87e42b25c3c53934ed9974c8",
+      "gitBlob": "6cf34a11e7a1bc6f33208bad00adb57ee5656cd6"
+    },
+    "independentDelta": {
+      "diffs": [
+        {
+          "line": 327,
+          "before": "    providerStatus.modelCatalog.source === 'anthropic-models-api' &&",
+          "after": "    ['anthropic-models-api', 'claude-sdk'].includes(providerStatus.modelCatalog.source) &&"
+        }
+      ],
+      "wholeTestPrefix": true,
+      "appendedBytes": 7088
+    },
+    "catalogCaseCounts": {
+      "before": 40,
+      "after": 43,
+      "newDiscriminating": 2,
+      "newPreservation": 1,
+      "executed": false
+    },
+    "meaning": "Accept the already-supported claude-sdk source in the first-party Anthropic offered-model predicate. ProviderId and status restrictions, alias handling, hidden/unavailable rows, normalization and curated fallback remain unchanged. UI availability is not authentication, launch permission or native readiness.",
+    "scope": "Exact existing incoming utility/test bodies only, with full own test prefix. No incoming native workflow, provider archive, readiness helper or broad branch adoption."
+  },
+  "preservationAssessment": {
+    "exactFivePaths": {
+      "modified": 4,
+      "added": 1,
+      "deleted": 0,
+      "renamed": 0,
+      "modesChanged": 0,
+      "paths": [
+        "scripts/legacy-agent-host/desktop-ui-controls.ts",
+        "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+        "src/renderer/utils/teamModelAvailability.ts",
+        "test/renderer/utils/teamModelAvailability.test.ts",
+        "scripts/legacy-agent-host/desktop-ui-controls-deadline.test.ts"
+      ]
+    },
+    "renderer85": {
+      "path": "test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts",
+      "bytes": 187890,
+      "sha256": "b6f11896e60014aac785968d42390afde38716d47de9bba9562522235db048c9",
+      "gitBlob": "76495189c992fcda47cd7a43a0c697190b5acbb3",
+      "cases": 85
+    },
+    "unchangedPublishedProducers": [
+      "scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+      "scripts/legacy-agent-host/desktop-task-review-cycle-ui-smoke.ts",
+      "src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts"
+    ],
+    "otherSelectedSources": [
+      "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+      "scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+      "scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts"
+    ],
+    "workflowChanges": 0,
+    "workflowCount": 42,
+    "dependenciesUnchanged": true,
+    "noNewProductionFile": true,
+    "sourceBudget": "Controls preimage is494lines; minimal gate fits existing800 cap. Existing catalog utility982lines has zero line growth, retaining its frozen exception. New standalone test is under800lines. No ignore/baseline/policy edit and no canonical guard execution result claimed.",
+    "nonDocs": {
+      "before": 8798,
+      "afterPlanned": 8799,
+      "qualification": "One planned new test; existing accepted source census plus proposed delta, not a fresh materialized census."
+    }
+  },
+  "gateAndRuntimeAssessment": {
+    "r1PublicationBeforeAuthorship": true,
+    "sourceAndControlR2Required": true,
+    "actualPublicationBeforeRuntime": true,
+    "currentStatus": {
+      "r1Authored": true,
+      "sourcePostimagesAuthored": false,
+      "testPostimagesAuthored": false,
+      "controlsAuthored": false,
+      "newRootCreated": false,
+      "newRuntimeExecuted": false,
+      "wholeE2EQualified": false
+    },
+    "futureRuntimeScope": "/workspace/scratch/c714-waitread-20261117",
+    "futureRuntimeShape": [
+      "exact bound Node binary",
+      "--test",
+      "scripts/legacy-agent-host/desktop-ui-controls-deadline.test.ts"
+    ],
+    "nodeCandidate": {
+      "path": "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+      "versionObserved": "v24.22.1",
+      "bytes": 126939688,
+      "sha256": "61ab14cd750fc24d5db53490ec5fc40f756e4b6e136b78cf7004265471d9bd1d",
+      "qualification": "Metadata read only; must be bound and revalidated before/after any new execution. It does not replace pinned CI Node versions."
+    },
+    "nodeCandidateQualification": "The R1 carries a root-observed metadata pin. This semantic reviewer did not inspect or execute that filesystem binary. Future exact control binding and before/after checks remain required.",
+    "freshAdmission": "Exclusive new staging remains unperformed. Refusal/unknown stays spent; no absent old environment restoration/replay.",
+    "independentWallBound": "Future controls must bind a real finite parent supervisor wall clock independently of test fake clocks.",
+    "wholeSuitesStillRequired": [
+      "whole149 Node aggregate in a complete environment",
+      "whole43 catalog Vitest with unchanged config/setup and genuine dependencies",
+      "whole85 renderer file",
+      "existing broader E2E/validation scopes"
+    ],
+    "noPromotion": "No current or predicted standalone10 result establishes149 aggregate,43 catalog,85 renderer, canonical build/typecheck/lint/source-size, Desktop GUI, Windows readiness or strict Darwin custody.",
+    "noNewOptionalGate": "All deferred checks named here are the existing R1/source-control R2/actual-runtime requirements, not an additional approval layer."
+  },
+  "frozenCiAssessment": {
+    "head": "9c9c73190840592963142d36562ea07d2b5d2d71",
+    "base": "77993819c233737f1e2b4c11c8ca1a5d360bcbe3",
+    "pr": 1218,
+    "latestObservationInSubject": "2026-11-17 03:52:16 UTC",
+    "subjectStatusQualification": "Retained historical R1 observation only. This reviewer did not query any CI run or PR.",
+    "noCiRefMetadataMutation": true
+  },
+  "checks": [
+    {
+      "name": "Exact complete R1 identity",
+      "status": "PASS_STATIC",
+      "evidence": {
+        "bytes": 20973,
+        "sha256": "e35155efe24474cfe0ff5d5ab90aa7b9f96bfe56eff99ad8aec10902aecf0016",
+        "gitBlob": "b34a76fffb93d5216cd689893186376963ef8654"
+      }
+    },
+    {
+      "name": "All21 R1 sections read as one complete subject",
+      "status": "PASS_STATIC",
+      "evidence": [
+        "schemaVersion",
+        "kind",
+        "at",
+        "repository",
+        "workingBranch",
+        "purpose",
+        "authority",
+        "basis",
+        "sourceBefore",
+        "newTestPath",
+        "newTestBefore",
+        "selectedSourceSemantics",
+        "newDeadlineTests",
+        "aggregateIntegration",
+        "preservation",
+        "runtimeBoundary",
+        "orderedGates",
+        "ciFrozen",
+        "prohibitions",
+        "status",
+        "preReviewCorrection"
+      ]
+    },
+    {
+      "name": "Root actual publication joins current source basis",
+      "status": "PASS_STATIC",
+      "evidence": {
+        "bytes": 53161,
+        "sha256": "3ebeb6b009e4de828099550161a2160360f522b583df704327d4b43fe0b37247",
+        "gitBlob": "7b1e84798593f4e30e0b717f157bf75fe8ae2c85"
+      }
+    },
+    {
+      "name": "Independent actual publication joins current basis",
+      "status": "PASS_STATIC",
+      "evidence": {
+        "bytes": 223719,
+        "sha256": "bed437ac7d407dc9132ce7ba34ff360e80d078e1e9e8eeb30d7e9c5e8e881bdc",
+        "gitBlob": "ebc1cd39f61dbaf9a6823a6655031ad0181d851f"
+      }
+    },
+    {
+      "name": "Actual reports remain documentation-only",
+      "status": "PASS_STATIC",
+      "evidence": "No source adoption or runtime promotion."
+    },
+    {
+      "name": "Current source basis retains all53 non-doc root entries",
+      "status": "PASS_STATIC",
+      "evidence": "Complete immutable independent actual report join."
+    },
+    {
+      "name": "R1 authored after recorded basis readback acceptance",
+      "status": "PASS_STATIC",
+      "evidence": {
+        "basisAccepted": "2026-11-17 03:59:20 UTC",
+        "r1Authored": "2026-11-17 04:04:53 UTC"
+      }
+    },
+    {
+      "name": "All four actual preimages read/hash joined at935",
+      "status": "PASS_STATIC",
+      "evidence": [
+        {
+          "role": "controls",
+          "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+          "mode": "100644",
+          "bytes": 28974,
+          "sha256": "7626e479a6662242009cb050e7e5af612a29e4205d62666d15274d5c30f91386",
+          "gitBlob": "ed57cb0fe7d57ef076a591621289eb77667c63ad"
+        },
+        {
+          "role": "nodeAggregate",
+          "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+          "mode": "100644",
+          "bytes": 164965,
+          "sha256": "852bedb85c83dbc4b488dffb4a9ffebbe398adc53e85f5a3cea8ca36b146cbf7",
+          "gitBlob": "896c587e077da56a98a314a175fb3cba0353d6ee"
+        },
+        {
+          "role": "catalog",
+          "path": "src/renderer/utils/teamModelAvailability.ts",
+          "mode": "100644",
+          "bytes": 32055,
+          "sha256": "6e216e10c07e953472afb74045c3a976e9f4a1d4fcd3e9f5d46dc789d19022e6",
+          "gitBlob": "167751c56f74c2869b8b3d9b128002d5bd642bcb"
+        },
+        {
+          "role": "catalogTests",
+          "path": "test/renderer/utils/teamModelAvailability.test.ts",
+          "mode": "100644",
+          "bytes": 49687,
+          "sha256": "0e37baae735529c11d2ed43432b132b516d252af8bb3084714c7082d7d4c4db8",
+          "gitBlob": "1a58c9c686010d5b5ded00f8e2b5064e4ab78c32"
+        }
+      ]
+    },
+    {
+      "name": "New test absent in complete exact scripts subtree",
+      "status": "PASS_STATIC",
+      "evidence": {
+        "bytes": 162740,
+        "sha256": "3899ff679a9fe8872a58aa8b57f520c4a469d3e245afdb7b08498a857170f797",
+        "gitBlob": "823808c41fc211196b68309603c4e33579c073b5"
+      }
+    },
+    {
+      "name": "Concrete fulfilled-result deadline omission joined",
+      "status": "PASS_STATIC",
+      "evidence": "ed57 exact preimage."
+    },
+    {
+      "name": "Same absolute deadline and strict boundary selected",
+      "status": "PASS_STATIC",
+      "evidence": "No reset or extra admission interval."
+    },
+    {
+      "name": "Gate precedes stateful readiness",
+      "status": "PASS_STATIC",
+      "evidence": "Late false and hover third point depend on this order."
+    },
+    {
+      "name": "Original timeout outside catch retained",
+      "status": "PASS_STATIC",
+      "evidence": "Expired fulfilled result ends through original terminal throw."
+    },
+    {
+      "name": "Default and supplied deadlines preserved",
+      "status": "PASS_STATIC",
+      "evidence": "Default-boundary cases and supplied73 shape."
+    },
+    {
+      "name": "Timely100ms cadence preserved",
+      "status": "PASS_STATIC",
+      "evidence": "One later generic tick; two hover ticks."
+    },
+    {
+      "name": "Rejected-request semantics excluded from edit",
+      "status": "PASS_STATIC",
+      "evidence": "Original non-transient errors and context-replacement whitelist remain."
+    },
+    {
+      "name": "Original owner placement retained",
+      "status": "PASS_STATIC",
+      "evidence": "Per-read and hover post-wait guards."
+    },
+    {
+      "name": "RequiredContent and passive navigation retained",
+      "status": "PASS_STATIC",
+      "evidence": "No incoming controls replacement."
+    },
+    {
+      "name": "No active preemption or total-click expansion",
+      "status": "PASS_STATIC",
+      "evidence": "Only fulfilled-result acceptance scope."
+    },
+    {
+      "name": "Exactly ten finite scenarios selected",
+      "status": "PASS_STATIC",
+      "evidence": [
+        {
+          "id": "late-first-exact",
+          "oldPrediction": "FAIL"
+        },
+        {
+          "id": "late-first-after",
+          "oldPrediction": "FAIL"
+        },
+        {
+          "id": "late-polled-exact",
+          "oldPrediction": "FAIL"
+        },
+        {
+          "id": "late-polled-after",
+          "oldPrediction": "FAIL"
+        },
+        {
+          "id": "late-not-ready",
+          "oldPrediction": "FAIL"
+        },
+        {
+          "id": "timely-first",
+          "oldPrediction": "PASS"
+        },
+        {
+          "id": "timely-polled",
+          "oldPrediction": "PASS"
+        },
+        {
+          "id": "custom-budget",
+          "oldPrediction": "FAIL"
+        },
+        {
+          "id": "hover-late",
+          "oldPrediction": "FAIL"
+        },
+        {
+          "id": "hover-timely",
+          "oldPrediction": "PASS"
+        }
+      ]
+    },
+    {
+      "name": "Static7failure3preservation split coherent",
+      "status": "PASS_STATIC",
+      "evidence": {
+        "fail": 7,
+        "pass": 3,
+        "executed": false
+      }
+    },
+    {
+      "name": "First-read exact and late boundaries",
+      "status": "PASS_STATIC",
+      "evidence": "No late predicate or tick."
+    },
+    {
+      "name": "Later-read cutoff and cadence",
+      "status": "PASS_STATIC",
+      "evidence": "False first observation, original one100ms tick."
+    },
+    {
+      "name": "Late false discriminates via side effects",
+      "status": "PASS_STATIC",
+      "evidence": "Old may throw same final timeout, but calls predicate and ticks once."
+    },
+    {
+      "name": "Timely object identity preserved",
+      "status": "PASS_STATIC",
+      "evidence": "Exact returned value identity."
+    },
+    {
+      "name": "Timely later cadence preserved",
+      "status": "PASS_STATIC",
+      "evidence": "False0 ->100ms tick ->ready101."
+    },
+    {
+      "name": "Custom73 boundary refutes hardcoded30s",
+      "status": "PASS_STATIC",
+      "evidence": "Two finite subcases within one top-level test."
+    },
+    {
+      "name": "Actual hover stability/input branch joined",
+      "status": "PASS_STATIC",
+      "evidence": "Actual exported controls, no algorithm copy."
+    },
+    {
+      "name": "Late hover requires zero input consequences",
+      "status": "PASS_STATIC",
+      "evidence": "Third late point cannot contribute stability or reach final guard/step/send."
+    },
+    {
+      "name": "Timely hover keeps one movement",
+      "status": "PASS_STATIC",
+      "evidence": "Three read guards + one final guard, two ticks, one step/send."
+    },
+    {
+      "name": "Fixture uses actual controls and restores globals",
+      "status": "PASS_STATIC",
+      "evidence": "No module-evaluation global patches; later body R2 must prove its exact fixture."
+    },
+    {
+      "name": "Standalone import boundary can be built-in-only",
+      "status": "PASS_STATIC",
+      "evidence": "Future test body remains unauthored."
+    },
+    {
+      "name": "Whole139 exact prefix preservation selected",
+      "status": "PASS_STATIC",
+      "evidence": "No existing body/title/timeout/assertion alteration."
+    },
+    {
+      "name": "All149 prospective titles unique",
+      "status": "PASS_STATIC",
+      "evidence": {
+        "old": 139,
+        "new": 10,
+        "total": 149,
+        "unique": 149
+      }
+    },
+    {
+      "name": "Awaited literal top-level registration selected",
+      "status": "PASS_STATIC",
+      "evidence": "After old registrations, not necessarily after old test completion."
+    },
+    {
+      "name": "Unconditional whole new module required",
+      "status": "PASS_STATIC",
+      "evidence": "Same complete module standalone and aggregate."
+    },
+    {
+      "name": "Current entry has no concurrency override",
+      "status": "PASS_STATIC",
+      "evidence": "Normal default sequential test semantics; preserve fixture isolation."
+    },
+    {
+      "name": "Exact existing catalog one-line candidate joined",
+      "status": "PASS_STATIC",
+      "evidence": "Existing incoming body, not reviewer-authored postimage."
+    },
+    {
+      "name": "Catalog whole40 prefix and3-case suffix joined",
+      "status": "PASS_STATIC",
+      "evidence": "40->43; two source-omission discriminators, one fallback preservation."
+    },
+    {
+      "name": "Catalog availability does not grant launch authority",
+      "status": "PASS_STATIC",
+      "evidence": {
+        "bytes": 48970,
+        "sha256": "3516082b456bbc8a48907005441316612ed285ac0a705f9e8f98139e5f171903",
+        "gitBlob": "b5c90cb7d5c3d018c6475bae2207ca3932cb6732"
+      }
+    },
+    {
+      "name": "Four modifications and one addition only",
+      "status": "PASS_STATIC",
+      "evidence": {
+        "modified": 4,
+        "added": 1,
+        "deleted": 0,
+        "renamed": 0,
+        "modesChanged": 0,
+        "paths": [
+          "scripts/legacy-agent-host/desktop-ui-controls.ts",
+          "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+          "src/renderer/utils/teamModelAvailability.ts",
+          "test/renderer/utils/teamModelAvailability.test.ts",
+          "scripts/legacy-agent-host/desktop-ui-controls-deadline.test.ts"
+        ]
+      }
+    },
+    {
+      "name": "Whole85 and published three fixes preserved",
+      "status": "PASS_STATIC",
+      "evidence": "Retain prior selected sources and whole renderer suite."
+    },
+    {
+      "name": "No workflow dependency or source-budget expansion",
+      "status": "PASS_STATIC",
+      "evidence": "Existing982-line catalog has no growth; controls494; new test under800."
+    },
+    {
+      "name": "Standalone10 does not qualify larger scopes",
+      "status": "PASS_STATIC",
+      "evidence": "149/43/85/canonical/GUI separate unresolved gates."
+    },
+    {
+      "name": "Whole139 dependency blocker remains disclosed",
+      "status": "PASS_STATIC",
+      "evidence": {
+        "bytes": 59294,
+        "sha256": "cdbaf093a3a94966ef8e1452c029a0c85a9d9b1a0a4702414eb8ed00b4a50c56",
+        "gitBlob": "d5a26fd663b828ab99461fe2b6466e1f059f8e6a"
+      }
+    },
+    {
+      "name": "Source/control R2 and actual readbacks precede runtime",
+      "status": "PASS_STATIC",
+      "evidence": "This R1 acceptance is not implementation or invocation approval."
+    },
+    {
+      "name": "Exclusive fresh admission and spent refusal",
+      "status": "PASS_STATIC",
+      "evidence": "No local scope probe by reviewer."
+    },
+    {
+      "name": "Complete raw evidence and independent wall bound required",
+      "status": "PASS_STATIC",
+      "evidence": "Future executable-control review retains original gates."
+    },
+    {
+      "name": "Frozen CI snapshots remain distinct",
+      "status": "PASS_STATIC",
+      "evidence": "No CI lookup; R1 queue snapshot is historical."
+    },
+    {
+      "name": "Real vendors and main/Ready/Stage2 excluded",
+      "status": "PASS_STATIC",
+      "evidence": "Root sole future executor."
+    },
+    {
+      "name": "No postimage or runtime acceptance implied",
+      "status": "PASS_STATIC",
+      "evidence": "Scope/criteria review only."
+    },
+    {
+      "name": "Complete root R1 review independently joined",
+      "status": "PASS_STATIC",
+      "evidence": {
+        "bytes": 26616,
+        "sha256": "248b78e9a3f44dacc6467f5ff0e91a0e7755413d093fe4a61a84a28fc8d9e133",
+        "gitBlob": "e5ed91344d26c5904c97649c2b9896f93b5443ce"
+      }
+    }
+  ],
+  "checkCount": 52,
+  "failedChecks": [],
+  "reviewerActions": {
+    "immutableGitReads": true,
+    "primaryNodeDocumentationReads": true,
+    "pureIdentityAndTextAnalysis": true,
+    "bareReviewRetentionOnly": true,
+    "shell": false,
+    "sourceRuntime": false,
+    "realClaudeCodex": false,
+    "sourceTestControlAuthorship": false,
+    "workingTreeWrites": false,
+    "ciReadPollingOrMutation": false,
+    "refOrPrMutation": false
+  },
+  "methodCorrection": "One data-only check-building attempt had an overescaped regex and failed to parse before execution. It performed no source/runtime/tool action. The corrected analysis generated the52 passing static checks; no repository or R1 bytes were changed.",
+  "unresolvedBlockers": [],
+  "disposition": "No concrete semantic blocker to publishing the exact R1 and its reviews. Source/test/control authorship remains root-only after the already specified publication actual-readback gate. Await exact source/test/control bodies for R2; no hypothetical implementation approval."
+}

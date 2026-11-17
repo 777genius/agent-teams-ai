@@ -1,0 +1,1042 @@
+{
+  "schemaVersion": 1,
+  "kind": "read-only-guard-advisory-existing-claude-sdk-catalog-candidate",
+  "reviewer": "/root/producer_r2_guard",
+  "at": "2026-11-17 03:57:49 UTC",
+  "repository": "777genius/agent-teams-ai",
+  "verdict": "NO_CONCRETE_STATIC_BLOCKER_IN_THE_EXACT_TWO_FILE_CANDIDATE; SOURCE_ONLY_ADVISORY",
+  "authority": {
+    "rootSoleAuthorApplierRuntimeRefPrCiExecutor": true,
+    "reviewerAllowed": "Immutable Git reads, pure data/hash comparisons, and bare review blob retention.",
+    "projectCodeEvaluated": false,
+    "approvedIdentityHelperOnly": {
+      "gitBlob": "e4a4568d589e1254b88ade1a5f87d53924e7c2e8",
+      "bytes": 3982,
+      "sha256": "cd3d5b96a5508215010923078469cc718282f17d765f6af493913c157bdf3db7"
+    },
+    "runtimePassClaimed": false
+  },
+  "subject": {
+    "ownRef": "9c9c73190840592963142d36562ea07d2b5d2d71",
+    "incomingRef": "5c55a4a2008f4a6131d265344d384b39415ad055",
+    "advisory": {
+      "bytes": 126069,
+      "sha256": "24fdef84a14ad724a4a73f60dc6f74d680f725d1427a85b83b466628ab3711b2",
+      "gitBlob": "7b8dec59f17e2886c24a52fd4faa030e7df8fa99"
+    },
+    "candidateIndex": 0,
+    "fullBodies": [
+      {
+        "role": "required production preimage",
+        "ref": "9c9c73190840592963142d36562ea07d2b5d2d71",
+        "path": "src/renderer/utils/teamModelAvailability.ts",
+        "bytes": 32055,
+        "sha256": "6e216e10c07e953472afb74045c3a976e9f4a1d4fcd3e9f5d46dc789d19022e6",
+        "gitBlob": "167751c56f74c2869b8b3d9b128002d5bd642bcb",
+        "readScope": "complete body"
+      },
+      {
+        "role": "existing incoming production candidate; not authored by reviewer",
+        "ref": "5c55a4a2008f4a6131d265344d384b39415ad055",
+        "path": "src/renderer/utils/teamModelAvailability.ts",
+        "bytes": 32077,
+        "sha256": "b1da0ea7199e69eb042e5beb16dfafa91c4d7b9360db41a3f9ba16424ca2fd43",
+        "gitBlob": "ac6e66775bd5efaf81cecb9a2f22a3437b4343ad",
+        "readScope": "complete body"
+      },
+      {
+        "role": "required whole-test preimage",
+        "ref": "9c9c73190840592963142d36562ea07d2b5d2d71",
+        "path": "test/renderer/utils/teamModelAvailability.test.ts",
+        "bytes": 49687,
+        "sha256": "0e37baae735529c11d2ed43432b132b516d252af8bb3084714c7082d7d4c4db8",
+        "gitBlob": "1a58c9c686010d5b5ded00f8e2b5064e4ab78c32",
+        "readScope": "complete body"
+      },
+      {
+        "role": "existing incoming whole-test candidate; not authored by reviewer",
+        "ref": "5c55a4a2008f4a6131d265344d384b39415ad055",
+        "path": "test/renderer/utils/teamModelAvailability.test.ts",
+        "bytes": 56775,
+        "sha256": "b08fe4a650ea9d23f4d8fa4b4ece157d9cd2f87e87e42b25c3c53934ed9974c8",
+        "gitBlob": "6cf34a11e7a1bc6f33208bad00adb57ee5656cd6",
+        "readScope": "complete body"
+      }
+    ]
+  },
+  "preciseDelta": {
+    "utility": {
+      "removed": "    providerStatus.modelCatalog.source === 'anthropic-models-api' &&",
+      "added": "    ['anthropic-models-api', 'claude-sdk'].includes(providerStatus.modelCatalog.source) &&",
+      "wholeBodyExactSingleReplacement": true,
+      "uniqueOriginalOccurrenceCount": 1,
+      "wholeForwardEqual": true,
+      "wholeInverseEqual": true,
+      "addedBytes": 22,
+      "beforeNewlineCount": 982,
+      "afterNewlineCount": 982,
+      "newImports": 0,
+      "newHelpers": 0,
+      "otherUtilityChanges": 0
+    },
+    "tests": {
+      "wholeOwnBodyExactPrefix": true,
+      "beforeBytes": 49687,
+      "afterBytes": 56775,
+      "appendedBytes": 7088,
+      "beforeNewlineCount": 1429,
+      "afterNewlineCount": 1611,
+      "appendedNewlineCount": 182,
+      "newCases": 3,
+      "oldCasesEditedRemoved": 0
+    },
+    "caseCensus": {
+      "ownSimpleRegistrations": 36,
+      "ownParameterizedRegistrations": 2,
+      "ownParameterizedExpandedCases": 4,
+      "ownExpectedCases": 40,
+      "incomingSimpleRegistrations": 39,
+      "incomingParameterizedRegistrations": 2,
+      "incomingParameterizedExpandedCases": 4,
+      "incomingExpectedCases": 43,
+      "newCases": 3,
+      "qualifiedRuntimeCount": false
+    }
+  },
+  "compatibilityEvidence": [
+    {
+      "ref": "9c9c73190840592963142d36562ea07d2b5d2d71",
+      "path": "src/features/runtime-provider-management/main/adapters/output/capturedClaudeMetadata.ts",
+      "bytes": 7477,
+      "sha256": "c4d8333cc5b562b7eb8de8398bde8275d579fdb7775c59c3d1ae5123e88cfdc8",
+      "gitBlob": "c0bd14811e8cd76dd34bcf42afac2785769e37ad",
+      "readScope": "complete body"
+    },
+    {
+      "ref": "9c9c73190840592963142d36562ea07d2b5d2d71",
+      "path": "src/features/runtime-provider-management/main/adapters/output/CapturedRuntimeProviderStatusClient.ts",
+      "bytes": 15353,
+      "sha256": "606098a4895f1715ea58677cfff11337790d5bbcf1be3fcdf3efcdf171b59aab",
+      "gitBlob": "500b04c5a0b9e15bc8f4401d5f7bdc0d4267e2a6",
+      "readScope": "complete body"
+    },
+    {
+      "ref": "9c9c73190840592963142d36562ea07d2b5d2d71",
+      "path": "src/shared/types/cliInstaller.ts",
+      "bytes": 18202,
+      "sha256": "ce28995162a32167226dd7c7fb9e68ffc8b068d6bf1b8ec88355f76ceaae9c0e",
+      "gitBlob": "af81c3af93ae2a0e53a635daf16530a604c0fe39",
+      "readScope": "complete body"
+    },
+    {
+      "ref": "9c9c73190840592963142d36562ea07d2b5d2d71",
+      "path": "src/renderer/components/team/dialogs/TeamModelSelector.tsx",
+      "bytes": 157938,
+      "sha256": "919572aefbd5b4f8f56eb0c6a0953e8ac1efff9868861ff32655e73b58994d38",
+      "gitBlob": "e54fd44a11644202b3c3d0c17a0c85b66e9f1520",
+      "readScope": "complete fetched/hash-verified string; imports and exact consumer regions 582-611, 1365-1425, 1535-1610 semantically read, not all 157938 bytes semantically audited"
+    }
+  ],
+  "findings": {
+    "reason": "The own producer and DTO already emit/accept claude-sdk catalogs, and the selector already avoids redundant hydration for that source. Only the utility's first-party source predicate omits it. The existing incoming one-line predicate feeds those same catalog rows into existing option, normalization and selection checks.",
+    "resolvedOffer": "For a usable SDK catalog, the picker uses non-hidden trimmed launchModel values (or nonblank id fallback), and refuses unoffered alias strings when they differ from the offered resolved launch value. A producer that legitimately supplies an alias as launchModel still offers that exact value.",
+    "refusal": "Visible unavailable rows remain visible with unavailable status and reason; they are excluded from available-model lists and normalized to the empty string. Hidden/unoffered rows are refused. A nonempty all-unavailable catalog yields no available models and does not restore curated choices.",
+    "fallback": "Unavailable, empty, all-hidden and all-blank catalogs continue to use original curated choices. This intentional UI fallback does not imply authentication or launch authority.",
+    "authorization": "Utility 'available' describes UI selection. The first test deliberately remains authenticated:false/verificationState:unknown/modelVerificationState:idle and checks those fields after calls. It does not invoke a launch guard. Separate complete producer evidence preserves teamLaunch:false and oneShot:false and independent authentication/currentness checks.",
+    "freshness": "No timestamp, freshness, polling, currentness or timeout logic changes. The existing first-party status guard excludes only unavailable, so stale/degraded SDK display can use the same catalog presentation policy as API catalogs. The fixed test timestamps are fixture data, not evidence of a fresh live catalog; the new tests install no fake clock and exercise no launch authorization path. Existing unrelated sorting/freshness helpers can read Date.now when called.",
+    "otherProviders": "Exact whole-byte inverse leaves compatible Anthropic routing, OpenCode/Codex behavior, API-only removed-model filtering, other static choices and current tests unchanged."
+  },
+  "regressionAssessment": [
+    {
+      "name": "uses only the resolved SDK offer without promoting its alias or authentication facts",
+      "oldSourceExpected": "FAIL at exact option values before any later assertion",
+      "candidateExpectedFromStaticReading": "Default plus resolved TEST-claude-sonnet with TEST display label; offered value normalizes and has no UI selection error, absent aliases/curated values are refused, input auth/verification fields remain unchanged.",
+      "meaning": "Detects missing source-enum acceptance through observable outputs, including resolved value versus alias distinction.",
+      "executed": false
+    },
+    {
+      "name": "keeps hidden and unavailable SDK rows refused without falling back when all offers are unavailable",
+      "oldSourceExpected": "FAIL at exact SDK offered/unavailable option values",
+      "candidateExpectedFromStaticReading": "Hidden value absent, unavailable row visible with its original reason but not available, unoffered/hidden/unavailable selections refused; nonempty all-unavailable set produces an empty available list.",
+      "meaning": "Detects the source omission and guards against accidental promotion through curated fallback.",
+      "executed": false
+    },
+    {
+      "name": "retains curated fallback for unavailable SDK catalogs or ready catalogs without visible values",
+      "oldSourceExpected": "PASS by original fallback policy",
+      "candidateExpectedFromStaticReading": "Same curated option values for unavailable/empty/all-hidden/blank-value catalogs; curated sonnet remains selectable while noncurated TEST resolved value is refused.",
+      "meaning": "Preservation control, not an independent old-code RED discriminator.",
+      "executed": false
+    }
+  ],
+  "reachableValueImportGraph": {
+    "sourceBoundary": "Candidate test/utility plus unchanged own repository modules. This is source reachability, not a trusted installed dependency inventory.",
+    "entry": {
+      "path": "test/renderer/utils/teamModelAvailability.test.ts",
+      "bytes": 56775,
+      "sha256": "b08fe4a650ea9d23f4d8fa4b4ece157d9cd2f87e87e42b25c3c53934ed9974c8",
+      "gitBlob": "6cf34a11e7a1bc6f33208bad00adb57ee5656cd6",
+      "valueImports": [
+        "src/renderer/utils/teamModelAvailability.ts",
+        "src/renderer/utils/teamProviderRuntimeStatusLoading.ts"
+      ],
+      "externalValueImports": [
+        "vitest"
+      ],
+      "completeBodyRead": true
+    },
+    "modules": [
+      {
+        "path": "src/renderer/utils/teamModelAvailability.ts",
+        "sourceRef": "5c55a4a2008f4a6131d265344d384b39415ad055",
+        "bytes": 32077,
+        "sha256": "b1da0ea7199e69eb042e5beb16dfafa91c4d7b9360db41a3f9ba16424ca2fd43",
+        "gitBlob": "ac6e66775bd5efaf81cecb9a2f22a3437b4343ad",
+        "valueImports": [
+          "src/shared/types/cliInstaller.ts",
+          "src/shared/utils/providerModelVisibility.ts",
+          "src/renderer/utils/teamModelCatalog.ts",
+          "src/renderer/utils/teamModelContext.ts",
+          "src/renderer/utils/teamModelLaunchSupport.ts"
+        ],
+        "completeBodyRead": true,
+        "dynamicImportsOrRequireCalls": []
+      },
+      {
+        "path": "src/shared/types/cliInstaller.ts",
+        "sourceRef": "9c9c73190840592963142d36562ea07d2b5d2d71",
+        "bytes": 18202,
+        "sha256": "ce28995162a32167226dd7c7fb9e68ffc8b068d6bf1b8ec88355f76ceaae9c0e",
+        "gitBlob": "af81c3af93ae2a0e53a635daf16530a604c0fe39",
+        "valueImports": [],
+        "completeBodyRead": true,
+        "dynamicImportsOrRequireCalls": []
+      },
+      {
+        "path": "src/shared/utils/providerModelVisibility.ts",
+        "sourceRef": "9c9c73190840592963142d36562ea07d2b5d2d71",
+        "bytes": 3861,
+        "sha256": "74cde628e8e855a9467e5b444b7416db1f0581a80f20dbfcba883fbfbaea64c4",
+        "gitBlob": "76d64e2b22c7470b60576a61c554d7669a4174ce",
+        "valueImports": [
+          "src/shared/utils/opencodeModelRef.ts"
+        ],
+        "completeBodyRead": true,
+        "dynamicImportsOrRequireCalls": []
+      },
+      {
+        "path": "src/renderer/utils/teamModelCatalog.ts",
+        "sourceRef": "9c9c73190840592963142d36562ea07d2b5d2d71",
+        "bytes": 27384,
+        "sha256": "3d3e5616e6d781c6c1054ef1a2db5bf3eb7f5818874ff864046fc79ccab5be29",
+        "gitBlob": "5e1348a54557f01f445de9466ea3d07bbd734032",
+        "valueImports": [
+          "src/shared/utils/contextMetrics.ts",
+          "src/shared/utils/modelParser.ts",
+          "src/shared/utils/opencodeModelRef.ts",
+          "src/shared/utils/opencodeModelRoute.ts",
+          "src/shared/utils/providerModelVisibility.ts",
+          "src/renderer/utils/modelReleaseFreshness.ts",
+          "src/renderer/utils/teamModelCatalogChatGptGate.ts"
+        ],
+        "completeBodyRead": true,
+        "dynamicImportsOrRequireCalls": []
+      },
+      {
+        "path": "src/renderer/utils/teamModelContext.ts",
+        "sourceRef": "9c9c73190840592963142d36562ea07d2b5d2d71",
+        "bytes": 948,
+        "sha256": "4d0a9deb1b75d16b57026fe27bdb73c9d7ec34fb43a4e6bb7b326b7293e2e0f8",
+        "gitBlob": "9cba26b388d7ba3e39326915c6cd3cdf2ee39381",
+        "valueImports": [
+          "src/shared/utils/teamProvider.ts"
+        ],
+        "completeBodyRead": true,
+        "dynamicImportsOrRequireCalls": []
+      },
+      {
+        "path": "src/renderer/utils/teamModelLaunchSupport.ts",
+        "sourceRef": "9c9c73190840592963142d36562ea07d2b5d2d71",
+        "bytes": 661,
+        "sha256": "2b2986a05c27ecdf648dd6c11b4b515964e5e9b41fcbabc4239fae3de84cfd2d",
+        "gitBlob": "6bfd39183a50ad02ce40a860b3affc9d83b64e9b",
+        "valueImports": [],
+        "completeBodyRead": true,
+        "dynamicImportsOrRequireCalls": []
+      },
+      {
+        "path": "src/renderer/utils/teamProviderRuntimeStatusLoading.ts",
+        "sourceRef": "9c9c73190840592963142d36562ea07d2b5d2d71",
+        "bytes": 4395,
+        "sha256": "623fb0291c50dd43016d08b54635d5ec4b4cbb582fd1a7768efba904980d175c",
+        "gitBlob": "305aea0b97d3b2b59dd897e06e39cc2c82406ee9",
+        "valueImports": [
+          "src/shared/utils/opencodeModelRef.ts",
+          "src/shared/utils/opencodeModelRoute.ts",
+          "src/shared/utils/providerStatusAuthority.ts",
+          "src/renderer/utils/anthropicCompatibleCatalogChecking.ts",
+          "src/renderer/utils/teamModelAvailability.ts"
+        ],
+        "completeBodyRead": true,
+        "dynamicImportsOrRequireCalls": []
+      },
+      {
+        "path": "src/shared/utils/contextMetrics.ts",
+        "sourceRef": "9c9c73190840592963142d36562ea07d2b5d2d71",
+        "bytes": 7746,
+        "sha256": "ec9389528d530804d62526452ab8cf802fc60015e0f09c08d57f08f9c05a159e",
+        "gitBlob": "9130776258d01017e4d6b6c3eb79618289c060fb",
+        "valueImports": [
+          "src/shared/utils/teamProvider.ts"
+        ],
+        "completeBodyRead": true,
+        "dynamicImportsOrRequireCalls": []
+      },
+      {
+        "path": "src/shared/utils/modelParser.ts",
+        "sourceRef": "9c9c73190840592963142d36562ea07d2b5d2d71",
+        "bytes": 4844,
+        "sha256": "d964238a425721c1353f583f93e4e2528d8688d050cd706c387d150159a373a6",
+        "gitBlob": "c2b10711ef0bf12cba55802451dc22149ed4e408",
+        "valueImports": [],
+        "completeBodyRead": true,
+        "dynamicImportsOrRequireCalls": []
+      },
+      {
+        "path": "src/shared/utils/opencodeModelRef.ts",
+        "sourceRef": "9c9c73190840592963142d36562ea07d2b5d2d71",
+        "bytes": 2726,
+        "sha256": "7a337f9349bb13357764eb4d2dd950c2a4bb669e671e645cac703be3ef40ce69",
+        "gitBlob": "3da89e8154f8072873dc78035e2ea168bc42ca25",
+        "valueImports": [],
+        "completeBodyRead": true,
+        "dynamicImportsOrRequireCalls": []
+      },
+      {
+        "path": "src/shared/utils/opencodeModelRoute.ts",
+        "sourceRef": "9c9c73190840592963142d36562ea07d2b5d2d71",
+        "bytes": 6221,
+        "sha256": "a329a721aed9173989076694ecee4888a2a583cb5f476444684edd37bd85ff9a",
+        "gitBlob": "0085f8eda0b80198a005e26807266d743106a84d",
+        "valueImports": [
+          "src/shared/utils/opencodeModelRef.ts"
+        ],
+        "completeBodyRead": true,
+        "dynamicImportsOrRequireCalls": []
+      },
+      {
+        "path": "src/renderer/utils/modelReleaseFreshness.ts",
+        "sourceRef": "9c9c73190840592963142d36562ea07d2b5d2d71",
+        "bytes": 1492,
+        "sha256": "7de512ab7833c5e48265bf283bfbf4f2c90345c42a9b3f9f6f8f44901674353a",
+        "gitBlob": "48fd1d654b1076863eb835b967d1eb3f59a371bd",
+        "valueImports": [],
+        "completeBodyRead": true,
+        "dynamicImportsOrRequireCalls": []
+      },
+      {
+        "path": "src/renderer/utils/teamModelCatalogChatGptGate.ts",
+        "sourceRef": "9c9c73190840592963142d36562ea07d2b5d2d71",
+        "bytes": 2136,
+        "sha256": "0a08ea562707862e81ec33c88b4dcdaf37e29e606da484168d37cb4d37c26cc5",
+        "gitBlob": "9a8181fd0b0c0d093abe83f0b81266569bfa9ed3",
+        "valueImports": [
+          "src/shared/utils/codexChatGptModelSupport.ts"
+        ],
+        "completeBodyRead": true,
+        "dynamicImportsOrRequireCalls": []
+      },
+      {
+        "path": "src/shared/utils/teamProvider.ts",
+        "sourceRef": "9c9c73190840592963142d36562ea07d2b5d2d71",
+        "bytes": 2060,
+        "sha256": "21a8c6453520c7bdfcdaed045cc4b2ed43f77e433206dc866d0907968132c0ff",
+        "gitBlob": "c0857f31d1bbc9d382fe0bdc25d916170f4aaeb1",
+        "valueImports": [
+          "src/shared/utils/opencodeModelRef.ts"
+        ],
+        "completeBodyRead": true,
+        "dynamicImportsOrRequireCalls": []
+      },
+      {
+        "path": "src/shared/utils/providerStatusAuthority.ts",
+        "sourceRef": "9c9c73190840592963142d36562ea07d2b5d2d71",
+        "bytes": 4567,
+        "sha256": "67241d584fdbef940ad2a0ef7eb459eb85af618bd907710d42c005821c2fa4fa",
+        "gitBlob": "56a1d52d3ba392ec00f60ccf6b7aedaffe6ba570",
+        "valueImports": [],
+        "completeBodyRead": true,
+        "dynamicImportsOrRequireCalls": []
+      },
+      {
+        "path": "src/renderer/utils/anthropicCompatibleCatalogChecking.ts",
+        "sourceRef": "9c9c73190840592963142d36562ea07d2b5d2d71",
+        "bytes": 667,
+        "sha256": "b371766b959535a344918ad8da495e3363582345ab2b2c7fb9e362e5dfecdf8f",
+        "gitBlob": "ad9b7f4fbddf9b2b0be2fce366af0db22f1810f1",
+        "valueImports": [
+          "src/shared/constants/anthropicConnectionMode.ts"
+        ],
+        "completeBodyRead": true,
+        "dynamicImportsOrRequireCalls": []
+      },
+      {
+        "path": "src/shared/utils/codexChatGptModelSupport.ts",
+        "sourceRef": "9c9c73190840592963142d36562ea07d2b5d2d71",
+        "bytes": 3437,
+        "sha256": "844cf61e93ac83d5697a0b97668cc352d6d7a87dcaf2844efa71afd7bef1dab9",
+        "gitBlob": "51c58448bb6683fed2b9fa0c4641f22093b0f24c",
+        "valueImports": [],
+        "completeBodyRead": true,
+        "dynamicImportsOrRequireCalls": []
+      },
+      {
+        "path": "src/shared/constants/anthropicConnectionMode.ts",
+        "sourceRef": "9c9c73190840592963142d36562ea07d2b5d2d71",
+        "bytes": 2043,
+        "sha256": "a1d11b68a8e374778d85a958974970256b4678b2ced8ca0af521b66b60b94d00",
+        "gitBlob": "3171a7714598643cae46144e97ac959dabbd5ece",
+        "valueImports": [],
+        "completeBodyRead": true,
+        "dynamicImportsOrRequireCalls": []
+      }
+    ],
+    "typeOnlyExclusions": [
+      "@shared/types",
+      "@shared/types/team",
+      "@features/runtime-provider-management",
+      "@features/runtime-provider-management/contracts",
+      "@features/opencode-runtime-installer/contracts (type import and export)",
+      "@features/codex-account/contracts"
+    ],
+    "configAndSetup": [
+      {
+        "ref": "9c9c73190840592963142d36562ea07d2b5d2d71",
+        "path": "vitest.config.ts",
+        "bytes": 1187,
+        "sha256": "877867b6b52de7919946cc62501a18eb39e78d689d10128011151cf83cd2edbc",
+        "gitBlob": "c57faa53a1bb869b4379bf888194806ef7e228e3",
+        "readScope": "complete body"
+      },
+      {
+        "ref": "9c9c73190840592963142d36562ea07d2b5d2d71",
+        "path": "test/setup.ts",
+        "bytes": 5297,
+        "sha256": "cb945908ebb8f9aecec7eb6eca354a9fe6a34b2aec1994ac7463d56dfd5f0d3b",
+        "gitBlob": "e24e03f9e2b9f7b9bdc3720212713c4106c64a1c",
+        "readScope": "complete body"
+      },
+      {
+        "ref": "9c9c73190840592963142d36562ea07d2b5d2d71",
+        "path": "package.json",
+        "bytes": 26839,
+        "sha256": "c92407a9a5dad6f9d6a6eb8ea7c456195d396679bb4b9dfd15b6c06b726d1084",
+        "gitBlob": "f80ec83172d0aec0dec8a8ab055426b4fca4a1f7",
+        "readScope": "complete stored immutable body hash verified; package scripts, engines, packageManager and relevant dependencies read"
+      }
+    ],
+    "externalFrameworkOrBuiltinImports": [
+      {
+        "specifier": "vitest",
+        "roles": [
+          "test registration/assertions",
+          "setup hooks/mocks"
+        ],
+        "installedBytesInspected": false
+      },
+      {
+        "specifier": "vitest/config",
+        "roles": [
+          "defineConfig"
+        ],
+        "installedBytesInspected": false
+      },
+      {
+        "specifier": "happy-dom",
+        "roles": [
+          "environment",
+          "Storage constructor in setup"
+        ],
+        "installedBytesInspected": false
+      },
+      {
+        "specifier": "path",
+        "roles": [
+          "config alias resolution",
+          "setup temporary path join"
+        ],
+        "builtin": true
+      },
+      {
+        "specifier": "fs",
+        "roles": [
+          "setup temporary-home read/create/remove"
+        ],
+        "builtin": true
+      },
+      {
+        "specifier": "os",
+        "roles": [
+          "setup tmpdir"
+        ],
+        "builtin": true
+      }
+    ],
+    "topLevelRepositoryEffects": "Production modules contain literal data, pure constant construction/Map/Set/WeakMap initialization and function declarations; callable helpers perform in-memory normalization/classification/sorting/Date arithmetic. No import reaches Electron main, captured metadata producer, Host, a vendor SDK, child_process or a network client. Setup's existing filesystem/environment/mock effects are separately recorded.",
+    "supplementalLexicalCheck": {
+      "dynamicImportsOrRequireCalls": 0,
+      "execTokenHits": 4,
+      "classification": "All four are RegExp.exec in model parsing/catalog label helpers, resolved by reading their full context; no child-process invocation.",
+      "regexIsNotSoleProof": true
+    },
+    "configAndSetupMockedSpecifiers": [
+      "@sentry/electron/main",
+      "@sentry/electron/renderer",
+      "@sentry/react"
+    ],
+    "mockScope": "Existing setup registers no-op vi.mock factories for these Sentry names; they are not value imports in the selected test/production closure. Third-party resolver/framework implementation remains uninspected."
+  },
+  "minimumFiniteCommand": {
+    "command": "pnpm exec vitest run --config vitest.config.ts --maxWorkers=1 test/renderer/utils/teamModelAvailability.test.ts",
+    "workingDirectory": "A separately established repository root with the exact subject/source graph and genuine installed dependencies. No directory was created or selected by reviewer.",
+    "mode": "Whole-file run, no watch, no test-name/line filter, no skip/only or passWithNoTests, no config/setup/deadline override.",
+    "sourceDefinedExpectedCases": 43,
+    "configTestTimeoutMs": 15000,
+    "timeoutQualification": "Original 15000 ms is a per-test timeout, not an outer wall-clock guarantee and not a preemption proof for synchronous framework/setup work. No outer invocation or deadline was authored or selected here.",
+    "packageManifest": {
+      "bytes": 26839,
+      "sha256": "c92407a9a5dad6f9d6a6eb8ea7c456195d396679bb4b9dfd15b6c06b726d1084",
+      "gitBlob": "f80ec83172d0aec0dec8a8ab055426b4fca4a1f7",
+      "nodeEngine": ">=24.15.0 <25 || >=26 <27",
+      "pnpm": "11.22.0+sha512.1ff870c4c6133dfd88fb2afc46dd13d47f09c9794b438c6fdb47ca98caf3bc16381ee0be93a091b8e3824cf01f889f46d7d9e20910fb0be1ab0fb5baa80dd621",
+      "vitestRange": "^3.2.5",
+      "happyDomRange": "^21.0.4",
+      "viteRange": "^6.4.4",
+      "rootTestScript": "pnpm --filter agent-teams-mcp build && pnpm --filter @agent-teams/legacy-agent-host build && vitest run",
+      "rootTestCiScript": "pnpm --filter agent-teams-mcp build && pnpm --filter @agent-teams/legacy-agent-host build && vitest run --maxWorkers=1"
+    },
+    "whyDirectExec": "The pinned package already uses Vitest run and --maxWorkers=1. Naming the one full file avoids unrelated MCP/Host prebuild scripts in root test/test:ci; source imports require neither prebuild output.",
+    "originalSetupFilesystemEffects": {
+      "staleHomeScan": "os.tmpdir(), prefix agent-teams-vitest-home-, directories older than configured age (default 24h); skipped only by the original cleanup-done env flag.",
+      "newHome": "fs.mkdtempSync creates one temporary home. HOME and USERPROFILE are stubbed and reapplied before each test.",
+      "cleanup": "afterAll and process exit remove the created home unless the original MEMBER_WORK_SYNC_RECOVERY_KEEP_TEMP flag is set.",
+      "newEnvironmentOverridesProposed": false
+    },
+    "availability": "Unqualified. Manifest ranges and source reachability do not prove installed Vitest/happy-dom/Vite/Node/pnpm bytes, resolution, startup behavior or pass results.",
+    "parentEnvironmentObservation": "Parent states the old source root remains absent and runtime-owned modules lack Vitest/tsx; reviewer performed no local probe. No old spent attempt is reused and no fake compatibility runner is proposed."
+  },
+  "requiredPreimagesAndLimits": {
+    "exactTwoFilePreimages": [
+      {
+        "role": "required production preimage",
+        "ref": "9c9c73190840592963142d36562ea07d2b5d2d71",
+        "path": "src/renderer/utils/teamModelAvailability.ts",
+        "bytes": 32055,
+        "sha256": "6e216e10c07e953472afb74045c3a976e9f4a1d4fcd3e9f5d46dc789d19022e6",
+        "gitBlob": "167751c56f74c2869b8b3d9b128002d5bd642bcb",
+        "readScope": "complete body"
+      },
+      {
+        "role": "required whole-test preimage",
+        "ref": "9c9c73190840592963142d36562ea07d2b5d2d71",
+        "path": "test/renderer/utils/teamModelAvailability.test.ts",
+        "bytes": 49687,
+        "sha256": "0e37baae735529c11d2ed43432b132b516d252af8bb3084714c7082d7d4c4db8",
+        "gitBlob": "1a58c9c686010d5b5ded00f8e2b5064e4ab78c32",
+        "readScope": "complete body"
+      }
+    ],
+    "existingCandidateTargets": [
+      {
+        "role": "existing incoming production candidate; not authored by reviewer",
+        "ref": "5c55a4a2008f4a6131d265344d384b39415ad055",
+        "path": "src/renderer/utils/teamModelAvailability.ts",
+        "bytes": 32077,
+        "sha256": "b1da0ea7199e69eb042e5beb16dfafa91c4d7b9360db41a3f9ba16424ca2fd43",
+        "gitBlob": "ac6e66775bd5efaf81cecb9a2f22a3437b4343ad",
+        "readScope": "complete body"
+      },
+      {
+        "role": "existing incoming whole-test candidate; not authored by reviewer",
+        "ref": "5c55a4a2008f4a6131d265344d384b39415ad055",
+        "path": "test/renderer/utils/teamModelAvailability.test.ts",
+        "bytes": 56775,
+        "sha256": "b08fe4a650ea9d23f4d8fa4b4ece157d9cd2f87e87e42b25c3c53934ed9974c8",
+        "gitBlob": "6cf34a11e7a1bc6f33208bad00adb57ee5656cd6",
+        "readScope": "complete body"
+      }
+    ],
+    "retainedContext": "All 18 module identities and unchanged package/config/setup are listed above. If a later execution setup uses different bytes or dependencies, this source-derived command/advisory does not qualify those differences.",
+    "noAdditionalAdoptionDependency": "The candidate does not require incoming native-prompt-suggestions code, Host provider-package replacement, incoming P11 runner variants, runtime-hook extraction, new workflows or a base merge.",
+    "blockers": [],
+    "unproved": [
+      "Actual RED failure or GREEN pass",
+      "Installed dependency identities/availability and safe startup",
+      "Typecheck/lint/source-size guard result",
+      "UI component integration or launch refusal execution",
+      "Native provider qualification, real model calls, readiness timing or current CI status"
+    ],
+    "scopePreserved": "Frozen live-CI refs and original 139/85 whole tests are not edited or polled. No source/control postimage authored, no runtime setup selected, no PR/ref/CI action, no vendor version/status/startup probe."
+  },
+  "methodCorrections": [
+    "An initial shorthand counted only ordinary it registrations (36 to 39). Full registration review includes two unchanged two-case it.each tables, so final counts are 40 to 43. Parent was informed before retention.",
+    "One attempted combined output of catalog/selector regions exceeded the output budget; all those required regions were subsequently reread in bounded chunks before conclusions.",
+    "Supplemental process-call lexical scan matched four ordinary RegExp.exec calls. Full contexts show no process execution; these matches are not a finding."
+  ],
+  "checkCount": 29,
+  "checks": [
+    {
+      "id": "SUBJECT_FULL_BYTES",
+      "status": "PASS_STATIC",
+      "statement": "All four exact selected bodies were fully fetched, independently hashed and completely read.",
+      "evidence": [
+        {
+          "path": "src/renderer/utils/teamModelAvailability.ts",
+          "role": "required production preimage",
+          "gitBlob": "167751c56f74c2869b8b3d9b128002d5bd642bcb"
+        },
+        {
+          "path": "src/renderer/utils/teamModelAvailability.ts",
+          "role": "existing incoming production candidate; not authored by reviewer",
+          "gitBlob": "ac6e66775bd5efaf81cecb9a2f22a3437b4343ad"
+        },
+        {
+          "path": "test/renderer/utils/teamModelAvailability.test.ts",
+          "role": "required whole-test preimage",
+          "gitBlob": "1a58c9c686010d5b5ded00f8e2b5064e4ab78c32"
+        },
+        {
+          "path": "test/renderer/utils/teamModelAvailability.test.ts",
+          "role": "existing incoming whole-test candidate; not authored by reviewer",
+          "gitBlob": "6cf34a11e7a1bc6f33208bad00adb57ee5656cd6"
+        }
+      ]
+    },
+    {
+      "id": "ADVISORY_JOIN",
+      "status": "PASS_STATIC",
+      "statement": "The exact advisory candidate pins equal the independently fetched four identities and existing producer/consumer pins.",
+      "evidence": {
+        "advisory": {
+          "bytes": 126069,
+          "sha256": "24fdef84a14ad724a4a73f60dc6f74d680f725d1427a85b83b466628ab3711b2",
+          "gitBlob": "7b8dec59f17e2886c24a52fd4faa030e7df8fa99"
+        },
+        "candidateIndex": 0
+      }
+    },
+    {
+      "id": "SINGLE_PREDICATE",
+      "status": "PASS_STATIC",
+      "statement": "Whole incoming utility equals exactly one existing predicate replacement, with a whole-byte inverse to the own preimage.",
+      "evidence": {
+        "removed": "    providerStatus.modelCatalog.source === 'anthropic-models-api' &&",
+        "added": "    ['anthropic-models-api', 'claude-sdk'].includes(providerStatus.modelCatalog.source) &&",
+        "wholeBodyExactSingleReplacement": true
+      }
+    },
+    {
+      "id": "NO_PRODUCTION_EXPANSION",
+      "status": "PASS_STATIC",
+      "statement": "Production adds 22 bytes and no newlines, imports, helpers or other edits; this is not a fresh source-file-size guard execution.",
+      "evidence": {
+        "beforeBytes": 32055,
+        "afterBytes": 32077,
+        "beforeNewlines": 982,
+        "afterNewlines": 982,
+        "knownLineCountAbove800": true,
+        "exceptionOrGuardConfigEdited": false
+      }
+    },
+    {
+      "id": "WHOLE_TEST_PREFIX",
+      "status": "PASS_STATIC",
+      "statement": "The complete 49687-byte original test body is an exact prefix; the only suffix is 7088 bytes / 182 newlines with three new ordinary it registrations.",
+      "evidence": {
+        "before": {
+          "role": "required whole-test preimage",
+          "ref": "9c9c73190840592963142d36562ea07d2b5d2d71",
+          "path": "test/renderer/utils/teamModelAvailability.test.ts",
+          "bytes": 49687,
+          "sha256": "0e37baae735529c11d2ed43432b132b516d252af8bb3084714c7082d7d4c4db8",
+          "gitBlob": "1a58c9c686010d5b5ded00f8e2b5064e4ab78c32",
+          "readScope": "complete body"
+        },
+        "after": {
+          "role": "existing incoming whole-test candidate; not authored by reviewer",
+          "ref": "5c55a4a2008f4a6131d265344d384b39415ad055",
+          "path": "test/renderer/utils/teamModelAvailability.test.ts",
+          "bytes": 56775,
+          "sha256": "b08fe4a650ea9d23f4d8fa4b4ece157d9cd2f87e87e42b25c3c53934ed9974c8",
+          "gitBlob": "6cf34a11e7a1bc6f33208bad00adb57ee5656cd6",
+          "readScope": "complete body"
+        },
+        "addedBytes": 7088,
+        "addedNewlines": 182
+      }
+    },
+    {
+      "id": "CASE_CENSUS",
+      "status": "PASS_STATIC",
+      "statement": "Correct expanded source-defined counts are 40 original and 43 incoming cases. No only/skip/todo/fails registration appears.",
+      "evidence": {
+        "originalSimple": 36,
+        "incomingSimple": 39,
+        "unchangedItEachRegistrations": 2,
+        "eachLiteralCaseCounts": [
+          2,
+          2
+        ],
+        "originalExpanded": 40,
+        "incomingExpanded": 43,
+        "qualifiedRuntimeCount": false
+      }
+    },
+    {
+      "id": "EXISTING_PRODUCER_SOURCE",
+      "status": "PASS_STATIC",
+      "statement": "Own captured Claude metadata already emits catalog and item source claude-sdk; resolvedModel becomes launchModel, with aliases collapsed.",
+      "evidence": {
+        "path": "src/features/runtime-provider-management/main/adapters/output/capturedClaudeMetadata.ts",
+        "gitBlob": "c0bd14811e8cd76dd34bcf42afac2785769e37ad",
+        "functions": [
+          "decode",
+          "readCapturedClaudeStatus"
+        ],
+        "review": "Complete producer body read."
+      }
+    },
+    {
+      "id": "PRODUCER_AUTHORITY",
+      "status": "PASS_STATIC",
+      "statement": "Captured producer checks profile/config/currentness, reads authentication separately, and returns teamLaunch:false and oneShot:false; source catalog recognition grants neither capability.",
+      "evidence": {
+        "gitBlob": "c0bd14811e8cd76dd34bcf42afac2785769e37ad",
+        "client": "500b04c5a0b9e15bc8f4401d5f7bdc0d4267e2a6",
+        "clientRoute": "Anthropic getProviderStatus captures const current = deps.captureGuard?.() ?? (() => true), awaits readCapturedClaudeStatus, then checks current() before adding catalogScope; failures return failure(providerId), with no new fallback introduced."
+      }
+    },
+    {
+      "id": "DTO_AND_CONSUMER_ALREADY_JOIN",
+      "status": "PASS_STATIC",
+      "statement": "Own catalog-source union already includes claude-sdk and selector hydration already recognizes it; selector calls the selected option and normalization utility.",
+      "evidence": {
+        "dto": {
+          "ref": "9c9c73190840592963142d36562ea07d2b5d2d71",
+          "path": "src/shared/types/cliInstaller.ts",
+          "bytes": 18202,
+          "sha256": "ce28995162a32167226dd7c7fb9e68ffc8b068d6bf1b8ec88355f76ceaae9c0e",
+          "gitBlob": "af81c3af93ae2a0e53a635daf16530a604c0fe39",
+          "readScope": "complete body"
+        },
+        "consumer": {
+          "ref": "9c9c73190840592963142d36562ea07d2b5d2d71",
+          "path": "src/renderer/components/team/dialogs/TeamModelSelector.tsx",
+          "bytes": 157938,
+          "sha256": "919572aefbd5b4f8f56eb0c6a0953e8ac1efff9868861ff32655e73b58994d38",
+          "gitBlob": "e54fd44a11644202b3c3d0c17a0c85b66e9f1520",
+          "readScope": "complete fetched/hash-verified string; imports and exact consumer regions 582-611, 1365-1425, 1535-1610 semantically read, not all 157938 bytes semantically audited"
+        },
+        "consumerLines": [
+          598,
+          1378,
+          1549
+        ]
+      }
+    },
+    {
+      "id": "PROVIDER_SOURCE_STATUS_GUARD",
+      "status": "PASS_STATIC",
+      "statement": "Anthropic catalog provider identity and status != unavailable remain intact; source acceptance alone expands from API to API-or-SDK.",
+      "evidence": {
+        "path": "src/renderer/utils/teamModelAvailability.ts",
+        "lines": [
+          322,
+          329
+        ],
+        "removed": "    providerStatus.modelCatalog.source === 'anthropic-models-api' &&",
+        "added": "    ['anthropic-models-api', 'claude-sdk'].includes(providerStatus.modelCatalog.source) &&"
+      }
+    },
+    {
+      "id": "RESOLVED_OFFER_ONLY",
+      "status": "PASS_STATIC",
+      "statement": "Visible first-party SDK launch values are used without appending curated rows; launchModel is preferred over nonblank id, duplicates use existing model/label policy.",
+      "evidence": {
+        "path": "src/renderer/utils/teamModelAvailability.ts",
+        "functions": [
+          "getVisibleRuntimeCatalogModels",
+          "getAnthropicFirstPartySelectorModels"
+        ],
+        "lines": [
+          375,
+          447
+        ]
+      }
+    },
+    {
+      "id": "REFUSED_ROWS",
+      "status": "PASS_STATIC",
+      "statement": "Hidden and unoffered resolved selections are refused; visible explicitly unavailable rows retain their reason and remain unavailable.",
+      "evidence": {
+        "path": "src/renderer/utils/teamModelAvailability.ts",
+        "functions": [
+          "getRuntimeModelAvailability",
+          "getAvailableTeamProviderModels",
+          "isTeamModelAvailableForUi"
+        ],
+        "lines": [
+          611,
+          647,
+          688,
+          721,
+          842,
+          879
+        ]
+      }
+    },
+    {
+      "id": "EMPTY_AVAILABLE_SET",
+      "status": "PASS_STATIC",
+      "statement": "A nonempty visible catalog whose rows are explicitly unavailable returns an empty available list; it does not restore curated offers.",
+      "evidence": {
+        "path": "src/renderer/utils/teamModelAvailability.ts",
+        "lines": [
+          699,
+          707
+        ],
+        "test": "allUnavailable subcase in second appended test"
+      }
+    },
+    {
+      "id": "FALLBACK_PRESERVED",
+      "status": "PASS_STATIC",
+      "statement": "An unavailable catalog, empty list, all-hidden list, or list with no nonblank id/launch value retains existing curated fallback.",
+      "evidence": {
+        "path": "src/renderer/utils/teamModelAvailability.ts",
+        "functions": [
+          "hasAnthropicFirstPartyRuntimeCatalog",
+          "getVisibleRuntimeCatalogModels",
+          "getAvailableTeamProviderModels"
+        ],
+        "test": "third appended test"
+      }
+    },
+    {
+      "id": "NORMALIZATION_ERRORS",
+      "status": "PASS_STATIC",
+      "statement": "SDK membership drives existing UI availability, normalization and selection-error paths consistently; missing selections and default handling are unchanged.",
+      "evidence": {
+        "path": "src/renderer/utils/teamModelAvailability.ts",
+        "lines": [
+          842,
+          982
+        ]
+      }
+    },
+    {
+      "id": "AUTH_NONPROMOTION_SCOPE",
+      "status": "PASS_STATIC",
+      "statement": "New test asserts authenticated false, verificationState unknown and modelVerificationState idle remain unchanged. This proves field nonmutation in the tested UI calls, not end-to-end launch refusal.",
+      "evidence": {
+        "test": "6cf34a11e7a1bc6f33208bad00adb57ee5656cd6",
+        "fixture": "baseStatus",
+        "producer": "c0bd14811e8cd76dd34bcf42afac2785769e37ad"
+      }
+    },
+    {
+      "id": "NEW_CASE_ONE_DISCRIMINATES",
+      "status": "PASS_STATIC",
+      "statement": "Old predicate rejects SDK as first-party and returns curated options, so the first appended test's exact ['', 'TEST-claude-sonnet'] option assertion is expected to fail old source.",
+      "evidence": {
+        "testName": "uses only the resolved SDK offer without promoting its alias or authentication facts",
+        "staticPrediction": true,
+        "executed": false
+      }
+    },
+    {
+      "id": "NEW_CASE_TWO_DISCRIMINATES",
+      "status": "PASS_STATIC",
+      "statement": "Old predicate likewise returns curated options instead of the explicit offered/unavailable SDK rows, so the second appended test is expected to fail old source.",
+      "evidence": {
+        "testName": "keeps hidden and unavailable SDK rows refused without falling back when all offers are unavailable",
+        "staticPrediction": true,
+        "executed": false
+      }
+    },
+    {
+      "id": "NEW_CASE_THREE_PRESERVES",
+      "status": "PASS_STATIC",
+      "statement": "The third appended test is a preservation control which should already pass the old fallback policy; it is not a third independent RED failure.",
+      "evidence": {
+        "testName": "retains curated fallback for unavailable SDK catalogs or ready catalogs without visible values",
+        "staticPrediction": true,
+        "executed": false
+      }
+    },
+    {
+      "id": "UNCHANGED_OLD_CASES",
+      "status": "PASS_STATIC",
+      "statement": "All 40 source-defined old cases remain whole and unchanged, including other provider, API catalog, compatible custom route, pending/freshness and UI refusal behavior.",
+      "evidence": {
+        "wholePrefixBytes": 49687,
+        "wholePrefixBlob": "1a58c9c686010d5b5ded00f8e2b5064e4ab78c32",
+        "execution": null
+      }
+    },
+    {
+      "id": "FRESHNESS_LIMIT",
+      "status": "PASS_STATIC",
+      "statement": "The new source uses the original status != unavailable rule; stale/degraded SDK display may therefore be recognized. No freshness, authentication, terminal verification or native launch authority predicate changes.",
+      "evidence": {
+        "path": "src/renderer/utils/teamModelAvailability.ts",
+        "methodsUnchanged": [
+          "isTeamProviderModelCatalogFresh",
+          "isTeamProviderModelCatalogSettled",
+          "hasTerminalAuthoritativeModelVerification"
+        ],
+        "fixtureTimestampsAreData": true,
+        "fakeClockInstalled": false
+      }
+    },
+    {
+      "id": "IMPORT_GRAPH_IDENTITIES",
+      "status": "PASS_STATIC",
+      "statement": "All 18 repository production modules reachable by selected test value imports have exact full-body identities, were completely read, and form a closed value-import graph.",
+      "evidence": {
+        "moduleCount": 18,
+        "missing": []
+      }
+    },
+    {
+      "id": "NO_VENDOR_IMPORT_EDGE",
+      "status": "PASS_STATIC",
+      "statement": "The graph contains no repository child-process/network execution call or dynamic import/require edge. Type-only @shared/types and @features imports do not import their runtime barrels.",
+      "evidence": {
+        "graph": [
+          "src/renderer/utils/teamModelAvailability.ts",
+          "src/shared/types/cliInstaller.ts",
+          "src/shared/utils/providerModelVisibility.ts",
+          "src/renderer/utils/teamModelCatalog.ts",
+          "src/renderer/utils/teamModelContext.ts",
+          "src/renderer/utils/teamModelLaunchSupport.ts",
+          "src/renderer/utils/teamProviderRuntimeStatusLoading.ts",
+          "src/shared/utils/contextMetrics.ts",
+          "src/shared/utils/modelParser.ts",
+          "src/shared/utils/opencodeModelRef.ts",
+          "src/shared/utils/opencodeModelRoute.ts",
+          "src/renderer/utils/modelReleaseFreshness.ts",
+          "src/renderer/utils/teamModelCatalogChatGptGate.ts",
+          "src/shared/utils/teamProvider.ts",
+          "src/shared/utils/providerStatusAuthority.ts",
+          "src/renderer/utils/anthropicCompatibleCatalogChecking.ts",
+          "src/shared/utils/codexChatGptModelSupport.ts",
+          "src/shared/constants/anthropicConnectionMode.ts"
+        ],
+        "dynamicImportsOrRequire": [],
+        "regexExecHitsClassified": "Four lexical exec(...) hits are RegExp.exec calls, not child-process calls.",
+        "frameworkBytesInspected": false
+      }
+    },
+    {
+      "id": "NO_MAIN_PRODUCER_EDGE",
+      "status": "PASS_STATIC",
+      "statement": "Captured metadata/status client and React selector were read only as compatibility evidence and are not reachable from the selected unit test.",
+      "evidence": {
+        "nonReachablePaths": [
+          "src/features/runtime-provider-management/main/adapters/output/capturedClaudeMetadata.ts",
+          "src/features/runtime-provider-management/main/adapters/output/CapturedRuntimeProviderStatusClient.ts",
+          "src/renderer/components/team/dialogs/TeamModelSelector.tsx"
+        ],
+        "testValueEdges": [
+          "@renderer/utils/teamModelAvailability",
+          "@renderer/utils/teamProviderRuntimeStatusLoading",
+          "vitest"
+        ]
+      }
+    },
+    {
+      "id": "CONFIG_SCOPE",
+      "status": "PASS_STATIC",
+      "statement": "Unchanged config includes this test file, sets happy-dom, 15000 ms per-test timeout and test/setup.ts, with repository aliases and no globalSetup/custom plugin entry.",
+      "evidence": {
+        "config": {
+          "ref": "9c9c73190840592963142d36562ea07d2b5d2d71",
+          "path": "vitest.config.ts",
+          "bytes": 1187,
+          "sha256": "877867b6b52de7919946cc62501a18eb39e78d689d10128011151cf83cd2edbc",
+          "gitBlob": "c57faa53a1bb869b4379bf888194806ef7e228e3",
+          "readScope": "complete body"
+        },
+        "testTimeout": 15000,
+        "setupFiles": [
+          "./test/setup.ts"
+        ],
+        "execution": false
+      }
+    },
+    {
+      "id": "SETUP_EFFECTS",
+      "status": "PASS_STATIC",
+      "statement": "Existing setup performs temporary-home filesystem work, HOME/USERPROFILE stubs, happy-dom storage patch and console/Sentry test mocking; it invokes no vendor executable.",
+      "evidence": {
+        "setup": {
+          "ref": "9c9c73190840592963142d36562ea07d2b5d2d71",
+          "path": "test/setup.ts",
+          "bytes": 5297,
+          "sha256": "cb945908ebb8f9aecec7eb6eca354a9fe6a34b2aec1994ac7463d56dfd5f0d3b",
+          "gitBlob": "e24e03f9e2b9f7b9bdc3720212713c4106c64a1c",
+          "readScope": "complete body"
+        },
+        "effects": [
+          "Best-effort removal of os.tmpdir() directories with agent-teams-vitest-home- prefix older than configured age, default 24h, unless cleanup-done flag is already set.",
+          "Creates a new prefixed temporary home, reapplies HOME/USERPROFILE before each test, and removes the created home in afterAll/process exit unless the original keep-temp environment flag is set.",
+          "Mocks Sentry APIs and checks unexpected console errors/warnings."
+        ],
+        "newSetupAuthored": false
+      }
+    },
+    {
+      "id": "MINIMUM_WHOLE_FILE_COMMAND",
+      "status": "PASS_STATIC",
+      "statement": "A source-derived finite whole-file Vitest run can name the unchanged config and the single full test file with one worker; it avoids root test-script prebuilds and preserves all 43 source-defined cases.",
+      "evidence": {
+        "command": "pnpm exec vitest run --config vitest.config.ts --maxWorkers=1 test/renderer/utils/teamModelAvailability.test.ts",
+        "package": {
+          "ref": "9c9c73190840592963142d36562ea07d2b5d2d71",
+          "path": "package.json",
+          "bytes": 26839,
+          "sha256": "c92407a9a5dad6f9d6a6eb8ea7c456195d396679bb4b9dfd15b6c06b726d1084",
+          "gitBlob": "f80ec83172d0aec0dec8a8ab055426b4fca4a1f7",
+          "readScope": "complete stored immutable body hash verified; package scripts, engines, packageManager and relevant dependencies read"
+        },
+        "runtimeQualification": false
+      }
+    },
+    {
+      "id": "NO_RUNTIME_INFERENCE",
+      "status": "PASS_STATIC",
+      "statement": "No Vitest, Node, pnpm, package install, vendor status/version/startup, source materialization or test execution was performed. Installed package bytes and tool availability are uninspected.",
+      "evidence": {
+        "red": null,
+        "green": null,
+        "outerExit": null,
+        "environmentCreated": false,
+        "actualTestCount": null
+      }
+    },
+    {
+      "id": "OWNERSHIP_FROZEN",
+      "status": "PASS_STATIC",
+      "statement": "Reviewer created only a bare advisory report; no current CI run was read, no refs/PR/source/config/workflow/runner was changed, and no new execution venue was selected.",
+      "evidence": {
+        "rootSoleExecutor": true,
+        "oldSpentAttemptReused": false,
+        "frozenWhole139And85TestsUnchangedByCandidate": true,
+        "sourceCandidateOnly": true
+      }
+    }
+  ],
+  "failedChecks": [],
+  "decision": "No concrete blocker found for separately considering exactly the existing two-file candidate. This report is a bounded static review, not selection, application, execution authorization or runtime PASS. Root owns any future concrete source/test setup and execution decision."
+}

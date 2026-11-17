@@ -1,0 +1,184 @@
+{
+  "schemaVersion": 1,
+  "kind": "STRICT_DARWIN_P09_ADVISORY_RECEIPT_TRANSPORT_CLARIFICATION",
+  "reviewer": "/root/producer_r2_semantic",
+  "recordedAt": "2026-11-17T03:21:02.916Z",
+  "parentAdvisory": {
+    "bytes": 62374,
+    "sha256": "830aa1ee54fe76cb30939b729f6ca3b1169cc7041c481170efba1874f3396fcf",
+    "gitBlob": "397fefe2b52afdfe6c2a171f846e153e5dd66d88"
+  },
+  "status": "ADDITIVE_SOURCE_OBSERVATION_NO_CUSTODY_FIX_ESTABLISHED",
+  "scope": "Clarify the aggregate mutation errno field when assessing a future primitive against the frozen oracle; preserve the original advisory and all historical outcomes.",
+  "source": {
+    "commit": "9c9c73190840592963142d36562ea07d2b5d2d71",
+    "path": "packages/legacy-agent-host/tests/fixtures/posix-exec-native.c",
+    "identity": {
+      "bytes": 21219,
+      "sha256": "085eeb378d9b500490300dcf1c595bf13e7979c1218f2f37f4ba6e18787441e9",
+      "gitBlob": "19aca56c55a666654b04827b3c2446d2ad03ad8d"
+    },
+    "exactCurrentExcerpt": {
+      "firstLine": 249,
+      "lastLine": 269,
+      "body": "static int rewrite_fd(int output, const char *replacement) {\n  int source = open(replacement, O_RDONLY | O_CLOEXEC | O_NOFOLLOW);\n  if (source < 0) return errno;\n  struct stat info;\n  int error = fstat(source, &info) || !S_ISREG(info.st_mode) || info.st_size <= 0 || info.st_size > 2*1024*1024 ? EINVAL : 0;\n  if (!error && lseek(output, 0, SEEK_SET) < 0) error = errno;\n  char bytes[65536]; ssize_t count = 0;\n  while (!error && (count = read(source, bytes, sizeof(bytes))) > 0) {\n    if (write(output, bytes, (size_t)count) != count) error = EIO;\n  }\n  if (!error && count < 0) error = errno;\n  if (!error && (ftruncate(output, info.st_size) || fsync(output))) error = errno;\n  (void)close(source);\n  return error;\n}\nstatic int rewrite(const char *path, const char *replacement) {\n  int output = open(path, O_WRONLY | O_CLOEXEC | O_NOFOLLOW);\n  if (output < 0) return errno;\n  int error = rewrite_fd(output, replacement);\n  (void)close(output);\n  return error;\n"
+    },
+    "oracle": {
+      "path": "packages/legacy-agent-host/tests/registered-process-executable.native.ts",
+      "identity": {
+        "bytes": 27709,
+        "sha256": "b249d30a6168eb015658f35f5524ed4314cd7c4093afe5a14690a1ba6743df2e",
+        "gitBlob": "f1e1d1145898e201723be343fa8768d73332fcb1"
+      },
+      "firstLine": 490,
+      "lastLine": 498,
+      "body": "            if (item.mode === 'after-check' || item.mode === 'writer-open') {\n              if (fact.mutationAfterCheckErrno === constants.errno.ETXTBSY) {\n                assert.equal(fact.exitCode, 0); outputMatches('A');\n                assert.equal(markers, 'LIB\\nBIN:A\\nMAIN:A\\n');\n              } else {\n                assert.equal(fact.mutationAfterCheckErrno, 0);\n                assert.equal(markers, '', 'no selected library or payload constructor may run after byte mutation');\n                assert.equal(fact.exitCode, -1); assert.ok(fact.exitSignal > 0);\n              }\n"
+    }
+  },
+  "findings": [
+    {
+      "observation": "rewrite(path, replacement) preserves errno if opening the target for writing fails.",
+      "location": "posix-exec-native.c:264-269",
+      "meaning": "An ETXTBSY returned from that open can reach mutationAfterCheckErrno unchanged."
+    },
+    {
+      "observation": "rewrite_fd compares write's return to the requested count and sets error=EIO for every mismatch; it does not preserve errno from a negative write return.",
+      "location": "posix-exec-native.c:255-258",
+      "meaning": "A hypothetical real ETXTBSY from write on the original already-open writer would be collapsed to EIO. The current mutationAfterCheckErrno field is therefore not universally a raw syscall errno.",
+      "shortWrite": "A positive short write also becomes EIO and must remain distinguishable from a negative result if new evidence is ever designed."
+    },
+    {
+      "observation": "All four retained signed after-check/writer-open failures have aggregate mutation result zero, all A markers, exit zero and no signal.",
+      "meaning": "This transport information loss does not explain or repair those historical failures. It neither changes their outcome nor establishes that any write returned ETXTBSY."
+    },
+    {
+      "observation": "The strict oracle has two alternatives: genuine ETXTBSY with original A/normal exit, or mutation success with no markers and signal termination.",
+      "meaning": "Calling the aggregate field raw in prior narrative must not be used to infer an unseen denied-write errno. EIO must not be relabelled ETXTBSY from expectation or TEST mode."
+    }
+  ],
+  "implicationForAnyFutureCandidate": {
+    "requiredEvidence": "If a separately selected native primitive denies write through the pre-opened descriptor, retain the actual write return and immediately captured syscall errno, with acquisition errors and short writes distinct. This is evidence fidelity, not permission to alter the accepted error outcomes.",
+    "strictOracleUnchanged": true,
+    "noControllerPostimageAuthored": true,
+    "noTestPostimageAuthored": true,
+    "noExecutableControlAuthored": true,
+    "noNativePrimitiveEstablished": true,
+    "noExecutionSelected": true,
+    "rootSoleAuthorAndExecutor": true
+  },
+  "boundaries": {
+    "doesNotSupersedeParent": true,
+    "strictP09Qualified": false,
+    "blocksFreshCiLaunch": false,
+    "noCiReadOrMutation": true,
+    "noShellRuntimeOrProbe": true,
+    "noSourceRefPrMutation": true,
+    "noNewGate": true
+  },
+  "checkCount": 5,
+  "checks": [
+    {
+      "name": "Exact current fixture identity unchanged",
+      "status": "PASS",
+      "evidence": {
+        "bytes": 21219,
+        "sha256": "085eeb378d9b500490300dcf1c595bf13e7979c1218f2f37f4ba6e18787441e9",
+        "gitBlob": "19aca56c55a666654b04827b3c2446d2ad03ad8d"
+      }
+    },
+    {
+      "name": "Exact current strict oracle identity unchanged",
+      "status": "PASS",
+      "evidence": {
+        "bytes": 27709,
+        "sha256": "b249d30a6168eb015658f35f5524ed4314cd7c4093afe5a14690a1ba6743df2e",
+        "gitBlob": "f1e1d1145898e201723be343fa8768d73332fcb1"
+      }
+    },
+    {
+      "name": "Open error propagation and write mismatch collapse read from literal current source",
+      "status": "PASS",
+      "evidence": "Two complete functions, lines 249-269"
+    },
+    {
+      "name": "Historical zero-mutation-result observations remain unchanged failures",
+      "status": "PASS",
+      "evidence": [
+        {
+          "arch": "x64",
+          "label": "adhoc-test-only:after-check",
+          "decimal": 570425345,
+          "hex": "0x22000001",
+          "hard": false,
+          "kill": false,
+          "enforcement": false,
+          "write": 0,
+          "markers": [
+            "LIB",
+            "BIN:A",
+            "MAIN:A"
+          ],
+          "exit": 0,
+          "signal": 0
+        },
+        {
+          "arch": "x64",
+          "label": "adhoc-test-only:writer-open",
+          "decimal": 570425345,
+          "hex": "0x22000001",
+          "hard": false,
+          "kill": false,
+          "enforcement": false,
+          "write": 0,
+          "markers": [
+            "LIB",
+            "BIN:A",
+            "MAIN:A"
+          ],
+          "exit": 0,
+          "signal": 0
+        },
+        {
+          "arch": "arm",
+          "label": "adhoc-test-only:after-check",
+          "decimal": 570425345,
+          "hex": "0x22000001",
+          "hard": false,
+          "kill": false,
+          "enforcement": false,
+          "write": 0,
+          "markers": [
+            "LIB",
+            "BIN:A",
+            "MAIN:A"
+          ],
+          "exit": 0,
+          "signal": 0
+        },
+        {
+          "arch": "arm",
+          "label": "adhoc-test-only:writer-open",
+          "decimal": 570425345,
+          "hex": "0x22000001",
+          "hard": false,
+          "kill": false,
+          "enforcement": false,
+          "write": 0,
+          "markers": [
+            "LIB",
+            "BIN:A",
+            "MAIN:A"
+          ],
+          "exit": 0,
+          "signal": 0
+        }
+      ]
+    },
+    {
+      "name": "No hypothetical implementation or runtime approval",
+      "status": "PASS",
+      "evidence": "Advisory data only; parent conclusion unchanged"
+    }
+  ],
+  "conclusion": "Retain this clarification beside 397fefe2. The missing continuous native guard remains the central blocker. A future raw ETXTBSY proof must additionally distinguish actual syscall errno from this existing aggregate field; no current result is promoted and no source correction is authored."
+}

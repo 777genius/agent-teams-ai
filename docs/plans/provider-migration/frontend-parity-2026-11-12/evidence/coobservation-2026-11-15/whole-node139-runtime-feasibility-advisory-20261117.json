@@ -1,0 +1,1128 @@
+{
+  "schemaVersion": 1,
+  "kind": "bounded-node139-source-feasibility-advisory",
+  "repository": "777genius/agent-teams-ai",
+  "sourceCommit": "9c9c73190840592963142d36562ea07d2b5d2d71",
+  "at": "2026-11-17 04:03:26 UTC",
+  "question": "Can the exact complete 139-case desktop-team-ui-smoke.test.ts import and execute from repository source plus Node 24.22.1 alone, with no node_modules and no compiled artifacts?",
+  "answer": {
+    "nodeOnly": false,
+    "status": "SOURCE-PROVED PREREQUISITE BLOCKER; NOT A RUNTIME RESULT",
+    "reason": "The top-level test import eagerly links desktop-backend-fixture.ts. Its non-type imports address literal packages/legacy-agent-host/dist/**/*.js files. Their source graph additionally requires compiled task-change-ledger exports and resolvable external/workspace packages. Node type stripping neither builds those paths nor installs/resolves missing packages.",
+    "scope": "This is sufficient to refute the Node-only setup. It is not a proof that an arbitrary partially installed setup is sufficient, nor an exhaustive every-transitive-package inventory."
+  },
+  "entry": {
+    "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+    "identity": {
+      "bytes": 164965,
+      "sha256": "852bedb85c83dbc4b488dffb4a9ffebbe398adc53e85f5a3cea8ca36b146cbf7",
+      "gitBlob": "896c587e077da56a98a314a175fb3cba0353d6ee"
+    },
+    "caseCount": 139,
+    "caseCountBasis": {
+      "blob": "a3660453344deb2c4e91cdc8e951c44f9d501817",
+      "bytes": 49935,
+      "sha256": "5b106b029096b02b288db395cdb05c8f367cd16444c2f015e79c9f28098f9134",
+      "fullReadback": true
+    },
+    "completeValueImports": [
+      {
+        "line": 1,
+        "text": "import assert from 'node:assert/strict';"
+      },
+      {
+        "line": 2,
+        "text": "import { test } from 'node:test';"
+      },
+      {
+        "line": 3,
+        "text": "import { execFileSync } from 'node:child_process';"
+      },
+      {
+        "line": 4,
+        "text": "import { createHash } from 'node:crypto';"
+      },
+      {
+        "line": 5,
+        "text": "import { mkdir, mkdtemp, readFile, realpath, rm, writeFile } from 'node:fs/promises';"
+      },
+      {
+        "line": 6,
+        "text": "import { tmpdir } from 'node:os';"
+      },
+      {
+        "line": 7,
+        "text": "import { join } from 'node:path';"
+      },
+      {
+        "line": 8,
+        "text": "import { runInNewContext } from 'node:vm';"
+      },
+      {
+        "line": 9,
+        "text": "import { setImmediate } from 'node:timers/promises';"
+      },
+      {
+        "line": 11,
+        "text": "import { desktopShellEnvironmentProbeSource } from './desktop-backend-fixture.ts';"
+      },
+      {
+        "line": 12,
+        "text": "import { readRendererBackendConnections } from './desktop-backend-observations.ts';"
+      },
+      {
+        "line": 13,
+        "text": "import { attachRendererDiagnostics } from './desktop-team-ui-smoke.ts';"
+      },
+      {
+        "line": 14,
+        "text": "import { assertDesktopOwnerRoutingAvailability } from './desktop-owner-routing-availability-ui.ts';"
+      },
+      {
+        "line": 15,
+        "text": "import { hostTeamSelectionKey } from '../../src/features/agent-backend/contracts/teamSelection.ts';"
+      },
+      {
+        "line": 16,
+        "text": "import { desktopTaskBoardAssignmentReadyExpression } from './desktop-task-comment-input-target.ts';"
+      },
+      {
+        "line": 17,
+        "text": "import { runDesktopTaskBoardAttachmentsUi } from './desktop-task-board-attachments-ui.ts';"
+      },
+      {
+        "line": 18,
+        "text": "import { createDesktopUiControls } from './desktop-ui-controls.ts';"
+      },
+      {
+        "line": 19,
+        "text": "import { projectDesktopCodexLoginFailure } from './desktop-codex-login-ui-proof.ts';"
+      },
+      {
+        "line": 20,
+        "text": "import { projectDesktopCodexInstallerFailure, projectDesktopSelectionTargetFailure } from './desktop-backend-failures.ts';"
+      },
+      {
+        "line": 21,
+        "text": "import { projectDesktopEmulatedReadinessFailure, projectDesktopProofReceiptSummary, projectDesktopTaskBoardFailure } from './desktop-proof-evidence.ts';"
+      },
+      {
+        "line": 22,
+        "text": "import { readNativeProviderArtifact } from '../../packages/legacy-agent-host/tests/fixtures/native-provider-artifact.ts';"
+      }
+    ]
+  },
+  "environmentBasis": {
+    "providedByRoot": "Current scratch has no Vitest/tsx/happy-dom and the old source root is absent. This reviewer did not inspect or probe the runtime/filesystem.",
+    "hypothesis": "No node_modules or compiled artifacts, per the feasibility question.",
+    "noEnvironmentRestorationSelected": true,
+    "noOldPhaseReplay": true
+  },
+  "nodeLanguageSupport": {
+    "version": "24.22.1",
+    "primaryUrl": "https://nodejs.org/download/release/v24.22.1/docs/api/typescript.html",
+    "retrievedSourceRef": "turn120view0",
+    "facts": [
+      "Node natively strips erasable TypeScript syntax and supports native node:test.",
+      "Type stripping does not consume tsconfig path mappings or produce missing dist files; explicit import file extensions still resolve the requested files.",
+      "The helper and whole-suite entry use explicit .ts relative imports, and root/Host package type is module. Missing tsx is not the decisive blocker."
+    ],
+    "limit": "Source/runtime documentation only. No Node executable was invoked to test parsing or linking."
+  },
+  "decisiveEdges": [
+    {
+      "from": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+      "to": "scripts/legacy-agent-host/desktop-backend-fixture.ts",
+      "kind": "eager value import",
+      "importedValue": "desktopShellEnvironmentProbeSource"
+    },
+    {
+      "from": "scripts/legacy-agent-host/desktop-backend-fixture.ts",
+      "to": "packages/legacy-agent-host/dist/adapters/team/createFilesystemTeamOwner.js",
+      "kind": "eager value import",
+      "source": "packages/legacy-agent-host/src/adapters/team/createFilesystemTeamOwner.ts"
+    },
+    {
+      "from": "scripts/legacy-agent-host/desktop-backend-fixture.ts",
+      "to": "packages/legacy-agent-host/dist/adapters/profile/ProfileWriterLease.js",
+      "kind": "eager value import",
+      "source": "packages/legacy-agent-host/src/adapters/profile/ProfileWriterLease.ts"
+    },
+    {
+      "from": "scripts/legacy-agent-host/desktop-backend-fixture.ts",
+      "to": "packages/legacy-agent-host/dist/composition/readProfile.js",
+      "kind": "eager value import",
+      "source": "packages/legacy-agent-host/src/composition/readProfile.ts"
+    },
+    {
+      "from": "packages/legacy-agent-host/src/composition/readProfile.ts",
+      "to": "packages/legacy-agent-host/src/composition/TeamHost.ts",
+      "kind": "eager value import; emitted import remains TeamHost.js",
+      "importedValue": "teamHostProfileSchema"
+    },
+    {
+      "from": "packages/legacy-agent-host/src/adapters/profile/ProfileWriterLease.ts",
+      "to": "agent-teams-controller/src/internal/fileLock.js",
+      "kind": "top-level createRequire result, immediately invoked require"
+    },
+    {
+      "from": "packages/legacy-agent-host/src/adapters/team/createFilesystemTeamOwner.ts",
+      "to": "packages/legacy-agent-host/src/adapters/team/ControllerAdapter.ts",
+      "kind": "eager value import"
+    },
+    {
+      "from": "packages/legacy-agent-host/src/adapters/team/ControllerAdapter.ts",
+      "to": "agent-teams-controller/src/internal/{fileLock,atomicFile,boardLock}.js",
+      "kind": "top-level CommonJS requires; workspace package must resolve"
+    },
+    {
+      "from": "scripts/legacy-agent-host/desktop-runtime-source-fixture.ts",
+      "to": "packages/legacy-agent-host/dist/composition/runtimeProfile.js",
+      "kind": "eager value import"
+    },
+    {
+      "from": "scripts/legacy-agent-host/desktop-runtime-source-fixture.ts",
+      "to": "packages/legacy-agent-host/dist/management/profile.js",
+      "kind": "eager value import"
+    },
+    {
+      "from": "packages/legacy-agent-host/src/composition/runtimeProfile.ts",
+      "to": "@agent-teams/provider-implementations/codex",
+      "kind": "eager value import",
+      "importedValue": "captureCodexConfiguredMcpCatalog"
+    },
+    {
+      "from": "packages/legacy-agent-host/src/composition/runtimeProfile.ts",
+      "to": "zod",
+      "kind": "eager value import"
+    },
+    {
+      "from": "packages/legacy-agent-host/src/composition/TeamHost.ts",
+      "to": "packages/legacy-agent-host/src/composition/TeamReviewComposition.ts",
+      "kind": "eager value import"
+    },
+    {
+      "from": "packages/legacy-agent-host/src/composition/TeamReviewComposition.ts",
+      "to": "@agent-teams/task-change-ledger/review-storage",
+      "kind": "eager value import; package exports resolve dist/review/storage/index.js"
+    },
+    {
+      "from": "packages/legacy-agent-host/src/composition/TeamReviewComposition.ts",
+      "to": "packages/legacy-agent-host/src/composition/HostTeamReview.ts",
+      "kind": "eager value import"
+    },
+    {
+      "from": "packages/legacy-agent-host/src/composition/HostTeamReview.ts",
+      "to": "@agent-teams/task-change-ledger and /review-content, /review-git, /review-apply, /review-writer, /review-transport",
+      "kind": "eager value imports; package exports resolve dist"
+    },
+    {
+      "from": "packages/legacy-agent-host/src/composition/TeamHost.ts",
+      "to": "packages/legacy-agent-host/src/composition/RuntimeTeamCoordinator.ts",
+      "kind": "eager value import"
+    },
+    {
+      "from": "packages/legacy-agent-host/src/composition/RuntimeTeamCoordinator.ts",
+      "to": "packages/legacy-agent-host/src/composition/createRuntimeMemberProviderFactory.ts",
+      "kind": "eager value import"
+    },
+    {
+      "from": "packages/legacy-agent-host/src/composition/createRuntimeMemberProviderFactory.ts",
+      "to": "packages/legacy-agent-host/src/mcp/endpoint.ts",
+      "kind": "eager value import"
+    },
+    {
+      "from": "packages/legacy-agent-host/src/mcp/endpoint.ts",
+      "to": "@modelcontextprotocol/sdk/server/index.js, /server/streamableHttp.js, /types.js",
+      "kind": "eager value imports"
+    },
+    {
+      "from": "packages/legacy-agent-host/src/composition/createRuntimeMemberProviderFactory.ts",
+      "to": "ClaudeMemberProvider, CodexMemberProvider, OpenCodeMemberProvider, OpenCodeV2EmbeddedMemberProvider",
+      "kind": "four eager value imports in adapters/providers"
+    },
+    {
+      "from": "packages/legacy-agent-host/src/adapters/providers/ClaudeMemberProvider.ts",
+      "to": "@agent-teams/provider-implementations/claude",
+      "kind": "eager value import"
+    },
+    {
+      "from": "packages/legacy-agent-host/src/adapters/providers/CodexMemberProvider.ts",
+      "to": "@agent-teams/provider-implementations/codex",
+      "kind": "eager value import"
+    },
+    {
+      "from": "packages/legacy-agent-host/src/adapters/providers/OpenCodeMemberProvider.ts",
+      "to": "@agent-teams/provider-implementations/opencode",
+      "kind": "eager value imports"
+    },
+    {
+      "from": "packages/legacy-agent-host/src/adapters/providers/OpenCodeV2EmbeddedMemberProvider.ts",
+      "to": "packages/legacy-agent-host/src/adapters/providers/OpenCodeV2CapturedConfiguration.ts",
+      "kind": "eager value import"
+    },
+    {
+      "from": "packages/legacy-agent-host/src/adapters/providers/OpenCodeV2CapturedConfiguration.ts",
+      "to": "packages/legacy-agent-host/src/adapters/providers/OpenCodeConfigurationSource.ts",
+      "kind": "eager value import"
+    },
+    {
+      "from": "packages/legacy-agent-host/src/adapters/providers/OpenCodeConfigurationSource.ts",
+      "to": "jsonc-parser",
+      "kind": "eager value import",
+      "importedValues": [
+        "getNodeValue",
+        "parseTree"
+      ]
+    }
+  ],
+  "requiredBuildAndPackageBoundaries": {
+    "host": {
+      "path": "packages/legacy-agent-host",
+      "identity": {
+        "bytes": 12355,
+        "sha256": "4e567d64af0c5a0d85e155e90fd4eec9a6ca720e89edfe9923d7e4cc9a1b4f81",
+        "gitBlob": "42093f5cb1be431e383a2bbf97223a2bd8d54b49"
+      },
+      "engine": ">=24.21.0 <25",
+      "existingBuildScript": "node node_modules/@typescript/native/bin/tsc -p tsconfig.json",
+      "existingPrebuild": "pnpm --filter @agent-teams/task-change-ledger build",
+      "compilerOptions": {
+        "target": "ES2024",
+        "module": "NodeNext",
+        "moduleResolution": "NodeNext",
+        "strict": true,
+        "noUncheckedIndexedAccess": true,
+        "exactOptionalPropertyTypes": true,
+        "noUnusedLocals": true,
+        "noUnusedParameters": true,
+        "verbatimModuleSyntax": true,
+        "declaration": true,
+        "rootDir": "src",
+        "outDir": "dist",
+        "types": [
+          "node"
+        ],
+        "skipLibCheck": true
+      },
+      "declaredDependencies": {
+        "@agent-teams/provider-implementations": "file:../../vendor/provider-migration/host-logs-thinking-c79b81bf/agent-teams-provider-implementations-0.0.0.tgz",
+        "@agent-teams/provider-session-contracts": "file:../../vendor/provider-migration/host-logs-thinking-c79b81bf/agent-teams-provider-session-contracts-0.0.0.tgz",
+        "@modelcontextprotocol/sdk": "1.32.0",
+        "agent-teams-controller": "workspace:*",
+        "zod": "4.6.7",
+        "@agent-teams/task-change-ledger": "workspace:*",
+        "jsonc-parser": "3.3.1"
+      },
+      "declaredBuildDevDependencies": {
+        "@types/node": "^24.12.4",
+        "@typescript/native": "npm:typescript@7.0.2"
+      },
+      "classification": "Actual eager dist and package-resolution prerequisites; installation/build not performed."
+    },
+    "ledger": {
+      "path": "packages/task-change-ledger",
+      "identity": {
+        "bytes": 2714,
+        "sha256": "a0db21117b905b414e825862d8bc93cfe9280975c8b91e1afa6cca2e1570a132",
+        "gitBlob": "0fac5843889e1b28d53712f353bce1b0bae855a4"
+      },
+      "engine": ">=24.21.0 <25",
+      "existingBuildScript": "node node_modules/@typescript/native/bin/tsc -p tsconfig.json",
+      "compilerOptions": {
+        "target": "ES2024",
+        "module": "NodeNext",
+        "moduleResolution": "NodeNext",
+        "strict": true,
+        "noUnusedLocals": true,
+        "noUnusedParameters": true,
+        "verbatimModuleSyntax": true,
+        "declaration": true,
+        "rootDir": "src",
+        "outDir": "dist",
+        "types": [
+          "node"
+        ],
+        "skipLibCheck": true
+      },
+      "declaredDependencies": {
+        "diff": "8.0.3",
+        "@codemirror/merge": "6.12.0",
+        "@codemirror/state": "6.5.4",
+        "node-diff3": "3.2.0"
+      },
+      "declaredBuildDevDependencies": {
+        "@types/node": "^24.12.4",
+        "@typescript/native": "npm:typescript@7.0.2"
+      },
+      "classification": "A real workspace package with compiled dist exports; complete declared dependency set listed, not all individually proven as the first linker failure."
+    },
+    "controller": {
+      "path": "agent-teams-controller",
+      "identity": {
+        "bytes": 526,
+        "sha256": "7da9c6dae6931016efbdd571ed858529851268a5b965d955a9d4c76ed1395a2e",
+        "gitBlob": "293fb7e08df5e9cc00663e0e5454dfde6ecfb103"
+      },
+      "type": "commonjs",
+      "main": "src/index.js",
+      "existingBuildScript": "node ./scripts/build.mjs",
+      "declaredDevDependencies": {
+        "proper-lockfile": "4.1.2"
+      },
+      "classification": "The proved eager lock/atomic/board imports use checked-in CommonJS src. They need package resolution/linking, but these edges do not require controller dist or proper-lockfile. They must not be replaced with shims."
+    },
+    "providerArtifact": {
+      "selectedDirectory": "vendor/provider-migration/host-logs-thinking-c79b81bf",
+      "receiptIdentity": {
+        "bytes": 5740,
+        "sha256": "93ef58e01044287252668396c2bd7cd8da4f628c7265f73185d89893fd65ba34",
+        "gitBlob": "a78d8a6619a358c79f88fc66886754eb2b6de9b2"
+      },
+      "implementationPackage": {
+        "file": "agent-teams-provider-implementations-0.0.0.tgz",
+        "gitBlob": "f05a05edba53aa07364d9bbd5510f468dfe7ebe3",
+        "bytes": 186398,
+        "sha256": "a3ee7632c9685fafb4ccc57cb5548503c476fc9ed608bd13438ed74e5329f9d8",
+        "integrity": "sha512-1QxsR0b5zRvHBjE0oQFVTEadYmpUmO1ElixO0Y0L3EuVDUXxkvhlE8KXUR0sTRplYVNV37n8jZ7+pSDYCGS2jA==",
+        "regularPackageMembers": 253,
+        "uncompressedBytes": 796929,
+        "packageName": "@agent-teams/provider-implementations",
+        "version": "0.0.0",
+        "dependencies": {
+          "@agent-teams/provider-session-contracts": "0.0.0",
+          "@anthropic-ai/claude-agent-sdk": "0.3.305",
+          "zod": "4.6.7",
+          "@anthropic-ai/sdk": "0.122.0",
+          "@modelcontextprotocol/sdk": "1.32.0"
+        },
+        "peerDependenciesPresent": false
+      },
+      "sessionContractsPackage": {
+        "file": "agent-teams-provider-session-contracts-0.0.0.tgz",
+        "gitBlob": "33c2944ff8a52a9c087fba9d3cab1daffe2604d8",
+        "bytes": 6230,
+        "sha256": "0ea08bacd3f19a54c065cfaebbe8ae0fb3a8e6770886402f435a96e97867d2bc",
+        "integrity": "sha512-ONExHCowcHR4vsD86pOF3t91KlqkpVt83g43OXNM1tI+8nae32WkTI+UrIuYjg45PuR6KKgfEIHz9pNXPMFC4g==",
+        "regularPackageMembers": 12,
+        "uncompressedBytes": 18153,
+        "packageName": "@agent-teams/provider-session-contracts",
+        "version": "0.0.0",
+        "dependencies": {}
+      },
+      "classification": "Manifest-selected physical archives and dependencies recorded by the checked-in receipt. This feasibility task reread/rehashed the receipt, not the tgz binary bodies or registry dependency implementations. It does not attest a freshly installed artifact."
+    },
+    "installationConstraint": "The exact selected package contents, workspace links, compiler package, and their frozen dependency closure are real prerequisites. Any fresh setup remains separately reviewed. The report does not authorize an install, lifecycle script, compiler, source overlay, shim, or partial-test substitution."
+  },
+  "testSpecificDataInputs": {
+    "providerArchiveCase": {
+      "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+      "identity": {
+        "bytes": 164965,
+        "sha256": "852bedb85c83dbc4b488dffb4a9ffebbe398adc53e85f5a3cea8ca36b146cbf7",
+        "gitBlob": "896c587e077da56a98a314a175fb3cba0353d6ee"
+      },
+      "lines": {
+        "from": 1853,
+        "to": 1864
+      },
+      "text": "test('the selected provider receipt digest matches the actual manifest-selected archive bytes', async () => {\n  const repo = join(import.meta.dirname, '../..');\n  const manifest = JSON.parse(await readFile(join(repo, 'packages/legacy-agent-host/package.json'), 'utf8')) as {\n    dependencies: Record<string, unknown>;\n  };\n  const dependency = manifest.dependencies['@agent-teams/provider-implementations'];\n  assert.ok(typeof dependency === 'string' &&\n    /^file:\\.\\.\\/\\.\\.\\/vendor\\/provider-migration\\/[a-z0-9-]+\\/agent-teams-provider-implementations-0\\.0\\.0\\.tgz$/.test(dependency));\n  const path = dependency.slice('file:../../'.length);\n  const sha256 = createHash('sha256').update(await readFile(join(repo, path))).digest('hex');\n  assert.deepEqual(await readNativeProviderArtifact(repo), { path, sha256 });\n});"
+    },
+    "requiredSelectedArchive": "vendor/provider-migration/host-logs-thinking-c79b81bf/agent-teams-provider-implementations-0.0.0.tgz",
+    "requiredSelectedReceipt": "vendor/provider-migration/host-logs-thinking-c79b81bf/source-receipt.json",
+    "additionalWholeSourceReads": [
+      "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+      "scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts",
+      "scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+      "scripts/legacy-agent-host/desktop-task-review-cycle-ui-smoke.ts"
+    ],
+    "dynamicRepositoryImport": "scripts/legacy-agent-host/desktop-resume-records.ts imports built-in node:sqlite; no external sqlite package is implied by that edge.",
+    "controlledSubprocessCase": "The complete file includes execFileSync(process.execPath, [generated TEST shell-probe .mjs, ...]) for the finite shell fixture. Thus running the whole suite is not subprocess-free, though these calls target the selected Node executable. This task did not run them."
+  },
+  "runnerDistinction": {
+    "whole139": "Imports test from node:test and uses native node --test. Neither the entry nor its selected direct imports supplies a Vitest/tsx/happy-dom requirement.",
+    "whole85": "The renderer85 Vitest suite remains a distinct preserved deliverable. No inference that satisfying Node139 prerequisites qualifies or executes renderer85.",
+    "controlModule": "desktop-ui-controls.ts itself imports only node:assert/strict. That narrower module fact does not make the unchanged whole139 dependency graph Node-only.",
+    "noSpecialFallback": "No filtered test run, copied helper algorithm, dynamic-import removal, fake Vitest shim, or replacement source tree proposed."
+  },
+  "existingWorkflowCorroboration": {
+    "path": ".github/workflows/host-emulated-acceptance.yml",
+    "identity": {
+      "bytes": 96872,
+      "sha256": "5379894007246368728c518c08222be329d58bb2755dc80235709a033017805d",
+      "gitBlob": "9ec6dfb68e98480a12224528e2637153f4274a6b"
+    },
+    "completeCorpus": {
+      "blob": "9011bb095b3249421eb114231fd0ce26878f5624",
+      "bytes": 1423178,
+      "sha256": "0257ec7c26f1d5d358c9bd6841540b8098d265f49af5f588be260a6bfb42065f"
+    },
+    "excerpt": {
+      "lines": {
+        "from": 89,
+        "to": 105
+      },
+      "text": "      - name: Install frozen workspace and Electron\n        run: |\n          set -euo pipefail\n          node scripts/ci/install-dependencies-with-retry.mjs --child-concurrency=1\n          node scripts/ensure-electron-install.cjs --strict\n          node -e \"require('node:assert/strict').equal(require('electron/package.json').version, '44.10.1')\"\n          pnpm exec electron-rebuild --module-dir . --force --only better-sqlite3 --version 44.10.1\n      - name: Build existing Desktop prerequisites and verify admission\n        run: |\n          set -euo pipefail\n          if [[ \"$RUNNER_OS\" = Linux ]]; then node scripts/build/buildLinuxNodeExec.mjs; fi\n          pnpm --filter @agent-teams/legacy-agent-host build\n          pnpm --filter agent-teams-controller build\n          pnpm --filter agent-teams-mcp build\n          node --test scripts/legacy-agent-host/desktop-backend-observations.test.ts scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts scripts/legacy-agent-host/test-child-process-trace.test.ts scripts/legacy-agent-host/desktop-emulated-settings.test.ts scripts/legacy-agent-host/desktop-emulated-codex-catalog.test.ts scripts/legacy-agent-host/desktop-resume-records.test.ts scripts/legacy-agent-host/desktop-captured-app-exit.test.ts scripts/legacy-agent-host/desktop-opencode-v2-management-records.test.ts\n          node --test test/scripts/installDependenciesWithRetry.test.mjs\n      - name: Verify original Runtime and Team conversation contracts"
+    },
+    "interpretation": "Existing workflow installs dependencies and builds Host/controller/MCP before invoking the native Node test file. Its wider Desktop prerequisites are corroboration, not a claim that all Electron/native build steps are minimal requirements for this one Node file."
+  },
+  "decisiveExcerpts": [
+    {
+      "path": "scripts/legacy-agent-host/desktop-backend-fixture.ts",
+      "identity": {
+        "bytes": 33737,
+        "sha256": "58279362c05f6645881e4850807f78183eee5dc51dfb32f355ff4ded7e7c3589",
+        "gitBlob": "495118ecb0d895dcc87f5782f8a4b0ccd35d3587"
+      },
+      "lines": {
+        "from": 1,
+        "to": 33
+      },
+      "text": "import {\n  GROUP_ALICE_CONTEXT,\n  GROUP_BOB_CONTEXT,\n} from '../../packages/legacy-agent-host/tests/fixtures/native-claude-team/group-chat.ts';\nimport { createHash } from 'node:crypto';\nimport { mkdir, mkdtemp, readFile, realpath, writeFile } from 'node:fs/promises';\nimport { tmpdir } from 'node:os';\nimport { basename, dirname, join } from 'node:path';\nimport { createFilesystemTeamOwner } from '../../packages/legacy-agent-host/dist/adapters/team/createFilesystemTeamOwner.js';\nimport { acquireProfileWriterLease } from '../../packages/legacy-agent-host/dist/adapters/profile/ProfileWriterLease.js';\nimport { CONTEXT_MARKER } from '../../packages/legacy-agent-host/tests/fixtures/native-claude-team/model.ts';\nimport { readTeamHostProfile } from '../../packages/legacy-agent-host/dist/composition/readProfile.js';\nimport type { CandidateRuntimePaths } from './candidate-runtime-paths.ts';\nimport type { TeamHostProfile } from '../../packages/legacy-agent-host/dist/composition/TeamHost.js';\nimport { prepareNativeReviewWorkspace } from './desktop-native-review-fixture.ts';\nimport { prepareDesktopReviewLedger } from './desktop-review-fixture.ts';\nimport { prepareDesktopStoppedImport } from './desktop-stopped-import-fixture.ts';\nimport { desktopBackendEnvironment, desktopRuntimeSourceEnvironment, prepareDesktopRuntimeProfile, readDesktopLinuxChildExecInput } from './desktop-runtime-source-fixture.ts';\nimport type { DesktopOpenCodeSourceSelection } from './desktop-runtime-source-fixture.ts';\nexport { desktopBackendEnvironment } from './desktop-runtime-source-fixture.ts';\nimport type { DesktopOpenCodeV2Selection } from './desktop-opencode-v2-fixture.ts';\nimport { desktopCodexSha256, prepareDesktopCodexLoginOpener } from './desktop-codex-login-fixture.ts';\nexport { desktopCodexSha256 } from './desktop-codex-login-fixture.ts';\nimport { desktopClaudeSha256 } from './desktop-claude-native-selection.ts';\nimport { DESKTOP_MCP_MEMBERS, prepareDesktopCapturedMcpRecipes } from './desktop-opencode-v2-mcp-fixture.ts';\n\nexport const digest = (bytes: Uint8Array | string): string =>\n  createHash('sha256').update(bytes).digest('hex');\nexport const fileDigest = async (path: string): Promise<string> => digest(await readFile(path));\n\nconst quoteShellArgument = (value: string): string => \"'\" + value.replaceAll(\"'\", \"'\\\\''\") + \"'\";\n\n/** Shell bootstrap preserves the captured absolute Node even inside an app bundle path. */"
+    },
+    {
+      "path": "packages/legacy-agent-host/src/adapters/profile/ProfileWriterLease.ts",
+      "identity": {
+        "bytes": 2341,
+        "sha256": "69588150393bc19fdf0e87d9458984de1c69a99cda80efb82c1e033ac63dad42",
+        "gitBlob": "761cfba79bd4a993442681d4ec2decdad57efc3b"
+      },
+      "lines": {
+        "from": 1,
+        "to": 8
+      },
+      "text": "import { lstatSync, realpathSync } from 'node:fs';\nimport { createRequire } from 'node:module';\nimport { isAbsolute, join, resolve } from 'node:path';\n\nconst require = createRequire(import.meta.url);\nconst locks = require('agent-teams-controller/src/internal/fileLock.js') as {\n  acquireFileLockSync(path: string, options: { acquireTimeoutMs: number }): () => void;\n};"
+    },
+    {
+      "path": "packages/legacy-agent-host/src/composition/readProfile.ts",
+      "identity": {
+        "bytes": 435,
+        "sha256": "dc909435c6a66c045bccba9ac1b3a946b06fd2713331acf6c4468deebd976bec",
+        "gitBlob": "39524282358bb2f18cb3013f1b30889dc078b83a"
+      },
+      "lines": {
+        "from": 1,
+        "to": 20
+      },
+      "text": "import { readCapturedProfile } from '../owned-process/readCapturedProfile.js';\nimport { teamHostProfileSchema } from './TeamHost.js';\n\nimport type { TeamHostProfile } from './TeamHost.js';\n\n/** Captured private file and digest are supplied by the trusted Desktop profile. */\nexport function readTeamHostProfile(path: string, sha256: string): TeamHostProfile {\n  return teamHostProfileSchema.parse(readCapturedProfile(path, sha256));\n}\n"
+    },
+    {
+      "path": "packages/legacy-agent-host/src/composition/runtimeProfile.ts",
+      "identity": {
+        "bytes": 10369,
+        "sha256": "8d01aa3189e83512c25b1b5f2a5fc3f0a427da7be979291127179914489b9cc8",
+        "gitBlob": "7dcaecc2d76bf568347082b5f82f0d738e0bfaa1"
+      },
+      "lines": {
+        "from": 1,
+        "to": 13
+      },
+      "text": "import { captureCodexConfiguredMcpCatalog } from '@agent-teams/provider-implementations/codex';\nimport type { CodexConfiguredMcpCatalog } from '@agent-teams/provider-implementations/codex';\nimport { capturedMcpSourceSchema } from '../mcp-catalog/capturedSource.js';\nimport { z } from 'zod';\n\nimport { nativeProcessProfileSchema, nativeProfilePathSchema } from './nativeProcessProfile.js';\nimport { hasUntrustedOpenCodeBinaryOverride } from './openCodeV2Environment.js';\nimport { isCanonicalOpenCodeV2Directory } from './openCodeV2StaticPreflight.js';\nimport { openCodeV2EmbeddedProfileSchema } from './openCodeV2EmbeddedProfile.js';\nimport { capturedMcpServersSchema } from '../mcp-catalog/capturedServer.js';\nimport { openCodeManagedPreferencesSchema } from './openCodeManagedPreferences.js';\nimport { initialRuntimeModelAdmissionSchema } from './initialRuntimeModelAdmission.js';\n"
+    },
+    {
+      "path": "packages/legacy-agent-host/src/composition/createRuntimeMemberProviderFactory.ts",
+      "identity": {
+        "bytes": 15423,
+        "sha256": "189b8a98f8708d22b1ffabc84ef235efd320a910bf7a9ee19c266846ccd3f1ac",
+        "gitBlob": "ff8389cb7c44d3116c17a9826f1daf9c17551c7d"
+      },
+      "lines": {
+        "from": 1,
+        "to": 18
+      },
+      "text": "import type { TeamMcpGroupPort } from '../mcp/groupChatTools.js';\nimport { createMemberAttachmentPort } from './createMemberAttachmentPort.js';\nimport type { TeamMcpNativeMemberCreationPort } from '../mcp/nativeMemberCreationContracts.js';\nimport { createClaudeMemberProvider } from '../adapters/providers/ClaudeMemberProvider.js';\nimport { createCodexMemberProvider } from '../adapters/providers/CodexMemberProvider.js';\nimport { createOpenCodeMemberProvider } from '../adapters/providers/OpenCodeMemberProvider.js';\nimport { createOpenCodeV2EmbeddedMemberProvider } from '../adapters/providers/OpenCodeV2EmbeddedMemberProvider.js';\nimport { startTeamMcpEndpoint } from '../mcp/endpoint.js';\nimport { RuntimeOwnerError } from '../runtime/contracts.js';\nimport { runtimeDigest } from '../runtime/identity.js';\nimport { captureMemberProviderAuthority } from './captureMemberProviderAuthority.js';\nimport { captureNativeInputAuthority } from './captureNativeInputAuthority.js';\nimport { createClaudeSubagents } from './createClaudeSubagents.js';\nimport { createClaudeCheckpointSource } from './createClaudeCheckpointSource.js';\nimport { createMemberEvidenceCapture } from './createMemberEvidenceCapture.js';\nimport { createMemberProcessMcpPort } from './createMemberProcessMcpPort.js';\nimport { assertRuntimeWorktree } from './runtimeWorktreeCapture.js';\nimport { memberInitialInstructions } from './TeamLaunchComposition.js';"
+    },
+    {
+      "path": "packages/legacy-agent-host/src/mcp/endpoint.ts",
+      "identity": {
+        "bytes": 13508,
+        "sha256": "90c2cd466302bc57bf6a145451a6599ffe0257593541560f297465e2070ad65d",
+        "gitBlob": "1c9bdf5c98165030ee955b17f7c606d01d1627f6"
+      },
+      "lines": {
+        "from": 1,
+        "to": 10
+      },
+      "text": "import { randomBytes, timingSafeEqual } from 'node:crypto';\nimport { createServer } from 'node:http';\n\nimport { Server } from '@modelcontextprotocol/sdk/server/index.js';\nimport { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';\nimport { CallToolRequestSchema, ListToolsRequestSchema } from '@modelcontextprotocol/sdk/types.js';\n\nimport { TeamOwnerError } from '../team/contracts.js';\nimport { McpToolFailure } from './contracts.js';\nimport { createTeamMcpTools } from './tools.js';"
+    },
+    {
+      "path": "packages/legacy-agent-host/src/composition/TeamReviewComposition.ts",
+      "identity": {
+        "bytes": 3259,
+        "sha256": "31a6b3a2cc18cc3a1ca221a5a607ebd90744f82534903b562b76f96f30f36015",
+        "gitBlob": "72963fb246daccfbe70632f04d1ae286956bd7a5"
+      },
+      "lines": {
+        "from": 1,
+        "to": 6
+      },
+      "text": "import { readProcessStartTimeMs } from '@agent-teams/task-change-ledger/review-storage';\nimport { createTeamReviewMethods } from '../review/createTeamReviewMethods.js';\nimport { TeamOwnerError } from '../team/contracts.js';\nimport { createHostTeamReview } from './HostTeamReview.js';\nimport type { HostedTeam } from './MemberEntry.js';\nimport type { TeamHostProfile } from './TeamHost.js';"
+    },
+    {
+      "path": "packages/legacy-agent-host/src/composition/HostTeamReview.ts",
+      "identity": {
+        "bytes": 20744,
+        "sha256": "524090688947b8c3fda5523e60c00655e1d64bc36438a1c6cbb6624a69a12e45",
+        "gitBlob": "23732e186b88b3474ad2e65defdeadc5ff2deb59"
+      },
+      "lines": {
+        "from": 1,
+        "to": 18
+      },
+      "text": "import { reviewMethodKind } from '../team/reviewMethodKind.js';\nimport { AsyncLocalStorage } from 'node:async_hooks';\nimport { join, relative, isAbsolute, sep } from 'node:path';\nimport { lstatSync, realpathSync } from 'node:fs';\nimport { AgentChangeLedgerReader, TaskChangeLedgerReader } from '@agent-teams/task-change-ledger';\nimport { FileContentResolver } from '@agent-teams/task-change-ledger/review-content';\nimport { GitDiffFallback } from '@agent-teams/task-change-ledger/review-git';\nimport { ReviewApplier } from '@agent-teams/task-change-ledger/review-apply';\nimport {\n  createReviewWriter,\n  resolveAuthorizedReviewRoot,\n  validateAuthorizedReviewFilePath,\n  collectAuthoritativeReviewedFiles,\n} from '@agent-teams/task-change-ledger/review-writer';\nimport {\n  bindReviewWriterRequest,\n  dispatchReviewWriter,\n} from '@agent-teams/task-change-ledger/review-transport';"
+    },
+    {
+      "path": "packages/legacy-agent-host/src/adapters/providers/OpenCodeConfigurationSource.ts",
+      "identity": {
+        "bytes": 11488,
+        "sha256": "7137298d7c6caa935924c175cf8d0b8d58f6c3968cb45ebe3c01e66a7b1e89f9",
+        "gitBlob": "6efd49158d9f3ab93d916fdb562fa61b2f8aa039"
+      },
+      "lines": {
+        "from": 1,
+        "to": 20
+      },
+      "text": "import { createHash } from 'node:crypto';\nimport {\n  closeSync,\n  constants,\n  fstatSync,\n  lstatSync,\n  openSync,\n  readSync,\n  realpathSync,\n} from 'node:fs';\nimport { dirname, isAbsolute, join, parse as parsePath, resolve, sep } from 'node:path';\n\nimport { getNodeValue, parseTree } from 'jsonc-parser';\n\nimport { openCodeConfigurationReferenceSchema } from '../../composition/openCodeConfigurationReference.js';\nimport { ManagementCommandError } from '../../management/commandRecords.js';\nimport { managementDigest } from '../../management/identity.js';\n\nimport type { Node as JsoncNode, ParseError } from 'jsonc-parser';\nimport type { OpenCodeConfigurationReference } from '../../composition/openCodeConfigurationReference.js';"
+    }
+  ],
+  "completeFetchedFileIdentityIndex": [
+    {
+      "path": "scripts/legacy-agent-host/desktop-backend-fixture.ts",
+      "identity": {
+        "bytes": 33737,
+        "sha256": "58279362c05f6645881e4850807f78183eee5dc51dfb32f355ff4ded7e7c3589",
+        "gitBlob": "495118ecb0d895dcc87f5782f8a4b0ccd35d3587"
+      },
+      "url": "https://github.com/777genius/agent-teams-ai/blob/9c9c73190840592963142d36562ea07d2b5d2d71/scripts/legacy-agent-host/desktop-backend-fixture.ts"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-backend-observations.ts",
+      "identity": {
+        "bytes": 33423,
+        "sha256": "2f98ed35ffb34f090d58b4021f54b1d92938f2ae6263312dd867654b923e80c8",
+        "gitBlob": "dca0c1710273411656e3284db0302449a00ddaf6"
+      },
+      "url": "https://github.com/777genius/agent-teams-ai/blob/9c9c73190840592963142d36562ea07d2b5d2d71/scripts/legacy-agent-host/desktop-backend-observations.ts"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.ts",
+      "identity": {
+        "bytes": 27829,
+        "sha256": "9ea0a2063cae525d80b8a79eac4fcb79062d47fe81f9f2b72d843662a3e92abf",
+        "gitBlob": "9aa43a43d6186c62bc92dae60dab4fe57cc63fe6"
+      },
+      "url": "https://github.com/777genius/agent-teams-ai/blob/9c9c73190840592963142d36562ea07d2b5d2d71/scripts/legacy-agent-host/desktop-team-ui-smoke.ts"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-owner-routing-availability-ui.ts",
+      "identity": {
+        "bytes": 12335,
+        "sha256": "5d05c61bb9a5b0f8abb2533df0f7f12babd1162a57bb636e21b88f63b19b597b",
+        "gitBlob": "d0c2e893bcede89c56c516242469e6e88cf43a88"
+      },
+      "url": "https://github.com/777genius/agent-teams-ai/blob/9c9c73190840592963142d36562ea07d2b5d2d71/scripts/legacy-agent-host/desktop-owner-routing-availability-ui.ts"
+    },
+    {
+      "path": "src/features/agent-backend/contracts/teamSelection.ts",
+      "identity": {
+        "bytes": 699,
+        "sha256": "62b245ce310279e4e2f3aedbbd1f152a225affff16bd289b0e0fb4ef60479278",
+        "gitBlob": "f8b41569f3b24647678a6293accd2be03e281fca"
+      },
+      "url": "https://github.com/777genius/agent-teams-ai/blob/9c9c73190840592963142d36562ea07d2b5d2d71/src/features/agent-backend/contracts/teamSelection.ts"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+      "identity": {
+        "bytes": 8457,
+        "sha256": "2da55bb40a5689ace0e922dc4867d7c73278d9a1cd200ea8c4602ca68f82da3b",
+        "gitBlob": "3c7b4bb53f4259ac0795d3f92fb715887acb554f"
+      },
+      "url": "https://github.com/777genius/agent-teams-ai/blob/9c9c73190840592963142d36562ea07d2b5d2d71/scripts/legacy-agent-host/desktop-task-comment-input-target.ts"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-task-board-attachments-ui.ts",
+      "identity": {
+        "bytes": 25110,
+        "sha256": "83b92a2f8a1f2141bf1672548d9f01402a514720783f850897bf3cd98560e656",
+        "gitBlob": "e128514aef972fd4f3fcf745155b8a937fbbc71e"
+      },
+      "url": "https://github.com/777genius/agent-teams-ai/blob/9c9c73190840592963142d36562ea07d2b5d2d71/scripts/legacy-agent-host/desktop-task-board-attachments-ui.ts"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "identity": {
+        "bytes": 28974,
+        "sha256": "7626e479a6662242009cb050e7e5af612a29e4205d62666d15274d5c30f91386",
+        "gitBlob": "ed57cb0fe7d57ef076a591621289eb77667c63ad"
+      },
+      "url": "https://github.com/777genius/agent-teams-ai/blob/9c9c73190840592963142d36562ea07d2b5d2d71/scripts/legacy-agent-host/desktop-ui-controls.ts"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-codex-login-ui-proof.ts",
+      "identity": {
+        "bytes": 14384,
+        "sha256": "f99140283a8755025c45a47b00eaf093f66df77e1780102918962feeac8e2607",
+        "gitBlob": "b108d88b37bc679fa50bdef8e20df99947cc6954"
+      },
+      "url": "https://github.com/777genius/agent-teams-ai/blob/9c9c73190840592963142d36562ea07d2b5d2d71/scripts/legacy-agent-host/desktop-codex-login-ui-proof.ts"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-backend-failures.ts",
+      "identity": {
+        "bytes": 32872,
+        "sha256": "af840a158f0d765fd4ebd9ba9d8b7e378e5f5a5c7ed9ecd0659101fe7834849f",
+        "gitBlob": "55cbfa9ab573b41a7903360f0539ac0f137fc7d8"
+      },
+      "url": "https://github.com/777genius/agent-teams-ai/blob/9c9c73190840592963142d36562ea07d2b5d2d71/scripts/legacy-agent-host/desktop-backend-failures.ts"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-proof-evidence.ts",
+      "identity": {
+        "bytes": 26258,
+        "sha256": "cb08691efb9eb422674ceb35c3f7e93ba660500f1d3ee8c8da35d611452f00e8",
+        "gitBlob": "5a537bd32e3b13bedeb415b02a09546bc5f686ed"
+      },
+      "url": "https://github.com/777genius/agent-teams-ai/blob/9c9c73190840592963142d36562ea07d2b5d2d71/scripts/legacy-agent-host/desktop-proof-evidence.ts"
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/fixtures/native-provider-artifact.ts",
+      "identity": {
+        "bytes": 9713,
+        "sha256": "2446a157fd921c868c7b6963a991f6ca664ab17ea84d33523fd1e9863ff70ca5",
+        "gitBlob": "342fab2bf377b7ca6acd6dbd180a946382c00c1a"
+      },
+      "url": "https://github.com/777genius/agent-teams-ai/blob/9c9c73190840592963142d36562ea07d2b5d2d71/packages/legacy-agent-host/tests/fixtures/native-provider-artifact.ts"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-runtime-source-fixture.ts",
+      "identity": {
+        "bytes": 17687,
+        "sha256": "64df0ba4beb7c5d85a18637af836533430f90620e2f5072763a9dc3880351231",
+        "gitBlob": "bd1f76510d3339513ca694998fe4523aed0a6eff"
+      },
+      "url": "https://github.com/777genius/agent-teams-ai/blob/9c9c73190840592963142d36562ea07d2b5d2d71/scripts/legacy-agent-host/desktop-runtime-source-fixture.ts"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-opencode-v2-fixture.ts",
+      "identity": {
+        "bytes": 7577,
+        "sha256": "22a46aa137e87c4f1a282aae5518e9aada69ce8b947169457d3aadde3b2ace1d",
+        "gitBlob": "9d6a158fe27134c6f0559ea058f2ecfa5ad478d1"
+      },
+      "url": "https://github.com/777genius/agent-teams-ai/blob/9c9c73190840592963142d36562ea07d2b5d2d71/scripts/legacy-agent-host/desktop-opencode-v2-fixture.ts"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-native-stop-fixture.ts",
+      "identity": {
+        "bytes": 29580,
+        "sha256": "2b954cec0846e30f530ae615e63ac05ae9a3969e0338e5d2ab03ec80a62a0f0d",
+        "gitBlob": "d2f58f7dd6ce6b05ff6200fabe67a4945f94a506"
+      },
+      "url": "https://github.com/777genius/agent-teams-ai/blob/9c9c73190840592963142d36562ea07d2b5d2d71/scripts/legacy-agent-host/desktop-native-stop-fixture.ts"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-resume-records.ts",
+      "identity": {
+        "bytes": 11685,
+        "sha256": "fe69bc8ed0208727811e53fbf7f1c92de27732181db6afb63de96d49f6a174ff",
+        "gitBlob": "0ca117bd5e84ae6368278a3a0a1cda40b5ec680b"
+      },
+      "url": "https://github.com/777genius/agent-teams-ai/blob/9c9c73190840592963142d36562ea07d2b5d2d71/scripts/legacy-agent-host/desktop-resume-records.ts"
+    },
+    {
+      "path": "packages/legacy-agent-host/src/adapters/team/createFilesystemTeamOwner.ts",
+      "identity": {
+        "bytes": 2456,
+        "sha256": "759df61d7a27155aaea0fea4b048ec7231d68a9b38918483bd2a46f6a545e0ee",
+        "gitBlob": "f46d39fe38e189f9e618296248650a83c76e5033"
+      },
+      "url": "https://github.com/777genius/agent-teams-ai/blob/9c9c73190840592963142d36562ea07d2b5d2d71/packages/legacy-agent-host/src/adapters/team/createFilesystemTeamOwner.ts"
+    },
+    {
+      "path": "packages/legacy-agent-host/src/adapters/profile/ProfileWriterLease.ts",
+      "identity": {
+        "bytes": 2341,
+        "sha256": "69588150393bc19fdf0e87d9458984de1c69a99cda80efb82c1e033ac63dad42",
+        "gitBlob": "761cfba79bd4a993442681d4ec2decdad57efc3b"
+      },
+      "url": "https://github.com/777genius/agent-teams-ai/blob/9c9c73190840592963142d36562ea07d2b5d2d71/packages/legacy-agent-host/src/adapters/profile/ProfileWriterLease.ts"
+    },
+    {
+      "path": "packages/legacy-agent-host/src/adapters/team/ControllerAdapter.ts",
+      "identity": {
+        "bytes": 7214,
+        "sha256": "cb0d1e69b79fd0ceb2819235d8ca74e5aed4e69253220c3b46621011a3d4c2f9",
+        "gitBlob": "45ca266cf44afd3a65c5db3312640d71f67328eb"
+      },
+      "url": "https://github.com/777genius/agent-teams-ai/blob/9c9c73190840592963142d36562ea07d2b5d2d71/packages/legacy-agent-host/src/adapters/team/ControllerAdapter.ts"
+    },
+    {
+      "path": "packages/legacy-agent-host/src/composition/readProfile.ts",
+      "identity": {
+        "bytes": 435,
+        "sha256": "dc909435c6a66c045bccba9ac1b3a946b06fd2713331acf6c4468deebd976bec",
+        "gitBlob": "39524282358bb2f18cb3013f1b30889dc078b83a"
+      },
+      "url": "https://github.com/777genius/agent-teams-ai/blob/9c9c73190840592963142d36562ea07d2b5d2d71/packages/legacy-agent-host/src/composition/readProfile.ts"
+    },
+    {
+      "path": "packages/legacy-agent-host/src/composition/TeamHost.ts",
+      "identity": {
+        "bytes": 35571,
+        "sha256": "07e6fcb2b24e4c3e5ae540fc74c2195460c3108a8eb89295843de1f9ead9a6c2",
+        "gitBlob": "6145e95c323207893e55b20daf1fa2e74e0cee97"
+      },
+      "url": "https://github.com/777genius/agent-teams-ai/blob/9c9c73190840592963142d36562ea07d2b5d2d71/packages/legacy-agent-host/src/composition/TeamHost.ts"
+    },
+    {
+      "path": "packages/legacy-agent-host/src/composition/runtimeProfile.ts",
+      "identity": {
+        "bytes": 10369,
+        "sha256": "8d01aa3189e83512c25b1b5f2a5fc3f0a427da7be979291127179914489b9cc8",
+        "gitBlob": "7dcaecc2d76bf568347082b5f82f0d738e0bfaa1"
+      },
+      "url": "https://github.com/777genius/agent-teams-ai/blob/9c9c73190840592963142d36562ea07d2b5d2d71/packages/legacy-agent-host/src/composition/runtimeProfile.ts"
+    },
+    {
+      "path": "packages/legacy-agent-host/src/management/profile.ts",
+      "identity": {
+        "bytes": 5699,
+        "sha256": "e4c99575480163cb5077d0768cc2a612f9f00bead9b228f3e9d56c0e2399896c",
+        "gitBlob": "ccefb500c16a228e03b7a1e4a47e04897fbca4f1"
+      },
+      "url": "https://github.com/777genius/agent-teams-ai/blob/9c9c73190840592963142d36562ea07d2b5d2d71/packages/legacy-agent-host/src/management/profile.ts"
+    },
+    {
+      "path": "packages/legacy-agent-host/src/composition/RuntimeTeamCoordinator.ts",
+      "identity": {
+        "bytes": 35008,
+        "sha256": "1d86d1616645c2c0169806777415097e1523e294322b047699294ddfac03f1e0",
+        "gitBlob": "0f5e2258b2af33c55673aa0fdc4c660e3629e784"
+      },
+      "url": "https://github.com/777genius/agent-teams-ai/blob/9c9c73190840592963142d36562ea07d2b5d2d71/packages/legacy-agent-host/src/composition/RuntimeTeamCoordinator.ts"
+    },
+    {
+      "path": "packages/legacy-agent-host/src/composition/createRuntimeMemberProviderFactory.ts",
+      "identity": {
+        "bytes": 15423,
+        "sha256": "189b8a98f8708d22b1ffabc84ef235efd320a910bf7a9ee19c266846ccd3f1ac",
+        "gitBlob": "ff8389cb7c44d3116c17a9826f1daf9c17551c7d"
+      },
+      "url": "https://github.com/777genius/agent-teams-ai/blob/9c9c73190840592963142d36562ea07d2b5d2d71/packages/legacy-agent-host/src/composition/createRuntimeMemberProviderFactory.ts"
+    },
+    {
+      "path": "packages/legacy-agent-host/src/mcp/endpoint.ts",
+      "identity": {
+        "bytes": 13508,
+        "sha256": "90c2cd466302bc57bf6a145451a6599ffe0257593541560f297465e2070ad65d",
+        "gitBlob": "1c9bdf5c98165030ee955b17f7c606d01d1627f6"
+      },
+      "url": "https://github.com/777genius/agent-teams-ai/blob/9c9c73190840592963142d36562ea07d2b5d2d71/packages/legacy-agent-host/src/mcp/endpoint.ts"
+    },
+    {
+      "path": "packages/legacy-agent-host/src/adapters/providers/ClaudeMemberProvider.ts",
+      "identity": {
+        "bytes": 9039,
+        "sha256": "5a7e5ab19c9f486c21e518c117c2637e0125b38f7ef2850ee6e1295bbad2123d",
+        "gitBlob": "a2158e62d439c0ee0b29ffd28df64cf848cee99f"
+      },
+      "url": "https://github.com/777genius/agent-teams-ai/blob/9c9c73190840592963142d36562ea07d2b5d2d71/packages/legacy-agent-host/src/adapters/providers/ClaudeMemberProvider.ts"
+    },
+    {
+      "path": "packages/legacy-agent-host/src/adapters/providers/CodexMemberProvider.ts",
+      "identity": {
+        "bytes": 15002,
+        "sha256": "75184e7328f9449a9f449994f0cd5dbbd2e954bd0170b79c2fbd236fec66e9c4",
+        "gitBlob": "f1d7efcb34f5c91953b474828bf09dbf3c092e98"
+      },
+      "url": "https://github.com/777genius/agent-teams-ai/blob/9c9c73190840592963142d36562ea07d2b5d2d71/packages/legacy-agent-host/src/adapters/providers/CodexMemberProvider.ts"
+    },
+    {
+      "path": "packages/legacy-agent-host/src/adapters/providers/OpenCodeMemberProvider.ts",
+      "identity": {
+        "bytes": 23243,
+        "sha256": "1f262a499ca1999c6a2188f5b90005c5c1c4c84f8fdb6fb40d08bbeeaab8bdf1",
+        "gitBlob": "78b22adbb55ab285186285e4e3f6ada38f413ecb"
+      },
+      "url": "https://github.com/777genius/agent-teams-ai/blob/9c9c73190840592963142d36562ea07d2b5d2d71/packages/legacy-agent-host/src/adapters/providers/OpenCodeMemberProvider.ts"
+    },
+    {
+      "path": "packages/legacy-agent-host/src/adapters/providers/OpenCodeV2EmbeddedMemberProvider.ts",
+      "identity": {
+        "bytes": 20153,
+        "sha256": "dd77a3ece2f781c2ad810cf5c51156761d3ae5a26c9f990967ace7997c6ac876",
+        "gitBlob": "d8a6a5e614ce90c9055a2b1298d4c9edaf07ef01"
+      },
+      "url": "https://github.com/777genius/agent-teams-ai/blob/9c9c73190840592963142d36562ea07d2b5d2d71/packages/legacy-agent-host/src/adapters/providers/OpenCodeV2EmbeddedMemberProvider.ts"
+    },
+    {
+      "path": "packages/legacy-agent-host/src/adapters/providers/OpenCodeV2CapturedConfiguration.ts",
+      "identity": {
+        "bytes": 5887,
+        "sha256": "5961f8b6be474f6f7c85d6e162bf577a6e58bf423e00832ff560ff87a0204f68",
+        "gitBlob": "0449edd82efd8becbb12364faaa80d4ebd9aacda"
+      },
+      "url": "https://github.com/777genius/agent-teams-ai/blob/9c9c73190840592963142d36562ea07d2b5d2d71/packages/legacy-agent-host/src/adapters/providers/OpenCodeV2CapturedConfiguration.ts"
+    },
+    {
+      "path": "packages/legacy-agent-host/src/adapters/providers/OpenCodeConfigurationSource.ts",
+      "identity": {
+        "bytes": 11488,
+        "sha256": "7137298d7c6caa935924c175cf8d0b8d58f6c3968cb45ebe3c01e66a7b1e89f9",
+        "gitBlob": "6efd49158d9f3ab93d916fdb562fa61b2f8aa039"
+      },
+      "url": "https://github.com/777genius/agent-teams-ai/blob/9c9c73190840592963142d36562ea07d2b5d2d71/packages/legacy-agent-host/src/adapters/providers/OpenCodeConfigurationSource.ts"
+    },
+    {
+      "path": "packages/legacy-agent-host/src/composition/TeamReviewComposition.ts",
+      "identity": {
+        "bytes": 3259,
+        "sha256": "31a6b3a2cc18cc3a1ca221a5a607ebd90744f82534903b562b76f96f30f36015",
+        "gitBlob": "72963fb246daccfbe70632f04d1ae286956bd7a5"
+      },
+      "url": "https://github.com/777genius/agent-teams-ai/blob/9c9c73190840592963142d36562ea07d2b5d2d71/packages/legacy-agent-host/src/composition/TeamReviewComposition.ts"
+    },
+    {
+      "path": "packages/legacy-agent-host/src/composition/HostTeamReview.ts",
+      "identity": {
+        "bytes": 20744,
+        "sha256": "524090688947b8c3fda5523e60c00655e1d64bc36438a1c6cbb6624a69a12e45",
+        "gitBlob": "23732e186b88b3474ad2e65defdeadc5ff2deb59"
+      },
+      "url": "https://github.com/777genius/agent-teams-ai/blob/9c9c73190840592963142d36562ea07d2b5d2d71/packages/legacy-agent-host/src/composition/HostTeamReview.ts"
+    },
+    {
+      "path": "package.json",
+      "identity": {
+        "bytes": 26839,
+        "sha256": "c92407a9a5dad6f9d6a6eb8ea7c456195d396679bb4b9dfd15b6c06b726d1084",
+        "gitBlob": "f80ec83172d0aec0dec8a8ab055426b4fca4a1f7"
+      },
+      "url": "https://github.com/777genius/agent-teams-ai/blob/9c9c73190840592963142d36562ea07d2b5d2d71/package.json"
+    },
+    {
+      "path": "pnpm-workspace.yaml",
+      "identity": {
+        "bytes": 6946,
+        "sha256": "581c6a5ada272bf4fd370efccf5398c63a3abd32782cf82021cfa11d94a0e1a5",
+        "gitBlob": "a049a862742a85ba77faafea329fc221b3e500e4"
+      },
+      "url": "https://github.com/777genius/agent-teams-ai/blob/9c9c73190840592963142d36562ea07d2b5d2d71/pnpm-workspace.yaml"
+    },
+    {
+      "path": "packages/legacy-agent-host/package.json",
+      "identity": {
+        "bytes": 12355,
+        "sha256": "4e567d64af0c5a0d85e155e90fd4eec9a6ca720e89edfe9923d7e4cc9a1b4f81",
+        "gitBlob": "42093f5cb1be431e383a2bbf97223a2bd8d54b49"
+      },
+      "url": "https://github.com/777genius/agent-teams-ai/blob/9c9c73190840592963142d36562ea07d2b5d2d71/packages/legacy-agent-host/package.json"
+    },
+    {
+      "path": "packages/legacy-agent-host/tsconfig.json",
+      "identity": {
+        "bytes": 456,
+        "sha256": "54be9b6021660d54c06c14fd25cc5c4484b7615f01d9eb033fc52edfded095ab",
+        "gitBlob": "9fad9f8a73e1cfffd382c0ba76f2945e5c361531"
+      },
+      "url": "https://github.com/777genius/agent-teams-ai/blob/9c9c73190840592963142d36562ea07d2b5d2d71/packages/legacy-agent-host/tsconfig.json"
+    },
+    {
+      "path": "packages/task-change-ledger/package.json",
+      "identity": {
+        "bytes": 2714,
+        "sha256": "a0db21117b905b414e825862d8bc93cfe9280975c8b91e1afa6cca2e1570a132",
+        "gitBlob": "0fac5843889e1b28d53712f353bce1b0bae855a4"
+      },
+      "url": "https://github.com/777genius/agent-teams-ai/blob/9c9c73190840592963142d36562ea07d2b5d2d71/packages/task-change-ledger/package.json"
+    },
+    {
+      "path": "packages/task-change-ledger/tsconfig.json",
+      "identity": {
+        "bytes": 378,
+        "sha256": "03d503904b76cc07fc4765a30493d288b99a2dbcf1325f3dda243592a407cb6c",
+        "gitBlob": "ff7683dc99c69dbf8c884ba138382468c9c86314"
+      },
+      "url": "https://github.com/777genius/agent-teams-ai/blob/9c9c73190840592963142d36562ea07d2b5d2d71/packages/task-change-ledger/tsconfig.json"
+    },
+    {
+      "path": "agent-teams-controller/package.json",
+      "identity": {
+        "bytes": 526,
+        "sha256": "7da9c6dae6931016efbdd571ed858529851268a5b965d955a9d4c76ed1395a2e",
+        "gitBlob": "293fb7e08df5e9cc00663e0e5454dfde6ecfb103"
+      },
+      "url": "https://github.com/777genius/agent-teams-ai/blob/9c9c73190840592963142d36562ea07d2b5d2d71/agent-teams-controller/package.json"
+    },
+    {
+      "path": "agent-teams-controller/src/internal/fileLock.js",
+      "identity": {
+        "bytes": 9662,
+        "sha256": "633a3c9863482b98f8acfdf66a3771f3d1133cbbc72b6e6a5aec19aae7892069",
+        "gitBlob": "3c087f7e7f35106e72340c3eca51b325e10d8314"
+      },
+      "url": "https://github.com/777genius/agent-teams-ai/blob/9c9c73190840592963142d36562ea07d2b5d2d71/agent-teams-controller/src/internal/fileLock.js"
+    },
+    {
+      "path": "agent-teams-controller/src/internal/atomicFile.js",
+      "identity": {
+        "bytes": 2584,
+        "sha256": "1dd90a08ef49ac810fe8e84c824f7e622b2c80bc90693f1d0d56df2a03a2eea7",
+        "gitBlob": "58311c77563351d5812caa652285aed64e3f58c7"
+      },
+      "url": "https://github.com/777genius/agent-teams-ai/blob/9c9c73190840592963142d36562ea07d2b5d2d71/agent-teams-controller/src/internal/atomicFile.js"
+    },
+    {
+      "path": "agent-teams-controller/src/internal/boardLock.js",
+      "identity": {
+        "bytes": 972,
+        "sha256": "93f1142230525c21f805a458c2d2abde4a5582275f833be451018af93fadcd70",
+        "gitBlob": "70e38795b8d4f7eeaffe6bae9970dbfda3cb92a1"
+      },
+      "url": "https://github.com/777genius/agent-teams-ai/blob/9c9c73190840592963142d36562ea07d2b5d2d71/agent-teams-controller/src/internal/boardLock.js"
+    },
+    {
+      "path": "vendor/provider-migration/host-logs-thinking-c79b81bf/source-receipt.json",
+      "identity": {
+        "bytes": 5740,
+        "sha256": "93ef58e01044287252668396c2bd7cd8da4f628c7265f73185d89893fd65ba34",
+        "gitBlob": "a78d8a6619a358c79f88fc66886754eb2b6de9b2"
+      },
+      "url": "https://github.com/777genius/agent-teams-ai/blob/9c9c73190840592963142d36562ea07d2b5d2d71/vendor/provider-migration/host-logs-thinking-c79b81bf/source-receipt.json"
+    }
+  ],
+  "limits": {
+    "runtimePassClaimed": false,
+    "firstFailureObserved": false,
+    "sourceOrTestPostimagesAuthored": false,
+    "shellOrRuntimeInvoked": false,
+    "metadataOrVendorSubprocessInvoked": false,
+    "ciReadOrPolling": false,
+    "refOrPrMutation": false,
+    "newSetupSelected": false,
+    "oldPhaseReplayed": false,
+    "fullTransitiveRegistryOrBinaryAudit": false,
+    "sourceOnly": true
+  },
+  "checks": [
+    {
+      "name": "entry whole bytes exact",
+      "status": "PASS",
+      "evidence": {
+        "bytes": 164965,
+        "sha256": "852bedb85c83dbc4b488dffb4a9ffebbe398adc53e85f5a3cea8ca36b146cbf7",
+        "gitBlob": "896c587e077da56a98a314a175fb3cba0353d6ee"
+      }
+    },
+    {
+      "name": "whole139 scope preserved",
+      "status": "PASS",
+      "evidence": "No whole-file selection/filter change."
+    },
+    {
+      "name": "eager fixture value import",
+      "status": "PASS",
+      "evidence": "entry line11"
+    },
+    {
+      "name": "three decisive literal Host dist imports",
+      "status": "PASS",
+      "evidence": "fixture static imports"
+    },
+    {
+      "name": "Host compiler emits src to dist",
+      "status": "PASS",
+      "evidence": "exact Host tsconfig"
+    },
+    {
+      "name": "native Node does not install/build dependencies",
+      "status": "PASS",
+      "evidence": "Node24.22.1 docs and literal import graph"
+    },
+    {
+      "name": "Host readProfile imports TeamHost schema eagerly",
+      "status": "PASS",
+      "evidence": "readProfile full435B"
+    },
+    {
+      "name": "controller lock required at module load",
+      "status": "PASS",
+      "evidence": "ProfileWriterLease line6"
+    },
+    {
+      "name": "controller lock source has only built-in requires",
+      "status": "PASS",
+      "evidence": "Complete fileLock body"
+    },
+    {
+      "name": "ledger compiled exports declared",
+      "status": "PASS",
+      "evidence": "exact ledger manifest"
+    },
+    {
+      "name": "Host prebuild builds ledger",
+      "status": "PASS",
+      "evidence": "exact Host manifest"
+    },
+    {
+      "name": "same real compiler declared for Host and ledger",
+      "status": "PASS",
+      "evidence": "No compiler shim"
+    },
+    {
+      "name": "MCP SDK eager import confirmed",
+      "status": "PASS",
+      "evidence": "factory -> endpoint"
+    },
+    {
+      "name": "Zod eager import confirmed",
+      "status": "PASS",
+      "evidence": "runtimeProfile"
+    },
+    {
+      "name": "three provider JS entry imports confirmed",
+      "status": "PASS",
+      "evidence": "RuntimeMemberProviderFactory's eager provider graph"
+    },
+    {
+      "name": "jsonc-parser eager path confirmed",
+      "status": "PASS",
+      "evidence": "OpenCodeV2EmbeddedMemberProvider -> capturedConfiguration -> source"
+    },
+    {
+      "name": "exact own provider pair retained",
+      "status": "PASS",
+      "evidence": "No incoming provider adoption"
+    },
+    {
+      "name": "archive physical-byte read is whole-test requirement",
+      "status": "PASS",
+      "evidence": "whole file lines1853-1864"
+    },
+    {
+      "name": "native node:test runner",
+      "status": "PASS",
+      "evidence": "No Vitest shim"
+    },
+    {
+      "name": "all selected complete body identities verified",
+      "status": "PASS",
+      "evidence": "45 full-file identities"
+    },
+    {
+      "name": "existing workflow builds before Node entry",
+      "status": "PASS",
+      "evidence": {
+        "bytes": 96872,
+        "sha256": "5379894007246368728c518c08222be329d58bb2755dc80235709a033017805d",
+        "gitBlob": "9ec6dfb68e98480a12224528e2637153f4274a6b"
+      }
+    },
+    {
+      "name": "source-only no execution or qualification claim",
+      "status": "PASS",
+      "evidence": "No shell, tests, native/vendor command, CI polling, refs or PR actions."
+    }
+  ]
+}

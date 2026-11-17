@@ -1,0 +1,1441 @@
+{
+  "schemaVersion": 1,
+  "kind": "independent-actual-new-draft-event-initial-capture-binding-review",
+  "reviewer": "/root/red_publication_recovery",
+  "at": "2026-11-17 03:23:28 UTC",
+  "repository": "777genius/agent-teams-ai",
+  "decision": "ACCEPTED_EXACT_EVENT_ASSOCIATION_AND_INITIAL_SNAPSHOT_BINDING",
+  "subject": {
+    "packet": {
+      "bytes": 643663,
+      "sha256": "484f4fba12763c0d56cb0fbb4254a107af55856fb79590843a1342478244ed12",
+      "gitBlob": "e739deca62881c52f7585baec25c51978cfbf731"
+    },
+    "r1": {
+      "bytes": 83960,
+      "sha256": "6ffeef78018e330679aa9a2bc2da5422aca9d2a38fb4c60834959bfd880e6e58",
+      "gitBlob": "7237425e51bda9feb7d0ded4e424fe72745680c1"
+    },
+    "actualPublicationGate": {
+      "bytes": 3186,
+      "sha256": "ac50077597d03f098f37b864f4d53ae65301c78ee969a823186b610480677a7c",
+      "gitBlob": "082178036bc188dabaeb82d1d2a91e8840f2b13e"
+    },
+    "externalMutationIntent": {
+      "bytes": 6057,
+      "sha256": "5d9e48adca5414b54eef55e7d68eb3353d77cb5dd3c3d660eb5c7f5278ca7315",
+      "gitBlob": "a692320653688e84c8f006c9c7eb883350f16423"
+    },
+    "prNumber": 1218,
+    "prId": 5349848284,
+    "headRef": "ci/frontend-parity-c714-20261117-head",
+    "headCommit": "9c9c73190840592963142d36562ea07d2b5d2d71",
+    "headTree": "ebd6c383f34c6fd4331b6f0a3da5b90597b5cc1f",
+    "baseRef": "ci/frontend-parity-c714-20261117-base",
+    "baseCommit": "77993819c233737f1e2b4c11c8ca1a5d360bcbe3",
+    "baseTree": "ada3f27db78fabc17a91e3904d41b8bc547c6dca",
+    "syntheticMerge": "7baf8533f00c4cfa3ef5493753fd6169d5b81247",
+    "syntheticMergeTree": "ebd6c383f34c6fd4331b6f0a3da5b90597b5cc1f",
+    "runIds": [
+      44008782844,
+      44008782843,
+      44008782825,
+      44008782909,
+      44008782832,
+      44008782869,
+      44008782932
+    ],
+    "runAttempt": 1
+  },
+  "scope": {
+    "packetOnly": true,
+    "completePacketBytes": 643663,
+    "fullPacketReadAndHash": true,
+    "embeddedExternalIntentBytes": 6057,
+    "embeddedExternalIntentReadAndHash": true,
+    "antecedentActualReportsAlreadyFullyRead": {
+      "root": {
+        "bytes": 192606,
+        "sha256": "1dc0a2f36dd3448f190f03b748be9ef2a52c5419b0bf1065097f8b3bf4a85a7f",
+        "gitBlob": "ba7f15a2e0964f00f7b9fbefdcdfcb7593aa733d"
+      },
+      "independent": {
+        "bytes": 292888,
+        "sha256": "307b15ae5c8bd2dd6003b3c9caf44c0ce3972f3c1392313402d9125ab4c4d600",
+        "gitBlob": "176dfbe127f3a9f9f81c089dfab445c8d1ce3ff9"
+      }
+    },
+    "gateBodyNotReaudited": "Packet and complete intent name the same root-reported closed gate08217803; no additional historical/gate fetch was requested or performed.",
+    "livePrQueries": 0,
+    "liveCiQueries": 0,
+    "sourceReadsOutsideRetainedEvidence": 0,
+    "targetExecutions": 0,
+    "rawEmbeddedUtf8Bodies": 23,
+    "rawEmbeddedUtf8Bytes": 268755
+  },
+  "conclusion": "Exact association of all seven attempt1 runs to PR1218 is closed. The initial discovery list has empty pull_requests arrays, but every complete attempt-specific raw metadata body already retained in the packet explicitly contains the single exact PR1218 association with correct PR ID, both immutable refs/SHAs, and repository IDs. These direct associations satisfy the accepted R1 new-run/event proof requirement. The exact CI event-derived title, one recorded opened Draft creation, unique exact head/base pair query, and synthetic merge proof independently corroborate the binding. The unsupported check-suite endpoint creates no remaining event-association blocker. This is not a runtime/test success review.",
+  "importantEvidenceDistinction": {
+    "initialDiscovery": {
+      "location": "packet.discovery.rawPages[0]",
+      "allSevenPullRequestsArraysEmpty": true,
+      "qualification": "Preserved as the initial list response; not evidence that a run lacks an actual associated PR."
+    },
+    "laterAttemptMetadata": {
+      "locations": "packet.attempts[*].rawMetadata.structuredContent.content",
+      "allSevenPullRequestsArraysPopulated": true,
+      "eachAssociationCount": 1,
+      "prNumber": 1218,
+      "prId": 5349848284,
+      "headSha": "9c9c73190840592963142d36562ea07d2b5d2d71",
+      "baseSha": "77993819c233737f1e2b4c11c8ca1a5d360bcbe3",
+      "headRef": "ci/frontend-parity-c714-20261117-head",
+      "baseRef": "ci/frontend-parity-c714-20261117-base",
+      "headRepositoryId": 1163183284,
+      "baseRepositoryId": 1163183284,
+      "qualification": "Direct parsed raw JSON from exact /actions/runs/<id>/attempts/1 URLs; no live polling or check-suite workaround needed."
+    },
+    "checkSuites": {
+      "requestedInPacket": 7,
+      "successfulReads": 0,
+      "errorCode": "INVALID_ARGUMENT",
+      "httpStatus": 400,
+      "reason": "Connector unsupported endpoint family",
+      "absentSuiteClaim": false,
+      "bypassPerformed": false,
+      "remainingAssociationGap": false
+    }
+  },
+  "chronology": {
+    "externalIntent": "2026-11-17 03:13:49 UTC",
+    "baseRefInvocation": "2026-11-17 03:14:02 UTC",
+    "headRefInvocation": "2026-11-17 03:14:17 UTC",
+    "prInvocation": "2026-11-17 03:14:27 UTC",
+    "prCreatedAt": "2026-11-17T03:14:27Z",
+    "prUpdatedAt": "2026-11-17T03:14:27Z",
+    "allSevenRunsCreatedAt": "2026-11-17T03:14:31Z",
+    "eventBindingRecordAt": "2026-11-17 03:16:39 UTC",
+    "packetRetainedAt": "2026-11-17 03:18:08 UTC"
+  },
+  "mutationAccounting": {
+    "recordedCounts": {
+      "baseRef": 1,
+      "headRef": 1,
+      "openedDraftPr": 1,
+      "rerun": 0,
+      "cancel": 0,
+      "dispatch": 0,
+      "metadataEdit": 0
+    },
+    "creationReceipts": {
+      "base": {
+        "location": "packet.actionReceipts.base",
+        "canonicalIdentity": {
+          "bytes": 5038,
+          "sha256": "3ef8b66203323eb9a052fc55626a4806173c2cfcea755bae878db58d45542fcd",
+          "gitBlob": "b1af59289420dd632a950cc0d4d97d57ca1c227c"
+        },
+        "ref": "refs/heads/ci/frontend-parity-c714-20261117-base",
+        "target": "77993819c233737f1e2b4c11c8ca1a5d360bcbe3",
+        "tree": "ada3f27db78fabc17a91e3904d41b8bc547c6dca"
+      },
+      "head": {
+        "location": "packet.actionReceipts.head",
+        "canonicalIdentity": {
+          "bytes": 5066,
+          "sha256": "57f931b375e709fc97a2ae7768c4d8d67c34bad7c0f504758c8418adae5e0165",
+          "gitBlob": "9464e02c727221826b39175b49fbbeb0b2796948"
+        },
+        "ref": "refs/heads/ci/frontend-parity-c714-20261117-head",
+        "target": "9c9c73190840592963142d36562ea07d2b5d2d71",
+        "tree": "ebd6c383f34c6fd4331b6f0a3da5b90597b5cc1f"
+      },
+      "pr": {
+        "location": "packet.actionReceipts.pr",
+        "canonicalIdentity": {
+          "bytes": 44497,
+          "sha256": "06f73aa18dbc9ff3ecfd5ded2702f0d1acfdbdef7512efb1c89ebc30cca72084",
+          "gitBlob": "2534dae544e2c82c7d2a99b3fbb8a6473f3f2c14"
+        },
+        "number": 1218,
+        "id": 5349848284
+      }
+    },
+    "qualification": "One successful captured receipt for each selected operation and recorded zero extra mutations. No claim of an exhaustive audit of unrelated external actors or repository activity."
+  },
+  "exactPayloadJoin": {
+    "r1": "7237425e51bda9feb7d0ded4e424fe72745680c1",
+    "externalIntent": "a692320653688e84c8f006c9c7eb883350f16423",
+    "toolNamesArgumentsCountsReadbacksExact": true,
+    "finalHeadOnlySubstitution": "9c9c73190840592963142d36562ea07d2b5d2d71",
+    "prDraft": true,
+    "maintainerCanModify": false,
+    "completeTitleAndBodyLiteralMatch": true
+  },
+  "prAndMerge": {
+    "prNumber": 1218,
+    "prId": 5349848284,
+    "url": "https://github.com/777genius/agent-teams-ai/pull/1218",
+    "state": "open",
+    "draft": true,
+    "head": {
+      "ref": "ci/frontend-parity-c714-20261117-head",
+      "sha": "9c9c73190840592963142d36562ea07d2b5d2d71",
+      "repositoryId": 1163183284,
+      "repository": "777genius/agent-teams-ai"
+    },
+    "base": {
+      "ref": "ci/frontend-parity-c714-20261117-base",
+      "sha": "77993819c233737f1e2b4c11c8ca1a5d360bcbe3",
+      "repositoryId": 1163183284,
+      "repository": "777genius/agent-teams-ai"
+    },
+    "mergeRef": "refs/pull/1218/merge",
+    "mergeCommit": "7baf8533f00c4cfa3ef5493753fd6169d5b81247",
+    "mergeTree": "ebd6c383f34c6fd4331b6f0a3da5b90597b5cc1f",
+    "mergeParents": [
+      "77993819c233737f1e2b4c11c8ca1a5d360bcbe3",
+      "9c9c73190840592963142d36562ea07d2b5d2d71"
+    ],
+    "mergeTreeEqualsAcceptedHeadTree": true,
+    "merged": false,
+    "closedAt": null,
+    "metadataUpdatedAfterCreationObserved": false
+  },
+  "exactPairQuery": {
+    "url": "https://api.github.com/repos/777genius/agent-teams-ai/pulls?state=open&head=777genius%3Aci%2Ffrontend-parity-c714-20261117-head&base=ci%2Ffrontend-parity-c714-20261117-base&per_page=100&page=1",
+    "resultCount": 1,
+    "onlyPrNumber": 1218,
+    "scope": "Exact open head/base pair; no global other-PR uniqueness assumption needed because every selected run has its own direct PR association."
+  },
+  "discovery": {
+    "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs?event=pull_request&branch=ci%2Ffrontend-parity-c714-20261117-head&head_sha=9c9c73190840592963142d36562ea07d2b5d2d71&created=%3E%3D2026-11-17T03%3A14%3A27Z&exclude_pull_requests=false&per_page=100&page=1",
+    "pageCount": 1,
+    "totalCount": 7,
+    "allPagesReadForSnapshot": true,
+    "perPage": 100,
+    "runIds": [
+      44008782844,
+      44008782843,
+      44008782825,
+      44008782909,
+      44008782832,
+      44008782869,
+      44008782932
+    ],
+    "expectedWorkflowSetExact": true
+  },
+  "ciEventProof": {
+    "runId": 44008782909,
+    "title": "CI proof: PR=1218 | head=9c9c73190840592963142d36562ea07d2b5d2d71 | base=77993819c233737f1e2b4c11c8ca1a5d360bcbe3 | merge=7baf8533f00c4cfa3ef5493753fd6169d5b81247 | action=opened | draft=true",
+    "sourceWorkflow": ".github/workflows/ci.yml",
+    "sourceWorkflowBlob": "a93ff6ba1e5656523668694bca24910a468aebc7",
+    "derivation": "Pinned unchanged run-name expression uses github.event.pull_request.number/head.sha/base.sha plus github.sha/event.action/draft.",
+    "action": "opened",
+    "draft": true
+  },
+  "runSnapshots": [
+    {
+      "runId": 44008782844,
+      "attempt": 1,
+      "workflowPath": ".github/workflows/electron-packaged-ci.yml",
+      "workflowId": 368482949,
+      "status": "queued",
+      "conclusion": null,
+      "createdAt": "2026-11-17T03:14:31Z",
+      "headSha": "9c9c73190840592963142d36562ea07d2b5d2d71",
+      "headBranch": "ci/frontend-parity-c714-20261117-head",
+      "repositoryId": 1163183284,
+      "checkSuiteId": 119134958271,
+      "initialDiscoveryPullRequestCount": 0,
+      "attemptPullRequestAssociation": {
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/pulls/1218",
+        "id": 5349848284,
+        "number": 1218,
+        "head": {
+          "ref": "ci/frontend-parity-c714-20261117-head",
+          "sha": "9c9c73190840592963142d36562ea07d2b5d2d71",
+          "repo": {
+            "id": 1163183284,
+            "url": "https://api.github.com/repos/777genius/agent-teams-ai",
+            "name": "agent-teams-ai"
+          }
+        },
+        "base": {
+          "ref": "ci/frontend-parity-c714-20261117-base",
+          "sha": "77993819c233737f1e2b4c11c8ca1a5d360bcbe3",
+          "repo": {
+            "id": 1163183284,
+            "url": "https://api.github.com/repos/777genius/agent-teams-ai",
+            "name": "agent-teams-ai"
+          }
+        }
+      },
+      "attemptMetadataUrl": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/44008782844/attempts/1",
+      "attemptMetadataIdentity": {
+        "bytes": 13822,
+        "sha256": "50cd10d9cbb4a23ce084e04d223e170598472ff4456215466572bc7f70d1d706",
+        "gitBlob": "6d5f2f31978f2c6eb3d0b664bbba11329de4d13e"
+      },
+      "jobsAsOfSnapshot": 1,
+      "jobsCurrentSnapshotComplete": true,
+      "jobIds": [
+        133790459077
+      ],
+      "queuedJobs": 1,
+      "skippedJobs": 0,
+      "terminalArtifacts": null
+    },
+    {
+      "runId": 44008782843,
+      "attempt": 1,
+      "workflowPath": ".github/workflows/host-emulated-acceptance.yml",
+      "workflowId": 417564953,
+      "status": "queued",
+      "conclusion": null,
+      "createdAt": "2026-11-17T03:14:31Z",
+      "headSha": "9c9c73190840592963142d36562ea07d2b5d2d71",
+      "headBranch": "ci/frontend-parity-c714-20261117-head",
+      "repositoryId": 1163183284,
+      "checkSuiteId": 119134958285,
+      "initialDiscoveryPullRequestCount": 0,
+      "attemptPullRequestAssociation": {
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/pulls/1218",
+        "id": 5349848284,
+        "number": 1218,
+        "head": {
+          "ref": "ci/frontend-parity-c714-20261117-head",
+          "sha": "9c9c73190840592963142d36562ea07d2b5d2d71",
+          "repo": {
+            "id": 1163183284,
+            "url": "https://api.github.com/repos/777genius/agent-teams-ai",
+            "name": "agent-teams-ai"
+          }
+        },
+        "base": {
+          "ref": "ci/frontend-parity-c714-20261117-base",
+          "sha": "77993819c233737f1e2b4c11c8ca1a5d360bcbe3",
+          "repo": {
+            "id": 1163183284,
+            "url": "https://api.github.com/repos/777genius/agent-teams-ai",
+            "name": "agent-teams-ai"
+          }
+        }
+      },
+      "attemptMetadataUrl": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/44008782843/attempts/1",
+      "attemptMetadataIdentity": {
+        "bytes": 13829,
+        "sha256": "b016ae4c3d72ef09b78746a070ac80bf80adac5f98339c9a308cbcf82aa35c7d",
+        "gitBlob": "7d6e8692f08b0287dc7bc3f555f5d849e0d6586d"
+      },
+      "jobsAsOfSnapshot": 22,
+      "jobsCurrentSnapshotComplete": true,
+      "jobIds": [
+        133790458485,
+        133790458656,
+        133790458674,
+        133790458749,
+        133790458853,
+        133790458876,
+        133790458914,
+        133790458918,
+        133790458925,
+        133790458926,
+        133790458932,
+        133790458935,
+        133790458946,
+        133790458962,
+        133790458964,
+        133790458973,
+        133790458977,
+        133790458991,
+        133790459004,
+        133790459025,
+        133790459063,
+        133790459141
+      ],
+      "queuedJobs": 22,
+      "skippedJobs": 0,
+      "terminalArtifacts": null
+    },
+    {
+      "runId": 44008782825,
+      "attempt": 1,
+      "workflowPath": ".github/workflows/codeql.yml",
+      "workflowId": 287665407,
+      "status": "completed",
+      "conclusion": "skipped",
+      "createdAt": "2026-11-17T03:14:31Z",
+      "headSha": "9c9c73190840592963142d36562ea07d2b5d2d71",
+      "headBranch": "ci/frontend-parity-c714-20261117-head",
+      "repositoryId": 1163183284,
+      "checkSuiteId": 119134958234,
+      "initialDiscoveryPullRequestCount": 0,
+      "attemptPullRequestAssociation": {
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/pulls/1218",
+        "id": 5349848284,
+        "number": 1218,
+        "head": {
+          "ref": "ci/frontend-parity-c714-20261117-head",
+          "sha": "9c9c73190840592963142d36562ea07d2b5d2d71",
+          "repo": {
+            "id": 1163183284,
+            "url": "https://api.github.com/repos/777genius/agent-teams-ai",
+            "name": "agent-teams-ai"
+          }
+        },
+        "base": {
+          "ref": "ci/frontend-parity-c714-20261117-base",
+          "sha": "77993819c233737f1e2b4c11c8ca1a5d360bcbe3",
+          "repo": {
+            "id": 1163183284,
+            "url": "https://api.github.com/repos/777genius/agent-teams-ai",
+            "name": "agent-teams-ai"
+          }
+        }
+      },
+      "attemptMetadataUrl": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/44008782825/attempts/1",
+      "attemptMetadataIdentity": {
+        "bytes": 13802,
+        "sha256": "885b452cd96e50fd9bb419bd652e9eba725c415f9b25e5e47dea1f884544b8eb",
+        "gitBlob": "027c2ad2ab6a58ebffecef2b1455bbfb0ad70cb1"
+      },
+      "jobsAsOfSnapshot": 1,
+      "jobsCurrentSnapshotComplete": true,
+      "jobIds": [
+        133790459544
+      ],
+      "queuedJobs": 0,
+      "skippedJobs": 1,
+      "terminalArtifacts": {
+        "total_count": 0,
+        "artifacts": []
+      }
+    },
+    {
+      "runId": 44008782909,
+      "attempt": 1,
+      "workflowPath": ".github/workflows/ci.yml",
+      "workflowId": 236915316,
+      "status": "queued",
+      "conclusion": null,
+      "createdAt": "2026-11-17T03:14:31Z",
+      "headSha": "9c9c73190840592963142d36562ea07d2b5d2d71",
+      "headBranch": "ci/frontend-parity-c714-20261117-head",
+      "repositoryId": 1163183284,
+      "checkSuiteId": 119134958479,
+      "initialDiscoveryPullRequestCount": 0,
+      "attemptPullRequestAssociation": {
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/pulls/1218",
+        "id": 5349848284,
+        "number": 1218,
+        "head": {
+          "ref": "ci/frontend-parity-c714-20261117-head",
+          "sha": "9c9c73190840592963142d36562ea07d2b5d2d71",
+          "repo": {
+            "id": 1163183284,
+            "url": "https://api.github.com/repos/777genius/agent-teams-ai",
+            "name": "agent-teams-ai"
+          }
+        },
+        "base": {
+          "ref": "ci/frontend-parity-c714-20261117-base",
+          "sha": "77993819c233737f1e2b4c11c8ca1a5d360bcbe3",
+          "repo": {
+            "id": 1163183284,
+            "url": "https://api.github.com/repos/777genius/agent-teams-ai",
+            "name": "agent-teams-ai"
+          }
+        }
+      },
+      "attemptMetadataUrl": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/44008782909/attempts/1",
+      "attemptMetadataIdentity": {
+        "bytes": 14105,
+        "sha256": "993746337c22ad17a8d4531793c5f67575e43d1cfa8aee1da5494e465e27c7ae",
+        "gitBlob": "1550c537c4d25cd1690459e80cd513849014be69"
+      },
+      "jobsAsOfSnapshot": 4,
+      "jobsCurrentSnapshotComplete": true,
+      "jobIds": [
+        133790460444,
+        133790462531,
+        133790462628,
+        133790462669
+      ],
+      "queuedJobs": 1,
+      "skippedJobs": 3,
+      "terminalArtifacts": null
+    },
+    {
+      "runId": 44008782832,
+      "attempt": 1,
+      "workflowPath": ".github/workflows/opencode-v2-stage1-preflight.yml",
+      "workflowId": 408464117,
+      "status": "queued",
+      "conclusion": null,
+      "createdAt": "2026-11-17T03:14:31Z",
+      "headSha": "9c9c73190840592963142d36562ea07d2b5d2d71",
+      "headBranch": "ci/frontend-parity-c714-20261117-head",
+      "repositoryId": 1163183284,
+      "checkSuiteId": 119134958272,
+      "initialDiscoveryPullRequestCount": 0,
+      "attemptPullRequestAssociation": {
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/pulls/1218",
+        "id": 5349848284,
+        "number": 1218,
+        "head": {
+          "ref": "ci/frontend-parity-c714-20261117-head",
+          "sha": "9c9c73190840592963142d36562ea07d2b5d2d71",
+          "repo": {
+            "id": 1163183284,
+            "url": "https://api.github.com/repos/777genius/agent-teams-ai",
+            "name": "agent-teams-ai"
+          }
+        },
+        "base": {
+          "ref": "ci/frontend-parity-c714-20261117-base",
+          "sha": "77993819c233737f1e2b4c11c8ca1a5d360bcbe3",
+          "repo": {
+            "id": 1163183284,
+            "url": "https://api.github.com/repos/777genius/agent-teams-ai",
+            "name": "agent-teams-ai"
+          }
+        }
+      },
+      "attemptMetadataUrl": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/44008782832/attempts/1",
+      "attemptMetadataIdentity": {
+        "bytes": 13856,
+        "sha256": "39700ef49c4b8597232451fef27c185afe8d87d420b47b827fc9c6e54adb051c",
+        "gitBlob": "581eefcbf3ea23d79e15d34e874f64f3f048129a"
+      },
+      "jobsAsOfSnapshot": 9,
+      "jobsCurrentSnapshotComplete": true,
+      "jobIds": [
+        133790458623,
+        133790458798,
+        133790458802,
+        133790458814,
+        133790458837,
+        133790458878,
+        133790458919,
+        133790458921,
+        133790458928
+      ],
+      "queuedJobs": 9,
+      "skippedJobs": 0,
+      "terminalArtifacts": null
+    },
+    {
+      "runId": 44008782869,
+      "attempt": 1,
+      "workflowPath": ".github/workflows/announcements-content.yml",
+      "workflowId": 350445454,
+      "status": "queued",
+      "conclusion": null,
+      "createdAt": "2026-11-17T03:14:31Z",
+      "headSha": "9c9c73190840592963142d36562ea07d2b5d2d71",
+      "headBranch": "ci/frontend-parity-c714-20261117-head",
+      "repositoryId": 1163183284,
+      "checkSuiteId": 119134958394,
+      "initialDiscoveryPullRequestCount": 0,
+      "attemptPullRequestAssociation": {
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/pulls/1218",
+        "id": 5349848284,
+        "number": 1218,
+        "head": {
+          "ref": "ci/frontend-parity-c714-20261117-head",
+          "sha": "9c9c73190840592963142d36562ea07d2b5d2d71",
+          "repo": {
+            "id": 1163183284,
+            "url": "https://api.github.com/repos/777genius/agent-teams-ai",
+            "name": "agent-teams-ai"
+          }
+        },
+        "base": {
+          "ref": "ci/frontend-parity-c714-20261117-base",
+          "sha": "77993819c233737f1e2b4c11c8ca1a5d360bcbe3",
+          "repo": {
+            "id": 1163183284,
+            "url": "https://api.github.com/repos/777genius/agent-teams-ai",
+            "name": "agent-teams-ai"
+          }
+        }
+      },
+      "attemptMetadataUrl": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/44008782869/attempts/1",
+      "attemptMetadataIdentity": {
+        "bytes": 13824,
+        "sha256": "21b3f1eedd90fd4e668111a2edbc983576384e0403ee3aed6b4b8527afb3ba64",
+        "gitBlob": "d3f992595dd02f61c2cba2fb3ba777b709856bd2"
+      },
+      "jobsAsOfSnapshot": 1,
+      "jobsCurrentSnapshotComplete": true,
+      "jobIds": [
+        133790458428
+      ],
+      "queuedJobs": 1,
+      "skippedJobs": 0,
+      "terminalArtifacts": null
+    },
+    {
+      "runId": 44008782932,
+      "attempt": 1,
+      "workflowPath": ".github/workflows/opencode-desktop-e2e.yml",
+      "workflowId": 354578294,
+      "status": "completed",
+      "conclusion": "skipped",
+      "createdAt": "2026-11-17T03:14:31Z",
+      "headSha": "9c9c73190840592963142d36562ea07d2b5d2d71",
+      "headBranch": "ci/frontend-parity-c714-20261117-head",
+      "repositoryId": 1163183284,
+      "checkSuiteId": 119134958560,
+      "initialDiscoveryPullRequestCount": 0,
+      "attemptPullRequestAssociation": {
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/pulls/1218",
+        "id": 5349848284,
+        "number": 1218,
+        "head": {
+          "ref": "ci/frontend-parity-c714-20261117-head",
+          "sha": "9c9c73190840592963142d36562ea07d2b5d2d71",
+          "repo": {
+            "id": 1163183284,
+            "url": "https://api.github.com/repos/777genius/agent-teams-ai",
+            "name": "agent-teams-ai"
+          }
+        },
+        "base": {
+          "ref": "ci/frontend-parity-c714-20261117-base",
+          "sha": "77993819c233737f1e2b4c11c8ca1a5d360bcbe3",
+          "repo": {
+            "id": 1163183284,
+            "url": "https://api.github.com/repos/777genius/agent-teams-ai",
+            "name": "agent-teams-ai"
+          }
+        }
+      },
+      "attemptMetadataUrl": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/44008782932/attempts/1",
+      "attemptMetadataIdentity": {
+        "bytes": 13841,
+        "sha256": "98b599a78edc9f1408b55f3d667dadcdcab8034195e52c5e6f2c1fb70d789063",
+        "gitBlob": "7e136cd7d74b7a57fa08aa39d910ae5144197c72"
+      },
+      "jobsAsOfSnapshot": 1,
+      "jobsCurrentSnapshotComplete": true,
+      "jobIds": [
+        133790501129
+      ],
+      "queuedJobs": 0,
+      "skippedJobs": 1,
+      "terminalArtifacts": {
+        "total_count": 0,
+        "artifacts": []
+      }
+    }
+  ],
+  "initialJobsSummary": {
+    "totalAsOfSnapshot": 39,
+    "queued": 34,
+    "skipped": 5,
+    "successful": 0,
+    "terminalWorkflowCount": 2,
+    "queuedWorkflowCount": 5,
+    "finalSelectedJobCountEstablished": false,
+    "qualification": "Pagination is complete for each captured scheduling snapshot. Dependent jobs are not yet all scheduled; current totals are not final workflow denominators."
+  },
+  "terminalDraftSkips": [
+    {
+      "runId": 44008782825,
+      "workflow": ".github/workflows/codeql.yml",
+      "attempt": 1,
+      "conclusion": "skipped",
+      "jobs": 1,
+      "skippedJobs": 1,
+      "artifactCount": 0
+    },
+    {
+      "runId": 44008782932,
+      "workflow": ".github/workflows/opencode-desktop-e2e.yml",
+      "attempt": 1,
+      "conclusion": "skipped",
+      "jobs": 1,
+      "skippedJobs": 1,
+      "artifactCount": 0
+    }
+  ],
+  "pendingRuntimeEvidence": {
+    "activeRunIds": [
+      44008782844,
+      44008782843,
+      44008782909,
+      44008782832,
+      44008782869
+    ],
+    "sourceCheckout": "NOT_YET_OBSERVED",
+    "wholeNode139": "UNREACHED",
+    "wholeRenderer85": "UNREACHED",
+    "desktopE2E": "UNREACHED",
+    "fullFinalJobSets": "PENDING_SCHEDULING",
+    "runtimeLogs": "NOT_IN_INITIAL_PACKET",
+    "activeWorkflowArtifacts": "NOT_YET_CAPTURED",
+    "archiveContentsRead": false,
+    "cleanup": "UNREACHED",
+    "qualification": "These are existing unfinished capture obligations, not event-association blockers or a new execution gate. Only the already selected new runs may continue to be observed under the accepted R1."
+  },
+  "rawEmbeddedResponseBodyPins": [
+    {
+      "location": "packet.actionReceipts.base.refReadback",
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/ref/heads/ci/frontend-parity-c714-20261117-base",
+      "contentIdentity": {
+        "bytes": 459,
+        "sha256": "f5c2285c47296fa460f1b7ad8450261d10c12e795b6c472f6ceb498e35733bff",
+        "gitBlob": "5528d3d62f673f2dc67628ae6634188dd948d079"
+      },
+      "isError": false
+    },
+    {
+      "location": "packet.actionReceipts.base.commitReadback",
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/commits/77993819c233737f1e2b4c11c8ca1a5d360bcbe3",
+      "contentIdentity": {
+        "bytes": 1162,
+        "sha256": "178be040d66f65a8d761edead358cb8a5a2d0c6fca746247ea60e3cb0a04056c",
+        "gitBlob": "e5a6ac36a1e29ffa31997ba9b67339d272f125c6"
+      },
+      "isError": false
+    },
+    {
+      "location": "packet.actionReceipts.head.refReadback",
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/ref/heads/ci/frontend-parity-c714-20261117-head",
+      "contentIdentity": {
+        "bytes": 459,
+        "sha256": "03f25027685f8d7053894c32260424c984e55dd85f5b522db673efd2c87af7e8",
+        "gitBlob": "aabfc9a09012305627a0138471fe9bd7e9392843"
+      },
+      "isError": false
+    },
+    {
+      "location": "packet.actionReceipts.head.commitReadback",
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/commits/9c9c73190840592963142d36562ea07d2b5d2d71",
+      "contentIdentity": {
+        "bytes": 1176,
+        "sha256": "047610cd62d8bf4e0650961320a1b1be873ed0c546221355c5704225c5ae26e6",
+        "gitBlob": "003ebc170dbb8249091ab3ece0b3c376fdb4fa4f"
+      },
+      "isError": false
+    },
+    {
+      "location": "packet.actionReceipts.pr.fullReadback",
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/pulls/1218",
+      "contentIdentity": {
+        "bytes": 19329,
+        "sha256": "b02cfcf9f5a79c2433d2a7942661a22f3708f247584c8f58b94dd20cc95fbd65",
+        "gitBlob": "6d2cd468b86bead02893e774642ab1148e381466"
+      },
+      "isError": false
+    },
+    {
+      "location": "packet.completeExactHeadBasePrQuery",
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/pulls?state=open&head=777genius%3Aci%2Ffrontend-parity-c714-20261117-head&base=ci%2Ffrontend-parity-c714-20261117-base&per_page=100&page=1",
+      "contentIdentity": {
+        "bytes": 19108,
+        "sha256": "0afc7ef13362131e6f77bad840ed7f0c6069662210cc930de1d9cdaaed7d5944",
+        "gitBlob": "2b3de88369f730a67021b8d7bb9503099ae964d4"
+      },
+      "isError": false
+    },
+    {
+      "location": "packet.discovery.rawPages.0",
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs?event=pull_request&branch=ci%2Ffrontend-parity-c714-20261117-head&head_sha=9c9c73190840592963142d36562ea07d2b5d2d71&created=%3E%3D2026-11-17T03%3A14%3A27Z&exclude_pull_requests=false&per_page=100&page=1",
+      "contentIdentity": {
+        "bytes": 93229,
+        "sha256": "e4a92558f32254136d0f915a17f0e7542627298f8d48730d3ae08e1e8d77cd17",
+        "gitBlob": "0d18d91510e7ae7ce02f7756d9c6a67a5c6531f8"
+      },
+      "isError": false
+    },
+    {
+      "location": "packet.attempts.0.rawMetadata",
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/44008782844/attempts/1",
+      "contentIdentity": {
+        "bytes": 13822,
+        "sha256": "50cd10d9cbb4a23ce084e04d223e170598472ff4456215466572bc7f70d1d706",
+        "gitBlob": "6d5f2f31978f2c6eb3d0b664bbba11329de4d13e"
+      },
+      "isError": false
+    },
+    {
+      "location": "packet.attempts.0.jobsRawPages.0",
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/44008782844/attempts/1/jobs?per_page=100&page=1",
+      "contentIdentity": {
+        "bytes": 914,
+        "sha256": "557b3179896dfa403665632a5d7e0328d6dd760c11219464ab8ac9794f970038",
+        "gitBlob": "6ebdd9de16d653e88f89aed8a1969653ddf8347b"
+      },
+      "isError": false
+    },
+    {
+      "location": "packet.attempts.1.rawMetadata",
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/44008782843/attempts/1",
+      "contentIdentity": {
+        "bytes": 13829,
+        "sha256": "b016ae4c3d72ef09b78746a070ac80bf80adac5f98339c9a308cbcf82aa35c7d",
+        "gitBlob": "7d6e8692f08b0287dc7bc3f555f5d849e0d6586d"
+      },
+      "isError": false
+    },
+    {
+      "location": "packet.attempts.1.jobsRawPages.0",
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/44008782843/attempts/1/jobs?per_page=100&page=1",
+      "contentIdentity": {
+        "bytes": 20058,
+        "sha256": "1e756cb1d3d12a58b8f25bf2034092fd97296720721ec1c5fe691869b219dc62",
+        "gitBlob": "c6e67ced78466511869c5f2fb17e7da9709ade07"
+      },
+      "isError": false
+    },
+    {
+      "location": "packet.attempts.2.rawMetadata",
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/44008782825/attempts/1",
+      "contentIdentity": {
+        "bytes": 13802,
+        "sha256": "885b452cd96e50fd9bb419bd652e9eba725c415f9b25e5e47dea1f884544b8eb",
+        "gitBlob": "027c2ad2ab6a58ebffecef2b1455bbfb0ad70cb1"
+      },
+      "isError": false
+    },
+    {
+      "location": "packet.attempts.2.jobsRawPages.0",
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/44008782825/attempts/1/jobs?per_page=100&page=1",
+      "contentIdentity": {
+        "bytes": 945,
+        "sha256": "628c88405e67811964569a76b512c55b14b044aec931b4f770b48dc047c4bfce",
+        "gitBlob": "b7fea4b984ce89a66101ef82b5555097d5ab5d90"
+      },
+      "isError": false
+    },
+    {
+      "location": "packet.attempts.2.terminalArtifactsRaw",
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/44008782825/artifacts?per_page=100&page=1",
+      "contentIdentity": {
+        "bytes": 32,
+        "sha256": "244563f989470892c537c9a4622920af0d228ee4528f7d00c64a06d6cd95856c",
+        "gitBlob": "ccd036f15290ec2e42695f742d9edf63354be932"
+      },
+      "isError": false
+    },
+    {
+      "location": "packet.attempts.3.rawMetadata",
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/44008782909/attempts/1",
+      "contentIdentity": {
+        "bytes": 14105,
+        "sha256": "993746337c22ad17a8d4531793c5f67575e43d1cfa8aee1da5494e465e27c7ae",
+        "gitBlob": "1550c537c4d25cd1690459e80cd513849014be69"
+      },
+      "isError": false
+    },
+    {
+      "location": "packet.attempts.3.jobsRawPages.0",
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/44008782909/attempts/1/jobs?per_page=100&page=1",
+      "contentIdentity": {
+        "bytes": 4468,
+        "sha256": "b39aa41da0e006a8a5076e4cf5e90afc3420c7bffe7fc7aa0258d72e67067e66",
+        "gitBlob": "d58d98ba64b5fdfc38a4fdf534ca71114199a4ac"
+      },
+      "isError": false
+    },
+    {
+      "location": "packet.attempts.4.rawMetadata",
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/44008782832/attempts/1",
+      "contentIdentity": {
+        "bytes": 13856,
+        "sha256": "39700ef49c4b8597232451fef27c185afe8d87d420b47b827fc9c6e54adb051c",
+        "gitBlob": "581eefcbf3ea23d79e15d34e874f64f3f048129a"
+      },
+      "isError": false
+    },
+    {
+      "location": "packet.attempts.4.jobsRawPages.0",
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/44008782832/attempts/1/jobs?per_page=100&page=1",
+      "contentIdentity": {
+        "bytes": 8454,
+        "sha256": "5b5f52c6da1f61f5b5ddacadb5be41fe5ed2016efda32676edd903139a9d79c2",
+        "gitBlob": "399331e5909acf2db6410137ac0edfc1450e3f4e"
+      },
+      "isError": false
+    },
+    {
+      "location": "packet.attempts.5.rawMetadata",
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/44008782869/attempts/1",
+      "contentIdentity": {
+        "bytes": 13824,
+        "sha256": "21b3f1eedd90fd4e668111a2edbc983576384e0403ee3aed6b4b8527afb3ba64",
+        "gitBlob": "d3f992595dd02f61c2cba2fb3ba777b709856bd2"
+      },
+      "isError": false
+    },
+    {
+      "location": "packet.attempts.5.jobsRawPages.0",
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/44008782869/attempts/1/jobs?per_page=100&page=1",
+      "contentIdentity": {
+        "bytes": 919,
+        "sha256": "17a1ed3b89ce44292a9b246750d5ee309ac7c14a1db4678918dc2287cbf7bd88",
+        "gitBlob": "8cd3f7f0f2cd41926de4b2d2fa48f5eb9b4cddfb"
+      },
+      "isError": false
+    },
+    {
+      "location": "packet.attempts.6.rawMetadata",
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/44008782932/attempts/1",
+      "contentIdentity": {
+        "bytes": 13841,
+        "sha256": "98b599a78edc9f1408b55f3d667dadcdcab8034195e52c5e6f2c1fb70d789063",
+        "gitBlob": "7e136cd7d74b7a57fa08aa39d910ae5144197c72"
+      },
+      "isError": false
+    },
+    {
+      "location": "packet.attempts.6.jobsRawPages.0",
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/44008782932/attempts/1/jobs?per_page=100&page=1",
+      "contentIdentity": {
+        "bytes": 932,
+        "sha256": "254f41e17d6ded2fd0ec30bd1f49dd1f8d0fc8652dcd15d9b629ef7066893681",
+        "gitBlob": "6ce721ae8ab64b34b83c64d1084e3e2bd45fab6b"
+      },
+      "isError": false
+    },
+    {
+      "location": "packet.attempts.6.terminalArtifactsRaw",
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/44008782932/artifacts?per_page=100&page=1",
+      "contentIdentity": {
+        "bytes": 32,
+        "sha256": "244563f989470892c537c9a4622920af0d228ee4528f7d00c64a06d6cd95856c",
+        "gitBlob": "ccd036f15290ec2e42695f742d9edf63354be932"
+      },
+      "isError": false
+    }
+  ],
+  "reviewMethodCorrection": "A draft comparison initially compared the whole R1 action object to the external intent, including the descriptive expectedEvent property omitted by the intent. The executable projection order/tool/arguments/executionCount/readback matches exactly after the documented final-head substitution. The expected opened event is independently present in captured CI event-derived title and all exact direct attempt associations. No subject or action bytes changed.",
+  "checks": [
+    {
+      "id": "complete-packet-identity",
+      "passed": true,
+      "detail": "Full643663B read and hashed."
+    },
+    {
+      "id": "exact-r1-and-full-intent",
+      "passed": true,
+      "detail": "Full6057B external intent identity joined."
+    },
+    {
+      "id": "antecedent-gate-pointer",
+      "passed": true,
+      "detail": "Same reported closed actual gate; no re-audit outside this packet."
+    },
+    {
+      "id": "actual-publication-report-pins",
+      "passed": true,
+      "detail": "Existing fully accepted actual reports are exact."
+    },
+    {
+      "id": "actual-final-head-substitution",
+      "passed": true,
+      "detail": "Exact9c9 final publication, not stalecba."
+    },
+    {
+      "id": "ancestor-base",
+      "passed": true,
+      "detail": "Exact779 andada3."
+    },
+    {
+      "id": "three-executable-payloads-and-readbacks",
+      "passed": true,
+      "detail": "Only final-head substitution and order renumbering; R1 descriptive expectedEvent not a tool argument."
+    },
+    {
+      "id": "recorded-one-shot-counts",
+      "passed": true,
+      "detail": "Three creation receipts; no repeated invocation represented."
+    },
+    {
+      "id": "creation-receipts-success",
+      "passed": true,
+      "detail": "All retained creation tool envelopes successful."
+    },
+    {
+      "id": "intent-action-chronology",
+      "passed": true,
+      "detail": "Intent03:13:49/base03:14:02/head03:14:17/PR03:14:27."
+    },
+    {
+      "id": "base-ref-and-commit-readback",
+      "passed": true,
+      "detail": "Exact new base."
+    },
+    {
+      "id": "head-ref-and-commit-readback",
+      "passed": true,
+      "detail": "Exact accepted full9c9 commit."
+    },
+    {
+      "id": "preflight-recorded",
+      "passed": true,
+      "detail": "Recorded in intent, not re-polled by reviewer."
+    },
+    {
+      "id": "pr-create-and-fullreadback",
+      "passed": true,
+      "detail": "Complete exact created PR."
+    },
+    {
+      "id": "pr-payload",
+      "passed": true,
+      "detail": "Concrete payload and draft/open state."
+    },
+    {
+      "id": "pr-head-base-repository",
+      "passed": true,
+      "detail": "Both immutable refs and repository IDs."
+    },
+    {
+      "id": "pr-no-update-observed",
+      "passed": true,
+      "detail": "Snapshot shows original creation timestamp; ongoing freeze remains required."
+    },
+    {
+      "id": "exact-pair-pr-query",
+      "passed": true,
+      "detail": "One exact open head/base pair; not a repository-wide uniqueness claim."
+    },
+    {
+      "id": "merge-ref-and-commit",
+      "passed": true,
+      "detail": "Actual synthetic merge identity."
+    },
+    {
+      "id": "merge-parents-and-source-tree",
+      "passed": true,
+      "detail": "Merge tree equals head; both exact parents."
+    },
+    {
+      "id": "discovery-complete-seven",
+      "passed": true,
+      "detail": "Complete first snapshot below100-page size."
+    },
+    {
+      "id": "discovery-url-bounded",
+      "passed": true,
+      "detail": "Only new head/action window."
+    },
+    {
+      "id": "exact-seven-workflow-set",
+      "passed": true,
+      "detail": "All seven selected workflows, no added or missing run."
+    },
+    {
+      "id": "initial-discovery-empty-pr-arrays",
+      "passed": true,
+      "detail": "True for initial discovery only."
+    },
+    {
+      "id": "exact-attempt-url:44008782844",
+      "passed": true,
+      "detail": "Retained raw attempt1 response."
+    },
+    {
+      "id": "run-identity:44008782844",
+      "passed": true,
+      "detail": "Exact new head/ref/repo/event, four seconds after PR."
+    },
+    {
+      "id": "discovery-attempt-identity:44008782844",
+      "passed": true,
+      "detail": "Same immutable run identity across snapshots."
+    },
+    {
+      "id": "direct-pr1218-association:44008782844",
+      "passed": true,
+      "detail": "Direct attempt record closes run-to-exact-PR association."
+    },
+    {
+      "id": "complete-jobs-snapshot:44008782844",
+      "passed": true,
+      "detail": "Complete scheduling snapshot, not final dependent-job denominator."
+    },
+    {
+      "id": "job-ownership:44008782844",
+      "passed": true,
+      "detail": "Every job belongs to exact new run/attempt/head."
+    },
+    {
+      "id": "suite-limitation:44008782844",
+      "passed": true,
+      "detail": "Unsupported family rejection; no bypass or absent-suite claim."
+    },
+    {
+      "id": "exact-attempt-url:44008782843",
+      "passed": true,
+      "detail": "Retained raw attempt1 response."
+    },
+    {
+      "id": "run-identity:44008782843",
+      "passed": true,
+      "detail": "Exact new head/ref/repo/event, four seconds after PR."
+    },
+    {
+      "id": "discovery-attempt-identity:44008782843",
+      "passed": true,
+      "detail": "Same immutable run identity across snapshots."
+    },
+    {
+      "id": "direct-pr1218-association:44008782843",
+      "passed": true,
+      "detail": "Direct attempt record closes run-to-exact-PR association."
+    },
+    {
+      "id": "complete-jobs-snapshot:44008782843",
+      "passed": true,
+      "detail": "Complete scheduling snapshot, not final dependent-job denominator."
+    },
+    {
+      "id": "job-ownership:44008782843",
+      "passed": true,
+      "detail": "Every job belongs to exact new run/attempt/head."
+    },
+    {
+      "id": "suite-limitation:44008782843",
+      "passed": true,
+      "detail": "Unsupported family rejection; no bypass or absent-suite claim."
+    },
+    {
+      "id": "exact-attempt-url:44008782825",
+      "passed": true,
+      "detail": "Retained raw attempt1 response."
+    },
+    {
+      "id": "run-identity:44008782825",
+      "passed": true,
+      "detail": "Exact new head/ref/repo/event, four seconds after PR."
+    },
+    {
+      "id": "discovery-attempt-identity:44008782825",
+      "passed": true,
+      "detail": "Same immutable run identity across snapshots."
+    },
+    {
+      "id": "direct-pr1218-association:44008782825",
+      "passed": true,
+      "detail": "Direct attempt record closes run-to-exact-PR association."
+    },
+    {
+      "id": "complete-jobs-snapshot:44008782825",
+      "passed": true,
+      "detail": "Complete scheduling snapshot, not final dependent-job denominator."
+    },
+    {
+      "id": "job-ownership:44008782825",
+      "passed": true,
+      "detail": "Every job belongs to exact new run/attempt/head."
+    },
+    {
+      "id": "suite-limitation:44008782825",
+      "passed": true,
+      "detail": "Unsupported family rejection; no bypass or absent-suite claim."
+    },
+    {
+      "id": "exact-attempt-url:44008782909",
+      "passed": true,
+      "detail": "Retained raw attempt1 response."
+    },
+    {
+      "id": "run-identity:44008782909",
+      "passed": true,
+      "detail": "Exact new head/ref/repo/event, four seconds after PR."
+    },
+    {
+      "id": "discovery-attempt-identity:44008782909",
+      "passed": true,
+      "detail": "Same immutable run identity across snapshots."
+    },
+    {
+      "id": "direct-pr1218-association:44008782909",
+      "passed": true,
+      "detail": "Direct attempt record closes run-to-exact-PR association."
+    },
+    {
+      "id": "complete-jobs-snapshot:44008782909",
+      "passed": true,
+      "detail": "Complete scheduling snapshot, not final dependent-job denominator."
+    },
+    {
+      "id": "job-ownership:44008782909",
+      "passed": true,
+      "detail": "Every job belongs to exact new run/attempt/head."
+    },
+    {
+      "id": "suite-limitation:44008782909",
+      "passed": true,
+      "detail": "Unsupported family rejection; no bypass or absent-suite claim."
+    },
+    {
+      "id": "exact-attempt-url:44008782832",
+      "passed": true,
+      "detail": "Retained raw attempt1 response."
+    },
+    {
+      "id": "run-identity:44008782832",
+      "passed": true,
+      "detail": "Exact new head/ref/repo/event, four seconds after PR."
+    },
+    {
+      "id": "discovery-attempt-identity:44008782832",
+      "passed": true,
+      "detail": "Same immutable run identity across snapshots."
+    },
+    {
+      "id": "direct-pr1218-association:44008782832",
+      "passed": true,
+      "detail": "Direct attempt record closes run-to-exact-PR association."
+    },
+    {
+      "id": "complete-jobs-snapshot:44008782832",
+      "passed": true,
+      "detail": "Complete scheduling snapshot, not final dependent-job denominator."
+    },
+    {
+      "id": "job-ownership:44008782832",
+      "passed": true,
+      "detail": "Every job belongs to exact new run/attempt/head."
+    },
+    {
+      "id": "suite-limitation:44008782832",
+      "passed": true,
+      "detail": "Unsupported family rejection; no bypass or absent-suite claim."
+    },
+    {
+      "id": "exact-attempt-url:44008782869",
+      "passed": true,
+      "detail": "Retained raw attempt1 response."
+    },
+    {
+      "id": "run-identity:44008782869",
+      "passed": true,
+      "detail": "Exact new head/ref/repo/event, four seconds after PR."
+    },
+    {
+      "id": "discovery-attempt-identity:44008782869",
+      "passed": true,
+      "detail": "Same immutable run identity across snapshots."
+    },
+    {
+      "id": "direct-pr1218-association:44008782869",
+      "passed": true,
+      "detail": "Direct attempt record closes run-to-exact-PR association."
+    },
+    {
+      "id": "complete-jobs-snapshot:44008782869",
+      "passed": true,
+      "detail": "Complete scheduling snapshot, not final dependent-job denominator."
+    },
+    {
+      "id": "job-ownership:44008782869",
+      "passed": true,
+      "detail": "Every job belongs to exact new run/attempt/head."
+    },
+    {
+      "id": "suite-limitation:44008782869",
+      "passed": true,
+      "detail": "Unsupported family rejection; no bypass or absent-suite claim."
+    },
+    {
+      "id": "exact-attempt-url:44008782932",
+      "passed": true,
+      "detail": "Retained raw attempt1 response."
+    },
+    {
+      "id": "run-identity:44008782932",
+      "passed": true,
+      "detail": "Exact new head/ref/repo/event, four seconds after PR."
+    },
+    {
+      "id": "discovery-attempt-identity:44008782932",
+      "passed": true,
+      "detail": "Same immutable run identity across snapshots."
+    },
+    {
+      "id": "direct-pr1218-association:44008782932",
+      "passed": true,
+      "detail": "Direct attempt record closes run-to-exact-PR association."
+    },
+    {
+      "id": "complete-jobs-snapshot:44008782932",
+      "passed": true,
+      "detail": "Complete scheduling snapshot, not final dependent-job denominator."
+    },
+    {
+      "id": "job-ownership:44008782932",
+      "passed": true,
+      "detail": "Every job belongs to exact new run/attempt/head."
+    },
+    {
+      "id": "suite-limitation:44008782932",
+      "passed": true,
+      "detail": "Unsupported family rejection; no bypass or absent-suite claim."
+    },
+    {
+      "id": "ci-event-derived-proof",
+      "passed": true,
+      "detail": "Pinned run-name derives exact PR/head/base/merge/action/draft."
+    },
+    {
+      "id": "direct-event-association-complete",
+      "passed": true,
+      "detail": "R1 new-run/event proof condition satisfied; check-suite read unnecessary for association."
+    },
+    {
+      "id": "two-terminal-five-queued",
+      "passed": true,
+      "detail": "Only two Draft-skipped workflows are terminal."
+    },
+    {
+      "id": "terminal-skip-artifacts:44008782825",
+      "passed": true,
+      "detail": "One skipped job, zero artifacts, no runtime pass."
+    },
+    {
+      "id": "terminal-skip-artifacts:44008782932",
+      "passed": true,
+      "detail": "One skipped job, zero artifacts, no runtime pass."
+    },
+    {
+      "id": "39jobs-snapshot-not-final",
+      "passed": true,
+      "detail": "34queued+5skipped; no final job-count assertion."
+    },
+    {
+      "id": "runtime-unreached-explicit",
+      "passed": true,
+      "detail": "No executed source/test/UI/archive/cleanup success inferred."
+    },
+    {
+      "id": "freeze-and-noreplay",
+      "passed": true,
+      "detail": "Existing capture may continue; no new invocation gate or retry."
+    }
+  ],
+  "checkCount": 81,
+  "passedChecks": [
+    "complete-packet-identity",
+    "exact-r1-and-full-intent",
+    "antecedent-gate-pointer",
+    "actual-publication-report-pins",
+    "actual-final-head-substitution",
+    "ancestor-base",
+    "three-executable-payloads-and-readbacks",
+    "recorded-one-shot-counts",
+    "creation-receipts-success",
+    "intent-action-chronology",
+    "base-ref-and-commit-readback",
+    "head-ref-and-commit-readback",
+    "preflight-recorded",
+    "pr-create-and-fullreadback",
+    "pr-payload",
+    "pr-head-base-repository",
+    "pr-no-update-observed",
+    "exact-pair-pr-query",
+    "merge-ref-and-commit",
+    "merge-parents-and-source-tree",
+    "discovery-complete-seven",
+    "discovery-url-bounded",
+    "exact-seven-workflow-set",
+    "initial-discovery-empty-pr-arrays",
+    "exact-attempt-url:44008782844",
+    "run-identity:44008782844",
+    "discovery-attempt-identity:44008782844",
+    "direct-pr1218-association:44008782844",
+    "complete-jobs-snapshot:44008782844",
+    "job-ownership:44008782844",
+    "suite-limitation:44008782844",
+    "exact-attempt-url:44008782843",
+    "run-identity:44008782843",
+    "discovery-attempt-identity:44008782843",
+    "direct-pr1218-association:44008782843",
+    "complete-jobs-snapshot:44008782843",
+    "job-ownership:44008782843",
+    "suite-limitation:44008782843",
+    "exact-attempt-url:44008782825",
+    "run-identity:44008782825",
+    "discovery-attempt-identity:44008782825",
+    "direct-pr1218-association:44008782825",
+    "complete-jobs-snapshot:44008782825",
+    "job-ownership:44008782825",
+    "suite-limitation:44008782825",
+    "exact-attempt-url:44008782909",
+    "run-identity:44008782909",
+    "discovery-attempt-identity:44008782909",
+    "direct-pr1218-association:44008782909",
+    "complete-jobs-snapshot:44008782909",
+    "job-ownership:44008782909",
+    "suite-limitation:44008782909",
+    "exact-attempt-url:44008782832",
+    "run-identity:44008782832",
+    "discovery-attempt-identity:44008782832",
+    "direct-pr1218-association:44008782832",
+    "complete-jobs-snapshot:44008782832",
+    "job-ownership:44008782832",
+    "suite-limitation:44008782832",
+    "exact-attempt-url:44008782869",
+    "run-identity:44008782869",
+    "discovery-attempt-identity:44008782869",
+    "direct-pr1218-association:44008782869",
+    "complete-jobs-snapshot:44008782869",
+    "job-ownership:44008782869",
+    "suite-limitation:44008782869",
+    "exact-attempt-url:44008782932",
+    "run-identity:44008782932",
+    "discovery-attempt-identity:44008782932",
+    "direct-pr1218-association:44008782932",
+    "complete-jobs-snapshot:44008782932",
+    "job-ownership:44008782932",
+    "suite-limitation:44008782932",
+    "ci-event-derived-proof",
+    "direct-event-association-complete",
+    "two-terminal-five-queued",
+    "terminal-skip-artifacts:44008782825",
+    "terminal-skip-artifacts:44008782932",
+    "39jobs-snapshot-not-final",
+    "runtime-unreached-explicit",
+    "freeze-and-noreplay"
+  ],
+  "failedChecks": [],
+  "unresolvedPointers": [],
+  "unresolvedAssociationBlockers": [],
+  "unresolvedBlockers": [],
+  "eventAssociationComplete": true,
+  "initialCaptureAccepted": true,
+  "allSelectedRunsTerminal": false,
+  "ciRuntimeAccepted": false,
+  "runtimePassClaims": false,
+  "wholeE2EQualified": false,
+  "newExecutionGateIntroduced": false,
+  "unchangedBoundaries": {
+    "freezeBothSnapshotRefs": true,
+    "freezeNewPrMetadata": true,
+    "noRerun": true,
+    "noCancel": true,
+    "noDispatch": true,
+    "noLocalReplay": true,
+    "noOriginalOrFrozenPolling": true,
+    "noRealClaudeOrCodex": true,
+    "workingEvidencePushesRemainSeparate": true
+  },
+  "reviewerActions": {
+    "readPacketGitBlob": 1,
+    "livePrReads": 0,
+    "liveCiReads": 0,
+    "checkSuiteReads": 0,
+    "sourceChanges": 0,
+    "refChanges": 0,
+    "prChanges": 0,
+    "ciActions": 0,
+    "shellOrTargetRuntimeInvocations": 0,
+    "bareReportRetentionOnly": true
+  },
+  "disposition": "Accepted for exact event/run binding and initial snapshot accounting. Preserve the initial-empty/later-populated association distinction, retain unsupported-suite errors as limitations, and continue only already authorized new-run evidence capture. No test, artifact-content, cleanup, native or whole-E2E success is inferred."
+}

@@ -1,0 +1,906 @@
+{
+  "schemaVersion": 1,
+  "kind": "independent-semantic-standalone10-executable-control-r2-review",
+  "reviewer": "/root/producer_r2_semantic",
+  "at": "2026-11-17 05:28:24 UTC",
+  "repository": "777genius/agent-teams-ai",
+  "subject": {
+    "bytes": 21995,
+    "sha256": "0dd648c1a839758e864e39b177b15d5fa44bcfcb221e258b0817e5c6da82d431",
+    "gitBlob": "3fc2c894069f5a75936ec6379494d4e0df62db1a"
+  },
+  "runner": {
+    "bytes": 25389,
+    "sha256": "da237b7e53a07e47c1625b9b577514a62498fe4816bfa5966c461e5ef4117c9c",
+    "gitBlob": "5e19889942d3e28f215c76f1e55ba81fd12f3ced"
+  },
+  "binding": {
+    "bytes": 105210,
+    "sha256": "99ef94654b99dfb0e2fc2e5f1767f3b185b14a73ab5b437ff5a7b405886b4a90",
+    "gitBlob": "a206a4432f4e9f77f682b91d340c191826b5f25b"
+  },
+  "verdict": "ACCEPT_STATIC_EXACT_CORRECTED_CONTROL_R2_FOR_EXISTING_ONE_FRESH_STANDALONE10_SCOPE",
+  "verdictMeaning": "Complete source/control semantic review only. No runtime RED/GREEN or physical staging is claimed. Existing exact control publication, root/independent actual readbacks, immutable admission record and one original invocation gates remain unchanged.",
+  "sourceCommit": "674d32a84644f87544910c28bb4d2a4214958fb5",
+  "sourceTree": "076131eff684e011ae87907e66d31e7eb9e50d30",
+  "sourceActualGate": {
+    "bytes": 5512,
+    "sha256": "6a7448cf1d88673af3c65741c51e2faf07703a99dfee37bf4fccd5383a943bf7",
+    "gitBlob": "be45f8ee4cd349456d196f6cfb1a1038c218c80c"
+  },
+  "r1": {
+    "bytes": 20973,
+    "sha256": "e35155efe24474cfe0ff5d5ab90aa7b9f96bfe56eff99ad8aec10902aecf0016",
+    "gitBlob": "b34a76fffb93d5216cd689893186376963ef8654"
+  },
+  "r1ActualGate": {
+    "bytes": 3516,
+    "sha256": "ae46b4e2997a5a5185fada08711e4f291be723b53c1afdd05af2bd89ebcd11fd",
+    "gitBlob": "29040a4faa87137bfa070c71651147b2da4f2102"
+  },
+  "sourceR2": {
+    "bytes": 19187,
+    "sha256": "8bb84de228b570dfc121233893d32209a9389da44aa1747c7924dff936fa4c1a",
+    "gitBlob": "1318b887473a61e1cbfb3960812fbc84e3b4df13"
+  },
+  "rootExactControlReview": {
+    "bytes": 20665,
+    "sha256": "0eaeeae487ed062955b37ef5b4568606e790d1db70f08248417b9efcfd70b706",
+    "gitBlob": "356ee2d4a963741f952381811af6d8ff5f323a0f"
+  },
+  "readMethod": "Full exact proposal/runner/binding read; all four complete embedded UTF-8 bodies rehashed; whole old controls read and every postimage byte joined by sole43-byte insertion/inverse; actual package/fixture/GREEN controls independently read from immutable674 source. Final binding has same full key set and only runner identity changed from first corrected binding, so every other literal body/field is preserved. No target source was evaluated.",
+  "completeSourceBodies": [
+    {
+      "phase": "RED",
+      "path": "package.json",
+      "mode": "100644",
+      "pin": {
+        "bytes": 26839,
+        "sha256": "c92407a9a5dad6f9d6a6eb8ea7c456195d396679bb4b9dfd15b6c06b726d1084",
+        "gitBlob": "f80ec83172d0aec0dec8a8ab055426b4fca4a1f7"
+      },
+      "fullBodyBytes": 26839,
+      "hashVerified": true,
+      "actualJoin": "Independent complete file read at 674d32a84644f87544910c28bb4d2a4214958fb5"
+    },
+    {
+      "phase": "RED",
+      "path": "scripts/legacy-agent-host/desktop-ui-controls-deadline.test.ts",
+      "mode": "100644",
+      "pin": {
+        "bytes": 7883,
+        "sha256": "29836f914218edb4876b6a4e157e7cdc68f63cdf414084cdd41683965c734eda",
+        "gitBlob": "6a9f8ad7481cd5910befcc6c7ff5992eef03965b"
+      },
+      "fullBodyBytes": 7883,
+      "hashVerified": true,
+      "actualJoin": "Independent complete file read at 674d32a84644f87544910c28bb4d2a4214958fb5"
+    },
+    {
+      "phase": "RED",
+      "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "mode": "100644",
+      "pin": {
+        "bytes": 28974,
+        "sha256": "7626e479a6662242009cb050e7e5af612a29e4205d62666d15274d5c30f91386",
+        "gitBlob": "ed57cb0fe7d57ef076a591621289eb77667c63ad"
+      },
+      "fullBodyBytes": 28974,
+      "hashVerified": true,
+      "actualJoin": "Complete accepted ed57 preimage; exact sourceGate before pin and old corpus literal"
+    },
+    {
+      "phase": "GREEN",
+      "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "mode": "100644",
+      "pin": {
+        "bytes": 29017,
+        "sha256": "ffd9bbb822dbdc30da7cb8daa881fcbebd384ba2bf9bdd87c804c511166fa02b",
+        "gitBlob": "5286c036a63a14e98925711a224df202c9a7caa7"
+      },
+      "fullBodyBytes": 29017,
+      "hashVerified": true,
+      "actualJoin": "Independent complete file read at 674d32a84644f87544910c28bb4d2a4214958fb5"
+    }
+  ],
+  "bodyByteTotals": {
+    "all4": 92713,
+    "red": 63696,
+    "green": 63739
+  },
+  "controlsWholeInverse": {
+    "offset": 14002,
+    "bytes": 43,
+    "text": "        if (Date.now() >= deadline) break;\n",
+    "wholeInverse": true
+  },
+  "publishedSourceJoins": [
+    {
+      "phase": "RED",
+      "path": "package.json",
+      "mode": "100644",
+      "pin": {
+        "bytes": 26839,
+        "sha256": "c92407a9a5dad6f9d6a6eb8ea7c456195d396679bb4b9dfd15b6c06b726d1084",
+        "gitBlob": "f80ec83172d0aec0dec8a8ab055426b4fca4a1f7"
+      },
+      "fullBodyBytes": 26839,
+      "hashVerified": true,
+      "actualJoin": "Independent complete file read at 674d32a84644f87544910c28bb4d2a4214958fb5"
+    },
+    {
+      "phase": "RED",
+      "path": "scripts/legacy-agent-host/desktop-ui-controls-deadline.test.ts",
+      "mode": "100644",
+      "pin": {
+        "bytes": 7883,
+        "sha256": "29836f914218edb4876b6a4e157e7cdc68f63cdf414084cdd41683965c734eda",
+        "gitBlob": "6a9f8ad7481cd5910befcc6c7ff5992eef03965b"
+      },
+      "fullBodyBytes": 7883,
+      "hashVerified": true,
+      "actualJoin": "Independent complete file read at 674d32a84644f87544910c28bb4d2a4214958fb5"
+    },
+    {
+      "phase": "GREEN",
+      "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "mode": "100644",
+      "pin": {
+        "bytes": 29017,
+        "sha256": "ffd9bbb822dbdc30da7cb8daa881fcbebd384ba2bf9bdd87c804c511166fa02b",
+        "gitBlob": "5286c036a63a14e98925711a224df202c9a7caa7"
+      },
+      "fullBodyBytes": 29017,
+      "hashVerified": true,
+      "actualJoin": "Independent complete file read at 674d32a84644f87544910c28bb4d2a4214958fb5"
+    }
+  ],
+  "sourcePublicationAuthorityLimit": "The complete closed source-actual gate is read and joins current accepted source rows. This review independently reads the three executable composition files at674; it does not repeat the full source-publication tree/doc census already accepted by root and independent actual reviewers.",
+  "tests": {
+    "fullPath": "scripts/legacy-agent-host/desktop-ui-controls-deadline.test.ts",
+    "expandedCount": 10,
+    "uniqueTitles": 10,
+    "topLevelRegistrationExpressions": 6,
+    "perTestTimeoutMs": 5000,
+    "imports": [
+      "node:assert/strict",
+      "node:test",
+      "./desktop-ui-controls.ts"
+    ],
+    "controlsValueImports": [
+      "node:assert/strict"
+    ],
+    "phaseExpectedOutcomesOnly": [
+      {
+        "label": "RED",
+        "exitCode": 1,
+        "tests": [
+          {
+            "number": 1,
+            "title": "generic UI read refuses its first fulfilled value exactly at the original deadline",
+            "result": "FAIL",
+            "signature": "missing-rejection"
+          },
+          {
+            "number": 2,
+            "title": "generic UI read refuses its first fulfilled value after the original deadline",
+            "result": "FAIL",
+            "signature": "missing-rejection"
+          },
+          {
+            "number": 3,
+            "title": "generic UI read refuses a later fulfilled value exactly at the original deadline",
+            "result": "FAIL",
+            "signature": "missing-rejection"
+          },
+          {
+            "number": 4,
+            "title": "generic UI read refuses a later fulfilled value after the original deadline",
+            "result": "FAIL",
+            "signature": "missing-rejection"
+          },
+          {
+            "number": 5,
+            "title": "generic UI read does not admit or poll again after a late false observation",
+            "result": "FAIL",
+            "signature": "late-false-readiness"
+          },
+          {
+            "number": 6,
+            "title": "generic UI read preserves a timely first value and its exact identity",
+            "result": "PASS",
+            "signature": null
+          },
+          {
+            "number": 7,
+            "title": "generic UI read preserves its original cadence and a timely later value",
+            "result": "PASS",
+            "signature": null
+          },
+          {
+            "number": 8,
+            "title": "generic UI read honors a supplied budget at its strict boundary",
+            "result": "FAIL",
+            "signature": "missing-rejection"
+          },
+          {
+            "number": 9,
+            "title": "generic UI hover refuses a third stable point arriving at the original deadline",
+            "result": "FAIL",
+            "signature": "missing-rejection"
+          },
+          {
+            "number": 10,
+            "title": "generic UI hover preserves one movement after three timely stable points",
+            "result": "PASS",
+            "signature": null
+          }
+        ]
+      },
+      {
+        "label": "GREEN",
+        "exitCode": 0,
+        "tests": [
+          {
+            "number": 1,
+            "title": "generic UI read refuses its first fulfilled value exactly at the original deadline",
+            "result": "PASS",
+            "signature": null
+          },
+          {
+            "number": 2,
+            "title": "generic UI read refuses its first fulfilled value after the original deadline",
+            "result": "PASS",
+            "signature": null
+          },
+          {
+            "number": 3,
+            "title": "generic UI read refuses a later fulfilled value exactly at the original deadline",
+            "result": "PASS",
+            "signature": null
+          },
+          {
+            "number": 4,
+            "title": "generic UI read refuses a later fulfilled value after the original deadline",
+            "result": "PASS",
+            "signature": null
+          },
+          {
+            "number": 5,
+            "title": "generic UI read does not admit or poll again after a late false observation",
+            "result": "PASS",
+            "signature": null
+          },
+          {
+            "number": 6,
+            "title": "generic UI read preserves a timely first value and its exact identity",
+            "result": "PASS",
+            "signature": null
+          },
+          {
+            "number": 7,
+            "title": "generic UI read preserves its original cadence and a timely later value",
+            "result": "PASS",
+            "signature": null
+          },
+          {
+            "number": 8,
+            "title": "generic UI read honors a supplied budget at its strict boundary",
+            "result": "PASS",
+            "signature": null
+          },
+          {
+            "number": 9,
+            "title": "generic UI hover refuses a third stable point arriving at the original deadline",
+            "result": "PASS",
+            "signature": null
+          },
+          {
+            "number": 10,
+            "title": "generic UI hover preserves one movement after three timely stable points",
+            "result": "PASS",
+            "signature": null
+          }
+        ]
+      }
+    ],
+    "sourceDerivedCaseAnalysis": [
+      {
+        "number": 1,
+        "frames": [
+          30000
+        ],
+        "red": "FAIL: assert.rejects reports missing expected rejection",
+        "green": "PASS: same deadline reached, original timeout thrown before readiness",
+        "reads": 1,
+        "guards": 1,
+        "predicatesGreen": 0,
+        "ticksGreen": [],
+        "missingExpectedRejection": true,
+        "title": "generic UI read refuses its first fulfilled value exactly at the original deadline"
+      },
+      {
+        "number": 2,
+        "frames": [
+          30001
+        ],
+        "red": "FAIL: assert.rejects reports missing expected rejection",
+        "green": "PASS: same deadline exceeded, original timeout thrown before readiness",
+        "reads": 1,
+        "guards": 1,
+        "predicatesGreen": 0,
+        "ticksGreen": [],
+        "missingExpectedRejection": true,
+        "title": "generic UI read refuses its first fulfilled value after the original deadline"
+      },
+      {
+        "number": 3,
+        "frames": [
+          0,
+          30000
+        ],
+        "red": "FAIL: false observation then late truthy value admitted, missing rejection",
+        "green": "PASS: first false keeps one real 100ms tick, late second value rejected before readiness",
+        "reads": 2,
+        "guards": 2,
+        "predicatesGreen": 1,
+        "ticksGreen": [
+          100
+        ],
+        "missingExpectedRejection": true,
+        "title": "generic UI read refuses a later fulfilled value exactly at the original deadline"
+      },
+      {
+        "number": 4,
+        "frames": [
+          0,
+          30001
+        ],
+        "red": "FAIL: false observation then late truthy value admitted, missing rejection",
+        "green": "PASS: first false keeps one real 100ms tick, late second value rejected before readiness",
+        "reads": 2,
+        "guards": 2,
+        "predicatesGreen": 1,
+        "ticksGreen": [
+          100
+        ],
+        "missingExpectedRejection": true,
+        "title": "generic UI read refuses a later fulfilled value after the original deadline"
+      },
+      {
+        "number": 5,
+        "frames": [
+          30000
+        ],
+        "red": "FAIL: timeout assertion succeeds, but readiness observed false and extra original 100ms wait occurred; first failing assertion is predicates [false] deepStrictEqual []",
+        "green": "PASS: late false value never reaches readiness or another tick, original timeout",
+        "reads": 1,
+        "guards": 1,
+        "predicatesGreen": 0,
+        "ticksGreen": [],
+        "redFirstAssertion": {
+          "code": "ERR_ASSERTION",
+          "operator": "deepStrictEqual",
+          "message": "late values never enter readiness",
+          "actual": [
+            false
+          ],
+          "expected": []
+        },
+        "title": "generic UI read does not admit or poll again after a late false observation"
+      },
+      {
+        "number": 6,
+        "frames": [
+          29999
+        ],
+        "red": "PASS",
+        "green": "PASS: same offered object identity and one predicate, no ticks/effects",
+        "reads": 1,
+        "guards": 1,
+        "predicatesGreen": 1,
+        "ticksGreen": [],
+        "title": "generic UI read preserves a timely first value and its exact identity"
+      },
+      {
+        "number": 7,
+        "frames": [
+          0,
+          101
+        ],
+        "red": "PASS",
+        "green": "PASS: one continuing real 100ms tick and same timely object",
+        "reads": 2,
+        "guards": 2,
+        "predicatesGreen": 2,
+        "ticksGreen": [
+          100
+        ],
+        "title": "generic UI read preserves its original cadence and a timely later value"
+      },
+      {
+        "number": 8,
+        "frames": [
+          72,
+          73
+        ],
+        "red": "FAIL: first subcase at72 passes; second exact supplied73ms boundary admits value, missing rejection",
+        "green": "PASS: separate restored fixture per subcase;72 accepted,73 rejected, same supplied budget",
+        "reads": "one per subcase",
+        "guards": "one per subcase",
+        "predicatesGreen": "1 at72,0 at73",
+        "ticksGreen": [],
+        "missingExpectedRejection": true,
+        "title": "generic UI read honors a supplied budget at its strict boundary"
+      },
+      {
+        "number": 9,
+        "frames": [
+          0,
+          100,
+          30000
+        ],
+        "red": "FAIL: third stable point reaches stateful readiness, then one movement dispatch; missing rejection",
+        "green": "PASS: late third point rejected before mutating stability predicate; no post-read owner guard, step or send",
+        "reads": 3,
+        "guards": 3,
+        "ticksGreen": [
+          100,
+          100
+        ],
+        "inputDispatchesGreen": 0,
+        "stepsGreen": 0,
+        "missingExpectedRejection": true,
+        "title": "generic UI hover refuses a third stable point arriving at the original deadline"
+      },
+      {
+        "number": 10,
+        "frames": [
+          0,
+          100,
+          29999
+        ],
+        "red": "PASS",
+        "green": "PASS: three timely stable points, original fourth ownership guard, one mouseMoved step with same point identity and one exact Input.dispatchMouseEvent",
+        "reads": 3,
+        "guards": 4,
+        "ticksGreen": [
+          100,
+          100
+        ],
+        "inputDispatchesGreen": 1,
+        "stepsGreen": 1,
+        "title": "generic UI hover preserves one movement after three timely stable points"
+      }
+    ],
+    "fixtureRestoration": "Date and setTimeout wrapper setup is under try. Real original100ms waits remain; wrappers advance only mocked observed Date at original callback. Finally restores methods and timers before asserting pendingTimers size0. Unexpected unresolved timer/setup errors are failures, not fabricated success.",
+    "predictionLimits": "Static predictions only, including standard Node TAP format. These tests exercise fulfilled-observation deadline acceptance and actual hover integration, not live CDP cancellation, all old error branches or application/native readiness."
+  },
+  "tap": {
+    "officialPrimarySource": {
+      "repository": "nodejs/node",
+      "ref": "v24.22.1",
+      "path": "lib/internal/test_runner/reporter/tap.js",
+      "identity": {
+        "bytes": 8809,
+        "sha256": "3aadb6a08fab850e8dc365cc14432fa77464c2b7f794b934c91426bc5c513f3b",
+        "gitBlob": "2bacba167570a80e63243fc01fbcc206ea0d2753"
+      },
+      "fullBodyRead": true,
+      "tagLiteralJoin": true,
+      "executed": false
+    },
+    "formatSupport": "Built-in TAP13 emits ordered test start/result/plan. ERR_TEST_FAILURE testCodeFailure unwraps assertion cause; expected precedes actual and operator. ObjectEntries arrays serialize expected[] with no child entries, actual[false] with 0:false. Missing-rejection expected object retains its timeout message. Complete raw details remain original evidence.",
+    "classifierScope": "Exactly ten top-level titles/numbers and subtest headers, one1..10, all summary counts, exact failure types/codes/operators/diagnostic messages, no nested substitute or bail-out. Does not create or execute synthetic TAP. The actual Node binary's full identity is checked by the future runner; reading the tag is source support, not binary attestation."
+  },
+  "composition": {
+    "scope": "/workspace/scratch/c714-waitread-20261117",
+    "stage": "/workspace/scratch/c714f5bce554/narrow-waitread-controls-20261117",
+    "stageFiles": [
+      "execution-admission.json",
+      "waitread-binding.json",
+      "waitread-supervisor.cjs"
+    ],
+    "redFiles": [
+      {
+        "path": "package.json",
+        "mode": "100644",
+        "pin": {
+          "bytes": 26839,
+          "sha256": "c92407a9a5dad6f9d6a6eb8ea7c456195d396679bb4b9dfd15b6c06b726d1084",
+          "gitBlob": "f80ec83172d0aec0dec8a8ab055426b4fca4a1f7"
+        }
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-ui-controls-deadline.test.ts",
+        "mode": "100644",
+        "pin": {
+          "bytes": 7883,
+          "sha256": "29836f914218edb4876b6a4e157e7cdc68f63cdf414084cdd41683965c734eda",
+          "gitBlob": "6a9f8ad7481cd5910befcc6c7ff5992eef03965b"
+        }
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+        "mode": "100644",
+        "pin": {
+          "bytes": 28974,
+          "sha256": "7626e479a6662242009cb050e7e5af612a29e4205d62666d15274d5c30f91386",
+          "gitBlob": "ed57cb0fe7d57ef076a591621289eb77667c63ad"
+        }
+      }
+    ],
+    "greenControls": {
+      "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "mode": "100644",
+      "pin": {
+        "bytes": 29017,
+        "sha256": "ffd9bbb822dbdc30da7cb8daa881fcbebd384ba2bf9bdd87c804c511166fa02b",
+        "gitBlob": "5286c036a63a14e98925711a224df202c9a7caa7"
+      }
+    },
+    "node": {
+      "path": "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+      "realpath": "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+      "bytes": 126939688,
+      "sha256": "61ab14cd750fc24d5db53490ec5fc40f756e4b6e136b78cf7004265471d9bd1d",
+      "device": "27",
+      "inode": "9223372036854818252",
+      "uid": "65534",
+      "gid": "65534",
+      "mode": "0o755",
+      "mtimeNs": "1794515386000000000",
+      "ctimeNs": "1794515386000000000",
+      "versionPreviouslyObserved": "v24.22.1"
+    },
+    "argv": [
+      "--test",
+      "--test-reporter=tap",
+      "scripts/legacy-agent-host/desktop-ui-controls-deadline.test.ts"
+    ],
+    "parentEnvironment": "empty via bash exec -c; no NODE_OPTIONS/preloads/config/compile-cache environment",
+    "childEnvironment": {
+      "PATH": "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin",
+      "LANG": "C.UTF-8",
+      "TZ": "UTC"
+    },
+    "sourceDirectories": [
+      "source",
+      "source/scripts",
+      "source/scripts/legacy-agent-host"
+    ],
+    "evidenceDirectory": "evidence",
+    "perPhaseSourceLeaves": 3,
+    "oldScopesRemainSpent": true
+  },
+  "budgets": {
+    "perTestMs": 5000,
+    "defaultUiReadMs": 30000,
+    "continuingUiTickMs": 100,
+    "suppliedTestMs": 73,
+    "phaseWallMs": 60000,
+    "outerWallMs": 135000,
+    "cleanupWallMs": 4000,
+    "termToKillMs": 250,
+    "processObservationTickMs": 25,
+    "rawOutputBytes": 8388608,
+    "parentClock": "process.hrtime.bigint; separate supervisor process, no mocks",
+    "limit": "Timers cannot preempt synchronous kernel/filesystem calls. Absolute monotonic checks reject expired admission/final success; phase60s covers original child close/EOF observation; the cleanup signal/wait interval is one original4s deadline, including exceptional continuation. Do not claim a hard kernel-preempted end-to-end wall limit."
+  },
+  "correctedFindings": [
+    {
+      "finding": "Incomplete failure identity retention in initial7d",
+      "resolution": "Current runner retains full sample before validation, cleanup initial/continued snapshots, unowned rows/errors, observed identity map and root metadata; no missing-map success inference."
+    },
+    {
+      "finding": "Outer deadline callback could lag synchronous work in d318",
+      "resolution": "Current5e198 uses same original absolute monotonic cutoff synchronously before scope, materialization, transition, fixed open/write and each spawn. Empty raw/phase refusal evidence persists when spawn is denied."
+    },
+    {
+      "finding": "Exceptional cleanup reentry could restart4s",
+      "resolution": "Current5e198 stores original cleanupStarted/deadline once on active; TERM/KILL attempts are not replayed. Identity map copied in finally even on cleanup throw."
+    }
+  ],
+  "finalCorrectionJoin": {
+    "changedFields": [
+      "runner"
+    ],
+    "exactOldFieldKeys": true,
+    "allEmbeddedBodiesUnchanged": true,
+    "phasesUnchanged": true
+  },
+  "phaseReachability": [
+    {
+      "state": "Before scope/admission failure",
+      "outcome": "REFUSED_BEFORE_SCOPE_ADMISSION_SPENT, outer1; complete refusal in stdout; no source scope admitted; no replay."
+    },
+    {
+      "state": "After scope but materialization/preflight failure",
+      "outcome": "INCOMPLETE_SPENT, no admitted successful phase; actual partial census or diagnostic retained."
+    },
+    {
+      "state": "Pre-spawn expiry",
+      "outcome": "Phase REFUSED_BEFORE_CHILD_ADMISSION with empty raw files and phase JSON; no child; outer incomplete/spent."
+    },
+    {
+      "state": "RED mismatch/failure/timeout/unknown",
+      "outcome": "Raw streams, actual phase and original-process cleanup evidence retained; no controls transition, no GREEN."
+    },
+    {
+      "state": "Exact expected RED, ordinary exit, source/control/Node unchanged, phase file retained",
+      "outcome": "RED PASS_EXPECTED_DISCRIMINATOR permits only the cutoff-guarded exact controls transition."
+    },
+    {
+      "state": "Transition failure or cutoff expiry",
+      "outcome": "Partial or fixed actual source census retained, outer incomplete/spent; no rollback/retry; GREEN never admitted by a stale timer flag."
+    },
+    {
+      "state": "GREEN mismatch/failure/timeout",
+      "outcome": "GREEN incomplete/spent; complete reached raw/phase/cleanup evidence; expected RED is not promoted to full success."
+    },
+    {
+      "state": "Both exact phases plus final source/control/Node identities and original outer cutoff",
+      "outcome": "Only then PASS_BOUNDED_STANDALONE_RED_GREEN/outer0/runtimeQualified true for standalone10. Whole149/catalog43/renderer85/E2E flags stay false."
+    }
+  ],
+  "preservedLimits": [
+    "RED7FAIL3PASS and GREEN10PASS are expected static outcomes; no new execution was performed.",
+    "Complete original139 and catalog40 prefixes were accepted in source R2; aggregate149 and catalog43 are separate required runs. Neither is included in this three-file standalone source composition.",
+    "Renderer85, canonical validation, actual Desktop UI/GUI, Windows/Darwin readiness/custody, provider/native qualification and whole E2E remain open.",
+    "Recorded process sampling proves only admitted same-identity finite Node group observations/absence, not continuous executable custody or all OS libraries; unknown/unowned observations refuse.",
+    "Source/action admission and success deadlines are monotonic, but synchronous I/O is not kernel-preempted. Cleanup cannot renew the selected original interval.",
+    "Future admission data relies on the required prior root+independent actual publication acceptance; runner does not replace that external Git review with a mere runtime format check.",
+    "Current PR1218 frozen source9c9/base779 and all old/frozen scopes remain unchanged; no real Claude/Codex even version, no application launch, default merge, Ready, release or Stage2."
+  ],
+  "checkCount": 39,
+  "checks": [
+    {
+      "id": "S01",
+      "result": "PASS_STATIC",
+      "name": "Exact corrected proposal, runner and complete binding identities",
+      "evidence": "Full 21,995 / 25,389 / 105,210 UTF-8 byte bodies read and independently byte/SHA-256/Git hashed; final subject is 3fc2c894, not either superseded proposal."
+    },
+    {
+      "id": "S02",
+      "result": "PASS_STATIC",
+      "name": "Closed R1 authoring and source actual gate joins",
+      "evidence": "R1 gate 29040a4f closed 04:25:08; source gate be45f8ee closed 05:05:24. This review accepts controls statically; future exact control publication/actual/admission gates remain required."
+    },
+    {
+      "id": "S03",
+      "result": "PASS_STATIC",
+      "name": "All four complete source bodies match identities and existing selected source",
+      "evidence": "92,713 total embedded body bytes. Package and whole10 fixture independently read at published 674d32a8; GREEN controls independently read there. RED controls equal complete accepted ed57 preimage from original corpus and source gate."
+    },
+    {
+      "id": "S04",
+      "result": "PASS_STATIC",
+      "name": "All actual published source bodies equal embedded literals",
+      "evidence": "No manifest-only source assumption: three complete immutable file reads joined byte for byte. Source gate identifies the exact previous controls body."
+    },
+    {
+      "id": "S05",
+      "result": "PASS_STATIC",
+      "name": "Only 43-byte source transition and complete whole-byte inverse",
+      "evidence": "At character/UTF-8 offset 14002, the sole insertion is `        if (Date.now() >= deadline) break;\\n`. Removing it reproduces all 28,974 original controls bytes, including every helper and later branch."
+    },
+    {
+      "id": "S06",
+      "result": "PASS_STATIC",
+      "name": "Every other control binding field is unchanged by final correction",
+      "evidence": "Final binding differs from 5629 only in runner identity. No source/test/title/prediction/Node/path/environment/phase/budget selection changed."
+    },
+    {
+      "id": "S07",
+      "result": "PASS_STATIC",
+      "name": "New module executes actual controls and builtins only",
+      "evidence": "Actual exported createDesktopUiControls is used. No copied implementation, Host dist, application imports, vendor SDK, Vitest shim, network or CDP process is in the value-import closure."
+    },
+    {
+      "id": "S08",
+      "result": "PASS_STATIC",
+      "name": "Actual complete package metadata supplies module type without running scripts",
+      "evidence": "Full repository package.json remains unchanged; direct Node --test does not invoke package lifecycle/build/install scripts or package main. No dependency installation or custom loader is selected."
+    },
+    {
+      "id": "S09",
+      "result": "PASS_STATIC",
+      "name": "Exact whole10 inventory and R1 identities preserved",
+      "evidence": "Five literal scenario entries plus five later top-level tests; six registration expressions expand to ten unconditional cases. Supplied-budget test has two sequential fixtures within one case, not additional subtests."
+    },
+    {
+      "id": "S10",
+      "result": "PASS_STATIC",
+      "name": "No filtered, skipped, retried or detached test registration",
+      "evidence": "Complete file selected once per phase. TAP is a built-in reporting-only option; no test-name pattern, only/skip/todo, retry, shard, concurrency change, timeout override or forced-exit flag."
+    },
+    {
+      "id": "S11",
+      "result": "PASS_STATIC",
+      "name": "All ten source-derived RED/GREEN predictions match both exact phase plans",
+      "evidence": "RED expected exit1 with six missing-rejection assertion failures, one late-false readiness assertion failure and three preservation passes. GREEN expected exit0/all10. Predictions remain static until original execution."
+    },
+    {
+      "id": "S12",
+      "result": "PASS_STATIC",
+      "name": "First and later exact/late fulfilled observations are discriminating",
+      "evidence": "Cases1–4 reject at 30000/30001 only after original evaluate fulfills. Old code accepts the truthy offered value; fixed code rejects before invoking readiness. Later-read cases preserve exactly one original real100ms tick for the first timely false observation."
+    },
+    {
+      "id": "S13",
+      "result": "PASS_STATIC",
+      "name": "Late false observation distinguishes admission from eventual timeout",
+      "evidence": "Case5 old timeout assertion itself succeeds, but its first later failure is predicates [false] versus [] with message `late values never enter readiness` and deepStrictEqual. Fixed code invokes no predicate and schedules no extra tick for this expired fulfilled value."
+    },
+    {
+      "id": "S14",
+      "result": "PASS_STATIC",
+      "name": "Timely first/later values and exact object identity remain tested",
+      "evidence": "Cases6/7 pass both revisions: 29999 timely first result; false at0 then true at101 with one real100ms tick. Exact object identity, reads, guards, predicates and absence of steps/sends are asserted."
+    },
+    {
+      "id": "S15",
+      "result": "PASS_STATIC",
+      "name": "Supplied timeout retains its original strict boundary",
+      "evidence": "Case8 separately restores fixtures at72 and73 with timeout73. At72 both return same object; old73 accepts and fails rejects; fixed73 uses original timeout before readiness. No default-timeout substitution."
+    },
+    {
+      "id": "S16",
+      "result": "PASS_STATIC",
+      "name": "Actual stateful hover consequence and preservation are tested",
+      "evidence": "Case9 late third stable point reaches old readiness/one fake CDP movement, causing missing rejection; fixed gate stops before the third predicate and emits no step/send. Case10 has three timely stable points, fourth original owner check, exactly one mouseMoved step retaining point identity and one exact Input.dispatchMouseEvent."
+    },
+    {
+      "id": "S17",
+      "result": "PASS_STATIC",
+      "name": "All modified fixture globals restore under finally",
+      "evidence": "Date-only t.mock.timers is enabled inside try; setTimeout is wrapped around the saved real function. Each pending handle is removed before callback; finally restores method mocks, resets Date, then asserts zero original pending timers. No mocks run at module evaluation."
+    },
+    {
+      "id": "S18",
+      "result": "PASS_STATIC",
+      "name": "Child clock control does not replace original waits or parent deadlines",
+      "evidence": "Per-test5000, default30000, supplied73 and real100ms waits are unchanged. Only observed Date is controlled. Parent uses process.hrtime.bigint in a separate process; there are no parent mock APIs."
+    },
+    {
+      "id": "S19",
+      "result": "PASS_STATIC",
+      "name": "Original errors/currentness/predicate and navigation semantics preserve every other byte",
+      "evidence": "No catch whitelist, rejected-read retry/tick behavior, owner-guard position, requiredContent, passive observation/navigation, original diagnostics or other helper changed. These invariants are static; new10 is not claimed to execute every old regression branch."
+    },
+    {
+      "id": "S20",
+      "result": "PASS_STATIC",
+      "name": "No pending-CDP cancellation or multi-step click deadline claim",
+      "evidence": "The gate runs only after fulfillment. It cannot preempt a still-pending evaluate, cancel transport, reset the clock, or create a new total click/scroll budget."
+    },
+    {
+      "id": "S21",
+      "result": "PASS_STATIC",
+      "name": "Official pinned Node TAP source supports expected diagnostics",
+      "evidence": "Complete nodejs/node@v24.22.1 lib/internal/test_runner/reporter/tap.js (2bacba16,8809B) read. Assertion unwrapping emits code/expected/actual/operator. Empty expected array emits its key without children; [false] emits index0:false. This is source support, not executed/synthetic TAP evidence or binary-build attestation."
+    },
+    {
+      "id": "S22",
+      "result": "PASS_STATIC",
+      "name": "TAP parser checks the complete ordered inventory and finite summary",
+      "evidence": "Exactly ten top-level results and ten # Subtest headers; ordered numbers/titles/outcomes, one1..10, tests10/suites0, expected pass/fail, cancelled/skipped/todo0; no bail-out or indented substitute result. Missing file/module/timeout/cancelled output cannot satisfy this census."
+    },
+    {
+      "id": "S23",
+      "result": "PASS_STATIC",
+      "name": "RED assertion classification rejects unrelated failure signatures",
+      "evidence": "Each expected failure requires testCodeFailure and ERR_ASSERTION. Cases1–4/8/9 additionally require rejects, Missing expected rejection and the exact original timeout label in diagnostics. Case5 requires deepStrictEqual, exact readiness message, empty expected and actual[0]=false."
+    },
+    {
+      "id": "S24",
+      "result": "PASS_STATIC",
+      "name": "Complete raw evidence retained; ordinary exit and classification are separate",
+      "evidence": "Both raw stdout/stderr files are opened exclusively, fully streamed, fsynced and hashed. Output exceeding8MiB, capture errors or wrong/null/signal exits prevent acceptance. Stderr is retained for actual review; empty stderr is not fabricated or assumed."
+    },
+    {
+      "id": "S25",
+      "result": "PASS_STATIC",
+      "name": "One fresh scope with exactly three source leaves and fixed control stage",
+      "evidence": "Exclusive scope creation and file writes; no symlinks, extra source files, dependency trees or old scopes. Source files0644/nlink1; source directories0755. Stage has exactly runner, binding, admission; complete file/root identities and metadata must remain unchanged."
+    },
+    {
+      "id": "S26",
+      "result": "PASS_STATIC",
+      "name": "Both parent and child use pinned Node with explicit clean environments",
+      "evidence": "Parent cwd/ and empty env/execArgv asserted; original exec -c supplied by root. Child fixed argv/env with shell:false. Exact Node whole SHA/size/realpath plus decimal BigInt device/inode/owner/mode/times validated before/after; no fresh version or vendor probe selected."
+    },
+    {
+      "id": "S27",
+      "result": "PASS_STATIC",
+      "name": "Observed process custody supports bounded ordinary exit only",
+      "evidence": "Original detached group/session leader and start identity required. Full samples are retained before validation, all admitted rows require original group/session, uid and Node exe; previously captured same-start zombies retain prior complete identity. Sampled custody is not continuous kernel execution attestation."
+    },
+    {
+      "id": "S28",
+      "result": "PASS_STATIC",
+      "name": "Failure cleanup preserves original process evidence and bounded authority",
+      "evidence": "Only same captured PID/start/group/session rows are signalled. Full initial/continued snapshots, unowned rows/errors and complete identity maps are retained, including finally if cleanup itself throws. Unknown/unowned rows refuse; forced cleanup never promotes a phase."
+    },
+    {
+      "id": "S29",
+      "result": "PASS_STATIC",
+      "name": "Reported outer-admission defect is corrected against the original absolute cutoff",
+      "evidence": "Synchronous existing135s admission checks occur immediately before new scope, each source file write, RED→GREEN transition, fixed-controls open/write and every child spawn. A delayed timer callback cannot admit the later operation after expiry."
+    },
+    {
+      "id": "S30",
+      "result": "PASS_STATIC",
+      "name": "Pre-spawn deadline refusal cannot launch a child",
+      "evidence": "Refusal records REFUSED_BEFORE_CHILD_ADMISSION, closes/hashes original raw files and retains phase JSON, then throws before spawn. Outer receipt remains incomplete/spent; no retry."
+    },
+    {
+      "id": "S31",
+      "result": "PASS_STATIC",
+      "name": "Exceptional cleanup cannot renew the original four-second interval",
+      "evidence": "Single original active-process cleanup start/deadline; reentry uses remaining time. termAttemptedAt and killAttempted prevent replayed attempts. Signal/await loops check remaining original interval; identity map survives finally. Sync syscalls themselves are not kernel-preempted."
+    },
+    {
+      "id": "S32",
+      "result": "PASS_STATIC",
+      "name": "GREEN requires the complete exact expected RED and ordinary process absence",
+      "evidence": "RED phase must finish exact output/TAP/exit/ownership/absence/source/node/stage checks and immutable phase evidence before PASS_EXPECTED_DISCRIMINATOR returns. Any failure/unknown/refusal throws; no controls transition or GREEN path follows it."
+    },
+    {
+      "id": "S33",
+      "result": "PASS_STATIC",
+      "name": "Only exact published fixed controls may replace the old controls inode",
+      "evidence": "Before-transition census equals admitted RED; fixed body identity checked; original dev/inode/nlink checked via O_NOFOLLOW opened fd; write/truncate/fsync. All other rows remain fully metadata/byte equal; transition evidence retained before GREEN."
+    },
+    {
+      "id": "S34",
+      "result": "PASS_STATIC",
+      "name": "GREEN and final success require full independent checks with no promotion",
+      "evidence": "GREEN reuses identical fixture/package/argv, expects all10/exit0, and must satisfy ordinary close/EOF, no signal/remaining original PIDs, complete censuses, Node and final outer monotonic bound. runtimeQualified becomes true only after all succeed; whole149/43/85/E2E remain false."
+    },
+    {
+      "id": "S35",
+      "result": "PASS_STATIC",
+      "name": "All refusal, timeout, malformed output or retention failures remain spent",
+      "evidence": "Before-scope refusal reports REFUSED_BEFORE_SCOPE_ADMISSION_SPENT; after-scope errors INCOMPLETE_SPENT. Retention error is reported and outer success withheld. No retry/relaunch, fallback source, rollback, filtering or alternate phase is authored."
+    },
+    {
+      "id": "S36",
+      "result": "PASS_STATIC",
+      "name": "Future immutable admission is data and joins externally accepted actual publication",
+      "evidence": "Fixed runner→binding→proposal precede publication. Later exact admission contains actual control commit/tree/docs/proposal/review identities and original source gate; its complete SHA is pinned by original argv. Runtime validates data/schema/pin joins; remote Git publication acceptance remains the required prior external actual-review step."
+    },
+    {
+      "id": "S37",
+      "result": "PASS_STATIC",
+      "name": "Source composition and broader unresolved suites remain honest",
+      "evidence": "RED is new whole10 fixture with old controls and actual package, not a historical full-tree checkout. GREEN only changes controls. Aggregate149, catalog43, renderer85, canonical validation, actual GUI, native/provider and full E2E are not executed or qualified by these controls."
+    },
+    {
+      "id": "S38",
+      "result": "PASS_STATIC",
+      "name": "Current root exact review joins corrected subjects without taking over its work",
+      "evidence": "Root356ee2d4 full20665B report read/hashed; all39 static checks target these same final pins. This independent semantic result remains separate from Guard/binding reports and future publication readbacks."
+    },
+    {
+      "id": "S39",
+      "result": "PASS_STATIC",
+      "name": "Review caused no target execution or source/CI mutation",
+      "evidence": "Only immutable Git/source/evidence reads, pure data/identity calculations and this bare report. No runner/test/Node-source execution, shell, staging, refs/PR/CI action or polling; root remains sole author/applier/executor."
+    }
+  ],
+  "blockers": [],
+  "remainingExistingGates": "Root and independent full control R2 acceptance; root docs-only publication and immediate exact-parent non-force push; full root and independent actual readbacks; computed exact admission record full readback; only then exclusive staging and original invocation.",
+  "reviewerActions": {
+    "immutableGitReads": true,
+    "pureIdentityAndStaticDataAnalysis": true,
+    "bareReportRetentionOnly": true,
+    "shell": false,
+    "targetExecution": false,
+    "sourceOrControlAuthorship": false,
+    "staging": false,
+    "refPrCiChanges": false,
+    "liveCiPolling": false
+  },
+  "selfReadbackProtocol": "Retain exact bare report; send parent identity immediately before full retained readback. Then verify complete literal/bytes/SHA/Git/parsed/check equality, with no post-retention edits."
+}

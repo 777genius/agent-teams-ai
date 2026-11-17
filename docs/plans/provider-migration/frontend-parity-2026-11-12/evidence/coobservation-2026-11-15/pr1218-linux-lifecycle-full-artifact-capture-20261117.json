@@ -1,0 +1,463 @@
+{
+  "schemaVersion": 1,
+  "kind": "pr1218-linux-claude-lifecycle-complete-artifact-capture",
+  "at": "2026-11-17 04:49:34 UTC",
+  "observation": {
+    "bytes": 408939,
+    "sha256": "819f1bd3f0bc50b6278e5e7fe7f297bcaf56f5426168b9fbc7fa0bc2b2e4b58d",
+    "gitBlob": "40d8a9980519dc8c4d24588019320c9d632f3297"
+  },
+  "laterObservation": {
+    "bytes": 455579,
+    "sha256": "bda6d3d4dc2b7f2fa799c4547078e3d1de27b2d30e2966ef9fa47811f426c3ec",
+    "gitBlob": "df2a9c76c301f123b83a1be4faca8c74a68ee16a"
+  },
+  "job": {
+    "runId": 44008782843,
+    "id": 133790458656,
+    "name": "Offline Host Desktop (linux-x64, claude-lifecycle)",
+    "conclusion": "success",
+    "head": "9c9c73190840592963142d36562ea07d2b5d2d71",
+    "log": {
+      "bytes": 204205,
+      "sha256": "1911e00350a5ee2a57b6f18e2935715cffe984d4500a239c1204ad23f6aadfdb",
+      "gitBlob": "abf21b8e5c7e8f3311cee0e58693a577bcf3d1f6"
+    }
+  },
+  "priorLogReview": {
+    "bytes": 58426,
+    "sha256": "bd1ca451e3826f61eba8e4c5b8dced9fb4ce7a2ae51d5a0fbf3073ca7e229ff6",
+    "gitBlob": "b0d04555b7e8fd542348fe4a6c6ffad97b0773c4"
+  },
+  "artifact": {
+    "artifactId": 14298896959,
+    "name": "host-emulated-linux-x64-9c9c73190840592963142d36562ea07d2b5d2d71-claude-lifecycle",
+    "runId": 44008782843,
+    "fileId": "file_00000000ef608210919e4091125d534c",
+    "archivePath": "/workspace/scratch/c714f5bce554/ci-pr1218-artifacts/observation8/14298896959/artifact.zip",
+    "bytes": 4207603,
+    "sha256": "802ff33d1a580e366724bfaa38a3d11f172ea8532a99e105e2e2b88d6fa69e5e",
+    "members": [
+      {
+        "path": "TEST-desktop-backend-J46Z4c/TEST-peer-claude-scope/config/projects/TEST-desktop-peer/0c54f91a-e045-4eb2-a0fa-b097da369102.jsonl",
+        "kind": "file",
+        "bytes": 6448,
+        "sha256": "6f6631983b17df0dfe4b4bcbec43318879c5043f051b7c7a14dfabdb85ff54bd",
+        "gitBlob": "83295da2ac470eda60efe6140c4561494988b237",
+        "crc32": 882579149,
+        "utf8": true,
+        "localPath": "/workspace/scratch/c714f5bce554/ci-pr1218-artifacts/observation8/14298896959/members/TEST-desktop-backend-J46Z4c/TEST-peer-claude-scope/config/projects/TEST-desktop-peer/0c54f91a-e045-4eb2-a0fa-b097da369102.jsonl",
+        "retainedAsGitBlob": true
+      },
+      {
+        "path": "TEST-desktop-backend-J46Z4c/TEST-peer-claude-scope/effects.ndjson",
+        "kind": "file",
+        "bytes": 7870,
+        "sha256": "b31e6f1bac5611bfd4e48e42ad01b99a2b7fd522e055b5afdbfafcb8d00a5828",
+        "gitBlob": "89d73139eff8ed45c5ee975e19b2cf84167ba714",
+        "crc32": 3382705783,
+        "utf8": true,
+        "localPath": "/workspace/scratch/c714f5bce554/ci-pr1218-artifacts/observation8/14298896959/members/TEST-desktop-backend-J46Z4c/TEST-peer-claude-scope/effects.ndjson",
+        "retainedAsGitBlob": true
+      },
+      {
+        "path": "TEST-desktop-backend-J46Z4c/desktop-app.log",
+        "kind": "file",
+        "bytes": 38498,
+        "sha256": "28d1afa5cc2c63b0186df58db12b400a61b2c29678e0d44d5b68b3fd69b71bf6",
+        "gitBlob": "cd8a7906808113c59e582779f1af71ecec227d52",
+        "crc32": 324152215,
+        "utf8": true,
+        "localPath": "/workspace/scratch/c714f5bce554/ci-pr1218-artifacts/observation8/14298896959/members/TEST-desktop-backend-J46Z4c/desktop-app.log",
+        "retainedAsGitBlob": true
+      },
+      {
+        "path": "TEST-desktop-backend-J46Z4c/desktop-backend-receipt.json",
+        "kind": "file",
+        "bytes": 892595,
+        "sha256": "d0ba98d9f2c210793edbeba12d9e1a1ec6b3e535b978df723e68dff14eb17eca",
+        "gitBlob": "8e5b6d6a8571594fbdcd202484dc3a708228f140",
+        "crc32": 4283665878,
+        "utf8": true,
+        "localPath": "/workspace/scratch/c714f5bce554/ci-pr1218-artifacts/observation8/14298896959/members/TEST-desktop-backend-J46Z4c/desktop-backend-receipt.json",
+        "retainedAsGitBlob": true
+      },
+      {
+        "path": "TEST-desktop-backend-J46Z4c/desktop-descriptor.json",
+        "kind": "file",
+        "bytes": 2641,
+        "sha256": "4a5d04747ddd887584880bb087d91eac78e3d02f97fc910e09e8f4f53c153484",
+        "gitBlob": "0bc9cd06e2008cde3285c4ae7214e5fce848e09c",
+        "crc32": 1299767802,
+        "utf8": true,
+        "localPath": "/workspace/scratch/c714f5bce554/ci-pr1218-artifacts/observation8/14298896959/members/TEST-desktop-backend-J46Z4c/desktop-descriptor.json",
+        "retainedAsGitBlob": true
+      },
+      {
+        "path": "TEST-desktop-backend-J46Z4c/emulated-cold-resume-epoch1-bundles/main/chunks/TaskBoundaryParser-Zk2WZzJg.cjs",
+        "kind": "file",
+        "bytes": 68952,
+        "sha256": "c14cfc36aeec6fd7103c507f258097aaeccf552dbbf608fea43f9e3c7a7ef3b3",
+        "gitBlob": "bf0c6a0f5bafaf11454abaaa7cf0515f401f483d",
+        "crc32": 3004458883,
+        "utf8": true,
+        "localPath": "/workspace/scratch/c714f5bce554/ci-pr1218-artifacts/observation8/14298896959/members/TEST-desktop-backend-J46Z4c/emulated-cold-resume-epoch1-bundles/main/chunks/TaskBoundaryParser-Zk2WZzJg.cjs",
+        "retainedAsGitBlob": false
+      },
+      {
+        "path": "TEST-desktop-backend-J46Z4c/emulated-cold-resume-epoch1-bundles/main/chunks/TeamDataService-DySh5-O-.cjs",
+        "kind": "file",
+        "bytes": 800653,
+        "sha256": "ed455bf2423e0511bf1fb8e30069280fe99b505e8e4968df3705309a7131556e",
+        "gitBlob": "abf7ac9d9f2c7add051272ecb5a6bca6b6d15954",
+        "crc32": 3473859076,
+        "utf8": true,
+        "localPath": "/workspace/scratch/c714f5bce554/ci-pr1218-artifacts/observation8/14298896959/members/TEST-desktop-backend-J46Z4c/emulated-cold-resume-epoch1-bundles/main/chunks/TeamDataService-DySh5-O-.cjs",
+        "retainedAsGitBlob": false
+      },
+      {
+        "path": "TEST-desktop-backend-J46Z4c/emulated-cold-resume-epoch1-bundles/main/chunks/index-D9GX0Q6a.cjs",
+        "kind": "file",
+        "bytes": 28605,
+        "sha256": "89c988b7be61f7f30f0effaed6a2626a2279b0ed753228360e77e227884d0a92",
+        "gitBlob": "d2ccd8debea9de24e288bb3e00b5a167756ea506",
+        "crc32": 3865303483,
+        "utf8": true,
+        "localPath": "/workspace/scratch/c714f5bce554/ci-pr1218-artifacts/observation8/14298896959/members/TEST-desktop-backend-J46Z4c/emulated-cold-resume-epoch1-bundles/main/chunks/index-D9GX0Q6a.cjs",
+        "retainedAsGitBlob": false
+      },
+      {
+        "path": "TEST-desktop-backend-J46Z4c/emulated-cold-resume-epoch1-bundles/main/chunks/index-yaJFGvjB.cjs",
+        "kind": "file",
+        "bytes": 4302,
+        "sha256": "ec64b11e28a53961fd7846392857a0167886b8b086d14f54e20041ddc9927155",
+        "gitBlob": "f612ba798f259f605eecd6b08f44a996ca6e7a69",
+        "crc32": 3844145959,
+        "utf8": true,
+        "localPath": "/workspace/scratch/c714f5bce554/ci-pr1218-artifacts/observation8/14298896959/members/TEST-desktop-backend-J46Z4c/emulated-cold-resume-epoch1-bundles/main/chunks/index-yaJFGvjB.cjs",
+        "retainedAsGitBlob": false
+      },
+      {
+        "path": "TEST-desktop-backend-J46Z4c/emulated-cold-resume-epoch1-bundles/main/chunks/memberWorkSyncTeamIdentity-BKWiAXQn.cjs",
+        "kind": "file",
+        "bytes": 4251,
+        "sha256": "7babbc9bd69c863a2210647b3d5f589d96437a9a80fd794b54196387849217f6",
+        "gitBlob": "8cb0df445dfdebd3fd06126142549abd1ab43b26",
+        "crc32": 3053724805,
+        "utf8": true,
+        "localPath": "/workspace/scratch/c714f5bce554/ci-pr1218-artifacts/observation8/14298896959/members/TEST-desktop-backend-J46Z4c/emulated-cold-resume-epoch1-bundles/main/chunks/memberWorkSyncTeamIdentity-BKWiAXQn.cjs",
+        "retainedAsGitBlob": false
+      },
+      {
+        "path": "TEST-desktop-backend-J46Z4c/emulated-cold-resume-epoch1-bundles/main/chunks/taskChangeState-rZolvpL6.cjs",
+        "kind": "file",
+        "bytes": 561881,
+        "sha256": "f40557112189b351692a4b0f19244d7845a4dfe754f468326a21c36386efa1cd",
+        "gitBlob": "4ab790eeecc4c014d2a57952cda42029570ee1fd",
+        "crc32": 1748029689,
+        "utf8": true,
+        "localPath": "/workspace/scratch/c714f5bce554/ci-pr1218-artifacts/observation8/14298896959/members/TEST-desktop-backend-J46Z4c/emulated-cold-resume-epoch1-bundles/main/chunks/taskChangeState-rZolvpL6.cjs",
+        "retainedAsGitBlob": false
+      },
+      {
+        "path": "TEST-desktop-backend-J46Z4c/emulated-cold-resume-epoch1-bundles/main/chunks/taskHistory-2kbwfqIg.cjs",
+        "kind": "file",
+        "bytes": 1646698,
+        "sha256": "1d336b6cea5aa5c4768954541a24347fe89bb46a83faddaf8b26fd6e0afb7f85",
+        "gitBlob": "8398a374f7d92e6ade8a41059364d773744330d9",
+        "crc32": 2278925645,
+        "utf8": true,
+        "localPath": "/workspace/scratch/c714f5bce554/ci-pr1218-artifacts/observation8/14298896959/members/TEST-desktop-backend-J46Z4c/emulated-cold-resume-epoch1-bundles/main/chunks/taskHistory-2kbwfqIg.cjs",
+        "retainedAsGitBlob": false
+      },
+      {
+        "path": "TEST-desktop-backend-J46Z4c/emulated-cold-resume-epoch1-bundles/main/chunks/teamTaskSnapshotCompaction-mUovQwio.cjs",
+        "kind": "file",
+        "bytes": 9723,
+        "sha256": "2915a9af73772eda67fa92bd4499976d75724d9605cc947e356bd1dc1cee600c",
+        "gitBlob": "e29ed49ca5906264f07c3c65a68dbc379b49f538",
+        "crc32": 2648290797,
+        "utf8": true,
+        "localPath": "/workspace/scratch/c714f5bce554/ci-pr1218-artifacts/observation8/14298896959/members/TEST-desktop-backend-J46Z4c/emulated-cold-resume-epoch1-bundles/main/chunks/teamTaskSnapshotCompaction-mUovQwio.cjs",
+        "retainedAsGitBlob": false
+      },
+      {
+        "path": "TEST-desktop-backend-J46Z4c/emulated-cold-resume-epoch1-bundles/main/index.cjs",
+        "kind": "file",
+        "bytes": 11738111,
+        "sha256": "867e1c3eb691d4f291d91cd0021a64a5ec5494e0663bc4da029db2fe5db46e10",
+        "gitBlob": "0bd22d880bd1397b8baa7ff22c316761b1083395",
+        "crc32": 3345986264,
+        "utf8": true,
+        "localPath": "/workspace/scratch/c714f5bce554/ci-pr1218-artifacts/observation8/14298896959/members/TEST-desktop-backend-J46Z4c/emulated-cold-resume-epoch1-bundles/main/index.cjs",
+        "retainedAsGitBlob": false
+      },
+      {
+        "path": "TEST-desktop-backend-J46Z4c/emulated-cold-resume-epoch1-bundles/main/internal-storage-worker.cjs",
+        "kind": "file",
+        "bytes": 212535,
+        "sha256": "3433cb94575a5748d3133174952698af2a98ac2afb348cb159fcb1110e0b284f",
+        "gitBlob": "9a2ace0b1fed5070aa58635dc41baa99915adbf2",
+        "crc32": 435705202,
+        "utf8": true,
+        "localPath": "/workspace/scratch/c714f5bce554/ci-pr1218-artifacts/observation8/14298896959/members/TEST-desktop-backend-J46Z4c/emulated-cold-resume-epoch1-bundles/main/internal-storage-worker.cjs",
+        "retainedAsGitBlob": false
+      },
+      {
+        "path": "TEST-desktop-backend-J46Z4c/emulated-cold-resume-epoch1-bundles/main/task-change-worker.cjs",
+        "kind": "file",
+        "bytes": 2346,
+        "sha256": "f8fcc24dd4dc9842cd0f70ffe02891d39eef84019d4aab4ed21b529ba9326446",
+        "gitBlob": "01cd637e8b5ad1a1af260bcbe69ecd6988cfa381",
+        "crc32": 2768511219,
+        "utf8": true,
+        "localPath": "/workspace/scratch/c714f5bce554/ci-pr1218-artifacts/observation8/14298896959/members/TEST-desktop-backend-J46Z4c/emulated-cold-resume-epoch1-bundles/main/task-change-worker.cjs",
+        "retainedAsGitBlob": false
+      },
+      {
+        "path": "TEST-desktop-backend-J46Z4c/emulated-cold-resume-epoch1-bundles/main/team-data-worker.cjs",
+        "kind": "file",
+        "bytes": 6593,
+        "sha256": "dc145e9f1fb5fdfa2e5f51ca6d6f2db8e22e89cb3ab34dae2745ccfd4e6f3823",
+        "gitBlob": "c79161af2911f44ce00cf6aef9fcc6ded8831a2b",
+        "crc32": 296980654,
+        "utf8": true,
+        "localPath": "/workspace/scratch/c714f5bce554/ci-pr1218-artifacts/observation8/14298896959/members/TEST-desktop-backend-J46Z4c/emulated-cold-resume-epoch1-bundles/main/team-data-worker.cjs",
+        "retainedAsGitBlob": false
+      },
+      {
+        "path": "TEST-desktop-backend-J46Z4c/emulated-cold-resume-epoch1-bundles/main/team-fs-worker.cjs",
+        "kind": "file",
+        "bytes": 56734,
+        "sha256": "6e6410a44a3d1b97065085259858215045ed137b5bd0dd27bf70f797091c9c83",
+        "gitBlob": "33c98757d0edeecf6d28fc2a1ff3e5973c2677e1",
+        "crc32": 416217819,
+        "utf8": true,
+        "localPath": "/workspace/scratch/c714f5bce554/ci-pr1218-artifacts/observation8/14298896959/members/TEST-desktop-backend-J46Z4c/emulated-cold-resume-epoch1-bundles/main/team-fs-worker.cjs",
+        "retainedAsGitBlob": false
+      },
+      {
+        "path": "TEST-desktop-backend-J46Z4c/emulated-cold-resume-epoch1-bundles/preload/index.js",
+        "kind": "file",
+        "bytes": 96166,
+        "sha256": "4f02e5f1659bb0373f5515d81c7edf5f9bc7af8b67a39f1600171f8acb291406",
+        "gitBlob": "68fc0ce925c26c7ee46ab0c16e15e79b413fbf69",
+        "crc32": 2087030115,
+        "utf8": true,
+        "localPath": "/workspace/scratch/c714f5bce554/ci-pr1218-artifacts/observation8/14298896959/members/TEST-desktop-backend-J46Z4c/emulated-cold-resume-epoch1-bundles/preload/index.js",
+        "retainedAsGitBlob": false
+      },
+      {
+        "path": "TEST-desktop-backend-J46Z4c/host-profile.json",
+        "kind": "file",
+        "bytes": 7322,
+        "sha256": "a904dc74cb3389ec190ead3185229c8f8e2d0a95090c7a1794d38694ec44969e",
+        "gitBlob": "eeb3118aa8805aeed4f1cfe7a610e6d6af838261",
+        "crc32": 230536802,
+        "utf8": true,
+        "localPath": "/workspace/scratch/c714f5bce554/ci-pr1218-artifacts/observation8/14298896959/members/TEST-desktop-backend-J46Z4c/host-profile.json",
+        "retainedAsGitBlob": true
+      },
+      {
+        "path": "TEST-desktop-backend-J46Z4c/hoststore/management-commands/39bc3570d529f7e5d2d22f753ae9f2311173b5694eab12319d227b182d89afa4.json",
+        "kind": "file",
+        "bytes": 956,
+        "sha256": "923b4d0343a284889722c9641bc754b7a94993a6ec18d3898bd0b8372154fe90",
+        "gitBlob": "194948a14db9c3a8723da3cd22f4c55d531b8cad",
+        "crc32": 849126501,
+        "utf8": true,
+        "localPath": "/workspace/scratch/c714f5bce554/ci-pr1218-artifacts/observation8/14298896959/members/TEST-desktop-backend-J46Z4c/hoststore/management-commands/39bc3570d529f7e5d2d22f753ae9f2311173b5694eab12319d227b182d89afa4.json",
+        "retainedAsGitBlob": true
+      },
+      {
+        "path": "TEST-desktop-backend-J46Z4c/hoststore/runtime-checkpoints/cp1-c356a6665164ad1cd44a590a55d5a5ab41201bca023cfb2d0ef91b29678dc41a.json",
+        "kind": "file",
+        "bytes": 1742,
+        "sha256": "c3d3b17a90fa69bac43401641b43e3c79bc4677271a6493cd62b175146874d59",
+        "gitBlob": "e3daa6218aff8d36ee3d1d4a1f46749e843bfbe0",
+        "crc32": 688519660,
+        "utf8": true,
+        "localPath": "/workspace/scratch/c714f5bce554/ci-pr1218-artifacts/observation8/14298896959/members/TEST-desktop-backend-J46Z4c/hoststore/runtime-checkpoints/cp1-c356a6665164ad1cd44a590a55d5a5ab41201bca023cfb2d0ef91b29678dc41a.json",
+        "retainedAsGitBlob": true
+      },
+      {
+        "path": "TEST-desktop-backend-J46Z4c/hoststore/teams/test-desktop-backend/inboxes/alice.json",
+        "kind": "file",
+        "bytes": 969,
+        "sha256": "ee52fd044c1819066cce59930b5264a4601b3547834ff94db604c625e1808a7b",
+        "gitBlob": "3ef675d0d7a91de0d7f950994467249760928ebb",
+        "crc32": 2370092865,
+        "utf8": true,
+        "localPath": "/workspace/scratch/c714f5bce554/ci-pr1218-artifacts/observation8/14298896959/members/TEST-desktop-backend-J46Z4c/hoststore/teams/test-desktop-backend/inboxes/alice.json",
+        "retainedAsGitBlob": true
+      },
+      {
+        "path": "TEST-desktop-backend-J46Z4c/sentinel-invocations.ndjson",
+        "kind": "file",
+        "bytes": 192,
+        "sha256": "6a654a1a19ba032449ef95df2bef8c8d31dbcd57e4c694085e111dc483c2fa8f",
+        "gitBlob": "bbcdfb51d86f5e95da1be959854c827d76a10221",
+        "crc32": 1552139509,
+        "utf8": true,
+        "localPath": "/workspace/scratch/c714f5bce554/ci-pr1218-artifacts/observation8/14298896959/members/TEST-desktop-backend-J46Z4c/sentinel-invocations.ndjson",
+        "retainedAsGitBlob": true
+      },
+      {
+        "path": "TEST-desktop-backend-J46Z4c/ui-emulated-lifecycle-active-queued-before-quit.png",
+        "kind": "file",
+        "bytes": 117320,
+        "sha256": "e7b7ca840114ede2dd8c00bd841b79cc2a22987b52853e2bec115b53b0a6fd0b",
+        "gitBlob": "6a91c58690ed6d8bcaae3f0a924215f99d2598bb",
+        "crc32": 436487771,
+        "utf8": false,
+        "localPath": "/workspace/scratch/c714f5bce554/ci-pr1218-artifacts/observation8/14298896959/members/TEST-desktop-backend-J46Z4c/ui-emulated-lifecycle-active-queued-before-quit.png",
+        "retainedAsGitBlob": false
+      },
+      {
+        "path": "TEST-desktop-backend-J46Z4c/ui-emulated-lifecycle-launch.png",
+        "kind": "file",
+        "bytes": 102864,
+        "sha256": "033485ebd5d6a967c4c79e3b20b9e7537e4ad481b086683dd8f89d5abac649d9",
+        "gitBlob": "dab6b36db9bf917d46e7c427a3a1890b5151a2c4",
+        "crc32": 1445759649,
+        "utf8": false,
+        "localPath": "/workspace/scratch/c714f5bce554/ci-pr1218-artifacts/observation8/14298896959/members/TEST-desktop-backend-J46Z4c/ui-emulated-lifecycle-launch.png",
+        "retainedAsGitBlob": false
+      },
+      {
+        "path": "TEST-desktop-backend-J46Z4c/ui-emulated-lifecycle-resume-selected.png",
+        "kind": "file",
+        "bytes": 103974,
+        "sha256": "32a5652e626f4d391c64ef139521e5a56d0bdf29969018c47f5806529da771fd",
+        "gitBlob": "de4b692b28b258d0b952b86c510004320ac93a1d",
+        "crc32": 2426886450,
+        "utf8": false,
+        "localPath": "/workspace/scratch/c714f5bce554/ci-pr1218-artifacts/observation8/14298896959/members/TEST-desktop-backend-J46Z4c/ui-emulated-lifecycle-resume-selected.png",
+        "retainedAsGitBlob": false
+      },
+      {
+        "path": "TEST-desktop-backend-J46Z4c/ui-emulated-lifecycle-resumed.png",
+        "kind": "file",
+        "bytes": 107568,
+        "sha256": "f767552dffa1bed93baa600527efdd35987dfc464a68d35881aa3cb1d99425f7",
+        "gitBlob": "a6bc3d33d7fc853aa80917a8a59def04cddc8c69",
+        "crc32": 2053990544,
+        "utf8": false,
+        "localPath": "/workspace/scratch/c714f5bce554/ci-pr1218-artifacts/observation8/14298896959/members/TEST-desktop-backend-J46Z4c/ui-emulated-lifecycle-resumed.png",
+        "retainedAsGitBlob": false
+      },
+      {
+        "path": "TEST-desktop-backend-J46Z4c/ui-emulated-lifecycle-stopped.png",
+        "kind": "file",
+        "bytes": 95052,
+        "sha256": "649ef3a50fc2bbccd654b1efca72b9210615ca68ef618570693154df6a3a9ace",
+        "gitBlob": "48e165f5dfb0f1ec813ba850788d690c681ea271",
+        "crc32": 3124563395,
+        "utf8": false,
+        "localPath": "/workspace/scratch/c714f5bce554/ci-pr1218-artifacts/observation8/14298896959/members/TEST-desktop-backend-J46Z4c/ui-emulated-lifecycle-stopped.png",
+        "retainedAsGitBlob": false
+      },
+      {
+        "path": "TEST-desktop-backend-J46Z4c/ui-emulated-runtime-effects.json",
+        "kind": "file",
+        "bytes": 10509,
+        "sha256": "9dcc9857509eb2a67cce9ec05f70da3b1113e64e7668576b1f5dcf75771561d4",
+        "gitBlob": "d4a9d14fff6f202082304b7bd77a81240cb0c673",
+        "crc32": 951521610,
+        "utf8": true,
+        "localPath": "/workspace/scratch/c714f5bce554/ci-pr1218-artifacts/observation8/14298896959/members/TEST-desktop-backend-J46Z4c/ui-emulated-runtime-effects.json",
+        "retainedAsGitBlob": true
+      },
+      {
+        "path": "TEST-desktop-backend-J46Z4c/ui-seed-receipt.json",
+        "kind": "file",
+        "bytes": 2335,
+        "sha256": "6083d327370fbbace95f36f537b0bf94022b2a15ad3e4ae6cd42542203b98416",
+        "gitBlob": "5a7592b875ff4b2caa6e987318354eae600e4774",
+        "crc32": 3737609981,
+        "utf8": true,
+        "localPath": "/workspace/scratch/c714f5bce554/ci-pr1218-artifacts/observation8/14298896959/members/TEST-desktop-backend-J46Z4c/ui-seed-receipt.json",
+        "retainedAsGitBlob": true
+      },
+      {
+        "path": "TEST-emulated-ui-inputs-nB8hqK/linux-child-exec/linux-child-exec",
+        "kind": "file",
+        "bytes": 790608,
+        "sha256": "8fc3e5a748a55218d0b9eff7a7a7db6f249b246a6be940464da26456fe511c45",
+        "gitBlob": "5cfafbff2cdf51422a2eebbb4f3c143e7c7bc807",
+        "crc32": 3977027915,
+        "utf8": false,
+        "localPath": "/workspace/scratch/c714f5bce554/ci-pr1218-artifacts/observation8/14298896959/members/TEST-emulated-ui-inputs-nB8hqK/linux-child-exec/linux-child-exec",
+        "retainedAsGitBlob": false
+      },
+      {
+        "path": "TEST-emulated-ui-inputs-nB8hqK/linux-child-exec/manifest.json",
+        "kind": "file",
+        "bytes": 2408,
+        "sha256": "e67ba493cc10e1fd124f6c7437b6f86e1eba46746ce73e51088d67eb095b2734",
+        "gitBlob": "f83d4686d6bbdb2273c73eb4b4489e0a163e6517",
+        "crc32": 3765380163,
+        "utf8": true,
+        "localPath": "/workspace/scratch/c714f5bce554/ci-pr1218-artifacts/observation8/14298896959/members/TEST-emulated-ui-inputs-nB8hqK/linux-child-exec/manifest.json",
+        "retainedAsGitBlob": true
+      },
+      {
+        "path": "host-emulated-emulated-claude-lifecycle-ui.log",
+        "kind": "file",
+        "bytes": 225,
+        "sha256": "9e899901541d7df054a5f0d72b8f308b4553fb93aa5bf79d9244c168b8e05f43",
+        "gitBlob": "fb457245bd169d9f90c7ddba55c62092b1baba0b",
+        "crc32": 375760406,
+        "utf8": true,
+        "localPath": "/workspace/scratch/c714f5bce554/ci-pr1218-artifacts/observation8/14298896959/members/host-emulated-emulated-claude-lifecycle-ui.log",
+        "retainedAsGitBlob": true
+      },
+      {
+        "path": "host-emulated-inputs.json",
+        "kind": "file",
+        "bytes": 1803,
+        "sha256": "28d10bd57bbadde4847f7944d3484569080aa52f6cbe2d2d438eb65fb677dc60",
+        "gitBlob": "3e210f36f97504d62b18ab50dec91fc85ce9c159",
+        "crc32": 3194153960,
+        "utf8": true,
+        "localPath": "/workspace/scratch/c714f5bce554/ci-pr1218-artifacts/observation8/14298896959/members/host-emulated-inputs.json",
+        "retainedAsGitBlob": true
+      },
+      {
+        "path": "host-emulated-linux-child-exec-selection.json",
+        "kind": "file",
+        "bytes": 271,
+        "sha256": "4acca7223b4f9694c55f8e3cb4503a7515b93c77668d6ac746e0f62140c6ad2a",
+        "gitBlob": "d4b1fe520bbb6a98c680dc1028ff90659715370a",
+        "crc32": 2563153614,
+        "utf8": true,
+        "localPath": "/workspace/scratch/c714f5bce554/ci-pr1218-artifacts/observation8/14298896959/members/host-emulated-linux-child-exec-selection.json",
+        "retainedAsGitBlob": true
+      },
+      {
+        "path": "host-emulated-summary.json",
+        "kind": "file",
+        "bytes": 912,
+        "sha256": "bdf7916e448d6ce644b2663c2d385a7871d919a8668ac13a67a62ed388766f5d",
+        "gitBlob": "edb9a005b018fb02d3a56190787e6469f4a48585",
+        "crc32": 146072171,
+        "utf8": true,
+        "localPath": "/workspace/scratch/c714f5bce554/ci-pr1218-artifacts/observation8/14298896959/members/host-emulated-summary.json",
+        "retainedAsGitBlob": true
+      }
+    ],
+    "membersComplete": true,
+    "fileCount": 37,
+    "uncompressedBytes": 17532632
+  },
+  "capture": {
+    "zipDigestAndByteCountVerified": true,
+    "all37MembersFullyReadForHashesAndCRC": true,
+    "completeMemberCensus": true,
+    "all17NonBundleTextBodiesRetained": true,
+    "nonBundleTextBytes": 977696,
+    "bundleAndBinaryMembersRetainedInOriginalVerifiedZip": true,
+    "binaryOrSourceExecution": false
+  },
+  "qualification": "Capture only. Full receipt/source maps/peer effects/cleanup semantics now available for independent joins. Whole139 already log-green in explicit229 invocation; this does not establish renderer85, new149/43/10, native vendor authentication, unrelated E2E lanes or overall active Host workflow."
+}

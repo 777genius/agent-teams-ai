@@ -1,0 +1,216 @@
+{
+  "schemaVersion": 1,
+  "kind": "frozen-ci-complete-frontend-shard2-artifact-capture",
+  "at": "2026-11-17 05:58:28 UTC",
+  "sourceHead": "9c9c73190840592963142d36562ea07d2b5d2d71",
+  "runId": 44008782843,
+  "attempt": 1,
+  "jobId": 133790458962,
+  "jobLog": {
+    "bytes": 202124,
+    "sha256": "0ab3b3e7181121c0f588ee6e3b51dc1b6d36cf6080e531995f881da5b32b435f",
+    "gitBlob": "96cd259186ca5e5823e2b3b35b013464578c0f7b"
+  },
+  "originalObservedJob": {
+    "id": 133790458962,
+    "run_id": 44008782843,
+    "workflow_name": "Host Emulated Acceptance",
+    "head_branch": "ci/frontend-parity-c714-20261117-head",
+    "run_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/44008782843",
+    "run_attempt": 1,
+    "node_id": "CR_kwDORVTEtM8AAAAfJohkUg",
+    "head_sha": "9c9c73190840592963142d36562ea07d2b5d2d71",
+    "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/jobs/133790458962",
+    "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/44008782843/job/133790458962",
+    "status": "completed",
+    "conclusion": "success",
+    "created_at": "2026-11-17T03:14:32Z",
+    "started_at": "2026-11-17T05:20:39Z",
+    "completed_at": "2026-11-17T05:27:56Z",
+    "name": "Offline frontend tests (2/4)",
+    "steps": [
+      {
+        "name": "Set up job",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 1,
+        "started_at": "2026-11-17T05:20:40Z",
+        "completed_at": "2026-11-17T05:20:41Z"
+      },
+      {
+        "name": "Run actions/checkout@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 2,
+        "started_at": "2026-11-17T05:20:41Z",
+        "completed_at": "2026-11-17T05:20:55Z"
+      },
+      {
+        "name": "Run pnpm/action-setup@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 3,
+        "started_at": "2026-11-17T05:20:56Z",
+        "completed_at": "2026-11-17T05:21:00Z"
+      },
+      {
+        "name": "Run actions/setup-node@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 4,
+        "started_at": "2026-11-17T05:21:00Z",
+        "completed_at": "2026-11-17T05:21:05Z"
+      },
+      {
+        "name": "Verify source and capture the original Host test runtime",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 5,
+        "started_at": "2026-11-17T05:21:05Z",
+        "completed_at": "2026-11-17T05:21:05Z"
+      },
+      {
+        "name": "Setup the original workspace test runtime",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 6,
+        "started_at": "2026-11-17T05:21:05Z",
+        "completed_at": "2026-11-17T05:21:15Z"
+      },
+      {
+        "name": "Prepare original test prerequisites",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 7,
+        "started_at": "2026-11-17T05:21:15Z",
+        "completed_at": "2026-11-17T05:21:55Z"
+      },
+      {
+        "name": "Run the complete safe frontend shard",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 8,
+        "started_at": "2026-11-17T05:21:55Z",
+        "completed_at": "2026-11-17T05:27:52Z"
+      },
+      {
+        "name": "Preserve original test results, including failures",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 9,
+        "started_at": "2026-11-17T05:27:52Z",
+        "completed_at": "2026-11-17T05:27:53Z"
+      },
+      {
+        "name": "Post Setup the original workspace test runtime",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 15,
+        "started_at": "2026-11-17T05:27:53Z",
+        "completed_at": "2026-11-17T05:27:53Z"
+      },
+      {
+        "name": "Post Run actions/setup-node@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 16,
+        "started_at": "2026-11-17T05:27:53Z",
+        "completed_at": "2026-11-17T05:27:54Z"
+      },
+      {
+        "name": "Post Run pnpm/action-setup@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 17,
+        "started_at": "2026-11-17T05:27:54Z",
+        "completed_at": "2026-11-17T05:27:54Z"
+      },
+      {
+        "name": "Post Run actions/checkout@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 18,
+        "started_at": "2026-11-17T05:27:54Z",
+        "completed_at": "2026-11-17T05:27:54Z"
+      },
+      {
+        "name": "Complete job",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 19,
+        "started_at": "2026-11-17T05:27:54Z",
+        "completed_at": "2026-11-17T05:27:54Z"
+      }
+    ],
+    "check_run_url": "https://api.github.com/repos/777genius/agent-teams-ai/check-runs/133790458962",
+    "labels": [
+      "ubuntu-latest"
+    ],
+    "runner_id": 1000383813,
+    "runner_name": "GitHub Actions 1000383813",
+    "runner_group_id": 0,
+    "runner_group_name": "GitHub Actions"
+  },
+  "archive": {
+    "artifactId": 14301633290,
+    "name": "host-offline-tests-9c9c73190840592963142d36562ea07d2b5d2d71-2",
+    "runId": 44008782843,
+    "bytes": 313120,
+    "sha256": "db192f7d1187d1cc06fbc519c0cd81214a39245b870461b67bf57667ad41dd32",
+    "fileId": "file_00000000b3e481f49f331c4601d2445f",
+    "archivePath": "/workspace/scratch/c714f5bce554/ci-pr1218-artifacts/observation13/14301633290/artifact.zip",
+    "members": [
+      {
+        "path": "host-offline-tests-2.json",
+        "kind": "file",
+        "bytes": 2389600,
+        "sha256": "1623bdabac26b56107a0758fb526fa87a1d79b87b9b36c12574372966a39563a",
+        "gitBlob": "d3868b44b99e7ec13d72116a21ba29274427e725",
+        "crc32": 1042599570,
+        "utf8": true,
+        "localPath": "/workspace/scratch/c714f5bce554/ci-pr1218-artifacts/observation13/14301633290/members/host-offline-tests-2.json"
+      },
+      {
+        "path": "host-offline-tests-2.log",
+        "kind": "file",
+        "bytes": 107106,
+        "sha256": "1fd2c48c71ccdfe32ad01291949d430e71f308791dbe1cc0ef1426a731c2cf3b",
+        "gitBlob": "5787abc9e2d7f9b8a10eafe46c990bfd258bff11",
+        "crc32": 1078539370,
+        "utf8": true,
+        "localPath": "/workspace/scratch/c714f5bce554/ci-pr1218-artifacts/observation13/14301633290/members/host-offline-tests-2.log"
+      }
+    ],
+    "membersComplete": true,
+    "fileCount": 2,
+    "uncompressedBytes": 2496706
+  },
+  "retainedMembers": [
+    {
+      "path": "host-offline-tests-2.json",
+      "kind": "file",
+      "bytes": 2389600,
+      "sha256": "1623bdabac26b56107a0758fb526fa87a1d79b87b9b36c12574372966a39563a",
+      "gitBlob": "d3868b44b99e7ec13d72116a21ba29274427e725",
+      "crc32": 1042599570,
+      "utf8": true,
+      "localPath": "/workspace/scratch/c714f5bce554/ci-pr1218-artifacts/observation13/14301633290/members/host-offline-tests-2.json"
+    },
+    {
+      "path": "host-offline-tests-2.log",
+      "kind": "file",
+      "bytes": 107106,
+      "sha256": "1fd2c48c71ccdfe32ad01291949d430e71f308791dbe1cc0ef1426a731c2cf3b",
+      "gitBlob": "5787abc9e2d7f9b8a10eafe46c990bfd258bff11",
+      "crc32": 1078539370,
+      "utf8": true,
+      "localPath": "/workspace/scratch/c714f5bce554/ci-pr1218-artifacts/observation13/14301633290/members/host-offline-tests-2.log"
+    }
+  ],
+  "completeTextBytes": 2496706,
+  "limits": [
+    "Complete original two-member ZIP/hash/CRC capture; both full text members retained without filtering.",
+    "Log observes wholefile85 PASS. Independent exact case/source/runtime audit remains separate.",
+    "Shard-wide18 skipped tests and2 skipped files stay skipped; later149/43/10 and full E2E unqualified."
+  ]
+}

@@ -1,0 +1,1806 @@
+{
+  "schemaVersion": 1,
+  "kind": "root-inode64-member-reveal-R1-actual-publication-readback",
+  "at": "2026-11-17 06:30:24 UTC",
+  "repository": "777genius/agent-teams-ai",
+  "branch": "fix/frontend-parity-coobservation-c714-20261115",
+  "verdict": "ACCEPT_EXACT_R1_DOCS_PUBLICATION_ROOT_READBACK",
+  "publication": {
+    "commit": "6d06207d96ea1c7ae7d9199a552ec776451dc231",
+    "parent": "c4fc226201fb32e59d1a8ccfb130922926445747",
+    "tree": "b5bb45adf162e15fd7d909140adeaf958c23d1f9",
+    "docsTree": "a4486f1b960f8658fde466d3c1e51e13993b5c48",
+    "manifest": {
+      "bytes": 11667,
+      "sha256": "a4040d0353f90185d6e56696256a9a15a5f6e3a6529c01cb2bb5f8af8cba7fe9",
+      "gitBlob": "59a0816f4c7399985557df3489b54c94fe50c8d3"
+    },
+    "immediateExpectedParentPush": true,
+    "force": false
+  },
+  "subject": {
+    "bytes": 27869,
+    "sha256": "e3a891024d750f7c868a7a253f2ed1f3630b833e92d1698af38b533c8ebc5db7",
+    "gitBlob": "b16bf54091cfb2fd2756ad7a951d0f9143611d2b"
+  },
+  "completeDelta": [
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/29-reconciled-acceptance-and-custody-followups-2026-11-15.md",
+      "before": {
+        "sha": "5b1fcb255b37e1a260044156e8422e3111634cac",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": {
+        "sha": "cad54c1df10b391cd1ed6b11a988d5898ea9ec09",
+        "mode": "100644",
+        "type": "blob",
+        "bytes": 2587834
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/continuation-status-20261116.md",
+      "before": {
+        "sha": "de900e6435a345008041f04ac139ea4601b1c08e",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": {
+        "sha": "e8c8edcd0c365273c02e83c50384ff65f148a38a",
+        "mode": "100644",
+        "type": "blob",
+        "bytes": 64543
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1213-retention-catalog-20261116.json",
+      "before": {
+        "sha": "c6dfa3239593bceba4d27a1ae087be6ffd3e9d18",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": {
+        "sha": "a6e33006bb43a011c5dd6283fcf2d15933f6747c",
+        "mode": "100644",
+        "type": "blob",
+        "bytes": 482865
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/inode64-member-reveal-r1-20261117.json",
+      "before": null,
+      "after": {
+        "sha": "b16bf54091cfb2fd2756ad7a951d0f9143611d2b",
+        "mode": "100644",
+        "type": "blob",
+        "bytes": 27869
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/inode64-member-reveal-r1-binding-review-20261117.json",
+      "before": null,
+      "after": {
+        "sha": "4edbaba44e16de90ef20d2a1e1baf9350d847a88",
+        "mode": "100644",
+        "type": "blob",
+        "bytes": 86401
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/inode64-member-reveal-r1-guard-review-20261117.json",
+      "before": null,
+      "after": {
+        "sha": "3e53832bf5fee506849b88202028ae73a50f2ab1",
+        "mode": "100644",
+        "type": "blob",
+        "bytes": 60065
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/inode64-member-reveal-r1-publication-manifest-20261117.json",
+      "before": null,
+      "after": {
+        "sha": "59a0816f4c7399985557df3489b54c94fe50c8d3",
+        "mode": "100644",
+        "type": "blob",
+        "bytes": 11667
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/inode64-member-reveal-r1-root-review-20261117.json",
+      "before": null,
+      "after": {
+        "sha": "3e38848ca22648dccb8928553b31543d8cb366b6",
+        "mode": "100644",
+        "type": "blob",
+        "bytes": 13214
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/inode64-member-reveal-r1-semantic-review-20261117.json",
+      "before": null,
+      "after": {
+        "sha": "6f1d57b805792bca13cdda2048c34c59d3565944",
+        "mode": "100644",
+        "type": "blob",
+        "bytes": 48210
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/narrow-waitread-control-independent-actual-publication-20261117.json",
+      "before": null,
+      "after": {
+        "sha": "f20c0188402a166dce08b6592e06e311edcc9fe9",
+        "mode": "100644",
+        "type": "blob",
+        "bytes": 200533
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/narrow-waitread-control-root-actual-publication-20261117.json",
+      "before": null,
+      "after": {
+        "sha": "516017b52445cd7c337878f0754a0e121849b24d",
+        "mode": "100644",
+        "type": "blob",
+        "bytes": 65482
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/opencode-member-reveal-r1-advisory-20261117.json",
+      "before": null,
+      "after": {
+        "sha": "c246bbf66dd628fe6909a1a57cab85bdccf80d58",
+        "mode": "100644",
+        "type": "blob",
+        "bytes": 27043
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1218-codex-extensions-actual-review-20261117.json",
+      "before": null,
+      "after": {
+        "sha": "342a38f823f0d07bd8281fd94022ea1f3ecb3133",
+        "mode": "100644",
+        "type": "blob",
+        "bytes": 101500
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1218-cross-team-windows-full-failure-capture-20261117.json",
+      "before": null,
+      "after": {
+        "sha": "33e472d38720bda64a2483041af43405c2eec085",
+        "mode": "100644",
+        "type": "blob",
+        "bytes": 43216
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1218-executed-observation13-20261117.json",
+      "before": null,
+      "after": {
+        "sha": "e809fefa350f8d7f7e3e4922ac0bba865c19c13e",
+        "mode": "100644",
+        "type": "blob",
+        "bytes": 573622
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1218-executed-observation14-20261117.json",
+      "before": null,
+      "after": {
+        "sha": "99f1a2a1630f25627a9e103f9a58f48c1c87a0ec",
+        "mode": "100644",
+        "type": "blob",
+        "bytes": 638122
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1218-extensions-semantic-slice-20261117.json",
+      "before": null,
+      "after": {
+        "sha": "14bd6ed652989dde397cce0073e315e269762bcb",
+        "mode": "100644",
+        "type": "blob",
+        "bytes": 28120
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1218-frontend2-complete-artifact-capture-20261117.json",
+      "before": null,
+      "after": {
+        "sha": "88130b0010f8d67e683792e0712b5ce01d7e7e03",
+        "mode": "100644",
+        "type": "blob",
+        "bytes": 7711
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1218-whole-renderer85-actual-review-20261117.json",
+      "before": null,
+      "after": {
+        "sha": "4277afde65b656545ca30e4b1be3f593af862fc8",
+        "mode": "100644",
+        "type": "blob",
+        "bytes": 56658
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/standalone-waitread-inode64-advisory-20261117.json",
+      "before": null,
+      "after": {
+        "sha": "5af2e1cf8dc14ace23e8cc1f10ddbb25e8ef6d26",
+        "mode": "100644",
+        "type": "blob",
+        "bytes": 54695
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/standalone-waitread-original-refusal-20261117.json",
+      "before": null,
+      "after": {
+        "sha": "30bcf16f731650684a275de4ae4be6cd18b41c4e",
+        "mode": "100644",
+        "type": "blob",
+        "bytes": 200440
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/standalone-waitread-original-spent-admission-20261117.json",
+      "before": null,
+      "after": {
+        "sha": "8c2c7a2a439b1054972f4a52eb8f88b842274dba",
+        "mode": "100644",
+        "type": "blob",
+        "bytes": 1583
+      }
+    }
+  ],
+  "actualBodyReadbacks": [
+    {
+      "kind": "actual",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/inode64-member-reveal-r1-20261117.json",
+      "bytes": 27869,
+      "sha256": "e3a891024d750f7c868a7a253f2ed1f3630b833e92d1698af38b533c8ebc5db7",
+      "gitBlob": "b16bf54091cfb2fd2756ad7a951d0f9143611d2b",
+      "literalMatches": true,
+      "fullyRead": true
+    },
+    {
+      "kind": "actual",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/inode64-member-reveal-r1-root-review-20261117.json",
+      "bytes": 13214,
+      "sha256": "e9b2a9dc949e9b6ee1eb6c65af0ea52158f64a6e62702f27131e2eb795884156",
+      "gitBlob": "3e38848ca22648dccb8928553b31543d8cb366b6",
+      "literalMatches": true,
+      "fullyRead": true
+    },
+    {
+      "kind": "actual",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/inode64-member-reveal-r1-guard-review-20261117.json",
+      "bytes": 60065,
+      "sha256": "b595b1bf8f385d5ef402cb2e63d78444657ca15d7678139e902645a156aa1c45",
+      "gitBlob": "3e53832bf5fee506849b88202028ae73a50f2ab1",
+      "literalMatches": true,
+      "fullyRead": true
+    },
+    {
+      "kind": "actual",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/inode64-member-reveal-r1-semantic-review-20261117.json",
+      "bytes": 48210,
+      "sha256": "8e0f5fa4c848572cb1a08f3ab83c7c630b15954c6f502b11c1483b28390ad17b",
+      "gitBlob": "6f1d57b805792bca13cdda2048c34c59d3565944",
+      "literalMatches": true,
+      "fullyRead": true
+    },
+    {
+      "kind": "actual",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/inode64-member-reveal-r1-binding-review-20261117.json",
+      "bytes": 86401,
+      "sha256": "097963b5df0cec6cfb91dd4ebb76ac23213c6b0bef460d70083679f19fcb16c4",
+      "gitBlob": "4edbaba44e16de90ef20d2a1e1baf9350d847a88",
+      "literalMatches": true,
+      "fullyRead": true
+    },
+    {
+      "kind": "actual",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/standalone-waitread-original-spent-admission-20261117.json",
+      "bytes": 1583,
+      "sha256": "bdb1d12b8e8539e8200f18ea4f39a9b2e0582324a66f5fd6297694e95d338538",
+      "gitBlob": "8c2c7a2a439b1054972f4a52eb8f88b842274dba",
+      "literalMatches": true,
+      "fullyRead": true
+    },
+    {
+      "kind": "actual",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/standalone-waitread-original-refusal-20261117.json",
+      "bytes": 200440,
+      "sha256": "ab24e85bd89e55d48149f05274176df9fba2e0340b526c1a927242b4ed401bd4",
+      "gitBlob": "30bcf16f731650684a275de4ae4be6cd18b41c4e",
+      "literalMatches": true,
+      "fullyRead": true
+    },
+    {
+      "kind": "actual",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/standalone-waitread-inode64-advisory-20261117.json",
+      "bytes": 54695,
+      "sha256": "9212ceb83645a0f9fb9e2f9b37985c5af6bfe6248014014cac86eead66a7092d",
+      "gitBlob": "5af2e1cf8dc14ace23e8cc1f10ddbb25e8ef6d26",
+      "literalMatches": true,
+      "fullyRead": true
+    },
+    {
+      "kind": "actual",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/opencode-member-reveal-r1-advisory-20261117.json",
+      "bytes": 27043,
+      "sha256": "ccc199a00f3e822961831a05b2e9138076a4843a389b432354aea07093ed1543",
+      "gitBlob": "c246bbf66dd628fe6909a1a57cab85bdccf80d58",
+      "literalMatches": true,
+      "fullyRead": true
+    },
+    {
+      "kind": "actual",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1218-whole-renderer85-actual-review-20261117.json",
+      "bytes": 56658,
+      "sha256": "2a20638c7372fc202d5dc1fbcb364744a8ada038401e6673461ab8147843524e",
+      "gitBlob": "4277afde65b656545ca30e4b1be3f593af862fc8",
+      "literalMatches": true,
+      "fullyRead": true
+    },
+    {
+      "kind": "actual",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1218-codex-extensions-actual-review-20261117.json",
+      "bytes": 101500,
+      "sha256": "04307965e2c3be91b229a6364fa758b468ee177ba3b45392e2a23cbd8946e1e9",
+      "gitBlob": "342a38f823f0d07bd8281fd94022ea1f3ecb3133",
+      "literalMatches": true,
+      "fullyRead": true
+    },
+    {
+      "kind": "actual",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1218-extensions-semantic-slice-20261117.json",
+      "bytes": 28120,
+      "sha256": "3a7b10b970e6fc6f9812c94c1ecb7a5a5cafedd717674642a67aea7db34f5de5",
+      "gitBlob": "14bd6ed652989dde397cce0073e315e269762bcb",
+      "literalMatches": true,
+      "fullyRead": true
+    },
+    {
+      "kind": "actual",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/narrow-waitread-control-root-actual-publication-20261117.json",
+      "bytes": 65482,
+      "sha256": "9e0931fb08d50ef3a2c7f3ec24707a791ce479890d26b899b8a073eb822798b4",
+      "gitBlob": "516017b52445cd7c337878f0754a0e121849b24d",
+      "literalMatches": true,
+      "fullyRead": true
+    },
+    {
+      "kind": "actual",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/narrow-waitread-control-independent-actual-publication-20261117.json",
+      "bytes": 200533,
+      "sha256": "25f4847a99bf1647b30b782eae9053a6b85cda1013b6b0d28fbae3ff6a7a484a",
+      "gitBlob": "f20c0188402a166dce08b6592e06e311edcc9fe9",
+      "literalMatches": true,
+      "fullyRead": true
+    },
+    {
+      "kind": "actual",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1218-executed-observation13-20261117.json",
+      "bytes": 573622,
+      "sha256": "0e5df724cec747e57ce3f028d3b1f683fd5663c8b67931fa4b9f4c075620236e",
+      "gitBlob": "e809fefa350f8d7f7e3e4922ac0bba865c19c13e",
+      "literalMatches": true,
+      "fullyRead": true
+    },
+    {
+      "kind": "actual",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1218-executed-observation14-20261117.json",
+      "bytes": 638122,
+      "sha256": "d9211667e0c60f4413f36f1003fe321feb2de96918585db1490b971400caf6f1",
+      "gitBlob": "99f1a2a1630f25627a9e103f9a58f48c1c87a0ec",
+      "literalMatches": true,
+      "fullyRead": true
+    },
+    {
+      "kind": "actual",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1218-frontend2-complete-artifact-capture-20261117.json",
+      "bytes": 7711,
+      "sha256": "7ea1b4b25243970292f504c67cd8dd6ee4a2f38a6cef6508a241923ea54c288d",
+      "gitBlob": "88130b0010f8d67e683792e0712b5ce01d7e7e03",
+      "literalMatches": true,
+      "fullyRead": true
+    },
+    {
+      "kind": "actual",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1218-cross-team-windows-full-failure-capture-20261117.json",
+      "bytes": 43216,
+      "sha256": "baf4a9f2de58d967366c652bf7cba5d28e7b4d3c3f576f3d359f04516f31c972",
+      "gitBlob": "33e472d38720bda64a2483041af43405c2eec085",
+      "literalMatches": true,
+      "fullyRead": true
+    },
+    {
+      "kind": "actual",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/29-reconciled-acceptance-and-custody-followups-2026-11-15.md",
+      "bytes": 2587834,
+      "sha256": "ab59e0cc3a6b69ce7375584545f2d13dc38ae62450c35a3c04cd3e9ebddb8d5e",
+      "gitBlob": "cad54c1df10b391cd1ed6b11a988d5898ea9ec09",
+      "literalMatches": true,
+      "fullyRead": true
+    },
+    {
+      "kind": "actual",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/continuation-status-20261116.md",
+      "bytes": 64543,
+      "sha256": "bd3d8910193bc7200464b0a8587b7a87889b2d7c15a77229d1a12bdd5fbf6d07",
+      "gitBlob": "e8c8edcd0c365273c02e83c50384ff65f148a38a",
+      "literalMatches": true,
+      "fullyRead": true
+    },
+    {
+      "kind": "actual",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1213-retention-catalog-20261116.json",
+      "bytes": 482865,
+      "sha256": "9612b31d139a37b0da96af0f6051076fc6fb60ea66c41896fea41057b2fa07fe",
+      "gitBlob": "a6e33006bb43a011c5dd6283fcf2d15933f6747c",
+      "literalMatches": true,
+      "fullyRead": true
+    },
+    {
+      "kind": "actual",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/inode64-member-reveal-r1-publication-manifest-20261117.json",
+      "bytes": 11667,
+      "sha256": "a4040d0353f90185d6e56696256a9a15a5f6e3a6529c01cb2bb5f8af8cba7fe9",
+      "gitBlob": "59a0816f4c7399985557df3489b54c94fe50c8d3",
+      "literalMatches": true,
+      "fullyRead": true
+    }
+  ],
+  "parentBodyReadbacks": [
+    {
+      "kind": "parent",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/29-reconciled-acceptance-and-custody-followups-2026-11-15.md",
+      "bytes": 2582891,
+      "sha256": "7a471d1286ac1a3378e4eb405b26ebaf4caeef8d850a34e3883560cb93657f4d",
+      "gitBlob": "5b1fcb255b37e1a260044156e8422e3111634cac",
+      "literalMatches": true,
+      "fullyRead": true
+    },
+    {
+      "kind": "parent",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/continuation-status-20261116.md",
+      "bytes": 59600,
+      "sha256": "8d63895e7a765b51c293c25df453f2ec5110825d3d89ef3e54d5149a8125a0eb",
+      "gitBlob": "de900e6435a345008041f04ac139ea4601b1c08e",
+      "literalMatches": true,
+      "fullyRead": true
+    },
+    {
+      "kind": "parent",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1213-retention-catalog-20261116.json",
+      "bytes": 469560,
+      "sha256": "a2ca7bf0c92868a9efd5b7560dca93b1c7d0d7357d0ee8e26d830b960a165949",
+      "gitBlob": "c6dfa3239593bceba4d27a1ae087be6ffd3e9d18",
+      "literalMatches": true,
+      "fullyRead": true
+    }
+  ],
+  "selectedSourceAnchorRows": [
+    {
+      "path": "package.json",
+      "mode": "100644",
+      "bytes": 26839,
+      "sha256": "c92407a9a5dad6f9d6a6eb8ea7c456195d396679bb4b9dfd15b6c06b726d1084",
+      "gitBlob": "f80ec83172d0aec0dec8a8ab055426b4fca4a1f7"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "mode": "100644",
+      "bytes": 29017,
+      "sha256": "ffd9bbb822dbdc30da7cb8daa881fcbebd384ba2bf9bdd87c804c511166fa02b",
+      "gitBlob": "5286c036a63a14e98925711a224df202c9a7caa7"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-ui-controls-deadline.test.ts",
+      "mode": "100644",
+      "bytes": 7883,
+      "sha256": "29836f914218edb4876b6a4e157e7cdc68f63cdf414084cdd41683965c734eda",
+      "gitBlob": "6a9f8ad7481cd5910befcc6c7ff5992eef03965b"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-emulated-runtime-ui.ts",
+      "mode": "100644",
+      "bytes": 69194,
+      "sha256": "bed27eab54593e30f76ef3121e1d1effdaa53ca9b872ecbbf52b6c2fd619087e",
+      "gitBlob": "43ab487464098fed0425ffd51441a38abc206f3b"
+    }
+  ],
+  "currentPointerJoins": [
+    {
+      "pointer": "catalog.inode64MemberRevealR1Stage.subject",
+      "pin": {
+        "bytes": 27869,
+        "sha256": "e3a891024d750f7c868a7a253f2ed1f3630b833e92d1698af38b533c8ebc5db7",
+        "gitBlob": "b16bf54091cfb2fd2756ad7a951d0f9143611d2b"
+      },
+      "actualPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/inode64-member-reveal-r1-20261117.json",
+      "derived": false
+    },
+    {
+      "pointer": "catalog.inode64MemberRevealR1Stage.reviews.root",
+      "pin": {
+        "bytes": 13214,
+        "sha256": "e9b2a9dc949e9b6ee1eb6c65af0ea52158f64a6e62702f27131e2eb795884156",
+        "gitBlob": "3e38848ca22648dccb8928553b31543d8cb366b6"
+      },
+      "actualPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/inode64-member-reveal-r1-root-review-20261117.json",
+      "derived": false
+    },
+    {
+      "pointer": "catalog.inode64MemberRevealR1Stage.reviews.guard",
+      "pin": {
+        "bytes": 60065,
+        "sha256": "b595b1bf8f385d5ef402cb2e63d78444657ca15d7678139e902645a156aa1c45",
+        "gitBlob": "3e53832bf5fee506849b88202028ae73a50f2ab1"
+      },
+      "actualPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/inode64-member-reveal-r1-guard-review-20261117.json",
+      "derived": false
+    },
+    {
+      "pointer": "catalog.inode64MemberRevealR1Stage.reviews.semantic",
+      "pin": {
+        "bytes": 48210,
+        "sha256": "8e0f5fa4c848572cb1a08f3ab83c7c630b15954c6f502b11c1483b28390ad17b",
+        "gitBlob": "6f1d57b805792bca13cdda2048c34c59d3565944"
+      },
+      "actualPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/inode64-member-reveal-r1-semantic-review-20261117.json",
+      "derived": false
+    },
+    {
+      "pointer": "catalog.inode64MemberRevealR1Stage.reviews.binding",
+      "pin": {
+        "bytes": 86401,
+        "sha256": "097963b5df0cec6cfb91dd4ebb76ac23213c6b0bef460d70083679f19fcb16c4",
+        "gitBlob": "4edbaba44e16de90ef20d2a1e1baf9350d847a88"
+      },
+      "actualPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/inode64-member-reveal-r1-binding-review-20261117.json",
+      "derived": false
+    },
+    {
+      "pointer": "catalog.inode64MemberRevealR1Stage.priorActual.root",
+      "pin": {
+        "bytes": 65482,
+        "sha256": "9e0931fb08d50ef3a2c7f3ec24707a791ce479890d26b899b8a073eb822798b4",
+        "gitBlob": "516017b52445cd7c337878f0754a0e121849b24d"
+      },
+      "actualPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/narrow-waitread-control-root-actual-publication-20261117.json",
+      "derived": false
+    },
+    {
+      "pointer": "catalog.inode64MemberRevealR1Stage.priorActual.independent",
+      "pin": {
+        "bytes": 200533,
+        "sha256": "25f4847a99bf1647b30b782eae9053a6b85cda1013b6b0d28fbae3ff6a7a484a",
+        "gitBlob": "f20c0188402a166dce08b6592e06e311edcc9fe9"
+      },
+      "actualPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/narrow-waitread-control-independent-actual-publication-20261117.json",
+      "derived": false
+    },
+    {
+      "pointer": "catalog.inode64MemberRevealR1Stage.spent.admission",
+      "pin": {
+        "bytes": 1583,
+        "sha256": "bdb1d12b8e8539e8200f18ea4f39a9b2e0582324a66f5fd6297694e95d338538",
+        "gitBlob": "8c2c7a2a439b1054972f4a52eb8f88b842274dba"
+      },
+      "actualPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/standalone-waitread-original-spent-admission-20261117.json",
+      "derived": false
+    },
+    {
+      "pointer": "catalog.inode64MemberRevealR1Stage.spent.refusal",
+      "pin": {
+        "bytes": 200440,
+        "sha256": "ab24e85bd89e55d48149f05274176df9fba2e0340b526c1a927242b4ed401bd4",
+        "gitBlob": "30bcf16f731650684a275de4ae4be6cd18b41c4e"
+      },
+      "actualPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/standalone-waitread-original-refusal-20261117.json",
+      "derived": false
+    },
+    {
+      "pointer": "catalog.inode64MemberRevealR1Stage.driverBefore",
+      "pin": {
+        "bytes": 69194,
+        "sha256": "bed27eab54593e30f76ef3121e1d1effdaa53ca9b872ecbbf52b6c2fd619087e",
+        "gitBlob": "43ab487464098fed0425ffd51441a38abc206f3b"
+      },
+      "actualPath": "scripts/legacy-agent-host/desktop-emulated-runtime-ui.ts",
+      "derived": false
+    },
+    {
+      "pointer": "catalog.inode64MemberRevealR1Stage.runtimeEvidence.renderer85",
+      "pin": {
+        "bytes": 56658,
+        "sha256": "2a20638c7372fc202d5dc1fbcb364744a8ada038401e6673461ab8147843524e",
+        "gitBlob": "4277afde65b656545ca30e4b1be3f593af862fc8"
+      },
+      "actualPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1218-whole-renderer85-actual-review-20261117.json",
+      "derived": false
+    },
+    {
+      "pointer": "catalog.inode64MemberRevealR1Stage.runtimeEvidence.observation13",
+      "pin": {
+        "bytes": 573622,
+        "sha256": "0e5df724cec747e57ce3f028d3b1f683fd5663c8b67931fa4b9f4c075620236e",
+        "gitBlob": "e809fefa350f8d7f7e3e4922ac0bba865c19c13e"
+      },
+      "actualPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1218-executed-observation13-20261117.json",
+      "derived": false
+    },
+    {
+      "pointer": "catalog.inode64MemberRevealR1Stage.runtimeEvidence.observation14",
+      "pin": {
+        "bytes": 638122,
+        "sha256": "d9211667e0c60f4413f36f1003fe321feb2de96918585db1490b971400caf6f1",
+        "gitBlob": "99f1a2a1630f25627a9e103f9a58f48c1c87a0ec"
+      },
+      "actualPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1218-executed-observation14-20261117.json",
+      "derived": false
+    },
+    {
+      "pointer": "catalog.inode64MemberRevealR1Stage.runtimeEvidence.completeNewFailureCapture",
+      "pin": {
+        "bytes": 43216,
+        "sha256": "baf4a9f2de58d967366c652bf7cba5d28e7b4d3c3f576f3d359f04516f31c972",
+        "gitBlob": "33e472d38720bda64a2483041af43405c2eec085"
+      },
+      "actualPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1218-cross-team-windows-full-failure-capture-20261117.json",
+      "derived": false
+    },
+    {
+      "pointer": "catalog.inode64MemberRevealR1EvidenceFiles.0",
+      "pin": {
+        "bytes": 27869,
+        "sha256": "e3a891024d750f7c868a7a253f2ed1f3630b833e92d1698af38b533c8ebc5db7",
+        "gitBlob": "b16bf54091cfb2fd2756ad7a951d0f9143611d2b"
+      },
+      "actualPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/inode64-member-reveal-r1-20261117.json",
+      "derived": false
+    },
+    {
+      "pointer": "catalog.inode64MemberRevealR1EvidenceFiles.1",
+      "pin": {
+        "bytes": 13214,
+        "sha256": "e9b2a9dc949e9b6ee1eb6c65af0ea52158f64a6e62702f27131e2eb795884156",
+        "gitBlob": "3e38848ca22648dccb8928553b31543d8cb366b6"
+      },
+      "actualPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/inode64-member-reveal-r1-root-review-20261117.json",
+      "derived": false
+    },
+    {
+      "pointer": "catalog.inode64MemberRevealR1EvidenceFiles.2",
+      "pin": {
+        "bytes": 60065,
+        "sha256": "b595b1bf8f385d5ef402cb2e63d78444657ca15d7678139e902645a156aa1c45",
+        "gitBlob": "3e53832bf5fee506849b88202028ae73a50f2ab1"
+      },
+      "actualPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/inode64-member-reveal-r1-guard-review-20261117.json",
+      "derived": false
+    },
+    {
+      "pointer": "catalog.inode64MemberRevealR1EvidenceFiles.3",
+      "pin": {
+        "bytes": 48210,
+        "sha256": "8e0f5fa4c848572cb1a08f3ab83c7c630b15954c6f502b11c1483b28390ad17b",
+        "gitBlob": "6f1d57b805792bca13cdda2048c34c59d3565944"
+      },
+      "actualPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/inode64-member-reveal-r1-semantic-review-20261117.json",
+      "derived": false
+    },
+    {
+      "pointer": "catalog.inode64MemberRevealR1EvidenceFiles.4",
+      "pin": {
+        "bytes": 86401,
+        "sha256": "097963b5df0cec6cfb91dd4ebb76ac23213c6b0bef460d70083679f19fcb16c4",
+        "gitBlob": "4edbaba44e16de90ef20d2a1e1baf9350d847a88"
+      },
+      "actualPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/inode64-member-reveal-r1-binding-review-20261117.json",
+      "derived": false
+    },
+    {
+      "pointer": "catalog.inode64MemberRevealR1EvidenceFiles.5",
+      "pin": {
+        "bytes": 1583,
+        "sha256": "bdb1d12b8e8539e8200f18ea4f39a9b2e0582324a66f5fd6297694e95d338538",
+        "gitBlob": "8c2c7a2a439b1054972f4a52eb8f88b842274dba"
+      },
+      "actualPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/standalone-waitread-original-spent-admission-20261117.json",
+      "derived": false
+    },
+    {
+      "pointer": "catalog.inode64MemberRevealR1EvidenceFiles.6",
+      "pin": {
+        "bytes": 200440,
+        "sha256": "ab24e85bd89e55d48149f05274176df9fba2e0340b526c1a927242b4ed401bd4",
+        "gitBlob": "30bcf16f731650684a275de4ae4be6cd18b41c4e"
+      },
+      "actualPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/standalone-waitread-original-refusal-20261117.json",
+      "derived": false
+    },
+    {
+      "pointer": "catalog.inode64MemberRevealR1EvidenceFiles.7",
+      "pin": {
+        "bytes": 54695,
+        "sha256": "9212ceb83645a0f9fb9e2f9b37985c5af6bfe6248014014cac86eead66a7092d",
+        "gitBlob": "5af2e1cf8dc14ace23e8cc1f10ddbb25e8ef6d26"
+      },
+      "actualPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/standalone-waitread-inode64-advisory-20261117.json",
+      "derived": false
+    },
+    {
+      "pointer": "catalog.inode64MemberRevealR1EvidenceFiles.8",
+      "pin": {
+        "bytes": 27043,
+        "sha256": "ccc199a00f3e822961831a05b2e9138076a4843a389b432354aea07093ed1543",
+        "gitBlob": "c246bbf66dd628fe6909a1a57cab85bdccf80d58"
+      },
+      "actualPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/opencode-member-reveal-r1-advisory-20261117.json",
+      "derived": false
+    },
+    {
+      "pointer": "catalog.inode64MemberRevealR1EvidenceFiles.9",
+      "pin": {
+        "bytes": 56658,
+        "sha256": "2a20638c7372fc202d5dc1fbcb364744a8ada038401e6673461ab8147843524e",
+        "gitBlob": "4277afde65b656545ca30e4b1be3f593af862fc8"
+      },
+      "actualPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1218-whole-renderer85-actual-review-20261117.json",
+      "derived": false
+    },
+    {
+      "pointer": "catalog.inode64MemberRevealR1EvidenceFiles.10",
+      "pin": {
+        "bytes": 101500,
+        "sha256": "04307965e2c3be91b229a6364fa758b468ee177ba3b45392e2a23cbd8946e1e9",
+        "gitBlob": "342a38f823f0d07bd8281fd94022ea1f3ecb3133"
+      },
+      "actualPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1218-codex-extensions-actual-review-20261117.json",
+      "derived": false
+    },
+    {
+      "pointer": "catalog.inode64MemberRevealR1EvidenceFiles.11",
+      "pin": {
+        "bytes": 28120,
+        "sha256": "3a7b10b970e6fc6f9812c94c1ecb7a5a5cafedd717674642a67aea7db34f5de5",
+        "gitBlob": "14bd6ed652989dde397cce0073e315e269762bcb"
+      },
+      "actualPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1218-extensions-semantic-slice-20261117.json",
+      "derived": false
+    },
+    {
+      "pointer": "catalog.inode64MemberRevealR1EvidenceFiles.12",
+      "pin": {
+        "bytes": 65482,
+        "sha256": "9e0931fb08d50ef3a2c7f3ec24707a791ce479890d26b899b8a073eb822798b4",
+        "gitBlob": "516017b52445cd7c337878f0754a0e121849b24d"
+      },
+      "actualPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/narrow-waitread-control-root-actual-publication-20261117.json",
+      "derived": false
+    },
+    {
+      "pointer": "catalog.inode64MemberRevealR1EvidenceFiles.13",
+      "pin": {
+        "bytes": 200533,
+        "sha256": "25f4847a99bf1647b30b782eae9053a6b85cda1013b6b0d28fbae3ff6a7a484a",
+        "gitBlob": "f20c0188402a166dce08b6592e06e311edcc9fe9"
+      },
+      "actualPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/narrow-waitread-control-independent-actual-publication-20261117.json",
+      "derived": false
+    },
+    {
+      "pointer": "catalog.inode64MemberRevealR1EvidenceFiles.14",
+      "pin": {
+        "bytes": 573622,
+        "sha256": "0e5df724cec747e57ce3f028d3b1f683fd5663c8b67931fa4b9f4c075620236e",
+        "gitBlob": "e809fefa350f8d7f7e3e4922ac0bba865c19c13e"
+      },
+      "actualPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1218-executed-observation13-20261117.json",
+      "derived": false
+    },
+    {
+      "pointer": "catalog.inode64MemberRevealR1EvidenceFiles.15",
+      "pin": {
+        "bytes": 638122,
+        "sha256": "d9211667e0c60f4413f36f1003fe321feb2de96918585db1490b971400caf6f1",
+        "gitBlob": "99f1a2a1630f25627a9e103f9a58f48c1c87a0ec"
+      },
+      "actualPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1218-executed-observation14-20261117.json",
+      "derived": false
+    },
+    {
+      "pointer": "catalog.inode64MemberRevealR1EvidenceFiles.16",
+      "pin": {
+        "bytes": 7711,
+        "sha256": "7ea1b4b25243970292f504c67cd8dd6ee4a2f38a6cef6508a241923ea54c288d",
+        "gitBlob": "88130b0010f8d67e683792e0712b5ce01d7e7e03"
+      },
+      "actualPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1218-frontend2-complete-artifact-capture-20261117.json",
+      "derived": false
+    },
+    {
+      "pointer": "catalog.inode64MemberRevealR1EvidenceFiles.17",
+      "pin": {
+        "bytes": 43216,
+        "sha256": "baf4a9f2de58d967366c652bf7cba5d28e7b4d3c3f576f3d359f04516f31c972",
+        "gitBlob": "33e472d38720bda64a2483041af43405c2eec085"
+      },
+      "actualPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1218-cross-team-windows-full-failure-capture-20261117.json",
+      "derived": false
+    },
+    {
+      "pointer": "manifest.subject",
+      "pin": {
+        "bytes": 27869,
+        "sha256": "e3a891024d750f7c868a7a253f2ed1f3630b833e92d1698af38b533c8ebc5db7",
+        "gitBlob": "b16bf54091cfb2fd2756ad7a951d0f9143611d2b"
+      },
+      "actualPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/inode64-member-reveal-r1-20261117.json",
+      "derived": false
+    },
+    {
+      "pointer": "manifest.reviews.root",
+      "pin": {
+        "bytes": 13214,
+        "sha256": "e9b2a9dc949e9b6ee1eb6c65af0ea52158f64a6e62702f27131e2eb795884156",
+        "gitBlob": "3e38848ca22648dccb8928553b31543d8cb366b6"
+      },
+      "actualPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/inode64-member-reveal-r1-root-review-20261117.json",
+      "derived": false
+    },
+    {
+      "pointer": "manifest.reviews.guard",
+      "pin": {
+        "bytes": 60065,
+        "sha256": "b595b1bf8f385d5ef402cb2e63d78444657ca15d7678139e902645a156aa1c45",
+        "gitBlob": "3e53832bf5fee506849b88202028ae73a50f2ab1"
+      },
+      "actualPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/inode64-member-reveal-r1-guard-review-20261117.json",
+      "derived": false
+    },
+    {
+      "pointer": "manifest.reviews.semantic",
+      "pin": {
+        "bytes": 48210,
+        "sha256": "8e0f5fa4c848572cb1a08f3ab83c7c630b15954c6f502b11c1483b28390ad17b",
+        "gitBlob": "6f1d57b805792bca13cdda2048c34c59d3565944"
+      },
+      "actualPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/inode64-member-reveal-r1-semantic-review-20261117.json",
+      "derived": false
+    },
+    {
+      "pointer": "manifest.reviews.binding",
+      "pin": {
+        "bytes": 86401,
+        "sha256": "097963b5df0cec6cfb91dd4ebb76ac23213c6b0bef460d70083679f19fcb16c4",
+        "gitBlob": "4edbaba44e16de90ef20d2a1e1baf9350d847a88"
+      },
+      "actualPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/inode64-member-reveal-r1-binding-review-20261117.json",
+      "derived": false
+    },
+    {
+      "pointer": "manifest.evidenceFiles.0",
+      "pin": {
+        "bytes": 27869,
+        "sha256": "e3a891024d750f7c868a7a253f2ed1f3630b833e92d1698af38b533c8ebc5db7",
+        "gitBlob": "b16bf54091cfb2fd2756ad7a951d0f9143611d2b"
+      },
+      "actualPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/inode64-member-reveal-r1-20261117.json",
+      "derived": false
+    },
+    {
+      "pointer": "manifest.evidenceFiles.1",
+      "pin": {
+        "bytes": 13214,
+        "sha256": "e9b2a9dc949e9b6ee1eb6c65af0ea52158f64a6e62702f27131e2eb795884156",
+        "gitBlob": "3e38848ca22648dccb8928553b31543d8cb366b6"
+      },
+      "actualPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/inode64-member-reveal-r1-root-review-20261117.json",
+      "derived": false
+    },
+    {
+      "pointer": "manifest.evidenceFiles.2",
+      "pin": {
+        "bytes": 60065,
+        "sha256": "b595b1bf8f385d5ef402cb2e63d78444657ca15d7678139e902645a156aa1c45",
+        "gitBlob": "3e53832bf5fee506849b88202028ae73a50f2ab1"
+      },
+      "actualPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/inode64-member-reveal-r1-guard-review-20261117.json",
+      "derived": false
+    },
+    {
+      "pointer": "manifest.evidenceFiles.3",
+      "pin": {
+        "bytes": 48210,
+        "sha256": "8e0f5fa4c848572cb1a08f3ab83c7c630b15954c6f502b11c1483b28390ad17b",
+        "gitBlob": "6f1d57b805792bca13cdda2048c34c59d3565944"
+      },
+      "actualPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/inode64-member-reveal-r1-semantic-review-20261117.json",
+      "derived": false
+    },
+    {
+      "pointer": "manifest.evidenceFiles.4",
+      "pin": {
+        "bytes": 86401,
+        "sha256": "097963b5df0cec6cfb91dd4ebb76ac23213c6b0bef460d70083679f19fcb16c4",
+        "gitBlob": "4edbaba44e16de90ef20d2a1e1baf9350d847a88"
+      },
+      "actualPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/inode64-member-reveal-r1-binding-review-20261117.json",
+      "derived": false
+    },
+    {
+      "pointer": "manifest.evidenceFiles.5",
+      "pin": {
+        "bytes": 1583,
+        "sha256": "bdb1d12b8e8539e8200f18ea4f39a9b2e0582324a66f5fd6297694e95d338538",
+        "gitBlob": "8c2c7a2a439b1054972f4a52eb8f88b842274dba"
+      },
+      "actualPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/standalone-waitread-original-spent-admission-20261117.json",
+      "derived": false
+    },
+    {
+      "pointer": "manifest.evidenceFiles.6",
+      "pin": {
+        "bytes": 200440,
+        "sha256": "ab24e85bd89e55d48149f05274176df9fba2e0340b526c1a927242b4ed401bd4",
+        "gitBlob": "30bcf16f731650684a275de4ae4be6cd18b41c4e"
+      },
+      "actualPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/standalone-waitread-original-refusal-20261117.json",
+      "derived": false
+    },
+    {
+      "pointer": "manifest.evidenceFiles.7",
+      "pin": {
+        "bytes": 54695,
+        "sha256": "9212ceb83645a0f9fb9e2f9b37985c5af6bfe6248014014cac86eead66a7092d",
+        "gitBlob": "5af2e1cf8dc14ace23e8cc1f10ddbb25e8ef6d26"
+      },
+      "actualPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/standalone-waitread-inode64-advisory-20261117.json",
+      "derived": false
+    },
+    {
+      "pointer": "manifest.evidenceFiles.8",
+      "pin": {
+        "bytes": 27043,
+        "sha256": "ccc199a00f3e822961831a05b2e9138076a4843a389b432354aea07093ed1543",
+        "gitBlob": "c246bbf66dd628fe6909a1a57cab85bdccf80d58"
+      },
+      "actualPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/opencode-member-reveal-r1-advisory-20261117.json",
+      "derived": false
+    },
+    {
+      "pointer": "manifest.evidenceFiles.9",
+      "pin": {
+        "bytes": 56658,
+        "sha256": "2a20638c7372fc202d5dc1fbcb364744a8ada038401e6673461ab8147843524e",
+        "gitBlob": "4277afde65b656545ca30e4b1be3f593af862fc8"
+      },
+      "actualPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1218-whole-renderer85-actual-review-20261117.json",
+      "derived": false
+    },
+    {
+      "pointer": "manifest.evidenceFiles.10",
+      "pin": {
+        "bytes": 101500,
+        "sha256": "04307965e2c3be91b229a6364fa758b468ee177ba3b45392e2a23cbd8946e1e9",
+        "gitBlob": "342a38f823f0d07bd8281fd94022ea1f3ecb3133"
+      },
+      "actualPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1218-codex-extensions-actual-review-20261117.json",
+      "derived": false
+    },
+    {
+      "pointer": "manifest.evidenceFiles.11",
+      "pin": {
+        "bytes": 28120,
+        "sha256": "3a7b10b970e6fc6f9812c94c1ecb7a5a5cafedd717674642a67aea7db34f5de5",
+        "gitBlob": "14bd6ed652989dde397cce0073e315e269762bcb"
+      },
+      "actualPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1218-extensions-semantic-slice-20261117.json",
+      "derived": false
+    },
+    {
+      "pointer": "manifest.evidenceFiles.12",
+      "pin": {
+        "bytes": 65482,
+        "sha256": "9e0931fb08d50ef3a2c7f3ec24707a791ce479890d26b899b8a073eb822798b4",
+        "gitBlob": "516017b52445cd7c337878f0754a0e121849b24d"
+      },
+      "actualPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/narrow-waitread-control-root-actual-publication-20261117.json",
+      "derived": false
+    },
+    {
+      "pointer": "manifest.evidenceFiles.13",
+      "pin": {
+        "bytes": 200533,
+        "sha256": "25f4847a99bf1647b30b782eae9053a6b85cda1013b6b0d28fbae3ff6a7a484a",
+        "gitBlob": "f20c0188402a166dce08b6592e06e311edcc9fe9"
+      },
+      "actualPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/narrow-waitread-control-independent-actual-publication-20261117.json",
+      "derived": false
+    },
+    {
+      "pointer": "manifest.evidenceFiles.14",
+      "pin": {
+        "bytes": 573622,
+        "sha256": "0e5df724cec747e57ce3f028d3b1f683fd5663c8b67931fa4b9f4c075620236e",
+        "gitBlob": "e809fefa350f8d7f7e3e4922ac0bba865c19c13e"
+      },
+      "actualPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1218-executed-observation13-20261117.json",
+      "derived": false
+    },
+    {
+      "pointer": "manifest.evidenceFiles.15",
+      "pin": {
+        "bytes": 638122,
+        "sha256": "d9211667e0c60f4413f36f1003fe321feb2de96918585db1490b971400caf6f1",
+        "gitBlob": "99f1a2a1630f25627a9e103f9a58f48c1c87a0ec"
+      },
+      "actualPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1218-executed-observation14-20261117.json",
+      "derived": false
+    },
+    {
+      "pointer": "manifest.evidenceFiles.16",
+      "pin": {
+        "bytes": 7711,
+        "sha256": "7ea1b4b25243970292f504c67cd8dd6ee4a2f38a6cef6508a241923ea54c288d",
+        "gitBlob": "88130b0010f8d67e683792e0712b5ce01d7e7e03"
+      },
+      "actualPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1218-frontend2-complete-artifact-capture-20261117.json",
+      "derived": false
+    },
+    {
+      "pointer": "manifest.evidenceFiles.17",
+      "pin": {
+        "bytes": 43216,
+        "sha256": "baf4a9f2de58d967366c652bf7cba5d28e7b4d3c3f576f3d359f04516f31c972",
+        "gitBlob": "33e472d38720bda64a2483041af43405c2eec085"
+      },
+      "actualPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1218-cross-team-windows-full-failure-capture-20261117.json",
+      "derived": false
+    },
+    {
+      "pointer": "manifest.modifiedDocuments.0",
+      "pin": {
+        "bytes": 2587834,
+        "sha256": "ab59e0cc3a6b69ce7375584545f2d13dc38ae62450c35a3c04cd3e9ebddb8d5e",
+        "gitBlob": "cad54c1df10b391cd1ed6b11a988d5898ea9ec09"
+      },
+      "actualPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/29-reconciled-acceptance-and-custody-followups-2026-11-15.md",
+      "derived": false
+    },
+    {
+      "pointer": "manifest.modifiedDocuments.0.before",
+      "pin": {
+        "bytes": 2582891,
+        "sha256": "7a471d1286ac1a3378e4eb405b26ebaf4caeef8d850a34e3883560cb93657f4d",
+        "gitBlob": "5b1fcb255b37e1a260044156e8422e3111634cac"
+      },
+      "actualPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/29-reconciled-acceptance-and-custody-followups-2026-11-15.md",
+      "derived": false
+    },
+    {
+      "pointer": "manifest.modifiedDocuments.1",
+      "pin": {
+        "bytes": 64543,
+        "sha256": "bd3d8910193bc7200464b0a8587b7a87889b2d7c15a77229d1a12bdd5fbf6d07",
+        "gitBlob": "e8c8edcd0c365273c02e83c50384ff65f148a38a"
+      },
+      "actualPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/continuation-status-20261116.md",
+      "derived": false
+    },
+    {
+      "pointer": "manifest.modifiedDocuments.1.before",
+      "pin": {
+        "bytes": 59600,
+        "sha256": "8d63895e7a765b51c293c25df453f2ec5110825d3d89ef3e54d5149a8125a0eb",
+        "gitBlob": "de900e6435a345008041f04ac139ea4601b1c08e"
+      },
+      "actualPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/continuation-status-20261116.md",
+      "derived": false
+    },
+    {
+      "pointer": "manifest.modifiedDocuments.2",
+      "pin": {
+        "bytes": 482865,
+        "sha256": "9612b31d139a37b0da96af0f6051076fc6fb60ea66c41896fea41057b2fa07fe",
+        "gitBlob": "a6e33006bb43a011c5dd6283fcf2d15933f6747c"
+      },
+      "actualPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1213-retention-catalog-20261116.json",
+      "derived": false
+    },
+    {
+      "pointer": "manifest.modifiedDocuments.2.before",
+      "pin": {
+        "bytes": 469560,
+        "sha256": "a2ca7bf0c92868a9efd5b7560dca93b1c7d0d7357d0ee8e26d830b960a165949",
+        "gitBlob": "c6dfa3239593bceba4d27a1ae087be6ffd3e9d18"
+      },
+      "actualPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1213-retention-catalog-20261116.json",
+      "derived": false
+    },
+    {
+      "pointer": "manifest.appendSectionIdentity",
+      "pin": {
+        "bytes": 4943,
+        "sha256": "50462da6bf1f8a1c3e4820b21253b45ebd59543c74af2433e85f659ac8906dbf",
+        "gitBlob": "8e1418ead69e3fe3eda20cd6fbcee9f7e481ed3a"
+      },
+      "actualPath": "DERIVED: exact full suffix of both actual plan/status",
+      "derived": true
+    }
+  ],
+  "checks": [
+    {
+      "id": "actual-commit-parent-tree-ref",
+      "status": "PASS_ACTUAL",
+      "evidence": {
+        "commit": "6d06207d96ea1c7ae7d9199a552ec776451dc231",
+        "parent": "c4fc226201fb32e59d1a8ccfb130922926445747",
+        "tree": "b5bb45adf162e15fd7d909140adeaf958c23d1f9",
+        "docs": "a4486f1b960f8658fde466d3c1e51e13993b5c48"
+      }
+    },
+    {
+      "id": "immediate-expected-parent-push",
+      "status": "PASS_ACTUAL",
+      "evidence": {
+        "force": false,
+        "expected": "c4fc226201fb32e59d1a8ccfb130922926445747"
+      }
+    },
+    {
+      "id": "untruncated-root-docs",
+      "status": "PASS_ACTUAL",
+      "evidence": {
+        "rootEntries": 54,
+        "docsEntries": 3621
+      }
+    },
+    {
+      "id": "53-nondoc-root-entries-identical",
+      "status": "PASS_ACTUAL",
+      "evidence": "All source/package/dependency/config/workflow subtrees unchanged."
+    },
+    {
+      "id": "22-deltas-19adds-3mods",
+      "status": "PASS_ACTUAL",
+      "evidence": [
+        {
+          "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/29-reconciled-acceptance-and-custody-followups-2026-11-15.md",
+          "before": {
+            "sha": "5b1fcb255b37e1a260044156e8422e3111634cac",
+            "mode": "100644",
+            "type": "blob"
+          },
+          "after": {
+            "sha": "cad54c1df10b391cd1ed6b11a988d5898ea9ec09",
+            "mode": "100644",
+            "type": "blob",
+            "bytes": 2587834
+          }
+        },
+        {
+          "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/continuation-status-20261116.md",
+          "before": {
+            "sha": "de900e6435a345008041f04ac139ea4601b1c08e",
+            "mode": "100644",
+            "type": "blob"
+          },
+          "after": {
+            "sha": "e8c8edcd0c365273c02e83c50384ff65f148a38a",
+            "mode": "100644",
+            "type": "blob",
+            "bytes": 64543
+          }
+        },
+        {
+          "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1213-retention-catalog-20261116.json",
+          "before": {
+            "sha": "c6dfa3239593bceba4d27a1ae087be6ffd3e9d18",
+            "mode": "100644",
+            "type": "blob"
+          },
+          "after": {
+            "sha": "a6e33006bb43a011c5dd6283fcf2d15933f6747c",
+            "mode": "100644",
+            "type": "blob",
+            "bytes": 482865
+          }
+        },
+        {
+          "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/inode64-member-reveal-r1-20261117.json",
+          "before": null,
+          "after": {
+            "sha": "b16bf54091cfb2fd2756ad7a951d0f9143611d2b",
+            "mode": "100644",
+            "type": "blob",
+            "bytes": 27869
+          }
+        },
+        {
+          "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/inode64-member-reveal-r1-binding-review-20261117.json",
+          "before": null,
+          "after": {
+            "sha": "4edbaba44e16de90ef20d2a1e1baf9350d847a88",
+            "mode": "100644",
+            "type": "blob",
+            "bytes": 86401
+          }
+        },
+        {
+          "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/inode64-member-reveal-r1-guard-review-20261117.json",
+          "before": null,
+          "after": {
+            "sha": "3e53832bf5fee506849b88202028ae73a50f2ab1",
+            "mode": "100644",
+            "type": "blob",
+            "bytes": 60065
+          }
+        },
+        {
+          "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/inode64-member-reveal-r1-publication-manifest-20261117.json",
+          "before": null,
+          "after": {
+            "sha": "59a0816f4c7399985557df3489b54c94fe50c8d3",
+            "mode": "100644",
+            "type": "blob",
+            "bytes": 11667
+          }
+        },
+        {
+          "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/inode64-member-reveal-r1-root-review-20261117.json",
+          "before": null,
+          "after": {
+            "sha": "3e38848ca22648dccb8928553b31543d8cb366b6",
+            "mode": "100644",
+            "type": "blob",
+            "bytes": 13214
+          }
+        },
+        {
+          "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/inode64-member-reveal-r1-semantic-review-20261117.json",
+          "before": null,
+          "after": {
+            "sha": "6f1d57b805792bca13cdda2048c34c59d3565944",
+            "mode": "100644",
+            "type": "blob",
+            "bytes": 48210
+          }
+        },
+        {
+          "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/narrow-waitread-control-independent-actual-publication-20261117.json",
+          "before": null,
+          "after": {
+            "sha": "f20c0188402a166dce08b6592e06e311edcc9fe9",
+            "mode": "100644",
+            "type": "blob",
+            "bytes": 200533
+          }
+        },
+        {
+          "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/narrow-waitread-control-root-actual-publication-20261117.json",
+          "before": null,
+          "after": {
+            "sha": "516017b52445cd7c337878f0754a0e121849b24d",
+            "mode": "100644",
+            "type": "blob",
+            "bytes": 65482
+          }
+        },
+        {
+          "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/opencode-member-reveal-r1-advisory-20261117.json",
+          "before": null,
+          "after": {
+            "sha": "c246bbf66dd628fe6909a1a57cab85bdccf80d58",
+            "mode": "100644",
+            "type": "blob",
+            "bytes": 27043
+          }
+        },
+        {
+          "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1218-codex-extensions-actual-review-20261117.json",
+          "before": null,
+          "after": {
+            "sha": "342a38f823f0d07bd8281fd94022ea1f3ecb3133",
+            "mode": "100644",
+            "type": "blob",
+            "bytes": 101500
+          }
+        },
+        {
+          "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1218-cross-team-windows-full-failure-capture-20261117.json",
+          "before": null,
+          "after": {
+            "sha": "33e472d38720bda64a2483041af43405c2eec085",
+            "mode": "100644",
+            "type": "blob",
+            "bytes": 43216
+          }
+        },
+        {
+          "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1218-executed-observation13-20261117.json",
+          "before": null,
+          "after": {
+            "sha": "e809fefa350f8d7f7e3e4922ac0bba865c19c13e",
+            "mode": "100644",
+            "type": "blob",
+            "bytes": 573622
+          }
+        },
+        {
+          "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1218-executed-observation14-20261117.json",
+          "before": null,
+          "after": {
+            "sha": "99f1a2a1630f25627a9e103f9a58f48c1c87a0ec",
+            "mode": "100644",
+            "type": "blob",
+            "bytes": 638122
+          }
+        },
+        {
+          "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1218-extensions-semantic-slice-20261117.json",
+          "before": null,
+          "after": {
+            "sha": "14bd6ed652989dde397cce0073e315e269762bcb",
+            "mode": "100644",
+            "type": "blob",
+            "bytes": 28120
+          }
+        },
+        {
+          "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1218-frontend2-complete-artifact-capture-20261117.json",
+          "before": null,
+          "after": {
+            "sha": "88130b0010f8d67e683792e0712b5ce01d7e7e03",
+            "mode": "100644",
+            "type": "blob",
+            "bytes": 7711
+          }
+        },
+        {
+          "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1218-whole-renderer85-actual-review-20261117.json",
+          "before": null,
+          "after": {
+            "sha": "4277afde65b656545ca30e4b1be3f593af862fc8",
+            "mode": "100644",
+            "type": "blob",
+            "bytes": 56658
+          }
+        },
+        {
+          "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/standalone-waitread-inode64-advisory-20261117.json",
+          "before": null,
+          "after": {
+            "sha": "5af2e1cf8dc14ace23e8cc1f10ddbb25e8ef6d26",
+            "mode": "100644",
+            "type": "blob",
+            "bytes": 54695
+          }
+        },
+        {
+          "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/standalone-waitread-original-refusal-20261117.json",
+          "before": null,
+          "after": {
+            "sha": "30bcf16f731650684a275de4ae4be6cd18b41c4e",
+            "mode": "100644",
+            "type": "blob",
+            "bytes": 200440
+          }
+        },
+        {
+          "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/standalone-waitread-original-spent-admission-20261117.json",
+          "before": null,
+          "after": {
+            "sha": "8c2c7a2a439b1054972f4a52eb8f88b842274dba",
+            "mode": "100644",
+            "type": "blob",
+            "bytes": 1583
+          }
+        }
+      ]
+    },
+    {
+      "id": "no-deletion-or-mode-change",
+      "status": "PASS_ACTUAL",
+      "evidence": "Only named docs leaves."
+    },
+    {
+      "id": "actual-leaf-proposal",
+      "status": "PASS_ACTUAL",
+      "evidence": {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/inode64-member-reveal-r1-20261117.json",
+        "bytes": 27869,
+        "sha256": "e3a891024d750f7c868a7a253f2ed1f3630b833e92d1698af38b533c8ebc5db7",
+        "gitBlob": "b16bf54091cfb2fd2756ad7a951d0f9143611d2b"
+      }
+    },
+    {
+      "id": "actual-leaf-rootR1",
+      "status": "PASS_ACTUAL",
+      "evidence": {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/inode64-member-reveal-r1-root-review-20261117.json",
+        "bytes": 13214,
+        "sha256": "e9b2a9dc949e9b6ee1eb6c65af0ea52158f64a6e62702f27131e2eb795884156",
+        "gitBlob": "3e38848ca22648dccb8928553b31543d8cb366b6"
+      }
+    },
+    {
+      "id": "actual-leaf-guardR1",
+      "status": "PASS_ACTUAL",
+      "evidence": {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/inode64-member-reveal-r1-guard-review-20261117.json",
+        "bytes": 60065,
+        "sha256": "b595b1bf8f385d5ef402cb2e63d78444657ca15d7678139e902645a156aa1c45",
+        "gitBlob": "3e53832bf5fee506849b88202028ae73a50f2ab1"
+      }
+    },
+    {
+      "id": "actual-leaf-semanticR1",
+      "status": "PASS_ACTUAL",
+      "evidence": {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/inode64-member-reveal-r1-semantic-review-20261117.json",
+        "bytes": 48210,
+        "sha256": "8e0f5fa4c848572cb1a08f3ab83c7c630b15954c6f502b11c1483b28390ad17b",
+        "gitBlob": "6f1d57b805792bca13cdda2048c34c59d3565944"
+      }
+    },
+    {
+      "id": "actual-leaf-bindingR1",
+      "status": "PASS_ACTUAL",
+      "evidence": {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/inode64-member-reveal-r1-binding-review-20261117.json",
+        "bytes": 86401,
+        "sha256": "097963b5df0cec6cfb91dd4ebb76ac23213c6b0bef460d70083679f19fcb16c4",
+        "gitBlob": "4edbaba44e16de90ef20d2a1e1baf9350d847a88"
+      }
+    },
+    {
+      "id": "actual-leaf-spentAdmission",
+      "status": "PASS_ACTUAL",
+      "evidence": {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/standalone-waitread-original-spent-admission-20261117.json",
+        "bytes": 1583,
+        "sha256": "bdb1d12b8e8539e8200f18ea4f39a9b2e0582324a66f5fd6297694e95d338538",
+        "gitBlob": "8c2c7a2a439b1054972f4a52eb8f88b842274dba"
+      }
+    },
+    {
+      "id": "actual-leaf-completeRefusal",
+      "status": "PASS_ACTUAL",
+      "evidence": {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/standalone-waitread-original-refusal-20261117.json",
+        "bytes": 200440,
+        "sha256": "ab24e85bd89e55d48149f05274176df9fba2e0340b526c1a927242b4ed401bd4",
+        "gitBlob": "30bcf16f731650684a275de4ae4be6cd18b41c4e"
+      }
+    },
+    {
+      "id": "actual-leaf-inodeAdvisory",
+      "status": "PASS_ACTUAL",
+      "evidence": {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/standalone-waitread-inode64-advisory-20261117.json",
+        "bytes": 54695,
+        "sha256": "9212ceb83645a0f9fb9e2f9b37985c5af6bfe6248014014cac86eead66a7092d",
+        "gitBlob": "5af2e1cf8dc14ace23e8cc1f10ddbb25e8ef6d26"
+      }
+    },
+    {
+      "id": "actual-leaf-memberSemanticAdvisory",
+      "status": "PASS_ACTUAL",
+      "evidence": {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/opencode-member-reveal-r1-advisory-20261117.json",
+        "bytes": 27043,
+        "sha256": "ccc199a00f3e822961831a05b2e9138076a4843a389b432354aea07093ed1543",
+        "gitBlob": "c246bbf66dd628fe6909a1a57cab85bdccf80d58"
+      }
+    },
+    {
+      "id": "actual-leaf-renderer85Review",
+      "status": "PASS_ACTUAL",
+      "evidence": {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1218-whole-renderer85-actual-review-20261117.json",
+        "bytes": 56658,
+        "sha256": "2a20638c7372fc202d5dc1fbcb364744a8ada038401e6673461ab8147843524e",
+        "gitBlob": "4277afde65b656545ca30e4b1be3f593af862fc8"
+      }
+    },
+    {
+      "id": "actual-leaf-codexExtensionsReview",
+      "status": "PASS_ACTUAL",
+      "evidence": {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1218-codex-extensions-actual-review-20261117.json",
+        "bytes": 101500,
+        "sha256": "04307965e2c3be91b229a6364fa758b468ee177ba3b45392e2a23cbd8946e1e9",
+        "gitBlob": "342a38f823f0d07bd8281fd94022ea1f3ecb3133"
+      }
+    },
+    {
+      "id": "actual-leaf-extensionsSemanticSlice",
+      "status": "PASS_ACTUAL",
+      "evidence": {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1218-extensions-semantic-slice-20261117.json",
+        "bytes": 28120,
+        "sha256": "3a7b10b970e6fc6f9812c94c1ecb7a5a5cafedd717674642a67aea7db34f5de5",
+        "gitBlob": "14bd6ed652989dde397cce0073e315e269762bcb"
+      }
+    },
+    {
+      "id": "actual-leaf-controlRootActual",
+      "status": "PASS_ACTUAL",
+      "evidence": {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/narrow-waitread-control-root-actual-publication-20261117.json",
+        "bytes": 65482,
+        "sha256": "9e0931fb08d50ef3a2c7f3ec24707a791ce479890d26b899b8a073eb822798b4",
+        "gitBlob": "516017b52445cd7c337878f0754a0e121849b24d"
+      }
+    },
+    {
+      "id": "actual-leaf-controlIndependentActual",
+      "status": "PASS_ACTUAL",
+      "evidence": {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/narrow-waitread-control-independent-actual-publication-20261117.json",
+        "bytes": 200533,
+        "sha256": "25f4847a99bf1647b30b782eae9053a6b85cda1013b6b0d28fbae3ff6a7a484a",
+        "gitBlob": "f20c0188402a166dce08b6592e06e311edcc9fe9"
+      }
+    },
+    {
+      "id": "actual-leaf-ciObservation13",
+      "status": "PASS_ACTUAL",
+      "evidence": {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1218-executed-observation13-20261117.json",
+        "bytes": 573622,
+        "sha256": "0e5df724cec747e57ce3f028d3b1f683fd5663c8b67931fa4b9f4c075620236e",
+        "gitBlob": "e809fefa350f8d7f7e3e4922ac0bba865c19c13e"
+      }
+    },
+    {
+      "id": "actual-leaf-ciObservation14",
+      "status": "PASS_ACTUAL",
+      "evidence": {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1218-executed-observation14-20261117.json",
+        "bytes": 638122,
+        "sha256": "d9211667e0c60f4413f36f1003fe321feb2de96918585db1490b971400caf6f1",
+        "gitBlob": "99f1a2a1630f25627a9e103f9a58f48c1c87a0ec"
+      }
+    },
+    {
+      "id": "actual-leaf-frontend2Capture",
+      "status": "PASS_ACTUAL",
+      "evidence": {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1218-frontend2-complete-artifact-capture-20261117.json",
+        "bytes": 7711,
+        "sha256": "7ea1b4b25243970292f504c67cd8dd6ee4a2f38a6cef6508a241923ea54c288d",
+        "gitBlob": "88130b0010f8d67e683792e0712b5ce01d7e7e03"
+      }
+    },
+    {
+      "id": "actual-leaf-failureArtifactsCapture",
+      "status": "PASS_ACTUAL",
+      "evidence": {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1218-cross-team-windows-full-failure-capture-20261117.json",
+        "bytes": 43216,
+        "sha256": "baf4a9f2de58d967366c652bf7cba5d28e7b4d3c3f576f3d359f04516f31c972",
+        "gitBlob": "33e472d38720bda64a2483041af43405c2eec085"
+      }
+    },
+    {
+      "id": "actual-leaf-plan",
+      "status": "PASS_ACTUAL",
+      "evidence": {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/29-reconciled-acceptance-and-custody-followups-2026-11-15.md",
+        "bytes": 2587834,
+        "sha256": "ab59e0cc3a6b69ce7375584545f2d13dc38ae62450c35a3c04cd3e9ebddb8d5e",
+        "gitBlob": "cad54c1df10b391cd1ed6b11a988d5898ea9ec09"
+      }
+    },
+    {
+      "id": "actual-leaf-status",
+      "status": "PASS_ACTUAL",
+      "evidence": {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/continuation-status-20261116.md",
+        "bytes": 64543,
+        "sha256": "bd3d8910193bc7200464b0a8587b7a87889b2d7c15a77229d1a12bdd5fbf6d07",
+        "gitBlob": "e8c8edcd0c365273c02e83c50384ff65f148a38a"
+      }
+    },
+    {
+      "id": "actual-leaf-catalog",
+      "status": "PASS_ACTUAL",
+      "evidence": {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1213-retention-catalog-20261116.json",
+        "bytes": 482865,
+        "sha256": "9612b31d139a37b0da96af0f6051076fc6fb60ea66c41896fea41057b2fa07fe",
+        "gitBlob": "a6e33006bb43a011c5dd6283fcf2d15933f6747c"
+      }
+    },
+    {
+      "id": "actual-leaf-manifest",
+      "status": "PASS_ACTUAL",
+      "evidence": {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/inode64-member-reveal-r1-publication-manifest-20261117.json",
+        "bytes": 11667,
+        "sha256": "a4040d0353f90185d6e56696256a9a15a5f6e3a6529c01cb2bb5f8af8cba7fe9",
+        "gitBlob": "59a0816f4c7399985557df3489b54c94fe50c8d3"
+      }
+    },
+    {
+      "id": "22-complete-actual-bodies",
+      "status": "PASS_ACTUAL",
+      "evidence": {
+        "bytes": 5381393
+      }
+    },
+    {
+      "id": "3-complete-parent-bodies",
+      "status": "PASS_ACTUAL",
+      "evidence": {
+        "bytes": 3112051
+      }
+    },
+    {
+      "id": "full-prefix-docs/plans/provider-migration/frontend-parity-2026-11-12/29-reconciled-acceptance-and-custody-followups-2026-11-15.md",
+      "status": "PASS_ACTUAL",
+      "evidence": {
+        "before": {
+          "bytes": 2582891,
+          "sha256": "7a471d1286ac1a3378e4eb405b26ebaf4caeef8d850a34e3883560cb93657f4d",
+          "gitBlob": "5b1fcb255b37e1a260044156e8422e3111634cac"
+        },
+        "append": {
+          "bytes": 4943,
+          "sha256": "50462da6bf1f8a1c3e4820b21253b45ebd59543c74af2433e85f659ac8906dbf",
+          "gitBlob": "8e1418ead69e3fe3eda20cd6fbcee9f7e481ed3a"
+        },
+        "after": {
+          "bytes": 2587834,
+          "sha256": "ab59e0cc3a6b69ce7375584545f2d13dc38ae62450c35a3c04cd3e9ebddb8d5e",
+          "gitBlob": "cad54c1df10b391cd1ed6b11a988d5898ea9ec09"
+        }
+      }
+    },
+    {
+      "id": "full-prefix-docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/continuation-status-20261116.md",
+      "status": "PASS_ACTUAL",
+      "evidence": {
+        "before": {
+          "bytes": 59600,
+          "sha256": "8d63895e7a765b51c293c25df453f2ec5110825d3d89ef3e54d5149a8125a0eb",
+          "gitBlob": "de900e6435a345008041f04ac139ea4601b1c08e"
+        },
+        "append": {
+          "bytes": 4943,
+          "sha256": "50462da6bf1f8a1c3e4820b21253b45ebd59543c74af2433e85f659ac8906dbf",
+          "gitBlob": "8e1418ead69e3fe3eda20cd6fbcee9f7e481ed3a"
+        },
+        "after": {
+          "bytes": 64543,
+          "sha256": "bd3d8910193bc7200464b0a8587b7a87889b2d7c15a77229d1a12bdd5fbf6d07",
+          "gitBlob": "e8c8edcd0c365273c02e83c50384ff65f148a38a"
+        }
+      }
+    },
+    {
+      "id": "81-prior-values-83total",
+      "status": "PASS_ACTUAL",
+      "evidence": "Exactly two current keys appended."
+    },
+    {
+      "id": "27-bundles-totals-preserved",
+      "status": "PASS_ACTUAL",
+      "evidence": {
+        "bundles": 27,
+        "totals": {
+          "bundles": 27,
+          "outerBytes": 17894693,
+          "payloadInstances": 219,
+          "payloadBytes": 15911913
+        }
+      }
+    },
+    {
+      "id": "current-stage-evidence",
+      "status": "PASS_ACTUAL",
+      "evidence": "Exact currently selected data."
+    },
+    {
+      "id": "complete-current-pointer-joins",
+      "status": "PASS_ACTUAL",
+      "evidence": {
+        "count": 62,
+        "unresolved": 0,
+        "derivedSuffix": "One derived identity joined from both complete actual document suffixes; it is not a separate blob fetch."
+      }
+    },
+    {
+      "id": "selected-source-anchor",
+      "status": "PASS_ACTUAL",
+      "evidence": [
+        {
+          "path": "package.json",
+          "mode": "100644",
+          "bytes": 26839,
+          "sha256": "c92407a9a5dad6f9d6a6eb8ea7c456195d396679bb4b9dfd15b6c06b726d1084",
+          "gitBlob": "f80ec83172d0aec0dec8a8ab055426b4fca4a1f7"
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+          "mode": "100644",
+          "bytes": 29017,
+          "sha256": "ffd9bbb822dbdc30da7cb8daa881fcbebd384ba2bf9bdd87c804c511166fa02b",
+          "gitBlob": "5286c036a63a14e98925711a224df202c9a7caa7"
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-ui-controls-deadline.test.ts",
+          "mode": "100644",
+          "bytes": 7883,
+          "sha256": "29836f914218edb4876b6a4e157e7cdc68f63cdf414084cdd41683965c734eda",
+          "gitBlob": "6a9f8ad7481cd5910befcc6c7ff5992eef03965b"
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-emulated-runtime-ui.ts",
+          "mode": "100644",
+          "bytes": 69194,
+          "sha256": "bed27eab54593e30f76ef3121e1d1effdaa53ca9b872ecbbf52b6c2fd619087e",
+          "gitBlob": "43ab487464098fed0425ffd51441a38abc206f3b"
+        }
+      ]
+    },
+    {
+      "id": "actual-partition",
+      "status": "PASS_ACTUAL",
+      "evidence": {
+        "leaves": 12014,
+        "docs": 3215,
+        "nonDocs": 8799,
+        "workflows": 42
+      }
+    },
+    {
+      "id": "full-R1-review-closure",
+      "status": "PASS_ACTUAL",
+      "evidence": {
+        "checks": 131,
+        "closedAt": "2026-11-17 06:26:03 UTC"
+      }
+    },
+    {
+      "id": "frozen-ci-identities",
+      "status": "PASS_ACTUAL",
+      "evidence": {
+        "head": "9c9c73190840592963142d36562ea07d2b5d2d71",
+        "base": "77993819c233737f1e2b4c11c8ca1a5d360bcbe3",
+        "pr": 1218,
+        "merge": "7baf8533f00c4cfa3ef5493753fd6169d5b81247"
+      }
+    },
+    {
+      "id": "no-source-control-or-runtime-authorship",
+      "status": "PASS_ACTUAL",
+      "evidence": "Docs-only actual stage; no source/control postimage, materialization, test invocation or GUI result."
+    }
+  ],
+  "checkCount": 41,
+  "failedChecks": [],
+  "unresolvedPointers": [],
+  "blockers": [],
+  "independentActualStillRequired": true,
+  "sourceControlAuthorshipAuthorized": false,
+  "runtimeAuthorized": false,
+  "sourcePostimagesAuthored": false,
+  "controlsAuthored": false,
+  "staged": false,
+  "runtimeExecuted": false,
+  "environmentNotice": "The local execution environment became unavailable after publication. No new physical absence, Node pin or stage identity observation is claimed. Git source/actual review remains available; future runtime admission still requires the exact physical controls.",
+  "dataOnlyReviewCorrection": "The initially attempted pointer traversal correctly refused to resolve appendSectionIdentity as an actual blob. It is now joined as the exact complete suffix of both literal-prefix-verified actual documents; no publication or source bytes changed.",
+  "qualification": "Docs-only R1 actual evidence. With independently closed full actual readbacks this permits only exact selected postimage authorship; it does not admit runtime, GUI or full E2E."
+}

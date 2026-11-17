@@ -1,0 +1,51 @@
+{
+  "schemaVersion": 1,
+  "kind": "c714-immutable-green-binding-lossless-transport-parts",
+  "binding": {
+    "bytes": 8262787,
+    "sha256": "56d2bb56ff1135fbc606d375b2b8debd8c5f3feaaa8b61904aa584c4dc38435c",
+    "gitBlob": "ea852a05538a51710c13a0cd86a8bd1e3fa1c056"
+  },
+  "bindingLocalPath": "/workspace/scratch/c714-post-transport-20261117/controls/green-binding.json",
+  "codec": "Concatenate complete ordered UTF-8 text part bodies with NO separator, newline, trimming, decoding transformation or JSON interpretation. Part boundaries never split UTF-16 surrogate pairs; Git/SHA256 identities are of UTF-8 bytes. Reassembled entire bytes must match binding identity.",
+  "parts": [
+    {
+      "ordinal": 0,
+      "utf16Start": 0,
+      "utf16End": 2800000,
+      "identity": {
+        "bytes": 2801279,
+        "sha256": "98639f464306184d3131ed36e625ae6e88e156a96aeb57e31787a1be2ea5f916",
+        "gitBlob": "441fd0ecb053bf9191332e635ff764cd511c4d0e"
+      }
+    },
+    {
+      "ordinal": 1,
+      "utf16Start": 2800000,
+      "utf16End": 5600000,
+      "identity": {
+        "bytes": 2800142,
+        "sha256": "16214d8009f81bea6e90fdc12de912a36542024aaa2451d0d7bc9f5ae8954957",
+        "gitBlob": "58fc694520738dae1507e0545fd5d18f7344fe89"
+      }
+    },
+    {
+      "ordinal": 2,
+      "utf16Start": 5600000,
+      "utf16End": 8261344,
+      "identity": {
+        "bytes": 2661366,
+        "sha256": "197b6c989795fad2a4d46205aaca86aa79391ece81eb267205e85bf3b18f233f",
+        "gitBlob": "92de54c81f85a21da8b4ff9346f89d9c55bd5d79"
+      }
+    }
+  ],
+  "partsCount": 3,
+  "totalUtf8Bytes": 8262787,
+  "originalBindingUnchanged": true,
+  "transportOnly": true,
+  "reason": "The GitHub connector returns Transport closed with no body for the exact 8,262,787-byte retained binding; the smaller baseline and other evidence remain readable. These bare literal parts allow complete independent read/reconstruction/hash without changing controls, source, execution scope, or gates.",
+  "bindingWasStaged": false,
+  "sourceWasApplied": false,
+  "runtimeWasInvoked": false
+}

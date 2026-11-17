@@ -1,0 +1,210 @@
+{
+  "schemaVersion": 1,
+  "kind": "fresh-isolated-draft-ci-r1-publication-manifest",
+  "at": "2026-11-17 03:05:35 UTC",
+  "repository": "777genius/agent-teams-ai",
+  "branch": "fix/frontend-parity-coobservation-c714-20261115",
+  "parent": "cba4af86044e89c9ff3cce25f05dc5424bf06329",
+  "parentTree": "4028fd8a54f32d93e9b60b0075e9fbd88347b524",
+  "parentDocsTree": "6e31a490b74671b23dab9a71754f8a76335ecca4",
+  "purpose": "Retain exact reviewed prospective fresh CI R1, prior refusal actual gate and all static source/route/trigger reviews. No source/test/workflow/executable change or ref/PR/CI action.",
+  "subject": {
+    "bytes": 83960,
+    "sha256": "6ffeef78018e330679aa9a2bc2da5422aca9d2a38fb4c60834959bfd880e6e58",
+    "gitBlob": "7237425e51bda9feb7d0ded4e424fe72745680c1"
+  },
+  "rootReview": {
+    "bytes": 24978,
+    "sha256": "314c5b60d64483423aeea6e6aef1eff91c252cf8633b289d571b73f164d8a140",
+    "gitBlob": "1ec622e91cd4ee66550ca4ceeb64fecd92ab3283"
+  },
+  "independentReviews": {
+    "guard": {
+      "bytes": 54369,
+      "sha256": "cd82b805deb86de3186f3ad898f3eb7b7dea80c76e30ba8b9de0a38c40128db6",
+      "gitBlob": "0be829ca4f1b17eac7e3978b4a80ae7d912897f1"
+    },
+    "semantic": {
+      "bytes": 67149,
+      "sha256": "385d290c748a2b80cc3cdf1973fb8b8360e261589d9ca00cb856feb42bf3a1d2",
+      "gitBlob": "16b891df833243e90d6b7bfdb3468a1d2483507f"
+    },
+    "binding": {
+      "bytes": 62051,
+      "sha256": "1d2678bf3296927269ae2acbe4556ac2032374d0c305bdb1c2b321d0dbd52eb2",
+      "gitBlob": "f714674b59ca409029ddc2c06d2427a6500bc94a"
+    }
+  },
+  "reviewsClosedAt": "2026-11-17 03:05:35 UTC",
+  "reviewCheckCounts": {
+    "root": 52,
+    "guard": 104,
+    "semantic": 49,
+    "binding": 118
+  },
+  "evidenceFiles": [
+    {
+      "role": "refusalActualRoot",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-producer-materialization-refusal-actual-root-publication-20261117.json",
+      "mode": "100644",
+      "bytes": 104266,
+      "sha256": "7e9b7815d3b2d1278c398fd5986fd9a0dadc059cb4e8cfd6363b17825d77130a",
+      "gitBlob": "a2527ea3a07cf7f4939498f09b27378efacd6446"
+    },
+    {
+      "role": "refusalActualIndependent",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-producer-materialization-refusal-actual-independent-publication-20261117.json",
+      "mode": "100644",
+      "bytes": 127896,
+      "sha256": "00c01b9cedd53d7a879a15d2a58788bb4bba143dd7a766725d46e3664e91ee41",
+      "gitBlob": "21506ca5ccd759553d3b0529ba00e4e14270ae9b"
+    },
+    {
+      "role": "refusalActualGate",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-producer-materialization-refusal-actual-gate-20261117.json",
+      "mode": "100644",
+      "bytes": 4076,
+      "sha256": "fa0b03bf25816f12ca76fb9809e5c7761639b7e20bc6d36239d9ee3b5978d4df",
+      "gitBlob": "676a807985f6bf17831b3375786a31d69b002b30"
+    },
+    {
+      "role": "ciSourceWorkflowCorpus",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/fresh-ci-source-workflow-corpus-20261117.json",
+      "mode": "100644",
+      "bytes": 1423178,
+      "sha256": "0257ec7c26f1d5d358c9bd6841540b8098d265f49af5f588be260a6bfb42065f",
+      "gitBlob": "9011bb095b3249421eb114231fd0ce26878f5624"
+    },
+    {
+      "role": "ciEntryGuardAdvisory",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/fresh-ci-entry-guard-advisory-20261117.json",
+      "mode": "100644",
+      "bytes": 29021,
+      "sha256": "d036879309b4245604eb01d166af7b27079f9602a38005846e43711c716aa62c",
+      "gitBlob": "9acdf46776d8b6ecfe6b75ddbfb4d6738296d027"
+    },
+    {
+      "role": "ciSemanticAdvisory",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/fresh-ci-semantic-advisory-20261117.json",
+      "mode": "100644",
+      "bytes": 58110,
+      "sha256": "6a1ba6bdaa3278a041e2687b8588bbda3ae328a48af145a2780ab2b56c493096",
+      "gitBlob": "625192f5fc414e3fe0f646e6cb18db031263cdc2"
+    },
+    {
+      "role": "ciBindingAdvisory",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/fresh-ci-binding-trigger-advisory-20261117.json",
+      "mode": "100644",
+      "bytes": 104799,
+      "sha256": "d995389da8279bdd9edd1af8cbf07604c9bf81d1f3c3ab2f01d3c09cfc8402cc",
+      "gitBlob": "30de518ca496cb3ef079a3420057d8cd8ed32b51"
+    },
+    {
+      "role": "ciR1",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/fresh-ci-isolated-draft-r1-20261117.json",
+      "mode": "100644",
+      "bytes": 83960,
+      "sha256": "6ffeef78018e330679aa9a2bc2da5422aca9d2a38fb4c60834959bfd880e6e58",
+      "gitBlob": "7237425e51bda9feb7d0ded4e424fe72745680c1"
+    },
+    {
+      "role": "ciRootR1Review",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/fresh-ci-isolated-draft-root-r1-review-20261117.json",
+      "mode": "100644",
+      "bytes": 24978,
+      "sha256": "314c5b60d64483423aeea6e6aef1eff91c252cf8633b289d571b73f164d8a140",
+      "gitBlob": "1ec622e91cd4ee66550ca4ceeb64fecd92ab3283"
+    },
+    {
+      "role": "ciGuardR1Review",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/fresh-ci-isolated-draft-guard-r1-review-20261117.json",
+      "mode": "100644",
+      "bytes": 54369,
+      "sha256": "cd82b805deb86de3186f3ad898f3eb7b7dea80c76e30ba8b9de0a38c40128db6",
+      "gitBlob": "0be829ca4f1b17eac7e3978b4a80ae7d912897f1"
+    },
+    {
+      "role": "ciSemanticR1Review",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/fresh-ci-isolated-draft-semantic-r1-review-20261117.json",
+      "mode": "100644",
+      "bytes": 67149,
+      "sha256": "385d290c748a2b80cc3cdf1973fb8b8360e261589d9ca00cb856feb42bf3a1d2",
+      "gitBlob": "16b891df833243e90d6b7bfdb3468a1d2483507f"
+    },
+    {
+      "role": "ciBindingR1Review",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/fresh-ci-isolated-draft-independent-r1-review-20261117.json",
+      "mode": "100644",
+      "bytes": 62051,
+      "sha256": "1d2678bf3296927269ae2acbe4556ac2032374d0c305bdb1c2b321d0dbd52eb2",
+      "gitBlob": "f714674b59ca409029ddc2c06d2427a6500bc94a"
+    }
+  ],
+  "modifiedFiles": [
+    {
+      "role": "plan",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/29-reconciled-acceptance-and-custody-followups-2026-11-15.md",
+      "mode": "100644",
+      "bytes": 2571825,
+      "sha256": "dfb1edf8b8c94341b96d867a313f8c297a01f32bf37596b682ca0e7cc34e2999",
+      "gitBlob": "4dd7688d742c9b188f3f4ca5e2740f130aad0f07"
+    },
+    {
+      "role": "status",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/continuation-status-20261116.md",
+      "mode": "100644",
+      "bytes": 51051,
+      "sha256": "f1015e6ebb3600e12d790cb8544e4c277205d0c8ef28eabbb71046c7b2c82f9f",
+      "gitBlob": "eef01705a17b89757347a4f918cea95640026e30"
+    },
+    {
+      "role": "catalog",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1213-retention-catalog-20261116.json",
+      "mode": "100644",
+      "bytes": 365508,
+      "sha256": "80181cf641692ea8f50756f415a1e7f64b2e7ad07f945243c5f3ef0727a32b7a",
+      "gitBlob": "b65bc9aa1c0792806975c138a8c8b5db9e5f10f5"
+    }
+  ],
+  "manifestPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/fresh-ci-isolated-draft-r1-publication-manifest-20261117.json",
+  "expectedDelta": {
+    "changed": 16,
+    "added": 13,
+    "modified": 3,
+    "deleted": 0,
+    "modesChanged": 0,
+    "nonDocChanged": 0,
+    "workflowChanged": 0
+  },
+  "expectedCensus": {
+    "parentLeaves": 11923,
+    "parentDocs": 3125,
+    "leaves": 11936,
+    "docs": 3138,
+    "nonDocs": 8798,
+    "workflows": 42
+  },
+  "catalogPreservation": {
+    "archiveKey": "priorCombinedNodeRendererStageAtFreshCiR1",
+    "evidenceKey": "combined139Renderer85FreshCiR1EvidenceFiles",
+    "wholePriorCurrentStage": true,
+    "otherParentFields": 70,
+    "completeBundles": 27,
+    "totalsUnchanged": true,
+    "planAndStatusFullPrefixesPreserved": true
+  },
+  "futureHeadBinding": {
+    "sha": null,
+    "rule": "The exact commit created by publishing this R1, its completed reviews and documentation-only retention on fix/frontend-parity-coobservation-c714-20261115, immediately pushed, then fully read back by root and an independent reviewer. The gate records actual immutable commit/root/docs trees. An external mutation-intent blob binds that actual SHA before any ref mutation. This avoids self-referential future commit identities.",
+    "mustEqualSourceBasis": {
+      "all53NonDocRootEntries": true,
+      "all42WorkflowBodies": true,
+      "all9SelectedSourceBodies": true,
+      "whole139And85TestFiles": true
+    },
+    "allowedDifference": "Documentation retention only; no source/test/workflow/control mutation. Final full comparison against ancestor must keep only the same three non-documentation modified paths and additional evidence documentation.",
+    "noStaleBasisSubstitution": true,
+    "noBranchTipSubstitution": true
+  },
+  "qualification": "R1 documentation publication only; full actual root/independent readbacks and externally pinned final-head intent remain necessary before exact fresh ref/PR mutations. No new CI/E2E PASS, no old local replay, no broader qualification."
+}

@@ -1,0 +1,394 @@
+{
+  "schemaVersion": 1,
+  "kind": "independent-bounded-member-reveal-r1-preparation-advisory",
+  "at": "2026-11-17 05:40:49 UTC",
+  "reviewer": "/root/producer_r2_semantic",
+  "repository": "777genius/agent-teams-ai",
+  "subject": {
+    "priorAdvisory": {
+      "bytes": 54913,
+      "sha256": "f5e6d95df688e87b5588f7bd3aac52d7c82ab05536312c901a04ef9572906d6c",
+      "gitBlob": "6bf023a459f4c63770528ff1f1da357008709a96"
+    },
+    "originalFailurePacket": {
+      "bytes": 217614,
+      "sha256": "4df660534b4ac26644349a5f412d6ab03807b3fa10b648798c25c423abcde655",
+      "gitBlob": "40f983754899ade7491929f28abeaba4e96ac2b6"
+    },
+    "currentSourceCommit": "674d32a84644f87544910c28bb4d2a4214958fb5",
+    "laterControlPublication": "c4fc is reported docs-only by root; no moving ref or new metadata action used"
+  },
+  "decision": "RECOMMEND_SINGLE_DRIVER_REVEAL_INSERTION_NO_EXTRACTION",
+  "qualification": "Advisory only. No candidate postimage was authored, approved or executed. Root alone authors/applies/stages/executes; existing source/control/review processes remain unchanged.",
+  "primarySourceBasis": [
+    {
+      "path": "scripts/legacy-agent-host/desktop-emulated-runtime-ui.ts",
+      "bytes": 69194,
+      "sha256": "bed27eab54593e30f76ef3121e1d1effdaa53ca9b872ecbbf52b6c2fd619087e",
+      "gitBlob": "43ab487464098fed0425ffd51441a38abc206f3b",
+      "actualPublished674LiteralEqual": true,
+      "readCoverage": "Full current794-line body read."
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "bytes": 29017,
+      "sha256": "ffd9bbb822dbdc30da7cb8daa881fcbebd384ba2bf9bdd87c804c511166fa02b",
+      "gitBlob": "5286c036a63a14e98925711a224df202c9a7caa7",
+      "actualPublished674LiteralEqual": true,
+      "readCoverage": "Full current495-line body read, including fixed post-fulfilled cutoff, complete scroll/click/hover and passive observation branches."
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+      "bytes": 165022,
+      "sha256": "fed1ee2429b0e1a7ccd592c127d7afc30bb69e0c10a1f8c673e240c1bc9dd581",
+      "gitBlob": "12c73fbc683dc297033bd8b6472e9dbee60b9b8a",
+      "actualPublished674LiteralEqual": true,
+      "readCoverage": "Complete165022-byte body fetched/hashed; exact inverse joins the previously fully read139 prefix, with unchanged literal57-byte awaited import. All relevant actual helper tests re-read; no unrelated full-suite re-audit claim."
+    },
+    {
+      "path": "src/renderer/components/team/members/MemberCard.tsx",
+      "bytes": 61541,
+      "sha256": "d30f788d27d42d32420e321f70122b790350d28ba7f8ce7432601756658904c6",
+      "gitBlob": "c916a79ec44540cace8bb19364d2ce71618000a3",
+      "actualPublished674LiteralEqual": true,
+      "readCoverage": "Complete body fetched/hashed at674; exact row/name/decorative/quick-action markup and event properties read. Other component business policies not re-audited."
+    }
+  ],
+  "retainedFailure": {
+    "runId": 44008782843,
+    "runAttempt": 1,
+    "jobId": 133790458853,
+    "jobConclusion": "failure",
+    "sourceHead": "9c9c73190840592963142d36562ea07d2b5d2d71",
+    "failure": "UI read timed out: open original member detail; no mutation retry",
+    "frames": [
+      "scripts/legacy-agent-host/desktop-ui-controls.ts:208:11",
+      "scripts/legacy-agent-host/desktop-ui-controls.ts:265:23",
+      "scripts/legacy-agent-host/desktop-ui-controls.ts:299:17",
+      "scripts/legacy-agent-host/desktop-emulated-runtime-ui.ts:453:3",
+      "scripts/legacy-agent-host/desktop-backend-smoke.ts:421:12",
+      "scripts/legacy-agent-host/desktop-backend-smoke.ts:781:29"
+    ],
+    "memberDetailSteps": 0,
+    "causeQualification": {
+      "certain": "The original driver failed inside the initial readPoint for 'open original member detail', before any member-detail hover or mouse press/release. The custom expression never supplied an accepted target before the original 30000ms read window ended. Earlier UI prefix evidence remains real but the overall receipt and job are failed/incomplete.",
+      "concreteSourceDefect": "The driver asks for the viewport-hit-testable center of the exact Alice name without first revealing that name. clickExpression does not scroll. The member roster is above Kanban in a separately scrollable main panel. The retained failure image shows that panel scrolled into Kanban, with the member roster and team header outside the visible area.",
+      "supportedInference": "Omitted viewport preparation is the leading source-backed explanation and a concrete robustness defect in this harness flow. An offscreen or clipped name center fails elementFromPoint/descendant eligibility indefinitely while the underlying roster can be ready.",
+      "notProven": "The selected custom expression returns only null on all refusal paths. The receipt does not contain failed row/name counts, rectangles, clipping boundary, target center or hit identity. It therefore cannot prove that one particular DOM branch, rather than another unrecorded refusal or allowed transient context error, occurred on every read.",
+      "narrowShape": "Reveal the same unique Alice member-name target through the existing bounded physical scrollTo helper immediately before the unchanged clickExpression. Preserve target identity, unique-row/name checks, nested-button exclusion, hit ownership, post-hover stabilization, final ownership/geometry checks and one press/release. No timeout increase, blind click, action retry, direct handler/store/API invocation, selector relaxation or product component change is supported."
+    },
+    "screenshotBoundary": "The prior independent6bf reviewer viewed retained ui-failure.png and described roster/header outside the visible center scroller. This advisory joins that full report; it did not re-open PNG pixels, re-download the ZIP or re-audit all14 artifact texts.",
+    "selectedReceipt": {
+      "gitBlob": "35750c1358882851fbd36dfd78f7c026eefe0e95",
+      "bytes": 933199,
+      "sha256": "cbceb4ff668648488f99232506d9b521d732d91ef8c672d3df20146f2efa6382"
+    },
+    "currentControlsWereNotInOldRun": true
+  },
+  "minimalProspectiveScope": {
+    "modifiedPaths": [
+      "scripts/legacy-agent-host/desktop-emulated-runtime-ui.ts"
+    ],
+    "unchangedPaths": [
+      "scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+      "scripts/legacy-agent-host/desktop-ui-controls-deadline.test.ts",
+      "all product/Host/provider files",
+      "all workflows and existing runtime controls"
+    ],
+    "placement": "Immediately before the current original member clickExpression, after proof.stats assignment.",
+    "preparation": "Use existing scrollTo for descendant name spans of the identical div role=button, tabindex=0, class-token group/member card shape, with exact trimmed text alice. Preserve default maximum12 wheel events and select existing requireCenterHit=true fifth-argument option.",
+    "exactSignature": "scrollTo(selector: string, label: string, text?: string, maxWheelEvents = 12, scrollOptions: { requireCenterHit?: boolean } = {})",
+    "targetData": {
+      "rowSelector": "div[role=\"button\"][tabindex=\"0\"][class~=\"group/member\"]",
+      "descendant": "span",
+      "text": "alice",
+      "maxWheelEvents": 12,
+      "requireCenterHit": true
+    },
+    "lineBudget": {
+      "current": 794,
+      "maximum": 800,
+      "remaining": 6,
+      "rule": "Root can fit the one call in existing six-line headroom. Exact postimage count must be checked when authored; no hypothetical final line count is asserted."
+    },
+    "originalClickPreimage": {
+      "body": "  await ui.clickExpression(`(()=>{const rows=[...document.querySelectorAll('div[role=\"button\"][tabindex=\"0\"][class~=\"group/member\"]')].filter(e=>[...e.querySelectorAll('span')].some(n=>n.textContent.trim()==='alice'));\n    if(rows.length!==1)return null;const e=rows[0],names=[...e.querySelectorAll('span')].filter(n=>n.textContent.trim()==='alice');if(names.length!==1)return null;\n    const n=names[0],r=n.getBoundingClientRect(),x=r.x+r.width/2,y=r.y+r.height/2,hit=document.elementFromPoint(x,y);\n    return r.width&&r.height&&hit&&!hit.closest('button')&&(hit===e||e.contains(hit))?{x,y,tag:e.tagName}:null})()`, 'open original member detail');",
+      "identity": {
+        "bytes": 649,
+        "sha256": "41c01f7e76509f264fe9337294554e84bc7c22e355558ab000469f9dae086f24",
+        "gitBlob": "0119d9327d234e9eeacb4d68e0422c5a038c79f9"
+      },
+      "start": 36910,
+      "end": 37559,
+      "line": 453,
+      "qualification": "This649-byte original fragment is data/excerpt from the existing body, not a new implementation or separate retained Git object."
+    },
+    "noNewHelperOrTestRecommended": true,
+    "why": "The semantic change is ordering an existing bounded preparation before an existing guarded action. Moving the action to a new helper would add API/import/source/test surfaces without fixing another demonstrated defect. Existing actual helper tests plus the unchanged whole flow provide a meaningful proportional validation for this narrow wiring change."
+  },
+  "helperBehavior": {
+    "discovery": "All selector matches are filtered only by exact trimmed text; exactly one is required before geometry. No first-match fallback.",
+    "geometry": "Find nearest vertically scrollable auto/scroll ancestor, otherwise documentElement; intersect its vertical bounds with viewport. Require positive name dimensions and valid vertical span. Success requires entire name rectangle inside that span and opt-in center hit on name/descendant.",
+    "input": "Use parent center as wheel dispatch location, clamp delta between-600 and600 toward name center. No more than12 wheels, each followed by original real100ms wait; then one final visibility read.",
+    "covered": "Persistent occlusion cannot satisfy requireCenterHit. Existing finite wheel loop eventually refuses; no member click occurs because preparation throws.",
+    "ambiguous": "Multiple ordinary exact-name spans refuse before any wheel. A nested member-row shape can share a single span; preparation may scroll but unchanged click still refuses row ambiguity. Do not claim the preparatory selector alone duplicates every original row predicate.",
+    "visible": "Already fully visible hit-testable name returns on first read without wheel; original click's later hover/stabilization still runs.",
+    "collapsedOrAbsent": "No expansion or alias/fallback is added. Zero dimensions or no match remain bounded read refusal.",
+    "timing": "Existing waitRead30000 applies to each observation, plus existing wheel cap and100ms cadence. This is not a new single overall30s reveal deadline and does not cancel a pending evaluate.",
+    "ownership": "Existing scroll waitRead invokes original owned-renderer assertion and fixed postfulfilled cutoff. Original click retains final ownership/geometry and nested-button checks."
+  },
+  "existingTestCoverage": [
+    {
+      "case": "Covered center scroll opt-in",
+      "sourceLines": [
+        1227,
+        1276
+      ],
+      "existingTest": "original scroll opt-in reveals a covered checkbox with one bounded wheel",
+      "actualImplementation": true,
+      "method": "Actual createDesktopUiControls.scrollTo evaluates its own emitted expression in runInNewContext with finite DOM objects. A physical mouseWheel changes fixture geometry/hit state; exact one-wheel and descendant-center hit assertions.",
+      "limit": "Generic checkbox target, not the member driver composition; does not prove all clipping or persistent-overlay shapes."
+    },
+    {
+      "case": "Default scroll preservation",
+      "sourceLines": [
+        1227,
+        1276
+      ],
+      "existingTest": "original default scroll preserves a disabled control before its readiness wait",
+      "actualImplementation": true,
+      "method": "Actual default scroll expression returns without wheel and does not consult elementFromPoint.",
+      "limit": "Not the proposed opt-in already-visible member branch."
+    },
+    {
+      "case": "Moving and stable click geometry",
+      "sourceLines": [
+        613,
+        639
+      ],
+      "existingTest": "original desktop click waits for stable target geometry, without repeating input",
+      "actualImplementation": true,
+      "method": "Actual click logic consumes changing point frames and produces one hover, one press, one release at settled coordinates.",
+      "limit": "Returned point frames do not execute the member-specific custom DOM expression."
+    },
+    {
+      "case": "Unstable and temporarily unavailable click",
+      "sourceLines": [
+        667,
+        713
+      ],
+      "existingTest": "original desktop click refuses a constantly moving target before dispatch; original owner-qualified click rereads its full expression through unavailability at unchanged coordinates",
+      "actualImplementation": true,
+      "method": "Actual click sampling refuses perpetual movement, repeats the original expression through null without clicking stale data, and preserves one press/release on later stability.",
+      "limit": "Generic point frames."
+    },
+    {
+      "case": "Final point unavailable or moved",
+      "sourceLines": [
+        1194,
+        1224
+      ],
+      "existingTest": "original desktop click refuses a target unavailable/moved during the final ownership check",
+      "actualImplementation": true,
+      "method": "Actual final ownership-triggered reread and strict geometry result; zero press/release after change.",
+      "limit": "Generic target frames."
+    },
+    {
+      "case": "Owner/cutoff after pending final read",
+      "sourceLines": [
+        1279,
+        1322
+      ],
+      "existingTest": "original desktop click rechecks owner/cutoff after its pending final target read",
+      "actualImplementation": true,
+      "method": "Actual click has held final read, then original owner or cutoff refusal; zero press/release and no extra retargeting.",
+      "limit": "Existing externally supplied owner assertion, not a new total click timer."
+    },
+    {
+      "case": "Missing/ambiguous/zero/disabled/covered generic target",
+      "sourceLines": [
+        2101,
+        2205
+      ],
+      "existingTest": "original conversation refuses each invalid target within its unchanged first read deadline",
+      "actualImplementation": true,
+      "method": "Actual generic target expression executes in VM; finite DOM duplicates/coverage/size and own requiredContent are checked, no hover/press on refusal.",
+      "limit": "Conversation button selector and target() helper; does not replace the literal member clickExpression or prove its row/name-specific ambiguity."
+    },
+    {
+      "case": "Current fulfilled-read cutoff",
+      "sourceFile": "scripts/legacy-agent-host/desktop-ui-controls-deadline.test.ts",
+      "gitBlob": "6a9f8ad7481cd5910befcc6c7ff5992eef03965b",
+      "expandedCases": 10,
+      "actualImplementation": true,
+      "method": "Previously complete-read actual controls fixture, awaited by current aggregate, covers postfulfilled deadline and actual hover consequences.",
+      "limit": "Separate current runner has only static review in this advisory; no fresh PASS claimed here. These cases do not reveal member DOM."
+    }
+  ],
+  "aggregatePreservation": {
+    "suffix": "\nawait import('./desktop-ui-controls-deadline.test.ts');\n",
+    "hasSuffix": true,
+    "original139Prefix": {
+      "bytes": 164965,
+      "sha256": "852bedb85c83dbc4b488dffb4a9ffebbe398adc53e85f5a3cea8ca36b146cbf7",
+      "gitBlob": "896c587e077da56a98a314a175fb3cba0353d6ee"
+    },
+    "noMemberDriverImport": true,
+    "memberLabelPresent": false
+  },
+  "verificationRecommendation": {
+    "staticSourceReview": [
+      "Review the exact then-current publication and one driver insertion after root authors it; join literal unchanged649-byte click and the entire remaining driver by whole-byte inverse.",
+      "Confirm source remains at or below800 lines, no ignore/baseline/cap changes, same exact target shape/text and helper argument ordering; no added branch/provider special case.",
+      "Keep current165022-byte whole149 module and7883-byte deadline module exact; do not append new tests just to mirror the one call."
+    ],
+    "existingTests": "When the existing complete suite gate is executed under its separately accepted environment, preserve whole149 rather than a selected-name subset. Reuse current actual scroll, generic target, click ownership/stability and deadline cases. No execution result is inferred from this advisory.",
+    "wholeFlow": "The separately bound original provider E2E must remain complete. For the failed OpenCode path, require successful original member click, Member Logs and exact Unknown Stats UI, reload/no input replay, schedules/real cron, Task Activity/detail/stream and Team Stop with original receipts/screenshots/cleanup. Keep all earlier prefix obligations. The shared insertion also affects Claude/Codex; existing all-provider objective and unchanged flow branches remain.",
+    "evidenceInterpretation": "In a later flow, bounded wheels before the same one original member click support actual use of reveal. If no wheel is needed, that run proves visible-target preservation, not a forced clipped-target discriminator. Neither case justifies claiming all four adversarial member geometries were independently tested.",
+    "noRuntimeSubstitution": "Generic helper tests or source reasoning alone cannot promote the previously failed OpenCode flow. Conversely, no fresh isolated action helper is required merely to add a previously tested preparation call.",
+    "optionalOnlyIfBroaderGoalSelected": "If deterministic member-specific clipped/visible/ambiguous/covered cases become a separately selected requirement, test one real action helper imported by both driver and test using actual createDesktopUiControls and VM DOM geometry. Do not copy the member expression into a test-only implementation, assert only source text, fake the whole E2E, or call root's real runner here. This optional alternative is not selected or authored."
+  },
+  "analysisLimits": [
+    "The prior failure proves no accepted target before timeout, not exact null-branch attribution or cause of initial scroll position.",
+    "Current674 controls include the accepted postfulfilled cutoff; old9c9 failure useded57 controls. That separate difference is preserved and is not blamed for offscreen target geometry.",
+    "Current whole149 eager dependency/build requirements remain as previously documented; this advisory does not create a Node-only full-suite path.",
+    "No approved hypothetical postimage, new source control, runner, execution, retry, workflow/ref/PR change or native/provider scope.",
+    "All check statuses are advisory static/evidence conclusions, not runtime PASS."
+  ],
+  "checks": [
+    {
+      "id": "M01",
+      "result": "PASS_ADVISORY",
+      "name": "Immutable advisory/packet identities",
+      "evidence": "Full6bf advisory read, exact54913B/SHAf5e6...; full40f packet transport hashed217614B/SHA4df6...; complete selected job and all22 member metadata read. Nested unrelated jobs/install chatter are not re-audited."
+    },
+    {
+      "id": "M02",
+      "result": "PASS_ADVISORY",
+      "name": "Current source rather than stale CI source",
+      "evidence": "Fresh immutable674 file reads equal supplied driver43ab, fixed controls5286 and aggregate12c73 whole literals. MemberCardc916 also joins674."
+    },
+    {
+      "id": "M03",
+      "result": "PASS_ADVISORY",
+      "name": "Exact current driver and original boundary",
+      "evidence": "All794 driver lines read. After provider-specific catalog/stats and before original Member Logs/Stats, the same649-byte clickExpression call occurs at original line453 without reveal."
+    },
+    {
+      "id": "M04",
+      "result": "PASS_ADVISORY",
+      "name": "Failure interpretation preserves uncertainty",
+      "evidence": "The old frozen9c9 run failed in initial readPoint before member hover/press/release. Full6bf source/layout/image interpretation supports missing reveal, but no per-read row/name/geometry/hit data establishes the unique null cause or prior scrolling event."
+    },
+    {
+      "id": "M05",
+      "result": "PASS_ADVISORY",
+      "name": "Current deadline fix is orthogonal",
+      "evidence": "Current waitRead rejects a fulfilled value at/after its original cutoff before predicate. It cannot reveal a target or turn null into a usable point; no reason to change it for this correction."
+    },
+    {
+      "id": "M06",
+      "result": "PASS_ADVISORY",
+      "name": "Existing helper signature supports the insertion",
+      "evidence": "scrollTo(selector,label,text?,maxWheelEvents=12,scrollOptions={}) is the existing exact signature. requireCenterHit belongs in fifth argument, with explicit12 in fourth if needed; default bounds remain unchanged."
+    },
+    {
+      "id": "M07",
+      "result": "PASS_ADVISORY",
+      "name": "Reveal target is the original name",
+      "evidence": "MemberCard exposes the original role/button/tabIndex/group-member row and ordinary name span without pointer-events-none. The row-qualified descendant span with trim-equal alice targets the same text whose center the untouched click measures."
+    },
+    {
+      "id": "M08",
+      "result": "PASS_ADVISORY",
+      "name": "Preparation uniqueness is not click authority",
+      "evidence": "scrollTo requires exactly one matching name node. Ordinary missing/disjoint-duplicate names return null. Even a pathological nested-row case sharing one span cannot bypass the untouched click's independent unique row and unique in-row name checks."
+    },
+    {
+      "id": "M09",
+      "result": "PASS_ADVISORY",
+      "name": "Center hit strengthens preparation without weakening click",
+      "evidence": "Opt-in requires name-center hit to be the span or its descendant plus full vertical containment in viewport/nearest vertical scroller. Existing click still requires row-descendant hit, no nested native button, stable geometry and ownership."
+    },
+    {
+      "id": "M10",
+      "result": "PASS_ADVISORY",
+      "name": "Physical scrolling stays bounded",
+      "evidence": "Nearest ancestor with scrollHeight>clientHeight and overflowY auto/scroll; viewport-intersected top/bottom; delta clamp±600; at most12 wheel events plus final read; original100ms between wheels; no direct scrollTop/scrollIntoView/store/API/handler mutation."
+    },
+    {
+      "id": "M11",
+      "result": "PASS_ADVISORY",
+      "name": "No new global deadline assertion is invented",
+      "evidence": "Each scroll observation uses unchanged default waitRead30000. There can be up to13 observations; neither helper nor this advisory claims one overall30000ms reveal budget or cancellation of pending CDP. Existing outer controls remain separate."
+    },
+    {
+      "id": "M12",
+      "result": "PASS_ADVISORY",
+      "name": "Single original click fully preserved",
+      "evidence": "Original649-byte call is retained exactly as preimage data; suggested insertion is immediately before it. Post-hover reread, two equal samples within15, final owner/geometry and one press/release stay unchanged."
+    },
+    {
+      "id": "M13",
+      "result": "PASS_ADVISORY",
+      "name": "No product fix or collapsed-section action is supported",
+      "evidence": "Current evidence supports viewport preparation only. If the name is absent/zero-sized/collapsed, ambiguous or persistently covered, preserve refusal; do not add expansion/fallback selector/click retry or alter MemberCard/dialog/Host."
+    },
+    {
+      "id": "M14",
+      "result": "PASS_ADVISORY",
+      "name": "Existing tests are actual implementations",
+      "evidence": "Relevant full test branches invoke createDesktopUiControls. Scroll and generic target cases execute emitted expressions in node:vm; click tests execute actual async control logic. This is not a source-string-only presence check."
+    },
+    {
+      "id": "M15",
+      "result": "PASS_ADVISORY",
+      "name": "Member-specific finite scenario gap is explicit",
+      "evidence": "Current aggregate neither imports runDesktopEmulatedRuntimeUi nor contains the member-detail label. It does not independently test the proposed composition across all clipped/visible/ambiguous/covered name cases."
+    },
+    {
+      "id": "M16",
+      "result": "PASS_ADVISORY",
+      "name": "Minimum recommendation is one driver insertion",
+      "evidence": "For a call-site-only harness correction using unchanged tested helpers, static exact insertion/inverse plus existing whole149 and unchanged original full E2E is proportionate. New action-helper extraction is not necessary for this scope and is not recommended here."
+    },
+    {
+      "id": "M17",
+      "result": "PASS_ADVISORY",
+      "name": "Extraction is only needed for an additional isolated composition-testing objective",
+      "evidence": "If root separately requires deterministic four-shape member-specific tests, call-string assertions or a copied implementation would not satisfy that goal. Then a single real action helper consumed by driver and tests could host the unchanged click plus reveal, tested using actual controls/DOM. That broader objective is unselected, not a new mandatory gate."
+    },
+    {
+      "id": "M18",
+      "result": "PASS_ADVISORY",
+      "name": "Complete current aggregate is preserved",
+      "evidence": "Removing only exact57-byte awaited-import suffix recreates entire old139 body896c at164965B/SHA852b.... Current aggregate12c73 and new10 remain untouched, so selected count149 and every original case stay intact."
+    },
+    {
+      "id": "M19",
+      "result": "PASS_ADVISORY",
+      "name": "Original tail and shared-provider exposure remain visible",
+      "evidence": "Member Logs/Stats, reload/no replay, schedules/automatic cron, Task Activity and Team Stop remain identical; failed OpenCode must reach them before full-flow acceptance. Shared boundary also runs Claude/Codex; old snapshot successes do not execute the new insertion."
+    },
+    {
+      "id": "M20",
+      "result": "PASS_ADVISORY",
+      "name": "No runtime or source acceptance is fabricated",
+      "evidence": "This is a prospective source-scope recommendation, not R1/postimage approval or proof of correction. No shell, target execution, source/control/ref/PR/CI mutation, polling or new venue/action occurred; only this bare report is retained."
+    }
+  ],
+  "checkCount": 20,
+  "reviewerActions": {
+    "immutableGitReads": true,
+    "pureIdentityAndDataAnalysis": true,
+    "bareAdvisoryOnly": true,
+    "sourceOrTestAuthorship": false,
+    "sourceBodiesExecuted": false,
+    "shell": false,
+    "runtime": false,
+    "liveCiPolling": false,
+    "refPrCiMutation": false
+  },
+  "retentionProtocol": "Send exact bare report pin immediately, then full retained literal/hash/parsed/check self-readback; no post-retention edits."
+}

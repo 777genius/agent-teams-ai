@@ -1,0 +1,3812 @@
+{
+  "schemaVersion": 1,
+  "kind": "c714-immutable-producer-materialization-green-binding-independent-r2",
+  "reviewer": "/root/red_publication_recovery",
+  "at": "2026-11-17 02:11:17 UTC",
+  "verdict": "ACCEPT_EXACT_IMMUTABLE_BINDING_FOR_PUBLICATION_WITH_EXISTING_GATES",
+  "accepted": true,
+  "acceptedWithinAssignedScope": true,
+  "repository": "777genius/agent-teams-ai",
+  "branch": "fix/frontend-parity-coobservation-c714-20261115",
+  "preparedFromCommit": "b83da2bb72ada6e9fb3a426cb2a7d62b30ec4871",
+  "preparedFromTree": "5ef5abf3c6aadd53340f457ea7f77e6b69f84878",
+  "subject": {
+    "binding": {
+      "bytes": 8262787,
+      "sha256": "56d2bb56ff1135fbc606d375b2b8debd8c5f3feaaa8b61904aa584c4dc38435c",
+      "gitBlob": "ea852a05538a51710c13a0cd86a8bd1e3fa1c056"
+    },
+    "baselineBinding": {
+      "bytes": 6399172,
+      "sha256": "be265da9b130091d251295f937a7ab09b1db0e03f2c4a02d985839134e0379ec",
+      "gitBlob": "9f9ddcf0f9f62cce1a31f204ae786a8e2d3d2267"
+    },
+    "runner": {
+      "bytes": 104131,
+      "sha256": "20958434e304d6d67657abad910d7c891f5a9086164e73d19cc8764348fc83f5",
+      "gitBlob": "c81f72a8ed14a93b3557fdf889f9ad6cebc25140"
+    },
+    "r1": {
+      "bytes": 139634,
+      "sha256": "b9524cd8f0f1251f034337f4eb8fbc6606adc1d1c987d993580be06b9a078a75",
+      "gitBlob": "8ce89328171e58ec3e0631dce9607ee7e1eba54e"
+    },
+    "proposal": {
+      "bytes": 28238,
+      "sha256": "9df788ded4a212545e21352c16a556e9d9d72f221bb0823b45c64efd32839faf",
+      "gitBlob": "486aac82a04b969d6ba14df6929eeddca3e43c59"
+    },
+    "sourcePublicationGate": {
+      "bytes": 6536,
+      "sha256": "1333882f719c6b832223e038043b9b82491d8168e9cf5effa64c12b0cf4741a2",
+      "gitBlob": "63fe55b3f050783b80bda34e3261564600186592"
+    },
+    "publishedSubject": {
+      "commit": "b83da2bb72ada6e9fb3a426cb2a7d62b30ec4871",
+      "tree": "5ef5abf3c6aadd53340f457ea7f77e6b69f84878",
+      "qualification": "Exact published nine-row source vector: only the three independently reviewed producer postimages change; four fixed producers and complete139/85 test bodies remain identical. Publication is not physical application or GREEN acceptance."
+    },
+    "bindingLocalPath": "/workspace/scratch/c714-post-transport-20261117/controls/green-binding.json",
+    "beforeSourceVector": {
+      "bytes": 2118,
+      "sha256": "f2574559a378b3bc537fdcedbde161003c8344a5485dfff9322214f6fda2a90c",
+      "gitBlob": "f6446bdc2bbdb511206c729a1f03717871baea6d"
+    },
+    "sourceVector": {
+      "bytes": 2118,
+      "sha256": "6007c5c7ba2f74c43bd9b73c50cae2319eacbf712c233cc0d67b3efbb4c6894d",
+      "gitBlob": "3887991d5dbd25dbec5c8656e8e03d423ea502b7"
+    },
+    "sourcePins": [
+      {
+        "path": "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+        "mode": "100644",
+        "bytes": 24759,
+        "sha256": "d15b7eea14c0951194310aee34ddc5c477879c759a97a4e2f4e9fce1f956ce9b",
+        "gitBlob": "cf93da72a198dac636658e512093eef7828b5927"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+        "mode": "100644",
+        "bytes": 45795,
+        "sha256": "2c5931f5c7fa1dc8bb7858201c1b8afdbae9683faf4a2ad9fce067f116f3f94b",
+        "gitBlob": "5026f0ec6165bb092717ddc989043848a25081dc"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts",
+        "mode": "100644",
+        "bytes": 36260,
+        "sha256": "26357f37b146fc171bbceadb624bde4a7f4e459d2073ae23a651e757817b2d38",
+        "gitBlob": "4700a0052d3c58a2b3d9bc66e6803220688050fd"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+        "mode": "100644",
+        "bytes": 8457,
+        "sha256": "2da55bb40a5689ace0e922dc4867d7c73278d9a1cd200ea8c4602ca68f82da3b",
+        "gitBlob": "3c7b4bb53f4259ac0795d3f92fb715887acb554f"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-task-review-cycle-ui-smoke.ts",
+        "mode": "100644",
+        "bytes": 33036,
+        "sha256": "4fa52cfad9347065680ef62a3ba6420762408a78a93b77e96ac3a2e16e68bdc9",
+        "gitBlob": "8d175c98158b3bd71192aef7b1929484b2b681b6"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+        "mode": "100644",
+        "bytes": 164965,
+        "sha256": "852bedb85c83dbc4b488dffb4a9ffebbe398adc53e85f5a3cea8ca36b146cbf7",
+        "gitBlob": "896c587e077da56a98a314a175fb3cba0353d6ee"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+        "mode": "100644",
+        "bytes": 28974,
+        "sha256": "7626e479a6662242009cb050e7e5af612a29e4205d62666d15274d5c30f91386",
+        "gitBlob": "ed57cb0fe7d57ef076a591621289eb77667c63ad"
+      },
+      {
+        "path": "src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts",
+        "mode": "100644",
+        "bytes": 74340,
+        "sha256": "647ac5732bfd6b5cb57834adb4ad22c32ee5dfb018a934c92f982efd9daa531c",
+        "gitBlob": "c2faa156015707bc5fbd7f8123a7ffd9c4faa486"
+      },
+      {
+        "path": "test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts",
+        "mode": "100644",
+        "bytes": 187890,
+        "sha256": "b6f11896e60014aac785968d42390afde38716d47de9bba9562522235db048c9",
+        "gitBlob": "76495189c992fcda47cd7a43a0c697190b5acbb3"
+      }
+    ],
+    "testIdentities": {
+      "node": {
+        "bytes": 164965,
+        "sha256": "852bedb85c83dbc4b488dffb4a9ffebbe398adc53e85f5a3cea8ca36b146cbf7",
+        "gitBlob": "896c587e077da56a98a314a175fb3cba0353d6ee"
+      },
+      "renderer": {
+        "bytes": 187890,
+        "sha256": "b6f11896e60014aac785968d42390afde38716d47de9bba9562522235db048c9",
+        "gitBlob": "76495189c992fcda47cd7a43a0c697190b5acbb3"
+      }
+    }
+  },
+  "method": {
+    "scope": "Complete read-only binding R2 against the exact current RED binding, accepted unchanged runner/R1, and actual accepted three-producer source publication.",
+    "fullCurrentBindingReadAndRehashed": true,
+    "fullBaselineBindingReadAndRehashed": true,
+    "fullRunnerReadAndRehashed": true,
+    "bindingTransport": "The direct full-blob read returned Transport closed with no body twice. All three immutable literal transport parts and their complete manifest were fetched independently; exact ordered raw concatenation without separators or transformations reconstituted all 8262787 UTF-8 bytes and matched the selected Git blob and SHA256. This was data transport only.",
+    "noTargetCodeEvaluation": true,
+    "noShell": true,
+    "noRuntime": true,
+    "noSourceRefCiMutation": true,
+    "identityHelper": {
+      "bytes": 3982,
+      "sha256": "cd3d5b96a5508215010923078469cc718282f17d765f6af493913c157bdf3db7",
+      "gitBlob": "e4a4568d589e1254b88ade1a5f87d53924e7c2e8"
+    },
+    "historicalScope": "All 58 inherited complete review records remain literal identical; 19 appended full current evidence bodies are independently hashed and joined to accepted immutable full readbacks. No recursive historical runtime re-audit or new physical census is claimed."
+  },
+  "transportManifest": {
+    "bytes": 2073,
+    "sha256": "535e1204c513c6a3c9fb6ab925f8ee32014588ea065b94b6075ff8bd18ab6627",
+    "gitBlob": "be69500fa261dd5c45d5e8215596a94d292e2c45"
+  },
+  "transport": {
+    "schemaVersion": 1,
+    "kind": "c714-immutable-green-binding-lossless-transport-parts",
+    "binding": {
+      "bytes": 8262787,
+      "sha256": "56d2bb56ff1135fbc606d375b2b8debd8c5f3feaaa8b61904aa584c4dc38435c",
+      "gitBlob": "ea852a05538a51710c13a0cd86a8bd1e3fa1c056"
+    },
+    "bindingLocalPath": "/workspace/scratch/c714-post-transport-20261117/controls/green-binding.json",
+    "codec": "Concatenate complete ordered UTF-8 text part bodies with NO separator, newline, trimming, decoding transformation or JSON interpretation. Part boundaries never split UTF-16 surrogate pairs; Git/SHA256 identities are of UTF-8 bytes. Reassembled entire bytes must match binding identity.",
+    "parts": [
+      {
+        "ordinal": 0,
+        "utf16Start": 0,
+        "utf16End": 2800000,
+        "identity": {
+          "bytes": 2801279,
+          "sha256": "98639f464306184d3131ed36e625ae6e88e156a96aeb57e31787a1be2ea5f916",
+          "gitBlob": "441fd0ecb053bf9191332e635ff764cd511c4d0e"
+        }
+      },
+      {
+        "ordinal": 1,
+        "utf16Start": 2800000,
+        "utf16End": 5600000,
+        "identity": {
+          "bytes": 2800142,
+          "sha256": "16214d8009f81bea6e90fdc12de912a36542024aaa2451d0d7bc9f5ae8954957",
+          "gitBlob": "58fc694520738dae1507e0545fd5d18f7344fe89"
+        }
+      },
+      {
+        "ordinal": 2,
+        "utf16Start": 5600000,
+        "utf16End": 8261344,
+        "identity": {
+          "bytes": 2661366,
+          "sha256": "197b6c989795fad2a4d46205aaca86aa79391ece81eb267205e85bf3b18f233f",
+          "gitBlob": "92de54c81f85a21da8b4ff9346f89d9c55bd5d79"
+        }
+      }
+    ],
+    "partsCount": 3,
+    "totalUtf8Bytes": 8262787,
+    "originalBindingUnchanged": true,
+    "transportOnly": true,
+    "reason": "The GitHub connector returns Transport closed with no body for the exact 8,262,787-byte retained binding; the smaller baseline and other evidence remain readable. These bare literal parts allow complete independent read/reconstruction/hash without changing controls, source, execution scope, or gates.",
+    "bindingWasStaged": false,
+    "sourceWasApplied": false,
+    "runtimeWasInvoked": false
+  },
+  "completePartReadbacks": [
+    {
+      "ordinal": 0,
+      "utf16Start": 0,
+      "utf16End": 2800000,
+      "identity": {
+        "bytes": 2801279,
+        "sha256": "98639f464306184d3131ed36e625ae6e88e156a96aeb57e31787a1be2ea5f916",
+        "gitBlob": "441fd0ecb053bf9191332e635ff764cd511c4d0e"
+      },
+      "fullBodyRead": true,
+      "exactIdentity": true,
+      "exactRange": true
+    },
+    {
+      "ordinal": 1,
+      "utf16Start": 2800000,
+      "utf16End": 5600000,
+      "identity": {
+        "bytes": 2800142,
+        "sha256": "16214d8009f81bea6e90fdc12de912a36542024aaa2451d0d7bc9f5ae8954957",
+        "gitBlob": "58fc694520738dae1507e0545fd5d18f7344fe89"
+      },
+      "fullBodyRead": true,
+      "exactIdentity": true,
+      "exactRange": true
+    },
+    {
+      "ordinal": 2,
+      "utf16Start": 5600000,
+      "utf16End": 8261344,
+      "identity": {
+        "bytes": 2661366,
+        "sha256": "197b6c989795fad2a4d46205aaca86aa79391ece81eb267205e85bf3b18f233f",
+        "gitBlob": "92de54c81f85a21da8b4ff9346f89d9c55bd5d79"
+      },
+      "fullBodyRead": true,
+      "exactIdentity": true,
+      "exactRange": true
+    }
+  ],
+  "fieldDelta": {
+    "changed": [
+      "kind",
+      "phase",
+      "bindingLocalPath",
+      "publishedSubject",
+      "actualPublishedSubjectReadbackEvidence",
+      "acceptedReviewBodies",
+      "beforeSourceOverlay",
+      "sourceOverlay",
+      "sourcePins",
+      "sourceVectorIdentity",
+      "materializePaths",
+      "acceptedCombinedRed",
+      "producerR2ReviewedAndPublished",
+      "producerActualReadbackAccepted",
+      "draftState",
+      "historicalBeforeSourceOverlayQualification"
+    ],
+    "added": [
+      "producerGreenTransitionProvenance",
+      "producerGreenControlAuthoredAtUtc"
+    ],
+    "unchanged": [
+      "schemaVersion",
+      "publishedR1",
+      "publishedRecoveryR1",
+      "publishedTransportAmendment",
+      "combinedR1Identity",
+      "combinedR1Body",
+      "combinedR1ActualReadbackAccepted",
+      "combinedR1ActualReadbackEvidence",
+      "runnerLocalPath",
+      "runnerIdentity",
+      "actualPublishedSubjectReadbackAccepted",
+      "combinedInputImportAdmission",
+      "inputFiles",
+      "testIdentities",
+      "nodeNames",
+      "rendererNames",
+      "nodeRedFailureSites",
+      "rendererRedFailureSites",
+      "commandVectors",
+      "nativeMetadataArgv",
+      "outputRoots",
+      "tempRoots",
+      "rendererRawEnvironment",
+      "rendererEffectiveAbsentKeys",
+      "rendererAbsentPaths",
+      "rendererStaticPins",
+      "rendererStaticLinks",
+      "rendererNativePins",
+      "rendererEntryRelative",
+      "rollupLocalOverride",
+      "rendererDerivedConfig",
+      "materializationReceiptScope",
+      "acceptedCombinedGreen",
+      "behavioralAttempts",
+      "timing",
+      "executionScope",
+      "authorshipGate",
+      "historicalRecoveryProvenance",
+      "historicalTestMaterialization",
+      "historicalEvidenceBodies",
+      "historicalPredictionCorrection",
+      "correctedControlAuthoredAtUtc",
+      "dataReplicaRecovery",
+      "postTransportRecoveryProvenance",
+      "postTransportControlAuthoredAtUtc"
+    ],
+    "removed": []
+  },
+  "completeUnchangedFieldReadbacks": [
+    {
+      "key": "schemaVersion",
+      "completeLiteralValuePreserved": true,
+      "derivedJsonIdentity": {
+        "bytes": 1,
+        "sha256": "6b86b273ff34fce19d6b804eff5a3f5747ada4eaa22f1d49c01e52ddb7875b4b",
+        "gitBlob": "56a6051ca2b02b04ef92d5150c9ef600403cb1de"
+      }
+    },
+    {
+      "key": "publishedR1",
+      "completeLiteralValuePreserved": true,
+      "derivedJsonIdentity": {
+        "bytes": 42,
+        "sha256": "0de2f600ec2aa6099da95105dd1e4714586d1a101647ca08c876b391ba29c11f",
+        "gitBlob": "687d8acffe515cbc1fe1470bc5b31f86f04affa9"
+      }
+    },
+    {
+      "key": "publishedRecoveryR1",
+      "completeLiteralValuePreserved": true,
+      "derivedJsonIdentity": {
+        "bytes": 42,
+        "sha256": "00f9fef0a6c3b427af061d164ca8008ee0dcdeb13d7a51e7fca015b0b1111cad",
+        "gitBlob": "93c72df82fe259d556cd37759980fd00f6225c19"
+      }
+    },
+    {
+      "key": "publishedTransportAmendment",
+      "completeLiteralValuePreserved": true,
+      "derivedJsonIdentity": {
+        "bytes": 42,
+        "sha256": "0cb38ef9257f7d4e16dc2206bda222fd15940053fd45f97fb30db48fe6ed5f02",
+        "gitBlob": "df7f519a1187f31fb8311760b1d3c97f547a62ee"
+      }
+    },
+    {
+      "key": "combinedR1Identity",
+      "completeLiteralValuePreserved": true,
+      "derivedJsonIdentity": {
+        "bytes": 145,
+        "sha256": "d6096113de7374779e10f5a9c75e47af72f4b5f1cad0239d7e0de60419ac3828",
+        "gitBlob": "2010f3fc2f04c6919035e13ef9629ea7eaceb3ff"
+      }
+    },
+    {
+      "key": "combinedR1Body",
+      "completeLiteralValuePreserved": true,
+      "derivedJsonIdentity": {
+        "bytes": 146458,
+        "sha256": "1a02b4cc582b2afae3bae70c925c9eddfdd05c8bc32f949a5f4598b4ff8e08dd",
+        "gitBlob": "1309b89303f3ca310fec47f008b5d4dd4fec2bc7"
+      }
+    },
+    {
+      "key": "combinedR1ActualReadbackAccepted",
+      "completeLiteralValuePreserved": true,
+      "derivedJsonIdentity": {
+        "bytes": 4,
+        "sha256": "b5bea41b6c623f7c09f1bf24dcae58ebab3c0cdd90ad966bc43a45b44867e12b",
+        "gitBlob": "f32a5804e292d30bedf68f62d32fb75d87e99fd9"
+      }
+    },
+    {
+      "key": "combinedR1ActualReadbackEvidence",
+      "completeLiteralValuePreserved": true,
+      "derivedJsonIdentity": {
+        "bytes": 312,
+        "sha256": "e674f1cfa747606990d3a8a635c0b598966aeaea8da3ced85093c7dc7b3a29f0",
+        "gitBlob": "fa16a8bd6cb7e1f97d4a586e7ddb5561280bd994"
+      }
+    },
+    {
+      "key": "runnerLocalPath",
+      "completeLiteralValuePreserved": true,
+      "derivedJsonIdentity": {
+        "bytes": 77,
+        "sha256": "dccb873b02f9e70065b7ecbfc65fb39877d7dd5fbda024935c5415ff7a239e67",
+        "gitBlob": "267b3c4c189165b68daec66d8aaae20c30f648cf"
+      }
+    },
+    {
+      "key": "runnerIdentity",
+      "completeLiteralValuePreserved": true,
+      "derivedJsonIdentity": {
+        "bytes": 145,
+        "sha256": "b1b0f722bcc0eb50be6585b611413270fd9794a3a9846d4265303d5591e9f683",
+        "gitBlob": "5f31d92d790d48a4c0eb3a73d515b94d9f27a93d"
+      }
+    },
+    {
+      "key": "actualPublishedSubjectReadbackAccepted",
+      "completeLiteralValuePreserved": true,
+      "derivedJsonIdentity": {
+        "bytes": 4,
+        "sha256": "b5bea41b6c623f7c09f1bf24dcae58ebab3c0cdd90ad966bc43a45b44867e12b",
+        "gitBlob": "f32a5804e292d30bedf68f62d32fb75d87e99fd9"
+      }
+    },
+    {
+      "key": "combinedInputImportAdmission",
+      "completeLiteralValuePreserved": true,
+      "derivedJsonIdentity": {
+        "bytes": 8237,
+        "sha256": "f123fd000cd08b47d12fb009043a5d0f398784f1ee42923927eac400646854b5",
+        "gitBlob": "0bfa14dc8aad83fb2ff4b00b23ef243113071e4f"
+      }
+    },
+    {
+      "key": "inputFiles",
+      "completeLiteralValuePreserved": true,
+      "derivedJsonIdentity": {
+        "bytes": 2002,
+        "sha256": "2446840c4d848ac1c4ca353b3a625cdf0ed060b2d0d077fea8383c0862b417b8",
+        "gitBlob": "227d24c6052cfb078e0c99ff9b8a92425142beda"
+      }
+    },
+    {
+      "key": "testIdentities",
+      "completeLiteralValuePreserved": true,
+      "derivedJsonIdentity": {
+        "bytes": 311,
+        "sha256": "e0dec0e629fefe7aac2c986d395e28eee647d18f937aa548bccade50508e7975",
+        "gitBlob": "b356ed62d68b73172c71cfaeba6136d620638ab0"
+      }
+    },
+    {
+      "key": "nodeNames",
+      "completeLiteralValuePreserved": true,
+      "derivedJsonIdentity": {
+        "bytes": 11285,
+        "sha256": "3364f9a0bc12536ef2c26174a1341f8f8d4183cb6cb0795a6c339d1dd9cc6226",
+        "gitBlob": "96bf8a32335853f8721251c8131e534fab668aac"
+      }
+    },
+    {
+      "key": "rendererNames",
+      "completeLiteralValuePreserved": true,
+      "derivedJsonIdentity": {
+        "bytes": 6292,
+        "sha256": "66e1508f9a02882291b6233a03af58ff4713aca256351f1758f91e7b5855a787",
+        "gitBlob": "92bb24568c9a463b494fa5f88ddef3a662d284cb"
+      }
+    },
+    {
+      "key": "nodeRedFailureSites",
+      "completeLiteralValuePreserved": true,
+      "derivedJsonIdentity": {
+        "bytes": 420,
+        "sha256": "4c9156461a43fb1bd90ff8fbeb7f646afb8b53fe9ef0ce416af48ecc37e99b6a",
+        "gitBlob": "52432e15802a28d5efb2987f7a7e953649be27d9"
+      }
+    },
+    {
+      "key": "rendererRedFailureSites",
+      "completeLiteralValuePreserved": true,
+      "derivedJsonIdentity": {
+        "bytes": 46,
+        "sha256": "292b157b269ada679ec4f6dfba0d555476d99c2a116370a02da7835220a15343",
+        "gitBlob": "bc1e6b16c296d50c97106862a3d72f1042ce77ac"
+      }
+    },
+    {
+      "key": "commandVectors",
+      "completeLiteralValuePreserved": true,
+      "derivedJsonIdentity": {
+        "bytes": 4278,
+        "sha256": "5a069a2e0073911d3214789f6e01f758de8d5409566e856eef5be4ab5399da53",
+        "gitBlob": "4c497157483d80992953502c6d107bfba3f2da4f"
+      }
+    },
+    {
+      "key": "nativeMetadataArgv",
+      "completeLiteralValuePreserved": true,
+      "derivedJsonIdentity": {
+        "bytes": 1048,
+        "sha256": "78a74e5d2fde872b89dc001ce68340ee6fd212930fd2463bed5088a9d4db4404",
+        "gitBlob": "4917732d69a7d7341b1e07f2156e0e0a180f74a4"
+      }
+    },
+    {
+      "key": "outputRoots",
+      "completeLiteralValuePreserved": true,
+      "derivedJsonIdentity": {
+        "bytes": 428,
+        "sha256": "3d3d42b11914f5ea9b2cf14759f5f632674a52cdc929c4dc081fdd1196cbf467",
+        "gitBlob": "a6d943612cf762baaff4fe2a99ee421686bd834d"
+      }
+    },
+    {
+      "key": "tempRoots",
+      "completeLiteralValuePreserved": true,
+      "derivedJsonIdentity": {
+        "bytes": 448,
+        "sha256": "838468846fd4c355f341ac0a72b2ef7e45232cb05087a505e31a3ffd7f69a462",
+        "gitBlob": "b3bd2c7625dfd98aa09eb97452a7efa516614be7"
+      }
+    },
+    {
+      "key": "rendererRawEnvironment",
+      "completeLiteralValuePreserved": true,
+      "derivedJsonIdentity": {
+        "bytes": 1177,
+        "sha256": "a03c56d94c769bbb35cacee4697518db4f2ad81112ccdaa47a18646e1c3baec6",
+        "gitBlob": "2c4dcd0c642fc07373ba8c973f6f8af2d49b0499"
+      }
+    },
+    {
+      "key": "rendererEffectiveAbsentKeys",
+      "completeLiteralValuePreserved": true,
+      "derivedJsonIdentity": {
+        "bytes": 452,
+        "sha256": "9a3c7e5a2645d8ee17d3d42a3c1d9245411624cff2837fdfdd59c7627eea85bf",
+        "gitBlob": "27a56290a235f25ee6fbd930cbe47ecc08446213"
+      }
+    },
+    {
+      "key": "rendererAbsentPaths",
+      "completeLiteralValuePreserved": true,
+      "derivedJsonIdentity": {
+        "bytes": 374,
+        "sha256": "324fc7165aaf7b55f67b1a5550d4b05e5871bd1e074c9e39897a7a0da63ccd07",
+        "gitBlob": "2d392a385c7b88c6896b16d314e0e4e6df1df37f"
+      }
+    },
+    {
+      "key": "rendererStaticPins",
+      "completeLiteralValuePreserved": true,
+      "derivedJsonIdentity": {
+        "bytes": 3401,
+        "sha256": "f5def993ce5867317a4de7b0be741c7f54761dbcc99d30032825487596eb449c",
+        "gitBlob": "51bb6d46e4a2a1d1dbd37bb40b0b7f873bddd79d"
+      }
+    },
+    {
+      "key": "rendererStaticLinks",
+      "completeLiteralValuePreserved": true,
+      "derivedJsonIdentity": {
+        "bytes": 960,
+        "sha256": "9b57ad3e47d53666c26e5e107ba88b2e3ffcff8a753c0ead69f171684c37e8c9",
+        "gitBlob": "eb6243d8d1c199a1eec9e467e57e6a4b6b960586"
+      }
+    },
+    {
+      "key": "rendererNativePins",
+      "completeLiteralValuePreserved": true,
+      "derivedJsonIdentity": {
+        "bytes": 558,
+        "sha256": "c54cd42d741bfca3ca9b9e5f03d0c14c720d1bf05210c2f2903cf9ce6e2c93b7",
+        "gitBlob": "4ab2011b9fe63e7e12059f7a20c14026ddb3e03e"
+      }
+    },
+    {
+      "key": "rendererEntryRelative",
+      "completeLiteralValuePreserved": true,
+      "derivedJsonIdentity": {
+        "bytes": 172,
+        "sha256": "468efc9494c845699a29c6e78cd892160d8ebdd2773400ac6d537a23361e9361",
+        "gitBlob": "5165c2468e00fcd95cc05bbb3d1b82367286ef46"
+      }
+    },
+    {
+      "key": "rollupLocalOverride",
+      "completeLiteralValuePreserved": true,
+      "derivedJsonIdentity": {
+        "bytes": 85,
+        "sha256": "cc4de1ba0ef5fdc57c752d968cf7938bf5f1c1b58715b9efa7dc8fa53c2943b3",
+        "gitBlob": "f3fc63df97ee09a0ad4c53d7ffe32cd96e9c851f"
+      }
+    },
+    {
+      "key": "rendererDerivedConfig",
+      "completeLiteralValuePreserved": true,
+      "derivedJsonIdentity": {
+        "bytes": 1182,
+        "sha256": "84a03a6d0354cff64d566f85779c50843a97a7aaa15a9d77587dd6d7c2eae9d9",
+        "gitBlob": "9f2f9b23f93bb52e77992427474b73b4cefb3c28"
+      }
+    },
+    {
+      "key": "materializationReceiptScope",
+      "completeLiteralValuePreserved": true,
+      "derivedJsonIdentity": {
+        "bytes": 2695,
+        "sha256": "1cbace728b28e442efd4e531f3378ba0e9cf1766050ae8cd07944f3fcbfc373f",
+        "gitBlob": "d4777f73d23ab85b3b0a9dc567e76cb84942072d"
+      }
+    },
+    {
+      "key": "acceptedCombinedGreen",
+      "completeLiteralValuePreserved": true,
+      "derivedJsonIdentity": {
+        "bytes": 4,
+        "sha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+        "gitBlob": "ec747fa47ddb81e9bf2d282011ed32aa4c59f932"
+      }
+    },
+    {
+      "key": "behavioralAttempts",
+      "completeLiteralValuePreserved": true,
+      "derivedJsonIdentity": {
+        "bytes": 101,
+        "sha256": "7db887ad42462b6b378bd55283c6680d46dec52231a9eb95887365a02134b422",
+        "gitBlob": "1435812b0ebe1ab8fc21c2c51250b54b6c0fe109"
+      }
+    },
+    {
+      "key": "timing",
+      "completeLiteralValuePreserved": true,
+      "derivedJsonIdentity": {
+        "bytes": 103,
+        "sha256": "a1cc1be1f6e52cae92fa3f260a1dbaa22805572504b69acf7f7273c045676613",
+        "gitBlob": "c0db8c2a6974a9c2c7c019d415825f82d5e554b1"
+      }
+    },
+    {
+      "key": "executionScope",
+      "completeLiteralValuePreserved": true,
+      "derivedJsonIdentity": {
+        "bytes": 383,
+        "sha256": "4abe3ec8b5b98df8e50c3e39c0b3fb66f6b83bd059518709eed06c2b0909d39c",
+        "gitBlob": "778f8b3b2d2d0f89eb9e915281c989840c182efa"
+      }
+    },
+    {
+      "key": "authorshipGate",
+      "completeLiteralValuePreserved": true,
+      "derivedJsonIdentity": {
+        "bytes": 1078,
+        "sha256": "ef89993e9f473ee8c687a2e8e58fdad3f0070aa0df99665d6e3287c22eadaee1",
+        "gitBlob": "b145e873b92df5233c65c5270b82abb0bc804791"
+      }
+    },
+    {
+      "key": "historicalRecoveryProvenance",
+      "completeLiteralValuePreserved": true,
+      "derivedJsonIdentity": {
+        "bytes": 767,
+        "sha256": "e9e27b7f60b981b98078b6e8e0ad0954464f888d814fd10bf4cf60fdd2c42290",
+        "gitBlob": "4d22dec7e345a62aa71521da93cf6cb0d771bc7e"
+      }
+    },
+    {
+      "key": "historicalTestMaterialization",
+      "completeLiteralValuePreserved": true,
+      "derivedJsonIdentity": {
+        "bytes": 7161,
+        "sha256": "f0e07e1bbcd44bbf8209e11f2c9d0bf88380360bceef141a1be921e794a4490a",
+        "gitBlob": "c7dd125e3f3c946c85bc828d1f7dbd0db51c7578"
+      }
+    },
+    {
+      "key": "historicalEvidenceBodies",
+      "completeLiteralValuePreserved": true,
+      "derivedJsonIdentity": {
+        "bytes": 32141,
+        "sha256": "0a520d6fe65e22cf262b35b9e2e5cf962d4c9ce231d7734001bdf3e8a427587d",
+        "gitBlob": "e34bac483c176635d318045832a91ae99c1f16d7"
+      }
+    },
+    {
+      "key": "historicalPredictionCorrection",
+      "completeLiteralValuePreserved": true,
+      "derivedJsonIdentity": {
+        "bytes": 2285,
+        "sha256": "8495fd2a39e1f77be0d00b5bc7e69106db2ed07ac3f3315fd50478b3942a452d",
+        "gitBlob": "c355a46f38b4c6b2ff3ce7e45c4f35b2e497d24f"
+      }
+    },
+    {
+      "key": "correctedControlAuthoredAtUtc",
+      "completeLiteralValuePreserved": true,
+      "derivedJsonIdentity": {
+        "bytes": 26,
+        "sha256": "2c840c56a13571a588630a4e15a124431381f737907c17cef532f3b6b9e4e844",
+        "gitBlob": "f63b0825ff5ba0c9a7a0a0e183d3a7409350a265"
+      }
+    },
+    {
+      "key": "dataReplicaRecovery",
+      "completeLiteralValuePreserved": true,
+      "derivedJsonIdentity": {
+        "bytes": 15534,
+        "sha256": "25bd4b205ba52a5cfea8a7e80e8f498b042d92da529c65727d982f5110c55347",
+        "gitBlob": "29a526b81c9b71c91851ae0d03ae4bb9175c162f"
+      }
+    },
+    {
+      "key": "postTransportRecoveryProvenance",
+      "completeLiteralValuePreserved": true,
+      "derivedJsonIdentity": {
+        "bytes": 3144,
+        "sha256": "cb2484caf60bfb7e53a44b8188c576f672e7116d301472c93ee73172adcc1564",
+        "gitBlob": "cad498c7b30fc103274c529b7a92e6c8a16cb28f"
+      }
+    },
+    {
+      "key": "postTransportControlAuthoredAtUtc",
+      "completeLiteralValuePreserved": true,
+      "derivedJsonIdentity": {
+        "bytes": 25,
+        "sha256": "e5517acccf37cb1a0f44985edc70311b1ad817ed898668774840916ec9c00c7c",
+        "gitBlob": "91158bfff32c31add3e4f3430cffc2c09cbe574b"
+      }
+    }
+  ],
+  "completeChangedFieldReadbacks": [
+    {
+      "key": "kind",
+      "beforeDataIdentity": {
+        "bytes": 76,
+        "sha256": "5eff11d23fdc0d6f001e2d91c21ede44320472866197e182bc683a77be9a9588",
+        "gitBlob": "0047ec6ac3aeb509ab408f5d912f78e8b118ce6c"
+      },
+      "afterDataIdentity": {
+        "bytes": 108,
+        "sha256": "a23ddfc75f4835ccf0e92a8dc573454c6a887b779afbbabe3007eb56d0b1c5d6",
+        "gitBlob": "518fe970eb17d1fedc9c5a24a6e186cf2dd62fbe"
+      },
+      "identityJoinsProposal": true
+    },
+    {
+      "key": "phase",
+      "beforeDataIdentity": {
+        "bytes": 5,
+        "sha256": "4bc9274d8758b867e8c071a6082c68a2eb1668fc5ad34f631f96bf94f354c1e1",
+        "gitBlob": "03fa49738bd672cc5ef76bbaa11a2f6545761fb6"
+      },
+      "afterDataIdentity": {
+        "bytes": 7,
+        "sha256": "7f3e916bf628c503cac5f6babcf2dc37b7c8f2e7e8350e0e2a77c80caee95765",
+        "gitBlob": "d151d1e95870ed8a809643bf00ca34d569f56759"
+      },
+      "identityJoinsProposal": true
+    },
+    {
+      "key": "bindingLocalPath",
+      "beforeDataIdentity": {
+        "bytes": 75,
+        "sha256": "1c31d4bc819cc6c614e001c086a526eadd2957f920a26bcd668c06a898da251c",
+        "gitBlob": "211b51ecd4c1f7b1fbfc284d123a0d2c722a10d6"
+      },
+      "afterDataIdentity": {
+        "bytes": 77,
+        "sha256": "43e6a15a5fb36caadd193b19b382f6e602d9f4b2fc672fcd9780fb5860901bc6",
+        "gitBlob": "99f722b22702895c4f5a0fd51e0672e0610f6ab5"
+      },
+      "identityJoinsProposal": true
+    },
+    {
+      "key": "publishedSubject",
+      "beforeDataIdentity": {
+        "bytes": 241,
+        "sha256": "d3819e95821a75375bc0575249b03faf72c16fccd3072a232a9fb5fc05d42277",
+        "gitBlob": "7651d541424fbd29113a0305b23834b6a481afd5"
+      },
+      "afterDataIdentity": {
+        "bytes": 358,
+        "sha256": "48f2e21e0f09a40a1c3879b7dd2a72c5a9388218b80b473a6327ae1ededd2da6",
+        "gitBlob": "2307508891e9dae3bae09ff381b4845a71e4fe3c"
+      },
+      "identityJoinsProposal": true
+    },
+    {
+      "key": "actualPublishedSubjectReadbackEvidence",
+      "beforeDataIdentity": {
+        "bytes": 312,
+        "sha256": "9058ba684d5367a722a473d514d2137a5d5aa9b088c75b5a7dbd89d9946b8786",
+        "gitBlob": "ee56c654f8d000872c4b7d6c253f142c1c4f4e30"
+      },
+      "afterDataIdentity": {
+        "bytes": 313,
+        "sha256": "c6724b69bf8ff64beac9aa9493b30593839c178fe9c12611686b20586ae9a994",
+        "gitBlob": "c8080eee1ee3c06f1a4af9e4d822bfc3637e14ae"
+      },
+      "identityJoinsProposal": true
+    },
+    {
+      "key": "acceptedReviewBodies",
+      "beforeDataIdentity": {
+        "bytes": 4894302,
+        "sha256": "de270bcaba23b8b74ff7404336da495542ba03503a90d866f26f9f466710ee39",
+        "gitBlob": "3bb5820782abea44f12b22ff00f022beac234b7d"
+      },
+      "afterDataIdentity": {
+        "bytes": 6579593,
+        "sha256": "8213a1bedb7a78b87246bc8519fb5897bb2e9b4a4c3754a8662b1e585b6283a2",
+        "gitBlob": "89b8645542767f2cb596957db894f853b3c73148"
+      },
+      "identityJoinsProposal": true
+    },
+    {
+      "key": "beforeSourceOverlay",
+      "beforeDataIdentity": {
+        "bytes": 603020,
+        "sha256": "e3e958a2af853f32ff752b68f132d8ad8f56ea8f827a6244b3d03843b735d1bb",
+        "gitBlob": "255ed64f9cf7dd5ca509ab0ca5b4b2011340a372"
+      },
+      "afterDataIdentity": {
+        "bytes": 620741,
+        "sha256": "d2db1924a39abd1d0309fe37b40f5851a6a32471f39ef322eed9000c9237de7f",
+        "gitBlob": "00cdd5a4c081ae51f63dd27ea79f5c8a598cb6cc"
+      },
+      "identityJoinsProposal": true
+    },
+    {
+      "key": "sourceOverlay",
+      "beforeDataIdentity": {
+        "bytes": 620741,
+        "sha256": "d2db1924a39abd1d0309fe37b40f5851a6a32471f39ef322eed9000c9237de7f",
+        "gitBlob": "00cdd5a4c081ae51f63dd27ea79f5c8a598cb6cc"
+      },
+      "afterDataIdentity": {
+        "bytes": 621017,
+        "sha256": "7972c6cbfdc6e0cb1d48b10ff2717b7cacdace5f0906db69244d44dad16b2db0",
+        "gitBlob": "42e7d5ca57a5fede877c21d09075d1c889a37392"
+      },
+      "identityJoinsProposal": true
+    },
+    {
+      "key": "sourcePins",
+      "beforeDataIdentity": {
+        "bytes": 2118,
+        "sha256": "2a41fa75600693b18d439c27fb9d0159b2ee8428eaa823efa3946fde8ef5461d",
+        "gitBlob": "49c4e372e1ef518894375b0470a2a11acae8d6fb"
+      },
+      "afterDataIdentity": {
+        "bytes": 2118,
+        "sha256": "be4efda1db2b25ddf42a1cd853a5757f99f01ba2397b19c6d6c5b2679f2d80c3",
+        "gitBlob": "a7b24d52b2af56d9b5f16fd2f5266739cb1ee447"
+      },
+      "identityJoinsProposal": true
+    },
+    {
+      "key": "sourceVectorIdentity",
+      "beforeDataIdentity": {
+        "bytes": 143,
+        "sha256": "b9ab7381bcd05456ae5a749480c4744c57d55f6d1efc5d7b70f4066486a4443b",
+        "gitBlob": "42e1c724f39dd25414e5515277aa90ccf1350b51"
+      },
+      "afterDataIdentity": {
+        "bytes": 143,
+        "sha256": "d9ef0653f0569b1be52efd254c9bcc331a95793e3573cc9dd961dbb3b12a178c",
+        "gitBlob": "fbabcd3472ab79b3c2ad0cfa262b29dfca644ea6"
+      },
+      "identityJoinsProposal": true
+    },
+    {
+      "key": "materializePaths",
+      "beforeDataIdentity": {
+        "bytes": 149,
+        "sha256": "960daffbe651fb561b6d1b3b4169dfcd668963395c04d8cae3e6099d39bc46ce",
+        "gitBlob": "c192f2fef77a1511a0aa66603a48341b123f6136"
+      },
+      "afterDataIdentity": {
+        "bytes": 221,
+        "sha256": "af8df1d7588901fbc3ac745260e3956ed9df29db4e11065138f8ecde492c2da6",
+        "gitBlob": "7d078f34e5dc884990afc4d630a2886ce194f85b"
+      },
+      "identityJoinsProposal": true
+    },
+    {
+      "key": "acceptedCombinedRed",
+      "beforeDataIdentity": {
+        "bytes": 4,
+        "sha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+        "gitBlob": "ec747fa47ddb81e9bf2d282011ed32aa4c59f932"
+      },
+      "afterDataIdentity": {
+        "bytes": 153396,
+        "sha256": "df12c6508242070cad9a850166bbf4e49ac61a16c91c76d7f327f0ccedc9e46b",
+        "gitBlob": "4ff86a7c9c12a333422b1135ee4d6df594932a29"
+      },
+      "identityJoinsProposal": true
+    },
+    {
+      "key": "producerR2ReviewedAndPublished",
+      "beforeDataIdentity": {
+        "bytes": 5,
+        "sha256": "fcbcf165908dd18a9e49f7ff27810176db8e9f63b4352213741664245224f8aa",
+        "gitBlob": "02e4a84d62c4b0fe9cca60bba7b9799f78f1f7ed"
+      },
+      "afterDataIdentity": {
+        "bytes": 4,
+        "sha256": "b5bea41b6c623f7c09f1bf24dcae58ebab3c0cdd90ad966bc43a45b44867e12b",
+        "gitBlob": "f32a5804e292d30bedf68f62d32fb75d87e99fd9"
+      },
+      "identityJoinsProposal": true
+    },
+    {
+      "key": "producerActualReadbackAccepted",
+      "beforeDataIdentity": {
+        "bytes": 5,
+        "sha256": "fcbcf165908dd18a9e49f7ff27810176db8e9f63b4352213741664245224f8aa",
+        "gitBlob": "02e4a84d62c4b0fe9cca60bba7b9799f78f1f7ed"
+      },
+      "afterDataIdentity": {
+        "bytes": 4,
+        "sha256": "b5bea41b6c623f7c09f1bf24dcae58ebab3c0cdd90ad966bc43a45b44867e12b",
+        "gitBlob": "f32a5804e292d30bedf68f62d32fb75d87e99fd9"
+      },
+      "identityJoinsProposal": true
+    },
+    {
+      "key": "draftState",
+      "beforeDataIdentity": {
+        "bytes": 593,
+        "sha256": "a863cb6d4f589dc6d1aa4e38691ea944f200f642cca29912444ecbe14afb0e76",
+        "gitBlob": "4a0087083de026e90ec024e1bfe58eeb83b38430"
+      },
+      "afterDataIdentity": {
+        "bytes": 940,
+        "sha256": "e2dcb21b907714090b6164044bbcc01ed59c43558cbec69b74df81ed2a6aaf8f",
+        "gitBlob": "45a97999d18753ca75e8cc80307ba7220bf161f8"
+      },
+      "identityJoinsProposal": true
+    },
+    {
+      "key": "historicalBeforeSourceOverlayQualification",
+      "beforeDataIdentity": {
+        "bytes": 289,
+        "sha256": "ccf304331d5d38bee509ee24cdeacb67c471cdc26dd02ccceccad9a2a20bc22d",
+        "gitBlob": "7ba2be46b813d65b02be5c59d33effadda3d8d80"
+      },
+      "afterDataIdentity": {
+        "bytes": 411,
+        "sha256": "0882ba5ecee6146748f0a7f843a5be0c2c4b2dbbdd4df0e047b2bd32767445eb",
+        "gitBlob": "54c3832f18705d67db43a7f8e814f0624f5328c9"
+      },
+      "identityJoinsProposal": true
+    }
+  ],
+  "completeInverse": {
+    "restoresEntireBaselineBytes": true,
+    "identity": {
+      "bytes": 6399172,
+      "sha256": "be265da9b130091d251295f937a7ab09b1db0e03f2c4a02d985839134e0379ec",
+      "gitBlob": "9f9ddcf0f9f62cce1a31f204ae786a8e2d3d2267"
+    },
+    "codec": "Restore exactly the 16 changed values from full baseline, remove exactly the two added keys, preserve key order; serialize two-space JSON plus terminal LF."
+  },
+  "fieldIdentityCodec": "Complete individual JSON values serialized compactly with JSON.stringify in preserved key order. These field identities are derived data identities, not standalone Git blobs.",
+  "reviewRecordPreservation": {
+    "inheritedRecords": 58,
+    "inheritedCompleteBodyBytes": 4529571,
+    "original58RecordsLiteralIdentical": true,
+    "appendedRecords": 19,
+    "appendedCompleteBodyBytes": 1563886,
+    "totalRecords": 77,
+    "totalCompleteBodyBytes": 6093457,
+    "allRolesUnique": true,
+    "allFullBodiesReadAndRehashed": true
+  },
+  "completeReviewBodyReadbacks": [
+    {
+      "ordinal": 1,
+      "role": "freshBootstrapGuardActualReview",
+      "identity": {
+        "bytes": 32514,
+        "sha256": "90810a8b4e1e41f0e93305fa8eaf217f42becc9d48d2c3289f28120ba25c0be1",
+        "gitBlob": "6253ffe549fb6d93c13e955ddc94b13de74c4075"
+      },
+      "fullBodyReadAndRehashed": true,
+      "identityMatches": true,
+      "inherited": true,
+      "entireInheritedRecordLiteralIdentical": true
+    },
+    {
+      "ordinal": 2,
+      "role": "freshSdkIndependentReview",
+      "identity": {
+        "bytes": 84719,
+        "sha256": "3b4817d8e35e4bdb98870c9847c5c0fc040f943c20707111c4a2e27de6c1457e",
+        "gitBlob": "24edbc3d30da325e938c72dea556ac5651858ae6"
+      },
+      "fullBodyReadAndRehashed": true,
+      "identityMatches": true,
+      "inherited": true,
+      "entireInheritedRecordLiteralIdentical": true
+    },
+    {
+      "ordinal": 3,
+      "role": "freshMcpIndependentReview",
+      "identity": {
+        "bytes": 155439,
+        "sha256": "60ab2ac59131729416c29a9fadff21b94a631f089e62ce845cd9becf6fc503bd",
+        "gitBlob": "75f89c1560d381f1ada8b67ab912bfb8bf9f1239"
+      },
+      "fullBodyReadAndRehashed": true,
+      "identityMatches": true,
+      "inherited": true,
+      "entireInheritedRecordLiteralIdentical": true
+    },
+    {
+      "ordinal": 4,
+      "role": "crossR1ActualPublicationReadback",
+      "identity": {
+        "bytes": 24775,
+        "sha256": "885af8f2f5e47cb57a9164f70bee403816840b91dc95c6b0ce146ce1d3620bc1",
+        "gitBlob": "2e863fe3aa95696dc2b242dc5f9195a1f46f4a34"
+      },
+      "fullBodyReadAndRehashed": true,
+      "identityMatches": true,
+      "inherited": true,
+      "entireInheritedRecordLiteralIdentical": true
+    },
+    {
+      "ordinal": 5,
+      "role": "crossTestGuardR2",
+      "identity": {
+        "bytes": 35700,
+        "sha256": "f017d731ccb03e0fbbbc1ea7fa8932629bf579e9b8ae062802a62e7765d06e01",
+        "gitBlob": "7fed0e34689f80f55dc49161afb13d939b680ee7"
+      },
+      "fullBodyReadAndRehashed": true,
+      "identityMatches": true,
+      "inherited": true,
+      "entireInheritedRecordLiteralIdentical": true
+    },
+    {
+      "ordinal": 6,
+      "role": "crossTestParityR2",
+      "identity": {
+        "bytes": 98112,
+        "sha256": "111540b83687b7e8cd9cdf10dd7ee9881a1e9c20828409157118dcaff3116156",
+        "gitBlob": "b55e84be7a38ecf556003cfc531773436b041884"
+      },
+      "fullBodyReadAndRehashed": true,
+      "identityMatches": true,
+      "inherited": true,
+      "entireInheritedRecordLiteralIdentical": true
+    },
+    {
+      "ordinal": 7,
+      "role": "crossTestActualPublicationReadback",
+      "identity": {
+        "bytes": 56894,
+        "sha256": "a6a75b27f4f85d17e7ec303af47fd307368055db285405c2adcba16cc4894e5a",
+        "gitBlob": "6f8dbb18844f8949e75e144452d9b13decad7b48"
+      },
+      "fullBodyReadAndRehashed": true,
+      "identityMatches": true,
+      "inherited": true,
+      "entireInheritedRecordLiteralIdentical": true
+    },
+    {
+      "ordinal": 8,
+      "role": "crossActualRedGuard",
+      "identity": {
+        "bytes": 140038,
+        "sha256": "4c7461b5f39deaa940c1022f6452463242e504512039d272b193e996324d7774",
+        "gitBlob": "2456b180544745287f7dd6dcf497d068816d9d4a"
+      },
+      "fullBodyReadAndRehashed": true,
+      "identityMatches": true,
+      "inherited": true,
+      "entireInheritedRecordLiteralIdentical": true
+    },
+    {
+      "ordinal": 9,
+      "role": "crossActualRedPrimarySemantic",
+      "identity": {
+        "bytes": 190694,
+        "sha256": "9258ff64a8be1e3723c4309a8fe4ff1b807c2a2b45f98756bb29cb773039c25c",
+        "gitBlob": "b1d7d6c148d0f2b11e72aa728a03a64091590838"
+      },
+      "fullBodyReadAndRehashed": true,
+      "identityMatches": true,
+      "inherited": true,
+      "entireInheritedRecordLiteralIdentical": true
+    },
+    {
+      "ordinal": 10,
+      "role": "crossActualRedSemanticClosure",
+      "identity": {
+        "bytes": 86249,
+        "sha256": "b43ed4a88bc5b714d67e857407448267617875c88e3441612d88c013d85d6aeb",
+        "gitBlob": "ffc5a83973da41cd9e9b9e780b302b0cb16704db"
+      },
+      "fullBodyReadAndRehashed": true,
+      "identityMatches": true,
+      "inherited": true,
+      "entireInheritedRecordLiteralIdentical": true
+    },
+    {
+      "ordinal": 11,
+      "role": "crossProducerGuardR2",
+      "identity": {
+        "bytes": 121044,
+        "sha256": "438d5bafc103e0525fca049b64cf8d4b02c2216188e4321784487195ce481339",
+        "gitBlob": "e60f5b0ecb7b5aa4b86b0dc528745ed9f5d41637"
+      },
+      "fullBodyReadAndRehashed": true,
+      "identityMatches": true,
+      "inherited": true,
+      "entireInheritedRecordLiteralIdentical": true
+    },
+    {
+      "ordinal": 12,
+      "role": "crossProducerParityR2",
+      "identity": {
+        "bytes": 109607,
+        "sha256": "da402e2bc50d090cc5b2a57ff1eac0dc5d6767b77876d97f301937db7197536b",
+        "gitBlob": "fb8220fb8c074cf7225cadc4fba9b6568d45fe2f"
+      },
+      "fullBodyReadAndRehashed": true,
+      "identityMatches": true,
+      "inherited": true,
+      "entireInheritedRecordLiteralIdentical": true
+    },
+    {
+      "ordinal": 13,
+      "role": "crossProducerActualPublicationReadback",
+      "identity": {
+        "bytes": 31670,
+        "sha256": "5b50bfd38e108852888c3e5bb0f41fd2f3d07340c30a4cf3fcb0340b7890b0b4",
+        "gitBlob": "42db2a5f8e3d4d6fbaf7921ce9fd07ef24678e66"
+      },
+      "fullBodyReadAndRehashed": true,
+      "identityMatches": true,
+      "inherited": true,
+      "entireInheritedRecordLiteralIdentical": true
+    },
+    {
+      "ordinal": 14,
+      "role": "crossActualGreenFullGuard",
+      "identity": {
+        "bytes": 209270,
+        "sha256": "b56c4d2a4328f11a679a73de100d13af4ec7e8ccc6fe8f6333de98dec4d2d329",
+        "gitBlob": "848e6efd0b924e4415848551cfea034f22b84221"
+      },
+      "fullBodyReadAndRehashed": true,
+      "identityMatches": true,
+      "inherited": true,
+      "entireInheritedRecordLiteralIdentical": true
+    },
+    {
+      "ordinal": 15,
+      "role": "crossActualGreenFinalSemantic",
+      "identity": {
+        "bytes": 140647,
+        "sha256": "74936b31eeefd735ec329d286ae145b2eddb16fa025e5fb8cc6f715c5b133fd3",
+        "gitBlob": "4a49adfedbc84301e88d524d71b766a7ad785d14"
+      },
+      "fullBodyReadAndRehashed": true,
+      "identityMatches": true,
+      "inherited": true,
+      "entireInheritedRecordLiteralIdentical": true
+    },
+    {
+      "ordinal": 16,
+      "role": "crossActualGreenFullEnvelope",
+      "identity": {
+        "bytes": 166444,
+        "sha256": "c1ec7ed1270235d520b436e28cbdeb0988bc1af4c8473b5226e34b081b305981",
+        "gitBlob": "46b7d646a2845f544c5d959bb9bf068c2bbbc49b"
+      },
+      "fullBodyReadAndRehashed": true,
+      "identityMatches": true,
+      "inherited": true,
+      "entireInheritedRecordLiteralIdentical": true
+    },
+    {
+      "ordinal": 17,
+      "role": "crossOriginalValidationIncompleteGuard",
+      "identity": {
+        "bytes": 146237,
+        "sha256": "22813b7c3fa165d506e7eb487b5be229ea7910d4208c73a930a9621978a4703e",
+        "gitBlob": "736df253a457b9a7260febbd74071ed2615be2bd"
+      },
+      "fullBodyReadAndRehashed": true,
+      "identityMatches": true,
+      "inherited": true,
+      "entireInheritedRecordLiteralIdentical": true
+    },
+    {
+      "ordinal": 18,
+      "role": "crossOriginalValidationIncompleteParity",
+      "identity": {
+        "bytes": 169081,
+        "sha256": "0863878d6085e61a91e8f96d970bdb9cd83a3ea6ce0a174c80bf0a0eb5cd9175",
+        "gitBlob": "7567c92bcc194c2de5e26abfed0a8604522fe589"
+      },
+      "fullBodyReadAndRehashed": true,
+      "identityMatches": true,
+      "inherited": true,
+      "entireInheritedRecordLiteralIdentical": true
+    },
+    {
+      "ordinal": 19,
+      "role": "isolatedRecoveryR1Guard",
+      "identity": {
+        "bytes": 167262,
+        "sha256": "9375e23aeba4b871ad016c82c76ae539f769bea1a5f2ab72c63a8d615af24585",
+        "gitBlob": "0fdbe9a84daa354332d61c13a532090199d50c88"
+      },
+      "fullBodyReadAndRehashed": true,
+      "identityMatches": true,
+      "inherited": true,
+      "entireInheritedRecordLiteralIdentical": true
+    },
+    {
+      "ordinal": 20,
+      "role": "isolatedRecoveryR1Parity",
+      "identity": {
+        "bytes": 133047,
+        "sha256": "d94fb2464c47195fadfcaf311732025c578e8084b9b7ef701dd52c76e6aeca77",
+        "gitBlob": "97bfd42e46bc1dd2160f8c9826de68219303b67d"
+      },
+      "fullBodyReadAndRehashed": true,
+      "identityMatches": true,
+      "inherited": true,
+      "entireInheritedRecordLiteralIdentical": true
+    },
+    {
+      "ordinal": 21,
+      "role": "isolatedRecoveryR1CompositeActualPublicationReadback",
+      "identity": {
+        "bytes": 231365,
+        "sha256": "393a6ee912d88ff0faf979c8229a705578e1bd6723a3cf58769449205dbe2335",
+        "gitBlob": "e695dd8aca0559256e01175166317ab905f467a4"
+      },
+      "fullBodyReadAndRehashed": true,
+      "identityMatches": true,
+      "inherited": true,
+      "entireInheritedRecordLiteralIdentical": true
+    },
+    {
+      "ordinal": 22,
+      "role": "combinedR1RootActual",
+      "identity": {
+        "bytes": 25481,
+        "sha256": "54c837bf45a6318cf43452ba3b6e66e341d7c4153a1d4d5d93a323bb24b9196d",
+        "gitBlob": "72db8984a98696287225899a3bf0c31bfd57a71f"
+      },
+      "fullBodyReadAndRehashed": true,
+      "identityMatches": true,
+      "inherited": true,
+      "entireInheritedRecordLiteralIdentical": true
+    },
+    {
+      "ordinal": 23,
+      "role": "combinedR1IndependentActual",
+      "identity": {
+        "bytes": 80224,
+        "sha256": "aa8a8c7f6fa8b49593a9e233ae8ae9b0eb4848365915dde71bb7cb81b19e1f4e",
+        "gitBlob": "0669feaf0e8759ad2fd4330efe315c5540b55252"
+      },
+      "fullBodyReadAndRehashed": true,
+      "identityMatches": true,
+      "inherited": true,
+      "entireInheritedRecordLiteralIdentical": true
+    },
+    {
+      "ordinal": 24,
+      "role": "combinedTestGuardR2",
+      "identity": {
+        "bytes": 25359,
+        "sha256": "dc7aebf5607cb8150b04c23b5e5a36f83735e5081ba18b78586ef30283d77843",
+        "gitBlob": "4d3004a5c76544dc8e47b842e981f22e7fbcdcc3"
+      },
+      "fullBodyReadAndRehashed": true,
+      "identityMatches": true,
+      "inherited": true,
+      "entireInheritedRecordLiteralIdentical": true
+    },
+    {
+      "ordinal": 25,
+      "role": "combinedTestRendererR2",
+      "identity": {
+        "bytes": 97016,
+        "sha256": "9b67a3fa8a4fa07231f986881698b13ffc75c2171f18ed9f919a30e7875d145b",
+        "gitBlob": "6580a4f45747c0f079e37e0f3db042eca6c33c9e"
+      },
+      "fullBodyReadAndRehashed": true,
+      "identityMatches": true,
+      "inherited": true,
+      "entireInheritedRecordLiteralIdentical": true
+    },
+    {
+      "ordinal": 26,
+      "role": "combinedTestRootActual",
+      "identity": {
+        "bytes": 29341,
+        "sha256": "fe81d1f6216e3aa89c456d22cd0a8c7ff735fb255902cfc99e915fae030875e8",
+        "gitBlob": "19ae837ffe2a9b1caaa2496cb08ac24841900752"
+      },
+      "fullBodyReadAndRehashed": true,
+      "identityMatches": true,
+      "inherited": true,
+      "entireInheritedRecordLiteralIdentical": true
+    },
+    {
+      "ordinal": 27,
+      "role": "combinedTestIndependentActual",
+      "identity": {
+        "bytes": 57841,
+        "sha256": "a8736b98140b38c92578210fd9064f6952a96e3ea07df5471d9f88b11849f37e",
+        "gitBlob": "156f7b1977379568bcd7aa487be21d7ef95880f1"
+      },
+      "fullBodyReadAndRehashed": true,
+      "identityMatches": true,
+      "inherited": true,
+      "entireInheritedRecordLiteralIdentical": true
+    },
+    {
+      "ordinal": 28,
+      "role": "rendererInitialInstalledAdmission",
+      "identity": {
+        "bytes": 156717,
+        "sha256": "76e5d3440254a5e778eb700eb306251a779d0f5a8c6dfe8c47e740895b316154",
+        "gitBlob": "a342571a13ce31b46e9782356cc23527c61ee644"
+      },
+      "fullBodyReadAndRehashed": true,
+      "identityMatches": true,
+      "inherited": true,
+      "entireInheritedRecordLiteralIdentical": true
+    },
+    {
+      "ordinal": 29,
+      "role": "rendererAdditionalInstalledAdmission",
+      "identity": {
+        "bytes": 167326,
+        "sha256": "c880352c1d6cc0ac0c2c37bfb4d18d3a9718170298e814cb884f67fbc7e0413b",
+        "gitBlob": "e37de06a48b2d958fbd54de599ca5f933e3c23b0"
+      },
+      "fullBodyReadAndRehashed": true,
+      "identityMatches": true,
+      "inherited": true,
+      "entireInheritedRecordLiteralIdentical": true
+    },
+    {
+      "ordinal": 30,
+      "role": "rendererCombinedFeasibility",
+      "identity": {
+        "bytes": 53474,
+        "sha256": "1ce3d9e96b5a8a100bccb1caa7bb1ab2ee8f234cb2afd35e940eb298c64c1238",
+        "gitBlob": "6ee0aadb457acd58e35df41c8fa8492ff6654933"
+      },
+      "fullBodyReadAndRehashed": true,
+      "identityMatches": true,
+      "inherited": true,
+      "entireInheritedRecordLiteralIdentical": true
+    },
+    {
+      "ordinal": 31,
+      "role": "rendererPathDataAdmission",
+      "identity": {
+        "bytes": 8151,
+        "sha256": "9ceef73e09588b59852323fba2d2396cd83b2a524849a8cfb20b4bb278daa323",
+        "gitBlob": "d688c295815c064fad5e6d4f3a7481c083c6cd06"
+      },
+      "fullBodyReadAndRehashed": true,
+      "identityMatches": true,
+      "inherited": true,
+      "entireInheritedRecordLiteralIdentical": true
+    },
+    {
+      "ordinal": 32,
+      "role": "combinedSemanticSourceGuide",
+      "identity": {
+        "bytes": 13467,
+        "sha256": "fd44402a9555871ddc2d26aa4ff87337c2591995f78f6642eab63142e8645254",
+        "gitBlob": "969d58ae7fb9788b0266ff6cefd8c9cd2aad7231"
+      },
+      "fullBodyReadAndRehashed": true,
+      "identityMatches": true,
+      "inherited": true,
+      "entireInheritedRecordLiteralIdentical": true
+    },
+    {
+      "ordinal": 33,
+      "role": "combinedWholeTestsR2Proposal",
+      "identity": {
+        "bytes": 24017,
+        "sha256": "1532df713cd8c75025fccaaecbc7041e05f3ced87d1894f041a97a01e6d8f9a1",
+        "gitBlob": "061cb0545b58d847ef69b05baa2b140065456730"
+      },
+      "fullBodyReadAndRehashed": true,
+      "identityMatches": true,
+      "inherited": true,
+      "entireInheritedRecordLiteralIdentical": true
+    },
+    {
+      "ordinal": 34,
+      "role": "correctedTitleR1GuardReview",
+      "identity": {
+        "bytes": 59821,
+        "sha256": "42f0bc02651b061669e9b54eb572561904ec33098ad15257c4f0cb3ca91ef5b3",
+        "gitBlob": "097d04fa9d0fa693c31a3c1d14bc47758defc760"
+      },
+      "fullBodyReadAndRehashed": true,
+      "identityMatches": true,
+      "inherited": true,
+      "entireInheritedRecordLiteralIdentical": true
+    },
+    {
+      "ordinal": 35,
+      "role": "correctedTitleR1SemanticReview",
+      "identity": {
+        "bytes": 72429,
+        "sha256": "b158a9a257fe0ae01af6741630aeac2d37de0be52264902df0972297b12e5f5a",
+        "gitBlob": "ca250c5c83647d5d6956d205c5ceb9791b9634ea"
+      },
+      "fullBodyReadAndRehashed": true,
+      "identityMatches": true,
+      "inherited": true,
+      "entireInheritedRecordLiteralIdentical": true
+    },
+    {
+      "ordinal": 36,
+      "role": "correctedTitleR1BindingReview",
+      "identity": {
+        "bytes": 61763,
+        "sha256": "d24e61f10818e156fec7eadccd7f9d04607bd2f6e0095b72b070af2ef9ae3406",
+        "gitBlob": "c1c1ace034643b96bf4cd4e9234a87dbd28822bc"
+      },
+      "fullBodyReadAndRehashed": true,
+      "identityMatches": true,
+      "inherited": true,
+      "entireInheritedRecordLiteralIdentical": true
+    },
+    {
+      "ordinal": 37,
+      "role": "correctedTitleR1RootActual",
+      "identity": {
+        "bytes": 20615,
+        "sha256": "771c21e1e7f582d6983e2070bf93602ad3d24cfd4c737bdb1dda3e71ae14c255",
+        "gitBlob": "3985861870b7ebd448978d83e4ea7577c4d0eb58"
+      },
+      "fullBodyReadAndRehashed": true,
+      "identityMatches": true,
+      "inherited": true,
+      "entireInheritedRecordLiteralIdentical": true
+    },
+    {
+      "ordinal": 38,
+      "role": "correctedTitleR1IndependentActual",
+      "identity": {
+        "bytes": 74113,
+        "sha256": "ec3023dae83daed61ef312d10d106c73aa222b2e0016061a0b627383f14779ff",
+        "gitBlob": "ab99273cdb4da1f27d6650242755cb24e5d0c3a6"
+      },
+      "fullBodyReadAndRehashed": true,
+      "identityMatches": true,
+      "inherited": true,
+      "entireInheritedRecordLiteralIdentical": true
+    },
+    {
+      "ordinal": 39,
+      "role": "historicalTestMaterializationGuard",
+      "identity": {
+        "bytes": 126054,
+        "sha256": "34a3bb0df97616ea1b93524a628f320594f1700ee158617b04258c98d610cb9c",
+        "gitBlob": "62fda73c295b6fa1467a121685e4daa85a686869"
+      },
+      "fullBodyReadAndRehashed": true,
+      "identityMatches": true,
+      "inherited": true,
+      "entireInheritedRecordLiteralIdentical": true
+    },
+    {
+      "ordinal": 40,
+      "role": "historicalTestMaterializationParity",
+      "identity": {
+        "bytes": 113999,
+        "sha256": "48dc8af6e125667c960df0d8fcead2c8a82428d8fd8b45294a1465071267ced9",
+        "gitBlob": "eeb4a37b7967a387bf01c16337788fc75f3bbb6e"
+      },
+      "fullBodyReadAndRehashed": true,
+      "identityMatches": true,
+      "inherited": true,
+      "entireInheritedRecordLiteralIdentical": true
+    },
+    {
+      "ordinal": 41,
+      "role": "historicalTestMaterializationRootActual",
+      "identity": {
+        "bytes": 68230,
+        "sha256": "8cd9f33fc3afeba9e1b9843620022272a850aef36a740a87e3147b9df89c3737",
+        "gitBlob": "1a90d32206b2b31ae3e3dba8e2edde55349851c7"
+      },
+      "fullBodyReadAndRehashed": true,
+      "identityMatches": true,
+      "inherited": true,
+      "entireInheritedRecordLiteralIdentical": true
+    },
+    {
+      "ordinal": 42,
+      "role": "historicalTestMaterializationIndependentActual",
+      "identity": {
+        "bytes": 115641,
+        "sha256": "fcfa1571b7ea385fea409dcbe5d5adfe2e9b8b60309a6b331c439feb26704790",
+        "gitBlob": "374fc9db427cb6bcd3380190e836717fa661fe3f"
+      },
+      "fullBodyReadAndRehashed": true,
+      "identityMatches": true,
+      "inherited": true,
+      "entireInheritedRecordLiteralIdentical": true
+    },
+    {
+      "ordinal": 43,
+      "role": "originalSixTitlePredictionDiagnosis",
+      "identity": {
+        "bytes": 127784,
+        "sha256": "7deff97792b556dea4da2ed2e1c10fc158445d51e4343171f2e813ff242b6196",
+        "gitBlob": "b80e069b705d41405733ff4fd40caa3ad2a753e6"
+      },
+      "fullBodyReadAndRehashed": true,
+      "identityMatches": true,
+      "inherited": true,
+      "entireInheritedRecordLiteralIdentical": true
+    },
+    {
+      "ordinal": 44,
+      "role": "postTransportRecoveryR1RootReview",
+      "identity": {
+        "bytes": 22893,
+        "sha256": "c69c619dd888465c09a133f6145449b5e8db37b2892ccf954e70c333aef97206",
+        "gitBlob": "569e0fd96a6408d1ada2c5c0894ca2512e7564e1"
+      },
+      "fullBodyReadAndRehashed": true,
+      "identityMatches": true,
+      "inherited": true,
+      "entireInheritedRecordLiteralIdentical": true
+    },
+    {
+      "ordinal": 45,
+      "role": "postTransportRecoveryR1GuardReview",
+      "identity": {
+        "bytes": 32255,
+        "sha256": "fe3306e57dd3bc667cf1692a937fcbc41184d1350bee2daf4f23e203e75e351a",
+        "gitBlob": "327c0e80e9f04a2515bd4655acc4513aa67ba689"
+      },
+      "fullBodyReadAndRehashed": true,
+      "identityMatches": true,
+      "inherited": true,
+      "entireInheritedRecordLiteralIdentical": true
+    },
+    {
+      "ordinal": 46,
+      "role": "postTransportRecoveryR1BindingReview",
+      "identity": {
+        "bytes": 47731,
+        "sha256": "4a924e4f9cc8b1bea52e2f359a0932e64c95e2211001f9ce2150c48cfd526323",
+        "gitBlob": "1675502277a40634814c524137687895b88006da"
+      },
+      "fullBodyReadAndRehashed": true,
+      "identityMatches": true,
+      "inherited": true,
+      "entireInheritedRecordLiteralIdentical": true
+    },
+    {
+      "ordinal": 47,
+      "role": "postTransportRecoveryR1SemanticReview",
+      "identity": {
+        "bytes": 47224,
+        "sha256": "8c30827b94fff969551d37eaaec4e9e4756a126cff645bc677c19df10547bc40",
+        "gitBlob": "e875f6847ac7f80d647cfd9080b28e31968c8358"
+      },
+      "fullBodyReadAndRehashed": true,
+      "identityMatches": true,
+      "inherited": true,
+      "entireInheritedRecordLiteralIdentical": true
+    },
+    {
+      "ordinal": 48,
+      "role": "postTransportRecoveryR1RootActual",
+      "identity": {
+        "bytes": 32853,
+        "sha256": "4b353847c949f242095de78453d619f78ec03bca0ccbc87a91fb6c90cc579754",
+        "gitBlob": "99812b3efa965d202d67feca8b5d7948e0800b11"
+      },
+      "fullBodyReadAndRehashed": true,
+      "identityMatches": true,
+      "inherited": true,
+      "entireInheritedRecordLiteralIdentical": true
+    },
+    {
+      "ordinal": 49,
+      "role": "postTransportRecoveryR1IndependentActual",
+      "identity": {
+        "bytes": 68306,
+        "sha256": "3e2b87c35227e99abc32e5a95808895a1298df30267994f6278c1c63a806bae9",
+        "gitBlob": "d277c2271e3457882c895e927b76a8a32427f83a"
+      },
+      "fullBodyReadAndRehashed": true,
+      "identityMatches": true,
+      "inherited": true,
+      "entireInheritedRecordLiteralIdentical": true
+    },
+    {
+      "ordinal": 50,
+      "role": "correctedRedIncompleteRootAccounting",
+      "identity": {
+        "bytes": 6076,
+        "sha256": "8cceaba2e0d81fc158541a708f0ae89e0bcbad702db4530b5fa135ce0482e125",
+        "gitBlob": "e483e532de888e7f3698d5d2310d5ddecd2875ee"
+      },
+      "fullBodyReadAndRehashed": true,
+      "identityMatches": true,
+      "inherited": true,
+      "entireInheritedRecordLiteralIdentical": true
+    },
+    {
+      "ordinal": 51,
+      "role": "correctedRedIncompleteGuardReview",
+      "identity": {
+        "bytes": 9251,
+        "sha256": "4f902f51c54b9d0a6db2bb99cc6d267bab21e962d13ec30a4c4ef6762384ce34",
+        "gitBlob": "80a17feff65625c696d35aaee26e3614544cff23"
+      },
+      "fullBodyReadAndRehashed": true,
+      "identityMatches": true,
+      "inherited": true,
+      "entireInheritedRecordLiteralIdentical": true
+    },
+    {
+      "ordinal": 52,
+      "role": "correctedRedIncompleteSemanticReview",
+      "identity": {
+        "bytes": 10310,
+        "sha256": "fb97e622ad21ff840bc781d4ad23a1a3624d2fc4c71d06e22645ded36da21d09",
+        "gitBlob": "ff3ed051ca16e886c0d60248294c99c71643d7ad"
+      },
+      "fullBodyReadAndRehashed": true,
+      "identityMatches": true,
+      "inherited": true,
+      "entireInheritedRecordLiteralIdentical": true
+    },
+    {
+      "ordinal": 53,
+      "role": "correctedRedIncompleteRootActual",
+      "identity": {
+        "bytes": 23920,
+        "sha256": "ac86fb03a9bad33ed0c2555abc7346a3c7e1ec5141b78d24592aeca3cd508938",
+        "gitBlob": "306d9b854656fe560f98620856b4a2e7bc98254c"
+      },
+      "fullBodyReadAndRehashed": true,
+      "identityMatches": true,
+      "inherited": true,
+      "entireInheritedRecordLiteralIdentical": true
+    },
+    {
+      "ordinal": 54,
+      "role": "correctedRedIncompleteIndependentActual",
+      "identity": {
+        "bytes": 67084,
+        "sha256": "981e5a19ff9b2f1891010395c47d1bc470e56ef671195bc4e83c7aeabbf9a56c",
+        "gitBlob": "65be34f4b4d7373c3cc18b9c299fca90e8dddabc"
+      },
+      "fullBodyReadAndRehashed": true,
+      "identityMatches": true,
+      "inherited": true,
+      "entireInheritedRecordLiteralIdentical": true
+    },
+    {
+      "ordinal": 55,
+      "role": "postTransportRecoveryRecommendations",
+      "identity": {
+        "bytes": 27997,
+        "sha256": "9e08049327575391ebfaaf8ff4f41877ac43ebfad8d063a16d31cad41316b664",
+        "gitBlob": "10c383ebb2cb5827fd811d6f0e7ad6a950fbae7f"
+      },
+      "fullBodyReadAndRehashed": true,
+      "identityMatches": true,
+      "inherited": true,
+      "entireInheritedRecordLiteralIdentical": true
+    },
+    {
+      "ordinal": 56,
+      "role": "returnedSourceInputObservation",
+      "identity": {
+        "bytes": 13750,
+        "sha256": "7a217af0f942da5789b6d65962f7c8b3ccd830be96e31f6f3965ae162b9e2e6b",
+        "gitBlob": "0988f7b08ae156529fc7cbc9b37c9d82f405164e"
+      },
+      "fullBodyReadAndRehashed": true,
+      "identityMatches": true,
+      "inherited": true,
+      "entireInheritedRecordLiteralIdentical": true
+    },
+    {
+      "ordinal": 57,
+      "role": "returnedPathObservation",
+      "identity": {
+        "bytes": 2135,
+        "sha256": "d3be601285716e140c0ec98b596ae2e59ba1d286cfbedb4c739a526628cd1b53",
+        "gitBlob": "7063e49185bd288bf32ccd9ca6aead6388679c37"
+      },
+      "fullBodyReadAndRehashed": true,
+      "identityMatches": true,
+      "inherited": true,
+      "entireInheritedRecordLiteralIdentical": true
+    },
+    {
+      "ordinal": 58,
+      "role": "returnedToolCacheObservation",
+      "identity": {
+        "bytes": 8115,
+        "sha256": "f30cd2786b3b6c8ec49440f835f16c5ed0367fb73bc6160f09d5d363409bade7",
+        "gitBlob": "75b276dbcd832a2f496c684a4bbe3f6a9b607da1"
+      },
+      "fullBodyReadAndRehashed": true,
+      "identityMatches": true,
+      "inherited": true,
+      "entireInheritedRecordLiteralIdentical": true
+    },
+    {
+      "ordinal": 59,
+      "role": "postTransportControlsRootActual",
+      "identity": {
+        "bytes": 54354,
+        "sha256": "9a43e5d60a312b823fc6371d80cb53d9d69b09eb89387b21a43d91d4db998d8b",
+        "gitBlob": "9f7e5b993977d82876f291937eecfbad54fa7ec0"
+      },
+      "fullBodyReadAndRehashed": true,
+      "identityMatches": true,
+      "inherited": false,
+      "entireInheritedRecordLiteralIdentical": null
+    },
+    {
+      "ordinal": 60,
+      "role": "postTransportControlsIndependentActual",
+      "identity": {
+        "bytes": 100624,
+        "sha256": "56c645a2d9221b2717eb8e25dfc496b9a31464fac6c297a34dbdeeba68907dff",
+        "gitBlob": "5cbacb781c10f52c5cf5a032f8fdc03c24881d81"
+      },
+      "fullBodyReadAndRehashed": true,
+      "identityMatches": true,
+      "inherited": false,
+      "entireInheritedRecordLiteralIdentical": null
+    },
+    {
+      "ordinal": 61,
+      "role": "postTransportCombinedRedObservedOuter",
+      "identity": {
+        "bytes": 13970,
+        "sha256": "341064fd92ead2afed314db220e095bae77a2b96af47580b30c35f495a0e80cd",
+        "gitBlob": "947cf5276c207149f87d67dd06a175b49c9f1b5b"
+      },
+      "fullBodyReadAndRehashed": true,
+      "identityMatches": true,
+      "inherited": false,
+      "entireInheritedRecordLiteralIdentical": null
+    },
+    {
+      "ordinal": 62,
+      "role": "postTransportCombinedRedRootRuntimeReview",
+      "identity": {
+        "bytes": 50772,
+        "sha256": "b708a3eb026e85f1a733cbb1e4836c7e5cabf571bb3c68fbc74c9ac2a719c882",
+        "gitBlob": "19fcd35a9e8783dfa28c824d23a8df510209ca80"
+      },
+      "fullBodyReadAndRehashed": true,
+      "identityMatches": true,
+      "inherited": false,
+      "entireInheritedRecordLiteralIdentical": null
+    },
+    {
+      "ordinal": 63,
+      "role": "postTransportCombinedRedGuardRuntimeReview",
+      "identity": {
+        "bytes": 261789,
+        "sha256": "d9e6e50a0678babd3d54551af2951fb57825b0fc51fa1e7682def558a52bfd32",
+        "gitBlob": "38bd0eb98cb500274a477c1c02bfef0156bee7d6"
+      },
+      "fullBodyReadAndRehashed": true,
+      "identityMatches": true,
+      "inherited": false,
+      "entireInheritedRecordLiteralIdentical": null
+    },
+    {
+      "ordinal": 64,
+      "role": "postTransportCombinedRedSemanticRuntimeReview",
+      "identity": {
+        "bytes": 229314,
+        "sha256": "2e05bcc76671b35883fc04e072d46e0961c86c2d293de2582e0e0fe0196692da",
+        "gitBlob": "3cddc2bdb141d81c87c97d6059c56278b1118a55"
+      },
+      "fullBodyReadAndRehashed": true,
+      "identityMatches": true,
+      "inherited": false,
+      "entireInheritedRecordLiteralIdentical": null
+    },
+    {
+      "ordinal": 65,
+      "role": "postTransportCombinedRedCompleteLargeBodyJoin",
+      "identity": {
+        "bytes": 8914,
+        "sha256": "e322edbfc50d1706db7838681e2d65abf4648180c4a4da3ba418d94fff5eac44",
+        "gitBlob": "aad388d47bc80c4dd09789ee76238ebd935e8cdd"
+      },
+      "fullBodyReadAndRehashed": true,
+      "identityMatches": true,
+      "inherited": false,
+      "entireInheritedRecordLiteralIdentical": null
+    },
+    {
+      "ordinal": 66,
+      "role": "postTransportCombinedRedPublicationRootActual",
+      "identity": {
+        "bytes": 55348,
+        "sha256": "bbe57a54a25a38bee1d4f4de5fc1d036d81f6b2ecdb40b3d0088b274de6656c9",
+        "gitBlob": "9218839ef55406b01267605c040bc586c7d443be"
+      },
+      "fullBodyReadAndRehashed": true,
+      "identityMatches": true,
+      "inherited": false,
+      "entireInheritedRecordLiteralIdentical": null
+    },
+    {
+      "ordinal": 67,
+      "role": "postTransportCombinedRedPublicationIndependentActual",
+      "identity": {
+        "bytes": 166393,
+        "sha256": "cbe1880831780d10a7131282ab2ecc37d81fbdede3c53a265c1749ea863c20f2",
+        "gitBlob": "e5c2c2d8c84c0d491e334f6d67774cf23c83948f"
+      },
+      "fullBodyReadAndRehashed": true,
+      "identityMatches": true,
+      "inherited": false,
+      "entireInheritedRecordLiteralIdentical": null
+    },
+    {
+      "ordinal": 68,
+      "role": "threeProducerSourceAuthorshipGate",
+      "identity": {
+        "bytes": 4327,
+        "sha256": "3231731b2a22cb3903ccff6991341b54c673cd7064599b9aa7238fe07e3c6b18",
+        "gitBlob": "2780955d0a71956a75650ddf4d8a0ff0576faa57"
+      },
+      "fullBodyReadAndRehashed": true,
+      "identityMatches": true,
+      "inherited": false,
+      "entireInheritedRecordLiteralIdentical": null
+    },
+    {
+      "ordinal": 69,
+      "role": "threeProducerSourceR2Proposal",
+      "identity": {
+        "bytes": 25372,
+        "sha256": "7def167b3384043abb2cea83e90c51ea332f2c12a9f4fc3ca1ddcf1531bab85c",
+        "gitBlob": "b0d4fb7c7ca2fc486fda6823ee3c3618171f8cdc"
+      },
+      "fullBodyReadAndRehashed": true,
+      "identityMatches": true,
+      "inherited": false,
+      "entireInheritedRecordLiteralIdentical": null
+    },
+    {
+      "ordinal": 70,
+      "role": "threeProducerSourceR2Root",
+      "identity": {
+        "bytes": 17023,
+        "sha256": "30aa0b71c8c7cdb32d88db381e7396ec2e543ea977d80e93ee8297bd9f3304f3",
+        "gitBlob": "e4119f144e4a79e7c7b6a1598a33a70388df207f"
+      },
+      "fullBodyReadAndRehashed": true,
+      "identityMatches": true,
+      "inherited": false,
+      "entireInheritedRecordLiteralIdentical": null
+    },
+    {
+      "ordinal": 71,
+      "role": "threeProducerSourceR2Guard",
+      "identity": {
+        "bytes": 245598,
+        "sha256": "0bdbb65827d3717684d09ea1e35a2528b2ea4ee36143e4d3abe3601bf8bb8022",
+        "gitBlob": "ce6997eef4cc5989fb1c5437a23ef490bc74377a"
+      },
+      "fullBodyReadAndRehashed": true,
+      "identityMatches": true,
+      "inherited": false,
+      "entireInheritedRecordLiteralIdentical": null
+    },
+    {
+      "ordinal": 72,
+      "role": "threeProducerSourceR2Semantic",
+      "identity": {
+        "bytes": 70998,
+        "sha256": "3a3fe8dcf619204191b0db04023c5293fd24e433b74f2bf801f07bbc395d0f6c",
+        "gitBlob": "0c3db6a22e1f652ca30d085de23217fc52eb5e51"
+      },
+      "fullBodyReadAndRehashed": true,
+      "identityMatches": true,
+      "inherited": false,
+      "entireInheritedRecordLiteralIdentical": null
+    },
+    {
+      "ordinal": 73,
+      "role": "threeProducerSourceR2Binding",
+      "identity": {
+        "bytes": 47779,
+        "sha256": "ce13ee532bbca6a6181f95a97815e6c122be0a0adb46220ba61fd8b7c4029faa",
+        "gitBlob": "c2357e52f57abe45cd77d1ff0844aaa16d1095a6"
+      },
+      "fullBodyReadAndRehashed": true,
+      "identityMatches": true,
+      "inherited": false,
+      "entireInheritedRecordLiteralIdentical": null
+    },
+    {
+      "ordinal": 74,
+      "role": "threeProducerSourcePublicationManifest",
+      "identity": {
+        "bytes": 15180,
+        "sha256": "25dd8d8f0e59fb6be9e66eb6d7eba4e30103c2ed7d0d005c6cc2b8093fbac91f",
+        "gitBlob": "9ae8f0d2eaadc7e481a60ae594871c647d478c26"
+      },
+      "fullBodyReadAndRehashed": true,
+      "identityMatches": true,
+      "inherited": false,
+      "entireInheritedRecordLiteralIdentical": null
+    },
+    {
+      "ordinal": 75,
+      "role": "threeProducerSourcePublicationRootActual",
+      "identity": {
+        "bytes": 67762,
+        "sha256": "72188509d6d08e0c84a355f30686b898f00bbd0f6a19cc5b723df405080dfad9",
+        "gitBlob": "8940b2ec5b87ecd8ed5d442d282687ee7ec22a00"
+      },
+      "fullBodyReadAndRehashed": true,
+      "identityMatches": true,
+      "inherited": false,
+      "entireInheritedRecordLiteralIdentical": null
+    },
+    {
+      "ordinal": 76,
+      "role": "threeProducerSourcePublicationIndependentActual",
+      "identity": {
+        "bytes": 121833,
+        "sha256": "3fd7ec1c29e1d689175e0866821c1b397fdf5b8a41a2ee6d20d2756cfb58c917",
+        "gitBlob": "0915fd43d3324c43d32939214c7ac1d31545d164"
+      },
+      "fullBodyReadAndRehashed": true,
+      "identityMatches": true,
+      "inherited": false,
+      "entireInheritedRecordLiteralIdentical": null
+    },
+    {
+      "ordinal": 77,
+      "role": "threeProducerBindingAuthorshipGate",
+      "identity": {
+        "bytes": 6536,
+        "sha256": "1333882f719c6b832223e038043b9b82491d8168e9cf5effa64c12b0cf4741a2",
+        "gitBlob": "63fe55b3f050783b80bda34e3261564600186592"
+      },
+      "fullBodyReadAndRehashed": true,
+      "identityMatches": true,
+      "inherited": false,
+      "entireInheritedRecordLiteralIdentical": null
+    }
+  ],
+  "completeAppendedCurrentEvidenceJoins": [
+    {
+      "role": "postTransportControlsRootActual",
+      "identity": {
+        "bytes": 54354,
+        "sha256": "9a43e5d60a312b823fc6371d80cb53d9d69b09eb89387b21a43d91d4db998d8b",
+        "gitBlob": "9f7e5b993977d82876f291937eecfbad54fa7ec0"
+      },
+      "joined": true,
+      "comparison": "Complete raw identity and parsed full-body equality with accepted immutable prior readback"
+    },
+    {
+      "role": "postTransportControlsIndependentActual",
+      "identity": {
+        "bytes": 100624,
+        "sha256": "56c645a2d9221b2717eb8e25dfc496b9a31464fac6c297a34dbdeeba68907dff",
+        "gitBlob": "5cbacb781c10f52c5cf5a032f8fdc03c24881d81"
+      },
+      "joined": true,
+      "comparison": "Complete raw identity and parsed full-body equality with accepted immutable prior readback"
+    },
+    {
+      "role": "postTransportCombinedRedObservedOuter",
+      "identity": {
+        "bytes": 13970,
+        "sha256": "341064fd92ead2afed314db220e095bae77a2b96af47580b30c35f495a0e80cd",
+        "gitBlob": "947cf5276c207149f87d67dd06a175b49c9f1b5b"
+      },
+      "joined": true,
+      "comparison": "Complete raw identity and parsed full-body equality with accepted immutable prior readback"
+    },
+    {
+      "role": "postTransportCombinedRedRootRuntimeReview",
+      "identity": {
+        "bytes": 50772,
+        "sha256": "b708a3eb026e85f1a733cbb1e4836c7e5cabf571bb3c68fbc74c9ac2a719c882",
+        "gitBlob": "19fcd35a9e8783dfa28c824d23a8df510209ca80"
+      },
+      "joined": true,
+      "comparison": "Complete raw identity and parsed full-body equality with accepted immutable prior readback"
+    },
+    {
+      "role": "postTransportCombinedRedGuardRuntimeReview",
+      "identity": {
+        "bytes": 261789,
+        "sha256": "d9e6e50a0678babd3d54551af2951fb57825b0fc51fa1e7682def558a52bfd32",
+        "gitBlob": "38bd0eb98cb500274a477c1c02bfef0156bee7d6"
+      },
+      "joined": true,
+      "comparison": "Complete raw identity and parsed full-body equality with accepted immutable prior readback"
+    },
+    {
+      "role": "postTransportCombinedRedSemanticRuntimeReview",
+      "identity": {
+        "bytes": 229314,
+        "sha256": "2e05bcc76671b35883fc04e072d46e0961c86c2d293de2582e0e0fe0196692da",
+        "gitBlob": "3cddc2bdb141d81c87c97d6059c56278b1118a55"
+      },
+      "joined": true,
+      "comparison": "Complete raw identity and parsed full-body equality with accepted immutable prior readback"
+    },
+    {
+      "role": "postTransportCombinedRedCompleteLargeBodyJoin",
+      "identity": {
+        "bytes": 8914,
+        "sha256": "e322edbfc50d1706db7838681e2d65abf4648180c4a4da3ba418d94fff5eac44",
+        "gitBlob": "aad388d47bc80c4dd09789ee76238ebd935e8cdd"
+      },
+      "joined": true,
+      "comparison": "Complete raw identity and parsed full-body equality with accepted immutable prior readback"
+    },
+    {
+      "role": "postTransportCombinedRedPublicationRootActual",
+      "identity": {
+        "bytes": 55348,
+        "sha256": "bbe57a54a25a38bee1d4f4de5fc1d036d81f6b2ecdb40b3d0088b274de6656c9",
+        "gitBlob": "9218839ef55406b01267605c040bc586c7d443be"
+      },
+      "joined": true,
+      "comparison": "Complete raw body literal equality with full prior readback"
+    },
+    {
+      "role": "postTransportCombinedRedPublicationIndependentActual",
+      "identity": {
+        "bytes": 166393,
+        "sha256": "cbe1880831780d10a7131282ab2ecc37d81fbdede3c53a265c1749ea863c20f2",
+        "gitBlob": "e5c2c2d8c84c0d491e334f6d67774cf23c83948f"
+      },
+      "joined": true,
+      "comparison": "Complete raw body literal equality with full prior readback"
+    },
+    {
+      "role": "threeProducerSourceAuthorshipGate",
+      "identity": {
+        "bytes": 4327,
+        "sha256": "3231731b2a22cb3903ccff6991341b54c673cd7064599b9aa7238fe07e3c6b18",
+        "gitBlob": "2780955d0a71956a75650ddf4d8a0ff0576faa57"
+      },
+      "joined": true,
+      "comparison": "Complete raw body literal equality with full prior readback"
+    },
+    {
+      "role": "threeProducerSourceR2Proposal",
+      "identity": {
+        "bytes": 25372,
+        "sha256": "7def167b3384043abb2cea83e90c51ea332f2c12a9f4fc3ca1ddcf1531bab85c",
+        "gitBlob": "b0d4fb7c7ca2fc486fda6823ee3c3618171f8cdc"
+      },
+      "joined": true,
+      "comparison": "Complete raw body literal equality with full prior readback"
+    },
+    {
+      "role": "threeProducerSourceR2Root",
+      "identity": {
+        "bytes": 17023,
+        "sha256": "30aa0b71c8c7cdb32d88db381e7396ec2e543ea977d80e93ee8297bd9f3304f3",
+        "gitBlob": "e4119f144e4a79e7c7b6a1598a33a70388df207f"
+      },
+      "joined": true,
+      "comparison": "Complete raw body literal equality with full prior readback"
+    },
+    {
+      "role": "threeProducerSourceR2Guard",
+      "identity": {
+        "bytes": 245598,
+        "sha256": "0bdbb65827d3717684d09ea1e35a2528b2ea4ee36143e4d3abe3601bf8bb8022",
+        "gitBlob": "ce6997eef4cc5989fb1c5437a23ef490bc74377a"
+      },
+      "joined": true,
+      "comparison": "Complete raw body literal equality with full prior readback"
+    },
+    {
+      "role": "threeProducerSourceR2Semantic",
+      "identity": {
+        "bytes": 70998,
+        "sha256": "3a3fe8dcf619204191b0db04023c5293fd24e433b74f2bf801f07bbc395d0f6c",
+        "gitBlob": "0c3db6a22e1f652ca30d085de23217fc52eb5e51"
+      },
+      "joined": true,
+      "comparison": "Complete raw body literal equality with full prior readback"
+    },
+    {
+      "role": "threeProducerSourceR2Binding",
+      "identity": {
+        "bytes": 47779,
+        "sha256": "ce13ee532bbca6a6181f95a97815e6c122be0a0adb46220ba61fd8b7c4029faa",
+        "gitBlob": "c2357e52f57abe45cd77d1ff0844aaa16d1095a6"
+      },
+      "joined": true,
+      "comparison": "Complete raw body literal equality with full prior readback"
+    },
+    {
+      "role": "threeProducerSourcePublicationManifest",
+      "identity": {
+        "bytes": 15180,
+        "sha256": "25dd8d8f0e59fb6be9e66eb6d7eba4e30103c2ed7d0d005c6cc2b8093fbac91f",
+        "gitBlob": "9ae8f0d2eaadc7e481a60ae594871c647d478c26"
+      },
+      "joined": true,
+      "comparison": "Complete raw body literal equality with full prior readback"
+    },
+    {
+      "role": "threeProducerSourcePublicationRootActual",
+      "identity": {
+        "bytes": 67762,
+        "sha256": "72188509d6d08e0c84a355f30686b898f00bbd0f6a19cc5b723df405080dfad9",
+        "gitBlob": "8940b2ec5b87ecd8ed5d442d282687ee7ec22a00"
+      },
+      "joined": true,
+      "comparison": "Complete raw body literal equality with full prior readback"
+    },
+    {
+      "role": "threeProducerSourcePublicationIndependentActual",
+      "identity": {
+        "bytes": 121833,
+        "sha256": "3fd7ec1c29e1d689175e0866821c1b397fdf5b8a41a2ee6d20d2756cfb58c917",
+        "gitBlob": "0915fd43d3324c43d32939214c7ac1d31545d164"
+      },
+      "joined": true,
+      "comparison": "Complete raw body literal equality with full prior readback"
+    },
+    {
+      "role": "threeProducerBindingAuthorshipGate",
+      "identity": {
+        "bytes": 6536,
+        "sha256": "1333882f719c6b832223e038043b9b82491d8168e9cf5effa64c12b0cf4741a2",
+        "gitBlob": "63fe55b3f050783b80bda34e3261564600186592"
+      },
+      "joined": true,
+      "comparison": "Complete raw body literal equality with full prior readback"
+    }
+  ],
+  "completeSourceBodyReadbacks": [
+    {
+      "scope": "beforeSourceOverlay",
+      "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "mode": "100644",
+      "identity": {
+        "bytes": 28974,
+        "sha256": "7626e479a6662242009cb050e7e5af612a29e4205d62666d15274d5c30f91386",
+        "gitBlob": "ed57cb0fe7d57ef076a591621289eb77667c63ad"
+      },
+      "completeBodyReadAndRehashed": true,
+      "completeAcceptedBodyLiteralIdentical": true
+    },
+    {
+      "scope": "beforeSourceOverlay",
+      "path": "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+      "mode": "100644",
+      "identity": {
+        "bytes": 24759,
+        "sha256": "d15b7eea14c0951194310aee34ddc5c477879c759a97a4e2f4e9fce1f956ce9b",
+        "gitBlob": "cf93da72a198dac636658e512093eef7828b5927"
+      },
+      "completeBodyReadAndRehashed": true,
+      "completeAcceptedBodyLiteralIdentical": true
+    },
+    {
+      "scope": "beforeSourceOverlay",
+      "path": "scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+      "mode": "100644",
+      "identity": {
+        "bytes": 8457,
+        "sha256": "2da55bb40a5689ace0e922dc4867d7c73278d9a1cd200ea8c4602ca68f82da3b",
+        "gitBlob": "3c7b4bb53f4259ac0795d3f92fb715887acb554f"
+      },
+      "completeBodyReadAndRehashed": true,
+      "completeAcceptedBodyLiteralIdentical": true
+    },
+    {
+      "scope": "beforeSourceOverlay",
+      "path": "scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts",
+      "mode": "100644",
+      "identity": {
+        "bytes": 36260,
+        "sha256": "26357f37b146fc171bbceadb624bde4a7f4e459d2073ae23a651e757817b2d38",
+        "gitBlob": "4700a0052d3c58a2b3d9bc66e6803220688050fd"
+      },
+      "completeBodyReadAndRehashed": true,
+      "completeAcceptedBodyLiteralIdentical": true
+    },
+    {
+      "scope": "beforeSourceOverlay",
+      "path": "src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts",
+      "mode": "100644",
+      "identity": {
+        "bytes": 74351,
+        "sha256": "68abe01f665b263bd8581659ea306f366428fdccbb45246f08ec42e20b9ee575",
+        "gitBlob": "1176fd06b70f1b717ba83deb387f87b05b18b45b"
+      },
+      "completeBodyReadAndRehashed": true,
+      "completeAcceptedBodyLiteralIdentical": true
+    },
+    {
+      "scope": "beforeSourceOverlay",
+      "path": "scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+      "mode": "100644",
+      "identity": {
+        "bytes": 45707,
+        "sha256": "d8ee4090606876194393463e96411f89ed54a53bd3095df333a5d47c5c7fd159",
+        "gitBlob": "bd8bc728808eda00a45b300fd328d49e4e919bc2"
+      },
+      "completeBodyReadAndRehashed": true,
+      "completeAcceptedBodyLiteralIdentical": true
+    },
+    {
+      "scope": "beforeSourceOverlay",
+      "path": "scripts/legacy-agent-host/desktop-task-review-cycle-ui-smoke.ts",
+      "mode": "100644",
+      "identity": {
+        "bytes": 32845,
+        "sha256": "43e12eb3252e578061ea5840ae39d173ce0cd5a8ce6673c5c5ea06d97a8bedaa",
+        "gitBlob": "d65706646743798f2646421105f2f6a75819f143"
+      },
+      "completeBodyReadAndRehashed": true,
+      "completeAcceptedBodyLiteralIdentical": true
+    },
+    {
+      "scope": "beforeSourceOverlay",
+      "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+      "mode": "100644",
+      "identity": {
+        "bytes": 164965,
+        "sha256": "852bedb85c83dbc4b488dffb4a9ffebbe398adc53e85f5a3cea8ca36b146cbf7",
+        "gitBlob": "896c587e077da56a98a314a175fb3cba0353d6ee"
+      },
+      "completeBodyReadAndRehashed": true,
+      "completeAcceptedBodyLiteralIdentical": true
+    },
+    {
+      "scope": "beforeSourceOverlay",
+      "path": "test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts",
+      "mode": "100644",
+      "identity": {
+        "bytes": 187890,
+        "sha256": "b6f11896e60014aac785968d42390afde38716d47de9bba9562522235db048c9",
+        "gitBlob": "76495189c992fcda47cd7a43a0c697190b5acbb3"
+      },
+      "completeBodyReadAndRehashed": true,
+      "completeAcceptedBodyLiteralIdentical": true
+    },
+    {
+      "scope": "sourceOverlay",
+      "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "mode": "100644",
+      "identity": {
+        "bytes": 28974,
+        "sha256": "7626e479a6662242009cb050e7e5af612a29e4205d62666d15274d5c30f91386",
+        "gitBlob": "ed57cb0fe7d57ef076a591621289eb77667c63ad"
+      },
+      "completeBodyReadAndRehashed": true,
+      "completeAcceptedBodyLiteralIdentical": true
+    },
+    {
+      "scope": "sourceOverlay",
+      "path": "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+      "mode": "100644",
+      "identity": {
+        "bytes": 24759,
+        "sha256": "d15b7eea14c0951194310aee34ddc5c477879c759a97a4e2f4e9fce1f956ce9b",
+        "gitBlob": "cf93da72a198dac636658e512093eef7828b5927"
+      },
+      "completeBodyReadAndRehashed": true,
+      "completeAcceptedBodyLiteralIdentical": true
+    },
+    {
+      "scope": "sourceOverlay",
+      "path": "scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+      "mode": "100644",
+      "identity": {
+        "bytes": 8457,
+        "sha256": "2da55bb40a5689ace0e922dc4867d7c73278d9a1cd200ea8c4602ca68f82da3b",
+        "gitBlob": "3c7b4bb53f4259ac0795d3f92fb715887acb554f"
+      },
+      "completeBodyReadAndRehashed": true,
+      "completeAcceptedBodyLiteralIdentical": true
+    },
+    {
+      "scope": "sourceOverlay",
+      "path": "scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts",
+      "mode": "100644",
+      "identity": {
+        "bytes": 36260,
+        "sha256": "26357f37b146fc171bbceadb624bde4a7f4e459d2073ae23a651e757817b2d38",
+        "gitBlob": "4700a0052d3c58a2b3d9bc66e6803220688050fd"
+      },
+      "completeBodyReadAndRehashed": true,
+      "completeAcceptedBodyLiteralIdentical": true
+    },
+    {
+      "scope": "sourceOverlay",
+      "path": "src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts",
+      "mode": "100644",
+      "identity": {
+        "bytes": 74340,
+        "sha256": "647ac5732bfd6b5cb57834adb4ad22c32ee5dfb018a934c92f982efd9daa531c",
+        "gitBlob": "c2faa156015707bc5fbd7f8123a7ffd9c4faa486"
+      },
+      "completeBodyReadAndRehashed": true,
+      "completeAcceptedBodyLiteralIdentical": true
+    },
+    {
+      "scope": "sourceOverlay",
+      "path": "scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+      "mode": "100644",
+      "identity": {
+        "bytes": 45795,
+        "sha256": "2c5931f5c7fa1dc8bb7858201c1b8afdbae9683faf4a2ad9fce067f116f3f94b",
+        "gitBlob": "5026f0ec6165bb092717ddc989043848a25081dc"
+      },
+      "completeBodyReadAndRehashed": true,
+      "completeAcceptedBodyLiteralIdentical": true
+    },
+    {
+      "scope": "sourceOverlay",
+      "path": "scripts/legacy-agent-host/desktop-task-review-cycle-ui-smoke.ts",
+      "mode": "100644",
+      "identity": {
+        "bytes": 33036,
+        "sha256": "4fa52cfad9347065680ef62a3ba6420762408a78a93b77e96ac3a2e16e68bdc9",
+        "gitBlob": "8d175c98158b3bd71192aef7b1929484b2b681b6"
+      },
+      "completeBodyReadAndRehashed": true,
+      "completeAcceptedBodyLiteralIdentical": true
+    },
+    {
+      "scope": "sourceOverlay",
+      "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+      "mode": "100644",
+      "identity": {
+        "bytes": 164965,
+        "sha256": "852bedb85c83dbc4b488dffb4a9ffebbe398adc53e85f5a3cea8ca36b146cbf7",
+        "gitBlob": "896c587e077da56a98a314a175fb3cba0353d6ee"
+      },
+      "completeBodyReadAndRehashed": true,
+      "completeAcceptedBodyLiteralIdentical": true
+    },
+    {
+      "scope": "sourceOverlay",
+      "path": "test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts",
+      "mode": "100644",
+      "identity": {
+        "bytes": 187890,
+        "sha256": "b6f11896e60014aac785968d42390afde38716d47de9bba9562522235db048c9",
+        "gitBlob": "76495189c992fcda47cd7a43a0c697190b5acbb3"
+      },
+      "completeBodyReadAndRehashed": true,
+      "completeAcceptedBodyLiteralIdentical": true
+    }
+  ],
+  "source": {
+    "completeBeforeBodyCount": 9,
+    "completeBeforeBodyBytes": 604208,
+    "completeAfterBodyCount": 9,
+    "completeAfterBodyBytes": 604476,
+    "beforeOverlayLiteralEqualsCompleteAcceptedRedSourceOverlay": true,
+    "vectors": {
+      "before": {
+        "bytes": 2118,
+        "sha256": "f2574559a378b3bc537fdcedbde161003c8344a5485dfff9322214f6fda2a90c",
+        "gitBlob": "f6446bdc2bbdb511206c729a1f03717871baea6d"
+      },
+      "after": {
+        "bytes": 2118,
+        "sha256": "6007c5c7ba2f74c43bd9b73c50cae2319eacbf712c233cc0d67b3efbb4c6894d",
+        "gitBlob": "3887991d5dbd25dbec5c8656e8e03d423ea502b7"
+      },
+      "beforePins": [
+        {
+          "path": "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+          "mode": "100644",
+          "bytes": 24759,
+          "sha256": "d15b7eea14c0951194310aee34ddc5c477879c759a97a4e2f4e9fce1f956ce9b",
+          "gitBlob": "cf93da72a198dac636658e512093eef7828b5927"
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+          "mode": "100644",
+          "bytes": 45707,
+          "sha256": "d8ee4090606876194393463e96411f89ed54a53bd3095df333a5d47c5c7fd159",
+          "gitBlob": "bd8bc728808eda00a45b300fd328d49e4e919bc2"
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts",
+          "mode": "100644",
+          "bytes": 36260,
+          "sha256": "26357f37b146fc171bbceadb624bde4a7f4e459d2073ae23a651e757817b2d38",
+          "gitBlob": "4700a0052d3c58a2b3d9bc66e6803220688050fd"
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+          "mode": "100644",
+          "bytes": 8457,
+          "sha256": "2da55bb40a5689ace0e922dc4867d7c73278d9a1cd200ea8c4602ca68f82da3b",
+          "gitBlob": "3c7b4bb53f4259ac0795d3f92fb715887acb554f"
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-task-review-cycle-ui-smoke.ts",
+          "mode": "100644",
+          "bytes": 32845,
+          "sha256": "43e12eb3252e578061ea5840ae39d173ce0cd5a8ce6673c5c5ea06d97a8bedaa",
+          "gitBlob": "d65706646743798f2646421105f2f6a75819f143"
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+          "mode": "100644",
+          "bytes": 164965,
+          "sha256": "852bedb85c83dbc4b488dffb4a9ffebbe398adc53e85f5a3cea8ca36b146cbf7",
+          "gitBlob": "896c587e077da56a98a314a175fb3cba0353d6ee"
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+          "mode": "100644",
+          "bytes": 28974,
+          "sha256": "7626e479a6662242009cb050e7e5af612a29e4205d62666d15274d5c30f91386",
+          "gitBlob": "ed57cb0fe7d57ef076a591621289eb77667c63ad"
+        },
+        {
+          "path": "src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts",
+          "mode": "100644",
+          "bytes": 74351,
+          "sha256": "68abe01f665b263bd8581659ea306f366428fdccbb45246f08ec42e20b9ee575",
+          "gitBlob": "1176fd06b70f1b717ba83deb387f87b05b18b45b"
+        },
+        {
+          "path": "test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts",
+          "mode": "100644",
+          "bytes": 187890,
+          "sha256": "b6f11896e60014aac785968d42390afde38716d47de9bba9562522235db048c9",
+          "gitBlob": "76495189c992fcda47cd7a43a0c697190b5acbb3"
+        }
+      ],
+      "afterPins": [
+        {
+          "path": "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+          "mode": "100644",
+          "bytes": 24759,
+          "sha256": "d15b7eea14c0951194310aee34ddc5c477879c759a97a4e2f4e9fce1f956ce9b",
+          "gitBlob": "cf93da72a198dac636658e512093eef7828b5927"
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+          "mode": "100644",
+          "bytes": 45795,
+          "sha256": "2c5931f5c7fa1dc8bb7858201c1b8afdbae9683faf4a2ad9fce067f116f3f94b",
+          "gitBlob": "5026f0ec6165bb092717ddc989043848a25081dc"
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts",
+          "mode": "100644",
+          "bytes": 36260,
+          "sha256": "26357f37b146fc171bbceadb624bde4a7f4e459d2073ae23a651e757817b2d38",
+          "gitBlob": "4700a0052d3c58a2b3d9bc66e6803220688050fd"
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+          "mode": "100644",
+          "bytes": 8457,
+          "sha256": "2da55bb40a5689ace0e922dc4867d7c73278d9a1cd200ea8c4602ca68f82da3b",
+          "gitBlob": "3c7b4bb53f4259ac0795d3f92fb715887acb554f"
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-task-review-cycle-ui-smoke.ts",
+          "mode": "100644",
+          "bytes": 33036,
+          "sha256": "4fa52cfad9347065680ef62a3ba6420762408a78a93b77e96ac3a2e16e68bdc9",
+          "gitBlob": "8d175c98158b3bd71192aef7b1929484b2b681b6"
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+          "mode": "100644",
+          "bytes": 164965,
+          "sha256": "852bedb85c83dbc4b488dffb4a9ffebbe398adc53e85f5a3cea8ca36b146cbf7",
+          "gitBlob": "896c587e077da56a98a314a175fb3cba0353d6ee"
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+          "mode": "100644",
+          "bytes": 28974,
+          "sha256": "7626e479a6662242009cb050e7e5af612a29e4205d62666d15274d5c30f91386",
+          "gitBlob": "ed57cb0fe7d57ef076a591621289eb77667c63ad"
+        },
+        {
+          "path": "src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts",
+          "mode": "100644",
+          "bytes": 74340,
+          "sha256": "647ac5732bfd6b5cb57834adb4ad22c32ee5dfb018a934c92f982efd9daa531c",
+          "gitBlob": "c2faa156015707bc5fbd7f8123a7ffd9c4faa486"
+        },
+        {
+          "path": "test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts",
+          "mode": "100644",
+          "bytes": 187890,
+          "sha256": "b6f11896e60014aac785968d42390afde38716d47de9bba9562522235db048c9",
+          "gitBlob": "76495189c992fcda47cd7a43a0c697190b5acbb3"
+        }
+      ]
+    },
+    "materializePaths": [
+      "scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+      "scripts/legacy-agent-host/desktop-task-review-cycle-ui-smoke.ts",
+      "src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts"
+    ],
+    "exactChangedRows": 3,
+    "frozenRows": 6,
+    "fourFixedProducerBodiesLiteralUnchanged": true,
+    "bothWhole139And85TestBodiesLiteralUnchanged": true,
+    "publishedPostimages": [
+      {
+        "path": "scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+        "identity": {
+          "bytes": 45795,
+          "sha256": "2c5931f5c7fa1dc8bb7858201c1b8afdbae9683faf4a2ad9fce067f116f3f94b",
+          "gitBlob": "5026f0ec6165bb092717ddc989043848a25081dc"
+        }
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-task-review-cycle-ui-smoke.ts",
+        "identity": {
+          "bytes": 33036,
+          "sha256": "4fa52cfad9347065680ef62a3ba6420762408a78a93b77e96ac3a2e16e68bdc9",
+          "gitBlob": "8d175c98158b3bd71192aef7b1929484b2b681b6"
+        }
+      },
+      {
+        "path": "src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts",
+        "identity": {
+          "bytes": 74340,
+          "sha256": "647ac5732bfd6b5cb57834adb4ad22c32ee5dfb018a934c92f982efd9daa531c",
+          "gitBlob": "c2faa156015707bc5fbd7f8123a7ffd9c4faa486"
+        }
+      }
+    ],
+    "lastAcceptedPhysicalRedOverlays": 6,
+    "prospectiveAfterMaterializationOverlays": 9,
+    "qualification": "These are complete embedded source data identities joined to accepted actual Git publication and immutable source preimages. The reviewer has not inspected or changed a current physical workspace."
+  },
+  "acceptedCombinedRed": {
+    "phaseReceipt": {
+      "bytes": 139946,
+      "sha256": "51867690fb9a707141b01ee3dff6d42d082a5ba7aceffd1f4f43eec8a428c9be",
+      "gitBlob": "bcc31247c2752b2017edba9adcd129a1c83cdd32"
+    },
+    "completeReceiptBodyEqualToAcceptedImmutableEvidence": true,
+    "observedOuter": {
+      "bytes": 13970,
+      "sha256": "341064fd92ead2afed314db220e095bae77a2b96af47580b30c35f495a0e80cd",
+      "gitBlob": "947cf5276c207149f87d67dd06a175b49c9f1b5b"
+    },
+    "observedOuterSupervisorExit": 0,
+    "independentReviewAccepted": true,
+    "actualPublicationReadbackAccepted": true,
+    "runtimeReviews": {
+      "root": {
+        "bytes": 50772,
+        "sha256": "b708a3eb026e85f1a733cbb1e4836c7e5cabf571bb3c68fbc74c9ac2a719c882",
+        "gitBlob": "19fcd35a9e8783dfa28c824d23a8df510209ca80"
+      },
+      "guard": {
+        "bytes": 261789,
+        "sha256": "d9e6e50a0678babd3d54551af2951fb57825b0fc51fa1e7682def558a52bfd32",
+        "gitBlob": "38bd0eb98cb500274a477c1c02bfef0156bee7d6"
+      },
+      "semantic": {
+        "bytes": 229314,
+        "sha256": "2e05bcc76671b35883fc04e072d46e0961c86c2d293de2582e0e0fe0196692da",
+        "gitBlob": "3cddc2bdb141d81c87c97d6059c56278b1118a55"
+      },
+      "completeLargeBodies": {
+        "bytes": 8914,
+        "sha256": "e322edbfc50d1706db7838681e2d65abf4648180c4a4da3ba418d94fff5eac44",
+        "gitBlob": "aad388d47bc80c4dd09789ee76238ebd935e8cdd"
+      }
+    },
+    "actualPublication": {
+      "commit": "77993819c233737f1e2b4c11c8ca1a5d360bcbe3",
+      "tree": "ada3f27db78fabc17a91e3904d41b8bc547c6dca",
+      "docsTree": "a1b92f625b548e7384ef13e0358c420d1e1f136d",
+      "manifest": {
+        "bytes": 12114,
+        "sha256": "de413d1bdef997d3c3e2d18b1e1b21fab0f6459cca566c82aae74b1423bbe210",
+        "gitBlob": "5e5167b45611cb7700bbcca2c07a0f910ca46ec6"
+      },
+      "root": {
+        "bytes": 55348,
+        "sha256": "bbe57a54a25a38bee1d4f4de5fc1d036d81f6b2ecdb40b3d0088b274de6656c9",
+        "gitBlob": "9218839ef55406b01267605c040bc586c7d443be"
+      },
+      "independent": {
+        "bytes": 166393,
+        "sha256": "cbe1880831780d10a7131282ab2ecc37d81fbdede3c53a265c1749ea863c20f2",
+        "gitBlob": "e5c2c2d8c84c0d491e334f6d67774cf23c83948f"
+      }
+    },
+    "acceptanceGate": {
+      "bytes": 4327,
+      "sha256": "3231731b2a22cb3903ccff6991341b54c673cd7064599b9aa7238fe07e3c6b18",
+      "gitBlob": "2780955d0a71956a75650ddf4d8a0ff0576faa57"
+    },
+    "unchangedRunnerAcceptedCombinedChecksJoined": true,
+    "exactBeforeSourceVector": true,
+    "primaryOrder": [
+      "node",
+      "renderer"
+    ],
+    "nodeOutcome": {
+      "tests": 139,
+      "passed": 134,
+      "failed": 5
+    },
+    "rendererOutcome": {
+      "tests": 85,
+      "passed": 82,
+      "failed": 3
+    },
+    "noCurrentRuntimeReexecutionOrReclassification": true
+  },
+  "producerAcceptance": {
+    "sourcePublicationGate": {
+      "bytes": 6536,
+      "sha256": "1333882f719c6b832223e038043b9b82491d8168e9cf5effa64c12b0cf4741a2",
+      "gitBlob": "63fe55b3f050783b80bda34e3261564600186592"
+    },
+    "sourcePublicationGateClosedAtUtc": "2026-11-17 02:00:49 UTC",
+    "sourcePublication": "b83da2bb72ada6e9fb3a426cb2a7d62b30ec4871",
+    "sourceRootActual": {
+      "bytes": 67762,
+      "sha256": "72188509d6d08e0c84a355f30686b898f00bbd0f6a19cc5b723df405080dfad9",
+      "gitBlob": "8940b2ec5b87ecd8ed5d442d282687ee7ec22a00"
+    },
+    "sourceIndependentActual": {
+      "bytes": 121833,
+      "sha256": "3fd7ec1c29e1d689175e0866821c1b397fdf5b8a41a2ee6d20d2756cfb58c917",
+      "gitBlob": "0915fd43d3324c43d32939214c7ac1d31545d164"
+    },
+    "sourceR2Proposal": {
+      "bytes": 25372,
+      "sha256": "7def167b3384043abb2cea83e90c51ea332f2c12a9f4fc3ca1ddcf1531bab85c",
+      "gitBlob": "b0d4fb7c7ca2fc486fda6823ee3c3618171f8cdc"
+    },
+    "sourceR2Reviews": {
+      "root": {
+        "bytes": 17023,
+        "sha256": "30aa0b71c8c7cdb32d88db381e7396ec2e543ea977d80e93ee8297bd9f3304f3",
+        "gitBlob": "e4119f144e4a79e7c7b6a1598a33a70388df207f"
+      },
+      "guard": {
+        "bytes": 245598,
+        "sha256": "0bdbb65827d3717684d09ea1e35a2528b2ea4ee36143e4d3abe3601bf8bb8022",
+        "gitBlob": "ce6997eef4cc5989fb1c5437a23ef490bc74377a"
+      },
+      "semantic": {
+        "bytes": 70998,
+        "sha256": "3a3fe8dcf619204191b0db04023c5293fd24e433b74f2bf801f07bbc395d0f6c",
+        "gitBlob": "0c3db6a22e1f652ca30d085de23217fc52eb5e51"
+      },
+      "binding": {
+        "bytes": 47779,
+        "sha256": "ce13ee532bbca6a6181f95a97815e6c122be0a0adb46220ba61fd8b7c4029faa",
+        "gitBlob": "c2357e52f57abe45cd77d1ff0844aaa16d1095a6"
+      }
+    },
+    "sourceR2AndActualAcceptanceBooleansTruthfullyFollowClosedGate": true
+  },
+  "preservation": {
+    "runnerFullBytesUnchanged": true,
+    "r1FullBytesUnchanged": true,
+    "all45OtherInheritedValuesLiteralUnchanged": true,
+    "completeCommandsNamesTestsSemanticsDataUnchanged": true,
+    "completeInputFilesReplicaProvenanceMetadataEnvironmentNativeConfigUnchanged": true,
+    "completeOutputAndTempPathsOwnershipHistoricalBodiesReceiptScopeUnchanged": true,
+    "original180SecondPrimaryAnd30SecondMetadataClocksUnchanged": true,
+    "finiteAttemptCapsNoReplaySignalCaptureCleanupContractsUnchanged": true,
+    "originalDraftAndHistoricalBeforeQualifierFullyArchived": true
+  },
+  "immutableBindingSequence": {
+    "control": "Complete R2, publication with immediate push, full root and independent actual readbacks before staging.",
+    "materialization": "Stage only green-binding.json, preserve current runner/red-binding/replicas, invoke materialize green once. Exactly three source writes and source/supervisor metadata census. Runtime dependencies/compiled/provider/cache remain UNINSPECTED/false/null in this source-only phase.",
+    "materializationAcceptance": "Collect full actual source-only phase/metadata evidence and separately observed outer0. Complete independent actual review, publication and full readbacks before GREEN.",
+    "green": "Invoke run green once with the exact same binding bytes. Preserve all whole139/85 names, tests, commands, no retry, original clocks, native admission, raw/JSON evidence, captured cleanup and fresh complete runtime input before/after census.",
+    "validation": "Only after accepted/published/read-back GREEN author a separate immutable validation binding with full GREEN acceptance. No validation binding is authored here."
+  },
+  "unchangedRunnerJoins": {
+    "selectedPhase": "green",
+    "exactSourceOnlyMaterializePaths": [
+      "scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+      "scripts/legacy-agent-host/desktop-task-review-cycle-ui-smoke.ts",
+      "src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts"
+    ],
+    "materializationRuntimeInputs": {
+      "inspected": false,
+      "preserved": null,
+      "dependencies": "UNINSPECTED",
+      "compiled": "UNINSPECTED",
+      "providers": "UNINSPECTED",
+      "bootstrapCache": "UNINSPECTED"
+    },
+    "sameBindingReceiptAssertion": "assert materialized['bindingIdentity'] == identity(binding_bytes)",
+    "meaning": "The unchanged GREEN run path reads the exact producer materialization receipt, checks its binding identity against the unchanged current binding bytes, checks identical published subject/test/source vector and exact written paths, and requires source-only preserved/finalized metadata with no interruptions or cleanup debt.",
+    "externalGate": "Complete independent materialization acceptance, publication and actual readbacks remain external prerequisites before later run green. Materialization receipt or acceptance evidence must not be appended to this immutable binding.",
+    "acceptedCombinedGreenRemainsNull": true,
+    "separateValidationBindingOnlyAfterAcceptedPublishedReadBackGreen": true
+  },
+  "draftSnapshot": {
+    "data": {
+      "sourceMaterialized": true,
+      "existingSourceMaterializationScope": "Authorship-time snapshot: the original two tests and four fixed producers remain the last accepted physical RED six-overlay source. The three new producer postimages are published but not yet applied.",
+      "sourceWrittenByThisScope": false,
+      "controlsStaged": false,
+      "runtimeExecuted": true,
+      "runtimeExecutedScope": "Only the completed accepted post-transport RED53054; producer materialization/GREEN/validation have not run.",
+      "producerPostimagesAuthored": true,
+      "producerPostimagesPublished": true,
+      "producerPostimagesApplied": false,
+      "runnerBindingR2AndActualPublicationStillRequired": true,
+      "newReplicaFilesStaged": true,
+      "scope": "Current immutable GREEN-binding authorship snapshot only; controlsStaged refers to this new green-binding.json. Existing runner, RED binding and six replicas already exist. Original64038 remains REFUSED/SPENT and corrected54393 remains UNKNOWN/INCOMPLETE/SPENT."
+    },
+    "interpretation": "sourceMaterialized and runtimeExecuted describe the accepted earlier six-overlay physical RED, explicitly scoped as such; new producer postimages remain unapplied and this green-binding.json remains unstaged.",
+    "transitionProvenance": {
+      "baselineRedBinding": {
+        "bytes": 6399172,
+        "sha256": "be265da9b130091d251295f937a7ab09b1db0e03f2c4a02d985839134e0379ec",
+        "gitBlob": "9f9ddcf0f9f62cce1a31f204ae786a8e2d3d2267"
+      },
+      "baselineRunner": {
+        "bytes": 104131,
+        "sha256": "20958434e304d6d67657abad910d7c891f5a9086164e73d19cc8764348fc83f5",
+        "gitBlob": "c81f72a8ed14a93b3557fdf889f9ad6cebc25140"
+      },
+      "baselineRedControlPublication": "1eff2aef92a5952618cb600604160c3a3024b2dd",
+      "baselineDraftState": {
+        "sourceMaterialized": true,
+        "existingSourceMaterializationScope": "Original closed source-only materialization; current six overlays. No source is written by this post-transport recovery scope. Fresh full physical admission remains mandatory.",
+        "sourceWrittenByThisScope": false,
+        "controlsStaged": false,
+        "runtimeExecuted": false,
+        "producerPostimagesAuthored": false,
+        "runnerBindingR2AndActualPublicationStillRequired": true,
+        "newReplicaFilesStaged": false,
+        "scope": "Current separate recovery control-authorship state only; both earlier invocations remain permanently spent and old custody/cleanup unknown."
+      },
+      "baselineHistoricalBeforeSourceOverlayQualification": "The inherited beforeSourceOverlay is the original5-overlay materialization preimage, retained only for the historical transition. New RED input_snapshot uses unchanged sourceOverlay/current9pins and must freshly admit all current6overlays. No test restoration/materialization is allowed.",
+      "original58ReviewRecordsLiteralIdentical": true,
+      "sourcePublicationGate": {
+        "bytes": 6536,
+        "sha256": "1333882f719c6b832223e038043b9b82491d8168e9cf5effa64c12b0cf4741a2",
+        "gitBlob": "63fe55b3f050783b80bda34e3261564600186592"
+      },
+      "sourcePublicationGateClosedAtUtc": "2026-11-17 02:00:49 UTC",
+      "sourcePublication": "b83da2bb72ada6e9fb3a426cb2a7d62b30ec4871",
+      "sourceR2Proposal": {
+        "bytes": 25372,
+        "sha256": "7def167b3384043abb2cea83e90c51ea332f2c12a9f4fc3ca1ddcf1531bab85c",
+        "gitBlob": "b0d4fb7c7ca2fc486fda6823ee3c3618171f8cdc"
+      },
+      "sourceR2Reviews": {
+        "root": {
+          "bytes": 17023,
+          "sha256": "30aa0b71c8c7cdb32d88db381e7396ec2e543ea977d80e93ee8297bd9f3304f3",
+          "gitBlob": "e4119f144e4a79e7c7b6a1598a33a70388df207f"
+        },
+        "guard": {
+          "bytes": 245598,
+          "sha256": "0bdbb65827d3717684d09ea1e35a2528b2ea4ee36143e4d3abe3601bf8bb8022",
+          "gitBlob": "ce6997eef4cc5989fb1c5437a23ef490bc74377a"
+        },
+        "semantic": {
+          "bytes": 70998,
+          "sha256": "3a3fe8dcf619204191b0db04023c5293fd24e433b74f2bf801f07bbc395d0f6c",
+          "gitBlob": "0c3db6a22e1f652ca30d085de23217fc52eb5e51"
+        },
+        "binding": {
+          "bytes": 47779,
+          "sha256": "ce13ee532bbca6a6181f95a97815e6c122be0a0adb46220ba61fd8b7c4029faa",
+          "gitBlob": "c2357e52f57abe45cd77d1ff0844aaa16d1095a6"
+        }
+      },
+      "immutableBindingForBothMaterializationAndGreen": true,
+      "materializationAcceptanceRequirement": "After this binding R2/publication/full actual readbacks, root may stage this exact binding and invoke materialize green once. Complete source-only materialization evidence, separately observed outer0, independent actual review, publication and full actual readbacks are an EXTERNAL prerequisite for later run green with these IDENTICAL binding bytes. Do not append the materialization receipt/reviews/publication to this binding.",
+      "greenAcceptanceRequirement": "One full Node139 then renderer85 GREEN under unchanged commands/deadlines/capture. Complete GREEN acceptance/publication/full actual readbacks precede authorship of a distinct validation binding. acceptedCombinedGreen remains null here.",
+      "validationBindingRequirement": "A separate validation binding may be authored only after accepted/published/read-back GREEN and must preserve this publishedSubject/source vector/test identities while embedding the full accepted GREEN receipt and evidence.",
+      "noNewR1OrRunnerChange": true,
+      "noTestWrites": true,
+      "controlsNotYetStaged": true,
+      "materializationNotYetInvoked": true,
+      "greenNotYetInvoked": true,
+      "validationNotYetInvoked": true,
+      "wholeE2EQualified": false
+    },
+    "authoredAtUtc": "2026-11-17 02:02:33 UTC",
+    "authoredAfterExactClosedSourcePublicationGate": true
+  },
+  "parallelRootStatic": {
+    "identity": {
+      "bytes": 60425,
+      "sha256": "1e73ba974bb56a77fbeb81c0853608ca57bdb80b6234a9cf49c0adacb5a4064c",
+      "gitBlob": "022f629acd0b84cc2a5712b9b10f3ed9dd96c593"
+    },
+    "completeBodyReadAndRehashed": true,
+    "all204ChecksPassed": true,
+    "exactSameSubject": true,
+    "all77CompleteReviewBodyIdentitiesJoined": true,
+    "all18SourceBodyIdentitiesJoined": true,
+    "exactSame45Unchanged16Changed2AddedFields": true,
+    "exactSameTransportManifestAndParts": true,
+    "noUnresolvedPointersOrBlockers": true
+  },
+  "oldAttempts": {
+    "original64038": "REFUSED/SPENT observedouter2; unchanged",
+    "corrected54393": "UNKNOWN/INCOMPLETE/SPENT; no finalouter/custody/cleanup recovered",
+    "postTransport53054": "COMPLETE accepted RED observedouter0; not replayed"
+  },
+  "checks": [
+    {
+      "name": "Complete admitted baseline binding exact",
+      "passed": true
+    },
+    {
+      "name": "Complete runner exact and unchanged",
+      "passed": true
+    },
+    {
+      "name": "Complete admitted R1 body exact and literal unchanged in baseline",
+      "passed": true
+    },
+    {
+      "name": "Closed source actual gate is the exact accepted current publication",
+      "passed": true
+    },
+    {
+      "name": "Closed source gate uses both complete reviewed actual reports",
+      "passed": true
+    },
+    {
+      "name": "Closed source gate is still authorship-only before selected materialization/GREEN",
+      "passed": true
+    },
+    {
+      "name": "Complete RED baseline overlay matches accepted source preimage: scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "passed": true
+    },
+    {
+      "name": "Complete RED baseline overlay matches accepted source preimage: scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+      "passed": true
+    },
+    {
+      "name": "Complete RED baseline overlay matches accepted source preimage: scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+      "passed": true
+    },
+    {
+      "name": "Complete RED baseline overlay matches accepted source preimage: scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts",
+      "passed": true
+    },
+    {
+      "name": "Complete RED baseline overlay matches accepted source preimage: src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts",
+      "passed": true
+    },
+    {
+      "name": "Complete RED baseline overlay matches accepted source preimage: scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+      "passed": true
+    },
+    {
+      "name": "Complete RED baseline overlay matches accepted source preimage: scripts/legacy-agent-host/desktop-task-review-cycle-ui-smoke.ts",
+      "passed": true
+    },
+    {
+      "name": "Complete RED baseline overlay matches accepted source preimage: scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+      "passed": true
+    },
+    {
+      "name": "Complete RED baseline overlay matches accepted source preimage: test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts",
+      "passed": true
+    },
+    {
+      "name": "All 58 complete baseline review bodies rehash",
+      "passed": true
+    },
+    {
+      "name": "Lossless complete transport reassembly matches exact candidate binding",
+      "passed": true
+    },
+    {
+      "name": "All three ordered whole parts and offsets match full binding without transformations",
+      "passed": true
+    },
+    {
+      "name": "Exactly sixteen selected existing fields change, two fields are added and none removed",
+      "passed": true
+    },
+    {
+      "name": "Complete unchanged inherited binding field: schemaVersion",
+      "passed": true
+    },
+    {
+      "name": "Complete unchanged inherited binding field: publishedR1",
+      "passed": true
+    },
+    {
+      "name": "Complete unchanged inherited binding field: publishedRecoveryR1",
+      "passed": true
+    },
+    {
+      "name": "Complete unchanged inherited binding field: publishedTransportAmendment",
+      "passed": true
+    },
+    {
+      "name": "Complete unchanged inherited binding field: combinedR1Identity",
+      "passed": true
+    },
+    {
+      "name": "Complete unchanged inherited binding field: combinedR1Body",
+      "passed": true
+    },
+    {
+      "name": "Complete unchanged inherited binding field: combinedR1ActualReadbackAccepted",
+      "passed": true
+    },
+    {
+      "name": "Complete unchanged inherited binding field: combinedR1ActualReadbackEvidence",
+      "passed": true
+    },
+    {
+      "name": "Complete unchanged inherited binding field: runnerLocalPath",
+      "passed": true
+    },
+    {
+      "name": "Complete unchanged inherited binding field: runnerIdentity",
+      "passed": true
+    },
+    {
+      "name": "Complete unchanged inherited binding field: actualPublishedSubjectReadbackAccepted",
+      "passed": true
+    },
+    {
+      "name": "Complete unchanged inherited binding field: combinedInputImportAdmission",
+      "passed": true
+    },
+    {
+      "name": "Complete unchanged inherited binding field: inputFiles",
+      "passed": true
+    },
+    {
+      "name": "Complete unchanged inherited binding field: testIdentities",
+      "passed": true
+    },
+    {
+      "name": "Complete unchanged inherited binding field: nodeNames",
+      "passed": true
+    },
+    {
+      "name": "Complete unchanged inherited binding field: rendererNames",
+      "passed": true
+    },
+    {
+      "name": "Complete unchanged inherited binding field: nodeRedFailureSites",
+      "passed": true
+    },
+    {
+      "name": "Complete unchanged inherited binding field: rendererRedFailureSites",
+      "passed": true
+    },
+    {
+      "name": "Complete unchanged inherited binding field: commandVectors",
+      "passed": true
+    },
+    {
+      "name": "Complete unchanged inherited binding field: nativeMetadataArgv",
+      "passed": true
+    },
+    {
+      "name": "Complete unchanged inherited binding field: outputRoots",
+      "passed": true
+    },
+    {
+      "name": "Complete unchanged inherited binding field: tempRoots",
+      "passed": true
+    },
+    {
+      "name": "Complete unchanged inherited binding field: rendererRawEnvironment",
+      "passed": true
+    },
+    {
+      "name": "Complete unchanged inherited binding field: rendererEffectiveAbsentKeys",
+      "passed": true
+    },
+    {
+      "name": "Complete unchanged inherited binding field: rendererAbsentPaths",
+      "passed": true
+    },
+    {
+      "name": "Complete unchanged inherited binding field: rendererStaticPins",
+      "passed": true
+    },
+    {
+      "name": "Complete unchanged inherited binding field: rendererStaticLinks",
+      "passed": true
+    },
+    {
+      "name": "Complete unchanged inherited binding field: rendererNativePins",
+      "passed": true
+    },
+    {
+      "name": "Complete unchanged inherited binding field: rendererEntryRelative",
+      "passed": true
+    },
+    {
+      "name": "Complete unchanged inherited binding field: rollupLocalOverride",
+      "passed": true
+    },
+    {
+      "name": "Complete unchanged inherited binding field: rendererDerivedConfig",
+      "passed": true
+    },
+    {
+      "name": "Complete unchanged inherited binding field: materializationReceiptScope",
+      "passed": true
+    },
+    {
+      "name": "Complete unchanged inherited binding field: acceptedCombinedGreen",
+      "passed": true
+    },
+    {
+      "name": "Complete unchanged inherited binding field: behavioralAttempts",
+      "passed": true
+    },
+    {
+      "name": "Complete unchanged inherited binding field: timing",
+      "passed": true
+    },
+    {
+      "name": "Complete unchanged inherited binding field: executionScope",
+      "passed": true
+    },
+    {
+      "name": "Complete unchanged inherited binding field: authorshipGate",
+      "passed": true
+    },
+    {
+      "name": "Complete unchanged inherited binding field: historicalRecoveryProvenance",
+      "passed": true
+    },
+    {
+      "name": "Complete unchanged inherited binding field: historicalTestMaterialization",
+      "passed": true
+    },
+    {
+      "name": "Complete unchanged inherited binding field: historicalEvidenceBodies",
+      "passed": true
+    },
+    {
+      "name": "Complete unchanged inherited binding field: historicalPredictionCorrection",
+      "passed": true
+    },
+    {
+      "name": "Complete unchanged inherited binding field: correctedControlAuthoredAtUtc",
+      "passed": true
+    },
+    {
+      "name": "Complete unchanged inherited binding field: dataReplicaRecovery",
+      "passed": true
+    },
+    {
+      "name": "Complete unchanged inherited binding field: postTransportRecoveryProvenance",
+      "passed": true
+    },
+    {
+      "name": "Complete unchanged inherited binding field: postTransportControlAuthoredAtUtc",
+      "passed": true
+    },
+    {
+      "name": "Exact changed field data identity joins proposal: kind",
+      "passed": true
+    },
+    {
+      "name": "Exact changed field data identity joins proposal: phase",
+      "passed": true
+    },
+    {
+      "name": "Exact changed field data identity joins proposal: bindingLocalPath",
+      "passed": true
+    },
+    {
+      "name": "Exact changed field data identity joins proposal: publishedSubject",
+      "passed": true
+    },
+    {
+      "name": "Exact changed field data identity joins proposal: actualPublishedSubjectReadbackEvidence",
+      "passed": true
+    },
+    {
+      "name": "Exact changed field data identity joins proposal: acceptedReviewBodies",
+      "passed": true
+    },
+    {
+      "name": "Exact changed field data identity joins proposal: beforeSourceOverlay",
+      "passed": true
+    },
+    {
+      "name": "Exact changed field data identity joins proposal: sourceOverlay",
+      "passed": true
+    },
+    {
+      "name": "Exact changed field data identity joins proposal: sourcePins",
+      "passed": true
+    },
+    {
+      "name": "Exact changed field data identity joins proposal: sourceVectorIdentity",
+      "passed": true
+    },
+    {
+      "name": "Exact changed field data identity joins proposal: materializePaths",
+      "passed": true
+    },
+    {
+      "name": "Exact changed field data identity joins proposal: acceptedCombinedRed",
+      "passed": true
+    },
+    {
+      "name": "Exact changed field data identity joins proposal: producerR2ReviewedAndPublished",
+      "passed": true
+    },
+    {
+      "name": "Exact changed field data identity joins proposal: producerActualReadbackAccepted",
+      "passed": true
+    },
+    {
+      "name": "Exact changed field data identity joins proposal: draftState",
+      "passed": true
+    },
+    {
+      "name": "Exact changed field data identity joins proposal: historicalBeforeSourceOverlayQualification",
+      "passed": true
+    },
+    {
+      "name": "Complete field inverse restores exact full baseline binding bytes",
+      "passed": true
+    },
+    {
+      "name": "Original 58 complete review records are literal identical prefix",
+      "passed": true
+    },
+    {
+      "name": "Exactly 19 appended current evidence records give 77 total with unique roles",
+      "passed": true
+    },
+    {
+      "name": "Full historical draft state and qualifier are preserved in transition provenance",
+      "passed": true
+    },
+    {
+      "name": "New binding authorship follows exact closed source publication gate",
+      "passed": true
+    },
+    {
+      "name": "Published current source subject and both exact actual readbacks are used",
+      "passed": true
+    },
+    {
+      "name": "Exact unchanged runner and R1 are retained by new binding and proposal",
+      "passed": true
+    },
+    {
+      "name": "Complete embedded review body identity: freshBootstrapGuardActualReview",
+      "passed": true
+    },
+    {
+      "name": "Complete embedded review body identity: freshSdkIndependentReview",
+      "passed": true
+    },
+    {
+      "name": "Complete embedded review body identity: freshMcpIndependentReview",
+      "passed": true
+    },
+    {
+      "name": "Complete embedded review body identity: crossR1ActualPublicationReadback",
+      "passed": true
+    },
+    {
+      "name": "Complete embedded review body identity: crossTestGuardR2",
+      "passed": true
+    },
+    {
+      "name": "Complete embedded review body identity: crossTestParityR2",
+      "passed": true
+    },
+    {
+      "name": "Complete embedded review body identity: crossTestActualPublicationReadback",
+      "passed": true
+    },
+    {
+      "name": "Complete embedded review body identity: crossActualRedGuard",
+      "passed": true
+    },
+    {
+      "name": "Complete embedded review body identity: crossActualRedPrimarySemantic",
+      "passed": true
+    },
+    {
+      "name": "Complete embedded review body identity: crossActualRedSemanticClosure",
+      "passed": true
+    },
+    {
+      "name": "Complete embedded review body identity: crossProducerGuardR2",
+      "passed": true
+    },
+    {
+      "name": "Complete embedded review body identity: crossProducerParityR2",
+      "passed": true
+    },
+    {
+      "name": "Complete embedded review body identity: crossProducerActualPublicationReadback",
+      "passed": true
+    },
+    {
+      "name": "Complete embedded review body identity: crossActualGreenFullGuard",
+      "passed": true
+    },
+    {
+      "name": "Complete embedded review body identity: crossActualGreenFinalSemantic",
+      "passed": true
+    },
+    {
+      "name": "Complete embedded review body identity: crossActualGreenFullEnvelope",
+      "passed": true
+    },
+    {
+      "name": "Complete embedded review body identity: crossOriginalValidationIncompleteGuard",
+      "passed": true
+    },
+    {
+      "name": "Complete embedded review body identity: crossOriginalValidationIncompleteParity",
+      "passed": true
+    },
+    {
+      "name": "Complete embedded review body identity: isolatedRecoveryR1Guard",
+      "passed": true
+    },
+    {
+      "name": "Complete embedded review body identity: isolatedRecoveryR1Parity",
+      "passed": true
+    },
+    {
+      "name": "Complete embedded review body identity: isolatedRecoveryR1CompositeActualPublicationReadback",
+      "passed": true
+    },
+    {
+      "name": "Complete embedded review body identity: combinedR1RootActual",
+      "passed": true
+    },
+    {
+      "name": "Complete embedded review body identity: combinedR1IndependentActual",
+      "passed": true
+    },
+    {
+      "name": "Complete embedded review body identity: combinedTestGuardR2",
+      "passed": true
+    },
+    {
+      "name": "Complete embedded review body identity: combinedTestRendererR2",
+      "passed": true
+    },
+    {
+      "name": "Complete embedded review body identity: combinedTestRootActual",
+      "passed": true
+    },
+    {
+      "name": "Complete embedded review body identity: combinedTestIndependentActual",
+      "passed": true
+    },
+    {
+      "name": "Complete embedded review body identity: rendererInitialInstalledAdmission",
+      "passed": true
+    },
+    {
+      "name": "Complete embedded review body identity: rendererAdditionalInstalledAdmission",
+      "passed": true
+    },
+    {
+      "name": "Complete embedded review body identity: rendererCombinedFeasibility",
+      "passed": true
+    },
+    {
+      "name": "Complete embedded review body identity: rendererPathDataAdmission",
+      "passed": true
+    },
+    {
+      "name": "Complete embedded review body identity: combinedSemanticSourceGuide",
+      "passed": true
+    },
+    {
+      "name": "Complete embedded review body identity: combinedWholeTestsR2Proposal",
+      "passed": true
+    },
+    {
+      "name": "Complete embedded review body identity: correctedTitleR1GuardReview",
+      "passed": true
+    },
+    {
+      "name": "Complete embedded review body identity: correctedTitleR1SemanticReview",
+      "passed": true
+    },
+    {
+      "name": "Complete embedded review body identity: correctedTitleR1BindingReview",
+      "passed": true
+    },
+    {
+      "name": "Complete embedded review body identity: correctedTitleR1RootActual",
+      "passed": true
+    },
+    {
+      "name": "Complete embedded review body identity: correctedTitleR1IndependentActual",
+      "passed": true
+    },
+    {
+      "name": "Complete embedded review body identity: historicalTestMaterializationGuard",
+      "passed": true
+    },
+    {
+      "name": "Complete embedded review body identity: historicalTestMaterializationParity",
+      "passed": true
+    },
+    {
+      "name": "Complete embedded review body identity: historicalTestMaterializationRootActual",
+      "passed": true
+    },
+    {
+      "name": "Complete embedded review body identity: historicalTestMaterializationIndependentActual",
+      "passed": true
+    },
+    {
+      "name": "Complete embedded review body identity: originalSixTitlePredictionDiagnosis",
+      "passed": true
+    },
+    {
+      "name": "Complete embedded review body identity: postTransportRecoveryR1RootReview",
+      "passed": true
+    },
+    {
+      "name": "Complete embedded review body identity: postTransportRecoveryR1GuardReview",
+      "passed": true
+    },
+    {
+      "name": "Complete embedded review body identity: postTransportRecoveryR1BindingReview",
+      "passed": true
+    },
+    {
+      "name": "Complete embedded review body identity: postTransportRecoveryR1SemanticReview",
+      "passed": true
+    },
+    {
+      "name": "Complete embedded review body identity: postTransportRecoveryR1RootActual",
+      "passed": true
+    },
+    {
+      "name": "Complete embedded review body identity: postTransportRecoveryR1IndependentActual",
+      "passed": true
+    },
+    {
+      "name": "Complete embedded review body identity: correctedRedIncompleteRootAccounting",
+      "passed": true
+    },
+    {
+      "name": "Complete embedded review body identity: correctedRedIncompleteGuardReview",
+      "passed": true
+    },
+    {
+      "name": "Complete embedded review body identity: correctedRedIncompleteSemanticReview",
+      "passed": true
+    },
+    {
+      "name": "Complete embedded review body identity: correctedRedIncompleteRootActual",
+      "passed": true
+    },
+    {
+      "name": "Complete embedded review body identity: correctedRedIncompleteIndependentActual",
+      "passed": true
+    },
+    {
+      "name": "Complete embedded review body identity: postTransportRecoveryRecommendations",
+      "passed": true
+    },
+    {
+      "name": "Complete embedded review body identity: returnedSourceInputObservation",
+      "passed": true
+    },
+    {
+      "name": "Complete embedded review body identity: returnedPathObservation",
+      "passed": true
+    },
+    {
+      "name": "Complete embedded review body identity: returnedToolCacheObservation",
+      "passed": true
+    },
+    {
+      "name": "Complete embedded review body identity: postTransportControlsRootActual",
+      "passed": true
+    },
+    {
+      "name": "Appended current complete evidence joins accepted immutable readback: postTransportControlsRootActual",
+      "passed": true
+    },
+    {
+      "name": "Complete embedded review body identity: postTransportControlsIndependentActual",
+      "passed": true
+    },
+    {
+      "name": "Appended current complete evidence joins accepted immutable readback: postTransportControlsIndependentActual",
+      "passed": true
+    },
+    {
+      "name": "Complete embedded review body identity: postTransportCombinedRedObservedOuter",
+      "passed": true
+    },
+    {
+      "name": "Appended current complete evidence joins accepted immutable readback: postTransportCombinedRedObservedOuter",
+      "passed": true
+    },
+    {
+      "name": "Complete embedded review body identity: postTransportCombinedRedRootRuntimeReview",
+      "passed": true
+    },
+    {
+      "name": "Appended current complete evidence joins accepted immutable readback: postTransportCombinedRedRootRuntimeReview",
+      "passed": true
+    },
+    {
+      "name": "Complete embedded review body identity: postTransportCombinedRedGuardRuntimeReview",
+      "passed": true
+    },
+    {
+      "name": "Appended current complete evidence joins accepted immutable readback: postTransportCombinedRedGuardRuntimeReview",
+      "passed": true
+    },
+    {
+      "name": "Complete embedded review body identity: postTransportCombinedRedSemanticRuntimeReview",
+      "passed": true
+    },
+    {
+      "name": "Appended current complete evidence joins accepted immutable readback: postTransportCombinedRedSemanticRuntimeReview",
+      "passed": true
+    },
+    {
+      "name": "Complete embedded review body identity: postTransportCombinedRedCompleteLargeBodyJoin",
+      "passed": true
+    },
+    {
+      "name": "Appended current complete evidence joins accepted immutable readback: postTransportCombinedRedCompleteLargeBodyJoin",
+      "passed": true
+    },
+    {
+      "name": "Complete embedded review body identity: postTransportCombinedRedPublicationRootActual",
+      "passed": true
+    },
+    {
+      "name": "Appended current complete evidence joins accepted immutable readback: postTransportCombinedRedPublicationRootActual",
+      "passed": true
+    },
+    {
+      "name": "Complete embedded review body identity: postTransportCombinedRedPublicationIndependentActual",
+      "passed": true
+    },
+    {
+      "name": "Appended current complete evidence joins accepted immutable readback: postTransportCombinedRedPublicationIndependentActual",
+      "passed": true
+    },
+    {
+      "name": "Complete embedded review body identity: threeProducerSourceAuthorshipGate",
+      "passed": true
+    },
+    {
+      "name": "Appended current complete evidence joins accepted immutable readback: threeProducerSourceAuthorshipGate",
+      "passed": true
+    },
+    {
+      "name": "Complete embedded review body identity: threeProducerSourceR2Proposal",
+      "passed": true
+    },
+    {
+      "name": "Appended current complete evidence joins accepted immutable readback: threeProducerSourceR2Proposal",
+      "passed": true
+    },
+    {
+      "name": "Complete embedded review body identity: threeProducerSourceR2Root",
+      "passed": true
+    },
+    {
+      "name": "Appended current complete evidence joins accepted immutable readback: threeProducerSourceR2Root",
+      "passed": true
+    },
+    {
+      "name": "Complete embedded review body identity: threeProducerSourceR2Guard",
+      "passed": true
+    },
+    {
+      "name": "Appended current complete evidence joins accepted immutable readback: threeProducerSourceR2Guard",
+      "passed": true
+    },
+    {
+      "name": "Complete embedded review body identity: threeProducerSourceR2Semantic",
+      "passed": true
+    },
+    {
+      "name": "Appended current complete evidence joins accepted immutable readback: threeProducerSourceR2Semantic",
+      "passed": true
+    },
+    {
+      "name": "Complete embedded review body identity: threeProducerSourceR2Binding",
+      "passed": true
+    },
+    {
+      "name": "Appended current complete evidence joins accepted immutable readback: threeProducerSourceR2Binding",
+      "passed": true
+    },
+    {
+      "name": "Complete embedded review body identity: threeProducerSourcePublicationManifest",
+      "passed": true
+    },
+    {
+      "name": "Appended current complete evidence joins accepted immutable readback: threeProducerSourcePublicationManifest",
+      "passed": true
+    },
+    {
+      "name": "Complete embedded review body identity: threeProducerSourcePublicationRootActual",
+      "passed": true
+    },
+    {
+      "name": "Appended current complete evidence joins accepted immutable readback: threeProducerSourcePublicationRootActual",
+      "passed": true
+    },
+    {
+      "name": "Complete embedded review body identity: threeProducerSourcePublicationIndependentActual",
+      "passed": true
+    },
+    {
+      "name": "Appended current complete evidence joins accepted immutable readback: threeProducerSourcePublicationIndependentActual",
+      "passed": true
+    },
+    {
+      "name": "Complete embedded review body identity: threeProducerBindingAuthorshipGate",
+      "passed": true
+    },
+    {
+      "name": "Appended current complete evidence joins accepted immutable readback: threeProducerBindingAuthorshipGate",
+      "passed": true
+    },
+    {
+      "name": "All 77 complete embedded review bodies total exactly 6093457 bytes",
+      "passed": true
+    },
+    {
+      "name": "Complete current before overlay is exactly the full accepted RED after overlay",
+      "passed": true
+    },
+    {
+      "name": "Complete beforeSourceOverlay body joins admitted immutable source: scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "passed": true
+    },
+    {
+      "name": "Complete beforeSourceOverlay body joins admitted immutable source: scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+      "passed": true
+    },
+    {
+      "name": "Complete beforeSourceOverlay body joins admitted immutable source: scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+      "passed": true
+    },
+    {
+      "name": "Complete beforeSourceOverlay body joins admitted immutable source: scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts",
+      "passed": true
+    },
+    {
+      "name": "Complete beforeSourceOverlay body joins admitted immutable source: src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts",
+      "passed": true
+    },
+    {
+      "name": "Complete beforeSourceOverlay body joins admitted immutable source: scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+      "passed": true
+    },
+    {
+      "name": "Complete beforeSourceOverlay body joins admitted immutable source: scripts/legacy-agent-host/desktop-task-review-cycle-ui-smoke.ts",
+      "passed": true
+    },
+    {
+      "name": "Complete beforeSourceOverlay body joins admitted immutable source: scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+      "passed": true
+    },
+    {
+      "name": "Complete beforeSourceOverlay body joins admitted immutable source: test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts",
+      "passed": true
+    },
+    {
+      "name": "Complete sourceOverlay body joins admitted immutable source: scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "passed": true
+    },
+    {
+      "name": "Complete sourceOverlay body joins admitted immutable source: scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+      "passed": true
+    },
+    {
+      "name": "Complete sourceOverlay body joins admitted immutable source: scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+      "passed": true
+    },
+    {
+      "name": "Complete sourceOverlay body joins admitted immutable source: scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts",
+      "passed": true
+    },
+    {
+      "name": "Complete sourceOverlay body joins admitted immutable source: src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts",
+      "passed": true
+    },
+    {
+      "name": "Complete sourceOverlay body joins admitted immutable source: scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+      "passed": true
+    },
+    {
+      "name": "Complete sourceOverlay body joins admitted immutable source: scripts/legacy-agent-host/desktop-task-review-cycle-ui-smoke.ts",
+      "passed": true
+    },
+    {
+      "name": "Complete sourceOverlay body joins admitted immutable source: scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+      "passed": true
+    },
+    {
+      "name": "Complete sourceOverlay body joins admitted immutable source: test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts",
+      "passed": true
+    },
+    {
+      "name": "Exactly the three admitted producer rows change, preserving the six fixed rows",
+      "passed": true
+    },
+    {
+      "name": "Complete sorted before and after pin vectors equal proposal and publication",
+      "passed": true
+    },
+    {
+      "name": "All 18 complete embedded source bodies have exact before604208 and after604476 byte totals",
+      "passed": true
+    },
+    {
+      "name": "The original whole Node139 and renderer85 test bodies and identity pair are unchanged",
+      "passed": true
+    },
+    {
+      "name": "Only exact producer paths are selected for materialization",
+      "passed": true
+    },
+    {
+      "name": "Complete embedded accepted RED phase receipt is exact previously accepted immutable evidence",
+      "passed": true
+    },
+    {
+      "name": "Accepted RED receipt satisfies unchanged action, command, phase and expected child exit contract",
+      "passed": true
+    },
+    {
+      "name": "Accepted RED receipt retains complete inputs, test identities, same runner and matching before vector",
+      "passed": true
+    },
+    {
+      "name": "Accepted RED receipt retains exact successful captured finalization and both semantic suites",
+      "passed": true
+    },
+    {
+      "name": "Accepted RED separate observed outer and actual publication acceptance are exact",
+      "passed": true
+    },
+    {
+      "name": "Accepted RED publication manifest and producer-authorship gate pointers join complete exact bodies",
+      "passed": true
+    },
+    {
+      "name": "Accepted RED runtime review pointers join all full appended immutable bodies",
+      "passed": true
+    },
+    {
+      "name": "Source R2 and actual publication booleans follow completed exact source acceptance",
+      "passed": true
+    },
+    {
+      "name": "Source R2 proof identities are the complete accepted current published reports",
+      "passed": true
+    },
+    {
+      "name": "New provenance anchors unchanged baseline controls and actual control publication",
+      "passed": true
+    },
+    {
+      "name": "GREEN phase, new binding path and exact producer-only materialization are selected",
+      "passed": true
+    },
+    {
+      "name": "Same immutable binding governs source-only materialization then GREEN with external acceptance gate",
+      "passed": true
+    },
+    {
+      "name": "Materialization remains source-and-supervisor metadata only with runtime payloads uninspected",
+      "passed": true
+    },
+    {
+      "name": "Accepted GREEN remains null and later separate validation binding is explicitly gated",
+      "passed": true
+    },
+    {
+      "name": "All whole suite names, complete tests, commands, metadata argv, environments and native configuration remain literal unchanged",
+      "passed": true
+    },
+    {
+      "name": "Input manifests, replica provenance, historical bodies, paths, ownership and receipt scope remain exact",
+      "passed": true
+    },
+    {
+      "name": "Original per-primary180/metadata30 timing, finite attempts and no replay remain exact",
+      "passed": true
+    },
+    {
+      "name": "Draft snapshot explicitly distinguishes accepted physical RED from unapplied source postimages and new control",
+      "passed": true
+    },
+    {
+      "name": "No new binding staging, materialization, GREEN, validation, runner/test edits or whole E2E are claimed",
+      "passed": true
+    },
+    {
+      "name": "Both previous rejected/unknown attempts and accepted RED remain distinct and spent",
+      "passed": true
+    },
+    {
+      "name": "Root complete static report has the identical independently derived subject",
+      "passed": true
+    },
+    {
+      "name": "Root full 204 checks pass with empty failed/pointer/blocker lists",
+      "passed": true
+    },
+    {
+      "name": "Root all77 full review identities join independently rehashed whole bodies",
+      "passed": true
+    },
+    {
+      "name": "Root all18 source body identities join independent before/after readbacks",
+      "passed": true
+    },
+    {
+      "name": "Root exact changed/unchanged/added field sets and transport contract agree",
+      "passed": true
+    },
+    {
+      "name": "Root report claims no staging/source/runtime/runner changes",
+      "passed": true
+    }
+  ],
+  "checkCount": 234,
+  "failedChecks": [],
+  "unresolvedPointers": [],
+  "unresolvedBlockers": [],
+  "bindingStaged": false,
+  "sourceWorkingTreeWrites": 0,
+  "sourceApplied": false,
+  "runtimeInvoked": false,
+  "runnerChanged": false,
+  "testsChanged": false,
+  "materializationInvoked": false,
+  "greenInvoked": false,
+  "validationInvoked": false,
+  "wholeE2EQualified": false,
+  "disposition": "Exact immutable binding accepted within the assigned R2 scope. Complete remaining independent R2 reports, immediate-push publication and full actual root/independent readbacks precede staging. The already specified external source-only materialization acceptance/publication/readbacks precede the single full GREEN under these identical binding bytes. No additional requirement or scope is introduced.",
+  "limits": [
+    "Static data, exact source preservation and unchanged-runner binding joins only. This report supplies no new physical source/application/input census, runtime outcome, GUI/native/vendor/integration or whole E2E qualification.",
+    "Original64038 remains REFUSED/SPENT with outer2; corrected54393 remains UNKNOWN/INCOMPLETE/SPENT with old termination/custody/cleanup unknown; accepted53054 RED remains complete and spent.",
+    "No source/helper/import/test/workflow/runner expansion, deadline extension, replay, partial resume, cache repair, original CI polling or external communication was performed."
+  ]
+}

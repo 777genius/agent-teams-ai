@@ -257,3 +257,132 @@ Next: actual control publication readbacks, then one exclusive source-free stagi
 One new full invocation53054 completed with independently observed supervisor outer0. Expected RED: Node139=134pass/5fail, renderer85=82pass/3fail. All old133/80 and positive controls137/84/85 passed. Full fresh inputs before/after matched; all captured processes finalized, Node debt and owned renderer temporary output cleanup were empty. All82 evidence files/90,459,854 bytes are retained with complete lossless large-body joins. No source change or test rematerialization occurred.
 
 Root19fcd35a, Guard38bd0eb9 and semantic3cddc2bd accept the exact RED; root fully read both independent reports. Packetca4e84b2, outer947cf527, phasebcc31247 and full input joinaad388d4 retain the result. Actual outcome publication readbacks remain before any producer authorship. Original64038 stays refused/outer2 and54393 stays unknown/spent. GREEN and broader E2E remain open; no deadline extension, replay, real Claude/Codex execution or source change.
+
+## 2026-11-17 — exact three producer fixes published
+
+After full accepted RED publication readbacks (root9218839e, independente5c2c2d8), the authorship gate closed01:40:00 UTC. Proposalb0d4fb7c and all three exact postimages passed root55/Guard81/semantic97/binding65 source R2 checks. P11 gains two original-cutoff checks after its existing awaits; Review requires current canEditNow===true within its original30_000 wait; the hook removes only !silent && from the current-request finally guard. Full inverses are exact; four fixed producers and both139/85 test bodies stay unchanged. Files remain572/794/2068lines.
+
+Source postimages5026f0ec/8d175c98/c2faa156 and published vector3887991d are retained. No test-workspace source application or GREEN execution occurred. Complete actual source publication readbacks and then a reviewed immutable materialization/GREEN binding precede the selected application and whole GREEN. Accepted RED53054 remains complete; old64038refused/outer2 and54393unknown/spent remain distinct. Broader E2E remains open.
+
+## 2026-11-17 — immutable producer/GREEN controls published
+
+Source publication b83da2bb passed full root/independent actual readbacks; gate63fe55b3 closed 2026-11-17 02:00:49 UTC. Immutable bindingea852a05 uses unchanged runnerc81/R18ce, exact RED before-vectorf644 and published producer after-vector388. Root204/Guard201/semantic252/binding234 complete R2 checks pass, and root read all three full independent reports. All58 inherited review records, both139/85 test bodies and four fixed producers stay identical. The whole8,262,787-byte binding and all3 lossless transport parts are retained.
+
+Full actual binding publication readbacks remain before staging. One source-only materialization and its complete independent acceptance/publication/readbacks must precede GREEN with the same immutable binding bytes. A later validation binding remains gated on accepted/published/read-back GREEN. No source application or new runtime result is asserted. Broader E2E remains open.
+
+## 2026-11-17 — local materialization refused; no source application
+
+After full binding actual readbacks, source-free GREEN-binding staging succeeded with observedouter0. The one subsequent materialize green invocation ended with observedouter1 at unchanged runnerline1098 because its selected ROOT/REPO admission failed. Read-only observation found the selected source root absent; cause/time UNKNOWN. No phase receipt, source/metadata boundary or source write was reached. Refusalba7c846e and path observation814c9c40 are retained; root29/Guard52 checks accept accounting only.
+
+The local attempt is permanently SPENT. Source/input preservation remains unknown/null; GREEN and validation remain UNREACHED. Published source fixes stay retained in Git. Full actual refusal publication readbacks precede a separately selected fresh venue; current CI investigation is advisory only, with no new run/PR/ref selected. Do not replay or restore in place. Whole E2E remains open.
+
+
+## 2026-11-17 03:05:35 UTC — exact fresh isolated Draft CI R1 retained
+
+R1 `7237425e51bda9feb7d0ded4e424fe72745680c1` is accepted by root and all three independent reviews. This publication retains those complete reports plus the 42-workflow/9-source corpus, provider-entry/coverage/event advisories, and the prior local-refusal actual reports/gate. Source and workflow bytes are unchanged; whole139/85 files remain exact.
+
+Next, after full actual-publication root/independent readbacks, externally bind this actual publication commit to the fresh immutable CI-head ref, create the exact ancestor-base ref, read both back, and open the one reviewed Draft PR. Working evidence pushes stay separate, so active CI runs will not be replaced by synchronize. No new ref/PR/run has been created yet.
+
+Expected selection: five active workflow families, two Draft-skipped families; CI's Draft full-qualification failure remains intentional policy. Host Process is not selected. Actual job/test/artifact/cleanup outcomes are unobserved, not PASS. The refused local attempt remains spent, source root unavailable at its last observation, and GREEN/validation remain unexecuted. No broader qualification, real Claude/Codex execution, frozen/old-run mutation, release or merge is selected.
+
+
+## 2026-11-17 03:41:21 UTC — PR1218 opened; exact CI evidence is still pending
+
+Actual R1 gate `082178036bc188dabaeb82d1d2a91e8840f2b13e` and external intent `a692320653688e84c8f006c9c7eb883350f16423` admitted exactly two fresh ref creations and one opened Draft PR. CI head stays `9c9c73190840592963142d36562ea07d2b5d2d71`, base stays `77993819c233737f1e2b4c11c8ca1a5d360bcbe3`; working evidence commits do not move the snapshot refs.
+
+All seven attempt1 runs bind directly to PR1218 in their complete attempt metadata. Host44008782843, Packaged44008782844, CI44008782909, Stage144008782832 and Announcements44008782869 remain QUEUED at the latest retained03:34:31 UTC observation. CodeQL44008782825 and OpenCodeDesktop44008782932 are completed expected Draft skips; their one-job/zero-artifact captures are final and are not polled further. The initial39-job snapshot is not the final dependent-job census.
+
+No current Node139/renderer85/Desktop result, source checkout or cleanup PASS is available. Queue cause remains UNKNOWN. Static Windows/Darwin/provider follow-ups add bounded evidence, not source adoption or native qualification. The old local materialization remains REFUSED/SPENT; its GREEN/validation are still UNREACHED. Continue only the five bound active runs under the unchanged R1 capture contract. Whole E2E remains incomplete.
+
+
+## 2026-11-17 — narrow catalog/deadline R1 accepted statically
+
+R1 `b34a76fffb93d5216cd689893186376963ef8654` has full root/guard/semantic/binding review (30/32/52/73 checks). Exact accepted source basis is `935ed8dd0b0f3f95cbbc7ed6d691009efa2c47da`. Pending actual readbacks of this docs publication still precede all new source/test/control authorship.
+
+Selected future delta: the existing captured-SDK catalog predicate and exact three-case test suffix; one original-deadline admission gate in actual waitRead; a whole10-case Node module appended by literal awaited import after the full original139 body. Prospective149/43 are separate from unchanged85. No new execution or test PASS is claimed. Full canonical/type/build/GUI/native gates remain open.
+
+PR1218 remains fixed at head9c9/base779. Observations5–7 are retained in `e685147a4ce2b7e7bec7e2396b0d2841d9f31821`; all five active runs are still queued as of04:06:01UTC. Two terminal Draft skips remain skips. Queue cause is unknown. No source checkout, new139/85 GREEN or Desktop cleanup has been observed.
+
+
+## Captured catalog and UI deadline source correction — 2026-11-17
+
+The exact five source/test postimages in `1318b887473a61e1cbfb3960812fbc84e3b4df13` completed source R2 with 35 root, 43 guard, 46 semantic and 99 binding checks. The complete reports, four before bodies, five after bodies, and canonical11/12 vectors were read; all independent reports were fully self-read. The accepted R1 authorship gate is `29040a4faa87137bfa070c71651147b2da4f2102`.
+
+The catalog accepts the existing captured `claude-sdk` source through the unchanged Anthropic offer pipeline. Generic UI reads refuse fulfilled observations at or after the original deadline before calling readiness or issuing another polling wait. The full original139 Node and40 catalog test bodies remain exact prefixes. Ten finite deadline tests are included by an awaited literal import; three catalog cases are appended. The prospective full inventories are149 and43, with the separate renderer85 unchanged.
+
+This publication selects exactly four source/test modifications and one new test. It changes no workflow, dependency, provider archive, policy, exception or timeout budget. Production5020, exceptions141 and cap800 remain; the catalog stays982 lines under its frozen983 cap. Seven other critical source rows, including the previous three producer corrections, remain unchanged.
+
+This is source publication, with actual publication readbacks still pending at record creation. The new10/149/43 have not run; frozen CI on9c9 can validate only its earlier source. Root must complete the actual source readbacks and separate exact executable-control R2/publication/readbacks before the fresh standalone10 RED/GREEN. No old attempt is restored or replayed, and no whole E2E, vendor, native, default or release qualification is granted.
+
+## 2026-11-17 — standalone waitRead controls accepted; runtime pending
+
+The exact source publication `674d32a84644f87544910c28bb4d2a4214958fb5` is accepted by complete root35-check and independent116-check actual readbacks. Source gate `be45f8ee4cd349456d196f6cfb1a1038c218c80c` joins all19 actual changed bodies, the original parent documents, complete source vectors and preserved repository partitions.
+
+Executable-control R2 `3fc2c894069f5a75936ec6379494d4e0df62db1a` is now accepted by root39, guard53, semantic39 and binding52 static checks (183 total). All reports have complete literal/hash self-readback and root full read. Exact runner `5e19889942d3e28f215c76f1e55ba81fd12f3ced` and binding `a206a4432f4e9f77f682b91d340c191826b5f25b` are published as documentation evidence. The source/test bodies are unchanged by this publication.
+
+The selected future attempt uses only the actual repository package, complete new ten-case test and actual old/fixed UI controls: three files,63696 bytes RED and63739 bytes GREEN. Expected RED is3 PASS/7 FAIL (six missing-rejection assertions and one late-false readiness assertion); expected GREEN is10 PASS. These are expectations, not observed results. Exact Node24.22.1 bytes and decimal identities, explicit TAP output, complete raw logs, original exits/absence, source/control/root censuses and unchanged source/test budgets are bound.
+
+The final control review corrected failure process-evidence retention, same absolute outer-deadline admission at every source/spawn boundary, and exceptional cleanup that could renew its budget. The original4s cleanup interval and TERM/KILL attempt state now survive continuation; no signal pass or target phase is replayed. Synchronous filesystem operations are not kernel-preempted; actual monotonic checks enforce admission and prevent late qualification.
+
+The required next sequence remains actual root+independent publication readbacks, a fully retained immutable admission record, one exclusive new control staging, and one original conditional RED/GREEN invocation. No local control staging, source materialization or new test invocation has happened when this record is created. Any refusal, unknown, timeout or unexpected result is spent; whole149, catalog43, renderer85, canonical validation and whole E2E remain separately open.
+
+Frozen PR1218 remains Draft at head `9c9c73190840592963142d36562ea07d2b5d2d71`, base `77993819c233737f1e2b4c11c8ca1a5d360bcbe3`. Retained observation12 at 2026-11-17 05:24:09 UTC reports Packaged2 successful/4 running jobs; Host12 successful/1 failed/1 running/8 queued; CI1 successful/12 skipped/1 running/1 queued. Frontend shard2 is running and renderer85 has not yet been observed. No original9 or terminal-run polling, rerun/cancel/dispatch, PR/ref mutation or default activation is performed.
+
+The full Linux Claude lifecycle artifact review accepts the original finite SDK-peer flow and original139 Node cases, with two ordinary application exits and bounded original Host/peer cleanup. Active HOLD stays unknown; queued input is cancelled without delivery. It does not qualify real Claude/Codex, new149/43/10, renderer85, native binaries or full E2E.
+
+Both complete Darwin artifact sets retain strict P09 failure: x64 has6 PASS/3 INCOMPLETE/1 COUNTEREXAMPLE; ARM7 PASS/2 INCOMPLETE/1 COUNTEREXAMPLE. Stage1 is terminal7-success/2-failure. Successful earlier Host/custody steps remain bounded; no native fix or waiver is selected.
+
+The original OpenCode flow remains INCOMPLETE at the initial member-detail target read, before any member mouse input. The retained screenshot/layout/source advisory supports missing viewport preparation; exact null branch and prior scroll trigger are unknown. A bounded original scroll-reveal candidate is advisory only and is outside this completed five-source/control subject. The newly captured Codex/extension artifacts are complete data captures, with independent semantic review separate.
+
+All79 original catalog values, all27 complete bundles/totals, both full plan/status prefixes, all8799 non-doc leaves and all42 workflows are preserved. This publication adds only exact controls, review/evidence records and these documentation pointers. Production5020,800-line limit,141 frozen exceptions, no-real-agent and frozen-PR constraints remain.
+
+
+## Inode64 standalone recovery and member reveal — R1 (2026-11-17 06:26:03 UTC)
+
+The original standalone deadline invocation is retained as `REFUSED_BEFORE_SCOPE_ADMISSION_SPENT`: exit 1, zero phases and zero cases, before source creation or child spawn. The signed Node inode and unsigned Python pin represent the same 64 bits. The supervisor did not reach its digest check; separate full external pre/post identity observations and all three staged control files remain unchanged. The old absent source root and preserved old stage are spent and will not be reused.
+
+Exact R1 `b16bf54091cfb2fd2756ad7a951d0f9143611d2b` selects two bounded changes after this publication's complete actual readbacks: range-checked inode normalization only inside exactNode with the original unsigned pin retained, and one awaited existing scrollTo call for the unique alice name before the unchanged 649-byte original member click. No source or executable-control postimage is published by this R1. Root and independent guard, semantic and binding reviews passed 131 static/evidence checks with no blockers and complete report readbacks.
+
+The fresh standalone source and stage names are `/workspace/scratch/c714-waitread-inode64-20261117` and `/workspace/scratch/c714f5bce554/narrow-waitread-inode64-controls-20261117`. The actual docs-only R1 publication will be the known immutable source anchor; later combined R2 publication is joined through an external immutable admission. All three selected source inputs, full ordered ten-case expectations, original test/phase/supervisor/cleanup budgets, raw streams and process/census rules remain unchanged. Expected RED 7 failures/3 passes and GREEN 10 passes remain predictions.
+
+The whole original renderer85 now has independently accepted actual GREEN evidence at frozen 9c9, including former regressions81–83 and later stale-response assertions. The surrounding shard's18 skipped cases/two skipped files remain skipped. Later aggregate149, catalog43, standalone10 and the new member-reveal wiring have no runtime result here. Prior finite Codex/Extensions success stays bounded, including the recorded mutation-boundary banner and unsupported final Extensions observations.
+
+Retained CI observation14 reports Host19 successes,2 failures,1 queued and Packaged3 successes,3 failures,1 queued. Those are time-bound observations, not final workflow success. Full original cross-team and both Windows failure artifacts are retained; their errors remain failures. No frozen CI ref/PR mutation, rerun/cancel/dispatch, Ready, real Claude/Codex, default activation, native/release or Stage2 qualification occurs.
+
+All current source/workflow/dependency bytes, previous81 catalog values,27 bundles and totals remain unchanged. Full plan/status prefixes are preserved. Exact evidence files:
+
+- `inode64-member-reveal-r1-20261117.json` — `b16bf54091cfb2fd2756ad7a951d0f9143611d2b`, 27869 bytes.
+- `inode64-member-reveal-r1-root-review-20261117.json` — `3e38848ca22648dccb8928553b31543d8cb366b6`, 13214 bytes.
+- `inode64-member-reveal-r1-guard-review-20261117.json` — `3e53832bf5fee506849b88202028ae73a50f2ab1`, 60065 bytes.
+- `inode64-member-reveal-r1-semantic-review-20261117.json` — `6f1d57b805792bca13cdda2048c34c59d3565944`, 48210 bytes.
+- `inode64-member-reveal-r1-binding-review-20261117.json` — `4edbaba44e16de90ef20d2a1e1baf9350d847a88`, 86401 bytes.
+- `standalone-waitread-original-spent-admission-20261117.json` — `8c2c7a2a439b1054972f4a52eb8f88b842274dba`, 1583 bytes.
+- `standalone-waitread-original-refusal-20261117.json` — `30bcf16f731650684a275de4ae4be6cd18b41c4e`, 200440 bytes.
+- `standalone-waitread-inode64-advisory-20261117.json` — `5af2e1cf8dc14ace23e8cc1f10ddbb25e8ef6d26`, 54695 bytes.
+- `opencode-member-reveal-r1-advisory-20261117.json` — `c246bbf66dd628fe6909a1a57cab85bdccf80d58`, 27043 bytes.
+- `pr1218-whole-renderer85-actual-review-20261117.json` — `4277afde65b656545ca30e4b1be3f593af862fc8`, 56658 bytes.
+- `pr1218-codex-extensions-actual-review-20261117.json` — `342a38f823f0d07bd8281fd94022ea1f3ecb3133`, 101500 bytes.
+- `pr1218-extensions-semantic-slice-20261117.json` — `14bd6ed652989dde397cce0073e315e269762bcb`, 28120 bytes.
+- `narrow-waitread-control-root-actual-publication-20261117.json` — `516017b52445cd7c337878f0754a0e121849b24d`, 65482 bytes.
+- `narrow-waitread-control-independent-actual-publication-20261117.json` — `f20c0188402a166dce08b6592e06e311edcc9fe9`, 200533 bytes.
+- `pr1218-executed-observation13-20261117.json` — `e809fefa350f8d7f7e3e4922ac0bba865c19c13e`, 573622 bytes.
+- `pr1218-executed-observation14-20261117.json` — `99f1a2a1630f25627a9e103f9a58f48c1c87a0ec`, 638122 bytes.
+- `pr1218-frontend2-complete-artifact-capture-20261117.json` — `88130b0010f8d67e683792e0712b5ce01d7e7e03`, 7711 bytes.
+- `pr1218-cross-team-windows-full-failure-capture-20261117.json` — `33e472d38720bda64a2483041af43405c2eec085`, 43216 bytes.
+
+
+## Exact member reveal and inode64 controls — combined R2 (2026-11-17 06:53:13 UTC)
+
+All four exact R2 reviews are closed for proposal `bb9a1cddc7add50dae7a907e247dd2a5efc61885`: root40, guard44, semantic42 and binding48, totaling174 passing static checks with no blockers and complete report readbacks. The known R1 actual source anchor is `6d06207d96ea1c7ae7d9199a552ec776451dc231`, after its root/independent actual reports and gate `6bbf83caa77cb9eaab9e262f46bed45f03494968`. Authorship occurred only after that gate closed.
+
+The sole executable source delta is `scripts/legacy-agent-host/desktop-emulated-runtime-ui.ts`: original `43ab487464098fed0425ffd51441a38abc206f3b` becomes `ff991b68481fbf4da8a9ed36476f7c2e142c5f4f` through exactly176bytes/four lines. It awaits the existing scrollTo helper on the original row-scoped exact alice name, max12 wheels and fifth-argument requireCenterHit:true, immediately before the original649-byte member click. The click remains byte-identical and retains final target/ownership/stability/center-hit authority. The file is798 physical lines under the unchanged800 cap. There is no new helper, import, provider branch, DOM mutation, fallback or timeout increase. Existing helper30s bounds each observation; no single30s total-reveal claim is made.
+
+The corrected standalone supervisor `19662be9d55c70166c8f2c2e74775e6b03098197` changes only two fresh path literals and exactNode's range-checked signed64-to-unsigned64 inode comparison. It retains raw inode metadata and every original Node pin, non-inode check, source/control census, absolute admission cutoff, full TAP inventory, ownership sample, ordinary-close requirement and original cleanup deadline/signal rule. Binding `381c51a331b9d03f5aab87835af3dad5a6643d3c` changes exactly10 existing fields, adds one provenance field and preserves17 others and all four embedded bodies totaling92713bytes. Its source anchor is the known6d commit; the later actual combined commit belongs in an external immutable admission, not a guessed future self-reference. The three selected standalone source bodies are unchanged; the driver is not one of them.
+
+Both complete13-row vectors preserve every original12 source row. Whole149 still contains the entire original139 prefix and unchanged awaited ten-case import; catalog43 and renderer85 are unchanged. The original refused standalone invocation remains SPENT with zero admitted phases/cases. The fresh names are `/workspace/scratch/c714-waitread-inode64-20261117` and `/workspace/scratch/c714f5bce554/narrow-waitread-inode64-controls-20261117`; they have not been created or invoked by this continuation. Current physical state is unknown because the execution environment is unavailable. A restored matching venue and fresh physical admission checks are required before staging or invocation. RED7fail/3pass and GREEN10pass remain predictions.
+
+All seven original PR1218 runs are now terminal. Final Host status is20successful/3failed jobs, including the aggregate failure after OpenCode and cross-team scenario failures; its frontend-test aggregate succeeded. Packaged ended3successful/4failed including its full gate. Observations15–17, final artifact indexes and all three newly completed full job logs are retained. No terminal run will be polled again. There are33verified unique archive captures; the review archive14304826722 has only a download transport reference and is explicitly unextracted/unhashed/unqualified after environment loss. No signed download URL is retained here.
+
+Complete failure advisories preserve the remaining blockers. Cross-team progressed through its preceding slices before the600000-byte oversized-comment reload failed: entry module main.tsx was not imported after recorded ERR_INSUFFICIENT_RESOURCES requests. The exact exhausted resource remains unknown; no retry/reload or budget increase is selected. Windowsx64's original10s recovery envelope was consumed by fresh full ownership censuses despite a ready UI snapshot; both original Stop actions and the later case result remain unreached. WindowsARM's earlier metadata recovery and original120s controller boundary remain failed/incomplete. Darwin strict P09 remains a separate counterexample. These are retained failures, not new passing product behavior.
+
+This publication preserves all83 prior catalog values,27bundles/totals, complete plan/status prefixes,8799non-doc leaves,5020production files,141exceptions,800source cap and42workflows. It adds only this current stage and evidence-file catalog entries. Full root and independent actual publication readbacks must next verify the sole source delta, complete source/control bodies, all document additions/prefixes and unchanged subtrees. This static publication does not qualify standalone10, whole149/catalog43, new-driverGUI, canonical typecheck, packaged/native or fullE2E. No new CI event is selected by this R2.

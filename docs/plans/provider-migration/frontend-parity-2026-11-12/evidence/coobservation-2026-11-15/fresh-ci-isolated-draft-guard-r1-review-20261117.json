@@ -1,0 +1,1197 @@
+{
+  "schemaVersion": 1,
+  "kind": "independent-guard-review-of-exact-prospective-isolated-draft-ci-r1",
+  "reviewer": "/root/producer_r2_guard",
+  "at": "2026-11-17 03:04:58 UTC",
+  "repository": "777genius/agent-teams-ai",
+  "subject": {
+    "bytes": 83960,
+    "sha256": "6ffeef78018e330679aa9a2bc2da5422aca9d2a38fb4c60834959bfd880e6e58",
+    "gitBlob": "7237425e51bda9feb7d0ded4e424fe72745680c1"
+  },
+  "currentSourceBasisCommit": "cba4af86044e89c9ff3cce25f05dc5424bf06329",
+  "decision": "ACCEPT_EXACT_R1_WITH_ITS_EXISTING_EXTERNAL_PUBLICATION_AND_ACTUAL_GATES",
+  "conclusion": "No actual guard-scope blocker was found in exact R1 7237425e51bda9feb7d0ded4e424fe72745680c1. It selects one future immutable base/head pair and one opened Draft PR after full R1 publication, immediate push, root and independent actual readbacks, and an external exact-head intent. It preserves the published producer bytes, whole tests, workflow deadlines, no-real-Claude/Codex boundary, isolated snapshot ownership, spent local refusal and truthful result classifications. This is a prospective static acceptance only; no CI venue action or runtime PASS is asserted.",
+  "readCoverage": {
+    "exactR1": "Complete 83,960-byte literal body fetched, rehashed and read contiguously in full; no summary used in place of the R1.",
+    "basis": "Complete 1,423,178-byte immutable basis fetched and rehashed; all 42 nested full workflow bodies (751,430 bytes), all nine nested full selected source bodies (604,476 bytes), all 53 non-doc roots and exact source/test/workflow identities mechanically joined. Guard-relevant full statements and command/concurrency lines inspected; this is not a claim of a fresh exhaustive semantic audit of every workflow line.",
+    "advisories": "Complete retained entry guard9acdf, semantic625, binding30de and preceding refusal gate676a read and exact identities joined. Entry guard is this agent's prior independent full primary-source investigation; the provider and trigger analyses remain explicitly attributed to their independent reviewers.",
+    "previousSourceReview": "The selected producer postimages, exact inverses and whole test identities were independently reviewed earlier by this guard. This R1 introduces zero new source/test/workflow/executable-control postimages; all current full bodies are joined again.",
+    "helper": "Only pinned pure-JavaScript identity helper e4a4568d589e1254b88ade1a5f87d53924e7c2e8 was dynamically evaluated. All other sources, workflows, commands and reports remained data.",
+    "independentScope": "Exact future-head gate, mutation count/failure policy, immutable snapshots, frozen ownership, no-vendor boundary, unchanged whole test/deadline scope, capture/result honesty. No shell, source/ref/PR/CI/runtime action or old-run poll."
+  },
+  "evidence": {
+    "exactR1": {
+      "bytes": 83960,
+      "sha256": "6ffeef78018e330679aa9a2bc2da5422aca9d2a38fb4c60834959bfd880e6e58",
+      "gitBlob": "7237425e51bda9feb7d0ded4e424fe72745680c1"
+    },
+    "currentBasis": {
+      "bytes": 1423178,
+      "sha256": "0257ec7c26f1d5d358c9bd6841540b8098d265f49af5f588be260a6bfb42065f",
+      "gitBlob": "9011bb095b3249421eb114231fd0ce26878f5624"
+    },
+    "precedingRefusalActualGate": {
+      "bytes": 4076,
+      "sha256": "fa0b03bf25816f12ca76fb9809e5c7761639b7e20bc6d36239d9ee3b5978d4df",
+      "gitBlob": "676a807985f6bf17831b3375786a31d69b002b30"
+    },
+    "entryAndEagerGuard": {
+      "bytes": 29021,
+      "sha256": "d036879309b4245604eb01d166af7b27079f9602a38005846e43711c716aa62c",
+      "gitBlob": "9acdf46776d8b6ecfe6b75ddbfb4d6738296d027"
+    },
+    "providerAndWorkflowSemantic": {
+      "bytes": 58110,
+      "sha256": "6a1ba6bdaa3278a041e2687b8588bbda3ae328a48af145a2780ab2b56c493096",
+      "gitBlob": "625192f5fc414e3fe0f646e6cb18db031263cdc2"
+    },
+    "triggerSnapshotAndCaptureBinding": {
+      "bytes": 104799,
+      "sha256": "d995389da8279bdd9edd1af8cbf07604c9bf81d1f3c3ab2f01d3c09cfc8402cc",
+      "gitBlob": "30de518ca496cb3ef079a3420057d8cd8ed32b51"
+    },
+    "sourceVector": {
+      "bytes": 2118,
+      "sha256": "6007c5c7ba2f74c43bd9b73c50cae2319eacbf712c233cc0d67b3efbb4c6894d",
+      "gitBlob": "3887991d5dbd25dbec5c8656e8e03d423ea502b7"
+    },
+    "wholeNode139": {
+      "bytes": 164965,
+      "sha256": "852bedb85c83dbc4b488dffb4a9ffebbe398adc53e85f5a3cea8ca36b146cbf7",
+      "gitBlob": "896c587e077da56a98a314a175fb3cba0353d6ee"
+    },
+    "wholeRenderer85": {
+      "bytes": 187890,
+      "sha256": "b6f11896e60014aac785968d42390afde38716d47de9bba9562522235db048c9",
+      "gitBlob": "76495189c992fcda47cd7a43a0c697190b5acbb3"
+    },
+    "all9SourceManifest": [
+      {
+        "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+        "mode": "100644",
+        "bytes": 28974,
+        "sha256": "7626e479a6662242009cb050e7e5af612a29e4205d62666d15274d5c30f91386",
+        "gitBlob": "ed57cb0fe7d57ef076a591621289eb77667c63ad"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+        "mode": "100644",
+        "bytes": 24759,
+        "sha256": "d15b7eea14c0951194310aee34ddc5c477879c759a97a4e2f4e9fce1f956ce9b",
+        "gitBlob": "cf93da72a198dac636658e512093eef7828b5927"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+        "mode": "100644",
+        "bytes": 8457,
+        "sha256": "2da55bb40a5689ace0e922dc4867d7c73278d9a1cd200ea8c4602ca68f82da3b",
+        "gitBlob": "3c7b4bb53f4259ac0795d3f92fb715887acb554f"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts",
+        "mode": "100644",
+        "bytes": 36260,
+        "sha256": "26357f37b146fc171bbceadb624bde4a7f4e459d2073ae23a651e757817b2d38",
+        "gitBlob": "4700a0052d3c58a2b3d9bc66e6803220688050fd"
+      },
+      {
+        "path": "src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts",
+        "mode": "100644",
+        "bytes": 74340,
+        "sha256": "647ac5732bfd6b5cb57834adb4ad22c32ee5dfb018a934c92f982efd9daa531c",
+        "gitBlob": "c2faa156015707bc5fbd7f8123a7ffd9c4faa486"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+        "mode": "100644",
+        "bytes": 45795,
+        "sha256": "2c5931f5c7fa1dc8bb7858201c1b8afdbae9683faf4a2ad9fce067f116f3f94b",
+        "gitBlob": "5026f0ec6165bb092717ddc989043848a25081dc"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-task-review-cycle-ui-smoke.ts",
+        "mode": "100644",
+        "bytes": 33036,
+        "sha256": "4fa52cfad9347065680ef62a3ba6420762408a78a93b77e96ac3a2e16e68bdc9",
+        "gitBlob": "8d175c98158b3bd71192aef7b1929484b2b681b6"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+        "mode": "100644",
+        "bytes": 164965,
+        "sha256": "852bedb85c83dbc4b488dffb4a9ffebbe398adc53e85f5a3cea8ca36b146cbf7",
+        "gitBlob": "896c587e077da56a98a314a175fb3cba0353d6ee"
+      },
+      {
+        "path": "test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts",
+        "mode": "100644",
+        "bytes": 187890,
+        "sha256": "b6f11896e60014aac785968d42390afde38716d47de9bba9562522235db048c9",
+        "gitBlob": "76495189c992fcda47cd7a43a0c697190b5acbb3"
+      }
+    ],
+    "currentRootTree": "4028fd8a54f32d93e9b60b0075e9fbd88347b524",
+    "currentGithubTree": "d95091ab0edb488d6e418ffa789d0f07c447ecda",
+    "baseCommit": "77993819c233737f1e2b4c11c8ca1a5d360bcbe3",
+    "baseTree": "ada3f27db78fabc17a91e3904d41b8bc547c6dca",
+    "futureCiHead": null,
+    "futureCiHeadRule": "The exact commit created by publishing this R1, its completed reviews and documentation-only retention on fix/frontend-parity-coobservation-c714-20261115, immediately pushed, then fully read back by root and an independent reviewer. The gate records actual immutable commit/root/docs trees. An external mutation-intent blob binds that actual SHA before any ref mutation. This avoids self-referential future commit identities."
+  },
+  "principalFindings": [
+    {
+      "area": "Entry, eager execution and provider fallback",
+      "finding": "The packaged project-path smoke's four explicit OpenCode commands reach the pinned orchestrator's guarded native delivery or selected JS fast paths before general startup. The reviewed shared preAction does not launch a real Claude/Codex version, status or startup probe. Provider-semantic625 confirms explicit filtering, lazy unselected vendor modules and OpenCode-only fallback. Allowed OpenCode version/model metadata acquisition remains within its declared scope.",
+      "limitation": "The driver inherits process.env before overriding HOME/XDG/OpenCode config paths; do not claim a universally empty environment or subprocess-free smoke. The static conclusion is for the unchanged declared CI command and locked runtime, not arbitrary hostile overrides, modified artifacts, all CLI commands or unobserved runtime results."
+    },
+    {
+      "area": "No new executable changes",
+      "finding": "The current three published producer fixes and four fixed producers are exact frozen bytes. Node139 and renderer85 remain complete unchanged files. R1 does not alter timeouts, test filtering, frontend exclusions, source caps, runner code or workflows. Existing 800-line limit/exceptions remain unchanged, including the accepted 2,068-line hook exception.",
+      "sourceVector": {
+        "bytes": 2118,
+        "sha256": "6007c5c7ba2f74c43bd9b73c50cae2319eacbf712c233cc0d67b3efbb4c6894d",
+        "gitBlob": "3887991d5dbd25dbec5c8656e8e03d423ea502b7"
+      }
+    },
+    {
+      "area": "Future publication and identity",
+      "finding": "cba is the review basis, not the future CI head. Final head must be the exact accepted docs-publication commit of this R1/reviews. The external mutation intent records it only after actual publication/readbacks. Full non-doc equivalence and ancestor comparison are required before a ref action."
+    },
+    {
+      "area": "Ownership and one-shot behavior",
+      "finding": "Only root may create the two exact snapshot refs and the single Draft PR. Unknown/refused actions stay spent and are resolved only by exact new-object readback; neither a blind retry nor alternate CI trigger is selected. Snapshot refs/PR metadata remain fixed while any selected run is active; separate working-branch evidence pushes do not move them."
+    },
+    {
+      "area": "Selected outcomes",
+      "finding": "Seven event-eligible workflows comprise five active families and two expected Draft-skipped workflows. Host23, Packaged7 and Stage1-9 declared expansions remain the existing ones. The unchanged Draft Full qualification policy failure is expected and must not be counted as producer success or silently ignored. Strict Darwin custody/HOLD and all actual failures stay explicit."
+    },
+    {
+      "area": "Actual evidence and exclusions",
+      "finding": "New exact-run pagination, exact-attempt jobs, full decoded logs, accessible archive bodies and actual cleanup evidence govern claims. Missing evidence remains unread/UNKNOWN/UNREACHED. The refused local invocation remains spent; no restoration/replay, frozen-PR/original-nine activity, main/Ready/merge/default/release/Stage2 operation is selected."
+    }
+  ],
+  "noVendorFlagInterpretation": "R1.testAndProviderScope.noVendorVersionProbes is scoped to forbidden real Claude/Codex probes in its adjacent noRealClaudeOrCodex field and full declared provider/advisory context. It does not ban the explicitly allowed existing OpenCode metadata/version path. Root confirmed this exact interpretation; no R1 or code edit is needed.",
+  "unfulfilledFutureRequirementsAlreadyInR1": [
+    "Full assigned R1 reviews, docs-only publication and immediate push.",
+    "Full root and independent actual readbacks with immutable publication commit/root/docs trees.",
+    "External exact final-head intent; final alias absence, immutable source/workflow/whole-test equivalence and complete ancestor comparison.",
+    "One-shot exact snapshot-ref and Draft-PR operations by root with complete new-object readbacks.",
+    "All new selected runs terminal and complete available actual evidence retained, reviewed, published and read back."
+  ],
+  "futureRequirementsQualification": "These are existing future execution conditions in the accepted prospective R1, not defects in the proposal and not new gates introduced by this report. None is claimed completed here.",
+  "checks": [
+    {
+      "id": "exact_r1_pin",
+      "result": "PASS",
+      "details": {
+        "bytes": 83960,
+        "sha256": "6ffeef78018e330679aa9a2bc2da5422aca9d2a38fb4c60834959bfd880e6e58",
+        "gitBlob": "7237425e51bda9feb7d0ded4e424fe72745680c1"
+      }
+    },
+    {
+      "id": "basis_pin",
+      "result": "PASS",
+      "details": {
+        "bytes": 1423178,
+        "sha256": "0257ec7c26f1d5d358c9bd6841540b8098d265f49af5f588be260a6bfb42065f",
+        "gitBlob": "9011bb095b3249421eb114231fd0ce26878f5624"
+      }
+    },
+    {
+      "id": "semantic_advisory_pin",
+      "result": "PASS",
+      "details": {
+        "bytes": 58110,
+        "sha256": "6a1ba6bdaa3278a041e2687b8588bbda3ae328a48af145a2780ab2b56c493096",
+        "gitBlob": "625192f5fc414e3fe0f646e6cb18db031263cdc2"
+      }
+    },
+    {
+      "id": "entry_advisory_pin",
+      "result": "PASS",
+      "details": {
+        "bytes": 29021,
+        "sha256": "d036879309b4245604eb01d166af7b27079f9602a38005846e43711c716aa62c",
+        "gitBlob": "9acdf46776d8b6ecfe6b75ddbfb4d6738296d027"
+      }
+    },
+    {
+      "id": "binding_advisory_pin",
+      "result": "PASS",
+      "details": {
+        "bytes": 104799,
+        "sha256": "d995389da8279bdd9edd1af8cbf07604c9bf81d1f3c3ab2f01d3c09cfc8402cc",
+        "gitBlob": "30de518ca496cb3ef079a3420057d8cd8ed32b51"
+      }
+    },
+    {
+      "id": "closed_refusal_gate_pin",
+      "result": "PASS",
+      "details": {
+        "bytes": 4076,
+        "sha256": "fa0b03bf25816f12ca76fb9809e5c7761639b7e20bc6d36239d9ee3b5978d4df",
+        "gitBlob": "676a807985f6bf17831b3375786a31d69b002b30"
+      }
+    },
+    {
+      "id": "root_trees_join",
+      "result": "PASS",
+      "details": {
+        "commit": "cba4af86044e89c9ff3cce25f05dc5424bf06329",
+        "rootTree": "4028fd8a54f32d93e9b60b0075e9fbd88347b524",
+        "githubTree": "d95091ab0edb488d6e418ffa789d0f07c447ecda"
+      }
+    },
+    {
+      "id": "all53_non_doc_roots",
+      "result": "PASS",
+      "details": {
+        "count": 53
+      }
+    },
+    {
+      "id": "workflow_full_body_.github/workflows/announcements-content.yml",
+      "result": "PASS",
+      "details": {
+        "path": ".github/workflows/announcements-content.yml",
+        "identity": {
+          "bytes": 2301,
+          "sha256": "4380473bf81c1e8762e11d1803bb023e60308c5525c6c409531d9749ec7661d8",
+          "gitBlob": "d7d1c6fde200971f29defe95c2c0436a0318b499"
+        }
+      }
+    },
+    {
+      "id": "workflow_full_body_.github/workflows/anthropic-compatible-status-e2e.yml",
+      "result": "PASS",
+      "details": {
+        "path": ".github/workflows/anthropic-compatible-status-e2e.yml",
+        "identity": {
+          "bytes": 8602,
+          "sha256": "037e94e79d2b13136a2209f2a1dac2c65ee5bee117c8dcfcf11e71c106b2e8a0",
+          "gitBlob": "6ec8f76ef4036fde31daab73db1205cf9f7dfdd2"
+        }
+      }
+    },
+    {
+      "id": "workflow_full_body_.github/workflows/anthropic-env-portability.yml",
+      "result": "PASS",
+      "details": {
+        "path": ".github/workflows/anthropic-env-portability.yml",
+        "identity": {
+          "bytes": 4713,
+          "sha256": "fee75fc9544498e419c45ddb3acdf6df20a387dc29c04009e8d450bea2fb5359",
+          "gitBlob": "d3fa7512b79b79dc64c1580dfdc42d63361ae68a"
+        }
+      }
+    },
+    {
+      "id": "workflow_full_body_.github/workflows/build-linux-windows-draft.yml",
+      "result": "PASS",
+      "details": {
+        "path": ".github/workflows/build-linux-windows-draft.yml",
+        "identity": {
+          "bytes": 17033,
+          "sha256": "4968e05cf86cb6252494c6a0778dd2bb43a6439b995f0fd769504ac0633ce501",
+          "gitBlob": "919dc9d816a5f7441783af22a286da9b1e4f6f8a"
+        }
+      }
+    },
+    {
+      "id": "workflow_full_body_.github/workflows/ci.yml",
+      "result": "PASS",
+      "details": {
+        "path": ".github/workflows/ci.yml",
+        "identity": {
+          "bytes": 175238,
+          "sha256": "8cac831e00dd87f656a971c6496b8278c7cfddc261f1eb48573a7e2acf83c2d1",
+          "gitBlob": "a93ff6ba1e5656523668694bca24910a468aebc7"
+        }
+      }
+    },
+    {
+      "id": "workflow_full_body_.github/workflows/codeql.yml",
+      "result": "PASS",
+      "details": {
+        "path": ".github/workflows/codeql.yml",
+        "identity": {
+          "bytes": 2479,
+          "sha256": "d35b6d96c6d3582415b4feaf3144575f5d3a520c6e058c673ec15f95ddae5a7b",
+          "gitBlob": "406b6f790f1e1a260a9f974bf85e9cc6441ed1c1"
+        }
+      }
+    },
+    {
+      "id": "workflow_full_body_.github/workflows/codex-runtime-smoke.yml",
+      "result": "PASS",
+      "details": {
+        "path": ".github/workflows/codex-runtime-smoke.yml",
+        "identity": {
+          "bytes": 3229,
+          "sha256": "2d9b2fb19cb3d1e2797611254104bf5ab433b588427350747f0c0c6196f4490d",
+          "gitBlob": "cef44447c47e39a7da678f37e2518952e218da08"
+        }
+      }
+    },
+    {
+      "id": "workflow_full_body_.github/workflows/dependency-review.yml",
+      "result": "PASS",
+      "details": {
+        "path": ".github/workflows/dependency-review.yml",
+        "identity": {
+          "bytes": 1527,
+          "sha256": "52570674031aecbba23cf8725e5aa09b58495421c8c9b21cef0e14a791ce27d0",
+          "gitBlob": "4a5f2ab17b3daf4ffdf6992ee85d159adf2c46c6"
+        }
+      }
+    },
+    {
+      "id": "workflow_full_body_.github/workflows/electron-dev-profile-cross-platform.yml",
+      "result": "PASS",
+      "details": {
+        "path": ".github/workflows/electron-dev-profile-cross-platform.yml",
+        "identity": {
+          "bytes": 3218,
+          "sha256": "c85dd3daa63c0d31b8c87e5fe4b935456f6c47dbf9a0be1f06b6b8fbfaf84d25",
+          "gitBlob": "490c2048dfbd9f275f784d7a0f1a6eeba0a9f361"
+        }
+      }
+    },
+    {
+      "id": "workflow_full_body_.github/workflows/electron-packaged-ci.yml",
+      "result": "PASS",
+      "details": {
+        "path": ".github/workflows/electron-packaged-ci.yml",
+        "identity": {
+          "bytes": 19532,
+          "sha256": "443502b3620450fc174440d6bdf6db3777e97b7f00d56d42e2fbd624b569b73f",
+          "gitBlob": "0938e9f31bad7520fec025ebde6aad8e071cfe69"
+        }
+      }
+    },
+    {
+      "id": "workflow_full_body_.github/workflows/host-emulated-acceptance.yml",
+      "result": "PASS",
+      "details": {
+        "path": ".github/workflows/host-emulated-acceptance.yml",
+        "identity": {
+          "bytes": 96872,
+          "sha256": "5379894007246368728c518c08222be329d58bb2755dc80235709a033017805d",
+          "gitBlob": "9ec6dfb68e98480a12224528e2637153f4274a6b"
+        }
+      }
+    },
+    {
+      "id": "workflow_full_body_.github/workflows/host-process-acceptance.yml",
+      "result": "PASS",
+      "details": {
+        "path": ".github/workflows/host-process-acceptance.yml",
+        "identity": {
+          "bytes": 34313,
+          "sha256": "71b16b1b1fd1f0c88d3cb15a18cdfcce08b2b18908d3a5ce755330b4b2aeedf1",
+          "gitBlob": "70202d22a5840401a00025cd60b797c514f3e455"
+        }
+      }
+    },
+    {
+      "id": "workflow_full_body_.github/workflows/kanban-table-desktop-e2e.yml",
+      "result": "PASS",
+      "details": {
+        "path": ".github/workflows/kanban-table-desktop-e2e.yml",
+        "identity": {
+          "bytes": 3335,
+          "sha256": "572df7cb9de920ed0685febc94f6ddd08f18d7d96312e8ed946933a63ccbcdb3",
+          "gitBlob": "95d681fe04abd838dd11799d7791fa59444c6e32"
+        }
+      }
+    },
+    {
+      "id": "workflow_full_body_.github/workflows/landing-hetzner-release.yml",
+      "result": "PASS",
+      "details": {
+        "path": ".github/workflows/landing-hetzner-release.yml",
+        "identity": {
+          "bytes": 7306,
+          "sha256": "ad5337b9e4a36797703c0e340a9539f0c12f2739eed6805851fcfa8cb00d1290",
+          "gitBlob": "4b54f229156f9d347e1a33da0d83b3374acc4078"
+        }
+      }
+    },
+    {
+      "id": "workflow_full_body_.github/workflows/landing.yml",
+      "result": "PASS",
+      "details": {
+        "path": ".github/workflows/landing.yml",
+        "identity": {
+          "bytes": 5592,
+          "sha256": "1bda852e705b3b744b5b001e0fe3cb2d8fd80eaa3108d17787c076ad3b753b32",
+          "gitBlob": "4a1ad9ae59ff2e338930a195d54fdff62da1ebc5"
+        }
+      }
+    },
+    {
+      "id": "workflow_full_body_.github/workflows/macos-signing-qualification.yml",
+      "result": "PASS",
+      "details": {
+        "path": ".github/workflows/macos-signing-qualification.yml",
+        "identity": {
+          "bytes": 9635,
+          "sha256": "409769be92f1d49ed74ffca6e4affe25f365d5bf4bc4f5a18a1deebea11c3a0d",
+          "gitBlob": "d63bddd51302a5c0380762bf22171f43c38a39b0"
+        }
+      }
+    },
+    {
+      "id": "workflow_full_body_.github/workflows/opencode-desktop-e2e.yml",
+      "result": "PASS",
+      "details": {
+        "path": ".github/workflows/opencode-desktop-e2e.yml",
+        "identity": {
+          "bytes": 6719,
+          "sha256": "ea78e9c6002db433bb57087c3d4eac3d652412746b3a3d5d2aad0cb02e76d17e",
+          "gitBlob": "3d2a90a0e335155d435bd4eae4f2bd2842425983"
+        }
+      }
+    },
+    {
+      "id": "workflow_full_body_.github/workflows/opencode-native-windows-e2e.yml",
+      "result": "PASS",
+      "details": {
+        "path": ".github/workflows/opencode-native-windows-e2e.yml",
+        "identity": {
+          "bytes": 29178,
+          "sha256": "3f6ea47d1aac384382cca261686972222433330e9563a87b941d23ac345b8f80",
+          "gitBlob": "f5a2a472b752acf37399fc9e11f63f6d45bdb297"
+        }
+      }
+    },
+    {
+      "id": "workflow_full_body_.github/workflows/opencode-packaged-e2e.yml",
+      "result": "PASS",
+      "details": {
+        "path": ".github/workflows/opencode-packaged-e2e.yml",
+        "identity": {
+          "bytes": 19616,
+          "sha256": "80a7c110468f22670a541dcf8cd452c6de754376f4ff970bbdf2888bd91fc2fe",
+          "gitBlob": "458e165ef020a1f8b05806b9ae7edc839134e1b4"
+        }
+      }
+    },
+    {
+      "id": "workflow_full_body_.github/workflows/opencode-v2-cold-dashboard-e2e.yml",
+      "result": "PASS",
+      "details": {
+        "path": ".github/workflows/opencode-v2-cold-dashboard-e2e.yml",
+        "identity": {
+          "bytes": 2756,
+          "sha256": "2bd119e64866ae18519f01be6e7bffc138d0ce7b1e32ce2329a35e59de5a87a3",
+          "gitBlob": "be6a9ae5a88efadca344773ed4aa962d42823d28"
+        }
+      }
+    },
+    {
+      "id": "workflow_full_body_.github/workflows/opencode-v2-stage1-preflight.yml",
+      "result": "PASS",
+      "details": {
+        "path": ".github/workflows/opencode-v2-stage1-preflight.yml",
+        "identity": {
+          "bytes": 36013,
+          "sha256": "fddd1aface758ef115a5e904151cb61dd78dca04d8f52fb99f4326ddaff53a14",
+          "gitBlob": "2f557dd4b74806e6a444c46656af07b52bc0fb4e"
+        }
+      }
+    },
+    {
+      "id": "workflow_full_body_.github/workflows/prepare-updater-native-inputs.yml",
+      "result": "PASS",
+      "details": {
+        "path": ".github/workflows/prepare-updater-native-inputs.yml",
+        "identity": {
+          "bytes": 8825,
+          "sha256": "6f69a0083fd03597029533db66f2f44fda629b2b3a127c62978809eb990db229",
+          "gitBlob": "51beb92ade4931fe04336c7d3908bacfc932269e"
+        }
+      }
+    },
+    {
+      "id": "workflow_full_body_.github/workflows/provider-real-runtime-e2e.yml",
+      "result": "PASS",
+      "details": {
+        "path": ".github/workflows/provider-real-runtime-e2e.yml",
+        "identity": {
+          "bytes": 8958,
+          "sha256": "9903545813f74656b4e78e53641449a7c4c09b6b3564263f83aa7f2f2f8f0737",
+          "gitBlob": "4ee30807aa18f043fe53d090bfb6211bb5458ce0"
+        }
+      }
+    },
+    {
+      "id": "workflow_full_body_.github/workflows/publish-carried-release.yml",
+      "result": "PASS",
+      "details": {
+        "path": ".github/workflows/publish-carried-release.yml",
+        "identity": {
+          "bytes": 3908,
+          "sha256": "b360d26ec6945d7e6d53090860f6ffb4001827db8df8cffcc29007222cfb0546",
+          "gitBlob": "371ed6d3b2cf4e41c012da287a295783c39c426e"
+        }
+      }
+    },
+    {
+      "id": "workflow_full_body_.github/workflows/recover-existing-draft-payloads.yml",
+      "result": "PASS",
+      "details": {
+        "path": ".github/workflows/recover-existing-draft-payloads.yml",
+        "identity": {
+          "bytes": 1905,
+          "sha256": "b1c53692156cd7a56178dca761a942fc9471d5ca7fd182699b918d3165aeb2db",
+          "gitBlob": "eadeedf4381cbf1d7e32cd31105dd88cd2c8eb65"
+        }
+      }
+    },
+    {
+      "id": "workflow_full_body_.github/workflows/release-publication-guard.yml",
+      "result": "PASS",
+      "details": {
+        "path": ".github/workflows/release-publication-guard.yml",
+        "identity": {
+          "bytes": 2706,
+          "sha256": "3e59073acae4e5a536a6c3e8a5ddadbd78e095cff4a87eb84a317173fe22dcac",
+          "gitBlob": "10b7abd2992cc740084a5c51ace7f3fe025220f9"
+        }
+      }
+    },
+    {
+      "id": "workflow_full_body_.github/workflows/release.yml",
+      "result": "PASS",
+      "details": {
+        "path": ".github/workflows/release.yml",
+        "identity": {
+          "bytes": 46671,
+          "sha256": "22803b1c55d071932b59b66cd2802e31a3a528fc60db94f9b22a94b699048051",
+          "gitBlob": "d28bee6dea87ec191f0d40670f3e68c48251d049"
+        }
+      }
+    },
+    {
+      "id": "workflow_full_body_.github/workflows/reviewrouter-interaction.yml",
+      "result": "PASS",
+      "details": {
+        "path": ".github/workflows/reviewrouter-interaction.yml",
+        "identity": {
+          "bytes": 4238,
+          "sha256": "72904ac011de713511f51cd05d7f6d8e145ef537e3ae871e5b872f204de1b339",
+          "gitBlob": "edb68c51f54ad4a792eb29f1f557aad48e3a6218"
+        }
+      }
+    },
+    {
+      "id": "workflow_full_body_.github/workflows/reviewrouter-review.yml",
+      "result": "PASS",
+      "details": {
+        "path": ".github/workflows/reviewrouter-review.yml",
+        "identity": {
+          "bytes": 912,
+          "sha256": "d30c359c172a2d2e6ad8af7b5557894ae8d601f5f4957a87153aa93810966cc4",
+          "gitBlob": "04964f8ac7beadb3277fb28ec9cc0d61b86ca84b"
+        }
+      }
+    },
+    {
+      "id": "workflow_full_body_.github/workflows/runtime-bootstrap-smoke.yml",
+      "result": "PASS",
+      "details": {
+        "path": ".github/workflows/runtime-bootstrap-smoke.yml",
+        "identity": {
+          "bytes": 5079,
+          "sha256": "65e296bb4946582ca3745930f1ecf0b16df481d38fb591a06c26f80529881f15",
+          "gitBlob": "4020f668ab2a9a7b16fcb0aa7fd2d79a061f1d44"
+        }
+      }
+    },
+    {
+      "id": "workflow_full_body_.github/workflows/sentry-owned-process-native.yml",
+      "result": "PASS",
+      "details": {
+        "path": ".github/workflows/sentry-owned-process-native.yml",
+        "identity": {
+          "bytes": 39878,
+          "sha256": "2d84faae57ad758575935dc760df6561d219f16ee8c0bd615006ca3d88837357",
+          "gitBlob": "1188fa5b89d59b739d927082d1b6954a57181819"
+        }
+      }
+    },
+    {
+      "id": "workflow_full_body_.github/workflows/stage-existing-partial-draft.yml",
+      "result": "PASS",
+      "details": {
+        "path": ".github/workflows/stage-existing-partial-draft.yml",
+        "identity": {
+          "bytes": 5418,
+          "sha256": "1644a7dd73642776d00077ab00d6f862679eb890cb5b154042f51dae30b6c37c",
+          "gitBlob": "295dbf212e13b15505696d997ec7c45b4ee3cfa9"
+        }
+      }
+    },
+    {
+      "id": "workflow_full_body_.github/workflows/teams-create-page-desktop-e2e.yml",
+      "result": "PASS",
+      "details": {
+        "path": ".github/workflows/teams-create-page-desktop-e2e.yml",
+        "identity": {
+          "bytes": 6522,
+          "sha256": "f57bf21347769c79b9c8c21f6f35b40b772fbfe9cb5f8155d7daabb54499d15f",
+          "gitBlob": "ef939f224a1642cb596906324c8d61441780ccc7"
+        }
+      }
+    },
+    {
+      "id": "workflow_full_body_.github/workflows/updater-linux-packages.yml",
+      "result": "PASS",
+      "details": {
+        "path": ".github/workflows/updater-linux-packages.yml",
+        "identity": {
+          "bytes": 21602,
+          "sha256": "37710e0293dcb00b31df74062b52a52a77f1c22f2e37d8ce2150c668baa98074",
+          "gitBlob": "60d214756c640b7925cfe11ba45ed4009f27ca3c"
+        }
+      }
+    },
+    {
+      "id": "workflow_full_body_.github/workflows/updater-mac-manual-migration.yml",
+      "result": "PASS",
+      "details": {
+        "path": ".github/workflows/updater-mac-manual-migration.yml",
+        "identity": {
+          "bytes": 5900,
+          "sha256": "40898d8173495bcbe67effb3912294c355aafd42e020e1d099040b184c127d4f",
+          "gitBlob": "4aa3a4181259514c5a43fbc7dd4ad98811a3588e"
+        }
+      }
+    },
+    {
+      "id": "workflow_full_body_.github/workflows/updater-mac-old-updater.yml",
+      "result": "PASS",
+      "details": {
+        "path": ".github/workflows/updater-mac-old-updater.yml",
+        "identity": {
+          "bytes": 12460,
+          "sha256": "dfb731e1620c1bfe47b51cd2af5e9c90c7c46eaa3841b39c7993d7938224b71f",
+          "gitBlob": "067a25687f36caefe156b0446c5056d230d27c62"
+        }
+      }
+    },
+    {
+      "id": "workflow_full_body_.github/workflows/updater-mac-source.yml",
+      "result": "PASS",
+      "details": {
+        "path": ".github/workflows/updater-mac-source.yml",
+        "identity": {
+          "bytes": 7512,
+          "sha256": "216b64cf04a7b5bebf527ffb21bfe3df0c12bcd828450a377bb67dc59540e025",
+          "gitBlob": "1196e40faa99e0ab64e329d91f3fea7c6ed47f94"
+        }
+      }
+    },
+    {
+      "id": "workflow_full_body_.github/workflows/updater-mac-updater.yml",
+      "result": "PASS",
+      "details": {
+        "path": ".github/workflows/updater-mac-updater.yml",
+        "identity": {
+          "bytes": 12323,
+          "sha256": "c71f29ef00ea623a30d11e3fa40ebc1d0fadd8a77f4552687c54b0527f4768db",
+          "gitBlob": "950f95892277ae303772ac699915250f0f4f66af"
+        }
+      }
+    },
+    {
+      "id": "workflow_full_body_.github/workflows/updater-native-feasibility.yml",
+      "result": "PASS",
+      "details": {
+        "path": ".github/workflows/updater-native-feasibility.yml",
+        "identity": {
+          "bytes": 13476,
+          "sha256": "8fe371aab977f9ce0d54086c11e508ed7b370780db344b93efd3592d3b4a09ce",
+          "gitBlob": "b55e6cbcb4de61e2e8688e1ff4b4529b043a4ada"
+        }
+      }
+    },
+    {
+      "id": "workflow_full_body_.github/workflows/updater-windows-ota.yml",
+      "result": "PASS",
+      "details": {
+        "path": ".github/workflows/updater-windows-ota.yml",
+        "identity": {
+          "bytes": 27610,
+          "sha256": "3dcf1d333467391acd418869d6676c18d1193bb81d36040da358bd7e0f62743f",
+          "gitBlob": "10ffcd79e48a71346df7545af638208ce039ad83"
+        }
+      }
+    },
+    {
+      "id": "workflow_full_body_.github/workflows/updater-windows.yml",
+      "result": "PASS",
+      "details": {
+        "path": ".github/workflows/updater-windows.yml",
+        "identity": {
+          "bytes": 11849,
+          "sha256": "1be54468be42e72674c01f5b94c58789fbf75a3e4d7ac6deff312738f2b1f5e2",
+          "gitBlob": "a4e9375cb95c4129c503f1d7be82de1e3926ea62"
+        }
+      }
+    },
+    {
+      "id": "workflow_full_body_.github/workflows/windows-backfill-diagnostic.yml",
+      "result": "PASS",
+      "details": {
+        "path": ".github/workflows/windows-backfill-diagnostic.yml",
+        "identity": {
+          "bytes": 14471,
+          "sha256": "adfdc03d5de437d308916da76774a1e4ca31aa5786f4ea2fe2fae4e1a2127c2c",
+          "gitBlob": "44bec5d82998468d48ac539f3624d0c2de1c6648"
+        }
+      }
+    },
+    {
+      "id": "workflow_full_census",
+      "result": "PASS",
+      "details": {
+        "count": 42,
+        "bytes": 751430
+      }
+    },
+    {
+      "id": "selected_source_full_body_scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "result": "PASS",
+      "details": {
+        "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+        "identity": {
+          "bytes": 28974,
+          "sha256": "7626e479a6662242009cb050e7e5af612a29e4205d62666d15274d5c30f91386",
+          "gitBlob": "ed57cb0fe7d57ef076a591621289eb77667c63ad"
+        }
+      }
+    },
+    {
+      "id": "selected_source_full_body_scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+      "result": "PASS",
+      "details": {
+        "path": "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+        "identity": {
+          "bytes": 24759,
+          "sha256": "d15b7eea14c0951194310aee34ddc5c477879c759a97a4e2f4e9fce1f956ce9b",
+          "gitBlob": "cf93da72a198dac636658e512093eef7828b5927"
+        }
+      }
+    },
+    {
+      "id": "selected_source_full_body_scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+      "result": "PASS",
+      "details": {
+        "path": "scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+        "identity": {
+          "bytes": 8457,
+          "sha256": "2da55bb40a5689ace0e922dc4867d7c73278d9a1cd200ea8c4602ca68f82da3b",
+          "gitBlob": "3c7b4bb53f4259ac0795d3f92fb715887acb554f"
+        }
+      }
+    },
+    {
+      "id": "selected_source_full_body_scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts",
+      "result": "PASS",
+      "details": {
+        "path": "scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts",
+        "identity": {
+          "bytes": 36260,
+          "sha256": "26357f37b146fc171bbceadb624bde4a7f4e459d2073ae23a651e757817b2d38",
+          "gitBlob": "4700a0052d3c58a2b3d9bc66e6803220688050fd"
+        }
+      }
+    },
+    {
+      "id": "selected_source_full_body_src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts",
+      "result": "PASS",
+      "details": {
+        "path": "src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts",
+        "identity": {
+          "bytes": 74340,
+          "sha256": "647ac5732bfd6b5cb57834adb4ad22c32ee5dfb018a934c92f982efd9daa531c",
+          "gitBlob": "c2faa156015707bc5fbd7f8123a7ffd9c4faa486"
+        }
+      }
+    },
+    {
+      "id": "selected_source_full_body_scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+      "result": "PASS",
+      "details": {
+        "path": "scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+        "identity": {
+          "bytes": 45795,
+          "sha256": "2c5931f5c7fa1dc8bb7858201c1b8afdbae9683faf4a2ad9fce067f116f3f94b",
+          "gitBlob": "5026f0ec6165bb092717ddc989043848a25081dc"
+        }
+      }
+    },
+    {
+      "id": "selected_source_full_body_scripts/legacy-agent-host/desktop-task-review-cycle-ui-smoke.ts",
+      "result": "PASS",
+      "details": {
+        "path": "scripts/legacy-agent-host/desktop-task-review-cycle-ui-smoke.ts",
+        "identity": {
+          "bytes": 33036,
+          "sha256": "4fa52cfad9347065680ef62a3ba6420762408a78a93b77e96ac3a2e16e68bdc9",
+          "gitBlob": "8d175c98158b3bd71192aef7b1929484b2b681b6"
+        }
+      }
+    },
+    {
+      "id": "selected_source_full_body_scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+      "result": "PASS",
+      "details": {
+        "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+        "identity": {
+          "bytes": 164965,
+          "sha256": "852bedb85c83dbc4b488dffb4a9ffebbe398adc53e85f5a3cea8ca36b146cbf7",
+          "gitBlob": "896c587e077da56a98a314a175fb3cba0353d6ee"
+        }
+      }
+    },
+    {
+      "id": "selected_source_full_body_test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts",
+      "result": "PASS",
+      "details": {
+        "path": "test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts",
+        "identity": {
+          "bytes": 187890,
+          "sha256": "b6f11896e60014aac785968d42390afde38716d47de9bba9562522235db048c9",
+          "gitBlob": "76495189c992fcda47cd7a43a0c697190b5acbb3"
+        }
+      }
+    },
+    {
+      "id": "all9_sources_bytes",
+      "result": "PASS",
+      "details": {
+        "count": 9,
+        "bytes": 604476
+      }
+    },
+    {
+      "id": "vector_pin_join",
+      "result": "PASS",
+      "details": {
+        "bytes": 2118,
+        "sha256": "6007c5c7ba2f74c43bd9b73c50cae2319eacbf712c233cc0d67b3efbb4c6894d",
+        "gitBlob": "3887991d5dbd25dbec5c8656e8e03d423ea502b7"
+      }
+    },
+    {
+      "id": "whole_test_identity_join",
+      "result": "PASS",
+      "details": {
+        "node": {
+          "bytes": 164965,
+          "sha256": "852bedb85c83dbc4b488dffb4a9ffebbe398adc53e85f5a3cea8ca36b146cbf7",
+          "gitBlob": "896c587e077da56a98a314a175fb3cba0353d6ee"
+        },
+        "renderer": {
+          "bytes": 187890,
+          "sha256": "b6f11896e60014aac785968d42390afde38716d47de9bba9562522235db048c9",
+          "gitBlob": "76495189c992fcda47cd7a43a0c697190b5acbb3"
+        }
+      }
+    },
+    {
+      "id": "trigger_map_matches_binding_advisory",
+      "result": "PASS",
+      "details": {
+        "rows": 42
+      }
+    },
+    {
+      "id": "trigger_counts",
+      "result": "PASS",
+      "details": {
+        "eligible": 7,
+        "active": 5,
+        "draftSkipped": 2
+      }
+    },
+    {
+      "id": "zero_new_postimages",
+      "result": "PASS",
+      "details": "No executable postimage authored by this proposal"
+    },
+    {
+      "id": "exact_concurrency_literal_.github/workflows/announcements-content.yml",
+      "result": "PASS",
+      "details": {
+        "group": "Announcements Content-pull_request-<NEW_PR_NUMBER>",
+        "cancelInProgress": true
+      }
+    },
+    {
+      "id": "exact_concurrency_literal_.github/workflows/ci.yml",
+      "result": "PASS",
+      "details": {
+        "group": "CI-pull_request-<NEW_PR_NUMBER>-checks",
+        "cancelInProgress": true
+      }
+    },
+    {
+      "id": "exact_concurrency_literal_.github/workflows/codeql.yml",
+      "result": "PASS",
+      "details": {
+        "group": "CodeQL-pull_request-<NEW_PR_NUMBER>",
+        "cancelInProgress": true
+      }
+    },
+    {
+      "id": "exact_concurrency_literal_.github/workflows/electron-packaged-ci.yml",
+      "result": "PASS",
+      "details": {
+        "group": "Electron packaged CI-<NEW_PR_NUMBER>-checks",
+        "cancelInProgress": true
+      }
+    },
+    {
+      "id": "exact_concurrency_literal_.github/workflows/host-emulated-acceptance.yml",
+      "result": "PASS",
+      "details": {
+        "methodCorrection": {
+          "check": "exact_concurrency_literal_.github/workflows/host-emulated-acceptance.yml",
+          "initialResult": "FAIL",
+          "cause": "A contiguous excerpt check compared R1's three executable YAML lines with a workflow block that also contains one comment. All actual concurrency expression lines are byte-identical.",
+          "method": "Remove comment-only lines for this excerpt comparison; full workflow body hash remains exact and unchanged.",
+          "result": "PASS",
+          "literal": "concurrency:\n  group: ${{ github.workflow }}-v2-${{ github.event_name }}-${{ github.event_name == 'pull_request' && github.event.pull_request.number || (github.event_name == 'merge_group' || github.event_name == 'push' && github.ref_type == 'branch' && github.event.repository.default_branch != '' && github.ref_name != github.event.repository.default_branch && !startsWith(github.ref_name, 'release/')) && github.ref || github.run_id }}\n  cancel-in-progress: ${{ github.event_name == 'pull_request' || github.event_name == 'push' && github.ref_type == 'branch' && github.event.repository.default_branch != '' && github.ref_name != github.event.repository.default_branch && !startsWith(github.ref_name, 'release/') }}",
+          "actualBlock": "concurrency:\n  # Leave the obsolete always-aggregate group after all of its matrix jobs were cancelled.\n  group: ${{ github.workflow }}-v2-${{ github.event_name }}-${{ github.event_name == 'pull_request' && github.event.pull_request.number || (github.event_name == 'merge_group' || github.event_name == 'push' && github.ref_type == 'branch' && github.event.repository.default_branch != '' && github.ref_name != github.event.repository.default_branch && !startsWith(github.ref_name, 'release/')) && github.ref || github.run_id }}\n  cancel-in-progress: ${{ github.event_name == 'pull_request' || github.event_name == 'push' && github.ref_type == 'branch' && github.event.repository.default_branch != '' && github.ref_name != github.event.repository.default_branch && !startsWith(github.ref_name, 'release/') }}"
+        }
+      }
+    },
+    {
+      "id": "exact_concurrency_literal_.github/workflows/opencode-desktop-e2e.yml",
+      "result": "PASS",
+      "details": {
+        "group": "OpenCode diagnostics desktop E2E-pull_request-<NEW_PR_NUMBER>",
+        "cancelInProgress": true
+      }
+    },
+    {
+      "id": "exact_concurrency_literal_.github/workflows/opencode-v2-stage1-preflight.yml",
+      "result": "PASS",
+      "details": {
+        "group": "OpenCode V2 Stage1 static preflight (TEST only)-pull_request-<NEW_PR_NUMBER>",
+        "cancelInProgress": true
+      }
+    },
+    {
+      "id": "whole_node_file_command_present",
+      "result": "PASS",
+      "details": {
+        "methodCorrection": {
+          "check": "whole_node_file_command_present",
+          "initialResult": "FAIL",
+          "cause": "The selected whole file is an argument in a command containing additional whole test files, so a two-token adjacency search was over-specific.",
+          "method": "Inspect the complete original node --test command and exact full-file argument; require no test-name filter on that command.",
+          "result": "PASS",
+          "actualLine103": "          node --test scripts/legacy-agent-host/desktop-backend-observations.test.ts scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts scripts/legacy-agent-host/test-child-process-trace.test.ts scripts/legacy-agent-host/desktop-emulated-settings.test.ts scripts/legacy-agent-host/desktop-emulated-codex-catalog.test.ts scripts/legacy-agent-host/desktop-resume-records.test.ts scripts/legacy-agent-host/desktop-captured-app-exit.test.ts scripts/legacy-agent-host/desktop-opencode-v2-management-records.test.ts"
+        }
+      }
+    },
+    {
+      "id": "frontend_command_literal_preserved",
+      "result": "PASS",
+      "details": {
+        "methodCorrection": {
+          "check": "frontend_command_literal_preserved",
+          "initialResult": "FAIL",
+          "cause": "R1 records the unchanged command on one logical line while the YAML uses shell continuation lines and output capture.",
+          "method": "Join shell continuation boundaries with one separating space as data; preserve every command argument and quoted value, then require R1's exact command prefix and existing output capture. The first normalization retained the pre-backslash space twice; that data-only checker was corrected.",
+          "result": "PASS",
+          "originalLines": "          pnpm exec vitest run --maxWorkers=2 --shard=\"$HOST_TEST_SHARD/4\" \\\n            --exclude '**/*.live.test.*' --exclude '**/*.live-e2e.test.*' --exclude '**/*.native.test.*' \\\n            --reporter=default --reporter=json --outputFile \"$RUNNER_TEMP/host-offline-tests-$HOST_TEST_SHARD.json\" \\\n            2>&1 | tee \"$RUNNER_TEMP/host-offline-tests-$HOST_TEST_SHARD.log\"",
+          "logicalCommand": "pnpm exec vitest run --maxWorkers=2 --shard=\"$HOST_TEST_SHARD/4\" --exclude '**/*.live.test.*' --exclude '**/*.live-e2e.test.*' --exclude '**/*.native.test.*' --reporter=default --reporter=json --outputFile \"$RUNNER_TEMP/host-offline-tests-$HOST_TEST_SHARD.json\" 2>&1 | tee \"$RUNNER_TEMP/host-offline-tests-$HOST_TEST_SHARD.log\""
+        }
+      }
+    },
+    {
+      "id": "root_only_and_no_execution_selected_for_review",
+      "result": "PASS",
+      "details": "Root is sole author/applier/stager/executor; all R1 actual-invocation flags remain false. This review performs only data reads/hash joins and bare report retention."
+    },
+    {
+      "id": "future_head_external_not_cba",
+      "result": "PASS",
+      "details": "The head is the actual immutable commit of this R1's later accepted docs publication, bound externally after root and independent actual readbacks. The historical cba source-basis commit cannot substitute."
+    },
+    {
+      "id": "publication_and_actual_gate_before_ref_mutation",
+      "result": "PASS",
+      "details": "The closed 676a refusal-accounting gate permits prospective review only. The distinct future R1 publication/actual-readback gate remains required before refs/PR."
+    },
+    {
+      "id": "complete_four_reviews_before_publication",
+      "result": "PASS",
+      "details": "All four assigned full R1 reviews precede publication. This report supplies guard scope only."
+    },
+    {
+      "id": "no_new_executable_postimage_and_no_new_r2",
+      "result": "PASS",
+      "details": "No new executable/source/test/workflow body is selected. Existing accepted producer source R2 remains applicable; no invented new source-authoring gate."
+    },
+    {
+      "id": "final_non_doc_compare_and_whole_files_frozen",
+      "result": "PASS",
+      "details": "Final head must preserve all 53 non-doc roots, all 42 workflows, all nine selected bodies and whole139/85 tests; full comparison against exact ancestor may add only evidence docs beyond the existing three source paths."
+    },
+    {
+      "id": "exact_one_shot_ref_pair_and_draft",
+      "result": "PASS",
+      "details": "One exact base creation, one exact future-publication head creation, and one opened Draft PR; no alternate venue or runtime replay."
+    },
+    {
+      "id": "exact_new_ref_names_and_readback",
+      "result": "PASS",
+      "details": "Full immutable ref/commit/tree and PR identity readback is specified. Historical absence observations do not replace required final preflight."
+    },
+    {
+      "id": "spent_unknown_mutations_not_retried",
+      "result": "PASS",
+      "details": "Refusal/transport uncertainty consumes the issued action. Only exact-new-ref/PR readback may resolve occurrence; no overwrite, duplicate PR, old-ref recovery, or CI dispatch/rerun fallback."
+    },
+    {
+      "id": "snapshot_and_pr_metadata_freeze",
+      "result": "PASS",
+      "details": "Both snapshot refs and the new PR's metadata are fixed throughout active selected runs, keeping run identity and concurrency groups stable."
+    },
+    {
+      "id": "working_docs_immediate_push_separate",
+      "result": "PASS",
+      "details": "Evidence retention on the existing working branch is immediately pushed without moving either CI snapshot or synchronizing the new PR."
+    },
+    {
+      "id": "history_and_catalog_preservation",
+      "result": "PASS",
+      "details": "R1 preserves earlier plan/status prefixes, archives the complete prior current stage, and preserves unrelated catalog fields/bundles/totals."
+    },
+    {
+      "id": "unchanged_deadlines_filters_and_retries",
+      "result": "PASS",
+      "details": "Full workflow hashes match. Selected Host UI/frontend remain45min, aggregate5min; Packaged matrix90min. Existing producer90s/30s conditions and hook currentness are exact frozen published source bytes."
+    },
+    {
+      "id": "whole_test_counts_are_selection_not_execution",
+      "result": "PASS",
+      "details": "Whole Node139 is an explicit complete-file argument across18UI lanes; renderer85 is collectively selected by the existing four shards. No test or shard result is claimed."
+    },
+    {
+      "id": "explicit_no_real_claude_codex_scope",
+      "result": "PASS",
+      "details": "The noVendorVersionProbes flag is interpreted in the adjacent no-real-Claude/Codex scope, as confirmed by root. Real Claude/Codex including version/status/startup is prohibited; the original declared OpenCode version/metadata paths remain allowed."
+    },
+    {
+      "id": "pinned_entry_no_eager_vendor_route_join",
+      "result": "PASS",
+      "details": "Full retained 9acdf entry/delivery/preAction proof is joined: selected native wrapper validates and launches verified Bun delivery; selected JS fast paths run before general startup; errors do not enter a vendor fallback. Full current command bytes and locked upstream commit are unchanged."
+    },
+    {
+      "id": "explicit_opencode_provider_and_fallback_join",
+      "result": "PASS",
+      "details": "Full semantic625 advisory independently traces filtered status/model list, lazy vendor imports, OpenCode-only resolution/version/models fallback, and verified V2 delivery. It is attributed provider evidence, not double-counted as this guard's independent full transitive scan."
+    },
+    {
+      "id": "provider_proof_limits_not_universal",
+      "result": "PASS",
+      "details": "Conclusion is limited to unchanged declared CI commands, locked runtime and reviewed finite peers. It is neither a subprocess-free statement, arbitrary-config theorem nor runtime/archive-byte attestation."
+    },
+    {
+      "id": "expected_draft_policy_outcomes_nonpass",
+      "result": "PASS",
+      "details": "CI Full qualification remains an expected Draft policy failure; CodeQL and OpenCode diagnostics Draft skips stay explicit. These do not turn actual failures, missing runs or skipped tests into PASS."
+    },
+    {
+      "id": "complete_new_run_discovery_only",
+      "result": "PASS",
+      "details": "Only exact new PR/head/action-window runs are selected; retain complete paginated raw responses, deduplicate and account for all seven event-eligible workflows. Missing event evidence stays UNKNOWN/UNREACHED."
+    },
+    {
+      "id": "exact_attempt_and_full_job_logs",
+      "result": "PASS",
+      "details": "Capture exact initial attempt and every job/step/runner/time/outcome. Full retained decoded logs are required for claims, with truncation or transport limits explicit."
+    },
+    {
+      "id": "artifact_metadata_not_archive_custody",
+      "result": "PASS",
+      "details": "Available artifact download capability is selected only for exact new IDs; archive hashes/members/raw evidence remain future proof. Metadata and generic UTF8 fetch cannot establish archive or screenshot custody."
+    },
+    {
+      "id": "cleanup_actual_evidence_not_inference",
+      "result": "PASS",
+      "details": "Fixture/process/filesystem/profile/TEST-model cleanup must be evidenced; failure-step logs remain relevant even when uploads or run conclusions exist."
+    },
+    {
+      "id": "checkout_head_merge_mutable_input_distinguished",
+      "result": "PASS",
+      "details": "Explicit head checkouts, synthetic merge tree/parents and Stage1's separately fetched main product-lock input are separately captured. Future exact SHA/availability is not assumed."
+    },
+    {
+      "id": "spent_local_attempt_stays_refused",
+      "result": "PASS",
+      "details": "Refused local materialization remains spent; no phase receipt or physical preservation claim is manufactured. Its GREEN/validation paths remain unexecuted; future CI does not repair that history."
+    },
+    {
+      "id": "frozen_original_pr_main_stage2_exclusions",
+      "result": "PASS",
+      "details": "Original-nine/frozen PRs, existing PR1192, main/default/release/Stage2, local restore/replay and agent actions remain outside selected scope."
+    },
+    {
+      "id": "coverage_gaps_preserved",
+      "result": "PASS",
+      "details": "Host Process is not selected by this diff; bounded provider/OS GUI/native/auth gaps remain explicit in the full R1 and joined semantic advisory."
+    },
+    {
+      "id": "future_changes_require_separate_plan",
+      "result": "PASS",
+      "details": "No prospective follow-up source change, CI-head motion or automatic replay is smuggled into this one-shot selection."
+    },
+    {
+      "id": "completion_requires_terminal_complete_actual_evidence",
+      "result": "PASS",
+      "details": "Completion remains contingent on actual new run evidence, complete available logs/artifacts, retained reviewed outcomes and publication readback; this static report cannot satisfy it."
+    }
+  ],
+  "checkCount": 104,
+  "passedCheckCount": 104,
+  "failedChecks": [],
+  "actualBlockers": [],
+  "checkerMethodCorrections": "Three data-only literal checks were corrected after inspecting original full YAML: the Host concurrency excerpt omits one comment; Node --test names additional whole files before the selected file; frontend uses backslash-newline continuations and existing tee output capture. Final checks compare actual expressions/complete arguments and preserve exact whole-body hashes. The frontend normalizer also corrected a duplicated separating space introduced by its first checker. No source, R1, command, filter, timeout or runtime was changed. Two final field predicates were also corrected to use the observed literal owner '/root' and capitalized 'Not selected' Host Process sentence; these were checker spelling assumptions, not R1 defects.",
+  "actions": {
+    "gitAndEvidenceReads": true,
+    "pureDataIdentityAndComparison": true,
+    "bareReportRetention": true,
+    "shell": false,
+    "targetRuntime": false,
+    "realClaudeOrCodex": false,
+    "sourceWrites": false,
+    "controlWrites": false,
+    "refMutations": false,
+    "prMutations": false,
+    "ciActions": false,
+    "oldCiPolling": false,
+    "originalNinePolling": false
+  },
+  "runtimeClaims": {
+    "refsCreated": false,
+    "prCreated": false,
+    "ciRunsObserved": false,
+    "greenExecuted": false,
+    "validationExecuted": false,
+    "ciPass": false,
+    "wholeNode139Pass": false,
+    "wholeRenderer85Pass": false,
+    "artifactBytesAttested": false
+  },
+  "qualification": "Accepted only as a full static guard review of the exact pinned prospective R1. Root owns publication and all future authorized execution; actual results and missing evidence require their own truthful retained accounting."
+}

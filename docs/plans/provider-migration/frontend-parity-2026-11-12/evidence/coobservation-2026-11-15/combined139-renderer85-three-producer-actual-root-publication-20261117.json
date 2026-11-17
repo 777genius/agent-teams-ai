@@ -1,0 +1,1808 @@
+{
+  "schemaVersion": 1,
+  "kind": "combined139-renderer85-three-producer-root-actual-publication-readback",
+  "at": "2026-11-17 01:55:14 UTC",
+  "repository": "777genius/agent-teams-ai",
+  "branch": "fix/frontend-parity-coobservation-c714-20261115",
+  "accepted": true,
+  "actualCommit": "b83da2bb72ada6e9fb3a426cb2a7d62b30ec4871",
+  "actualTree": "5ef5abf3c6aadd53340f457ea7f77e6b69f84878",
+  "actualDocsTree": "ca906a27438211f8261ea22cf3b916599be3216e",
+  "soleParent": "77993819c233737f1e2b4c11c8ca1a5d360bcbe3",
+  "parentTree": "ada3f27db78fabc17a91e3904d41b8bc547c6dca",
+  "parentDocsTree": "a1b92f625b548e7384ef13e0358c420d1e1f136d",
+  "manifest": {
+    "bytes": 15180,
+    "sha256": "25dd8d8f0e59fb6be9e66eb6d7eba4e30103c2ed7d0d005c6cc2b8093fbac91f",
+    "gitBlob": "9ae8f0d2eaadc7e481a60ae594871c647d478c26"
+  },
+  "subject": {
+    "sourceFiles": [
+      {
+        "path": "scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+        "identity": {
+          "bytes": 45795,
+          "sha256": "2c5931f5c7fa1dc8bb7858201c1b8afdbae9683faf4a2ad9fce067f116f3f94b",
+          "gitBlob": "5026f0ec6165bb092717ddc989043848a25081dc"
+        }
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-task-review-cycle-ui-smoke.ts",
+        "identity": {
+          "bytes": 33036,
+          "sha256": "4fa52cfad9347065680ef62a3ba6420762408a78a93b77e96ac3a2e16e68bdc9",
+          "gitBlob": "8d175c98158b3bd71192aef7b1929484b2b681b6"
+        }
+      },
+      {
+        "path": "src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts",
+        "identity": {
+          "bytes": 74340,
+          "sha256": "647ac5732bfd6b5cb57834adb4ad22c32ee5dfb018a934c92f982efd9daa531c",
+          "gitBlob": "c2faa156015707bc5fbd7f8123a7ffd9c4faa486"
+        }
+      }
+    ],
+    "beforeSourceVector": {
+      "bytes": 2118,
+      "sha256": "f2574559a378b3bc537fdcedbde161003c8344a5485dfff9322214f6fda2a90c",
+      "gitBlob": "f6446bdc2bbdb511206c729a1f03717871baea6d"
+    },
+    "sourceVector": {
+      "bytes": 2118,
+      "sha256": "6007c5c7ba2f74c43bd9b73c50cae2319eacbf712c233cc0d67b3efbb4c6894d",
+      "gitBlob": "3887991d5dbd25dbec5c8656e8e03d423ea502b7"
+    },
+    "sourcePins": [
+      {
+        "path": "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+        "mode": "100644",
+        "bytes": 24759,
+        "sha256": "d15b7eea14c0951194310aee34ddc5c477879c759a97a4e2f4e9fce1f956ce9b",
+        "gitBlob": "cf93da72a198dac636658e512093eef7828b5927"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+        "mode": "100644",
+        "bytes": 45795,
+        "sha256": "2c5931f5c7fa1dc8bb7858201c1b8afdbae9683faf4a2ad9fce067f116f3f94b",
+        "gitBlob": "5026f0ec6165bb092717ddc989043848a25081dc"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts",
+        "mode": "100644",
+        "bytes": 36260,
+        "sha256": "26357f37b146fc171bbceadb624bde4a7f4e459d2073ae23a651e757817b2d38",
+        "gitBlob": "4700a0052d3c58a2b3d9bc66e6803220688050fd"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+        "mode": "100644",
+        "bytes": 8457,
+        "sha256": "2da55bb40a5689ace0e922dc4867d7c73278d9a1cd200ea8c4602ca68f82da3b",
+        "gitBlob": "3c7b4bb53f4259ac0795d3f92fb715887acb554f"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-task-review-cycle-ui-smoke.ts",
+        "mode": "100644",
+        "bytes": 33036,
+        "sha256": "4fa52cfad9347065680ef62a3ba6420762408a78a93b77e96ac3a2e16e68bdc9",
+        "gitBlob": "8d175c98158b3bd71192aef7b1929484b2b681b6"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+        "mode": "100644",
+        "bytes": 164965,
+        "sha256": "852bedb85c83dbc4b488dffb4a9ffebbe398adc53e85f5a3cea8ca36b146cbf7",
+        "gitBlob": "896c587e077da56a98a314a175fb3cba0353d6ee"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+        "mode": "100644",
+        "bytes": 28974,
+        "sha256": "7626e479a6662242009cb050e7e5af612a29e4205d62666d15274d5c30f91386",
+        "gitBlob": "ed57cb0fe7d57ef076a591621289eb77667c63ad"
+      },
+      {
+        "path": "src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts",
+        "mode": "100644",
+        "bytes": 74340,
+        "sha256": "647ac5732bfd6b5cb57834adb4ad22c32ee5dfb018a934c92f982efd9daa531c",
+        "gitBlob": "c2faa156015707bc5fbd7f8123a7ffd9c4faa486"
+      },
+      {
+        "path": "test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts",
+        "mode": "100644",
+        "bytes": 187890,
+        "sha256": "b6f11896e60014aac785968d42390afde38716d47de9bba9562522235db048c9",
+        "gitBlob": "76495189c992fcda47cd7a43a0c697190b5acbb3"
+      }
+    ],
+    "tests": {
+      "node": {
+        "bytes": 164965,
+        "sha256": "852bedb85c83dbc4b488dffb4a9ffebbe398adc53e85f5a3cea8ca36b146cbf7",
+        "gitBlob": "896c587e077da56a98a314a175fb3cba0353d6ee"
+      },
+      "renderer": {
+        "bytes": 187890,
+        "sha256": "b6f11896e60014aac785968d42390afde38716d47de9bba9562522235db048c9",
+        "gitBlob": "76495189c992fcda47cd7a43a0c697190b5acbb3"
+      }
+    }
+  },
+  "actualReadbacks": [
+    {
+      "path": "scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+      "bytes": 45795,
+      "sha256": "2c5931f5c7fa1dc8bb7858201c1b8afdbae9683faf4a2ad9fce067f116f3f94b",
+      "gitBlob": "5026f0ec6165bb092717ddc989043848a25081dc",
+      "fullBodyReadAndRehashed": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-task-review-cycle-ui-smoke.ts",
+      "bytes": 33036,
+      "sha256": "4fa52cfad9347065680ef62a3ba6420762408a78a93b77e96ac3a2e16e68bdc9",
+      "gitBlob": "8d175c98158b3bd71192aef7b1929484b2b681b6",
+      "fullBodyReadAndRehashed": true
+    },
+    {
+      "path": "src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts",
+      "bytes": 74340,
+      "sha256": "647ac5732bfd6b5cb57834adb4ad22c32ee5dfb018a934c92f982efd9daa531c",
+      "gitBlob": "c2faa156015707bc5fbd7f8123a7ffd9c4faa486",
+      "fullBodyReadAndRehashed": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-post-transport-recovery-red-actual-root-publication-20261117.json",
+      "bytes": 55348,
+      "sha256": "bbe57a54a25a38bee1d4f4de5fc1d036d81f6b2ecdb40b3d0088b274de6656c9",
+      "gitBlob": "9218839ef55406b01267605c040bc586c7d443be",
+      "fullBodyReadAndRehashed": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-post-transport-recovery-red-actual-independent-publication-20261117.json",
+      "bytes": 166393,
+      "sha256": "cbe1880831780d10a7131282ab2ecc37d81fbdede3c53a265c1749ea863c20f2",
+      "gitBlob": "e5c2c2d8c84c0d491e334f6d67774cf23c83948f",
+      "fullBodyReadAndRehashed": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-producer-authorship-gate-20261117.json",
+      "bytes": 4327,
+      "sha256": "3231731b2a22cb3903ccff6991341b54c673cd7064599b9aa7238fe07e3c6b18",
+      "gitBlob": "2780955d0a71956a75650ddf4d8a0ff0576faa57",
+      "fullBodyReadAndRehashed": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-three-producer-source-r2-proposal-20261117.json",
+      "bytes": 25372,
+      "sha256": "7def167b3384043abb2cea83e90c51ea332f2c12a9f4fc3ca1ddcf1531bab85c",
+      "gitBlob": "b0d4fb7c7ca2fc486fda6823ee3c3618171f8cdc",
+      "fullBodyReadAndRehashed": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-three-producer-root-source-r2-review-20261117.json",
+      "bytes": 17023,
+      "sha256": "30aa0b71c8c7cdb32d88db381e7396ec2e543ea977d80e93ee8297bd9f3304f3",
+      "gitBlob": "e4119f144e4a79e7c7b6a1598a33a70388df207f",
+      "fullBodyReadAndRehashed": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-three-producer-guard-source-r2-review-20261117.json",
+      "bytes": 245598,
+      "sha256": "0bdbb65827d3717684d09ea1e35a2528b2ea4ee36143e4d3abe3601bf8bb8022",
+      "gitBlob": "ce6997eef4cc5989fb1c5437a23ef490bc74377a",
+      "fullBodyReadAndRehashed": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-three-producer-semantic-source-r2-review-20261117.json",
+      "bytes": 70998,
+      "sha256": "3a3fe8dcf619204191b0db04023c5293fd24e433b74f2bf801f07bbc395d0f6c",
+      "gitBlob": "0c3db6a22e1f652ca30d085de23217fc52eb5e51",
+      "fullBodyReadAndRehashed": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-three-producer-binding-source-r2-review-20261117.json",
+      "bytes": 47779,
+      "sha256": "ce13ee532bbca6a6181f95a97815e6c122be0a0adb46220ba61fd8b7c4029faa",
+      "gitBlob": "c2357e52f57abe45cd77d1ff0844aaa16d1095a6",
+      "fullBodyReadAndRehashed": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/29-reconciled-acceptance-and-custody-followups-2026-11-15.md",
+      "bytes": 2563641,
+      "sha256": "5d678bfaa13d9ce9b175ccfe5d3446e0d59f9c7a82adc2414459e4f2ddb22953",
+      "gitBlob": "45045d83208b87845e0f1e363da306ee25d77031",
+      "fullBodyReadAndRehashed": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/continuation-status-20261116.md",
+      "bytes": 47811,
+      "sha256": "e0ac9007c538de1a1466d0bc87545cd7592e661ed4ebae17786c3e98974f1da5",
+      "gitBlob": "ab8c41a609735ebcbaa499f89efb308fa4a98d0b",
+      "fullBodyReadAndRehashed": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1213-retention-catalog-20261116.json",
+      "bytes": 230200,
+      "sha256": "74d391b5458e4e53588f8616e0a522fee7b4f705aa4cf6810cfda4dc73f52fe9",
+      "gitBlob": "330bfd617fd812e47ea070cea8b86cef1e047f5d",
+      "fullBodyReadAndRehashed": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-three-producer-publication-manifest-20261117.json",
+      "bytes": 15180,
+      "sha256": "25dd8d8f0e59fb6be9e66eb6d7eba4e30103c2ed7d0d005c6cc2b8093fbac91f",
+      "gitBlob": "9ae8f0d2eaadc7e481a60ae594871c647d478c26",
+      "fullBodyReadAndRehashed": true
+    }
+  ],
+  "completeActualBodyBytes": 3642841,
+  "extraFrozenSourceBodyBytes": 451305,
+  "allNineSourceReadbacks": [
+    {
+      "path": "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+      "mode": "100644",
+      "bytes": 24759,
+      "sha256": "d15b7eea14c0951194310aee34ddc5c477879c759a97a4e2f4e9fce1f956ce9b",
+      "gitBlob": "cf93da72a198dac636658e512093eef7828b5927",
+      "fullBodyReadAndRehashed": true,
+      "tree": "800c50d1b9cd5e538bd889a1f24475084ef5ff57"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+      "mode": "100644",
+      "bytes": 45795,
+      "sha256": "2c5931f5c7fa1dc8bb7858201c1b8afdbae9683faf4a2ad9fce067f116f3f94b",
+      "gitBlob": "5026f0ec6165bb092717ddc989043848a25081dc",
+      "fullBodyReadAndRehashed": true,
+      "tree": "800c50d1b9cd5e538bd889a1f24475084ef5ff57"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts",
+      "mode": "100644",
+      "bytes": 36260,
+      "sha256": "26357f37b146fc171bbceadb624bde4a7f4e459d2073ae23a651e757817b2d38",
+      "gitBlob": "4700a0052d3c58a2b3d9bc66e6803220688050fd",
+      "fullBodyReadAndRehashed": true,
+      "tree": "800c50d1b9cd5e538bd889a1f24475084ef5ff57"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+      "mode": "100644",
+      "bytes": 8457,
+      "sha256": "2da55bb40a5689ace0e922dc4867d7c73278d9a1cd200ea8c4602ca68f82da3b",
+      "gitBlob": "3c7b4bb53f4259ac0795d3f92fb715887acb554f",
+      "fullBodyReadAndRehashed": true,
+      "tree": "800c50d1b9cd5e538bd889a1f24475084ef5ff57"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-task-review-cycle-ui-smoke.ts",
+      "mode": "100644",
+      "bytes": 33036,
+      "sha256": "4fa52cfad9347065680ef62a3ba6420762408a78a93b77e96ac3a2e16e68bdc9",
+      "gitBlob": "8d175c98158b3bd71192aef7b1929484b2b681b6",
+      "fullBodyReadAndRehashed": true,
+      "tree": "800c50d1b9cd5e538bd889a1f24475084ef5ff57"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+      "mode": "100644",
+      "bytes": 164965,
+      "sha256": "852bedb85c83dbc4b488dffb4a9ffebbe398adc53e85f5a3cea8ca36b146cbf7",
+      "gitBlob": "896c587e077da56a98a314a175fb3cba0353d6ee",
+      "fullBodyReadAndRehashed": true,
+      "tree": "800c50d1b9cd5e538bd889a1f24475084ef5ff57"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "mode": "100644",
+      "bytes": 28974,
+      "sha256": "7626e479a6662242009cb050e7e5af612a29e4205d62666d15274d5c30f91386",
+      "gitBlob": "ed57cb0fe7d57ef076a591621289eb77667c63ad",
+      "fullBodyReadAndRehashed": true,
+      "tree": "800c50d1b9cd5e538bd889a1f24475084ef5ff57"
+    },
+    {
+      "path": "src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts",
+      "mode": "100644",
+      "bytes": 74340,
+      "sha256": "647ac5732bfd6b5cb57834adb4ad22c32ee5dfb018a934c92f982efd9daa531c",
+      "gitBlob": "c2faa156015707bc5fbd7f8123a7ffd9c4faa486",
+      "fullBodyReadAndRehashed": true,
+      "tree": "56bda382944632ec0cc1d2fa94cf574bed0e73c5"
+    },
+    {
+      "path": "test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts",
+      "mode": "100644",
+      "bytes": 187890,
+      "sha256": "b6f11896e60014aac785968d42390afde38716d47de9bba9562522235db048c9",
+      "gitBlob": "76495189c992fcda47cd7a43a0c697190b5acbb3",
+      "fullBodyReadAndRehashed": true,
+      "tree": "92519c914f57ec6cee13c2e4b0b2be568a56f641"
+    }
+  ],
+  "completeNineSourceBodyBytes": 604476,
+  "fullParentModifiedBodyReadbacks": [
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/29-reconciled-acceptance-and-custody-followups-2026-11-15.md",
+      "bytes": 2560337,
+      "sha256": "1ea54bc9f596e274c1bd2e0207742b8c453efcfda7b57f345bf7395df2dbda83",
+      "gitBlob": "b4c035726a57b68ddfdf7e0fe8eebcbf5d84b10d",
+      "fullBodyReadAndRehashed": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/continuation-status-20261116.md",
+      "bytes": 46758,
+      "sha256": "e50f8e11d74d42feb4897f00050ef6f60b71e66ccbdecf8fef1698a48074844d",
+      "gitBlob": "6eccc39aa5580df54dc86f2917e67f980d5574de",
+      "fullBodyReadAndRehashed": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1213-retention-catalog-20261116.json",
+      "bytes": 197602,
+      "sha256": "3c8ec7dd7b8257e0df08e77a0c7cd43226a5d69f449614e8dc9baab03fbfc310",
+      "gitBlob": "dc80f5b02f336f0aac80058a69d08a79b48314fb",
+      "fullBodyReadAndRehashed": true
+    }
+  ],
+  "completeDelta": [
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/29-reconciled-acceptance-and-custody-followups-2026-11-15.md",
+      "before": {
+        "mode": "100644",
+        "gitBlob": "b4c035726a57b68ddfdf7e0fe8eebcbf5d84b10d"
+      },
+      "after": {
+        "mode": "100644",
+        "gitBlob": "45045d83208b87845e0f1e363da306ee25d77031"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-post-transport-recovery-red-actual-independent-publication-20261117.json",
+      "before": null,
+      "after": {
+        "mode": "100644",
+        "gitBlob": "e5c2c2d8c84c0d491e334f6d67774cf23c83948f"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-post-transport-recovery-red-actual-root-publication-20261117.json",
+      "before": null,
+      "after": {
+        "mode": "100644",
+        "gitBlob": "9218839ef55406b01267605c040bc586c7d443be"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-producer-authorship-gate-20261117.json",
+      "before": null,
+      "after": {
+        "mode": "100644",
+        "gitBlob": "2780955d0a71956a75650ddf4d8a0ff0576faa57"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-three-producer-binding-source-r2-review-20261117.json",
+      "before": null,
+      "after": {
+        "mode": "100644",
+        "gitBlob": "c2357e52f57abe45cd77d1ff0844aaa16d1095a6"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-three-producer-guard-source-r2-review-20261117.json",
+      "before": null,
+      "after": {
+        "mode": "100644",
+        "gitBlob": "ce6997eef4cc5989fb1c5437a23ef490bc74377a"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-three-producer-publication-manifest-20261117.json",
+      "before": null,
+      "after": {
+        "mode": "100644",
+        "gitBlob": "9ae8f0d2eaadc7e481a60ae594871c647d478c26"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-three-producer-root-source-r2-review-20261117.json",
+      "before": null,
+      "after": {
+        "mode": "100644",
+        "gitBlob": "e4119f144e4a79e7c7b6a1598a33a70388df207f"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-three-producer-semantic-source-r2-review-20261117.json",
+      "before": null,
+      "after": {
+        "mode": "100644",
+        "gitBlob": "0c3db6a22e1f652ca30d085de23217fc52eb5e51"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-three-producer-source-r2-proposal-20261117.json",
+      "before": null,
+      "after": {
+        "mode": "100644",
+        "gitBlob": "b0d4fb7c7ca2fc486fda6823ee3c3618171f8cdc"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/continuation-status-20261116.md",
+      "before": {
+        "mode": "100644",
+        "gitBlob": "6eccc39aa5580df54dc86f2917e67f980d5574de"
+      },
+      "after": {
+        "mode": "100644",
+        "gitBlob": "ab8c41a609735ebcbaa499f89efb308fa4a98d0b"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1213-retention-catalog-20261116.json",
+      "before": {
+        "mode": "100644",
+        "gitBlob": "dc80f5b02f336f0aac80058a69d08a79b48314fb"
+      },
+      "after": {
+        "mode": "100644",
+        "gitBlob": "330bfd617fd812e47ea070cea8b86cef1e047f5d"
+      }
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+      "before": {
+        "mode": "100644",
+        "gitBlob": "bd8bc728808eda00a45b300fd328d49e4e919bc2"
+      },
+      "after": {
+        "mode": "100644",
+        "gitBlob": "5026f0ec6165bb092717ddc989043848a25081dc"
+      }
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-task-review-cycle-ui-smoke.ts",
+      "before": {
+        "mode": "100644",
+        "gitBlob": "d65706646743798f2646421105f2f6a75819f143"
+      },
+      "after": {
+        "mode": "100644",
+        "gitBlob": "8d175c98158b3bd71192aef7b1929484b2b681b6"
+      }
+    },
+    {
+      "path": "src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts",
+      "before": {
+        "mode": "100644",
+        "gitBlob": "1176fd06b70f1b717ba83deb387f87b05b18b45b"
+      },
+      "after": {
+        "mode": "100644",
+        "gitBlob": "c2faa156015707bc5fbd7f8123a7ffd9c4faa486"
+      }
+    }
+  ],
+  "subtreeProofs": [
+    {
+      "name": "docs",
+      "beforeTree": "a1b92f625b548e7384ef13e0358c420d1e1f136d",
+      "afterTree": "ca906a27438211f8261ea22cf3b916599be3216e",
+      "beforeLeaves": 3090,
+      "afterLeaves": 3099,
+      "changedPaths": [
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/29-reconciled-acceptance-and-custody-followups-2026-11-15.md",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-post-transport-recovery-red-actual-independent-publication-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-post-transport-recovery-red-actual-root-publication-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-producer-authorship-gate-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-three-producer-binding-source-r2-review-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-three-producer-guard-source-r2-review-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-three-producer-publication-manifest-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-three-producer-root-source-r2-review-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-three-producer-semantic-source-r2-review-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-three-producer-source-r2-proposal-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/continuation-status-20261116.md",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1213-retention-catalog-20261116.json"
+      ]
+    },
+    {
+      "name": "scripts",
+      "beforeTree": "144090e99c2d91d49073e0ea17d7cf6be9ea053e",
+      "afterTree": "800c50d1b9cd5e538bd889a1f24475084ef5ff57",
+      "beforeLeaves": 600,
+      "afterLeaves": 600,
+      "changedPaths": [
+        "scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+        "scripts/legacy-agent-host/desktop-task-review-cycle-ui-smoke.ts"
+      ]
+    },
+    {
+      "name": "src",
+      "beforeTree": "ed69e62618e57d88c2e5237f98074a1ff8853e6f",
+      "afterTree": "56bda382944632ec0cc1d2fa94cf574bed0e73c5",
+      "beforeLeaves": 4659,
+      "afterLeaves": 4659,
+      "changedPaths": [
+        "src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts"
+      ]
+    }
+  ],
+  "unchangedOtherRootEntries": [
+    {
+      "path": ".coderabbit.yaml",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "cfdf47bf5d5759599f5383222ebfb8a385f09668",
+      "size": 669,
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/cfdf47bf5d5759599f5383222ebfb8a385f09668"
+    },
+    {
+      "path": ".dockerignore",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "c2d844c25fc61f06640f362de761e3f8d310c3b5",
+      "size": 694,
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/c2d844c25fc61f06640f362de761e3f8d310c3b5"
+    },
+    {
+      "path": ".gitattributes",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "924c7377f9ae4c068d106e74e17e964297d61e6e",
+      "size": 180,
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/924c7377f9ae4c068d106e74e17e964297d61e6e"
+    },
+    {
+      "path": ".github",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "d95091ab0edb488d6e418ffa789d0f07c447ecda",
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees/d95091ab0edb488d6e418ffa789d0f07c447ecda"
+    },
+    {
+      "path": ".gitignore",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "777569b186effad3a2bcbcb09cd770180c8c5e2c",
+      "size": 2867,
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/777569b186effad3a2bcbcb09cd770180c8c5e2c"
+    },
+    {
+      "path": ".husky",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "665211222b358904b557bd356a129f1ff938ca7e",
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees/665211222b358904b557bd356a129f1ff938ca7e"
+    },
+    {
+      "path": ".mcp.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "da61a538a43375404483bd1f810b6377da5cc72f",
+      "size": 296,
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/da61a538a43375404483bd1f810b6377da5cc72f"
+    },
+    {
+      "path": ".node-version",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "63f87c20ef9fd0ace28f8d0a3b74b5ef2e24feff",
+      "size": 8,
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/63f87c20ef9fd0ace28f8d0a3b74b5ef2e24feff"
+    },
+    {
+      "path": ".npmrc",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "b6f27f135954640c8cc5bfd7b8c9922ca6eb2aad",
+      "size": 19,
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/b6f27f135954640c8cc5bfd7b8c9922ca6eb2aad"
+    },
+    {
+      "path": ".nvmrc",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "63f87c20ef9fd0ace28f8d0a3b74b5ef2e24feff",
+      "size": 8,
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/63f87c20ef9fd0ace28f8d0a3b74b5ef2e24feff"
+    },
+    {
+      "path": ".oxfmtrc.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "b003c531d6e548a5939ceb0694f15296c92e5060",
+      "size": 847,
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/b003c531d6e548a5939ceb0694f15296c92e5060"
+    },
+    {
+      "path": ".oxlintrc.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "cc0d2441ebfedc93354e081b0cf61b6a2109dcc9",
+      "size": 596,
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/cc0d2441ebfedc93354e081b0cf61b6a2109dcc9"
+    },
+    {
+      "path": ".prettierignore",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "3d15b642e4d19c01f1c3ec61acc0ff367a0ccae2",
+      "size": 297,
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/3d15b642e4d19c01f1c3ec61acc0ff367a0ccae2"
+    },
+    {
+      "path": ".prettierrc.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "c96ec48e897a4ec478beb34716723e13d29068ed",
+      "size": 563,
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/c96ec48e897a4ec478beb34716723e13d29068ed"
+    },
+    {
+      "path": "AGENTS.md",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "0c8a4a63abf24c1510c934990a025ebc99c9e435",
+      "size": 8999,
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/0c8a4a63abf24c1510c934990a025ebc99c9e435"
+    },
+    {
+      "path": "AGENT_CRITICAL_GUARDRAILS.md",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "a9a087fa5216ede29c5900b3a10638fc1ec3e2f3",
+      "size": 2236,
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/a9a087fa5216ede29c5900b3a10638fc1ec3e2f3"
+    },
+    {
+      "path": "CLAUDE.md",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "88df8ee5ef8d951139b2a8eb9b518996babbcb3e",
+      "size": 16756,
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/88df8ee5ef8d951139b2a8eb9b518996babbcb3e"
+    },
+    {
+      "path": "LICENSE",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "929839bc0872222df278f9e53f15e1268ff4e0ec",
+      "size": 32433,
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/929839bc0872222df278f9e53f15e1268ff4e0ec"
+    },
+    {
+      "path": "README.md",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "dbf976c3418f0dee7ef84e4458e49af39110bdd5",
+      "size": 48099,
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/dbf976c3418f0dee7ef84e4458e49af39110bdd5"
+    },
+    {
+      "path": "agent-teams-controller",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "1ef9482608cbaa5b7f28dc42812820cba96b953e",
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees/1ef9482608cbaa5b7f28dc42812820cba96b953e"
+    },
+    {
+      "path": "bin",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "e6b29ba2f2fda222d5831b3c672e88b72f5f7383",
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees/e6b29ba2f2fda222d5831b3c672e88b72f5f7383"
+    },
+    {
+      "path": "docker",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "7e4007a72bc3fdba8d94e8f5eebc3586f110c16e",
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees/7e4007a72bc3fdba8d94e8f5eebc3586f110c16e"
+    },
+    {
+      "path": "electron.vite.config.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "9045260aab02891055e324607b83e1bb39c7110a",
+      "size": 13238,
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/9045260aab02891055e324607b83e1bb39c7110a"
+    },
+    {
+      "path": "eslint.config.js",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "7ca4b71fe3a357c00c110c9b75d3034e06e4b22c",
+      "size": 37840,
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/7ca4b71fe3a357c00c110c9b75d3034e06e4b22c"
+    },
+    {
+      "path": "eslint.fast.config.js",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "8a6d66ce8d2112b0891f6fc2f78a08c103b4ebfb",
+      "size": 7268,
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/8a6d66ce8d2112b0891f6fc2f78a08c103b4ebfb"
+    },
+    {
+      "path": "eslint.feature-overrides.mts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "9c6450d54b87ce33f7d799f900226c316e367937",
+      "size": 657,
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/9c6450d54b87ce33f7d799f900226c316e367937"
+    },
+    {
+      "path": "eslint.gateway-boundaries.mts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "4975b20df1353a9687fd479ab043beb025e967ba",
+      "size": 3786,
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/4975b20df1353a9687fd479ab043beb025e967ba"
+    },
+    {
+      "path": "i18next.config.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "a8c56bbba2f1003e93fcf9f57e0c5eec4bb37ff5",
+      "size": 1051,
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/a8c56bbba2f1003e93fcf9f57e0c5eec4bb37ff5"
+    },
+    {
+      "path": "landing",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "193513230f45a135704f1b34dbfa0792e6823e26",
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees/193513230f45a135704f1b34dbfa0792e6823e26"
+    },
+    {
+      "path": "legacy-host.lock.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "6916f66ea9e4a7e8299c3ffd328e226d009ebd79",
+      "size": 947,
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/6916f66ea9e4a7e8299c3ffd328e226d009ebd79"
+    },
+    {
+      "path": "managed-git.lock.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "2099dfe6b1e1c0ff0d64f45d6c8565b498af4333",
+      "size": 1026,
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/2099dfe6b1e1c0ff0d64f45d6c8565b498af4333"
+    },
+    {
+      "path": "mcp-server",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "6dcfc48486817e03cbf5cfeca34d0f9c6f495ba5",
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees/6dcfc48486817e03cbf5cfeca34d0f9c6f495ba5"
+    },
+    {
+      "path": "package.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "f80ec83172d0aec0dec8a8ab055426b4fca4a1f7",
+      "size": 26839,
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/f80ec83172d0aec0dec8a8ab055426b4fca4a1f7"
+    },
+    {
+      "path": "packages",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "3934729cd387940917b79992f2579bf6269d157c",
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees/3934729cd387940917b79992f2579bf6269d157c"
+    },
+    {
+      "path": "patches",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "8eb2e6aaa216638cbe6c072d79802733d43f500d",
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees/8eb2e6aaa216638cbe6c072d79802733d43f500d"
+    },
+    {
+      "path": "pnpm-lock.yaml",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "9d2ce04a1bbf743e49403d2520873134b08b68de",
+      "size": 956788,
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/9d2ce04a1bbf743e49403d2520873134b08b68de"
+    },
+    {
+      "path": "pnpm-workspace.yaml",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "a049a862742a85ba77faafea329fc221b3e500e4",
+      "size": 6946,
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/a049a862742a85ba77faafea329fc221b3e500e4"
+    },
+    {
+      "path": "postcss.config.cjs",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "85f717cc09ecb1153d6a4c0962284e09e4b8d6a9",
+      "size": 80,
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/85f717cc09ecb1153d6a4c0962284e09e4b8d6a9"
+    },
+    {
+      "path": "resources",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "69acacf60db94f62dbe4a99ed308aab59310e905",
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees/69acacf60db94f62dbe4a99ed308aab59310e905"
+    },
+    {
+      "path": "runtime.lock.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "1757d79786da78e739a322e8bba81cd3dc88dcaa",
+      "size": 6127,
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/1757d79786da78e739a322e8bba81cd3dc88dcaa"
+    },
+    {
+      "path": "tailwind.config.js",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "a52ebb338468d8fcef92837aa27aebd48c7206d7",
+      "size": 2941,
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/a52ebb338468d8fcef92837aa27aebd48c7206d7"
+    },
+    {
+      "path": "terminal-platform.lock.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "039a8a2a7b959b44bf3d483e37335fdc6774e8cb",
+      "size": 1914,
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/039a8a2a7b959b44bf3d483e37335fdc6774e8cb"
+    },
+    {
+      "path": "test",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "92519c914f57ec6cee13c2e4b0b2be568a56f641",
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees/92519c914f57ec6cee13c2e4b0b2be568a56f641"
+    },
+    {
+      "path": "tools",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "9356c03e96405eb578158f06d6fdcbc89d105bd6",
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees/9356c03e96405eb578158f06d6fdcbc89d105bd6"
+    },
+    {
+      "path": "tsconfig.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "568952f5025a88c16b0568c7279d8e85a4288b43",
+      "size": 1235,
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/568952f5025a88c16b0568c7279d8e85a4288b43"
+    },
+    {
+      "path": "tsconfig.legacy-agent-host-scripts.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "538fdfe23d7aa6bac6f18a483d5d364aef644a39",
+      "size": 646,
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/538fdfe23d7aa6bac6f18a483d5d364aef644a39"
+    },
+    {
+      "path": "tsconfig.node.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "c94c942012bef62695dc3b22b1a2b7229d047f59",
+      "size": 824,
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/c94c942012bef62695dc3b22b1a2b7229d047f59"
+    },
+    {
+      "path": "vendor",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "bb912d7d38fa18b29d0cbe90e76d06a2603b8b4f",
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees/bb912d7d38fa18b29d0cbe90e76d06a2603b8b4f"
+    },
+    {
+      "path": "vitest.config.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "c57faa53a1bb869b4379bf888194806ef7e228e3",
+      "size": 1187,
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/c57faa53a1bb869b4379bf888194806ef7e228e3"
+    },
+    {
+      "path": "vitest.critical.config.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "c32070bf9e1724892aa8cb695152e8f49f1293f0",
+      "size": 852,
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/c32070bf9e1724892aa8cb695152e8f49f1293f0"
+    },
+    {
+      "path": "vitest.opencode-proof.config.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "274de1c0955ad4f98d220857a94576ce6a50864b",
+      "size": 601,
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/274de1c0955ad4f98d220857a94576ce6a50864b"
+    }
+  ],
+  "census": {
+    "leaves": 11897,
+    "docs": 3099,
+    "nonDocs": 8798,
+    "workflows": 42
+  },
+  "censusQualification": "Complete changed docs/scripts/src subtrees compared against full parent trees; all51 other root entries exact, with complete current test subtree additionally read. Current counts inherit unchanged remaining source/workflow subtrees from accepted779 parent; no fresh physical runtime census or source-size guard execution is claimed.",
+  "currentPointerJoins": [
+    {
+      "label": "redActualRoot",
+      "identity": {
+        "bytes": 55348,
+        "sha256": "bbe57a54a25a38bee1d4f4de5fc1d036d81f6b2ecdb40b3d0088b274de6656c9",
+        "gitBlob": "9218839ef55406b01267605c040bc586c7d443be"
+      },
+      "joined": true
+    },
+    {
+      "label": "redActualIndependent",
+      "identity": {
+        "bytes": 166393,
+        "sha256": "cbe1880831780d10a7131282ab2ecc37d81fbdede3c53a265c1749ea863c20f2",
+        "gitBlob": "e5c2c2d8c84c0d491e334f6d67774cf23c83948f"
+      },
+      "joined": true
+    },
+    {
+      "label": "producerGate",
+      "identity": {
+        "bytes": 4327,
+        "sha256": "3231731b2a22cb3903ccff6991341b54c673cd7064599b9aa7238fe07e3c6b18",
+        "gitBlob": "2780955d0a71956a75650ddf4d8a0ff0576faa57"
+      },
+      "joined": true
+    },
+    {
+      "label": "proposal",
+      "identity": {
+        "bytes": 25372,
+        "sha256": "7def167b3384043abb2cea83e90c51ea332f2c12a9f4fc3ca1ddcf1531bab85c",
+        "gitBlob": "b0d4fb7c7ca2fc486fda6823ee3c3618171f8cdc"
+      },
+      "joined": true
+    },
+    {
+      "label": "rootReview",
+      "identity": {
+        "bytes": 17023,
+        "sha256": "30aa0b71c8c7cdb32d88db381e7396ec2e543ea977d80e93ee8297bd9f3304f3",
+        "gitBlob": "e4119f144e4a79e7c7b6a1598a33a70388df207f"
+      },
+      "joined": true
+    },
+    {
+      "label": "guardReview",
+      "identity": {
+        "bytes": 245598,
+        "sha256": "0bdbb65827d3717684d09ea1e35a2528b2ea4ee36143e4d3abe3601bf8bb8022",
+        "gitBlob": "ce6997eef4cc5989fb1c5437a23ef490bc74377a"
+      },
+      "joined": true
+    },
+    {
+      "label": "semanticReview",
+      "identity": {
+        "bytes": 70998,
+        "sha256": "3a3fe8dcf619204191b0db04023c5293fd24e433b74f2bf801f07bbc395d0f6c",
+        "gitBlob": "0c3db6a22e1f652ca30d085de23217fc52eb5e51"
+      },
+      "joined": true
+    },
+    {
+      "label": "bindingReview",
+      "identity": {
+        "bytes": 47779,
+        "sha256": "ce13ee532bbca6a6181f95a97815e6c122be0a0adb46220ba61fd8b7c4029faa",
+        "gitBlob": "c2357e52f57abe45cd77d1ff0844aaa16d1095a6"
+      },
+      "joined": true
+    },
+    {
+      "label": "source R2 proposal",
+      "identity": {
+        "bytes": 25372,
+        "sha256": "7def167b3384043abb2cea83e90c51ea332f2c12a9f4fc3ca1ddcf1531bab85c",
+        "gitBlob": "b0d4fb7c7ca2fc486fda6823ee3c3618171f8cdc"
+      },
+      "joined": true
+    },
+    {
+      "label": "source root review",
+      "identity": {
+        "bytes": 17023,
+        "sha256": "30aa0b71c8c7cdb32d88db381e7396ec2e543ea977d80e93ee8297bd9f3304f3",
+        "gitBlob": "e4119f144e4a79e7c7b6a1598a33a70388df207f"
+      },
+      "joined": true
+    },
+    {
+      "label": "source guard review",
+      "identity": {
+        "bytes": 245598,
+        "sha256": "0bdbb65827d3717684d09ea1e35a2528b2ea4ee36143e4d3abe3601bf8bb8022",
+        "gitBlob": "ce6997eef4cc5989fb1c5437a23ef490bc74377a"
+      },
+      "joined": true
+    },
+    {
+      "label": "source semantic review",
+      "identity": {
+        "bytes": 70998,
+        "sha256": "3a3fe8dcf619204191b0db04023c5293fd24e433b74f2bf801f07bbc395d0f6c",
+        "gitBlob": "0c3db6a22e1f652ca30d085de23217fc52eb5e51"
+      },
+      "joined": true
+    },
+    {
+      "label": "source binding review",
+      "identity": {
+        "bytes": 47779,
+        "sha256": "ce13ee532bbca6a6181f95a97815e6c122be0a0adb46220ba61fd8b7c4029faa",
+        "gitBlob": "c2357e52f57abe45cd77d1ff0844aaa16d1095a6"
+      },
+      "joined": true
+    },
+    {
+      "label": "authorship gate",
+      "identity": {
+        "bytes": 4327,
+        "sha256": "3231731b2a22cb3903ccff6991341b54c673cd7064599b9aa7238fe07e3c6b18",
+        "gitBlob": "2780955d0a71956a75650ddf4d8a0ff0576faa57"
+      },
+      "joined": true
+    },
+    {
+      "label": "RED actual root",
+      "identity": {
+        "bytes": 55348,
+        "sha256": "bbe57a54a25a38bee1d4f4de5fc1d036d81f6b2ecdb40b3d0088b274de6656c9",
+        "gitBlob": "9218839ef55406b01267605c040bc586c7d443be"
+      },
+      "joined": true
+    },
+    {
+      "label": "RED actual independent",
+      "identity": {
+        "bytes": 166393,
+        "sha256": "cbe1880831780d10a7131282ab2ecc37d81fbdede3c53a265c1749ea863c20f2",
+        "gitBlob": "e5c2c2d8c84c0d491e334f6d67774cf23c83948f"
+      },
+      "joined": true
+    },
+    {
+      "label": "published producer vector",
+      "identity": {
+        "bytes": 2118,
+        "sha256": "6007c5c7ba2f74c43bd9b73c50cae2319eacbf712c233cc0d67b3efbb4c6894d",
+        "gitBlob": "3887991d5dbd25dbec5c8656e8e03d423ea502b7"
+      },
+      "joined": true
+    },
+    {
+      "label": "Guard postimage scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+      "identity": {
+        "bytes": 45795,
+        "sha256": "2c5931f5c7fa1dc8bb7858201c1b8afdbae9683faf4a2ad9fce067f116f3f94b",
+        "gitBlob": "5026f0ec6165bb092717ddc989043848a25081dc"
+      },
+      "joined": true
+    },
+    {
+      "label": "semantic postimage scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+      "identity": {
+        "bytes": 45795,
+        "sha256": "2c5931f5c7fa1dc8bb7858201c1b8afdbae9683faf4a2ad9fce067f116f3f94b",
+        "gitBlob": "5026f0ec6165bb092717ddc989043848a25081dc"
+      },
+      "joined": true
+    },
+    {
+      "label": "binding postimage scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+      "identity": {
+        "bytes": 45795,
+        "sha256": "2c5931f5c7fa1dc8bb7858201c1b8afdbae9683faf4a2ad9fce067f116f3f94b",
+        "gitBlob": "5026f0ec6165bb092717ddc989043848a25081dc"
+      },
+      "joined": true
+    },
+    {
+      "label": "actual source postimage scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+      "identity": {
+        "bytes": 45795,
+        "sha256": "2c5931f5c7fa1dc8bb7858201c1b8afdbae9683faf4a2ad9fce067f116f3f94b",
+        "gitBlob": "5026f0ec6165bb092717ddc989043848a25081dc"
+      },
+      "joined": true
+    },
+    {
+      "label": "Guard postimage scripts/legacy-agent-host/desktop-task-review-cycle-ui-smoke.ts",
+      "identity": {
+        "bytes": 33036,
+        "sha256": "4fa52cfad9347065680ef62a3ba6420762408a78a93b77e96ac3a2e16e68bdc9",
+        "gitBlob": "8d175c98158b3bd71192aef7b1929484b2b681b6"
+      },
+      "joined": true
+    },
+    {
+      "label": "semantic postimage scripts/legacy-agent-host/desktop-task-review-cycle-ui-smoke.ts",
+      "identity": {
+        "bytes": 33036,
+        "sha256": "4fa52cfad9347065680ef62a3ba6420762408a78a93b77e96ac3a2e16e68bdc9",
+        "gitBlob": "8d175c98158b3bd71192aef7b1929484b2b681b6"
+      },
+      "joined": true
+    },
+    {
+      "label": "binding postimage scripts/legacy-agent-host/desktop-task-review-cycle-ui-smoke.ts",
+      "identity": {
+        "bytes": 33036,
+        "sha256": "4fa52cfad9347065680ef62a3ba6420762408a78a93b77e96ac3a2e16e68bdc9",
+        "gitBlob": "8d175c98158b3bd71192aef7b1929484b2b681b6"
+      },
+      "joined": true
+    },
+    {
+      "label": "actual source postimage scripts/legacy-agent-host/desktop-task-review-cycle-ui-smoke.ts",
+      "identity": {
+        "bytes": 33036,
+        "sha256": "4fa52cfad9347065680ef62a3ba6420762408a78a93b77e96ac3a2e16e68bdc9",
+        "gitBlob": "8d175c98158b3bd71192aef7b1929484b2b681b6"
+      },
+      "joined": true
+    },
+    {
+      "label": "Guard postimage src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts",
+      "identity": {
+        "bytes": 74340,
+        "sha256": "647ac5732bfd6b5cb57834adb4ad22c32ee5dfb018a934c92f982efd9daa531c",
+        "gitBlob": "c2faa156015707bc5fbd7f8123a7ffd9c4faa486"
+      },
+      "joined": true
+    },
+    {
+      "label": "semantic postimage src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts",
+      "identity": {
+        "bytes": 74340,
+        "sha256": "647ac5732bfd6b5cb57834adb4ad22c32ee5dfb018a934c92f982efd9daa531c",
+        "gitBlob": "c2faa156015707bc5fbd7f8123a7ffd9c4faa486"
+      },
+      "joined": true
+    },
+    {
+      "label": "binding postimage src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts",
+      "identity": {
+        "bytes": 74340,
+        "sha256": "647ac5732bfd6b5cb57834adb4ad22c32ee5dfb018a934c92f982efd9daa531c",
+        "gitBlob": "c2faa156015707bc5fbd7f8123a7ffd9c4faa486"
+      },
+      "joined": true
+    },
+    {
+      "label": "actual source postimage src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts",
+      "identity": {
+        "bytes": 74340,
+        "sha256": "647ac5732bfd6b5cb57834adb4ad22c32ee5dfb018a934c92f982efd9daa531c",
+        "gitBlob": "c2faa156015707bc5fbd7f8123a7ffd9c4faa486"
+      },
+      "joined": true
+    }
+  ],
+  "checks": [
+    {
+      "name": "actual commit/ref/tree/sole parent",
+      "passed": true
+    },
+    {
+      "name": "all51 other complete root entries unchanged",
+      "passed": true
+    },
+    {
+      "name": "complete anchored current/parent docs",
+      "passed": true
+    },
+    {
+      "name": "no removed leaves or mode changes docs",
+      "passed": true
+    },
+    {
+      "name": "exact subtree delta docs",
+      "passed": true
+    },
+    {
+      "name": "complete anchored current/parent scripts",
+      "passed": true
+    },
+    {
+      "name": "no removed leaves or mode changes scripts",
+      "passed": true
+    },
+    {
+      "name": "exact subtree delta scripts",
+      "passed": true
+    },
+    {
+      "name": "complete anchored current/parent src",
+      "passed": true
+    },
+    {
+      "name": "no removed leaves or mode changes src",
+      "passed": true
+    },
+    {
+      "name": "exact subtree delta src",
+      "passed": true
+    },
+    {
+      "name": "exact whole15-leaf change set",
+      "passed": true
+    },
+    {
+      "name": "only three selected source modifications",
+      "passed": true
+    },
+    {
+      "name": "complete actual changed body scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+      "passed": true
+    },
+    {
+      "name": "complete actual changed body scripts/legacy-agent-host/desktop-task-review-cycle-ui-smoke.ts",
+      "passed": true
+    },
+    {
+      "name": "complete actual changed body src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts",
+      "passed": true
+    },
+    {
+      "name": "complete actual changed body docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-post-transport-recovery-red-actual-root-publication-20261117.json",
+      "passed": true
+    },
+    {
+      "name": "complete actual changed body docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-post-transport-recovery-red-actual-independent-publication-20261117.json",
+      "passed": true
+    },
+    {
+      "name": "complete actual changed body docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-producer-authorship-gate-20261117.json",
+      "passed": true
+    },
+    {
+      "name": "complete actual changed body docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-three-producer-source-r2-proposal-20261117.json",
+      "passed": true
+    },
+    {
+      "name": "complete actual changed body docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-three-producer-root-source-r2-review-20261117.json",
+      "passed": true
+    },
+    {
+      "name": "complete actual changed body docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-three-producer-guard-source-r2-review-20261117.json",
+      "passed": true
+    },
+    {
+      "name": "complete actual changed body docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-three-producer-semantic-source-r2-review-20261117.json",
+      "passed": true
+    },
+    {
+      "name": "complete actual changed body docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-three-producer-binding-source-r2-review-20261117.json",
+      "passed": true
+    },
+    {
+      "name": "complete actual changed body docs/plans/provider-migration/frontend-parity-2026-11-12/29-reconciled-acceptance-and-custody-followups-2026-11-15.md",
+      "passed": true
+    },
+    {
+      "name": "complete actual changed body docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/continuation-status-20261116.md",
+      "passed": true
+    },
+    {
+      "name": "complete actual changed body docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1213-retention-catalog-20261116.json",
+      "passed": true
+    },
+    {
+      "name": "complete actual changed body docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-three-producer-publication-manifest-20261117.json",
+      "passed": true
+    },
+    {
+      "name": "complete actual selected source leaf scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+      "passed": true
+    },
+    {
+      "name": "complete actual selected source leaf scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+      "passed": true
+    },
+    {
+      "name": "complete actual selected source leaf scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts",
+      "passed": true
+    },
+    {
+      "name": "complete actual selected source leaf scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+      "passed": true
+    },
+    {
+      "name": "complete actual selected source leaf scripts/legacy-agent-host/desktop-task-review-cycle-ui-smoke.ts",
+      "passed": true
+    },
+    {
+      "name": "complete actual selected source leaf scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+      "passed": true
+    },
+    {
+      "name": "complete actual selected source leaf scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "passed": true
+    },
+    {
+      "name": "complete actual selected source leaf src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts",
+      "passed": true
+    },
+    {
+      "name": "complete actual selected source leaf test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts",
+      "passed": true
+    },
+    {
+      "name": "actual nine-row canonical vector",
+      "passed": true
+    },
+    {
+      "name": "frozen six full source/test bodies",
+      "passed": true
+    },
+    {
+      "name": "published postimage and line bound scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+      "passed": true
+    },
+    {
+      "name": "published postimage and line bound scripts/legacy-agent-host/desktop-task-review-cycle-ui-smoke.ts",
+      "passed": true
+    },
+    {
+      "name": "published postimage and line bound src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts",
+      "passed": true
+    },
+    {
+      "name": "complete parent modified body docs/plans/provider-migration/frontend-parity-2026-11-12/29-reconciled-acceptance-and-custody-followups-2026-11-15.md",
+      "passed": true
+    },
+    {
+      "name": "exact complete parent text prefix docs/plans/provider-migration/frontend-parity-2026-11-12/29-reconciled-acceptance-and-custody-followups-2026-11-15.md",
+      "passed": true
+    },
+    {
+      "name": "complete parent modified body docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/continuation-status-20261116.md",
+      "passed": true
+    },
+    {
+      "name": "exact complete parent text prefix docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/continuation-status-20261116.md",
+      "passed": true
+    },
+    {
+      "name": "complete parent modified body docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1213-retention-catalog-20261116.json",
+      "passed": true
+    },
+    {
+      "name": "catalog full preserved parent field kind",
+      "passed": true
+    },
+    {
+      "name": "catalog full preserved parent field schemaVersion",
+      "passed": true
+    },
+    {
+      "name": "catalog full preserved parent field parentCandidate",
+      "passed": true
+    },
+    {
+      "name": "catalog full preserved parent field source",
+      "passed": true
+    },
+    {
+      "name": "catalog full preserved parent field baselineIndex",
+      "passed": true
+    },
+    {
+      "name": "catalog full preserved parent field baselineActualPublication",
+      "passed": true
+    },
+    {
+      "name": "catalog full preserved parent field baselineIndependentPublication",
+      "passed": true
+    },
+    {
+      "name": "catalog full preserved parent field late06ActualPublication",
+      "passed": true
+    },
+    {
+      "name": "catalog full preserved parent field late06IndependentPublication",
+      "passed": true
+    },
+    {
+      "name": "catalog full preserved parent field bundles",
+      "passed": true
+    },
+    {
+      "name": "catalog full preserved parent field conversationBinding",
+      "passed": true
+    },
+    {
+      "name": "catalog full preserved parent field localEnvironment",
+      "passed": true
+    },
+    {
+      "name": "catalog full preserved parent field remainingRuntimeBudgets",
+      "passed": true
+    },
+    {
+      "name": "catalog full preserved parent field totals",
+      "passed": true
+    },
+    {
+      "name": "catalog full preserved parent field incomingDeliveryAudit",
+      "passed": true
+    },
+    {
+      "name": "catalog full preserved parent field environmentObservations",
+      "passed": true
+    },
+    {
+      "name": "catalog full preserved parent field historicalLocalEnvironment",
+      "passed": true
+    },
+    {
+      "name": "catalog full preserved parent field freshConversationBinding",
+      "passed": true
+    },
+    {
+      "name": "catalog full preserved parent field originalCiFinal",
+      "passed": true
+    },
+    {
+      "name": "catalog full preserved parent field freshRecoveryCheckpoint",
+      "passed": true
+    },
+    {
+      "name": "catalog full preserved parent field originalArtifactAnalyses",
+      "passed": true
+    },
+    {
+      "name": "catalog full preserved parent field totalsQualification",
+      "passed": true
+    },
+    {
+      "name": "catalog full preserved parent field freshRecoveryEvidenceFiles",
+      "passed": true
+    },
+    {
+      "name": "catalog full preserved parent field freshRunnerR2",
+      "passed": true
+    },
+    {
+      "name": "catalog full preserved parent field currentConversationStage",
+      "passed": true
+    },
+    {
+      "name": "catalog full preserved parent field originalP09ArtifactReview",
+      "passed": true
+    },
+    {
+      "name": "catalog full preserved parent field priorConversationStageAtProducerPublication",
+      "passed": true
+    },
+    {
+      "name": "catalog full preserved parent field crossCloseProspectiveScope",
+      "passed": true
+    },
+    {
+      "name": "catalog full preserved parent field incomingDeliveryUpdates",
+      "passed": true
+    },
+    {
+      "name": "catalog full preserved parent field currentCrossCloseStage",
+      "passed": true
+    },
+    {
+      "name": "catalog full preserved parent field priorCrossCloseStageAtTestPublication",
+      "passed": true
+    },
+    {
+      "name": "catalog full preserved parent field priorCrossCloseStageAtRedControlsPublication",
+      "passed": true
+    },
+    {
+      "name": "catalog full preserved parent field priorCrossCloseStageAtGreenBindingPublication",
+      "passed": true
+    },
+    {
+      "name": "catalog full preserved parent field priorCrossCloseStageAtRecoveryR1Publication",
+      "passed": true
+    },
+    {
+      "name": "catalog full preserved parent field crossValidationRecoveryEvidenceFiles",
+      "passed": true
+    },
+    {
+      "name": "catalog full preserved parent field incomingDeliveryLatestSourceAssessment",
+      "passed": true
+    },
+    {
+      "name": "catalog full preserved parent field priorCrossCloseStageAtRecoveryControlsPublication",
+      "passed": true
+    },
+    {
+      "name": "catalog full preserved parent field crossValidationRecoveryControlEvidenceFiles",
+      "passed": true
+    },
+    {
+      "name": "catalog full preserved parent field priorCrossCloseStageAtRecoveryCompletion",
+      "passed": true
+    },
+    {
+      "name": "catalog full preserved parent field crossValidationRecoveryCompletionEvidenceFiles",
+      "passed": true
+    },
+    {
+      "name": "catalog full preserved parent field combined139Renderer85R1EvidenceFiles",
+      "passed": true
+    },
+    {
+      "name": "catalog full preserved parent field priorCombinedNodeRendererStageAtTestPublication",
+      "passed": true
+    },
+    {
+      "name": "catalog full preserved parent field combined139Renderer85TestEvidenceFiles",
+      "passed": true
+    },
+    {
+      "name": "catalog full preserved parent field priorCombinedNodeRendererStageAtControlsPublication",
+      "passed": true
+    },
+    {
+      "name": "catalog full preserved parent field combined139Renderer85ControlEvidenceFiles",
+      "passed": true
+    },
+    {
+      "name": "catalog full preserved parent field priorCombinedNodeRendererStageAtTestMaterialization",
+      "passed": true
+    },
+    {
+      "name": "catalog full preserved parent field combined139Renderer85TestMaterializationEvidenceFiles",
+      "passed": true
+    },
+    {
+      "name": "catalog full preserved parent field priorCombinedNodeRendererStageAtRefusedRed",
+      "passed": true
+    },
+    {
+      "name": "catalog full preserved parent field combined139Renderer85RefusedRedEvidenceFiles",
+      "passed": true
+    },
+    {
+      "name": "catalog full preserved parent field incomingDeliveryAtRefusedCombinedRed",
+      "passed": true
+    },
+    {
+      "name": "catalog full preserved parent field priorCombinedNodeRendererStageAtCorrectedTitleR1",
+      "passed": true
+    },
+    {
+      "name": "catalog full preserved parent field combined139Renderer85CorrectedTitleR1EvidenceFiles",
+      "passed": true
+    },
+    {
+      "name": "catalog full preserved parent field incomingDSourceFollowup",
+      "passed": true
+    },
+    {
+      "name": "catalog full preserved parent field canonicalDependencyFollowup",
+      "passed": true
+    },
+    {
+      "name": "catalog full preserved parent field priorCombinedNodeRendererStageAtCorrectedControls",
+      "passed": true
+    },
+    {
+      "name": "catalog full preserved parent field combined139Renderer85CorrectedControlEvidenceFiles",
+      "passed": true
+    },
+    {
+      "name": "catalog full preserved parent field priorCombinedNodeRendererStageAtCorrectedRedIncomplete",
+      "passed": true
+    },
+    {
+      "name": "catalog full preserved parent field combined139Renderer85CorrectedRedIncompleteEvidenceFiles",
+      "passed": true
+    },
+    {
+      "name": "catalog full preserved parent field priorCombinedNodeRendererStageAtPostTransportRecoveryR1",
+      "passed": true
+    },
+    {
+      "name": "catalog full preserved parent field combined139Renderer85PostTransportRecoveryR1EvidenceFiles",
+      "passed": true
+    },
+    {
+      "name": "catalog full preserved parent field priorCombinedNodeRendererStageAtPostTransportRecoveryControls",
+      "passed": true
+    },
+    {
+      "name": "catalog full preserved parent field combined139Renderer85PostTransportRecoveryControlEvidenceFiles",
+      "passed": true
+    },
+    {
+      "name": "catalog full preserved parent field priorCombinedNodeRendererStageAtPostTransportRecoveryRed",
+      "passed": true
+    },
+    {
+      "name": "catalog full preserved parent field combined139Renderer85PostTransportRecoveryRedEvidenceFiles",
+      "passed": true
+    },
+    {
+      "name": "catalog exact complete stage archive",
+      "passed": true
+    },
+    {
+      "name": "catalog only two added keys",
+      "passed": true
+    },
+    {
+      "name": "all27 original bundles/totals exact",
+      "passed": true
+    },
+    {
+      "name": "exact current stage and eight evidence entries",
+      "passed": true
+    },
+    {
+      "name": "current pointer redActualRoot",
+      "passed": true
+    },
+    {
+      "name": "current pointer redActualIndependent",
+      "passed": true
+    },
+    {
+      "name": "current pointer producerGate",
+      "passed": true
+    },
+    {
+      "name": "current pointer proposal",
+      "passed": true
+    },
+    {
+      "name": "current pointer rootReview",
+      "passed": true
+    },
+    {
+      "name": "current pointer guardReview",
+      "passed": true
+    },
+    {
+      "name": "current pointer semanticReview",
+      "passed": true
+    },
+    {
+      "name": "current pointer bindingReview",
+      "passed": true
+    },
+    {
+      "name": "current pointer source R2 proposal",
+      "passed": true
+    },
+    {
+      "name": "current pointer source root review",
+      "passed": true
+    },
+    {
+      "name": "current pointer source guard review",
+      "passed": true
+    },
+    {
+      "name": "current pointer source semantic review",
+      "passed": true
+    },
+    {
+      "name": "current pointer source binding review",
+      "passed": true
+    },
+    {
+      "name": "current pointer authorship gate",
+      "passed": true
+    },
+    {
+      "name": "current pointer RED actual root",
+      "passed": true
+    },
+    {
+      "name": "current pointer RED actual independent",
+      "passed": true
+    },
+    {
+      "name": "current pointer published producer vector",
+      "passed": true
+    },
+    {
+      "name": "full R2 reviews all exact and accepted",
+      "passed": true
+    },
+    {
+      "name": "current pointer Guard postimage scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+      "passed": true
+    },
+    {
+      "name": "current pointer semantic postimage scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+      "passed": true
+    },
+    {
+      "name": "current pointer binding postimage scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+      "passed": true
+    },
+    {
+      "name": "current pointer actual source postimage scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+      "passed": true
+    },
+    {
+      "name": "current pointer Guard postimage scripts/legacy-agent-host/desktop-task-review-cycle-ui-smoke.ts",
+      "passed": true
+    },
+    {
+      "name": "current pointer semantic postimage scripts/legacy-agent-host/desktop-task-review-cycle-ui-smoke.ts",
+      "passed": true
+    },
+    {
+      "name": "current pointer binding postimage scripts/legacy-agent-host/desktop-task-review-cycle-ui-smoke.ts",
+      "passed": true
+    },
+    {
+      "name": "current pointer actual source postimage scripts/legacy-agent-host/desktop-task-review-cycle-ui-smoke.ts",
+      "passed": true
+    },
+    {
+      "name": "current pointer Guard postimage src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts",
+      "passed": true
+    },
+    {
+      "name": "current pointer semantic postimage src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts",
+      "passed": true
+    },
+    {
+      "name": "current pointer binding postimage src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts",
+      "passed": true
+    },
+    {
+      "name": "current pointer actual source postimage src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts",
+      "passed": true
+    },
+    {
+      "name": "chronology R1 selected gate before source proposal before source R2 before commit",
+      "passed": true
+    },
+    {
+      "name": "published source distinct from physical workspace and GREEN",
+      "passed": true
+    },
+    {
+      "name": "old refused and unknown attempts not upgraded",
+      "passed": true
+    },
+    {
+      "name": "immediate push confirmed",
+      "passed": true
+    }
+  ],
+  "failedChecks": [],
+  "unresolvedPointers": [],
+  "unresolvedBlockers": [],
+  "producerSourcePostimagesPublished": true,
+  "sourceWorkingTreeWrites": 0,
+  "phaseBindingAuthored": false,
+  "producerPhaseBindingAuthorshipGateOpened": false,
+  "disposition": "Root actual producer publication accepted. Complete independent actual readback and root full read of it remain before authoring the exact immutable producer-materialization/GREEN binding; application remains gated on that binding R2/publication/readbacks.",
+  "qualification": "Exact three-source publication only. No producer application, GREEN, validation or broader GUI/native/vendor/integration/fullE2E acceptance."
+}

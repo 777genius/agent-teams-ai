@@ -1,0 +1,2368 @@
+{
+  "schemaVersion": 1,
+  "kind": "independent-prospective-isolated-draft-ci-binding-trigger-advisory",
+  "reviewer": "/root/red_publication_recovery",
+  "at": "2026-11-17 02:47:59 UTC",
+  "repository": "777genius/agent-teams-ai",
+  "decision": "ACCEPTED_WITHIN_ASSIGNED_ADVISORY_SCOPE_ONLY",
+  "subject": {
+    "observedCommit": "cba4af86044e89c9ff3cce25f05dc5424bf06329",
+    "observedRootTree": "4028fd8a54f32d93e9b60b0075e9fbd88347b524",
+    "currentSourceVector": {
+      "bytes": 2118,
+      "sha256": "6007c5c7ba2f74c43bd9b73c50cae2319eacbf712c233cc0d67b3efbb4c6894d",
+      "gitBlob": "3887991d5dbd25dbec5c8656e8e03d423ea502b7"
+    },
+    "currentWorkflowTree": "d95091ab0edb488d6e418ffa789d0f07c447ecda",
+    "baseBranch": "ci/frontend-parity-c714-20261117-base",
+    "baseCommit": "77993819c233737f1e2b4c11c8ca1a5d360bcbe3",
+    "baseTree": "ada3f27db78fabc17a91e3904d41b8bc547c6dca",
+    "ciHeadBranch": "ci/frontend-parity-c714-20261117-head",
+    "ciHeadCommit": null,
+    "workingBranch": "fix/frontend-parity-coobservation-c714-20261115",
+    "draft": true,
+    "ciHeadCommitBinding": "Will be exact final source/workflow-identical prospective-R1 docs publication commit, pinned externally before either ref or PR mutation; cba4af86 is this advisory's current source/workflow basis, not an asserted future snapshot commit."
+  },
+  "closedPriorFailureGate": {
+    "bytes": 4076,
+    "sha256": "fa0b03bf25816f12ca76fb9809e5c7761639b7e20bc6d36239d9ee3b5978d4df",
+    "gitBlob": "676a807985f6bf17831b3375786a31d69b002b30",
+    "closedAt": "2026-11-17 02:36:41 UTC",
+    "qualification": "Prior spent local refusal retained; no local reconstruction, replay, staging or target runtime in this advisory."
+  },
+  "basisIdentity": {
+    "bytes": 1423178,
+    "sha256": "0257ec7c26f1d5d358c9bd6841540b8098d265f49af5f588be260a6bfb42065f",
+    "gitBlob": "9011bb095b3249421eb114231fd0ce26878f5624"
+  },
+  "rootTreeAnchors": {
+    "current": {
+      "path": ".github",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "d95091ab0edb488d6e418ffa789d0f07c447ecda",
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees/d95091ab0edb488d6e418ffa789d0f07c447ecda"
+    },
+    "base": {
+      "path": ".github",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "d95091ab0edb488d6e418ffa789d0f07c447ecda",
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees/d95091ab0edb488d6e418ffa789d0f07c447ecda"
+    }
+  },
+  "currentNonDocRootCount": 53,
+  "workflowCount": 42,
+  "workflowBytes": 751430,
+  "sourceBodyCount": 9,
+  "sourceBodyBytes": 604476,
+  "sourceReadbacks": [
+    {
+      "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "mode": "100644",
+      "bytes": 28974,
+      "sha256": "7626e479a6662242009cb050e7e5af612a29e4205d62666d15274d5c30f91386",
+      "gitBlob": "ed57cb0fe7d57ef076a591621289eb77667c63ad",
+      "literalPriorActualJoined": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+      "mode": "100644",
+      "bytes": 24759,
+      "sha256": "d15b7eea14c0951194310aee34ddc5c477879c759a97a4e2f4e9fce1f956ce9b",
+      "gitBlob": "cf93da72a198dac636658e512093eef7828b5927",
+      "literalPriorActualJoined": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+      "mode": "100644",
+      "bytes": 8457,
+      "sha256": "2da55bb40a5689ace0e922dc4867d7c73278d9a1cd200ea8c4602ca68f82da3b",
+      "gitBlob": "3c7b4bb53f4259ac0795d3f92fb715887acb554f",
+      "literalPriorActualJoined": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts",
+      "mode": "100644",
+      "bytes": 36260,
+      "sha256": "26357f37b146fc171bbceadb624bde4a7f4e459d2073ae23a651e757817b2d38",
+      "gitBlob": "4700a0052d3c58a2b3d9bc66e6803220688050fd",
+      "literalPriorActualJoined": true
+    },
+    {
+      "path": "src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts",
+      "mode": "100644",
+      "bytes": 74340,
+      "sha256": "647ac5732bfd6b5cb57834adb4ad22c32ee5dfb018a934c92f982efd9daa531c",
+      "gitBlob": "c2faa156015707bc5fbd7f8123a7ffd9c4faa486",
+      "literalPriorActualJoined": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+      "mode": "100644",
+      "bytes": 45795,
+      "sha256": "2c5931f5c7fa1dc8bb7858201c1b8afdbae9683faf4a2ad9fce067f116f3f94b",
+      "gitBlob": "5026f0ec6165bb092717ddc989043848a25081dc",
+      "literalPriorActualJoined": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-task-review-cycle-ui-smoke.ts",
+      "mode": "100644",
+      "bytes": 33036,
+      "sha256": "4fa52cfad9347065680ef62a3ba6420762408a78a93b77e96ac3a2e16e68bdc9",
+      "gitBlob": "8d175c98158b3bd71192aef7b1929484b2b681b6",
+      "literalPriorActualJoined": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+      "mode": "100644",
+      "bytes": 164965,
+      "sha256": "852bedb85c83dbc4b488dffb4a9ffebbe398adc53e85f5a3cea8ca36b146cbf7",
+      "gitBlob": "896c587e077da56a98a314a175fb3cba0353d6ee",
+      "literalPriorActualJoined": true
+    },
+    {
+      "path": "test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts",
+      "mode": "100644",
+      "bytes": 187890,
+      "sha256": "b6f11896e60014aac785968d42390afde38716d47de9bba9562522235db048c9",
+      "gitBlob": "76495189c992fcda47cd7a43a0c697190b5acbb3",
+      "literalPriorActualJoined": true
+    }
+  ],
+  "fixedCompare": {
+    "base": "77993819c233737f1e2b4c11c8ca1a5d360bcbe3",
+    "head": "cba4af86044e89c9ff3cce25f05dc5424bf06329",
+    "mergeBase": "77993819c233737f1e2b4c11c8ca1a5d360bcbe3",
+    "status": "ahead",
+    "ahead": 3,
+    "behind": 0,
+    "totalCommits": 3,
+    "commits": [
+      "b83da2bb72ada6e9fb3a426cb2a7d62b30ec4871",
+      "9a37963441396d6eddaf507e57e504e21503878c",
+      "cba4af86044e89c9ff3cce25f05dc5424bf06329"
+    ],
+    "files": [
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/29-reconciled-acceptance-and-custody-followups-2026-11-15.md",
+        "status": "modified",
+        "blob": "b35e162950c72c8160e8ee5ffa44a584ede5152e",
+        "additions": 34,
+        "deletions": 0
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-post-transport-recovery-red-actual-independent-publication-20261117.json",
+        "status": "added",
+        "blob": "e5c2c2d8c84c0d491e334f6d67774cf23c83948f",
+        "additions": 4247,
+        "deletions": 0
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-post-transport-recovery-red-actual-root-publication-20261117.json",
+        "status": "added",
+        "blob": "9218839ef55406b01267605c040bc586c7d443be",
+        "additions": 1594,
+        "deletions": 0
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-producer-authorship-gate-20261117.json",
+        "status": "added",
+        "blob": "2780955d0a71956a75650ddf4d8a0ff0576faa57",
+        "additions": 99,
+        "deletions": 0
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-producer-green-binding-20261117.json",
+        "status": "added",
+        "blob": "ea852a05538a51710c13a0cd86a8bd1e3fa1c056",
+        "additions": 2919,
+        "deletions": 0
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-producer-green-binding-actual-gate-20261117.json",
+        "status": "added",
+        "blob": "0bf466496fc388dabe652eb4121229dd981b8f16",
+        "additions": 164,
+        "deletions": 0
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-producer-green-binding-actual-independent-publication-20261117.json",
+        "status": "added",
+        "blob": "2aec11137769eef832609bdaeb6acc94774ce005",
+        "additions": 3885,
+        "deletions": 0
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-producer-green-binding-actual-root-publication-20261117.json",
+        "status": "added",
+        "blob": "a23b2fbe580fd610653cb1452e48c67a7007c69f",
+        "additions": 2753,
+        "deletions": 0
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-producer-green-binding-guard-r2-review-20261117.json",
+        "status": "added",
+        "blob": "f5bf733feb08fb08e60adc94454802f6a2fe2620",
+        "additions": 6062,
+        "deletions": 0
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-producer-green-binding-independent-r2-review-20261117.json",
+        "status": "added",
+        "blob": "45dd5691a8fa7fc2faf297d84d47452a9f1ca8cf",
+        "additions": 3812,
+        "deletions": 0
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-producer-green-binding-part-0-20261117.txt",
+        "status": "added",
+        "blob": "441fd0ecb053bf9191332e635ff764cd511c4d0e",
+        "additions": 462,
+        "deletions": 0
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-producer-green-binding-part-1-20261117.txt",
+        "status": "added",
+        "blob": "58fc694520738dae1507e0545fd5d18f7344fe89",
+        "additions": 388,
+        "deletions": 0
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-producer-green-binding-part-2-20261117.txt",
+        "status": "added",
+        "blob": "92de54c81f85a21da8b4ff9346f89d9c55bd5d79",
+        "additions": 2071,
+        "deletions": 0
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-producer-green-binding-publication-manifest-20261117.json",
+        "status": "added",
+        "blob": "1d9c7818ab2f44ca398f34502cc29b0e58332a63",
+        "additions": 377,
+        "deletions": 0
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-producer-green-binding-r2-proposal-20261117.json",
+        "status": "added",
+        "blob": "486aac82a04b969d6ba14df6929eeddca3e43c59",
+        "additions": 734,
+        "deletions": 0
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-producer-green-binding-root-r2-review-20261117.json",
+        "status": "added",
+        "blob": "022f629acd0b84cc2a5712b9b10f3ed9dd96c593",
+        "additions": 1877,
+        "deletions": 0
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-producer-green-binding-semantic-r2-review-20261117.json",
+        "status": "added",
+        "blob": "10cda254fce68db87f9bfbcd2c82a6a60318b25d",
+        "additions": 3944,
+        "deletions": 0
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-producer-green-binding-staging-intent-20261117.json",
+        "status": "added",
+        "blob": "dbf620ef39ab35952f13a7972be1292cc33e4705",
+        "additions": 195,
+        "deletions": 0
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-producer-green-binding-staging-outer-20261117.json",
+        "status": "added",
+        "blob": "85c0b89906a819d5a93d88fd7613587361ef7c72",
+        "additions": 41,
+        "deletions": 0
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-producer-green-binding-staging-receipt-20261117.json",
+        "status": "added",
+        "blob": "dd48b15ec75ae4f5d12b84617159f3b152bacdbb",
+        "additions": 353,
+        "deletions": 0
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-producer-green-binding-transport-manifest-20261117.json",
+        "status": "added",
+        "blob": "be69500fa261dd5c45d5e8215596a94d292e2c45",
+        "additions": 51,
+        "deletions": 0
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-producer-materialization-intent-20261117.json",
+        "status": "added",
+        "blob": "d775e502038485469b3ab2f96569e5fd6b3ee98c",
+        "additions": 89,
+        "deletions": 0
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-producer-materialization-refusal-20261117.json",
+        "status": "added",
+        "blob": "ba7c846e55a9e87aca99cba43b52baddef6b760a",
+        "additions": 120,
+        "deletions": 0
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-producer-materialization-refusal-guard-review-20261117.json",
+        "status": "added",
+        "blob": "c83325fd3692af5faff2527488d12ec1a3da4ea4",
+        "additions": 1331,
+        "deletions": 0
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-producer-materialization-refusal-paths-20261117.json",
+        "status": "added",
+        "blob": "814c9c40adec04824d9fa5a52c95e4b52d7d783a",
+        "additions": 144,
+        "deletions": 0
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-producer-materialization-refusal-publication-manifest-20261117.json",
+        "status": "added",
+        "blob": "d3a80dade565a95d367e0f87551461d00abc6e75",
+        "additions": 235,
+        "deletions": 0
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-producer-materialization-refusal-root-review-20261117.json",
+        "status": "added",
+        "blob": "7a30c61d3816a20810533e8e341780faea811088",
+        "additions": 550,
+        "deletions": 0
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-three-producer-actual-independent-publication-20261117.json",
+        "status": "added",
+        "blob": "0915fd43d3324c43d32939214c7ac1d31545d164",
+        "additions": 3081,
+        "deletions": 0
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-three-producer-actual-root-publication-20261117.json",
+        "status": "added",
+        "blob": "8940b2ec5b87ecd8ed5d442d282687ee7ec22a00",
+        "additions": 1808,
+        "deletions": 0
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-three-producer-actual-source-gate-20261117.json",
+        "status": "added",
+        "blob": "63fe55b3f050783b80bda34e3261564600186592",
+        "additions": 157,
+        "deletions": 0
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-three-producer-binding-source-r2-review-20261117.json",
+        "status": "added",
+        "blob": "c2357e52f57abe45cd77d1ff0844aaa16d1095a6",
+        "additions": 1038,
+        "deletions": 0
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-three-producer-guard-source-r2-review-20261117.json",
+        "status": "added",
+        "blob": "ce6997eef4cc5989fb1c5437a23ef490bc74377a",
+        "additions": 1742,
+        "deletions": 0
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-three-producer-publication-manifest-20261117.json",
+        "status": "added",
+        "blob": "9ae8f0d2eaadc7e481a60ae594871c647d478c26",
+        "additions": 358,
+        "deletions": 0
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-three-producer-root-source-r2-review-20261117.json",
+        "status": "added",
+        "blob": "e4119f144e4a79e7c7b6a1598a33a70388df207f",
+        "additions": 470,
+        "deletions": 0
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-three-producer-semantic-source-r2-review-20261117.json",
+        "status": "added",
+        "blob": "0c3db6a22e1f652ca30d085de23217fc52eb5e51",
+        "additions": 1397,
+        "deletions": 0
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-three-producer-source-r2-proposal-20261117.json",
+        "status": "added",
+        "blob": "b0d4fb7c7ca2fc486fda6823ee3c3618171f8cdc",
+        "additions": 541,
+        "deletions": 0
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/continuation-status-20261116.md",
+        "status": "modified",
+        "blob": "9e7daa6bb118d16f86d7560dfc011d205a036303",
+        "additions": 18,
+        "deletions": 0
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1213-retention-catalog-20261116.json",
+        "status": "modified",
+        "blob": "329435a6356258b36b77de12a515f646a60908c2",
+        "additions": 2803,
+        "deletions": 51
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+        "status": "modified",
+        "blob": "5026f0ec6165bb092717ddc989043848a25081dc",
+        "additions": 2,
+        "deletions": 0
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-task-review-cycle-ui-smoke.ts",
+        "status": "modified",
+        "blob": "8d175c98158b3bd71192aef7b1929484b2b681b6",
+        "additions": 7,
+        "deletions": 1
+      },
+      {
+        "path": "src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts",
+        "status": "modified",
+        "blob": "c2faa156015707bc5fbd7f8123a7ffd9c4faa486",
+        "additions": 1,
+        "deletions": 1
+      }
+    ]
+  },
+  "workflowReadbacks": [
+    {
+      "path": ".github/workflows/announcements-content.yml",
+      "bytes": 2301,
+      "sha256": "4380473bf81c1e8762e11d1803bb023e60308c5525c6c409531d9749ec7661d8",
+      "gitBlob": "d7d1c6fde200971f29defe95c2c0436a0318b499",
+      "treeJoined": true,
+      "rootBasisLiteralJoined": true
+    },
+    {
+      "path": ".github/workflows/anthropic-compatible-status-e2e.yml",
+      "bytes": 8602,
+      "sha256": "037e94e79d2b13136a2209f2a1dac2c65ee5bee117c8dcfcf11e71c106b2e8a0",
+      "gitBlob": "6ec8f76ef4036fde31daab73db1205cf9f7dfdd2",
+      "treeJoined": true,
+      "rootBasisLiteralJoined": true
+    },
+    {
+      "path": ".github/workflows/anthropic-env-portability.yml",
+      "bytes": 4713,
+      "sha256": "fee75fc9544498e419c45ddb3acdf6df20a387dc29c04009e8d450bea2fb5359",
+      "gitBlob": "d3fa7512b79b79dc64c1580dfdc42d63361ae68a",
+      "treeJoined": true,
+      "rootBasisLiteralJoined": true
+    },
+    {
+      "path": ".github/workflows/build-linux-windows-draft.yml",
+      "bytes": 17033,
+      "sha256": "4968e05cf86cb6252494c6a0778dd2bb43a6439b995f0fd769504ac0633ce501",
+      "gitBlob": "919dc9d816a5f7441783af22a286da9b1e4f6f8a",
+      "treeJoined": true,
+      "rootBasisLiteralJoined": true
+    },
+    {
+      "path": ".github/workflows/ci.yml",
+      "bytes": 175238,
+      "sha256": "8cac831e00dd87f656a971c6496b8278c7cfddc261f1eb48573a7e2acf83c2d1",
+      "gitBlob": "a93ff6ba1e5656523668694bca24910a468aebc7",
+      "treeJoined": true,
+      "rootBasisLiteralJoined": true
+    },
+    {
+      "path": ".github/workflows/codeql.yml",
+      "bytes": 2479,
+      "sha256": "d35b6d96c6d3582415b4feaf3144575f5d3a520c6e058c673ec15f95ddae5a7b",
+      "gitBlob": "406b6f790f1e1a260a9f974bf85e9cc6441ed1c1",
+      "treeJoined": true,
+      "rootBasisLiteralJoined": true
+    },
+    {
+      "path": ".github/workflows/codex-runtime-smoke.yml",
+      "bytes": 3229,
+      "sha256": "2d9b2fb19cb3d1e2797611254104bf5ab433b588427350747f0c0c6196f4490d",
+      "gitBlob": "cef44447c47e39a7da678f37e2518952e218da08",
+      "treeJoined": true,
+      "rootBasisLiteralJoined": true
+    },
+    {
+      "path": ".github/workflows/dependency-review.yml",
+      "bytes": 1527,
+      "sha256": "52570674031aecbba23cf8725e5aa09b58495421c8c9b21cef0e14a791ce27d0",
+      "gitBlob": "4a5f2ab17b3daf4ffdf6992ee85d159adf2c46c6",
+      "treeJoined": true,
+      "rootBasisLiteralJoined": true
+    },
+    {
+      "path": ".github/workflows/electron-dev-profile-cross-platform.yml",
+      "bytes": 3218,
+      "sha256": "c85dd3daa63c0d31b8c87e5fe4b935456f6c47dbf9a0be1f06b6b8fbfaf84d25",
+      "gitBlob": "490c2048dfbd9f275f784d7a0f1a6eeba0a9f361",
+      "treeJoined": true,
+      "rootBasisLiteralJoined": true
+    },
+    {
+      "path": ".github/workflows/electron-packaged-ci.yml",
+      "bytes": 19532,
+      "sha256": "443502b3620450fc174440d6bdf6db3777e97b7f00d56d42e2fbd624b569b73f",
+      "gitBlob": "0938e9f31bad7520fec025ebde6aad8e071cfe69",
+      "treeJoined": true,
+      "rootBasisLiteralJoined": true
+    },
+    {
+      "path": ".github/workflows/host-emulated-acceptance.yml",
+      "bytes": 96872,
+      "sha256": "5379894007246368728c518c08222be329d58bb2755dc80235709a033017805d",
+      "gitBlob": "9ec6dfb68e98480a12224528e2637153f4274a6b",
+      "treeJoined": true,
+      "rootBasisLiteralJoined": true
+    },
+    {
+      "path": ".github/workflows/host-process-acceptance.yml",
+      "bytes": 34313,
+      "sha256": "71b16b1b1fd1f0c88d3cb15a18cdfcce08b2b18908d3a5ce755330b4b2aeedf1",
+      "gitBlob": "70202d22a5840401a00025cd60b797c514f3e455",
+      "treeJoined": true,
+      "rootBasisLiteralJoined": true
+    },
+    {
+      "path": ".github/workflows/kanban-table-desktop-e2e.yml",
+      "bytes": 3335,
+      "sha256": "572df7cb9de920ed0685febc94f6ddd08f18d7d96312e8ed946933a63ccbcdb3",
+      "gitBlob": "95d681fe04abd838dd11799d7791fa59444c6e32",
+      "treeJoined": true,
+      "rootBasisLiteralJoined": true
+    },
+    {
+      "path": ".github/workflows/landing-hetzner-release.yml",
+      "bytes": 7306,
+      "sha256": "ad5337b9e4a36797703c0e340a9539f0c12f2739eed6805851fcfa8cb00d1290",
+      "gitBlob": "4b54f229156f9d347e1a33da0d83b3374acc4078",
+      "treeJoined": true,
+      "rootBasisLiteralJoined": true
+    },
+    {
+      "path": ".github/workflows/landing.yml",
+      "bytes": 5592,
+      "sha256": "1bda852e705b3b744b5b001e0fe3cb2d8fd80eaa3108d17787c076ad3b753b32",
+      "gitBlob": "4a1ad9ae59ff2e338930a195d54fdff62da1ebc5",
+      "treeJoined": true,
+      "rootBasisLiteralJoined": true
+    },
+    {
+      "path": ".github/workflows/macos-signing-qualification.yml",
+      "bytes": 9635,
+      "sha256": "409769be92f1d49ed74ffca6e4affe25f365d5bf4bc4f5a18a1deebea11c3a0d",
+      "gitBlob": "d63bddd51302a5c0380762bf22171f43c38a39b0",
+      "treeJoined": true,
+      "rootBasisLiteralJoined": true
+    },
+    {
+      "path": ".github/workflows/opencode-desktop-e2e.yml",
+      "bytes": 6719,
+      "sha256": "ea78e9c6002db433bb57087c3d4eac3d652412746b3a3d5d2aad0cb02e76d17e",
+      "gitBlob": "3d2a90a0e335155d435bd4eae4f2bd2842425983",
+      "treeJoined": true,
+      "rootBasisLiteralJoined": true
+    },
+    {
+      "path": ".github/workflows/opencode-native-windows-e2e.yml",
+      "bytes": 29178,
+      "sha256": "3f6ea47d1aac384382cca261686972222433330e9563a87b941d23ac345b8f80",
+      "gitBlob": "f5a2a472b752acf37399fc9e11f63f6d45bdb297",
+      "treeJoined": true,
+      "rootBasisLiteralJoined": true
+    },
+    {
+      "path": ".github/workflows/opencode-packaged-e2e.yml",
+      "bytes": 19616,
+      "sha256": "80a7c110468f22670a541dcf8cd452c6de754376f4ff970bbdf2888bd91fc2fe",
+      "gitBlob": "458e165ef020a1f8b05806b9ae7edc839134e1b4",
+      "treeJoined": true,
+      "rootBasisLiteralJoined": true
+    },
+    {
+      "path": ".github/workflows/opencode-v2-cold-dashboard-e2e.yml",
+      "bytes": 2756,
+      "sha256": "2bd119e64866ae18519f01be6e7bffc138d0ce7b1e32ce2329a35e59de5a87a3",
+      "gitBlob": "be6a9ae5a88efadca344773ed4aa962d42823d28",
+      "treeJoined": true,
+      "rootBasisLiteralJoined": true
+    },
+    {
+      "path": ".github/workflows/opencode-v2-stage1-preflight.yml",
+      "bytes": 36013,
+      "sha256": "fddd1aface758ef115a5e904151cb61dd78dca04d8f52fb99f4326ddaff53a14",
+      "gitBlob": "2f557dd4b74806e6a444c46656af07b52bc0fb4e",
+      "treeJoined": true,
+      "rootBasisLiteralJoined": true
+    },
+    {
+      "path": ".github/workflows/prepare-updater-native-inputs.yml",
+      "bytes": 8825,
+      "sha256": "6f69a0083fd03597029533db66f2f44fda629b2b3a127c62978809eb990db229",
+      "gitBlob": "51beb92ade4931fe04336c7d3908bacfc932269e",
+      "treeJoined": true,
+      "rootBasisLiteralJoined": true
+    },
+    {
+      "path": ".github/workflows/provider-real-runtime-e2e.yml",
+      "bytes": 8958,
+      "sha256": "9903545813f74656b4e78e53641449a7c4c09b6b3564263f83aa7f2f2f8f0737",
+      "gitBlob": "4ee30807aa18f043fe53d090bfb6211bb5458ce0",
+      "treeJoined": true,
+      "rootBasisLiteralJoined": true
+    },
+    {
+      "path": ".github/workflows/publish-carried-release.yml",
+      "bytes": 3908,
+      "sha256": "b360d26ec6945d7e6d53090860f6ffb4001827db8df8cffcc29007222cfb0546",
+      "gitBlob": "371ed6d3b2cf4e41c012da287a295783c39c426e",
+      "treeJoined": true,
+      "rootBasisLiteralJoined": true
+    },
+    {
+      "path": ".github/workflows/recover-existing-draft-payloads.yml",
+      "bytes": 1905,
+      "sha256": "b1c53692156cd7a56178dca761a942fc9471d5ca7fd182699b918d3165aeb2db",
+      "gitBlob": "eadeedf4381cbf1d7e32cd31105dd88cd2c8eb65",
+      "treeJoined": true,
+      "rootBasisLiteralJoined": true
+    },
+    {
+      "path": ".github/workflows/release-publication-guard.yml",
+      "bytes": 2706,
+      "sha256": "3e59073acae4e5a536a6c3e8a5ddadbd78e095cff4a87eb84a317173fe22dcac",
+      "gitBlob": "10b7abd2992cc740084a5c51ace7f3fe025220f9",
+      "treeJoined": true,
+      "rootBasisLiteralJoined": true
+    },
+    {
+      "path": ".github/workflows/release.yml",
+      "bytes": 46671,
+      "sha256": "22803b1c55d071932b59b66cd2802e31a3a528fc60db94f9b22a94b699048051",
+      "gitBlob": "d28bee6dea87ec191f0d40670f3e68c48251d049",
+      "treeJoined": true,
+      "rootBasisLiteralJoined": true
+    },
+    {
+      "path": ".github/workflows/reviewrouter-interaction.yml",
+      "bytes": 4238,
+      "sha256": "72904ac011de713511f51cd05d7f6d8e145ef537e3ae871e5b872f204de1b339",
+      "gitBlob": "edb68c51f54ad4a792eb29f1f557aad48e3a6218",
+      "treeJoined": true,
+      "rootBasisLiteralJoined": true
+    },
+    {
+      "path": ".github/workflows/reviewrouter-review.yml",
+      "bytes": 912,
+      "sha256": "d30c359c172a2d2e6ad8af7b5557894ae8d601f5f4957a87153aa93810966cc4",
+      "gitBlob": "04964f8ac7beadb3277fb28ec9cc0d61b86ca84b",
+      "treeJoined": true,
+      "rootBasisLiteralJoined": true
+    },
+    {
+      "path": ".github/workflows/runtime-bootstrap-smoke.yml",
+      "bytes": 5079,
+      "sha256": "65e296bb4946582ca3745930f1ecf0b16df481d38fb591a06c26f80529881f15",
+      "gitBlob": "4020f668ab2a9a7b16fcb0aa7fd2d79a061f1d44",
+      "treeJoined": true,
+      "rootBasisLiteralJoined": true
+    },
+    {
+      "path": ".github/workflows/sentry-owned-process-native.yml",
+      "bytes": 39878,
+      "sha256": "2d84faae57ad758575935dc760df6561d219f16ee8c0bd615006ca3d88837357",
+      "gitBlob": "1188fa5b89d59b739d927082d1b6954a57181819",
+      "treeJoined": true,
+      "rootBasisLiteralJoined": true
+    },
+    {
+      "path": ".github/workflows/stage-existing-partial-draft.yml",
+      "bytes": 5418,
+      "sha256": "1644a7dd73642776d00077ab00d6f862679eb890cb5b154042f51dae30b6c37c",
+      "gitBlob": "295dbf212e13b15505696d997ec7c45b4ee3cfa9",
+      "treeJoined": true,
+      "rootBasisLiteralJoined": true
+    },
+    {
+      "path": ".github/workflows/teams-create-page-desktop-e2e.yml",
+      "bytes": 6522,
+      "sha256": "f57bf21347769c79b9c8c21f6f35b40b772fbfe9cb5f8155d7daabb54499d15f",
+      "gitBlob": "ef939f224a1642cb596906324c8d61441780ccc7",
+      "treeJoined": true,
+      "rootBasisLiteralJoined": true
+    },
+    {
+      "path": ".github/workflows/updater-linux-packages.yml",
+      "bytes": 21602,
+      "sha256": "37710e0293dcb00b31df74062b52a52a77f1c22f2e37d8ce2150c668baa98074",
+      "gitBlob": "60d214756c640b7925cfe11ba45ed4009f27ca3c",
+      "treeJoined": true,
+      "rootBasisLiteralJoined": true
+    },
+    {
+      "path": ".github/workflows/updater-mac-manual-migration.yml",
+      "bytes": 5900,
+      "sha256": "40898d8173495bcbe67effb3912294c355aafd42e020e1d099040b184c127d4f",
+      "gitBlob": "4aa3a4181259514c5a43fbc7dd4ad98811a3588e",
+      "treeJoined": true,
+      "rootBasisLiteralJoined": true
+    },
+    {
+      "path": ".github/workflows/updater-mac-old-updater.yml",
+      "bytes": 12460,
+      "sha256": "dfb731e1620c1bfe47b51cd2af5e9c90c7c46eaa3841b39c7993d7938224b71f",
+      "gitBlob": "067a25687f36caefe156b0446c5056d230d27c62",
+      "treeJoined": true,
+      "rootBasisLiteralJoined": true
+    },
+    {
+      "path": ".github/workflows/updater-mac-source.yml",
+      "bytes": 7512,
+      "sha256": "216b64cf04a7b5bebf527ffb21bfe3df0c12bcd828450a377bb67dc59540e025",
+      "gitBlob": "1196e40faa99e0ab64e329d91f3fea7c6ed47f94",
+      "treeJoined": true,
+      "rootBasisLiteralJoined": true
+    },
+    {
+      "path": ".github/workflows/updater-mac-updater.yml",
+      "bytes": 12323,
+      "sha256": "c71f29ef00ea623a30d11e3fa40ebc1d0fadd8a77f4552687c54b0527f4768db",
+      "gitBlob": "950f95892277ae303772ac699915250f0f4f66af",
+      "treeJoined": true,
+      "rootBasisLiteralJoined": true
+    },
+    {
+      "path": ".github/workflows/updater-native-feasibility.yml",
+      "bytes": 13476,
+      "sha256": "8fe371aab977f9ce0d54086c11e508ed7b370780db344b93efd3592d3b4a09ce",
+      "gitBlob": "b55e6cbcb4de61e2e8688e1ff4b4529b043a4ada",
+      "treeJoined": true,
+      "rootBasisLiteralJoined": true
+    },
+    {
+      "path": ".github/workflows/updater-windows-ota.yml",
+      "bytes": 27610,
+      "sha256": "3dcf1d333467391acd418869d6676c18d1193bb81d36040da358bd7e0f62743f",
+      "gitBlob": "10ffcd79e48a71346df7545af638208ce039ad83",
+      "treeJoined": true,
+      "rootBasisLiteralJoined": true
+    },
+    {
+      "path": ".github/workflows/updater-windows.yml",
+      "bytes": 11849,
+      "sha256": "1be54468be42e72674c01f5b94c58789fbf75a3e4d7ac6deff312738f2b1f5e2",
+      "gitBlob": "a4e9375cb95c4129c503f1d7be82de1e3926ea62",
+      "treeJoined": true,
+      "rootBasisLiteralJoined": true
+    },
+    {
+      "path": ".github/workflows/windows-backfill-diagnostic.yml",
+      "bytes": 14471,
+      "sha256": "adfdc03d5de437d308916da76774a1e4ca31aa5786f4ea2fe2fae4e1a2127c2c",
+      "gitBlob": "44bec5d82998468d48ac539f3624d0c2de1c6648",
+      "treeJoined": true,
+      "rootBasisLiteralJoined": true
+    }
+  ],
+  "eventCensus": {
+    "pull_request": 28,
+    "push": 11,
+    "workflow_dispatch": 34,
+    "merge_group": 1,
+    "schedule": 1,
+    "workflow_call": 2,
+    "release": 1,
+    "pull_request_review_comment": 1,
+    "issue_comment": 1
+  },
+  "all42TriggerMap": [
+    {
+      "path": ".github/workflows/announcements-content.yml",
+      "events": [
+        "pull_request",
+        "push",
+        "workflow_dispatch"
+      ],
+      "types": "opened,synchronize,reopened (default)",
+      "prBranchFilter": null,
+      "pathPatternCount": 0,
+      "openedDraftEventEligible": true,
+      "matchedPaths": "all changed paths; no path filter",
+      "reason": "opened type and actual compare paths match"
+    },
+    {
+      "path": ".github/workflows/anthropic-compatible-status-e2e.yml",
+      "events": [
+        "workflow_dispatch",
+        "pull_request"
+      ],
+      "types": "[opened, synchronize, reopened, ready_for_review, converted_to_draft]",
+      "prBranchFilter": null,
+      "pathPatternCount": 29,
+      "openedDraftEventEligible": false,
+      "matchedPaths": [],
+      "reason": "none of 41 actual changed paths matches PR paths"
+    },
+    {
+      "path": ".github/workflows/anthropic-env-portability.yml",
+      "events": [
+        "workflow_dispatch",
+        "pull_request"
+      ],
+      "types": "[opened, synchronize, reopened, ready_for_review, converted_to_draft]",
+      "prBranchFilter": null,
+      "pathPatternCount": 31,
+      "openedDraftEventEligible": false,
+      "matchedPaths": [],
+      "reason": "none of 41 actual changed paths matches PR paths"
+    },
+    {
+      "path": ".github/workflows/build-linux-windows-draft.yml",
+      "events": [
+        "workflow_dispatch"
+      ],
+      "types": null,
+      "prBranchFilter": null,
+      "pathPatternCount": 0,
+      "openedDraftEventEligible": false,
+      "matchedPaths": [],
+      "reason": "no pull_request event"
+    },
+    {
+      "path": ".github/workflows/ci.yml",
+      "events": [
+        "push",
+        "pull_request",
+        "merge_group",
+        "workflow_dispatch"
+      ],
+      "types": "[\nopened,\nsynchronize,\nreopened,\nready_for_review,\nconverted_to_draft,\nedited,\nlabeled,\nunlabeled,\n]",
+      "prBranchFilter": null,
+      "pathPatternCount": 0,
+      "openedDraftEventEligible": true,
+      "matchedPaths": "all changed paths; no path filter",
+      "reason": "opened type and actual compare paths match"
+    },
+    {
+      "path": ".github/workflows/codeql.yml",
+      "events": [
+        "workflow_dispatch",
+        "push",
+        "pull_request",
+        "schedule"
+      ],
+      "types": "[opened, synchronize, reopened, ready_for_review, converted_to_draft]",
+      "prBranchFilter": null,
+      "pathPatternCount": 11,
+      "openedDraftEventEligible": true,
+      "matchedPaths": [
+        "scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+        "scripts/legacy-agent-host/desktop-task-review-cycle-ui-smoke.ts",
+        "src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts"
+      ],
+      "reason": "opened type and actual compare paths match"
+    },
+    {
+      "path": ".github/workflows/codex-runtime-smoke.yml",
+      "events": [
+        "workflow_dispatch",
+        "pull_request",
+        "push"
+      ],
+      "types": "[opened, synchronize, reopened, ready_for_review, converted_to_draft]",
+      "prBranchFilter": null,
+      "pathPatternCount": 12,
+      "openedDraftEventEligible": false,
+      "matchedPaths": [],
+      "reason": "none of 41 actual changed paths matches PR paths"
+    },
+    {
+      "path": ".github/workflows/dependency-review.yml",
+      "events": [
+        "pull_request"
+      ],
+      "types": "opened,synchronize,reopened (default)",
+      "prBranchFilter": null,
+      "pathPatternCount": 4,
+      "openedDraftEventEligible": false,
+      "matchedPaths": [],
+      "reason": "none of 41 actual changed paths matches PR paths"
+    },
+    {
+      "path": ".github/workflows/electron-dev-profile-cross-platform.yml",
+      "events": [
+        "pull_request",
+        "push"
+      ],
+      "types": "[opened, synchronize, reopened, ready_for_review]",
+      "prBranchFilter": null,
+      "pathPatternCount": 8,
+      "openedDraftEventEligible": false,
+      "matchedPaths": [],
+      "reason": "none of 41 actual changed paths matches PR paths"
+    },
+    {
+      "path": ".github/workflows/electron-packaged-ci.yml",
+      "events": [
+        "pull_request"
+      ],
+      "types": "[opened, synchronize, reopened, ready_for_review, labeled, unlabeled, edited]",
+      "prBranchFilter": null,
+      "pathPatternCount": 0,
+      "openedDraftEventEligible": true,
+      "matchedPaths": "all changed paths; no path filter",
+      "reason": "opened type and actual compare paths match"
+    },
+    {
+      "path": ".github/workflows/host-emulated-acceptance.yml",
+      "events": [
+        "workflow_dispatch",
+        "pull_request"
+      ],
+      "types": "[opened, synchronize, reopened, ready_for_review, converted_to_draft]",
+      "prBranchFilter": null,
+      "pathPatternCount": 23,
+      "openedDraftEventEligible": true,
+      "matchedPaths": [
+        "scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+        "scripts/legacy-agent-host/desktop-task-review-cycle-ui-smoke.ts",
+        "src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts"
+      ],
+      "reason": "opened type and actual compare paths match"
+    },
+    {
+      "path": ".github/workflows/host-process-acceptance.yml",
+      "events": [
+        "pull_request",
+        "workflow_dispatch"
+      ],
+      "types": "[opened, synchronize, reopened, ready_for_review, converted_to_draft]",
+      "prBranchFilter": null,
+      "pathPatternCount": 27,
+      "openedDraftEventEligible": false,
+      "matchedPaths": [],
+      "reason": "none of 41 actual changed paths matches PR paths"
+    },
+    {
+      "path": ".github/workflows/kanban-table-desktop-e2e.yml",
+      "events": [
+        "push",
+        "pull_request"
+      ],
+      "types": "[opened, synchronize, ready_for_review]",
+      "prBranchFilter": null,
+      "pathPatternCount": 5,
+      "openedDraftEventEligible": false,
+      "matchedPaths": [],
+      "reason": "none of 41 actual changed paths matches PR paths"
+    },
+    {
+      "path": ".github/workflows/landing-hetzner-release.yml",
+      "events": [
+        "push",
+        "pull_request",
+        "workflow_dispatch"
+      ],
+      "types": "opened,synchronize,reopened (default)",
+      "prBranchFilter": null,
+      "pathPatternCount": 10,
+      "openedDraftEventEligible": false,
+      "matchedPaths": [],
+      "reason": "none of 41 actual changed paths matches PR paths"
+    },
+    {
+      "path": ".github/workflows/landing.yml",
+      "events": [
+        "push",
+        "pull_request",
+        "workflow_dispatch"
+      ],
+      "types": "opened,synchronize,reopened (default)",
+      "prBranchFilter": null,
+      "pathPatternCount": 9,
+      "openedDraftEventEligible": false,
+      "matchedPaths": [],
+      "reason": "none of 41 actual changed paths matches PR paths"
+    },
+    {
+      "path": ".github/workflows/macos-signing-qualification.yml",
+      "events": [
+        "workflow_dispatch"
+      ],
+      "types": null,
+      "prBranchFilter": null,
+      "pathPatternCount": 0,
+      "openedDraftEventEligible": false,
+      "matchedPaths": [],
+      "reason": "no pull_request event"
+    },
+    {
+      "path": ".github/workflows/opencode-desktop-e2e.yml",
+      "events": [
+        "workflow_dispatch",
+        "pull_request"
+      ],
+      "types": "[opened, synchronize, reopened, ready_for_review, converted_to_draft]",
+      "prBranchFilter": null,
+      "pathPatternCount": 20,
+      "openedDraftEventEligible": true,
+      "matchedPaths": [
+        "src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts"
+      ],
+      "reason": "opened type and actual compare paths match"
+    },
+    {
+      "path": ".github/workflows/opencode-native-windows-e2e.yml",
+      "events": [
+        "workflow_call",
+        "workflow_dispatch"
+      ],
+      "types": null,
+      "prBranchFilter": null,
+      "pathPatternCount": 0,
+      "openedDraftEventEligible": false,
+      "matchedPaths": [],
+      "reason": "no pull_request event"
+    },
+    {
+      "path": ".github/workflows/opencode-packaged-e2e.yml",
+      "events": [
+        "workflow_call",
+        "workflow_dispatch",
+        "pull_request"
+      ],
+      "types": "[opened, synchronize, reopened, ready_for_review, converted_to_draft]",
+      "prBranchFilter": null,
+      "pathPatternCount": 23,
+      "openedDraftEventEligible": false,
+      "matchedPaths": [],
+      "reason": "none of 41 actual changed paths matches PR paths"
+    },
+    {
+      "path": ".github/workflows/opencode-v2-cold-dashboard-e2e.yml",
+      "events": [
+        "pull_request"
+      ],
+      "types": "[opened, synchronize, reopened, ready_for_review]",
+      "prBranchFilter": null,
+      "pathPatternCount": 21,
+      "openedDraftEventEligible": false,
+      "matchedPaths": [],
+      "reason": "none of 41 actual changed paths matches PR paths"
+    },
+    {
+      "path": ".github/workflows/opencode-v2-stage1-preflight.yml",
+      "events": [
+        "pull_request"
+      ],
+      "types": "[opened, synchronize, reopened]",
+      "prBranchFilter": null,
+      "pathPatternCount": 27,
+      "openedDraftEventEligible": true,
+      "matchedPaths": [
+        "scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+        "scripts/legacy-agent-host/desktop-task-review-cycle-ui-smoke.ts"
+      ],
+      "reason": "opened type and actual compare paths match"
+    },
+    {
+      "path": ".github/workflows/prepare-updater-native-inputs.yml",
+      "events": [
+        "pull_request",
+        "workflow_dispatch"
+      ],
+      "types": "opened,synchronize,reopened (default)",
+      "prBranchFilter": null,
+      "pathPatternCount": 10,
+      "openedDraftEventEligible": false,
+      "matchedPaths": [],
+      "reason": "none of 41 actual changed paths matches PR paths"
+    },
+    {
+      "path": ".github/workflows/provider-real-runtime-e2e.yml",
+      "events": [
+        "workflow_dispatch",
+        "push",
+        "pull_request"
+      ],
+      "types": "[opened, synchronize, reopened, ready_for_review, converted_to_draft]",
+      "prBranchFilter": null,
+      "pathPatternCount": 16,
+      "openedDraftEventEligible": false,
+      "matchedPaths": [],
+      "reason": "none of 41 actual changed paths matches PR paths"
+    },
+    {
+      "path": ".github/workflows/publish-carried-release.yml",
+      "events": [
+        "workflow_dispatch"
+      ],
+      "types": null,
+      "prBranchFilter": null,
+      "pathPatternCount": 0,
+      "openedDraftEventEligible": false,
+      "matchedPaths": [],
+      "reason": "no pull_request event"
+    },
+    {
+      "path": ".github/workflows/recover-existing-draft-payloads.yml",
+      "events": [
+        "workflow_dispatch"
+      ],
+      "types": null,
+      "prBranchFilter": null,
+      "pathPatternCount": 0,
+      "openedDraftEventEligible": false,
+      "matchedPaths": [],
+      "reason": "no pull_request event"
+    },
+    {
+      "path": ".github/workflows/release-publication-guard.yml",
+      "events": [
+        "release"
+      ],
+      "types": null,
+      "prBranchFilter": null,
+      "pathPatternCount": 0,
+      "openedDraftEventEligible": false,
+      "matchedPaths": [],
+      "reason": "no pull_request event"
+    },
+    {
+      "path": ".github/workflows/release.yml",
+      "events": [
+        "workflow_dispatch"
+      ],
+      "types": null,
+      "prBranchFilter": null,
+      "pathPatternCount": 0,
+      "openedDraftEventEligible": false,
+      "matchedPaths": [],
+      "reason": "no pull_request event"
+    },
+    {
+      "path": ".github/workflows/reviewrouter-interaction.yml",
+      "events": [
+        "pull_request_review_comment",
+        "issue_comment",
+        "workflow_dispatch"
+      ],
+      "types": null,
+      "prBranchFilter": null,
+      "pathPatternCount": 0,
+      "openedDraftEventEligible": false,
+      "matchedPaths": [],
+      "reason": "no pull_request event"
+    },
+    {
+      "path": ".github/workflows/reviewrouter-review.yml",
+      "events": [
+        "workflow_dispatch"
+      ],
+      "types": null,
+      "prBranchFilter": null,
+      "pathPatternCount": 0,
+      "openedDraftEventEligible": false,
+      "matchedPaths": [],
+      "reason": "no pull_request event"
+    },
+    {
+      "path": ".github/workflows/runtime-bootstrap-smoke.yml",
+      "events": [
+        "workflow_dispatch",
+        "push",
+        "pull_request"
+      ],
+      "types": "[opened, synchronize, reopened, ready_for_review, converted_to_draft]",
+      "prBranchFilter": null,
+      "pathPatternCount": 19,
+      "openedDraftEventEligible": false,
+      "matchedPaths": [],
+      "reason": "none of 41 actual changed paths matches PR paths"
+    },
+    {
+      "path": ".github/workflows/sentry-owned-process-native.yml",
+      "events": [
+        "pull_request",
+        "workflow_dispatch"
+      ],
+      "types": "[opened, synchronize, reopened, ready_for_review, converted_to_draft]",
+      "prBranchFilter": null,
+      "pathPatternCount": 41,
+      "openedDraftEventEligible": false,
+      "matchedPaths": [],
+      "reason": "none of 41 actual changed paths matches PR paths"
+    },
+    {
+      "path": ".github/workflows/stage-existing-partial-draft.yml",
+      "events": [
+        "workflow_dispatch"
+      ],
+      "types": null,
+      "prBranchFilter": null,
+      "pathPatternCount": 0,
+      "openedDraftEventEligible": false,
+      "matchedPaths": [],
+      "reason": "no pull_request event"
+    },
+    {
+      "path": ".github/workflows/teams-create-page-desktop-e2e.yml",
+      "events": [
+        "pull_request",
+        "push"
+      ],
+      "types": "[opened, synchronize, reopened, ready_for_review]",
+      "prBranchFilter": null,
+      "pathPatternCount": 18,
+      "openedDraftEventEligible": false,
+      "matchedPaths": [],
+      "reason": "none of 41 actual changed paths matches PR paths"
+    },
+    {
+      "path": ".github/workflows/updater-linux-packages.yml",
+      "events": [
+        "pull_request",
+        "workflow_dispatch"
+      ],
+      "types": "opened,synchronize,reopened (default)",
+      "prBranchFilter": null,
+      "pathPatternCount": 12,
+      "openedDraftEventEligible": false,
+      "matchedPaths": [],
+      "reason": "none of 41 actual changed paths matches PR paths"
+    },
+    {
+      "path": ".github/workflows/updater-mac-manual-migration.yml",
+      "events": [
+        "workflow_dispatch"
+      ],
+      "types": null,
+      "prBranchFilter": null,
+      "pathPatternCount": 0,
+      "openedDraftEventEligible": false,
+      "matchedPaths": [],
+      "reason": "no pull_request event"
+    },
+    {
+      "path": ".github/workflows/updater-mac-old-updater.yml",
+      "events": [
+        "workflow_dispatch"
+      ],
+      "types": null,
+      "prBranchFilter": null,
+      "pathPatternCount": 0,
+      "openedDraftEventEligible": false,
+      "matchedPaths": [],
+      "reason": "no pull_request event"
+    },
+    {
+      "path": ".github/workflows/updater-mac-source.yml",
+      "events": [
+        "workflow_dispatch"
+      ],
+      "types": null,
+      "prBranchFilter": null,
+      "pathPatternCount": 0,
+      "openedDraftEventEligible": false,
+      "matchedPaths": [],
+      "reason": "no pull_request event"
+    },
+    {
+      "path": ".github/workflows/updater-mac-updater.yml",
+      "events": [
+        "workflow_dispatch"
+      ],
+      "types": null,
+      "prBranchFilter": null,
+      "pathPatternCount": 0,
+      "openedDraftEventEligible": false,
+      "matchedPaths": [],
+      "reason": "no pull_request event"
+    },
+    {
+      "path": ".github/workflows/updater-native-feasibility.yml",
+      "events": [
+        "pull_request",
+        "workflow_dispatch"
+      ],
+      "types": "opened,synchronize,reopened (default)",
+      "prBranchFilter": null,
+      "pathPatternCount": 7,
+      "openedDraftEventEligible": false,
+      "matchedPaths": [],
+      "reason": "none of 41 actual changed paths matches PR paths"
+    },
+    {
+      "path": ".github/workflows/updater-windows-ota.yml",
+      "events": [
+        "pull_request",
+        "workflow_dispatch"
+      ],
+      "types": "opened,synchronize,reopened (default)",
+      "prBranchFilter": null,
+      "pathPatternCount": 15,
+      "openedDraftEventEligible": false,
+      "matchedPaths": [],
+      "reason": "none of 41 actual changed paths matches PR paths"
+    },
+    {
+      "path": ".github/workflows/updater-windows.yml",
+      "events": [
+        "pull_request",
+        "workflow_dispatch"
+      ],
+      "types": "opened,synchronize,reopened (default)",
+      "prBranchFilter": null,
+      "pathPatternCount": 11,
+      "openedDraftEventEligible": false,
+      "matchedPaths": [],
+      "reason": "none of 41 actual changed paths matches PR paths"
+    },
+    {
+      "path": ".github/workflows/windows-backfill-diagnostic.yml",
+      "events": [
+        "workflow_dispatch",
+        "pull_request"
+      ],
+      "types": "[opened, synchronize, reopened, ready_for_review, converted_to_draft]",
+      "prBranchFilter": null,
+      "pathPatternCount": 13,
+      "openedDraftEventEligible": false,
+      "matchedPaths": [],
+      "reason": "none of 41 actual changed paths matches PR paths"
+    }
+  ],
+  "pushBranchMap": [
+    {
+      "path": ".github/workflows/announcements-content.yml",
+      "branches": "    branches: [main]"
+    },
+    {
+      "path": ".github/workflows/ci.yml",
+      "branches": "    branches:\n      - main\n      - refactor/team-provisioning-round2-reapply\n      - refactor/hosted-web-feature-boundaries"
+    },
+    {
+      "path": ".github/workflows/codeql.yml",
+      "branches": "    branches: [main]"
+    },
+    {
+      "path": ".github/workflows/codex-runtime-smoke.yml",
+      "branches": "    branches: [main]"
+    },
+    {
+      "path": ".github/workflows/electron-dev-profile-cross-platform.yml",
+      "branches": "    branches: [main]"
+    },
+    {
+      "path": ".github/workflows/kanban-table-desktop-e2e.yml",
+      "branches": "    branches: [main]"
+    },
+    {
+      "path": ".github/workflows/landing-hetzner-release.yml",
+      "branches": "    branches: [main]"
+    },
+    {
+      "path": ".github/workflows/landing.yml",
+      "branches": "    branches: [main]"
+    },
+    {
+      "path": ".github/workflows/provider-real-runtime-e2e.yml",
+      "branches": "    branches: [main]"
+    },
+    {
+      "path": ".github/workflows/runtime-bootstrap-smoke.yml",
+      "branches": "    branches: [main]"
+    },
+    {
+      "path": ".github/workflows/teams-create-page-desktop-e2e.yml",
+      "branches": "    branches: [main]"
+    }
+  ],
+  "newRefObservations": [
+    {
+      "ref": "ci/frontend-parity-c714-20261117-base",
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/ref/heads/ci/frontend-parity-c714-20261117-base",
+      "result": {
+        "error": "GitHub API error 404: {\"message\":\"Not Found\",\"documentation_url\":\"https://docs.github.com/rest/git/refs#get-a-reference\",\"status\":\"404\"}",
+        "error_code": "NOT_FOUND",
+        "error_data": {
+          "message": "Not Found",
+          "documentation_url": "https://docs.github.com/rest/git/refs#get-a-reference",
+          "status": "404"
+        }
+      },
+      "errorIsExpectedAbsentObservation": true
+    },
+    {
+      "ref": "ci/frontend-parity-c714-20261117-head",
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/ref/heads/ci/frontend-parity-c714-20261117-head",
+      "result": {
+        "error": "GitHub API error 404: {\"message\":\"Not Found\",\"documentation_url\":\"https://docs.github.com/rest/git/refs#get-a-reference\",\"status\":\"404\"}",
+        "error_code": "NOT_FOUND",
+        "error_data": {
+          "message": "Not Found",
+          "documentation_url": "https://docs.github.com/rest/git/refs#get-a-reference",
+          "status": "404"
+        }
+      },
+      "errorIsExpectedAbsentObservation": true
+    }
+  ],
+  "refCreationConclusion": "Both exact new refs select no reviewed create or push workflow: create is undeclared; every push filter excludes both branch names. This conclusion does not depend on token recursion suppression or assuming an API-created ref emits no push event. No default branch, release or Stage2 event is created by the proposed operations.",
+  "selectedWorkflowDetails": [
+    {
+      "path": ".github/workflows/announcements-content.yml",
+      "name": "Announcements Content",
+      "types": "opened,synchronize,reopened (default)",
+      "matchedPaths": "all changed paths; no path filter",
+      "draftBehavior": "eligible; active jobs may run according to unchanged workflow policy",
+      "openedConcurrency": {
+        "group": "Announcements Content-pull_request-<NEW_PR_NUMBER>",
+        "cancelInProgress": true,
+        "literal": "concurrency:\n  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event_name == 'pull_request' && github.event.pull_request.number || (github.event_name == 'merge_group' || github.event_name == 'push' && github.ref_type == 'branch' && github.event.repository.default_branch != '' && github.ref_name != github.event.repository.default_branch && !startsWith(github.ref_name, 'release/')) && github.ref || github.run_id }}\n  cancel-in-progress: ${{ github.event_name == 'pull_request' || github.event_name == 'push' && github.ref_type == 'branch' && github.event.repository.default_branch != '' && github.ref_name != github.event.repository.default_branch && !startsWith(github.ref_name, 'release/') }}"
+      },
+      "checkoutEvidence": [
+        {
+          "line": 22,
+          "text": "    steps:\n      - uses: actions/checkout@v6\n        with:\n          persist-credentials: false\n          fetch-depth: 0\n          ref: ${{ github.event.pull_request.head.sha || github.sha }}\n      - name: Setup pnpm\n        uses: pnpm/action-setup@v6\n      - uses: actions/setup-node@v6\n        with:\n          node-version-file: .node-version\n          cache: pnpm"
+        }
+      ]
+    },
+    {
+      "path": ".github/workflows/ci.yml",
+      "name": "CI",
+      "types": "[\nopened,\nsynchronize,\nreopened,\nready_for_review,\nconverted_to_draft,\nedited,\nlabeled,\nunlabeled,\n]",
+      "matchedPaths": "all changed paths; no path filter",
+      "draftBehavior": "plan + fast feedback selected; full=false, metadata=false, reuse=false; Full qualification intentionally fails; heavy/full and native gated jobs are not selected",
+      "openedConcurrency": {
+        "group": "CI-pull_request-<NEW_PR_NUMBER>-checks",
+        "cancelInProgress": true,
+        "literal": "concurrency:\n  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event_name == 'pull_request' && github.event.pull_request.number || (github.event_name == 'merge_group' || github.event_name == 'push' && github.ref_type == 'branch' && github.event.repository.default_branch != '' && github.ref_name != github.event.repository.default_branch && !startsWith(github.ref_name, 'release/')) && github.ref || github.run_id }}-${{ github.event_name == 'pull_request' && github.event.action == 'edited' && format('edited-{0}', github.run_id) || 'checks' }}\n  cancel-in-progress: ${{ github.event_name == 'pull_request' && github.event.action != 'edited' || github.event_name == 'push' && github.ref_type == 'branch' && github.event.repository.default_branch != '' && github.ref_name != github.event.repository.default_branch && !startsWith(github.ref_name, 'release/') }}"
+      },
+      "checkoutEvidence": [
+        {
+          "line": 72,
+          "text": "      - name: Checkout\n        uses: actions/checkout@v6\n        with:\n          fetch-depth: 0\n      - name: Setup Node.js\n        uses: actions/setup-node@v6\n        with:\n          node-version-file: .node-version\n      - name: \"CI source proof: PR=${{ github.event.pull_request.number || 0 }} | base=${{ github.event.pull_request.base.sha || 'none' }} | head=${{ github.event.pull_request.head.sha || github.sha }}\"\n        run: echo 'Source event identity recorded in job metadata'\n      - name: Plan feedback and verify reusable evidence\n        id: plan"
+        },
+        {
+          "line": 100,
+          "text": "      - name: Checkout\n        uses: actions/checkout@v6\n      - name: Setup pnpm\n        uses: pnpm/action-setup@v6\n      - name: Setup Node.js\n        uses: actions/setup-node@v6\n        with:\n          node-version-file: .node-version\n          cache: pnpm\n      # Force exit: a broken gate wait loop must fail this step, not hang it.\n      - name: Test feedback policy\n        run: node --test --test-force-exit test/scripts/ciFeedback*.test.mts test/scripts/ciChangeScope*.test.mts test/scripts/installDependenciesWithRetry.test.mjs"
+        },
+        {
+          "line": 2594,
+          "text": "      - name: Checkout\n        uses: actions/checkout@v6\n      - name: Setup Node.js\n        uses: actions/setup-node@v6\n        with:\n          node-version-file: .node-version\n      - name: Require selected Codex login and native schedule qualification\n        if: >-\n          needs.plan.outputs.metadata == 'false' &&\n          github.event_name == 'pull_request' && github.event.pull_request.draft == false &&\n          github.event.pull_request.head.repo.full_name == github.repository &&\n          (github.event.pull_request.base.ref == 'feat/provider-host-frontend-parity-20261112' ||"
+        }
+      ],
+      "ciSpecialJobConditions": [
+        {
+          "job": "retained-opencode-coexistence",
+          "if": "    if: >-\n      needs.plan.outputs.full == 'true' && needs.plan.outputs.reuse == 'false' &&\n      ((github.event_name == 'workflow_dispatch' && inputs.stage1_desktop) ||\n      (github.event_name == 'pull_request' && github.event.pull_request.draft == false && github.event.pull_request.head.repo.full_name == github.repository &&\n      (github.event.pull_request.base.ref == 'feat/provider-migration-stage-1' || (github.event.pull_request.base.ref == 'main' && github.event.pull_request.head.ref == 'feat/provider-migration-stage-1'))))",
+          "jobUses": []
+        },
+        {
+          "job": "codex-login-desktop",
+          "if": "    if: >-\n      needs.plan.outputs.metadata == 'false' &&\n      github.event_name == 'pull_request' && github.event.pull_request.draft == false &&\n      github.event.pull_request.head.repo.full_name == github.repository &&\n      (github.event.pull_request.base.ref == 'feat/provider-host-frontend-parity-20261112' ||\n       github.event.pull_request.head.ref == 'feat/provider-host-frontend-parity-20261112')",
+          "jobUses": []
+        },
+        {
+          "job": "stage1-desktop",
+          "if": "    if: >-\n      (github.event_name == 'workflow_dispatch' && inputs.stage1_desktop) ||\n      (github.event_name == 'pull_request' && github.event.pull_request.draft == false && (github.event.pull_request.base.ref == 'feat/provider-migration-stage-1' || (github.event.pull_request.base.ref == 'main' && github.event.pull_request.head.ref == 'feat/provider-migration-stage-1' && github.event.pull_request.head.repo.full_name == github.repository)))",
+          "jobUses": []
+        },
+        {
+          "job": "stage1-process-diagnostic",
+          "if": "    if: github.event_name == 'workflow_dispatch' && inputs.stage1_process_diagnostic",
+          "jobUses": []
+        },
+        {
+          "job": "stage1-process-qualification",
+          "if": "    if: >-\n      (github.event_name == 'workflow_dispatch' && inputs.stage1_process_qualification) ||\n      (github.event_name == 'pull_request' && github.event.pull_request.draft == false && (github.event.pull_request.base.ref == 'feat/provider-migration-stage-1' || (github.event.pull_request.base.ref == 'main' && github.event.pull_request.head.ref == 'feat/provider-migration-stage-1' && github.event.pull_request.head.repo.full_name == github.repository)))",
+          "jobUses": []
+        }
+      ]
+    },
+    {
+      "path": ".github/workflows/codeql.yml",
+      "name": "CodeQL",
+      "types": "[opened, synchronize, reopened, ready_for_review, converted_to_draft]",
+      "matchedPaths": [
+        "scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+        "scripts/legacy-agent-host/desktop-task-review-cycle-ui-smoke.ts",
+        "src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts"
+      ],
+      "draftBehavior": "event eligible; all workflow jobs skip Draft",
+      "openedConcurrency": {
+        "group": "CodeQL-pull_request-<NEW_PR_NUMBER>",
+        "cancelInProgress": true,
+        "literal": "concurrency:\n  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event_name == 'pull_request' && github.event.pull_request.number || (github.event_name == 'merge_group' || github.event_name == 'push' && github.ref_type == 'branch' && github.event.repository.default_branch != '' && github.ref_name != github.event.repository.default_branch && !startsWith(github.ref_name, 'release/')) && github.ref || github.run_id }}\n  cancel-in-progress: ${{ github.event_name == 'pull_request' || github.event_name == 'push' && github.ref_type == 'branch' && github.event.repository.default_branch != '' && github.ref_name != github.event.repository.default_branch && !startsWith(github.ref_name, 'release/') }}"
+      },
+      "checkoutEvidence": [
+        {
+          "line": 64,
+          "text": "      - name: Checkout repository\n        uses: actions/checkout@v6\n\n      - name: Initialize CodeQL\n        uses: github/codeql-action/init@v4\n        with:\n          languages: ${{ matrix.language }}\n          config-file: ./.github/codeql/codeql-config.yml\n\n      - name: Perform CodeQL Analysis\n        uses: github/codeql-action/analyze@v4\n        with:"
+        }
+      ]
+    },
+    {
+      "path": ".github/workflows/electron-packaged-ci.yml",
+      "name": "Electron packaged CI",
+      "types": "[opened, synchronize, reopened, ready_for_review, labeled, unlabeled, edited]",
+      "matchedPaths": "all changed paths; no path filter",
+      "draftBehavior": "eligible; active jobs may run according to unchanged workflow policy",
+      "openedConcurrency": {
+        "group": "Electron packaged CI-<NEW_PR_NUMBER>-checks",
+        "cancelInProgress": true,
+        "literal": "concurrency:\n  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.run_id }}-${{ github.event.action == 'edited' && !github.event.changes.base && (github.event.changes.title || github.event.changes.body) && format('metadata-{0}', github.run_id) || 'checks' }}\n  cancel-in-progress: ${{ github.event_name == 'pull_request' && !(github.event.action == 'edited' && !github.event.changes.base && (github.event.changes.title || github.event.changes.body)) }}"
+      },
+      "checkoutEvidence": [
+        {
+          "line": 27,
+          "text": "    steps:\n      - uses: actions/checkout@v6\n        with:\n          fetch-depth: 0\n          persist-credentials: false\n      - uses: actions/setup-node@v6\n        with:\n          node-version-file: .node-version\n      - name: Verify packaged CI policy contracts\n        run: node --test scripts/ci/packaged-ci-policy.test.mts\n      - name: Test provider archive integrity gate\n        run: node --test scripts/ci/packaged-ci-provider-integrity.test.ts"
+        },
+        {
+          "line": 88,
+          "text": "    steps:\n      - uses: actions/checkout@v6\n        with:\n          ref: ${{ github.event.pull_request.head.sha }}\n          persist-credentials: false\n      - uses: pnpm/action-setup@v6\n      - uses: actions/setup-node@v6\n        with:\n          node-version-file: .node-version\n          cache: pnpm\n      - uses: actions/setup-python@v6\n        if: matrix.os != 'darwin'"
+        },
+        {
+          "line": 297,
+          "text": "    steps:\n      - uses: actions/checkout@v6\n        with:\n          persist-credentials: false\n      - uses: actions/setup-node@v6\n        with:\n          node-version-file: .node-version\n      - name: Require selected packaging verification\n        if: needs.packaged-scope.outputs.scope != 'full' || needs.packaged-scope.outputs.run != 'false'\n        env:\n          PACKAGED_SCOPE: ${{ needs.packaged-scope.outputs.scope }}\n          SCOPE_RESULT: ${{ needs.packaged-scope.result }}"
+        }
+      ]
+    },
+    {
+      "path": ".github/workflows/host-emulated-acceptance.yml",
+      "name": "Host Emulated Acceptance",
+      "types": "[opened, synchronize, reopened, ready_for_review, converted_to_draft]",
+      "matchedPaths": [
+        "scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+        "scripts/legacy-agent-host/desktop-task-review-cycle-ui-smoke.ts",
+        "src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts"
+      ],
+      "draftBehavior": "eligible; active jobs may run according to unchanged workflow policy",
+      "openedConcurrency": {
+        "group": "Host Emulated Acceptance-v2-pull_request-<NEW_PR_NUMBER>",
+        "cancelInProgress": true,
+        "literal": "concurrency:\n  group: ${{ github.workflow }}-v2-${{ github.event_name }}-${{ github.event_name == 'pull_request' && github.event.pull_request.number || (github.event_name == 'merge_group' || github.event_name == 'push' && github.ref_type == 'branch' && github.event.repository.default_branch != '' && github.ref_name != github.event.repository.default_branch && !startsWith(github.ref_name, 'release/')) && github.ref || github.run_id }}\n  cancel-in-progress: ${{ github.event_name == 'pull_request' || github.event_name == 'push' && github.ref_type == 'branch' && github.event.repository.default_branch != '' && github.ref_name != github.event.repository.default_branch && !startsWith(github.ref_name, 'release/') }}"
+      },
+      "checkoutEvidence": [
+        {
+          "line": 68,
+          "text": "    steps:\n      - uses: actions/checkout@v6\n        with:\n          ref: ${{ github.event.pull_request.head.sha || github.sha }}\n          persist-credentials: false\n      - uses: pnpm/action-setup@v6\n      - uses: actions/setup-node@v6\n        with:\n          node-version: 24.21.0\n          cache: pnpm\n      - name: Verify original checkout and runner tuple\n        run: |"
+        },
+        {
+          "line": 1188,
+          "text": "    steps:\n      - uses: actions/checkout@v6\n        with:\n          ref: ${{ github.event.pull_request.head.sha || github.sha }}\n          persist-credentials: false\n      - uses: pnpm/action-setup@v6\n      - uses: actions/setup-node@v6\n        with:\n          node-version: 24.21.0\n      - name: Verify source and capture the original Host test runtime\n        run: |\n          set -euo pipefail"
+        }
+      ]
+    },
+    {
+      "path": ".github/workflows/opencode-desktop-e2e.yml",
+      "name": "OpenCode diagnostics desktop E2E",
+      "types": "[opened, synchronize, reopened, ready_for_review, converted_to_draft]",
+      "matchedPaths": [
+        "src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts"
+      ],
+      "draftBehavior": "event eligible; all workflow jobs skip Draft",
+      "openedConcurrency": {
+        "group": "OpenCode diagnostics desktop E2E-pull_request-<NEW_PR_NUMBER>",
+        "cancelInProgress": true,
+        "literal": "concurrency:\n  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event_name == 'pull_request' && github.event.pull_request.number || (github.event_name == 'merge_group' || github.event_name == 'push' && github.ref_type == 'branch' && github.event.repository.default_branch != '' && github.ref_name != github.event.repository.default_branch && !startsWith(github.ref_name, 'release/')) && github.ref || github.run_id }}\n  cancel-in-progress: ${{ github.event_name == 'pull_request' || github.event_name == 'push' && github.ref_type == 'branch' && github.event.repository.default_branch != '' && github.ref_name != github.event.repository.default_branch && !startsWith(github.ref_name, 'release/') }}"
+      },
+      "checkoutEvidence": [
+        {
+          "line": 60,
+          "text": "    steps:\n      - uses: actions/checkout@v6\n      - name: Enable Windows long paths\n        if: runner.os == 'Windows'\n        shell: pwsh\n        run: git config --global core.longpaths true\n      - uses: pnpm/action-setup@v6\n      - uses: actions/setup-node@v6\n        with:\n          node-version-file: .node-version\n          cache: pnpm\n      - run: node ./scripts/ci/install-dependencies-with-retry.mjs"
+        }
+      ]
+    },
+    {
+      "path": ".github/workflows/opencode-v2-stage1-preflight.yml",
+      "name": "OpenCode V2 Stage1 static preflight (TEST only)",
+      "types": "[opened, synchronize, reopened]",
+      "matchedPaths": [
+        "scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+        "scripts/legacy-agent-host/desktop-task-review-cycle-ui-smoke.ts"
+      ],
+      "draftBehavior": "eligible; active jobs may run according to unchanged workflow policy",
+      "openedConcurrency": {
+        "group": "OpenCode V2 Stage1 static preflight (TEST only)-pull_request-<NEW_PR_NUMBER>",
+        "cancelInProgress": true,
+        "literal": "concurrency:\n  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event_name == 'pull_request' && github.event.pull_request.number || (github.event_name == 'merge_group' || github.event_name == 'push' && github.ref_type == 'branch' && github.event.repository.default_branch != '' && github.ref_name != github.event.repository.default_branch && !startsWith(github.ref_name, 'release/')) && github.ref || github.run_id }}\n  cancel-in-progress: ${{ github.event_name == 'pull_request' || github.event_name == 'push' && github.ref_type == 'branch' && github.event.repository.default_branch != '' && github.ref_name != github.event.repository.default_branch && !startsWith(github.ref_name, 'release/') }}"
+      },
+      "checkoutEvidence": [
+        {
+          "line": 62,
+          "text": "    steps:\n      - uses: actions/checkout@v6\n        with:\n          ref: ${{ github.event.pull_request.head.sha }}\n          persist-credentials: false\n      - name: Require immutable PR source HEAD\n        shell: bash\n        env:\n          EXPECTED_PR_HEAD: ${{ github.event.pull_request.head.sha }}\n        run: |\n          set -euo pipefail\n          test \"$(git rev-parse HEAD)\" = \"$EXPECTED_PR_HEAD\""
+        },
+        {
+          "line": 76,
+          "text": "      # to agree before returning even a static read-only candidate.\n      - uses: actions/checkout@v6\n        with:\n          ref: main\n          path: .current-product-lock\n          persist-credentials: false\n          sparse-checkout: runtime.lock.json\n          sparse-checkout-cone-mode: false\n      - name: Record exact current product commit\n        shell: bash\n        run: git -C .current-product-lock rev-parse HEAD\n      - uses: pnpm/action-setup@v6"
+        },
+        {
+          "line": 136,
+          "text": "    steps:\n      - uses: actions/checkout@v6\n        with:\n          ref: ${{ github.event.pull_request.head.sha }}\n          persist-credentials: false\n      - name: Require immutable PR native source HEAD\n        shell: bash\n        env:\n          EXPECTED_PR_HEAD: ${{ github.event.pull_request.head.sha }}\n        run: |\n          set -euo pipefail\n          test \"$(git rev-parse HEAD)\" = \"$EXPECTED_PR_HEAD\""
+        },
+        {
+          "line": 212,
+          "text": "    steps:\n      - uses: actions/checkout@v6\n        with:\n          ref: ${{ github.event.pull_request.head.sha }}\n          persist-credentials: false\n      - name: Require immutable PR source HEAD\n        shell: bash\n        env:\n          EXPECTED_PR_HEAD: ${{ github.event.pull_request.head.sha }}\n        run: |\n          set -euo pipefail\n          test \"$(git rev-parse HEAD)\" = \"$EXPECTED_PR_HEAD\""
+        },
+        {
+          "line": 362,
+          "text": "    steps:\n      - uses: actions/checkout@v6\n        with:\n          ref: ${{ github.event.pull_request.head.sha }}\n          persist-credentials: false\n      - name: Require immutable source HEAD and record actual runner tuple\n        shell: bash\n        run: |\n          set -euo pipefail\n          test \"$(git rev-parse HEAD)\" = \"$OPENCODE_V2_TEST_SOURCE_HEAD\"\n          uname -sm\n          if [ \"$RUNNER_OS\" = macOS ]; then /usr/sbin/sysctl -n kern.osversion; fi"
+        }
+      ]
+    }
+  ],
+  "activeWorkflowCount": 5,
+  "eventEligibleWorkflowCount": 7,
+  "draftSkippedWorkflowCount": 2,
+  "ciDraftExpectedOutcome": {
+    "policy": {
+      "bytes": 19265,
+      "sha256": "c89f9b195d5efb183db154f87f3fee0c4e30345e4f24c6797b9a99e09311e40e",
+      "gitBlob": "9d734783b4e273a4e4fbad27d4e51984646d436d"
+    },
+    "full": false,
+    "metadata": false,
+    "reuse": false,
+    "fullQualification": "expected failure with Draft feedback does not qualify for merge",
+    "qualification": "A green overall CI status is not expected for this Draft; classify actual producer controls separately and never call the full merge qualification passed."
+  },
+  "snapshotAndConcurrencyContract": [
+    "After final prospective-R1 docs publication, bind exact final working commit/tree/source-vector/workflow-tree externally; use it once as CI-head ref target. Do not substitute stale cba4af86 or a branch-tip name for that final immutable SHA.",
+    "Base snapshot target is exactly 77993819c233737f1e2b4c11c8ca1a5d360bcbe3. Read both new ref targets back; capture full head/base commits and trees. Recompute complete compare after final docs publication; only the same three source modifications and added evidence docs may differ.",
+    "Open exactly the selected same-repository Draft PR from CI head snapshot to CI base snapshot. Record response PR id/number/node_id/url, draft/open state, creation/update times, head/base repo IDs/full_names/refs/SHAs. No PR on the working branch is part of this venue.",
+    "Freeze both CI refs and new PR metadata while selected runs are active: no head push, base push, force push, rebase, label/title/body/base edits, Ready conversion, close/reopen, rerun or dispatch. Same-new-PR synchronize would replace active runs under current cancel-in-progress=true keys. Existing different PR numbers are isolated.",
+    "Working-branch evidence commits can be pushed immediately without moving either CI snapshot; its lack of a PR is root-observed advisory context and is to remain separate from the selected new PR.",
+    "Capture synthetic merge commit/ref/tree/parents independently from head/base. For the ancestor-base proposal its merge tree should join the final head tree; verify the actual relationship and never equate merge SHA with source SHA. CI run-name already prints head/base/merge/action/draft.",
+    "Announcements, Host jobs, Packaged smoke and Stage1 jobs explicitly check out PR head; CI and Packaged scope/gate use default PR merge checkout. Bind each executed checkout to the appropriate recorded commit, not only run.head_sha.",
+    "Stage1 static-preflight additionally reads main into .current-product-lock with runtime.lock.json sparse checkout and logs its actual commit. Preserve that separate observed product commit and lock blob/content identity; it is not the PR source head.",
+    "All selected run IDs and attempts are new and assigned to this exact new PR; no original-nine or frozen-PR/run polling or mutation is permitted. Later proposed source/snapshot changes remain outside this currently unselected advisory."
+  ],
+  "captureContract": {
+    "discovery": "After the single new PR action, list /repos/777genius/agent-teams-ai/actions/runs with event=pull_request, branch=<CI_HEAD_REF>, head_sha=<FINAL_HEAD_SHA>, created=<new-action-window>, exclude_pull_requests=false, per_page=100, page=N. Retain every raw page and total_count; join each selected run to exact new PR number/head/base/repository and action-time window. Do not use an unfiltered repository-wide or old-head census.",
+    "completeEnumeration": "Paginate to total_count/end, deduplicate IDs, and account for all seven event-eligible workflows including Draft-skipped ones. GitHub caps filtered run searches at1000; if hit, subdivide the same new-action creation window. No first-page-only wrapper can prove completeness. If run PR metadata is absent, verify via that new run/check-suite/event proof before selecting it.",
+    "runIdentityFields": [
+      "id",
+      "node_id",
+      "workflow_id",
+      "path",
+      "name",
+      "event",
+      "head_branch",
+      "head_sha",
+      "run_number",
+      "run_attempt",
+      "check_suite_id",
+      "check_suite_node_id",
+      "pull_requests including number/head/base",
+      "repository and head_repository IDs/full_names",
+      "display_title",
+      "created_at",
+      "run_started_at",
+      "updated_at",
+      "status",
+      "conclusion",
+      "html_url",
+      "jobs_url",
+      "artifacts_url",
+      "logs_url"
+    ],
+    "attemptIdentity": "Use /actions/runs/<NEW_RUN_ID>/attempts/<EXACT_ATTEMPT> and /actions/runs/<NEW_RUN_ID>/attempts/<EXACT_ATTEMPT>/jobs?per_page=100&page=N; capture all jobs/steps with run and attempt identities, runner labels/IDs/platform, start/end/status/conclusion. Expected initial attempt is1; no rerun selected. Never silently substitute a latest-attempt wrapper.",
+    "terminalCapture": "Observe selected new runs only until terminal, preserve all job outcomes including skips/cancellation/incomplete outcomes, and retrieve full decoded logs for selected new job IDs. Hash full retained text; step-summary wrappers are not full logs. Keep stdout/truncation/transport limitations explicit.",
+    "artifacts": "List /actions/runs/<NEW_RUN_ID>/artifacts?per_page=100&page=N through all pages. Record exact artifact ID/name/digest/size/expiry/creation times/workflow_run and its head identity; distinguish index metadata from archive content. Current generic GitHub fetch is UTF-8-only and does not download binary ZIP archives. Archive content or screenshot custody must not be claimed from index metadata alone.",
+    "capabilityEvidence": {
+      "runWrapper": "github_fetch_commit_workflow_runs filters pull_request and first page only",
+      "jobWrapper": "github_fetch_workflow_run_jobs latest attempt and first page only",
+      "artifactWrapper": "github_fetch_workflow_run_artifacts first page only",
+      "completeRead": "github_fetch supports paginated approved GET URLs; github_fetch_workflow_job_logs follows plaintext log redirect"
+    }
+  },
+  "officialDocumentation": [
+    {
+      "url": "https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows",
+      "references": [
+        "turn105view0",
+        "turn107view0"
+      ],
+      "usedFor": "Reference creation can trigger create; PR default types and head-vs-merge checkout; branch/path event filters."
+    },
+    {
+      "url": "https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax",
+      "references": [
+        "turn105view1",
+        "turn107view1"
+      ],
+      "usedFor": "Concurrency groups are repository-wide and case-insensitive; cancel-in-progress controls replacement."
+    },
+    {
+      "url": "https://docs.github.com/en/rest/actions/workflow-runs",
+      "references": [
+        "turn105view2",
+        "turn106view4"
+      ],
+      "usedFor": "Run-list filters, per_page maximum100, page, filtered search1000-result cap."
+    },
+    {
+      "url": "https://docs.github.com/en/rest/actions/workflow-jobs",
+      "references": [
+        "turn108view0",
+        "turn108view1"
+      ],
+      "usedFor": "Attempt-specific jobs and pagination; latest default unsuitable for attempt-exact custody; job logs plaintext endpoint."
+    },
+    {
+      "url": "https://docs.github.com/en/rest/actions/artifacts",
+      "references": [
+        "turn108view2",
+        "turn108view3"
+      ],
+      "usedFor": "Run artifact pagination, IDs,digest,expiry and workflow run identities."
+    }
+  ],
+  "ownershipLimits": {
+    "packagedBundledOrchestratorNoRealCli": "Guard and semantic own this separate pending route proof; this advisory does not authorize runtime before that proof and exact prospective R1 are complete.",
+    "providerCoverage": "Semantic owns selected coverage; no new tests added here.",
+    "noRuntimeQualificationClaim": true,
+    "noVenueSelected": true,
+    "noRefCreated": true,
+    "noPrCreated": true,
+    "noCiInvoked": true,
+    "noShellOrTargetCodeExecuted": true,
+    "noOriginalOrFrozenRunsRead": true,
+    "reportBlobOnlyWrite": true
+  },
+  "checks": [
+    {
+      "id": "scope-is-advisory",
+      "passed": true,
+      "detail": "No action selected or performed by this reviewer."
+    },
+    {
+      "id": "basis-exact-identity",
+      "passed": true,
+      "detail": "Full 1,423,178-byte source/workflow basis read and hashed."
+    },
+    {
+      "id": "current-commit-root",
+      "passed": true,
+      "detail": "Joins prior accepted actual publication."
+    },
+    {
+      "id": "base-commit-root",
+      "passed": true,
+      "detail": "Exact accepted ancestor."
+    },
+    {
+      "id": "workflow-root-anchors",
+      "passed": true,
+      "detail": "Complete shared .github tree d95091ab0edb488d6e418ffa789d0f07c447ecda."
+    },
+    {
+      "id": "workflow-tree-complete",
+      "passed": true,
+      "detail": "All 42 workflow leaves accounted."
+    },
+    {
+      "id": "full42-body-census",
+      "passed": true,
+      "detail": "42 independent full blob reads, 751,430 bytes."
+    },
+    {
+      "id": "workflow-full-identity:.github/workflows/announcements-content.yml",
+      "passed": true,
+      "detail": {
+        "bytes": 2301,
+        "sha256": "4380473bf81c1e8762e11d1803bb023e60308c5525c6c409531d9749ec7661d8",
+        "gitBlob": "d7d1c6fde200971f29defe95c2c0436a0318b499"
+      }
+    },
+    {
+      "id": "workflow-full-identity:.github/workflows/anthropic-compatible-status-e2e.yml",
+      "passed": true,
+      "detail": {
+        "bytes": 8602,
+        "sha256": "037e94e79d2b13136a2209f2a1dac2c65ee5bee117c8dcfcf11e71c106b2e8a0",
+        "gitBlob": "6ec8f76ef4036fde31daab73db1205cf9f7dfdd2"
+      }
+    },
+    {
+      "id": "workflow-full-identity:.github/workflows/anthropic-env-portability.yml",
+      "passed": true,
+      "detail": {
+        "bytes": 4713,
+        "sha256": "fee75fc9544498e419c45ddb3acdf6df20a387dc29c04009e8d450bea2fb5359",
+        "gitBlob": "d3fa7512b79b79dc64c1580dfdc42d63361ae68a"
+      }
+    },
+    {
+      "id": "workflow-full-identity:.github/workflows/build-linux-windows-draft.yml",
+      "passed": true,
+      "detail": {
+        "bytes": 17033,
+        "sha256": "4968e05cf86cb6252494c6a0778dd2bb43a6439b995f0fd769504ac0633ce501",
+        "gitBlob": "919dc9d816a5f7441783af22a286da9b1e4f6f8a"
+      }
+    },
+    {
+      "id": "workflow-full-identity:.github/workflows/ci.yml",
+      "passed": true,
+      "detail": {
+        "bytes": 175238,
+        "sha256": "8cac831e00dd87f656a971c6496b8278c7cfddc261f1eb48573a7e2acf83c2d1",
+        "gitBlob": "a93ff6ba1e5656523668694bca24910a468aebc7"
+      }
+    },
+    {
+      "id": "workflow-full-identity:.github/workflows/codeql.yml",
+      "passed": true,
+      "detail": {
+        "bytes": 2479,
+        "sha256": "d35b6d96c6d3582415b4feaf3144575f5d3a520c6e058c673ec15f95ddae5a7b",
+        "gitBlob": "406b6f790f1e1a260a9f974bf85e9cc6441ed1c1"
+      }
+    },
+    {
+      "id": "workflow-full-identity:.github/workflows/codex-runtime-smoke.yml",
+      "passed": true,
+      "detail": {
+        "bytes": 3229,
+        "sha256": "2d9b2fb19cb3d1e2797611254104bf5ab433b588427350747f0c0c6196f4490d",
+        "gitBlob": "cef44447c47e39a7da678f37e2518952e218da08"
+      }
+    },
+    {
+      "id": "workflow-full-identity:.github/workflows/dependency-review.yml",
+      "passed": true,
+      "detail": {
+        "bytes": 1527,
+        "sha256": "52570674031aecbba23cf8725e5aa09b58495421c8c9b21cef0e14a791ce27d0",
+        "gitBlob": "4a5f2ab17b3daf4ffdf6992ee85d159adf2c46c6"
+      }
+    },
+    {
+      "id": "workflow-full-identity:.github/workflows/electron-dev-profile-cross-platform.yml",
+      "passed": true,
+      "detail": {
+        "bytes": 3218,
+        "sha256": "c85dd3daa63c0d31b8c87e5fe4b935456f6c47dbf9a0be1f06b6b8fbfaf84d25",
+        "gitBlob": "490c2048dfbd9f275f784d7a0f1a6eeba0a9f361"
+      }
+    },
+    {
+      "id": "workflow-full-identity:.github/workflows/electron-packaged-ci.yml",
+      "passed": true,
+      "detail": {
+        "bytes": 19532,
+        "sha256": "443502b3620450fc174440d6bdf6db3777e97b7f00d56d42e2fbd624b569b73f",
+        "gitBlob": "0938e9f31bad7520fec025ebde6aad8e071cfe69"
+      }
+    },
+    {
+      "id": "workflow-full-identity:.github/workflows/host-emulated-acceptance.yml",
+      "passed": true,
+      "detail": {
+        "bytes": 96872,
+        "sha256": "5379894007246368728c518c08222be329d58bb2755dc80235709a033017805d",
+        "gitBlob": "9ec6dfb68e98480a12224528e2637153f4274a6b"
+      }
+    },
+    {
+      "id": "workflow-full-identity:.github/workflows/host-process-acceptance.yml",
+      "passed": true,
+      "detail": {
+        "bytes": 34313,
+        "sha256": "71b16b1b1fd1f0c88d3cb15a18cdfcce08b2b18908d3a5ce755330b4b2aeedf1",
+        "gitBlob": "70202d22a5840401a00025cd60b797c514f3e455"
+      }
+    },
+    {
+      "id": "workflow-full-identity:.github/workflows/kanban-table-desktop-e2e.yml",
+      "passed": true,
+      "detail": {
+        "bytes": 3335,
+        "sha256": "572df7cb9de920ed0685febc94f6ddd08f18d7d96312e8ed946933a63ccbcdb3",
+        "gitBlob": "95d681fe04abd838dd11799d7791fa59444c6e32"
+      }
+    },
+    {
+      "id": "workflow-full-identity:.github/workflows/landing-hetzner-release.yml",
+      "passed": true,
+      "detail": {
+        "bytes": 7306,
+        "sha256": "ad5337b9e4a36797703c0e340a9539f0c12f2739eed6805851fcfa8cb00d1290",
+        "gitBlob": "4b54f229156f9d347e1a33da0d83b3374acc4078"
+      }
+    },
+    {
+      "id": "workflow-full-identity:.github/workflows/landing.yml",
+      "passed": true,
+      "detail": {
+        "bytes": 5592,
+        "sha256": "1bda852e705b3b744b5b001e0fe3cb2d8fd80eaa3108d17787c076ad3b753b32",
+        "gitBlob": "4a1ad9ae59ff2e338930a195d54fdff62da1ebc5"
+      }
+    },
+    {
+      "id": "workflow-full-identity:.github/workflows/macos-signing-qualification.yml",
+      "passed": true,
+      "detail": {
+        "bytes": 9635,
+        "sha256": "409769be92f1d49ed74ffca6e4affe25f365d5bf4bc4f5a18a1deebea11c3a0d",
+        "gitBlob": "d63bddd51302a5c0380762bf22171f43c38a39b0"
+      }
+    },
+    {
+      "id": "workflow-full-identity:.github/workflows/opencode-desktop-e2e.yml",
+      "passed": true,
+      "detail": {
+        "bytes": 6719,
+        "sha256": "ea78e9c6002db433bb57087c3d4eac3d652412746b3a3d5d2aad0cb02e76d17e",
+        "gitBlob": "3d2a90a0e335155d435bd4eae4f2bd2842425983"
+      }
+    },
+    {
+      "id": "workflow-full-identity:.github/workflows/opencode-native-windows-e2e.yml",
+      "passed": true,
+      "detail": {
+        "bytes": 29178,
+        "sha256": "3f6ea47d1aac384382cca261686972222433330e9563a87b941d23ac345b8f80",
+        "gitBlob": "f5a2a472b752acf37399fc9e11f63f6d45bdb297"
+      }
+    },
+    {
+      "id": "workflow-full-identity:.github/workflows/opencode-packaged-e2e.yml",
+      "passed": true,
+      "detail": {
+        "bytes": 19616,
+        "sha256": "80a7c110468f22670a541dcf8cd452c6de754376f4ff970bbdf2888bd91fc2fe",
+        "gitBlob": "458e165ef020a1f8b05806b9ae7edc839134e1b4"
+      }
+    },
+    {
+      "id": "workflow-full-identity:.github/workflows/opencode-v2-cold-dashboard-e2e.yml",
+      "passed": true,
+      "detail": {
+        "bytes": 2756,
+        "sha256": "2bd119e64866ae18519f01be6e7bffc138d0ce7b1e32ce2329a35e59de5a87a3",
+        "gitBlob": "be6a9ae5a88efadca344773ed4aa962d42823d28"
+      }
+    },
+    {
+      "id": "workflow-full-identity:.github/workflows/opencode-v2-stage1-preflight.yml",
+      "passed": true,
+      "detail": {
+        "bytes": 36013,
+        "sha256": "fddd1aface758ef115a5e904151cb61dd78dca04d8f52fb99f4326ddaff53a14",
+        "gitBlob": "2f557dd4b74806e6a444c46656af07b52bc0fb4e"
+      }
+    },
+    {
+      "id": "workflow-full-identity:.github/workflows/prepare-updater-native-inputs.yml",
+      "passed": true,
+      "detail": {
+        "bytes": 8825,
+        "sha256": "6f69a0083fd03597029533db66f2f44fda629b2b3a127c62978809eb990db229",
+        "gitBlob": "51beb92ade4931fe04336c7d3908bacfc932269e"
+      }
+    },
+    {
+      "id": "workflow-full-identity:.github/workflows/provider-real-runtime-e2e.yml",
+      "passed": true,
+      "detail": {
+        "bytes": 8958,
+        "sha256": "9903545813f74656b4e78e53641449a7c4c09b6b3564263f83aa7f2f2f8f0737",
+        "gitBlob": "4ee30807aa18f043fe53d090bfb6211bb5458ce0"
+      }
+    },
+    {
+      "id": "workflow-full-identity:.github/workflows/publish-carried-release.yml",
+      "passed": true,
+      "detail": {
+        "bytes": 3908,
+        "sha256": "b360d26ec6945d7e6d53090860f6ffb4001827db8df8cffcc29007222cfb0546",
+        "gitBlob": "371ed6d3b2cf4e41c012da287a295783c39c426e"
+      }
+    },
+    {
+      "id": "workflow-full-identity:.github/workflows/recover-existing-draft-payloads.yml",
+      "passed": true,
+      "detail": {
+        "bytes": 1905,
+        "sha256": "b1c53692156cd7a56178dca761a942fc9471d5ca7fd182699b918d3165aeb2db",
+        "gitBlob": "eadeedf4381cbf1d7e32cd31105dd88cd2c8eb65"
+      }
+    },
+    {
+      "id": "workflow-full-identity:.github/workflows/release-publication-guard.yml",
+      "passed": true,
+      "detail": {
+        "bytes": 2706,
+        "sha256": "3e59073acae4e5a536a6c3e8a5ddadbd78e095cff4a87eb84a317173fe22dcac",
+        "gitBlob": "10b7abd2992cc740084a5c51ace7f3fe025220f9"
+      }
+    },
+    {
+      "id": "workflow-full-identity:.github/workflows/release.yml",
+      "passed": true,
+      "detail": {
+        "bytes": 46671,
+        "sha256": "22803b1c55d071932b59b66cd2802e31a3a528fc60db94f9b22a94b699048051",
+        "gitBlob": "d28bee6dea87ec191f0d40670f3e68c48251d049"
+      }
+    },
+    {
+      "id": "workflow-full-identity:.github/workflows/reviewrouter-interaction.yml",
+      "passed": true,
+      "detail": {
+        "bytes": 4238,
+        "sha256": "72904ac011de713511f51cd05d7f6d8e145ef537e3ae871e5b872f204de1b339",
+        "gitBlob": "edb68c51f54ad4a792eb29f1f557aad48e3a6218"
+      }
+    },
+    {
+      "id": "workflow-full-identity:.github/workflows/reviewrouter-review.yml",
+      "passed": true,
+      "detail": {
+        "bytes": 912,
+        "sha256": "d30c359c172a2d2e6ad8af7b5557894ae8d601f5f4957a87153aa93810966cc4",
+        "gitBlob": "04964f8ac7beadb3277fb28ec9cc0d61b86ca84b"
+      }
+    },
+    {
+      "id": "workflow-full-identity:.github/workflows/runtime-bootstrap-smoke.yml",
+      "passed": true,
+      "detail": {
+        "bytes": 5079,
+        "sha256": "65e296bb4946582ca3745930f1ecf0b16df481d38fb591a06c26f80529881f15",
+        "gitBlob": "4020f668ab2a9a7b16fcb0aa7fd2d79a061f1d44"
+      }
+    },
+    {
+      "id": "workflow-full-identity:.github/workflows/sentry-owned-process-native.yml",
+      "passed": true,
+      "detail": {
+        "bytes": 39878,
+        "sha256": "2d84faae57ad758575935dc760df6561d219f16ee8c0bd615006ca3d88837357",
+        "gitBlob": "1188fa5b89d59b739d927082d1b6954a57181819"
+      }
+    },
+    {
+      "id": "workflow-full-identity:.github/workflows/stage-existing-partial-draft.yml",
+      "passed": true,
+      "detail": {
+        "bytes": 5418,
+        "sha256": "1644a7dd73642776d00077ab00d6f862679eb890cb5b154042f51dae30b6c37c",
+        "gitBlob": "295dbf212e13b15505696d997ec7c45b4ee3cfa9"
+      }
+    },
+    {
+      "id": "workflow-full-identity:.github/workflows/teams-create-page-desktop-e2e.yml",
+      "passed": true,
+      "detail": {
+        "bytes": 6522,
+        "sha256": "f57bf21347769c79b9c8c21f6f35b40b772fbfe9cb5f8155d7daabb54499d15f",
+        "gitBlob": "ef939f224a1642cb596906324c8d61441780ccc7"
+      }
+    },
+    {
+      "id": "workflow-full-identity:.github/workflows/updater-linux-packages.yml",
+      "passed": true,
+      "detail": {
+        "bytes": 21602,
+        "sha256": "37710e0293dcb00b31df74062b52a52a77f1c22f2e37d8ce2150c668baa98074",
+        "gitBlob": "60d214756c640b7925cfe11ba45ed4009f27ca3c"
+      }
+    },
+    {
+      "id": "workflow-full-identity:.github/workflows/updater-mac-manual-migration.yml",
+      "passed": true,
+      "detail": {
+        "bytes": 5900,
+        "sha256": "40898d8173495bcbe67effb3912294c355aafd42e020e1d099040b184c127d4f",
+        "gitBlob": "4aa3a4181259514c5a43fbc7dd4ad98811a3588e"
+      }
+    },
+    {
+      "id": "workflow-full-identity:.github/workflows/updater-mac-old-updater.yml",
+      "passed": true,
+      "detail": {
+        "bytes": 12460,
+        "sha256": "dfb731e1620c1bfe47b51cd2af5e9c90c7c46eaa3841b39c7993d7938224b71f",
+        "gitBlob": "067a25687f36caefe156b0446c5056d230d27c62"
+      }
+    },
+    {
+      "id": "workflow-full-identity:.github/workflows/updater-mac-source.yml",
+      "passed": true,
+      "detail": {
+        "bytes": 7512,
+        "sha256": "216b64cf04a7b5bebf527ffb21bfe3df0c12bcd828450a377bb67dc59540e025",
+        "gitBlob": "1196e40faa99e0ab64e329d91f3fea7c6ed47f94"
+      }
+    },
+    {
+      "id": "workflow-full-identity:.github/workflows/updater-mac-updater.yml",
+      "passed": true,
+      "detail": {
+        "bytes": 12323,
+        "sha256": "c71f29ef00ea623a30d11e3fa40ebc1d0fadd8a77f4552687c54b0527f4768db",
+        "gitBlob": "950f95892277ae303772ac699915250f0f4f66af"
+      }
+    },
+    {
+      "id": "workflow-full-identity:.github/workflows/updater-native-feasibility.yml",
+      "passed": true,
+      "detail": {
+        "bytes": 13476,
+        "sha256": "8fe371aab977f9ce0d54086c11e508ed7b370780db344b93efd3592d3b4a09ce",
+        "gitBlob": "b55e6cbcb4de61e2e8688e1ff4b4529b043a4ada"
+      }
+    },
+    {
+      "id": "workflow-full-identity:.github/workflows/updater-windows-ota.yml",
+      "passed": true,
+      "detail": {
+        "bytes": 27610,
+        "sha256": "3dcf1d333467391acd418869d6676c18d1193bb81d36040da358bd7e0f62743f",
+        "gitBlob": "10ffcd79e48a71346df7545af638208ce039ad83"
+      }
+    },
+    {
+      "id": "workflow-full-identity:.github/workflows/updater-windows.yml",
+      "passed": true,
+      "detail": {
+        "bytes": 11849,
+        "sha256": "1be54468be42e72674c01f5b94c58789fbf75a3e4d7ac6deff312738f2b1f5e2",
+        "gitBlob": "a4e9375cb95c4129c503f1d7be82de1e3926ea62"
+      }
+    },
+    {
+      "id": "workflow-full-identity:.github/workflows/windows-backfill-diagnostic.yml",
+      "passed": true,
+      "detail": {
+        "bytes": 14471,
+        "sha256": "adfdc03d5de437d308916da76774a1e4ca31aa5786f4ea2fe2fae4e1a2127c2c",
+        "gitBlob": "44bec5d82998468d48ac539f3624d0c2de1c6648"
+      }
+    },
+    {
+      "id": "all53-current-nondoc-roots",
+      "passed": true,
+      "detail": "All current non-doc root entries match source/workflow basis."
+    },
+    {
+      "id": "source9-current-literal-join",
+      "passed": true,
+      "detail": "All nine complete current source bodies hash and join accepted actual source report."
+    },
+    {
+      "id": "source-vector388",
+      "passed": true,
+      "detail": "Current published source remains exact accepted vector."
+    },
+    {
+      "id": "compare-complete-threecommits",
+      "passed": true,
+      "detail": "Independent fixed-SHA compare."
+    },
+    {
+      "id": "compare41paths",
+      "passed": true,
+      "detail": "Only the three reviewed producer sources differ outside docs."
+    },
+    {
+      "id": "compare-exact-three-source-blobs",
+      "passed": true,
+      "detail": "Exact selected source identities; no removed files."
+    },
+    {
+      "id": "on-block-format-census",
+      "passed": true,
+      "detail": "All 42 use explicit indentation-based on mappings; no omitted scalar/inline trigger."
+    },
+    {
+      "id": "no-create-workflowrun-prtarget",
+      "passed": true,
+      "detail": "No matching automatic routes in reviewed workflow set."
+    },
+    {
+      "id": "eleven-push-declarations",
+      "passed": true,
+      "detail": "Ten main-only workflows; CI additionally allows exactly two established integration branches."
+    },
+    {
+      "id": "newref-push-filter-exclusion:ci/frontend-parity-c714-20261117-base",
+      "passed": true,
+      "detail": "Any push event associated with creating this exact branch fails every current push branch filter."
+    },
+    {
+      "id": "newref-observed-absent:ci/frontend-parity-c714-20261117-base",
+      "passed": true,
+      "detail": "Independent read-only authenticated Git-ref GET returned 404 during this advisory."
+    },
+    {
+      "id": "newref-push-filter-exclusion:ci/frontend-parity-c714-20261117-head",
+      "passed": true,
+      "detail": "Any push event associated with creating this exact branch fails every current push branch filter."
+    },
+    {
+      "id": "newref-observed-absent:ci/frontend-parity-c714-20261117-head",
+      "passed": true,
+      "detail": "Independent read-only authenticated Git-ref GET returned 404 during this advisory."
+    },
+    {
+      "id": "exact-seven-opened-path-selections",
+      "passed": true,
+      "detail": "All 41 actual paths checked against 28 PR trigger path filters; no PR branch filters."
+    },
+    {
+      "id": "all-seven-opened-type",
+      "passed": true,
+      "detail": "Opened event selected explicitly or through default types."
+    },
+    {
+      "id": "no-prbranch-pathsign-ambiguity",
+      "passed": true,
+      "detail": "No PR branch filter or paths-ignore alters this exact map."
+    },
+    {
+      "id": "draft-skips-codeql",
+      "passed": true,
+      "detail": "Only analyze job skipped for Draft."
+    },
+    {
+      "id": "draft-skips-opencode-desktop",
+      "passed": true,
+      "detail": "Only desktop job skipped for Draft."
+    },
+    {
+      "id": "host-process-not-selected",
+      "passed": true,
+      "detail": "No changed path matches Host Process Acceptance."
+    },
+    {
+      "id": "ci-feedback-helper-current",
+      "passed": true,
+      "detail": "Complete 19,265-byte policy body read/hash/root-joined."
+    },
+    {
+      "id": "ci-draft-fast-policy",
+      "passed": true,
+      "detail": "Opened valid Draft gets full=false, metadata=false, reuse=false."
+    },
+    {
+      "id": "ci-draft-fullgate-intentional-failure",
+      "passed": true,
+      "detail": "Expected Full qualification failure is policy, not a producer-test assertion."
+    },
+    {
+      "id": "unique-selected-workflow-names",
+      "passed": true,
+      "detail": "No selected-workflow concurrency name collision."
+    },
+    {
+      "id": "all-selected-pr-scoped-concurrency",
+      "passed": true,
+      "detail": "All opened concurrency groups include the NEW PR number; cancel expression evaluates true for opened PR."
+    },
+    {
+      "id": "no-selected-reusable-job-dispatch",
+      "passed": true,
+      "detail": "No job-level workflow_call expands this trigger enumeration."
+    },
+    {
+      "id": "refinement-isolated-head",
+      "passed": true,
+      "detail": "Selected PR will reference immutable CI snapshot head, not the mutable working branch."
+    }
+  ],
+  "passedChecks": [
+    "scope-is-advisory",
+    "basis-exact-identity",
+    "current-commit-root",
+    "base-commit-root",
+    "workflow-root-anchors",
+    "workflow-tree-complete",
+    "full42-body-census",
+    "workflow-full-identity:.github/workflows/announcements-content.yml",
+    "workflow-full-identity:.github/workflows/anthropic-compatible-status-e2e.yml",
+    "workflow-full-identity:.github/workflows/anthropic-env-portability.yml",
+    "workflow-full-identity:.github/workflows/build-linux-windows-draft.yml",
+    "workflow-full-identity:.github/workflows/ci.yml",
+    "workflow-full-identity:.github/workflows/codeql.yml",
+    "workflow-full-identity:.github/workflows/codex-runtime-smoke.yml",
+    "workflow-full-identity:.github/workflows/dependency-review.yml",
+    "workflow-full-identity:.github/workflows/electron-dev-profile-cross-platform.yml",
+    "workflow-full-identity:.github/workflows/electron-packaged-ci.yml",
+    "workflow-full-identity:.github/workflows/host-emulated-acceptance.yml",
+    "workflow-full-identity:.github/workflows/host-process-acceptance.yml",
+    "workflow-full-identity:.github/workflows/kanban-table-desktop-e2e.yml",
+    "workflow-full-identity:.github/workflows/landing-hetzner-release.yml",
+    "workflow-full-identity:.github/workflows/landing.yml",
+    "workflow-full-identity:.github/workflows/macos-signing-qualification.yml",
+    "workflow-full-identity:.github/workflows/opencode-desktop-e2e.yml",
+    "workflow-full-identity:.github/workflows/opencode-native-windows-e2e.yml",
+    "workflow-full-identity:.github/workflows/opencode-packaged-e2e.yml",
+    "workflow-full-identity:.github/workflows/opencode-v2-cold-dashboard-e2e.yml",
+    "workflow-full-identity:.github/workflows/opencode-v2-stage1-preflight.yml",
+    "workflow-full-identity:.github/workflows/prepare-updater-native-inputs.yml",
+    "workflow-full-identity:.github/workflows/provider-real-runtime-e2e.yml",
+    "workflow-full-identity:.github/workflows/publish-carried-release.yml",
+    "workflow-full-identity:.github/workflows/recover-existing-draft-payloads.yml",
+    "workflow-full-identity:.github/workflows/release-publication-guard.yml",
+    "workflow-full-identity:.github/workflows/release.yml",
+    "workflow-full-identity:.github/workflows/reviewrouter-interaction.yml",
+    "workflow-full-identity:.github/workflows/reviewrouter-review.yml",
+    "workflow-full-identity:.github/workflows/runtime-bootstrap-smoke.yml",
+    "workflow-full-identity:.github/workflows/sentry-owned-process-native.yml",
+    "workflow-full-identity:.github/workflows/stage-existing-partial-draft.yml",
+    "workflow-full-identity:.github/workflows/teams-create-page-desktop-e2e.yml",
+    "workflow-full-identity:.github/workflows/updater-linux-packages.yml",
+    "workflow-full-identity:.github/workflows/updater-mac-manual-migration.yml",
+    "workflow-full-identity:.github/workflows/updater-mac-old-updater.yml",
+    "workflow-full-identity:.github/workflows/updater-mac-source.yml",
+    "workflow-full-identity:.github/workflows/updater-mac-updater.yml",
+    "workflow-full-identity:.github/workflows/updater-native-feasibility.yml",
+    "workflow-full-identity:.github/workflows/updater-windows-ota.yml",
+    "workflow-full-identity:.github/workflows/updater-windows.yml",
+    "workflow-full-identity:.github/workflows/windows-backfill-diagnostic.yml",
+    "all53-current-nondoc-roots",
+    "source9-current-literal-join",
+    "source-vector388",
+    "compare-complete-threecommits",
+    "compare41paths",
+    "compare-exact-three-source-blobs",
+    "on-block-format-census",
+    "no-create-workflowrun-prtarget",
+    "eleven-push-declarations",
+    "newref-push-filter-exclusion:ci/frontend-parity-c714-20261117-base",
+    "newref-observed-absent:ci/frontend-parity-c714-20261117-base",
+    "newref-push-filter-exclusion:ci/frontend-parity-c714-20261117-head",
+    "newref-observed-absent:ci/frontend-parity-c714-20261117-head",
+    "exact-seven-opened-path-selections",
+    "all-seven-opened-type",
+    "no-prbranch-pathsign-ambiguity",
+    "draft-skips-codeql",
+    "draft-skips-opencode-desktop",
+    "host-process-not-selected",
+    "ci-feedback-helper-current",
+    "ci-draft-fast-policy",
+    "ci-draft-fullgate-intentional-failure",
+    "unique-selected-workflow-names",
+    "all-selected-pr-scoped-concurrency",
+    "no-selected-reusable-job-dispatch",
+    "refinement-isolated-head"
+  ],
+  "failedChecks": [],
+  "unresolvedBlockers": [],
+  "unresolvedPointers": [],
+  "qualification": "All assigned trigger, snapshot binding and capture analyses are accepted as advisory for the exact stated branch names and source/workflow-identical final head. It is neither the forthcoming exact R1 nor a new-venue execution gate."
+}

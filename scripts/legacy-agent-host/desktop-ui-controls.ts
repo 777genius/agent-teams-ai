@@ -194,6 +194,7 @@ export function createDesktopUiControls(
       options.assertOwnedRenderer();
       try {
         const value = await cdp.evaluate(expression);
+        if (Date.now() >= deadline) break;
         if (isReady(value)) return value;
       } catch (error) {
         if (

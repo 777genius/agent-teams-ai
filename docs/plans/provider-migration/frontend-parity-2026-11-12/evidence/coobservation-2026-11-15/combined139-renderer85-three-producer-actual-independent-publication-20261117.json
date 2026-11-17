@@ -1,0 +1,3081 @@
+{
+  "schemaVersion": 1,
+  "kind": "combined139-renderer85-three-producer-actual-independent-publication-readback",
+  "reviewer": "/root/red_publication_recovery",
+  "at": "2026-11-17 01:59:26 UTC",
+  "repository": "777genius/agent-teams-ai",
+  "branch": "fix/frontend-parity-coobservation-c714-20261115",
+  "verdict": "ACCEPT_EXACT_ACTUAL_THREE_PRODUCER_SOURCE_PUBLICATION",
+  "accepted": true,
+  "actualCommit": "b83da2bb72ada6e9fb3a426cb2a7d62b30ec4871",
+  "actualTree": "5ef5abf3c6aadd53340f457ea7f77e6b69f84878",
+  "actualDocsTree": "ca906a27438211f8261ea22cf3b916599be3216e",
+  "soleParent": "77993819c233737f1e2b4c11c8ca1a5d360bcbe3",
+  "parentTree": "ada3f27db78fabc17a91e3904d41b8bc547c6dca",
+  "parentDocsTree": "a1b92f625b548e7384ef13e0358c420d1e1f136d",
+  "actualBranchHead": "b83da2bb72ada6e9fb3a426cb2a7d62b30ec4871",
+  "manifest": {
+    "bytes": 15180,
+    "sha256": "25dd8d8f0e59fb6be9e66eb6d7eba4e30103c2ed7d0d005c6cc2b8093fbac91f",
+    "gitBlob": "9ae8f0d2eaadc7e481a60ae594871c647d478c26"
+  },
+  "subject": {
+    "sourceFiles": [
+      {
+        "path": "scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+        "identity": {
+          "bytes": 45795,
+          "sha256": "2c5931f5c7fa1dc8bb7858201c1b8afdbae9683faf4a2ad9fce067f116f3f94b",
+          "gitBlob": "5026f0ec6165bb092717ddc989043848a25081dc"
+        }
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-task-review-cycle-ui-smoke.ts",
+        "identity": {
+          "bytes": 33036,
+          "sha256": "4fa52cfad9347065680ef62a3ba6420762408a78a93b77e96ac3a2e16e68bdc9",
+          "gitBlob": "8d175c98158b3bd71192aef7b1929484b2b681b6"
+        }
+      },
+      {
+        "path": "src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts",
+        "identity": {
+          "bytes": 74340,
+          "sha256": "647ac5732bfd6b5cb57834adb4ad22c32ee5dfb018a934c92f982efd9daa531c",
+          "gitBlob": "c2faa156015707bc5fbd7f8123a7ffd9c4faa486"
+        }
+      }
+    ],
+    "beforeSourceVector": {
+      "bytes": 2118,
+      "sha256": "f2574559a378b3bc537fdcedbde161003c8344a5485dfff9322214f6fda2a90c",
+      "gitBlob": "f6446bdc2bbdb511206c729a1f03717871baea6d"
+    },
+    "sourceVector": {
+      "bytes": 2118,
+      "sha256": "6007c5c7ba2f74c43bd9b73c50cae2319eacbf712c233cc0d67b3efbb4c6894d",
+      "gitBlob": "3887991d5dbd25dbec5c8656e8e03d423ea502b7"
+    },
+    "sourcePins": [
+      {
+        "path": "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+        "mode": "100644",
+        "bytes": 24759,
+        "sha256": "d15b7eea14c0951194310aee34ddc5c477879c759a97a4e2f4e9fce1f956ce9b",
+        "gitBlob": "cf93da72a198dac636658e512093eef7828b5927"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+        "mode": "100644",
+        "bytes": 45795,
+        "sha256": "2c5931f5c7fa1dc8bb7858201c1b8afdbae9683faf4a2ad9fce067f116f3f94b",
+        "gitBlob": "5026f0ec6165bb092717ddc989043848a25081dc"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts",
+        "mode": "100644",
+        "bytes": 36260,
+        "sha256": "26357f37b146fc171bbceadb624bde4a7f4e459d2073ae23a651e757817b2d38",
+        "gitBlob": "4700a0052d3c58a2b3d9bc66e6803220688050fd"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+        "mode": "100644",
+        "bytes": 8457,
+        "sha256": "2da55bb40a5689ace0e922dc4867d7c73278d9a1cd200ea8c4602ca68f82da3b",
+        "gitBlob": "3c7b4bb53f4259ac0795d3f92fb715887acb554f"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-task-review-cycle-ui-smoke.ts",
+        "mode": "100644",
+        "bytes": 33036,
+        "sha256": "4fa52cfad9347065680ef62a3ba6420762408a78a93b77e96ac3a2e16e68bdc9",
+        "gitBlob": "8d175c98158b3bd71192aef7b1929484b2b681b6"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+        "mode": "100644",
+        "bytes": 164965,
+        "sha256": "852bedb85c83dbc4b488dffb4a9ffebbe398adc53e85f5a3cea8ca36b146cbf7",
+        "gitBlob": "896c587e077da56a98a314a175fb3cba0353d6ee"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+        "mode": "100644",
+        "bytes": 28974,
+        "sha256": "7626e479a6662242009cb050e7e5af612a29e4205d62666d15274d5c30f91386",
+        "gitBlob": "ed57cb0fe7d57ef076a591621289eb77667c63ad"
+      },
+      {
+        "path": "src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts",
+        "mode": "100644",
+        "bytes": 74340,
+        "sha256": "647ac5732bfd6b5cb57834adb4ad22c32ee5dfb018a934c92f982efd9daa531c",
+        "gitBlob": "c2faa156015707bc5fbd7f8123a7ffd9c4faa486"
+      },
+      {
+        "path": "test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts",
+        "mode": "100644",
+        "bytes": 187890,
+        "sha256": "b6f11896e60014aac785968d42390afde38716d47de9bba9562522235db048c9",
+        "gitBlob": "76495189c992fcda47cd7a43a0c697190b5acbb3"
+      }
+    ],
+    "tests": {
+      "node": {
+        "bytes": 164965,
+        "sha256": "852bedb85c83dbc4b488dffb4a9ffebbe398adc53e85f5a3cea8ca36b146cbf7",
+        "gitBlob": "896c587e077da56a98a314a175fb3cba0353d6ee"
+      },
+      "renderer": {
+        "bytes": 187890,
+        "sha256": "b6f11896e60014aac785968d42390afde38716d47de9bba9562522235db048c9",
+        "gitBlob": "76495189c992fcda47cd7a43a0c697190b5acbb3"
+      }
+    }
+  },
+  "method": {
+    "operations": "Read-only Git API full blobs, actual commit/ref/root and complete root-anchored subtrees; pure UTF-8 identity calculation and literal data comparisons. Only this bare report blob is authored.",
+    "targetCodeEvaluated": false,
+    "shellInvoked": false,
+    "targetRuntimeInvoked": false,
+    "sourceOrRefOrCiMutation": false,
+    "identityHelper": {
+      "bytes": 3982,
+      "sha256": "cd3d5b96a5508215010923078469cc718282f17d765f6af493913c157bdf3db7",
+      "gitBlob": "e4a4568d589e1254b88ade1a5f87d53924e7c2e8"
+    },
+    "fullRootRecursiveTransport": "Known unavailable; no root census inferred from a truncated response. All changed docs/scripts/src trees were read completely and anchored to actual current and parent roots. The full unchanged test tree was reused only after joining its exact actual root entry.",
+    "inheritedImmutableProofs": "Accepted full prior RED actual readback and full source R2 bodies are actual current published evidence. Unchanged historical runtime, large-input and old-attempt proofs are reused without recursive historical audit or a fresh physical/runtime census."
+  },
+  "fullActualBodyReadbacks": [
+    {
+      "path": "scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+      "bytes": 45795,
+      "sha256": "2c5931f5c7fa1dc8bb7858201c1b8afdbae9683faf4a2ad9fce067f116f3f94b",
+      "gitBlob": "5026f0ec6165bb092717ddc989043848a25081dc",
+      "tree": "800c50d1b9cd5e538bd889a1f24475084ef5ff57",
+      "fullBodyReadAndRehashed": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-task-review-cycle-ui-smoke.ts",
+      "bytes": 33036,
+      "sha256": "4fa52cfad9347065680ef62a3ba6420762408a78a93b77e96ac3a2e16e68bdc9",
+      "gitBlob": "8d175c98158b3bd71192aef7b1929484b2b681b6",
+      "tree": "800c50d1b9cd5e538bd889a1f24475084ef5ff57",
+      "fullBodyReadAndRehashed": true
+    },
+    {
+      "path": "src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts",
+      "bytes": 74340,
+      "sha256": "647ac5732bfd6b5cb57834adb4ad22c32ee5dfb018a934c92f982efd9daa531c",
+      "gitBlob": "c2faa156015707bc5fbd7f8123a7ffd9c4faa486",
+      "tree": "56bda382944632ec0cc1d2fa94cf574bed0e73c5",
+      "fullBodyReadAndRehashed": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-post-transport-recovery-red-actual-root-publication-20261117.json",
+      "bytes": 55348,
+      "sha256": "bbe57a54a25a38bee1d4f4de5fc1d036d81f6b2ecdb40b3d0088b274de6656c9",
+      "gitBlob": "9218839ef55406b01267605c040bc586c7d443be",
+      "tree": "ca906a27438211f8261ea22cf3b916599be3216e",
+      "fullBodyReadAndRehashed": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-post-transport-recovery-red-actual-independent-publication-20261117.json",
+      "bytes": 166393,
+      "sha256": "cbe1880831780d10a7131282ab2ecc37d81fbdede3c53a265c1749ea863c20f2",
+      "gitBlob": "e5c2c2d8c84c0d491e334f6d67774cf23c83948f",
+      "tree": "ca906a27438211f8261ea22cf3b916599be3216e",
+      "fullBodyReadAndRehashed": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-producer-authorship-gate-20261117.json",
+      "bytes": 4327,
+      "sha256": "3231731b2a22cb3903ccff6991341b54c673cd7064599b9aa7238fe07e3c6b18",
+      "gitBlob": "2780955d0a71956a75650ddf4d8a0ff0576faa57",
+      "tree": "ca906a27438211f8261ea22cf3b916599be3216e",
+      "fullBodyReadAndRehashed": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-three-producer-source-r2-proposal-20261117.json",
+      "bytes": 25372,
+      "sha256": "7def167b3384043abb2cea83e90c51ea332f2c12a9f4fc3ca1ddcf1531bab85c",
+      "gitBlob": "b0d4fb7c7ca2fc486fda6823ee3c3618171f8cdc",
+      "tree": "ca906a27438211f8261ea22cf3b916599be3216e",
+      "fullBodyReadAndRehashed": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-three-producer-root-source-r2-review-20261117.json",
+      "bytes": 17023,
+      "sha256": "30aa0b71c8c7cdb32d88db381e7396ec2e543ea977d80e93ee8297bd9f3304f3",
+      "gitBlob": "e4119f144e4a79e7c7b6a1598a33a70388df207f",
+      "tree": "ca906a27438211f8261ea22cf3b916599be3216e",
+      "fullBodyReadAndRehashed": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-three-producer-guard-source-r2-review-20261117.json",
+      "bytes": 245598,
+      "sha256": "0bdbb65827d3717684d09ea1e35a2528b2ea4ee36143e4d3abe3601bf8bb8022",
+      "gitBlob": "ce6997eef4cc5989fb1c5437a23ef490bc74377a",
+      "tree": "ca906a27438211f8261ea22cf3b916599be3216e",
+      "fullBodyReadAndRehashed": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-three-producer-semantic-source-r2-review-20261117.json",
+      "bytes": 70998,
+      "sha256": "3a3fe8dcf619204191b0db04023c5293fd24e433b74f2bf801f07bbc395d0f6c",
+      "gitBlob": "0c3db6a22e1f652ca30d085de23217fc52eb5e51",
+      "tree": "ca906a27438211f8261ea22cf3b916599be3216e",
+      "fullBodyReadAndRehashed": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-three-producer-binding-source-r2-review-20261117.json",
+      "bytes": 47779,
+      "sha256": "ce13ee532bbca6a6181f95a97815e6c122be0a0adb46220ba61fd8b7c4029faa",
+      "gitBlob": "c2357e52f57abe45cd77d1ff0844aaa16d1095a6",
+      "tree": "ca906a27438211f8261ea22cf3b916599be3216e",
+      "fullBodyReadAndRehashed": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/29-reconciled-acceptance-and-custody-followups-2026-11-15.md",
+      "bytes": 2563641,
+      "sha256": "5d678bfaa13d9ce9b175ccfe5d3446e0d59f9c7a82adc2414459e4f2ddb22953",
+      "gitBlob": "45045d83208b87845e0f1e363da306ee25d77031",
+      "tree": "ca906a27438211f8261ea22cf3b916599be3216e",
+      "fullBodyReadAndRehashed": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/continuation-status-20261116.md",
+      "bytes": 47811,
+      "sha256": "e0ac9007c538de1a1466d0bc87545cd7592e661ed4ebae17786c3e98974f1da5",
+      "gitBlob": "ab8c41a609735ebcbaa499f89efb308fa4a98d0b",
+      "tree": "ca906a27438211f8261ea22cf3b916599be3216e",
+      "fullBodyReadAndRehashed": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1213-retention-catalog-20261116.json",
+      "bytes": 230200,
+      "sha256": "74d391b5458e4e53588f8616e0a522fee7b4f705aa4cf6810cfda4dc73f52fe9",
+      "gitBlob": "330bfd617fd812e47ea070cea8b86cef1e047f5d",
+      "tree": "ca906a27438211f8261ea22cf3b916599be3216e",
+      "fullBodyReadAndRehashed": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-three-producer-publication-manifest-20261117.json",
+      "bytes": 15180,
+      "sha256": "25dd8d8f0e59fb6be9e66eb6d7eba4e30103c2ed7d0d005c6cc2b8093fbac91f",
+      "gitBlob": "9ae8f0d2eaadc7e481a60ae594871c647d478c26",
+      "tree": "ca906a27438211f8261ea22cf3b916599be3216e",
+      "fullBodyReadAndRehashed": true
+    }
+  ],
+  "completeActualBodyBytes": 3642841,
+  "fullParentModifiedBodyReadbacks": [
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/29-reconciled-acceptance-and-custody-followups-2026-11-15.md",
+      "bytes": 2560337,
+      "sha256": "1ea54bc9f596e274c1bd2e0207742b8c453efcfda7b57f345bf7395df2dbda83",
+      "gitBlob": "b4c035726a57b68ddfdf7e0fe8eebcbf5d84b10d",
+      "tree": "a1b92f625b548e7384ef13e0358c420d1e1f136d",
+      "fullBodyReadAndRehashed": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/continuation-status-20261116.md",
+      "bytes": 46758,
+      "sha256": "e50f8e11d74d42feb4897f00050ef6f60b71e66ccbdecf8fef1698a48074844d",
+      "gitBlob": "6eccc39aa5580df54dc86f2917e67f980d5574de",
+      "tree": "a1b92f625b548e7384ef13e0358c420d1e1f136d",
+      "fullBodyReadAndRehashed": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1213-retention-catalog-20261116.json",
+      "bytes": 197602,
+      "sha256": "3c8ec7dd7b8257e0df08e77a0c7cd43226a5d69f449614e8dc9baab03fbfc310",
+      "gitBlob": "dc80f5b02f336f0aac80058a69d08a79b48314fb",
+      "tree": "a1b92f625b548e7384ef13e0358c420d1e1f136d",
+      "fullBodyReadAndRehashed": true
+    }
+  ],
+  "completeParentModifiedBodyBytes": 2804697,
+  "allNineSourceReadbacks": [
+    {
+      "path": "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+      "mode": "100644",
+      "bytes": 24759,
+      "sha256": "d15b7eea14c0951194310aee34ddc5c477879c759a97a4e2f4e9fce1f956ce9b",
+      "gitBlob": "cf93da72a198dac636658e512093eef7828b5927",
+      "tree": "800c50d1b9cd5e538bd889a1f24475084ef5ff57",
+      "fullBodyReadAndRehashed": true,
+      "unchangedFromParent": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+      "mode": "100644",
+      "bytes": 45795,
+      "sha256": "2c5931f5c7fa1dc8bb7858201c1b8afdbae9683faf4a2ad9fce067f116f3f94b",
+      "gitBlob": "5026f0ec6165bb092717ddc989043848a25081dc",
+      "tree": "800c50d1b9cd5e538bd889a1f24475084ef5ff57",
+      "fullBodyReadAndRehashed": true,
+      "unchangedFromParent": false
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts",
+      "mode": "100644",
+      "bytes": 36260,
+      "sha256": "26357f37b146fc171bbceadb624bde4a7f4e459d2073ae23a651e757817b2d38",
+      "gitBlob": "4700a0052d3c58a2b3d9bc66e6803220688050fd",
+      "tree": "800c50d1b9cd5e538bd889a1f24475084ef5ff57",
+      "fullBodyReadAndRehashed": true,
+      "unchangedFromParent": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+      "mode": "100644",
+      "bytes": 8457,
+      "sha256": "2da55bb40a5689ace0e922dc4867d7c73278d9a1cd200ea8c4602ca68f82da3b",
+      "gitBlob": "3c7b4bb53f4259ac0795d3f92fb715887acb554f",
+      "tree": "800c50d1b9cd5e538bd889a1f24475084ef5ff57",
+      "fullBodyReadAndRehashed": true,
+      "unchangedFromParent": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-task-review-cycle-ui-smoke.ts",
+      "mode": "100644",
+      "bytes": 33036,
+      "sha256": "4fa52cfad9347065680ef62a3ba6420762408a78a93b77e96ac3a2e16e68bdc9",
+      "gitBlob": "8d175c98158b3bd71192aef7b1929484b2b681b6",
+      "tree": "800c50d1b9cd5e538bd889a1f24475084ef5ff57",
+      "fullBodyReadAndRehashed": true,
+      "unchangedFromParent": false
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+      "mode": "100644",
+      "bytes": 164965,
+      "sha256": "852bedb85c83dbc4b488dffb4a9ffebbe398adc53e85f5a3cea8ca36b146cbf7",
+      "gitBlob": "896c587e077da56a98a314a175fb3cba0353d6ee",
+      "tree": "800c50d1b9cd5e538bd889a1f24475084ef5ff57",
+      "fullBodyReadAndRehashed": true,
+      "unchangedFromParent": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "mode": "100644",
+      "bytes": 28974,
+      "sha256": "7626e479a6662242009cb050e7e5af612a29e4205d62666d15274d5c30f91386",
+      "gitBlob": "ed57cb0fe7d57ef076a591621289eb77667c63ad",
+      "tree": "800c50d1b9cd5e538bd889a1f24475084ef5ff57",
+      "fullBodyReadAndRehashed": true,
+      "unchangedFromParent": true
+    },
+    {
+      "path": "src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts",
+      "mode": "100644",
+      "bytes": 74340,
+      "sha256": "647ac5732bfd6b5cb57834adb4ad22c32ee5dfb018a934c92f982efd9daa531c",
+      "gitBlob": "c2faa156015707bc5fbd7f8123a7ffd9c4faa486",
+      "tree": "56bda382944632ec0cc1d2fa94cf574bed0e73c5",
+      "fullBodyReadAndRehashed": true,
+      "unchangedFromParent": false
+    },
+    {
+      "path": "test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts",
+      "mode": "100644",
+      "bytes": 187890,
+      "sha256": "b6f11896e60014aac785968d42390afde38716d47de9bba9562522235db048c9",
+      "gitBlob": "76495189c992fcda47cd7a43a0c697190b5acbb3",
+      "tree": "92519c914f57ec6cee13c2e4b0b2be568a56f641",
+      "fullBodyReadAndRehashed": true,
+      "unchangedFromParent": true
+    }
+  ],
+  "completeNineSourceBodyBytes": 604476,
+  "extraFrozenSourceBodyBytes": 451305,
+  "fullActualEvidenceReadbacks": [
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-post-transport-recovery-red-actual-root-publication-20261117.json",
+      "bytes": 55348,
+      "sha256": "bbe57a54a25a38bee1d4f4de5fc1d036d81f6b2ecdb40b3d0088b274de6656c9",
+      "gitBlob": "9218839ef55406b01267605c040bc586c7d443be",
+      "fullBodyReadAndRehashed": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-post-transport-recovery-red-actual-independent-publication-20261117.json",
+      "bytes": 166393,
+      "sha256": "cbe1880831780d10a7131282ab2ecc37d81fbdede3c53a265c1749ea863c20f2",
+      "gitBlob": "e5c2c2d8c84c0d491e334f6d67774cf23c83948f",
+      "fullBodyReadAndRehashed": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-producer-authorship-gate-20261117.json",
+      "bytes": 4327,
+      "sha256": "3231731b2a22cb3903ccff6991341b54c673cd7064599b9aa7238fe07e3c6b18",
+      "gitBlob": "2780955d0a71956a75650ddf4d8a0ff0576faa57",
+      "fullBodyReadAndRehashed": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-three-producer-source-r2-proposal-20261117.json",
+      "bytes": 25372,
+      "sha256": "7def167b3384043abb2cea83e90c51ea332f2c12a9f4fc3ca1ddcf1531bab85c",
+      "gitBlob": "b0d4fb7c7ca2fc486fda6823ee3c3618171f8cdc",
+      "fullBodyReadAndRehashed": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-three-producer-root-source-r2-review-20261117.json",
+      "bytes": 17023,
+      "sha256": "30aa0b71c8c7cdb32d88db381e7396ec2e543ea977d80e93ee8297bd9f3304f3",
+      "gitBlob": "e4119f144e4a79e7c7b6a1598a33a70388df207f",
+      "fullBodyReadAndRehashed": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-three-producer-guard-source-r2-review-20261117.json",
+      "bytes": 245598,
+      "sha256": "0bdbb65827d3717684d09ea1e35a2528b2ea4ee36143e4d3abe3601bf8bb8022",
+      "gitBlob": "ce6997eef4cc5989fb1c5437a23ef490bc74377a",
+      "fullBodyReadAndRehashed": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-three-producer-semantic-source-r2-review-20261117.json",
+      "bytes": 70998,
+      "sha256": "3a3fe8dcf619204191b0db04023c5293fd24e433b74f2bf801f07bbc395d0f6c",
+      "gitBlob": "0c3db6a22e1f652ca30d085de23217fc52eb5e51",
+      "fullBodyReadAndRehashed": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-three-producer-binding-source-r2-review-20261117.json",
+      "bytes": 47779,
+      "sha256": "ce13ee532bbca6a6181f95a97815e6c122be0a0adb46220ba61fd8b7c4029faa",
+      "gitBlob": "c2357e52f57abe45cd77d1ff0844aaa16d1095a6",
+      "fullBodyReadAndRehashed": true
+    }
+  ],
+  "completeDelta": [
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/29-reconciled-acceptance-and-custody-followups-2026-11-15.md",
+      "before": {
+        "mode": "100644",
+        "gitBlob": "b4c035726a57b68ddfdf7e0fe8eebcbf5d84b10d"
+      },
+      "after": {
+        "mode": "100644",
+        "gitBlob": "45045d83208b87845e0f1e363da306ee25d77031"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-post-transport-recovery-red-actual-independent-publication-20261117.json",
+      "before": null,
+      "after": {
+        "mode": "100644",
+        "gitBlob": "e5c2c2d8c84c0d491e334f6d67774cf23c83948f"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-post-transport-recovery-red-actual-root-publication-20261117.json",
+      "before": null,
+      "after": {
+        "mode": "100644",
+        "gitBlob": "9218839ef55406b01267605c040bc586c7d443be"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-producer-authorship-gate-20261117.json",
+      "before": null,
+      "after": {
+        "mode": "100644",
+        "gitBlob": "2780955d0a71956a75650ddf4d8a0ff0576faa57"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-three-producer-binding-source-r2-review-20261117.json",
+      "before": null,
+      "after": {
+        "mode": "100644",
+        "gitBlob": "c2357e52f57abe45cd77d1ff0844aaa16d1095a6"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-three-producer-guard-source-r2-review-20261117.json",
+      "before": null,
+      "after": {
+        "mode": "100644",
+        "gitBlob": "ce6997eef4cc5989fb1c5437a23ef490bc74377a"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-three-producer-publication-manifest-20261117.json",
+      "before": null,
+      "after": {
+        "mode": "100644",
+        "gitBlob": "9ae8f0d2eaadc7e481a60ae594871c647d478c26"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-three-producer-root-source-r2-review-20261117.json",
+      "before": null,
+      "after": {
+        "mode": "100644",
+        "gitBlob": "e4119f144e4a79e7c7b6a1598a33a70388df207f"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-three-producer-semantic-source-r2-review-20261117.json",
+      "before": null,
+      "after": {
+        "mode": "100644",
+        "gitBlob": "0c3db6a22e1f652ca30d085de23217fc52eb5e51"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-three-producer-source-r2-proposal-20261117.json",
+      "before": null,
+      "after": {
+        "mode": "100644",
+        "gitBlob": "b0d4fb7c7ca2fc486fda6823ee3c3618171f8cdc"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/continuation-status-20261116.md",
+      "before": {
+        "mode": "100644",
+        "gitBlob": "6eccc39aa5580df54dc86f2917e67f980d5574de"
+      },
+      "after": {
+        "mode": "100644",
+        "gitBlob": "ab8c41a609735ebcbaa499f89efb308fa4a98d0b"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1213-retention-catalog-20261116.json",
+      "before": {
+        "mode": "100644",
+        "gitBlob": "dc80f5b02f336f0aac80058a69d08a79b48314fb"
+      },
+      "after": {
+        "mode": "100644",
+        "gitBlob": "330bfd617fd812e47ea070cea8b86cef1e047f5d"
+      }
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+      "before": {
+        "mode": "100644",
+        "gitBlob": "bd8bc728808eda00a45b300fd328d49e4e919bc2"
+      },
+      "after": {
+        "mode": "100644",
+        "gitBlob": "5026f0ec6165bb092717ddc989043848a25081dc"
+      }
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-task-review-cycle-ui-smoke.ts",
+      "before": {
+        "mode": "100644",
+        "gitBlob": "d65706646743798f2646421105f2f6a75819f143"
+      },
+      "after": {
+        "mode": "100644",
+        "gitBlob": "8d175c98158b3bd71192aef7b1929484b2b681b6"
+      }
+    },
+    {
+      "path": "src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts",
+      "before": {
+        "mode": "100644",
+        "gitBlob": "1176fd06b70f1b717ba83deb387f87b05b18b45b"
+      },
+      "after": {
+        "mode": "100644",
+        "gitBlob": "c2faa156015707bc5fbd7f8123a7ffd9c4faa486"
+      }
+    }
+  ],
+  "deltaCounts": {
+    "changed": 15,
+    "added": 9,
+    "modified": 6,
+    "deleted": 0,
+    "modesChanged": 0,
+    "sourceModified": 3,
+    "docsModified": 3,
+    "docsAdded": 9,
+    "exactChangedNonDocPaths": [
+      "scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+      "scripts/legacy-agent-host/desktop-task-review-cycle-ui-smoke.ts",
+      "src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts"
+    ]
+  },
+  "subtreeProofs": [
+    {
+      "name": "docs",
+      "beforeTree": "a1b92f625b548e7384ef13e0358c420d1e1f136d",
+      "afterTree": "ca906a27438211f8261ea22cf3b916599be3216e",
+      "beforeEntries": 3496,
+      "afterEntries": 3505,
+      "beforeLeaves": 3090,
+      "afterLeaves": 3099,
+      "changedPaths": [
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/29-reconciled-acceptance-and-custody-followups-2026-11-15.md",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-post-transport-recovery-red-actual-independent-publication-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-post-transport-recovery-red-actual-root-publication-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-producer-authorship-gate-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-three-producer-binding-source-r2-review-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-three-producer-guard-source-r2-review-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-three-producer-publication-manifest-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-three-producer-root-source-r2-review-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-three-producer-semantic-source-r2-review-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-three-producer-source-r2-proposal-20261117.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/continuation-status-20261116.md",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1213-retention-catalog-20261116.json"
+      ],
+      "complete": true,
+      "truncated": false
+    },
+    {
+      "name": "scripts",
+      "beforeTree": "144090e99c2d91d49073e0ea17d7cf6be9ea053e",
+      "afterTree": "800c50d1b9cd5e538bd889a1f24475084ef5ff57",
+      "beforeEntries": 634,
+      "afterEntries": 634,
+      "beforeLeaves": 600,
+      "afterLeaves": 600,
+      "changedPaths": [
+        "scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+        "scripts/legacy-agent-host/desktop-task-review-cycle-ui-smoke.ts"
+      ],
+      "complete": true,
+      "truncated": false
+    },
+    {
+      "name": "src",
+      "beforeTree": "ed69e62618e57d88c2e5237f98074a1ff8853e6f",
+      "afterTree": "56bda382944632ec0cc1d2fa94cf574bed0e73c5",
+      "beforeEntries": 5445,
+      "afterEntries": 5445,
+      "beforeLeaves": 4659,
+      "afterLeaves": 4659,
+      "changedPaths": [
+        "src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts"
+      ],
+      "complete": true,
+      "truncated": false
+    }
+  ],
+  "unchangedOtherRootEntries": [
+    {
+      "path": ".coderabbit.yaml",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "cfdf47bf5d5759599f5383222ebfb8a385f09668",
+      "size": 669,
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/cfdf47bf5d5759599f5383222ebfb8a385f09668"
+    },
+    {
+      "path": ".dockerignore",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "c2d844c25fc61f06640f362de761e3f8d310c3b5",
+      "size": 694,
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/c2d844c25fc61f06640f362de761e3f8d310c3b5"
+    },
+    {
+      "path": ".gitattributes",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "924c7377f9ae4c068d106e74e17e964297d61e6e",
+      "size": 180,
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/924c7377f9ae4c068d106e74e17e964297d61e6e"
+    },
+    {
+      "path": ".github",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "d95091ab0edb488d6e418ffa789d0f07c447ecda",
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees/d95091ab0edb488d6e418ffa789d0f07c447ecda"
+    },
+    {
+      "path": ".gitignore",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "777569b186effad3a2bcbcb09cd770180c8c5e2c",
+      "size": 2867,
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/777569b186effad3a2bcbcb09cd770180c8c5e2c"
+    },
+    {
+      "path": ".husky",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "665211222b358904b557bd356a129f1ff938ca7e",
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees/665211222b358904b557bd356a129f1ff938ca7e"
+    },
+    {
+      "path": ".mcp.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "da61a538a43375404483bd1f810b6377da5cc72f",
+      "size": 296,
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/da61a538a43375404483bd1f810b6377da5cc72f"
+    },
+    {
+      "path": ".node-version",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "63f87c20ef9fd0ace28f8d0a3b74b5ef2e24feff",
+      "size": 8,
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/63f87c20ef9fd0ace28f8d0a3b74b5ef2e24feff"
+    },
+    {
+      "path": ".npmrc",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "b6f27f135954640c8cc5bfd7b8c9922ca6eb2aad",
+      "size": 19,
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/b6f27f135954640c8cc5bfd7b8c9922ca6eb2aad"
+    },
+    {
+      "path": ".nvmrc",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "63f87c20ef9fd0ace28f8d0a3b74b5ef2e24feff",
+      "size": 8,
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/63f87c20ef9fd0ace28f8d0a3b74b5ef2e24feff"
+    },
+    {
+      "path": ".oxfmtrc.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "b003c531d6e548a5939ceb0694f15296c92e5060",
+      "size": 847,
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/b003c531d6e548a5939ceb0694f15296c92e5060"
+    },
+    {
+      "path": ".oxlintrc.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "cc0d2441ebfedc93354e081b0cf61b6a2109dcc9",
+      "size": 596,
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/cc0d2441ebfedc93354e081b0cf61b6a2109dcc9"
+    },
+    {
+      "path": ".prettierignore",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "3d15b642e4d19c01f1c3ec61acc0ff367a0ccae2",
+      "size": 297,
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/3d15b642e4d19c01f1c3ec61acc0ff367a0ccae2"
+    },
+    {
+      "path": ".prettierrc.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "c96ec48e897a4ec478beb34716723e13d29068ed",
+      "size": 563,
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/c96ec48e897a4ec478beb34716723e13d29068ed"
+    },
+    {
+      "path": "AGENTS.md",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "0c8a4a63abf24c1510c934990a025ebc99c9e435",
+      "size": 8999,
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/0c8a4a63abf24c1510c934990a025ebc99c9e435"
+    },
+    {
+      "path": "AGENT_CRITICAL_GUARDRAILS.md",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "a9a087fa5216ede29c5900b3a10638fc1ec3e2f3",
+      "size": 2236,
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/a9a087fa5216ede29c5900b3a10638fc1ec3e2f3"
+    },
+    {
+      "path": "CLAUDE.md",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "88df8ee5ef8d951139b2a8eb9b518996babbcb3e",
+      "size": 16756,
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/88df8ee5ef8d951139b2a8eb9b518996babbcb3e"
+    },
+    {
+      "path": "LICENSE",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "929839bc0872222df278f9e53f15e1268ff4e0ec",
+      "size": 32433,
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/929839bc0872222df278f9e53f15e1268ff4e0ec"
+    },
+    {
+      "path": "README.md",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "dbf976c3418f0dee7ef84e4458e49af39110bdd5",
+      "size": 48099,
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/dbf976c3418f0dee7ef84e4458e49af39110bdd5"
+    },
+    {
+      "path": "agent-teams-controller",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "1ef9482608cbaa5b7f28dc42812820cba96b953e",
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees/1ef9482608cbaa5b7f28dc42812820cba96b953e"
+    },
+    {
+      "path": "bin",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "e6b29ba2f2fda222d5831b3c672e88b72f5f7383",
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees/e6b29ba2f2fda222d5831b3c672e88b72f5f7383"
+    },
+    {
+      "path": "docker",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "7e4007a72bc3fdba8d94e8f5eebc3586f110c16e",
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees/7e4007a72bc3fdba8d94e8f5eebc3586f110c16e"
+    },
+    {
+      "path": "electron.vite.config.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "9045260aab02891055e324607b83e1bb39c7110a",
+      "size": 13238,
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/9045260aab02891055e324607b83e1bb39c7110a"
+    },
+    {
+      "path": "eslint.config.js",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "7ca4b71fe3a357c00c110c9b75d3034e06e4b22c",
+      "size": 37840,
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/7ca4b71fe3a357c00c110c9b75d3034e06e4b22c"
+    },
+    {
+      "path": "eslint.fast.config.js",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "8a6d66ce8d2112b0891f6fc2f78a08c103b4ebfb",
+      "size": 7268,
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/8a6d66ce8d2112b0891f6fc2f78a08c103b4ebfb"
+    },
+    {
+      "path": "eslint.feature-overrides.mts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "9c6450d54b87ce33f7d799f900226c316e367937",
+      "size": 657,
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/9c6450d54b87ce33f7d799f900226c316e367937"
+    },
+    {
+      "path": "eslint.gateway-boundaries.mts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "4975b20df1353a9687fd479ab043beb025e967ba",
+      "size": 3786,
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/4975b20df1353a9687fd479ab043beb025e967ba"
+    },
+    {
+      "path": "i18next.config.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "a8c56bbba2f1003e93fcf9f57e0c5eec4bb37ff5",
+      "size": 1051,
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/a8c56bbba2f1003e93fcf9f57e0c5eec4bb37ff5"
+    },
+    {
+      "path": "landing",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "193513230f45a135704f1b34dbfa0792e6823e26",
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees/193513230f45a135704f1b34dbfa0792e6823e26"
+    },
+    {
+      "path": "legacy-host.lock.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "6916f66ea9e4a7e8299c3ffd328e226d009ebd79",
+      "size": 947,
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/6916f66ea9e4a7e8299c3ffd328e226d009ebd79"
+    },
+    {
+      "path": "managed-git.lock.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "2099dfe6b1e1c0ff0d64f45d6c8565b498af4333",
+      "size": 1026,
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/2099dfe6b1e1c0ff0d64f45d6c8565b498af4333"
+    },
+    {
+      "path": "mcp-server",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "6dcfc48486817e03cbf5cfeca34d0f9c6f495ba5",
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees/6dcfc48486817e03cbf5cfeca34d0f9c6f495ba5"
+    },
+    {
+      "path": "package.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "f80ec83172d0aec0dec8a8ab055426b4fca4a1f7",
+      "size": 26839,
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/f80ec83172d0aec0dec8a8ab055426b4fca4a1f7"
+    },
+    {
+      "path": "packages",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "3934729cd387940917b79992f2579bf6269d157c",
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees/3934729cd387940917b79992f2579bf6269d157c"
+    },
+    {
+      "path": "patches",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "8eb2e6aaa216638cbe6c072d79802733d43f500d",
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees/8eb2e6aaa216638cbe6c072d79802733d43f500d"
+    },
+    {
+      "path": "pnpm-lock.yaml",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "9d2ce04a1bbf743e49403d2520873134b08b68de",
+      "size": 956788,
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/9d2ce04a1bbf743e49403d2520873134b08b68de"
+    },
+    {
+      "path": "pnpm-workspace.yaml",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "a049a862742a85ba77faafea329fc221b3e500e4",
+      "size": 6946,
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/a049a862742a85ba77faafea329fc221b3e500e4"
+    },
+    {
+      "path": "postcss.config.cjs",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "85f717cc09ecb1153d6a4c0962284e09e4b8d6a9",
+      "size": 80,
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/85f717cc09ecb1153d6a4c0962284e09e4b8d6a9"
+    },
+    {
+      "path": "resources",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "69acacf60db94f62dbe4a99ed308aab59310e905",
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees/69acacf60db94f62dbe4a99ed308aab59310e905"
+    },
+    {
+      "path": "runtime.lock.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "1757d79786da78e739a322e8bba81cd3dc88dcaa",
+      "size": 6127,
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/1757d79786da78e739a322e8bba81cd3dc88dcaa"
+    },
+    {
+      "path": "tailwind.config.js",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "a52ebb338468d8fcef92837aa27aebd48c7206d7",
+      "size": 2941,
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/a52ebb338468d8fcef92837aa27aebd48c7206d7"
+    },
+    {
+      "path": "terminal-platform.lock.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "039a8a2a7b959b44bf3d483e37335fdc6774e8cb",
+      "size": 1914,
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/039a8a2a7b959b44bf3d483e37335fdc6774e8cb"
+    },
+    {
+      "path": "test",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "92519c914f57ec6cee13c2e4b0b2be568a56f641",
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees/92519c914f57ec6cee13c2e4b0b2be568a56f641"
+    },
+    {
+      "path": "tools",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "9356c03e96405eb578158f06d6fdcbc89d105bd6",
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees/9356c03e96405eb578158f06d6fdcbc89d105bd6"
+    },
+    {
+      "path": "tsconfig.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "568952f5025a88c16b0568c7279d8e85a4288b43",
+      "size": 1235,
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/568952f5025a88c16b0568c7279d8e85a4288b43"
+    },
+    {
+      "path": "tsconfig.legacy-agent-host-scripts.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "538fdfe23d7aa6bac6f18a483d5d364aef644a39",
+      "size": 646,
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/538fdfe23d7aa6bac6f18a483d5d364aef644a39"
+    },
+    {
+      "path": "tsconfig.node.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "c94c942012bef62695dc3b22b1a2b7229d047f59",
+      "size": 824,
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/c94c942012bef62695dc3b22b1a2b7229d047f59"
+    },
+    {
+      "path": "vendor",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "bb912d7d38fa18b29d0cbe90e76d06a2603b8b4f",
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees/bb912d7d38fa18b29d0cbe90e76d06a2603b8b4f"
+    },
+    {
+      "path": "vitest.config.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "c57faa53a1bb869b4379bf888194806ef7e228e3",
+      "size": 1187,
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/c57faa53a1bb869b4379bf888194806ef7e228e3"
+    },
+    {
+      "path": "vitest.critical.config.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "c32070bf9e1724892aa8cb695152e8f49f1293f0",
+      "size": 852,
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/c32070bf9e1724892aa8cb695152e8f49f1293f0"
+    },
+    {
+      "path": "vitest.opencode-proof.config.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "274de1c0955ad4f98d220857a94576ce6a50864b",
+      "size": 601,
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/274de1c0955ad4f98d220857a94576ce6a50864b"
+    }
+  ],
+  "unchangedTestTree": {
+    "sha": "92519c914f57ec6cee13c2e4b0b2be568a56f641",
+    "complete": true,
+    "truncated": false,
+    "source": "Full accepted prior read joined to unchanged current actual root/test entry; complete current renderer test body independently fetched and rehashed."
+  },
+  "census": {
+    "leaves": 11897,
+    "docs": 3099,
+    "nonDocs": 8798,
+    "workflows": 42
+  },
+  "censusQualification": "Complete current and parent docs/scripts/src leaf maps determine the exact 15-path delta; all 51 other root entries are literal unchanged. The 8798 non-doc leaves and 42 workflows inherit the accepted parent census with no non-doc addition, deletion or mode change. No new physical source/runtime census or source-size guard execution is claimed.",
+  "completeParentTextPrefixes": [
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/29-reconciled-acceptance-and-custody-followups-2026-11-15.md",
+      "parent": {
+        "bytes": 2560337,
+        "sha256": "1ea54bc9f596e274c1bd2e0207742b8c453efcfda7b57f345bf7395df2dbda83",
+        "gitBlob": "b4c035726a57b68ddfdf7e0fe8eebcbf5d84b10d"
+      },
+      "append": {
+        "bytes": 3304,
+        "sha256": "1fd0787586642923ac7922eedf71e4c721dfe4b3df7420c770a7c3419a958f28",
+        "gitBlob": "91ae5fb83caea9e527db2470751e37c4dad9a949"
+      },
+      "exactFullPrefixPreserved": true,
+      "appendIsDerivedNotStandalone": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/continuation-status-20261116.md",
+      "parent": {
+        "bytes": 46758,
+        "sha256": "e50f8e11d74d42feb4897f00050ef6f60b71e66ccbdecf8fef1698a48074844d",
+        "gitBlob": "6eccc39aa5580df54dc86f2917e67f980d5574de"
+      },
+      "append": {
+        "bytes": 1053,
+        "sha256": "9d83cb9a019649f5788fc25c93efdc0f23bbfa9c49e705f5280a3fcfa55414eb",
+        "gitBlob": "80f90925f53981953f523925d241c635abd37e63"
+      },
+      "exactFullPrefixPreserved": true,
+      "appendIsDerivedNotStandalone": true
+    }
+  ],
+  "catalogPreservation": {
+    "exactFullArchiveKey": "priorCombinedNodeRendererStageAtThreeProducerPublication",
+    "priorEntireCurrentStageLiteralIdentical": true,
+    "evidenceKey": "combined139Renderer85ThreeProducerEvidenceFiles",
+    "completeEvidenceMapLiteralIdenticalToManifest": true,
+    "evidenceFiles": [
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-post-transport-recovery-red-actual-root-publication-20261117.json",
+        "bytes": 55348,
+        "sha256": "bbe57a54a25a38bee1d4f4de5fc1d036d81f6b2ecdb40b3d0088b274de6656c9",
+        "gitBlob": "9218839ef55406b01267605c040bc586c7d443be"
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-post-transport-recovery-red-actual-independent-publication-20261117.json",
+        "bytes": 166393,
+        "sha256": "cbe1880831780d10a7131282ab2ecc37d81fbdede3c53a265c1749ea863c20f2",
+        "gitBlob": "e5c2c2d8c84c0d491e334f6d67774cf23c83948f"
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-producer-authorship-gate-20261117.json",
+        "bytes": 4327,
+        "sha256": "3231731b2a22cb3903ccff6991341b54c673cd7064599b9aa7238fe07e3c6b18",
+        "gitBlob": "2780955d0a71956a75650ddf4d8a0ff0576faa57"
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-three-producer-source-r2-proposal-20261117.json",
+        "bytes": 25372,
+        "sha256": "7def167b3384043abb2cea83e90c51ea332f2c12a9f4fc3ca1ddcf1531bab85c",
+        "gitBlob": "b0d4fb7c7ca2fc486fda6823ee3c3618171f8cdc"
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-three-producer-root-source-r2-review-20261117.json",
+        "bytes": 17023,
+        "sha256": "30aa0b71c8c7cdb32d88db381e7396ec2e543ea977d80e93ee8297bd9f3304f3",
+        "gitBlob": "e4119f144e4a79e7c7b6a1598a33a70388df207f"
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-three-producer-guard-source-r2-review-20261117.json",
+        "bytes": 245598,
+        "sha256": "0bdbb65827d3717684d09ea1e35a2528b2ea4ee36143e4d3abe3601bf8bb8022",
+        "gitBlob": "ce6997eef4cc5989fb1c5437a23ef490bc74377a"
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-three-producer-semantic-source-r2-review-20261117.json",
+        "bytes": 70998,
+        "sha256": "3a3fe8dcf619204191b0db04023c5293fd24e433b74f2bf801f07bbc395d0f6c",
+        "gitBlob": "0c3db6a22e1f652ca30d085de23217fc52eb5e51"
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-three-producer-binding-source-r2-review-20261117.json",
+        "bytes": 47779,
+        "sha256": "ce13ee532bbca6a6181f95a97815e6c122be0a0adb46220ba61fd8b7c4029faa",
+        "gitBlob": "c2357e52f57abe45cd77d1ff0844aaa16d1095a6"
+      }
+    ],
+    "otherParentFields": [
+      {
+        "key": "kind",
+        "literalValueIdentical": true
+      },
+      {
+        "key": "schemaVersion",
+        "literalValueIdentical": true
+      },
+      {
+        "key": "parentCandidate",
+        "literalValueIdentical": true
+      },
+      {
+        "key": "source",
+        "literalValueIdentical": true
+      },
+      {
+        "key": "baselineIndex",
+        "literalValueIdentical": true
+      },
+      {
+        "key": "baselineActualPublication",
+        "literalValueIdentical": true
+      },
+      {
+        "key": "baselineIndependentPublication",
+        "literalValueIdentical": true
+      },
+      {
+        "key": "late06ActualPublication",
+        "literalValueIdentical": true
+      },
+      {
+        "key": "late06IndependentPublication",
+        "literalValueIdentical": true
+      },
+      {
+        "key": "bundles",
+        "literalValueIdentical": true
+      },
+      {
+        "key": "conversationBinding",
+        "literalValueIdentical": true
+      },
+      {
+        "key": "localEnvironment",
+        "literalValueIdentical": true
+      },
+      {
+        "key": "remainingRuntimeBudgets",
+        "literalValueIdentical": true
+      },
+      {
+        "key": "totals",
+        "literalValueIdentical": true
+      },
+      {
+        "key": "incomingDeliveryAudit",
+        "literalValueIdentical": true
+      },
+      {
+        "key": "environmentObservations",
+        "literalValueIdentical": true
+      },
+      {
+        "key": "historicalLocalEnvironment",
+        "literalValueIdentical": true
+      },
+      {
+        "key": "freshConversationBinding",
+        "literalValueIdentical": true
+      },
+      {
+        "key": "originalCiFinal",
+        "literalValueIdentical": true
+      },
+      {
+        "key": "freshRecoveryCheckpoint",
+        "literalValueIdentical": true
+      },
+      {
+        "key": "originalArtifactAnalyses",
+        "literalValueIdentical": true
+      },
+      {
+        "key": "totalsQualification",
+        "literalValueIdentical": true
+      },
+      {
+        "key": "freshRecoveryEvidenceFiles",
+        "literalValueIdentical": true
+      },
+      {
+        "key": "freshRunnerR2",
+        "literalValueIdentical": true
+      },
+      {
+        "key": "currentConversationStage",
+        "literalValueIdentical": true
+      },
+      {
+        "key": "originalP09ArtifactReview",
+        "literalValueIdentical": true
+      },
+      {
+        "key": "priorConversationStageAtProducerPublication",
+        "literalValueIdentical": true
+      },
+      {
+        "key": "crossCloseProspectiveScope",
+        "literalValueIdentical": true
+      },
+      {
+        "key": "incomingDeliveryUpdates",
+        "literalValueIdentical": true
+      },
+      {
+        "key": "currentCrossCloseStage",
+        "literalValueIdentical": true
+      },
+      {
+        "key": "priorCrossCloseStageAtTestPublication",
+        "literalValueIdentical": true
+      },
+      {
+        "key": "priorCrossCloseStageAtRedControlsPublication",
+        "literalValueIdentical": true
+      },
+      {
+        "key": "priorCrossCloseStageAtGreenBindingPublication",
+        "literalValueIdentical": true
+      },
+      {
+        "key": "priorCrossCloseStageAtRecoveryR1Publication",
+        "literalValueIdentical": true
+      },
+      {
+        "key": "crossValidationRecoveryEvidenceFiles",
+        "literalValueIdentical": true
+      },
+      {
+        "key": "incomingDeliveryLatestSourceAssessment",
+        "literalValueIdentical": true
+      },
+      {
+        "key": "priorCrossCloseStageAtRecoveryControlsPublication",
+        "literalValueIdentical": true
+      },
+      {
+        "key": "crossValidationRecoveryControlEvidenceFiles",
+        "literalValueIdentical": true
+      },
+      {
+        "key": "priorCrossCloseStageAtRecoveryCompletion",
+        "literalValueIdentical": true
+      },
+      {
+        "key": "crossValidationRecoveryCompletionEvidenceFiles",
+        "literalValueIdentical": true
+      },
+      {
+        "key": "combined139Renderer85R1EvidenceFiles",
+        "literalValueIdentical": true
+      },
+      {
+        "key": "priorCombinedNodeRendererStageAtTestPublication",
+        "literalValueIdentical": true
+      },
+      {
+        "key": "combined139Renderer85TestEvidenceFiles",
+        "literalValueIdentical": true
+      },
+      {
+        "key": "priorCombinedNodeRendererStageAtControlsPublication",
+        "literalValueIdentical": true
+      },
+      {
+        "key": "combined139Renderer85ControlEvidenceFiles",
+        "literalValueIdentical": true
+      },
+      {
+        "key": "priorCombinedNodeRendererStageAtTestMaterialization",
+        "literalValueIdentical": true
+      },
+      {
+        "key": "combined139Renderer85TestMaterializationEvidenceFiles",
+        "literalValueIdentical": true
+      },
+      {
+        "key": "priorCombinedNodeRendererStageAtRefusedRed",
+        "literalValueIdentical": true
+      },
+      {
+        "key": "combined139Renderer85RefusedRedEvidenceFiles",
+        "literalValueIdentical": true
+      },
+      {
+        "key": "incomingDeliveryAtRefusedCombinedRed",
+        "literalValueIdentical": true
+      },
+      {
+        "key": "priorCombinedNodeRendererStageAtCorrectedTitleR1",
+        "literalValueIdentical": true
+      },
+      {
+        "key": "combined139Renderer85CorrectedTitleR1EvidenceFiles",
+        "literalValueIdentical": true
+      },
+      {
+        "key": "incomingDSourceFollowup",
+        "literalValueIdentical": true
+      },
+      {
+        "key": "canonicalDependencyFollowup",
+        "literalValueIdentical": true
+      },
+      {
+        "key": "priorCombinedNodeRendererStageAtCorrectedControls",
+        "literalValueIdentical": true
+      },
+      {
+        "key": "combined139Renderer85CorrectedControlEvidenceFiles",
+        "literalValueIdentical": true
+      },
+      {
+        "key": "priorCombinedNodeRendererStageAtCorrectedRedIncomplete",
+        "literalValueIdentical": true
+      },
+      {
+        "key": "combined139Renderer85CorrectedRedIncompleteEvidenceFiles",
+        "literalValueIdentical": true
+      },
+      {
+        "key": "priorCombinedNodeRendererStageAtPostTransportRecoveryR1",
+        "literalValueIdentical": true
+      },
+      {
+        "key": "combined139Renderer85PostTransportRecoveryR1EvidenceFiles",
+        "literalValueIdentical": true
+      },
+      {
+        "key": "priorCombinedNodeRendererStageAtPostTransportRecoveryControls",
+        "literalValueIdentical": true
+      },
+      {
+        "key": "combined139Renderer85PostTransportRecoveryControlEvidenceFiles",
+        "literalValueIdentical": true
+      },
+      {
+        "key": "priorCombinedNodeRendererStageAtPostTransportRecoveryRed",
+        "literalValueIdentical": true
+      },
+      {
+        "key": "combined139Renderer85PostTransportRecoveryRedEvidenceFiles",
+        "literalValueIdentical": true
+      }
+    ],
+    "otherParentFieldCount": 64,
+    "exactAddedKeys": [
+      "priorCombinedNodeRendererStageAtThreeProducerPublication",
+      "combined139Renderer85ThreeProducerEvidenceFiles"
+    ],
+    "originalBundleCount": 27,
+    "allWholeBundlesLiteralIdentical": true,
+    "totals": {
+      "bundles": 27,
+      "outerBytes": 17894693,
+      "payloadInstances": 219,
+      "payloadBytes": 15911913
+    },
+    "wholeTotalsLiteralIdentical": true
+  },
+  "currentStage": {
+    "publishedProducerPostimages": true,
+    "producerPostimagesApplied": false,
+    "physicalSourceReference": {
+      "identity": {
+        "bytes": 2478745,
+        "sha256": "238e6f8dc2cd570845441ff537242103449056bcb68ad7089e169e2d530840c5",
+        "gitBlob": "499fe05449dfd5b2e4e46d4a4629c24b2fcc696d"
+      },
+      "sourceRows": 8798,
+      "physicalOverlays": 6,
+      "workflowLeaves": 42,
+      "fullC5IndexLeaves": 11567,
+      "qualification": "Latest accepted physical RED before/after reference only, before producer application:8798 rows,11567tree/index,42workflows,6overlays. New Git postimages do not replace a fresh current physical materialization boundary."
+    },
+    "currentSourceVector": {
+      "bytes": 2118,
+      "sha256": "f2574559a378b3bc537fdcedbde161003c8344a5485dfff9322214f6fda2a90c",
+      "gitBlob": "f6446bdc2bbdb511206c729a1f03717871baea6d"
+    },
+    "sourceState": {
+      "publishedProducerSourcePins": [
+        {
+          "path": "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+          "mode": "100644",
+          "bytes": 24759,
+          "sha256": "d15b7eea14c0951194310aee34ddc5c477879c759a97a4e2f4e9fce1f956ce9b",
+          "gitBlob": "cf93da72a198dac636658e512093eef7828b5927"
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+          "mode": "100644",
+          "bytes": 45795,
+          "sha256": "2c5931f5c7fa1dc8bb7858201c1b8afdbae9683faf4a2ad9fce067f116f3f94b",
+          "gitBlob": "5026f0ec6165bb092717ddc989043848a25081dc"
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts",
+          "mode": "100644",
+          "bytes": 36260,
+          "sha256": "26357f37b146fc171bbceadb624bde4a7f4e459d2073ae23a651e757817b2d38",
+          "gitBlob": "4700a0052d3c58a2b3d9bc66e6803220688050fd"
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+          "mode": "100644",
+          "bytes": 8457,
+          "sha256": "2da55bb40a5689ace0e922dc4867d7c73278d9a1cd200ea8c4602ca68f82da3b",
+          "gitBlob": "3c7b4bb53f4259ac0795d3f92fb715887acb554f"
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-task-review-cycle-ui-smoke.ts",
+          "mode": "100644",
+          "bytes": 33036,
+          "sha256": "4fa52cfad9347065680ef62a3ba6420762408a78a93b77e96ac3a2e16e68bdc9",
+          "gitBlob": "8d175c98158b3bd71192aef7b1929484b2b681b6"
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+          "mode": "100644",
+          "bytes": 164965,
+          "sha256": "852bedb85c83dbc4b488dffb4a9ffebbe398adc53e85f5a3cea8ca36b146cbf7",
+          "gitBlob": "896c587e077da56a98a314a175fb3cba0353d6ee"
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+          "mode": "100644",
+          "bytes": 28974,
+          "sha256": "7626e479a6662242009cb050e7e5af612a29e4205d62666d15274d5c30f91386",
+          "gitBlob": "ed57cb0fe7d57ef076a591621289eb77667c63ad"
+        },
+        {
+          "path": "src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts",
+          "mode": "100644",
+          "bytes": 74340,
+          "sha256": "647ac5732bfd6b5cb57834adb4ad22c32ee5dfb018a934c92f982efd9daa531c",
+          "gitBlob": "c2faa156015707bc5fbd7f8123a7ffd9c4faa486"
+        },
+        {
+          "path": "test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts",
+          "mode": "100644",
+          "bytes": 187890,
+          "sha256": "b6f11896e60014aac785968d42390afde38716d47de9bba9562522235db048c9",
+          "gitBlob": "76495189c992fcda47cd7a43a0c697190b5acbb3"
+        }
+      ],
+      "publishedProducerSourceVector": {
+        "bytes": 2118,
+        "sha256": "6007c5c7ba2f74c43bd9b73c50cae2319eacbf712c233cc0d67b3efbb4c6894d",
+        "gitBlob": "3887991d5dbd25dbec5c8656e8e03d423ea502b7"
+      },
+      "latestAcceptedPhysicalRedSourcePins": [
+        {
+          "path": "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+          "mode": "100644",
+          "bytes": 24759,
+          "sha256": "d15b7eea14c0951194310aee34ddc5c477879c759a97a4e2f4e9fce1f956ce9b",
+          "gitBlob": "cf93da72a198dac636658e512093eef7828b5927"
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+          "mode": "100644",
+          "bytes": 45707,
+          "sha256": "d8ee4090606876194393463e96411f89ed54a53bd3095df333a5d47c5c7fd159",
+          "gitBlob": "bd8bc728808eda00a45b300fd328d49e4e919bc2"
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts",
+          "mode": "100644",
+          "bytes": 36260,
+          "sha256": "26357f37b146fc171bbceadb624bde4a7f4e459d2073ae23a651e757817b2d38",
+          "gitBlob": "4700a0052d3c58a2b3d9bc66e6803220688050fd"
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+          "mode": "100644",
+          "bytes": 8457,
+          "sha256": "2da55bb40a5689ace0e922dc4867d7c73278d9a1cd200ea8c4602ca68f82da3b",
+          "gitBlob": "3c7b4bb53f4259ac0795d3f92fb715887acb554f"
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-task-review-cycle-ui-smoke.ts",
+          "mode": "100644",
+          "bytes": 32845,
+          "sha256": "43e12eb3252e578061ea5840ae39d173ce0cd5a8ce6673c5c5ea06d97a8bedaa",
+          "gitBlob": "d65706646743798f2646421105f2f6a75819f143"
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+          "mode": "100644",
+          "bytes": 164965,
+          "sha256": "852bedb85c83dbc4b488dffb4a9ffebbe398adc53e85f5a3cea8ca36b146cbf7",
+          "gitBlob": "896c587e077da56a98a314a175fb3cba0353d6ee"
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+          "mode": "100644",
+          "bytes": 28974,
+          "sha256": "7626e479a6662242009cb050e7e5af612a29e4205d62666d15274d5c30f91386",
+          "gitBlob": "ed57cb0fe7d57ef076a591621289eb77667c63ad"
+        },
+        {
+          "path": "src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts",
+          "mode": "100644",
+          "bytes": 74351,
+          "sha256": "68abe01f665b263bd8581659ea306f366428fdccbb45246f08ec42e20b9ee575",
+          "gitBlob": "1176fd06b70f1b717ba83deb387f87b05b18b45b"
+        },
+        {
+          "path": "test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts",
+          "mode": "100644",
+          "bytes": 187890,
+          "sha256": "b6f11896e60014aac785968d42390afde38716d47de9bba9562522235db048c9",
+          "gitBlob": "76495189c992fcda47cd7a43a0c697190b5acbb3"
+        }
+      ],
+      "latestAcceptedPhysicalRedSourceVector": {
+        "bytes": 2118,
+        "sha256": "f2574559a378b3bc537fdcedbde161003c8344a5485dfff9322214f6fda2a90c",
+        "gitBlob": "f6446bdc2bbdb511206c729a1f03717871baea6d"
+      },
+      "latestAcceptedPhysicalRedOverlays": 6,
+      "expectedAfterProducerMaterializationOverlays": 9,
+      "sourceWorkingTreeWrites": 0,
+      "producerPostimagesApplied": false,
+      "qualification": "The three Git source postimages are published. The test workspace has not been written by this source-authoring/publication stage; its last accepted complete physical observation is RED. Fresh complete producer materialization admission remains required."
+    },
+    "producerSourceR2": {
+      "proposal": {
+        "bytes": 25372,
+        "sha256": "7def167b3384043abb2cea83e90c51ea332f2c12a9f4fc3ca1ddcf1531bab85c",
+        "gitBlob": "b0d4fb7c7ca2fc486fda6823ee3c3618171f8cdc"
+      },
+      "root": {
+        "bytes": 17023,
+        "sha256": "30aa0b71c8c7cdb32d88db381e7396ec2e543ea977d80e93ee8297bd9f3304f3",
+        "gitBlob": "e4119f144e4a79e7c7b6a1598a33a70388df207f"
+      },
+      "guard": {
+        "bytes": 245598,
+        "sha256": "0bdbb65827d3717684d09ea1e35a2528b2ea4ee36143e4d3abe3601bf8bb8022",
+        "gitBlob": "ce6997eef4cc5989fb1c5437a23ef490bc74377a"
+      },
+      "semantic": {
+        "bytes": 70998,
+        "sha256": "3a3fe8dcf619204191b0db04023c5293fd24e433b74f2bf801f07bbc395d0f6c",
+        "gitBlob": "0c3db6a22e1f652ca30d085de23217fc52eb5e51"
+      },
+      "binding": {
+        "bytes": 47779,
+        "sha256": "ce13ee532bbca6a6181f95a97815e6c122be0a0adb46220ba61fd8b7c4029faa",
+        "gitBlob": "c2357e52f57abe45cd77d1ff0844aaa16d1095a6"
+      },
+      "rootReadAllFullIndependentReports": true,
+      "closedAt": "2026-11-17 01:50:17 UTC",
+      "authoredAt": "2026-11-17 01:43:09 UTC",
+      "sourceFiles": [
+        {
+          "path": "scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+          "preimage": {
+            "bytes": 45707,
+            "sha256": "d8ee4090606876194393463e96411f89ed54a53bd3095df333a5d47c5c7fd159",
+            "gitBlob": "bd8bc728808eda00a45b300fd328d49e4e919bc2"
+          },
+          "postimage": {
+            "bytes": 45795,
+            "sha256": "2c5931f5c7fa1dc8bb7858201c1b8afdbae9683faf4a2ad9fce067f116f3f94b",
+            "gitBlob": "5026f0ec6165bb092717ddc989043848a25081dc"
+          },
+          "preimageLines": 570,
+          "postimageLines": 572,
+          "cap": 800
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-task-review-cycle-ui-smoke.ts",
+          "preimage": {
+            "bytes": 32845,
+            "sha256": "43e12eb3252e578061ea5840ae39d173ce0cd5a8ce6673c5c5ea06d97a8bedaa",
+            "gitBlob": "d65706646743798f2646421105f2f6a75819f143"
+          },
+          "postimage": {
+            "bytes": 33036,
+            "sha256": "4fa52cfad9347065680ef62a3ba6420762408a78a93b77e96ac3a2e16e68bdc9",
+            "gitBlob": "8d175c98158b3bd71192aef7b1929484b2b681b6"
+          },
+          "preimageLines": 788,
+          "postimageLines": 794,
+          "cap": 800
+        },
+        {
+          "path": "src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts",
+          "preimage": {
+            "bytes": 74351,
+            "sha256": "68abe01f665b263bd8581659ea306f366428fdccbb45246f08ec42e20b9ee575",
+            "gitBlob": "1176fd06b70f1b717ba83deb387f87b05b18b45b"
+          },
+          "postimage": {
+            "bytes": 74340,
+            "sha256": "647ac5732bfd6b5cb57834adb4ad22c32ee5dfb018a934c92f982efd9daa531c",
+            "gitBlob": "c2faa156015707bc5fbd7f8123a7ffd9c4faa486"
+          },
+          "preimageLines": 2068,
+          "postimageLines": 2068,
+          "cap": 2068
+        }
+      ]
+    },
+    "preservedExistingStageFields": [
+      "r1",
+      "r1Publication",
+      "r1ActualGate",
+      "runner",
+      "binding",
+      "proposal",
+      "rootStatic",
+      "independentReviews",
+      "r2ReviewsClosedAt",
+      "runnerAuthoredAt",
+      "bindingAuthoredAt",
+      "exactRunnerReplacements",
+      "unchangedFullFunctions",
+      "unchangedImportStatements",
+      "bindingDelta",
+      "original43ReviewRecordsLiteralIdentical",
+      "totalReviewBodies",
+      "totalReviewBodyBytes",
+      "unchangedOverlayInstances",
+      "unchangedOverlayBytes",
+      "currentTests",
+      "currentSourceVector",
+      "selectedRoots",
+      "immutableReplicaCount",
+      "immutableReplicaBytes",
+      "currentInputCount",
+      "relocatedInputNames",
+      "redUniqueControlCensus",
+      "attempts",
+      "original64038",
+      "corrected54393",
+      "controlsAuthored",
+      "controlsR2Accepted",
+      "controlsStaged",
+      "newReplicaFilesStaged",
+      "currentRuntimeExecuted",
+      "acceptedCombinedGreen",
+      "wholeE2EQualified",
+      "controlPublication",
+      "controlActualGate",
+      "staging",
+      "redReviewsClosedAt",
+      "redOutcome",
+      "redReviewBodiesFullyReadByRoot"
+    ],
+    "acceptedCombinedRed": {
+      "identity": {
+        "bytes": 139946,
+        "sha256": "51867690fb9a707141b01ee3dff6d42d082a5ba7aceffd1f4f43eec8a428c9be",
+        "gitBlob": "bcc31247c2752b2017edba9adcd129a1c83cdd32"
+      },
+      "packet": {
+        "bytes": 441196,
+        "sha256": "ebce8cffde715538fc340a07304678a0c563700c72b3eea3de035dd86b7fca5f",
+        "gitBlob": "ca4e84b2c1a41a1c848a62c4c3ad6be1a8af65c8"
+      },
+      "outer": {
+        "bytes": 13970,
+        "sha256": "341064fd92ead2afed314db220e095bae77a2b96af47580b30c35f495a0e80cd",
+        "gitBlob": "947cf5276c207149f87d67dd06a175b49c9f1b5b"
+      },
+      "observedOuterSupervisorExit": 0,
+      "independentReviewAccepted": true,
+      "actualPublicationReadbackAccepted": true,
+      "phaseReceiptRetainedWithinPacket": true,
+      "root": {
+        "bytes": 50772,
+        "sha256": "b708a3eb026e85f1a733cbb1e4836c7e5cabf571bb3c68fbc74c9ac2a719c882",
+        "gitBlob": "19fcd35a9e8783dfa28c824d23a8df510209ca80"
+      },
+      "guard": {
+        "bytes": 261789,
+        "sha256": "d9e6e50a0678babd3d54551af2951fb57825b0fc51fa1e7682def558a52bfd32",
+        "gitBlob": "38bd0eb98cb500274a477c1c02bfef0156bee7d6"
+      },
+      "semantic": {
+        "bytes": 229314,
+        "sha256": "2e05bcc76671b35883fc04e072d46e0961c86c2d293de2582e0e0fe0196692da",
+        "gitBlob": "3cddc2bdb141d81c87c97d6059c56278b1118a55"
+      },
+      "fullInputJoin": {
+        "bytes": 8914,
+        "sha256": "e322edbfc50d1706db7838681e2d65abf4648180c4a4da3ba418d94fff5eac44",
+        "gitBlob": "aad388d47bc80c4dd09789ee76238ebd935e8cdd"
+      },
+      "publication": {
+        "commit": "77993819c233737f1e2b4c11c8ca1a5d360bcbe3",
+        "tree": "ada3f27db78fabc17a91e3904d41b8bc547c6dca",
+        "docsTree": "a1b92f625b548e7384ef13e0358c420d1e1f136d",
+        "root": {
+          "bytes": 55348,
+          "sha256": "bbe57a54a25a38bee1d4f4de5fc1d036d81f6b2ecdb40b3d0088b274de6656c9",
+          "gitBlob": "9218839ef55406b01267605c040bc586c7d443be"
+        },
+        "independent": {
+          "bytes": 166393,
+          "sha256": "cbe1880831780d10a7131282ab2ecc37d81fbdede3c53a265c1749ea863c20f2",
+          "gitBlob": "e5c2c2d8c84c0d491e334f6d67774cf23c83948f"
+        }
+      }
+    },
+    "acceptedCombinedGreen": null,
+    "producerPublicationActualReadbackAcceptedAtPublicationAuthoring": false,
+    "phaseBindingAuthored": false,
+    "greenExecuted": false,
+    "validationExecuted": false,
+    "wholeE2EQualified": false
+  },
+  "fullPostimageInverseReadbacks": [
+    {
+      "path": "scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+      "preimage": {
+        "bytes": 45707,
+        "sha256": "d8ee4090606876194393463e96411f89ed54a53bd3095df333a5d47c5c7fd159",
+        "gitBlob": "bd8bc728808eda00a45b300fd328d49e4e919bc2"
+      },
+      "postimage": {
+        "bytes": 45795,
+        "sha256": "2c5931f5c7fa1dc8bb7858201c1b8afdbae9683faf4a2ad9fce067f116f3f94b",
+        "gitBlob": "5026f0ec6165bb092717ddc989043848a25081dc"
+      },
+      "preimageLines": 570,
+      "postimageLines": 572,
+      "cap": 800,
+      "fullForwardExact": true,
+      "fullInverseExact": true,
+      "allExactSpansJoined": true,
+      "edits": [
+        {
+          "before": "    const cutoff = Date.now() + 90_000; let value = await observe();\n",
+          "after": "    const cutoff = Date.now() + 90_000; let value = await observe();\n    assert.ok(Date.now() < cutoff, label);\n",
+          "beforeIdentity": {
+            "bytes": 69,
+            "sha256": "0adccd0c7d853dbd37433ba7894bb3d4f63d4ef10773dfdc2c2d0e539160ecbe",
+            "gitBlob": "d4e0199d7e73809b71dfc3f2b76f1af9cbc0bff6"
+          },
+          "afterIdentity": {
+            "bytes": 112,
+            "sha256": "de7f2ca237f32dcbdfc773577530ab4556cd1a3cb535f2e816b300f68611a548",
+            "gitBlob": "0d6b0741a77ce34cd0630ac78a829495428f8d9e"
+          },
+          "offsetInSequentialPreimage": 5691
+        },
+        {
+          "before": "      current(); await new Promise<void>(resolve => setTimeout(resolve, 100)); value = await observe();\n",
+          "after": "      current(); await new Promise<void>(resolve => setTimeout(resolve, 100)); value = await observe();\n      assert.ok(Date.now() < cutoff, label);\n",
+          "beforeIdentity": {
+            "bytes": 104,
+            "sha256": "d483ce71179e9bb55c0c8db027102bcec457d876a21b024c4abed9bbc93ee4b5",
+            "gitBlob": "8aa2e4509dfb1cd1f613cbc2299f85a78dfcc11b"
+          },
+          "afterIdentity": {
+            "bytes": 149,
+            "sha256": "dea724bd8f3a043912b13e570378bcecd5c4ce984b272fb11568e642bcdf9458",
+            "gitBlob": "bf5773cd7b6dc066bc34405199f545f1a2d3e8cb"
+          },
+          "offsetInSequentialPreimage": 5856
+        }
+      ]
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-task-review-cycle-ui-smoke.ts",
+      "preimage": {
+        "bytes": 32845,
+        "sha256": "43e12eb3252e578061ea5840ae39d173ce0cd5a8ce6673c5c5ea06d97a8bedaa",
+        "gitBlob": "d65706646743798f2646421105f2f6a75819f143"
+      },
+      "postimage": {
+        "bytes": 33036,
+        "sha256": "4fa52cfad9347065680ef62a3ba6420762408a78a93b77e96ac3a2e16e68bdc9",
+        "gitBlob": "8d175c98158b3bd71192aef7b1929484b2b681b6"
+      },
+      "preimageLines": 788,
+      "postimageLines": 794,
+      "cap": 800,
+      "fullForwardExact": true,
+      "fullInverseExact": true,
+      "allExactSpansJoined": true,
+      "edits": [
+        {
+          "before": "      desktopTaskCommentInputExpression(options.handleId, taskId),\n      'exact current correction Task/owner/surface'\n",
+          "after": "      desktopTaskCommentInputExpression(options.handleId, taskId),\n      'exact current correction Task/owner/surface',\n      30_000,\n      (value) =>\n        value !== null &&\n        typeof value === 'object' &&\n        !Array.isArray(value) &&\n        (value as Record<string, unknown>).canEditNow === true\n",
+          "beforeIdentity": {
+            "bytes": 119,
+            "sha256": "489d4a378e651681701ce1ad8671cb804d5a76e96d6cfff869c3a06ccab0afc8",
+            "gitBlob": "d6280a34384bb329d9e7b84698cee62af90245bf"
+          },
+          "afterIdentity": {
+            "bytes": 310,
+            "sha256": "ec6d5ce70aa7bc491e7a9f325f721fdf86b534d8a0c76d744ce9f3be5fc43790",
+            "gitBlob": "70321976d4c567083d9d9e4b7d4835785e053fe6"
+          },
+          "offsetInSequentialPreimage": 17215
+        }
+      ]
+    },
+    {
+      "path": "src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts",
+      "preimage": {
+        "bytes": 74351,
+        "sha256": "68abe01f665b263bd8581659ea306f366428fdccbb45246f08ec42e20b9ee575",
+        "gitBlob": "1176fd06b70f1b717ba83deb387f87b05b18b45b"
+      },
+      "postimage": {
+        "bytes": 74340,
+        "sha256": "647ac5732bfd6b5cb57834adb4ad22c32ee5dfb018a934c92f982efd9daa531c",
+        "gitBlob": "c2faa156015707bc5fbd7f8123a7ffd9c4faa486"
+      },
+      "preimageLines": 2068,
+      "postimageLines": 2068,
+      "cap": 2068,
+      "fullForwardExact": true,
+      "fullInverseExact": true,
+      "allExactSpansJoined": true,
+      "edits": [
+        {
+          "before": "if (!silent && requestIsCurrent()) {",
+          "after": "if (requestIsCurrent()) {",
+          "beforeIdentity": {
+            "bytes": 36,
+            "sha256": "cba9564e19adffb199815aeabf20514dc6b0ee4581918dfaaefef07bc1f36fdd",
+            "gitBlob": "de1a0189ff8a7e20359f2b1c413238b66e678840"
+          },
+          "afterIdentity": {
+            "bytes": 25,
+            "sha256": "9c202d426593ba1e1f6edaab02998d59b33973dbb7c5abd0597fa4c5cdc5c0e2",
+            "gitBlob": "775d8c2bc28a221a353467d5287d043024d9a34a"
+          },
+          "offsetInSequentialPreimage": 21419
+        }
+      ]
+    }
+  ],
+  "derivedNineRowVectors": {
+    "before": {
+      "bytes": 2118,
+      "sha256": "f2574559a378b3bc537fdcedbde161003c8344a5485dfff9322214f6fda2a90c",
+      "gitBlob": "f6446bdc2bbdb511206c729a1f03717871baea6d"
+    },
+    "after": {
+      "bytes": 2118,
+      "sha256": "6007c5c7ba2f74c43bd9b73c50cae2319eacbf712c233cc0d67b3efbb4c6894d",
+      "gitBlob": "3887991d5dbd25dbec5c8656e8e03d423ea502b7"
+    },
+    "codec": "Sorted paths; sorted record keys; compact UTF-8 JSON with no terminal LF; derived identities are not standalone Git blobs."
+  },
+  "exactSourceAssessment": {
+    "selectedPaths": [
+      "scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+      "scripts/legacy-agent-host/desktop-task-review-cycle-ui-smoke.ts",
+      "src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts"
+    ],
+    "changedSelectedRows": 3,
+    "frozenSelectedRows": 6,
+    "bothWhole139And85TestBodiesLiteralUnchanged": true,
+    "fourFixedProducerBodiesLiteralUnchanged": true,
+    "noAdditionalHelperOrImportOrFileChanges": true,
+    "productionFilesByPreservedConstruction": 5020,
+    "standardCap": 800,
+    "existingExceptions": 141,
+    "postimageLines": [
+      572,
+      794,
+      2068
+    ],
+    "sourceSizeRuntimeGuardExecuted": false,
+    "semanticPreservation": "The actual published postimages equal the three complete independently accepted R2 bodies. The full inverse of each actual postimage reproduces its admitted parent source preimage. The P11 original post-observation cutoff, Review exact live editability predicate and Hook current-request finally are precisely the admitted changes; all other source bytes remain unchanged."
+  },
+  "fullR2ReportJoins": {
+    "root": {
+      "identity": {
+        "bytes": 17023,
+        "sha256": "30aa0b71c8c7cdb32d88db381e7396ec2e543ea977d80e93ee8297bd9f3304f3",
+        "gitBlob": "e4119f144e4a79e7c7b6a1598a33a70388df207f"
+      },
+      "checks": 55,
+      "allPassed": true
+    },
+    "guard": {
+      "identity": {
+        "bytes": 245598,
+        "sha256": "0bdbb65827d3717684d09ea1e35a2528b2ea4ee36143e4d3abe3601bf8bb8022",
+        "gitBlob": "ce6997eef4cc5989fb1c5437a23ef490bc74377a"
+      },
+      "checks": 81,
+      "allPassed": true
+    },
+    "semantic": {
+      "identity": {
+        "bytes": 70998,
+        "sha256": "3a3fe8dcf619204191b0db04023c5293fd24e433b74f2bf801f07bbc395d0f6c",
+        "gitBlob": "0c3db6a22e1f652ca30d085de23217fc52eb5e51"
+      },
+      "checks": 97,
+      "allPassed": true
+    },
+    "binding": {
+      "identity": {
+        "bytes": 47779,
+        "sha256": "ce13ee532bbca6a6181f95a97815e6c122be0a0adb46220ba61fd8b7c4029faa",
+        "gitBlob": "c2357e52f57abe45cd77d1ff0844aaa16d1095a6"
+      },
+      "checks": 65,
+      "allPassed": true
+    },
+    "exactProposal": {
+      "bytes": 25372,
+      "sha256": "7def167b3384043abb2cea83e90c51ea332f2c12a9f4fc3ca1ddcf1531bab85c",
+      "gitBlob": "b0d4fb7c7ca2fc486fda6823ee3c3618171f8cdc"
+    },
+    "exactGate": {
+      "bytes": 4327,
+      "sha256": "3231731b2a22cb3903ccff6991341b54c673cd7064599b9aa7238fe07e3c6b18",
+      "gitBlob": "2780955d0a71956a75650ddf4d8a0ff0576faa57"
+    },
+    "allThreeFullPostimageSubjectsJoined": true,
+    "fullGuardEmbeddedGateAndProposalLiteralEqual": true,
+    "admittedR1": {
+      "bytes": 139634,
+      "sha256": "b9524cd8f0f1251f034337f4eb8fbc6606adc1d1c987d993580be06b9a078a75",
+      "gitBlob": "8ce89328171e58ec3e0631dce9607ee7e1eba54e"
+    },
+    "dataVerifierCorrection": "The earlier data-only reverse checker was corrected to use exact offsets where the replacement hook condition repeats. The actual full published postimage inverse is independently exact. No source bytes or target runtime were changed by that checker correction."
+  },
+  "chronology": {
+    "producerGateAt": "2026-11-17 01:40:00 UTC",
+    "sourceProposalAt": "2026-11-17 01:43:09 UTC",
+    "sourceR2ClosedAt": "2026-11-17 01:50:17 UTC",
+    "actualCommitAt": "2026-11-17T01:51:48Z",
+    "rootActualReadbackAt": "2026-11-17 01:55:14 UTC"
+  },
+  "currentPublicationPointerJoins": [
+    {
+      "label": "redActualRoot",
+      "identity": {
+        "bytes": 55348,
+        "sha256": "bbe57a54a25a38bee1d4f4de5fc1d036d81f6b2ecdb40b3d0088b274de6656c9",
+        "gitBlob": "9218839ef55406b01267605c040bc586c7d443be"
+      },
+      "joined": true
+    },
+    {
+      "label": "redActualIndependent",
+      "identity": {
+        "bytes": 166393,
+        "sha256": "cbe1880831780d10a7131282ab2ecc37d81fbdede3c53a265c1749ea863c20f2",
+        "gitBlob": "e5c2c2d8c84c0d491e334f6d67774cf23c83948f"
+      },
+      "joined": true
+    },
+    {
+      "label": "producerGate",
+      "identity": {
+        "bytes": 4327,
+        "sha256": "3231731b2a22cb3903ccff6991341b54c673cd7064599b9aa7238fe07e3c6b18",
+        "gitBlob": "2780955d0a71956a75650ddf4d8a0ff0576faa57"
+      },
+      "joined": true
+    },
+    {
+      "label": "proposal",
+      "identity": {
+        "bytes": 25372,
+        "sha256": "7def167b3384043abb2cea83e90c51ea332f2c12a9f4fc3ca1ddcf1531bab85c",
+        "gitBlob": "b0d4fb7c7ca2fc486fda6823ee3c3618171f8cdc"
+      },
+      "joined": true
+    },
+    {
+      "label": "rootReview",
+      "identity": {
+        "bytes": 17023,
+        "sha256": "30aa0b71c8c7cdb32d88db381e7396ec2e543ea977d80e93ee8297bd9f3304f3",
+        "gitBlob": "e4119f144e4a79e7c7b6a1598a33a70388df207f"
+      },
+      "joined": true
+    },
+    {
+      "label": "guardReview",
+      "identity": {
+        "bytes": 245598,
+        "sha256": "0bdbb65827d3717684d09ea1e35a2528b2ea4ee36143e4d3abe3601bf8bb8022",
+        "gitBlob": "ce6997eef4cc5989fb1c5437a23ef490bc74377a"
+      },
+      "joined": true
+    },
+    {
+      "label": "semanticReview",
+      "identity": {
+        "bytes": 70998,
+        "sha256": "3a3fe8dcf619204191b0db04023c5293fd24e433b74f2bf801f07bbc395d0f6c",
+        "gitBlob": "0c3db6a22e1f652ca30d085de23217fc52eb5e51"
+      },
+      "joined": true
+    },
+    {
+      "label": "bindingReview",
+      "identity": {
+        "bytes": 47779,
+        "sha256": "ce13ee532bbca6a6181f95a97815e6c122be0a0adb46220ba61fd8b7c4029faa",
+        "gitBlob": "c2357e52f57abe45cd77d1ff0844aaa16d1095a6"
+      },
+      "joined": true
+    },
+    {
+      "label": "source R2 proposal",
+      "identity": {
+        "bytes": 25372,
+        "sha256": "7def167b3384043abb2cea83e90c51ea332f2c12a9f4fc3ca1ddcf1531bab85c",
+        "gitBlob": "b0d4fb7c7ca2fc486fda6823ee3c3618171f8cdc"
+      },
+      "joined": true
+    },
+    {
+      "label": "source root review",
+      "identity": {
+        "bytes": 17023,
+        "sha256": "30aa0b71c8c7cdb32d88db381e7396ec2e543ea977d80e93ee8297bd9f3304f3",
+        "gitBlob": "e4119f144e4a79e7c7b6a1598a33a70388df207f"
+      },
+      "joined": true
+    },
+    {
+      "label": "source guard review",
+      "identity": {
+        "bytes": 245598,
+        "sha256": "0bdbb65827d3717684d09ea1e35a2528b2ea4ee36143e4d3abe3601bf8bb8022",
+        "gitBlob": "ce6997eef4cc5989fb1c5437a23ef490bc74377a"
+      },
+      "joined": true
+    },
+    {
+      "label": "source semantic review",
+      "identity": {
+        "bytes": 70998,
+        "sha256": "3a3fe8dcf619204191b0db04023c5293fd24e433b74f2bf801f07bbc395d0f6c",
+        "gitBlob": "0c3db6a22e1f652ca30d085de23217fc52eb5e51"
+      },
+      "joined": true
+    },
+    {
+      "label": "source binding review",
+      "identity": {
+        "bytes": 47779,
+        "sha256": "ce13ee532bbca6a6181f95a97815e6c122be0a0adb46220ba61fd8b7c4029faa",
+        "gitBlob": "c2357e52f57abe45cd77d1ff0844aaa16d1095a6"
+      },
+      "joined": true
+    },
+    {
+      "label": "authorship gate",
+      "identity": {
+        "bytes": 4327,
+        "sha256": "3231731b2a22cb3903ccff6991341b54c673cd7064599b9aa7238fe07e3c6b18",
+        "gitBlob": "2780955d0a71956a75650ddf4d8a0ff0576faa57"
+      },
+      "joined": true
+    },
+    {
+      "label": "RED actual root",
+      "identity": {
+        "bytes": 55348,
+        "sha256": "bbe57a54a25a38bee1d4f4de5fc1d036d81f6b2ecdb40b3d0088b274de6656c9",
+        "gitBlob": "9218839ef55406b01267605c040bc586c7d443be"
+      },
+      "joined": true
+    },
+    {
+      "label": "RED actual independent",
+      "identity": {
+        "bytes": 166393,
+        "sha256": "cbe1880831780d10a7131282ab2ecc37d81fbdede3c53a265c1749ea863c20f2",
+        "gitBlob": "e5c2c2d8c84c0d491e334f6d67774cf23c83948f"
+      },
+      "joined": true
+    },
+    {
+      "label": "published producer vector",
+      "identity": {
+        "bytes": 2118,
+        "sha256": "6007c5c7ba2f74c43bd9b73c50cae2319eacbf712c233cc0d67b3efbb4c6894d",
+        "gitBlob": "3887991d5dbd25dbec5c8656e8e03d423ea502b7"
+      },
+      "joined": true
+    },
+    {
+      "label": "Guard postimage scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+      "identity": {
+        "bytes": 45795,
+        "sha256": "2c5931f5c7fa1dc8bb7858201c1b8afdbae9683faf4a2ad9fce067f116f3f94b",
+        "gitBlob": "5026f0ec6165bb092717ddc989043848a25081dc"
+      },
+      "joined": true
+    },
+    {
+      "label": "semantic postimage scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+      "identity": {
+        "bytes": 45795,
+        "sha256": "2c5931f5c7fa1dc8bb7858201c1b8afdbae9683faf4a2ad9fce067f116f3f94b",
+        "gitBlob": "5026f0ec6165bb092717ddc989043848a25081dc"
+      },
+      "joined": true
+    },
+    {
+      "label": "binding postimage scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+      "identity": {
+        "bytes": 45795,
+        "sha256": "2c5931f5c7fa1dc8bb7858201c1b8afdbae9683faf4a2ad9fce067f116f3f94b",
+        "gitBlob": "5026f0ec6165bb092717ddc989043848a25081dc"
+      },
+      "joined": true
+    },
+    {
+      "label": "actual source postimage scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+      "identity": {
+        "bytes": 45795,
+        "sha256": "2c5931f5c7fa1dc8bb7858201c1b8afdbae9683faf4a2ad9fce067f116f3f94b",
+        "gitBlob": "5026f0ec6165bb092717ddc989043848a25081dc"
+      },
+      "joined": true
+    },
+    {
+      "label": "Guard postimage scripts/legacy-agent-host/desktop-task-review-cycle-ui-smoke.ts",
+      "identity": {
+        "bytes": 33036,
+        "sha256": "4fa52cfad9347065680ef62a3ba6420762408a78a93b77e96ac3a2e16e68bdc9",
+        "gitBlob": "8d175c98158b3bd71192aef7b1929484b2b681b6"
+      },
+      "joined": true
+    },
+    {
+      "label": "semantic postimage scripts/legacy-agent-host/desktop-task-review-cycle-ui-smoke.ts",
+      "identity": {
+        "bytes": 33036,
+        "sha256": "4fa52cfad9347065680ef62a3ba6420762408a78a93b77e96ac3a2e16e68bdc9",
+        "gitBlob": "8d175c98158b3bd71192aef7b1929484b2b681b6"
+      },
+      "joined": true
+    },
+    {
+      "label": "binding postimage scripts/legacy-agent-host/desktop-task-review-cycle-ui-smoke.ts",
+      "identity": {
+        "bytes": 33036,
+        "sha256": "4fa52cfad9347065680ef62a3ba6420762408a78a93b77e96ac3a2e16e68bdc9",
+        "gitBlob": "8d175c98158b3bd71192aef7b1929484b2b681b6"
+      },
+      "joined": true
+    },
+    {
+      "label": "actual source postimage scripts/legacy-agent-host/desktop-task-review-cycle-ui-smoke.ts",
+      "identity": {
+        "bytes": 33036,
+        "sha256": "4fa52cfad9347065680ef62a3ba6420762408a78a93b77e96ac3a2e16e68bdc9",
+        "gitBlob": "8d175c98158b3bd71192aef7b1929484b2b681b6"
+      },
+      "joined": true
+    },
+    {
+      "label": "Guard postimage src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts",
+      "identity": {
+        "bytes": 74340,
+        "sha256": "647ac5732bfd6b5cb57834adb4ad22c32ee5dfb018a934c92f982efd9daa531c",
+        "gitBlob": "c2faa156015707bc5fbd7f8123a7ffd9c4faa486"
+      },
+      "joined": true
+    },
+    {
+      "label": "semantic postimage src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts",
+      "identity": {
+        "bytes": 74340,
+        "sha256": "647ac5732bfd6b5cb57834adb4ad22c32ee5dfb018a934c92f982efd9daa531c",
+        "gitBlob": "c2faa156015707bc5fbd7f8123a7ffd9c4faa486"
+      },
+      "joined": true
+    },
+    {
+      "label": "binding postimage src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts",
+      "identity": {
+        "bytes": 74340,
+        "sha256": "647ac5732bfd6b5cb57834adb4ad22c32ee5dfb018a934c92f982efd9daa531c",
+        "gitBlob": "c2faa156015707bc5fbd7f8123a7ffd9c4faa486"
+      },
+      "joined": true
+    },
+    {
+      "label": "actual source postimage src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts",
+      "identity": {
+        "bytes": 74340,
+        "sha256": "647ac5732bfd6b5cb57834adb4ad22c32ee5dfb018a934c92f982efd9daa531c",
+        "gitBlob": "c2faa156015707bc5fbd7f8123a7ffd9c4faa486"
+      },
+      "joined": true
+    }
+  ],
+  "currentPublicationPointerCount": 29,
+  "priorAcceptedRedPublication": {
+    "commit": "77993819c233737f1e2b4c11c8ca1a5d360bcbe3",
+    "tree": "ada3f27db78fabc17a91e3904d41b8bc547c6dca",
+    "docsTree": "a1b92f625b548e7384ef13e0358c420d1e1f136d",
+    "root": {
+      "bytes": 55348,
+      "sha256": "bbe57a54a25a38bee1d4f4de5fc1d036d81f6b2ecdb40b3d0088b274de6656c9",
+      "gitBlob": "9218839ef55406b01267605c040bc586c7d443be"
+    },
+    "independent": {
+      "bytes": 166393,
+      "sha256": "cbe1880831780d10a7131282ab2ecc37d81fbdede3c53a265c1749ea863c20f2",
+      "gitBlob": "e5c2c2d8c84c0d491e334f6d67774cf23c83948f"
+    },
+    "completeActualPublishedBodiesReadAndLiteralEqual": true
+  },
+  "parallelRootActual": {
+    "identity": {
+      "bytes": 67762,
+      "sha256": "72188509d6d08e0c84a355f30686b898f00bbd0f6a19cc5b723df405080dfad9",
+      "gitBlob": "8940b2ec5b87ecd8ed5d442d282687ee7ec22a00"
+    },
+    "fullBodyReadAndRehashed": true,
+    "all149ChecksPassed": true,
+    "all29CurrentPointerJoinsIndependentlyResolved": true,
+    "exactSameSubject": true,
+    "exactCommitTreeDocsAndSoleParent": true,
+    "exactFullActualAndParentReadbacks": true,
+    "exactFullDelta": true
+  },
+  "oldAttempts": {
+    "session53054": "Complete accepted expected RED; observed outer 0; Node 134 pass/5 fail, renderer 82 pass/3 fail; spent. This source publication does not change that accepted physical observation.",
+    "session64038": "REFUSED/SPENT; observed outer 2. No replay.",
+    "session54393": "UNKNOWN/INCOMPLETE/SPENT; old outer/termination/custody/cleanup remain unknown. No recovery or transfer inferred."
+  },
+  "checks": [
+    {
+      "name": "Actual current ref is the exact requested source publication commit",
+      "passed": true
+    },
+    {
+      "name": "Actual commit has exactly the accepted RED publication as sole parent",
+      "passed": true
+    },
+    {
+      "name": "Actual commit root and manifest parent root are exact",
+      "passed": true
+    },
+    {
+      "name": "Both complete root listings are untruncated and contain 54 entries",
+      "passed": true
+    },
+    {
+      "name": "Only docs, scripts and src root entries change",
+      "passed": true
+    },
+    {
+      "name": "All 51 other complete root entries are literal identical",
+      "passed": true
+    },
+    {
+      "name": "No root entry added or removed",
+      "passed": true
+    },
+    {
+      "name": "Full docs before and after tree are exact root anchors",
+      "passed": true
+    },
+    {
+      "name": "Full docs leaf delta has no deletion or mode change",
+      "passed": true
+    },
+    {
+      "name": "Full scripts before and after tree are exact root anchors",
+      "passed": true
+    },
+    {
+      "name": "Full scripts leaf delta has no deletion or mode change",
+      "passed": true
+    },
+    {
+      "name": "Full src before and after tree are exact root anchors",
+      "passed": true
+    },
+    {
+      "name": "Full src leaf delta has no deletion or mode change",
+      "passed": true
+    },
+    {
+      "name": "Exact fifteen changed paths equal the complete manifest publication list",
+      "passed": true
+    },
+    {
+      "name": "Exact delta is nine additions and six modifications",
+      "passed": true
+    },
+    {
+      "name": "Exact non-doc delta is the three selected producer modifications",
+      "passed": true
+    },
+    {
+      "name": "Docs delta is exactly nine additions and three modifications",
+      "passed": true
+    },
+    {
+      "name": "Published census derives from exact anchored unchanged leaves",
+      "passed": true
+    },
+    {
+      "name": "Full actual published body rehash and tree join: scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+      "passed": true
+    },
+    {
+      "name": "Full actual published body rehash and tree join: scripts/legacy-agent-host/desktop-task-review-cycle-ui-smoke.ts",
+      "passed": true
+    },
+    {
+      "name": "Full actual published body rehash and tree join: src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts",
+      "passed": true
+    },
+    {
+      "name": "Full actual published body rehash and tree join: docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-post-transport-recovery-red-actual-root-publication-20261117.json",
+      "passed": true
+    },
+    {
+      "name": "Full actual published body rehash and tree join: docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-post-transport-recovery-red-actual-independent-publication-20261117.json",
+      "passed": true
+    },
+    {
+      "name": "Full actual published body rehash and tree join: docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-producer-authorship-gate-20261117.json",
+      "passed": true
+    },
+    {
+      "name": "Full actual published body rehash and tree join: docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-three-producer-source-r2-proposal-20261117.json",
+      "passed": true
+    },
+    {
+      "name": "Full actual published body rehash and tree join: docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-three-producer-root-source-r2-review-20261117.json",
+      "passed": true
+    },
+    {
+      "name": "Full actual published body rehash and tree join: docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-three-producer-guard-source-r2-review-20261117.json",
+      "passed": true
+    },
+    {
+      "name": "Full actual published body rehash and tree join: docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-three-producer-semantic-source-r2-review-20261117.json",
+      "passed": true
+    },
+    {
+      "name": "Full actual published body rehash and tree join: docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-three-producer-binding-source-r2-review-20261117.json",
+      "passed": true
+    },
+    {
+      "name": "Full actual published body rehash and tree join: docs/plans/provider-migration/frontend-parity-2026-11-12/29-reconciled-acceptance-and-custody-followups-2026-11-15.md",
+      "passed": true
+    },
+    {
+      "name": "Full actual published body rehash and tree join: docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/continuation-status-20261116.md",
+      "passed": true
+    },
+    {
+      "name": "Full actual published body rehash and tree join: docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1213-retention-catalog-20261116.json",
+      "passed": true
+    },
+    {
+      "name": "Full actual published body rehash and tree join: docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-three-producer-publication-manifest-20261117.json",
+      "passed": true
+    },
+    {
+      "name": "All fifteen actual changed bodies total exactly 3642841 bytes",
+      "passed": true
+    },
+    {
+      "name": "Complete publication manifest hash is exact",
+      "passed": true
+    },
+    {
+      "name": "Complete parent modified document rehash and tree join: docs/plans/provider-migration/frontend-parity-2026-11-12/29-reconciled-acceptance-and-custody-followups-2026-11-15.md",
+      "passed": true
+    },
+    {
+      "name": "Full unchanged Markdown prefix and appended body identity: docs/plans/provider-migration/frontend-parity-2026-11-12/29-reconciled-acceptance-and-custody-followups-2026-11-15.md",
+      "passed": true
+    },
+    {
+      "name": "Complete parent modified document rehash and tree join: docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/continuation-status-20261116.md",
+      "passed": true
+    },
+    {
+      "name": "Full unchanged Markdown prefix and appended body identity: docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/continuation-status-20261116.md",
+      "passed": true
+    },
+    {
+      "name": "Complete parent modified document rehash and tree join: docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1213-retention-catalog-20261116.json",
+      "passed": true
+    },
+    {
+      "name": "All three full parent modified documents total exactly 2804697 bytes",
+      "passed": true
+    },
+    {
+      "name": "Complete unchanged test subtree remains anchored in the actual root",
+      "passed": true
+    },
+    {
+      "name": "Current complete source body, nine-row pin, and actual tree agree: scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+      "passed": true
+    },
+    {
+      "name": "Frozen entire source/test body is literal unchanged: scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+      "passed": true
+    },
+    {
+      "name": "Current complete source body, nine-row pin, and actual tree agree: scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+      "passed": true
+    },
+    {
+      "name": "Current complete source body, nine-row pin, and actual tree agree: scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts",
+      "passed": true
+    },
+    {
+      "name": "Frozen entire source/test body is literal unchanged: scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts",
+      "passed": true
+    },
+    {
+      "name": "Current complete source body, nine-row pin, and actual tree agree: scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+      "passed": true
+    },
+    {
+      "name": "Frozen entire source/test body is literal unchanged: scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+      "passed": true
+    },
+    {
+      "name": "Current complete source body, nine-row pin, and actual tree agree: scripts/legacy-agent-host/desktop-task-review-cycle-ui-smoke.ts",
+      "passed": true
+    },
+    {
+      "name": "Current complete source body, nine-row pin, and actual tree agree: scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+      "passed": true
+    },
+    {
+      "name": "Frozen entire source/test body is literal unchanged: scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+      "passed": true
+    },
+    {
+      "name": "Current complete source body, nine-row pin, and actual tree agree: scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "passed": true
+    },
+    {
+      "name": "Frozen entire source/test body is literal unchanged: scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "passed": true
+    },
+    {
+      "name": "Current complete source body, nine-row pin, and actual tree agree: src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts",
+      "passed": true
+    },
+    {
+      "name": "Current complete source body, nine-row pin, and actual tree agree: test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts",
+      "passed": true
+    },
+    {
+      "name": "Frozen entire source/test body is literal unchanged: test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts",
+      "passed": true
+    },
+    {
+      "name": "All nine full current source bodies total exactly 604476 bytes",
+      "passed": true
+    },
+    {
+      "name": "Six additional frozen bodies total exactly 451305 bytes",
+      "passed": true
+    },
+    {
+      "name": "Published producer has exact full forward/inverse and admitted preimage: scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+      "passed": true
+    },
+    {
+      "name": "Published producer line count and existing cap match accepted proposal: scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+      "passed": true
+    },
+    {
+      "name": "Published producer has exact full forward/inverse and admitted preimage: scripts/legacy-agent-host/desktop-task-review-cycle-ui-smoke.ts",
+      "passed": true
+    },
+    {
+      "name": "Published producer line count and existing cap match accepted proposal: scripts/legacy-agent-host/desktop-task-review-cycle-ui-smoke.ts",
+      "passed": true
+    },
+    {
+      "name": "Published producer has exact full forward/inverse and admitted preimage: src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts",
+      "passed": true
+    },
+    {
+      "name": "Published producer line count and existing cap match accepted proposal: src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts",
+      "passed": true
+    },
+    {
+      "name": "Derived complete nine-row after-vector exactly 3887991d",
+      "passed": true
+    },
+    {
+      "name": "Derived complete nine-row before-vector remains f6446bdc",
+      "passed": true
+    },
+    {
+      "name": "Exactly three nine-row entries change",
+      "passed": true
+    },
+    {
+      "name": "Both complete tests are the unchanged 139/85 identities",
+      "passed": true
+    },
+    {
+      "name": "Actual evidence addition full identity: docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-post-transport-recovery-red-actual-root-publication-20261117.json",
+      "passed": true
+    },
+    {
+      "name": "Actual evidence addition full identity: docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-post-transport-recovery-red-actual-independent-publication-20261117.json",
+      "passed": true
+    },
+    {
+      "name": "Actual evidence addition full identity: docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-producer-authorship-gate-20261117.json",
+      "passed": true
+    },
+    {
+      "name": "Actual evidence addition full identity: docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-three-producer-source-r2-proposal-20261117.json",
+      "passed": true
+    },
+    {
+      "name": "Actual evidence addition full identity: docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-three-producer-root-source-r2-review-20261117.json",
+      "passed": true
+    },
+    {
+      "name": "Actual evidence addition full identity: docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-three-producer-guard-source-r2-review-20261117.json",
+      "passed": true
+    },
+    {
+      "name": "Actual evidence addition full identity: docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-three-producer-semantic-source-r2-review-20261117.json",
+      "passed": true
+    },
+    {
+      "name": "Actual evidence addition full identity: docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-three-producer-binding-source-r2-review-20261117.json",
+      "passed": true
+    },
+    {
+      "name": "Actual complete source proposal and gate match accepted literal bodies",
+      "passed": true
+    },
+    {
+      "name": "Actual complete root and binding R2 bodies match prior accepted literal reports",
+      "passed": true
+    },
+    {
+      "name": "Full root source R2 accepts all 55 checks without blockers",
+      "passed": true
+    },
+    {
+      "name": "Full Guard source R2 accepts all 81 checks without findings",
+      "passed": true
+    },
+    {
+      "name": "Full semantic source R2 accepts all 97 checks without assigned blockers",
+      "passed": true
+    },
+    {
+      "name": "Full binding source R2 accepts all 65 checks without blockers",
+      "passed": true
+    },
+    {
+      "name": "Root R2 exact selected subject joins publication",
+      "passed": true
+    },
+    {
+      "name": "Binding R2 exact selected subject joins publication",
+      "passed": true
+    },
+    {
+      "name": "Semantic R2 exact nine-row boundary and tests join publication",
+      "passed": true
+    },
+    {
+      "name": "Guard full postimage and inverse joins actual published producer: scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+      "passed": true
+    },
+    {
+      "name": "Semantic and binding complete postimage subject join actual producer: scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+      "passed": true
+    },
+    {
+      "name": "Guard full postimage and inverse joins actual published producer: scripts/legacy-agent-host/desktop-task-review-cycle-ui-smoke.ts",
+      "passed": true
+    },
+    {
+      "name": "Semantic and binding complete postimage subject join actual producer: scripts/legacy-agent-host/desktop-task-review-cycle-ui-smoke.ts",
+      "passed": true
+    },
+    {
+      "name": "Guard full postimage and inverse joins actual published producer: src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts",
+      "passed": true
+    },
+    {
+      "name": "Semantic and binding complete postimage subject join actual producer: src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts",
+      "passed": true
+    },
+    {
+      "name": "All four source reviews join exact admitted R1, producer gate and proposal",
+      "passed": true
+    },
+    {
+      "name": "Guard complete embedded gate and proposal equal actual retained bodies",
+      "passed": true
+    },
+    {
+      "name": "Complete inherited catalog value preserved: kind",
+      "passed": true
+    },
+    {
+      "name": "Complete inherited catalog value preserved: schemaVersion",
+      "passed": true
+    },
+    {
+      "name": "Complete inherited catalog value preserved: parentCandidate",
+      "passed": true
+    },
+    {
+      "name": "Complete inherited catalog value preserved: source",
+      "passed": true
+    },
+    {
+      "name": "Complete inherited catalog value preserved: baselineIndex",
+      "passed": true
+    },
+    {
+      "name": "Complete inherited catalog value preserved: baselineActualPublication",
+      "passed": true
+    },
+    {
+      "name": "Complete inherited catalog value preserved: baselineIndependentPublication",
+      "passed": true
+    },
+    {
+      "name": "Complete inherited catalog value preserved: late06ActualPublication",
+      "passed": true
+    },
+    {
+      "name": "Complete inherited catalog value preserved: late06IndependentPublication",
+      "passed": true
+    },
+    {
+      "name": "Complete inherited catalog value preserved: bundles",
+      "passed": true
+    },
+    {
+      "name": "Complete inherited catalog value preserved: conversationBinding",
+      "passed": true
+    },
+    {
+      "name": "Complete inherited catalog value preserved: localEnvironment",
+      "passed": true
+    },
+    {
+      "name": "Complete inherited catalog value preserved: remainingRuntimeBudgets",
+      "passed": true
+    },
+    {
+      "name": "Complete inherited catalog value preserved: totals",
+      "passed": true
+    },
+    {
+      "name": "Complete inherited catalog value preserved: incomingDeliveryAudit",
+      "passed": true
+    },
+    {
+      "name": "Complete inherited catalog value preserved: environmentObservations",
+      "passed": true
+    },
+    {
+      "name": "Complete inherited catalog value preserved: historicalLocalEnvironment",
+      "passed": true
+    },
+    {
+      "name": "Complete inherited catalog value preserved: freshConversationBinding",
+      "passed": true
+    },
+    {
+      "name": "Complete inherited catalog value preserved: originalCiFinal",
+      "passed": true
+    },
+    {
+      "name": "Complete inherited catalog value preserved: freshRecoveryCheckpoint",
+      "passed": true
+    },
+    {
+      "name": "Complete inherited catalog value preserved: originalArtifactAnalyses",
+      "passed": true
+    },
+    {
+      "name": "Complete inherited catalog value preserved: totalsQualification",
+      "passed": true
+    },
+    {
+      "name": "Complete inherited catalog value preserved: freshRecoveryEvidenceFiles",
+      "passed": true
+    },
+    {
+      "name": "Complete inherited catalog value preserved: freshRunnerR2",
+      "passed": true
+    },
+    {
+      "name": "Complete inherited catalog value preserved: currentConversationStage",
+      "passed": true
+    },
+    {
+      "name": "Complete inherited catalog value preserved: originalP09ArtifactReview",
+      "passed": true
+    },
+    {
+      "name": "Complete inherited catalog value preserved: priorConversationStageAtProducerPublication",
+      "passed": true
+    },
+    {
+      "name": "Complete inherited catalog value preserved: crossCloseProspectiveScope",
+      "passed": true
+    },
+    {
+      "name": "Complete inherited catalog value preserved: incomingDeliveryUpdates",
+      "passed": true
+    },
+    {
+      "name": "Complete inherited catalog value preserved: currentCrossCloseStage",
+      "passed": true
+    },
+    {
+      "name": "Complete inherited catalog value preserved: priorCrossCloseStageAtTestPublication",
+      "passed": true
+    },
+    {
+      "name": "Complete inherited catalog value preserved: priorCrossCloseStageAtRedControlsPublication",
+      "passed": true
+    },
+    {
+      "name": "Complete inherited catalog value preserved: priorCrossCloseStageAtGreenBindingPublication",
+      "passed": true
+    },
+    {
+      "name": "Complete inherited catalog value preserved: priorCrossCloseStageAtRecoveryR1Publication",
+      "passed": true
+    },
+    {
+      "name": "Complete inherited catalog value preserved: crossValidationRecoveryEvidenceFiles",
+      "passed": true
+    },
+    {
+      "name": "Complete inherited catalog value preserved: incomingDeliveryLatestSourceAssessment",
+      "passed": true
+    },
+    {
+      "name": "Complete inherited catalog value preserved: priorCrossCloseStageAtRecoveryControlsPublication",
+      "passed": true
+    },
+    {
+      "name": "Complete inherited catalog value preserved: crossValidationRecoveryControlEvidenceFiles",
+      "passed": true
+    },
+    {
+      "name": "Complete inherited catalog value preserved: priorCrossCloseStageAtRecoveryCompletion",
+      "passed": true
+    },
+    {
+      "name": "Complete inherited catalog value preserved: crossValidationRecoveryCompletionEvidenceFiles",
+      "passed": true
+    },
+    {
+      "name": "Complete inherited catalog value preserved: combined139Renderer85R1EvidenceFiles",
+      "passed": true
+    },
+    {
+      "name": "Complete inherited catalog value preserved: priorCombinedNodeRendererStageAtTestPublication",
+      "passed": true
+    },
+    {
+      "name": "Complete inherited catalog value preserved: combined139Renderer85TestEvidenceFiles",
+      "passed": true
+    },
+    {
+      "name": "Complete inherited catalog value preserved: priorCombinedNodeRendererStageAtControlsPublication",
+      "passed": true
+    },
+    {
+      "name": "Complete inherited catalog value preserved: combined139Renderer85ControlEvidenceFiles",
+      "passed": true
+    },
+    {
+      "name": "Complete inherited catalog value preserved: priorCombinedNodeRendererStageAtTestMaterialization",
+      "passed": true
+    },
+    {
+      "name": "Complete inherited catalog value preserved: combined139Renderer85TestMaterializationEvidenceFiles",
+      "passed": true
+    },
+    {
+      "name": "Complete inherited catalog value preserved: priorCombinedNodeRendererStageAtRefusedRed",
+      "passed": true
+    },
+    {
+      "name": "Complete inherited catalog value preserved: combined139Renderer85RefusedRedEvidenceFiles",
+      "passed": true
+    },
+    {
+      "name": "Complete inherited catalog value preserved: incomingDeliveryAtRefusedCombinedRed",
+      "passed": true
+    },
+    {
+      "name": "Complete inherited catalog value preserved: priorCombinedNodeRendererStageAtCorrectedTitleR1",
+      "passed": true
+    },
+    {
+      "name": "Complete inherited catalog value preserved: combined139Renderer85CorrectedTitleR1EvidenceFiles",
+      "passed": true
+    },
+    {
+      "name": "Complete inherited catalog value preserved: incomingDSourceFollowup",
+      "passed": true
+    },
+    {
+      "name": "Complete inherited catalog value preserved: canonicalDependencyFollowup",
+      "passed": true
+    },
+    {
+      "name": "Complete inherited catalog value preserved: priorCombinedNodeRendererStageAtCorrectedControls",
+      "passed": true
+    },
+    {
+      "name": "Complete inherited catalog value preserved: combined139Renderer85CorrectedControlEvidenceFiles",
+      "passed": true
+    },
+    {
+      "name": "Complete inherited catalog value preserved: priorCombinedNodeRendererStageAtCorrectedRedIncomplete",
+      "passed": true
+    },
+    {
+      "name": "Complete inherited catalog value preserved: combined139Renderer85CorrectedRedIncompleteEvidenceFiles",
+      "passed": true
+    },
+    {
+      "name": "Complete inherited catalog value preserved: priorCombinedNodeRendererStageAtPostTransportRecoveryR1",
+      "passed": true
+    },
+    {
+      "name": "Complete inherited catalog value preserved: combined139Renderer85PostTransportRecoveryR1EvidenceFiles",
+      "passed": true
+    },
+    {
+      "name": "Complete inherited catalog value preserved: priorCombinedNodeRendererStageAtPostTransportRecoveryControls",
+      "passed": true
+    },
+    {
+      "name": "Complete inherited catalog value preserved: combined139Renderer85PostTransportRecoveryControlEvidenceFiles",
+      "passed": true
+    },
+    {
+      "name": "Complete inherited catalog value preserved: priorCombinedNodeRendererStageAtPostTransportRecoveryRed",
+      "passed": true
+    },
+    {
+      "name": "Complete inherited catalog value preserved: combined139Renderer85PostTransportRecoveryRedEvidenceFiles",
+      "passed": true
+    },
+    {
+      "name": "Exactly 64 other complete parent catalog fields preserved",
+      "passed": true
+    },
+    {
+      "name": "Complete previous current stage is exactly archived",
+      "passed": true
+    },
+    {
+      "name": "Exactly the named archive and evidence catalog keys are added",
+      "passed": true
+    },
+    {
+      "name": "Complete eight-entry current evidence map equals manifest",
+      "passed": true
+    },
+    {
+      "name": "All complete 27 original bundles and totals remain literal equal",
+      "passed": true
+    },
+    {
+      "name": "Current stage preserves all fields outside the precise selected publication changes",
+      "passed": true
+    },
+    {
+      "name": "Current catalog records the published after-vector and complete nine pins",
+      "passed": true
+    },
+    {
+      "name": "Physical RED source reference remains distinct and unchanged before-vector",
+      "passed": true
+    },
+    {
+      "name": "Current physical source metadata is unchanged apart from truthful qualification",
+      "passed": true
+    },
+    {
+      "name": "Current publication explicitly claims no source application, GREEN, validation or whole E2E",
+      "passed": true
+    },
+    {
+      "name": "Current catalog correctly records source publication with actual readback still pending at authoring",
+      "passed": true
+    },
+    {
+      "name": "Full producer gate body and exact identity are in current stage",
+      "passed": true
+    },
+    {
+      "name": "Current R2 references and full source pre/post triples join accepted exact reports",
+      "passed": true
+    },
+    {
+      "name": "Gate closes before complete proposal authorship, R2 closure and actual commit",
+      "passed": true
+    },
+    {
+      "name": "Both actual prior RED readback reports are published literal accepted bodies",
+      "passed": true
+    },
+    {
+      "name": "Both prior actual reports join gate actual commit/root/docs/sole parent",
+      "passed": true
+    },
+    {
+      "name": "Accepted physical RED immutable proofs remain exact apart from publication acceptance",
+      "passed": true
+    },
+    {
+      "name": "Accepted RED observed outcome and both spent old attempts remain unmodified",
+      "passed": true
+    },
+    {
+      "name": "Root actual report full identity and complete accepted subject join publication",
+      "passed": true
+    },
+    {
+      "name": "Root actual report has all 149 successful checks and no unresolved entries",
+      "passed": true
+    },
+    {
+      "name": "Root full 15 current and 3 parent body readbacks join independent full bodies",
+      "passed": true
+    },
+    {
+      "name": "Root full nine-source readbacks join independent full bodies and same trees",
+      "passed": true
+    },
+    {
+      "name": "Root exact full delta equals independently derived delta",
+      "passed": true
+    },
+    {
+      "name": "Root anchored subtree leaves and all 51 unchanged entries join independent proof",
+      "passed": true
+    },
+    {
+      "name": "All 29 root current pointer joins are independently resolved to full actual bodies or exact derived vector",
+      "passed": true
+    },
+    {
+      "name": "Root actual report preserves no physical application or phase-binding authorship claim",
+      "passed": true
+    },
+    {
+      "name": "All complete read operations succeeded",
+      "passed": true
+    },
+    {
+      "name": "Source-size boundary remains 5020 files, 800 standard cap and 141 existing exceptions by exact construction",
+      "passed": true
+    },
+    {
+      "name": "Accepted exact binding review remains full-read and its own self-readback verified",
+      "passed": true
+    }
+  ],
+  "checkCount": 187,
+  "failedChecks": [],
+  "unresolvedPointers": [],
+  "unresolvedBlockers": [],
+  "sourceWorkingTreeWritesByReviewer": 0,
+  "producerSourcePostimagesPublished": true,
+  "producerPostimagesApplied": false,
+  "phaseBindingAuthoredByReviewer": false,
+  "runtimeInvokedByReviewer": false,
+  "producerPhaseBindingAuthorshipGateOpenedByReviewer": false,
+  "greenExecuted": false,
+  "validationExecuted": false,
+  "wholeE2EQualified": false,
+  "disposition": "The actual source publication is independently accepted. Root must completely read/hash/join this retained report to close the already selected actual-publication gate before authoring the exact immutable producer-materialization/GREEN binding. This report applies no source and authorizes no bypass of the existing binding R2/publication/readback or materialization and whole-GREEN sequence.",
+  "limits": [
+    "Git publication and exact static source/data preservation only; no fresh physical source application, runtime input census, GREEN, canonical validation or broader GUI/native/vendor/integration/full E2E result.",
+    "No new requirements, expanded source set, helper/import/test/workflow change, deadline extension, replay, partial resume, original CI polling or external communication was introduced.",
+    "Whole-root recursive transport was unavailable; the proof is complete root-anchored changed-subtree comparison plus all 51 literal unchanged remaining root entries, explicitly inheriting unchanged census."
+  ]
+}

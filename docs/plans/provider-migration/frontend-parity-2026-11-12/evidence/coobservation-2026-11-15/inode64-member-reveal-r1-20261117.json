@@ -1,0 +1,565 @@
+{
+  "schemaVersion": 1,
+  "kind": "R1-inode64-fresh-standalone-and-member-reveal-plan",
+  "at": "2026-11-17 06:16:00 UTC",
+  "repository": "777genius/agent-teams-ai",
+  "workingBranch": "fix/frontend-parity-coobservation-c714-20261115",
+  "author": "/root",
+  "purpose": "Finish two bounded blockers in parallel: correct only the cross-language Node inode comparison for one genuinely new standalone10 RED/GREEN attempt; reveal the existing unique alice member name before the unchanged original member-detail click in the common finite-provider GUI driver.",
+  "authority": {
+    "user": "Autonomously finish frontend/Host/extracted-provider parity end-to-end, work in parallel, immediately push every commit. No real Claude/Codex even version/probe. No main/default merge, Ready, release/default activation or Stage2.",
+    "rootSoleAuthorExecutor": true,
+    "reviewers": "Read-only Git/source/retained evidence and pure in-memory checks; may create bare review blobs. No shell, target runtime, source/control/ref/PR/CI mutation or live CI polling.",
+    "existingSequentialGates": "Complete this R1 plus root and independent reviews, docs publication/immediate push and full root/independent actual readbacks before source/control postimages. Complete combined exact source/control R2, publication/immediate push and full root/independent actual readbacks before staging or runtime.",
+    "noNewPermissionNeeded": true
+  },
+  "base": {
+    "commit": "c4fc226201fb32e59d1a8ccfb130922926445747",
+    "tree": "dd5a5960c523c25349d2c8a32ef3ee95ba57ab91",
+    "docsTree": "80c4128c877e6ca4fb7eb545025bdb3d64703952",
+    "parent": "674d32a84644f87544910c28bb4d2a4214958fb5",
+    "actualClosedAt": "2026-11-17 05:45:16 UTC",
+    "rootActual": {
+      "bytes": 65482,
+      "sha256": "9e0931fb08d50ef3a2c7f3ec24707a791ce479890d26b899b8a073eb822798b4",
+      "gitBlob": "516017b52445cd7c337878f0754a0e121849b24d"
+    },
+    "independentActual": {
+      "bytes": 200533,
+      "sha256": "25f4847a99bf1647b30b782eae9053a6b85cda1013b6b0d28fbae3ff6a7a484a",
+      "gitBlob": "f20c0188402a166dce08b6592e06e311edcc9fe9"
+    },
+    "completeLeaves": 11995,
+    "docsLeaves": 3196,
+    "nonDocLeaves": 8799,
+    "workflowLeaves": 42,
+    "rootNonDocEntries": 53,
+    "workingRefConfirmed": "2026-11-17 06:12:31 UTC",
+    "openWorkingHeadPRs": 0
+  },
+  "basis": {
+    "previousR1": {
+      "bytes": 20973,
+      "sha256": "e35155efe24474cfe0ff5d5ab90aa7b9f96bfe56eff99ad8aec10902aecf0016",
+      "gitBlob": "b34a76fffb93d5216cd689893186376963ef8654"
+    },
+    "previousR1Actual": {
+      "bytes": 3516,
+      "sha256": "ae46b4e2997a5a5185fada08711e4f291be723b53c1afdd05af2bd89ebcd11fd",
+      "gitBlob": "29040a4faa87137bfa070c71651147b2da4f2102"
+    },
+    "sourceR2": {
+      "bytes": 19187,
+      "sha256": "8bb84de228b570dfc121233893d32209a9389da44aa1747c7924dff936fa4c1a",
+      "gitBlob": "1318b887473a61e1cbfb3960812fbc84e3b4df13"
+    },
+    "sourceActualGate": {
+      "bytes": 5512,
+      "sha256": "6a7448cf1d88673af3c65741c51e2faf07703a99dfee37bf4fccd5383a943bf7",
+      "gitBlob": "be45f8ee4cd349456d196f6cfb1a1038c218c80c"
+    },
+    "sourceBeforeVector": {
+      "bytes": 2552,
+      "sha256": "647b7a268b8b8921d875327e3394726916d54cc3c10c1bb8d2e2e9538db2d496",
+      "gitBlob": "ae0aa3e814cb90d9568cef5f35be6a0d8f46a361"
+    },
+    "sourceAfterVector": {
+      "bytes": 2784,
+      "sha256": "6a212eb715b312ae74c25e58078fd26b1247695d94f5c47536dc2a20aed49ce1",
+      "gitBlob": "fff972049718ae5ddaa7000e17341fade490233e"
+    },
+    "previousControlProposal": {
+      "bytes": 21995,
+      "sha256": "0dd648c1a839758e864e39b177b15d5fa44bcfcb221e258b0817e5c6da82d431",
+      "gitBlob": "3fc2c894069f5a75936ec6379494d4e0df62db1a"
+    },
+    "previousRunner": {
+      "bytes": 25389,
+      "sha256": "da237b7e53a07e47c1625b9b577514a62498fe4816bfa5966c461e5ef4117c9c",
+      "gitBlob": "5e19889942d3e28f215c76f1e55ba81fd12f3ced"
+    },
+    "previousBinding": {
+      "bytes": 105210,
+      "sha256": "99ef94654b99dfb0e2fc2e5f1767f3b185b14a73ab5b437ff5a7b405886b4a90",
+      "gitBlob": "a206a4432f4e9f77f682b91d340c191826b5f25b"
+    },
+    "spentAdmission": {
+      "bytes": 1583,
+      "sha256": "bdb1d12b8e8539e8200f18ea4f39a9b2e0582324a66f5fd6297694e95d338538",
+      "gitBlob": "8c2c7a2a439b1054972f4a52eb8f88b842274dba"
+    },
+    "completeRefusal": {
+      "bytes": 200440,
+      "sha256": "ab24e85bd89e55d48149f05274176df9fba2e0340b526c1a927242b4ed401bd4",
+      "gitBlob": "30bcf16f731650684a275de4ae4be6cd18b41c4e"
+    },
+    "inodeAdvisory": {
+      "bytes": 54695,
+      "sha256": "9212ceb83645a0f9fb9e2f9b37985c5af6bfe6248014014cac86eead66a7092d",
+      "gitBlob": "5af2e1cf8dc14ace23e8cc1f10ddbb25e8ef6d26"
+    },
+    "memberGuardAdvisory": {
+      "bytes": 54913,
+      "sha256": "f5e6d95df688e87b5588f7bd3aac52d7c82ab05536312c901a04ef9572906d6c",
+      "gitBlob": "6bf023a459f4c63770528ff1f1da357008709a96"
+    },
+    "memberSemanticAdvisory": {
+      "bytes": 27043,
+      "sha256": "ccc199a00f3e822961831a05b2e9138076a4843a389b432354aea07093ed1543",
+      "gitBlob": "c246bbf66dd628fe6909a1a57cab85bdccf80d58"
+    },
+    "renderer85ActualReview": {
+      "bytes": 56658,
+      "sha256": "2a20638c7372fc202d5dc1fbcb364744a8ada038401e6673461ab8147843524e",
+      "gitBlob": "4277afde65b656545ca30e4b1be3f593af862fc8"
+    },
+    "codexExtensionsActualReview": {
+      "bytes": 101500,
+      "sha256": "04307965e2c3be91b229a6364fa758b468ee177ba3b45392e2a23cbd8946e1e9",
+      "gitBlob": "342a38f823f0d07bd8281fd94022ea1f3ecb3133"
+    },
+    "extensionsSemanticSlice": {
+      "bytes": 28120,
+      "sha256": "3a7b10b970e6fc6f9812c94c1ecb7a5a5cafedd717674642a67aea7db34f5de5",
+      "gitBlob": "14bd6ed652989dde397cce0073e315e269762bcb"
+    }
+  },
+  "spentAttempt": {
+    "token": "c714-waitread-20261117-original-one-shot",
+    "scope": "/workspace/scratch/c714-waitread-20261117",
+    "stage": "/workspace/scratch/c714f5bce554/narrow-waitread-controls-20261117",
+    "invokedAt": "2026-11-17 05:47:31 UTC",
+    "status": "REFUSED_BEFORE_SCOPE_ADMISSION_SPENT",
+    "exitCode": 1,
+    "phases": 0,
+    "cases": 0,
+    "reason": "Node BigIntStats exposes the same64 inode as signed; initial exactNode compared its decimal string with the Python unsigned pin.",
+    "nodeRawInode": "-9223372036854733364",
+    "unchangedExpectedUnsignedInode": "9223372036854818252",
+    "sharedBits": "0x800000000000a5cc",
+    "boundary": "Failure was before scope creation, source materialization or test-child spawn. Supervisor Node digest check was not reached; separate external pre/post full hash and metadata are unchanged. All staged control file identities/metadata were unchanged.",
+    "persistence": "Spent source root remains absent and must not be created or restored; old controls remain present and must not be edited/reused; old admission may not be replayed. This plan never turns that outcome into RED/GREEN."
+  },
+  "selectedFreshStandalone": {
+    "scope": "/workspace/scratch/c714-waitread-inode64-20261117",
+    "stage": "/workspace/scratch/c714f5bce554/narrow-waitread-inode64-controls-20261117",
+    "attemptToken": "c714-waitread-inode64-20261117-original-one-shot",
+    "absenceObservation": {
+      "newCandidates": [
+        {
+          "path": "/workspace/scratch/c714-waitread-inode64-20261117",
+          "lexists": false,
+          "parentRealpath": "/workspace/scratch"
+        },
+        {
+          "path": "/workspace/scratch/c714f5bce554/narrow-waitread-inode64-controls-20261117",
+          "lexists": false,
+          "parentRealpath": "/workspace/scratch/c714f5bce554"
+        }
+      ],
+      "spentSourceStillAbsent": true,
+      "spentControlStageStillPresent": true
+    },
+    "sourceAnchor": "The exact actual immutable docs-only publication of this R1, known before authoring R2. Its selected package/test/fixed-controls bytes must equal current c4fc/674 source. The later driver-only change does not enter these3 standalone inputs. Admission additionally binds the actual combined source/control R2 publication and its root/independent actual readbacks.",
+    "sourceComposition": "Same3 exact repository files and historical old-controls phase as original binding. New RED uses unchanged new10 fixture with historical oldcontrols; GREEN changes only oldcontrols to fixed5286. This is not a historical whole-tree checkout.",
+    "redFiles": [
+      {
+        "path": "package.json",
+        "pin": {
+          "bytes": 26839,
+          "sha256": "c92407a9a5dad6f9d6a6eb8ea7c456195d396679bb4b9dfd15b6c06b726d1084",
+          "gitBlob": "f80ec83172d0aec0dec8a8ab055426b4fca4a1f7"
+        }
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-ui-controls-deadline.test.ts",
+        "pin": {
+          "bytes": 7883,
+          "sha256": "29836f914218edb4876b6a4e157e7cdc68f63cdf414084cdd41683965c734eda",
+          "gitBlob": "6a9f8ad7481cd5910befcc6c7ff5992eef03965b"
+        }
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+        "pin": {
+          "bytes": 28974,
+          "sha256": "7626e479a6662242009cb050e7e5af612a29e4205d62666d15274d5c30f91386",
+          "gitBlob": "ed57cb0fe7d57ef076a591621289eb77667c63ad"
+        }
+      }
+    ],
+    "greenControls": {
+      "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "pin": {
+        "bytes": 29017,
+        "sha256": "ffd9bbb822dbdc30da7cb8daa881fcbebd384ba2bf9bdd87c804c511166fa02b",
+        "gitBlob": "5286c036a63a14e98925711a224df202c9a7caa7"
+      }
+    },
+    "node": {
+      "path": "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+      "realpath": "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+      "bytes": 126939688,
+      "sha256": "61ab14cd750fc24d5db53490ec5fc40f756e4b6e136b78cf7004265471d9bd1d",
+      "device": "27",
+      "inode": "9223372036854818252",
+      "uid": "65534",
+      "gid": "65534",
+      "mode": "0o755",
+      "mtimeNs": "1794515386000000000",
+      "ctimeNs": "1794515386000000000",
+      "versionPreviouslyObserved": "v24.22.1"
+    },
+    "testArgv": [
+      "--test",
+      "--test-reporter=tap",
+      "scripts/legacy-agent-host/desktop-ui-controls-deadline.test.ts"
+    ],
+    "parentEnvironment": "empty via bash exec -c; no NODE_OPTIONS/preloads/config/compile-cache environment",
+    "childEnvironment": {
+      "PATH": "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin",
+      "LANG": "C.UTF-8",
+      "TZ": "UTC"
+    },
+    "budgets": {
+      "phaseWallMs": 60000,
+      "supervisorWallMs": 135000,
+      "cleanupWallMs": 4000,
+      "outputLimitBytes": 8388608,
+      "perTestMs": 5000,
+      "originalUiDefaultMs": 30000,
+      "originalPollMs": 100
+    },
+    "completeCaseInventory": [
+      {
+        "label": "RED",
+        "exitCode": 1,
+        "tests": [
+          {
+            "number": 1,
+            "title": "generic UI read refuses its first fulfilled value exactly at the original deadline",
+            "result": "FAIL",
+            "signature": "missing-rejection"
+          },
+          {
+            "number": 2,
+            "title": "generic UI read refuses its first fulfilled value after the original deadline",
+            "result": "FAIL",
+            "signature": "missing-rejection"
+          },
+          {
+            "number": 3,
+            "title": "generic UI read refuses a later fulfilled value exactly at the original deadline",
+            "result": "FAIL",
+            "signature": "missing-rejection"
+          },
+          {
+            "number": 4,
+            "title": "generic UI read refuses a later fulfilled value after the original deadline",
+            "result": "FAIL",
+            "signature": "missing-rejection"
+          },
+          {
+            "number": 5,
+            "title": "generic UI read does not admit or poll again after a late false observation",
+            "result": "FAIL",
+            "signature": "late-false-readiness"
+          },
+          {
+            "number": 6,
+            "title": "generic UI read preserves a timely first value and its exact identity",
+            "result": "PASS",
+            "signature": null
+          },
+          {
+            "number": 7,
+            "title": "generic UI read preserves its original cadence and a timely later value",
+            "result": "PASS",
+            "signature": null
+          },
+          {
+            "number": 8,
+            "title": "generic UI read honors a supplied budget at its strict boundary",
+            "result": "FAIL",
+            "signature": "missing-rejection"
+          },
+          {
+            "number": 9,
+            "title": "generic UI hover refuses a third stable point arriving at the original deadline",
+            "result": "FAIL",
+            "signature": "missing-rejection"
+          },
+          {
+            "number": 10,
+            "title": "generic UI hover preserves one movement after three timely stable points",
+            "result": "PASS",
+            "signature": null
+          }
+        ]
+      },
+      {
+        "label": "GREEN",
+        "exitCode": 0,
+        "tests": [
+          {
+            "number": 1,
+            "title": "generic UI read refuses its first fulfilled value exactly at the original deadline",
+            "result": "PASS",
+            "signature": null
+          },
+          {
+            "number": 2,
+            "title": "generic UI read refuses its first fulfilled value after the original deadline",
+            "result": "PASS",
+            "signature": null
+          },
+          {
+            "number": 3,
+            "title": "generic UI read refuses a later fulfilled value exactly at the original deadline",
+            "result": "PASS",
+            "signature": null
+          },
+          {
+            "number": 4,
+            "title": "generic UI read refuses a later fulfilled value after the original deadline",
+            "result": "PASS",
+            "signature": null
+          },
+          {
+            "number": 5,
+            "title": "generic UI read does not admit or poll again after a late false observation",
+            "result": "PASS",
+            "signature": null
+          },
+          {
+            "number": 6,
+            "title": "generic UI read preserves a timely first value and its exact identity",
+            "result": "PASS",
+            "signature": null
+          },
+          {
+            "number": 7,
+            "title": "generic UI read preserves its original cadence and a timely later value",
+            "result": "PASS",
+            "signature": null
+          },
+          {
+            "number": 8,
+            "title": "generic UI read honors a supplied budget at its strict boundary",
+            "result": "PASS",
+            "signature": null
+          },
+          {
+            "number": 9,
+            "title": "generic UI hover refuses a third stable point arriving at the original deadline",
+            "result": "PASS",
+            "signature": null
+          },
+          {
+            "number": 10,
+            "title": "generic UI hover preserves one movement after three timely stable points",
+            "result": "PASS",
+            "signature": null
+          }
+        ]
+      }
+    ],
+    "exactControlChange": {
+      "baseline": {
+        "bytes": 25389,
+        "sha256": "da237b7e53a07e47c1625b9b577514a62498fe4816bfa5966c461e5ef4117c9c",
+        "gitBlob": "5e19889942d3e28f215c76f1e55ba81fd12f3ced"
+      },
+      "inode": "Only in exactNode: retain raw metadata.inode; validate raw BigInt lies within signed64 and unchanged expected pin within unsigned64; derive BigInt.asUintN(64, raw) and compare decimal value to the existing pin; return both raw and canonical inode evidence. Generic metadata/source/control censuses stay raw. No Number conversion or expected-pin replacement.",
+      "requiredRebinding": "New exclusive scope/stage/token, current R1 and actual gates, immutable source anchor, exact runner/binding/publication/admission identities. Any hardcoded prior publication refs must be updated to these exact joined identities. Preserve all actual source/test bodies and test budgets.",
+      "preserve": [
+        "Exact Node realpath/hash/size/device/mode/owner/times and full before/after checks.",
+        "Parent exec-c empty environment, cwd/, exact argv/no execArgv; detached child Node session and fixed env.",
+        "Only3 regular0644/nlink1 staged controls and0755 directories; no symlinks; exclusive fresh scope and no pre-existing artifacts.",
+        "Full source/control/root before/after censuses; only oldcontrols→fixedcontrols on the same original inode after accepted RED and ordinary cleanup.",
+        "One original monotonic supervisor deadline, unchanged phase deadlines and immediate synchronous pre-admission cutoff checks before scope/materialization/transition/write/spawn.",
+        "Full process samples before validation and finally retention; PID/start/session/group/uid/exe/argv ownership; no unrelated-process signaling.",
+        "One original4s cleanup deadline across continuation, no repeated TERM/KILL pass, original250ms TERM→KILL.",
+        "Complete raw stdout/stderr8MiB cap, exact TAP10 ordered cases/plan/counters/diagnostics; no skip/todo/cancel/nested substitute/bailout.",
+        "Ordinary close/EOF/exact status/no signal and no surviving captured process/session/group before acceptance.",
+        "Any refusal, timeout, unknown, retention or cleanup error spends the attempt; no silent retry."
+      ]
+    },
+    "commandShape": "exec -c <exact Node> <fresh stage>/waitread-supervisor.cjs <exact binding SHA256> <exact admission SHA256>; one supervisor invocation only, then its original RED and conditionally admitted GREEN.",
+    "classification": "Expected RED7fail/3pass and GREEN10pass are predictions until complete new original evidence. Original failed attempt remains0cases. Standalone10 cannot qualify aggregate149, catalog43, renderer85, driver GUI, canonical validation or full E2E."
+  },
+  "selectedDriverChange": {
+    "path": "scripts/legacy-agent-host/desktop-emulated-runtime-ui.ts",
+    "before": {
+      "bytes": 69194,
+      "sha256": "bed27eab54593e30f76ef3121e1d1effdaa53ca9b872ecbbf52b6c2fd619087e",
+      "gitBlob": "43ab487464098fed0425ffd51441a38abc206f3b"
+    },
+    "beforeLines": 794,
+    "location": "Immediately after proof.stats = stats; and immediately before the unchanged original649-byte ui.clickExpression call opening the member detail.",
+    "change": "Insert one awaited call to the existing ui.scrollTo helper. Selector: div[role=\"button\"][tabindex=\"0\"][class~=\"group/member\"] span. Exact text alice. Max wheel events12. Fifth argument {requireCenterHit:true}. Use a descriptive TEST proof label. No helper extraction, new test module or other driver edits.",
+    "originalClick": {
+      "bytes": 649,
+      "sha256": "41c01f7e76509f264fe9337294554e84bc7c22e355558ab000469f9dae086f24"
+    },
+    "semantics": "Existing helper selects the same unique exact name; physical wheel only; nearest scroller viewport containment; zero/multiple target or blocked center refuses. Existing final click retains unique row/name selection, nested-button exclusion, ownership, stable point, final authority and exactly one press/release.",
+    "helperLimits": "Existing max12 wheels with existing±600 deltas/100ms cadence; existing30s per-observation reads, not a newly claimed30s total reveal deadline. No timeout increase, click retry, fallback selector, section expansion or DOM mutation.",
+    "reason": "Original OpenCode failed its initial member read with zero member hover/press/release; retained screenshot shows roster above viewport. Codex succeeded at same original selector when roster visible. This supports preparation hypothesis without proving exact failed predicate or prior scroll cause.",
+    "affectedProviders": "Shared Claude/Codex/OpenCode driver path. Prior frozen9c9 success does not execute this new line.",
+    "validation": "Full source R2 inverse-delta/unchanged649-byte-click check, actual existing scrollTo implementation/test coverage and source-size cap; later unchanged whole provider GUI journeys remain required, including member Logs/Stats, reload, schedule/manual+realcron, Task Activity and Stop. This R1 selects no GUI execution.",
+    "tests": "No new bespoke member-reveal tests, no replacement fixture; preserve published aggregate149 byte-for-byte. Existing finite helper tests and later unchanged full GUI flow are the proportional evidence route.",
+    "sourceBudget": "One new awaited call, keep≤800physical lines; no cap/baseline/ignore/exception changes."
+  },
+  "preservation": {
+    "sourceDelta": "Only one existing TEST driver file modified in later source publication; zero new/deleted/renamed source files and zero mode changes.",
+    "exactPublishedFiveSources": [
+      {
+        "role": "controls",
+        "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+        "mode": "100644",
+        "before": {
+          "bytes": 28974,
+          "sha256": "7626e479a6662242009cb050e7e5af612a29e4205d62666d15274d5c30f91386",
+          "gitBlob": "ed57cb0fe7d57ef076a591621289eb77667c63ad"
+        },
+        "after": {
+          "bytes": 29017,
+          "sha256": "ffd9bbb822dbdc30da7cb8daa881fcbebd384ba2bf9bdd87c804c511166fa02b",
+          "gitBlob": "5286c036a63a14e98925711a224df202c9a7caa7"
+        },
+        "physicalLines": 495
+      },
+      {
+        "role": "nodeAggregate",
+        "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+        "mode": "100644",
+        "before": {
+          "bytes": 164965,
+          "sha256": "852bedb85c83dbc4b488dffb4a9ffebbe398adc53e85f5a3cea8ca36b146cbf7",
+          "gitBlob": "896c587e077da56a98a314a175fb3cba0353d6ee"
+        },
+        "after": {
+          "bytes": 165022,
+          "sha256": "fed1ee2429b0e1a7ccd592c127d7afc30bb69e0c10a1f8c673e240c1bc9dd581",
+          "gitBlob": "12c73fbc683dc297033bd8b6472e9dbee60b9b8a"
+        },
+        "physicalLines": 2702
+      },
+      {
+        "role": "catalog",
+        "path": "src/renderer/utils/teamModelAvailability.ts",
+        "mode": "100644",
+        "before": {
+          "bytes": 32055,
+          "sha256": "6e216e10c07e953472afb74045c3a976e9f4a1d4fcd3e9f5d46dc789d19022e6",
+          "gitBlob": "167751c56f74c2869b8b3d9b128002d5bd642bcb"
+        },
+        "after": {
+          "bytes": 32077,
+          "sha256": "b1da0ea7199e69eb042e5beb16dfafa91c4d7b9360db41a3f9ba16424ca2fd43",
+          "gitBlob": "ac6e66775bd5efaf81cecb9a2f22a3437b4343ad"
+        },
+        "physicalLines": 982
+      },
+      {
+        "role": "catalogTests",
+        "path": "test/renderer/utils/teamModelAvailability.test.ts",
+        "mode": "100644",
+        "before": {
+          "bytes": 49687,
+          "sha256": "0e37baae735529c11d2ed43432b132b516d252af8bb3084714c7082d7d4c4db8",
+          "gitBlob": "1a58c9c686010d5b5ded00f8e2b5064e4ab78c32"
+        },
+        "after": {
+          "bytes": 56775,
+          "sha256": "b08fe4a650ea9d23f4d8fa4b4ece157d9cd2f87e87e42b25c3c53934ed9974c8",
+          "gitBlob": "6cf34a11e7a1bc6f33208bad00adb57ee5656cd6"
+        },
+        "physicalLines": 1611
+      },
+      {
+        "role": "deadlineTests",
+        "path": "scripts/legacy-agent-host/desktop-ui-controls-deadline.test.ts",
+        "mode": "100644",
+        "before": null,
+        "after": {
+          "bytes": 7883,
+          "sha256": "29836f914218edb4876b6a4e157e7cdc68f63cdf414084cdd41683965c734eda",
+          "gitBlob": "6a9f8ad7481cd5910befcc6c7ff5992eef03965b"
+        },
+        "physicalLines": 202
+      }
+    ],
+    "protectedSources": [
+      "scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+      "scripts/legacy-agent-host/desktop-task-review-cycle-ui-smoke.ts",
+      "src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts",
+      "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+      "scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+      "scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts"
+    ],
+    "completeExistingCases": {
+      "nodeAggregate": 149,
+      "catalog": 43,
+      "renderer": 85,
+      "standalone": 10
+    },
+    "runtimeState": "Whole85 actualGREEN at frozen9c9 accepted separately; original139 actualPASS separately. Later149/43 and standalone10 still unexecuted.",
+    "productionFiles": 5020,
+    "productionLineCap": 800,
+    "exceptions": 141,
+    "nonDocLeaves": 8799,
+    "workflows": 42,
+    "frozenCatalog": "Preserve all81 existing catalog values, full plan/status prefixes, all27 bundles and original totals; append only this scope/evidence, no historical rewriting.",
+    "noPackageDependencyWorkflowChange": true
+  },
+  "ciFrozen": {
+    "pr": 1218,
+    "headBranch": "ci/frontend-parity-c714-20261117-head",
+    "head": "9c9c73190840592963142d36562ea07d2b5d2d71",
+    "baseBranch": "ci/frontend-parity-c714-20261117-base",
+    "base": "77993819c233737f1e2b4c11c8ca1a5d360bcbe3",
+    "syntheticMerge": "7baf8533f00c4cfa3ef5493753fd6169d5b81247",
+    "latestObservation": 14,
+    "observedAt": "2026-11-17 06:12:31 UTC",
+    "onlyActiveRunIds": [
+      44008782844,
+      44008782843
+    ],
+    "terminalRunIds": [
+      44008782825,
+      44008782932,
+      44008782869,
+      44008782832,
+      44008782909
+    ],
+    "status": "Host19success2failure1queued; Packaged3success3failure1queued. Fullqualification previously failed at draft-feedback gate; Darwin strictP09 and all observed failures remain failures.",
+    "mutation": "CI refs and PR metadata remain fixed while active; no rerun/cancel/dispatch/new event/Ready selected. Never poll original9 or terminal runs. Retained immutable artifact reads remain allowed."
+  },
+  "orderedGates": [
+    "Root and independent guard/semantic/binding full R1 reviews of this plan, complete relevant preimages/advisories/constraints.",
+    "Docs-only R1/review publication to current working branch with exact expected-parent immediate force:false push; complete root and independent actual leaf/body/ref/pointer readbacks; retain closed authorship gate.",
+    "Root authors only selected driver and corrected supervisor/binding postimages. Source anchor is the actual R1 commit; source/control combined R2 complete reviews by root and independent guard/semantic/binding reviewers. No staging or runtime.",
+    "Publish exact reviewed driver/control/evidence and append-only status/catalog updates with immediate expected-parent push. Complete root and independent actual readbacks and immutable runtime admission.",
+    "Stage exactly3 freshly bound controls into the exclusively new control root, verify full identities/metadata, invoke one supervisor once. Preserve any refusal as spent; no replay.",
+    "Retain complete new original results and independent bounded evidence reviews. Select later canonical/full149/43/GUI/packaged/native followups only on their concrete evidence and authority."
+  ],
+  "prohibitions": [
+    "No real Claude/Codex invocation, including version/probe.",
+    "No frozen PR1206/1207/1208/1211/1212/1213 mutation or original9 polling.",
+    "No main/default merge, release, Stage2, broad vendor/native qualification.",
+    "No old absent-root restoration/replay or UNKNOWN/SKIP/CANCELLED promotion.",
+    "No browser or Computer Use app GUI path; any future app GUI must use dev:mcp and TEST state.",
+    "No broad workflow/exclusion/dependency/budget changes.",
+    "Every commit is immediately pushed with force:false and exact expected parent."
+  ],
+  "status": {
+    "r1Authored": true,
+    "sourcePostimagesAuthored": false,
+    "controlPostimagesAuthored": false,
+    "newStageCreated": false,
+    "newScopeCreated": false,
+    "newRuntimeInvoked": false,
+    "fullE2EQualified": false
+  }
+}

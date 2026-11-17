@@ -1,0 +1,358 @@
+{
+  "schemaVersion": 1,
+  "at": "2026-11-17 01:51:33 UTC",
+  "repository": "777genius/agent-teams-ai",
+  "branch": "fix/frontend-parity-coobservation-c714-20261115",
+  "parent": "77993819c233737f1e2b4c11c8ca1a5d360bcbe3",
+  "parentTree": "ada3f27db78fabc17a91e3904d41b8bc547c6dca",
+  "purpose": "Publish only the three exact independently accepted source postimages selected by R1 after accepted complete RED and actual publication readbacks. Full actual producer readbacks remain before phase-binding authorship/application.",
+  "r1": {
+    "bytes": 139634,
+    "sha256": "b9524cd8f0f1251f034337f4eb8fbc6606adc1d1c987d993580be06b9a078a75",
+    "gitBlob": "8ce89328171e58ec3e0631dce9607ee7e1eba54e"
+  },
+  "producerAuthorshipGate": {
+    "bytes": 4327,
+    "sha256": "3231731b2a22cb3903ccff6991341b54c673cd7064599b9aa7238fe07e3c6b18",
+    "gitBlob": "2780955d0a71956a75650ddf4d8a0ff0576faa57"
+  },
+  "proposal": {
+    "bytes": 25372,
+    "sha256": "7def167b3384043abb2cea83e90c51ea332f2c12a9f4fc3ca1ddcf1531bab85c",
+    "gitBlob": "b0d4fb7c7ca2fc486fda6823ee3c3618171f8cdc"
+  },
+  "subject": {
+    "sourceFiles": [
+      {
+        "path": "scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+        "identity": {
+          "bytes": 45795,
+          "sha256": "2c5931f5c7fa1dc8bb7858201c1b8afdbae9683faf4a2ad9fce067f116f3f94b",
+          "gitBlob": "5026f0ec6165bb092717ddc989043848a25081dc"
+        }
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-task-review-cycle-ui-smoke.ts",
+        "identity": {
+          "bytes": 33036,
+          "sha256": "4fa52cfad9347065680ef62a3ba6420762408a78a93b77e96ac3a2e16e68bdc9",
+          "gitBlob": "8d175c98158b3bd71192aef7b1929484b2b681b6"
+        }
+      },
+      {
+        "path": "src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts",
+        "identity": {
+          "bytes": 74340,
+          "sha256": "647ac5732bfd6b5cb57834adb4ad22c32ee5dfb018a934c92f982efd9daa531c",
+          "gitBlob": "c2faa156015707bc5fbd7f8123a7ffd9c4faa486"
+        }
+      }
+    ],
+    "beforeSourceVector": {
+      "bytes": 2118,
+      "sha256": "f2574559a378b3bc537fdcedbde161003c8344a5485dfff9322214f6fda2a90c",
+      "gitBlob": "f6446bdc2bbdb511206c729a1f03717871baea6d"
+    },
+    "sourceVector": {
+      "bytes": 2118,
+      "sha256": "6007c5c7ba2f74c43bd9b73c50cae2319eacbf712c233cc0d67b3efbb4c6894d",
+      "gitBlob": "3887991d5dbd25dbec5c8656e8e03d423ea502b7"
+    },
+    "sourcePins": [
+      {
+        "path": "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+        "mode": "100644",
+        "bytes": 24759,
+        "sha256": "d15b7eea14c0951194310aee34ddc5c477879c759a97a4e2f4e9fce1f956ce9b",
+        "gitBlob": "cf93da72a198dac636658e512093eef7828b5927"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+        "mode": "100644",
+        "bytes": 45795,
+        "sha256": "2c5931f5c7fa1dc8bb7858201c1b8afdbae9683faf4a2ad9fce067f116f3f94b",
+        "gitBlob": "5026f0ec6165bb092717ddc989043848a25081dc"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts",
+        "mode": "100644",
+        "bytes": 36260,
+        "sha256": "26357f37b146fc171bbceadb624bde4a7f4e459d2073ae23a651e757817b2d38",
+        "gitBlob": "4700a0052d3c58a2b3d9bc66e6803220688050fd"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+        "mode": "100644",
+        "bytes": 8457,
+        "sha256": "2da55bb40a5689ace0e922dc4867d7c73278d9a1cd200ea8c4602ca68f82da3b",
+        "gitBlob": "3c7b4bb53f4259ac0795d3f92fb715887acb554f"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-task-review-cycle-ui-smoke.ts",
+        "mode": "100644",
+        "bytes": 33036,
+        "sha256": "4fa52cfad9347065680ef62a3ba6420762408a78a93b77e96ac3a2e16e68bdc9",
+        "gitBlob": "8d175c98158b3bd71192aef7b1929484b2b681b6"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+        "mode": "100644",
+        "bytes": 164965,
+        "sha256": "852bedb85c83dbc4b488dffb4a9ffebbe398adc53e85f5a3cea8ca36b146cbf7",
+        "gitBlob": "896c587e077da56a98a314a175fb3cba0353d6ee"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+        "mode": "100644",
+        "bytes": 28974,
+        "sha256": "7626e479a6662242009cb050e7e5af612a29e4205d62666d15274d5c30f91386",
+        "gitBlob": "ed57cb0fe7d57ef076a591621289eb77667c63ad"
+      },
+      {
+        "path": "src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts",
+        "mode": "100644",
+        "bytes": 74340,
+        "sha256": "647ac5732bfd6b5cb57834adb4ad22c32ee5dfb018a934c92f982efd9daa531c",
+        "gitBlob": "c2faa156015707bc5fbd7f8123a7ffd9c4faa486"
+      },
+      {
+        "path": "test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts",
+        "mode": "100644",
+        "bytes": 187890,
+        "sha256": "b6f11896e60014aac785968d42390afde38716d47de9bba9562522235db048c9",
+        "gitBlob": "76495189c992fcda47cd7a43a0c697190b5acbb3"
+      }
+    ],
+    "tests": {
+      "node": {
+        "bytes": 164965,
+        "sha256": "852bedb85c83dbc4b488dffb4a9ffebbe398adc53e85f5a3cea8ca36b146cbf7",
+        "gitBlob": "896c587e077da56a98a314a175fb3cba0353d6ee"
+      },
+      "renderer": {
+        "bytes": 187890,
+        "sha256": "b6f11896e60014aac785968d42390afde38716d47de9bba9562522235db048c9",
+        "gitBlob": "76495189c992fcda47cd7a43a0c697190b5acbb3"
+      }
+    }
+  },
+  "rootReview": {
+    "bytes": 17023,
+    "sha256": "30aa0b71c8c7cdb32d88db381e7396ec2e543ea977d80e93ee8297bd9f3304f3",
+    "gitBlob": "e4119f144e4a79e7c7b6a1598a33a70388df207f"
+  },
+  "independentReviews": {
+    "guard": {
+      "bytes": 245598,
+      "sha256": "0bdbb65827d3717684d09ea1e35a2528b2ea4ee36143e4d3abe3601bf8bb8022",
+      "gitBlob": "ce6997eef4cc5989fb1c5437a23ef490bc74377a"
+    },
+    "semantic": {
+      "bytes": 70998,
+      "sha256": "3a3fe8dcf619204191b0db04023c5293fd24e433b74f2bf801f07bbc395d0f6c",
+      "gitBlob": "0c3db6a22e1f652ca30d085de23217fc52eb5e51"
+    },
+    "binding": {
+      "bytes": 47779,
+      "sha256": "ce13ee532bbca6a6181f95a97815e6c122be0a0adb46220ba61fd8b7c4029faa",
+      "gitBlob": "c2357e52f57abe45cd77d1ff0844aaa16d1095a6"
+    }
+  },
+  "r2ClosedAt": "2026-11-17 01:50:17 UTC",
+  "sourceFiles": [
+    {
+      "path": "scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+      "bytes": 45795,
+      "sha256": "2c5931f5c7fa1dc8bb7858201c1b8afdbae9683faf4a2ad9fce067f116f3f94b",
+      "gitBlob": "5026f0ec6165bb092717ddc989043848a25081dc",
+      "mode": "100644",
+      "prior": {
+        "bytes": 45707,
+        "sha256": "d8ee4090606876194393463e96411f89ed54a53bd3095df333a5d47c5c7fd159",
+        "gitBlob": "bd8bc728808eda00a45b300fd328d49e4e919bc2"
+      },
+      "preimageLines": 570,
+      "postimageLines": 572,
+      "cap": 800,
+      "completeInverseExact": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-task-review-cycle-ui-smoke.ts",
+      "bytes": 33036,
+      "sha256": "4fa52cfad9347065680ef62a3ba6420762408a78a93b77e96ac3a2e16e68bdc9",
+      "gitBlob": "8d175c98158b3bd71192aef7b1929484b2b681b6",
+      "mode": "100644",
+      "prior": {
+        "bytes": 32845,
+        "sha256": "43e12eb3252e578061ea5840ae39d173ce0cd5a8ce6673c5c5ea06d97a8bedaa",
+        "gitBlob": "d65706646743798f2646421105f2f6a75819f143"
+      },
+      "preimageLines": 788,
+      "postimageLines": 794,
+      "cap": 800,
+      "completeInverseExact": true
+    },
+    {
+      "path": "src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts",
+      "bytes": 74340,
+      "sha256": "647ac5732bfd6b5cb57834adb4ad22c32ee5dfb018a934c92f982efd9daa531c",
+      "gitBlob": "c2faa156015707bc5fbd7f8123a7ffd9c4faa486",
+      "mode": "100644",
+      "prior": {
+        "bytes": 74351,
+        "sha256": "68abe01f665b263bd8581659ea306f366428fdccbb45246f08ec42e20b9ee575",
+        "gitBlob": "1176fd06b70f1b717ba83deb387f87b05b18b45b"
+      },
+      "preimageLines": 2068,
+      "postimageLines": 2068,
+      "cap": 2068,
+      "completeInverseExact": true
+    }
+  ],
+  "evidenceFiles": [
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-post-transport-recovery-red-actual-root-publication-20261117.json",
+      "bytes": 55348,
+      "sha256": "bbe57a54a25a38bee1d4f4de5fc1d036d81f6b2ecdb40b3d0088b274de6656c9",
+      "gitBlob": "9218839ef55406b01267605c040bc586c7d443be"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-post-transport-recovery-red-actual-independent-publication-20261117.json",
+      "bytes": 166393,
+      "sha256": "cbe1880831780d10a7131282ab2ecc37d81fbdede3c53a265c1749ea863c20f2",
+      "gitBlob": "e5c2c2d8c84c0d491e334f6d67774cf23c83948f"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-producer-authorship-gate-20261117.json",
+      "bytes": 4327,
+      "sha256": "3231731b2a22cb3903ccff6991341b54c673cd7064599b9aa7238fe07e3c6b18",
+      "gitBlob": "2780955d0a71956a75650ddf4d8a0ff0576faa57"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-three-producer-source-r2-proposal-20261117.json",
+      "bytes": 25372,
+      "sha256": "7def167b3384043abb2cea83e90c51ea332f2c12a9f4fc3ca1ddcf1531bab85c",
+      "gitBlob": "b0d4fb7c7ca2fc486fda6823ee3c3618171f8cdc"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-three-producer-root-source-r2-review-20261117.json",
+      "bytes": 17023,
+      "sha256": "30aa0b71c8c7cdb32d88db381e7396ec2e543ea977d80e93ee8297bd9f3304f3",
+      "gitBlob": "e4119f144e4a79e7c7b6a1598a33a70388df207f"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-three-producer-guard-source-r2-review-20261117.json",
+      "bytes": 245598,
+      "sha256": "0bdbb65827d3717684d09ea1e35a2528b2ea4ee36143e4d3abe3601bf8bb8022",
+      "gitBlob": "ce6997eef4cc5989fb1c5437a23ef490bc74377a"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-three-producer-semantic-source-r2-review-20261117.json",
+      "bytes": 70998,
+      "sha256": "3a3fe8dcf619204191b0db04023c5293fd24e433b74f2bf801f07bbc395d0f6c",
+      "gitBlob": "0c3db6a22e1f652ca30d085de23217fc52eb5e51"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-three-producer-binding-source-r2-review-20261117.json",
+      "bytes": 47779,
+      "sha256": "ce13ee532bbca6a6181f95a97815e6c122be0a0adb46220ba61fd8b7c4029faa",
+      "gitBlob": "c2357e52f57abe45cd77d1ff0844aaa16d1095a6"
+    }
+  ],
+  "modifiedFiles": [
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/29-reconciled-acceptance-and-custody-followups-2026-11-15.md",
+      "bytes": 2563641,
+      "sha256": "5d678bfaa13d9ce9b175ccfe5d3446e0d59f9c7a82adc2414459e4f2ddb22953",
+      "gitBlob": "45045d83208b87845e0f1e363da306ee25d77031",
+      "prior": {
+        "bytes": 2560337,
+        "sha256": "1ea54bc9f596e274c1bd2e0207742b8c453efcfda7b57f345bf7395df2dbda83",
+        "gitBlob": "b4c035726a57b68ddfdf7e0fe8eebcbf5d84b10d"
+      },
+      "exactPrefixPreserved": true,
+      "appendIdentity": {
+        "bytes": 3304,
+        "sha256": "1fd0787586642923ac7922eedf71e4c721dfe4b3df7420c770a7c3419a958f28",
+        "gitBlob": "91ae5fb83caea9e527db2470751e37c4dad9a949"
+      },
+      "appendIdentityIsDerivedNotStandalone": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/continuation-status-20261116.md",
+      "bytes": 47811,
+      "sha256": "e0ac9007c538de1a1466d0bc87545cd7592e661ed4ebae17786c3e98974f1da5",
+      "gitBlob": "ab8c41a609735ebcbaa499f89efb308fa4a98d0b",
+      "prior": {
+        "bytes": 46758,
+        "sha256": "e50f8e11d74d42feb4897f00050ef6f60b71e66ccbdecf8fef1698a48074844d",
+        "gitBlob": "6eccc39aa5580df54dc86f2917e67f980d5574de"
+      },
+      "exactPrefixPreserved": true,
+      "appendIdentity": {
+        "bytes": 1053,
+        "sha256": "9d83cb9a019649f5788fc25c93efdc0f23bbfa9c49e705f5280a3fcfa55414eb",
+        "gitBlob": "80f90925f53981953f523925d241c635abd37e63"
+      },
+      "appendIdentityIsDerivedNotStandalone": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1213-retention-catalog-20261116.json",
+      "bytes": 230200,
+      "sha256": "74d391b5458e4e53588f8616e0a522fee7b4f705aa4cf6810cfda4dc73f52fe9",
+      "gitBlob": "330bfd617fd812e47ea070cea8b86cef1e047f5d",
+      "prior": {
+        "bytes": 197602,
+        "sha256": "3c8ec7dd7b8257e0df08e77a0c7cd43226a5d69f449614e8dc9baab03fbfc310",
+        "gitBlob": "dc80f5b02f336f0aac80058a69d08a79b48314fb"
+      },
+      "archiveKey": "priorCombinedNodeRendererStageAtThreeProducerPublication",
+      "evidenceKey": "combined139Renderer85ThreeProducerEvidenceFiles",
+      "preservedOriginalBundles": 27,
+      "preservedOriginalTotals": {
+        "bundles": 27,
+        "outerBytes": 17894693,
+        "payloadInstances": 219,
+        "payloadBytes": 15911913
+      },
+      "preservedOtherParentFields": 64
+    }
+  ],
+  "manifestPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-three-producer-publication-manifest-20261117.json",
+  "expectedDelta": {
+    "changed": 15,
+    "added": 9,
+    "modified": 6,
+    "deleted": 0,
+    "modesChanged": 0,
+    "sourceModified": 3,
+    "docsModified": 3,
+    "docsAdded": 9,
+    "exactChangedNonDocPaths": [
+      "scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+      "scripts/legacy-agent-host/desktop-task-review-cycle-ui-smoke.ts",
+      "src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts"
+    ]
+  },
+  "expectedCensus": {
+    "parentLeaves": 11888,
+    "parentDocs": 3090,
+    "leaves": 11897,
+    "docs": 3099,
+    "nonDocs": 8798,
+    "workflows": 42
+  },
+  "catalogPreservation": {
+    "archiveKey": "priorCombinedNodeRendererStageAtThreeProducerPublication",
+    "evidenceKey": "combined139Renderer85ThreeProducerEvidenceFiles",
+    "originalBundles": 27,
+    "totals": {
+      "bundles": 27,
+      "outerBytes": 17894693,
+      "payloadInstances": 219,
+      "payloadBytes": 15911913
+    },
+    "allOtherParentFieldsPreserved": true
+  },
+  "qualification": "Static source R2 and exact Git publication only. Test workspace source not applied; materialization/GREEN/validation and broader GUI/native/vendor/integration/fullE2E remain unobserved."
+}

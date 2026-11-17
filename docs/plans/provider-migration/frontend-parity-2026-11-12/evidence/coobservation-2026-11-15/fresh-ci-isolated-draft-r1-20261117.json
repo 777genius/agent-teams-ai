@@ -1,0 +1,1929 @@
+{
+  "schemaVersion": 1,
+  "kind": "prospective-fresh-isolated-draft-ci-r1",
+  "at": "2026-11-17 02:55:25 UTC",
+  "repository": "777genius/agent-teams-ai",
+  "owner": "/root",
+  "state": "PROPOSED_NOT_EXECUTED",
+  "objective": "Obtain fresh end-to-end evidence for the already reviewed and published three producer fixes using unchanged finite-provider CI workflows after the separate local materialization refusal.",
+  "authorization": "User requested autonomous parallel completion of frontend/Host/provider parity E2E, immediate push for each commit, no real Claude/Codex; no new user approval needed for this bounded isolated Draft venue.",
+  "precedingClosedGate": {
+    "bytes": 4076,
+    "sha256": "fa0b03bf25816f12ca76fb9809e5c7761639b7e20bc6d36239d9ee3b5978d4df",
+    "gitBlob": "676a807985f6bf17831b3375786a31d69b002b30",
+    "closedAt": "2026-11-17 02:36:41 UTC",
+    "actualPublication": {
+      "commit": "cba4af86044e89c9ff3cce25f05dc5424bf06329",
+      "tree": "4028fd8a54f32d93e9b60b0075e9fbd88347b524",
+      "docsTree": "6e31a490b74671b23dab9a71754f8a76335ecca4",
+      "root": {
+        "bytes": 104266,
+        "sha256": "7e9b7815d3b2d1278c398fd5986fd9a0dadc059cb4e8cfd6363b17825d77130a",
+        "gitBlob": "a2527ea3a07cf7f4939498f09b27378efacd6446"
+      },
+      "independent": {
+        "bytes": 127896,
+        "sha256": "00c01b9cedd53d7a879a15d2a58788bb4bba143dd7a766725d46e3664e91ee41",
+        "gitBlob": "21506ca5ccd759553d3b0529ba00e4e14270ae9b"
+      }
+    }
+  },
+  "sourceBasis": {
+    "commit": "cba4af86044e89c9ff3cce25f05dc5424bf06329",
+    "rootTree": "4028fd8a54f32d93e9b60b0075e9fbd88347b524",
+    "githubTree": "d95091ab0edb488d6e418ffa789d0f07c447ecda",
+    "corpus": {
+      "bytes": 1423178,
+      "sha256": "0257ec7c26f1d5d358c9bd6841540b8098d265f49af5f588be260a6bfb42065f",
+      "gitBlob": "9011bb095b3249421eb114231fd0ce26878f5624"
+    },
+    "sourceVector": {
+      "bytes": 2118,
+      "sha256": "6007c5c7ba2f74c43bd9b73c50cae2319eacbf712c233cc0d67b3efbb4c6894d",
+      "gitBlob": "3887991d5dbd25dbec5c8656e8e03d423ea502b7"
+    },
+    "sourcePins": [
+      {
+        "path": "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+        "mode": "100644",
+        "bytes": 24759,
+        "sha256": "d15b7eea14c0951194310aee34ddc5c477879c759a97a4e2f4e9fce1f956ce9b",
+        "gitBlob": "cf93da72a198dac636658e512093eef7828b5927"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+        "mode": "100644",
+        "bytes": 45795,
+        "sha256": "2c5931f5c7fa1dc8bb7858201c1b8afdbae9683faf4a2ad9fce067f116f3f94b",
+        "gitBlob": "5026f0ec6165bb092717ddc989043848a25081dc"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts",
+        "mode": "100644",
+        "bytes": 36260,
+        "sha256": "26357f37b146fc171bbceadb624bde4a7f4e459d2073ae23a651e757817b2d38",
+        "gitBlob": "4700a0052d3c58a2b3d9bc66e6803220688050fd"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+        "mode": "100644",
+        "bytes": 8457,
+        "sha256": "2da55bb40a5689ace0e922dc4867d7c73278d9a1cd200ea8c4602ca68f82da3b",
+        "gitBlob": "3c7b4bb53f4259ac0795d3f92fb715887acb554f"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-task-review-cycle-ui-smoke.ts",
+        "mode": "100644",
+        "bytes": 33036,
+        "sha256": "4fa52cfad9347065680ef62a3ba6420762408a78a93b77e96ac3a2e16e68bdc9",
+        "gitBlob": "8d175c98158b3bd71192aef7b1929484b2b681b6"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+        "mode": "100644",
+        "bytes": 164965,
+        "sha256": "852bedb85c83dbc4b488dffb4a9ffebbe398adc53e85f5a3cea8ca36b146cbf7",
+        "gitBlob": "896c587e077da56a98a314a175fb3cba0353d6ee"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+        "mode": "100644",
+        "bytes": 28974,
+        "sha256": "7626e479a6662242009cb050e7e5af612a29e4205d62666d15274d5c30f91386",
+        "gitBlob": "ed57cb0fe7d57ef076a591621289eb77667c63ad"
+      },
+      {
+        "path": "src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts",
+        "mode": "100644",
+        "bytes": 74340,
+        "sha256": "647ac5732bfd6b5cb57834adb4ad22c32ee5dfb018a934c92f982efd9daa531c",
+        "gitBlob": "c2faa156015707bc5fbd7f8123a7ffd9c4faa486"
+      },
+      {
+        "path": "test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts",
+        "mode": "100644",
+        "bytes": 187890,
+        "sha256": "b6f11896e60014aac785968d42390afde38716d47de9bba9562522235db048c9",
+        "gitBlob": "76495189c992fcda47cd7a43a0c697190b5acbb3"
+      }
+    ],
+    "nonDocRootEntries": [
+      {
+        "path": ".coderabbit.yaml",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "cfdf47bf5d5759599f5383222ebfb8a385f09668",
+        "size": 669,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/cfdf47bf5d5759599f5383222ebfb8a385f09668"
+      },
+      {
+        "path": ".dockerignore",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "c2d844c25fc61f06640f362de761e3f8d310c3b5",
+        "size": 694,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/c2d844c25fc61f06640f362de761e3f8d310c3b5"
+      },
+      {
+        "path": ".gitattributes",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "924c7377f9ae4c068d106e74e17e964297d61e6e",
+        "size": 180,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/924c7377f9ae4c068d106e74e17e964297d61e6e"
+      },
+      {
+        "path": ".github",
+        "mode": "040000",
+        "type": "tree",
+        "sha": "d95091ab0edb488d6e418ffa789d0f07c447ecda",
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees/d95091ab0edb488d6e418ffa789d0f07c447ecda"
+      },
+      {
+        "path": ".gitignore",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "777569b186effad3a2bcbcb09cd770180c8c5e2c",
+        "size": 2867,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/777569b186effad3a2bcbcb09cd770180c8c5e2c"
+      },
+      {
+        "path": ".husky",
+        "mode": "040000",
+        "type": "tree",
+        "sha": "665211222b358904b557bd356a129f1ff938ca7e",
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees/665211222b358904b557bd356a129f1ff938ca7e"
+      },
+      {
+        "path": ".mcp.json",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "da61a538a43375404483bd1f810b6377da5cc72f",
+        "size": 296,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/da61a538a43375404483bd1f810b6377da5cc72f"
+      },
+      {
+        "path": ".node-version",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "63f87c20ef9fd0ace28f8d0a3b74b5ef2e24feff",
+        "size": 8,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/63f87c20ef9fd0ace28f8d0a3b74b5ef2e24feff"
+      },
+      {
+        "path": ".npmrc",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "b6f27f135954640c8cc5bfd7b8c9922ca6eb2aad",
+        "size": 19,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/b6f27f135954640c8cc5bfd7b8c9922ca6eb2aad"
+      },
+      {
+        "path": ".nvmrc",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "63f87c20ef9fd0ace28f8d0a3b74b5ef2e24feff",
+        "size": 8,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/63f87c20ef9fd0ace28f8d0a3b74b5ef2e24feff"
+      },
+      {
+        "path": ".oxfmtrc.json",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "b003c531d6e548a5939ceb0694f15296c92e5060",
+        "size": 847,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/b003c531d6e548a5939ceb0694f15296c92e5060"
+      },
+      {
+        "path": ".oxlintrc.json",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "cc0d2441ebfedc93354e081b0cf61b6a2109dcc9",
+        "size": 596,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/cc0d2441ebfedc93354e081b0cf61b6a2109dcc9"
+      },
+      {
+        "path": ".prettierignore",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "3d15b642e4d19c01f1c3ec61acc0ff367a0ccae2",
+        "size": 297,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/3d15b642e4d19c01f1c3ec61acc0ff367a0ccae2"
+      },
+      {
+        "path": ".prettierrc.json",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "c96ec48e897a4ec478beb34716723e13d29068ed",
+        "size": 563,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/c96ec48e897a4ec478beb34716723e13d29068ed"
+      },
+      {
+        "path": "AGENTS.md",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "0c8a4a63abf24c1510c934990a025ebc99c9e435",
+        "size": 8999,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/0c8a4a63abf24c1510c934990a025ebc99c9e435"
+      },
+      {
+        "path": "AGENT_CRITICAL_GUARDRAILS.md",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "a9a087fa5216ede29c5900b3a10638fc1ec3e2f3",
+        "size": 2236,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/a9a087fa5216ede29c5900b3a10638fc1ec3e2f3"
+      },
+      {
+        "path": "CLAUDE.md",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "88df8ee5ef8d951139b2a8eb9b518996babbcb3e",
+        "size": 16756,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/88df8ee5ef8d951139b2a8eb9b518996babbcb3e"
+      },
+      {
+        "path": "LICENSE",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "929839bc0872222df278f9e53f15e1268ff4e0ec",
+        "size": 32433,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/929839bc0872222df278f9e53f15e1268ff4e0ec"
+      },
+      {
+        "path": "README.md",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "dbf976c3418f0dee7ef84e4458e49af39110bdd5",
+        "size": 48099,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/dbf976c3418f0dee7ef84e4458e49af39110bdd5"
+      },
+      {
+        "path": "agent-teams-controller",
+        "mode": "040000",
+        "type": "tree",
+        "sha": "1ef9482608cbaa5b7f28dc42812820cba96b953e",
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees/1ef9482608cbaa5b7f28dc42812820cba96b953e"
+      },
+      {
+        "path": "bin",
+        "mode": "040000",
+        "type": "tree",
+        "sha": "e6b29ba2f2fda222d5831b3c672e88b72f5f7383",
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees/e6b29ba2f2fda222d5831b3c672e88b72f5f7383"
+      },
+      {
+        "path": "docker",
+        "mode": "040000",
+        "type": "tree",
+        "sha": "7e4007a72bc3fdba8d94e8f5eebc3586f110c16e",
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees/7e4007a72bc3fdba8d94e8f5eebc3586f110c16e"
+      },
+      {
+        "path": "electron.vite.config.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "9045260aab02891055e324607b83e1bb39c7110a",
+        "size": 13238,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/9045260aab02891055e324607b83e1bb39c7110a"
+      },
+      {
+        "path": "eslint.config.js",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "7ca4b71fe3a357c00c110c9b75d3034e06e4b22c",
+        "size": 37840,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/7ca4b71fe3a357c00c110c9b75d3034e06e4b22c"
+      },
+      {
+        "path": "eslint.fast.config.js",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "8a6d66ce8d2112b0891f6fc2f78a08c103b4ebfb",
+        "size": 7268,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/8a6d66ce8d2112b0891f6fc2f78a08c103b4ebfb"
+      },
+      {
+        "path": "eslint.feature-overrides.mts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "9c6450d54b87ce33f7d799f900226c316e367937",
+        "size": 657,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/9c6450d54b87ce33f7d799f900226c316e367937"
+      },
+      {
+        "path": "eslint.gateway-boundaries.mts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "4975b20df1353a9687fd479ab043beb025e967ba",
+        "size": 3786,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/4975b20df1353a9687fd479ab043beb025e967ba"
+      },
+      {
+        "path": "i18next.config.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "a8c56bbba2f1003e93fcf9f57e0c5eec4bb37ff5",
+        "size": 1051,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/a8c56bbba2f1003e93fcf9f57e0c5eec4bb37ff5"
+      },
+      {
+        "path": "landing",
+        "mode": "040000",
+        "type": "tree",
+        "sha": "193513230f45a135704f1b34dbfa0792e6823e26",
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees/193513230f45a135704f1b34dbfa0792e6823e26"
+      },
+      {
+        "path": "legacy-host.lock.json",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "6916f66ea9e4a7e8299c3ffd328e226d009ebd79",
+        "size": 947,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/6916f66ea9e4a7e8299c3ffd328e226d009ebd79"
+      },
+      {
+        "path": "managed-git.lock.json",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "2099dfe6b1e1c0ff0d64f45d6c8565b498af4333",
+        "size": 1026,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/2099dfe6b1e1c0ff0d64f45d6c8565b498af4333"
+      },
+      {
+        "path": "mcp-server",
+        "mode": "040000",
+        "type": "tree",
+        "sha": "6dcfc48486817e03cbf5cfeca34d0f9c6f495ba5",
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees/6dcfc48486817e03cbf5cfeca34d0f9c6f495ba5"
+      },
+      {
+        "path": "package.json",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "f80ec83172d0aec0dec8a8ab055426b4fca4a1f7",
+        "size": 26839,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/f80ec83172d0aec0dec8a8ab055426b4fca4a1f7"
+      },
+      {
+        "path": "packages",
+        "mode": "040000",
+        "type": "tree",
+        "sha": "3934729cd387940917b79992f2579bf6269d157c",
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees/3934729cd387940917b79992f2579bf6269d157c"
+      },
+      {
+        "path": "patches",
+        "mode": "040000",
+        "type": "tree",
+        "sha": "8eb2e6aaa216638cbe6c072d79802733d43f500d",
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees/8eb2e6aaa216638cbe6c072d79802733d43f500d"
+      },
+      {
+        "path": "pnpm-lock.yaml",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "9d2ce04a1bbf743e49403d2520873134b08b68de",
+        "size": 956788,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/9d2ce04a1bbf743e49403d2520873134b08b68de"
+      },
+      {
+        "path": "pnpm-workspace.yaml",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "a049a862742a85ba77faafea329fc221b3e500e4",
+        "size": 6946,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/a049a862742a85ba77faafea329fc221b3e500e4"
+      },
+      {
+        "path": "postcss.config.cjs",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "85f717cc09ecb1153d6a4c0962284e09e4b8d6a9",
+        "size": 80,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/85f717cc09ecb1153d6a4c0962284e09e4b8d6a9"
+      },
+      {
+        "path": "resources",
+        "mode": "040000",
+        "type": "tree",
+        "sha": "69acacf60db94f62dbe4a99ed308aab59310e905",
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees/69acacf60db94f62dbe4a99ed308aab59310e905"
+      },
+      {
+        "path": "runtime.lock.json",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "1757d79786da78e739a322e8bba81cd3dc88dcaa",
+        "size": 6127,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/1757d79786da78e739a322e8bba81cd3dc88dcaa"
+      },
+      {
+        "path": "scripts",
+        "mode": "040000",
+        "type": "tree",
+        "sha": "800c50d1b9cd5e538bd889a1f24475084ef5ff57",
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees/800c50d1b9cd5e538bd889a1f24475084ef5ff57"
+      },
+      {
+        "path": "src",
+        "mode": "040000",
+        "type": "tree",
+        "sha": "56bda382944632ec0cc1d2fa94cf574bed0e73c5",
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees/56bda382944632ec0cc1d2fa94cf574bed0e73c5"
+      },
+      {
+        "path": "tailwind.config.js",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "a52ebb338468d8fcef92837aa27aebd48c7206d7",
+        "size": 2941,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/a52ebb338468d8fcef92837aa27aebd48c7206d7"
+      },
+      {
+        "path": "terminal-platform.lock.json",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "039a8a2a7b959b44bf3d483e37335fdc6774e8cb",
+        "size": 1914,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/039a8a2a7b959b44bf3d483e37335fdc6774e8cb"
+      },
+      {
+        "path": "test",
+        "mode": "040000",
+        "type": "tree",
+        "sha": "92519c914f57ec6cee13c2e4b0b2be568a56f641",
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees/92519c914f57ec6cee13c2e4b0b2be568a56f641"
+      },
+      {
+        "path": "tools",
+        "mode": "040000",
+        "type": "tree",
+        "sha": "9356c03e96405eb578158f06d6fdcbc89d105bd6",
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees/9356c03e96405eb578158f06d6fdcbc89d105bd6"
+      },
+      {
+        "path": "tsconfig.json",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "568952f5025a88c16b0568c7279d8e85a4288b43",
+        "size": 1235,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/568952f5025a88c16b0568c7279d8e85a4288b43"
+      },
+      {
+        "path": "tsconfig.legacy-agent-host-scripts.json",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "538fdfe23d7aa6bac6f18a483d5d364aef644a39",
+        "size": 646,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/538fdfe23d7aa6bac6f18a483d5d364aef644a39"
+      },
+      {
+        "path": "tsconfig.node.json",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "c94c942012bef62695dc3b22b1a2b7229d047f59",
+        "size": 824,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/c94c942012bef62695dc3b22b1a2b7229d047f59"
+      },
+      {
+        "path": "vendor",
+        "mode": "040000",
+        "type": "tree",
+        "sha": "bb912d7d38fa18b29d0cbe90e76d06a2603b8b4f",
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees/bb912d7d38fa18b29d0cbe90e76d06a2603b8b4f"
+      },
+      {
+        "path": "vitest.config.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "c57faa53a1bb869b4379bf888194806ef7e228e3",
+        "size": 1187,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/c57faa53a1bb869b4379bf888194806ef7e228e3"
+      },
+      {
+        "path": "vitest.critical.config.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "c32070bf9e1724892aa8cb695152e8f49f1293f0",
+        "size": 852,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/c32070bf9e1724892aa8cb695152e8f49f1293f0"
+      },
+      {
+        "path": "vitest.opencode-proof.config.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "274de1c0955ad4f98d220857a94576ce6a50864b",
+        "size": 601,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/274de1c0955ad4f98d220857a94576ce6a50864b"
+      }
+    ],
+    "nonDocLeaves": 8798,
+    "productionFiles": 5020,
+    "lineCap": 800,
+    "lineCapExceptions": 141,
+    "workflowCount": 42,
+    "workflowBytes": 751430,
+    "workflowPins": [
+      {
+        "path": ".github/workflows/announcements-content.yml",
+        "identity": {
+          "bytes": 2301,
+          "sha256": "4380473bf81c1e8762e11d1803bb023e60308c5525c6c409531d9749ec7661d8",
+          "gitBlob": "d7d1c6fde200971f29defe95c2c0436a0318b499"
+        }
+      },
+      {
+        "path": ".github/workflows/anthropic-compatible-status-e2e.yml",
+        "identity": {
+          "bytes": 8602,
+          "sha256": "037e94e79d2b13136a2209f2a1dac2c65ee5bee117c8dcfcf11e71c106b2e8a0",
+          "gitBlob": "6ec8f76ef4036fde31daab73db1205cf9f7dfdd2"
+        }
+      },
+      {
+        "path": ".github/workflows/anthropic-env-portability.yml",
+        "identity": {
+          "bytes": 4713,
+          "sha256": "fee75fc9544498e419c45ddb3acdf6df20a387dc29c04009e8d450bea2fb5359",
+          "gitBlob": "d3fa7512b79b79dc64c1580dfdc42d63361ae68a"
+        }
+      },
+      {
+        "path": ".github/workflows/build-linux-windows-draft.yml",
+        "identity": {
+          "bytes": 17033,
+          "sha256": "4968e05cf86cb6252494c6a0778dd2bb43a6439b995f0fd769504ac0633ce501",
+          "gitBlob": "919dc9d816a5f7441783af22a286da9b1e4f6f8a"
+        }
+      },
+      {
+        "path": ".github/workflows/ci.yml",
+        "identity": {
+          "bytes": 175238,
+          "sha256": "8cac831e00dd87f656a971c6496b8278c7cfddc261f1eb48573a7e2acf83c2d1",
+          "gitBlob": "a93ff6ba1e5656523668694bca24910a468aebc7"
+        }
+      },
+      {
+        "path": ".github/workflows/codeql.yml",
+        "identity": {
+          "bytes": 2479,
+          "sha256": "d35b6d96c6d3582415b4feaf3144575f5d3a520c6e058c673ec15f95ddae5a7b",
+          "gitBlob": "406b6f790f1e1a260a9f974bf85e9cc6441ed1c1"
+        }
+      },
+      {
+        "path": ".github/workflows/codex-runtime-smoke.yml",
+        "identity": {
+          "bytes": 3229,
+          "sha256": "2d9b2fb19cb3d1e2797611254104bf5ab433b588427350747f0c0c6196f4490d",
+          "gitBlob": "cef44447c47e39a7da678f37e2518952e218da08"
+        }
+      },
+      {
+        "path": ".github/workflows/dependency-review.yml",
+        "identity": {
+          "bytes": 1527,
+          "sha256": "52570674031aecbba23cf8725e5aa09b58495421c8c9b21cef0e14a791ce27d0",
+          "gitBlob": "4a5f2ab17b3daf4ffdf6992ee85d159adf2c46c6"
+        }
+      },
+      {
+        "path": ".github/workflows/electron-dev-profile-cross-platform.yml",
+        "identity": {
+          "bytes": 3218,
+          "sha256": "c85dd3daa63c0d31b8c87e5fe4b935456f6c47dbf9a0be1f06b6b8fbfaf84d25",
+          "gitBlob": "490c2048dfbd9f275f784d7a0f1a6eeba0a9f361"
+        }
+      },
+      {
+        "path": ".github/workflows/electron-packaged-ci.yml",
+        "identity": {
+          "bytes": 19532,
+          "sha256": "443502b3620450fc174440d6bdf6db3777e97b7f00d56d42e2fbd624b569b73f",
+          "gitBlob": "0938e9f31bad7520fec025ebde6aad8e071cfe69"
+        }
+      },
+      {
+        "path": ".github/workflows/host-emulated-acceptance.yml",
+        "identity": {
+          "bytes": 96872,
+          "sha256": "5379894007246368728c518c08222be329d58bb2755dc80235709a033017805d",
+          "gitBlob": "9ec6dfb68e98480a12224528e2637153f4274a6b"
+        }
+      },
+      {
+        "path": ".github/workflows/host-process-acceptance.yml",
+        "identity": {
+          "bytes": 34313,
+          "sha256": "71b16b1b1fd1f0c88d3cb15a18cdfcce08b2b18908d3a5ce755330b4b2aeedf1",
+          "gitBlob": "70202d22a5840401a00025cd60b797c514f3e455"
+        }
+      },
+      {
+        "path": ".github/workflows/kanban-table-desktop-e2e.yml",
+        "identity": {
+          "bytes": 3335,
+          "sha256": "572df7cb9de920ed0685febc94f6ddd08f18d7d96312e8ed946933a63ccbcdb3",
+          "gitBlob": "95d681fe04abd838dd11799d7791fa59444c6e32"
+        }
+      },
+      {
+        "path": ".github/workflows/landing-hetzner-release.yml",
+        "identity": {
+          "bytes": 7306,
+          "sha256": "ad5337b9e4a36797703c0e340a9539f0c12f2739eed6805851fcfa8cb00d1290",
+          "gitBlob": "4b54f229156f9d347e1a33da0d83b3374acc4078"
+        }
+      },
+      {
+        "path": ".github/workflows/landing.yml",
+        "identity": {
+          "bytes": 5592,
+          "sha256": "1bda852e705b3b744b5b001e0fe3cb2d8fd80eaa3108d17787c076ad3b753b32",
+          "gitBlob": "4a1ad9ae59ff2e338930a195d54fdff62da1ebc5"
+        }
+      },
+      {
+        "path": ".github/workflows/macos-signing-qualification.yml",
+        "identity": {
+          "bytes": 9635,
+          "sha256": "409769be92f1d49ed74ffca6e4affe25f365d5bf4bc4f5a18a1deebea11c3a0d",
+          "gitBlob": "d63bddd51302a5c0380762bf22171f43c38a39b0"
+        }
+      },
+      {
+        "path": ".github/workflows/opencode-desktop-e2e.yml",
+        "identity": {
+          "bytes": 6719,
+          "sha256": "ea78e9c6002db433bb57087c3d4eac3d652412746b3a3d5d2aad0cb02e76d17e",
+          "gitBlob": "3d2a90a0e335155d435bd4eae4f2bd2842425983"
+        }
+      },
+      {
+        "path": ".github/workflows/opencode-native-windows-e2e.yml",
+        "identity": {
+          "bytes": 29178,
+          "sha256": "3f6ea47d1aac384382cca261686972222433330e9563a87b941d23ac345b8f80",
+          "gitBlob": "f5a2a472b752acf37399fc9e11f63f6d45bdb297"
+        }
+      },
+      {
+        "path": ".github/workflows/opencode-packaged-e2e.yml",
+        "identity": {
+          "bytes": 19616,
+          "sha256": "80a7c110468f22670a541dcf8cd452c6de754376f4ff970bbdf2888bd91fc2fe",
+          "gitBlob": "458e165ef020a1f8b05806b9ae7edc839134e1b4"
+        }
+      },
+      {
+        "path": ".github/workflows/opencode-v2-cold-dashboard-e2e.yml",
+        "identity": {
+          "bytes": 2756,
+          "sha256": "2bd119e64866ae18519f01be6e7bffc138d0ce7b1e32ce2329a35e59de5a87a3",
+          "gitBlob": "be6a9ae5a88efadca344773ed4aa962d42823d28"
+        }
+      },
+      {
+        "path": ".github/workflows/opencode-v2-stage1-preflight.yml",
+        "identity": {
+          "bytes": 36013,
+          "sha256": "fddd1aface758ef115a5e904151cb61dd78dca04d8f52fb99f4326ddaff53a14",
+          "gitBlob": "2f557dd4b74806e6a444c46656af07b52bc0fb4e"
+        }
+      },
+      {
+        "path": ".github/workflows/prepare-updater-native-inputs.yml",
+        "identity": {
+          "bytes": 8825,
+          "sha256": "6f69a0083fd03597029533db66f2f44fda629b2b3a127c62978809eb990db229",
+          "gitBlob": "51beb92ade4931fe04336c7d3908bacfc932269e"
+        }
+      },
+      {
+        "path": ".github/workflows/provider-real-runtime-e2e.yml",
+        "identity": {
+          "bytes": 8958,
+          "sha256": "9903545813f74656b4e78e53641449a7c4c09b6b3564263f83aa7f2f2f8f0737",
+          "gitBlob": "4ee30807aa18f043fe53d090bfb6211bb5458ce0"
+        }
+      },
+      {
+        "path": ".github/workflows/publish-carried-release.yml",
+        "identity": {
+          "bytes": 3908,
+          "sha256": "b360d26ec6945d7e6d53090860f6ffb4001827db8df8cffcc29007222cfb0546",
+          "gitBlob": "371ed6d3b2cf4e41c012da287a295783c39c426e"
+        }
+      },
+      {
+        "path": ".github/workflows/recover-existing-draft-payloads.yml",
+        "identity": {
+          "bytes": 1905,
+          "sha256": "b1c53692156cd7a56178dca761a942fc9471d5ca7fd182699b918d3165aeb2db",
+          "gitBlob": "eadeedf4381cbf1d7e32cd31105dd88cd2c8eb65"
+        }
+      },
+      {
+        "path": ".github/workflows/release-publication-guard.yml",
+        "identity": {
+          "bytes": 2706,
+          "sha256": "3e59073acae4e5a536a6c3e8a5ddadbd78e095cff4a87eb84a317173fe22dcac",
+          "gitBlob": "10b7abd2992cc740084a5c51ace7f3fe025220f9"
+        }
+      },
+      {
+        "path": ".github/workflows/release.yml",
+        "identity": {
+          "bytes": 46671,
+          "sha256": "22803b1c55d071932b59b66cd2802e31a3a528fc60db94f9b22a94b699048051",
+          "gitBlob": "d28bee6dea87ec191f0d40670f3e68c48251d049"
+        }
+      },
+      {
+        "path": ".github/workflows/reviewrouter-interaction.yml",
+        "identity": {
+          "bytes": 4238,
+          "sha256": "72904ac011de713511f51cd05d7f6d8e145ef537e3ae871e5b872f204de1b339",
+          "gitBlob": "edb68c51f54ad4a792eb29f1f557aad48e3a6218"
+        }
+      },
+      {
+        "path": ".github/workflows/reviewrouter-review.yml",
+        "identity": {
+          "bytes": 912,
+          "sha256": "d30c359c172a2d2e6ad8af7b5557894ae8d601f5f4957a87153aa93810966cc4",
+          "gitBlob": "04964f8ac7beadb3277fb28ec9cc0d61b86ca84b"
+        }
+      },
+      {
+        "path": ".github/workflows/runtime-bootstrap-smoke.yml",
+        "identity": {
+          "bytes": 5079,
+          "sha256": "65e296bb4946582ca3745930f1ecf0b16df481d38fb591a06c26f80529881f15",
+          "gitBlob": "4020f668ab2a9a7b16fcb0aa7fd2d79a061f1d44"
+        }
+      },
+      {
+        "path": ".github/workflows/sentry-owned-process-native.yml",
+        "identity": {
+          "bytes": 39878,
+          "sha256": "2d84faae57ad758575935dc760df6561d219f16ee8c0bd615006ca3d88837357",
+          "gitBlob": "1188fa5b89d59b739d927082d1b6954a57181819"
+        }
+      },
+      {
+        "path": ".github/workflows/stage-existing-partial-draft.yml",
+        "identity": {
+          "bytes": 5418,
+          "sha256": "1644a7dd73642776d00077ab00d6f862679eb890cb5b154042f51dae30b6c37c",
+          "gitBlob": "295dbf212e13b15505696d997ec7c45b4ee3cfa9"
+        }
+      },
+      {
+        "path": ".github/workflows/teams-create-page-desktop-e2e.yml",
+        "identity": {
+          "bytes": 6522,
+          "sha256": "f57bf21347769c79b9c8c21f6f35b40b772fbfe9cb5f8155d7daabb54499d15f",
+          "gitBlob": "ef939f224a1642cb596906324c8d61441780ccc7"
+        }
+      },
+      {
+        "path": ".github/workflows/updater-linux-packages.yml",
+        "identity": {
+          "bytes": 21602,
+          "sha256": "37710e0293dcb00b31df74062b52a52a77f1c22f2e37d8ce2150c668baa98074",
+          "gitBlob": "60d214756c640b7925cfe11ba45ed4009f27ca3c"
+        }
+      },
+      {
+        "path": ".github/workflows/updater-mac-manual-migration.yml",
+        "identity": {
+          "bytes": 5900,
+          "sha256": "40898d8173495bcbe67effb3912294c355aafd42e020e1d099040b184c127d4f",
+          "gitBlob": "4aa3a4181259514c5a43fbc7dd4ad98811a3588e"
+        }
+      },
+      {
+        "path": ".github/workflows/updater-mac-old-updater.yml",
+        "identity": {
+          "bytes": 12460,
+          "sha256": "dfb731e1620c1bfe47b51cd2af5e9c90c7c46eaa3841b39c7993d7938224b71f",
+          "gitBlob": "067a25687f36caefe156b0446c5056d230d27c62"
+        }
+      },
+      {
+        "path": ".github/workflows/updater-mac-source.yml",
+        "identity": {
+          "bytes": 7512,
+          "sha256": "216b64cf04a7b5bebf527ffb21bfe3df0c12bcd828450a377bb67dc59540e025",
+          "gitBlob": "1196e40faa99e0ab64e329d91f3fea7c6ed47f94"
+        }
+      },
+      {
+        "path": ".github/workflows/updater-mac-updater.yml",
+        "identity": {
+          "bytes": 12323,
+          "sha256": "c71f29ef00ea623a30d11e3fa40ebc1d0fadd8a77f4552687c54b0527f4768db",
+          "gitBlob": "950f95892277ae303772ac699915250f0f4f66af"
+        }
+      },
+      {
+        "path": ".github/workflows/updater-native-feasibility.yml",
+        "identity": {
+          "bytes": 13476,
+          "sha256": "8fe371aab977f9ce0d54086c11e508ed7b370780db344b93efd3592d3b4a09ce",
+          "gitBlob": "b55e6cbcb4de61e2e8688e1ff4b4529b043a4ada"
+        }
+      },
+      {
+        "path": ".github/workflows/updater-windows-ota.yml",
+        "identity": {
+          "bytes": 27610,
+          "sha256": "3dcf1d333467391acd418869d6676c18d1193bb81d36040da358bd7e0f62743f",
+          "gitBlob": "10ffcd79e48a71346df7545af638208ce039ad83"
+        }
+      },
+      {
+        "path": ".github/workflows/updater-windows.yml",
+        "identity": {
+          "bytes": 11849,
+          "sha256": "1be54468be42e72674c01f5b94c58789fbf75a3e4d7ac6deff312738f2b1f5e2",
+          "gitBlob": "a4e9375cb95c4129c503f1d7be82de1e3926ea62"
+        }
+      },
+      {
+        "path": ".github/workflows/windows-backfill-diagnostic.yml",
+        "identity": {
+          "bytes": 14471,
+          "sha256": "adfdc03d5de437d308916da76774a1e4ca31aa5786f4ea2fe2fae4e1a2127c2c",
+          "gitBlob": "44bec5d82998468d48ac539f3624d0c2de1c6648"
+        }
+      }
+    ],
+    "newSourcePostimages": 0,
+    "newTestPostimages": 0,
+    "newWorkflowPostimages": 0,
+    "newExecutableControls": 0
+  },
+  "independentAdvisories": {
+    "entryGuard": {
+      "bytes": 29021,
+      "sha256": "d036879309b4245604eb01d166af7b27079f9602a38005846e43711c716aa62c",
+      "gitBlob": "9acdf46776d8b6ecfe6b75ddbfb4d6738296d027"
+    },
+    "semantic": {
+      "bytes": 58110,
+      "sha256": "6a1ba6bdaa3278a041e2687b8588bbda3ae328a48af145a2780ab2b56c493096",
+      "gitBlob": "625192f5fc414e3fe0f646e6cb18db031263cdc2"
+    },
+    "bindingTriggerCapture": {
+      "bytes": 104799,
+      "sha256": "d995389da8279bdd9edd1af8cbf07604c9bf81d1f3c3ab2f01d3c09cfc8402cc",
+      "gitBlob": "30de518ca496cb3ef079a3420057d8cd8ed32b51"
+    },
+    "rootFullBodyReadbackAndHashAcceptance": true,
+    "rootPrimarySourcesFullRead": true
+  },
+  "historicalState": {
+    "acceptedRed": {
+      "packet": "ca4e84b2c1a41a1c848a62c4c3ad6be1a8af65c8",
+      "phase": "bcc31247c2752b2017edba9adcd129a1c83cdd32",
+      "node": {
+        "total": 139,
+        "passed": 134,
+        "failed": 5
+      },
+      "renderer": {
+        "total": 85,
+        "passed": 82,
+        "failed": 3
+      },
+      "qualification": "Completed historical RED before three producer fixes, not current CI results."
+    },
+    "sourcePublication": {
+      "commit": "b83da2bb72ada6e9fb3a426cb2a7d62b30ec4871",
+      "actualGate": {
+        "bytes": 6536,
+        "sha256": "1333882f719c6b832223e038043b9b82491d8168e9cf5effa64c12b0cf4741a2",
+        "gitBlob": "63fe55b3f050783b80bda34e3261564600186592"
+      },
+      "qualification": "Published source bytes accepted; no local physical application proved."
+    },
+    "spentLocalMaterialization": {
+      "intent": {
+        "bytes": 3489,
+        "sha256": "042c3ff0a2668e4bae8aeea9c178860eaa055c1739a3b0af5404dbd988f3f528",
+        "gitBlob": "d775e502038485469b3ab2f96569e5fd6b3ee98c"
+      },
+      "failure": {
+        "bytes": 5796,
+        "sha256": "7865c3e53095955d2ff2406faa0a7d1bedfb0d4fbca5770b02922615ba9127c5",
+        "gitBlob": "ba7c846e55a9e87aca99cba43b52baddef6b760a"
+      },
+      "paths": {
+        "bytes": 4110,
+        "sha256": "2625f6aec302e50b5fb88183bdadd010bb90b03b4abdd3c4c99bd3ff777e2360",
+        "gitBlob": "814c9c40adec04824d9fa5a52c95e4b52d7d783a"
+      },
+      "status": "REFUSED_BEFORE_SOURCE_ROOT_ADMISSION_SPENT",
+      "outerExit": 1,
+      "phaseReceipt": null,
+      "sourceApplied": false,
+      "greenExecuted": false,
+      "validationExecuted": false,
+      "rootMissingCauseAndTime": "UNKNOWN",
+      "oldRoot": "/workspace/scratch/c714-fresh-20261116",
+      "noReplay": true,
+      "noInPlaceRestore": true
+    },
+    "originalNine": "Terminal historical results only; no polling, rerun, cancel or mutation."
+  },
+  "finalHeadBinding": {
+    "sha": null,
+    "rule": "The exact commit created by publishing this R1, its completed reviews and documentation-only retention on fix/frontend-parity-coobservation-c714-20261115, immediately pushed, then fully read back by root and an independent reviewer. The gate records actual immutable commit/root/docs trees. An external mutation-intent blob binds that actual SHA before any ref mutation. This avoids self-referential future commit identities.",
+    "mustEqualSourceBasis": {
+      "all53NonDocRootEntries": true,
+      "all42WorkflowBodies": true,
+      "all9SelectedSourceBodies": true,
+      "whole139And85TestFiles": true
+    },
+    "allowedDifference": "Documentation retention only; no source/test/workflow/control mutation. Final full comparison against ancestor must keep only the same three non-documentation modified paths and additional evidence documentation.",
+    "noStaleBasisSubstitution": true,
+    "noBranchTipSubstitution": true
+  },
+  "publicationContract": {
+    "workingBranch": "fix/frontend-parity-coobservation-c714-20261115",
+    "rootSoleAuthorApplierStagerExecutor": true,
+    "commitImmediatePush": true,
+    "expectedParent": "cba4af86044e89c9ff3cce25f05dc5424bf06329",
+    "force": false,
+    "fullR1ReviewsBeforePublication": [
+      "root",
+      "independent guard",
+      "independent semantic",
+      "independent binding"
+    ],
+    "fullRootAndIndependentActualReadbacksBeforeRefOrPrMutation": true,
+    "newR2Needed": false,
+    "newR2Reason": "This selection authors no executable runner, workflow, source or test postimage. The existing producer source R2/publication/actual gates are unchanged; the only new executed operations are the exact structured branch/PR actions and read-only capture specified here.",
+    "planAndStatus": "Append only, preserve complete parent prefixes.",
+    "catalog": "Archive the entire prior currentCombinedNodeRendererStage; preserve all unrelated fields, 27 bundle bodies and totals. Add exact new-stage evidence identities and no success promotion.",
+    "noCiHeadOnWorkingBranch": true
+  },
+  "selectedMutationSequence": [
+    {
+      "order": 1,
+      "operation": "final-preflight-read-only",
+      "requirements": [
+        "Closed R1 actual publication gate and external exact-head intent",
+        "Both snapshot names still absent; existing names are not overwritten",
+        "Working branch has no open PR; frozen PRs are not queried or changed",
+        "Exact immutable base commit/tree and full final compare verified; merge-base equals ancestor, zero behind",
+        "No source/workflow/test changes since accepted source basis"
+      ]
+    },
+    {
+      "order": 2,
+      "tool": "github_create_branch",
+      "arguments": {
+        "repository_full_name": "777genius/agent-teams-ai",
+        "branch_name": "ci/frontend-parity-c714-20261117-base",
+        "sha": "77993819c233737f1e2b4c11c8ca1a5d360bcbe3"
+      },
+      "executionCount": 1,
+      "readback": "GET exact newly created ref and commit; target must be exact 77993819, tree ada3f27db78fabc17a91e3904d41b8bc547c6dca."
+    },
+    {
+      "order": 3,
+      "tool": "github_create_branch",
+      "arguments": {
+        "repository_full_name": "777genius/agent-teams-ai",
+        "branch_name": "ci/frontend-parity-c714-20261117-head",
+        "sha": "$FINAL_ACCEPTED_R1_PUBLICATION_COMMIT"
+      },
+      "executionCount": 1,
+      "readback": "GET exact newly created ref and commit; target/tree must equal the externally pinned accepted R1 publication."
+    },
+    {
+      "order": 4,
+      "tool": "github_create_pull_request",
+      "arguments": {
+        "repository_full_name": "777genius/agent-teams-ai",
+        "base": "ci/frontend-parity-c714-20261117-base",
+        "head": "ci/frontend-parity-c714-20261117-head",
+        "title": "test: isolated frontend parity producer fixes and emulated E2E",
+        "body": "## Purpose\n\nThis Draft PR is an isolated CI snapshot for the frontend/Host/provider parity work tracked by #982 and #1192. Its ancestor base preserves the actual three producer fixes while keeping ongoing evidence commits on a separate working branch.\n\n## Changes under test\n\n- Enforce the existing live-membership deadline after each observation.\n- Require editable state before the review-cycle correction input is used.\n- Clear provider-management loading state for the current request, including silent refresh.\n\nThe whole 139-case Node file and whole 85-case renderer file remain unchanged. Existing workflow commands, deadlines, filters and provider restrictions remain unchanged.\n\n## Selected evidence\n\nThe opened Draft event selects Host Emulated Acceptance, Electron packaged CI, OpenCode V2 Stage1 preflight, Announcements Content and CI fast feedback. These paths use finite TEST Claude/Codex peers and the declared OpenCode runtimes. No real Claude/Codex CLI run is selected.\n\nCI Full qualification intentionally fails for Draft; CodeQL and OpenCode diagnostics Desktop E2E are expected to skip. Host Process Acceptance is not selected by this diff. Every actual failure, skip, cancellation or unexecuted step will remain explicit.\n\nThe prior local materialization attempt was refused before source-root admission and is spent. This CI snapshot provides separate evidence; it does not repair or replay that attempt.\n\nBoth snapshot refs and this PR's metadata stay fixed while the selected runs are active. This PR is for test evidence; merge, Ready conversion, release and default activation are outside this scope.\n",
+        "draft": true,
+        "maintainer_can_modify": false
+      },
+      "executionCount": 1,
+      "expectedEvent": "pull_request opened",
+      "readback": "Capture complete new PR record, head/base refs and SHA, repository IDs, draft/open state, times and eventual synthetic merge commit/tree/parents; head/base must equal the bound snapshots."
+    }
+  ],
+  "mutationFailurePolicy": "A refusal or transport-unknown mutation is spent as issued: retain the complete tool envelope, perform only exact-new-ref/PR readback to resolve whether it happened, and do not blindly repeat. Do not overwrite an unexpected ref, create a duplicate PR, or recover by editing old/frozen refs. A missing event/run is UNKNOWN/UNREACHED until evidenced; no dispatch/rerun fallback is selected.",
+  "branchAndConcurrency": {
+    "workingBranch": "fix/frontend-parity-coobservation-c714-20261115",
+    "baseBranch": "ci/frontend-parity-c714-20261117-base",
+    "headBranch": "ci/frontend-parity-c714-20261117-head",
+    "baseCommit": "77993819c233737f1e2b4c11c8ca1a5d360bcbe3",
+    "baseTree": "ada3f27db78fabc17a91e3904d41b8bc547c6dca",
+    "bothAliasesObservedAbsentByRootAndIndependent": true,
+    "creationEvents": "Neither name matches any of 11 push branch filters; no create/workflow_run/pull_request_target declared in all 42 reviewed workflows.",
+    "snapshotFreeze": "No change to either CI ref or new PR metadata while any selected run is active; no push, force push, rebase, title/body/base/label edits, Ready conversion, close/reopen, cancellation, rerun or dispatch.",
+    "workingEvidencePushes": "Documentation commits on the separate working branch must be immediately pushed. They do not move either snapshot or emit synchronize for this PR.",
+    "concurrency": [
+      {
+        "path": ".github/workflows/announcements-content.yml",
+        "group": "Announcements Content-pull_request-<NEW_PR_NUMBER>",
+        "cancelInProgress": true,
+        "literal": "concurrency:\n  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event_name == 'pull_request' && github.event.pull_request.number || (github.event_name == 'merge_group' || github.event_name == 'push' && github.ref_type == 'branch' && github.event.repository.default_branch != '' && github.ref_name != github.event.repository.default_branch && !startsWith(github.ref_name, 'release/')) && github.ref || github.run_id }}\n  cancel-in-progress: ${{ github.event_name == 'pull_request' || github.event_name == 'push' && github.ref_type == 'branch' && github.event.repository.default_branch != '' && github.ref_name != github.event.repository.default_branch && !startsWith(github.ref_name, 'release/') }}"
+      },
+      {
+        "path": ".github/workflows/ci.yml",
+        "group": "CI-pull_request-<NEW_PR_NUMBER>-checks",
+        "cancelInProgress": true,
+        "literal": "concurrency:\n  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event_name == 'pull_request' && github.event.pull_request.number || (github.event_name == 'merge_group' || github.event_name == 'push' && github.ref_type == 'branch' && github.event.repository.default_branch != '' && github.ref_name != github.event.repository.default_branch && !startsWith(github.ref_name, 'release/')) && github.ref || github.run_id }}-${{ github.event_name == 'pull_request' && github.event.action == 'edited' && format('edited-{0}', github.run_id) || 'checks' }}\n  cancel-in-progress: ${{ github.event_name == 'pull_request' && github.event.action != 'edited' || github.event_name == 'push' && github.ref_type == 'branch' && github.event.repository.default_branch != '' && github.ref_name != github.event.repository.default_branch && !startsWith(github.ref_name, 'release/') }}"
+      },
+      {
+        "path": ".github/workflows/codeql.yml",
+        "group": "CodeQL-pull_request-<NEW_PR_NUMBER>",
+        "cancelInProgress": true,
+        "literal": "concurrency:\n  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event_name == 'pull_request' && github.event.pull_request.number || (github.event_name == 'merge_group' || github.event_name == 'push' && github.ref_type == 'branch' && github.event.repository.default_branch != '' && github.ref_name != github.event.repository.default_branch && !startsWith(github.ref_name, 'release/')) && github.ref || github.run_id }}\n  cancel-in-progress: ${{ github.event_name == 'pull_request' || github.event_name == 'push' && github.ref_type == 'branch' && github.event.repository.default_branch != '' && github.ref_name != github.event.repository.default_branch && !startsWith(github.ref_name, 'release/') }}"
+      },
+      {
+        "path": ".github/workflows/electron-packaged-ci.yml",
+        "group": "Electron packaged CI-<NEW_PR_NUMBER>-checks",
+        "cancelInProgress": true,
+        "literal": "concurrency:\n  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.run_id }}-${{ github.event.action == 'edited' && !github.event.changes.base && (github.event.changes.title || github.event.changes.body) && format('metadata-{0}', github.run_id) || 'checks' }}\n  cancel-in-progress: ${{ github.event_name == 'pull_request' && !(github.event.action == 'edited' && !github.event.changes.base && (github.event.changes.title || github.event.changes.body)) }}"
+      },
+      {
+        "path": ".github/workflows/host-emulated-acceptance.yml",
+        "group": "Host Emulated Acceptance-v2-pull_request-<NEW_PR_NUMBER>",
+        "cancelInProgress": true,
+        "literal": "concurrency:\n  group: ${{ github.workflow }}-v2-${{ github.event_name }}-${{ github.event_name == 'pull_request' && github.event.pull_request.number || (github.event_name == 'merge_group' || github.event_name == 'push' && github.ref_type == 'branch' && github.event.repository.default_branch != '' && github.ref_name != github.event.repository.default_branch && !startsWith(github.ref_name, 'release/')) && github.ref || github.run_id }}\n  cancel-in-progress: ${{ github.event_name == 'pull_request' || github.event_name == 'push' && github.ref_type == 'branch' && github.event.repository.default_branch != '' && github.ref_name != github.event.repository.default_branch && !startsWith(github.ref_name, 'release/') }}"
+      },
+      {
+        "path": ".github/workflows/opencode-desktop-e2e.yml",
+        "group": "OpenCode diagnostics desktop E2E-pull_request-<NEW_PR_NUMBER>",
+        "cancelInProgress": true,
+        "literal": "concurrency:\n  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event_name == 'pull_request' && github.event.pull_request.number || (github.event_name == 'merge_group' || github.event_name == 'push' && github.ref_type == 'branch' && github.event.repository.default_branch != '' && github.ref_name != github.event.repository.default_branch && !startsWith(github.ref_name, 'release/')) && github.ref || github.run_id }}\n  cancel-in-progress: ${{ github.event_name == 'pull_request' || github.event_name == 'push' && github.ref_type == 'branch' && github.event.repository.default_branch != '' && github.ref_name != github.event.repository.default_branch && !startsWith(github.ref_name, 'release/') }}"
+      },
+      {
+        "path": ".github/workflows/opencode-v2-stage1-preflight.yml",
+        "group": "OpenCode V2 Stage1 static preflight (TEST only)-pull_request-<NEW_PR_NUMBER>",
+        "cancelInProgress": true,
+        "literal": "concurrency:\n  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event_name == 'pull_request' && github.event.pull_request.number || (github.event_name == 'merge_group' || github.event_name == 'push' && github.ref_type == 'branch' && github.event.repository.default_branch != '' && github.ref_name != github.event.repository.default_branch && !startsWith(github.ref_name, 'release/')) && github.ref || github.run_id }}\n  cancel-in-progress: ${{ github.event_name == 'pull_request' || github.event_name == 'push' && github.ref_type == 'branch' && github.event.repository.default_branch != '' && github.ref_name != github.event.repository.default_branch && !startsWith(github.ref_name, 'release/') }}"
+      }
+    ],
+    "futureChange": "Any later fix or CI-head movement requires a separate concrete reviewed/published/read-back source and invocation plan after this run set is terminal. Not selected by this R1."
+  },
+  "workflowSelection": {
+    "all42TriggerMap": [
+      {
+        "path": ".github/workflows/announcements-content.yml",
+        "events": [
+          "pull_request",
+          "push",
+          "workflow_dispatch"
+        ],
+        "types": "opened,synchronize,reopened (default)",
+        "prBranchFilter": null,
+        "pathPatternCount": 0,
+        "openedDraftEventEligible": true,
+        "matchedPaths": "all changed paths; no path filter",
+        "reason": "opened type and actual compare paths match"
+      },
+      {
+        "path": ".github/workflows/anthropic-compatible-status-e2e.yml",
+        "events": [
+          "workflow_dispatch",
+          "pull_request"
+        ],
+        "types": "[opened, synchronize, reopened, ready_for_review, converted_to_draft]",
+        "prBranchFilter": null,
+        "pathPatternCount": 29,
+        "openedDraftEventEligible": false,
+        "matchedPaths": [],
+        "reason": "none of 41 actual changed paths matches PR paths"
+      },
+      {
+        "path": ".github/workflows/anthropic-env-portability.yml",
+        "events": [
+          "workflow_dispatch",
+          "pull_request"
+        ],
+        "types": "[opened, synchronize, reopened, ready_for_review, converted_to_draft]",
+        "prBranchFilter": null,
+        "pathPatternCount": 31,
+        "openedDraftEventEligible": false,
+        "matchedPaths": [],
+        "reason": "none of 41 actual changed paths matches PR paths"
+      },
+      {
+        "path": ".github/workflows/build-linux-windows-draft.yml",
+        "events": [
+          "workflow_dispatch"
+        ],
+        "types": null,
+        "prBranchFilter": null,
+        "pathPatternCount": 0,
+        "openedDraftEventEligible": false,
+        "matchedPaths": [],
+        "reason": "no pull_request event"
+      },
+      {
+        "path": ".github/workflows/ci.yml",
+        "events": [
+          "push",
+          "pull_request",
+          "merge_group",
+          "workflow_dispatch"
+        ],
+        "types": "[\nopened,\nsynchronize,\nreopened,\nready_for_review,\nconverted_to_draft,\nedited,\nlabeled,\nunlabeled,\n]",
+        "prBranchFilter": null,
+        "pathPatternCount": 0,
+        "openedDraftEventEligible": true,
+        "matchedPaths": "all changed paths; no path filter",
+        "reason": "opened type and actual compare paths match"
+      },
+      {
+        "path": ".github/workflows/codeql.yml",
+        "events": [
+          "workflow_dispatch",
+          "push",
+          "pull_request",
+          "schedule"
+        ],
+        "types": "[opened, synchronize, reopened, ready_for_review, converted_to_draft]",
+        "prBranchFilter": null,
+        "pathPatternCount": 11,
+        "openedDraftEventEligible": true,
+        "matchedPaths": [
+          "scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+          "scripts/legacy-agent-host/desktop-task-review-cycle-ui-smoke.ts",
+          "src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts"
+        ],
+        "reason": "opened type and actual compare paths match"
+      },
+      {
+        "path": ".github/workflows/codex-runtime-smoke.yml",
+        "events": [
+          "workflow_dispatch",
+          "pull_request",
+          "push"
+        ],
+        "types": "[opened, synchronize, reopened, ready_for_review, converted_to_draft]",
+        "prBranchFilter": null,
+        "pathPatternCount": 12,
+        "openedDraftEventEligible": false,
+        "matchedPaths": [],
+        "reason": "none of 41 actual changed paths matches PR paths"
+      },
+      {
+        "path": ".github/workflows/dependency-review.yml",
+        "events": [
+          "pull_request"
+        ],
+        "types": "opened,synchronize,reopened (default)",
+        "prBranchFilter": null,
+        "pathPatternCount": 4,
+        "openedDraftEventEligible": false,
+        "matchedPaths": [],
+        "reason": "none of 41 actual changed paths matches PR paths"
+      },
+      {
+        "path": ".github/workflows/electron-dev-profile-cross-platform.yml",
+        "events": [
+          "pull_request",
+          "push"
+        ],
+        "types": "[opened, synchronize, reopened, ready_for_review]",
+        "prBranchFilter": null,
+        "pathPatternCount": 8,
+        "openedDraftEventEligible": false,
+        "matchedPaths": [],
+        "reason": "none of 41 actual changed paths matches PR paths"
+      },
+      {
+        "path": ".github/workflows/electron-packaged-ci.yml",
+        "events": [
+          "pull_request"
+        ],
+        "types": "[opened, synchronize, reopened, ready_for_review, labeled, unlabeled, edited]",
+        "prBranchFilter": null,
+        "pathPatternCount": 0,
+        "openedDraftEventEligible": true,
+        "matchedPaths": "all changed paths; no path filter",
+        "reason": "opened type and actual compare paths match"
+      },
+      {
+        "path": ".github/workflows/host-emulated-acceptance.yml",
+        "events": [
+          "workflow_dispatch",
+          "pull_request"
+        ],
+        "types": "[opened, synchronize, reopened, ready_for_review, converted_to_draft]",
+        "prBranchFilter": null,
+        "pathPatternCount": 23,
+        "openedDraftEventEligible": true,
+        "matchedPaths": [
+          "scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+          "scripts/legacy-agent-host/desktop-task-review-cycle-ui-smoke.ts",
+          "src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts"
+        ],
+        "reason": "opened type and actual compare paths match"
+      },
+      {
+        "path": ".github/workflows/host-process-acceptance.yml",
+        "events": [
+          "pull_request",
+          "workflow_dispatch"
+        ],
+        "types": "[opened, synchronize, reopened, ready_for_review, converted_to_draft]",
+        "prBranchFilter": null,
+        "pathPatternCount": 27,
+        "openedDraftEventEligible": false,
+        "matchedPaths": [],
+        "reason": "none of 41 actual changed paths matches PR paths"
+      },
+      {
+        "path": ".github/workflows/kanban-table-desktop-e2e.yml",
+        "events": [
+          "push",
+          "pull_request"
+        ],
+        "types": "[opened, synchronize, ready_for_review]",
+        "prBranchFilter": null,
+        "pathPatternCount": 5,
+        "openedDraftEventEligible": false,
+        "matchedPaths": [],
+        "reason": "none of 41 actual changed paths matches PR paths"
+      },
+      {
+        "path": ".github/workflows/landing-hetzner-release.yml",
+        "events": [
+          "push",
+          "pull_request",
+          "workflow_dispatch"
+        ],
+        "types": "opened,synchronize,reopened (default)",
+        "prBranchFilter": null,
+        "pathPatternCount": 10,
+        "openedDraftEventEligible": false,
+        "matchedPaths": [],
+        "reason": "none of 41 actual changed paths matches PR paths"
+      },
+      {
+        "path": ".github/workflows/landing.yml",
+        "events": [
+          "push",
+          "pull_request",
+          "workflow_dispatch"
+        ],
+        "types": "opened,synchronize,reopened (default)",
+        "prBranchFilter": null,
+        "pathPatternCount": 9,
+        "openedDraftEventEligible": false,
+        "matchedPaths": [],
+        "reason": "none of 41 actual changed paths matches PR paths"
+      },
+      {
+        "path": ".github/workflows/macos-signing-qualification.yml",
+        "events": [
+          "workflow_dispatch"
+        ],
+        "types": null,
+        "prBranchFilter": null,
+        "pathPatternCount": 0,
+        "openedDraftEventEligible": false,
+        "matchedPaths": [],
+        "reason": "no pull_request event"
+      },
+      {
+        "path": ".github/workflows/opencode-desktop-e2e.yml",
+        "events": [
+          "workflow_dispatch",
+          "pull_request"
+        ],
+        "types": "[opened, synchronize, reopened, ready_for_review, converted_to_draft]",
+        "prBranchFilter": null,
+        "pathPatternCount": 20,
+        "openedDraftEventEligible": true,
+        "matchedPaths": [
+          "src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts"
+        ],
+        "reason": "opened type and actual compare paths match"
+      },
+      {
+        "path": ".github/workflows/opencode-native-windows-e2e.yml",
+        "events": [
+          "workflow_call",
+          "workflow_dispatch"
+        ],
+        "types": null,
+        "prBranchFilter": null,
+        "pathPatternCount": 0,
+        "openedDraftEventEligible": false,
+        "matchedPaths": [],
+        "reason": "no pull_request event"
+      },
+      {
+        "path": ".github/workflows/opencode-packaged-e2e.yml",
+        "events": [
+          "workflow_call",
+          "workflow_dispatch",
+          "pull_request"
+        ],
+        "types": "[opened, synchronize, reopened, ready_for_review, converted_to_draft]",
+        "prBranchFilter": null,
+        "pathPatternCount": 23,
+        "openedDraftEventEligible": false,
+        "matchedPaths": [],
+        "reason": "none of 41 actual changed paths matches PR paths"
+      },
+      {
+        "path": ".github/workflows/opencode-v2-cold-dashboard-e2e.yml",
+        "events": [
+          "pull_request"
+        ],
+        "types": "[opened, synchronize, reopened, ready_for_review]",
+        "prBranchFilter": null,
+        "pathPatternCount": 21,
+        "openedDraftEventEligible": false,
+        "matchedPaths": [],
+        "reason": "none of 41 actual changed paths matches PR paths"
+      },
+      {
+        "path": ".github/workflows/opencode-v2-stage1-preflight.yml",
+        "events": [
+          "pull_request"
+        ],
+        "types": "[opened, synchronize, reopened]",
+        "prBranchFilter": null,
+        "pathPatternCount": 27,
+        "openedDraftEventEligible": true,
+        "matchedPaths": [
+          "scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+          "scripts/legacy-agent-host/desktop-task-review-cycle-ui-smoke.ts"
+        ],
+        "reason": "opened type and actual compare paths match"
+      },
+      {
+        "path": ".github/workflows/prepare-updater-native-inputs.yml",
+        "events": [
+          "pull_request",
+          "workflow_dispatch"
+        ],
+        "types": "opened,synchronize,reopened (default)",
+        "prBranchFilter": null,
+        "pathPatternCount": 10,
+        "openedDraftEventEligible": false,
+        "matchedPaths": [],
+        "reason": "none of 41 actual changed paths matches PR paths"
+      },
+      {
+        "path": ".github/workflows/provider-real-runtime-e2e.yml",
+        "events": [
+          "workflow_dispatch",
+          "push",
+          "pull_request"
+        ],
+        "types": "[opened, synchronize, reopened, ready_for_review, converted_to_draft]",
+        "prBranchFilter": null,
+        "pathPatternCount": 16,
+        "openedDraftEventEligible": false,
+        "matchedPaths": [],
+        "reason": "none of 41 actual changed paths matches PR paths"
+      },
+      {
+        "path": ".github/workflows/publish-carried-release.yml",
+        "events": [
+          "workflow_dispatch"
+        ],
+        "types": null,
+        "prBranchFilter": null,
+        "pathPatternCount": 0,
+        "openedDraftEventEligible": false,
+        "matchedPaths": [],
+        "reason": "no pull_request event"
+      },
+      {
+        "path": ".github/workflows/recover-existing-draft-payloads.yml",
+        "events": [
+          "workflow_dispatch"
+        ],
+        "types": null,
+        "prBranchFilter": null,
+        "pathPatternCount": 0,
+        "openedDraftEventEligible": false,
+        "matchedPaths": [],
+        "reason": "no pull_request event"
+      },
+      {
+        "path": ".github/workflows/release-publication-guard.yml",
+        "events": [
+          "release"
+        ],
+        "types": null,
+        "prBranchFilter": null,
+        "pathPatternCount": 0,
+        "openedDraftEventEligible": false,
+        "matchedPaths": [],
+        "reason": "no pull_request event"
+      },
+      {
+        "path": ".github/workflows/release.yml",
+        "events": [
+          "workflow_dispatch"
+        ],
+        "types": null,
+        "prBranchFilter": null,
+        "pathPatternCount": 0,
+        "openedDraftEventEligible": false,
+        "matchedPaths": [],
+        "reason": "no pull_request event"
+      },
+      {
+        "path": ".github/workflows/reviewrouter-interaction.yml",
+        "events": [
+          "pull_request_review_comment",
+          "issue_comment",
+          "workflow_dispatch"
+        ],
+        "types": null,
+        "prBranchFilter": null,
+        "pathPatternCount": 0,
+        "openedDraftEventEligible": false,
+        "matchedPaths": [],
+        "reason": "no pull_request event"
+      },
+      {
+        "path": ".github/workflows/reviewrouter-review.yml",
+        "events": [
+          "workflow_dispatch"
+        ],
+        "types": null,
+        "prBranchFilter": null,
+        "pathPatternCount": 0,
+        "openedDraftEventEligible": false,
+        "matchedPaths": [],
+        "reason": "no pull_request event"
+      },
+      {
+        "path": ".github/workflows/runtime-bootstrap-smoke.yml",
+        "events": [
+          "workflow_dispatch",
+          "push",
+          "pull_request"
+        ],
+        "types": "[opened, synchronize, reopened, ready_for_review, converted_to_draft]",
+        "prBranchFilter": null,
+        "pathPatternCount": 19,
+        "openedDraftEventEligible": false,
+        "matchedPaths": [],
+        "reason": "none of 41 actual changed paths matches PR paths"
+      },
+      {
+        "path": ".github/workflows/sentry-owned-process-native.yml",
+        "events": [
+          "pull_request",
+          "workflow_dispatch"
+        ],
+        "types": "[opened, synchronize, reopened, ready_for_review, converted_to_draft]",
+        "prBranchFilter": null,
+        "pathPatternCount": 41,
+        "openedDraftEventEligible": false,
+        "matchedPaths": [],
+        "reason": "none of 41 actual changed paths matches PR paths"
+      },
+      {
+        "path": ".github/workflows/stage-existing-partial-draft.yml",
+        "events": [
+          "workflow_dispatch"
+        ],
+        "types": null,
+        "prBranchFilter": null,
+        "pathPatternCount": 0,
+        "openedDraftEventEligible": false,
+        "matchedPaths": [],
+        "reason": "no pull_request event"
+      },
+      {
+        "path": ".github/workflows/teams-create-page-desktop-e2e.yml",
+        "events": [
+          "pull_request",
+          "push"
+        ],
+        "types": "[opened, synchronize, reopened, ready_for_review]",
+        "prBranchFilter": null,
+        "pathPatternCount": 18,
+        "openedDraftEventEligible": false,
+        "matchedPaths": [],
+        "reason": "none of 41 actual changed paths matches PR paths"
+      },
+      {
+        "path": ".github/workflows/updater-linux-packages.yml",
+        "events": [
+          "pull_request",
+          "workflow_dispatch"
+        ],
+        "types": "opened,synchronize,reopened (default)",
+        "prBranchFilter": null,
+        "pathPatternCount": 12,
+        "openedDraftEventEligible": false,
+        "matchedPaths": [],
+        "reason": "none of 41 actual changed paths matches PR paths"
+      },
+      {
+        "path": ".github/workflows/updater-mac-manual-migration.yml",
+        "events": [
+          "workflow_dispatch"
+        ],
+        "types": null,
+        "prBranchFilter": null,
+        "pathPatternCount": 0,
+        "openedDraftEventEligible": false,
+        "matchedPaths": [],
+        "reason": "no pull_request event"
+      },
+      {
+        "path": ".github/workflows/updater-mac-old-updater.yml",
+        "events": [
+          "workflow_dispatch"
+        ],
+        "types": null,
+        "prBranchFilter": null,
+        "pathPatternCount": 0,
+        "openedDraftEventEligible": false,
+        "matchedPaths": [],
+        "reason": "no pull_request event"
+      },
+      {
+        "path": ".github/workflows/updater-mac-source.yml",
+        "events": [
+          "workflow_dispatch"
+        ],
+        "types": null,
+        "prBranchFilter": null,
+        "pathPatternCount": 0,
+        "openedDraftEventEligible": false,
+        "matchedPaths": [],
+        "reason": "no pull_request event"
+      },
+      {
+        "path": ".github/workflows/updater-mac-updater.yml",
+        "events": [
+          "workflow_dispatch"
+        ],
+        "types": null,
+        "prBranchFilter": null,
+        "pathPatternCount": 0,
+        "openedDraftEventEligible": false,
+        "matchedPaths": [],
+        "reason": "no pull_request event"
+      },
+      {
+        "path": ".github/workflows/updater-native-feasibility.yml",
+        "events": [
+          "pull_request",
+          "workflow_dispatch"
+        ],
+        "types": "opened,synchronize,reopened (default)",
+        "prBranchFilter": null,
+        "pathPatternCount": 7,
+        "openedDraftEventEligible": false,
+        "matchedPaths": [],
+        "reason": "none of 41 actual changed paths matches PR paths"
+      },
+      {
+        "path": ".github/workflows/updater-windows-ota.yml",
+        "events": [
+          "pull_request",
+          "workflow_dispatch"
+        ],
+        "types": "opened,synchronize,reopened (default)",
+        "prBranchFilter": null,
+        "pathPatternCount": 15,
+        "openedDraftEventEligible": false,
+        "matchedPaths": [],
+        "reason": "none of 41 actual changed paths matches PR paths"
+      },
+      {
+        "path": ".github/workflows/updater-windows.yml",
+        "events": [
+          "pull_request",
+          "workflow_dispatch"
+        ],
+        "types": "opened,synchronize,reopened (default)",
+        "prBranchFilter": null,
+        "pathPatternCount": 11,
+        "openedDraftEventEligible": false,
+        "matchedPaths": [],
+        "reason": "none of 41 actual changed paths matches PR paths"
+      },
+      {
+        "path": ".github/workflows/windows-backfill-diagnostic.yml",
+        "events": [
+          "workflow_dispatch",
+          "pull_request"
+        ],
+        "types": "[opened, synchronize, reopened, ready_for_review, converted_to_draft]",
+        "prBranchFilter": null,
+        "pathPatternCount": 13,
+        "openedDraftEventEligible": false,
+        "matchedPaths": [],
+        "reason": "none of 41 actual changed paths matches PR paths"
+      }
+    ],
+    "eventEligible": 7,
+    "activeFamilies": 5,
+    "draftSkipped": 2,
+    "expected": [
+      {
+        "path": ".github/workflows/host-emulated-acceptance.yml",
+        "jobs": 23,
+        "scope": "18 UI matrix lanes + 4 complete frontend shards + aggregate",
+        "timeoutsMinutes": {
+          "ui": 45,
+          "frontend": 45,
+          "aggregate": 5
+        }
+      },
+      {
+        "path": ".github/workflows/electron-packaged-ci.yml",
+        "jobs": 7,
+        "scope": "Full diff classifier + 5 original OS/arch tuples + gate",
+        "timeoutsMinutes": {
+          "matrix": 90
+        }
+      },
+      {
+        "path": ".github/workflows/opencode-v2-stage1-preflight.yml",
+        "jobs": 9,
+        "scope": "2 static preflight + instructions + durable HTTP + 5 embedded engine tuples; strict Darwin HOLD/failure remains possible"
+      },
+      {
+        "path": ".github/workflows/announcements-content.yml",
+        "jobs": 1,
+        "scope": "Existing content check"
+      },
+      {
+        "path": ".github/workflows/ci.yml",
+        "jobs": null,
+        "scope": "Existing plan/fast-feedback/qualification policy; capture every actual job including non-Draft/full/dispatch skips",
+        "intentionalDraftGate": "Full qualification FAIL: Draft feedback does not qualify for merge"
+      },
+      {
+        "path": ".github/workflows/codeql.yml",
+        "scope": "Event eligible, jobs SKIP for Draft"
+      },
+      {
+        "path": ".github/workflows/opencode-desktop-e2e.yml",
+        "scope": "Event eligible, jobs SKIP for Draft"
+      }
+    ],
+    "hostProcess": "Not selected by exact diff; five-tuple Host Process remains unproved by this venue.",
+    "unchangedLimits": "No deadline increase, test-name filtering, new exclusion, whitelist, workflow edit or retry mechanism is selected."
+  },
+  "testAndProviderScope": {
+    "node": {
+      "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+      "cases": 139,
+      "identity": {
+        "bytes": 164965,
+        "sha256": "852bedb85c83dbc4b488dffb4a9ffebbe398adc53e85f5a3cea8ca36b146cbf7",
+        "gitBlob": "896c587e077da56a98a314a175fb3cba0353d6ee"
+      },
+      "selection": "Host Emulated workflow line 103 passes the complete test file to node --test in every one of the 18 UI jobs, after install/build prerequisites; no test-name filter."
+    },
+    "renderer": {
+      "path": "test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts",
+      "cases": 85,
+      "identity": {
+        "bytes": 187890,
+        "sha256": "b6f11896e60014aac785968d42390afde38716d47de9bba9562522235db048c9",
+        "gitBlob": "76495189c992fcda47cd7a43a0c697190b5acbb3"
+      },
+      "selection": "The complete file matches vitest.config.ts test/**/*.test.ts and none of the three live/native exclusions. Host Emulated's four shards collectively select it; its particular shard is not observed.",
+      "headHook": "c2faa156015707bc5fbd7f8123a7ffd9c4faa486"
+    },
+    "hostMatrix": [
+      {
+        "runner": "ubuntu-latest",
+        "platform": "linux-x64",
+        "kind": "finite peer / offline / controlled process Desktop",
+        "lanes": [
+          "team",
+          "taskboard",
+          "skills",
+          "cross-team",
+          "collaboration",
+          "extensions",
+          "import",
+          "management",
+          "codex-login",
+          "codex",
+          "claude",
+          "claude-lifecycle",
+          "opencode",
+          "review",
+          "selection",
+          "processes"
+        ],
+        "count": 16
+      },
+      {
+        "runner": "macos-15",
+        "platform": "darwin-arm64",
+        "kind": "finite Codex installer Desktop",
+        "lanes": [
+          "installer"
+        ],
+        "count": 1
+      },
+      {
+        "runner": "ubuntu-latest",
+        "platform": "linux-x64",
+        "kind": "actual OpenCode V2 Settings with finite localhost model",
+        "lanes": [
+          "opencode-v2-management"
+        ],
+        "count": 1
+      }
+    ],
+    "finiteProviders": [
+      {
+        "provider": "Claude",
+        "revision": "SDK 0.3.305",
+        "actualExecutable": "captured Node TEST peer",
+        "ui": "Linux runtime, lifecycle and mixed collaboration/extension/import fixture flows"
+      },
+      {
+        "provider": "Codex",
+        "revision": "protocol 0.162.0",
+        "actualExecutable": "captured Node TEST peer",
+        "ui": "Linux runtime, login, selection, mixed collaboration and Darwin ARM finite installer 0.162.0-to-0.169.0"
+      },
+      {
+        "provider": "OpenCode V1",
+        "revision": "1.19.4",
+        "actualExecutable": "captured Node TEST peer",
+        "ui": "Linux runtime and mixed collaboration"
+      }
+    ],
+    "frontendCommand": "pnpm exec vitest run --maxWorkers=2 --shard=\"$HOST_TEST_SHARD/4\" --exclude '**/*.live.test.*' --exclude '**/*.live-e2e.test.*' --exclude '**/*.native.test.*' --reporter=default --reporter=json --outputFile \"$RUNNER_TEMP/host-offline-tests-$HOST_TEST_SHARD.json\"",
+    "originalFrontendExclusions": true,
+    "openCodeV2": {
+      "platform": "linux-x64",
+      "engine": "2.1.4",
+      "bun": "1.3.11",
+      "runtimeConfigured": false,
+      "managementProfiles": 2,
+      "originalFiniteIntents": 5,
+      "scope": "Original Electron Settings key rejection/replacement, model test, global/project defaults, inheritance and renderer reload",
+      "excluded": [
+        "Claude/Codex execution",
+        "vendor authentication/inference",
+        "native V2 OAuth/forget",
+        "release qualification"
+      ]
+    },
+    "packaged": "Existing five tuples linux-x64, darwin-arm64, darwin-x64, win32-x64 and win32-arm64: actual OpenCode V2 Host/MCP/Stop/coldResume; Windows Main Retry/Processes Kill via finite Codex; Darwin relaunch via finite Claude SDK.",
+    "strictDarwin": "Existing strict P09 native custody contracts remain unchanged; prior failures are not waived or promoted.",
+    "entryAndProviderRoute": {
+      "entryGuard": {
+        "bytes": 29021,
+        "sha256": "d036879309b4245604eb01d166af7b27079f9602a38005846e43711c716aa62c",
+        "gitBlob": "9acdf46776d8b6ecfe6b75ddbfb4d6738296d027"
+      },
+      "semantic": {
+        "bytes": 58110,
+        "sha256": "6a1ba6bdaa3278a041e2687b8588bbda3ae328a48af145a2780ab2b56c493096",
+        "gitBlob": "625192f5fc414e3fe0f646e6cb18db031263cdc2"
+      },
+      "runtimeSource": {
+        "repository": "777genius/agent_teams_orchestrator",
+        "tag": "v0.0.160",
+        "commit": "e13edcd3d4ffbecc0272ae30195cc6b15b710ee7",
+        "tagResolution": "Independent guard read Git ref and reports direct commit; same commit is declared in locked OpenCode V2 delivery."
+      },
+      "commands": [
+        "runtime status --json --provider opencode --summary --project-path <TEST project>",
+        "runtime status --json --provider opencode --project-path <TEST project>",
+        "model list --json --provider opencode --project-path <TEST project>",
+        "runtime status --json --provider opencode --project-path <absent TEST project> (expected exit 1, no JSON)"
+      ],
+      "finding": "No selected or eager Claude/Codex execution identified in the pinned command path. Program name claude-multimodel alone is not a vendor-execution verdict, and the --provider flag alone was not used as proof.",
+      "limitations": "The driver inherits process.env before overriding HOME/XDG/OpenCode config paths; do not claim a universally empty environment or subprocess-free smoke. The static conclusion is for the unchanged declared CI command and locked runtime, not arbitrary hostile overrides, modified artifacts, all CLI commands or unobserved runtime results."
+    },
+    "noRealClaudeOrCodex": true,
+    "noVendorVersionProbes": true,
+    "allowedRealOpenCode": "Only already-declared checksum-pinned/OpenCode finite localhost-model paths; no paid vendor model/auth setup.",
+    "runtimeVersions": {
+      "hostNode": "24.21.0",
+      "frontendNode": "26.12.1",
+      "pnpm": "11.22.0",
+      "corepack": "0.36.0",
+      "electron": "44.10.1",
+      "openCodeV2": "2.1.4",
+      "bun": "1.3.11",
+      "stage1InstructionsOpenCode": "2.0.21"
+    },
+    "coverageGaps": [
+      "Host Emulated has no Windows GUI lane; Darwin ARM covers only finite installer, with no Darwin x64 Host Emulated GUI or complete provider conversation matrix.",
+      "Packaged adds bounded Windows finite Codex Retry/Kill and Darwin finite Claude relaunch, plus OpenCode V2 Host contracts, but does not fill every provider/OS GUI/auth/native-vendor combination.",
+      "Host Process is not triggered by this exact diff and would be a separate input-free manual workflow if a permitted dispatch capability is later available; it still does not qualify GUI.",
+      "A future CI pass would not retroactively make the refused local materialization or GREEN runner successful. New run IDs, exact head/compare, all selected jobs and complete artifacts need their own evidence review."
+    ]
+  },
+  "checkoutIdentity": {
+    "explicitHead": [
+      "Announcements",
+      "Host UI/frontend",
+      "Packaged smoke",
+      "Stage1 source jobs"
+    ],
+    "syntheticMerge": [
+      "CI",
+      "Packaged scope/gate"
+    ],
+    "mergeProof": "Capture actual synthetic merge commit, both parents and tree. Ancestor-base merge tree must equal the accepted CI head tree; merge SHA is distinct from source SHA.",
+    "additionalMutableInput": "Stage1 static-preflight separately checks out main into .current-product-lock. Capture its actual logged product commit and runtime.lock.json blob/full bytes independently; never treat it as the PR head or silently assume current main.",
+    "otherInputs": "Capture declared dependency/runtime download pins, actual OS/arch/runtime versions and source checkout evidence from logs/artifacts. Availability remains unproved until observed."
+  },
+  "capture": {
+    "discovery": "After the single new PR action, list /repos/777genius/agent-teams-ai/actions/runs with event=pull_request, branch=<CI_HEAD_REF>, head_sha=<FINAL_HEAD_SHA>, created=<new-action-window>, exclude_pull_requests=false, per_page=100, page=N. Retain every raw page and total_count; join each selected run to exact new PR number/head/base/repository and action-time window. Do not use an unfiltered repository-wide or old-head census.",
+    "completeEnumeration": "Paginate to total_count/end, deduplicate IDs, and account for all seven event-eligible workflows including Draft-skipped ones. GitHub caps filtered run searches at1000; if hit, subdivide the same new-action creation window. No first-page-only wrapper can prove completeness. If run PR metadata is absent, verify via that new run/check-suite/event proof before selecting it.",
+    "runIdentityFields": [
+      "id",
+      "node_id",
+      "workflow_id",
+      "path",
+      "name",
+      "event",
+      "head_branch",
+      "head_sha",
+      "run_number",
+      "run_attempt",
+      "check_suite_id",
+      "check_suite_node_id",
+      "pull_requests including number/head/base",
+      "repository and head_repository IDs/full_names",
+      "display_title",
+      "created_at",
+      "run_started_at",
+      "updated_at",
+      "status",
+      "conclusion",
+      "html_url",
+      "jobs_url",
+      "artifacts_url",
+      "logs_url"
+    ],
+    "attemptIdentity": "Use /actions/runs/<NEW_RUN_ID>/attempts/<EXACT_ATTEMPT> and /actions/runs/<NEW_RUN_ID>/attempts/<EXACT_ATTEMPT>/jobs?per_page=100&page=N; capture all jobs/steps with run and attempt identities, runner labels/IDs/platform, start/end/status/conclusion. Expected initial attempt is1; no rerun selected. Never silently substitute a latest-attempt wrapper.",
+    "terminalCapture": "Observe selected new runs only until terminal, preserve all job outcomes including skips/cancellation/incomplete outcomes, and retrieve full decoded logs for selected new job IDs. Hash full retained text; step-summary wrappers are not full logs. Keep stdout/truncation/transport limitations explicit.",
+    "artifacts": "List /actions/runs/<NEW_RUN_ID>/artifacts?per_page=100&page=N through all pages. Record exact artifact ID/name/digest/size/expiry/creation times/workflow_run and its head identity; distinguish index metadata from archive content. Current generic GitHub fetch is UTF-8-only and does not download binary ZIP archives. Archive content or screenshot custody must not be claimed from index metadata alone.",
+    "capabilityEvidence": {
+      "runWrapper": "github_fetch_commit_workflow_runs filters pull_request and first page only",
+      "jobWrapper": "github_fetch_workflow_run_jobs latest attempt and first page only",
+      "artifactWrapper": "github_fetch_workflow_run_artifacts first page only",
+      "completeRead": "github_fetch supports paginated approved GET URLs; github_fetch_workflow_job_logs follows plaintext log redirect"
+    },
+    "artifactDownloadCapability": "github_download_workflow_artifact is available for exact new artifact IDs and returns reusable ZIP byte references. Use it for complete archive contents where accessible, retaining archive hashes/member inventory and raw selected evidence. Generic github_fetch binary refusal is not an archive read. Any inaccessible archive/member/screenshot remains explicitly unread.",
+    "cadence": "Read only new PR and newly bound run IDs, using bounded adaptive polls with user progress updates. Stop terminal polling once complete; no blocking wait over 60 seconds.",
+    "noOldRunPolling": true,
+    "allWorkflowsAndJobsAccounted": true,
+    "allTestResults": "Whole Node139 and renderer85 counts/results, full shard counts, every UI lane and cleanup/receipt result must be joined to exact source. Reachable but unobserved later branches remain unqualified.",
+    "resultClassification": [
+      "PASS only for observed complete successful selected contracts",
+      "FAIL for actual failures",
+      "EXPECTED_POLICY_FAIL for the unchanged Draft qualification gate only",
+      "EXPECTED_DRAFT_SKIP for explicit Draft skips only",
+      "SKIP/CANCELLED/UNKNOWN/UNREACHED remain non-PASS"
+    ],
+    "cleanup": "Capture original workflow/fixture process, filesystem, profile and TEST model cleanup evidence and failed-step logs where available; never infer cleanup from artifact upload or workflow conclusion alone.",
+    "retention": "Retain full raw paginated responses, logs and accessible artifact bodies in Git-backed evidence with exact identities; preserve all prior history."
+  },
+  "exclusions": [
+    "No original-nine polling or mutation",
+    "No frozen PR1206/1207/1208/1211/1212/1213 metadata, CI, rerun, cancel or dispatch",
+    "No existing PR1192 retarget/Ready/merge",
+    "No main/default modification, release/default activation or Stage2",
+    "No whole native/vendor or all-platform qualification",
+    "No local source-root reconstruction, GREEN/validation replay, runner execution or driver.close diagnostic",
+    "No native folder picker; future app GUI only via authorized dev:mcp",
+    "No agent source/runtime/ref/PR/CI changes"
+  ],
+  "completionCriteria": "The selected fresh CI venue is complete only after all event-eligible workflows are accounted, all selected runs terminal, complete available evidence reviewed and actual outcomes retained/published/read back. This does not by itself complete every broader parity/native qualification gap. Any failure leads to a separately bounded source investigation/fix, not an automatic replay.",
+  "invoked": {
+    "refsCreated": false,
+    "prCreated": false,
+    "ciRunsObserved": false,
+    "sourceApplied": false,
+    "localRunnerInvoked": false
+  },
+  "qualification": "Prospective R1 only. No new CI or E2E PASS is claimed; execution remains closed until full R1 review/publication/actual readback and exact external head binding."
+}

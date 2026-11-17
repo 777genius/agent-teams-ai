@@ -1,0 +1,558 @@
+{
+  "schema": "c714.prospective-packaged-opencode.entry-guard.v1",
+  "reviewer": "/root/producer_r2_guard",
+  "completedAtUtc": "2026-11-17 02:42:40 UTC",
+  "assignment": "Bounded read-only review of packaged macOS project-path smoke entry/eager startup and failure routing. Root remains sole action author/executor; no venue selection.",
+  "currentAppHead": "cba4af86044e89c9ff3cce25f05dc5424bf06329",
+  "runtimeSourceCommit": "e13edcd3d4ffbecc0272ae30195cc6b15b710ee7",
+  "verdict": "NO_CLAUDE_OR_CODEX_LAUNCH_FOUND_IN_SELECTED_ENTRY_AND_SHARED_PREACTION_PATH",
+  "conclusion": "The four fixed driver calls use explicit OpenCode inventory routes. The complete entry/delivery control flow neither launches a real Claude/Codex executable eagerly nor falls back to one or to interactive CLI main when these routes fail. Shared setup is not subprocess-free: macOS plutil/security and optional delivery codesign are distinct permitted OS utilities. The separately assigned provider review reports the same exclusion for handler/registry/adapter routes.",
+  "scopeAndLimits": {
+    "sourceAssessmentOnly": true,
+    "compiledArchiveExecuted": false,
+    "compiledArchiveBinaryToSourceAttestationPerformed": false,
+    "ciVenueSelected": false,
+    "ciRunObserved": false,
+    "originalFrozenPrsOrRunsPolled": false,
+    "noNewR1": true,
+    "noNewTests": true,
+    "noBroadTransitiveAuditContinued": true,
+    "boundary": "Complete primary source bodies were retrieved and hashed. Entry/delivery active code and called setup/error paths were read; this is not a claim that every dormant function, every npm dependency or arbitrary externally injected startup/configuration code was exhaustively audited.",
+    "entrySourceMap": "Full entry blob is 48,906 bytes. Executable TypeScript prefix is 21,447 UTF-16 code units/552 split lines; the remainder is a single inert sourceMappingURL comment, retained in full identity. No source was evaluated.",
+    "authReadCoverage": "Complete auth.ts body was fetched/hashed; the called getClaudeAIOAuthTokens/getAnthropicApiKeyWithSource/keychain paths and module-level initializer declarations were inspected. Dormant refresh/inference/auth-helper paths were not invoked.",
+    "parentNarrowing": "Parent message requested completion only of concrete orchestrator entry/eager-probe proof and explicitly excluded broader transitive audit or new tests."
+  },
+  "commandSurface": [
+    [
+      "runtime",
+      "status",
+      "--json",
+      "--provider",
+      "opencode",
+      "--summary",
+      "--project-path",
+      "<project>"
+    ],
+    [
+      "runtime",
+      "status",
+      "--json",
+      "--provider",
+      "opencode",
+      "--project-path",
+      "<project>"
+    ],
+    [
+      "model",
+      "list",
+      "--json",
+      "--provider",
+      "opencode",
+      "--project-path",
+      "<project>"
+    ],
+    [
+      "runtime",
+      "status",
+      "--json",
+      "--provider",
+      "opencode",
+      "--project-path",
+      "<missing-project>"
+    ]
+  ],
+  "errorRouting": {
+    "nativeValidationOrSidecarFailure": "throw; no alternate provider/runtime launch",
+    "nativeChildFailure": "propagate child status or thrown error; no fallback",
+    "nativeCancellation": "retained child handle receives signal; wrapper reports signal status",
+    "sharedPreActionOrParserFailure": "rejects awaited fastpath/main; no continuation into later full main import",
+    "runtimeStatusHandlerFailure": "handler outcome remains inside matched status route",
+    "modelListHandlerFailure": "writes Model list failed, exitCode 1, fastpath returns true",
+    "successfulMatchedRoute": "main returns before earlyInput and ../main.js"
+  },
+  "relevantObservedOsOperations": [
+    {
+      "operation": "Bundled Bun invocation",
+      "selector": "absolute <runtime-root>/bun/bun",
+      "purpose": "Execute verified <runtime-root>/local-cli/cli.js with unchanged selected argv"
+    },
+    {
+      "operation": "Optional /usr/bin/codesign",
+      "selector": "constant absolute path",
+      "purpose": "Qualify signed Bun sidecar"
+    },
+    {
+      "operation": "Conditional /usr/bin/plutil",
+      "selector": "constant absolute path",
+      "purpose": "Read existing macOS managed-settings plists"
+    },
+    {
+      "operation": "Conditional security keychain reads",
+      "selector": "security command in secure storage/auth read paths",
+      "purpose": "Read existing credentials, without launching Claude/Codex"
+    }
+  ],
+  "semanticCoordination": {
+    "reviewer": "/root/producer_r2_semantic",
+    "status": "Received final selected handler/provider trace conclusion via collaboration message; separate retained semantic pin pending.",
+    "independentlyOwnedPaths": [
+      "src/cli/runtimeStatusCommand.ts",
+      "src/cli/handlers/runtime.ts",
+      "src/cli/modelListCommand.ts",
+      "src/cli/handlers/model.ts",
+      "registry/provider status and OpenCode inventory/host/selection modules"
+    ],
+    "messageSummary": "Explicit opencode guards suppress Codex statuses/model catalog. OpenCode summary is passive; full/model list select only OpenCode env/PATH/app-managed candidates. Missing/unsupported selection has no Claude/Codex fallback. OpenCode singleton constructors are inert/path-only. Codex login/app-server probes remain inside unselected function calls."
+  },
+  "checks": [
+    {
+      "id": "APP_SOURCE_PIN",
+      "result": "PASS",
+      "evidence": "The driver, stage-runtime script and runtime.lock were fetched at cba4af86044e89c9ff3cce25f05dc5424bf06329 and their complete literal bodies hashed."
+    },
+    {
+      "id": "RUNTIME_SOURCE_PIN",
+      "result": "PASS",
+      "evidence": "runtime.lock sourceRepository is 777genius/agent_teams_orchestrator; sourceRef v0.0.160 resolves directly to commit e13edcd3d4ffbecc0272ae30195cc6b15b710ee7."
+    },
+    {
+      "id": "DRIVER_FIXED_EXECUTABLE",
+      "result": "PASS",
+      "evidence": "The Darwin-only driver selects the .app Contents/Resources/runtime/claude-multimodel path directly; its name is the bundled orchestrator, not an invocation of PATH claude."
+    },
+    {
+      "id": "FOUR_SELECTED_COMMANDS",
+      "result": "PASS",
+      "evidence": "Both status modes, model list, and missing-project status carry explicit --provider opencode; spawnSync uses shell:false."
+    },
+    {
+      "id": "DRIVER_ENV_BOUNDARY",
+      "result": "PASS",
+      "evidence": "HOME/XDG/OPENCODE_CONFIG_DIR are overridden; other process.env entries, including PATH and possible provider/config markers, are inherited. Private HOME is not asserted to be a complete hermetic boundary."
+    },
+    {
+      "id": "STAGER_DOES_NOT_RUN_RUNTIME",
+      "result": "PASS",
+      "evidence": "stage-runtime.mjs downloads/checks/extracts/stages the pinned archive and reads VERSION; it does not run the bundled runtime."
+    },
+    {
+      "id": "ENTRY_STATIC_IMPORTS",
+      "result": "PASS",
+      "evidence": "CLI entry runtime static imports are bun:bundle feature and clientVersion. The packaged delivery identity import is type-only."
+    },
+    {
+      "id": "ENTRY_TOP_LEVEL_EFFECTS",
+      "result": "PASS",
+      "evidence": "The entry sets synthetic MACRO when absent and selected environment defaults; it invokes main. None of these top-level operations launches Claude or Codex."
+    },
+    {
+      "id": "NATIVE_SELECTED_ROUTE",
+      "result": "PASS",
+      "evidence": "With embedded delivery identity, runtime commands and model list delegate before the version branch, profiler, and full main import."
+    },
+    {
+      "id": "PINNED_DELIVERY_FILES",
+      "result": "PASS",
+      "evidence": "The wrapper derives absolute bundled bun and local-cli/cli.js paths from realpath(process.execPath), checks identities/platform/arch and regular non-symlink canonical files."
+    },
+    {
+      "id": "DARWIN_SIGNATURE_ALTERNATIVE",
+      "result": "PASS",
+      "evidence": "If Bun bytes differ after signing, acceptance requires /usr/bin/codesign checks of runtime and Bun under the same Developer ID. This is a Bun signature qualification, not a provider fallback."
+    },
+    {
+      "id": "DELEGATION_EXACT_ARGV",
+      "result": "PASS",
+      "evidence": "The sole delivery child launch is absolute bundled Bun with ['--no-install', entry, ...args], same cwd, inherited env, shell:false."
+    },
+    {
+      "id": "DELIVERY_FAILURE_TERMINAL",
+      "result": "PASS",
+      "evidence": "Validation, I/O, signing, and child errors throw; cancellation returns a signal status. No source/PATH/Claude/Codex fallback exists in the complete delivery module."
+    },
+    {
+      "id": "VERSION_BRANCH_UNREACHED",
+      "result": "PASS",
+      "evidence": "The entry version branch requires exactly one --version/-v/-V argument; none of the four driver calls matches. Even that branch only formats the inlined clientVersion."
+    },
+    {
+      "id": "STATUS_FASTPATH",
+      "result": "PASS",
+      "evidence": "runRuntimeStatusFastPath recognizes runtime status, builds its command and preAction, awaits parseAsync, then returns true."
+    },
+    {
+      "id": "MODELLIST_FASTPATH",
+      "result": "PASS",
+      "evidence": "runModelListFastPath recognizes model list. Handler errors write Model list failed and set exitCode=1; parse completion still returns true."
+    },
+    {
+      "id": "NO_ERROR_FALLTHROUGH",
+      "result": "PASS",
+      "evidence": "Main awaits each fastpath and returns on true. A thrown preAction/parser/handler error rejects main; there is no catch that resumes at the full CLI. The full ../main.js import is reachable only after non-matching routes."
+    },
+    {
+      "id": "PROFILER_NO_VENDOR_PROBE",
+      "result": "PASS",
+      "evidence": "The selected profiler call records perf marks and optional memory snapshots; the complete profiler/clientVersion/OpenCode-Bun-version modules contain no vendor process probe. Analytics public API is inert in this open build."
+    },
+    {
+      "id": "PREACTION_CALL_SET",
+      "result": "PASS",
+      "evidence": "Both fastpaths have the same five-step setup: ensureMdmSettingsLoaded, enableConfigs, applySafeConfigEnvironmentVariables, applyExtraCACertsFromConfig, configureGlobalAgents."
+    },
+    {
+      "id": "MDM_MACOS_COMMAND",
+      "result": "PASS",
+      "evidence": "The complete MDM raw read and constants use /usr/bin/plutil for existing managed plists on Darwin. No Claude/Codex executable is selected."
+    },
+    {
+      "id": "CONFIG_READ_PATH",
+      "result": "PASS",
+      "evidence": "enableConfigs reads/parses global config; getGlobalConfig reads/caches and may register a nonpersistent file watcher. Source error/default/backup handling remains configuration I/O, not provider startup."
+    },
+    {
+      "id": "ELIGIBILITY_HELPER_SKIP",
+      "result": "PASS",
+      "evidence": "Safe-env setup calls remote-managed-settings eligibility; that reads existing OAuth/auth state and invokes getAnthropicApiKeyWithSource with skipRetrievingKeyFromApiKeyHelper:true."
+    },
+    {
+      "id": "KEYCHAIN_NOT_VENDOR_CLI",
+      "result": "PASS",
+      "evidence": "Reviewed OAuth/keychain read paths use security or storage data. Keychain prefetch defines callable functions but does not start itself at module evaluation. No real Claude/Codex probe was found in these called paths."
+    },
+    {
+      "id": "CA_PROXY_ONLY",
+      "result": "PASS",
+      "evidence": "CA/mTLS/proxy setup reads certificate/env data and constructs HTTP agents/interceptors. It does not invoke a Claude/Codex executable."
+    },
+    {
+      "id": "EXPLICIT_PROVIDER_JOIN",
+      "result": "PASS",
+      "evidence": "Semantic reviewer independently closed the handler/registry/OpenCode path: explicit opencode suppresses Codex status/catalog calls; no eager vendor singleton probe or cross-provider fallback was found. This is attributed coordination, not a hash-joined semantic report."
+    },
+    {
+      "id": "NO_EXECUTION_OR_VENUE_ACTION",
+      "result": "PASS",
+      "evidence": "This reviewer performed Git/source reads and pure JavaScript identity/data processing only; the only permitted mutation is retention of this bare review blob. No shell/runtime/version probe/source/ref/PR/CI action occurred."
+    }
+  ],
+  "checkCount": 26,
+  "passedCheckCount": 26,
+  "primarySourceManifest": [
+    {
+      "repository": "777genius/agent-teams-ai",
+      "ref": "cba4af86044e89c9ff3cce25f05dc5424bf06329",
+      "path": "scripts/e2e/opencode-project-path-packaged.mjs",
+      "bytes": 3069,
+      "sha256": "88cf2a9320273f2f6dac9cccb20ddeb1f18640df8fb6493beb7ef51f5dc9ef25",
+      "gitBlob": "72af1c16a8ffd035f8f70dc519eaead13cd28bd4",
+      "sourceUrl": "https://github.com/777genius/agent-teams-ai/blob/cba4af86044e89c9ff3cce25f05dc5424bf06329/scripts/e2e/opencode-project-path-packaged.mjs"
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "ref": "cba4af86044e89c9ff3cce25f05dc5424bf06329",
+      "path": "scripts/stage-runtime.mjs",
+      "bytes": 9050,
+      "sha256": "7ee8a9036562728a66d5a1dcd3ce7c97abf75cabeb97092eb9b87171ed2e29be",
+      "gitBlob": "fb06c3470b93df96ec0859536f135191616db093",
+      "sourceUrl": "https://github.com/777genius/agent-teams-ai/blob/cba4af86044e89c9ff3cce25f05dc5424bf06329/scripts/stage-runtime.mjs"
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "ref": "cba4af86044e89c9ff3cce25f05dc5424bf06329",
+      "path": "runtime.lock.json",
+      "bytes": 6127,
+      "sha256": "fa614f6dcc672b47342a838300f4c1c7b82ae0f05899c108af17838c58c53a87",
+      "gitBlob": "1757d79786da78e739a322e8bba81cd3dc88dcaa",
+      "sourceUrl": "https://github.com/777genius/agent-teams-ai/blob/cba4af86044e89c9ff3cce25f05dc5424bf06329/runtime.lock.json"
+    },
+    {
+      "repository": "777genius/agent_teams_orchestrator",
+      "ref": "e13edcd3d4ffbecc0272ae30195cc6b15b710ee7",
+      "path": "src/entrypoints/cli.tsx",
+      "bytes": 48906,
+      "sha256": "defe7af65119dc77f2f9c1129f83bae5e7bb7b9f7dc0001732e18831817ae17a",
+      "gitBlob": "ce5308b112e1a0b36c73a139c0feb49ef8fc2561",
+      "sourceUrl": "https://github.com/777genius/agent_teams_orchestrator/blob/e13edcd3d4ffbecc0272ae30195cc6b15b710ee7/src/entrypoints/cli.tsx"
+    },
+    {
+      "repository": "777genius/agent_teams_orchestrator",
+      "ref": "e13edcd3d4ffbecc0272ae30195cc6b15b710ee7",
+      "path": "src/cli/packagedOpenCodeDelivery.ts",
+      "bytes": 6944,
+      "sha256": "c7eb5b9deb10ea690f8549cdf08d05f9cdbec4237b8d465e10cfc9ecde47817a",
+      "gitBlob": "959ca828369723e22e58e657418151378ab5b8f2",
+      "sourceUrl": "https://github.com/777genius/agent_teams_orchestrator/blob/e13edcd3d4ffbecc0272ae30195cc6b15b710ee7/src/cli/packagedOpenCodeDelivery.ts"
+    },
+    {
+      "repository": "777genius/agent_teams_orchestrator",
+      "ref": "e13edcd3d4ffbecc0272ae30195cc6b15b710ee7",
+      "path": "scripts/build.ts",
+      "bytes": 17458,
+      "sha256": "c02cc66f78e7a6532ba80ddff4f4c04d920ff1edfe0a310f39b81d097824c7d7",
+      "gitBlob": "64a681f754dd5e28d52f73eab3d6d0dd164abad2",
+      "sourceUrl": "https://github.com/777genius/agent_teams_orchestrator/blob/e13edcd3d4ffbecc0272ae30195cc6b15b710ee7/scripts/build.ts"
+    },
+    {
+      "repository": "777genius/agent_teams_orchestrator",
+      "ref": "e13edcd3d4ffbecc0272ae30195cc6b15b710ee7",
+      "path": "src/utils/clientVersion.ts",
+      "bytes": 257,
+      "sha256": "6ab38df5d2aa7669ca629590497d10de9f5342b58d4ac048c14689164b088a5a",
+      "gitBlob": "f204c3bcfceada59c35263f97323b410942fed0b",
+      "sourceUrl": "https://github.com/777genius/agent_teams_orchestrator/blob/e13edcd3d4ffbecc0272ae30195cc6b15b710ee7/src/utils/clientVersion.ts"
+    },
+    {
+      "repository": "777genius/agent_teams_orchestrator",
+      "ref": "e13edcd3d4ffbecc0272ae30195cc6b15b710ee7",
+      "path": "src/constants/openCodeBunVersion.ts",
+      "bytes": 303,
+      "sha256": "133edf43c6e56849b8ba4b167dcc062e937e741c99a7160369136911beb4739b",
+      "gitBlob": "61cbfa735bef4b48dd8e4a1f4cd9721d9ffa71bc",
+      "sourceUrl": "https://github.com/777genius/agent_teams_orchestrator/blob/e13edcd3d4ffbecc0272ae30195cc6b15b710ee7/src/constants/openCodeBunVersion.ts"
+    },
+    {
+      "repository": "777genius/agent_teams_orchestrator",
+      "ref": "e13edcd3d4ffbecc0272ae30195cc6b15b710ee7",
+      "path": "src/utils/startupProfiler.ts",
+      "bytes": 6079,
+      "sha256": "c33652a3bb29134f910531131b7918d220497358afe8eed78d7745f2c6f2291c",
+      "gitBlob": "d16b094a8b9bf2b5ba75885c6cfb42dc8727bfa5",
+      "sourceUrl": "https://github.com/777genius/agent_teams_orchestrator/blob/e13edcd3d4ffbecc0272ae30195cc6b15b710ee7/src/utils/startupProfiler.ts"
+    },
+    {
+      "repository": "777genius/agent_teams_orchestrator",
+      "ref": "e13edcd3d4ffbecc0272ae30195cc6b15b710ee7",
+      "path": "src/services/analytics/index.ts",
+      "bytes": 1107,
+      "sha256": "5ed4a410950d87a8667cd781dcf2ce0c2db4a90659a9604c5646671a5f4c2058",
+      "gitBlob": "327e7e2d621788143c7107ec266f3566c1ca8fa2",
+      "sourceUrl": "https://github.com/777genius/agent_teams_orchestrator/blob/e13edcd3d4ffbecc0272ae30195cc6b15b710ee7/src/services/analytics/index.ts"
+    },
+    {
+      "repository": "777genius/agent_teams_orchestrator",
+      "ref": "e13edcd3d4ffbecc0272ae30195cc6b15b710ee7",
+      "path": "src/utils/settings/mdm/settings.ts",
+      "bytes": 10716,
+      "sha256": "bd7e354ef23f724abf19ab64539affab1723d1b598478f565ba3b04149472b6d",
+      "gitBlob": "61a8785d302b72c946cb4b13d60b28df4bbabb02",
+      "sourceUrl": "https://github.com/777genius/agent_teams_orchestrator/blob/e13edcd3d4ffbecc0272ae30195cc6b15b710ee7/src/utils/settings/mdm/settings.ts"
+    },
+    {
+      "repository": "777genius/agent_teams_orchestrator",
+      "ref": "e13edcd3d4ffbecc0272ae30195cc6b15b710ee7",
+      "path": "src/utils/settings/mdm/rawRead.ts",
+      "bytes": 4183,
+      "sha256": "848d97a1d6e4937fb3188ccea214b6f9f72784ccc3d2a838d750d11f25356cb0",
+      "gitBlob": "18aeacafd5b8ff748ea1df23f5c9b17ccf9cf107",
+      "sourceUrl": "https://github.com/777genius/agent_teams_orchestrator/blob/e13edcd3d4ffbecc0272ae30195cc6b15b710ee7/src/utils/settings/mdm/rawRead.ts"
+    },
+    {
+      "repository": "777genius/agent_teams_orchestrator",
+      "ref": "e13edcd3d4ffbecc0272ae30195cc6b15b710ee7",
+      "path": "src/utils/settings/mdm/constants.ts",
+      "bytes": 2617,
+      "sha256": "9d5a3693aca5fe87e5751ef264f4709fca4a2ef87e03c217c256f442a21350cb",
+      "gitBlob": "10753f3f682d5ed64c18801e3184458486857cb4",
+      "sourceUrl": "https://github.com/777genius/agent_teams_orchestrator/blob/e13edcd3d4ffbecc0272ae30195cc6b15b710ee7/src/utils/settings/mdm/constants.ts"
+    },
+    {
+      "repository": "777genius/agent_teams_orchestrator",
+      "ref": "e13edcd3d4ffbecc0272ae30195cc6b15b710ee7",
+      "path": "src/utils/config.ts",
+      "bytes": 65670,
+      "sha256": "74229a1d090b345451f049271499620d561c8d018f65125bb10018b328846889",
+      "gitBlob": "8f8c81e27db37850e8639e9a9cfec2163fd985e1",
+      "sourceUrl": "https://github.com/777genius/agent_teams_orchestrator/blob/e13edcd3d4ffbecc0272ae30195cc6b15b710ee7/src/utils/config.ts"
+    },
+    {
+      "repository": "777genius/agent_teams_orchestrator",
+      "ref": "e13edcd3d4ffbecc0272ae30195cc6b15b710ee7",
+      "path": "src/utils/managedEnv.ts",
+      "bytes": 8200,
+      "sha256": "e967a66a44852f46bb3e7d7d6e4a898f0e445b56ec3183fcec16138458ee691e",
+      "gitBlob": "9934182a4f8067c95b74a493e55398727c020056",
+      "sourceUrl": "https://github.com/777genius/agent_teams_orchestrator/blob/e13edcd3d4ffbecc0272ae30195cc6b15b710ee7/src/utils/managedEnv.ts"
+    },
+    {
+      "repository": "777genius/agent_teams_orchestrator",
+      "ref": "e13edcd3d4ffbecc0272ae30195cc6b15b710ee7",
+      "path": "src/services/remoteManagedSettings/syncCache.ts",
+      "bytes": 4229,
+      "sha256": "79e7d7df1d2a5be7d24ce782829b0ec12b2f5ac06b716fc7a803a457383ec941",
+      "gitBlob": "da65f6535f0d27f985b0805d54f775e08f370311",
+      "sourceUrl": "https://github.com/777genius/agent_teams_orchestrator/blob/e13edcd3d4ffbecc0272ae30195cc6b15b710ee7/src/services/remoteManagedSettings/syncCache.ts"
+    },
+    {
+      "repository": "777genius/agent_teams_orchestrator",
+      "ref": "e13edcd3d4ffbecc0272ae30195cc6b15b710ee7",
+      "path": "src/utils/auth.ts",
+      "bytes": 70335,
+      "sha256": "9311e95ac2bc2ae8f404612d7da2b78b1de89729f2ec95ca98f72f7c1e8976f4",
+      "gitBlob": "1ba6e0112a5e6b7341e15719a7e5561ea3ee5ba9",
+      "sourceUrl": "https://github.com/777genius/agent_teams_orchestrator/blob/e13edcd3d4ffbecc0272ae30195cc6b15b710ee7/src/utils/auth.ts"
+    },
+    {
+      "repository": "777genius/agent_teams_orchestrator",
+      "ref": "e13edcd3d4ffbecc0272ae30195cc6b15b710ee7",
+      "path": "src/utils/secureStorage/index.ts",
+      "bytes": 559,
+      "sha256": "e73e784ce18ba8f5e2b1d8c8fc6877662257b9d8df0ee3f89c9118670c79ab51",
+      "gitBlob": "d84f07a903d5706b3b86600df9d52e625a986253",
+      "sourceUrl": "https://github.com/777genius/agent_teams_orchestrator/blob/e13edcd3d4ffbecc0272ae30195cc6b15b710ee7/src/utils/secureStorage/index.ts"
+    },
+    {
+      "repository": "777genius/agent_teams_orchestrator",
+      "ref": "e13edcd3d4ffbecc0272ae30195cc6b15b710ee7",
+      "path": "src/utils/secureStorage/macOsKeychainStorage.ts",
+      "bytes": 8271,
+      "sha256": "178df791a6b7c6ebccdd6f02c47319089b4245b47c79d7d5b644e90720fa2244",
+      "gitBlob": "344cfba21d257f983f769392fe5e3f660b29b8e9",
+      "sourceUrl": "https://github.com/777genius/agent_teams_orchestrator/blob/e13edcd3d4ffbecc0272ae30195cc6b15b710ee7/src/utils/secureStorage/macOsKeychainStorage.ts"
+    },
+    {
+      "repository": "777genius/agent_teams_orchestrator",
+      "ref": "e13edcd3d4ffbecc0272ae30195cc6b15b710ee7",
+      "path": "src/utils/secureStorage/keychainPrefetch.ts",
+      "bytes": 4755,
+      "sha256": "b9203ab3e0efd27376d8abda0ee59cc26396fe5337eb58e019fcc2467c8e821e",
+      "gitBlob": "061c2b16cc9927419f20a81d3080aa2c66c5bd1b",
+      "sourceUrl": "https://github.com/777genius/agent_teams_orchestrator/blob/e13edcd3d4ffbecc0272ae30195cc6b15b710ee7/src/utils/secureStorage/keychainPrefetch.ts"
+    },
+    {
+      "repository": "777genius/agent_teams_orchestrator",
+      "ref": "e13edcd3d4ffbecc0272ae30195cc6b15b710ee7",
+      "path": "src/utils/secureStorage/macOsKeychainHelpers.ts",
+      "bytes": 4797,
+      "sha256": "4909e3a8a1a374f1a2183887087ae23c1859e6882fc8b2bfb070c02b8e2ec17d",
+      "gitBlob": "9da8bb2da94a920c01f740d0058aa9e8a3d3452e",
+      "sourceUrl": "https://github.com/777genius/agent_teams_orchestrator/blob/e13edcd3d4ffbecc0272ae30195cc6b15b710ee7/src/utils/secureStorage/macOsKeychainHelpers.ts"
+    },
+    {
+      "repository": "777genius/agent_teams_orchestrator",
+      "ref": "e13edcd3d4ffbecc0272ae30195cc6b15b710ee7",
+      "path": "src/utils/caCertsConfig.ts",
+      "bytes": 3608,
+      "sha256": "49a9cea20250e43c4ed48afc1bbec6143445232e35946662b81c1b7790875b58",
+      "gitBlob": "7bcaef3f19029069819e55ca0cee87206bc3f81a",
+      "sourceUrl": "https://github.com/777genius/agent_teams_orchestrator/blob/e13edcd3d4ffbecc0272ae30195cc6b15b710ee7/src/utils/caCertsConfig.ts"
+    },
+    {
+      "repository": "777genius/agent_teams_orchestrator",
+      "ref": "e13edcd3d4ffbecc0272ae30195cc6b15b710ee7",
+      "path": "src/utils/caCerts.ts",
+      "bytes": 4401,
+      "sha256": "42494a6c903f20bee4b2ae5208136735c6cbc3df6d9b8197bf530d00923a7cef",
+      "gitBlob": "1974a93571c0b59341129165a19db95276c5913e",
+      "sourceUrl": "https://github.com/777genius/agent_teams_orchestrator/blob/e13edcd3d4ffbecc0272ae30195cc6b15b710ee7/src/utils/caCerts.ts"
+    },
+    {
+      "repository": "777genius/agent_teams_orchestrator",
+      "ref": "e13edcd3d4ffbecc0272ae30195cc6b15b710ee7",
+      "path": "src/utils/proxy.ts",
+      "bytes": 13545,
+      "sha256": "205b528a8555706e802ea15682e378d1bc98c0e39066bae2ff82688b2bbb8e3a",
+      "gitBlob": "398802319482a9878bea15dfa10b102aea4fe3c7",
+      "sourceUrl": "https://github.com/777genius/agent_teams_orchestrator/blob/e13edcd3d4ffbecc0272ae30195cc6b15b710ee7/src/utils/proxy.ts"
+    },
+    {
+      "repository": "777genius/agent_teams_orchestrator",
+      "ref": "e13edcd3d4ffbecc0272ae30195cc6b15b710ee7",
+      "path": "src/utils/mtls.ts",
+      "bytes": 4655,
+      "sha256": "eb1daca54c75d36f4c2c355234f74621ca0069090c4cf503e142ba59054784d3",
+      "gitBlob": "b421ab54fb54e9811a9a1720cf188004891fde19",
+      "sourceUrl": "https://github.com/777genius/agent_teams_orchestrator/blob/e13edcd3d4ffbecc0272ae30195cc6b15b710ee7/src/utils/mtls.ts"
+    },
+    {
+      "repository": "777genius/agent_teams_orchestrator",
+      "ref": "e13edcd3d4ffbecc0272ae30195cc6b15b710ee7",
+      "path": "src/utils/model/providers.ts",
+      "bytes": 2611,
+      "sha256": "868187d564fdba0260ebc020692aae08478fe3ea28f9964d3f1967a4703d7e4f",
+      "gitBlob": "89ffed417c794e8c3483481ca01328f3af6780fb",
+      "sourceUrl": "https://github.com/777genius/agent_teams_orchestrator/blob/e13edcd3d4ffbecc0272ae30195cc6b15b710ee7/src/utils/model/providers.ts"
+    },
+    {
+      "repository": "777genius/agent_teams_orchestrator",
+      "ref": "e13edcd3d4ffbecc0272ae30195cc6b15b710ee7",
+      "path": "src/utils/anthropicConnectionMode.ts",
+      "bytes": 2786,
+      "sha256": "8782e1ab56aaa7848d07b711b2f43d79cbc28e7f76ccab3bee6d422894566e29",
+      "gitBlob": "c9eaa1b9638f44fcf56194f4fb3325468503d568",
+      "sourceUrl": "https://github.com/777genius/agent_teams_orchestrator/blob/e13edcd3d4ffbecc0272ae30195cc6b15b710ee7/src/utils/anthropicConnectionMode.ts"
+    },
+    {
+      "repository": "777genius/agent_teams_orchestrator",
+      "ref": "e13edcd3d4ffbecc0272ae30195cc6b15b710ee7",
+      "path": "src/utils/settings/settings.ts",
+      "bytes": 32185,
+      "sha256": "214e314d6424ee0e38cccae5fe88d5e6893e5932afa26d7b8711a441146dbf4f",
+      "gitBlob": "3bea04af2e72b8a722f5755285ef7096015d8100",
+      "sourceUrl": "https://github.com/777genius/agent_teams_orchestrator/blob/e13edcd3d4ffbecc0272ae30195cc6b15b710ee7/src/utils/settings/settings.ts"
+    },
+    {
+      "repository": "777genius/agent_teams_orchestrator",
+      "ref": "e13edcd3d4ffbecc0272ae30195cc6b15b710ee7",
+      "path": "src/utils/settings/settingsCache.ts",
+      "bytes": 2416,
+      "sha256": "71d132e059e92586ca87d489c5d510ddce1f14c47acb141653a8f4980aa6a8e6",
+      "gitBlob": "745dd602e5ab3c4fb7e5658712cbcc00d5a3716d",
+      "sourceUrl": "https://github.com/777genius/agent_teams_orchestrator/blob/e13edcd3d4ffbecc0272ae30195cc6b15b710ee7/src/utils/settings/settingsCache.ts"
+    },
+    {
+      "repository": "777genius/agent_teams_orchestrator",
+      "ref": "e13edcd3d4ffbecc0272ae30195cc6b15b710ee7",
+      "path": "src/utils/cleanupRegistry.ts",
+      "bytes": 900,
+      "sha256": "07505ea73c4cfff522e8721dcccf63de390a09b4fb67dff12ed73b1d373ca2a5",
+      "gitBlob": "13c98b8d8445ee07672b500f76cc3da6c5a778fe",
+      "sourceUrl": "https://github.com/777genius/agent_teams_orchestrator/blob/e13edcd3d4ffbecc0272ae30195cc6b15b710ee7/src/utils/cleanupRegistry.ts"
+    },
+    {
+      "repository": "777genius/agent_teams_orchestrator",
+      "ref": "e13edcd3d4ffbecc0272ae30195cc6b15b710ee7",
+      "path": "src/utils/envUtils.ts",
+      "bytes": 8532,
+      "sha256": "736561be3699a9565762c898ef69663d83a21720ca86d1cb588678f3a59e9dd8",
+      "gitBlob": "8990e01c7687df6c9b7f23b4235989f13d6c6158",
+      "sourceUrl": "https://github.com/777genius/agent_teams_orchestrator/blob/e13edcd3d4ffbecc0272ae30195cc6b15b710ee7/src/utils/envUtils.ts"
+    },
+    {
+      "repository": "777genius/agent_teams_orchestrator",
+      "ref": "e13edcd3d4ffbecc0272ae30195cc6b15b710ee7",
+      "path": "src/utils/which.ts",
+      "bytes": 2428,
+      "sha256": "ac9947f1e380550d9baac2a0893dcdcb6240047ed9fb47e4d6c2507bde4650cd",
+      "gitBlob": "ecb1c889cc1f6708353dd4afea08852365da20ad",
+      "sourceUrl": "https://github.com/777genius/agent_teams_orchestrator/blob/e13edcd3d4ffbecc0272ae30195cc6b15b710ee7/src/utils/which.ts"
+    },
+    {
+      "repository": "777genius/agent_teams_orchestrator",
+      "ref": "e13edcd3d4ffbecc0272ae30195cc6b15b710ee7",
+      "path": "src/utils/findExecutable.ts",
+      "bytes": 553,
+      "sha256": "fa6db28828b87abcd38489cd4e371f1c03953160729e83701d3746fa6d14e9d0",
+      "gitBlob": "8224d019fcf5dfe84ede06a903491a016eaaada2",
+      "sourceUrl": "https://github.com/777genius/agent_teams_orchestrator/blob/e13edcd3d4ffbecc0272ae30195cc6b15b710ee7/src/utils/findExecutable.ts"
+    }
+  ],
+  "identityHelper": {
+    "gitBlob": "e4a4568d589e1254b88ade1a5f87d53924e7c2e8",
+    "bytes": 3982,
+    "sha256": "cd3d5b96a5508215010923078469cc718282f17d765f6af493913c157bdf3db7",
+    "onlyEvaluatedSource": true
+  },
+  "actions": {
+    "gitReadOnlyCalls": true,
+    "sourceEvaluated": false,
+    "targetRuntimeInvocations": 0,
+    "realClaudeInvocations": 0,
+    "realCodexInvocations": 0,
+    "physicalSourceWrites": 0,
+    "refWrites": 0,
+    "prWrites": 0,
+    "ciActions": 0,
+    "reportBareBlobRetentionOnly": true
+  }
+}

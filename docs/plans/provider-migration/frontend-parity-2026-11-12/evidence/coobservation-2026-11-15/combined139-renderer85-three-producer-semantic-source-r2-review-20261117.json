@@ -1,0 +1,1397 @@
+{
+  "schemaVersion": 1,
+  "kind": "combined139-renderer85-three-producer-independent-semantic-source-r2",
+  "reviewer": "/root/producer_r2_semantic",
+  "at": "2026-11-17T01:48:55.196Z",
+  "repository": "777genius/agent-teams-ai",
+  "branch": "fix/frontend-parity-coobservation-c714-20261115",
+  "verdict": "ACCEPTED_EXACT_THREE_PRODUCER_SOURCE_POSTIMAGES_STATIC_SEMANTICS_ONLY",
+  "acceptedWithinAssignedScope": true,
+  "subject": {
+    "proposal": {
+      "bytes": 25372,
+      "sha256": "7def167b3384043abb2cea83e90c51ea332f2c12a9f4fc3ca1ddcf1531bab85c",
+      "gitBlob": "b0d4fb7c7ca2fc486fda6823ee3c3618171f8cdc"
+    },
+    "preparedFromCommit": "77993819c233737f1e2b4c11c8ca1a5d360bcbe3",
+    "preparedFromTree": "ada3f27db78fabc17a91e3904d41b8bc547c6dca",
+    "r1": {
+      "bytes": 139634,
+      "sha256": "b9524cd8f0f1251f034337f4eb8fbc6606adc1d1c987d993580be06b9a078a75",
+      "gitBlob": "8ce89328171e58ec3e0631dce9607ee7e1eba54e"
+    },
+    "producerAuthorshipGate": {
+      "bytes": 4327,
+      "sha256": "3231731b2a22cb3903ccff6991341b54c673cd7064599b9aa7238fe07e3c6b18",
+      "gitBlob": "2780955d0a71956a75650ddf4d8a0ff0576faa57"
+    },
+    "independentAcceptedRedActualPublication": {
+      "bytes": 166393,
+      "sha256": "cbe1880831780d10a7131282ab2ecc37d81fbdede3c53a265c1749ea863c20f2",
+      "gitBlob": "e5c2c2d8c84c0d491e334f6d67774cf23c83948f"
+    },
+    "acceptedRedSemanticReview": {
+      "bytes": 229314,
+      "sha256": "2e05bcc76671b35883fc04e072d46e0961c86c2d293de2582e0e0fe0196692da",
+      "gitBlob": "3cddc2bdb141d81c87c97d6059c56278b1118a55"
+    },
+    "postimages": [
+      {
+        "path": "scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+        "mode": "100644",
+        "bytes": 45795,
+        "sha256": "2c5931f5c7fa1dc8bb7858201c1b8afdbae9683faf4a2ad9fce067f116f3f94b",
+        "gitBlob": "5026f0ec6165bb092717ddc989043848a25081dc",
+        "physicalLines": 572
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-task-review-cycle-ui-smoke.ts",
+        "mode": "100644",
+        "bytes": 33036,
+        "sha256": "4fa52cfad9347065680ef62a3ba6420762408a78a93b77e96ac3a2e16e68bdc9",
+        "gitBlob": "8d175c98158b3bd71192aef7b1929484b2b681b6",
+        "physicalLines": 794
+      },
+      {
+        "path": "src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts",
+        "mode": "100644",
+        "bytes": 74340,
+        "sha256": "647ac5732bfd6b5cb57834adb4ad22c32ee5dfb018a934c92f982efd9daa531c",
+        "gitBlob": "c2faa156015707bc5fbd7f8123a7ffd9c4faa486",
+        "physicalLines": 2068
+      }
+    ],
+    "frozenTests": {
+      "node": {
+        "bytes": 164965,
+        "sha256": "852bedb85c83dbc4b488dffb4a9ffebbe398adc53e85f5a3cea8ca36b146cbf7",
+        "gitBlob": "896c587e077da56a98a314a175fb3cba0353d6ee"
+      },
+      "renderer": {
+        "bytes": 187890,
+        "sha256": "b6f11896e60014aac785968d42390afde38716d47de9bba9562522235db048c9",
+        "gitBlob": "76495189c992fcda47cd7a43a0c697190b5acbb3"
+      }
+    }
+  },
+  "authority": {
+    "closedGateAt": "2026-11-17 01:40:00 UTC",
+    "recordedDataAuthoringObservationAt": "2026-11-17 01:42:33 UTC",
+    "completeProposalRetentionAt": "2026-11-17 01:43:09 UTC",
+    "exactGateBodyInProposalMatches": true,
+    "rootFullReadIndependentActual": true,
+    "independentFullReadRoot": true,
+    "independentSelfReadbackConfirmed": true,
+    "rootActualJoined": {
+      "bytes": 55348,
+      "sha256": "bbe57a54a25a38bee1d4f4de5fc1d036d81f6b2ecdb40b3d0088b274de6656c9",
+      "gitBlob": "9218839ef55406b01267605c040bc586c7d443be"
+    },
+    "independentActualChecks": 179,
+    "acceptedRedObservedOuter": 0,
+    "acceptedRedSession": 53054,
+    "inheritedRedOutcome": "Node 139: 134 pass / 5 expected failures; renderer 85: 82 pass / 3 expected failures. All original 133/80 and Node 137 / renderer 84–85 pass. Both primary exits 1; separately observed supervisor outer 0.",
+    "authorityScope": "The existing closed gate permits root authorship of these three selected source postimages. This review is exact static SOURCE R2 only. It neither repeats nor substitutes for the already accepted full runtime/publication review.",
+    "sourceCreationTimeQualification": "The explicit retained chronology records all authorship after the gate. The individual first-two blob creation times are not invented; the proposal accurately records the data-writer check correction and the later complete retention time."
+  },
+  "method": {
+    "dataOnly": true,
+    "shellExecuted": false,
+    "targetRuntimeExecuted": false,
+    "sourceOrTestEvaluated": false,
+    "helperEvaluatedOnly": {
+      "bytes": 3982,
+      "sha256": "cd3d5b96a5508215010923078469cc718282f17d765f6af493913c157bdf3db7",
+      "gitBlob": "e4a4568d589e1254b88ade1a5f87d53924e7c2e8"
+    },
+    "sourcePostimagesAuthoredByReviewer": false,
+    "sourceWorkingTreeWrites": false,
+    "sourceFilesApplied": false,
+    "controlOrReplicaFilesChanged": false,
+    "refsMutated": false,
+    "ciReadOrMutated": false,
+    "bareReviewBlobRetentionOnly": true,
+    "completeSourceBodiesFetched": 6,
+    "completePreimageBytes": 152903,
+    "completePostimageBytes": 153171,
+    "wholePreimagesRead": {
+      "p11_pre": [
+        [
+          1,
+          190
+        ],
+        [
+          191,
+          380
+        ],
+        [
+          381,
+          570
+        ]
+      ],
+      "review_pre": [
+        [
+          1,
+          260
+        ],
+        [
+          261,
+          530
+        ],
+        [
+          531,
+          788
+        ]
+      ],
+      "hook_pre": [
+        [
+          1,
+          400
+        ],
+        [
+          401,
+          530
+        ],
+        [
+          521,
+          900
+        ],
+        [
+          901,
+          1300
+        ],
+        [
+          1301,
+          1700
+        ],
+        [
+          1701,
+          2068
+        ]
+      ]
+    },
+    "fullBodyReview": "Every complete producer preimage and postimage was retrieved and rehashed. Complete preimages were read throughout; actual changed regions were read in full. Both exact-offset inverse comparison and independent unique-marker/anchor inverse comparison cover every remaining postimage byte against those complete preimages, including imports and trailing content.",
+    "fullFrozenTestsFetchedAndRehashed": true,
+    "fullSelectedFixturesAndCasesRead": true,
+    "oldTestsScope": "The frozen complete 139/85 test bodies retain every old byte. The accepted RED establishes observed finite original 133/80 passes. This review does not claim exhaustive path analysis or execution of those old cases.",
+    "fixedDependencies": {
+      "controls": {
+        "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+        "bytes": 28974,
+        "sha256": "7626e479a6662242009cb050e7e5af612a29e4205d62666d15274d5c30f91386",
+        "gitBlob": "ed57cb0fe7d57ef076a591621289eb77667c63ad",
+        "semanticRead": "Complete actual waitRead implementation, its deadline/cadence/error behavior and original input ordering."
+      },
+      "projectContext": {
+        "path": "src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderProjectContext.ts",
+        "bytes": 1300,
+        "sha256": "94e4ebc5b9e343b12ebc40f5251bab30372d9668aab295a57930653b20b6730f",
+        "gitBlob": "33744a0abc543ab39e13d0b5a784de719e40ec58",
+        "ref": "77993819c233737f1e2b4c11c8ca1a5d360bcbe3",
+        "semanticRead": "Complete helper; captured path/runtime/generation and unmount generation increment."
+      }
+    },
+    "primaryOrFixtureExecutionForReview": false,
+    "noInferredGreenPass": true
+  },
+  "exactSourceReadbacks": [
+    {
+      "path": "scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+      "preimage": {
+        "bytes": 45707,
+        "sha256": "d8ee4090606876194393463e96411f89ed54a53bd3095df333a5d47c5c7fd159",
+        "gitBlob": "bd8bc728808eda00a45b300fd328d49e4e919bc2"
+      },
+      "postimage": {
+        "bytes": 45795,
+        "sha256": "2c5931f5c7fa1dc8bb7858201c1b8afdbae9683faf4a2ad9fce067f116f3f94b",
+        "gitBlob": "5026f0ec6165bb092717ddc989043848a25081dc"
+      },
+      "physicalLines": {
+        "before": 570,
+        "after": 572,
+        "cap": 800
+      },
+      "deltaBytes": 88,
+      "inverseMatches": true,
+      "inverseIdentity": {
+        "bytes": 45707,
+        "sha256": "d8ee4090606876194393463e96411f89ed54a53bd3095df333a5d47c5c7fd159",
+        "gitBlob": "bd8bc728808eda00a45b300fd328d49e4e919bc2"
+      },
+      "inverseEdits": [
+        {
+          "offset": 5856,
+          "afterMatches": true,
+          "beforeIdentity": {
+            "bytes": 104,
+            "sha256": "d483ce71179e9bb55c0c8db027102bcec457d876a21b024c4abed9bbc93ee4b5",
+            "gitBlob": "8aa2e4509dfb1cd1f613cbc2299f85a78dfcc11b"
+          },
+          "afterIdentity": {
+            "bytes": 149,
+            "sha256": "dea724bd8f3a043912b13e570378bcecd5c4ce984b272fb11568e642bcdf9458",
+            "gitBlob": "bf5773cd7b6dc066bc34405199f545f1a2d3e8cb"
+          }
+        },
+        {
+          "offset": 5691,
+          "afterMatches": true,
+          "beforeIdentity": {
+            "bytes": 69,
+            "sha256": "0adccd0c7d853dbd37433ba7894bb3d4f63d4ef10773dfdc2c2d0e539160ecbe",
+            "gitBlob": "d4e0199d7e73809b71dfc3f2b76f1af9cbc0bff6"
+          },
+          "afterIdentity": {
+            "bytes": 112,
+            "sha256": "de7f2ca237f32dcbdfc773577530ab4556cd1a3cb535f2e816b300f68611a548",
+            "gitBlob": "0d6b0741a77ce34cd0630ac78a829495428f8d9e"
+          }
+        }
+      ]
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-task-review-cycle-ui-smoke.ts",
+      "preimage": {
+        "bytes": 32845,
+        "sha256": "43e12eb3252e578061ea5840ae39d173ce0cd5a8ce6673c5c5ea06d97a8bedaa",
+        "gitBlob": "d65706646743798f2646421105f2f6a75819f143"
+      },
+      "postimage": {
+        "bytes": 33036,
+        "sha256": "4fa52cfad9347065680ef62a3ba6420762408a78a93b77e96ac3a2e16e68bdc9",
+        "gitBlob": "8d175c98158b3bd71192aef7b1929484b2b681b6"
+      },
+      "physicalLines": {
+        "before": 788,
+        "after": 794,
+        "cap": 800
+      },
+      "deltaBytes": 191,
+      "inverseMatches": true,
+      "inverseIdentity": {
+        "bytes": 32845,
+        "sha256": "43e12eb3252e578061ea5840ae39d173ce0cd5a8ce6673c5c5ea06d97a8bedaa",
+        "gitBlob": "d65706646743798f2646421105f2f6a75819f143"
+      },
+      "inverseEdits": [
+        {
+          "offset": 17215,
+          "afterMatches": true,
+          "beforeIdentity": {
+            "bytes": 119,
+            "sha256": "489d4a378e651681701ce1ad8671cb804d5a76e96d6cfff869c3a06ccab0afc8",
+            "gitBlob": "d6280a34384bb329d9e7b84698cee62af90245bf"
+          },
+          "afterIdentity": {
+            "bytes": 310,
+            "sha256": "ec6d5ce70aa7bc491e7a9f325f721fdf86b534d8a0c76d744ce9f3be5fc43790",
+            "gitBlob": "70321976d4c567083d9d9e4b7d4835785e053fe6"
+          }
+        }
+      ]
+    },
+    {
+      "path": "src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts",
+      "preimage": {
+        "bytes": 74351,
+        "sha256": "68abe01f665b263bd8581659ea306f366428fdccbb45246f08ec42e20b9ee575",
+        "gitBlob": "1176fd06b70f1b717ba83deb387f87b05b18b45b"
+      },
+      "postimage": {
+        "bytes": 74340,
+        "sha256": "647ac5732bfd6b5cb57834adb4ad22c32ee5dfb018a934c92f982efd9daa531c",
+        "gitBlob": "c2faa156015707bc5fbd7f8123a7ffd9c4faa486"
+      },
+      "physicalLines": {
+        "before": 2068,
+        "after": 2068,
+        "cap": 2068
+      },
+      "deltaBytes": -11,
+      "inverseMatches": true,
+      "inverseIdentity": {
+        "bytes": 74351,
+        "sha256": "68abe01f665b263bd8581659ea306f366428fdccbb45246f08ec42e20b9ee575",
+        "gitBlob": "1176fd06b70f1b717ba83deb387f87b05b18b45b"
+      },
+      "inverseEdits": [
+        {
+          "offset": 21419,
+          "afterMatches": true,
+          "beforeIdentity": {
+            "bytes": 36,
+            "sha256": "cba9564e19adffb199815aeabf20514dc6b0ee4581918dfaaefef07bc1f36fdd",
+            "gitBlob": "de1a0189ff8a7e20359f2b1c413238b66e678840"
+          },
+          "afterIdentity": {
+            "bytes": 25,
+            "sha256": "9c202d426593ba1e1f6edaab02998d59b33973dbb7c5abd0597fa4c5cdc5c0e2",
+            "gitBlob": "775d8c2bc28a221a353467d5287d043024d9a34a"
+          }
+        }
+      ]
+    }
+  ],
+  "independentSelectedRegions": {
+    "p11": {
+      "markers": {
+        "start": "  const poll = async <T>(",
+        "end": "  const workspace = join(fixture.root, 'workspace');"
+      },
+      "offsets": {
+        "preStart": 5587,
+        "preEnd": 5980,
+        "postStart": 5587,
+        "postEnd": 6068
+      },
+      "beforeIdentity": {
+        "bytes": 393,
+        "sha256": "8d071f908160878ddbc6e789385aa9e86f3dc0ef595498c9f3a32b20dbd27059",
+        "gitBlob": "a94c902f6a7d8793b9e2bea6d4cb25bf9031e6af"
+      },
+      "afterIdentity": {
+        "bytes": 481,
+        "sha256": "4783a1203d1d54c44b77bc68eeaf365637561cf6425c39918c879d97fbc8e677",
+        "gitBlob": "8aadf565a9b38a15896bd77523e8a6a62822d576"
+      },
+      "before": "  const poll = async <T>(observe: () => Promise<T>, accepts: (value: T) => boolean, label: string) => {\n    const cutoff = Date.now() + 90_000; let value = await observe();\n    while (!accepts(value) && Date.now() < cutoff) {\n      current(); await new Promise<void>(resolve => setTimeout(resolve, 100)); value = await observe();\n    }\n    assert.ok(accepts(value), label); return value;\n  };\n",
+      "after": "  const poll = async <T>(observe: () => Promise<T>, accepts: (value: T) => boolean, label: string) => {\n    const cutoff = Date.now() + 90_000; let value = await observe();\n    assert.ok(Date.now() < cutoff, label);\n    while (!accepts(value) && Date.now() < cutoff) {\n      current(); await new Promise<void>(resolve => setTimeout(resolve, 100)); value = await observe();\n      assert.ok(Date.now() < cutoff, label);\n    }\n    assert.ok(accepts(value), label); return value;\n  };\n",
+      "prefix": {
+        "bytes": 5587,
+        "sha256": "193613c7f158feb9c81b17e9585d0830a183a60941eea716df187286dfd8d499",
+        "gitBlob": "c7136070a43f7ef7246d782001c2d07ecf17569c"
+      },
+      "suffix": {
+        "bytes": 39727,
+        "sha256": "b5a8f27fc470e2bde07f80a94339b8e26c84790cd412ff4894272583587469fa",
+        "gitBlob": "90c4f782a744b1c41f8010946637eca6f72e6367"
+      }
+    },
+    "review": {
+      "markers": {
+        "start": "  const commentTarget = record(",
+        "end": "  await snapshotStage(await newReceipt(commentBefore, 'task.comment'), 'in_progress');"
+      },
+      "offsets": {
+        "preStart": 17160,
+        "preEnd": 17773,
+        "postStart": 17160,
+        "postEnd": 17964
+      },
+      "beforeIdentity": {
+        "bytes": 613,
+        "sha256": "b62b848270f5a9fe078a94562e87045c07f10b8fbed0bba578bcbd21f33de261",
+        "gitBlob": "502e47fa195fa8dad726063c3bd5fe9ce0a6e1ac"
+      },
+      "afterIdentity": {
+        "bytes": 804,
+        "sha256": "508a925af41818b204c6144c5e1ac481cb48e4f3978cf45dc8a5d0f44277c437",
+        "gitBlob": "f8693df7593a74fc5b2b906104765e25c87c1905"
+      },
+      "before": "  const commentTarget = record(\n    await ui.waitRead(\n      desktopTaskCommentInputExpression(options.handleId, taskId),\n      'exact current correction Task/owner/surface'\n    )\n  );\n  assert.equal(typeof commentTarget.selector, 'string');\n  await ui.scrollTo(String(commentTarget.selector), 'existing Task comment composer');\n  await ui.click(String(commentTarget.selector), 'focus existing correction comment');\n  await cdp.send('Input.insertText', { text: commentText });\n  await ui.click(\n    '[role=\"dialog\"] button.message-composer-send-button',\n    'original correction Comment once',\n    'Comment'\n  );\n",
+      "after": "  const commentTarget = record(\n    await ui.waitRead(\n      desktopTaskCommentInputExpression(options.handleId, taskId),\n      'exact current correction Task/owner/surface',\n      30_000,\n      (value) =>\n        value !== null &&\n        typeof value === 'object' &&\n        !Array.isArray(value) &&\n        (value as Record<string, unknown>).canEditNow === true\n    )\n  );\n  assert.equal(typeof commentTarget.selector, 'string');\n  await ui.scrollTo(String(commentTarget.selector), 'existing Task comment composer');\n  await ui.click(String(commentTarget.selector), 'focus existing correction comment');\n  await cdp.send('Input.insertText', { text: commentText });\n  await ui.click(\n    '[role=\"dialog\"] button.message-composer-send-button',\n    'original correction Comment once',\n    'Comment'\n  );\n",
+      "prefix": {
+        "bytes": 17160,
+        "sha256": "645fc8c608a1f319f62ecccf4f2f12c07f3deafb64471908381b2f4806d3729d",
+        "gitBlob": "065c99cc10b17c21687a0a1a86c42f59b98953ed"
+      },
+      "suffix": {
+        "bytes": 15072,
+        "sha256": "9daea7603dd3675dc3197d3ce213585c8bb37d4c5304a332b332e772abe78724",
+        "gitBlob": "f85880d6927c6828441b4e29fe18e1a104c1091e"
+      }
+    },
+    "hook": {
+      "markers": {
+        "start": "  const refresh = useCallback(",
+        "end": "  const loadDirectoryPage = useCallback("
+      },
+      "offsets": {
+        "preStart": 19429,
+        "preEnd": 21677,
+        "postStart": 19429,
+        "postEnd": 21666
+      },
+      "beforeIdentity": {
+        "bytes": 2248,
+        "sha256": "895094e7540c2d059185e28644b2fe99e7030de20a89ae948b717a7de9880a8d",
+        "gitBlob": "d04767126674d638d3b51d627852845cdac051f4"
+      },
+      "afterIdentity": {
+        "bytes": 2237,
+        "sha256": "18d88284997b04e4fd7ab30875394c2c611431114f2087e5cea64235e2fa92db",
+        "gitBlob": "487908e1ee293d372b367564781e3702211eba96"
+      },
+      "before": "  const refresh = useCallback(\n    async (input: { silent?: boolean } = {}): Promise<boolean> => {\n      if (!options.enabled) {\n        return true;\n      }\n      viewRequestedRef.current = true;\n      const projectContext = getProjectContextSnapshot();\n      const requestSeq = viewLoadRequestSeq.current + 1;\n      viewLoadRequestSeq.current = requestSeq;\n      const requestIsCurrent = (): boolean =>\n        viewLoadRequestSeq.current === requestSeq && isProjectContextCurrent(projectContext);\n      const silent = input.silent === true;\n      if (!silent) {\n        setLoading(true);\n      }\n      setError(null);\n      setErrorDiagnostics(null);\n      try {\n        const response = await api.runtimeProviderManagement.loadView({\n          ...connectionForm.runtimeProviderContext(\n            options.runtimeId,\n            projectContext.path,\n            options.connectionContextToken\n          ),\n        });\n        if (!requestIsCurrent()) {\n          return false;\n        }\n        if (response.error) {\n          if (!silent) {\n            setView(null);\n          }\n          setError(response.error.message);\n          setErrorDiagnostics(response.error.diagnostics ?? null);\n          return false;\n        }\n        const nextView = presentManagementView(response.view ?? null);\n        setView(nextView);\n        setSelectedModelId(nextView?.defaultModel ?? null);\n        setSelectedProviderId((current) => {\n          if (current && nextView?.providers.some((provider) => provider.providerId === current)) {\n            return current;\n          }\n          return selectInitialProviderId(nextView);\n        });\n        return true;\n      } catch (loadError) {\n        if (!requestIsCurrent()) {\n          return false;\n        }\n        if (!silent) {\n          setView(null);\n        }\n        setError(loadError instanceof Error ? loadError.message : 'Failed to load providers');\n        setErrorDiagnostics(null);\n        return false;\n      } finally {\n        if (!silent && requestIsCurrent()) {\n          setLoading(false);\n        }\n      }\n    },\n    [\n      getProjectContextSnapshot,\n      isProjectContextCurrent,\n      options.enabled,\n      options.runtimeId,\n      options.connectionContextToken,\n    ]\n  );\n",
+      "after": "  const refresh = useCallback(\n    async (input: { silent?: boolean } = {}): Promise<boolean> => {\n      if (!options.enabled) {\n        return true;\n      }\n      viewRequestedRef.current = true;\n      const projectContext = getProjectContextSnapshot();\n      const requestSeq = viewLoadRequestSeq.current + 1;\n      viewLoadRequestSeq.current = requestSeq;\n      const requestIsCurrent = (): boolean =>\n        viewLoadRequestSeq.current === requestSeq && isProjectContextCurrent(projectContext);\n      const silent = input.silent === true;\n      if (!silent) {\n        setLoading(true);\n      }\n      setError(null);\n      setErrorDiagnostics(null);\n      try {\n        const response = await api.runtimeProviderManagement.loadView({\n          ...connectionForm.runtimeProviderContext(\n            options.runtimeId,\n            projectContext.path,\n            options.connectionContextToken\n          ),\n        });\n        if (!requestIsCurrent()) {\n          return false;\n        }\n        if (response.error) {\n          if (!silent) {\n            setView(null);\n          }\n          setError(response.error.message);\n          setErrorDiagnostics(response.error.diagnostics ?? null);\n          return false;\n        }\n        const nextView = presentManagementView(response.view ?? null);\n        setView(nextView);\n        setSelectedModelId(nextView?.defaultModel ?? null);\n        setSelectedProviderId((current) => {\n          if (current && nextView?.providers.some((provider) => provider.providerId === current)) {\n            return current;\n          }\n          return selectInitialProviderId(nextView);\n        });\n        return true;\n      } catch (loadError) {\n        if (!requestIsCurrent()) {\n          return false;\n        }\n        if (!silent) {\n          setView(null);\n        }\n        setError(loadError instanceof Error ? loadError.message : 'Failed to load providers');\n        setErrorDiagnostics(null);\n        return false;\n      } finally {\n        if (requestIsCurrent()) {\n          setLoading(false);\n        }\n      }\n    },\n    [\n      getProjectContextSnapshot,\n      isProjectContextCurrent,\n      options.enabled,\n      options.runtimeId,\n      options.connectionContextToken,\n    ]\n  );\n",
+      "prefix": {
+        "bytes": 19429,
+        "sha256": "07854d78ef82e62994c5691dc316a5663b0cdf86dece9e5ee5fffc3daa9de1f0",
+        "gitBlob": "a4616e351ef52b23dcb2661de76e9facff51bb60"
+      },
+      "suffix": {
+        "bytes": 52674,
+        "sha256": "9adc7c1de948aba19ee1f12536f11cc709be62c3869b9a2489522c19b686c082",
+        "gitBlob": "bad9754c46a2a8d84f929120d778a823e33aa79d"
+      }
+    }
+  },
+  "preservedNineRowBoundary": {
+    "beforeSourcePins": [
+      {
+        "path": "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+        "mode": "100644",
+        "bytes": 24759,
+        "sha256": "d15b7eea14c0951194310aee34ddc5c477879c759a97a4e2f4e9fce1f956ce9b",
+        "gitBlob": "cf93da72a198dac636658e512093eef7828b5927"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+        "mode": "100644",
+        "bytes": 45707,
+        "sha256": "d8ee4090606876194393463e96411f89ed54a53bd3095df333a5d47c5c7fd159",
+        "gitBlob": "bd8bc728808eda00a45b300fd328d49e4e919bc2"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts",
+        "mode": "100644",
+        "bytes": 36260,
+        "sha256": "26357f37b146fc171bbceadb624bde4a7f4e459d2073ae23a651e757817b2d38",
+        "gitBlob": "4700a0052d3c58a2b3d9bc66e6803220688050fd"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+        "mode": "100644",
+        "bytes": 8457,
+        "sha256": "2da55bb40a5689ace0e922dc4867d7c73278d9a1cd200ea8c4602ca68f82da3b",
+        "gitBlob": "3c7b4bb53f4259ac0795d3f92fb715887acb554f"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-task-review-cycle-ui-smoke.ts",
+        "mode": "100644",
+        "bytes": 32845,
+        "sha256": "43e12eb3252e578061ea5840ae39d173ce0cd5a8ce6673c5c5ea06d97a8bedaa",
+        "gitBlob": "d65706646743798f2646421105f2f6a75819f143"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+        "mode": "100644",
+        "bytes": 164965,
+        "sha256": "852bedb85c83dbc4b488dffb4a9ffebbe398adc53e85f5a3cea8ca36b146cbf7",
+        "gitBlob": "896c587e077da56a98a314a175fb3cba0353d6ee"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+        "mode": "100644",
+        "bytes": 28974,
+        "sha256": "7626e479a6662242009cb050e7e5af612a29e4205d62666d15274d5c30f91386",
+        "gitBlob": "ed57cb0fe7d57ef076a591621289eb77667c63ad"
+      },
+      {
+        "path": "src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts",
+        "mode": "100644",
+        "bytes": 74351,
+        "sha256": "68abe01f665b263bd8581659ea306f366428fdccbb45246f08ec42e20b9ee575",
+        "gitBlob": "1176fd06b70f1b717ba83deb387f87b05b18b45b"
+      },
+      {
+        "path": "test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts",
+        "mode": "100644",
+        "bytes": 187890,
+        "sha256": "b6f11896e60014aac785968d42390afde38716d47de9bba9562522235db048c9",
+        "gitBlob": "76495189c992fcda47cd7a43a0c697190b5acbb3"
+      }
+    ],
+    "afterSourcePins": [
+      {
+        "path": "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+        "mode": "100644",
+        "bytes": 24759,
+        "sha256": "d15b7eea14c0951194310aee34ddc5c477879c759a97a4e2f4e9fce1f956ce9b",
+        "gitBlob": "cf93da72a198dac636658e512093eef7828b5927"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+        "mode": "100644",
+        "bytes": 45795,
+        "sha256": "2c5931f5c7fa1dc8bb7858201c1b8afdbae9683faf4a2ad9fce067f116f3f94b",
+        "gitBlob": "5026f0ec6165bb092717ddc989043848a25081dc"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts",
+        "mode": "100644",
+        "bytes": 36260,
+        "sha256": "26357f37b146fc171bbceadb624bde4a7f4e459d2073ae23a651e757817b2d38",
+        "gitBlob": "4700a0052d3c58a2b3d9bc66e6803220688050fd"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+        "mode": "100644",
+        "bytes": 8457,
+        "sha256": "2da55bb40a5689ace0e922dc4867d7c73278d9a1cd200ea8c4602ca68f82da3b",
+        "gitBlob": "3c7b4bb53f4259ac0795d3f92fb715887acb554f"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-task-review-cycle-ui-smoke.ts",
+        "mode": "100644",
+        "bytes": 33036,
+        "sha256": "4fa52cfad9347065680ef62a3ba6420762408a78a93b77e96ac3a2e16e68bdc9",
+        "gitBlob": "8d175c98158b3bd71192aef7b1929484b2b681b6"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+        "mode": "100644",
+        "bytes": 164965,
+        "sha256": "852bedb85c83dbc4b488dffb4a9ffebbe398adc53e85f5a3cea8ca36b146cbf7",
+        "gitBlob": "896c587e077da56a98a314a175fb3cba0353d6ee"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+        "mode": "100644",
+        "bytes": 28974,
+        "sha256": "7626e479a6662242009cb050e7e5af612a29e4205d62666d15274d5c30f91386",
+        "gitBlob": "ed57cb0fe7d57ef076a591621289eb77667c63ad"
+      },
+      {
+        "path": "src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts",
+        "mode": "100644",
+        "bytes": 74340,
+        "sha256": "647ac5732bfd6b5cb57834adb4ad22c32ee5dfb018a934c92f982efd9daa531c",
+        "gitBlob": "c2faa156015707bc5fbd7f8123a7ffd9c4faa486"
+      },
+      {
+        "path": "test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts",
+        "mode": "100644",
+        "bytes": 187890,
+        "sha256": "b6f11896e60014aac785968d42390afde38716d47de9bba9562522235db048c9",
+        "gitBlob": "76495189c992fcda47cd7a43a0c697190b5acbb3"
+      }
+    ],
+    "beforeSourceVector": {
+      "bytes": 2118,
+      "sha256": "f2574559a378b3bc537fdcedbde161003c8344a5485dfff9322214f6fda2a90c",
+      "gitBlob": "f6446bdc2bbdb511206c729a1f03717871baea6d"
+    },
+    "afterSourceVector": {
+      "bytes": 2118,
+      "sha256": "6007c5c7ba2f74c43bd9b73c50cae2319eacbf712c233cc0d67b3efbb4c6894d",
+      "gitBlob": "3887991d5dbd25dbec5c8656e8e03d423ea502b7"
+    },
+    "codec": "Sorted path array; record keys sorted; compact JSON UTF-8 without terminal LF. Derived vector identity is not a standalone Git blob.",
+    "changedPaths": [
+      "scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+      "scripts/legacy-agent-host/desktop-task-review-cycle-ui-smoke.ts",
+      "src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts"
+    ],
+    "frozenRows": [
+      {
+        "path": "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+        "mode": "100644",
+        "bytes": 24759,
+        "sha256": "d15b7eea14c0951194310aee34ddc5c477879c759a97a4e2f4e9fce1f956ce9b",
+        "gitBlob": "cf93da72a198dac636658e512093eef7828b5927"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts",
+        "mode": "100644",
+        "bytes": 36260,
+        "sha256": "26357f37b146fc171bbceadb624bde4a7f4e459d2073ae23a651e757817b2d38",
+        "gitBlob": "4700a0052d3c58a2b3d9bc66e6803220688050fd"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+        "mode": "100644",
+        "bytes": 8457,
+        "sha256": "2da55bb40a5689ace0e922dc4867d7c73278d9a1cd200ea8c4602ca68f82da3b",
+        "gitBlob": "3c7b4bb53f4259ac0795d3f92fb715887acb554f"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+        "mode": "100644",
+        "bytes": 164965,
+        "sha256": "852bedb85c83dbc4b488dffb4a9ffebbe398adc53e85f5a3cea8ca36b146cbf7",
+        "gitBlob": "896c587e077da56a98a314a175fb3cba0353d6ee"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+        "mode": "100644",
+        "bytes": 28974,
+        "sha256": "7626e479a6662242009cb050e7e5af612a29e4205d62666d15274d5c30f91386",
+        "gitBlob": "ed57cb0fe7d57ef076a591621289eb77667c63ad"
+      },
+      {
+        "path": "test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts",
+        "mode": "100644",
+        "bytes": 187890,
+        "sha256": "b6f11896e60014aac785968d42390afde38716d47de9bba9562522235db048c9",
+        "gitBlob": "76495189c992fcda47cd7a43a0c697190b5acbb3"
+      }
+    ],
+    "exactlyThreeChangedRows": true,
+    "bothWholeTestsUnchanged": true,
+    "fourFixedProducersUnchanged": true,
+    "productionFileCount": 5020,
+    "productionCap": 800,
+    "exceptionCount": 141,
+    "hookExistingExceptionLines": 2068,
+    "actualHeadPathReadbacks": [
+      {
+        "path": "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+        "bytes": 24759,
+        "sha256": "d15b7eea14c0951194310aee34ddc5c477879c759a97a4e2f4e9fce1f956ce9b",
+        "gitBlob": "cf93da72a198dac636658e512093eef7828b5927",
+        "atCommit": "77993819c233737f1e2b4c11c8ca1a5d360bcbe3"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+        "bytes": 45707,
+        "sha256": "d8ee4090606876194393463e96411f89ed54a53bd3095df333a5d47c5c7fd159",
+        "gitBlob": "bd8bc728808eda00a45b300fd328d49e4e919bc2",
+        "atCommit": "77993819c233737f1e2b4c11c8ca1a5d360bcbe3"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts",
+        "bytes": 36260,
+        "sha256": "26357f37b146fc171bbceadb624bde4a7f4e459d2073ae23a651e757817b2d38",
+        "gitBlob": "4700a0052d3c58a2b3d9bc66e6803220688050fd",
+        "atCommit": "77993819c233737f1e2b4c11c8ca1a5d360bcbe3"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+        "bytes": 8457,
+        "sha256": "2da55bb40a5689ace0e922dc4867d7c73278d9a1cd200ea8c4602ca68f82da3b",
+        "gitBlob": "3c7b4bb53f4259ac0795d3f92fb715887acb554f",
+        "atCommit": "77993819c233737f1e2b4c11c8ca1a5d360bcbe3"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-task-review-cycle-ui-smoke.ts",
+        "bytes": 32845,
+        "sha256": "43e12eb3252e578061ea5840ae39d173ce0cd5a8ce6673c5c5ea06d97a8bedaa",
+        "gitBlob": "d65706646743798f2646421105f2f6a75819f143",
+        "atCommit": "77993819c233737f1e2b4c11c8ca1a5d360bcbe3"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+        "bytes": 164965,
+        "sha256": "852bedb85c83dbc4b488dffb4a9ffebbe398adc53e85f5a3cea8ca36b146cbf7",
+        "gitBlob": "896c587e077da56a98a314a175fb3cba0353d6ee",
+        "atCommit": "77993819c233737f1e2b4c11c8ca1a5d360bcbe3"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+        "bytes": 28974,
+        "sha256": "7626e479a6662242009cb050e7e5af612a29e4205d62666d15274d5c30f91386",
+        "gitBlob": "ed57cb0fe7d57ef076a591621289eb77667c63ad",
+        "atCommit": "77993819c233737f1e2b4c11c8ca1a5d360bcbe3"
+      },
+      {
+        "path": "src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts",
+        "bytes": 74351,
+        "sha256": "68abe01f665b263bd8581659ea306f366428fdccbb45246f08ec42e20b9ee575",
+        "gitBlob": "1176fd06b70f1b717ba83deb387f87b05b18b45b",
+        "atCommit": "77993819c233737f1e2b4c11c8ca1a5d360bcbe3"
+      },
+      {
+        "path": "test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts",
+        "bytes": 187890,
+        "sha256": "b6f11896e60014aac785968d42390afde38716d47de9bba9562522235db048c9",
+        "gitBlob": "76495189c992fcda47cd7a43a0c697190b5acbb3",
+        "atCommit": "77993819c233737f1e2b4c11c8ca1a5d360bcbe3"
+      }
+    ],
+    "qualification": "These are exact source/data identities and preserved selected rows. No new physical runtime-input census, application receipt, branch publication or repository-wide guard execution was performed by this reviewer."
+  },
+  "semanticFindings": {
+    "p11": {
+      "accepted": true,
+      "actualRegion": "  const poll = async <T>(observe: () => Promise<T>, accepts: (value: T) => boolean, label: string) => {\n    const cutoff = Date.now() + 90_000; let value = await observe();\n    assert.ok(Date.now() < cutoff, label);\n    while (!accepts(value) && Date.now() < cutoff) {\n      current(); await new Promise<void>(resolve => setTimeout(resolve, 100)); value = await observe();\n      assert.ok(Date.now() < cutoff, label);\n    }\n    assert.ok(accepts(value), label); return value;\n  };\n",
+      "explanation": "Exactly two assertions were added immediately after the two original awaited observations in the original local poll. Both compare Date.now() strictly against the single cutoff set before the first await. Each check therefore rejects a fulfilled result at or beyond that cutoff before readiness interpretation. No cutoff recreation, reset, extension, new timer, observation, currentness call, catch, retry or call-site change exists.",
+      "preservation": "All original readiness predicate calls, the final original labeled readiness assertion, direct observation-error identity, current() position and 100 ms cadence remain byte-identical after removing the two exact inserted lines. The complete prefix and suffix outside this poll match.",
+      "limit": "This is post-observation admission. It does not cancel an unresolved observation at 90 seconds and does not add a new timer or change the existing outer runtime deadline. The source review makes no new native, GUI or historical-timeout-cause claim."
+    },
+    "review": {
+      "accepted": true,
+      "actualRegion": "  const commentTarget = record(\n    await ui.waitRead(\n      desktopTaskCommentInputExpression(options.handleId, taskId),\n      'exact current correction Task/owner/surface',\n      30_000,\n      (value) =>\n        value !== null &&\n        typeof value === 'object' &&\n        !Array.isArray(value) &&\n        (value as Record<string, unknown>).canEditNow === true\n    )\n  );\n  assert.equal(typeof commentTarget.selector, 'string');\n  await ui.scrollTo(String(commentTarget.selector), 'existing Task comment composer');\n  await ui.click(String(commentTarget.selector), 'focus existing correction comment');\n  await cdp.send('Input.insertText', { text: commentText });\n  await ui.click(\n    '[role=\"dialog\"] button.message-composer-send-button',\n    'original correction Comment once',\n    'Comment'\n  );\n",
+      "explanation": "The original waitRead call receives the unchanged 30000 ms default explicitly and a predicate requiring non-null, typeof object, non-array and canEditNow === true. It rejects the selected missing/false/nonboolean/array variants before any original input action. Undefined and primitive values also fail the type check without requiring property access.",
+      "preservation": "The expression builder, label, returned descriptor, string selector assertion, one scroll, one focus, one Input.insertText, one submit, and all later receipt/notification code remain unchanged. waitRead itself is the frozen original implementation: one deadline, ownership before each observation, original context-destruction handling, ordinary error identity and 100 ms cadence. No helper, import, new wait, catch or input replay was added.",
+      "limit": "The fixture supplies finite explicit CDP observations and the existing expression-builder sentinel. It qualifies the original driver's admission and ordering under actual waitRead, not a fresh live renderer expression or GUI. The short next-error branches do not exhaust the 30-second timeout."
+    },
+    "hook": {
+      "accepted": true,
+      "actualRegion": "  const refresh = useCallback(\n    async (input: { silent?: boolean } = {}): Promise<boolean> => {\n      if (!options.enabled) {\n        return true;\n      }\n      viewRequestedRef.current = true;\n      const projectContext = getProjectContextSnapshot();\n      const requestSeq = viewLoadRequestSeq.current + 1;\n      viewLoadRequestSeq.current = requestSeq;\n      const requestIsCurrent = (): boolean =>\n        viewLoadRequestSeq.current === requestSeq && isProjectContextCurrent(projectContext);\n      const silent = input.silent === true;\n      if (!silent) {\n        setLoading(true);\n      }\n      setError(null);\n      setErrorDiagnostics(null);\n      try {\n        const response = await api.runtimeProviderManagement.loadView({\n          ...connectionForm.runtimeProviderContext(\n            options.runtimeId,\n            projectContext.path,\n            options.connectionContextToken\n          ),\n        });\n        if (!requestIsCurrent()) {\n          return false;\n        }\n        if (response.error) {\n          if (!silent) {\n            setView(null);\n          }\n          setError(response.error.message);\n          setErrorDiagnostics(response.error.diagnostics ?? null);\n          return false;\n        }\n        const nextView = presentManagementView(response.view ?? null);\n        setView(nextView);\n        setSelectedModelId(nextView?.defaultModel ?? null);\n        setSelectedProviderId((current) => {\n          if (current && nextView?.providers.some((provider) => provider.providerId === current)) {\n            return current;\n          }\n          return selectInitialProviderId(nextView);\n        });\n        return true;\n      } catch (loadError) {\n        if (!requestIsCurrent()) {\n          return false;\n        }\n        if (!silent) {\n          setView(null);\n        }\n        setError(loadError instanceof Error ? loadError.message : 'Failed to load providers');\n        setErrorDiagnostics(null);\n        return false;\n      } finally {\n        if (requestIsCurrent()) {\n          setLoading(false);\n        }\n      }\n    },\n    [\n      getProjectContextSnapshot,\n      isProjectContextCurrent,\n      options.enabled,\n      options.runtimeId,\n      options.connectionContextToken,\n    ]\n  );\n",
+      "explanation": "Only the eleven ASCII bytes '!silent && ' were removed from the current view refresh finally condition. The existing requestIsCurrent() guard still requires the captured view sequence and project/runtime/generation snapshot. Current silent success, response-error and rejection now retire loading inherited from an earlier visible request. Stale or unmounted completions remain unable to retire a newer request's loading.",
+      "preservation": "The API request, sequence increment, disabled fast return, silent handling before the request, silent view-preservation on errors, success projection, catch behavior, error/diagnostic values, return values and callback dependencies are unchanged. The other existing if (requestIsCurrent()) conditions throughout the hook remain byte-identical.",
+      "limit": "No request cancellation, retry, timeout, transport, diagnostic publisher or runtime/native behavior was introduced. GREEN must still observe every selected later assertion."
+    }
+  },
+  "frozenRegressionBranchAnalysis": {
+    "totalSelectedScenarioBranches": 21,
+    "nodeCases": [
+      {
+        "ordinal": 134,
+        "variant": "first fulfilled true exactly at 90000",
+        "red": "Expected missing-rejection failure at 2593:3; subsequent trace/count/delay assertions were unreached.",
+        "source": "The first new assertion requires Date.now() < the original cutoff before accepts can run. Equality rejects with the original label.",
+        "green": "Rejection must be an AssertionError including the original label, exactly one read, trace [read], no delay.",
+        "greenObserved": false
+      },
+      {
+        "ordinal": 135,
+        "variant": "first fulfilled true at 90001",
+        "red": "Expected missing-rejection failure at 2593:3; subsequent trace/count/delay assertions were unreached.",
+        "source": "The first new assertion rejects the fulfilled late observation using the same cutoff created before the first await.",
+        "green": "Original-labeled AssertionError, exactly one read, trace [read], no delay.",
+        "greenObserved": false
+      },
+      {
+        "ordinal": 136,
+        "variant": "initial false at 0 followed by true at 90001",
+        "red": "Expected missing-rejection failure at 2593:3; subsequent trace/count/delay assertions were unreached.",
+        "source": "The original loop performs current(), one original 100 ms wait and its second observe; the second new assertion refuses the late fulfilled value before readiness is accepted.",
+        "green": "Original-labeled AssertionError, exactly two reads, trace [read, guard, read], delays [100].",
+        "greenObserved": false
+      },
+      {
+        "ordinal": 137,
+        "variant": "immediate true at 89999",
+        "red": "The complete control test passed, including this branch.",
+        "source": "The new strict inequality passes before the original readiness predicate, and the original final assertion returns true without entering the loop.",
+        "green": "True, one read, trace [read], no delay or current() call.",
+        "greenObserved": false
+      },
+      {
+        "ordinal": 137,
+        "variant": "false at 0 followed by true at 101",
+        "red": "The complete control test passed, including this branch.",
+        "source": "Both added assertions pass. The original loop preserves exactly one current() call and one 100 ms wait before the second read.",
+        "green": "True, two reads, trace [read, guard, read], delays [100].",
+        "greenObserved": false
+      },
+      {
+        "ordinal": 137,
+        "variant": "original observation rejects at 90001",
+        "red": "The complete control test passed, including exact error identity.",
+        "source": "Await rejection propagates before the new assertion can execute. No catch, wrapping, fallback or replacement error was added.",
+        "green": "The exact supplied Error object propagates; one read, trace [read], no delay.",
+        "greenObserved": false
+      },
+      {
+        "ordinal": 137,
+        "variant": "original currentness guard rejects after initial false",
+        "red": "The complete control test passed, including exact error identity.",
+        "source": "The retained current() invocation precedes creation of the original delay Promise. Its exception prevents the wait and any second observation.",
+        "green": "The exact currentness Error object propagates; one read, trace [read, guard], no delay.",
+        "greenObserved": false
+      },
+      {
+        "ordinal": 137,
+        "variant": "initial false exactly at 90000",
+        "red": "The complete control test passed; old code refused through its final readiness assertion.",
+        "source": "The new first post-await assertion now refuses immediately at equality, still with AssertionError and no second read, wait or guard.",
+        "green": "AssertionError; one read, trace [read], no delay.",
+        "greenObserved": false
+      },
+      {
+        "ordinal": 138,
+        "variant": "null followed by original read error",
+        "red": "Derived from frozen loop order and the retained later {} failure: this first variant completed its rejection, trace, budget and read-count assertions.",
+        "source": "value !== null is false, so the existing waitRead continues without any input action and preserves its ordinary next read error.",
+        "green": "Identical read Error; two reads, trace [read, read], budget [30000], no scroll/focus/insert/submit.",
+        "greenObserved": false
+      },
+      {
+        "ordinal": 138,
+        "variant": "empty object followed by original read error",
+        "red": "This second variant resolved under old Boolean admission and failed its rejects assertion at 2682:5; its following trace/budget/count assertions were unreached.",
+        "source": "A non-null non-array object without canEditNow has an undefined property and fails exact === true admission.",
+        "green": "Identical next read Error; two reads, trace [read, read], budget [30000], no input actions.",
+        "greenObserved": false
+      },
+      {
+        "ordinal": 138,
+        "variant": "canEditNow false followed by original read error",
+        "red": "Unreached after the preceding {} assertion failed.",
+        "source": "Exact boolean false fails === true, so waitRead performs the next original read without entering input actions.",
+        "green": "Identical next read Error; two reads, trace [read, read], budget [30000], no input actions.",
+        "greenObserved": false
+      },
+      {
+        "ordinal": 138,
+        "variant": "canEditNow numeric 1 followed by original read error",
+        "red": "Unreached after the preceding {} assertion failed.",
+        "source": "No truthiness conversion occurs. Numeric 1 fails strict equality to true.",
+        "green": "Identical next read Error; two reads, trace [read, read], budget [30000], no input actions.",
+        "greenObserved": false
+      },
+      {
+        "ordinal": 138,
+        "variant": "array containing a true-authority object followed by original read error",
+        "red": "Unreached after the preceding {} assertion failed.",
+        "source": "Array.isArray rejects the array before any canEditNow access; containing an authorized object does not authorize the array.",
+        "green": "Identical next read Error; two reads, trace [read, read], budget [30000], no input actions.",
+        "greenObserved": false
+      },
+      {
+        "ordinal": 139,
+        "variant": "already-current authority",
+        "red": "Derived from frozen ordered variants and the later two-read mismatch: this first variant completed its full trace, budget and count assertions.",
+        "source": "The current descriptor is a non-null non-array object with canEditNow exactly true. The original selector validation and one scroll/focus/insert/submit sequence follow.",
+        "green": "One read then scroll, focus, insert, submit; budget [30000], exactly one read and insertion.",
+        "greenObserved": false
+      },
+      {
+        "ordinal": 139,
+        "variant": "false authority followed by current authority",
+        "red": "The old code skipped the second read and failed the trace equality at 2692:12. Its later budget/count assertions and insertion-error branch were unreached.",
+        "source": "The first descriptor is rejected; the second is admitted. Every statement after waitRead is byte-identical, so only the original one input sequence is eligible.",
+        "green": "Two reads then scroll, focus, insert, submit; budget [30000], exactly two reads and one insertion.",
+        "greenObserved": false
+      },
+      {
+        "ordinal": 139,
+        "variant": "original insertion rejects",
+        "red": "Unreached after the false-to-current trace assertion failed.",
+        "source": "The unchanged awaited cdp.send rejects directly after one read, scroll and focus. No new catch or replay exists, so the submit is never reached.",
+        "green": "Identical insertion Error; trace [read, scroll, focus, insert], budget [30000], one read, no submit or repeated insertion.",
+        "greenObserved": false
+      }
+    ],
+    "rendererCases": [
+      {
+        "ordinal": 81,
+        "name": "clears loading for the current silent refresh and refuses a stale response",
+        "red": "The retained RED reached loading=true, two loadView calls, the current view and null error, then failed loading=false at 5722:28. Settling the old visible request and all following assertions were unreached.",
+        "source": "The visible request increments the view sequence and sets loading=true. The silent request supersedes it without setting loading again. On current successful completion the unchanged result handling publishes the current view, and the changed finally now clears loading under requestIsCurrent(). The old visible completion fails that same sequence guard in both result handling and finally.",
+        "green": "Two calls; current view and null error; loading=false. Settle the first request and require its Promise to return false, with current view/error/loading unchanged and no third call.",
+        "greenObserved": false
+      },
+      {
+        "ordinal": 82,
+        "name": "clears pending loading when the current silent refresh ends with response-error",
+        "red": "Reached two loadView calls, then failed loading=false at 5781:30. Current view/error/diagnostics assertions and the old visible settlement were unreached.",
+        "source": "The unchanged current response-error branch returns false and publishes the exact error and diagnostics. Silent mode still preserves the existing view; the fixture begins with null, so its null expectation does not mean the patch clears silent-error views. The changed current finally clears loading. A stale first success cannot overwrite any current state.",
+        "green": "Two calls; loading=false, view=null in this fixture, exact TEST-current-silent-view-error, errorDiagnostics=null. Settle old success, require false and preserve all current state.",
+        "greenObserved": false
+      },
+      {
+        "ordinal": 83,
+        "name": "clears pending loading when the current silent refresh ends with rejection",
+        "red": "Reached two loadView calls, then failed loading=false at 5781:30. Current view/error/diagnostics assertions and the old visible settlement were unreached.",
+        "source": "The unchanged catch first refuses stale contexts, then retains the exact Error message and null diagnostics for a current rejection. Silent view-preservation logic remains unchanged. Finally now clears loading for this current silent request; the old request remains stale.",
+        "green": "Two calls; loading=false, view=null in this fixture, exact Error message, null diagnostics. The first request later resolves false without overwriting error/view/loading.",
+        "greenObserved": false
+      },
+      {
+        "ordinal": 84,
+        "name": "keeps a silent view completion inert after newer-request",
+        "red": "The complete passing control reached all its assertions.",
+        "source": "A third visible request advances viewLoadRequestSeq and sets loading=true. The second silent completion is stale, so both its body and changed finally refuse state writes. The first visible completion is also stale. Only the current third request publishes its view and clears loading.",
+        "green": "Exactly three calls. Silent and first completions leave loading=true and view=null; first returns false. Latest returns true, publishes TEST-latest-view and clears loading.",
+        "greenObserved": false
+      },
+      {
+        "ordinal": 85,
+        "name": "keeps a silent view completion inert after unmounted",
+        "red": "The complete passing control reached all its assertions.",
+        "source": "The unchanged project-context helper increments its generation on unmount. The saved silent and visible snapshots then fail isProjectContextCurrent, so the changed finally remains inert as well as the result path.",
+        "green": "Exactly two calls. Both completions retain loading=true and view=null in the retained observation object, first returns false, and state remains exactly the pre-unmount object.",
+        "greenObserved": false
+      }
+    ],
+    "reachedBranchPrecision": "Sub-variant RED reachability is derived from the exact frozen sequential test bodies and the retained reported failing assertion, not from invented separate reporter records. Node 138 completed null and failed {}; Node 139 completed immediate-current and failed false-to-current trace. This preserves the accepted RED verdict while specifying its precise limits.",
+    "fixtureBoundaries": "Node extracts each unique actual-source start/end span, strips TypeScript only in the later authorized test runtime, and injects finite clocks/CDP data. This reviewer did not evaluate either source or fixture. Renderer uses the frozen real hook/React finite harness. No new provider/native package startup or diagnostic helper is selected.",
+    "requiredGreen": "After the existing source publication/readback and exact immutable materialization/GREEN binding gates, the unchanged whole Node 139 and renderer 85 suites must each run once in their existing ordered combined package. Require all 139/85 pass, no skips/cancellation/todo, all later assertions complete, original source/input/runtime boundaries and clocks, captured cleanup and separate actual outer 0. Source static acceptance does not satisfy any of these runtime predicates."
+  },
+  "authoringVerifierCorrection": {
+    "asRetainedInProposal": {
+      "at": "2026-11-17 01:42:33 UTC",
+      "gateAt": "2026-11-17 01:40:00 UTC",
+      "files": [
+        {
+          "path": "scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+          "retainedInAuthoringStore": true,
+          "pin": {
+            "bytes": 45795,
+            "sha256": "2c5931f5c7fa1dc8bb7858201c1b8afdbae9683faf4a2ad9fce067f116f3f94b",
+            "gitBlob": "5026f0ec6165bb092717ddc989043848a25081dc"
+          }
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-task-review-cycle-ui-smoke.ts",
+          "retainedInAuthoringStore": true,
+          "pin": {
+            "bytes": 33036,
+            "sha256": "4fa52cfad9347065680ef62a3ba6420762408a78a93b77e96ac3a2e16e68bdc9",
+            "gitBlob": "8d175c98158b3bd71192aef7b1929484b2b681b6"
+          }
+        },
+        {
+          "path": "src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts",
+          "retainedInAuthoringStore": false,
+          "pin": null
+        }
+      ],
+      "failure": "Data-only inverse checker required the replacement hook condition to be globally unique, but existing other hook conditions share that text. Two source blobs retained; hook/proposal not yet retained. No target runtime, physical source, test, control or branch mutation. Fixing verification to use exact recorded edit offsets."
+    },
+    "assessment": "The common new hook condition is not globally unique. Checking the exact recorded edit offset and the unique surrounding refresh/finally anchor is sufficient and independently reproduced here. The first two retained producer pins equal the final proposal pins; no source drift or runtime action is introduced by the data verifier correction."
+  },
+  "reviewerDataCheckCorrections": [
+    {
+      "check": "P11 adds exactly two same-cutoff post-await assertions",
+      "initialCheckerIssue": "A four-space substring also matched within the six-space loop line, so the redundant substring occurrence check falsely failed.",
+      "correctedCheck": "Count exact complete lines: one four-space initial assertion, one six-space loop assertion, two total.",
+      "sourceOrProposalChanged": false,
+      "allByteInverseWasAlreadyPassing": true,
+      "result": {
+        "initial": 1,
+        "loop": 1,
+        "total": 2
+      }
+    }
+  ],
+  "checkCount": 97,
+  "checks": [
+    {
+      "name": "Proposal exact source authorship gate body",
+      "passed": true
+    },
+    {
+      "name": "Proposal exact source authorship gate identity",
+      "passed": true
+    },
+    {
+      "name": "Independent actual publication identity",
+      "passed": true
+    },
+    {
+      "name": "Independent actual publication accepted exact HEAD and tree",
+      "passed": true
+    },
+    {
+      "name": "Independent publication 179 checks have no unresolved failures",
+      "passed": true
+    },
+    {
+      "name": "Gate and proposal join accepted R1",
+      "passed": true
+    },
+    {
+      "name": "Gate and proposal join exact retained RED semantic review",
+      "passed": true
+    },
+    {
+      "name": "Proposal authored strictly after recorded closed gate",
+      "passed": true
+    },
+    {
+      "name": "Before nine-source rows exactly equal accepted R1",
+      "passed": true
+    },
+    {
+      "name": "Only three exact paths in selected write set",
+      "passed": true
+    },
+    {
+      "name": "p11 complete preimage identity",
+      "passed": true
+    },
+    {
+      "name": "p11 complete postimage identity",
+      "passed": true
+    },
+    {
+      "name": "p11 exact R1 file region and allowed delta",
+      "passed": true
+    },
+    {
+      "name": "p11 expected physical lines and cap",
+      "passed": true
+    },
+    {
+      "name": "p11 terminal LF and LF-only preservation",
+      "passed": true
+    },
+    {
+      "name": "p11 recorded post edit occurs at exact sequential offset 5856",
+      "passed": true
+    },
+    {
+      "name": "p11 recorded edit before/after identities 5856",
+      "passed": true
+    },
+    {
+      "name": "p11 recorded post edit occurs at exact sequential offset 5691",
+      "passed": true
+    },
+    {
+      "name": "p11 recorded edit before/after identities 5691",
+      "passed": true
+    },
+    {
+      "name": "p11 all-byte inverse equals complete retrieved preimage",
+      "passed": true
+    },
+    {
+      "name": "p11 inverse recomputes full preimage identity",
+      "passed": true
+    },
+    {
+      "name": "review complete preimage identity",
+      "passed": true
+    },
+    {
+      "name": "review complete postimage identity",
+      "passed": true
+    },
+    {
+      "name": "review exact R1 file region and allowed delta",
+      "passed": true
+    },
+    {
+      "name": "review expected physical lines and cap",
+      "passed": true
+    },
+    {
+      "name": "review terminal LF and LF-only preservation",
+      "passed": true
+    },
+    {
+      "name": "review recorded post edit occurs at exact sequential offset 17215",
+      "passed": true
+    },
+    {
+      "name": "review recorded edit before/after identities 17215",
+      "passed": true
+    },
+    {
+      "name": "review all-byte inverse equals complete retrieved preimage",
+      "passed": true
+    },
+    {
+      "name": "review inverse recomputes full preimage identity",
+      "passed": true
+    },
+    {
+      "name": "hook complete preimage identity",
+      "passed": true
+    },
+    {
+      "name": "hook complete postimage identity",
+      "passed": true
+    },
+    {
+      "name": "hook exact R1 file region and allowed delta",
+      "passed": true
+    },
+    {
+      "name": "hook expected physical lines and cap",
+      "passed": true
+    },
+    {
+      "name": "hook terminal LF and LF-only preservation",
+      "passed": true
+    },
+    {
+      "name": "hook recorded post edit occurs at exact sequential offset 21419",
+      "passed": true
+    },
+    {
+      "name": "hook recorded edit before/after identities 21419",
+      "passed": true
+    },
+    {
+      "name": "hook all-byte inverse equals complete retrieved preimage",
+      "passed": true
+    },
+    {
+      "name": "hook inverse recomputes full preimage identity",
+      "passed": true
+    },
+    {
+      "name": "Derived before source vector identity",
+      "passed": true
+    },
+    {
+      "name": "Derived after source vector identity",
+      "passed": true
+    },
+    {
+      "name": "Exactly three changed vector rows and identical path order",
+      "passed": true
+    },
+    {
+      "name": "Six frozen rows identical to explicit frozen manifest",
+      "passed": true
+    },
+    {
+      "name": "Node entire frozen test hash",
+      "passed": true
+    },
+    {
+      "name": "Renderer entire frozen test hash",
+      "passed": true
+    },
+    {
+      "name": "Explicit non-execution/non-application statements retained",
+      "passed": true
+    },
+    {
+      "name": "Fixed producer whole body at exact HEAD: scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+      "passed": true,
+      "detail": {
+        "bytes": 24759,
+        "sha256": "d15b7eea14c0951194310aee34ddc5c477879c759a97a4e2f4e9fce1f956ce9b",
+        "gitBlob": "cf93da72a198dac636658e512093eef7828b5927"
+      }
+    },
+    {
+      "name": "Fixed producer whole body at exact HEAD: scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts",
+      "passed": true,
+      "detail": {
+        "bytes": 36260,
+        "sha256": "26357f37b146fc171bbceadb624bde4a7f4e459d2073ae23a651e757817b2d38",
+        "gitBlob": "4700a0052d3c58a2b3d9bc66e6803220688050fd"
+      }
+    },
+    {
+      "name": "Fixed producer whole body at exact HEAD: scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+      "passed": true,
+      "detail": {
+        "bytes": 8457,
+        "sha256": "2da55bb40a5689ace0e922dc4867d7c73278d9a1cd200ea8c4602ca68f82da3b",
+        "gitBlob": "3c7b4bb53f4259ac0795d3f92fb715887acb554f"
+      }
+    },
+    {
+      "name": "p11 unique original start/end extraction markers",
+      "passed": true
+    },
+    {
+      "name": "p11 ordered original region markers",
+      "passed": true
+    },
+    {
+      "name": "p11 complete prefix outside region unchanged",
+      "passed": true
+    },
+    {
+      "name": "p11 complete suffix outside region unchanged",
+      "passed": true
+    },
+    {
+      "name": "P11 adds exactly two same-cutoff post-await assertions",
+      "passed": true,
+      "detail": {
+        "method": "Exact complete-line matches, not overlapping indentation substrings",
+        "counts": {
+          "initial": 1,
+          "loop": 1,
+          "total": 2
+        }
+      }
+    },
+    {
+      "name": "P11 independent marker-scoped inverse exactly equals original poll",
+      "passed": true
+    },
+    {
+      "name": "P11 first cutoff check immediately follows original first fulfilled observe",
+      "passed": true
+    },
+    {
+      "name": "P11 loop cutoff check immediately follows original repeated fulfilled observe",
+      "passed": true
+    },
+    {
+      "name": "P11 same original deadline defined once",
+      "passed": true
+    },
+    {
+      "name": "P11 two original awaited observations preserved",
+      "passed": true
+    },
+    {
+      "name": "P11 original readiness loop/final assertion preserved",
+      "passed": true
+    },
+    {
+      "name": "P11 no catch or additional wait/currentness/observation",
+      "passed": true
+    },
+    {
+      "name": "review unique original start/end extraction markers",
+      "passed": true
+    },
+    {
+      "name": "review ordered original region markers",
+      "passed": true
+    },
+    {
+      "name": "review complete prefix outside region unchanged",
+      "passed": true
+    },
+    {
+      "name": "review complete suffix outside region unchanged",
+      "passed": true
+    },
+    {
+      "name": "Review exact original waitRead extended argument list occurs once",
+      "passed": true
+    },
+    {
+      "name": "Review independent marker-scoped inverse exactly equals original correction stage",
+      "passed": true
+    },
+    {
+      "name": "Review exact selector validation and original ordered input actions unchanged",
+      "passed": true
+    },
+    {
+      "name": "Review no new catch, loop, helper or additional waitRead",
+      "passed": true
+    },
+    {
+      "name": "hook unique original start/end extraction markers",
+      "passed": true
+    },
+    {
+      "name": "hook ordered original region markers",
+      "passed": true
+    },
+    {
+      "name": "hook complete prefix outside region unchanged",
+      "passed": true
+    },
+    {
+      "name": "hook complete suffix outside region unchanged",
+      "passed": true
+    },
+    {
+      "name": "Hook original and postimage exact selected finally anchors are unique",
+      "passed": true
+    },
+    {
+      "name": "Hook independent anchored inverse reproduces entire original refresh",
+      "passed": true
+    },
+    {
+      "name": "Hook exactly eleven bytes removed",
+      "passed": true
+    },
+    {
+      "name": "Hook original currentness definition unchanged",
+      "passed": true
+    },
+    {
+      "name": "Hook silent initial-loading and error-view rules remain",
+      "passed": true
+    },
+    {
+      "name": "Hook original API request remains singular",
+      "passed": true
+    },
+    {
+      "name": "Hook original success and catch stale-return guards remain",
+      "passed": true
+    },
+    {
+      "name": "Independent publication joins exact root actual report",
+      "passed": true
+    },
+    {
+      "name": "Gate accepted RED packet joins retained semantic and publication authority",
+      "passed": true
+    },
+    {
+      "name": "Gate accepted RED outer joins retained semantic and publication authority",
+      "passed": true
+    },
+    {
+      "name": "Gate accepted RED phaseReceipt joins retained semantic and publication authority",
+      "passed": true
+    },
+    {
+      "name": "Unchanged runner authority joins retained RED semantic and publication",
+      "passed": true
+    },
+    {
+      "name": "Unchanged binding authority joins retained RED semantic and publication",
+      "passed": true
+    },
+    {
+      "name": "Current preimage path at exact HEAD: scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+      "passed": true
+    },
+    {
+      "name": "Current preimage path at exact HEAD: scripts/legacy-agent-host/desktop-task-review-cycle-ui-smoke.ts",
+      "passed": true
+    },
+    {
+      "name": "Current preimage path at exact HEAD: scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+      "passed": true
+    },
+    {
+      "name": "Current preimage path at exact HEAD: src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts",
+      "passed": true
+    },
+    {
+      "name": "Current preimage path at exact HEAD: test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts",
+      "passed": true
+    },
+    {
+      "name": "Original waitRead explicit default remains 30000 and one existing deadline",
+      "passed": true
+    },
+    {
+      "name": "Original waitRead owns every observation and retains 100 ms cadence",
+      "passed": true
+    },
+    {
+      "name": "Existing hook project/runtime/unmount generation guard remains",
+      "passed": true
+    },
+    {
+      "name": "Original refreshDirectory requests silent view only after view requested",
+      "passed": true
+    },
+    {
+      "name": "Data authoring correction retained exact first two already-created blobs",
+      "passed": true
+    },
+    {
+      "name": "Counts retain original 5020 source files and 141 exceptions",
+      "passed": true
+    }
+  ],
+  "failedChecks": [],
+  "unresolvedAssignedScopeBlockers": [],
+  "decision": {
+    "p11PostimageAccepted": true,
+    "reviewPostimageAccepted": true,
+    "hookPostimageAccepted": true,
+    "exactProposalAccepted": true,
+    "normalErrorCurrentnessCadenceInputLoadingSemanticsReviewed": true,
+    "allLaterGreenBranchesStaticallyReviewed": true,
+    "sourcePublicationObserved": false,
+    "sourceApplicationObserved": false,
+    "greenExecuted": false,
+    "greenPassClaim": false,
+    "validationExecuted": false,
+    "wholeE2EQualified": false,
+    "nextStep": "Complete the already required source R2 publication and full actual readbacks, then the existing immutable phase-binding/materialization/GREEN sequence. No extra gate or broader source edit is requested."
+  },
+  "oldAttempts": {
+    "53054": "Complete accepted expected RED; actual supervisor outer 0; spent. This review does not replay it.",
+    "54393": "UNKNOWN/INCOMPLETE/SPENT; old outer, termination, custody and cleanup remain unknown.",
+    "64038": "REFUSED/SPENT; observed outer 2; no transfer of authority."
+  },
+  "limitations": [
+    "Only exact static source/proposal acceptance is given. No shell, test, build, lint, guard, provider, native or GUI execution occurred.",
+    "All source bytes outside the selected regions are equal by complete inverse comparison, not a new behavioral qualification of every unchanged subsystem.",
+    "No physical source application, current fresh runtime census, new cleanup observation or new commit/ref publication was made or independently claimed.",
+    "Future GREEN must reach every remaining assertion and branch; the previously accepted RED does not qualify those later outcomes.",
+    "Real Claude/Codex, including --version, remain unexecuted. Frozen PRs/CI, main/Ready/Stage2, provider archives and runtime configuration were untouched.",
+    "Fresh GUI, Windows Process15s/Packaged10s, strict Darwin P09, later P11/genuine M16, incoming integration, canonical typing/build and whole E2E remain open."
+  ]
+}

@@ -1,0 +1,1823 @@
+{
+  "schemaVersion": 1,
+  "kind": "independent-semantic-linux-claude-lifecycle-retained-artifact-review",
+  "reviewer": "/root/producer_r2_semantic",
+  "at": "2026-11-17 05:17:57 UTC",
+  "repository": "777genius/agent-teams-ai",
+  "decision": "ACCEPT_RETAINED_EVIDENCE_FOR_EXACT_FINITE_LINUX_LIFECYCLE_AND_ORIGINAL_NODE139_SCOPE",
+  "decisionMeaning": "All review checks below are evidence/static/data joins. Observed runtime PASS belongs to the original retained CI job. This review neither executes a test nor broadens native, packaged, renderer or whole-E2E qualification.",
+  "subject": {
+    "bytes": 23852,
+    "sha256": "00657aaac7b76b7631559e92e10221404761c322503032a58f9e37b94359995b",
+    "gitBlob": "aa282d6e5ea70bff0200d90c4127517899d2bbb8"
+  },
+  "receipt": {
+    "bytes": 892595,
+    "sha256": "d0ba98d9f2c210793edbeba12d9e1a1ec6b3e535b978df723e68dff14eb17eca",
+    "gitBlob": "8e5b6d6a8571594fbdcd202484dc3a708228f140"
+  },
+  "originalJobLog": {
+    "bytes": 204205,
+    "sha256": "1911e00350a5ee2a57b6f18e2935715cffe984d4500a239c1204ad23f6aadfdb",
+    "gitBlob": "abf21b8e5c7e8f3311cee0e58693a577bcf3d1f6"
+  },
+  "supportingPins": {
+    "observation8": {
+      "bytes": 408939,
+      "sha256": "819f1bd3f0bc50b6278e5e7fe7f297bcaf56f5426168b9fbc7fa0bc2b2e4b58d",
+      "gitBlob": "40d8a9980519dc8c4d24588019320c9d632f3297"
+    },
+    "observation9": {
+      "bytes": 455579,
+      "sha256": "bda6d3d4dc2b7f2fa799c4547078e3d1de27b2d30e2966ef9fa47811f426c3ec",
+      "gitBlob": "df2a9c76c301f123b83a1be4faca8c74a68ee16a"
+    },
+    "priorLogReview": {
+      "bytes": 58426,
+      "sha256": "bd1ca451e3826f61eba8e4c5b8dced9fb4ce7a2ae51d5a0fbf3073ca7e229ff6",
+      "gitBlob": "b0d04555b7e8fd542348fe4a6c6ffad97b0773c4"
+    },
+    "originalSourceCorpus": {
+      "bytes": 1423178,
+      "sha256": "0257ec7c26f1d5d358c9bd6841540b8098d265f49af5f588be260a6bfb42065f",
+      "gitBlob": "9011bb095b3249421eb114231fd0ce26878f5624"
+    },
+    "workflow": {
+      "bytes": 96872,
+      "sha256": "5379894007246368728c518c08222be329d58bb2755dc80235709a033017805d",
+      "gitBlob": "9ec6dfb68e98480a12224528e2637153f4274a6b"
+    },
+    "identityHelper": {
+      "gitBlob": "e4a4568d589e1254b88ade1a5f87d53924e7c2e8",
+      "bytes": 3982,
+      "sha256": "cd3d5b96a5508215010923078469cc718282f17d765f6af493913c157bdf3db7"
+    }
+  },
+  "scope": {
+    "source": {
+      "head": "9c9c73190840592963142d36562ea07d2b5d2d71",
+      "dirty": false
+    },
+    "pr": 1218,
+    "base": "77993819c233737f1e2b4c11c8ca1a5d360bcbe3",
+    "headRef": "ci/frontend-parity-c714-20261117-head",
+    "baseRef": "ci/frontend-parity-c714-20261117-base",
+    "mode": "emulated-claude-lifecycle-ui",
+    "platform": "linux",
+    "architecture": "x64",
+    "nodeVersion": "24.21.0",
+    "electronVersion": "44.10.1",
+    "sdk": "0.3.305",
+    "nativeProviders": "forbidden",
+    "reviewFullReceiptFields": true,
+    "reviewAllSourceMapRows": true,
+    "review17CompleteTextBodies": true,
+    "reviewCompleteOriginalAppAndJobLogs": true
+  },
+  "job": {
+    "id": 133790458656,
+    "runId": 44008782843,
+    "attempt": 1,
+    "name": "Offline Host Desktop (linux-x64, claude-lifecycle)",
+    "status": "completed",
+    "conclusion": "success",
+    "head": "9c9c73190840592963142d36562ea07d2b5d2d71",
+    "createdAt": "2026-11-17T03:14:31Z",
+    "startedAt": "2026-11-17T04:13:33Z",
+    "completedAt": "2026-11-17T04:19:09Z",
+    "labels": [
+      "ubuntu-latest"
+    ],
+    "steps": [
+      {
+        "number": 1,
+        "name": "Set up job",
+        "conclusion": "success"
+      },
+      {
+        "number": 2,
+        "name": "Run actions/checkout@v6",
+        "conclusion": "success"
+      },
+      {
+        "number": 3,
+        "name": "Run pnpm/action-setup@v6",
+        "conclusion": "success"
+      },
+      {
+        "number": 4,
+        "name": "Run actions/setup-node@v6",
+        "conclusion": "success"
+      },
+      {
+        "number": 5,
+        "name": "Verify original checkout and runner tuple",
+        "conclusion": "success"
+      },
+      {
+        "number": 6,
+        "name": "Prepare private Linux display",
+        "conclusion": "success"
+      },
+      {
+        "number": 7,
+        "name": "Install frozen workspace and Electron",
+        "conclusion": "success"
+      },
+      {
+        "number": 8,
+        "name": "Build existing Desktop prerequisites and verify admission",
+        "conclusion": "success"
+      },
+      {
+        "number": 9,
+        "name": "Verify original Runtime and Team conversation contracts",
+        "conclusion": "skipped"
+      },
+      {
+        "number": 10,
+        "name": "Verify complete workspace types and original typed lint scopes",
+        "conclusion": "skipped"
+      },
+      {
+        "number": 11,
+        "name": "Capture package-manager and Host inputs without vendor executables",
+        "conclusion": "success"
+      },
+      {
+        "number": 12,
+        "name": "Capture original controlled Linux process input without a provider",
+        "conclusion": "skipped"
+      },
+      {
+        "number": 13,
+        "name": "Exercise ordinary Team controls and renderer reload",
+        "conclusion": "skipped"
+      },
+      {
+        "number": 14,
+        "name": "Exercise ordinary Taskboard controls and persistence",
+        "conclusion": "skipped"
+      },
+      {
+        "number": 15,
+        "name": "Exercise original Skills and cross-Team controls",
+        "conclusion": "skipped"
+      },
+      {
+        "number": 16,
+        "name": "Exercise model, effort and credential controls with the pinned TEST peer",
+        "conclusion": "skipped"
+      },
+      {
+        "number": 17,
+        "name": "Exercise original collaboration, Extensions and saved-import controls through finite peers",
+        "conclusion": "skipped"
+      },
+      {
+        "number": 18,
+        "name": "Exercise original Codex browser and device login controls through the finite TEST peer",
+        "conclusion": "skipped"
+      },
+      {
+        "number": 19,
+        "name": "Exercise original cold Claude Resume and active Quit with the finite SDK peer",
+        "conclusion": "success"
+      },
+      {
+        "number": 20,
+        "name": "Exercise original provider conversations and schedules through pinned TEST peers",
+        "conclusion": "skipped"
+      },
+      {
+        "number": 21,
+        "name": "Exercise original Review Keep, Reject, Undo, Redo and reload",
+        "conclusion": "skipped"
+      },
+      {
+        "number": 22,
+        "name": "Exercise original Review after a cold Host and app restart",
+        "conclusion": "skipped"
+      },
+      {
+        "number": 23,
+        "name": "Exercise saved next-launch selection while the original Team remains live",
+        "conclusion": "skipped"
+      },
+      {
+        "number": 24,
+        "name": "Exercise original cold Processes Stop with an independently retained neighbor",
+        "conclusion": "skipped"
+      },
+      {
+        "number": 25,
+        "name": "Exercise stock Codex Update while the original Team retains its captured source",
+        "conclusion": "skipped"
+      },
+      {
+        "number": 26,
+        "name": "Stage checksum-pinned OpenCode base without executing the legacy CLI",
+        "conclusion": "skipped"
+      },
+      {
+        "number": 27,
+        "name": "Prepare exact OpenCode V2 Bun and engine graph",
+        "conclusion": "skipped"
+      },
+      {
+        "number": 28,
+        "name": "Exercise original OpenCode V2 credential and scoped model Settings",
+        "conclusion": "skipped"
+      },
+      {
+        "number": 29,
+        "name": "Verify original OpenCode V2 UI receipts and physical cleanup",
+        "conclusion": "skipped"
+      },
+      {
+        "number": 30,
+        "name": "Verify exact source, original screenshots, receipts and cleanup",
+        "conclusion": "success"
+      },
+      {
+        "number": 31,
+        "name": "Preserve original Desktop evidence, including failures",
+        "conclusion": "success"
+      },
+      {
+        "number": 60,
+        "name": "Post Run actions/setup-node@v6",
+        "conclusion": "success"
+      },
+      {
+        "number": 61,
+        "name": "Post Run pnpm/action-setup@v6",
+        "conclusion": "success"
+      },
+      {
+        "number": 62,
+        "name": "Post Run actions/checkout@v6",
+        "conclusion": "success"
+      },
+      {
+        "number": 63,
+        "name": "Complete job",
+        "conclusion": "success"
+      }
+    ]
+  },
+  "artifact": {
+    "id": 14298896959,
+    "name": "host-emulated-linux-x64-9c9c73190840592963142d36562ea07d2b5d2d71-claude-lifecycle",
+    "bytes": 4207603,
+    "sha256": "802ff33d1a580e366724bfaa38a3d11f172ea8532a99e105e2e2b88d6fa69e5e",
+    "count": 37,
+    "uniquePaths": 37,
+    "textRetained": 17,
+    "js": 14,
+    "png": 5,
+    "otherBinary": 1,
+    "rootZipAndAll37CRCVerification": {
+      "zipDigestAndByteCountVerified": true,
+      "all37MembersFullyReadForHashesAndCRC": true,
+      "completeMemberCensus": true,
+      "all17NonBundleTextBodiesRetained": true,
+      "nonBundleTextBytes": 977696,
+      "bundleAndBinaryMembersRetainedInOriginalVerifiedZip": true,
+      "binaryOrSourceExecution": false
+    },
+    "thisReviewer": "17 complete text bodies independently hashed and CRC-verified. Other 20 archive-member identities joined as capture metadata only.",
+    "uncompressedBytes": 17532632
+  },
+  "textMemberCensus": [
+    {
+      "i": 0,
+      "path": "TEST-desktop-backend-J46Z4c/TEST-peer-claude-scope/config/projects/TEST-desktop-peer/0c54f91a-e045-4eb2-a0fa-b097da369102.jsonl",
+      "bytes": 6448,
+      "sha256": "6f6631983b17df0dfe4b4bcbec43318879c5043f051b7c7a14dfabdb85ff54bd",
+      "gitBlob": "83295da2ac470eda60efe6140c4561494988b237",
+      "crc32": 882579149
+    },
+    {
+      "i": 1,
+      "path": "TEST-desktop-backend-J46Z4c/TEST-peer-claude-scope/effects.ndjson",
+      "bytes": 7870,
+      "sha256": "b31e6f1bac5611bfd4e48e42ad01b99a2b7fd522e055b5afdbfafcb8d00a5828",
+      "gitBlob": "89d73139eff8ed45c5ee975e19b2cf84167ba714",
+      "crc32": 3382705783
+    },
+    {
+      "i": 2,
+      "path": "TEST-desktop-backend-J46Z4c/desktop-app.log",
+      "bytes": 38498,
+      "sha256": "28d1afa5cc2c63b0186df58db12b400a61b2c29678e0d44d5b68b3fd69b71bf6",
+      "gitBlob": "cd8a7906808113c59e582779f1af71ecec227d52",
+      "crc32": 324152215
+    },
+    {
+      "i": 3,
+      "path": "TEST-desktop-backend-J46Z4c/desktop-backend-receipt.json",
+      "bytes": 892595,
+      "sha256": "d0ba98d9f2c210793edbeba12d9e1a1ec6b3e535b978df723e68dff14eb17eca",
+      "gitBlob": "8e5b6d6a8571594fbdcd202484dc3a708228f140",
+      "crc32": 4283665878
+    },
+    {
+      "i": 4,
+      "path": "TEST-desktop-backend-J46Z4c/desktop-descriptor.json",
+      "bytes": 2641,
+      "sha256": "4a5d04747ddd887584880bb087d91eac78e3d02f97fc910e09e8f4f53c153484",
+      "gitBlob": "0bc9cd06e2008cde3285c4ae7214e5fce848e09c",
+      "crc32": 1299767802
+    },
+    {
+      "i": 5,
+      "path": "TEST-desktop-backend-J46Z4c/host-profile.json",
+      "bytes": 7322,
+      "sha256": "a904dc74cb3389ec190ead3185229c8f8e2d0a95090c7a1794d38694ec44969e",
+      "gitBlob": "eeb3118aa8805aeed4f1cfe7a610e6d6af838261",
+      "crc32": 230536802
+    },
+    {
+      "i": 6,
+      "path": "TEST-desktop-backend-J46Z4c/hoststore/management-commands/39bc3570d529f7e5d2d22f753ae9f2311173b5694eab12319d227b182d89afa4.json",
+      "bytes": 956,
+      "sha256": "923b4d0343a284889722c9641bc754b7a94993a6ec18d3898bd0b8372154fe90",
+      "gitBlob": "194948a14db9c3a8723da3cd22f4c55d531b8cad",
+      "crc32": 849126501
+    },
+    {
+      "i": 7,
+      "path": "TEST-desktop-backend-J46Z4c/hoststore/runtime-checkpoints/cp1-c356a6665164ad1cd44a590a55d5a5ab41201bca023cfb2d0ef91b29678dc41a.json",
+      "bytes": 1742,
+      "sha256": "c3d3b17a90fa69bac43401641b43e3c79bc4677271a6493cd62b175146874d59",
+      "gitBlob": "e3daa6218aff8d36ee3d1d4a1f46749e843bfbe0",
+      "crc32": 688519660
+    },
+    {
+      "i": 8,
+      "path": "TEST-desktop-backend-J46Z4c/hoststore/teams/test-desktop-backend/inboxes/alice.json",
+      "bytes": 969,
+      "sha256": "ee52fd044c1819066cce59930b5264a4601b3547834ff94db604c625e1808a7b",
+      "gitBlob": "3ef675d0d7a91de0d7f950994467249760928ebb",
+      "crc32": 2370092865
+    },
+    {
+      "i": 9,
+      "path": "TEST-desktop-backend-J46Z4c/sentinel-invocations.ndjson",
+      "bytes": 192,
+      "sha256": "6a654a1a19ba032449ef95df2bef8c8d31dbcd57e4c694085e111dc483c2fa8f",
+      "gitBlob": "bbcdfb51d86f5e95da1be959854c827d76a10221",
+      "crc32": 1552139509
+    },
+    {
+      "i": 10,
+      "path": "TEST-desktop-backend-J46Z4c/ui-emulated-runtime-effects.json",
+      "bytes": 10509,
+      "sha256": "9dcc9857509eb2a67cce9ec05f70da3b1113e64e7668576b1f5dcf75771561d4",
+      "gitBlob": "d4a9d14fff6f202082304b7bd77a81240cb0c673",
+      "crc32": 951521610
+    },
+    {
+      "i": 11,
+      "path": "TEST-desktop-backend-J46Z4c/ui-seed-receipt.json",
+      "bytes": 2335,
+      "sha256": "6083d327370fbbace95f36f537b0bf94022b2a15ad3e4ae6cd42542203b98416",
+      "gitBlob": "5a7592b875ff4b2caa6e987318354eae600e4774",
+      "crc32": 3737609981
+    },
+    {
+      "i": 12,
+      "path": "TEST-emulated-ui-inputs-nB8hqK/linux-child-exec/manifest.json",
+      "bytes": 2408,
+      "sha256": "e67ba493cc10e1fd124f6c7437b6f86e1eba46746ce73e51088d67eb095b2734",
+      "gitBlob": "f83d4686d6bbdb2273c73eb4b4489e0a163e6517",
+      "crc32": 3765380163
+    },
+    {
+      "i": 13,
+      "path": "host-emulated-emulated-claude-lifecycle-ui.log",
+      "bytes": 225,
+      "sha256": "9e899901541d7df054a5f0d72b8f308b4553fb93aa5bf79d9244c168b8e05f43",
+      "gitBlob": "fb457245bd169d9f90c7ddba55c62092b1baba0b",
+      "crc32": 375760406
+    },
+    {
+      "i": 14,
+      "path": "host-emulated-inputs.json",
+      "bytes": 1803,
+      "sha256": "28d10bd57bbadde4847f7944d3484569080aa52f6cbe2d2d438eb65fb677dc60",
+      "gitBlob": "3e210f36f97504d62b18ab50dec91fc85ce9c159",
+      "crc32": 3194153960
+    },
+    {
+      "i": 15,
+      "path": "host-emulated-linux-child-exec-selection.json",
+      "bytes": 271,
+      "sha256": "4acca7223b4f9694c55f8e3cb4503a7515b93c77668d6ac746e0f62140c6ad2a",
+      "gitBlob": "d4b1fe520bbb6a98c680dc1028ff90659715370a",
+      "crc32": 2563153614
+    },
+    {
+      "i": 16,
+      "path": "host-emulated-summary.json",
+      "bytes": 912,
+      "sha256": "bdf7916e448d6ce644b2663c2d385a7871d919a8668ac13a67a62ed388766f5d",
+      "gitBlob": "edb9a005b018fb02d3a56190787e6469f4a48585",
+      "crc32": 146072171
+    }
+  ],
+  "directCompleteSourceBodies": [
+    {
+      "path": "scripts/legacy-agent-host/desktop-source-freeze.ts",
+      "bytes": 3208,
+      "sha256": "b7db02503f45ee10136de234f96d4a0999d2dfbbfb421fefb499dfe7a27ec8f9",
+      "gitBlob": "4ef2cc07ede3172aa594e0eac614a1d473a5f705",
+      "physicalMapMatch": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-emulated-runtime-fixture.ts",
+      "bytes": 21981,
+      "sha256": "d0d00254e7e39ab8b5163e02cc93754775a8efe56ff28b8c87f07d02e0292c7e",
+      "gitBlob": "7b5edfbd4967debe454387c7a8b6246e67216dc8",
+      "physicalMapMatch": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-emulated-lifecycle-boundary.ts",
+      "bytes": 9825,
+      "sha256": "aa936c996a96c12c6728cbf1bca27f94e428b691e0fa2baabcd8fd74c449a499",
+      "gitBlob": "41d42274a468f086941eb4b9435fa4ff09adf2be",
+      "physicalMapMatch": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-emulated-lifecycle-records.ts",
+      "bytes": 4657,
+      "sha256": "454548d4a174a8d8e2a10bbe1b955e02fc45dee594b1796898ad33019f687058",
+      "gitBlob": "a53b2e82fd4230ada988fcf3e82d98981927a427",
+      "physicalMapMatch": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-emulated-lifecycle-ui.ts",
+      "bytes": 22845,
+      "sha256": "135cd81f2edde1f087b231d4dcbed83d8cc8beade5a0230a093e6cbfcb1923ee",
+      "gitBlob": "b33e5290e4ed86a48b902a24ffc80509f1c89236",
+      "physicalMapMatch": true
+    },
+    {
+      "path": "tools/owned-process-broker/fixtures/claudeProviderPeer.mjs",
+      "bytes": 32221,
+      "sha256": "c443b410efbe4910839b02662fa1767b60e428936c012d729b26eeb82f182a87",
+      "gitBlob": "920b40fa594f7aa65e11d1ec1f31d2aa69581a01",
+      "physicalMapMatch": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-backend-fixture.ts",
+      "bytes": 33737,
+      "sha256": "58279362c05f6645881e4850807f78183eee5dc51dfb32f355ff4ded7e7c3589",
+      "gitBlob": "495118ecb0d895dcc87f5782f8a4b0ccd35d3587",
+      "physicalMapMatch": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-runtime-source-fixture.ts",
+      "bytes": 17687,
+      "sha256": "64df0ba4beb7c5d85a18637af836533430f90620e2f5072763a9dc3880351231",
+      "gitBlob": "bd1f76510d3339513ca694998fe4523aed0a6eff",
+      "physicalMapMatch": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-resume-records.ts",
+      "bytes": 11685,
+      "sha256": "fe69bc8ed0208727811e53fbf7f1c92de27732181db6afb63de96d49f6a174ff",
+      "gitBlob": "0ca117bd5e84ae6368278a3a0a1cda40b5ec680b",
+      "physicalMapMatch": true
+    },
+    {
+      "path": "runtime.lock.json",
+      "bytes": 6127,
+      "sha256": "fa614f6dcc672b47342a838300f4c1c7b82ae0f05899c108af17838c58c53a87",
+      "gitBlob": "1757d79786da78e739a322e8bba81cd3dc88dcaa",
+      "physicalMapMatch": true
+    }
+  ],
+  "acceptedSourceVector": [
+    {
+      "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "bytes": 28974,
+      "sha256": "7626e479a6662242009cb050e7e5af612a29e4205d62666d15274d5c30f91386",
+      "gitBlob": "ed57cb0fe7d57ef076a591621289eb77667c63ad",
+      "physicalMapMatch": true,
+      "qualification": "physical before/after identity match"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+      "bytes": 24759,
+      "sha256": "d15b7eea14c0951194310aee34ddc5c477879c759a97a4e2f4e9fce1f956ce9b",
+      "gitBlob": "cf93da72a198dac636658e512093eef7828b5927",
+      "physicalMapMatch": true,
+      "qualification": "physical before/after identity match"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+      "bytes": 8457,
+      "sha256": "2da55bb40a5689ace0e922dc4867d7c73278d9a1cd200ea8c4602ca68f82da3b",
+      "gitBlob": "3c7b4bb53f4259ac0795d3f92fb715887acb554f",
+      "physicalMapMatch": true,
+      "qualification": "physical before/after identity match"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts",
+      "bytes": 36260,
+      "sha256": "26357f37b146fc171bbceadb624bde4a7f4e459d2073ae23a651e757817b2d38",
+      "gitBlob": "4700a0052d3c58a2b3d9bc66e6803220688050fd",
+      "physicalMapMatch": true,
+      "qualification": "physical before/after identity match"
+    },
+    {
+      "path": "src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts",
+      "bytes": 74340,
+      "sha256": "647ac5732bfd6b5cb57834adb4ad22c32ee5dfb018a934c92f982efd9daa531c",
+      "gitBlob": "c2faa156015707bc5fbd7f8123a7ffd9c4faa486",
+      "physicalMapMatch": true,
+      "qualification": "physical before/after identity match"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+      "bytes": 45795,
+      "sha256": "2c5931f5c7fa1dc8bb7858201c1b8afdbae9683faf4a2ad9fce067f116f3f94b",
+      "gitBlob": "5026f0ec6165bb092717ddc989043848a25081dc",
+      "physicalMapMatch": true,
+      "qualification": "physical before/after identity match"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-task-review-cycle-ui-smoke.ts",
+      "bytes": 33036,
+      "sha256": "4fa52cfad9347065680ef62a3ba6420762408a78a93b77e96ac3a2e16e68bdc9",
+      "gitBlob": "8d175c98158b3bd71192aef7b1929484b2b681b6",
+      "physicalMapMatch": true,
+      "qualification": "physical before/after identity match"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+      "bytes": 164965,
+      "sha256": "852bedb85c83dbc4b488dffb4a9ffebbe398adc53e85f5a3cea8ca36b146cbf7",
+      "gitBlob": "896c587e077da56a98a314a175fb3cba0353d6ee",
+      "physicalMapMatch": true,
+      "qualification": "physical before/after identity match"
+    },
+    {
+      "path": "test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts",
+      "bytes": 187890,
+      "sha256": "b6f11896e60014aac785968d42390afde38716d47de9bba9562522235db048c9",
+      "gitBlob": "76495189c992fcda47cd7a43a0c697190b5acbb3",
+      "physicalMapMatch": false,
+      "qualification": "renderer test body not present in selected physical maps; no execution inference"
+    }
+  ],
+  "sourceFreeze": {
+    "beforeRows": 1757,
+    "afterRows": 1757,
+    "uniquePaths": 1757,
+    "duplicatePaths": [],
+    "malformed": [],
+    "allOrderedRowsExactlyEqual": true,
+    "derivedArrayIdentity": {
+      "bytes": 266427,
+      "sha256": "c9a93c998a65eb0716ac8116aa9bb2a46d2b63a55a3b0e8630c4d6ecda8bf300",
+      "gitBlob": "0555b0e3dc26bccf144f01327a95e46a589f03f2"
+    },
+    "derivedIdentityIsNotSeparateRetainedBlob": true,
+    "qualification": "Complete arrays remain in the full receipt. Physical source hashes provide identity; only listed direct complete bodies and previously reviewed selected vector receive source semantics here."
+  },
+  "physicalPins": {
+    "nodeSha256": "7fde7b8afa198da66257f42ee2001d874c7355631e6d1579a5fb5ef1f246df4c",
+    "hostEntrySha256": "7ff0d33309b54969f7a5c5f88935d4593596e68670db21f08ee694c9d0c27add",
+    "corepackPackageSha256": "6f431b9a91afe6b4757f4b5a3855e2f79e2f366dd4242fd397713932aa3a2714",
+    "corepackLibrarySha256": "abd6f0e7b4e2af310243e202fd908ea64cda545786222f0a3d3f62426e8ad66e",
+    "pnpmStubSha256": "0f4d62c2f56f113dcce2acb6762a1573f493d100c25be86bdbaa4a2611575989",
+    "profileSha256": "a904dc74cb3389ec190ead3185229c8f8e2d0a95090c7a1794d38694ec44969e",
+    "descriptorSha256": "4a5d04747ddd887584880bb087d91eac78e3d02f97fc910e09e8f4f53c153484",
+    "sentinelSha256": "c6aad3420c828d4bdd1bda4935ca7d99a090525c2e673d9774812144fd48a351",
+    "shellProbeSha256": "472a71ce233ee7ac5806a1546d11317b6b0859cc85220b5b385d21d017e9c68a",
+    "providerArchiveSha256": "a3ee7632c9685fafb4ccc57cb5548503c476fc9ed608bd13438ed74e5329f9d8",
+    "pnpmSha256": "7c2a67995976b5b592b611d8b236e3b0633bd654fb49aedd96c6eb7ce04c9cbb",
+    "electronSha256": "7722b3b95b0a31e24906f8046c1bf29cb03c1b99f67058b0b9a4c0e8681c0d87",
+    "smokeSourceSha256": "dd9e4dfb052bb75f1f14188bc3a6e634a67f5ce461c1019f9c0d10a8b934f9bc",
+    "fixtureSourceSha256": "58279362c05f6645881e4850807f78183eee5dc51dfb32f355ff4ded7e7c3589",
+    "uiSourceSha256": "9ea0a2063cae525d80b8a79eac4fcb79062d47fe81f9f2b72d843662a3e92abf",
+    "linuxChildExec": {
+      "manifestPath": "/home/runner/work/_temp/TEST-emulated-ui-inputs-nB8hqK/linux-child-exec/manifest.json",
+      "manifestSha256": "e67ba493cc10e1fd124f6c7437b6f86e1eba46746ce73e51088d67eb095b2734",
+      "binarySha256": "8fc3e5a748a55218d0b9eff7a7a7db6f249b246a6be940464da26456fe511c45"
+    },
+    "linuxManifest": {
+      "bytes": 2408,
+      "sha256": "e67ba493cc10e1fd124f6c7437b6f86e1eba46746ce73e51088d67eb095b2734",
+      "gitBlob": "f83d4686d6bbdb2273c73eb4b4489e0a163e6517"
+    },
+    "processLauncher": {
+      "manifestSha256": "942a64272a8f86959e2bf08f3e28eea353c8642be369dbfa4e3a5ac428dfbfe3",
+      "binarySha256": "2a8c086c5e454bf902def4803bf2d855717bd7f3162f51aaeca58b1a4581ae7a"
+    }
+  },
+  "finiteAuthority": {
+    "fixturePins": {
+      "executable": {
+        "path": "/home/runner/work/_temp/TEST-desktop-backend-J46Z4c/bin/TEST-claude-peer",
+        "sha256": "3619fea584d5e90ebb80a3f2ea660df54f7adc7380b2f6fc88e135574a0d380d"
+      },
+      "sources": [
+        {
+          "path": "/home/runner/work/agent-teams-ai/agent-teams-ai/tools/owned-process-broker/fixtures/claudeProviderPeer.mjs",
+          "sha256": "c443b410efbe4910839b02662fa1767b60e428936c012d729b26eeb82f182a87"
+        }
+      ],
+      "provider": "claude",
+      "lifecycleVariant": "cold-resume-active-quit-v1",
+      "protocolRevision": "sdk-0.3.305",
+      "runtimeConfigured": true,
+      "managementConfigured": true,
+      "vendorsAllowed": false
+    },
+    "sourceBodyPin": {
+      "path": "tools/owned-process-broker/fixtures/claudeProviderPeer.mjs",
+      "bytes": 32221,
+      "sha256": "c443b410efbe4910839b02662fa1767b60e428936c012d729b26eeb82f182a87",
+      "gitBlob": "920b40fa594f7aa65e11d1ec1f31d2aa69581a01",
+      "physicalMapMatch": true
+    },
+    "runtimeMembers": 1,
+    "providerTemplates": 1,
+    "managementProfiles": 1,
+    "accountBinding": "TEST-no-vendor-account",
+    "syntheticUsage": true,
+    "sentinelCensus": {
+      "invocations": [
+        {
+          "executable": "claude-multimodel",
+          "allowed": true,
+          "argc": 1,
+          "command": null,
+          "flags": [
+            "--version"
+          ]
+        },
+        {
+          "executable": "claude-multimodel",
+          "allowed": true,
+          "argc": 1,
+          "command": null,
+          "flags": [
+            "--version"
+          ]
+        }
+      ],
+      "preQuitCount": 2,
+      "postQuitOrCleanupInvocations": [],
+      "refusedInvocations": [],
+      "qualification": "Only finite sentinel version checks and the isolated shell-environment fixture are admitted; any native/control fallback before or after Quit makes this provider-emulation proof incomplete."
+    },
+    "peerEventCounts": {
+      "launch": 7,
+      "started": 7,
+      "initialized": 7,
+      "input": 4,
+      "terminal": 3,
+      "mcp-connected": 2,
+      "partial": 1
+    },
+    "peerLaunches": [
+      {
+        "provider": "claude",
+        "role": "management",
+        "pid": 5717,
+        "event": "launch",
+        "parentPid": 4916,
+        "sessionId": "40df7c40-99bd-48b5-b627-b135aa18f3b1",
+        "restored": false
+      },
+      {
+        "provider": "claude",
+        "role": "management",
+        "pid": 5909,
+        "event": "launch",
+        "parentPid": 4916,
+        "sessionId": "0450a5ff-4fb7-42e0-8a12-1721beba6b59",
+        "restored": false
+      },
+      {
+        "provider": "claude",
+        "role": "runtime",
+        "pid": 6017,
+        "event": "launch",
+        "parentPid": 4916,
+        "sessionId": "c0ff1877-57ba-4b56-9f00-75124aca12d6",
+        "restored": false
+      },
+      {
+        "provider": "claude",
+        "role": "runtime",
+        "pid": 6132,
+        "event": "launch",
+        "parentPid": 4916,
+        "sessionId": "0c54f91a-e045-4eb2-a0fa-b097da369102",
+        "restored": false
+      },
+      {
+        "provider": "claude",
+        "role": "management",
+        "pid": 7355,
+        "event": "launch",
+        "parentPid": 6670,
+        "sessionId": "f879934e-9565-45b5-bc99-b0dcb66a1358",
+        "restored": false
+      },
+      {
+        "provider": "claude",
+        "role": "management",
+        "pid": 7554,
+        "event": "launch",
+        "parentPid": 6670,
+        "sessionId": "fdaf84da-0401-4a43-a61c-b2cffe3ba3d1",
+        "restored": false
+      },
+      {
+        "provider": "claude",
+        "role": "runtime",
+        "pid": 7760,
+        "event": "launch",
+        "parentPid": 6670,
+        "sessionId": "0c54f91a-e045-4eb2-a0fa-b097da369102",
+        "restored": true
+      }
+    ],
+    "mcpCatalogs": [
+      {
+        "pid": 6132,
+        "tools": 51,
+        "unique": 51
+      },
+      {
+        "pid": 7760,
+        "tools": 51,
+        "unique": 51
+      }
+    ],
+    "noMcpToolCallObserved": true,
+    "limits": "Direct finite source/route plus recorded trace supports no selected real Claude/Codex executable. No exhaustive arbitrary dependency/binary/OS-exec attestation; TEST version probes and private SDK peer are distinct from vendor CLI execution."
+  },
+  "epochs": {
+    "first": {
+      "app": {
+        "pid": 4573,
+        "processGroup": 4573,
+        "identity": "Tue Nov 17 04:16:09 2026 /opt/hostedtoolcache/node/24.21.0/x64/bin/node /home/runner/work/_temp/TEST-emulated-ui-inputs-nB8hqK/corepack/node_modules/.pnpm/corepack@0.36.0/node_modules/corepack/dist/pnpm.js dev:mcp --remoteDebuggingPort 9222 --noSandbox",
+        "invocation": [
+          "/opt/hostedtoolcache/node/24.21.0/x64/bin/node",
+          "/home/runner/work/_temp/TEST-emulated-ui-inputs-nB8hqK/corepack/node_modules/.pnpm/corepack@0.36.0/node_modules/corepack/dist/pnpm.js",
+          "dev:mcp",
+          "--remoteDebuggingPort",
+          "9222",
+          "--noSandbox"
+        ]
+      },
+      "rendererTarget": {
+        "id": "EFE46C9E92BB0C9A2322869A00B49393",
+        "url": "http://localhost:5173/"
+      },
+      "host": {
+        "pid": 4916,
+        "ppid": 4703,
+        "pgid": 4573
+      },
+      "startupOutcome": {
+        "elapsedMs": 26795,
+        "matchingMainFound": true,
+        "appExitCode": null,
+        "appSignalCode": null,
+        "spawnError": false
+      },
+      "startupBudgetMs": 180000,
+      "cleanup": {
+        "appExitCode": 0,
+        "appSignalCode": null,
+        "remaining": [],
+        "capturedHostAbsent": true,
+        "writerLockReleased": true,
+        "originalPeerPids": [
+          5717,
+          5909,
+          6017,
+          6132
+        ],
+        "peerRemaining": []
+      }
+    },
+    "second": {
+      "app": {
+        "pid": 6320,
+        "processGroup": 6320,
+        "identity": "Tue Nov 17 04:17:41 2026 /opt/hostedtoolcache/node/24.21.0/x64/bin/node /home/runner/work/_temp/TEST-emulated-ui-inputs-nB8hqK/corepack/node_modules/.pnpm/corepack@0.36.0/node_modules/corepack/dist/pnpm.js dev:mcp --remoteDebuggingPort 9222 --noSandbox",
+        "invocation": [
+          "/opt/hostedtoolcache/node/24.21.0/x64/bin/node",
+          "/home/runner/work/_temp/TEST-emulated-ui-inputs-nB8hqK/corepack/node_modules/.pnpm/corepack@0.36.0/node_modules/corepack/dist/pnpm.js",
+          "dev:mcp",
+          "--remoteDebuggingPort",
+          "9222",
+          "--noSandbox"
+        ]
+      },
+      "rendererTarget": {
+        "id": "589F1415649312B72EE998604E3F1AE3",
+        "url": "http://localhost:5173/"
+      },
+      "host": {
+        "pid": 6670,
+        "ppid": 6448,
+        "pgid": 6320
+      },
+      "startupOutcome": {
+        "elapsedMs": 25323,
+        "matchingMainFound": true,
+        "appExitCode": null,
+        "appSignalCode": null,
+        "spawnError": false
+      },
+      "startupBudgetMs": 180000,
+      "checkpointAndHistoryUnchanged": true,
+      "originalProductUnchanged": true,
+      "runtimeAllocationsBeforeResume": 0,
+      "promptReplaysBeforeResume": 0,
+      "cleanup": {
+        "processGroup": 6320,
+        "remaining": [],
+        "appExitCode": 0,
+        "appSignalCode": null,
+        "capturedHostAbsent": true
+      }
+    }
+  },
+  "lifecycle": {
+    "capture": {
+      "commandId": "capture:launch:roster:1cedeebb-4a90-47ec-9667-084d1be116b5",
+      "configurationRevision": "6416f74411a8d4bdca47447bba6a110ec82fb1ce8b44da0627ef2e13f1f3c7e5",
+      "launchId": "d67467af-3ee5-5c20-ae24-51531568b01a",
+      "members": [
+        {
+          "memberId": "alice-id",
+          "principalId": "agent:bbe32567-d342-593c-a1b7-bcf451a623bc",
+          "delivery": {
+            "backendId": "TEST-desktop-owner-TEST-desktop-backend-J46Z4c",
+            "teamId": "TEST-desktop-team",
+            "teamName": "test-desktop-backend",
+            "runId": "d67467af-3ee5-5c20-ae24-51531568b01a",
+            "memberId": "alice-id",
+            "generation": "capture-69bfeb6e-4fb2-5836-a538-7b698e75297f"
+          }
+        }
+      ],
+      "principalId": "TEST-human",
+      "fingerprint": "2b4a7b5c90261773da18f7631d2cbfad5c4e1aa7e06f7ac5de8373fd5cc03f91"
+    },
+    "checkpoint": {
+      "payloadDigest": "151f871d4e88ac5007e46a2fd55b0f22d5032f821fc1c01e19914d5500dc5726",
+      "historyDigest": "b86fff621c967e09ab6ffc6cf67805e2be51185ef5108f04bd0f3ecee455e74f",
+      "reference": "cp1-c356a6665164ad1cd44a590a55d5a5ab41201bca023cfb2d0ef91b29678dc41a"
+    },
+    "checkpointFile": {
+      "bytes": 1742,
+      "sha256": "c3d3b17a90fa69bac43401641b43e3c79bc4677271a6493cd62b175146874d59",
+      "gitBlob": "e3daa6218aff8d36ee3d1d4a1f46749e843bfbe0"
+    },
+    "originalProviderHistoryPrefix": {
+      "bytes": 521,
+      "sha256": "194fa1544ddb38388f982f16b83a9cea26e1187aa9ff9c39c0ef9fe2fb16f76f",
+      "gitBlob": "af0866ea85e942b927abde74588799155cb9cddd"
+    },
+    "originalProviderHistoryPrefixNotSeparatelyRetained": true,
+    "finalProviderHistory": {
+      "bytes": 6448,
+      "sha256": "6f6631983b17df0dfe4b4bcbec43318879c5043f051b7c7a14dfabdb85ff54bd",
+      "gitBlob": "83295da2ac470eda60efe6140c4561494988b237"
+    },
+    "finalHistoryRows": 5,
+    "originalSourceSession": {
+      "sessionRef": "dd01ab02-0a28-54ae-9741-03d87135a5a0",
+      "binding": {
+        "backendId": "TEST-desktop-owner-TEST-desktop-backend-J46Z4c",
+        "teamId": "TEST-desktop-team",
+        "runId": "d67467af-3ee5-5c20-ae24-51531568b01a",
+        "memberId": "alice-id",
+        "generation": "capture-69bfeb6e-4fb2-5836-a538-7b698e75297f"
+      },
+      "config": {
+        "tenantId": "TEST-desktop-owner-TEST-desktop-backend-J46Z4c",
+        "projectId": "TEST-project-TEST-desktop-backend-J46Z4c",
+        "sessionId": "dd01ab02-0a28-54ae-9741-03d87135a5a0",
+        "generation": 2,
+        "configRevision": "capture-3e8c15f541a1fe6972303bfc53aab2b05d1d17f54232e68c690451752fc7df71",
+        "requiredCapabilities": [
+          "session.conversation"
+        ]
+      },
+      "phase": "closed",
+      "custody": "released",
+      "inputCount": 1
+    },
+    "resume": {
+      "sourceGeneration": "capture-69bfeb6e-4fb2-5836-a538-7b698e75297f",
+      "selectedGeneration": "restore-42dfae1a27d0ff31cd5d84b7195b729c48cf5e2b6b22fef247f2babbe914ca1f",
+      "reference": "cp1-c356a6665164ad1cd44a590a55d5a5ab41201bca023cfb2d0ef91b29678dc41a",
+      "nativeSession": "0c54f91a-e045-4eb2-a0fa-b097da369102",
+      "originalPromptReplays": 0
+    },
+    "commands": [
+      {
+        "text": "TEST_UI_RESUME",
+        "commandId": "7e359d03-8185-4fdc-9358-e333206e5df2",
+        "inputId": "e8ddb191-4ec2-5c24-b449-dbd9052218bf"
+      },
+      {
+        "text": "TEST_UI_HOLD",
+        "commandId": "8903c959-a824-4602-8a7e-d9afddf2a3ef",
+        "inputId": "1bd53a94-1359-5603-ab84-cf79ba86323d"
+      },
+      {
+        "text": "TEST_UI_QUIT_QUEUED",
+        "commandId": "82846cde-8b40-4e41-bba9-ecfcdfd9a05a",
+        "inputId": "78a8a904-e728-5508-a356-0573f03a51ad"
+      }
+    ],
+    "recordedUiStepCounts": {
+      "total": 50,
+      "mouseMoved": 23,
+      "mouseClick": 23,
+      "mouseWheel": 2,
+      "passiveObservation": 2
+    },
+    "checkpointAndEffectsJoins": {
+      "checkpointDigest": true,
+      "checkpointOperations": true,
+      "checkpointHistoryDigest": true,
+      "checkpointReference": true,
+      "checkpointSourceBinding": true,
+      "checkpointConfig": true,
+      "checkpointSourceSession": true,
+      "checkpointFile": true,
+      "providerHistoryOriginalPrefix": true,
+      "historyFinalRows": 5,
+      "effectsNdjsonJson": true,
+      "effectsUi": true,
+      "effectsCleanup": true,
+      "effectsQuit": true,
+      "effectsFirstPrefix": true,
+      "sourceEqualsBeforeQuitSource": true
+    },
+    "sessionAfterQuitExactScalarDelta": [
+      {
+        "path": [
+          "phase"
+        ],
+        "before": "allocated",
+        "after": "closed"
+      },
+      {
+        "path": [
+          "sealed"
+        ],
+        "before": false,
+        "after": true
+      },
+      {
+        "path": [
+          "custody"
+        ],
+        "before": "owned",
+        "after": "released"
+      },
+      {
+        "path": [
+          "nativeReady"
+        ],
+        "before": true,
+        "after": false
+      },
+      {
+        "path": [
+          "inputs",
+          "1",
+          "phase"
+        ],
+        "before": "consumed",
+        "after": "unknown"
+      },
+      {
+        "path": [
+          "inputs",
+          "2",
+          "phase"
+        ],
+        "before": "admitted",
+        "after": "cancelled"
+      },
+      {
+        "path": [
+          "activitySequence"
+        ],
+        "before": 16,
+        "after": 20
+      },
+      {
+        "path": [
+          "closeClaimed"
+        ],
+        "before": {
+          "absent": true
+        },
+        "after": true
+      },
+      {
+        "path": [
+          "diagnostic"
+        ],
+        "before": {
+          "absent": true
+        },
+        "after": "observe-ended"
+      }
+    ],
+    "afterQuit": {
+      "activeOutcome": "unknown",
+      "queuedOutcome": "cancelled",
+      "queuedNativeDeliveries": 0,
+      "productUnchanged": true,
+      "bothAppGroupsAbsent": true,
+      "bothHostsAbsent": true,
+      "writerLockReleased": true
+    },
+    "originalRequestedQuitExit": {
+      "initialExitCode": 0,
+      "initialSignalCode": null,
+      "exitCode": 0,
+      "signalCode": null
+    },
+    "beforeHarnessCleanup": [],
+    "cleanup": {
+      "scope": "second captured app epoch; firstCleanup retained separately",
+      "processGroup": 6320,
+      "remaining": [],
+      "appExitCode": 0,
+      "appSignalCode": null,
+      "capturedHostObserved": true,
+      "capturedHostAbsent": true,
+      "hostExitCode": "not exposed by main-owned transport; no separate Host exit code recorded"
+    },
+    "peerCleanup": {
+      "originalPeerPids": [
+        5717,
+        5909,
+        6017,
+        6132,
+        7355,
+        7554,
+        7760
+      ],
+      "remaining": [],
+      "absent": true
+    },
+    "hostTrace": [
+      {
+        "line": 89,
+        "mainPid": 4703,
+        "event": "async-spawn",
+        "pid": 4916,
+        "requestedCommand": "linux-child-exec",
+        "linuxChildExecTarget": "node",
+        "versionOnly": false,
+        "observedBirth": {
+          "startTicks": "20576",
+          "parentPid": 4703,
+          "processGroupId": 4573
+        },
+        "atomic": false,
+        "observedAtMs": 1794889001730
+      },
+      {
+        "line": 160,
+        "mainPid": 4703,
+        "event": "async-exit",
+        "pid": 4916,
+        "status": 0,
+        "signal": null,
+        "observedAtMs": 1794889061782
+      },
+      {
+        "line": 259,
+        "mainPid": 6448,
+        "event": "async-spawn",
+        "pid": 6670,
+        "requestedCommand": "linux-child-exec",
+        "linuxChildExecTarget": "node",
+        "versionOnly": false,
+        "observedBirth": {
+          "startTicks": "29456",
+          "parentPid": 6448,
+          "processGroupId": 6320
+        },
+        "atomic": false,
+        "observedAtMs": 1794889090516
+      },
+      {
+        "line": 331,
+        "mainPid": 6448,
+        "event": "async-exit",
+        "pid": 6670,
+        "status": 0,
+        "signal": null,
+        "observedAtMs": 1794889143396
+      }
+    ],
+    "traceSummaries": [
+      {
+        "line": 170,
+        "mainPid": 4703,
+        "event": "trace-summary",
+        "rows": 26,
+        "droppedObservations": 0,
+        "observedChildren": 12,
+        "unobservedChildren": 0,
+        "observationFailures": 0,
+        "limited": false,
+        "coverage": "node-async-and-unix-process-table-only"
+      },
+      {
+        "line": 340,
+        "mainPid": 6448,
+        "event": "trace-summary",
+        "rows": 26,
+        "droppedObservations": 0,
+        "observedChildren": 12,
+        "unobservedChildren": 0,
+        "observationFailures": 0,
+        "limited": false,
+        "coverage": "node-async-and-unix-process-table-only"
+      }
+    ],
+    "logicalDigestAnalysis": {
+      "correctedDerivedCanonicalChecks": {
+        "managementCanonical": true,
+        "taskCanonical": true,
+        "taskWholeResult": true
+      },
+      "qualification": "Insertion-order JSON.stringify was not the correct derived hash for the management and task logical fields. Independently sorting object keys recursively produces both recorded logical hashes exactly; raw Git/SHA/CRC identities and whole-record equalities also match. This is a data derivation, not an added claim about undocumented producer serialization."
+    }
+  },
+  "nodeCoverage": {
+    "source": {
+      "bytes": 164965,
+      "sha256": "852bedb85c83dbc4b488dffb4a9ffebbe398adc53e85f5a3cea8ca36b146cbf7",
+      "gitBlob": "896c587e077da56a98a314a175fb3cba0353d6ee"
+    },
+    "commandLine": "node --test scripts/legacy-agent-host/desktop-backend-observations.test.ts scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts scripts/legacy-agent-host/test-child-process-trace.test.ts scripts/legacy-agent-host/desktop-emulated-settings.test.ts scripts/legacy-agent-host/desktop-emulated-codex-catalog.test.ts scripts/legacy-agent-host/desktop-resume-records.test.ts scripts/legacy-agent-host/desktop-captured-app-exit.test.ts scripts/legacy-agent-host/desktop-opencode-v2-management-records.test.ts",
+    "summary": [
+      "ℹ tests 229",
+      "ℹ suites 0",
+      "ℹ pass 229",
+      "ℹ fail 0",
+      "ℹ cancelled 0",
+      "ℹ skipped 0",
+      "ℹ todo 0",
+      "ℹ duration_ms 15039.146493"
+    ],
+    "caseCount": 139,
+    "exactMatchesOnce": 139,
+    "excludedInference": [
+      "renderer85",
+      "new standalone10",
+      "new aggregate149",
+      "catalog43",
+      "all-provider E2E",
+      "native or packaged qualification"
+    ],
+    "full139TitleMapDerivedIdentity": {
+      "bytes": 15629,
+      "sha256": "97f8e220a90159c256c9b7f35dd7a834ce4a72617f71195377e6af7cb91aa109",
+      "gitBlob": "c4b9e4fe9a963a75486cd97aa1997cd06d105fe5"
+    },
+    "full139TitleMapSeparatelyRetained": false,
+    "matchMethod": "Every expanded title from complete original test source is matched exactly once to a successful original job-log row after removing the timing suffix only; all 139 comparisons were computed and inspected, with the six selected last cases listed below. No test-name filter was used.",
+    "matchedLogLines": [
+      863,
+      864,
+      865,
+      866,
+      867,
+      868,
+      869,
+      870,
+      871,
+      872,
+      873,
+      874,
+      875,
+      876,
+      877,
+      878,
+      879,
+      880,
+      881,
+      882,
+      883,
+      884,
+      885,
+      886,
+      887,
+      888,
+      889,
+      890,
+      891,
+      892,
+      893,
+      894,
+      895,
+      896,
+      897,
+      898,
+      899,
+      900,
+      901,
+      902,
+      903,
+      904,
+      905,
+      906,
+      907,
+      908,
+      909,
+      910,
+      911,
+      912,
+      913,
+      914,
+      915,
+      916,
+      917,
+      918,
+      919,
+      920,
+      921,
+      922,
+      923,
+      924,
+      925,
+      926,
+      927,
+      928,
+      929,
+      930,
+      931,
+      932,
+      933,
+      934,
+      935,
+      936,
+      937,
+      938,
+      939,
+      940,
+      941,
+      942,
+      943,
+      944,
+      945,
+      946,
+      947,
+      948,
+      949,
+      950,
+      951,
+      952,
+      953,
+      954,
+      955,
+      956,
+      957,
+      958,
+      959,
+      960,
+      961,
+      962,
+      963,
+      964,
+      965,
+      966,
+      967,
+      968,
+      969,
+      970,
+      971,
+      972,
+      973,
+      974,
+      975,
+      976,
+      977,
+      978,
+      979,
+      980,
+      981,
+      982,
+      983,
+      984,
+      985,
+      986,
+      987,
+      988,
+      989,
+      990,
+      991,
+      992,
+      993,
+      994,
+      995,
+      998,
+      999,
+      1000,
+      1001,
+      1002,
+      1003
+    ],
+    "firstCase": {
+      "case": 1,
+      "line": 863,
+      "title": "captured UI discovery waits for Main admission and actual mount while early diagnostics remain active"
+    },
+    "lastSixCases": [
+      {
+        "case": 134,
+        "line": 998,
+        "title": "P11 keeps the original 90-second cutoff for first result at the exact cutoff"
+      },
+      {
+        "case": 135,
+        "line": 999,
+        "title": "P11 keeps the original 90-second cutoff for first result after the cutoff"
+      },
+      {
+        "case": 136,
+        "line": 1000,
+        "title": "P11 keeps the original 90-second cutoff for polled result after the cutoff"
+      },
+      {
+        "case": 137,
+        "line": 1001,
+        "title": "P11 actual poll retains timely acceptance, original cadence, currentness and read-error identity"
+      },
+      {
+        "case": 138,
+        "line": 1002,
+        "title": "original review correction refuses missing or false live edit authority before any input action"
+      },
+      {
+        "case": 139,
+        "line": 1003,
+        "title": "original review correction admits current authority with one original insertion and submit"
+      }
+    ]
+  },
+  "bundles": {
+    "joins": {
+      "originalEqualsEpoch1": true,
+      "snapshotEqualsOriginal": true,
+      "secondEqualsOriginal": true,
+      "all14Members": [
+        {
+          "path": "main/chunks/index-D9GX0Q6a.cjs",
+          "sha256": "89c988b7be61f7f30f0effaed6a2626a2279b0ed753228360e77e227884d0a92",
+          "archivePath": "TEST-desktop-backend-J46Z4c/emulated-cold-resume-epoch1-bundles/main/chunks/index-D9GX0Q6a.cjs",
+          "bytes": 28605,
+          "match": true
+        },
+        {
+          "path": "main/chunks/index-yaJFGvjB.cjs",
+          "sha256": "ec64b11e28a53961fd7846392857a0167886b8b086d14f54e20041ddc9927155",
+          "archivePath": "TEST-desktop-backend-J46Z4c/emulated-cold-resume-epoch1-bundles/main/chunks/index-yaJFGvjB.cjs",
+          "bytes": 4302,
+          "match": true
+        },
+        {
+          "path": "main/chunks/memberWorkSyncTeamIdentity-BKWiAXQn.cjs",
+          "sha256": "7babbc9bd69c863a2210647b3d5f589d96437a9a80fd794b54196387849217f6",
+          "archivePath": "TEST-desktop-backend-J46Z4c/emulated-cold-resume-epoch1-bundles/main/chunks/memberWorkSyncTeamIdentity-BKWiAXQn.cjs",
+          "bytes": 4251,
+          "match": true
+        },
+        {
+          "path": "main/chunks/TaskBoundaryParser-Zk2WZzJg.cjs",
+          "sha256": "c14cfc36aeec6fd7103c507f258097aaeccf552dbbf608fea43f9e3c7a7ef3b3",
+          "archivePath": "TEST-desktop-backend-J46Z4c/emulated-cold-resume-epoch1-bundles/main/chunks/TaskBoundaryParser-Zk2WZzJg.cjs",
+          "bytes": 68952,
+          "match": true
+        },
+        {
+          "path": "main/chunks/taskChangeState-rZolvpL6.cjs",
+          "sha256": "f40557112189b351692a4b0f19244d7845a4dfe754f468326a21c36386efa1cd",
+          "archivePath": "TEST-desktop-backend-J46Z4c/emulated-cold-resume-epoch1-bundles/main/chunks/taskChangeState-rZolvpL6.cjs",
+          "bytes": 561881,
+          "match": true
+        },
+        {
+          "path": "main/chunks/taskHistory-2kbwfqIg.cjs",
+          "sha256": "1d336b6cea5aa5c4768954541a24347fe89bb46a83faddaf8b26fd6e0afb7f85",
+          "archivePath": "TEST-desktop-backend-J46Z4c/emulated-cold-resume-epoch1-bundles/main/chunks/taskHistory-2kbwfqIg.cjs",
+          "bytes": 1646698,
+          "match": true
+        },
+        {
+          "path": "main/chunks/TeamDataService-DySh5-O-.cjs",
+          "sha256": "ed455bf2423e0511bf1fb8e30069280fe99b505e8e4968df3705309a7131556e",
+          "archivePath": "TEST-desktop-backend-J46Z4c/emulated-cold-resume-epoch1-bundles/main/chunks/TeamDataService-DySh5-O-.cjs",
+          "bytes": 800653,
+          "match": true
+        },
+        {
+          "path": "main/chunks/teamTaskSnapshotCompaction-mUovQwio.cjs",
+          "sha256": "2915a9af73772eda67fa92bd4499976d75724d9605cc947e356bd1dc1cee600c",
+          "archivePath": "TEST-desktop-backend-J46Z4c/emulated-cold-resume-epoch1-bundles/main/chunks/teamTaskSnapshotCompaction-mUovQwio.cjs",
+          "bytes": 9723,
+          "match": true
+        },
+        {
+          "path": "main/index.cjs",
+          "sha256": "867e1c3eb691d4f291d91cd0021a64a5ec5494e0663bc4da029db2fe5db46e10",
+          "archivePath": "TEST-desktop-backend-J46Z4c/emulated-cold-resume-epoch1-bundles/main/index.cjs",
+          "bytes": 11738111,
+          "match": true
+        },
+        {
+          "path": "main/internal-storage-worker.cjs",
+          "sha256": "3433cb94575a5748d3133174952698af2a98ac2afb348cb159fcb1110e0b284f",
+          "archivePath": "TEST-desktop-backend-J46Z4c/emulated-cold-resume-epoch1-bundles/main/internal-storage-worker.cjs",
+          "bytes": 212535,
+          "match": true
+        },
+        {
+          "path": "main/task-change-worker.cjs",
+          "sha256": "f8fcc24dd4dc9842cd0f70ffe02891d39eef84019d4aab4ed21b529ba9326446",
+          "archivePath": "TEST-desktop-backend-J46Z4c/emulated-cold-resume-epoch1-bundles/main/task-change-worker.cjs",
+          "bytes": 2346,
+          "match": true
+        },
+        {
+          "path": "main/team-data-worker.cjs",
+          "sha256": "dc145e9f1fb5fdfa2e5f51ca6d6f2db8e22e89cb3ab34dae2745ccfd4e6f3823",
+          "archivePath": "TEST-desktop-backend-J46Z4c/emulated-cold-resume-epoch1-bundles/main/team-data-worker.cjs",
+          "bytes": 6593,
+          "match": true
+        },
+        {
+          "path": "main/team-fs-worker.cjs",
+          "sha256": "6e6410a44a3d1b97065085259858215045ed137b5bd0dd27bf70f797091c9c83",
+          "archivePath": "TEST-desktop-backend-J46Z4c/emulated-cold-resume-epoch1-bundles/main/team-fs-worker.cjs",
+          "bytes": 56734,
+          "match": true
+        },
+        {
+          "path": "preload/index.js",
+          "sha256": "4f02e5f1659bb0373f5515d81c7edf5f9bc7af8b67a39f1600171f8acb291406",
+          "archivePath": "TEST-desktop-backend-J46Z4c/emulated-cold-resume-epoch1-bundles/preload/index.js",
+          "bytes": 96166,
+          "match": true
+        }
+      ]
+    },
+    "bodyReview": false,
+    "reproducibleSourceToBundleClaim": false,
+    "devRenderer": "http://localhost:5173; no full packaged renderer/build manifest qualification"
+  },
+  "screenshots": {
+    "identities": [
+      {
+        "path": "/home/runner/work/_temp/TEST-desktop-backend-J46Z4c/ui-emulated-lifecycle-launch.png",
+        "sha256": "033485ebd5d6a967c4c79e3b20b9e7537e4ad481b086683dd8f89d5abac649d9",
+        "archiveMatch": true,
+        "archiveMember": "TEST-desktop-backend-J46Z4c/ui-emulated-lifecycle-launch.png",
+        "bytes": 102864
+      },
+      {
+        "path": "/home/runner/work/_temp/TEST-desktop-backend-J46Z4c/ui-emulated-lifecycle-stopped.png",
+        "sha256": "649ef3a50fc2bbccd654b1efca72b9210615ca68ef618570693154df6a3a9ace",
+        "archiveMatch": true,
+        "archiveMember": "TEST-desktop-backend-J46Z4c/ui-emulated-lifecycle-stopped.png",
+        "bytes": 95052
+      },
+      {
+        "path": "/home/runner/work/_temp/TEST-desktop-backend-J46Z4c/ui-emulated-lifecycle-resume-selected.png",
+        "sha256": "32a5652e626f4d391c64ef139521e5a56d0bdf29969018c47f5806529da771fd",
+        "archiveMatch": true,
+        "archiveMember": "TEST-desktop-backend-J46Z4c/ui-emulated-lifecycle-resume-selected.png",
+        "bytes": 103974
+      },
+      {
+        "path": "/home/runner/work/_temp/TEST-desktop-backend-J46Z4c/ui-emulated-lifecycle-resumed.png",
+        "sha256": "f767552dffa1bed93baa600527efdd35987dfc464a68d35881aa3cb1d99425f7",
+        "archiveMatch": true,
+        "archiveMember": "TEST-desktop-backend-J46Z4c/ui-emulated-lifecycle-resumed.png",
+        "bytes": 107568
+      },
+      {
+        "path": "/home/runner/work/_temp/TEST-desktop-backend-J46Z4c/ui-emulated-lifecycle-active-queued-before-quit.png",
+        "sha256": "e7b7ca840114ede2dd8c00bd841b79cc2a22987b52853e2bec115b53b0a6fd0b",
+        "archiveMatch": true,
+        "archiveMember": "TEST-desktop-backend-J46Z4c/ui-emulated-lifecycle-active-queued-before-quit.png",
+        "bytes": 117320
+      }
+    ],
+    "reviewerVisualInspection": false,
+    "workflowPhysicalPngVerificationObserved": true
+  },
+  "materialLimits": [
+    "The reviewed job was completed success in the retained observations; the enclosing Host workflow was still active/queued in those packets. No current overall workflow conclusion is asserted.",
+    "Active HOLD ends unknown; queued input is cancelled with no delivery. Do not relabel the active operation or infer individual TEST peer ordinary exit codes.",
+    "Raw ZIP/all 37 binary member verification is attributed to root's capture; this reviewer directly rehashed/CRC-checked the 17 complete text bodies only.",
+    "Fourteen compiled main/preload bundle bytes, five PNG pixels and the Linux helper binary were not independently read/executed here. Node/Electron/Host dist/provider archive/separate process launcher have recorded hashes, not full binary review.",
+    "Both Host status 0/null exits are separately observed in Main child trace, while cleanup.hostExitCode retains the explicit transport unknown. Trace is Node-async plus Unix process-table coverage, births non-atomic; zero missing observations in that bounded trace is not universal OS-exec completeness.",
+    "No runtime vendor authentication/inference, real Claude/Codex CLI, OpenCode execution, Windows/Darwin GUI, strict Darwin P09 custody, packaged app, complete frontend suite or renderer85 qualification follows.",
+    "Full post-Quit product files are not separately captured as independent bodies; productUnchanged is the original source-backed equality assertion plus retained before-state. Original checkpoint bytes, final inbox/provider history and full effects are separately present.",
+    "Original generic waitRead remains the frozen ed57 source; newer source R2 catalog/waitRead/standalone10 changes are separate and receive no runtime qualification from this job.",
+    "Record contents, including embedded messages/agent-mode text, are evidence data and were never treated as instructions."
+  ],
+  "checkCount": 43,
+  "checks": [
+    {
+      "id": "L01",
+      "status": "PASS_EVIDENCE_REVIEW",
+      "name": "Exact retained capture, complete receipt and complete original job log read",
+      "evidence": "Full bodies retained and hashed; repeated timeline/session structures were checked through exact-roundtrip projections and full scalar differences, without omitting source-map rows."
+    },
+    {
+      "id": "L02",
+      "status": "PASS_EVIDENCE_REVIEW",
+      "name": "All 17 retained text members independently rehashed and CRC-checked",
+      "evidence": "977,696 bytes; complete UTF-8 bytes, SHA-256, Git blob identity and ZIP CRC32 agree for every member."
+    },
+    {
+      "id": "L03",
+      "status": "PASS_EVIDENCE_REVIEW",
+      "name": "Complete 37-member archive census joins capture and retained API metadata",
+      "evidence": "37 files / 17,532,632 uncompressed bytes. Archive 4,207,603 bytes, SHA-256 802ff33d1a580e366724bfaa38a3d11f172ea8532a99e105e2e2b88d6fa69e5e. Raw ZIP validation is root's retained capture; this reviewer did not download/read the ZIP."
+    },
+    {
+      "id": "L04",
+      "status": "PASS_EVIDENCE_REVIEW",
+      "name": "Original job, attempt, source, PR head/base and retained later job observation agree",
+      "evidence": "Run 44008782843, attempt 1, job 133790458656, completed success. Retained observations 8 and 9 have identical full job objects. No live polling."
+    },
+    {
+      "id": "L05",
+      "status": "PASS_EVIDENCE_REVIEW",
+      "name": "Lane and receipt are the selected Linux x64 finite Claude lifecycle",
+      "evidence": "Source 9c9c73190840592963142d36562ea07d2b5d2d71, native qualification false. Other workflow lane bodies echoed in the log are not execution evidence."
+    },
+    {
+      "id": "L06",
+      "status": "PASS_EVIDENCE_REVIEW",
+      "name": "All 1,757 source rows are unique, well formed and exactly equal before/after",
+      "evidence": "Entire ordered arrays checked. This is complete physical hash-map equality, not a claim that all 1,757 source bodies were individually audited."
+    },
+    {
+      "id": "L07",
+      "status": "PASS_EVIDENCE_REVIEW",
+      "name": "Direct finite authority and lifecycle source bodies match physical maps",
+      "evidence": "Nine complete TypeScript/JavaScript source bodies and complete runtime.lock.json were read and hashed at frozen source 9c9; every one joins both physical maps."
+    },
+    {
+      "id": "L08",
+      "status": "PASS_EVIDENCE_REVIEW",
+      "name": "Earlier three published fixes and original Node139 match the physical source map",
+      "evidence": "Eight of nine accepted vector rows are present and match. The separate renderer85 test body is absent from this receipt's selected-source maps; its immutable source identity is known but runtime coverage is not inferred."
+    },
+    {
+      "id": "L09",
+      "status": "PASS_EVIDENCE_REVIEW",
+      "name": "Runtime lock remains the original source identity",
+      "evidence": "Version 0.0.160, CLI version 2.777.777 and source e13edcd3d4ffbecc0272ae30195cc6b15b710ee7 remain metadata. This job does not thereby execute or qualify native locked runtime archives."
+    },
+    {
+      "id": "L10",
+      "status": "PASS_EVIDENCE_REVIEW",
+      "name": "Full original Node139 file is included in an unfiltered eight-file native Node command",
+      "evidence": "Original job-log line 753 names desktop-team-ui-smoke.test.ts without a name filter; the full 139 expanded source titles match exactly once in log lines 863–1003."
+    },
+    {
+      "id": "L11",
+      "status": "PASS_EVIDENCE_REVIEW",
+      "name": "All 139 exact cases passed in the observed original 229-test invocation",
+      "evidence": "229 pass, 0 fail, 0 cancelled, 0 skipped, 0 todo; duration 15039.146493 ms. Source title-to-log map is retained below."
+    },
+    {
+      "id": "L12",
+      "status": "PASS_EVIDENCE_REVIEW",
+      "name": "The six selected P11/Review regressions are actually present and green",
+      "evidence": "Exact/effectively-late first result, late polled result, timely/cadence/currentness/error control, missing/false edit authority, and exactly one original input/submit all pass. This is log evidence for existing producer fixes."
+    },
+    {
+      "id": "L13",
+      "status": "PASS_EVIDENCE_REVIEW",
+      "name": "Node229, installer7 and selected management13 invocations remain distinct",
+      "evidence": "Later seven installer checks and thirteen scheduling/Claude management checks pass separately. The 229 count is not inflated with them. No renderer85, new standalone10, aggregate149 or catalog43 is inferred."
+    },
+    {
+      "id": "L14",
+      "status": "PASS_EVIDENCE_REVIEW",
+      "name": "Profile and descriptor bytes and Node/Host pins join exactly",
+      "evidence": "Private fixture owner/profile, Node SHA, Host entry SHA and descriptor profile hash agree across retained inputs, profile, descriptor and receipt."
+    },
+    {
+      "id": "L15",
+      "status": "PASS_EVIDENCE_REVIEW",
+      "name": "All selected provider executable edges bind the finite TEST peer",
+      "evidence": "Exactly one runtime member, one provider template and one management profile select private bin/TEST-claude-peer with SHA-256 3619fea584d5e90ebb80a3f2ea660df54f7adc7380b2f6fc88e135574a0d380d; no real Claude or Codex binary is selected by these routes."
+    },
+    {
+      "id": "L16",
+      "status": "PASS_EVIDENCE_REVIEW",
+      "name": "Finite SDK-only authority is explicit in complete peer and fixture sources",
+      "evidence": "Protocol sdk-0.3.305 / SDK 0.3.305, lifecycle cold-resume-active-quit-v1, TEST-no-vendor-account, vendorsAllowed=false, isolated provider HOME/config/tmp/XDG. Complete finite peer has no child_process/vendor-launch edge; controlled marker responses and counters are synthetic."
+    },
+    {
+      "id": "L17",
+      "status": "PASS_EVIDENCE_REVIEW",
+      "name": "Sentinel census is exactly two permitted metadata probes and no later probes",
+      "evidence": "Both recorded invocations are private TEST claude-multimodel --version; source sentinel allows that exact one-argument shape only and returns TEST version 2.777.777. No refused or post-Quit/cleanup invocations. This is not real Claude/Codex --version."
+    },
+    {
+      "id": "L18",
+      "status": "PASS_EVIDENCE_REVIEW",
+      "name": "Original provider effects agree in every retained representation",
+      "evidence": "All 31 JSONL effects equal the complete JSON file, UI proof, final cleanup and after-Quit peer cleanup. First-epoch cleanup is the exact first 17 effects."
+    },
+    {
+      "id": "L19",
+      "status": "PASS_EVIDENCE_REVIEW",
+      "name": "Seven original TEST peers are tied to the two exact original Hosts",
+      "evidence": "First Host 4916 owns management 5717/5909, probe 6017, runtime 6132. Second Host 6670 owns management 7355/7554 and restored runtime 7760. Only 7760 is restored."
+    },
+    {
+      "id": "L20",
+      "status": "PASS_EVIDENCE_REVIEW",
+      "name": "Finite protocol observations match the selected lifecycle without extra dispatch",
+      "evidence": "Exactly probe, BOOT, RESUME, HOLD inputs; probe/BOOT/RESUME terminal success; HOLD partial only. No effect failure, interrupt, queued-input delivery or extra original BOOT."
+    },
+    {
+      "id": "L21",
+      "status": "PASS_EVIDENCE_REVIEW",
+      "name": "MCP connections retain their exact bounded meaning",
+      "evidence": "Two connections list the same 51 tools. No MCP tool-call event is recorded in this lifecycle. This establishes connection/catalog exposure only, not execution of all tools."
+    },
+    {
+      "id": "L22",
+      "status": "PASS_EVIDENCE_REVIEW",
+      "name": "Original UI input path is retained without synthetic backend writes",
+      "evidence": "50 recorded steps: 23 pointer moves, 23 mouse clicks, two wheel events and two passive sidebar observations. Original saved Team Launch, Stop, cold restart, explicit checkpoint selection/Resume and three Composer sends are used. Backend queries in the selected source are read-only verification."
+    },
+    {
+      "id": "L23",
+      "status": "PASS_EVIDENCE_REVIEW",
+      "name": "The first original generation closes after a single successful BOOT",
+      "evidence": "The original capture generation, binding, one successful input and one published Stop checkpoint are retained; old source remains byte-for-byte equivalent as a parsed object before final Quit."
+    },
+    {
+      "id": "L24",
+      "status": "PASS_EVIDENCE_REVIEW",
+      "name": "Checkpoint complete bytes, payload digest, source binding/config and operations join",
+      "evidence": "Independently recomputed JSON.stringify checkpoint payload digest, completed-operation history digest and cp1 reference using the full retained source contract and complete checkpoint/body."
+    },
+    {
+      "id": "L25",
+      "status": "PASS_EVIDENCE_REVIEW",
+      "name": "The complete original two-row provider history is retained as an exact final-history prefix",
+      "evidence": "Original prefix is 521 bytes / SHA-256 194fa1544ddb38388f982f16b83a9cea26e1187aa9ff9c39c0ef9fe2fb16f76f. Final five rows are BOOT user/reply, wrapped RESUME user/reply, wrapped HOLD user. No queued user and no HOLD terminal reply."
+    },
+    {
+      "id": "L26",
+      "status": "PASS_EVIDENCE_REVIEW",
+      "name": "First original Quit reaches ordinary exit and release before second epoch",
+      "evidence": "Original window-close reply acknowledged; first app exit 0/null, group empty, Host 4916 absent, writer lock released and first four original peers absent before same-profile cold startup."
+    },
+    {
+      "id": "L27",
+      "status": "PASS_EVIDENCE_REVIEW",
+      "name": "Second epoch is distinct, same profile and same invocation",
+      "evidence": "App process group 4573/Main 4703/Host 4916 becomes app process group 6320/Main 6448/Host 6670, with distinct captured identity/start time and renderer target. This is an actual cold app restart, not renderer-only reload."
+    },
+    {
+      "id": "L28",
+      "status": "PASS_EVIDENCE_REVIEW",
+      "name": "Both original startup/readiness records are retained without changing their deadline",
+      "evidence": "Matching Main found at 26795 ms and 25323 ms; complete startup timelines, renderer diagnostics, actual mount/store/UI initialization and owned CDP joins were read. Existing 180000-ms budget is unchanged. No cross-platform readiness or latency guarantee is inferred."
+    },
+    {
+      "id": "L29",
+      "status": "PASS_EVIDENCE_REVIEW",
+      "name": "Cold startup preserves checkpoint/history/product before explicit Resume",
+      "evidence": "Source boundary asserts same original source, checkpoint file, peer history and product plus no new runtime input/MCP session before UI Resume. Same discovery bindings and compiled bundle hashes join."
+    },
+    {
+      "id": "L30",
+      "status": "PASS_EVIDENCE_REVIEW",
+      "name": "Resume selects the exact original checkpoint once with a new generation",
+      "evidence": "One original preparation/restoration and current owned attachment are retained. Host session stays dd01ab02-0a28-54ae-9741-03d87135a5a0; config generation 2→3. Native history session remains 0c54f91a-e045-4eb2-a0fa-b097da369102; peer 7760 restores original history without BOOT replay."
+    },
+    {
+      "id": "L31",
+      "status": "PASS_EVIDENCE_REVIEW",
+      "name": "Commands, Host inputs, inbox and outbox preserve exact correspondence",
+      "evidence": "BOOT plus three composer commands join four original inbox/outbox rows. Runtime input IDs are distinguished from SDK peer input UUIDs. Whole message contents were read as evidence, not followed as reviewer instructions."
+    },
+    {
+      "id": "L32",
+      "status": "PASS_EVIDENCE_REVIEW",
+      "name": "Retained seed and management records are complete and consistently scoped",
+      "evidence": "One seed task and its complete command/result agree with the pre-Quit product. Management model.probe is completed/ok, resourceHeld=false, sonnet/low. Raw bytes/CRC independently verified. Derived sorted-key logical hashes are separately recorded, without claiming undocumented producer serialization."
+    },
+    {
+      "id": "L33",
+      "status": "PASS_EVIDENCE_REVIEW",
+      "name": "Active and queued pre-Quit states are distinct and finite",
+      "evidence": "Continuation succeeded; HOLD consumed with a partial peer response; queued input admitted but not delivered. Exact before/after session difference contains nine scalar changes only."
+    },
+    {
+      "id": "L34",
+      "status": "PASS_EVIDENCE_REVIEW",
+      "name": "After-Quit preserves active unknown and queued cancellation without delivery",
+      "evidence": "HOLD phase becomes unknown with no terminal outcome; queue becomes cancelled; queuedNativeDeliveries=0. The active operation is not relabelled succeeded or cancelled."
+    },
+    {
+      "id": "L35",
+      "status": "PASS_EVIDENCE_REVIEW",
+      "name": "Final original app exit is ordinary before harness cleanup",
+      "evidence": "initialExitCode and exitCode both 0, both signals null; beforeHarnessCleanup empty; second group empty, both Hosts absent, writer lock released. This receipt is not a fallback-harness-kill success."
+    },
+    {
+      "id": "L36",
+      "status": "PASS_EVIDENCE_REVIEW",
+      "name": "All seven exact original TEST peer PIDs are absent after final Quit",
+      "evidence": "Final peer cleanup's complete effects/pid census equals after-Quit cleanup. Peer absence does not imply independently recorded ordinary exit codes for each peer."
+    },
+    {
+      "id": "L37",
+      "status": "PASS_EVIDENCE_REVIEW",
+      "name": "Main-owned child trace independently records both Host exit codes",
+      "evidence": "desktop-app.log lines 89/160 and 259/331 connect Host births to status 0/null exits. Two trace summaries each have 26 rows, 12 children, no drops/unobserved/failures and limited=false. Coverage remains node-async-and-unix-process-table-only and births atomic=false."
+    },
+    {
+      "id": "L38",
+      "status": "PASS_EVIDENCE_REVIEW",
+      "name": "Receipt's Host exit-code uncertainty remains explicit",
+      "evidence": "Cleanup receipt says no separate Host exit code exposed by main-owned transport. Independent app-trace evidence is reported alongside that literal unknown; it does not overwrite the receipt or imply exhaustive OS process tracing."
+    },
+    {
+      "id": "L39",
+      "status": "PASS_EVIDENCE_REVIEW",
+      "name": "Compiled main/preload identities agree across original epochs and archive census",
+      "evidence": "All 14 original bundle pins equal first-epoch snapshot and second startup, and each joins the archive member SHA. Full bundle bodies are not reviewed here; reproducible source-to-bundle rebuild is not claimed."
+    },
+    {
+      "id": "L40",
+      "status": "PASS_EVIDENCE_REVIEW",
+      "name": "Five screenshot identities join archive census",
+      "evidence": "Launch, stopped, selected Resume, resumed and active/queued images match receipt and archive pins. Workflow verifies physical PNG structure/size; this reviewer did not visually inspect images."
+    },
+    {
+      "id": "L41",
+      "status": "PASS_EVIDENCE_REVIEW",
+      "name": "Linux helper manifest/selection/receipt/source pins join",
+      "evidence": "Manifest body complete; matching binary SHA, native C source SHA and all 12 link-input records retained. Binary exists in captured ZIP; this reviewer has not executed or independently read the binary."
+    },
+    {
+      "id": "L42",
+      "status": "PASS_EVIDENCE_REVIEW",
+      "name": "Additional binaries, process launcher and native scopes remain unqualified",
+      "evidence": "Node, Electron, Host dist, provider archive and separate process-launcher binary have recorded hashes, not complete binary body review. Separate launcher binary/manifest are not among the 37 ZIP members. No native Claude/Codex auth/inference, packaged app, Darwin/Windows GUI, Stage1 custody or entire Host workflow qualification."
+    },
+    {
+      "id": "L43",
+      "status": "PASS_EVIDENCE_REVIEW",
+      "name": "Review remained data/source-only and does not add a launch gate",
+      "evidence": "Only immutable Git reads and pure data/hash calculations, then this bare report; no shell, source execution, local runtime, CI reads/polls/actions, refs or PR changes. Existing failures and newer source/control gates remain separate."
+    }
+  ],
+  "blockersForThisBoundedEvidenceAcceptance": [],
+  "executionOrMutationByReviewer": {
+    "shell": false,
+    "runtime": false,
+    "nativeProbe": false,
+    "sourceOrControlAuthorship": false,
+    "sourceWrite": false,
+    "refOrPrChange": false,
+    "ciReadOrPoll": false,
+    "ciMutation": false,
+    "bareReviewBlobOnly": true
+  },
+  "selfReadbackProtocol": "Retain exact report; immediately send parent its computed pin; then fetch the complete retained body and confirm literal, bytes, SHA-256, Git identity, parsed structure and checks. No post-retention edits."
+}

@@ -1,0 +1,36 @@
+{
+  "schemaVersion": 1,
+  "verdict": "ACCEPT_EXACT_CONTROL_PUBLICATION_FOR_ONE_FRESH_STANDALONE_ATTEMPT",
+  "bindingSha256": "99ef94654b99dfb0e2fc2e5f1767f3b185b14a73ab5b437ff5a7b405886b4a90",
+  "runner": {
+    "bytes": 25389,
+    "sha256": "da237b7e53a07e47c1625b9b577514a62498fe4816bfa5966c461e5ef4117c9c",
+    "gitBlob": "5e19889942d3e28f215c76f1e55ba81fd12f3ced"
+  },
+  "sourceCommit": "674d32a84644f87544910c28bb4d2a4214958fb5",
+  "sourceActualGate": {
+    "bytes": 5512,
+    "sha256": "6a7448cf1d88673af3c65741c51e2faf07703a99dfee37bf4fccd5383a943bf7",
+    "gitBlob": "be45f8ee4cd349456d196f6cfb1a1038c218c80c"
+  },
+  "scope": "/workspace/scratch/c714-waitread-20261117",
+  "stage": "/workspace/scratch/c714f5bce554/narrow-waitread-controls-20261117",
+  "attemptToken": "c714-waitread-20261117-original-one-shot",
+  "controlParent": "674d32a84644f87544910c28bb4d2a4214958fb5",
+  "controlCommit": "c4fc226201fb32e59d1a8ccfb130922926445747",
+  "controlTree": "dd5a5960c523c25349d2c8a32ef3ee95ba57ab91",
+  "controlDocsTree": "80c4128c877e6ca4fb7eb545025bdb3d64703952",
+  "controlProposal": "3fc2c894069f5a75936ec6379494d4e0df62db1a",
+  "rootActual": {
+    "bytes": 65482,
+    "sha256": "9e0931fb08d50ef3a2c7f3ec24707a791ce479890d26b899b8a073eb822798b4",
+    "gitBlob": "516017b52445cd7c337878f0754a0e121849b24d"
+  },
+  "independentActual": {
+    "bytes": 200533,
+    "sha256": "25f4847a99bf1647b30b782eae9053a6b85cda1013b6b0d28fbae3ff6a7a484a",
+    "gitBlob": "f20c0188402a166dce08b6592e06e311edcc9fe9"
+  },
+  "fullReadbacksAccepted": true,
+  "originalAttemptsStillSpent": true
+}

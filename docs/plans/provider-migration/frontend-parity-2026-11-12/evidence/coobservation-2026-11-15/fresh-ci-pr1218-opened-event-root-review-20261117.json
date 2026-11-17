@@ -1,0 +1,519 @@
+{
+  "schemaVersion": 1,
+  "kind": "root-fresh-ci-opened-event-and-initial-capture-review",
+  "at": "2026-11-17 03:28:26 UTC",
+  "repository": "777genius/agent-teams-ai",
+  "subject": {
+    "bytes": 643663,
+    "sha256": "484f4fba12763c0d56cb0fbb4254a107af55856fb79590843a1342478244ed12",
+    "gitBlob": "e739deca62881c52f7585baec25c51978cfbf731"
+  },
+  "r1": {
+    "bytes": 83960,
+    "sha256": "6ffeef78018e330679aa9a2bc2da5422aca9d2a38fb4c60834959bfd880e6e58",
+    "gitBlob": "7237425e51bda9feb7d0ded4e424fe72745680c1"
+  },
+  "closedActualGate": {
+    "bytes": 3186,
+    "sha256": "ac50077597d03f098f37b864f4d53ae65301c78ee969a823186b610480677a7c",
+    "gitBlob": "082178036bc188dabaeb82d1d2a91e8840f2b13e"
+  },
+  "externalIntent": {
+    "bytes": 6057,
+    "sha256": "5d9e48adca5414b54eef55e7d68eb3353d77cb5dd3c3d660eb5c7f5278ca7315",
+    "gitBlob": "a692320653688e84c8f006c9c7eb883350f16423"
+  },
+  "independentReview": {
+    "bytes": 52251,
+    "sha256": "a0ca78605ab11ede47198647f728fb2486dd054bea906ad4843edb49646e4610",
+    "gitBlob": "453d86519e532122fdc647c2799c22c8374062e6"
+  },
+  "acceptedEventAssociation": true,
+  "acceptedInitialCapture": true,
+  "importantClarification": "The immutable packet contains both the initial list records with empty pull_requests arrays and later exact attempt1 records with explicit PR1218 associations. Root and independent reviewer read and verified all seven direct attempt associations. Unsupported check-suite family reads are retained; no bypass or missing association is asserted.",
+  "checks": [
+    {
+      "name": "complete-initial-packet-identity",
+      "passed": true,
+      "evidence": {
+        "bytes": 643663,
+        "sha256": "484f4fba12763c0d56cb0fbb4254a107af55856fb79590843a1342478244ed12",
+        "gitBlob": "e739deca62881c52f7585baec25c51978cfbf731"
+      }
+    },
+    {
+      "name": "actual-R1-gate-closed",
+      "passed": true,
+      "evidence": {
+        "bytes": 3186,
+        "sha256": "ac50077597d03f098f37b864f4d53ae65301c78ee969a823186b610480677a7c",
+        "gitBlob": "082178036bc188dabaeb82d1d2a91e8840f2b13e"
+      }
+    },
+    {
+      "name": "external-intent-exact-head",
+      "passed": true,
+      "evidence": {
+        "bytes": 6057,
+        "sha256": "5d9e48adca5414b54eef55e7d68eb3353d77cb5dd3c3d660eb5c7f5278ca7315",
+        "gitBlob": "a692320653688e84c8f006c9c7eb883350f16423"
+      }
+    },
+    {
+      "name": "one-shot-counts",
+      "passed": true,
+      "evidence": {
+        "baseRef": 1,
+        "headRef": 1,
+        "openedDraftPr": 1,
+        "rerun": 0,
+        "cancel": 0,
+        "dispatch": 0,
+        "metadataEdit": 0
+      }
+    },
+    {
+      "name": "new-ref:base",
+      "passed": true,
+      "evidence": {
+        "sha": "77993819c233737f1e2b4c11c8ca1a5d360bcbe3",
+        "ref": "ci/frontend-parity-c714-20261117-base"
+      }
+    },
+    {
+      "name": "new-ref:head",
+      "passed": true,
+      "evidence": {
+        "sha": "9c9c73190840592963142d36562ea07d2b5d2d71",
+        "ref": "ci/frontend-parity-c714-20261117-head"
+      }
+    },
+    {
+      "name": "one-actual-draft-pr",
+      "passed": true,
+      "evidence": {
+        "number": 1218,
+        "id": 5349848284,
+        "url": "https://github.com/777genius/agent-teams-ai/pull/1218",
+        "draft": true,
+        "maintainerCanModify": false,
+        "created": "2026-11-17T03:14:27Z"
+      }
+    },
+    {
+      "name": "exact-PR-payload",
+      "passed": true,
+      "evidence": {
+        "title": "test: isolated frontend parity producer fixes and emulated E2E",
+        "bodySha256": "e6109b8eb08a8bed7d7ba756cc6ce8ef870bcb81bcba7d6cabb9f1e3e27e6dc0",
+        "head": "9c9c73190840592963142d36562ea07d2b5d2d71",
+        "base": "77993819c233737f1e2b4c11c8ca1a5d360bcbe3"
+      }
+    },
+    {
+      "name": "merge-tree-and-parents",
+      "passed": true,
+      "evidence": {
+        "sha": "7baf8533f00c4cfa3ef5493753fd6169d5b81247",
+        "tree": "ebd6c383f34c6fd4331b6f0a3da5b90597b5cc1f",
+        "parents": [
+          "77993819c233737f1e2b4c11c8ca1a5d360bcbe3",
+          "9c9c73190840592963142d36562ea07d2b5d2d71"
+        ]
+      }
+    },
+    {
+      "name": "complete-seven-workflow-discovery",
+      "passed": true,
+      "evidence": [
+        44008782844,
+        44008782843,
+        44008782825,
+        44008782909,
+        44008782832,
+        44008782869,
+        44008782932
+      ]
+    },
+    {
+      "name": "direct-attempt-PR:44008782844",
+      "passed": true,
+      "evidence": {
+        "runId": 44008782844,
+        "attempt": 1,
+        "prNumber": 1218,
+        "prId": 5349848284,
+        "head": "9c9c73190840592963142d36562ea07d2b5d2d71",
+        "base": "77993819c233737f1e2b4c11c8ca1a5d360bcbe3",
+        "headRef": "ci/frontend-parity-c714-20261117-head",
+        "baseRef": "ci/frontend-parity-c714-20261117-base",
+        "repositoryId": 1163183284,
+        "source": "Previously captured exact attempt1 raw metadata in packet e739deca; no extra query."
+      }
+    },
+    {
+      "name": "direct-attempt-PR:44008782843",
+      "passed": true,
+      "evidence": {
+        "runId": 44008782843,
+        "attempt": 1,
+        "prNumber": 1218,
+        "prId": 5349848284,
+        "head": "9c9c73190840592963142d36562ea07d2b5d2d71",
+        "base": "77993819c233737f1e2b4c11c8ca1a5d360bcbe3",
+        "headRef": "ci/frontend-parity-c714-20261117-head",
+        "baseRef": "ci/frontend-parity-c714-20261117-base",
+        "repositoryId": 1163183284,
+        "source": "Previously captured exact attempt1 raw metadata in packet e739deca; no extra query."
+      }
+    },
+    {
+      "name": "direct-attempt-PR:44008782825",
+      "passed": true,
+      "evidence": {
+        "runId": 44008782825,
+        "attempt": 1,
+        "prNumber": 1218,
+        "prId": 5349848284,
+        "head": "9c9c73190840592963142d36562ea07d2b5d2d71",
+        "base": "77993819c233737f1e2b4c11c8ca1a5d360bcbe3",
+        "headRef": "ci/frontend-parity-c714-20261117-head",
+        "baseRef": "ci/frontend-parity-c714-20261117-base",
+        "repositoryId": 1163183284,
+        "source": "Previously captured exact attempt1 raw metadata in packet e739deca; no extra query."
+      }
+    },
+    {
+      "name": "direct-attempt-PR:44008782909",
+      "passed": true,
+      "evidence": {
+        "runId": 44008782909,
+        "attempt": 1,
+        "prNumber": 1218,
+        "prId": 5349848284,
+        "head": "9c9c73190840592963142d36562ea07d2b5d2d71",
+        "base": "77993819c233737f1e2b4c11c8ca1a5d360bcbe3",
+        "headRef": "ci/frontend-parity-c714-20261117-head",
+        "baseRef": "ci/frontend-parity-c714-20261117-base",
+        "repositoryId": 1163183284,
+        "source": "Previously captured exact attempt1 raw metadata in packet e739deca; no extra query."
+      }
+    },
+    {
+      "name": "direct-attempt-PR:44008782832",
+      "passed": true,
+      "evidence": {
+        "runId": 44008782832,
+        "attempt": 1,
+        "prNumber": 1218,
+        "prId": 5349848284,
+        "head": "9c9c73190840592963142d36562ea07d2b5d2d71",
+        "base": "77993819c233737f1e2b4c11c8ca1a5d360bcbe3",
+        "headRef": "ci/frontend-parity-c714-20261117-head",
+        "baseRef": "ci/frontend-parity-c714-20261117-base",
+        "repositoryId": 1163183284,
+        "source": "Previously captured exact attempt1 raw metadata in packet e739deca; no extra query."
+      }
+    },
+    {
+      "name": "direct-attempt-PR:44008782869",
+      "passed": true,
+      "evidence": {
+        "runId": 44008782869,
+        "attempt": 1,
+        "prNumber": 1218,
+        "prId": 5349848284,
+        "head": "9c9c73190840592963142d36562ea07d2b5d2d71",
+        "base": "77993819c233737f1e2b4c11c8ca1a5d360bcbe3",
+        "headRef": "ci/frontend-parity-c714-20261117-head",
+        "baseRef": "ci/frontend-parity-c714-20261117-base",
+        "repositoryId": 1163183284,
+        "source": "Previously captured exact attempt1 raw metadata in packet e739deca; no extra query."
+      }
+    },
+    {
+      "name": "direct-attempt-PR:44008782932",
+      "passed": true,
+      "evidence": {
+        "runId": 44008782932,
+        "attempt": 1,
+        "prNumber": 1218,
+        "prId": 5349848284,
+        "head": "9c9c73190840592963142d36562ea07d2b5d2d71",
+        "base": "77993819c233737f1e2b4c11c8ca1a5d360bcbe3",
+        "headRef": "ci/frontend-parity-c714-20261117-head",
+        "baseRef": "ci/frontend-parity-c714-20261117-base",
+        "repositoryId": 1163183284,
+        "source": "Previously captured exact attempt1 raw metadata in packet e739deca; no extra query."
+      }
+    },
+    {
+      "name": "complete-initial-job-pages:44008782844",
+      "passed": true,
+      "evidence": {
+        "jobs": 1,
+        "pages": 1,
+        "attempt": 1
+      }
+    },
+    {
+      "name": "complete-initial-job-pages:44008782843",
+      "passed": true,
+      "evidence": {
+        "jobs": 22,
+        "pages": 1,
+        "attempt": 1
+      }
+    },
+    {
+      "name": "complete-initial-job-pages:44008782825",
+      "passed": true,
+      "evidence": {
+        "jobs": 1,
+        "pages": 1,
+        "attempt": 1
+      }
+    },
+    {
+      "name": "complete-initial-job-pages:44008782909",
+      "passed": true,
+      "evidence": {
+        "jobs": 4,
+        "pages": 1,
+        "attempt": 1
+      }
+    },
+    {
+      "name": "complete-initial-job-pages:44008782832",
+      "passed": true,
+      "evidence": {
+        "jobs": 9,
+        "pages": 1,
+        "attempt": 1
+      }
+    },
+    {
+      "name": "complete-initial-job-pages:44008782869",
+      "passed": true,
+      "evidence": {
+        "jobs": 1,
+        "pages": 1,
+        "attempt": 1
+      }
+    },
+    {
+      "name": "complete-initial-job-pages:44008782932",
+      "passed": true,
+      "evidence": {
+        "jobs": 1,
+        "pages": 1,
+        "attempt": 1
+      }
+    },
+    {
+      "name": "initial39-not-final-count",
+      "passed": true,
+      "evidence": {
+        "jobs": 39,
+        "queued": 34,
+        "skipped": 5,
+        "qualification": "As-of scheduling snapshot only; dependent jobs not yet instantiated."
+      }
+    },
+    {
+      "name": "expected-terminal-draft-skip:44008782825",
+      "passed": true,
+      "evidence": {
+        "runId": 44008782825,
+        "jobId": 133790459544,
+        "classification": "EXPECTED_DRAFT_SKIP",
+        "artifacts": 0
+      }
+    },
+    {
+      "name": "expected-terminal-draft-skip:44008782932",
+      "passed": true,
+      "evidence": {
+        "runId": 44008782932,
+        "jobId": 133790501129,
+        "classification": "EXPECTED_DRAFT_SKIP",
+        "artifacts": 0
+      }
+    },
+    {
+      "name": "independent-event-review-full-join",
+      "passed": true,
+      "evidence": {
+        "bytes": 52251,
+        "sha256": "a0ca78605ab11ede47198647f728fb2486dd054bea906ad4843edb49646e4610",
+        "gitBlob": "453d86519e532122fdc647c2799c22c8374062e6"
+      }
+    },
+    {
+      "name": "no-runtime-success-claimed",
+      "passed": true,
+      "evidence": {
+        "expectedWorkflowSet": 7,
+        "expectedDraftSkippedTerminal": 2,
+        "otherWorkflowsQueuedAtFirstAttemptCapture": 5,
+        "sourceApplicationInCi": "NOT_YET_OBSERVED",
+        "node139": "UNREACHED",
+        "renderer85": "UNREACHED",
+        "desktopE2E": "UNREACHED",
+        "artifactContentsRead": false,
+        "cleanup": "UNREACHED",
+        "wholeE2EQualified": false
+      }
+    }
+  ],
+  "checkCount": 29,
+  "failedChecks": [],
+  "unresolvedPointers": [],
+  "unresolvedAssociationBlockers": [],
+  "snapshotRefMutationCount": 2,
+  "openedDraftPrCount": 1,
+  "newPr": 1218,
+  "head": "9c9c73190840592963142d36562ea07d2b5d2d71",
+  "base": "77993819c233737f1e2b4c11c8ca1a5d360bcbe3",
+  "merge": "7baf8533f00c4cfa3ef5493753fd6169d5b81247",
+  "sourceTree": "ebd6c383f34c6fd4331b6f0a3da5b90597b5cc1f",
+  "selectedRuns": [
+    {
+      "id": 44008782844,
+      "path": ".github/workflows/electron-packaged-ci.yml",
+      "attempt": 1
+    },
+    {
+      "id": 44008782843,
+      "path": ".github/workflows/host-emulated-acceptance.yml",
+      "attempt": 1
+    },
+    {
+      "id": 44008782825,
+      "path": ".github/workflows/codeql.yml",
+      "attempt": 1
+    },
+    {
+      "id": 44008782909,
+      "path": ".github/workflows/ci.yml",
+      "attempt": 1
+    },
+    {
+      "id": 44008782832,
+      "path": ".github/workflows/opencode-v2-stage1-preflight.yml",
+      "attempt": 1
+    },
+    {
+      "id": 44008782869,
+      "path": ".github/workflows/announcements-content.yml",
+      "attempt": 1
+    },
+    {
+      "id": 44008782932,
+      "path": ".github/workflows/opencode-desktop-e2e.yml",
+      "attempt": 1
+    }
+  ],
+  "initialJobTotals": {
+    "jobs": 39,
+    "queued": 34,
+    "skipped": 5
+  },
+  "queuedObservations": {
+    "bytes": 472970,
+    "sha256": "f6e232e64b58b9fceaf7387698b9d4793c719cc0ba9cefd23c5c67f2dd1fafcc",
+    "gitBlob": "ec8bd63b5c49b21a7e017211cfb4cfd7cd0bb75e"
+  },
+  "directAttemptAssociations": [
+    {
+      "runId": 44008782844,
+      "attempt": 1,
+      "prNumber": 1218,
+      "prId": 5349848284,
+      "head": "9c9c73190840592963142d36562ea07d2b5d2d71",
+      "base": "77993819c233737f1e2b4c11c8ca1a5d360bcbe3",
+      "headRef": "ci/frontend-parity-c714-20261117-head",
+      "baseRef": "ci/frontend-parity-c714-20261117-base",
+      "repositoryId": 1163183284,
+      "source": "Previously captured exact attempt1 raw metadata in packet e739deca; no extra query."
+    },
+    {
+      "runId": 44008782843,
+      "attempt": 1,
+      "prNumber": 1218,
+      "prId": 5349848284,
+      "head": "9c9c73190840592963142d36562ea07d2b5d2d71",
+      "base": "77993819c233737f1e2b4c11c8ca1a5d360bcbe3",
+      "headRef": "ci/frontend-parity-c714-20261117-head",
+      "baseRef": "ci/frontend-parity-c714-20261117-base",
+      "repositoryId": 1163183284,
+      "source": "Previously captured exact attempt1 raw metadata in packet e739deca; no extra query."
+    },
+    {
+      "runId": 44008782825,
+      "attempt": 1,
+      "prNumber": 1218,
+      "prId": 5349848284,
+      "head": "9c9c73190840592963142d36562ea07d2b5d2d71",
+      "base": "77993819c233737f1e2b4c11c8ca1a5d360bcbe3",
+      "headRef": "ci/frontend-parity-c714-20261117-head",
+      "baseRef": "ci/frontend-parity-c714-20261117-base",
+      "repositoryId": 1163183284,
+      "source": "Previously captured exact attempt1 raw metadata in packet e739deca; no extra query."
+    },
+    {
+      "runId": 44008782909,
+      "attempt": 1,
+      "prNumber": 1218,
+      "prId": 5349848284,
+      "head": "9c9c73190840592963142d36562ea07d2b5d2d71",
+      "base": "77993819c233737f1e2b4c11c8ca1a5d360bcbe3",
+      "headRef": "ci/frontend-parity-c714-20261117-head",
+      "baseRef": "ci/frontend-parity-c714-20261117-base",
+      "repositoryId": 1163183284,
+      "source": "Previously captured exact attempt1 raw metadata in packet e739deca; no extra query."
+    },
+    {
+      "runId": 44008782832,
+      "attempt": 1,
+      "prNumber": 1218,
+      "prId": 5349848284,
+      "head": "9c9c73190840592963142d36562ea07d2b5d2d71",
+      "base": "77993819c233737f1e2b4c11c8ca1a5d360bcbe3",
+      "headRef": "ci/frontend-parity-c714-20261117-head",
+      "baseRef": "ci/frontend-parity-c714-20261117-base",
+      "repositoryId": 1163183284,
+      "source": "Previously captured exact attempt1 raw metadata in packet e739deca; no extra query."
+    },
+    {
+      "runId": 44008782869,
+      "attempt": 1,
+      "prNumber": 1218,
+      "prId": 5349848284,
+      "head": "9c9c73190840592963142d36562ea07d2b5d2d71",
+      "base": "77993819c233737f1e2b4c11c8ca1a5d360bcbe3",
+      "headRef": "ci/frontend-parity-c714-20261117-head",
+      "baseRef": "ci/frontend-parity-c714-20261117-base",
+      "repositoryId": 1163183284,
+      "source": "Previously captured exact attempt1 raw metadata in packet e739deca; no extra query."
+    },
+    {
+      "runId": 44008782932,
+      "attempt": 1,
+      "prNumber": 1218,
+      "prId": 5349848284,
+      "head": "9c9c73190840592963142d36562ea07d2b5d2d71",
+      "base": "77993819c233737f1e2b4c11c8ca1a5d360bcbe3",
+      "headRef": "ci/frontend-parity-c714-20261117-head",
+      "baseRef": "ci/frontend-parity-c714-20261117-base",
+      "repositoryId": 1163183284,
+      "source": "Previously captured exact attempt1 raw metadata in packet e739deca; no extra query."
+    }
+  ],
+  "allSelectedRunsTerminal": false,
+  "sourceApplicationInCi": "NOT_YET_OBSERVED",
+  "runtimePassClaims": false,
+  "wholeE2EQualified": false,
+  "localMaterializationReplay": false,
+  "disposition": "Existing R1 event and capture association is complete. Continue observing only the five new active runs; the two final Draft skips are fully accounted. No new execution gate, rerun/cancel/dispatch or source/ref/PR mutation is introduced."
+}

@@ -1,0 +1,1157 @@
+{
+  "schemaVersion": 1,
+  "kind": "independent-original-waitread-refusal-and-node-inode-representation-advisory",
+  "reviewer": "/root/red_publication_recovery",
+  "at": "2026-11-17 06:00:38 UTC",
+  "repository": "777genius/agent-teams-ai",
+  "subject": {
+    "bytes": 200440,
+    "sha256": "ab24e85bd89e55d48149f05274176df9fba2e0340b526c1a927242b4ed401bd4",
+    "gitBlob": "30bcf16f731650684a275de4ae4be6cd18b41c4e"
+  },
+  "verdict": "ACCEPT_REFUSAL_ACCOUNTING_AND_EXACT_SIGNED64_REPRESENTATION_DIAGNOSIS",
+  "decision": "The original supervisor was invoked once with the exact admitted controls and refused before source scope creation or any test phase. The inode mismatch is explained by the official Node v24.22.1 signed64 BigIntStats construction. The two retained raw values represent the same64 inode bits. Recommend a narrowly scoped, explicit and range-checked unsigned normalization at the cross-language Node inode comparison in a fresh reviewed scope. This advisory authors no source/control/helper and authorizes no replay.",
+  "sourceCommit": "674d32a84644f87544910c28bb4d2a4214958fb5",
+  "controlCommit": "c4fc226201fb32e59d1a8ccfb130922926445747",
+  "controlProposal": {
+    "bytes": 21995,
+    "sha256": "0dd648c1a839758e864e39b177b15d5fa44bcfcb221e258b0817e5c6da82d431",
+    "gitBlob": "3fc2c894069f5a75936ec6379494d4e0df62db1a"
+  },
+  "runner": {
+    "bytes": 25389,
+    "sha256": "da237b7e53a07e47c1625b9b577514a62498fe4816bfa5966c461e5ef4117c9c",
+    "gitBlob": "5e19889942d3e28f215c76f1e55ba81fd12f3ced"
+  },
+  "binding": {
+    "bytes": 105210,
+    "sha256": "99ef94654b99dfb0e2fc2e5f1767f3b185b14a73ab5b437ff5a7b405886b4a90",
+    "gitBlob": "a206a4432f4e9f77f682b91d340c191826b5f25b"
+  },
+  "sourceActualGate": {
+    "bytes": 5512,
+    "sha256": "6a7448cf1d88673af3c65741c51e2faf07703a99dfee37bf4fccd5383a943bf7",
+    "gitBlob": "be45f8ee4cd349456d196f6cfb1a1038c218c80c"
+  },
+  "rootControlActual": {
+    "bytes": 65482,
+    "sha256": "9e0931fb08d50ef3a2c7f3ec24707a791ce479890d26b899b8a073eb822798b4",
+    "gitBlob": "516017b52445cd7c337878f0754a0e121849b24d"
+  },
+  "independentControlActual": {
+    "bytes": 200533,
+    "sha256": "25f4847a99bf1647b30b782eae9053a6b85cda1013b6b0d28fbae3ff6a7a484a",
+    "gitBlob": "f20c0188402a166dce08b6592e06e311edcc9fe9"
+  },
+  "completePacketRead": {
+    "pin": {
+      "bytes": 200440,
+      "sha256": "ab24e85bd89e55d48149f05274176df9fba2e0340b526c1a927242b4ed401bd4",
+      "gitBlob": "30bcf16f731650684a275de4ae4be6cd18b41c4e"
+    },
+    "wholeBodyRead": true,
+    "wholeHashMatch": true,
+    "bytes": 200440
+  },
+  "admittedData": {
+    "pin": {
+      "bytes": 1583,
+      "sha256": "bdb1d12b8e8539e8200f18ea4f39a9b2e0582324a66f5fd6297694e95d338538",
+      "gitBlob": "8c2c7a2a439b1054972f4a52eb8f88b842274dba"
+    },
+    "fullBody": "{\n  \"schemaVersion\": 1,\n  \"verdict\": \"ACCEPT_EXACT_CONTROL_PUBLICATION_FOR_ONE_FRESH_STANDALONE_ATTEMPT\",\n  \"bindingSha256\": \"99ef94654b99dfb0e2fc2e5f1767f3b185b14a73ab5b437ff5a7b405886b4a90\",\n  \"runner\": {\n    \"bytes\": 25389,\n    \"sha256\": \"da237b7e53a07e47c1625b9b577514a62498fe4816bfa5966c461e5ef4117c9c\",\n    \"gitBlob\": \"5e19889942d3e28f215c76f1e55ba81fd12f3ced\"\n  },\n  \"sourceCommit\": \"674d32a84644f87544910c28bb4d2a4214958fb5\",\n  \"sourceActualGate\": {\n    \"bytes\": 5512,\n    \"sha256\": \"6a7448cf1d88673af3c65741c51e2faf07703a99dfee37bf4fccd5383a943bf7\",\n    \"gitBlob\": \"be45f8ee4cd349456d196f6cfb1a1038c218c80c\"\n  },\n  \"scope\": \"/workspace/scratch/c714-waitread-20261117\",\n  \"stage\": \"/workspace/scratch/c714f5bce554/narrow-waitread-controls-20261117\",\n  \"attemptToken\": \"c714-waitread-20261117-original-one-shot\",\n  \"controlParent\": \"674d32a84644f87544910c28bb4d2a4214958fb5\",\n  \"controlCommit\": \"c4fc226201fb32e59d1a8ccfb130922926445747\",\n  \"controlTree\": \"dd5a5960c523c25349d2c8a32ef3ee95ba57ab91\",\n  \"controlDocsTree\": \"80c4128c877e6ca4fb7eb545025bdb3d64703952\",\n  \"controlProposal\": \"3fc2c894069f5a75936ec6379494d4e0df62db1a\",\n  \"rootActual\": {\n    \"bytes\": 65482,\n    \"sha256\": \"9e0931fb08d50ef3a2c7f3ec24707a791ce479890d26b899b8a073eb822798b4\",\n    \"gitBlob\": \"516017b52445cd7c337878f0754a0e121849b24d\"\n  },\n  \"independentActual\": {\n    \"bytes\": 200533,\n    \"sha256\": \"25f4847a99bf1647b30b782eae9053a6b85cda1013b6b0d28fbae3ff6a7a484a\",\n    \"gitBlob\": \"f20c0188402a166dce08b6592e06e311edcc9fe9\"\n  },\n  \"fullReadbacksAccepted\": true,\n  \"originalAttemptsStillSpent\": true\n}\n",
+    "wholeEmbeddedHashMatched": true,
+    "completePublishedActualPinsJoined": true
+  },
+  "stageCustody": {
+    "operations": [
+      {
+        "file": "waitread-supervisor.cjs",
+        "part": 1,
+        "parts": 1,
+        "fullDecodedPayload": {
+          "bytes": 25389,
+          "sha256": "da237b7e53a07e47c1625b9b577514a62498fe4816bfa5966c461e5ef4117c9c",
+          "gitBlob": "5e19889942d3e28f215c76f1e55ba81fd12f3ced"
+        },
+        "wholeRetainedCommandIdentity": {
+          "bytes": 35066,
+          "sha256": "ab75ad5af1e9937db12da73398824babb87d2c8e4843cc54ba5a0f47372846f9",
+          "gitBlob": "acd58f251ed2c6ce83ee940a49d8f643dae9c4e9"
+        },
+        "originalToolExit": 0,
+        "originalToolChunk": "57acaa",
+        "originalResult": {
+          "path": "/workspace/scratch/c714f5bce554/narrow-waitread-controls-20261117/waitread-supervisor.cjs",
+          "bytes": 25389,
+          "sha256": "da237b7e53a07e47c1625b9b577514a62498fe4816bfa5966c461e5ef4117c9c",
+          "device": "27",
+          "inode": "3335771",
+          "mode": "0o644",
+          "nlink": 1
+        }
+      },
+      {
+        "file": "waitread-binding.json",
+        "part": 1,
+        "parts": 2,
+        "fullDecodedPayload": {
+          "bytes": 60004,
+          "sha256": "f4e6aafe9f3ea77ed60b3770abeea2651b9f916713dc1d8060c4b2f8e1a7b10a",
+          "gitBlob": "fdd86d398bce4039eb90e078133903c25d3944bc"
+        },
+        "wholeRetainedCommandIdentity": {
+          "bytes": 81274,
+          "sha256": "f2bf25111ab94f5debd6429aba6db85dbef54ab3dfcd460234876bce03f6618e",
+          "gitBlob": "83055c32de442baeba80309d37272fe60ddf7cdf"
+        },
+        "originalToolExit": 0,
+        "originalToolChunk": "035c9d",
+        "originalResult": {
+          "path": "/workspace/scratch/c714f5bce554/narrow-waitread-controls-20261117/waitread-binding.json",
+          "bytes": 60004,
+          "sha256": "f4e6aafe9f3ea77ed60b3770abeea2651b9f916713dc1d8060c4b2f8e1a7b10a",
+          "device": "27",
+          "inode": "3335772",
+          "mode": "0o644",
+          "nlink": 1
+        }
+      },
+      {
+        "file": "waitread-binding.json",
+        "part": 2,
+        "parts": 2,
+        "fullDecodedPayload": {
+          "bytes": 45206,
+          "sha256": "e7172daf8c359a389d6f6633b6b8e93f41a42090a123f03e713cfc5bc2cd453f",
+          "gitBlob": "cc559a24f60425991fc54f3c8488cd13547f1e0c"
+        },
+        "wholeRetainedCommandIdentity": {
+          "bytes": 61792,
+          "sha256": "fe157c7374ea53f1318f8d21d2634e1a121997680c0dcae5a3f1e5fd4984fb20",
+          "gitBlob": "c8c3312c60634dbae129452318f96edabf7b2230"
+        },
+        "originalToolExit": 0,
+        "originalToolChunk": "d20c90",
+        "originalResult": {
+          "path": "/workspace/scratch/c714f5bce554/narrow-waitread-controls-20261117/waitread-binding.json",
+          "bytes": 105210,
+          "sha256": "99ef94654b99dfb0e2fc2e5f1767f3b185b14a73ab5b437ff5a7b405886b4a90",
+          "device": "27",
+          "inode": "3335772",
+          "mode": "0o644",
+          "nlink": 1
+        }
+      },
+      {
+        "file": "execution-admission.json",
+        "part": 1,
+        "parts": 1,
+        "fullDecodedPayload": {
+          "bytes": 1583,
+          "sha256": "bdb1d12b8e8539e8200f18ea4f39a9b2e0582324a66f5fd6297694e95d338538",
+          "gitBlob": "8c2c7a2a439b1054972f4a52eb8f88b842274dba"
+        },
+        "wholeRetainedCommandIdentity": {
+          "bytes": 3380,
+          "sha256": "720b757ff488ed522c33c68b80300a953d116be58bec7f06b25bccb86dac68d6",
+          "gitBlob": "cde1fb2be6adef420b96938d589e19d1d477f7f2"
+        },
+        "originalToolExit": 0,
+        "originalToolChunk": "1487d5",
+        "originalResult": {
+          "path": "/workspace/scratch/c714f5bce554/narrow-waitread-controls-20261117/execution-admission.json",
+          "bytes": 1583,
+          "sha256": "bdb1d12b8e8539e8200f18ea4f39a9b2e0582324a66f5fd6297694e95d338538",
+          "device": "27",
+          "inode": "3335773",
+          "mode": "0o644",
+          "nlink": 1
+        }
+      }
+    ],
+    "wholeEncodedPayloadsReadAndReconstructed": true,
+    "joins": {
+      "runnerLiteralEqual": true,
+      "bindingLiteralEqual": true,
+      "admissionLiteralEqual": true,
+      "bindingPin": {
+        "bytes": 105210,
+        "sha256": "99ef94654b99dfb0e2fc2e5f1767f3b185b14a73ab5b437ff5a7b405886b4a90",
+        "gitBlob": "a206a4432f4e9f77f682b91d340c191826b5f25b"
+      },
+      "admissionPin": {
+        "bytes": 1583,
+        "sha256": "bdb1d12b8e8539e8200f18ea4f39a9b2e0582324a66f5fd6297694e95d338538",
+        "gitBlob": "8c2c7a2a439b1054972f4a52eb8f88b842274dba"
+      }
+    },
+    "exclusiveCreationCount": 3,
+    "stageDirectoryCreatedOnce": true,
+    "bindingAppendCount": 1,
+    "bindingOriginalDevice": "27",
+    "bindingOriginalInode": "3335772",
+    "appendPriorFullHashChecked": true,
+    "preStage": {
+      "node": {
+        "path": "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+        "realpath": "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+        "bytes": 126939688,
+        "sha256": "61ab14cd750fc24d5db53490ec5fc40f756e4b6e136b78cf7004265471d9bd1d",
+        "device": "27",
+        "inode": "9223372036854818252",
+        "uid": "65534",
+        "gid": "65534",
+        "mode": "0o755",
+        "mtimeNs": "1794515386000000000",
+        "ctimeNs": "1794515386000000000"
+      },
+      "scopeAbsent": true,
+      "stageAbsent": true,
+      "scopeParentRealpath": "/workspace/scratch",
+      "stageParentRealpath": "/workspace/scratch/c714f5bce554"
+    },
+    "completeBefore": {
+      "files": [
+        {
+          "path": "/workspace/scratch/c714f5bce554/narrow-waitread-controls-20261117/waitread-supervisor.cjs",
+          "bytes": 25389,
+          "sha256": "da237b7e53a07e47c1625b9b577514a62498fe4816bfa5966c461e5ef4117c9c",
+          "gitBlob": "5e19889942d3e28f215c76f1e55ba81fd12f3ced",
+          "device": "27",
+          "inode": "3335771",
+          "mode": "0o644",
+          "mtimeNs": "1794894449695558701",
+          "ctimeNs": "1794894449695558701"
+        },
+        {
+          "path": "/workspace/scratch/c714f5bce554/narrow-waitread-controls-20261117/waitread-binding.json",
+          "bytes": 105210,
+          "sha256": "99ef94654b99dfb0e2fc2e5f1767f3b185b14a73ab5b437ff5a7b405886b4a90",
+          "gitBlob": "a206a4432f4e9f77f682b91d340c191826b5f25b",
+          "device": "27",
+          "inode": "3335772",
+          "mode": "0o644",
+          "mtimeNs": "1794894450911543059",
+          "ctimeNs": "1794894450911543059"
+        },
+        {
+          "path": "/workspace/scratch/c714f5bce554/narrow-waitread-controls-20261117/execution-admission.json",
+          "bytes": 1583,
+          "sha256": "bdb1d12b8e8539e8200f18ea4f39a9b2e0582324a66f5fd6297694e95d338538",
+          "gitBlob": "8c2c7a2a439b1054972f4a52eb8f88b842274dba",
+          "device": "27",
+          "inode": "3335773",
+          "mode": "0o644",
+          "mtimeNs": "1794894451379537038",
+          "ctimeNs": "1794894451379537038"
+        }
+      ],
+      "scopeAbsent": true,
+      "nodeSha256": "61ab14cd750fc24d5db53490ec5fc40f756e4b6e136b78cf7004265471d9bd1d",
+      "stageDirectoryMode": "0o755"
+    },
+    "completeAfter": {
+      "scopeAbsent": true,
+      "controlFiles": [
+        {
+          "path": "/workspace/scratch/c714f5bce554/narrow-waitread-controls-20261117/execution-admission.json",
+          "bytes": 1583,
+          "sha256": "bdb1d12b8e8539e8200f18ea4f39a9b2e0582324a66f5fd6297694e95d338538",
+          "gitBlob": "8c2c7a2a439b1054972f4a52eb8f88b842274dba",
+          "device": "27",
+          "inode": "3335773",
+          "mode": "0o644",
+          "mtimeNs": "1794894451379537038",
+          "ctimeNs": "1794894451379537038"
+        },
+        {
+          "path": "/workspace/scratch/c714f5bce554/narrow-waitread-controls-20261117/waitread-binding.json",
+          "bytes": 105210,
+          "sha256": "99ef94654b99dfb0e2fc2e5f1767f3b185b14a73ab5b437ff5a7b405886b4a90",
+          "gitBlob": "a206a4432f4e9f77f682b91d340c191826b5f25b",
+          "device": "27",
+          "inode": "3335772",
+          "mode": "0o644",
+          "mtimeNs": "1794894450911543059",
+          "ctimeNs": "1794894450911543059"
+        },
+        {
+          "path": "/workspace/scratch/c714f5bce554/narrow-waitread-controls-20261117/waitread-supervisor.cjs",
+          "bytes": 25389,
+          "sha256": "da237b7e53a07e47c1625b9b577514a62498fe4816bfa5966c461e5ef4117c9c",
+          "gitBlob": "5e19889942d3e28f215c76f1e55ba81fd12f3ced",
+          "device": "27",
+          "inode": "3335771",
+          "mode": "0o644",
+          "mtimeNs": "1794894449695558701",
+          "ctimeNs": "1794894449695558701"
+        }
+      ],
+      "node": {
+        "path": "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+        "realpath": "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+        "bytes": 126939688,
+        "sha256": "61ab14cd750fc24d5db53490ec5fc40f756e4b6e136b78cf7004265471d9bd1d",
+        "device": "27",
+        "inode": "9223372036854818252",
+        "uid": "65534",
+        "gid": "65534",
+        "mode": "0o755",
+        "mtimeNs": "1794515386000000000",
+        "ctimeNs": "1794515386000000000"
+      }
+    },
+    "threeFilesPathSortedLiteralMetadataEqual": true,
+    "stageIsSpentAndPreserved": true,
+    "qualification": "Four original data-only staging operations are read as evidence, not executed. The binding has two original transfer chunks. The sole append retains its original inode and validates the first complete chunk before appending."
+  },
+  "originalInvocation": {
+    "at": "2026-11-17 05:47:31 UTC",
+    "command": "exec -c /opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node /workspace/scratch/c714f5bce554/narrow-waitread-controls-20261117/waitread-supervisor.cjs 99ef94654b99dfb0e2fc2e5f1767f3b185b14a73ab5b437ff5a7b405886b4a90 bdb1d12b8e8539e8200f18ea4f39a9b2e0582324a66f5fd6297694e95d338538",
+    "outerExitCode": 1,
+    "originalToolChunk": "a34dfa",
+    "completeToolOutputIdentity": {
+      "bytes": 2824,
+      "sha256": "79a38120fe58253dbad11517782e7a24f5be69294938d98c263b8606a99798a5",
+      "gitBlob": "4e630944ba326d8c470fd35a28a03e85ba641f8a"
+    },
+    "completeOutputEqualsParsed": true,
+    "parsedResult": {
+      "status": "REFUSED_BEFORE_SCOPE_ADMISSION_SPENT",
+      "receipt": null,
+      "phases": [],
+      "error": "AssertionError [ERR_ASSERTION]: Node inode\n+ actual - expected\n\n+ '-9223372036854733364'\n- '9223372036854818252'\n\n    at exactNode (/workspace/scratch/c714f5bce554/narrow-waitread-controls-20261117/waitread-supervisor.cjs:72:12)\n    at main (/workspace/scratch/c714f5bce554/narrow-waitread-controls-20261117/waitread-supervisor.cjs:342:47)\n    at Object.<anonymous> (/workspace/scratch/c714f5bce554/narrow-waitread-controls-20261117/waitread-supervisor.cjs:400:1)\n    at Module._compile (node:internal/modules/cjs/loader:1929:14)\n    at Object..js (node:internal/modules/cjs/loader:2060:10)\n    at Module.load (node:internal/modules/cjs/loader:1651:32)\n    at Module._load (node:internal/modules/cjs/loader:1443:12)\n    at wrapModuleLoad (node:internal/modules/cjs/loader:261:19)\n    at Module.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:154:5)\n    at node:internal/main/run_main_module:33:47",
+      "refusal": {
+        "schemaVersion": 1,
+        "kind": "TEST-standalone-waitread-original-attempt",
+        "status": "REFUSED_BEFORE_SCOPE_ADMISSION_SPENT",
+        "phases": [],
+        "attemptSpent": true,
+        "runtimeQualified": false,
+        "whole149Qualified": false,
+        "catalog43Qualified": false,
+        "renderer85Qualified": false,
+        "wholeE2EQualified": false,
+        "binding": {
+          "bytes": 105210,
+          "sha256": "99ef94654b99dfb0e2fc2e5f1767f3b185b14a73ab5b437ff5a7b405886b4a90",
+          "gitBlob": "a206a4432f4e9f77f682b91d340c191826b5f25b"
+        },
+        "admission": {
+          "bytes": 1583,
+          "sha256": "bdb1d12b8e8539e8200f18ea4f39a9b2e0582324a66f5fd6297694e95d338538",
+          "gitBlob": "8c2c7a2a439b1054972f4a52eb8f88b842274dba"
+        },
+        "sourceCommit": "674d32a84644f87544910c28bb4d2a4214958fb5",
+        "controlCommit": "c4fc226201fb32e59d1a8ccfb130922926445747",
+        "scope": "/workspace/scratch/c714-waitread-20261117",
+        "error": "AssertionError [ERR_ASSERTION]: Node inode\n+ actual - expected\n\n+ '-9223372036854733364'\n- '9223372036854818252'\n\n    at exactNode (/workspace/scratch/c714f5bce554/narrow-waitread-controls-20261117/waitread-supervisor.cjs:72:12)\n    at main (/workspace/scratch/c714f5bce554/narrow-waitread-controls-20261117/waitread-supervisor.cjs:342:47)\n    at Object.<anonymous> (/workspace/scratch/c714f5bce554/narrow-waitread-controls-20261117/waitread-supervisor.cjs:400:1)\n    at Module._compile (node:internal/modules/cjs/loader:1929:14)\n    at Object..js (node:internal/modules/cjs/loader:2060:10)\n    at Module.load (node:internal/modules/cjs/loader:1651:32)\n    at Module._load (node:internal/modules/cjs/loader:1443:12)\n    at wrapModuleLoad (node:internal/modules/cjs/loader:261:19)\n    at Module.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:154:5)\n    at node:internal/main/run_main_module:33:47",
+        "finishedAt": "2026-11-17T05:47:32.105Z",
+        "interrupted": null,
+        "supervisorElapsedMs": 16.488356
+      }
+    },
+    "scopeCreationReached": false,
+    "sourceWritesReached": false,
+    "testChildSpawnReached": false,
+    "phaseCount": 0,
+    "testCaseCount": 0
+  },
+  "refusalControlFlow": {
+    "runnerIdentity": {
+      "bytes": 25389,
+      "sha256": "da237b7e53a07e47c1625b9b577514a62498fe4816bfa5966c461e5ef4117c9c",
+      "gitBlob": "5e19889942d3e28f215c76f1e55ba81fd12f3ced"
+    },
+    "rawMetadataSource": "metadata uses fs.lstatSync with bigint:true and retains String(s.ino).",
+    "inodeComparisonLine": 72,
+    "initialExactNodeCallLine": 342,
+    "exclusiveScopeCreationLine": 350,
+    "firstSourceWriteLine": 360,
+    "firstPhaseCallLine": 367,
+    "originalCatchLines": "400-423",
+    "qualification": "The initial Node inode comparison throws before its later uid/gid/timestamp comparisons, byte-count and digest checks. Thus the supervisor did not admit complete Node identity. Its own nodeBefore result is absent. External complete pre/post Node metadata and full SHA256 are separately retained and unchanged. The observed original supervisor exit is1; no test child or group was created on this path."
+  },
+  "nodeRepresentation": {
+    "observed": {
+      "signed": "-9223372036854733364",
+      "unsigned": "9223372036854818252",
+      "modulus": "18446744073709551616",
+      "sum": "9223372036854818252",
+      "same64Bits": true,
+      "signedInRange": true,
+      "unsignedInRange": true,
+      "normalized": "9223372036854818252",
+      "roundtrip": "-9223372036854733364",
+      "unsignedHex": "800000000000a5cc",
+      "dataOnly": true
+    },
+    "rawValuesPreserved": true,
+    "interpretation": "The negative Node value is the signed interpretation of the same high-bit-set64-bit inode represented positively by the retained Python metadata. It is not a floating-point rounding difference and does not require changing the unsigned inode pin or the Node binary.",
+    "exactBitsHex": "800000000000a5cc",
+    "causalStatus": "Supported by complete pinned upstream construction path and the original observed runtime failure; no additional runtime probe or rebuild was performed."
+  },
+  "primaryNodeSource": {
+    "repository": "nodejs/node",
+    "releaseTag": "v24.22.1",
+    "tagObject": "d01285110044365f0ad4fec24482a585646640e2",
+    "releaseCommit": "ce7aaf1cee78b8cf0ce17364260535c418d3ed26",
+    "githubReportedTagSignatureVerified": true,
+    "files": [
+      {
+        "repository": "nodejs/node",
+        "ref": "v24.22.1",
+        "path": "lib/internal/fs/utils.js",
+        "pin": {
+          "bytes": 28625,
+          "sha256": "f4db2e1dc91477d5859e944c92c9df74166716b09a6596a003154f5a0ade0954",
+          "gitBlob": "b2b773fe58f88a2d4ecb0e6bca41d1916ebb5c4b"
+        },
+        "providerGitBlob": "b2b773fe58f88a2d4ecb0e6bca41d1916ebb5c4b",
+        "providerGitIdentityMatched": true,
+        "url": "https://github.com/nodejs/node/blob/v24.22.1/lib/internal/fs/utils.js",
+        "releaseCommit": "ce7aaf1cee78b8cf0ce17364260535c418d3ed26",
+        "immutableUrl": "https://github.com/nodejs/node/blob/ce7aaf1cee78b8cf0ce17364260535c418d3ed26/lib/internal/fs/utils.js"
+      },
+      {
+        "repository": "nodejs/node",
+        "ref": "v24.22.1",
+        "path": "lib/fs.js",
+        "pin": {
+          "bytes": 91862,
+          "sha256": "b0cf8dc9859b7c4a8cacd45234fa121cbe9e334aef11225b00d596e228b0785e",
+          "gitBlob": "3801843e59a2e3b241556893d0e13c7bddf3dff4"
+        },
+        "providerGitBlob": "3801843e59a2e3b241556893d0e13c7bddf3dff4",
+        "providerGitIdentityMatched": true,
+        "url": "https://github.com/nodejs/node/blob/v24.22.1/lib/fs.js",
+        "releaseCommit": "ce7aaf1cee78b8cf0ce17364260535c418d3ed26",
+        "immutableUrl": "https://github.com/nodejs/node/blob/ce7aaf1cee78b8cf0ce17364260535c418d3ed26/lib/fs.js"
+      },
+      {
+        "repository": "nodejs/node",
+        "ref": "v24.22.1",
+        "path": "src/node_file.cc",
+        "pin": {
+          "bytes": 151818,
+          "sha256": "de02404246451e6c870aeea7d09cfbf89941dc208b28ef84755545407cabbffa",
+          "gitBlob": "acb9e9d669835a5433a47a531b79c3609070d9a0"
+        },
+        "providerGitBlob": "acb9e9d669835a5433a47a531b79c3609070d9a0",
+        "providerGitIdentityMatched": true,
+        "url": "https://github.com/nodejs/node/blob/v24.22.1/src/node_file.cc",
+        "releaseCommit": "ce7aaf1cee78b8cf0ce17364260535c418d3ed26",
+        "immutableUrl": "https://github.com/nodejs/node/blob/ce7aaf1cee78b8cf0ce17364260535c418d3ed26/src/node_file.cc"
+      },
+      {
+        "repository": "nodejs/node",
+        "ref": "v24.22.1",
+        "path": "src/node_file.h",
+        "pin": {
+          "bytes": 18117,
+          "sha256": "0a5bc99e3c1fb101e9a34caff10decf47530e6f20aea687c29416331b56a96e3",
+          "gitBlob": "fab01a4c17b8083d2d8178d14f4d77be4f035bb7"
+        },
+        "providerGitBlob": "fab01a4c17b8083d2d8178d14f4d77be4f035bb7",
+        "providerGitIdentityMatched": true,
+        "url": "https://github.com/nodejs/node/blob/v24.22.1/src/node_file.h",
+        "releaseCommit": "ce7aaf1cee78b8cf0ce17364260535c418d3ed26",
+        "immutableUrl": "https://github.com/nodejs/node/blob/ce7aaf1cee78b8cf0ce17364260535c418d3ed26/src/node_file.h"
+      },
+      {
+        "repository": "nodejs/node",
+        "ref": "v24.22.1",
+        "path": "deps/uv/include/uv.h",
+        "pin": {
+          "bytes": 73038,
+          "sha256": "bb9ed99b80cd22c58361bffdfbb2aa7029ce0391cde616745c0072a6f3c03219",
+          "gitBlob": "da06345557bb6c1e8c5f82547dcc2a13c431760d"
+        },
+        "providerGitBlob": "da06345557bb6c1e8c5f82547dcc2a13c431760d",
+        "providerGitIdentityMatched": true,
+        "url": "https://github.com/nodejs/node/blob/v24.22.1/deps/uv/include/uv.h",
+        "releaseCommit": "ce7aaf1cee78b8cf0ce17364260535c418d3ed26",
+        "immutableUrl": "https://github.com/nodejs/node/blob/ce7aaf1cee78b8cf0ce17364260535c418d3ed26/deps/uv/include/uv.h"
+      },
+      {
+        "repository": "nodejs/node",
+        "ref": "v24.22.1",
+        "path": "src/aliased_buffer.h",
+        "pin": {
+          "bytes": 6393,
+          "sha256": "f5aec5e5b138e4ef31f0ce223eb10a0fbd0a39ea57615c8ca6bd137bf4a9157e",
+          "gitBlob": "8e988bcb010d1057ab21f911a50515c2ac70e498"
+        },
+        "providerGitBlob": "8e988bcb010d1057ab21f911a50515c2ac70e498",
+        "providerGitIdentityMatched": true,
+        "url": "https://github.com/nodejs/node/blob/v24.22.1/src/aliased_buffer.h",
+        "releaseCommit": "ce7aaf1cee78b8cf0ce17364260535c418d3ed26",
+        "immutableUrl": "https://github.com/nodejs/node/blob/ce7aaf1cee78b8cf0ce17364260535c418d3ed26/src/aliased_buffer.h"
+      },
+      {
+        "repository": "nodejs/node",
+        "ref": "v24.22.1",
+        "path": "src/node_file-inl.h",
+        "pin": {
+          "bytes": 15013,
+          "sha256": "24bc4e96b939708ae9d6d60206debbcd4c3c92ce2190e11d25b8bf9ab06d3ab1",
+          "gitBlob": "ebd97c1c8c525142216b356ce1ca2feb095800d2"
+        },
+        "providerGitBlob": "ebd97c1c8c525142216b356ce1ca2feb095800d2",
+        "providerGitIdentityMatched": true,
+        "url": "https://github.com/nodejs/node/blob/v24.22.1/src/node_file-inl.h",
+        "releaseCommit": "ce7aaf1cee78b8cf0ce17364260535c418d3ed26",
+        "immutableUrl": "https://github.com/nodejs/node/blob/ce7aaf1cee78b8cf0ce17364260535c418d3ed26/src/node_file-inl.h"
+      },
+      {
+        "repository": "nodejs/node",
+        "ref": "v24.22.1",
+        "path": "src/aliased_buffer-inl.h",
+        "pin": {
+          "bytes": 7954,
+          "sha256": "7f503c60ab4ae93c492e1926c888c4e1fe89ae5bab80510eced151108556bd4c",
+          "gitBlob": "da2c45321f6d38f9f01afc6b46f97550a72c031f"
+        },
+        "providerGitBlob": "da2c45321f6d38f9f01afc6b46f97550a72c031f",
+        "providerGitIdentityMatched": true,
+        "url": "https://github.com/nodejs/node/blob/v24.22.1/src/aliased_buffer-inl.h",
+        "releaseCommit": "ce7aaf1cee78b8cf0ce17364260535c418d3ed26",
+        "immutableUrl": "https://github.com/nodejs/node/blob/ce7aaf1cee78b8cf0ce17364260535c418d3ed26/src/aliased_buffer-inl.h"
+      },
+      {
+        "repository": "nodejs/node",
+        "ref": "v24.22.1",
+        "path": "deps/uv/src/unix/fs.c",
+        "pin": {
+          "bytes": 59954,
+          "sha256": "895d46c60b30e12249ed6a6696a184fcc594fccaefb008ddb3a3b6a694f0388b",
+          "gitBlob": "90cb40d98d47ab31de509db32eb9a9222d7aced6"
+        },
+        "providerGitBlob": "90cb40d98d47ab31de509db32eb9a9222d7aced6",
+        "providerGitIdentityMatched": true,
+        "url": "https://github.com/nodejs/node/blob/v24.22.1/deps/uv/src/unix/fs.c",
+        "releaseCommit": "ce7aaf1cee78b8cf0ce17364260535c418d3ed26",
+        "immutableUrl": "https://github.com/nodejs/node/blob/ce7aaf1cee78b8cf0ce17364260535c418d3ed26/deps/uv/src/unix/fs.c"
+      },
+      {
+        "repository": "nodejs/node",
+        "ref": "v24.22.1",
+        "path": "deps/uv/src/unix/linux.c",
+        "pin": {
+          "bytes": 73200,
+          "sha256": "215185d94697e05cd75ba9466bb9ea93076769a7767218d4183eaf0723ccf2d2",
+          "gitBlob": "110964884ddc04c9c373c429720f83e3c18566ed"
+        },
+        "providerGitBlob": "110964884ddc04c9c373c429720f83e3c18566ed",
+        "providerGitIdentityMatched": true,
+        "url": "https://github.com/nodejs/node/blob/v24.22.1/deps/uv/src/unix/linux.c",
+        "releaseCommit": "ce7aaf1cee78b8cf0ce17364260535c418d3ed26",
+        "immutableUrl": "https://github.com/nodejs/node/blob/ce7aaf1cee78b8cf0ce17364260535c418d3ed26/deps/uv/src/unix/linux.c"
+      }
+    ],
+    "completeFileCount": 10,
+    "completeBytes": 525974,
+    "allProviderGitBlobIdentitiesMatched": true,
+    "sourceFacts": [
+      {
+        "location": "deps/uv/include/uv.h:383-401",
+        "meaning": "uv_stat_t declares st_ino as uint64_t."
+      },
+      {
+        "location": "deps/uv/src/unix/fs.c:1432-1443;1588-1600",
+        "meaning": "The Unix fallback copies the native stat inode directly into uv_stat_t after lstat."
+      },
+      {
+        "location": "deps/uv/src/unix/linux.c:1120-1130",
+        "meaning": "The Linux statx path directly copies stx_ino into the same unsigned field."
+      },
+      {
+        "location": "lib/fs.js:1764-1780; src/node_file.cc:1200-1248",
+        "meaning": "lstatSync passes the bigint option into the native binding; synchronous LStat obtains uv_stat_t and calls FillGlobalStatsArray."
+      },
+      {
+        "location": "src/node_file.h:78-79; src/aliased_buffer.h:195-199",
+        "meaning": "The bigint stats buffer is AliasedBigInt64Array, whose native element type is int64_t and JavaScript view is BigInt64Array."
+      },
+      {
+        "location": "src/node_file-inl.h:89-91;113;130-143; src/aliased_buffer-inl.h:154-158",
+        "meaning": "FillStatsArray casts each stat field to NativeT, including st_ino, and stores that signed int64_t value. The bigint branch returns the signed JavaScript array view."
+      },
+      {
+        "location": "lib/internal/fs/utils.js:381-390;495-498;550-560",
+        "meaning": "getStatsFromBinding reads index7 from BigInt64Array, passes it to BigIntStats, and StatsBase assigns it directly to this.ino. There is no unsigned correction on this path."
+      }
+    ]
+  },
+  "officialDocumentation": [
+    {
+      "url": "https://nodejs.org/download/release/v24.22.1/docs/api/fs.html#class-fsstats",
+      "meaning": "bigint:true makes numeric fs.Stats values BigInt and adds nanosecond properties; the docs alone do not promise unsigned inode representation."
+    },
+    {
+      "url": "https://nodejs.org/download/release/v24.22.1/docs/api/fs.html#statsino",
+      "meaning": "stats.ino is the filesystem-specific inode number, with number or bigint type."
+    },
+    {
+      "url": "https://tc39.es/ecma262/multipage/indexed-collections.html#table-the-typedarray-constructors",
+      "meaning": "BigInt64Array uses64-bit two's-complement signed integer elements."
+    },
+    {
+      "url": "https://tc39.es/ecma262/multipage/numbers-and-dates.html#sec-bigint.asuintn",
+      "meaning": "BigInt.asUintN returns the argument modulo2 raised to the requested bit width."
+    },
+    {
+      "url": "https://tc39.es/ecma262/multipage/numbers-and-dates.html#sec-bigint.asintn",
+      "meaning": "BigInt.asIntN converts the residue to the corresponding signed range; this is the exact inverse on the validated64-bit domains."
+    }
+  ],
+  "recommendedMinimalRule": {
+    "scope": "Only the cross-language Node inode equality against the unsigned Python-derived immutable binding pin. Preserve generic metadata's raw inode and existing same-runtime before/after comparisons.",
+    "expectedPinUnchanged": "9223372036854818252",
+    "rawSignedObserved": "-9223372036854733364",
+    "inputRepresentation": "Exact canonical decimal strings parsed as BigInt, never Number; retain the original raw Node decimal separately.",
+    "rawDomain": "Require -2^63 <= rawNodeInode < 2^63 for this pinned Node signed64 path.",
+    "expectedDomain": "Require 0 <= expectedUnsignedInode < 2^64.",
+    "normalization": "For an in-range signed raw value, leave nonnegative values unchanged and add18446744073709551616 exactly once to negative values. This is BigInt.asUintN at width64, applied only after validating the domains.",
+    "comparison": "Require the resulting canonical unsigned64 inode to equal the unchanged exact expected pin. Keep the signed raw value and the canonical unsigned value together in retained Node identity evidence.",
+    "inverse": "The corresponding signed64 interpretation of the expected unsigned pin must be the exact raw value; the arithmetic already holds for this refusal.",
+    "preservation": "Keep the exact Node path, realpath, no-symlink and regular-file requirements, mode0755, device27, exact full byte count126939688, SHA25661ab14cd750fc24d5db53490ec5fc40f756e4b6e136b78cf7004265471d9bd1d, uid/gid, mtimeNs and ctimeNs comparisons unchanged. Preserve all per-phase and outer identity checks.",
+    "noInformationLoss": "On the checked signed64 domain the mapping is a bijection onto unsigned64. The nonnegative half maps to the lower half and the negative half maps to the upper half. No two admitted raw values collide, and all64 inode bits are checked.",
+    "reject": "Reject noncanonical or out-of-range input, mismatch of normalized inode, or any other identity mismatch. Do not apply modulo to arbitrary-width integers without range validation, use absolute value, round through Number, rewrite the pin from a fresh observation, omit inode, or normalize unrelated signed timestamps.",
+    "unchangedOtherScope": "No changes to test/source bodies, package, phase inventories, budgets, original process ownership/cleanup, raw output evidence or broader qualification. No Node substitution, extra version invocation, or new exploratory process is needed for this source diagnosis.",
+    "codeAuthored": false,
+    "implementationSelected": false
+  },
+  "spentAndQualification": {
+    "originalAttemptSpent": true,
+    "oldStageSpent": true,
+    "replayAllowed": false,
+    "oldScopeMayBeReused": false,
+    "scopeCurrentlyRecordedAbsent": true,
+    "redObserved": false,
+    "greenObserved": false,
+    "whole149": false,
+    "catalog43": false,
+    "renderer85": false,
+    "canonicalValidation": false,
+    "wholeE2E": false,
+    "freshScopeRequirement": "A fresh narrowly reviewed R1/control scope is required before any corrected original attempt. Retain the old refusal and stage; no same-attempt retry is selected. This is the existing task's fresh-scope requirement, not an added approval flow."
+  },
+  "limitations": [
+    "The reviewer did not execute Node, Python, target source, supervisor or any staged command; Base64 decoding, hashing, JSON joins and exact integer arithmetic were data-only.",
+    "Full Node binary metadata/hash are original retained observations. No independent source-to-binary reproducible build or runtime source probe is claimed.",
+    "The complete packet supports this original refusal and absence of test execution. No new filesystem/proc census or live CI query was performed.",
+    "Public Node sources were fully read through the GitHub connector because the web renderer did not open GitHub source pages. Official Node API and ECMAScript specification pages were browsed directly.",
+    "This advisory does not accept a future executable postimage or authorize staging/execution."
+  ],
+  "checks": [
+    {
+      "name": "Whole refusal packet identity",
+      "result": "PASS_EVIDENCE_OR_STATIC",
+      "evidence": {
+        "pin": {
+          "bytes": 200440,
+          "sha256": "ab24e85bd89e55d48149f05274176df9fba2e0340b526c1a927242b4ed401bd4",
+          "gitBlob": "30bcf16f731650684a275de4ae4be6cd18b41c4e"
+        },
+        "fullBodyRead": true
+      }
+    },
+    {
+      "name": "Exact source and controls match accepted actual publication",
+      "result": "PASS_EVIDENCE_OR_STATIC",
+      "evidence": {
+        "sourceCommit": "674d32a84644f87544910c28bb4d2a4214958fb5",
+        "controlCommit": "c4fc226201fb32e59d1a8ccfb130922926445747",
+        "subject": {
+          "bytes": 21995,
+          "sha256": "0dd648c1a839758e864e39b177b15d5fa44bcfcb221e258b0817e5c6da82d431",
+          "gitBlob": "3fc2c894069f5a75936ec6379494d4e0df62db1a"
+        },
+        "runner": {
+          "bytes": 25389,
+          "sha256": "da237b7e53a07e47c1625b9b577514a62498fe4816bfa5966c461e5ef4117c9c",
+          "gitBlob": "5e19889942d3e28f215c76f1e55ba81fd12f3ced"
+        },
+        "binding": {
+          "bytes": 105210,
+          "sha256": "99ef94654b99dfb0e2fc2e5f1767f3b185b14a73ab5b437ff5a7b405886b4a90",
+          "gitBlob": "a206a4432f4e9f77f682b91d340c191826b5f25b"
+        }
+      }
+    },
+    {
+      "name": "Source gate and actual review references match complete accepted bodies",
+      "result": "PASS_EVIDENCE_OR_STATIC",
+      "evidence": {
+        "sourceGate": {
+          "bytes": 5512,
+          "sha256": "6a7448cf1d88673af3c65741c51e2faf07703a99dfee37bf4fccd5383a943bf7",
+          "gitBlob": "be45f8ee4cd349456d196f6cfb1a1038c218c80c"
+        },
+        "root": {
+          "bytes": 65482,
+          "sha256": "9e0931fb08d50ef3a2c7f3ec24707a791ce479890d26b899b8a073eb822798b4",
+          "gitBlob": "516017b52445cd7c337878f0754a0e121849b24d"
+        },
+        "independent": {
+          "bytes": 200533,
+          "sha256": "25f4847a99bf1647b30b782eae9053a6b85cda1013b6b0d28fbae3ff6a7a484a",
+          "gitBlob": "f20c0188402a166dce08b6592e06e311edcc9fe9"
+        }
+      }
+    },
+    {
+      "name": "Full immutable admission hash and schema bind exact publication",
+      "result": "PASS_EVIDENCE_OR_STATIC",
+      "evidence": {
+        "pin": {
+          "bytes": 1583,
+          "sha256": "bdb1d12b8e8539e8200f18ea4f39a9b2e0582324a66f5fd6297694e95d338538",
+          "gitBlob": "8c2c7a2a439b1054972f4a52eb8f88b842274dba"
+        },
+        "actualPublicationBound": true
+      }
+    },
+    {
+      "name": "All four encoded stage payloads reconstruct exact three admitted bodies",
+      "result": "PASS_EVIDENCE_OR_STATIC",
+      "evidence": {
+        "parts": [
+          {
+            "file": "waitread-supervisor.cjs",
+            "part": 1,
+            "parts": 1,
+            "pin": {
+              "bytes": 25389,
+              "sha256": "da237b7e53a07e47c1625b9b577514a62498fe4816bfa5966c461e5ef4117c9c",
+              "gitBlob": "5e19889942d3e28f215c76f1e55ba81fd12f3ced"
+            },
+            "commandPin": {
+              "bytes": 35066,
+              "sha256": "ab75ad5af1e9937db12da73398824babb87d2c8e4843cc54ba5a0f47372846f9",
+              "gitBlob": "acd58f251ed2c6ce83ee940a49d8f643dae9c4e9"
+            }
+          },
+          {
+            "file": "waitread-binding.json",
+            "part": 1,
+            "parts": 2,
+            "pin": {
+              "bytes": 60004,
+              "sha256": "f4e6aafe9f3ea77ed60b3770abeea2651b9f916713dc1d8060c4b2f8e1a7b10a",
+              "gitBlob": "fdd86d398bce4039eb90e078133903c25d3944bc"
+            },
+            "commandPin": {
+              "bytes": 81274,
+              "sha256": "f2bf25111ab94f5debd6429aba6db85dbef54ab3dfcd460234876bce03f6618e",
+              "gitBlob": "83055c32de442baeba80309d37272fe60ddf7cdf"
+            }
+          },
+          {
+            "file": "waitread-binding.json",
+            "part": 2,
+            "parts": 2,
+            "pin": {
+              "bytes": 45206,
+              "sha256": "e7172daf8c359a389d6f6633b6b8e93f41a42090a123f03e713cfc5bc2cd453f",
+              "gitBlob": "cc559a24f60425991fc54f3c8488cd13547f1e0c"
+            },
+            "commandPin": {
+              "bytes": 61792,
+              "sha256": "fe157c7374ea53f1318f8d21d2634e1a121997680c0dcae5a3f1e5fd4984fb20",
+              "gitBlob": "c8c3312c60634dbae129452318f96edabf7b2230"
+            }
+          },
+          {
+            "file": "execution-admission.json",
+            "part": 1,
+            "parts": 1,
+            "pin": {
+              "bytes": 1583,
+              "sha256": "bdb1d12b8e8539e8200f18ea4f39a9b2e0582324a66f5fd6297694e95d338538",
+              "gitBlob": "8c2c7a2a439b1054972f4a52eb8f88b842274dba"
+            },
+            "commandPin": {
+              "bytes": 3380,
+              "sha256": "720b757ff488ed522c33c68b80300a953d116be58bec7f06b25bccb86dac68d6",
+              "gitBlob": "cde1fb2be6adef420b96938d589e19d1d477f7f2"
+            }
+          }
+        ],
+        "literalJoins": {
+          "runnerLiteralEqual": true,
+          "bindingLiteralEqual": true,
+          "admissionLiteralEqual": true,
+          "bindingPin": {
+            "bytes": 105210,
+            "sha256": "99ef94654b99dfb0e2fc2e5f1767f3b185b14a73ab5b437ff5a7b405886b4a90",
+            "gitBlob": "a206a4432f4e9f77f682b91d340c191826b5f25b"
+          },
+          "admissionPin": {
+            "bytes": 1583,
+            "sha256": "bdb1d12b8e8539e8200f18ea4f39a9b2e0582324a66f5fd6297694e95d338538",
+            "gitBlob": "8c2c7a2a439b1054972f4a52eb8f88b842274dba"
+          }
+        }
+      }
+    },
+    {
+      "name": "Exclusive creation and one original-inode binding append",
+      "result": "PASS_EVIDENCE_OR_STATIC",
+      "evidence": {
+        "stageCreatedOnce": true,
+        "sourceScopeUntouched": true,
+        "appendInode": "3335772"
+      }
+    },
+    {
+      "name": "All original staging operations exit0 and complete files match hashes",
+      "result": "PASS_EVIDENCE_OR_STATIC",
+      "evidence": {
+        "exitCodes": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "results": [
+          {
+            "path": "/workspace/scratch/c714f5bce554/narrow-waitread-controls-20261117/waitread-supervisor.cjs",
+            "bytes": 25389,
+            "sha256": "da237b7e53a07e47c1625b9b577514a62498fe4816bfa5966c461e5ef4117c9c",
+            "device": "27",
+            "inode": "3335771",
+            "mode": "0o644",
+            "nlink": 1
+          },
+          {
+            "path": "/workspace/scratch/c714f5bce554/narrow-waitread-controls-20261117/waitread-binding.json",
+            "bytes": 60004,
+            "sha256": "f4e6aafe9f3ea77ed60b3770abeea2651b9f916713dc1d8060c4b2f8e1a7b10a",
+            "device": "27",
+            "inode": "3335772",
+            "mode": "0o644",
+            "nlink": 1
+          },
+          {
+            "path": "/workspace/scratch/c714f5bce554/narrow-waitread-controls-20261117/waitread-binding.json",
+            "bytes": 105210,
+            "sha256": "99ef94654b99dfb0e2fc2e5f1767f3b185b14a73ab5b437ff5a7b405886b4a90",
+            "device": "27",
+            "inode": "3335772",
+            "mode": "0o644",
+            "nlink": 1
+          },
+          {
+            "path": "/workspace/scratch/c714f5bce554/narrow-waitread-controls-20261117/execution-admission.json",
+            "bytes": 1583,
+            "sha256": "bdb1d12b8e8539e8200f18ea4f39a9b2e0582324a66f5fd6297694e95d338538",
+            "device": "27",
+            "inode": "3335773",
+            "mode": "0o644",
+            "nlink": 1
+          }
+        ]
+      }
+    },
+    {
+      "name": "Prestage absence and exact three-file stage metadata",
+      "result": "PASS_EVIDENCE_OR_STATIC",
+      "evidence": {
+        "preStage": {
+          "node": {
+            "path": "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+            "realpath": "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+            "bytes": 126939688,
+            "sha256": "61ab14cd750fc24d5db53490ec5fc40f756e4b6e136b78cf7004265471d9bd1d",
+            "device": "27",
+            "inode": "9223372036854818252",
+            "uid": "65534",
+            "gid": "65534",
+            "mode": "0o755",
+            "mtimeNs": "1794515386000000000",
+            "ctimeNs": "1794515386000000000"
+          },
+          "scopeAbsent": true,
+          "stageAbsent": true,
+          "scopeParentRealpath": "/workspace/scratch",
+          "stageParentRealpath": "/workspace/scratch/c714f5bce554"
+        },
+        "stageVerification": {
+          "files": [
+            {
+              "path": "/workspace/scratch/c714f5bce554/narrow-waitread-controls-20261117/waitread-supervisor.cjs",
+              "bytes": 25389,
+              "sha256": "da237b7e53a07e47c1625b9b577514a62498fe4816bfa5966c461e5ef4117c9c",
+              "gitBlob": "5e19889942d3e28f215c76f1e55ba81fd12f3ced",
+              "device": "27",
+              "inode": "3335771",
+              "mode": "0o644",
+              "mtimeNs": "1794894449695558701",
+              "ctimeNs": "1794894449695558701"
+            },
+            {
+              "path": "/workspace/scratch/c714f5bce554/narrow-waitread-controls-20261117/waitread-binding.json",
+              "bytes": 105210,
+              "sha256": "99ef94654b99dfb0e2fc2e5f1767f3b185b14a73ab5b437ff5a7b405886b4a90",
+              "gitBlob": "a206a4432f4e9f77f682b91d340c191826b5f25b",
+              "device": "27",
+              "inode": "3335772",
+              "mode": "0o644",
+              "mtimeNs": "1794894450911543059",
+              "ctimeNs": "1794894450911543059"
+            },
+            {
+              "path": "/workspace/scratch/c714f5bce554/narrow-waitread-controls-20261117/execution-admission.json",
+              "bytes": 1583,
+              "sha256": "bdb1d12b8e8539e8200f18ea4f39a9b2e0582324a66f5fd6297694e95d338538",
+              "gitBlob": "8c2c7a2a439b1054972f4a52eb8f88b842274dba",
+              "device": "27",
+              "inode": "3335773",
+              "mode": "0o644",
+              "mtimeNs": "1794894451379537038",
+              "ctimeNs": "1794894451379537038"
+            }
+          ],
+          "scopeAbsent": true,
+          "nodeSha256": "61ab14cd750fc24d5db53490ec5fc40f756e4b6e136b78cf7004265471d9bd1d",
+          "stageDirectoryMode": "0o755"
+        }
+      }
+    },
+    {
+      "name": "Full original output equals retained parsed refusal",
+      "result": "PASS_EVIDENCE_OR_STATIC",
+      "evidence": {
+        "outputPin": {
+          "bytes": 2824,
+          "sha256": "79a38120fe58253dbad11517782e7a24f5be69294938d98c263b8606a99798a5",
+          "gitBlob": "4e630944ba326d8c470fd35a28a03e85ba641f8a"
+        },
+        "chunkId": "a34dfa",
+        "exitCode": 1
+      }
+    },
+    {
+      "name": "Original invocation exactly binds published controls and admission",
+      "result": "PASS_EVIDENCE_OR_STATIC",
+      "evidence": {
+        "command": "exec -c /opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node /workspace/scratch/c714f5bce554/narrow-waitread-controls-20261117/waitread-supervisor.cjs 99ef94654b99dfb0e2fc2e5f1767f3b185b14a73ab5b437ff5a7b405886b4a90 bdb1d12b8e8539e8200f18ea4f39a9b2e0582324a66f5fd6297694e95d338538",
+        "invokedAt": "2026-11-17 05:47:31 UTC",
+        "oneOriginalInvocationInPacket": true
+      }
+    },
+    {
+      "name": "Observed exit1 zero phases null receipt and spent refusal",
+      "result": "PASS_EVIDENCE_OR_STATIC",
+      "evidence": {
+        "status": "REFUSED_BEFORE_SCOPE_ADMISSION_SPENT",
+        "exitCode": 1,
+        "phases": 0,
+        "receipt": null,
+        "finishedAt": "2026-11-17T05:47:32.105Z"
+      }
+    },
+    {
+      "name": "Exact signed raw inode and unsigned expected failure preserved",
+      "result": "PASS_EVIDENCE_OR_STATIC",
+      "evidence": {
+        "observation": {
+          "pythonUnsigned": "9223372036854818252",
+          "nodeBigIntRaw": "-9223372036854733364",
+          "relation": "nodeBigIntRaw + 2^64 = pythonUnsigned",
+          "exactEqualityVerified": true,
+          "qualification": "Observed raw representations and exact arithmetic only. Authoritative pinned runtime source review is required before selecting any correction; no binary/source substitution inferred."
+        },
+        "error": "AssertionError [ERR_ASSERTION]: Node inode\n+ actual - expected\n\n+ '-9223372036854733364'\n- '9223372036854818252'\n\n    at exactNode (/workspace/scratch/c714f5bce554/narrow-waitread-controls-20261117/waitread-supervisor.cjs:72:12)\n    at main (/workspace/scratch/c714f5bce554/narrow-waitread-controls-20261117/waitread-supervisor.cjs:342:47)\n    at Object.<anonymous> (/workspace/scratch/c714f5bce554/narrow-waitread-controls-20261117/waitread-supervisor.cjs:400:1)\n    at Module._compile (node:internal/modules/cjs/loader:1929:14)\n    at Object..js (node:internal/modules/cjs/loader:2060:10)\n    at Module.load (node:internal/modules/cjs/loader:1651:32)\n    at Module._load (node:internal/modules/cjs/loader:1443:12)\n    at wrapModuleLoad (node:internal/modules/cjs/loader:261:19)\n    at Module.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:154:5)\n    at node:internal/main/run_main_module:33:47"
+      }
+    },
+    {
+      "name": "Published control flow refuses before scope creation or test child",
+      "result": "PASS_EVIDENCE_OR_STATIC",
+      "evidence": {
+        "runner": {
+          "bytes": 25389,
+          "sha256": "da237b7e53a07e47c1625b9b577514a62498fe4816bfa5966c461e5ef4117c9c",
+          "gitBlob": "5e19889942d3e28f215c76f1e55ba81fd12f3ced"
+        },
+        "failureLine": 72,
+        "initialCallLine": 342,
+        "scopeCreationLine": 350,
+        "sourceWriteLine": 360,
+        "firstPhaseCallLine": 367,
+        "testChildSpawnReached": false,
+        "sourceWritesReached": false
+      }
+    },
+    {
+      "name": "Supervisor complete Node admission was not reached",
+      "result": "PASS_EVIDENCE_OR_STATIC",
+      "evidence": {
+        "meaning": "Failure occurs on inode before later uid/gid/timestamp comparisons, byte count and digest checks. The complete unchanged Node metadata and full hash are separate external pre/post observations."
+      }
+    },
+    {
+      "name": "All three staged file full metadata and identities unchanged",
+      "result": "PASS_EVIDENCE_OR_STATIC",
+      "evidence": {
+        "paths": [
+          "/workspace/scratch/c714f5bce554/narrow-waitread-controls-20261117/execution-admission.json",
+          "/workspace/scratch/c714f5bce554/narrow-waitread-controls-20261117/waitread-binding.json",
+          "/workspace/scratch/c714f5bce554/narrow-waitread-controls-20261117/waitread-supervisor.cjs"
+        ],
+        "comparison": "Full path-sorted objects, including size, both hashes, device, inode, mode, mtimeNs and ctimeNs."
+      }
+    },
+    {
+      "name": "External complete Node metadata and full hash unchanged",
+      "result": "PASS_EVIDENCE_OR_STATIC",
+      "evidence": {
+        "node": {
+          "path": "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+          "realpath": "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+          "bytes": 126939688,
+          "sha256": "61ab14cd750fc24d5db53490ec5fc40f756e4b6e136b78cf7004265471d9bd1d",
+          "device": "27",
+          "inode": "9223372036854818252",
+          "uid": "65534",
+          "gid": "65534",
+          "mode": "0o755",
+          "mtimeNs": "1794515386000000000",
+          "ctimeNs": "1794515386000000000"
+        },
+        "qualification": "Retained original pre/post observations; no fresh filesystem or binary probe by reviewer."
+      }
+    },
+    {
+      "name": "No test runtime or broader qualification follows from refusal",
+      "result": "PASS_EVIDENCE_OR_STATIC",
+      "evidence": {
+        "testCases": 0,
+        "redObserved": false,
+        "greenObserved": false,
+        "sourceScopeAbsent": true,
+        "cleanup": "Original supervisor exit1 observed. Control flow creates no test child, so no test-child cleanup is claimed."
+      }
+    },
+    {
+      "name": "Ten full primary source bodies match provider Git identities",
+      "result": "PASS_EVIDENCE_OR_STATIC",
+      "evidence": {
+        "sourceCount": 10,
+        "totalBytes": 525974,
+        "sourceRef": "v24.22.1"
+      }
+    },
+    {
+      "name": "Official exact release tag is anchored",
+      "result": "PASS_EVIDENCE_OR_STATIC",
+      "evidence": {
+        "tagObject": "d01285110044365f0ad4fec24482a585646640e2",
+        "releaseCommit": "ce7aaf1cee78b8cf0ce17364260535c418d3ed26",
+        "githubTagSignatureVerified": true
+      }
+    },
+    {
+      "name": "Node synchronous lstat routes bigint request into native stats conversion",
+      "result": "PASS_EVIDENCE_OR_STATIC",
+      "evidence": {
+        "locations": [
+          "lib/fs.js:1764-1780",
+          "src/node_file.cc:1200-1248"
+        ]
+      }
+    },
+    {
+      "name": "libuv stores unsigned64 inode from platform stat",
+      "result": "PASS_EVIDENCE_OR_STATIC",
+      "evidence": {
+        "locations": [
+          "deps/uv/include/uv.h:391",
+          "deps/uv/src/unix/fs.c:1440",
+          "deps/uv/src/unix/linux.c:1127"
+        ]
+      }
+    },
+    {
+      "name": "Node bigint stats backing is signed int64",
+      "result": "PASS_EVIDENCE_OR_STATIC",
+      "evidence": {
+        "locations": [
+          "src/node_file.h:79",
+          "src/aliased_buffer.h:195-199",
+          "src/aliased_buffer-inl.h:154-158"
+        ]
+      }
+    },
+    {
+      "name": "FillStatsArray explicitly casts inode into signed backing",
+      "result": "PASS_EVIDENCE_OR_STATIC",
+      "evidence": {
+        "locations": [
+          "src/node_file-inl.h:89-91",
+          "src/node_file-inl.h:113",
+          "src/node_file-inl.h:136-139"
+        ]
+      }
+    },
+    {
+      "name": "BigIntStats retains signed array value without unsigned conversion",
+      "result": "PASS_EVIDENCE_OR_STATIC",
+      "evidence": {
+        "locations": [
+          "lib/internal/fs/utils.js:381-390",
+          "lib/internal/fs/utils.js:495-498",
+          "lib/internal/fs/utils.js:550-560"
+        ]
+      }
+    },
+    {
+      "name": "Observed representations equal exactly the same64 inode bits",
+      "result": "PASS_EVIDENCE_OR_STATIC",
+      "evidence": {
+        "arithmetic": {
+          "signed": "-9223372036854733364",
+          "unsigned": "9223372036854818252",
+          "modulus": "18446744073709551616",
+          "sum": "9223372036854818252",
+          "same64Bits": true,
+          "signedInRange": true,
+          "unsignedInRange": true,
+          "normalized": "9223372036854818252",
+          "roundtrip": "-9223372036854733364",
+          "unsignedHex": "800000000000a5cc",
+          "dataOnly": true
+        }
+      }
+    },
+    {
+      "name": "Proposed normalization preserves original unsigned inode pin and all bits",
+      "result": "PASS_EVIDENCE_OR_STATIC",
+      "evidence": {
+        "rawDomain": "signed64 only",
+        "pinDomain": "unsigned64 only",
+        "pinUnchanged": "9223372036854818252",
+        "rule": "After exact range checks, preserve nonnegative raw value or add 2^64 once to a negative raw value. Compare canonical unsigned result to the existing pin. Retain raw signed decimal separately.",
+        "bijection": "Disjoint signed halves map one-to-one to disjoint unsigned halves. No input outside the two validated64-bit domains is accepted."
+      }
+    }
+  ],
+  "checkCount": 26,
+  "failedChecks": [],
+  "unresolvedPointers": [],
+  "unresolvedBlockers": [],
+  "reviewerEffects": {
+    "readOnlyGitAndOfficialDocumentation": true,
+    "dataOnlyIdentityArithmetic": true,
+    "targetCodeAuthoredOrEvaluated": false,
+    "helperFileAuthored": false,
+    "shellOrRuntime": false,
+    "sourceOrRefMutation": false,
+    "liveCiPolling": false,
+    "reportRetentionOnly": "Bare Git blob"
+  },
+  "selfReadbackProtocol": "Retain the complete UTF-8 JSON report, send the pin immediately, then fetch all retained bytes and require literal equality plus matching byte count, SHA256 and Git blob before final confirmation."
+}

@@ -1,0 +1,1877 @@
+{
+  "schemaVersion": 1,
+  "kind": "c714-immutable-producer-materialization-green-binding-root-static-review",
+  "reviewer": "root",
+  "at": "2026-11-17 02:06:49 UTC",
+  "verdict": "ACCEPT_EXACT_IMMUTABLE_BINDING_FOR_INDEPENDENT_R2_AND_PUBLICATION",
+  "subject": {
+    "binding": {
+      "bytes": 8262787,
+      "sha256": "56d2bb56ff1135fbc606d375b2b8debd8c5f3feaaa8b61904aa584c4dc38435c",
+      "gitBlob": "ea852a05538a51710c13a0cd86a8bd1e3fa1c056"
+    },
+    "baselineBinding": {
+      "bytes": 6399172,
+      "sha256": "be265da9b130091d251295f937a7ab09b1db0e03f2c4a02d985839134e0379ec",
+      "gitBlob": "9f9ddcf0f9f62cce1a31f204ae786a8e2d3d2267"
+    },
+    "runner": {
+      "bytes": 104131,
+      "sha256": "20958434e304d6d67657abad910d7c891f5a9086164e73d19cc8764348fc83f5",
+      "gitBlob": "c81f72a8ed14a93b3557fdf889f9ad6cebc25140"
+    },
+    "r1": {
+      "bytes": 139634,
+      "sha256": "b9524cd8f0f1251f034337f4eb8fbc6606adc1d1c987d993580be06b9a078a75",
+      "gitBlob": "8ce89328171e58ec3e0631dce9607ee7e1eba54e"
+    },
+    "proposal": {
+      "bytes": 28238,
+      "sha256": "9df788ded4a212545e21352c16a556e9d9d72f221bb0823b45c64efd32839faf",
+      "gitBlob": "486aac82a04b969d6ba14df6929eeddca3e43c59"
+    },
+    "sourcePublicationGate": {
+      "bytes": 6536,
+      "sha256": "1333882f719c6b832223e038043b9b82491d8168e9cf5effa64c12b0cf4741a2",
+      "gitBlob": "63fe55b3f050783b80bda34e3261564600186592"
+    },
+    "publishedSubject": {
+      "commit": "b83da2bb72ada6e9fb3a426cb2a7d62b30ec4871",
+      "tree": "5ef5abf3c6aadd53340f457ea7f77e6b69f84878",
+      "qualification": "Exact published nine-row source vector: only the three independently reviewed producer postimages change; four fixed producers and complete139/85 test bodies remain identical. Publication is not physical application or GREEN acceptance."
+    },
+    "bindingLocalPath": "/workspace/scratch/c714-post-transport-20261117/controls/green-binding.json",
+    "beforeSourceVector": {
+      "bytes": 2118,
+      "sha256": "f2574559a378b3bc537fdcedbde161003c8344a5485dfff9322214f6fda2a90c",
+      "gitBlob": "f6446bdc2bbdb511206c729a1f03717871baea6d"
+    },
+    "sourceVector": {
+      "bytes": 2118,
+      "sha256": "6007c5c7ba2f74c43bd9b73c50cae2319eacbf712c233cc0d67b3efbb4c6894d",
+      "gitBlob": "3887991d5dbd25dbec5c8656e8e03d423ea502b7"
+    },
+    "sourcePins": [
+      {
+        "path": "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+        "mode": "100644",
+        "bytes": 24759,
+        "sha256": "d15b7eea14c0951194310aee34ddc5c477879c759a97a4e2f4e9fce1f956ce9b",
+        "gitBlob": "cf93da72a198dac636658e512093eef7828b5927"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+        "mode": "100644",
+        "bytes": 45795,
+        "sha256": "2c5931f5c7fa1dc8bb7858201c1b8afdbae9683faf4a2ad9fce067f116f3f94b",
+        "gitBlob": "5026f0ec6165bb092717ddc989043848a25081dc"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts",
+        "mode": "100644",
+        "bytes": 36260,
+        "sha256": "26357f37b146fc171bbceadb624bde4a7f4e459d2073ae23a651e757817b2d38",
+        "gitBlob": "4700a0052d3c58a2b3d9bc66e6803220688050fd"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+        "mode": "100644",
+        "bytes": 8457,
+        "sha256": "2da55bb40a5689ace0e922dc4867d7c73278d9a1cd200ea8c4602ca68f82da3b",
+        "gitBlob": "3c7b4bb53f4259ac0795d3f92fb715887acb554f"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-task-review-cycle-ui-smoke.ts",
+        "mode": "100644",
+        "bytes": 33036,
+        "sha256": "4fa52cfad9347065680ef62a3ba6420762408a78a93b77e96ac3a2e16e68bdc9",
+        "gitBlob": "8d175c98158b3bd71192aef7b1929484b2b681b6"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+        "mode": "100644",
+        "bytes": 164965,
+        "sha256": "852bedb85c83dbc4b488dffb4a9ffebbe398adc53e85f5a3cea8ca36b146cbf7",
+        "gitBlob": "896c587e077da56a98a314a175fb3cba0353d6ee"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+        "mode": "100644",
+        "bytes": 28974,
+        "sha256": "7626e479a6662242009cb050e7e5af612a29e4205d62666d15274d5c30f91386",
+        "gitBlob": "ed57cb0fe7d57ef076a591621289eb77667c63ad"
+      },
+      {
+        "path": "src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts",
+        "mode": "100644",
+        "bytes": 74340,
+        "sha256": "647ac5732bfd6b5cb57834adb4ad22c32ee5dfb018a934c92f982efd9daa531c",
+        "gitBlob": "c2faa156015707bc5fbd7f8123a7ffd9c4faa486"
+      },
+      {
+        "path": "test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts",
+        "mode": "100644",
+        "bytes": 187890,
+        "sha256": "b6f11896e60014aac785968d42390afde38716d47de9bba9562522235db048c9",
+        "gitBlob": "76495189c992fcda47cd7a43a0c697190b5acbb3"
+      }
+    ],
+    "testIdentities": {
+      "node": {
+        "bytes": 164965,
+        "sha256": "852bedb85c83dbc4b488dffb4a9ffebbe398adc53e85f5a3cea8ca36b146cbf7",
+        "gitBlob": "896c587e077da56a98a314a175fb3cba0353d6ee"
+      },
+      "renderer": {
+        "bytes": 187890,
+        "sha256": "b6f11896e60014aac785968d42390afde38716d47de9bba9562522235db048c9",
+        "gitBlob": "76495189c992fcda47cd7a43a0c697190b5acbb3"
+      }
+    }
+  },
+  "method": "Read/reconstructed and rehashed the full retained8,262,787-byte binding using all3 complete ordered transport parts; no binding or target code evaluated. Complete field and body comparison against retained RED binding, current accepted R1, unchanged whole runner, full published9source bodies, complete accepted RED and source R2/actual evidence.",
+  "transport": {
+    "schemaVersion": 1,
+    "kind": "c714-immutable-green-binding-lossless-transport-parts",
+    "binding": {
+      "bytes": 8262787,
+      "sha256": "56d2bb56ff1135fbc606d375b2b8debd8c5f3feaaa8b61904aa584c4dc38435c",
+      "gitBlob": "ea852a05538a51710c13a0cd86a8bd1e3fa1c056"
+    },
+    "bindingLocalPath": "/workspace/scratch/c714-post-transport-20261117/controls/green-binding.json",
+    "codec": "Concatenate complete ordered UTF-8 text part bodies with NO separator, newline, trimming, decoding transformation or JSON interpretation. Part boundaries never split UTF-16 surrogate pairs; Git/SHA256 identities are of UTF-8 bytes. Reassembled entire bytes must match binding identity.",
+    "parts": [
+      {
+        "ordinal": 0,
+        "utf16Start": 0,
+        "utf16End": 2800000,
+        "identity": {
+          "bytes": 2801279,
+          "sha256": "98639f464306184d3131ed36e625ae6e88e156a96aeb57e31787a1be2ea5f916",
+          "gitBlob": "441fd0ecb053bf9191332e635ff764cd511c4d0e"
+        }
+      },
+      {
+        "ordinal": 1,
+        "utf16Start": 2800000,
+        "utf16End": 5600000,
+        "identity": {
+          "bytes": 2800142,
+          "sha256": "16214d8009f81bea6e90fdc12de912a36542024aaa2451d0d7bc9f5ae8954957",
+          "gitBlob": "58fc694520738dae1507e0545fd5d18f7344fe89"
+        }
+      },
+      {
+        "ordinal": 2,
+        "utf16Start": 5600000,
+        "utf16End": 8261344,
+        "identity": {
+          "bytes": 2661366,
+          "sha256": "197b6c989795fad2a4d46205aaca86aa79391ece81eb267205e85bf3b18f233f",
+          "gitBlob": "92de54c81f85a21da8b4ff9346f89d9c55bd5d79"
+        }
+      }
+    ],
+    "partsCount": 3,
+    "totalUtf8Bytes": 8262787,
+    "originalBindingUnchanged": true,
+    "transportOnly": true,
+    "reason": "The GitHub connector returns Transport closed with no body for the exact 8,262,787-byte retained binding; the smaller baseline and other evidence remain readable. These bare literal parts allow complete independent read/reconstruction/hash without changing controls, source, execution scope, or gates.",
+    "bindingWasStaged": false,
+    "sourceWasApplied": false,
+    "runtimeWasInvoked": false
+  },
+  "transportManifest": {
+    "bytes": 2073,
+    "sha256": "535e1204c513c6a3c9fb6ab925f8ee32014588ea065b94b6075ff8bd18ab6627",
+    "gitBlob": "be69500fa261dd5c45d5e8215596a94d292e2c45"
+  },
+  "changedExistingFields": [
+    "kind",
+    "phase",
+    "bindingLocalPath",
+    "publishedSubject",
+    "actualPublishedSubjectReadbackEvidence",
+    "acceptedReviewBodies",
+    "beforeSourceOverlay",
+    "sourceOverlay",
+    "sourcePins",
+    "sourceVectorIdentity",
+    "materializePaths",
+    "acceptedCombinedRed",
+    "producerR2ReviewedAndPublished",
+    "producerActualReadbackAccepted",
+    "draftState",
+    "historicalBeforeSourceOverlayQualification"
+  ],
+  "unchangedExistingFields": [
+    "schemaVersion",
+    "publishedR1",
+    "publishedRecoveryR1",
+    "publishedTransportAmendment",
+    "combinedR1Identity",
+    "combinedR1Body",
+    "combinedR1ActualReadbackAccepted",
+    "combinedR1ActualReadbackEvidence",
+    "runnerLocalPath",
+    "runnerIdentity",
+    "actualPublishedSubjectReadbackAccepted",
+    "combinedInputImportAdmission",
+    "inputFiles",
+    "testIdentities",
+    "nodeNames",
+    "rendererNames",
+    "nodeRedFailureSites",
+    "rendererRedFailureSites",
+    "commandVectors",
+    "nativeMetadataArgv",
+    "outputRoots",
+    "tempRoots",
+    "rendererRawEnvironment",
+    "rendererEffectiveAbsentKeys",
+    "rendererAbsentPaths",
+    "rendererStaticPins",
+    "rendererStaticLinks",
+    "rendererNativePins",
+    "rendererEntryRelative",
+    "rollupLocalOverride",
+    "rendererDerivedConfig",
+    "materializationReceiptScope",
+    "acceptedCombinedGreen",
+    "behavioralAttempts",
+    "timing",
+    "executionScope",
+    "authorshipGate",
+    "historicalRecoveryProvenance",
+    "historicalTestMaterialization",
+    "historicalEvidenceBodies",
+    "historicalPredictionCorrection",
+    "correctedControlAuthoredAtUtc",
+    "dataReplicaRecovery",
+    "postTransportRecoveryProvenance",
+    "postTransportControlAuthoredAtUtc"
+  ],
+  "addedFields": [
+    "producerGreenTransitionProvenance",
+    "producerGreenControlAuthoredAtUtc"
+  ],
+  "completeReviewBodyReadbacks": [
+    {
+      "role": "freshBootstrapGuardActualReview",
+      "identity": {
+        "bytes": 32514,
+        "sha256": "90810a8b4e1e41f0e93305fa8eaf217f42becc9d48d2c3289f28120ba25c0be1",
+        "gitBlob": "6253ffe549fb6d93c13e955ddc94b13de74c4075"
+      }
+    },
+    {
+      "role": "freshSdkIndependentReview",
+      "identity": {
+        "bytes": 84719,
+        "sha256": "3b4817d8e35e4bdb98870c9847c5c0fc040f943c20707111c4a2e27de6c1457e",
+        "gitBlob": "24edbc3d30da325e938c72dea556ac5651858ae6"
+      }
+    },
+    {
+      "role": "freshMcpIndependentReview",
+      "identity": {
+        "bytes": 155439,
+        "sha256": "60ab2ac59131729416c29a9fadff21b94a631f089e62ce845cd9becf6fc503bd",
+        "gitBlob": "75f89c1560d381f1ada8b67ab912bfb8bf9f1239"
+      }
+    },
+    {
+      "role": "crossR1ActualPublicationReadback",
+      "identity": {
+        "bytes": 24775,
+        "sha256": "885af8f2f5e47cb57a9164f70bee403816840b91dc95c6b0ce146ce1d3620bc1",
+        "gitBlob": "2e863fe3aa95696dc2b242dc5f9195a1f46f4a34"
+      }
+    },
+    {
+      "role": "crossTestGuardR2",
+      "identity": {
+        "bytes": 35700,
+        "sha256": "f017d731ccb03e0fbbbc1ea7fa8932629bf579e9b8ae062802a62e7765d06e01",
+        "gitBlob": "7fed0e34689f80f55dc49161afb13d939b680ee7"
+      }
+    },
+    {
+      "role": "crossTestParityR2",
+      "identity": {
+        "bytes": 98112,
+        "sha256": "111540b83687b7e8cd9cdf10dd7ee9881a1e9c20828409157118dcaff3116156",
+        "gitBlob": "b55e84be7a38ecf556003cfc531773436b041884"
+      }
+    },
+    {
+      "role": "crossTestActualPublicationReadback",
+      "identity": {
+        "bytes": 56894,
+        "sha256": "a6a75b27f4f85d17e7ec303af47fd307368055db285405c2adcba16cc4894e5a",
+        "gitBlob": "6f8dbb18844f8949e75e144452d9b13decad7b48"
+      }
+    },
+    {
+      "role": "crossActualRedGuard",
+      "identity": {
+        "bytes": 140038,
+        "sha256": "4c7461b5f39deaa940c1022f6452463242e504512039d272b193e996324d7774",
+        "gitBlob": "2456b180544745287f7dd6dcf497d068816d9d4a"
+      }
+    },
+    {
+      "role": "crossActualRedPrimarySemantic",
+      "identity": {
+        "bytes": 190694,
+        "sha256": "9258ff64a8be1e3723c4309a8fe4ff1b807c2a2b45f98756bb29cb773039c25c",
+        "gitBlob": "b1d7d6c148d0f2b11e72aa728a03a64091590838"
+      }
+    },
+    {
+      "role": "crossActualRedSemanticClosure",
+      "identity": {
+        "bytes": 86249,
+        "sha256": "b43ed4a88bc5b714d67e857407448267617875c88e3441612d88c013d85d6aeb",
+        "gitBlob": "ffc5a83973da41cd9e9b9e780b302b0cb16704db"
+      }
+    },
+    {
+      "role": "crossProducerGuardR2",
+      "identity": {
+        "bytes": 121044,
+        "sha256": "438d5bafc103e0525fca049b64cf8d4b02c2216188e4321784487195ce481339",
+        "gitBlob": "e60f5b0ecb7b5aa4b86b0dc528745ed9f5d41637"
+      }
+    },
+    {
+      "role": "crossProducerParityR2",
+      "identity": {
+        "bytes": 109607,
+        "sha256": "da402e2bc50d090cc5b2a57ff1eac0dc5d6767b77876d97f301937db7197536b",
+        "gitBlob": "fb8220fb8c074cf7225cadc4fba9b6568d45fe2f"
+      }
+    },
+    {
+      "role": "crossProducerActualPublicationReadback",
+      "identity": {
+        "bytes": 31670,
+        "sha256": "5b50bfd38e108852888c3e5bb0f41fd2f3d07340c30a4cf3fcb0340b7890b0b4",
+        "gitBlob": "42db2a5f8e3d4d6fbaf7921ce9fd07ef24678e66"
+      }
+    },
+    {
+      "role": "crossActualGreenFullGuard",
+      "identity": {
+        "bytes": 209270,
+        "sha256": "b56c4d2a4328f11a679a73de100d13af4ec7e8ccc6fe8f6333de98dec4d2d329",
+        "gitBlob": "848e6efd0b924e4415848551cfea034f22b84221"
+      }
+    },
+    {
+      "role": "crossActualGreenFinalSemantic",
+      "identity": {
+        "bytes": 140647,
+        "sha256": "74936b31eeefd735ec329d286ae145b2eddb16fa025e5fb8cc6f715c5b133fd3",
+        "gitBlob": "4a49adfedbc84301e88d524d71b766a7ad785d14"
+      }
+    },
+    {
+      "role": "crossActualGreenFullEnvelope",
+      "identity": {
+        "bytes": 166444,
+        "sha256": "c1ec7ed1270235d520b436e28cbdeb0988bc1af4c8473b5226e34b081b305981",
+        "gitBlob": "46b7d646a2845f544c5d959bb9bf068c2bbbc49b"
+      }
+    },
+    {
+      "role": "crossOriginalValidationIncompleteGuard",
+      "identity": {
+        "bytes": 146237,
+        "sha256": "22813b7c3fa165d506e7eb487b5be229ea7910d4208c73a930a9621978a4703e",
+        "gitBlob": "736df253a457b9a7260febbd74071ed2615be2bd"
+      }
+    },
+    {
+      "role": "crossOriginalValidationIncompleteParity",
+      "identity": {
+        "bytes": 169081,
+        "sha256": "0863878d6085e61a91e8f96d970bdb9cd83a3ea6ce0a174c80bf0a0eb5cd9175",
+        "gitBlob": "7567c92bcc194c2de5e26abfed0a8604522fe589"
+      }
+    },
+    {
+      "role": "isolatedRecoveryR1Guard",
+      "identity": {
+        "bytes": 167262,
+        "sha256": "9375e23aeba4b871ad016c82c76ae539f769bea1a5f2ab72c63a8d615af24585",
+        "gitBlob": "0fdbe9a84daa354332d61c13a532090199d50c88"
+      }
+    },
+    {
+      "role": "isolatedRecoveryR1Parity",
+      "identity": {
+        "bytes": 133047,
+        "sha256": "d94fb2464c47195fadfcaf311732025c578e8084b9b7ef701dd52c76e6aeca77",
+        "gitBlob": "97bfd42e46bc1dd2160f8c9826de68219303b67d"
+      }
+    },
+    {
+      "role": "isolatedRecoveryR1CompositeActualPublicationReadback",
+      "identity": {
+        "bytes": 231365,
+        "sha256": "393a6ee912d88ff0faf979c8229a705578e1bd6723a3cf58769449205dbe2335",
+        "gitBlob": "e695dd8aca0559256e01175166317ab905f467a4"
+      }
+    },
+    {
+      "role": "combinedR1RootActual",
+      "identity": {
+        "bytes": 25481,
+        "sha256": "54c837bf45a6318cf43452ba3b6e66e341d7c4153a1d4d5d93a323bb24b9196d",
+        "gitBlob": "72db8984a98696287225899a3bf0c31bfd57a71f"
+      }
+    },
+    {
+      "role": "combinedR1IndependentActual",
+      "identity": {
+        "bytes": 80224,
+        "sha256": "aa8a8c7f6fa8b49593a9e233ae8ae9b0eb4848365915dde71bb7cb81b19e1f4e",
+        "gitBlob": "0669feaf0e8759ad2fd4330efe315c5540b55252"
+      }
+    },
+    {
+      "role": "combinedTestGuardR2",
+      "identity": {
+        "bytes": 25359,
+        "sha256": "dc7aebf5607cb8150b04c23b5e5a36f83735e5081ba18b78586ef30283d77843",
+        "gitBlob": "4d3004a5c76544dc8e47b842e981f22e7fbcdcc3"
+      }
+    },
+    {
+      "role": "combinedTestRendererR2",
+      "identity": {
+        "bytes": 97016,
+        "sha256": "9b67a3fa8a4fa07231f986881698b13ffc75c2171f18ed9f919a30e7875d145b",
+        "gitBlob": "6580a4f45747c0f079e37e0f3db042eca6c33c9e"
+      }
+    },
+    {
+      "role": "combinedTestRootActual",
+      "identity": {
+        "bytes": 29341,
+        "sha256": "fe81d1f6216e3aa89c456d22cd0a8c7ff735fb255902cfc99e915fae030875e8",
+        "gitBlob": "19ae837ffe2a9b1caaa2496cb08ac24841900752"
+      }
+    },
+    {
+      "role": "combinedTestIndependentActual",
+      "identity": {
+        "bytes": 57841,
+        "sha256": "a8736b98140b38c92578210fd9064f6952a96e3ea07df5471d9f88b11849f37e",
+        "gitBlob": "156f7b1977379568bcd7aa487be21d7ef95880f1"
+      }
+    },
+    {
+      "role": "rendererInitialInstalledAdmission",
+      "identity": {
+        "bytes": 156717,
+        "sha256": "76e5d3440254a5e778eb700eb306251a779d0f5a8c6dfe8c47e740895b316154",
+        "gitBlob": "a342571a13ce31b46e9782356cc23527c61ee644"
+      }
+    },
+    {
+      "role": "rendererAdditionalInstalledAdmission",
+      "identity": {
+        "bytes": 167326,
+        "sha256": "c880352c1d6cc0ac0c2c37bfb4d18d3a9718170298e814cb884f67fbc7e0413b",
+        "gitBlob": "e37de06a48b2d958fbd54de599ca5f933e3c23b0"
+      }
+    },
+    {
+      "role": "rendererCombinedFeasibility",
+      "identity": {
+        "bytes": 53474,
+        "sha256": "1ce3d9e96b5a8a100bccb1caa7bb1ab2ee8f234cb2afd35e940eb298c64c1238",
+        "gitBlob": "6ee0aadb457acd58e35df41c8fa8492ff6654933"
+      }
+    },
+    {
+      "role": "rendererPathDataAdmission",
+      "identity": {
+        "bytes": 8151,
+        "sha256": "9ceef73e09588b59852323fba2d2396cd83b2a524849a8cfb20b4bb278daa323",
+        "gitBlob": "d688c295815c064fad5e6d4f3a7481c083c6cd06"
+      }
+    },
+    {
+      "role": "combinedSemanticSourceGuide",
+      "identity": {
+        "bytes": 13467,
+        "sha256": "fd44402a9555871ddc2d26aa4ff87337c2591995f78f6642eab63142e8645254",
+        "gitBlob": "969d58ae7fb9788b0266ff6cefd8c9cd2aad7231"
+      }
+    },
+    {
+      "role": "combinedWholeTestsR2Proposal",
+      "identity": {
+        "bytes": 24017,
+        "sha256": "1532df713cd8c75025fccaaecbc7041e05f3ced87d1894f041a97a01e6d8f9a1",
+        "gitBlob": "061cb0545b58d847ef69b05baa2b140065456730"
+      }
+    },
+    {
+      "role": "correctedTitleR1GuardReview",
+      "identity": {
+        "bytes": 59821,
+        "sha256": "42f0bc02651b061669e9b54eb572561904ec33098ad15257c4f0cb3ca91ef5b3",
+        "gitBlob": "097d04fa9d0fa693c31a3c1d14bc47758defc760"
+      }
+    },
+    {
+      "role": "correctedTitleR1SemanticReview",
+      "identity": {
+        "bytes": 72429,
+        "sha256": "b158a9a257fe0ae01af6741630aeac2d37de0be52264902df0972297b12e5f5a",
+        "gitBlob": "ca250c5c83647d5d6956d205c5ceb9791b9634ea"
+      }
+    },
+    {
+      "role": "correctedTitleR1BindingReview",
+      "identity": {
+        "bytes": 61763,
+        "sha256": "d24e61f10818e156fec7eadccd7f9d04607bd2f6e0095b72b070af2ef9ae3406",
+        "gitBlob": "c1c1ace034643b96bf4cd4e9234a87dbd28822bc"
+      }
+    },
+    {
+      "role": "correctedTitleR1RootActual",
+      "identity": {
+        "bytes": 20615,
+        "sha256": "771c21e1e7f582d6983e2070bf93602ad3d24cfd4c737bdb1dda3e71ae14c255",
+        "gitBlob": "3985861870b7ebd448978d83e4ea7577c4d0eb58"
+      }
+    },
+    {
+      "role": "correctedTitleR1IndependentActual",
+      "identity": {
+        "bytes": 74113,
+        "sha256": "ec3023dae83daed61ef312d10d106c73aa222b2e0016061a0b627383f14779ff",
+        "gitBlob": "ab99273cdb4da1f27d6650242755cb24e5d0c3a6"
+      }
+    },
+    {
+      "role": "historicalTestMaterializationGuard",
+      "identity": {
+        "bytes": 126054,
+        "sha256": "34a3bb0df97616ea1b93524a628f320594f1700ee158617b04258c98d610cb9c",
+        "gitBlob": "62fda73c295b6fa1467a121685e4daa85a686869"
+      }
+    },
+    {
+      "role": "historicalTestMaterializationParity",
+      "identity": {
+        "bytes": 113999,
+        "sha256": "48dc8af6e125667c960df0d8fcead2c8a82428d8fd8b45294a1465071267ced9",
+        "gitBlob": "eeb4a37b7967a387bf01c16337788fc75f3bbb6e"
+      }
+    },
+    {
+      "role": "historicalTestMaterializationRootActual",
+      "identity": {
+        "bytes": 68230,
+        "sha256": "8cd9f33fc3afeba9e1b9843620022272a850aef36a740a87e3147b9df89c3737",
+        "gitBlob": "1a90d32206b2b31ae3e3dba8e2edde55349851c7"
+      }
+    },
+    {
+      "role": "historicalTestMaterializationIndependentActual",
+      "identity": {
+        "bytes": 115641,
+        "sha256": "fcfa1571b7ea385fea409dcbe5d5adfe2e9b8b60309a6b331c439feb26704790",
+        "gitBlob": "374fc9db427cb6bcd3380190e836717fa661fe3f"
+      }
+    },
+    {
+      "role": "originalSixTitlePredictionDiagnosis",
+      "identity": {
+        "bytes": 127784,
+        "sha256": "7deff97792b556dea4da2ed2e1c10fc158445d51e4343171f2e813ff242b6196",
+        "gitBlob": "b80e069b705d41405733ff4fd40caa3ad2a753e6"
+      }
+    },
+    {
+      "role": "postTransportRecoveryR1RootReview",
+      "identity": {
+        "bytes": 22893,
+        "sha256": "c69c619dd888465c09a133f6145449b5e8db37b2892ccf954e70c333aef97206",
+        "gitBlob": "569e0fd96a6408d1ada2c5c0894ca2512e7564e1"
+      }
+    },
+    {
+      "role": "postTransportRecoveryR1GuardReview",
+      "identity": {
+        "bytes": 32255,
+        "sha256": "fe3306e57dd3bc667cf1692a937fcbc41184d1350bee2daf4f23e203e75e351a",
+        "gitBlob": "327c0e80e9f04a2515bd4655acc4513aa67ba689"
+      }
+    },
+    {
+      "role": "postTransportRecoveryR1BindingReview",
+      "identity": {
+        "bytes": 47731,
+        "sha256": "4a924e4f9cc8b1bea52e2f359a0932e64c95e2211001f9ce2150c48cfd526323",
+        "gitBlob": "1675502277a40634814c524137687895b88006da"
+      }
+    },
+    {
+      "role": "postTransportRecoveryR1SemanticReview",
+      "identity": {
+        "bytes": 47224,
+        "sha256": "8c30827b94fff969551d37eaaec4e9e4756a126cff645bc677c19df10547bc40",
+        "gitBlob": "e875f6847ac7f80d647cfd9080b28e31968c8358"
+      }
+    },
+    {
+      "role": "postTransportRecoveryR1RootActual",
+      "identity": {
+        "bytes": 32853,
+        "sha256": "4b353847c949f242095de78453d619f78ec03bca0ccbc87a91fb6c90cc579754",
+        "gitBlob": "99812b3efa965d202d67feca8b5d7948e0800b11"
+      }
+    },
+    {
+      "role": "postTransportRecoveryR1IndependentActual",
+      "identity": {
+        "bytes": 68306,
+        "sha256": "3e2b87c35227e99abc32e5a95808895a1298df30267994f6278c1c63a806bae9",
+        "gitBlob": "d277c2271e3457882c895e927b76a8a32427f83a"
+      }
+    },
+    {
+      "role": "correctedRedIncompleteRootAccounting",
+      "identity": {
+        "bytes": 6076,
+        "sha256": "8cceaba2e0d81fc158541a708f0ae89e0bcbad702db4530b5fa135ce0482e125",
+        "gitBlob": "e483e532de888e7f3698d5d2310d5ddecd2875ee"
+      }
+    },
+    {
+      "role": "correctedRedIncompleteGuardReview",
+      "identity": {
+        "bytes": 9251,
+        "sha256": "4f902f51c54b9d0a6db2bb99cc6d267bab21e962d13ec30a4c4ef6762384ce34",
+        "gitBlob": "80a17feff65625c696d35aaee26e3614544cff23"
+      }
+    },
+    {
+      "role": "correctedRedIncompleteSemanticReview",
+      "identity": {
+        "bytes": 10310,
+        "sha256": "fb97e622ad21ff840bc781d4ad23a1a3624d2fc4c71d06e22645ded36da21d09",
+        "gitBlob": "ff3ed051ca16e886c0d60248294c99c71643d7ad"
+      }
+    },
+    {
+      "role": "correctedRedIncompleteRootActual",
+      "identity": {
+        "bytes": 23920,
+        "sha256": "ac86fb03a9bad33ed0c2555abc7346a3c7e1ec5141b78d24592aeca3cd508938",
+        "gitBlob": "306d9b854656fe560f98620856b4a2e7bc98254c"
+      }
+    },
+    {
+      "role": "correctedRedIncompleteIndependentActual",
+      "identity": {
+        "bytes": 67084,
+        "sha256": "981e5a19ff9b2f1891010395c47d1bc470e56ef671195bc4e83c7aeabbf9a56c",
+        "gitBlob": "65be34f4b4d7373c3cc18b9c299fca90e8dddabc"
+      }
+    },
+    {
+      "role": "postTransportRecoveryRecommendations",
+      "identity": {
+        "bytes": 27997,
+        "sha256": "9e08049327575391ebfaaf8ff4f41877ac43ebfad8d063a16d31cad41316b664",
+        "gitBlob": "10c383ebb2cb5827fd811d6f0e7ad6a950fbae7f"
+      }
+    },
+    {
+      "role": "returnedSourceInputObservation",
+      "identity": {
+        "bytes": 13750,
+        "sha256": "7a217af0f942da5789b6d65962f7c8b3ccd830be96e31f6f3965ae162b9e2e6b",
+        "gitBlob": "0988f7b08ae156529fc7cbc9b37c9d82f405164e"
+      }
+    },
+    {
+      "role": "returnedPathObservation",
+      "identity": {
+        "bytes": 2135,
+        "sha256": "d3be601285716e140c0ec98b596ae2e59ba1d286cfbedb4c739a526628cd1b53",
+        "gitBlob": "7063e49185bd288bf32ccd9ca6aead6388679c37"
+      }
+    },
+    {
+      "role": "returnedToolCacheObservation",
+      "identity": {
+        "bytes": 8115,
+        "sha256": "f30cd2786b3b6c8ec49440f835f16c5ed0367fb73bc6160f09d5d363409bade7",
+        "gitBlob": "75b276dbcd832a2f496c684a4bbe3f6a9b607da1"
+      }
+    },
+    {
+      "role": "postTransportControlsRootActual",
+      "identity": {
+        "bytes": 54354,
+        "sha256": "9a43e5d60a312b823fc6371d80cb53d9d69b09eb89387b21a43d91d4db998d8b",
+        "gitBlob": "9f7e5b993977d82876f291937eecfbad54fa7ec0"
+      }
+    },
+    {
+      "role": "postTransportControlsIndependentActual",
+      "identity": {
+        "bytes": 100624,
+        "sha256": "56c645a2d9221b2717eb8e25dfc496b9a31464fac6c297a34dbdeeba68907dff",
+        "gitBlob": "5cbacb781c10f52c5cf5a032f8fdc03c24881d81"
+      }
+    },
+    {
+      "role": "postTransportCombinedRedObservedOuter",
+      "identity": {
+        "bytes": 13970,
+        "sha256": "341064fd92ead2afed314db220e095bae77a2b96af47580b30c35f495a0e80cd",
+        "gitBlob": "947cf5276c207149f87d67dd06a175b49c9f1b5b"
+      }
+    },
+    {
+      "role": "postTransportCombinedRedRootRuntimeReview",
+      "identity": {
+        "bytes": 50772,
+        "sha256": "b708a3eb026e85f1a733cbb1e4836c7e5cabf571bb3c68fbc74c9ac2a719c882",
+        "gitBlob": "19fcd35a9e8783dfa28c824d23a8df510209ca80"
+      }
+    },
+    {
+      "role": "postTransportCombinedRedGuardRuntimeReview",
+      "identity": {
+        "bytes": 261789,
+        "sha256": "d9e6e50a0678babd3d54551af2951fb57825b0fc51fa1e7682def558a52bfd32",
+        "gitBlob": "38bd0eb98cb500274a477c1c02bfef0156bee7d6"
+      }
+    },
+    {
+      "role": "postTransportCombinedRedSemanticRuntimeReview",
+      "identity": {
+        "bytes": 229314,
+        "sha256": "2e05bcc76671b35883fc04e072d46e0961c86c2d293de2582e0e0fe0196692da",
+        "gitBlob": "3cddc2bdb141d81c87c97d6059c56278b1118a55"
+      }
+    },
+    {
+      "role": "postTransportCombinedRedCompleteLargeBodyJoin",
+      "identity": {
+        "bytes": 8914,
+        "sha256": "e322edbfc50d1706db7838681e2d65abf4648180c4a4da3ba418d94fff5eac44",
+        "gitBlob": "aad388d47bc80c4dd09789ee76238ebd935e8cdd"
+      }
+    },
+    {
+      "role": "postTransportCombinedRedPublicationRootActual",
+      "identity": {
+        "bytes": 55348,
+        "sha256": "bbe57a54a25a38bee1d4f4de5fc1d036d81f6b2ecdb40b3d0088b274de6656c9",
+        "gitBlob": "9218839ef55406b01267605c040bc586c7d443be"
+      }
+    },
+    {
+      "role": "postTransportCombinedRedPublicationIndependentActual",
+      "identity": {
+        "bytes": 166393,
+        "sha256": "cbe1880831780d10a7131282ab2ecc37d81fbdede3c53a265c1749ea863c20f2",
+        "gitBlob": "e5c2c2d8c84c0d491e334f6d67774cf23c83948f"
+      }
+    },
+    {
+      "role": "threeProducerSourceAuthorshipGate",
+      "identity": {
+        "bytes": 4327,
+        "sha256": "3231731b2a22cb3903ccff6991341b54c673cd7064599b9aa7238fe07e3c6b18",
+        "gitBlob": "2780955d0a71956a75650ddf4d8a0ff0576faa57"
+      }
+    },
+    {
+      "role": "threeProducerSourceR2Proposal",
+      "identity": {
+        "bytes": 25372,
+        "sha256": "7def167b3384043abb2cea83e90c51ea332f2c12a9f4fc3ca1ddcf1531bab85c",
+        "gitBlob": "b0d4fb7c7ca2fc486fda6823ee3c3618171f8cdc"
+      }
+    },
+    {
+      "role": "threeProducerSourceR2Root",
+      "identity": {
+        "bytes": 17023,
+        "sha256": "30aa0b71c8c7cdb32d88db381e7396ec2e543ea977d80e93ee8297bd9f3304f3",
+        "gitBlob": "e4119f144e4a79e7c7b6a1598a33a70388df207f"
+      }
+    },
+    {
+      "role": "threeProducerSourceR2Guard",
+      "identity": {
+        "bytes": 245598,
+        "sha256": "0bdbb65827d3717684d09ea1e35a2528b2ea4ee36143e4d3abe3601bf8bb8022",
+        "gitBlob": "ce6997eef4cc5989fb1c5437a23ef490bc74377a"
+      }
+    },
+    {
+      "role": "threeProducerSourceR2Semantic",
+      "identity": {
+        "bytes": 70998,
+        "sha256": "3a3fe8dcf619204191b0db04023c5293fd24e433b74f2bf801f07bbc395d0f6c",
+        "gitBlob": "0c3db6a22e1f652ca30d085de23217fc52eb5e51"
+      }
+    },
+    {
+      "role": "threeProducerSourceR2Binding",
+      "identity": {
+        "bytes": 47779,
+        "sha256": "ce13ee532bbca6a6181f95a97815e6c122be0a0adb46220ba61fd8b7c4029faa",
+        "gitBlob": "c2357e52f57abe45cd77d1ff0844aaa16d1095a6"
+      }
+    },
+    {
+      "role": "threeProducerSourcePublicationManifest",
+      "identity": {
+        "bytes": 15180,
+        "sha256": "25dd8d8f0e59fb6be9e66eb6d7eba4e30103c2ed7d0d005c6cc2b8093fbac91f",
+        "gitBlob": "9ae8f0d2eaadc7e481a60ae594871c647d478c26"
+      }
+    },
+    {
+      "role": "threeProducerSourcePublicationRootActual",
+      "identity": {
+        "bytes": 67762,
+        "sha256": "72188509d6d08e0c84a355f30686b898f00bbd0f6a19cc5b723df405080dfad9",
+        "gitBlob": "8940b2ec5b87ecd8ed5d442d282687ee7ec22a00"
+      }
+    },
+    {
+      "role": "threeProducerSourcePublicationIndependentActual",
+      "identity": {
+        "bytes": 121833,
+        "sha256": "3fd7ec1c29e1d689175e0866821c1b397fdf5b8a41a2ee6d20d2756cfb58c917",
+        "gitBlob": "0915fd43d3324c43d32939214c7ac1d31545d164"
+      }
+    },
+    {
+      "role": "threeProducerBindingAuthorshipGate",
+      "identity": {
+        "bytes": 6536,
+        "sha256": "1333882f719c6b832223e038043b9b82491d8168e9cf5effa64c12b0cf4741a2",
+        "gitBlob": "63fe55b3f050783b80bda34e3261564600186592"
+      }
+    }
+  ],
+  "completeSourceBodyReadbacks": [
+    {
+      "boundary": "before",
+      "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "identity": {
+        "bytes": 28974,
+        "sha256": "7626e479a6662242009cb050e7e5af612a29e4205d62666d15274d5c30f91386",
+        "gitBlob": "ed57cb0fe7d57ef076a591621289eb77667c63ad"
+      }
+    },
+    {
+      "boundary": "before",
+      "path": "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+      "identity": {
+        "bytes": 24759,
+        "sha256": "d15b7eea14c0951194310aee34ddc5c477879c759a97a4e2f4e9fce1f956ce9b",
+        "gitBlob": "cf93da72a198dac636658e512093eef7828b5927"
+      }
+    },
+    {
+      "boundary": "before",
+      "path": "scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+      "identity": {
+        "bytes": 8457,
+        "sha256": "2da55bb40a5689ace0e922dc4867d7c73278d9a1cd200ea8c4602ca68f82da3b",
+        "gitBlob": "3c7b4bb53f4259ac0795d3f92fb715887acb554f"
+      }
+    },
+    {
+      "boundary": "before",
+      "path": "scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts",
+      "identity": {
+        "bytes": 36260,
+        "sha256": "26357f37b146fc171bbceadb624bde4a7f4e459d2073ae23a651e757817b2d38",
+        "gitBlob": "4700a0052d3c58a2b3d9bc66e6803220688050fd"
+      }
+    },
+    {
+      "boundary": "before",
+      "path": "src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts",
+      "identity": {
+        "bytes": 74351,
+        "sha256": "68abe01f665b263bd8581659ea306f366428fdccbb45246f08ec42e20b9ee575",
+        "gitBlob": "1176fd06b70f1b717ba83deb387f87b05b18b45b"
+      }
+    },
+    {
+      "boundary": "before",
+      "path": "scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+      "identity": {
+        "bytes": 45707,
+        "sha256": "d8ee4090606876194393463e96411f89ed54a53bd3095df333a5d47c5c7fd159",
+        "gitBlob": "bd8bc728808eda00a45b300fd328d49e4e919bc2"
+      }
+    },
+    {
+      "boundary": "before",
+      "path": "scripts/legacy-agent-host/desktop-task-review-cycle-ui-smoke.ts",
+      "identity": {
+        "bytes": 32845,
+        "sha256": "43e12eb3252e578061ea5840ae39d173ce0cd5a8ce6673c5c5ea06d97a8bedaa",
+        "gitBlob": "d65706646743798f2646421105f2f6a75819f143"
+      }
+    },
+    {
+      "boundary": "before",
+      "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+      "identity": {
+        "bytes": 164965,
+        "sha256": "852bedb85c83dbc4b488dffb4a9ffebbe398adc53e85f5a3cea8ca36b146cbf7",
+        "gitBlob": "896c587e077da56a98a314a175fb3cba0353d6ee"
+      }
+    },
+    {
+      "boundary": "before",
+      "path": "test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts",
+      "identity": {
+        "bytes": 187890,
+        "sha256": "b6f11896e60014aac785968d42390afde38716d47de9bba9562522235db048c9",
+        "gitBlob": "76495189c992fcda47cd7a43a0c697190b5acbb3"
+      }
+    },
+    {
+      "boundary": "after",
+      "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "identity": {
+        "bytes": 28974,
+        "sha256": "7626e479a6662242009cb050e7e5af612a29e4205d62666d15274d5c30f91386",
+        "gitBlob": "ed57cb0fe7d57ef076a591621289eb77667c63ad"
+      }
+    },
+    {
+      "boundary": "after",
+      "path": "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+      "identity": {
+        "bytes": 24759,
+        "sha256": "d15b7eea14c0951194310aee34ddc5c477879c759a97a4e2f4e9fce1f956ce9b",
+        "gitBlob": "cf93da72a198dac636658e512093eef7828b5927"
+      }
+    },
+    {
+      "boundary": "after",
+      "path": "scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+      "identity": {
+        "bytes": 8457,
+        "sha256": "2da55bb40a5689ace0e922dc4867d7c73278d9a1cd200ea8c4602ca68f82da3b",
+        "gitBlob": "3c7b4bb53f4259ac0795d3f92fb715887acb554f"
+      }
+    },
+    {
+      "boundary": "after",
+      "path": "scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts",
+      "identity": {
+        "bytes": 36260,
+        "sha256": "26357f37b146fc171bbceadb624bde4a7f4e459d2073ae23a651e757817b2d38",
+        "gitBlob": "4700a0052d3c58a2b3d9bc66e6803220688050fd"
+      }
+    },
+    {
+      "boundary": "after",
+      "path": "src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts",
+      "identity": {
+        "bytes": 74340,
+        "sha256": "647ac5732bfd6b5cb57834adb4ad22c32ee5dfb018a934c92f982efd9daa531c",
+        "gitBlob": "c2faa156015707bc5fbd7f8123a7ffd9c4faa486"
+      }
+    },
+    {
+      "boundary": "after",
+      "path": "scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+      "identity": {
+        "bytes": 45795,
+        "sha256": "2c5931f5c7fa1dc8bb7858201c1b8afdbae9683faf4a2ad9fce067f116f3f94b",
+        "gitBlob": "5026f0ec6165bb092717ddc989043848a25081dc"
+      }
+    },
+    {
+      "boundary": "after",
+      "path": "scripts/legacy-agent-host/desktop-task-review-cycle-ui-smoke.ts",
+      "identity": {
+        "bytes": 33036,
+        "sha256": "4fa52cfad9347065680ef62a3ba6420762408a78a93b77e96ac3a2e16e68bdc9",
+        "gitBlob": "8d175c98158b3bd71192aef7b1929484b2b681b6"
+      }
+    },
+    {
+      "boundary": "after",
+      "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+      "identity": {
+        "bytes": 164965,
+        "sha256": "852bedb85c83dbc4b488dffb4a9ffebbe398adc53e85f5a3cea8ca36b146cbf7",
+        "gitBlob": "896c587e077da56a98a314a175fb3cba0353d6ee"
+      }
+    },
+    {
+      "boundary": "after",
+      "path": "test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts",
+      "identity": {
+        "bytes": 187890,
+        "sha256": "b6f11896e60014aac785968d42390afde38716d47de9bba9562522235db048c9",
+        "gitBlob": "76495189c992fcda47cd7a43a0c697190b5acbb3"
+      }
+    }
+  ],
+  "completeReviewBodyBytes": 6093457,
+  "checks": [
+    {
+      "name": "Complete lossless reconstructed binding readback",
+      "passed": true
+    },
+    {
+      "name": "Whole runner remains exact c81",
+      "passed": true
+    },
+    {
+      "name": "Whole accepted R1 remains exact8ce",
+      "passed": true
+    },
+    {
+      "name": "Authorship after source actual gate",
+      "passed": true
+    },
+    {
+      "name": "Exactly selected16 existing fields change",
+      "passed": true
+    },
+    {
+      "name": "Exactly2 provenance/time fields added",
+      "passed": true
+    },
+    {
+      "name": "Complete inherited field unchanged: schemaVersion",
+      "passed": true
+    },
+    {
+      "name": "Complete inherited field unchanged: publishedR1",
+      "passed": true
+    },
+    {
+      "name": "Complete inherited field unchanged: publishedRecoveryR1",
+      "passed": true
+    },
+    {
+      "name": "Complete inherited field unchanged: publishedTransportAmendment",
+      "passed": true
+    },
+    {
+      "name": "Complete inherited field unchanged: combinedR1Identity",
+      "passed": true
+    },
+    {
+      "name": "Complete inherited field unchanged: combinedR1Body",
+      "passed": true
+    },
+    {
+      "name": "Complete inherited field unchanged: combinedR1ActualReadbackAccepted",
+      "passed": true
+    },
+    {
+      "name": "Complete inherited field unchanged: combinedR1ActualReadbackEvidence",
+      "passed": true
+    },
+    {
+      "name": "Complete inherited field unchanged: runnerLocalPath",
+      "passed": true
+    },
+    {
+      "name": "Complete inherited field unchanged: runnerIdentity",
+      "passed": true
+    },
+    {
+      "name": "Complete inherited field unchanged: actualPublishedSubjectReadbackAccepted",
+      "passed": true
+    },
+    {
+      "name": "Complete inherited field unchanged: combinedInputImportAdmission",
+      "passed": true
+    },
+    {
+      "name": "Complete inherited field unchanged: inputFiles",
+      "passed": true
+    },
+    {
+      "name": "Complete inherited field unchanged: testIdentities",
+      "passed": true
+    },
+    {
+      "name": "Complete inherited field unchanged: nodeNames",
+      "passed": true
+    },
+    {
+      "name": "Complete inherited field unchanged: rendererNames",
+      "passed": true
+    },
+    {
+      "name": "Complete inherited field unchanged: nodeRedFailureSites",
+      "passed": true
+    },
+    {
+      "name": "Complete inherited field unchanged: rendererRedFailureSites",
+      "passed": true
+    },
+    {
+      "name": "Complete inherited field unchanged: commandVectors",
+      "passed": true
+    },
+    {
+      "name": "Complete inherited field unchanged: nativeMetadataArgv",
+      "passed": true
+    },
+    {
+      "name": "Complete inherited field unchanged: outputRoots",
+      "passed": true
+    },
+    {
+      "name": "Complete inherited field unchanged: tempRoots",
+      "passed": true
+    },
+    {
+      "name": "Complete inherited field unchanged: rendererRawEnvironment",
+      "passed": true
+    },
+    {
+      "name": "Complete inherited field unchanged: rendererEffectiveAbsentKeys",
+      "passed": true
+    },
+    {
+      "name": "Complete inherited field unchanged: rendererAbsentPaths",
+      "passed": true
+    },
+    {
+      "name": "Complete inherited field unchanged: rendererStaticPins",
+      "passed": true
+    },
+    {
+      "name": "Complete inherited field unchanged: rendererStaticLinks",
+      "passed": true
+    },
+    {
+      "name": "Complete inherited field unchanged: rendererNativePins",
+      "passed": true
+    },
+    {
+      "name": "Complete inherited field unchanged: rendererEntryRelative",
+      "passed": true
+    },
+    {
+      "name": "Complete inherited field unchanged: rollupLocalOverride",
+      "passed": true
+    },
+    {
+      "name": "Complete inherited field unchanged: rendererDerivedConfig",
+      "passed": true
+    },
+    {
+      "name": "Complete inherited field unchanged: materializationReceiptScope",
+      "passed": true
+    },
+    {
+      "name": "Complete inherited field unchanged: acceptedCombinedGreen",
+      "passed": true
+    },
+    {
+      "name": "Complete inherited field unchanged: behavioralAttempts",
+      "passed": true
+    },
+    {
+      "name": "Complete inherited field unchanged: timing",
+      "passed": true
+    },
+    {
+      "name": "Complete inherited field unchanged: executionScope",
+      "passed": true
+    },
+    {
+      "name": "Complete inherited field unchanged: authorshipGate",
+      "passed": true
+    },
+    {
+      "name": "Complete inherited field unchanged: historicalRecoveryProvenance",
+      "passed": true
+    },
+    {
+      "name": "Complete inherited field unchanged: historicalTestMaterialization",
+      "passed": true
+    },
+    {
+      "name": "Complete inherited field unchanged: historicalEvidenceBodies",
+      "passed": true
+    },
+    {
+      "name": "Complete inherited field unchanged: historicalPredictionCorrection",
+      "passed": true
+    },
+    {
+      "name": "Complete inherited field unchanged: correctedControlAuthoredAtUtc",
+      "passed": true
+    },
+    {
+      "name": "Complete inherited field unchanged: dataReplicaRecovery",
+      "passed": true
+    },
+    {
+      "name": "Complete inherited field unchanged: postTransportRecoveryProvenance",
+      "passed": true
+    },
+    {
+      "name": "Complete inherited field unchanged: postTransportControlAuthoredAtUtc",
+      "passed": true
+    },
+    {
+      "name": "Original58 literal review records unchanged",
+      "passed": true
+    },
+    {
+      "name": "77 unique current review/evidence records",
+      "passed": true
+    },
+    {
+      "name": "Complete review-body identity: freshBootstrapGuardActualReview",
+      "passed": true
+    },
+    {
+      "name": "Complete review-body identity: freshSdkIndependentReview",
+      "passed": true
+    },
+    {
+      "name": "Complete review-body identity: freshMcpIndependentReview",
+      "passed": true
+    },
+    {
+      "name": "Complete review-body identity: crossR1ActualPublicationReadback",
+      "passed": true
+    },
+    {
+      "name": "Complete review-body identity: crossTestGuardR2",
+      "passed": true
+    },
+    {
+      "name": "Complete review-body identity: crossTestParityR2",
+      "passed": true
+    },
+    {
+      "name": "Complete review-body identity: crossTestActualPublicationReadback",
+      "passed": true
+    },
+    {
+      "name": "Complete review-body identity: crossActualRedGuard",
+      "passed": true
+    },
+    {
+      "name": "Complete review-body identity: crossActualRedPrimarySemantic",
+      "passed": true
+    },
+    {
+      "name": "Complete review-body identity: crossActualRedSemanticClosure",
+      "passed": true
+    },
+    {
+      "name": "Complete review-body identity: crossProducerGuardR2",
+      "passed": true
+    },
+    {
+      "name": "Complete review-body identity: crossProducerParityR2",
+      "passed": true
+    },
+    {
+      "name": "Complete review-body identity: crossProducerActualPublicationReadback",
+      "passed": true
+    },
+    {
+      "name": "Complete review-body identity: crossActualGreenFullGuard",
+      "passed": true
+    },
+    {
+      "name": "Complete review-body identity: crossActualGreenFinalSemantic",
+      "passed": true
+    },
+    {
+      "name": "Complete review-body identity: crossActualGreenFullEnvelope",
+      "passed": true
+    },
+    {
+      "name": "Complete review-body identity: crossOriginalValidationIncompleteGuard",
+      "passed": true
+    },
+    {
+      "name": "Complete review-body identity: crossOriginalValidationIncompleteParity",
+      "passed": true
+    },
+    {
+      "name": "Complete review-body identity: isolatedRecoveryR1Guard",
+      "passed": true
+    },
+    {
+      "name": "Complete review-body identity: isolatedRecoveryR1Parity",
+      "passed": true
+    },
+    {
+      "name": "Complete review-body identity: isolatedRecoveryR1CompositeActualPublicationReadback",
+      "passed": true
+    },
+    {
+      "name": "Complete review-body identity: combinedR1RootActual",
+      "passed": true
+    },
+    {
+      "name": "Complete review-body identity: combinedR1IndependentActual",
+      "passed": true
+    },
+    {
+      "name": "Complete review-body identity: combinedTestGuardR2",
+      "passed": true
+    },
+    {
+      "name": "Complete review-body identity: combinedTestRendererR2",
+      "passed": true
+    },
+    {
+      "name": "Complete review-body identity: combinedTestRootActual",
+      "passed": true
+    },
+    {
+      "name": "Complete review-body identity: combinedTestIndependentActual",
+      "passed": true
+    },
+    {
+      "name": "Complete review-body identity: rendererInitialInstalledAdmission",
+      "passed": true
+    },
+    {
+      "name": "Complete review-body identity: rendererAdditionalInstalledAdmission",
+      "passed": true
+    },
+    {
+      "name": "Complete review-body identity: rendererCombinedFeasibility",
+      "passed": true
+    },
+    {
+      "name": "Complete review-body identity: rendererPathDataAdmission",
+      "passed": true
+    },
+    {
+      "name": "Complete review-body identity: combinedSemanticSourceGuide",
+      "passed": true
+    },
+    {
+      "name": "Complete review-body identity: combinedWholeTestsR2Proposal",
+      "passed": true
+    },
+    {
+      "name": "Complete review-body identity: correctedTitleR1GuardReview",
+      "passed": true
+    },
+    {
+      "name": "Complete review-body identity: correctedTitleR1SemanticReview",
+      "passed": true
+    },
+    {
+      "name": "Complete review-body identity: correctedTitleR1BindingReview",
+      "passed": true
+    },
+    {
+      "name": "Complete review-body identity: correctedTitleR1RootActual",
+      "passed": true
+    },
+    {
+      "name": "Complete review-body identity: correctedTitleR1IndependentActual",
+      "passed": true
+    },
+    {
+      "name": "Complete review-body identity: historicalTestMaterializationGuard",
+      "passed": true
+    },
+    {
+      "name": "Complete review-body identity: historicalTestMaterializationParity",
+      "passed": true
+    },
+    {
+      "name": "Complete review-body identity: historicalTestMaterializationRootActual",
+      "passed": true
+    },
+    {
+      "name": "Complete review-body identity: historicalTestMaterializationIndependentActual",
+      "passed": true
+    },
+    {
+      "name": "Complete review-body identity: originalSixTitlePredictionDiagnosis",
+      "passed": true
+    },
+    {
+      "name": "Complete review-body identity: postTransportRecoveryR1RootReview",
+      "passed": true
+    },
+    {
+      "name": "Complete review-body identity: postTransportRecoveryR1GuardReview",
+      "passed": true
+    },
+    {
+      "name": "Complete review-body identity: postTransportRecoveryR1BindingReview",
+      "passed": true
+    },
+    {
+      "name": "Complete review-body identity: postTransportRecoveryR1SemanticReview",
+      "passed": true
+    },
+    {
+      "name": "Complete review-body identity: postTransportRecoveryR1RootActual",
+      "passed": true
+    },
+    {
+      "name": "Complete review-body identity: postTransportRecoveryR1IndependentActual",
+      "passed": true
+    },
+    {
+      "name": "Complete review-body identity: correctedRedIncompleteRootAccounting",
+      "passed": true
+    },
+    {
+      "name": "Complete review-body identity: correctedRedIncompleteGuardReview",
+      "passed": true
+    },
+    {
+      "name": "Complete review-body identity: correctedRedIncompleteSemanticReview",
+      "passed": true
+    },
+    {
+      "name": "Complete review-body identity: correctedRedIncompleteRootActual",
+      "passed": true
+    },
+    {
+      "name": "Complete review-body identity: correctedRedIncompleteIndependentActual",
+      "passed": true
+    },
+    {
+      "name": "Complete review-body identity: postTransportRecoveryRecommendations",
+      "passed": true
+    },
+    {
+      "name": "Complete review-body identity: returnedSourceInputObservation",
+      "passed": true
+    },
+    {
+      "name": "Complete review-body identity: returnedPathObservation",
+      "passed": true
+    },
+    {
+      "name": "Complete review-body identity: returnedToolCacheObservation",
+      "passed": true
+    },
+    {
+      "name": "Complete review-body identity: postTransportControlsRootActual",
+      "passed": true
+    },
+    {
+      "name": "Complete review-body identity: postTransportControlsIndependentActual",
+      "passed": true
+    },
+    {
+      "name": "Complete review-body identity: postTransportCombinedRedObservedOuter",
+      "passed": true
+    },
+    {
+      "name": "Complete review-body identity: postTransportCombinedRedRootRuntimeReview",
+      "passed": true
+    },
+    {
+      "name": "Complete review-body identity: postTransportCombinedRedGuardRuntimeReview",
+      "passed": true
+    },
+    {
+      "name": "Complete review-body identity: postTransportCombinedRedSemanticRuntimeReview",
+      "passed": true
+    },
+    {
+      "name": "Complete review-body identity: postTransportCombinedRedCompleteLargeBodyJoin",
+      "passed": true
+    },
+    {
+      "name": "Complete review-body identity: postTransportCombinedRedPublicationRootActual",
+      "passed": true
+    },
+    {
+      "name": "Complete review-body identity: postTransportCombinedRedPublicationIndependentActual",
+      "passed": true
+    },
+    {
+      "name": "Complete review-body identity: threeProducerSourceAuthorshipGate",
+      "passed": true
+    },
+    {
+      "name": "Complete review-body identity: threeProducerSourceR2Proposal",
+      "passed": true
+    },
+    {
+      "name": "Complete review-body identity: threeProducerSourceR2Root",
+      "passed": true
+    },
+    {
+      "name": "Complete review-body identity: threeProducerSourceR2Guard",
+      "passed": true
+    },
+    {
+      "name": "Complete review-body identity: threeProducerSourceR2Semantic",
+      "passed": true
+    },
+    {
+      "name": "Complete review-body identity: threeProducerSourceR2Binding",
+      "passed": true
+    },
+    {
+      "name": "Complete review-body identity: threeProducerSourcePublicationManifest",
+      "passed": true
+    },
+    {
+      "name": "Complete review-body identity: threeProducerSourcePublicationRootActual",
+      "passed": true
+    },
+    {
+      "name": "Complete review-body identity: threeProducerSourcePublicationIndependentActual",
+      "passed": true
+    },
+    {
+      "name": "Complete review-body identity: threeProducerBindingAuthorshipGate",
+      "passed": true
+    },
+    {
+      "name": "Exact appended current evidence: postTransportControlsRootActual",
+      "passed": true
+    },
+    {
+      "name": "Exact appended current evidence: postTransportControlsIndependentActual",
+      "passed": true
+    },
+    {
+      "name": "Exact appended current evidence: postTransportCombinedRedObservedOuter",
+      "passed": true
+    },
+    {
+      "name": "Exact appended current evidence: postTransportCombinedRedRootRuntimeReview",
+      "passed": true
+    },
+    {
+      "name": "Exact appended current evidence: postTransportCombinedRedGuardRuntimeReview",
+      "passed": true
+    },
+    {
+      "name": "Exact appended current evidence: postTransportCombinedRedSemanticRuntimeReview",
+      "passed": true
+    },
+    {
+      "name": "Exact appended current evidence: postTransportCombinedRedCompleteLargeBodyJoin",
+      "passed": true
+    },
+    {
+      "name": "Exact appended current evidence: postTransportCombinedRedPublicationRootActual",
+      "passed": true
+    },
+    {
+      "name": "Exact appended current evidence: postTransportCombinedRedPublicationIndependentActual",
+      "passed": true
+    },
+    {
+      "name": "Exact appended current evidence: threeProducerSourceAuthorshipGate",
+      "passed": true
+    },
+    {
+      "name": "Exact appended current evidence: threeProducerSourceR2Proposal",
+      "passed": true
+    },
+    {
+      "name": "Exact appended current evidence: threeProducerSourceR2Root",
+      "passed": true
+    },
+    {
+      "name": "Exact appended current evidence: threeProducerSourceR2Guard",
+      "passed": true
+    },
+    {
+      "name": "Exact appended current evidence: threeProducerSourceR2Semantic",
+      "passed": true
+    },
+    {
+      "name": "Exact appended current evidence: threeProducerSourceR2Binding",
+      "passed": true
+    },
+    {
+      "name": "Exact appended current evidence: threeProducerSourcePublicationManifest",
+      "passed": true
+    },
+    {
+      "name": "Exact appended current evidence: threeProducerSourcePublicationRootActual",
+      "passed": true
+    },
+    {
+      "name": "Exact appended current evidence: threeProducerSourcePublicationIndependentActual",
+      "passed": true
+    },
+    {
+      "name": "Exact appended current evidence: threeProducerBindingAuthorshipGate",
+      "passed": true
+    },
+    {
+      "name": "Before overlay equals accepted RED complete overlay",
+      "passed": true
+    },
+    {
+      "name": "before full source body: scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "passed": true
+    },
+    {
+      "name": "before full source body: scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+      "passed": true
+    },
+    {
+      "name": "before full source body: scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+      "passed": true
+    },
+    {
+      "name": "before full source body: scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts",
+      "passed": true
+    },
+    {
+      "name": "before full source body: src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts",
+      "passed": true
+    },
+    {
+      "name": "before full source body: scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+      "passed": true
+    },
+    {
+      "name": "before full source body: scripts/legacy-agent-host/desktop-task-review-cycle-ui-smoke.ts",
+      "passed": true
+    },
+    {
+      "name": "before full source body: scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+      "passed": true
+    },
+    {
+      "name": "before full source body: test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts",
+      "passed": true
+    },
+    {
+      "name": "after full source body: scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "passed": true
+    },
+    {
+      "name": "after full source body: scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+      "passed": true
+    },
+    {
+      "name": "after full source body: scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+      "passed": true
+    },
+    {
+      "name": "after full source body: scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts",
+      "passed": true
+    },
+    {
+      "name": "after full source body: src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts",
+      "passed": true
+    },
+    {
+      "name": "after full source body: scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+      "passed": true
+    },
+    {
+      "name": "after full source body: scripts/legacy-agent-host/desktop-task-review-cycle-ui-smoke.ts",
+      "passed": true
+    },
+    {
+      "name": "after full source body: scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+      "passed": true
+    },
+    {
+      "name": "after full source body: test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts",
+      "passed": true
+    },
+    {
+      "name": "Only selected3 source rows change",
+      "passed": true
+    },
+    {
+      "name": "Source row equals full actual published body: scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "passed": true
+    },
+    {
+      "name": "Source row equals full actual published body: scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+      "passed": true
+    },
+    {
+      "name": "Source row equals full actual published body: scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+      "passed": true
+    },
+    {
+      "name": "Source row equals full actual published body: scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts",
+      "passed": true
+    },
+    {
+      "name": "Source row equals full actual published body: src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts",
+      "passed": true
+    },
+    {
+      "name": "Source row equals full actual published body: scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+      "passed": true
+    },
+    {
+      "name": "Source row equals full actual published body: scripts/legacy-agent-host/desktop-task-review-cycle-ui-smoke.ts",
+      "passed": true
+    },
+    {
+      "name": "Source row equals full actual published body: scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+      "passed": true
+    },
+    {
+      "name": "Source row equals full actual published body: test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts",
+      "passed": true
+    },
+    {
+      "name": "Full9 after source pins exact",
+      "passed": true
+    },
+    {
+      "name": "Current RED before vector f644",
+      "passed": true
+    },
+    {
+      "name": "New after vector388 exactcodec",
+      "passed": true
+    },
+    {
+      "name": "Existing physical line cap: scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+      "passed": true,
+      "detail": {
+        "lines": 572
+      }
+    },
+    {
+      "name": "Existing physical line cap: scripts/legacy-agent-host/desktop-task-review-cycle-ui-smoke.ts",
+      "passed": true,
+      "detail": {
+        "lines": 794
+      }
+    },
+    {
+      "name": "Existing physical line cap: src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts",
+      "passed": true,
+      "detail": {
+        "lines": 2068
+      }
+    },
+    {
+      "name": "Node139 exactnames/testidentity unchanged",
+      "passed": true
+    },
+    {
+      "name": "Renderer85 exactnames/testidentity unchanged",
+      "passed": true
+    },
+    {
+      "name": "Full accepted RED phase exactbcc",
+      "passed": true
+    },
+    {
+      "name": "Accepted RED priorphase flags and complete outcomes",
+      "passed": true
+    },
+    {
+      "name": "RED separate observed outer0",
+      "passed": true
+    },
+    {
+      "name": "RED full source/test/runner join",
+      "passed": true
+    },
+    {
+      "name": "RED exact2 accepted suites",
+      "passed": true
+    },
+    {
+      "name": "RED empty cleanup and no errors",
+      "passed": true
+    },
+    {
+      "name": "RED publication full actuals joined",
+      "passed": true
+    },
+    {
+      "name": "Exact actual source publication subject",
+      "passed": true
+    },
+    {
+      "name": "Producer reviewed/published/readback flags truthful",
+      "passed": true
+    },
+    {
+      "name": "GREEN not asserted accepted",
+      "passed": true
+    },
+    {
+      "name": "Original whole commands unchanged and R1-bound",
+      "passed": true
+    },
+    {
+      "name": "Distinct immutable current-control binding path",
+      "passed": true
+    },
+    {
+      "name": "Three source materialize order exact",
+      "passed": true
+    },
+    {
+      "name": "Source-only receipt scope unchanged",
+      "passed": true
+    },
+    {
+      "name": "External actual materialization publication gate remains mandatory",
+      "passed": true
+    },
+    {
+      "name": "Same-binding check remains exact in unchanged runner",
+      "passed": true
+    },
+    {
+      "name": "Historical draft/overlay qualification literal preserved",
+      "passed": true
+    },
+    {
+      "name": "Authorship snapshot does not claim source application/GREEN",
+      "passed": true
+    }
+  ],
+  "failedChecks": [],
+  "unresolvedPointers": [],
+  "unresolvedBlockers": [],
+  "requiredNext": "All independent full R2 reviews; publication/immediate push and complete root/independent actual readbacks before staging. External accepted source-only materialization publication/readbacks before run green with identical binding.",
+  "bindingStaged": false,
+  "sourceWritten": false,
+  "runtimeInvoked": false,
+  "runnerChanged": false,
+  "wholeE2EQualified": false
+}

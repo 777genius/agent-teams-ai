@@ -1,0 +1,104 @@
+{
+  "schemaVersion": 1,
+  "kind": "inode64-member-reveal-R1-actual-authorship-gate",
+  "at": "2026-11-17 06:33:57 UTC",
+  "repository": "777genius/agent-teams-ai",
+  "branch": "fix/frontend-parity-coobservation-c714-20261115",
+  "verdict": "R1_FULL_ACTUAL_READBACKS_CLOSED_FOR_EXACT_SOURCE_CONTROL_AUTHORSHIP_ONLY",
+  "r1": {
+    "bytes": 27869,
+    "sha256": "e3a891024d750f7c868a7a253f2ed1f3630b833e92d1698af38b533c8ebc5db7",
+    "gitBlob": "b16bf54091cfb2fd2756ad7a951d0f9143611d2b"
+  },
+  "commit": "6d06207d96ea1c7ae7d9199a552ec776451dc231",
+  "tree": "b5bb45adf162e15fd7d909140adeaf958c23d1f9",
+  "docsTree": "a4486f1b960f8658fde466d3c1e51e13993b5c48",
+  "parent": "c4fc226201fb32e59d1a8ccfb130922926445747",
+  "manifest": {
+    "bytes": 11667,
+    "sha256": "a4040d0353f90185d6e56696256a9a15a5f6e3a6529c01cb2bb5f8af8cba7fe9",
+    "gitBlob": "59a0816f4c7399985557df3489b54c94fe50c8d3"
+  },
+  "rootActual": {
+    "bytes": 74741,
+    "sha256": "c6eee115daa3d4c205baecfe47bbfc33c02750616790a612eccb71b7a95d23b7",
+    "gitBlob": "987cd165ec38747d8425b0d5984e797a4886b6b1"
+  },
+  "independentActual": {
+    "bytes": 170762,
+    "sha256": "30270672655a4793b8f568647421a0fd6aa8c911b277fba2a616f373edd62306",
+    "gitBlob": "62e961fcb91218d41557049ac5d43de98eeceaa0"
+  },
+  "fullRootReadback": true,
+  "fullIndependentReadback": true,
+  "independentFullSelfReadback": true,
+  "actualChecks": {
+    "root": 41,
+    "independent": 64
+  },
+  "sourceAnchorRows": [
+    {
+      "path": "package.json",
+      "mode": "100644",
+      "bytes": 26839,
+      "sha256": "c92407a9a5dad6f9d6a6eb8ea7c456195d396679bb4b9dfd15b6c06b726d1084",
+      "gitBlob": "f80ec83172d0aec0dec8a8ab055426b4fca4a1f7"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "mode": "100644",
+      "bytes": 29017,
+      "sha256": "ffd9bbb822dbdc30da7cb8daa881fcbebd384ba2bf9bdd87c804c511166fa02b",
+      "gitBlob": "5286c036a63a14e98925711a224df202c9a7caa7"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-ui-controls-deadline.test.ts",
+      "mode": "100644",
+      "bytes": 7883,
+      "sha256": "29836f914218edb4876b6a4e157e7cdc68f63cdf414084cdd41683965c734eda",
+      "gitBlob": "6a9f8ad7481cd5910befcc6c7ff5992eef03965b"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-emulated-runtime-ui.ts",
+      "mode": "100644",
+      "bytes": 69194,
+      "sha256": "bed27eab54593e30f76ef3121e1d1effdaa53ca9b872ecbbf52b6c2fd619087e",
+      "gitBlob": "43ab487464098fed0425ffd51441a38abc206f3b"
+    }
+  ],
+  "selectedAuthorship": {
+    "driver": "Only one awaited existing ui.scrollTo call immediately before the literal unchanged649-byte member click; unchanged all other driver bytes and≤800lines.",
+    "controls": "Only range-checked signed64→unsigned64 inode comparison in exactNode plus raw/canonical evidence and exact fresh scope/stage/token/R1/source-anchor/authority rebinding. Preserve every test body, Node pin, deadline, process/cleanup/census/TAP rule.",
+    "knownSourceAnchor": "6d06207d96ea1c7ae7d9199a552ec776451dc231",
+    "laterPublication": "Future combined source/control R2 publication has this known commit as sole parent. Its exact identity and actual readbacks are bound only after they exist by external immutable runtime admission."
+  },
+  "priorSpentAttempt": {
+    "bytes": 200440,
+    "sha256": "ab24e85bd89e55d48149f05274176df9fba2e0340b526c1a927242b4ed401bd4",
+    "gitBlob": "30bcf16f731650684a275de4ae4be6cd18b41c4e"
+  },
+  "preservation": {
+    "all22ActualBodies": 5381393,
+    "all3ParentBodies": 3112051,
+    "allPriorCatalogFields": 81,
+    "bundles": 27,
+    "sourceChanges": 0,
+    "nonDocLeaves": 8799,
+    "workflows": 42
+  },
+  "environment": {
+    "notice": "Local execution environment is unavailable.",
+    "dataOnlyMetadataCheck": {
+      "status": "rejected",
+      "reason": "No usable execution environment is available. Wait for an environment to become available before using this tool."
+    },
+    "physicalFreshState": "No new current physical observation; last retained new roots were absent. Do not stage/invoke until an available environment supplies all exact required admission checks. No replacement runtime or changed Node pin is authorized.",
+    "newAttemptInvoked": false
+  },
+  "sourcePostimagesAuthored": false,
+  "controlsAuthored": false,
+  "stageCreated": false,
+  "scopeCreated": false,
+  "runtimeAuthorized": false,
+  "fullE2EQualified": false
+}

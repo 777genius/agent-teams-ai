@@ -1,0 +1,541 @@
+{
+  "schemaVersion": 1,
+  "kind": "combined139-renderer85-three-producer-source-r2-proposal",
+  "author": "root",
+  "authoredAtUtc": "2026-11-17 01:43:09 UTC",
+  "authorshipTimeQualification": "This is the complete proposal/three-postimage retention time. The first two identical postimage blobs were created in the preceding data-writer call after the closed gate; their individual exact creation times were not retained. All source postimages were authored after the gate. The data-only inverse verifier was corrected to use exact edit offsets, without changing either retained source body.",
+  "dataAuthoringObservation": {
+    "at": "2026-11-17 01:42:33 UTC",
+    "gateAt": "2026-11-17 01:40:00 UTC",
+    "files": [
+      {
+        "path": "scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+        "retainedInAuthoringStore": true,
+        "pin": {
+          "bytes": 45795,
+          "sha256": "2c5931f5c7fa1dc8bb7858201c1b8afdbae9683faf4a2ad9fce067f116f3f94b",
+          "gitBlob": "5026f0ec6165bb092717ddc989043848a25081dc"
+        }
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-task-review-cycle-ui-smoke.ts",
+        "retainedInAuthoringStore": true,
+        "pin": {
+          "bytes": 33036,
+          "sha256": "4fa52cfad9347065680ef62a3ba6420762408a78a93b77e96ac3a2e16e68bdc9",
+          "gitBlob": "8d175c98158b3bd71192aef7b1929484b2b681b6"
+        }
+      },
+      {
+        "path": "src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts",
+        "retainedInAuthoringStore": false,
+        "pin": null
+      }
+    ],
+    "failure": "Data-only inverse checker required the replacement hook condition to be globally unique, but existing other hook conditions share that text. Two source blobs retained; hook/proposal not yet retained. No target runtime, physical source, test, control or branch mutation. Fixing verification to use exact recorded edit offsets."
+  },
+  "repository": "777genius/agent-teams-ai",
+  "branch": "fix/frontend-parity-coobservation-c714-20261115",
+  "preparedFromCommit": "77993819c233737f1e2b4c11c8ca1a5d360bcbe3",
+  "preparedFromTree": "ada3f27db78fabc17a91e3904d41b8bc547c6dca",
+  "r1": {
+    "bytes": 139634,
+    "sha256": "b9524cd8f0f1251f034337f4eb8fbc6606adc1d1c987d993580be06b9a078a75",
+    "gitBlob": "8ce89328171e58ec3e0631dce9607ee7e1eba54e"
+  },
+  "producerAuthorshipGate": {
+    "kind": "post-transport-recovery-red-producer-authorship-gate-closed",
+    "at": "2026-11-17 01:40:00 UTC",
+    "commit": "77993819c233737f1e2b4c11c8ca1a5d360bcbe3",
+    "tree": "ada3f27db78fabc17a91e3904d41b8bc547c6dca",
+    "docsTree": "a1b92f625b548e7384ef13e0358c420d1e1f136d",
+    "r1": {
+      "bytes": 139634,
+      "sha256": "b9524cd8f0f1251f034337f4eb8fbc6606adc1d1c987d993580be06b9a078a75",
+      "gitBlob": "8ce89328171e58ec3e0631dce9607ee7e1eba54e"
+    },
+    "runner": {
+      "bytes": 104131,
+      "sha256": "20958434e304d6d67657abad910d7c891f5a9086164e73d19cc8764348fc83f5",
+      "gitBlob": "c81f72a8ed14a93b3557fdf889f9ad6cebc25140"
+    },
+    "binding": {
+      "bytes": 6399172,
+      "sha256": "be265da9b130091d251295f937a7ab09b1db0e03f2c4a02d985839134e0379ec",
+      "gitBlob": "9f9ddcf0f9f62cce1a31f204ae786a8e2d3d2267"
+    },
+    "acceptedRed": {
+      "phaseReceipt": {
+        "bytes": 139946,
+        "sha256": "51867690fb9a707141b01ee3dff6d42d082a5ba7aceffd1f4f43eec8a428c9be",
+        "gitBlob": "bcc31247c2752b2017edba9adcd129a1c83cdd32"
+      },
+      "packet": {
+        "bytes": 441196,
+        "sha256": "ebce8cffde715538fc340a07304678a0c563700c72b3eea3de035dd86b7fca5f",
+        "gitBlob": "ca4e84b2c1a41a1c848a62c4c3ad6be1a8af65c8"
+      },
+      "outer": {
+        "bytes": 13970,
+        "sha256": "341064fd92ead2afed314db220e095bae77a2b96af47580b30c35f495a0e80cd",
+        "gitBlob": "947cf5276c207149f87d67dd06a175b49c9f1b5b"
+      },
+      "observedOuter": 0,
+      "rootReview": {
+        "bytes": 50772,
+        "sha256": "b708a3eb026e85f1a733cbb1e4836c7e5cabf571bb3c68fbc74c9ac2a719c882",
+        "gitBlob": "19fcd35a9e8783dfa28c824d23a8df510209ca80"
+      },
+      "guardReview": {
+        "bytes": 261789,
+        "sha256": "d9e6e50a0678babd3d54551af2951fb57825b0fc51fa1e7682def558a52bfd32",
+        "gitBlob": "38bd0eb98cb500274a477c1c02bfef0156bee7d6"
+      },
+      "semanticReview": {
+        "bytes": 229314,
+        "sha256": "2e05bcc76671b35883fc04e072d46e0961c86c2d293de2582e0e0fe0196692da",
+        "gitBlob": "3cddc2bdb141d81c87c97d6059c56278b1118a55"
+      },
+      "fullInputJoin": {
+        "bytes": 8914,
+        "sha256": "e322edbfc50d1706db7838681e2d65abf4648180c4a4da3ba418d94fff5eac44",
+        "gitBlob": "aad388d47bc80c4dd09789ee76238ebd935e8cdd"
+      }
+    },
+    "rootActual": {
+      "bytes": 55348,
+      "sha256": "bbe57a54a25a38bee1d4f4de5fc1d036d81f6b2ecdb40b3d0088b274de6656c9",
+      "gitBlob": "9218839ef55406b01267605c040bc586c7d443be"
+    },
+    "independentActual": {
+      "bytes": 166393,
+      "sha256": "cbe1880831780d10a7131282ab2ecc37d81fbdede3c53a265c1749ea863c20f2",
+      "gitBlob": "e5c2c2d8c84c0d491e334f6d67774cf23c83948f"
+    },
+    "rootFullReadIndependent": true,
+    "independentFullReadRoot": true,
+    "independentSelfReadbackConfirmed": true,
+    "sourcePreimageVector": {
+      "bytes": 2118,
+      "sha256": "f2574559a378b3bc537fdcedbde161003c8344a5485dfff9322214f6fda2a90c",
+      "gitBlob": "f6446bdc2bbdb511206c729a1f03717871baea6d"
+    },
+    "testIdentities": {
+      "node": {
+        "bytes": 164965,
+        "sha256": "852bedb85c83dbc4b488dffb4a9ffebbe398adc53e85f5a3cea8ca36b146cbf7",
+        "gitBlob": "896c587e077da56a98a314a175fb3cba0353d6ee"
+      },
+      "renderer": {
+        "bytes": 187890,
+        "sha256": "b6f11896e60014aac785968d42390afde38716d47de9bba9562522235db048c9",
+        "gitBlob": "76495189c992fcda47cd7a43a0c697190b5acbb3"
+      }
+    },
+    "allowedNow": "Root may author only the three exact producer postimages already selected by R1: P11 post-observation original deadline assertions; Review original waitRead exact live edit predicate with30_000; Hook only removal of !silent && . Full independent producer R2, immediate publication and complete actual readbacks precede application. Tests, four fixed producers, runner, clocks, captures and cleanup remain frozen.",
+    "producerPostimagesAuthoredBeforeGate": false,
+    "sourceWritesSinceRed": 0,
+    "testRematerialization": false,
+    "greenExecuted": false,
+    "wholeE2EQualified": false,
+    "priorUnknownReportIdentityQualification": "An earlier publication reviewer reported completion but its report identity was not received before tool cache/agent registry reset. That unretained completion was not used to open this gate; the full independent e5c2c2d8 report is used.",
+    "old64038": "REFUSED/SPENT; observedouter2",
+    "old54393": "UNKNOWN/INCOMPLETE/SPENT; old outer/termination/custody/cleanup unknown"
+  },
+  "producerAuthorshipGateIdentity": {
+    "bytes": 4327,
+    "sha256": "3231731b2a22cb3903ccff6991341b54c673cd7064599b9aa7238fe07e3c6b18",
+    "gitBlob": "2780955d0a71956a75650ddf4d8a0ff0576faa57"
+  },
+  "redActualPublication": {
+    "commit": "77993819c233737f1e2b4c11c8ca1a5d360bcbe3",
+    "tree": "ada3f27db78fabc17a91e3904d41b8bc547c6dca",
+    "docsTree": "a1b92f625b548e7384ef13e0358c420d1e1f136d",
+    "root": {
+      "bytes": 55348,
+      "sha256": "bbe57a54a25a38bee1d4f4de5fc1d036d81f6b2ecdb40b3d0088b274de6656c9",
+      "gitBlob": "9218839ef55406b01267605c040bc586c7d443be"
+    },
+    "independent": {
+      "bytes": 166393,
+      "sha256": "cbe1880831780d10a7131282ab2ecc37d81fbdede3c53a265c1749ea863c20f2",
+      "gitBlob": "e5c2c2d8c84c0d491e334f6d67774cf23c83948f"
+    }
+  },
+  "files": [
+    {
+      "path": "scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+      "mode": "100644",
+      "preimage": {
+        "bytes": 45707,
+        "sha256": "d8ee4090606876194393463e96411f89ed54a53bd3095df333a5d47c5c7fd159",
+        "gitBlob": "bd8bc728808eda00a45b300fd328d49e4e919bc2"
+      },
+      "postimage": {
+        "bytes": 45795,
+        "sha256": "2c5931f5c7fa1dc8bb7858201c1b8afdbae9683faf4a2ad9fce067f116f3f94b",
+        "gitBlob": "5026f0ec6165bb092717ddc989043848a25081dc"
+      },
+      "preimageLines": 570,
+      "postimageLines": 572,
+      "cap": 800,
+      "completeInverseExact": true,
+      "inverseMethod": "Reverse the exact recorded edit offsets, requiring each complete after span at that location; reproduce every original file byte.",
+      "edits": [
+        {
+          "before": "    const cutoff = Date.now() + 90_000; let value = await observe();\n",
+          "after": "    const cutoff = Date.now() + 90_000; let value = await observe();\n    assert.ok(Date.now() < cutoff, label);\n",
+          "beforeIdentity": {
+            "bytes": 69,
+            "sha256": "0adccd0c7d853dbd37433ba7894bb3d4f63d4ef10773dfdc2c2d0e539160ecbe",
+            "gitBlob": "d4e0199d7e73809b71dfc3f2b76f1af9cbc0bff6"
+          },
+          "afterIdentity": {
+            "bytes": 112,
+            "sha256": "de7f2ca237f32dcbdfc773577530ab4556cd1a3cb535f2e816b300f68611a548",
+            "gitBlob": "0d6b0741a77ce34cd0630ac78a829495428f8d9e"
+          },
+          "offsetInSequentialPreimage": 5691
+        },
+        {
+          "before": "      current(); await new Promise<void>(resolve => setTimeout(resolve, 100)); value = await observe();\n",
+          "after": "      current(); await new Promise<void>(resolve => setTimeout(resolve, 100)); value = await observe();\n      assert.ok(Date.now() < cutoff, label);\n",
+          "beforeIdentity": {
+            "bytes": 104,
+            "sha256": "d483ce71179e9bb55c0c8db027102bcec457d876a21b024c4abed9bbc93ee4b5",
+            "gitBlob": "8aa2e4509dfb1cd1f613cbc2299f85a78dfcc11b"
+          },
+          "afterIdentity": {
+            "bytes": 149,
+            "sha256": "dea724bd8f3a043912b13e570378bcecd5c4ce984b272fb11568e642bcdf9458",
+            "gitBlob": "bf5773cd7b6dc066bc34405199f545f1a2d3e8cb"
+          },
+          "offsetInSequentialPreimage": 5856
+        }
+      ],
+      "allowedDelta": "Only the existing local poll body between its unique declaration and existing workspace declaration. Check the same original Date.now cutoff immediately after each of the two existing awaited observations and before accepting/continuing. No new/reset/extended deadline, timer, observation, catch, retry, call site, import, finite-provider branch or other source region. Preserve original assertion label, direct read-error identity, currentness call and100ms cadence."
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-task-review-cycle-ui-smoke.ts",
+      "mode": "100644",
+      "preimage": {
+        "bytes": 32845,
+        "sha256": "43e12eb3252e578061ea5840ae39d173ce0cd5a8ce6673c5c5ea06d97a8bedaa",
+        "gitBlob": "d65706646743798f2646421105f2f6a75819f143"
+      },
+      "postimage": {
+        "bytes": 33036,
+        "sha256": "4fa52cfad9347065680ef62a3ba6420762408a78a93b77e96ac3a2e16e68bdc9",
+        "gitBlob": "8d175c98158b3bd71192aef7b1929484b2b681b6"
+      },
+      "preimageLines": 788,
+      "postimageLines": 794,
+      "cap": 800,
+      "completeInverseExact": true,
+      "inverseMethod": "Reverse the exact recorded edit offsets, requiring each complete after span at that location; reproduce every original file byte.",
+      "edits": [
+        {
+          "before": "      desktopTaskCommentInputExpression(options.handleId, taskId),\n      'exact current correction Task/owner/surface'\n",
+          "after": "      desktopTaskCommentInputExpression(options.handleId, taskId),\n      'exact current correction Task/owner/surface',\n      30_000,\n      (value) =>\n        value !== null &&\n        typeof value === 'object' &&\n        !Array.isArray(value) &&\n        (value as Record<string, unknown>).canEditNow === true\n",
+          "beforeIdentity": {
+            "bytes": 119,
+            "sha256": "489d4a378e651681701ce1ad8671cb804d5a76e96d6cfff869c3a06ccab0afc8",
+            "gitBlob": "d6280a34384bb329d9e7b84698cee62af90245bf"
+          },
+          "afterIdentity": {
+            "bytes": 310,
+            "sha256": "ec6d5ce70aa7bc491e7a9f325f721fdf86b534d8a0c76d744ce9f3be5fc43790",
+            "gitBlob": "70321976d4c567083d9d9e4b7d4835785e053fe6"
+          },
+          "offsetInSequentialPreimage": 17215
+        }
+      ],
+      "allowedDelta": "Only add the exact readiness predicate and explicitly preserve the existing30_000 default at the original waitRead inside the unique commentTarget correction span. The predicate accepts only a non-null non-array object whose canEditNow property is exactly true. Preserve original expression, label, selector validation and scroll/focus/insert/submit order, original errors and no replay. No new helper/import/file, no copied readiness producer and no mutation outside that argument list."
+    },
+    {
+      "path": "src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts",
+      "mode": "100644",
+      "preimage": {
+        "bytes": 74351,
+        "sha256": "68abe01f665b263bd8581659ea306f366428fdccbb45246f08ec42e20b9ee575",
+        "gitBlob": "1176fd06b70f1b717ba83deb387f87b05b18b45b"
+      },
+      "postimage": {
+        "bytes": 74340,
+        "sha256": "647ac5732bfd6b5cb57834adb4ad22c32ee5dfb018a934c92f982efd9daa531c",
+        "gitBlob": "c2faa156015707bc5fbd7f8123a7ffd9c4faa486"
+      },
+      "preimageLines": 2068,
+      "postimageLines": 2068,
+      "cap": 2068,
+      "completeInverseExact": true,
+      "inverseMethod": "Reverse the exact recorded edit offsets, requiring each complete after span at that location; reproduce every original file byte.",
+      "edits": [
+        {
+          "before": "if (!silent && requestIsCurrent()) {",
+          "after": "if (requestIsCurrent()) {",
+          "beforeIdentity": {
+            "bytes": 36,
+            "sha256": "cba9564e19adffb199815aeabf20514dc6b0ee4581918dfaaefef07bc1f36fdd",
+            "gitBlob": "de1a0189ff8a7e20359f2b1c413238b66e678840"
+          },
+          "afterIdentity": {
+            "bytes": 25,
+            "sha256": "9c202d426593ba1e1f6edaab02998d59b33973dbb7c5abd0597fa4c5cdc5c0e2",
+            "gitBlob": "775d8c2bc28a221a353467d5287d043024d9a34a"
+          },
+          "offsetInSequentialPreimage": 21419
+        }
+      ],
+      "allowedDelta": "Only remove !silent && from the original getView finally condition if (!silent && requestIsCurrent()). Preserve its exact currentness check, setLoading(false), surrounding try/catch/finally, all requests/state/errors and every other source byte. No growth, diagnostic publisher/helper/import or new file."
+    }
+  ],
+  "beforeSourcePins": [
+    {
+      "path": "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+      "mode": "100644",
+      "bytes": 24759,
+      "sha256": "d15b7eea14c0951194310aee34ddc5c477879c759a97a4e2f4e9fce1f956ce9b",
+      "gitBlob": "cf93da72a198dac636658e512093eef7828b5927"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+      "mode": "100644",
+      "bytes": 45707,
+      "sha256": "d8ee4090606876194393463e96411f89ed54a53bd3095df333a5d47c5c7fd159",
+      "gitBlob": "bd8bc728808eda00a45b300fd328d49e4e919bc2"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts",
+      "mode": "100644",
+      "bytes": 36260,
+      "sha256": "26357f37b146fc171bbceadb624bde4a7f4e459d2073ae23a651e757817b2d38",
+      "gitBlob": "4700a0052d3c58a2b3d9bc66e6803220688050fd"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+      "mode": "100644",
+      "bytes": 8457,
+      "sha256": "2da55bb40a5689ace0e922dc4867d7c73278d9a1cd200ea8c4602ca68f82da3b",
+      "gitBlob": "3c7b4bb53f4259ac0795d3f92fb715887acb554f"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-task-review-cycle-ui-smoke.ts",
+      "mode": "100644",
+      "bytes": 32845,
+      "sha256": "43e12eb3252e578061ea5840ae39d173ce0cd5a8ce6673c5c5ea06d97a8bedaa",
+      "gitBlob": "d65706646743798f2646421105f2f6a75819f143"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+      "mode": "100644",
+      "bytes": 164965,
+      "sha256": "852bedb85c83dbc4b488dffb4a9ffebbe398adc53e85f5a3cea8ca36b146cbf7",
+      "gitBlob": "896c587e077da56a98a314a175fb3cba0353d6ee"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "mode": "100644",
+      "bytes": 28974,
+      "sha256": "7626e479a6662242009cb050e7e5af612a29e4205d62666d15274d5c30f91386",
+      "gitBlob": "ed57cb0fe7d57ef076a591621289eb77667c63ad"
+    },
+    {
+      "path": "src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts",
+      "mode": "100644",
+      "bytes": 74351,
+      "sha256": "68abe01f665b263bd8581659ea306f366428fdccbb45246f08ec42e20b9ee575",
+      "gitBlob": "1176fd06b70f1b717ba83deb387f87b05b18b45b"
+    },
+    {
+      "path": "test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts",
+      "mode": "100644",
+      "bytes": 187890,
+      "sha256": "b6f11896e60014aac785968d42390afde38716d47de9bba9562522235db048c9",
+      "gitBlob": "76495189c992fcda47cd7a43a0c697190b5acbb3"
+    }
+  ],
+  "afterSourcePins": [
+    {
+      "path": "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+      "mode": "100644",
+      "bytes": 24759,
+      "sha256": "d15b7eea14c0951194310aee34ddc5c477879c759a97a4e2f4e9fce1f956ce9b",
+      "gitBlob": "cf93da72a198dac636658e512093eef7828b5927"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+      "mode": "100644",
+      "bytes": 45795,
+      "sha256": "2c5931f5c7fa1dc8bb7858201c1b8afdbae9683faf4a2ad9fce067f116f3f94b",
+      "gitBlob": "5026f0ec6165bb092717ddc989043848a25081dc"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts",
+      "mode": "100644",
+      "bytes": 36260,
+      "sha256": "26357f37b146fc171bbceadb624bde4a7f4e459d2073ae23a651e757817b2d38",
+      "gitBlob": "4700a0052d3c58a2b3d9bc66e6803220688050fd"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+      "mode": "100644",
+      "bytes": 8457,
+      "sha256": "2da55bb40a5689ace0e922dc4867d7c73278d9a1cd200ea8c4602ca68f82da3b",
+      "gitBlob": "3c7b4bb53f4259ac0795d3f92fb715887acb554f"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-task-review-cycle-ui-smoke.ts",
+      "mode": "100644",
+      "bytes": 33036,
+      "sha256": "4fa52cfad9347065680ef62a3ba6420762408a78a93b77e96ac3a2e16e68bdc9",
+      "gitBlob": "8d175c98158b3bd71192aef7b1929484b2b681b6"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+      "mode": "100644",
+      "bytes": 164965,
+      "sha256": "852bedb85c83dbc4b488dffb4a9ffebbe398adc53e85f5a3cea8ca36b146cbf7",
+      "gitBlob": "896c587e077da56a98a314a175fb3cba0353d6ee"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "mode": "100644",
+      "bytes": 28974,
+      "sha256": "7626e479a6662242009cb050e7e5af612a29e4205d62666d15274d5c30f91386",
+      "gitBlob": "ed57cb0fe7d57ef076a591621289eb77667c63ad"
+    },
+    {
+      "path": "src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts",
+      "mode": "100644",
+      "bytes": 74340,
+      "sha256": "647ac5732bfd6b5cb57834adb4ad22c32ee5dfb018a934c92f982efd9daa531c",
+      "gitBlob": "c2faa156015707bc5fbd7f8123a7ffd9c4faa486"
+    },
+    {
+      "path": "test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts",
+      "mode": "100644",
+      "bytes": 187890,
+      "sha256": "b6f11896e60014aac785968d42390afde38716d47de9bba9562522235db048c9",
+      "gitBlob": "76495189c992fcda47cd7a43a0c697190b5acbb3"
+    }
+  ],
+  "beforeSourceVector": {
+    "bytes": 2118,
+    "sha256": "f2574559a378b3bc537fdcedbde161003c8344a5485dfff9322214f6fda2a90c",
+    "gitBlob": "f6446bdc2bbdb511206c729a1f03717871baea6d"
+  },
+  "afterSourceVector": {
+    "bytes": 2118,
+    "sha256": "6007c5c7ba2f74c43bd9b73c50cae2319eacbf712c233cc0d67b3efbb4c6894d",
+    "gitBlob": "3887991d5dbd25dbec5c8656e8e03d423ea502b7"
+  },
+  "sourceVectorCodec": "Sorted path array; record keys sorted; compact JSON UTF-8 without terminal LF. Derived vector identity is not a standalone Git blob.",
+  "frozenSourceAndTests": [
+    {
+      "path": "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+      "mode": "100644",
+      "bytes": 24759,
+      "sha256": "d15b7eea14c0951194310aee34ddc5c477879c759a97a4e2f4e9fce1f956ce9b",
+      "gitBlob": "cf93da72a198dac636658e512093eef7828b5927"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts",
+      "mode": "100644",
+      "bytes": 36260,
+      "sha256": "26357f37b146fc171bbceadb624bde4a7f4e459d2073ae23a651e757817b2d38",
+      "gitBlob": "4700a0052d3c58a2b3d9bc66e6803220688050fd"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+      "mode": "100644",
+      "bytes": 8457,
+      "sha256": "2da55bb40a5689ace0e922dc4867d7c73278d9a1cd200ea8c4602ca68f82da3b",
+      "gitBlob": "3c7b4bb53f4259ac0795d3f92fb715887acb554f"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+      "mode": "100644",
+      "bytes": 164965,
+      "sha256": "852bedb85c83dbc4b488dffb4a9ffebbe398adc53e85f5a3cea8ca36b146cbf7",
+      "gitBlob": "896c587e077da56a98a314a175fb3cba0353d6ee"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "mode": "100644",
+      "bytes": 28974,
+      "sha256": "7626e479a6662242009cb050e7e5af612a29e4205d62666d15274d5c30f91386",
+      "gitBlob": "ed57cb0fe7d57ef076a591621289eb77667c63ad"
+    },
+    {
+      "path": "test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts",
+      "mode": "100644",
+      "bytes": 187890,
+      "sha256": "b6f11896e60014aac785968d42390afde38716d47de9bba9562522235db048c9",
+      "gitBlob": "76495189c992fcda47cd7a43a0c697190b5acbb3"
+    }
+  ],
+  "testIdentities": {
+    "node": {
+      "bytes": 164965,
+      "sha256": "852bedb85c83dbc4b488dffb4a9ffebbe398adc53e85f5a3cea8ca36b146cbf7",
+      "gitBlob": "896c587e077da56a98a314a175fb3cba0353d6ee"
+    },
+    "renderer": {
+      "bytes": 187890,
+      "sha256": "b6f11896e60014aac785968d42390afde38716d47de9bba9562522235db048c9",
+      "gitBlob": "76495189c992fcda47cd7a43a0c697190b5acbb3"
+    }
+  },
+  "selectedWriteSet": [
+    "scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+    "scripts/legacy-agent-host/desktop-task-review-cycle-ui-smoke.ts",
+    "src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts"
+  ],
+  "counts": {
+    "selectedSourceRows": 9,
+    "changedProducers": 3,
+    "frozenProducers": 4,
+    "frozenWholeTests": 2,
+    "nodeCases": 139,
+    "rendererCases": 85,
+    "productionFiles": 5020,
+    "exceptions": 141,
+    "productionCap": 800
+  },
+  "sourcePostimagesAuthored": true,
+  "sourceWorkingTreeWrites": 0,
+  "sourcePostimagesPublished": false,
+  "sourcePostimagesApplied": false,
+  "testsRematerialized": false,
+  "runnerChanged": false,
+  "phaseBindingAuthored": false,
+  "greenExecuted": false,
+  "validationExecuted": false,
+  "wholeE2EQualified": false,
+  "requiredNext": "Independent complete source R2; publish these exact3 postimages with immediate push and full actual root+independent readbacks. Then author/review/publish/readback one immutable producer-materialization/GREEN binding; apply only through the existing one producer-materialization, accept/publish/readback its full actual result, then one full GREEN. No new R1 or runner change, no repair/retry/partial resume.",
+  "selectedSemanticRationale": {
+    "P11": "Check the same original cutoff directly after each existing awaited observation, before readiness acceptance/continuation. Existing rejected observation identity and original currentness/cadence remain unchanged.",
+    "Review": "The original descriptor may be truthy while edit authority is absent or false. Existing waitRead must require exact current canEditNow=true before scroll/focus/insert/submit and keep30_000.",
+    "Hook": "A current silent view refresh can supersede a pending visible request. Its finally must clear shared loading under the existing exact currentness guard; stale/newer/unmounted completions remain inert."
+  },
+  "redReachabilityLimits": {
+    "node138": "The original null variant completed before the original {} variant failed. Remaining variants require GREEN.",
+    "node139": "The original immediate-current variant completed; false-to-current skipped a read and failed. The insert-error branch requires GREEN.",
+    "renderer81to83": "Assertions after current loading=false were unreached in RED and must all pass in GREEN."
+  },
+  "oldAttempts": {
+    "53054": "COMPLETE accepted expected RED; outer0; spent",
+    "54393": "UNKNOWN/INCOMPLETE/SPENT; old outer/termination/custody/cleanup unknown",
+    "64038": "REFUSED/SPENT; outer2"
+  },
+  "broaderOpen": [
+    "fresh GUI",
+    "Windows Process15s and Packaged10s",
+    "strictDarwinP09",
+    "laterP11 and genuineM16",
+    "incoming integration",
+    "canonical typing/build",
+    "whole E2E"
+  ]
+}

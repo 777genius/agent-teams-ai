@@ -1,0 +1,377 @@
+{
+  "schemaVersion": 1,
+  "at": "2026-11-17 02:14:24 UTC",
+  "repository": "777genius/agent-teams-ai",
+  "branch": "fix/frontend-parity-coobservation-c714-20261115",
+  "parent": "b83da2bb72ada6e9fb3a426cb2a7d62b30ec4871",
+  "parentTree": "5ef5abf3c6aadd53340f457ea7f77e6b69f84878",
+  "parentDocsTree": "ca906a27438211f8261ea22cf3b916599be3216e",
+  "purpose": "Publish exact fully reviewed immutable producer-materialization/GREEN binding and lossless transport evidence, with source actual readbacks; no source changes or runtime result.",
+  "subject": {
+    "binding": {
+      "bytes": 8262787,
+      "sha256": "56d2bb56ff1135fbc606d375b2b8debd8c5f3feaaa8b61904aa584c4dc38435c",
+      "gitBlob": "ea852a05538a51710c13a0cd86a8bd1e3fa1c056"
+    },
+    "baselineBinding": {
+      "bytes": 6399172,
+      "sha256": "be265da9b130091d251295f937a7ab09b1db0e03f2c4a02d985839134e0379ec",
+      "gitBlob": "9f9ddcf0f9f62cce1a31f204ae786a8e2d3d2267"
+    },
+    "runner": {
+      "bytes": 104131,
+      "sha256": "20958434e304d6d67657abad910d7c891f5a9086164e73d19cc8764348fc83f5",
+      "gitBlob": "c81f72a8ed14a93b3557fdf889f9ad6cebc25140"
+    },
+    "r1": {
+      "bytes": 139634,
+      "sha256": "b9524cd8f0f1251f034337f4eb8fbc6606adc1d1c987d993580be06b9a078a75",
+      "gitBlob": "8ce89328171e58ec3e0631dce9607ee7e1eba54e"
+    },
+    "proposal": {
+      "bytes": 28238,
+      "sha256": "9df788ded4a212545e21352c16a556e9d9d72f221bb0823b45c64efd32839faf",
+      "gitBlob": "486aac82a04b969d6ba14df6929eeddca3e43c59"
+    },
+    "sourcePublicationGate": {
+      "bytes": 6536,
+      "sha256": "1333882f719c6b832223e038043b9b82491d8168e9cf5effa64c12b0cf4741a2",
+      "gitBlob": "63fe55b3f050783b80bda34e3261564600186592"
+    },
+    "publishedSubject": {
+      "commit": "b83da2bb72ada6e9fb3a426cb2a7d62b30ec4871",
+      "tree": "5ef5abf3c6aadd53340f457ea7f77e6b69f84878",
+      "qualification": "Exact published nine-row source vector: only the three independently reviewed producer postimages change; four fixed producers and complete139/85 test bodies remain identical. Publication is not physical application or GREEN acceptance."
+    },
+    "bindingLocalPath": "/workspace/scratch/c714-post-transport-20261117/controls/green-binding.json",
+    "beforeSourceVector": {
+      "bytes": 2118,
+      "sha256": "f2574559a378b3bc537fdcedbde161003c8344a5485dfff9322214f6fda2a90c",
+      "gitBlob": "f6446bdc2bbdb511206c729a1f03717871baea6d"
+    },
+    "sourceVector": {
+      "bytes": 2118,
+      "sha256": "6007c5c7ba2f74c43bd9b73c50cae2319eacbf712c233cc0d67b3efbb4c6894d",
+      "gitBlob": "3887991d5dbd25dbec5c8656e8e03d423ea502b7"
+    },
+    "sourcePins": [
+      {
+        "path": "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+        "mode": "100644",
+        "bytes": 24759,
+        "sha256": "d15b7eea14c0951194310aee34ddc5c477879c759a97a4e2f4e9fce1f956ce9b",
+        "gitBlob": "cf93da72a198dac636658e512093eef7828b5927"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+        "mode": "100644",
+        "bytes": 45795,
+        "sha256": "2c5931f5c7fa1dc8bb7858201c1b8afdbae9683faf4a2ad9fce067f116f3f94b",
+        "gitBlob": "5026f0ec6165bb092717ddc989043848a25081dc"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts",
+        "mode": "100644",
+        "bytes": 36260,
+        "sha256": "26357f37b146fc171bbceadb624bde4a7f4e459d2073ae23a651e757817b2d38",
+        "gitBlob": "4700a0052d3c58a2b3d9bc66e6803220688050fd"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+        "mode": "100644",
+        "bytes": 8457,
+        "sha256": "2da55bb40a5689ace0e922dc4867d7c73278d9a1cd200ea8c4602ca68f82da3b",
+        "gitBlob": "3c7b4bb53f4259ac0795d3f92fb715887acb554f"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-task-review-cycle-ui-smoke.ts",
+        "mode": "100644",
+        "bytes": 33036,
+        "sha256": "4fa52cfad9347065680ef62a3ba6420762408a78a93b77e96ac3a2e16e68bdc9",
+        "gitBlob": "8d175c98158b3bd71192aef7b1929484b2b681b6"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+        "mode": "100644",
+        "bytes": 164965,
+        "sha256": "852bedb85c83dbc4b488dffb4a9ffebbe398adc53e85f5a3cea8ca36b146cbf7",
+        "gitBlob": "896c587e077da56a98a314a175fb3cba0353d6ee"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+        "mode": "100644",
+        "bytes": 28974,
+        "sha256": "7626e479a6662242009cb050e7e5af612a29e4205d62666d15274d5c30f91386",
+        "gitBlob": "ed57cb0fe7d57ef076a591621289eb77667c63ad"
+      },
+      {
+        "path": "src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts",
+        "mode": "100644",
+        "bytes": 74340,
+        "sha256": "647ac5732bfd6b5cb57834adb4ad22c32ee5dfb018a934c92f982efd9daa531c",
+        "gitBlob": "c2faa156015707bc5fbd7f8123a7ffd9c4faa486"
+      },
+      {
+        "path": "test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts",
+        "mode": "100644",
+        "bytes": 187890,
+        "sha256": "b6f11896e60014aac785968d42390afde38716d47de9bba9562522235db048c9",
+        "gitBlob": "76495189c992fcda47cd7a43a0c697190b5acbb3"
+      }
+    ],
+    "testIdentities": {
+      "node": {
+        "bytes": 164965,
+        "sha256": "852bedb85c83dbc4b488dffb4a9ffebbe398adc53e85f5a3cea8ca36b146cbf7",
+        "gitBlob": "896c587e077da56a98a314a175fb3cba0353d6ee"
+      },
+      "renderer": {
+        "bytes": 187890,
+        "sha256": "b6f11896e60014aac785968d42390afde38716d47de9bba9562522235db048c9",
+        "gitBlob": "76495189c992fcda47cd7a43a0c697190b5acbb3"
+      }
+    }
+  },
+  "sourcePublicationGate": {
+    "bytes": 6536,
+    "sha256": "1333882f719c6b832223e038043b9b82491d8168e9cf5effa64c12b0cf4741a2",
+    "gitBlob": "63fe55b3f050783b80bda34e3261564600186592"
+  },
+  "rootReview": {
+    "bytes": 60425,
+    "sha256": "1e73ba974bb56a77fbeb81c0853608ca57bdb80b6234a9cf49c0adacb5a4064c",
+    "gitBlob": "022f629acd0b84cc2a5712b9b10f3ed9dd96c593"
+  },
+  "independentReviews": {
+    "guard": {
+      "bytes": 227012,
+      "sha256": "c618c7e8746b6845ffc086bb09897f3cd56336df021ceda35a67d781495e1a25",
+      "gitBlob": "f5bf733feb08fb08e60adc94454802f6a2fe2620"
+    },
+    "semantic": {
+      "bytes": 156302,
+      "sha256": "c05539c498a522d0cfd2ef46e1f6798486cb109550f0170d3e2250ffbdc45a44",
+      "gitBlob": "10cda254fce68db87f9bfbcd2c82a6a60318b25d"
+    },
+    "binding": {
+      "bytes": 139454,
+      "sha256": "ac5c573f9f12201481b04227f99cdfad2cefb4176018e7a8859257fa8ba72eaf",
+      "gitBlob": "45dd5691a8fa7fc2faf297d84d47452a9f1ca8cf"
+    }
+  },
+  "r2ClosedAt": "2026-11-17 02:14:24 UTC",
+  "evidenceFiles": [
+    {
+      "role": "sourceActualRoot",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-three-producer-actual-root-publication-20261117.json",
+      "mode": "100644",
+      "bytes": 67762,
+      "sha256": "72188509d6d08e0c84a355f30686b898f00bbd0f6a19cc5b723df405080dfad9",
+      "gitBlob": "8940b2ec5b87ecd8ed5d442d282687ee7ec22a00"
+    },
+    {
+      "role": "sourceActualIndependent",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-three-producer-actual-independent-publication-20261117.json",
+      "mode": "100644",
+      "bytes": 121833,
+      "sha256": "3fd7ec1c29e1d689175e0866821c1b397fdf5b8a41a2ee6d20d2756cfb58c917",
+      "gitBlob": "0915fd43d3324c43d32939214c7ac1d31545d164"
+    },
+    {
+      "role": "sourceActualGate",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-three-producer-actual-source-gate-20261117.json",
+      "mode": "100644",
+      "bytes": 6536,
+      "sha256": "1333882f719c6b832223e038043b9b82491d8168e9cf5effa64c12b0cf4741a2",
+      "gitBlob": "63fe55b3f050783b80bda34e3261564600186592"
+    },
+    {
+      "role": "binding",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-producer-green-binding-20261117.json",
+      "mode": "100644",
+      "bytes": 8262787,
+      "sha256": "56d2bb56ff1135fbc606d375b2b8debd8c5f3feaaa8b61904aa584c4dc38435c",
+      "gitBlob": "ea852a05538a51710c13a0cd86a8bd1e3fa1c056"
+    },
+    {
+      "role": "bindingTransportManifest",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-producer-green-binding-transport-manifest-20261117.json",
+      "mode": "100644",
+      "bytes": 2073,
+      "sha256": "535e1204c513c6a3c9fb6ab925f8ee32014588ea065b94b6075ff8bd18ab6627",
+      "gitBlob": "be69500fa261dd5c45d5e8215596a94d292e2c45"
+    },
+    {
+      "role": "bindingTransportPart0",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-producer-green-binding-part-0-20261117.txt",
+      "mode": "100644",
+      "bytes": 2801279,
+      "sha256": "98639f464306184d3131ed36e625ae6e88e156a96aeb57e31787a1be2ea5f916",
+      "gitBlob": "441fd0ecb053bf9191332e635ff764cd511c4d0e"
+    },
+    {
+      "role": "bindingTransportPart1",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-producer-green-binding-part-1-20261117.txt",
+      "mode": "100644",
+      "bytes": 2800142,
+      "sha256": "16214d8009f81bea6e90fdc12de912a36542024aaa2451d0d7bc9f5ae8954957",
+      "gitBlob": "58fc694520738dae1507e0545fd5d18f7344fe89"
+    },
+    {
+      "role": "bindingTransportPart2",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-producer-green-binding-part-2-20261117.txt",
+      "mode": "100644",
+      "bytes": 2661366,
+      "sha256": "197b6c989795fad2a4d46205aaca86aa79391ece81eb267205e85bf3b18f233f",
+      "gitBlob": "92de54c81f85a21da8b4ff9346f89d9c55bd5d79"
+    },
+    {
+      "role": "bindingProposal",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-producer-green-binding-r2-proposal-20261117.json",
+      "mode": "100644",
+      "bytes": 28238,
+      "sha256": "9df788ded4a212545e21352c16a556e9d9d72f221bb0823b45c64efd32839faf",
+      "gitBlob": "486aac82a04b969d6ba14df6929eeddca3e43c59"
+    },
+    {
+      "role": "bindingRootStatic",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-producer-green-binding-root-r2-review-20261117.json",
+      "mode": "100644",
+      "bytes": 60425,
+      "sha256": "1e73ba974bb56a77fbeb81c0853608ca57bdb80b6234a9cf49c0adacb5a4064c",
+      "gitBlob": "022f629acd0b84cc2a5712b9b10f3ed9dd96c593"
+    },
+    {
+      "role": "bindingGuardStatic",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-producer-green-binding-guard-r2-review-20261117.json",
+      "mode": "100644",
+      "bytes": 227012,
+      "sha256": "c618c7e8746b6845ffc086bb09897f3cd56336df021ceda35a67d781495e1a25",
+      "gitBlob": "f5bf733feb08fb08e60adc94454802f6a2fe2620"
+    },
+    {
+      "role": "bindingSemanticStatic",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-producer-green-binding-semantic-r2-review-20261117.json",
+      "mode": "100644",
+      "bytes": 156302,
+      "sha256": "c05539c498a522d0cfd2ef46e1f6798486cb109550f0170d3e2250ffbdc45a44",
+      "gitBlob": "10cda254fce68db87f9bfbcd2c82a6a60318b25d"
+    },
+    {
+      "role": "bindingIndependentStatic",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-producer-green-binding-independent-r2-review-20261117.json",
+      "mode": "100644",
+      "bytes": 139454,
+      "sha256": "ac5c573f9f12201481b04227f99cdfad2cefb4176018e7a8859257fa8ba72eaf",
+      "gitBlob": "45dd5691a8fa7fc2faf297d84d47452a9f1ca8cf"
+    }
+  ],
+  "modifiedFiles": [
+    {
+      "role": "plan",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/29-reconciled-acceptance-and-custody-followups-2026-11-15.md",
+      "mode": "100644",
+      "bytes": 2566444,
+      "sha256": "b9901b2998355b3db09de8f31a793ed5d9dc3d87fa20aae03590571355b301d6",
+      "gitBlob": "feced58ceb583a4e383e3c9db7d0e7d0c2a71a4b"
+    },
+    {
+      "role": "status",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/continuation-status-20261116.md",
+      "mode": "100644",
+      "bytes": 48793,
+      "sha256": "90a26591676b5ef01eaa61cb42411b65dcd4410d373f7948fa6f90c829ac6f9d",
+      "gitBlob": "2a5fcf1a5a7f325cdc2270569b2f1e4530388580"
+    },
+    {
+      "role": "catalog",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1213-retention-catalog-20261116.json",
+      "mode": "100644",
+      "bytes": 270955,
+      "sha256": "6a13e9f8f939c475e88250b9b4f02c0de799526ba0c54d10c98a06c561764c17",
+      "gitBlob": "44b6e290cd183fd18630555897ced32402245594"
+    }
+  ],
+  "manifestPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-producer-green-binding-publication-manifest-20261117.json",
+  "expectedDelta": {
+    "changed": 17,
+    "added": 14,
+    "modified": 3,
+    "deleted": 0,
+    "modesChanged": 0,
+    "nonDocChanged": 0,
+    "workflowChanged": 0
+  },
+  "expectedCensus": {
+    "parentLeaves": 11897,
+    "parentDocs": 3099,
+    "leaves": 11911,
+    "docs": 3113,
+    "nonDocs": 8798,
+    "workflows": 42
+  },
+  "catalogPreservation": {
+    "archiveKey": "priorCombinedNodeRendererStageAtProducerGreenBinding",
+    "evidenceKey": "combined139Renderer85ProducerGreenBindingEvidenceFiles",
+    "priorCurrentStagePreservedWhole": true,
+    "otherParentFields": 66,
+    "completeBundles": 27,
+    "totalsUnchanged": true,
+    "planAndStatusFullPrefixesPreserved": true
+  },
+  "transport": {
+    "wholeBinding": {
+      "bytes": 8262787,
+      "sha256": "56d2bb56ff1135fbc606d375b2b8debd8c5f3feaaa8b61904aa584c4dc38435c",
+      "gitBlob": "ea852a05538a51710c13a0cd86a8bd1e3fa1c056"
+    },
+    "manifest": {
+      "bytes": 2073,
+      "sha256": "535e1204c513c6a3c9fb6ab925f8ee32014588ea065b94b6075ff8bd18ab6627",
+      "gitBlob": "be69500fa261dd5c45d5e8215596a94d292e2c45"
+    },
+    "parts": [
+      {
+        "ordinal": 0,
+        "utf16Start": 0,
+        "utf16End": 2800000,
+        "identity": {
+          "bytes": 2801279,
+          "sha256": "98639f464306184d3131ed36e625ae6e88e156a96aeb57e31787a1be2ea5f916",
+          "gitBlob": "441fd0ecb053bf9191332e635ff764cd511c4d0e"
+        }
+      },
+      {
+        "ordinal": 1,
+        "utf16Start": 2800000,
+        "utf16End": 5600000,
+        "identity": {
+          "bytes": 2800142,
+          "sha256": "16214d8009f81bea6e90fdc12de912a36542024aaa2451d0d7bc9f5ae8954957",
+          "gitBlob": "58fc694520738dae1507e0545fd5d18f7344fe89"
+        }
+      },
+      {
+        "ordinal": 2,
+        "utf16Start": 5600000,
+        "utf16End": 8261344,
+        "identity": {
+          "bytes": 2661366,
+          "sha256": "197b6c989795fad2a4d46205aaca86aa79391ece81eb267205e85bf3b18f233f",
+          "gitBlob": "92de54c81f85a21da8b4ff9346f89d9c55bd5d79"
+        }
+      }
+    ],
+    "exactFullReassemblyRequired": true
+  },
+  "qualification": {
+    "sourceWorkingTreeWrites": 0,
+    "bindingStaged": false,
+    "materializationInvoked": false,
+    "greenInvoked": false,
+    "validationInvoked": false,
+    "wholeE2EQualified": false,
+    "externalMaterializationPublicationGate": true,
+    "sameBindingForMaterializationAndGreen": true
+  }
+}
