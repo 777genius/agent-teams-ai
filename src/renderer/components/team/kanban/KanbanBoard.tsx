@@ -5,12 +5,12 @@ import { arrayMove } from '@dnd-kit/sortable';
 import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { useAppTranslation } from '@features/localization/renderer';
+import { isElectronMode } from '@renderer/api';
 import { Button } from '@renderer/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
 import { useResizableColumns } from '@renderer/hooks/useResizableColumns';
 import { cn } from '@renderer/lib/utils';
 import { buildMemberColorMap } from '@renderer/utils/memberHelpers';
-import { DEFAULT_REVIEW_FLOW } from '@shared/constants/kanban';
 import { isTeamTaskNeedsFixActionable } from '@shared/utils/teamTaskState';
 import {
   CheckCircle2,
@@ -48,7 +48,6 @@ import type {
   KanbanColumnId,
   KanbanState,
   ResolvedTeamMember,
-  ReviewFlowSettings,
   TeamTask,
 } from '@shared/types';
 
@@ -95,7 +94,6 @@ interface KanbanBoardProps {
   onSortChange: (sort: KanbanSortState) => void;
   onRequestReview: (taskId: string) => void;
   onApprove: (taskId: string) => void;
-  onReviewFlowSettingsChange?: (settings: ReviewFlowSettings) => Promise<void>;
   onRequestChanges: (taskId: string) => void;
   onMoveBackToDone: (taskId: string) => void;
   onStartTask: (taskId: string) => void;
@@ -331,7 +329,6 @@ export const KanbanBoard = memo(function KanbanBoard({
   onSortChange,
   onRequestReview,
   onApprove,
-  onReviewFlowSettingsChange,
   onRequestChanges,
   onMoveBackToDone,
   onStartTask,
@@ -357,15 +354,9 @@ export const KanbanBoard = memo(function KanbanBoard({
     Partial<Record<KanbanColumnId, number>>
   >({});
   const approvalSettingsAccessory = useMemo(
-    () =>
-      onReviewFlowSettingsChange ? (
-        <KanbanApprovedSettingsMenu
-          reviewFlow={kanbanState.reviewFlow ?? DEFAULT_REVIEW_FLOW}
-          reviewFlowPrompt={kanbanState.reviewFlowPrompt ?? ''}
-          onSave={onReviewFlowSettingsChange}
-        />
-      ) : null,
-    [kanbanState.reviewFlow, kanbanState.reviewFlowPrompt, onReviewFlowSettingsChange]
+    // Review-flow settings are saved through the desktop bridge only.
+    () => (isElectronMode() ? <KanbanApprovedSettingsMenu teamName={teamName} /> : null),
+    [teamName]
   );
   const hasReviewers = kanbanState.reviewers.length > 0;
   const enableTaskSorting =

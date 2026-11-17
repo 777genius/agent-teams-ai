@@ -114,8 +114,9 @@ function taskBriefing(context, memberName) {
   return tasks.taskBriefing(context, memberName);
 }
 
+/** Effective view (flow, prompt and source after the default/override layering). */
 function getKanbanState(context) {
-  return kanban.getKanbanState(context);
+  return kanban.getEffectiveKanbanState(context);
 }
 
 function setKanbanColumn(context, taskId, column, options) {

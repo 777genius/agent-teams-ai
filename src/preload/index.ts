@@ -10,6 +10,7 @@ import { createMemberWorkSyncBridge } from '@features/member-work-sync/preload';
 import { createOrganizationsBridge } from '@features/organizations/preload';
 import { createProjectFolderBridge } from '@features/project-folder/preload';
 import { createRecentProjectsBridge } from '@features/recent-projects/preload';
+import { createReviewFlowBridge } from '@features/review-flow/preload';
 import { createRuntimeProviderManagementBridge } from '@features/runtime-provider-management/preload';
 import { createTeamGroupChatsBridge } from '@features/team-group-chats/preload';
 import { createTeamImportBridge } from '@features/team-import/preload';
@@ -218,7 +219,6 @@ import {
   TEAM_SEND_MESSAGE,
   TEAM_SET_CHANGE_PRESENCE_TRACKING,
   TEAM_SET_PROJECT_BRANCH_TRACKING,
-  TEAM_SET_REVIEW_FLOW_SETTINGS,
   TEAM_SET_TASK_CLARIFICATION,
   TEAM_SET_TASK_LOG_STREAM_TRACKING,
   TEAM_SET_TOOL_ACTIVITY_TRACKING,
@@ -359,7 +359,6 @@ import type {
   ReviewConflictResolution,
   ReviewDecisionConflictCandidateSummary,
   ReviewFileScope,
-  ReviewFlowSettings,
   ReviewRedoAction,
   ReviewRenameRecoveryExpectation,
   ReviewUndoAction,
@@ -519,6 +518,7 @@ const electronAPI: ElectronAPI = {
     ipcRenderer,
   }),
   ...createRecentProjectsBridge(),
+  reviewFlow: createReviewFlowBridge(),
   teamGroupChats: createTeamGroupChatsBridge(),
   announcements: createAnnouncementsBridge(),
   gatewayProvider: createGatewayProviderBridge(),
@@ -1050,9 +1050,6 @@ const electronAPI: ElectronAPI = {
     },
     updateKanban: async (teamName: string, taskId: string, patch: UpdateKanbanPatch) => {
       return invokeIpcWithResult<void>(TEAM_UPDATE_KANBAN, teamName, taskId, patch);
-    },
-    setReviewFlowSettings: async (teamName: string, settings: ReviewFlowSettings) => {
-      return invokeIpcWithResult<void>(TEAM_SET_REVIEW_FLOW_SETTINGS, teamName, settings);
     },
     updateKanbanColumnOrder: async (
       teamName: string,

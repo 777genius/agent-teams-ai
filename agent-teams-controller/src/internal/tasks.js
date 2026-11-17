@@ -1087,7 +1087,7 @@ async function memberBriefing(context, memberName, options = {}) {
         '',
         buildMemberTaskProtocol(
             context.teamName, messagingProtocol,
-            kanbanStore.isHumanApprovalFlow(kanbanStore.readKanbanState(context.paths, context.teamName))
+            kanbanStore.isHumanApprovalFlow(context.paths, context.teamName)
         ),
         '',
         buildMemberProcessProtocol(context.teamName)

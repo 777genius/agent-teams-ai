@@ -4,6 +4,7 @@ const path = require('path');
 const { createController } = require('../src/index.js');
 const kanban = require('../src/internal/kanban.js');
 const kanbanStore = require('../src/internal/kanbanStore.js');
+const { reviewFlowDefaults } = require('../src/index.js');
 
 describe('configurable review flow', () => {
   let dir;
@@ -437,7 +438,7 @@ describe('configurable review flow', () => {
     expect(JSON.parse(fs.readFileSync(inboxPath, 'utf8'))).toHaveLength(beforeInbox);
   });
 
-  it('preserves settings through kanban writes and fails closed for corrupt stored policy', () => {
+  it('preserves settings through kanban writes and fails closed for corrupt stored policy until it is repaired', () => {
     board.addReviewer('alice');
     board.setReviewFlowSettings({ reviewFlow: 'human_approval' });
     board.removeReviewer('alice');
@@ -447,7 +448,10 @@ describe('configurable review flow', () => {
     disk.reviewFlow = 'everyone';
     fs.writeFileSync(kanbanFile(), JSON.stringify(disk));
     expect(() => board.getKanbanState()).toThrow(/review flow is corrupt/);
-    expect(() => board.setReviewFlowSettings({ reviewFlow: 'agent_approval' })).toThrow(/review flow is corrupt/);
+    expect(() => board.addReviewer('bob')).toThrow(/review flow is corrupt/);
+    // Saving settings is the repair path, so it replaces the corrupt override instead of failing.
+    board.setReviewFlowSettings({ reviewFlow: 'agent_approval' });
+    expect(board.getKanbanState()).toMatchObject({ reviewFlow: 'agent_approval', reviewFlowSource: 'team' });
   });
 
   it('allows explicit AI-only completion when default policy is off', () => {
@@ -461,28 +465,173 @@ describe('configurable review flow', () => {
     expect(board.getTask(task.id).reviewState).toBe('reviewed');
   });
 
-  it('rejects unknown flows, empty settings and agent-forged values without persisting', () => {
+  it('rejects unknown flows, empty or incomplete settings and bad prompts without persisting', () => {
     expect(() => board.setReviewFlowSettings({ reviewFlow: 'everyone' })).toThrow(/reviewFlow must be one of/);
-    expect(() => board.setReviewFlowSettings({})).toThrow(/empty/);
-    expect(() => board.setReviewFlowSettings({ reviewFlowPrompt: 'x'.repeat(1001) })).toThrow(/at most 1000/);
-    expect(() => board.setReviewFlowSettings({ reviewFlowPrompt: 5 })).toThrow(/must be a string/);
-    expect(board.getKanbanState()).toMatchObject({ reviewFlow: 'agent_approval' });
+    expect(() => board.setReviewFlowSettings({})).toThrow(/reviewFlow must be one of/);
+    expect(() => board.setReviewFlowSettings({ reviewFlowPrompt: 'only a prompt' })).toThrow(/reviewFlow must be one of/);
+    expect(() => board.setReviewFlowSettings('human_approval')).toThrow(/must be an object/);
+    expect(() => board.setReviewFlowSettings({ reviewFlow: 'human_approval', reviewFlowPrompt: 'x'.repeat(1001) }))
+      .toThrow(/at most 1000/);
+    expect(() => board.setReviewFlowSettings({ reviewFlow: 'human_approval', reviewFlowPrompt: 5 }))
+      .toThrow(/must be a string/);
+    expect(board.getKanbanState()).toMatchObject({ reviewFlow: 'agent_approval', reviewFlowSource: 'default' });
     expect(board.getKanbanState().reviewFlowPrompt).toBeUndefined();
+    expect(fs.existsSync(kanbanFile())).toBe(false);
   });
 
-  it('keeps the flow when only the prompt changes and clears the prompt with empty text', () => {
-    board.setReviewFlowSettings({ reviewFlow: 'human_approval' });
-    board.setReviewFlowSettings({ reviewFlowPrompt: '  Check the migration plan first.  ' });
+  it('saves the override as a complete unit and removes the prompt when it is empty', () => {
+    board.setReviewFlowSettings({ reviewFlow: 'human_approval', reviewFlowPrompt: '  Check the migration plan first.  ' });
     expect(board.getKanbanState()).toMatchObject({
-      reviewFlow: 'human_approval', reviewFlowPrompt: 'Check the migration plan first.',
+      reviewFlow: 'human_approval', reviewFlowPrompt: 'Check the migration plan first.', reviewFlowSource: 'team',
     });
-    board.setReviewFlowSettings({ reviewFlow: 'agent_approval' });
-    expect(board.getKanbanState()).toMatchObject({
-      reviewFlow: 'agent_approval', reviewFlowPrompt: 'Check the migration plan first.',
-    });
-    board.setReviewFlowSettings({ reviewFlowPrompt: '   ' });
+    board.setReviewFlowSettings({ reviewFlow: 'agent_approval', reviewFlowPrompt: '   ' });
+    expect(board.getKanbanState()).toMatchObject({ reviewFlow: 'agent_approval', reviewFlowSource: 'team' });
     expect(board.getKanbanState().reviewFlowPrompt).toBeUndefined();
-    expect(JSON.parse(fs.readFileSync(kanbanFile(), 'utf8')).reviewFlowPrompt).toBeUndefined();
+    const disk = JSON.parse(fs.readFileSync(kanbanFile(), 'utf8'));
+    expect(disk.reviewFlow).toBe('agent_approval');
+    expect(disk.reviewFlowPrompt).toBeUndefined();
+  });
+
+  describe('global default and team override', () => {
+    const defaultsFile = () => path.join(dir, 'review-flow-defaults.json');
+    const writeDefaults = (settings) => reviewFlowDefaults.write(dir, settings);
+
+    it('follows the built-in default when no default file and no override exist', () => {
+      expect(board.getKanbanState()).toMatchObject({ reviewFlow: 'agent_approval', reviewFlowSource: 'default' });
+      expect(kanban.isHumanApprovalFlow(controller.context)).toBe(false);
+    });
+
+    it('lets a team without an override follow the default, including later changes, without touching its file', () => {
+      board.setReviewFlowSettings({ reviewFlow: 'agent_approval' });
+      board.setReviewFlowSettings(null);
+      board.addReviewer('alice');
+      const before = fs.readFileSync(kanbanFile(), 'utf8');
+
+      writeDefaults({ reviewFlow: 'human_approval', reviewFlowPrompt: 'Default prompt' });
+      expect(board.getKanbanState()).toMatchObject({
+        reviewFlow: 'human_approval', reviewFlowPrompt: 'Default prompt', reviewFlowSource: 'default',
+      });
+      expect(kanban.isHumanApprovalFlow(controller.context)).toBe(true);
+      expect(fs.readFileSync(kanbanFile(), 'utf8')).toBe(before);
+
+      writeDefaults({ reviewFlow: 'agent_approval' });
+      expect(kanban.isHumanApprovalFlow(controller.context)).toBe(false);
+      expect(fs.readFileSync(kanbanFile(), 'utf8')).toBe(before);
+    });
+
+    it('lets the team override beat the default as one unit and null hands control back', () => {
+      writeDefaults({ reviewFlow: 'human_approval', reviewFlowPrompt: 'Default prompt' });
+      board.setReviewFlowSettings({ reviewFlow: 'agent_approval' });
+      expect(board.getKanbanState()).toMatchObject({ reviewFlow: 'agent_approval', reviewFlowSource: 'team' });
+      expect(board.getKanbanState().reviewFlowPrompt).toBeUndefined();
+      expect(kanban.isHumanApprovalFlow(controller.context)).toBe(false);
+
+      board.setReviewFlowSettings(null);
+      expect(board.getKanbanState()).toMatchObject({
+        reviewFlow: 'human_approval', reviewFlowPrompt: 'Default prompt', reviewFlowSource: 'default',
+      });
+      const disk = JSON.parse(fs.readFileSync(kanbanFile(), 'utf8'));
+      expect(disk.reviewFlow).toBeUndefined();
+      expect(disk.reviewFlowPrompt).toBeUndefined();
+    });
+
+    it('never writes the effective default into the team kanban file', () => {
+      writeDefaults({ reviewFlow: 'human_approval', reviewFlowPrompt: 'Default prompt' });
+      board.addReviewer('alice');
+      board.removeReviewer('alice');
+      const task = board.createTask({ subject: 'Defaulted team', owner: 'bob' });
+      board.completeTask(task.id, 'bob');
+      board.addReviewer('alice');
+      board.requestReview(task.id, { from: 'alice', reviewer: 'alice' });
+      const disk = JSON.parse(fs.readFileSync(kanbanFile(), 'utf8'));
+      expect(disk.reviewFlow).toBeUndefined();
+      expect(disk.reviewFlowPrompt).toBeUndefined();
+    });
+
+    it('enforces human-only approval and delivers the prompt when both come from the default', async () => {
+      writeDefaults({ reviewFlow: 'human_approval', reviewFlowPrompt: 'Default prompt for reviewers.' });
+      const task = board.createTask({ subject: 'Default governed review', owner: 'bob' });
+      board.completeTask(task.id, 'bob');
+      board.addReviewer('alice');
+      board.requestReview(task.id, { from: 'alice', reviewer: 'alice' });
+      const inbox = JSON.parse(fs.readFileSync(
+        path.join(dir, 'teams', 'fixture', 'inboxes', 'alice.json'), 'utf8'
+      ));
+      expect(inbox.map((msg) => msg.text).join('\n')).toContain('Default prompt for reviewers.');
+      expect(() => board.approveReview(task.id, { from: 'alice' })).toThrow(/Human approval required/);
+      expect(() => board.setKanbanColumn(task.id, 'approved', { transition: 'manual_approve' }))
+        .toThrow(/Human approval required/);
+      expect(await board.memberBriefing('bob')).toContain('DONE (awaiting human acceptance)');
+    });
+
+    it('fails closed when the default file is corrupt, instead of falling back to agent approval', () => {
+      fs.writeFileSync(defaultsFile(), '{not json');
+      expect(() => board.getKanbanState()).toThrow(/Review flow defaults are corrupt/);
+      expect(() => kanban.isHumanApprovalFlow(controller.context)).toThrow(/Review flow defaults are corrupt/);
+      fs.writeFileSync(defaultsFile(), JSON.stringify({ reviewFlow: 'everyone' }));
+      expect(() => board.getKanbanState()).toThrow(/Review flow defaults are corrupt/);
+      fs.writeFileSync(defaultsFile(), JSON.stringify({ reviewFlow: 'human_approval', reviewFlowPrompt: 7 }));
+      expect(() => board.getKanbanState()).toThrow(/Review flow defaults are corrupt/);
+    });
+
+    it('reports an unreadable default file differently from a corrupt one, and still fails closed', () => {
+      fs.mkdirSync(defaultsFile());
+      expect(() => board.getKanbanState()).toThrow(/Review flow defaults could not be read \(EISDIR\)/);
+      expect(() => kanban.isHumanApprovalFlow(controller.context)).toThrow(/could not be read/);
+    });
+
+    it('lets a team with an invalid saved flow be reset or overwritten, then works again', () => {
+      const corrupt = (fields) => fs.writeFileSync(kanbanFile(), JSON.stringify({
+        teamName: 'fixture', reviewers: ['alice'], tasks: {}, ...fields,
+      }));
+      writeDefaults({ reviewFlow: 'human_approval', reviewFlowPrompt: 'Default prompt' });
+      for (const fields of [{ reviewFlow: 'everyone' }, { reviewFlowPrompt: 'orphan' }, { reviewFlow: 'agent_approval', reviewFlowPrompt: 9 }]) {
+        corrupt(fields);
+        expect(() => board.getKanbanState()).toThrow(/review flow is corrupt/);
+        expect(() => board.addReviewer('bob')).toThrow(/review flow is corrupt/);
+
+        board.setReviewFlowSettings(null);
+        expect(board.getKanbanState()).toMatchObject({
+          reviewFlow: 'human_approval', reviewFlowPrompt: 'Default prompt', reviewFlowSource: 'default',
+        });
+        expect(board.listReviewers()).toContain('alice');
+
+        corrupt(fields);
+        board.setReviewFlowSettings({ reviewFlow: 'agent_approval', reviewFlowPrompt: 'Mine' });
+        expect(board.getKanbanState()).toMatchObject({
+          reviewFlow: 'agent_approval', reviewFlowPrompt: 'Mine', reviewFlowSource: 'team',
+        });
+        expect(board.addReviewer('bob')).toContain('bob');
+        board.removeReviewer('bob');
+      }
+    });
+
+    it('still refuses to repair a kanban file that is not valid JSON or not an object', () => {
+      fs.writeFileSync(kanbanFile(), '{broken');
+      expect(() => board.setReviewFlowSettings(null)).toThrow();
+      expect(fs.readFileSync(kanbanFile(), 'utf8')).toBe('{broken');
+      fs.writeFileSync(kanbanFile(), '[]');
+      expect(() => board.setReviewFlowSettings({ reviewFlow: 'human_approval' })).toThrow(/review flow is corrupt/);
+      expect(fs.readFileSync(kanbanFile(), 'utf8')).toBe('[]');
+    });
+
+    it('validates and normalises the default on write and stores the prompt only when present', () => {
+      expect(() => writeDefaults({ reviewFlow: 'everyone' })).toThrow(/reviewFlow must be one of/);
+      expect(() => writeDefaults({ reviewFlow: 'human_approval', reviewFlowPrompt: 'x'.repeat(1001) })).toThrow(/at most 1000/);
+      expect(fs.existsSync(defaultsFile())).toBe(false);
+      expect(writeDefaults({ reviewFlow: 'human_approval', reviewFlowPrompt: '  hi  ' }))
+        .toEqual({ reviewFlow: 'human_approval', reviewFlowPrompt: 'hi' });
+      expect(writeDefaults({ reviewFlow: 'agent_approval', reviewFlowPrompt: '' }))
+        .toEqual({ reviewFlow: 'agent_approval', reviewFlowPrompt: '' });
+      expect(JSON.parse(fs.readFileSync(defaultsFile(), 'utf8'))).toEqual({ reviewFlow: 'agent_approval' });
+    });
+
+    it('treats a prompt without a flow in the team file as corrupt', () => {
+      fs.mkdirSync(path.dirname(kanbanFile()), { recursive: true });
+      fs.writeFileSync(kanbanFile(), JSON.stringify({ teamName: 'fixture', reviewers: [], tasks: {}, reviewFlowPrompt: 'orphan' }));
+      expect(() => board.getKanbanState()).toThrow(/review flow is corrupt/);
+      expect(() => board.addReviewer('alice')).toThrow(/review flow is corrupt/);
+    });
   });
 
   it('delivers the owner prompt to the reviewer without changing who may approve', () => {

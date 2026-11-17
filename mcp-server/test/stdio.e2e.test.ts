@@ -2053,6 +2053,41 @@ describe('agent-teams-mcp stdio e2e', () => {
     }
   });
 
+  it('enforces human_approval that comes only from the global default file over stdio', async () => {
+    const teamName = 'stdio-default-flow-team';
+    await writeTeamConfig(claudeDir, teamName);
+    await writeFile(
+      path.join(claudeDir, 'review-flow-defaults.json'),
+      JSON.stringify({ reviewFlow: 'human_approval', reviewFlowPrompt: 'Default: check migrations.' })
+    );
+    const client = new McpStdIoClient(serverPath, workspaceRoot);
+    const context = { claudeDir, teamName };
+
+    try {
+      await client.initialize();
+      const kanban = parseJsonToolResult((await client.callTool(
+        'kanban_get', context, 230
+      ) as { result: unknown }).result);
+      expect(kanban.reviewFlow).toBe('human_approval');
+      expect(kanban.reviewFlowPrompt).toBe('Default: check migrations.');
+      expect(kanban.reviewFlowSource).toBe('default');
+
+      const task = parseJsonToolResult((await client.callTool(
+        'task_create', { ...context, subject: 'Default governed task', owner: 'alice' }, 231
+      ) as { result: unknown }).result);
+      await client.callTool('task_complete', { ...context, taskId: task.id, actor: 'alice' }, 232);
+      await client.callTool('review_request', {
+        ...context, taskId: task.id, from: 'team-lead', reviewer: 'bob',
+      }, 233);
+      const rejected = await client.callTool(
+        'review_approve', { ...context, taskId: task.id, from: 'bob' }, 234
+      );
+      expect(JSON.stringify(rejected)).toMatch(/Human approval required/);
+    } finally {
+      await client.close();
+    }
+  });
+
   it('guards review lifecycle bypasses and deleted resurrection over stdio', async () => {
     await writeTeamConfig(claudeDir, 'stdio-hardening-team');
     const client = new McpStdIoClient(serverPath, workspaceRoot);

@@ -395,11 +395,7 @@ try {
   ), 'return to legacy grid mode');
   // Real Electron + IPC + on-disk acceptance of the opt-in approval policy.
   // A hidden loading skeleton button must not count as the loaded Grid header.
-  const setReviewFlow = async (
-    layout: 'grid' | 'columns',
-    reviewFlow: 'agent_approval' | 'human_approval',
-    reviewFlowPrompt: string
-  ): Promise<void> => {
+  const openReviewFlowPanel = async (layout: 'grid' | 'columns'): Promise<void> => {
     // Both CDP programs are constant source strings; choose selectors inside
     // the renderer rather than interpolating host values into executable code.
     await until(() => cdp!.evaluate(
@@ -429,30 +425,58 @@ try {
     await until(() => cdp!.evaluate(
       "!!document.querySelector('[data-testid=\"kanban-review-flow-panel\"]')"
     ), `${layout} review flow panel opened`);
-    // The panel starts from the persisted flow. Toggle its unchecked preset
-    // and use a static CDP expression so fixture text cannot become executable code.
+    // The editor renders only after the overview arrives over IPC (skeleton before that).
+    await until(() => cdp!.evaluate(
+      "!!document.querySelector('[data-testid=\"kanban-review-flow-editor\"]')"
+    ), `${layout} review flow editor loaded`);
+  };
+  const setReviewFlow = async (
+    layout: 'grid' | 'columns',
+    reviewFlow: 'agent_approval' | 'human_approval',
+    reviewFlowPrompt: string
+  ): Promise<void> => {
+    await openReviewFlowPanel(layout);
     assert.equal(
       reviewFlowPrompt,
       reviewFlow === 'human_approval' ? 'Run the e2e suite before deciding.' : '',
       'review-flow fixture instructions must match the static CDP program'
     );
-    await cdp!.evaluate(
-      `(()=>{
-        const radio = document.querySelector(
-          'input[type="radio"][data-testid^="kanban-review-flow-"]:not(:checked)'
-        );
-        if (!(radio instanceof HTMLInputElement)) throw Error('Review flow option missing');
-        radio.click();
-        const area = document.querySelector('[data-testid="kanban-review-flow-prompt"]');
-        if (!(area instanceof HTMLTextAreaElement)) throw Error('Review flow prompt missing');
-        const setter = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')?.set;
-        setter?.call(
-          area,
-          radio.value === 'human_approval' ? 'Run the e2e suite before deciding.' : ''
-        );
-        area.dispatchEvent(new Event('input', { bubbles: true }));
-      })()`
-    );
+    // The team starts out following the default. "human_approval" turns the
+    // "use default" switch off and picks the other preset; "agent_approval" is the
+    // reset path (switch back on, which removes the team override).
+    // Static CDP programs only: fixture text must never become executable code.
+    if (reviewFlow === 'human_approval') {
+      await cdp!.evaluate(
+        `(()=>{
+          const sw = document.querySelector('[data-testid="kanban-review-flow-use-default"]');
+          if (!(sw instanceof HTMLElement)) throw Error('Use-default switch missing');
+          if (sw.getAttribute('aria-checked') === 'true') sw.click();
+        })()`
+      );
+      await until(() => cdp!.evaluate(
+        "!!document.querySelector('input[type=\"radio\"][data-testid=\"kanban-review-flow-human_approval\"]:not(:disabled)')"
+      ), `${layout} custom review flow is editable`);
+      await cdp!.evaluate(
+        `(()=>{
+          const radio = document.querySelector('[data-testid="kanban-review-flow-human_approval"]');
+          if (!(radio instanceof HTMLInputElement)) throw Error('Review flow option missing');
+          radio.click();
+          const area = document.querySelector('[data-testid="kanban-review-flow-prompt"]');
+          if (!(area instanceof HTMLTextAreaElement)) throw Error('Review flow prompt missing');
+          const setter = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')?.set;
+          setter?.call(area, 'Run the e2e suite before deciding.');
+          area.dispatchEvent(new Event('input', { bubbles: true }));
+        })()`
+      );
+    } else {
+      await cdp!.evaluate(
+        `(()=>{
+          const sw = document.querySelector('[data-testid="kanban-review-flow-use-default"]');
+          if (!(sw instanceof HTMLElement)) throw Error('Use-default switch missing');
+          if (sw.getAttribute('aria-checked') !== 'true') sw.click();
+        })()`
+      );
+    }
     await until(() => cdp!.evaluate(
       "(()=>{const b=document.querySelector('[data-testid=\"kanban-review-flow-save\"]');return b instanceof HTMLButtonElement&&!b.disabled;})()"
     ), `${layout} review flow save enabled`);
@@ -464,9 +488,11 @@ try {
         reviewFlow?: string;
         reviewFlowPrompt?: string;
       };
-      return (
-        state.reviewFlow === reviewFlow && (state.reviewFlowPrompt ?? '') === reviewFlowPrompt.trim()
-      );
+      return reviewFlow === 'human_approval'
+        ? state.reviewFlow === 'human_approval' &&
+            state.reviewFlowPrompt === reviewFlowPrompt.trim()
+        // Reset: the team file must carry no override, so the default applies again.
+        : state.reviewFlow === undefined && state.reviewFlowPrompt === undefined;
     }, `${layout} review flow persisted via real IPC`);
     await until(() => cdp!.evaluate(
       "!document.querySelector('[data-testid=\"kanban-review-flow-panel\"]')"
@@ -475,7 +501,7 @@ try {
   const initialFlow = JSON.parse(await readFile(tableTeam.kanbanFile, 'utf8')) as {
     reviewFlow?: string;
   };
-  assert.notEqual(initialFlow.reviewFlow, 'human_approval', 'review flow defaults to agent approval');
+  assert.equal(initialFlow.reviewFlow, undefined, 'a fresh team follows the default (no override)');
   await setReviewFlow('grid', 'human_approval', 'Run the e2e suite before deciding.');
   await cdp.screenshot(join(root, 'kanban-table-human-approval-grid.png'));
   await setReviewFlow('grid', 'agent_approval', '');
@@ -486,6 +512,70 @@ try {
   await setReviewFlow('columns', 'human_approval', 'Run the e2e suite before deciding.');
   await cdp.screenshot(join(root, 'kanban-table-human-approval-columns.png'));
   await setReviewFlow('columns', 'agent_approval', '');
+
+  // The default for all teams: set it in the Review flow settings tab, then prove in
+  // the real UI that a team without its own override resolves to it while its own
+  // kanban file stays untouched. Static CDP programs only.
+  const claudeDir = dirname(dirname(dirname(tableTeam.kanbanFile)));
+  assert(
+    tableTeam.kanbanFile.endsWith(join('teams', tableTeam.teamName, 'kanban-state.json')),
+    'fixture kanban file lives under <claudeDir>/teams/<team>'
+  );
+  const defaultsFile = join(claudeDir, 'review-flow-defaults.json');
+  const saveDefaultFlow = async (flow: 'agent_approval' | 'human_approval'): Promise<void> => {
+    await cdp!.evaluate("window.__agentTeamsDevStore.getState().openSettingsTab('reviewFlow')");
+    await until(() => cdp!.evaluate(
+      "!!document.querySelector('[data-testid=\"review-flow-settings-page\"] input[type=\"radio\"][data-testid=\"review-flow-settings-human_approval\"]:not(:disabled)')"
+    ), 'review flow settings tab loaded with the default scope selected');
+    await cdp!.evaluate(
+      flow === 'human_approval'
+        ? "document.querySelector('[data-testid=\"review-flow-settings-human_approval\"]')?.click()"
+        : "document.querySelector('[data-testid=\"review-flow-settings-agent_approval\"]')?.click()"
+    );
+    await until(() => cdp!.evaluate(
+      "(()=>{const b=document.querySelector('[data-testid=\"review-flow-settings-save\"]');return b instanceof HTMLButtonElement&&!b.disabled;})()"
+    ), 'default review flow save enabled');
+    if (flow === 'human_approval') {
+      await cdp!.screenshot(join(root, 'settings-appearance-review-flow-desktop.png'));
+    }
+    await cdp!.evaluate(
+      "document.querySelector('[data-testid=\"review-flow-settings-save\"]')?.click()"
+    );
+    await until(async () => {
+      const saved = JSON.parse(await readFile(defaultsFile, 'utf8')) as { reviewFlow?: string };
+      return saved.reviewFlow === flow;
+    }, `default review flow ${flow} persisted via real IPC`);
+  };
+  await saveDefaultFlow('human_approval');
+  const backToTeam = await navigateToTeam();
+  assert.equal(
+    (backToTeam as { activeTeam?: string }).activeTeam,
+    tableTeam.teamName,
+    'team tab is active again after the settings tab'
+  );
+  await openReviewFlowPanel('columns');
+  await until(() => cdp!.evaluate(
+    `(()=>{
+      const sw = document.querySelector('[data-testid="kanban-review-flow-use-default"]');
+      const radio = document.querySelector('[data-testid="kanban-review-flow-human_approval"]');
+      return sw?.getAttribute('aria-checked') === 'true' && radio instanceof HTMLInputElement && radio.checked;
+    })()`
+  ), 'a team without an override resolves to the default human_approval');
+  const followingTeam = JSON.parse(await readFile(tableTeam.kanbanFile, 'utf8')) as {
+    reviewFlow?: string;
+  };
+  assert.equal(followingTeam.reviewFlow, undefined, 'changing the default never writes into team files');
+  // A real key press (targets the focused element), not a synthetic event on `document`.
+  for (const type of ['keyDown', 'keyUp'] as const) {
+    await cdp.send('Input.dispatchKeyEvent', {
+      type, key: 'Escape', code: 'Escape', windowsVirtualKeyCode: 27,
+    });
+  }
+  await until(() => cdp!.evaluate(
+    "!document.querySelector('[data-testid=\"kanban-review-flow-panel\"]')"
+  ), 'review flow panel closes on Escape');
+  await saveDefaultFlow('agent_approval');
+  await navigateToTeam();
 
   // Exercise the actual shared search and virtualized DOM at 0, 1, 50 and 1004 tasks.
   await cdp.evaluate("document.querySelector('[data-testid=\"kanban-view-table\"]')?.click()");
