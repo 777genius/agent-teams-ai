@@ -2,7 +2,9 @@ import type {
   ResolvedTeamWorkContext,
   TeamWorkContextAddress,
 } from './TeamProjectContextRuntimeResolver';
-import type { TeamCreateConfigRequest, TeamCreateRequest } from '@shared/types';
+import { isDeepStrictEqual } from 'node:util';
+
+import type { TeamCreateConfigRequest, TeamCreateRequest, ReplaceMembersRequest } from '@shared/types';
 
 interface SavedTeamRequestPort {
   getSavedRequest(teamName: string): Promise<TeamCreateRequest | null>;
@@ -11,6 +13,25 @@ interface SavedTeamRequestPort {
   ): Promise<void>;
   /** Called only for an already materialized reserved alias. */
   assertOwnedAlias(teamName: string): Promise<void>;
+  replaceMembers(teamName: string, request: ReplaceMembersRequest): Promise<void>;
+}
+
+type AuthoringMember = TeamCreateRequest['members'][number];
+
+/** Runtime cwd/agentId are per-run; only the authored roster belongs to the logical team. */
+function authoredRoster(members: readonly AuthoringMember[]): unknown[] {
+  return members.map((member) => ({
+    name: member.name,
+    role: member.role,
+    workflow: member.workflow,
+    isolation: member.isolation,
+    providerId: member.providerId,
+    providerBackendId: member.providerBackendId,
+    model: member.model,
+    effort: member.effort,
+    fastMode: member.fastMode,
+    mcpPolicy: member.mcpPolicy,
+  }));
 }
 
 interface ContextResolverPort {
@@ -34,14 +55,26 @@ export class TeamProjectContextDraftMaterializer {
 
   async ensureProjectDraft(address: TeamWorkContextAddress): Promise<ResolvedTeamWorkContext> {
     const resolved = await this.context.reserveForProvisioning(address);
-    if (resolved.mode === 'shared' || resolved.state === 'ready') return resolved;
+    if (resolved.mode === 'shared') return resolved;
     const existing = await this.teamStore.getSavedRequest(resolved.executionTeamName);
-    if (existing) {
-      // A crashed create may have persisted a draft. Never take over another
-      // profile's alias just because our index contains a matching name.
+    if (existing || resolved.state === 'ready') {
+      // A ready native team may still have stale authored roster metadata.
+      // The caller has already verified all project runtimes are stopped.
       await this.teamStore.assertOwnedAlias(resolved.executionTeamName);
+      if (!existing) {
+        throw new Error('Project runtime settings are missing; refusing to overwrite history');
+      }
       if (existing.projectContextMode === 'per_project') {
         throw new Error('Nested project contexts are not allowed');
+      }
+      const logical = await this.teamStore.getSavedRequest(address.logicalTeamName);
+      if (!logical) throw new Error('Logical team settings are unavailable');
+      if (!isDeepStrictEqual(authoredRoster(logical.members), authoredRoster(existing.members))) {
+        // Preserve physical run identities and old tasks/chats: only sync
+        // member authoring metadata using the existing stopped-only mutation.
+        await this.teamStore.replaceMembers(resolved.executionTeamName, {
+          members: logical.members,
+        });
       }
       return resolved;
     }
