@@ -1,6 +1,7 @@
 import { createDesktopCodexSourceSelection } from './desktop-codex-source-selection.ts';
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
+import { readFileSync } from 'node:fs';
 import { readFile, readdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { performance } from 'node:perf_hooks';
@@ -58,6 +59,12 @@ export async function waitForDesktopOpenCodePreflight(cdp: UiCdpPort, options: {
     assert.equal(createHash('sha256').update(bytes).digest('hex'), options.fixture.pins.profileSha256,
       'original TEST profile bytes remain pinned');
     return record(JSON.parse(bytes.toString('utf8')));
+  };
+  const assertPinnedProfile = (): void => {
+    assertWithin();
+    const actual = createHash('sha256').update(readFileSync(options.fixture.profilePath)).digest('hex');
+    assertWithin();
+    assert.equal(actual, options.fixture.pins.profileSha256, 'original TEST profile bytes remain pinned');
   };
   const profile = await readProfile(), owner = record(profile.owner);
   const teams = profile.teams;
@@ -133,7 +140,7 @@ export async function waitForDesktopOpenCodePreflight(cdp: UiCdpPort, options: {
   const beforeRead = async (): Promise<void> => {
     await readProfile();
     const state = await options.ownerState();
-    assertWithin();
+    assertPinnedProfile();
     assert.deepEqual(state.binding, binding, 'original Team owner binding changed');
     readOriginal();
   };
@@ -161,7 +168,7 @@ export async function waitForDesktopOpenCodePreflight(cdp: UiCdpPort, options: {
     original.deadline - Date.now(), value => currentForm(value).ready === true, { deadline: original.deadline, beforeRead });
   await beforeRead(); // A late DOM result cannot outlive the original receipt or owner.
   assertWithin();
-  const assertCurrent = (): void => { assertWithin(); assert.ok(readOriginal()); };
+  const assertCurrent = (): void => { assertPinnedProfile(); assert.ok(readOriginal()); };
   // These controls are used only for the existing pre-submit scroll/click. Their
   // reads stay bound to the original owner/receipt; Input dispatch remains unchanged.
   return createDesktopUiControls({

@@ -1904,3 +1904,22 @@ test('original OpenCode preflight rechecks the original form in the final contro
   await assert.rejects(ui.click('[role="dialog"] button', 'submit original once', 'Launch team'), /original OpenCode launch form changed/);
   assert.equal(f.inputCount(), 0, 'a matching Launch team label on a changed form cannot admit a click');
 });
+
+
+test('original OpenCode preflight rejects profile mutation during the final post-DOM owner read', async t => {
+  const f = originalOpenCodePreflightFixture(t);
+  f.hooks.evaluate = () => { if (f.state.reads === 2) { f.complete(); f.state.ready = true; } };
+  const ui = await f.start();
+  let changed = false;
+  f.hooks.ownerRead = () => {
+    // Two preflight observations, then initial/hover/two stable/final target reads.
+    if (f.state.reads === 7 && !changed) { fs.appendFileSync(f.profilePath, ' '); changed = true; }
+  };
+  let failure: unknown;
+  try { await ui.click('[role="dialog"] button', 'submit original once', 'Launch team'); }
+  catch (error) { failure = error; }
+  assert.equal(changed, true, 'the profile changes inside the awaited owner read after the final DOM result');
+  assert.equal(f.commands.filter(row => row.params?.type === 'mousePressed').length, 0,
+    'a profile changed in the final awaited owner read must refuse before the original press');
+  assert.match(String(failure), /original TEST profile bytes remain pinned/);
+});
