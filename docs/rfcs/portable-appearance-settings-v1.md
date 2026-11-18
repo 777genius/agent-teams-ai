@@ -8,7 +8,7 @@ At the PR #1130 code state, Appearance has: theme (Dark / Light / System), expan
 
 `display.showTimestamps`, `display.compactMode` and `display.syntaxHighlighting` are defined in types, defaults and validation. A repository usage search did **not** find their integration into the actual message/task/code rendering components. Do not surface these keys as functioning toggles until they demonstrably change what users see.
 
-The app provides **29 UI locales**. New user-facing settings need localized labels, explanations and options; this is included in LOC estimates below.
+The app provides **30 UI locales**. New user-facing settings need localized labels, explanations and options; this is included in LOC estimates below.
 
 **Data ownership matters:** `ConfigManager` is a backend-wide configuration source. For new *per-client* visual preferences, storing values there would unexpectedly change multiple browser clients or a local desktop view. Preserve the existing stored `general.theme` contract in v1 for backwards compatibility; do not silently migrate it.
 
@@ -23,7 +23,7 @@ The app provides **29 UI locales**. New user-facing settings need localized labe
 
 ## 3. Options and estimated implementation size
 
-**LOC = rough net new/changed production + tests + all 29 locale additions**, not a commitment. Range assumes reuse of existing settings components and no new framework. Estimates are per setting; if implemented together, common preference plumbing is written once, not repeatedly.
+**LOC = rough net new/changed production + tests + all 30 locale additions**, not a commitment. Range assumes reuse of existing settings components and no new framework. Estimates are per setting; if implemented together, common preference plumbing is written once, not repeatedly.
 
 | Priority | Setting / proposed values | Estimated LOC | User value (1–10) | Regression risk | Decision |
 | --- | --- | ---: | ---: | --- | --- |
@@ -38,7 +38,7 @@ The app provides **29 UI locales**. New user-facing settings need localized labe
 | P2 | **Accent color:** curated accessible palette with contrast tests in light/dark | **450–850** | 5 | High | Defer; numerous hard-coded semantic colors exist |
 | Defer | **Whole-app UI scale/zoom:** presets | **500–900+** | 6 | High | Conflicts with existing Electron traffic-light zoom layout and browser zoom; prefer scoped text size |
 
-**Estimate conventions:** A first new setting includes ~70–120 LOC of shared renderer-local preference plumbing; do not add that cost again to every row. Localizations (~2–5 new strings across 29 locale JSON files) and React/component/E2E tests materially contribute to each range.
+**Estimate conventions:** A first new setting includes ~70–120 LOC of shared renderer-local preference plumbing; do not add that cost again to every row. Localizations (~2–5 new strings across 30 locale JSON files) and React/component/E2E tests materially contribute to each range.
 
 ## 4. Minimal implementation architecture
 
@@ -66,7 +66,7 @@ Existing native window title bar: windowControls adapter (Electron only, unchang
 2. **Small PR B — message text:** client-local storage, bounded presets, CSS scoped to chat text; test reload, a second browser client/profile, long messages/code blocks, reduced window sizes and RTL.
 3. **Small PR C — motion:** system default and user-reduced variant; test live OS preference updates and representative animated panels. Make loading progress still understandable with motion reduced.
 4. **P1 after visual approval:** one display feature per PR. Show desktop + browser screenshots for narrow, typical and wide viewports; preserve selection, scrolling, keyboard focus and persisted choices.
-5. Before merge: TypeScript, lint, focused tests, cross-platform build/desktop smoke as applicable, browser E2E, 29-locale completeness, dark/light contrast and changed UI screenshots. Compare with baseline and fix every actionable reviewer finding. Use the existing CI pipelines, not a new test infrastructure.
+5. Before merge: TypeScript, lint, focused tests, cross-platform build/desktop smoke as applicable, browser E2E, 30-locale completeness, dark/light contrast and changed UI screenshots. Compare with baseline and fix every actionable reviewer finding. Use the existing CI pipelines, not a new test infrastructure.
 
 ## 6. Critical review of the design
 
