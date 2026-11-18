@@ -3,6 +3,10 @@ import {
   REVIEW_FLOW_SET_DEFAULTS,
   REVIEW_FLOW_SET_TEAM_OVERRIDE,
 } from '@features/review-flow/contracts';
+import {
+  TEAM_PROJECT_CONTEXT_SET_MODE_CHANNEL,
+  TEAM_PROJECT_CONTEXT_VIEW_CHANNEL,
+} from '@features/team-project-context/contracts';
 import { TeamReadFailureError } from '@features/team-read-recovery/main';
 import { bindTeamProvisioningStartApi } from '@main/services/team/contracts/TeamProvisioningApis';
 import {
@@ -280,11 +284,6 @@ import {
   TEAM_UPDATE_TASK_STATUS,
   TEAM_VALIDATE_CLI_ARGS,
 } from '../../../src/preload/constants/ipcChannels';
-
-import {
-  TEAM_PROJECT_CONTEXT_SET_MODE_CHANNEL,
-  TEAM_PROJECT_CONTEXT_VIEW_CHANNEL,
-} from '@features/team-project-context/contracts';
 
 import type { TeamIpcHandlerApis } from '../../../src/main/services/team/contracts/TeamProvisioningApis';
 import type { TeamPermanentDeletionIntent } from '../../../src/main/services/team/TeamBackupService';
@@ -7714,6 +7713,7 @@ describe('ipc teams handlers', () => {
       expect(result.success).toBe(true);
       expect(service.createTeamConfig).toHaveBeenCalledWith({
         teamName: 'draft-team',
+        projectContextMode: 'per_project',
         displayName: 'Draft Team',
         description: 'Saved draft',
         color: '#3366ff',
@@ -8034,6 +8034,7 @@ describe('ipc teams handlers', () => {
         expect(teamHandlerMocks.createTeam).toHaveBeenCalledWith(
           {
             teamName: 'draft-team',
+            projectContextMode: 'shared',
             displayName: 'Draft Team',
             description: 'Saved draft',
             color: '#3366ff',
