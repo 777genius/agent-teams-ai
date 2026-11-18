@@ -3,6 +3,7 @@ import {
   resolveCreateTeamDefaultProjectPath,
   resolveTeamProjectSelection,
   resolveTeamsProjectNavigationPath,
+  resolveTeamLaunchDefaultProjectPath,
   teamMatchesProjectSelection,
 } from '@renderer/components/team/teamProjectSelection';
 import { describe, expect, it } from 'vitest';
@@ -149,6 +150,18 @@ describe('teamProjectSelection', () => {
         priorityProjectPath: '/Users/test/priority',
       })
     ).toBe('/Users/test/selected');
+  });
+
+  it('launches the selected project after a shared team switches to isolated history', () => {
+    expect(resolveTeamLaunchDefaultProjectPath(
+      'per_project', '/Users/test/project-b', '/Users/test/legacy-a'
+    )).toBe('/Users/test/project-b');
+    expect(resolveTeamLaunchDefaultProjectPath(
+      'shared', '/Users/test/project-b', '/Users/test/legacy-a'
+    )).toBe('/Users/test/legacy-a');
+    expect(resolveTeamLaunchDefaultProjectPath(
+      undefined, '/Users/test/project-b', null
+    )).toBe('/Users/test/project-b');
   });
 
   it('uses priority project path as a create default fallback', () => {

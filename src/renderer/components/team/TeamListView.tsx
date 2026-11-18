@@ -75,6 +75,7 @@ import {
   resolveCreateTeamDefaultProjectPath,
   resolveTeamProjectSelection,
   resolveTeamsProjectNavigationPath,
+  resolveTeamLaunchDefaultProjectPath,
   teamMatchesProjectSelection,
 } from './teamProjectSelection';
 import { TeamStatusBadge } from './TeamStatusBadge';
@@ -963,7 +964,13 @@ export const TeamListView = memo(function TeamListView({
         setLaunchDialogMode(mode);
         setLaunchDialogTeamName(teamName);
         setLaunchDialogMembers(resolveLaunchDialogMembers(data.members ?? []));
-        setLaunchDialogDefaultPath(data.config.projectPath ?? projectPath);
+        setLaunchDialogDefaultPath(
+          resolveTeamLaunchDefaultProjectPath(
+            useStore.getState().teamByName[teamName]?.projectContextMode,
+            projectPath,
+            data.config.projectPath
+          )
+        );
         setLaunchDialogOpen(true);
       } catch (err) {
         // Draft teams (no config.json) throw TEAM_DRAFT — expected, use fallback

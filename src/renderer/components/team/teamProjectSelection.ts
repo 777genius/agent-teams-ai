@@ -145,6 +145,19 @@ export function resolveTeamProjectSelection({
   };
 }
 
+/**
+ * A previously shared team retains its last native project path. Once switched
+ * to per-project mode, launching from the team list must use the selected
+ * project rather than silently returning to that old shared checkout.
+ */
+export function resolveTeamLaunchDefaultProjectPath(
+  mode: TeamSummary['projectContextMode'],
+  selectedProjectPath: string,
+  savedProjectPath: string | null | undefined
+): string {
+  return mode === 'per_project' ? selectedProjectPath : (savedProjectPath ?? selectedProjectPath);
+}
+
 export function resolveCreateTeamDefaultProjectPath({
   initialProjectPath,
   selectedProjectPath,
