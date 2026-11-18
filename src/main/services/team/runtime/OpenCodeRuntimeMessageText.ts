@@ -71,7 +71,7 @@ export function buildOpenCodeRuntimeMessageText(input: OpenCodeTeamRuntimeMessag
   }
 
   const requestedReplyRecipient = input.replyRecipient?.trim() ?? '';
-  const replyContract = classifyOpenCodeDeliveryReplyContract(requestedReplyRecipient);
+  const replyContract = classifyOpenCodeDeliveryReplyContract(requestedReplyRecipient, input.knownPeerRecipient);
   const isInformationalNotice = replyContract === 'informational';
   // A teammate (not the lead, not the user) sent this message: by team
   // contract replies are optional, but the message may still request a response. Mandatory replies

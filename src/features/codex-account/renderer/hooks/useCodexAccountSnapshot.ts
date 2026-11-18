@@ -86,6 +86,8 @@ export function isCodexAccountSnapshotPending(
 export function useCodexAccountSnapshot(options: {
   enabled: boolean;
   includeRateLimits?: boolean;
+  /** Disable passive timers while Providers is hidden; keep active login observation. */
+  passivePollingEnabled?: boolean;
   initialRefreshDelayMs?: number;
   initialRefreshMaxDelayMs?: number;
 }): {
@@ -112,6 +114,8 @@ export function useCodexAccountSnapshot(options: {
   const loadingTokensRef = useRef(new Set<symbol>());
   const rateLimitsLoadingTokensRef = useRef(new Set<symbol>());
   const mountedRef = useRef(true);
+  const passivePollingWasEnabled = useRef(false);
+  const pendingResumeRevalidation = useRef(false);
   const enabledRef = useRef(false);
   const lifecycleIdRef = useRef(0);
   const snapshotRevisionRef = useRef(0);
@@ -126,6 +130,8 @@ export function useCodexAccountSnapshot(options: {
   const [initialRefreshAttempted, setInitialRefreshAttempted] = useState(false);
   const [initialRateLimitsAttempted, setInitialRateLimitsAttempted] = useState(false);
   const enabled = electronMode && options.enabled;
+  const loginPending = snapshot?.login.status === 'pending' || snapshot?.login.status === 'starting';
+  const mayPollAccount = options.passivePollingEnabled !== false || loginPending || loading;
 
   useEffect(() => {
     const loadingTokens = loadingTokensRef.current;
@@ -377,8 +383,47 @@ export function useCodexAccountSnapshot(options: {
     options.includeRateLimits,
   ]);
 
+  // Resuming an old Settings pane must not wait another interval to discover
+  // an externally changed account. Do not run this on the initial cold read.
   useEffect(() => {
-    if (!electronMode || !options.enabled || typeof document === 'undefined') {
+    // Only a visible Providers pane resumes passive reads. Pending login
+    // already has its own polling and must never start a second resume read.
+    const active = enabled && options.passivePollingEnabled !== false;
+    const wasActive = passivePollingWasEnabled.current;
+    passivePollingWasEnabled.current = active;
+    if (!active) {
+      pendingResumeRevalidation.current = false;
+      return;
+    }
+    // Preserve the request across an already-running rate-limit/account read.
+    // That read might have started before Providers reopened and seen old auth.
+    if (
+      !wasActive && snapshot &&
+      lastUpdatedAtRef.current !== null &&
+      Date.now() - lastUpdatedAtRef.current >= CODEX_VISIBLE_STANDARD_REFRESH_MS
+    ) {
+      pendingResumeRevalidation.current = true;
+    }
+    if (!pendingResumeRevalidation.current) return;
+    if (loginPending) {
+      // Login has its own 3s checks and account-change notification.
+      pendingResumeRevalidation.current = false;
+      return;
+    }
+    if (
+      !initialRefreshAttempted ||
+      (options.includeRateLimits === true && !initialRateLimitsAttemptedRef.current) ||
+      loading || rateLimitsLoading
+    ) return;
+    pendingResumeRevalidation.current = false;
+    void refresh({ includeRateLimits: options.includeRateLimits, silent: true });
+  }, [
+    enabled, initialRefreshAttempted, loading, loginPending, rateLimitsLoading,
+    options.passivePollingEnabled, options.includeRateLimits, refresh, snapshot,
+  ]);
+
+  useEffect(() => {
+    if (!electronMode || !options.enabled || !mayPollAccount || typeof document === 'undefined') {
       return;
     }
 
@@ -420,6 +465,7 @@ export function useCodexAccountSnapshot(options: {
     electronMode,
     initialRefreshAttempted,
     initialRefreshDelayMs,
+    mayPollAccount,
     options.enabled,
     options.includeRateLimits,
     refresh,
@@ -427,7 +473,7 @@ export function useCodexAccountSnapshot(options: {
   ]);
 
   useEffect(() => {
-    if (!electronMode || !options.enabled) {
+    if (!electronMode || !options.enabled || !mayPollAccount) {
       return;
     }
     if (snapshot === null && !initialRefreshAttempted) {
@@ -453,6 +499,7 @@ export function useCodexAccountSnapshot(options: {
     electronMode,
     initialRefreshAttempted,
     initialRefreshDelayMs,
+    mayPollAccount,
     options.enabled,
     options.includeRateLimits,
     refresh,

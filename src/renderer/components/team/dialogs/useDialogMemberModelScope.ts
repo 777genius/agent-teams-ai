@@ -7,6 +7,7 @@ import { useOpenCodeLocalModelScope } from './useOpenCodeLocalModelScope';
 export function useDialogMemberModelScope(
   input: Omit<Parameters<typeof useOpenCodeLocalModelScope>[0], 'members'> & {
     teamName?: string;
+    retainedGatewayOwnerKey?: string;
     members: readonly (Parameters<typeof useOpenCodeLocalModelScope>[0]['members'][number] & {
       name: string;
     })[];
@@ -15,6 +16,7 @@ export function useDialogMemberModelScope(
   const gatewayBindings = useGatewayMemberBindings(input.enabled ? input.teamName : undefined, {
     memberNames: input.members.filter((member) => !member.removedAt).map((member) => member.name),
     mode: 'roster',
+    retainedOwnerKey: input.retainedGatewayOwnerKey,
   });
   const openCodeScope = useOpenCodeLocalModelScope(input);
   const scope = useMemo(

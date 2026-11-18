@@ -105,7 +105,7 @@ let scenarioComplete = false;
 const record = (step: string, detail: Record<string, unknown> = {}) =>
   (evidence.steps as unknown[]).push({ step, at: new Date().toISOString(), ...detail });
 const redact = (value: unknown) => String(value).replaceAll(gateway?.token ?? '\0', '[REDACTED]');
-const dialog = 'document.querySelector("[role=dialog]")';
+const dialog = 'document.querySelector("[data-testid=create-team-page]")';
 const leadTrigger = `${dialog}.querySelector('[data-role="lead-row"] button[aria-label^="Anthropic provider,"]')`;
 const preflightPath = path.join(data.temp, 'claude-team-preflight-debug.log');
 
@@ -429,7 +429,7 @@ try {
   await cdp.clickText('Teams');
   await cdp.clickText('Create Team');
   await cdp.clickText('Custom path', dialog);
-  await cdp.fill('[role=dialog] input[aria-label="Custom working directory"]', data.project);
+  await cdp.fill('[data-testid=create-team-page] input[aria-label="Custom working directory"]', data.project);
   await cdp.fill('#team-name', 'packaged-default-model-test');
   if (
     !(await cdp.evaluate<boolean>(
@@ -632,7 +632,7 @@ try {
   process.exitCode = 1;
   if (cdp) {
     evidence.failureUi = await cdp
-      .evaluate('document.querySelector("[role=dialog]")?.innerText ?? document.body.innerText')
+      .evaluate('document.querySelector("[data-testid=create-team-page]")?.innerText ?? document.body.innerText')
       .catch(() => 'renderer unavailable');
   }
 } finally {

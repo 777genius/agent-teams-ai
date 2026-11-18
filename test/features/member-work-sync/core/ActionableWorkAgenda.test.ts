@@ -646,6 +646,73 @@ describe('buildActionableWorkAgenda', () => {
     });
   });
 
+  it.each(['lead', 'user'] as const)(
+    'pauses review while waiting on %s and resumes the same cycle after clarification',
+    (waitingOn) => {
+      const task = {
+        id: 'waiting-review',
+        status: 'completed',
+        owner: 'bob',
+        reviewState: 'review',
+        needsClarification: waitingOn as 'lead' | 'user' | null,
+        historyEvents: [
+          { id: 'request', type: 'review_requested', reviewer: 'alice' },
+          { id: 'start', type: 'review_started', actor: 'alice' },
+        ],
+      };
+      const agendaFor = (memberName: string) =>
+        buildActionableWorkAgenda({
+          teamName: 'team-a',
+          memberName,
+          generatedAt: '2026-04-29T00:00:00.000Z',
+          members: [{ name: 'bob' }, { name: 'alice' }, { name: 'team-lead' }],
+          tasks: [task, { id: 'other', status: 'pending', owner: 'alice' }],
+          hash,
+        });
+      expect(agendaFor('alice').items.map((item) => item.taskId)).toEqual(['other']);
+      expect(agendaFor('team-lead').items.map((item) => item.kind)).toEqual(
+        waitingOn === 'lead' ? ['clarification'] : []
+      );
+      task.needsClarification = null;
+      expect(agendaFor('alice').items).toContainEqual(
+        expect.objectContaining({
+          taskId: task.id,
+          kind: 'review',
+          evidence: expect.objectContaining({
+            reviewCycleId: 'request',
+            reviewObligation: 'review_in_progress',
+          }),
+        })
+      );
+    }
+  );
+
+  it.each(['lead', 'user'] as const)(
+    'keeps only actionable lead oversight when the reviewer is Lead and waits on %s',
+    (waitingOn) => {
+      const agenda = buildActionableWorkAgenda({
+        teamName: 'team-a',
+        memberName: 'team-lead',
+        generatedAt: '2026-04-29T00:00:00.000Z',
+        members: [{ name: 'bob' }, { name: 'team-lead' }],
+        tasks: [
+          {
+            id: 'review',
+            status: 'completed',
+            owner: 'bob',
+            reviewState: 'review',
+            needsClarification: waitingOn,
+            historyEvents: [{ id: 'request', type: 'review_requested', reviewer: 'team-lead' }],
+          },
+        ],
+        hash,
+      });
+      expect(agenda.items.map((item) => item.kind)).toEqual(
+        waitingOn === 'lead' ? ['clarification'] : []
+      );
+    }
+  );
+
   it('does not nudge owners while work is waiting on user or unfinished dependencies', () => {
     const agenda = buildActionableWorkAgenda({
       teamName: 'team-a',

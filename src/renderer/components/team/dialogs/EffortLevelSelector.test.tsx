@@ -109,6 +109,24 @@ describe('EffortLevelSelector', () => {
     await unmount();
   });
 
+  it('shows one unsupported explanation instead of a duplicate warning', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    providerStatusMock.current = buildCatalogProviderStatus([]);
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    try {
+      await act(async () => root.render(React.createElement(EffortLevelSelector, {
+        onValueChange: vi.fn(), providerId: 'codex', model: 'gpt-5.5', value: '',
+      })));
+      expect(host.textContent).toContain('does not support configurable reasoning effort');
+      expect(host.textContent).not.toContain('Effort is unavailable for this model.');
+    } finally {
+      await act(async () => root.unmount());
+      host.remove();
+    }
+  });
+
   it('leaves an available effort alone', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     providerStatusMock.current = buildCatalogProviderStatus(['low', 'medium', 'high']);

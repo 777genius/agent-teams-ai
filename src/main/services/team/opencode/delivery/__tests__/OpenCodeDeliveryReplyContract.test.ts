@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   classifyOpenCodeDeliveryReplyContract,
+  isOpenCodeConfiguredPeerRecipient,
   isOpenCodeReplyOptionalDeliveryContract,
   OPEN_CODE_INFORMATIONAL_NOTICE_REPLY_RECIPIENT,
 } from '../OpenCodeDeliveryReplyContract';
@@ -25,6 +26,27 @@ describe('classifyOpenCodeDeliveryReplyContract', () => {
     expect(classifyOpenCodeDeliveryReplyContract('team-lead')).toBe('lead_reply');
     expect(classifyOpenCodeDeliveryReplyContract('lead')).toBe('lead_reply');
     expect(classifyOpenCodeDeliveryReplyContract('orchestrator')).toBe('lead_reply');
+  });
+
+  it('prioritizes exact configured roster peers over legacy lead aliases', () => {
+    const members = [
+      { name: 'captain', agentType: 'team-lead' },
+      { name: 'team_lead', agentType: 'teammate' },
+    ];
+    expect(isOpenCodeConfiguredPeerRecipient(members, 'team_lead')).toBe(true);
+    expect(isOpenCodeConfiguredPeerRecipient(members, 'captain')).toBe(false);
+    expect(isOpenCodeConfiguredPeerRecipient([
+      members[0], { ...members[1], removedAt: 123 },
+    ], 'team_lead')).toBe(false);
+    expect(isOpenCodeConfiguredPeerRecipient([
+      members[0], { name: 'team_lead', role: 'Team Lead' },
+    ], 'team_lead')).toBe(false);
+    expect(isOpenCodeConfiguredPeerRecipient([
+      ...members, { name: 'TEAM_LEAD', agentType: 'teammate' },
+    ], 'team_lead')).toBe(false);
+    expect(classifyOpenCodeDeliveryReplyContract('team_lead', true)).toBe('teammate_report');
+    expect(isOpenCodeReplyOptionalDeliveryContract('team_lead', true)).toBe(true);
+    expect(classifyOpenCodeDeliveryReplyContract('team_lead')).toBe('lead_reply');
   });
 
   it('treats every other addressable recipient as a teammate report', () => {

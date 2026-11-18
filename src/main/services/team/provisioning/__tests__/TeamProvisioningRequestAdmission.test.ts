@@ -209,6 +209,49 @@ describe('TeamProvisioningRequestAdmission', () => {
     expect(getResolvableProvisioningRunId).toHaveBeenCalledWith(' alpha ');
   });
 
+  it('keeps historical work out of opt-in bootstrap-only launch and preserves legacy launch', async () => {
+    const launchOpenCodeTeamThroughRuntimeAdapter = vi.fn(async (_request: TeamLaunchRequest) => ({
+      runId: 'new-runtime',
+    }));
+    const host = createHost({
+      runTracking: { getResolvableProvisioningRunId: vi.fn(() => null) },
+      shouldRouteOpenCodeToRuntimeAdapter: vi.fn(() => true),
+      launchOpenCodeTeamThroughRuntimeAdapter,
+    });
+    const boundary = createTeamProvisioningRequestAdmissionBoundary(
+      host,
+      async () => ({
+        version: 1,
+        cwd: '/repo',
+        providerId: 'opencode',
+        prompt: 'Historical one-time work',
+        createdAt: 1,
+      }),
+      async () => undefined
+    );
+
+    await expect(
+      boundary.launchTeam({ ...launchRequest, bootstrapOnly: true }, vi.fn())
+    ).resolves.toMatchObject({ runId: 'new-runtime' });
+    expect(launchOpenCodeTeamThroughRuntimeAdapter.mock.calls[0]?.[0]).toMatchObject({
+      bootstrapOnly: true,
+      prompt: undefined,
+    });
+
+    await boundary.launchTeam(launchRequest, vi.fn());
+    expect(launchOpenCodeTeamThroughRuntimeAdapter.mock.calls[1]?.[0]).toMatchObject({
+      prompt: 'Historical one-time work',
+    });
+
+    await expect(
+      boundary.launchTeam(
+        { ...launchRequest, bootstrapOnly: true, prompt: 'Do not run this task' },
+        vi.fn()
+      )
+    ).rejects.toThrow('Bootstrap-only launch must not contain a work prompt');
+    expect(launchOpenCodeTeamThroughRuntimeAdapter).toHaveBeenCalledTimes(2);
+  });
+
   it('rejects a reentrant request for the admitted team instead of deadlocking', async () => {
     let occupied = false;
     const withTeamLock = async <T>(_teamName: string, fn: () => Promise<T>): Promise<T> => {

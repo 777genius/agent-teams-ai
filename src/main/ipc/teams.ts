@@ -10,6 +10,11 @@ import {
   validateAgentAttachmentSerializedIpcPayload,
 } from '@features/agent-attachments/main';
 import { readNativeInboxAttachmentCapability } from '@features/member-work-sync/main';
+import {
+  createReviewFlowFeature,
+  registerReviewFlowIpc,
+  removeReviewFlowIpc,
+} from '@features/review-flow/main';
 import { persistNodeMemberSettingsRelaunch } from '@features/team-provisioning/main';
 import {
   classifyTeamReadWorkerFailure,
@@ -24,11 +29,13 @@ import {
   isTeamDataWorkerFatalError,
 } from '@main/services/team/TeamDataWorkerClient';
 import {
+  checkOptionalExtraCliArgs,
   parseCreateTeamRequest,
   TeamRequestValidationError,
+  validateBootstrapOnlyLaunchRequest,
 } from '@main/services/team/TeamRequestValidation';
 import { getAppIconPath } from '@main/utils/appIcon';
-import { getTeamsBasePath } from '@main/utils/pathDecoder';
+import { getClaudeBasePath, getTeamsBasePath } from '@main/utils/pathDecoder';
 import { isProcessAlive } from '@main/utils/processHealth';
 import { safeSendToRenderer } from '@main/utils/safeWebContentsSend';
 import { stripMarkdown } from '@main/utils/textFormatting';
@@ -128,11 +135,7 @@ import {
   parseTeamMemberRestartResult,
   type TeamMemberRestartResult,
 } from '@shared/types/teamMemberRestart';
-import {
-  extractFlagsFromHelp,
-  extractUserFlags,
-  PROTECTED_CLI_FLAGS,
-} from '@shared/utils/cliArgsParser';
+import { extractFlagsFromHelp, findInvalidUserFlags } from '@shared/utils/cliArgsParser';
 import { getErrorMessage } from '@shared/utils/errorHandling';
 import { isLeadMember } from '@shared/utils/leadDetection';
 import { createLogger } from '@shared/utils/logger';
@@ -689,6 +692,17 @@ export function initializeTeamHandlers(
 }
 
 export function registerTeamHandlers(ipcMain: IpcMain): void {
+  registerReviewFlowIpc(
+    ipcMain,
+    createReviewFlowFeature({
+      teamWriter: {
+        setReviewFlowSettings: (teamName, settings) =>
+          getTeamDataService().setReviewFlowSettings(teamName, settings),
+      },
+      getClaudeDir: getClaudeBasePath,
+      getTeamsDir: getTeamsBasePath,
+    })
+  );
   ipcMain.handle(TEAM_LIST, handleListTeams);
   ipcMain.handle(TEAM_GET_DATA, handleGetData);
   ipcMain.handle(TEAM_GET_TASK_CHANGE_PRESENCE, handleGetTaskChangePresence);
@@ -781,6 +795,7 @@ export function registerTeamHandlers(ipcMain: IpcMain): void {
 }
 
 export function removeTeamHandlers(ipcMain: IpcMain): void {
+  removeReviewFlowIpc(ipcMain);
   ipcMain.removeHandler(TEAM_LIST);
   ipcMain.removeHandler(TEAM_GET_DATA);
   ipcMain.removeHandler(TEAM_GET_TASK_CHANGE_PRESENCE);
@@ -1955,14 +1970,8 @@ async function validateProvisioningRequest(
       };
     }
   }
-  if (payload.extraCliArgs !== undefined) {
-    if (typeof payload.extraCliArgs !== 'string') {
-      return { valid: false, error: 'extraCliArgs must be a string' };
-    }
-    if (payload.extraCliArgs.length > 1024) {
-      return { valid: false, error: 'extraCliArgs too long (max 1024)' };
-    }
-  }
+  const extraCliArgs = checkOptionalExtraCliArgs(payload.extraCliArgs);
+  if (!extraCliArgs.ok) return { valid: false, error: extraCliArgs.error };
 
   return {
     valid: true,
@@ -1988,10 +1997,7 @@ async function validateProvisioningRequest(
         typeof payload.worktree === 'string' && payload.worktree.trim()
           ? payload.worktree.trim()
           : undefined,
-      extraCliArgs:
-        typeof payload.extraCliArgs === 'string' && payload.extraCliArgs.trim()
-          ? payload.extraCliArgs.trim()
-          : undefined,
+      extraCliArgs: extraCliArgs.value,
     },
   };
 }
@@ -2141,6 +2147,10 @@ async function handleLaunchTeamUnlocked(
   if (payload.prompt !== undefined && typeof payload.prompt !== 'string') {
     return { success: false, error: 'prompt must be a string' };
   }
+  const extraCliArgs = checkOptionalExtraCliArgs(payload.extraCliArgs);
+  if (!extraCliArgs.ok) return { success: false, error: extraCliArgs.error };
+  const bootstrapError = validateBootstrapOnlyLaunchRequest(payload);
+  if (bootstrapError) return { success: false, error: bootstrapError };
 
   if (payload.model !== undefined && typeof payload.model !== 'string') {
     return { success: false, error: 'model must be a string' };
@@ -2181,6 +2191,7 @@ async function handleLaunchTeamUnlocked(
     if (meta) isDraft = true;
   }
 
+  if (isDraft && payload.bootstrapOnly) return { success: false, error: 'Finish team setup first' };
   if (isDraft) {
     const savedRequest = await getTeamDataService().getSavedRequest(tn);
     if (!savedRequest) {
@@ -2226,6 +2237,11 @@ async function handleLaunchTeamUnlocked(
       : providerChangedFromSaved
         ? undefined
         : savedRequest.model;
+    // A saved draft may predate the guard, so check the args that will really run.
+    const draftExtraCliArgs = checkOptionalExtraCliArgs(
+      typeof payload.extraCliArgs === 'string' ? payload.extraCliArgs : savedRequest.extraCliArgs
+    );
+    if (!draftExtraCliArgs.ok) return { success: false, error: draftExtraCliArgs.error };
     const draftLimitContext =
       booleanOptions.limitContext ??
       (providerChangedFromSaved ? undefined : savedRequest.limitContext);
@@ -2257,10 +2273,7 @@ async function handleLaunchTeamUnlocked(
         typeof payload.worktree === 'string'
           ? payload.worktree.trim() || undefined
           : savedRequest.worktree,
-      extraCliArgs:
-        typeof payload.extraCliArgs === 'string'
-          ? payload.extraCliArgs.trim() || undefined
-          : savedRequest.extraCliArgs,
+      extraCliArgs: draftExtraCliArgs.value,
       members: savedRequest.members,
     };
 
@@ -2366,6 +2379,7 @@ async function handleLaunchTeamUnlocked(
           cwd,
           prompt:
             typeof payload.prompt === 'string' ? payload.prompt.trim() || undefined : undefined,
+          bootstrapOnly: payload.bootstrapOnly === true ? true : undefined,
           providerId: launchProviderId,
           providerBackendId: launchProviderBackendValidation.value,
           model: rawLaunchModel,
@@ -2379,10 +2393,7 @@ async function handleLaunchTeamUnlocked(
           allowExperimentalLocalModels: booleanOptions.allowExperimentalLocalModels,
           worktree:
             typeof payload.worktree === 'string' ? payload.worktree.trim() || undefined : undefined,
-          extraCliArgs:
-            typeof payload.extraCliArgs === 'string'
-              ? payload.extraCliArgs.trim() || undefined
-              : undefined,
+          extraCliArgs: extraCliArgs.value,
         },
         (progress) => {
           launchIoGovernor?.noteProvisioningProgress(progress);
@@ -2410,17 +2421,7 @@ async function handleValidateCliArgs(
   }
   return wrapTeamHandler('validateCliArgs', async () => {
     const helpOutput = await getTeamProvisioningPreflightApi().getCliHelpOutput();
-    const knownFlags = extractFlagsFromHelp(helpOutput);
-    const userFlags = extractUserFlags(rawArgs);
-
-    const invalidFlags = userFlags.filter((f) => !knownFlags.has(f));
-    const protectedFlags = userFlags.filter((f) => PROTECTED_CLI_FLAGS.has(f));
-    const allBad = [...new Set([...invalidFlags, ...protectedFlags])];
-
-    return {
-      valid: allBad.length === 0,
-      invalidFlags: allBad.length > 0 ? allBad : undefined,
-    };
+    return findInvalidUserFlags(rawArgs, extractFlagsFromHelp(helpOutput));
   });
 }
 

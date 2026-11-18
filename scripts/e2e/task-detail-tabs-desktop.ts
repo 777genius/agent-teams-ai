@@ -85,6 +85,11 @@ for (const [id, status, subject] of [
     id, displayId: id === '2' ? '2'.repeat(100) : id, subject, status, owner: tableTeam.secondOwner,
     blockedBy: id === '2' ? ['1'] : [], blocks: [], related: [],
     createdAt: tableStamp, comments: [],
+    // Task 3 sits in the lead's sign-off stage (lead_then_human second review cycle).
+    ...(id === '3' ? { historyEvents: [
+      { id: 'h1', type: 'review_requested', timestamp: tableStamp, actor: 'dev', from: 'none', to: 'review', reviewer: 'reviewer' },
+      { id: 'h2', type: 'review_requested', timestamp: tableStamp, actor: 'reviewer', from: 'review', to: 'review', reviewer: 'team-lead', stage: 'lead_signoff', afterReviewRequestId: 'h1' },
+    ] } : {}),
   }, null, 2) + '\n', { flag: 'wx', mode: 0o600 });
 }
 const tableKanbanState = JSON.parse(await readFile(tableTeam.kanbanFile, 'utf8'));
@@ -161,6 +166,29 @@ const reads: unknown[] = [];
 const diagnostics: unknown[] = [];
 let passed = false;
 let launchError: Error | undefined;
+/** Exercise Radix selectors with actual mouse input through Chromium CDP. */
+async function clickAppearanceControl(testId: string): Promise<void> {
+  assert(cdp, 'CDP must be connected before Appearance interactions');
+  const point = (await cdp.evaluate(`(() => {
+    const node = document.querySelector('[data-testid="${testId}"]');
+    if (!(node instanceof HTMLElement)) throw new Error('Appearance control missing: ${testId}');
+    node.scrollIntoView({ block: 'center', inline: 'nearest' });
+    const bounds = node.getBoundingClientRect();
+    if (bounds.width === 0 || bounds.height === 0) throw new Error('Appearance control hidden: ${testId}');
+    return { x: bounds.left + bounds.width / 2, y: bounds.top + bounds.height / 2 };
+  })()`)) as { x: number; y: number };
+  await cdp.send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: point.x, y: point.y });
+  await cdp.send('Input.dispatchMouseEvent', { type: 'mousePressed', x: point.x, y: point.y, button: 'left', clickCount: 1 });
+  await cdp.send('Input.dispatchMouseEvent', { type: 'mouseReleased', x: point.x, y: point.y, button: 'left', clickCount: 1 });
+}
+async function chooseAppearanceOption(triggerId: string, optionId: string): Promise<void> {
+  await clickAppearanceControl(triggerId);
+  await until(
+    () => cdp!.evaluate(`!!document.querySelector('[data-testid="${optionId}"]')`),
+    `Appearance option ${optionId} opens`
+  );
+  await clickAppearanceControl(optionId);
+}
 const receiptPath = join(root, 'electron-watcher-v7-' + sha.slice(0, 7) + '.json');
 async function receipt() {
   await writeFile(
@@ -336,6 +364,10 @@ try {
   await until(() => cdp!.evaluate(
     "(()=>{const dialog=document.querySelector('[role=\"dialog\"]');return !!dialog&&dialog.textContent?.includes('TABLE_E2E_REVIEW');})()"
   ), 'existing task detail dialog opens from table');
+  await until(() => cdp!.evaluate(
+    "!!document.querySelector('[role=\"dialog\"] [data-testid=\"task-lead-signoff-chip\"]')"
+  ), 'a review task in the lead sign-off stage shows the Lead sign-off chip');
+  await cdp.screenshot(join(root, 'task-lead-signoff-chip.png'));
   await cdp.send('Input.dispatchKeyEvent', { type: 'keyDown', key: 'Escape', code: 'Escape' });
   await until(() => cdp!.evaluate(
     "!document.querySelector('[role=\"dialog\"]')"
@@ -370,10 +402,209 @@ try {
   await until(() => cdp!.evaluate(
     "!document.querySelector('[data-testid=\"team-task-table\"]') && !!document.querySelector('[data-testid=\"kanban-view-grid\"][aria-pressed=\"true\"]')"
   ), 'return to legacy grid mode');
+  // Real Electron + IPC + on-disk acceptance of the opt-in approval policy.
+  // A hidden loading skeleton button must not count as the loaded Grid header.
+  const openReviewFlowPanel = async (layout: 'grid' | 'columns'): Promise<void> => {
+    // Both CDP programs are constant source strings; choose selectors inside
+    // the renderer rather than interpolating host values into executable code.
+    await until(() => cdp!.evaluate(
+      `(()=>{
+        const grid = !!document.querySelector('[data-testid="kanban-view-grid"][aria-pressed="true"]');
+        const selector = grid
+          ? '.kanban-grid-item-wrapper [data-testid="kanban-approved-settings"]'
+          : '[data-testid="kanban-approved-settings"]';
+        const b = document.querySelector(selector);
+        return b instanceof HTMLButtonElement && !b.disabled && b.getBoundingClientRect().width > 0;
+      })()`
+    ), `loaded ${layout} Approved-column settings button`);
+    await cdp!.evaluate(
+      `(()=>{
+        const grid = !!document.querySelector('[data-testid="kanban-view-grid"][aria-pressed="true"]');
+        const selector = grid
+          ? '.kanban-grid-item-wrapper [data-testid="kanban-approved-settings"]'
+          : '[data-testid="kanban-approved-settings"]';
+        const b = document.querySelector(selector);
+        if (!(b instanceof HTMLButtonElement)) throw Error('Approved settings missing');
+        // Wide grids keep the Approved column off-screen; bring it into view first.
+        b.scrollIntoView({ block: 'center', inline: 'center' });
+        // Radix PopoverTrigger opens from the click event (the dropdown trigger used keydown).
+        b.click();
+      })()`
+    );
+    await until(() => cdp!.evaluate(
+      "!!document.querySelector('[data-testid=\"kanban-review-flow-panel\"]')"
+    ), `${layout} review flow panel opened`);
+    // The editor renders only after the overview arrives over IPC (skeleton before that).
+    await until(() => cdp!.evaluate(
+      "!!document.querySelector('[data-testid=\"kanban-review-flow-editor\"]')"
+    ), `${layout} review flow editor loaded`);
+  };
+  const setReviewFlow = async (
+    layout: 'grid' | 'columns',
+    reviewFlow: 'agent_approval' | 'human_approval',
+    reviewFlowPrompt: string
+  ): Promise<void> => {
+    await openReviewFlowPanel(layout);
+    assert.equal(
+      reviewFlowPrompt,
+      reviewFlow === 'human_approval' ? 'Run the e2e suite before deciding.' : '',
+      'review-flow fixture instructions must match the static CDP program'
+    );
+    // The team starts out following the default. "human_approval" turns the
+    // "use default" switch off and picks the other preset; "agent_approval" is the
+    // reset path (switch back on, which removes the team override).
+    // Static CDP programs only: fixture text must never become executable code.
+    if (reviewFlow === 'human_approval') {
+      await cdp!.evaluate(
+        `(()=>{
+          const sw = document.querySelector('[data-testid="kanban-review-flow-use-default"]');
+          if (!(sw instanceof HTMLElement)) throw Error('Use-default switch missing');
+          if (sw.getAttribute('aria-checked') === 'true') sw.click();
+        })()`
+      );
+      await until(() => cdp!.evaluate(
+        "!!document.querySelector('input[type=\"radio\"][data-testid=\"kanban-review-flow-human_approval\"]:not(:disabled)')"
+      ), `${layout} custom review flow is editable`);
+      await cdp!.evaluate(
+        `(()=>{
+          const radio = document.querySelector('[data-testid="kanban-review-flow-human_approval"]');
+          if (!(radio instanceof HTMLInputElement)) throw Error('Review flow option missing');
+          radio.click();
+          const area = document.querySelector('[data-testid="kanban-review-flow-prompt"]');
+          if (!(area instanceof HTMLTextAreaElement)) throw Error('Review flow prompt missing');
+          const setter = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')?.set;
+          setter?.call(area, 'Run the e2e suite before deciding.');
+          area.dispatchEvent(new Event('input', { bubbles: true }));
+        })()`
+      );
+    } else {
+      await cdp!.evaluate(
+        `(()=>{
+          const sw = document.querySelector('[data-testid="kanban-review-flow-use-default"]');
+          if (!(sw instanceof HTMLElement)) throw Error('Use-default switch missing');
+          if (sw.getAttribute('aria-checked') !== 'true') sw.click();
+        })()`
+      );
+    }
+    await until(() => cdp!.evaluate(
+      "(()=>{const b=document.querySelector('[data-testid=\"kanban-review-flow-save\"]');return b instanceof HTMLButtonElement&&!b.disabled;})()"
+    ), `${layout} review flow save enabled`);
+    await cdp!.evaluate(
+      "document.querySelector('[data-testid=\"kanban-review-flow-save\"]')?.click()"
+    );
+    await until(async () => {
+      const state = JSON.parse(await readFile(tableTeam.kanbanFile, 'utf8')) as {
+        reviewFlow?: string;
+        reviewFlowPrompt?: string;
+      };
+      return reviewFlow === 'human_approval'
+        ? state.reviewFlow === 'human_approval' &&
+            state.reviewFlowPrompt === reviewFlowPrompt.trim()
+        // Reset: the team file must carry no override, so the default applies again.
+        : state.reviewFlow === undefined && state.reviewFlowPrompt === undefined;
+    }, `${layout} review flow persisted via real IPC`);
+    await until(() => cdp!.evaluate(
+      "!document.querySelector('[data-testid=\"kanban-review-flow-panel\"]')"
+    ), `${layout} review flow panel closed after save`);
+  };
+  const initialFlow = JSON.parse(await readFile(tableTeam.kanbanFile, 'utf8')) as {
+    reviewFlow?: string;
+  };
+  assert.equal(initialFlow.reviewFlow, undefined, 'a fresh team follows the default (no override)');
+  await setReviewFlow('grid', 'human_approval', 'Run the e2e suite before deciding.');
+  await cdp.screenshot(join(root, 'kanban-table-human-approval-grid.png'));
+  await setReviewFlow('grid', 'agent_approval', '');
   await cdp.evaluate("document.querySelector('[data-testid=\"kanban-view-columns\"]')?.click()");
   await until(() => cdp!.evaluate(
     "!!document.querySelector('[data-testid=\"kanban-view-columns\"][aria-pressed=\"true\"]')"
   ), 'legacy columns mode works');
+  await setReviewFlow('columns', 'human_approval', 'Run the e2e suite before deciding.');
+  await cdp.screenshot(join(root, 'kanban-table-human-approval-columns.png'));
+  await setReviewFlow('columns', 'agent_approval', '');
+
+  // The default for all teams: set it in the Review flow settings tab, then prove in
+  // the real UI that a team without its own override resolves to it while its own
+  // kanban file stays untouched. Static CDP programs only.
+  const claudeDir = dirname(dirname(dirname(tableTeam.kanbanFile)));
+  assert(
+    tableTeam.kanbanFile.endsWith(join('teams', tableTeam.teamName, 'kanban-state.json')),
+    'fixture kanban file lives under <claudeDir>/teams/<team>'
+  );
+  const defaultsFile = join(claudeDir, 'review-flow-defaults.json');
+  const saveDefaultFlow = async (
+    flow: 'agent_approval' | 'human_approval' | 'lead_then_human'
+  ): Promise<void> => {
+    await cdp!.evaluate("window.__agentTeamsDevStore.getState().openSettingsTab('reviewFlow')");
+    await until(() => cdp!.evaluate(
+      "!!document.querySelector('[data-testid=\"review-flow-settings-page\"] input[type=\"radio\"][data-testid=\"review-flow-settings-human_approval\"]:not(:disabled)')"
+    ), 'review flow settings tab loaded with the default scope selected');
+    await cdp!.evaluate(
+      `document.querySelector('[data-testid="review-flow-settings-${flow}"]')?.click()`
+    );
+    await until(() => cdp!.evaluate(
+      "(()=>{const b=document.querySelector('[data-testid=\"review-flow-settings-save\"]');return b instanceof HTMLButtonElement&&!b.disabled;})()"
+    ), 'default review flow save enabled');
+    if (flow === 'human_approval') {
+      await cdp!.screenshot(join(root, 'settings-appearance-review-flow-desktop.png'));
+    }
+    await cdp!.evaluate(
+      "document.querySelector('[data-testid=\"review-flow-settings-save\"]')?.click()"
+    );
+    await until(async () => {
+      const saved = JSON.parse(await readFile(defaultsFile, 'utf8')) as { reviewFlow?: string };
+      return saved.reviewFlow === flow;
+    }, `default review flow ${flow} persisted via real IPC`);
+  };
+  await saveDefaultFlow('human_approval');
+  const backToTeam = await navigateToTeam();
+  assert.equal(
+    (backToTeam as { activeTeam?: string }).activeTeam,
+    tableTeam.teamName,
+    'team tab is active again after the settings tab'
+  );
+  await openReviewFlowPanel('columns');
+  await until(() => cdp!.evaluate(
+    `(()=>{
+      const sw = document.querySelector('[data-testid="kanban-review-flow-use-default"]');
+      const radio = document.querySelector('[data-testid="kanban-review-flow-human_approval"]');
+      return sw?.getAttribute('aria-checked') === 'true' && radio instanceof HTMLInputElement && radio.checked;
+    })()`
+  ), 'a team without an override resolves to the default human_approval');
+  const followingTeam = JSON.parse(await readFile(tableTeam.kanbanFile, 'utf8')) as {
+    reviewFlow?: string;
+  };
+  assert.equal(followingTeam.reviewFlow, undefined, 'changing the default never writes into team files');
+  // A real key press (targets the focused element), not a synthetic event on `document`.
+  for (const type of ['keyDown', 'keyUp'] as const) {
+    await cdp.send('Input.dispatchKeyEvent', {
+      type, key: 'Escape', code: 'Escape', windowsVirtualKeyCode: 27,
+    });
+  }
+  await until(() => cdp!.evaluate(
+    "!document.querySelector('[data-testid=\"kanban-review-flow-panel\"]')"
+  ), 'review flow panel closes on Escape');
+  // Third flow: the lead signs off after the reviewer. A following team resolves to it too.
+  await saveDefaultFlow('lead_then_human');
+  await navigateToTeam();
+  await openReviewFlowPanel('columns');
+  await until(() => cdp!.evaluate(
+    `(()=>{
+      const sw = document.querySelector('[data-testid="kanban-review-flow-use-default"]');
+      const radio = document.querySelector('[data-testid="kanban-review-flow-lead_then_human"]');
+      return sw?.getAttribute('aria-checked') === 'true' && radio instanceof HTMLInputElement && radio.checked;
+    })()`
+  ), 'a team without an override resolves to the default lead_then_human');
+  for (const type of ['keyDown', 'keyUp'] as const) {
+    await cdp.send('Input.dispatchKeyEvent', {
+      type, key: 'Escape', code: 'Escape', windowsVirtualKeyCode: 27,
+    });
+  }
+  await until(() => cdp!.evaluate(
+    "!document.querySelector('[data-testid=\"kanban-review-flow-panel\"]')"
+  ), 'review flow panel closes on Escape after the lead sign-off default');
+  await saveDefaultFlow('agent_approval');
+  await navigateToTeam();
+
   // Exercise the actual shared search and virtualized DOM at 0, 1, 50 and 1004 tasks.
   await cdp.evaluate("document.querySelector('[data-testid=\"kanban-view-table\"]')?.click()");
   await until(() => cdp!.evaluate(
@@ -410,7 +641,217 @@ try {
     "(()=>{const rows=[...document.querySelectorAll('[data-testid=\"team-task-table-row\"]')];return rows.length>0&&rows.length<40&&rows.some(row=>Number(row.getAttribute('data-task-id'))>=500);})()"
   ), 'virtualizer reaches distant rows without mounting the whole table');
   await cdp.screenshot(join(root, 'kanban-table-1000-rows.png'));
+  // Real Electron regression: changing text size must resize the virtualized
+  // row estimate and actual rows together for long 1000+ task tables.
+  await cdp.evaluate(`(() => {
+    const key = 'agent-teams-appearance-v1';
+    const oldValue = localStorage.getItem(key);
+    window.__taskTablePriorAppearance = oldValue;
+    const existing = oldValue ? JSON.parse(oldValue) : {
+      version: 1, zoomPercent: 100, activeCustomThemeId: null, themes: [],
+    };
+    const newValue = JSON.stringify({ ...existing, fontSizePercent: 150 });
+    localStorage.setItem(key, newValue);
+    window.dispatchEvent(new StorageEvent('storage', { key, oldValue, newValue }));
+  })()`);
+  await until(() => cdp!.evaluate(
+    "(()=>{const el=document.querySelector('[data-testid=team-task-table-row]');const scroller=document.querySelector('[data-testid=team-task-table-scroller]');return !!el&&!!scroller&&el.getBoundingClientRect().height>=71&&el.getBoundingClientRect().height<=74&&scroller.scrollHeight>70000;})()"
+  ), '150% text size updates real 1004-row virtualizer offsets and row geometry');
+  await cdp.evaluate("document.querySelector('[data-testid=team-task-table-scroller]').scrollTop=1000000");
+  await until(() => cdp!.evaluate(
+    "(()=>{const rows=[...document.querySelectorAll('[data-testid=team-task-table-row]')];return rows.length>0&&rows.length<40&&rows.some(row=>Number(row.getAttribute('data-task-id'))>=900);})()"
+  ), '150% virtualized table still reaches distant tasks without skipping rows');
+  await cdp.screenshot(join(root, 'kanban-table-font-150-virtualized.png'));
+  await cdp.evaluate(`(() => {
+    const key = 'agent-teams-appearance-v1';
+    const oldValue = localStorage.getItem(key);
+    const newValue = window.__taskTablePriorAppearance;
+    if (newValue === null) localStorage.removeItem(key);
+    else localStorage.setItem(key, newValue);
+    window.dispatchEvent(new StorageEvent('storage', { key, oldValue, newValue }));
+    delete window.__taskTablePriorAppearance;
+  })()`);
+  await until(() => cdp!.evaluate(
+    "(()=>{const el=document.querySelector('[data-testid=team-task-table-row]');const scroller=document.querySelector('[data-testid=team-task-table-scroller]');return !!el&&!!scroller&&el.getBoundingClientRect().height<=49&&scroller.scrollHeight<60000;})()"
+  ), 'Reset text size also restores 48px row virtualization and scroll extents');
+  reads.push({ kind: 'task-table-typography-virtualization-real-electron', tasks: 1004, scales: [100,150], scrollToDistantTask: true });
   reads.push({ kind: 'table-real-electron-live', liveUpdate: true, sort: true, settings: true, legacyModes: true, taskDetail: true, searchCounts: [0, 1, 50], virtualizedTasks: 1004 });
+  // Qualify Appearance navigation and theme persistence in the same real Electron renderer.
+  await cdp.evaluate("window.__agentTeamsDevStore.getState().openSettingsTab('appearance')");
+  await until(() => cdp!.evaluate(
+    '!!document.querySelector(\'[data-testid="settings-nav-appearance"][aria-current="page"]\') && !!document.querySelector(\'[data-testid="appearance-theme-light"]\')'
+  ), 'Appearance page loads from Settings navigation');
+  const previousTheme = await cdp.evaluate(
+    "(async()=>{const theme=(await window.electronAPI.config.get()).general.theme;window.__taskTabsAppearanceInitialTheme=theme;return theme;})()"
+  ) as string;
+  assert(['dark', 'light', 'system'].includes(previousTheme), 'Known initial theme');
+  await cdp.evaluate(
+    `(()=>{const theme=window.__taskTabsAppearanceInitialTheme==='light'?'dark':'light';const button=document.querySelector('[data-testid="appearance-theme-'+theme+'"]');if(!(button instanceof HTMLButtonElement))throw Error('Theme button missing');button.click();})()`
+  );
+  await until(() => cdp!.evaluate(
+    `(async()=>{const theme=window.__taskTabsAppearanceInitialTheme==='light'?'dark':'light';const c=await window.electronAPI.config.get();return c.general.theme===theme&&document.documentElement.classList.contains(theme);})()`
+  ), 'Appearance saves and applies theme through real Electron IPC');
+  await cdp.evaluate("document.querySelector('[data-testid=\"settings-nav-general\"]').click()");
+  await until(() => cdp!.evaluate(
+    '!!document.querySelector(\'[data-testid="settings-nav-general"][aria-current="page"]\')'
+  ), 'General settings tab opens');
+  await cdp.evaluate("document.querySelector('[data-testid=\"settings-nav-appearance\"]').click()");
+  await until(() => cdp!.evaluate(
+    '!!document.querySelector(\'[data-testid="settings-nav-appearance"][aria-current="page"]\')'
+  ), 'Appearance reopens with the persisted selection');
+  await cdp.screenshot(join(root, 'settings-appearance-desktop.png'));
+  await cdp.evaluate(
+    `(()=>{const theme=window.__taskTabsAppearanceInitialTheme;const button=document.querySelector('[data-testid="appearance-theme-'+theme+'"]');if(!(button instanceof HTMLButtonElement))throw Error('Restore theme button missing');button.click();})()`
+  );
+  await until(() => cdp!.evaluate(
+    `(async()=>{const c=await window.electronAPI.config.get();return c.general.theme===window.__taskTabsAppearanceInitialTheme;})()`
+  ), 'Appearance restores fixture theme');
+  // Typography is independent of UI zoom and uses actual OS font fallback in Electron.
+  await chooseAppearanceOption('appearance-font-select', 'appearance-font-option-Georgia');
+  await chooseAppearanceOption('appearance-text-size', 'appearance-text-size-option-125');
+  await until(() => cdp!.evaluate(
+    "(()=>{const v=JSON.parse(localStorage.getItem('agent-teams-appearance-v1')||'null');const root=document.documentElement;const font=getComputedStyle(document.body).fontFamily;const size=parseFloat(getComputedStyle(document.querySelector('[data-testid=appearance-font-select]')).fontSize);return v?.fontFamily==='Georgia'&&v?.fontSizePercent===125&&root.style.getPropertyValue('--appearance-text-scale')==='1.25'&&font.includes('Georgia')&&size>=14.9&&size<=15.1;})()"
+  ), 'Appearance applies local font and 125% glyph/line height without changing zoom');
+  await cdp.screenshot(join(root, 'settings-appearance-typography-125-desktop.png'));
+  // Custom Appearance E2E: exercise the actual Electron renderer, IPC and persisted
+  // local preference store (never synthetic React props or fabricated E2E receipts).
+  await chooseAppearanceOption('appearance-ui-scale', 'appearance-ui-scale-option-125');
+  await until(() => cdp!.evaluate(
+    "(async()=>{const value=JSON.parse(localStorage.getItem('agent-teams-appearance-v1')||'null');const zoom=await window.electronAPI.getZoomFactor();return value?.zoomPercent===125&&Math.abs(zoom-1.25)<0.02;})()"
+  ), 'Appearance applies and saves 125% through native Electron zoom');
+  await cdp.screenshot(join(root, 'settings-appearance-125-desktop.png'));
+  await chooseAppearanceOption('appearance-ui-scale', 'appearance-ui-scale-option-200');
+  await until(() => cdp!.evaluate(
+    "(async()=>{const value=JSON.parse(localStorage.getItem('agent-teams-appearance-v1')||'null');const zoom=await window.electronAPI.getZoomFactor();return value?.zoomPercent===200&&Math.abs(zoom-2)<0.02;})()"
+  ), 'Appearance applies and saves 200% through native Electron zoom');
+  await until(() => cdp!.evaluate(
+    "(()=>{const ids=['appearance-ui-scale','appearance-custom-theme-select','appearance-edit-custom-themes','appearance-font-select','appearance-text-size'];const visible=ids.every(id=>{const el=document.querySelector('[data-testid='+id+']');if(!(el instanceof HTMLElement))return false;const box=el.getBoundingClientRect();return box.width>0&&box.left>=0&&box.right<=window.innerWidth-4;});const sidebar=document.getElementById('sidebar-tasks-panel');return visible&&(!sidebar||sidebar.getClientRects().length===0);})()"
+  ), '200% Appearance controls remain onscreen without task sidebar overflow');
+  await cdp.screenshot(join(root, 'settings-appearance-200-desktop.png'));
+  await cdp.evaluate("document.querySelector('[data-testid=appearance-font-select]')?.scrollIntoView({block:'center'})");
+  await cdp.screenshot(join(root, 'settings-appearance-fonts-at-200-desktop.png'));
+  // Ensure typography controls are reachable even in the narrow 200% viewport.
+  await until(() => cdp!.evaluate(
+    "(()=>{const ids=['appearance-font-select','appearance-font-discover','appearance-text-size'];return ids.every(id=>{const el=document.querySelector('[data-testid='+id+']');if(!(el instanceof HTMLElement))return false;el.scrollIntoView({block:'nearest'});const b=el.getBoundingClientRect();return b.width>0&&b.left>=0&&b.right<=innerWidth-4;});})()"
+  ), '200% font controls fit within the visible settings panel');
+  // A 200% native scale halves the CSS viewport; editing must still work.
+  await cdp.evaluate("document.querySelector('[data-testid=\"appearance-edit-custom-themes\"]').click()");
+  await until(() => cdp!.evaluate(
+    "(()=>{const dialog=document.querySelector('[data-testid=\"appearance-theme-editor-dialog\"]');const editor=dialog?.querySelector('.cm-content');const save=dialog?.querySelector('[data-testid=\"appearance-theme-json-save\"]');if(!(editor instanceof HTMLElement)||!(save instanceof HTMLElement))return false;const box=save.getBoundingClientRect();return box.bottom<=innerHeight-2&&box.top>=0&&box.width>0&&editor.getBoundingClientRect().height>20;})()"
+  ), '200% JSON editor keeps its Save control and editor visible');
+  await cdp.screenshot(join(root, 'settings-appearance-editor-200-desktop.png'));
+  await cdp.evaluate("document.querySelector('[data-testid=\"appearance-theme-json-cancel\"]').click()");
+  await until(() => cdp!.evaluate(
+    "!document.querySelector('[data-testid=\"appearance-theme-editor-dialog\"]')"
+  ), '200% JSON editor cancels cleanly');
+  await chooseAppearanceOption('appearance-ui-scale', 'appearance-ui-scale-option-100');
+  await until(() => cdp!.evaluate(
+    "(async()=>{const value=JSON.parse(localStorage.getItem('agent-teams-appearance-v1')||'null');const zoom=await window.electronAPI.getZoomFactor();return value?.zoomPercent===100&&Math.abs(zoom-1)<0.02;})()"
+  ), 'Appearance resets native scale to 100%');
+  await cdp.evaluate(
+    "(()=>{const button=document.querySelector('[data-testid=\"appearance-edit-custom-themes\"]');if(!(button instanceof HTMLButtonElement))throw Error('Theme editor missing');button.click();})()"
+  );
+  await until(() => cdp!.evaluate(
+    "!!document.querySelector('[data-testid=\"appearance-theme-editor-dialog\"] .cm-content')"
+  ), 'Appearance JSON editor opens with real CodeMirror');
+  await cdp.evaluate(
+    "(()=>{const button=document.querySelector('[data-testid=\"appearance-theme-json-save\"]');if(!(button instanceof HTMLButtonElement))throw Error('Theme save missing');button.click();})()"
+  );
+  await until(() => cdp!.evaluate(
+    "(()=>{const record=JSON.parse(localStorage.getItem('agent-teams-appearance-v1')||'null');return record?.themes?.some(t=>t.id==='my-theme')&&!document.querySelector('[data-testid=\"appearance-theme-editor-dialog\"]');})()"
+  ), 'Valid JSON theme is persisted and editor closes');
+  await chooseAppearanceOption('appearance-custom-theme-select', 'appearance-custom-theme-option-my-theme');
+  await until(() => cdp!.evaluate(
+    "(()=>{const value=JSON.parse(localStorage.getItem('agent-teams-appearance-v1')||'null');return value?.activeCustomThemeId==='my-theme'&&document.documentElement.classList.contains('custom-theme')&&document.documentElement.style.getPropertyValue('--color-accent')==='#6366f1';})()"
+  ), 'Custom theme applies CSS semantic tokens on the real root');
+  await cdp.screenshot(join(root, 'settings-appearance-custom-theme-desktop.png'));
+  await cdp.evaluate(
+    "(()=>{const button=document.querySelector('[data-testid=\"appearance-theme-dark\"]');if(!(button instanceof HTMLButtonElement))throw Error('Built-in theme missing');button.click();})()"
+  );
+  await until(() => cdp!.evaluate(
+    "(()=>{const value=JSON.parse(localStorage.getItem('agent-teams-appearance-v1')||'null');return value?.activeCustomThemeId===null&&!document.documentElement.classList.contains('custom-theme')&&document.documentElement.style.getPropertyValue('--color-accent')==='';})()"
+  ), 'Returning to built-in themes fully clears custom CSS overrides');
+  // Regression: a rejected save must not leave an armed Overwrite action when
+  // the editor is closed and reopened for a new session.
+  await cdp.evaluate("document.querySelector('[data-testid=\"appearance-edit-custom-themes\"]').click()");
+  await until(() => cdp!.evaluate(
+    "!!document.querySelector('[data-testid=\"appearance-theme-editor-dialog\"] .cm-content')"
+  ), 'Editor reopens for conflict recovery');
+  await cdp.evaluate(
+    "(()=>{const key='agent-teams-appearance-v1';const raw=localStorage.getItem(key);if(!raw)throw Error('Missing saved palette');window.__appearanceConflictFixture=raw;localStorage.setItem(key,JSON.stringify({...JSON.parse(raw),themes:[]}));document.querySelector('[data-testid=\"appearance-theme-json-save\"]').click();})()"
+  );
+  await until(() => cdp!.evaluate(
+    "!!document.querySelector('[data-testid=\"appearance-theme-json-error\"]')&&!!document.querySelector('[data-testid=\"appearance-theme-json-overwrite\"]')"
+  ), 'Editor detects conflicting saved themes');
+  await cdp.evaluate(
+    "(()=>{document.querySelector('[data-testid=\"appearance-theme-json-cancel\"]').click();const original=window.__appearanceConflictFixture;localStorage.setItem('agent-teams-appearance-v1',original);delete window.__appearanceConflictFixture;})()"
+  );
+  await until(() => cdp!.evaluate(
+    "!document.querySelector('[data-testid=\"appearance-theme-editor-dialog\"]')"
+  ), 'Cancelling a conflict closes the editor');
+  await cdp.evaluate("document.querySelector('[data-testid=\"appearance-edit-custom-themes\"]').click()");
+  await until(() => cdp!.evaluate(
+    "!!document.querySelector('[data-testid=\"appearance-theme-editor-dialog\"] .cm-content')&&!document.querySelector('[data-testid=\"appearance-theme-json-error\"]')&&!document.querySelector('[data-testid=\"appearance-theme-json-overwrite\"]')"
+  ), 'New editing session clears stale conflict and overwrite action');
+  await cdp.evaluate("document.querySelector('[data-testid=\"appearance-theme-json-cancel\"]').click()");
+  await until(() => cdp!.evaluate(
+    "!document.querySelector('[data-testid=\"appearance-theme-editor-dialog\"]')"
+  ), 'Clean editor cancellation');
+  // Exercise the manual local font fallback, which works even when the experimental
+  // browser installed-font API is unsupported or denied (e.g. opaque file origin).
+  // Exercise keyboard selection as well as pointer selection: long Radix menus
+  // may move when the pointer enters their scroll zone.
+  await clickAppearanceControl('appearance-font-select');
+  await until(() => cdp!.evaluate(
+    "!!document.querySelector('[data-testid=appearance-font-option-system]')"
+  ), 'Font menu opens for keyboard selection');
+  await cdp.evaluate("(()=>{const item=document.querySelector('[data-testid=appearance-font-option-system]');if(!(item instanceof HTMLElement))throw Error('System option missing');item.focus();})()");
+  await cdp.send('Input.dispatchKeyEvent', {
+    type: 'keyDown', key: 'Enter', code: 'Enter', windowsVirtualKeyCode: 13,
+  });
+  await cdp.send('Input.dispatchKeyEvent', {
+    type: 'keyUp', key: 'Enter', code: 'Enter', windowsVirtualKeyCode: 13,
+  });
+  await until(() => cdp!.evaluate(
+    "(()=>{const v=JSON.parse(localStorage.getItem('agent-teams-appearance-v1')||'null');return v?.fontFamily===null;})()"
+  ), 'System font selected through keyboard');
+  await clickAppearanceControl('appearance-font-other');
+  await until(() => cdp!.evaluate(
+    "!!document.querySelector('[data-testid=appearance-font-custom-input]')"
+  ), 'Manual font field opens');
+  await clickAppearanceControl('appearance-font-custom-input');
+  await cdp.send('Input.insertText', { text: 'Noto Sans' });
+  await clickAppearanceControl('appearance-font-custom-apply');
+  await until(() => cdp!.evaluate(
+    "(()=>{const v=JSON.parse(localStorage.getItem('agent-teams-appearance-v1')||'null');return v?.fontFamily==='Noto Sans'&&document.documentElement.style.getPropertyValue('--appearance-font-family').includes('Noto Sans');})()"
+  ), 'Manual font name persists and applies in actual Electron');
+  await cdp.screenshot(join(root, 'settings-appearance-manual-font-desktop.png'));
+  await cdp.evaluate("document.querySelector('[data-testid=\"settings-nav-general\"]')?.click()");
+  await until(() => cdp!.evaluate(
+    "!!document.querySelector('[data-testid=\"settings-nav-general\"][aria-current=\"page\"]')"
+  ), 'Leave Appearance after typography selection');
+  await cdp.evaluate("document.querySelector('[data-testid=\"settings-nav-appearance\"]')?.click()");
+  await until(() => cdp!.evaluate(
+    "(()=>{const font=document.querySelector('[data-testid=appearance-font-select]');const size=document.querySelector('[data-testid=appearance-text-size]');return !!font&&!!size&&font.textContent.includes('Noto Sans')&&size.textContent.includes('125%');})()"
+  ), 'Typography selection survives Settings navigation');
+  await clickAppearanceControl('appearance-font-select');
+  await until(() => cdp!.evaluate(
+    "!!document.querySelector('[data-testid=appearance-font-option-system]')"
+  ), 'System font option opens for reset');
+  await cdp.evaluate("document.querySelector('[data-testid=appearance-font-option-system]')?.focus()");
+  await cdp.send('Input.dispatchKeyEvent', {
+    type: 'keyDown', key: 'Enter', code: 'Enter', windowsVirtualKeyCode: 13,
+  });
+  await cdp.send('Input.dispatchKeyEvent', {
+    type: 'keyUp', key: 'Enter', code: 'Enter', windowsVirtualKeyCode: 13,
+  });
+  await chooseAppearanceOption('appearance-text-size', 'appearance-text-size-option-100');
+  await until(() => cdp!.evaluate(
+    "(()=>{const v=JSON.parse(localStorage.getItem('agent-teams-appearance-v1')||'null');return v?.fontFamily===null&&v?.fontSizePercent===100&&document.documentElement.style.getPropertyValue('--appearance-font-family')===''&&document.documentElement.style.getPropertyValue('--appearance-text-scale')==='1';})()"
+  ), 'System typography resets without affecting custom themes or native zoom');
+  reads.push({ kind: 'appearance-typography-real-electron', fontChoices: ['Georgia','Noto Sans','system'], textSizes: [100,125], persisted: true, customManualFont: true, restored: true });
+  reads.push({ kind: 'appearance-custom-theme-and-zoom-real-electron', customJsonSaved: true, cssApplied: true, builtinsRestored: true, scales: [100,125,200] });
+  reads.push({ kind: 'appearance-settings-real-electron', navigation: true, themeSaved: true, themeRestored: true });
   }
 
   if (!tableOnly) {

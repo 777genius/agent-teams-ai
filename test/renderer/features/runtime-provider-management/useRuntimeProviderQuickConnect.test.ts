@@ -8,6 +8,7 @@ import {
   useRuntimeProviderQuickConnect,
 } from '../../../../src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderQuickConnect';
 import {
+  getRuntimeProviderConnectedCountObservation,
   getRuntimeProviderDirectoryCacheSnapshot,
   observeRuntimeProviderDirectoryRevision,
   publishRuntimeProviderDirectoryCache,
@@ -120,6 +121,20 @@ describe('useRuntimeProviderQuickConnect', () => {
     vi.useRealTimers();
     resetRuntimeProviderDirectoryCacheForTests();
     current = null;
+  });
+
+  it('revalidates the count when runtime identity settles after the first summary', async () => {
+    const connected = directoryResponse();
+    connected.directory!.entries[0]!.state = 'connected';
+    connected.directory!.fetchedAt = new Date().toISOString();
+    loadProviderDirectory.mockResolvedValue(connected);
+    await renderHarness({ runtimeRevision: null });
+    expect(getRuntimeProviderConnectedCountObservation('/tmp/test-project')).toBeNull();
+    await renderHarness({ runtimeRevision: 'runtime-ready' });
+    expect(getRuntimeProviderConnectedCountObservation('/tmp/test-project')).toMatchObject({
+      connected: 1,
+      runtimeRevision: 'runtime-ready',
+    });
   });
 
   it('drops a warm cache when an initially unknown binary resolves to a different version', async () => {
@@ -248,6 +263,45 @@ describe('useRuntimeProviderQuickConnect', () => {
     });
   });
 
+  it('uses a connected-only summary if the existing all-provider summary is truncated', async () => {
+    const revision = JSON.stringify(['ready', '1.2.3', '/bin/opencode']);
+    const all = directoryResponse('openrouter');
+    all.directory!.totalCount = 200;
+    all.directory!.nextCursor = '100';
+    const connected = directoryResponse('openrouter');
+    connected.directory!.filter = 'connected';
+    connected.directory!.entries = [{ ...connected.directory!.entries[0], state: 'connected' }];
+    connected.directory!.fetchedAt = new Date().toISOString();
+    loadProviderDirectory.mockResolvedValueOnce(all).mockResolvedValueOnce(connected);
+
+    await renderHarness({ runtimeRevision: revision });
+    expect(loadProviderDirectory).toHaveBeenCalledTimes(2);
+    expect(loadProviderDirectory.mock.calls[1]?.[0]).toMatchObject({
+      summary: true, filter: 'connected', limit: 100, refresh: false,
+    });
+    expect(getRuntimeProviderConnectedCountObservation('/tmp/test-project')).toMatchObject({
+      connected: 1, source: 'summary-connected', runtimeRevision: revision,
+    });
+    expect(getRuntimeProviderDirectoryCacheSnapshot('/tmp/test-project')?.entries).toMatchObject([
+      { providerId: 'openrouter', state: 'available' },
+    ]);
+  });
+
+  it('falls back to existing all-summary cards if the filtered probe fails', async () => {
+    const revision = JSON.stringify(['ready', '1.2.3', '/bin/opencode']);
+    const all = directoryResponse('openrouter');
+    all.directory!.totalCount = 200;
+    all.directory!.nextCursor = '100';
+    loadProviderDirectory.mockResolvedValueOnce(all).mockResolvedValueOnce({
+      schemaVersion: 1, runtimeId: 'opencode',
+      error: { code: 'unsupported-action', message: 'Unknown filter', recoverable: true },
+    });
+    await renderHarness({ runtimeRevision: revision });
+    expect(loadProviderDirectory).toHaveBeenCalledTimes(2);
+    expect(current?.entries[0]?.providerId).toBe('openrouter');
+    expect(getRuntimeProviderConnectedCountObservation('/tmp/test-project')).toBeNull();
+  });
+
   it('does not query OpenCode while the prerequisite is unavailable', async () => {
     await act(async () => root.render(React.createElement(Harness, { enabled: false })));
     await act(async () => {
@@ -300,19 +354,19 @@ describe('useRuntimeProviderQuickConnect', () => {
 
   it('keeps the settled runtime across a re-check and reloads only on a real change', async () => {
     const ready = '["ready","1.17.18","/opencode"]';
-    // The first settled identity after startup is a baseline, not a change.
+    // The first settled identity revalidates the previously unscoped summary.
     await renderHarness({ runtimeRevision: null });
     await renderHarness({ runtimeRevision: ready });
     // A re-check clears the status while it runs, then reports the same runtime.
     await renderHarness({ runtimeRevision: null });
     await renderHarness({ runtimeRevision: ready });
     await renderHarness({ runtimeRevision: ready });
-    expect(loadProviderDirectory).toHaveBeenCalledTimes(1);
+    expect(loadProviderDirectory).toHaveBeenCalledTimes(2);
     expect(loadProviderDirectory.mock.calls[0]?.[0]).toMatchObject({ refresh: false });
 
     await renderHarness({ runtimeRevision: '["ready","1.18.0","/opencode"]' });
-    expect(loadProviderDirectory).toHaveBeenCalledTimes(2);
-    expect(loadProviderDirectory.mock.calls[1]?.[0]).toMatchObject({ refresh: true });
+    expect(loadProviderDirectory).toHaveBeenCalledTimes(3);
+    expect(loadProviderDirectory.mock.calls[2]?.[0]).toMatchObject({ refresh: true });
   });
 
   it('keeps a refresh request when the grid is disabled before the read starts', async () => {

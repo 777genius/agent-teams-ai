@@ -432,6 +432,18 @@ describe('OpenCodeTeamRuntimeAdapter delivery prompt contracts', () => {
     expect(groupText).not.toContain('Required message_send argument envelope');
   });
 
+  it('keeps an exact roster peer called team_lead on the optional peer contract', () => {
+    const base = {
+      teamName: 'team-a', laneId: 'secondary:opencode:Worker', memberName: 'Worker',
+      cwd: '/repo', text: 'Current status?', replyRecipient: 'team_lead',
+    };
+    const peerText = buildOpenCodeRuntimeMessageText({ ...base, knownPeerRecipient: true });
+    const aliasText = buildOpenCodeRuntimeMessageText({ ...base, knownPeerRecipient: false });
+    expect(peerText).toContain('status report from your teammate "team_lead"');
+    expect(peerText).not.toContain('Required message_send argument envelope');
+    expect(aliasText).toContain('Required message_send argument envelope');
+  });
+
   it('builds a reply-optional teammate report envelope for teammate reply recipients', async () => {
     const text = await deliveredPromptText('alice');
 

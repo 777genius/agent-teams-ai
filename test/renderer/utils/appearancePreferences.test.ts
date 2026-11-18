@@ -1,0 +1,300 @@
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+import {
+  APPEARANCE_STORAGE_KEY,
+  applyCustomThemeToRoot,
+  applyAppearanceTypographyToRoot,
+  DEFAULT_APPEARANCE,
+  EXAMPLE_THEME,
+  formatCustomThemesJson,
+  getAppearanceSnapshot,
+  getLatestAppearance,
+  normalizeFontFamily,
+  uniqueFontFamilies,
+  parseCustomThemesJson,
+  readAppearance,
+  saveAppearance,
+  setActiveCustomTheme,
+  setAppearanceFontFamily,
+  setAppearanceFontSize,
+  setAppearanceZoom,
+  setCustomThemes,
+  reflectNativeAppearanceZoom,
+  subscribeAppearance,
+  validateCustomThemes,
+} from '@features/appearance/renderer';
+
+import type { CustomTheme } from '@features/appearance/renderer';
+
+const example = (): CustomTheme => ({
+  ...EXAMPLE_THEME,
+  colors: { ...EXAMPLE_THEME.colors },
+});
+
+beforeEach(() => {
+  localStorage.clear();
+  saveAppearance(DEFAULT_APPEARANCE);
+  document.documentElement.classList.remove('custom-theme');
+  document.documentElement.style.removeProperty('--color-surface');
+});
+
+describe('user color theme JSON', () => {
+  it('offers an editable named theme template and accepts a valid palette', () => {
+    const themes = parseCustomThemesJson(formatCustomThemesJson([]));
+    expect(themes).toEqual([EXAMPLE_THEME]);
+  });
+
+  it('rejects untrusted CSS, arbitrary keys and malformed JSON without applying them', () => {
+    const safe = example();
+    expect(() =>
+      parseCustomThemesJson(JSON.stringify({ themes: [{ ...safe, colors: { ...safe.colors, surface: 'url(https://example.org/evil)' } }] }))
+    ).toThrow(/surface/);
+    expect(() =>
+      parseCustomThemesJson(JSON.stringify({ themes: [{ ...safe, css: 'body { display: none }' }] }))
+    ).toThrow(/unknown field/);
+    expect(() => parseCustomThemesJson('{"themes":')).toThrow();
+    expect(getAppearanceSnapshot().themes).toEqual([]);
+  });
+
+  it('rejects empty-string unknown keys in all palette objects', () => {
+    const valid = example();
+    expect(() => parseCustomThemesJson(JSON.stringify({ '': true, themes: [valid] }))).toThrow(/unknown field/);
+    expect(() => validateCustomThemes([{ ...valid, '': true }])).toThrow(/unknown field/);
+    expect(() => validateCustomThemes([{ ...valid, colors: { ...valid.colors, '': '#000000' } }])).toThrow(/unknown field/);
+  });
+
+  it('rejects duplicate ids and excessive theme counts', () => {
+    expect(() => validateCustomThemes([example(), example()])).toThrow(/duplicate/);
+    expect(() => validateCustomThemes(Array.from({ length: 9 }, (_, i) => ({
+      ...example(), id: `my-theme-${i}`,
+    })))).toThrow(/at most 8/);
+  });
+
+  it('enforces contrast against raised, overlay and sidebar surfaces', () => {
+    for (const surface of ['surface', 'surfaceRaised', 'surfaceOverlay', 'surfaceSidebar'] as const) {
+      const bad = example();
+      bad.colors[surface] = bad.colors.text;
+      expect(() => validateCustomThemes([bad])).toThrow(new RegExp(surface));
+    }
+  });
+
+  it('keeps separate built-in configuration and clears active theme on deletion', () => {
+    setCustomThemes([example()]);
+    setActiveCustomTheme('my-theme');
+    expect(getAppearanceSnapshot().activeCustomThemeId).toBe('my-theme');
+    setCustomThemes([]);
+    expect(getAppearanceSnapshot().activeCustomThemeId).toBeNull();
+    expect(getAppearanceSnapshot().themes).toEqual([]);
+  });
+
+  it('switches only eleven allowlisted CSS tokens and removes them on reset', () => {
+    const root = document.documentElement;
+    applyCustomThemeToRoot(root, example());
+    expect(root.classList.contains('custom-theme')).toBe(true);
+    expect(root.style.getPropertyValue('--color-surface')).toBe(EXAMPLE_THEME.colors.surface);
+    expect(root.style.getPropertyValue('--color-accent')).toBe(EXAMPLE_THEME.colors.accent);
+
+    applyCustomThemeToRoot(root, null);
+    expect(root.classList.contains('custom-theme')).toBe(false);
+    expect(root.style.getPropertyValue('--color-surface')).toBe('');
+    expect(root.style.getPropertyValue('--color-accent')).toBe('');
+  });
+});
+
+describe('portable Appearance persistence', () => {
+  it('persists scale and named themes under a versioned local key', () => {
+    setCustomThemes([example()]);
+    setAppearanceZoom(125);
+    const current = getAppearanceSnapshot();
+    expect(current.zoomPercent).toBe(125);
+    expect(readAppearance(localStorage)).toEqual(current);
+    expect(JSON.parse(localStorage.getItem(APPEARANCE_STORAGE_KEY)!).version).toBe(1);
+  });
+
+  it('rejects out-of-range zoom and preserves the previous setting', () => {
+    setAppearanceZoom(90);
+    expect(() => setAppearanceZoom(210)).toThrow(/between/);
+    expect(() => setAppearanceZoom(Number.NaN)).toThrow(/between/);
+    expect(getAppearanceSnapshot().zoomPercent).toBe(90);
+  });
+
+  it('does not change the visible setting when storage rejects writes', () => {
+    const old = getAppearanceSnapshot();
+    expect(() =>
+      saveAppearance(
+        { ...old, zoomPercent: 150 },
+        { setItem: () => { throw new Error('QuotaExceededError'); } }
+      )
+    ).toThrow(/QuotaExceeded/);
+    expect(getAppearanceSnapshot()).toBe(old);
+  });
+
+  it('recovers from invalid values and denied storage reads', () => {
+    localStorage.setItem(APPEARANCE_STORAGE_KEY, '{"version":2}');
+    expect(readAppearance(localStorage)).toEqual(DEFAULT_APPEARANCE);
+    expect(readAppearance({ getItem: () => { throw new Error('denied'); } })).toEqual(DEFAULT_APPEARANCE);
+  });
+
+  it('keeps built-in theme switching usable with corrupt local preferences', () => {
+    localStorage.setItem(APPEARANCE_STORAGE_KEY, '{"version":1,"themes":[');
+    expect(() => setActiveCustomTheme(null)).not.toThrow();
+    expect(getAppearanceSnapshot().activeCustomThemeId).toBeNull();
+  });
+
+  it('clears an active custom theme without overwriting corrupt storage', () => {
+    setCustomThemes([example()]);
+    setActiveCustomTheme('my-theme');
+    const corrupt = '{"version":1,"themes":[';
+    localStorage.setItem(APPEARANCE_STORAGE_KEY, corrupt);
+    expect(() => setActiveCustomTheme(null)).not.toThrow();
+    expect(getAppearanceSnapshot().activeCustomThemeId).toBeNull();
+    expect(localStorage.getItem(APPEARANCE_STORAGE_KEY)).toBe(corrupt);
+  });
+
+  it('merges a stale tab theme save with the latest zoom', () => {
+    setCustomThemes([example()]);
+    setAppearanceZoom(125);
+    localStorage.setItem(APPEARANCE_STORAGE_KEY, JSON.stringify({
+      ...getAppearanceSnapshot(), zoomPercent: 175,
+    }));
+    expect(getLatestAppearance().zoomPercent).toBe(175);
+    setCustomThemes([]);
+    expect(getAppearanceSnapshot().zoomPercent).toBe(175);
+    expect(getAppearanceSnapshot().themes).toEqual([]);
+  });
+
+  it('does not overwrite a corrupt appearance record when another setting changes', () => {
+    setCustomThemes([example()]);
+    const corrupt = '{"version":1,"themes":[';
+    localStorage.setItem(APPEARANCE_STORAGE_KEY, corrupt);
+    expect(() => setAppearanceZoom(125)).toThrow(/Invalid saved appearance preferences/);
+    expect(localStorage.getItem(APPEARANCE_STORAGE_KEY)).toBe(corrupt);
+    expect(getAppearanceSnapshot().themes).toEqual([example()]);
+  });
+
+  it('preserves reflected native zoom when a later theme save succeeds', () => {
+    reflectNativeAppearanceZoom(175);
+    expect(readAppearance(localStorage).zoomPercent).toBe(100);
+    expect(getLatestAppearance().zoomPercent).toBe(175);
+    setCustomThemes([example()]);
+    expect(readAppearance(localStorage).zoomPercent).toBe(175);
+    expect(getAppearanceSnapshot().zoomPercent).toBe(175);
+  });
+
+  it('keeps a reflected zoom on external theme-only edits, but accepts external zoom changes', () => {
+    reflectNativeAppearanceZoom(175);
+    const previous = localStorage.getItem(APPEARANCE_STORAGE_KEY)!;
+    const withTheme = JSON.stringify({ ...readAppearance(localStorage), themes: [example()] });
+    localStorage.setItem(APPEARANCE_STORAGE_KEY, withTheme);
+    window.dispatchEvent(new StorageEvent('storage', {
+      key: APPEARANCE_STORAGE_KEY, oldValue: previous, newValue: withTheme,
+    }));
+    expect(getAppearanceSnapshot().zoomPercent).toBe(175);
+    expect(getAppearanceSnapshot().themes).toEqual([example()]);
+    setCustomThemes([]);
+    expect(readAppearance(localStorage).zoomPercent).toBe(175);
+
+    reflectNativeAppearanceZoom(200);
+    const priorZoom = localStorage.getItem(APPEARANCE_STORAGE_KEY)!;
+    const externalZoom = JSON.stringify({ ...readAppearance(localStorage), zoomPercent: 150 });
+    localStorage.setItem(APPEARANCE_STORAGE_KEY, externalZoom);
+    window.dispatchEvent(new StorageEvent('storage', {
+      key: APPEARANCE_STORAGE_KEY, oldValue: priorZoom, newValue: externalZoom,
+    }));
+    expect(getAppearanceSnapshot().zoomPercent).toBe(150);
+    setCustomThemes([example()]);
+    expect(readAppearance(localStorage).zoomPercent).toBe(150);
+  });
+
+  it('shows a native zoom when storage is unavailable', () => {
+    reflectNativeAppearanceZoom(175);
+    expect(getAppearanceSnapshot().zoomPercent).toBe(175);
+    expect(readAppearance(localStorage).zoomPercent).toBe(100);
+  });
+
+  it('rejects palette borders indistinguishable from a surface or white accent', () => {
+    const noBorder = example();
+    noBorder.colors.border = noBorder.colors.surface;
+    expect(() => validateCustomThemes([noBorder])).toThrow(/border/);
+    const whiteAccent = example();
+    whiteAccent.colors.accent = '#ffffff';
+    expect(() => validateCustomThemes([whiteAccent])).toThrow(/accent/);
+  });
+
+  it('preserves old v1 palettes and zoom after adding typography preferences', () => {
+    localStorage.setItem(APPEARANCE_STORAGE_KEY, JSON.stringify({
+      version: 1, zoomPercent: 125, activeCustomThemeId: null, themes: [example()],
+    }));
+    const old = readAppearance(localStorage);
+    expect(old).toMatchObject({ fontFamily: null, fontSizePercent: 100, zoomPercent: 125 });
+    setAppearanceFontFamily('Georgia');
+    setAppearanceFontSize(125);
+    expect(readAppearance(localStorage)).toMatchObject({
+      fontFamily: 'Georgia', fontSizePercent: 125, zoomPercent: 125, themes: [example()],
+    });
+  });
+
+  it('validates the single CSS family name and text size before persisting', () => {
+    setAppearanceFontFamily('  Noto Sans  ');
+    setAppearanceFontSize(150);
+    expect(getAppearanceSnapshot()).toMatchObject({ fontFamily: 'Noto Sans', fontSizePercent: 150 });
+    for (const bad of ['a; background:red', 'x\\\\00', 'a"b', ' ', 'x'.repeat(81)]) {
+      expect(() => setAppearanceFontFamily(bad)).toThrow(/Font family/);
+    }
+    for (const invalid of [50, 151, 101.5, Number.NaN]) {
+      expect(() => setAppearanceFontSize(invalid)).toThrow(/between/);
+    }
+    expect(getAppearanceSnapshot()).toMatchObject({ fontFamily: 'Noto Sans', fontSizePercent: 150 });
+    expect(normalizeFontFamily('Noto Sans')).toBe('Noto Sans');
+
+    // Invalid stored fields are discarded without deleting valid user themes/zoom.
+    setCustomThemes([example()]);
+    const broken = { ...getAppearanceSnapshot(), fontFamily: 'url(evil)', fontSizePercent: 999 };
+    // An unknown family name is inert CSS, but CSS syntax is strictly blocked.
+    broken.fontFamily = 'font; color:red';
+    localStorage.setItem(APPEARANCE_STORAGE_KEY, JSON.stringify(broken));
+    expect(readAppearance(localStorage)).toMatchObject({
+      fontFamily: null, fontSizePercent: 100, zoomPercent: 100, themes: [example()],
+    });
+  });
+
+  it('applies and removes typography CSS without touching palette or zoom', () => {
+    const root = document.createElement('div');
+    applyAppearanceTypographyToRoot(root, { fontFamily: 'Georgia', fontSizePercent: 125 });
+    expect(root.style.getPropertyValue('--appearance-font-family')).toContain('"Georgia"');
+    expect(root.style.getPropertyValue('--appearance-text-scale')).toBe('1.25');
+    expect(root.style.getPropertyValue('--color-surface')).toBe('');
+    applyAppearanceTypographyToRoot(root, { fontFamily: null, fontSizePercent: 100 });
+    expect(root.style.getPropertyValue('--appearance-font-family')).toBe('');
+    expect(root.style.getPropertyValue('--appearance-text-scale')).toBe('1');
+  });
+
+  it('keeps one entry per case-insensitive family while preserving selected spelling', () => {
+    expect(uniqueFontFamilies(['Georgia', 'ARIAL', 'georgia', 'Arial'])).toEqual(['Arial', 'georgia']);
+    expect(uniqueFontFamilies(['Georgia', 'Noto Sans'], 'georgia')).toEqual(['georgia', 'Noto Sans']);
+    expect(uniqueFontFamilies(['Georgia'], 'Custom Font')).toEqual(['Custom Font', 'Georgia']);
+  });
+
+  it('merges a font edit with the latest saved theme and zoom from another tab', () => {
+    setAppearanceZoom(125);
+    localStorage.setItem(APPEARANCE_STORAGE_KEY, JSON.stringify({
+      ...readAppearance(localStorage), themes: [example()], zoomPercent: 175,
+    }));
+    setAppearanceFontFamily('Verdana');
+    expect(readAppearance(localStorage)).toMatchObject({
+      zoomPercent: 175, fontFamily: 'Verdana', fontSizePercent: 100, themes: [example()],
+    });
+  });
+
+  it('notifies subscribers for local theme and zoom selections', () => {
+    const listener = vi.fn();
+    const unsubscribe = subscribeAppearance(listener);
+    setCustomThemes([example()]);
+    setActiveCustomTheme('my-theme');
+    setAppearanceZoom(150);
+    expect(listener).toHaveBeenCalledTimes(3);
+    unsubscribe();
+    setAppearanceZoom(100);
+    expect(listener).toHaveBeenCalledTimes(3);
+  });
+});

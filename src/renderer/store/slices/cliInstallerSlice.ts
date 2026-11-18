@@ -31,6 +31,7 @@ import {
   invalidateCliProviderScopeReads,
   setBoundedScopedProviderStatus,
 } from './cliProviderStatusScope';
+import { createCodexRuntimeStatusActions } from './codexRuntimeStatusActions';
 import { captureOpenCodeMetadataRead } from './openCodeMetadataPublication';
 import { createOpenCodeRuntimeActions } from './openCodeRuntimeActions';
 
@@ -820,6 +821,7 @@ export interface CliInstallerSlice {
   cliStatus: CliInstallationStatus | null;
   cliStatusLoading: boolean;
   cliProviderStatusLoading: Partial<Record<CliProviderId, boolean>>;
+  codexStatusRecoveryPending: boolean;
   cliProviderStatusByScope: Readonly<Record<string, CliProviderStatus>>;
   cliProviderStatusScopeRevision: number;
   cliStatusError: string | null;
@@ -850,6 +852,7 @@ export interface CliInstallerSlice {
   bootstrapCliStatus: (options?: {
     multimodelEnabled?: boolean;
     providerStatusMode?: 'full' | 'defer';
+    isActive?: () => boolean;
   }) => Promise<void>;
   fetchCliStatus: () => Promise<void>;
   fetchCliProviderStatus: (
@@ -877,7 +880,7 @@ let cliProviderStatusRequestId = 0;
 const cliProviderStatusActiveRequestIds = new Map<string, number>();
 const codexCatalogLoadingRefreshAttempts = new Map<CliProviderId, number>();
 const codexCatalogLoadingRefreshTimers = new Map<CliProviderId, ReturnType<typeof setTimeout>>();
-let codexRuntimeStatusInFlight: Promise<void> | null = null;
+const codexCatalogLoadingRefreshActive = new Map<CliProviderId, (() => boolean) | undefined>();
 
 function clearCodexCatalogLoadingRefresh(providerId: CliProviderId): void {
   const timer = codexCatalogLoadingRefreshTimers.get(providerId);
@@ -886,18 +889,23 @@ function clearCodexCatalogLoadingRefresh(providerId: CliProviderId): void {
     codexCatalogLoadingRefreshTimers.delete(providerId);
   }
   codexCatalogLoadingRefreshAttempts.delete(providerId);
+  codexCatalogLoadingRefreshActive.delete(providerId);
 }
 
 function scheduleCodexCatalogLoadingRefresh(
   get: () => Pick<CliInstallerSlice, 'cliStatus' | 'fetchCliProviderStatus'>,
-  providerId: CliProviderId
+  providerId: CliProviderId,
+  isActive?: () => boolean
 ): void {
+  if (isActive?.() === false) return;
   const provider = getProviderStatus(get().cliStatus, providerId);
   if (!isCodexCatalogLoadingSnapshot(provider)) {
     clearCodexCatalogLoadingRefresh(providerId);
     return;
   }
 
+  // An active startup may take over a retry queued by an earlier disposed mount.
+  codexCatalogLoadingRefreshActive.set(providerId, isActive);
   if (codexCatalogLoadingRefreshTimers.has(providerId)) {
     return;
   }
@@ -910,6 +918,12 @@ function scheduleCodexCatalogLoadingRefresh(
   codexCatalogLoadingRefreshAttempts.set(providerId, attempts + 1);
   const timer = setTimeout(() => {
     codexCatalogLoadingRefreshTimers.delete(providerId);
+    const canRefresh = codexCatalogLoadingRefreshActive.get(providerId);
+    codexCatalogLoadingRefreshActive.delete(providerId);
+    if (canRefresh?.() === false) {
+      codexCatalogLoadingRefreshAttempts.delete(providerId);
+      return;
+    }
     const latestProvider = getProviderStatus(get().cliStatus, providerId);
     if (!isCodexCatalogLoadingSnapshot(latestProvider)) {
       codexCatalogLoadingRefreshAttempts.delete(providerId);
@@ -923,9 +937,10 @@ function scheduleCodexCatalogLoadingRefresh(
 }
 
 function scheduleCodexCatalogLoadingRefreshes(
-  get: () => Pick<CliInstallerSlice, 'cliStatus' | 'fetchCliProviderStatus'>
+  get: () => Pick<CliInstallerSlice, 'cliStatus' | 'fetchCliProviderStatus'>,
+  isActive?: () => boolean
 ): void {
-  scheduleCodexCatalogLoadingRefresh(get, 'codex');
+  scheduleCodexCatalogLoadingRefresh(get, 'codex', isActive);
 }
 
 // =============================================================================
@@ -940,6 +955,7 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
   cliStatus: null,
   cliStatusLoading: false,
   cliProviderStatusLoading: {},
+  codexStatusRecoveryPending: false,
   cliProviderStatusByScope: {},
   cliProviderStatusScopeRevision: 0,
   cliStatusError: null,
@@ -1064,7 +1080,7 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
         };
       });
 
-      if (epoch === cliStatusEpoch) scheduleCodexCatalogLoadingRefreshes(get);
+      if (epoch === cliStatusEpoch) scheduleCodexCatalogLoadingRefreshes(get, options?.isActive);
 
       if (!metadata.installed) {
         if (epoch === cliStatusEpoch) {
@@ -1571,28 +1587,7 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
     () => clearCliProviderStatusInFlight('opencode')
   ),
 
-  fetchCodexRuntimeStatus: async () => {
-    if (!api.codexRuntime) return;
-    if (codexRuntimeStatusInFlight) return codexRuntimeStatusInFlight;
-
-    codexRuntimeStatusInFlight = (async () => {
-      set({ codexRuntimeStatusLoading: true, codexRuntimeError: null });
-      try {
-        const status = await api.codexRuntime.getStatus();
-        set({ codexRuntimeStatus: status, codexRuntimeError: status.error ?? null });
-      } catch (error) {
-        const message =
-          error instanceof Error ? error.message : 'Failed to check Codex runtime status';
-        logger.error('Failed to fetch Codex runtime status:', error);
-        set({ codexRuntimeError: message });
-      } finally {
-        set({ codexRuntimeStatusLoading: false });
-        codexRuntimeStatusInFlight = null;
-      }
-    })();
-
-    return codexRuntimeStatusInFlight;
-  },
+  ...createCodexRuntimeStatusActions(set),
 
   installCodexRuntime: async () => {
     if (!api.codexRuntime) return;
@@ -1640,10 +1635,5 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
     } finally {
       set({ codexRuntimeStatusLoading: false });
     }
-  },
-
-  invalidateCodexRuntimeStatus: async () => {
-    await api.codexRuntime?.invalidateStatus();
-    set({ codexRuntimeStatus: null });
   },
 });

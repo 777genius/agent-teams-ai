@@ -1,0 +1,114 @@
+import { useEffect, useState } from 'react';
+
+import { api } from '@renderer/api';
+
+import { isOpenCodeRuntimeUsable } from '../../core/domain';
+import { countCompleteDirectoryConnections } from '../connectedCountObservationPolicy';
+import {
+  beginRuntimeProviderConnectedCountCheck,
+  getRuntimeProviderDirectoryReadToken,
+  observeRuntimeProviderDirectoryRevision,
+  publishRuntimeProviderConnectedCount,
+} from '../runtimeProviderDirectoryCache';
+
+import type { OpenCodeRuntimeStatus } from '@shared/types';
+
+/** One in-flight count read per scope/runtime/credential generation, across Dashboard panes. */
+const activeReads = new Map<string, Promise<void>>();
+const recentAttempts = new Map<string, number>();
+const RETRY_AFTER_MS = 2 * 60_000;
+
+interface DashboardConnectedCountProbeOptions {
+  enabled: boolean;
+  projectPath: string | null;
+  runtimeStatus: OpenCodeRuntimeStatus | null;
+  connectedCount: number | null;
+}
+
+/**
+ * Only the connected-source summary; never a full directory or model catalog.
+ * Existing generation fences reject results after runtime or credential changes.
+ */
+export function useOpenCodeDashboardConnectedCountProbe({
+  enabled,
+  projectPath,
+  runtimeStatus,
+  connectedCount,
+}: DashboardConnectedCountProbeOptions): void {
+  const [attemptRevision, retry] = useState(0);
+  const revision =
+    runtimeStatus?.state === 'ready' && isOpenCodeRuntimeUsable(runtimeStatus)
+      ? JSON.stringify(['ready', runtimeStatus.version ?? null, runtimeStatus.binaryPath ?? null])
+      : null;
+  // This changes on invalidation; the Dashboard's existing external-store
+  // subscription re-renders the hook even when Unknown stays Unknown.
+  const readToken = getRuntimeProviderDirectoryReadToken(projectPath);
+
+  useEffect(() => {
+    if (!enabled || !revision || connectedCount !== null) return;
+    observeRuntimeProviderDirectoryRevision(revision);
+    const token = getRuntimeProviderDirectoryReadToken(projectPath);
+    const key = JSON.stringify([projectPath?.trim() || null, revision, token]);
+    const now = Date.now();
+    // Pane remounts and rapid project switches must not restart a failed CLI read.
+    for (const [attemptKey, startedAt] of recentAttempts) {
+      if (now - startedAt >= RETRY_AFTER_MS) recentAttempts.delete(attemptKey);
+    }
+    const attemptedAt = recentAttempts.get(key);
+    if (attemptedAt !== undefined) {
+      // Expiry can precede the retry deadline when the response was cached.
+      // Wake an active pane once the cooldown ends; a rerender alone is not
+      // guaranteed after the visible evidence has already become Unknown.
+      const timer = window.setTimeout(
+        () => retry((value) => value + 1),
+        Math.max(1, attemptedAt + RETRY_AFTER_MS - now + 10)
+      );
+      return () => window.clearTimeout(timer);
+    }
+    if (activeReads.has(key)) return;
+    recentAttempts.set(key, now);
+
+    const endCheck = beginRuntimeProviderConnectedCountCheck(projectPath, token);
+    const request = api.runtimeProviderManagement
+      .loadProviderDirectory({
+        runtimeId: 'opencode',
+        summary: true,
+        projectPath,
+        query: null,
+        filter: 'connected',
+        limit: 100,
+        cursor: null,
+        refresh: false,
+      })
+      .then((response) => {
+        if (
+          response.schemaVersion !== 1 ||
+          response.runtimeId !== 'opencode' ||
+          response.error ||
+          !response.directory
+        )
+          return;
+        const connected = countCompleteDirectoryConnections(response.directory, 'connected');
+        if (connected === null) return;
+        publishRuntimeProviderConnectedCount({
+          projectPath,
+          readToken: token,
+          runtimeRevision: revision,
+          connected,
+          fetchedAt: response.directory.fetchedAt,
+          source: 'summary-connected',
+        });
+      })
+      .catch(() => {
+        // Failed inventory stays Unknown until the bounded retry cooldown.
+      })
+      .finally(() => {
+        endCheck();
+        if (activeReads.get(key) === request) activeReads.delete(key);
+        retry((value) => value + 1);
+      });
+    activeReads.set(key, request);
+    // Do not cancel a started read on tab changes: it is already running,
+    // and the generation token still prevents publishing stale data.
+  }, [enabled, projectPath, revision, connectedCount, readToken, attemptRevision]);
+}

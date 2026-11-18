@@ -42,7 +42,7 @@ jobs:
   install:
     if: github.event_name != 'pull_request' || github.event.pull_request.draft != true
     name: Install Codex runtime (${{ matrix.os }})
-    runs-on: ${{ matrix.os == 'ubuntu-latest' && (vars.CI_LINUX_RUNNER || 'ubicloud-standard-4') || matrix.os == 'macos-latest' && (vars.CI_MACOS_ARM_RUNNER || 'namespace-profile-macos-15') || matrix.os }}
+    runs-on: ${{ matrix.os == 'ubuntu-latest' && (vars.CI_LINUX_RUNNER || 'ubuntu-latest') || matrix.os == 'macos-latest' && (vars.CI_MACOS_ARM_RUNNER || 'namespace-profile-macos-15') || matrix.os }}
     timeout-minutes: 20
 
     strategy:

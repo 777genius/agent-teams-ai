@@ -261,6 +261,7 @@ async function handleUpdateConfig(
       }
     }
 
+    await configManager.waitForPersistence();
     const updatedConfig = configManager.getConfig();
     return { success: true, data: updatedConfig };
   } catch (error) {

@@ -1,3 +1,4 @@
+import { resolveRuntimeStatusExecutionContext } from '@main/services/runtime/runtimeStatusExecutionContext';
 import { type ExecCliOptions } from '@main/utils/childProcess';
 import {
   type CliProviderModelCatalog,
@@ -243,6 +244,7 @@ export async function readRuntimeProviderLaunchFacts(
   ports: ReadRuntimeProviderLaunchFactsPorts
 ): Promise<RuntimeProviderLaunchFacts> {
   const providerArgs = input.providerArgs ?? [];
+  const context = await resolveRuntimeStatusExecutionContext(input.providerId, input.cwd);
   const modelListPromise = ports.execCli(
     input.claudePath,
     buildProviderControlPlaneCliCommandArgs(providerArgs, [
@@ -251,9 +253,10 @@ export async function readRuntimeProviderLaunchFacts(
       '--json',
       '--provider',
       input.providerId,
+      ...context.projectArgs,
     ]),
     {
-      cwd: input.cwd,
+      cwd: context.cwd ?? input.cwd,
       env: input.env,
       timeout: PROVIDER_MODEL_LIST_TIMEOUT_MS,
     }

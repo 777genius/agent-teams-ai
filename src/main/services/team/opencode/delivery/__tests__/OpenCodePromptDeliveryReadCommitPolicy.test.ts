@@ -387,6 +387,15 @@ describe('OpenCode prompt delivery read commit policy', () => {
         taskRefsIncludeAll,
       });
     await expect(allowed()).resolves.toBe(true);
+    await expect(isOpenCodeDeliveryResponseReadCommitAllowed({
+      teamName: 'team',
+      memberName: 'alice',
+      configuredLeadName: null,
+      ledgerRecord: { ...peer, replyRecipient: 'captain' },
+      responseState: 'empty_assistant_turn',
+      hasAcceptedMemberWorkSyncReport: async () => false,
+      taskRefsIncludeAll,
+    })).resolves.toBe(false);
     for (const overrides of [
       { replyRecipient: 'user' },
       { replyRecipient: 'team-lead' },
@@ -511,6 +520,32 @@ describe('OpenCode prompt delivery read commit policy', () => {
         taskRefsIncludeAll,
       })
     ).resolves.toBe(true);
+    expect(hasAcceptedMemberWorkSyncReport).not.toHaveBeenCalled();
+  });
+
+  it('recognizes review_complete as legacy read-commit proof for review pickup', async () => {
+    const hasAcceptedMemberWorkSyncReport = vi.fn(async () => false);
+    for (const toolName of ['mcp__agent-teams__review_complete', 'review_approve']) {
+      await expect(
+        isLegacyOpenCodeMemberWorkSyncReadCommitAllowed({
+          teamName: 'team',
+          memberName: 'alice',
+          workSyncIntent: 'review_pickup',
+          responseObservation: {
+            state: 'responded_tool_call',
+            deliveredUserMessageId: 'runtime-prompt-1',
+            assistantMessageId: 'assistant-1',
+            toolCallNames: [toolName],
+            visibleMessageToolCallId: null,
+            visibleReplyMessageId: null,
+            visibleReplyCorrelation: null,
+            latestAssistantPreview: null,
+            reason: null,
+          },
+          hasAcceptedMemberWorkSyncReport,
+        })
+      ).resolves.toBe(true);
+    }
     expect(hasAcceptedMemberWorkSyncReport).not.toHaveBeenCalled();
   });
 

@@ -203,16 +203,27 @@ const EventContent = ({
       );
     case 'review_requested':
       return (
-        <span className="flex items-center gap-1">
-          <Eye size={10} className="text-purple-400" />
-          {t('taskDetail.workflowTimeline.reviewRequested')}
-          {event.reviewer ? (
-            <MemberBadge
-              name={event.reviewer}
-              color={memberColorMap?.get(event.reviewer)}
-              size="sm"
-              hideAvatar
-            />
+        <span className="flex min-w-0 flex-col gap-1">
+          <span className="inline-flex items-center gap-1">
+            <Eye size={10} className="text-purple-400" />
+            {t(
+              event.stage === 'lead_signoff'
+                ? 'taskDetail.workflowTimeline.leadSignoffRequested'
+                : 'taskDetail.workflowTimeline.reviewRequested'
+            )}
+            {event.reviewer ? (
+              <MemberBadge
+                name={event.reviewer}
+                color={memberColorMap?.get(event.reviewer)}
+                size="sm"
+                hideAvatar
+              />
+            ) : null}
+          </span>
+          {event.stage === 'lead_signoff' && event.note ? (
+            <span className="whitespace-pre-wrap break-words text-[var(--color-text-muted)]">
+              {event.note}
+            </span>
           ) : null}
         </span>
       );
@@ -229,6 +240,29 @@ const EventContent = ({
           <MessageSquareX size={10} className="text-amber-400" />
           {t('taskDetail.workflowTimeline.changesRequested')}
           <ReviewStateBadge state="needsFix" />
+        </span>
+      );
+    case 'review_completed':
+      return (
+        <span className="flex min-w-0 flex-col gap-1">
+          <span className="inline-flex items-center gap-1">
+            <Eye size={10} className="text-sky-400" />
+            {t('taskDetail.workflowTimeline.reviewCompleted')}
+            <ReviewStateBadge state="reviewed" />
+          </span>
+          {event.note ? (
+            <span className="whitespace-pre-wrap break-words text-[var(--color-text-muted)]">
+              {event.note}
+            </span>
+          ) : null}
+        </span>
+      );
+    case 'human_approved':
+      return (
+        <span className="flex items-center gap-1">
+          <ShieldCheck size={10} className="text-emerald-400" />
+          {t('taskDetail.workflowTimeline.humanApproved')}
+          <ReviewStateBadge state="approved" />
         </span>
       );
     case 'review_approved':
@@ -296,6 +330,8 @@ function getReviewStateLabel(
   switch (state) {
     case 'approved':
       return t('taskDetail.reviewStates.approved');
+    case 'reviewed':
+      return t('taskDetail.reviewStates.reviewed');
     case 'needsFix':
       return t('taskDetail.reviewStates.needsFix');
     case 'review':
@@ -321,6 +357,9 @@ function dotColor(event: TaskHistoryEvent): string {
       return 'bg-purple-400';
     case 'review_changes_requested':
       return 'bg-amber-400';
+    case 'review_completed':
+      return 'bg-sky-400';
+    case 'human_approved':
     case 'review_approved':
       return 'bg-emerald-400';
     default:

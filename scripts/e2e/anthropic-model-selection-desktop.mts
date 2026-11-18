@@ -210,7 +210,7 @@ class Cdp {
 }
 const button = (text: string, scope = 'document') =>
   `Array.from(${scope}.querySelectorAll('button')).find(e => e.textContent.trim() === ${JSON.stringify(text)})`;
-const dialog = "document.querySelector('[role=dialog]')";
+const dialog = "document.querySelector('[data-testid=create-team-page]')";
 const json = async (file: string, value: unknown) =>
   writeFile(file, JSON.stringify(value, null, 2) + '\n');
 
@@ -614,7 +614,7 @@ async function main(): Promise<void> {
         } else if (!recordBaseline) {
           assert.equal(selected, 'Default', 'Default selection must survive context toggle');
           await cdp.waitFor(
-            `document.querySelector('[role=dialog]').innerText.includes('The verified model catalog is unavailable or stale')`,
+            `document.querySelector('[data-testid=create-team-page]').innerText.includes('The verified model catalog is unavailable or stale')`,
             'missing catalog launch gate'
           );
         }
@@ -741,7 +741,7 @@ async function main(): Promise<void> {
         const expected = limit ? model : `${model}[1m]`;
         const visiblePreflight = `${label}${limit ? '' : ' (1M)'} - Selected model `;
         await cdp.waitFor(
-          `document.querySelector('[role=dialog]').innerText.replace(/\\s+/g, ' ').includes(${JSON.stringify(visiblePreflight)} + 'verified') || document.querySelector('[role=dialog]').innerText.replace(/\\s+/g, ' ').includes(${JSON.stringify(visiblePreflight)} + 'available')`,
+          `document.querySelector('[data-testid=create-team-page]').innerText.replace(/\\s+/g, ' ').includes(${JSON.stringify(visiblePreflight)} + 'verified') || document.querySelector('[data-testid=create-team-page]').innerText.replace(/\\s+/g, ' ').includes(${JSON.stringify(visiblePreflight)} + 'available')`,
           'current visible preflight model'
         );
         const preflightPath = path.join(d.tmp, 'claude-team-preflight-debug.log');
@@ -774,7 +774,7 @@ async function main(): Promise<void> {
       // The real Create button must call native createConfig, not launch.
       if (finalLimit) {
         await cdp.waitFor(
-          `document.querySelector('[role=dialog]').innerText.replace(/\\s+/g, ' ').includes(${JSON.stringify(label + ' - Selected model verified')}) || document.querySelector('[role=dialog]').innerText.replace(/\\s+/g, ' ').includes(${JSON.stringify(label + ' - Selected model available')})`,
+          `document.querySelector('[data-testid=create-team-page]').innerText.replace(/\\s+/g, ' ').includes(${JSON.stringify(label + ' - Selected model verified')}) || document.querySelector('[data-testid=create-team-page]').innerText.replace(/\\s+/g, ' ').includes(${JSON.stringify(label + ' - Selected model available')})`,
           'final 200K preflight'
         );
       }

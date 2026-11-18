@@ -1,3 +1,4 @@
+import { ParticipantAvatar } from '@renderer/components/team/ParticipantAvatar';
 import { cn } from '@renderer/lib/utils';
 
 import { FLAT_ROSTER_GRID_COLUMNS } from './flatRosterLayout';
@@ -11,6 +12,7 @@ interface FrameProps {
   layout: 'flat' | 'lead' | 'member';
   dataRole: string;
   removed?: boolean;
+  expanded?: boolean;
 }
 
 /** Shared display shell; it does not own roster editing, runtime discovery or state. */
@@ -21,6 +23,7 @@ export const RosterParticipantFrame = ({
   layout,
   dataRole,
   removed = false,
+  expanded = false,
 }: Readonly<FrameProps>): React.JSX.Element => {
   const flat = layout === 'flat';
   return (
@@ -42,11 +45,13 @@ export const RosterParticipantFrame = ({
       )}
       data-role={dataRole}
       style={{
-        backgroundColor: flat
-          ? undefined
-          : isLight
-            ? 'color-mix(in srgb, var(--color-surface-raised) 22%, white 78%)'
-            : 'var(--color-surface-raised)',
+        backgroundColor: expanded
+          ? `color-mix(in srgb, ${accentColor} 5%, transparent)`
+          : flat
+            ? undefined
+            : isLight
+              ? 'color-mix(in srgb, var(--color-surface-raised) 22%, white 78%)'
+              : 'var(--color-surface-raised)',
         boxShadow: flat
           ? undefined
           : isLight
@@ -55,7 +60,10 @@ export const RosterParticipantFrame = ({
       }}
     >
       <div
-        className={cn('absolute inset-y-0 left-0 w-1', flat ? 'my-2 rounded-full' : 'rounded-l-md')}
+        className={cn(
+          'absolute inset-y-0 left-0 w-0.5',
+          flat ? 'my-2 rounded-full' : 'rounded-l-md'
+        )}
         style={{ backgroundColor: accentColor }}
         aria-hidden="true"
       />
@@ -74,7 +82,7 @@ export const RosterParticipantIdentity = ({
   return (
     <div className="flex min-w-0 items-center gap-2">
       {avatarSrc ? (
-        <img
+        <ParticipantAvatar
           src={avatarSrc}
           alt=""
           className="size-8 shrink-0 rounded-full bg-[var(--color-surface-raised)]"

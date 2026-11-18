@@ -4,6 +4,7 @@ import { TeamConfigReader } from '../../TeamConfigReader';
 import { TeamInboxReader } from '../../TeamInboxReader';
 import { TeamTaskReader } from '../../TeamTaskReader';
 
+import { isOpenCodeConfiguredPeerRecipient } from './OpenCodeDeliveryReplyContract';
 import {
   getOpenCodeRuntimeDeliveryPromptTimeMs,
   getOpenCodeRuntimeDeliveryRecordTimeMs,
@@ -42,6 +43,11 @@ export interface OpenCodeRuntimeDeliveryProofReaderInput {
   teamName: string;
   activeMemberKeys: ReadonlySet<string>;
   recordsByMember: ReadonlyMap<string, readonly OpenCodePromptDeliveryLedgerRecord[]>;
+}
+
+interface RecipientRoster {
+  leadName: string | null;
+  members: NonNullable<TeamConfig['members']>;
 }
 
 interface ConfigReaderPort {
@@ -103,7 +109,8 @@ class MaterializedOpenCodeRuntimeDeliveryProofIndex implements OpenCodeRuntimeDe
     private readonly latestSuccessTimesByMember: ReadonlyMap<string, number>,
     private readonly visibleRepliesByMember: ReadonlyMap<string, readonly IndexedVisibleReply[]>,
     private readonly taskProgressTimes: ReadonlyMap<string, number>,
-    private readonly inferredTaskRefsByRecordId: ReadonlyMap<string, readonly TaskRef[]>
+    private readonly inferredTaskRefsByRecordId: ReadonlyMap<string, readonly TaskRef[]>,
+    private readonly roster: RecipientRoster
   ) {}
 
   getSnapshot(
@@ -111,7 +118,15 @@ class MaterializedOpenCodeRuntimeDeliveryProofIndex implements OpenCodeRuntimeDe
     record: OpenCodePromptDeliveryLedgerRecord
   ): OpenCodeRuntimeDeliveryProofSnapshot {
     const memberKey = normalizeOpenCodeRuntimeDeliveryToken(memberName);
-    const visibleReplies = this.visibleRepliesByMember.get(memberKey) ?? [];
+    const allowedInboxes = record.groupChatId ? ['user'] : getOpenCodeVisibleReplyInboxCandidates({
+      replyRecipient: record.replyRecipient,
+      configuredLeadName: this.roster.leadName,
+      knownPeerRecipient: isOpenCodeConfiguredPeerRecipient(this.roster.members, record.replyRecipient),
+      includeUserFallbackForLeadRecipient: true,
+    });
+    const allowed = new Set(allowedInboxes.map(name => name.toLowerCase()));
+    const visibleReplies = (this.visibleRepliesByMember.get(memberKey) ?? [])
+      .filter(reply => allowed.has(reply.inboxName.toLowerCase()));
     const relayOfMessageId = record.inboxMessageId.trim();
     const promptTime = getOpenCodeRuntimeDeliveryPromptTimeMs(record);
     let visibleReply: IndexedVisibleReply | null = null;
@@ -212,31 +227,35 @@ export class OpenCodeRuntimeDeliveryProofReader {
   async readProofIndex(
     input: OpenCodeRuntimeDeliveryProofReaderInput
   ): Promise<OpenCodeRuntimeDeliveryProofIndex> {
-    const [configuredLeadName, visibleRepliesByMember, taskProgressProof] = await Promise.all([
-      this.readConfiguredLeadName(input.teamName),
+    const [roster, visibleRepliesByMember, taskProgressProof] = await Promise.all([
+      this.readConfiguredRecipientRoster(input.teamName),
       this.readVisibleRepliesByMember(input),
       this.readTaskProgressProof(input.teamName, input.activeMemberKeys, input.recordsByMember),
     ]);
 
     return new MaterializedOpenCodeRuntimeDeliveryProofIndex(
       this.readLatestSuccessTimesByMember(input.activeMemberKeys, input.recordsByMember),
-      await visibleRepliesByMember(configuredLeadName),
+      await visibleRepliesByMember(roster),
       taskProgressProof.taskProgressTimes,
-      taskProgressProof.inferredTaskRefsByRecordId
+      taskProgressProof.inferredTaskRefsByRecordId,
+      roster
     );
   }
 
-  private async readConfiguredLeadName(teamName: string): Promise<string | null> {
+  private async readConfiguredRecipientRoster(teamName: string): Promise<RecipientRoster> {
     const config =
       (typeof this.configReader.getConfigSnapshot === 'function'
         ? await this.configReader.getConfigSnapshot(teamName)
         : await this.configReader.getConfig(teamName)) ?? null;
-    return config?.members?.find((member) => isLeadMember(member))?.name?.trim() || null;
+    return {
+      leadName: config?.members?.find(member => isLeadMember(member))?.name?.trim() || null,
+      members: config?.members ?? [],
+    };
   }
 
   private async readVisibleRepliesByMember(
     input: OpenCodeRuntimeDeliveryProofReaderInput
-  ): Promise<(configuredLeadName: string | null) => Promise<Map<string, IndexedVisibleReply[]>>> {
+  ): Promise<(roster: RecipientRoster) => Promise<Map<string, IndexedVisibleReply[]>>> {
     const candidateDescriptors = new Map<
       string,
       {
@@ -255,12 +274,13 @@ export class OpenCodeRuntimeDeliveryProofReader {
       }
     }
 
-    return async (configuredLeadName: string | null) => {
+    return async (roster: RecipientRoster) => {
       const inboxNames = new Set<string>();
       for (const descriptor of candidateDescriptors.values()) {
         for (const inboxName of getOpenCodeVisibleReplyInboxCandidates({
           ...descriptor,
-          configuredLeadName,
+          configuredLeadName: roster.leadName,
+          knownPeerRecipient: isOpenCodeConfiguredPeerRecipient(roster.members, descriptor.replyRecipient ?? ''),
         })) {
           inboxNames.add(inboxName);
         }

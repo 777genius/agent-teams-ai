@@ -1,6 +1,10 @@
 import { useCallback, useMemo } from 'react';
 
+import { useAppTranslation } from '@features/localization/renderer';
 import { api, isElectronMode } from '@renderer/api';
+import { confirm } from '@renderer/components/common/ConfirmDialog';
+import { hasUnfinishedCreateTeamDraft } from '@renderer/hooks/useCreateTeamDraftAvailability';
+import { resetCreateTeamDraft } from '@renderer/services/resetCreateTeamDraft';
 import { useStore } from '@renderer/store';
 import { isTeamProvisioningActive } from '@renderer/store/slices/teamSlice';
 import { useShallow } from 'zustand/react/shallow';
@@ -26,15 +30,18 @@ interface UseOrganizationCreateTeamDialogResult {
     placement?: OrganizationPlacementSelection
   ) => Promise<void>;
   openTeam: (teamName: string, projectPath?: string) => void;
+  openCreationPage: (placement: OrganizationPlacementSelection) => Promise<void>;
 }
 
 export function useOrganizationCreateTeamDialog(): UseOrganizationCreateTeamDialogResult {
   const electronMode = isElectronMode();
+  const { t } = useAppTranslation('team');
   const {
     teams,
     connectionMode,
     createTeam,
     openTeamTab,
+    openTeamsCreationPage,
     provisioningErrorByTeam,
     clearProvisioningError,
     provisioningRuns,
@@ -45,6 +52,7 @@ export function useOrganizationCreateTeamDialog(): UseOrganizationCreateTeamDial
       connectionMode: state.connectionMode,
       createTeam: state.createTeam,
       openTeamTab: state.openTeamTab,
+      openTeamsCreationPage: state.openTeamsCreationPage,
       provisioningErrorByTeam: state.provisioningErrorByTeam,
       clearProvisioningError: state.clearProvisioningError,
       provisioningRuns: state.provisioningRuns,
@@ -96,6 +104,28 @@ export function useOrganizationCreateTeamDialog(): UseOrganizationCreateTeamDial
     [createTeam]
   );
 
+  const openCreationPage = useCallback(async (placement: OrganizationPlacementSelection) => {
+    const hasSavedDraft = await hasUnfinishedCreateTeamDraft();
+    const hasOpenEditor = useStore
+      .getState()
+      .getAllPaneTabs()
+      .some((tab) => tab.type === 'teams' && tab.teamsCreationPage);
+    if (hasOpenEditor || hasSavedDraft) {
+      const accepted = await confirm({
+        title: t('create.title.create'),
+        message: t('create.draft.replaceConfirmation', {
+          defaultValue: 'Creating this team will replace your unfinished draft. Continue?',
+        }),
+        confirmLabel: t('create.draft.replace', { defaultValue: 'Replace draft' }),
+        variant: 'danger',
+      });
+      if (!accepted) return;
+    }
+    const originTabId = useStore.getState().getActiveTab()?.id;
+    await resetCreateTeamDraft();
+    openTeamsCreationPage({ placement, originTabId }, true);
+  }, [openTeamsCreationPage, t]);
+
   return {
     canCreate,
     existingTeamNames: teams.map((team) => team.teamName),
@@ -105,5 +135,6 @@ export function useOrganizationCreateTeamDialog(): UseOrganizationCreateTeamDial
     clearProvisioningError,
     createTeam: createTeamWithPlacement,
     openTeam: openTeamTab,
+    openCreationPage,
   };
 }

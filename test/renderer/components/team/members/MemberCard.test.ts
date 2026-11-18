@@ -800,7 +800,7 @@ describe('MemberCard starting-state visuals', () => {
     });
 
     const img = host.querySelector('img');
-    const avatarRing = img?.parentElement;
+    const avatarRing = img?.closest('[data-participant-avatar]')?.parentElement;
     const clickableCard = host.querySelector('[role="button"]') as HTMLElement | null;
 
     expect(avatarRing).not.toBeNull();

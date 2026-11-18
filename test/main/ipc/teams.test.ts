@@ -1,4 +1,8 @@
-import type { ResolveOpenCodeInputDeclaration } from '@features/agent-attachments/contracts';
+import {
+  REVIEW_FLOW_GET_OVERVIEW,
+  REVIEW_FLOW_SET_DEFAULTS,
+  REVIEW_FLOW_SET_TEAM_OVERRIDE,
+} from '@features/review-flow/contracts';
 import { TeamReadFailureError } from '@features/team-read-recovery/main';
 import { bindTeamProvisioningStartApi } from '@main/services/team/contracts/TeamProvisioningApis';
 import {
@@ -13,6 +17,7 @@ import * as os from 'os';
 import * as path from 'path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import type { ResolveOpenCodeInputDeclaration } from '@features/agent-attachments/contracts';
 import type { ElectronAPI } from '@shared/types/api';
 import type {
   BoardTaskActivityDetailResult,
@@ -376,6 +381,9 @@ const TEAM_HANDLER_KEYS = [
   TEAM_TOOL_APPROVAL_SETTINGS,
   TEAM_UPDATE_CONFIG,
   TEAM_UPDATE_KANBAN,
+  REVIEW_FLOW_GET_OVERVIEW,
+  REVIEW_FLOW_SET_DEFAULTS,
+  REVIEW_FLOW_SET_TEAM_OVERRIDE,
   TEAM_UPDATE_KANBAN_COLUMN_ORDER,
   TEAM_UPDATE_MEMBER_ROLE,
   TEAM_UPDATE_TASK_FIELDS,
@@ -574,6 +582,7 @@ describe('ipc teams handlers', () => {
     createTask: vi.fn(() => resolved({ id: '1', subject: 'Test', status: 'pending' })),
     requestReview: vi.fn(() => resolvedUndefined()),
     updateKanban: vi.fn(() => resolvedUndefined()),
+    setReviewFlowSettings: vi.fn(() => resolvedUndefined()),
     updateKanbanColumnOrder: vi.fn(() => resolvedUndefined()),
     updateTaskStatus: vi.fn(() => resolvedUndefined()),
     startTask: vi.fn(() => resolvedUndefined()),
@@ -7250,6 +7259,125 @@ describe('ipc teams handlers', () => {
       expect(result.success).toBe(false);
       expect(result.error).toBe('allowExperimentalLocalModels must be a boolean');
       expect(teamHandlerMocks.createTeam).not.toHaveBeenCalled();
+    });
+  });
+
+  it('optional CLI Validate matches Create/Launch admission for documented modes and empty values', async () => {
+    const validate = handlers.get(TEAM_VALIDATE_CLI_ARGS)!;
+    // Some supported CLI options are absent from the installed --help output.
+    teamHandlerMocks.getCliHelpOutput.mockResolvedValue('Usage: -p, --print');
+
+    const allowed = await validate({ sender: { send: vi.fn() } } as never,
+      '--max-turns 5 --teammate-mode tmux');
+    expect(allowed).toMatchObject({ success: true, data: { valid: true } });
+
+    for (const raw of ['--max-turns=', '--max-turns ""', '-p-max-turns=']) {
+      const noValue = await validate({ sender: { send: vi.fn() } } as never, raw);
+      expect(noValue).toMatchObject({
+        success: true, data: { valid: false, missingValueFlag: '--max-turns' },
+      });
+    }
+
+    const protectedMode = await validate({ sender: { send: vi.fn() } } as never,
+      '--teammate-mode unsupported');
+    expect(protectedMode).toMatchObject({
+      success: true, data: { valid: false, invalidFlags: ['--teammate-mode'] },
+    });
+    expect(teamHandlerMocks.getCliHelpOutput).toHaveBeenCalledTimes(5);
+  });
+
+  // Simulated desktop submits that skip the optional Validate button.
+  describe('extraCliArgs admission on desktop create and launch', () => {
+    const blockedArgs = [
+      ['-rother-session', 'app-managed flags: -r'],
+      ['--disallowed-tools x', 'app-managed flags: --disallowed-tools'],
+      ['--max-turns', 'ends with --max-turns but no value'],
+      ['--max-turns=', 'ends with --max-turns but no value'],
+      ['--max-turns ""', 'ends with --max-turns but no value'],
+      ['-p-max-turns=', 'ends with --max-turns but no value'],
+    ] as const;
+
+    it.each(blockedArgs)('rejects %s on team create', async (extraCliArgs, error) => {
+      const result = (await handlers.get(TEAM_CREATE)!({ sender: { send: vi.fn() } } as never, {
+        teamName: 'test-team',
+        members: [{ name: 'alice' }],
+        cwd: os.tmpdir(),
+        extraCliArgs,
+      })) as { success: boolean; error?: string };
+
+      expect(result.success).toBe(false);
+      expect(result.error).toContain(error);
+      expect(teamHandlerMocks.createTeam).not.toHaveBeenCalled();
+    });
+
+    it.each(blockedArgs)('rejects %s on team launch', async (extraCliArgs, error) => {
+      const result = (await handlers.get(TEAM_LAUNCH)!({ sender: { send: vi.fn() } } as never, {
+        teamName: 'my-team',
+        cwd: os.tmpdir(),
+        extraCliArgs,
+      })) as { success: boolean; error?: string };
+
+      expect(result.success).toBe(false);
+      expect(result.error).toContain(error);
+      expect(teamHandlerMocks.launchTeam).not.toHaveBeenCalled();
+      expect(teamHandlerMocks.createTeam).not.toHaveBeenCalled();
+    });
+
+    it('rejects protected args saved on a draft before it launches', async () => {
+      const claudeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'ipc-draft-extra-args-'));
+      setClaudeBasePathOverride(claudeRoot);
+      try {
+        const teamDir = path.join(claudeRoot, 'teams', 'draft-team');
+        fs.mkdirSync(teamDir, { recursive: true });
+        fs.writeFileSync(
+          path.join(teamDir, 'team.meta.json'),
+          JSON.stringify({ version: 1, cwd: '/Users/test/project', createdAt: Date.now() })
+        );
+        service.getSavedRequest.mockResolvedValueOnce({
+          teamName: 'draft-team',
+          cwd: '/Users/test/project',
+          extraCliArgs: '--disallowed-tools x',
+          members: [],
+        });
+
+        const result = (await handlers.get(TEAM_LAUNCH)!({ sender: { send: vi.fn() } } as never, {
+          teamName: 'draft-team',
+          cwd: os.tmpdir(),
+        })) as { success: boolean; error?: string };
+
+        expect(result.success).toBe(false);
+        expect(result.error).toContain('app-managed flags: --disallowed-tools');
+        expect(teamHandlerMocks.createTeam).not.toHaveBeenCalled();
+        expect(teamHandlerMocks.launchTeam).not.toHaveBeenCalled();
+      } finally {
+        setClaudeBasePathOverride(null);
+        fs.rmSync(claudeRoot, { recursive: true, force: true });
+      }
+    });
+
+    it('passes valid args through to create and launch', async () => {
+      const event = { sender: { send: vi.fn() } } as never;
+      const created = (await handlers.get(TEAM_CREATE)!(event, {
+        teamName: 'test-team',
+        members: [{ name: 'alice' }],
+        cwd: os.tmpdir(),
+        extraCliArgs: ' --max-turns 5 --teammate-mode tmux ',
+      })) as { success: boolean };
+      const launched = (await handlers.get(TEAM_LAUNCH)!(event, {
+        teamName: 'my-team',
+        cwd: os.tmpdir(),
+        extraCliArgs: '--max-turns 5 --teammate-mode tmux',
+      })) as { success: boolean };
+
+      expect(created.success).toBe(true);
+      expect(teamHandlerMocks.createTeam.mock.calls[0][0].extraCliArgs).toBe(
+        '--max-turns 5 --teammate-mode tmux'
+      );
+      expect(launched.success).toBe(true);
+      expect(teamHandlerMocks.launchTeam).toHaveBeenCalledWith(
+        expect.objectContaining({ extraCliArgs: '--max-turns 5 --teammate-mode tmux' }),
+        expect.any(Function)
+      );
     });
   });
 

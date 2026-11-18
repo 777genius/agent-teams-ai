@@ -153,6 +153,24 @@ describe('buildCreateBootstrapUserPrompt', () => {
 });
 
 describe('lead launch prompts include the teammate roster rules', () => {
+  it('never turns a bootstrap-only launch into an old work request', () => {
+    const prompt = buildDeterministicLaunchHydrationPrompt(
+      {
+        teamName: 'sandbox-relaunch',
+        cwd: '/sandbox',
+        bootstrapOnly: true,
+        prompt: 'NEVER_REPLAY_THIS_OLD_TASK',
+      },
+      teammates,
+      [],
+      false
+    );
+    expect(prompt).not.toContain('NEVER_REPLAY_THIS_OLD_TASK');
+    expect(prompt).not.toContain('Original user instructions to apply now');
+    expect(prompt).toContain('Do NOT create, assign, or delegate any new task in this turn.');
+    expect(prompt).toContain('Your teammates are EXACTLY:');
+  });
+
   it.each([false, true])(
     'executes an explicit launch request in the deferred operating turn (resume=%s)',
     (isResume) => {

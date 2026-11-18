@@ -300,7 +300,6 @@ const TaskDetailDialogHost = memo(
         setSelectedIdentity(null);
       }
     }, [contextId, selectedIdentity, teamName]);
-
     const registeredIdentity =
       selectedIdentity?.contextId === contextId && selectedIdentity.teamName === teamName
         ? selectedIdentity
@@ -581,7 +580,6 @@ interface LeadLoadBridgeProps {
 const EMPTY_MESSAGES_PANEL_TASKS: TeamTaskWithKanban[] = [];
 const TEAM_HEADER_NAV_ACTION_CLASS =
   'inline-flex h-8 shrink-0 items-center justify-center gap-1.5 rounded-md border border-[var(--color-border-emphasis)] bg-transparent px-2.5 text-[11px] font-medium text-[var(--color-text-secondary)] transition-colors hover:bg-[var(--color-surface-raised)] hover:text-[var(--color-text)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--color-border-emphasis)]';
-
 function buildMessagesPanelTasksSignature(tasks: readonly TeamTaskWithKanban[]): string {
   return JSON.stringify(
     tasks.map((task) => [
@@ -809,7 +807,6 @@ const LeadLoadBridge = memo(function LeadLoadBridge({
 
     const stats = leadSessionContextStats.get(targetAiGroupId);
     const injections = stats?.accumulatedInjections ?? [];
-
     let lastUsage: UsageLike | null = null;
     let lastModelName: string | undefined;
     const targetItem = leadConversation.items.find(
@@ -1376,7 +1373,6 @@ export const TeamDetailView = memo(function TeamDetailView({
       state.setActiveTab(existingUsageTab.id);
       return;
     }
-
     state.openTab({
       type: 'token-usage',
       label: 'Usage',
@@ -1760,7 +1756,6 @@ export const TeamDetailView = memo(function TeamDetailView({
       return;
     }
     interactiveTeamRef.current = teamName;
-
     void (async () => {
       try {
         const headResult = await refreshTeamMessagesHead(teamName);
@@ -2047,7 +2042,6 @@ export const TeamDetailView = memo(function TeamDetailView({
     if (memberRosterHydrationRetryRef.current === memberRosterHydrationRetryKey) {
       return;
     }
-
     const timer = window.setTimeout(() => {
       const state = useStore.getState();
       if (state.selectedTeamName !== teamName) {
@@ -2342,7 +2336,6 @@ export const TeamDetailView = memo(function TeamDetailView({
         : pendingTeamSectionFocus.section === 'tasks'
           ? 'kanban'
           : pendingTeamSectionFocus.section;
-
     if (sectionId === 'overview') {
       const revealOverview = (): void =>
         contentRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -2655,7 +2648,6 @@ export const TeamDetailView = memo(function TeamDetailView({
           // best-effort
         }
       }
-
       closeCreateTaskDialog();
     } finally {
       setCreatingTask(false);
@@ -2729,13 +2721,12 @@ export const TeamDetailView = memo(function TeamDetailView({
             className={cn(
               TEAM_HEADER_NAV_ACTION_CLASS,
               'font-semibold tracking-[0.01em] transition-[transform,filter,box-shadow] hover:-translate-y-px hover:brightness-110 active:translate-y-0 active:brightness-95',
-              pinned && 'w-8 px-0'
+              'w-8 px-0'
             )}
             style={visualizeButtonStyle}
             onClick={handleOpenGraphTab}
           >
             <Network size={13} className="shrink-0" />
-            {pinned ? null : t('detail.actions.visualize')}
           </Button>
         </TooltipTrigger>
         <TooltipContent side="bottom">{t('detail.tooltips.openTeamGraph')}</TooltipContent>
@@ -3062,10 +3053,10 @@ export const TeamDetailView = memo(function TeamDetailView({
                           <button
                             type="button"
                             onClick={() => setEditorOpen(true)}
-                            className={TEAM_HEADER_NAV_ACTION_CLASS}
+                            aria-label={t('detail.actions.editCode')}
+                            className={cn(TEAM_HEADER_NAV_ACTION_CLASS, 'w-8 px-0')}
                           >
                             <Code size={11} className="shrink-0" />
-                            {t('detail.actions.editCode')}
                           </button>
                         </TooltipTrigger>
                         <TooltipContent>{t('detail.tooltips.openBuiltInEditor')}</TooltipContent>
@@ -3076,10 +3067,10 @@ export const TeamDetailView = memo(function TeamDetailView({
                         <button
                           type="button"
                           onClick={handleOpenUsageTab}
-                          className={TEAM_HEADER_NAV_ACTION_CLASS}
+                          aria-label={t('detail.actions.usage', { defaultValue: 'Usage' })}
+                          className={cn(TEAM_HEADER_NAV_ACTION_CLASS, 'w-8 px-0')}
                         >
                           <BarChart3 size={11} className="shrink-0" />
-                          {t('detail.actions.usage', { defaultValue: 'Usage' })}
                         </button>
                       </TooltipTrigger>
                       <TooltipContent side="bottom">
@@ -3126,18 +3117,23 @@ export const TeamDetailView = memo(function TeamDetailView({
                   badge={activeTeammateCount === 0 ? t('detail.solo') : activeTeammateCount}
                   defaultOpen
                   afterBadge={
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="pointer-events-auto h-6 gap-1 px-2 text-xs text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setAddMemberDialogOpen(true);
-                      }}
-                    >
-                      <UserPlus size={12} />
-                      {t('detail.actions.add')}
-                    </Button>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          aria-label={t('detail.actions.add')}
+                          className="pointer-events-auto size-6 p-0 text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setAddMemberDialogOpen(true);
+                          }}
+                        >
+                          <UserPlus size={12} />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>{t('detail.actions.add')}</TooltipContent>
+                    </Tooltip>
                   }
                   action={
                     <div className="runtime-telemetry-legend flex items-center gap-3 pr-3 text-[11px] font-medium leading-none text-[var(--color-text-muted)] opacity-0 transition-opacity duration-150">
@@ -3176,24 +3172,6 @@ export const TeamDetailView = memo(function TeamDetailView({
                   </div>
                 </CollapsibleTeamSection>
               </div>
-
-              <CollapsibleTeamSection
-                sectionId="sessions"
-                variant="flat"
-                title={t('sessions.title')}
-                icon={<History size={14} />}
-                defaultOpen={false}
-              >
-                <TeamSessionsSection
-                  sessions={teamSessions}
-                  sessionsLoading={sessionsLoading}
-                  sessionsError={sessionsError}
-                  leadSessionId={data.config.leadSessionId}
-                  selectedSessionId={kanbanFilter.sessionId}
-                  onSelectSession={(id) => setKanbanFilter((prev) => ({ ...prev, sessionId: id }))}
-                  projectPath={data.config.projectPath}
-                />
-              </CollapsibleTeamSection>
 
               <CollapsibleTeamSection
                 sectionId="kanban"
@@ -3259,7 +3237,6 @@ export const TeamDetailView = memo(function TeamDetailView({
                   onOpenTrash={handleOpenTrash}
                 />
               </CollapsibleTeamSection>
-
               <TeamChangesSection
                 teamName={teamName}
                 sectionVariant="flat"
@@ -3268,7 +3245,29 @@ export const TeamDetailView = memo(function TeamDetailView({
                 onOpenTask={openTaskDetailDialog}
                 onViewChanges={handleViewChangesForFile}
               />
-
+              <CollapsibleTeamSection
+                sectionId="sessions"
+                variant="flat"
+                title={t('sessions.title')}
+                icon={<History size={14} />}
+                defaultOpen={false}
+              >
+                <TeamSessionsSection
+                  sessions={teamSessions}
+                  sessionsLoading={sessionsLoading}
+                  sessionsError={sessionsError}
+                  leadSessionId={data.config.leadSessionId}
+                  selectedSessionId={kanbanFilter.sessionId}
+                  onSelectSession={(id) => {
+                    setKanbanFilter((prev) => ({ ...prev, sessionId: id }));
+                    contentRef.current?.querySelector('[data-section-id="kanban"]')
+                      ?.dispatchEvent(new CustomEvent('team-section-navigate', {
+                        detail: { focus: document.activeElement?.matches(':focus-visible') },
+                      }));
+                  }}
+                  projectPath={data.config.projectPath}
+                />
+              </CollapsibleTeamSection>
               <CollapsibleTeamSection
                 sectionId="schedules"
                 variant="flat"
@@ -3278,7 +3277,6 @@ export const TeamDetailView = memo(function TeamDetailView({
               >
                 <ScheduleSection teamName={teamName} />
               </CollapsibleTeamSection>
-
               <LiveRuntimeStatusBridge
                 teamName={teamName}
                 members={membersWithLiveBranches}

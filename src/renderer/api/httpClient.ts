@@ -68,6 +68,7 @@ import type { GatewayProviderApi } from '@features/gateway-provider/contracts';
 import type { MemberLogStreamApi } from '@features/member-log-stream/contracts';
 import type { ProjectFolderElectronApi } from '@features/project-folder/contracts';
 import type { DashboardRecentProjectsPayload } from '@features/recent-projects/contracts';
+import type { ReviewFlowElectronApi } from '@features/review-flow/contracts';
 import type {
   RuntimeProviderCompanionActionInput,
   RuntimeProviderCompanionInput,
@@ -231,6 +232,18 @@ function gatewayUnavailable(): never {
 }
 
 export class HttpAPIClient implements ElectronAPI {
+  reviewFlow: ReviewFlowElectronApi = {
+    getOverview: async () => {
+      throw new Error('Review flow settings are only available in the desktop app');
+    },
+    setDefaults: async () => {
+      throw new Error('Review flow settings are only available in the desktop app');
+    },
+    setTeamOverride: async () => {
+      throw new Error('Review flow settings are only available in the desktop app');
+    },
+  };
+
   gatewayProvider: GatewayProviderApi = {
     listGatewayProfiles: async () => [],
     saveGatewayProfile: async () => gatewayUnavailable(),
@@ -894,6 +907,8 @@ export class HttpAPIClient implements ElectronAPI {
   // ---------------------------------------------------------------------------
 
   getZoomFactor = async (): Promise<number> => 1.0;
+
+  setZoomFactor = async (factor: number): Promise<number> => factor;
 
   onZoomFactorChanged = (_callback: (zoomFactor: number) => void): (() => void) => {
     // No-op in browser mode — zoom is managed by the browser itself

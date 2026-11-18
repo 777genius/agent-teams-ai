@@ -1,6 +1,7 @@
 import * as React from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
+import { ParticipantAvatar } from '@renderer/components/team/ParticipantAvatar';
 import { getTeamColorSet, getThemedBadge } from '@renderer/constants/teamColors';
 import { useTheme } from '@renderer/hooks/useTheme';
 import { cn } from '@renderer/lib/utils';
@@ -15,14 +16,20 @@ import { Command as CommandPrimitive } from 'cmdk';
 import { Check, ChevronsUpDown, UserRound } from 'lucide-react';
 
 import { Popover, PopoverContent, PopoverTrigger } from './popover';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './tooltip';
 
 import type { ResolvedTeamMember } from '@shared/types';
 
-interface MemberSelectProps {
-  members: ResolvedTeamMember[];
+type SelectableMember = Pick<ResolvedTeamMember, 'name'> &
+  Partial<Pick<ResolvedTeamMember, 'role' | 'agentType' | 'color' | 'removedAt'>>;
+
+interface MemberSelectProps<T extends SelectableMember> {
+  members: T[];
   value: string | null;
   onChange: (value: string | null) => void;
   placeholder?: string;
+  /** Localized warning for a saved recipient no longer present in the roster. */
+  unavailableLabel?: string;
   /** Show "Unassigned" option at the top of the list */
   allowUnassigned?: boolean;
   /** Size variant */
@@ -34,18 +41,19 @@ interface MemberSelectProps {
   className?: string;
   searchPlaceholder?: string;
   emptyMessage?: string;
-  getMemberLabel?: (member: ResolvedTeamMember) => string;
-  getMemberDescription?: (member: ResolvedTeamMember) => string | null | undefined;
+  getMemberLabel?: (member: T) => string;
+  getMemberDescription?: (member: T) => string | null | undefined;
   ariaLabel?: string;
 }
 
 const UNASSIGNED_VALUE = '__unassigned__';
 
-export const MemberSelect = ({
+export const MemberSelect = <T extends SelectableMember>({
   members,
   value,
   onChange,
   placeholder = 'Select member...',
+  unavailableLabel,
   allowUnassigned = false,
   size = 'sm',
   triggerVariant = 'default',
@@ -57,7 +65,7 @@ export const MemberSelect = ({
   getMemberLabel,
   getMemberDescription,
   ariaLabel,
-}: MemberSelectProps): React.JSX.Element => {
+}: MemberSelectProps<T>): React.JSX.Element => {
   const { t } = useAppTranslation('common');
   const [open, setOpen] = React.useState(false);
   const [search, setSearch] = React.useState('');
@@ -79,12 +87,12 @@ export const MemberSelect = ({
   const effectivePopoverAlign = popoverAlign ?? (isAvatarTrigger ? 'end' : 'start');
   const avatarTriggerSize = size === 'md' ? 'size-9' : 'size-8';
   const resolveMemberLabel = React.useCallback(
-    (member: ResolvedTeamMember): string =>
+    (member: T): string =>
       getMemberLabel?.(member) ?? (member.name === 'team-lead' ? 'lead' : member.name),
     [getMemberLabel]
   );
   const resolveMemberDescription = React.useCallback(
-    (member: ResolvedTeamMember): string | null | undefined =>
+    (member: T): string | null | undefined =>
       getMemberDescription?.(member) ??
       formatAgentRole(member.role) ??
       formatAgentRole(member.agentType),
@@ -98,28 +106,28 @@ export const MemberSelect = ({
         : allowUnassigned
           ? t('members.unassigned')
           : placeholder;
+  const unavailableSelection = Boolean(value && !selectedMember);
   const triggerAriaLabel =
     ariaLabel ?? (isAvatarTrigger ? `Select member: ${selectedLabel}` : undefined);
 
   const renderAvatarByName = (name: string): React.ReactNode => (
-    <img
+    <ParticipantAvatar
       src={avatarMap.get(name) ?? agentAvatarUrl(name, avatarSize)}
       alt=""
       className={`${avatarClass} shrink-0 rounded-full bg-[var(--color-surface-raised)]`}
       loading="lazy"
     />
   );
-  const renderMemberAvatar = (member: ResolvedTeamMember): React.ReactNode =>
-    renderAvatarByName(member.name);
+  const renderMemberAvatar = (member: T): React.ReactNode => renderAvatarByName(member.name);
 
   // eslint-disable-next-line sonarjs/function-return-type -- option renderer returns mixed node structure
-  const renderMemberInline = (member: ResolvedTeamMember): React.ReactNode => {
+  const renderMemberInline = (member: T): React.ReactNode => {
     const resolvedColor = colorMap.get(member.name);
     const colors = getTeamColorSet(resolvedColor ?? '');
     const label = resolveMemberLabel(member);
     return (
       <span className="inline-flex min-w-0 max-w-full items-center gap-1.5">
-        <img
+        <ParticipantAvatar
           src={avatarMap.get(member.name) ?? agentAvatarUrl(member.name, avatarSize)}
           alt=""
           className={`${avatarClass} shrink-0 rounded-full bg-[var(--color-surface-raised)]`}
@@ -141,49 +149,65 @@ export const MemberSelect = ({
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <button
-          type="button"
-          role="combobox"
-          aria-haspopup="listbox"
-          aria-expanded={open}
-          aria-controls={listboxId}
-          aria-label={triggerAriaLabel}
-          title={isAvatarTrigger ? selectedLabel : undefined}
-          disabled={disabled}
-          className={cn(
-            isAvatarTrigger
-              ? `inline-flex ${avatarTriggerSize} shrink-0 items-center justify-center rounded-md border border-[var(--color-border)] bg-transparent p-0 text-xs shadow-sm transition-colors hover:bg-[var(--color-surface-raised)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--color-border-emphasis)] disabled:cursor-not-allowed disabled:opacity-50`
-              : `flex ${triggerHeight} w-full items-center justify-between rounded-md border border-[var(--color-border)] bg-transparent px-2 py-1 text-xs shadow-sm transition-colors placeholder:text-[var(--color-text-muted)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--color-border-emphasis)] disabled:cursor-not-allowed disabled:opacity-50`,
-            className
-          )}
-        >
-          {isAvatarTrigger ? (
-            selectedMember ? (
-              renderMemberAvatar(selectedMember)
-            ) : value ? (
-              renderAvatarByName(value)
-            ) : (
-              <UserRound className="size-4 text-[var(--color-text-muted)]" />
-            )
-          ) : (
-            <>
-              <span className="min-w-0 truncate text-left">
-                {selectedMember ? (
-                  renderMemberInline(selectedMember)
-                ) : value === null && allowUnassigned ? (
-                  <span className="text-xs text-[var(--color-text-muted)]">
-                    {t('members.unassigned')}
-                  </span>
-                ) : (
-                  <span className="text-[var(--color-text-muted)]">{placeholder}</span>
+      <TooltipProvider delayDuration={150} skipDelayDuration={1500}>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <PopoverTrigger asChild>
+              <button
+                type="button"
+                role="combobox"
+                aria-haspopup="listbox"
+                aria-expanded={open}
+                aria-controls={listboxId}
+                aria-label={triggerAriaLabel}
+                aria-invalid={unavailableSelection || undefined}
+                title={isAvatarTrigger && !unavailableSelection ? selectedLabel : undefined}
+                disabled={disabled}
+                className={cn(
+                  isAvatarTrigger
+                    ? `inline-flex ${avatarTriggerSize} shrink-0 items-center justify-center rounded-md border border-[var(--color-border)] bg-[var(--color-form-control-bg)] p-0 text-xs shadow-sm transition-colors hover:bg-[var(--color-form-control-hover-bg)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--color-border-emphasis)] disabled:cursor-not-allowed disabled:opacity-50`
+                    : `flex ${triggerHeight} w-full items-center justify-between rounded-md border border-[var(--color-border)] bg-[var(--color-form-control-bg)] px-2 py-1 text-xs shadow-sm transition-colors placeholder:text-[var(--color-text-muted)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--color-border-emphasis)] disabled:cursor-not-allowed disabled:opacity-50`,
+                  className
                 )}
-              </span>
-              <ChevronsUpDown className="ml-2 size-3.5 shrink-0 opacity-50" />
-            </>
-          )}
-        </button>
-      </PopoverTrigger>
+              >
+                {isAvatarTrigger ? (
+                  selectedMember ? (
+                    renderMemberAvatar(selectedMember)
+                  ) : value ? (
+                    renderAvatarByName(value)
+                  ) : (
+                    <UserRound className="size-4 text-[var(--color-text-muted)]" />
+                  )
+                ) : (
+                  <>
+                    <span className="min-w-0 truncate text-left">
+                      {selectedMember ? (
+                        renderMemberInline(selectedMember)
+                      ) : value === null && allowUnassigned ? (
+                        <span className="text-xs text-[var(--color-text-muted)]">
+                          {t('members.unassigned')}
+                        </span>
+                      ) : (
+                        <span className="text-[var(--color-text-muted)]">
+                          {unavailableSelection && unavailableLabel
+                            ? `${selectedLabel} — ${unavailableLabel}`
+                            : value
+                              ? selectedLabel
+                              : placeholder}
+                        </span>
+                      )}
+                    </span>
+                    <ChevronsUpDown className="ml-2 size-3.5 shrink-0 opacity-50" />
+                  </>
+                )}
+              </button>
+            </PopoverTrigger>
+          </TooltipTrigger>
+          {unavailableSelection && unavailableLabel ? (
+            <TooltipContent side="top">{unavailableLabel}</TooltipContent>
+          ) : null}
+        </Tooltip>
+      </TooltipProvider>
       <PopoverContent
         className={cn(
           isAvatarTrigger ? 'w-56 p-0' : 'w-[var(--radix-popover-trigger-width)] min-w-[200px] p-0'
@@ -202,7 +226,7 @@ export const MemberSelect = ({
               value={search}
               onValueChange={setSearch}
               placeholder={searchPlaceholder ?? t('members.searchPlaceholder')}
-              className="flex h-8 w-full border-0 bg-transparent px-2 py-1 text-xs text-[var(--color-text)] outline-none placeholder:text-[var(--color-text-muted)]"
+              className="flex h-8 w-full border-0 bg-[var(--color-form-control-bg)] px-2 py-1 text-xs text-[var(--color-text)] outline-none placeholder:text-[var(--color-text-muted)]"
             />
           </div>
           <CommandPrimitive.List
@@ -261,7 +285,7 @@ export const MemberSelect = ({
                     }}
                     className="relative flex w-full cursor-default select-none items-center gap-2 rounded-sm px-2 py-1.5 text-xs outline-none data-[selected=true]:bg-[var(--color-surface-raised)] data-[selected=true]:text-[var(--color-text)]"
                   >
-                    <img
+                    <ParticipantAvatar
                       src={avatarMap.get(m.name) ?? agentAvatarUrl(m.name, avatarSize)}
                       alt=""
                       className={`${avatarClass} shrink-0 rounded-full bg-[var(--color-surface-raised)]`}

@@ -174,7 +174,7 @@ export const ToolApprovalSettingsContent: React.FC<{
               }}
               className="w-14 rounded border px-1.5 py-0.5 text-center text-xs"
               style={{
-                backgroundColor: 'var(--color-surface-raised)',
+                backgroundColor: 'var(--color-form-control-bg)',
                 borderColor: 'var(--color-border)',
                 color: 'var(--color-text)',
               }}

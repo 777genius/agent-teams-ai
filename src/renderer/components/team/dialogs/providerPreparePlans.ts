@@ -1,5 +1,8 @@
 import { buildProviderPrepareAttemptRuntimeSignature } from './providerPrepareAttemptIdentity';
-import { buildProviderPrepareModelCacheKey } from './providerPrepareCacheKey';
+import {
+  appendProviderPrepareInvalidationEpoch,
+  buildProviderPrepareModelCacheKey,
+} from './providerPrepareCacheKey';
 import {
   getProviderPrepareCachedSnapshot,
   type ProviderPrepareDiagnosticsCachedSnapshot,
@@ -41,6 +44,7 @@ export function buildProviderPreparePlans({
   limitContext,
   runtimeProviderStatusById,
   cachedModelResultsByCacheKey,
+  invalidationEpochByProviderId,
 }: {
   cwd: string;
   providerIds: readonly TeamProviderId[];
@@ -55,6 +59,7 @@ export function buildProviderPreparePlans({
     string,
     Record<string, ProviderPrepareDiagnosticsModelResult>
   >;
+  invalidationEpochByProviderId?: Readonly<Partial<Record<TeamProviderId, number>>>;
 }): ProviderPreparePlan[] {
   return providerIds.map((providerId) => {
     const selectedModelChecks = [...(selectedModelChecksByProvider.get(providerId) ?? [])];
@@ -67,7 +72,10 @@ export function buildProviderPreparePlans({
     const modelChecksSignature = buildProviderPrepareModelChecksSignature(
       new Map([[providerId, selectedModelChecks]])
     );
-    const requestSignature = buildProviderPrepareRequestSignature({
+    // Explicit credential/settings changes require a fresh proof even when the
+    // runtime's passive status has not changed yet.
+    const epoch = invalidationEpochByProviderId?.[providerId] ?? 0;
+    const requestSignature = appendProviderPrepareInvalidationEpoch(buildProviderPrepareRequestSignature({
       cwd,
       selectedProviderId: providerId,
       selectedModel: '',
@@ -77,15 +85,15 @@ export function buildProviderPreparePlans({
         runtimeProviderStatusById.get(providerId)
       ),
       modelChecksSignature,
-    });
-    const cacheKey = buildProviderPrepareModelCacheKey({
+    }), epoch);
+    const cacheKey = appendProviderPrepareInvalidationEpoch(buildProviderPrepareModelCacheKey({
       cwd,
       providerId,
       backendSummary,
       limitContext,
       runtimeStatusSignature,
       modelChecksSignature,
-    });
+    }), epoch);
     const cachedModelResultsById = {
       ...getShortLivedProviderPrepareModelResults({
         providerId,

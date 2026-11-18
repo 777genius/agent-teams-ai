@@ -31,10 +31,12 @@ export const RUN_SUPERSESSION_POLICY = {
     'kanban-table-desktop-e2e',
     'landing-hetzner-release',
     'opencode-desktop-e2e',
-    'opencode-packaged-e2e',
+    'opencode-v2-cold-dashboard-e2e',
+    'provider-real-runtime-e2e',
     'prepare-updater-native-inputs',
     'runtime-bootstrap-smoke',
     'sentry-owned-process-native',
+    'teams-create-page-desktop-e2e',
     'updater-linux-packages',
     'updater-native-feasibility',
     'updater-windows',
@@ -59,6 +61,7 @@ export const RUN_SUPERSESSION_POLICY = {
   ],
   // Manual-only Mac updater runs, reusable workflows and ReviewRouter: no workflow-level group.
   unmanaged: [
+    'opencode-packaged-e2e',
     'opencode-native-windows-e2e',
     'reviewrouter-interaction',
     'reviewrouter-review',

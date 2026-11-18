@@ -7,6 +7,7 @@ import {
   decodeMemberWorkSyncStoredStatus,
   MemberWorkSyncStatusDecodeError,
 } from './decodeMemberWorkSyncStoredStatus';
+import { readFailureDetail } from './memberWorkSyncPreparationDiagnostics';
 import { MemberWorkSyncSafetyJsonReadError } from './memberWorkSyncSafetyJson';
 import {
   createMemberWorkSyncStatusToken,
@@ -21,6 +22,7 @@ import type {
 } from '../../contracts';
 import type {
   MemberWorkSyncAuthorityCommitResult,
+  MemberWorkSyncAuthorityFailureDetail,
   MemberWorkSyncAuthorityFailureReason as FailureReason,
   MemberWorkSyncAuthorityReadResult,
   MemberWorkSyncStatusAuthoritySnapshot,
@@ -145,8 +147,13 @@ export class MemberWorkSyncStatusAuthority {
       | undefined;
     let acknowledgedWrite = false;
     let knownCommit: Extract<MemberWorkSyncAuthorityCommitResult, { committed: true }> | undefined;
-    const failed = (reason: FailureReason): Outcome =>
-      commit ? { committed: false, reason } : { ok: false, reason };
+    const failed = (
+      reason: FailureReason,
+      detail?: MemberWorkSyncAuthorityFailureDetail
+    ): Outcome =>
+      commit
+        ? { committed: false, reason, ...(detail ? { detail } : {}) }
+        : { ok: false, reason, ...(detail ? { detail } : {}) };
     const classify = (error: unknown): Outcome => {
       if (knownCommit)
         return {
@@ -168,7 +175,7 @@ export class MemberWorkSyncStatusAuthority {
       ) {
         return { committed: 'unknown', reason: 'commit_unknown', mutationId: commit.mutationId };
       }
-      return failed(failureReason(error));
+      return failed(failureReason(error), readFailureDetail(error));
     };
     // Deferring effects gives composition a synchronous window to register this entire lifetime.
     const physical = Promise.resolve().then(async () => {

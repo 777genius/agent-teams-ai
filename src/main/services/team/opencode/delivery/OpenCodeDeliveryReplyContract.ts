@@ -1,4 +1,4 @@
-import { isLeadAgentType, isLeadMember } from '@shared/utils/leadDetection';
+import { isCanonicalSettingsLeadMember, isLeadAgentType, isLeadNameAlias } from '@shared/utils/leadDetection';
 
 /**
  * Reserved reply-recipient marker for informational system/task notifications.
@@ -29,8 +29,25 @@ export type OpenCodeDeliveryReplyContract =
   | 'teammate_report'
   | 'informational';
 
+/** Exact current roster peers outrank historical lead-name aliases. */
+export function isOpenCodeConfiguredPeerRecipient(
+  members: readonly { name?: unknown; agentType?: unknown; role?: unknown; removedAt?: unknown }[] | null | undefined,
+  replyRecipient: string
+): boolean {
+  const key = replyRecipient.trim().toLowerCase();
+  if (!key) return false;
+  const matches = members?.filter(member =>
+    !member.removedAt &&
+    typeof member.name === 'string' &&
+    member.name.trim().toLowerCase() === key
+  ) ?? [];
+  // Ambiguous, removed or role-only lead identities must never be inferred as peers.
+  return matches.length === 1 && !isCanonicalSettingsLeadMember(matches[0]);
+}
+
 export function classifyOpenCodeDeliveryReplyContract(
-  replyRecipient: string | null | undefined
+  replyRecipient: string | null | undefined,
+  knownPeerRecipient = false
 ): OpenCodeDeliveryReplyContract {
   const recipient = typeof replyRecipient === 'string' ? replyRecipient.trim() : '';
   const lower = recipient.toLowerCase();
@@ -40,7 +57,8 @@ export function classifyOpenCodeDeliveryReplyContract(
   if (lower === OPEN_CODE_INFORMATIONAL_NOTICE_REPLY_RECIPIENT) {
     return 'informational';
   }
-  if (isLeadMember({ name: recipient }) || isLeadAgentType(lower)) {
+  if (knownPeerRecipient) return 'teammate_report';
+  if (isLeadNameAlias(recipient) || isLeadAgentType(lower)) {
     return 'lead_reply';
   }
   return 'teammate_report';
@@ -73,8 +91,74 @@ export function isOpenCodeAppAuthoredNoticeContract(
 }
 
 export function isOpenCodeReplyOptionalDeliveryContract(
-  replyRecipient: string | null | undefined
+  replyRecipient: string | null | undefined,
+  knownPeerRecipient = false
 ): boolean {
-  const contract = classifyOpenCodeDeliveryReplyContract(replyRecipient);
+  const contract = classifyOpenCodeDeliveryReplyContract(replyRecipient, knownPeerRecipient);
   return contract === 'informational' || contract === 'teammate_report';
+}
+
+/** Resolve a configured lead independently of its display-name aliases. */
+export function isOpenCodeConfiguredLeadReply(
+  record: { replyRecipient?: string | null } | null | undefined,
+  configuredLeadName: string | null | undefined
+): boolean {
+  const recipient = record?.replyRecipient?.trim().toLowerCase();
+  return Boolean(
+    recipient && configuredLeadName?.trim() &&
+    recipient === configuredLeadName.trim().toLowerCase()
+  );
+}
+/** Concrete user/lead messages must not settle without a destination receipt. */
+export function isOpenCodeReplyRequiredDeliveryRecipient(
+  recipient: string | null | undefined,
+  configuredLeadName?: string | null,
+  knownPeerRecipient = false
+): boolean {
+  if (!recipient?.trim()) return false;
+  const replyContract = classifyOpenCodeDeliveryReplyContract(recipient, knownPeerRecipient);
+  return replyContract === 'user_reply' || replyContract === 'lead_reply' ||
+    isOpenCodeConfiguredLeadReply({ replyRecipient: recipient }, configuredLeadName);
+}
+
+/** The persisted recipient, reply ID and physical inbox must describe the same lead delivery. */
+export function isOpenCodeLeadDestinationProof(
+  record: {
+    memberName: string;
+    inboxMessageId: string;
+    visibleReplyInbox?: string | null;
+    visibleReplyMessageId?: string | null;
+  } | null | undefined,
+  configuredLeadName: string | null | undefined,
+  proof: {
+    inboxName: string;
+    message: {
+      messageId: string;
+      from: string;
+      to?: string;
+      relayOfMessageId?: string;
+    };
+  } | null | undefined
+): boolean {
+  const lead = configuredLeadName?.trim().toLowerCase();
+  return Boolean(
+    lead && record && proof &&
+    record.visibleReplyInbox?.trim().toLowerCase() === lead &&
+    record.visibleReplyMessageId?.trim() === proof.message.messageId.trim() &&
+    proof.inboxName.trim().toLowerCase() === lead &&
+    proof.message.to?.trim().toLowerCase() === lead &&
+    proof.message.from.trim().toLowerCase() === record.memberName.trim().toLowerCase() &&
+    proof.message.relayOfMessageId?.trim() === record.inboxMessageId.trim()
+  );
+}
+
+/** Lead role may be a legacy alias or the configured member's custom name. */
+export function isOpenCodeLeadReplyRecipient(
+  record: { replyRecipient?: string | null } | null | undefined,
+  configuredLeadName: string | null | undefined,
+  knownPeerRecipient = false
+): boolean {
+  return Boolean(record && !knownPeerRecipient &&
+    (classifyOpenCodeDeliveryReplyContract(record.replyRecipient) === 'lead_reply' ||
+      isOpenCodeConfiguredLeadReply(record, configuredLeadName)));
 }

@@ -746,7 +746,10 @@ describe('secondary delivery waiting for a native bootstrap commit', () => {
           canDeliverToTeamRuntime: () => run.progress.state === 'ready',
           hasAcceptedMemberWorkSyncReport: async () => false,
           taskRefsIncludeAll: () => true,
-          visibleReplyProofService: h.deps.openCodeVisibleReplyProofService,
+          visibleReplyProofService: {
+            ...h.deps.openCodeVisibleReplyProofService,
+            getConfiguredLeadName: vi.fn(async () => 'team-lead'),
+          },
           maybeSyncRuntimePermissionsAfterDelivery: async () => undefined,
           rememberRuntimePidFromBridge: async () => undefined,
           recoverRuntimeLanesForWatchdog: async () => [],

@@ -54,8 +54,8 @@ export interface OpenCodePromptDeliveryWatchdogCoordinatorPorts {
   ): boolean;
   visibleReplyProofService: Pick<
     OpenCodeVisibleReplyProofService,
-    'applyDestinationProof' | 'materializePlainTextReplyIfNeeded'
-  >;
+    'applyDestinationProof' | 'materializePlainTextReplyIfNeeded' | 'getConfiguredLeadName'
+  > & Partial<Pick<OpenCodeVisibleReplyProofService, 'isConfiguredPeerRecipient'>>;
   maybeSyncRuntimePermissionsAfterDelivery(input: {
     teamName: string;
     runId?: string | null;
@@ -135,8 +135,19 @@ export class OpenCodePromptDeliveryWatchdogCoordinator {
     visibleReply?: OpenCodeVisibleReplyProof | null;
     ledgerRecord?: OpenCodePromptDeliveryLedgerRecord | null;
   }): Promise<boolean> {
+    const recipient = input.ledgerRecord?.replyRecipient?.trim().toLowerCase();
+    const needsRoster = input.teamName && input.ledgerRecord && !input.ledgerRecord.groupChatId &&
+      recipient !== 'user' && recipient !== 'system';
+    const configuredLeadName = needsRoster
+      ? await this.ports.visibleReplyProofService.getConfiguredLeadName(input.teamName ?? '')
+      : undefined;
+    const knownPeerRecipient = needsRoster && recipient
+      ? await this.ports.visibleReplyProofService.isConfiguredPeerRecipient?.(input.teamName ?? '', recipient) ?? false
+      : false;
     return isOpenCodeDeliveryResponseReadCommitAllowed({
       ...input,
+      configuredLeadName,
+      knownPeerRecipient,
       hasAcknowledgedInbound: this.ports.hasAcknowledgedInbound,
       hasAcceptedMemberWorkSyncReport: (report) =>
         this.ports.hasAcceptedMemberWorkSyncReport(report),

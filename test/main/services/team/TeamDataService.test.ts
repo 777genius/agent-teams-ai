@@ -456,6 +456,116 @@ describe('TeamDataService task projection cache invalidation', () => {
     expect(invalidateSpy).toHaveBeenCalledTimes(14);
   });
 
+  it.each([
+    { scenario: 'completed', change: { status: 'completed' as const } },
+    { scenario: 'reassigned', change: { owner: 'bob' } },
+  ])('does not start a task $scenario during asynchronous scheduled admission', async ({ change }) => {
+    const task: TeamTask = {
+      id: 'task-1',
+      subject: 'Scheduled assignment',
+      owner: 'alice',
+      status: 'pending',
+    };
+    const taskBoard = {
+      getTask: vi.fn(() => task),
+      startTask: vi.fn(),
+    };
+    const service = new TeamDataService(
+      { getConfig: vi.fn(async () => buildDefaultTeamConfig()) } as never,
+      { getTasks: vi.fn(async () => [task]) } as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      (() => ({ taskBoard })) as never
+    );
+    await expect(
+      service.startTaskByUser('my-team', task.id, {
+        expectedOwner: 'alice',
+        canStart: async () => {
+          Object.assign(task, change);
+          return true;
+        },
+      })
+    ).rejects.toThrow('Scheduled task start superseded');
+    expect(taskBoard.startTask).not.toHaveBeenCalled();
+  });
+
+  it.each([true, false])(
+    'reports scheduled task start notification only after handoff confirmation (%s)',
+    async (deliveredToInbox) => {
+      const original: TeamTask = {
+        id: 'task-1', subject: 'Old instruction', owner: 'alice', status: 'pending',
+      };
+      let currentTask = original;
+      const taskBoard = {
+        getTask: vi.fn(() => currentTask),
+        listTasks: vi.fn(() => [currentTask]),
+        startTask: vi.fn(),
+      };
+      const service = new TeamDataService(
+        { getConfig: vi.fn(async () => buildDefaultTeamConfig()) } as never,
+        { getTasks: vi.fn(async () => [original]) } as never,
+        {} as never,
+        {} as never,
+        {} as never,
+        {} as never,
+        {} as never,
+        {} as never,
+        {} as never,
+        {} as never,
+        (() => ({ taskBoard })) as never
+      );
+      const send = vi.spyOn(service, 'sendMessage').mockResolvedValue({
+        deliveredToInbox, messageId: 'scheduled-handoff',
+      });
+      const result = await service.startTaskByUser('my-team', original.id, {
+        expectedOwner: 'alice',
+        canStart: async () => {
+          currentTask = { ...original, subject: 'Current instruction' };
+          return true;
+        },
+      });
+      expect(result.notifiedOwner).toBe(deliveredToInbox);
+      expect(taskBoard.startTask).toHaveBeenCalledExactlyOnceWith('task-1', 'user');
+      expect(send).toHaveBeenCalledExactlyOnceWith(
+        'my-team', expect.objectContaining({ text: expect.stringContaining('Current instruction') })
+      );
+    }
+  );
+
+  it('keeps scheduled work pending when the selected member already owns an active task', async () => {
+    const pending: TeamTask = {
+      id: 'scheduled-task', subject: 'New scheduled work', owner: 'alice', status: 'pending',
+    };
+    const active: TeamTask = {
+      id: 'existing-task', subject: 'Current work', owner: 'alice', status: 'in_progress',
+    };
+    const taskBoard = {
+      getTask: vi.fn(() => pending),
+      listTasks: vi.fn(() => [pending, active]),
+      startTask: vi.fn(),
+    };
+    const service = new TeamDataService(
+      { getConfig: vi.fn(async () => buildDefaultTeamConfig()) } as never,
+      { getTasks: vi.fn(async () => [pending, active]) } as never,
+      {} as never, {} as never, {} as never, {} as never, {} as never,
+      {} as never, {} as never, {} as never,
+      (() => ({ taskBoard })) as never
+    );
+    expect(service.hasActiveOwnedTask('my-team', 'alice')).toBe(true);
+    expect(service.hasActiveOwnedTask('my-team', 'bob')).toBe(false);
+    await expect(service.startTaskByUser('my-team', pending.id, {
+      expectedOwner: 'alice',
+      canStart: async () => true,
+    })).rejects.toThrow('Scheduled recipient is already working');
+    expect(taskBoard.startTask).not.toHaveBeenCalled();
+  });
+
   it('removes detached trees, never recursively removes public paths, and stays idempotent', async () => {
     const claudeRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'team-data-delete-cache-'));
     tempPaths.push(claudeRoot);
@@ -4135,6 +4245,58 @@ describe('TeamDataService', () => {
       comment: 'Needs fixes',
       leadSessionId: 'lead-2',
     });
+  });
+
+  it('routes an interrupted human rejection back to the trusted retry path after disabling the policy', async () => {
+    const requestChangesAsHuman = vi.fn();
+    const requestChanges = vi.fn();
+    const taskBoard = {
+      getTask: vi.fn(() => ({
+        id: 'task-1',
+        status: 'completed',
+        reviewState: 'needsFix',
+        historyEvents: [
+          {
+            id: 'decision-1',
+            type: 'review_changes_requested',
+            from: 'reviewed',
+            to: 'needsFix',
+            actor: 'user',
+            timestamp: '2026-11-16T01:00:00.000Z',
+            note: 'Original human feedback',
+          },
+        ],
+      })),
+      getKanbanState: vi.fn(() => ({
+        teamName: 'my-team', reviewers: [], tasks: {}, reviewFlow: 'agent_approval', reviewFlowSource: 'default',
+      })),
+      requestChangesAsHuman,
+      requestChanges,
+    };
+    const service = new TeamDataService(
+      {
+        listTeams: vi.fn(),
+        getConfig: vi.fn(async () => ({ name: 'My team', members: [] })),
+      } as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      () => ({ taskBoard }) as never
+    );
+
+    await service.updateKanban('my-team', 'task-1', {
+      op: 'request_changes', comment: 'Retry with retained original feedback',
+    });
+    expect(requestChangesAsHuman).toHaveBeenCalledWith('task-1', {
+      comment: 'Retry with retained original feedback',
+    });
+    expect(requestChanges).not.toHaveBeenCalled();
   });
 
   it('uses direct kanban approval for completed tasks that are not in review', async () => {

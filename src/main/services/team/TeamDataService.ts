@@ -1,4 +1,5 @@
 import { NodeApplicationCommandHasher } from '@features/application-command-ledger/main';
+import { isHumanApprovalFlow, type ReviewFlowSettings } from '@features/review-flow';
 import { TaskBoardCommandFacade } from '@features/task-board-commands';
 import { fingerprintSavedLaunchSettings } from '@features/team-provisioning/contracts';
 import { fromProvisioningMembers, isMixedOpenCodeSideLanePlan } from '@features/team-runtime-lanes';
@@ -81,7 +82,7 @@ import { readTeamMessagesPage } from './TeamMessagePageRead';
 import { TeamMetaStore } from './TeamMetaStore';
 import { applyDistinctRosterColors } from './teamRosterColors';
 import { TeamSentMessagesStore } from './TeamSentMessagesStore';
-import { getTeamTaskWorkflowColumn, selectCurrentActiveTeamTask } from './teamTaskActiveState';
+import { getTeamTaskWorkflowColumn, isTeamTaskActivelyWorked, selectCurrentActiveTeamTask } from './teamTaskActiveState';
 import { TeamTaskCommentNotificationJournal } from './TeamTaskCommentNotificationJournal';
 import { TeamTaskReader } from './TeamTaskReader';
 import { compactTeamTaskForSnapshot } from './teamTaskSnapshotCompaction';
@@ -813,7 +814,7 @@ export class TeamDataService {
   private resolveTaskReviewState(
     task: Pick<TeamTask, 'reviewState' | 'historyEvents' | 'status'>,
     kanbanTaskState?: KanbanState['tasks'][string]
-  ): 'none' | 'review' | 'needsFix' | 'approved' {
+  ): 'none' | 'review' | 'needsFix' | 'reviewed' | 'approved' {
     const kanbanColumn = kanbanTaskState?.column;
     const kanbanWorkflowColumn = kanbanColumn
       ? getTeamTaskWorkflowColumn({
@@ -884,7 +885,7 @@ export class TeamDataService {
   private resolveTaskKanbanColumn(
     task: Pick<TeamTask, 'status'>,
     kanbanTaskState?: KanbanState['tasks'][string],
-    reviewState: 'none' | 'review' | 'needsFix' | 'approved' = 'none'
+    reviewState: 'none' | 'review' | 'needsFix' | 'reviewed' | 'approved' = 'none'
   ): 'review' | 'approved' | undefined {
     return getTeamTaskWorkflowColumn({
       status: task.status,
@@ -901,7 +902,7 @@ export class TeamDataService {
   private resolveReviewerFromHistory(
     task: TeamTask,
     kanbanTaskState?: KanbanState['tasks'][string],
-    reviewState: 'none' | 'review' | 'needsFix' | 'approved' = this.resolveTaskReviewState(
+    reviewState: 'none' | 'review' | 'needsFix' | 'reviewed' | 'approved' = this.resolveTaskReviewState(
       task,
       kanbanTaskState
     )
@@ -919,7 +920,10 @@ export class TeamDataService {
         if (event.type === 'review_requested' && event.reviewer) {
           return event.reviewer;
         }
-        if (event.type === 'review_approved' || event.type === 'review_changes_requested') {
+        if (event.type === 'review_approved' ||
+          event.type === 'review_completed' ||
+          event.type === 'human_approved' ||
+          event.type === 'review_changes_requested') {
           break;
         }
         if (
@@ -2204,6 +2208,7 @@ export class TeamDataService {
       ...(request.prompt?.trim() ? { prompt: request.prompt.trim() } : {}),
       ...(request.promptTaskRefs?.length ? { promptTaskRefs: request.promptTaskRefs } : {}),
       ...(shouldStart ? { startImmediately: true } : {}),
+      ...(request.notifyOwner === false ? { notifyOwner: false } : {}),
     };
 
     let task: TeamTask;
@@ -2354,41 +2359,62 @@ export class TeamDataService {
     return { notifiedOwner: !!task.owner };
   }
 
-  /**
-   * Start a task triggered by the user via UI.
-   * Unlike startTask(), this always notifies the owner (including the lead in solo teams).
-   */
-  async startTaskByUser(teamName: string, taskId: string): Promise<{ notifiedOwner: boolean }> {
+  /** Start a user task and notify its owner, including the solo lead. */
+  /** Consult the existing board rather than spawning a second execution for a busy member. */
+  hasActiveOwnedTask(teamName: string, owner: string): boolean {
+    return (this.getTaskBoard(teamName).listTasks() as TeamTask[]).some(
+      (task) => task.owner === owner && isTeamTaskActivelyWorked(task)
+    );
+  }
+
+  async startTaskByUser(
+    teamName: string,
+    taskId: string,
+    admission?: { expectedOwner: string; canStart: () => Promise<boolean> }
+  ): Promise<{ notifiedOwner: boolean }> {
     const tasks = await this.taskReader.getTasks(teamName);
-    const task = tasks.find((t) => t.id === taskId);
+    let task = tasks.find((t) => t.id === taskId);
     if (!task) {
       throw new Error(`Task #${taskId} not found`);
     }
     if (task.status !== 'pending') {
       throw new Error(`Task #${taskId} is not pending (current: ${task.status})`);
     }
-
+    // Revalidate after async reads, before the irreversible board write.
+    if (admission) {
+      if (task.owner !== admission.expectedOwner || !(await admission.canStart())) {
+        throw new Error('Scheduled task start superseded');
+      }
+      // The admission check awaits runtime I/O: task state may change in the meantime.
+      const board = this.getTaskBoard(teamName);
+      const latestTask = board.getTask(taskId) as TeamTask | null;
+      if (latestTask?.status !== 'pending' || latestTask.owner !== admission.expectedOwner) {
+        throw new Error('Scheduled task start superseded');
+      }
+      if ((board.listTasks() as TeamTask[]).some(
+        (other) => other.id !== taskId && other.owner === admission.expectedOwner && isTeamTaskActivelyWorked(other)
+      )) {
+        throw new Error('Scheduled recipient is already working');
+      }
+      task = latestTask; // Notify using the actual post-admission task contents.
+    }
     this.getTaskBoard(teamName).startTask(taskId, 'user');
     this.invalidateGlobalTaskProjectionCache();
-
-    if (task.owner) {
-      await this.sendUserTaskStartNotification(teamName, task);
-    }
-
-    return { notifiedOwner: !!task.owner };
+    const notifiedOwner = task.owner
+      ? await this.sendUserTaskStartNotification(teamName, task)
+      : false;
+    return { notifiedOwner };
   }
 
-  /**
-   * Send a task start notification from the user to the task owner.
-   * Includes description, prompt, and task_get/task_complete instructions.
-   * Used by startTaskByUser and createTask (startImmediately).
-   */
-  private async sendUserTaskStartNotification(teamName: string, task: TeamTask): Promise<void> {
-    if (!task.owner) return;
+  /** Returns only confirmed inbox/runtime handoff; never claims successful delivery on failure. */
+  private async sendUserTaskStartNotification(teamName: string, task: TeamTask): Promise<boolean> {
+    if (!task.owner) return false;
     try {
-      await this.sendMessage(teamName, this.buildUserTaskStartNotification(teamName, task));
+      const result = await this.sendMessage(teamName, this.buildUserTaskStartNotification(teamName, task));
+      return result.deliveredToInbox || result.deliveredViaStdin === true;
     } catch {
-      // Best-effort notification
+      // Preserve the started task for inspection; scheduled work must not retry blindly.
+      return false;
     }
   }
 
@@ -3966,6 +3992,11 @@ export class TeamDataService {
     return texts.length > MAX_LEAD_TEXTS ? texts.slice(-MAX_LEAD_TEXTS) : texts;
   }
 
+  /** `null` removes the team's override so it follows the default again. */
+  async setReviewFlowSettings(teamName: string, settings: ReviewFlowSettings | null): Promise<void> {
+    this.getTaskBoard(teamName).setReviewFlowSettings(settings);
+  }
+
   async updateKanban(teamName: string, taskId: string, patch: UpdateKanbanPatch): Promise<void> {
     const taskBoard = this.getTaskBoard(teamName);
 
@@ -3982,6 +4013,15 @@ export class TeamDataService {
           ...(leadSessionId ? { leadSessionId } : {}),
         });
       } else {
+        // Only the desktop renderer's user action reaches this path. Agent tools
+        // have no updateKanban/setReviewFlowSettings endpoint; controller locks
+        // and re-checks the policy before every approval mutation.
+        const task = taskBoard.getTask(taskId) as TeamTask;
+        if (isHumanApprovalFlow(taskBoard.getKanbanState?.() as KanbanState | null) ||
+            getReviewStateFromTask(task) === 'reviewed') {
+          taskBoard.approveAsHuman(taskId);
+          return;
+        }
         const { leadName, leadSessionId } = await this.resolveLeadRuntimeContext(teamName);
         const workflowColumn = this.getControllerTaskWorkflowColumn(taskBoard, taskId);
         if (workflowColumn === undefined) {
@@ -4000,6 +4040,32 @@ export class TeamDataService {
       return;
     }
 
+    if (patch.op === 'request_changes') {
+      const task = taskBoard.getTask(taskId) as TeamTask;
+      const reviewState = getReviewStateFromTask(task);
+      const latestDecision = [...(task.historyEvents ?? [])].reverse().find(
+        (event) =>
+          event.type === 'review_requested' ||
+          event.type === 'review_changes_requested' ||
+          event.type === 'review_completed' ||
+          event.type === 'review_approved' ||
+          event.type === 'human_approved'
+      );
+      const retryHumanRejection =
+        (task.status === 'completed' || task.status === 'pending') &&
+        reviewState === 'needsFix' &&
+        latestDecision?.type === 'review_changes_requested' &&
+        latestDecision.actor === 'user';
+      if (reviewState === 'reviewed' ||
+          isHumanApprovalFlow(taskBoard.getKanbanState?.() as KanbanState | null) ||
+          retryHumanRejection) {
+        taskBoard.requestChangesAsHuman(taskId, {
+          comment: patch.comment?.trim() || 'User requested changes.',
+          ...(patch.taskRefs?.length ? { taskRefs: patch.taskRefs } : {}),
+        });
+        return;
+      }
+    }
     const { leadName, leadSessionId } = await this.resolveLeadRuntimeContext(teamName);
     taskBoard.requestChanges(taskId, {
       from: leadName,

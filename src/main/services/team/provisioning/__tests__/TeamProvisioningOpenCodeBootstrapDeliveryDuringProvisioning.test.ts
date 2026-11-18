@@ -144,6 +144,7 @@ function createHarness() {
     visibleReplyProofService: {
       applyDestinationProof: vi.fn(),
       materializePlainTextReplyIfNeeded: vi.fn(),
+      getConfiguredLeadName: vi.fn(async () => 'team-lead'),
     },
     maybeSyncRuntimePermissionsAfterDelivery: async () => undefined,
     rememberRuntimePidFromBridge: async () => undefined,

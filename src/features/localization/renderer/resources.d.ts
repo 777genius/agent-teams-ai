@@ -419,7 +419,8 @@ export default interface Resources {
         "uk": "Ukrainian",
         "ur": "Urdu",
         "vi": "Vietnamese",
-        "zh": "Chinese"
+        "zh": "Chinese",
+        "zh-TW": "Traditional Chinese"
       },
       "searchPlaceholder": "Search language...",
       "selectPlaceholder": "Select app language...",
@@ -2645,6 +2646,35 @@ export default interface Resources {
           "description": "Automatically expand each response turn when opening a transcript or receiving a new message",
           "label": "Expand AI responses by default"
         },
+        "customThemes": {
+          "description": "Use named JSON color palettes based on Dark or Light.",
+          "edit": "Edit JSON",
+          "editor": {
+            "cancel": "Cancel",
+            "conflict": "Themes changed in another tab. Your JSON draft is preserved; review it or explicitly overwrite the newer themes.",
+            "description": "Edit up to 8 named themes. Colors must be #RRGGBB; Save applies only valid JSON. Use an empty themes array to remove all themes.",
+            "invalidJson": "Invalid JSON syntax",
+            "invalidTheme": "Invalid theme palette. Check the fields, colors, and contrast.",
+            "overwrite": "Overwrite newer themes",
+            "save": "Save themes",
+            "title": "Edit custom themes (JSON)"
+          },
+          "label": "Custom themes",
+          "localOnly": "Themes, UI zoom and typography are saved only on this browser/device.",
+          "none": "Built-in theme"
+        },
+        "fontFamily": {
+          "apply": "Apply",
+          "description": "Choose a locally installed font for the interface. Editors and terminals keep their own fonts.",
+          "discover": "Find installed fonts",
+          "empty": "No installed fonts were found. Enter a font name manually.",
+          "label": "UI font",
+          "loaded": "Installed fonts added to the menu.",
+          "other": "Other font…",
+          "placeholder": "Installed font family",
+          "system": "System default",
+          "unavailable": "Font discovery is unavailable here. Enter a font name manually."
+        },
         "nativeTitleBar": {
           "description": "Use the default system window frame instead of the custom title bar",
           "label": "Use native title bar",
@@ -2653,6 +2683,11 @@ export default interface Resources {
             "message": "The app needs to restart to apply the title bar change. Restart now?",
             "title": "Restart required"
           }
+        },
+        "textSize": {
+          "description": "Change interface text without changing the overall UI zoom.",
+          "label": "Text size",
+          "reset": "Reset"
         },
         "theme": {
           "description": "Choose your preferred color theme",
@@ -2663,7 +2698,12 @@ export default interface Resources {
             "system": "System"
           }
         },
-        "title": "Appearance"
+        "title": "Appearance",
+        "uiScale": {
+          "description": "Scale the entire app without changing the operating system or browser zoom.",
+          "label": "Interface scale",
+          "reset": "Reset"
+        }
       },
       "browserAccess": {
         "serverMode": {
@@ -3452,12 +3492,16 @@ export default interface Resources {
         "emptyRecommended": "No recommended models found.",
         "emptyRecommendedFree": "No recommended free models found.",
         "freeOnly": "Free only",
+        "freeQuotaReached": "OpenRouter’s daily limit for free models has been reached.",
         "launchableDescription": "Known routes from OpenCode config, free built-in models, and the current default. Local routes need a successful test before they are ready for team launches.",
         "launchableTitle": "OpenCode model routes",
         "loaded": "Loaded {{loaded}} of {{total}}",
         "loadingRoutes": "Loading OpenCode model routes...",
         "noRoutesMatch": "No OpenCode model routes match \"{{query}}\".",
         "noneReported": "No OpenCode model routes were reported yet. Configure a local route in OpenCode or use the Providers tab to inspect catalog providers.",
+        "paidRetryNotice": "If the daily free-model limit is reached, this test will automatically retry once with gpt-oss-20b. That request uses your OpenRouter balance.",
+        "paidRetryResult": "Paid retry with gpt-oss-20b",
+        "paidRetryRunning": "Free-model limit reached. Testing gpt-oss-20b using your OpenRouter balance…",
         "recommendedOnly": "Recommended only",
         "routeUnavailableAuth": "This provider requires authentication before this model can be used.",
         "routeUnavailableFailed": "This model route failed its last execution test.",
@@ -3475,10 +3519,6 @@ export default interface Resources {
         "testCancelUnsupported": "Stopping tests is not supported by this runtime.",
         "testCancelled": "Test stopped.",
         "testInProgress": "Model test is already running.",
-        "freeQuotaReached": "OpenRouter’s daily limit for free models has been reached.",
-        "paidRetryNotice": "If the daily free-model limit is reached, this test will automatically retry once with gpt-oss-20b. That request uses your OpenRouter balance.",
-        "paidRetryRunning": "Free-model limit reached. Testing gpt-oss-20b using your OpenRouter balance…",
-        "paidRetryResult": "Paid retry with gpt-oss-20b",
         "testingElapsed": "Waiting for test result... {{seconds}}s",
         "useInTeamPicker": "Save for team picker",
         "validationContextRequired": "Select a validation context above to enable Test and Set default. Saving for team picker only stores the route for new teams."
@@ -3548,6 +3588,10 @@ export default interface Resources {
       "notifications": {
         "description": "Control when and how you get notified about agent activity, task completions, and errors.",
         "label": "Notifications"
+      },
+      "reviewFlow": {
+        "description": "Choose who gives final approval after AI review, for all teams or for individual ones.",
+        "label": "Review flow"
       }
     },
     "view": {
@@ -3735,6 +3779,7 @@ export default interface Resources {
       "validation": {
         "allFlagsValid": "All flags valid",
         "failed": "Validation failed",
+        "missingValue": "Missing value: {{flags}}",
         "protectedFlags": "Protected: {{flags}}",
         "unknownFlags": "Unknown: {{flags}}"
       }
@@ -3902,6 +3947,7 @@ export default interface Resources {
     },
     "create": {
       "actions": {
+        "backToTeams": "Back to teams",
         "create": "Create",
         "creating": "Creating...",
         "openExisting": "Open Existing Team",
@@ -3922,6 +3968,11 @@ export default interface Resources {
       "description": {
         "copy": "Create a new team based on an existing one.",
         "create": "Set up your team and choose how it starts."
+      },
+      "draft": {
+        "continue": "Continue creating",
+        "replace": "Replace draft",
+        "replaceConfirmation": "You have an unfinished team draft. Starting this action will replace it. Continue?"
       },
       "errors": {
         "createConfigFailed": "Failed to create team config",
@@ -3966,6 +4017,7 @@ export default interface Resources {
         "groupOrRootHelp": "Choose a group, or keep the organization root.",
         "groupOrRootLabel": "Group or root",
         "groupOrRootPlaceholder": "Root or group",
+        "invalidSelection": "Choose a valid organization and destination before creating the team.",
         "kind": {
           "group": "Group",
           "root": "Root"
@@ -3978,6 +4030,11 @@ export default interface Resources {
       "placeholders": {
         "description": "Brief description of the team purpose",
         "prompt": "Instructions for the team lead during provisioning..."
+      },
+      "placementFailure": {
+        "acknowledge": "Got it",
+        "message": "Team {{teamName}} was created. Assign it from the Organization Map; do not create it again.",
+        "title": "Team created, but not added to the organization"
       },
       "prepare": {
         "checkingProviders": "Checking selected providers...",
@@ -4405,7 +4462,7 @@ export default interface Resources {
       "taskRequired": "Enter a request to copy a prompt. Currently supports creating saved drafts only.",
       "taskTooLong": "Native runs support requests up to {{limit}} characters. Shorten the request to run it.",
       "templatesTitle": "Available team templates (reference)",
-      "title": "Manage teams with a prompt",
+      "title": "Manage with a prompt",
       "trashAvailable": "Reversible trash for draft/stopped teams is available."
     },
     "kanban": {
@@ -4495,7 +4552,7 @@ export default interface Resources {
         "start": "Start",
         "taskLogsActive": "Task logs active"
       },
-      "title": "Kanban",
+      "title": "Tasks",
       "trash": {
         "close": "Close",
         "deleted": "Deleted",
@@ -4588,6 +4645,8 @@ export default interface Resources {
       "schedule": {
         "agentDescription": "When the team is off, runs an isolated agent. When live, creates an assigned task.",
         "execution": "Execution",
+        "historicalPromptAcknowledged": "I've reviewed the saved prompt and separated any lasting instructions. Keep the old prompt, but never run it for scheduled work.",
+        "historicalPromptReviewRequired": "Review the team's saved one-time instructions before scheduling. Clear or separate the old launch prompt first.",
         "labelOptional": "Label (optional)",
         "labelPlaceholder": "e.g., Daily code review, Nightly tests...",
         "leadDefault": "Team lead (default)",
@@ -4601,6 +4660,10 @@ export default interface Resources {
         "searchTeams": "Search teams...",
         "selectTeam": "Select a team...",
         "target": "Target when team is running",
+        "taskFirstAgentDescription": "The selected teammate receives a board task after the team is safely started, if needed. Busy agents are not interrupted.",
+        "taskFirstTarget": "Assign to",
+        "taskFirstTeamDescription": "The team lead receives a coordination task after the team is safely started, if needed. Existing work is not interrupted.",
+        "taskFirstWholeTeam": "Via team lead",
         "team": "Team",
         "teamDescription": "Starts the saved team if stopped; otherwise assigns a task to its lead. Uses saved team provider and project settings.",
         "teamPathMissing": "The team needs a saved project folder before scheduling a launch.",
@@ -5222,13 +5285,13 @@ export default interface Resources {
           "skipped": "skipped",
           "unknown": "unknown"
         },
+        "deliveryUnconfirmed": "Delivery not confirmed for {{names}}",
         "description": "Choose at least two agents. You are included automatically.",
         "mentions": "{{count}} mentions of you",
         "message": "Message this group",
         "minimum": "Select at least two agents.",
         "name": "Chat name",
         "recipient": "To {{name}}",
-        "deliveryUnconfirmed": "Delivery not confirmed for {{names}}",
         "recipientRestartHint": "{{name}} must be running a compatible runtime before sending.",
         "restartHint": "All participants must be running a compatible runtime before sending.",
         "restore": "Restore chat",
@@ -5426,7 +5489,7 @@ export default interface Resources {
       "openCodeDefaultUnavailable": "OpenCode has no usable default model for this project. Choose a model explicitly.",
       "openCodeSelectedRouteUnavailable": "This model is not available from its provider right now. Pick another model, or reconnect the provider and refresh.",
       "openCodeStatus": {
-        "authRequiredModels": "Models requiring a provider connection: {{count}}. They are hidden from the choices by default.",
+        "authRequiredModels": "{{count}} OpenCode catalog models require an account or API key for their provider. They are hidden until connected; showing them does not make them usable.",
         "badges": {
           "check": "Check",
           "free": "Free",
@@ -5435,7 +5498,7 @@ export default interface Resources {
           "setup": "Setup"
         },
         "freeModelsAvailableTitle": "Free models are in OpenCode Zen",
-        "hideAuthRequired": "Hide these models",
+        "hideAuthRequired": "Hide unavailable models",
         "loadingRuntime": "OpenCode runtime status is still loading.",
         "messages": {
           "checking": "The app is still checking the OpenCode runtime. Wait for provider status to finish, then try again.",
@@ -5452,7 +5515,7 @@ export default interface Resources {
         "providerNotConnectedTitle": "OpenCode provider is not connected",
         "readyMessage": "OpenCode passed provider readiness. Select it to use OpenCode models for this team.",
         "readyTitle": "OpenCode is ready",
-        "showAuthRequired": "Show these models",
+        "showAuthRequired": "Show unavailable models",
         "summary": {
           "checking": "OpenCode status: checking runtime",
           "projectFolderMissing": "OpenCode status: project folder not found",
@@ -6336,6 +6399,80 @@ export default interface Resources {
       "submit": "Submit",
       "title": "Request Changes"
     },
+    "reviewFlow": {
+      "badges": {
+        "custom": "Custom",
+        "default": "Default",
+        "repair": "Needs repair"
+      },
+      "broken": {
+        "defaults": "The saved default for all teams can't be read, so review actions are paused in every team until you save a new default.",
+        "defaultsHint": "The form shows the built-in values. Save them, or change them first, to repair the default.",
+        "details": "Details: {{message}}",
+        "fixDefaults": "Fix the default",
+        "teamHint": "This team's saved settings can't be read, so review actions are paused here. Save new settings, or choose the default and save, to repair it."
+      },
+      "cancel": "Cancel",
+      "discard": "Discard changes",
+      "editor": {
+        "defaultHeading": "Default for all teams",
+        "followingTeams": "Teams following the default: {{count}}",
+        "teamHeading": "This team"
+      },
+      "feedback": {
+        "error": "Could not save: {{message}}",
+        "saved": "Saved",
+        "saving": "Saving…"
+      },
+      "flowLegend": "Who gives final approval",
+      "flows": {
+        "agent_approval": {
+          "description": "The reviewer approves and the task moves to Approved.",
+          "label": "Agents approve"
+        },
+        "human_approval": {
+          "description": "The reviewer finishes the review and the task stays in Done as reviewed. Only you move it to Approved.",
+          "label": "I give final approval"
+        },
+        "lead_then_human": {
+          "description": "After the reviewer, the team lead signs off in a second review. Then the task waits in Done for you. Only you move it to Approved.",
+          "label": "Lead signs off, then I approve"
+        }
+      },
+      "humanApprovalNote": "In this mode agents can never move a task to Approved. Only you can.",
+      "intro": "After a reviewer checks a task, it either goes straight to Approved or waits in Done for you. Set the default for all teams here, and give individual teams their own settings when they need them.",
+      "loadError": "Could not load review flow settings. {{message}}",
+      "loading": "Loading review flow settings…",
+      "overrides": {
+        "empty": "All teams follow the default.",
+        "heading": "Teams with custom settings ({{count}})",
+        "reset": "Reset to default",
+        "resetLabel": "Reset {{team}} to the default"
+      },
+      "popover": {
+        "openSettings": "Change the default for all teams…"
+      },
+      "promptHint": "Sent to reviewers with each review request and visible to agents on the board. It does not change who may approve.",
+      "promptLabel": "Instructions for agents (optional)",
+      "promptPlaceholder": "For example: run the e2e tests before deciding.",
+      "retry": "Retry",
+      "save": "Save",
+      "scope": {
+        "defaultOption": "All teams (default)",
+        "empty": "No teams found.",
+        "label": "Settings for",
+        "searchPlaceholder": "Search teams"
+      },
+      "title": "Review flow",
+      "unreadable": {
+        "heading": "Teams with unreadable settings ({{count}})"
+      },
+      "useDefault": {
+        "custom": "This team has its own review flow.",
+        "following": "Following the default: {{flow}}",
+        "label": "Use the default settings"
+      }
+    },
     "roleSelect": {
       "customRole": "Custom role...",
       "empty": "No roles found.",
@@ -6354,6 +6491,7 @@ export default interface Resources {
       "title": "Running Teams"
     },
     "schedule": {
+      "actionFailed": "Schedule action failed",
       "actions": {
         "addSchedule": "Add Schedule",
         "delete": "Delete",
@@ -6375,6 +6513,7 @@ export default interface Resources {
         "expression": "Cron expression",
         "highFrequencyWarning": "High frequency schedule (less than 5 min interval)",
         "nextRuns": "Next runs:",
+        "noTimezones": "No matching timezones",
         "presets": {
           "dailyAtNine": "Daily at 9am",
           "everyHour": "Every hour",
@@ -6383,6 +6522,7 @@ export default interface Resources {
           "mondayAtNine": "Monday at 9am",
           "weekdaysAtNine": "Weekdays at 9am"
         },
+        "searchTimezone": "Search timezones...",
         "selectTimezone": "Select timezone",
         "timezone": "Timezone",
         "warmUpDescription": "Prepares selected providers before scheduled execution",
@@ -6395,6 +6535,7 @@ export default interface Resources {
         },
         "warmUpTime": "Warm-up time"
       },
+      "deleteConfirmation": "Delete schedule \"{{label}}\"? Its run history will also be removed.",
       "empty": {
         "description": "Create a schedule to run team tasks automatically on a cron schedule.",
         "title": "No schedules yet"
@@ -6409,10 +6550,12 @@ export default interface Resources {
         "errors": "Errors",
         "exitCode": "exit {{code}}",
         "loadingLogs": "Loading logs...",
+        "openTask": "Open task",
         "retryCount": "retry {{count}}/{{max}}",
         "stillRunning": "Task is still running...",
         "title": "Run Log"
       },
+      "runRequested": "Run requested. Check history to see whether work was handed off.",
       "runStatus": {
         "cancelled": "Cancelled",
         "completed": "Completed",
@@ -6599,6 +6742,10 @@ export default interface Resources {
         "edit": "Edit description",
         "placeholder": "Task description (supports markdown)"
       },
+      "leadSignoff": {
+        "badge": "Lead sign-off",
+        "hint": "The team lead signs off on this task before it reaches Done."
+      },
       "loading": {
         "fetchingTeamData": "Fetching team data",
         "title": "Loading task..."
@@ -6629,7 +6776,8 @@ export default interface Resources {
       "reviewStates": {
         "approved": "Approved",
         "inReview": "In review",
-        "needsFix": "Needs fix"
+        "needsFix": "Needs fix",
+        "reviewed": "Reviewed"
       },
       "sections": {
         "attachments": "Attachments",
@@ -6652,9 +6800,12 @@ export default interface Resources {
         "createdAs": "Created as",
         "currentImplementationInterval": "Current implementation interval",
         "empty": "No workflow history recorded",
+        "humanApproved": "Approved by user",
         "implementationIntervalEnded": "Implementation interval ended at this transition",
+        "leadSignoffRequested": "Lead sign-off requested",
         "ownerChanged": "Owner changed",
         "reassigned": "Reassigned",
+        "reviewCompleted": "AI review completed",
         "reviewRequested": "Review requested",
         "reviewStarted": "Review started",
         "runningPrefix": "running ",
@@ -6803,6 +6954,9 @@ export default interface Resources {
       "warningUnsafeTaskCall": "Could not safely rewrite Task call: {{call}}"
     },
     "templates": {
+      "confirmAction": "Apply template",
+      "confirmMessage": "This will replace your teammates, instructions and team settings with the template’s values.",
+      "confirmTitle": "Apply team template?",
       "descriptions": {
         "content": "Create clear articles, newsletters, educational content and scripts.",
         "customer-support": "Resolve customer questions and turn recurring issues into useful help content.",

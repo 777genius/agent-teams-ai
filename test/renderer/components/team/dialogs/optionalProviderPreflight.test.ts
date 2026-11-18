@@ -6,6 +6,16 @@ import {
   getPendingProviderPreflightIds,
   resumeInterruptedProviderPreflight,
 } from '@renderer/components/team/dialogs/optionalProviderPreflight';
+import {
+  appendProviderPrepareInvalidationEpoch,
+  buildProviderPrepareModelCacheKey,
+} from '@renderer/components/team/dialogs/providerPrepareCacheKey';
+import { buildProviderPreparePlans } from '@renderer/components/team/dialogs/providerPreparePlans';
+import {
+  getShortLivedProviderPrepareModelResults,
+  invalidateShortLivedProviderPrepareModelResults,
+  storeShortLivedProviderPrepareModelResults,
+} from '@renderer/components/team/dialogs/providerPrepareShortLivedCache';
 import { hasEffectiveProviderLaunchAuthority } from '@renderer/utils/providerReadiness';
 import { createDefaultCliExtensionCapabilities } from '@shared/utils/providerExtensionCapabilities';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -613,6 +623,80 @@ describe('optional provider preflight skip', () => {
       expect(prepareProvisioning).toHaveBeenCalledTimes(2);
     }
   );
+  it('reruns the identical provider plan after explicit settings invalidation while the old check is pending', async () => {
+    const fence = createProviderSubmissionFence();
+    const finish: Array<(value: TeamProvisioningPrepareResult) => void> = [];
+    const prepareProvisioning = vi.fn(
+      () => new Promise<TeamProvisioningPrepareResult>((resolve) => finish.push(resolve))
+    );
+    const planAt = (epoch: number) =>
+      buildProviderPreparePlans({
+        cwd: '/tmp/test-preflight',
+        providerIds: ['opencode'],
+        selectedModelChecksByProvider: new Map(),
+        backendSummaryByProvider: new Map(),
+        limitContext: false,
+        runtimeProviderStatusById: new Map([['opencode', provider('opencode')]]),
+        cachedModelResultsByCacheKey: new Map(),
+        invalidationEpochByProviderId: { opencode: epoch },
+      })[0]!;
+    const originalPlan = planAt(0);
+    const invalidatedPlan = planAt(1);
+    expect(invalidatedPlan.cacheKey).not.toBe(originalPlan.cacheKey);
+    expect(invalidatedPlan.requestSignature).not.toBe(originalPlan.requestSignature);
+    const displayKey = appendProviderPrepareInvalidationEpoch(
+      buildProviderPrepareModelCacheKey({
+        cwd: '/tmp/test-preflight',
+        providerId: 'opencode',
+        backendSummary: null,
+        limitContext: false,
+        runtimeStatusSignature: invalidatedPlan.runtimeStatusSignature,
+        modelChecksSignature: invalidatedPlan.modelChecksSignature,
+      }),
+      1
+    );
+    expect(displayKey).toBe(invalidatedPlan.cacheKey);
+    const input = {
+      cwd: '/tmp/test-preflight',
+      providerId: 'opencode' as const,
+      selectedModelIds: [],
+      prepareProvisioning,
+    };
+    const oldResult = fence.runPreflight(originalPlan, input);
+    const newResult = fence.runPreflight(invalidatedPlan, input);
+    expect(newResult).not.toBe(oldResult);
+    expect(prepareProvisioning).toHaveBeenCalledTimes(2);
+    for (const complete of finish) complete({ ready: true, message: 'ready' });
+    await Promise.all([oldResult, newResult]);
+  });
+
+  it('clears short-lived OpenCode model evidence when credentials change', () => {
+    const cacheKey = 'TEST-settings-invalidation';
+    storeShortLivedProviderPrepareModelResults({
+      providerId: 'opencode',
+      cacheKey,
+      modelResultsById: { 'openrouter/test': { status: 'ready', line: 'verified', warningLine: null } },
+    });
+    expect(getShortLivedProviderPrepareModelResults({ providerId: 'opencode', cacheKey }))
+      .toHaveProperty('openrouter/test');
+    invalidateShortLivedProviderPrepareModelResults('opencode');
+    expect(getShortLivedProviderPrepareModelResults({ providerId: 'opencode', cacheKey }))
+      .toEqual({});
+  });
+
+  it('rejoins an active selection after switching away and back without duplicate probes', async () => {
+    const fence = createProviderSubmissionFence();
+    const finishes: ((value: TeamProvisioningPrepareResult) => void)[] = [];
+    const prepareProvisioning = vi.fn(() => new Promise<TeamProvisioningPrepareResult>((resolve) => finishes.push(resolve)));
+    const input = { cwd: '/tmp/test-preflight', providerId: 'opencode' as const, selectedModelIds: [], prepareProvisioning };
+    const firstIdentity = { cacheKey: 'proof-a', requestSignature: 'model-a' };
+    const first = fence.runPreflight(firstIdentity, input);
+    const second = fence.runPreflight({ cacheKey: 'proof-b', requestSignature: 'model-b' }, input);
+    expect(fence.runPreflight(firstIdentity, input)).toBe(first);
+    expect(prepareProvisioning).toHaveBeenCalledTimes(2);
+    for (const finish of finishes) finish({ ready: true, message: 'ready' });
+    await Promise.all([first, second]);
+  });
   it('rejoins skipped OpenCode diagnostics with the same exact proof identity', async () => {
     const fence = createProviderSubmissionFence();
     const prepareProvisioning = vi.fn(async () => ({ ready: true, message: 'ready' }));

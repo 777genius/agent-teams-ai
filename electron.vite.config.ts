@@ -258,7 +258,7 @@ export default defineConfig({
       esbuildOptions: {
         target: rendererDependencyEsbuildTarget,
       },
-      include: ['@codemirror/language-data'],
+      include: ['@codemirror/language-data', '@floating-ui/dom'],
       exclude: [
         '@claude-teams/agent-graph',
         '@terminal-platform/design-tokens',

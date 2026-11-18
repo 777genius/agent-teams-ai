@@ -181,6 +181,7 @@ export function useOpenCodeConnectedModelCatalog(input: {
         entries.map((entry) => [entry.providerId.trim().toLowerCase(), entry] as const)
       );
       let sourceIndex = 0;
+      let recoveryFreshUntil: string | null = null;
       const loadNext = async () => {
         while (current() && sourceIndex < sources.length) {
           if (!(await waitForStatus())) return;
@@ -201,10 +202,9 @@ export function useOpenCodeConnectedModelCatalog(input: {
               catalog.catalogState === 'fresh' &&
               Date.parse(catalog.freshUntil ?? '') > Date.now()
             ) {
-              input.onCatalogRecovery?.({
-                projectPath: input.projectPath,
-                freshUntil: catalog.freshUntil,
-              });
+              // Status recovery can invalidate the shared model cache. Defer it
+              // until every connected source has finished its in-flight read.
+              recoveryFreshUntil = catalog.freshUntil ?? null;
             }
             loadedModels.push(...catalog.models);
             if (catalog.catalogState === 'stale') {
@@ -247,6 +247,9 @@ export function useOpenCodeConnectedModelCatalog(input: {
             loadedModels.length > 0 || loadErrors.length === 0 ? loadedModels : retainedModels,
           errors: loadErrors,
         });
+        if (recoveryFreshUntil) {
+          input.onCatalogRecovery?.({ projectPath: input.projectPath, freshUntil: recoveryFreshUntil });
+        }
       }
     })()
       .catch((error: unknown) => {

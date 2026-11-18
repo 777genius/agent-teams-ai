@@ -991,7 +991,7 @@ export const RuntimeLocalProviderSetupDialog = ({
                         placeholder="Choose a project"
                         searchPlaceholder="Search projects..."
                         emptyMessage="No matching projects."
-                        className="h-9 min-w-0 flex-1 rounded-lg bg-white/[0.015] px-3.5 shadow-none"
+                        className="h-9 min-w-0 flex-1 rounded-lg bg-[var(--color-form-control-bg)] px-3.5 shadow-none"
                         disabled={projectPickerLoading || projectOptions.length === 0}
                         onValueChange={(value) => {
                           setProviderListError(null);
@@ -1369,7 +1369,7 @@ export const RuntimeLocalProviderSetupDialog = ({
                           placeholder="Choose a project"
                           searchPlaceholder="Search projects..."
                           emptyMessage="No matching projects."
-                          className="h-9 min-w-0 flex-1 rounded-lg bg-white/[0.015] px-3.5 shadow-none"
+                          className="h-9 min-w-0 flex-1 rounded-lg bg-[var(--color-form-control-bg)] px-3.5 shadow-none"
                           disabled={
                             setupLocked || projectPickerLoading || projectOptions.length === 0
                           }

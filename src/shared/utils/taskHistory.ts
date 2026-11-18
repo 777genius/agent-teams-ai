@@ -29,6 +29,8 @@ export function getDerivedReviewStateFromHistory(
       event.type === 'review_requested' ||
       event.type === 'review_changes_requested' ||
       event.type === 'review_approved' ||
+      event.type === 'review_completed' ||
+      event.type === 'human_approved' ||
       event.type === 'review_started'
     ) {
       return event.to;
@@ -43,6 +45,8 @@ export function getDerivedReviewStateFromHistory(
           previous.type === 'review_requested' ||
           previous.type === 'review_changes_requested' ||
           previous.type === 'review_approved' ||
+          previous.type === 'review_completed' ||
+          previous.type === 'human_approved' ||
           previous.type === 'review_started'
         ) {
           return previous.to === 'needsFix' ? 'needsFix' : 'none';
@@ -58,6 +62,35 @@ export function getDerivedReviewStateFromHistory(
         }
       }
       return 'none';
+    }
+  }
+  return null;
+}
+
+/**
+ * Which stage the open review cycle is in: the lead's sign-off (second cycle of the
+ * lead_then_human flow) or a regular reviewer cycle. Null when no review cycle is open.
+ * Mirrors getCurrentReviewStage in agent-teams-controller/src/internal/reviewState.js.
+ */
+export function getCurrentReviewStage(
+  task: Pick<TeamTask, 'historyEvents'>
+): 'lead_signoff' | 'reviewer' | null {
+  const events = getTaskHistoryEvents(task);
+  for (let i = events.length - 1; i >= 0; i--) {
+    const event = events[i];
+    if (event.type === 'review_requested') {
+      return event.stage === 'lead_signoff' ? 'lead_signoff' : 'reviewer';
+    }
+    if (
+      event.type === 'review_changes_requested' ||
+      event.type === 'review_approved' ||
+      event.type === 'review_completed' ||
+      event.type === 'human_approved' ||
+      event.type === 'task_created' ||
+      (event.type === 'status_changed' &&
+        (event.to === 'in_progress' || event.to === 'pending' || event.to === 'deleted'))
+    ) {
+      return null;
     }
   }
   return null;

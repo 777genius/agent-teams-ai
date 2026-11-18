@@ -40,6 +40,23 @@ describe('ConfirmDialog modes', () => {
     await expect(result).resolves.toBe(true);
   });
 
+  it('recaptures focus restored late to a background field', async () => {
+    const background = document.createElement('input');
+    document.body.appendChild(background);
+    let result!: Promise<boolean>;
+    await act(async () => {
+      result = confirm({ title: 'Apply team template?', message: 'Replace your draft?' });
+    });
+    const dialog = host.querySelector('[role="dialog"]')!;
+    const confirmButton = dialog.querySelector<HTMLButtonElement>('[data-confirm-btn]')!;
+    expect(document.activeElement).toBe(confirmButton);
+    await act(async () => background.focus());
+    expect(document.activeElement).toBe(confirmButton);
+    await act(async () => confirmButton.click());
+    await expect(result).resolves.toBe(true);
+    background.remove();
+  });
+
   it('shows one focused Close action in info mode', async () => {
     let result!: Promise<boolean>;
     await act(async () => {

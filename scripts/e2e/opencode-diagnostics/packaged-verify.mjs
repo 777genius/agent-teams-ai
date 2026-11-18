@@ -5,6 +5,7 @@ import { createRequire } from 'node:module';
 import { isDeepStrictEqual } from 'node:util';
 import { clickControl, correlateReport, enterProviderSettings } from './catalog.mjs';
 import { v2SupportSnapshot, verifyV2SupportRepair } from './v2-support-repair.mjs';
+import { hasExactVisibleOpenCodeCount, verifyCompleteConnectedSourceSummary } from './real-runtime.mjs';
 import {
   runtimeProvenance,
   packagedEnvironment,
@@ -825,6 +826,9 @@ export async function verifyPackaged({
   try {
     try {
       observe = await installCatalogObservation(send, preloadScripts, data.artifact.archive.path);
+      // The same preload bridge records passive reads before V2 installation or warm status.
+      // Observe data only; no wrapped IPC method changes its result or error.
+      if (v2Repair) await observe('globalThis.__packagedCatalogObservation.records = []; globalThis.__packagedCatalogObservation.active = true');
     } finally {
       evidence.scriptMetadata = scriptMetadata;
       evidence.preloadDiscovery = preloadScripts.map(({ scriptId, executionContextId }) => ({
@@ -964,6 +968,71 @@ export async function verifyPackaged({
       'preserve-existing-project\n',
       'Existing project sentinel changed before status'
     );
+    if (v2Repair) {
+      // Prove a real app-installed V2 zero before any explicit project-status,
+      // directory-readiness or Settings call could seed the Dashboard cache.
+      const started = Date.now();
+      const proof = (evidence.v2ColdDashboardCount = {
+        expected: 0, observed: null, runtimeVersion: version.version,
+        elapsedMs: null, settingsVisited: false, passiveModelReads: null,
+        passiveConnectedSummaries: null, independentConnected: null, passed: false,
+      });
+      try {
+        const deadline = Date.now() + 120000;
+        while (Date.now() < deadline) {
+          let view;
+          try {
+            view = await evaluate(`(() => {
+              const count = [...document.querySelectorAll('[data-testid="dashboard-opencode-provider-count"]')]
+                .find((el) => el.getClientRects().length);
+              const dashboard = [...document.querySelectorAll('[data-testid="dashboard-manage-providers"]')]
+                .some((el) => el.getClientRects().length);
+              const settings = [...document.querySelectorAll('[data-testid="provider-settings-page"]')]
+                .some((el) => el.getClientRects().length);
+              return { dashboard, settings, countVisible: Boolean(count),
+                countText: count?.textContent ?? '' };
+            })()`);
+          } catch {
+            // A renderer context change cannot establish a verified zero.
+          }
+          if (view?.settings) {
+            proof.settingsVisited = true;
+            break;
+          }
+          if (view?.dashboard && view.countVisible &&
+              hasExactVisibleOpenCodeCount(view.countText, 0)) {
+            proof.observed = 0;
+            break;
+          }
+          await pause(500);
+        }
+        proof.elapsedMs = Date.now() - started;
+        await shot('v2-cold-dashboard-connected-count');
+        assert(!proof.settingsVisited, 'Settings visited before V2 Dashboard count evidence');
+        assert.equal(proof.observed, 0,
+          'Cold installed V2 Dashboard did not show the verified zero connection count');
+        const traffic = await observe('globalThis.__packagedCatalogObservation');
+        assert(!traffic.overflow, 'Cold V2 preload IPC observation overflow');
+        proof.passiveModelReads = traffic.records.filter((r) => r.method === 'loadModels').length;
+        proof.passiveConnectedSummaries = traffic.records.filter((r) =>
+          r.method === 'loadProviderDirectory' && r.input?.summary === true &&
+          r.input?.filter === 'connected' && r.input?.runtimeId === 'opencode'
+        ).length;
+        assert.equal(proof.passiveModelReads, 0, 'Cold Dashboard initiated model inventory');
+        // This corroborating read happens only AFTER the rendered count was proven.
+        const response = await probe('v2IndependentConnectedSourceSummary',
+          'window.electronAPI.runtimeProviderManagement.loadProviderDirectory({runtimeId:"opencode",projectPath:null,summary:true,filter:"connected",query:null,limit:100,cursor:null,refresh:false})',
+          125000);
+        proof.independentConnected = verifyCompleteConnectedSourceSummary(response, 0);
+        proof.passed = true;
+      } finally {
+        await save('v2-cold-connected-count.json', JSON.stringify(proof, null, 2));
+        // The later Settings refresh measures only its own calls, never the
+        // pre-Settings connected-summary proof (refresh:false/filter:connected).
+        await observe('globalThis.__packagedCatalogObservation.records = []; globalThis.__packagedCatalogObservation.active = false');
+      }
+    }
+
     evidence.projectStatus = { path: data.project, sentinel: data.projectSentinel, attempts: [] };
     const projectStatuses = [];
     for (let attempt = 0; attempt < 2; attempt++) {

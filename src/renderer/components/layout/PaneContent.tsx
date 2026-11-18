@@ -15,6 +15,7 @@ import { nameColorSet } from '@renderer/utils/projectColor';
 import { useShallow } from 'zustand/react/shallow';
 
 import { DashboardView } from '../dashboard/DashboardView';
+import { SettingsView } from '../settings/SettingsView';
 import { TeamListSkeleton } from '../team/TeamListSkeleton';
 import { TeamLoadingSkeleton } from '../team/TeamLoadingSkeleton';
 
@@ -38,11 +39,6 @@ const SessionReportTab = lazy(() =>
 const SchedulesView = lazy(() =>
   import('../schedules/SchedulesView').then((module) => ({
     default: module.SchedulesView,
-  }))
-);
-const SettingsView = lazy(() =>
-  import('../settings/SettingsView').then((module) => ({
-    default: module.SettingsView,
   }))
 );
 const TeamDetailView = lazy(() =>
@@ -142,7 +138,8 @@ const TeamPaneLazyFallback = ({
 const PaneTabSlot = ({ tab, isActive, isPaneFocused }: PaneTabSlotProps): React.JSX.Element => {
   const { t } = useAppTranslation('team');
   const [hasActivated, setHasActivated] = useState(isActive);
-  const shouldRenderContent = hasActivated && (tab.type !== 'teams' || isActive);
+  const shouldRenderContent =
+    hasActivated && (tab.type !== 'teams' || isActive || tab.teamsCreationPage === true);
 
   useEffect(() => {
     if (isActive) {
@@ -172,7 +169,7 @@ const PaneTabSlot = ({ tab, isActive, isPaneFocused }: PaneTabSlotProps): React.
           {tab.type === 'dashboard' && <DashboardView isActive={isActive} />}
           {tab.type === 'notifications' && <NotificationsView />}
           {tab.type === 'settings' && <SettingsView isActive={isActive} />}
-          {tab.type === 'teams' && <TeamListView />}
+          {tab.type === 'teams' && <TeamListView tabId={tab.id} isActive={isActive} />}
           {tab.type === 'organizations' && (
             <TabUIProvider tabId={tab.id}>
               <OrganizationMapTab isActive={isActive} isPaneFocused={isPaneFocused} />

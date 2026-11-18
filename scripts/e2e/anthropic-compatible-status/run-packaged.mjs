@@ -438,10 +438,11 @@ try {
   await cdp.clickText('Teams');
   await cdp.clickText('Create Team');
   record('create-team-opened');
-  await cdp.clickText('Custom path', 'document.querySelector("[role=dialog]")');
-  await cdp.fill('[role=dialog] input[aria-label="Custom working directory"]', data.project);
+  await cdp.wait('Boolean(document.querySelector("[data-testid=create-team-page]"))', 'Create Team page');
+  await cdp.clickText('Custom path', 'document.querySelector("[data-testid=create-team-page]")');
+  await cdp.fill('[data-testid=create-team-page] input[aria-label="Custom working directory"]', data.project);
   record('test-project-selected');
-  await cdp.click('[role=dialog] button[aria-label^="Anthropic provider,"]');
+  await cdp.click('[data-testid=create-team-page] button[aria-label^="Anthropic provider,"]');
   await cdp.wait(
     'Boolean(document.querySelector("[data-testid=team-model-selector-provider-nav-anthropic]"))',
     'Create Team model selector'
@@ -482,7 +483,7 @@ try {
   );
   await cdp.wait(
     `(() => {
-      const text = document.querySelector('[role=dialog]')?.innerText ?? '';
+      const text = document.querySelector('[data-testid=create-team-page]')?.innerText ?? '';
       const selected = ${selectedModelExpression};
       const lead = document.querySelector('[data-role="lead-row"] button[aria-label^="Anthropic provider,"]')?.getAttribute('aria-label') ?? '';
       return selected && lead.includes(${JSON.stringify(model)}) &&
@@ -492,7 +493,7 @@ try {
     'settled Create Team preflight for selected compatible model',
     180000
   );
-  const createTeamText = await cdp.evaluate('document.querySelector("[role=dialog]").innerText');
+  const createTeamText = await cdp.evaluate('document.querySelector("[data-testid=create-team-page]").innerText');
   assert(
     /Selected model checks[\s\S]*(available|compatible|verified)/i.test(createTeamText),
     'Selected-model preflight did not report a positive model check'
@@ -529,7 +530,7 @@ try {
     try {
       evidence.failureUi = (
         await cdp.evaluate(`(() =>
-        (document.querySelector('[role=dialog]')?.innerText ?? '')
+        (document.querySelector('[data-testid=create-team-page]')?.innerText ?? '')
           .split('\\n').map((line) => line.trim())
           .filter((line) => /selected provider|selected model|issue684-compatible-model|checking|preflight|anthropic/i.test(line))
           .slice(-24)

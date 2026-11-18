@@ -1,4 +1,4 @@
-import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
 import { Button } from '@renderer/components/ui/button';
@@ -21,14 +21,8 @@ import { OrganizationEditorPanel } from './OrganizationEditorPanel';
 import { OrgGraphSurface } from './OrgGraphSurface';
 import { OrgInspector } from './OrgInspector';
 
-import type { OrganizationMapScope, OrganizationPlacementSelection } from '../../contracts';
+import type { OrganizationMapScope } from '../../contracts';
 import type { GraphLayoutMode } from '@claude-teams/agent-graph';
-
-const CreateTeamDialog = lazy(() =>
-  import('@renderer/components/team/dialogs/CreateTeamDialog').then((module) => ({
-    default: module.CreateTeamDialog,
-  }))
-);
 
 export interface OrganizationMapTabProps {
   isActive?: boolean;
@@ -46,8 +40,7 @@ export const OrganizationMapTab = ({
   );
   const [mapScope, setMapScope] = useState<OrganizationMapScope>('all');
   const [activeOrganizationId, setActiveOrganizationId] = useState<string | undefined>(undefined);
-  const [createTeamPlacement, setCreateTeamPlacement] =
-    useState<OrganizationPlacementSelection | null>(null);
+  const creation = useOrganizationCreateTeamDialog();
   const {
     viewModel,
     selectedNodeId,
@@ -64,7 +57,6 @@ export const OrganizationMapTab = ({
     organizationId: activeOrganizationId,
     refreshMap: refreshMapAfterStructureMutation,
   });
-  const createTeamDialog = useOrganizationCreateTeamDialog();
   const organizations = useMemo(
     () => structureManager.structure?.organizations ?? viewModel?.payload.organizations ?? [],
     [structureManager.structure?.organizations, viewModel?.payload.organizations]
@@ -337,7 +329,9 @@ export const OrganizationMapTab = ({
             onRemoveTeam={structureManager.removeTeam}
             onUpsertRelation={structureManager.upsertRelation}
             onDeleteRelation={structureManager.deleteRelation}
-            onCreateTeamHere={setCreateTeamPlacement}
+            onCreateTeamHere={(placement) => {
+              void creation.openCreationPage(placement);
+            }}
           />
         ) : selectedNode ? (
           <OrgInspector
@@ -352,29 +346,6 @@ export const OrganizationMapTab = ({
           />
         ) : null}
       </div>
-      {createTeamPlacement ? (
-        <Suspense fallback={null}>
-          <CreateTeamDialog
-            open={createTeamPlacement !== null}
-            canCreate={createTeamDialog.canCreate}
-            provisioningErrorsByTeam={createTeamDialog.provisioningErrorsByTeam}
-            clearProvisioningError={createTeamDialog.clearProvisioningError}
-            existingTeamNames={createTeamDialog.existingTeamNames}
-            provisioningTeamNames={createTeamDialog.provisioningTeamNames}
-            activeTeams={createTeamDialog.activeTeams}
-            initialOrganizationPlacement={createTeamPlacement}
-            onClose={() => {
-              setCreateTeamPlacement(null);
-              void Promise.all([
-                refresh({ force: true }),
-                structureManager.refreshStructure({ force: true }),
-              ]);
-            }}
-            onCreate={createTeamDialog.createTeam}
-            onOpenTeam={createTeamDialog.openTeam}
-          />
-        </Suspense>
-      ) : null}
     </div>
   );
 };

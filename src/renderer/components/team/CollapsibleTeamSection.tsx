@@ -74,9 +74,13 @@ export const CollapsibleTeamSection = memo(function CollapsibleTeamSection({
   const isFlat = variant === 'flat';
   const sectionRef = useRef<HTMLElement>(null);
 
-  const handleNavigate = useCallback((): void => {
+  const handleNavigate = useCallback((event: Event): void => {
     setOpen(true);
-    if (sectionRef.current) scrollAfterExpand(sectionRef.current);
+    if (!sectionRef.current) return;
+    scrollAfterExpand(sectionRef.current);
+    if (event instanceof CustomEvent && event.detail?.focus === true) {
+      sectionRef.current.querySelector<HTMLButtonElement>('button')?.focus({ preventScroll: true });
+    }
   }, []);
 
   useEffect(() => {

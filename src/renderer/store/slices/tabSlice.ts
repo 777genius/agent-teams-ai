@@ -30,10 +30,15 @@ import {
   getSessionResetState,
   getWorktreeNavigationState,
 } from '../utils/stateResetHelpers';
+import {
+  leaveTeamsCreation,
+  navigateToTeamsCreation,
+  updateTabInLayout,
+} from '../utils/teamsCreationNavigation';
 
 import type { AppState, SearchNavigationContext } from '../types';
 import type { PaneLayout } from '@renderer/types/panes';
-import type { OpenTabOptions, Tab, TabInput, TabNavigationRequest } from '@renderer/types/tabs';
+import type { OpenTabOptions, Tab, TabInput, TabNavigationRequest, TeamsCreationSeed } from '@renderer/types/tabs';
 import type { StateCreator } from 'zustand';
 
 // =============================================================================
@@ -51,6 +56,8 @@ export interface TabSlice {
 
   // Actions
   openTab: (tab: TabInput, options?: OpenTabOptions) => void;
+  openTeamsCreationPage: (seed?: Omit<TeamsCreationSeed, 'id'>, replaceExisting?: boolean) => void;
+  closeTeamsCreationPage: (tabId: string) => void;
   closeTab: (tabId: string) => void;
   setActiveTab: (tabId: string) => void;
   openDashboard: () => void;
@@ -104,22 +111,6 @@ function syncFromLayout(layout: PaneLayout): Record<string, unknown> {
     activeTabId: synced.activeTabId,
     selectedTabIds: synced.selectedTabIds,
   };
-}
-
-/**
- * Update a tab in whichever pane contains it, returning the new layout.
- */
-function updateTabInLayout(
-  layout: PaneLayout,
-  tabId: string,
-  updater: (tab: Tab) => Tab
-): PaneLayout {
-  const pane = findPaneByTabId(layout, tabId);
-  if (!pane) return layout;
-  return updatePane(layout, {
-    ...pane,
-    tabs: pane.tabs.map((t) => (t.id === tabId ? updater(t) : t)),
-  });
 }
 
 // =============================================================================
@@ -203,6 +194,12 @@ export const createTabSlice: StateCreator<AppState, [], [], TabSlice> = (set, ge
     const newLayout = updatePane(paneLayout, updatedPane);
     set(syncFromLayout(newLayout));
   },
+
+  openTeamsCreationPage: (seed, replaceExisting) =>
+    navigateToTeamsCreation(get(), (layout) => set(syncFromLayout(layout)), seed, replaceExisting),
+
+  closeTeamsCreationPage: (tabId) =>
+    leaveTeamsCreation(get(), (layout) => set(syncFromLayout(layout)), tabId),
 
   // Close a tab by ID in whichever pane contains it
   closeTab: (tabId: string) => {

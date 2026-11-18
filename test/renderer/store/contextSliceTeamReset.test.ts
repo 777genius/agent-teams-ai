@@ -241,6 +241,85 @@ describe('context slice team/task reset', () => {
     expect(store.getState().selectedTeamName).toBeNull();
   });
 
+  it('never persists copied-team seed contents in context tab snapshots', async () => {
+    const seedTab: Tab = {
+      id: 'teams-with-copy-seed',
+      type: 'teams',
+      label: 'Teams',
+      createdAt: 0,
+      teamsCreationPage: true,
+      teamsCreationSeed: {
+        id: 'copy-once',
+        copyData: { teamName: 'copied-team', members: [], prompt: 'personal copied prompt' },
+      },
+    };
+    const pane = {
+      id: 'pane-default',
+      tabs: [seedTab],
+      activeTabId: seedTab.id,
+      selectedTabIds: [seedTab.id],
+      widthFraction: 1,
+    };
+    const store = createTestStore();
+    store.setState({
+      openTabs: [seedTab],
+      activeTabId: seedTab.id,
+      paneLayout: { focusedPaneId: pane.id, panes: [pane] },
+    });
+
+    await store.getState().switchContext('ssh-dev');
+
+    const saved = contextStorageMock.saveSnapshot.mock.calls.find(([context]) => context === 'local')?.[1] as {
+      openTabs: Tab[];
+      paneLayout: { panes: { tabs: Tab[] }[] };
+    } | undefined;
+    expect(saved?.openTabs[0]).toMatchObject({
+      type: 'teams',
+      teamsCreationPage: false,
+      teamsCreationSeed: undefined,
+    });
+    expect(saved?.paneLayout.panes[0].tabs[0].teamsCreationSeed).toBeUndefined();
+    expect(JSON.stringify(saved)).not.toContain('personal copied prompt');
+  });
+
+  it('drops old persisted creation seeds when restoring a context', async () => {
+    const savedTab: Tab = {
+      id: 'teams-with-stale-seed',
+      type: 'teams',
+      label: 'Teams',
+      createdAt: 0,
+      teamsCreationPage: true,
+      teamsCreationSeed: {
+        id: 'old-copy',
+        copyData: { teamName: 'old-copy', members: [], prompt: 'stale copy should not replay' },
+      },
+    };
+    const snapshot = targetSnapshot();
+    contextStorageMock.loadSnapshot.mockResolvedValue({
+      ...snapshot,
+      openTabs: [savedTab],
+      activeTabId: savedTab.id,
+      paneLayout: {
+        focusedPaneId: 'pane-default',
+        panes: [{
+          ...snapshot.paneLayout.panes[0],
+          tabs: [savedTab],
+          activeTabId: savedTab.id,
+        }],
+      },
+    });
+    const store = createTestStore();
+
+    await store.getState().switchContext('ssh-dev');
+
+    expect(store.getState().openTabs[0]).toMatchObject({
+      type: 'teams',
+      teamsCreationPage: false,
+      teamsCreationSeed: undefined,
+    });
+    expect(store.getState().paneLayout.panes[0].tabs[0].teamsCreationSeed).toBeUndefined();
+  });
+
   it('does not switch context when Changes cannot flush durably', async () => {
     const requestClose = await registerBlockedChangeReview();
     const store = createTestStore();

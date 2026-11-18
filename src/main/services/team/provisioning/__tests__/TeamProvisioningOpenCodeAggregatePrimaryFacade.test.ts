@@ -106,6 +106,7 @@ class TestOpenCodeAggregatePrimaryFacade extends TeamProvisioningOpenCodeAggrega
       visibleReplyProofService: {
         applyDestinationProof: vi.fn(),
         materializePlainTextReplyIfNeeded: vi.fn(),
+        getConfiguredLeadName: vi.fn(async () => 'team-lead'),
       },
       maybeSyncRuntimePermissionsAfterDelivery: async () => {},
       rememberRuntimePidFromBridge: async () => {},

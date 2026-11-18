@@ -4,6 +4,7 @@ import {
   OPEN_CODE_SOLO_MEMBER_ROLE,
   type TeamRuntimeLanePlan,
 } from '@features/team-runtime-lanes';
+import { resolveRuntimeStatusExecutionContext } from '@main/services/runtime/runtimeStatusExecutionContext';
 import { WorkingDirectoryMissingError } from '@main/utils/cliWorkingDirectory';
 import { isMissingDirectory } from '@main/utils/directoryPresence';
 import { resolveAnthropicLaunchModel } from '@shared/utils/anthropicLaunchModel';
@@ -545,6 +546,7 @@ export class TeamProvisioningPrepareCoordinator {
   ): Promise<string | null> {
     let parsed: ProviderModelListCommandResponse;
     try {
+      const context = await resolveRuntimeStatusExecutionContext(providerId, cwd);
       const { stdout } = await this.ports.execCli(
         claudePath,
         buildProviderControlPlaneCliCommandArgs(providerArgs, [
@@ -553,9 +555,10 @@ export class TeamProvisioningPrepareCoordinator {
           '--json',
           '--provider',
           providerId,
+          ...context.projectArgs,
         ]),
         {
-          cwd,
+          cwd: context.cwd ?? cwd,
           env,
           timeout:
             providerId === 'opencode'
@@ -618,6 +621,7 @@ export class TeamProvisioningPrepareCoordinator {
     providerArgs: string[] = [],
     limitContext: boolean
   ): Promise<string | null> {
+    const context = await resolveRuntimeStatusExecutionContext(providerId, cwd);
     const { stdout } = await this.ports.execCli(
       claudePath,
       buildProviderControlPlaneCliCommandArgs(providerArgs, [
@@ -626,9 +630,10 @@ export class TeamProvisioningPrepareCoordinator {
         '--json',
         '--provider',
         providerId,
+        ...context.projectArgs,
       ]),
       {
-        cwd,
+        cwd: context.cwd ?? cwd,
         env,
         timeout:
           providerId === 'opencode'

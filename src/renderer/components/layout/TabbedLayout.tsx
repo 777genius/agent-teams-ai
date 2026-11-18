@@ -60,13 +60,14 @@ export const TabbedLayout = (): React.JSX.Element => {
 
   // --- DnD state (lifted from PaneContainer) ---
   const panes = useStore(useShallow((s) => s.paneLayout.panes));
-  const hideSidebarForActiveTab = useStore(
+  const activeTabType = useStore(
     useShallow((s) => {
       const focusedPane = s.paneLayout.panes.find((pane) => pane.id === s.paneLayout.focusedPaneId);
       const activeTab = focusedPane?.tabs.find((tab) => tab.id === focusedPane.activeTabId);
-      return activeTab?.type === 'token-usage';
+      return activeTab?.type;
     })
   );
+  const hideSidebarForActiveTab = activeTabType === 'token-usage';
   const [activeTab, setActiveTab] = useState<Tab | null>(null);
 
   const sensors = useSensors(
@@ -159,7 +160,7 @@ export const TabbedLayout = (): React.JSX.Element => {
 
   return (
     <div
-      className="flex h-screen flex-col bg-claude-dark-bg text-claude-dark-text"
+      className="flex h-full flex-col bg-claude-dark-bg text-claude-dark-text"
       style={
         { '--macos-traffic-light-padding-left': `${trafficLightPadding}px` } as React.CSSProperties
       }
@@ -173,7 +174,7 @@ export const TabbedLayout = (): React.JSX.Element => {
       >
         <TabBarRow />
         <CliInstallWarningBanner />
-        <div className="flex flex-1 overflow-hidden">
+        <div className="flex min-w-0 flex-1 overflow-hidden" style={{ containerType: 'inline-size' }}>
           {/* Command Palette (Cmd+K) */}
           <CommandPalette />
 
@@ -186,7 +187,7 @@ export const TabbedLayout = (): React.JSX.Element => {
           </div>
 
           {/* Sidebar - Task list / Sessions (right side) */}
-          {!hideSidebarForActiveTab && <Sidebar />}
+          {!hideSidebarForActiveTab && <Sidebar hideOnNarrowSettings={activeTabType === 'settings'} />}
         </div>
 
         {/* Drag overlay - semi-transparent ghost of the dragged tab */}

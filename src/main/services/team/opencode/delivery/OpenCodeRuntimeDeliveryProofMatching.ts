@@ -1,3 +1,4 @@
+import { classifyOpenCodeDeliveryReplyContract } from './OpenCodeDeliveryReplyContract';
 import {
   isOpenCodeVisibleReplySemanticallySufficient,
   type OpenCodeVisibleReplyProof,
@@ -26,16 +27,21 @@ export function isOpenCodeLeadReplyRecipientAlias(value: string): boolean {
 export function getOpenCodeVisibleReplyInboxCandidates(input: {
   replyRecipient?: string | null;
   configuredLeadName?: string | null;
+  knownPeerRecipient?: boolean;
   includeUserFallbackForLeadRecipient?: boolean;
 }): string[] {
   const explicitRecipient = input.replyRecipient?.trim() || 'user';
   const candidates = [explicitRecipient];
+  if (input.knownPeerRecipient) return candidates;
   const configuredLeadName = input.configuredLeadName?.trim() || null;
   const isConfiguredLeadRecipient =
     Boolean(configuredLeadName) &&
     configuredLeadName?.toLowerCase() === explicitRecipient.toLowerCase();
 
-  if (isOpenCodeLeadReplyRecipientAlias(explicitRecipient) || isConfiguredLeadRecipient) {
+  if (
+    classifyOpenCodeDeliveryReplyContract(explicitRecipient) === 'lead_reply' ||
+    isOpenCodeLeadReplyRecipientAlias(explicitRecipient) || isConfiguredLeadRecipient
+  ) {
     if (configuredLeadName) {
       candidates.push(configuredLeadName);
     }

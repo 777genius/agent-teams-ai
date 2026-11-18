@@ -201,7 +201,46 @@
           "system": "Sistema"
         }
       },
-      "title": "Aspetto"
+      "title": "Aspetto",
+      "customThemes": {
+        "label": "Temi personalizzati",
+        "description": "Palette JSON con nome basate sul tema scuro o chiaro.",
+        "none": "Tema integrato",
+        "edit": "Modifica JSON",
+        "localOnly": "Temi, zoom e caratteri vengono salvati solo su questo dispositivo o browser.",
+        "editor": {
+          "title": "Modifica temi (JSON)",
+          "description": "Fino a 8 temi. I colori devono essere #RRGGBB. Si applica solo JSON valido; un array themes vuoto elimina tutti i temi.",
+          "cancel": "Annulla",
+          "save": "Salva temi",
+          "conflict": "I temi sono stati modificati in un'altra scheda. La bozza JSON è conservata: controllala o sovrascrivi esplicitamente i temi più recenti.",
+          "overwrite": "Sovrascrivi i temi recenti",
+          "invalidJson": "Sintassi JSON non valida",
+          "invalidTheme": "Palette del tema non valida. Controlla campi, colori e contrasto."
+        }
+      },
+      "uiScale": {
+        "label": "Scala dell’interfaccia",
+        "description": "Ridimensiona tutta l’app senza modificare lo zoom del sistema o del browser.",
+        "reset": "Ripristina"
+      },
+      "fontFamily": {
+        "label": "Carattere dell’interfaccia",
+        "description": "Scegli un carattere installato sul dispositivo. Editor e terminale mantengono i propri caratteri.",
+        "system": "Predefinito di sistema",
+        "other": "Altro carattere…",
+        "placeholder": "Nome del carattere installato",
+        "apply": "Applica",
+        "discover": "Mostra caratteri installati",
+        "loaded": "I caratteri installati sono stati aggiunti all’elenco.",
+        "unavailable": "Impossibile elencare i caratteri qui. Inserisci il nome manualmente.",
+        "empty": "Nessun carattere installato trovato. Inserisci il nome manualmente."
+      },
+      "textSize": {
+        "label": "Dimensione testo",
+        "description": "Modifica il testo senza cambiare lo zoom dell’interfaccia.",
+        "reset": "Ripristina"
+      }
     },
     "browserAccess": {
       "serverMode": {

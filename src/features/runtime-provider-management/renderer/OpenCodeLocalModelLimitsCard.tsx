@@ -228,7 +228,7 @@ export const OpenCodeLocalModelLimitsCard = ({
                   setErrorMessage(null);
                 }}
                 placeholder="128000"
-                className="h-8 bg-[var(--color-surface)] text-xs"
+                className="h-8 bg-[var(--color-form-control-bg)] text-xs"
                 disabled={saving}
               />
             </label>
@@ -249,7 +249,7 @@ export const OpenCodeLocalModelLimitsCard = ({
                   setErrorMessage(null);
                 }}
                 placeholder="32768"
-                className="h-8 bg-[var(--color-surface)] text-xs"
+                className="h-8 bg-[var(--color-form-control-bg)] text-xs"
                 disabled={saving}
               />
             </label>

@@ -10,6 +10,7 @@ import { createMemberWorkSyncBridge } from '@features/member-work-sync/preload';
 import { createOrganizationsBridge } from '@features/organizations/preload';
 import { createProjectFolderBridge } from '@features/project-folder/preload';
 import { createRecentProjectsBridge } from '@features/recent-projects/preload';
+import { createReviewFlowBridge } from '@features/review-flow/preload';
 import { createRuntimeProviderManagementBridge } from '@features/runtime-provider-management/preload';
 import { createTeamGroupChatsBridge } from '@features/team-group-chats/preload';
 import { createTeamImportBridge } from '@features/team-import/preload';
@@ -19,7 +20,7 @@ import { createTerminalWorkspaceBridge } from '@features/terminal-workspace/prel
 import { createTmuxInstallerBridge } from '@features/tmux-installer/preload';
 import { createTokenUsageBridge } from '@features/token-usage/preload';
 import { createWorkspaceTrustBridge } from '@features/workspace-trust/preload';
-import { WINDOW_ZOOM_FACTOR_CHANGED_CHANNEL } from '@shared/constants';
+import { WINDOW_SET_ZOOM_FACTOR_CHANNEL, WINDOW_ZOOM_FACTOR_CHANGED_CHANNEL } from '@shared/constants';
 import { parseTeamMemberRestartResult } from '@shared/types/teamMemberRestart';
 import { contextBridge, ipcRenderer, webUtils } from 'electron';
 
@@ -517,6 +518,7 @@ const electronAPI: ElectronAPI = {
     ipcRenderer,
   }),
   ...createRecentProjectsBridge(),
+  reviewFlow: createReviewFlowBridge(),
   teamGroupChats: createTeamGroupChatsBridge(),
   announcements: createAnnouncementsBridge(),
   gatewayProvider: createGatewayProviderBridge(),
@@ -764,6 +766,7 @@ const electronAPI: ElectronAPI = {
 
   // Zoom factor sync (used for traffic-light-safe layout)
   getZoomFactor: async (): Promise<number> => currentZoomFactor,
+  setZoomFactor: (factor: number): Promise<number> => ipcRenderer.invoke(WINDOW_SET_ZOOM_FACTOR_CHANNEL, factor),
   onZoomFactorChanged: (callback: (zoomFactor: number) => void): (() => void) => {
     const listener = (_event: Electron.IpcRendererEvent, zoomFactor: unknown): void => {
       if (typeof zoomFactor !== 'number' || !Number.isFinite(zoomFactor)) return;

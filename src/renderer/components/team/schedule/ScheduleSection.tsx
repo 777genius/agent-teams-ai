@@ -21,10 +21,12 @@ import { useShallow } from 'zustand/react/shallow';
 
 import { LaunchTeamDialogLoadingFallback } from '../dialogs/LaunchTeamDialogLoadingFallback';
 
+import { ScheduleAssignmentSummary } from './ScheduleAssignmentSummary';
 import { ScheduleEmptyState } from './ScheduleEmptyState';
 import { ScheduleRunLogDialog } from './ScheduleRunLogDialog';
 import { ScheduleRunRow } from './ScheduleRunRow';
 import { ScheduleStatusBadge } from './ScheduleStatusBadge';
+import { useScheduleActions } from './useScheduleActions';
 
 const LaunchTeamDialog = lazy(() =>
   import('../dialogs/LaunchTeamDialog').then((m) => ({ default: m.LaunchTeamDialog }))
@@ -61,9 +63,11 @@ const ScheduleRow = ({
   onResume,
   onTriggerNow,
 }: ScheduleRowProps): React.JSX.Element => {
-  const { t } = useAppTranslation('team');
+  const { t, resolvedLanguage } = useAppTranslation('team');
+  const { t: tCommon } = useAppTranslation('common');
   const [expanded, setExpanded] = useState(false);
   const [selectedRun, setSelectedRun] = useState<ScheduleRun | null>(null);
+  const [menuOpen, setMenuOpen] = useState(false);
   const runs = useStore(useShallow((s) => s.scheduleRuns[schedule.id] ?? []));
   const runsLoading = useStore((s) => s.scheduleRunsLoading[schedule.id] ?? false);
   const fetchRunHistory = useStore((s) => s.fetchRunHistory);
@@ -79,44 +83,47 @@ const ScheduleRow = ({
   return (
     <div className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface)]">
       {/* Header row */}
-      <div className="flex items-center gap-2 px-3 py-2">
+      <div className="flex flex-wrap items-center gap-x-2 gap-y-1 px-3 py-2">
         {/* Expand toggle */}
         <button
           type="button"
           className="shrink-0 text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)]"
           onClick={handleExpand}
+          aria-expanded={expanded}
+          aria-label={schedule.label || getCronDescription(schedule.cronExpression, resolvedLanguage)}
         >
           {expanded ? <ChevronDown className="size-3.5" /> : <ChevronRight className="size-3.5" />}
         </button>
 
         {/* Info */}
-        <div className="min-w-0 flex-1">
+        <div className="min-w-0 flex-[1_1_12rem]">
           <div className="flex items-center gap-2">
             <span className="truncate text-xs font-medium text-[var(--color-text)]">
-              {schedule.label || getCronDescription(schedule.cronExpression)}
+              {schedule.label || getCronDescription(schedule.cronExpression, resolvedLanguage)}
             </span>
             <ScheduleStatusBadge status={schedule.status} />
           </div>
-          <div className="mt-0.5 flex items-center gap-3 text-[11px] text-[var(--color-text-muted)]">
-            {schedule.label ? <span>{getCronDescription(schedule.cronExpression)}</span> : null}
+          <div className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-[var(--color-text-muted)]">
+            {schedule.label ? <span>{getCronDescription(schedule.cronExpression, resolvedLanguage)}</span> : null}
             <Tooltip>
               <TooltipTrigger asChild>
                 <span className="cursor-default">
-                  {t('schedule.nextRun', { next: formatNextRun(schedule.nextRunAt) })}
+                  {t('schedule.nextRun', { next: formatNextRun(schedule.nextRunAt, resolvedLanguage) })}
                 </span>
               </TooltipTrigger>
               {schedule.nextRunAt ? (
                 <TooltipContent side="top" className="text-xs">
-                  {new Date(schedule.nextRunAt).toLocaleString()}
+                  {new Date(schedule.nextRunAt).toLocaleString(resolvedLanguage)}
                 </TooltipContent>
               ) : null}
             </Tooltip>
             <span>{schedule.timezone}</span>
           </div>
+          <ScheduleAssignmentSummary schedule={schedule} />
         </div>
 
         {/* Actions */}
-        <div className="flex shrink-0 items-center gap-1">
+        <div className="ml-auto flex shrink-0 items-center gap-1">
           <Tooltip>
             <TooltipTrigger asChild>
               <Button
@@ -124,6 +131,7 @@ const ScheduleRow = ({
                 size="sm"
                 className="size-7 p-0"
                 onClick={() => onTriggerNow(schedule.id)}
+                aria-label={t('schedule.actions.runNow')}
                 disabled={schedule.status !== 'active'}
               >
                 <Zap className="size-3.5" />
@@ -132,9 +140,9 @@ const ScheduleRow = ({
             <TooltipContent side="top">{t('schedule.actions.runNow')}</TooltipContent>
           </Tooltip>
 
-          <Popover>
+          <Popover open={menuOpen} onOpenChange={setMenuOpen}>
             <PopoverTrigger asChild>
-              <Button variant="ghost" size="sm" className="size-7 p-0">
+              <Button variant="ghost" size="sm" className="size-7 p-0" aria-label={tCommon('actions.moreActions')}>
                 <MoreHorizontal className="size-3.5" />
               </Button>
             </PopoverTrigger>
@@ -142,7 +150,7 @@ const ScheduleRow = ({
               <button
                 type="button"
                 className="flex w-full items-center rounded-sm px-2 py-1.5 text-xs text-[var(--color-text)] hover:bg-[var(--color-surface-raised)]"
-                onClick={() => onEdit(schedule)}
+                onClick={() => { setMenuOpen(false); onEdit(schedule); }}
               >
                 <Pencil className="mr-2 size-3.5" />
                 {t('schedule.actions.edit')}
@@ -151,7 +159,7 @@ const ScheduleRow = ({
                 <button
                   type="button"
                   className="flex w-full items-center rounded-sm px-2 py-1.5 text-xs text-[var(--color-text)] hover:bg-[var(--color-surface-raised)]"
-                  onClick={() => onPause(schedule.id)}
+                  onClick={() => { setMenuOpen(false); onPause(schedule.id); }}
                 >
                   <Pause className="mr-2 size-3.5" />
                   {t('schedule.actions.pause')}
@@ -160,7 +168,7 @@ const ScheduleRow = ({
                 <button
                   type="button"
                   className="flex w-full items-center rounded-sm px-2 py-1.5 text-xs text-[var(--color-text)] hover:bg-[var(--color-surface-raised)]"
-                  onClick={() => onResume(schedule.id)}
+                  onClick={() => { setMenuOpen(false); onResume(schedule.id); }}
                 >
                   <Play className="mr-2 size-3.5" />
                   {t('schedule.actions.resume')}
@@ -169,7 +177,7 @@ const ScheduleRow = ({
               <button
                 type="button"
                 className="flex w-full items-center rounded-sm px-2 py-1.5 text-xs text-red-400 hover:bg-[var(--color-surface-raised)]"
-                onClick={() => onDelete(schedule.id)}
+                onClick={() => { setMenuOpen(false); onDelete(schedule.id); }}
               >
                 <Trash2 className="mr-2 size-3.5" />
                 {t('schedule.actions.delete')}
@@ -217,17 +225,11 @@ const ScheduleRow = ({
 
 export const ScheduleSection = ({ teamName }: ScheduleSectionProps): React.JSX.Element => {
   const { t } = useAppTranslation('team');
-  const { schedules, pauseSchedule, resumeSchedule, deleteSchedule, triggerNow, fetchSchedules } =
-    useStore(
-      useShallow((s) => ({
-        schedules: s.schedules.filter((sch) => sch.teamName === teamName),
-        pauseSchedule: s.pauseSchedule,
-        resumeSchedule: s.resumeSchedule,
-        deleteSchedule: s.deleteSchedule,
-        triggerNow: s.triggerNow,
-        fetchSchedules: s.fetchSchedules,
-      }))
-    );
+  const { schedules, fetchSchedules } = useStore(useShallow((s) => ({
+    schedules: s.schedules.filter((sch) => sch.teamName === teamName),
+    fetchSchedules: s.fetchSchedules,
+  })));
+  const { feedback, act: actOnSchedule } = useScheduleActions();
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingSchedule, setEditingSchedule] = useState<Schedule | null>(null);
@@ -252,28 +254,6 @@ export const ScheduleSection = ({ teamName }: ScheduleSectionProps): React.JSX.E
     setEditingSchedule(null);
   }, []);
 
-  const handleDelete = useCallback(
-    async (id: string) => {
-      try {
-        await deleteSchedule(id);
-      } catch (err) {
-        console.error('Failed to delete schedule:', err);
-      }
-    },
-    [deleteSchedule]
-  );
-
-  const handleTriggerNow = useCallback(
-    async (id: string) => {
-      try {
-        await triggerNow(id);
-      } catch (err) {
-        console.error('Failed to trigger schedule:', err);
-      }
-    },
-    [triggerNow]
-  );
-
   return (
     <div className="space-y-2 p-3">
       {/* Header with create button */}
@@ -292,6 +272,12 @@ export const ScheduleSection = ({ teamName }: ScheduleSectionProps): React.JSX.E
         </Button>
       </div>
 
+      {feedback ? (
+        <p role={feedback.kind === 'error' ? 'alert' : 'status'} className={`rounded border px-2 py-1.5 text-xs ${feedback.kind === 'error' ? 'border-red-500/30 text-red-400' : 'border-[var(--color-border)] text-[var(--color-text-secondary)]'}`}>
+          {feedback.message}
+        </p>
+      ) : null}
+
       {/* Schedule list or empty state */}
       {schedules.length === 0 ? (
         <ScheduleEmptyState />
@@ -302,10 +288,10 @@ export const ScheduleSection = ({ teamName }: ScheduleSectionProps): React.JSX.E
               key={schedule.id}
               schedule={schedule}
               onEdit={handleEdit}
-              onDelete={(id) => void handleDelete(id)}
-              onPause={(id) => void pauseSchedule(id)}
-              onResume={(id) => void resumeSchedule(id)}
-              onTriggerNow={(id) => void handleTriggerNow(id)}
+              onDelete={(id) => void actOnSchedule('delete', id)}
+              onPause={(id) => void actOnSchedule('pause', id)}
+              onResume={(id) => void actOnSchedule('resume', id)}
+              onTriggerNow={(id) => void actOnSchedule('run', id)}
             />
           ))}
         </div>

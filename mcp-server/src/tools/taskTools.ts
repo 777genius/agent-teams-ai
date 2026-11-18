@@ -34,7 +34,7 @@ const ALWAYS_LOAD_META = {
 
 const relationshipTypeSchema = z.enum(['blocked-by', 'blocks', 'related']);
 const inventoryTaskStatusSchema = z.enum(['pending', 'in_progress', 'completed']);
-const reviewStateSchema = z.enum(['none', 'review', 'needsFix', 'approved']);
+const reviewStateSchema = z.enum(['none', 'review', 'needsFix', 'reviewed', 'approved']);
 const inventoryKanbanColumnSchema = z.enum(['review', 'approved']);
 const taskMutationActorSchema = z
   .string()

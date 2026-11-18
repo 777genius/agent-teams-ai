@@ -1,8 +1,41 @@
 import { isLegacyComposerDraftStorageKey } from '@renderer/utils/composerDraftIdentity';
 import { del, get, keys, set } from 'idb-keyval';
 
+import { isCreateTeamDraftGenerationCurrent } from './createTeamDraftGeneration';
+
 const DRAFT_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
 const DRAFT_KEY_PREFIX = 'draft:';
+
+// Only in-progress team creation fields are retained until explicit creation/discard.
+// Other drafts retain the existing 24-hour policy.
+const RETAINED_CREATE_KEYS = new Set([
+  'createTeam:description',
+  'createTeam:prompt',
+  'createTeam:prompt:chips',
+]);
+const isRetainedCreateKey = (key: string): boolean => RETAINED_CREATE_KEYS.has(key);
+
+// Creation text/chips are separate legacy keys. Serialize only those mutations
+// so a delayed edit cannot resurrect them after successful creation or discard.
+const retainedMutations = new Map<string, Promise<void>>();
+function orderedCreateMutation(
+  key: string,
+  operation: () => Promise<void>,
+  generation?: number
+): Promise<void> {
+  if (!isRetainedCreateKey(key)) return operation();
+  const previous = retainedMutations.get(key) ?? Promise.resolve();
+  const result = previous.then(() => {
+    if (generation !== undefined && !isCreateTeamDraftGenerationCurrent(generation)) return;
+    return operation();
+  });
+  const settled = result.then(() => undefined, () => undefined);
+  retainedMutations.set(key, settled);
+  void settled.then(() => {
+    if (retainedMutations.get(key) === settled) retainedMutations.delete(key);
+  });
+  return result;
+}
 
 interface StoredDraft {
   value: string;
@@ -32,7 +65,7 @@ function fallbackLoad(key: string): string | null {
   const fullKey = `${DRAFT_KEY_PREFIX}${key}`;
   const stored = fallbackStore.get(fullKey);
   if (!stored) return null;
-  if (Date.now() - stored.timestamp > DRAFT_TTL_MS) {
+  if (!isRetainedCreateKey(key) && Date.now() - stored.timestamp > DRAFT_TTL_MS) {
     fallbackStore.delete(fullKey);
     return null;
   }
@@ -46,13 +79,17 @@ function fallbackDelete(key: string): void {
 function fallbackCleanupExpired(): void {
   const now = Date.now();
   for (const [fullKey, stored] of fallbackStore.entries()) {
-    if (!isLegacyComposerDraftStorageKey(fullKey) && now - stored.timestamp > DRAFT_TTL_MS) {
+    if (
+      !isRetainedCreateKey(fullKey.slice(DRAFT_KEY_PREFIX.length)) &&
+      !isLegacyComposerDraftStorageKey(fullKey) &&
+      now - stored.timestamp > DRAFT_TTL_MS
+    ) {
       fallbackStore.delete(fullKey);
     }
   }
 }
 
-async function saveDraft(key: string, value: string): Promise<void> {
+async function saveDraftUnordered(key: string, value: string): Promise<void> {
   if (idbUnavailable) {
     fallbackSave(key, value);
     return;
@@ -66,13 +103,18 @@ async function saveDraft(key: string, value: string): Promise<void> {
   }
 }
 
+async function saveDraft(key: string, value: string, generation?: number): Promise<void> {
+  return orderedCreateMutation(key, () => saveDraftUnordered(key, value), generation);
+}
+
 async function loadDraft(key: string): Promise<string | null> {
+  if (isRetainedCreateKey(key)) await retainedMutations.get(key);
   if (idbUnavailable) return fallbackLoad(key);
   try {
     const stored = await get<StoredDraft>(`${DRAFT_KEY_PREFIX}${key}`);
     if (!stored) return null;
     const age = Date.now() - stored.timestamp;
-    if (age > DRAFT_TTL_MS) {
+    if (!isRetainedCreateKey(key) && age > DRAFT_TTL_MS) {
       void deleteDraft(key);
       return null;
     }
@@ -83,7 +125,7 @@ async function loadDraft(key: string): Promise<string | null> {
   }
 }
 
-async function deleteDraft(key: string): Promise<void> {
+async function deleteDraftUnordered(key: string): Promise<void> {
   if (idbUnavailable) {
     fallbackDelete(key);
     return;
@@ -94,6 +136,10 @@ async function deleteDraft(key: string): Promise<void> {
     markIdbUnavailable();
     fallbackDelete(key);
   }
+}
+
+async function deleteDraft(key: string, generation?: number): Promise<void> {
+  return orderedCreateMutation(key, () => deleteDraftUnordered(key), generation);
 }
 
 async function cleanupExpired(): Promise<void> {
@@ -107,6 +153,7 @@ async function cleanupExpired(): Promise<void> {
       (k): k is IDBValidKey & string =>
         typeof k === 'string' &&
         k.startsWith(DRAFT_KEY_PREFIX) &&
+        !isRetainedCreateKey(k.slice(DRAFT_KEY_PREFIX.length)) &&
         !isLegacyComposerDraftStorageKey(k)
     );
     const now = Date.now();

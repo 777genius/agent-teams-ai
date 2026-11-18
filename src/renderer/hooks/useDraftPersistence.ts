@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
+import { currentCreateTeamDraftGeneration } from '@renderer/services/createTeamDraftGeneration';
 import { draftStorage } from '@renderer/services/draftStorage';
 
 interface UseDraftPersistenceOptions {
@@ -13,6 +14,8 @@ interface UseDraftPersistenceResult {
   value: string;
   setValue: (v: string) => void;
   isSaved: boolean;
+  /** True once persisted text has been read (or the read has failed). */
+  isLoaded: boolean;
   clearDraft: () => void;
 }
 
@@ -24,13 +27,16 @@ export function useDraftPersistence({
 }: UseDraftPersistenceOptions): UseDraftPersistenceResult {
   const [value, setValueState] = useState(initialValue ?? '');
   const [isSaved, setIsSaved] = useState(false);
+  const [isLoaded, setIsLoaded] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pendingValueRef = useRef<{ key: string; value: string } | null>(null);
   const keyRef = useRef(key);
+  const generationRef = useRef(key.startsWith('createTeam:') ? currentCreateTeamDraftGeneration() : undefined);
   const mountedRef = useRef(true);
   const editRevisionRef = useRef(0);
 
   useEffect(() => {
+    if (keyRef.current !== key) editRevisionRef.current++;
     keyRef.current = key;
   }, [key]);
 
@@ -50,9 +56,9 @@ export function useDraftPersistence({
       const pending = pendingValueRef.current;
       pendingValueRef.current = null;
       if (pending.value.length === 0) {
-        void draftStorage.deleteDraft(pending.key);
+        void draftStorage.deleteDraft(pending.key, generationRef.current);
       } else {
-        void draftStorage.saveDraft(pending.key, pending.value);
+        void draftStorage.saveDraft(pending.key, pending.value, generationRef.current);
       }
     }
   }, []);
@@ -67,18 +73,25 @@ export function useDraftPersistence({
     setValueState(initialValue ?? '');
 
     setIsSaved(false);
+    setIsLoaded(false);
 
-    if (!enabled)
+    if (!enabled) {
+      setIsLoaded(true);
       return () => {
         cancelled = true;
       };
+    }
     const loadRevision = editRevisionRef.current;
     void (async () => {
-      const draft = await draftStorage.loadDraft(key);
-      if (cancelled || editRevisionRef.current !== loadRevision) return;
-      if (draft != null && initialValue == null) {
-        setValueState(draft);
-        setIsSaved(true);
+      try {
+        const draft = await draftStorage.loadDraft(key);
+        if (cancelled || editRevisionRef.current !== loadRevision) return;
+        if (draft != null && initialValue == null) {
+          setValueState(draft);
+          setIsSaved(true);
+        }
+      } finally {
+        if (!cancelled) setIsLoaded(true);
       }
     })();
 
@@ -115,10 +128,13 @@ export function useDraftPersistence({
         if (pending == null) return;
 
         if (pending.value.length === 0) {
-          void draftStorage.deleteDraft(pending.key);
+          void draftStorage.deleteDraft(pending.key, generationRef.current);
         } else {
-          void draftStorage.saveDraft(pending.key, pending.value).then(() => {
-            if (mountedRef.current) setIsSaved(true);
+          const saveRevision = editRevisionRef.current;
+          void draftStorage.saveDraft(pending.key, pending.value, generationRef.current).then(() => {
+            if (mountedRef.current && editRevisionRef.current === saveRevision && keyRef.current === pending.key) {
+              setIsSaved(true);
+            }
           });
         }
       }, debounceMs);
@@ -136,9 +152,9 @@ export function useDraftPersistence({
     setValueState('');
     setIsSaved(false);
     if (enabled) {
-      void draftStorage.deleteDraft(keyRef.current);
+      void draftStorage.deleteDraft(keyRef.current, generationRef.current);
     }
   }, [enabled]);
 
-  return { value, setValue, isSaved, clearDraft };
+  return { value, setValue, isSaved, isLoaded, clearDraft };
 }

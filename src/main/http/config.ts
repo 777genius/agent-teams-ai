@@ -82,6 +82,7 @@ export function registerConfigRoutes(
       } else {
         applyConfig();
       }
+      await configManager.waitForPersistence();
       const updatedConfig = configManager.getConfig();
       return { success: true, data: updatedConfig };
     } catch (error) {

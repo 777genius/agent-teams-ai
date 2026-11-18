@@ -48,14 +48,33 @@ export async function confirm(opts: {
   cancelLabel?: string;
   variant?: 'default' | 'danger';
   mode?: 'confirm' | 'info';
+  /** An owner may cancel only its own pending confirmation (e.g. editor unmount). */
+  signal?: AbortSignal;
 }): Promise<boolean> {
   return new Promise<boolean>((resolve) => {
-    // If a previous dialog is open, resolve it as cancelled
-    if (globalResolver) {
-      globalResolver(false);
+    if (opts.signal?.aborted) {
+      resolve(false);
+      return;
     }
+    // If another confirmation owns the singleton, finish it as canceled.
+    globalResolver?.(false);
 
-    globalResolver = resolve;
+    let settled = false;
+    const finish = (accepted: boolean): void => {
+      if (settled) return;
+      settled = true;
+      opts.signal?.removeEventListener('abort', onAbort);
+      resolve(accepted);
+    };
+    const onAbort = (): void => {
+      // The old owner must not dismiss a newer, unrelated confirmation.
+      if (globalResolver !== finish) return;
+      globalResolver = null;
+      globalSetState?.(initialState);
+      finish(false);
+    };
+    globalResolver = finish;
+    opts.signal?.addEventListener('abort', onAbort, { once: true });
     globalSetState?.({
       isOpen: true,
       title: opts.title,
@@ -96,10 +115,40 @@ export const ConfirmDialog = (): React.JSX.Element | null => {
   useEffect(() => {
     if (!state.isOpen) return;
     const handleKeyDown = (e: KeyboardEvent): void => {
-      if (e.key === 'Escape') close(false);
+      if (e.key === 'Escape') {
+        close(false);
+        return;
+      }
+      // aria-modal must keep Tab inside the confirmation so the background
+      // team form cannot be edited during an unresolved destructive action.
+      if (e.key !== 'Tab') return;
+      const dialog = dialogRef.current;
+      const controls = dialog?.querySelectorAll<HTMLButtonElement>(
+        'button:not([disabled]):not([tabindex="-1"])'
+      );
+      if (!dialog || !controls?.length) return;
+      const first = controls[0];
+      const last = controls[controls.length - 1];
+      const outside = !dialog.contains(document.activeElement);
+      if (e.shiftKey ? outside || document.activeElement === first : outside || document.activeElement === last) {
+        e.preventDefault();
+        (e.shiftKey ? last : first).focus();
+      }
+    };
+    // Closing a Select can restore focus to its trigger after this modal mounts.
+    // Keep the background inert even when that late focus restoration occurs.
+    const handleFocusIn = (event: FocusEvent): void => {
+      const dialog = dialogRef.current;
+      if (dialog && event.target instanceof Node && !dialog.contains(event.target)) {
+        dialog.querySelector<HTMLButtonElement>('[data-confirm-btn]')?.focus();
+      }
     };
     document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
+    document.addEventListener('focusin', handleFocusIn);
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+      document.removeEventListener('focusin', handleFocusIn);
+    };
   }, [state.isOpen, close]);
 
   // Auto-focus confirm button

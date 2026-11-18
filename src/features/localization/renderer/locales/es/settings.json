@@ -201,7 +201,46 @@
           "system": "Sistema"
         }
       },
-      "title": "Apariencia"
+      "title": "Apariencia",
+      "customThemes": {
+        "label": "Temas personalizados",
+        "description": "Paletas JSON con nombre basadas en el tema claro u oscuro.",
+        "none": "Tema integrado",
+        "edit": "Editar JSON",
+        "localOnly": "Los temas, el zoom y las fuentes se guardan solo en este dispositivo o navegador.",
+        "editor": {
+          "title": "Editar temas (JSON)",
+          "description": "Edita hasta 8 temas. Usa colores #RRGGBB. Solo se aplica JSON válido; un arreglo themes vacío elimina todos los temas.",
+          "cancel": "Cancelar",
+          "save": "Guardar temas",
+          "conflict": "Los temas cambiaron en otra pestaña. Tu borrador JSON se conserva; revísalo o sobrescribe expresamente los temas más recientes.",
+          "overwrite": "Sobrescribir temas recientes",
+          "invalidJson": "Sintaxis JSON no válida",
+          "invalidTheme": "Paleta de tema no válida. Comprueba los campos, colores y el contraste."
+        }
+      },
+      "uiScale": {
+        "label": "Escala de la interfaz",
+        "description": "Escala toda la aplicación sin cambiar el zoom del sistema ni del navegador.",
+        "reset": "Restablecer"
+      },
+      "fontFamily": {
+        "label": "Fuente de la interfaz",
+        "description": "Elige una fuente instalada en este dispositivo. El editor y la terminal conservan sus fuentes.",
+        "system": "Fuente del sistema",
+        "other": "Otra fuente…",
+        "placeholder": "Nombre de la fuente instalada",
+        "apply": "Aplicar",
+        "discover": "Buscar fuentes instaladas",
+        "loaded": "Fuentes instaladas añadidas a la lista.",
+        "unavailable": "No se pueden consultar las fuentes aquí. Escribe el nombre manualmente.",
+        "empty": "No se encontraron fuentes instaladas. Escribe el nombre manualmente."
+      },
+      "textSize": {
+        "label": "Tamaño del texto",
+        "description": "Cambia el texto sin modificar el zoom general de la interfaz.",
+        "reset": "Restablecer"
+      }
     },
     "browserAccess": {
       "serverMode": {

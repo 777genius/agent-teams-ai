@@ -2,7 +2,10 @@ import {
   validateTeammateName,
   validateTeamName,
 } from '@main/services/team/TeamIdentifierValidation';
-import { extractUserFlags, PROTECTED_CLI_FLAGS } from '@shared/utils/cliArgsParser';
+import {
+  findOptionMissingValue,
+  findProtectedUserFlags,
+} from '@shared/utils/cliArgsParser';
 import {
   formatEffortLevelListForProvider,
   isTeamEffortLevelForProvider,
@@ -30,6 +33,20 @@ const PROVIDER_BACKEND_ERROR =
 
 export class TeamRequestValidationError extends Error {
   readonly name = 'TeamRequestValidationError';
+}
+
+/** Reject ambiguous launch requests before admission can replay persisted work. */
+export function validateBootstrapOnlyLaunchRequest(input: {
+  bootstrapOnly?: unknown;
+  prompt?: unknown;
+}): string | null {
+  if (input.bootstrapOnly !== undefined && input.bootstrapOnly !== true) {
+    return 'bootstrapOnly must be true when provided';
+  }
+  if (input.bootstrapOnly === true && typeof input.prompt === 'string' && input.prompt.trim()) {
+    return 'Bootstrap-only launch must not contain a work prompt';
+  }
+  return null;
 }
 
 export function assertProvisioningTeamName(value: unknown): string {
@@ -106,15 +123,32 @@ export function assertOptionalExtraCliArgs(value: unknown): string | undefined {
     throw new TeamRequestValidationError('extraCliArgs too long (max 1024)');
   }
 
-  const protectedFlags = extractUserFlags(extraCliArgs).filter((flag) =>
-    PROTECTED_CLI_FLAGS.has(flag)
-  );
+  const protectedFlags = findProtectedUserFlags(extraCliArgs);
   if (protectedFlags.length > 0) {
     throw new TeamRequestValidationError(
       `extraCliArgs contains app-managed flags: ${[...new Set(protectedFlags)].join(', ')}`
     );
   }
+  const missingValue = findOptionMissingValue(extraCliArgs);
+  if (missingValue) {
+    throw new TeamRequestValidationError(`extraCliArgs ends with ${missingValue} but no value`);
+  }
   return extraCliArgs;
+}
+
+/**
+ * The same fail-closed guard as assertOptionalExtraCliArgs, for desktop IPC handlers
+ * that return an error result instead of throwing.
+ */
+export function checkOptionalExtraCliArgs(
+  value: unknown
+): { ok: true; value: string | undefined } | { ok: false; error: string } {
+  try {
+    return { ok: true, value: assertOptionalExtraCliArgs(value) };
+  } catch (error) {
+    if (error instanceof TeamRequestValidationError) return { ok: false, error: error.message };
+    throw error;
+  }
 }
 
 export function assertOptionalEffort(
@@ -249,6 +283,8 @@ export function parseCreateMembers(
 
 export function parseLaunchRequest(teamName: string, body: unknown): TeamLaunchRequest {
   const payload = body && typeof body === 'object' ? (body as Record<string, unknown>) : {};
+  const bootstrapError = validateBootstrapOnlyLaunchRequest(payload);
+  if (bootstrapError) throw new TeamRequestValidationError(bootstrapError);
   const providerId = payload.providerId == null ? undefined : parseProviderId(payload.providerId);
   const prompt = assertOptionalString(payload.prompt, 'prompt');
   const providerBackendId = parseLaunchProviderBackendId(providerId, payload.providerBackendId);
@@ -276,6 +312,7 @@ export function parseLaunchRequest(teamName: string, body: unknown): TeamLaunchR
     ...(prompt && {
       prompt,
     }),
+    ...(payload.bootstrapOnly === true ? { bootstrapOnly: true as const } : {}),
     ...(model && {
       model,
     }),
@@ -403,6 +440,9 @@ export function parseDraftLaunchCreateRequest(
   body: unknown
 ): TeamCreateRequest {
   const payload = getObjectPayload(body);
+  const bootstrapError = validateBootstrapOnlyLaunchRequest(payload);
+  if (bootstrapError) throw new TeamRequestValidationError(bootstrapError);
+  if (payload.bootstrapOnly) throw new TeamRequestValidationError('Finish team setup first');
   normalizeRuntimeSelectionVersion(payload.runtimeSelectionVersion);
   const teamName = Object.hasOwn(payload, 'teamName')
     ? assertProvisioningTeamName(payload.teamName)

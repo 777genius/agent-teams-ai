@@ -25,6 +25,12 @@ vi.mock('@renderer/api', () => ({
       invalidateStatus: vi.fn(),
       onProgress: vi.fn(() => vi.fn()),
     },
+    codexRuntime: {
+      getStatus: vi.fn(),
+      install: vi.fn(),
+      invalidateStatus: vi.fn(),
+      onProgress: vi.fn(() => vi.fn()),
+    },
     // Minimal stubs for other api methods referenced by store slices
     getProjects: vi.fn(() => Promise.resolve([])),
     getSessions: vi.fn(() => Promise.resolve([])),
@@ -81,6 +87,7 @@ import {
 } from '@shared/types/cliInstaller';
 import { createDefaultCliExtensionCapabilities } from '@shared/utils/providerExtensionCapabilities';
 
+import type { CodexRuntimeStatus } from '@features/codex-runtime-installer/contracts';
 import type { CliInstallationStatus } from '@shared/types';
 
 function createMultimodelProvider(
@@ -250,6 +257,9 @@ describe('cliInstallerSlice', () => {
       openCodeRuntimeStatus: null,
       openCodeRuntimeStatusLoading: false,
       openCodeRuntimeError: null,
+      codexRuntimeStatus: null,
+      codexRuntimeStatusLoading: false,
+      codexRuntimeError: null,
     });
   });
 
@@ -1319,6 +1329,96 @@ describe('cliInstallerSlice', () => {
       expect(api.cliInstaller.getProviderStatus).not.toHaveBeenCalled();
     });
 
+    it('does not retry Codex from an abandoned bootstrap that settles after cleanup', async () => {
+      vi.useFakeTimers();
+      const codex = createMultimodelProvider({
+        providerId: 'codex',
+        displayName: 'Codex',
+        modelCatalogRefreshState: 'loading',
+        runtimeCapabilities: { modelCatalog: { dynamic: true, source: 'app-server' } },
+      });
+      const metadata = createDeferredValue<CliInstallationStatus>();
+      vi.mocked(api.cliInstaller.getStatus).mockReturnValueOnce(metadata.promise);
+      let mounted = true;
+      const bootstrapping = useStore.getState().bootstrapCliStatus({
+        multimodelEnabled: true,
+        providerStatusMode: 'defer',
+        isActive: () => mounted,
+      });
+      mounted = false;
+      metadata.resolve(createMultimodelStatus([codex]));
+      await bootstrapping;
+      await vi.advanceTimersByTimeAsync(5_100);
+      expect(api.cliInstaller.getProviderStatus).not.toHaveBeenCalled();
+    });
+
+    it('cancels pending Codex startup retry but allows a subsequent active bootstrap', async () => {
+      vi.useFakeTimers();
+      const codex = createMultimodelProvider({
+        providerId: 'codex',
+        displayName: 'Codex',
+        modelCatalogRefreshState: 'loading',
+        runtimeCapabilities: { modelCatalog: { dynamic: true, source: 'app-server' } },
+      });
+      vi.mocked(api.cliInstaller.getStatus).mockResolvedValue(createMultimodelStatus([codex]));
+      vi.mocked(api.cliInstaller.getProviderStatus).mockResolvedValue(
+        createMultimodelProvider({
+          providerId: 'codex',
+          displayName: 'Codex',
+          modelCatalogRefreshState: 'ready',
+        })
+      );
+      let mounted = true;
+      const options = {
+        multimodelEnabled: true,
+        providerStatusMode: 'defer' as const,
+        isActive: () => mounted,
+      };
+      await useStore.getState().bootstrapCliStatus(options);
+      mounted = false;
+      await vi.advanceTimersByTimeAsync(5_100);
+      expect(api.cliInstaller.getProviderStatus).not.toHaveBeenCalled();
+
+      mounted = true;
+      await useStore.getState().bootstrapCliStatus(options);
+      await vi.advanceTimersByTimeAsync(5_100);
+      expect(api.cliInstaller.getProviderStatus).toHaveBeenCalledTimes(1);
+      expect(api.cliInstaller.getProviderStatus).toHaveBeenCalledWith('codex');
+    });
+
+    it('hands a pending Codex catalog retry to a newer active bootstrap', async () => {
+      vi.useFakeTimers();
+      const loadingCodex = createMultimodelProvider({
+        providerId: 'codex',
+        displayName: 'Codex',
+        modelCatalogRefreshState: 'loading',
+        runtimeCapabilities: { modelCatalog: { dynamic: true, source: 'app-server' } },
+      });
+      vi.mocked(api.cliInstaller.getStatus).mockResolvedValue(
+        createMultimodelStatus([loadingCodex])
+      );
+      vi.mocked(api.cliInstaller.getProviderStatus).mockResolvedValue(
+        createMultimodelProvider({
+          providerId: 'codex',
+          displayName: 'Codex',
+          modelCatalogRefreshState: 'ready',
+        })
+      );
+      let firstMounted = true;
+      await useStore.getState().bootstrapCliStatus({
+        providerStatusMode: 'defer',
+        isActive: () => firstMounted,
+      });
+      firstMounted = false;
+      await useStore.getState().bootstrapCliStatus({
+        providerStatusMode: 'defer',
+        isActive: () => true,
+      });
+      await vi.advanceTimersByTimeAsync(5_100);
+      expect(api.cliInstaller.getProviderStatus).toHaveBeenCalledTimes(1);
+      expect(api.cliInstaller.getProviderStatus).toHaveBeenCalledWith('codex');
+    });
+
     it('does not hydrate pending providers when startup asks to defer provider status checks', async () => {
       const mockStatus = createMultimodelStatus([
         createDeferredProvider('anthropic', 'Anthropic'),
@@ -1836,6 +1936,50 @@ describe('cliInstallerSlice', () => {
         'openrouter/openai/gpt-oss-20b:free',
       ]);
       expect(opencode?.modelCatalog?.models).toHaveLength(3);
+    });
+  });
+
+  describe('Codex runtime status invalidation', () => {
+    it('retires a pending native read and publishes only the status fetched after invalidation', async () => {
+      const pendingOld = createDeferredValue<CodexRuntimeStatus>();
+      const pendingFresh = createDeferredValue<CodexRuntimeStatus>();
+      vi.mocked(api.codexRuntime.getStatus)
+        .mockReturnValueOnce(pendingOld.promise)
+        .mockReturnValueOnce(pendingFresh.promise);
+      vi.mocked(api.codexRuntime.invalidateStatus).mockResolvedValue(undefined);
+
+      const oldRead = useStore.getState().fetchCodexRuntimeStatus();
+      expect(useStore.getState().codexRuntimeStatusLoading).toBe(true);
+      await useStore.getState().invalidateCodexRuntimeStatus();
+      const freshRead = useStore.getState().fetchCodexRuntimeStatus();
+      expect(api.codexRuntime.invalidateStatus).toHaveBeenCalledTimes(1);
+      expect(api.codexRuntime.getStatus).toHaveBeenCalledTimes(2);
+
+      const staleStatus: CodexRuntimeStatus = {
+        installed: false,
+        latestVersion: '0.1.0',
+        updateAvailable: true,
+        source: 'missing',
+        state: 'idle',
+      };
+      pendingOld.resolve(staleStatus);
+      await oldRead;
+      expect(useStore.getState().codexRuntimeStatus).toBeNull();
+      expect(useStore.getState().codexRuntimeStatusLoading).toBe(true);
+
+      const freshStatus: CodexRuntimeStatus = {
+        installed: true,
+        version: '0.2.0',
+        latestVersion: '0.2.0',
+        updateAvailable: false,
+        source: 'app-managed',
+        state: 'ready',
+      };
+      pendingFresh.resolve(freshStatus);
+      await freshRead;
+      expect(useStore.getState().codexRuntimeStatus).toEqual(freshStatus);
+      expect(useStore.getState().codexRuntimeStatusLoading).toBe(false);
+      expect(useStore.getState().codexRuntimeError).toBeNull();
     });
   });
 

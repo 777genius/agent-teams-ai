@@ -479,6 +479,7 @@ export const SendMessageDialog = ({
               value={member || null}
               onChange={(v) => setMember(v ?? '')}
               placeholder={t('sendMessage.selectMemberPlaceholder')}
+              unavailableLabel={t('messages.manualQueue.recipientUnavailable')}
               size="sm"
             />
           </div>

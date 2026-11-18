@@ -201,7 +201,46 @@
           "system": "시스템"
         }
       },
-      "title": "이름 *"
+      "title": "외관",
+      "customThemes": {
+        "label": "사용자 지정 테마",
+        "description": "라이트 또는 다크를 기반으로 한 이름 있는 JSON 색상 팔레트입니다.",
+        "none": "기본 테마",
+        "edit": "JSON 편집",
+        "localOnly": "테마, 확대/축소, 글꼴은 이 장치 또는 브라우저에만 저장됩니다.",
+        "editor": {
+          "title": "테마 편집(JSON)",
+          "description": "테마는 최대 8개이며 색상은 #RRGGBB 형식입니다. 유효한 JSON만 적용됩니다. 빈 themes 배열은 모든 테마를 삭제합니다.",
+          "cancel": "취소",
+          "save": "테마 저장",
+          "conflict": "다른 탭에서 테마가 변경되었습니다. JSON 초안은 유지됩니다. 내용을 확인하거나 최신 테마를 명시적으로 덮어쓰세요.",
+          "overwrite": "최신 테마 덮어쓰기",
+          "invalidJson": "JSON 문법이 올바르지 않습니다",
+          "invalidTheme": "테마 팔레트가 유효하지 않습니다. 필드, 색상, 대비를 확인하세요."
+        }
+      },
+      "uiScale": {
+        "label": "인터페이스 배율",
+        "description": "운영체제나 브라우저 배율을 변경하지 않고 앱 전체 크기를 조정합니다.",
+        "reset": "초기화"
+      },
+      "fontFamily": {
+        "label": "인터페이스 글꼴",
+        "description": "이 장치에 설치된 글꼴을 선택하세요. 편집기와 터미널 글꼴은 변경되지 않습니다.",
+        "system": "시스템 기본값",
+        "other": "다른 글꼴…",
+        "placeholder": "설치된 글꼴 이름",
+        "apply": "적용",
+        "discover": "설치된 글꼴 찾기",
+        "loaded": "설치된 글꼴을 목록에 추가했습니다.",
+        "unavailable": "여기서는 글꼴 목록을 확인할 수 없습니다. 이름을 직접 입력하세요.",
+        "empty": "설치된 글꼴을 찾지 못했습니다. 이름을 직접 입력하세요."
+      },
+      "textSize": {
+        "label": "텍스트 크기",
+        "description": "전체 UI 확대/축소와 별도로 텍스트 크기를 변경합니다.",
+        "reset": "초기화"
+      }
     },
     "browserAccess": {
       "serverMode": {
