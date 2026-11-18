@@ -124,6 +124,7 @@ import { MemberDetailDialog } from './members/MemberDetailDialog';
 import { type MemberActivityFilter, type MemberDetailTab } from './members/memberDetailTypes';
 import { deriveMetrics } from './context-metric-alias';
 import { TeamDeleteButton } from './TeamDeleteButton';
+import { toLogicalProjectLaunchRequest } from './projectTeamLaunchRequest';
 import { showTeamDeleteError } from './teamDeleteErrorDialog';
 import { runTeamDeleteOnce } from './teamDeleteProgress';
 import { resolvePinnedTeamActionTop } from './teamDetailLayout';
@@ -2066,26 +2067,17 @@ export const TeamDetailView = memo(function TeamDetailView({
     setSendDialogOpen(true);
   }, []);
 
-  const [projectLaunchError, setProjectLaunchError] = useState<string | null>(null);
   const openLaunchDialog = useCallback((mode: TeamLaunchDialogMode) => {
     if (retainedHistory && logicalTeamName) {
-      // Retained work is historical; never launch the newly shared logical
-      // runtime while the user is viewing a different physical history.
+      // Retained work is historical; never launch into a different history.
       useStore.getState().openTeamTab(logicalTeamName);
       return;
     }
-    if (logicalTeamName) {
-      void (async () => {
-        setProjectLaunchError(null);
-        if (mode === 'relaunch') await api.teams.stop(teamName);
-        await launchTeam({ teamName: logicalTeamName, cwd: data?.config.projectPath ?? '' });
-      })().catch((error: unknown) =>
-        setProjectLaunchError(error instanceof Error ? error.message : String(error))
-      );
-      return;
-    }
-    setLaunchDialogState({ open: true, mode });
-  }, [logicalTeamName, retainedHistory, teamName, data?.config.projectPath, launchTeam]);
+    // A project runtime MUST use the existing form: a bare launch silently
+    // defaults skipPermissions to true and bypasses the saved approval policy.
+    // Relaunch mode also avoids launch-mode's independent roster mutation.
+    setLaunchDialogState({ open: true, mode: logicalTeamName ? 'relaunch' : mode });
+  }, [logicalTeamName, retainedHistory]);
 
   const closeLaunchDialog = useCallback(() => {
     setLaunchDialogState((prev) => ({ ...prev, open: false }));
@@ -2100,7 +2092,7 @@ export const TeamDetailView = memo(function TeamDetailView({
         return;
       }
       await launchTeam(logicalTeamName
-        ? { ...request, teamName: logicalTeamName, cwd: data?.config.projectPath ?? request.cwd }
+        ? toLogicalProjectLaunchRequest(request, logicalTeamName, data?.config.projectPath)
         : request);
     },
     [launchTeam, logicalTeamName, retainedHistory, data?.config.projectPath]
@@ -2124,7 +2116,14 @@ export const TeamDetailView = memo(function TeamDetailView({
       onMembersSaved?: () => void
     ): Promise<void> => {
       if (logicalTeamName) {
-        throw new Error('Project teams relaunch through the logical-team admission action');
+        if (memberSettingsRelaunch) {
+          throw new Error('Edit the shared roster in the logical team before relaunching');
+        }
+        if (data?.isAlive) await api.teams.stop(teamName);
+        await launchTeam(toLogicalProjectLaunchRequest(
+          request, logicalTeamName, data?.config.projectPath
+        ));
+        return;
       }
       await executeTeamRelaunch({
         teamName,
@@ -3106,11 +3105,6 @@ export const TeamDetailView = memo(function TeamDetailView({
                   {t('detail.kanbanSafeData')}
                 </div>
               ) : null}
-              {projectLaunchError && (
-                <div role="alert" className="mb-3 rounded-md border border-red-500/40 bg-red-500/10 px-3 py-2 text-xs text-[var(--step-error-text)]">
-                  {projectLaunchError}
-                </div>
-              )}
               {reviewActionError ? (
                 <div className="mb-3 rounded-md border border-red-500/40 bg-red-500/10 px-3 py-2 text-xs text-[var(--step-error-text)]">
                   {reviewActionError}
@@ -3718,12 +3712,12 @@ export const TeamDetailView = memo(function TeamDetailView({
       {spawnStatusWatcher}
       {teamAgentRuntimeWatcher}
       {renderBody()}
-      {launchDialogOpen && !logicalTeamName && (
+      {launchDialogOpen && (
         <Suspense
           fallback={
             <LaunchTeamDialogLoadingFallback
               mode={launchDialogState.mode}
-              teamName={teamName}
+              teamName={logicalTeamName ?? teamName}
               onClose={closeLaunchDialog}
             />
           }
@@ -3731,7 +3725,7 @@ export const TeamDetailView = memo(function TeamDetailView({
           <LaunchTeamDialog
             mode={launchDialogState.mode}
             open={launchDialogOpen}
-            teamName={teamName}
+            teamName={logicalTeamName ?? teamName}
             members={isDraftTeamView ? EMPTY_RESOLVED_MEMBERS : membersWithLiveBranches}
             defaultProjectPath={launchDialogDefaultProjectPath}
             provisioningError={provisioningError}
