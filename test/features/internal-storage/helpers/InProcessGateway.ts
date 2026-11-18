@@ -65,7 +65,10 @@ export class InProcessGateway
     return this.op('mws.status.list', { teamName });
   }
 
-  statusDeleteMatching(teamName: string, targets: MemberWorkSyncStatusDeleteTarget[]): Promise<number> {
+  async statusDeleteMatching(
+    teamName: string,
+    targets: MemberWorkSyncStatusDeleteTarget[]
+  ): Promise<number> {
     return this.op('mws.status.deleteMatching', { teamName, targets });
   }
 

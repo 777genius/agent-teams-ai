@@ -15,8 +15,11 @@ import {
   decodeMemberWorkSyncStoredStatus,
   MemberWorkSyncStatusDecodeError,
 } from './decodeMemberWorkSyncStoredStatus';
+import { readMemberWorkSyncStatusRevision } from '../../core/domain/MemberWorkSyncStatusRevision';
+
 import { readIncarnationMismatch } from './memberWorkSyncPreparationDiagnostics';
 import { areSnapshotRecordSetsEquivalent } from './memberWorkSyncSqliteMappers';
+import { normalizeMemberKey } from './memberWorkSyncStoreIdentity';
 
 import type { MemberWorkSyncStoreSnapshot } from './JsonMemberWorkSyncStore';
 import type { MemberWorkSyncStorePaths } from './MemberWorkSyncStorePaths';
@@ -24,8 +27,10 @@ import type {
   MemberWorkSyncStatusDeleteTarget,
   MemberWorkSyncTeamSnapshotRecords,
 } from '@features/internal-storage/contracts/internalStorageContracts';
-import type { MemberWorkSyncStorageGateway } from '@features/internal-storage/main';
-import type { InternalStorageJsonReplica } from '@features/internal-storage/main/infrastructure/InternalStorageJsonReplica';
+import type {
+  InternalStorageJsonReplica,
+  MemberWorkSyncStorageGateway,
+} from '@features/internal-storage/main';
 
 export type StaleIncarnationHealOutcome = 'healed' | 'not_applicable' | 'refused' | 'failed';
 
@@ -154,7 +159,7 @@ async function planStatusFile(
   }
   // Legacy envelope: { schemaVersion: 1, members: { [memberKey]: status } }.
   if (value.schemaVersion !== 1 || !isRecord(value.members)) return;
-  const kept: Record<string, unknown> = {};
+  const kept: Record<string, unknown> = Object.create(null) as Record<string, unknown>;
   let removed = 0;
   for (const [memberKey, status] of Object.entries(value.members)) {
     const found = foreignIncarnationOf(input, memberKey, status);
@@ -207,6 +212,10 @@ async function planFiles(input: StaleIncarnationHealInput, plan: Plan): Promise<
 async function planPrimary(input: StaleIncarnationHealInput, plan: Plan): Promise<void> {
   const records = await input.gateway.listTeamSnapshot(input.teamName);
   const kept = records.statuses.filter((row) => {
+    if (row.memberKey !== normalizeMemberKey(row.memberName)) {
+      plan.refusal = 'primary_member_key_mismatch';
+      return true;
+    }
     let value: unknown;
     try {
       value = JSON.parse(row.statusJson);
@@ -239,6 +248,15 @@ async function planReplica(input: StaleIncarnationHealInput, plan: Plan): Promis
   const envelope = parseOptional(raw);
   if (!isRecord(envelope) || raw === null || envelope.schemaVersion !== 1) return;
   if (envelope.state !== 'clean' && envelope.state !== 'dirty') return;
+  if (
+    Object.hasOwn(envelope, 'incarnation') &&
+    (typeof envelope.incarnation !== 'string' ||
+      !envelope.incarnation.trim() ||
+      envelope.incarnation.trim() !== envelope.incarnation)
+  ) {
+    plan.refusal = 'replica_incarnation_invalid';
+    return;
+  }
   const wrapperForeign =
     typeof envelope.incarnation === 'string' && envelope.incarnation !== input.incarnation;
   // A legacy dirty fence carries no trusted candidate, so none of it is ever validated or merged.
@@ -269,6 +287,30 @@ async function planReplica(input: StaleIncarnationHealInput, plan: Plan): Promis
     return false;
   });
   if (!wrapperForeign && kept.length === statuses.length) return;
+  if (wrapperForeign) {
+    // A status without its own current incarnation is not safe to promote by
+    // changing a foreign replica wrapper. Validate the whole retained status.
+    for (const status of kept) {
+      try {
+        if (
+          !isRecord(status) ||
+          typeof status.memberName !== 'string' ||
+          readMemberWorkSyncStatusRevision(status)?.incarnation !== input.incarnation
+        ) {
+          plan.refusal = 'foreign_replica_unbound_status';
+          return;
+        }
+        decodeMemberWorkSyncStoredStatus(status, {
+          teamName: input.teamName,
+          memberName: status.memberName,
+          incarnation: input.incarnation,
+        });
+      } catch {
+        plan.refusal = 'foreign_replica_unbound_status';
+        return;
+      }
+    }
+  }
   if (envelope.state === 'dirty' && wrapperForeign) {
     // A dirty fence written under another identity is continuity evidence we cannot bridge.
     plan.refusal = 'dirty_replica_from_another_identity';

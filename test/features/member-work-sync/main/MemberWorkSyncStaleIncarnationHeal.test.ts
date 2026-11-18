@@ -523,7 +523,16 @@ describe('targeted self-heal of status rows left by an earlier team identity', (
     const read = authority.startRead({ teamName: TEAM, memberName: 'bob' });
     const result = await read.result;
     await read.settled;
-    expect(result).toMatchObject({ ok: true });
+    expect(result).toMatchObject({
+      ok: true,
+      snapshot: {
+        status: {
+          teamName: TEAM,
+          memberName: 'bob',
+          statusRevision: { incarnation: CURRENT },
+        },
+      },
+    });
   });
 
   it('keeps the identity fence until an interrupted cleanup import settles', async () => {
@@ -639,21 +648,114 @@ describe('targeted self-heal of status rows left by an earlier team identity', (
       statusJson: row.statusJson,
     }));
     await expect(
-      Promise.resolve().then(() =>
-        h.gateway.statusDeleteMatching(TEAM, [
-          targets[0],
-          { ...targets[1], statusJson: 'unexpected newer status' },
-        ])
-      )
+      h.gateway.statusDeleteMatching(TEAM, [
+        targets[0],
+        { ...targets[1], statusJson: 'unexpected newer status' },
+      ])
     ).rejects.toThrow('changed before deletion');
     expect(await primary(h)).toEqual(before);
 
     await expect(
-      Promise.resolve().then(() =>
-        h.gateway.statusDeleteMatching(TEAM, [{ ...targets[0], teamName: 'another-team' }])
-      )
+      h.gateway.statusDeleteMatching(TEAM, [{ ...targets[0], teamName: 'another-team' }])
     ).rejects.toThrow('Invalid member-work-sync status deletion target');
     expect(await primary(h)).toEqual(before);
+  });
+
+  it('preserves a current legacy status keyed by __proto__ during cleanup', async () => {
+    const h = await setup('json');
+    const path = h.paths.getLegacyStatusPath(TEAM);
+    await mkdir(dirname(path), { recursive: true });
+    await writeFile(
+      path,
+      JSON.stringify({
+        schemaVersion: 1,
+        members: Object.fromEntries([
+          ['alice', mk('alice', FOREIGN)],
+          ['__proto__', mk('__proto__', CURRENT)],
+        ]),
+      })
+    );
+    const result = await healStaleIncarnationStatuses({
+      teamName: TEAM,
+      incarnation: CURRENT,
+      backend: 'json',
+      error: new MemberWorkSyncStatusDecodeError('incarnation_mismatch', FOREIGN),
+      gateway: h.gateway,
+      paths: h.paths,
+      replica: h.replica,
+    });
+    expect(result).toBe('healed');
+    const after = JSON.parse(await readFile(path, 'utf8')) as { members: Record<string, MemberWorkSyncStatus> };
+    expect(Object.keys(after.members)).toEqual(['__proto__']);
+    expect(Object.hasOwn(after.members, '__proto__')).toBe(true);
+    expect(after.members.__proto__.statusRevision?.incarnation).toBe(CURRENT);
+  });
+
+  it('refuses a primary status row with a mismatched member key', async () => {
+    const h = await setup('sqlite');
+    const source = snapshotToRecords(TEAM, snap([mk('bob', FOREIGN)]));
+    const record = source.statuses[0];
+    await h.gateway.importTeam(TEAM, {
+      ...source,
+      statuses: [{ ...record, memberKey: 'alice' }],
+    });
+    const before = await primary(h);
+    const result = await healStaleIncarnationStatuses({
+      teamName: TEAM,
+      incarnation: CURRENT,
+      backend: 'sqlite',
+      error: new MemberWorkSyncStatusDecodeError('incarnation_mismatch', FOREIGN),
+      gateway: h.gateway,
+      paths: h.paths,
+      replica: h.replica,
+      logger: { warn: h.warn },
+    });
+    expect(result).toBe('refused');
+    expect(await primary(h)).toEqual(before);
+    expect(h.warn).toHaveBeenCalledWith(
+      'member-work-sync stale status cleanup refused',
+      expect.objectContaining({ reason: 'primary_member_key_mismatch' })
+    );
+    expect(await quarantineFiles(h)).toEqual([]);
+  });
+
+  it('refuses a foreign replica with an unbound surviving status', async () => {
+    const h = await setup('sqlite');
+    const legacy = mk('bob', CURRENT);
+    delete legacy.statusRevision;
+    await writeReplica(h, 'clean', FOREIGN, snap([legacy]));
+    const replicaPath = h.paths.getSqliteFallbackReplicaPath(TEAM);
+    const before = await readFile(replicaPath, 'utf8');
+    await expect(prepare(h)).rejects.toThrow();
+    expect(await readFile(replicaPath, 'utf8')).toBe(before);
+    expect(h.warn).toHaveBeenCalledWith(
+      'member-work-sync stale status cleanup refused',
+      expect.objectContaining({ reason: 'foreign_replica_unbound_status' })
+    );
+  });
+
+  it('refuses a non-string replica incarnation rather than adopting its payload', async () => {
+    const h = await setup('sqlite');
+    const path = h.paths.getSqliteFallbackReplicaPath(TEAM);
+    await mkdir(dirname(path), { recursive: true });
+    const snapshot = snap([mk('bob', CURRENT)]);
+    await writeFile(
+      path,
+      JSON.stringify({
+        schemaVersion: 1,
+        state: 'clean',
+        updatedAt: OLD,
+        incarnation: null,
+        snapshot,
+      })
+    );
+    await expect(prepare(h)).rejects.toThrow();
+    const result = await readFile(path, 'utf8');
+    expect(JSON.parse(result)).toMatchObject({ incarnation: null });
+    expect(h.warn).toHaveBeenCalledWith(
+      'member-work-sync stale status cleanup refused',
+      expect.objectContaining({ reason: 'replica_incarnation_invalid' })
+    );
   });
 
   it('deletes selected aliased SQLite statuses without rewriting other domain rows', async () => {
