@@ -56,6 +56,8 @@ export interface OpenCodeV2EmbeddedServerOptions {
   startupTimeoutMs?: number;
   endpoint?: string;
   selectedFile?: Readonly<{ source: DeferredOpenCodeV2FileKey; mode: OpenCodeV2SelectedFileMode }>;
+  /** Synchronous observation only; never an admission, timer or cleanup callback. */
+  observeStartupPhase?(phase: 'graph-start' | 'graph-done' | 'native-launch'): void;
 }
 export interface OpenCodeV2EmbeddedReady {
   endpoint: string;
@@ -113,6 +115,13 @@ export function createOpenCodeV2EmbeddedServer(options: OpenCodeV2EmbeddedServer
   const startupTimeoutMs = options.startupTimeoutMs ?? 120_000;
   const requestedEndpoint = options.endpoint;
   const selectedFile = options.selectedFile;
+  let observeStartupPhase: OpenCodeV2EmbeddedServerOptions['observeStartupPhase'];
+  try { observeStartupPhase = options.observeStartupPhase; }
+  catch { /* An unavailable optional observer does not change startup. */ }
+  const observe = (phase: Parameters<NonNullable<typeof observeStartupPhase>>[0]): void => {
+    try { observeStartupPhase?.(phase); }
+    catch { /* An observer cannot change the original startup or cleanup outcome. */ }
+  };
   if (selectedFile && (!DeferredOpenCodeV2FileKey.is(selectedFile.source) ||
       !selectedFile.source.isCurrent() || selectedFile.source.descriptor.cwd !== profile.cwd ||
       !['fresh', 'restore', 'catalog'].includes(selectedFile.mode))) return fail();
@@ -246,12 +255,14 @@ export function createOpenCodeV2EmbeddedServer(options: OpenCodeV2EmbeddedServer
         ...(signal ? [signal] : []),
       ]);
       try {
+        observe('graph-start');
         combined.throwIfAborted();
         if (process.platform === 'win32') {
           // The source verifies the selected graph before loading its exact
           // target N-API binary. Capture remains synchronous before private stdin.
           windowsCustody = await createWindowsJobCustody(embedded, combined);
         } else await verifyOpenCodeV2EmbeddedGraph(embedded, combined);
+        observe('graph-done');
         for (const directory of [configDirectory, path.dirname(databasePath)]) {
           if (
             !path.isAbsolute(directory) ||
@@ -286,6 +297,7 @@ export function createOpenCodeV2EmbeddedServer(options: OpenCodeV2EmbeddedServer
           ...(selectedFile ? { selectedFile: { descriptor: selectedFile.source.descriptor, mode: selectedFile.mode } } : {}),
         });
         if (Buffer.byteLength(input) + 1 > 256 * 1024) return fail();
+        observe('native-launch');
         combined.throwIfAborted();
         child = custody.launch({
           command: profile.executable.path,

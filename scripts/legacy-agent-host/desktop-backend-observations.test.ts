@@ -1678,6 +1678,12 @@ function originalOpenCodePreflightFixture(t: TestContext, publish = true) {
   const profile = { owner, teams: [{ binding, scope: { teamId: binding.teamId, runId: 'TEST-run' } }] };
   const profilePath = join(root, 'host-profile.json'), profileBytes = JSON.stringify(profile);
   fs.writeFileSync(profilePath, profileBytes, { mode: 0o600 });
+  const ownerDirectory = join(storageRoot, 'teams/test-desktop-backend/.host-owner');
+  fs.mkdirSync(ownerDirectory, { recursive: true, mode: 0o700 });
+  const ownerStatePath = join(ownerDirectory, 'state.json');
+  const writeOwner = (next: Record<string, unknown>) =>
+    fs.writeFileSync(ownerStatePath, JSON.stringify({ binding: next }), { mode: 0o600 });
+  writeOwner(binding);
   const store = new FileManagementCommandStore(storageRoot), hash = managementDigest;
   const commandId = 'team-preflight-' + hash('TEST-command'), profileId = 'team-probe-' + hash('TEST-profile');
   const origin: NonNullable<StoredModelProbe['localModelReadinessOrigin']> = {
@@ -1702,12 +1708,12 @@ function originalOpenCodePreflightFixture(t: TestContext, publish = true) {
       destinationKeys: [hash('destination')] },
   };
   if (publish) store.write(probe);
-  const state = { ready: false, current: true, owned: true, reads: 0, ownerReads: 0,
+  const state = { ready: false, current: true, owned: true, reads: 0, ownerReads: 0, x: 100,
     binding: { ...binding } as Record<string, unknown> };
-  const hooks: { evaluate?(): void; ownerRead?(): void; input?(type: string): void } = {};
+  const hooks: { evaluate?(): void; afterEvaluate?(): void; ownerRead?(): void; input?(type: string): void } = {};
   const commands: { method: string; params?: Record<string, unknown> }[] = [];
   const proof: Record<string, unknown> = {}, refusal = new Error('TEST original renderer revoked');
-  const rectangle = () => ({ x: 100, y: 100, top: 100, bottom: 140, width: 160, height: 40 });
+  const rectangle = () => ({ x: state.x, y: 100, top: 100, bottom: 140, width: 160, height: 40 });
   const button = { get textContent() { return state.ready ? 'Launch team' : 'Skip preflight and launch'; },
     disabled: false, tagName: 'BUTTON', contains: () => false, matches: () => false,
     getAttribute: () => null, getBoundingClientRect: rectangle, getAnimations: () => [],
@@ -1722,7 +1728,7 @@ function originalOpenCodePreflightFixture(t: TestContext, publish = true) {
   const cdp = {
     async evaluate(expression: string) {
       state.reads++; hooks.evaluate?.();
-      return runInNewContext(expression, { innerWidth: 1400, innerHeight: 900,
+      const value = runInNewContext(expression, { innerWidth: 1400, innerHeight: 900,
         getComputedStyle: () => ({ pointerEvents: 'auto' }), document: {
           fonts: { status: 'loaded' }, elementFromPoint: () => button,
           querySelectorAll(selector: string) {
@@ -1730,6 +1736,8 @@ function originalOpenCodePreflightFixture(t: TestContext, publish = true) {
             assert.equal(selector, '[role="dialog"] button'); return [button];
           },
         } });
+      hooks.afterEvaluate?.();
+      return value;
     },
     async send(method: string, params?: Record<string, unknown>) {
       commands.push({ method, params });
@@ -1742,7 +1750,10 @@ function originalOpenCodePreflightFixture(t: TestContext, publish = true) {
       openCodeV2: { model: 'test-local/TEST-model', displayName: 'TEST-model' } },
     prompt: 'OPENCODE_TEAM_ONE', proof, step() {},
     assertOwnedRenderer() { if (!state.owned) throw refusal; },
-    async ownerState() { state.ownerReads++; hooks.ownerRead?.(); return { binding: state.binding }; },
+    async ownerState() {
+      state.ownerReads++; hooks.ownerRead?.();
+      return JSON.parse(await fsp.readFile(ownerStatePath, 'utf8')) as Record<string, unknown>;
+    },
   });
   const complete = () => {
     Object.assign(probe, { phase: 'completed', ok: true, resourceHeld: false, readiness: {
@@ -1756,7 +1767,7 @@ function originalOpenCodePreflightFixture(t: TestContext, publish = true) {
     store.write(probe);
   };
   const inputCount = () => commands.filter(row => row.method.startsWith('Input.')).length;
-  return { root, storageRoot, store, profilePath, probe, state, hooks, commands, proof, refusal,
+  return { root, storageRoot, store, profilePath, ownerStatePath, writeOwner, probe, state, hooks, commands, proof, refusal,
     start, complete, inputCount, journalPath: join(storageRoot, 'management-commands', hash(commandId) + '.json') };
 }
 
@@ -1794,7 +1805,7 @@ for (const change of ['replacement', 'fingerprint', 'probe-cutoff', 'scope-cutof
     f.hooks.evaluate = () => {
       if (f.state.reads !== 1) return;
       if (change === 'renderer') { f.state.owned = false; return; }
-      if (change === 'owner-binding') { f.state.binding.teamId = 'OTHER'; return; }
+      if (change === 'owner-binding') { f.writeOwner({ ...f.state.binding, teamId: 'OTHER' }); return; }
       if (change === 'profile-bytes') { fs.appendFileSync(f.profilePath, ' '); return; }
       if (change === 'form') { f.state.current = false; return; }
       if (change === 'replacement') {
@@ -1906,20 +1917,88 @@ test('original OpenCode preflight rechecks the original form in the final contro
 });
 
 
-test('original OpenCode preflight rejects profile mutation during the final post-DOM owner read', async t => {
+test('original OpenCode preflight rejects profile mutation during the final awaited DOM read', async t => {
   const f = originalOpenCodePreflightFixture(t);
   f.hooks.evaluate = () => { if (f.state.reads === 2) { f.complete(); f.state.ready = true; } };
   const ui = await f.start();
   let changed = false;
-  f.hooks.ownerRead = () => {
+  f.hooks.afterEvaluate = () => {
     // Two preflight observations, then initial/hover/two stable/final target reads.
     if (f.state.reads === 7 && !changed) { fs.appendFileSync(f.profilePath, ' '); changed = true; }
   };
   let failure: unknown;
   try { await ui.click('[role="dialog"] button', 'submit original once', 'Launch team'); }
   catch (error) { failure = error; }
-  assert.equal(changed, true, 'the profile changes inside the awaited owner read after the final DOM result');
+  assert.equal(changed, true, 'the profile changes after the final DOM sample inside its awaited read');
   assert.equal(f.commands.filter(row => row.params?.type === 'mousePressed').length, 0,
-    'a profile changed in the final awaited owner read must refuse before the original press');
+    'a profile changed in the final awaited read must refuse before the original press');
   assert.match(String(failure), /original TEST profile bytes remain pinned/);
 });
+
+for (const mutation of ['form', 'geometry'] as const) {
+  test(`original OpenCode preflight keeps final ${mutation} observation after awaited owner reads`, async t => {
+    const f = originalOpenCodePreflightFixture(t);
+    f.hooks.evaluate = () => { if (f.state.reads === 2) { f.complete(); f.state.ready = true; } };
+    const ui = await f.start();
+    let changed = false;
+    f.hooks.ownerRead = () => {
+      if (f.state.reads !== 7 || changed) return;
+      changed = true;
+      if (mutation === 'form') f.state.current = false;
+      else f.state.x = 500;
+    };
+    await ui.click('[role="dialog"] button', 'submit original once', 'Launch team');
+    const presses = f.commands.filter(row => row.params?.type === 'mousePressed');
+    assert.deepEqual({ changedAfterDom: changed, presses: presses.length }, { changedAfterDom: false, presses: 1 },
+      'no awaited owner preparation follows the final DOM sample; the unchanged form receives one press');
+    assert.equal(presses[0]?.params?.x, f.state.x + 80, 'the press uses the final current target geometry');
+    assert.equal(f.commands.filter(row => row.params?.type === 'mouseReleased').length, 1);
+  });
+}
+
+for (const mutation of ['owner-binding', 'owner-missing', 'owner-corrupt', 'receipt', 'deadline'] as const) {
+  test(`original OpenCode preflight rejects ${mutation} changed during the final awaited DOM read`, async t => {
+    const f = originalOpenCodePreflightFixture(t);
+    f.hooks.evaluate = () => { if (f.state.reads === 2) { f.complete(); f.state.ready = true; } };
+    const ui = await f.start();
+    let changed = false;
+    f.hooks.afterEvaluate = () => {
+      if (f.state.reads !== 7 || changed) return;
+      changed = true;
+      if (mutation === 'owner-binding') f.writeOwner({ ...f.state.binding, teamId: 'OTHER' });
+      else if (mutation === 'owner-missing') fs.unlinkSync(f.ownerStatePath);
+      else if (mutation === 'owner-corrupt') fs.writeFileSync(f.ownerStatePath, '{');
+      else if (mutation === 'receipt') f.store.write({ ...f.probe, fingerprint: managementDigest('OTHER') });
+      else t.mock.timers.setTime(91_000);
+    };
+    await assert.rejects(ui.click('[role="dialog"] button', 'submit original once', 'Launch team'),
+      mutation === 'owner-missing' ? /ENOENT/ : mutation === 'owner-corrupt' ? SyntaxError : /changed|expired/);
+    assert.equal(changed, true, 'the original input fence follows the final awaited DOM result');
+    assert.equal(f.commands.filter(row => row.params?.type === 'mousePressed').length, 0);
+  });
+}
+
+for (const mutation of ['form', 'geometry'] as const) {
+  test(`original OpenCode preflight observes ${mutation} changed during final owner preparation`, async t => {
+    const f = originalOpenCodePreflightFixture(t);
+    f.hooks.evaluate = () => { if (f.state.reads === 2) { f.complete(); f.state.ready = true; } };
+    const ui = await f.start();
+    let changed = false;
+    f.hooks.ownerRead = () => {
+      if (f.state.reads !== 6 || changed) return;
+      changed = true;
+      if (mutation === 'form') f.state.current = false;
+      else f.state.x = 500;
+    };
+    const click = ui.click('[role="dialog"] button', 'submit original once', 'Launch team');
+    if (mutation === 'form') await assert.rejects(click, /original OpenCode launch form changed/);
+    else await click;
+    assert.equal(changed, true, 'the final awaited preparation actually changes the original target');
+    const presses = f.commands.filter(row => row.params?.type === 'mousePressed');
+    assert.equal(presses.length, mutation === 'form' ? 0 : 1);
+    if (mutation === 'geometry') {
+      assert.equal(presses[0]?.params?.x, f.state.x + 80, 'the original finite samples settle the fresh geometry');
+      assert.equal(f.commands.filter(row => row.params?.type === 'mouseReleased').length, 1);
+    }
+  });
+}

@@ -168,14 +168,23 @@ export async function waitForDesktopOpenCodePreflight(cdp: UiCdpPort, options: {
     original.deadline - Date.now(), value => currentForm(value).ready === true, { deadline: original.deadline, beforeRead });
   await beforeRead(); // A late DOM result cannot outlive the original receipt or owner.
   assertWithin();
-  const assertCurrent = (): void => { assertPinnedProfile(); assert.ok(readOriginal()); };
+  const assertCurrent = (): void => {
+    assertPinnedProfile();
+    const state = record(JSON.parse(readFileSync(
+      join(storageRoot, 'teams/test-desktop-backend/.host-owner/state.json'), 'utf8'
+    )));
+    assertWithin();
+    assert.deepEqual(state.binding, binding, 'original Team owner binding changed');
+    assert.ok(readOriginal());
+  };
   // These controls are used only for the existing pre-submit scroll/click. Their
   // reads stay bound to the original owner/receipt; Input dispatch remains unchanged.
   return createDesktopUiControls({
     async evaluate(source) {
       await beforeRead();
       const value = record(await cdp.evaluate(`(() => { const form=${expression}; const value=(${source}); return {form,value}; })()`));
-      await beforeRead();
+      // Keep every fresh owner/source fence without another await after the DOM sample.
+      assertCurrent();
       currentForm(value.form);
       return value.value;
     },

@@ -1,8 +1,9 @@
 // @vitest-environment node
 import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
 import { channel } from 'node:diagnostics_channel';
 import { once } from 'node:events';
-import { mkdtempSync, realpathSync, rmSync } from 'node:fs';
+import { mkdtempSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
 import { createServer } from 'node:http';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -14,16 +15,30 @@ import type { IncomingMessage, ServerResponse } from 'node:http';
 
 const controlled = vi.hoisted(() => ({
   create: (_options: unknown): unknown => { throw new Error('TEST native factory unset'); },
+  spawn: vi.fn(() => { throw new Error('TEST unexpected native spawn'); }),
+}));
+vi.mock('node:child_process', async importOriginal => ({
+  ...await importOriginal<typeof import('node:child_process')>(), spawn: controlled.spawn,
 }));
 vi.mock('../../../packages/legacy-agent-host/src/adapters/providers/OpenCodeV2EmbeddedServer.js',
   () => ({ createOpenCodeV2EmbeddedServer: (options: unknown) => controlled.create(options) }));
 
+import * as probeDiagnostics from '../../../packages/legacy-agent-host/src/adapters/providers/createClaudeCloseDiagnostic';
+import * as embeddedGraph from '../../../packages/legacy-agent-host/src/adapters/providers/OpenCodeV2EmbeddedGraph';
 import { createOpenCodeV2ModelProbe } from '../../../packages/legacy-agent-host/src/adapters/providers/OpenCodeV2ModelProbe';
+import * as windowsCustody from '../../../packages/legacy-agent-host/src/adapters/providers/WindowsJobCustody';
 import { runtimeMemberProfileSchema } from '../../../packages/legacy-agent-host/src/composition/runtimeProfile';
 import { teamModelProbeProfile } from '../../../packages/legacy-agent-host/src/composition/teamLaunchModelProbe';
 import { openCodeManagementProfileSchema } from '../../../packages/legacy-agent-host/src/management/profile';
 
-afterEach(() => { controlled.create = () => { throw new Error('TEST native factory unset'); }; });
+import type { OpenCodeV2EmbeddedServerOptions } from '../../../packages/legacy-agent-host/src/adapters/providers/OpenCodeV2EmbeddedServer';
+import type { OpenCodeProbeDiagnostic } from '../../../src/features/agent-backend/main/infrastructure/decodeClaudeCloseDiagnostics';
+
+afterEach(() => {
+  controlled.create = () => { throw new Error('TEST native factory unset'); };
+  expect(controlled.spawn).not.toHaveBeenCalled();
+  controlled.spawn.mockClear();
+});
 
 async function within<T>(work: Promise<T>, label: string): Promise<T> {
   let timer: ReturnType<typeof setTimeout> | undefined;
@@ -39,7 +54,8 @@ async function within<T>(work: Promise<T>, label: string): Promise<T> {
  * Production ModelProbe, its private configuration, both D clients and global fetch
  * remain real. These checks do not qualify an actual native process or credential.
  */
-async function fixture(mode: 'http' | 'custody' | 'stop-unknown' = 'http', startFailure?: unknown) {
+async function fixture(mode: 'http' | 'custody' | 'stop-unknown' = 'http', startFailure?: unknown,
+  isCurrent: () => boolean = () => true) {
   const root = realpathSync(mkdtempSync(join(tmpdir(), 'TEST-v2-model-probe-lifecycle-')));
   const pid = 48101, startIdentity = 'TEST-original-start-identity', password = 'TEST-loopback-only';
   const blocked = Promise.withResolvers<void>(), disconnected = Promise.withResolvers<void>();
@@ -144,11 +160,14 @@ async function fixture(mode: 'http' | 'custody' | 'stop-unknown' = 'http', start
   });
   const identity = { executablePath: management.executable.path, executableSha256: management.executable.sha256,
     pid, startIdentity, version: '2.1.4' as const };
-  controlled.create = () => {
+  controlled.create = raw => {
     nativeCreations++;
+    const observe = (raw as Pick<OpenCodeV2EmbeddedServerOptions, 'observeStartupPhase'>).observeStartupPhase;
     return {
       start: async () => {
+        observe?.('graph-start');
         if (startFailure !== undefined) throw startFailure;
+        observe?.('graph-done'); observe?.('native-launch');
         return { endpoint, pid, startIdentity };
       },
       readPassword: () => { passwordReads++; return password; },
@@ -171,13 +190,14 @@ async function fixture(mode: 'http' | 'custody' | 'stop-unknown' = 'http', start
   const probe = createOpenCodeV2ModelProbe(management, {
     commandId: 'TEST-original-probe', profileId: management.profileId, configRevision: management.configRevision,
     providerId: 'TEST-provider', modelId: 'TEST-model',
-  }, () => true);
+  }, isCurrent);
   return {
     observations,
     probe, parent, disconnected: disconnected.promise, custodyReturned: custodyReturned.promise,
     releaseCustody: () => returnCustody.resolve(),
     heldSignal: () => heldSignal,
-    counts: () => ({ requests, passwordReads, physicalStops, nativeCreations, logReads, promptPosts, custodyHeld }),
+    counts: () => ({ requests, passwordReads, physicalStops, nativeCreations, logReads, promptPosts, custodyHeld,
+      sessionCreates: session === undefined ? 0 : 1 }),
     start() {
       run = probe.run(parent.signal); void run.catch(() => {});
       return run;
@@ -292,3 +312,160 @@ test.each(['getter', 'proxy', 'held'] as const)('original probe exception surviv
     expect(f.counts()).toMatchObject({ requests: 0, nativeCreations: 1, physicalStops: 1 });
   } finally { await f.dispose(); }
 });
+
+const probePrefix = 'legacy-agent-host: opencode-probe ';
+const phases = ['run', 'graph-start', 'graph-done', 'native-launch', 'native-ready',
+  'credential', 'attestation', 'session-create', 'driver-open', 'first-submit'];
+
+test('phase sink failure preserves the original probe HTTP, single run and physical cleanup', async () => {
+  const originalFactory = probeDiagnostics.createOpenCodeProbeDiagnostic;
+  let baseline: ReturnType<Awaited<ReturnType<typeof fixture>>['counts']> | undefined;
+  for (const brokenSink of [false, true]) {
+    const records: OpenCodeProbeDiagnostic[] = [];
+    const diagnostic = vi.spyOn(probeDiagnostics, 'createOpenCodeProbeDiagnostic')
+      .mockImplementation((selected, command, digest) => originalFactory(selected, command, digest, line => {
+        records.push(JSON.parse(line.slice(probePrefix.length)) as OpenCodeProbeDiagnostic);
+        if (brokenSink) throw new Error('TEST diagnostic sink failure');
+      }));
+    let f: Awaited<ReturnType<typeof fixture>> | undefined;
+    try {
+      f = await fixture();
+      expect(records, 'constructing a probe does not start its clock or observe a run').toEqual([]);
+      const running = f.start();
+      expect(f.probe.run(f.parent.signal)).toBe(running);
+      await f.barrier();
+      const before = f.counts();
+      baseline ??= before;
+      expect(before).toEqual(baseline);
+      expect(before).toMatchObject({ nativeCreations: 1, sessionCreates: 1, logReads: 1, promptPosts: 0 });
+      expect(records.map(record => record.phase)).toEqual(phases);
+      expect(records.map(record => record.sequence)).toEqual(phases.map((_phase, index) => index + 1));
+      expect(records.every(record => record.probeDigest === records[0]!.probeDigest)).toBe(true);
+      expect(records.every(record => /^[a-f0-9]{64}$/.test(record.probeDigest))).toBe(true);
+      // first-submit only observes entry: the original D queue still blocks the native prompt POST.
+      f.parent.abort();
+      await within(f.disconnected, 'original response after phase observation');
+      await expect(running).resolves.toBe(false);
+      await expect(f.probe.close()).resolves.toBe(true);
+      expect(f.counts().requests).toBe(before.requests);
+      expect(f.counts().passwordReads).toBe(before.passwordReads);
+      expect(records).toHaveLength(phases.length);
+      f.assertClosed(); expect(f.observations).toEqual([]);
+    } finally { diagnostic.mockRestore(); await f?.dispose(); }
+  }
+});
+
+test.each(['native-ready', 'session-create', 'first-submit'] as const)(
+  'the original guard after %s still refuses ownership lost during observation', async boundary => {
+    const originalFactory = probeDiagnostics.createOpenCodeProbeDiagnostic;
+    const observed: string[] = [];
+    let current = true;
+    const diagnostic = vi.spyOn(probeDiagnostics, 'createOpenCodeProbeDiagnostic')
+      .mockImplementation((selected, command, digest) => originalFactory(selected, command, digest, line => {
+        const record = JSON.parse(line.slice(probePrefix.length)) as OpenCodeProbeDiagnostic;
+        observed.push(record.phase);
+        if (record.phase === boundary) {
+          current = false;
+          throw new Error('TEST diagnostic failure after owner revocation');
+        }
+      }));
+    let f: Awaited<ReturnType<typeof fixture>> | undefined;
+    try {
+      f = await fixture('http', undefined, () => current);
+      await expect(f.start()).rejects.toMatchObject({ code: 'held' });
+      expect(observed.at(-1)).toBe(boundary);
+      expect(f.counts()).toMatchObject({ nativeCreations: 1, logReads: 0, promptPosts: 0,
+        sessionCreates: boundary === 'first-submit' ? 1 : 0 });
+      if (boundary === 'native-ready') expect(f.counts().requests).toBe(0);
+      const before = f.counts();
+      await expect(f.probe.close()).resolves.toBe(true);
+      expect(f.counts().physicalStops).toBe(1);
+      expect(f.counts().requests).toBe(before.requests);
+      expect(f.probe.wasRejected()).toBe(false);
+    } finally { diagnostic.mockRestore(); await f?.dispose(); }
+  }
+);
+
+type StartupPhase = Parameters<NonNullable<OpenCodeV2EmbeddedServerOptions['observeStartupPhase']>>[0];
+
+/** The real server verifies a tiny TEST file; its original allocation guard never permits a child. */
+async function embeddedBoundary(
+  observer: 'absent' | 'throw' | 'getter' | 'captured', graphFailure: boolean, abortAt?: StartupPhase
+) {
+  const root = realpathSync(mkdtempSync(join(tmpdir(), 'TEST-v2-probe-phase-boundary-')));
+  const executable = join(root, 'TEST-never-executed'), bytes = Buffer.from('TEST inert source only\n');
+  writeFileSync(executable, bytes, { mode: 0o600 });
+  const originalFailure = new Error('TEST original graph failure');
+  const diagnosticFailure = new Error('TEST diagnostic failure');
+  const originalAbort = new Error('TEST original startup abort');
+  const controller = new AbortController(), observed: StartupPhase[] = [];
+  let graphReads = 0, allocationChecks = 0, custodyCalls = 0, getterReads = 0;
+  const graph = vi.spyOn(embeddedGraph, 'verifyOpenCodeV2EmbeddedGraph').mockImplementation(async () => {
+    graphReads++;
+    if (graphFailure) throw originalFailure;
+    return { modulePath: executable, effectPath: executable, requiredBunVersion: 'TEST-unused' };
+  });
+  const windows = vi.spyOn(windowsCustody, 'createWindowsJobCustody').mockImplementation(async () => {
+    graphReads++;
+    if (graphFailure) throw originalFailure;
+    return { capture() { custodyCalls++; throw new Error('TEST unexpected native custody'); } };
+  });
+  const options: OpenCodeV2EmbeddedServerOptions = {
+    profile: { provider: 'opencode', cwd: root, environment: { HOME: root },
+      executable: { path: executable, sha256: createHash('sha256').update(bytes).digest('hex') } },
+    embedded: { directory: root, manifestSha256: 'a'.repeat(64), version: '2.1.4',
+      platform: process.platform, arch: process.arch },
+    databasePath: join(root, 'TEST-unused.sqlite'), configDirectory: root, config: {},
+    canAllocate: () => { allocationChecks++; return false; },
+    processCustody: {
+      captureRoot() { custodyCalls++; throw new Error('TEST unexpected root capture'); },
+      readRootExecutable() { custodyCalls++; throw new Error('TEST unexpected executable measurement'); },
+    },
+  };
+  if (observer === 'getter') Object.defineProperty(options, 'observeStartupPhase', {
+    get() { getterReads++; throw diagnosticFailure; },
+  });
+  else if (observer !== 'absent') options.observeStartupPhase = phase => {
+    observed.push(phase);
+    if (phase === abortAt) controller.abort(originalAbort);
+    if (observer === 'throw') throw diagnosticFailure;
+  };
+  let server: ReturnType<typeof import('../../../packages/legacy-agent-host/src/adapters/providers/OpenCodeV2EmbeddedServer')['createOpenCodeV2EmbeddedServer']> | undefined;
+  try {
+    const actual = await vi.importActual<typeof import('../../../packages/legacy-agent-host/src/adapters/providers/OpenCodeV2EmbeddedServer')>(
+      '../../../packages/legacy-agent-host/src/adapters/providers/OpenCodeV2EmbeddedServer');
+    server = actual.createOpenCodeV2EmbeddedServer(options);
+    if (observer === 'captured') options.observeStartupPhase = () => { throw diagnosticFailure; };
+    const failure = await server.start(controller.signal).then(() => {
+      throw new Error('TEST unadmitted native startup unexpectedly succeeded');
+    }, error => error as unknown);
+    if (abortAt) expect(failure).toBe(originalAbort);
+    else if (graphFailure) expect(failure).toBe(originalFailure);
+    else expect(failure).toMatchObject({ message: 'Native launch unavailable' });
+    const expectedPhases: StartupPhase[] = graphFailure || abortAt === 'graph-start'
+      ? ['graph-start'] : ['graph-start', 'graph-done', 'native-launch'];
+    expect(observed).toEqual(observer === 'absent' || observer === 'getter' ? [] : expectedPhases);
+    expect(graphReads).toBe(abortAt === 'graph-start' ? 0 : 1);
+    expect(allocationChecks).toBe(graphFailure || abortAt ? 0 : 1);
+    expect(getterReads).toBe(observer === 'getter' ? 1 : 0);
+    expect(custodyCalls).toBe(0); expect(controlled.spawn).not.toHaveBeenCalled();
+    await expect(server.stopOwned()).resolves.toBe(true);
+  } finally {
+    await server?.stopOwned();
+    windows.mockRestore(); graph.mockRestore();
+    rmSync(root, { recursive: true, force: true });
+  }
+}
+
+test.each(['absent', 'throw', 'getter', 'captured'] as const)(
+  'real embedded startup keeps original graph and launch refusal with %s observation', async observer => {
+    await embeddedBoundary(observer, true);
+    await embeddedBoundary(observer, false);
+  }
+);
+
+test.each(['graph-start', 'native-launch'] as const)(
+  'original startup cutoff immediately after %s refuses even if the observer throws', async phase => {
+    await embeddedBoundary('throw', false, phase);
+  }
+);

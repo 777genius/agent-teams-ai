@@ -1,5 +1,5 @@
 import { type ChildProcessWithoutNullStreams } from 'node:child_process';
-import { createHash, randomUUID } from 'node:crypto';
+import { randomUUID } from 'node:crypto';
 import { TextDecoder } from 'node:util';
 
 import {
@@ -44,7 +44,7 @@ import { createLogger } from '@shared/utils/logger';
 
 import { CapturedHostNotificationBuffer } from './CapturedHostNotificationBuffer';
 import { captureNativePromptSettings, type NativePromptSettingsSelection } from './CapturedNativePromptOptions';
-import { decodeClaudeCloseDiagnostics } from './decodeClaudeCloseDiagnostics';
+import { createCapturedHostDiagnostics } from './createCapturedHostDiagnostics';
 import {
   capturedHostProfileDigest,
   captureHostProfile,
@@ -144,23 +144,7 @@ export class CapturedHostClient {
   private nativePumping = false;
   private readonly nativeHints = new Map<string, { hint: HostCustodyHint; sent: boolean }>();
   private diagnosticTail = Buffer.alloc(0);
-  private readonly retainCloseDiagnostic = decodeClaudeCloseDiagnostics(
-    (observation) => {
-      createLogger('Host:ClaudeClose').diagnostic('Claude close stage', observation);
-    },
-    (observation) => {
-      createLogger('Host:ClaudeManagement').diagnostic('Claude management stage', observation);
-    },
-    (observation) => {
-      const { startIdentity, ...fields } = observation;
-      if (this.child?.pid !== undefined)
-        createLogger('Host:OpenCodeMetadata').diagnostic('OpenCode metadata stage', {
-          ...fields,
-          ...(startIdentity === undefined ? {} : { startIdentityHash: createHash('sha256').update(startIdentity, 'utf8').digest('hex') }),
-          hostPid: this.child.pid,
-        });
-    }
-  );
+  private readonly retainCloseDiagnostic = createCapturedHostDiagnostics(() => this.child?.pid);
 
   constructor(
     profile: SelectedHostProfile,

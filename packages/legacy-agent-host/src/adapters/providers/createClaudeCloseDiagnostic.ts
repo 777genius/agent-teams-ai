@@ -125,3 +125,40 @@ export function createOpenCodeMetadataDiagnostic(
     },
   });
 }
+
+export type OpenCodeProbePhase = 'run' | 'graph-start' | 'graph-done' | 'native-launch'
+  | 'native-ready' | 'credential' | 'attestation' | 'session-create' | 'driver-open' | 'first-submit';
+const probePhases = new Set<OpenCodeProbePhase>(['run', 'graph-start', 'graph-done', 'native-launch',
+  'native-ready', 'credential', 'attestation', 'session-create', 'driver-open', 'first-submit']);
+
+/** Last observed phase only: no readiness, failure, process identity or release authority. */
+export function createOpenCodeProbeDiagnostic(
+  selected: { profileId: string; configRevision: string },
+  commandId: string,
+  probeDigest: string,
+  write: (line: string) => void = writeDiagnostic,
+  now: () => number = () => performance.now()
+): (phase: OpenCodeProbePhase) => void {
+  try {
+    const hash = (value: unknown) => createHash('sha256').update(JSON.stringify(value)).digest('hex');
+    const identity = Object.freeze({ profileHash: hash([selected.profileId, selected.configRevision]),
+      commandHash: hash(commandId), probeDigest });
+    const valid = typeof probeDigest === 'string' && /^[a-f0-9]{64}$/.test(probeDigest);
+    const observed = new Set<OpenCodeProbePhase>();
+    let started: number | undefined, count = 0;
+    return phase => {
+      try {
+        if (!valid || count >= 12 || !probePhases.has(phase) || observed.has(phase)) return;
+        observed.add(phase); count++;
+        if (count > 1 && started === undefined) return;
+        const at = now();
+        if (!Number.isFinite(at) || at < 0) return;
+        started ??= at;
+        const elapsedMs = Math.round(at - started);
+        if (!Number.isSafeInteger(elapsedMs) || elapsedMs < 0 || elapsedMs > 3_600_000) return;
+        write('legacy-agent-host: opencode-probe ' + JSON.stringify({ ...identity,
+          phase, sequence: count, elapsedMs }) + '\n');
+      } catch { /* Diagnostics cannot replace an original probe operation or error. */ }
+    };
+  } catch { return () => {}; }
+}

@@ -13,6 +13,17 @@ const stages = new Set([
   'capture-close-error',
 ]);
 const metadataPrefix = 'legacy-agent-host: opencode-metadata ';
+const probePrefix = 'legacy-agent-host: opencode-probe ';
+const probePhases = new Set(['run', 'graph-start', 'graph-done', 'native-launch', 'native-ready',
+  'credential', 'attestation', 'session-create', 'driver-open', 'first-submit']);
+export interface OpenCodeProbeDiagnostic {
+  readonly profileHash: string;
+  readonly commandHash: string;
+  readonly probeDigest: string;
+  readonly phase: string;
+  readonly sequence: number;
+  readonly elapsedMs: number;
+}
 interface OpenCodeMetadataIdentity {
   readonly profileHash: string;
   readonly mode: 'directory' | 'provider';
@@ -113,13 +124,33 @@ const safeId = (value: unknown): value is string =>
 export function decodeClaudeCloseDiagnostics(
   retain: (value: ClaudeCloseDiagnostic) => void | Promise<void>,
   retainManagement?: (value: ClaudeManagementDiagnostic) => void | Promise<void>,
-  retainMetadata?: (value: OpenCodeMetadataDiagnostic) => void | Promise<void>
+  retainMetadata?: (value: OpenCodeMetadataDiagnostic) => void | Promise<void>,
+  retainProbe?: (value: OpenCodeProbeDiagnostic) => void | Promise<void>
 ): (chunk: Buffer) => void {
   let pending = Buffer.alloc(0);
   let discard = false;
   const emit = (line: Buffer): void => {
     try {
       const text = new TextDecoder('utf-8', { fatal: true }).decode(line);
+      if (text.startsWith(probePrefix)) {
+        if (!retainProbe) return;
+        const value: unknown = JSON.parse(text.slice(probePrefix.length));
+        if (!exact(value, ['profileHash', 'commandHash', 'probeDigest', 'phase', 'sequence', 'elapsedMs']) ||
+            !hash(value.profileHash) || !hash(value.commandHash) || !hash(value.probeDigest) ||
+            typeof value.phase !== 'string' || !probePhases.has(value.phase) ||
+            typeof value.sequence !== 'number' || !Number.isSafeInteger(value.sequence) ||
+            value.sequence < 1 || value.sequence > 12 ||
+            typeof value.elapsedMs !== 'number' || !Number.isSafeInteger(value.elapsedMs) ||
+            value.elapsedMs < 0 || value.elapsedMs > 3_600_000) return;
+        const diagnostic: OpenCodeProbeDiagnostic = Object.freeze({
+          profileHash: value.profileHash, commandHash: value.commandHash, probeDigest: value.probeDigest,
+          phase: value.phase, sequence: value.sequence, elapsedMs: value.elapsedMs,
+        });
+        void Promise.resolve(retainProbe(diagnostic)).catch(() => {
+          /* Missing observations cannot settle the original probe or its cleanup. */
+        });
+        return;
+      }
       if (text.startsWith(metadataPrefix)) {
         if (!retainMetadata) return;
         const value: unknown = JSON.parse(text.slice(metadataPrefix.length));

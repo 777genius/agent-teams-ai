@@ -1,5 +1,6 @@
+import { constants as bufferConstants } from 'node:buffer';
 import { createHash } from 'node:crypto';
-import { lstatSync, readFileSync, realpathSync } from 'node:fs';
+import { closeSync, fstatSync, lstatSync, openSync, readFileSync, readSync, realpathSync } from 'node:fs';
 import { win32 } from 'node:path';
 
 import { isCanonicalNativePath } from './nativePath.js';
@@ -41,6 +42,63 @@ function readFile(path: string, expected?: string): { file: CapturedWindowsFile;
   return { file: Object.freeze({ path, sha256 }), bytes };
 }
 
+/** Node 24 readFileSync byte/owned-descriptor rules, without retaining a digest-only image. */
+function digestFile(path: string): string {
+  const fd = openSync(path, 'r');
+  let hash: ReturnType<typeof createHash>;
+  let size = 0, offset = 0;
+  let closeAttempted = false;
+  try {
+    let info: ReturnType<typeof fstatSync>;
+    try { info = fstatSync(fd); } catch {
+      // Node 24 closes its owned fd after failed internal fstat, then isFileType(undefined) throws.
+      // In particular, an fstat ENOENT must not become permission to select a later PATH entry.
+      throw new TypeError("Cannot read properties of undefined (reading '1')");
+    }
+    size = info.isFile() ? Number(info.size) : 0;
+    if (size > 2 ** 31 - 1) throw Object.assign(
+      new RangeError(`File size (${size}) is greater than 2 GiB`), { code: 'ERR_FS_FILE_TOO_LARGE' });
+    let buffer: Buffer;
+    try { buffer = Buffer.allocUnsafe(size === 0 ? 8192 : Math.min(size, 512 * 1024)); } catch (error) {
+      if (size === 0) {
+        // Node's unknown-size allocation failure leaks its fd. Improve cleanup without
+        // replacing that original error (especially with a PATH-fallback close ENOENT).
+        closeAttempted = true;
+        try { closeSync(fd); } catch { /* Preserve the original allocation refusal. */ }
+      }
+      throw error;
+    }
+    hash = createHash('sha256');
+    do {
+      const count = readSync(fd, buffer, 0, size === 0 ? buffer.length : Math.min(buffer.length, size - offset), null);
+      if (!count) break;
+      hash.update(buffer.subarray(0, count));
+      offset += count;
+    } while (size === 0 || offset < size);
+  } finally {
+    // Match readFileSync: a close failure overrides an earlier read/allocation failure.
+    if (!closeAttempted) closeSync(fd);
+  }
+  // Unknown-size readFileSync validates its final concat length only after closing the fd.
+  // This branch is guaranteed to refuse in Buffer.concat before any large allocation.
+  if (size === 0 && offset > bufferConstants.MAX_LENGTH) Buffer.concat([Buffer.alloc(0)], offset);
+  return hash.digest('hex');
+}
+
+/** Keep every original before/after check and finish this file before starting the next. */
+function readFileIdentity(path: string, expected?: string): CapturedWindowsFile {
+  if (!isCanonicalNativePath(`win32-${process.arch}`, path)) unavailable();
+  const before = lstatSync(path, { bigint: true });
+  if (!before.isFile() || before.isSymbolicLink() || realpathSync(path) !== path) unavailable();
+  const sha256 = digestFile(path);
+  const after = lstatSync(path, { bigint: true });
+  if ((expected !== undefined && sha256 !== expected) || !after.isFile() || after.isSymbolicLink() ||
+      realpathSync(path) !== path || before.dev !== after.dev || before.ino !== after.ino ||
+      before.size !== after.size || before.mtimeNs !== after.mtimeNs || before.ctimeNs !== after.ctimeNs)
+    unavailable();
+  return Object.freeze({ path, sha256 });
+}
+
 function environmentValue(environment: NativeProcessProfile['environment'], name: string): string | undefined {
   const values = Object.entries(environment).filter(([key]) => key.toUpperCase() === name.toUpperCase());
   if (values.length > 1) unavailable();
@@ -49,7 +107,7 @@ function environmentValue(environment: NativeProcessProfile['environment'], name
 
 /** Known npm/Bun wrappers name only these native interpreters; no shell resolver is involved. */
 function captureInterpreter(command: string, profile: NativeProcessProfile): CapturedWindowsFile {
-  if (win32.isAbsolute(command)) return readFile(realpathSync(command)).file;
+  if (win32.isAbsolute(command)) return readFileIdentity(realpathSync(command));
   if (command !== 'node' && command !== 'bun') unavailable();
   const capturedPath = environmentValue(profile.environment, 'PATH');
   if (!capturedPath) unavailable();
@@ -57,7 +115,7 @@ function captureInterpreter(command: string, profile: NativeProcessProfile): Cap
     if (!entry) continue;
     const directory = entry.startsWith('"') && entry.endsWith('"') ? entry.slice(1, -1) : entry;
     const candidate = win32.resolve(profile.cwd, directory, `${command}.exe`);
-    try { return readFile(realpathSync(candidate)).file; }
+    try { return readFileIdentity(realpathSync(candidate)); }
     catch (error) {
       const code = error && typeof error === 'object' && 'code' in error ? error.code : undefined;
       if (code !== 'ENOENT' && code !== 'ENOTDIR') throw error;
@@ -76,7 +134,7 @@ export function captureWindowsLauncher(profile: NativeProcessProfile): CapturedW
   const direct = resolveDirectWindowsLauncher(original.path, content);
   if (direct) {
     const executable = captureInterpreter(direct.command, profile);
-    const entrypoints = direct.argsPrefix.map(path => readFile(realpathSync(path)).file);
+    const entrypoints = direct.argsPrefix.map(path => readFileIdentity(realpathSync(path)));
     return Object.freeze({ original, executable,
       files: Object.freeze([original, executable, ...entrypoints]),
       argsPrefix: Object.freeze(entrypoints.map(file => file.path)) });
@@ -84,13 +142,13 @@ export function captureWindowsLauncher(profile: NativeProcessProfile): CapturedW
   // Same explicit cmd image policy as the existing frontend helper, using captured SystemRoot.
   const systemRoot = environmentValue(profile.environment, 'SystemRoot') ?? 'C:\\Windows';
   if (!win32.isAbsolute(systemRoot)) unavailable();
-  const executable = readFile(realpathSync(win32.join(systemRoot, 'System32', 'cmd.exe'))).file;
+  const executable = readFileIdentity(realpathSync(win32.join(systemRoot, 'System32', 'cmd.exe')));
   return Object.freeze({ original, executable, files: Object.freeze([original, executable]),
     argsPrefix: Object.freeze([]), batch: inspectWindowsBatchPolicy(content) });
 }
 
 export function verifyCapturedWindowsLauncher(captured: CapturedWindowsLauncher): void {
-  for (const file of captured.files) readFile(file.path, file.sha256);
+  for (const file of captured.files) readFileIdentity(file.path, file.sha256);
 }
 
 /** Standard CreateProcessW argv quoting for a direct executable/interpreter. */

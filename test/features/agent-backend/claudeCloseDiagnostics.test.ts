@@ -3,8 +3,12 @@ import { createHash } from 'node:crypto';
 
 import { it as test } from 'vitest';
 
-import { createClaudeCloseDiagnostic, createClaudeManagementDiagnostic, createOpenCodeMetadataDiagnostic } from '../../../packages/legacy-agent-host/src/adapters/providers/createClaudeCloseDiagnostic';
+import { createClaudeCloseDiagnostic, createClaudeManagementDiagnostic, createOpenCodeMetadataDiagnostic, createOpenCodeProbeDiagnostic } from '../../../packages/legacy-agent-host/src/adapters/providers/createClaudeCloseDiagnostic';
+import { createCapturedHostDiagnostics } from '../../../src/features/agent-backend/main/infrastructure/createCapturedHostDiagnostics';
 import { decodeClaudeCloseDiagnostics } from '../../../src/features/agent-backend/main/infrastructure/decodeClaudeCloseDiagnostics';
+import { addLogSink } from '../../../src/shared/utils/logger';
+
+import type { OpenCodeProbeDiagnostic } from '../../../src/features/agent-backend/main/infrastructure/decodeClaudeCloseDiagnostics';
 
 const binding = { backendId: 'TEST-backend', teamId: 'TEST-team', runId: 'TEST-run',
   memberId: 'TEST-member', generation: 'restore-123' };
@@ -197,4 +201,162 @@ test('metadata read failures retain closed original facts before ready without a
   assert.equal(calls, 2, 'a failed sink cannot prevent the next closed diagnostic');
   assert.doesNotThrow(() => createOpenCodeMetadataDiagnostic(selected, undefined, () => { throw new Error(secret); })
     .readFailed({ stage: 'admission', reason: 'held', elapsedMs: 0, deadlineExpired: false, aborted: null }));
+});
+
+const probePrefix = 'legacy-agent-host: opencode-probe ';
+const probePhases = ['run', 'graph-start', 'graph-done', 'native-launch', 'native-ready',
+  'credential', 'attestation', 'session-create', 'driver-open', 'first-submit'] as const;
+
+test('probe phase observations retain captured hashes, a lazy clock and at most twelve transitions', () => {
+  const secret = 'TEST-private-command-path-key';
+  const selected = { profileId: 'TEST-original', configRevision: 'TEST-revision' };
+  const original = { ...selected }, lines: string[] = [];
+  let clock = 50, clockReads = 0;
+  const observe = createOpenCodeProbeDiagnostic(selected, secret, 'a'.repeat(64), line => lines.push(line),
+    () => { clockReads++; return clock; });
+  selected.profileId = secret; selected.configRevision = secret; clock = 500;
+  assert.equal(clockReads, 0); assert.deepEqual(lines, [], 'construction does not observe or start a probe');
+  for (const phase of probePhases) { observe(phase); clock += 7; }
+  for (let repeat = 0; repeat < 20; repeat++) for (const phase of probePhases) observe(phase);
+  assert.equal(lines.length, probePhases.length); assert.ok(lines.length <= 12);
+  assert.equal(clockReads, probePhases.length, 'duplicate transitions do not read the clock or write again');
+  assert.ok(lines.every(line => Buffer.byteLength(line) < 8192));
+  assert.equal(lines.join('').includes(secret), false);
+  assert.equal(lines.join('').includes('TEST-original'), false);
+  const retained: OpenCodeProbeDiagnostic[] = [];
+  const decode = decodeClaudeCloseDiagnostics(() => {}, undefined, undefined, value => { retained.push(value); });
+  for (const byte of Buffer.from(lines.join(''))) decode(Buffer.from([byte]));
+  assert.equal(retained.length, probePhases.length);
+  const hash = (value: unknown) => createHash('sha256').update(JSON.stringify(value)).digest('hex');
+  assert.deepEqual(retained, probePhases.map((phase, index) => ({
+    profileHash: hash([original.profileId, original.configRevision]), commandHash: hash(secret),
+    probeDigest: 'a'.repeat(64), phase, sequence: index + 1, elapsedMs: index * 7,
+  })));
+  assert.ok(retained.every(Object.isFrozen));
+  assert.ok(retained.every(value => !Object.hasOwn(value, 'pid') && !Object.hasOwn(value, 'ready') &&
+    !Object.hasOwn(value, 'released') && !Object.hasOwn(value, 'failed')));
+});
+
+test('probe diagnostics cannot replace clock, write or sink failures with authority', async () => {
+  const selected = { profileId: 'TEST-original', configRevision: 'TEST-revision' };
+  const secret = 'TEST-private-diagnostic-error', lines: string[] = [];
+  let attempts = 0, clock = 100;
+  const observe = createOpenCodeProbeDiagnostic(selected, 'TEST-command', 'a'.repeat(64), line => {
+    if (++attempts === 1) throw new Error(secret);
+    lines.push(line);
+  }, () => clock);
+  assert.doesNotThrow(() => observe('run'));
+  clock += 13; observe('graph-start');
+  assert.equal(JSON.parse(lines[0]!.slice(probePrefix.length)).sequence, 2,
+    'a lost write is not relabelled as an earlier observation');
+  assert.equal(JSON.parse(lines[0]!.slice(probePrefix.length)).elapsedMs, 13);
+  const badClock = createOpenCodeProbeDiagnostic(selected, 'TEST-command', 'a'.repeat(64), line => lines.push(line),
+    () => { throw new Error(secret); });
+  for (const phase of probePhases) assert.doesNotThrow(() => badClock(phase));
+  assert.equal(lines.length, 1);
+  for (const firstRead of ['throw', 'nan'] as const) {
+    let reads = 0;
+    const missingOrigin = createOpenCodeProbeDiagnostic(selected, 'TEST-command', 'a'.repeat(64),
+      line => lines.push(line), () => {
+        if (++reads > 1) return 1000;
+        if (firstRead === 'throw') throw new Error(secret);
+        return NaN;
+      });
+    for (const phase of probePhases) assert.doesNotThrow(() => missingOrigin(phase));
+    assert.equal(reads, 1, 'a missing original timestamp is never replaced by a later phase');
+    assert.equal(lines.length, 1);
+  }
+  for (const value of [NaN, Infinity, -1]) {
+    const invalidClock = createOpenCodeProbeDiagnostic(selected, 'TEST-command', 'a'.repeat(64), line => lines.push(line), () => value);
+    assert.doesNotThrow(() => invalidClock('run'));
+  }
+  assert.equal(lines.length, 1);
+  let sinkCalls = 0;
+  const decode = decodeClaudeCloseDiagnostics(() => {}, undefined, undefined, () => {
+    if (++sinkCalls === 1) throw new Error(secret);
+    return Promise.reject(new Error(secret));
+  });
+  assert.doesNotThrow(() => decode(Buffer.from(lines[0]! + lines[0]!)));
+  await new Promise<void>(resolve => setImmediate(resolve));
+  assert.equal(sinkCalls, 2);
+  const noObserver = decodeClaudeCloseDiagnostics(() => { throw new Error('TEST unrelated decoder'); });
+  assert.doesNotThrow(() => noObserver(Buffer.from(lines[0]!)));
+});
+
+test('probe diagnostic construction failures return a silent observer without reading its clock', () => {
+  const failure = new Error('TEST private diagnostic construction failure');
+  let reads = 0, clockReads = 0, writes = 0;
+  const getter = Object.defineProperty({ profileId: 'TEST-profile', configRevision: 'TEST-revision' },
+    'profileId', { get() { reads++; throw failure; } });
+  const serializer = { profileId: { toJSON() { reads++; throw failure; } } as unknown as string,
+    configRevision: 'TEST-revision' };
+  for (const selected of [getter, serializer]) {
+    const observe = createOpenCodeProbeDiagnostic(selected, 'TEST-command', 'a'.repeat(64),
+      () => { writes++; }, () => { clockReads++; return 1; });
+    for (const phase of probePhases) assert.doesNotThrow(() => observe(phase));
+  }
+  let digestCoercions = 0;
+  const rawDigest = {
+    toString() { digestCoercions++; return 'a'.repeat(64); },
+    toJSON() { return 'TEST private oversized diagnostic ' + 'x'.repeat(9000); },
+  } as unknown as string;
+  const invalid = createOpenCodeProbeDiagnostic({ profileId: 'TEST-profile', configRevision: 'TEST-revision' },
+    'TEST-command', rawDigest, () => { writes++; }, () => { clockReads++; return 1; });
+  for (const phase of probePhases) assert.doesNotThrow(() => invalid(phase));
+  assert.equal(digestCoercions, 0, 'a malformed digest is never coerced into bounded-string evidence');
+  assert.equal(reads, 2); assert.equal(clockReads, 0); assert.equal(writes, 0);
+});
+
+test('probe decoder rejects raw, nonfinite, extra and custody-like fields and recovers framing', () => {
+  const valid = { profileHash: 'a'.repeat(64), commandHash: 'b'.repeat(64), probeDigest: 'c'.repeat(64),
+    phase: 'graph-start', sequence: 2, elapsedMs: 7 };
+  const values: unknown[] = [];
+  const decode = decodeClaudeCloseDiagnostics(() => {}, undefined, undefined, value => { values.push(value); });
+  const frame = (value: Record<string, unknown>) => probePrefix + JSON.stringify(value) + '\n';
+  for (const unsafe of [
+    { ...valid, extra: 'TEST-secret' }, { ...valid, pid: 42 }, { ...valid, ready: true },
+    { ...valid, profileHash: 'TEST-path' }, { ...valid, commandHash: '/private/path' },
+    { ...valid, probeDigest: null }, { ...valid, phase: 'released' }, { ...valid, phase: 'failure' },
+    { ...valid, sequence: 0 }, { ...valid, sequence: 13 }, { ...valid, sequence: 1.5 },
+    { ...valid, elapsedMs: -1 }, { ...valid, elapsedMs: 3_600_001 },
+    { ...valid, elapsedMs: null }, { ...valid, elapsedMs: undefined },
+  ]) decode(Buffer.from(frame(unsafe)));
+  assert.deepEqual(values, []);
+  decode(Buffer.concat([Buffer.from(probePrefix), Buffer.from([0xff]), Buffer.from('\n')]));
+  decode(Buffer.from(probePrefix + 'x'.repeat(8193)));
+  decode(Buffer.from('\n' + frame(valid) + frame({ ...valid, sequence: 12, elapsedMs: 3_600_000 })));
+  assert.deepEqual(values, [valid, { ...valid, sequence: 12, elapsedMs: 3_600_000 }]);
+});
+
+test('captured Host logs retain the new phase separately from original metadata custody records', () => {
+  const entries: { namespace: string; args: readonly unknown[] }[] = [];
+  const removeBroken = addLogSink(() => { throw new Error('TEST sink failure'); });
+  const remove = addLogSink(entry => { entries.push(entry); });
+  let pid: number | undefined = 731;
+  const decode = createCapturedHostDiagnostics(() => pid);
+  try {
+    createOpenCodeProbeDiagnostic({ profileId: 'TEST-profile', configRevision: 'TEST-revision' },
+      'TEST-command', 'a'.repeat(64), line => decode(Buffer.from(line)), () => 100)('run');
+    createOpenCodeMetadataDiagnostic({ profileId: 'TEST-profile', configRevision: 'TEST-revision' },
+      undefined, line => decode(Buffer.from(line))).ready({ pid: 732, startIdentity: 'TEST:original:732' });
+    createClaudeCloseDiagnostic(binding, 'TEST-session', line => decode(Buffer.from(line)))({ stage: 'custody', outcome: 'confirmed' });
+    createClaudeManagementDiagnostic({ profileId: 'TEST-profile', configRevision: 'TEST-revision', environment: {} },
+      undefined, line => decode(Buffer.from(line)))('host-cleanup', new Error('cleanup-unconfirmed'));
+    assert.deepEqual(entries.map(entry => entry.namespace),
+      ['Host:OpenCodeProbe', 'Host:OpenCodeMetadata', 'Host:ClaudeClose', 'Host:ClaudeManagement']);
+    assert.deepEqual(entries[0]!.args, ['OpenCode probe phase', {
+      profileHash: createHash('sha256').update(JSON.stringify(['TEST-profile', 'TEST-revision'])).digest('hex'),
+      commandHash: createHash('sha256').update(JSON.stringify('TEST-command')).digest('hex'),
+      probeDigest: 'a'.repeat(64), phase: 'run', sequence: 1, elapsedMs: 0, hostPid: 731,
+    }]);
+    assert.deepEqual(entries[1]!.args, ['OpenCode metadata stage', {
+      profileHash: createHash('sha256').update(JSON.stringify(['TEST-profile', 'TEST-revision'])).digest('hex'),
+      mode: 'directory', providerHash: null, pid: 732, stage: 'ready',
+      startIdentityHash: createHash('sha256').update('TEST:original:732', 'utf8').digest('hex'), hostPid: 731,
+    }]);
+    pid = undefined;
+    createOpenCodeProbeDiagnostic({ profileId: 'TEST-profile', configRevision: 'TEST-revision' },
+      'TEST-command', 'a'.repeat(64), line => decode(Buffer.from(line)), () => 100)('run');
+    assert.equal(entries.length, 4, 'no Host identity is invented for a missing original child');
+  } finally { remove(); removeBroken(); }
 });
