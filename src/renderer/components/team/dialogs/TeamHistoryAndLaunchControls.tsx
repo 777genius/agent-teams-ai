@@ -27,12 +27,12 @@ interface Props {
 }
 
 /** Creation-only controls. No runtime routing or fallback to shared history here. */
-export function TeamHistoryAndLaunchControls({
+export const TeamHistoryAndLaunchControls = ({
   projectContextMode,
   onProjectContextModeChange,
   launchTeam,
   onLaunchTeamChange,
-}: Props): JSX.Element {
+}: Readonly<Props>): JSX.Element => {
   const { t } = useAppTranslation('team');
   return (
     <>
@@ -94,4 +94,4 @@ export function TeamHistoryAndLaunchControls({
       </div>
     </>
   );
-}
+};

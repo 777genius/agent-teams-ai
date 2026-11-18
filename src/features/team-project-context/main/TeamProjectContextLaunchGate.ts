@@ -1,16 +1,16 @@
 import type { PersistedTeamWorkContext } from './TeamProjectContextRegistry';
 import type { TeamRuntimeState } from '@shared/types';
 
-type ContextRegistry = {
+interface ContextRegistry {
   list(logicalTeamName: string): Promise<readonly Pick<
     PersistedTeamWorkContext, 'executionTeamName' | 'state'
   >[]>;
-};
+}
 
-type RuntimeStateReader = {
+interface RuntimeStateReader {
   getRuntimeState(teamName: string): Promise<TeamRuntimeState>;
   hasProvisioningRun(teamName: string): boolean;
-};
+}
 
 export class TeamProjectContextLaunchConflictError extends Error {
   readonly code = 'TEAM_PROJECT_CONTEXT_RUNNING';

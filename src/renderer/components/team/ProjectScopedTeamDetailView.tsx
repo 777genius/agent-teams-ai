@@ -38,12 +38,12 @@ const LaunchTeamDialog = lazy(() =>
  * One visible logical-team tab. A ready, owner-verified native alias is passed
  * to the existing Tasks/Messages screen; nothing is copied or filtered by time.
  */
-export function ProjectScopedTeamDetailView({
+export const ProjectScopedTeamDetailView = ({
   teamName,
   retainedSharedHistory = false,
   isActive = true,
   isPaneFocused = true,
-}: Props): React.JSX.Element {
+}: Readonly<Props>): React.JSX.Element => {
   const { t } = useAppTranslation('team');
   const {
     repositoryGroups,
@@ -419,4 +419,4 @@ export function ProjectScopedTeamDetailView({
       )}
     </div>
   );
-}
+};

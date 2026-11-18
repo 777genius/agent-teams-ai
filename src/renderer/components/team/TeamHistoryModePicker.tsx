@@ -21,11 +21,11 @@ interface Props {
 }
 
 /** Team-definition setting; switching never merges or deletes any history. */
-export function TeamHistoryModePicker({
+export const TeamHistoryModePicker = ({
   teamName,
   mode,
   onChanged,
-}: Props): React.JSX.Element {
+}: Readonly<Props>): React.JSX.Element => {
   const { t } = useAppTranslation('team');
   const id = useId();
   const [busy, setBusy] = useState(false);
@@ -67,4 +67,4 @@ export function TeamHistoryModePicker({
       {error && <p className="text-xs text-red-400" role="alert">{error}</p>}
     </div>
   );
-}
+};

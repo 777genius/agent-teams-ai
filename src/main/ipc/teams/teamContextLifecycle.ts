@@ -156,11 +156,11 @@ export async function deleteLogicalTeamWithContexts(
   }
 }
 
-interface PermanentDeleteRegistry extends Pick<
+type PermanentDeleteRegistry = Pick<
   TeamProjectContextRegistry,
   'hasRetainedIndex' | 'beginPermanentDeletion' | 'cancelPermanentDeletion' |
   'listForPermanentDeletion' | 'forgetPermanentlyDeletedContext'
-> {}
+>;
 
 export async function permanentlyDeleteLogicalTeam(
   logicalTeamName: unknown,

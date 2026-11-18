@@ -83,7 +83,7 @@ describe('TeamMetaStore', () => {
       projectContextMode: 'per_project',
       createdAt: 1,
     });
-    const persisted = JSON.parse(atomicWriteAsync.mock.calls[0]?.[1] as string);
+    const persisted = JSON.parse(atomicWriteAsync.mock.calls[0]?.[1]);
     expect(persisted.projectContextMode).toBe('per_project');
   });
 
@@ -99,7 +99,7 @@ describe('TeamMetaStore', () => {
       createdAt: 1,
     });
 
-    expect(JSON.parse(atomicWriteAsync.mock.calls[0]?.[1] as string)).toMatchObject({
+    expect(JSON.parse(atomicWriteAsync.mock.calls[0]?.[1])).toMatchObject({
       cwd: '/sandbox/new-project',
       projectContextMode: 'per_project',
     });

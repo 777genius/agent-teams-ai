@@ -63,8 +63,9 @@ vi.mock('./dialogs/LaunchTeamDialog', () => ({
   }, 'Configure runtime and launch'),
 }));
 
-import { ProjectScopedTeamDetailView } from './ProjectScopedTeamDetailView';
 import { getVisibleTeamNamesInAnyPane } from '@renderer/store/team/teamViewVisibility';
+
+import { ProjectScopedTeamDetailView } from './ProjectScopedTeamDetailView';
 
 function native(name: string, projectPath: string) {
   return {
@@ -274,7 +275,7 @@ describe('ProjectScopedTeamDetailView project switching', () => {
     getView.mockResolvedValue(native('ptc-b', '/TEST/b'));
     launchTeam.mockResolvedValue({ runId: 'b' });
     await act(async () => {
-      (host.querySelector('[data-testid="launch-with-provider"]') as HTMLButtonElement).click();
+      host.querySelector<HTMLButtonElement>('[data-testid="launch-with-provider"]')!.click();
     });
     await settle();
     expect(launchTeam).toHaveBeenCalledWith({
