@@ -1,7 +1,7 @@
 import { TeamProjectContextRegistry } from '@features/team-project-context/main';
-import { TeamMetaStore } from '@main/services/team/TeamMetaStore';
 import { TeamPromptManagement } from '@features/team-prompt-management/main';
 import { getTeamDataWorkerClient } from '@main/services/team/TeamDataWorkerClient';
+import { TeamMetaStore } from '@main/services/team/TeamMetaStore';
 
 import type { DesktopExternalAgentConnection } from '@features/external-agent-connection/main';
 import type { TeamDataService } from '@main/services/team/TeamDataService';

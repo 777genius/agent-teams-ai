@@ -18,14 +18,14 @@ import { del, get, set } from 'idb-keyval';
 import { isCreateTeamDraftGenerationCurrent } from './createTeamDraftGeneration';
 
 import type { InlineChip } from '@renderer/types/inlineChip';
+import type { EffortLevel } from '@shared/types';
 import type {
-  TeamProjectContextMode,
   TeamFastMode,
   TeamMemberMcpPolicy,
+  TeamProjectContextMode,
   TeamProviderBackendId,
   TeamProviderId,
 } from '@shared/types';
-import type { EffortLevel } from '@shared/types';
 
 // ---------------------------------------------------------------------------
 // Types

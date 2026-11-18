@@ -1,4 +1,5 @@
 import { parsePersistedTeamProjectContextMode } from '../core';
+
 import { TeamProjectContextLaunchGate } from './TeamProjectContextLaunchGate';
 
 import type { TeamProjectContextMode, TeamRuntimeState } from '@shared/types';

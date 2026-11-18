@@ -223,7 +223,7 @@ import {
   parseTeamProvisioningBooleanOptions,
 } from './teamIpcRequestParsers';
 import { waitForOpenCodeRuntimeRelayForUi } from './teams/openCodeRuntimeDeliveryRelayUi';
-import { stopLogicalTeam, projectAliveTeamNames, deleteLogicalTeamWithContexts, restoreLogicalTeamWithContexts, permanentlyDeleteLogicalTeam } from './teams/teamContextLifecycle';
+import { deleteLogicalTeamWithContexts, permanentlyDeleteLogicalTeam, projectAliveTeamNames, restoreLogicalTeamWithContexts, stopLogicalTeam } from './teams/teamContextLifecycle';
 import { withTeamLaunchAdmission } from './teams/teamLaunchAdmission';
 import { teamMessageNotificationScanner } from './teams/teamMessageNotificationScanner';
 import { createMessagesPageHandler } from './teams/teamMessagesPageHandler';

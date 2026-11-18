@@ -1,7 +1,7 @@
 import { parsePersistedTeamProjectContextMode } from '../core';
-import type { TeamProjectContextRegistry } from './TeamProjectContextRegistry';
 
 import type { PersistedTeamWorkContext } from './TeamProjectContextRegistry';
+import type { TeamProjectContextRegistry } from './TeamProjectContextRegistry';
 import type { TeamMetaFile } from '@main/services/team/TeamMetaStore';
 import type { TeamProjectContextMode } from '@shared/types';
 

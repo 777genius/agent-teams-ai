@@ -15,8 +15,8 @@ import { createRuntimeProviderManagementBridge } from '@features/runtime-provide
 import { createTeamGroupChatsBridge } from '@features/team-group-chats/preload';
 import { createTeamImportBridge } from '@features/team-import/preload';
 import {
-  TEAM_PROJECT_CONTEXT_VIEW_CHANNEL,
   TEAM_PROJECT_CONTEXT_SET_MODE_CHANNEL,
+  TEAM_PROJECT_CONTEXT_VIEW_CHANNEL,
   type TeamProjectContextView,
 } from '@features/team-project-context/contracts';
 import { createTeamMemberSettingsBridge } from '@features/team-provisioning/preload';

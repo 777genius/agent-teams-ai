@@ -2,12 +2,12 @@ import { createHash, randomUUID } from 'node:crypto';
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 
-import { validateTeamName } from '@main/services/team/TeamIdentifierValidation';
 import {
   readTeamOwnerProfileScope,
   resolveThisAppProfileScope,
   TEAM_PROFILE_OWNER_MARKER_FILE,
 } from '@main/services/team/provisioning/TeamProvisioningProfileOwnership';
+import { validateTeamName } from '@main/services/team/TeamIdentifierValidation';
 import { atomicWriteAsync } from '@main/utils/atomicWrite';
 import {
   getBackupsBasePath,

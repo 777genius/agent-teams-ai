@@ -3,9 +3,9 @@ import * as path from 'node:path';
 
 import { JsonScheduleRepository } from '@main/services/schedule/JsonScheduleRepository';
 import {
+  claimTeamForThisProfile,
   readTeamOwnerProfileScope,
   resolveThisAppProfileScope,
-  claimTeamForThisProfile,
   TEAM_PROFILE_OWNER_MARKER_FILE,
 } from '@main/services/team/provisioning/TeamProvisioningProfileOwnership';
 import { validateTeamName } from '@main/services/team/TeamIdentifierValidation';
@@ -17,7 +17,7 @@ import { TEAM_PROJECT_CONTEXT_SET_MODE_CHANNEL } from '../contracts';
 import { changeTeamProjectContextMode } from './TeamProjectContextModeService';
 import { TeamProjectContextRegistry } from './TeamProjectContextRegistry';
 
-import type { TeamProjectContextMode, TeamRuntimeState, IpcResult } from '@shared/types';
+import type { IpcResult, TeamProjectContextMode, TeamRuntimeState } from '@shared/types';
 import type { IpcMain } from 'electron';
 
 interface ModeRuntimePorts {

@@ -95,7 +95,6 @@ import type { TaskCommentNotificationJournalStore } from './TaskCommentNotificat
 import type { TeamFileWritePolicy } from './teamFileWritePolicy';
 import type { TeamLogSourceTracker } from './TeamLogSourceTracker';
 import type { TeamMetaFile } from './TeamMetaStore';
-import type { AgentActionMode } from '@shared/types';
 import type {
   AddMemberRequest,
   AttachmentMeta,
@@ -131,6 +130,7 @@ import type {
   ToolCallMeta,
   UpdateKanbanPatch,
 } from '@shared/types';
+import type { AgentActionMode } from '@shared/types';
 import type { AgentTeamsController } from 'agent-teams-controller';
 
 const { createController } = agentTeamsControllerModule;
