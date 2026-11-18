@@ -343,22 +343,113 @@ describe('targeted self-heal of status rows left by an earlier team identity', (
     ]);
   });
 
-  it('heals a replica written for another incarnation without wiping current JSON state (JSON backend)', async () => {
+  it('refuses to promote a foreign replica without the SQLite primary available', async () => {
     const h = await setup('json');
     await h.json.write(mk('bob', CURRENT));
     await h.json.write(mk('alice', FOREIGN));
     await writeReplica(h, 'clean', FOREIGN, snap([mk('bob', CURRENT)]));
     const bobPath = h.paths.getMemberStatusPath(TEAM, 'bob');
+    const alicePath = h.paths.getMemberStatusPath(TEAM, 'alice');
+    const replicaPath = h.paths.getSqliteFallbackReplicaPath(TEAM);
     const bobRaw = await readFile(bobPath, 'utf8');
+    const aliceRaw = await readFile(alicePath, 'utf8');
+    const replicaRaw = await readFile(replicaPath, 'utf8');
 
-    await expect(prepare(h)).resolves.toBe('ran');
+    await expect(prepare(h)).rejects.toThrow();
 
     expect(await readFile(bobPath, 'utf8')).toBe(bobRaw);
-    const envelope = JSON.parse(await readFile(h.paths.getSqliteFallbackReplicaPath(TEAM), 'utf8'));
-    expect(envelope).toMatchObject({ state: 'clean', incarnation: CURRENT });
-    const aliceDir = dirname(h.paths.getMemberStatusPath(TEAM, 'alice'));
-    expect((await readdir(aliceDir)).some((name) => name.includes('.stale-incarnation.'))).toBe(
-      true
+    expect(await readFile(alicePath, 'utf8')).toBe(aliceRaw);
+    expect(await readFile(replicaPath, 'utf8')).toBe(replicaRaw);
+    expect(await quarantineFiles(h)).toEqual([]);
+    expect(h.warn).toHaveBeenCalledWith(
+      'member-work-sync stale status cleanup refused',
+      expect.objectContaining({ reason: 'foreign_replica_requires_primary' })
+    );
+  });
+
+  it('keeps SQLite-only current status readable through JSON fallback after cleanup crash', async () => {
+    const h = await setup('sqlite', { fallbackRequiresReplica: true });
+    await importPrimary(h, [mk('bob', CURRENT)]);
+    await writeReplica(h, 'clean', FOREIGN, snap([mk('alice', FOREIGN)]));
+    const heal = await healStaleIncarnationStatuses({
+      teamName: TEAM,
+      incarnation: CURRENT,
+      backend: 'sqlite',
+      error: new MemberWorkSyncStatusDecodeError('incarnation_mismatch', FOREIGN),
+      gateway: h.gateway,
+      paths: h.paths,
+      replica: h.replica,
+      logger: { warn: h.warn },
+    });
+    expect(heal).toBe('healed');
+    // Simulate process death here: there is no authority preparation retry.
+    const envelope = JSON.parse(
+      await readFile(h.paths.getSqliteFallbackReplicaPath(TEAM), 'utf8')
+    ) as { state: string; incarnation: string; snapshot: MemberWorkSyncStoreSnapshot };
+    expect(envelope.state).toBe('clean');
+    expect(envelope.incarnation).toBe(CURRENT);
+    expect(envelope.snapshot.statuses.map((status) => status.memberName)).toEqual(['bob']);
+
+    const jsonFallback = new BackendSelectingMemberWorkSyncStore(
+      new InternalStorageBackendSelector(() => Promise.reject(new Error('SQLite unavailable'))),
+      h.sqlite,
+      h.json,
+      { gateway: h.gateway, paths: h.paths, fallbackRequiresReplica: true }
+    );
+    const authority = new MemberWorkSyncStatusAuthority({
+      identity: createTestWorkSyncIdentity(CURRENT),
+      withPreparedBackend: (binding, operation) =>
+        jsonFallback.withPreparedBackend(binding, operation),
+    });
+    const read = authority.startRead({ teamName: TEAM, memberName: 'bob' });
+    const result = await read.result;
+    await read.settled;
+    expect(result).toMatchObject({
+      ok: true,
+      snapshot: {
+        status: { memberName: 'bob', statusRevision: { incarnation: CURRENT } },
+      },
+    });
+  });
+
+  it('refuses a foreign dirty replica without a candidate before deleting SQLite statuses', async () => {
+    const h = await setup('sqlite');
+    await importPrimary(h, [mk('alice', FOREIGN)]);
+    const path = h.paths.getSqliteFallbackReplicaPath(TEAM);
+    await mkdir(dirname(path), { recursive: true });
+    await writeFile(
+      path,
+      JSON.stringify({ schemaVersion: 1, state: 'dirty', incarnation: FOREIGN, updatedAt: OLD })
+    );
+    const before = await primary(h);
+    await expect(prepare(h)).rejects.toThrow();
+    expect(await primary(h)).toEqual(before);
+    expect(await quarantineFiles(h)).toEqual([]);
+    expect(h.warn).toHaveBeenCalledWith(
+      'member-work-sync stale status cleanup refused',
+      expect.objectContaining({ reason: 'dirty_replica_from_another_identity' })
+    );
+  });
+
+  it('refuses conflicting lineages among retained foreign-replica statuses', async () => {
+    const h = await setup('sqlite');
+    await importPrimary(h, [mk('alice', FOREIGN)]);
+    const bob = mk('bob', CURRENT);
+    const conflicting = {
+      ...mk('Bob', CURRENT),
+      statusRevision: { ...bob.statusRevision!, lineageId: 'another-lineage' },
+    };
+    await writeReplica(h, 'clean', FOREIGN, snap([bob, conflicting]));
+    const before = await primary(h);
+    const replicaPath = h.paths.getSqliteFallbackReplicaPath(TEAM);
+    const replicaBefore = await readFile(replicaPath, 'utf8');
+    await expect(prepare(h)).rejects.toThrow();
+    expect(await primary(h)).toEqual(before);
+    expect(await readFile(replicaPath, 'utf8')).toBe(replicaBefore);
+    expect(await quarantineFiles(h)).toEqual([]);
+    expect(h.warn).toHaveBeenCalledWith(
+      'member-work-sync stale status cleanup refused',
+      expect.objectContaining({ reason: 'replica_retained_state_invalid' })
     );
   });
 

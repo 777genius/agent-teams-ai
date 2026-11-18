@@ -17,8 +17,10 @@ import {
 } from './decodeMemberWorkSyncStoredStatus';
 import { readMemberWorkSyncStatusRevision } from '../../core/domain/MemberWorkSyncStatusRevision';
 
+import { validateMemberWorkSyncAuthoritySnapshot, validateMemberWorkSyncPrimaryRecords } from './memberWorkSyncAuthorityPreparation';
+import { mergeDomainSnapshots } from './memberWorkSyncDomainSnapshotMerge';
 import { readIncarnationMismatch } from './memberWorkSyncPreparationDiagnostics';
-import { areSnapshotRecordSetsEquivalent } from './memberWorkSyncSqliteMappers';
+import { areSnapshotRecordSetsEquivalent, recordsToSnapshot } from './memberWorkSyncSqliteMappers';
 import { normalizeMemberKey } from './memberWorkSyncStoreIdentity';
 
 import type { MemberWorkSyncStoreSnapshot } from './JsonMemberWorkSyncStore';
@@ -69,6 +71,7 @@ interface Plan {
   entries: Entry[];
   evidenceTimes: number[];
   primaryKept: MemberWorkSyncTeamSnapshotRecords | null;
+  primaryAfter: MemberWorkSyncTeamSnapshotRecords | null;
   primaryDelete: MemberWorkSyncStatusDeleteTarget[];
   files: FileOp[];
   replica: ReplicaOp | null;
@@ -240,7 +243,8 @@ async function planPrimary(input: StaleIncarnationHealInput, plan: Plan): Promis
     });
     return false;
   });
-  if (kept.length !== records.statuses.length) plan.primaryKept = { ...records, statuses: kept };
+  plan.primaryAfter = { ...records, statuses: kept };
+  if (kept.length !== records.statuses.length) plan.primaryKept = plan.primaryAfter;
 }
 
 async function planReplica(input: StaleIncarnationHealInput, plan: Plan): Promise<void> {
@@ -259,6 +263,11 @@ async function planReplica(input: StaleIncarnationHealInput, plan: Plan): Promis
   }
   const wrapperForeign =
     typeof envelope.incarnation === 'string' && envelope.incarnation !== input.incarnation;
+  // An explicit foreign dirty fence is unsafe even when it has no recovery candidate.
+  if (envelope.state === 'dirty' && wrapperForeign) {
+    plan.refusal = 'dirty_replica_from_another_identity';
+    return;
+  }
   // A legacy dirty fence carries no trusted candidate, so none of it is ever validated or merged.
   if (envelope.state === 'dirty' && envelope.incarnation === undefined) return;
   if (!isRecord(envelope.snapshot) || !Array.isArray(envelope.snapshot.statuses)) return;
@@ -311,11 +320,6 @@ async function planReplica(input: StaleIncarnationHealInput, plan: Plan): Promis
       }
     }
   }
-  if (envelope.state === 'dirty' && wrapperForeign) {
-    // A dirty fence written under another identity is continuity evidence we cannot bridge.
-    plan.refusal = 'dirty_replica_from_another_identity';
-    return;
-  }
   if (wrapperForeign) {
     const updatedAt = Date.parse(String(envelope.updatedAt));
     plan.evidenceTimes.push(updatedAt);
@@ -326,9 +330,28 @@ async function planReplica(input: StaleIncarnationHealInput, plan: Plan): Promis
         foreignIncarnation: String(envelope.incarnation),
       });
   }
+  const retained = {
+    ...envelope.snapshot,
+    statuses: kept,
+  } as unknown as MemberWorkSyncStoreSnapshot;
+  try {
+    validateMemberWorkSyncAuthoritySnapshot(
+      { teamName: input.teamName, incarnation: input.incarnation },
+      retained
+    );
+  } catch {
+    plan.refusal = 'replica_retained_state_invalid';
+    return;
+  }
+  if (wrapperForeign && input.backend === 'json') {
+    // Without SQLite, absence of SQLite-only statuses cannot be disproven.
+    // Do not promote a potentially partial foreign replica to JSON authority.
+    plan.refusal = 'foreign_replica_requires_primary';
+    return;
+  }
   plan.replica = {
     state: envelope.state,
-    snapshot: { ...envelope.snapshot, statuses: kept } as unknown as MemberWorkSyncStoreSnapshot,
+    snapshot: retained,
     rawBefore: raw,
   };
 }
@@ -437,6 +460,7 @@ export async function healStaleIncarnationStatuses(
     entries: [],
     evidenceTimes: [],
     primaryKept: null,
+    primaryAfter: null,
     primaryDelete: [],
     files: [],
     replica: null,
@@ -448,6 +472,28 @@ export async function healStaleIncarnationStatuses(
     await planReplica(input, plan);
     if (input.backend === 'sqlite') await planPrimary(input, plan);
     await planFiles(input, plan);
+    const identity = { teamName: input.teamName, incarnation: input.incarnation };
+    if (plan.primaryAfter && !plan.refusal) {
+      try {
+        validateMemberWorkSyncPrimaryRecords(identity, plan.primaryAfter);
+      } catch {
+        plan.refusal = 'primary_retained_state_invalid';
+      }
+    }
+    if (plan.replica && input.backend === 'sqlite' && !plan.refusal) {
+      // Publication must include the complete surviving SQLite snapshot, not
+      // just the subset retained from the foreign replica. Otherwise a crash
+      // before preparation retry would expose missing SQLite-only members to
+      // JSON fallback as authoritative absence.
+      try {
+        if (!plan.primaryAfter) throw new Error('Missing primary snapshot');
+        const canonical = recordsToSnapshot(input.teamName, plan.primaryAfter);
+        plan.replica.snapshot = mergeDomainSnapshots(canonical, plan.replica.snapshot);
+        validateMemberWorkSyncAuthoritySnapshot(identity, plan.replica.snapshot);
+      } catch {
+        plan.refusal = 'replica_continuity_unverified';
+      }
+    }
     if (plan.entries.length === 0 && !plan.replica && !plan.refusal) return 'not_applicable';
     const refusal = plan.refusal ?? (await corroborate(input, plan));
     if (refusal) {
