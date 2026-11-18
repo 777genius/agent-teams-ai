@@ -1,15 +1,19 @@
 import assert from 'node:assert/strict';
+import childProcess from 'node:child_process';
+import fs from 'node:fs';
+import { syncBuiltinESMExports } from 'node:module';
 import { createHash } from 'node:crypto';
 import { mkdir, mkdtemp, readFile, realpath, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 import { test } from 'node:test';
+import type { TestContext } from 'node:test';
 import { CONTEXT_MARKER, REQUIRED_TOOLS, startOpenCodeModel } from '../../packages/legacy-agent-host/tests/fixtures/native-opencode-team/model.ts';
 import { checkpoint, jsonDigest, originalHistoryMarker } from './desktop-resume-records.ts';
-import { separateDesktopOpenCodeRuntimeChildren } from './desktop-native-stop-fixture.ts';
+import { separateDesktopOpenCodeRuntimeChildren, captureDesktopOpenCodeGlobalMetadata, captureDesktopOpenCodeProjectMetadata } from './desktop-native-stop-fixture.ts';
 import { captureDesktopMetadataLineage, desktopMetadataProfileHash, assertDesktopMetadataReleasedEvidence,
-  readDesktopMetadataLineage, readDesktopMetadataLineageFailure } from './desktop-opencode-metadata-lineage.ts';
+  readDesktopMetadataLineage, readDesktopMetadataLineageFailure, desktopMetadataReadyScopeCount } from './desktop-opencode-metadata-lineage.ts';
 import type { DesktopNativeHostSnapshot, DesktopMetadataEvent } from './desktop-opencode-metadata-lineage.ts';
 import { assertCapturedDesktopMetadataAbsent, assertFirstResumeMetadataAbsent, assertColdOpenCodeRuntimeRecords } from './desktop-opencode-v2-cold-metadata.ts';
 
@@ -485,3 +489,218 @@ test('V2 checkpoint evidence reads only its exact captured SQLite session and re
     await assert.rejects(checkpoint(root, session, 'opencode'));
   } finally { await rm(root, { recursive: true, force: true }); }
 });
+
+
+test('passive metadata scope count admits only exact complete lifecycle transitions', () => {
+  const globalHash = 'a'.repeat(64), projectHash = 'b'.repeat(64);
+  const ready: DesktopMetadataEvent = { hostPid: 10, profileHash: globalHash, mode: 'directory',
+    providerHash: null, pid: 11, startIdentityHash: nativeIdentityHash('TEST-11'), stage: 'ready' };
+  const released = { ...ready, stage: 'released' as const };
+  const next = { ...ready, mode: 'provider' as const, providerHash: 'c'.repeat(64),
+    pid: 12, startIdentityHash: nativeIdentityHash('TEST-12') };
+  const project = { ...next, profileHash: projectHash, pid: 13, startIdentityHash: nativeIdentityHash('TEST-13') };
+  const count = (events: readonly DesktopMetadataEvent[], scopes = [globalHash, projectHash]) =>
+    desktopMetadataReadyScopeCount(events, scopes, 10);
+  assert.equal(count([]), 0);
+  assert.equal(count([ready]), 1);
+  assert.equal(count([ready, released]), 0);
+  assert.equal(count([ready, released, next, project]), 2);
+  assert.equal(count([ready, released, next], [globalHash]), 1);
+  for (const events of [
+    [ready, next], [ready, { ...released, stage: 'cleanup-unknown' as const }],
+    [ready, released, ready], [released],
+    [{ ...ready, profileHash: 'd'.repeat(64) }],
+    [{ ...ready, hostPid: 20 }], [ready, { ...released, startIdentityHash: nativeIdentityHash('foreign') }],
+  ]) assert.throws(() => count(events));
+  assert.throws(() => count([], [globalHash, globalHash]));
+});
+
+async function metadataCallerFixture(t: TestContext) {
+  const root = await realpath(await mkdtemp(join(tmpdir(), 'TEST-metadata-budget-')));
+  const fixture = { root, node: '/TEST/node', hostEntry: '/TEST/host' }, group = 90;
+  const owner = { ownerId: 'TEST-owner', revision: 'TEST-owner-revision' };
+  const selections = [null, join(root, 'workspace')].map((projectPath, index) => ({
+    runtimeId: 'opencode', projectPath, owner, contextId: 'TEST-context-' + index,
+    profileId: 'TEST-profile-' + index, configRevision: 'TEST-config-' + index,
+  }));
+  const revisions = ['b'.repeat(64), 'd'.repeat(64)], ids = ['a'.repeat(64), 'c'.repeat(64)];
+  const executable = { path: '/TEST/bun', sha256: 'e'.repeat(64) };
+  const sources = selections.map((selection, index) => ({
+    sourceId: ids[index]!, revision: revisions[index]!, profileId: 'runtime-source:' + revisions[index],
+    configRevision: 'runtime-source:' + revisions[index], scope: index === 0 ? 'global' as const : 'project' as const,
+    projectPath: selection.projectPath,
+  }));
+  await mkdir(join(root, 'hoststore/runtime-sources'), { recursive: true });
+  await mkdir(join(root, 'hoststore/runtime-sessions'), { recursive: true });
+  await mkdir(join(root, 'hoststore/management-commands'), { recursive: true });
+  await writeFile(join(root, 'desktop-descriptor.json'), JSON.stringify({ management: selections }));
+  await writeFile(join(root, 'host-profile.json'), JSON.stringify({ owner, management: selections.map(selection => ({
+    provider: 'opencode', profileId: selection.profileId, configRevision: selection.configRevision, executable,
+  })) }));
+  const index = { records: selections.map((selection, i) => ({
+    revision: revisions[i], grant: { targetId: ids[i], ownerId: owner.ownerId, ownerRevision: owner.revision,
+      contextId: selection.contextId, projectPath: selection.projectPath, runtimeId: 'opencode',
+      profileId: selection.profileId, configRevision: selection.configRevision },
+    candidate: { executable, openCodeConfiguration: { scope: sources[i]!.scope } },
+  })), current: ids.map((sourceId, i) => ({ sourceId, revision: revisions[i] })) };
+  await writeFile(join(root, 'hoststore/runtime-sources/index.json'), JSON.stringify(index));
+  const host = { pid: 10, parentPid: 8, groupId: group, birth: 'Wed Nov 18 09:00:00 2026', command: fixture.node };
+  const child = (pid: number) => ({ pid, parentPid: host.pid, groupId: pid,
+    birth: 'Wed Nov 18 09:00:01 2026', command: '/TEST/bun' });
+  const event = (scope: number, pid: number): DesktopMetadataEvent => ({
+    hostPid: host.pid, profileHash: desktopMetadataProfileHash(sources[scope]!),
+    mode: 'provider', providerHash: 'f'.repeat(64), pid,
+    startIdentityHash: nativeIdentityHash('TEST-native-' + pid), stage: 'ready',
+  });
+  const state = { now: 0, deadline: 180_000, ownerCost: 0, owned: true, host,
+    children: [child(11)], events: [event(0, 11)], logReads: 0, catalogCalls: 0, physicalReads: 0 };
+  let onRead: (() => void) | undefined, targetRead = 0;
+  const originalRead = fs.readFileSync;
+  t.mock.method(fs, 'readFileSync', (path: fs.PathOrFileDescriptor, options?: unknown) => {
+    if (path === join(root, 'userData/logs/app-errors.1.ndjson')) throw Object.assign(new Error('TEST absent rotation'), { code: 'ENOENT' });
+    if (path === join(root, 'userData/logs/app-errors.ndjson')) {
+      state.logReads++;
+      if (state.logReads >= targetRead) { const notify = onRead; onRead = undefined; notify?.(); }
+      return Buffer.from(state.events.map(value => JSON.stringify({ namespace: 'Host:OpenCodeMetadata',
+        message: 'OpenCode metadata stage ' + JSON.stringify(value) })).join('\n') + '\n');
+    }
+    return Reflect.apply(originalRead, fs, [path, options]);
+  });
+  t.mock.method(childProcess, 'execFileSync', (file: string, args: readonly string[]) => {
+    assert.equal(file, '/bin/ps', 'finite reads cannot launch a vendor or any other executable');
+    if (args.join(' ') === '-axww -o pid=,ppid=,pgid=,lstart=,comm=') {
+      state.physicalReads++;
+      return [state.host, ...state.children].map(row =>
+        [row.pid, row.parentPid, row.groupId, row.birth, row.command].join(' ')).join('\n');
+    }
+    assert.deepEqual(args, ['-p', String(host.pid), '-o', 'command=']);
+    return fixture.node + ' ' + fixture.hostEntry;
+  });
+  t.mock.method(process, 'kill', () => assert.fail('a metadata observation never signals'));
+  t.mock.method(Date, 'now', () => state.now);
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  const previousBun = process.env.OPENCODE_V2_EMBEDDED_BUN;
+  process.env.OPENCODE_V2_EMBEDDED_BUN = '/TEST/bun';
+  syncBuiltinESMExports();
+  t.after(async () => {
+    t.mock.restoreAll(); syncBuiltinESMExports();
+    if (previousBun === undefined) delete process.env.OPENCODE_V2_EMBEDDED_BUN;
+    else process.env.OPENCODE_V2_EMBEDDED_BUN = previousBun;
+    await rm(root, { recursive: true, force: true });
+  });
+  const assertOwnedRenderer = () => {
+    assert.equal(state.owned, true, 'original renderer revoked');
+    state.now += state.ownerCost;
+  };
+  const remainingMs = () => {
+    const remaining = state.deadline - state.now;
+    assert.ok(remaining > 0, 'original TEST observation cutoff');
+    return remaining;
+  };
+  const cdp = { evaluate: async (expression: string) => {
+    state.catalogCalls++;
+    assert.ok(expression.startsWith('window.electronAPI.runtimeProviderManagement.loadModels('));
+    return { runtimeId: 'opencode', models: { providerId: 'test-local', catalogState: 'fresh',
+      models: [{ modelId: 'test-local/TEST-model' }] } };
+  } };
+  const captureGlobal = () => captureDesktopOpenCodeGlobalMetadata(cdp, fixture, group, assertOwnedRenderer, remainingMs);
+  return { fixture, group, state, child, event, sources, index, assertOwnedRenderer, remainingMs, captureGlobal,
+    nextLogRead: (count = 1) => new Promise<void>(resolve => { targetRead = state.logReads + count; onRead = resolve; }) };
+}
+
+test('actual global caller waits a released mode through original setup allowance, then uses physical evidence', async t => {
+  const f = await metadataCallerFixture(t), first = f.state.events[0]!;
+  f.state.events.push({ ...first, stage: 'released' }); f.state.children = [];
+  const observed = f.nextLogRead(), pending = f.captureGlobal();
+  await Promise.race([observed, pending.then(() => assert.fail('a closed mode is not ready'))]);
+  f.state.now = 6000;
+  f.state.events.push(f.event(0, 12)); f.state.children = [f.child(12)];
+  t.mock.timers.tick(100);
+  const result = await pending;
+  assert.equal(f.state.catalogCalls, 1, 'the original catalog action is never replayed');
+  assert.equal(result.captured.children.length, 1);
+  assert.equal(result.captured.children[0]!.pid, 12);
+  assert.deepEqual(result.captured.metadataLineage!.events, f.state.events);
+});
+
+test('actual project caller keeps two scopes, rechecks original DOM and preserves global lineage', async t => {
+  const f = await metadataCallerFixture(t), global = await f.captureGlobal();
+  const first = f.event(1, 12);
+  f.state.events.push(first, { ...first, stage: 'released' });
+  const observed = f.nextLogRead();
+  let domReads = 0;
+  const pending = captureDesktopOpenCodeProjectMetadata(f.fixture, f.group, global, {
+    remainingMs: f.remainingMs, assertOwnedRenderer: f.assertOwnedRenderer,
+    beforePhysical: async () => { domReads++; },
+  });
+  await Promise.race([observed, pending.then(() => assert.fail('project transition is not ready'))]);
+  f.state.now = 6000;
+  f.state.events.push(f.event(1, 13)); f.state.children.push(f.child(13));
+  t.mock.timers.tick(100);
+  const result = await pending;
+  assert.equal(domReads, 1); assert.equal(f.state.catalogCalls, 1);
+  assert.deepEqual(result.captured.children.map(row => row.pid), [11, 13]);
+  assert.deepEqual(result.captured.metadataLineage!.events.slice(0, global.captured.metadataLineage!.events.length),
+    global.captured.metadataLineage!.events);
+});
+
+for (const change of ['renderer', 'host', 'source', 'prefix'] as const) {
+  test('actual passive caller refuses changed ' + change + ' after its original wait', async t => {
+    const f = await metadataCallerFixture(t), first = f.state.events[0]!;
+    f.state.events.push({ ...first, stage: 'released' }); f.state.children = [];
+    const observed = f.nextLogRead(), pending = f.captureGlobal();
+    await Promise.race([observed, pending.then(() => assert.fail('transition prematurely qualified'))]);
+    if (change === 'renderer') f.state.owned = false;
+    if (change === 'host') f.state.host = { ...f.state.host, birth: 'Wed Nov 18 09:00:02 2026' };
+    if (change === 'source') {
+      f.index.current[0]!.revision = '9'.repeat(64);
+      await writeFile(join(f.fixture.root, 'hoststore/runtime-sources/index.json'), JSON.stringify(f.index));
+    }
+    if (change === 'prefix') { f.state.events = [f.event(0, 12)]; f.state.children = [f.child(12)]; }
+    const refused = assert.rejects(pending);
+    t.mock.timers.tick(100);
+    await refused; assert.equal(f.state.catalogCalls, 1);
+  });
+}
+
+test('actual global caller rejects ready at original cutoff and never starts a fresh physical window', async t => {
+  const f = await metadataCallerFixture(t), first = f.state.events[0]!;
+  f.state.events.push({ ...first, stage: 'released' }); f.state.children = [];
+  const observed = f.nextLogRead(), pending = f.captureGlobal();
+  await Promise.race([observed, pending.then(() => assert.fail('transition prematurely qualified'))]);
+  f.state.now = f.state.deadline;
+  f.state.events.push(f.event(0, 12)); f.state.children = [f.child(12)];
+  const refused = assert.rejects(pending, /cutoff|deadline/);
+  t.mock.timers.tick(100);
+  await refused; assert.equal(f.state.catalogCalls, 1);
+});
+
+test('actual global caller cannot qualify count alone and caps physical observation by remaining time', async t => {
+  const f = await metadataCallerFixture(t);
+  f.state.deadline = 50; f.state.children = [];
+  const observed = f.nextLogRead(2), pending = f.captureGlobal();
+  await Promise.race([observed, pending.then(() => assert.fail('count alone cannot qualify a birth'))]);
+  f.state.now = 50;
+  const refused = assert.rejects(pending, /cutoff|deadline/);
+  t.mock.timers.tick(100);
+  await refused; assert.equal(f.state.catalogCalls, 1);
+});
+
+for (const scope of ['global', 'project'] as const) {
+  test('actual ' + scope + ' return checks original cutoff after final synchronous owner cost', async t => {
+    const f = await metadataCallerFixture(t);
+    const global = scope === 'project' ? await f.captureGlobal() : undefined;
+    if (global) { f.state.events.push(f.event(1, 12)); f.state.children.push(f.child(12)); }
+    const capture = () => global
+      ? captureDesktopOpenCodeProjectMetadata(f.fixture, f.group, global,
+        { remainingMs: f.remainingMs, assertOwnedRenderer: f.assertOwnedRenderer })
+      : f.captureGlobal();
+    f.state.now = 0; f.state.ownerCost = 1;
+    await capture();
+    const exactReturnCost = f.state.now;
+    assert.ok(exactReturnCost > 0);
+    f.state.now = 0; f.state.deadline = exactReturnCost;
+    await assert.rejects(capture(), /cutoff|deadline/,
+      'the same final owner check reaching the immutable cutoff cannot return success');
+  });
+}

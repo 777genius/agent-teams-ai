@@ -35,10 +35,33 @@ async function files(
     if (allowAbsent && (error as NodeJS.ErrnoException).code === 'ENOENT') return [];
     throw error;
   });
-  assert.ok(
-    entries.length <= 256 &&
-      entries.every((entry) => entry.isFile() && /^[a-zA-Z0-9_-]+\.json$/.test(entry.name))
-  );
+  try {
+    assert.ok(
+      entries.length <= 256 &&
+        entries.every((entry) => entry.isFile() && /^[a-zA-Z0-9_-]+\.json$/.test(entry.name))
+    );
+  } catch (error) {
+    try {
+      const sample = entries.slice(0, 256);
+      const shape = { count: Math.min(entries.length, 257), sampled: sample.length,
+        truncated: entries.length > sample.length, regular: 0, validJsonName: 0,
+        regularJson: 0, directory: 0, symbolicLink: 0, otherType: 0 };
+      for (const entry of sample) {
+        const regular = entry.isFile(), directory = entry.isDirectory(), symbolicLink = entry.isSymbolicLink();
+        const validJsonName = /^[a-zA-Z0-9_-]+\.json$/.test(entry.name);
+        if (regular) shape.regular++;
+        if (validJsonName) shape.validJsonName++;
+        if (regular && validJsonName) shape.regularJson++;
+        if (directory) shape.directory++;
+        if (symbolicLink) shape.symbolicLink++;
+        if (!regular && !directory && !symbolicLink) shape.otherType++;
+      }
+      console.log(JSON.stringify({ kind: 'TEST_DESKTOP_RECORD_ENTRY_SHAPE', shape }));
+    } catch {
+      // Only already-read Dirents are sampled; reporting cannot replace the original refusal.
+    }
+    throw error;
+  }
   return Promise.all(
     entries
       .sort((a, b) => a.name.localeCompare(b.name))

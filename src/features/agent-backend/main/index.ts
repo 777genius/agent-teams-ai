@@ -95,3 +95,8 @@ export {
   LegacyStoppedImportHold,
 } from './infrastructure/stopped-import/createLegacyStoppedTeamSource';
 export { prepareStoppedLegacyImport } from './infrastructure/stopped-import/prepareStoppedLegacyImport';
+export { createStoppedImportDiagnostic } from './infrastructure/stopped-import/createStoppedImportDiagnostic';
+export type {
+  StoppedImportDiagnostic,
+  StoppedImportDiagnosticPhase,
+} from './infrastructure/stopped-import/createStoppedImportDiagnostic';

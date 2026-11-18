@@ -12,6 +12,23 @@ const stages = new Set([
   'capture-close-completed',
   'capture-close-error',
 ]);
+const runtimeOpenPrefix = 'legacy-agent-host: runtime-open ';
+const runtimeOpenPhases = {
+  factory: new Set(['selection', 'authority', 'worktree', 'model-readiness', 'bindings',
+    'endpoint', 'provider-prepare', 'provider-create', 'interactions', 'driver-open', 'driver-wrap']),
+  runtime: new Set(['authority', 'driver-open', 'session-ref', 'publish', 'observe',
+    'sealed-close', 'readiness', 'readiness-publish']),
+};
+const runtimeOpenCategories = new Set(['invalid', 'conflict', 'forbidden', 'held',
+  'busy', 'aborted', 'deadline', 'unknown']);
+export interface RuntimeOpenDiagnostic {
+  readonly profileHash: string;
+  readonly configurationHash: string;
+  readonly source: 'factory' | 'runtime';
+  readonly phase: string;
+  readonly category: string;
+  readonly observedAtMs: number;
+}
 const metadataPrefix = 'legacy-agent-host: opencode-metadata ';
 const probePrefix = 'legacy-agent-host: opencode-probe ';
 const probePhases = new Set(['run', 'graph-start', 'graph-done', 'native-launch', 'native-ready',
@@ -125,13 +142,34 @@ export function decodeClaudeCloseDiagnostics(
   retain: (value: ClaudeCloseDiagnostic) => void | Promise<void>,
   retainManagement?: (value: ClaudeManagementDiagnostic) => void | Promise<void>,
   retainMetadata?: (value: OpenCodeMetadataDiagnostic) => void | Promise<void>,
-  retainProbe?: (value: OpenCodeProbeDiagnostic) => void | Promise<void>
+  retainProbe?: (value: OpenCodeProbeDiagnostic) => void | Promise<void>,
+  retainRuntimeOpen?: (value: RuntimeOpenDiagnostic) => void | Promise<void>
 ): (chunk: Buffer) => void {
   let pending = Buffer.alloc(0);
   let discard = false;
   const emit = (line: Buffer): void => {
     try {
       const text = new TextDecoder('utf-8', { fatal: true }).decode(line);
+      if (text.startsWith(runtimeOpenPrefix)) {
+        if (!retainRuntimeOpen) return;
+        const value: unknown = JSON.parse(text.slice(runtimeOpenPrefix.length));
+        if (!exact(value, ['profileHash', 'configurationHash', 'source', 'phase', 'category', 'observedAtMs']) ||
+            !hash(value.profileHash) || !hash(value.configurationHash) ||
+            !(value.source === 'factory' || value.source === 'runtime') ||
+            typeof value.phase !== 'string' || !runtimeOpenPhases[value.source].has(value.phase) ||
+            typeof value.category !== 'string' || !runtimeOpenCategories.has(value.category) ||
+            typeof value.observedAtMs !== 'number' || !Number.isSafeInteger(value.observedAtMs) ||
+            value.observedAtMs < 0) return;
+        const diagnostic: RuntimeOpenDiagnostic = Object.freeze({
+          profileHash: value.profileHash, configurationHash: value.configurationHash,
+          source: value.source, phase: value.phase, category: value.category,
+          observedAtMs: value.observedAtMs,
+        });
+        void Promise.resolve(retainRuntimeOpen(diagnostic)).catch(() => {
+          /* Diagnostic loss cannot settle an original Runtime open or cleanup. */
+        });
+        return;
+      }
       if (text.startsWith(probePrefix)) {
         if (!retainProbe) return;
         const value: unknown = JSON.parse(text.slice(probePrefix.length));

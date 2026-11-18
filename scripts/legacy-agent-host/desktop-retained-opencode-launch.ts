@@ -34,8 +34,26 @@ async function launchInOriginalRenderer(input: RetainedOpenCodeLaunchInput): Pro
   };
   const value = (raw: unknown, action: string): unknown => {
     const result = object(raw);
-    if (result.ok !== true || result.action !== action)
-      throw new Error(`Original runtime ${action} was not confirmed`);
+    if (result.ok !== true || result.action !== action) {
+      let diagnostic = '';
+      try {
+        const own = (key: 'reason' | 'outcome'): unknown => {
+          const descriptor = Object.getOwnPropertyDescriptor(result, key);
+          return descriptor && 'value' in descriptor ? descriptor.value : undefined;
+        };
+        const reason = own('reason'), outcome = own('outcome');
+        diagnostic = '; ' + JSON.stringify({
+          reason: typeof reason === 'string' && [
+            'unavailable', 'invalid', 'source-changed', 'account-changed', 'import-not-absent',
+            'not-eligible', 'busy', 'intent-changed', 'outcome-unknown',
+          ].includes(reason) ? reason : null,
+          outcome: outcome === 'not-dispatched' || outcome === 'unknown' ? outcome : null,
+        });
+      } catch {
+        // Optional closed facts cannot replace the original refusal or its cleanup.
+      }
+      throw new Error(`Original runtime ${action} was not confirmed${diagnostic}`);
+    }
     return result.value;
   };
   let scopeId: string | undefined, attempted = false, failed = false, failure: unknown, launched: Row | undefined;

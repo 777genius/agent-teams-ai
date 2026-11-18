@@ -1505,6 +1505,195 @@ test('actual Linux owner cleanup keeps final ' + mode + ' as failure after its o
 });
 
 
+type PassiveEpochMode = 'natural' | 'birth' | 'parent' | 'child' | 'invocation' | 'duplicate' |
+  'nonzero' | 'signal' | 'pending-exit' | 'deadline' | 'escaped-descendant' | 'host-debt' |
+  'group-debt' | 'final-descendant' | 'final-group' | 'final-host' | 'final-deadline' |
+  'final-exit' | 'table-failure' | 'port-debt' | 'port-deadline';
+
+async function passiveOriginalOwnerEpoch(t: TestContext, mode: PassiveEpochMode) {
+  const { finishDesktopOwnerRoutingEpoch } = await import('./desktop-owner-routing-epoch.ts');
+  const { selectedCdpPort } = await import('./desktop-backend-observations.ts');
+  const net = createRequire(import.meta.url)('node:net') as typeof import('node:net');
+  const platform = Object.getOwnPropertyDescriptor(process, 'platform'); assert.ok(platform);
+  Object.defineProperty(process, 'platform', { ...platform, value: 'linux' });
+  t.after(() => { Object.defineProperty(process, 'platform', platform); t.mock.restoreAll(); syncBuiltinESMExports(); });
+  const base = capturedLinuxNodeTuple(), group = base.group;
+  const app = Object.assign(new childProcess.ChildProcess(), {
+    pid: mode === 'child' ? group + 10 : group,
+    exitCode: null as number | null, signalCode: null as NodeJS.Signals | null,
+  });
+  const epoch: Record<string, unknown> = { cdpListener: 45001 }, hosts = [{ pid: 46001 }];
+  const expected = mode === 'invocation' ? base.expectedIdentity.replace('dev:mcp', 'dev:other') : base.expectedIdentity;
+  const display = base.observedIdentity.replace('[MainThread] <defunct>', '[MainThread]');
+  const observed = mode === 'birth' ? display.replace('06:10:25', '06:10:26') : display;
+  const originalMembers = [
+    { pid: group, ppid: mode === 'parent' ? process.pid + 1 : process.pid, pgid: group },
+    { pid: 44002, ppid: group, pgid: group }, { pid: 44003, ppid: 44002, pgid: group },
+    { pid: 44004, ppid: 44003, pgid: group },
+  ];
+  if (mode === 'duplicate') originalMembers.push({ ...originalMembers[1]! });
+  const counts = { close: 0, disconnect: 0, owned: 0, signals: 0, sockets: 0, destroys: 0,
+    naturalReads: 0, readsAfterDeadline: 0, identities: 0, states: 0 };
+  const censusFailure = new Error('TEST original process census unavailable');
+  let now = 0, afterWait = false;
+  const delays: number[] = [], cleared: number[] = [];
+  const timers = new Map<object, number>();
+  t.mock.method(Date, 'now', () => now);
+  t.mock.method(globalThis, 'setTimeout', (callback: () => void, delay: number) => {
+    const token = { delay, serial: delays.length }; delays.push(delay); timers.set(token, delay);
+    if (delay <= 100) {
+      assert.ok(delay > 0, 'the remaining original deadline allows this passive wait');
+      now = mode === 'deadline' ? 3000 : now + delay; afterWait = true;
+      app.exitCode = mode === 'pending-exit' || mode === 'signal' ? null : mode === 'nonzero' ? 1 : 0;
+      app.signalCode = mode === 'signal' ? 'SIGTERM' : null;
+      queueMicrotask(() => { timers.delete(token); callback(); });
+    } else assert.equal(delay, 3000, 'only the existing original close and disconnect timers');
+    return token as unknown as NodeJS.Timeout;
+  });
+  t.mock.method(globalThis, 'clearTimeout', (token: NodeJS.Timeout) => {
+    const delay = timers.get(token); assert.equal(delay, 3000); cleared.push(delay!); timers.delete(token);
+  });
+  t.mock.method(childProcess, 'execFileSync', (file: string, args: readonly string[], options: unknown) => {
+    assert.equal(file, '/bin/ps'); assert.deepEqual(options, { encoding: 'utf8', timeout: 3000 });
+    if (args[0] === '-ax') {
+      assert.deepEqual(args, ['-ax', '-o', 'pid=,ppid=,pgid=']);
+      if (now >= 3000) counts.readsAfterDeadline++;
+      let rows = originalMembers;
+      if (afterWait) {
+        counts.naturalReads++; rows = [];
+        if (mode === 'table-failure') throw censusFailure;
+        if (mode === 'escaped-descendant' || mode === 'final-descendant' && counts.naturalReads === 2)
+          rows = [{ pid: 44002, ppid: 1, pgid: 99002 }];
+        if (mode === 'group-debt' || mode === 'final-group' && counts.naturalReads === 2)
+          rows = [{ pid: 47001, ppid: 1, pgid: group }];
+        if (mode === 'host-debt' || mode === 'final-host' && counts.naturalReads === 2)
+          rows = [{ pid: 46001, ppid: 1, pgid: 99002 }];
+        if (mode === 'final-deadline' && counts.naturalReads === 2) now = 3000;
+        if (mode === 'final-exit' && counts.naturalReads === 2) app.exitCode = 1;
+      }
+      return [{ pid: 99001, ppid: 1, pgid: 99001 }, ...rows]
+        .map(row => String(row.pid) + ' ' + row.ppid + ' ' + row.pgid).join('\n');
+    }
+    assert.deepEqual(args.slice(0, 3), ['-p', String(group), '-o']);
+    if (args[3] === 'stat=') { counts.states++; return 'S'; }
+    assert.equal(args[3], 'lstart=,command='); counts.identities++; return observed;
+  });
+  t.mock.method(process, 'kill', () => {
+    counts.signals++; assert.fail('a refused invocation never obtains signal authority');
+  });
+  t.mock.method(net, 'createConnection', (options: unknown) => {
+    counts.sockets++; assert.deepEqual(options, { host: '127.0.0.1', port: selectedCdpPort });
+    const socket = Object.assign(new EventEmitter(), {
+      destroy(): EventEmitter { counts.destroys++; return socket; },
+      setTimeout(delay: number): EventEmitter {
+        assert.equal(delay, 1000);
+        queueMicrotask(() => {
+          if (mode === 'port-deadline') now = 3000;
+          socket.emit(mode === 'port-debt' ? 'connect' : 'error', new Error('TEST absent'));
+        });
+        return socket;
+      },
+    });
+    return socket;
+  });
+  syncBuiltinESMExports();
+  let error: unknown;
+  try {
+    await finishDesktopOwnerRoutingEpoch({ app, group, appIdentity: expected, hosts, epoch,
+      assertOwned() { counts.owned++; }, cdp: {
+        async evaluate(expression: string) {
+          counts.close++; assert.equal(expression, 'window.electronAPI.windowControls.close()'); return undefined;
+        },
+        async close() { counts.disconnect++; },
+      } as Parameters<typeof finishDesktopOwnerRoutingEpoch>[0]['cdp'] });
+  } catch (caught) { error = caught; }
+  assert.deepEqual([counts.owned, counts.close, counts.disconnect], [1, 1, 1]);
+  assert.deepEqual(cleared, [3000, 3000]);
+  assert.equal(counts.signals, 0);
+  assert.equal((epoch.cleanup as Record<string, unknown>).signalAttempted, false);
+  return { app, epoch, error, counts, delays, now, originalMembers, censusFailure };
+}
+
+test('actual owner caller passively settles the original changed-display child without granting signal authority', async t => {
+  const f = await passiveOriginalOwnerEpoch(t, 'natural');
+  assert.equal(f.error, undefined);
+  assert.deepEqual([f.app.exitCode, f.app.signalCode, f.now], [0, null, 100]);
+  assert.deepEqual(f.delays, [3000, 3000, 100]);
+  assert.deepEqual([f.counts.naturalReads, f.counts.sockets, f.counts.destroys], [2, 1, 1]);
+  const observation = f.epoch.originalNaturalExit as Record<string, unknown>;
+  assert.equal(observation.settled, true); assert.equal(observation.signalAuthority, false);
+  assert.deepEqual(observation.initialMembers, f.originalMembers);
+  assert.deepEqual(observation.hostPids, [46001]);
+  assert.deepEqual(f.epoch.originalNaturalExitFinal, { originalPidsAbsent: true, originalHostsAbsent: true,
+    remainingCount: 0, appExitCode: 0, appSignalCode: null });
+  assert.equal(f.epoch.originalZombieGuard, undefined, 'the changed display remains refused');
+  assert.equal((f.epoch.cleanup as Record<string, unknown>).hostsAbsent, true);
+});
+
+for (const mode of ['birth', 'parent', 'child', 'invocation', 'duplicate'] as const)
+test('actual passive owner observation refuses wrong original ' + mode, async t => {
+  const f = await passiveOriginalOwnerEpoch(t, mode);
+  assert.match(String(f.error), /original epoch invocation identity remains current/);
+  assert.equal((f.epoch.originalNaturalExit as Record<string, unknown>).reason,
+    'ineligible-original-epoch-exit-observation');
+  assert.equal(f.counts.naturalReads, 0); assert.equal(f.counts.sockets, 0);
+  assert.deepEqual(f.delays, [3000, 3000]);
+});
+
+for (const mode of ['nonzero', 'signal', 'pending-exit', 'deadline', 'escaped-descendant', 'host-debt', 'group-debt'] as const)
+test('actual passive owner observation retains unresolved ' + mode, async t => {
+  const f = await passiveOriginalOwnerEpoch(t, mode);
+  assert.match(String(f.error), /original epoch invocation identity remains current/);
+  const observation = f.epoch.originalNaturalExit as Record<string, unknown>;
+  assert.equal(observation.settled, false); assert.equal(observation.signalAuthority, false);
+  assert.equal(f.counts.sockets, 0); assert.equal(f.counts.readsAfterDeadline, 0);
+  assert.equal(f.now <= 3000, true);
+  if (mode === 'deadline') assert.equal(f.counts.naturalReads, 0, 'no expired observation retry');
+  if (mode === 'escaped-descendant') {
+    assert.equal(observation.remainingCount, 0);
+    assert.equal(observation.originalPidsAbsent, false, 'escaped original descendants still retain debt');
+  }
+});
+
+for (const [mode, refusal] of [
+  ['final-descendant', /every original epoch PID remains absent in the final census/],
+  ['final-group', /no next configuration while the captured epoch group remains/],
+  ['final-host', /every original owner Host remains absent in the final census/],
+  ['final-deadline', /original natural-exit deadline after final census/],
+  ['final-exit', /original retained child still exited naturally before the next epoch/],
+] as const)
+test('actual owner final census refuses late ' + mode + ' before original port qualification', async t => {
+  const f = await passiveOriginalOwnerEpoch(t, mode);
+  assert.match(String(f.error), refusal);
+  assert.equal((f.epoch.originalNaturalExit as Record<string, unknown>).settled, true,
+    'the prior passive read alone must not authorize the next epoch');
+  assert.equal(f.counts.naturalReads, 2);
+  assert.equal(f.counts.sockets, 0);
+  if (mode === 'final-descendant') {
+    assert.deepEqual((f.epoch.cleanup as Record<string, unknown>).remaining, []);
+    assert.equal((f.epoch.originalNaturalExitFinal as Record<string, unknown>).originalPidsAbsent, false);
+  }
+});
+
+test('actual passive owner observation preserves the original failed census', async t => {
+  const failed = await passiveOriginalOwnerEpoch(t, 'table-failure');
+  assert.equal(failed.error, failed.censusFailure); assert.equal(failed.counts.sockets, 0);
+});
+
+test('actual passive owner observation still requires the original port to be absent', async t => {
+  const f = await passiveOriginalOwnerEpoch(t, 'port-debt');
+  assert.match(String(f.error), /true !== false/);
+  assert.deepEqual([f.counts.sockets, f.counts.destroys], [1, 1]);
+});
+
+test('actual passive owner observation refuses port absence arriving at the original cutoff', async t => {
+  const f = await passiveOriginalOwnerEpoch(t, 'port-deadline');
+  assert.match(String(f.error), /original natural-exit deadline after port qualification/);
+  assert.deepEqual([f.counts.sockets, f.counts.destroys, f.now], [1, 1, 3000]);
+  assert.equal((f.epoch.originalNaturalExit as Record<string, unknown>).settled, true);
+});
+
+
 // Read the real pure projection. The packaged CLI main is never imported by these cases.
 const {
   projectDesktopEmulatedReadinessFailure,

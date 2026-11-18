@@ -418,3 +418,258 @@ test('original final pending owner cannot poll after its captured renderer is re
   assert.equal(sends.some(command => command.params?.type === 'mouseReleased'), false);
   t.mock.restoreAll();
 });
+
+function readWaitReports(t: TestContext): { output: string[]; reads(): Record<string, unknown>[] } {
+  const output: string[] = [];
+  t.mock.method(console, 'log', (value: unknown) => { output.push(String(value)); });
+  return { output, reads: () => output.map(value => JSON.parse(value) as Record<string, unknown>)
+    .filter(value => value.kind === 'TEST_DESKTOP_READ_WAIT')
+    .map(value => value.read as Record<string, unknown>) };
+}
+
+test('after-hover diagnostics retain the original late-read cutoff without another input', { timeout: 5000 }, async t => {
+  const reports = readWaitReports(t);
+  await withReadFixture(t, [
+    { settlesAt: 0, value: point }, { settlesAt: 30_000, value: point },
+  ], async f => {
+    await assert.rejects(f.ui.clickExpression(f.expression, f.label), {
+      message: 'UI read timed out: ' + f.label + ' after pointer enter; no mutation retry',
+    });
+    assert.equal(f.reads.length, 2);
+    assert.equal(f.guards.length, 3);
+    assert.deepEqual(f.ticks, []);
+    assert.deepEqual(f.sends.map(row => row.params?.type ?? row.method), ['Page.bringToFront', 'mouseMoved']);
+    assert.deepEqual(reports.reads(), [{
+      phase: 'after-hover', boundary: 'evaluate', cutoff: 'after-evaluate',
+      firstCheckAtMs: 0, lastCheckAtMs: 30_000,
+      ownerStarted: 1, ownerResolved: 1, preparationStarted: 0, preparationResolved: 0,
+      readsStarted: 1, readsResolved: 1, postReadLate: 1, contextRetries: 0, deadlineMs: 30_000,
+    }]);
+    assert.ok(!reports.output.join('').includes(f.label));
+    assert.ok(!reports.output.join('').includes(f.expression));
+  });
+});
+
+test('after-hover exhaustion reports zero new reads and cannot reset the original deadline', { timeout: 5000 }, async t => {
+  const reports = readWaitReports(t), sends: string[] = [];
+  let reads = 0, owners = 0;
+  try {
+    t.mock.timers.enable({ apis: ['Date'], now: 0 });
+    const ui = createDesktopUiControls({
+      async evaluate() { reads++; return point; },
+      async send(method, params) {
+        sends.push(String(params?.type ?? method));
+        if (params?.type === 'mouseMoved') t.mock.timers.setTime(30_000);
+        return {};
+      },
+    }, { assertOwnedRenderer() { owners++; }, step() {} });
+    await assert.rejects(ui.clickExpression('PRIVATE-expression', 'PRIVATE-label'), /after pointer enter; no mutation retry/);
+    assert.equal(reads, 1); assert.equal(owners, 2);
+    assert.deepEqual(sends, ['Page.bringToFront', 'mouseMoved']);
+    assert.equal(reports.reads().length, 1);
+    const row = reports.reads()[0]!;
+    assert.equal(row.phase, 'after-hover'); assert.equal(row.cutoff, 'loop');
+    assert.equal(row.readsStarted, 0); assert.equal(row.readsResolved, 0);
+    assert.equal(row.firstCheckAtMs, 30_000); assert.equal(row.lastCheckAtMs, 30_000);
+    assert.equal(row.deadlineMs, 30_000);
+    assert.doesNotMatch(reports.output.join(''), /PRIVATE/);
+  } finally { t.mock.restoreAll(); t.mock.timers.reset(); }
+});
+
+test('read diagnostics distinguish the existing context retry from a late fulfilled observation', { timeout: 5000 }, async t => {
+  const reports = readWaitReports(t), order: string[] = [], ticks: number[] = [];
+  let reads = 0, predicates = 0;
+  try {
+    t.mock.timers.enable({ apis: ['Date'], now: 0 });
+    t.mock.method(globalThis, 'setTimeout', (done: () => void, delay: number) => {
+      ticks.push(delay); t.mock.timers.setTime(Date.now() + delay); done();
+      return {} as ReturnType<typeof setTimeout>;
+    });
+    const ui = createDesktopUiControls({
+      async evaluate() {
+        order.push('read'); reads++;
+        if (reads === 1) throw new Error('Execution context was destroyed PRIVATE-message');
+        t.mock.timers.setTime(30_000); return { value: 'PRIVATE-returned-value' };
+      },
+      async send() { assert.fail('passive read cannot dispatch'); },
+    }, { assertOwnedRenderer() { order.push('owner'); }, step() { assert.fail('passive read has no action'); } });
+    await assert.rejects(ui.waitRead('PRIVATE-expression', 'PRIVATE-label', 30_000, () => {
+      predicates++; return true;
+    }), /UI read timed out/);
+    assert.deepEqual(order, ['owner', 'read', 'owner', 'read']);
+    assert.deepEqual(ticks, [100]); assert.equal(predicates, 0);
+    const row = reports.reads()[0]!;
+    assert.equal(reports.reads().length, 1); assert.equal(row.contextRetries, 1);
+    assert.equal(row.readsStarted, 2); assert.equal(row.readsResolved, 1); assert.equal(row.postReadLate, 1);
+    assert.equal(row.cutoff, 'after-evaluate'); assert.equal(row.lastCheckAtMs, 30_000);
+    assert.doesNotMatch(reports.output.join(''), /PRIVATE/);
+  } finally { t.mock.restoreAll(); t.mock.timers.reset(); }
+});
+
+for (const boundary of ['owner', 'preparation', 'evaluate'] as const) {
+  test('throwing diagnostic output preserves the exact original ' + boundary + ' refusal', { timeout: 5000 }, async t => {
+    const refusal = new Error('PRIVATE-original-' + boundary), order: string[] = [];
+    let reports = 0;
+    try {
+      t.mock.timers.enable({ apis: ['Date'], now: 0 });
+      t.mock.method(console, 'log', () => { reports++; throw new Error('PRIVATE-diagnostic-output'); });
+      const ui = createDesktopUiControls({
+        async evaluate() { order.push('read'); throw refusal; },
+        async send() { assert.fail('refused read cannot dispatch'); },
+      }, {
+        assertOwnedRenderer() { order.push('owner'); if (boundary === 'owner') throw refusal; },
+        step() { assert.fail('refused read has no action'); },
+      });
+      const beforeRead = async () => { order.push('prepare'); if (boundary === 'preparation') throw refusal; };
+      await assert.rejects(ui.waitRead('PRIVATE-expression', 'PRIVATE-label', 30_000, Boolean,
+        boundary === 'preparation' ? { deadline: 30_000, beforeRead } : undefined), error => error === refusal);
+      assert.equal(reports, 1);
+      assert.deepEqual(order, boundary === 'owner' ? ['owner'] :
+        boundary === 'preparation' ? ['owner', 'prepare'] : ['owner', 'read']);
+    } finally { t.mock.restoreAll(); t.mock.timers.reset(); }
+  });
+}
+
+test('preparation reaching the original cutoff is observed without a DOM request or replacement budget', { timeout: 5000 }, async t => {
+  const reports = readWaitReports(t), order: string[] = [];
+  try {
+    t.mock.timers.enable({ apis: ['Date'], now: 0 });
+    const ui = createDesktopUiControls({
+      async evaluate() { assert.fail('late preparation cannot read DOM'); },
+      async send() { assert.fail('late preparation cannot dispatch'); },
+    }, { assertOwnedRenderer() { order.push('owner'); }, step() {} });
+    await assert.rejects(ui.waitRead('PRIVATE-expression', 'PRIVATE-label', 30_000, Boolean, {
+      deadline: 30_000,
+      async beforeRead() { order.push('prepare'); t.mock.timers.setTime(30_000); },
+    }), /UI read timed out/);
+    assert.deepEqual(order, ['owner', 'prepare', 'owner']);
+    const row = reports.reads()[0]!;
+    assert.equal(row.preparationStarted, 1); assert.equal(row.preparationResolved, 1);
+    assert.equal(row.ownerStarted, 2); assert.equal(row.ownerResolved, 2); assert.equal(row.readsStarted, 0);
+    assert.equal(row.cutoff, 'after-preparation'); assert.equal(row.deadlineMs, 30_000);
+    assert.equal(row.lastCheckAtMs, 30_000);
+  } finally { t.mock.restoreAll(); t.mock.timers.reset(); }
+});
+
+test('owner observation cost keeps the original post-read cutoff and no readiness call', { timeout: 5000 }, async t => {
+  const reports = readWaitReports(t), order: string[] = [];
+  try {
+    t.mock.timers.enable({ apis: ['Date'], now: 0 });
+    const ui = createDesktopUiControls({
+      async evaluate() { order.push('read'); return point; },
+      async send() { assert.fail('late read cannot dispatch'); },
+    }, { assertOwnedRenderer() { order.push('owner'); t.mock.timers.setTime(30_000); }, step() {} });
+    await assert.rejects(ui.waitRead('PRIVATE-expression', 'PRIVATE-label', 30_000, () => {
+      assert.fail('the existing post-read guard refuses before readiness');
+    }), /UI read timed out/);
+    assert.deepEqual(order, ['owner', 'read'], 'the diagnostic adds no new owner or deadline boundary');
+    const row = reports.reads()[0]!;
+    assert.equal(row.readsStarted, 1); assert.equal(row.readsResolved, 1); assert.equal(row.postReadLate, 1);
+    assert.equal(row.firstCheckAtMs, 0); assert.equal(row.lastCheckAtMs, 30_000);
+  } finally { t.mock.restoreAll(); t.mock.timers.reset(); }
+});
+
+test('a timely original value remains identical and emits no failure diagnostic', { timeout: 5000 }, async t => {
+  const reports = readWaitReports(t);
+  await withReadFixture(t, [{ settlesAt: 29_999, value: offeredValue }], async f => {
+    assert.equal(await f.read(), offeredValue);
+    assert.equal(f.reads.length, 1); assert.equal(f.guards.length, 1);
+    assert.deepEqual(f.ticks, []); assert.deepEqual(f.sends, []); assert.deepEqual(reports.output, []);
+  });
+});
+
+for (const mode of ['present', 'dom-throws', 'transport-getter', 'different-label'] as const) {
+  test('same Create target reports only closed existing DOM facts: ' + mode, { timeout: 5000 }, async t => {
+    const reports = readWaitReports(t), sends: string[] = [], ticks: number[] = [];
+    let reads = 0, privateReads = 0, diagnosticQueries = 0, stepCount = 0;
+    const selector = '[data-testid="create-team-page"] button';
+    const label = mode === 'different-label' ? 'PRIVATE-other-create' : 'Create and Launch original solo source exactly once';
+    const page = {
+      querySelector(query: string) {
+        if (query === '#launch-team') return { getAttribute(name: string) { assert.equal(name, 'data-state'); return 'checked'; } };
+        assert.equal(query, '#create-team-launch-authority-blocker'); return {};
+      },
+      querySelectorAll(query: string) {
+        assert.ok(query === '[role="alert"]' || query === '[aria-invalid="true"]');
+        return new Array(query === '[role="alert"]' ? 40 : 2);
+      },
+    };
+    const control = {
+      textContent: 'Create',
+      getBoundingClientRect() { return { x: 20, y: 20, width: 100, height: 40 }; },
+      matches(query: string) { assert.equal(query, ':disabled'); return true; },
+      getAttribute(name: string) {
+        if (name === 'aria-disabled') return null;
+        assert.equal(name, 'aria-describedby'); return 'create-team-launch-authority-blocker';
+      },
+      closest(query: string) {
+        diagnosticQueries++; assert.equal(query, '[data-testid="create-team-page"]');
+        if (mode === 'dom-throws') throw new Error('PRIVATE-DOM-refusal');
+        return page;
+      },
+      querySelector(query: string) { assert.equal(query, 'svg.animate-spin'); return {}; },
+      contains() { return false; },
+    };
+    for (const target of [page, control]) {
+      for (const key of ['value', 'validationMessage', 'checkValidity', 'reportValidity', 'innerHTML']) {
+        Object.defineProperty(target, key, { get() { privateReads++; throw new Error('PRIVATE-form-access'); } });
+      }
+    }
+    try {
+      t.mock.timers.enable({ apis: ['Date'], now: 0 });
+      t.mock.method(globalThis, 'setTimeout', (done: () => void, delay: number) => {
+        ticks.push(delay); t.mock.timers.setTime(Date.now() + delay); done();
+        return {} as ReturnType<typeof setTimeout>;
+      });
+      const ui = createDesktopUiControls({
+        async evaluate(expression) {
+          reads++;
+          assert.equal(reads, 1, 'diagnostics use only the original target lookup');
+          const value = runInNewContext(expression, {
+            document: {
+              querySelectorAll(query: string) {
+                if (query === selector) return [control];
+                assert.equal(query, '[data-testid="create-team-page"]'); return [page];
+              },
+              elementFromPoint() { return control; },
+            },
+            getComputedStyle() { return { pointerEvents: 'none' }; },
+            innerWidth: 1600, innerHeight: 1000,
+          }) as Record<string, unknown>;
+          if (mode === 'transport-getter') {
+            Object.defineProperty(value, 'createFacts', {
+              get() { privateReads++; throw new Error('PRIVATE-transport-getter'); },
+            });
+          }
+          t.mock.timers.setTime(29_900);
+          return value;
+        },
+        async send(method, params) { sends.push(String(params?.type ?? method)); return {}; },
+      }, { assertOwnedRenderer() {}, step() { stepCount++; } });
+      let failure: Error | undefined;
+      await assert.rejects(ui.click(selector, label, 'Create'), error => {
+        assert.ok(error instanceof Error); failure = error; return true;
+      });
+      assert.ok(failure); assert.match(failure.message, /UI target read failed:/);
+      const facts = JSON.parse(failure.message.split('facts=')[1]!) as Record<string, unknown>;
+      assert.deepEqual(Object.fromEntries(Object.entries(facts).filter(([key]) => !key.startsWith('create'))), {
+        matches: 1, disabled: true, ariaDisabled: false, pointerEventsNone: true, centerInViewport: true, hitPresent: true,
+      });
+      const create = Object.fromEntries(Object.entries(facts).filter(([key]) => key.startsWith('create')));
+      assert.deepEqual(create, mode === 'present' ? {
+        createPageUnique: true, createLaunchChecked: true, createAuthorityDescribed: true,
+        createAuthorityNoticePresent: true, createSubmittingSpinner: true,
+        createAlertCount: 33, createInvalidAttributeCount: 2,
+      } : {});
+      assert.ok(failure.cause instanceof Error);
+      assert.equal(failure.cause.message, 'UI read timed out: ' + label + '; no mutation retry');
+      assert.equal(privateReads, 0, 'no private value, validity method or response getter is read');
+      assert.equal(diagnosticQueries, mode === 'different-label' ? 0 : 1);
+      assert.equal(reads, 1); assert.equal(stepCount, 0); assert.deepEqual(ticks, [100]);
+      assert.deepEqual(sends, ['Page.bringToFront'], 'disabled original target never hovers or clicks');
+      assert.doesNotMatch(JSON.stringify(facts), /PRIVATE/); assert.doesNotMatch(reports.output.join(''), /PRIVATE/);
+      assert.equal(reports.reads()[0]!.phase, 'initial');
+      assert.equal(reports.reads()[0]!.cutoff, 'loop'); assert.equal(reports.reads()[0]!.readsResolved, 1);
+    } finally { t.mock.restoreAll(); t.mock.timers.reset(); }
+  });
+}

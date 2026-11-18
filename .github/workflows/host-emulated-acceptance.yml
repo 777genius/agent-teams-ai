@@ -124,7 +124,7 @@ jobs:
           pnpm --filter @agent-teams/legacy-agent-host build
           pnpm --filter agent-teams-controller build
           pnpm --filter agent-teams-mcp build
-          node --test scripts/legacy-agent-host/desktop-backend-observations.test.ts scripts/legacy-agent-host/desktop-file-digest.test.ts scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts scripts/legacy-agent-host/test-child-process-trace.test.ts scripts/legacy-agent-host/desktop-emulated-settings.test.ts scripts/legacy-agent-host/desktop-emulated-codex-catalog.test.ts scripts/legacy-agent-host/desktop-resume-records.test.ts scripts/legacy-agent-host/desktop-captured-app-exit.test.ts scripts/legacy-agent-host/desktop-opencode-v2-management-records.test.ts
+          node --test scripts/legacy-agent-host/desktop-backend-observations.test.ts scripts/legacy-agent-host/desktop-file-digest.test.ts scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts scripts/legacy-agent-host/test-child-process-trace.test.ts scripts/legacy-agent-host/desktop-emulated-settings.test.ts scripts/legacy-agent-host/desktop-emulated-codex-catalog.test.ts scripts/legacy-agent-host/desktop-resume-records.test.ts scripts/legacy-agent-host/desktop-captured-app-exit.test.ts scripts/legacy-agent-host/desktop-opencode-v2-management-records.test.ts scripts/legacy-agent-host/desktop-opencode-v2-lifecycle.test.ts
           node --test test/scripts/installDependenciesWithRetry.test.mjs
       - name: Verify finite legacy bootstrap ownership and refusal boundaries
         if: matrix.lane == 'import-lifecycle'
@@ -174,6 +174,14 @@ jobs:
             scripts/legacy-agent-host/desktop-task-comment-input-target.ts \
             scripts/legacy-agent-host/desktop-team-ui-smoke.ts \
             scripts/legacy-agent-host/desktop-ui-controls.ts \
+            scripts/legacy-agent-host/desktop-native-quit-ui-smoke.ts \
+            scripts/legacy-agent-host/desktop-opencode-metadata-lineage.ts \
+            scripts/legacy-agent-host/desktop-opencode-v2-lifecycle.test.ts \
+            scripts/legacy-agent-host/desktop-opencode-v2-review-ui-smoke.ts \
+            scripts/legacy-agent-host/desktop-owner-routing-epoch.ts \
+            scripts/legacy-agent-host/desktop-retained-opencode-launch.ts \
+            scripts/legacy-agent-host/desktop-retained-opencode-launch.test.ts \
+            scripts/legacy-agent-host/desktop-ui-controls-deadline.test.ts \
             scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts \
             scripts/legacy-agent-host/packaged-opencode-v2-inputs.ts \
             scripts/legacy-agent-host/qualify-linux-process-sdk.ts \

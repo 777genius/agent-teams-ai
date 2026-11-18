@@ -270,3 +270,86 @@ test('primary refusal is preserved alongside a failed cleanup acknowledgement', 
     error.errors[0] === failure && error.errors[1] === cleanup);
   assert.equal(f.calls.some(row => row.action === 'launch'), false);
 });
+
+function assertOnlyOriginalOpenCleanup(f: ReturnType<typeof fixture>): void {
+  assert.deepEqual(f.calls, [
+    { action: 'open', teamName: input.request.teamName, intentId: input.intentId },
+    { action: 'closeIntent', teamName: input.request.teamName, intentId: input.intentId },
+  ]);
+  assert.equal(f.rawLaunches(), 0);
+  assert.deepEqual(f.alternate, []);
+}
+
+for (const publicFailure of [
+  { reason: 'not-eligible', outcome: 'not-dispatched' },
+  { reason: 'import-not-absent', outcome: 'unknown' },
+] as const) {
+  test('original open refusal reports its already captured closed ' + publicFailure.outcome + ' fields', async () => {
+    const f = fixture(request => request.action === 'open' ? {
+      ok: false, ...publicFailure, message: 'PRIVATE-message', scopeId: 'PRIVATE-capability',
+      teamName: 'PRIVATE-team', path: '/PRIVATE/path', token: 'PRIVATE-token',
+    } : undefined);
+    await assert.rejects(f.run(), error => {
+      assert.ok(error instanceof Error);
+      assert.equal(error.message, 'Original runtime open was not confirmed; ' + JSON.stringify(publicFailure));
+      assert.doesNotMatch(error.message, /PRIVATE/);
+      return true;
+    });
+    assertOnlyOriginalOpenCleanup(f);
+  });
+}
+
+for (const mode of ['unknown', 'inherited', 'getters'] as const) {
+  test('original open diagnostics discard private or non-own public fields: ' + mode, async () => {
+    let privateReads = 0;
+    const refused = mode === 'inherited'
+      ? Object.assign(Object.create({ reason: 'busy', outcome: 'unknown' }), { ok: false }) as Row
+      : { ok: false } as Row;
+    if (mode === 'unknown') Object.assign(refused, {
+      reason: 'PRIVATE-unknown-reason', outcome: 'PRIVATE-unknown-outcome',
+      value: { scopeId: 'PRIVATE-capability' },
+    });
+    if (mode === 'getters') {
+      for (const key of ['reason', 'outcome', 'message', 'stack', 'cause', 'path', 'token']) {
+        Object.defineProperty(refused, key, { get() { privateReads++; throw new Error('PRIVATE-getter'); } });
+      }
+    }
+    const f = fixture(request => request.action === 'open' ? refused : undefined);
+    await assert.rejects(f.run(), error => {
+      assert.ok(error instanceof Error);
+      assert.equal(error.message, 'Original runtime open was not confirmed; {"reason":null,"outcome":null}');
+      assert.doesNotMatch(error.message, /PRIVATE/);
+      return true;
+    });
+    assert.equal(privateReads, 0);
+    assertOnlyOriginalOpenCleanup(f);
+  });
+}
+
+test('failed optional descriptor observation preserves the original open refusal and cleanup', async () => {
+  let descriptors = 0;
+  const refused = new Proxy({ ok: false }, {
+    getOwnPropertyDescriptor() { descriptors++; throw new Error('PRIVATE-descriptor'); },
+  });
+  const f = fixture(request => request.action === 'open' ? refused : undefined);
+  await assert.rejects(f.run(), { message: 'Original runtime open was not confirmed' });
+  assert.equal(descriptors, 1);
+  assertOnlyOriginalOpenCleanup(f);
+});
+
+test('closed refusal details preserve original primary and cleanup ordering without resubmission', async () => {
+  const f = fixture(request => request.action === 'open'
+    ? { ok: false, reason: 'busy', outcome: 'not-dispatched' }
+    : request.action === 'closeIntent'
+      ? { ok: false, reason: 'outcome-unknown', outcome: 'unknown' }
+      : undefined);
+  await assert.rejects(f.run(), error => {
+    assert.ok(error instanceof AggregateError);
+    assert.equal(error.message, 'Original retained Launch and its choice cleanup were not confirmed');
+    assert.equal(error.errors.length, 2);
+    assert.equal(error.errors[0].message, 'Original runtime open was not confirmed; {"reason":"busy","outcome":"not-dispatched"}');
+    assert.equal(error.errors[1].message, 'Original runtime closeIntent was not confirmed; {"reason":"outcome-unknown","outcome":"unknown"}');
+    return true;
+  });
+  assertOnlyOriginalOpenCleanup(f);
+});

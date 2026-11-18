@@ -3,6 +3,7 @@ import { randomUUID } from 'node:crypto';
 import {
   captureLegacyStoppedSource,
   createRetainedLegacyLaunchScope,
+  createStoppedImportDiagnostic,
   importStoppedLegacyTeam,
   RetainedLegacyLaunchCoordinator,
   RetainedLegacyLaunchRefusal,
@@ -15,6 +16,7 @@ import {
   readOriginalRuntimeScope,
 } from '@main/services/runtime/OriginalRuntimeScope';
 import { TeamLaunchStateStore } from '@main/services/team/TeamLaunchStateStore';
+import { createLogger } from '@shared/utils/logger';
 
 import type {
   RetainedLegacyLaunchResult,
@@ -25,6 +27,8 @@ import type {
   CapturedRetainedLegacyRuntime,
   DesktopBackendFeature,
   LegacyStoppedSourceOwners,
+  StoppedImportDiagnostic,
+  StoppedImportDiagnosticPhase,
 } from '@features/agent-backend/main';
 import type { TeamProvisioningProgress } from '@shared/types';
 
@@ -49,6 +53,9 @@ export function createDesktopStoppedTeamOperations(readShell: () => ShellOwner |
       }
     | undefined;
   const importOutcomes = new Map<string, 'published' | 'unknown'>();
+  const observeImportFailure = (observation: StoppedImportDiagnostic) => {
+    createLogger('StoppedTeamImport').diagnostic('Stopped Team import refusal', observation);
+  };
   const captureDebts = new Map<
     string,
     { runtime: CapturedRetainedLegacyRuntime; teamName: string; intentId: string }[]
@@ -133,10 +140,14 @@ export function createDesktopStoppedTeamOperations(readShell: () => ShellOwner |
       request: unknown,
       current: () => boolean
     ): Promise<StoppedTeamImportResult> {
+      const observe = createStoppedImportDiagnostic('desktop', observeImportFailure);
+      let phase: StoppedImportDiagnosticPhase = 'request';
       try {
         const input = validateStoppedImportAction(request);
+        phase = 'source-owner';
         const { captured, isCurrent } = capture(original, contextId, current);
         let source: CapturedLegacyStoppedSource | undefined;
+        phase = 'source-capture';
         try {
           source = captureLegacyStoppedSource(input.teamName, contextId, isCurrent);
         } catch (error) {
@@ -150,23 +161,30 @@ export function createDesktopStoppedTeamOperations(readShell: () => ShellOwner |
             request: input,
             guard: { isCurrent },
             owners: captured.value,
+            observeFailure: observeImportFailure,
             captureSource: () => {
               if (!source) throw Object.assign(new Error('Missing source'), { code: 'ENOENT' });
               return source;
             },
           });
         if (!source) return run();
+        phase = 'source-key';
         const key = retainedLegacySourceOperationKey(source);
+        phase = 'source-queue';
         return await coordinator.import(key, async () => {
+          phase = 'queued-source';
           if (captureDebts.has(key)) throw new RetainedLegacyLaunchRefusal('outcome-unknown');
           if (!isCurrent() || !source.isCurrent())
             throw new RetainedLegacyLaunchRefusal('source-changed');
+          phase = 'application';
           const result = await run();
+          phase = 'publication-result';
           if (result.ok) importOutcomes.set(key, 'published');
           else if (result.outcome === 'unknown') importOutcomes.set(key, 'unknown');
           return result;
         });
-      } catch {
+      } catch (error) {
+        observe(phase, error, 'not-dispatched');
         return { ok: false, reason: 'held', outcome: 'not-dispatched' };
       }
     },

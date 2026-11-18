@@ -102,11 +102,11 @@ export function readDesktopMetadataEvents(root: string, hostPid: number, allowEm
 const readEvents = readDesktopMetadataEvents;
 
 /** One captured owner per profile; a successor requires the previous exact ready's confirmed close. */
-function lifecycle(events: readonly DesktopMetadataEvent[], profileHashes: readonly string[], hostPid: number) {
+function lifecycle(events: readonly DesktopMetadataEvent[], profileHashes: readonly string[], hostPid: number, allowEmpty = false) {
   assert.ok(profileHashes.length === 1 || profileHashes.length === 2);
   assert.equal(new Set(profileHashes).size, profileHashes.length);
   assert.ok(profileHashes.every(hash));
-  assert.ok(events.length > 0 && events.length <= 128);
+  assert.ok((allowEmpty || events.length > 0) && events.length <= 128);
   const originals = new Map<number, DesktopMetadataEvent>(), active = new Map<string, DesktopMetadataEvent>();
   for (const event of events) {
     assert.equal(event.hostPid, hostPid);
@@ -126,6 +126,14 @@ function lifecycle(events: readonly DesktopMetadataEvent[], profileHashes: reado
     }
   }
   return { originals, active };
+}
+
+
+/** A passive readiness count, never a physical birth, Runtime or release qualification. */
+export function desktopMetadataReadyScopeCount(
+  events: readonly DesktopMetadataEvent[], profileHashes: readonly string[], hostPid: number
+): number {
+  return lifecycle(events, profileHashes, hostPid, true).active.size;
 }
 
 export function assertDesktopMetadataLineageRetained(

@@ -11,6 +11,7 @@ import {
   withOriginalRuntimeLaunchAdmission,
 } from '../../../src/main/services/runtime/OriginalRuntimeScope';
 import { TeamProvisioningService } from '../../../src/main/services/team/TeamProvisioningService';
+import { addLogSink } from '../../../src/shared/utils/logger';
 
 import type {
   CapturedRetainedLegacyRuntime,
@@ -221,5 +222,74 @@ describe('actual Main import publication versus direct original Launch admission
     });
     expect(native).not.toHaveBeenCalled();
     await f.owner.shutdown();
+  });
+});
+
+describe('actual Main stopped import refusal diagnostics', () => {
+  it('keeps missing owner held and records only the closed original boundary', async () => {
+    const f = fixture();
+    const observations: unknown[][] = [];
+    const removeSink = addLogSink((entry) => {
+      if (entry.namespace === 'StoppedTeamImport') observations.push([...entry.args]);
+    });
+    try {
+      f.owner.clearOwners();
+      expect(await f.importTeam()).toEqual({
+        ok: false,
+        reason: 'held',
+        outcome: 'not-dispatched',
+      });
+      expect(state.import).not.toHaveBeenCalled();
+      expect(observations).toEqual([
+        [
+          'Stopped Team import refusal',
+          {
+            source: 'desktop',
+            phase: 'source-owner',
+            category: 'unavailable',
+            outcome: 'not-dispatched',
+          },
+        ],
+      ]);
+      expect(JSON.stringify(observations)).not.toContain(f.teamName);
+      expect(JSON.stringify(observations)).not.toContain(state.root);
+    } finally {
+      removeSink();
+      await f.owner.shutdown();
+    }
+  });
+
+  it('preserves an original queued application rejection without a second attempt', async () => {
+    const f = fixture();
+    const observations: unknown[][] = [];
+    const removeSink = addLogSink((entry) => {
+      if (entry.namespace === 'StoppedTeamImport') observations.push([...entry.args]);
+    });
+    state.import.mockRejectedValueOnce(
+      Object.assign(new Error('PRIVATE-application-path-token'), { code: 'EACCES' })
+    );
+    try {
+      expect(await f.importTeam()).toEqual({
+        ok: false,
+        reason: 'held',
+        outcome: 'not-dispatched',
+      });
+      expect(state.import).toHaveBeenCalledTimes(1);
+      expect(observations).toEqual([
+        [
+          'Stopped Team import refusal',
+          {
+            source: 'desktop',
+            phase: 'application',
+            category: 'denied',
+            outcome: 'not-dispatched',
+          },
+        ],
+      ]);
+      expect(JSON.stringify(observations)).not.toContain('PRIVATE');
+    } finally {
+      removeSink();
+      await f.owner.shutdown();
+    }
   });
 });
