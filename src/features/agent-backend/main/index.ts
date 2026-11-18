@@ -94,9 +94,15 @@ export {
   createLegacyStoppedTeamSource,
   LegacyStoppedImportHold,
 } from './infrastructure/stopped-import/createLegacyStoppedTeamSource';
-export { prepareStoppedLegacyImport } from './infrastructure/stopped-import/prepareStoppedLegacyImport';
+export { createRetainedLegacyOpenDiagnostic } from './infrastructure/stopped-import/createRetainedLegacyOpenDiagnostic';
 export { createStoppedImportDiagnostic } from './infrastructure/stopped-import/createStoppedImportDiagnostic';
 export type {
   StoppedImportDiagnostic,
   StoppedImportDiagnosticPhase,
 } from './infrastructure/stopped-import/createStoppedImportDiagnostic';
+export { prepareStoppedLegacyImport } from './infrastructure/stopped-import/prepareStoppedLegacyImport';
+export {
+  RETAINED_LEGACY_OPEN_DIAGNOSTIC_NAMESPACE,
+  type RetainedLegacyOpenDiagnostic,
+  type RetainedLegacyOpenDiagnosticPhase,
+} from './infrastructure/stopped-import/retainedLegacyOpenDiagnosticContract';

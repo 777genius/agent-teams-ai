@@ -3,8 +3,10 @@ import { randomUUID } from 'node:crypto';
 import {
   captureLegacyStoppedSource,
   createRetainedLegacyLaunchScope,
+  createRetainedLegacyOpenDiagnostic,
   createStoppedImportDiagnostic,
   importStoppedLegacyTeam,
+  RETAINED_LEGACY_OPEN_DIAGNOSTIC_NAMESPACE,
   RetainedLegacyLaunchCoordinator,
   RetainedLegacyLaunchRefusal,
   retainedLegacySourceOperationKey,
@@ -27,6 +29,8 @@ import type {
   CapturedRetainedLegacyRuntime,
   DesktopBackendFeature,
   LegacyStoppedSourceOwners,
+  RetainedLegacyOpenDiagnostic,
+  RetainedLegacyOpenDiagnosticPhase,
   StoppedImportDiagnostic,
   StoppedImportDiagnosticPhase,
 } from '@features/agent-backend/main';
@@ -55,6 +59,9 @@ export function createDesktopStoppedTeamOperations(readShell: () => ShellOwner |
   const importOutcomes = new Map<string, 'published' | 'unknown'>();
   const observeImportFailure = (observation: StoppedImportDiagnostic) => {
     createLogger('StoppedTeamImport').diagnostic('Stopped Team import refusal', observation);
+  };
+  const observeRetainedOpenFailure = (observation: RetainedLegacyOpenDiagnostic) => {
+    createLogger(RETAINED_LEGACY_OPEN_DIAGNOSTIC_NAMESPACE).diagnostic(observation);
   };
   const captureDebts = new Map<
     string,
@@ -195,8 +202,12 @@ export function createDesktopStoppedTeamOperations(readShell: () => ShellOwner |
       current: () => boolean,
       onProgress?: (progress: TeamProvisioningProgress) => void
     ): Promise<RetainedLegacyLaunchResult> {
+      let observe: ReturnType<typeof createRetainedLegacyOpenDiagnostic> | undefined;
+      let phase: RetainedLegacyOpenDiagnosticPhase = 'source-owner';
       try {
         const request = validateRetainedLegacyLaunchRequest(value);
+        if (request.action === 'open')
+          observe = createRetainedLegacyOpenDiagnostic(request, process.pid, observeRetainedOpenFailure);
         // Authenticated cleanup can release an effect-free choice after its selected context changes.
         if (
           request.action === 'close' ||
@@ -216,72 +227,93 @@ export function createDesktopStoppedTeamOperations(readShell: () => ShellOwner |
           return result;
         }
         const { captured, isCurrent } = capture(original, contextId, current);
+        phase = 'source-capture';
         const selectedSource =
           request.action === 'open'
             ? captureLegacyStoppedSource(request.teamName, contextId, isCurrent)
             : undefined;
+        phase = 'source-key';
         const selectedKey = selectedSource
           ? retainedLegacySourceOperationKey(selectedSource)
           : undefined;
-        return await coordinator.request(
+        phase = 'coordinator';
+        const result = await coordinator.request(
           request,
           async (teamName, projectPath) => {
-            const source =
-              selectedSource ?? captureLegacyStoppedSource(teamName, contextId, isCurrent);
-            const key = retainedLegacySourceOperationKey(source);
-            if (importOutcomes.has(key)) throw new RetainedLegacyLaunchRefusal('import-not-absent');
-            if (captureDebts.has(key)) throw new RetainedLegacyLaunchRefusal('outcome-unknown');
-            const target = await original.feature.captureStoppedImport(contextId, { isCurrent });
-            if (!isCurrent() || !source.isCurrent())
-              throw new RetainedLegacyLaunchRefusal('source-changed');
-            if (!captured.captureRuntime) throw new RetainedLegacyLaunchRefusal('unavailable');
-            const runtime = await captured.captureRuntime(
-              source,
-              () => isCurrent() && !captureDebts.has(key),
-              onProgress,
-              projectPath
-            );
             try {
-              return createRetainedLegacyLaunchScope({
+              phase = 'source-capture';
+              const source =
+                selectedSource ?? captureLegacyStoppedSource(teamName, contextId, isCurrent);
+              phase = 'source-key';
+              const key = retainedLegacySourceOperationKey(source);
+              if (importOutcomes.has(key)) throw new RetainedLegacyLaunchRefusal('import-not-absent');
+              if (captureDebts.has(key)) throw new RetainedLegacyLaunchRefusal('outcome-unknown');
+              phase = 'target-capture';
+              const target = await original.feature.captureStoppedImport(contextId, { isCurrent });
+              if (!isCurrent() || !source.isCurrent())
+                throw new RetainedLegacyLaunchRefusal('source-changed');
+              phase = 'runtime-capture';
+              if (!captured.captureRuntime) throw new RetainedLegacyLaunchRefusal('unavailable');
+              const runtime = await captured.captureRuntime(
                 source,
-                owners: captured.value,
-                target,
-                guard: { isCurrent },
-                runtime,
-              });
-            } catch (error) {
+                () => isCurrent() && !captureDebts.has(key),
+                onProgress,
+                projectPath
+              );
+              phase = 'scope-construction';
               try {
-                await runtime.close();
-              } catch {
-                const debt = captureDebts.get(key) ?? [];
-                debt.push({
+                const authority = createRetainedLegacyLaunchScope({
+                  source,
+                  owners: captured.value,
+                  target,
+                  guard: { isCurrent },
                   runtime,
-                  teamName,
-                  intentId:
-                    request.action === 'open' || request.action === 'rebind'
-                      ? request.intentId
-                      : '',
                 });
-                captureDebts.set(key, debt);
-                throw new RetainedLegacyLaunchRefusal('outcome-unknown');
+                phase = 'coordinator-admission';
+                return authority;
+              } catch (error) {
+                observe?.remember(phase, error);
+                try {
+                  await runtime.close();
+                } catch {
+                  const debt = captureDebts.get(key) ?? [];
+                  debt.push({
+                    runtime,
+                    teamName,
+                    intentId:
+                      request.action === 'open' || request.action === 'rebind'
+                        ? request.intentId
+                        : '',
+                  });
+                  captureDebts.set(key, debt);
+                  throw new RetainedLegacyLaunchRefusal('outcome-unknown');
+                }
+                throw error;
               }
+            } catch (error) {
+              observe?.remember(phase, error);
               throw error;
             }
           },
           selectedKey
         );
+        observe?.finish(phase, result);
+        return result;
       } catch (error) {
+        observe?.remember(phase, error);
         const reason =
           error instanceof TypeError
             ? 'invalid'
             : error instanceof RetainedLegacyLaunchRefusal
               ? error.reason
               : 'unavailable';
-        return {
+        const result: RetainedLegacyLaunchResult = {
           ok: false,
           reason,
           outcome: reason === 'outcome-unknown' ? 'unknown' : 'not-dispatched',
         };
+        observe?.finish(phase, result);
+        return result;
       }
     },
     shutdown: async () => {

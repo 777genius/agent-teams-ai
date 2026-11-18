@@ -46,7 +46,7 @@ function capture(t: TestContext, event?: (record: Record<string, unknown>) => vo
   });
   return records;
 }
-function session(): Session {
+function session(beforeReadiness?: () => void): Session {
   let end!: () => void;
   const ended = new Promise<void>(resolve => { end = resolve; });
   const driver: Session = {
@@ -61,6 +61,7 @@ function session(): Session {
     interrupt: async () => ({ ok: false, code: 'unsupported' }),
     checkReadiness: async function () {
       assert.equal(this, driver);
+      beforeReadiness?.();
       return { ok: true, value: undefined };
     },
     checkpoint: () => ({ ok: false, code: 'unsupported' }),
@@ -108,10 +109,8 @@ test('actual Runtime keeps a failed finite driver open held with the original co
 });
 
 test('actual Runtime distinguishes a readiness throw after the finite driver was attached', async t => {
-  const records = capture(t), driver = session();
-  driver.checkReadiness = async function () {
-    assert.equal(this, driver); throw new RuntimeOwnerError('busy');
-  };
+  const records = capture(t);
+  const driver = session(() => { throw new RuntimeOwnerError('busy'); });
   const runtime = await owner(t, { open: async () => ({ driver, capabilities: ['tools'] }) });
   const record = await runtime.openSession({ binding, config });
   assert.equal(record.phase, 'held'); assert.equal(record.custody, 'unknown');
@@ -133,11 +132,23 @@ test('actual Runtime success and its original finite close emit no refusal', asy
 
 test('factory selection rethrows the exact original exception without attempting later ports', async t => {
   const records = capture(t), original = new RuntimeOwnerError('forbidden');
-  const entry = { config } as MemberEntry;
-  const options = {
+  const unexpected = (): never => assert.fail('no factory port after the selection refusal');
+  const entry: MemberEntry = {
+    config, binding,
+    get profile() { return unexpected(); },
+    get baseProfile() { return unexpected(); },
+    get team() { return unexpected(); },
+    get delivery() { return unexpected(); },
+  };
+  const options: Parameters<typeof createRuntimeMemberProviderFactory>[0] = {
     entries: new Map([['TEST-entry', entry]]), profileId: 'TEST-private-profile',
+    storageRoot: '/TEST/no-native-execution', principalId: 'TEST-principal', hostIncarnation: 'TEST-host',
+    get windows() { return unexpected(); },
+    settleDeliveries: unexpected,
     isSealed: () => { throw original; },
-  } as Parameters<typeof createRuntimeMemberProviderFactory>[0];
+    assertWriter: unexpected, assertCurrent: unexpected, captureInteractions: unexpected,
+    readRuntime: unexpected, readCheckpoint: unexpected, observe: unexpected, onProgress: unexpected,
+  };
   const factory = createRuntimeMemberProviderFactory(options);
   await assert.rejects(factory.open(config, () => {}), error => error === original);
   assert.equal(records.length, 1);

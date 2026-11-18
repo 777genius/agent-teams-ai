@@ -92,7 +92,7 @@ test('missing original hash or time cannot be replaced by a later successful obs
   const lostHash = createRuntimeOpenDiagnostic(target, line => { lines.push(line); }, () => 3);
   delete circular.self;
   lostHash('selection', new Error('TEST-error')); lostHash('driver-open', new Error('TEST-error'));
-  assert.deepEqual(lines, []);
+  assert.equal(lines.length, 0);
   for (const first of [NaN, Infinity, -1, 0.5, 'throw'] as const) {
     let calls = 0;
     const observe = createRuntimeOpenDiagnostic(selected(), line => { lines.push(line); }, () => {

@@ -12,6 +12,7 @@ import { waitFor } from '../e2e/release-updater/cdp.mts';
 import { createDesktopUiControls, desktopJsLiteral } from './desktop-ui-controls.ts';
 import { startRetainedOpenCodeModel } from './desktop-retained-opencode-model.ts';
 import { retainedOpenCodeLaunchExpression, RETAINED_OPENCODE_LAUNCH_TIMEOUT_MS } from './desktop-retained-opencode-launch.ts';
+import { readRetainedOpenDiagnostic, type RetainedOpenDiagnosticBinding } from './desktop-retained-open-diagnostics.ts';
 import {
   exerciseRetainedDonorHistory,
   originalLinuxProcessPresent,
@@ -150,6 +151,7 @@ test('original Electron retains legacy fork V1 while routing new Host V2 and iso
   let fixture: Awaited<ReturnType<typeof prepareDesktopBackendFixture>> | undefined;
   let app: Awaited<ReturnType<typeof startRetainedOpenCodeApp>> | undefined;
   let passed = false, cleanup = false, failure: unknown;
+  let retainedOpenAttempt: RetainedOpenDiagnosticBinding | undefined;
   const legacyTeam = 'test-retained-opencode-v1';
   let legacySubmitted = false, legacyStopped = false;
   const cleanupErrors: unknown[] = [], steps: Record<string, unknown>[] = [];
@@ -309,9 +311,11 @@ test('original Electron retains legacy fork V1 while routing new Host V2 and iso
     assert.equal(await callTeams<boolean>('processAlive', [legacyTeam]), false);
     assert.equal(model.observations.length, callsBeforeUpgrade, 'Host selection never replays retained V1 input');
     legacyStopped = false;
+    retainedOpenAttempt = { mainPid: app.electron.pid, teamName: legacyTeam, intentId: 'TEST-coexist-retained-original-once' };
     const retainedLaunch = await app.call(retainedOpenCodeLaunchExpression({ intentId: 'TEST-coexist-retained-original-once',
       request: { teamName: legacyTeam, cwd: legacyProject, providerId: 'opencode', model: 'test-legacy/TEST-model',
         skipPermissions: true, runtimeSelectionVersion: 1 } }), RETAINED_OPENCODE_LAUNCH_TIMEOUT_MS);
+    retainedOpenAttempt = undefined;
     assert.equal(typeof retainedLaunch.runId, 'string'); assert.notEqual(retainedLaunch.runId, created.runId);
     await waitLegacyRuntime(retainedLaunch.runId);
     const legacyProcesses = await legacyChildren();
@@ -348,9 +352,11 @@ test('original Electron retains legacy fork V1 while routing new Host V2 and iso
     await waitFor(async () => await callTeams<boolean>('processAlive', [legacyTeam]) === false || null, 'retained V1 Stop settles', 120_000);
     assert.ok(hostProcesses.every(originalLinuxProcessPresent), 'legacy Stop preserves all original V2 native children');
     await send(hostKey, 'alice', 'TEST_OWNED_V2_AFTER_STOP');
+    retainedOpenAttempt = { mainPid: app.electron.pid, teamName: legacyTeam, intentId: 'TEST-coexist-retained-after-stop-once' };
     const relaunched = await app.call(retainedOpenCodeLaunchExpression({ intentId: 'TEST-coexist-retained-after-stop-once',
       request: { teamName: legacyTeam, cwd: legacyProject, providerId: 'opencode', model: 'test-legacy/TEST-model',
         skipPermissions: true, runtimeSelectionVersion: 1 } }), RETAINED_OPENCODE_LAUNCH_TIMEOUT_MS);
+    retainedOpenAttempt = undefined;
     assert.equal(typeof relaunched.runId, 'string'); assert.notEqual(relaunched.runId, retainedLaunch.runId);
     const relaunchedRuntime = await waitLegacyRuntime(relaunched.runId);
     const relaunchedMember = record(record(relaunchedRuntime.members).bob);
@@ -425,6 +431,13 @@ test('original Electron retains legacy fork V1 while routing new Host V2 and iso
     proof.status = passed && cleanup ? 'PASS' : 'FAIL';
     if (failure) proof.failure = failure instanceof Error ? failure.message : String(failure);
     proof.cleanupFailures = cleanupErrors.map(error => error instanceof Error ? error.message : String(error));
+    if (failure) {
+      proof.retainedOpenDiagnostic = { status: 'diagnostic-unknown', reason: 'unreadable-log' };
+      try { proof.retainedOpenDiagnostic = await readRetainedOpenDiagnostic({ root: fixture?.root, binding: retainedOpenAttempt }); }
+      catch { /* Diagnostic availability cannot replace original failure or cleanup. */ }
+      try { console.error('TEST retained open diagnostic', JSON.stringify(proof.retainedOpenDiagnostic)); }
+      catch { /* The original save and error precedence remain authoritative. */ }
+    }
     await save();
   }
   if (failure && cleanupErrors.length) throw new AggregateError([failure, ...cleanupErrors], 'coexistence and cleanup failed');

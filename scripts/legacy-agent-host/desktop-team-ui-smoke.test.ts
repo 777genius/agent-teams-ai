@@ -3940,11 +3940,13 @@ type NativeSetupStep = 'global-catalog' | 'global-source' | 'global-lineage' | '
 async function originalNativeSetupWindow(options: {
   clock: { now: number }; openCode?: boolean; opening?: boolean; startReady?: boolean; progressReady?: boolean;
   readyCount?: number; actorCount?: number; tickMs?: number; sessions?: Record<string, unknown>[];
+  hostVariant?: 'missing' | 'duplicate' | 'reused-birth';
   preparationProof?: { consumed: number; probes: { requestedModel: string }[] };
   onStep?: (step: NativeSetupStep, count: number) => void | Promise<void>;
   guard?: (count: number) => void; arm?: () => void; disarm?: () => void;
 }) {
   const { stripTypeScriptTypes } = await import('node:module');
+  const { desktopMetadataProfileHash, desktopMetadataReadyScopeCount } = await import('./desktop-opencode-metadata-lineage.ts');
   const source = (await readFile(new URL('./desktop-native-stop-fixture.ts', import.meta.url), 'utf8')).replace(/\r\n/gu, '\n');
   const markers = ['const object = (value: unknown): Record<string, unknown> => {',
     'export async function prepareDesktopNativeStop(', '/** Closed diagnostic projection of one already completed Runtime file read. */',
@@ -3953,17 +3955,30 @@ async function originalNativeSetupWindow(options: {
   for (const marker of markers) assert.equal(source.split(marker).length, 2, 'one original native setup source boundary');
   const positions = markers.map(marker => source.indexOf(marker));
   assert.deepEqual([...positions].sort((a, b) => a - b), positions);
+  const metadataMarkers = ['export function readDesktopNativeHostProcesses(',
+    'export function separateDesktopOpenCodeRuntimeChildren(', 'type MetadataObservationBudget = {',
+    "/** Actual source-derived profile IDs, not the descriptor's common seed profile. */"];
+  for (const marker of metadataMarkers) assert.equal(source.split(marker).length, 2, 'one actual metadata helper boundary');
+  const metadataPositions = metadataMarkers.map(marker => source.indexOf(marker));
+  assert.deepEqual([...metadataPositions].sort((a, b) => a - b), metadataPositions);
+  assert.ok(positions[2]! < metadataPositions[0]! && metadataPositions[3]! < positions[3]!);
   const actual = stripTypeScriptTypes(source.slice(positions[0], positions[1]) +
     source.slice(positions[1], positions[2]).replace(/^export /u, '') +
+    source.slice(metadataPositions[0], metadataPositions[1]).replace(/^export /u, '') +
+    source.slice(metadataPositions[2], metadataPositions[3]) +
     source.slice(positions[3], positions[4]).replace(/^export /u, ''));
   const trace: string[] = [], calls: { step: NativeSetupStep; timeoutMs: number | undefined }[] = [];
   const counts = new Map<NativeSetupStep, number>(), evidence: Record<string, unknown> = {};
-  let guards = 0, arms = 0, disarms = 0;
+  let guards = 0, arms = 0, disarms = 0, hostReads = 0, sourceChecks = 0;
+  const guardsBefore = new Map<NativeSetupStep, number>();
   const fixture = { handleId: 'TEST-handle', node: 'TEST-node', hostEntry: 'TEST-host', root: 'TEST-root' }, group = 7;
   const host = { pid: 10, parentPid: 7, groupId: group, birth: 'TEST-host-birth', command: 'TEST-node TEST-host' };
   const globalSource = { sourceId: 'TEST-global', revision: 'TEST-revision', profileId: 'TEST-profile',
     configRevision: 'TEST-config', scope: 'global', projectPath: null };
-  const globalCaptured = { host, children: [{ pid: 11 }] }, projectCaptured = { host, children: [{ pid: 11 }, { pid: 12 }] };
+  const globalProfileHash = desktopMetadataProfileHash(globalSource);
+  const metadataChild = { pid: 11, parentPid: host.pid, groupId: 11,
+    birth: 'TEST-metadata-birth', command: 'TEST-native --metadata' };
+  const globalCaptured = { host, children: [metadataChild] }, projectCaptured = { host, children: [metadataChild, { pid: 12 }] };
   const runtimeCaptured = { host, children: [...projectCaptured.children, { pid: 31 }] };
   const metadataSources = [{ scope: 'global' }, { scope: 'project' }];
   const selection = { launchId: 'TEST-launch', rosterRevision: 'TEST-roster', members: [{ memberId: 'alice-id' }] };
@@ -3980,7 +3995,8 @@ async function originalNativeSetupWindow(options: {
     return () => { trace.push('disarm'); disarms++; options.disarm?.(); };
   } };
   async function observe<T>(step: NativeSetupStep, value: T): Promise<T> {
-    trace.push(step); const count = (counts.get(step) ?? 0) + 1; counts.set(step, count);
+    trace.push(step); if (!guardsBefore.has(step)) guardsBefore.set(step, guards);
+    const count = (counts.get(step) ?? 0) + 1; counts.set(step, count);
     assert.ok(count <= (step === 'progress' || step === 'sessions' ? 3 : 1), 'no setup operation replay or unbounded read loop');
     await options.onStep?.(step, count); return value;
   }
@@ -4022,7 +4038,8 @@ async function originalNativeSetupWindow(options: {
   const make = Function('environment', `'use strict';
     const {assert,Date,setTimeout,process,join,desktopJsLiteral,assertOwnedCdpListener,
       readDesktopOpenCodeMetadataSource,desktopMetadataProfileHash,captureMetadataObservation,metadataOnlyRuntimeDigest,
-      captureDesktopOpenCodeProjectMetadata,observeDesktopOpenCodeMetadata,readDesktopNativeStopSessions,fileDigest,processTable,command}=environment;
+      captureDesktopOpenCodeProjectMetadata,observeDesktopOpenCodeMetadata,readDesktopNativeStopSessions,fileDigest,processTable,
+      processFacts,readDesktopMetadataEvents,desktopMetadataReadyScopeCount,command}=environment;
     ${actual}
     return {prepareDesktopNativeStop,captureDesktopOpenCodeGlobalMetadata};`) as (environment: Record<string, unknown>) => {
       prepareDesktopNativeStop: (input: Record<string, unknown>) => Promise<Record<string, unknown>>;
@@ -4032,12 +4049,28 @@ async function originalNativeSetupWindow(options: {
     setTimeout(done: () => void, ms: number) { assert.equal(ms, 100); trace.push('tick'); options.clock.now += options.tickMs ?? ms; done(); },
     desktopJsLiteral: JSON.stringify,
     assertOwnedCdpListener(value: number) { assert.equal(value, group); guard(); },
-    readDesktopOpenCodeMetadataSource(root: string, projectPath: null) {
-      assert.equal(root, fixture.root); assert.equal(projectPath, null); return observe('global-source', globalSource);
+    processFacts() {
+      assert.ok(++hostReads <= 32, 'bounded original Host census');
+      const current = options.hostVariant === 'reused-birth' && hostReads > 1
+        ? { ...host, birth: 'TEST-reused-host-birth' } : host;
+      return options.hostVariant === 'missing' ? [metadataChild]
+        : options.hostVariant === 'duplicate' ? [current, { ...current }, metadataChild] : [current, metadataChild];
     },
-    desktopMetadataProfileHash(value: unknown) { assert.equal(value, globalSource); return 'TEST-global-profile-hash'; },
+    readDesktopMetadataEvents(root: string, hostPid: number, allowEmpty: boolean) {
+      assert.equal(root, fixture.root); assert.equal(hostPid, host.pid); assert.equal(allowEmpty, true);
+      return [{ hostPid, profileHash: globalProfileHash, mode: 'directory', providerHash: null,
+        pid: metadataChild.pid, startIdentityHash: 'a'.repeat(64), stage: 'ready' }];
+    },
+    desktopMetadataReadyScopeCount,
+    readDesktopOpenCodeMetadataSource(root: string, projectPath: null) {
+      assert.equal(root, fixture.root); assert.equal(projectPath, null);
+      if (!counts.has('global-source')) return observe('global-source', globalSource);
+      trace.push('global-source-check'); assert.ok(++sourceChecks <= 3, 'bounded passive source rechecks');
+      return globalSource;
+    },
+    desktopMetadataProfileHash(value: unknown) { assert.equal(value, globalSource); return globalProfileHash; },
     captureMetadataObservation(value: unknown, observedGroup: number, hashes: string[], original: unknown, expected: number) {
-      assert.deepEqual(value, fixture); assert.equal(observedGroup, group); assert.deepEqual(hashes, ['TEST-global-profile-hash']);
+      assert.deepEqual(value, fixture); assert.equal(observedGroup, group); assert.deepEqual(hashes, [globalProfileHash]);
       assert.equal(original, undefined); assert.equal(expected, 0); return observe('global-lineage', { captured: globalCaptured });
     },
     metadataOnlyRuntimeDigest(root: string) { assert.equal(root, fixture.root); return observe('global-digest', 'TEST-runtime-digest'); },
@@ -4057,7 +4090,8 @@ async function originalNativeSetupWindow(options: {
     command(pid: number) { assert.ok(pid === host.pid || actors.some(row => row.pid === pid));
       return pid === host.pid ? `${fixture.node} ${fixture.hostEntry}` : 'TEST-native --original'; },
   });
-  return { trace, calls, counts, evidence, armPayloads, configuration, globalSource, globalCaptured, openingSession,
+  return { trace, calls, counts, guardsBefore, evidence, armPayloads, configuration, globalSource, globalCaptured, openingSession,
+    metadataReads: () => ({ hostReads, sourceChecks }),
     projectCaptured, runtimeCaptured, metadataSources, countsOfPreparation: () => ({ arms, disarms }),
     run: () => functions.prepareDesktopNativeStop({ cdp, fixture, group, evidence, executable: 'TEST-native',
       ...(options.openCode === false ? {} : { openCode: { model: { configuredLaunchPreparation: preparation, probes } } }),
@@ -4085,6 +4119,8 @@ test('original native setup carries one live OpenCode window through actual glob
   assert.equal(setup.metadataBeforeLaunch, f.projectCaptured); assert.equal(setup.metadataAtRuntimeObservation, f.runtimeCaptured);
   assert.equal(setup.metadataSources, f.metadataSources); assert.equal(setup.nativeExecutableSha256, 'a'.repeat(64));
   assert.ok([...f.counts.values()].every(count => count === 1));
+  assert.equal(f.metadataReads().sourceChecks, 3, 'the actual passive helper rechecks the same source without replaying operations');
+  assert.ok(f.metadataReads().hostReads > 1);
 });
 
 test('original native setup never replenishes the start window and clamps ordinary reads to its smaller remainder', { timeout: 5000 }, async () => {
@@ -4172,12 +4208,13 @@ test('pending-open keeps original session identity empty-input and native actor 
 });
 
 test('owned guards and the original polling tick cannot dispatch after the setup cutoff', { timeout: 5000 }, async () => {
-  for (const [guardIndex, denied] of [[1, 'global-catalog'], [2, 'global-source'], [3, 'initial-read'],
-    [4, 'project-catalog'], [5, 'start'], [6, 'progress']] as const) {
+  const reference = await originalNativeSetupWindow({ clock: { now: 0 } }); await reference.run();
+  for (const denied of ['global-catalog', 'global-source', 'initial-read', 'project-catalog', 'start', 'progress'] as const) {
+    const guardIndex = reference.guardsBefore.get(denied); assert.ok(guardIndex, 'an original guard precedes this fixed operation');
     const clock = { now: 0 }, f = await originalNativeSetupWindow({ clock, guard(count) { if (count === guardIndex) clock.now = 180_000; } });
     await assert.rejects(f.run(), /Original OpenCode setup observation deadline expired/u);
     assert.equal(f.trace.includes(denied), false); assert.equal(f.evidence.nativeSetup, undefined);
-    assert.deepEqual(f.countsOfPreparation(), guardIndex < 5 ? { arms: 0, disarms: 0 } : { arms: 1, disarms: 1 });
+    assert.deepEqual(f.countsOfPreparation(), ['start', 'progress'].includes(denied) ? { arms: 1, disarms: 1 } : { arms: 0, disarms: 0 });
   }
   const clock = { now: 0 }, armed = await originalNativeSetupWindow({ clock, arm() { clock.now = 180_000; } });
   await assert.rejects(armed.run(), /Original OpenCode setup observation deadline expired/u);
@@ -4211,11 +4248,13 @@ test('rejected original setup awaits and guards retain their exact Error even af
     await assert.rejects(f.run(), error => error === original); assert.equal(f.evidence.nativeSetup, undefined);
     assert.deepEqual(f.countsOfPreparation(), { arms: 1, disarms: 1 });
   }
-  for (const guardIndex of [1, 5]) {
+  const reference = await originalNativeSetupWindow({ clock: { now: 0 } }); await reference.run();
+  for (const target of ['global-catalog', 'start'] as const) {
+    const guardIndex = reference.guardsBefore.get(target); assert.ok(guardIndex);
     const clock = { now: 0 }, original = new Error('TEST original ownership guard');
     const f = await originalNativeSetupWindow({ clock, guard(count) { if (count === guardIndex) { clock.now = 180_001; throw original; } } });
     await assert.rejects(f.run(), error => error === original);
-    assert.deepEqual(f.countsOfPreparation(), guardIndex === 1 ? { arms: 0, disarms: 0 } : { arms: 1, disarms: 1 });
+    assert.deepEqual(f.countsOfPreparation(), target === 'global-catalog' ? { arms: 0, disarms: 0 } : { arms: 1, disarms: 1 });
   }
 });
 
@@ -4252,6 +4291,19 @@ test('legacy native setup keeps undefined CDP overrides and its separate 45-seco
   await assert.rejects(expired.run(), { name: 'AssertionError', message: /starting/u });
   assert.equal(expired.counts.get('progress'), 1, 'the unchanged legacy polling boundary retains its original last read');
   assert.equal(expired.evidence.nativeSetup, undefined); assert.equal(expired.trace.includes('native-table'), false);
+});
+
+test('actual native setup refuses missing duplicate or reused original Host facts before metadata qualification', async () => {
+  for (const hostVariant of ['missing', 'duplicate', 'reused-birth'] as const) {
+    const f = await originalNativeSetupWindow({ clock: { now: 0 }, hostVariant });
+    await assert.rejects(f.run(), /one exact TEST Host|same retained metadata Host birth/u);
+    assert.equal(f.counts.get('global-source'), undefined);
+    assert.equal(f.counts.get('global-lineage'), undefined);
+    assert.equal(f.counts.get('initial-read'), undefined);
+    assert.equal(f.counts.get('start'), undefined);
+    assert.equal(f.evidence.nativeSetup, undefined);
+    assert.deepEqual(f.countsOfPreparation(), { arms: 0, disarms: 0 });
+  }
 });
 
 test('standalone actual global metadata retains its default CDP override without selecting a setup window', { timeout: 5000 }, async () => {
