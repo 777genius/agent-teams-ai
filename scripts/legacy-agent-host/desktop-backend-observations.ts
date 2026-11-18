@@ -5,7 +5,7 @@ import { readdir, realpath } from 'node:fs/promises';
 import { createConnection } from 'node:net';
 import { basename, join } from 'node:path';
 import { fileDigest } from './desktop-backend-fixture.ts';
-import { desktopFiniteHeapNodeOptions } from './desktop-runtime-source-fixture.ts';
+import { desktopFiniteHeapNodeOptions } from '../lib/desktop-finite-node-options.ts';
 export { projectDesktopHarnessFailure, projectDesktopMixedSettingsFailure } from './desktop-backend-failures.ts';
 
 export interface ProcessIdentity {

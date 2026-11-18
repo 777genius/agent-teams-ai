@@ -11,6 +11,7 @@ import { fileURLToPath } from 'node:url';
 
 import { formatGitHubReleaseDownloadError } from './lib/github-release-download-error.mjs';
 import { ensureMinimumNodeOldSpaceEnv } from './lib/node-options.mjs';
+import { normalizeDesktopDevNodeOptions } from './lib/desktop-finite-node-options.ts';
 import {
   extractArchive,
   findExtractedBinary,
@@ -706,7 +707,7 @@ async function main() {
       ? { CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH: resolvedRuntime.binaryPath }
       : {}),
   };
-  ensureMinimumNodeOldSpaceEnv(uiEnv);
+  normalizeDesktopDevNodeOptions(uiEnv, ensureMinimumNodeOldSpaceEnv);
   delete uiEnv.CLAUDE_CLI_PATH;
   const uiPackageManager = readPackageManagerCommand(uiRepoRoot);
   const resolvedElectronViteArgs = await resolveElectronViteArgs(electronViteArgs);

@@ -10,7 +10,8 @@ import { join } from 'node:path';
 import { performance } from 'node:perf_hooks';
 import type { TestContext } from 'node:test';
 import { digest } from './desktop-backend-fixture.ts';
-import { desktopBackendEnvironment, desktopFiniteHeapNodeOptions } from './desktop-runtime-source-fixture.ts';
+import { desktopBackendEnvironment } from './desktop-runtime-source-fixture.ts';
+import { desktopFiniteHeapNodeOptions, normalizeDesktopDevNodeOptions } from '../lib/desktop-finite-node-options.ts';
 import { observeDesktopEmulatedRuntimeChildren } from './desktop-emulated-runtime-fixture.ts';
 import { createDesktopProcessRootOracle } from './desktop-process-root-oracle.ts';
 import {
@@ -183,7 +184,9 @@ test('finite heap admission and closed app environment preserve every other fiel
     assert.equal(Object.hasOwn(ordinary, 'NODE_OPTIONS'), false);
     process.env.LEGACY_DESKTOP_TEST_FINITE_HEAP_1536 = '1';
     assert.doesNotThrow(() => assertDesktopProofEnvironment(false));
-    assert.deepEqual(environment(), { ...ordinary, NODE_OPTIONS: '--max-old-space-size=1536' });
+    assert.deepEqual(environment(), { ...ordinary, NODE_OPTIONS: '--max-old-space-size=1536',
+      LEGACY_DESKTOP_TEST_FINITE_HEAP_1536: '1', LEGACY_DESKTOP_BACKEND_GO: '1',
+      LEGACY_DESKTOP_EMULATED_ONLY: '1', LEGACY_DESKTOP_PROOF_MODE: mode });
   }
   process.env.LEGACY_DESKTOP_TEST_FINITE_HEAP_1536 = '1536';
   assert.throws(() => assertDesktopProofEnvironment(false), /exact selector/);
@@ -201,6 +204,93 @@ test('finite heap admission and closed app environment preserve every other fiel
   process.env.LEGACY_DESKTOP_EMULATED_ONLY = '1';
   process.env.LEGACY_DESKTOP_TEST_FINITE_HEAP_8192 = '1';
   assert.throws(() => assertDesktopProofEnvironment(false), /provider-emulation refuses LEGACY_DESKTOP_TEST_FINITE_HEAP_8192/);
+});
+
+const originalDevNodeOptions = (createRequire(import.meta.url)('../lib/node-options.mjs') as {
+  ensureMinimumNodeOldSpaceEnv(environment: Record<string, string | undefined>, minimumMb?: number): void;
+}).ensureMinimumNodeOldSpaceEnv;
+
+test('the real fixture and original dev normalizer retain the selected finite heap across startup', {
+  skip: process.platform !== 'linux' || process.arch !== 'x64',
+}, (t) => {
+  const controlled = (key: string) => key.startsWith('LEGACY_DESKTOP_') || key === 'NODE_OPTIONS';
+  const original = Object.fromEntries(Object.entries(process.env).filter(([key]) => controlled(key)));
+  for (const key of Object.keys(original)) delete process.env[key];
+  t.after(() => {
+    for (const key of Object.keys(process.env)) if (controlled(key)) delete process.env[key];
+    Object.assign(process.env, original);
+  });
+  Object.assign(process.env, { LEGACY_DESKTOP_BACKEND_GO: '1', LEGACY_DESKTOP_EMULATED_ONLY: '1',
+    LEGACY_DESKTOP_TEST_FINITE_HEAP_1536: '1', NODE_OPTIONS: '--require=/TEST/ambient.cjs' });
+  for (const mode of ['emulated-retained-original-ui', 'emulated-import-lifecycle-ui']) {
+    process.env.LEGACY_DESKTOP_PROOF_MODE = mode;
+    const fixtureEnv = desktopBackendEnvironment('/TEST/finite-root', '/TEST/node', '/TEST/descriptor.json', 'a'.repeat(64));
+    const uiEnv = { ...fixtureEnv, UV_THREADPOOL_SIZE: '16' }, before = { ...uiEnv };
+    const originalFloor = { ...uiEnv };
+    originalDevNodeOptions(originalFloor);
+    assert.equal(originalFloor.NODE_OPTIONS, '--max-old-space-size=2048', 'original downstream floor reproduces the missed seam');
+    const minima: Array<number | undefined> = [];
+    normalizeDesktopDevNodeOptions(uiEnv, (target, minimum) => {
+      minima.push(minimum); originalDevNodeOptions(target, minimum);
+    });
+    assert.deepEqual(minima, [1536]);
+    assert.deepEqual(uiEnv, before, 'actual normalization keeps the fixed option and all other closed fields');
+    const missingSelector: Record<string, string | undefined> = { ...fixtureEnv };
+    delete missingSelector.LEGACY_DESKTOP_TEST_FINITE_HEAP_1536;
+    normalizeDesktopDevNodeOptions(missingSelector, originalDevNodeOptions);
+    assert.equal(missingSelector.NODE_OPTIONS, '--max-old-space-size=2048', 'other TEST context alone never grants the finite floor');
+  }
+});
+
+test('dev startup refuses incomplete finite context and arbitrary Node flags before invoking its normalizer', () => {
+  const admitted: Record<string, string | undefined> = {
+    LEGACY_DESKTOP_BACKEND_GO: '1', LEGACY_DESKTOP_EMULATED_ONLY: '1',
+    LEGACY_DESKTOP_TEST_FINITE_HEAP_1536: '1', LEGACY_DESKTOP_PROOF_MODE: 'emulated-retained-original-ui',
+    NODE_OPTIONS: '--max-old-space-size=1536',
+  };
+  let calls = 0;
+  const normalize = (env: Record<string, string | undefined>, minimum?: number) => {
+    calls++; originalDevNodeOptions(env, minimum);
+  };
+  const refuse = (env: Record<string, string | undefined>, pattern: RegExp, platform = 'linux', arch = 'x64') => {
+    const before = { ...env }, previousCalls = calls;
+    assert.throws(() => normalizeDesktopDevNodeOptions(env, normalize, platform, arch), pattern);
+    assert.equal(calls, previousCalls, 'refusal precedes the original normalizer');
+    assert.deepEqual(env, before, 'refused context is never rewritten into an admitted one');
+  };
+  for (const key of ['LEGACY_DESKTOP_BACKEND_GO', 'LEGACY_DESKTOP_EMULATED_ONLY', 'LEGACY_DESKTOP_PROOF_MODE']) {
+    const env = { ...admitted }; delete env[key]; refuse(env, /finite TEST heap requires/);
+    refuse({ ...admitted, [key]: 'forged' }, /finite TEST heap requires/);
+  }
+  for (const selected of ['', '0', '1536', '1\n'])
+    refuse({ ...admitted, LEGACY_DESKTOP_TEST_FINITE_HEAP_1536: selected }, /exact selector/);
+  for (const mode of ['native-launch-ui', 'team-ui', 'emulated-import-ui'])
+    refuse({ ...admitted, LEGACY_DESKTOP_PROOF_MODE: mode }, /exact finite lifecycle mode/);
+  for (const option of [undefined, '', '--max-old-space-size=2048', '--max_old_space_size=1536',
+    '--max-old-space-size=1536 ', '--max-old-space-size=1536 --trace-gc',
+    '--require=/TEST/ambient.cjs --max-old-space-size=1536', '--max-old-space-size=1536 --max-old-space-size=8192'])
+    refuse({ ...admitted, NODE_OPTIONS: option }, /only its exact Node option/);
+  refuse({ ...admitted }, /requires Linux/, 'darwin', 'arm64');
+  refuse({ ...admitted }, /requires Linux/, 'win32', 'x64');
+  refuse({ ...admitted }, /requires x64/, 'linux', 'arm64');
+  assert.equal(calls, 0);
+});
+
+test('ordinary dev normalization stays exact and a future finite floor regression fails closed', () => {
+  for (const [platform, arch] of [['linux', 'x64'], ['darwin', 'arm64'], ['win32', 'x64']]) {
+    for (const options of [undefined, '', '--max-old-space-size=1536', '--max-old-space-size=8192',
+      '--trace-warnings --max-old-space-size=1024']) {
+      const environment = { NODE_OPTIONS: options, NODE_ENV: 'development' }, expected = { ...environment };
+      originalDevNodeOptions(expected);
+      normalizeDesktopDevNodeOptions(environment, originalDevNodeOptions, platform, arch);
+      assert.deepEqual(environment, expected);
+    }
+  }
+  const finite = { LEGACY_DESKTOP_BACKEND_GO: '1', LEGACY_DESKTOP_EMULATED_ONLY: '1',
+    LEGACY_DESKTOP_TEST_FINITE_HEAP_1536: '1', LEGACY_DESKTOP_PROOF_MODE: 'emulated-import-lifecycle-ui',
+    NODE_OPTIONS: '--max-old-space-size=1536' };
+  assert.throws(() => normalizeDesktopDevNodeOptions(finite, env => originalDevNodeOptions(env), 'linux', 'x64'),
+    /must retain its fixed Node option/);
 });
 
 test('TEST management admission retains only the exact direct detached Host peer without signaling', (t) => {

@@ -296,7 +296,8 @@ export async function runDesktopLiveMembershipUiSmoke(cdp: UiCdpPort, options: {
   assert.equal(record(saved.savedSettings).providerId, 'anthropic');
   assert.equal(record(saved.savedSettings).model, finite ? 'TEST-claude-sonnet' : 'claude-opus-4-6');
   assert.equal(record(saved.savedSettings).effort, 'medium');
-  assert.equal(record(saved.savedSettings).prompt, '');
+  // Original Create normalizes a blank prompt to an omitted optional field.
+  assert.equal(record(saved.savedSettings).prompt, undefined);
   assert.equal(record(saved.savedSettings).skipPermissions, true);
   assert.equal(record(saved.savedSettings).syncModelsWithLead, false);
   assert.equal(record(rows(saved.members)[1]!.settings).providerId, 'codex');
