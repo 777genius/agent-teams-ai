@@ -28,6 +28,7 @@ function fixture(result: ResolvedTeamWorkContext = reserved) {
     createTeamConfig: vi.fn(async (_: TeamCreateConfigRequest, _options: { claimOwnerOnCreate: true }) => undefined),
     assertOwnedAlias: vi.fn(async () => undefined),
     replaceMembers: vi.fn(async () => undefined),
+    assertStoppedForRosterSync: vi.fn(async () => undefined),
   };
   return { materializer: new TeamProjectContextDraftMaterializer(context, store), context, store };
 }
@@ -90,11 +91,26 @@ describe('TeamProjectContextDraftMaterializer', () => {
     });
     expect(result.state).toBe('ready');
     expect(f.store.assertOwnedAlias).toHaveBeenCalledWith('ptc-sandbox');
+    expect(f.store.assertStoppedForRosterSync).toHaveBeenCalledWith('ptc-sandbox');
     expect(f.store.replaceMembers).toHaveBeenCalledOnce();
     expect(f.store.replaceMembers).toHaveBeenCalledWith('ptc-sandbox', {
       members: [{ name: 'alice', role: 'new role' }, { name: 'bob' }],
     });
     expect(f.store.createTeamConfig).not.toHaveBeenCalled();
+  });
+
+  it('refuses to mutate the project roster while its runtime is still live', async () => {
+    const f = fixture({ ...reserved, state: 'ready' });
+    f.store.getSavedRequest.mockImplementation(async (name) => ({
+      teamName: name,
+      cwd: '/sandbox/b',
+      members: [{ name: 'alice', role: name === 'builders' ? 'new' : 'old' }],
+    }));
+    f.store.assertStoppedForRosterSync.mockRejectedValue(new Error('Stop this project runtime'));
+    await expect(f.materializer.ensureProjectDraft({
+      logicalTeamName: 'builders', projectPath: '/sandbox/b',
+    })).rejects.toThrow('Stop this project runtime');
+    expect(f.store.replaceMembers).not.toHaveBeenCalled();
   });
 
   it('does not rewrite unchanged authored roster or runtime-only member cwd', async () => {

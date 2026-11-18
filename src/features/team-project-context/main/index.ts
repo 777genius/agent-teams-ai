@@ -4,6 +4,7 @@ export { TeamProjectContextDraftMaterializer } from './TeamProjectContextDraftMa
 export {
   TeamProjectContextLaunchGate,
   TeamProjectContextLaunchConflictError,
+  isConfirmedStoppedTeamRuntime,
 } from './TeamProjectContextLaunchGate';
 export {
   registerTeamProjectContextModeHandler,

@@ -6,6 +6,7 @@ import {
   TeamProjectContextLaunchGate,
   TeamProjectContextRegistry,
   TeamProjectContextRuntimeResolver,
+  isConfirmedStoppedTeamRuntime,
 } from '@features/team-project-context/main';
 import {
   readTeamOwnerProfileScope,
@@ -46,6 +47,12 @@ export function createProjectContextRuntimeParts(ports: ProjectTeamRuntimePorts)
     getSavedRequest: (teamName) => ports.data.getSavedRequest(teamName),
     createTeamConfig: (config, options) => ports.data.createTeamConfig(config, options),
     replaceMembers: (name, request) => ports.data.replaceMembers(name, request),
+    assertStoppedForRosterSync: async (name) => {
+      if (ports.run.hasProvisioningRun(name) ||
+          !isConfirmedStoppedTeamRuntime(await ports.runtime.getRuntimeState(name))) {
+        throw new Error('Stop this project runtime before applying team roster changes');
+      }
+    },
     assertOwnedAlias: async (teamName) => {
       const owner = await readTeamOwnerProfileScope(path.join(getTeamsBasePath(), teamName));
       if (owner !== resolveThisAppProfileScope()) {

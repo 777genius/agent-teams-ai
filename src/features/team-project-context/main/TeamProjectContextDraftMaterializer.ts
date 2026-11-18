@@ -14,6 +14,7 @@ interface SavedTeamRequestPort {
   /** Called only for an already materialized reserved alias. */
   assertOwnedAlias(teamName: string): Promise<void>;
   replaceMembers(teamName: string, request: ReplaceMembersRequest): Promise<void>;
+  assertStoppedForRosterSync(teamName: string): Promise<void>;
 }
 
 type AuthoringMember = TeamCreateRequest['members'][number];
@@ -72,6 +73,7 @@ export class TeamProjectContextDraftMaterializer {
       if (!isDeepStrictEqual(authoredRoster(logical.members), authoredRoster(existing.members))) {
         // Preserve physical run identities and old tasks/chats: only sync
         // member authoring metadata using the existing stopped-only mutation.
+        await this.teamStore.assertStoppedForRosterSync(resolved.executionTeamName);
         await this.teamStore.replaceMembers(resolved.executionTeamName, {
           members: logical.members,
         });

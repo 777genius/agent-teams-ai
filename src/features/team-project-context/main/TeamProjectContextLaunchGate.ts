@@ -16,7 +16,7 @@ export class TeamProjectContextLaunchConflictError extends Error {
   readonly code = 'TEAM_PROJECT_CONTEXT_RUNNING';
 }
 
-function confirmedStopped(state: TeamRuntimeState): boolean {
+export function isConfirmedStoppedTeamRuntime(state: TeamRuntimeState): boolean {
   // A stale "disconnected" or "ready" progress is not proof a process
   // stopped. Retained secondaries and unknown run owners must fail closed.
   if (state.isAlive || state.runId !== null) return false;
@@ -61,7 +61,7 @@ export class TeamProjectContextLaunchGate {
         );
       }
       const state = await this.runtime.getRuntimeState(name);
-      if (!confirmedStopped(state)) {
+      if (!isConfirmedStoppedTeamRuntime(state)) {
         throw new TeamProjectContextLaunchConflictError(
           'This team is running or has unresolved runtime ownership in another project'
         );
