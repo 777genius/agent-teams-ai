@@ -347,7 +347,6 @@ export class BackendSelectingMemberWorkSyncStore
               teamName,
               incarnation,
               backend,
-              backendIntegrity: this.selector.getBackendInfo()?.integrity ?? null,
               error,
               gateway,
               paths,

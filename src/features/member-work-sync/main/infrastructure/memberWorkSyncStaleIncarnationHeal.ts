@@ -41,8 +41,6 @@ export interface StaleIncarnationHealInput {
   /** Current incarnation, taken from the lifecycle owner inside its fence. */
   incarnation: string;
   backend: 'sqlite' | 'json';
-  /** SQLite integrity from the selected backend; absent evidence never authorizes rebinding. */
-  backendIntegrity: 'ok' | 'recovered' | null;
   /** The preparation failure that triggered this attempt. */
   error: unknown;
   gateway: MemberWorkSyncStorageGateway;
@@ -496,9 +494,11 @@ export async function healStaleIncarnationStatuses(
       // just the subset retained from the foreign replica. Otherwise a crash
       // before preparation retry would expose missing SQLite-only members to
       // JSON fallback as authoritative absence.
-      if (input.backendIntegrity !== 'ok') {
-        // After corruption recovery a successfully read, empty SQLite database
-        // is not proof that previously committed statuses never existed.
+      // The selector's initial ping may belong to a retired worker. Query the
+      // live gateway after the primary snapshot is read, so a replacement worker
+      // that recreated SQLite cannot be mistaken for the healthy old worker.
+      const latestBackend = await input.gateway.ping();
+      if (latestBackend.integrity !== 'ok') {
         plan.refusal = 'sqlite_primary_continuity_unverified';
       } else {
         try {

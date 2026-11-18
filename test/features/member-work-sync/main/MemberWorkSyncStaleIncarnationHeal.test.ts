@@ -329,7 +329,6 @@ describe('targeted self-heal of status rows left by an earlier team identity', (
       teamName: TEAM,
       incarnation: CURRENT,
       backend: 'sqlite',
-      backendIntegrity: 'ok',
       error: new MemberWorkSyncStatusDecodeError('incarnation_mismatch', FOREIGN),
       gateway: h.gateway,
       paths: h.paths,
@@ -380,7 +379,6 @@ describe('targeted self-heal of status rows left by an earlier team identity', (
       teamName: TEAM,
       incarnation: CURRENT,
       backend: 'sqlite',
-      backendIntegrity: 'ok',
       error: new MemberWorkSyncStatusDecodeError('incarnation_mismatch', FOREIGN),
       gateway: h.gateway,
       paths: h.paths,
@@ -581,14 +579,22 @@ describe('targeted self-heal of status rows left by an earlier team identity', (
   });
 
   it('refuses clean replica promotion when SQLite was recreated after corruption', async () => {
-    const h = await setup('sqlite', { integrity: 'recovered' });
+    // The selector initially reported 'ok', but an independently replaced
+    // worker now reports that its SQLite database was recreated.
+    const h = await setup('sqlite', { integrity: 'ok' });
     await writeReplica(h, 'clean', FOREIGN, snap([mk('alice', FOREIGN)]));
+    const originalPing = h.gateway.ping.bind(h.gateway);
+    const livePing = vi.spyOn(h.gateway, 'ping').mockImplementation(async () => ({
+      ...(await originalPing()),
+      integrity: 'recovered',
+    }));
     const replicaPath = h.paths.getSqliteFallbackReplicaPath(TEAM);
     const before = await readFile(replicaPath, 'utf8');
     await expect(prepare(h)).rejects.toThrow();
     expect(await primary(h)).toMatchObject({ statuses: [] });
     expect(await readFile(replicaPath, 'utf8')).toBe(before);
     expect(await quarantineFiles(h)).toEqual([]);
+    expect(livePing).toHaveBeenCalled();
     expect(h.warn).toHaveBeenCalledWith(
       'member-work-sync stale status cleanup refused',
       expect.objectContaining({ reason: 'sqlite_primary_continuity_unverified' })
@@ -858,7 +864,6 @@ describe('targeted self-heal of status rows left by an earlier team identity', (
       teamName: TEAM,
       incarnation: CURRENT,
       backend: 'json',
-      backendIntegrity: null,
       error: new MemberWorkSyncStatusDecodeError('incarnation_mismatch', FOREIGN),
       gateway: h.gateway,
       paths: h.paths,
@@ -884,7 +889,6 @@ describe('targeted self-heal of status rows left by an earlier team identity', (
       teamName: TEAM,
       incarnation: CURRENT,
       backend: 'sqlite',
-      backendIntegrity: 'ok',
       error: new MemberWorkSyncStatusDecodeError('incarnation_mismatch', FOREIGN),
       gateway: h.gateway,
       paths: h.paths,
@@ -961,7 +965,6 @@ describe('targeted self-heal of status rows left by an earlier team identity', (
       teamName: TEAM,
       incarnation: CURRENT,
       backend: 'sqlite',
-      backendIntegrity: 'ok',
       error: new MemberWorkSyncStatusDecodeError('incarnation_mismatch', FOREIGN),
       gateway: h.gateway,
       paths: h.paths,
