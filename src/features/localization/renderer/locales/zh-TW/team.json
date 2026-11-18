@@ -1627,6 +1627,7 @@
     }
   },
   "launch": {
+    "projectScopedRosterReadOnly": "團隊成員在所有專案間共用；啟動此專案時無法編輯團隊成員。",
     "actions": {
       "createSchedule": "建立排程",
       "creating": "正在建立…",

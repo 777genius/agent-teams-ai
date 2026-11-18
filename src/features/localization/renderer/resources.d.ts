@@ -4588,6 +4588,7 @@ export default interface Resources {
       }
     },
     "launch": {
+      "projectScopedRosterReadOnly": "The team roster is shared across projects and cannot be edited while launching this project.",
       "actions": {
         "createSchedule": "Create Schedule",
         "creating": "Creating...",

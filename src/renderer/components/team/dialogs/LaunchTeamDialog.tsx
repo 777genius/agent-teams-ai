@@ -2709,7 +2709,8 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
                   </div>
                 ) : null}
 
-                <TeamRosterEditorSection
+                {props.rosterReadOnly && <p className="text-xs text-text-muted">{t('launch.projectScopedRosterReadOnly')}</p>}
+                {!props.rosterReadOnly && <TeamRosterEditorSection
                   runtimeSelectionUnresolved={runtimeSelectionUnresolved}
                   members={membersDrafts}
                   onMembersChange={setMembersDraftsFromUser}
@@ -2786,7 +2787,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
                       </div>
                     ) : null
                   }
-                />
+                />}
 
                 <div className="space-y-1.5">
                   <Label htmlFor="dialog-prompt" className="label-optional">
