@@ -520,7 +520,13 @@ async function run() {
     });
     throw error;
   } finally {
-    await cdp?.close().catch(() => undefined);
+    // macOS can keep DevTools open even after all E2E assertions passed.
+    // Stop only our detached Electron process group before closing its CDP link.
+    let teardownFinished = false;
+    const cleanupWatchdog = setTimeout(() => {
+      console.error('[project-history-e2e] lingering handles after teardown; exiting harness');
+      process.exit(teardownFinished && success ? 0 : 1);
+    }, 15_000);
     if (app?.pid) {
       try {
         if (process.platform === 'win32') {
@@ -530,9 +536,20 @@ async function run() {
         }
       } catch { /* owned app already exited */ }
     }
+    // An unresponsive DevTools close must never consume the CI job timeout.
+    await Promise.race([
+      cdp?.close().catch(() => undefined) ?? Promise.resolve(),
+      pause(2_000),
+    ]);
+    app?.stdout?.destroy();
+    app?.stderr?.destroy();
+    app?.unref();
     if (success && !keep && process.env.PROJECT_TEAM_E2E_REMOVE_FIXTURE === '1') {
       await rm(f.root, { recursive: true, force: true });
     }
+    teardownFinished = true;
+    // Unref only after cleanup: failures cannot silently exit before reporting.
+    cleanupWatchdog.unref();
   }
 }
 run().catch((error) => { console.error(error); process.exitCode = 1; });
