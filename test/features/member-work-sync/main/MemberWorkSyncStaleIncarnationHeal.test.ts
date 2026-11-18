@@ -393,6 +393,15 @@ describe('targeted self-heal of status rows left by an earlier team identity', (
     expect(await quarantineFiles(h)).toEqual([]);
   });
 
+  it('refuses a foreign status evaluated at the same instant as team creation', async () => {
+    const h = await setup('sqlite');
+    await importPrimary(h, [mk('alice', FOREIGN, '2024-01-01T00:00:00.000Z')]);
+    const before = await primary(h);
+    await expect(prepare(h)).rejects.toMatchObject({ reason: 'incarnation_mismatch' });
+    expect(await primary(h)).toEqual(before);
+    expect(await quarantineFiles(h)).toEqual([]);
+  });
+
   it('refuses while a purge of this team is pending', async () => {
     const h = await setup('sqlite');
     await importPrimary(h, [mk('alice', FOREIGN)]);

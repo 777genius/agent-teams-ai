@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { lstat, mkdir, readdir, readFile, rename } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 
@@ -318,14 +319,14 @@ async function corroborate(input: StaleIncarnationHealInput, plan: Plan): Promis
   }
   if (birth === null) return 'team_root_age_unknown';
   // Rows newer than the directory could be this team's own state under a re-minted marker.
-  return plan.evidenceTimes.every((time) => Number.isFinite(time) && time <= birth)
+  return plan.evidenceTimes.every((time) => Number.isFinite(time) && time < birth)
     ? null
     : 'state_not_older_than_team';
 }
 
 async function execute(input: StaleIncarnationHealInput, plan: Plan): Promise<string> {
   const { paths, teamName, incarnation } = input;
-  const stamp = new Date().toISOString().replace(/[:.]/g, '-');
+  const stamp = `${new Date().toISOString().replace(/[:.]/g, '-')}-${randomUUID().slice(0, 12)}`;
   const quarantine = join(paths.getTeamDir(teamName), `stale-incarnation-${stamp}.json`);
   const firstCreated = await mkdir(dirname(quarantine), { recursive: true });
   if (firstCreated) await syncDirectoryDurably(dirname(firstCreated));
