@@ -27,6 +27,7 @@ function fixture(result: ResolvedTeamWorkContext = reserved) {
         : null),
     createTeamConfig: vi.fn(async (_: TeamCreateConfigRequest, _options: { claimOwnerOnCreate: true }) => undefined),
     assertOwnedAlias: vi.fn(async () => undefined),
+    replaceMembers: vi.fn(async () => undefined),
   };
   return { materializer: new TeamProjectContextDraftMaterializer(context, store), context, store };
 }
@@ -69,6 +70,56 @@ describe('TeamProjectContextDraftMaterializer', () => {
     expect(f.store.assertOwnedAlias).toHaveBeenCalledWith('ptc-sandbox');
     expect(f.store.createTeamConfig).not.toHaveBeenCalled();
 
+  });
+
+  it('synchronizes an edited logical roster into a stopped ready project before launch', async () => {
+    const f = fixture({ ...reserved, state: 'ready' });
+    f.store.getSavedRequest.mockImplementation(async (name) =>
+      name === 'builders'
+        ? {
+            teamName: 'builders', cwd: '/sandbox/b',
+            members: [{ name: 'alice', role: 'new role' }, { name: 'bob' }],
+          }
+        : {
+            teamName: 'ptc-sandbox', cwd: '/sandbox/b',
+            members: [{ name: 'alice', role: 'old role' }],
+          }
+    );
+    const result = await f.materializer.ensureProjectDraft({
+      logicalTeamName: 'builders', projectPath: '/sandbox/b',
+    });
+    expect(result.state).toBe('ready');
+    expect(f.store.assertOwnedAlias).toHaveBeenCalledWith('ptc-sandbox');
+    expect(f.store.replaceMembers).toHaveBeenCalledOnce();
+    expect(f.store.replaceMembers).toHaveBeenCalledWith('ptc-sandbox', {
+      members: [{ name: 'alice', role: 'new role' }, { name: 'bob' }],
+    });
+    expect(f.store.createTeamConfig).not.toHaveBeenCalled();
+  });
+
+  it('does not rewrite unchanged authored roster or runtime-only member cwd', async () => {
+    const f = fixture({ ...reserved, state: 'ready' });
+    f.store.getSavedRequest.mockImplementation(async (name) => ({
+      teamName: name,
+      cwd: '/sandbox/b',
+      members: [{
+        name: 'alice', role: 'developer',
+        ...(name === 'ptc-sandbox' ? { cwd: '/generated/member-worktree' } : {}),
+      }],
+    }));
+    await f.materializer.ensureProjectDraft({
+      logicalTeamName: 'builders', projectPath: '/sandbox/b',
+    });
+    expect(f.store.replaceMembers).not.toHaveBeenCalled();
+  });
+
+  it('never mutates an unowned ready project runtime even after logical roster edits', async () => {
+    const f = fixture({ ...reserved, state: 'ready' });
+    f.store.assertOwnedAlias.mockRejectedValue(new Error('foreign owner'));
+    await expect(f.materializer.ensureProjectDraft({
+      logicalTeamName: 'builders', projectPath: '/sandbox/b',
+    })).rejects.toThrow('foreign owner');
+    expect(f.store.replaceMembers).not.toHaveBeenCalled();
   });
 
   it('leaves legacy shared teams on existing team paths with no second draft', async () => {

@@ -66,6 +66,10 @@ async function fixture() {
         throw error;
       }
     },
+    async replaceMembers(): Promise<void> {
+      // Native provider fixture has no roster; runtime meta mutation is
+      // covered by TeamProjectContextDraftMaterializer focused tests.
+    },
     async runConfigurationOperation<T>(_teamName: string, fn: () => Promise<T>): Promise<T> {
       return fn();
     },
