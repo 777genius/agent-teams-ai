@@ -28,7 +28,7 @@ provider #8 `f5d632a6122df2f6995451bd33e6a0fbcda67680`.
 
 | ID | Состояние | Остаток и критерий готовности | Исполнитель |
 | --- | --- | --- | --- |
-| F1 | Реализация и R2 готовы; UI E2E остаётся | Пятый original GUI на `356fe604` получил explicit V8 OOM при 512 MiB до Electron; UV4 применился (11 threads). Новый ограниченный профиль 768+UV4 прошёл 10/10 и R2, ожидает original GUI. Все 5 attempts завершены до UI, epochs=0. | pr_graph; reviewflow; root |
+| F1 | Реализация и R2 готовы; UI E2E остаётся | Шестой original GUI на `9f63bec3` также получил explicit V8 OOM при 768 MiB до Electron. Новый профиль 1024+UV4 прошёл 10/10 и R2; main dependency roots исследуются отдельно. Все 6 attempts до UI, epochs=0. | pr_graph; media; reviewflow; root |
 | F2 | Реализация и focused contracts готовы | Canonical Host agenda блокирует review work при lead/user clarification до review cycle; старый app path — re-export. Agenda 26/26 и cycle 3/3 PASS. | reviewflow |
 | M1 | Native E2E PASS на `2f33d566` | Все 8 original steps за 151754 ms: media bytes/4 MiB normalization, 11 model requests, cold history/attachments, restored native readiness, no replay, оба stop custody=released и cleanup=true. Desktop GUI и vendor auth этим результатом не квалифицируются. | media; R2 reviewflow; root |
 | E1 | Исходные отказы исправлены; текущий E2E остаётся | Композиция 22 source закрывает HTTP/store cycle, finite metadata, retained authority, trusted input, Kanban и точечные type/test отказы.611 frontend/IPC PASS в 20 файлах по отдельным scoped runs; полный текущий Host/GUI verdict остаётся. | root |
@@ -513,3 +513,26 @@ P9 не имеет подтверждённого конечного LOC до р
   Same focused resource suite 10/10 PASS за 1.837 s, exact independent R2 и diff
   check PASS. Весь test file вне двух новых profile blocks побайтово прежний.
   Этот профиль ещё не имеет GUI verdict; следующий original run один.
+- 18 ноября, actual GUI `9f63bec3`: fixed768+UV4 снова исчерпал V8 heap
+  в первом main SSR transform (SIGABRT): GC 761.6→760.4 MB, затем 761.5→760.4 MB.
+  Actual Vite fixed768/UV4 и 11 threads; RSS 1017916 / PSS 943511 KiB,
+  total RSS 1760824 / PSS 1511637 KiB. Wrapper 24.241 s, startup 17.708 s из 180 s.
+  Receipt INCOMPLETE, beforeHarnessCleanup=[] и cleanup.remaining=[], no Host,
+  epochs=0, source freeze без ошибок. Шестирежимная очередь не запускалась:
+  она использует ту же ещё не завершённую стартовую сборку.
+- 18 ноября, measured heap correction: experimental 768 заменён на 1024+UV4;
+  retired 512/768 selectors и старые Node options отвергаются. Только прежние
+  три files и два experimental test blocks; original 1536/default/native,
+  parent heap, commands/plugins/maps-off, Host env и deadlines прежние.
+  Focused 10/10 PASS за 1.575 s, independent R2 и diff check PASS. Это повышение
+  установленно недостаточного лимита, не доказательство причины old SIGKILL.
+  Отдельный read-only R1 проверяет, не втягивают ли main imports лишнюю Host
+  composition через public barrels; новых product edits по гипотезе нет.
+- 18 ноября, durable native evidence: сохранены исходный
+  [полный receipt 2f33](evidence/native-opencode-v2-media-2f33d566-20261118.json)
+  и [terminal log](evidence/native-opencode-v2-media-2f33d566-20261118-terminal.json).
+  SHA256 receipt 423c4aa672793dc191d5a342e376aa1512d11f189b2b2047facd3dd150ae08f5;
+  log f6af0041569fce0993fba9f30307ada02f86ce6a0fd9dbad1776b25c174a1a45.
+  Receipt побайтово исходный; log хранится как UTF-8 text в JSON с original
+  byte count/hash и восстанавливается побайтово. Их sourceHead остаётся 2f33;
+  на новый срез native результат не переносится.

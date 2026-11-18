@@ -55,7 +55,7 @@ export function assertDesktopProofEnvironment(linuxModeAllowed: boolean): void {
       assert.equal(process.env.LEGACY_M19_ORIGINAL_HOST_CRASH_GO, undefined);
     }
     // Reject inherited native/scenario selectors before any fixture or model starts.
-    const allowed = /^LEGACY_DESKTOP_(?:BACKEND_GO|EMULATED_ONLY|PROOF_MODE|CDP_PORT|TEST_DISPLAY|TEST_XAUTHORITY|TEST_FINITE_HEAP_(?:1536|768)|COREPACK_HOME|NODE_SHA256|HOST_ENTRY_SHA256|PNPM_PATH|PNPM_SHA256|COREPACK_PACKAGE_SHA256|COREPACK_LIBRARY_SHA256)$/u;
+    const allowed = /^LEGACY_DESKTOP_(?:BACKEND_GO|EMULATED_ONLY|PROOF_MODE|CDP_PORT|TEST_DISPLAY|TEST_XAUTHORITY|TEST_FINITE_HEAP_(?:1536|1024)|COREPACK_HOME|NODE_SHA256|HOST_ENTRY_SHA256|PNPM_PATH|PNPM_SHA256|COREPACK_PACKAGE_SHA256|COREPACK_LIBRARY_SHA256)$/u;
     for (const key of Object.keys(process.env))
       if (key.startsWith('LEGACY_DESKTOP_')) assert.ok(allowed.test(key) ||
         mode === 'review-readback-ui' && /^LEGACY_DESKTOP_READBACK_(?:ROOT|RECEIPT_SHA256)$/u.test(key) ||
