@@ -167,16 +167,14 @@ async function planStatusFile(
     plan.evidenceTimes.push(found.evaluatedAt);
   }
   if (removed === 0) return;
-  plan.files.push(
-    Object.keys(kept).length === 0
-      ? { kind: 'quarantine', path }
-      : {
-          kind: 'rewrite',
-          path,
-          rawBefore: raw,
-          next: `${JSON.stringify({ ...value, members: kept }, null, 2)}\n`,
-        }
-  );
+  // Even when all statuses are stale, the same legacy envelope may contain
+  // independent metric events. Preserve every non-status field in place.
+  plan.files.push({
+    kind: 'rewrite',
+    path,
+    rawBefore: raw,
+    next: `${JSON.stringify({ ...value, members: kept }, null, 2)}\n`,
+  });
 }
 
 async function planFiles(input: StaleIncarnationHealInput, plan: Plan): Promise<void> {

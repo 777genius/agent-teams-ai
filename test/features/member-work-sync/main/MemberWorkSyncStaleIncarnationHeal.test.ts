@@ -299,6 +299,50 @@ describe('targeted self-heal of status rows left by an earlier team identity', (
     expect(Object.keys(kept.members)).toEqual(['bob']);
   });
 
+  it('preserves legacy metrics when every legacy status is stale', async () => {
+    const h = await setup('sqlite');
+    const legacyPath = h.paths.getLegacyStatusPath(TEAM);
+    const metric = {
+      id: 'legacy-only-metric',
+      teamName: TEAM,
+      memberName: 'alice',
+      kind: 'status_evaluated' as const,
+      state: 'needs_sync' as const,
+      agendaFingerprint: 'f',
+      recordedAt: OLD,
+      actionableCount: 0,
+    };
+    await mkdir(dirname(legacyPath), { recursive: true });
+    await writeFile(
+      legacyPath,
+      JSON.stringify({
+        schemaVersion: 1,
+        members: { alice: mk('alice', FOREIGN) },
+        metrics: { recentEvents: [metric] },
+      })
+    );
+    const outcome = await healStaleIncarnationStatuses({
+      teamName: TEAM,
+      incarnation: CURRENT,
+      backend: 'sqlite',
+      error: new MemberWorkSyncStatusDecodeError('incarnation_mismatch', FOREIGN),
+      gateway: h.gateway,
+      paths: h.paths,
+      replica: h.replica,
+      logger: { warn: h.warn },
+    });
+    expect(outcome).toBe('healed');
+    expect(JSON.parse(await readFile(legacyPath, 'utf8'))).toMatchObject({
+      members: {},
+      metrics: { recentEvents: [metric] },
+    });
+    await expect(prepare(h)).resolves.toBe('ran');
+    expect((await primary(h)).statuses).toEqual([]);
+    expect((await primary(h)).metricEvents).toEqual([
+      expect.objectContaining({ id: metric.id, memberName: metric.memberName }),
+    ]);
+  });
+
   it('heals a replica written for another incarnation without wiping current JSON state (JSON backend)', async () => {
     const h = await setup('json');
     await h.json.write(mk('bob', CURRENT));
