@@ -28,11 +28,11 @@ provider #8 `f5d632a6122df2f6995451bd33e6a0fbcda67680`.
 
 | ID | Состояние | Остаток и критерий готовности | Исполнитель |
 | --- | --- | --- | --- |
-| F1 | Реализация и R2 готовы; UI E2E остаётся | Три original GUI attempts остановлены SIGKILL main SSR до Electron. Найден лишний import edge при чтении profile: та же схема без полной Host composition, −69256 KiB PSS в bounded import check. Следующий original GUI проверяет это изменение. | pr_graph; reviewflow; root |
+| F1 | Реализация и R2 готовы; UI E2E остаётся | Original GUI на `c8ab4139` снова остановлен SIGKILL main SSR до Electron; всего 4 attempts, UI epochs=0. Direct schema import снизил actual harness PSS до 264450 KiB, но startup не завершился. Следующий шаг — только обоснованный resource profile сборки. | pr_graph; reviewflow; root |
 | F2 | Реализация и focused contracts готовы | Canonical Host agenda блокирует review work при lead/user clarification до review cycle; старый app path — re-export. Agenda 26/26 и cycle 3/3 PASS. | reviewflow |
 | M1 | Native E2E PASS на `2f33d566` | Все 8 original steps за 151754 ms: media bytes/4 MiB normalization, 11 model requests, cold history/attachments, restored native readiness, no replay, оба stop custody=released и cleanup=true. Desktop GUI и vendor auth этим результатом не квалифицируются. | media; R2 reviewflow; root |
 | E1 | Исходные отказы исправлены; текущий E2E остаётся | Композиция 22 source закрывает HTTP/store cycle, finite metadata, retained authority, trusted input, Kanban и точечные type/test отказы.611 frontend/IPC PASS в 20 файлах по отдельным scoped runs; полный текущий Host/GUI verdict остаётся. | root |
-| W1 | x64 исправление готово; ARM64 открыт | Синхронное чтение configured key входит в прежнюю closing freshness-проверку; 36 focused checks PASS. ARM64: 6 последовательных MCP probes не укладываются в исходные 15 секунд. Итоговый cleanup подтверждён; deadlines и currentness сохранены. | pr_graph; root |
+| W1 | x64 исправление готово; ARM64 открыт | Configured key проверяется внутри прежней closing fence; 36 focused checks PASS. ARM64 last sample 14993 ms, final catalog staged, prepare/resume=0; точная первая причина отказа не установлена. Все 6 probe boundaries необходимы, cleanup=true. Необоснованный guard patch отклонён. | media; R2 reviewflow; root |
 | P9 | Открыто: контракт | Установить выполнимую границу original-path / writer / consumed bytes; текущую гарантию не сужать без явного решения. Независимые работы продолжаются. | root |
 | D1 | Композиция и независимое ревью готовы; CI остаётся | Все 22 postimages связаны с exact c8 parent, внешние изменения сохранены, source-size policy PASS. Получить результат оригинальных обязательных gates опубликованного среза. | root |
 
@@ -402,6 +402,43 @@ P9 не имеет подтверждённого конечного LOC до р
   GOGC=50, GOMAXPROCS=2; все project options и исходный timeout 60 s сохранены.
   Ledger build PASS за 1.513 s. Это ресурсный профиль компилятора; noCheck,
   изменение runtime environment или перенос прежнего native SHA не применялись.
+- 18 ноября, actual GUI `c8ab4139`: после strict Host build исходный
+  Taskboard/ReviewFlow run завершился INCOMPLETE (exit1). Main SSR снова
+  получил SIGKILL до Electron/Host/UI, startup observation 10.9 s при исходном
+  budget 180 s, полный wrapper 16.3 s. Receipt cleanup.remaining=[] и
+  beforeHarnessCleanup=[], source freeze без ошибок, owner epochs=0.
+  Sampled total RSS 967276 / PSS 821830 KiB; harness PSS 264450 KiB (раньше 308303),
+  actual Vite RSS 388308 KiB. Экономия подтверждена; OOM/signal sender не
+  установлен, четыре подробных PSS samples не фиксируют каждый возможный пик.
+- 18 ноября, W1 exact R1/R2: все 6 catalog calls разделены async/state/native
+  boundaries, TEST catalog peer уже возвращает ответ до тяжёлых SDK imports.
+  Два sync current guard в Windows callbacks действительно повторяются внутри
+  facade, но их стоимость и вклад в наблюдаемый отказ не измерены. Final job 24
+  staged, prepare/resume=0, installOwner ещё не достигнут; прежняя отметка
+  14993 ms не устанавливает точный checkSite/deadlineExpired. Patch не внесён,
+  W1 остаётся открыт до исходного ARM64 результата, исходные 15 s сохранены.
+- 18 ноября, full workspace types `c8ab4139`: уже подтверждённые ledger/Host
+  prebuild переиспользованы. Первая root app --noEmit --singleThreaded проверка
+  TS 7 с тем же 512MiB/50/2 compiler profile завершилась SIGKILL за 36229 ms,
+  без TS diagnostics (log 0 bytes). Остальные 11 canonical invocations не
+  запускались; полный workspace typecheck остаётся INCOMPLETE. Новые повторы
+  без установленной причины не запускаются; scoped Host PASS не заменяет его.
+- 18 ноября, F1 resource R1/R2: Vite использует async esbuild service,
+  поэтому ESBUILD_WORKER_THREADS=0 для sync API к этому пути не относится.
+  Installed Rollup 4.59.0 вызывает native parseAsync через NAPI AsyncTask/libuv;
+  исходный dev wrapper задаёт UV pool 16 (в actual Vite наблюдались 23 threads).
+  Это отдельная от V8 память и возможная конкуренция, не доказательство OOM.
+  Подготовлен один явный finite TEST profile: heap 512 + UV pool 4 для прежних
+  семи Linux/x64 emulated modes, с exact admission, отказом при двух/malformed
+  selectors и проверкой значений до/после normalizer. Профиль наследует
+  Electron Main, поэтому его scope — вся TEST app-chain; captured Host
+  сохраняет прежний closed environment без UV/NODE_OPTIONS. Default/native 1536
+  paths, build plugins, original commands, deadlines и verdicts сохраняются.
+  Это один следующий bounded experiment; исправление SIGKILL не заявляется.
+  Actual focused resource suite 10/10 PASS за 1.860 s: восемь прежних
+  default/1536/native cases и два новых closed512 boundary cases. Exact
+  трёхфайловый diff прошёл независимый R2 и whitespace check. Полный types,
+  Host build и GUI до публикации повторно не запускались.
 
 
 - 18 ноября, E1/D1 follow-up: подготовлена композиция 22 source/test/config на
@@ -446,3 +483,17 @@ P9 не имеет подтверждённого конечного LOC до р
   все 22 source postimages прежние. Actual полный size evaluator c8+22:
   5161 production paths / 141 frozen / 800 limit / 0 violations. Native PASS
   внешнего M1 остаётся привязан к исходному 2f33, без нового исполнения здесь.
+
+- 18 ноября, reconciliation: во время публикации finite512 появился
+  параллельный `d6d672f3` на том же c8 parent. Все его source/test/config/evidence
+  сохраняются. Три resource paths и 22 incoming source paths не пересекаются;
+  STATUS объединён предметно, с обеими отдельными областями результатов.
+  Сохранены оба родителя d6d672f3 и a8ecdaac; force push не используется.
+  Новый GUI ещё не запускался; прежние PASS не перепривязываются к новому SHA.
+  Independent R2: все 22 incoming pre/post SHA1/SHA256 совпали (0 mismatches);
+  611 scoped tests остаются evidence своих immutable bases. Diagnostic tuple
+  сохраняет validated latest operands при прежнем final readiness и sticky
+  UNKNOWN при конфликте; operational/success gates не меняются. UI input R2
+  подтвердил прежние 30 s / 16 samples, rechecks owner/deadline вокруг await,
+  один hover/press/release и прежние 12 wheel events без replay. R2 PASS для
+  composition; ни один прежний native/GUI result не переименован в текущий.
