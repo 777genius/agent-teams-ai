@@ -1,10 +1,7 @@
-import type {
-  ResolvedTeamWorkContext,
-  TeamWorkContextAddress,
-} from './TeamProjectContextRuntimeResolver';
 import { isDeepStrictEqual } from 'node:util';
 
-import type { TeamCreateConfigRequest, TeamCreateRequest, ReplaceMembersRequest } from '@shared/types';
+import type { ResolvedTeamWorkContext, TeamWorkContextAddress } from './TeamProjectContextRuntimeResolver';
+import type { ReplaceMembersRequest, TeamCreateConfigRequest, TeamCreateRequest } from '@shared/types';
 
 interface SavedTeamRequestPort {
   getSavedRequest(teamName: string): Promise<TeamCreateRequest | null>;
