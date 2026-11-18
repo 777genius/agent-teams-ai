@@ -311,11 +311,9 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
   });
   app.stdout.pipe(log, { end: false });
   app.stderr.pipe(log, { end: false });
-  let appIdentity = '';
-  let cdp: CdpPort | undefined;
-  let hostPid: number | undefined;
-  let quitRequested = false;
-  let finishMixedSettings: (() => Promise<void>) | undefined;
+  let appIdentity = '', quitRequested = false;
+  let cdp: CdpPort | undefined, hostPid: number | undefined;
+  let finishMixedSettings: (() => Promise<void>) | undefined, disposeMixedReadObservations: (() => void) | undefined;
   const spawnNextDesktopEpoch = (nextFixture: typeof fixture) => {
     if (nextFixture !== fixture) {
       assert.ok(checkpointUpgrade && fixture === checkpointUpgrade.original &&
@@ -488,7 +486,7 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
       });
     } else if (mixedMode) {
       assert.ok(mixedModels);
-      const mixed = await (mixedModels.membership ? runDesktopLiveMembershipUiSmoke : runDesktopMixedCreateLaunchUiSmoke)(cdp, {
+      const mixed: { finishSettings(): Promise<void>; disposeReadObservations?(): void } = await (mixedModels.membership ? runDesktopLiveMembershipUiSmoke : runDesktopMixedCreateLaunchUiSmoke)(cdp, {
         fixture, models: mixedModels, capturedGroup: () => group, evidence,
         assertOwnedRenderer: () => assertOwnedCdpListener(group),
         restartSameProfile: (createdHandleId, afterOriginalQuit) => restartSameProfile(mixedModels!.membership ? {
@@ -500,6 +498,7 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
         }),
       });
       finishMixedSettings = mixed.finishSettings;
+      disposeMixedReadObservations = mixed.disposeReadObservations;
     } else if (createConfigMode) {
       await runDesktopCreateUiSmoke(cdp, { fixture, evidence, model: conversationModel, assertOwnedRenderer: () => assertOwnedCdpListener(group) });
     } else if (scheduleUiMode) {
@@ -679,6 +678,7 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
 
     throw error;
   } finally {
+    disposeMixedReadObservations?.();
     evidence.quitRequested = quitRequested;
     await verifyDesktopSourceFreeze(repo, desktopProofSources, selectedSourceHashes, evidence);
     if (cdp) await bounded(cdp.close(), 3000, 'disconnect test renderer').catch(() => undefined);

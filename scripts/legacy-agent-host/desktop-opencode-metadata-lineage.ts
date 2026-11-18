@@ -258,6 +258,43 @@ export interface DesktopSourceMetadataLineage {
   readonly live: readonly ProcessFact[];
 }
 
+/** Actual pre-ready observations under one captured Host; never process-control authority. */
+export interface DesktopMetadataBirthWitness {
+  readonly host: ProcessFact;
+  readonly births: readonly ProcessFact[];
+}
+
+function witnessedPartition(options: {
+  host: ProcessFact; executable: string; profileHash: string; events: readonly DesktopMetadataEvent[];
+  observed: readonly ProcessFact[]; witness: DesktopMetadataBirthWitness;
+  original?: DesktopMetadataLineage;
+}): DesktopMetadataLineage {
+  const { host, events, witness, observed } = options;
+  assert.deepEqual(witness.host, host, 'pre-ready births belong to this exact original Host');
+  assert.ok(witness.births.length <= 128);
+  assert.equal(new Set(witness.births.map(row => row.pid)).size, witness.births.length);
+  const state = lifecycle(events, [options.profileHash], host.pid);
+  const births: ProcessFact[] = [];
+  for (const [pid, ready] of state.originals) {
+    const birth = witness.births.find(row => row.pid === pid);
+    assert.ok(birth, 'every original metadata ready, including retired predecessors, needs a retained physical birth');
+    assert.equal(birth.parentPid, host.pid); assert.equal(birth.groupId, pid);
+    assert.equal(birth.command, options.executable);
+    assert.match(birth.birth, /^linux-starttime:[1-9]\d*$/u);
+    assert.equal(ready.startIdentityHash, createHash('sha256').update(pid + ':' +
+      birth.birth.slice('linux-starttime:'.length)).digest('hex'), 'exact original Linux metadata birth');
+    const physical = observed.filter(row => row.pid === pid);
+    if (state.active.get(options.profileHash) === ready) {
+      assert.equal(physical.length, 1, 'original ready is physically present');
+      assert.deepEqual(physical[0], birth, 'the physically active original birth is unchanged');
+    } else assert.equal(physical.length, 0, 'the original retired birth is physically absent');
+    births.push({ ...birth });
+  }
+  const result = { profileHashes: [options.profileHash], events: events.map(row => ({ ...row })), births };
+  if (options.original) assertDesktopMetadataLineageRetained(options.original, result);
+  return result;
+}
+
 /** The live sampler may supply its same-census log snapshot; full reads always reread the original log. */
 export function captureDesktopSourceMetadataLineage(options: {
   root: string;
@@ -267,6 +304,7 @@ export function captureDesktopSourceMetadataLineage(options: {
   executable: string;
   original?: DesktopSourceMetadataLineage;
   witness?: DesktopMetadataWitness;
+  birthWitness?: DesktopMetadataBirthWitness;
   released?: boolean;
 }, sampledEvents?: readonly DesktopMetadataEvent[]): DesktopSourceMetadataLineage {
   const { host, profileHashes, observed } = options;
@@ -316,7 +354,14 @@ export function captureDesktopSourceMetadataLineage(options: {
     const before = original?.partitions.find(value => value.profileHashes[0] === profileHash);
     const ready = active.get(profileHash);
     let result: DesktopMetadataLineage;
-    if (ready) {
+    if (options.birthWitness) {
+      result = witnessedPartition({ host, executable: options.executable, profileHash, events: subset,
+        observed, witness: options.birthWitness, ...(before ? { original: before } : {}) });
+      if (ready) {
+        const birth = result.births.find(value => value.pid === ready.pid); assert.ok(birth);
+        live.push({ ...birth });
+      }
+    } else if (ready) {
       result = captureDesktopMetadataLineage({ events: subset, host, profileHashes: [profileHash],
         observed, executable: options.executable, ...(before ? { original: before } : {}) });
       const birth = result.births.find(value => value.pid === ready.pid); assert.ok(birth);

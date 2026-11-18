@@ -4,6 +4,7 @@ import { link, mkdir, mkdtemp, readFile, realpath, rm, symlink, writeFile } from
 import { tmpdir } from 'node:os';
 import { basename, join } from 'node:path';
 import { test } from 'node:test';
+import { setTimeout as delay } from 'node:timers/promises';
 import { runInNewContext } from 'node:vm';
 import { teamHostProfileSchema } from '../../packages/legacy-agent-host/dist/composition/TeamHost.js';
 import { selectOpenCodeV2ManagementModel } from '../../packages/legacy-agent-host/dist/composition/openCodeV2ModelSelection.js';
@@ -16,6 +17,7 @@ import { assertDesktopV2ManagementSourceHistory, bindDesktopV2ManagementReceipt,
 import { desktopJsLiteral } from './desktop-ui-controls.ts';
 import { captureDesktopSourceMetadataLineage, assertDesktopMetadataLineageReleased } from './desktop-opencode-metadata-lineage.ts';
 import { createDesktopMetadataWitness, readDesktopMetadataSourceFile } from './desktop-metadata-witness.ts';
+import { createDesktopLinuxMetadataBirthReader, createDesktopMetadataBirthCensus } from './desktop-metadata-birth-census.ts';
 import type { StoredRuntimeSourceCommand } from '../../packages/legacy-agent-host/dist/management/commandRecords.js';
 import type { PublishRuntimeSource } from '../../packages/legacy-agent-host/dist/composition/runtimeSourceContracts.js';
 
@@ -30,7 +32,7 @@ async function retainedEvidence() {
   return evidence;
 }
 
-/** Pure archived-record assertions only: no filesystem or native operation under this tuple. */
+/** Pure archived records or injected in-memory I/O only: no real filesystem/native operation under this tuple. */
 function withTuple<T>(platform: 'linux' | 'darwin', arch: 'x64' | 'arm64', work: () => T): T {
   const original = { platform: Object.getOwnPropertyDescriptor(process, 'platform')!,
     arch: Object.getOwnPropertyDescriptor(process, 'arch')! };
@@ -608,13 +610,14 @@ test('synchronous early metadata source read preserves the original regular-file
   });
 });
 
-test('the real membership UI fence samples before its original owner and model guards', async () => {
+test('the real membership UI fence checks census health and original source freshness before owner and model guards', async () => {
   const source = await readFile(new URL('./desktop-live-membership-ui-smoke.ts', import.meta.url), 'utf8');
   const begin = source.indexOf('  const current = () => {'), end = source.indexOf('  const step = ', begin);
   assert.ok(begin > 0 && end > begin);
-  const calls: string[] = [];
+  const calls: string[] = [], state: { failure?: Error; sourceFailure?: Error } = {};
   const current = runInNewContext('(() => {' + source.slice(begin, end) + 'return current; })()', {
-    metadataWitness: { observe: () => calls.push('live-witness') },
+    metadataCensus: { assertHealthy: () => { calls.push('live-witness'); if (state.failure) throw state.failure; } },
+    sourceProfilesNow: () => { calls.push('original-source'); if (state.sourceFailure) throw state.sourceFailure; },
     options: { assertOwnedRenderer: () => calls.push('original-owner') },
     modelRows: Array.from({ length: 3 }, () => ({ failures: [] })),
     models: { claude: { observations: [], notificationObservations: [] }, codex: { observations: [], notificationObservations: [] } },
@@ -623,5 +626,291 @@ test('the real membership UI fence samples before its original owner and model g
     }, equal: assert.equal },
   }) as () => void;
   current();
-  assert.deepEqual(calls, ['live-witness', 'original-owner', 'original-model', 'original-model', 'original-model']);
+  assert.deepEqual(calls, ['live-witness', 'original-source', 'original-owner', 'original-model', 'original-model', 'original-model']);
+  state.failure = new Error('TEST original census observation failed');
+  const before = calls.length;
+  assert.throws(() => current(), error => error === state.failure);
+  assert.deepEqual(calls.slice(before), ['live-witness'], 'read uncertainty refuses before the original UI owner guard');
+  delete state.failure; state.sourceFailure = new Error('TEST original source prefix changed');
+  const beforeSourceRefusal = calls.length;
+  assert.throws(() => current(), error => error === state.sourceFailure);
+  assert.deepEqual(calls.slice(beforeSourceRefusal), ['live-witness', 'original-source']);
+});
+
+async function preReadyMetadataFixture(work: (value: {
+  root: string;
+  host: { pid: number; parentPid: number; groupId: number; birth: string; command: string };
+  birth: { pid: number; parentPid: number; groupId: number; birth: string; command: string };
+  ready: { hostPid: number; profileHash: string; mode: 'provider'; providerHash: string;
+    pid: number; startIdentityHash: string; stage: 'ready' };
+  write(events: readonly unknown[]): Promise<void>;
+}) => Promise<void>) {
+  const root = await realpath(await mkdtemp(join(tmpdir(), 'TEST-metadata-pre-ready-')));
+  try {
+    const directory = join(root, 'userData/logs'); await mkdir(directory, { recursive: true });
+    const host = { pid: 10, parentPid: 2, groupId: 2, birth: 'linux-starttime:100', command: '/TEST/node' };
+    const birth = { pid: 11, parentPid: 10, groupId: 11, birth: 'linux-starttime:110', command: '/TEST/bun' };
+    const ready = { hostPid: 10, profileHash: 'a'.repeat(64), mode: 'provider' as const, providerHash: 'b'.repeat(64),
+      pid: 11, startIdentityHash: createHash('sha256').update('11:110').digest('hex'), stage: 'ready' as const };
+    const write = (events: readonly unknown[]) => writeFile(join(directory, 'app-errors.ndjson'), events.map(value => JSON.stringify({
+      namespace: 'Host:OpenCodeMetadata', message: 'OpenCode metadata stage ' + JSON.stringify(value),
+    })).join('\n') + '\n');
+    await work({ root, host, birth, ready, write });
+  } finally { await rm(root, { recursive: true, force: true }); }
+}
+
+test('pre-ready physical birth remains required and sufficient after the first source profile retires', async () => {
+  await preReadyMetadataFixture(async ({ root, host, birth, ready, write }) => {
+    // The observer captures a real-shaped physical observation before any ready event exists.
+    let observed = { host, births: [birth] };
+    const census = createDesktopMetadataBirthCensus(() => observed);
+    try {
+    await write([ready, { ...ready, stage: 'released' }]);
+    observed = { host, births: [] }; census.sample();
+    const originalOptions = { root, host, profileHashes: [ready.profileHash], observed: [], executable: birth.command };
+    assert.throws(() => captureDesktopSourceMetadataLineage(originalOptions), /previously retained physical lineage/);
+    const witnessedOptions = { ...originalOptions, birthWitness: census.witness() };
+    const result = captureDesktopSourceMetadataLineage(witnessedOptions);
+    assert.deepEqual(result.partitions[0]!.births, [birth]);
+    assert.deepEqual(result.live, []);
+    } finally { census.close(); }
+  });
+});
+
+test('a retired predecessor cannot borrow an active successor physical witness', async () => {
+  await preReadyMetadataFixture(async ({ root, host, birth, ready, write }) => {
+    const successor = { ...birth, pid: 12, groupId: 12, birth: 'linux-starttime:120' };
+    const next = { ...ready, pid: 12, startIdentityHash: createHash('sha256').update('12:120').digest('hex') };
+    await write([ready, { ...ready, stage: 'released' }, next]);
+    const options = { root, host, profileHashes: [ready.profileHash], observed: [successor], executable: birth.command };
+    assert.throws(() => captureDesktopSourceMetadataLineage({ ...options, birthWitness: { host, births: [successor] } }),
+      /retired predecessors.*retained physical birth/);
+    const result = captureDesktopSourceMetadataLineage({ ...options, birthWitness: { host, births: [birth, successor] } });
+    assert.deepEqual(result.partitions[0]!.births, [birth, successor]);
+    assert.deepEqual(result.live, [successor]);
+    await write([ready, { ...ready, stage: 'released' }, next, { ...next, stage: 'released' }]);
+    const closed = captureDesktopSourceMetadataLineage({ ...options, observed: [], original: result,
+      birthWitness: { host, births: [birth, successor] }, released: true });
+    assert.deepEqual(closed.partitions[0]!.births, [birth, successor]);
+    assert.deepEqual(closed.live, []);
+  });
+});
+
+test('pre-ready lineage refuses foreign Host, mismatched birth, unknown cleanup, changed prefix and live retirement', async () => {
+  await preReadyMetadataFixture(async ({ root, host, birth, ready, write }) => {
+    const options = { root, host, profileHashes: [ready.profileHash], observed: [birth], executable: birth.command };
+    await write([ready]);
+    for (const changed of [
+      { ...birth, birth: 'linux-starttime:999' }, { ...birth, birth: 'ps-only-date' },
+      { ...birth, parentPid: 99 }, { ...birth, groupId: 99 }, { ...birth, command: '/TEST/foreign-bun' },
+    ]) assert.throws(() => captureDesktopSourceMetadataLineage({ ...options, birthWitness: { host, births: [changed] } }));
+    assert.throws(() => captureDesktopSourceMetadataLineage({ ...options,
+      birthWitness: { host: { ...host, birth: 'linux-starttime:999' }, births: [birth] } }), /exact original Host/);
+    const original = captureDesktopSourceMetadataLineage({ ...options, birthWitness: { host, births: [birth] } });
+    for (const events of [
+      [{ ...ready, profileHash: 'f'.repeat(64) }], [{ ...ready, startIdentityHash: 'f'.repeat(64) }],
+      [ready, { ...ready, stage: 'cleanup-unknown' }],
+      [ready, { ...ready, stage: 'released' }, ready],
+    ]) {
+      await write(events);
+      assert.throws(() => captureDesktopSourceMetadataLineage({ ...options, original, birthWitness: { host, births: [birth] } }));
+    }
+    await write([ready, { ...ready, stage: 'released' }]);
+    assert.throws(() => captureDesktopSourceMetadataLineage({ ...options, original,
+      birthWitness: { host, births: [birth] } }), /retired birth is physically absent/);
+    assert.throws(() => captureDesktopSourceMetadataLineage({ ...options, observed: [], original,
+      birthWitness: { host, births: [] } }), /retained physical birth/);
+  });
+});
+
+test('read-only census failure is sticky, copies are isolated and closure is idempotent', () => {
+  const host = { pid: 10, parentPid: 2, groupId: 2, birth: 'linux-starttime:100', command: '/TEST/node' };
+  const child = { pid: 11, parentPid: 10, groupId: 11, birth: 'linux-starttime:110', command: '/TEST/bun' };
+  let reads = 0, fail = false;
+  const error = new Error('TEST selected Bun observation failed');
+  const census = createDesktopMetadataBirthCensus(() => { reads++; if (fail) throw error; return { host, births: [child] }; });
+  const first = census.witness(); first.host.birth = 'changed'; first.births[0]!.birth = 'changed';
+  assert.deepEqual(census.witness(), { host, births: [child] });
+  fail = true;
+  assert.throws(() => census.sample(), value => value === error);
+  assert.throws(() => census.assertHealthy(), value => value === error);
+  assert.throws(() => census.witness(), value => value === error);
+  const before = reads;
+  assert.deepEqual(census.close(), census.close());
+  assert.throws(() => census.sample(), value => value === error);
+  assert.equal(reads, before);
+});
+
+test('cold census is armed before new Host discovery and cannot borrow the old epoch', () => {
+  const host = { pid: 10, parentPid: 2, groupId: 2, birth: 'linux-starttime:100', command: '/TEST/node' };
+  const birth = { pid: 11, parentPid: 10, groupId: 11, birth: 'linux-starttime:110', command: '/TEST/bun' };
+  let current: { host?: typeof host; births: typeof birth[] } = { host, births: [birth] };
+  const old = createDesktopMetadataBirthCensus(() => current);
+  old.expectOriginalQuit(); current = { births: [] }; old.sample();
+  assert.equal(old.close().originalExitObserved, true);
+  const next = createDesktopMetadataBirthCensus(() => current);
+  try {
+    assert.throws(() => next.witness(), /physically captured original Host/);
+    const coldHost = { ...host, pid: 20, groupId: 3, birth: 'linux-starttime:200' };
+    const coldBirth = { ...birth, pid: 21, groupId: 21, parentPid: 20, birth: 'linux-starttime:210' };
+    current = { host: coldHost, births: [coldBirth] }; next.sample();
+    assert.deepEqual(next.witness(), { host: coldHost, births: [coldBirth] });
+    current = { host, births: [birth] };
+    assert.throws(() => next.sample(), /same actual original metadata Host/);
+  } finally { next.close(); }
+});
+
+test('unexpected original Host disappearance and physical PID reuse remain refusal', () => {
+  const host = { pid: 10, parentPid: 2, groupId: 2, birth: 'linux-starttime:100', command: '/TEST/node' };
+  const birth = { pid: 11, parentPid: 10, groupId: 11, birth: 'linux-starttime:110', command: '/TEST/bun' };
+  for (const next of [{ births: [] }, { host, births: [{ ...birth, birth: 'linux-starttime:111' }] }]) {
+    let current: { host?: typeof host; births: typeof birth[] } = { host, births: [birth] };
+    const census = createDesktopMetadataBirthCensus(() => current);
+    try { current = next; assert.throws(() => census.sample()); assert.throws(() => census.witness()); }
+    finally { assert.equal(census.close().failed, true); }
+  }
+});
+
+function finiteProcTree() {
+  const files = new Map<string, Buffer>(), links = new Map<string, string>();
+  const put = (path: string, value: string) => files.set(path, Buffer.from(value));
+  const stat = (pid: number, parent: number, group: number, birth: number, state = 'S') => {
+    const fields = Array<string>(20).fill('0');
+    fields[0] = state; fields[1] = String(parent); fields[2] = String(group); fields[19] = String(birth);
+    put(`/proc/${pid}/stat`, `${pid} (TEST finite observation) ${fields.join(' ')}`);
+  };
+  const child = (pid: number, birth: number, state = 'S') => {
+    stat(pid, 10, pid, birth, state); links.set(`/proc/${pid}/exe`, '/TEST/bun');
+    put(`/proc/${pid}/cmdline`, '/TEST/bun\0--no-env-file\0--config=/dev/null\0--no-install\0/TEST/embedded.js\0');
+  };
+  stat(2, 1, 2, 20); put('/proc/2/cmdline', '/TEST/app\0'); put('/proc/2/task/2/children', '10');
+  stat(10, 2, 2, 100); links.set('/proc/10/exe', '/TEST/node');
+  put('/proc/10/cmdline', '/TEST/node\0/TEST/host.js\0'); put('/proc/10/task/10/children', '11'); child(11, 110);
+  const absent = () => Object.assign(new Error('TEST proc entry absent'), { code: 'ENOENT' });
+  const io = {
+    read(path: string, maximum: number) { const value = files.get(path); if (!value) throw absent();
+      assert.ok(value.length <= maximum); return value; },
+    realpath(path: string) { const value = links.get(path); if (!value) throw absent(); return value; },
+  };
+  const options = { group: () => 2, node: '/TEST/node', hostEntry: '/TEST/host.js',
+    executable: '/TEST/bun', embeddedEntry: '/TEST/embedded.js' };
+  return { files, links, put, stat, child, absent, io, options };
+}
+
+test('actual Linux reader captures pre-ready stat/exe/argv/stat and rejects zombie or foreign identities', () => withTuple('linux', 'x64', () => {
+  const expected = { pid: 11, parentPid: 10, groupId: 11, birth: 'linux-starttime:110', command: '/TEST/bun' };
+  const base = finiteProcTree();
+  const reader = createDesktopLinuxMetadataBirthReader(base.options, base.io);
+  const observed = reader({ quitExpected: false });
+  assert.deepEqual(observed.births, [expected]);
+  assert.equal(observed.host!.birth, 'linux-starttime:100');
+  for (const mutate of [
+    (tree: ReturnType<typeof finiteProcTree>) => tree.stat(11, 10, 11, 110, 'Z'),
+    (tree: ReturnType<typeof finiteProcTree>) => tree.stat(11, 99, 11, 110),
+    (tree: ReturnType<typeof finiteProcTree>) => tree.stat(11, 10, 99, 110),
+    (tree: ReturnType<typeof finiteProcTree>) => tree.put('/proc/11/cmdline', '/TEST/bun\0foreign\0'),
+  ]) {
+    const tree = finiteProcTree(); mutate(tree);
+    assert.throws(() => createDesktopLinuxMetadataBirthReader(tree.options, tree.io)({ quitExpected: false }));
+  }
+  const changed = finiteProcTree(); let reads = 0;
+  const io = { ...changed.io, read(path: string, maximum: number) {
+    if (path === '/proc/11/stat' && ++reads === 3) changed.stat(11, 10, 11, 999);
+    return changed.io.read(path, maximum);
+  } };
+  assert.throws(() => createDesktopLinuxMetadataBirthReader(changed.options, io)({ quitExpected: false }), /kernel birth remains current/);
+}));
+
+test('planned Quit racing an original Host read preserves births without adopting a successor', () => withTuple('linux', 'x64', () => {
+  const tree = finiteProcTree(); let quit = false;
+  const io = { ...tree.io, realpath(path: string) {
+    if (quit && path === '/proc/10/exe') { tree.files.delete('/proc/10/stat'); throw tree.absent(); }
+    return tree.io.realpath(path);
+  } };
+  const census = createDesktopMetadataBirthCensus(createDesktopLinuxMetadataBirthReader(tree.options, io));
+  const before = census.witness();
+  try {
+    census.expectOriginalQuit(); quit = true; census.sample();
+    assert.deepEqual(census.witness(), before);
+    assert.equal(census.close().originalExitObserved, true);
+  } finally { census.close(); }
+  const reused = finiteProcTree();
+  const other = createDesktopMetadataBirthCensus(createDesktopLinuxMetadataBirthReader(reused.options, reused.io));
+  try {
+    other.expectOriginalQuit(); reused.stat(10, 2, 2, 999, 'Z');
+    assert.throws(() => other.sample()); assert.throws(() => other.witness());
+  } finally { other.close(); }
+}));
+
+test('unknown pre-executable candidates never become witnesses and selected Bun uncertainty stays sticky during Quit', () => withTuple('linux', 'x64', () => {
+  const tree = finiteProcTree(); tree.put('/proc/10/task/10/children', '11 99');
+  const observed = createDesktopLinuxMetadataBirthReader(tree.options, tree.io)({ quitExpected: false });
+  assert.deepEqual(observed.unobservedPids, [99]);
+  assert.deepEqual(observed.births.map(row => row.pid), [11]);
+  let selected = false;
+  const io = { ...tree.io, realpath(path: string) {
+    if (path === '/proc/12/exe' && selected) throw tree.absent();
+    if (path === '/proc/12/exe') selected = true;
+    return tree.io.realpath(path);
+  } };
+  const census = createDesktopMetadataBirthCensus(createDesktopLinuxMetadataBirthReader(tree.options, io));
+  try {
+    census.expectOriginalQuit(); tree.child(12, 120); tree.put('/proc/10/task/10/children', '12');
+    assert.throws(() => census.sample(), /TEST proc entry absent/);
+    assert.throws(() => census.witness(), /TEST proc entry absent/);
+  } finally { assert.equal(census.close().failed, true); }
+}));
+
+test('one census timer samples before UI fences and outer disposal stops all future reads', async () => {
+  let reads = 0;
+  const host = { pid: 10, parentPid: 2, groupId: 2, birth: 'linux-starttime:100', command: '/TEST/node' };
+  let births: { pid: number; parentPid: number; groupId: number; birth: string; command: string }[] = [];
+  const census = createDesktopMetadataBirthCensus(() => { reads++; return { host, births }; });
+  try {
+    births = [{ pid: 11, parentPid: 10, groupId: 11, birth: 'linux-starttime:110', command: '/TEST/bun' }];
+    const deadline = Date.now() + 1000;
+    while (reads < 2 && Date.now() < deadline) await delay(10);
+    assert.ok(reads >= 2); births = [];
+    while (reads < 3 && Date.now() < deadline) await delay(10);
+    assert.ok(reads >= 3);
+    assert.equal(census.witness().births.length, 1, 'physical birth retained between two original UI fences');
+    const before = reads; const closure = census.close();
+    await delay(75);
+    assert.equal(reads, before); assert.equal(closure.closed, true);
+    assert.deepEqual(census.close(), closure);
+  } finally { census.close(); }
+});
+
+test('planned Quit at the final same-Host read retains births across an observed zombie transition', () => withTuple('linux', 'x64', () => {
+  const tree = finiteProcTree(); let quit = false;
+  const io = { ...tree.io, read(path: string, maximum: number) {
+    const value = tree.io.read(path, maximum);
+    if (quit && path === '/proc/10/task/10/children') tree.stat(10, 2, 2, 100, 'Z');
+    return value;
+  } };
+  const census = createDesktopMetadataBirthCensus(createDesktopLinuxMetadataBirthReader(tree.options, io));
+  const before = census.witness();
+  try {
+    census.expectOriginalQuit(); tree.put('/proc/10/task/10/children', ''); quit = true; census.sample();
+    assert.deepEqual(census.witness(), before);
+    assert.equal(census.close().originalExitObserved, true);
+  } finally { census.close(); }
+}));
+
+test('finite reader tuple restores foreign process descriptors and preserves the production non-Linux refusal', () => {
+  const descriptors = () => ({ platform: Object.getOwnPropertyDescriptor(process, 'platform'),
+    arch: Object.getOwnPropertyDescriptor(process, 'arch') });
+  const original = descriptors();
+  withTuple('darwin', 'arm64', () => {
+    const foreign = descriptors(), tree = finiteProcTree(); let reads = 0;
+    const io = { ...tree.io, read(path: string, maximum: number) { reads++; return tree.io.read(path, maximum); } };
+    assert.throws(() => createDesktopLinuxMetadataBirthReader(tree.options, io)({ quitExpected: false }));
+    assert.equal(reads, 0, 'the original platform guard precedes any process observation');
+    withTuple('linux', 'x64', () => {
+      const observed = createDesktopLinuxMetadataBirthReader(tree.options, io)({ quitExpected: false });
+      assert.equal(observed.births[0]!.birth, 'linux-starttime:110');
+    });
+    assert.deepEqual(descriptors(), foreign, 'the synchronous fake-I/O case restores the actual outer platform');
+  });
+  assert.deepEqual(descriptors(), original);
 });

@@ -281,6 +281,7 @@ jobs:
             test/features/agent-backend/claudeCloseDiagnostics.test.ts \
             scripts/legacy-agent-host/desktop-opencode-metadata-lineage.ts \
             scripts/legacy-agent-host/desktop-metadata-witness.ts \
+            scripts/legacy-agent-host/desktop-metadata-birth-census.ts \
             test/renderer/components/cli/CliStatusVisibility.test.ts \
             tools/owned-process-broker/nativeEmulatedSourceCold.ts \
             tools/owned-process-broker/nativeEmulatedProfile.ts \
