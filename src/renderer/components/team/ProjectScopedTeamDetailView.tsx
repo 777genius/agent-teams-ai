@@ -9,7 +9,7 @@ import { useShallow } from 'zustand/react/shallow';
 
 import { TeamDetailView } from './TeamDetailView';
 import { TeamHistoryModePicker } from './TeamHistoryModePicker';
-import { resolveTeamProjectSelection } from './teamProjectSelection';
+import { findTeamProjectSelectionTarget, resolveTeamProjectSelection } from './teamProjectSelection';
 
 import type { TeamProjectContextView } from '@features/team-project-context/contracts';
 import type { TeamLaunchRequest } from '@shared/types';
@@ -175,14 +175,22 @@ export function ProjectScopedTeamDetailView({
   }, [isActive, retainedOwner, teamName, t]);
   const redirectTeam = context?.state === 'redirect' ? context.logicalTeamName : null;
   const redirectProject = context?.state === 'redirect' ? context.projectPath : null;
+  // Deep links can outlive a deleted worktree. Never route their physical
+  // task identity to whichever unrelated project the sidebar currently shows.
+  const redirectProjectListed = useMemo(
+    () => redirectProject
+      ? findTeamProjectSelectionTarget(repositoryGroups, projects, redirectProject) !== null
+      : false,
+    [redirectProject, repositoryGroups, projects]
+  );
   useEffect(() => {
-    if (!isActive || !redirectTeam || !redirectProject) return;
+    if (!isActive || !redirectTeam || !redirectProject || !redirectProjectListed) return;
     // A deep link may still use the physical alias. Navigate through its
     // verified owner; never mount the alias as an independent team editor.
     redirectProjectAliasTaskNavigation(
       () => useStore.getState(), teamName, redirectTeam, redirectProject
     );
-  }, [isActive, redirectTeam, redirectProject, teamName]);
+  }, [isActive, redirectTeam, redirectProject, redirectProjectListed, teamName]);
 
   const start = useCallback(async (request: TeamLaunchRequest): Promise<void> => {
     const cwd = request.cwd.trim();
@@ -228,6 +236,29 @@ export function ProjectScopedTeamDetailView({
           <TeamDetailView
             teamName={teamName}
             logicalTeamName={teamName}
+            retainedHistory
+            isActive={isActive}
+            isPaneFocused={isPaneFocused}
+          />
+        </div>
+      </div>
+    );
+  }
+
+  if (context?.state === 'redirect' && !redirectProjectListed) {
+    // The verified physical alias remains readable even when the worktree
+    // disappeared from project discovery. Do not dispatch new work to a
+    // missing/unknown project or discard pending physical task navigation.
+    return (
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+        <div className="border-b border-border px-4 py-2 text-xs text-text-muted">
+          {context.logicalTeamName} · {context.projectPath} · {t('projectContextView.retainedHistory')}
+        </div>
+        <div className="flex min-h-0 min-w-0 flex-1" data-team-name={teamName}>
+          <TeamDetailView
+            teamName={teamName}
+            logicalTeamName={context.logicalTeamName}
+            teamDisplayName={context.logicalTeamName}
             retainedHistory
             isActive={isActive}
             isPaneFocused={isPaneFocused}

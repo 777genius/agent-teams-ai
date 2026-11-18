@@ -194,6 +194,22 @@ describe('ProjectScopedTeamDetailView project switching', () => {
     expect(openTeamTab).toHaveBeenCalledWith('builders');
   });
 
+  it('preserves verified physical task history when its worktree disappeared from discovery', async () => {
+    getView.mockResolvedValue({
+      mode: 'per_project',
+      state: 'redirect',
+      logicalTeamName: 'builders',
+      projectPath: '/removed/worktree',
+    });
+    await act(async () => root.render(
+      React.createElement(ProjectScopedTeamDetailView, { teamName: 'ptc-removed' })
+    ));
+    await settle();
+    expect(host.querySelector('[data-team]')?.getAttribute('data-team')).toBe('ptc-removed');
+    expect(host.textContent).toContain('/removed/worktree');
+    expect(host.textContent).not.toContain('projectContextView.empty');
+  });
+
   it('keeps the pre-feature shared team name unchanged', async () => {
     getView.mockResolvedValue({
       mode: 'shared', state: 'ready', executionTeamName: 'builders',
