@@ -8,12 +8,12 @@ import {
 
 import type { RetainedLegacyLaunchChoice } from '@features/agent-backend/renderer';
 
-type Intent = {
+interface Intent {
   generation: number;
   key: string;
   epoch: ReturnType<typeof captureContextScopedRequestEpoch>;
   signal: AbortSignal;
-};
+}
 const createOwner = (key: string) => ({
   mounted: false,
   generation: 0,
