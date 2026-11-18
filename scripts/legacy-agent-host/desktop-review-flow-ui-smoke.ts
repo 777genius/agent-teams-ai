@@ -59,6 +59,9 @@ export async function runDesktopReviewFlowUiSmoke(
   options.evidence.reviewFlowUiProof = proof;
   const step = (value: Record<string, unknown>) => { steps.push(value); };
   const ui = createDesktopUiControls(cdp, { assertOwnedRenderer: options.assertOwnedRenderer, step });
+  const clickPolicyFooter = (target: string, label: string, text?: string) => ui.click(target, label, text, undefined, {
+    scrollBeforeClick: { label: 'reveal ' + label, requireCenterHit: true },
+  });
   const waitProduct = async <T>(read: () => Promise<T>, matches: (value: T) => boolean, label: string) => {
     const deadline = Date.now() + 20_000;
     while (Date.now() < deadline) {
@@ -112,7 +115,7 @@ export async function runDesktopReviewFlowUiSmoke(
     await ui.click(trigger, 'open original team Review flow');
   };
   const saveTeam = async (settings: Record<string, unknown> | null) => {
-    await ui.click(selector('kanban-review-flow-save'), 'save one original team review policy');
+    await clickPolicyFooter(selector('kanban-review-flow-save'), 'save one original team review policy');
     const receipt = await newReceipt('task.board.review-flow', { settings });
     await ui.waitRead(`!document.querySelector(${desktopJsLiteral(selector('kanban-review-flow-panel'))})`,
       'original policy panel closes after its save');
@@ -120,13 +123,13 @@ export async function runDesktopReviewFlowUiSmoke(
     return receipt;
   };
   const openDefaults = async () => {
-    await ui.click(selector('kanban-review-flow-open-settings'), 'open existing default settings link');
+    await clickPolicyFooter(selector('kanban-review-flow-open-settings'), 'open existing default settings link');
     await ui.waitRead(`Boolean(document.querySelector(${desktopJsLiteral(selector('review-flow-settings-page'))}))`,
       'original Review flow Settings page');
   };
   const saveDefaults = async (flow: string) => {
     await ui.click(selector('review-flow-settings-' + flow), 'select TEST app ' + flow);
-    await ui.click(selector('review-flow-settings-save'), 'save TEST app review default');
+    await clickPolicyFooter(selector('review-flow-settings-save'), 'save TEST app review default');
     await ui.waitRead(`document.querySelector(${desktopJsLiteral(selector('review-flow-settings-feedback'))})?.textContent.trim()==='Saved'`,
       'original default save acknowledged');
     assert.deepEqual(await json(defaultsPath), { reviewFlow: flow });
@@ -157,7 +160,7 @@ export async function runDesktopReviewFlowUiSmoke(
   assert.equal(await readFile(defaultsPath, 'utf8'), humanDefaults, 'Host override never copies or changes app defaults');
   await openPanel();
   await readEditor('kanban-review-flow', 'human_approval', true);
-  await ui.click(selector('kanban-review-flow-panel') + ' button', 'close inherited team policy', 'Cancel');
+  await clickPolicyFooter(selector('kanban-review-flow-panel') + ' button', 'close inherited team policy', 'Cancel');
 
   const card = `.kanban-task-card[data-task-id="${taskId}"]`;
   const boardEntry = record(inherited.tasks)[taskId];

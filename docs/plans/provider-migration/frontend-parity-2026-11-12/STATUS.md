@@ -1,10 +1,11 @@
 # Завершение Host / frontend parity
 
 Обновлено: 18 ноября 2026. Единственный текущий рабочий план.
-Опорный app source до текущего import-only среза: `4f5ae2dcb10c83fb6b3a3862b8d5065e0c7843ab`.
+Последний проверенный app source: `f60dcc107c00c58c0a577f2661f9f0eaf80a596f`.
 Provider entrypoints и четыре Host import-only изменения прошли R2.
 Canonical provider check PASS; provider `b19494fd` опубликован.
-Новый app pin, frozen install и strict Host build PASS; следующий gate — original GUI.
+Taskboard и task review cycle GUI PASS; ReviewFlow остановился на невидимой ссылке.
+Навигация к footer исправлена через существующий bounded trusted scroll; R2 PASS.
 
 ## Цель, доставка и неизменные границы
 
@@ -37,7 +38,7 @@ Desktop frontend для Claude, Codex, OpenCode V1/V2. Работать авто
 
 | ID | Состояние | Следующий результат и критерий готовности | Владелец |
 | --- | --- | --- | --- |
-| F1 | Реализация, focused checks и R2 готовы; GUI INCOMPLETE | После нового immutable provider package провести original Taskboard/ReviewFlow GUI: реальные Settings/Approved/reopen, current request/cycle, все три owner-routing epochs, final receipt и пустой cleanup. | pr_graph; media; reviewflow; root |
+| F1 | Taskboard и task review cycle GUI PASS на f60; ReviewFlow INCOMPLETE | Довести переход к footer в scrollable popover, затем original Settings/Approved/reopen и все три owner-routing epochs. Сохранить current request/cycle, final receipt и пустой cleanup. | pr_graph; media; reviewflow; root |
 | F2 | Реализация и focused contracts PASS | Сохранить canonical Host agenda: lead/user clarification блокирует review work до review cycle; app path остаётся re-export. Не выдавать UI сохранение lead_then_human за исполненный lead handoff. | reviewflow |
 | M1 | Native E2E PASS только на 2f33d566 | Сохранить точный native receipt; новый package оценить по затронутым boundaries. Desktop/vendor auth/release этим native run не квалифицированы. | media; R2 reviewflow |
 | E1 | Исходные source/fixture отказы исправлены; текущий GUI остаётся | После первого GUI выполнить минимальную очередь изменённых Create/import/retained/Resume/Add/collaboration путей; исходные authority/source/no-replay/cleanup assertions обязательны. | root; pr_graph |
@@ -50,10 +51,10 @@ Logs/Thinking/source/filter/fullscreen/stderr, accounts/models, native suggestio
 schedules, live membership и retained launch. Повторная разработка не требуется;
 приёмка текущего интеграционного пути остаётся отдельной обязанностью.
 
-## Сейчас выполняется: убрать лишние provider imports из Main
+## Завершено: узкие provider imports и запуск Main
 
-Последний GUI остановился до Electron/Host/UI на Main SSR с explicit V8 OOM.
-Повтор той же сборки не запускается. Текущий ограниченный срез:
+Срез опубликован в f60dcc10; original GUI с профилем 1536 прошёл Main/preload,
+renderer/Main readiness, backend discovery и первые два UI proofs:
 
 1. Provider `./captured-configuration`: ровно четыре уже публичные capture-функции
    напрямую из определяющих модулей, без общего internal/provider barrel.
@@ -79,14 +80,40 @@ SHA256 `ad05bd8c799c4d2c366a6eab72f937466355a5994eac6bd201ee754217cf5aa7`.
 Штатный `pnpm install --frozen-lockfile --ignore-scripts --prefer-offline`
 PASS за 20.415 s, проверены 2533 supply-chain entries. Strict Host TS7 build
 с `--singleThreaded`, compiler-only 512MiB/50/2 PASS за 10.431 s;
-source receipt записан. Следом один original GUI на чистом
-опубликованном срезе. Provider/install/build PASS не квалифицируют app GUI.
+source receipt записан. Main SSR на исходном профиле 1536/maps-off собрал
+3712 modules за 28.54 s; preload — 117 modules за 200 ms. При 1024 память
+заканчивалась уже после transform. Итог UI имеет отдельный scope ниже.
 
 Независимый static audit 4f5: 3816 app files, 99 value-imported Host public subpaths,
 334 compiled Host modules; все шесть provider-barrel рёбер находились в этих
 четырёх Host-файлах. `/owned-process` имеет 104 local modules. Прямые MCP SDK
 Server/StreamableHTTP/request-schema imports у OpenCodeCoordinationEndpoint
-остаются необходимыми protocol imports. Устранение всех SDK и OOM fix не заявлены.
+остаются необходимыми protocol imports. Устранение всех SDK не заявляется.
+
+## Сейчас выполняется: завершить original ReviewFlow GUI
+
+На exact f60 source `taskBoardUiProof=PASS`, `taskReviewCycleUiProof=PASS`.
+Taskboard прошёл create/dependency/association/assignee/clarification/order,
+blocked-start и последующий success, reload и attachments. Review cycle прошёл
+исходные девять состояний complete→request→request_changes→start→comment→complete→
+request→approve→disapprove, итог completed/none в Done. R2 связал source hashes
+всех трёх UI proofs с опубликованными Git objects; отдельный visual signoff не заявлен.
+
+ReviewFlow открыл policy panel одним trusted click и прочитал inherited
+agent_approval. Следующая ссылка `open existing default settings link` активна,
+но ниже clip: matches=1, centerInViewport=false, hitPresent=false. Исходные 30 s
+истекли после 152 owner checks/read evaluations; settings mutation ещё не было.
+Скриншот подтверждает штатный scrollable popover высотой около 384 px.
+Для четырёх существующих footer actions используется готовый ui.click
+scrollBeforeClick с requireCenterHit: общий прежний 30 s и максимум 12 wheels,
+проверки owner/deadline/hit и один click сохраняются. Product layout не меняется.
+Следующий original GUI должен подтвердить полный ReviewFlow и три owner epochs.
+Изменён только TEST helper: три строки delegate и четыре footer call sites;
+pinned Node 24.21 syntax check, diff check и independent actual-diff R2 PASS.
+Файл уже включён в исходный source-freeze roster; product/build/deps прежние.
+[Производная сводка исходного f60 GUI](evidence/gui-taskboard-f60dcc10-fixed1536-20261118.json)
+связывает source, 22 command receipts и 10 screenshots с hashes. Это bounded
+summary общего INCOMPLETE, не полный receipt и не новый общий PASS.
 
 ## Подтверждённая реализация и границы результатов
 
@@ -160,8 +187,9 @@ TEST parser допускает исходный 384 KiB chunk только дл�
 
 ## Original GUI: компактная история незавершённых запусков
 
-Все строки ниже — **INCOMPLETE до Electron/Host/UI**, без owner epochs,
-с пустым cleanup.remaining; исходный startup 180 s не увеличивался.
+Все запуски пока **INCOMPLETE** и без финальных owner epochs. Последний дошёл
+до реального UI; предыдущие завершались до него. Cleanup.remaining пуст;
+исходный startup 180 s не увеличивался.
 
 | Source / профиль | Фактический результат Main SSR | Наблюдение |
 | --- | --- | --- |
@@ -172,6 +200,8 @@ TEST parser допускает исходный 384 KiB chunk только дл�
 | 356fe604 / 512 + UV4 | Explicit V8 OOM/SIGABRT, 27.214 s | Retained heap 509.9 MB; Vite 11 threads. |
 | 9f63bec3 / 768 + UV4 | Explicit V8 OOM/SIGABRT, 24.241 s | Retained heap 760.4 MB; Vite 11 threads. |
 | **4f5ae2dc / 1024 + UV4, maps off** | **Explicit V8 OOM/SIGABRT, 30.248 s** | Retained heap 1010.7 MB; Vite PSS 1205049 / total 1786707 KiB; source freeze/cleanup без ошибок. |
+| f60dcc10 / 1024 + UV4, maps off | 3712 modules transformed, затем explicit OOM/SIGABRT; 53.099 s | Retained heap 996.2 MB; Vite PSS 1197674 / total 1757584 KiB. |
+| **f60dcc10 / original 1536, maps off** | **Main/preload/renderer PASS; Taskboard + review cycle PASS; ReviewFlow link offscreen** | Wrapper 334.508 s, exit 1; failure Quit acknowledged, listener absent, appExit 0; capturedHostObserved=false, отдельный Host exit не заявляется. |
 
 Действующий experimental selector — только 1024 + UV4 для прежних семи Linux/x64
 finite emulated modes. Retired 512/768, произвольные flags, malformed/two selectors
@@ -181,11 +211,14 @@ Original 1536/default/native, parent heap, команды/plugins и deadlines �
 не наследует NODE_OPTIONS/UV. Maps-off меняет debug artifacts main/renderer,
 не preload; byte-identical build/Sentry qualification не заявлены.
 Explicit OOM новых попыток не устанавливает причину прежних SIGKILL.
+Последний и следующий original GUI используют существующий профиль 1536
+с исходным UV behavior. Его parent heap, capture pins и Host environment прежние;
+новых resource selectors, production knobs или deadlines для этого не вводилось.
 
 ## Оставшиеся обязательные gates и минимальная очередь
 
-1. Готово к публикации: app source с проверенными immutable pins/install/build;
-   exact checked package и source receipt сохранены, SPI archive неизменён.
+1. Опубликовать минимальное исправление footer navigation и actual GUI evidence;
+   provider archive/install/Host build неизменны и повторной проверки не требуют.
 2. Один original task-board-cross-team-ui на чистом новом source. При успехе читать
    final durable receipt после exit и всех трёх owner-routing epochs: ранняя
    console PASS недостаточна. Host/source/owner/cleanup guards обязательны.

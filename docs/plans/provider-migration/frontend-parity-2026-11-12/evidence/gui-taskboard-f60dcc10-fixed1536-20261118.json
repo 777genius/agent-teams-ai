@@ -1,0 +1,573 @@
+{
+  "schemaVersion": 1,
+  "kind": "DERIVED_ORIGINAL_GUI_EVIDENCE_SUMMARY",
+  "qualification": {
+    "derivedSummary": true,
+    "fullReceipt": false,
+    "overallPass": false,
+    "overallStatus": "INCOMPLETE",
+    "scope": "Completed original task-board-cross-team-ui invocation on f60dcc10; earlier subproof PASS values do not qualify ReviewFlow, later flows or owner-routing continuation.",
+    "hashEncoding": "File hashes are SHA-256 of exact bytes. Fields named canonicalJsonSha256 use UTF-8 JSON with recursively sorted object keys, compact separators, original array order and unescaped Unicode.",
+    "artifactRetention": "Referenced raw artifacts remain at their captured local paths; this summary does not copy or replace them."
+  },
+  "source": {
+    "head": "f60dcc107c00c58c0a577f2661f9f0eaf80a596f",
+    "tree": "10d775966f685afd58b750d2a78f775627cc8c5a",
+    "worktreeCleanBefore": true,
+    "worktreeCleanAfterExit": true,
+    "selectedSourceCount": 1883,
+    "beforeAfterSourceListsEqual": true,
+    "selectedSourceListCanonicalJsonSha256": "0c7b1c2e877d510a2be81fed138d616043a7d49e45739549e27d2f128cd8debd",
+    "harness": {
+      "path": "scripts/legacy-agent-host/desktop-backend-smoke.ts",
+      "sha256": "51d056aeff4ce159eab1533ca68838c768dc978f851a41687bb81e49a4863221",
+      "origin": "original receipt source freeze"
+    },
+    "uiControls": {
+      "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "sha256": "e84a189178a440aa57137ce2213a425d4b2231d78f708afe07501b9ba121d85d",
+      "origin": "original receipt source freeze"
+    },
+    "crossTeamDriver": {
+      "path": "scripts/legacy-agent-host/desktop-task-board-cross-team-ui-smoke.ts",
+      "sha256": "2670c38db359c6ca321cf8ae2eeeff7cb9e1658b35d6ba9c22d03c20f97bcbe6",
+      "origin": "original receipt source freeze"
+    },
+    "sourceFreezeFailure": null,
+    "ownerSourceFreezeFailure": null
+  },
+  "run": {
+    "mode": "task-board-cross-team-ui",
+    "preparedAt": "2026-11-18T21:07:35.432556+00:00",
+    "completedCollectionAt": "2026-11-18T21:13:29.077527+00:00",
+    "harnessExitCode": 1,
+    "elapsedSeconds": 334.508,
+    "actualSession": 44674,
+    "runner": {
+      "path": "/workspace/scratch/de9d4631e21c/gui-prerequisites-20261118/run-task-board.py",
+      "bytes": 1444,
+      "sha256": "6cac2fb7f95198a6138b00bc21f095a29e18959e1916c55e6c33ef9949146d04"
+    },
+    "passiveObserver": {
+      "path": "/workspace/scratch/de9d4631e21c/gui-prerequisites-20261118/observe-gui-resources.py",
+      "bytes": 10596,
+      "sha256": "7728cd6d843f986a3244b37477e41f880b394ab3746e346da6f259ddb5bc967d"
+    },
+    "invocation": [
+      "python3",
+      "/workspace/scratch/de9d4631e21c/gui-prerequisites-20261118/observe-gui-resources.py",
+      "--mode",
+      "task-board-cross-team-ui",
+      "--source-maps-off",
+      "--prefix",
+      "/workspace/scratch/de9d4631e21c/gui-prerequisites-20261118/task-board-fixed1536-no-maps-f60dcc10",
+      "--",
+      "python3",
+      "/workspace/scratch/de9d4631e21c/gui-prerequisites-20261118/run-task-board.py"
+    ],
+    "resourceProfile": {
+      "selector": "LEGACY_DESKTOP_TEST_FINITE_HEAP_1536=1",
+      "mapsOff": true,
+      "uvPool": "original profile behavior; no override",
+      "parentHeap": "unchanged"
+    },
+    "oldSpaceMiB": 1536,
+    "observedViteResourceProfile": [
+      {
+        "role": "electron-vite",
+        "nodeOptions": "fixed1536",
+        "sourceMaps": "off",
+        "peakRssKiB": 1703384,
+        "peakPssKiB": 1661885
+      }
+    ],
+    "capturePins": "MATCH",
+    "noPrebuild": true,
+    "noAutomaticRetry": true,
+    "providerArchiveSha256": "ad05bd8c799c4d2c366a6eab72f937466355a5994eac6bd201ee754217cf5aa7",
+    "nodeSha256": "7fde7b8afa198da66257f42ee2001d874c7355631e6d1579a5fb5ef1f246df4c",
+    "hostEntrySha256": "4e1841072540175636a776082693780021827ce56d0b5c2aa11f9e8511d132ba",
+    "electronSha256": "7722b3b95b0a31e24906f8046c1bf29cb03c1b99f67058b0b9a4c0e8681c0d87",
+    "pnpmSha256": "7c2a67995976b5b592b611d8b236e3b0633bd654fb49aedd96c6eb7ce04c9cbb"
+  },
+  "artifacts": {
+    "originalReceipt": {
+      "path": "/tmp/TEST-desktop-backend-NOf0ZA/desktop-backend-receipt.json",
+      "bytes": 4230979,
+      "sha256": "161f325719c946ff8341ce0582e4a5e00ee0036f0795fd6839f31027ad0664cc"
+    },
+    "postExitObservation": {
+      "path": "/workspace/scratch/de9d4631e21c/gui-prerequisites-20261118/task-board-cross-team-20261118T210735Z.observation.json",
+      "bytes": 3416,
+      "sha256": "c00ade9d3eb59783a558c47ae66f143a918bc88e84f172dc3c3a037b0c81b1b1"
+    },
+    "attemptMetadata": {
+      "path": "/workspace/scratch/de9d4631e21c/gui-prerequisites-20261118/gui-attempt-f60dcc10-fixed1536.json",
+      "bytes": 3015,
+      "sha256": "f4ed91dda1a22d915a7880f1e1a1eb1680c7425d03ecd2fe2350fb62169f8afb"
+    },
+    "originalHarnessLog": {
+      "path": "/workspace/scratch/de9d4631e21c/gui-prerequisites-20261118/task-board-cross-team-20261118T210735Z.log",
+      "bytes": 4845,
+      "sha256": "4c07473773669fa786eb0dfd52c55ba08318c36d91bba7722abb0ba81a842853"
+    },
+    "desktopAppLog": {
+      "path": "/tmp/TEST-desktop-backend-NOf0ZA/desktop-app.log",
+      "bytes": 39688,
+      "sha256": "d1a5317dea0ce9a4b69dda9b8f04d41fbc28c7b8605ec8176d6f17eeddbbf45b"
+    },
+    "resourceSummary": {
+      "path": "/workspace/scratch/de9d4631e21c/gui-prerequisites-20261118/task-board-fixed1536-no-maps-f60dcc10.resources.json",
+      "bytes": 30156,
+      "sha256": "3f8c0aab38338ca38d74afa3ee8905c100c3809d5d3ff982d7b91811dd791b6d"
+    },
+    "resourceTrace": {
+      "path": "/workspace/scratch/de9d4631e21c/gui-prerequisites-20261118/task-board-fixed1536-no-maps-f60dcc10.resources.jsonl",
+      "bytes": 123242,
+      "sha256": "02b20c3ec31bddc6cf2c914dfe958f341809b4ef3bcf86d9c94be59107a8b61d"
+    },
+    "resourceRunnerLog": {
+      "path": "/workspace/scratch/de9d4631e21c/gui-prerequisites-20261118/task-board-fixed1536-no-maps-f60dcc10.runner.log",
+      "bytes": 163,
+      "sha256": "628f8f1bdff2f8f62a1bd685a126f58a3932aca675d6dd3017e7352516a24a82"
+    },
+    "commandReceiptDirectory": "/tmp/TEST-desktop-backend-NOf0ZA/hoststore/teams/test-desktop-backend/.host-owner/commands"
+  },
+  "startup": {
+    "mainSsr": {
+      "completed": true,
+      "transformedModules": 3712,
+      "seconds": 28.54,
+      "compiledPath": "dist-electron/main/index.cjs",
+      "compiledSha256": "b1cc75f67bf4022ee3bade3867dcc6a59cf8a05e68a06d8cfc86dbe8c8cce257"
+    },
+    "preload": {
+      "completed": true,
+      "transformedModules": 117,
+      "seconds": 0.2,
+      "compiledPath": "dist-electron/preload/index.js",
+      "compiledSha256": "0562ad43745aab58ff1dcf39c98ecf4d011881520ed00fa077d2da9d6857b3aa"
+    },
+    "rendererTarget": {
+      "elapsedMs": 43138,
+      "matchingMainFound": true,
+      "appExitCode": null,
+      "appSignalCode": null,
+      "spawnError": false
+    },
+    "documentStatus": "DOCUMENT_READY",
+    "appReadinessStatus": "READY",
+    "backendDiscovery": {
+      "state": "ready",
+      "bindingCount": 3,
+      "attempts": 1,
+      "transient": []
+    },
+    "interpretation": "Startup/readiness completed before original UI actions. Repeated routing warnings are not identified as the cause of the later target-geometry failure."
+  },
+  "proofs": {
+    "taskBoardUiProof": {
+      "status": "PASS",
+      "source": {
+        "path": "scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts",
+        "sha256": "0d33e45f9692601125f536cdbd87354bee19fa6fd336ac60d6d1b31d3432f59c",
+        "origin": "original receipt source freeze"
+      },
+      "canonicalJsonSha256": "02191d1f031bde8a4368a92a983dc681a3e90018d3f59a8d951f22d752e842f1",
+      "originalStepCount": 99,
+      "originalTaskCount": 2,
+      "groupAssociationStatus": "PASS",
+      "attachmentsStatus": "PASS",
+      "receiptCount": 13,
+      "receipts": [
+        {
+          "file": "0b074cc3689622df65e7fb63e3aca4bb02a46e54e1bcbb6c9ff0a43db760f086.json",
+          "bytes": 1184,
+          "sha256": "5a9a89772e0b0ad6833fcdb6dfa4830bc6ea948b49f25f36ed910a400ca0819d",
+          "commandId": "42e69496-afdb-43a6-a8b4-9a4e774e7b38",
+          "operation": "task.start",
+          "phase": "rejected"
+        },
+        {
+          "file": "36cd2f57d5689f788233d615ed3da0087886d7ff475d23fb75d756db95cbdf0c.json",
+          "bytes": 2395,
+          "sha256": "101ae74c029ab98bf1dd2adf46a5c164d5157190e34cfd458b75ab36fe251a4a",
+          "commandId": "d1739774-68c9-4f92-9c17-a42ccd6cc71f",
+          "operation": "task.create",
+          "phase": "completed"
+        },
+        {
+          "file": "54ea395514a32e6aa6406075f10f5be7ae8ae0484c09d433e773855ca10cdb56.json",
+          "bytes": 3803,
+          "sha256": "80ce87c428420005991b8130843c4c22ae96a4d2316e12e4fdc1850fe6ecc8a8",
+          "commandId": "4a648ae9-ea57-40bc-999d-579c8a2b3a81",
+          "operation": "task.start",
+          "phase": "completed"
+        },
+        {
+          "file": "6aeb6ccba8a301b5d56804c26fea19834b9dd520bdfe380a0d5fea24136bba61.json",
+          "bytes": 1802843,
+          "sha256": "0d39bfbace04885003b39f98bb308e58736636823271b2cdd5856c5fbe474b05",
+          "commandId": "TEST-large-accepted-task-comment",
+          "operation": "task.comment",
+          "phase": "completed"
+        },
+        {
+          "file": "73d51a47022bad35094134a650a17f09916cdc1f2cab13ca2201e1ac8ef59773.json",
+          "bytes": 2197,
+          "sha256": "78988e6739fc86000cff4eca1e0414e3b182585201a2f17cf04a0d49a073e006",
+          "commandId": "TEST-ui-offline-seed",
+          "operation": "task.create",
+          "phase": "completed"
+        },
+        {
+          "file": "84ddd0be5deb04f613bf6303aae6a35febe98d33d1f17a3ec8e128071f72ffa4.json",
+          "bytes": 4427,
+          "sha256": "813ddaff0654878e452043cbc5cbb8fa557a6a8336ed32f511b8fa6cae129a26",
+          "commandId": "1f24d427-5536-4086-b134-67de747b431e",
+          "operation": "task.attachment.add",
+          "phase": "completed"
+        },
+        {
+          "file": "903e933c3828d5882135a8e208935870ca7bd2e3760ef50b0a9fa0c512d168f6.json",
+          "bytes": 1522,
+          "sha256": "50e6db7049ae987f4daa1cda31321d42746e7ae79b24ff8bf186277b14299f0a",
+          "commandId": "347c196e-d370-482a-a747-843e4e7b60df",
+          "operation": "task.board.order",
+          "phase": "completed"
+        },
+        {
+          "file": "9249c37097a38bcd3314a441b7042bdd77a1c32f397de455eaddbc14a9c5fe3e.json",
+          "bytes": 2505,
+          "sha256": "0dbcfc31b2c3cc441420b21309b02acb890a5252e42423efbef38df9c496bc2a",
+          "commandId": "157948ed-0c94-4ed3-8b3a-1d779319de8f",
+          "operation": "task.assign",
+          "phase": "completed"
+        },
+        {
+          "file": "9d1c00e7d559dc9e3bd888745de60c08add08f13aaf062228b6d4ca543eb5e33.json",
+          "bytes": 2287,
+          "sha256": "f8a926d4186748a416163e11a05a59d2e9e84f6a8f2db2ebb7abbf6fa1f80fcf",
+          "commandId": "TEST-task-board-clarification-setup",
+          "operation": "task.clarification",
+          "phase": "completed"
+        },
+        {
+          "file": "b842d67f7e7c3b20370a4c9672b9ccbd15785cb4cd48e2fbddb22be1bcfcab18.json",
+          "bytes": 602702,
+          "sha256": "30c183ebdf62e67002ebed35d433fe35c37081aafc0f259653ccc35c744efd14",
+          "commandId": "2e8cac51-d543-4b5e-9a5c-031cf539c2bb",
+          "operation": "task.lifecycle",
+          "phase": "completed"
+        },
+        {
+          "file": "cd576e00d2fdc9e3010d8e3bfe97cc30bcef98ede45644edfd912772a388f956.json",
+          "bytes": 2475,
+          "sha256": "2da34c690e7fd78f43b41ecb833d42b87fc61f3500c710aee6e206e973307811",
+          "commandId": "a6550b26-da6a-45cd-98d3-436dcfffa45c",
+          "operation": "task.clarification",
+          "phase": "completed"
+        },
+        {
+          "file": "d9c9c0ddc1074add9a592ee9eef7c29cb8ce8c3350ffdd9b381783db77c35c78.json",
+          "bytes": 6519,
+          "sha256": "c21aca95cee4fdeae0d81703450f153267c854483ef4ca88ccef8ef4b6aef6b7",
+          "commandId": "6d9f7c1a-ec8d-4fd2-bf4c-5cc95aee2d78",
+          "operation": "task.comment",
+          "phase": "completed"
+        },
+        {
+          "file": "e883c5113311aeb4b488bbf1ac5592a07f535fb1920003d4726f0635b018abbb.json",
+          "bytes": 4499,
+          "sha256": "4dc65ce16519d2e903d5c3ca11de0bd62918509e0712d240233a8a760eb55a12",
+          "commandId": "549bfa35-7151-4eb6-ad98-50e2c67c0761",
+          "operation": "task.attachment.remove",
+          "phase": "completed"
+        }
+      ],
+      "embeddedReceiptsCanonicalJsonSha256": "3e981f65f7c85025e55f30100a44dd9a4c97ea591997ac8ea8dc2efdf1cb7593",
+      "receiptFilesMatchOriginalEmbeddedObjects": true,
+      "screenshots": {
+        "initialScreenshot": {
+          "path": "/tmp/TEST-desktop-backend-NOf0ZA/ui-task-board-initial.png",
+          "bytes": 98789,
+          "sha256": "5d115e2f351114fb3fc965e9a5d2445e23eeea1c9f36c9dcda974f08eb9b1f0b"
+        },
+        "dependencyScreenshot": {
+          "path": "/tmp/TEST-desktop-backend-NOf0ZA/ui-task-board-assigned-blocked.png",
+          "bytes": 105621,
+          "sha256": "1c302e13b371485b257b4a3ef10b0cf7ea2fa0e9f7a180b24d7ac33912741a83"
+        },
+        "reorderedScreenshot": {
+          "path": "/tmp/TEST-desktop-backend-NOf0ZA/ui-task-board-reordered.png",
+          "bytes": 125922,
+          "sha256": "dab66fbd7a92aedd959c5e7bd23a54528119e843a79d0fcbb7ad3c973a4dc629"
+        },
+        "blockedStartScreenshot": {
+          "path": "/tmp/TEST-desktop-backend-NOf0ZA/ui-task-board-blocked-start.png",
+          "bytes": 138321,
+          "sha256": "15b858c1d9eff3944a44faeb13d971f3a0ea6e046699d36a9e5681986e9654fa"
+        },
+        "reloadedScreenshot": {
+          "path": "/tmp/TEST-desktop-backend-NOf0ZA/ui-task-board-reloaded.png",
+          "bytes": 118605,
+          "sha256": "61c299ff26e749af18056ae8ecd33e622bcd1b8879bd1816c04b50bea19e7bae"
+        },
+        "attachments.addedScreenshot": {
+          "path": "/tmp/TEST-desktop-backend-NOf0ZA/ui-task-board-attachment-added.png",
+          "bytes": 120486,
+          "sha256": "d8b437c5dd93b19446817e2a3f44957239f489cb12914cc25fa78dd4aeec9f0b"
+        },
+        "attachments.reloadedScreenshot": {
+          "path": "/tmp/TEST-desktop-backend-NOf0ZA/ui-task-board-attachments-reloaded.png",
+          "bytes": 110364,
+          "sha256": "546d8605385425e4b6f0714800e1f09586188497b58af4cbc0e2c5863f0eb907"
+        },
+        "attachments.removedScreenshot": {
+          "path": "/tmp/TEST-desktop-backend-NOf0ZA/ui-task-board-attachment-removed.png",
+          "bytes": 112072,
+          "sha256": "75a97fa0d4bc6c5618c2be4d58051f47e4cb8ebca9f58fc715d48377bcad6a6b"
+        }
+      },
+      "productSourceHashes": [
+        {
+          "path": "src/renderer/components/team/dialogs/CreateTaskDialog.tsx",
+          "sha256": "f6e2d258003ce9237a5b87fe875a070868646699c60e30c8e848a4ace2ac69b2"
+        },
+        {
+          "path": "src/renderer/components/team/dialogs/TaskDetailDialog.tsx",
+          "sha256": "8efb9b58de0e0b41d0a1264cccef6ac6b530792698d6b7fcd3b1aadfe3fc046b"
+        },
+        {
+          "path": "src/renderer/components/ui/MemberSelect.tsx",
+          "sha256": "69bf0eb3e109ee241e61619fd73bc7515415f45414eb61cbd56fd408ec1e782c"
+        },
+        {
+          "path": "src/renderer/components/team/dialogs/TaskAttachments.tsx",
+          "sha256": "de4ed41c179dec907c85ec06462538d2ce2b7dc70a705cd665ca4e7b8bc9b1b4"
+        },
+        {
+          "path": "src/renderer/components/team/dialogs/TaskCommentInput.tsx",
+          "sha256": "7f5c23b48db6fcb519d3a8837ad77688851c21419c5ab45183632a2600c4bc77"
+        },
+        {
+          "path": "src/renderer/components/team/dialogs/TaskCommentsSection.tsx",
+          "sha256": "3d7e30507a2c757f4d065922f569ec991bf37823a1ce44222488c629740c51b6"
+        },
+        {
+          "path": "src/renderer/components/team/kanban/KanbanBoard.tsx",
+          "sha256": "54df5a7cd4b34628b294571a6968a22cc7fc39f861b40b4527f3bf54f27b3ef9"
+        },
+        {
+          "path": "src/renderer/components/team/kanban/KanbanFilterPopover.tsx",
+          "sha256": "8373b1d084f7aed58d339632a249ea96d2f4b11515348551567f4e6625695286"
+        },
+        {
+          "path": "src/renderer/components/team/kanban/teamTaskProjection.ts",
+          "sha256": "ea06d2e5fac4aa83b1d0953fdcf8d191e04794c78ba8a8e76c80984f306188fe"
+        },
+        {
+          "path": "src/renderer/components/team/kanban/KanbanTaskCard.tsx",
+          "sha256": "d3fbe36798bec83764584e29d653cf3bca07870bde6fe2db422bac859dada2c9"
+        },
+        {
+          "path": "src/features/agent-backend/renderer/createHostTeamMutations.ts",
+          "sha256": "73a6fdf0b6ce0710ab45f0e4418597c35074b7e21f44d57222224853c2c735a5"
+        }
+      ],
+      "visualReview": "screenshots retained; independent visual inspection pending"
+    },
+    "taskReviewCycleUiProof": {
+      "status": "PASS",
+      "source": {
+        "path": "scripts/legacy-agent-host/desktop-task-review-cycle-ui-smoke.ts",
+        "sha256": "3123c2bcf29522defc7e9441ad6f68d2e31e6a1e0ea570d4b455aaada9044e76",
+        "origin": "original receipt source freeze"
+      },
+      "canonicalJsonSha256": "6de312bd0598e24408cb5b96f6bb7dad2ad4e0a3b67582a3f4757893f09920db",
+      "originalStepCount": 62,
+      "receiptCount": 9,
+      "receipts": [
+        {
+          "file": "f0904c3d06840fdadd1fea11fa068a7734689971845e94f336430bca5f403f81.json",
+          "bytes": 4742,
+          "sha256": "4136a1cfe45f0b3ed9d21143aa81bc110ca5ba7cb28492d60121ac458ac715a9",
+          "commandId": "d1f3fabf-a403-43fe-bc3f-54de8216d6ed",
+          "operation": "task.lifecycle",
+          "phase": "completed"
+        },
+        {
+          "file": "7875e833e70cf4d0302d28993ec33180bee966091f9548438df7e4f9fbd65cb6.json",
+          "bytes": 4968,
+          "sha256": "5a8036f9366242da3e49e4ba0b981a300eb9cc77a8782f08cc2c2752013bee87",
+          "commandId": "d17ec9bf-f004-456e-b4f3-2e2850b50d9c",
+          "operation": "task.review",
+          "phase": "completed"
+        },
+        {
+          "file": "eb42b8e33891f2048e938cb594d14cd99e1b87977a3c8de2272f80e04a25004c.json",
+          "bytes": 5797,
+          "sha256": "a0a916e28bf45a9b26bb184bf91ccc7e06017e3fc6279f3796a209607270a0f3",
+          "commandId": "123bcc9e-9489-4bcb-8f15-e2fef23f7167",
+          "operation": "task.review",
+          "phase": "completed"
+        },
+        {
+          "file": "c66fb19ee801d4248d5bd80fc494e026fab750e2bf3eebbbce2e48db7b5d2f51.json",
+          "bytes": 6325,
+          "sha256": "c0ba4f9bad4cfc5b1643fb5bb9120546406bdf0b5e510ab2d654cf3e5a8c7d20",
+          "commandId": "09ddeafa-4601-4782-8aee-c98fcbc0221e",
+          "operation": "task.start",
+          "phase": "completed"
+        },
+        {
+          "file": "b42b77894f9e4d968b00d2ce26da9046252c7a4559ca21970216040f79631f16.json",
+          "bytes": 7083,
+          "sha256": "59baaf8d639c613aa4b5c4e02455c29028473c50bbf4ebbfd5a0fbd7444910fd",
+          "commandId": "7b53371d-b765-49f3-a01d-d6a7a49dedf6",
+          "operation": "task.comment",
+          "phase": "completed"
+        },
+        {
+          "file": "1fbfa0e75cbda5bd790c778964e09fe1c08dcf159add6fb40eae7eadeac800f2.json",
+          "bytes": 6561,
+          "sha256": "d72a16f1f8d7ed6a50e6091fa9fb3fde3127f01588763cea1e116ceee081b8a9",
+          "commandId": "025ffa79-fcec-4173-b041-c96aa789d4e0",
+          "operation": "task.lifecycle",
+          "phase": "completed"
+        },
+        {
+          "file": "2bb1f3b128d12745a278077e55c0b042a7d4bafbe6e975028fc6f27677d7a8e7.json",
+          "bytes": 6787,
+          "sha256": "4fce0ad44e53ff8e764501bc10fa5e46c9982abd2ae249c30335b1af58b0c2d8",
+          "commandId": "22a1fd20-9010-4c4b-aff2-01af083f699a",
+          "operation": "task.review",
+          "phase": "completed"
+        },
+        {
+          "file": "05ec19de0b425d6aa6074c213e27f3465ca10596b0190374245cb5acf8437c0f.json",
+          "bytes": 7110,
+          "sha256": "93d6ce9c436825c1d56d48748ffb6c00fab601b40d8290aa309d996be896e1f0",
+          "commandId": "4ae7f496-a567-4af4-8ae8-2e261564a2cf",
+          "operation": "task.review",
+          "phase": "completed"
+        },
+        {
+          "file": "78492d2b9dd111bd60ab3f87888e96aa1e92fc4d7c0a3c5402c3c2558aaa53ad.json",
+          "bytes": 7279,
+          "sha256": "a2d7d2f0f85de2e9f91907c30e0467f064617010104c302f1aa4273210b8510f",
+          "commandId": "ecb730eb-e475-4675-a911-0509fc03e78e",
+          "operation": "task.review",
+          "phase": "completed"
+        }
+      ],
+      "receiptIdsCanonicalJsonSha256": "7df40195c2deed71a5da48dd0db353d7f0237a34904fc830b12a9ba21de04463",
+      "approvedToDone": {
+        "status": "PASS",
+        "statusAfter": "completed",
+        "reviewStateAfter": "none",
+        "doneControlsVisible": true
+      },
+      "screenshot": {
+        "path": "/tmp/TEST-desktop-backend-NOf0ZA/ui-task-review-approved.png",
+        "bytes": 97846,
+        "sha256": "4d27bff58f189223e0d2411fcd7b6abb90c65329e74018bd942a0a7a3176daec"
+      }
+    },
+    "reviewFlowUiProof": {
+      "status": "INCOMPLETE",
+      "source": {
+        "path": "scripts/legacy-agent-host/desktop-review-flow-ui-smoke.ts",
+        "sha256": "eeb51630257a3c0aeb5ef6e5228f4d1d168b260bf311cf01a0edf39eec7c72b3",
+        "origin": "original receipt source freeze"
+      },
+      "canonicalJsonSha256": "2a06591ff4a78efafa251b63b0934545cc9124328d4716e0d1aae2c0d7a03849",
+      "originalStepCount": 2,
+      "lastOriginalAction": {
+        "action": "mouseClick",
+        "label": "open original team Review flow",
+        "selector": "[data-testid=\"kanban-approved-settings\"]",
+        "state": "attempted"
+      },
+      "failure": {
+        "message": "UI target read failed: open existing default settings link; facts={\"matches\":1,\"disabled\":false,\"ariaDisabled\":false,\"pointerEventsNone\":false,\"centerInViewport\":false,\"hitPresent\":false}",
+        "targetFacts": {
+          "matches": 1,
+          "disabled": false,
+          "ariaDisabled": false,
+          "pointerEventsNone": false,
+          "centerInViewport": false,
+          "hitPresent": false
+        },
+        "source": {
+          "kind": "error",
+          "frames": [
+            "scripts/legacy-agent-host/desktop-ui-controls.ts:487:26",
+            "scripts/legacy-agent-host/desktop-ui-controls.ts:491:17",
+            "scripts/legacy-agent-host/desktop-review-flow-ui-smoke.ts:123:5",
+            "scripts/legacy-agent-host/desktop-review-flow-ui-smoke.ts:140:3",
+            "scripts/legacy-agent-host/desktop-task-board-cross-team-ui-smoke.ts:153:5",
+            "scripts/legacy-agent-host/desktop-backend-smoke.ts:479:7"
+          ]
+        },
+        "originalReadBudgetMs": 30000,
+        "readWaitObservation": {
+          "phase": "initial",
+          "boundary": "evaluate",
+          "cutoff": "after-evaluate",
+          "firstCheckAtMs": 1795036356579,
+          "lastCheckAtMs": 1795036386591,
+          "ownerStarted": 152,
+          "ownerResolved": 152,
+          "preparationStarted": 0,
+          "preparationResolved": 0,
+          "readsStarted": 152,
+          "readsResolved": 152,
+          "postReadLate": 1,
+          "contextRetries": 0,
+          "deadlineMs": 1795036386579
+        },
+        "interpretation": "One enabled target was found, but its center was outside the viewport and hit testing found no element at that center. No click retry or changed deadline was used."
+      },
+      "failureScreenshot": {
+        "path": "/tmp/TEST-desktop-backend-NOf0ZA/ui-failure.png",
+        "bytes": 135174,
+        "sha256": "0b99088eb6cb82138d4cbbba0f5817eff9eb77790a7f1d3f78b3685ae876879c"
+      }
+    }
+  },
+  "continuation": {
+    "ownerRoutingEpochs": [],
+    "ownerContinuationStarted": false,
+    "basis": "Post-exit observation records no epochs; original harness requires Taskboard-chain PASS and cleanup before owner continuation.",
+    "laterFlowsQualified": false
+  },
+  "cleanup": {
+    "processGroup": 56,
+    "remaining": [],
+    "appExitCode": 0,
+    "appSignalCode": null,
+    "capturedHostObserved": false,
+    "capturedHostAbsent": null,
+    "hostExitCode": "not exposed by main-owned transport; no separate Host exit code recorded",
+    "originalRequestedQuitExit": {
+      "initialExitCode": null,
+      "initialSignalCode": null,
+      "exitCode": 0,
+      "signalCode": null
+    },
+    "failureQuit": {
+      "attempted": true,
+      "scope": "Close only the verified TEST window before stopping its dev wrapper",
+      "reply": "acknowledged",
+      "listenerAbsent": true
+    },
+    "beforeHarnessCleanup": [],
+    "qualification": "The captured app group is empty and app exit is 0/null. capturedHostObserved=false and capturedHostAbsent=null; no separate Host exit or Host custody-release verdict is inferred."
+  },
+  "privacy": {
+    "projection": "Explicit metadata allowlist; no command payloads, environment maps, credentials, raw DOM, notification text or full source-hash roster copied.",
+    "keyNameInspection": "No secret-bearing key names in the derived summary.",
+    "rawSourceArtifactsCopied": false
+  }
+}
