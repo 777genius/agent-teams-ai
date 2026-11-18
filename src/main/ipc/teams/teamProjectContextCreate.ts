@@ -29,7 +29,7 @@ import type {
 } from '@shared/types';
 
 export interface ProjectTeamRuntimePorts {
-  data: Pick<TeamDataService, 'createTeamConfig' | 'getSavedRequest' | 'runConfigurationOperation'>;
+  data: Pick<TeamDataService, 'createTeamConfig' | 'getSavedRequest' | 'replaceMembers' | 'runConfigurationOperation'>;
   runtime: Pick<TeamRuntimeApi, 'getRuntimeState'>;
   run: Pick<TeamProvisioningRunApi, 'hasProvisioningRun'>;
 }
@@ -45,6 +45,7 @@ export function createProjectContextRuntimeParts(ports: ProjectTeamRuntimePorts)
   const materializer = new TeamProjectContextDraftMaterializer(resolver, {
     getSavedRequest: (teamName) => ports.data.getSavedRequest(teamName),
     createTeamConfig: (config, options) => ports.data.createTeamConfig(config, options),
+    replaceMembers: (name, request) => ports.data.replaceMembers(name, request),
     assertOwnedAlias: async (teamName) => {
       const owner = await readTeamOwnerProfileScope(path.join(getTeamsBasePath(), teamName));
       if (owner !== resolveThisAppProfileScope()) {
