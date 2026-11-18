@@ -5,6 +5,7 @@ import { api } from '@renderer/api';
 import { Button } from '@renderer/components/ui/button';
 import { useStore } from '@renderer/store';
 import { redirectProjectAliasTaskNavigation } from '@renderer/store/team/projectAliasTaskNavigation';
+import { registerVisiblePhysicalTeam } from '@renderer/store/team/teamViewVisibility';
 import { useShallow } from 'zustand/react/shallow';
 
 import { TeamDetailView } from './TeamDetailView';
@@ -191,6 +192,19 @@ export function ProjectScopedTeamDetailView({
       () => useStore.getState(), teamName, redirectTeam, redirectProject
     );
   }, [isActive, redirectTeam, redirectProject, redirectProjectListed, teamName]);
+
+  const visiblePhysicalTeam =
+    !isActive || context?.mode !== 'per_project'
+      ? null
+      : (context.state === 'ready' || context.state === 'retained')
+        ? context.executionTeamName
+        : (context.state === 'redirect' && !redirectProjectListed)
+          ? teamName
+          : null;
+  useEffect(
+    () => visiblePhysicalTeam ? registerVisiblePhysicalTeam(visiblePhysicalTeam) : undefined,
+    [visiblePhysicalTeam]
+  );
 
   const start = useCallback(async (request: TeamLaunchRequest): Promise<void> => {
     const cwd = request.cwd.trim();

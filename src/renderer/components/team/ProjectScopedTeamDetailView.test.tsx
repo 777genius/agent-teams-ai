@@ -64,6 +64,7 @@ vi.mock('./dialogs/LaunchTeamDialog', () => ({
 }));
 
 import { ProjectScopedTeamDetailView } from './ProjectScopedTeamDetailView';
+import { getVisibleTeamNamesInAnyPane } from '@renderer/store/team/teamViewVisibility';
 
 function native(name: string, projectPath: string) {
   return {
@@ -102,6 +103,33 @@ describe('ProjectScopedTeamDetailView project switching', () => {
   afterEach(async () => {
     await act(async () => root.unmount());
     host.remove();
+  });
+
+  it('keeps the mounted native project visible for live inbox/task refresh and unregisters it', async () => {
+    const visible = () => getVisibleTeamNamesInAnyPane({
+      paneLayout: { panes: [] },
+    } as never);
+    getView.mockImplementation(async (_logical: string, project: string) =>
+      project === '/TEST/a' ? native('ptc-a-visible', project) : native('ptc-b-visible', project)
+    );
+    await act(async () => root.render(
+      React.createElement(ProjectScopedTeamDetailView, { teamName: 'builders', isActive: true })
+    ));
+    await settle();
+    expect(visible().has('ptc-a-visible')).toBe(true);
+
+    state.selectedProjectId = 'project-b';
+    await act(async () => root.render(
+      React.createElement(ProjectScopedTeamDetailView, { teamName: 'builders', isActive: true })
+    ));
+    await settle();
+    expect(visible().has('ptc-a-visible')).toBe(false);
+    expect(visible().has('ptc-b-visible')).toBe(true);
+
+    await act(async () => root.render(
+      React.createElement(ProjectScopedTeamDetailView, { teamName: 'builders', isActive: false })
+    ));
+    expect(visible().has('ptc-b-visible')).toBe(false);
   });
 
   it('renders only the selected project native Tasks/Messages context (A→B→A)', async () => {
