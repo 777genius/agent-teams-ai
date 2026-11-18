@@ -436,7 +436,6 @@ export const ProjectScopedTeamDetailView = ({
             open
             teamName={teamName}
             members={[]}
-            // A new project has no verified runtime policy; require explicit approval.
             projectPermissionTeamName={null}
             defaultProjectPath={selectedProjectPath}
             provisioningError={error ?? null}
