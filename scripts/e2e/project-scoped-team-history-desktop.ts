@@ -246,11 +246,15 @@ async function reconnectRenderer(): Promise<boolean> {
 
 function visibleTask(alias: string, task: string): string {
   const selector = JSON.stringify('[data-team-name="' + alias + '"]');
-  // Tabs are intentionally kept mounted but hidden. querySelector() can select
-  // an earlier *hidden* tab, producing a false failure despite visible task data.
+  // Team tabs remain mounted. The grid also mounts actual cards with opacity-0
+  // behind a temporary skeleton overlay. Neither hidden tabs nor invisible
+  // task text prove that the user can see a project-specific Kanban card.
   return 'Array.from(document.querySelectorAll(' + selector + ')).some(' +
-    'node => node.getClientRects().length > 0 && node.textContent?.includes(' +
-    JSON.stringify(task) + '))';
+    'pane => pane.getClientRects().length > 0 && ' +
+    'Array.from(pane.querySelectorAll(".kanban-task-card")).some(card => ' +
+    'card.getClientRects().length > 0 && !card.closest(".opacity-0") && ' +
+    'getComputedStyle(card).visibility !== "hidden" && ' +
+    'card.textContent?.includes(' + JSON.stringify(task) + ')))';
 }
 
 function hasVisibleTeam(alias: string): string {
