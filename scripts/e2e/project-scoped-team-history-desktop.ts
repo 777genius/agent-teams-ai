@@ -396,7 +396,7 @@ async function verifyRetainedSharedAfterProjectIsolation(f: Fixture) {
   await json(path.join(teamDir, 'inboxes', 'user.json'), [{
     from: 'alice', to: 'user', text: 'LEGACY_SHARED_CHAT_ONLY',
     timestamp: new Date().toISOString(), read: false, messageId: randomUUID(),
-  ]);
+  }]);
 
   await cdp.evaluate('(async () => {' +
     'const f = ' + JSON.stringify(f) + ';' +
