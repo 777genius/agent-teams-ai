@@ -97,6 +97,7 @@ test('empty reports pass, errors and malformed reports fail closed', () => {
 const risk = {
   advisory: 'GHSA-fc5q-39xc-vjpf',
   package: 'picomatch',
+  mode: 'pnpm',
   versions: ['2.3.2', '4.0.4'],
   expires: '2026-12-15',
   reason: 'No patched release yet; reachable only through trusted build tooling globs.',
@@ -130,8 +131,89 @@ test('an accepted risk covers only its advisory, package and listed versions', (
     assessAuditReport(pnpmReport({ 1: riskAdvisory(), 2: unrelated() }), { accepted }).blocked,
     ['2']
   );
-  // npm reports carry no installed versions, so they never take the accepted-risk path.
+  // A pnpm risk never applies to an npm report.
   assert.deepEqual(assessAuditReport(npmReport(), { npm: true, accepted }).excepted, []);
+});
+
+const npmRisk = { ...risk, mode: 'npm', versions: ['2.3.2', '4.0.7'] };
+const npmNodes = {
+  'node_modules/picomatch': '4.0.7',
+  'node_modules/micromatch/node_modules/picomatch': '2.3.2',
+};
+const riskLeaf = {
+  name: 'picomatch',
+  dependency: 'picomatch',
+  severity: 'high',
+  url: `https://github.com/advisories/${risk.advisory}`,
+};
+// npm reports have no versions: the install paths are resolved through the lockfile.
+const landingReport = () => ({
+  auditReportVersion: 2,
+  vulnerabilities: {
+    picomatch: {
+      name: 'picomatch',
+      severity: 'high',
+      via: [riskLeaf],
+      nodes: Object.keys(npmNodes),
+    },
+    micromatch: { name: 'micromatch', severity: 'high', via: ['picomatch'] },
+    nuxt: { name: 'nuxt', severity: 'high', via: ['micromatch', 'builder'] },
+    builder: { name: 'builder', severity: 'high', via: ['nuxt'] },
+  },
+  metadata: { vulnerabilities: { high: 4, critical: 0 } },
+});
+const npmOptions = { npm: true, accepted: [npmRisk], lockVersions: npmNodes };
+
+test('an accepted npm risk covers only its advisory, package and lockfile versions', () => {
+  assert.equal(assessAuditReport(landingReport(), { npm: true }).blocked.length, 4);
+  assert.deepEqual(assessAuditReport(landingReport(), npmOptions), {
+    blocked: [],
+    excepted: ['picomatch', 'micromatch', 'nuxt', 'builder'],
+  });
+  // The pnpm entry does not apply to an npm report, and the npm entry not to a pnpm report.
+  assert.equal(
+    assessAuditReport(landingReport(), { ...npmOptions, accepted: [risk] }).blocked.length,
+    4
+  );
+  assert.deepEqual(
+    assessAuditReport(pnpmReport({ 1: riskAdvisory(['2.3.2', '4.0.7']) }), { accepted: [npmRisk] })
+      .blocked,
+    ['1']
+  );
+  // An unlisted version, an unknown install path or a missing lockfile entry is not covered.
+  for (const lockVersions of [
+    { ...npmNodes, 'node_modules/picomatch': '4.0.8' },
+    { ...npmNodes, 'node_modules/picomatch': undefined },
+    { 'node_modules/picomatch': '4.0.7' },
+    {},
+  ]) {
+    assert.equal(
+      assessAuditReport(landingReport(), { ...npmOptions, lockVersions }).blocked.length,
+      4
+    );
+  }
+  // A package without install paths cannot be verified.
+  const noNodes = landingReport();
+  delete noNodes.vulnerabilities.picomatch.nodes;
+  assert.equal(assessAuditReport(noNodes, npmOptions).blocked.length, 4);
+  // Another package or advisory with the same shape is not covered.
+  for (const leaf of [
+    { ...riskLeaf, name: 'other', dependency: 'other' },
+    { ...riskLeaf, url: 'https://github.com/advisories/GHSA-abcd-efgh-ijkl' },
+  ]) {
+    const other = landingReport();
+    other.vulnerabilities.picomatch.via = [leaf];
+    assert.equal(assessAuditReport(other, npmOptions).blocked.length, 4);
+  }
+  // Any other HIGH leaf in the tree still blocks its own chain.
+  const extra = landingReport();
+  extra.vulnerabilities.micromatch.via.push({
+    ...riskLeaf,
+    name: 'micromatch',
+    dependency: 'micromatch',
+    url: 'https://github.com/advisories/GHSA-abcd-efgh-ijkl',
+  });
+  assert.deepEqual(assessAuditReport(extra, npmOptions).blocked, ['micromatch', 'nuxt', 'builder']);
 });
 
 test('accepted risks expire and are validated', () => {
@@ -149,6 +231,8 @@ test('accepted risks expire and are validated', () => {
       { ...risk, expires: 'soon' },
       { ...risk, reason: 'x' },
       { ...risk, package: undefined },
+      { ...risk, mode: undefined },
+      { ...risk, mode: 'yarn' },
     ]) {
       write([broken]);
       assert.throws(() => loadAcceptedRisks({ file }), /Invalid audit report/);
