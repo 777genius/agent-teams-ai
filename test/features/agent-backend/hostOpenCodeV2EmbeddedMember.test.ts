@@ -8,6 +8,22 @@ import { afterEach, expect, test, vi } from 'vitest';
 import type { MemberProviderContext } from '../../../packages/legacy-agent-host/src/adapters/providers/MemberProvider';
 import type { OpenCodeV2OwnedSession } from '../../../packages/legacy-agent-host/src/adapters/providers/OpenCodeV2OwnedSession';
 
+const nativeMediaLimits = {
+  revision: 'opencode-2.1.4-native-media-v1',
+  maxBytes: 4 * 1024 * 1024,
+  maxCount: 5,
+  maxTotalBytes: 8 * 1024 * 1024,
+  videos: false,
+};
+const attachmentBinding: Parameters<NonNullable<MemberProviderContext['attachments']>['resolve']>[0] = {
+  trustedBinding: 'TEST-trusted-binding',
+  sessionRef: 'TEST-native-session',
+  inputId: 'TEST-input',
+  operationRef: 'TEST-operation',
+  fingerprint: 'b'.repeat(64),
+  reference: { artifactId: 'TEST-png', mimeType: 'image/png', byteLength: 1, digest: 'c'.repeat(64) },
+};
+
 const controlled = vi.hoisted(() => ({
   client: (): unknown => {
     throw new Error('TEST client unset');
@@ -253,12 +269,16 @@ test('seal, revoked owner or changed auth during catalog disposal cannot resolve
       images: true,
       documents: false,
       textFiles: false,
+      nativeMedia: {
+        ...nativeMediaLimits,
+        mimeTypes: ['image/png'],
+      },
     });
     const held = f.holdDispose();
     const pending = f
       .attachments()
       .resolve(
-        {} as Parameters<NonNullable<MemberProviderContext['attachments']>['resolve']>[0],
+        attachmentBinding,
         new AbortController().signal
       );
     const rejected = expect(pending).rejects.toMatchObject(
@@ -286,12 +306,13 @@ test('image capability is absent before native catalog attestation and disabled 
     images: false,
     documents: false,
     textFiles: false,
+    nativeMedia: { ...nativeMediaLimits, mimeTypes: [] },
   });
   expect(
     await f
       .attachments()
       .resolve(
-        {} as Parameters<NonNullable<MemberProviderContext['attachments']>['resolve']>[0],
+        attachmentBinding,
         new AbortController().signal
       )
   ).toBeUndefined();

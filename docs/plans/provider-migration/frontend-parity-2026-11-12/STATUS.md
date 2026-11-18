@@ -245,3 +245,25 @@ P9 не имеет подтверждённого конечного LOC до р
   не записываются; 257 rows / 64 KiB / 512-byte input limit сохранены. Четыре
   observer checks, strict scoped TS 7.0.2 и независимое media review PASS.
   Следующий original native run выполняется на чистом опубликованном срезе.
+
+- 18 ноября, actual native `747123a6`: source/build/archive gate прошёл;
+  coordination и business Host завершились с подтверждённым cleanup, Host exit 0.
+  Business `runtime.open` дошёл до проверки capability projection без сохранённого
+  runtime-open/consumer refusal. Исходный TEST validator отклонил новое поле
+  `nativeMedia`, поэтому ready assertion, первый business model request и DM
+  не достигнуты; полный сценарий по-прежнему INCOMPLETE.
+- 18 ноября, M1 fixture R2: optional `nativeMedia` проверяется закрытой схемой
+  из шести полей, с точной revision, whitelist MIME, modality consistency и
+  верхними пределами 4 MiB / 5 / 8 MiB. Прежние boolean/private-key/input
+  проверки сохранены; malformed, лишние и несовместимые поля отвергаются.
+  Existing attachment suite 12/12 и scoped strict TS 7.0.2 PASS. Два старых
+  app assertions учитывают только captured PNG capability и валидный TEST
+  binding; исходные seal/revoke/auth, no-byte-read и cleanup проверки сохранены.
+  Existing member suite 3/3 PASS после исправления fixtures; независимое R2 PASS.
+  Production код, deadlines и отрицательные lifecycle oracles не изменены.
+- 18 ноября, F1 UI prerequisites: точный Electron 44.10.1 / ABI 149 и rebuilt
+  better-sqlite3 прошли реальный in-memory SELECT 1. Original LinuxNodeExec и
+  captured Corepack 0.36.0 / pnpm 11.22.0 inputs подготовлены. Xvfb с исходной
+  XAUTHORITY успешно проверен по разрешённому harness localhost TCP пути.
+  GUI journey ещё не исполнялся; запланирован после native run без одновременной
+  тяжёлой нагрузки и изменения исходных deadlines.

@@ -50,8 +50,27 @@ export function assertSafeRuntimeProjection(value: unknown): void {
     assert.equal(typeof safe.nativePromptCurrent, 'boolean');
   if (Object.hasOwn(safe, 'attachmentCapabilities')) {
     const capabilities = record(safe.attachmentCapabilities);
-    assert.deepEqual(Object.keys(capabilities).sort(), ['documents', 'images', 'textFiles']);
-    assert.ok(Object.values(capabilities).every((value) => typeof value === 'boolean'));
+    const hasMedia = Object.hasOwn(capabilities, 'nativeMedia');
+    assert.deepEqual(Object.keys(capabilities).sort(),
+      hasMedia ? ['documents', 'images', 'nativeMedia', 'textFiles'] : ['documents', 'images', 'textFiles']);
+    assert.ok(['images', 'documents', 'textFiles'].every((key) => typeof capabilities[key] === 'boolean'));
+    if (hasMedia) {
+      const media = record(capabilities.nativeMedia);
+      assert.deepEqual(Object.keys(media).sort(), ['maxBytes', 'maxCount', 'maxTotalBytes', 'mimeTypes', 'revision', 'videos']);
+      assert.equal(media.revision, 'opencode-2.1.4-native-media-v1');
+      assert.equal(media.videos, false);
+      assert.ok(Array.isArray(media.mimeTypes));
+      const mimeTypes: unknown[] = media.mimeTypes;
+      assert.ok(mimeTypes.length <= 5 && new Set(mimeTypes).size === mimeTypes.length);
+      assert.ok(mimeTypes.every((mime) => typeof mime === 'string' &&
+        ['image/png', 'image/jpeg', 'image/gif', 'image/webp', 'application/pdf'].includes(mime)));
+      assert.equal(mimeTypes.some((mime) => typeof mime === 'string' && mime.startsWith('image/')), capabilities.images);
+      assert.equal(mimeTypes.includes('application/pdf'), capabilities.documents);
+      for (const [key, maximum] of [['maxBytes', 4 * 1024 * 1024], ['maxCount', 5], ['maxTotalBytes', 8 * 1024 * 1024]] as const) {
+        const limit = media[key];
+        assert.ok(typeof limit === 'number' && Number.isSafeInteger(limit) && limit >= 1 && limit <= maximum);
+      }
+    }
   }
   if (Object.hasOwn(safe, 'sessionCommands')) {
     assert.ok(Array.isArray(safe.sessionCommands) && safe.sessionCommands.length <= 4096);
