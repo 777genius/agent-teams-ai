@@ -1,4 +1,4 @@
-import { lazy, memo, Suspense, useCallback, useEffect, useMemo, useState } from 'react';
+import { lazy, memo, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
 import { recordRecentProjectOpenPaths } from '@features/recent-projects/renderer';
@@ -74,6 +74,7 @@ import {
   findTeamProjectSelectionTarget,
   resolveCreateTeamDefaultProjectPath,
   resolveTeamLaunchDefaultProjectPath,
+  resolveTeamListProjectPermissionAlias,
   resolveTeamProjectSelection,
   resolveTeamsProjectNavigationPath,
   teamMatchesProjectSelection,
@@ -947,6 +948,9 @@ export const TeamListView = memo(function TeamListView({
   const [launchDialogTeamName, setLaunchDialogTeamName] = useState('');
   const [launchDialogMembers, setLaunchDialogMembers] = useState<ResolvedTeamMember[]>([]);
   const [launchDialogDefaultPath, setLaunchDialogDefaultPath] = useState<string | undefined>();
+  const [launchDialogProjectPermissionTeamName, setLaunchDialogProjectPermissionTeamName] =
+    useState<string | null | undefined>();
+  const launchRequestIdRef = useRef(0);
 
   const handleLaunchTeam = useCallback(
     async (
@@ -957,10 +961,25 @@ export const TeamListView = memo(function TeamListView({
     ) => {
       e.stopPropagation();
       if (!projectPath) return;
+      const requestId = ++launchRequestIdRef.current;
+      const projectContextMode = teams.find((team) => team.teamName === teamName)?.projectContextMode;
+      let permissionTeamName: string | null | undefined;
+      if (projectContextMode === 'per_project') {
+        try {
+          const context = await api.teams.getProjectContextView(teamName, projectPath);
+          permissionTeamName = resolveTeamListProjectPermissionAlias(teamName, projectPath, context);
+        } catch {
+          // An unverified project runtime never inherits auto-approval from the logical team.
+          permissionTeamName = null;
+        }
+      }
+      if (requestId !== launchRequestIdRef.current) return;
+      setLaunchDialogProjectPermissionTeamName(permissionTeamName);
       try {
         const data = await api.teams.getData(teamName, {
           includeMemberBranches: false,
         });
+        if (requestId !== launchRequestIdRef.current) return;
         setLaunchDialogMode(mode);
         setLaunchDialogTeamName(teamName);
         setLaunchDialogMembers(resolveLaunchDialogMembers(data.members ?? []));
@@ -980,6 +999,7 @@ export const TeamListView = memo(function TeamListView({
         // Logical per-project teams have no native config.json. Recover their
         // authored roster instead of opening a relaunch dialog with no members.
         const saved = await api.teams.getSavedRequest(teamName).catch(() => null);
+        if (requestId !== launchRequestIdRef.current) return;
         setLaunchDialogMode(mode);
         setLaunchDialogTeamName(teamName);
         setLaunchDialogMembers(resolveSavedLaunchDialogMembers(saved?.members ?? []));
@@ -987,7 +1007,7 @@ export const TeamListView = memo(function TeamListView({
         setLaunchDialogOpen(true);
       }
     },
-    []
+    [teams]
   );
 
   const handleLaunchSubmit = useCallback(
@@ -1198,6 +1218,8 @@ export const TeamListView = memo(function TeamListView({
           mode="relaunch"
           open={launchDialogOpen}
           teamName={launchDialogTeamName}
+          projectPermissionTeamName={launchDialogProjectPermissionTeamName}
+          rosterReadOnly={launchDialogProjectPermissionTeamName !== undefined}
           members={launchDialogMembers}
           defaultProjectPath={launchDialogDefaultPath}
           provisioningError={provisioningErrorByTeam[launchDialogTeamName] ?? null}
@@ -1211,6 +1233,8 @@ export const TeamListView = memo(function TeamListView({
           mode="launch"
           open={launchDialogOpen}
           teamName={launchDialogTeamName}
+          projectPermissionTeamName={launchDialogProjectPermissionTeamName}
+          rosterReadOnly={launchDialogProjectPermissionTeamName !== undefined}
           members={launchDialogMembers}
           defaultProjectPath={launchDialogDefaultPath}
           provisioningError={provisioningErrorByTeam[launchDialogTeamName] ?? null}

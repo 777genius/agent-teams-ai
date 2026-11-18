@@ -6738,6 +6738,48 @@ describe('LaunchTeamDialog', () => {
   );
 
 
+  it('fails closed to manual approval when a team-list project runtime is unverified', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    vi.mocked(api.teams.getSavedRequest).mockResolvedValue({
+      teamName: 'team-alpha',
+      cwd: '/tmp/project',
+      providerId: 'anthropic',
+      model: 'opus',
+      members: [],
+      skipPermissions: true,
+    });
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    try {
+      await act(async () => {
+        root.render(
+          React.createElement(LaunchTeamDialog, {
+            mode: 'relaunch',
+            open: true,
+            teamName: 'team-alpha',
+            projectPermissionTeamName: null,
+            members: [],
+            defaultProjectPath: '/tmp/project',
+            provisioningError: null,
+            activeTeams: [],
+            onClose: vi.fn(),
+            onRelaunch: vi.fn(async () => {}),
+          })
+        );
+        await flush();
+      });
+      expect(api.teams.getSavedRequest).toHaveBeenCalledWith('team-alpha');
+      expect(
+        host.querySelector('[data-testid="skip-permissions"]')?.getAttribute('data-checked')
+      ).toBe('false');
+    } finally {
+      await act(async () => root.unmount());
+      host.remove();
+      vi.mocked(api.teams.getSavedRequest).mockReset().mockResolvedValue(null);
+    }
+  });
+
   it('does not carry auto-approval from project A into another relaunch project', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     vi.mocked(api.teams.getSavedRequest).mockImplementation(async (teamName) => ({

@@ -1,5 +1,6 @@
 import { normalizePathForMatching } from '@renderer/utils/pathNormalize';
 
+import type { TeamProjectContextView } from '@features/team-project-context/contracts';
 import type { Project, RepositoryGroup } from '@renderer/types/data';
 import type { TeamSummary } from '@shared/types';
 
@@ -156,6 +157,26 @@ export function resolveTeamLaunchDefaultProjectPath(
   savedProjectPath: string | null | undefined
 ): string {
   return mode === 'per_project' ? selectedProjectPath : (savedProjectPath ?? selectedProjectPath);
+}
+
+/**
+ * Only a backend-verified runtime for the selected project may supply relaunch permissions.
+ * null makes missing, stale, or unowned contexts fall back to manual approval.
+ */
+export function resolveTeamListProjectPermissionAlias(
+  logicalTeamName: string,
+  selectedProjectPath: string,
+  context: TeamProjectContextView
+): string | null {
+  if (
+    context.mode !== 'per_project' ||
+    context.state !== 'ready' ||
+    context.executionTeamName === logicalTeamName ||
+    normalizePathForMatching(context.projectPath) !== normalizePathForMatching(selectedProjectPath)
+  ) {
+    return null;
+  }
+  return context.executionTeamName;
 }
 
 export function resolveCreateTeamDefaultProjectPath({

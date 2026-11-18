@@ -287,9 +287,9 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
   const effectiveTeamName = propsTeamName || selectedTeamName;
   const projectPermissionTeamName =
     props.mode === 'schedule' ? undefined : props.projectPermissionTeamName;
-  const launchHydrationKey = projectPermissionTeamName
-    ? `${effectiveTeamName}:${projectPermissionTeamName}`
-    : effectiveTeamName;
+  const launchHydrationKey = projectPermissionTeamName === undefined
+    ? effectiveTeamName
+    : `${effectiveTeamName}:${projectPermissionTeamName ?? 'unresolved'}`;
   const defaultProjectPath = isLaunchMode ? props.defaultProjectPath : undefined;
   const [launchHydratedTeamName, setLaunchHydratedTeamName] = useState<string | null>(null);
   const needsTeamSelector = isSchedule && !propsTeamName;
@@ -760,7 +760,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
   };
   const requireExplicitPermissionsForOtherProject = (path: string): void => {
     // Never carry auto-approval from an owned runtime into a different project.
-    if (projectPermissionTeamName &&
+    if (projectPermissionTeamName !== undefined &&
         normalizePath(path) !== normalizePath(defaultProjectPath ?? '')) {
       setSkipPermissions(false);
     }
@@ -985,13 +985,16 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
         savedRequest = null;
       }
       let projectSkipPermissions: boolean | undefined;
-      if (projectPermissionTeamName && projectPermissionTeamName !== effectiveTeamName) {
-        try {
-          const projectSavedRequest = await api.teams.getSavedRequest(projectPermissionTeamName);
-          // Missing or unreadable project policy must never enable auto-approval.
-          projectSkipPermissions = projectSavedRequest?.skipPermissions === true;
-        } catch {
-          projectSkipPermissions = false;
+      if (projectPermissionTeamName !== undefined) {
+        // No verified runtime means manual approval, never the logical team's stale policy.
+        projectSkipPermissions = false;
+        if (projectPermissionTeamName && projectPermissionTeamName !== effectiveTeamName) {
+          try {
+            const projectSavedRequest = await api.teams.getSavedRequest(projectPermissionTeamName);
+            projectSkipPermissions = projectSavedRequest?.skipPermissions === true;
+          } catch {
+            projectSkipPermissions = false;
+          }
         }
       }
       // Edits made while the request was in flight win over it, but an unrelated control is
@@ -2662,7 +2665,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
           {!usesSavedTeamRuntime ? <ProjectPathSelector
             cwdMode={cwdMode}
             onCwdModeChange={(mode) => {
-              if (projectPermissionTeamName && mode !== cwdMode) setSkipPermissions(false);
+              if (projectPermissionTeamName !== undefined && mode !== cwdMode) setSkipPermissions(false);
               setCwdMode(mode);
             }}
             selectedProjectPath={selectedProjectPath}

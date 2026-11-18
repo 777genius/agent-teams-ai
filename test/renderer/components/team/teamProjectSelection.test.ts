@@ -4,6 +4,7 @@ import {
   resolveTeamProjectSelection,
   resolveTeamsProjectNavigationPath,
   resolveTeamLaunchDefaultProjectPath,
+  resolveTeamListProjectPermissionAlias,
   teamMatchesProjectSelection,
 } from '@renderer/components/team/teamProjectSelection';
 import { describe, expect, it } from 'vitest';
@@ -162,6 +163,29 @@ describe('teamProjectSelection', () => {
     expect(resolveTeamLaunchDefaultProjectPath(
       undefined, '/Users/test/project-b', null
     )).toBe('/Users/test/project-b');
+  });
+
+  it('uses only a verified runtime owned by the selected project for relaunch permissions', () => {
+    const ready = {
+      mode: 'per_project' as const,
+      state: 'ready' as const,
+      executionTeamName: 'ptc-project-b',
+      workContextId: 'ctx-b',
+      projectPath: '/Users/test/project-b',
+    };
+    expect(resolveTeamListProjectPermissionAlias('logical-team', '/users/test/project-b/', ready))
+      .toBe('ptc-project-b');
+    expect(resolveTeamListProjectPermissionAlias('logical-team', '/Users/test/project-a', ready))
+      .toBeNull();
+    expect(resolveTeamListProjectPermissionAlias('logical-team', '/Users/test/project-b', {
+      ...ready, executionTeamName: 'logical-team',
+    })).toBeNull();
+    expect(resolveTeamListProjectPermissionAlias('logical-team', '/Users/test/project-b', {
+      mode: 'per_project', state: 'pending',
+    })).toBeNull();
+    expect(resolveTeamListProjectPermissionAlias('logical-team', '/Users/test/project-b', {
+      mode: 'shared', state: 'ready', executionTeamName: 'logical-team',
+    })).toBeNull();
   });
 
   it('uses priority project path as a create default fallback', () => {
