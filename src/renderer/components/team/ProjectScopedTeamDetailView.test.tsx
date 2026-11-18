@@ -72,13 +72,15 @@ vi.mock('./TeamHistoryModePicker', () => ({
 }));
 vi.mock('./dialogs/LaunchTeamDialog', () => ({
   LaunchTeamDialog: ({
-    onLaunch, teamName, defaultProjectPath,
+    onLaunch, teamName, defaultProjectPath, projectPermissionTeamName,
   }: {
     onLaunch: (request: { teamName: string; cwd: string; providerId: 'anthropic' }) => Promise<void>;
     teamName: string;
     defaultProjectPath: string;
+    projectPermissionTeamName?: string | null;
   }) => React.createElement('button', {
     'data-testid': 'launch-with-provider',
+    'data-permission-policy': projectPermissionTeamName === null ? 'manual' : 'inherited',
     onClick: () => { void onLaunch({
       teamName, cwd: defaultProjectPath, providerId: 'anthropic',
     }); },
@@ -359,6 +361,8 @@ describe('ProjectScopedTeamDetailView project switching', () => {
     await vi.waitFor(() => expect(
       host.querySelector('[data-testid="launch-with-provider"]')
     ).not.toBeNull());
+    expect(host.querySelector('[data-testid="launch-with-provider"]')?.getAttribute('data-permission-policy'))
+      .toBe('manual');
     expect(launchTeam).not.toHaveBeenCalled();
     getView.mockResolvedValue(native('ptc-b', '/TEST/b'));
     launchTeam.mockResolvedValue({ runId: 'b' });
