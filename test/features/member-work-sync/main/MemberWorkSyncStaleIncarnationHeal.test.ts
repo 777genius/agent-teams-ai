@@ -542,7 +542,7 @@ describe('targeted self-heal of status rows left by an earlier team identity', (
         messageKind: 'member_work_sync_nudge',
         source: 'member-work-sync',
         actionMode: 'do',
-        workSyncIntent: 'normal',
+        workSyncIntent: 'agenda_sync',
         text: 'old identity',
         taskRefs: [],
       },
