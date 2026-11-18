@@ -41,6 +41,8 @@ export interface StaleIncarnationHealInput {
   /** Current incarnation, taken from the lifecycle owner inside its fence. */
   incarnation: string;
   backend: 'sqlite' | 'json';
+  /** SQLite integrity from the selected backend; absent evidence never authorizes rebinding. */
+  backendIntegrity: 'ok' | 'recovered' | null;
   /** The preparation failure that triggered this attempt. */
   error: unknown;
   gateway: MemberWorkSyncStorageGateway;
@@ -489,18 +491,24 @@ export async function healStaleIncarnationStatuses(
         plan.refusal = 'primary_retained_state_invalid';
       }
     }
-    if (plan.replica && input.backend === 'sqlite' && !plan.refusal) {
+    if (plan.replica?.state === 'clean' && input.backend === 'sqlite' && !plan.refusal) {
       // Publication must include the complete surviving SQLite snapshot, not
       // just the subset retained from the foreign replica. Otherwise a crash
       // before preparation retry would expose missing SQLite-only members to
       // JSON fallback as authoritative absence.
-      try {
-        if (!plan.primaryAfter) throw new Error('Missing primary snapshot');
-        const canonical = recordsToSnapshot(input.teamName, plan.primaryAfter);
-        plan.replica.snapshot = mergeDomainSnapshots(canonical, plan.replica.snapshot);
-        validateMemberWorkSyncAuthoritySnapshot(identity, plan.replica.snapshot);
-      } catch {
-        plan.refusal = 'replica_continuity_unverified';
+      if (input.backendIntegrity !== 'ok') {
+        // After corruption recovery a successfully read, empty SQLite database
+        // is not proof that previously committed statuses never existed.
+        plan.refusal = 'sqlite_primary_continuity_unverified';
+      } else {
+        try {
+          if (!plan.primaryAfter) throw new Error('Missing primary snapshot');
+          const canonical = recordsToSnapshot(input.teamName, plan.primaryAfter);
+          plan.replica.snapshot = mergeDomainSnapshots(canonical, plan.replica.snapshot);
+          validateMemberWorkSyncAuthoritySnapshot(identity, plan.replica.snapshot);
+        } catch {
+          plan.refusal = 'replica_continuity_unverified';
+        }
       }
     }
     if (plan.entries.length === 0 && !plan.replica && !plan.refusal) return 'not_applicable';

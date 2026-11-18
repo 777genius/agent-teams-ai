@@ -63,9 +63,11 @@ Preparation removes such state automatically, once per preparation attempt, only
 holds: the team's `config.json` `_backupIdentityId` equals the current incarnation, no purge is
 pending, the stale status is older than the current team directory based on a verified filesystem
 creation time (not a ctime fallback), and the call is not a backup restore or preflight. Only status entries written under another incarnation are removed (SQLite
-rows by an exact-key/content guarded delete transaction, per-member and legacy status files and pre-sqlite archives are
-moved aside as `*.stale-incarnation.<stamp>`, the replica is rewritten only after reconciling with the surviving SQLite state, or refused when
-that state cannot be verified). Report intents, outbox,
+rows by an exact-key/content guarded delete transaction; per-member active files and their pre-SQLite
+archives are moved aside as `*.stale-incarnation.<stamp>`; legacy status envelopes (including archived
+generations) are rewritten in place to preserve unrelated metrics, with the originals retained in
+the quarantine record. A clean replica is rebound only after reconciling with a healthy SQLite
+primary, or refused when continuity cannot be verified). Report intents, outbox,
 metrics, journals, `report-token-secret.json`, current-incarnation status and other teams are never
 touched. Everything removed is recorded first in
 `.member-work-sync/stale-incarnation-<stamp>.json`. If any condition is unproven the failure stays

@@ -91,7 +91,11 @@ afterEach(async () => {
 
 async function setup(
   kind: 'json' | 'sqlite' = 'sqlite',
-  opts: { config?: Record<string, unknown> | null; fallbackRequiresReplica?: boolean } = {}
+  opts: {
+    config?: Record<string, unknown> | null;
+    fallbackRequiresReplica?: boolean;
+    integrity?: 'ok' | 'recovered';
+  } = {}
 ) {
   const root = await mkdtemp(join(tmpdir(), 'mws-stale-heal-'));
   roots.push(root);
@@ -108,7 +112,7 @@ async function setup(
           driver: 'better-sqlite3',
           databasePath: join(root, 'app.db'),
           schemaVersion: 4,
-          integrity: 'ok',
+          integrity: opts.integrity ?? 'ok',
         })
       : Promise.reject(new Error('test JSON backend'))
   );
@@ -325,6 +329,7 @@ describe('targeted self-heal of status rows left by an earlier team identity', (
       teamName: TEAM,
       incarnation: CURRENT,
       backend: 'sqlite',
+      backendIntegrity: 'ok',
       error: new MemberWorkSyncStatusDecodeError('incarnation_mismatch', FOREIGN),
       gateway: h.gateway,
       paths: h.paths,
@@ -375,6 +380,7 @@ describe('targeted self-heal of status rows left by an earlier team identity', (
       teamName: TEAM,
       incarnation: CURRENT,
       backend: 'sqlite',
+      backendIntegrity: 'ok',
       error: new MemberWorkSyncStatusDecodeError('incarnation_mismatch', FOREIGN),
       gateway: h.gateway,
       paths: h.paths,
@@ -572,6 +578,33 @@ describe('targeted self-heal of status rows left by an earlier team identity', (
     await expect(h.store.restoreValidatedBackup(candidate)).rejects.toThrow();
     expect(await primary(h)).toEqual(before);
     expect(await quarantineFiles(h)).toEqual([]);
+  });
+
+  it('refuses clean replica promotion when SQLite was recreated after corruption', async () => {
+    const h = await setup('sqlite', { integrity: 'recovered' });
+    await writeReplica(h, 'clean', FOREIGN, snap([mk('alice', FOREIGN)]));
+    const replicaPath = h.paths.getSqliteFallbackReplicaPath(TEAM);
+    const before = await readFile(replicaPath, 'utf8');
+    await expect(prepare(h)).rejects.toThrow();
+    expect(await primary(h)).toMatchObject({ statuses: [] });
+    expect(await readFile(replicaPath, 'utf8')).toBe(before);
+    expect(await quarantineFiles(h)).toEqual([]);
+    expect(h.warn).toHaveBeenCalledWith(
+      'member-work-sync stale status cleanup refused',
+      expect.objectContaining({ reason: 'sqlite_primary_continuity_unverified' })
+    );
+  });
+
+  it('does not complete a dirty continuity proof by copying SQLite-only statuses', async () => {
+    const h = await setup('sqlite');
+    await importPrimary(h, [mk('bob', CURRENT)]);
+    const before = await primary(h);
+    await writeReplica(h, 'dirty', CURRENT, snap([mk('alice', FOREIGN)]));
+    await expect(prepare(h)).rejects.toThrow();
+    const replica = JSON.parse(await readFile(h.paths.getSqliteFallbackReplicaPath(TEAM), 'utf8'));
+    expect(replica).toMatchObject({ state: 'dirty', incarnation: CURRENT });
+    expect(replica.snapshot.statuses).toEqual([]);
+    expect(await primary(h)).toEqual(before);
   });
 
   it('refuses a dirty replica from another incarnation (continuity cannot be proven)', async () => {
@@ -825,6 +858,7 @@ describe('targeted self-heal of status rows left by an earlier team identity', (
       teamName: TEAM,
       incarnation: CURRENT,
       backend: 'json',
+      backendIntegrity: null,
       error: new MemberWorkSyncStatusDecodeError('incarnation_mismatch', FOREIGN),
       gateway: h.gateway,
       paths: h.paths,
@@ -850,6 +884,7 @@ describe('targeted self-heal of status rows left by an earlier team identity', (
       teamName: TEAM,
       incarnation: CURRENT,
       backend: 'sqlite',
+      backendIntegrity: 'ok',
       error: new MemberWorkSyncStatusDecodeError('incarnation_mismatch', FOREIGN),
       gateway: h.gateway,
       paths: h.paths,
@@ -926,6 +961,7 @@ describe('targeted self-heal of status rows left by an earlier team identity', (
       teamName: TEAM,
       incarnation: CURRENT,
       backend: 'sqlite',
+      backendIntegrity: 'ok',
       error: new MemberWorkSyncStatusDecodeError('incarnation_mismatch', FOREIGN),
       gateway: h.gateway,
       paths: h.paths,
