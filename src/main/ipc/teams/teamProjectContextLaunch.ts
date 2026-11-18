@@ -1,12 +1,12 @@
 import { TeamMetaStore } from '@main/services/team/TeamMetaStore';
-import { rememberProjectRunIdentity } from './teamProjectContextProgressIdentity';
 
 import { parseOptionalTeamEffort, parseOptionalTeamFastMode } from '../teamIpcRequestParsers';
 
 import { createProjectContextRuntimeParts } from './teamProjectContextCreate';
+import { rememberProjectRunIdentity } from './teamProjectContextProgressIdentity';
 
-import type { ProjectTeamRuntimePorts } from './teamProjectContextCreate';
 import type { IpcResult, TeamLaunchRequest, TeamLaunchResponse, TeamProvisioningProgress } from '@shared/types';
+import type { ProjectTeamRuntimePorts } from './teamProjectContextCreate';
 
 export type ProjectContextProgressMapper = (
   progress: TeamProvisioningProgress,

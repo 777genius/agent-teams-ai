@@ -1,7 +1,5 @@
 import * as path from 'node:path';
 
-import { rememberProjectRunIdentity } from './teamProjectContextProgressIdentity';
-
 import {
   TeamProjectContextCreateCoordinator,
   TeamProjectContextDraftMaterializer,
@@ -15,6 +13,8 @@ import {
 } from '@main/services/team/provisioning/TeamProvisioningProfileOwnership';
 import { TeamMetaStore } from '@main/services/team/TeamMetaStore';
 import { getTeamsBasePath } from '@main/utils/pathDecoder';
+
+import { rememberProjectRunIdentity } from './teamProjectContextProgressIdentity';
 
 import type {
   TeamProvisioningRunApi,

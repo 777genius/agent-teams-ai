@@ -229,8 +229,8 @@ import { teamMessageNotificationScanner } from './teams/teamMessageNotificationS
 import { createMessagesPageHandler } from './teams/teamMessagesPageHandler';
 import { TeamPermanentDeletionTransactionCoordinator } from './teams/TeamPermanentDeletionTransactionCoordinator';
 import { createTeamWithProjectContext } from './teams/teamProjectContextCreate';
-import { projectPublicProvisioningProgress } from './teams/teamProjectContextProgressIdentity';
 import { buildTeamProgressReporter, withPreparedContextLaunch } from './teams/teamProjectContextLaunch';
+import { projectPublicProvisioningProgress } from './teams/teamProjectContextProgressIdentity';
 import { discardQueuedUserMessages, listQueuedUserMessages } from './teams/teamQueuedUserMessages';
 import { createTeamSoftDeleteRequests } from './teams/teamSoftDeleteFlow';
 import { withTimeoutValue } from './teams/withTimeoutValue';
