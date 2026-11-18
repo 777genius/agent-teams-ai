@@ -5,6 +5,7 @@ import { chmod, lstat, mkdir, mkdtemp, readFile, realpath, rm, symlink, writeFil
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { test, type TestContext } from 'node:test';
+import { runInNewContext } from 'node:vm';
 
 const source = join(import.meta.dirname, '../../tools/owned-process-broker/fixtures/legacyBootstrapPeer.mjs');
 const prompt = 'TEST_CURRENT_LEGACY_SOLO_ONE';
@@ -77,12 +78,72 @@ test('finite legacy bootstrap consumes original-format private input and never w
 test('closed finite version, runtime/model metadata and exact PONG checks never create a source config', async t => {
   const f = await fixture(t);
   for (const args of [['--version'], ['runtime', 'status', '--json', '--summary', '--provider', 'anthropic'],
+    ['runtime', 'status', '--json', '--provider', 'anthropic', '--summary'],
+    ['runtime', 'status', '--json', '--provider', 'anthropic'],
     ['model', 'list', '--json', '--provider', 'anthropic'], ['auth', 'status', '--json', '--provider', 'anthropic'],
     ['-p', 'Output only the single word PONG.', '--output-format', 'text', '--model', 'haiku', '--max-turns', '1', '--no-session-persistence']]) {
     const result = f.run(args); assert.equal(result.status, 0, result.stderr);
+    if (args[0] === 'runtime') assert.equal(JSON.parse(result.stdout).providers.anthropic.statusCheckOutcome, 'authoritative');
   }
+  const journal = join(f.root, 'finite-legacy-peer.ndjson'), before = await readFile(journal, 'utf8');
+  assert.deepEqual(before.trim().split('\n').map(line => JSON.parse(line)).filter(value => value.operation === 'runtime')
+    .map(value => value.args), [['--json', '--summary', '--provider', 'anthropic'],
+      ['--json', '--provider', 'anthropic', '--summary'], ['--json', '--provider', 'anthropic']]);
+  for (const args of [
+    ['runtime', 'status', '--json', '--summary', '--provider', 'anthropic', '--summary'],
+    ['runtime', 'status', '--json', '--summary', '--summary', '--provider', 'anthropic'],
+    ['runtime', 'status', '--json', '--provider', 'anthropic', '--summary', '--summary'],
+    ['runtime', 'status', '--json', '--provider', 'anthropic', '--summary', '--unexpected'],
+    ['runtime', 'status', '--json', '--provider', 'codex', '--summary'],
+    ['runtime', 'status', '--json', '--provider', 'opencode', '--summary'],
+    ['runtime', 'status', '--json', '--provider', '--summary'],
+    ['runtime', 'status', '--json', '--provider', 'anthropic', '--summary', 'anthropic'],
+    ['runtime', 'status', '--summary', '--json', '--provider', 'anthropic'],
+    ['runtime', 'status', '--json', '--provider', 'anthropic', '--provider', 'anthropic', '--summary'],
+    ['runtime', 'status', '--json', '--provider', 'anthropic', '--summary=true'],
+    ...(['model', 'auth'] as const).flatMap(kind => [
+      [kind, kind === 'model' ? 'list' : 'status', '--json', '--summary', '--provider', 'anthropic'],
+      [kind, kind === 'model' ? 'list' : 'status', '--json', '--provider', 'anthropic', '--summary'],
+    ]),
+  ]) {
+    const result = f.run(args); assert.equal(result.status, 1, JSON.stringify(args));
+    assert.equal(result.signal, null); assert.equal(result.error, undefined);
+    assert.equal(result.stdout, ''); assert.match(result.stderr, /AssertionError/);
+  }
+  assert.equal(await readFile(journal, 'utf8'), before, 'rejected metadata flags emit no peer effects');
   await assert.rejects(lstat(join(f.team, 'config.json')), { code: 'ENOENT' });
   assert.equal(JSON.parse(await readFile(f.markerPath, 'utf8')).consumerPid, undefined);
+});
+
+test('original Main provider-scoped summary argv is admitted without finite bootstrap authority', async t => {
+  const f = await fixture(t);
+  const main = await readFile(new URL('../../src/main/services/runtime/ClaudeMultimodelBridgeService.ts', import.meta.url), 'utf8');
+  const begin = "    const args = ['runtime', 'status', '--json', '--provider', providerId];";
+  const end = '    const timeout = this.getProviderStatusRuntimeTimeout';
+  assert.equal(main.split(begin).length, 2); assert.equal(main.split(end).length, 2);
+  const block = main.slice(main.indexOf(begin), main.indexOf(end));
+  const expectedArgs: string[][] = [];
+  for (const summary of [true, false]) {
+    // Execute only the actual Main argument builder, with no service/process/IO methods available.
+    const args = Array.from(runInNewContext('(() => {' + block + 'return args;})()', {
+      providerId: 'anthropic', options: { summary }, context: { projectArgs: [] },
+    }) as string[]);
+    assert.deepEqual(args, ['runtime', 'status', '--json', '--provider', 'anthropic', ...(summary ? ['--summary'] : [])]);
+    expectedArgs.push(args.slice(2));
+    const result = f.run(args); assert.equal(result.status, 0, result.stderr);
+    const response = JSON.parse(result.stdout);
+    assert.deepEqual(Object.keys(response.providers), ['anthropic']);
+    assert.equal(response.providers.anthropic.supported, true);
+    assert.equal(response.providers.anthropic.statusCheckOutcome, 'authoritative');
+  }
+  const effects = (await readFile(join(f.root, 'finite-legacy-peer.ndjson'), 'utf8')).trim().split('\n').map(line => JSON.parse(line));
+  assert.deepEqual(effects.map(row => [row.event, row.operation, row.args]),
+    expectedArgs.map(args => ['metadata-control', 'runtime', args]));
+  assert.equal(JSON.parse(await readFile(f.markerPath, 'utf8')).consumerPid, undefined);
+  assert.equal(await readFile(f.promptPath, 'utf8'), deferredPrompt);
+  assert.deepEqual(JSON.parse(await readFile(f.specPath, 'utf8')), f.spec);
+  for (const name of ['config.json', 'launch-state.json', 'launch-freshness.json', 'launch-stopped.json', 'nativeRelease.json'])
+    await assert.rejects(lstat(join(f.team, name)), { code: 'ENOENT' });
 });
 
 for (const scenario of ['extra-cli', 'wrong-provider', 'host-descriptor', 'outside-cwd', 'mixed-roster', 'wrong-prompt', 'wrong-profile-prefix', 'symlink-meta', 'source-config-present', 'world-writable-meta'] as const) {

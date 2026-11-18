@@ -9,8 +9,11 @@ function installScheduleOptionObservation(browser, document, option, point, expe
   const record = { version: 1, expectedTeamName, before: null, after: null,
     events: [], eventsCapped: false, finished: null, setup: 'pending', cleanupAttempted: false, cleanupComplete: false };
   const listeners = [];
+  const nodeIds = new WeakMap();
+  let nextNodeId = 0;
   let disposed = false;
   let trigger = null;
+  let popup = null;
   const safely = (read) => { try { return read(); } catch { return null; } };
   const boolean = (value) => typeof value === 'boolean' ? value : null;
   const number = (value) => Number.isFinite(value) && Math.abs(value) <= 1_000_000 ? value : null;
@@ -20,6 +23,48 @@ function installScheduleOptionObservation(browser, document, option, point, expe
     const name = safely(() => node?.tagName);
     return ['BUTTON', 'INPUT', 'DIV', 'SPAN', 'P', 'BODY', 'HTML'].includes(name) ? name : name ? 'other' : null;
   };
+  // IDs identify only retained DOM objects within this observer. Never emit DOM
+  // text, attributes, selectors, or a foreign team's name in event diagnostics.
+  const nodeId = (node) => safely(() => {
+    if (!node || typeof node !== 'object') return null;
+    if (nodeIds.has(node)) return nodeIds.get(node);
+    if (nextNodeId === 64) return null;
+    const id = ++nextNodeId;
+    nodeIds.set(node, id);
+    return id;
+  });
+  const box = (node) => safely(() => {
+    const rect = node?.getBoundingClientRect();
+    return rect ? [rect.left, rect.top, rect.width, rect.height].map(number) : null;
+  });
+  const item = (node) => safely(() => {
+    for (let depth = 0; node && depth < 8; node = node.parentElement, depth++) {
+      if (node.getAttribute?.('role') === 'option') return node;
+    }
+    return null;
+  });
+  const node = (element) => {
+    const optionAncestor = item(element);
+    return { id: nodeId(element), tag: tag(element), connected: safely(() => boolean(element?.isConnected)),
+      box: box(element), item: nodeId(optionAncestor), intended: same(optionAncestor, option), inPopup: contains(popup, element) };
+  };
+  const scroll = (element) => safely(() => {
+    const rows = [];
+    let depth = 0;
+    for (; element && depth < 8; element = element.parentElement, depth++) {
+      if (element.scrollTop || element.scrollLeft || element.scrollHeight > element.clientHeight || element.scrollWidth > element.clientWidth) {
+        if (rows.length === 3) return { rows, capped: true };
+        // Each row is [observer node ID, scrollLeft, scrollTop].
+        rows.push([nodeId(element), number(element.scrollLeft), number(element.scrollTop)]);
+      }
+    }
+    return { rows, capped: Boolean(element) };
+  });
+  const layout = (target, hit) => ({
+    intended: { id: nodeId(option), box: box(option) }, target: node(target), hit: node(hit),
+    scroll: { intended: scroll(option), hit: scroll(hit),
+      viewport: [browser.scrollX, browser.scrollY, browser.innerWidth, browser.innerHeight].map(number) },
+  });
   const state = () => {
     const currentTrigger = safely(() => document.querySelector(triggerSelector));
     const focus = safely(() => document.activeElement);
@@ -75,7 +120,10 @@ function installScheduleOptionObservation(browser, document, option, point, expe
       const hit = x === null || y === null ? null : safely(() => document.elementFromPoint(x, y));
       record.events.push({ kind, phase, trusted: boolean(event.isTrusted), prevented: boolean(event.defaultPrevented),
         targetTag: tag(target), targetSameOption: same(option, target), targetInOption: contains(option, target),
-        targetInTrigger: contains(trigger, target), x, y, hitInOption: contains(option, hit), state: state() });
+        targetInTrigger: contains(trigger, target), x, y, hitInOption: contains(option, hit), state: state(),
+        // Capture-phase geometry; keep the original bubble state
+        // and the existing 12-event / 12 KiB bounds without duplicate geometry.
+        layout: phase === 'capture' ? safely(() => layout(target, hit)) : null });
     } catch { /* A failed observation cannot affect delivery or the original wait. */ }
   };
   const recorder = Object.freeze({
@@ -95,7 +143,7 @@ function installScheduleOptionObservation(browser, document, option, point, expe
   try {
     trigger = document.querySelector(triggerSelector);
     const popupId = trigger?.getAttribute('aria-controls');
-    const popup = typeof popupId === 'string' && popupId.length <= 256 ? document.getElementById(popupId) : null;
+    popup = typeof popupId === 'string' && popupId.length <= 256 ? document.getElementById(popupId) : null;
     record.before = { state: state(), geometry: geometry(),
       optionRoleMatches: option?.getAttribute('role') === 'option', optionInTriggerPopup: contains(popup, option),
       triggerInScheduleDialog: contains(document.querySelector('[role=dialog] #schedule-label')?.closest('[role=dialog]'), trigger) };

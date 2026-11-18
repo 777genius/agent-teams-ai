@@ -6,7 +6,8 @@ import { createContext, runInContext } from 'node:vm';
 import { observeScheduleTeamSelection, scheduleOptionObservationSource } from './teams-create-page-schedule-observation.mjs';
 
 const teamName = 'teams-create-page-e2e-test';
-function fixture({ setupFailure = false, clickFailure = null, waitFailure = null, readFailure = false } = {}) {
+function fixture({ setupFailure = false, clickFailure = null, waitFailure = null, readFailure = false,
+  beforeEvents = () => {}, eventCycles = 1 } = {}) {
   const listeners = [], calls = [], options = [];
   let registrations = 0, selected = false, removed = 0, snapshot;
   const option = {
@@ -39,15 +40,18 @@ function fixture({ setupFailure = false, clickFailure = null, waitFailure = null
       if (index >= 0) { listeners.splice(index, 1); removed++; }
     },
   };
-  const browser = {}, renderer = createContext({ window: browser, document, element: option, target: { x: 50, y: 30 } });
+  const browser = { scrollX: 0, scrollY: 0, innerWidth: 1024, innerHeight: 674 };
+  const event = { target: option, clientX: 50, clientY: 30, isTrusted: true, defaultPrevented: false };
+  const renderer = createContext({ window: browser, document, element: option, target: { x: 50, y: 30 } });
   const client = {
     async click(expression, task, observedTeam) {
       calls.push({ kind: 'click', expression, task, observedTeam });
       runInContext(scheduleOptionObservationSource(observedTeam), renderer);
       if (clickFailure) throw clickFailure;
-      for (const kind of ['pointerdown', 'pointerup', 'click']) for (const capture of [true, false]) {
+      beforeEvents({ option, trigger, popup, document, browser, event });
+      for (let cycle = 0; cycle < eventCycles; cycle++) for (const kind of ['pointerdown', 'pointerup', 'click']) for (const capture of [true, false]) {
         for (const row of [...listeners]) if (row.kind === kind && row.capture === capture)
-          row.listener({ target: option, clientX: 50, clientY: 30, isTrusted: true, defaultPrevented: false });
+          row.listener(event);
       }
       selected = true;
     },
@@ -58,7 +62,8 @@ function fixture({ setupFailure = false, clickFailure = null, waitFailure = null
     async evaluate(expression) {
       calls.push({ kind: 'read' });
       if (readFailure) throw new Error('TEST read unavailable');
-      snapshot = await runInContext(expression, renderer);
+      // CDP returnByValue crosses the renderer's realm as JSON data.
+      snapshot = JSON.parse(JSON.stringify(await runInContext(expression, renderer)));
       return snapshot;
     },
   };
@@ -84,6 +89,112 @@ test('actual schedule observer preserves one selection and original wait, then r
   assert.equal(f.snapshot.cleanupComplete, true);
   assert.equal(f.removed, 6); assert.equal(f.listeners.length, 0);
   assert.ok(f.options.every(option => option.passive === true));
+});
+
+test('actual passive events retain the changed hit after the final sample without retrying the failed selection', async (t) => {
+  t.mock.method(process.stderr, 'write', () => true);
+  const original = new Error('TEST original exact-team acknowledgement failure');
+  const f = fixture({ waitFailure: original, beforeEvents({ option, popup, document, event }) {
+    const scroller = { parentElement: null, scrollTop: 44, scrollLeft: 0, scrollHeight: 300, clientHeight: 100 };
+    option.parentElement = scroller;
+    option.getBoundingClientRect = () => ({ left: 10, top: -24, width: 80, height: 20 });
+    const foreign = { tagName: 'DIV', isConnected: true, parentElement: scroller,
+      textContent: 'PRIVATE foreign team text',
+      getAttribute(name) { return name === 'role' ? 'option' : 'PRIVATE foreign attribute'; },
+      getBoundingClientRect() { return { left: 10, top: 20, width: 80, height: 20 }; } };
+    popup.contains = node => node === option || node === foreign;
+    document.elementFromPoint = () => foreign;
+    event.target = foreign;
+  } });
+  await assert.rejects(observeScheduleTeamSelection(f.client, teamName), error => error === original);
+  assert.deepEqual(f.calls.map(call => call.kind), ['click', 'wait', 'read']);
+  assert.equal(f.calls[1].timeoutMs, 45_000);
+  assert.equal(f.snapshot.before.geometry.hitInOption, true);
+  assert.equal(f.snapshot.before.geometry.top, 20);
+  const captured = f.snapshot.events.filter(event => event.phase === 'capture');
+  assert.deepEqual(captured.map(event => event.kind), ['pointerdown', 'pointerup', 'click']);
+  for (const event of captured) {
+    assert.equal(event.trusted, true);
+    assert.equal(event.hitInOption, false);
+    assert.deepEqual(event.layout.intended.box, [10, -24, 80, 20]);
+    assert.deepEqual(event.layout.target.box, [10, 20, 80, 20]);
+    assert.equal(event.layout.target.connected, true);
+    assert.equal(event.layout.target.intended, false);
+    assert.equal(event.layout.target.inPopup, true);
+    assert.notEqual(event.layout.target.id, event.layout.intended.id);
+    assert.equal(event.layout.target.id, event.layout.hit.id);
+    assert.equal(event.layout.target.item, event.layout.target.id);
+    assert.equal(event.layout.scroll.intended.rows[0][2], 44);
+    assert.deepEqual(event.layout.scroll.viewport, [0, 0, 1024, 674]);
+  }
+  assert.ok(f.snapshot.events.filter(event => event.phase === 'bubble').every(event => event.layout === null));
+  assert.equal(new Set(captured.map(event => event.layout.target.id)).size, 1);
+  assert.equal(JSON.stringify(f.snapshot).includes('PRIVATE'), false);
+  assert.equal(f.snapshot.cleanupComplete, true);
+  assert.equal(f.listeners.length, 0);
+});
+
+test('event facts distinguish an outside overlay from a different dispatch target without adopting either', async (t) => {
+  t.mock.method(process.stderr, 'write', () => true);
+  const f = fixture({ beforeEvents({ document, event }) {
+    const target = { tagName: 'SPAN', isConnected: false, parentElement: null,
+      getBoundingClientRect: () => ({ left: 1, top: 2, width: 3, height: 4 }) };
+    const overlay = { tagName: 'DIV', isConnected: true, parentElement: null,
+      getBoundingClientRect: () => ({ left: 0, top: 0, width: 1024, height: 674 }) };
+    event.target = target;
+    document.elementFromPoint = () => overlay;
+  } });
+  await observeScheduleTeamSelection(f.client, teamName);
+  const event = f.snapshot.events[0];
+  assert.notEqual(event.layout.target.id, event.layout.hit.id);
+  assert.equal(event.layout.target.connected, false);
+  assert.equal(event.layout.hit.connected, true);
+  assert.equal(event.layout.target.item, null);
+  assert.equal(event.layout.hit.item, null);
+  assert.equal(event.layout.target.intended, null);
+  assert.equal(event.layout.hit.inPopup, false);
+  assert.deepEqual(event.layout.hit.box, [0, 0, 1024, 674]);
+  assert.deepEqual(f.calls.map(call => call.kind), ['click', 'wait', 'read']);
+  assert.equal(f.snapshot.finished, 'success', 'Diagnostics cannot redefine the original acknowledgement');
+});
+
+test('throwing or malformed event layout reads leave the original error and passive cleanup intact', async (t) => {
+  t.mock.method(process.stderr, 'write', () => true);
+  const original = new Error('TEST original acknowledgement');
+  const f = fixture({ waitFailure: original, beforeEvents({ option, document, event }) {
+    option.getBoundingClientRect = () => { throw new Error('TEST geometry unavailable'); };
+    Object.defineProperty(option, 'scrollTop', { get() { throw new Error('TEST scroll unavailable'); } });
+    const foreign = { tagName: 'DIV', isConnected: true, parentElement: null,
+      getBoundingClientRect: () => ({ left: Infinity, top: 1_000_001, width: NaN, height: 20 }) };
+    document.elementFromPoint = () => foreign;
+    event.target = foreign;
+  } });
+  await assert.rejects(observeScheduleTeamSelection(f.client, teamName), error => error === original);
+  assert.equal(f.snapshot.events[0].layout.intended.box, null);
+  assert.equal(f.snapshot.events[0].layout.scroll.intended, null);
+  assert.deepEqual(f.snapshot.events[0].layout.hit.box, [null, null, null, 20]);
+  assert.equal(f.snapshot.cleanupComplete, true);
+  assert.equal(f.listeners.length, 0);
+  assert.equal(f.calls.filter(call => call.kind === 'click').length, 1);
+});
+
+test('event geometry keeps the original count and byte bounds with bounded scroll ancestry', async (t) => {
+  t.mock.method(process.stderr, 'write', () => true);
+  const f = fixture({ eventCycles: 3, beforeEvents({ option }) {
+    let parent = null;
+    for (let depth = 0; depth < 20; depth++) parent = { parentElement: parent,
+      scrollTop: depth + 1, scrollLeft: 0, scrollHeight: 300, clientHeight: 100 };
+    option.parentElement = parent;
+  } });
+  await observeScheduleTeamSelection(f.client, teamName);
+  assert.equal(f.snapshot.events.length, 12);
+  assert.equal(f.snapshot.eventsCapped, true);
+  assert.equal(f.snapshot.events[0].layout.scroll.intended.rows.length, 3);
+  assert.equal(f.snapshot.events[0].layout.scroll.intended.capped, true);
+  assert.ok(JSON.stringify(f.snapshot).length <= 12_288);
+  assert.equal(f.snapshot.cleanupComplete, true);
+  assert.equal(f.listeners.length, 0);
+  assert.equal(f.calls.filter(call => call.kind === 'click').length, 1);
 });
 
 test('partial observer installation cleans up and cannot prevent the original selection', async (t) => {

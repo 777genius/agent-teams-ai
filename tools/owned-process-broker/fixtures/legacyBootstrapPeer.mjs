@@ -60,8 +60,10 @@ if (['model', 'runtime', 'auth'].includes(control[0])) {
   const kind = control.shift(); assert.equal(control.shift(), kind === 'model' ? 'list' : 'status');
   const remaining = [...control];
   assert.equal(remaining.shift(), '--json');
-  if (remaining[0] === '--summary') { assert.equal(kind, 'runtime'); remaining.shift(); }
+  const summary = remaining[0] === '--summary';
+  if (summary) { assert.equal(kind, 'runtime'); remaining.shift(); }
   if (remaining[0] === '--provider') { assert.equal(remaining[1], 'anthropic'); remaining.splice(0, 2); }
+  if (kind === 'runtime' && !summary && remaining[0] === '--summary') remaining.shift();
   assert.deepEqual(remaining, []);
   assert.ok([workspace, process.env.TEST_LEGACY_BOOTSTRAP_REPO].includes(process.cwd()));
   const model = 'claude-sonnet-4-6';
