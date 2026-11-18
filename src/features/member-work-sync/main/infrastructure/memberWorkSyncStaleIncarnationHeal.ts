@@ -11,11 +11,11 @@ import {
   syncDirectoryDurably,
 } from '@main/utils/atomicWrite';
 
+import { readMemberWorkSyncStatusRevision } from '../../core/domain/MemberWorkSyncStatusRevision';
 import {
   decodeMemberWorkSyncStoredStatus,
   MemberWorkSyncStatusDecodeError,
 } from './decodeMemberWorkSyncStoredStatus';
-import { readMemberWorkSyncStatusRevision } from '../../core/domain/MemberWorkSyncStatusRevision';
 
 import { validateMemberWorkSyncAuthoritySnapshot, validateMemberWorkSyncPrimaryRecords } from './memberWorkSyncAuthorityPreparation';
 import { mergeDomainSnapshots } from './memberWorkSyncDomainSnapshotMerge';
@@ -46,6 +46,12 @@ export interface StaleIncarnationHealInput {
   gateway: MemberWorkSyncStorageGateway;
   paths: MemberWorkSyncStorePaths;
   replica: InternalStorageJsonReplica<MemberWorkSyncStoreSnapshot>;
+  /** Injectable filesystem observation for deterministic provenance tests; production uses lstat. */
+  readTeamRootStats?: (root: string) => Promise<{
+    birthtimeMs: number;
+    ctimeMs: number;
+    isDirectory(): boolean;
+  }>;
   logger?: { warn(message: string, metadata?: Record<string, unknown>): void };
 }
 
@@ -385,7 +391,10 @@ async function corroborate(input: StaleIncarnationHealInput, plan: Plan): Promis
   }
   let birth: number | null;
   try {
-    birth = getVerifiedTeamRootBirthtimeMs(await lstat(root));
+    const stats = input.readTeamRootStats
+      ? await input.readTeamRootStats(root)
+      : await lstat(root);
+    birth = getVerifiedTeamRootBirthtimeMs(stats);
   } catch {
     return 'team_root_unreadable';
   }

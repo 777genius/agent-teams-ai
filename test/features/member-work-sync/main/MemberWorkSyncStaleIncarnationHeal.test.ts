@@ -1,4 +1,4 @@
-import { copyFile, mkdir, mkdtemp, readdir, readFile, rm, writeFile } from 'node:fs/promises';
+import { copyFile, lstat, mkdir, mkdtemp, readdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 
@@ -34,25 +34,17 @@ import { createTestWorkSyncIdentity } from '../helpers/createTestWorkSyncIdentit
 import type { MemberWorkSyncStatus } from '@features/member-work-sync/contracts';
 import type { MemberWorkSyncStoreSnapshot } from '@features/member-work-sync/main/infrastructure/JsonMemberWorkSyncStore';
 
-// Exercise success and refusal paths independent of host tmpfs birthtime semantics.
-const rootAgeFixture = vi.hoisted(() => ({ known: true }));
-vi.mock('node:fs/promises', async (loadOriginal) => {
-  const fs = await loadOriginal<typeof import('node:fs/promises')>();
+// Model trusted directory provenance deterministically without mocking all filesystem reads.
+const rootAgeFixture = { known: true };
+async function readFixtureRootStats(root: string) {
+  const actual = await lstat(root);
+  const birthtimeMs = Date.parse('2024-01-01T00:00:00.000Z');
   return {
-    ...fs,
-    lstat: async (...args: Parameters<typeof fs.lstat>) => {
-      const result = await fs.lstat(...args);
-      if (String(args[0]).replaceAll('\\', '/').endsWith('/teams/sandbox')) {
-        const birthtimeMs = Date.parse('2024-01-01T00:00:00.000Z');
-        return Object.assign(result, {
-          birthtimeMs,
-          ctimeMs: rootAgeFixture.known ? birthtimeMs + 1000 : birthtimeMs,
-        });
-      }
-      return result;
-    },
+    birthtimeMs,
+    ctimeMs: rootAgeFixture.known ? birthtimeMs + 1000 : birthtimeMs,
+    isDirectory: () => actual.isDirectory(),
   };
-});
+}
 
 const TEAM = 'sandbox';
 const CURRENT = 'inc-1';
@@ -127,6 +119,7 @@ async function setup(
     gateway,
     paths,
     fallbackRequiresReplica: opts.fallbackRequiresReplica ?? false,
+    readTeamRootStats: readFixtureRootStats,
     logger: { warn },
   });
   const replica = new InternalStorageJsonReplica<MemberWorkSyncStoreSnapshot>(
@@ -141,7 +134,7 @@ async function setup(
       join(teamRoot, 'config.json'),
       JSON.stringify(opts.config ?? { name: TEAM, _backupIdentityId: CURRENT })
     );
-  return { root, paths, gateway, json, sqlite, store, replica, warn, teamRoot };
+  return { root, paths, gateway, json, sqlite, store, replica, warn, teamRoot, readTeamRootStats: readFixtureRootStats };
 }
 type H = Awaited<ReturnType<typeof setup>>;
 
@@ -333,6 +326,7 @@ describe('targeted self-heal of status rows left by an earlier team identity', (
       gateway: h.gateway,
       paths: h.paths,
       replica: h.replica,
+      readTeamRootStats: h.readTeamRootStats,
       logger: { warn: h.warn },
     });
     expect(outcome).toBe('healed');
@@ -383,6 +377,7 @@ describe('targeted self-heal of status rows left by an earlier team identity', (
       gateway: h.gateway,
       paths: h.paths,
       replica: h.replica,
+      readTeamRootStats: h.readTeamRootStats,
       logger: { warn: h.warn },
     });
     expect(heal).toBe('healed');
@@ -868,6 +863,7 @@ describe('targeted self-heal of status rows left by an earlier team identity', (
       gateway: h.gateway,
       paths: h.paths,
       replica: h.replica,
+      readTeamRootStats: h.readTeamRootStats,
     });
     expect(result).toBe('healed');
     const after = JSON.parse(await readFile(path, 'utf8')) as { members: Record<string, MemberWorkSyncStatus> };
@@ -893,6 +889,7 @@ describe('targeted self-heal of status rows left by an earlier team identity', (
       gateway: h.gateway,
       paths: h.paths,
       replica: h.replica,
+      readTeamRootStats: h.readTeamRootStats,
       logger: { warn: h.warn },
     });
     expect(result).toBe('refused');
@@ -969,6 +966,7 @@ describe('targeted self-heal of status rows left by an earlier team identity', (
       gateway: h.gateway,
       paths: h.paths,
       replica: h.replica,
+      readTeamRootStats: h.readTeamRootStats,
       logger: { warn: h.warn },
     });
     expect(result).toBe('healed');

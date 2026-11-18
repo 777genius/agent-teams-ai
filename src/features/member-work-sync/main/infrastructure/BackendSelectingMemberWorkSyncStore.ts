@@ -51,7 +51,10 @@ import {
   recordsToSnapshot,
   snapshotToRecords,
 } from './memberWorkSyncSqliteMappers';
-import { healStaleIncarnationStatuses } from './memberWorkSyncStaleIncarnationHeal';
+import {
+  healStaleIncarnationStatuses,
+  type StaleIncarnationHealInput,
+} from './memberWorkSyncStaleIncarnationHeal';
 import { preflightMemberWorkSyncStatusSources } from './memberWorkSyncStatusPreflight';
 import {
   type MemberWorkSyncBackupCandidate,
@@ -92,6 +95,7 @@ export interface BackendSelectingMemberWorkSyncStoreOptions {
   gateway: MemberWorkSyncStorageGateway;
   paths: MemberWorkSyncStorePaths;
   fallbackRequiresReplica: boolean;
+  readTeamRootStats?: StaleIncarnationHealInput['readTeamRootStats'];
   logger?: { warn(message: string, metadata?: Record<string, unknown>): void };
 }
 
@@ -351,6 +355,7 @@ export class BackendSelectingMemberWorkSyncStore
               gateway,
               paths,
               replica,
+              readTeamRootStats: this.options.readTeamRootStats,
               logger,
             })) !== 'healed'
           )
