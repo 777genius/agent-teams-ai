@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { projectAliveTeamNames, isLogicalTeamProcessAlive, stopLogicalTeam, permanentlyDeleteLogicalTeam, restoreLogicalTeamWithContexts } from '../../../src/main/ipc/teams/teamContextLifecycle';
+import { isLogicalTeamProcessAlive, permanentlyDeleteLogicalTeam, projectAliveTeamNames, restoreLogicalTeamWithContexts, stopLogicalTeam } from '../../../src/main/ipc/teams/teamContextLifecycle';
 
 import type { TeamMetaFile } from '../../../src/main/services/team/TeamMetaStore';
 import type { TeamSummary } from '../../../src/shared/types/team';

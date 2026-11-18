@@ -1,9 +1,9 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import {
+  projectPublicProvisioningProgress,
   rememberProjectRunIdentity,
   resolveProjectRunDiagnosticsTeam,
-  projectPublicProvisioningProgress,
 } from '../../../src/main/ipc/teams/teamProjectContextProgressIdentity';
 
 describe('project provisioning diagnostics identity', () => {
