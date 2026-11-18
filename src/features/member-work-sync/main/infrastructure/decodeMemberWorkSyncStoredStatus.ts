@@ -9,7 +9,11 @@ type RecordValue = Record<string, unknown>;
 type Check = (value: unknown) => boolean;
 
 export class MemberWorkSyncStatusDecodeError extends Error {
-  constructor(readonly reason: 'invalid_status' | 'identity_mismatch' | 'incarnation_mismatch') {
+  constructor(
+    readonly reason: 'invalid_status' | 'identity_mismatch' | 'incarnation_mismatch',
+    /** For incarnation_mismatch: the incarnation the stored row was written under. */
+    readonly foreignIncarnation?: string
+  ) {
     super(`Invalid stored member work sync status: ${reason}`);
     this.name = 'MemberWorkSyncStatusDecodeError';
   }
@@ -241,7 +245,7 @@ export function decodeMemberWorkSyncStoredStatus(
   if (!id(identity.incarnation)) throw new MemberWorkSyncStatusDecodeError('identity_mismatch');
   const revision = readMemberWorkSyncStatusRevision(status);
   if (revision && revision.incarnation !== identity.incarnation) {
-    throw new MemberWorkSyncStatusDecodeError('incarnation_mismatch');
+    throw new MemberWorkSyncStatusDecodeError('incarnation_mismatch', revision.incarnation);
   }
   return status;
 }

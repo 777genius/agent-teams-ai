@@ -67,7 +67,10 @@ afterEach(async () => {
   for (const core of cores.splice(0)) core.close();
   for (const root of roots.splice(0)) await rm(root, { recursive: true, force: true });
 });
-async function setup(kind: 'json' | 'sqlite' = 'sqlite') {
+async function setup(
+  kind: 'json' | 'sqlite' = 'sqlite',
+  logger?: { warn: (message: string, metadata?: Record<string, unknown>) => void }
+) {
   const root = await mkdtemp(join(tmpdir(), 'mws-prepared-sandbox-'));
   roots.push(root);
   const paths = new MemberWorkSyncStorePaths(join(root, 'teams'));
@@ -97,6 +100,7 @@ async function setup(kind: 'json' | 'sqlite' = 'sqlite') {
     gateway,
     paths,
     fallbackRequiresReplica: false,
+    logger,
   });
   const replica = new InternalStorageJsonReplica<MemberWorkSyncStoreSnapshot>(
     (team) => paths.getSqliteFallbackReplicaPath(team),
@@ -1044,5 +1048,97 @@ describe('prepared backend production storage path', () => {
       h.store.withPreparedBackend({ ...identity, incarnation: 'new-incarnation' }, vi.fn())
     ).rejects.toThrow('incarnation mismatch');
     expect(source).toHaveBeenCalledTimes(2);
+  });
+  describe('incarnation mismatch diagnostics (fail-closed, nothing is deleted)', () => {
+    const stale = (): MemberWorkSyncStatus => ({
+      ...status(),
+      statusRevision: { ...status().statusRevision!, incarnation: 'old-inc' },
+    });
+    const logged = (warn: ReturnType<typeof vi.fn>) =>
+      warn.mock.calls.filter(([message]) => String(message).includes('another team identity'));
+    const authorityOf = (h: Awaited<ReturnType<typeof setup>>) =>
+      new MemberWorkSyncStatusAuthority({
+        identity: createTestWorkSyncIdentity(identity.incarnation),
+        withPreparedBackend: (binding, operation) =>
+          h.store.withPreparedBackend(binding, operation),
+      });
+
+    it('reports the source and foreign incarnation for stale SQLite rows and keeps every row', async () => {
+      const warn = vi.fn();
+      const h = await setup('sqlite', { warn });
+      const bob = { ...snapshot(stale()).statuses[0], memberName: 'bob', statusRevision: status().statusRevision };
+      await h.gateway.importTeam(identity.teamName, snapshotToRecords(identity.teamName, snapshot(stale())));
+      await h.json.write(bob as MemberWorkSyncStatus);
+      const primaryBefore = await h.gateway.listTeamSnapshot(identity.teamName);
+      const activeBefore = await h.json.readSnapshotForImport(identity.teamName);
+      const operation = vi.fn();
+      await expect(h.store.withPreparedBackend({ ...identity, mutation: true }, operation)).rejects.toMatchObject({
+        reason: 'incarnation_mismatch',
+        foreignIncarnation: 'old-inc',
+      });
+      expect(operation).not.toHaveBeenCalled();
+      expect(logged(warn)).toHaveLength(1);
+      expect(logged(warn)[0][1]).toMatchObject({
+        teamName: identity.teamName,
+        incarnation: identity.incarnation,
+        foreignIncarnation: 'old-inc',
+        source: 'primary',
+        detail: 'incarnation_mismatch',
+        hint: expect.stringContaining('Nothing was changed'),
+      });
+      expect(await h.gateway.listTeamSnapshot(identity.teamName)).toEqual(primaryBefore);
+      expect(await h.json.readSnapshotForImport(identity.teamName)).toEqual(activeBefore);
+      // The failure cache still applies: a repeat within the window is not re-logged.
+      await expect(h.store.withPreparedBackend({ ...identity, mutation: true }, operation)).rejects.toThrow();
+      expect(logged(warn)).toHaveLength(1);
+      // The public contract keeps `reason: corrupt` and only adds an optional detail.
+      const read = authorityOf(h).startRead(member);
+      await expect(read.result).resolves.toEqual({ ok: false, reason: 'corrupt', detail: 'incarnation_mismatch' });
+      await read.settled;
+    });
+
+    it('reports a stale status inside a JSON replica and leaves the replica file untouched', async () => {
+      const warn = vi.fn();
+      const h = await setup('json', { warn });
+      await h.replica.writeClean(identity.teamName, snapshot(stale()), identity.incarnation);
+      const path = h.paths.getSqliteFallbackReplicaPath(identity.teamName);
+      const before = await readFile(path, 'utf8');
+      await expect(h.store.withPreparedBackend(identity, vi.fn())).rejects.toMatchObject({
+        reason: 'incarnation_mismatch',
+        foreignIncarnation: 'old-inc',
+      });
+      expect(logged(warn)[0][1]).toMatchObject({ source: 'replica', foreignIncarnation: 'old-inc' });
+      expect(await readFile(path, 'utf8')).toBe(before);
+    });
+
+    it('reports a replica written for another incarnation (wrapper) with its foreign incarnation', async () => {
+      const warn = vi.fn();
+      const h = await setup('json', { warn });
+      await h.replica.writeClean(identity.teamName, snapshot(), 'old-inc');
+      const path = h.paths.getSqliteFallbackReplicaPath(identity.teamName);
+      const before = await readFile(path, 'utf8');
+      await expect(h.store.withPreparedBackend(identity, vi.fn())).rejects.toThrow('incarnation mismatch');
+      expect(logged(warn)[0][1]).toMatchObject({
+        source: 'replica_wrapper',
+        foreignIncarnation: 'old-inc',
+        detail: 'incarnation_mismatch',
+      });
+      expect(await readFile(path, 'utf8')).toBe(before);
+      const read = authorityOf(h).startRead(member);
+      await expect(read.result).resolves.toEqual({ ok: false, reason: 'unavailable', detail: 'incarnation_mismatch' });
+      await read.settled;
+    });
+
+    it('does not label unrelated preparation failures as an incarnation mismatch', async () => {
+      const warn = vi.fn();
+      const h = await setup('sqlite', { warn });
+      vi.spyOn(h.gateway, 'listTeamSnapshot').mockRejectedValueOnce(new Error('disk offline'));
+      await expect(h.store.withPreparedBackend(identity, vi.fn())).rejects.toThrow('disk offline');
+      expect(logged(warn)).toHaveLength(0);
+      const read = authorityOf(h).startRead(member);
+      const result = await read.result;
+      await read.settled;
+      expect(result).not.toHaveProperty('detail');
+    });
   });
 });

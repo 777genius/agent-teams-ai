@@ -19,7 +19,7 @@ persisted values). Use the shared Tooltip and an accessible button label.
 Support both board layouts and avoid triggering column dragging when using the
 button.
 
-Persist `reviewFlow: 'agent_approval' | 'human_approval'` and optional
+Persist `reviewFlow: 'agent_approval' | 'human_approval' | 'lead_then_human'` and optional
 `reviewFlowPrompt: string` (trimmed, at most 1000 characters, empty clears it)
 with the team's kanban configuration, not in renderer local storage. Missing
 `reviewFlow` means `agent_approval` (the existing behavior, the default). The flow
@@ -181,6 +181,49 @@ Implementation budget: prefer reuse of the existing controller, board lock,
 review events, IPC and UI primitives over new services or persistence tables.
 Reassess changed-line estimates after auditing all review-state readers; no
 arbitrary line target should justify omitting a trust-boundary or regression test.
+
+## Lead sign-off before the human (`lead_then_human`)
+
+Some teams run Developer -> Reviewer -> Lead -> user. The `lead_then_human` flow
+keeps everything above (agents never approve; only the desktop user does) and adds
+one controller-enforced step between the reviewer and Done.
+
+- When the stage-1 reviewer calls `review_complete`, the controller does not move the
+  task to Done. Inside the same board lock it appends one `review_requested` history
+  event with `stage: 'lead_signoff'`, `reviewer: <lead>` and
+  `afterReviewRequestId: <stage-1 request id>`. The task stays in Review with the Lead
+  as the assigned reviewer. No new event type or state: all readers that already
+  understand a review cycle keep working.
+- The Lead finishes the sign-off with the same tools: `review_complete` (task goes to
+  Done, awaiting the user) or `review_request_changes` (task returns to the owner, and
+  the next review request starts a full cycle again from the reviewer).
+- Decisions are bound to a named actor. `review_complete`, `review_request_changes` (and
+  `review_approve` while a sign-off cycle is open) require an explicit `from` (no inference, no `team-lead` default) in `lead_then_human`,
+  and also for any open sign-off cycle after the team switched to another flow. The
+  explicit `from` must resolve to the assigned reviewer of the open cycle (the Lead, for
+  the sign-off); the Lead may also act as any reviewer (existing rule), and a cycle with
+  no assigned reviewer can be decided by any named member. This is the app's normal
+  trust model for named actors, not an authentication boundary: an agent that names
+  itself as the Lead is not distinguished from the Lead. The stage-1 reviewer's old
+  request id is rejected as stale.
+- A retry of the stage-1 `review_complete` is idempotent only for the reviewer who
+  handed off and only while the sign-off is still the latest request; the answer keeps
+  `reviewRequestId` (the stage-1 id the caller passed) and returns the new id as
+  `leadSignoffRequestId`. Anyone else, or a later cycle, gets the stale-request error.
+- Stage 2 is skipped when the explicit deciding actor is the Lead (`actor_is_lead`), when
+  the Lead submitted the work (`work_by_lead`: the actor of the latest completion before
+  the stage-1 review request; an unknown submitter never skips, and reassigning the owner
+  changes nothing), or when no Lead can be resolved (`no_lead`). The cycle then closes as
+  in `human_approval`; the `review_complete` payload and the `review_completed` history
+  event carry `leadSignoffSkipped` with that reason.
+- The Lead may sign off tasks that others submitted, even if they are assigned to it
+  later; the lead briefing always files an open sign-off under `Awaiting your sign-off:`.
+- The user can approve or reject at any time, including while the Lead has not yet
+  signed off. If the Lead is away the task simply waits; the user confirms manually.
+- The Lead always sees its pending sign-offs: the lead briefing has an
+  `Awaiting your sign-off:` section (with each `expectedReviewRequestId`) and a
+  `leadSignoff=N` counter, derived from board state on every call, so it survives
+  context compaction.
 
 ## Separate bugfix
 

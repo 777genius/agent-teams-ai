@@ -4,7 +4,11 @@ import { useAppTranslation } from '@features/localization/renderer';
 import { Label } from '@renderer/components/ui/label';
 import { Textarea } from '@renderer/components/ui/textarea';
 
-import { MAX_REVIEW_FLOW_PROMPT_LENGTH, REVIEW_FLOWS } from '../../core/domain/reviewFlowPolicy';
+import {
+  isHumanApprovalFlow,
+  MAX_REVIEW_FLOW_PROMPT_LENGTH,
+  REVIEW_FLOWS,
+} from '../../core/domain/reviewFlowPolicy';
 
 import { FLOW_TEXT_KEYS } from './reviewFlowText';
 
@@ -60,7 +64,7 @@ export const ReviewFlowSettingsForm = ({
           </label>
         ))}
       </fieldset>
-      {value.reviewFlow === 'human_approval' ? (
+      {isHumanApprovalFlow(value) ? (
         <p className="text-xs text-[var(--color-text-muted)]">
           {t('reviewFlow.humanApprovalNote')}
         </p>

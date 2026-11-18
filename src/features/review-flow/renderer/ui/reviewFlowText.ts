@@ -10,4 +10,8 @@ export const FLOW_TEXT_KEYS = {
     label: 'reviewFlow.flows.human_approval.label',
     description: 'reviewFlow.flows.human_approval.description',
   },
+  lead_then_human: {
+    label: 'reviewFlow.flows.lead_then_human.label',
+    description: 'reviewFlow.flows.lead_then_human.description',
+  },
 } as const satisfies Record<ReviewFlow, { label: string; description: string }>;

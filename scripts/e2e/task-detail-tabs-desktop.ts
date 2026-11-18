@@ -85,6 +85,11 @@ for (const [id, status, subject] of [
     id, displayId: id === '2' ? '2'.repeat(100) : id, subject, status, owner: tableTeam.secondOwner,
     blockedBy: id === '2' ? ['1'] : [], blocks: [], related: [],
     createdAt: tableStamp, comments: [],
+    // Task 3 sits in the lead's sign-off stage (lead_then_human second review cycle).
+    ...(id === '3' ? { historyEvents: [
+      { id: 'h1', type: 'review_requested', timestamp: tableStamp, actor: 'dev', from: 'none', to: 'review', reviewer: 'reviewer' },
+      { id: 'h2', type: 'review_requested', timestamp: tableStamp, actor: 'reviewer', from: 'review', to: 'review', reviewer: 'team-lead', stage: 'lead_signoff', afterReviewRequestId: 'h1' },
+    ] } : {}),
   }, null, 2) + '\n', { flag: 'wx', mode: 0o600 });
 }
 const tableKanbanState = JSON.parse(await readFile(tableTeam.kanbanFile, 'utf8'));
@@ -359,6 +364,10 @@ try {
   await until(() => cdp!.evaluate(
     "(()=>{const dialog=document.querySelector('[role=\"dialog\"]');return !!dialog&&dialog.textContent?.includes('TABLE_E2E_REVIEW');})()"
   ), 'existing task detail dialog opens from table');
+  await until(() => cdp!.evaluate(
+    "!!document.querySelector('[role=\"dialog\"] [data-testid=\"task-lead-signoff-chip\"]')"
+  ), 'a review task in the lead sign-off stage shows the Lead sign-off chip');
+  await cdp.screenshot(join(root, 'task-lead-signoff-chip.png'));
   await cdp.send('Input.dispatchKeyEvent', { type: 'keyDown', key: 'Escape', code: 'Escape' });
   await until(() => cdp!.evaluate(
     "!document.querySelector('[role=\"dialog\"]')"
@@ -522,15 +531,15 @@ try {
     'fixture kanban file lives under <claudeDir>/teams/<team>'
   );
   const defaultsFile = join(claudeDir, 'review-flow-defaults.json');
-  const saveDefaultFlow = async (flow: 'agent_approval' | 'human_approval'): Promise<void> => {
+  const saveDefaultFlow = async (
+    flow: 'agent_approval' | 'human_approval' | 'lead_then_human'
+  ): Promise<void> => {
     await cdp!.evaluate("window.__agentTeamsDevStore.getState().openSettingsTab('reviewFlow')");
     await until(() => cdp!.evaluate(
       "!!document.querySelector('[data-testid=\"review-flow-settings-page\"] input[type=\"radio\"][data-testid=\"review-flow-settings-human_approval\"]:not(:disabled)')"
     ), 'review flow settings tab loaded with the default scope selected');
     await cdp!.evaluate(
-      flow === 'human_approval'
-        ? "document.querySelector('[data-testid=\"review-flow-settings-human_approval\"]')?.click()"
-        : "document.querySelector('[data-testid=\"review-flow-settings-agent_approval\"]')?.click()"
+      `document.querySelector('[data-testid="review-flow-settings-${flow}"]')?.click()`
     );
     await until(() => cdp!.evaluate(
       "(()=>{const b=document.querySelector('[data-testid=\"review-flow-settings-save\"]');return b instanceof HTMLButtonElement&&!b.disabled;})()"
@@ -574,6 +583,25 @@ try {
   await until(() => cdp!.evaluate(
     "!document.querySelector('[data-testid=\"kanban-review-flow-panel\"]')"
   ), 'review flow panel closes on Escape');
+  // Third flow: the lead signs off after the reviewer. A following team resolves to it too.
+  await saveDefaultFlow('lead_then_human');
+  await navigateToTeam();
+  await openReviewFlowPanel('columns');
+  await until(() => cdp!.evaluate(
+    `(()=>{
+      const sw = document.querySelector('[data-testid="kanban-review-flow-use-default"]');
+      const radio = document.querySelector('[data-testid="kanban-review-flow-lead_then_human"]');
+      return sw?.getAttribute('aria-checked') === 'true' && radio instanceof HTMLInputElement && radio.checked;
+    })()`
+  ), 'a team without an override resolves to the default lead_then_human');
+  for (const type of ['keyDown', 'keyUp'] as const) {
+    await cdp.send('Input.dispatchKeyEvent', {
+      type, key: 'Escape', code: 'Escape', windowsVirtualKeyCode: 27,
+    });
+  }
+  await until(() => cdp!.evaluate(
+    "!document.querySelector('[data-testid=\"kanban-review-flow-panel\"]')"
+  ), 'review flow panel closes on Escape after the lead sign-off default');
   await saveDefaultFlow('agent_approval');
   await navigateToTeam();
 
