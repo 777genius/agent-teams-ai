@@ -28,9 +28,9 @@ provider #8 `f5d632a6122df2f6995451bd33e6a0fbcda67680`.
 
 | ID | Состояние | Остаток и критерий готовности | Исполнитель |
 | --- | --- | --- | --- |
-| F1 | Реализация и R2 готовы; UI E2E остаётся | Три original GUI attempts остановлены SIGKILL main SSR до Electron, включая fixed1536 и maps-off. UI verdict отсутствует; исследуется память исходной цепочки сборки/наблюдения. | pr_graph; reviewflow; root |
+| F1 | Реализация и R2 готовы; UI E2E остаётся | Три original GUI attempts остановлены SIGKILL main SSR до Electron. Найден лишний import edge при чтении profile: та же схема без полной Host composition, −69256 KiB PSS в bounded import check. Следующий original GUI проверяет это изменение. | pr_graph; reviewflow; root |
 | F2 | Реализация и focused contracts готовы | Canonical Host agenda блокирует review work при lead/user clarification до review cycle; старый app path — re-export. Agenda 26/26 и cycle 3/3 PASS. | reviewflow |
-| M1 | Native delivery подтверждена; общий E2E не завершён | На `047f002e` проверена доставка всех media; TEST chunk parser исправлен. `e114dd13` прошёл preparation и первый owned probe, но остановлен после initial-context headers. Cold readback/restore и итоговый cleanup остаются; добавлена bounded диагностика. | media; root |
+| M1 | Native E2E PASS на `2f33d566` | Все 8 original steps за 151754 ms: media bytes/4 MiB normalization, 11 model requests, cold history/attachments, restored native readiness, no replay, оба stop custody=released и cleanup=true. Desktop GUI и vendor auth этим результатом не квалифицируются. | media; R2 reviewflow; root |
 | E1 | Исправление готово; E2E остаётся | Полный status wire finite peer исправляет отказ Create/import; 2 contract checks PASS. Остальные исходные Create/import/retained/Resume/installer/Add journeys требуют текущего результата. | pr_graph; product ownership root |
 | W1 | x64 исправление готово; ARM64 открыт | Синхронное чтение configured key входит в прежнюю closing freshness-проверку; 36 focused checks PASS. ARM64: 6 последовательных MCP probes не укладываются в исходные 15 секунд. Итоговый cleanup подтверждён; deadlines и currentness сохранены. | pr_graph; root |
 | P9 | Открыто: контракт | Установить выполнимую границу original-path / writer / consumed bytes; текущую гарантию не сужать без явного решения. Независимые работы продолжаются. | root |
@@ -362,3 +362,43 @@ P9 не имеет подтверждённого конечного LOC до р
   считает точные empty-URL VM states GC/program; старые индексы сохранены,
   исходные frame names/paths не публикуются, raw CPU profile удаляется как прежде.
   Existing diagnostic suite 5/5, strict scoped TS 7.0.2, R2 и diff check PASS.
+- 18 ноября, actual native `2f33d566`: исходный полный OpenCode V2 2.1.4 E2E
+  PASS (1/1), elapsed 151754 ms, все 8 steps, cleanup=true; оба Host завершены
+  exit 0 / stdoutValid=true, исходный и cold-restored Stop подтверждают
+  custody=released. Coordination PASS с неизменённым receipt, 4 model requests
+  и 1 metadata; business ровно 11 requests, modelFailures=[], две once approvals,
+  исходные tool effects ONE/TWO, completed task, comment и два user replies.
+  PNG/JPEG/GIF/WebP и PDF 589 bytes доставлены точно; 4 MiB PNG нормализован
+  до 159 bytes / 2000×1 с exact red pixels. Public readback всех 6 исходных
+  вложений совпадает с оригиналами. Cold restore создаёт новую generation,
+  возвращает nativeReady=true, сохраняет 11 requests и прежние effects; lookup
+  и повтор двух command IDs возвращают исходные receipts без повторной работы.
+  Source/compiled inputs/provider archive неизменны на протяжении проверки;
+  SHA256 receipt `423c4aa672793dc191d5a342e376aa1512d11f189b2b2047facd3dd150ae08f5`.
+  Диагностика видит оба initial-context transport ends и последующий ready;
+  прежняя пауза e114 не воспроизведена, её причина этим PASS не устанавливается.
+  vendorAuthQualified/desktopQualified/releaseQualified остаются false.
+  Независимый R2 подтвердил final node:test verdict, все 8 original assertions,
+  оба custody release и совпадение всех 6 закреплённых digest; повторный run
+  не выполнялся. Passive trace достиг своего прежнего лимита и не используется
+  как доказательство cold restore или позднего cleanup.
+- 18 ноября, delivery snapshot `2f33d566`: app #1192 и provider #8 остаются
+  Draft на исходных bases, без merge/release. Все 43 review threads #1192
+  resolved; original текущие CI gates queued. Очередь и отменённые предшествующие
+  cohorts не засчитываются в PASS; повторные workflow не запускались.
+- 18 ноября, F1 resource R1/R2: четыре import-only children без запуска app
+  или vendor CLI сравнили исходные imports (PSS 297016 KiB), parent CLI heap256
+  (267996), common Taskboard roots (280044) и прямой schema import (227760).
+  Только последний edge исправлен: readProfile берёт тот же schema object/type
+  из teamHostProfile вместо TeamHost re-export; 388 лишних module loads исчезают
+  у read-only consumer. Тело readProfile и captured file/digest/path/fd guards
+  неизменны. Actual Host CLI сам импортирует createTeamHost, его composition
+  сохраняется; оба source paths уже закреплены в исходном roster. Broad lazy
+  rewrite и новый parent heap не применяются. R2 принял exact двухстрочный diff;
+  native receipt остаётся evidence исходного 2f33, без замены SHA/digest.
+  Первые две compiler attempts завершились 137 без TS diagnostics (default
+  и bounded Go profile). Строгий clean Host build на TS 7.0.2 завершён PASS
+  за 10.349 s с штатным --singleThreaded и compiler-only GOMEMLIMIT=512MiB,
+  GOGC=50, GOMAXPROCS=2; все project options и исходный timeout 60 s сохранены.
+  Ledger build PASS за 1.513 s. Это ресурсный профиль компилятора; noCheck,
+  изменение runtime environment или перенос прежнего native SHA не применялись.
