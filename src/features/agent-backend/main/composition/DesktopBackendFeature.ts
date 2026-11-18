@@ -80,7 +80,7 @@ export class DesktopBackendFeature {
       ...options,
       descriptor: options.descriptor ? Object.freeze({ ...options.descriptor }) : null,
     };
-    this.hostClientOptions = captureHostPromptSuggestions({
+    const promptOptions = captureHostPromptSuggestions({
       definitions: () => this.handleDefinitions(),
       currentClient: key => this.clients.get(key)?.client,
       isCurrent: () => !this.sealed && this.state === 'ready',
@@ -88,6 +88,8 @@ export class DesktopBackendFeature {
       enabled: this.options.nativeNextPromptEnabled === true,
       providers: this.options.nativeNextPromptProviders,
     });
+    this.hostClientOptions = owner => ({ ...promptOptions(owner),
+      ...(this.options.reviewFlowDefaultsDirectory ? { reviewFlowDefaultsDirectory: this.options.reviewFlowDefaultsDirectory } : {}) });
     this.store = options.bindings ?? new FileHandleBindingStore(options.bindingDirectory);
     const target = async (
       handle: BackendHandle,

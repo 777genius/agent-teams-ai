@@ -69,7 +69,7 @@ export function createTeamHost(
   composition?: { createProvider?(context: MemberProviderContext): MemberProvider;
     createScheduledProvider?(context: ScheduledRunProviderContext): ScheduledRunProvider;
     /** Separate captured app preference per provider, evaluated only when the Host is constructed. */
-    promptSuggestionProviders?: readonly PromptSuggestionProvider[] }
+    promptSuggestionProviders?: readonly PromptSuggestionProvider[]; reviewFlowDefaultsDirectory?: string }
 ): HostServer {
   const profile = structuredClone(teamHostProfileSchema.parse(rawProfile));
   // CLI/Main owns this app-level preference. Profile remains digest-bound and
@@ -166,6 +166,7 @@ export function createTeamHost(
       const team = createFilesystemTeamOwner({
         store,
         root: profile.owner.storageRoot,
+        ...(composition?.reviewFlowDefaultsDirectory ? { reviewFlowDefaultsDirectory: composition.reviewFlowDefaultsDirectory } : {}),
         binding: definition.binding,
         crossTeamSourceAuthority: crossTeam.sourceAuthorized,
         ...(definition.savedSettings === undefined
@@ -303,7 +304,7 @@ export function createTeamHost(
         | 'lookup'
         | 'getTask'
         | 'listTasks'
-        | 'snapshot'
+        | 'snapshot' | 'review-flow.read'
         | 'messages.page'
         | 'activity.logs'
         | 'activity.stats'
@@ -330,6 +331,11 @@ export function createTeamHost(
             if (input.liveRoster.phase === 'continue') throw new TeamOwnerError('hold');
           }
           const connection = selected.connection;
+          if (operation === 'review-flow.read') {
+            z.object({}).strict().parse(input.payload);
+            if (!connection.readQueries) throw new TeamOwnerError('hold');
+            return { ok: true, value: json({ kind: 'review-flow', ...connection.readQueries.getReviewFlowSettings() }) };
+          }
           if (operation === 'roster.read' || operation === 'roster.lookup') {
             if (operation === 'roster.read') {
               z.object({}).strict().parse(input.payload);
@@ -661,7 +667,7 @@ export function createTeamHost(
       buildId: profile.owner.buildId,
       capabilities: [
         'team.task',
-        'team.snapshot',
+        'team.snapshot', 'team.review-flow.read',
         'team.messages.page',
         'team.roster',
         'team.product-changes',
@@ -704,6 +710,7 @@ export function createTeamHost(
         'team.task.get': method('getTask'),
         'team.tasks.list': method('listTasks'),
         'team.snapshot': method('snapshot'),
+        'team.review-flow.read': method('review-flow.read'),
         'team.messages.page': method('messages.page'),
         'team.roster.read': method('roster.read'),
         'team.roster.lookup': method('roster.lookup'),

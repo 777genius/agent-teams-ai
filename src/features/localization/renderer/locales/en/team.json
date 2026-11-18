@@ -2753,6 +2753,7 @@
     }
   },
   "reviewFlow": {
+    "unavailable": "Settings for {{count}} team or owner could not be read. Retry before editing those teams.",
     "title": "Review flow",
     "intro": "After a reviewer checks a task, it either goes straight to Approved or waits in Done for you. Set the default for all teams here, and give individual teams their own settings when they need them.",
     "flowLegend": "Who gives final approval",

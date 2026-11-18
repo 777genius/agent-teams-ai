@@ -1,10 +1,12 @@
 import { useEffect, useMemo } from 'react';
 
+import { useAppTranslation } from '@features/localization/renderer';
 import { api } from '@renderer/api';
 import { useStore } from '@renderer/store';
 import { useShallow } from 'zustand/react/shallow';
 
 import { resolveReviewFlowPolicy } from '../../core/domain/reviewFlowPolicy';
+import { isReviewFlowTeamUnavailable } from '../view-model/reviewFlowViewModel';
 
 import { createReviewFlowStore } from './createReviewFlowStore';
 
@@ -36,6 +38,7 @@ export function useReviewFlowOverview(
       defaultsError: s.defaultsError,
       overrides: s.overrides,
       unreadableTeams: s.unreadableTeams,
+      unavailable: s.unavailable,
       load: s.load,
       saveDefaults: s.saveDefaults,
       saveTeamOverride: s.saveTeamOverride,
@@ -71,14 +74,18 @@ export function useTeamReviewFlow(teamName: string): TeamReviewFlow {
     defaultsError,
     overrides,
     unreadableTeams,
+    unavailable = [],
     load,
     saveTeamOverride,
   } = useReviewFlowOverview();
+  const { t } = useAppTranslation('team');
+  const team = useStore((state) => state.teams.find((entry) => entry.teamName === teamName));
+  const unavailableHere = isReviewFlowTeamUnavailable(team ?? { teamName }, unavailable);
   const override = overrides[teamName];
   const policy = useMemo(() => resolveReviewFlowPolicy(defaults, override), [defaults, override]);
   return {
-    status,
-    error,
+    status: unavailableHere ? 'error' : status,
+    error: unavailableHere ? t('reviewFlow.unavailable', { count: 1 }) : error,
     defaults,
     defaultsError,
     needsRepair: unreadableTeams.includes(teamName),

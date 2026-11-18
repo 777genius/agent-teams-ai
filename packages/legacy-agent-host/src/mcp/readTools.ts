@@ -13,7 +13,7 @@ const cursor = z.string().regex(/^[1-9][0-9]{0,8}\.[a-f0-9]{64}$/);
 export const taskInventorySchema = z.strictObject({
   owner: name.optional(),
   status: z.enum(["pending", "in_progress", "completed"]).optional(),
-  reviewState: z.enum(["none", "review", "needsFix", "approved"]).optional(),
+  reviewState: z.enum(["none", "review", "needsFix", "reviewed", "approved"]).optional(),
   kanbanColumn: z.enum(["review", "approved"]).optional(),
   relatedTo: id.optional(),
   blockedBy: id.optional(),

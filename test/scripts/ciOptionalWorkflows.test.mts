@@ -132,14 +132,18 @@ test('selected native Desktop acceptance is required by the existing Full qualif
   assert.doesNotMatch(sqlite, /--input-type/, 'node-gyp file children cannot inherit a stdin-only Node input type');
   const account = source.split('\n  codex-login-desktop:\n')[1]?.split(/\n {2}[\w-]+:\n/)[0];
   const selectedAccount = account?.match(/\n {4}if: >-\n([\s\S]*?)\n {4}runs-on:/)?.[1].trim();
-  const requiredAccount = gate.match(/Require selected Codex login and native schedule qualification\n {8}if: >-\n([\s\S]*?)\n {8}env:/)?.[1].trim();
+  const requiredAccount = gate.match(/Require selected Codex login and protocol-peer schedule qualification\n {8}if: >-\n([\s\S]*?)\n {8}env:/)?.[1].trim();
   assert.ok(selectedAccount && requiredAccount);
   assert.equal(selectedAccount.replace(/\s+/g, ' '), requiredAccount.replace(/\s+/g, ' '),
-    'every selected Codex login/native schedule run must succeed for the aggregate gate');
+    'every selected Codex login/protocol-peer schedule run must succeed for the aggregate gate');
   assert.match(gate, /needs: \[[^\]]*codex-login-desktop[^\]]*\]/);
   assert.match(gate, /CODEX_LOGIN_RESULT: \$\{\{ needs\.codex-login-desktop\.result \}\}/);
   assert.match(gate, /run: test "\$CODEX_LOGIN_RESULT" = success/);
   assert.doesNotMatch(account!, /continue-on-error:/);
+  assert.match(account!, /uses: \.\/\.github\/actions\/prepare-host-emulated-inputs/);
+  assert.match(account!, /emulated-codex-login-ui emulated-claude-runtime-ui emulated-codex-runtime-ui/);
+  assert.doesNotMatch(account!, /LEGACY_(?:DESKTOP_CODEX_PATH|SCHEDULE_NATIVE_GO|SCHEDULE_CLAUDE|SCHEDULE_CODEX)|scheduled-run-host\.native|codex-0\.162\.0-linux-x64/,
+    'Ready qualification must keep Claude and Codex behind the existing finite protocol peers');
 });
 
 test('GitHub Pages: production deployment requires the main branch', () => {

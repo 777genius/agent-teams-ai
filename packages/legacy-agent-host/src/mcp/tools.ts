@@ -188,6 +188,13 @@ export function createTeamMcpTools(connection: TeamMcpConnection) {
         })
     ),
     define(
+      'review_complete',
+      'Complete the exact AI review cycle; returns reviewed Done or the new Lead sign-off request. Only a human can grant final acceptance.',
+      z.strictObject({ ...command, ...task, expectedReviewRequestId: identifier, note: text.optional() }),
+      ({ commandId, ...payload }) => connection.execute({ commandId, operation: 'task.review',
+        payload: { ...present(payload), action: 'complete' } })
+    ),
+    define(
       'review_approve',
       'Approve completed work in its current review cycle.',
       z.strictObject({
@@ -207,7 +214,7 @@ export function createTeamMcpTools(connection: TeamMcpConnection) {
     define(
       'review_request_changes',
       'Return reviewed work to pending with a fix request and TaskRefs.',
-      z.strictObject({ ...command, ...task, comment: text, taskRefs: refs }),
+      z.strictObject({ ...command, ...task, comment: text, taskRefs: refs, expectedReviewRequestId: identifier.optional() }),
       ({ commandId, ...payload }) =>
         connection.execute({
           commandId,

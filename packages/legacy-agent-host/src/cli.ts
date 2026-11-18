@@ -41,7 +41,9 @@ try {
     // Throws on anything but a comma separated subset of the known providers (empty = none).
     const providers = process.env.AGENT_TEAMS_NATIVE_NEXT_PROMPT_PROVIDERS;
     server = createTeamHost(readTeamHostProfile(path, digest), streams,
-      providers === undefined ? undefined : { promptSuggestionProviders: parsePromptSuggestionProviders(providers) });
+      { ...(providers === undefined ? {} : { promptSuggestionProviders: parsePromptSuggestionProviders(providers) }),
+        ...(process.env.AGENT_TEAMS_REVIEW_FLOW_DEFAULTS_DIRECTORY
+          ? { reviewFlowDefaultsDirectory: process.env.AGENT_TEAMS_REVIEW_FLOW_DEFAULTS_DIRECTORY } : {}) });
   } else {
     server = createHostServer({ ...streams, buildId: 'legacy-agent-host/0.1.0' });
   }

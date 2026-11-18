@@ -15,6 +15,7 @@ export {
   hostMemberSpawnSnapshotCurrentness,
   hostProvisioningMemberSnapshot,
 } from './createHostMemberSpawnStatuses';
+export { createHostReviewFlowApi } from './createHostReviewFlowApi';
 export { createHostReviewApi } from './createHostReviewApi';
 export { HostTeamOperationError } from './createHostTeamMutations';
 export {

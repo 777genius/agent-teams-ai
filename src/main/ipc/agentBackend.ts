@@ -27,6 +27,7 @@ import {
   FileCodexAuthIntentStore,
   FileProviderOAuthIntentStore,
 } from '@features/runtime-provider-management/main';
+import { getClaudeBasePath } from '@main/utils/pathDecoder';
 import { safeSendToRenderer } from '@main/utils/safeWebContentsSend';
 import { createLogger } from '@shared/utils/logger';
 import { shell } from 'electron';
@@ -594,6 +595,7 @@ export function registerDesktopAgentBackend(options: BackendShellOptions): void 
     // Partial/invalid configuration must fail closed, not select another backend.
     descriptor: path || sha256 ? { path: path ?? '', sha256: sha256 ?? '' } : null,
     bindingDirectory: join(options.userDataPath, 'agent-backend', 'bindings'),
+    reviewFlowDefaultsDirectory: getClaudeBasePath(),
     modelIntents: new FileTeamModelProbeIntents(
       join(options.userDataPath, 'agent-backend', 'team-model-intents'),
       options.userDataPath

@@ -44,6 +44,7 @@ import { createLogger } from '@shared/utils/logger';
 
 import { CapturedHostNotificationBuffer } from './CapturedHostNotificationBuffer';
 import { captureNativePromptSettings, type NativePromptSettingsSelection } from './CapturedNativePromptOptions';
+import { captureReviewFlowDefaultsEnvironment } from './CapturedReviewFlowOptions';
 import { createCapturedHostDiagnostics } from './createCapturedHostDiagnostics';
 import {
   capturedHostProfileDigest,
@@ -101,6 +102,7 @@ interface PendingRequest {
 }
 
 export interface CapturedHostClientOptions extends NativePromptSettingsSelection {
+  readonly reviewFlowDefaultsDirectory?: string;
   readonly onNativePromptSuggestion?: (value: unknown, source: CapturedHostClient) => void;
 }
 
@@ -143,6 +145,7 @@ export class CapturedHostClient {
   private readonly nativePending = new Map<string, NativeRequest>();
   private nativePumping = false;
   private readonly nativeHints = new Map<string, { hint: HostCustodyHint; sent: boolean }>();
+  private readonly reviewFlowDefaultsEnvironment: Readonly<Record<string, string>>;
   private diagnosticTail = Buffer.alloc(0);
   private readonly retainCloseDiagnostic = createCapturedHostDiagnostics(() => this.child?.pid);
 
@@ -153,6 +156,7 @@ export class CapturedHostClient {
     promptOptions: CapturedHostClientOptions = {}
   ) {
     this.profile = captureHostProfile(profile);
+    this.reviewFlowDefaultsEnvironment = captureReviewFlowDefaultsEnvironment(promptOptions.reviewFlowDefaultsDirectory);
     this.capturedNativePromptEnvironment = captureNativePromptSettings(promptOptions).environment;
     const onNativePromptSuggestion = promptOptions.onNativePromptSuggestion;
     this.notifications = new CapturedHostNotificationBuffer(
@@ -186,6 +190,7 @@ export class CapturedHostClient {
           ...this.profile.env,
           // Trusted Main captures these settings once, including explicit recovery.
           ...this.capturedNativePromptEnvironment,
+          ...this.reviewFlowDefaultsEnvironment,
         },
         stdio: ['pipe', 'pipe', 'pipe'],
         windowsHide: true,

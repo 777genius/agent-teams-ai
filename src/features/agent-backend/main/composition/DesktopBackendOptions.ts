@@ -16,6 +16,8 @@ export interface DesktopBackendFeatureOptions extends NativePromptSettingsSelect
   /** Null is the safe default: no descriptor, handles or process launch. */
   descriptor: DesktopBackendDescriptorSelection | null;
   bindingDirectory: string;
+  /** Trusted app-global preference source; never supplied by a renderer command. */
+  reviewFlowDefaultsDirectory?: string;
   /** Private composition diagnostics; never serializes paths, payloads or raw errors. */
   onInitializationFailure?: (
     phase: InitializationPhase,

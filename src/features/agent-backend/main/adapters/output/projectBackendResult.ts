@@ -113,6 +113,7 @@ function task(value: unknown): BackendTask {
     result.reviewState = oneOf(source.reviewState, [
       'none',
       'review',
+      'reviewed',
       'approved',
       'needsFix',
     ] as const);
@@ -144,6 +145,7 @@ function receipt(value: unknown, request: BackendOperationRequest): BackendComma
     'task.review',
     'task.board.clear',
     'task.board.order',
+    'task.board.review-flow',
     'task.relationship',
     'task.clarification',
     'message.send',
@@ -163,7 +165,7 @@ function receipt(value: unknown, request: BackendOperationRequest): BackendComma
   if (result.taskSubmissionNoEffect) return result;
   if (source.result !== undefined) {
     const applied = row(source.result);
-    if (operation === 'task.board.order') {
+    if (operation === 'task.board.order' || operation === 'task.board.review-flow') {
       string(applied.teamName);
       array(applied.reviewers, string);
       for (const value of Object.values(row(applied.tasks)))
@@ -467,6 +469,17 @@ export function projectBackendResult(
     request.operation === 'task.attachment.read'
   )
     return { ok: true, value: readBackendAttachmentChunk(source.value, request.payload) };
+  if (request.operation === 'team.review-flow.read') {
+    const value = row(source.value);
+    if (value.kind !== 'review-flow') throw new Error('Invalid review flow settings');
+    const settings = value.settings === null ? null : row(value.settings);
+    if (value.unreadable !== undefined && (value.unreadable !== true || settings !== null))
+      throw new Error('Invalid review flow read');
+    return { ok: true, value: { kind: 'review-flow', ...(value.unreadable ? { unreadable: true as const } : {}), settings: settings === null ? null : {
+      reviewFlow: oneOf(settings.reviewFlow, ['agent_approval', 'human_approval', 'lead_then_human'] as const),
+      reviewFlowPrompt: string(settings.reviewFlowPrompt),
+    } } };
+  }
   if (request.operation === 'team.snapshot')
     return { ok: true, value: projectTeamSnapshot(source.value) };
   if (request.operation === 'team.messages.page')

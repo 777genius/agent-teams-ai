@@ -89,7 +89,7 @@ function withoutReviewFlowOverride(state) {
 
 /** Validates the persisted override unit; a prompt without a flow is as corrupt as a bad value. */
 function readReviewFlowOverrideFields(rawState) {
-  const corrupt = () => new Error('Kanban review flow is corrupt');
+  const corrupt = () => Object.assign(new Error('Kanban review flow is corrupt'), { code: 'invalid_review_flow' });
   if (rawState.reviewFlow === undefined) {
     if (rawState.reviewFlowPrompt !== undefined) throw corrupt();
     return {};
@@ -161,7 +161,7 @@ function readKanbanState(paths, teamName, options = {}) {
 /** Effective review-flow policy of a team: its own override, otherwise the global default. */
 function resolveReviewFlowPolicy(paths, teamName) {
   const override = getReviewFlowOverride(readKanbanState(paths, teamName));
-  return resolvePolicy(readDefaults(paths.claudeDir), override);
+  return resolvePolicy(readDefaults(paths.reviewFlowDefaultsDirectory ?? paths.claudeDir), override);
 }
 
 function isHumanApprovalFlow(paths, teamName) {

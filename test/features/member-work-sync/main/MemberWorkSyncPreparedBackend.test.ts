@@ -1,3 +1,4 @@
+import { readFailureDetail } from '@features/member-work-sync/main/infrastructure/memberWorkSyncPreparationDiagnostics';
 import { internalStorageInterruption } from '@features/member-work-sync/main/infrastructure/internalStorageInterruption';
 import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -171,6 +172,7 @@ describe('prepared backend production storage path', () => {
     async (kind) => {
       const h = await setup(kind);
       const authority = new MemberWorkSyncStatusAuthority({
+        diagnosticDetail: readFailureDetail,
       interruption: internalStorageInterruption,
         identity: createTestWorkSyncIdentity(identity.incarnation),
         withPreparedBackend: (binding, operation) =>
@@ -1060,6 +1062,7 @@ describe('prepared backend production storage path', () => {
       warn.mock.calls.filter(([message]) => String(message).includes('another team identity'));
     const authorityOf = (h: Awaited<ReturnType<typeof setup>>) =>
       new MemberWorkSyncStatusAuthority({
+        diagnosticDetail: readFailureDetail,
         identity: createTestWorkSyncIdentity(identity.incarnation),
         withPreparedBackend: (binding, operation) =>
           h.store.withPreparedBackend(binding, operation),

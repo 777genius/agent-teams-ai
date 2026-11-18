@@ -37,6 +37,8 @@ export function applyTeamTask(
     case 'task.board.clear':
       board.clearKanban(command.payload.taskId);
       return json(board.getTask(command.payload.taskId));
+    case 'task.board.review-flow':
+      return json(board.setReviewFlowSettings(command.payload.settings));
     case 'task.board.order':
       return json(
         board.updateColumnOrder(command.payload.columnId, command.payload.orderedTaskIds)
@@ -88,10 +90,18 @@ export function applyTeamTask(
           from: actor,
           ...(payload.reviewer === undefined ? {} : { reviewer: payload.reviewer }),
         });
-      else if (payload.action === 'start') board.startReview(taskId, { from: actor });
+      else if (payload.action === 'start') {
+        const review = board.startReview(taskId, { from: actor });
+        return json({ ...board.getTask(taskId), ...review });
+      } else if (payload.action === 'complete') {
+        const review = board.completeReview(taskId, { from: actor,
+          expectedReviewRequestId: payload.expectedReviewRequestId,
+          ...(payload.note === undefined ? {} : { note: payload.note }) });
+        return json({ ...board.getTask(taskId), ...review });
+      }
       else if (payload.action === 'disapprove') board.disapproveReview(taskId, { from: actor });
       else if (payload.action === 'approve')
-        board.approveReview(taskId, {
+        (actor === 'user' ? board.approveReviewFromUser : board.approveReview)(taskId, {
           from: actor,
           ...(payload.note === undefined ? {} : { note: payload.note }),
           ...(payload.notifyOwner === undefined ? {} : { 'notify-owner': payload.notifyOwner }),
@@ -100,9 +110,11 @@ export function applyTeamTask(
             : { suppressTaskComment: payload.suppressTaskComment }),
         });
       else
-        board.requestChanges(taskId, {
+        (actor === 'user' ? board.requestChangesFromUser : board.requestChanges)(taskId, {
           from: actor,
           comment: payload.comment,
+          ...(payload.expectedReviewRequestId === undefined
+            ? {} : { expectedReviewRequestId: payload.expectedReviewRequestId }),
           ...(payload.taskRefs === undefined ? {} : { taskRefs: payload.taskRefs }),
         });
       return json(board.getTask(taskId));

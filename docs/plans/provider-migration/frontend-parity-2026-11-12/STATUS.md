@@ -28,13 +28,13 @@ provider #8 `f5d632a6122df2f6995451bd33e6a0fbcda67680`.
 
 | ID | Состояние | Остаток и критерий готовности | Исполнитель |
 | --- | --- | --- | --- |
-| F1 | В работе: реализация | Согласованно интегрировать текущий main; ReviewFlow settings/defaults/overrides, human approval и Lead sign-off проходят через действующего Host owner, общий controller и историю/MCP. | frontend_parity; интеграция root |
-| F2 | В работе | Перенести проверку reviewer clarification в Host policy до назначения review work; сохранить re-export старого пути. | frontend_parity |
+| F1 | Реализация и R2 готовы; UI E2E остаётся | Main интегрирован. Settings/defaults/overrides, human authority и Lead cycles используют текущего owner/controller. Существующий task-board UI journey дополнен default → override → inherit → Approve → reopen; нужен исполненный результат. | reviewflow; root |
+| F2 | Реализация и focused contracts готовы | Canonical Host agenda блокирует review work при lead/user clarification до review cycle; старый app path — re-export. Agenda 26/26 и cycle 3/3 PASS. | reviewflow |
 | M1 | В работе: реализация | Восстановить поддерживаемые текущим frontend MIME/размеры вложений V2 и точно отразить возможности model+transport в UI; исходники провайдера меняются только в provider repo, приложение получает проверенный immutable artifact. | stage2_v2 |
 | E1 | Исправление готово; E2E остаётся | Полный status wire finite peer исправляет отказ Create/import; 2 contract checks PASS. Остальные исходные Create/import/retained/Resume/installer/Add journeys требуют текущего результата. | pr_graph; product ownership root |
 | W1 | x64 исправление готово; ARM64 открыт | Синхронное чтение configured key входит в прежнюю closing freshness-проверку; 36 focused checks PASS. ARM64: 6 последовательных MCP probes не укладываются в исходные 15 секунд. Итоговый cleanup подтверждён; deadlines и currentness сохранены. | pr_graph; root |
 | P9 | Открыто: контракт | Установить выполнимую границу original-path / writer / consumed bytes; текущую гарантию не сужать без явного решения. Независимые работы продолжаются. | root |
-| D1 | Запланировано | Свести изменения в одну композицию, провести независимое ревью, затронутые E2E и обязательные gates; обновить этот статус фактическими SHA/результатами. | root |
+| D1 | В работе | Свести изменения в одну композицию, провести независимое ревью, затронутые E2E и обязательные gates; обновить этот статус фактическими SHA/результатами. | root |
 
 Уже реализовано, повторная разработка не требуется: базовый Host/Session SPI,
 embedded V2 2.1.4, Logs/Thinking/source/filter/fullscreen/stderr, accounts/models,
@@ -155,3 +155,27 @@ P9 не имеет подтверждённого конечного LOC до р
   scoped fast lint и diff check PASS. Native Windows результат ещё не заявлен.
   Незапушенное увеличение ARM TEST deadline с 15 до 90 секунд исключено; исходные
   15 секунд сохранены. Отдельного подтверждённого ARM исправления пока нет.
+
+- 18 ноября, F1/F2 R2: независимое ревью нашло и подтвердило исправление двух
+  ошибок lost-ACK: настоящий structured `code` вместо `reason` и lookup исходного
+  commandId также при structured `outcome: unknown`. Frozen original handle,
+  запрет replay mutation и сохранение unknown при неудачном lookup проверены
+  в 10/10 renderer routing checks. Host ReviewFlow integration 7/7, UI Section
+  12/12, store 9/9 PASS; Host test types и legacy-host script types PASS на
+  pinned TS 7.0.2. Глобальные defaults не записываются в team override.
+  Добавлен оригинальный UI journey через Settings/Approved и reopen; R2 PASS,
+  исполненный GUI E2E пока не заявлен. Source roster разбит без потери pins.
+- 18 ноября, E1 CI R2: ready-PR job теперь использует существующие finite
+  Claude/Codex protocol peers и original login/runtime/schedule UI modes;
+  реальные vendor binaries удалены из этого job. Required gate, deadline,
+  original-command, real cron-tick, no-replay и cleanup проверки сохранены.
+  Общий input capture вынесен в composite action byte-for-byte. Workflow-policy
+  17/17, YAML parse, shell syntax и независимое review PASS.
+- 18 ноября, W1 Unicode fixture: batch source стал ASCII; `%~dp0` и captured
+  environment сохраняют Unicode paths и исходные argv. Fixture native copy
+  создаётся и проверяется до capture; production source/P9 не изменены.
+  Actual launcher capture/verifier 5/5, pinned Node syntax и diff check PASS;
+  нового Windows OS E2E результата нет.
+- 18 ноября, ограничения локальной проверки: полный app workspace typecheck
+  дважды остановлен с exit 137 без TS diagnostics (включая bounded heap run).
+  Это не PASS; узкие успешно завершённые проверки выше сохраняют свой scope.

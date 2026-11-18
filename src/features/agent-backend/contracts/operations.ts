@@ -132,6 +132,13 @@ export interface BackendOperationPayloads
     expectedRecipient?: BackendTaskRecipient;
   };
   'task.board.clear': { taskId: string };
+  'team.review-flow.read': Record<string, never>;
+  'task.board.review-flow': {
+    settings: {
+      reviewFlow: 'agent_approval' | 'human_approval' | 'lead_then_human';
+      reviewFlowPrompt: string;
+    } | null;
+  };
   'task.board.order': {
     columnId: 'todo' | 'in_progress' | 'done' | 'review' | 'approved';
     orderedTaskIds: string[];
@@ -152,6 +159,7 @@ export interface BackendOperationPayloads
     | { taskId: string; action: 'request'; reviewer?: string }
     | { taskId: string; action: 'start' }
     | { taskId: string; action: 'disapprove' }
+    | { taskId: string; action: 'complete'; expectedReviewRequestId: string; note?: string }
     | {
         taskId: string;
         action: 'approve';
@@ -159,7 +167,7 @@ export interface BackendOperationPayloads
         notifyOwner?: boolean;
         suppressTaskComment?: boolean;
       }
-    | { taskId: string; action: 'request_changes'; comment: string; taskRefs?: BackendTaskRef[] };
+    | { taskId: string; action: 'request_changes'; comment: string; taskRefs?: BackendTaskRef[]; expectedReviewRequestId?: string };
   'task.comment': {
     taskId: string;
     text: string;
@@ -298,7 +306,7 @@ export interface BackendTask {
   id: string;
   status: string;
   needsClarification?: 'lead' | 'user';
-  reviewState?: 'none' | 'review' | 'approved' | 'needsFix';
+  reviewState?: 'none' | 'review' | 'reviewed' | 'approved' | 'needsFix';
   subject?: string;
   description?: string;
   displayId?: string;
@@ -340,6 +348,7 @@ export interface BackendCommandReceipt {
     | 'task.review'
     | 'task.board.clear'
     | 'task.board.order'
+    | 'task.board.review-flow'
     | 'task.relationship'
     | 'task.clarification'
     | 'message.send';
@@ -500,6 +509,7 @@ export type BackendOperationResult =
         | BackendLeadActivity
         | BackendLeadContext
         | BackendTeamSnapshot
+        | { kind: 'review-flow'; settings: BackendOperationPayloads['task.board.review-flow']['settings']; unreadable?: true }
         | BackendTeamMessagesPage
         | BackendRosterConfiguration
         | BackendRosterReceipt

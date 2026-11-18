@@ -1,7 +1,7 @@
 import type { AttachmentReference, AttachmentUpload } from '../attachments/uploadContracts.js';
 import type { AttachmentMetadata } from '../attachments/contracts.js';
 import type { JsonValue } from '../contracts.js';
-import type { CommandReceipt, RuntimeMemberBinding } from './contracts.js';
+import type { CommandReceipt, RuntimeMemberBinding, TeamReviewFlowSettings } from './contracts.js';
 
 /** Private launch-owned technical selection; Team retains business membership/grants. */
 export interface TeamRuntimeSelection {
@@ -46,6 +46,7 @@ export interface TaskBoardPolicy {
   listDeletedTasks(): TeamTask[];
   getKanbanState(options?: { strict?: boolean }): unknown;
   clearKanban(id: string): unknown;
+  setReviewFlowSettings(settings: TeamReviewFlowSettings | null): unknown;
   updateColumnOrder(columnId: string, orderedTaskIds: string[]): unknown;
   linkTask(id: string, targetId: string, type: 'blocked-by' | 'blocks' | 'related'): TeamTask;
   unlinkTask(id: string, targetId: string, type: 'blocked-by' | 'blocks' | 'related'): TeamTask;
@@ -64,7 +65,12 @@ export interface TaskBoardPolicy {
     recipients: string[];
   }): { task: TeamTask; notifiedOwner: boolean };
   requestReview(id: string, flags: { from: string; reviewer?: string }): TeamTask;
-  startReview(id: string, flags: { from: string }): unknown;
+  startReview(id: string, flags: { from: string }): Record<string, unknown>;
+  completeReview(
+    id: string, flags: { from: string; expectedReviewRequestId: string; note?: string }
+  ): Record<string, unknown>;
+  approveReviewFromUser(id: string, flags: Record<string, unknown>): unknown;
+  requestChangesFromUser(id: string, flags: Record<string, unknown>): unknown;
   disapproveReview(id: string, flags: { from: string }): TeamTask;
   approveReview(
     id: string,
@@ -72,7 +78,7 @@ export interface TaskBoardPolicy {
   ): unknown;
   requestChanges(
     id: string,
-    flags: { from: string; comment: string; taskRefs?: import('./contracts.js').TaskRef[] }
+    flags: { from: string; comment: string; taskRefs?: import('./contracts.js').TaskRef[]; expectedReviewRequestId?: string }
   ): TeamTask;
   completeTask(id: string, actor: string): TeamTask;
   softDeleteTask(id: string, actor: string): TeamTask;
@@ -94,12 +100,13 @@ export interface TeamBoardReadPolicy {
     options: { includeActiveProcesses: boolean }
   ): Promise<string>;
   getKanbanState(options?: { strict?: boolean }): unknown;
+  getReviewFlowSettings(): { settings: TeamReviewFlowSettings | null; unreadable?: true };
   listReviewers(): unknown;
 }
 export interface TeamTaskInventoryFilters {
   owner?: string;
   status?: 'pending' | 'in_progress' | 'completed';
-  reviewState?: 'none' | 'review' | 'needsFix' | 'approved';
+  reviewState?: 'none' | 'review' | 'needsFix' | 'reviewed' | 'approved';
   kanbanColumn?: 'review' | 'approved';
   relatedTo?: string;
   blockedBy?: string;

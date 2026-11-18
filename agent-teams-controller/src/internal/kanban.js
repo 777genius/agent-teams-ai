@@ -177,6 +177,16 @@ function getEffectiveKanbanState(context, options) {
  * Desktop user action only. `settings` is a COMPLETE override unit ({ reviewFlow, reviewFlowPrompt? });
  * `null` removes the override so the team follows the global default again.
  */
+function getReviewFlowSettings(context) {
+  try {
+    const state = getKanbanState(context);
+    return { settings: state.reviewFlow === undefined ? null : reviewFlow.parseReviewFlowSettings(state) };
+  } catch (error) {
+    if (error.code === 'invalid_review_flow') return { settings: null, unreadable: true };
+    throw error;
+  }
+}
+
 function setReviewFlowSettings(context, settings) {
   const next = settings === null ? null : reviewFlow.parseReviewFlowSettings(settings);
   return withTeamBoardLock(context.paths, () => {
@@ -200,6 +210,7 @@ module.exports = {
   isHumanApprovalFlow,
   isLeadSignoffFlow,
   setReviewFlowSettings,
+  getReviewFlowSettings,
   clearKanban,
   listReviewers,
   addReviewer,

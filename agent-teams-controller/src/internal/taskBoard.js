@@ -1,5 +1,6 @@
 const kanban = require('./kanban.js');
 const review = require('./review.js');
+const { approveReviewFromUser, requestChangesFromUser } = require('./reviewClientActions.js');
 const tasks = require('./tasks.js');
 const taskOwnershipGuards = require('./taskOwnershipGuards.js');
 
@@ -115,6 +116,10 @@ function taskBriefing(context, memberName) {
 }
 
 /** Effective view (flow, prompt and source after the default/override layering). */
+function getReviewFlowSettings(context) {
+  return kanban.getReviewFlowSettings(context);
+}
+
 function getKanbanState(context, options) {
   return kanban.getEffectiveKanbanState(context, options);
 }
@@ -180,6 +185,8 @@ function requestChangesAsHuman(context, taskId, flags) {
 }
 
 module.exports = {
+  approveReviewFromUser,
+  requestChangesFromUser,
   addReviewer,
   addTaskAttachmentMeta,
   addTaskComment,
@@ -193,6 +200,7 @@ module.exports = {
   completeTask,
   createTask,
   getKanbanState,
+  getReviewFlowSettings,
   getTask,
   getTaskComment,
   leadBriefing,

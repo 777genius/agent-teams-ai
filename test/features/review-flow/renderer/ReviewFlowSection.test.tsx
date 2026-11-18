@@ -197,6 +197,26 @@ describe('ReviewFlowSection', () => {
     expect(load).toHaveBeenCalledWith({ force: true });
   });
 
+  it('excludes unavailable teams from default counts and blocks editing their unobserved policies', () => {
+    const { load, saveTeamOverride } = setOverview({}, { unavailable: [
+      { kind: 'team', teamName: 'beta', displayName: 'Beta', code: 'unavailable', outcome: 'unknown' },
+    ] });
+    render();
+    expect(host.textContent).toContain('reviewFlow.editor.followingTeams{"count":1}');
+    const notice = q('review-flow-unavailable')!;
+    expect(notice.getAttribute('role')).toBe('alert');
+    act(() => {
+      const picker = q<HTMLSelectElement>('scope-picker')!;
+      Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value')?.set?.call(picker, 'beta');
+      picker.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+    expect(q('review-flow-settings-editor')).toBeNull();
+    expect(host.textContent).not.toContain('reviewFlow.useDefault.following');
+    act(() => notice.querySelector('button')!.click());
+    expect(load).toHaveBeenCalledWith({ force: true });
+    expect(saveTeamOverride).not.toHaveBeenCalled();
+  });
+
   it('warns that review is paused when the saved default is unreadable and lets the user confirm a new one', async () => {
     const { saveDefaults } = setOverview({}, { defaultsError: 'defaults file is corrupt' });
     render();

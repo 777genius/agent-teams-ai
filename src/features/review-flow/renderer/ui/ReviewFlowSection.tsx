@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
+import { Button } from '@renderer/components/ui/button';
 
 import { useKnownTeams, useReviewFlowOverview } from '../state/useReviewFlow';
 import {
@@ -9,6 +10,7 @@ import {
   buildUnreadableRows,
   countFollowingDefault,
   DEFAULT_SCOPE_VALUE,
+  isReviewFlowTeamUnavailable,
   resolveScopePolicy,
   scopeFromValue,
 } from '../view-model/reviewFlowViewModel';
@@ -31,7 +33,7 @@ export const ReviewFlowSection = (): React.JSX.Element => {
   const teams = useKnownTeams();
   const [scopeValue, setScopeValue] = useState(DEFAULT_SCOPE_VALUE);
 
-  const { defaults, defaultsError, overrides, unreadableTeams } = overview;
+  const { defaults, defaultsError, overrides, unreadableTeams, unavailable = [] } = overview;
   const scope = scopeFromValue(scopeValue);
   const options = useMemo(
     () => buildScopeOptions(teams, overrides, unreadableTeams, t('reviewFlow.scope.defaultOption')),
@@ -50,6 +52,9 @@ export const ReviewFlowSection = (): React.JSX.Element => {
     () => buildUnreadableRows(teams, unreadableTeams),
     [teams, unreadableTeams]
   );
+  const selectedUnavailable = scope.kind === 'team' &&
+    isReviewFlowTeamUnavailable(teams.find((team) => team.teamName === scope.teamName) ?? { teamName: scope.teamName }, unavailable);
+  const availableTeams = teams.filter((team) => !isReviewFlowTeamUnavailable(team, unavailable));
   const policy = resolveScopePolicy(scope, defaults, overrides);
   const repair =
     scope.kind === 'default' ? defaultsError !== null : unreadableTeams.includes(scope.teamName);
@@ -83,16 +88,24 @@ export const ReviewFlowSection = (): React.JSX.Element => {
               onFix={scope.kind === 'team' ? () => setScopeValue(DEFAULT_SCOPE_VALUE) : undefined}
             />
           ) : null}
+          {unavailable.length > 0 ? (
+            <div role="alert" className="space-y-2" data-testid="review-flow-unavailable">
+              <p className="text-sm text-[var(--color-text-muted)]">{t('reviewFlow.unavailable', { count: unavailable.length })}</p>
+              <Button type="button" size="sm" variant="outline" onClick={() => void overview.load({ force: true })}>
+                {t('reviewFlow.retry')}
+              </Button>
+            </div>
+          ) : null}
           <ReviewFlowScopePicker options={options} value={scopeValue} onChange={setScopeValue} />
-          <ReviewFlowPolicyEditor
+          {!selectedUnavailable ? <ReviewFlowPolicyEditor
             scope={scope}
             policy={policy}
             defaults={defaults}
-            followingTeamCount={countFollowingDefault(teams, overrides)}
+            followingTeamCount={countFollowingDefault(availableTeams, overrides)}
             repair={repair}
             onSave={handleSave}
             testIdPrefix={TEST_ID_PREFIX}
-          />
+          /> : null}
           {scope.kind === 'default' ? (
             <>
               <ReviewFlowTeamList

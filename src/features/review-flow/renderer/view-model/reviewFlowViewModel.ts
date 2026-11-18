@@ -4,6 +4,7 @@ import {
 } from '../../core/domain/reviewFlowPolicy';
 
 import type {
+  ReviewFlowOverview,
   ReviewFlowPolicy,
   ReviewFlowSettings,
   TeamReviewFlowOverrides,
@@ -18,6 +19,7 @@ export const DEFAULT_SCOPE_VALUE = '*';
 export interface TeamIdentity {
   teamName: string;
   displayName?: string;
+  ownerResourceRef?: string;
 }
 
 /** Marker next to a team in the scope picker: its own settings, or saved settings that need repair. */
@@ -189,4 +191,14 @@ export function policyIdentity(scope: ReviewFlowScope, policy: ReviewFlowPolicy)
     policy.reviewFlow,
     policy.reviewFlowPrompt,
   ]);
+}
+
+/** Incomplete owner reads cannot make a team appear to follow the default. */
+export function isReviewFlowTeamUnavailable(
+  team: TeamIdentity,
+  unavailable: NonNullable<ReviewFlowOverview['unavailable']>
+): boolean {
+  return unavailable.some((item) => item.kind === 'team'
+    ? item.teamName === team.teamName
+    : team.ownerResourceRef !== undefined && item.ownerResourceRef === team.ownerResourceRef);
 }

@@ -1,5 +1,5 @@
 import { NodeApplicationCommandHasher } from '@features/application-command-ledger/main';
-import { isHumanApprovalFlow, type ReviewFlowSettings } from '@features/review-flow';
+import { type ReviewFlowSettings } from '@features/review-flow';
 import { TaskBoardCommandFacade } from '@features/task-board-commands';
 import { fingerprintSavedLaunchSettings } from '@features/team-provisioning/contracts';
 import { fromProvisioningMembers, isMixedOpenCodeSideLanePlan } from '@features/team-runtime-lanes';
@@ -3476,45 +3476,6 @@ export class TeamDataService {
     });
   }
 
-  private getControllerTaskWorkflowColumn(
-    taskBoard: AgentTeamsController['taskBoard'],
-    taskId: string
-  ): 'review' | 'approved' | undefined | null {
-    if (!taskBoard.getTask || !taskBoard.getKanbanState) {
-      return null;
-    }
-
-    const task = taskBoard.getTask(taskId) as TeamTask | null | undefined;
-    if (!task || typeof task.status !== 'string') {
-      return null;
-    }
-
-    const kanbanState = taskBoard.getKanbanState() as KanbanState | null | undefined;
-    const kanbanColumn = kanbanState?.tasks?.[task.id]?.column;
-    const kanbanWorkflowColumn = kanbanColumn
-      ? getTeamTaskWorkflowColumn({
-          status: task.status,
-          reviewState: 'none',
-          kanbanColumn,
-        })
-      : undefined;
-    if (kanbanWorkflowColumn) {
-      return kanbanWorkflowColumn;
-    }
-
-    const reviewState = getReviewStateFromTask({
-      historyEvents: task.historyEvents,
-      reviewState: task.reviewState,
-      status: task.status,
-      ...(kanbanColumn ? { kanbanColumn } : {}),
-    });
-    return getTeamTaskWorkflowColumn({
-      status: task.status,
-      reviewState,
-      ...(kanbanColumn ? { kanbanColumn } : {}),
-    });
-  }
-
   createTeamConfig(request: TeamCreateConfigRequest): Promise<void> {
     return this.runConfigurationOperation(request.teamName, () =>
       createDraftTeamConfig(request, {
@@ -4019,66 +3980,20 @@ export class TeamDataService {
           ...(leadSessionId ? { leadSessionId } : {}),
         });
       } else {
-        // Only the desktop renderer's user action reaches this path. Agent tools
-        // have no updateKanban/setReviewFlowSettings endpoint; controller locks
-        // and re-checks the policy before every approval mutation.
-        const task = taskBoard.getTask(taskId) as TeamTask;
-        if (isHumanApprovalFlow(taskBoard.getKanbanState?.() as KanbanState | null) ||
-            getReviewStateFromTask(task) === 'reviewed') {
-          taskBoard.approveAsHuman(taskId);
-          return;
-        }
         const { leadName, leadSessionId } = await this.resolveLeadRuntimeContext(teamName);
-        const workflowColumn = this.getControllerTaskWorkflowColumn(taskBoard, taskId);
-        if (workflowColumn === undefined) {
-          taskBoard.setKanbanColumn(taskId, 'approved', {
-            transition: 'manual_approve',
-          });
-        } else {
-          taskBoard.approveReview(taskId, {
-            from: leadName,
-            suppressTaskComment: true,
-            'notify-owner': true,
-            ...(leadSessionId ? { leadSessionId } : {}),
-          });
-        }
+        taskBoard.approveReviewFromUser(taskId, {
+          from: leadName, suppressTaskComment: true, 'notify-owner': true,
+          ...(leadSessionId ? { leadSessionId } : {}),
+        });
       }
       return;
     }
 
-    if (patch.op === 'request_changes') {
-      const task = taskBoard.getTask(taskId) as TeamTask;
-      const reviewState = getReviewStateFromTask(task);
-      const latestDecision = [...(task.historyEvents ?? [])].reverse().find(
-        (event) =>
-          event.type === 'review_requested' ||
-          event.type === 'review_changes_requested' ||
-          event.type === 'review_completed' ||
-          event.type === 'review_approved' ||
-          event.type === 'human_approved'
-      );
-      const retryHumanRejection =
-        (task.status === 'completed' || task.status === 'pending') &&
-        reviewState === 'needsFix' &&
-        latestDecision?.type === 'review_changes_requested' &&
-        latestDecision.actor === 'user';
-      if (reviewState === 'reviewed' ||
-          isHumanApprovalFlow(taskBoard.getKanbanState?.() as KanbanState | null) ||
-          retryHumanRejection) {
-        taskBoard.requestChangesAsHuman(taskId, {
-          comment: patch.comment?.trim() || 'User requested changes.',
-          ...(patch.taskRefs?.length ? { taskRefs: patch.taskRefs } : {}),
-        });
-        return;
-      }
-    }
     const { leadName, leadSessionId } = await this.resolveLeadRuntimeContext(teamName);
-    taskBoard.requestChanges(taskId, {
+    taskBoard.requestChangesFromUser(taskId, {
       from: leadName,
-      comment: patch.comment?.trim() || 'Reviewer requested changes.',
-      ...(patch.op === 'request_changes' && patch.taskRefs?.length
-        ? { taskRefs: patch.taskRefs }
-        : {}),
+      comment: patch.comment?.trim() || 'User requested changes.',
+      ...(patch.taskRefs?.length ? { taskRefs: patch.taskRefs } : {}),
       ...(leadSessionId ? { leadSessionId } : {}),
     });
   }

@@ -127,6 +127,7 @@ export class BackendOperationsFacade {
         const read =
           request.operation === 'task.get' ||
           request.operation === 'tasks.list' ||
+          request.operation === 'team.review-flow.read' ||
           request.operation === 'team.snapshot' ||
           request.operation === 'team.messages.page';
         const method =
@@ -139,7 +140,7 @@ export class BackendOperationsFacade {
                 : runtime || launch || memberAction || changes || roster || activity
                   ? request.operation
                   : read
-                    ? request.operation === 'team.snapshot' || request.operation === 'team.messages.page'
+                    ? request.operation === 'team.snapshot' || request.operation === 'team.messages.page' || request.operation === 'team.review-flow.read'
                       ? request.operation
                       : request.operation === 'task.get'
                         ? 'team.task.get'
