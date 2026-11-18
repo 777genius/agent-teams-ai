@@ -52,6 +52,16 @@ failedClose.publish({ ...closeFailure, probeDigest: 'a'.repeat(65) });
 failedClose.publish(Object.defineProperty({ ...closeFailure }, 'outcome', { get() { accessorCalls++; throw new Error(secret); } }));
 failedClose.publish(new Proxy({}, { getOwnPropertyDescriptor() { throw new Error(secret); } }));
 if (accessorCalls !== 0) process.exit(3);
+const failedReadiness = channel('agent-teams.legacy-host.first-refusal');
+const readiness = { kind: 'consumer', phase: 'cutoff', reason: 'held', cutoff: 1000, observedAt: 1262 };
+for (const invalid of [{ ...readiness, kind: 'reference' }, { ...readiness, phase: secret },
+  { ...readiness, reason: secret }, { ...readiness, cutoff: -1 }, { ...readiness, observedAt: null },
+  { ...readiness, observedAt: Number.MAX_SAFE_INTEGER + 1 }]) failedReadiness.publish(invalid);
+for (const field of ['kind', 'phase', 'reason', 'cutoff', 'observedAt'])
+  failedReadiness.publish(Object.defineProperty({ ...readiness }, field,
+    { get() { accessorCalls++; throw new Error(secret); } }));
+failedReadiness.publish(new Proxy({}, { getOwnPropertyDescriptor() { throw new Error(secret); } }));
+if (accessorCalls !== 0) process.exit(3);
 for (let index = 0; index < 300; index++) publish('undici:request:create',
   { origin: 'http://127.0.0.1:65530', path: '/api/info?private=' + secret, method: 'GET' });
 failedRead.publish({ ...failure, reason: secret });
@@ -61,6 +71,18 @@ failedMetadata.publish({ ...metadata, error: secret, stack: secret, path: ${JSON
 failedMetadata.publish({ ...metadata, reason: 'deadline', elapsedMs: 30001, deadlineExpired: true });
 failedClose.publish({ ...closeFailure, error: secret, stack: secret, token: secret, path: ${JSON.stringify(root)} });
 failedClose.publish({ ...closeFailure, stage: 'server-stop', runState: 'false' });
+failedReadiness.publish({ ...readiness, error: secret, consumerId: secret, actionDigest: secret,
+  currentCalls: { private: secret }, path: ${JSON.stringify(root)} });
+failedReadiness.publish({ ...readiness, phase: 'reference', reason: 'threw' });
+const runtimeOpen = { source: 'factory', phase: 'driver-open', category: 'held', observedAtMs: 1262 };
+for (const invalid of [{ ...runtimeOpen, source: secret }, { ...runtimeOpen, phase: secret },
+  { ...runtimeOpen, source: 'runtime', phase: 'provider-create' },
+  { ...runtimeOpen, category: secret }, { ...runtimeOpen, observedAtMs: -1 }])
+  process.stderr.write('legacy-agent-host: runtime-open ' + JSON.stringify(invalid) + '\\n');
+process.stderr.write('legacy-agent-host: runtime-open ' + JSON.stringify({ ...runtimeOpen,
+  profileHash: secret, configurationHash: secret, error: secret }) + '\\n');
+process.stderr.write('legacy-agent-host: runtime-open ' + JSON.stringify({ ...runtimeOpen,
+  source: 'runtime', observedAtMs: 1263 }) + '\\n');
 const end = Date.now() + 50; while (Date.now() < end) Math.sqrt(Date.now());
 // Flush only these synthetic diagnostic bytes; the existing parent test keeps its original bound.
 process.stderr.write('', () => process.exit(1));
@@ -104,8 +126,19 @@ process.stderr.write('', () => process.exit(1));
       outcome: closeFailures[0]!.outcome, errorClass: closeFailures[0]!.errorClass },
     { epoch: 1, stage: 'request-drain', code: 'unconfirmed', probeDigest: 'a'.repeat(64),
       runState: 'pending', outcome: 'unobserved', errorClass: 'none' });
-    assert.deepEqual(originalTrace.entries.slice(-4).map(row => row.event),
-      ['trace-limit', 'read-cut-failed', 'metadata-read-failed', 'host-probe-close-failed']);
+    const readinessFailures = originalTrace.entries.filter(row => row.event === 'readiness-refused');
+    assert.equal(readinessFailures.length, 1, 'first consumer refusal survives saturation without invoking getters');
+    const { atMs: readinessAt, ...readinessFailure } = readinessFailures[0]!;
+    assert.ok(typeof readinessAt === 'number' && readinessAt >= 0);
+    assert.deepEqual(readinessFailure, { epoch: 1, event: 'readiness-refused', kind: 'consumer',
+      phase: 'cutoff', reason: 'held', cutoff: 1000, observedAt: 1262, expired: true });
+    assert.deepEqual(originalTrace.entries.filter(row => row.event === 'runtime-open-failed'), [
+      { epoch: 1, event: 'runtime-open-failed', source: 'factory', phase: 'driver-open',
+        category: 'held', observedAtMs: 1262 },
+    ], 'first existing refusal is retained without hashes, IDs or fabricated elapsed time');
+    assert.deepEqual(originalTrace.entries.slice(-6).map(row => row.event),
+      ['trace-limit', 'read-cut-failed', 'metadata-read-failed', 'host-probe-close-failed',
+        'readiness-refused', 'runtime-open-failed']);
     assert.equal(originalTrace.entries.filter(row => row.event === 'trace-limit').length, 1);
     assert.equal(originalTrace.limited, true);
     assert.ok(originalTrace.entries.length <= 257);
@@ -365,7 +398,7 @@ process.stderr.write('', () => process.exit(1));
     const ordinary = passive.entries.length;
     const beforeBytes = passive.entries.reduce((sum, row) => sum + Buffer.byteLength(JSON.stringify(row)) + 1, 0);
     assert.ok(ordinary < 253, 'closed-row bytes saturate before ordinary count in this capture');
-    assert.ok(beforeBytes > 64 * 1024 - 5 * 513 && beforeBytes <= 64 * 1024 - 4 * 513);
+    assert.ok(beforeBytes > 64 * 1024 - 7 * 513 && beforeBytes <= 64 * 1024 - 6 * 513);
     const terminal = { event: 'metadata-read-failed', atMs: 11, stage: 'admission', reason: 'held',
       elapsedMs: 0, deadlineExpired: true, aborted: null, raw: secret };
     const lateRead = { event: 'read-cut-failed', atMs: 12, stage: 'after-log', reason: 'cleanup_unknown',

@@ -223,3 +223,25 @@ P9 не имеет подтверждённого конечного LOC до р
   diagnostics. Ledger и Host prebuild прошли; полный workspace gate не подтверждён.
   Новые тяжёлые локальные повторы не запускаются; successful narrow checks
   сохраняют только свой указанный scope.
+
+- 18 ноября, actual native `199fef38` (Linux x64, OpenCode 2.1.4): исходный
+  source/build/archive gate прошёл; coordination/readiness PASS с 4 model requests
+  и подтверждённым cleanup. Business `runtime.open` вернул held/open-unknown
+  до первого business model request и до media DM; весь сценарий INCOMPLETE,
+  business cleanup=false. Child exit 0 не заменяет подтверждение owner release.
+  Наблюдаемый отказ совпал с original readiness cutoff: admission 90 секунд,
+  открытие заняло ~25 секунд при отдельном launch budget 120 секунд. Source chain
+  сохраняет исходный cutoff до nativeReady; его продление не допускается.
+  Следующий срез удаляет только доказанный синхронный повтор closing authority
+  read и сохраняет existing refusal diagnostics для точной проверки причины.
+
+- 18 ноября, E1 closing-guard R2: в opening `canAllocate` уже закрывает authority
+  перед немедленным синхронным `setupCurrent`; только повтор этого guard удалён.
+  Allocated ветка теперь сама выполняет тот же closing guard после Runtime read.
+  Никакая проверка не переносится через await; readiness cutoff не меняется.
+  Ledger/Host build, 20/20 authority/native-action checks и root R2 PASS.
+- 18 ноября, E1 diagnostic R2: passive TEST receipt сохраняет первый исходный
+  sanitized runtime-open и consumer refusal с cutoff/observedAt. Hash/ID/raw error
+  не записываются; 257 rows / 64 KiB / 512-byte input limit сохранены. Четыре
+  observer checks, strict scoped TS 7.0.2 и независимое media review PASS.
+  Следующий original native run выполняется на чистом опубликованном срезе.

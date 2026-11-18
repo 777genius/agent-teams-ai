@@ -157,7 +157,7 @@ export function createRuntimeMemberProviderFactory(options: {
         })();
         const setupCurrent = () => {
           try {
-            if (!authority.isCurrent()) return false;
+            // canAllocate closes its authority check immediately before this synchronous read.
             const state = options.readRuntime(entry.binding);
             if (state.record?.phase === 'opening' && !state.attached) readiness?.assertCurrent();
             return true;

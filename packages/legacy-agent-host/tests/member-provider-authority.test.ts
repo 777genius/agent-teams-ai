@@ -146,12 +146,15 @@ test('restored provider authority binds the complete open request and keeps curr
   }
   t.mock.method(TeamOwnerStore.prototype, 'read', observeRead);
   const fences = t.mock.method(TeamOwnerStore.prototype, 'fenced');
-  let currentFailure: Error | undefined;
+  let currentFailure: Error | undefined, revokeDuringRuntimeRead = false;
   const authority = captureMemberProviderAuthority({
     entry, request, profileId: 'TEST-profile', hostIncarnation: 'TEST-host',
     assertAllocation() { allocationChecks++; },
     assertCurrent() { if (currentFailure) throw currentFailure; },
-    readRuntime: () => ({ record, attached }),
+    readRuntime() {
+      if (revokeDuringRuntimeRead) currentFailure = new Error('TEST-revoked-during-runtime-read');
+      return { record, attached };
+    },
   });
   authority.assertCurrent();
   assert.ok(tokens.length >= 3, 'original admit state and both original control state reads are reached');
@@ -184,6 +187,12 @@ test('restored provider authority binds the complete open request and keeps curr
   record.hostIncarnation = 'TEST-host';
   record.phase = 'allocated'; record.custody = 'owned'; record.sessionRef = 'TEST-restored-session'; attached = true;
   authority.assertAllocatedCurrent();
+  assert.equal(authority.canAllocate(), true, 'an existing allocation retains its current authority');
+  revokeDuringRuntimeRead = true;
+  assert.equal(authority.canAllocate(), false, 'the allocation guard closes after the Runtime read');
+  assert.equal(allocationChecks, 1, 'an existing allocation never replays its opening intent');
+  revokeDuringRuntimeRead = false; currentFailure = undefined;
+  assert.equal(authority.canAllocate(), true, 'a subsequent call checks authority afresh');
   record.sealed = true; assert.equal(authority.canAllocate(), false); record.sealed = false;
   request.checkpointRef = 'TEST-mutated-caller';
   record.config = structuredClone(request);

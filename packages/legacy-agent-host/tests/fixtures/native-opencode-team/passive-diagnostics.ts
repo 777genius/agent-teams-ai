@@ -6,11 +6,13 @@ import { fileURLToPath } from 'node:url';
 import type { ChildProcess } from 'node:child_process';
 
 const prefix = 'TEST_OPENCODE_V2_DIAGNOSTIC ';
+const runtimeOpenPrefix = 'legacy-agent-host: runtime-open ';
 const maximum = 256;
 const maximumTraceBytes = 64 * 1024, maximumLineBytes = 512, reservedLineBytes = maximumLineBytes + 1;
 const events = ['child-spawn', 'child-ready', 'child-failed', 'child-exit', 'child-output-limit',
   'child-input-ended', 'host-input-ended', 'request', 'request-send-headers', 'request-body-sent',
-  'response', 'response-end', 'request-error', 'read-cut-failed', 'metadata-read-failed', 'host-probe-close-failed', 'trace-limit'] as const;
+  'response', 'response-end', 'request-error', 'read-cut-failed', 'metadata-read-failed', 'host-probe-close-failed',
+  'readiness-refused', 'trace-limit'] as const;
 const routes = ['info', 'session-create', 'session-read', 'instructions', 'permissions', 'plugins',
   'mcp', 'log', 'prompt', 'provider-catalog', 'model-catalog', 'model-default', 'integration-read',
   'integration-connect', 'credential-remove', 'other-api'] as const;
@@ -102,10 +104,58 @@ function projectHostProbeCloseFailure(value: unknown) {
   } catch { return undefined; }
 }
 
+const runtimeOpenPhases = {
+  factory: ['selection', 'authority', 'worktree', 'model-readiness', 'bindings', 'endpoint',
+    'provider-prepare', 'provider-create', 'interactions', 'driver-open', 'driver-wrap'],
+  runtime: ['authority', 'driver-open', 'session-ref', 'publish', 'observe', 'sealed-close',
+    'readiness', 'readiness-publish'],
+} as const;
+
+/** Existing private stderr observation only; hashes and error payloads are not retained. */
+function projectRuntimeOpenFailure(value: unknown) {
+  try {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) return undefined;
+    const own = (key: string): unknown => {
+      const field = Object.getOwnPropertyDescriptor(value, key);
+      return field && 'value' in field ? field.value : undefined;
+    };
+    const source = choice(own('source'), ['factory', 'runtime']);
+    const phase = source && choice(own('phase'), runtimeOpenPhases[source]);
+    const category = choice(own('category'), ['invalid', 'conflict', 'forbidden', 'held', 'busy',
+      'aborted', 'deadline', 'unknown']);
+    const observedAtMs = integer(own('observedAtMs'), Number.MAX_SAFE_INTEGER);
+    if (!source || !phase || !category || observedAtMs === null) return undefined;
+    return { source, phase, category, observedAtMs };
+  } catch { return undefined; }
+}
+
+/** Observe the original consumer's first refusal without reading authority or invoking getters. */
+function projectReadinessRefusal(value: unknown) {
+  try {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) return undefined;
+    const own = (key: string): unknown => {
+      const field = Object.getOwnPropertyDescriptor(value, key);
+      return field && 'value' in field ? field.value : undefined;
+    };
+    if (own('kind') !== 'consumer') return undefined;
+    const phase = choice(own('phase'), ['initial-authority', 'read-consumer', 'identity', 'continuation',
+      'requirements', 'cutoff', 'reference', 'equality', 'final-authority']);
+    const reason = choice(own('reason'), ['held', 'threw']);
+    const rawCutoff = own('cutoff'), rawObservedAt = own('observedAt');
+    const cutoff = integer(rawCutoff, Number.MAX_SAFE_INTEGER);
+    const observedAt = integer(rawObservedAt, Number.MAX_SAFE_INTEGER);
+    if (!phase || !reason || !(rawCutoff === null && rawObservedAt === null ||
+      cutoff !== null && observedAt !== null)) return undefined;
+    return { kind: 'consumer' as const, phase, reason, cutoff, observedAt,
+      expired: cutoff === null || observedAt === null ? null : observedAt >= cutoff };
+  } catch { return undefined; }
+}
+
 /** Project again at the receipt boundary; native text/IDs/credentials are never retained. */
 export function createPassiveNativeDiagnosticCapture() {
   const entries: Record<string, unknown>[] = [];
-  let pending = '', ordinary = 0, bytes = 0, readObserved = false, metadataObserved = false, closeObserved = false, limitObserved = false, limited = false;
+  let pending = '', ordinary = 0, bytes = 0, readObserved = false, metadataObserved = false,
+    closeObserved = false, readinessObserved = false, runtimeOpenObserved = false, limitObserved = false, limited = false;
   // These counters belong to this one original capture, including all of its Host epochs.
   return {
     entries,
@@ -115,18 +165,24 @@ export function createPassiveNativeDiagnosticCapture() {
       pending += chunk.toString('utf8');
       for (let end = pending.indexOf('\n'); end >= 0; end = pending.indexOf('\n')) {
         const line = pending.slice(0, end); pending = pending.slice(end + 1);
-        if (!line.startsWith(prefix) || Buffer.byteLength(line) > maximumLineBytes) continue;
+        const runtimeOpen = line.startsWith(runtimeOpenPrefix);
+        if ((!runtimeOpen && !line.startsWith(prefix)) || Buffer.byteLength(line) > maximumLineBytes) continue;
         try {
-          const value = record(JSON.parse(line.slice(prefix.length)) as unknown);
-          const event = choice(value.event, events), atMs = integer(value.atMs);
-          if (!event || atMs === null) continue;
+          const value = record(JSON.parse(line.slice(runtimeOpen ? runtimeOpenPrefix.length : prefix.length)) as unknown);
+          const failedRuntimeOpen = runtimeOpen ? projectRuntimeOpenFailure(value) : undefined;
+          const event = runtimeOpen ? (failedRuntimeOpen ? 'runtime-open-failed' : null) : choice(value.event, events);
+          const atMs = integer(value.atMs);
+          if (!event || !runtimeOpen && atMs === null) continue;
           const failedCut = event === 'read-cut-failed' ? projectReadCutFailure(value) : undefined;
           const failedMetadata = event === 'metadata-read-failed' ? projectMetadataReadFailure(value) : undefined;
           const failedClose = event === 'host-probe-close-failed' ? projectHostProbeCloseFailure(value) : undefined;
+          const refusedReadiness = event === 'readiness-refused' ? projectReadinessRefusal(value) : undefined;
           if (event === 'read-cut-failed' && !failedCut || event === 'metadata-read-failed' && !failedMetadata ||
-              event === 'host-probe-close-failed' && !failedClose) continue;
+              event === 'host-probe-close-failed' && !failedClose || event === 'readiness-refused' && !refusedReadiness) continue;
           const failure = failedMetadata ?? failedCut;
-          const entry = { epoch, event, atMs, child: integer(value.child, 5), request: integer(value.request, 4096),
+          const entry = failedRuntimeOpen ? { epoch, event, ...failedRuntimeOpen }
+            : refusedReadiness ? { epoch, event, atMs, ...refusedReadiness }
+            : { epoch, event, atMs, child: integer(value.child, 5), request: integer(value.request, 4096),
             route: choice(value.route, routes), method: choice(value.method, ['GET', 'POST', 'PUT', 'DELETE']),
             durationMs: failure?.elapsedMs ?? integer(value.durationMs), status: integer(value.status, 599),
             contentEncoding: choice(value.contentEncoding, contentEncodings),
@@ -141,8 +197,15 @@ export function createPassiveNativeDiagnosticCapture() {
           const size = Buffer.byteLength(JSON.stringify(entry)) + 1;
           if (size > reservedLineBytes) continue;
           const reserve = (readObserved ? 0 : reservedLineBytes) + (metadataObserved ? 0 : reservedLineBytes) +
-            (closeObserved ? 0 : reservedLineBytes) + (limitObserved ? 0 : reservedLineBytes);
-          if (failedClose) {
+            (closeObserved ? 0 : reservedLineBytes) + (readinessObserved ? 0 : reservedLineBytes) +
+            (runtimeOpenObserved ? 0 : reservedLineBytes) + (limitObserved ? 0 : reservedLineBytes);
+          if (failedRuntimeOpen) {
+            if (runtimeOpenObserved || bytes + size > maximumTraceBytes - reserve + reservedLineBytes) continue;
+            runtimeOpenObserved = true;
+          } else if (refusedReadiness) {
+            if (readinessObserved || bytes + size > maximumTraceBytes - reserve + reservedLineBytes) continue;
+            readinessObserved = true;
+          } else if (failedClose) {
             if (closeObserved || bytes + size > maximumTraceBytes - reserve + reservedLineBytes) continue;
             closeObserved = true;
           } else if (failedMetadata) {
@@ -155,8 +218,8 @@ export function createPassiveNativeDiagnosticCapture() {
             if (limitObserved || bytes + size > maximumTraceBytes - reserve + reservedLineBytes) continue;
             limitObserved = true; limited = true;
           } else {
-            // Reserve all three failure observations within the original 257-row ceiling.
-            if (ordinary >= maximum - 3 || bytes + size > maximumTraceBytes - reserve) { limited = true; continue; }
+            // Reserve all five failure observations within the original 257-row ceiling.
+            if (ordinary >= maximum - 5 || bytes + size > maximumTraceBytes - reserve) { limited = true; continue; }
             ordinary++;
           }
           bytes += size;
@@ -439,7 +502,8 @@ function responseContentEncoding(headers: unknown): typeof contentEncodings[numb
 
 function observeOriginalHost(): void {
   const started = performance.now();
-  let ordinary = 0, emittedBytes = 0, children = 0, requests = 0, readObserved = false, metadataObserved = false, closeObserved = false, limited = false;
+  let ordinary = 0, emittedBytes = 0, children = 0, requests = 0, readObserved = false,
+    metadataObserved = false, closeObserved = false, readinessObserved = false, limited = false;
   const elapsed = () => Math.max(0, Math.round(performance.now() - started));
   const line = (value: Record<string, unknown>) => prefix + JSON.stringify({ atMs: elapsed(), ...value }) + '\n';
   const write = (value: string) => { emittedBytes += Buffer.byteLength(value); process.stderr.write(value); };
@@ -447,7 +511,12 @@ function observeOriginalHost(): void {
     const frame = line(value), size = Buffer.byteLength(frame);
     if (size > reservedLineBytes) return;
     const reserve = (readObserved ? 0 : reservedLineBytes) + (metadataObserved ? 0 : reservedLineBytes) +
-      (closeObserved ? 0 : reservedLineBytes) + (limited ? 0 : reservedLineBytes);
+      (closeObserved ? 0 : reservedLineBytes) + (readinessObserved ? 0 : reservedLineBytes) +
+      (limited ? 0 : reservedLineBytes);
+    if (value.event === 'readiness-refused') {
+      if (readinessObserved || emittedBytes + size > maximumTraceBytes - reserve + reservedLineBytes) return;
+      readinessObserved = true; write(frame); return;
+    }
     if (value.event === 'host-probe-close-failed') {
       if (closeObserved || emittedBytes + size > maximumTraceBytes - reserve + reservedLineBytes) return;
       closeObserved = true; write(frame); return;
@@ -461,7 +530,7 @@ function observeOriginalHost(): void {
       readObserved = true; write(frame); return;
     }
     if (limited) return;
-    if (ordinary >= maximum - 3 || emittedBytes + size > maximumTraceBytes - reserve) {
+    if (ordinary >= maximum - 4 || emittedBytes + size > maximumTraceBytes - reserve) {
       limited = true; write(line({ event: 'trace-limit' })); return;
     }
     ordinary++; write(frame);
@@ -484,6 +553,12 @@ function observeOriginalHost(): void {
       const failure = projectHostProbeCloseFailure(message);
       if (failure) emit({ event: 'host-probe-close-failed', ...failure });
     } catch { /* A passive TEST observation cannot change the original close result. */ }
+  });
+  channel('agent-teams.legacy-host.first-refusal').subscribe(message => {
+    try {
+      const failure = projectReadinessRefusal(message);
+      if (failure) emit({ event: 'readiness-refused', ...failure });
+    } catch { /* A passive TEST observation cannot replace the original refusal. */ }
   });
   const childEntry = fileURLToPath(new URL('../../../dist/adapters/providers/OpenCodeV2EmbeddedChild.js', import.meta.url));
   channel('child_process').subscribe(message => {

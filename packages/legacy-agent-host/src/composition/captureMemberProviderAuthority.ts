@@ -120,8 +120,10 @@ export function captureMemberProviderAuthority(options: {
         record.custody === 'owned' &&
         attached &&
         record.sessionRef
-      )
+      ) {
+        assertCurrent();
         return true;
+      }
       if (
         record.phase !== 'opening' ||
         record.custody !== 'unknown' ||
