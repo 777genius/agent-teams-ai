@@ -434,7 +434,10 @@ jobs:
                 assert.equal(row.negatives[field], 'refused');
               assert.deepEqual(row.negatives.numericPid, { ok: false, code: 'invalid', outcome: 'rejected' });
               const original = row.states.beforeLoss, retained = row.states.retained, final = row.states.afterCleanup;
-              assert.equal(original.hostIncarnation, row.hosts[0].hostIncarnation);
+              // Runtime ownership and transport HELLO have independent incarnation domains.
+              assert.equal(typeof original.hostIncarnation, 'string'); assert.ok(original.hostIncarnation.length > 0);
+              assert.deepEqual(row.barrier.attachment, { mainEpoch: row.hosts[0].mainEpoch,
+                hostIncarnation: row.hosts[0].hostIncarnation, profileDigest: row.hosts[0].profileDigest });
               assert.equal(original.phase, afterEffect ? 'allocated' : 'opening');
               assert.equal(original.custody, afterEffect ? 'owned' : 'unknown');
               for (const state of [retained, final]) {

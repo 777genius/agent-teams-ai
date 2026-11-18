@@ -3954,7 +3954,7 @@ test('full original Process verifier accepts only authority-bound no-dispatch ev
     const input = { phase: 'consumed', intent: { inputId: 'TEST-delivery', deliveryId: 'TEST-delivery' },
       fingerprint: 'TEST-input-fingerprint', operationRef: 'TEST-original-operation' };
     const original = { binding: { generation: 'TEST-original-binding' }, profileId: 'TEST-original-profile',
-      hostIncarnation: hosts[0]!.hostIncarnation, openFingerprint: 'TEST-original-open',
+      hostIncarnation: 'TEST-runtime-owner-A', openFingerprint: 'TEST-original-open',
       phase: afterEffect ? 'allocated' : 'opening', custody: afterEffect ? 'owned' : 'unknown', ...(afterEffect ? { input } : {}) };
     const retained = { ...original, phase: 'held', custody: 'unknown', nativeReady: false, inputs: count, interactions: 0,
       ...(afterEffect ? { input: { ...input, phase: 'unknown' } } : {}) };
@@ -3972,6 +3972,7 @@ test('full original Process verifier accepts only authority-bound no-dispatch ev
         commandLookup: count, processList: count },
       barrier: { reached: true, pendingBeforeCrash: true, originalAttachmentCurrent: true,
         originalHostExited: true, callbackSettled: true, crashMarkers: 1, terminalForwarded: false,
+        attachment: { mainEpoch, hostIncarnation: hosts[0]!.hostIncarnation, profileDigest: hosts[0]!.profileDigest },
         operation: afterEffect ? 'read' : 'resume', ...(afterEffect ? { nativeWriteAcknowledged: true,
           stream: 'stdout', heldBytes: 1, originalMore: false, inputEntered: 100, inputCutoff: 15100, beforeLossObserved: 200,
           terminal: { method: 'turn/completed', threadId: 'TEST-thread', turnId: 'TEST-turn' } } : {}) },
@@ -4002,7 +4003,8 @@ test('full original Process verifier accepts only authority-bound no-dispatch ev
   for (const declaration of ["import assert from 'node:assert/strict';", "import { readFileSync, writeFileSync } from 'node:fs';", "import { join } from 'node:path';"]) {
     assert.equal(script.split(declaration).length, 2); script = script.replace(declaration, '');
   }
-  const run = (proof = makeProof('codex')) => {
+  const ownerLossRows = () => ['completed-install-before-physical-resume', 'completed-effects-before-runtime-completion'].map(emulatedOwnerLoss);
+  const run = (proof = makeProof('codex'), ownerLoss = ownerLossRows()) => {
     const files = new Map<string, string>(), writes: Record<string, unknown>[] = [];
     const put = (name: string, value: unknown) => files.set(join('process-acceptance-evidence', name), JSON.stringify(value));
     const controller = { gateController: 'drained', rootExitCode: 0, activeProcesses: 0 };
@@ -4014,7 +4016,7 @@ test('full original Process verifier accepts only authority-bound no-dispatch ev
       sourceHead, platform: 'win32-x64', nodeVersion: 'v24.21.0', realProviderExecuted: false, desktopQualified: false, releaseQualified: false,
       wrappers: ['npm-node', 'generated-bun', 'opaque-cmd', 'positional-bat', 'npm-native'],
       providers: ['codex', 'opencode'].map(emulatedProvider),
-      ownerLoss: ['completed-install-before-physical-resume', 'completed-effects-before-runtime-completion'].map(emulatedOwnerLoss) });
+      ownerLoss });
     put('windows-emulated-provider.log', controller);
     for (const provider of ['codex', 'claude', 'opencode']) {
       put('windows-source-' + provider + '-receipt.json', provider === 'codex' ? proof : makeProof(provider));
@@ -4036,6 +4038,30 @@ test('full original Process verifier accepts only authority-bound no-dispatch ev
     let parent = root; for (const key of path.slice(0, -1)) parent = parent[key] as Record<string, unknown>;
     if (remove) delete parent[path.at(-1)!]; else parent[path.at(-1)!] = value;
   };
+  const ownerMutations: [string[], unknown][] = [
+    [['states', 'retained', 'hostIncarnation'], 'TEST-other-runtime-owner'],
+    [['states', 'afterCleanup', 'hostIncarnation'], 'TEST-other-runtime-owner'],
+    [['hosts', '0', 'helloHostIncarnation'], 'TEST-other-transport-owner'],
+    [['hosts', '1', 'helloHostIncarnation'], 'TEST-other-transport-owner'],
+    [['barrier', 'attachment', 'hostIncarnation'], 'TEST-other-transport-owner'],
+    [['barrier', 'attachment', 'mainEpoch'], 'TEST-other-Main'],
+    [['barrier', 'attachment', 'profileDigest'], 'd'.repeat(64)],
+  ];
+  for (const index of [0, 1]) {
+    for (const [path, value] of ownerMutations) {
+      const ownerLoss = JSON.parse(JSON.stringify(ownerLossRows())) as ReturnType<typeof ownerLossRows>;
+      replace(ownerLoss[index]!, path, value);
+      assert.throws(() => run(undefined, ownerLoss), { code: 'ERR_ASSERTION' }, 'owner loss ' + index + ' ' + path.join('.'));
+    }
+    const missing = ownerLossRows();
+    for (const state of ['beforeLoss', 'retained', 'afterCleanup'])
+      replace(missing[index]!, ['states', state, 'hostIncarnation'], '');
+    assert.throws(() => run(undefined, missing), { code: 'ERR_ASSERTION' }, 'empty original Runtime owner');
+  }
+  const coincident = ownerLossRows();
+  for (const row of coincident) for (const state of ['beforeLoss', 'retained', 'afterCleanup'])
+    replace(row, ['states', state, 'hostIncarnation'], row.hosts[0]!.hostIncarnation);
+  assert.equal(run(undefined, coincident).status, 'PASS', 'separate identity domains do not require unequal UUIDs');
   const mutations: [string[], unknown, boolean?][] = [
     [['cleanupEvidence'], null], [['cleanupEvidence'], null, true], [['cleanupEvidence', 'kind'], 'unknown'],
     [['cleanupEvidence', 'extra'], true], [['cleanupEvidence', 'mainEpoch'], 'TEST-other-Main'],
