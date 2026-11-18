@@ -12,7 +12,7 @@ Status: **proposal only**. No runtime behavior changes in this RFC. This documen
 
 The app provides **30 UI locales**. New user-facing settings need localized labels, explanations and options; this is included in LOC estimates below.
 
-**Data ownership matters:** `ConfigManager` is a backend-wide configuration source. For new *per-client* visual preferences, storing values there would unexpectedly change multiple browser clients or a local desktop view. Preserve the existing stored `general.theme` contract in v1 for backwards compatibility; do not silently migrate it.
+**Data ownership matters:** `ConfigManager` is a backend-wide configuration source. For new _per-client_ visual preferences, storing values there would unexpectedly change multiple browser clients or a local desktop view. Preserve the existing stored `general.theme` contract in v1 for backwards compatibility; do not silently migrate it.
 
 ## 2. Product decisions
 
@@ -31,7 +31,7 @@ The app provides **30 UI locales**. New user-facing settings need localized labe
 | Priority | Setting / proposed values                                                                                                                         |       Estimated LOC | User value (1–10) | Regression risk   | Decision                                                                             |
 | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------: | ----------------: | ----------------- | ------------------------------------------------------------------------------------ |
 | P0       | **Theme control accessibility:** expose selected Dark/Light/System state to assistive tech; keep current behavior                                 |           **25–65** |                 8 | Low               | Do first; no new persisted key or translations                                       |
-| P0       | **Chat text size:** Small / Default / Large; scope typography to messages, not entire app or editors                                              |         **190–340** |                 9 | Low–medium        | Additional *chat-only* control; do not duplicate existing app-wide `fontSizePercent` |
+| P0       | **Chat text size:** Small / Default / Large; scope typography to messages, not entire app or editors                                              |         **190–340** |                 9 | Low–medium        | Additional _chat-only_ control; do not duplicate existing app-wide `fontSizePercent` |
 | P0       | **Motion:** Follow system / Reduce animations; never force motion when OS requests reduced motion                                                 |         **220–390** |                 9 | Medium            | Audit existing animation hotspots and loaders; do not disable progress indication    |
 | P1       | **Task/list density:** Comfortable / Compact on task table and team/sidebar rows first, not the entire product                                    |         **300–540** |                 8 | Medium            | Only after visual snapshots for narrow windows                                       |
 | P1       | **Message timestamps:** Always / On hover or focus (accessible by keyboard); wire existing unused `display.showTimestamps` semantics deliberately |         **240–420** |                 7 | Medium            | Requires consistent behavior across message surfaces                                 |
@@ -41,7 +41,7 @@ The app provides **30 UI locales**. New user-facing settings need localized labe
 | P2       | **Accent color presets:** curated accessible shortcuts, with contrast tests in light/dark                                                         |         **450–850** |                 5 | High              | Defer; reuse shipped custom-theme palette validation, not a new theme engine         |
 | Shipped  | **Whole-app UI scale/zoom:** existing 70–200% setting                                                                                             | **0 (no new work)** |                 6 | Existing behavior | Preserve current Electron/browser zoom and E2E; scope new chat text size separately  |
 
-**Estimate conventions:** The first *additional* setting may need ~70–120 LOC of shared preference plumbing only where existing helpers cannot be reused; do not count or rebuild the shipped store, theme editor, typography or zoom controllers. Localizations (~2–5 new strings across 30 locale JSON files) and React/component/E2E tests materially contribute to each range.
+**Estimate conventions:** The first _additional_ setting may need ~70–120 LOC of shared preference plumbing only where existing helpers cannot be reused; do not count or rebuild the shipped store, theme editor, typography or zoom controllers. Localizations (~2–5 new strings across 30 locale JSON files) and React/component/E2E tests materially contribute to each range.
 
 ## 4. Minimal implementation architecture
 
@@ -50,7 +50,7 @@ AppearanceSection (render only)
   -> existing useAppearancePreferences / appearanceStore (selection + feedback)
     -> existing validated AppearancePreferences type/defaults + bounded new fields
     -> existing renderer-local adapter / agent-teams-appearance-v1
-  -> scoped CSS tokens/data attributes for *new* controls
+  -> scoped CSS tokens/data attributes for _new_ controls
 
 Existing theme: useThemeController -> AppConfig.general.theme (unchanged)
 Existing zoom and typography: useAppearanceZoomController / useAppearanceTypographyController (unchanged)
@@ -61,7 +61,7 @@ Existing native window title bar: windowControls adapter (Electron only, unchang
 - **DRY:** Reuse the shipped normalizer, appearance store and shared settings controls. Only add bounded fields, localization keys and scoped renderers when an option genuinely needs them; avoid a parallel preference namespace.
 - **Dependency direction:** domain type/defaults have no React/DOM/Electron imports; storage implementation depends on browser APIs; UI depends on a small hook. No event bus, new state manager, generic plugin architecture or remote preferences API.
 - **Failure behavior:** invalid/unknown values become defaults, and storage exceptions are nonfatal. Failed writes must not update saved preferences or their visible snapshot; the shipped native Electron zoom shortcut is the exception: when persistence fails after native zoom has already changed, `reflectNativeAppearanceZoom` may update the visible zoom as **unpersisted display state** without replacing saved zoom. Keep existing `parseAppearance`, size limits and CSS input sanitization; never reset users' saved themes, font or zoom when adding an option.
-- **Server vs client:** personal appearance applies to *this browser/profile*. Label that in UI; don't promise cross-device synchronization. Future account-backed sync is explicitly out of scope.
+- **Server vs client:** personal appearance applies to _this browser/profile_. Label that in UI; don't promise cross-device synchronization. Future account-backed sync is explicitly out of scope.
 - **Platform:** macOS, Windows, Linux, desktop and browser use the same portable code. Native title bar remains a separately conditional control supported on Windows/Linux Electron and restart-only; never show it in web UI.
 
 ## 5. Rollout and E2E requirements
@@ -82,6 +82,6 @@ Existing native window title bar: windowControls adapter (Electron only, unchang
 
 ## 7. Recommended v1 scope / acceptance criteria
 
-**Recommend**: theme accessibility, *chat-scoped* text size, and motion preference first. Do **not** ship unused `display` toggles or a second global zoom control. Accept when all of these work in both desktop and browser, survive reload, do not change another independent client's local preferences, respect system accessibility settings, keep defaults unchanged, and pass relevant existing E2E checks.
+**Recommend**: theme accessibility, _chat-scoped_ text size, and motion preference first. Do **not** ship unused `display` toggles or a second global zoom control. Accept when all of these work in both desktop and browser, survive reload, do not change another independent client's local preferences, respect system accessibility settings, keep defaults unchanged, and pass relevant existing E2E checks.
 
 The RFC does not authorize implementing every option. Follow-on feature PRs should remain separate and small; no feature implementation should be merged from this planning PR.
