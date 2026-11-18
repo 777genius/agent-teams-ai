@@ -3,6 +3,7 @@ import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { ProcessFact } from '../../packages/legacy-agent-host/tests/fixtures/native-input-capture.ts';
+import type { DesktopMetadataWitness } from './desktop-metadata-witness.ts';
 
 type Row = Record<string, unknown>;
 export interface DesktopMetadataEvent {
@@ -47,7 +48,7 @@ const identity = (value: DesktopMetadataEvent) => [value.hostPid, value.profileH
   value.providerHash, value.pid, value.startIdentityHash];
 
 /** Parse the existing private log only; this observation has no process/Host authority. */
-function readEvents(root: string, hostPid: number): DesktopMetadataEvent[] {
+export function readDesktopMetadataEvents(root: string, hostPid: number, allowEmpty = false): DesktopMetadataEvent[] {
   const directory = join(root, 'userData/logs');
   let rotated = Buffer.alloc(0);
   try { rotated = readFileSync(join(directory, 'app-errors.1.ndjson')); }
@@ -95,9 +96,10 @@ function readEvents(root: string, hostPid: number): DesktopMetadataEvent[] {
     events.push({ hostPid, profileHash: value.profileHash, mode: value.mode, providerHash: value.providerHash,
       pid: value.pid, startIdentityHash: value.startIdentityHash, stage: value.stage });
   }
-  assert.ok(events.length > 0 && events.length <= 128, 'finite original metadata lifecycle observations');
+  assert.ok((allowEmpty || events.length > 0) && events.length <= 128, 'finite original metadata lifecycle observations');
   return events;
 }
+const readEvents = readDesktopMetadataEvents;
 
 /** One captured owner per profile; a successor requires the previous exact ready's confirmed close. */
 function lifecycle(events: readonly DesktopMetadataEvent[], profileHashes: readonly string[], hostPid: number) {
@@ -256,7 +258,7 @@ export interface DesktopSourceMetadataLineage {
   readonly live: readonly ProcessFact[];
 }
 
-/** One whole-log budget for the original configuration/A/B source journey. */
+/** The live sampler may supply its same-census log snapshot; full reads always reread the original log. */
 export function captureDesktopSourceMetadataLineage(options: {
   root: string;
   host: ProcessFact;
@@ -264,13 +266,25 @@ export function captureDesktopSourceMetadataLineage(options: {
   observed: readonly ProcessFact[];
   executable: string;
   original?: DesktopSourceMetadataLineage;
+  witness?: DesktopMetadataWitness;
   released?: boolean;
-}): DesktopSourceMetadataLineage {
-  const { host, profileHashes, observed, original } = options;
+}, sampledEvents?: readonly DesktopMetadataEvent[]): DesktopSourceMetadataLineage {
+  const { host, profileHashes, observed } = options;
+  const witnessed = options.witness?.read(), original = witnessed ?? options.original;
+  if (witnessed && options.original) {
+    assert.deepEqual(witnessed.host, options.original.host);
+    assert.deepEqual(witnessed.profileHashes.slice(0, options.original.profileHashes.length), options.original.profileHashes);
+    assert.deepEqual(witnessed.events.slice(0, options.original.events.length), options.original.events);
+    for (const partition of options.original.partitions) {
+      const next = witnessed.partitions.find(row => row.profileHashes[0] === partition.profileHashes[0]);
+      assert.ok(next); assertDesktopMetadataLineageRetained(partition, next);
+    }
+  }
   assert.ok(profileHashes.length >= 1 && profileHashes.length <= 3);
   assert.equal(new Set(profileHashes).size, profileHashes.length);
   assert.ok(profileHashes.every(hash));
-  const events = readEvents(options.root, host.pid);
+  const events = sampledEvents ?? readEvents(options.root, host.pid);
+  assert.ok(events.length > 0 && events.length <= 128, 'finite original metadata lifecycle observations');
   if (original) {
     assert.deepEqual(host, original.host, 'same original source-selection Host');
     assert.deepEqual(profileHashes.slice(0, original.profileHashes.length), original.profileHashes);

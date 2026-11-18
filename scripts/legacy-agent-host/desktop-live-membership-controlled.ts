@@ -148,7 +148,7 @@ export async function readDesktopFiniteMembershipPeers(selected: Pick<DesktopFin
       assert.ok(Number.isSafeInteger(row.pid) && Number(row.pid) > 1);
       assert.notEqual(row.event, 'failure', 'a finite peer refusal is never native V2 qualification');
       if (row.event === 'input') {
-        assert.equal(row.role, 'management', 'the two initial Runtime peers receive no business input');
+        // Model probes derived from Runtime selections retain that selection's role.
         assert.equal(row.marker, 'TEST_MODEL_PROBE');
       }
       effects.push(row);
@@ -156,7 +156,7 @@ export async function readDesktopFiniteMembershipPeers(selected: Pick<DesktopFin
   }
   assert.ok(effects.length <= 4096);
   return { effects, probeCounts: (['claude', 'codex'] as const).map(provider =>
-    effects.filter(row => row.provider === provider && row.role === 'management' && row.event === 'input').length) };
+    effects.filter(row => row.provider === provider && row.event === 'input').length) };
 }
 
 /** Same captured ps census plus Linux kernel identity for that Host and its direct children only. */

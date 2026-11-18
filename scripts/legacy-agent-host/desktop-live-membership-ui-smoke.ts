@@ -21,8 +21,12 @@ import { mixedDesktopTeamName, readMixedLiveMembershipIdentity } from './desktop
 import type { DesktopLiveMemberSelection, DesktopMixedModels } from './desktop-mixed-native-fixture.ts';
 import { readDesktopFiniteMembershipPeers, desktopFiniteMembershipProcesses } from './desktop-live-membership-controlled.ts';
 import type { DesktopFiniteMembership } from './desktop-live-membership-controlled.ts';
+import { createDesktopMetadataWitness, createDesktopLinuxMetadataObservation,
+  readDesktopMetadataSourceFile } from './desktop-metadata-witness.ts';
+import type { DesktopMetadataWitness } from './desktop-metadata-witness.ts';
 import { readDesktopNativeStopSessions } from './desktop-native-stop-fixture.ts';
-import { captureDesktopSourceMetadataLineage, desktopMetadataProfileHash } from './desktop-opencode-metadata-lineage.ts';
+import { captureDesktopSourceMetadataLineage, desktopMetadataProfileHash,
+  readDesktopMetadataEvents } from './desktop-opencode-metadata-lineage.ts';
 import type { DesktopSourceMetadataLineage } from './desktop-opencode-metadata-lineage.ts';
 import { revealDesktopReply } from './desktop-reply-visibility.ts';
 import { createDesktopUiControls, desktopJsLiteral as literal } from './desktop-ui-controls.ts';
@@ -83,7 +87,9 @@ export async function runDesktopLiveMembershipUiSmoke(cdp: UiCdpPort, options: {
     openCodeGeneration: models.openCodeGeneration, ...(finite ? { initialPeers: finite.kind, fullMixedNativeQualification: false } : {}), steps };
   options.evidence.liveMembershipProof = proof;
   const modelRows = [models.claude, models.codex, models.opencode];
+  let metadataWitness: DesktopMetadataWitness | undefined;
   const current = () => {
+    metadataWitness?.observe();
     options.assertOwnedRenderer();
     for (const model of modelRows) assert.deepEqual(model.failures, []);
     for (const model of [models.claude, models.codex]) {
@@ -133,15 +139,13 @@ export async function runDesktopLiveMembershipUiSmoke(cdp: UiCdpPort, options: {
   };
   let sourceSeen = false;
   let previousSourceRecords: ReturnType<typeof runtimeSourceRecordSchema.parse>[] = [];
-  const sourceProfiles = async () => {
-    let envelope: Row;
-    try { envelope = await read(join(fixture.root, 'hoststore/runtime-sources/index.json'), 8 * 1024 * 1024); sourceSeen = true; }
-    catch (error) {
-      if (!sourceSeen && (error as NodeJS.ErrnoException).code === 'ENOENT')
-        return { records: [], current: [], profileHashes: [desktopMetadataProfileHash({
-          profileId: text(metadataProfile.profileId), configRevision: text(metadataProfile.configRevision) })] };
-      throw error;
+  const selectSourceProfiles = (envelope: Row | undefined) => {
+    if (envelope === undefined) {
+      assert.equal(sourceSeen, false, 'an original source index cannot disappear');
+      return { records: [], current: [], profileHashes: [desktopMetadataProfileHash({
+        profileId: text(metadataProfile.profileId), configRevision: text(metadataProfile.configRevision) })] };
     }
+    sourceSeen = true;
     const { digest, ...body } = envelope; assert.equal(digest, runtimeDigest(body));
     assert.deepEqual(Object.keys(body).sort(), ['current', 'records', 'schemaVersion']); assert.equal(body.schemaVersion, 1);
     const records = rows(body.records).map(row => runtimeSourceRecordSchema.parse(row)), pointers = rows(body.current, 256);
@@ -176,6 +180,19 @@ export async function runDesktopLiveMembershipUiSmoke(cdp: UiCdpPort, options: {
       ...selected.map(row => desktopMetadataProfileHash({ profileId: 'runtime-source:' + row.revision,
         configRevision: 'runtime-source:' + row.revision }))] };
   };
+  const sourceIndexPath = join(fixture.root, 'hoststore/runtime-sources/index.json');
+  const sourceProfiles = async () => {
+    let envelope: Row | undefined;
+    try { envelope = await read(sourceIndexPath, 8 * 1024 * 1024); }
+    catch (error) { if ((error as NodeJS.ErrnoException).code !== 'ENOENT' || sourceSeen) throw error; }
+    return selectSourceProfiles(envelope);
+  };
+  const sourceProfilesNow = () => {
+    let envelope: Row | undefined;
+    try { envelope = readDesktopMetadataSourceFile(sourceIndexPath, 8 * 1024 * 1024); }
+    catch (error) { if ((error as NodeJS.ErrnoException).code !== 'ENOENT' || sourceSeen) throw error; }
+    return selectSourceProfiles(envelope);
+  };
   const probeLedger = async () => {
     const directory = join(fixture.root, 'hoststore/management-commands'), names = await readdir(directory);
     assert.ok(names.length <= 256); const result: { commandId: string; fingerprint: string; digest: string }[] = [];
@@ -205,10 +222,11 @@ export async function runDesktopLiveMembershipUiSmoke(cdp: UiCdpPort, options: {
     let metadata: readonly ProcessFact[];
     if (v2) {
       const next = captureDesktopSourceMetadataLineage({ root: fixture.root, host, profileHashes: sources.profileHashes,
-        observed: table, executable: text(openCodeExecutable.path), ...(lineage ? { original: lineage } : {}) });
+        observed: table, executable: text(openCodeExecutable.path), ...(lineage ? { original: lineage } : {}),
+        ...(metadataWitness ? { witness: metadataWitness } : {}) });
       for (const row of children.filter(row => row.command === openCodeExecutable.path))
         assert.equal(command(row.pid), text(openCodeExecutable.path) + ' --no-env-file --config=/dev/null --no-install ' + embeddedEntry);
-      lineage = next; metadata = next.live;
+      metadataWitness?.retain(next); lineage = next; metadata = next.live;
     } else {
       metadata = children.filter(row => command(row.pid) === v1MetadataCommand); assert.ok(metadata.length <= 1);
       for (const birth of metadataBirths) {
@@ -251,11 +269,22 @@ export async function runDesktopLiveMembershipUiSmoke(cdp: UiCdpPort, options: {
       assert.ok(lineage);
       lineage = captureDesktopSourceMetadataLineage({ root: fixture.root, host,
         profileHashes: (await sourceProfiles()).profileHashes, observed: table,
-        executable: text(openCodeExecutable.path), original: lineage, released: true });
+        executable: text(openCodeExecutable.path), original: lineage, released: true,
+        ...(metadataWitness ? { witness: metadataWitness } : {}) });
+      metadataWitness?.retain(lineage);
     } else for (const row of metadataBirths) assert.ok(!table.some(live => live.pid === row.pid));
     epochs.push({ host, ...(lineage ? { lineage } : { metadataBirths: [...metadataBirths] }), released: true });
     await pins();
   };
+  const resetMetadataWitness = () => {
+    metadataWitness = finite && v2 ? createDesktopMetadataWitness(createDesktopLinuxMetadataObservation({
+      root: fixture.root, group: options.capturedGroup, node: fixture.node, hostEntry: fixture.hostEntry,
+      executable: text(openCodeExecutable.path), embeddedEntry: embeddedEntry!,
+      profileHashes: () => sourceProfilesNow().profileHashes,
+      events: hostPid => readDesktopMetadataEvents(fixture.root, hostPid, true),
+    })) : undefined;
+  };
+  resetMetadataWitness();
   await pins(); await ui.observeInput();
   await openOriginalCreateForm(cdp, ui, workspace, mixedDesktopTeamName);
   const create = '[data-testid="create-team-page"]';
@@ -546,6 +575,7 @@ export async function runDesktopLiveMembershipUiSmoke(cdp: UiCdpPort, options: {
   });
   assert.ok(afterQuitProbes);
   host = undefined; lineage = undefined; metadataBirths = [];
+  resetMetadataWitness();
   ui = createDesktopUiControls(cdp, { assertOwnedRenderer: current, step });
   await ui.observeInput(); await observe([]);
   assert.deepEqual(await sessions(), stopped);

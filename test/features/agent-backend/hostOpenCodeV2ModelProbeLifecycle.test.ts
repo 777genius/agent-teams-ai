@@ -4,10 +4,12 @@ import { createHash } from 'node:crypto';
 import { channel } from 'node:diagnostics_channel';
 import { once } from 'node:events';
 import { mkdtempSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
+import { realpath } from 'node:fs/promises';
 import { createServer } from 'node:http';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { setImmediate } from 'node:timers';
+import { fileURLToPath } from 'node:url';
 
 import { afterEach, expect, test, vi } from 'vitest';
 
@@ -392,7 +394,10 @@ type StartupPhase = Parameters<NonNullable<OpenCodeV2EmbeddedServerOptions['obse
 async function embeddedBoundary(
   observer: 'absent' | 'throw' | 'getter' | 'captured', graphFailure: boolean, abortAt?: StartupPhase
 ) {
-  const root = realpathSync(mkdtempSync(join(tmpdir(), 'TEST-v2-probe-phase-boundary-')));
+  const entry = fileURLToPath(new URL('../../../packages/legacy-agent-host/src/adapters/providers/OpenCodeV2EmbeddedChild.ts', import.meta.url));
+  expect(await realpath(entry), 'the original source child entry must already have its native canonical spelling').toBe(entry);
+  // Match the real server's native directory admission, including Windows aliases.
+  const root = await realpath(mkdtempSync(join(tmpdir(), 'TEST-v2-probe-phase-boundary-')));
   const executable = join(root, 'TEST-never-executed'), bytes = Buffer.from('TEST inert source only\n');
   writeFileSync(executable, bytes, { mode: 0o600 });
   const originalFailure = new Error('TEST original graph failure');

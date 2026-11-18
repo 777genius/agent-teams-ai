@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { mkdir, mkdtemp, readFile, realpath, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, realpath, rm, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { runInNewContext } from 'node:vm';
@@ -20,6 +20,7 @@ import { projectDesktopCodexLoginFailure } from './desktop-codex-login-ui-proof.
 import { projectDesktopCodexInstallerFailure, projectDesktopSelectionTargetFailure } from './desktop-backend-failures.ts';
 import { projectDesktopEmulatedReadinessFailure, projectDesktopProofReceiptSummary, projectDesktopTaskBoardFailure } from './desktop-proof-evidence.ts';
 import { readNativeProviderArtifact } from '../../packages/legacy-agent-host/tests/fixtures/native-provider-artifact.ts';
+import { readDesktopFiniteMembershipPeers } from './desktop-live-membership-controlled.ts';
 
 function deferred<T>() {
   let resolve!: (value: T) => void;
@@ -3773,6 +3774,66 @@ test('finite V2 P11 admission rejects mixed selectors before any fixture or proc
     await assert.rejects(select({ ...context, ...override }), assert.AssertionError);
   await assert.rejects(select(allowed, 'darwin'), assert.AssertionError);
   await assert.rejects(select(allowed, 'linux', 'arm64'), assert.AssertionError);
+});
+
+test('finite V2 P11 effects count exact probes from both original profile roles and refuse business inputs', async t => {
+  const root = await realpath(await mkdtemp(join(tmpdir(), 'TEST-finite-p11-effects-')));
+  t.after(() => rm(root, { recursive: true, force: true }));
+  const pin = async (name: string, bytes: string) => {
+    const path = join(root, name); await writeFile(path, bytes, { flag: 'wx' });
+    return { path, sha256: createHash('sha256').update(bytes).digest('hex') };
+  };
+  const source = await pin('TEST-source.mjs', 'export const source = "TEST finite protocol";\n');
+  const peers: Parameters<typeof readDesktopFiniteMembershipPeers>[0]['peers'][number][] = [];
+  for (const provider of ['claude', 'codex'] as const) {
+    const peerRoot = join(root, provider); await mkdir(peerRoot);
+    peers.push({ provider, root: peerRoot, executable: await pin(`TEST-${provider}.mjs`, `// TEST ${provider} wrapper; never executed\n`) });
+  }
+  const selected = { sources: [source], peers };
+  const original = peers.map(({ provider }, index) => ['management', 'runtime'].flatMap((role, roleIndex) => {
+    const common = { provider, role, pid: 200 + index * 10 + roleIndex, inputId: `TEST-${provider}-${role}` };
+    return [{ ...common, event: 'launch' }, { ...common, event: 'input', marker: 'TEST_MODEL_PROBE' },
+      { ...common, event: 'terminal', marker: 'Reply only OK. Do not use tools, access files or run commands.', outcome: 'succeeded' }];
+  }));
+  const writeRows = async (rows: Record<string, unknown>[][] = original) => {
+    for (const [index, peer] of peers.entries())
+      await writeFile(join(peer.root, 'effects.ndjson'), rows[index]!.map(row => JSON.stringify(row)).join('\n') + '\n');
+  };
+  await writeRows();
+  assert.deepEqual(await readDesktopFiniteMembershipPeers(selected), { effects: original.flat(), probeCounts: [2, 2] });
+  for (const [providerIndex] of peers.entries()) for (const role of ['management', 'runtime']) {
+    for (const marker of ['TEST_UI_BOOT', 'TEST_UI_HOLD', '/cost', 'TEST_MODEL_PROBE extra', 'TEST_MODEL_PROBE ',
+      'Reply only OK. Do not use tools, access files or run commands.', undefined, null]) {
+      const rows: Record<string, unknown>[][] = structuredClone(original);
+      rows[providerIndex]!.find(row => row.role === role && row.event === 'input')!.marker = marker;
+      await writeRows(rows);
+      await assert.rejects(readDesktopFiniteMembershipPeers(selected), error =>
+        error instanceof assert.AssertionError && error.actual === marker && error.expected === 'TEST_MODEL_PROBE');
+    }
+  }
+  for (const mutation of [{ event: 'failure' }, { role: 'other' }, { provider: 'opencode' },
+    { pid: 1 }, { pid: '200' }, { pid: 1.5 }, { pid: Number.MAX_SAFE_INTEGER + 1 }]) {
+    const rows: Record<string, unknown>[][] = structuredClone(original); Object.assign(rows[0]![1]!, mutation);
+    await writeRows(rows); await assert.rejects(readDesktopFiniteMembershipPeers(selected), assert.AssertionError);
+  }
+  await writeRows();
+  for (const captured of [source, ...peers.map(peer => peer.executable)]) {
+    const bytes = await readFile(captured.path);
+    await writeFile(captured.path, Buffer.concat([bytes, Buffer.from('changed')]));
+    await assert.rejects(readDesktopFiniteMembershipPeers(selected), assert.AssertionError);
+    await writeFile(captured.path, bytes);
+  }
+  const effectsPath = join(peers[0]!.root, 'effects.ndjson');
+  await writeFile(effectsPath, ' '.repeat(1024 * 1024 + 1));
+  await assert.rejects(readDesktopFiniteMembershipPeers(selected), assert.AssertionError);
+  await writeRows([Array.from({ length: 4097 }, () => original[0]![0]!), []]);
+  await assert.rejects(readDesktopFiniteMembershipPeers(selected), assert.AssertionError);
+  await rm(effectsPath); await symlink(join(peers[1]!.root, 'effects.ndjson'), effectsPath);
+  await assert.rejects(readDesktopFiniteMembershipPeers(selected), assert.AssertionError);
+  for (const peer of peers) await rm(join(peer.root, 'effects.ndjson'));
+  assert.deepEqual(await readDesktopFiniteMembershipPeers(selected), { effects: [], probeCounts: [0, 0] });
+  await writeRows();
+  assert.deepEqual(await readDesktopFiniteMembershipPeers(selected), { effects: original.flat(), probeCounts: [2, 2] });
 });
 
 test('finite V2 P11 Linux projection keeps exact kernel identity and refuses changed or foreign children', async () => {

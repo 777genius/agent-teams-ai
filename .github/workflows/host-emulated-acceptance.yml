@@ -280,6 +280,7 @@ jobs:
             packages/legacy-agent-host/src/adapters/providers/createClaudeCloseDiagnostic.ts \
             test/features/agent-backend/claudeCloseDiagnostics.test.ts \
             scripts/legacy-agent-host/desktop-opencode-metadata-lineage.ts \
+            scripts/legacy-agent-host/desktop-metadata-witness.ts \
             test/renderer/components/cli/CliStatusVisibility.test.ts \
             tools/owned-process-broker/nativeEmulatedSourceCold.ts \
             tools/owned-process-broker/nativeEmulatedProfile.ts \

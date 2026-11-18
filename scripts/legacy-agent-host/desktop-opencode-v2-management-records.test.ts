@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
-import { mkdir, mkdtemp, readFile, realpath, rm, writeFile } from 'node:fs/promises';
+import { link, mkdir, mkdtemp, readFile, realpath, rm, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { basename, join } from 'node:path';
 import { test } from 'node:test';
@@ -15,6 +15,7 @@ import { assertDesktopV2ManagementSourceHistory, bindDesktopV2ManagementReceipt,
   captureDesktopV2ManagementAuthority, readDesktopV2ManagementPublication } from './desktop-opencode-v2-management-records.ts';
 import { desktopJsLiteral } from './desktop-ui-controls.ts';
 import { captureDesktopSourceMetadataLineage, assertDesktopMetadataLineageReleased } from './desktop-opencode-metadata-lineage.ts';
+import { createDesktopMetadataWitness, readDesktopMetadataSourceFile } from './desktop-metadata-witness.ts';
 import type { StoredRuntimeSourceCommand } from '../../packages/legacy-agent-host/dist/management/commandRecords.js';
 import type { PublishRuntimeSource } from '../../packages/legacy-agent-host/dist/composition/runtimeSourceContracts.js';
 
@@ -378,4 +379,249 @@ test('metadata observation separation still refuses malformed diagnostics and un
         observed: [child], executable: child.command }));
     }
   } finally { await rm(root, { recursive: true, force: true }); }
+});
+
+// Constructed finite observations reproduce the original 806 Create-time handoff, not native acceptance.
+async function withEarlyMetadata(work: (fixture: {
+  root: string;
+  host: { pid: number; parentPid: number; groupId: number; birth: string; command: string };
+  child: { pid: number; parentPid: number; groupId: number; birth: string; command: string };
+  ready: { hostPid: number; profileHash: string; mode: 'provider'; providerHash: string;
+    pid: number; startIdentityHash: string; stage: 'ready' };
+  write(events: readonly unknown[]): Promise<unknown>;
+}) => Promise<void>) {
+  const root = await realpath(await mkdtemp(join(tmpdir(), 'TEST-early-metadata-')));
+  try {
+    const host = { pid: 10, parentPid: 1, groupId: 10, birth: 'linux-starttime:100', command: '/TEST/node' };
+    const child = { pid: 11, parentPid: 10, groupId: 11, birth: 'linux-starttime:110', command: '/TEST/bun' };
+    const ready = { hostPid: host.pid, profileHash: 'a'.repeat(64), mode: 'provider' as const,
+      providerHash: 'c'.repeat(64), pid: child.pid, startIdentityHash: createHash('sha256').update('11:110').digest('hex'),
+      stage: 'ready' as const };
+    const directory = join(root, 'userData/logs'); await mkdir(directory, { recursive: true });
+    const write = (events: readonly unknown[]) => writeFile(join(directory, 'app-errors.ndjson'),
+      events.map(event => JSON.stringify({ namespace: 'Host:OpenCodeMetadata',
+        message: 'OpenCode metadata stage ' + JSON.stringify(event) })).join('\n') + '\n');
+    await work({ root, host, child, ready, write });
+  } finally { await rm(root, { recursive: true, force: true }); }
+}
+
+test('early live metadata witness survives release before the first membership census', async () => {
+  await withEarlyMetadata(async ({ root, host, child, ready, write }) => {
+    const options = { root, host, profileHashes: ['d'.repeat(64), ready.profileHash], executable: child.command };
+    let observed = [child];
+    const witness = createDesktopMetadataWitness(() => ({ ...options, observed }));
+    await write([ready]); witness.observe();
+    assert.deepEqual(witness.read()!.partitions[0]!.births, [child]);
+    await write([ready, { ...ready, stage: 'released' }]); observed = [];
+    witness.observe();
+    assert.throws(() => captureDesktopSourceMetadataLineage({ ...options, observed }),
+      /a retired profile needs its previously retained physical lineage/, 'the original missing-witness refusal is unchanged');
+    const current = captureDesktopSourceMetadataLineage({ ...options, observed, witness });
+    assert.deepEqual(current.live, []);
+    assert.deepEqual(current.partitions[0]!.births, [child]);
+    assert.deepEqual(current.events.map(row => row.stage), ['ready', 'released']);
+  });
+});
+
+test('a metadata release after the sampled live census cannot replace its original event snapshot', async () => {
+  await withEarlyMetadata(async ({ root, host, child, ready, write }) => {
+    const options = { root, host, profileHashes: [ready.profileHash], executable: child.command };
+    // The reader already observed these ready bytes and this live kernel birth before release.
+    const witness = createDesktopMetadataWitness(() => ({ ...options, observed: [child], events: [ready] }));
+    await write([ready, { ...ready, stage: 'released' }]);
+    witness.observe();
+    assert.deepEqual(witness.read()!.events, [ready]);
+    const released = captureDesktopSourceMetadataLineage({ ...options, observed: [], witness });
+    assert.deepEqual(released.partitions[0]!.births, [child]); assert.deepEqual(released.live, []);
+    await write([{ ...ready, startIdentityHash: 'e'.repeat(64) }, { ...ready, stage: 'released' }]);
+    assert.throws(() => captureDesktopSourceMetadataLineage({ ...options, observed: [], witness }), /immutable whole-log prefix/);
+  });
+});
+
+test('early metadata pending observations never supply readiness or erase a retained prefix', async () => {
+  await withEarlyMetadata(async ({ root, host, child, ready, write }) => {
+    const options = { root, host, profileHashes: [ready.profileHash], executable: child.command };
+    let pending = true;
+    const witness = createDesktopMetadataWitness(() => pending ? undefined : { ...options, observed: [child] });
+    await write([]); witness.observe(); assert.equal(witness.read(), undefined);
+    assert.throws(() => captureDesktopSourceMetadataLineage({ ...options, observed: [], witness }),
+      /finite original metadata lifecycle observations/);
+    await write([ready]); pending = false; witness.observe();
+    pending = true;
+    let refusal: unknown;
+    assert.throws(() => { try { witness.observe(); } catch (error) { refusal = error; throw error; } }, /cannot disappear/);
+    pending = false;
+    assert.throws(() => witness.observe(), error => error === refusal);
+    assert.throws(() => witness.read(), error => error === refusal);
+  });
+});
+
+test('an unobserved retired metadata birth remains sticky debt even after a later live observation', async () => {
+  await withEarlyMetadata(async ({ root, host, child, ready, write }) => {
+    const options = { root, host, profileHashes: [ready.profileHash], executable: child.command };
+    let observed: typeof child[] = [];
+    const witness = createDesktopMetadataWitness(() => ({ ...options, observed }));
+    await write([ready, { ...ready, stage: 'released' }]);
+    let refusal: unknown;
+    assert.throws(() => { try { witness.observe(); } catch (error) { refusal = error; throw error; } }, /retired profile/);
+    await write([ready]); observed = [child];
+    assert.throws(() => witness.observe(), error => error === refusal);
+    assert.throws(() => captureDesktopSourceMetadataLineage({ ...options, observed, witness }), error => error === refusal);
+  });
+});
+
+test('a same-profile successor missed between early fences remains sticky missing-birth debt', async () => {
+  await withEarlyMetadata(async ({ root, host, child, ready, write }) => {
+    const options = { root, host, profileHashes: [ready.profileHash], executable: child.command };
+    const successor = { ...child, pid: 12, groupId: 12, birth: 'linux-starttime:120' };
+    const nextReady = { ...ready, pid: successor.pid,
+      startIdentityHash: createHash('sha256').update('12:120').digest('hex') };
+    const later = { ...child, pid: 13, groupId: 13, birth: 'linux-starttime:130' };
+    const laterReady = { ...ready, pid: later.pid,
+      startIdentityHash: createHash('sha256').update('13:130').digest('hex') };
+    for (const route of ['observe', 'retain'] as const) {
+      let observed = [child];
+      const witness = createDesktopMetadataWitness(() => ({ ...options, observed }));
+      await write([ready]); witness.observe();
+      const retained = witness.read()!;
+      const missed = [ready, { ...ready, stage: 'released' }, nextReady, { ...nextReady, stage: 'released' }];
+      await write(missed); observed = [];
+      let refusal: unknown;
+      assert.throws(() => {
+        try {
+          if (route === 'observe') witness.observe();
+          else witness.retain(captureDesktopSourceMetadataLineage({ ...options, observed, witness }));
+        } catch (error) { refusal = error; throw error; }
+      }, /every ready metadata process needs its original retained physical birth/);
+      await write([...missed, laterReady]); observed = [later];
+      assert.throws(() => witness.observe(), error => error === refusal);
+      assert.throws(() => witness.read(), error => error === refusal);
+      assert.throws(() => witness.retain(retained), error => error === refusal);
+    }
+  });
+});
+
+test('early metadata witness binds the ready hash to the actual Linux kernel birth', async () => {
+  await withEarlyMetadata(async ({ root, host, child, ready, write }) => {
+    const options = { root, host, profileHashes: [ready.profileHash], executable: child.command };
+    for (const changed of [
+      { ...child, birth: 'TEST-ps-only-birth' },
+      { ...child, birth: 'linux-starttime:111' },
+      { ...child, parentPid: 99 },
+      { ...child, groupId: 99 },
+      { ...child, command: '/TEST/other-bun' },
+    ]) {
+      await write([ready]);
+      const witness = createDesktopMetadataWitness(() => ({ ...options, observed: [changed] }));
+      assert.throws(() => witness.observe()); assert.throws(() => witness.read());
+    }
+    await write([{ ...ready, startIdentityHash: 'f'.repeat(64) }]);
+    const wrongReady = createDesktopMetadataWitness(() => ({ ...options, observed: [child] }));
+    assert.throws(() => wrongReady.observe(), /exact native birth/);
+  });
+});
+
+test('early metadata refuses changed source, prefix, PID reuse, unknown cleanup and live retired children', async () => {
+  await withEarlyMetadata(async ({ root, host, child, ready, write }) => {
+    const options = { root, host, profileHashes: [ready.profileHash], executable: child.command };
+    for (const [events, observed] of [
+      [[{ ...ready, startIdentityHash: 'e'.repeat(64) }], [child]],
+      [[{ ...ready, profileHash: 'f'.repeat(64) }], [child]],
+      [[ready, { ...ready, stage: 'cleanup-unknown' }], []],
+      [[ready, { ...ready, stage: 'released' }], [child]],
+      [[ready, { ...ready, stage: 'released' }, { ...ready, startIdentityHash: 'e'.repeat(64) }], [child]],
+    ] as const) {
+      let current: readonly typeof child[] = [child];
+      await write([ready]);
+      const witness = createDesktopMetadataWitness(() => ({ ...options, observed: current })); witness.observe();
+      await write(events); current = observed;
+      assert.throws(() => witness.observe()); assert.throws(() => witness.read());
+    }
+    let current = [child];
+    await write([ready]);
+    const witness = createDesktopMetadataWitness(() => ({ ...options, observed: current })); witness.observe();
+    current = [{ ...child, birth: 'linux-starttime:999' }];
+    assert.throws(() => witness.observe(), /birth is unchanged/);
+  });
+});
+
+test('a full original census can extend the early witness without losing either physical birth', async () => {
+  await withEarlyMetadata(async ({ root, host, child, ready, write }) => {
+    const options = { root, host, profileHashes: [ready.profileHash], executable: child.command };
+    const successor = { ...child, pid: 12, groupId: 12, birth: 'linux-starttime:120' };
+    const nextReady = { ...ready, pid: successor.pid, mode: 'directory', providerHash: null,
+      startIdentityHash: createHash('sha256').update('12:120').digest('hex') };
+    let observed = [child];
+    const witness = createDesktopMetadataWitness(() => ({ ...options, observed }));
+    await write([ready]); witness.observe();
+    const prefix = [ready, { ...ready, stage: 'released' }, nextReady];
+    await write(prefix); observed = [successor];
+    const original = captureDesktopSourceMetadataLineage({ ...options, observed, witness });
+    witness.retain(original);
+    original.partitions[0]!.births[0]!.birth = 'TEST-mutated-return-value';
+    await write([...prefix, { ...nextReady, stage: 'released' }]); observed = [];
+    witness.observe();
+    const closed = captureDesktopSourceMetadataLineage({ ...options, observed, witness, released: true });
+    assert.deepEqual(closed.partitions[0]!.births, [child, successor]);
+    const copied = witness.read()!; copied.host.birth = 'TEST-mutated-copy';
+    assert.equal(witness.read()!.host.birth, host.birth);
+    assert.throws(() => witness.retain({ ...closed, host: { ...host, birth: 'linux-starttime:999' } }), /original early metadata Host/);
+    assert.throws(() => witness.read(), /original early metadata Host/);
+  });
+});
+
+test('full-census retention cannot bypass early kernel-birth qualification', async () => {
+  await withEarlyMetadata(async ({ root, host, child, ready, write }) => {
+    const options = { root, host, profileHashes: [ready.profileHash], executable: child.command };
+    await write([ready]);
+    const wrong = captureDesktopSourceMetadataLineage({ ...options, observed: [{ ...child, birth: 'linux-starttime:999' }] });
+    const witness = createDesktopMetadataWitness(() => undefined);
+    assert.throws(() => witness.retain(wrong), /exact native birth/);
+    assert.throws(() => witness.read(), /exact native birth/);
+  });
+});
+
+test('early metadata read errors stay exact and cannot be retried into a successful witness', () => {
+  const refusal = Object.assign(new Error('TEST original proc read failed'), { code: 'ENOENT' });
+  let reads = 0;
+  const witness = createDesktopMetadataWitness(() => { reads++; if (reads === 1) throw refusal; return undefined; });
+  assert.throws(() => witness.observe(), error => error === refusal);
+  assert.throws(() => witness.observe(), error => error === refusal);
+  assert.throws(() => witness.read(), error => error === refusal);
+  assert.equal(reads, 1);
+});
+
+test('synchronous early metadata source read preserves the original regular-file limits', async () => {
+  await withEarlyMetadata(async ({ root }) => {
+    const path = join(root, 'source.json');
+    await writeFile(path, '{"schemaVersion":1}');
+    assert.deepEqual(readDesktopMetadataSourceFile(path, 64), { schemaVersion: 1 });
+    assert.throws(() => readDesktopMetadataSourceFile(path, 1));
+    assert.throws(() => readDesktopMetadataSourceFile(root, 64));
+    await writeFile(path, '[]'); assert.throws(() => readDesktopMetadataSourceFile(path, 64));
+    await writeFile(path, Buffer.from([0xff])); assert.throws(() => readDesktopMetadataSourceFile(path, 64));
+    await writeFile(path, '{}');
+    const alias = join(root, 'alias.json'); await symlink(path, alias);
+    assert.throws(() => readDesktopMetadataSourceFile(alias, 64));
+    await link(path, join(root, 'hardlink.json'));
+    assert.throws(() => readDesktopMetadataSourceFile(path, 64));
+  });
+});
+
+test('the real membership UI fence samples before its original owner and model guards', async () => {
+  const source = await readFile(new URL('./desktop-live-membership-ui-smoke.ts', import.meta.url), 'utf8');
+  const begin = source.indexOf('  const current = () => {'), end = source.indexOf('  const step = ', begin);
+  assert.ok(begin > 0 && end > begin);
+  const calls: string[] = [];
+  const current = runInNewContext('(() => {' + source.slice(begin, end) + 'return current; })()', {
+    metadataWitness: { observe: () => calls.push('live-witness') },
+    options: { assertOwnedRenderer: () => calls.push('original-owner') },
+    modelRows: Array.from({ length: 3 }, () => ({ failures: [] })),
+    models: { claude: { observations: [], notificationObservations: [] }, codex: { observations: [], notificationObservations: [] } },
+    assert: { deepEqual: (actual: unknown, expected: unknown) => {
+      calls.push('original-model'); assert.equal(JSON.stringify(actual), JSON.stringify(expected));
+    }, equal: assert.equal },
+  }) as () => void;
+  current();
+  assert.deepEqual(calls, ['live-witness', 'original-owner', 'original-model', 'original-model', 'original-model']);
 });

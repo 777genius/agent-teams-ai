@@ -197,6 +197,7 @@ export const desktopProofSupplementarySources = [
   'scripts/legacy-agent-host/desktop-backend-smoke.ts',
   'scripts/legacy-agent-host/desktop-codex-account-proof.ts',
   'scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts',
+  'scripts/legacy-agent-host/desktop-metadata-witness.ts',
   'scripts/legacy-agent-host/desktop-mixed-create-launch-ui-smoke.ts',
   'scripts/legacy-agent-host/desktop-mixed-native-fixture.ts',
   'scripts/legacy-agent-host/desktop-native-process-fixture.ts',

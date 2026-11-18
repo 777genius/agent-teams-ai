@@ -102,7 +102,7 @@ test('the original finite captured child retains sanitized stderr and excludes i
   });
 
 test('original Claude SDK child stderr reaches the member observer before failed startup and flushes its final tail',
-  { skip: process.platform === 'win32' }, async () => {
+  { skip: process.platform === 'win32' }, async t => {
     const { root, profile } = await setup(`#!${process.execPath}
 const { writeSync } = require('node:fs');
 writeSync(2, 'TEST original Claude startup diagnostic\\n');
@@ -133,15 +133,33 @@ process.exit(7);
           readCheckpoint: async () => { throw new Error('TEST checkpoint must not be read'); },
           observeProcessOutput: value => observations.push(value), onProgress: () => { progress++; },
         });
+        const originalSpawn = childProcess.spawn;
+        let originalClose: Promise<void> | undefined;
+        t.mock.method(childProcess, 'spawn', ((...args: Parameters<typeof spawn>) => {
+          assert.equal(args[0], profile.executable.path, 'only the original finite selected child');
+          assert.equal(originalClose, undefined, 'one original SDK child, never a replacement');
+          const child = originalSpawn(...args);
+          originalClose = new Promise<void>((resolve, reject) => {
+            child.once('error', reject);
+            child.once('close', () => { child.removeListener('error', reject); resolve(); });
+          });
+          void originalClose.catch(() => {}); // The original await below still reports any launch failure.
+          return child;
+        }) as typeof spawn);
+        syncBuiltinESMExports();
         try {
           await assert.rejects(provider.factory.open(request));
           assert.equal(await provider.cleanup(), true, 'the original finite child is physically stopped');
+          assert.ok(originalClose, 'the original child was captured before its output events');
+          // Physical process absence and the original pipe's final close are separate observations.
+          await originalClose;
           assert.deepEqual(observations, [
             { kind: 'process-output', stream: 'stderr', text: 'TEST original Claude startup diagnostic' },
             { kind: 'process-output', stream: 'stderr', text: 'TEST original Claude final tail' },
           ]);
           assert.equal(provider.isReady(), false); assert.equal(progress, 0);
         } finally {
+          t.mock.restoreAll(); syncBuiltinESMExports();
           provider.seal(); assert.equal(await provider.cleanup(), true);
         }
       } finally { await endpoint.close(); }
