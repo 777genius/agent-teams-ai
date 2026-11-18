@@ -242,6 +242,24 @@ export function readDesktopLinuxChildExecInput() {
   return verifyLinuxChildExecInput({ manifestPath, manifestSha256 });
 }
 
+/** Fixed optional build budget for two isolated finite Linux proofs, never ambient Node flags. */
+export function desktopFiniteHeapNodeOptions(
+  environment: Readonly<Record<string, string | undefined>> = process.env,
+  platform: string = process.platform,
+  arch: string = process.arch
+): '--max-old-space-size=1536' | undefined {
+  const selected = environment.LEGACY_DESKTOP_TEST_FINITE_HEAP_1536;
+  if (selected === undefined) return undefined;
+  assert.equal(selected, '1', 'finite TEST heap requires its exact selector');
+  assert.equal(platform, 'linux', 'finite TEST heap requires Linux');
+  assert.equal(arch, 'x64', 'finite TEST heap requires x64');
+  assert.equal(environment.LEGACY_DESKTOP_BACKEND_GO, '1', 'finite TEST heap requires explicit launch admission');
+  assert.equal(environment.LEGACY_DESKTOP_EMULATED_ONLY, '1', 'finite TEST heap requires provider emulation');
+  assert.ok(['emulated-retained-original-ui', 'emulated-import-lifecycle-ui'].includes(
+    environment.LEGACY_DESKTOP_PROOF_MODE ?? ''), 'finite TEST heap requires an exact finite lifecycle mode');
+  return '--max-old-space-size=1536';
+}
+
 export function desktopBackendEnvironment(
   root: string,
   node: string,
@@ -249,6 +267,7 @@ export function desktopBackendEnvironment(
   descriptorSha256: string,
   linuxChildExec = readDesktopLinuxChildExecInput()
 ) {
+  const finiteHeapNodeOptions = desktopFiniteHeapNodeOptions();
   return {
     HOME: join(root, 'home'),
     TMPDIR: join(root, 'tmp'),
@@ -274,6 +293,7 @@ export function desktopBackendEnvironment(
         (process.env.LEGACY_DESKTOP_BACKEND_GO === '1' &&
           !process.env.LEGACY_DESKTOP_PACKED_CAPTURE_PATH))
       ? { NODE_OPTIONS: '--max-old-space-size=8192' } : {}),
+    ...(finiteHeapNodeOptions ? { NODE_OPTIONS: finiteHeapNodeOptions } : {}),
     NO_COLOR: '1',
     // A TEST HOME changes pnpm's store lookup. Report drift without installing
     // into the frozen worktree; the harness verifies its selected archive bytes.

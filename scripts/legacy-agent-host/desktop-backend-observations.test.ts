@@ -10,6 +10,7 @@ import { join } from 'node:path';
 import { performance } from 'node:perf_hooks';
 import type { TestContext } from 'node:test';
 import { digest } from './desktop-backend-fixture.ts';
+import { desktopBackendEnvironment, desktopFiniteHeapNodeOptions } from './desktop-runtime-source-fixture.ts';
 import { observeDesktopEmulatedRuntimeChildren } from './desktop-emulated-runtime-fixture.ts';
 import { createDesktopProcessRootOracle } from './desktop-process-root-oracle.ts';
 import {
@@ -127,6 +128,79 @@ test('Linux TEST display admission accepts only the original local form or canon
   process.env.LEGACY_DESKTOP_BACKEND_GO = '1';
   process.env.LEGACY_DESKTOP_CLAUDE_PATH = '/TEST-refused-vendor';
   assert.throws(() => assertDesktopProofEnvironment(false), /provider-emulation refuses LEGACY_DESKTOP_CLAUDE_PATH/);
+});
+
+test('finite TEST heap selector admits only the two exact Linux x64 emulated lifecycle modes', () => {
+  const admitted = { LEGACY_DESKTOP_BACKEND_GO: '1', LEGACY_DESKTOP_EMULATED_ONLY: '1',
+    LEGACY_DESKTOP_TEST_FINITE_HEAP_1536: '1', LEGACY_DESKTOP_PROOF_MODE: 'emulated-retained-original-ui' };
+  for (const mode of ['emulated-retained-original-ui', 'emulated-import-lifecycle-ui'])
+    assert.equal(desktopFiniteHeapNodeOptions({ ...admitted, LEGACY_DESKTOP_PROOF_MODE: mode }, 'linux', 'x64'),
+      '--max-old-space-size=1536');
+  for (const value of ['', '0', 'true', '1536', '8192', '1 ', '--max-old-space-size=1536', '1\n'])
+    assert.throws(() => desktopFiniteHeapNodeOptions({ ...admitted, LEGACY_DESKTOP_TEST_FINITE_HEAP_1536: value },
+      'linux', 'x64'), /exact selector/);
+  for (const platform of ['darwin', 'win32', 'freebsd'])
+    assert.throws(() => desktopFiniteHeapNodeOptions(admitted, platform, 'x64'), /requires Linux/);
+  for (const arch of ['arm64', 'ia32', 'riscv64'])
+    assert.throws(() => desktopFiniteHeapNodeOptions(admitted, 'linux', arch), /requires x64/);
+  for (const value of [undefined, '', '0', 'true']) {
+    assert.throws(() => desktopFiniteHeapNodeOptions({ ...admitted, LEGACY_DESKTOP_BACKEND_GO: value },
+      'linux', 'x64'), /explicit launch admission/);
+    assert.throws(() => desktopFiniteHeapNodeOptions({ ...admitted, LEGACY_DESKTOP_EMULATED_ONLY: value },
+      'linux', 'x64'), /provider emulation/);
+  }
+  for (const mode of [undefined, '', 'team-ui', 'process-cold-ui', 'native-launch-ui', 'emulated-import-ui',
+    'emulated-claude-runtime-ui', 'emulated-codex-runtime-ui', 'emulated-retained-original-ui '])
+    assert.throws(() => desktopFiniteHeapNodeOptions({ ...admitted, LEGACY_DESKTOP_PROOF_MODE: mode },
+      'linux', 'x64'), /exact finite lifecycle mode/);
+});
+
+test('absent finite heap selector is inert on every platform and never reads ambient Node options', () => {
+  for (const platform of ['linux', 'darwin', 'win32']) for (const arch of ['x64', 'arm64'])
+    assert.equal(desktopFiniteHeapNodeOptions({ NODE_OPTIONS: '--require=/TEST/ambient.cjs --max-old-space-size=8192' },
+      platform, arch), undefined);
+});
+
+test('finite heap admission and closed app environment preserve every other field and reject ambient flags', {
+  skip: process.platform !== 'linux' || process.arch !== 'x64',
+}, (t) => {
+  const keys = (key: string) => key.startsWith('LEGACY_DESKTOP_') || key === 'NODE_OPTIONS';
+  const original = Object.fromEntries(Object.entries(process.env).filter(([key]) => keys(key)));
+  for (const key of Object.keys(original)) delete process.env[key];
+  t.after(() => {
+    for (const key of Object.keys(process.env)) if (keys(key)) delete process.env[key];
+    Object.assign(process.env, original);
+  });
+  Object.assign(process.env, { LEGACY_DESKTOP_BACKEND_GO: '1', LEGACY_DESKTOP_EMULATED_ONLY: '1',
+    LEGACY_DESKTOP_TEST_DISPLAY: ':97', LEGACY_DESKTOP_TEST_XAUTHORITY: '/TEST/Xauthority',
+    NODE_OPTIONS: '--require=/TEST/ambient.cjs --max-old-space-size=8192' });
+  const environment = () => desktopBackendEnvironment('/TEST/finite-root', '/TEST/node', '/TEST/descriptor.json', 'a'.repeat(64));
+  for (const mode of ['emulated-retained-original-ui', 'emulated-import-lifecycle-ui']) {
+    process.env.LEGACY_DESKTOP_PROOF_MODE = mode;
+    delete process.env.LEGACY_DESKTOP_TEST_FINITE_HEAP_1536;
+    assert.doesNotThrow(() => assertDesktopProofEnvironment(false));
+    const ordinary = environment();
+    assert.equal(Object.hasOwn(ordinary, 'NODE_OPTIONS'), false);
+    process.env.LEGACY_DESKTOP_TEST_FINITE_HEAP_1536 = '1';
+    assert.doesNotThrow(() => assertDesktopProofEnvironment(false));
+    assert.deepEqual(environment(), { ...ordinary, NODE_OPTIONS: '--max-old-space-size=1536' });
+  }
+  process.env.LEGACY_DESKTOP_TEST_FINITE_HEAP_1536 = '1536';
+  assert.throws(() => assertDesktopProofEnvironment(false), /exact selector/);
+  assert.throws(environment, /exact selector/);
+  process.env.LEGACY_DESKTOP_TEST_FINITE_HEAP_1536 = '1';
+  for (const mode of ['team-ui', 'emulated-import-ui', 'native-launch-ui']) {
+    process.env.LEGACY_DESKTOP_PROOF_MODE = mode;
+    assert.throws(() => assertDesktopProofEnvironment(true), /exact finite lifecycle mode/);
+    assert.throws(environment, /exact finite lifecycle mode/);
+  }
+  process.env.LEGACY_DESKTOP_PROOF_MODE = 'emulated-import-lifecycle-ui';
+  delete process.env.LEGACY_DESKTOP_EMULATED_ONLY;
+  assert.throws(() => assertDesktopProofEnvironment(true), /provider emulation/);
+  assert.throws(environment, /provider emulation/);
+  process.env.LEGACY_DESKTOP_EMULATED_ONLY = '1';
+  process.env.LEGACY_DESKTOP_TEST_FINITE_HEAP_8192 = '1';
+  assert.throws(() => assertDesktopProofEnvironment(false), /provider-emulation refuses LEGACY_DESKTOP_TEST_FINITE_HEAP_8192/);
 });
 
 test('TEST management admission retains only the exact direct detached Host peer without signaling', (t) => {

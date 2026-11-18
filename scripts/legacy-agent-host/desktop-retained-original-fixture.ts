@@ -38,6 +38,7 @@ export async function prepareDesktopRetainedOriginalFixture(repo: string, pnpmEn
   });
   const { root } = fixture, workspace = join(root, 'workspace');
   const team = join(root, 'claude/teams', RETAINED_ORIGINAL_TEAM);
+  await mkdir(dirname(team), { mode: 0o700 });
   await assert.rejects(lstat(team), { code: 'ENOENT' });
   await mkdir(team, { mode: 0o700 });
   await mkdir(join(root, 'claude/tasks', RETAINED_ORIGINAL_TEAM), { recursive: true, mode: 0o700 });

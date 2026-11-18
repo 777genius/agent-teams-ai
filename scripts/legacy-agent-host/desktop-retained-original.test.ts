@@ -11,6 +11,69 @@ const prompt = 'TEST_RETAINED_ORIGINAL_SOLO_ONE';
 const deferredPrompt = 'You are "team-lead", the team lead.\nYour team is "test-retained-original".\nUser instructions:\n' + prompt;
 const sha = (value: string) => createHash('sha256').update(value).digest('hex');
 
+test('real retained archive factory prepares a fresh private tree without launching peers or writing lifecycle authority',
+  { skip: process.platform === 'win32', timeout: 20_000 }, async t => {
+    const root = await realpath(await mkdtemp(join(tmpdir(), 'TEST-retained-preparation-')));
+    t.after(() => rm(root, { recursive: true, force: true }));
+    for (const name of ['home', 'tmp', 'corepack/dist/lib'])
+      await mkdir(join(root, name), { recursive: true, mode: 0o700 });
+    // Only package metadata is read. Any attempted package-manager execution fails.
+    await writeFile(join(root, 'corepack/package.json'), JSON.stringify({ name: 'corepack', version: 'TEST' }), { mode: 0o600 });
+    for (const name of ['dist/pnpm.js', 'dist/lib/corepack.cjs'])
+      await writeFile(join(root, 'corepack', name), 'throw new Error("TEST must never execute Corepack");\n', { mode: 0o600 });
+    const repo = await realpath(join(import.meta.dirname, '../..'));
+    const result = spawnSync(process.execPath, ['--input-type=module', '-e', `
+import assert from 'node:assert/strict';
+import { lstat, readFile, readdir, realpath } from 'node:fs/promises';
+import { dirname, join } from 'node:path';
+import { pathToFileURL } from 'node:url';
+const [repo, pnpmEntry, temporary] = process.argv.slice(1);
+const { prepareDesktopRetainedOriginalFixture, closeDesktopRetainedOriginalCatalog,
+  RETAINED_ORIGINAL_TEAM, RETAINED_ORIGINAL_KIND, readRetainedOriginalEffects } =
+  await import(pathToFileURL(join(repo, 'scripts/legacy-agent-host/desktop-retained-original-fixture.ts')).href);
+assert.deepEqual(await readdir(temporary), [], 'fresh factory input contains no precreated team directories');
+try {
+  const fixture = await prepareDesktopRetainedOriginalFixture(repo, pnpmEntry);
+  assert.equal(dirname(fixture.root), temporary);
+  assert.equal(await realpath(fixture.root), fixture.root);
+  const team = join(fixture.root, 'claude/teams', RETAINED_ORIGINAL_TEAM);
+  for (const directory of [dirname(team), team, join(fixture.root, 'claude/tasks', RETAINED_ORIGINAL_TEAM)]) {
+    const info = await lstat(directory);
+    assert.ok(info.isDirectory() && !info.isSymbolicLink());
+    assert.equal(info.mode & 0o777, 0o700);
+  }
+  assert.deepEqual((await readdir(team)).sort(), ['config.json', 'members.meta.json', 'team.meta.json']);
+  for (const name of ['launch-state.json', 'launch-stopped.json', 'launch-freshness.json', 'nativeRelease.json'])
+    await assert.rejects(lstat(join(team, name)), { code: 'ENOENT' });
+  assert.equal(fixture.retainedOriginal.seed.sourceKind, RETAINED_ORIGINAL_KIND);
+  assert.deepEqual(JSON.parse(await readFile(join(team, 'config.json'), 'utf8')), fixture.retainedOriginal.seed.config);
+  assert.equal(fixture.appEnvironment.CLAUDE_CLI_PATH, fixture.retainedOriginal.executable.path);
+  assert.equal(fixture.appEnvironment.CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH, fixture.retainedOriginal.executable.path);
+  assert.equal(fixture.appEnvironment.CODEX_CLI_PATH, join(fixture.root, 'bin/codex'));
+  assert.deepEqual(await readRetainedOriginalEffects(fixture.root), []);
+  await assert.rejects(lstat(fixture.sentinelLog), { code: 'ENOENT' });
+  for (const peer of fixture.emulatedRuntime.peers)
+    await assert.rejects(lstat(join(peer.root, 'effects.ndjson')), { code: 'ENOENT' });
+  assert.equal(fixture.retainedOriginal.catalog.requests, 0);
+  assert.deepEqual(fixture.retainedOriginal.catalog.failures, []);
+  process.stdout.write(JSON.stringify({ sourceKind: RETAINED_ORIGINAL_KIND, team: RETAINED_ORIGINAL_TEAM }));
+} finally {
+  await closeDesktopRetainedOriginalCatalog();
+}
+`, repo, join(root, 'corepack/dist/pnpm.js'), join(root, 'tmp')], {
+      cwd: repo, encoding: 'utf8', timeout: 15_000, maxBuffer: 128 * 1024,
+      env: { HOME: join(root, 'home'), TMPDIR: join(root, 'tmp'), PATH: dirname(process.execPath) + ':/usr/bin:/bin',
+        LANG: 'C.UTF-8', LC_ALL: 'C.UTF-8', LEGACY_DESKTOP_EMULATED_ONLY: '1',
+        LEGACY_DESKTOP_PROOF_MODE: 'emulated-retained-original-ui' },
+    });
+    assert.equal(result.error, undefined, result.stderr);
+    assert.equal(result.signal, null, 'preparation and original catalogue close must finish normally');
+    assert.equal(result.status, 0, result.stderr);
+    assert.deepEqual(JSON.parse(result.stdout), {
+      sourceKind: 'TEST-legacy-archive-without-native-release', team: 'test-retained-original',
+    });
+  });
+
 /** Synthetic protocol inputs only; these unit fixtures never claim an original Main release. */
 async function fixture(t: TestContext) {
   const root = await realpath(await mkdtemp(join(tmpdir(), 'TEST-desktop-backend-')));
