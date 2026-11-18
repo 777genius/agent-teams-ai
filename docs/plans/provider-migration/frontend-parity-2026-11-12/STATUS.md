@@ -31,8 +31,8 @@ provider #8 `f5d632a6122df2f6995451bd33e6a0fbcda67680`.
 | F1 | В работе: реализация | Согласованно интегрировать текущий main; ReviewFlow settings/defaults/overrides, human approval и Lead sign-off проходят через действующего Host owner, общий controller и историю/MCP. | frontend_parity; интеграция root |
 | F2 | В работе | Перенести проверку reviewer clarification в Host policy до назначения review work; сохранить re-export старого пути. | frontend_parity |
 | M1 | В работе: реализация | Восстановить поддерживаемые текущим frontend MIME/размеры вложений V2 и точно отразить возможности model+transport в UI; исходники провайдера меняются только в provider repo, приложение получает проверенный immutable artifact. | stage2_v2 |
-| E1 | Частично готово | 8 лишних assertions и 2 import/export-order ошибки исправлены; далее исправлять только установленные причины Create/import/retained/Resume/installer/Add сценариев. | pr_graph; product ownership root |
-| W1 | В работе: две причины | x64 расходует readiness lease на повторные проверки namespace/source; ARM64 успевает выполнить 5 из 6 MCP probes до остановки harness. В обоих исходных артефактах итоговый cleanup подтверждён; требования currentness сохраняются. | pr_graph; root |
+| E1 | Исправление готово; E2E остаётся | Полный status wire finite peer исправляет отказ Create/import; 2 contract checks PASS. Остальные исходные Create/import/retained/Resume/installer/Add journeys требуют текущего результата. | pr_graph; product ownership root |
+| W1 | x64 исправление готово; ARM64 открыт | Синхронное чтение configured key входит в прежнюю closing freshness-проверку; 36 focused checks PASS. ARM64: 6 последовательных MCP probes не укладываются в исходные 15 секунд. Итоговый cleanup подтверждён; deadlines и currentness сохранены. | pr_graph; root |
 | P9 | Открыто: контракт | Установить выполнимую границу original-path / writer / consumed bytes; текущую гарантию не сужать без явного решения. Независимые работы продолжаются. | root |
 | D1 | Запланировано | Свести изменения в одну композицию, провести независимое ревью, затронутые E2E и обязательные gates; обновить этот статус фактическими SHA/результатами. | root |
 
@@ -142,3 +142,16 @@ P9 не имеет подтверждённого конечного LOC до р
   2 import/export-order ошибки. Root проверил точный diff; fast ESLint трёх файлов
   и diff --check PASS, TypeScript pin 7.0.2. Первая typed ESLint попытка прервана
   OS (137), поэтому typed PASS не заявляется. Поведение не менялось.
+
+- 18 ноября, продолжение после переноса чата: опубликованное объединение main
+  `d269cf9b20b783717044a3da03643f66f1b93ebd` проверено по tree
+  `f2555b2edaa8f80788a1d5c535dad5ad55b1608a`; все незапушенные F1/M1/E1
+  изменения восстановлены без повторного merge. Root остаётся единственным writer.
+- 18 ноября, E1/W1 R2: `reviewflow` и root проверили точный readiness diff.
+  Configured key вычисляется внутри существующего capture callback до closing
+  source/owner observation. Последующие account/policy/target fences сохранены.
+  Под Node 24.21.0: OpenCode configuration + saved model readiness 36/36 PASS;
+  finite status `--summary`/full 2/2 PASS, включая production отказ partial response;
+  scoped fast lint и diff check PASS. Native Windows результат ещё не заявлен.
+  Незапушенное увеличение ARM TEST deadline с 15 до 90 секунд исключено; исходные
+  15 секунд сохранены. Отдельного подтверждённого ARM исправления пока нет.

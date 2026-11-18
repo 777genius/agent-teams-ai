@@ -129,15 +129,6 @@ function captureOpenCodeProbeAccountInspection(
   const before = bracket && capturedOrigin
     ? captureOpenCodeReadinessOrigin(capturedOrigin, profile, input.providerId, ownerCurrent) : undefined;
   if (bracket && before?.policy?.hasConfiguredApiKey !== true) held();
-  let capturedConfig: Record<string, unknown> | undefined;
-  const source = captureOpenCodeConfigurationSource(profile,
-    profile.nativeGeneration === 'v2' ? profile.embedded?.configurationSource : undefined, ownerCurrent, undefined,
-    bracket ? value => { capturedConfig = value; } : undefined);
-  const policy = before ?? (capturedOrigin
-    ? captureOpenCodeReadinessOrigin(capturedOrigin, profile, input.providerId, ownerCurrent) : undefined);
-  const raw = bracket ? capturedConfig ?? held() : source.read();
-  const provider = object(raw.provider) ? raw.provider[input.providerId] : undefined;
-  const options = object(provider) && object(provider.options) ? provider.options : {};
   const resolve = (value: unknown): unknown => {
     if (typeof value !== 'string') return value;
     if (value.includes('{file:')) return held();
@@ -148,8 +139,22 @@ function captureOpenCodeProbeAccountInspection(
         return selected;
       });
   };
-  const configuredKey = (policy || profile.nativeGeneration === 'v2') &&
-    typeof options.apiKey === 'string' && options.apiKey.includes('{file:') ? options.apiKey : resolve(options.apiKey);
+  let capturedConfig: Record<string, unknown> | undefined, capturedConfiguredKey: unknown;
+  const source = captureOpenCodeConfigurationSource(profile,
+    profile.nativeGeneration === 'v2' ? profile.embedded?.configurationSource : undefined, ownerCurrent, undefined,
+    bracket ? value => {
+      capturedConfig = value;
+      const provider = object(value.provider) ? value.provider[input.providerId] : undefined;
+      const apiKey = object(provider) && object(provider.options) ? provider.options.apiKey : undefined;
+      capturedConfiguredKey = typeof apiKey === 'string' && apiKey.includes('{file:') ? apiKey : resolve(apiKey);
+    } : undefined);
+  const policy = before ?? (capturedOrigin
+    ? captureOpenCodeReadinessOrigin(capturedOrigin, profile, input.providerId, ownerCurrent) : undefined);
+  const raw = bracket ? capturedConfig ?? held() : source.read();
+  const provider = object(raw.provider) ? raw.provider[input.providerId] : undefined;
+  const options = object(provider) && object(provider.options) ? provider.options : {};
+  const configuredKey = bracket ? capturedConfiguredKey : ((policy || profile.nativeGeneration === 'v2') &&
+    typeof options.apiKey === 'string' && options.apiKey.includes('{file:') ? options.apiKey : resolve(options.apiKey));
   const selectedUrl = policy ? policy.policy?.baseUrl
     : object(provider) && provider.npm === '@ai-sdk/openai-compatible' ? resolve(options.baseURL) : undefined;
   const configured = policy?.policy?.hasConfiguredApiKey ??
@@ -200,9 +205,9 @@ function captureOpenCodeProbeAccountInspection(
     ...(profile.nativeGeneration === 'v2' && nativeCredentialScopeDigest !== undefined ? { nativeCredentialScopeDigest } : {}),
   };
   if (bracket) {
-    // No weak currentness facet escapes: only the two intermediate origin reads
-    // are grouped. Native files/account remain freshly captured on every call.
-    if (configuration || key || fileProof || !nativeCurrent()) held();
+    // The pure configured-key read is inside source capture's closing freshness check.
+    // No source effect/await intervenes; future account checks still use nativeCurrent.
+    if (configuration || key || fileProof) held();
     const target = memberTarget!();
     return { account, origin: policy, memberReference: {
       target, originCurrent: policy!.isCurrent(), accountDigest: account.digest,

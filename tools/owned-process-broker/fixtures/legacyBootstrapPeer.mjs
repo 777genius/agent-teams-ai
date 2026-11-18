@@ -82,6 +82,8 @@ if (['model', 'runtime', 'auth'].includes(control[0])) {
   const provider = { providerId: 'anthropic', displayName: 'Claude', supported: true,
     authenticated: true, authMethod: 'api_key', verificationState: 'verified', statusCheckOutcome: 'authoritative',
     statusMessage: 'Finite TEST protocol readiness', models: [model], defaultModel: model, effectiveDefaultModel: model,
+    selectedBackendId: null, resolvedBackendId: null, availableBackends: [],
+    externalRuntimeDiagnostics: [], backend: null, detailMessage: null,
     canLoginFromUi: false, capabilities: { teamLaunch: true, oneShot: true,
       extensions: { plugins: false, mcp: false, skills: false } },
     modelCatalog, runtimeCapabilities: { modelCatalog: { dynamic: false, source: 'anthropic-models-api' },
