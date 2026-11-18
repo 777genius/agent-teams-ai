@@ -18,6 +18,8 @@ const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../
 const keep = process.env.PROJECT_TEAM_E2E_KEEP === '1';
 const logs: string[] = [];
 let app: ChildProcess | undefined;
+let debuggerPort: number | null = null;
+let lastReconnectMs = 0;
 let cdp: {
   evaluate(expression: string): Promise<unknown>;
   send(method: string, params?: Record<string, unknown>): Promise<unknown>;
@@ -209,6 +211,7 @@ async function start(f: Fixture): Promise<void> {
           (target) => target.type === 'page' && target.url.startsWith('http://localhost:')
         );
         if (renderer) {
+          debuggerPort = Number(match[1]);
           cdp = await CdpClient.connect(renderer.webSocketDebuggerUrl);
           return;
         }
@@ -221,6 +224,41 @@ async function start(f: Fixture): Promise<void> {
   throw new Error('Owned Electron renderer did not appear');
 }
 
+/** Electron can replace the inspected DevTools target on renderer reload (macOS).
+ * Reconnect to the same disposable application's active renderer, never to
+ * another process or an arbitrary page. */
+async function reconnectRenderer(): Promise<boolean> {
+  if (debuggerPort === null) return false;
+  const targets = await fetch('http://127.0.0.1:' + debuggerPort + '/json/list')
+    .then((response) => response.json()) as {
+      type: string; url: string; webSocketDebuggerUrl: string;
+    }[];
+  const renderer = targets.find(
+    (target) => target.type === 'page' && target.url.startsWith('http://localhost:')
+  );
+  if (!renderer) return false;
+  const next = await CdpClient.connect(renderer.webSocketDebuggerUrl);
+  const old = cdp;
+  cdp = next;
+  if (old && old !== next) void old.close().catch(() => undefined);
+  return true;
+}
+
+function visibleTask(alias: string, task: string): string {
+  const selector = JSON.stringify('[data-team-name="' + alias + '"]');
+  // Tabs are intentionally kept mounted but hidden. querySelector() can select
+  // an earlier *hidden* tab, producing a false failure despite visible task data.
+  return 'Array.from(document.querySelectorAll(' + selector + ')).some(' +
+    'node => node.getClientRects().length > 0 && node.textContent?.includes(' +
+    JSON.stringify(task) + '))';
+}
+
+function hasVisibleTeam(alias: string): string {
+  return 'Array.from(document.querySelectorAll(' +
+    JSON.stringify('[data-team-name="' + alias + '"]') +
+    ')).some(node => node.getClientRects().length > 0)';
+}
+
 async function waitFor(expression: string, label: string, timeoutMs = 45_000) {
   assert(cdp);
   const deadline = Date.now() + timeoutMs;
@@ -228,8 +266,13 @@ async function waitFor(expression: string, label: string, timeoutMs = 45_000) {
     try {
       if (await cdp.evaluate('(async () => Boolean(await (' + expression + ')))()')) return;
     } catch (error) {
-      if (!/execution context was destroyed|cannot find (?:default )?execution context|cannot find context with specified id/i.test(String(error))) {
-        throw error;
+      const message = String(error);
+      const lostTarget = /inspected target navigated or closed|CDP connection closed|target closed|WebSocket is not open/i.test(message);
+      const transientContext = /execution context was destroyed|cannot find (?:default )?execution context|cannot find context with specified id/i.test(message);
+      if (!lostTarget && !transientContext) throw error;
+      if (lostTarget && Date.now() - lastReconnectMs > 500) {
+        lastReconnectMs = Date.now();
+        await reconnectRenderer().catch(() => false);
       }
     }
     await pause(75);
@@ -301,28 +344,31 @@ async function verifyUi(f: Fixture) {
     's.openTeamTab(' + JSON.stringify(f.logical) + ', ' + JSON.stringify(f.projectA) +
     '); s.setMessagesPanelMode("sidebar"); return true; })()', 'open project team tab', 60_000);
 
-  const visibleTask = (alias: string, task: string) =>
-    'document.querySelector(' + JSON.stringify('[data-team-name="' + alias + '"]') +
-    ')?.textContent?.includes(' + JSON.stringify(task) + ')';
   await waitFor(visibleTask(f.nativeA, 'PROJECT_A_TASK_ONLY'), 'A task through UI');
   const friendlyHeading = await cdp.evaluate('(() => document.querySelector(' +
     JSON.stringify('[data-team-name="' + f.nativeA + '"] h2') +
     ')?.textContent?.trim() === "History fixture")()');
   assert.equal(friendlyHeading, true, 'Project runtime alias leaked as the visible team title');
-  assert.equal(await cdp.evaluate('Boolean(document.querySelector(' +
-    JSON.stringify('[data-team-name="' + f.nativeB + '"]') + '))'), false);
+  assert.equal(await cdp.evaluate(hasVisibleTeam(f.nativeB)), false);
   await cdp.screenshot(path.join(f.screenshots, 'history-a.png'));
 
   await selectProject(f, 'project-b');
   await waitFor(visibleTask(f.nativeB, 'PROJECT_B_TASK_ONLY'), 'B task through UI');
-  assert.equal(await cdp.evaluate('Boolean(document.querySelector(' +
-    JSON.stringify('[data-team-name="' + f.nativeA + '"]') + '))'), false);
+  assert.equal(await cdp.evaluate(hasVisibleTeam(f.nativeA)), false);
   await cdp.screenshot(path.join(f.screenshots, 'history-b.png'));
 
   await selectProject(f, 'project-a');
   await waitFor(visibleTask(f.nativeA, 'PROJECT_A_TASK_ONLY'), 'restored A task through UI');
 
-  await cdp.send('Page.reload');
+  try {
+    await cdp.send('Page.reload');
+  } catch (error) {
+    // macOS may replace the inspected renderer target as Page.reload executes.
+    // The following waitFor() reconnects to the new target before asserting UI.
+    if (!/inspected target navigated or closed|CDP connection closed|target closed/i.test(String(error))) {
+      throw error;
+    }
+  }
   await waitFor('window.electronAPI?.teams && window.__agentTeamsDevStore', 'renderer after reload', 60_000);
   await waitFor('(async () => Boolean((await window.electronAPI.startup.getStatus()).ready))()', 'app after reload', 60_000);
   await selectProject(f, 'project-a');
@@ -355,12 +401,9 @@ async function verifyRetainedAfterModeChange(f: Fixture) {
   // Open via the original physical task identity, as global task deep links do.
   await cdp.evaluate('(() => window.__agentTeamsDevStore.getState().openTeamTab(' +
     JSON.stringify(f.nativeA) + ', ' + JSON.stringify(f.projectA) + '))()');
-  await waitFor('document.querySelector(' +
-    JSON.stringify('[data-team-name="' + f.nativeA + '"]') +
-    ')?.textContent?.includes("PROJECT_A_TASK_ONLY")',
+  await waitFor(visibleTask(f.nativeA, 'PROJECT_A_TASK_ONLY'),
     'retained project A task through real Electron after switching to shared');
-  assert.equal(await cdp.evaluate('Boolean(document.querySelector(' +
-    JSON.stringify('[data-team-name="' + f.nativeB + '"]') + '))'), false,
+  assert.equal(await cdp.evaluate(hasVisibleTeam(f.nativeB)), false,
     'Old project B leaked into retained A history');
   await cdp.screenshot(path.join(f.screenshots, 'history-retained-after-shared.png'));
 }
@@ -411,21 +454,16 @@ async function verifyRetainedSharedAfterProjectIsolation(f: Fixture) {
   // history; ordinary team navigation must still use the selected project.
   await cdp.evaluate('(() => window.__agentTeamsDevStore.getState().openTeamTab(' +
     JSON.stringify(f.logical) + ', undefined, "1"))()');
-  await waitFor('document.querySelector(' +
-    JSON.stringify('[data-team-name="' + f.logical + '"]') +
-    ')?.textContent?.includes("LEGACY_SHARED_TASK_ONLY")',
+  await waitFor(visibleTask(f.logical, 'LEGACY_SHARED_TASK_ONLY'),
     'retained shared task through real Electron after enabling isolation');
-  assert.equal(await cdp.evaluate('Boolean(document.querySelector(' +
-    JSON.stringify('[data-team-name="' + f.nativeB + '"]') + '))'), false,
+  assert.equal(await cdp.evaluate(hasVisibleTeam(f.nativeB)), false,
     'Project B data leaked into retained shared history');
   await cdp.screenshot(path.join(f.screenshots, 'history-retained-shared-after-project.png'));
 
   await selectProject(f, 'project-a');
   await cdp.evaluate('(() => window.__agentTeamsDevStore.getState().openTeamTab(' +
     JSON.stringify(f.logical) + ', ' + JSON.stringify(f.projectA) + '))()');
-  await waitFor('document.querySelector(' +
-    JSON.stringify('[data-team-name="' + f.nativeA + '"]') +
-    ')?.textContent?.includes("PROJECT_A_TASK_ONLY")',
+  await waitFor(visibleTask(f.nativeA, 'PROJECT_A_TASK_ONLY'),
     'current A history remains available after retained shared task');
 }
 
