@@ -231,57 +231,272 @@ describe('TeamTaskWatchRegistry scoping', () => {
   describe('task directory backfill', () => {
     const HOUR_MS = 60 * 60 * 1000;
 
-    function seedTaskFiles(team: string, count: number): void {
-      const dir = path.join(root, team);
-      for (let id = 1; id <= count; id++) {
-        fs.writeFileSync(path.join(dir, `${id}.json`), '{}');
-      }
-      const longAgo = new Date(Date.now() - HOUR_MS);
-      for (const name of fs.readdirSync(dir)) {
-        fs.utimesSync(path.join(dir, name), longAgo, longAgo);
-      }
-      // Directory mtime is bumped last: writing files above changes it.
-      fs.utimesSync(dir, longAgo, longAgo);
+    function setMtime(file: string, mtimeMs: number): void {
+      const time = new Date(mtimeMs);
+      fs.utimesSync(file, time, time);
     }
 
-    async function openTeamAndCollect(events: string[], afterStart?: () => void): Promise<void> {
-      const scoped = new Set<string>(['alpha']);
-      const registry = new TeamTaskWatchRegistry({
+    function ageDirectory(team: string, mtimeMs = Date.now() - HOUR_MS): void {
+      const dir = path.join(root, team);
+      for (const name of fs.readdirSync(dir)) {
+        setMtime(path.join(dir, name), mtimeMs);
+      }
+      // The directory mtime is aged last: touching entries above can bump it.
+      setMtime(dir, mtimeMs);
+    }
+
+    function seedTaskFiles(team: string, count: number): void {
+      for (let id = 1; id <= count; id++) {
+        fs.writeFileSync(path.join(root, team, `${id}.json`), '{}');
+      }
+      ageDirectory(team);
+    }
+
+    function createTasksRegistry(scoped: Set<string>, events: string[]): TeamTaskWatchRegistry {
+      return new TeamTaskWatchRegistry({
         kind: 'tasks',
         rootPath: root,
         onChange: (_eventType, relativePath) => events.push(relativePath),
         onError: () => {},
         getScopedTeamNames: () => scoped,
       });
-      try {
-        await registry.start();
-        afterStart?.();
-        scoped.add('beta');
-        await registry.requestReconcile();
-      } finally {
-        await registry.close();
-      }
     }
 
     it('does not replay historical task files when a team enters scope', async () => {
       seedTaskFiles('beta', 50);
       const events: string[] = [];
-
-      await openTeamAndCollect(events);
+      const scoped = new Set(['alpha']);
+      const registry = createTasksRegistry(scoped, events);
+      try {
+        await registry.start();
+        scoped.add('beta');
+        await registry.requestReconcile();
+      } finally {
+        await registry.close();
+      }
 
       expect(latestTargets()).toContain(path.normalize(path.join(root, 'beta')));
       expect(events).toEqual([]);
     });
 
-    it('still replays task files written after the previous pass', async () => {
+    it('replays a task file created while the team was unwatched', async () => {
       seedTaskFiles('beta', 50);
       const events: string[] = [];
-
-      await openTeamAndCollect(events, () => {
+      const scoped = new Set(['alpha']);
+      const registry = createTasksRegistry(scoped, events);
+      try {
+        await registry.start();
         fs.writeFileSync(path.join(root, 'beta', '51.json'), '{}');
-      });
+        scoped.add('beta');
+        await registry.requestReconcile();
+      } finally {
+        await registry.close();
+      }
 
       expect(events).toEqual(['beta/51.json']);
+    });
+
+    it('replays an in-place edit of an old task file', async () => {
+      seedTaskFiles('beta', 5);
+      const events: string[] = [];
+      const scoped = new Set(['alpha']);
+      const registry = createTasksRegistry(scoped, events);
+      try {
+        await registry.start();
+        // Writing into an existing file leaves the directory mtime untouched.
+        const dirMtimeBefore = fs.statSync(path.join(root, 'beta')).mtimeMs;
+        fs.writeFileSync(path.join(root, 'beta', '3.json'), '{"edited":true}');
+        expect(fs.statSync(path.join(root, 'beta')).mtimeMs).toBe(dirMtimeBefore);
+        scoped.add('beta');
+        await registry.requestReconcile();
+      } finally {
+        await registry.close();
+      }
+
+      expect(events).toEqual(['beta/3.json']);
+    });
+
+    it('replays a task written through a temp file and rename', async () => {
+      seedTaskFiles('beta', 5);
+      const events: string[] = [];
+      const scoped = new Set(['alpha']);
+      const registry = createTasksRegistry(scoped, events);
+      try {
+        await registry.start();
+        fs.writeFileSync(path.join(root, 'beta', '.4.json.tmp'), '{"edited":true}');
+        fs.renameSync(path.join(root, 'beta', '.4.json.tmp'), path.join(root, 'beta', '4.json'));
+        scoped.add('beta');
+        await registry.requestReconcile();
+      } finally {
+        await registry.close();
+      }
+
+      expect(events).toEqual(['beta/4.json']);
+    });
+
+    it('backfills a task directory created in the race window', async () => {
+      const events: string[] = [];
+      const scoped = new Set(['alpha', 'delta']);
+      const registry = createTasksRegistry(scoped, events);
+      try {
+        await registry.start();
+        expect(latestTargets()).not.toContain(path.normalize(path.join(root, 'delta')));
+        fs.mkdirSync(path.join(root, 'delta'));
+        fs.writeFileSync(path.join(root, 'delta', '1.json'), '{}');
+        fs.writeFileSync(path.join(root, 'delta', '2.json'), '{}');
+        await registry.requestReconcile();
+      } finally {
+        await registry.close();
+      }
+
+      expect([...events].sort()).toEqual(['delta/1.json', 'delta/2.json']);
+    });
+
+    // Passes far apart on a controlled clock, so the 2 s tolerance cannot hide a
+    // boundary that moved with an unrelated pass.
+    const CLOCK_START_MS = 1_800_000_000_000;
+
+    async function withClock<T>(run: (at: (offsetMs: number) => void) => Promise<T>): Promise<T> {
+      vi.useFakeTimers({ toFake: ['Date'] });
+      vi.setSystemTime(CLOCK_START_MS);
+      try {
+        return await run((offsetMs) => vi.setSystemTime(CLOCK_START_MS + offsetMs));
+      } finally {
+        vi.useRealTimers();
+      }
+    }
+
+    function writeTaskAt(team: string, name: string, offsetMs: number): void {
+      const file = path.join(root, team, name);
+      fs.writeFileSync(file, '{}');
+      setMtime(file, CLOCK_START_MS + offsetMs);
+    }
+
+    it('replays a write made while the team was out of scope across unrelated passes', async () => {
+      seedTaskFiles('beta', 5);
+      ageDirectory('gamma', CLOCK_START_MS - HOUR_MS);
+      ageDirectory('beta', CLOCK_START_MS - HOUR_MS);
+      const events: string[] = [];
+      const scoped = new Set(['alpha']);
+      const registry = createTasksRegistry(scoped, events);
+      await withClock(async (at) => {
+        try {
+          await registry.start();
+          at(5_000);
+          writeTaskAt('beta', '6.json', 5_000);
+          // An unrelated team entering scope is a pass that changes the target set.
+          at(20_000);
+          scoped.add('gamma');
+          await registry.requestReconcile();
+          expect(events).toEqual([]);
+          at(40_000);
+          scoped.add('beta');
+          await registry.requestReconcile();
+        } finally {
+          await registry.close();
+        }
+      });
+
+      expect(events).toEqual(['beta/6.json']);
+    });
+
+    it('replays only files written after a team left the scope', async () => {
+      seedTaskFiles('beta', 5);
+      ageDirectory('gamma', CLOCK_START_MS - HOUR_MS);
+      ageDirectory('beta', CLOCK_START_MS - HOUR_MS);
+      const events: string[] = [];
+      const scoped = new Set(['alpha', 'beta']);
+      const registry = createTasksRegistry(scoped, events);
+      await withClock(async (at) => {
+        try {
+          await registry.start();
+          // Written while watched: delivered live, so it must not be replayed.
+          at(5_000);
+          writeTaskAt('beta', '6.json', 5_000);
+          at(10_000);
+          scoped.delete('beta');
+          await registry.requestReconcile();
+          expect(latestTargets()).not.toContain(path.normalize(path.join(root, 'beta')));
+          at(15_000);
+          writeTaskAt('beta', '7.json', 15_000);
+          at(20_000);
+          scoped.add('gamma');
+          await registry.requestReconcile();
+          at(30_000);
+          scoped.add('beta');
+          await registry.requestReconcile();
+        } finally {
+          await registry.close();
+        }
+      });
+
+      expect(events).toEqual(['beta/7.json']);
+    });
+
+    it('treats the 2 s tolerance as an inclusive boundary on the file mtime', async () => {
+      const startMs = 1_800_000_000_000;
+      vi.useFakeTimers({ toFake: ['Date'] });
+      vi.setSystemTime(startMs);
+      try {
+        const files: [string, number][] = [
+          ['inside.json', startMs - 1_000],
+          ['tie.json', startMs - 2_000],
+          ['outside.json', startMs - 3_000],
+        ];
+        for (const [name, mtimeMs] of files) {
+          fs.writeFileSync(path.join(root, 'beta', name), '{}');
+          setMtime(path.join(root, 'beta', name), mtimeMs);
+        }
+        setMtime(path.join(root, 'beta', 'config.json'), startMs - HOUR_MS);
+
+        const events: string[] = [];
+        const scoped = new Set(['alpha']);
+        const registry = createTasksRegistry(scoped, events);
+        try {
+          await registry.start();
+          scoped.add('beta');
+          await registry.requestReconcile();
+        } finally {
+          await registry.close();
+        }
+
+        expect([...events].sort()).toEqual(['beta/inside.json', 'beta/tie.json']);
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it('keeps replaying every team-root and inbox file regardless of age', async () => {
+      ageDirectory('beta');
+      ageDirectory(path.join('beta', 'inboxes'));
+      fs.writeFileSync(path.join(root, 'beta', 'inboxes', 'fresh.json'), '[]');
+      const events: string[] = [];
+      const artifactScoped = new Set(['alpha']);
+      const inboxScoped = new Set(['alpha']);
+      const registry = new TeamTaskWatchRegistry({
+        kind: 'teams',
+        rootPath: root,
+        onChange: (_eventType, relativePath) => events.push(relativePath),
+        onError: () => {},
+        getScopedTeamNames: () => artifactScoped,
+        getScopedInboxTeamNames: () => inboxScoped,
+      });
+      try {
+        await registry.start();
+        artifactScoped.add('beta');
+        inboxScoped.add('beta');
+        await registry.requestReconcile();
+      } finally {
+        await registry.close();
+      }
+
+      expect(events).toEqual(
+        expect.arrayContaining([
+          'beta/config.json',
+          'beta/inboxes/team-lead.json',
+          'beta/inboxes/fresh.json',
+        ])
+      );
     });
   });
 

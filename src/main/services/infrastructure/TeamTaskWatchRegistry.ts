@@ -47,10 +47,11 @@ const RECONCILE_INTERVAL_MS = 30_000;
 // change; this only avoids rebuilding the whole watcher once per event in a burst.
 const RECONCILE_DEBOUNCE_MS = 250;
 
-// Backfill for newly watched task directories only replays files that could have
-// been created or edited since the previous target pass. Coarse filesystem
-// timestamps (HFS+, FAT, network mounts) and small clock steps need some slack.
+// A newly watched task directory replays files modified since it was last
+// unwatched. Coarse filesystem timestamps (HFS+, FAT, network mounts) and small
+// clock steps need some slack on that boundary.
 const TASK_BACKFILL_MTIME_SLACK_MS = 2_000;
+const BACKFILL_STAT_BATCH_SIZE = 64;
 
 // Keep this list aligned with FileWatcher.processTeamsChange().
 // If a new team artifact should produce TeamChangeEvent, add it here too.
@@ -81,8 +82,12 @@ const TEAM_ROOT_FILES = new Set([
  * - Do not enable Chokidar polling here. Polling is owned by FileWatcher fallback.
  * - Initial app startup baseline stays silent except for explicitly scoped live
  *   inboxes when backfillInitialScopedInboxFiles is enabled.
- * - Newly discovered targets are scanned once so files created before rebuild
- *   are not lost.
+ * - Newly discovered targets are scanned once so files written while they were
+ *   not watched are not lost. Team-root and inbox targets replay every existing
+ *   file. Task directories replay only files whose mtime is not older than the
+ *   moment the directory stopped being watched (registry start if it never was),
+ *   because opening a team with N historical tasks must not turn into N events,
+ *   each of which re-reads the whole board.
  */
 export class TeamTaskWatchRegistry {
   private watcher: FSWatcher | null = null;
@@ -97,8 +102,15 @@ export class TeamTaskWatchRegistry {
   private reconcileDebounceTimer: NodeJS.Timeout | null = null;
   private readonly suspendedTeams = new Set<string>();
   private suppressInitialInboxBackfill = false;
-  /** Start time of the last target pass whose result was applied (0 = none yet). */
-  private lastTargetPassStartedAt = 0;
+  /** When start() began: the baseline for directories that were never watched. */
+  private startedAt = Date.now();
+  /**
+   * Since when a directory that left the watch set has not been watched: the start
+   * of the target pass that dropped it. A directory with no entry has not been
+   * watched since startedAt. Entries are removed again once the directory is
+   * watched.
+   */
+  private readonly unwatchedSince = new Map<string, number>();
 
   constructor(private readonly options: TeamTaskWatchRegistryOptions) {}
 
@@ -124,6 +136,11 @@ export class TeamTaskWatchRegistry {
     const suspendTargets = [...this.targets].filter(
       (target) => target === teamPath || target.startsWith(teamPathPrefix)
     );
+
+    const suspendedAt = Date.now();
+    for (const target of suspendTargets) {
+      this.unwatchedSince.set(target, suspendedAt);
+    }
 
     let released = false;
     if (suspendTargets.length > 0 && this.watcher) {
@@ -190,6 +207,7 @@ export class TeamTaskWatchRegistry {
     if (this.closed) {
       return;
     }
+    this.startedAt = Date.now();
     await this.reconcileTargets({ rethrowErrors: true });
     if (this.closed || this.reconcileTimer) {
       return;
@@ -221,7 +239,8 @@ export class TeamTaskWatchRegistry {
    * and recreating the whole watcher once per event. Correctness is preserved:
    * collectTargets re-reads the current directory state, so the trailing reconcile
    * still sees every change, and emitExistingFilesForNewTargets backfills files
-   * created before the rebuild.
+   * written while the new targets were not watched (task directories: only those
+   * modified since they were last unwatched).
    */
   private scheduleReconcile(): void {
     if (this.closed || this.reconcileDebounceTimer) {
@@ -294,10 +313,8 @@ export class TeamTaskWatchRegistry {
         (target) => !this.isSuspendedTarget(target)
       );
       const nextKey = targets.join('\n');
-      const previousPassStartedAt = this.lastTargetPassStartedAt;
-      this.lastTargetPassStartedAt = passStartedAt;
       if (nextKey !== this.targetKey) {
-        await this.applyTargetSet(targets, nextKey, previousPassStartedAt);
+        await this.applyTargetSet(targets, nextKey, passStartedAt);
       }
     } catch (error) {
       if (options.rethrowErrors) {
@@ -329,7 +346,7 @@ export class TeamTaskWatchRegistry {
   private async applyTargetSet(
     targets: string[],
     nextKey: string,
-    previousPassStartedAt: number
+    passStartedAt: number
   ): Promise<void> {
     if (this.closed) {
       return;
@@ -346,8 +363,9 @@ export class TeamTaskWatchRegistry {
     // on macOS opens one fd per file), so during a launch that adds dirs in bursts
     // it re-opened the entire (large) watched set repeatedly. add()/unwatch() touch
     // only the delta. emitExistingFilesForNewTargets still backfills files that
-    // already exist in newly added dirs, preserving the previous event surface
-    // (chokidar's own add() scan only re-confirms those same files, idempotently).
+    // changed in newly added dirs while they were unwatched (every existing file
+    // for team and inbox dirs, see the class contract); chokidar's own add() scan
+    // only re-confirms those same files, idempotently.
     const nextSet = new Set(targets);
     const addedTargets = targets.filter((target) => !this.targets.has(target));
     const removedTargets = [...this.targets].filter((target) => !nextSet.has(target));
@@ -355,6 +373,11 @@ export class TeamTaskWatchRegistry {
 
     if (removedTargets.length > 0) {
       this.watcher.unwatch(removedTargets);
+      // The watcher saw everything up to this unwatch, but the pass started
+      // earlier; the earlier boundary only costs a few duplicate replays.
+      for (const target of removedTargets) {
+        this.unwatchedSince.set(target, passStartedAt);
+      }
     }
     if (addedTargets.length > 0) {
       this.watcher.add(addedTargets);
@@ -363,15 +386,20 @@ export class TeamTaskWatchRegistry {
     this.targetKey = nextKey;
 
     if (addedTargets.length > 0) {
-      await this.emitExistingFilesForNewTargets(addedTargets, generation, {
-        // A task directory can enter scope only because the user opened its team.
-        // Replaying every historical task file then floods consumers that re-read
-        // the whole board per event, so only changes since the previous pass count.
-        modifiedSince:
-          this.options.kind === 'tasks' && previousPassStartedAt > 0
-            ? previousPassStartedAt - TASK_BACKFILL_MTIME_SLACK_MS
-            : undefined,
-      });
+      const modifiedSince = new Map<string, number>();
+      if (this.options.kind === 'tasks') {
+        // Replaying every historical task file when a team is merely opened would
+        // flood consumers that re-read the whole board per event, so only files
+        // touched while the directory was unwatched are replayed.
+        for (const target of addedTargets) {
+          const since = this.unwatchedSince.get(target) ?? this.startedAt;
+          modifiedSince.set(target, since - TASK_BACKFILL_MTIME_SLACK_MS);
+        }
+      }
+      for (const target of addedTargets) {
+        this.unwatchedSince.delete(target);
+      }
+      await this.emitExistingFilesForNewTargets(addedTargets, generation, { modifiedSince });
     }
   }
 
@@ -445,10 +473,9 @@ export class TeamTaskWatchRegistry {
   private async emitExistingFilesForNewTargets(
     targets: string[],
     generation: number,
-    options: { modifiedSince?: number } = {}
+    options: { modifiedSince?: ReadonlyMap<string, number> } = {}
   ): Promise<void> {
     const normalizedRoot = path.normalize(this.options.rootPath);
-    const { modifiedSince } = options;
     for (const targetPath of targets) {
       if (this.closed || generation !== this.generation) {
         return;
@@ -456,40 +483,52 @@ export class TeamTaskWatchRegistry {
       if (path.normalize(targetPath) === normalizedRoot) {
         continue;
       }
-      // Adding or renaming a file updates the directory mtime, so an untouched
-      // directory cannot hold a file this watcher missed.
-      if (modifiedSince !== undefined && !(await this.hasChangedSince(targetPath, modifiedSince))) {
-        continue;
-      }
-      // Covers the race where a new team/task/inbox dir is created with JSON
-      // files before Chokidar has rebuilt its target list. Only immediate files
-      // are scanned, matching depth: 0.
+      // Covers files written while this directory was not watched, including
+      // a new team/task/inbox dir created with JSON files before Chokidar has
+      // rebuilt its target list. Only immediate files are scanned, matching
+      // depth: 0.
       const entries = await this.readDirectory(targetPath);
+      const candidates: { filePath: string; relativePath: string }[] = [];
       for (const entry of entries) {
-        if (this.closed || generation !== this.generation) {
-          return;
-        }
         if (!entry.isFile()) {
           continue;
         }
         const filePath = path.join(targetPath, entry.name);
         const relativePath = this.toRelativePath(filePath);
-        if (!relativePath || !this.shouldEmit('add', relativePath)) {
-          continue;
+        if (relativePath && this.shouldEmit('add', relativePath)) {
+          candidates.push({ filePath, relativePath });
         }
-        if (modifiedSince !== undefined && !(await this.hasChangedSince(filePath, modifiedSince))) {
-          continue;
+      }
+      // An in-place edit does not touch the directory mtime, so every file is
+      // checked on its own; stats run in small batches to keep the pass short.
+      const since = options.modifiedSince?.get(targetPath);
+      for (let from = 0; from < candidates.length; from += BACKFILL_STAT_BATCH_SIZE) {
+        if (this.closed || generation !== this.generation) {
+          return;
         }
-        this.options.onChange('add', relativePath);
+        const batch = candidates.slice(from, from + BACKFILL_STAT_BATCH_SIZE);
+        const changed =
+          since === undefined
+            ? batch.map(() => true)
+            : await Promise.all(
+                batch.map((candidate) => this.isModifiedSince(candidate.filePath, since))
+              );
+        for (const [index, candidate] of batch.entries()) {
+          if (this.closed || generation !== this.generation) {
+            return;
+          }
+          if (changed[index]) {
+            this.options.onChange('add', candidate.relativePath);
+          }
+        }
       }
     }
   }
 
-  /** Missing or unreadable entries count as changed so a race never drops an event. */
-  private async hasChangedSince(entryPath: string, sinceMs: number): Promise<boolean> {
+  /** Missing or unreadable files count as modified so a race never drops an event. */
+  private async isModifiedSince(filePath: string, sinceMs: number): Promise<boolean> {
     try {
-      const stats = await fsp.stat(entryPath);
-      return stats.mtimeMs >= sinceMs;
+      return (await fsp.stat(filePath)).mtimeMs >= sinceMs;
     } catch {
       return true;
     }
