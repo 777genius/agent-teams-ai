@@ -191,7 +191,7 @@ export class BackendSelectingMemberWorkSyncStore
     const { teamName, incarnation } = identity;
     if (!this.options || !this.replica || !incarnation.trim())
       throw new MemberWorkSyncSafetyJsonReadError('unavailable');
-    const { gateway, paths, fallbackRequiresReplica, logger } = this.options;
+    const { gateway, paths, fallbackRequiresReplica, logger, readTeamRootStats } = this.options;
     const replica = this.replica;
     const backend = await this.selector.select<'sqlite' | 'json'>('sqlite', 'json');
     return this.replicaMutex.run(teamName, async () => {
@@ -355,7 +355,7 @@ export class BackendSelectingMemberWorkSyncStore
               gateway,
               paths,
               replica,
-              readTeamRootStats: this.options.readTeamRootStats,
+              readTeamRootStats,
               logger,
             })) !== 'healed'
           )

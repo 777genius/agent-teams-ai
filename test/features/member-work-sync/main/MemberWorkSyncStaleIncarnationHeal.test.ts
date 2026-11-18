@@ -134,7 +134,18 @@ async function setup(
       join(teamRoot, 'config.json'),
       JSON.stringify(opts.config ?? { name: TEAM, _backupIdentityId: CURRENT })
     );
-  return { root, paths, gateway, json, sqlite, store, replica, warn, teamRoot, readTeamRootStats: readFixtureRootStats };
+  return {
+    root,
+    paths,
+    gateway,
+    json,
+    sqlite,
+    store,
+    replica,
+    warn,
+    teamRoot,
+    readTeamRootStats: readFixtureRootStats,
+  };
 }
 type H = Awaited<ReturnType<typeof setup>>;
 
