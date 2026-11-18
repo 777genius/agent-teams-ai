@@ -2,6 +2,7 @@ import { copyFile, mkdir, mkdtemp, readdir, readFile, rm, writeFile } from 'node
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 
+import { InternalStorageOperationInterruptedError } from '@features/internal-storage/main';
 import { InternalStorageBackendSelector } from '@features/internal-storage/main/composition/InternalStorageBackendSelector';
 import { InternalStorageJsonReplica } from '@features/internal-storage/main/infrastructure/InternalStorageJsonReplica';
 import { InternalStorageWorkerCore } from '@features/internal-storage/main/infrastructure/worker/InternalStorageWorkerCore';
@@ -17,6 +18,7 @@ import {
   snapshotToRecords,
 } from '@features/member-work-sync/main/infrastructure/memberWorkSyncSqliteMappers';
 import { MemberWorkSyncStatusAuthority } from '@features/member-work-sync/main/infrastructure/MemberWorkSyncStatusAuthority';
+import { getVerifiedTeamRootBirthtimeMs } from '@features/member-work-sync/main/infrastructure/memberWorkSyncStaleIncarnationHeal';
 import { MemberWorkSyncStorePaths } from '@features/member-work-sync/main/infrastructure/MemberWorkSyncStorePaths';
 import { SqliteMemberWorkSyncStore } from '@features/member-work-sync/main/infrastructure/SqliteMemberWorkSyncStore';
 import Database from 'better-sqlite3-node';
@@ -138,6 +140,27 @@ const quarantineFiles = async (h: H) =>
   );
 const prepare = (h: H, mutation = true) =>
   h.store.withPreparedBackend({ ...identity, mutation }, async () => 'ran');
+
+describe('verified team directory creation time', () => {
+  const directory = (birthtimeMs: number, ctimeMs: number, isDirectory = true) => ({
+    birthtimeMs,
+    ctimeMs,
+    isDirectory: () => isDirectory,
+  });
+
+  it('refuses ctime fallback, invalid timestamps and non-directory paths', () => {
+    expect(getVerifiedTeamRootBirthtimeMs(directory(1_000, 1_000))).toBeNull();
+    expect(getVerifiedTeamRootBirthtimeMs(directory(0, 2_000))).toBeNull();
+    expect(getVerifiedTeamRootBirthtimeMs(directory(Number.NaN, 2_000))).toBeNull();
+    expect(getVerifiedTeamRootBirthtimeMs(directory(1_000, Number.NaN))).toBeNull();
+    expect(getVerifiedTeamRootBirthtimeMs(directory(2_000, 1_000))).toBeNull();
+    expect(getVerifiedTeamRootBirthtimeMs(directory(1_000, 2_000, false))).toBeNull();
+  });
+
+  it('accepts only creation time strictly preceding a later metadata change', () => {
+    expect(getVerifiedTeamRootBirthtimeMs(directory(1_000, 2_000))).toBe(1_000);
+  });
+});
 
 describe('targeted self-heal of status rows left by an earlier team identity', () => {
   it('removes only stale status rows and keeps current rows, other domains and the token secret', async () => {
@@ -290,6 +313,11 @@ describe('targeted self-heal of status rows left by an earlier team identity', (
     const h = await setup('sqlite');
     await importPrimary(h, [mk('alice', FOREIGN)]);
     const order: string[] = [];
+    const listed = h.gateway.listTeamSnapshot.bind(h.gateway);
+    vi.spyOn(h.gateway, 'listTeamSnapshot').mockImplementation(async (...args) => {
+      order.push('list');
+      return listed(...args);
+    });
     (h.gateway as { waitForSettling?: () => Promise<void> }).waitForSettling = async () => {
       order.push('settle');
     };
@@ -299,7 +327,8 @@ describe('targeted self-heal of status rows left by an earlier team identity', (
       return imported(...args);
     });
     await prepare(h);
-    expect(order.slice(0, 2)).toEqual(['settle', 'import']);
+    // Initial detection, settling, fresh snapshot, then the destructive import.
+    expect(order.slice(0, 4)).toEqual(['list', 'settle', 'list', 'import']);
   });
 
   describe.each([
@@ -408,6 +437,47 @@ describe('targeted self-heal of status rows left by an earlier team identity', (
     const result = await read.result;
     await read.settled;
     expect(result).toMatchObject({ ok: true });
+  });
+
+  it('keeps the identity fence until an interrupted cleanup import settles', async () => {
+    const h = await setup('sqlite');
+    await importPrimary(h, [mk('alice', FOREIGN)]);
+    let settle!: () => void;
+    const physical = new Promise<void>((resolve) => {
+      settle = resolve;
+    });
+    const interrupted = new InternalStorageOperationInterruptedError(
+      'interrupted cleanup import',
+      'unknown',
+      physical
+    );
+    vi.spyOn(h.gateway, 'importTeam').mockRejectedValueOnce(interrupted);
+    const owner = createTestWorkSyncIdentity(CURRENT);
+    const originalWithCurrent = owner.withCurrent.bind(owner);
+    let held = false;
+    const authority = new MemberWorkSyncStatusAuthority({
+      identity: {
+        ...owner,
+        withCurrent: async (teamName, incarnation, operation) => {
+          held = true;
+          try {
+            return await originalWithCurrent(teamName, incarnation, operation);
+          } finally {
+            held = false;
+          }
+        },
+      },
+      withPreparedBackend: (binding, operation) => h.store.withPreparedBackend(binding, operation),
+    });
+    const read = authority.startRead({ teamName: TEAM, memberName: 'bob' });
+    try {
+      await expect(read.result).resolves.toMatchObject({ ok: false, reason: 'unavailable' });
+      expect(held).toBe(true);
+    } finally {
+      settle();
+      await read.settled;
+    }
+    expect(held).toBe(false);
   });
 
   it('keeps the removed payloads in a quarantine record so nothing is unrecoverable', async () => {

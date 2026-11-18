@@ -61,8 +61,8 @@ source and both incarnations.
 
 Preparation removes such state automatically, once per preparation attempt, only when all of this
 holds: the team's `config.json` `_backupIdentityId` equals the current incarnation, no purge is
-pending, the stale status is older than the current team directory, and the call is not a backup
-restore or preflight. Only status entries written under another incarnation are removed (SQLite
+pending, the stale status is older than the current team directory based on a verified filesystem
+creation time (not a ctime fallback), and the call is not a backup restore or preflight. Only status entries written under another incarnation are removed (SQLite
 rows by a filtered team import, per-member and legacy status files and pre-sqlite archives are
 moved aside as `*.stale-incarnation.<stamp>`, the replica is rewritten). Report intents, outbox,
 metrics, journals, `report-token-secret.json`, current-incarnation status and other teams are never

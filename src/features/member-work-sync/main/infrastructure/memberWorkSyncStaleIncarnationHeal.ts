@@ -1,10 +1,12 @@
-import { access, lstat, mkdir, readdir, readFile, rename } from 'node:fs/promises';
+import { lstat, mkdir, readdir, readFile, rename } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 
-import { listPreSqliteArchiveGenerations } from '@features/internal-storage/main';
+import {
+  InternalStorageOperationInterruptedError,
+  listPreSqliteArchiveGenerations,
+} from '@features/internal-storage/main';
 import {
   atomicWriteAsync,
-  getDurablePathIdentity,
   syncDirectoryDurably,
 } from '@main/utils/atomicWrite';
 
@@ -63,6 +65,26 @@ interface Plan {
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   value !== null && typeof value === 'object' && !Array.isArray(value);
+
+/**
+ * Node may substitute ctime for birthtime on filesystems without creation timestamps.
+ * Only a distinct, earlier birthtime is positive evidence of the directory's age.
+ */
+export function getVerifiedTeamRootBirthtimeMs(stats: {
+  birthtimeMs: number;
+  ctimeMs: number;
+  isDirectory(): boolean;
+}): number | null {
+  if (
+    !stats.isDirectory() ||
+    !Number.isFinite(stats.birthtimeMs) ||
+    stats.birthtimeMs <= 0 ||
+    !Number.isFinite(stats.ctimeMs) ||
+    stats.ctimeMs <= stats.birthtimeMs
+  )
+    return null;
+  return stats.birthtimeMs;
+}
 
 /** A status is stale only when it decodes cleanly in every way except its recorded incarnation. */
 function foreignIncarnationOf(
@@ -255,18 +277,19 @@ async function corroborate(input: StaleIncarnationHealInput, plan: Plan): Promis
   if (!isRecord(config) || config._backupIdentityId !== input.incarnation)
     return 'identity_unconfirmed';
   try {
-    await access(input.paths.getPendingPrimaryPurgePath(input.teamName));
+    await lstat(input.paths.getPendingPrimaryPurgePath(input.teamName));
     return 'purge_pending';
-  } catch {
-    // No deletion marker for this team.
+  } catch (error) {
+    // A permission or I/O error cannot prove the absence of a deletion marker.
+    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') return 'purge_marker_unreadable';
   }
-  let birth: number;
+  let birth: number | null;
   try {
-    birth = getDurablePathIdentity(await lstat(root)).birthtimeMs;
+    birth = getVerifiedTeamRootBirthtimeMs(await lstat(root));
   } catch {
     return 'team_root_unreadable';
   }
-  if (!Number.isFinite(birth) || birth <= 0) return 'team_root_age_unknown';
+  if (birth === null) return 'team_root_age_unknown';
   // Rows newer than the directory could be this team's own state under a re-minted marker.
   return plan.evidenceTimes.every((time) => Number.isFinite(time) && time <= birth)
     ? null
@@ -275,7 +298,6 @@ async function corroborate(input: StaleIncarnationHealInput, plan: Plan): Promis
 
 async function execute(input: StaleIncarnationHealInput, plan: Plan): Promise<string> {
   const { paths, teamName, incarnation } = input;
-  await input.gateway.waitForSettling?.();
   const stamp = new Date().toISOString().replace(/[:.]/g, '-');
   const quarantine = join(paths.getTeamDir(teamName), `stale-incarnation-${stamp}.json`);
   await mkdir(dirname(quarantine), { recursive: true });
@@ -349,6 +371,8 @@ export async function healStaleIncarnationStatuses(
     refusal: null,
   };
   try {
+    // Snapshot the state only after any interrupted worker can no longer write to it.
+    await input.gateway.waitForSettling?.();
     await planReplica(input, plan);
     if (input.backend === 'sqlite') await planPrimary(input, plan);
     await planFiles(input, plan);
@@ -380,6 +404,8 @@ export async function healStaleIncarnationStatuses(
       incarnation: input.incarnation,
       error: String(error),
     });
+    // The authority must retain the identity fence until the interrupted writer settles.
+    if (error instanceof InternalStorageOperationInterruptedError) throw error;
     return 'failed';
   }
 }
