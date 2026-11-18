@@ -17,6 +17,10 @@ import WebSocket from 'ws';
 
 import { processes } from './opencode-diagnostics/platform.mjs';
 import { extendOwnedHistory, remainingOwned } from './teams-create-page-owned-processes.mjs';
+import {
+  observeScheduleTeamSelection,
+  scheduleOptionObservationSource,
+} from './teams-create-page-schedule-observation.mjs';
 
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(scriptDir, '../..');
@@ -601,7 +605,7 @@ class CdpClient {
     );
   }
 
-  async click(expression, taskTab = null) {
+  async click(expression, taskTab = null, scheduleTeam = null) {
     const cutoff = Date.now() + 30_000;
     const remaining = () => Math.max(0, cutoff - Date.now());
     await this.waitFor(expression, expression, remaining());
@@ -613,6 +617,7 @@ class CdpClient {
           team.value.length <= 256 && task.value.length <= 256)
         taskTabObservation = `if (target) { try { target.taskTabObserved = (${installTaskTabObservation.toString()})(window, document, element, ${JSON.stringify({ teamName: team.value, taskId: task.value })}); } catch {} }`;
     } catch { /* An unavailable diagnostic cannot prevent the original measurement/input. */ }
+    const scheduleObservation = scheduleTeam === null ? '' : scheduleOptionObservationSource(scheduleTeam);
     await this.evaluate(`(() => {
       const element = ${expression};
       if (element && !element.disabled) {
@@ -636,7 +641,7 @@ class CdpClient {
       return target;
     })()`;
     await this.waitFor(hitTarget(), `settled exact E2E click target: ${expression}`, remaining());
-    const target = await this.evaluate(hitTarget(taskTabObservation));
+    const target = await this.evaluate(hitTarget(taskTabObservation + scheduleObservation));
     try { if (taskTab) this.taskTabObservationInstalled = target?.taskTabObserved === true; } catch { /* Diagnostic only. */ }
     assert(Date.now() < cutoff, `E2E click target deadline: ${expression}`);
     assert(target, `Missing/disabled/hidden E2E click target: ${expression}`);
@@ -1034,13 +1039,7 @@ async function exerciseScheduleUx(client, fixture, log, inspectorWebSocketDebugg
 
   log('select the fixture team and review its saved one-time startup prompt');
   await client.click("document.querySelector('[role=dialog] button[role=combobox]')");
-  const teamOption = "Array.from(document.querySelectorAll('[cmdk-item]'))" +
-    ".find(option => option.textContent?.includes(" + JSON.stringify(fixture.teamName) + "))";
-  await client.click(teamOption);
-  await client.waitFor(
-    "document.querySelector('[role=dialog] button[role=combobox]')?.textContent?.trim() === " +
-      JSON.stringify(fixture.teamName) + " && document.querySelector('#schedule-saved-prompt-reviewed')",
-    'saved prompt acknowledgement for the exact fixture team visible before Save', 45_000);
+  await observeScheduleTeamSelection(client, fixture.teamName);
   await captureScreenshot(client, fixture, 'schedules-old-prompt-review');
 
   await client.fill('#schedule-label', scheduleLabel);

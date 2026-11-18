@@ -18,6 +18,8 @@ on:
       - 'src/main/services/team/provisioning/TeamProvisioningProviderPreflight.ts'
       - 'scripts/e2e/teams-create-page-owned-processes.mjs'
       - 'scripts/e2e/teams-create-page-owned-processes.test.mjs'
+      - 'scripts/e2e/teams-create-page-schedule-observation.mjs'
+      - 'scripts/e2e/teams-create-page-schedule-observation.test.mjs'
       - 'src/renderer/components/team/**'
       - 'src/features/organizations/**'
       - 'src/features/team-templates/**'
@@ -41,6 +43,8 @@ on:
       - 'src/main/services/team/provisioning/TeamProvisioningProviderPreflight.ts'
       - 'scripts/e2e/teams-create-page-owned-processes.mjs'
       - 'scripts/e2e/teams-create-page-owned-processes.test.mjs'
+      - 'scripts/e2e/teams-create-page-schedule-observation.mjs'
+      - 'scripts/e2e/teams-create-page-schedule-observation.test.mjs'
       - 'src/renderer/components/team/**'
       - 'src/features/organizations/**'
       - 'src/features/team-templates/**'
@@ -107,7 +111,7 @@ jobs:
         timeout-minutes: 10
         run: node ./scripts/ensure-electron-install.cjs --strict
       - name: Verify owned Windows process census and fail-closed teardown invariants
-        run: node --test scripts/e2e/teams-create-page-owned-processes.test.mjs
+        run: node --test scripts/e2e/teams-create-page-owned-processes.test.mjs scripts/e2e/teams-create-page-schedule-observation.test.mjs
       - name: Exercise actual Electron Create/Back/Resume/Copy/Launch
         shell: bash
         env:
