@@ -576,6 +576,33 @@ describe('targeted self-heal of status rows left by an earlier team identity', (
     expect(await quarantineFiles(h)).toEqual([]);
   });
 
+  it('rolls back the whole SQLite deletion when any exact payload is stale', async () => {
+    const h = await setup('sqlite');
+    await importPrimary(h, [mk('alice', FOREIGN), mk('bob', FOREIGN)]);
+    const before = await primary(h);
+    const targets = before.statuses.map((row) => ({
+      teamName: row.teamName,
+      memberKey: row.memberKey,
+      statusJson: row.statusJson,
+    }));
+    await expect(
+      Promise.resolve().then(() =>
+        h.gateway.statusDeleteMatching(TEAM, [
+          targets[0],
+          { ...targets[1], statusJson: 'unexpected newer status' },
+        ])
+      )
+    ).rejects.toThrow('changed before deletion');
+    expect(await primary(h)).toEqual(before);
+
+    await expect(
+      Promise.resolve().then(() =>
+        h.gateway.statusDeleteMatching(TEAM, [{ ...targets[0], teamName: 'another-team' }])
+      )
+    ).rejects.toThrow('Invalid member-work-sync status deletion target');
+    expect(await primary(h)).toEqual(before);
+  });
+
   it('deletes selected aliased SQLite statuses without rewriting other domain rows', async () => {
     const h = await setup('sqlite');
     const old = snap([
