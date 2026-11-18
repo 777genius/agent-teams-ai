@@ -95,11 +95,11 @@ export {
   LegacyStoppedImportHold,
 } from './infrastructure/stopped-import/createLegacyStoppedTeamSource';
 export { createRetainedLegacyOpenDiagnostic } from './infrastructure/stopped-import/createRetainedLegacyOpenDiagnostic';
-export { createStoppedImportDiagnostic } from './infrastructure/stopped-import/createStoppedImportDiagnostic';
 export type {
   StoppedImportDiagnostic,
   StoppedImportDiagnosticPhase,
 } from './infrastructure/stopped-import/createStoppedImportDiagnostic';
+export { createStoppedImportDiagnostic } from './infrastructure/stopped-import/createStoppedImportDiagnostic';
 export { prepareStoppedLegacyImport } from './infrastructure/stopped-import/prepareStoppedLegacyImport';
 export {
   RETAINED_LEGACY_OPEN_DIAGNOSTIC_NAMESPACE,

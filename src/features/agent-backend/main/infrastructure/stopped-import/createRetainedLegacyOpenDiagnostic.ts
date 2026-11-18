@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto';
 
 import { validateRetainedLegacyLaunchRequest } from '../../application/validateRetainedLegacyLaunchRequest';
+
 import { createStoppedImportDiagnostic } from './createStoppedImportDiagnostic';
 import { RETAINED_LEGACY_OPEN_DIAGNOSTIC_PHASES } from './retainedLegacyOpenDiagnosticContract';
 

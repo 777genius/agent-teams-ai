@@ -28,11 +28,11 @@ provider #8 `f5d632a6122df2f6995451bd33e6a0fbcda67680`.
 
 | ID | Состояние | Остаток и критерий готовности | Исполнитель |
 | --- | --- | --- | --- |
-| F1 | В работе: дизайн | Согласованно интегрировать текущий main; ReviewFlow settings/defaults/overrides, human approval и Lead sign-off проходят через действующего Host owner, общий controller и историю/MCP. | frontend_parity; интеграция root |
-| F2 | Запланировано | Перенести проверку reviewer clarification в Host policy до назначения review work; сохранить re-export старого пути. | frontend_parity |
-| M1 | В работе: проверка native API | Восстановить поддерживаемые текущим frontend MIME/размеры вложений V2 и точно отразить возможности model+transport в UI; исходники провайдера меняются только в provider repo, приложение получает проверенный immutable artifact. | stage2_v2 |
-| E1 | В работе: диагностика | Устранить текущие 8 typed-lint assertions и 2 import/export-order ошибки; затем исправлять только установленные причины Create/import/retained/Resume/installer/Add сценариев. | pr_graph; product ownership root |
-| W1 | В работе: диагностика | Windows x64 OpenCode readiness и ARM64 Codex standalone completion завершаются с подтверждённым cleanup; исходные дедлайны и полномочия сохраняются. | pr_graph; root |
+| F1 | В работе: реализация | Согласованно интегрировать текущий main; ReviewFlow settings/defaults/overrides, human approval и Lead sign-off проходят через действующего Host owner, общий controller и историю/MCP. | frontend_parity; интеграция root |
+| F2 | В работе | Перенести проверку reviewer clarification в Host policy до назначения review work; сохранить re-export старого пути. | frontend_parity |
+| M1 | В работе: реализация | Восстановить поддерживаемые текущим frontend MIME/размеры вложений V2 и точно отразить возможности model+transport в UI; исходники провайдера меняются только в provider repo, приложение получает проверенный immutable artifact. | stage2_v2 |
+| E1 | Частично готово | 8 лишних assertions и 2 import/export-order ошибки исправлены; далее исправлять только установленные причины Create/import/retained/Resume/installer/Add сценариев. | pr_graph; product ownership root |
+| W1 | В работе: две причины | x64 расходует readiness lease на повторные проверки namespace/source; ARM64 успевает выполнить 5 из 6 MCP probes до остановки harness. В обоих исходных артефактах итоговый cleanup подтверждён; требования currentness сохраняются. | pr_graph; root |
 | P9 | Открыто: контракт | Установить выполнимую границу original-path / writer / consumed bytes; текущую гарантию не сужать без явного решения. Независимые работы продолжаются. | root |
 | D1 | Запланировано | Свести изменения в одну композицию, провести независимое ревью, затронутые E2E и обязательные gates; обновить этот статус фактическими SHA/результатами. | root |
 
@@ -52,11 +52,11 @@ main, generated файлы, архивы и исторические evidence в
 | F2 clarification | 20–80 / 80–180 | 3 / 9 / 8 |
 | M1 media parity | 600–1400 / 500–1100 | 7 / 7 / 5 |
 | Общие readiness/lifecycle + membership | 0–1100 / 200–600 | 7 / 7 / 4 |
-| W1 Windows | 200–650 / 250–650 | 8 / 7 / 4 |
+| W1 Windows | 0–650 / 250–650 | 8 / 7 / 4 |
 | Остальная main integration | 0–150 / 0–150 | 4 / 8 / 7 |
 | Lint / test / CI glue | 0 / 100–300 | 3 / 9 / 6 |
 
-Итого без P9: 1620–4980 product + 1630–3980 tests/CI.
+Итого без P9: 1420–4980 product + 1630–3980 tests/CI.
 Нулевой нижний предел означает резерв диагностики: причина может оказаться
 только в TEST-коде. Пересекающиеся исправления считаются один раз.
 P9 не имеет подтверждённого конечного LOC до решения о контракте;
@@ -65,8 +65,8 @@ P9 не имеет подтверждённого конечного LOC до р
 
 ## Параллельная работа без дублирования
 
-- Root — единственный writer ref приложения. Исполнители используют отдельные
-  worktrees и передают небольшие проверенные изменения; каждый созданный commit
+- Root — единственный writer ref и index приложения. Исполнители редактируют
+  непересекающиеся файлы общего checkout; provider имеет отдельный checkout; каждый созданный commit
   сразу публикуется обычным fast-forward с expected SHA.
 - F1/F2 владеют review/work-sync контрактами и owner adapters. M1 владеет V2
   media port и capability projection. E1/W1 владеют конкретными TEST/CI и
@@ -113,4 +113,28 @@ P9 не имеет подтверждённого конечного LOC до р
 - 18 ноября, R1: root сверил актуальные app/main/provider SHA, граф PR и исходники.
   Устранены двойной подсчёт merged дочерних PR и ошибочное включение Stage 2.
   Разделены реальные gaps F1/F2/M1 и резерв диагностики E1/W1; P9 выделен отдельно.
-- Независимое R2 плана: ожидается. Продуктовые изменения ещё не опубликованы.
+- 18 ноября, R2 F1/F2: сохранить единый controller; различать human grant и
+  переданное имя; проверять current review request. Глобальные defaults читаются
+  из доверенного Main источника, входят в read-only snapshot/preimage и повторно
+  проверяются перед publish; не расширять task write allowlist и не копировать
+  глобальные defaults в team overrides. Старые work-sync paths остаются re-export.
+- 18 ноября, R2 M1: native 2.1.4 поддерживает PNG/JPEG/GIF/WebP и PDF, но сам
+  отбрасывает video. UI должен честно показать эту границу. Нормализация изображения
+  может изменить байты: приватный authenticated native receipt связывает исходный
+  digest, фактический normalized digest, session/input и captured child generation;
+  ACK/history и cold restore проверяют его. Raw/text-only wire limits не повышаются.
+- 18 ноября, R2 W1: финальные receipts обоих Windows jobs подтверждают cleanup;
+  промежуточная false строка не считается утечкой. x64: повторное полное обследование
+  съедает lease; ARM64: шесть физических MCP probes вокруг одного запуска съедают
+  окно наблюдения. До подтверждённого решения нижняя оценка product LOC равна 0.
+  Memoization и ослабление проверок по одним таймингам не принимаются.
+- 18 ноября, R2 приёмки: исходные packaged PASS переиспользуются только для
+  доказанно неизменённых boundaries; изменение imports/composition требует review.
+- 18 ноября: текущий main интегрируется; 21 текстовый конфликт разрешается
+  предметно, с сохранением disapprove, human approval, lead sign-off и Host routing.
+  Root разрешил 8 UI/worker/IPC конфликтов; остальные review/work-sync у F1/F2.
+
+- 18 ноября, E1: изолированно исправлены 8 избыточных non-null assertions и
+  2 import/export-order ошибки. Root проверил точный diff; fast ESLint трёх файлов
+  и diff --check PASS, TypeScript pin 7.0.2. Первая typed ESLint попытка прервана
+  OS (137), поэтому typed PASS не заявляется. Поведение не менялось.

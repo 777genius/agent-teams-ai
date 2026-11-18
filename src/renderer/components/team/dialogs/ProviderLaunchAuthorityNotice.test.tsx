@@ -202,7 +202,7 @@ describe('closed provider notice marker', () => {
   it('copies only closed own data and never reads raw details, models, credentials or a clock', () => {
     const input = markerInputs();
     let privateReads = 0;
-    for (const value of [input.blockers[0]!, input.checks[0]!, input.status, input.status.modelCatalog]) {
+    for (const value of [input.blockers[0], input.checks[0], input.status, input.status.modelCatalog]) {
       for (const key of ['details', 'detail', 'message', 'models', 'account', 'path', 'fetchedAt',
         'staleAt', 'toJSON', 'canSkipPreflight', 'permits', 'readiness']) {
         Object.defineProperty(value, key, { get() { privateReads++; throw new Error('PRIVATE'); } });
@@ -239,8 +239,8 @@ describe('closed provider notice marker', () => {
     for (const location of ['blocker', 'check', 'loading', 'status', 'capabilities', 'catalog', 'index'] as const) {
       const input = markerInputs();
       let reads = 0;
-      const [target, key]: [object, string] = location === 'blocker' ? [input.blockers[0]!, 'providerStatus'] :
-        location === 'check' ? [input.checks[0]!, 'status'] :
+      const [target, key]: [object, string] = location === 'blocker' ? [input.blockers[0], 'providerStatus'] :
+        location === 'check' ? [input.checks[0], 'status'] :
         location === 'loading' ? [input.loading, 'anthropic'] :
         location === 'status' ? [input.status, 'authenticated'] :
         location === 'capabilities' ? [input.status.capabilities, 'teamLaunch'] :
@@ -260,15 +260,15 @@ describe('closed provider notice marker', () => {
 
   it('refuses mismatched identities, duplicate providers, malformed values and overflow', () => {
     for (const mutate of [
-      (value: ReturnType<typeof markerInputs>) => { value.checks[0]!.providerId = 'codex'; },
+      (value: ReturnType<typeof markerInputs>) => { value.checks[0].providerId = 'codex'; },
       (value: ReturnType<typeof markerInputs>) => { value.status.providerId = 'codex'; },
       (value: ReturnType<typeof markerInputs>) => { value.status.statusCheckOutcome = 'PRIVATE'; },
       (value: ReturnType<typeof markerInputs>) => { value.status.statusCheckErrorCode = 'PRIVATE'; },
       (value: ReturnType<typeof markerInputs>) => { value.status.modelCatalog.status = 'PRIVATE'; },
       (value: ReturnType<typeof markerInputs>) => { value.status.modelCatalog.providerId = 'codex'; },
       (value: ReturnType<typeof markerInputs>) => { value.status.modelCatalog.schemaVersion = 2; },
-      (value: ReturnType<typeof markerInputs>) => { value.checks[0]!.status = 'ready'; },
-      (value: ReturnType<typeof markerInputs>) => { value.blockers.push(value.blockers[0]!); value.checks.push(value.checks[0]!); },
+      (value: ReturnType<typeof markerInputs>) => { value.checks[0].status = 'ready'; },
+      (value: ReturnType<typeof markerInputs>) => { value.blockers.push(value.blockers[0]); value.checks.push(value.checks[0]); },
     ]) {
       const input = markerInputs(); mutate(input);
       expect(createProviderLaunchAuthorityMarker(input.blockers, input.checks, input.loading))
