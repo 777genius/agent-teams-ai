@@ -3,7 +3,7 @@ import { createRoot } from 'react-dom/client';
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { state, getView, launchTeam, openTeamTab, updateTabLabel } = vi.hoisted(() => {
+const { state, getView, launchTeam, openTeamTab, updateTabLabel, selectTeam } = vi.hoisted(() => {
   const state = {
     repositoryGroups: [],
     projects: [
@@ -14,6 +14,7 @@ const { state, getView, launchTeam, openTeamTab, updateTabLabel } = vi.hoisted((
     selectedWorktreeId: null,
     selectedProjectId: 'project-a',
     activeProjectId: 'project-a',
+    selectedTeamName: null as string | null,
     teamByName: {
       builders: { displayName: 'Builders' },
     },
@@ -21,7 +22,14 @@ const { state, getView, launchTeam, openTeamTab, updateTabLabel } = vi.hoisted((
     currentProvisioningRunIdByTeam: {} as Record<string, string>,
     provisioningErrorByTeam: {} as Record<string, string | null>,
   };
-  return { state, getView: vi.fn(), launchTeam: vi.fn(), openTeamTab: vi.fn(), updateTabLabel: vi.fn() };
+  return {
+    state,
+    getView: vi.fn(),
+    launchTeam: vi.fn(),
+    openTeamTab: vi.fn(),
+    updateTabLabel: vi.fn(),
+    selectTeam: vi.fn(async (_teamName: string) => undefined),
+  };
 });
 
 vi.mock('@renderer/store', () => ({
@@ -34,6 +42,7 @@ vi.mock('@renderer/store', () => ({
         getAllPaneTabs: () => [{ id: 'alias-tab', type: 'team', teamName: 'ptc-a' }],
         openTeamTab,
         updateTabLabel,
+        selectTeam,
       }),
     }
   ),
@@ -49,10 +58,14 @@ vi.mock('./TeamProvisioningBanner', () => ({
 }));
 vi.mock('./TeamDetailView', () => ({
   TeamDetailView: ({ teamName, retainedHistory }: { teamName: string; retainedHistory?: boolean }) =>
-    React.createElement('div', {
-      'data-testid': 'team-detail', 'data-team': teamName,
-      'data-retained': String(retainedHistory === true),
-    }),
+    React.createElement(
+      'div',
+      {
+        'data-testid': 'team-detail', 'data-team': teamName,
+        'data-retained': String(retainedHistory === true),
+      },
+      React.createElement('div', { 'data-section-id': 'kanban' })
+    ),
 }));
 vi.mock('./TeamHistoryModePicker', () => ({
   TeamHistoryModePicker: () => React.createElement('div', { 'data-testid': 'mode-picker' }),
@@ -103,6 +116,8 @@ describe('ProjectScopedTeamDetailView project switching', () => {
     launchTeam.mockReset();
     openTeamTab.mockReset();
     updateTabLabel.mockReset();
+    selectTeam.mockReset();
+    state.selectedTeamName = null;
     state.selectedProjectId = 'project-a';
     state.activeProjectId = 'project-a';
     state.provisioningRuns = {};
@@ -170,6 +185,29 @@ describe('ProjectScopedTeamDetailView project switching', () => {
     expect(host.querySelector('[data-team]')?.getAttribute('data-team')).toBe('ptc-a');
     expect(getView).toHaveBeenCalledWith('builders', '/TEST/a');
     expect(getView).toHaveBeenCalledWith('builders', '/TEST/b');
+  });
+
+
+  it('restores physical selection on repeated logical tab activation and preserves section navigation', async () => {
+    getView.mockResolvedValue(native('ptc-a', '/TEST/a'));
+    await act(async () => root.render(
+      React.createElement(ProjectScopedTeamDetailView, { teamName: 'builders' })
+    ));
+    await settle();
+
+    // The logical tab section menu must reach the physical TeamDetailView sections.
+    expect(host.querySelector('[data-team-name="builders"] [data-section-id="kanban"]'))
+      .not.toBeNull();
+    expect(host.querySelector('[data-team-name="ptc-a"] [data-section-id="kanban"]'))
+      .not.toBeNull();
+
+    // Clicking an already-active tab reselects the logical name without remounting.
+    state.selectedTeamName = 'builders';
+    await act(async () => root.render(
+      React.createElement(ProjectScopedTeamDetailView, { teamName: 'builders' })
+    ));
+    await settle();
+    expect(selectTeam).toHaveBeenCalledWith('ptc-a');
   });
 
   it('redirects physical runtime deep links to the verified logical team and project', async () => {

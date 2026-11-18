@@ -67,6 +67,7 @@ export const ProjectScopedTeamDetailView = ({
   // A launch can start in Create Team or Team List, before this view owns a launchRef.
   const provisioningActive = useStore((s) => isTeamProvisioningActive(s, teamName));
   const provisioningError = useStore((s) => s.provisioningErrorByTeam[teamName] ?? null);
+  const selectedTeamName = useStore((s) => s.selectedTeamName);
   const selectedProjectPath = useMemo(
     () =>
       resolveTeamProjectSelection({
@@ -211,6 +212,18 @@ export const ProjectScopedTeamDetailView = ({
     [visiblePhysicalTeam]
   );
 
+  // Activating an already-open logical tab can reselect the logical team.
+  // Restore the verified physical runtime whenever that occurs while focused.
+  const readyExecutionTeamName =
+    context?.mode === 'per_project' && context.state === 'ready'
+      ? context.executionTeamName
+      : null;
+  useEffect(() => {
+    if (!isActive || !isPaneFocused || !readyExecutionTeamName ||
+        selectedTeamName !== teamName) return;
+    void useStore.getState().selectTeam(readyExecutionTeamName);
+  }, [isActive, isPaneFocused, readyExecutionTeamName, selectedTeamName, teamName]);
+
   const start = useCallback(async (request: TeamLaunchRequest): Promise<void> => {
     const cwd = request.cwd.trim();
     if (!cwd || launchingKey !== null) throw new Error('Choose a project before launch');
@@ -339,7 +352,7 @@ export const ProjectScopedTeamDetailView = ({
       );
     }
     return (
-      <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col" data-team-name={teamName}>
         <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border px-4 py-2 text-xs text-text-muted">
           <span>{logicalDisplayName} · {selectedProjectPath}</span>
           <TeamHistoryModePicker
