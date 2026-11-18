@@ -137,10 +137,15 @@ test('Linux TEST display admission accepts only the original local form or canon
   assert.throws(() => assertDesktopProofEnvironment(false), /provider-emulation refuses LEGACY_DESKTOP_CLAUDE_PATH/);
 });
 
-test('finite TEST heap selector admits only the two exact Linux x64 emulated lifecycle modes', () => {
+const finiteEmulatedUiModes = [
+  'emulated-retained-original-ui', 'emulated-import-lifecycle-ui', 'task-board-cross-team-ui',
+  'emulated-selection-ui', 'emulated-import-ui', 'emulated-claude-lifecycle-ui', 'emulated-collaboration-ui',
+] as const;
+
+test('finite TEST heap selector admits only the exact Linux x64 emulated UI modes', () => {
   const admitted = { LEGACY_DESKTOP_BACKEND_GO: '1', LEGACY_DESKTOP_EMULATED_ONLY: '1',
     LEGACY_DESKTOP_TEST_FINITE_HEAP_1536: '1', LEGACY_DESKTOP_PROOF_MODE: 'emulated-retained-original-ui' };
-  for (const mode of ['emulated-retained-original-ui', 'emulated-import-lifecycle-ui'])
+  for (const mode of finiteEmulatedUiModes)
     assert.equal(desktopFiniteHeapNodeOptions({ ...admitted, LEGACY_DESKTOP_PROOF_MODE: mode }, 'linux', 'x64'),
       '--max-old-space-size=1536');
   assert.equal(desktopFiniteHeapNodeOptions({ ...admitted, AGENT_TEAMS_DISABLE_SOURCEMAPS: '1' }, 'linux', 'x64'),
@@ -161,10 +166,10 @@ test('finite TEST heap selector admits only the two exact Linux x64 emulated lif
     assert.throws(() => desktopFiniteHeapNodeOptions({ ...admitted, LEGACY_DESKTOP_EMULATED_ONLY: value },
       'linux', 'x64'), /provider emulation/);
   }
-  for (const mode of [undefined, '', 'team-ui', 'process-cold-ui', 'native-launch-ui', 'emulated-import-ui',
+  for (const mode of [undefined, '', 'task-board-ui', 'task-board-cross-team-ui ', 'team-ui', 'process-cold-ui', 'native-launch-ui', 'emulated-management-ui', 'emulated-installer-ui', 'emulated-import-ui ',
     'emulated-claude-runtime-ui', 'emulated-codex-runtime-ui', 'emulated-retained-original-ui '])
     assert.throws(() => desktopFiniteHeapNodeOptions({ ...admitted, LEGACY_DESKTOP_PROOF_MODE: mode },
-      'linux', 'x64'), /exact finite lifecycle mode/);
+      'linux', 'x64'), /exact finite UI mode/);
 });
 
 test('absent finite heap selector is inert on every platform and never reads ambient Node options', () => {
@@ -188,7 +193,7 @@ test('finite heap admission and closed app environment preserve every other fiel
     LEGACY_DESKTOP_TEST_DISPLAY: ':97', LEGACY_DESKTOP_TEST_XAUTHORITY: '/TEST/Xauthority',
     NODE_OPTIONS: '--require=/TEST/ambient.cjs --max-old-space-size=8192', SENTRY_AUTH_TOKEN: 'PRIVATE-ambient-token' });
   const environment = () => desktopBackendEnvironment('/TEST/finite-root', '/TEST/node', '/TEST/descriptor.json', 'a'.repeat(64));
-  for (const mode of ['emulated-retained-original-ui', 'emulated-import-lifecycle-ui']) {
+  for (const mode of finiteEmulatedUiModes) {
     process.env.LEGACY_DESKTOP_PROOF_MODE = mode;
     delete process.env.LEGACY_DESKTOP_TEST_FINITE_HEAP_1536;
     process.env.AGENT_TEAMS_DISABLE_SOURCEMAPS = 'PRIVATE-ordinary-inert';
@@ -219,10 +224,10 @@ test('finite heap admission and closed app environment preserve every other fiel
   assert.throws(() => assertDesktopProofEnvironment(false), /exact selector/);
   assert.throws(environment, /exact selector/);
   process.env.LEGACY_DESKTOP_TEST_FINITE_HEAP_1536 = '1';
-  for (const mode of ['team-ui', 'emulated-import-ui', 'native-launch-ui']) {
+  for (const mode of ['task-board-ui', 'task-board-cross-team-ui ', 'team-ui', 'emulated-management-ui', 'native-launch-ui']) {
     process.env.LEGACY_DESKTOP_PROOF_MODE = mode;
-    assert.throws(() => assertDesktopProofEnvironment(true), /exact finite lifecycle mode/);
-    assert.throws(environment, /exact finite lifecycle mode/);
+    assert.throws(() => assertDesktopProofEnvironment(true), /exact finite UI mode/);
+    assert.throws(environment, /exact finite UI mode/);
   }
   process.env.LEGACY_DESKTOP_PROOF_MODE = 'emulated-import-lifecycle-ui';
   delete process.env.LEGACY_DESKTOP_EMULATED_ONLY;
@@ -249,7 +254,7 @@ test('the real fixture and original dev normalizer retain the selected finite he
   });
   Object.assign(process.env, { LEGACY_DESKTOP_BACKEND_GO: '1', LEGACY_DESKTOP_EMULATED_ONLY: '1',
     LEGACY_DESKTOP_TEST_FINITE_HEAP_1536: '1', NODE_OPTIONS: '--require=/TEST/ambient.cjs' });
-  for (const mode of ['emulated-retained-original-ui', 'emulated-import-lifecycle-ui']) {
+  for (const mode of finiteEmulatedUiModes) {
     process.env.LEGACY_DESKTOP_PROOF_MODE = mode;
     const fixtureEnv = desktopBackendEnvironment('/TEST/finite-root', '/TEST/node', '/TEST/descriptor.json', 'a'.repeat(64));
     const uiEnv = { ...fixtureEnv, UV_THREADPOOL_SIZE: '16' }, before = { ...uiEnv };
@@ -291,12 +296,12 @@ test('dev startup refuses incomplete finite context and arbitrary Node flags bef
   }
   for (const selected of ['', '0', '1536', '1\n'])
     refuse({ ...admitted, LEGACY_DESKTOP_TEST_FINITE_HEAP_1536: selected }, /exact selector/);
-  for (const mode of ['native-launch-ui', 'team-ui', 'emulated-import-ui'])
-    refuse({ ...admitted, LEGACY_DESKTOP_PROOF_MODE: mode }, /exact finite lifecycle mode/);
-  for (const option of [undefined, '', '--max-old-space-size=2048', '--max_old_space_size=1536',
+  for (const mode of ['task-board-ui', 'task-board-cross-team-ui ', 'native-launch-ui', 'team-ui', 'emulated-management-ui'])
+    refuse({ ...admitted, LEGACY_DESKTOP_PROOF_MODE: mode }, /exact finite UI mode/);
+  for (const mode of finiteEmulatedUiModes) for (const option of [undefined, '', '--max-old-space-size=2048', '--max_old_space_size=1536',
     '--max-old-space-size=1536 ', '--max-old-space-size=1536 --trace-gc',
     '--require=/TEST/ambient.cjs --max-old-space-size=1536', '--max-old-space-size=1536 --max-old-space-size=8192'])
-    refuse({ ...admitted, NODE_OPTIONS: option }, /only its exact Node option/);
+    refuse({ ...admitted, LEGACY_DESKTOP_PROOF_MODE: mode, NODE_OPTIONS: option }, /only its exact Node option/);
   refuse({ ...admitted }, /requires Linux/, 'darwin', 'arm64');
   refuse({ ...admitted }, /requires Linux/, 'win32', 'x64');
   refuse({ ...admitted }, /requires x64/, 'linux', 'arm64');

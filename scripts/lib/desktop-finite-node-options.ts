@@ -28,8 +28,11 @@ export function desktopFiniteHeapNodeOptions(
     }
   } else {
     assert.equal(environment.LEGACY_DESKTOP_EMULATED_ONLY, '1', 'finite TEST heap requires provider emulation');
-    assert.ok(['emulated-retained-original-ui', 'emulated-import-lifecycle-ui'].includes(mode ?? ''),
-      'finite TEST heap requires an exact finite lifecycle mode');
+    assert.ok([
+      'emulated-retained-original-ui', 'emulated-import-lifecycle-ui', 'task-board-cross-team-ui',
+      'emulated-selection-ui', 'emulated-import-ui', 'emulated-claude-lifecycle-ui', 'emulated-collaboration-ui',
+    ].includes(mode ?? ''),
+      'finite TEST heap requires an exact finite UI mode');
   }
   if (environment.AGENT_TEAMS_DISABLE_SOURCEMAPS !== undefined)
     assert.equal(environment.AGENT_TEAMS_DISABLE_SOURCEMAPS, '1', 'finite TEST source maps require their exact selector');

@@ -236,6 +236,9 @@ export function createOpenCodeV2EmbeddedMemberProvider(context: MemberProviderCo
               !await client.builtinPluginsOnly()) return undefined;
           const mcp = await client.readMcp();
           const receipt = context.endpoint.getCatalogReceipt?.();
+          // Missing tools/list may still be warming up, but a refused original
+          // allocation cannot become current through more native polling.
+          if (receipt === undefined && context.canAllocate() !== true) return unavailable();
           if (!mcp.every(row => row.status === 'connected') ||
               !isDeepStrictEqual(mcp.map(row => row.name).sort(), requiredServerNames) ||
               receipt === undefined || receipt.sequence <= 0 ||

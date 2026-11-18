@@ -28,9 +28,9 @@ provider #8 `f5d632a6122df2f6995451bd33e6a0fbcda67680`.
 
 | ID | Состояние | Остаток и критерий готовности | Исполнитель |
 | --- | --- | --- | --- |
-| F1 | Реализация и R2 готовы; UI E2E остаётся | Main интегрирован. Settings/defaults/overrides, human authority и Lead cycles используют текущего owner/controller. Существующий task-board UI journey дополнен default → override → inherit → Approve → reopen; нужен исполненный результат. | reviewflow; root |
+| F1 | Реализация и R2 готовы; UI E2E остаётся | Первый original GUI run остановлен SIGKILL сборки main SSR до открытия Electron. Для того же journey подготовлен проверенный fixed-1536 TEST scope; UI verdict ещё отсутствует. | pr_graph; reviewflow; root |
 | F2 | Реализация и focused contracts готовы | Canonical Host agenda блокирует review work при lead/user clarification до review cycle; старый app path — re-export. Agenda 26/26 и cycle 3/3 PASS. | reviewflow |
-| M1 | Native delivery подтверждена; общий E2E не завершён | На `047f002e` оба input succeeded, 11 business model requests без ошибок; normalization большого PNG и exact PNG/JPEG/GIF/WebP/PDF проверены. Readback остановлен несовпадением TEST parser и существующего chunk contract; cold restore и итоговый cleanup остаются. | media; root |
+| M1 | Native delivery подтверждена; общий E2E не завершён | На `047f002e` проверена доставка всех media; TEST chunk parser исправлен в `19b5bf34`. Повтор остановлен readiness cutoff до DM. Cold readback/restore и итоговый cleanup остаются; TTL сохраняется. | media; root |
 | E1 | Исправление готово; E2E остаётся | Полный status wire finite peer исправляет отказ Create/import; 2 contract checks PASS. Остальные исходные Create/import/retained/Resume/installer/Add journeys требуют текущего результата. | pr_graph; product ownership root |
 | W1 | x64 исправление готово; ARM64 открыт | Синхронное чтение configured key входит в прежнюю closing freshness-проверку; 36 focused checks PASS. ARM64: 6 последовательных MCP probes не укладываются в исходные 15 секунд. Итоговый cleanup подтверждён; deadlines и currentness сохранены. | pr_graph; root |
 | P9 | Открыто: контракт | Установить выполнимую границу original-path / writer / consumed bytes; текущую гарантию не сужать без явного решения. Независимые работы продолжаются. | root |
@@ -295,3 +295,43 @@ P9 не имеет подтверждённого конечного LOC до р
   лишние поля, неправильные digest/offset/size, noncanonical base64 и raw padding.
   Existing observer/close suite 5/5, scoped strict TS 7.0.2 и независимое R2 PASS.
   Schema загружается lazily из исходного Host dist после build, сохраняя bootstrap.
+- 18 ноября, actual native `19b5bf34`: первый зафиксированный consumer refusal
+  имеет phase=cutoff, observedAt на 1527 ms позже original cutoff. Coordination
+  PASS с cleanup=true и 4 model requests; business DM не достигнуты. Initial
+  graph phase заняла 14236 ms; business probe утратил admission через 24561 ms,
+  но продолжил опрос до исходного 120-second launch budget. Run INCOMPLETE,
+  elapsed 213504 ms, business exit 1 / stdoutValid=true / cleanup=false.
+  Этот run не проверяет новый chunk reader; прежний media delivery PASS не
+  переносится на cold recovery. Проверка graph performance продолжается.
+- 18 ноября, E1 failed-opening R2: при missing catalog receipt и окончательном
+  отказе исходного canAllocate probe теперь сразу выходит через прежний disposal
+  и single owned cleanup. Missing receipt при действующей allocation остаётся
+  transient; valid receipt не добавляет новых allocation reads. Новый state/cache
+  не введён. Existing member suite 8/8, source/test strict TS 7.0.2 и R2 PASS;
+  false/throw admission, warmup recovery и sticky stop/dispose UNKNOWN проверены.
+- 18 ноября, F1 original GUI `19b5bf34`: main SSR transform в electron-vite
+  получил SIGKILL до Electron/CDP/Host, не исчерпав original 180-second startup.
+  Receipt INCOMPLETE, cleanup.remaining=[], source freeze сохранён. OOM не
+  доказан: у погибшего процесса отсутствовала resource telemetry.
+  Первый ограниченный повтор использует существующий exact TEST heap 1536 MiB
+  с исходными sourcemaps. Selector явно допущен для task-board-cross-team-ui
+  и четырёх finite queue modes с тем же unconditional build: selection, import,
+  claude-lifecycle, collaboration. Два прежних finite modes и отдельные native
+  guards сохранены; arbitrary modes/flags/ambient NODE_OPTIONS отвергаются.
+  Admission → closed environment → real dev normalizer: 6/6 PASS, R2 PASS.
+  Все три build/resource helper уже входят в исходный frozen source roster;
+  повторные pins не добавлены. Actual GUI acceptance ещё не получена.
+- 18 ноября, E1 performance R1: import-equivalent пары unchanged graph verifier
+  с parent heap 256/512 MiB не подтвердили улучшение: средние 5.505/5.458 s,
+  RSS около 327–328 MiB, GC 126–158 ms; второй run быстрее независимо от heap.
+  Actual graph 14.236 s этим baseline не воспроизведён. Graph и parent heap
+  не изменены. Следующий конкретный фактор — исходный TEST observation loop
+  каждые 25 ms с полным profile/authority read, конкурирующий с graph verification;
+  его стоимость и границы проверяются отдельно от production source guards.
+- 18 ноября, E1 observer R2: найден и удалён только синхронный дубль полного
+  writer/profile/digest guard перед `manager.probes.read`. Сам read первым
+  действием выполняет тот же callback через assertAdmission; abort проверяется
+  до него, без промежуточного await. Tick 25 ms, producer currentness, original
+  deadline, terminal receipt и cleanup проверки сохранены; cache не добавлен.
+  Existing revoked-authority case 1/1 PASS, два независимых source review и
+  diff check PASS. Влияние на полный native run ещё не измерено.
