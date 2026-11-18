@@ -281,6 +281,11 @@ import {
   TEAM_VALIDATE_CLI_ARGS,
 } from '../../../src/preload/constants/ipcChannels';
 
+import {
+  TEAM_PROJECT_CONTEXT_SET_MODE_CHANNEL,
+  TEAM_PROJECT_CONTEXT_VIEW_CHANNEL,
+} from '@features/team-project-context/contracts';
+
 import type { TeamIpcHandlerApis } from '../../../src/main/services/team/contracts/TeamProvisioningApis';
 import type { TeamPermanentDeletionIntent } from '../../../src/main/services/team/TeamBackupService';
 
@@ -302,6 +307,8 @@ type PermanentlyDeleteTeamMock = (
 ) => Promise<boolean>;
 
 const TEAM_HANDLER_KEYS = [
+  TEAM_PROJECT_CONTEXT_SET_MODE_CHANNEL,
+  TEAM_PROJECT_CONTEXT_VIEW_CHANNEL,
   TEAM_ADD_MEMBER,
   TEAM_ADD_TASK_COMMENT,
   TEAM_ADD_TASK_RELATIONSHIP,
@@ -394,6 +401,10 @@ const TEAM_HANDLER_KEYS = [
 
 describe('ipc teams handlers', () => {
   const handlers = new Map<string, (...args: unknown[]) => Promise<unknown>>();
+  // These legacy controller/IPC scenarios deliberately exercise shared mode.
+  // New-team default per_project is covered by its dedicated integration tests.
+  const legacyCreateHandler = (...args: unknown[]): Promise<unknown> =>
+    handlers.get(TEAM_CREATE)!(args[0], { projectContextMode: 'shared', ...(args[1] as object) });
   const ipcMain = {
     handle: vi.fn((channel: string, fn: (...args: unknown[]) => Promise<unknown>) => {
       handlers.set(channel, fn);
@@ -2937,7 +2948,7 @@ describe('ipc teams handlers', () => {
     expect(listResult.success).toBe(true);
     expect(service.listTeams).toHaveBeenCalledTimes(1);
 
-    const createResult = (await handlers.get(TEAM_CREATE)!({ sender: { send: vi.fn() } } as never, {
+    const createResult = (await legacyCreateHandler({ sender: { send: vi.fn() } } as never, {
       teamName: 'my-team',
       members: [{ name: 'alice' }],
       cwd: os.tmpdir(),
@@ -2985,7 +2996,7 @@ describe('ipc teams handlers', () => {
       return resolved({ runId: 'run-created-watch-scope' });
     });
 
-    const result = (await handlers.get(TEAM_CREATE)!({ sender: { send: vi.fn() } } as never, {
+    const result = (await legacyCreateHandler({ sender: { send: vi.fn() } } as never, {
       teamName: createTeam,
       members: [{ name: 'alice' }],
       cwd: os.tmpdir(),
@@ -3110,7 +3121,7 @@ describe('ipc teams handlers', () => {
       .mockResolvedValueOnce([{ teamName: 'background-fresh', displayName: 'Background Fresh' }])
       .mockResolvedValueOnce([{ teamName: 'fresh-team', displayName: 'Fresh' }]);
 
-    const createResult = (await handlers.get(TEAM_CREATE)!({ sender: { send: vi.fn() } } as never, {
+    const createResult = (await legacyCreateHandler({ sender: { send: vi.fn() } } as never, {
       teamName: 'my-team',
       members: [{ name: 'alice' }],
       cwd: os.tmpdir(),
@@ -7223,7 +7234,7 @@ describe('ipc teams handlers', () => {
 
   describe('createTeam prompt validation', () => {
     it('accepts valid prompt in team create request', async () => {
-      const handler = handlers.get(TEAM_CREATE)!;
+      const handler = legacyCreateHandler;
       const result = (await handler({ sender: { send: vi.fn() } } as never, {
         teamName: 'test-team',
         members: [{ name: 'alice' }],
@@ -7236,7 +7247,7 @@ describe('ipc teams handlers', () => {
     });
 
     it('rejects non-string prompt in team create request', async () => {
-      const handler = handlers.get(TEAM_CREATE)!;
+      const handler = legacyCreateHandler;
       const result = (await handler({ sender: { send: vi.fn() } } as never, {
         teamName: 'test-team',
         members: [{ name: 'alice' }],
@@ -7248,7 +7259,7 @@ describe('ipc teams handlers', () => {
     });
 
     it('rejects a non-boolean experimental local-model override', async () => {
-      const handler = handlers.get(TEAM_CREATE)!;
+      const handler = legacyCreateHandler;
       const result = (await handler({ sender: { send: vi.fn() } } as never, {
         teamName: 'test-team',
         members: [{ name: 'alice' }],
@@ -7298,7 +7309,7 @@ describe('ipc teams handlers', () => {
     ] as const;
 
     it.each(blockedArgs)('rejects %s on team create', async (extraCliArgs, error) => {
-      const result = (await handlers.get(TEAM_CREATE)!({ sender: { send: vi.fn() } } as never, {
+      const result = (await legacyCreateHandler({ sender: { send: vi.fn() } } as never, {
         teamName: 'test-team',
         members: [{ name: 'alice' }],
         cwd: os.tmpdir(),
@@ -7357,7 +7368,7 @@ describe('ipc teams handlers', () => {
 
     it('passes valid args through to create and launch', async () => {
       const event = { sender: { send: vi.fn() } } as never;
-      const created = (await handlers.get(TEAM_CREATE)!(event, {
+      const created = (await legacyCreateHandler(event, {
         teamName: 'test-team',
         members: [{ name: 'alice' }],
         cwd: os.tmpdir(),
@@ -7532,7 +7543,7 @@ describe('ipc teams handlers', () => {
 
   describe('solo team (zero members)', () => {
     it('createTeam accepts members: [] (provisioning validation)', async () => {
-      const handler = handlers.get(TEAM_CREATE)!;
+      const handler = legacyCreateHandler;
       const result = (await handler({ sender: { send: vi.fn() } } as never, {
         teamName: 'solo-team',
         members: [],
@@ -7545,7 +7556,7 @@ describe('ipc teams handlers', () => {
     });
 
     it('createTeam preserves teammate backend and fast mode metadata', async () => {
-      const handler = handlers.get(TEAM_CREATE)!;
+      const handler = legacyCreateHandler;
       const result = (await handler({ sender: { send: vi.fn() } } as never, {
         teamName: 'runtime-team',
         members: [
@@ -7588,7 +7599,7 @@ describe('ipc teams handlers', () => {
     });
 
     it('createTeam validates teammate runtime fields against inherited team provider metadata', async () => {
-      const handler = handlers.get(TEAM_CREATE)!;
+      const handler = legacyCreateHandler;
       const result = (await handler({ sender: { send: vi.fn() } } as never, {
         teamName: 'inherited-backend-team',
         members: [
@@ -7620,7 +7631,7 @@ describe('ipc teams handlers', () => {
     });
 
     it('createTeam preserves top-level OpenCode provider and inherited teammate backend', async () => {
-      const handler = handlers.get(TEAM_CREATE)!;
+      const handler = legacyCreateHandler;
       const result = (await handler({ sender: { send: vi.fn() } } as never, {
         teamName: 'opencode-runtime-team',
         members: [
@@ -8554,7 +8565,7 @@ describe('ipc teams handlers', () => {
     });
 
     it('still rejects members as non-array in createTeam', async () => {
-      const handler = handlers.get(TEAM_CREATE)!;
+      const handler = legacyCreateHandler;
       const result = (await handler({ sender: { send: vi.fn() } } as never, {
         teamName: 'solo-team',
         members: 'not-array',
@@ -8641,7 +8652,7 @@ describe('ipc teams handlers', () => {
 
   describe('reserved teammate names', () => {
     it('rejects teammate name "user" in createTeam', async () => {
-      const handler = handlers.get(TEAM_CREATE)!;
+      const handler = legacyCreateHandler;
       const result = (await handler({ sender: { send: vi.fn() } } as never, {
         teamName: 'solo-team',
         members: [{ name: 'user' }],
@@ -8652,7 +8663,7 @@ describe('ipc teams handlers', () => {
     });
 
     it('rejects teammate name "team-lead" in createTeam', async () => {
-      const handler = handlers.get(TEAM_CREATE)!;
+      const handler = legacyCreateHandler;
       const result = (await handler({ sender: { send: vi.fn() } } as never, {
         teamName: 'solo-team',
         members: [{ name: 'team-lead' }],

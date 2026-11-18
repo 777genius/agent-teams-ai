@@ -13,7 +13,6 @@ import { access } from 'fs/promises';
 import { join } from 'path';
 
 import { registerTeamMemberDiagnosticsRoute } from './teamMemberDiagnostics';
-import { rememberMemberWorkSyncRuntimeStop } from './teamRuntimeStopReplay';
 import { rejectUnsupportedProjectContextHttpLaunch } from './teamProjectContextLaunchGuard';
 import {
   HttpBadRequestError,
@@ -23,6 +22,7 @@ import {
   parseTeamConfigurationReadQuery,
   withRuntimeTeamName,
 } from './teamRouteParsers';
+import { rememberMemberWorkSyncRuntimeStop } from './teamRuntimeStopReplay';
 import { registerTeamLifecycleRoutes } from './teams/teamLifecycleRoutes';
 import { registerTeamManagementRoutes } from './teams/teamManagementRoutes';
 
