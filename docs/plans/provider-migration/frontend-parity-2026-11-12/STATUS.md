@@ -1,557 +1,239 @@
 # Завершение Host / frontend parity
 
-Обновлено: 18 ноября 2026. Это текущий рабочий план и краткий статус.
-Исторические планы и receipts остаются по прежним ссылкам; их статусы не
-переносятся автоматически на новое дерево.
+Обновлено: 18 ноября 2026. Единственный текущий рабочий план.
+Опорный app source до текущего import-only среза: `4f5ae2dcb10c83fb6b3a3862b8d5065e0c7843ab`.
+Provider entrypoints и четыре Host import-only изменения прошли R2.
+Canonical provider check PASS; provider `b19494fd` опубликован.
+Новый app pin, frozen install и strict Host build PASS; следующий gate — original GUI.
 
-## Цель и границы
+## Цель, доставка и неизменные границы
 
-Завершить согласованный перенос в изолированный Host с сохранением работающих
-возможностей текущего Desktop frontend для Claude, Codex, OpenCode V1/V2.
-Поручение от 18 ноября: работать автономно и параллельно, вести один актуальный
-план, не дублировать реализацию, сразу публиковать коммиты и проверять изменения
-end-to-end без повторения неизменённых дорогих матриц.
+Завершить согласованный перенос в изолированный Host с сохранением текущего
+Desktop frontend для Claude, Codex, OpenCode V1/V2. Работать автономно,
+параллельно по независимым файлам, сразу публиковать готовые коммиты и проверять
+затронутые end-to-end пути без повторения неизменённых дорогих матриц.
 
-Stage 2 / замена ядер остаётся отложенной ([решение](https://github.com/777genius/agent-teams-ai/pull/1105#issuecomment-6771443351)).
-Release и включение Host по умолчанию не являются частью этой реализации.
-Реальные Claude/Codex не запускаются: используются существующие protocol peers;
-OpenCode проверяется существующим pinned localhost model сценарием.
-Не ослаблять source/owner/currentness/cleanup/UNKNOWN проверки ради зелёного CI.
+- App [#1192](https://github.com/777genius/agent-teams-ai/pull/1192) и provider #8
+  остаются Draft на исходных bases; маршрут доставки: **#1192 → #1186 → #982**.
+  Merge в main, release, включение Host по умолчанию и Stage 2 не разрешены.
+  [Решение об отложенном Stage 2](https://github.com/777genius/agent-teams-ai/pull/1105#issuecomment-6771443351).
+- Реальные Claude/Codex запрещены, включая version и binary с localhost endpoint.
+  Использовать исходные finite protocol peers; OpenCode — только разрешённый
+  pinned native/local-model сценарий. Все проверки выполняются в TEST projects.
+- Сохранить source/owner/currentness, authority, private snapshots, process custody,
+  исходные deadlines, negative oracles и cleanup. UNKNOWN/skip/cancel/queued
+  не являются PASS; exit 0 ребёнка не заменяет подтверждённый owner release.
+- Root — единственный writer ref/index приложения. Общему файлу назначается один
+  владелец; provider имеет отдельный checkout. Сохранять чужие изменения и оба
+  родителя при reconciliation; обычный expected-SHA update, без force push.
+- Не создавать второй controller, scheduler, auth owner, event bus или ReviewFlow.
+  Не менять bundler/plugins или global defaults ради прохождения TEST.
 
-Исходные refs: app #1192 `9a8d7ffd8e680d7e951b671f0d39a4585e6c1926`,
-main `3ba3475559c1052d799732bb61badd9da5d54164`,
-provider #8 `f5d632a6122df2f6995451bd33e6a0fbcda67680`.
-Основной путь доставки: #1192 → #1186 → #982; результаты дочерних PR проверяются
-по содержимому. Исторические CI snapshots не сливаются механически.
+Подробная прежняя хронология сохранена в
+[опубликованном журнале 4f5ae2dc](https://github.com/777genius/agent-teams-ai/blob/4f5ae2dcb10c83fb6b3a3862b8d5065e0c7843ab/docs/plans/provider-migration/frontend-parity-2026-11-12/STATUS.md).
+Её исторические SHA, оценки LOC и receipts не перепривязываются к новому дереву.
 
-## Единственный текущий список работы
+## Живой план: готово / осталось / критерий приёмки
 
-| ID | Состояние | Остаток и критерий готовности | Исполнитель |
+| ID | Состояние | Следующий результат и критерий готовности | Владелец |
 | --- | --- | --- | --- |
-| F1 | Реализация и R2 готовы; UI E2E остаётся | После 6 отказов до UI подготовлены fixed1024+UV4 и узкий Main readiness entrypoint. Strict Host build и scoped public consumer TS7 PASS; original GUI нового среза ожидается. /owned-process provider roots остаются. | pr_graph; media; reviewflow; root |
-| F2 | Реализация и focused contracts готовы | Canonical Host agenda блокирует review work при lead/user clarification до review cycle; старый app path — re-export. Agenda 26/26 и cycle 3/3 PASS. | reviewflow |
-| M1 | Native E2E PASS на `2f33d566` | Все 8 original steps за 151754 ms: media bytes/4 MiB normalization, 11 model requests, cold history/attachments, restored native readiness, no replay, оба stop custody=released и cleanup=true. Desktop GUI и vendor auth этим результатом не квалифицируются. | media; R2 reviewflow; root |
-| E1 | Исходные отказы исправлены; текущий E2E остаётся | Композиция 22 source закрывает HTTP/store cycle, finite metadata, retained authority, trusted input, Kanban и точечные type/test отказы.611 frontend/IPC PASS в 20 файлах по отдельным scoped runs; полный текущий Host/GUI verdict остаётся. | root |
-| W1 | x64 исправление готово; ARM64 открыт | Configured key проверяется внутри прежней closing fence; 36 focused checks PASS. ARM64 last sample 14993 ms, final catalog staged, prepare/resume=0; точная первая причина отказа не установлена. Все 6 probe boundaries необходимы, cleanup=true. Необоснованный guard patch отклонён. | media; R2 reviewflow; root |
-| P9 | Открыто: контракт | Установить выполнимую границу original-path / writer / consumed bytes; текущую гарантию не сужать без явного решения. Независимые работы продолжаются. | root |
-| D1 | Композиция и независимое ревью готовы; CI остаётся | Все 22 postimages связаны с exact c8 parent, внешние изменения сохранены, source-size policy PASS. Получить результат оригинальных обязательных gates опубликованного среза. | root |
+| F1 | Реализация, focused checks и R2 готовы; GUI INCOMPLETE | После нового immutable provider package провести original Taskboard/ReviewFlow GUI: реальные Settings/Approved/reopen, current request/cycle, все три owner-routing epochs, final receipt и пустой cleanup. | pr_graph; media; reviewflow; root |
+| F2 | Реализация и focused contracts PASS | Сохранить canonical Host agenda: lead/user clarification блокирует review work до review cycle; app path остаётся re-export. Не выдавать UI сохранение lead_then_human за исполненный lead handoff. | reviewflow |
+| M1 | Native E2E PASS только на 2f33d566 | Сохранить точный native receipt; новый package оценить по затронутым boundaries. Desktop/vendor auth/release этим native run не квалифицированы. | media; R2 reviewflow |
+| E1 | Исходные source/fixture отказы исправлены; текущий GUI остаётся | После первого GUI выполнить минимальную очередь изменённых Create/import/retained/Resume/Add/collaboration путей; исходные authority/source/no-replay/cleanup assertions обязательны. | root; pr_graph |
+| W1 | x64 source fix готов; Windows acceptance открыт | Нужны original Windows x64/ARM64 gates и same-Main packaged recovery. ARM64 первая причина отказа не установлена; 15 s и все шесть разделённых probe boundaries сохраняются. | root; media |
+| P09 | Открыто: решение о контракте | Установить выполнимую границу original pathname / разрешённый writer / consumed bytes; до отдельного решения не сужать гарантию и не менять failed oracle. | root |
+| D1 | Композиция и независимое ревью готовы; gates открыты | Получить обязательные current-tree CI, полный workspace typecheck и необходимые platform результаты. Pending/исторические scoped PASS не заменяют их. | root |
 
-Уже реализовано, повторная разработка не требуется: базовый Host/Session SPI,
-embedded V2 2.1.4, Logs/Thinking/source/filter/fullscreen/stderr, accounts/models,
-native suggestions, schedules, live membership и retained launch.
-Наличие реализации не заменяет приёмку её текущего интеграционного пути.
+Уже реализованы базовый Host/Session SPI, embedded V2 2.1.4,
+Logs/Thinking/source/filter/fullscreen/stderr, accounts/models, native suggestions,
+schedules, live membership и retained launch. Повторная разработка не требуется;
+приёмка текущего интеграционного пути остаётся отдельной обязанностью.
 
-## Объём и риски
+## Сейчас выполняется: убрать лишние provider imports из Main
 
-Строки — новое/существенно изменённое рукописное содержимое. Готовые изменения
-main, generated файлы, архивы и исторические evidence в оценку не входят.
+Последний GUI остановился до Electron/Host/UI на Main SSR с explicit V8 OOM.
+Повтор той же сборки не запускается. Текущий ограниченный срез:
 
-| Срез | Продукт / тесты, LOC | Сложность / надёжность подхода / уверенность, из 10 |
+1. Provider `./captured-configuration`: ровно четыре уже публичные capture-функции
+   напрямую из определяющих модулей, без общего internal/provider barrel.
+2. Отдельный `./codex-mcp-catalog`: тот же `readCodexConfiguredMcpCatalog` и уже
+   публичный тип каталога, без wrapper. Reader не чистый при вызове: сохраняет
+   caller-owned launch/dispose, captured HOME/CODEX_HOME, canRead/abort, фактический
+   terminal, 1 MiB и исходные timeout/cleanup проверки; import сам не запускает IO.
+3. Host: только value imports в runtimeProfile, runtimeExtraArgs,
+   capturedRuntimeMcpRecipes и readCodexMcpCatalog; тела и type-only imports прежние.
+4. Existing packed consumer: fresh process с SDK-denying resolve/load hooks и
+   negative control, закрытые export sets, пять прежних binding identities,
+   type consumer, bounded fake metadata port и отказ canRead до launch.
+
+**R2 и canonical provider check PASS**, exit 0 за 143.529 s: оба builds/types,
+577/577 source tests и оба packed consumers 1/1, включая SDK refusal и пять
+binding identities. TEST environment исправлен на HOME + CODEX_HOME до запуска.
+Сразу опубликован provider `b19494fd2de47538a1c9315e338199ff41bbe497`,
+tree `43c3778781815b87269056d3a6ceafb16cb28f08`. Exact tested archive — 191145 bytes,
+SHA256 `ad05bd8c799c4d2c366a6eab72f937466355a5994eac6bd201ee754217cf5aa7`.
+Все прежние 252 compiled outputs и SPI archive побайтово сохранены; добавлены
+только четыре facade JS/d.ts и package exports. App принял implementation pin
+`captured-config-b19494fd`; SPI остаётся на прежнем aad-каталоге.
+Штатный `pnpm install --frozen-lockfile --ignore-scripts --prefer-offline`
+PASS за 20.415 s, проверены 2533 supply-chain entries. Strict Host TS7 build
+с `--singleThreaded`, compiler-only 512MiB/50/2 PASS за 10.431 s;
+source receipt записан. Следом один original GUI на чистом
+опубликованном срезе. Provider/install/build PASS не квалифицируют app GUI.
+
+Независимый static audit 4f5: 3816 app files, 99 value-imported Host public subpaths,
+334 compiled Host modules; все шесть provider-barrel рёбер находились в этих
+четырёх Host-файлах. `/owned-process` имеет 104 local modules. Прямые MCP SDK
+Server/StreamableHTTP/request-schema imports у OpenCodeCoordinationEndpoint
+остаются необходимыми protocol imports. Устранение всех SDK и OOM fix не заявлены.
+
+## Подтверждённая реализация и границы результатов
+
+| Срез | Что завершено | Проверено; чего результат не доказывает |
 | --- | --- | --- |
-| F1 ReviewFlow | 800–1600 / 500–1000 | 7 / 8 / 7 |
-| F2 clarification | 20–80 / 80–180 | 3 / 9 / 8 |
-| M1 media parity | 600–1400 / 500–1100 | 7 / 7 / 5 |
-| Общие readiness/lifecycle + membership | 0–1100 / 200–600 | 7 / 7 / 4 |
-| W1 Windows | 0–650 / 250–650 | 8 / 7 / 4 |
-| Остальная main integration | 0–150 / 0–150 | 4 / 8 / 7 |
-| Lint / test / CI glue | 0 / 100–300 | 3 / 9 / 6 |
+| F1 authority/defaults | Human grant отделён от переданного имени; current review request/cycle fenced. Defaults из trusted Main входят в snapshot/preimage и recheck до publish; task write allowlist не расширен, defaults не копируются в override. | ReviewFlow/lead 56, controller 46, history 3, clarification/status 7 PASS в своих исходных runs; не current GUI. |
+| F1 ACK recovery | Structured code вместо reason; original command lookup также при structured outcome=unknown, frozen handle, без повторной mutation; неизвестный lookup сохраняет unknown. | Renderer routing 10/10, Host integration 7/7, UI Section 12/12, store 9/9 PASS; UI journey добавлен и прошёл R2, исполненный GUI ещё отсутствует. |
+| F2 agenda | Canonical Host owner; clarification блокирует review до cycle; старый app path re-export. | Agenda 26/26 и cycle 3/3 PASS. |
+| E1/W1 readiness | Configured key вычисляется внутри исходного capture callback до closing fence; account/policy/target checks сохранены. | Configuration + saved-model 36/36, finite status 2/2 PASS; нового Windows native PASS нет. |
+| Installer | Failed Host acceptance не делает новый candidate ready в следующем warm/cold getStatus; сохраняется принятая версия. | 34/34 PASS, source не менялся; не Darwin installer GUI. |
+| E1 startup | Inventory batch 12 полностью settles; per-file identity/hash/mode, symlink/count/unlisted/abort/closing checks сохранены. Удалены только доказанные sync duplicate guards; cache/TTL не добавлены. | Graph 12/12; authority/native-action 20/20; revoked observer 1/1 PASS. Darwin original startup qualification остаётся. |
+| E1 failed open/diagnostics | При окончательно потерянной allocation missing receipt идёт в прежний disposal; transient допустим только при действующей authority. Passive diagnostics не читают тела/секреты и не заменяют verdict. | Member 8/8; diagnostic suite 5/5 + scoped strict TS PASS. Ранние UNKNOWN receipts остаются UNKNOWN. |
+| CI/Unicode fixture | Ready job использует finite Claude/Codex peers и исходные UI/cron/no-replay oracles; ASCII batch сохраняет Unicode пути через captured env/%~dp0. | Workflow policy 17/17; launcher 5/5 PASS; обязательные CI/platform gates не заменены. |
+| Main readiness imports | readProfile берёт тот же schema напрямую; public /team-host/readiness содержит только три старых named values. Type-only imports/guards прежние; новые source pins сохранены. | Strict Host build PASS 10.318 s; scoped NodeNext consumer TS7 PASS 0.867 s. Не полный workspace и не memory/OOM proof. |
 
-Итого без P9: 1420–4980 product + 1630–3980 tests/CI.
-Нулевой нижний предел означает резерв диагностики: причина может оказаться
-только в TEST-коде. Пересекающиеся исправления считаются один раз.
-P9 не имеет подтверждённого конечного LOC до решения о контракте;
-[имеющаяся записка](40-p09-source-writer-decision-2026-11-16.md) сохраняет оба
-невыбранных направления и их ограничения.
+### E1/D1: 22-file composition и доказательства
 
-## Параллельная работа без дублирования
+- Incoming d6 на exact c8 parent и отдельные resource изменения сохранены вместе;
+  все 22 pre/post SHA1/SHA256 совпали. HTTP-only entrypoint разрывает store cycle;
+  strict Kanban read предшествует прежнему policy lookup, оба reads сохранены.
+- Retained TEST authority связана с exact owner/profile; finite metadata/status
+  имеют production shape. Trusted UI geometry сохраняет 30 s, 16 samples,
+  owner/deadline checks, один hover/press/release и 12 wheel events без replay.
+- **611 frontend/IPC PASS в 20 файлах по отдельным immutable-base scoped runs** —
+  не единый aggregate/full-suite/native PASS. Attachment 15, Kanban 2,
+  Host ReviewFlow 10 и name-filtered cases имеют собственные отдельные scopes.
+- Actual boundary matrix 90/90, fast lint четырёх boundary files и translation-only
+  TS7 PASS. Source-size evaluator c8+22: 5161 production paths, 141 frozen
+  exceptions, limit 800, zero violations; policy/baseline не ослаблены.
+- Combined 17-file lint SIGKILL (-9) и combined test/translation TS timeout 45 s —
+  INCOMPLETE. Historical missing snapshots/logs не реконструированы.
+- [Report 90](90-original-9a8-failure-followup-2026-11-18.md),
+  [source manifest](evidence/parity-followup-source-manifest-20261118.json),
+  [finite witness](evidence/parity-followup-finite-checks-20261118.json) и
+  [evidence index](evidence/head9a8-followups-20261118.json) сохраняют точный scope.
 
-- Root — единственный writer ref и index приложения. Исполнители редактируют
-  непересекающиеся файлы общего checkout; provider имеет отдельный checkout; каждый созданный commit
-  сразу публикуется обычным fast-forward с expected SHA.
-- F1/F2 владеют review/work-sync контрактами и owner adapters. M1 владеет V2
-  media port и capability projection. E1/W1 владеют конкретными TEST/CI и
-  установленными process/readiness исправлениями.
-- Общий файл получает одного владельца до редактирования. Новая информация
-  вносится сюда; отдельные планы с тем же scope не создаются.
-- При движении удалённой ветки перечитать новый HEAD, сохранить чужие изменения
-  и согласовать пересекающийся diff; force push и подмена истории запрещены.
-- Сохранять текущие owners, storage, controller policy и UI. Не создавать
-  параллельный scheduler, auth owner, event bus или реализацию ReviewFlow.
+## M1: source-scoped native PASS и media contract
 
-## Минимальная достаточная проверка
+**PASS на `2f33d5668944ef6804557690b20ce51b70245aab`, Linux x64 / OpenCode 2.1.4:**
+исходный E2E 1/1, все восемь original steps за 151754 ms, cleanup=true.
+Coordination: четыре model requests + одна metadata, неизменённый receipt.
+Business: ровно 11 requests, modelFailures=[], две once approvals, эффекты ONE/TWO,
+completed task/comment и два replies. Оба Host exit 0 / stdoutValid=true;
+исходный и cold-restored Stop подтверждают custody=released.
 
-1. R1: проверить scope, реальные точки владения, существующий код main/provider
-   и критичные границы до реализации. R2: независимое ревью конкретного плана/diff;
-   исправить подтверждённые замечания и записать результат ниже.
-2. Для среза: pinned TypeScript 7, затронутые lint/architecture guards,
-   точечные тесты существенных правил и существующий E2E пользовательского пути.
-   Не добавлять unit tests для простого переноса/форматирования.
-3. Существующие успешные оригинальные результаты использовать на неизменённых
-   границах после review diff. Повторять затронутые проверки, не все исторические
-   матрицы на каждое изменение документации.
-4. Очередь/skip/cancel/UNKNOWN не являются PASS. Во время CI продолжать
-   независимую работу; не запускать дублирующие workflow.
-5. Итоговая приёмка относится к собранному дереву и затронутым provider artifacts;
-   обязательные GitHub gates сохраняются. Не считать source review native PASS.
+PNG/JPEG/GIF/WebP и PDF 589 bytes доставлены точно. Исходный PNG 4 MiB нормализован
+до 159 bytes / 2000×1 с exact red pixels. Public readback шести исходных attachments
+побайтово совпал. Cold restore дал новую generation/nativeReady=true, сохранил
+11 requests и эффекты; lookup/replay двух command IDs вернули прежние receipts.
+Source, compiled inputs и provider archive сохранялись на протяжении проверки;
+независимый R2 проверил final verdict, восемь assertions и шесть pinned digests.
 
-## Проверенные исходные результаты
+- [Полный исходный receipt](evidence/native-opencode-v2-media-2f33d566-20261118.json):
+  SHA256 `423c4aa672793dc191d5a342e376aa1512d11f189b2b2047facd3dd150ae08f5`.
+- [Исходный terminal log](evidence/native-opencode-v2-media-2f33d566-20261118-terminal.json):
+  SHA256 `f6af0041569fce0993fba9f30307ada02f86ce6a0fd9dbad1776b25c174a1a45`;
+  JSON хранит original UTF-8 bytes/hash и допускает точное восстановление.
+- Receipt остаётся на 2f33; новый source/package не получает его PASS автоматически.
+  vendorAuthQualified/desktopQualified/releaseQualified=false. Saturated passive
+  trace не служит доказательством cold restore/позднего cleanup; причина e114 pause
+  этим последующим PASS не установлена.
 
-- App `9a8d7ffd`: все 4 frontend shards SUCCESS.
-- Все 5 packaged platform jobs SUCCESS; aggregate проверяется отдельно.
-  [Run 44314176630](https://github.com/777genius/agent-teams-ai/actions/runs/44314176630).
-- Process fixtures: Linux/Darwin x64/ARM64 SUCCESS; Windows x64/ARM64 FAILURE
-  в разных сценариях. [Run 44314176538](https://github.com/777genius/agent-teams-ai/actions/runs/44314176538).
-- V2/SPI/static: 7 SUCCESS, обе Darwin mutation lanes FAILURE.
-  [Run 44314176336](https://github.com/777genius/agent-teams-ai/actions/runs/44314176336).
-- Host Desktop содержит реальные отказы; full E2E не принят.
-  [Run 44314176310](https://github.com/777genius/agent-teams-ai/actions/runs/44314176310).
-- Старые registration/settlement замечания #1188 и token-identity #1227 уже
-  исправлены в текущем коде и повторно в backlog не включаются.
+Media: максимум 5 файлов, 4 MiB/source, 8 MiB/source total; PDF только при model modality
+и exact bytes; video не рекламируется, unsupported media не становится reference.
+Authenticated private receipt связывает source/normalized digest, session/input,
+child generation и deadline. Cold checkpoint сохраняет session/media revision;
+повторная аттестация всех старых ACK после restart не заявляется.
+TEST parser допускает исходный 384 KiB chunk только для exact pending attachment read
+с canonical base64/closed envelope/offset/digest; прочие frames и stripped envelope
+сохраняют 256 KiB, абсолютный Host frame 1 MiB. Product/raw budgets не увеличены.
 
-## Журнал текущей реализации и ревью
+## Original GUI: компактная история незавершённых запусков
 
-- 18 ноября, R1: root сверил актуальные app/main/provider SHA, граф PR и исходники.
-  Устранены двойной подсчёт merged дочерних PR и ошибочное включение Stage 2.
-  Разделены реальные gaps F1/F2/M1 и резерв диагностики E1/W1; P9 выделен отдельно.
-- 18 ноября, R2 F1/F2: сохранить единый controller; различать human grant и
-  переданное имя; проверять current review request. Глобальные defaults читаются
-  из доверенного Main источника, входят в read-only snapshot/preimage и повторно
-  проверяются перед publish; не расширять task write allowlist и не копировать
-  глобальные defaults в team overrides. Старые work-sync paths остаются re-export.
-- 18 ноября, R2 M1: native 2.1.4 поддерживает PNG/JPEG/GIF/WebP и PDF, но сам
-  отбрасывает video. UI должен честно показать эту границу. Нормализация изображения
-  может изменить байты: приватный authenticated native receipt связывает исходный
-  digest, фактический normalized digest, session/input и captured child generation;
-  ACK/active history проверяют его. Cold checkpoint сохраняет session identity и
-  media revision; повторная аттестация всех прошлых ACK после restart не заявляется.
-  Raw/text-only wire limits не повышаются.
-- 18 ноября, R2 W1: финальные receipts обоих Windows jobs подтверждают cleanup;
-  промежуточная false строка не считается утечкой. x64: повторное полное обследование
-  съедает lease; ARM64: шесть физических MCP probes вокруг одного запуска съедают
-  окно наблюдения. До подтверждённого решения нижняя оценка product LOC равна 0.
-  Memoization и ослабление проверок по одним таймингам не принимаются.
-- 18 ноября, R2 приёмки: исходные packaged PASS переиспользуются только для
-  доказанно неизменённых boundaries; изменение imports/composition требует review.
-- 18 ноября: текущий main интегрируется; 21 текстовый конфликт разрешён
-  предметно, с сохранением disapprove, human approval, lead sign-off и Host routing.
-  Сохранены единые work-sync re-exports и shared history helpers.
-  ReviewFlow/Lead sign-off: 56 PASS; controller review/briefing/disapproval: 46 PASS;
-  history: 3 PASS; clarification/cycle/status-detail: 7 PASS. Ledger, controller и
-  Host build PASS под Node 24.21 / TypeScript 7.0.2. Нативные Host команды и
-  captured-owner настройки F1 остаются в следующем срезе.
+Все строки ниже — **INCOMPLETE до Electron/Host/UI**, без owner epochs,
+с пустым cleanup.remaining; исходный startup 180 s не увеличивался.
 
-- 18 ноября, E1: изолированно исправлены 8 избыточных non-null assertions и
-  2 import/export-order ошибки. Root проверил точный diff; fast ESLint трёх файлов
-  и diff --check PASS, TypeScript pin 7.0.2. Первая typed ESLint попытка прервана
-  OS (137), поэтому typed PASS не заявляется. Поведение не менялось.
+| Source / профиль | Фактический результат Main SSR | Наблюдение |
+| --- | --- | --- |
+| 19b5bf34 / default | SIGKILL, около 60 s | Telemetry отсутствует; OOM не доказан. |
+| e114dd13 / 1536, maps on | SIGKILL, 15.1 s | Vite RSS 448868 KiB; sender неизвестен. |
+| e114dd13 / 1536, maps off | SIGKILL, 47.316 s | Total PSS 1266242 KiB; OOM не доказан. |
+| c8ab4139 / 1536, maps off | SIGKILL, 16.3 s wrapper | Harness PSS 264450 KiB после schema import fix; причина сигнала неизвестна. |
+| 356fe604 / 512 + UV4 | Explicit V8 OOM/SIGABRT, 27.214 s | Retained heap 509.9 MB; Vite 11 threads. |
+| 9f63bec3 / 768 + UV4 | Explicit V8 OOM/SIGABRT, 24.241 s | Retained heap 760.4 MB; Vite 11 threads. |
+| **4f5ae2dc / 1024 + UV4, maps off** | **Explicit V8 OOM/SIGABRT, 30.248 s** | Retained heap 1010.7 MB; Vite PSS 1205049 / total 1786707 KiB; source freeze/cleanup без ошибок. |
 
-- 18 ноября, продолжение после переноса чата: опубликованное объединение main
-  `d269cf9b20b783717044a3da03643f66f1b93ebd` проверено по tree
-  `f2555b2edaa8f80788a1d5c535dad5ad55b1608a`; все незапушенные F1/M1/E1
-  изменения восстановлены без повторного merge. Root остаётся единственным writer.
-- 18 ноября, E1/W1 R2: `reviewflow` и root проверили точный readiness diff.
-  Configured key вычисляется внутри существующего capture callback до closing
-  source/owner observation. Последующие account/policy/target fences сохранены.
-  Под Node 24.21.0: OpenCode configuration + saved model readiness 36/36 PASS;
-  finite status `--summary`/full 2/2 PASS, включая production отказ partial response;
-  scoped fast lint и diff check PASS. Native Windows результат ещё не заявлен.
-  Незапушенное увеличение ARM TEST deadline с 15 до 90 секунд исключено; исходные
-  15 секунд сохранены. Отдельного подтверждённого ARM исправления пока нет.
+Действующий experimental selector — только 1024 + UV4 для прежних семи Linux/x64
+finite emulated modes. Retired 512/768, произвольные flags, malformed/two selectors
+отвергаются; exact Node/UV проверяются до/после normalizer. Focused 10/10 и R2 PASS.
+Original 1536/default/native, parent heap, команды/plugins и deadlines сохранены.
+Профиль действует на TEST app-chain, включая Electron Main; Host closed env
+не наследует NODE_OPTIONS/UV. Maps-off меняет debug artifacts main/renderer,
+не preload; byte-identical build/Sentry qualification не заявлены.
+Explicit OOM новых попыток не устанавливает причину прежних SIGKILL.
 
-- 18 ноября, F1/F2 R2: независимое ревью нашло и подтвердило исправление двух
-  ошибок lost-ACK: настоящий structured `code` вместо `reason` и lookup исходного
-  commandId также при structured `outcome: unknown`. Frozen original handle,
-  запрет replay mutation и сохранение unknown при неудачном lookup проверены
-  в 10/10 renderer routing checks. Host ReviewFlow integration 7/7, UI Section
-  12/12, store 9/9 PASS; Host test types и legacy-host script types PASS на
-  pinned TS 7.0.2. Глобальные defaults не записываются в team override.
-  Добавлен оригинальный UI journey через Settings/Approved и reopen; R2 PASS,
-  исполненный GUI E2E пока не заявлен. Source roster разбит без потери pins.
-- 18 ноября, E1 CI R2: ready-PR job теперь использует существующие finite
-  Claude/Codex protocol peers и original login/runtime/schedule UI modes;
-  реальные vendor binaries удалены из этого job. Required gate, deadline,
-  original-command, real cron-tick, no-replay и cleanup проверки сохранены.
-  Общий input capture вынесен в composite action byte-for-byte. Workflow-policy
-  17/17, YAML parse, shell syntax и независимое review PASS.
-- 18 ноября, W1 Unicode fixture: batch source стал ASCII; `%~dp0` и captured
-  environment сохраняют Unicode paths и исходные argv. Fixture native copy
-  создаётся и проверяется до capture; production source/P9 не изменены.
-  Actual launcher capture/verifier 5/5, pinned Node syntax и diff check PASS;
-  нового Windows OS E2E результата нет.
-- 18 ноября, ограничения локальной проверки: полный app workspace typecheck
-  дважды остановлен с exit 137 без TS diagnostics (включая bounded heap run).
-  Это не PASS; узкие успешно завершённые проверки выше сохраняют свой scope.
+## Оставшиеся обязательные gates и минимальная очередь
 
-- 18 ноября, публикация: E1/W1 `26d1600d`, F1/CI/Unicode `88cc5828` и provider
-  `aad5c2f8bedc7782f6d5f3746a47b74f0c3735d6` опубликованы сразу после commit.
-  Provider tree `a2d6de72a62c778642b207dff5939d1e1cc9ff43` clean; retained
-  archives сверены с 252 implementation + 10 SPI dist files. App получает новый
-  immutable каталог `v2-media-aad5c2f8`; старые archives не менялись.
-  Frozen pnpm 11.22 install и 2533 supply-chain checks PASS.
-- 18 ноября, M1 R2: private authenticated receipt связывает исходный prompt body,
-  фактическую normalization, original child/session/input и конечный deadline.
-  Native limits: 5 файлов всего, 4 MiB/source, 8 MiB/source total; public/raw
-  budgets не повышены, video не рекламируется. PDF допускается только при model
-  modality и сохранении исходных байтов. Unsupported media не превращается в reference.
-  Source build/types и original packed consumer PASS; первоначальный source run
-  577/577, финальный 576/577 с unchanged Codex fixture timing failure, затем
-  original Codex file 4/4 и affected suites 19/19 PASS. Полный `pnpm check`
-  одним непрерывным зелёным run не заявляется. App media 19/19 и native harness
-  targeted TS 7.0.2 PASS. Native execution ещё остаётся.
-- 18 ноября, review closure: 23 подтверждённо исправленных #1192 threads resolved
-  после source/R2 аудита. Для failed Host acceptance установщика добавлен regression
-  warm/cold status: принятой остаётся старая revision/version; при отсутствии
-  подтверждённой версии другой installed candidate не даёт ready. 34/34 PASS
-  (Node 24.22.3); source не менялся. Root R2 и diff check PASS.
-- 18 ноября, текущая E2E диагностика: Darwin ARM Resume job 134984181853
-  ([run 44356006994](https://github.com/777genius/agent-teams-ai/actions/runs/44356006994))
-  остановился на original preflight до Resume. Probe cleanup подтверждён;
-  внутренние 30 секунд startup расходуются в том числе на graph verification
-  (~23 секунды). Диагностика безопасного parallel inventory продолжается;
-  deadline и graph/source проверки не ослаблены.
+1. Готово к публикации: app source с проверенными immutable pins/install/build;
+   exact checked package и source receipt сохранены, SPI archive неизменён.
+2. Один original task-board-cross-team-ui на чистом новом source. При успехе читать
+   final durable receipt после exit и всех трёх owner-routing epochs: ранняя
+   console PASS недостаточна. Host/source/owner/cleanup guards обязательны.
+3. Затем очередь без duplicate basic taskboard: emulated-selection-ui,
+   emulated-import-ui, emulated-import-lifecycle-ui, emulated-retained-original-ui,
+   emulated-claude-lifecycle-ui, emulated-collaboration-ui. Запускать только нужные
+   изменённые boundaries; перенос старого PASS требует доказанного scope equality.
+4. emulated-installer-ui локально BLOCKED_PLATFORM: требуется исходный Darwin
+   qualification; Linux selection не объявляется его заменой. Darwin ARM original
+   preflight 30 s и native startup/Resume остаются отдельными gates.
+5. W1: final catalog staged около 14993 ms, prepare/resume=0, cleanup подтверждён;
+   first checkSite/deadlineExpired неизвестен. Все шесть probes разделены async/
+   state/native boundaries. Два sync guard формально дублируются, но измеренного
+   вклада нет: patch отклонён. Нужен исходный ARM64 результат с прежними 15 s,
+   плюс Windows same-Main recovery на обеих архитектурах по Report 30.
+6. Полный workspace typecheck остаётся INCOMPLETE: последний root app TS7
+   --noEmit --singleThreaded на c8, GOMEMLIMIT=512MiB/GOGC=50/GOMAXPROCS=2 — SIGKILL
+   за 36229 ms, 0 bytes diagnostics; остальные 11 canonical invocations не запускались.
+   Предыдущие exit 137 и full typed lint interruption также не PASS. Scoped Host/consumer
+   checks не заменяют gate; новый тяжёлый повтор требует конкретного основания.
+7. P09: прежний contract original path/argv/env/cwd/resources и защита от writer
+   пока не доказаны для исходных Darwin adversarial cases. Направления A/B из
+   Report 40 не выбраны. Не вводить silent copy, запрет scripts, новый permission
+   policy или доверие writer без отдельного решения; независимые работы продолжаются.
 
-- 18 ноября, E1 graph R2: независимые каталоги проверяются ограниченными batch
-  по 12, только после принятого parent read. Каждый исходный batch полностью
-  settles до отказа или следующего чтения. Сохранены symlink/unlisted/type/count,
-  per-file fd/stat/hash/mode, abort и closing manifest checks; cache не добавлен.
-  На тех же 24 664 files / 5073 directories: inventory 2095 → 583 ms, full
-  verification 8473 → 6430 ms (Linux Node 24.21). File phase не менялась;
-  её часть разницы timing не считается отдельным улучшением. Original + extended
-  graph invariants 12/12 PASS, root R2 PASS. Darwin startup qualification остаётся.
-- 18 ноября, full typecheck: дополнительный diagnostic run с реальным native
-  compiler и GOMEMLIMIT=768MiB/GOGC=50/GOMAXPROCS=2 также exit 137 без TS
-  diagnostics. Ledger и Host prebuild прошли; полный workspace gate не подтверждён.
-  Новые тяжёлые локальные повторы не запускаются; successful narrow checks
-  сохраняют только свой указанный scope.
+Проверки выполнять по очереди без конкурирующих GUI/native/build процессов и
+изменения frozen source/deps. Source R2 не равен native PASS; повторять только
+затронутые сценарии и конкретные оставшиеся risks, сохраняя required CI gates.
 
-- 18 ноября, actual native `199fef38` (Linux x64, OpenCode 2.1.4): исходный
-  source/build/archive gate прошёл; coordination/readiness PASS с 4 model requests
-  и подтверждённым cleanup. Business `runtime.open` вернул held/open-unknown
-  до первого business model request и до media DM; весь сценарий INCOMPLETE,
-  business cleanup=false. Child exit 0 не заменяет подтверждение owner release.
-  Наблюдаемый отказ совпал с original readiness cutoff: admission 90 секунд,
-  открытие заняло ~25 секунд при отдельном launch budget 120 секунд. Source chain
-  сохраняет исходный cutoff до nativeReady; его продление не допускается.
-  Следующий срез удаляет только доказанный синхронный повтор closing authority
-  read и сохраняет existing refusal diagnostics для точной проверки причины.
+## CI snapshot, исходные receipts и решения
 
-- 18 ноября, E1 closing-guard R2: в opening `canAllocate` уже закрывает authority
-  перед немедленным синхронным `setupCurrent`; только повтор этого guard удалён.
-  Allocated ветка теперь сама выполняет тот же closing guard после Runtime read.
-  Никакая проверка не переносится через await; readiness cutoff не меняется.
-  Ledger/Host build, 20/20 authority/native-action checks и root R2 PASS.
-- 18 ноября, E1 diagnostic R2: passive TEST receipt сохраняет первый исходный
-  sanitized runtime-open и consumer refusal с cutoff/observedAt. Hash/ID/raw error
-  не записываются; 257 rows / 64 KiB / 512-byte input limit сохранены. Четыре
-  observer checks, strict scoped TS 7.0.2 и независимое media review PASS.
-  Следующий original native run выполняется на чистом опубликованном срезе.
+Снимок GitHub на 4f5ae2dc: **43 review threads resolved**, новых open findings нет.
+CI proof / Host emulated / process / packaged / Teams creation / V2 static —
+**queued, не PASS**. Повторные workflow не запрашиваются; отменённые cohorts
+и skipped jobs не квалифицируют новый срез.
 
-- 18 ноября, actual native `747123a6`: source/build/archive gate прошёл;
-  coordination и business Host завершились с подтверждённым cleanup, Host exit 0.
-  Business `runtime.open` дошёл до проверки capability projection без сохранённого
-  runtime-open/consumer refusal. Исходный TEST validator отклонил новое поле
-  `nativeMedia`, поэтому ready assertion, первый business model request и DM
-  не достигнуты; полный сценарий по-прежнему INCOMPLETE.
-- 18 ноября, M1 fixture R2: optional `nativeMedia` проверяется закрытой схемой
-  из шести полей, с точной revision, whitelist MIME, modality consistency и
-  верхними пределами 4 MiB / 5 / 8 MiB. Прежние boolean/private-key/input
-  проверки сохранены; malformed, лишние и несовместимые поля отвергаются.
-  Existing attachment suite 12/12 и scoped strict TS 7.0.2 PASS. Два старых
-  app assertions учитывают только captured PNG capability и валидный TEST
-  binding; исходные seal/revoke/auth, no-byte-read и cleanup проверки сохранены.
-  Existing member suite 3/3 PASS после исправления fixtures; независимое R2 PASS.
-  Production код, deadlines и отрицательные lifecycle oracles не изменены.
-- 18 ноября, F1 UI prerequisites: точный Electron 44.10.1 / ABI 149 и rebuilt
-  better-sqlite3 прошли реальный in-memory SELECT 1. Original LinuxNodeExec и
-  captured Corepack 0.36.0 / pnpm 11.22.0 inputs подготовлены. Xvfb с исходной
-  XAUTHORITY успешно проверен по разрешённому harness localhost TCP пути.
-  GUI journey ещё не исполнялся; запланирован после native run без одновременной
-  тяжёлой нагрузки и изменения исходных deadlines.
+| Исторический source 9a8d7ffd | Результат и исходный run |
+| --- | --- |
+| Frontend | Все четыре shards SUCCESS, только исходный scope. |
+| Packaged | Пять platform jobs SUCCESS; [44314176630](https://github.com/777genius/agent-teams-ai/actions/runs/44314176630), aggregate отдельно. |
+| Process | Linux/Darwin x64/ARM64 SUCCESS, Windows x64/ARM64 FAILURE; [44314176538](https://github.com/777genius/agent-teams-ai/actions/runs/44314176538). |
+| V2/SPI/static | Семь SUCCESS, обе Darwin mutation lanes FAILURE; [44314176336](https://github.com/777genius/agent-teams-ai/actions/runs/44314176336). |
+| Host Desktop | Реальные failures, full E2E не принят; [44314176310](https://github.com/777genius/agent-teams-ai/actions/runs/44314176310). |
 
-- 18 ноября, actual native `047f002e`: original source/build gates, compound
-  readiness и business nativeReady прошли; оба input terminal succeeded, все
-  11 business model requests завершились без modelFailures. PNG 4 MiB реально
-  нормализован до 159 bytes / 2000×1 с точными red pixels и новым digest;
-  PNG/JPEG/GIF/WebP и PDF 589 bytes прошли exact-byte проверки. На сохранённом
-  attachment read исходный TEST parser отказал: source API возвращает chunk
-  384 KiB, base64 512 KiB, а generic TEST line guard допускает лишь 256 KiB.
-  Полный run INCOMPLETE, elapsed 144388 ms; business exit 0 не заменяет cleanup
-  (overall false). Cold readback/restore не заявляются как PASS.
-- 18 ноября, CI compile follow-up: исходный Darwin x64 process job
-  [135015705253](https://github.com/777genius/agent-teams-ai/actions/runs/44364834233/job/135015705253)
-  на `747123a6` обнаружил TS2322 в projection `reviewFlow`. Один `as const`
-  сохраняет исходные три литерала вместо widened string; runtime не меняется.
-  Exact affected CI project `tools/owned-process-broker/tsconfig.retained-host.json`
-  прошёл pinned TS 7.0.2; resolved file list подтверждает включение projection.
-  Independent R2 и diff check PASS; полный workspace typecheck этим не заменяется.
-- 18 ноября, M1 frame R2: TEST parser согласован с уже существующим exact
-  384 KiB attachment contract. Только успешный ответ на pending message attachment
-  read с исходным digest, закрытыми envelope/metadata, canonical base64 и точными
-  offset/nextOffset/byte count может превышать generic 256 KiB. Сохраняются
-  исходные 256 KiB для raw envelope без base64 и всех остальных frames, а также
-  существующий абсолютный Host limit 1 MiB. Product chunk/upload alignment,
-  raw/public provider budgets, deadlines и original native assertions не менялись.
-  Регрессии отвергают неизвестный id, другой method, notifications/errors,
-  лишние поля, неправильные digest/offset/size, noncanonical base64 и raw padding.
-  Existing observer/close suite 5/5, scoped strict TS 7.0.2 и независимое R2 PASS.
-  Schema загружается lazily из исходного Host dist после build, сохраняя bootstrap.
-- 18 ноября, actual native `19b5bf34`: первый зафиксированный consumer refusal
-  имеет phase=cutoff, observedAt на 1527 ms позже original cutoff. Coordination
-  PASS с cleanup=true и 4 model requests; business DM не достигнуты. Initial
-  graph phase заняла 14236 ms; business probe утратил admission через 24561 ms,
-  но продолжил опрос до исходного 120-second launch budget. Run INCOMPLETE,
-  elapsed 213504 ms, business exit 1 / stdoutValid=true / cleanup=false.
-  Этот run не проверяет новый chunk reader; прежний media delivery PASS не
-  переносится на cold recovery. Проверка graph performance продолжается.
-- 18 ноября, E1 failed-opening R2: при missing catalog receipt и окончательном
-  отказе исходного canAllocate probe теперь сразу выходит через прежний disposal
-  и single owned cleanup. Missing receipt при действующей allocation остаётся
-  transient; valid receipt не добавляет новых allocation reads. Новый state/cache
-  не введён. Existing member suite 8/8, source/test strict TS 7.0.2 и R2 PASS;
-  false/throw admission, warmup recovery и sticky stop/dispose UNKNOWN проверены.
-- 18 ноября, F1 original GUI `19b5bf34`: main SSR transform в electron-vite
-  получил SIGKILL до Electron/CDP/Host, не исчерпав original 180-second startup.
-  Receipt INCOMPLETE, cleanup.remaining=[], source freeze сохранён. OOM не
-  доказан: у погибшего процесса отсутствовала resource telemetry.
-  Первый ограниченный повтор использует существующий exact TEST heap 1536 MiB
-  с исходными sourcemaps. Selector явно допущен для task-board-cross-team-ui
-  и четырёх finite queue modes с тем же unconditional build: selection, import,
-  claude-lifecycle, collaboration. Два прежних finite modes и отдельные native
-  guards сохранены; arbitrary modes/flags/ambient NODE_OPTIONS отвергаются.
-  Admission → closed environment → real dev normalizer: 6/6 PASS, R2 PASS.
-  Все три build/resource helper уже входят в исходный frozen source roster;
-  повторные pins не добавлены. Actual GUI acceptance ещё не получена.
-- 18 ноября, E1 performance R1: import-equivalent пары unchanged graph verifier
-  с parent heap 256/512 MiB не подтвердили улучшение: средние 5.505/5.458 s,
-  RSS около 327–328 MiB, GC 126–158 ms; второй run быстрее независимо от heap.
-  Actual graph 14.236 s этим baseline не воспроизведён. Graph и parent heap
-  не изменены. Следующий конкретный фактор — исходный TEST observation loop
-  каждые 25 ms с полным profile/authority read, конкурирующий с graph verification;
-  его стоимость и границы проверяются отдельно от production source guards.
-- 18 ноября, E1 observer R2: найден и удалён только синхронный дубль полного
-  writer/profile/digest guard перед `manager.probes.read`. Сам read первым
-  действием выполняет тот же callback через assertAdmission; abort проверяется
-  до него, без промежуточного await. Tick 25 ms, producer currentness, original
-  deadline, terminal receipt и cleanup проверки сохранены; cache не добавлен.
-  Existing revoked-authority case 1/1 PASS, два независимых source review и
-  diff check PASS. Влияние на полный native run ещё не измерено.
-- 18 ноября, actual native `e114dd13`: coordination PASS / cleanup=true,
-  4 requests + 1 metadata, original receipt unchanged; cumulative step 72467 ms
-  против 88992 ms в предыдущем run. Ordinary graph 11964 ms, first-submit
-  23053 ms. Business owned probe и permissions прошли; initial-context PUT
-  вернул 204, первый GET — headers 200 на 23858 ms. Второй GET не начался.
-  Business open 65201 ms, held/custody-unresolved; child exit 0, Host exit 1,
-  stdoutValid=true, overall cleanup=false, business model requests=0.
-  SQLite readback содержит один исходный instruction entry, 694 UTF-8 bytes.
-  Headers не доказывают завершение чтения тела; причинный branch ещё неизвестен.
-  Missing-catalog fix в этом run не был задействован. UNKNOWN не заменяется
-  наблюдаемым выходом ребёнка, пока отсутствует подтверждение полного owner release.
-- 18 ноября, F1 GUI resources на `e114dd13`: fixed1536 с исходными картами
-  остановлен SIGKILL через 15.1 s, actual Vite RSS peak 448868 KiB. Повтор с
-  уже поддерживаемым exact maps-off flag — тот же original main SSR refusal
-  через 47.316 s; sampled aggregate PSS peak 1266242 KiB, Vite PSS peak
-  646380 KiB, harness PSS peak 308303 KiB. Оба receipts INCOMPLETE до
-  Electron/Host/UI, cleanup.remaining=[], source freeze сохранён. OOM-sender
-  не установлен. Maps-off меняет debug artifacts main/renderer, не preload;
-  идентичность всех build bytes и Sentry qualification не заявляются.
-- 18 ноября, E1 readback diagnostic R2: существующий undici trailers observer
-  наблюдает только original request objects для log и instructions, с прежними
-  scalar/row/byte bounds, без чтения тел и дополнительных native requests.
-  Это transport completion перед handler.onComplete, не подтверждение JSON,
-  captured current, dispose или application readback. CPU summary отдельно
-  считает точные empty-URL VM states GC/program; старые индексы сохранены,
-  исходные frame names/paths не публикуются, raw CPU profile удаляется как прежде.
-  Existing diagnostic suite 5/5, strict scoped TS 7.0.2, R2 и diff check PASS.
-- 18 ноября, actual native `2f33d566`: исходный полный OpenCode V2 2.1.4 E2E
-  PASS (1/1), elapsed 151754 ms, все 8 steps, cleanup=true; оба Host завершены
-  exit 0 / stdoutValid=true, исходный и cold-restored Stop подтверждают
-  custody=released. Coordination PASS с неизменённым receipt, 4 model requests
-  и 1 metadata; business ровно 11 requests, modelFailures=[], две once approvals,
-  исходные tool effects ONE/TWO, completed task, comment и два user replies.
-  PNG/JPEG/GIF/WebP и PDF 589 bytes доставлены точно; 4 MiB PNG нормализован
-  до 159 bytes / 2000×1 с exact red pixels. Public readback всех 6 исходных
-  вложений совпадает с оригиналами. Cold restore создаёт новую generation,
-  возвращает nativeReady=true, сохраняет 11 requests и прежние effects; lookup
-  и повтор двух command IDs возвращают исходные receipts без повторной работы.
-  Source/compiled inputs/provider archive неизменны на протяжении проверки;
-  SHA256 receipt `423c4aa672793dc191d5a342e376aa1512d11f189b2b2047facd3dd150ae08f5`.
-  Диагностика видит оба initial-context transport ends и последующий ready;
-  прежняя пауза e114 не воспроизведена, её причина этим PASS не устанавливается.
-  vendorAuthQualified/desktopQualified/releaseQualified остаются false.
-  Независимый R2 подтвердил final node:test verdict, все 8 original assertions,
-  оба custody release и совпадение всех 6 закреплённых digest; повторный run
-  не выполнялся. Passive trace достиг своего прежнего лимита и не используется
-  как доказательство cold restore или позднего cleanup.
-- 18 ноября, delivery snapshot `2f33d566`: app #1192 и provider #8 остаются
-  Draft на исходных bases, без merge/release. Все 43 review threads #1192
-  resolved; original текущие CI gates queued. Очередь и отменённые предшествующие
-  cohorts не засчитываются в PASS; повторные workflow не запускались.
-- 18 ноября, F1 resource R1/R2: четыре import-only children без запуска app
-  или vendor CLI сравнили исходные imports (PSS 297016 KiB), parent CLI heap256
-  (267996), common Taskboard roots (280044) и прямой schema import (227760).
-  Только последний edge исправлен: readProfile берёт тот же schema object/type
-  из teamHostProfile вместо TeamHost re-export; 388 лишних module loads исчезают
-  у read-only consumer. Тело readProfile и captured file/digest/path/fd guards
-  неизменны. Actual Host CLI сам импортирует createTeamHost, его composition
-  сохраняется; оба source paths уже закреплены в исходном roster. Broad lazy
-  rewrite и новый parent heap не применяются. R2 принял exact двухстрочный diff;
-  native receipt остаётся evidence исходного 2f33, без замены SHA/digest.
-  Первые две compiler attempts завершились 137 без TS diagnostics (default
-  и bounded Go profile). Строгий clean Host build на TS 7.0.2 завершён PASS
-  за 10.349 s с штатным --singleThreaded и compiler-only GOMEMLIMIT=512MiB,
-  GOGC=50, GOMAXPROCS=2; все project options и исходный timeout 60 s сохранены.
-  Ledger build PASS за 1.513 s. Это ресурсный профиль компилятора; noCheck,
-  изменение runtime environment или перенос прежнего native SHA не применялись.
-- 18 ноября, actual GUI `c8ab4139`: после strict Host build исходный
-  Taskboard/ReviewFlow run завершился INCOMPLETE (exit1). Main SSR снова
-  получил SIGKILL до Electron/Host/UI, startup observation 10.9 s при исходном
-  budget 180 s, полный wrapper 16.3 s. Receipt cleanup.remaining=[] и
-  beforeHarnessCleanup=[], source freeze без ошибок, owner epochs=0.
-  Sampled total RSS 967276 / PSS 821830 KiB; harness PSS 264450 KiB (раньше 308303),
-  actual Vite RSS 388308 KiB. Экономия подтверждена; OOM/signal sender не
-  установлен, четыре подробных PSS samples не фиксируют каждый возможный пик.
-- 18 ноября, W1 exact R1/R2: все 6 catalog calls разделены async/state/native
-  boundaries, TEST catalog peer уже возвращает ответ до тяжёлых SDK imports.
-  Два sync current guard в Windows callbacks действительно повторяются внутри
-  facade, но их стоимость и вклад в наблюдаемый отказ не измерены. Final job 24
-  staged, prepare/resume=0, installOwner ещё не достигнут; прежняя отметка
-  14993 ms не устанавливает точный checkSite/deadlineExpired. Patch не внесён,
-  W1 остаётся открыт до исходного ARM64 результата, исходные 15 s сохранены.
-- 18 ноября, full workspace types `c8ab4139`: уже подтверждённые ledger/Host
-  prebuild переиспользованы. Первая root app --noEmit --singleThreaded проверка
-  TS 7 с тем же 512MiB/50/2 compiler profile завершилась SIGKILL за 36229 ms,
-  без TS diagnostics (log 0 bytes). Остальные 11 canonical invocations не
-  запускались; полный workspace typecheck остаётся INCOMPLETE. Новые повторы
-  без установленной причины не запускаются; scoped Host PASS не заменяет его.
-- 18 ноября, F1 resource R1/R2: Vite использует async esbuild service,
-  поэтому ESBUILD_WORKER_THREADS=0 для sync API к этому пути не относится.
-  Installed Rollup 4.59.0 вызывает native parseAsync через NAPI AsyncTask/libuv;
-  исходный dev wrapper задаёт UV pool 16 (в actual Vite наблюдались 23 threads).
-  Это отдельная от V8 память и возможная конкуренция, не доказательство OOM.
-  Подготовлен один явный finite TEST profile: heap 512 + UV pool 4 для прежних
-  семи Linux/x64 emulated modes, с exact admission, отказом при двух/malformed
-  selectors и проверкой значений до/после normalizer. Профиль наследует
-  Electron Main, поэтому его scope — вся TEST app-chain; captured Host
-  сохраняет прежний closed environment без UV/NODE_OPTIONS. Default/native 1536
-  paths, build plugins, original commands, deadlines и verdicts сохраняются.
-  Это один следующий bounded experiment; исправление SIGKILL не заявляется.
-  Actual focused resource suite 10/10 PASS за 1.860 s: восемь прежних
-  default/1536/native cases и два новых closed512 boundary cases. Exact
-  трёхфайловый diff прошёл независимый R2 и whitespace check. Полный types,
-  Host build и GUI до публикации повторно не запускались.
-
-
-- 18 ноября, E1/D1 follow-up: подготовлена композиция 22 source/test/config на
-  exact `c8ab4139c4f3e0f763effffdd44d6412188ba388`; все pre/post hashes
-  проверены, внешний OpenCode/finite-build commit сохранён без пересечений.
-  HTTP-only entrypoint разрывает renderer/store cycle; exact public root допущен
-  обеими ESLint policies, descendants остаются закрыты. Actual matrix 90/90 и
-  full configured fast lint четырёх изменённых boundary files PASS.
-- Bounded frontend/IPC:611 PASS в 20 различных файлах по отдельным immutable-base
-  runs; это не один full-suite/native PASS. Cross helper 52/52, finite metadata 5/5,
-  ledger 2/2, retained authority 2, trusted controller 2 и TeamDataService 3 PASS
-  сохраняют отдельные scopes и name-filtered skips.
-- Original 19 frontend 4: три collection refusals покрыты 57/57. Attachment fixture
-  согласован с прежним capability-level PDF refusal: 15/15. Kanban wrapper теперь
-  сначала выполняет исходный strict state read, затем прежний policy lookup;
-  один controller и один неизменённый native-member callback дали RED→GREEN.
-  Publication/no-write assertions сохранены, атомарность двух reads не заявляется.
-- Original 19 Windows Teams остановлен до Electron: исправлены generated translation
-  declaration и readonly test assignment. Pinned generator добавил один ключ;
-  locales/UI calls/production readonly не изменены. Translation-only TS 7.0.2 exit 0,
-  actual Host ReviewFlow 10/10 PASS. Combined test+translation TS timeout 45 s остаётся
-  INCOMPLETE; combined 17-file lint SIGKILL (-9) также не PASS, тяжёлых повторов нет.
-- Actual полный source-size evaluator на e114+22: 5161 production paths,
-  141 frozen exceptions,800-line limit, 0 violations. Канбан 220 lines; existing
-  httpClient 1864 и full ESLint 1168 не выросли. Generated declaration исключён
-  прежней явной policy, baseline не менялся. Независимое R2 поздних изменений PASS.
-- Все 15 остающихся original 19 workflows terminal CANCELLED, ранее 14 SKIP закрыты.
-  Исполненные frontend 4 / Windows Teams failures и Windows static Stage1 success
-  сохранены отдельно; cancelled scopes не квалифицированы. Логи двух failed jobs
-  повторно не читались. Current full Host/GUI/platform acceptance и P09 остаются.
-  [Отчёт и проверяемые receipts](90-original-9a8-failure-followup-2026-11-18.md).
-
-- Поздний parent adoption: внешний `2f33d566` сохраняет новые F1/M1 findings
-  и две TEST diagnostics правки. Все 22 pre/post bindings прежние; полный набор
-  5161 production blob tuples равен уже проверенному e114+22. Переносится только
-  source-size verdict; новый native/GUI результат из равенства не следует.
-  Original e114 cohort закрыт: 14 SKIP / 15 CANCELLED. Два native jobs отменены
-  на подготовке до assertions; исходные логи и artifact metadata сохранены один раз.
-
-- Финальный parent adoption: сохранён внешний c8 readProfile import fix и
-  полный новый F1/M1 journal. Два import targets меняются при прежних 9 строках;
-  все 22 source postimages прежние. Actual полный size evaluator c8+22:
-  5161 production paths / 141 frozen / 800 limit / 0 violations. Native PASS
-  внешнего M1 остаётся привязан к исходному 2f33, без нового исполнения здесь.
-
-- 18 ноября, reconciliation: во время публикации finite512 появился
-  параллельный `d6d672f3` на том же c8 parent. Все его source/test/config/evidence
-  сохраняются. Три resource paths и 22 incoming source paths не пересекаются;
-  STATUS объединён предметно, с обеими отдельными областями результатов.
-  Сохранены оба родителя d6d672f3 и a8ecdaac; force push не используется.
-  Новый GUI ещё не запускался; прежние PASS не перепривязываются к новому SHA.
-  Independent R2: все 22 incoming pre/post SHA1/SHA256 совпали (0 mismatches);
-  611 scoped tests остаются evidence своих immutable bases. Diagnostic tuple
-  сохраняет validated latest operands при прежнем final readiness и sticky
-  UNKNOWN при конфликте; operational/success gates не меняются. UI input R2
-  подтвердил прежние 30 s / 16 samples, rechecks owner/deadline вокруг await,
-  один hover/press/release и прежние 12 wheel events без replay. R2 PASS для
-  composition; ни один прежний native/GUI result не переименован в текущий.
-- 18 ноября, actual GUI `356fe604`: fixed512+UV4 дал конкретный V8 heap OOM
-  в первом main SSR transform и SIGABRT. GC 508.4→506.8 MB, затем 511.4→509.9 MB
-  и ineffective mark-compacts near heap limit: исходной сборке недостаточно
-  512 MiB. Fixed512/UV4 наблюдались фактически, Vite threads 11 вместо 23;
-  Vite RSS 674664 / PSS 630651 KiB, total RSS 1442024 / PSS 1192836 KiB. Wrapper 27.214 s,
-  последнее startup observation 18.794 s при прежних 180 s. Receipt INCOMPLETE,
-  beforeHarnessCleanup=[] и cleanup.remaining=[], Host не начат, epochs=0,
-  source freeze без ошибок. Прежние SIGKILL этим результатом не объяснены.
-- 18 ноября, bounded correction: новый experimental 512 profile заменён
-  единственным 768+UV4 для тех же семи finite modes; original 1536/default/native
-  paths, Host closed env, parent heap, commands/plugins/maps-off и deadlines
-  сохранены. Retired 512 отвергается через actual proof admission отдельно и
-  вместе с 768; stale Node 512 также отвергается. Runtime source pins прежние.
-  Same focused resource suite 10/10 PASS за 1.837 s, exact independent R2 и diff
-  check PASS. Весь test file вне двух новых profile blocks побайтово прежний.
-  Этот профиль ещё не имеет GUI verdict; следующий original run один.
-- 18 ноября, actual GUI `9f63bec3`: fixed768+UV4 снова исчерпал V8 heap
-  в первом main SSR transform (SIGABRT): GC 761.6→760.4 MB, затем 761.5→760.4 MB.
-  Actual Vite fixed768/UV4 и 11 threads; RSS 1017916 / PSS 943511 KiB,
-  total RSS 1760824 / PSS 1511637 KiB. Wrapper 24.241 s, startup 17.708 s из 180 s.
-  Receipt INCOMPLETE, beforeHarnessCleanup=[] и cleanup.remaining=[], no Host,
-  epochs=0, source freeze без ошибок. Шестирежимная очередь не запускалась:
-  она использует ту же ещё не завершённую стартовую сборку.
-- 18 ноября, measured heap correction: experimental 768 заменён на 1024+UV4;
-  retired 512/768 selectors и старые Node options отвергаются. Только прежние
-  три files и два experimental test blocks; original 1536/default/native,
-  parent heap, commands/plugins/maps-off, Host env и deadlines прежние.
-  Focused 10/10 PASS за 1.575 s, independent R2 и diff check PASS. Это повышение
-  установленно недостаточного лимита, не доказательство причины old SIGKILL.
-  Отдельный read-only R1 проверяет, не втягивают ли main imports лишнюю Host
-  composition через public barrels; новых product edits по гипотезе нет.
-- 18 ноября, durable native evidence: сохранены исходный
-  [полный receipt 2f33](evidence/native-opencode-v2-media-2f33d566-20261118.json)
-  и [terminal log](evidence/native-opencode-v2-media-2f33d566-20261118-terminal.json).
-  SHA256 receipt 423c4aa672793dc191d5a342e376aa1512d11f189b2b2047facd3dd150ae08f5;
-  log f6af0041569fce0993fba9f30307ada02f86ce6a0fd9dbad1776b25c174a1a45.
-  Receipt побайтово исходный; log хранится как UTF-8 text в JSON с original
-  byte count/hash и восстанавливается побайтово. Их sourceHead остаётся 2f33;
-  на новый срез native результат не переносится.
-- 18 ноября, Main readiness R1/R2: CapturedLocalModelReadiness получал три
-  pure values из /team-host, чья статическая runtime closure имеет 572 Host
-  modules и все 3 provider barrels. Defining modules имеют 13/12 local modules
-  без provider imports. Новый public ./team-host/readiness реэкспортирует
-  только actualCaptureReadinessCommandId, localModelReadinessCaptureViewSchema
-  и parseLiveRosterResponse из прежних определений; Main меняет только value
-  import, type-only imports и реализация неизменны. Прямые exports целых
-  defining modules отклонены R2: они открыли бы 24 дополнительных внутренних
-  runtime values. Facade 6 lines добавлен в existing source roster.
-  Source graph — не memory proof: отдельный /owned-process entry имеет 104
-  local modules и независимо достигает provider/SDK barrels; он не изменён.
-- Четырёхфайловый readiness diff: final R2 и static full/fast import-boundary
-  review PASS без изменения lint policy. Strict Host TS7 --singleThreaded
-  build с compiler 512MiB/50/2 и прежними 60 s PASS за 10.318 s. Новый JS/d.ts
-  выпущен штатно. Scoped strict consumer NodeNext TS7 через actual package
-  export map, без paths aliases и runtime SDK imports, PASS за 0.867 s;
-  все три значения совместимы с прежними public types. Diff check PASS.
-  Provider artifacts, runtime/authority/deadline/oracle и bundler configuration
-  не менялись. Следующий GUI проверяет полную композицию; OOM fix ещё не доказан.
+Подробные контракты и оставшиеся критерии:
+[Report 29: acceptance/custody](29-reconciled-acceptance-and-custody-followups-2026-11-15.md),
+[Report 30: Windows same-Main retry](30-windows-same-main-retry-integration-2026-11-15.md),
+[Report 40: P09 writer decision](40-p09-source-writer-decision-2026-11-16.md),
+[Report 90: source/evidence follow-up](90-original-9a8-failure-followup-2026-11-18.md).
+Registration/settlement замечания #1188 и token identity #1227 уже исправлены;
+повторно в backlog не включать. Все historical evidence остаются по своим SHA.

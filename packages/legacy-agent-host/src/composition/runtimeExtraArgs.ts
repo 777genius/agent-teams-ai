@@ -1,6 +1,8 @@
-import { captureClaudeExtraArgs } from "@agent-teams/provider-implementations/claude";
-import { captureCodexExtraArgs } from "@agent-teams/provider-implementations/codex";
-import { captureOpenCodeExtraArgs } from "@agent-teams/provider-implementations/opencode";
+import {
+  captureClaudeExtraArgs,
+  captureCodexExtraArgs,
+  captureOpenCodeExtraArgs,
+} from "@agent-teams/provider-implementations/captured-configuration";
 import { parseCliArgs } from "../team-launch/cliArgs.js";
 import { TeamLaunchError } from "../team-launch/contracts.js";
 import type { RuntimeMemberProfile } from "./runtimeProfile.js";

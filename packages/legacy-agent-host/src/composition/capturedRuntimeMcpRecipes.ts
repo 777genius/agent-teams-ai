@@ -5,7 +5,7 @@ export type { CapturedRuntimeMcpReference } from './capturedRuntimeMcpReferences
 import { z } from 'zod';
 import { join } from 'node:path';
 import { lstatSync } from 'node:fs';
-import { captureCodexConfiguredMcpCatalog } from '@agent-teams/provider-implementations/codex';
+import { captureCodexConfiguredMcpCatalog } from '@agent-teams/provider-implementations/captured-configuration';
 import { readCapturedMcpBytes } from '../mcp-catalog/capturedFile.js';
 import { capturedMcpServersSchema } from '../mcp-catalog/capturedServer.js';
 import { capturedMcpSourceSchema } from '../mcp-catalog/capturedSource.js';
