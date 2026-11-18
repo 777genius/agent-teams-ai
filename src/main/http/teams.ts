@@ -295,6 +295,15 @@ export function registerTeamRoutes(app: FastifyInstance, services: HttpServices)
   app.post<{ Body: CreateTeamBody }>('/api/teams', async (request, reply) => {
     try {
       const createRequest = parseCreateTeamRequest(request.body);
+      // HTTP launch does not yet support project-context admission. Preserve
+      // create-then-launch for existing HTTP clients rather than writing an
+      // unlaunchable per_project draft when their request omits the mode.
+      if ((request.body as Partial<TeamCreateRequest>)?.projectContextMode === 'per_project') {
+        throw new HttpBadRequestError(
+          'Project-isolated teams currently require Electron; use shared for HTTP create/launch'
+        );
+      }
+      createRequest.projectContextMode = 'shared';
       const management = managementFeature
         ? await managementFeature.create(
             createRequest,

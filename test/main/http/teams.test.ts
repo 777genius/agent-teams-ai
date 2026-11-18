@@ -257,6 +257,7 @@ describe('HTTP team runtime routes', () => {
       });
       expect(createTeamConfig).toHaveBeenCalledWith({
         teamName: 'new-team',
+        projectContextMode: 'shared',
         displayName: 'New Team',
         members: [
           {
@@ -280,6 +281,27 @@ describe('HTTP team runtime routes', () => {
         limitContext: true,
       });
       expect(resumeTeam).toHaveBeenCalledWith('new-team');
+    } finally {
+      await app.close();
+    }
+  });
+
+  it('rejects explicit project-isolated HTTP create before persisting an unlaunchable draft', async () => {
+    const { app, createTeamConfig } = await createApp();
+    try {
+      const response = await app.inject({
+        method: 'POST',
+        url: '/api/teams',
+        payload: {
+          teamName: 'http-scoped-team',
+          cwd: '/Users/test/project',
+          members: [],
+          projectContextMode: 'per_project',
+        },
+      });
+      expect(response.statusCode).toBe(400);
+      expect(response.json().error).toContain('require Electron');
+      expect(createTeamConfig).not.toHaveBeenCalled();
     } finally {
       await app.close();
     }
@@ -555,6 +577,7 @@ describe('HTTP team runtime routes', () => {
       expect(response.statusCode).toBe(201);
       expect(createTeamConfig).toHaveBeenCalledWith({
         teamName: 'default-anthropic-effort-team',
+        projectContextMode: 'shared',
         members: [{ name: 'builder' }],
         cwd: '/Users/test/project',
         effort: 'max',
@@ -583,6 +606,7 @@ describe('HTTP team runtime routes', () => {
       expect(response.statusCode).toBe(201);
       expect(createTeamConfig).toHaveBeenCalledWith({
         teamName: 'inherited-backend-team',
+        projectContextMode: 'shared',
         members: [{ name: 'builder', providerBackendId: 'codex-native', effort: 'xhigh' }],
         cwd: '/Users/test/project',
         providerId: 'codex',
