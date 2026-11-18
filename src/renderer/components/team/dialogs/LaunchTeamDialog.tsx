@@ -285,6 +285,11 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
   );
   // Effective team name: from props if provided, otherwise from local selection
   const effectiveTeamName = propsTeamName || selectedTeamName;
+  const projectPermissionTeamName =
+    props.mode === 'schedule' ? undefined : props.projectPermissionTeamName;
+  const launchHydrationKey = projectPermissionTeamName
+    ? `${effectiveTeamName}:${projectPermissionTeamName}`
+    : effectiveTeamName;
   const defaultProjectPath = isLaunchMode ? props.defaultProjectPath : undefined;
   const [launchHydratedTeamName, setLaunchHydratedTeamName] = useState<string | null>(null);
   const needsTeamSelector = isSchedule && !propsTeamName;
@@ -438,7 +443,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
       : selectedProjectPath.trim();
   const effectiveCwd = cwdMode === 'project' ? selectedProjectCwd : customCwd.trim();
   const launchPreflightSelectionReady = isLaunchPreflightProjectSelectionReady({
-    draftLoaded: !isLaunchMode || launchHydratedTeamName === effectiveTeamName,
+    draftLoaded: !isLaunchMode || launchHydratedTeamName === launchHydrationKey,
     effectiveCwd,
     cwdMode,
     projectsLoading,
@@ -907,8 +912,8 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
   useEffect(() => {
     if (!open || !isLaunchMode) return;
     // Hydrate at most once per open dialog, and never on top of user edits.
-    if (hydrationRef.current.dirty || hydrationRef.current.key === effectiveTeamName) {
-      setLaunchHydratedTeamName(effectiveTeamName);
+    if (hydrationRef.current.dirty || hydrationRef.current.key === launchHydrationKey) {
+      setLaunchHydratedTeamName(launchHydrationKey);
       return;
     }
 
@@ -972,10 +977,20 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
         }
         savedRequest = null;
       }
+      let projectSkipPermissions: boolean | undefined;
+      if (projectPermissionTeamName && projectPermissionTeamName !== effectiveTeamName) {
+        try {
+          const projectSavedRequest = await api.teams.getSavedRequest(projectPermissionTeamName);
+          // Missing or unreadable project policy must never enable auto-approval.
+          projectSkipPermissions = projectSavedRequest?.skipPermissions === true;
+        } catch {
+          projectSkipPermissions = false;
+        }
+      }
       // Edits made while the request was in flight win over it, but an unrelated control is
       // not a roster edit — and with no live members the saved request is its only source.
       if (cancelled) return;
-      setLaunchHydratedTeamName(effectiveTeamName);
+      setLaunchHydratedTeamName(launchHydrationKey);
       if (!relaunchSyncEditedRef.current) {
         setRelaunchInheritedSync(savedRequest?.syncModelsWithLead);
       }
@@ -1022,8 +1037,10 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
       setSelectedFastModeRaw(launchPrefill.fastMode);
       setLimitContextRaw(launchPrefill.limitContext);
       const storedSkipPermissions = localStorage.getItem('team:lastSkipPermissions') !== 'false';
-      setSkipPermissionsRaw(savedRequest?.skipPermissions ?? storedSkipPermissions);
-      hydrationRef.current.key = effectiveTeamName;
+      setSkipPermissionsRaw(
+        projectSkipPermissions ?? savedRequest?.skipPermissions ?? storedSkipPermissions
+      );
+      hydrationRef.current.key = launchHydrationKey;
     })();
 
     return () => {
@@ -1033,6 +1050,8 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
     open,
     isLaunchMode,
     effectiveTeamName,
+    launchHydrationKey,
+    projectPermissionTeamName,
     members,
     multimodelEnabled,
     previousLaunchParams,

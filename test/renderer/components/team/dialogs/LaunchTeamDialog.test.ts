@@ -333,7 +333,15 @@ vi.mock('@renderer/components/team/dialogs/ProvisioningProviderRuntimeSettingsDi
 }));
 
 vi.mock('@renderer/components/team/dialogs/SkipPermissionsCheckbox', () => ({
-  SkipPermissionsCheckbox: () => React.createElement('div', null, 'skip-permissions'),
+  SkipPermissionsCheckbox: ({ checked }: { checked: boolean }) =>
+    React.createElement(
+      'div',
+      {
+        'data-testid': 'skip-permissions',
+        'data-checked': String(checked),
+      },
+      'skip-permissions'
+    ),
 }));
 
 vi.mock('@renderer/components/team/dialogs/AdvancedCliSection', () => ({
@@ -6679,4 +6687,54 @@ describe('LaunchTeamDialog', () => {
       }
     }
   );
+
+  it.each([
+    { logical: true, project: false },
+    { logical: false, project: true },
+  ])(
+    'hydrates project relaunch permissions from the native runtime (logical $logical, project $project)',
+    async ({ logical, project }) => {
+      vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+      vi.mocked(api.teams.getSavedRequest).mockImplementation(async (teamName) => ({
+        teamName,
+        cwd: '/tmp/project',
+        providerId: 'anthropic',
+        model: 'opus',
+        members: [],
+        skipPermissions: teamName === 'ptc-project-a' ? project : logical,
+      }));
+      const host = document.createElement('div');
+      document.body.appendChild(host);
+      const root = createRoot(host);
+      try {
+        await act(async () => {
+          root.render(
+            React.createElement(LaunchTeamDialog, {
+              mode: 'relaunch',
+              open: true,
+              teamName: 'team-alpha',
+              projectPermissionTeamName: 'ptc-project-a',
+              members: [],
+              defaultProjectPath: '/tmp/project',
+              provisioningError: null,
+              activeTeams: [],
+              onClose: vi.fn(),
+              onRelaunch: vi.fn(async () => {}),
+            })
+          );
+          await flush();
+        });
+        expect(api.teams.getSavedRequest).toHaveBeenCalledWith('team-alpha');
+        expect(api.teams.getSavedRequest).toHaveBeenCalledWith('ptc-project-a');
+        expect(
+          host.querySelector('[data-testid="skip-permissions"]')?.getAttribute('data-checked')
+        ).toBe(String(project));
+      } finally {
+        await act(async () => root.unmount());
+        host.remove();
+        vi.mocked(api.teams.getSavedRequest).mockReset().mockResolvedValue(null);
+      }
+    }
+  );
+
 });

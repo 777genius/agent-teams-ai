@@ -3729,6 +3729,7 @@ export const TeamDetailView = memo(function TeamDetailView({
             mode={launchDialogState.mode}
             open={launchDialogOpen}
             teamName={logicalTeamName ?? teamName}
+            projectPermissionTeamName={logicalTeamName ? teamName : undefined}
             rosterReadOnly={Boolean(logicalTeamName)}
             members={isDraftTeamView ? EMPTY_RESOLVED_MEMBERS : membersWithLiveBranches}
             defaultProjectPath={launchDialogDefaultProjectPath}

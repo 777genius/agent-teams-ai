@@ -12,6 +12,8 @@ interface LaunchDialogBase {
   validateMemberSettings?: () => Promise<void>;
   open: boolean;
   teamName: string;
+  /** Owned project runtime alias containing the last submitted permission policy. */
+  projectPermissionTeamName?: string;
   onClose: () => void;
 }
 
