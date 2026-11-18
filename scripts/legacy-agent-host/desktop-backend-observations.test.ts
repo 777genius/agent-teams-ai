@@ -353,20 +353,20 @@ test('finite TEST heap admits only original V2 management and finite V2 membersh
       'linux', 'x64'), /finite TEST heap requires/);
 });
 
-test('512 MiB finite app profile requires one exact selector and preserves heap and worker pool boundaries', () => {
+test('768 MiB finite app profile requires one exact selector and preserves heap and worker pool boundaries', () => {
   const admitted: Record<string, string | undefined> = {
     LEGACY_DESKTOP_BACKEND_GO: '1', LEGACY_DESKTOP_EMULATED_ONLY: '1',
-    LEGACY_DESKTOP_TEST_FINITE_HEAP_512: '1', LEGACY_DESKTOP_PROOF_MODE: 'task-board-cross-team-ui',
-    NODE_OPTIONS: '--max-old-space-size=512', UV_THREADPOOL_SIZE: '4',
+    LEGACY_DESKTOP_TEST_FINITE_HEAP_768: '1', LEGACY_DESKTOP_PROOF_MODE: 'task-board-cross-team-ui',
+    NODE_OPTIONS: '--max-old-space-size=768', UV_THREADPOOL_SIZE: '4',
   };
   for (const mode of finiteEmulatedUiModes) {
     const environment = { ...admitted, LEGACY_DESKTOP_PROOF_MODE: mode }, before = { ...environment };
-    assert.equal(desktopFiniteHeapNodeOptions(environment, 'linux', 'x64'), '--max-old-space-size=512');
+    assert.equal(desktopFiniteHeapNodeOptions(environment, 'linux', 'x64'), '--max-old-space-size=768');
     const minima: Array<number | undefined> = [];
     normalizeDesktopDevNodeOptions(environment, (target, minimum) => {
       minima.push(minimum); originalDevNodeOptions(target, minimum);
     }, 'linux', 'x64');
-    assert.deepEqual(minima, [512]);
+    assert.deepEqual(minima, [768]);
     assert.deepEqual(environment, before);
   }
   const refuse = (changes: Record<string, string | undefined>, pattern: RegExp, platform = 'linux', arch = 'x64') => {
@@ -376,10 +376,10 @@ test('512 MiB finite app profile requires one exact selector and preserves heap 
     assert.equal(normalized, false, 'invalid context is refused before normalization');
     assert.deepEqual(environment, before, 'refusal never rewrites resource context');
   };
-  for (const value of ['', '0', 'true', '512', '1536', '1 ', '1\n']) {
-    refuse({ LEGACY_DESKTOP_TEST_FINITE_HEAP_512: value }, /exact selector/);
+  for (const value of ['', '0', 'true', '768', '1536', '1 ', '1\n']) {
+    refuse({ LEGACY_DESKTOP_TEST_FINITE_HEAP_768: value }, /exact selector/);
     refuse({ LEGACY_DESKTOP_TEST_FINITE_HEAP_1536: value }, /exactly one selector/);
-    refuse({ LEGACY_DESKTOP_TEST_FINITE_HEAP_1536: '1', LEGACY_DESKTOP_TEST_FINITE_HEAP_512: value }, /exactly one selector/);
+    refuse({ LEGACY_DESKTOP_TEST_FINITE_HEAP_1536: '1', LEGACY_DESKTOP_TEST_FINITE_HEAP_768: value }, /exactly one selector/);
   }
   refuse({ LEGACY_DESKTOP_TEST_FINITE_HEAP_1536: '1' }, /exactly one selector/);
   for (const key of ['LEGACY_DESKTOP_BACKEND_GO', 'LEGACY_DESKTOP_EMULATED_ONLY'])
@@ -389,9 +389,9 @@ test('512 MiB finite app profile requires one exact selector and preserves heap 
     refuse({ LEGACY_DESKTOP_PROOF_MODE: mode }, /exact finite UI mode/);
   for (const context of finiteV2HeapContexts)
     refuse({ ...context, LEGACY_DESKTOP_EMULATED_ONLY: undefined }, /requires an emulated UI mode/);
-  for (const option of [undefined, '', '--max-old-space-size=1536', '--max_old_space_size=512',
-    '--max-old-space-size=512 ', '--max-old-space-size=512 --trace-gc',
-    '--require=/TEST/ambient.cjs --max-old-space-size=512', '--max-old-space-size=512 --max-old-space-size=8192'])
+  for (const option of [undefined, '', '--max-old-space-size=1536', '--max-old-space-size=512', '--max_old_space_size=768',
+    '--max-old-space-size=768 ', '--max-old-space-size=768 --trace-gc',
+    '--require=/TEST/ambient.cjs --max-old-space-size=768', '--max-old-space-size=768 --max-old-space-size=8192'])
     refuse({ NODE_OPTIONS: option }, /only its exact Node option/);
   for (const pool of [undefined, '', '0', '2', '04', '4 ', '16', '128'])
     refuse({ UV_THREADPOOL_SIZE: pool }, /requires its fixed worker pool/);
@@ -407,7 +407,7 @@ test('512 MiB finite app profile requires one exact selector and preserves heap 
   }, 'linux', 'x64'), /must retain its fixed worker pool/);
 });
 
-test('512 MiB finite original fixture admits only its fixed app environment and keeps ordinary and 1536 defaults', {
+test('768 MiB finite original fixture admits only its fixed app environment and keeps ordinary and 1536 defaults', {
   skip: process.platform !== 'linux' || process.arch !== 'x64',
 }, (t) => {
   const controlled = (key: string) => key.startsWith('LEGACY_DESKTOP_') ||
@@ -425,18 +425,18 @@ test('512 MiB finite original fixture admits only its fixed app environment and 
   const environment = () => desktopBackendEnvironment('/TEST/finite-root', '/TEST/node', '/TEST/descriptor.json', 'a'.repeat(64));
   for (const mode of finiteEmulatedUiModes) {
     process.env.LEGACY_DESKTOP_PROOF_MODE = mode;
-    delete process.env.LEGACY_DESKTOP_TEST_FINITE_HEAP_512;
+    delete process.env.LEGACY_DESKTOP_TEST_FINITE_HEAP_768;
     process.env.AGENT_TEAMS_DISABLE_SOURCEMAPS = 'PRIVATE-ordinary-inert';
     assert.doesNotThrow(() => assertDesktopProofEnvironment(false));
     const ordinary = environment();
     for (const key of ['NODE_OPTIONS', 'UV_THREADPOOL_SIZE', 'AGENT_TEAMS_DISABLE_SOURCEMAPS', 'SENTRY_AUTH_TOKEN'])
       assert.equal(Object.hasOwn(ordinary, key), false);
     delete process.env.AGENT_TEAMS_DISABLE_SOURCEMAPS;
-    process.env.LEGACY_DESKTOP_TEST_FINITE_HEAP_512 = '1';
+    process.env.LEGACY_DESKTOP_TEST_FINITE_HEAP_768 = '1';
     assert.doesNotThrow(() => assertDesktopProofEnvironment(false));
     const selected: Record<string, string | undefined> = environment();
-    assert.deepEqual(selected, { ...ordinary, NODE_OPTIONS: '--max-old-space-size=512', UV_THREADPOOL_SIZE: '4',
-      LEGACY_DESKTOP_TEST_FINITE_HEAP_512: '1', LEGACY_DESKTOP_BACKEND_GO: '1',
+    assert.deepEqual(selected, { ...ordinary, NODE_OPTIONS: '--max-old-space-size=768', UV_THREADPOOL_SIZE: '4',
+      LEGACY_DESKTOP_TEST_FINITE_HEAP_768: '1', LEGACY_DESKTOP_BACKEND_GO: '1',
       LEGACY_DESKTOP_EMULATED_ONLY: '1', LEGACY_DESKTOP_PROOF_MODE: mode });
     const uiEnv = { ...selected, UV_THREADPOOL_SIZE: selected.UV_THREADPOOL_SIZE?.trim() || '16' };
     normalizeDesktopDevNodeOptions(uiEnv, originalDevNodeOptions);
@@ -450,10 +450,16 @@ test('512 MiB finite original fixture admits only its fixed app environment and 
     }
     delete process.env.LEGACY_DESKTOP_TEST_FINITE_HEAP_1536;
   }
-  process.env.LEGACY_DESKTOP_TEST_FINITE_HEAP_512 = '0';
+  process.env.LEGACY_DESKTOP_TEST_FINITE_HEAP_768 = '0';
   assert.throws(() => assertDesktopProofEnvironment(false), /exact selector/);
   assert.throws(environment, /exact selector/);
+  delete process.env.LEGACY_DESKTOP_TEST_FINITE_HEAP_768;
+  process.env.LEGACY_DESKTOP_TEST_FINITE_HEAP_512 = '1';
+  assert.throws(() => assertDesktopProofEnvironment(false), /provider-emulation refuses LEGACY_DESKTOP_TEST_FINITE_HEAP_512/);
+  process.env.LEGACY_DESKTOP_TEST_FINITE_HEAP_768 = '1';
+  assert.throws(() => assertDesktopProofEnvironment(false), /provider-emulation refuses LEGACY_DESKTOP_TEST_FINITE_HEAP_512/);
   delete process.env.LEGACY_DESKTOP_TEST_FINITE_HEAP_512;
+  delete process.env.LEGACY_DESKTOP_TEST_FINITE_HEAP_768;
   process.env.LEGACY_DESKTOP_TEST_FINITE_HEAP_1536 = '1';
   const legacy = environment();
   assert.equal(legacy.NODE_OPTIONS, '--max-old-space-size=1536');

@@ -7,18 +7,18 @@ export function desktopFiniteHeapNodeOptions(
   environment: Readonly<NodeEnvironment> = process.env,
   platform: string = process.platform,
   arch: string = process.arch
-): '--max-old-space-size=1536' | '--max-old-space-size=512' | undefined {
+): '--max-old-space-size=1536' | '--max-old-space-size=768' | undefined {
   const selected = environment.LEGACY_DESKTOP_TEST_FINITE_HEAP_1536;
-  const selected512 = environment.LEGACY_DESKTOP_TEST_FINITE_HEAP_512;
-  if (selected === undefined && selected512 === undefined) return undefined;
-  assert.ok(selected === undefined || selected512 === undefined, 'finite TEST heap requires exactly one selector');
-  assert.equal(selected ?? selected512, '1', 'finite TEST heap requires its exact selector');
+  const selected768 = environment.LEGACY_DESKTOP_TEST_FINITE_HEAP_768;
+  if (selected === undefined && selected768 === undefined) return undefined;
+  assert.ok(selected === undefined || selected768 === undefined, 'finite TEST heap requires exactly one selector');
+  assert.equal(selected ?? selected768, '1', 'finite TEST heap requires its exact selector');
   assert.equal(platform, 'linux', 'finite TEST heap requires Linux');
   assert.equal(arch, 'x64', 'finite TEST heap requires x64');
   assert.equal(environment.LEGACY_DESKTOP_BACKEND_GO, '1', 'finite TEST heap requires explicit launch admission');
   const mode = environment.LEGACY_DESKTOP_PROOF_MODE;
   if (mode === 'opencode-v2-management-ui' || mode === 'native-mixed-create-launch-ui') {
-    assert.equal(selected512, undefined, '512 MiB finite TEST heap requires an emulated UI mode');
+    assert.equal(selected768, undefined, '768 MiB finite TEST heap requires an emulated UI mode');
     assert.equal(environment.LEGACY_DESKTOP_EMULATED_ONLY, undefined,
       'finite TEST heap requires the original native V2 scope');
     if (mode === 'native-mixed-create-launch-ui') {
@@ -39,7 +39,7 @@ export function desktopFiniteHeapNodeOptions(
   }
   if (environment.AGENT_TEAMS_DISABLE_SOURCEMAPS !== undefined)
     assert.equal(environment.AGENT_TEAMS_DISABLE_SOURCEMAPS, '1', 'finite TEST source maps require their exact selector');
-  return selected512 === undefined ? '--max-old-space-size=1536' : '--max-old-space-size=512';
+  return selected768 === undefined ? '--max-old-space-size=1536' : '--max-old-space-size=768';
 }
 
 /** Carry only the validated finite context through the closed original app environment. */
@@ -49,8 +49,8 @@ export function desktopFiniteHeapAppEnvironment(
   const options = desktopFiniteHeapNodeOptions(environment);
   return options === undefined ? {} : {
     NODE_OPTIONS: options,
-    ...(options === '--max-old-space-size=512'
-      ? { LEGACY_DESKTOP_TEST_FINITE_HEAP_512: '1', UV_THREADPOOL_SIZE: '4' }
+    ...(options === '--max-old-space-size=768'
+      ? { LEGACY_DESKTOP_TEST_FINITE_HEAP_768: '1', UV_THREADPOOL_SIZE: '4' }
       : { LEGACY_DESKTOP_TEST_FINITE_HEAP_1536: '1' }),
     LEGACY_DESKTOP_BACKEND_GO: '1',
     LEGACY_DESKTOP_PROOF_MODE: environment.LEGACY_DESKTOP_PROOF_MODE!,
@@ -74,11 +74,11 @@ export function normalizeDesktopDevNodeOptions(
   const finite = desktopFiniteHeapNodeOptions(environment, platform, arch);
   if (finite !== undefined)
     assert.equal(environment.NODE_OPTIONS, finite, 'finite TEST startup requires only its exact Node option');
-  if (finite === '--max-old-space-size=512')
-    assert.equal(environment.UV_THREADPOOL_SIZE, '4', '512 MiB finite TEST startup requires its fixed worker pool');
-  normalize(environment, finite === undefined ? undefined : finite === '--max-old-space-size=512' ? 512 : 1536);
+  if (finite === '--max-old-space-size=768')
+    assert.equal(environment.UV_THREADPOOL_SIZE, '4', '768 MiB finite TEST startup requires its fixed worker pool');
+  normalize(environment, finite === undefined ? undefined : finite === '--max-old-space-size=768' ? 768 : 1536);
   if (finite !== undefined)
     assert.equal(environment.NODE_OPTIONS, finite, 'finite TEST startup must retain its fixed Node option');
-  if (finite === '--max-old-space-size=512')
-    assert.equal(environment.UV_THREADPOOL_SIZE, '4', '512 MiB finite TEST startup must retain its fixed worker pool');
+  if (finite === '--max-old-space-size=768')
+    assert.equal(environment.UV_THREADPOOL_SIZE, '4', '768 MiB finite TEST startup must retain its fixed worker pool');
 }

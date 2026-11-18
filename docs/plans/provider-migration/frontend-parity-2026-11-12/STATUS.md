@@ -28,7 +28,7 @@ provider #8 `f5d632a6122df2f6995451bd33e6a0fbcda67680`.
 
 | ID | Состояние | Остаток и критерий готовности | Исполнитель |
 | --- | --- | --- | --- |
-| F1 | Реализация и R2 готовы; UI E2E остаётся | Original GUI на `c8ab4139` снова остановлен SIGKILL main SSR до Electron; всего 4 attempts, UI epochs=0. Direct schema import снизил actual harness PSS до 264450 KiB, но startup не завершился. Следующий шаг — только обоснованный resource profile сборки. | pr_graph; reviewflow; root |
+| F1 | Реализация и R2 готовы; UI E2E остаётся | Пятый original GUI на `356fe604` получил explicit V8 OOM при 512 MiB до Electron; UV4 применился (11 threads). Новый ограниченный профиль 768+UV4 прошёл 10/10 и R2, ожидает original GUI. Все 5 attempts завершены до UI, epochs=0. | pr_graph; reviewflow; root |
 | F2 | Реализация и focused contracts готовы | Canonical Host agenda блокирует review work при lead/user clarification до review cycle; старый app path — re-export. Agenda 26/26 и cycle 3/3 PASS. | reviewflow |
 | M1 | Native E2E PASS на `2f33d566` | Все 8 original steps за 151754 ms: media bytes/4 MiB normalization, 11 model requests, cold history/attachments, restored native readiness, no replay, оба stop custody=released и cleanup=true. Desktop GUI и vendor auth этим результатом не квалифицируются. | media; R2 reviewflow; root |
 | E1 | Исходные отказы исправлены; текущий E2E остаётся | Композиция 22 source закрывает HTTP/store cycle, finite metadata, retained authority, trusted input, Kanban и точечные type/test отказы.611 frontend/IPC PASS в 20 файлах по отдельным scoped runs; полный текущий Host/GUI verdict остаётся. | root |
@@ -497,3 +497,19 @@ P9 не имеет подтверждённого конечного LOC до р
   подтвердил прежние 30 s / 16 samples, rechecks owner/deadline вокруг await,
   один hover/press/release и прежние 12 wheel events без replay. R2 PASS для
   composition; ни один прежний native/GUI result не переименован в текущий.
+- 18 ноября, actual GUI `356fe604`: fixed512+UV4 дал конкретный V8 heap OOM
+  в первом main SSR transform и SIGABRT. GC 508.4→506.8 MB, затем 511.4→509.9 MB
+  и ineffective mark-compacts near heap limit: исходной сборке недостаточно
+  512 MiB. Fixed512/UV4 наблюдались фактически, Vite threads 11 вместо 23;
+  Vite RSS 674664 / PSS 630651 KiB, total RSS 1442024 / PSS 1192836 KiB. Wrapper 27.214 s,
+  последнее startup observation 18.794 s при прежних 180 s. Receipt INCOMPLETE,
+  beforeHarnessCleanup=[] и cleanup.remaining=[], Host не начат, epochs=0,
+  source freeze без ошибок. Прежние SIGKILL этим результатом не объяснены.
+- 18 ноября, bounded correction: новый experimental 512 profile заменён
+  единственным 768+UV4 для тех же семи finite modes; original 1536/default/native
+  paths, Host closed env, parent heap, commands/plugins/maps-off и deadlines
+  сохранены. Retired 512 отвергается через actual proof admission отдельно и
+  вместе с 768; stale Node 512 также отвергается. Runtime source pins прежние.
+  Same focused resource suite 10/10 PASS за 1.837 s, exact independent R2 и diff
+  check PASS. Весь test file вне двух новых profile blocks побайтово прежний.
+  Этот профиль ещё не имеет GUI verdict; следующий original run один.
