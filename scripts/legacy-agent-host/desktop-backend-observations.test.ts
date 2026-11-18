@@ -2191,3 +2191,506 @@ for (const mutation of ['form', 'geometry'] as const) {
     }
   });
 }
+
+
+function retainedNativeReviewMarkers(): Record<string, unknown> {
+  return {
+    status: 'INCOMPLETE', failureSource: { kind: 'error', frames: [] },
+    rendererTarget: { id: 'TEST-private-id', url: 'TEST-private-url' },
+    rendererDiagnostics: { startup: {
+      status: 'DOCUMENT_READY',
+      commands: [{ method: 'Page.enable', sentMs: 1, ackMs: 2 },
+        { method: 'Runtime.evaluate', sentMs: 3, ackMs: 4 }],
+      appReadiness: { status: 'READY', observations: [{ phase: 'TEST-private-phase' }] },
+    } },
+    discoveryReadiness: { attempts: 1, transient: [] },
+    nativeReviewUiProof: { provider: 'opencode-v2', status: 'INCOMPLETE',
+      originalGlobalMetadata: { path: 'TEST-private-path' },
+      originalMetadataBeforeLaunch: { account: 'TEST-private-account' },
+      steps: [{ label: 'TEST-private-label', expression: 'TEST-private-expression' }] },
+  };
+}
+
+function nativeReviewMarkerProjection(evidence: Record<string, unknown>): Record<string, unknown> {
+  const summary = projectDesktopProofReceiptSummary(evidence,
+    { receiptPath: '/TEST/receipt.json', mode: 'native-review-ui', mixedMode: false });
+  assert.ok(summary.nativeReviewFailure && typeof summary.nativeReviewFailure === 'object');
+  return summary.nativeReviewFailure as Record<string, unknown>;
+}
+
+const unavailableNativeReviewMarkers = {
+  schemaVersion: 1, status: 'unavailable', reason: 'invalid-retained-markers',
+};
+
+test('actual native Review failure summary keeps closed retained markers and the original failure identity', () => {
+  const evidence = retainedNativeReviewMarkers(), before = JSON.stringify(evidence);
+  const summary = projectDesktopProofReceiptSummary(evidence,
+    { receiptPath: '/TEST/receipt.json', mode: 'native-review-ui', mixedMode: false });
+  assert.equal(summary.failureSource, evidence.failureSource);
+  assert.equal(summary.status, 'INCOMPLETE'); assert.equal(summary.receipt, '/TEST/receipt.json');
+  assert.deepEqual(summary.nativeReviewFailure, {
+    schemaVersion: 1, status: 'available', source: 'retained-original-proof-markers',
+    atomicWithFailure: false, identifiesTimedOutCall: false,
+    startup: {
+      rendererTargetRecorded: true, diagnosticsRecorded: true, documentStatus: 'DOCUMENT_READY',
+      commands: { count: 2, atCaptureLimit: false,
+        lastRetainedCommand: { method: 'Runtime.evaluate', outcome: 'acknowledged' } },
+      appReadiness: { status: 'READY', observations: 1, atCaptureLimit: false },
+      discoveryReadinessRecorded: true,
+    },
+    review: { recorded: true, status: 'INCOMPLETE', globalMetadataRecorded: true,
+      projectMetadataRecorded: true, stopRecorded: false, stepCount: 1 },
+  });
+  const output = JSON.stringify(summary.nativeReviewFailure);
+  assert.ok(output.length <= 2048); assert.doesNotMatch(output, /TEST-private|\/TEST|expression|account/);
+  assert.equal(JSON.stringify(evidence), before);
+  (summary.nativeReviewFailure as Record<string, unknown>).status = 'TEST-output-only';
+  assert.equal(JSON.stringify(evidence), before, 'projection is not a retained-input alias');
+});
+
+test('native Review retained markers preserve absent segments and pending versus failed original commands', () => {
+  const empty = nativeReviewMarkerProjection({ status: 'INCOMPLETE' });
+  assert.deepEqual(empty.startup, {
+    rendererTargetRecorded: false, diagnosticsRecorded: false, documentStatus: null,
+    commands: { count: null, atCaptureLimit: null, lastRetainedCommand: null },
+    appReadiness: { status: null, observations: null, atCaptureLimit: null },
+    discoveryReadinessRecorded: false,
+  });
+  assert.deepEqual(empty.review, { recorded: false, status: null,
+    globalMetadataRecorded: false, projectMetadataRecorded: false, stopRecorded: false, stepCount: null });
+  for (const failed of [undefined, 'timeout', 'refused']) {
+    const command = { method: 'Runtime.evaluate', sentMs: 1,
+      ...(failed === undefined ? {} : { failed }) };
+    const result = nativeReviewMarkerProjection({ status: 'INCOMPLETE',
+      rendererDiagnostics: { startup: { status: 'WAITING', commands: [command] } } });
+    assert.deepEqual((result.startup as Record<string, unknown>).commands, {
+      count: 1, atCaptureLimit: false,
+      lastRetainedCommand: { method: 'Runtime.evaluate', outcome: failed ?? 'pending' },
+    });
+    assert.equal(result.identifiesTimedOutCall, false);
+  }
+});
+
+test('native Review marker limits expose saturation and refuse overflow before reading array entries', () => {
+  const commands = Array.from({ length: 96 }, () => ({ method: 'Runtime.enable', sentMs: 1, ackMs: 2 }));
+  const observations = Array.from({ length: 24 }, () => ({}));
+  const steps = Array.from({ length: 256 }, () => ({}));
+  const atLimit = nativeReviewMarkerProjection({ status: 'INCOMPLETE',
+    rendererDiagnostics: { startup: { status: 'DOCUMENT_READY', commands,
+      appReadiness: { status: 'READY', observations } } },
+    nativeReviewUiProof: { provider: 'opencode-v2', status: 'PASS', steps } });
+  assert.deepEqual((atLimit.startup as Record<string, unknown>).commands, {
+    count: 96, atCaptureLimit: true,
+    lastRetainedCommand: { method: 'Runtime.enable', outcome: 'acknowledged' },
+  });
+  assert.deepEqual((atLimit.startup as Record<string, unknown>).appReadiness,
+    { status: 'READY', observations: 24, atCaptureLimit: true });
+  assert.equal((atLimit.review as Record<string, unknown>).stepCount, 256);
+  let accessed = 0;
+  const overflow = (length: number) => Object.defineProperty(new Array(length), '0', {
+    get() { accessed++; throw new Error('TEST-private-overflow'); },
+  });
+  for (const evidence of [
+    { status: 'INCOMPLETE', rendererDiagnostics: { startup: { status: 'WAITING', commands: overflow(97) } } },
+    { status: 'INCOMPLETE', rendererDiagnostics: { startup: { status: 'DOCUMENT_READY', commands: [],
+      appReadiness: { status: 'WAITING', observations: overflow(25) } } } },
+    { status: 'INCOMPLETE', nativeReviewUiProof: { provider: 'opencode-v2', status: 'INCOMPLETE', steps: overflow(257) } },
+  ]) assert.deepEqual(nativeReviewMarkerProjection(evidence), unavailableNativeReviewMarkers);
+  assert.equal(accessed, 0);
+});
+
+test('native Review marker projection refuses malformed retained statuses commands counters and segments', () => {
+  const malformed: Record<string, unknown>[] = [
+    { status: 7 }, { status: 'INCOMPLETE', rendererTarget: false },
+    { status: 'INCOMPLETE', discoveryReadiness: [] },
+    { status: 'INCOMPLETE', rendererDiagnostics: null },
+    { status: 'INCOMPLETE', rendererDiagnostics: { startup: {} } },
+    { status: 'INCOMPLETE', nativeReviewUiProof: { provider: 'other', status: 'INCOMPLETE', steps: [] } },
+    { status: 'INCOMPLETE', nativeReviewUiProof: { provider: 'opencode-v2', status: 'INCOMPLETE', steps: {} } },
+  ];
+  for (const command of [
+    { method: 'TEST-private-method', sentMs: 1 }, { method: 'Runtime.evaluate', sentMs: NaN },
+    { method: 'Runtime.evaluate', sentMs: -1 }, { method: 'Runtime.evaluate', sentMs: 2, ackMs: 1 },
+    { method: 'Runtime.evaluate', sentMs: 1, ackMs: 2, failed: 'timeout' },
+    { method: 'Runtime.evaluate', sentMs: 1, failed: 'TEST-private-error' },
+  ]) malformed.push({ status: 'INCOMPLETE',
+    rendererDiagnostics: { startup: { status: 'WAITING', commands: [command] } } });
+  malformed.push({ status: 'INCOMPLETE',
+    rendererDiagnostics: { startup: { status: 'WAITING', commands: new Array(1) } } });
+  for (const evidence of malformed)
+    assert.deepEqual(nativeReviewMarkerProjection(evidence), unavailableNativeReviewMarkers);
+});
+
+test('native Review projection never invokes selected accessors or unselected private fields', () => {
+  let getterCalls = 0;
+  const accessor = () => { getterCalls++; throw new Error('TEST-private-getter'); };
+  const withGetter = (key: string, base: Record<string, unknown> = {}) =>
+    Object.defineProperty(base, key, { get: accessor });
+  const evidenceCases: Record<string, unknown>[] = [
+    withGetter('rendererTarget', { status: 'INCOMPLETE' }),
+    withGetter('rendererDiagnostics', { status: 'INCOMPLETE' }),
+    { status: 'INCOMPLETE', rendererDiagnostics: withGetter('startup') },
+    { status: 'INCOMPLETE', rendererDiagnostics: { startup: withGetter('status', { commands: [] }) } },
+    { status: 'INCOMPLETE', rendererDiagnostics: { startup: { status: 'WAITING',
+      commands: [withGetter('method', { sentMs: 1 })] } } },
+    { status: 'INCOMPLETE', nativeReviewUiProof: withGetter('steps', { provider: 'opencode-v2', status: 'INCOMPLETE' }) },
+  ];
+  const indexAccessor = Object.defineProperty([{}], '0', { get: accessor });
+  evidenceCases.push({ status: 'INCOMPLETE',
+    rendererDiagnostics: { startup: { status: 'WAITING', commands: indexAccessor } } });
+  for (const evidence of evidenceCases)
+    assert.deepEqual(nativeReviewMarkerProjection(evidence), unavailableNativeReviewMarkers);
+  const privateFields = retainedNativeReviewMarkers();
+  Object.defineProperty(privateFields.rendererTarget as object, 'url', { get: accessor });
+  const proof = privateFields.nativeReviewUiProof as Record<string, unknown>;
+  Object.defineProperty((proof.steps as object[])[0]!, 'label', { get: accessor });
+  assert.equal(nativeReviewMarkerProjection(privateFields).status, 'available');
+  const nested = { startup: { status: 'WAITING', commands: [] } };
+  assert.equal(nativeReviewMarkerProjection({ status: 'INCOMPLETE',
+    rendererDiagnostics: new Proxy(nested, { get: accessor }) }).status, 'available');
+  assert.equal(getterCalls, 0);
+  let descriptorTraps = 0;
+  assert.deepEqual(nativeReviewMarkerProjection({ status: 'INCOMPLETE',
+    rendererDiagnostics: new Proxy({}, { getOwnPropertyDescriptor() { descriptorTraps++; throw new Error('TEST-private-trap'); } }) }),
+  unavailableNativeReviewMarkers);
+  assert.equal(descriptorTraps, 1);
+});
+
+test('actual native Review summary leaves success other modes and the original status getter count unchanged', () => {
+  const primary = { kind: 'error', frames: [] };
+  for (const [mode, status] of [
+    ['native-review-ui', 'PASS'], ['native-review-readback-ui', 'INCOMPLETE'], ['team-ui', 'INCOMPLETE'],
+  ]) {
+    const evidence = Object.defineProperty({ status, failureSource: primary }, 'rendererDiagnostics', {
+      get() { assert.fail('new projection must not read a success or unrelated marker'); },
+    });
+    assert.deepEqual(projectDesktopProofReceiptSummary(evidence,
+      { receiptPath: '/TEST/receipt.json', mode: mode!, mixedMode: false }),
+    { status, receipt: '/TEST/receipt.json', ...(status === 'PASS' ? {} : { failureSource: primary }) });
+  }
+  let reads = 0;
+  const accessorStatus = Object.defineProperty({ failureSource: primary }, 'status', {
+    get() { reads++; return 'INCOMPLETE'; },
+  });
+  assert.deepEqual(projectDesktopProofReceiptSummary(accessorStatus,
+    { receiptPath: '/TEST/receipt.json', mode: 'native-review-ui', mixedMode: false }),
+  { status: 'INCOMPLETE', receipt: '/TEST/receipt.json', failureSource: primary });
+  assert.equal(reads, 2, 'only the two pre-existing summary reads execute; diagnostic correlation is unavailable');
+});
+
+type RetainedFailureMode = 'emulated-retained-original-ui' | 'native-resume-ui';
+
+function retainedModeFailureProjection(mode: RetainedFailureMode, evidence: Record<string, unknown>): Record<string, unknown> {
+  const summary = projectDesktopProofReceiptSummary(evidence,
+    { receiptPath: '/TEST/receipt.json', mode, mixedMode: false });
+  const result = summary[mode === 'native-resume-ui' ? 'nativeResumeFailure' : 'retainedOriginalFailure'];
+  assert.ok(result && typeof result === 'object');
+  return result as Record<string, unknown>;
+}
+
+function originalRuntimeFailureMarkers(): Record<string, unknown> {
+  return { status: 'INCOMPLETE', failureSource: { kind: 'error', frames: [] },
+    retainedOriginalUiProof: { status: 'INCOMPLETE', steps: [{ label: 'TEST-private-step' }],
+      choiceScreenshot: { path: 'TEST-private-path' }, readyScreenshot: { account: 'TEST-private-account' } },
+    rendererFailureSnapshot: { dialogs: [{
+      text: 'TEST-private-team Use the original runtime? TEST-private-token',
+      buttons: [{ text: 'Use original runtime for this team', disabled: false },
+        { text: 'Use original runtime for this team', disabled: true },
+        { text: 'TEST-private-button', disabled: false }],
+    }] } };
+}
+
+function resumeFailureMarkers(): Record<string, unknown> {
+  return { status: 'INCOMPLETE', failureSource: { kind: 'error', frames: [] },
+    rendererTarget: { id: 'TEST-private-first' },
+    rendererDiagnostics: { startup: { status: 'DOCUMENT_READY',
+      commands: [{ method: 'Runtime.enable', sentMs: 1, ackMs: 2 }],
+      appReadiness: { status: 'READY', observations: [{}] } } },
+    discoveryReadiness: { path: 'TEST-private-first-discovery' },
+    launchDialogProof: { provider: 'opencode', status: 'PASS', steps: [],
+      capture: { token: 'TEST-private-capture' }, stop: { privateState: 'TEST-private-stop' } },
+    coldResumeBoundary: { provider: 'opencode', status: 'PASS',
+      firstQuit: { reply: 'TEST-private-reply' }, firstCleanup: { path: 'TEST-private-cleanup' },
+      secondEpoch: { status: 'PASS', rendererTarget: { id: 'TEST-private-second' },
+        rendererDiagnostics: { startup: { status: 'DOCUMENT_READY',
+          commands: [{ method: 'Runtime.evaluate', sentMs: 3, ackMs: 4 }],
+          appReadiness: { status: 'READY', observations: [{}, {}] } } },
+        discoveryReadiness: { path: 'TEST-private-second-discovery' } } },
+    resumeDialogProof: { provider: 'opencode', status: 'INCOMPLETE', phase: 'resume-submit-attempted',
+      steps: [{ expression: 'TEST-private-expression' }], source: { account: 'TEST-private-source' },
+      recoveryReferences: { intent: 'TEST-private-intent' }, recoverySnapshotFailure: 'TEST-private-recovery-error' },
+    rendererFailureSnapshot: { unavailable: true } };
+}
+
+test('actual retained-original failure summary reports only saved occurrence flags and marker presence', () => {
+  const evidence = originalRuntimeFailureMarkers(), before = JSON.stringify(evidence);
+  const summary = projectDesktopProofReceiptSummary(evidence,
+    { receiptPath: '/TEST/receipt.json', mode: 'emulated-retained-original-ui', mixedMode: false });
+  assert.equal(summary.failureSource, evidence.failureSource);
+  const result = summary.retainedOriginalFailure as Record<string, unknown>;
+  assert.deepEqual(result, {
+    schemaVersion: 1, status: 'available', source: 'retained-original-proof-markers',
+    atomicWithFailure: false, identifiesTimedOutCall: false, establishesCauseOrEffects: false,
+    original: { recorded: true, status: 'INCOMPLETE', stepCount: 1,
+      choiceScreenshotRecorded: true, readyScreenshotRecorded: true, replyScreenshotRecorded: false,
+      launchRecorded: false, stopRecorded: false },
+    postFailureDialogs: { source: 'retained-post-failure-partial-dialog-sample',
+      snapshotRecorded: true, unavailable: null, completeDom: false, actualTruncationKnown: false,
+      count: 1, atCaptureLimit: false, items: [{
+        textAtCaptureLimit: false,
+        textOccurrences: { useOriginalQuestion: true, stopOriginalQuestion: false, importHeld: false, launchUnavailable: false },
+        buttons: { count: 3, atCaptureLimit: false, buttonTextAtCaptureLimit: false, matches: {
+          useOriginal: { count: 2, enabled: 1, disabled: 1 }, stopOriginal: { count: 0, enabled: 0, disabled: 0 },
+          retryImport: { count: 0, enabled: 0, disabled: 0 }, close: { count: 0, enabled: 0, disabled: 0 },
+        } },
+      }] },
+  });
+  assert.equal(JSON.stringify(evidence), before);
+  assert.doesNotMatch(JSON.stringify(result), /TEST-private|\/TEST|token|account|expression/);
+  assert.ok(JSON.stringify(result).length <= 4096);
+  (result.original as Record<string, unknown>).status = 'TEST-output-only';
+  assert.equal(JSON.stringify(evidence), before, 'returned markers never alias the retained proof');
+});
+
+test('retained-original summary distinguishes missing partial samples from fixed alternate dialog occurrences', () => {
+  const missing = retainedModeFailureProjection('emulated-retained-original-ui', { status: 'INCOMPLETE' });
+  assert.deepEqual(missing.original, { recorded: false, status: null, stepCount: null,
+    choiceScreenshotRecorded: false, readyScreenshotRecorded: false, replyScreenshotRecorded: false,
+    launchRecorded: false, stopRecorded: false });
+  assert.deepEqual(missing.postFailureDialogs, { source: 'retained-post-failure-partial-dialog-sample',
+    snapshotRecorded: false, unavailable: null, completeDom: false, actualTruncationKnown: false,
+    count: null, atCaptureLimit: null, items: [] });
+  const partial = retainedModeFailureProjection('emulated-retained-original-ui', {
+    status: 'INCOMPLETE', retainedOriginalUiProof: { status: 'INCOMPLETE' },
+    rendererFailureSnapshot: { unavailable: true },
+  });
+  assert.equal((partial.original as Record<string, unknown>).stepCount, null);
+  assert.equal((partial.postFailureDialogs as Record<string, unknown>).unavailable, true);
+  const alternatives = retainedModeFailureProjection('emulated-retained-original-ui', {
+    status: 'INCOMPLETE', rendererFailureSnapshot: { dialogs: [{
+      text: 'Stop and use the original runtime? Stopped Team import held Team Launch unavailable',
+      buttons: [{ text: 'Stop and configure original runtime', disabled: false },
+        { text: 'Retry original import', disabled: true }, { text: 'Close', disabled: false }],
+    }] },
+  });
+  const dialogs = alternatives.postFailureDialogs as Record<string, unknown>;
+  const item = (dialogs.items as Record<string, unknown>[])[0]!;
+  assert.deepEqual(item.textOccurrences,
+    { useOriginalQuestion: false, stopOriginalQuestion: true, importHeld: true, launchUnavailable: true });
+  assert.deepEqual((item.buttons as Record<string, unknown>).matches, {
+    useOriginal: { count: 0, enabled: 0, disabled: 0 }, stopOriginal: { count: 1, enabled: 1, disabled: 0 },
+    retryImport: { count: 1, enabled: 0, disabled: 1 }, close: { count: 1, enabled: 1, disabled: 0 },
+  });
+  assert.equal(dialogs.completeDom, false); assert.equal(dialogs.actualTruncationKnown, false);
+});
+
+test('retained-original summary exposes capture limits and refuses overflow before array access', () => {
+  const button = { text: 'x'.repeat(160), disabled: false };
+  const dialog = { text: 'x'.repeat(8000), buttons: Array.from({ length: 24 }, () => button) };
+  const limited = retainedModeFailureProjection('emulated-retained-original-ui', {
+    status: 'INCOMPLETE', retainedOriginalUiProof: { status: 'INCOMPLETE', steps: new Array(256) },
+    rendererFailureSnapshot: { dialogs: [dialog, dialog, dialog] },
+  });
+  assert.equal((limited.original as Record<string, unknown>).stepCount, 256);
+  const sample = limited.postFailureDialogs as Record<string, unknown>;
+  assert.equal(sample.atCaptureLimit, true);
+  const item = (sample.items as Record<string, unknown>[])[0]!;
+  assert.equal(item.textAtCaptureLimit, true);
+  assert.equal((item.buttons as Record<string, unknown>).atCaptureLimit, true);
+  assert.equal((item.buttons as Record<string, unknown>).buttonTextAtCaptureLimit, true);
+  let accessed = 0;
+  const overflow = (length: number) => Object.defineProperty(new Array(length), '0', {
+    get() { accessed++; throw new Error('TEST-private-overflow'); },
+  });
+  for (const patch of [
+    { rendererFailureSnapshot: { dialogs: overflow(4) } },
+    { rendererFailureSnapshot: { dialogs: [{ text: '', buttons: overflow(25) }] } },
+    { rendererFailureSnapshot: { dialogs: [{ text: 'x'.repeat(8001), buttons: [] }] } },
+    { rendererFailureSnapshot: { dialogs: [{ text: '', buttons: [{ text: 'x'.repeat(161), disabled: false }] }] } },
+    { retainedOriginalUiProof: { status: 'INCOMPLETE', steps: overflow(257) } },
+  ]) assert.deepEqual(retainedModeFailureProjection('emulated-retained-original-ui', { status: 'INCOMPLETE', ...patch }),
+    unavailableNativeReviewMarkers);
+  assert.equal(accessed, 0);
+});
+
+test('actual native Resume summary keeps first and cold-successor startup and recovery markers separate', () => {
+  const evidence = resumeFailureMarkers(), before = JSON.stringify(evidence);
+  const summary = projectDesktopProofReceiptSummary(evidence,
+    { receiptPath: '/TEST/receipt.json', mode: 'native-resume-ui', mixedMode: false });
+  assert.equal(summary.failureSource, evidence.failureSource);
+  const result = summary.nativeResumeFailure as Record<string, unknown>;
+  const first = (result.firstEpoch as Record<string, unknown>).startup as Record<string, unknown>;
+  const cold = result.coldBoundary as Record<string, unknown>;
+  const second = cold.secondEpochStartup as Record<string, unknown>;
+  assert.deepEqual(first.commands, { count: 1, atCaptureLimit: false,
+    lastRetainedCommand: { method: 'Runtime.enable', outcome: 'acknowledged' } });
+  assert.deepEqual(second.commands, { count: 1, atCaptureLimit: false,
+    lastRetainedCommand: { method: 'Runtime.evaluate', outcome: 'acknowledged' } });
+  assert.equal((first.appReadiness as Record<string, unknown>).observations, 1);
+  assert.equal((second.appReadiness as Record<string, unknown>).observations, 2);
+  assert.equal(cold.recorded, true); assert.equal(cold.status, 'PASS');
+  assert.equal(cold.firstQuitRecorded, true); assert.equal(cold.firstCleanupRecorded, true);
+  assert.equal(cold.secondEpochRecorded, true); assert.equal(cold.secondEpochStatus, 'PASS');
+  assert.deepEqual(result.launch, { recorded: true, status: 'PASS', stepCount: 0,
+    captureRecorded: true, stopRecorded: true });
+  assert.deepEqual(result.resume, { recorded: true, status: 'INCOMPLETE', stepCount: 1,
+    lastRetainedPhase: 'resume-submit-attempted', sourceRecorded: true, readyLaunchRecorded: false,
+    recoveryReferencesRecorded: true, recoverySnapshotRecorded: false, recoverySnapshotFailureRecorded: true });
+  assert.deepEqual(result.postFailureSnapshot, { recorded: true, unavailable: true });
+  assert.equal(result.atomicWithFailure, false); assert.equal(result.identifiesTimedOutCall, false);
+  assert.equal(result.establishesCauseOrEffects, false);
+  assert.doesNotMatch(JSON.stringify(result), /TEST-private|\/TEST|token|account|expression/);
+  assert.ok(JSON.stringify(result).length <= 4096); assert.equal(JSON.stringify(evidence), before);
+  second.documentStatus = 'TEST-output-only';
+  assert.equal(JSON.stringify(evidence), before);
+});
+
+test('Resume partial cold startup is not substituted with first startup or assumed to reach Resume', () => {
+  const evidence = resumeFailureMarkers();
+  delete evidence.resumeDialogProof;
+  const cold = evidence.coldResumeBoundary as Record<string, unknown>;
+  cold.status = 'INCOMPLETE'; cold.secondEpoch = { status: 'INCOMPLETE',
+    rendererDiagnostics: { startup: { status: 'WAITING',
+      commands: [{ method: 'Runtime.evaluate', sentMs: 9, failed: 'timeout' }] } } };
+  const projected = retainedModeFailureProjection('native-resume-ui', evidence);
+  const first = (projected.firstEpoch as Record<string, unknown>).startup as Record<string, unknown>;
+  const second = (projected.coldBoundary as Record<string, unknown>).secondEpochStartup as Record<string, unknown>;
+  assert.equal(first.documentStatus, 'DOCUMENT_READY'); assert.equal(second.documentStatus, 'WAITING');
+  assert.deepEqual(second.commands, { count: 1, atCaptureLimit: false,
+    lastRetainedCommand: { method: 'Runtime.evaluate', outcome: 'timeout' } });
+  assert.equal((projected.resume as Record<string, unknown>).recorded, false);
+  assert.equal(projected.identifiesTimedOutCall, false, 'last retained timeout is not identified as the thrown request');
+  delete cold.secondEpoch;
+  const noSuccessor = retainedModeFailureProjection('native-resume-ui', evidence);
+  assert.equal((noSuccessor.coldBoundary as Record<string, unknown>).secondEpochRecorded, false);
+  assert.equal((noSuccessor.coldBoundary as Record<string, unknown>).secondEpochStartup, null);
+});
+
+test('Resume projection retains all original closed phases and separates recovery presence from its outcome', () => {
+  for (const phase of ['source-released', 'resume-submit-attempted', 'restored-ready', 'second-send-attempted',
+    'second-stop-attempted', 'second-checkpoint-released']) {
+    const evidence = { status: 'INCOMPLETE', resumeDialogProof: { provider: 'opencode', status: 'INCOMPLETE',
+      phase, steps: [], recoverySnapshot: { privateError: 'TEST-private-recovery' } } };
+    const result = retainedModeFailureProjection('native-resume-ui', evidence);
+    const resume = result.resume as Record<string, unknown>;
+    assert.equal(resume.lastRetainedPhase, phase); assert.equal(resume.recoverySnapshotRecorded, true);
+    assert.equal(resume.recoverySnapshotFailureRecorded, false);
+    assert.equal(result.establishesCauseOrEffects, false);
+  }
+  const empty = retainedModeFailureProjection('native-resume-ui', { status: 'INCOMPLETE' });
+  assert.equal((empty.launch as Record<string, unknown>).recorded, false);
+  assert.equal((empty.coldBoundary as Record<string, unknown>).recorded, false);
+  assert.equal((empty.resume as Record<string, unknown>).lastRetainedPhase, null);
+  assert.deepEqual(empty.postFailureSnapshot, { recorded: false, unavailable: null });
+});
+
+test('Resume retained startup limits apply independently to both epochs with malformed records closed', () => {
+  const retained = { status: 'DOCUMENT_READY',
+    commands: Array.from({ length: 96 }, () => ({ method: 'Runtime.enable', sentMs: 1, ackMs: 2 })),
+    appReadiness: { status: 'READY', observations: new Array(24) } };
+  const result = retainedModeFailureProjection('native-resume-ui', { status: 'INCOMPLETE',
+    rendererDiagnostics: { startup: retained },
+    coldResumeBoundary: { provider: 'opencode', status: 'INCOMPLETE',
+      secondEpoch: { status: 'INCOMPLETE', rendererDiagnostics: { startup: retained } } } });
+  for (const startup of [
+    (result.firstEpoch as Record<string, unknown>).startup,
+    (result.coldBoundary as Record<string, unknown>).secondEpochStartup,
+  ]) {
+    const part = startup as Record<string, unknown>;
+    assert.equal((part.commands as Record<string, unknown>).atCaptureLimit, true);
+    assert.equal((part.appReadiness as Record<string, unknown>).atCaptureLimit, true);
+  }
+  const badStartup = [
+    { status: 'WAITING', commands: new Array(97) },
+    { status: 'WAITING', commands: [], appReadiness: { status: 'WAITING', observations: new Array(25) } },
+    { status: 'WAITING', commands: [{ method: 'TEST-private-method', sentMs: 1 }] },
+    { status: 'WAITING', commands: [{ method: 'Runtime.evaluate', sentMs: 2, ackMs: 1 }] },
+    { status: 'WAITING', commands: [{ method: 'Runtime.evaluate', sentMs: 1, ackMs: 2, failed: 'timeout' }] },
+  ];
+  for (const startup of badStartup) for (const successor of [false, true]) {
+    const evidence = { status: 'INCOMPLETE', ...(successor
+      ? { coldResumeBoundary: { provider: 'opencode', status: 'INCOMPLETE',
+        secondEpoch: { status: 'INCOMPLETE', rendererDiagnostics: { startup } } } }
+      : { rendererDiagnostics: { startup } }) };
+    assert.deepEqual(retainedModeFailureProjection('native-resume-ui', evidence), unavailableNativeReviewMarkers);
+  }
+  for (const patch of [
+    { launchDialogProof: { provider: 'TEST-private-provider', status: 'INCOMPLETE', steps: [] } },
+    { coldResumeBoundary: { provider: 'opencode', status: 'INCOMPLETE', secondEpoch: null } },
+    { resumeDialogProof: { provider: 'opencode', status: 'INCOMPLETE', phase: 'TEST-private-phase', steps: [] } },
+    { resumeDialogProof: { provider: 'opencode', status: 'INCOMPLETE', phase: 'source-released', steps: new Array(257) } },
+    { resumeDialogProof: { provider: 'opencode', status: 'INCOMPLETE', phase: 'source-released', steps: [],
+      recoverySnapshotFailure: 'x'.repeat(4001) } },
+    { rendererFailureSnapshot: { unavailable: 'TEST-private-status' } },
+  ]) assert.deepEqual(retainedModeFailureProjection('native-resume-ui', { status: 'INCOMPLETE', ...patch }),
+    unavailableNativeReviewMarkers);
+});
+
+test('new mode projections refuse selected accessors and array holes without reading private getters', () => {
+  let reads = 0;
+  const accessor = () => { reads++; throw new Error('TEST-private-getter'); };
+  const withGetter = (key: string, base: Record<string, unknown> = {}) =>
+    Object.defineProperty(base, key, { get: accessor });
+  const indexed = Object.defineProperty([{}], '0', { get: accessor });
+  const retainedCases: Record<string, unknown>[] = [
+    withGetter('retainedOriginalUiProof', { status: 'INCOMPLETE' }),
+    { status: 'INCOMPLETE', retainedOriginalUiProof: withGetter('status') },
+    { status: 'INCOMPLETE', rendererFailureSnapshot: withGetter('dialogs') },
+    { status: 'INCOMPLETE', rendererFailureSnapshot: { dialogs: indexed } },
+    { status: 'INCOMPLETE', rendererFailureSnapshot: { dialogs: new Array(1) } },
+    { status: 'INCOMPLETE', rendererFailureSnapshot: { dialogs: [withGetter('text', { buttons: [] })] } },
+    { status: 'INCOMPLETE', rendererFailureSnapshot: { dialogs: [{ text: '', buttons: indexed }] } },
+    { status: 'INCOMPLETE', rendererFailureSnapshot: { dialogs: [{ text: '', buttons: [withGetter('disabled', { text: 'Close' })] }] } },
+  ];
+  for (const evidence of retainedCases)
+    assert.deepEqual(retainedModeFailureProjection('emulated-retained-original-ui', evidence), unavailableNativeReviewMarkers);
+  const resumeCases: Record<string, unknown>[] = [
+    withGetter('coldResumeBoundary', { status: 'INCOMPLETE' }),
+    { status: 'INCOMPLETE', coldResumeBoundary: withGetter('secondEpoch', { provider: 'opencode', status: 'INCOMPLETE' }) },
+    { status: 'INCOMPLETE', coldResumeBoundary: { provider: 'opencode', status: 'INCOMPLETE',
+      secondEpoch: withGetter('rendererDiagnostics', { status: 'INCOMPLETE' }) } },
+    { status: 'INCOMPLETE', rendererDiagnostics: { startup: { status: 'WAITING', commands: indexed } } },
+    { status: 'INCOMPLETE', resumeDialogProof: withGetter('phase', { provider: 'opencode', status: 'INCOMPLETE', steps: [] }) },
+    { status: 'INCOMPLETE', resumeDialogProof: withGetter('recoverySnapshotFailure',
+      { provider: 'opencode', status: 'INCOMPLETE', phase: 'source-released', steps: [] }) },
+  ];
+  for (const evidence of resumeCases)
+    assert.deepEqual(retainedModeFailureProjection('native-resume-ui', evidence), unavailableNativeReviewMarkers);
+  const privateOnly = originalRuntimeFailureMarkers();
+  Object.defineProperty(privateOnly.rendererFailureSnapshot as object, 'store', { get: accessor });
+  Object.defineProperty(privateOnly.retainedOriginalUiProof as object, 'cleanupFailure', { get: accessor });
+  assert.equal(retainedModeFailureProjection('emulated-retained-original-ui', privateOnly).status, 'available');
+  const nested = new Proxy({ status: 'INCOMPLETE', steps: [] }, { get: accessor });
+  assert.equal(retainedModeFailureProjection('emulated-retained-original-ui',
+    { status: 'INCOMPLETE', retainedOriginalUiProof: nested }).status, 'available');
+  assert.equal(reads, 0);
+  let descriptorTraps = 0;
+  assert.deepEqual(retainedModeFailureProjection('native-resume-ui', { status: 'INCOMPLETE',
+    coldResumeBoundary: new Proxy({}, { getOwnPropertyDescriptor() { descriptorTraps++; throw new Error('TEST-private-trap'); } }) }),
+  unavailableNativeReviewMarkers);
+  assert.equal(descriptorTraps, 1);
+});
+
+test('actual new mode gates leave success unrelated modes and pre-existing status reads unchanged', () => {
+  const primary = { kind: 'error', frames: [] };
+  for (const [mode, status] of [
+    ['emulated-retained-original-ui', 'PASS'], ['native-resume-ui', 'PASS'],
+    ['native-review-readback-ui', 'INCOMPLETE'], ['team-ui', 'INCOMPLETE'],
+  ]) {
+    const evidence = { status, failureSource: primary };
+    for (const key of ['retainedOriginalUiProof', 'coldResumeBoundary', 'resumeDialogProof'])
+      Object.defineProperty(evidence, key, { get() { assert.fail('unselected marker getter'); } });
+    assert.deepEqual(projectDesktopProofReceiptSummary(evidence,
+      { receiptPath: '/TEST/receipt.json', mode: mode!, mixedMode: false }),
+    { status, receipt: '/TEST/receipt.json', ...(status === 'PASS' ? {} : { failureSource: primary }) });
+  }
+  for (const mode of ['emulated-retained-original-ui', 'native-resume-ui'] as const) {
+    let reads = 0;
+    const evidence = Object.defineProperty({ failureSource: primary }, 'status',
+      { get() { reads++; return 'INCOMPLETE'; } });
+    assert.deepEqual(projectDesktopProofReceiptSummary(evidence,
+      { receiptPath: '/TEST/receipt.json', mode, mixedMode: false }),
+    { status: 'INCOMPLETE', receipt: '/TEST/receipt.json', failureSource: primary });
+    assert.equal(reads, 2, 'diagnostic gate adds no status getter invocation');
+  }
+});

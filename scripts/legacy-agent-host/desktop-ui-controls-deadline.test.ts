@@ -1,6 +1,9 @@
 import assert from 'node:assert/strict';
 import { test, type TestContext } from 'node:test';
 import { runInNewContext } from 'node:vm';
+import { createProviderLaunchAuthorityMarker, PROVIDER_LAUNCH_AUTHORITY_MARKER_ATTRIBUTE,
+  PROVIDER_LAUNCH_AUTHORITY_MARKER_LIMIT, UNKNOWN_PROVIDER_LAUNCH_AUTHORITY_MARKER
+} from '../../src/shared/utils/providerLaunchAuthorityMarker.ts';
 
 import { createDesktopUiControls, desktopAnimationFramesExpression } from './desktop-ui-controls.ts';
 
@@ -590,6 +593,7 @@ for (const mode of ['present', 'dom-throws', 'transport-getter', 'different-labe
         assert.equal(query, '#create-team-launch-authority-blocker'); return {};
       },
       querySelectorAll(query: string) {
+        if (query === '#create-team-launch-authority-blocker') return [];
         assert.ok(query === '[role="alert"]' || query === '[aria-invalid="true"]');
         return new Array(query === '[role="alert"]' ? 40 : 2);
       },
@@ -660,7 +664,8 @@ for (const mode of ['present', 'dom-throws', 'transport-getter', 'different-labe
         createPageUnique: true, createLaunchChecked: true, createAuthorityDescribed: true,
         createAuthorityNoticePresent: true, createSubmittingSpinner: true,
         createAlertCount: 33, createInvalidAttributeCount: 2,
-      } : {});
+        createAuthorityMarker: UNKNOWN_PROVIDER_LAUNCH_AUTHORITY_MARKER,
+      } : mode === 'different-label' ? {} : { createAuthorityMarker: UNKNOWN_PROVIDER_LAUNCH_AUTHORITY_MARKER });
       assert.ok(failure.cause instanceof Error);
       assert.equal(failure.cause.message, 'UI read timed out: ' + label + '; no mutation retry');
       assert.equal(privateReads, 0, 'no private value, validity method or response getter is read');
@@ -672,4 +677,139 @@ for (const mode of ['present', 'dom-throws', 'transport-getter', 'different-labe
       assert.equal(reports.reads()[0]!.cutoff, 'loop'); assert.equal(reports.reads()[0]!.readsResolved, 1);
     } finally { t.mock.restoreAll(); t.mock.timers.reset(); }
   });
+}
+
+for (const mode of ['valid', 'malformed', 'oversized', 'missing', 'duplicate', 'dom-throws',
+  'transport-accessor', 'different-label', 'enabled'] as const) {
+  test('original Create target retains closed notice marker without changing admission: ' + mode,
+    { timeout: 5000 }, async t => {
+      const reports = readWaitReports(t), sends: string[] = [], ticks: number[] = [];
+      let reads = 0, owners = 0, markerQueries = 0, attributeReads = 0, privateReads = 0;
+      const selector = '[data-testid="create-team-page"] button';
+      const label = mode === 'different-label' ? 'other Create action' :
+        'Create and Launch original solo source exactly once';
+      const marker = createProviderLaunchAuthorityMarker(
+        [{ providerId: 'anthropic', providerStatus: {
+          providerId: 'anthropic', supported: true, authenticated: false,
+          verificationState: 'unknown', statusCheckOutcome: 'pending',
+          statusCheckErrorCode: 'partial_response', modelCatalogRefreshState: 'loading',
+          capabilities: { teamLaunch: false }, modelCatalog: null,
+        } }],
+        [{ providerId: 'anthropic', status: 'checking' }], { anthropic: true }
+      );
+      assert.notEqual(marker, UNKNOWN_PROVIDER_LAUNCH_AUTHORITY_MARKER);
+      const notice = {
+        getAttribute(name: string) {
+          attributeReads++; assert.equal(name, PROVIDER_LAUNCH_AUTHORITY_MARKER_ATTRIBUTE);
+          if (mode === 'dom-throws') throw new Error('PRIVATE-marker-DOM');
+          return mode === 'malformed' ? '{"v":1,"path":"PRIVATE"}' :
+            mode === 'oversized' ? 'x'.repeat(PROVIDER_LAUNCH_AUTHORITY_MARKER_LIMIT + 1) : marker;
+        },
+      };
+      const page = {
+        querySelector(query: string) {
+          if (query === '#launch-team') return { getAttribute() { return 'checked'; } };
+          assert.equal(query, '#create-team-launch-authority-blocker');
+          return mode === 'missing' ? null : notice;
+        },
+        querySelectorAll(query: string) {
+          if (query === '#create-team-launch-authority-blocker') {
+            markerQueries++;
+            return mode === 'missing' ? [] : mode === 'duplicate' ? [notice, notice] : [notice];
+          }
+          assert.ok(query === '[role="alert"]' || query === '[aria-invalid="true"]');
+          return [];
+        },
+      };
+      const control = {
+        textContent: 'Create', tagName: 'BUTTON',
+        getBoundingClientRect() { return { x: 20, y: 20, width: 100, height: 40 }; },
+        matches(query: string) { assert.equal(query, ':disabled'); return mode !== 'enabled'; },
+        getAttribute(name: string) {
+          if (name === 'aria-disabled') return null;
+          assert.equal(name, 'aria-describedby'); return 'create-team-launch-authority-blocker';
+        },
+        closest(query: string) {
+          if (query === '[role="dialog"]') return null;
+          assert.equal(query, '[data-testid="create-team-page"]'); return page;
+        },
+        querySelector(query: string) { assert.equal(query, 'svg.animate-spin'); return null; },
+        getAnimations() { return []; },
+        contains() { return false; },
+      };
+      for (const value of [page, notice, control]) {
+        for (const key of ['value', 'validationMessage', 'innerHTML', 'canSkipPreflight', 'readiness']) {
+          Object.defineProperty(value, key, { get() { privateReads++; throw new Error('PRIVATE-field'); } });
+        }
+      }
+      try {
+        t.mock.timers.enable({ apis: ['Date'], now: 0 });
+        t.mock.method(globalThis, 'setTimeout', (done: () => void, delay: number) => {
+          ticks.push(delay); t.mock.timers.setTime(Date.now() + delay); done();
+          return {} as ReturnType<typeof setTimeout>;
+        });
+        const ui = createDesktopUiControls({
+          async evaluate(expression) {
+            reads++;
+            assert.ok(reads <= (mode === 'enabled' ? 5 : 1), 'only original target reads');
+            const value = runInNewContext(expression, {
+              document: {
+                querySelectorAll(query: string) {
+                  if (query === selector) return [control];
+                  assert.equal(query, '[data-testid="create-team-page"]'); return [page];
+                },
+                elementFromPoint() { return control; },
+              },
+              getComputedStyle() { return { pointerEvents: mode === 'enabled' ? 'auto' : 'none' }; },
+              innerWidth: 1600, innerHeight: 1000,
+            }) as Record<string, unknown>;
+            if (mode === 'transport-accessor') {
+              const facts = value.createFacts;
+              assert.ok(facts && typeof facts === 'object');
+              Object.defineProperty(facts, 'createAuthorityMarker', {
+                get() { privateReads++; throw new Error('PRIVATE-marker-transport'); },
+              });
+            }
+            if (mode !== 'enabled') t.mock.timers.setTime(29_900);
+            return value;
+          },
+          async send(method, params) { sends.push(String(params?.type ?? method)); return {}; },
+        }, { assertOwnedRenderer() { owners++; }, step() {} });
+        if (mode === 'enabled') {
+          await ui.click(selector, label, 'Create');
+          assert.equal(reads, 5);
+          assert.deepEqual(sends, ['Page.bringToFront', 'mouseMoved', 'mousePressed', 'mouseReleased']);
+          assert.deepEqual(ticks, [100, 100]);
+          assert.equal(markerQueries, 0, 'a ready target does not read failure-only marker data');
+          assert.equal(attributeReads, 0);
+          assert.deepEqual(reports.output, []);
+        } else {
+          let failure: Error | undefined;
+          await assert.rejects(ui.click(selector, label, 'Create'), error => {
+            assert.ok(error instanceof Error); failure = error; return true;
+          });
+          assert.ok(failure);
+          assert.ok(failure.cause instanceof Error);
+          assert.equal(failure.cause.message, 'UI read timed out: ' + label + '; no mutation retry');
+          const facts = JSON.parse(failure.message.split('facts=')[1]!) as Record<string, unknown>;
+          assert.equal(facts.disabled, true);
+          assert.equal(facts.createAuthorityMarker, mode === 'different-label' ? undefined :
+            mode === 'valid' ? marker : UNKNOWN_PROVIDER_LAUNCH_AUTHORITY_MARKER);
+          assert.equal(reads, 1); assert.equal(owners, 1);
+          assert.deepEqual(sends, ['Page.bringToFront']);
+          assert.deepEqual(ticks, [100]);
+          assert.equal(markerQueries, mode === 'different-label' ? 0 : 1);
+          assert.equal(attributeReads, ['missing', 'duplicate', 'different-label'].includes(mode) ? 0 : 1);
+          assert.equal(reports.reads()[0]!.phase, 'initial');
+          assert.equal(reports.reads()[0]!.cutoff, 'loop');
+          assert.equal(reports.reads()[0]!.deadlineMs, 30_000);
+          assert.equal(reports.reads()[0]!.readsStarted, 1);
+          assert.equal(reports.reads()[0]!.readsResolved, 1);
+          assert.equal(reports.reads()[0]!.postReadLate, 0);
+          assert.doesNotMatch(JSON.stringify(facts), /PRIVATE/);
+        }
+        assert.equal(privateReads, 0);
+        assert.doesNotMatch(reports.output.join(''), /PRIVATE/);
+      } finally { t.mock.restoreAll(); t.mock.timers.reset(); }
+    });
 }

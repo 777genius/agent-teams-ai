@@ -1,4 +1,4 @@
-import type { StoppedImportDiagnosticCategory } from './createStoppedImportDiagnostic';
+import type { StoppedImportDiagnosticCategory } from './createStoppedImportDiagnostic.js';
 
 export const RETAINED_LEGACY_OPEN_DIAGNOSTIC_NAMESPACE = 'RetainedLegacyOpen';
 export const RETAINED_LEGACY_OPEN_DIAGNOSTIC_PHASES = [

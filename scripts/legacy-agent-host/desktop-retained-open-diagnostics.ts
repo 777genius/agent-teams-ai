@@ -85,7 +85,7 @@ class LogRefusal extends Error {
   readonly reason: UnknownReason;
   constructor(reason: UnknownReason) { super(reason); this.reason = reason; }
 }
-const refuse = (reason: UnknownReason): never => { throw new LogRefusal(reason); };
+const refuse: (reason: UnknownReason) => never = (reason) => { throw new LogRefusal(reason); };
 const rejection = (error: unknown): UnknownProjection =>
   unknown(error instanceof LogRefusal ? error.reason : 'unreadable-log');
 const same = (a: FileIdentity, b: FileIdentity) =>

@@ -34,6 +34,10 @@ export const desktopProofProcessSources = [
 
 /** Finite additions from the accepted horizontal/auth/harness handoffs; no filesystem discovery. */
 export const desktopProofSupplementarySources = [
+  'src/shared/utils/providerLaunchAuthorityMarker.ts',
+  'src/renderer/components/team/dialogs/ProviderLaunchAuthorityNotice.tsx',
+  'src/renderer/components/team/dialogs/ProviderLaunchAuthorityNotice.test.tsx',
+  'scripts/legacy-agent-host/desktop-ui-controls-deadline.test.ts',
   'src/features/agent-backend/main/infrastructure/createCapturedHostDiagnostics.ts',
   'test/features/agent-backend/hostOpenCodeV2ModelProbeLifecycle.test.ts',
   'scripts/legacy-agent-host/desktop-file-digest.ts',

@@ -790,6 +790,10 @@ export async function nativeEmulatedSourceScenario(sandbox: string, broker: stri
       const diagnostic = JSON.stringify({ kind: 'TEST_SOURCE_FIRST_REFUSAL', provider, diagnostic: evidence.firstRefusal });
       console.log(Buffer.byteLength(diagnostic) <= 65536 ? diagnostic : JSON.stringify({ kind: 'TEST_SOURCE_FIRST_REFUSAL', provider, diagnostic: { status: 'unknown', reason: 'projection-limit' } }));
     } catch { /* Preserve the original failure even if its bounded diagnostic cannot be written. */ }
+    if (failure) try { const diagnostic = JSON.stringify({ kind: 'TEST_SOURCE_READINESS_OBSERVATIONS', provider,
+      runtimeProjection: evidence.runtimeProjection ?? null, codexReadinessObservation: evidence.codexReadinessObservation ?? null });
+      if (Buffer.byteLength(diagnostic) <= 16384) console.log(diagnostic);
+    } catch { /* Preserve the original failure if its captured observations cannot be written. */ }
   }
   if (failure) throw failure;
   assert.ok(complete && evidence.cleanup === true); evidence.status = 'PASS'; evidence.stage = 'complete';

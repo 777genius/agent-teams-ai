@@ -406,6 +406,290 @@ export function projectDesktopEmulatedReadinessFailure(value: unknown) {
   } catch { return { schemaVersion: 1, status: 'unavailable', reason: 'projection-failed' }; }
 }
 
+/** Retained markers only: this snapshot cannot identify the failing CDP call or qualify a UI stage. */
+function projectDesktopNativeReviewFailure(value: unknown): Record<string, unknown> {
+  try {
+    const row = (item: unknown): Record<string, unknown> => {
+      if (!item || typeof item !== 'object' || Array.isArray(item)) throw new Error();
+      return item as Record<string, unknown>;
+    };
+    const own = (item: unknown, key: string): unknown => {
+      if (!item || typeof item !== 'object') throw new Error();
+      const descriptor = Object.getOwnPropertyDescriptor(item, key);
+      if (!descriptor) return undefined;
+      if (!('value' in descriptor)) throw new Error();
+      return descriptor.value;
+    };
+    const optional = (item: unknown) => item === undefined ? undefined : row(item);
+    const marker = (item: unknown): boolean => item === undefined ? false : Boolean(row(item));
+    const closed = (item: unknown, allowed: readonly string[]): string => {
+      if (typeof item !== 'string' || !allowed.includes(item)) throw new Error();
+      return item;
+    };
+    const count = (items: unknown, cap: number): number => {
+      if (!Array.isArray(items)) throw new Error();
+      const length = own(items, 'length');
+      if (typeof length !== 'number' || !Number.isSafeInteger(length) || length < 0 || length > cap)
+        throw new Error();
+      return length;
+    };
+    const finiteTime = (item: unknown): number => {
+      if (typeof item !== 'number' || !Number.isSafeInteger(item) || item < 0) throw new Error();
+      return item;
+    };
+    const evidence = row(value);
+    closed(own(evidence, 'status'), ['INCOMPLETE', 'FAIL']);
+    const diagnostics = optional(own(evidence, 'rendererDiagnostics'));
+    const startup = diagnostics ? row(own(diagnostics, 'startup')) : undefined;
+    let commandCount: number | null = null;
+    let lastRetainedCommand: { method: string; outcome: string } | null = null;
+    if (startup) {
+      const commands = own(startup, 'commands');
+      commandCount = count(commands, 96);
+      for (let index = 0; index < commandCount; index++) {
+        const command = row(own(commands, String(index)));
+        const method = closed(own(command, 'method'),
+          ['Page.enable', 'Runtime.enable', 'Page.getFrameTree', 'Runtime.evaluate', 'Log.enable', 'Network.enable']);
+        const sent = finiteTime(own(command, 'sentMs'));
+        const ack = own(command, 'ackMs'), failed = own(command, 'failed');
+        if (ack !== undefined && (failed !== undefined || finiteTime(ack) < sent)) throw new Error();
+        const outcome = failed !== undefined ? closed(failed, ['timeout', 'refused'])
+          : ack !== undefined ? 'acknowledged' : 'pending';
+        lastRetainedCommand = { method, outcome };
+      }
+    }
+    const app = startup ? optional(own(startup, 'appReadiness')) : undefined;
+    const appObservations = app ? count(own(app, 'observations'), 24) : null;
+    const review = optional(own(evidence, 'nativeReviewUiProof'));
+    if (review) closed(own(review, 'provider'), ['opencode-v2']);
+    const result = {
+      schemaVersion: 1, status: 'available', source: 'retained-original-proof-markers',
+      atomicWithFailure: false, identifiesTimedOutCall: false,
+      startup: {
+        rendererTargetRecorded: marker(own(evidence, 'rendererTarget')),
+        diagnosticsRecorded: diagnostics !== undefined,
+        documentStatus: startup ? closed(own(startup, 'status'), ['WAITING', 'DOCUMENT_READY']) : null,
+        commands: { count: commandCount, atCaptureLimit: commandCount === null ? null : commandCount === 96,
+          lastRetainedCommand },
+        appReadiness: { status: app ? closed(own(app, 'status'), ['WAITING', 'READY']) : null,
+          observations: appObservations, atCaptureLimit: appObservations === null ? null : appObservations === 24 },
+        discoveryReadinessRecorded: marker(own(evidence, 'discoveryReadiness')),
+      },
+      review: {
+        recorded: review !== undefined,
+        status: review ? closed(own(review, 'status'), ['INCOMPLETE', 'PASS']) : null,
+        globalMetadataRecorded: review ? marker(own(review, 'originalGlobalMetadata')) : false,
+        projectMetadataRecorded: review ? marker(own(review, 'originalMetadataBeforeLaunch')) : false,
+        stopRecorded: review ? marker(own(review, 'stop')) : false,
+        stepCount: review ? count(own(review, 'steps'), 256) : null,
+      },
+    };
+    if (JSON.stringify(result).length > 2048) throw new Error();
+    return result;
+  } catch {
+    return { schemaVersion: 1, status: 'unavailable', reason: 'invalid-retained-markers' };
+  }
+}
+
+/** Gate only on an own data status; never add a read of an existing summary accessor. */
+function nativeReviewFailureSummary(evidence: Record<string, unknown>, mode: string): Record<string, unknown> {
+  if (mode !== 'native-review-ui') return {};
+  try {
+    const status = Object.getOwnPropertyDescriptor(evidence, 'status');
+    if (!status || !('value' in status) || status.value === 'PASS') return {};
+    return { nativeReviewFailure: projectDesktopNativeReviewFailure(evidence) };
+  } catch {
+    return {};
+  }
+}
+
+/** Closed projections of already retained markers; no read or action is performed here. */
+function retainedFailureReader(value: unknown) {
+  const row = (item: unknown): Record<string, unknown> => {
+    if (!item || typeof item !== 'object' || Array.isArray(item)) throw new Error();
+    return item as Record<string, unknown>;
+  };
+  const own = (item: unknown, key: string): unknown => {
+    if (!item || typeof item !== 'object') throw new Error();
+    const descriptor = Object.getOwnPropertyDescriptor(item, key);
+    if (!descriptor) return undefined;
+    if (!('value' in descriptor)) throw new Error();
+    return descriptor.value;
+  };
+  const optional = (item: unknown) => item === undefined ? undefined : row(item);
+  const marker = (item: unknown) => item === undefined ? false : Boolean(row(item));
+  const closed = (item: unknown, allowed: readonly string[]): string => {
+    if (typeof item !== 'string' || !allowed.includes(item)) throw new Error();
+    return item;
+  };
+  const count = (items: unknown, cap: number): number => {
+    if (!Array.isArray(items)) throw new Error();
+    const length = own(items, 'length');
+    if (typeof length !== 'number' || !Number.isSafeInteger(length) || length < 0 || length > cap)
+      throw new Error();
+    return length;
+  };
+  const text = (item: unknown, cap: number): string => {
+    if (typeof item !== 'string' || item.length > cap) throw new Error();
+    return item;
+  };
+  const boolean = (item: unknown): boolean | null => {
+    if (item === undefined) return null;
+    if (typeof item !== 'boolean') throw new Error();
+    return item;
+  };
+  const status = (part: Record<string, unknown> | undefined) =>
+    part ? closed(own(part, 'status'), ['INCOMPLETE', 'PASS']) : null;
+  const steps = (part: Record<string, unknown> | undefined) => {
+    const items = part ? own(part, 'steps') : undefined;
+    return items === undefined ? null : count(items, 256);
+  };
+  const finiteTime = (item: unknown): number => {
+    if (typeof item !== 'number' || !Number.isSafeInteger(item) || item < 0) throw new Error();
+    return item;
+  };
+  const startup = (part: Record<string, unknown> | undefined) => {
+    if (!part) return null;
+    const diagnostics = optional(own(part, 'rendererDiagnostics'));
+    const retained = diagnostics ? row(own(diagnostics, 'startup')) : undefined;
+    let commandCount: number | null = null;
+    let lastRetainedCommand: { method: string; outcome: string } | null = null;
+    if (retained) {
+      const commands = own(retained, 'commands'); commandCount = count(commands, 96);
+      for (let index = 0; index < commandCount; index++) {
+        const command = row(own(commands, String(index)));
+        const method = closed(own(command, 'method'),
+          ['Page.enable', 'Runtime.enable', 'Page.getFrameTree', 'Runtime.evaluate', 'Log.enable', 'Network.enable']);
+        const sent = finiteTime(own(command, 'sentMs'));
+        const ack = own(command, 'ackMs'), failed = own(command, 'failed');
+        if (ack !== undefined && (failed !== undefined || finiteTime(ack) < sent)) throw new Error();
+        const outcome = failed !== undefined ? closed(failed, ['timeout', 'refused'])
+          : ack !== undefined ? 'acknowledged' : 'pending';
+        lastRetainedCommand = { method, outcome };
+      }
+    }
+    const app = retained ? optional(own(retained, 'appReadiness')) : undefined;
+    const observations = app ? count(own(app, 'observations'), 24) : null;
+    return { rendererTargetRecorded: marker(own(part, 'rendererTarget')),
+      diagnosticsRecorded: diagnostics !== undefined,
+      documentStatus: retained ? closed(own(retained, 'status'), ['WAITING', 'DOCUMENT_READY']) : null,
+      commands: { count: commandCount, atCaptureLimit: commandCount === null ? null : commandCount === 96,
+        lastRetainedCommand },
+      appReadiness: { status: app ? closed(own(app, 'status'), ['WAITING', 'READY']) : null,
+        observations, atCaptureLimit: observations === null ? null : observations === 24 },
+      discoveryReadinessRecorded: marker(own(part, 'discoveryReadiness')) };
+  };
+  const evidence = row(value); closed(own(evidence, 'status'), ['INCOMPLETE', 'FAIL']);
+  return { evidence, row, own, optional, marker, closed, count, text, boolean, status, steps, startup };
+}
+
+/** Occurrences in the saved partial dialog sample are not the original modal state. */
+function projectDesktopRetainedOriginalFailure(value: unknown): Record<string, unknown> {
+  try {
+    const r = retainedFailureReader(value), { own, optional, marker } = r;
+    const proof = optional(own(r.evidence, 'retainedOriginalUiProof'));
+    const snapshot = optional(own(r.evidence, 'rendererFailureSnapshot'));
+    const dialogs = snapshot ? own(snapshot, 'dialogs') : undefined;
+    const dialogCount = dialogs === undefined ? null : r.count(dialogs, 3);
+    const items = [];
+    if (dialogCount !== null) for (let index = 0; index < dialogCount; index++) {
+      const dialog = r.row(own(dialogs, String(index))), text = r.text(own(dialog, 'text'), 8000);
+      const buttons = own(dialog, 'buttons'), buttonCount = r.count(buttons, 24);
+      const matches = {
+        useOriginal: { count: 0, enabled: 0, disabled: 0 },
+        stopOriginal: { count: 0, enabled: 0, disabled: 0 },
+        retryImport: { count: 0, enabled: 0, disabled: 0 },
+        close: { count: 0, enabled: 0, disabled: 0 },
+      };
+      let buttonTextAtCaptureLimit = false;
+      const labels = [
+        ['useOriginal', 'Use original runtime for this team'],
+        ['stopOriginal', 'Stop and configure original runtime'],
+        ['retryImport', 'Retry original import'], ['close', 'Close'],
+      ] as const;
+      for (let buttonIndex = 0; buttonIndex < buttonCount; buttonIndex++) {
+        const button = r.row(own(buttons, String(buttonIndex)));
+        const label = r.text(own(button, 'text'), 160), disabled = r.boolean(own(button, 'disabled'));
+        if (disabled === null) throw new Error();
+        buttonTextAtCaptureLimit ||= label.length === 160;
+        for (const [key, expected] of labels) if (label === expected) {
+          matches[key].count++; matches[key][disabled ? 'disabled' : 'enabled']++;
+        }
+      }
+      items.push({ textAtCaptureLimit: text.length === 8000,
+        textOccurrences: { useOriginalQuestion: text.includes('Use the original runtime?'),
+          stopOriginalQuestion: text.includes('Stop and use the original runtime?'),
+          importHeld: text.includes('Stopped Team import held'), launchUnavailable: text.includes('Team Launch unavailable') },
+        buttons: { count: buttonCount, atCaptureLimit: buttonCount === 24, buttonTextAtCaptureLimit, matches } });
+    }
+    const result = { schemaVersion: 1, status: 'available', source: 'retained-original-proof-markers',
+      atomicWithFailure: false, identifiesTimedOutCall: false, establishesCauseOrEffects: false,
+      original: { recorded: proof !== undefined, status: r.status(proof), stepCount: r.steps(proof),
+        choiceScreenshotRecorded: proof ? marker(own(proof, 'choiceScreenshot')) : false,
+        readyScreenshotRecorded: proof ? marker(own(proof, 'readyScreenshot')) : false,
+        replyScreenshotRecorded: proof ? marker(own(proof, 'replyScreenshot')) : false,
+        launchRecorded: proof ? marker(own(proof, 'originalLaunch')) : false,
+        stopRecorded: proof ? marker(own(proof, 'stop')) : false },
+      postFailureDialogs: { source: 'retained-post-failure-partial-dialog-sample',
+        snapshotRecorded: snapshot !== undefined, unavailable: snapshot ? r.boolean(own(snapshot, 'unavailable')) : null,
+        completeDom: false, actualTruncationKnown: false, count: dialogCount,
+        atCaptureLimit: dialogCount === null ? null : dialogCount === 3, items } };
+    if (JSON.stringify(result).length > 4096) throw new Error();
+    return result;
+  } catch { return { schemaVersion: 1, status: 'unavailable', reason: 'invalid-retained-markers' }; }
+}
+
+/** First and cold-successor startup markers stay in their original identity domains. */
+function projectDesktopNativeResumeFailure(value: unknown): Record<string, unknown> {
+  try {
+    const r = retainedFailureReader(value), { own, optional, marker } = r;
+    const launch = optional(own(r.evidence, 'launchDialogProof'));
+    const cold = optional(own(r.evidence, 'coldResumeBoundary'));
+    const second = cold ? optional(own(cold, 'secondEpoch')) : undefined;
+    const resume = optional(own(r.evidence, 'resumeDialogProof'));
+    const snapshot = optional(own(r.evidence, 'rendererFailureSnapshot'));
+    for (const proof of [launch, cold, resume]) if (proof)
+      r.closed(own(proof, 'provider'), ['claude', 'codex', 'opencode']);
+    const recoveryFailure = resume ? own(resume, 'recoverySnapshotFailure') : undefined;
+    if (recoveryFailure !== undefined) r.text(recoveryFailure, 4000);
+    const result = { schemaVersion: 1, status: 'available', source: 'retained-original-proof-markers',
+      atomicWithFailure: false, identifiesTimedOutCall: false, establishesCauseOrEffects: false,
+      firstEpoch: { source: 'top-level-first-startup', startup: r.startup(r.evidence) },
+      coldBoundary: { recorded: cold !== undefined, status: r.status(cold),
+        firstQuitRecorded: cold ? marker(own(cold, 'firstQuit')) : false,
+        firstCleanupRecorded: cold ? marker(own(cold, 'firstCleanup')) : false,
+        secondEpochRecorded: second !== undefined, secondEpochStatus: r.status(second),
+        secondEpochStartup: r.startup(second) },
+      launch: { recorded: launch !== undefined, status: r.status(launch), stepCount: r.steps(launch),
+        captureRecorded: launch ? marker(own(launch, 'capture')) : false,
+        stopRecorded: launch ? marker(own(launch, 'stop')) : false },
+      resume: { recorded: resume !== undefined, status: r.status(resume), stepCount: r.steps(resume),
+        lastRetainedPhase: resume ? r.closed(own(resume, 'phase'),
+          ['source-released', 'resume-submit-attempted', 'restored-ready', 'second-send-attempted',
+            'second-stop-attempted', 'second-checkpoint-released']) : null,
+        sourceRecorded: resume ? marker(own(resume, 'source')) : false,
+        readyLaunchRecorded: resume ? marker(own(resume, 'readyLaunch')) : false,
+        recoveryReferencesRecorded: resume ? marker(own(resume, 'recoveryReferences')) : false,
+        recoverySnapshotRecorded: resume ? marker(own(resume, 'recoverySnapshot')) : false,
+        recoverySnapshotFailureRecorded: recoveryFailure !== undefined },
+      postFailureSnapshot: { recorded: snapshot !== undefined,
+        unavailable: snapshot ? r.boolean(own(snapshot, 'unavailable')) : null } };
+    if (JSON.stringify(result).length > 4096) throw new Error();
+    return result;
+  } catch { return { schemaVersion: 1, status: 'unavailable', reason: 'invalid-retained-markers' }; }
+}
+
+function retainedFlowFailureSummary(evidence: Record<string, unknown>, mode: string): Record<string, unknown> {
+  if (mode !== 'emulated-retained-original-ui' && mode !== 'native-resume-ui') return {};
+  try {
+    const status = Object.getOwnPropertyDescriptor(evidence, 'status');
+    if (!status || !('value' in status) || status.value === 'PASS') return {};
+    return mode === 'emulated-retained-original-ui'
+      ? { retainedOriginalFailure: projectDesktopRetainedOriginalFailure(evidence) }
+      : { nativeResumeFailure: projectDesktopNativeResumeFailure(evidence) };
+  } catch { return {}; }
+}
+
 /** Only the original receipt summary; no observation, retry or cleanup is performed here. */
 export function projectDesktopProofReceiptSummary(evidence: Record<string, unknown>, options: {
   receiptPath: string; mode: string; mixedMode: boolean;
@@ -427,5 +711,7 @@ export function projectDesktopProofReceiptSummary(evidence: Record<string, unkno
       ? { emulatedReadinessFailure: projectDesktopEmulatedReadinessFailure(evidence) } : {}),
     ...(['task-board-ui', 'task-board-cross-team-ui'].includes(mode) && evidence.status !== 'PASS'
       ? { taskBoardFailure: projectDesktopTaskBoardFailure(evidence) } : {}),
+    ...nativeReviewFailureSummary(evidence, mode),
+    ...retainedFlowFailureSummary(evidence, mode),
   };
 }

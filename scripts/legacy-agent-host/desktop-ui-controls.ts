@@ -1,4 +1,7 @@
 import assert from 'node:assert/strict';
+import { PROVIDER_LAUNCH_AUTHORITY_MARKER_ATTRIBUTE, PROVIDER_LAUNCH_AUTHORITY_MARKER_LIMIT,
+  readProviderLaunchAuthorityMarker, UNKNOWN_PROVIDER_LAUNCH_AUTHORITY_MARKER
+} from '../../src/shared/utils/providerLaunchAuthorityMarker.ts';
 
 const literalEscapes: Readonly<Record<string, string>> = {
   '<': '\\u003c',
@@ -287,7 +290,12 @@ export function createDesktopUiControls(
         createAuthorityNoticePresent:Boolean(page.querySelector('#create-team-launch-authority-blocker')),
         createSubmittingSpinner:Boolean(e.querySelector('svg.animate-spin')),
         createAlertCount:Math.min(page.querySelectorAll('[role="alert"]').length,33),
-        createInvalidAttributeCount:Math.min(page.querySelectorAll('[aria-invalid="true"]').length,33)
+        createInvalidAttributeCount:Math.min(page.querySelectorAll('[aria-invalid="true"]').length,33),
+        createAuthorityMarker:(()=>{try{const notices=page.querySelectorAll('#create-team-launch-authority-blocker');
+          if(notices.length!==1)return null;
+          const marker=notices[0].getAttribute(${desktopJsLiteral(PROVIDER_LAUNCH_AUTHORITY_MARKER_ATTRIBUTE)});
+          return typeof marker==='string'&&marker.length<=${PROVIDER_LAUNCH_AUTHORITY_MARKER_LIMIT}?marker:null;
+        }catch{return null;}})()
       };
     } catch { return null; }
   })()`;
@@ -384,7 +392,7 @@ export function createDesktopUiControls(
       }
     };
     // Reuse the original passive reads and deadline. Retain only closed facts,
-    // never DOM text, attributes, HTML or another request after a failed click.
+    // never raw DOM text/HTML, unvalidated attributes or another request after a failed click.
     const readPoint = async (phase: string): Promise<Record<string, unknown>> => {
       const bootstrapRead = phase === label && label === 'open existing More menu' &&
         selector === 'button[aria-label="More actions"]';
@@ -413,7 +421,7 @@ export function createDesktopUiControls(
             } catch { return point; }
           })()`
         : expression;
-      let facts: Record<string, boolean | number> | undefined;
+      let facts: Record<string, boolean | number | string> | undefined;
       let preparationPending = false;
       const readOptions = prepareScroll ? { deadline: readDeadline, beforeRead: async () => {
         preparationPending = true;
@@ -433,6 +441,7 @@ export function createDesktopUiControls(
                 centerInViewport: row.centerInViewport === true, hitPresent: row.hitPresent === true,
               };
               if (finiteSourceCreate(selector, label, text)) {
+                facts.createAuthorityMarker = UNKNOWN_PROVIDER_LAUNCH_AUTHORITY_MARKER;
                 try {
                   const own = (value: unknown, key: string): unknown => {
                     if (!value || typeof value !== 'object') return undefined;
@@ -448,6 +457,8 @@ export function createDesktopUiControls(
                     const value = own(create, key);
                     if (typeof value === 'number' && Number.isInteger(value) && value >= 0 && value <= 33) facts[key] = value;
                   }
+                  if (own(create, 'createPageUnique') === true)
+                    facts.createAuthorityMarker = readProviderLaunchAuthorityMarker(own(create, 'createAuthorityMarker'));
                 } catch { /* Optional closed facts cannot replace the original target refusal. */ }
               }
               if (bootstrapRead && row.bootstrapFacts && typeof row.bootstrapFacts === 'object' &&

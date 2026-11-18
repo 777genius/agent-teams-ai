@@ -4599,3 +4599,76 @@ test('source standalone keeps captured authority, original relative defaults, cl
   await assert.rejects(refused.run(), error => error === failure);
   assert.deepEqual(refused.counts(), { now: 0, starts: 1, reads: 1 }); assert.deepEqual(refused.delays, []);
 });
+
+test('source failure stdout preserves original refusal and emits only bounded captured readiness afterward', () => {
+  const source = readFileSync(new URL('../../../tools/owned-process-broker/nativeEmulatedSourceScenario.ts', import.meta.url), 'utf8').replace(/\r\n/g, '\n');
+  const begin = "    if (failure) try {\n      const diagnostic = JSON.stringify({ kind: 'TEST_SOURCE_FIRST_REFUSAL'";
+  const end = '  }\n  if (failure) throw failure;';
+  assert.equal(source.split(begin).length, 2); assert.equal(source.split(end).length, 2);
+  const start = source.indexOf(begin), stop = source.indexOf(end, start);
+  const cleanup = 'for (const epoch of epochs) try { await epoch.close(); }';
+  assert.equal(source.split(cleanup).length, 2); assert.ok(start > source.indexOf(cleanup));
+  assert.ok(stop > start);
+  const program = source.slice(start, stop) + '\nif (failure) throw failure;';
+  const original = new Error('PRIVATE-original-failure');
+  const refusal = Object.freeze({ status: 'unknown', reason: 'empty' });
+  const projection = Object.freeze({ status: 'observed', atomicWithFailure: false,
+    viewDigest: 'a'.repeat(64), bindingMatches: true, recordReady: false,
+    providerReady: null, ownerCurrent: null, nativeReady: false });
+  const codex = Object.freeze({ schemaVersion: 1, status: 'observed', atomicWithFailure: false,
+    samplePoint: 'last-original-projection-with-matching-view-digest',
+    source: Object.freeze({ sourceId: 'b'.repeat(64), revision: 'c'.repeat(64) }),
+    bindingDigest: 'd'.repeat(64), viewDigest: projection.viewDigest,
+    mainEpoch: 'TEST-prior-main', launchId: 'TEST-prior-Team-B', observedEventCount: 1,
+    events: Object.freeze([Object.freeze([1, 1, 'open', 'before-await', null])]) });
+  const exercise = (evidence: Record<string, unknown>, failure: Error | null = original, failWrite = 0) => {
+    const lines: string[] = []; let writes = 0;
+    const run = () => runInNewContext(program, { evidence, failure, provider: 'codex', Buffer,
+      console: { log(line: string) {
+        writes++;
+        if (writes === failWrite) throw new Error('PRIVATE-sink-failure');
+        lines.push(line);
+      } } });
+    if (failure) assert.throws(run, error => error === failure);
+    else assert.doesNotThrow(run);
+    return { lines, writes };
+  };
+  const evidence = Object.freeze({ stage: 'B-standalone', firstRefusal: refusal,
+    runtimeProjection: projection, codexReadinessObservation: codex });
+  const observed = exercise(evidence);
+  assert.equal(observed.writes, 2);
+  assert.equal(observed.lines[0], JSON.stringify({ kind: 'TEST_SOURCE_FIRST_REFUSAL', provider: 'codex', diagnostic: refusal }));
+  assert.deepEqual(JSON.parse(observed.lines[1]!), { kind: 'TEST_SOURCE_READINESS_OBSERVATIONS', provider: 'codex',
+    runtimeProjection: projection, codexReadinessObservation: codex });
+  assert.equal(evidence.runtimeProjection, projection); assert.equal(evidence.codexReadinessObservation, codex);
+  assert.equal(JSON.parse(observed.lines[1]!).codexReadinessObservation.launchId, 'TEST-prior-Team-B');
+  assert.equal(JSON.parse(observed.lines[1]!).codexReadinessObservation.atomicWithFailure, false,
+    'an earlier Team-B view is not restamped as current standalone readiness');
+  assert.doesNotMatch(observed.lines.join('\n'), /PRIVATE-|argv|environment|operationRef/);
+  const missing = exercise({ firstRefusal: refusal });
+  assert.deepEqual(JSON.parse(missing.lines[1]!), { kind: 'TEST_SOURCE_READINESS_OBSERVATIONS', provider: 'codex',
+    runtimeProjection: null, codexReadinessObservation: null });
+  let reads = 0;
+  const success = exercise(new Proxy({}, { get() { reads++; throw new Error('PRIVATE-success-read'); } }), null);
+  assert.equal(success.writes, 0); assert.equal(success.lines.length, 0); assert.equal(reads, 0);
+  const emptyFrame = JSON.stringify({ kind: 'TEST_SOURCE_READINESS_OBSERVATIONS', provider: 'codex',
+    runtimeProjection: '', codexReadinessObservation: null });
+  const padding = 'a'.repeat(16384 - Buffer.byteLength(emptyFrame));
+  const boundary = exercise({ firstRefusal: refusal, runtimeProjection: padding });
+  assert.equal(boundary.writes, 2); assert.equal(Buffer.byteLength(boundary.lines[1]!), 16384);
+  const overflow = exercise({ firstRefusal: refusal, runtimeProjection: padding.slice(0, -1) + 'é' });
+  assert.equal(overflow.writes, 1); assert.equal(overflow.lines[0], observed.lines[0]);
+  const cyclic: Record<string, unknown> = {}; cyclic.self = cyclic;
+  const serialization = exercise({ firstRefusal: refusal, runtimeProjection: cyclic });
+  assert.equal(serialization.writes, 1); assert.equal(serialization.lines[0], observed.lines[0]);
+  const firstSerialization = exercise({ firstRefusal: cyclic, runtimeProjection: projection, codexReadinessObservation: codex });
+  assert.equal(firstSerialization.writes, 1); assert.equal(firstSerialization.lines[0], observed.lines[1]);
+  const unavailable = exercise(Object.defineProperty({ firstRefusal: refusal }, 'runtimeProjection', {
+    get() { throw new Error('PRIVATE-observation-unavailable'); },
+  }));
+  assert.equal(unavailable.writes, 1); assert.equal(unavailable.lines[0], observed.lines[0]);
+  const firstSink = exercise(evidence, original, 1);
+  assert.equal(firstSink.writes, 2); assert.deepEqual(firstSink.lines, [observed.lines[1]]);
+  const secondSink = exercise(evidence, original, 2);
+  assert.equal(secondSink.writes, 2); assert.deepEqual(secondSink.lines, [observed.lines[0]]);
+});
