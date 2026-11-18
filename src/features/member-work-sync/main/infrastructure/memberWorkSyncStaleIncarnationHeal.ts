@@ -263,6 +263,7 @@ async function planReplica(input: StaleIncarnationHealInput, plan: Plan): Promis
   }
   const wrapperForeign =
     typeof envelope.incarnation === 'string' && envelope.incarnation !== input.incarnation;
+  const wrapperUnbound = !Object.hasOwn(envelope, 'incarnation');
   // An explicit foreign dirty fence is unsafe even when it has no recovery candidate.
   if (envelope.state === 'dirty' && wrapperForeign) {
     plan.refusal = 'dirty_replica_from_another_identity';
@@ -271,9 +272,9 @@ async function planReplica(input: StaleIncarnationHealInput, plan: Plan): Promis
   // A legacy dirty fence carries no trusted candidate, so none of it is ever validated or merged.
   if (envelope.state === 'dirty' && envelope.incarnation === undefined) return;
   if (!isRecord(envelope.snapshot) || !Array.isArray(envelope.snapshot.statuses)) return;
-  if (wrapperForeign) {
-    // Only status entries have trustworthy incarnation evidence. Never rebind
-    // an old replica's outbox, report intents, metrics or file operations.
+  if (wrapperForeign || wrapperUnbound) {
+    // Neither a foreign nor a legacy unbound wrapper establishes ownership of
+    // report intents, outbox, metrics or file operations.
     const collections = [
       envelope.snapshot.reportIntents,
       envelope.snapshot.outboxItems,
@@ -281,7 +282,9 @@ async function planReplica(input: StaleIncarnationHealInput, plan: Plan): Promis
       envelope.snapshot.filesToArchive,
     ];
     if (collections.some((values) => !Array.isArray(values) || values.length > 0)) {
-      plan.refusal = 'foreign_replica_non_status_data';
+      plan.refusal = wrapperForeign
+        ? 'foreign_replica_non_status_data'
+        : 'unbound_replica_non_status_data';
       return;
     }
   }
@@ -295,6 +298,12 @@ async function planReplica(input: StaleIncarnationHealInput, plan: Plan): Promis
     plan.evidenceTimes.push(found.evaluatedAt);
     return false;
   });
+  if (wrapperUnbound) {
+    // Legacy clean replicas carry no lifecycle binding. In a recovery path
+    // they may be read, but stale content cannot be promoted to this identity.
+    if (kept.length !== statuses.length) plan.refusal = 'unbound_replica_stale_status';
+    return;
+  }
   if (!wrapperForeign && kept.length === statuses.length) return;
   if (wrapperForeign) {
     // A status without its own current incarnation is not safe to promote by

@@ -718,6 +718,61 @@ describe('targeted self-heal of status rows left by an earlier team identity', (
     );
   });
 
+  it('refuses to promote stale statuses from a clean replica without incarnation', async () => {
+    const h = await setup('sqlite');
+    const path = h.paths.getSqliteFallbackReplicaPath(TEAM);
+    await mkdir(dirname(path), { recursive: true });
+    const raw = JSON.stringify({
+      schemaVersion: 1,
+      state: 'clean',
+      updatedAt: OLD,
+      snapshot: snap([mk('alice', FOREIGN)]),
+    });
+    await writeFile(path, raw);
+    const before = await primary(h);
+    await expect(prepare(h)).rejects.toThrow();
+    expect(await readFile(path, 'utf8')).toBe(raw);
+    expect(await primary(h)).toEqual(before);
+    expect(await quarantineFiles(h)).toEqual([]);
+    expect(h.warn).toHaveBeenCalledWith(
+      'member-work-sync stale status cleanup refused',
+      expect.objectContaining({ reason: 'unbound_replica_stale_status' })
+    );
+  });
+
+  it('refuses a legacy clean replica with unbound non-status data during recovery', async () => {
+    const h = await setup('sqlite');
+    const path = h.paths.getSqliteFallbackReplicaPath(TEAM);
+    await mkdir(dirname(path), { recursive: true });
+    const snapshot = snap([mk('alice', FOREIGN)]);
+    snapshot.metricEvents.push({
+      id: 'unbound-metric',
+      teamName: TEAM,
+      memberName: 'alice',
+      kind: 'status_evaluated',
+      state: 'needs_sync',
+      agendaFingerprint: 'f',
+      recordedAt: OLD,
+      actionableCount: 0,
+    });
+    const raw = JSON.stringify({
+      schemaVersion: 1,
+      state: 'clean',
+      updatedAt: OLD,
+      snapshot,
+    });
+    await writeFile(path, raw);
+    const before = await primary(h);
+    await expect(prepare(h)).rejects.toThrow();
+    expect(await readFile(path, 'utf8')).toBe(raw);
+    expect(await primary(h)).toEqual(before);
+    expect(await quarantineFiles(h)).toEqual([]);
+    expect(h.warn).toHaveBeenCalledWith(
+      'member-work-sync stale status cleanup refused',
+      expect.objectContaining({ reason: 'unbound_replica_non_status_data' })
+    );
+  });
+
   it('reports a foreign dirty replica even without stale status entries', async () => {
     const h = await setup('sqlite');
     await writeReplica(h, 'dirty', FOREIGN, snap([mk('bob', CURRENT)]));
