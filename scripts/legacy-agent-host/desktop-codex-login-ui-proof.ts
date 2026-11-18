@@ -72,8 +72,9 @@ export async function runDesktopCodexLoginUiProof(
   for (const [index, mode, label] of [[0, 'browser', 'Connect ChatGPT'], [1, 'device_code', 'Use code']] as const) {
     const result: Record<string, unknown> = { mode, status: 'INCOMPLETE' };
     cases.push(result);
-    await ui.scrollTo(`${dialogButtons}:enabled`, 'show original login action', label, 12, { requireCenterHit: true });
-    await ui.click(dialogButtons, 'start one original ' + mode + ' login', label);
+    await ui.click(dialogButtons, 'start one original ' + mode + ' login', label, undefined, {
+      scrollBeforeClick: { label: 'show original login action', selector: `${dialogButtons}:enabled`, requireCenterHit: true },
+    });
     // Private read remains in this process; neither URLs nor codes enter the receipt/logs.
     const login = record(await ui.waitRead(
       `window.electronAPI.getCodexAccountSnapshot().then(s=>s.login?.authUrl?{status:s.login.status,authUrl:s.login.authUrl,userCode:s.login.userCode??null}:s.login?.status==='failed'?{status:'failed'}:null)`,
@@ -96,9 +97,11 @@ export async function runDesktopCodexLoginUiProof(
     await ui.click(copySelector, 'copy original private login link/code');
     await ui.waitRead(`document.querySelector(${desktopJsLiteral(copySelector)})?.textContent.trim()==='Copied'`, 'native clipboard write acknowledged');
     result.copyAcknowledged = true;
-    await ui.scrollTo(dialogButtons, 'show original Open login action', 'Open login');
+    if (process.platform !== 'linux') await ui.scrollTo(dialogButtons, 'show original Open login action', 'Open login');
     if (process.platform === 'linux') {
-      await ui.click(dialogButtons, 'open original login through TEST OS opener', 'Open login');
+      await ui.click(dialogButtons, 'open original login through TEST OS opener', 'Open login', undefined, {
+        scrollBeforeClick: { label: 'show original Open login action' },
+      });
       externalOpenCount++;
       const end = Date.now() + 5000;
       let rows: Record<string, unknown>[] = [];
@@ -136,8 +139,9 @@ export async function runDesktopCodexLoginUiProof(
     assert.equal(reopened.authUrl === privateUrl && reopened.userCode === login.userCode, true, 'same private authorization after reopen');
     assert.equal((await commands()).filter(row => row.kind === 'oauth').length, index + 1, 'reopen never starts another login');
     result.reopenPreservedOriginal = true;
-    await ui.scrollTo(dialogButtons, 'show original Cancel login action', 'Cancel login');
-    await ui.click(dialogButtons, 'cancel original ' + mode + ' login', 'Cancel login');
+    await ui.click(dialogButtons, 'cancel original ' + mode + ' login', 'Cancel login', undefined, {
+      scrollBeforeClick: { label: 'show original Cancel login action' },
+    });
     await ui.waitRead(
       `window.electronAPI.getCodexAccountSnapshot().then(s=>s.login?.status==='cancelled'&&!s.login.authUrl&&!s.login.userCode&&s.managedAccount===null)`,
       'native cancellation and signed-out readback', 30_000

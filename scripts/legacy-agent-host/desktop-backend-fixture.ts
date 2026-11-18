@@ -23,10 +23,11 @@ import { desktopCodexSha256, prepareDesktopCodexLoginOpener } from './desktop-co
 export { desktopCodexSha256 } from './desktop-codex-login-fixture.ts';
 import { desktopClaudeSha256 } from './desktop-claude-native-selection.ts';
 import { DESKTOP_MCP_MEMBERS, prepareDesktopCapturedMcpRecipes } from './desktop-opencode-v2-mcp-fixture.ts';
+import { fileDigest } from './desktop-file-digest.ts';
+export { fileDigest } from './desktop-file-digest.ts';
 
 export const digest = (bytes: Uint8Array | string): string =>
   createHash('sha256').update(bytes).digest('hex');
-export const fileDigest = async (path: string): Promise<string> => digest(await readFile(path));
 
 const quoteShellArgument = (value: string): string => "'" + value.replaceAll("'", "'\\''") + "'";
 

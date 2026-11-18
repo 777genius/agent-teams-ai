@@ -1361,6 +1361,209 @@ for (const [change, replacement] of [
   });
 }
 
+function originalLoginActionabilityFixture() {
+  const selector = '[role="dialog"] button', text = 'Connect ChatGPT', child = {};
+  const state = { top: 400, wheels: 0, presses: 0, releases: 0, targetReads: 0, ownerCurrent: true };
+  const refusal = new Error('TEST original login renderer no longer owned');
+  const commands: Record<string, unknown>[] = [], steps: Record<string, unknown>[] = [];
+  const reads: { kind: 'scroll' | 'target'; available: boolean }[] = [];
+  const hooks: {
+    beforeRead?(kind: 'scroll' | 'target'): void;
+    afterRead?(kind: 'scroll' | 'target'): void;
+    afterInput?(type: string): void;
+    afterOwnerCheck?(): void;
+  } = {};
+  const scroller = { parentElement: null, scrollHeight: 1200, clientHeight: 698,
+    getBoundingClientRect: () => ({ x: 210, top: 130, bottom: 828, width: 980 }) };
+  const rectangle = () => ({ x: 992, y: state.top, top: state.top, bottom: state.top + 32, width: 150, height: 32 });
+  const dialog = { getBoundingClientRect: () => ({ x: 210, y: 45, width: 980, height: 810 }), getAnimations: () => [] };
+  const control = { parentElement: scroller, textContent: text, tagName: 'BUTTON',
+    contains: (node: unknown) => node === child, matches: () => false, getAttribute: () => null,
+    getBoundingClientRect: rectangle, closest: () => dialog, getAnimations: () => [] };
+  const ui = createDesktopUiControls({
+    async evaluate(expression: string) {
+      const kind = expression.includes('const wheelTop=') ? 'scroll' : 'target';
+      if (kind === 'target') state.targetReads++;
+      hooks.beforeRead?.(kind);
+      const value = runInNewContext(expression, {
+        innerWidth: 1400, innerHeight: 900,
+        getComputedStyle: () => ({ overflowY: 'auto', pointerEvents: 'auto' }),
+        document: { documentElement: scroller, fonts: { status: 'loaded' },
+          querySelectorAll(actual: string) {
+            assert.ok(actual === selector || actual === selector + ':enabled'); return [control];
+          },
+          elementFromPoint(x: number, y: number) {
+            return x >= 992 && x < 1142 && y >= 130 && y < 828 &&
+              y >= state.top && y < state.top + 32 ? child : null;
+          } },
+      }) as Record<string, unknown>;
+      reads.push({ kind, available: kind === 'scroll' ? value.visible === true : value.unavailableTarget !== true });
+      hooks.afterRead?.(kind);
+      return value;
+    },
+    async send(method: string, params: Record<string, unknown> = {}) {
+      commands.push({ method, ...params });
+      if (method !== 'Input.dispatchMouseEvent') return {};
+      const type = String(params.type);
+      if (type === 'mouseWheel') { state.wheels++; state.top = 400; }
+      if (type === 'mousePressed') state.presses++;
+      if (type === 'mouseReleased') state.releases++;
+      hooks.afterInput?.(type);
+      return {};
+    },
+  }, { assertOwnedRenderer() {
+    if (!state.ownerCurrent) throw refusal;
+    hooks.afterOwnerCheck?.();
+  }, step(value) { steps.push(value); } });
+  const click = () => Reflect.apply(ui.click, undefined, [selector, 'start one original browser login', text,
+    undefined, { scrollBeforeClick: { label: 'show original login action', selector: selector + ':enabled',
+      requireCenterHit: true } }]) as Promise<void>;
+  return { ui, click, selector, text, state, refusal, hooks, commands, steps, reads };
+}
+
+test('original prepared login click repairs first-visible then offscreen geometry before one press', { timeout: 5000 }, async t => {
+  t.mock.timers.enable({ apis: ['Date'], now: 1000 });
+  const f = originalLoginActionabilityFixture();
+  try {
+    // The failed original flow completed this zero-wheel read before starting its click.
+    await f.ui.scrollTo(f.selector + ':enabled', 'show original login action', f.text, 12, { requireCenterHit: true });
+    f.hooks.beforeRead = kind => {
+      if (kind !== 'target') return;
+      if (f.state.targetReads === 1) f.state.top = 884.5;
+      else if (f.state.wheels === 0) t.mock.timers.setTime(31_000);
+    };
+    await f.click().catch(error => {
+      assert.equal(f.state.presses, 0, 'unavailable geometry never dispatches the original login');
+      throw new Error('Original login stayed offscreen; physical presses=' + f.state.presses, { cause: error });
+    });
+    assert.equal(f.reads[0]?.available, true, 'the original scroll really observed a visible control');
+    assert.equal(f.reads.find(read => read.kind === 'target')?.available, false,
+      'the first actual click lookup observes the later offscreen control');
+    assert.equal(f.state.wheels, 1, 'one physical wheel repairs the observed geometry');
+    assert.equal(f.state.presses, 1);
+    assert.equal(f.state.releases, 1);
+    assert.deepEqual(f.commands.filter(row => row.method === 'Input.dispatchMouseEvent').map(row => row.type),
+      ['mouseWheel', 'mouseMoved', 'mousePressed', 'mouseReleased']);
+  } finally { t.mock.timers.reset(); }
+});
+
+for (const boundary of ['scroll-read', 'wheel', 'owner', 'wheel-transport'] as const) {
+  test(`original prepared login click refuses ${boundary} settlement before another lookup or input`, { timeout: 5000 }, async t => {
+    t.mock.timers.enable({ apis: ['Date'], now: 1000 });
+    const f = originalLoginActionabilityFixture();
+    const transportFailure = new Error('Execution context was destroyed during original wheel');
+    const afterUnavailable = boundary === 'owner' || boundary === 'wheel-transport';
+    if (boundary === 'scroll-read') f.hooks.afterRead = kind => {
+      if (kind === 'scroll') t.mock.timers.setTime(31_000);
+    };
+    else {
+      if (afterUnavailable) f.hooks.beforeRead = kind => {
+        if (kind === 'target' && f.state.targetReads === 1) f.state.top = 884.5;
+      };
+      else f.state.top = 884.5;
+      f.hooks.afterInput = type => {
+        if (type !== 'mouseWheel') return;
+        if (boundary === 'owner') f.state.ownerCurrent = false;
+        else if (boundary === 'wheel-transport') throw transportFailure;
+        else t.mock.timers.setTime(31_000);
+      };
+    }
+    try {
+      await assert.rejects(f.click(), error => {
+        if (boundary === 'owner') assert.equal(error, f.refusal);
+        else if (boundary === 'wheel-transport') assert.equal(error, transportFailure);
+        else assert.match(String(error), /UI read timed out/);
+        return true;
+      });
+      assert.equal(f.state.targetReads, afterUnavailable ? 1 : 0,
+        'a late preparation cannot perform one extra target lookup');
+      assert.equal(f.state.wheels, boundary === 'scroll-read' ? 0 : 1);
+      assert.equal(f.reads.length, afterUnavailable ? 3 : 1, 'no fresh preparation after an original refusal');
+      assert.equal(f.state.presses, 0);
+      assert.equal(f.state.releases, 0);
+    } finally { t.mock.timers.reset(); }
+  });
+}
+
+for (const cutoff of ['owner', 'deadline'] as const) {
+  test(`original prepared login click rechecks ${cutoff} after final preparation fulfills`, { timeout: 5000 }, async t => {
+    t.mock.timers.enable({ apis: ['Date'], now: 1000 });
+    const f = originalLoginActionabilityFixture();
+    let finalPreparationRead = false, checksAfterRead = 0;
+    f.hooks.afterRead = kind => {
+      if (kind === 'scroll' && f.state.targetReads === 4) finalPreparationRead = true;
+    };
+    f.hooks.afterOwnerCheck = () => {
+      // The scroll read and its caller have settled; revoke between fulfillment and final lookup.
+      if (finalPreparationRead && ++checksAfterRead === 2) queueMicrotask(() => {
+        if (cutoff === 'owner') f.state.ownerCurrent = false;
+        else t.mock.timers.setTime(31_000);
+      });
+    };
+    try {
+      await assert.rejects(f.click(), error => {
+        if (cutoff === 'owner') assert.equal(error, f.refusal);
+        else assert.match(String(error), /UI read timed out/);
+        return true;
+      });
+      assert.equal(finalPreparationRead, true);
+      assert.equal(f.state.targetReads, 4, 'no extra final target lookup after the awaited preparation');
+      assert.equal(f.state.wheels, 0);
+      assert.equal(f.state.presses, 0);
+      assert.equal(f.state.releases, 0);
+    } finally { t.mock.timers.reset(); }
+  });
+}
+
+test('original prepared login click shares twelve wheels across initial, stability and final reads', { timeout: 5000 }, async () => {
+  const f = originalLoginActionabilityFixture();
+  f.state.top = 884.5;
+  f.hooks.beforeRead = kind => {
+    if (kind === 'target') f.state.top = 400 + Math.max(0, Math.floor((f.state.targetReads - 2) / 3)) * 50;
+  };
+  f.hooks.afterRead = kind => { if (kind === 'target') f.state.top = 884.5; };
+  await assert.rejects(f.click(), /UI scroll timed out: show original login action/);
+  assert.equal(f.state.wheels, 12, 'no thirteenth wheel when a later phase needs another reveal');
+  assert.equal(f.state.targetReads, 12, 'the exhausted preparation cannot enter another target read');
+  assert.equal(f.reads.at(-1)?.kind, 'scroll');
+  assert.equal(f.reads.at(-1)?.available, false, 'zero remaining wheels still permits its final visibility read');
+  const trace = f.steps.find(step => step.action === 'mouseMoved')?.geometryTrace as { samples: { phase: string }[] };
+  assert.ok(trace.samples.filter(sample => sample.phase === 'final').length >= 3,
+    'the same original budget survives several final-target resamples');
+  assert.equal(f.state.presses, 0);
+  assert.equal(f.state.releases, 0);
+});
+
+test('original prepared login click admits visibility after the twelfth wheel without another wheel', { timeout: 5000 }, async () => {
+  const f = originalLoginActionabilityFixture();
+  f.state.top = 884.5;
+  f.hooks.afterInput = type => {
+    if (type === 'mouseWheel' && f.state.wheels < 12) f.state.top = 884.5;
+  };
+  await f.click();
+  assert.equal(f.state.wheels, 12);
+  assert.equal(f.state.presses, 1);
+  assert.equal(f.state.releases, 1);
+});
+
+for (const uncertain of ['mousePressed', 'mouseReleased'] as const) {
+  test(`original prepared login click never prepares again after uncertain ${uncertain}`, { timeout: 5000 }, async () => {
+    const f = originalLoginActionabilityFixture(), failure = new Error('TEST original uncertain ' + uncertain);
+    f.state.top = 884.5;
+    let readsAtPress = 0;
+    f.hooks.afterInput = type => {
+      if (type === 'mousePressed') { readsAtPress = f.reads.length; f.state.top = 884.5; }
+      if (type === uncertain) throw failure;
+    };
+    await assert.rejects(f.click(), error => { assert.equal(error, failure); return true; });
+    assert.equal(f.reads.length, readsAtPress, 'no scroll preparation or target read follows the original press');
+    assert.equal(f.state.wheels, 1);
+    assert.equal(f.state.presses, 1);
+    assert.equal(f.state.releases, uncertain === 'mouseReleased' ? 1 : 0);
+    assert.equal(f.commands.at(-1)?.type, uncertain, 'uncertain input is never retried');
+  });
+}
+
 for (const requireCenterHit of [false, true]) {
   test(requireCenterHit
     ? 'original scroll opt-in reveals a covered checkbox with one bounded wheel'

@@ -23,6 +23,11 @@ export interface UiCdpPort {
   evaluate(expression: string): Promise<unknown>;
   send(method: string, params?: Record<string, unknown>): Promise<unknown>;
 }
+interface ScrollBeforeClick {
+  label: string;
+  selector?: string;
+  requireCenterHit?: true;
+}
 
 /** Observe two visible renderer frames without changing focus, DOM, or input. */
 export function desktopAnimationFramesExpression(remainingMs: number): string {
@@ -202,11 +207,18 @@ export function createDesktopUiControls(
     expression: string,
     label: string,
     timeoutMs = 30_000,
-    isReady: (value: unknown) => boolean = Boolean
+    isReady: (value: unknown) => boolean = Boolean,
+    readOptions?: { deadline: number; beforeRead?(): Promise<void> }
   ): Promise<unknown> => {
-    const deadline = Date.now() + timeoutMs;
+    const deadline = readOptions?.deadline ?? Date.now() + timeoutMs;
     while (Date.now() < deadline) {
       options.assertOwnedRenderer();
+      if (readOptions?.beforeRead) {
+        // Preparation failures are terminal, including context-like input errors.
+        await readOptions.beforeRead();
+        options.assertOwnedRenderer();
+        if (Date.now() >= deadline) break;
+      }
       try {
         const value = await cdp.evaluate(expression);
         if (Date.now() >= deadline) break;
@@ -261,7 +273,7 @@ export function createDesktopUiControls(
     label: string,
     selector?: string,
     text?: string,
-    readiness?: { waitForFinalReadiness?: true; waitForRenderFrames?: true }
+    readiness?: { waitForFinalReadiness?: true; waitForRenderFrames?: true; scrollBeforeClick?: ScrollBeforeClick }
   ): Promise<void> => {
     await cdp.send('Page.bringToFront');
     // Every passive phase spends the original first-read budget, including a
@@ -274,6 +286,17 @@ export function createDesktopUiControls(
         throw new Error(`UI read timed out: ${label} final target; no mutation retry`);
       }
     };
+    const scroll = readiness?.scrollBeforeClick && { ...readiness.scrollBeforeClick };
+    const scrollBudget = { deadline: readDeadline, remainingWheels: 12 };
+    const prepareScroll = scroll ? async (): Promise<void> => {
+      assert.equal(typeof selector, 'string', 'original click selector is required for preparation');
+      options.assertOwnedRenderer();
+      assertReadDeadline();
+      await scrollTo(scroll.selector ?? selector!, scroll.label, text, 12,
+        { requireCenterHit: scroll.requireCenterHit }, scrollBudget);
+      options.assertOwnedRenderer();
+      assertReadDeadline();
+    } : undefined;
     const geometryTrace: { samples: Record<string, unknown>[]; overflow: boolean } = { samples: [], overflow: false };
     const observeGeometry = (phase: 'initial' | 'after-hover' | 'stable' | 'final', point: Record<string, unknown>): void => {
       try {
@@ -335,8 +358,14 @@ export function createDesktopUiControls(
           })()`
         : expression;
       let facts: Record<string, boolean | number> | undefined;
+      let preparationPending = false;
+      const readOptions = prepareScroll ? { deadline: readDeadline, beforeRead: async () => {
+        preparationPending = true;
+        await prepareScroll();
+      } } : undefined;
       try {
         const observed = record(await waitRead(readExpression, phase, readDeadline - Date.now(), value => {
+          preparationPending = false;
           if (value && typeof value === 'object' && !Array.isArray(value)) {
             const row = value as Record<string, unknown>;
             if (row.unavailableTarget === true) {
@@ -364,10 +393,12 @@ export function createDesktopUiControls(
             }
           }
           return Boolean(value);
-        }));
+        }, readOptions));
         observeGeometry(phase === label ? 'initial' : phase === label + ' after pointer enter' ? 'after-hover' : 'stable', observed);
         return observed;
       } catch (error) {
+        // Never replace a preparation/transport refusal with earlier geometry facts.
+        if (preparationPending) throw error;
         if (facts) throw new Error(`UI target read failed: ${phase}; facts=${JSON.stringify(facts)}`, { cause: error });
         throw error;
       }
@@ -407,6 +438,11 @@ export function createDesktopUiControls(
         assert.equal(observed, true, 'Original UI target render frames did not settle');
         step({ observation: 'two original renderer frames before final target read', label });
       }
+      if (prepareScroll) {
+        await prepareScroll();
+        options.assertOwnedRenderer();
+        assertReadDeadline();
+      }
       let finalValue = await cdp.evaluate(expression);
       // A null owner observation is still pending, unlike an explicit unavailable
       // target or transport rejection. Re-read only this original expression.
@@ -415,6 +451,11 @@ export function createDesktopUiControls(
         await new Promise<void>((done) => setTimeout(done, Math.min(100, readDeadline - Date.now())));
         assertReadDeadline();
         options.assertOwnedRenderer();
+        if (prepareScroll) {
+          await prepareScroll();
+          options.assertOwnedRenderer();
+          assertReadDeadline();
+        }
         finalValue = await cdp.evaluate(expression);
       }
       assertReadDeadline();
@@ -473,8 +514,9 @@ export function createDesktopUiControls(
       clickCount: 1,
     });
   };
-  const click = (selector: string, label: string, text?: string, requiredContent?: string): Promise<void> =>
-    clickExpression(target(selector, text, requiredContent), label, selector, text);
+  const click = (selector: string, label: string, text?: string, requiredContent?: string,
+    readiness?: { scrollBeforeClick?: ScrollBeforeClick }): Promise<void> =>
+    clickExpression(target(selector, text, requiredContent), label, selector, text, readiness);
   const hoverExpression = async (expression: string, label: string): Promise<void> => {
     let previous: { x: number; y: number } | undefined, stable = 0;
     // Canonical effects can settle before their renderer layout. Sample the
@@ -497,13 +539,21 @@ export function createDesktopUiControls(
   };
   const scrollTo = async (
     selector: string, label: string, text?: string, maxWheelEvents = 12,
-    scrollOptions: { requireCenterHit?: boolean } = {}
+    scrollOptions: { requireCenterHit?: boolean } = {},
+    preparation?: { deadline: number; remainingWheels: number }
   ): Promise<void> => {
     assert.ok(Number.isSafeInteger(maxWheelEvents) && maxWheelEvents >= 1 && maxWheelEvents <= 32);
+    const assertPreparation = (): void => {
+      if (!preparation) return;
+      options.assertOwnedRenderer();
+      if (Date.now() >= preparation.deadline)
+        throw new Error(`UI read timed out: ${label}; no mutation retry`);
+    };
     // Allow one final visibility read after the last wheel; never dispatch
     // an extra input event after reaching the TEST-only bounded budget.
     for (let attempt = 0; attempt <= maxWheelEvents; attempt++) {
       options.assertOwnedRenderer();
+      assertPreparation();
       const found = record(
         await waitRead(
           `(() => {
@@ -535,14 +585,17 @@ export function createDesktopUiControls(
         const hit=${scrollOptions.requireCenterHit === true ? 'document.elementFromPoint(r.x+r.width/2,r.y+r.height/2)' : 'e'};
         return {visible:bottom>top&&r.top>=top&&r.bottom<=bottom&&Boolean(hit&&(hit===e||e.contains(hit))),x,y,delta:Math.max(-600,Math.min(600,centerY-y))};
       })()`,
-          label
+          label, preparation ? preparation.deadline - Date.now() : 30_000, Boolean, preparation
         )
       );
+      assertPreparation();
       if (found.visible === true) return;
-      if (attempt === maxWheelEvents) break;
+      if (attempt === maxWheelEvents || preparation?.remainingWheels === 0) break;
       assert.equal(typeof found.x, 'number');
       assert.equal(typeof found.y, 'number');
       assert.equal(typeof found.delta, 'number');
+      assertPreparation();
+      if (preparation) preparation.remainingWheels--;
       step({ action: 'mouseWheel', label, selector, deltaY: found.delta });
       await cdp.send('Input.dispatchMouseEvent', {
         type: 'mouseWheel',
@@ -551,7 +604,9 @@ export function createDesktopUiControls(
         deltaX: 0,
         deltaY: found.delta,
       });
+      assertPreparation();
       await new Promise<void>((resolve) => setTimeout(resolve, 100));
+      assertPreparation();
     }
     throw new Error(`UI scroll timed out: ${label}; no effect retry`);
   };

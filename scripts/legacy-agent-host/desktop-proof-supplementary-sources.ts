@@ -34,6 +34,8 @@ export const desktopProofProcessSources = [
 
 /** Finite additions from the accepted horizontal/auth/harness handoffs; no filesystem discovery. */
 export const desktopProofSupplementarySources = [
+  'scripts/legacy-agent-host/desktop-file-digest.ts',
+  'scripts/legacy-agent-host/desktop-file-digest.test.ts',
   'scripts/legacy-agent-host/desktop-emulated-codex-login-fixture.ts',
   'packages/legacy-agent-host/tests/fixtures/codex-metadata-peer.ts',
   'scripts/legacy-agent-host/desktop-emulated-selection-ui.ts',
