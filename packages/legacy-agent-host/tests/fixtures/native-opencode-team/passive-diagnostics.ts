@@ -231,7 +231,7 @@ export function createPassiveNativeDiagnosticCapture() {
 }
 
 const cpuCategories = ['configuration-read', 'credential-read', 'team-writer-authority',
-  'custody-image', 'provider-transport', 'other', 'idle'] as const;
+  'custody-image', 'provider-transport', 'other', 'idle', 'v8-garbage-collector', 'v8-program'] as const;
 type CpuCategory = typeof cpuCategories[number];
 const cpuWriterFamilies = ['namespace-fence', 'team-state', 'team-state-validation',
   'launch-binding-read', 'launch-binding-current', 'launch-binding-clone', 'other-writer'] as const;
@@ -285,6 +285,9 @@ function cpuCategory(frame: Record<string, unknown>): number | undefined {
       /\/adapters\/providers\/OpenCodeV2EmbeddedMemberProvider\.[jt]s$/.test(path) && frame.functionName === 'attest') return 3;
   if (/\/features\/provider-session-implementation\/adapters\/opencode-protocol\/[^/]+\.js$/.test(path)) return 4;
   if (frame.functionName === '(idle)') return 6;
+  // Exact URL-free VM frames only; program is unattributed execution, not request or wait time.
+  if (path === '' && frame.functionName === '(garbage collector)') return 7;
+  if (path === '' && frame.functionName === '(program)') return 8;
   return undefined;
 }
 
@@ -624,11 +627,11 @@ function observeOriginalHost(): void {
     emit({ event, request: value.request, route: value.route, method: value.method,
       durationMs: Math.max(0, Math.round(performance.now() - value.started)) });
   });
-  // Headers alone do not show when a finite native log body finishes arriving.
-  // Observe only log trailers: no native bytes, header values or new requests.
+  // Headers alone do not show when a finite native log or instruction body finishes arriving.
+  // Observe only these trailers: no native bytes, header values or new requests.
   channel('undici:request:trailers').subscribe(message => {
     const value = pending.get(record(record(message).request));
-    if (value?.route !== 'log') return;
+    if (!value || value.route !== 'log' && value.route !== 'instructions') return;
     emit({ event: 'response-end', request: value.request, route: value.route, method: value.method,
       durationMs: Math.max(0, Math.round(performance.now() - value.started)) });
   });

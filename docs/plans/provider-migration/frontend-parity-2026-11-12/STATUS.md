@@ -28,9 +28,9 @@ provider #8 `f5d632a6122df2f6995451bd33e6a0fbcda67680`.
 
 | ID | Состояние | Остаток и критерий готовности | Исполнитель |
 | --- | --- | --- | --- |
-| F1 | Реализация и R2 готовы; UI E2E остаётся | Первый original GUI run остановлен SIGKILL сборки main SSR до открытия Electron. Для того же journey подготовлен проверенный fixed-1536 TEST scope; UI verdict ещё отсутствует. | pr_graph; reviewflow; root |
+| F1 | Реализация и R2 готовы; UI E2E остаётся | Три original GUI attempts остановлены SIGKILL main SSR до Electron, включая fixed1536 и maps-off. UI verdict отсутствует; исследуется память исходной цепочки сборки/наблюдения. | pr_graph; reviewflow; root |
 | F2 | Реализация и focused contracts готовы | Canonical Host agenda блокирует review work при lead/user clarification до review cycle; старый app path — re-export. Agenda 26/26 и cycle 3/3 PASS. | reviewflow |
-| M1 | Native delivery подтверждена; общий E2E не завершён | На `047f002e` проверена доставка всех media; TEST chunk parser исправлен в `19b5bf34`. Повтор остановлен readiness cutoff до DM. Cold readback/restore и итоговый cleanup остаются; TTL сохраняется. | media; root |
+| M1 | Native delivery подтверждена; общий E2E не завершён | На `047f002e` проверена доставка всех media; TEST chunk parser исправлен. `e114dd13` прошёл preparation и первый owned probe, но остановлен после initial-context headers. Cold readback/restore и итоговый cleanup остаются; добавлена bounded диагностика. | media; root |
 | E1 | Исправление готово; E2E остаётся | Полный status wire finite peer исправляет отказ Create/import; 2 contract checks PASS. Остальные исходные Create/import/retained/Resume/installer/Add journeys требуют текущего результата. | pr_graph; product ownership root |
 | W1 | x64 исправление готово; ARM64 открыт | Синхронное чтение configured key входит в прежнюю closing freshness-проверку; 36 focused checks PASS. ARM64: 6 последовательных MCP probes не укладываются в исходные 15 секунд. Итоговый cleanup подтверждён; deadlines и currentness сохранены. | pr_graph; root |
 | P9 | Открыто: контракт | Установить выполнимую границу original-path / writer / consumed bytes; текущую гарантию не сужать без явного решения. Независимые работы продолжаются. | root |
@@ -335,3 +335,30 @@ P9 не имеет подтверждённого конечного LOC до р
   deadline, terminal receipt и cleanup проверки сохранены; cache не добавлен.
   Existing revoked-authority case 1/1 PASS, два независимых source review и
   diff check PASS. Влияние на полный native run ещё не измерено.
+- 18 ноября, actual native `e114dd13`: coordination PASS / cleanup=true,
+  4 requests + 1 metadata, original receipt unchanged; cumulative step 72467 ms
+  против 88992 ms в предыдущем run. Ordinary graph 11964 ms, first-submit
+  23053 ms. Business owned probe и permissions прошли; initial-context PUT
+  вернул 204, первый GET — headers 200 на 23858 ms. Второй GET не начался.
+  Business open 65201 ms, held/custody-unresolved; child exit 0, Host exit 1,
+  stdoutValid=true, overall cleanup=false, business model requests=0.
+  SQLite readback содержит один исходный instruction entry, 694 UTF-8 bytes.
+  Headers не доказывают завершение чтения тела; причинный branch ещё неизвестен.
+  Missing-catalog fix в этом run не был задействован. UNKNOWN не заменяется
+  наблюдаемым выходом ребёнка, пока отсутствует подтверждение полного owner release.
+- 18 ноября, F1 GUI resources на `e114dd13`: fixed1536 с исходными картами
+  остановлен SIGKILL через 15.1 s, actual Vite RSS peak 448868 KiB. Повтор с
+  уже поддерживаемым exact maps-off flag — тот же original main SSR refusal
+  через 47.316 s; sampled aggregate PSS peak 1266242 KiB, Vite PSS peak
+  646380 KiB, harness PSS peak 308303 KiB. Оба receipts INCOMPLETE до
+  Electron/Host/UI, cleanup.remaining=[], source freeze сохранён. OOM-sender
+  не установлен. Maps-off меняет debug artifacts main/renderer, не preload;
+  идентичность всех build bytes и Sentry qualification не заявляются.
+- 18 ноября, E1 readback diagnostic R2: существующий undici trailers observer
+  наблюдает только original request objects для log и instructions, с прежними
+  scalar/row/byte bounds, без чтения тел и дополнительных native requests.
+  Это transport completion перед handler.onComplete, не подтверждение JSON,
+  captured current, dispose или application readback. CPU summary отдельно
+  считает точные empty-URL VM states GC/program; старые индексы сохранены,
+  исходные frame names/paths не публикуются, raw CPU profile удаляется как прежде.
+  Existing diagnostic suite 5/5, strict scoped TS 7.0.2, R2 и diff check PASS.

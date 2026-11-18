@@ -77,6 +77,13 @@ for (const path of ['/api/plugin', '/api/model', '/api/info']) {
     publish(name, request);
   }
 }
+for (const path of ['/api/session/TEST-session/log',
+  '/api/experimental/session/TEST-session/instructions/entries', '/api/info']) {
+  const request = { origin: 'http://127.0.0.1:65530', path: path + '?private=' + secret, method: 'GET' };
+  publish('undici:request:create', request);
+  publish('undici:request:trailers', { ...request });
+  publish('undici:request:trailers', request);
+}
 const failedRead = channel('agent-teams:opencode-v2:read-cut-failed');
 const failure = { stage: 'after-session', reason: 'deadline', elapsedMs: 30001, deadlineExpired: true, aborted: false };
 for (const invalid of [{ ...failure, reason: secret }, { ...failure, stage: secret },
@@ -154,6 +161,11 @@ process.stderr.write('', () => process.exit(1));
     assert.ok(originalTrace.entries.slice(0, 7).every(row => row.epoch === 1 && row.method === 'GET' &&
       typeof row.atMs === 'number' && (row.event === 'request' ? row.durationMs === null :
         typeof row.durationMs === 'number' && row.durationMs >= 0)));
+    const responseEnds = originalTrace.entries.filter(row => row.event === 'response-end');
+    assert.deepEqual(responseEnds.map(row => [row.request, row.route]), [[4, 'log'], [5, 'instructions']],
+      'only the original finite log/instruction request objects can report body arrival');
+    assert.ok(responseEnds.every(row => row.epoch === 1 && row.method === 'GET' &&
+      typeof row.atMs === 'number' && typeof row.durationMs === 'number' && row.durationMs >= 0));
     const readFailures = originalTrace.entries.filter(row => row.event === 'read-cut-failed');
     assert.equal(readFailures.length, 1, 'reserved late read failure survives original trace saturation once');
     const readFailure = readFailures[0]!;
@@ -250,6 +262,7 @@ process.stderr.write('', () => process.exit(1));
       ['configuration-read', 0, 0, 0, 0], ['credential-read', 1, 90, 1, 90],
       ['team-writer-authority', 8, 360, 9, 450], ['custody-image', 0, 0, 0, 0],
       ['provider-transport', 0, 0, 0, 0], ['other', 1, 100, 1, 100], ['idle', 0, 0, 0, 0],
+      ['v8-garbage-collector', 0, 0, 0, 0], ['v8-program', 0, 0, 0, 0],
     ], 'original broad totals and inclusive overlap remain unchanged');
     assert.deepEqual(projected.teamWriterDetails, [
       { family: 'namespace-fence', exclusiveSamples: 1, exclusiveSampledUs: 10 },
@@ -276,6 +289,29 @@ process.stderr.write('', () => process.exit(1));
     assert.equal(JSON.stringify(projected).includes(root), false);
     assert.equal(JSON.stringify(projected).includes('TEST-private-cpu-token'), false);
     assert.equal(projected.rawDiscarded, true); assert.equal(existsSync(path), false);
+
+    // Fixed V8 states split previously unclassified samples without retaining frame text.
+    const vmFrames = [
+      { url: '', functionName: '(garbage collector)' }, { url: '', functionName: '(program)' },
+      { url: '', functionName: '(idle)' }, frame('private.js', '(garbage collector)'),
+      frame('private.js', '(program)'), { url: '', functionName: '(garbage collector) ' },
+      { url: '', functionName: 'TEST-private-cpu-token' },
+    ];
+    writeFileSync(path, JSON.stringify({ startTime: 100, endTime: 300, nodes: [
+      { id: 1, callFrame: { url: '', functionName: '(root)' }, children: vmFrames.map((_, index) => index + 2) },
+      ...vmFrames.map((callFrame, index) => ({ id: index + 2, callFrame, children: [] })),
+    ], samples: [2, 3, 4, 5, 6, 7, 8], timeDeltas: [11, 13, 17, 19, 23, 29, 31] }), { mode: 0o600 });
+    const vmProjection = await readOriginalHostCpuProfile(path, true, 10000);
+    assert.equal(vmProjection.status, 'available');
+    assert.equal(vmProjection.sampledUs, 143); assert.equal(vmProjection.unsampledUs, 57);
+    assert.deepEqual(vmProjection.categories.filter(row => row.exclusiveSamples > 0)
+      .map(row => [row.category, row.exclusiveSamples, row.exclusiveSampledUs]), [
+        ['other', 4, 102], ['idle', 1, 17], ['v8-garbage-collector', 1, 11], ['v8-program', 1, 13],
+      ], 'only exact empty-URL VM frames are classified; lookalikes remain other');
+    assert.equal(vmProjection.categories.reduce((sum, row) => sum + row.exclusiveSampledUs, 0), 143);
+    for (const privateValue of [root, 'TEST-private-cpu-token', '(garbage collector)', '(program)'])
+      assert.equal(JSON.stringify(vmProjection).includes(privateValue), false);
+    assert.equal(vmProjection.rawDiscarded, true); assert.equal(existsSync(path), false);
 
     // Only original sampled ancestry identifies a caller; shared inner guards cannot replace it.
     const passwordFrame = frame('adapters/providers/OpenCodeV2MemberProvider.js', 'readPassword');
@@ -397,7 +433,7 @@ process.stderr.write('', () => process.exit(1));
     assert.deepEqual(refined.categories.map(row => [row.exclusiveSamples, row.exclusiveSampledUs,
       row.inclusiveSamples, row.inclusiveSampledUs]),
       [[0, 0, 0, 0], [1, 67, 2, 138], [17, 787, 18, 854], [0, 0, 0, 0],
-        [0, 0, 0, 0], [1, 73, 1, 73], [0, 0, 0, 0]]);
+        [0, 0, 0, 0], [1, 73, 1, 73], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]]);
     const namespace = refined.teamWriterDetails[0]!;
     assert.equal(refined.namespaceFenceDetails.reduce((sum, row) => sum + row.exclusiveSamples, 0),
       namespace.exclusiveSamples);
