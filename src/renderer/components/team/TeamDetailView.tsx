@@ -2095,7 +2095,7 @@ export const TeamDetailView = memo(function TeamDetailView({
         return;
       }
       await launchTeam(logicalTeamName
-        ? toLogicalProjectLaunchRequest(request, logicalTeamName, data?.config.projectPath)
+        ? toLogicalProjectLaunchRequest(request, logicalTeamName)
         : request);
     },
     [launchTeam, logicalTeamName, retainedHistory, data?.config.projectPath]
@@ -2123,9 +2123,7 @@ export const TeamDetailView = memo(function TeamDetailView({
           throw new Error('Edit the shared roster in the logical team before relaunching');
         }
         if (data?.isAlive) await api.teams.stop(teamName);
-        await launchTeam(toLogicalProjectLaunchRequest(
-          request, logicalTeamName, data?.config.projectPath
-        ));
+        await launchTeam(toLogicalProjectLaunchRequest(request, logicalTeamName));
         return;
       }
       await executeTeamRelaunch({
