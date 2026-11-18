@@ -758,6 +758,13 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
     setSkipPermissionsRaw(value);
     localStorage.setItem('team:lastSkipPermissions', String(value));
   };
+  const requireExplicitPermissionsForOtherProject = (path: string): void => {
+    // Never carry auto-approval from an owned runtime into a different project.
+    if (projectPermissionTeamName &&
+        normalizePath(path) !== normalizePath(defaultProjectPath ?? '')) {
+      setSkipPermissions(false);
+    }
+  };
   const setSelectedEffort = (value: string): void => {
     // Always an explicit user choice, including Default (''); programmatic clears
     // go through autoResetSelectedEffort instead.
@@ -2654,11 +2661,20 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
 
           {!usesSavedTeamRuntime ? <ProjectPathSelector
             cwdMode={cwdMode}
-            onCwdModeChange={setCwdMode}
+            onCwdModeChange={(mode) => {
+              if (projectPermissionTeamName && mode !== cwdMode) setSkipPermissions(false);
+              setCwdMode(mode);
+            }}
             selectedProjectPath={selectedProjectPath}
-            onSelectedProjectPathChange={setSelectedProjectPath}
+            onSelectedProjectPathChange={(path) => {
+              requireExplicitPermissionsForOtherProject(path);
+              setSelectedProjectPath(path);
+            }}
             customCwd={customCwd}
-            onCustomCwdChange={setCustomCwd}
+            onCustomCwdChange={(path) => {
+              requireExplicitPermissionsForOtherProject(path);
+              setCustomCwd(path);
+            }}
             projects={projects}
             projectsLoading={projectsLoading}
             projectsError={projectsError}
