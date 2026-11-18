@@ -4,12 +4,14 @@ import { useAppTranslation } from '@features/localization/renderer';
 import { api } from '@renderer/api';
 import { Button } from '@renderer/components/ui/button';
 import { useStore } from '@renderer/store';
+import { isTeamProvisioningActive } from '@renderer/store/slices/teamSlice';
 import { redirectProjectAliasTaskNavigation } from '@renderer/store/team/projectAliasTaskNavigation';
 import { registerVisiblePhysicalTeam } from '@renderer/store/team/teamViewVisibility';
 import { useShallow } from 'zustand/react/shallow';
 
 import { TeamDetailView } from './TeamDetailView';
 import { TeamHistoryModePicker } from './TeamHistoryModePicker';
+import { TeamProvisioningBanner } from './TeamProvisioningBanner';
 import { findTeamProjectSelectionTarget, resolveTeamProjectSelection } from './teamProjectSelection';
 
 import type { TeamProjectContextView } from '@features/team-project-context/contracts';
@@ -62,6 +64,9 @@ export const ProjectScopedTeamDetailView = ({
     activeProjectId: state.activeProjectId,
     logicalDisplayName: state.teamByName[teamName]?.displayName ?? teamName,
   })));
+  // A launch can start in Create Team or Team List, before this view owns a launchRef.
+  const provisioningActive = useStore((s) => isTeamProvisioningActive(s, teamName));
+  const provisioningError = useStore((s) => s.provisioningErrorByTeam[teamName] ?? null);
   const selectedProjectPath = useMemo(
     () =>
       resolveTeamProjectSelection({
@@ -371,6 +376,7 @@ export const ProjectScopedTeamDetailView = ({
     Boolean(selectedProjectPath) &&
     launchingKey === null &&
     awaitingReadyKey !== key &&
+    !provisioningActive &&
     !error &&
     (context?.state === 'empty' || context?.state === 'pending');
 
@@ -387,11 +393,18 @@ export const ProjectScopedTeamDetailView = ({
           />
         </div>
       )}
+      {context?.state === 'pending' && (
+        <div className="px-4 pt-3">
+          <TeamProvisioningBanner teamName={teamName} />
+        </div>
+      )}
       <div className="flex flex-1 flex-col items-center justify-center gap-3 p-6 text-center">
       <h2 className="text-base font-semibold">{logicalDisplayName}</h2>
-      <p className="max-w-lg text-sm text-text-muted" role={error ? 'alert' : 'status'}>
-        {message}
-      </p>
+      {!(context?.state === 'pending' && provisioningError) && (
+        <p className="max-w-lg text-sm text-text-muted" role={error ? 'alert' : 'status'}>
+          {message}
+        </p>
+      )}
       {canStart && (
         <Button onClick={() => setLaunchDialogOpen(true)} disabled={launching}>
           {t('projectContextView.start')}

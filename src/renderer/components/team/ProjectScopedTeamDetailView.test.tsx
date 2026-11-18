@@ -17,6 +17,9 @@ const { state, getView, launchTeam, openTeamTab, updateTabLabel } = vi.hoisted((
     teamByName: {
       builders: { displayName: 'Builders' },
     },
+    provisioningRuns: {} as Record<string, { runId: string; teamName: string; state: string }>,
+    currentProvisioningRunIdByTeam: {} as Record<string, string>,
+    provisioningErrorByTeam: {} as Record<string, string | null>,
   };
   return { state, getView: vi.fn(), launchTeam: vi.fn(), openTeamTab: vi.fn(), updateTabLabel: vi.fn() };
 });
@@ -38,6 +41,11 @@ vi.mock('@renderer/store', () => ({
 vi.mock('@renderer/api', () => ({ api: { teams: { getProjectContextView: getView, launchTeam, onProvisioningProgress: () => () => undefined } } }));
 vi.mock('@features/localization/renderer', () => ({
   useAppTranslation: () => ({ t: (key: string) => key }),
+}));
+vi.mock('./TeamProvisioningBanner', () => ({
+  TeamProvisioningBanner: ({ teamName }: { teamName: string }) =>
+    React.createElement('div', { 'data-testid': 'provisioning-banner' },
+      state.provisioningErrorByTeam[teamName] ?? 'Launching'),
 }));
 vi.mock('./TeamDetailView', () => ({
   TeamDetailView: ({ teamName, retainedHistory }: { teamName: string; retainedHistory?: boolean }) =>
@@ -97,6 +105,9 @@ describe('ProjectScopedTeamDetailView project switching', () => {
     updateTabLabel.mockReset();
     state.selectedProjectId = 'project-a';
     state.activeProjectId = 'project-a';
+    state.provisioningRuns = {};
+    state.currentProvisioningRunIdByTeam = {};
+    state.provisioningErrorByTeam = {};
     host = document.createElement('div');
     document.body.appendChild(host);
     root = createRoot(host);
@@ -249,6 +260,44 @@ describe('ProjectScopedTeamDetailView project switching', () => {
     ));
     await settle();
     expect(host.querySelector('[data-team]')?.getAttribute('data-team')).toBe('builders');
+  });
+
+  it('surfaces Create Team and Team List launch failures without a local launch reference', async () => {
+    getView.mockImplementation(async (_team: string, path: string) =>
+      ({ mode: 'per_project', state: path === '/TEST/a' ? 'pending' : 'empty' })
+    );
+    state.provisioningErrorByTeam.builders = 'Project runtime bootstrap failed';
+    await act(async () => root.render(
+      React.createElement(ProjectScopedTeamDetailView, { teamName: 'builders' })
+    ));
+    await settle();
+    expect(host.querySelector('[data-testid="provisioning-banner"]')?.textContent)
+      .toContain('Project runtime bootstrap failed');
+    expect(host.textContent).toContain('Project runtime bootstrap failed');
+    expect(launchTeam).not.toHaveBeenCalled();
+
+    state.selectedProjectId = 'project-b';
+    await act(async () => root.render(
+      React.createElement(ProjectScopedTeamDetailView, { teamName: 'builders' })
+    ));
+    await settle();
+    expect(host.querySelector('[data-testid="provisioning-banner"]')).toBeNull();
+    expect(host.textContent).toContain('projectContextView.empty');
+  });
+
+  it('blocks duplicate launch while Team List is provisioning the selected project', async () => {
+    getView.mockResolvedValue({ mode: 'per_project', state: 'pending' });
+    state.currentProvisioningRunIdByTeam.builders = 'run-from-team-list';
+    state.provisioningRuns['run-from-team-list'] = {
+      runId: 'run-from-team-list', teamName: 'builders', state: 'spawning',
+    };
+    await act(async () => root.render(
+      React.createElement(ProjectScopedTeamDetailView, { teamName: 'builders' })
+    ));
+    await settle();
+    expect(host.querySelector('[data-testid="provisioning-banner"]')).not.toBeNull();
+    expect(host.textContent).toContain('projectContextView.pending');
+    expect(host.querySelector('button')).toBeNull();
   });
 
   it('does not render another project history when target project is empty', async () => {
