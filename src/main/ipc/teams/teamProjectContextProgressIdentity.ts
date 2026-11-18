@@ -31,6 +31,25 @@ export function rememberProjectRunIdentity(
   identities.set(runId, { logicalTeam, physicalTeam, registeredAt: now });
 }
 
+/**
+ * Diagnostic artifacts use the native team directory, while the UI receives
+ * the logical identity. Only route a known exact run belonging to this logical
+ * team; never guess an alias from a prefix or unrelated run ID.
+ */
+export function resolveProjectRunDiagnosticsTeam(
+  logicalTeam: string,
+  runId: string | undefined
+): string {
+  if (!runId) return logicalTeam;
+  const row = identities.get(runId);
+  if (!row || row.logicalTeam !== logicalTeam) return logicalTeam;
+  if (Date.now() - row.registeredAt > RETENTION_MS) {
+    identities.delete(runId);
+    return logicalTeam;
+  }
+  return row.physicalTeam;
+}
+
 export function projectPublicProvisioningProgress(
   progress: TeamProvisioningProgress
 ): TeamProvisioningProgress {

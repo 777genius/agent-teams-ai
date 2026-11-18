@@ -1,33 +1,44 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import {
-  projectPublicProvisioningProgress,
   rememberProjectRunIdentity,
+  resolveProjectRunDiagnosticsTeam,
+  projectPublicProvisioningProgress,
 } from '../../../src/main/ipc/teams/teamProjectContextProgressIdentity';
 
-import type { TeamProvisioningProgress } from '../../../src/shared/types/team';
+describe('project provisioning diagnostics identity', () => {
+  afterEach(() => { vi.useRealTimers(); });
 
-function progress(runId: string, teamName: string): TeamProvisioningProgress {
-  return {
-    teamName, runId, state: 'failed', message: 'Startup failed',
-    startedAt: '2026-11-18T00:00:00Z',
-    updatedAt: '2026-11-18T00:00:01Z',
-  };
-}
-
-describe('project run status polling identity', () => {
-  it('maps only the exact known runtime run and physical team to the logical name', () => {
-    rememberProjectRunIdentity('project-run-1', 'builders', 'ptc-project-a');
-    expect(projectPublicProvisioningProgress(progress('project-run-1', 'ptc-project-a')).teamName)
-      .toBe('builders');
-    expect(projectPublicProvisioningProgress(progress('project-run-2', 'ptc-project-a')).teamName)
+  it('resolves the exact physical team for the logical team and run', () => {
+    rememberProjectRunIdentity('run-diagnostics-a', 'logical', 'ptc-project-a');
+    expect(resolveProjectRunDiagnosticsTeam('logical', 'run-diagnostics-a'))
       .toBe('ptc-project-a');
-    expect(projectPublicProvisioningProgress(progress('project-run-1', 'unrelated')).teamName)
-      .toBe('unrelated');
+    const progress = projectPublicProvisioningProgress({
+      teamName: 'ptc-project-a',
+      runId: 'run-diagnostics-a',
+      state: 'failed',
+      message: 'failed',
+      startedAt: '', updatedAt: '',
+    });
+    expect(progress.teamName).toBe('logical');
   });
 
-  it('preserves existing shared run status unchanged', () => {
-    expect(projectPublicProvisioningProgress(progress('legacy-run', 'legacy-team')).teamName)
-      .toBe('legacy-team');
+  it('does not expose another logical team diagnostics when the run ID is supplied', () => {
+    rememberProjectRunIdentity('run-diagnostics-b', 'first-logical', 'ptc-first');
+    expect(resolveProjectRunDiagnosticsTeam('second-logical', 'run-diagnostics-b'))
+      .toBe('second-logical');
+    expect(resolveProjectRunDiagnosticsTeam('first-logical', 'unrelated'))
+      .toBe('first-logical');
+    expect(resolveProjectRunDiagnosticsTeam('first-logical', undefined))
+      .toBe('first-logical');
+  });
+
+  it('does not route expired in-memory provisioning evidence to an alias', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-11-18T10:00:00.000Z'));
+    rememberProjectRunIdentity('run-diagnostics-expired', 'logical', 'ptc-old');
+    vi.setSystemTime(new Date('2026-11-18T15:00:00.000Z'));
+    expect(resolveProjectRunDiagnosticsTeam('logical', 'run-diagnostics-expired'))
+      .toBe('logical');
   });
 });

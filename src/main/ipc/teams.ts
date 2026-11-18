@@ -230,7 +230,7 @@ import { createMessagesPageHandler } from './teams/teamMessagesPageHandler';
 import { TeamPermanentDeletionTransactionCoordinator } from './teams/TeamPermanentDeletionTransactionCoordinator';
 import { createTeamWithProjectContext } from './teams/teamProjectContextCreate';
 import { buildTeamProgressReporter, withPreparedContextLaunch } from './teams/teamProjectContextLaunch';
-import { projectPublicProvisioningProgress } from './teams/teamProjectContextProgressIdentity';
+import { projectPublicProvisioningProgress, resolveProjectRunDiagnosticsTeam } from './teams/teamProjectContextProgressIdentity';
 import { discardQueuedUserMessages, listQueuedUserMessages } from './teams/teamQueuedUserMessages';
 import { createTeamSoftDeleteRequests } from './teams/teamSoftDeleteFlow';
 import { withTimeoutValue } from './teams/withTimeoutValue';
@@ -2586,7 +2586,6 @@ async function handleProvisioningStatus(
     )
   );
 }
-
 async function handleLaunchFailureDiagnostics(
   _event: IpcMainInvokeEvent,
   teamName: unknown,
@@ -2598,7 +2597,9 @@ async function handleLaunchFailureDiagnostics(
   }
   const validatedRunId = typeof runId === 'string' && runId.trim() ? runId.trim() : undefined;
   return wrapTeamHandler('launchFailureDiagnostics', () =>
-    readTeamLaunchFailureDiagnosticsBundle(validatedTeamName.value!, validatedRunId)
+    readTeamLaunchFailureDiagnosticsBundle(
+      resolveProjectRunDiagnosticsTeam(validatedTeamName.value!, validatedRunId), validatedRunId
+    )
   );
 }
 
