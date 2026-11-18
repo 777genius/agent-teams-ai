@@ -228,6 +228,63 @@ describe('TeamTaskWatchRegistry scoping', () => {
     expect(targets).toContain(path.normalize(path.join(root, 'beta')));
   });
 
+  describe('task directory backfill', () => {
+    const HOUR_MS = 60 * 60 * 1000;
+
+    function seedTaskFiles(team: string, count: number): void {
+      const dir = path.join(root, team);
+      for (let id = 1; id <= count; id++) {
+        fs.writeFileSync(path.join(dir, `${id}.json`), '{}');
+      }
+      const longAgo = new Date(Date.now() - HOUR_MS);
+      for (const name of fs.readdirSync(dir)) {
+        fs.utimesSync(path.join(dir, name), longAgo, longAgo);
+      }
+      // Directory mtime is bumped last: writing files above changes it.
+      fs.utimesSync(dir, longAgo, longAgo);
+    }
+
+    async function openTeamAndCollect(events: string[], afterStart?: () => void): Promise<void> {
+      const scoped = new Set<string>(['alpha']);
+      const registry = new TeamTaskWatchRegistry({
+        kind: 'tasks',
+        rootPath: root,
+        onChange: (_eventType, relativePath) => events.push(relativePath),
+        onError: () => {},
+        getScopedTeamNames: () => scoped,
+      });
+      try {
+        await registry.start();
+        afterStart?.();
+        scoped.add('beta');
+        await registry.requestReconcile();
+      } finally {
+        await registry.close();
+      }
+    }
+
+    it('does not replay historical task files when a team enters scope', async () => {
+      seedTaskFiles('beta', 50);
+      const events: string[] = [];
+
+      await openTeamAndCollect(events);
+
+      expect(latestTargets()).toContain(path.normalize(path.join(root, 'beta')));
+      expect(events).toEqual([]);
+    });
+
+    it('still replays task files written after the previous pass', async () => {
+      seedTaskFiles('beta', 50);
+      const events: string[] = [];
+
+      await openTeamAndCollect(events, () => {
+        fs.writeFileSync(path.join(root, 'beta', '51.json'), '{}');
+      });
+
+      expect(events).toEqual(['beta/51.json']);
+    });
+  });
+
   it('backfills existing inbox files when a live team enters inbox scope', async () => {
     const artifactScoped = new Set<string>(['alpha', 'beta']);
     const inboxScoped = new Set<string>(['alpha']);

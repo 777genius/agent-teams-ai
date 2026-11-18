@@ -47,6 +47,11 @@ const RECONCILE_INTERVAL_MS = 30_000;
 // change; this only avoids rebuilding the whole watcher once per event in a burst.
 const RECONCILE_DEBOUNCE_MS = 250;
 
+// Backfill for newly watched task directories only replays files that could have
+// been created or edited since the previous target pass. Coarse filesystem
+// timestamps (HFS+, FAT, network mounts) and small clock steps need some slack.
+const TASK_BACKFILL_MTIME_SLACK_MS = 2_000;
+
 // Keep this list aligned with FileWatcher.processTeamsChange().
 // If a new team artifact should produce TeamChangeEvent, add it here too.
 const TEAM_ROOT_FILES = new Set([
@@ -92,6 +97,8 @@ export class TeamTaskWatchRegistry {
   private reconcileDebounceTimer: NodeJS.Timeout | null = null;
   private readonly suspendedTeams = new Set<string>();
   private suppressInitialInboxBackfill = false;
+  /** Start time of the last target pass whose result was applied (0 = none yet). */
+  private lastTargetPassStartedAt = 0;
 
   constructor(private readonly options: TeamTaskWatchRegistryOptions) {}
 
@@ -279,6 +286,7 @@ export class TeamTaskWatchRegistry {
   private async runReconcilePass(options: { rethrowErrors?: boolean }): Promise<void> {
     this.reconcileInProgress = true;
     try {
+      const passStartedAt = Date.now();
       // Re-filter here rather than trusting collectTargets alone: a team can be
       // suspended after this pass read the directory, and applying the stale
       // list would put a watcher back on the tree that is about to be renamed.
@@ -286,8 +294,10 @@ export class TeamTaskWatchRegistry {
         (target) => !this.isSuspendedTarget(target)
       );
       const nextKey = targets.join('\n');
+      const previousPassStartedAt = this.lastTargetPassStartedAt;
+      this.lastTargetPassStartedAt = passStartedAt;
       if (nextKey !== this.targetKey) {
-        await this.applyTargetSet(targets, nextKey);
+        await this.applyTargetSet(targets, nextKey, previousPassStartedAt);
       }
     } catch (error) {
       if (options.rethrowErrors) {
@@ -316,7 +326,11 @@ export class TeamTaskWatchRegistry {
     return false;
   }
 
-  private async applyTargetSet(targets: string[], nextKey: string): Promise<void> {
+  private async applyTargetSet(
+    targets: string[],
+    nextKey: string,
+    previousPassStartedAt: number
+  ): Promise<void> {
     if (this.closed) {
       return;
     }
@@ -349,7 +363,15 @@ export class TeamTaskWatchRegistry {
     this.targetKey = nextKey;
 
     if (addedTargets.length > 0) {
-      await this.emitExistingFilesForNewTargets(addedTargets, generation);
+      await this.emitExistingFilesForNewTargets(addedTargets, generation, {
+        // A task directory can enter scope only because the user opened its team.
+        // Replaying every historical task file then floods consumers that re-read
+        // the whole board per event, so only changes since the previous pass count.
+        modifiedSince:
+          this.options.kind === 'tasks' && previousPassStartedAt > 0
+            ? previousPassStartedAt - TASK_BACKFILL_MTIME_SLACK_MS
+            : undefined,
+      });
     }
   }
 
@@ -422,14 +444,21 @@ export class TeamTaskWatchRegistry {
 
   private async emitExistingFilesForNewTargets(
     targets: string[],
-    generation: number
+    generation: number,
+    options: { modifiedSince?: number } = {}
   ): Promise<void> {
     const normalizedRoot = path.normalize(this.options.rootPath);
+    const { modifiedSince } = options;
     for (const targetPath of targets) {
       if (this.closed || generation !== this.generation) {
         return;
       }
       if (path.normalize(targetPath) === normalizedRoot) {
+        continue;
+      }
+      // Adding or renaming a file updates the directory mtime, so an untouched
+      // directory cannot hold a file this watcher missed.
+      if (modifiedSince !== undefined && !(await this.hasChangedSince(targetPath, modifiedSince))) {
         continue;
       }
       // Covers the race where a new team/task/inbox dir is created with JSON
@@ -443,11 +472,26 @@ export class TeamTaskWatchRegistry {
         if (!entry.isFile()) {
           continue;
         }
-        const relativePath = this.toRelativePath(path.join(targetPath, entry.name));
-        if (relativePath && this.shouldEmit('add', relativePath)) {
-          this.options.onChange('add', relativePath);
+        const filePath = path.join(targetPath, entry.name);
+        const relativePath = this.toRelativePath(filePath);
+        if (!relativePath || !this.shouldEmit('add', relativePath)) {
+          continue;
         }
+        if (modifiedSince !== undefined && !(await this.hasChangedSince(filePath, modifiedSince))) {
+          continue;
+        }
+        this.options.onChange('add', relativePath);
       }
+    }
+  }
+
+  /** Missing or unreadable entries count as changed so a race never drops an event. */
+  private async hasChangedSince(entryPath: string, sinceMs: number): Promise<boolean> {
+    try {
+      const stats = await fsp.stat(entryPath);
+      return stats.mtimeMs >= sinceMs;
+    } catch {
+      return true;
     }
   }
 
