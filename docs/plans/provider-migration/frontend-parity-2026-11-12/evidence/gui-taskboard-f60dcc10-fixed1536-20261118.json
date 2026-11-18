@@ -569,5 +569,123 @@
     "projection": "Explicit metadata allowlist; no command payloads, environment maps, credentials, raw DOM, notification text or full source-hash roster copied.",
     "keyNameInspection": "No secret-bearing key names in the derived summary.",
     "rawSourceArtifactsCopied": false
+  },
+  "independentVisualInspection": {
+    "kind": "DERIVED_POST_RUN_VISUAL_INSPECTION",
+    "verdict": "REVIEWED_WITH_NOTES",
+    "scope": "Independent inspection of seven retained images from the same original f60dcc10 fixed1536 invocation; no new screenshots, commands or runtime observations.",
+    "originalReceiptUnchanged": true,
+    "originalTaskBoardVisualReviewFieldUnchanged": "screenshots retained; independent visual inspection pending",
+    "updatesOriginalAutomatedVerdicts": false,
+    "reviews": [
+      {
+        "reviewer": "/root/pr_graph",
+        "imageCount": 5,
+        "images": [
+          {
+            "artifact": {
+              "path": "/tmp/TEST-desktop-backend-NOf0ZA/ui-task-board-initial.png",
+              "bytes": 98789,
+              "sha256": "5d115e2f351114fb3fc965e9a5d2445e23eeea1c9f36c9dcda974f08eb9b1f0b"
+            },
+            "observations": [
+              "TEST private backend is offline; alice and board-peer, Tasks 1 / TODO 1, and the seeded sidebar are visible.",
+              "The TODO card is still a loading skeleton."
+            ],
+            "limitations": [
+              "This frame alone does not qualify the loaded card content."
+            ]
+          },
+          {
+            "artifact": {
+              "path": "/tmp/TEST-desktop-backend-NOf0ZA/ui-task-board-assigned-blocked.png",
+              "bytes": 105621,
+              "sha256": "1c302e13b371485b257b4a3ef10b0cf7ea2fa0e9f7a180b24d7ac33912741a83"
+            },
+            "observations": [
+              "Dependent task c6d28959 is Pending and assigned to alice.",
+              "The red clarification indicator and Mark resolved control, and yellow Blocked by ac0e4ad3 relationship, are legible.",
+              "The dialog is inside the viewport."
+            ]
+          },
+          {
+            "artifact": {
+              "path": "/tmp/TEST-desktop-backend-NOf0ZA/ui-task-board-reordered.png",
+              "bytes": 125922,
+              "sha256": "dab66fbd7a92aedd959c5e7bd23a54528119e843a79d0fcbb7ad3c973a4dc629"
+            },
+            "observations": [
+              "TODO contains two tasks; dependent c6d28959 appears above seed ac0e4ad3.",
+              "Reciprocal Blocked by / Blocks relationships and the alice label are visible."
+            ],
+            "limitations": [
+              "Long references are ellipsized."
+            ]
+          },
+          {
+            "artifact": {
+              "path": "/tmp/TEST-desktop-backend-NOf0ZA/ui-task-board-blocked-start.png",
+              "bytes": 138321,
+              "sha256": "15b858c1d9eff3944a44faeb13d971f3a0ea6e046699d36a9e5681986e9654fa"
+            },
+            "observations": [
+              "Both tasks remain in TODO; the dependent task, owner and blocker are visible.",
+              "The sidebar visibly states: Tasks could not be refreshed; Previously loaded results remain visible; Host read crossed a mutation boundary."
+            ],
+            "limitations": [
+              "This frame is not warning-free. A static screenshot alone cannot prove that no mutation occurred."
+            ]
+          },
+          {
+            "artifact": {
+              "path": "/tmp/TEST-desktop-backend-NOf0ZA/ui-task-board-reloaded.png",
+              "bytes": 118605,
+              "sha256": "61c299ff26e749af18056ae8ecd33e622bcd1b8879bd1816c04b50bea19e7bae"
+            },
+            "observations": [
+              "TODO is 0 and In Progress is 1, with the same dependent task, alice label and dependency.",
+              "The seed is green/completed in the sidebar; the earlier refresh warning is absent."
+            ]
+          }
+        ],
+        "assessment": "No obvious clipping or overlap of primary task controls within these five image scopes. Initial loading and blocked-start refresh-warning qualifications remain."
+      },
+      {
+        "reviewer": "/root",
+        "imageCount": 2,
+        "images": [
+          {
+            "artifact": {
+              "path": "/tmp/TEST-desktop-backend-NOf0ZA/ui-task-review-approved.png",
+              "bytes": 97846,
+              "sha256": "4d27bff58f189223e0d2411fcd7b6abb90c65329e74018bd942a0a7a3176daec"
+            },
+            "observations": [
+              "The dependent subject is legible in Approved; the seed is Done.",
+              "Displayed dependency and owner are consistent with the retained task state."
+            ]
+          },
+          {
+            "artifact": {
+              "path": "/tmp/TEST-desktop-backend-NOf0ZA/ui-failure.png",
+              "bytes": 135174,
+              "sha256": "0b99088eb6cb82138d4cbbba0f5817eff9eb77790a7f1d3f78b3685ae876879c"
+            },
+            "observations": [
+              "The retained failure image shows clipping within the intended 384 px ReviewFlow panel region."
+            ],
+            "limitations": [
+              "This inspection does not qualify successful interaction with the default-settings link."
+            ]
+          }
+        ],
+        "assessment": "Readability of the approved-task frame and clipping in the original failure frame were independently reviewed."
+      }
+    ],
+    "limitations": [
+      "Visual inspection corroborates only the visible retained states.",
+      "It does not independently establish command-receipt correctness, no replay, native execution, all-platform behavior, completed ReviewFlow, or the three owner-routing epochs.",
+      "Overall original run remains INCOMPLETE; the raw receipt retains its original pending visual-review wording."
+    ]
   }
 }

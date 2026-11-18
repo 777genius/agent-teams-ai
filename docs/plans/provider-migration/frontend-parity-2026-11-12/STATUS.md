@@ -1,11 +1,11 @@
 # Завершение Host / frontend parity
 
 Обновлено: 18 ноября 2026. Единственный текущий рабочий план.
-Последний проверенный app source: `f60dcc107c00c58c0a577f2661f9f0eaf80a596f`.
-Provider entrypoints и четыре Host import-only изменения прошли R2.
-Canonical provider check PASS; provider `b19494fd` опубликован.
-Taskboard и task review cycle GUI PASS; ReviewFlow остановился на невидимой ссылке.
-Навигация к footer исправлена через существующий bounded trusted scroll; R2 PASS.
+Последний original GUI source: `823ef00a5cd081ccc3efdad85faf41e1cd888a27`.
+Provider `b19494fd`: canonical check PASS; узкие Host imports опубликованы.
+Taskboard PASS на 823; review cycle PASS только на f60. Последний прогон
+остановился при reload после Approved; footer fix ещё не был исполнен.
+Следующий ограниченный эксперимент: 1536 MiB + UV4, focused 10/10 и R2 PASS.
 
 ## Цель, доставка и неизменные границы
 
@@ -38,7 +38,7 @@ Desktop frontend для Claude, Codex, OpenCode V1/V2. Работать авто
 
 | ID | Состояние | Следующий результат и критерий готовности | Владелец |
 | --- | --- | --- | --- |
-| F1 | Taskboard и task review cycle GUI PASS на f60; ReviewFlow INCOMPLETE | Довести переход к footer в scrollable popover, затем original Settings/Approved/reopen и все три owner-routing epochs. Сохранить current request/cycle, final receipt и пустой cleanup. | pr_graph; media; reviewflow; root |
+| F1 | Taskboard PASS на 823; review cycle PASS на f60; ReviewFlow INCOMPLETE | Проверить reload и исправленный footer на ограниченном 1536 + UV4 профиле; затем original Settings/Approved/reopen и все три owner-routing epochs. Сохранить current request/cycle, final receipt и пустой cleanup. | pr_graph; media; reviewflow; root |
 | F2 | Реализация и focused contracts PASS | Сохранить canonical Host agenda: lead/user clarification блокирует review work до review cycle; app path остаётся re-export. Не выдавать UI сохранение lead_then_human за исполненный lead handoff. | reviewflow |
 | M1 | Native E2E PASS только на 2f33d566 | Сохранить точный native receipt; новый package оценить по затронутым boundaries. Desktop/vendor auth/release этим native run не квалифицированы. | media; R2 reviewflow |
 | E1 | Исходные source/fixture отказы исправлены; текущий GUI остаётся | После первого GUI выполнить минимальную очередь изменённых Create/import/retained/Resume/Add/collaboration путей; исходные authority/source/no-replay/cleanup assertions обязательны. | root; pr_graph |
@@ -97,7 +97,10 @@ Taskboard прошёл create/dependency/association/assignee/clarification/orde
 blocked-start и последующий success, reload и attachments. Review cycle прошёл
 исходные девять состояний complete→request→request_changes→start→comment→complete→
 request→approve→disapprove, итог completed/none в Done. R2 связал source hashes
-всех трёх UI proofs с опубликованными Git objects; отдельный visual signoff не заявлен.
+всех трёх UI proofs с опубликованными Git objects. Отдельно осмотрены семь
+сохранённых screenshots: нужные task/review состояния читаемы. У initial ещё
+loading skeleton; blocked-start показывает временный mutation-boundary warning,
+исчезнувший после reload. Visual review сохраняет эти оговорки, не меняя verdict.
 
 ReviewFlow открыл policy panel одним trusted click и прочитал inherited
 agent_approval. Следующая ссылка `open existing default settings link` активна,
@@ -114,6 +117,28 @@ pinned Node 24.21 syntax check, diff check и independent actual-diff R2 PASS.
 [Производная сводка исходного f60 GUI](evidence/gui-taskboard-f60dcc10-fixed1536-20261118.json)
 связывает source, 22 command receipts и 10 screenshots с hashes. Это bounded
 summary общего INCOMPLETE, не полный receipt и не новый общий PASS.
+
+
+**Повтор на 823ef00a:** Main/preload/renderer готовы, Taskboard PASS. Review cycle
+успел сохранить Approve receipt и Approved screenshot, затем original Page.reload
+на 235.474 s не завершился до исходного CDP Runtime.evaluate timeout. Новый footer
+helper не вызывался, ReviewFlow proof/settings mutation отсутствуют. Позже log
+зафиксировал renderer `killed 9` и recovery navigation на 300.414 s; отправитель
+сигнала и OOM не установлены. `lastCheckAt` записан перед synchronous owner census,
+поэтому он не доказывает точное время отправки зависшего CDP request.
+Wrapper exit 1 за 318.542 s; Quit unconfirmed. Fallback cleanup подтвердил
+capturedHostObserved=true, capturedHostAbsent=true, remaining=[]; app SIGTERM,
+source freeze/cleanup без ошибок. Исходный renderer исчез до fallback cleanup;
+сам cleanup не объясняет его kill. Failure screenshot показывает recovery splash.
+[Производная сводка 823 GUI](evidence/gui-taskboard-823ef00a-fixed1536-20261118.json)
+сохраняет hashes и границы наблюдения. Full E2E остаётся INCOMPLETE.
+
+На 823 passive peak total PSS 3612806 KiB; Vite 1689258 KiB / 23 threads,
+original renderer 1544628 KiB / 23 threads. В доступных diagnostic events нет
+Runtime.exceptionThrown; фильтры console/log не позволяют исключить все warnings
+или busy loop. Между f60 и 823 из 1883 source pins изменился только footer helper,
+до которого последний прогон не дошёл. Следующая проверка меняет только finite
+app resource context на 1536 + UV4; это эксперимент, не доказанное исправление kill.
 
 ## Подтверждённая реализация и границы результатов
 
@@ -187,8 +212,8 @@ TEST parser допускает исходный 384 KiB chunk только дл�
 
 ## Original GUI: компактная история незавершённых запусков
 
-Все запуски пока **INCOMPLETE** и без финальных owner epochs. Последний дошёл
-до реального UI; предыдущие завершались до него. Cleanup.remaining пуст;
+Все запуски пока **INCOMPLETE** и без финальных owner epochs. Два последних
+прогона с original 1536 дошли до реального UI; меньшие heaps завершались до него. Cleanup.remaining пуст;
 исходный startup 180 s не увеличивался.
 
 | Source / профиль | Фактический результат Main SSR | Наблюдение |
@@ -202,24 +227,32 @@ TEST parser допускает исходный 384 KiB chunk только дл�
 | **4f5ae2dc / 1024 + UV4, maps off** | **Explicit V8 OOM/SIGABRT, 30.248 s** | Retained heap 1010.7 MB; Vite PSS 1205049 / total 1786707 KiB; source freeze/cleanup без ошибок. |
 | f60dcc10 / 1024 + UV4, maps off | 3712 modules transformed, затем explicit OOM/SIGABRT; 53.099 s | Retained heap 996.2 MB; Vite PSS 1197674 / total 1757584 KiB. |
 | **f60dcc10 / original 1536, maps off** | **Main/preload/renderer PASS; Taskboard + review cycle PASS; ReviewFlow link offscreen** | Wrapper 334.508 s, exit 1; failure Quit acknowledged, listener absent, appExit 0; capturedHostObserved=false, отдельный Host exit не заявляется. |
+| **823ef00a / original 1536, maps off** | **Main/preload/renderer и Taskboard PASS; reload после Approved INCOMPLETE** | Wrapper 318.542 s, exit 1; CDP Runtime.evaluate timeout, позднее renderer killed 9. Quit unconfirmed; fallback подтвердил Host absent и remaining=[]; новый footer не исполнен. |
 
-Действующий experimental selector — только 1024 + UV4 для прежних семи Linux/x64
-finite emulated modes. Retired 512/768, произвольные flags, malformed/two selectors
-отвергаются; exact Node/UV проверяются до/после normalizer. Focused 10/10 и R2 PASS.
+Действующий experimental selector — `LEGACY_DESKTOP_TEST_FINITE_HEAP_1536_UV4=1`
+для прежних семи Linux/x64 finite emulated modes: exact Node heap 1536 и UV pool 4.
+Retired 512/768/1024, произвольные flags, malformed/two selectors отвергаются;
+exact Node/UV проверяются до/после normalizer. UV4 выбирается по явному selector,
+а не по Node option, который теперь совпадает с original 1536. Оба новых test
+blocks актуализированы, восемь original blocks сохранены. Focused **10/10 PASS**,
+zero skips, 1550.741 ms; independent actual-diff R2 PASS. Log SHA256
+`1af0934696abe38fc8276dd0bb23108eda7aa9cd8f9cd6f73434f06601bca4ab`.
 Original 1536/default/native, parent heap, команды/plugins и deadlines сохранены.
 Профиль действует на TEST app-chain, включая Electron Main; Host closed env
-не наследует NODE_OPTIONS/UV. Maps-off меняет debug artifacts main/renderer,
-не preload; byte-identical build/Sentry qualification не заявлены.
-Explicit OOM новых попыток не устанавливает причину прежних SIGKILL.
-Последний и следующий original GUI используют существующий профиль 1536
-с исходным UV behavior. Его parent heap, capture pins и Host environment прежние;
-новых resource selectors, production knobs или deadlines для этого не вводилось.
+не наследует NODE_OPTIONS/UV. UV4 ограничивает libuv/Rollup concurrency, не задаёт
+Chromium threads и не гарантирует меньший retained graph. Пассивный observer
+добавляет только CPU ticks из уже читаемого bounded /proc/PID/stat; прежние
+cadence/limits/identity guards сохранены. До завершения нового original run
+профиль не считается решением renderer failure.
+Maps-off меняет debug artifacts main/renderer, не preload; byte-identical
+build/Sentry qualification не заявлены. Explicit OOM меньших heaps не
+устанавливает причину остальных SIGKILL.
 
 ## Оставшиеся обязательные gates и минимальная очередь
 
-1. Опубликовать минимальное исправление footer navigation и actual GUI evidence;
-   provider archive/install/Host build неизменны и повторной проверки не требуют.
-2. Один original task-board-cross-team-ui на чистом новом source. При успехе читать
+1. Footer navigation опубликована; source-R2 PASS, фактическое исполнение ещё
+   требуется. Provider archive/install/Host build неизменны и не повторяются.
+2. Один original task-board-cross-team-ui на чистом source с 1536 + UV4. Читать
    final durable receipt после exit и всех трёх owner-routing epochs: ранняя
    console PASS недостаточна. Host/source/owner/cleanup guards обязательны.
 3. Затем очередь без duplicate basic taskboard: emulated-selection-ui,
@@ -250,9 +283,9 @@ Explicit OOM новых попыток не устанавливает прич�
 
 ## CI snapshot, исходные receipts и решения
 
-Снимок GitHub на 4f5ae2dc: **43 review threads resolved**, новых open findings нет.
-CI proof / Host emulated / process / packaged / Teams creation / V2 static —
-**queued, не PASS**. Повторные workflow не запрашиваются; отменённые cohorts
+Снимок GitHub на 823ef00a: **43 review threads resolved**, новых open findings нет.
+29 runs: 14 skipped / 15 queued. CI proof / Host emulated / process / packaged /
+Teams creation / V2 static — **queued, не PASS**. Повторные workflow не запрашиваются; отменённые cohorts
 и skipped jobs не квалифицируют новый срез.
 
 | Исторический source 9a8d7ffd | Результат и исходный run |
