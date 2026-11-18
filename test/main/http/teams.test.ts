@@ -749,6 +749,7 @@ describe('HTTP team runtime routes', () => {
       expect(createTeam).toHaveBeenCalledWith(
         {
           teamName: 'draft-team',
+          projectContextMode: 'shared',
           displayName: 'Draft Team',
           description: 'Saved draft',
           color: '#3366ff',

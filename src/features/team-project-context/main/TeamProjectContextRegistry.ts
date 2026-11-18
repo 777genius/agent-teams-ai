@@ -476,9 +476,14 @@ export class TeamProjectContextRegistry {
     return withFileLock(this.indexPath(logicalTeamName), async () => {
       await this.assertOwnedDirectory(logicalTeamName);
       const index = await this.readIndex(logicalTeamName);
-      if (index.deleting || index.softDeleting) {
+      if (index.deleting) {
         throw new TeamProjectContextUnavailableError(
-          'Team deletion or trash operation is in progress; new project contexts are disabled'
+          'Team permanent deletion is in progress; new project contexts are disabled'
+        );
+      }
+      if (index.softDeleting) {
+        throw new TeamProjectContextUnavailableError(
+          'Team trash operation is in progress; new project contexts are disabled'
         );
       }
       const existing = index.contexts.find((c) => c.projectKey === projectKey);

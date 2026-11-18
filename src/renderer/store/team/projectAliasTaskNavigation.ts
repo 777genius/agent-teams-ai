@@ -13,6 +13,7 @@ export function redirectProjectAliasTaskNavigation(
   projectPath: string
 ): void {
   const before = getState();
+  const initialContextId = before.activeContextId;
   const sourceTab = before.getAllPaneTabs().find(
     (tab) => tab.id === before.activeTabId &&
       isOrdinaryTeamTab(tab) && tab.teamName === physicalTeamName
@@ -27,7 +28,7 @@ export function redirectProjectAliasTaskNavigation(
       isOrdinaryTeamTab(tab) && tab.teamName === logicalTeamName
   );
   if (!sourceTab || !destinationTab || after.isContextSwitching ||
-      after.activeContextId !== before.activeContextId) return;
+      after.activeContextId !== initialContextId) return;
 
   if (review && review.teamName === physicalTeamName &&
       review.targetTeamTabId === sourceTab.id &&

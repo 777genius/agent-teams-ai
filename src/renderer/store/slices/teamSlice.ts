@@ -2299,7 +2299,7 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
     if (projectPath) {
       const stateForProject = get();
       const normalizedPath = normalizePath(projectPath);
-      const matchingProject = stateForProject.projects.find(
+      const matchingProject = (stateForProject.projects ?? []).find(
         (p) => normalizePath(p.path) === normalizedPath
       );
       if (matchingProject && stateForProject.selectedProjectId !== matchingProject.id) {
