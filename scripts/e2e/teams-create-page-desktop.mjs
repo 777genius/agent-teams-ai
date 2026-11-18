@@ -19,6 +19,7 @@ import { processes } from './opencode-diagnostics/platform.mjs';
 import { extendOwnedHistory, remainingOwned } from './teams-create-page-owned-processes.mjs';
 import {
   observeScheduleTeamSelection,
+  prepareScheduleOptionClick,
   scheduleOptionObservationSource,
 } from './teams-create-page-schedule-observation.mjs';
 
@@ -552,13 +553,13 @@ class CdpClient {
     this.listeners.set(method, listeners);
   }
 
-  send(method, params = {}) {
+  send(method, params = {}, timeoutMs = 30_000) {
     const id = ++this.nextId;
     return new Promise((resolve, reject) => {
       const timer = setTimeout(() => {
         this.pending.delete(id);
         reject(new Error(`CDP command timed out: ${method}`));
-      }, 30_000);
+      }, timeoutMs);
       this.pending.set(id, { resolve, reject, timer });
       this.socket.send(JSON.stringify({ id, method, params }));
     });
@@ -641,16 +642,21 @@ class CdpClient {
       return target;
     })()`;
     await this.waitFor(hitTarget(), `settled exact E2E click target: ${expression}`, remaining());
-    const target = await this.evaluate(hitTarget(taskTabObservation + scheduleObservation));
-    try { if (taskTab) this.taskTabObservationInstalled = target?.taskTabObserved === true; } catch { /* Diagnostic only. */ }
-    assert(Date.now() < cutoff, `E2E click target deadline: ${expression}`);
-    assert(target, `Missing/disabled/hidden E2E click target: ${expression}`);
-    await this.send('Input.dispatchMouseEvent', {
-      type: 'mousePressed', x: target.x, y: target.y, button: 'left', clickCount: 1,
-    });
-    await this.send('Input.dispatchMouseEvent', {
-      type: 'mouseReleased', x: target.x, y: target.y, button: 'left', clickCount: 1,
-    });
+    let prepared;
+    try {
+      if (scheduleTeam !== null)
+        prepared = await prepareScheduleOptionClick(this, expression, scheduleTeam, cutoff, scheduleObservation);
+      const target = prepared ? prepared.target : await this.evaluate(hitTarget(taskTabObservation + scheduleObservation));
+      try { if (taskTab) this.taskTabObservationInstalled = target?.taskTabObserved === true; } catch { /* Diagnostic only. */ }
+      assert(Date.now() < cutoff, `E2E click target deadline: ${expression}`);
+      assert(target, `Missing/disabled/hidden E2E click target: ${expression}`);
+      await this.send('Input.dispatchMouseEvent', {
+        type: 'mousePressed', x: target.x, y: target.y, button: 'left', clickCount: 1,
+      });
+      await this.send('Input.dispatchMouseEvent', {
+        type: 'mouseReleased', x: target.x, y: target.y, button: 'left', clickCount: 1,
+      });
+    } finally { if (prepared) await prepared.release(); }
   }
 
   async fill(selector, value) {

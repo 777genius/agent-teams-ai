@@ -56,9 +56,40 @@ export async function prepareEmulatedSourceProfile(sandbox: string, broker: stri
     const output = provider === 'codex' ? `codex-cli ${versions[source]}`
       : provider === 'claude' ? `${versions[source]} (Claude Code)` : versions[source];
     const code = `import assert from 'node:assert/strict';
-import {createHash} from 'node:crypto';import {appendFileSync,readFileSync,realpathSync} from 'node:fs';
+import {constants as bufferConstants} from 'node:buffer';
+import {createHash} from 'node:crypto';import {appendFileSync,closeSync,fstatSync,openSync,readFileSync,readSync,realpathSync} from 'node:fs';
+// Fresh Node 24 readFileSync bytes and owned-fd behavior, without retaining the whole image.
+function selfDigest(path) {
+  const hash = createHash('sha256');
+  const fd = openSync(path, 'r');
+  let size = 0, offset = 0, closeAttempted = false;
+  try {
+    let info;
+    try { info = fstatSync(fd); } catch {
+      throw new TypeError("Cannot read properties of undefined (reading '1')");
+    }
+    size = info.isFile() ? Number(info.size) : 0;
+    if (size > 2 ** 31 - 1) throw Object.assign(
+      new RangeError('File size (' + size + ') is greater than 2 GiB'), {code: 'ERR_FS_FILE_TOO_LARGE'});
+    let buffer;
+    try { buffer = Buffer.allocUnsafe(size === 0 ? 8192 : Math.min(size, 512 * 1024)); } catch (error) {
+      if (size === 0) {
+        closeAttempted = true;
+        try { closeSync(fd); } catch { /* Preserve the original allocation refusal. */ }
+      }
+      throw error;
+    }
+    do {
+      const count = readSync(fd, buffer, 0, size === 0 ? buffer.length : Math.min(buffer.length, size - offset), null);
+      if (!count) break;
+      hash.update(buffer.subarray(0, count)); offset += count;
+    } while (size === 0 || offset < size);
+  } finally { if (!closeAttempted) closeSync(fd); }
+  if (size === 0 && offset > bufferConstants.MAX_LENGTH) Buffer.concat([Buffer.alloc(0)], offset);
+  return hash.digest('hex');
+}
 assert.equal(realpathSync.native(process.execPath),${JSON.stringify(node)});
-assert.equal(createHash('sha256').update(readFileSync(process.execPath)).digest('hex'),${JSON.stringify(fileHash(node))});
+assert.equal(selfDigest(process.execPath),${JSON.stringify(fileHash(node))});
 const argv=process.argv.slice(2);
 const fact={provider:${JSON.stringify(provider)},source:${JSON.stringify(source)},pid:process.pid,parentPid:process.ppid};
 if(argv.length===1&&argv[0]==='--version'){

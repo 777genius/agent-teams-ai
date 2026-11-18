@@ -1,4 +1,114 @@
+import assert from 'node:assert/strict';
 import process from 'node:process';
+
+// Serialized into the retained original DOM object's realm. This only reads geometry.
+function scheduleOptionPoint(browser, document, element) {
+  if (!element?.isConnected || element.disabled || element.getAttribute('aria-disabled') === 'true') return null;
+  for (let ancestor = element; ancestor; ancestor = ancestor.parentElement) {
+    if (ancestor.getAnimations().some(animation => animation.playState === 'running')) return null;
+  }
+  const rect = element.getBoundingClientRect();
+  const x = rect.left + rect.width / 2, y = rect.top + rect.height / 2;
+  const hit = document.elementFromPoint(x, y);
+  return rect.width > 0 && rect.height > 0 && x >= 0 && x < browser.innerWidth &&
+    y >= 0 && y < browser.innerHeight && hit && element.contains(hit)
+    ? { x, y, left: rect.left, top: rect.top, width: rect.width, height: rect.height } : null;
+}
+
+/** Prepare only this original schedule option; all commands share the caller's captured deadline. */
+export async function prepareScheduleOptionClick(client, expression, teamName, cutoff, observation) {
+  let objectId;
+  const remaining = () => {
+    const left = cutoff - Date.now();
+    assert(left > 0, `E2E click target deadline: ${expression}`);
+    return left;
+  };
+  const result = response => {
+    if (response.exceptionDetails) throw new Error(
+      response.exceptionDetails.exception?.description ?? 'Renderer evaluation failed');
+    return response.result?.value;
+  };
+  const within = async (method, params) => {
+    const response = await client.send(method, params, remaining());
+    remaining(); result(response);
+    return response;
+  };
+  const release = async () => {
+    if (!objectId) return;
+    const original = objectId; objectId = undefined;
+    try { await client.send('Runtime.releaseObject', { objectId: original }, Math.max(0, cutoff - Date.now())); }
+    catch { /* The original input/refusal survives reference cleanup; closing CDP also releases its objects. */ }
+  };
+  const samePoint = (left, right) => left && right &&
+    ['x', 'y', 'left', 'top', 'width', 'height'].every(key => left[key] === right[key]);
+  try {
+    const captured = await client.send('Runtime.evaluate', {
+      expression: `(() => {
+        const element = (${expression});
+        const trigger = document.querySelector('[role=dialog] button[role=combobox]');
+        const popup = document.getElementById(trigger?.getAttribute('aria-controls'));
+        const dialog = document.querySelector('[role=dialog] #schedule-label')?.closest('[role=dialog]');
+        return { element, trigger, popup, dialog, owner: document };
+      })()`,
+      returnByValue: false,
+    }, remaining());
+    // Retain the returned reference before the post-await fence so even a late allocation is released.
+    objectId = captured.result?.objectId;
+    remaining(); result(captured);
+    assert(typeof objectId === 'string' && objectId.length > 0, 'Original schedule target reference unavailable');
+    const read = async (frame, expected = null) => {
+      const response = await within('Runtime.callFunctionOn', {
+        objectId, awaitPromise: true, returnByValue: true,
+        functionDeclaration: `async function() {
+          ${frame ? 'await new Promise(resolve => requestAnimationFrame(resolve));' : ''}
+          const element = this.element, trigger = this.trigger, popup = this.popup, dialog = this.dialog;
+          const current = () => {
+            if (this.owner !== document || (${expression}) !== element || !element?.isConnected ||
+                element.getAttribute('role') !== 'option' || element.getAttribute('data-value') !== ${JSON.stringify(teamName)} ||
+                !trigger?.isConnected || trigger.matches(':disabled') || trigger.getAttribute('aria-expanded') !== 'true' ||
+                document.querySelector('[role=dialog] button[role=combobox]') !== trigger ||
+                !popup?.isConnected || document.getElementById(trigger.getAttribute('aria-controls')) !== popup ||
+                !popup.contains(element) || !dialog?.isConnected || !dialog.contains(trigger) ||
+                document.querySelector('[role=dialog] #schedule-label')?.closest('[role=dialog]') !== dialog)
+              throw new Error('Original schedule option or owner changed');
+          };
+          current();
+          const point = (${scheduleOptionPoint.toString()})(window, document, element);
+          current();
+          const expected = ${JSON.stringify(expected)};
+          if (expected && (!point || !['x','y','left','top','width','height'].every(key => point[key] === expected[key])))
+            throw new Error('Original schedule option geometry changed before press');
+          const target = point && { x: point.x, y: point.y };
+          ${expected ? observation : ''}
+          current();
+          return point;
+        }`,
+      });
+      const point = result(response);
+      assert(point === null || point && Object.keys(point).sort().join(',') === 'height,left,top,width,x,y' &&
+        Object.values(point).every(Number.isFinite), 'Original schedule geometry unavailable');
+      return point;
+    };
+    let hovered, previous, stable;
+    for (;;) {
+      const point = await read(true);
+      if (!point) { previous = undefined; continue; }
+      if (!hovered || point.x !== hovered.x || point.y !== hovered.y) {
+        await within('Input.dispatchMouseEvent', { type: 'mouseMoved', x: point.x, y: point.y, button: 'none' });
+        hovered = point; previous = undefined;
+        continue;
+      }
+      if (samePoint(previous, point)) { stable = point; break; }
+      previous = point;
+    }
+    // Each preceding sample awaited a separate render opportunity after actual hover delivery.
+    // The final sample may refuse, but never scrolls, hovers, or retries an issued press.
+    const target = await read(false, stable);
+    remaining();
+    assert(samePoint(target, stable), 'Original schedule option geometry changed before press');
+    return { target: { x: target.x, y: target.y }, release };
+  } catch (error) { await release(); throw error; }
+}
 
 // Serialized into the original final hit sample. This observer has no authority
 // to select an option, focus a control, change a deadline, or dispatch input.

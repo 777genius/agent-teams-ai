@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import process from 'node:process';
 import test from 'node:test';
-import { createContext, runInContext } from 'node:vm';
+import { createContext, runInContext, runInNewContext } from 'node:vm';
 
 import { observeScheduleTeamSelection, scheduleOptionObservationSource } from './teams-create-page-schedule-observation.mjs';
 
@@ -230,5 +231,216 @@ test('original click and acknowledgement errors survive diagnostic failure witho
       assert.equal(f.snapshot.cleanupComplete, true);
     }
     assert.equal(f.listeners.length, 0);
+  }
+});
+
+function actualScheduleClick(options = {}) {
+  const source = readFileSync(new URL('./teams-create-page-desktop.mjs', import.meta.url), 'utf8');
+  const first = source.indexOf('class CdpClient {'), last = source.indexOf('\nasync function waitForProcessGroupExit(', first);
+  assert.ok(first > 0 && last > first);
+  const helpers = readFileSync(new URL('./teams-create-page-schedule-observation.mjs', import.meta.url), 'utf8')
+    .replace(/^import .*;\r?\n/gm, '').replace(/^export /gm, '');
+  const c = { now: 0, frames: 0, hoverFrames: 0, hovers: 0, presses: 0, releases: 0,
+    referenceReleases: 0, scrolls: 0, uiMutations: 0, selected: '', open: true, moved: false,
+    rect: { left: 130, top: 249, width: 753, height: 44 }, listeners: [], calls: [], writes: [],
+    snapshots: [], waits: [], handles: new Map(), finalReads: 0, detached: false };
+  class Element {
+    constructor(tagName, parentElement = null, attributes = {}) {
+      this.tagName = tagName; this.parentElement = parentElement; this.attributes = attributes;
+      this.isConnected = true; this.disabled = false;
+    }
+    contains(node) { for (; node; node = node.parentElement) if (node === this) return true; return false; }
+    getAttribute(name) {
+      if (this === trigger && name === 'aria-expanded') return String(c.open);
+      return this.attributes[name] ?? null;
+    }
+    matches() { return this.disabled; }
+    getAnimations() { return []; }
+    getBoundingClientRect() { return this.isConnected ? { ...c.rect } : { left: 0, top: 0, width: 0, height: 0 }; }
+    scrollIntoView() { c.scrolls++; }
+    closest() { return this === label ? c.dialog : null; }
+    click() { c.uiMutations++; throw new Error('TEST forbidden DOM click'); }
+    focus() { c.uiMutations++; throw new Error('TEST forbidden focus mutation'); }
+    setAttribute() { c.uiMutations++; throw new Error('TEST forbidden attribute mutation'); }
+  }
+  const body = new Element('BODY'), dialog = new Element('DIV', body), popup = new Element('DIV', body);
+  const trigger = new Element('BUTTON', dialog, { 'aria-controls': 'TEST-popup' });
+  Object.defineProperty(trigger, 'textContent', { get: () => c.selected || 'Select a team...' });
+  const option = new Element('DIV', popup, { role: 'option', 'data-value': teamName, 'aria-disabled': 'false' });
+  option.textContent = teamName;
+  const paragraph = new Element('P', option), foreign = new Element('DIV', popup), label = new Element('INPUT', dialog);
+  const review = new Element('INPUT', dialog);
+  Object.assign(c, { option, trigger, popup, dialog });
+  const document = {
+    visibilityState: 'visible', activeElement: label, hasFocus: () => true,
+    querySelectorAll() { return [c.option]; },
+    querySelector(selector) {
+      if (selector === '#schedule-saved-prompt-reviewed') return c.selected === teamName ? review : null;
+      if (selector.includes('#schedule-label')) return label;
+      if (selector === '[role=dialog]') return c.dialog;
+      return c.trigger;
+    },
+    getElementById(id) { return id === 'TEST-popup' ? c.popup : null; },
+    elementFromPoint(x, y) {
+      const r = c.rect;
+      return option.isConnected && x >= r.left && x < r.left + r.width && y >= r.top && y < r.top + r.height
+        ? paragraph : foreign;
+    },
+    addEventListener(kind, listener, config) { c.listeners.push({ kind, listener, capture: config.capture }); },
+    removeEventListener(kind, listener, config) {
+      const at = c.listeners.findIndex(row => row.kind === kind && row.listener === listener && row.capture === config.capture);
+      if (at >= 0) c.listeners.splice(at, 1);
+    },
+  };
+  const browser = { innerWidth: 1024, innerHeight: 674 }, renderer = createContext({ window: browser, document,
+    requestAnimationFrame(callback) {
+      queueMicrotask(() => {
+        c.now += 16; c.frames++;
+        if (c.hovers) c.hoverFrames++;
+        if (options.delayedLayout && c.hovers && !c.moved && c.hoverFrames === 2) {
+          c.rect.top += 100; c.moved = true;
+        }
+        options.onFrame?.(c);
+        callback(c.now);
+      });
+    },
+  });
+  const actual = runInNewContext(`${helpers}\n${source.slice(first, last)}\n({ CdpClient, observeScheduleTeamSelection })`, {
+    assert, Date: { now: () => c.now },
+    setTimeout(callback, ms) { c.now += ms; queueMicrotask(callback); return 1; }, clearTimeout() {},
+    process: { stderr: { write(value) { c.writes.push(value); } } },
+  });
+  const client = new actual.CdpClient({ on() {}, close() {} });
+  const copy = value => value === undefined ? undefined : JSON.parse(JSON.stringify(value));
+  const emit = (kind, phase, target, point) => {
+    for (const row of [...c.listeners]) if (row.kind === kind && row.capture === (phase === 'capture'))
+      row.listener({ target, clientX: point.x, clientY: point.y, isTrusted: true, defaultPrevented: false });
+  };
+  client.send = async (method, params, timeoutMs) => {
+    c.calls.push({ method, params, timeoutMs, at: c.now, frame: c.frames });
+    if (method === 'Runtime.releaseObject') {
+      c.referenceReleases++; c.handles.delete(params.objectId);
+      if (options.releaseError) throw options.releaseError;
+      return {};
+    }
+    if (method === 'Runtime.evaluate' || method === 'Runtime.callFunctionOn') {
+      if (method === 'Runtime.callFunctionOn' && options.frameTimeout && params.functionDeclaration.includes('requestAnimationFrame')) {
+        c.now += timeoutMs; throw options.frameTimeout;
+      }
+      const final = method === 'Runtime.callFunctionOn' && !params.functionDeclaration.includes('await new Promise');
+      if (final) { c.finalReads++; options.beforeFinal?.(c); }
+      let response;
+      try {
+        const value = method === 'Runtime.evaluate'
+          ? await runInContext(params.expression, renderer)
+          : await runInContext('(' + params.functionDeclaration + ')', renderer).call(c.handles.get(params.objectId));
+        if (params.returnByValue === false) {
+          c.handles.set('TEST-original-target', value);
+          response = { result: { type: 'object', objectId: 'TEST-original-target' } };
+        } else response = { result: { value: copy(value) } };
+      } catch (error) { response = { exceptionDetails: { exception: { description: error.message } } }; }
+      if (final) options.afterFinal?.(c);
+      options.afterRead?.(c, method, params);
+      return response;
+    }
+    assert.equal(method, 'Input.dispatchMouseEvent');
+    if (params.type === 'mouseMoved') {
+      c.hovers++; c.hoverFrames = 0;
+      options.afterHover?.(c);
+      if (options.hoverError) throw options.hoverError;
+      return {};
+    }
+    if (params.type === 'mousePressed') {
+      c.presses++;
+      // Finite reproduction: the first pointer delivery exposes delayed placement before its hit.
+      if (options.delayedLayout && !c.hovers && !c.moved) { c.rect.top += 100; c.moved = true; }
+      c.pressedTarget = document.elementFromPoint(params.x, params.y);
+      for (const phase of ['capture', 'bubble']) emit('pointerdown', phase, c.pressedTarget, params);
+      if (options.pressError) throw options.pressError;
+    } else {
+      assert.equal(params.type, 'mouseReleased'); c.releases++;
+      for (const phase of ['capture', 'bubble']) emit('pointerup', phase, c.pressedTarget, params);
+      emit('click', 'capture', c.pressedTarget, params);
+      c.selected = option.contains(c.pressedTarget) ? teamName : 'org-team-e2e-other';
+      c.open = false; option.isConnected = false; document.activeElement = trigger;
+      emit('click', 'bubble', c.pressedTarget, params);
+    }
+    return {};
+  };
+  const wait = client.waitFor.bind(client);
+  client.waitFor = async (expression, label, timeoutMs) => {
+    c.waits.push({ label, timeoutMs }); return wait(expression, label, timeoutMs);
+  };
+  return { c, client, async select() {
+    try { await actual.observeScheduleTeamSelection(client, teamName); }
+    catch (error) {
+      // Preserve the original error identity while retaining first-delivery facts in RED output.
+      error.finiteDelivery = { hovers: c.hovers, presses: c.presses, releases: c.releases, selected: c.selected };
+      throw error;
+    }
+  } };
+}
+
+test('actual schedule click prepares hover and distinct render samples before its sole press after delayed layout', async () => {
+  const h = actualScheduleClick({ delayedLayout: true });
+  await h.select();
+  assert.equal(h.c.selected, teamName); assert.equal(h.c.presses, 1); assert.equal(h.c.releases, 1);
+  assert.equal(h.c.hovers, 2, 'a moved original target is hovered at its new measured position before pressing');
+  assert.ok(h.c.hoverFrames >= 2, 'two different render opportunities follow the final hover');
+  assert.equal(h.c.scrolls, 1); assert.equal(h.c.uiMutations, 0);
+  assert.equal(h.c.referenceReleases, 1); assert.equal(h.c.handles.size, 0);
+  assert.equal(h.c.waits.at(-1).timeoutMs, 45_000, 'the original exact-team saved-prompt oracle is unchanged');
+  const snapshot = JSON.parse(h.c.writes.at(-1)).snapshot;
+  assert.equal(snapshot.before.geometry.y, 371); assert.equal(snapshot.after.state.triggerTextMatches, true);
+  assert.ok(snapshot.events.every(row => row.targetInOption)); assert.equal(snapshot.cleanupComplete, true);
+  const press = h.c.calls.findIndex(row => row.method === 'Input.dispatchMouseEvent' && row.params.type === 'mousePressed');
+  assert.ok(h.c.calls.slice(press).every(row => row.method !== 'Runtime.callFunctionOn' && row.params.type !== 'mouseMoved'));
+});
+
+test('schedule preparation refuses replacement of its original node, popup or dialog owner after hover', async () => {
+  for (const key of ['option', 'popup', 'dialog', 'trigger']) {
+    const h = actualScheduleClick({ afterHover(c) { c[key] = { ...c[key], isConnected: true }; } });
+    await assert.rejects(h.select(), /Original schedule option or owner changed/);
+    assert.equal(h.c.presses, 0); assert.equal(h.c.releases, 0);
+    assert.equal(h.c.referenceReleases, 1); assert.equal(h.c.handles.size, 0);
+  }
+});
+
+test('schedule final sample refuses geometry or owner mutation instead of rehovering or clicking', async () => {
+  for (const mutate of [c => { c.rect.top += 1; }, c => { c.popup = { ...c.popup }; }]) {
+    const h = actualScheduleClick({ beforeFinal: mutate });
+    await assert.rejects(h.select(), /Original schedule option (geometry|or owner) changed/);
+    assert.equal(h.c.finalReads, 1); assert.equal(h.c.hovers, 1);
+    assert.equal(h.c.presses, 0); assert.equal(h.c.referenceReleases, 1);
+  }
+});
+
+test('schedule preparation preserves its original absolute deadline across hover, frame and final awaits', async () => {
+  for (const boundary of ['afterHover', 'onFrame', 'afterFinal']) for (const elapsed of [30_000, 30_001]) {
+    const h = actualScheduleClick({ [boundary](c) { c.now = elapsed; } });
+    await assert.rejects(h.select(), /E2E click target deadline/);
+    assert.equal(h.c.presses, 0); assert.equal(h.c.releases, 0);
+    assert.equal(h.c.referenceReleases, 1); assert.equal(h.c.handles.size, 0);
+    for (const row of h.c.calls.filter(row => row.timeoutMs !== undefined && row.method !== 'Runtime.releaseObject'))
+      assert.ok(row.timeoutMs > 0 && row.timeoutMs <= 30_000 - row.at, 'no new per-command preparation budget');
+  }
+});
+
+test('a blocked render opportunity uses only the remaining original command budget and releases its reference', async () => {
+  const error = new Error('TEST CDP frame timed out');
+  const h = actualScheduleClick({ frameTimeout: error });
+  await assert.rejects(h.select(), value => value === error);
+  assert.equal(h.c.now, 30_000); assert.equal(h.c.presses, 0); assert.equal(h.c.hovers, 0);
+  assert.equal(h.c.referenceReleases, 1); assert.equal(h.c.handles.size, 0);
+});
+
+test('hover and uncertain press failures retain their original error without input replay or cleanup replacement', async () => {
+  for (const phase of ['hoverError', 'pressError']) {
+    const original = new Error('TEST original ' + phase);
+    const h = actualScheduleClick({ [phase]: original, releaseError: new Error('TEST reference release failure') });
+    await assert.rejects(h.select(), value => value === original);
+    assert.equal(h.c.presses, phase === 'pressError' ? 1 : 0); assert.equal(h.c.releases, 0);
+    assert.equal(h.c.hovers, 1); assert.equal(h.c.referenceReleases, 1); assert.equal(h.c.handles.size, 0);
+    assert.equal(h.c.uiMutations, 0);
   }
 });
