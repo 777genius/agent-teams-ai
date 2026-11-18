@@ -72,7 +72,7 @@ export async function runDesktopCodexLoginUiProof(
   for (const [index, mode, label] of [[0, 'browser', 'Connect ChatGPT'], [1, 'device_code', 'Use code']] as const) {
     const result: Record<string, unknown> = { mode, status: 'INCOMPLETE' };
     cases.push(result);
-    await ui.scrollTo(dialogButtons, 'show original login action', label);
+    await ui.scrollTo(`${dialogButtons}:enabled`, 'show original login action', label, 12, { requireCenterHit: true });
     await ui.click(dialogButtons, 'start one original ' + mode + ' login', label);
     // Private read remains in this process; neither URLs nor codes enter the receipt/logs.
     const login = record(await ui.waitRead(

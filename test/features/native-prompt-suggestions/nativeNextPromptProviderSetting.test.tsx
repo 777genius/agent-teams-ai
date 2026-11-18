@@ -7,7 +7,7 @@ import { NativeNextPromptProviderSetting } from '../../../src/features/native-pr
 
 const state = vi.hoisted(() => ({
   appConfig: undefined as unknown,
-  updateConfig: vi.fn(async (..._args: unknown[]) => undefined),
+  updateConfig: vi.fn(async (..._args: unknown[]): Promise<void> => undefined),
 }));
 vi.mock('@renderer/store', () => ({
   useStore: (select: (value: typeof state) => unknown) => select(state),
