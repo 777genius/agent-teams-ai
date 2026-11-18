@@ -170,15 +170,19 @@ jobs:
         run: node ./scripts/ci/install-dependencies-with-retry.mjs
 
       - name: Rebuild test SQLite native module for Node
+        id: native-test-sqlite
         run: node ./scripts/ci/rebuild-better-sqlite3-node.cjs
 
       - name: Audit dependencies
         run: node ./scripts/ci/audit-dependencies.mjs
 
+      # Independent gates share successful setup; every failure still fails this job.
       - name: Verify release download transport protocol
+        if: ${{ !cancelled() && steps.native-test-sqlite.outcome == 'success' }}
         run: node --test scripts/e2e/release-updater/github-download.test.mts
 
       - name: Validate workspace truth gate
+        if: ${{ !cancelled() && steps.native-test-sqlite.outcome == 'success' }}
         env:
           NODE_OPTIONS: --max-old-space-size=8192
         run: pnpm validate:ci

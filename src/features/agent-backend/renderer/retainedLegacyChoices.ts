@@ -16,15 +16,15 @@ import type {
 } from '../contracts/retainedLegacyLaunch';
 import type { RetainedLegacyTransport } from './retainedLegacyTransport';
 
-type ChoiceOwner = {
+interface ChoiceOwner {
   send: RetainedLegacyTransport;
   teamName: string;
   epoch: number;
   intentId?: string;
   closed: boolean;
   closing?: Promise<boolean>;
-};
-type OpenIntent = {
+}
+interface OpenIntent {
   send: RetainedLegacyTransport;
   teamName: string;
   epoch: number;
@@ -34,7 +34,7 @@ type OpenIntent = {
   scopeId?: string;
   closing?: Promise<boolean>;
   cleanup: Set<() => void>;
-};
+}
 const choiceOwners = new Map<string, ChoiceOwner>();
 const openIntents = new Map<string, OpenIntent>();
 function forgetOpen(key: string, intent: OpenIntent) {

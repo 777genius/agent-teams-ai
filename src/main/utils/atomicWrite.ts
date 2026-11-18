@@ -68,7 +68,7 @@ export function atomicWriteSync(
   options: { mode?: number } = {}
 ): void {
   const witness = beginOriginalRuntimeSourceWrite(targetPath, data);
-  if (!witness) return writeSync(targetPath, data, options);
+  if (!witness) return void writeSync(targetPath, data, options);
   let success = false;
   try {
     witness.beforeCommit();
