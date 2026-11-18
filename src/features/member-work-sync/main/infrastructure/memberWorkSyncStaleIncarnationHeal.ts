@@ -19,7 +19,10 @@ import { areSnapshotRecordSetsEquivalent } from './memberWorkSyncSqliteMappers';
 
 import type { MemberWorkSyncStoreSnapshot } from './JsonMemberWorkSyncStore';
 import type { MemberWorkSyncStorePaths } from './MemberWorkSyncStorePaths';
-import type { MemberWorkSyncTeamSnapshotRecords } from '@features/internal-storage/contracts/internalStorageContracts';
+import type {
+  MemberWorkSyncStatusDeleteTarget,
+  MemberWorkSyncTeamSnapshotRecords,
+} from '@features/internal-storage/contracts/internalStorageContracts';
 import type { MemberWorkSyncStorageGateway } from '@features/internal-storage/main';
 import type { InternalStorageJsonReplica } from '@features/internal-storage/main/infrastructure/InternalStorageJsonReplica';
 
@@ -44,6 +47,8 @@ interface Entry {
   memberName: string;
   foreignIncarnation: string;
   statusJson?: string;
+  teamKey?: string;
+  memberKey?: string;
   path?: string;
 }
 type FileOp =
@@ -58,6 +63,7 @@ interface Plan {
   entries: Entry[];
   evidenceTimes: number[];
   primaryKept: MemberWorkSyncTeamSnapshotRecords | null;
+  primaryDelete: MemberWorkSyncStatusDeleteTarget[];
   files: FileOp[];
   replica: ReplicaOp | null;
   refusal: string | null;
@@ -215,8 +221,15 @@ async function planPrimary(input: StaleIncarnationHealInput, plan: Plan): Promis
       memberName: row.memberName,
       foreignIncarnation: found.foreign,
       statusJson: row.statusJson,
+      teamKey: row.teamName,
+      memberKey: row.memberKey,
     });
     plan.evidenceTimes.push(found.evaluatedAt);
+    plan.primaryDelete.push({
+      teamName: row.teamName,
+      memberKey: row.memberKey,
+      statusJson: row.statusJson,
+    });
     return false;
   });
   if (kept.length !== records.statuses.length) plan.primaryKept = { ...records, statuses: kept };
@@ -232,6 +245,20 @@ async function planReplica(input: StaleIncarnationHealInput, plan: Plan): Promis
   // A legacy dirty fence carries no trusted candidate, so none of it is ever validated or merged.
   if (envelope.state === 'dirty' && envelope.incarnation === undefined) return;
   if (!isRecord(envelope.snapshot) || !Array.isArray(envelope.snapshot.statuses)) return;
+  if (wrapperForeign) {
+    // Only status entries have trustworthy incarnation evidence. Never rebind
+    // an old replica's outbox, report intents, metrics or file operations.
+    const collections = [
+      envelope.snapshot.reportIntents,
+      envelope.snapshot.outboxItems,
+      envelope.snapshot.metricEvents,
+      envelope.snapshot.filesToArchive,
+    ];
+    if (collections.some((values) => !Array.isArray(values) || values.length > 0)) {
+      plan.refusal = 'foreign_replica_non_status_data';
+      return;
+    }
+  }
   const statuses = envelope.snapshot.statuses as unknown[];
   const kept = statuses.filter((status) => {
     const memberName =
@@ -300,7 +327,8 @@ async function execute(input: StaleIncarnationHealInput, plan: Plan): Promise<st
   const { paths, teamName, incarnation } = input;
   const stamp = new Date().toISOString().replace(/[:.]/g, '-');
   const quarantine = join(paths.getTeamDir(teamName), `stale-incarnation-${stamp}.json`);
-  await mkdir(dirname(quarantine), { recursive: true });
+  const firstCreated = await mkdir(dirname(quarantine), { recursive: true });
+  if (firstCreated) await syncDirectoryDurably(dirname(firstCreated));
   // Everything removed is recorded first, so a stale state is never unrecoverable.
   await atomicWriteAsync(
     quarantine,
@@ -322,7 +350,9 @@ async function execute(input: StaleIncarnationHealInput, plan: Plan): Promise<st
     { durability: 'strict', syncDirectory: true }
   );
   if (plan.primaryKept) {
-    await input.gateway.importTeam(teamName, plan.primaryKept);
+    const removed = await input.gateway.statusDeleteMatching(teamName, plan.primaryDelete);
+    if (removed !== plan.primaryDelete.length)
+      throw new Error('member-work-sync stale status cleanup removed an unexpected row count');
     const roundTrip = await input.gateway.listTeamSnapshot(teamName);
     if (!areSnapshotRecordSetsEquivalent(roundTrip, plan.primaryKept))
       throw new Error(
@@ -366,6 +396,7 @@ export async function healStaleIncarnationStatuses(
     entries: [],
     evidenceTimes: [],
     primaryKept: null,
+    primaryDelete: [],
     files: [],
     replica: null,
     refusal: null,
@@ -376,7 +407,7 @@ export async function healStaleIncarnationStatuses(
     await planReplica(input, plan);
     if (input.backend === 'sqlite') await planPrimary(input, plan);
     await planFiles(input, plan);
-    if (plan.entries.length === 0 && !plan.replica) return 'not_applicable';
+    if (plan.entries.length === 0 && !plan.replica && !plan.refusal) return 'not_applicable';
     const refusal = plan.refusal ?? (await corroborate(input, plan));
     if (refusal) {
       input.logger?.warn('member-work-sync stale status cleanup refused', {

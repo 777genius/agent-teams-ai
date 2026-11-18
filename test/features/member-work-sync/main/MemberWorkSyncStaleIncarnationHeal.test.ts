@@ -7,6 +7,7 @@ import { InternalStorageBackendSelector } from '@features/internal-storage/main/
 import { InternalStorageJsonReplica } from '@features/internal-storage/main/infrastructure/InternalStorageJsonReplica';
 import { InternalStorageWorkerCore } from '@features/internal-storage/main/infrastructure/worker/InternalStorageWorkerCore';
 import { BackendSelectingMemberWorkSyncStore } from '@features/member-work-sync/main/infrastructure/BackendSelectingMemberWorkSyncStore';
+import { MemberWorkSyncStatusDecodeError } from '@features/member-work-sync/main/infrastructure/decodeMemberWorkSyncStoredStatus';
 import {
   buildPendingReportIntentId,
   isMemberWorkSyncStoreSnapshot,
@@ -18,7 +19,10 @@ import {
   snapshotToRecords,
 } from '@features/member-work-sync/main/infrastructure/memberWorkSyncSqliteMappers';
 import { MemberWorkSyncStatusAuthority } from '@features/member-work-sync/main/infrastructure/MemberWorkSyncStatusAuthority';
-import { getVerifiedTeamRootBirthtimeMs } from '@features/member-work-sync/main/infrastructure/memberWorkSyncStaleIncarnationHeal';
+import {
+  getVerifiedTeamRootBirthtimeMs,
+  healStaleIncarnationStatuses,
+} from '@features/member-work-sync/main/infrastructure/memberWorkSyncStaleIncarnationHeal';
 import { MemberWorkSyncStorePaths } from '@features/member-work-sync/main/infrastructure/MemberWorkSyncStorePaths';
 import { SqliteMemberWorkSyncStore } from '@features/member-work-sync/main/infrastructure/SqliteMemberWorkSyncStore';
 import Database from 'better-sqlite3-node';
@@ -29,6 +33,26 @@ import { createTestWorkSyncIdentity } from '../helpers/createTestWorkSyncIdentit
 
 import type { MemberWorkSyncStatus } from '@features/member-work-sync/contracts';
 import type { MemberWorkSyncStoreSnapshot } from '@features/member-work-sync/main/infrastructure/JsonMemberWorkSyncStore';
+
+// Exercise success and refusal paths independent of host tmpfs birthtime semantics.
+const rootAgeFixture = vi.hoisted(() => ({ known: true }));
+vi.mock('node:fs/promises', async (loadOriginal) => {
+  const fs = await loadOriginal<typeof import('node:fs/promises')>();
+  return {
+    ...fs,
+    lstat: async (...args: Parameters<typeof fs.lstat>) => {
+      const result = await fs.lstat(...args);
+      if (String(args[0]).replaceAll('\\', '/').endsWith('/teams/sandbox')) {
+        const birthtimeMs = Date.parse('2024-01-01T00:00:00.000Z');
+        return Object.assign(result, {
+          birthtimeMs,
+          ctimeMs: rootAgeFixture.known ? birthtimeMs + 1000 : birthtimeMs,
+        });
+      }
+      return result;
+    },
+  };
+});
 
 const TEAM = 'sandbox';
 const CURRENT = 'inc-1';
@@ -59,6 +83,7 @@ function snap(statuses: MemberWorkSyncStatus[]): MemberWorkSyncStoreSnapshot {
 const roots: string[] = [];
 const cores: InternalStorageWorkerCore[] = [];
 afterEach(async () => {
+  rootAgeFixture.known = true;
   vi.restoreAllMocks();
   for (const core of cores.splice(0)) core.close();
   for (const root of roots.splice(0)) await rm(root, { recursive: true, force: true });
@@ -225,7 +250,7 @@ describe('targeted self-heal of status rows left by an earlier team identity', (
     await importPrimary(h, [mk('alice', FOREIGN)]);
     await expect(prepare(h)).resolves.toBe('ran');
     expect(await memberKeys(h)).toEqual([]);
-    const imported = vi.spyOn(h.gateway, 'importTeam');
+    const imported = vi.spyOn(h.gateway, 'statusDeleteMatching');
     await expect(prepare(h, false)).resolves.toBe('ran');
     await expect(prepare(h, false)).resolves.toBe('ran');
     expect(imported).not.toHaveBeenCalled();
@@ -318,17 +343,26 @@ describe('targeted self-heal of status rows left by an earlier team identity', (
       order.push('list');
       return listed(...args);
     });
+    let finishSettling!: () => void;
+    const settling = new Promise<void>((resolve) => { finishSettling = resolve; });
     (h.gateway as { waitForSettling?: () => Promise<void> }).waitForSettling = async () => {
       order.push('settle');
+      await settling;
     };
-    const imported = h.gateway.importTeam.bind(h.gateway);
-    vi.spyOn(h.gateway, 'importTeam').mockImplementation(async (...args) => {
-      order.push('import');
-      return imported(...args);
+    const deleteMatching = h.gateway.statusDeleteMatching.bind(h.gateway);
+    vi.spyOn(h.gateway, 'statusDeleteMatching').mockImplementation(async (...args) => {
+      order.push('delete');
+      return deleteMatching(...args);
     });
-    await prepare(h);
-    // Initial detection, settling, fresh snapshot, then the destructive import.
-    expect(order.slice(0, 4)).toEqual(['list', 'settle', 'list', 'import']);
+    const pending = prepare(h);
+    try {
+      await vi.waitFor(() => expect(order).toEqual(['list', 'settle']));
+    } finally {
+      finishSettling();
+    }
+    await pending;
+    // Initial detection, physical settlement, fresh snapshot, then the targeted deletion.
+    expect(order.slice(0, 4)).toEqual(['list', 'settle', 'list', 'delete']);
   });
 
   describe.each([
@@ -340,7 +374,7 @@ describe('targeted self-heal of status rows left by an earlier team identity', (
       const h = await setup('sqlite', { config: opts.config as never });
       await importPrimary(h, [mk('alice', FOREIGN), mk('bob', CURRENT)]);
       const before = await primary(h);
-      const imported = vi.spyOn(h.gateway, 'importTeam');
+      const imported = vi.spyOn(h.gateway, 'statusDeleteMatching');
       await expect(prepare(h)).rejects.toMatchObject({ reason: 'incarnation_mismatch' });
       expect(await primary(h)).toEqual(before);
       expect(imported).not.toHaveBeenCalled();
@@ -451,7 +485,7 @@ describe('targeted self-heal of status rows left by an earlier team identity', (
       'unknown',
       physical
     );
-    vi.spyOn(h.gateway, 'importTeam').mockRejectedValueOnce(interrupted);
+    vi.spyOn(h.gateway, 'statusDeleteMatching').mockRejectedValueOnce(interrupted);
     const owner = createTestWorkSyncIdentity(CURRENT);
     const originalWithCurrent = owner.withCurrent.bind(owner);
     let held = false;
@@ -478,6 +512,105 @@ describe('targeted self-heal of status rows left by an earlier team identity', (
       await read.settled;
     }
     expect(held).toBe(false);
+  });
+
+  it('refuses when creation time cannot be distinguished from ctime', async () => {
+    const h = await setup('sqlite');
+    await importPrimary(h, [mk('alice', FOREIGN)]);
+    rootAgeFixture.known = false;
+    const before = await primary(h);
+    await expect(prepare(h)).rejects.toThrow();
+    expect(await primary(h)).toEqual(before);
+    expect(h.warn).toHaveBeenCalledWith(
+      'member-work-sync stale status cleanup refused',
+      expect.objectContaining({ reason: 'team_root_age_unknown' })
+    );
+  });
+
+  it('does not rebind a foreign replica carrying an older outbox', async () => {
+    const h = await setup('sqlite');
+    const snapshot = snap([mk('alice', FOREIGN)]);
+    snapshot.outboxItems.push({
+      id: 'foreign-pending',
+      teamName: TEAM,
+      memberName: 'alice',
+      agendaFingerprint: 'f',
+      payloadHash: 'untrusted',
+      payload: {
+        from: 'system',
+        to: 'alice',
+        messageKind: 'member_work_sync_nudge',
+        source: 'member-work-sync',
+        actionMode: 'do',
+        workSyncIntent: 'normal',
+        text: 'old identity',
+        taskRefs: [],
+      },
+      status: 'pending',
+      attemptGeneration: 0,
+      createdAt: OLD,
+      updatedAt: OLD,
+    });
+    await writeReplica(h, 'clean', FOREIGN, snapshot);
+    await importPrimary(h, [mk('bob', CURRENT)]);
+    const before = await primary(h);
+    const replicaPath = h.paths.getSqliteFallbackReplicaPath(TEAM);
+    const replicaBefore = await readFile(replicaPath, 'utf8');
+    await expect(prepare(h)).rejects.toThrow();
+    expect(await primary(h)).toEqual(before);
+    expect(await readFile(replicaPath, 'utf8')).toBe(replicaBefore);
+    expect(h.warn).toHaveBeenCalledWith(
+      'member-work-sync stale status cleanup refused',
+      expect.objectContaining({ reason: 'foreign_replica_non_status_data' })
+    );
+  });
+
+  it('reports a foreign dirty replica even without stale status entries', async () => {
+    const h = await setup('sqlite');
+    await writeReplica(h, 'dirty', FOREIGN, snap([mk('bob', CURRENT)]));
+    await expect(prepare(h)).rejects.toThrow();
+    expect(h.warn).toHaveBeenCalledWith(
+      'member-work-sync stale status cleanup refused',
+      expect.objectContaining({ reason: 'dirty_replica_from_another_identity' })
+    );
+    expect(await quarantineFiles(h)).toEqual([]);
+  });
+
+  it('deletes selected aliased SQLite statuses without rewriting other domain rows', async () => {
+    const h = await setup('sqlite');
+    const old = snap([
+      mk('alice', FOREIGN, OLD, 'Sandbox'),
+      mk('bob', CURRENT, OLD, 'Sandbox'),
+    ]);
+    old.metricEvents.push({
+      id: 'legacy-metric',
+      teamName: 'Sandbox',
+      memberName: 'bob',
+      kind: 'status_evaluated',
+      state: 'needs_sync',
+      agendaFingerprint: 'f',
+      recordedAt: OLD,
+      actionableCount: 0,
+    });
+    await h.gateway.importTeam('Sandbox', snapshotToRecords('Sandbox', old));
+    const before = await primary(h);
+    const result = await healStaleIncarnationStatuses({
+      teamName: TEAM,
+      incarnation: CURRENT,
+      backend: 'sqlite',
+      error: new MemberWorkSyncStatusDecodeError('incarnation_mismatch', FOREIGN),
+      gateway: h.gateway,
+      paths: h.paths,
+      replica: h.replica,
+      logger: { warn: h.warn },
+    });
+    expect(result).toBe('healed');
+    const after = await primary(h);
+    expect(after).toEqual({
+      ...before,
+      statuses: before.statuses.filter((row) => row.memberName !== 'alice'),
+    });
+    expect(after.metricEvents[0].teamName).toBe('Sandbox');
   });
 
   it('keeps the removed payloads in a quarantine record so nothing is unrecoverable', async () => {
