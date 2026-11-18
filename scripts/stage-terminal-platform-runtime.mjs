@@ -238,11 +238,10 @@ function extractArchive(archivePath, extractDir, archiveKind) {
 
   if (archiveKind === 'zip') {
     if (process.platform === 'win32') {
-      runOrThrow('powershell', [
-        '-NoProfile',
-        '-Command',
-        `Expand-Archive -LiteralPath '${archivePath.replace(/'/g, "''")}' -DestinationPath '${extractDir.replace(/'/g, "''")}' -Force`,
-      ]);
+      // Windows PowerShell 5.1 Expand-Archive can call an unavailable .NET
+      // ExtractToDirectory overload on hosted runners. The built-in Windows
+      // bsdtar handles ZIP archives without that PowerShell/.NET dependency.
+      runOrThrow('tar', ['-xf', archivePath, '-C', extractDir]);
       return;
     }
 
