@@ -16,6 +16,10 @@
     "gatewayProviders": {
       "description": "Manage gateway endpoints for per-teammate model access.",
       "label": "Gateway providers"
+    },
+    "reviewFlow": {
+      "label": "Процес рев'ю",
+      "description": "Хто дає фінальне схвалення після рев'ю агентів: для всіх команд або для окремих."
     }
   },
   "view": {

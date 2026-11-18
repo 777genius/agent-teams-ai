@@ -379,7 +379,6 @@ interface TeamLaunchAnalyticsContext {
   memberCount: number | null;
   providerIds: (string | null)[];
 }
-
 interface TaskFirstOutputAnalyticsContext {
   startedAtMs: number;
   targetType: 'member' | 'team';
@@ -610,7 +609,6 @@ function scheduleAfterPaint(run: () => void): PostPaintHandle {
       clearTimeout(handle.fallbackTimerId);
       handle.fallbackTimerId = undefined;
     }
-
     run();
   };
 
@@ -759,7 +757,6 @@ function schedulePostPaintTeamEnrichments(params: {
         teamDataReadWork.takeQueuedFull(teamName, requestScope);
         return;
       }
-
       if (teamDataReadWork.takeQueuedFull(teamName, requestScope)) {
         void get().refreshTeamData(teamName, { withDedup: true });
       }
@@ -973,7 +970,6 @@ async function refreshTaskChangePresenceForUpdatedTask(
 
   const cacheKey = buildTaskChangePresenceKey(teamName, taskId, options);
   state.invalidateTaskChangePresence([cacheKey]);
-
   try {
     await state.checkTaskHasChanges(teamName, taskId, options);
   } catch {
@@ -1147,7 +1143,6 @@ function recordTeamLaunchStepTransition(
     teamLaunchStepStartedAtByKey.set(stepKey, progressStartedAtMs);
   }
   if (!existingProgress || existingProgress.state === progress.state) return;
-
   const previousStep = getLaunchStepForState(existingProgress.state);
   const previousStepKey = `${progress.runId}:${previousStep}`;
   if (reportedTeamLaunchStepKeys.has(previousStepKey)) return;
@@ -1371,7 +1366,6 @@ function isVisibleInActiveTeamSurface(
 ): boolean {
   return Boolean(teamName && getVisibleTeamNamesInAnyPane(state).has(teamName));
 }
-
 export interface TeamSlice extends SidebarLogsHeightSlice, DeletedTaskFeed {
   teams: TeamSummary[];
   teamsUnavailable: TeamReadUnavailable[];
@@ -2172,7 +2166,6 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
       await inFlightGlobalTasksRefresh;
       return;
     }
-
     const runRefresh = async (): Promise<void> => {
       do {
         const isFollowUpRefresh = pendingFreshGlobalTasksRefresh;
@@ -2474,7 +2467,6 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
         ...currentAssignments,
         [stableOwnerId]: assignment,
       };
-
       if (
         existing?.ringIndex === assignment.ringIndex &&
         existing?.sectorIndex === assignment.sectorIndex &&
@@ -2674,7 +2666,6 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
         : { orderedVisibleOwnerIds: [], signature: null, assignments: {} };
       const currentAssignments = state.slotAssignmentsByTeam[teamName];
       const currentSession = state.graphLayoutSessionByTeam[teamName];
-
       if (
         areTeamGraphSlotAssignmentsEqual(currentAssignments, defaultSeed.assignments) &&
         currentSession?.mode === 'default' &&
@@ -2985,7 +2976,6 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
           state,
           nextGlobalTasks
         );
-
         return {
           selectedTeamName: teamName,
           selectedTeamData: nextTeamData,
@@ -3522,7 +3512,6 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
     if (!shouldKeepRefreshActive) {
       return;
     }
-
     const timer = setTimeout(() => {
       if (pendingTeamPendingReplyRefreshTimers.get(teamName) !== timer) {
         return;
@@ -3971,7 +3960,6 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
       throw error;
     }
   },
-
   addMember: async (teamName: string, request: AddMemberRequest) => {
     await unwrapIpc('team:addMember', () => api.teams.addMember(teamName, request));
     await get().refreshTeamData(teamName);
@@ -4725,7 +4713,6 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
         selectTeamDataForName(get(), progress.teamName)
       );
     }
-
     set((state) => {
       const nextRuns: Record<string, TeamProvisioningProgress> = {
         ...state.provisioningRuns,

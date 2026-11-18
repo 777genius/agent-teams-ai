@@ -1279,6 +1279,7 @@ export class ChangeExtractorService {
         reviewState:
           parsed.reviewState === 'review' ||
           parsed.reviewState === 'needsFix' ||
+          parsed.reviewState === 'reviewed' ||
           parsed.reviewState === 'approved'
             ? parsed.reviewState
             : 'none',

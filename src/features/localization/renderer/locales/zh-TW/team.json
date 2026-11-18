@@ -1233,6 +1233,10 @@
       "awaitingLead": "等待團隊負責人的澄清",
       "awaitingUser": "等待您的澄清"
     },
+    "leadSignoff": {
+      "badge": "組長簽核",
+      "hint": "任務在進入「完畢」之前需由組長簽核。"
+    },
     "description": {
       "add": "點選新增描述…",
       "edit": "編輯描述",
@@ -1314,6 +1318,7 @@
       "unassignedFrom": "未分配自",
       "ownerChanged": "所有者已變更",
       "reviewRequested": "已請求審查",
+      "leadSignoffRequested": "已請求組長簽核",
       "reviewStarted": "審查開始",
       "changesRequested": "要求變更",
       "approved": "已核准",
@@ -2712,6 +2717,80 @@
       "review": "審查",
       "done": "完畢",
       "approved": "已核准"
+    }
+  },
+  "reviewFlow": {
+    "title": "審查流程",
+    "intro": "審查者檢查任務後，任務會直接變為「已核准」，或停在「完畢」等待您的決定。您可以在這裡設定所有團隊的預設值，並為個別團隊另行設定。",
+    "flowLegend": "由誰做最終核准",
+    "flows": {
+      "agent_approval": {
+        "label": "由代理核准",
+        "description": "審查者核准後，任務會移至「已核准」。"
+      },
+      "human_approval": {
+        "label": "由我做最終核准",
+        "description": "審查者完成審查後，任務會以「已審查」狀態停留在「完畢」。只有您能將它移至「已核准」。"
+      },
+      "lead_then_human": {
+        "label": "先由組長簽核，最後由我核准",
+        "description": "審查者完成後，組長以第二次審查簽核。之後任務會停留在「完畢」等您。只有您能將它移至「已核准」。"
+      }
+    },
+    "humanApprovalNote": "在此模式下，代理永遠不能將任務移至「已核准」，只有您可以。",
+    "promptLabel": "給代理的指示（選填）",
+    "promptPlaceholder": "例如：決定之前先執行 e2e 測試。",
+    "promptHint": "會隨每次審查請求傳送給審查者，並顯示在看板上供代理查看。不會改變誰可以核准。",
+    "save": "儲存",
+    "cancel": "取消",
+    "discard": "捨棄變更",
+    "retry": "重試",
+    "loading": "正在載入審查流程設定…",
+    "loadError": "無法載入審查流程設定。{{message}}",
+    "badges": {
+      "default": "預設",
+      "custom": "自訂",
+      "repair": "需要修復"
+    },
+    "scope": {
+      "label": "設定對象",
+      "defaultOption": "所有團隊（預設）",
+      "searchPlaceholder": "搜尋團隊",
+      "empty": "找不到團隊。"
+    },
+    "editor": {
+      "defaultHeading": "所有團隊的預設值",
+      "teamHeading": "此團隊",
+      "followingTeams": "使用預設值的團隊：{{count}}"
+    },
+    "useDefault": {
+      "label": "使用預設設定",
+      "following": "目前使用預設值：{{flow}}",
+      "custom": "此團隊有自己的審查流程。"
+    },
+    "feedback": {
+      "saved": "已儲存",
+      "saving": "儲存中…",
+      "error": "無法儲存：{{message}}"
+    },
+    "overrides": {
+      "heading": "有自訂設定的團隊（{{count}}）",
+      "empty": "所有團隊都使用預設值。",
+      "reset": "重設為預設",
+      "resetLabel": "將 {{team}} 重設為預設值"
+    },
+    "popover": {
+      "openSettings": "變更所有團隊的預設值…"
+    },
+    "broken": {
+      "defaults": "無法讀取已儲存的所有團隊預設值，因此在您儲存新的預設值之前，所有團隊的審查操作都會暫停。",
+      "defaultsHint": "表單顯示的是內建值。請儲存它們，或先修改後再儲存，以修復預設值。",
+      "details": "詳細資訊：{{message}}",
+      "fixDefaults": "修復預設值",
+      "teamHint": "無法讀取此團隊已儲存的設定，因此這裡的審查操作已暫停。請儲存新設定，或選擇預設值後儲存，即可修復。"
+    },
+    "unreadable": {
+      "heading": "設定無法讀取的團隊（{{count}}）"
     }
   },
   "worktreeGitReadiness": {

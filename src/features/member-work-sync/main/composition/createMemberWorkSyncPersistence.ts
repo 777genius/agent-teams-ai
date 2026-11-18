@@ -1,3 +1,4 @@
+import { readFailureDetail } from '../infrastructure/memberWorkSyncPreparationDiagnostics';
 import { AsyncLocalStorage } from 'node:async_hooks';
 
 import { MemberWorkSyncTeamQuiescedError } from '../../core/application';
@@ -138,6 +139,7 @@ export function createMemberWorkSyncPersistence(input: {
       reportJournal: jsonJournal,
       authority: new MemberWorkSyncStatusAuthority({
         interruption: internalStorageInterruption,
+        diagnosticDetail: readFailureDetail,
         identity: input.lifecycleIdentity,
         withPreparedBackend: (identity, operation) =>
           operation(createJsonPreparedStatusBackend(identity.teamName, jsonStore)),
@@ -176,6 +178,7 @@ export function createMemberWorkSyncPersistence(input: {
     ),
     authority: new MemberWorkSyncStatusAuthority({
       interruption: internalStorageInterruption,
+        diagnosticDetail: readFailureDetail,
       identity: input.lifecycleIdentity,
       withPreparedBackend: (identity, operation) => store.withPreparedBackend(identity, operation),
     }),

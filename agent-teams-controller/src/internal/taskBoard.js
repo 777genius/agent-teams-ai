@@ -114,8 +114,9 @@ function taskBriefing(context, memberName) {
   return tasks.taskBriefing(context, memberName);
 }
 
+/** Effective view (flow, prompt and source after the default/override layering). */
 function getKanbanState(context, options) {
-  return kanban.getKanbanState(context, options);
+  return kanban.getEffectiveKanbanState(context, options);
 }
 
 function setKanbanColumn(context, taskId, column, options) {
@@ -158,8 +159,24 @@ function approveReview(context, taskId, flags) {
   return review.approveReview(context, taskId, flags);
 }
 
+function completeReview(context, taskId, flags) {
+  return review.completeReview(context, taskId, flags);
+}
+
+function approveAsHuman(context, taskId) {
+  return review.approveAsHuman(context, taskId);
+}
+
+function setReviewFlowSettings(context, settings) {
+  return kanban.setReviewFlowSettings(context, settings);
+}
+
 function requestChanges(context, taskId, flags) {
   return review.requestChanges(context, taskId, flags);
+}
+
+function requestChangesAsHuman(context, taskId, flags) {
+  return review.requestChangesAsHuman(context, taskId, flags);
 }
 
 module.exports = {
@@ -168,9 +185,11 @@ module.exports = {
   addTaskComment,
   approveReview,
   disapproveReview,
+  approveAsHuman,
   attachCommentFile,
   attachTaskFile,
   clearKanban,
+  completeReview,
   completeTask,
   createTask,
   getKanbanState,
@@ -187,11 +206,13 @@ module.exports = {
   removeTaskAttachment,
   reconcileTaskCreation,
   requestChanges,
+  requestChangesAsHuman,
   requestReview,
   resolveTaskActor,
   resolveTaskId,
   restoreTask,
   setKanbanColumn,
+  setReviewFlowSettings,
   setNeedsClarification,
   setTaskOwner,
   setTaskStatus,

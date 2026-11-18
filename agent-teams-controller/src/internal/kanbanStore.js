@@ -18,6 +18,7 @@ function validateSafetyState(value, teamName) {
       value.reviewers.some((name) => typeof name !== 'string' || !name.trim()))
   )
     return invalid();
+  readReviewFlowOverrideFields(value);
   for (const [taskId, task] of Object.entries(value.tasks)) {
     if (
       !taskId.trim() ||
@@ -43,14 +44,23 @@ function nowIso() {
 function readJson(filePath, fallbackValue) {
   try {
     return JSON.parse(fs.readFileSync(filePath, 'utf8'));
-  } catch {
-    return fallbackValue;
+  } catch (error) {
+    if (error && error.code === 'ENOENT') return fallbackValue;
+    throw error; // An unreadable policy must never silently turn approval restrictions off.
   }
 }
 
 function writeJson(filePath, value) {
   writeJsonFileSync(filePath, value);
 }
+
+const {
+  isHumanApproval,
+  parseReviewFlowSettings,
+  readDefaults,
+  resolvePolicy,
+  toPersistedSettings,
+} = require('./reviewFlow.js');
 
 function getDefaultState(teamName) {
   return {
@@ -60,8 +70,43 @@ function getDefaultState(teamName) {
   };
 }
 
+/**
+ * The team override of the review flow, or null when the team follows the global default.
+ * `state` must come from sanitizeState, so a present flow is always valid.
+ */
+function getReviewFlowOverride(state) {
+  if (!state || state.reviewFlow === undefined) return null;
+  return parseReviewFlowSettings(state);
+}
+
+/** The state without its review-flow override, i.e. as a team that follows the default. */
+function withoutReviewFlowOverride(state) {
+  const next = { ...state };
+  delete next.reviewFlow;
+  delete next.reviewFlowPrompt;
+  return next;
+}
+
+/** Validates the persisted override unit; a prompt without a flow is as corrupt as a bad value. */
+function readReviewFlowOverrideFields(rawState) {
+  const corrupt = () => new Error('Kanban review flow is corrupt');
+  if (rawState.reviewFlow === undefined) {
+    if (rawState.reviewFlowPrompt !== undefined) throw corrupt();
+    return {};
+  }
+  try {
+    return toPersistedSettings(parseReviewFlowSettings(rawState));
+  } catch {
+    throw corrupt();
+  }
+}
+
 function sanitizeState(teamName, rawState) {
-  const state = rawState && typeof rawState === 'object' ? rawState : {};
+  if (!rawState || typeof rawState !== 'object' || Array.isArray(rawState)) {
+    throw new Error('Kanban review flow is corrupt');
+  }
+  const overrideFields = readReviewFlowOverrideFields(rawState);
+  const state = rawState;
   const tasks = {};
   if (state.tasks && typeof state.tasks === 'object') {
     for (const [taskId, entry] of Object.entries(state.tasks)) {
@@ -87,6 +132,7 @@ function sanitizeState(teamName, rawState) {
       ? state.reviewers.filter((entry) => typeof entry === 'string' && entry.trim())
       : [],
     tasks,
+    ...overrideFields,
     ...(state.columnOrder && typeof state.columnOrder === 'object'
       ? { columnOrder: state.columnOrder }
       : {}),
@@ -112,8 +158,33 @@ function readKanbanState(paths, teamName, options = {}) {
   return sanitizeState(teamName, parsed);
 }
 
+/** Effective review-flow policy of a team: its own override, otherwise the global default. */
+function resolveReviewFlowPolicy(paths, teamName) {
+  const override = getReviewFlowOverride(readKanbanState(paths, teamName));
+  return resolvePolicy(readDefaults(paths.claudeDir), override);
+}
+
+function isHumanApprovalFlow(paths, teamName) {
+  return isHumanApproval(resolveReviewFlowPolicy(paths, teamName));
+}
+
 function writeKanbanState(paths, teamName, state) {
   writeJson(paths.kanbanPath, sanitizeState(teamName, state));
+}
+
+/**
+ * Replaces the team override with `settings` (a complete unit) or removes it (`null`). This is the
+ * repair path, so the previously saved review-flow fields are discarded WITHOUT being validated:
+ * a team whose saved flow is invalid or orphaned can still be reset or overwritten. Unparseable
+ * JSON or a non-object file still fails; everything else is sanitized and written as usual.
+ */
+function replaceReviewFlowOverride(paths, teamName, settings) {
+  const raw = readJson(paths.kanbanPath, getDefaultState(teamName));
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
+    throw new Error('Kanban review flow is corrupt');
+  }
+  const base = withoutReviewFlowOverride(raw);
+  writeKanbanState(paths, teamName, settings ? { ...base, ...toPersistedSettings(settings) } : base);
 }
 
 function removeTaskFromColumnOrder(state, taskId) {
@@ -248,8 +319,12 @@ module.exports = {
   validateSafetyState,
   clearKanban,
   garbageCollect,
+  isHumanApprovalFlow,
   readKanbanState,
+  replaceReviewFlowOverride,
+  resolveReviewFlowPolicy,
   setKanbanColumn,
   updateColumnOrder,
+  withoutReviewFlowOverride,
   writeKanbanState,
 };

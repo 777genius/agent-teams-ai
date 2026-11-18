@@ -130,9 +130,13 @@ P9 не имеет подтверждённого конечного LOC до р
   Memoization и ослабление проверок по одним таймингам не принимаются.
 - 18 ноября, R2 приёмки: исходные packaged PASS переиспользуются только для
   доказанно неизменённых boundaries; изменение imports/composition требует review.
-- 18 ноября: текущий main интегрируется; 21 текстовый конфликт разрешается
+- 18 ноября: текущий main интегрируется; 21 текстовый конфликт разрешён
   предметно, с сохранением disapprove, human approval, lead sign-off и Host routing.
-  Root разрешил 8 UI/worker/IPC конфликтов; остальные review/work-sync у F1/F2.
+  Сохранены единые work-sync re-exports и shared history helpers.
+  ReviewFlow/Lead sign-off: 56 PASS; controller review/briefing/disapproval: 46 PASS;
+  history: 3 PASS; clarification/cycle/status-detail: 7 PASS. Ledger, controller и
+  Host build PASS под Node 24.21 / TypeScript 7.0.2. Нативные Host команды и
+  captured-owner настройки F1 остаются в следующем срезе.
 
 - 18 ноября, E1: изолированно исправлены 8 избыточных non-null assertions и
   2 import/export-order ошибки. Root проверил точный diff; fast ESLint трёх файлов

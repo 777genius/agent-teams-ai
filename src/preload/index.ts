@@ -12,6 +12,7 @@ import { createNativeNextPromptBridge } from '@features/native-prompt-suggestion
 import { createOrganizationsBridge } from '@features/organizations/preload';
 import { createProjectFolderBridge } from '@features/project-folder/preload';
 import { createRecentProjectsBridge } from '@features/recent-projects/preload';
+import { createReviewFlowBridge } from '@features/review-flow/preload';
 import { createRuntimeProviderManagementBridge } from '@features/runtime-provider-management/preload';
 import { createTeamGroupChatsBridge } from '@features/team-group-chats/preload';
 import { createTeamImportBridge } from '@features/team-import/preload';
@@ -521,6 +522,7 @@ const electronAPI: ElectronAPI = {
     ipcRenderer,
   }),
   ...createRecentProjectsBridge(),
+  reviewFlow: createReviewFlowBridge(),
   teamGroupChats: createTeamGroupChatsBridge(),
   announcements: createAnnouncementsBridge(),
   gatewayProvider: createGatewayProviderBridge(),

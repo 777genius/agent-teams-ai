@@ -38,7 +38,6 @@ import { KanbanTaskAttachmentMosaic } from './KanbanTaskAttachmentMosaic';
 import { useTaskCommentPulse } from './useTaskCommentPulse';
 
 import type { KanbanColumnId, KanbanTaskState, TeamTask, TeamTaskWithKanban } from '@shared/types';
-
 interface KanbanTaskCardProps {
   task: TeamTaskWithKanban;
   contextId: string;
@@ -70,15 +69,12 @@ interface DependencyBadgeProps {
   taskMap: Map<string, TeamTask>;
   onScrollToTask?: (taskId: string) => void;
 }
-
 interface FlatDependencyRowProps extends DependencyBadgeProps {
   label: string;
   direction: 'backward' | 'forward';
   tone: 'blocked' | 'depends' | 'blocks';
 }
-
 const taskCardSignatureCache = new WeakMap<TeamTaskWithKanban, string>();
-
 function getTaskCardSignature(task: TeamTaskWithKanban): string {
   const cached = taskCardSignatureCache.get(task);
   if (cached !== undefined) return cached;
@@ -87,7 +83,6 @@ function getTaskCardSignature(task: TeamTaskWithKanban): string {
   taskCardSignatureCache.set(task, signature);
   return signature;
 }
-
 function areKanbanTaskStatesEqual(
   prev: KanbanTaskState | undefined,
   next: KanbanTaskState | undefined
@@ -105,7 +100,6 @@ function areKanbanTaskStatesEqual(
 function getTaskDependencyIds(task: TeamTaskWithKanban): string[] {
   return [...(task.blockedBy ?? []), ...(task.blocks ?? [])].filter((id) => id.length > 0);
 }
-
 function getDependencyTaskSignature(task: TeamTask | undefined): string {
   if (!task) return '';
   const kanbanTask = task as Partial<TeamTaskWithKanban>;
@@ -139,7 +133,6 @@ function areTaskMapDependenciesEqual(
   }
   return true;
 }
-
 const DependencyBadge = ({
   taskId,
   taskMap,
@@ -150,7 +143,6 @@ const DependencyBadge = ({
   const label = depTask
     ? `${formatTaskDisplayLabel(depTask)}: ${depTask.subject}`
     : `#${deriveTaskDisplayId(taskId)}`;
-
   return (
     <Tooltip>
       <TooltipTrigger asChild>
@@ -193,7 +185,6 @@ const FlatDependencyRow = ({
         ? 'text-blue-600 dark:text-blue-400'
         : 'text-[var(--color-text-muted)]';
   const DirectionIcon = direction === 'backward' ? ArrowLeftFromLine : ArrowRightFromLine;
-
   return (
     <button
       type="button"
@@ -236,7 +227,6 @@ const TruncatedTitle = ({
   const titleRef = useRef<HTMLHeadingElement | null>(null);
   const [isOverflowing, setIsOverflowing] = useState(false);
   const [tooltipOpen, setTooltipOpen] = useState(false);
-
   const updateOverflowState = useCallback((): boolean => {
     const element = titleRef.current;
     if (!element) return false;
@@ -248,13 +238,11 @@ const TruncatedTitle = ({
     if (!nextIsOverflowing) setTooltipOpen(false);
     return nextIsOverflowing;
   }, []);
-
   useLayoutEffect(() => {
     const element = titleRef.current;
     if (!element) return undefined;
 
     updateOverflowState();
-
     if (typeof ResizeObserver !== 'undefined') {
       let animationFrame = 0;
       const resizeObserver = new ResizeObserver(() => {
@@ -271,7 +259,6 @@ const TruncatedTitle = ({
     window.addEventListener('resize', updateOverflowState);
     return () => window.removeEventListener('resize', updateOverflowState);
   }, [text, updateOverflowState]);
-
   const handleTooltipOpenChange = useCallback(
     (open: boolean): void => {
       setTooltipOpen(open && updateOverflowState());
@@ -290,7 +277,6 @@ const TruncatedTitle = ({
       {text}
     </h5>
   );
-
   return (
     <Tooltip open={tooltipOpen} onOpenChange={handleTooltipOpenChange}>
       <TooltipTrigger asChild>{title}</TooltipTrigger>
@@ -324,7 +310,6 @@ const CancelTaskButton = ({
     setOpen(nextOpen);
     onOpenChange?.(nextOpen);
   };
-
   return (
     <Popover open={open} onOpenChange={handleOpenChange}>
       <Tooltip>
@@ -383,7 +368,6 @@ const CancelTaskButton = ({
     </Popover>
   );
 };
-
 interface TaskActionIconButtonProps {
   label: string;
   icon: React.ReactNode;
@@ -419,7 +403,6 @@ const TaskActionIconButton = ({
     <TooltipContent side={tooltipSide}>{label}</TooltipContent>
   </Tooltip>
 );
-
 interface TaskMetaActionsProps {
   taskId: string;
   unreadCount: number;
@@ -446,7 +429,6 @@ const TaskMetaActions = memo(function TaskMetaActions({
   onDeleteTask,
 }: TaskMetaActionsProps): React.JSX.Element {
   const { t } = useAppTranslation('team');
-
   return (
     <>
       {canOpenChanges && onViewChanges ? (
@@ -498,6 +480,7 @@ interface TaskPrimaryActionsProps {
   taskId: string;
   columnId: KanbanColumnId;
   isReviewManual: boolean;
+  canRejectReviewed?: boolean;
   onRequestReview: (taskId: string) => void;
   onApprove: (taskId: string) => void;
   onRequestChanges: (taskId: string) => void;
@@ -508,11 +491,11 @@ interface TaskPrimaryActionsProps {
   toolbarMode?: boolean;
   onActionPopoverOpenChange?: (open: boolean) => void;
 }
-
 const TaskPrimaryActions = memo(function TaskPrimaryActions({
   taskId,
   columnId,
   isReviewManual,
+  canRejectReviewed = false,
   onRequestReview,
   onApprove,
   onRequestChanges,
@@ -599,6 +582,18 @@ const TaskPrimaryActions = memo(function TaskPrimaryActions({
               onRequestReview(taskId);
             }}
           />
+          {canRejectReviewed ? (
+            <TaskActionIconButton
+              label={t('kanban.taskCard.requestChanges')}
+              icon={<FilePenLine size={11} />}
+              tooltipSide={toolbarMode ? 'left' : 'top'}
+              className="text-red-400 hover:bg-red-500/10 hover:text-red-300"
+              onClick={(e) => {
+                e.stopPropagation();
+                onRequestChanges(taskId);
+              }}
+            />
+          ) : null}
         </>
       ) : null}
 
@@ -658,7 +653,6 @@ const TaskPrimaryActions = memo(function TaskPrimaryActions({
     </div>
   );
 });
-
 export const KanbanTaskCard = memo(
   function KanbanTaskCard({
     task,
@@ -739,6 +733,7 @@ export const KanbanTaskCard = memo(
           taskId={task.id}
           columnId={columnId}
           isReviewManual={isReviewManual}
+          canRejectReviewed={columnId === 'done' && task.reviewState === 'reviewed'}
           onRequestReview={onRequestReview}
           onApprove={onApprove}
           onRequestChanges={onRequestChanges}
@@ -770,7 +765,6 @@ export const KanbanTaskCard = memo(
         </div>
       </div>
     );
-
     const cardContent = (
       <div
         data-task-id={task.id}
@@ -859,6 +853,13 @@ export const KanbanTaskCard = memo(
               {task.needsClarification === 'user'
                 ? t('kanban.taskCard.awaitingUser')
                 : t('kanban.taskCard.awaitingLead')}
+            </span>
+          ) : null}
+          {columnId === 'done' && task.reviewState === 'reviewed' ? (
+            <span
+              className={`mt-1 inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium ${REVIEW_STATE_DISPLAY.reviewed.bg} ${REVIEW_STATE_DISPLAY.reviewed.text}`}
+            >
+              {REVIEW_STATE_DISPLAY.reviewed.label}
             </span>
           ) : null}
           {isTeamTaskNeedsFixActionable(task) ? (
@@ -957,7 +958,6 @@ export const KanbanTaskCard = memo(
     if (!flat) {
       return cardContent;
     }
-
     return (
       <HoverCard
         open={toolbarOpen || actionPopoverOpen}

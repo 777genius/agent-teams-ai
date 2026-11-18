@@ -16,7 +16,7 @@ export interface TaskChangePresenceDescriptorInput {
   intervals?: TaskChangePresenceInterval[];
   createdAt?: string;
   since?: string;
-  reviewState?: 'review' | 'needsFix' | 'approved' | 'none';
+  reviewState?: 'review' | 'needsFix' | 'reviewed' | 'approved' | 'none';
   historyEvents?: unknown[];
   kanbanColumn?: 'review' | 'approved';
 }

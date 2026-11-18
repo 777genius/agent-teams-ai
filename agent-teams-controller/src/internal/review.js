@@ -1,14 +1,15 @@
-const fs = require('fs');
-const path = require('path');
-const { atomicWriteFileSync } = require('./atomicFile.js');
+const { createReviewDisapproval } = require('./reviewDisapproval.js');
 const kanbanStore = require('./kanbanStore.js');
 const kanban = require('./kanban.js');
+const { createReviewHumanActions } = require('./reviewHumanActions.js');
+const { createLeadSignoff } = require('./reviewLeadSignoff.js');
 const messages = require('./messages.js');
 const runtimeHelpers = require('./runtimeHelpers.js');
 const reviewStateHelpers = require('./reviewState.js');
 const tasks = require('./tasks.js');
 const { withTeamBoardLock } = require('./boardLock.js');
-const { wrapAgentBlock } = require('./agentBlocks.js');
+const reviewFlow = require('./reviewFlow.js');
+const { buildReviewRequestMessage } = require('./reviewRequestMessage.js');
 
 function warnNonCritical(message, error) {
   if (typeof console === 'undefined' || typeof console.warn !== 'function') {
@@ -46,6 +47,20 @@ function getEffectiveReviewState(context, task) {
   return reviewStateHelpers.getEffectiveReviewState(task, kanbanEntry).state;
 }
 
+function getLatestReviewRequestEvent(task) {
+  const events = Array.isArray(task.historyEvents) ? task.historyEvents : [];
+  for (let i = events.length - 1; i >= 0; i -= 1) {
+    const event = events[i];
+    if (event.type === 'review_requested') return event;
+    if (
+      event.type === 'task_created' ||
+      (event.type === 'status_changed' &&
+        (event.to === 'in_progress' || event.to === 'pending' || event.to === 'deleted'))
+    ) return null;
+  }
+  return null;
+}
+
 function getLatestReviewRequestedReviewer(task) {
   const events = Array.isArray(task.historyEvents) ? task.historyEvents : [];
   for (let i = events.length - 1; i >= 0; i--) {
@@ -57,6 +72,8 @@ function getLatestReviewRequestedReviewer(task) {
       e.type === 'review_changes_requested' ||
       e.type === 'review_approved' ||
       e.type === 'review_disapproved' ||
+      e.type === 'review_completed' ||
+      e.type === 'human_approved' ||
       (e.type === 'status_changed' &&
         (e.to === 'in_progress' || e.to === 'pending' || e.to === 'deleted')) ||
       e.type === 'task_created'
@@ -201,6 +218,8 @@ function getLatestReviewStartedActor(task) {
       e.type === 'review_changes_requested' ||
       e.type === 'review_approved' ||
       e.type === 'review_disapproved' ||
+      e.type === 'review_completed' ||
+      e.type === 'human_approved' ||
       (e.type === 'status_changed' &&
         (e.to === 'in_progress' || e.to === 'pending' || e.to === 'deleted')) ||
       e.type === 'task_created'
@@ -265,6 +284,8 @@ function getLatestReviewLifecycleEvent(task) {
       e.type === 'review_changes_requested' ||
       e.type === 'review_approved' ||
       e.type === 'review_disapproved' ||
+      e.type === 'review_completed' ||
+      e.type === 'human_approved' ||
       e.type === 'review_started'
     ) {
       return e;
@@ -347,7 +368,8 @@ function startReview(context, taskId, flags = {}) {
           return t;
         });
       }
-      return { ok: true, taskId: task.id, displayId: task.displayId, column: 'review' };
+      return { ok: true, taskId: task.id, displayId: task.displayId, column: 'review',
+        reviewRequestId: getLatestReviewRequestEvent(task)?.id ?? null };
     }
 
     assertReviewTransitionAllowed(context, task, 'starting review');
@@ -368,7 +390,8 @@ function startReview(context, taskId, flags = {}) {
         t.reviewState = 'review';
         return t;
       });
-      return { ok: true, taskId: task.id, displayId: task.displayId, column: 'review' };
+      return { ok: true, taskId: task.id, displayId: task.displayId, column: 'review',
+        reviewRequestId: getLatestReviewRequestEvent(task)?.id ?? null };
     } catch (error) {
       try {
         kanban.clearKanban(context, task.id, { transition: 'rollback' });
@@ -383,46 +406,8 @@ function startReview(context, taskId, flags = {}) {
   });
 }
 
-/** Transport examples vary; review transitions, actors and notifications remain canonical. */
-function reviewToolInstructions(context, task) {
-  if (context.boundTaskTools) {
-    const history = Array.isArray(task.historyEvents) ? task.historyEvents : [];
-    const requested = [...history].reverse().find((event) => event.type === 'review_requested');
-    const cycle = `${task.id}-${requested && requested.id ? requested.id : history.length}`;
-    return (
-      'These tools use your captured Team and actor. Do not supply teamName or from. ' +
-      'Keep each commandId unchanged when checking or retrying its original result; changed intent needs a new ID.\n\n' +
-      'FIRST call review_start to signal you are beginning the review:\n' +
-      JSON.stringify({ commandId: `review-start-${cycle}`, taskId: task.id }) +
-      '\n\n' +
-      'When approved, use MCP tool review_approve:\n' +
-      JSON.stringify({
-        commandId: `review-approve-${cycle}`,
-        taskId: task.id,
-        note: 'Approved',
-        notifyOwner: true,
-      }) +
-      '\n\n' +
-      'If changes are needed, use MCP tool review_request_changes:\n' +
-      JSON.stringify({
-        commandId: `review-changes-${cycle}`,
-        taskId: task.id,
-        comment: 'Describe required changes.',
-      })
-    );
-  }
-  return (
-    `FIRST call review_start to signal you are beginning the review:\n` +
-    `{ teamName: "${context.teamName}", taskId: "${task.id}", from: "<your-name>" }\n\n` +
-    `When approved, use MCP tool review_approve:\n` +
-    `{ teamName: "${context.teamName}", taskId: "${task.id}", from: "<your-name>", note?: "<optional note>", notifyOwner: true }\n\n` +
-    `If changes are needed, use MCP tool review_request_changes:\n` +
-    `{ teamName: "${context.teamName}", taskId: "${task.id}", from: "<your-name>", comment: "..." }`
-  );
-}
-
 function requestReview(context, taskId, flags = {}) {
-  const { task, reviewer, from, leadSessionId } = withTeamBoardLock(context.paths, () => {
+  const { task, reviewer, from, leadSessionId, reviewRequestId, humanApproval, reviewFlowPrompt } = withTeamBoardLock(context.paths, () => {
     const currentTask = tasks.getTask(context, taskId);
     if (currentTask.status !== 'completed') {
       throw new Error(
@@ -469,11 +454,15 @@ function requestReview(context, taskId, flags = {}) {
       throw error;
     }
 
+    const reviewPolicy = kanban.getReviewFlowPolicy(context);
     return {
       task: tasks.getTask(context, currentTask.id),
       reviewer: nextReviewer,
       from: nextFrom,
       leadSessionId: resolveLeadSessionId(context, flags),
+      reviewRequestId: getLatestReviewRequestEvent(tasks.getTask(context, currentTask.id))?.id,
+      humanApproval: reviewFlow.isHumanApproval(reviewPolicy),
+      reviewFlowPrompt: reviewPolicy.reviewFlowPrompt,
     };
   });
 
@@ -485,13 +474,10 @@ function requestReview(context, taskId, flags = {}) {
     messages.sendMessage(context, {
       to: reviewer,
       from,
-      text:
-        `**Please review** task #${task.displayId || task.id}\n\n` +
-        wrapAgentBlock(
-          `This request is for the CURRENT review cycle. If you reviewed this task earlier, do not treat this message as a duplicate while the task is still in review; prior approvals become stale after later work.\n\n` +
-            `Before declaring it duplicate, call task_get and check the current reviewState/status. If it is still in review for you, continue with the review tools below.\n\n` +
-            reviewToolInstructions(context, task)
-        ),
+      text: buildReviewRequestMessage({
+        teamName: context.teamName, task, reviewRequestId, humanApproval, reviewFlowPrompt,
+        boundTaskTools: context.boundTaskTools,
+      }),
       summary: `Review request for #${task.displayId || task.id}`,
       source: 'system_notification',
       ...(leadSessionId ? { leadSessionId } : {}),
@@ -503,58 +489,28 @@ function requestReview(context, taskId, flags = {}) {
   return task;
 }
 
-// Explicit human removal of approval; status/work intervals remain completed.
-function disapproveReview(context, taskId, flags = {}) {
-  if (flags.from !== 'user' || context.allowUserMessageSender !== true) {
-    throw new Error('Only the trusted user can remove task approval');
-  }
-  return withTeamBoardLock(context.paths, () => {
-    const task = tasks.getTask(context, taskId);
-    if (task.status !== 'completed' || getEffectiveReviewState(context, task) !== 'approved') {
-      throw new Error(`Task #${task.displayId || task.id} must be completed and approved`);
-    }
-    // This is synchronous rollback under the board lock, not a crash journal.
-    kanbanStore.readKanbanState(context.paths, context.teamName, { strict: true });
-    const taskPath = path.join(context.paths.tasksDir, `${task.id}.json`);
-    const originalTask = fs.readFileSync(taskPath);
-    let originalBoard;
-    try {
-      originalBoard = fs.readFileSync(context.paths.kanbanPath);
-    } catch (error) {
-      if (error.code !== 'ENOENT') throw error;
-    }
-    const timestamp = new Date().toISOString();
-    try {
-      kanbanStore.clearKanban(context.paths, context.teamName, task.id, { nextReviewState: 'none' });
-      return tasks.updateTask(context, task.id, (current) => {
-        closeReviewIntervals(current, timestamp);
-        current.historyEvents = tasks.appendHistoryEvent(current.historyEvents, {
-          type: 'review_disapproved', from: 'approved', to: 'none', actor: 'user', timestamp,
-        });
-        current.reviewState = 'none';
-        return current;
-      });
-    } catch (error) {
-      const rollbackErrors = [];
-      for (const [file, bytes] of [[taskPath, originalTask], [context.paths.kanbanPath, originalBoard]]) {
-        try {
-          if (bytes === undefined) fs.rmSync(file, { force: true });
-          else atomicWriteFileSync(file, bytes);
-        } catch (rollbackError) {
-          rollbackErrors.push(rollbackError);
-        }
-      }
-      if (rollbackErrors.length) {
-        throw new AggregateError([error, ...rollbackErrors], 'Disapprove failed; approval rollback incomplete');
-      }
-      throw error;
-    }
-  });
-}
+const disapproveReview = createReviewDisapproval({ getEffectiveReviewState, closeReviewIntervals });
 
+const leadSignoff = createLeadSignoff({
+  isLeadActor, resolveActorIdentityKey, getLatestReviewRequestEvent, closeReviewIntervals, warnNonCritical,
+});
+const { completeReview, approveAsHuman } = createReviewHumanActions({
+  leadSignoff,
+  getLatestReviewRequestEvent,
+  getEffectiveReviewState,
+  assertReviewTransitionAllowed,
+  getReviewDecisionActor,
+  closeReviewIntervals,
+  resolveLeadSessionId,
+  warnNonCritical,
+});
 function approveReview(context, taskId, flags = {}) {
   const result = withTeamBoardLock(context.paths, () => {
     const currentTask = tasks.getTask(context, taskId);
+    if (kanban.isHumanApprovalFlow(context)) {
+      throw new Error('Human approval required: reviewer must use review_complete');
+    }
+    leadSignoff.assertExplicitActor(context, currentTask, flags, 'review_approve');
     const nextFrom = getReviewDecisionActor(context, currentTask, flags, 'approve review');
     const nextNote =
       typeof flags.note === 'string' && flags.note.trim() ? flags.note.trim() : 'Approved';
@@ -661,63 +617,118 @@ function approveReview(context, taskId, flags = {}) {
 }
 
 function requestChanges(context, taskId, flags = {}) {
-  const { task, from, comment, leadSessionId } = withTeamBoardLock(context.paths, () => {
+  return requestChangesWithAuthority(context, taskId, flags, false);
+}
+
+// Trusted desktop user path. No MCP/CLI/public HTTP tool exposes this method.
+function requestChangesAsHuman(context, taskId, flags = {}) {
+  return requestChangesWithAuthority(context, taskId, flags, true);
+}
+
+function requestChangesWithAuthority(context, taskId, flags, fromHuman) {
+  const { task, from, comment, leadSessionId, decisionId } = withTeamBoardLock(context.paths, () => {
     const currentTask = tasks.getTask(context, taskId);
     if (!currentTask.owner) {
       throw new Error(`No owner found for task ${String(taskId)}`);
     }
 
-    const nextFrom = getReviewDecisionActor(context, currentTask, flags, 'request changes');
-    const nextComment =
-      typeof flags.comment === 'string' && flags.comment.trim()
+    const currentReviewState = getEffectiveReviewState(context, currentTask);
+    const latestDecision = [...(currentTask.historyEvents || [])].reverse().find(
+      (event) => [
+        'review_requested', 'review_changes_requested', 'review_completed',
+        'review_approved', 'human_approved',
+      ].includes(event.type)
+    );
+    const recoveringHumanRejection = fromHuman &&
+      currentReviewState === 'needsFix' &&
+      (currentTask.status === 'completed' || currentTask.status === 'pending') &&
+      latestDecision?.type === 'review_changes_requested' &&
+      latestDecision.actor === 'user';
+    if (fromHuman) {
+      if (!recoveringHumanRejection && (currentTask.status !== 'completed' ||
+          (currentReviewState !== 'review' && currentReviewState !== 'reviewed'))) {
+        throw new Error('Human rejection requires active Review or reviewed Done');
+      }
+    } else if (kanban.isHumanApprovalFlow(context)) {
+      const expectedId = typeof flags.expectedReviewRequestId === 'string'
+        ? flags.expectedReviewRequestId.trim() : '';
+      const currentId = getLatestReviewRequestEvent(currentTask)?.id;
+      if (!expectedId || expectedId !== currentId) {
+        throw new Error('Stale review request: review_request_changes requires current expectedReviewRequestId');
+      }
+    }
+    if (!fromHuman) leadSignoff.assertExplicitActor(context, currentTask, flags, 'review_request_changes');
+    const nextFrom = fromHuman
+      ? 'user'
+      : getReviewDecisionActor(context, currentTask, flags, 'request changes');
+    const nextComment = recoveringHumanRejection
+      ? latestDecision.note || 'Reviewer requested changes.'
+      : typeof flags.comment === 'string' && flags.comment.trim()
         ? flags.comment.trim()
         : 'Reviewer requested changes.';
-    const prevReviewState = assertReviewTransitionAllowed(
-      context,
-      currentTask,
-      'requesting changes'
-    );
-    const timestamp = new Date().toISOString();
-
-    tasks.updateTask(context, currentTask.id, (t) => {
-      closeReviewIntervals(t, timestamp);
-      t.historyEvents = tasks.appendHistoryEvent(t.historyEvents, {
-        type: 'review_changes_requested',
-        from: prevReviewState,
-        to: 'needsFix',
-        ...(nextComment ? { note: nextComment } : {}),
-        actor: nextFrom,
-        timestamp,
+    const prevReviewState = fromHuman
+      ? currentReviewState
+      : assertReviewTransitionAllowed(context, currentTask, 'requesting changes');
+    let decisionId = recoveringHumanRejection ? latestDecision.id : null;
+    if (!recoveringHumanRejection) {
+      const timestamp = new Date().toISOString();
+      tasks.updateTask(context, currentTask.id, (t) => {
+        closeReviewIntervals(t, timestamp);
+        t.historyEvents = tasks.appendHistoryEvent(t.historyEvents, {
+          type: 'review_changes_requested',
+          from: prevReviewState,
+          to: 'needsFix',
+          ...(nextComment ? { note: nextComment } : {}),
+          actor: nextFrom,
+          timestamp,
+        });
+        t.reviewState = 'needsFix';
+        return t;
       });
-      t.reviewState = 'needsFix';
-      return t;
-    });
+      if (fromHuman) {
+        decisionId = [...(tasks.getTask(context, currentTask.id).historyEvents || [])]
+          .reverse().find((event) =>
+            event.type === 'review_changes_requested' && event.actor === 'user'
+          )?.id;
+      }
+    }
 
     kanban.clearKanban(context, currentTask.id, {
       nextReviewState: 'needsFix',
       transition: 'request_changes',
     });
-    tasks.setTaskStatus(context, currentTask.id, 'pending', nextFrom, {
-      trustedInternalWrite: true,
-    });
-    tasks.addTaskComment(context, currentTask.id, {
-      text: nextComment,
-      from: nextFrom,
-      type: 'review_request',
-      ...(Array.isArray(flags.taskRefs) ? { taskRefs: flags.taskRefs } : {}),
-      notifyOwner: false,
-    });
+    if (currentTask.status !== 'pending') {
+      tasks.setTaskStatus(context, currentTask.id, 'pending', nextFrom, {
+        trustedInternalWrite: true,
+      });
+    }
+    if (fromHuman && !decisionId) {
+      throw new Error('Cannot resume human rejection without its recorded event ID');
+    }
+    const commentId = fromHuman ? `human-review-changes-${decisionId}` : null;
+    const existingComments = tasks.getTask(context, currentTask.id).comments || [];
+    if (!commentId || !existingComments.some((entry) => entry.id === commentId)) {
+      tasks.addTaskComment(context, currentTask.id, {
+        ...(commentId ? { id: commentId } : {}),
+        text: nextComment,
+        from: fromHuman ? runtimeHelpers.inferLeadName(context.paths) : nextFrom,
+        type: 'review_request',
+        ...(Array.isArray(flags.taskRefs) ? { taskRefs: flags.taskRefs } : {}),
+        notifyOwner: false,
+      });
+    }
 
     return {
       task: tasks.getTask(context, currentTask.id),
       from: nextFrom,
       comment: nextComment,
+      decisionId,
       leadSessionId: resolveLeadSessionId(context, flags),
     };
   });
 
   try {
-    messages.sendMessage(context, {
+    (fromHuman ? messages.sendTrustedMessage : messages.sendMessage)(context, {
       to: task.owner,
       from,
       text:
@@ -725,6 +736,7 @@ function requestChanges(context, taskId, flags = {}) {
         'The task has been moved back to pending. When you are ready to resume, review the task context, start it explicitly, implement the fixes, mark it completed, and request review again.',
       ...(Array.isArray(flags.taskRefs) ? { taskRefs: flags.taskRefs } : {}),
       summary: `Fix request for #${task.displayId || task.id}`,
+      ...(fromHuman && decisionId ? { messageId: decisionId } : {}),
       source: 'system_notification',
       ...(leadSessionId ? { leadSessionId } : {}),
     });
@@ -738,7 +750,10 @@ function requestChanges(context, taskId, flags = {}) {
 module.exports = {
   approveReview,
   disapproveReview,
+  approveAsHuman,
+  completeReview,
   requestReview,
   requestChanges,
+  requestChangesAsHuman,
   startReview,
 };

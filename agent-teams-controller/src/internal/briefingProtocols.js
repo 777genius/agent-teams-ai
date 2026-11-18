@@ -98,8 +98,11 @@ function buildMemberFormattingProtocol() {
 
 function buildMemberTaskProtocol(
   teamName,
-  messagingProtocol = createMemberMessagingProtocol('native')
+  messagingProtocol = createMemberMessagingProtocol('native'),
+  humanApproval = false
 ) {
+  const reviewDecisionTool = humanApproval ? 'review_complete' : 'review_approve';
+  const reviewDecisionResult = humanApproval ? 'DONE (awaiting human acceptance)' : 'APPROVED';
   const example = (tool, payload, legacy) =>
     messagingProtocol.boundTeamToolExample
       ? messagingProtocol.boundTeamToolExample(tool, payload)
@@ -149,12 +152,15 @@ function buildMemberTaskProtocol(
      If review is not explicitly requested yet or the reviewer is still undecided, leave the task completed and wait.
 3b. When you BEGIN reviewing a task, FIRST call review_start to ensure it appears in the REVIEW column:
    ${example('review_start', { taskId: '<taskId>' }, `{ teamName: "${teamName}", taskId: "<taskId>", from: "<your-name>" }`)}
-   This is MANDATORY before review_approve or review_request_changes. Without this step, the kanban board may not show the task in REVIEW during your review.
-4. If you are asked to review and the task is accepted, move it to APPROVED (not DONE) with MCP tool review_approve:
-   ${example('review_approve', { taskId: '<taskId>', note: '<optional note>', notifyOwner: true }, `{ teamName: "${teamName}", taskId: "<taskId>", from: "<your-name>", note?: "<optional note>", notifyOwner: true }`)}
-   CRITICAL: Text comments like "approved" or "LGTM" do NOT change the kanban board. You MUST call review_approve to move a task from REVIEW to APPROVED. Without the tool call the task stays stuck in the REVIEW column.
+   This is MANDATORY before ${reviewDecisionTool} or review_request_changes. Save the reviewRequestId returned by review_start; an older ID must not be used for a newer review cycle.
+4. If you are asked to review and the task is accepted, move it to ${reviewDecisionResult} with MCP tool ${reviewDecisionTool}:
+   ${humanApproval
+     ? example('review_complete', { taskId: '<taskId>', expectedReviewRequestId: '<reviewRequestId from the cycle you reviewed>', note: '<optional note>' }, `{ teamName: "${teamName}", taskId: "<taskId>", from: "<your-name>", expectedReviewRequestId: "<reviewRequestId from the cycle you reviewed>", note?: "<optional note>" }`)
+     : example('review_approve', { taskId: '<taskId>', note: '<optional note>', notifyOwner: true }, `{ teamName: "${teamName}", taskId: "<taskId>", from: "<your-name>", note?: "<optional note>", notifyOwner: true }`)}
+   CRITICAL: Text comments like "approved" or "LGTM" do NOT change review state. You MUST call ${reviewDecisionTool}; when the team's reviewFlow is human_approval or lead_then_human, an agent NEVER moves a task to Approved. In lead_then_human the first reviewer's review_complete hands the task to the Lead sign-off stage: the Lead receives a NEW reviewRequestId and finishes it with review_complete (open sign-offs are listed under "Awaiting your sign-off" in the lead briefing).
+   If kanban_get returns a reviewFlowPrompt, it holds the team owner's extra review-flow instructions: follow them. They never change which tools you may use or who may approve.
 5. If review fails and changes are needed, use MCP tool review_request_changes:
-   ${example('review_request_changes', { taskId: '<taskId>', comment: '<what to fix>' }, `{ teamName: "${teamName}", taskId: "<taskId>", from: "<your-name>", comment: "<what to fix>" }`)}
+   ${example('review_request_changes', { taskId: '<taskId>', comment: '<what to fix>', ...(humanApproval ? { expectedReviewRequestId: '<reviewRequestId from the cycle you reviewed>' } : {}) }, `{ teamName: "${teamName}", taskId: "<taskId>", from: "<your-name>", comment: "<what to fix>"${humanApproval ? ', expectedReviewRequestId: "<reviewRequestId from the cycle you reviewed>"' : ''} }`)}
 6. NEVER skip status updates. A task is NOT done until completed status is written.
    - Never "bulk-complete" a batch of tasks at the end. Update status incrementally as you work.
 7. To reply to a comment on a task, use MCP tool task_add_comment:
@@ -168,12 +174,12 @@ function buildMemberTaskProtocol(
 10. In ALL human-facing or teammate-facing message text, when you mention a task reference, ALWAYS write it with a leading # (for example: #abcd1234, not abcd1234 or "task abcd1234").
 11. Review workflow clarity (IMPORTANT):
    - The work task (e.g. #1) is the thing that must end up APPROVED after review.
-   - If you are reviewing work for task #X, run review_approve/review_request_changes on #X (the work task).
+   - If you are reviewing work for task #X, run ${reviewDecisionTool}/review_request_changes on #X (the work task).
    - Do NOT approve a separate "review task" (e.g. #2 created just to ask for a review) — that will put the wrong task into APPROVED.
    - Typical flow:
      a) Owner finishes work on #X -> task_complete #X -> review_request #X (moves to review column, notifies reviewer)
      b) Reviewer begins reviewing -> review_start #X (ensures task is in REVIEW column on kanban)
-     c) Reviewer accepts -> review_approve #X
+     c) Reviewer accepts -> ${reviewDecisionTool} #X
      d) Reviewer rejects -> review_request_changes #X (moves back to pending with needsFix)
 12. CLARIFICATION PROTOCOL (CRITICAL — MANDATORY):
    When you are blocked and need information to continue a task, you MUST do ALL steps below — skipping the board update or comment breaks traceability:
@@ -206,7 +212,7 @@ function buildMemberTaskProtocol(
     - If you complete fixes for a needsFix task, mark it completed and then send it back through review_request when ready for another review pass.
 15. MEMBER WORK SYNC REPORTING:
     - member_work_sync_status and member_work_sync_report are only for reporting whether you have seen the current actionable-work agenda. They do NOT start, complete, approve, or comment on tasks.
-    - Never use member_work_sync_report instead of task_start, task_complete, review_approve, review_request_changes, task_set_clarification, or task_add_comment.
+    - Never use member_work_sync_report instead of task_start, task_complete, ${reviewDecisionTool}, review_request_changes, task_set_clarification, or task_add_comment.
     - When you are about to stop, wait, or go idle because you believe your current work queue is handled, first call member_work_sync_status for yourself.
     - If the returned agenda has actionable items and you are actively continuing work on them, call member_work_sync_report with state "still_working", that exact agendaFingerprint, and the returned reportToken.
     - If you are blocked, report "blocked" only when the board already has blocker or clarification evidence for the listed task, and include the returned reportToken.

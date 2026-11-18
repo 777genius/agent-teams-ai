@@ -29,9 +29,17 @@ import {
 } from './memberWorkSyncAuthorityPreparation';
 import { mergeDomainSnapshots } from './memberWorkSyncDomainSnapshotMerge';
 import {
+  logIncarnationMismatch,
+  type MemberWorkSyncPreparationStage,
+  rememberPreparationFailure,
+} from './memberWorkSyncPreparationDiagnostics';
+import {
   createJsonPreparedStatusBackend,
   createSqlitePreparedStatusBackend,
 } from './memberWorkSyncPreparedStatusBackend';
+import {
+  parsePendingPrimaryPurgeMarker,
+} from './memberWorkSyncPurgeMarker';
 import { MemberWorkSyncSafetyJsonReadError } from './memberWorkSyncSafetyJson';
 import { mergeMemberWorkSyncSnapshots } from './memberWorkSyncSnapshotMerge';
 import {
@@ -182,7 +190,7 @@ export class BackendSelectingMemberWorkSyncStore
         const { teamName, incarnation } = identity;
         if (!this.options || !this.replica || !incarnation.trim())
           throw new MemberWorkSyncSafetyJsonReadError('unavailable');
-        const { gateway, paths, fallbackRequiresReplica } = this.options;
+        const { gateway, paths, fallbackRequiresReplica, logger } = this.options;
         const replica = this.replica;
         const backend = await this.selector.select<'sqlite' | 'json'>('sqlite', 'json');
         return this.replicaMutex.run(teamName, async () => {
@@ -197,6 +205,7 @@ export class BackendSelectingMemberWorkSyncStore
             throw previousFailure.error;
           if (!preflightOnly) this.authorityPreparationFailures.delete(normalizeTeamKey(teamName));
           let prepared = false;
+          let stage: MemberWorkSyncPreparationStage = 'replica_wrapper';
           try {
             if (await this.readPendingPrimaryPurge(teamName))
               throw new MemberWorkSyncSafetyJsonReadError('unavailable');
@@ -207,11 +216,14 @@ export class BackendSelectingMemberWorkSyncStore
                 : source.state === 'dirty'
                   ? source.candidate
                   : null;
+            stage = 'replica';
             if (candidate) validateMemberWorkSyncAuthoritySnapshot(identity, candidate);
+            stage = 'primary';
             const primary = backend === 'sqlite' ? await gateway.listTeamSnapshot(teamName) : null;
             if (primary) validateMemberWorkSyncPrimaryRecords(identity, primary);
             const canonical = primary ? recordsToSnapshot(teamName, primary) : emptySnapshot();
             validateMemberWorkSyncAuthoritySnapshot(identity, canonical);
+            stage = 'preflight';
             await preflightMemberWorkSyncStatusSources({
               paths,
               identity,
@@ -222,8 +234,11 @@ export class BackendSelectingMemberWorkSyncStore
               : this.jsonStore;
             const active = await reader.readSnapshotForImport(teamName);
             const archived = await reader.readArchivedSnapshotForImport(teamName);
-            for (const snapshot of [active, archived])
-              if (snapshot) validateMemberWorkSyncAuthoritySnapshot(identity, snapshot);
+            stage = 'active';
+            if (active) validateMemberWorkSyncAuthoritySnapshot(identity, active);
+            stage = 'archive';
+            if (archived) validateMemberWorkSyncAuthoritySnapshot(identity, archived);
+            stage = 'merged';
             let history = mergeDomainSnapshots(archived ?? emptySnapshot(), active);
             if (backup)
               history = mergeMemberWorkSyncBackupHistory({
@@ -333,20 +348,16 @@ export class BackendSelectingMemberWorkSyncStore
             }
             return result;
           } catch (error) {
+            logIncarnationMismatch(logger, { teamName, incarnation,
+              stage: prepared ? 'status_read' : stage, error });
             if (
               !preflightOnly &&
               !prepared &&
               !(error instanceof InternalStorageOperationInterruptedError)
             ) {
-              if (this.authorityPreparationFailures.size >= 128) {
-                const oldest = this.authorityPreparationFailures.keys().next().value;
-                if (oldest !== undefined) this.authorityPreparationFailures.delete(oldest);
-              }
-              this.authorityPreparationFailures.set(normalizeTeamKey(teamName), {
-                incarnation,
-                at: Date.now(),
-                error,
-              });
+              rememberPreparationFailure(
+                this.authorityPreparationFailures, normalizeTeamKey(teamName), incarnation, error
+              );
             }
             throw error;
           }
@@ -538,36 +549,7 @@ export class BackendSelectingMemberWorkSyncStore
       if ((error as NodeJS.ErrnoException).code === 'ENOENT') return null;
       throw error;
     }
-    try {
-      const parsed = JSON.parse(raw) as Record<string, unknown>;
-      const deletionIdentityId =
-        typeof parsed.deletionIdentityId === 'string' && parsed.deletionIdentityId.trim()
-          ? parsed.deletionIdentityId.trim()
-          : null;
-      const teamRootIdentity = parseMemberWorkSyncDurablePathIdentity(parsed.teamRootIdentity);
-      const recoverySafe =
-        parsed.schemaVersion === 2 &&
-        typeof parsed.teamName === 'string' &&
-        parsed.teamName.trim().toLowerCase() === teamName.trim().toLowerCase() &&
-        (deletionIdentityId !== null || teamRootIdentity !== null);
-      return {
-        schemaVersion: 2,
-        teamName: teamName.trim(),
-        deletionIdentityId,
-        teamRootIdentity,
-        activeJsonStateCleared: parsed.activeJsonStateCleared === true,
-        recoverySafe,
-      };
-    } catch {
-      return {
-        schemaVersion: 2,
-        teamName: teamName.trim(),
-        deletionIdentityId: null,
-        teamRootIdentity: null,
-        activeJsonStateCleared: false,
-        recoverySafe: false,
-      };
-    }
+    return parsePendingPrimaryPurgeMarker(raw, teamName);
   }
 
   private async isPendingPrimaryPurgeGenerationCurrent(
