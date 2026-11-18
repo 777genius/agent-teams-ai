@@ -4205,8 +4205,10 @@ describe('TeamDataService', () => {
     expect(disapproveReview).toHaveBeenCalledTimes(1);
   });
 
-  it('propagates leadSessionId for kanban-driven review transitions', async () => {
+  it('propagates leadSessionId and options through trusted controller review actions', async () => {
     const requestReviewMock = vi.fn();
+    const approveReviewFromUserMock = vi.fn();
+    const requestChangesFromUserMock = vi.fn();
     const approveReviewMock = vi.fn();
     const requestChangesMock = vi.fn();
 
@@ -4247,6 +4249,8 @@ describe('TeamDataService', () => {
               },
             })),
             requestReview: requestReviewMock,
+            approveReviewFromUser: approveReviewFromUserMock,
+            requestChangesFromUser: requestChangesFromUserMock,
             approveReview: approveReviewMock,
             requestChanges: requestChangesMock,
           },
@@ -4264,20 +4268,23 @@ describe('TeamDataService', () => {
       from: 'team-lead',
       leadSessionId: 'lead-2',
     });
-    expect(approveReviewMock).toHaveBeenCalledWith('task-1', {
+    expect(approveReviewFromUserMock).toHaveBeenCalledExactlyOnceWith('task-1', {
       from: 'team-lead',
       suppressTaskComment: true,
       'notify-owner': true,
       leadSessionId: 'lead-2',
     });
-    expect(requestChangesMock).toHaveBeenCalledWith('task-1', {
+    expect(requestChangesFromUserMock).toHaveBeenCalledExactlyOnceWith('task-1', {
       from: 'team-lead',
       comment: 'Needs fixes',
       leadSessionId: 'lead-2',
     });
+    expect(approveReviewMock).not.toHaveBeenCalled();
+    expect(requestChangesMock).not.toHaveBeenCalled();
   });
 
-  it('routes an interrupted human rejection back to the trusted retry path after disabling the policy', async () => {
+  it('delegates an interrupted human rejection retry to the trusted controller after disabling the policy', async () => {
+    const requestChangesFromUser = vi.fn();
     const requestChangesAsHuman = vi.fn();
     const requestChanges = vi.fn();
     const taskBoard = {
@@ -4300,6 +4307,7 @@ describe('TeamDataService', () => {
       getKanbanState: vi.fn(() => ({
         teamName: 'my-team', reviewers: [], tasks: {}, reviewFlow: 'agent_approval', reviewFlowSource: 'default',
       })),
+      requestChangesFromUser,
       requestChangesAsHuman,
       requestChanges,
     };
@@ -4323,13 +4331,16 @@ describe('TeamDataService', () => {
     await service.updateKanban('my-team', 'task-1', {
       op: 'request_changes', comment: 'Retry with retained original feedback',
     });
-    expect(requestChangesAsHuman).toHaveBeenCalledWith('task-1', {
+    expect(requestChangesFromUser).toHaveBeenCalledExactlyOnceWith('task-1', {
+      from: 'team-lead',
       comment: 'Retry with retained original feedback',
     });
+    expect(requestChangesAsHuman).not.toHaveBeenCalled();
     expect(requestChanges).not.toHaveBeenCalled();
   });
 
-  it('uses direct kanban approval for completed tasks that are not in review', async () => {
+  it('delegates approval of completed tasks outside review to the trusted controller', async () => {
+    const approveReviewFromUserMock = vi.fn();
     const approveReviewMock = vi.fn();
     const setKanbanColumnMock = vi.fn();
 
@@ -4365,6 +4376,7 @@ describe('TeamDataService', () => {
               reviewers: [],
               tasks: {},
             })),
+            approveReviewFromUser: approveReviewFromUserMock,
             setKanbanColumn: setKanbanColumnMock,
             approveReview: approveReviewMock,
           },
@@ -4373,9 +4385,13 @@ describe('TeamDataService', () => {
 
     await service.updateKanban('my-team', 'task-1', { op: 'set_column', column: 'approved' });
 
-    expect(setKanbanColumnMock).toHaveBeenCalledWith('task-1', 'approved', {
-      transition: 'manual_approve',
+    expect(approveReviewFromUserMock).toHaveBeenCalledExactlyOnceWith('task-1', {
+      from: 'team-lead',
+      suppressTaskComment: true,
+      'notify-owner': true,
+      leadSessionId: 'lead-2',
     });
+    expect(setKanbanColumnMock).not.toHaveBeenCalled();
     expect(approveReviewMock).not.toHaveBeenCalled();
   });
 

@@ -164,9 +164,10 @@ function isLeadSignoffFlow(context) {
  * prompt and where they come from. Never write this view back; writers use getKanbanState.
  */
 function getEffectiveKanbanState(context, options) {
+  const state = getKanbanState(context, options);
   const policy = getReviewFlowPolicy(context);
   return {
-    ...kanbanStore.withoutReviewFlowOverride(getKanbanState(context, options)),
+    ...kanbanStore.withoutReviewFlowOverride(state),
     reviewFlow: policy.reviewFlow,
     ...(policy.reviewFlowPrompt ? { reviewFlowPrompt: policy.reviewFlowPrompt } : {}),
     reviewFlowSource: policy.source,

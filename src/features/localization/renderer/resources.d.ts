@@ -6497,6 +6497,7 @@ export default interface Resources {
         "searchPlaceholder": "Search teams"
       },
       "title": "Review flow",
+      "unavailable": "Settings for {{count}} team or owner could not be read. Retry before editing those teams.",
       "unreadable": {
         "heading": "Teams with unreadable settings ({{count}})"
       },

@@ -31,10 +31,10 @@ provider #8 `f5d632a6122df2f6995451bd33e6a0fbcda67680`.
 | F1 | Реализация и R2 готовы; UI E2E остаётся | Три original GUI attempts остановлены SIGKILL main SSR до Electron. Найден лишний import edge при чтении profile: та же схема без полной Host composition, −69256 KiB PSS в bounded import check. Следующий original GUI проверяет это изменение. | pr_graph; reviewflow; root |
 | F2 | Реализация и focused contracts готовы | Canonical Host agenda блокирует review work при lead/user clarification до review cycle; старый app path — re-export. Agenda 26/26 и cycle 3/3 PASS. | reviewflow |
 | M1 | Native E2E PASS на `2f33d566` | Все 8 original steps за 151754 ms: media bytes/4 MiB normalization, 11 model requests, cold history/attachments, restored native readiness, no replay, оба stop custody=released и cleanup=true. Desktop GUI и vendor auth этим результатом не квалифицируются. | media; R2 reviewflow; root |
-| E1 | Исправление готово; E2E остаётся | Полный status wire finite peer исправляет отказ Create/import; 2 contract checks PASS. Остальные исходные Create/import/retained/Resume/installer/Add journeys требуют текущего результата. | pr_graph; product ownership root |
+| E1 | Исходные отказы исправлены; текущий E2E остаётся | Композиция 22 source закрывает HTTP/store cycle, finite metadata, retained authority, trusted input, Kanban и точечные type/test отказы.611 frontend/IPC PASS в 20 файлах по отдельным scoped runs; полный текущий Host/GUI verdict остаётся. | root |
 | W1 | x64 исправление готово; ARM64 открыт | Синхронное чтение configured key входит в прежнюю closing freshness-проверку; 36 focused checks PASS. ARM64: 6 последовательных MCP probes не укладываются в исходные 15 секунд. Итоговый cleanup подтверждён; deadlines и currentness сохранены. | pr_graph; root |
 | P9 | Открыто: контракт | Установить выполнимую границу original-path / writer / consumed bytes; текущую гарантию не сужать без явного решения. Независимые работы продолжаются. | root |
-| D1 | В работе | Свести изменения в одну композицию, провести независимое ревью, затронутые E2E и обязательные gates; обновить этот статус фактическими SHA/результатами. | root |
+| D1 | Композиция и независимое ревью готовы; CI остаётся | Все 22 postimages связаны с exact c8 parent, внешние изменения сохранены, source-size policy PASS. Получить результат оригинальных обязательных gates опубликованного среза. | root |
 
 Уже реализовано, повторная разработка не требуется: базовый Host/Session SPI,
 embedded V2 2.1.4, Logs/Thinking/source/filter/fullscreen/stderr, accounts/models,
@@ -402,3 +402,47 @@ P9 не имеет подтверждённого конечного LOC до р
   GOGC=50, GOMAXPROCS=2; все project options и исходный timeout 60 s сохранены.
   Ledger build PASS за 1.513 s. Это ресурсный профиль компилятора; noCheck,
   изменение runtime environment или перенос прежнего native SHA не применялись.
+
+
+- 18 ноября, E1/D1 follow-up: подготовлена композиция 22 source/test/config на
+  exact `c8ab4139c4f3e0f763effffdd44d6412188ba388`; все pre/post hashes
+  проверены, внешний OpenCode/finite-build commit сохранён без пересечений.
+  HTTP-only entrypoint разрывает renderer/store cycle; exact public root допущен
+  обеими ESLint policies, descendants остаются закрыты. Actual matrix 90/90 и
+  full configured fast lint четырёх изменённых boundary files PASS.
+- Bounded frontend/IPC:611 PASS в 20 различных файлах по отдельным immutable-base
+  runs; это не один full-suite/native PASS. Cross helper 52/52, finite metadata 5/5,
+  ledger 2/2, retained authority 2, trusted controller 2 и TeamDataService 3 PASS
+  сохраняют отдельные scopes и name-filtered skips.
+- Original 19 frontend 4: три collection refusals покрыты 57/57. Attachment fixture
+  согласован с прежним capability-level PDF refusal: 15/15. Kanban wrapper теперь
+  сначала выполняет исходный strict state read, затем прежний policy lookup;
+  один controller и один неизменённый native-member callback дали RED→GREEN.
+  Publication/no-write assertions сохранены, атомарность двух reads не заявляется.
+- Original 19 Windows Teams остановлен до Electron: исправлены generated translation
+  declaration и readonly test assignment. Pinned generator добавил один ключ;
+  locales/UI calls/production readonly не изменены. Translation-only TS 7.0.2 exit 0,
+  actual Host ReviewFlow 10/10 PASS. Combined test+translation TS timeout 45 s остаётся
+  INCOMPLETE; combined 17-file lint SIGKILL (-9) также не PASS, тяжёлых повторов нет.
+- Actual полный source-size evaluator на e114+22: 5161 production paths,
+  141 frozen exceptions,800-line limit, 0 violations. Канбан 220 lines; existing
+  httpClient 1864 и full ESLint 1168 не выросли. Generated declaration исключён
+  прежней явной policy, baseline не менялся. Независимое R2 поздних изменений PASS.
+- Все 15 остающихся original 19 workflows terminal CANCELLED, ранее 14 SKIP закрыты.
+  Исполненные frontend 4 / Windows Teams failures и Windows static Stage1 success
+  сохранены отдельно; cancelled scopes не квалифицированы. Логи двух failed jobs
+  повторно не читались. Current full Host/GUI/platform acceptance и P09 остаются.
+  [Отчёт и проверяемые receipts](90-original-9a8-failure-followup-2026-11-18.md).
+
+- Поздний parent adoption: внешний `2f33d566` сохраняет новые F1/M1 findings
+  и две TEST diagnostics правки. Все 22 pre/post bindings прежние; полный набор
+  5161 production blob tuples равен уже проверенному e114+22. Переносится только
+  source-size verdict; новый native/GUI результат из равенства не следует.
+  Original e114 cohort закрыт: 14 SKIP / 15 CANCELLED. Два native jobs отменены
+  на подготовке до assertions; исходные логи и artifact metadata сохранены один раз.
+
+- Финальный parent adoption: сохранён внешний c8 readProfile import fix и
+  полный новый F1/M1 journal. Два import targets меняются при прежних 9 строках;
+  все 22 source postimages прежние. Actual полный size evaluator c8+22:
+  5161 production paths / 141 frozen / 800 limit / 0 violations. Native PASS
+  внешнего M1 остаётся привязан к исходному 2f33, без нового исполнения здесь.

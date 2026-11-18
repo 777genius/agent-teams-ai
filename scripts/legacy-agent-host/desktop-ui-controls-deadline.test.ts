@@ -25,7 +25,8 @@ async function withReadFixture(
     steps: Record<string, unknown>[];
     sends: { method: string; params?: Record<string, unknown> }[];
     read(timeoutMs?: number): Promise<unknown>;
-  }) => Promise<void>
+  }) => Promise<void>,
+  onOwner?: (completedReads: number) => void
 ): Promise<void> {
   const expression = 'TEST_originalReadOnlyDeadlineTarget()';
   const label = 'TEST original generic read deadline';
@@ -64,7 +65,7 @@ async function withReadFixture(
       },
       async send(method, params) { sends.push({ method, params }); return {}; },
     }, {
-      assertOwnedRenderer() { guards.push(Date.now()); },
+      assertOwnedRenderer() { guards.push(Date.now()); onOwner?.(reads.length); },
       step(value) { steps.push(value); },
     });
     const fixture = {
@@ -270,9 +271,10 @@ test('opt-in renderer frames precede the original final target lookup and exactl
     ...readyClickFrames,
     { settlesAt: 250, value: true, animationFrames: true },
     { settlesAt: 251, value: point },
+    { settlesAt: 252, value: point },
   ], async f => {
     await f.ui.clickExpression(f.expression, f.label, undefined, undefined, { waitForRenderFrames: true });
-    assert.equal(f.reads.length, 6);
+    assert.equal(f.reads.length, 7);
     assert.equal(f.reads.at(-1), f.expression, 'fresh original owner/geometry/hit lookup follows the frame observation');
     assert.equal(f.steps.filter(row => row.observation === 'two original renderer frames before final target read').length, 1);
     assert.deepEqual(f.sends.filter(command => ['mousePressed', 'mouseReleased'].includes(String(command.params?.type))).map(command => command.params), [
@@ -812,4 +814,98 @@ for (const mode of ['valid', 'malformed', 'oversized', 'missing', 'duplicate', '
         assert.doesNotMatch(reports.output.join(''), /PRIVATE/);
       } finally { t.mock.restoreAll(); t.mock.timers.reset(); }
     });
+}
+
+test('frame-gated click reacquires a target moved by the original final ownership census before one input', { timeout: 5000 }, async t => {
+  const before = { x: 1045.3125, y: 163, tag: 'BUTTON' };
+  const after = { x: 1045.3125, y: 85, tag: 'BUTTON' };
+  const frames: Frame[] = [
+    { settlesAt: 0, value: before }, { settlesAt: 0, value: before },
+    { settlesAt: 100, value: before }, { settlesAt: 200, value: before },
+    { settlesAt: 250, value: true, animationFrames: true },
+    { settlesAt: 251, value: before }, { settlesAt: 252, value: before },
+    { settlesAt: 352, value: after }, { settlesAt: 452, value: after },
+    { settlesAt: 453, value: true, animationFrames: true },
+    { settlesAt: 454, value: after }, { settlesAt: 455, value: after },
+  ];
+  let moves = 0;
+  await withReadFixture(t, frames, async f => {
+    await f.ui.clickExpression(f.expression, f.label, undefined, undefined, { waitForRenderFrames: true });
+    assert.equal(moves, 1, 'the original owner fence is the injected layout-change boundary');
+    assert.equal(f.reads.length, 12);
+    assert.deepEqual(f.ticks, [100, 100, 100, 100], 'the moved target must earn two new stable samples');
+    assert.deepEqual(f.sends.map(row => row.params?.type ?? row.method), [
+      'Page.bringToFront', 'mouseMoved', 'mousePressed', 'mouseReleased',
+    ], 'preparation never repeats the original hover or input');
+    assert.deepEqual(f.sends.filter(row => row.params?.type === 'mousePressed' || row.params?.type === 'mouseReleased')
+      .map(row => row.params), [
+        { type: 'mousePressed', x: after.x, y: after.y, button: 'left', clickCount: 1 },
+        { type: 'mouseReleased', x: after.x, y: after.y, button: 'left', clickCount: 1 },
+      ]);
+    assert.equal(f.steps.filter(row => row.action === 'mouseClick').length, 1);
+    assert.equal(f.steps.find(row => row.action === 'mouseClick')?.target, after);
+  }, completedReads => {
+    if (completedReads === 6) { frames[6]!.value = after; moves++; }
+  });
+});
+
+test('post-owner movement exhausts the same sixteen point samples without one press', { timeout: 5000 }, async t => {
+  const frames: Frame[] = [{ settlesAt: 0, value: point }, { settlesAt: 0, value: point }];
+  const moves = new Map<number, { index: number; value: { x: number; y: number } }>();
+  let time = 0, current = point, moveCount = 0;
+  for (let cycle = 0; cycle < 4; cycle++) {
+    frames.push({ settlesAt: time += 100, value: current }, { settlesAt: time += 100, value: current },
+      { settlesAt: ++time, value: true, animationFrames: true }, { settlesAt: ++time, value: current });
+    const next = { x: current.x, y: current.y + 1 };
+    moves.set(frames.length, { index: frames.length, value: next });
+    frames.push({ settlesAt: ++time, value: current });
+    current = next;
+  }
+  await withReadFixture(t, frames, async f => {
+    await assert.rejects(f.ui.clickExpression(f.expression, f.label, undefined, undefined,
+      { waitForRenderFrames: true }), /Original UI target moved after ownership check/);
+    assert.equal(moveCount, 4);
+    assert.equal(f.reads.length, 22, 'two initial reads, sixteen point samples and four original frame observations');
+    assert.equal(f.reads.filter(expression => expression === f.expression).length - 2, 16);
+    assert.deepEqual(f.ticks, Array<number>(8).fill(100));
+    assert.deepEqual(f.sends.map(row => row.params?.type ?? row.method), ['Page.bringToFront', 'mouseMoved']);
+    assert.equal(f.steps.some(row => row.action === 'mouseClick'), false);
+  }, completedReads => {
+    const move = moves.get(completedReads);
+    if (move) { frames[move.index]!.value = move.value; moveCount++; }
+  });
+});
+
+test('post-owner reacquisition preserves a fresh owner refusal before the original input', { timeout: 5000 }, async t => {
+  const refusal = new Error('TEST owner lost during final reacquisition');
+  await withReadFixture(t, [
+    ...readyClickFrames, { settlesAt: 250, value: true, animationFrames: true },
+    { settlesAt: 251, value: point }, { settlesAt: 252, value: point },
+  ], async f => {
+    await assert.rejects(f.ui.clickExpression(f.expression, f.label, undefined, undefined,
+      { waitForRenderFrames: true }), error => error === refusal);
+    assert.equal(f.reads.length, 7);
+    assert.deepEqual(f.sends.map(row => row.params?.type ?? row.method), ['Page.bringToFront', 'mouseMoved']);
+    assert.equal(f.steps.some(row => row.action === 'mouseClick'), false);
+  }, completedReads => { if (completedReads === 7) throw refusal; });
+});
+
+for (const boundary of ['read', 'owner'] as const) {
+  test(`post-owner reacquisition ${boundary} reaching the original deadline refuses before input`, { timeout: 5000 }, async t => {
+    await withReadFixture(t, [
+      ...readyClickFrames, { settlesAt: 250, value: true, animationFrames: true },
+      { settlesAt: 251, value: point }, { settlesAt: boundary === 'read' ? 30_000 : 252, value: point },
+    ], async f => {
+      await assert.rejects(f.ui.clickExpression(f.expression, f.label, undefined, undefined,
+        { waitForRenderFrames: true }), {
+        message: 'UI read timed out: ' + f.label + ' final target; no mutation retry',
+      });
+      assert.equal(f.reads.length, 7, 'no observation after the original deadline');
+      assert.deepEqual(f.ticks, [100, 100]);
+      assert.deepEqual(f.sends.map(row => row.params?.type ?? row.method), ['Page.bringToFront', 'mouseMoved']);
+      assert.equal(f.steps.some(row => row.action === 'mouseClick'), false);
+    }, completedReads => {
+      if (boundary === 'owner' && completedReads === 7) t.mock.timers.setTime(30_000);
+    });
+  });
 }

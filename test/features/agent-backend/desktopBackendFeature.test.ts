@@ -8,6 +8,9 @@ import { join } from 'node:path';
 import Fastify from 'fastify';
 import { afterEach, beforeAll, expect, it, vi } from 'vitest';
 
+import { createStoppedImportComposition } from '../../../packages/legacy-agent-host/dist/composition/createStoppedImportComposition.js';
+import { teamHostProfileSchema } from '../../../packages/legacy-agent-host/dist/composition/teamHostProfile.js';
+import { configureRetainedOpenCodeImportAuthority } from '../../../scripts/legacy-agent-host/desktop-retained-opencode-authority';
 import {
   AGENT_BACKEND_CONNECTIONS_CHANNEL,
   AGENT_BACKEND_CONNECTIONS_ROUTE,
@@ -1240,4 +1243,146 @@ it('binds prompt publication to the current client, original roster and one matc
   expect(replacement).not.toHaveBeenCalled();
   expect((await original.shutdown()).childExit).toBe('confirmed');
   expect((await successor.shutdown()).childExit).toBe('confirmed');
+});
+
+function retainedReceiptProfile(descriptor: DesktopBackendDescriptor) {
+  const selectedOwner = descriptor.owners.find(owner =>
+    owner.ownerId === descriptor.defaultOwner.ownerId &&
+    owner.revision === descriptor.defaultOwner.revision);
+  if (!selectedOwner) throw new Error('TEST original selected owner is required');
+  return teamHostProfileSchema.parse({
+    schemaVersion: 1,
+    owner: {
+      ownerId: selectedOwner.ownerId, revision: selectedOwner.revision,
+      storageRoot: selectedOwner.storageRoot, profileId: selectedOwner.profile.profileId,
+      protocolVersion: 1, buildId: selectedOwner.profile.expectedBuildId,
+      nodeSha256: selectedOwner.profile.nodeSha256,
+      hostEntrySha256: selectedOwner.profile.hostEntrySha256,
+    },
+    principalId: 'TEST-human',
+    teams: [],
+  });
+}
+
+it('retained fixture pairs actual Main capture with actual Host receipt absence without starting an owner', async () => {
+  const setup = await fixture();
+  const profile = retainedReceiptProfile(setup.descriptor);
+  const original = JSON.stringify({ profile, descriptor: setup.descriptor });
+  let authorityReads = 0;
+  const receiptPorts = {
+    assertCurrent: () => { authorityReads += 1; },
+    attach: () => { throw new Error('TEST receipt reads must not attach a Team'); },
+    validateConfiguration: () => { throw new Error('TEST receipt reads must not publish a Team'); },
+  };
+  expect(createStoppedImportComposition({ profile, ...receiptPorts })).toBeUndefined();
+  const missing = feature({
+    descriptor: await selected(setup.descriptor), bindingDirectory: await root(),
+  });
+  await expect(missing.captureStoppedImport('local', { isCurrent: () => true }))
+    .rejects.toMatchObject({ code: 'unavailable', outcome: 'not-dispatched' });
+
+  const configured = configureRetainedOpenCodeImportAuthority(profile, { ...setup.descriptor });
+  expect(JSON.stringify({ profile, descriptor: setup.descriptor })).toBe(original);
+  const preparedProfile = teamHostProfileSchema.parse(configured.profile);
+  const descriptorSelection = await selected(configured.descriptor);
+  const parsedDescriptor = await loadDesktopBackendDescriptor(descriptorSelection);
+  expect(preparedProfile.creation).toEqual({ contextIds: ['local'] });
+  expect(parsedDescriptor.creation).toEqual({
+    owner: setup.descriptor.defaultOwner, contextIds: ['local'],
+    importAuthority: { principalId: profile.principalId },
+  });
+  const missingAuthority = feature({
+    descriptor: await selected({ ...configured.descriptor, creation: {
+      owner: setup.descriptor.defaultOwner, contextIds: ['local'],
+    } }),
+    bindingDirectory: await root(),
+  });
+  await expect(missingAuthority.captureStoppedImport('local', { isCurrent: () => true }))
+    .rejects.toMatchObject({ code: 'unavailable', outcome: 'not-dispatched' });
+
+  const desktop = feature({
+    descriptor: descriptorSelection, bindingDirectory: setup.bindingDirectory,
+  });
+  let current = true;
+  const target = await desktop.captureStoppedImport('local', { isCurrent: () => current });
+  expect(target.authority).toMatchObject({
+    root: profile.owner.storageRoot, ownerId: profile.owner.ownerId,
+    profileId: profile.owner.profileId, principalId: profile.principalId, contextIds: ['local'],
+  });
+  target.authority.assertCurrent();
+  await expect(desktop.captureStoppedImport('foreign-context', { isCurrent: () => true }))
+    .rejects.toMatchObject({ code: 'forbidden', outcome: 'not-dispatched' });
+
+  const composition = createStoppedImportComposition({ profile: preparedProfile, ...receiptPorts });
+  if (!composition) throw new Error('TEST captured receipt composition must exist');
+  const signal = new AbortController().signal;
+  const invoke = async (
+    operation: 'list' | 'lookup', contextId = 'local', owner = preparedProfile.owner
+  ) => {
+    const method = composition.methods[`team.import.${operation}`];
+    if (!method) throw new Error('TEST original receipt method must exist');
+    expect(method.lane).toBe('control');
+    return method.handle(
+      { owner, commandId: 'TEST-retained-absence', payload: { contextId } },
+      { requestId: `TEST-retained-${operation}`, signal }
+    );
+  };
+  expect(await invoke('list')).toEqual({ ok: true, value: { entries: [] } });
+  expect(await invoke('lookup')).toEqual({ ok: true, value: null });
+  expect(await invoke('list', 'foreign-context')).toEqual({
+    ok: false, code: 'forbidden', outcome: 'not-dispatched',
+  });
+  expect(await invoke('lookup', 'local', { ...preparedProfile.owner, revision: 'foreign-revision' }))
+    .toEqual({ ok: false, code: 'forbidden', outcome: 'not-dispatched' });
+  expect(authorityReads).toBeGreaterThan(0);
+  for (const owner of setup.descriptor.owners)
+    await expect(access(join(owner.storageRoot, 'started'))).rejects.toMatchObject({ code: 'ENOENT' });
+  await expect(access(join(profile.owner.storageRoot, '.host-team-registry', 'imports')))
+    .rejects.toMatchObject({ code: 'ENOENT' });
+  current = false;
+  expect(() => target.authority.assertCurrent()).toThrow('Backend routing: forbidden');
+});
+
+it('retained fixture preserves opaque runtime inputs and refuses foreign metadata without changing its inputs', async () => {
+  const setup = await fixture();
+  // This value is not executed or treated as a runtime recipe; the setup must preserve it opaquely.
+  const runtime = { providerTemplates: [{ testIdentity: 'TEST-original-template' }], members: [] };
+  const profile = { ...retainedReceiptProfile(setup.descriptor), runtime };
+  const descriptor = { ...setup.descriptor };
+  const configured = configureRetainedOpenCodeImportAuthority(profile, descriptor);
+  const creation = {
+    owner: setup.descriptor.defaultOwner, contextIds: ['local'],
+    importAuthority: { principalId: profile.principalId },
+  };
+  expect(configured.profile).toEqual({ ...profile, creation: { contextIds: ['local'] } });
+  expect(configured.descriptor).toEqual({ ...descriptor, creation });
+  expect(configured.profile.runtime).toBe(runtime);
+  expect(configured.profile.teams).toBe(profile.teams);
+  expect(configured.descriptor.owners).toBe(descriptor.owners);
+  expect(configured.descriptor.handles).toBe(descriptor.handles);
+  expect(configureRetainedOpenCodeImportAuthority(configured.profile, configured.descriptor))
+    .toEqual(configured);
+  const cases = [
+    { profile, descriptor: { ...descriptor, defaultOwner: { ownerId: 'B', revision: 'v1' } } },
+    { profile: { ...profile, owner: { ...profile.owner, profileId: 'foreign-profile' } }, descriptor },
+    { profile: { ...profile, owner: { ...profile.owner, storageRoot: '/TEST-foreign-root' } }, descriptor },
+    { profile, descriptor: { ...descriptor, owners: descriptor.owners.map(owner =>
+      owner.ownerId === descriptor.defaultOwner.ownerId
+        ? { ...owner, profile: { ...owner.profile, nodeSha256: 'f'.repeat(64) } } : owner) } },
+    { profile: { ...profile, creation: { contextIds: ['foreign-context'] } }, descriptor },
+    { profile, descriptor: { ...descriptor, creation: {
+      ...creation, importAuthority: { principalId: 'foreign-principal' },
+    } } },
+    { profile, descriptor: { ...descriptor, creation: { ...creation, contextIds: ['local', 'foreign'] } } },
+    { profile, descriptor: { ...descriptor, creation: {
+      ...creation, owner: { ownerId: 'B', revision: 'v1' },
+    } } },
+    { profile, descriptor: { ...descriptor, owners: [...descriptor.owners, descriptor.owners[0]] } },
+  ];
+  for (const candidate of cases) {
+    const before = JSON.stringify(candidate);
+    expect(() => configureRetainedOpenCodeImportAuthority(candidate.profile, candidate.descriptor))
+      .toThrow();
+    expect(JSON.stringify(candidate)).toBe(before);
+  }
 });

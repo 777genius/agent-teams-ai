@@ -41,8 +41,14 @@ export const reviewFlowBoundaries: Linter.Config[] = [
           forbid: [
             '**/review-flow/core/**',
             // The import rule also resolves public barrels to their index.ts files.
-            '**/review-flow/{contracts,main,preload,renderer}/!(index|index.ts){,/**}',
-            '**/review-flow/{contracts,main,preload,renderer}/*/*/**',
+            '**/review-flow/{contracts,main,preload}/!(index|index.ts){,/**}',
+            '**/review-flow/{contracts,main,preload}/*/*/**',
+            // Keep nested renderer paths private except the public HTTP index.
+            // Positive components avoid minimatch.makeRe's intermediate negated extglob behavior.
+            '**/review-flow/renderer/!(index|index.ts|http)',
+            '**/review-flow/renderer/{[!h]*,h[!t]*,ht[!t]*,htt[!p]*,http?*,h,ht,htt}/*{,/**}',
+            '**/review-flow/renderer/http/!(index|index.ts)',
+            '**/review-flow/renderer/http/*/*{,/**}',
           ],
         },
       ],

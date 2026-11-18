@@ -333,6 +333,8 @@ export const desktopProofSupplementarySources = [
   'src/renderer/components/team/members/MembersEditorSection.tsx',
   'src/renderer/components/team/members/TeamRosterEditorSection.tsx',
   'src/features/localization/renderer/locales/en/team.json',
+  'scripts/legacy-agent-host/desktop-retained-opencode-authority.ts',
+  'src/features/review-flow/renderer/http/index.ts',
 ];
 
 /** Exact finite Windows same-Main recovery and original Processes UI construction inputs. */

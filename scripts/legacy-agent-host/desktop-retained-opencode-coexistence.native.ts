@@ -11,6 +11,7 @@ import { fileHash as fileDigest } from '../../packages/legacy-agent-host/tests/f
 import { waitFor } from '../e2e/release-updater/cdp.mts';
 import { createDesktopUiControls, desktopJsLiteral } from './desktop-ui-controls.ts';
 import { startRetainedOpenCodeModel } from './desktop-retained-opencode-model.ts';
+import { configureRetainedOpenCodeImportAuthority } from './desktop-retained-opencode-authority.ts';
 import { retainedOpenCodeLaunchExpression, RETAINED_OPENCODE_LAUNCH_TIMEOUT_MS } from './desktop-retained-opencode-launch.ts';
 import { readRetainedOpenDiagnostic, type RetainedOpenDiagnosticBinding } from './desktop-retained-open-diagnostics.ts';
 import {
@@ -186,12 +187,13 @@ test('original Electron retains legacy fork V1 while routing new Host V2 and iso
         models: { 'TEST-model': { name: 'TEST-model', tool_call: true,
           limit: { context: 200000, output: 2000 } } } } } };
     await writeFile(join(legacyProject, 'opencode.json'), JSON.stringify(legacyConfig), { mode: 0o600, flag: 'wx' });
-    const profile = await json(fixture.profilePath);
+    const { profile, descriptor } = configureRetainedOpenCodeImportAuthority(
+      await json(fixture.profilePath), await json(fixture.descriptorPath)
+    );
     const runtime = record(profile.runtime), member = record((runtime.members as unknown[])[0]);
     record(record(member.embedded).providerConfiguration).settings = { baseURL: `${model.url}/host/v1`, apiKey: 'TEST-LOCALHOST-ONLY' };
     const profileBytes = JSON.stringify(profile);
     await writeFile(fixture.profilePath, profileBytes, { mode: 0o600 });
-    const descriptor = await json(fixture.descriptorPath);
     record(record(record((descriptor.owners as unknown[])[0]).profile).env).LEGACY_AGENT_HOST_PROFILE_SHA256 = digest(profileBytes);
     const descriptorBytes = JSON.stringify(descriptor);
     await writeFile(fixture.descriptorPath, descriptorBytes, { mode: 0o600 });

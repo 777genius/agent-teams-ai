@@ -29,7 +29,7 @@ import {
   type UpsertOrganizationRelationRequest,
   type UpsertOrganizationUnitRequest,
 } from '@features/organizations/contracts';
-import { createReviewFlowHttpApi } from '@features/review-flow/renderer';
+import { createReviewFlowHttpApi } from '@features/review-flow/renderer/http';
 import { createHttpTeamGroupChatsAPI } from '@features/team-group-chats';
 import {
   TOKEN_USAGE_BUDGET_SETTINGS_ROUTE,

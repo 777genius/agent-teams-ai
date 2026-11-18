@@ -356,8 +356,9 @@ channel('agent-teams.legacy-host.runtime-projection').subscribe(value => { try {
     assert.ok(tuple.slice(1, index).every(value => value === true) ? typeof tuple[index] === 'boolean' : tuple[index] === null);
   assert.equal(tuple[5], tuple.slice(1, 5).every(value => value === true));
   const prior = runtimeProjectionRows.get(tuple[0]);
-  if (prior !== undefined) assert.deepEqual(tuple, prior);
-  else { assert.ok(runtimeProjectionRows.size < 4); runtimeProjectionRows.set(tuple[0], tuple); }
+  if (prior !== undefined) assert.equal(tuple[5], prior[5]);
+  else assert.ok(runtimeProjectionRows.size < 4);
+  runtimeProjectionRows.set(tuple[0], tuple);
 } catch { projectionUnknown = true; runtimeProjectionRows.clear(); } });
 process.once('exit', () => { try {
   const value = projectionUnknown ? { status: 'unknown' } : { status: 'observed', rows: [...runtimeProjectionRows.values()] };

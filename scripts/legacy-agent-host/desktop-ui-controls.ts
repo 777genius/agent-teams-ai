@@ -500,8 +500,9 @@ export function createDesktopUiControls(
     // Async Host hydration can shift the DOM after hover. Check the original
     // target is stable before ONE physical click, never replay an uncertain click.
     let stableSamples = 0, remainingPointSamples = 16;
-    // Share the original 15 stability samples and final lookup, reserving that lookup.
-    while (remainingPointSamples > 1 && stableSamples < 2) {
+    // Frame-gated clicks reserve a post-owner read inside the same 16-sample budget.
+    const finalReads = readiness?.waitForRenderFrames ? 2 : 1;
+    while (remainingPointSamples > finalReads && stableSamples < 2) {
       await new Promise<void>((done) => setTimeout(done, 100));
       remainingPointSamples--;
       const next = await readPoint(label + ' stable target');
@@ -528,52 +529,63 @@ export function createDesktopUiControls(
         options.assertOwnedRenderer();
         assertReadDeadline();
       }
-      let finalValue = await cdp.evaluate(expression);
-      // A null owner observation is still pending, unlike an explicit unavailable
-      // target or transport rejection. Re-read only this original expression.
-      while (readiness?.waitForFinalReadiness && finalValue === null && Date.now() < readDeadline) {
-        options.assertOwnedRenderer();
-        await new Promise<void>((done) => setTimeout(done, Math.min(100, readDeadline - Date.now())));
-        assertReadDeadline();
-        options.assertOwnedRenderer();
-        if (prepareScroll) {
-          await prepareScroll();
+      for (let finalRead = 0; finalRead < finalReads; finalRead++) {
+        if (finalRead === 1) {
+          // The original final ownership census can let the renderer move. Reacquire
+          // before the one input, then fence ownership again; this is not atomic.
           options.assertOwnedRenderer();
           assertReadDeadline();
+          remainingPointSamples--;
         }
-        finalValue = await cdp.evaluate(expression);
-      }
-      assertReadDeadline();
-      const finalPoint = record(finalValue);
-      observeGeometry('final', finalPoint);
-      let resample = false;
-      try {
-        assert.notEqual(finalPoint.unavailableTarget, true, 'Original UI target unavailable after ownership check');
-        resample = remainingPointSamples >= 3 &&
-          [point.x, point.y, finalPoint.x, finalPoint.y].every(value => typeof value === 'number' && Number.isFinite(value)) &&
-          finalPoint.tag === point.tag &&
-          (!Object.is(finalPoint.x, point.x) || !Object.is(finalPoint.y, point.y));
-        if (!resample) assert.deepEqual(
-          [finalPoint.x, finalPoint.y, finalPoint.tag],
-          [point.x, point.y, point.tag],
-          'Original UI target moved after ownership check'
-        );
-      } catch (error) {
+        let finalValue = await cdp.evaluate(expression);
+        // A null owner observation is still pending, unlike an explicit unavailable
+        // target or transport rejection. Re-read only this original expression.
+        while (readiness?.waitForFinalReadiness && finalValue === null && Date.now() < readDeadline) {
+          options.assertOwnedRenderer();
+          await new Promise<void>((done) => setTimeout(done, Math.min(100, readDeadline - Date.now())));
+          assertReadDeadline();
+          options.assertOwnedRenderer();
+          if (prepareScroll) {
+            await prepareScroll();
+            options.assertOwnedRenderer();
+            assertReadDeadline();
+          }
+          finalValue = await cdp.evaluate(expression);
+        }
+        if (finalRead === 1) options.assertOwnedRenderer();
+        assertReadDeadline();
+        const finalPoint = record(finalValue);
+        observeGeometry('final', finalPoint);
+        let resample = false;
         try {
-          console.log(JSON.stringify({ kind: 'TEST_DESKTOP_CLICK_GEOMETRY', geometry: geometryTrace }));
-        } catch {
-          // The exact original final-target refusal remains authoritative.
+          assert.notEqual(finalPoint.unavailableTarget, true, 'Original UI target unavailable after ownership check');
+          resample = remainingPointSamples >= 2 + finalReads &&
+            [point.x, point.y, finalPoint.x, finalPoint.y].every(value => typeof value === 'number' && Number.isFinite(value)) &&
+            finalPoint.tag === point.tag &&
+            (!Object.is(finalPoint.x, point.x) || !Object.is(finalPoint.y, point.y));
+          if (!resample) assert.deepEqual(
+            [finalPoint.x, finalPoint.y, finalPoint.tag],
+            [point.x, point.y, point.tag],
+            'Original UI target moved after ownership check'
+          );
+        } catch (error) {
+          try {
+            console.log(JSON.stringify({ kind: 'TEST_DESKTOP_CLICK_GEOMETRY', geometry: geometryTrace }));
+          } catch {
+            // The exact original final-target refusal remains authoritative.
+          }
+          throw error;
         }
-        throw error;
-      }
-      if (resample) {
-        options.assertOwnedRenderer();
-        point = finalPoint;
-        stableSamples = 0;
+        if (resample) {
+          options.assertOwnedRenderer();
+          point = finalPoint;
+          stableSamples = 0;
+          break;
+        }
       }
     }
     assert.ok(stableSamples === 2, 'Original UI target did not settle before one click');
-    options.assertOwnedRenderer();
+    if (finalReads === 1) options.assertOwnedRenderer();
     assertReadDeadline();
     step({
       action: 'mouseClick',

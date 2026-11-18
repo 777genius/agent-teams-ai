@@ -130,7 +130,7 @@ describe('agent attachment validation', () => {
     }
   });
 
-  it('blocks non-image files for OpenCode even when the model supports images', () => {
+  it('blocks file attachments for OpenCode with image-only model input', () => {
     const capability = resolveAgentAttachmentCapability({
       providerId: 'opencode',
       declaredInputModalities: ['image'],
@@ -149,7 +149,7 @@ describe('agent attachment validation', () => {
     expect(result.ok).toBe(false);
     if (!result.ok) {
       expect(result.code).toBe('attachment_type_unsupported');
-      expect(result.message).toContain('non-image file attachments');
+      expect(result.message).toBe('This running agent cannot receive PDF attachments.');
     }
   });
 

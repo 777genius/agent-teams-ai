@@ -18,8 +18,9 @@ function fixture() {
     setDefaults: vi.fn(async settings => settings),
     setTeamOverride: vi.fn(async (_teamName, settings) => settings),
   };
+  const originalHandle = { handleId: 'TEST-original' };
   const connections: BackendConnectionSnapshot = { state: 'ready', bindings: [
-    { handle: { handleId: 'TEST-original' }, label: 'Captured team', members: [] },
+    { handle: originalHandle, label: 'Captured team', members: [] },
   ] };
   const backend: AgentBackendApi = {
     getConnections: vi.fn(async () => connections),
@@ -29,7 +30,7 @@ function fixture() {
   };
   let current = true;
   const api = createHostReviewFlowApi(legacy, backend, () => () => current);
-  return { api, legacy, backend, connections, invalidate: () => { current = false; } };
+  return { api, legacy, backend, connections, originalHandle, invalidate: () => { current = false; } };
 }
 
 it('keeps app defaults with their owner and writes Host overrides only through the captured handle', async () => {
@@ -71,7 +72,7 @@ it.each(['throw', 'unavailable', 'hold'] as const)(
   vi.mocked(f.backend.invoke).mockImplementation(async request => {
     calls.push(structuredClone(request));
     if (request.operation !== 'command.lookup') {
-      f.connections.bindings[0]!.handle.handleId = 'TEST-replacement';
+      f.originalHandle.handleId = 'TEST-replacement';
       if (failure === 'throw') throw new Error('lost response');
       return { ok: false, code: failure, outcome: 'unknown' };
     }

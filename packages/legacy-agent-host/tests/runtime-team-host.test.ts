@@ -3621,6 +3621,44 @@ test('Runtime projection privately observes only evaluated readiness operands an
     assert.throws(selected.read, error => error === failure);
     assert.deepEqual(selected.calls, order.slice(0, index + 1)); assert.deepEqual(observations, []);
   }
+  const source = readFileSync(new URL('../../../tools/owned-process-broker/nativeEmulatedSourceProfile.ts', import.meta.url), 'utf8');
+  const begin = source.indexOf('const runtimeProjectionRows = new Map();');
+  const end = source.indexOf('await import(${JSON.stringify(pathToFileURL(cli).href)});', begin);
+  assert.ok(begin > 0 && end > begin);
+  let receiveProjection: (value: unknown) => void = () => { throw new Error('TEST receiver missing'); };
+  let finishProjection: () => void = () => { throw new Error('TEST exit observer missing'); };
+  const writes: string[] = [];
+  runInNewContext(source.slice(begin, end), { assert, Buffer, projectionLedger: 'TEST-private-ledger',
+    channel(name: string) { assert.equal(name, 'agent-teams.legacy-host.runtime-projection');
+      return { subscribe(callback: typeof receiveProjection) { receiveProjection = callback; } }; },
+    process: { once(name: string, callback: typeof finishProjection) { assert.equal(name, 'exit'); finishProjection = callback; } },
+    writeFileSync(path: string, raw: string, options: unknown) {
+      assert.equal(path, 'TEST-private-ledger'); assert.equal(JSON.stringify(options), '{"mode":384,"flag":"wx"}'); writes.push(raw);
+    } });
+  const forwardProjection = (value: unknown) => {
+    assert.ok(value && typeof value === 'object');
+    assert.equal(Object.getPrototypeOf(value), Object.prototype);
+    // Re-home only the actual publisher's own descriptors for the VM realm, without rebuilding its payload.
+    receiveProjection(Object.defineProperties(Object.create(null) as Record<string, unknown>, Object.getOwnPropertyDescriptors(value)));
+  };
+  diagnostic.subscribe(forwardProjection);
+  try {
+    const pending = [
+      [true, false, true, true], [true, true, false, true], [true, true, true, false],
+      [true, true, false, true], [true, true, false, true],
+    ].map(bits => sample(bits).read());
+    for (const view of pending) assert.deepEqual(view, pending[0]);
+    const pendingDigest = runtimeDigest(pending[0]!);
+    const ready = sample([true, true, true, true]).read(), readyDigest = runtimeDigest(ready);
+    assert.notEqual(readyDigest, pendingDigest, 'final nativeReady remains part of the public digest');
+    assert.equal(writes.length, 0, 'private transitions do not write before the original exit observation');
+    finishProjection();
+    assert.equal(writes.length, 1); assert.ok(Buffer.byteLength(writes[0]!) <= 512);
+    assert.deepEqual(JSON.parse(writes[0]!), { status: 'observed', rows: [
+      [pendingDigest, true, true, false, null, false], [readyDigest, true, true, true, true, true],
+    ] }, 'the same public nonready view retains its latest valid private tuple, including a regressed gate');
+  } finally { diagnostic.unsubscribe(forwardProjection); }
+
   const plain = sample([true, true, true, true]).read();
   t.mock.method(diagnostic, 'publish', () => { throw failure; });
   assert.deepEqual(sample([true, true, true, true]).read(), plain, 'diagnostic failure cannot replace the public result');
@@ -3664,9 +3702,16 @@ test('the original passive Runtime projection receiver writes only bounded exit 
     assert.equal(rejected.writes[0]!.includes('PRIVATE-'), false);
   }
   assert.equal(getterCalls, 0);
-  const conflict = create(); conflict.receive(row);
-  conflict.receive(copy({ recordReady: true, providerReady: false })); conflict.exit();
+  const latest = create(); latest.receive(row);
+  latest.receive(copy({ recordReady: true, providerReady: false }));
+  latest.receive(copy({ recordReady: true, providerReady: true, ownerCurrent: false })); latest.exit();
+  assert.deepEqual(JSON.parse(latest.writes[0]!), { status: 'observed',
+    rows: [[row.viewDigest, true, true, true, false, false]] });
+  const ready = copy({ recordReady: true, providerReady: true, ownerCurrent: true, nativeReady: true });
+  const conflict = create(); conflict.receive(row); conflict.receive(ready); conflict.receive(row); conflict.exit();
   assert.deepEqual(JSON.parse(conflict.writes[0]!), { status: 'unknown' });
+  const reversed = create(); reversed.receive(ready); reversed.receive(row); reversed.receive(ready); reversed.exit();
+  assert.deepEqual(JSON.parse(reversed.writes[0]!), { status: 'unknown' });
   const bounded = create(); for (const digit of 'abcd') bounded.receive(copy({ viewDigest: digit.repeat(64) })); bounded.exit();
   assert.equal(JSON.parse(bounded.writes[0]!).rows.length, 4); assert.ok(Buffer.byteLength(bounded.writes[0]!) <= 512);
   const overflow = create(); for (const digit of 'abcde') overflow.receive(copy({ viewDigest: digit.repeat(64) })); overflow.exit();
