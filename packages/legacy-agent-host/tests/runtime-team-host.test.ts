@@ -4176,6 +4176,11 @@ test('original exit projection is preserved beside a bounded source-bound Codex 
     contexts: [['a'.repeat(64), 'b'.repeat(64), 'c'.repeat(64)]],
     events: valid.map(row => [0, row.sequence, row.invocation, row.operation, row.phase, row.result]),
     views: [['d'.repeat(64), 8]] });
+  const timing = (ordinal: number) => [ordinal * 100, ordinal, ordinal * 20, 20, ordinal, ordinal * 10, 10, ordinal, 0, 0];
+  const timed = valid.map((row, index) => event({ ...row, schemaVersion: 2, timing: timing(index + 1) }));
+  const timedLedger = decode(run(timed));
+  assert.deepEqual(timedLedger, { ...ledger, schemaVersion: 2,
+    events: timed.map(row => [0, row.sequence, row.invocation, row.operation, row.phase, row.result, row.timing]) });
   const repeated = create(); repeated.emit(phaseName, valid[0]); repeated.emit(viewName, view());
   for (const row of valid.slice(1)) repeated.emit(phaseName, row);
   repeated.emit(viewName, view()); repeated.finish(); assert.deepEqual(decode(repeated), ledger);
@@ -4190,6 +4195,21 @@ test('original exit projection is preserved beside a bounded source-bound Codex 
     nullRecord({ schemaVersion: 1, bindingDigest: 'a'.repeat(64), sourceId: 'b'.repeat(64), sourceRevision: 'c'.repeat(64), limit: true })];
   for (const value of invalid) assert.deepEqual(decode(run([value, ...valid])), unknown);
   assert.equal(getterCalls, 0);
+  const timingGetter = Object.defineProperty(timing(1), '0', { get() { getterCalls++; return 0; } });
+  const timingSymbol = timing(1); Object.defineProperty(timingSymbol, Symbol('PRIVATE-timing'), { value: true });
+  const invalidTimings: unknown[] = [null, [], timing(1).slice(1), timingGetter, timingSymbol,
+    [-1, ...timing(1).slice(1)], [1.5, ...timing(1).slice(1)], [1000000, ...timing(1).slice(1)],
+    [100, 4097, 20, 20, 1, 10, 10, 1, 0, 0], [100, 0, 20, 20, 1, 10, 10, 1, 0, 0],
+    [100, 1, 10, 20, 1, 10, 10, 1, 0, 0], [NaN, ...timing(1).slice(1)]];
+  for (const value of invalidTimings)
+    assert.deepEqual(decode(run([event({ schemaVersion: 2, timing: value })])), unknown);
+  assert.deepEqual(decode(run([event({ timing: timing(1) })])), unknown);
+  assert.deepEqual(decode(run([event({ schemaVersion: 2 })])), unknown);
+  for (const changed of [[99, ...timing(2).slice(1)], [200, ...timing(1).slice(1, 2), 40, 20, 2, 20, 10, 2, 0, 0],
+    [200, 2, 10, 10, 2, 20, 10, 2, 0, 0]])
+    assert.deepEqual(decode(run([timed[0], event({ ...timed[1], timing: changed })])), unknown);
+  assert.deepEqual(decode(run([timed[0], valid[1]])), unknown);
+  assert.equal(getterCalls, 0, 'malformed timing accessors are never evaluated');
   for (const values of [[valid[0], valid[0]], [valid[0], event({ sequence: 3, phase: 'after-await' })],
     [valid[0], event({ sequence: 2, operation: 'catalog', phase: 'after-await' })],
     [...valid, event({ sequence: 9, invocation: 3, phase: 'returned', result: false })]])
@@ -4220,6 +4240,13 @@ test('original exit projection is preserved beside a bounded source-bound Codex 
     events: Array.from({ length: 64 }, () => [3, 64, 16, 'readiness', 'before-await', false]),
     views: Array.from({ length: 4 }, () => ['f'.repeat(64), 64]) };
   assert.equal(Buffer.byteLength(JSON.stringify(width)), 3925); assert.ok(Buffer.byteLength(JSON.stringify(width)) < 8192);
+  const widestTiming = [999999, 4096, 999999, 999999, 4096, 999999, 999999, 4096, 999999, 999999];
+  const timedWidth = { ...width, schemaVersion: 2, events: width.events.map(row => [...row, widestTiming]) };
+  assert.equal(Buffer.byteLength(JSON.stringify(timedWidth)), 8149);
+  const timedAtLimit = decode(run(wide.map(row => event({ ...row, schemaVersion: 2, timing: widestTiming })),
+    [...'def0'].map(digit => view(digit.repeat(64)))));
+  assert.equal(timedAtLimit.status, 'observed', 'valid maximum-width timing stays within the original byte cap');
+  assert.equal((timedAtLimit.events as unknown[]).length, 64);
   for (const fault of ['write', 'serialize', 'subscribe'] as const) {
     const f = create(fault); f.emit(viewName, view()); f.finish();
     assert.equal(f.writes.get('TEST-projection'), originalRaw, 'failed new diagnostics preserve the original writer');
@@ -4276,6 +4303,16 @@ test('original exit projection is preserved beside a bounded source-bound Codex 
       source: { sourceId: 'b'.repeat(64), revision: 'c'.repeat(64) }, bindingDigest: 'a'.repeat(64), viewDigest: 'd'.repeat(64),
       mainEpoch: 'TEST-main', launchId: 'TEST-launch', observedEventCount: 8,
       events: valid.map(row => [row.sequence, row.invocation, row.operation, row.phase, row.result]) });
+    const timedAccepted = read(base(), JSON.stringify(timedLedger));
+    assert.deepEqual(timedAccepted, { ...accepted, schemaVersion: 2, timing: {
+      samplePoint: 'last-original-codex-phase-event', sequence: 8, elapsedDeciMs: timed.map(row => (row.timing as number[])[0]),
+      isCurrent: timing(8).slice(1, 4), canAllocate: timing(8).slice(4, 7), mcpSourceCurrent: timing(8).slice(7, 10) } });
+    const timedBefore = { ...timedLedger, views: [['d'.repeat(64), 1]] };
+    assert.deepEqual(read(base(), JSON.stringify(timedBefore)).timing, {
+      samplePoint: 'last-original-codex-phase-event', sequence: 1, elapsedDeciMs: [100],
+      isCurrent: timing(1).slice(1, 4), canAllocate: timing(1).slice(4, 7), mcpSourceCurrent: timing(1).slice(7, 10) });
+    const timedZero = read(base(), JSON.stringify({ ...timedLedger, views: [['d'.repeat(64), 0]] }));
+    assert.deepEqual(timedZero.events, []); assert.equal(Object.hasOwn(timedZero, 'timing'), false);
     const before = { ...ledger, views: [['d'.repeat(64), 1]] };
     assert.deepEqual(read(base(), JSON.stringify(before)).events, [[1, 1, 'open', 'before-await', null]]);
     const zero = { ...ledger, views: [['d'.repeat(64), 0]] };
@@ -4315,6 +4352,16 @@ test('original exit projection is preserved beside a bounded source-bound Codex 
       { ...ledger, events: [[0, 1, 1, 'readiness', 'before-await', false]] },
       { ...ledger, contexts: Array.from({ length: 5 }, (_, index) => [String(index).repeat(64), 'b'.repeat(64), 'c'.repeat(64)]) }];
     for (const invalid of badLedgers) assert.deepEqual(read(base(), JSON.stringify(invalid)), refused);
+    for (const value of invalidTimings.filter(value => value !== timingGetter && value !== timingSymbol)) {
+      const invalid: Record<string, unknown> = { ...timedLedger, events: [[0, 1, 1, 'open', 'before-await', null, value]], views: [['d'.repeat(64), 1]] };
+      assert.deepEqual(read(base(), JSON.stringify(invalid)), refused);
+    }
+    for (const invalid of [{ ...timedLedger, schemaVersion: 1 }, { ...ledger, schemaVersion: 2 },
+      { ...timedLedger, events: [[0, 1, 1, 'open', 'before-await', null, timing(1)],
+        [0, 2, 2, 'catalog', 'before-await', null, [99, ...timing(2).slice(1)]]], views: [['d'.repeat(64), 2]] },
+      { ...timedLedger, events: [[0, 1, 1, 'open', 'before-await', null, timing(1)],
+        [0, 2, 2, 'catalog', 'before-await', null]], views: [['d'.repeat(64), 2]] }])
+      assert.deepEqual(read(base(), JSON.stringify(invalid)), refused);
     assert.deepEqual(read(base(), '{'), refused); assert.deepEqual(read(base(), ' '.repeat(8193)), refused);
     rmSync(path); stats = 0; reads = 0;
     assert.deepEqual(JSON.parse(JSON.stringify(namespace.readEmulatedCodexReadinessObservation(base()))), refused);
@@ -4328,6 +4375,15 @@ test('original exit projection is preserved beside a bounded source-bound Codex 
     const widest = base(); widest.epochs[0]!.mainEpoch = '\u0001'.repeat(256);
     widest.lastLaunchReadiness.launchId = '\u0001'.repeat(256); widest.diagnosticLaunches[0]!.launchId = widest.lastLaunchReadiness.launchId;
     assert.equal(read(widest).status, 'observed'); assert.ok(Buffer.byteLength(JSON.stringify(read(widest))) <= 8192);
+    const widestTimed = { ...timedLedger, events: Array.from({ length: 16 }, (_, index) =>
+      ['before-await', 'after-await', 'returned'].map((phase, offset) => [0, index * 3 + offset + 1,
+        index + 1, 'readiness', phase, phase === 'returned' ? false : null, widestTiming])).flat(), views: [['d'.repeat(64), 48]] };
+    assert.equal(read(widest, JSON.stringify(widestTimed)).status, 'observed');
+    const resultWidth = { ...accepted, schemaVersion: 2, mainEpoch: '\u0001'.repeat(256), launchId: '\u0001'.repeat(256),
+      observedEventCount: 64, events: width.events.map(row => row.slice(1)), timing: {
+        samplePoint: 'last-original-codex-phase-event', sequence: 64, elapsedDeciMs: Array.from({ length: 64 }, () => 999999),
+        isCurrent: widestTiming.slice(1, 4), canAllocate: widestTiming.slice(4, 7), mcpSourceCurrent: widestTiming.slice(7, 10) } };
+    assert.equal(Buffer.byteLength(JSON.stringify(resultWidth)), 6869);
   } finally { rmSync(root, { recursive: true, force: true }); }
 });
 

@@ -1,4 +1,5 @@
 import { channel } from 'node:diagnostics_channel';
+import { performance } from 'node:perf_hooks';
 import { managementDigest } from '../../management/identity.js';
 import { NATIVE_IMAGE_MIME_TYPES } from '../../attachments/mimeTypes.js';
 import { capturedMcpSourceCurrent } from '../../mcp-catalog/capturedSource.js';
@@ -87,8 +88,12 @@ export function createCodexMemberProvider(
   const evidence = context.codexEvidence;
   const readinessObservation = (() => {
     let diagnostic: ReturnType<typeof channel> | undefined;
-    let identity: { schemaVersion: 1; bindingDigest: string; sourceId: string; sourceRevision: string } | undefined;
+    let identity: { schemaVersion: 2; bindingDigest: string; sourceId: string; sourceRevision: string } | undefined;
     let sequence = 0, invocations = 0, disabled = false;
+    let started = 0;
+    // Fixed buckets: isCurrent, canAllocate, MCP source; count, total ms, maximum ms.
+    // Emit integer tenths of a millisecond only. Bounds keep the 64-event ledger below 8192 bytes.
+    const guards = Array.from({ length: 3 }, () => ({ count: 0, total: 0, max: 0 }));
     try {
       diagnostic = channel('agent-teams.legacy-host.codex-readiness');
       const origin = context.processOrigin, binding = context.endpoint.binding;
@@ -97,8 +102,9 @@ export function createCodexMemberProvider(
           typeof sourceRevision === 'string' && /^[a-f0-9]{64}$/.test(sourceRevision)) {
         const { backendId, teamId, runId, memberId, generation } = binding;
         if ([backendId, teamId, runId, memberId, generation].every(value => typeof value === 'string'))
-          identity = { schemaVersion: 1, bindingDigest: managementDigest({ backendId, teamId, runId, memberId, generation }), sourceId, sourceRevision };
+          identity = { schemaVersion: 2, bindingDigest: managementDigest({ backendId, teamId, runId, memberId, generation }), sourceId, sourceRevision };
       }
+      started = performance.now();
     } catch { disabled = true; }
     const limit = (): void => { try {
       if (!identity || disabled) return; disabled = true;
@@ -107,19 +113,37 @@ export function createCodexMemberProvider(
     const publish = (invocation: number | undefined, operation: ReadinessOperation, phase: ReadinessPhase, result: boolean | null = null): void => { try {
       if (!identity || disabled || invocation === undefined) return;
       if (sequence >= 64) { limit(); return; }
+      const timing = [Math.floor((performance.now() - started) * 10),
+        ...guards.flatMap(value => [value.count, Math.floor(value.total * 10), Math.floor(value.max * 10)])];
+      if (timing.some(value => !Number.isSafeInteger(value) || value < 0 || value > 999999)) { limit(); return; }
       sequence++;
-      if (diagnostic?.hasSubscribers) diagnostic.publish({ ...identity, sequence, invocation, operation, phase, result });
+      if (diagnostic?.hasSubscribers) diagnostic.publish({ ...identity, sequence, invocation, operation, phase, result, timing });
     } catch { disabled = true; } };
     const begin = (operation: ReadinessOperation): number | undefined => { try {
       if (!identity || disabled) return undefined;
       if (invocations >= 16) { limit(); return undefined; }
       const invocation = ++invocations; publish(invocation, operation, 'before-await'); return invocation;
     } catch { disabled = true; return undefined; } };
-    return { begin, publish };
+    const measure = (index: 0 | 1 | 2, guard: () => boolean): boolean => {
+      let before: number | undefined;
+      try { if (identity && !disabled && diagnostic?.hasSubscribers) before = performance.now(); }
+      catch { disabled = true; }
+      try { return guard(); }
+      finally { if (before !== undefined) try {
+        const elapsed = performance.now() - before, value = guards[index]!;
+        if (!Number.isFinite(elapsed) || elapsed < 0 || elapsed > 99999.9 || value.count >= 4096 ||
+            value.total + elapsed > 99999.9) limit();
+        else { value.count++; value.total += elapsed; value.max = Math.max(value.max, elapsed); }
+      } catch { disabled = true; } }
+    };
+    return { begin, publish, measure };
   })();
+  const isCurrent = () => readinessObservation.measure(0, () => context.isCurrent());
+  const allocationCurrent = () => readinessObservation.measure(1, () => context.canAllocate());
+  const mcpSourceCurrent = () => readinessObservation.measure(2, () => capturedMcpSourceCurrent(profile));
   if (profile.provider !== 'codex') throw new Error('Invalid Codex profile');
   qualifiedCodexProtocolRevision(profile.protocolRevision);
-  if (!capturedMcpSourceCurrent(profile)) throw new Error('Captured MCP source changed');
+  if (!mcpSourceCurrent()) throw new Error('Captured MCP source changed');
   const extraArgs = captureCodexExtraArgs(profile.extraArgs);
   const policy = codexMcpPolicy(
     profile,
@@ -133,10 +157,10 @@ export function createCodexMemberProvider(
     ...(extraArgs.length ? { extraArgs: [...extraArgs] } : {}),
     environment: buildCodexMemberEnvironment(profile.environment, context.endpoint.bearerToken),
   };
-  const canAllocate = () => context.canAllocate() && capturedMcpSourceCurrent(profile);
+  const canAllocate = () => allocationCurrent() && mcpSourceCurrent();
   const canCapture = () =>
-    (context.canCaptureRegisteredProcess?.() ?? context.canAllocate()) &&
-    capturedMcpSourceCurrent(profile);
+    (context.canCaptureRegisteredProcess?.() ?? allocationCurrent()) &&
+    mcpSourceCurrent();
   const custody = (
     options.createProcess ??
     ((selected, canAllocate) =>
@@ -153,12 +177,12 @@ export function createCodexMemberProvider(
   let ready = false;
   let allocated = false;
   const current = () =>
-    !sealed && context.isCurrent() && custody.isRunning() && capturedMcpSourceCurrent(profile);
+    !sealed && isCurrent() && custody.isRunning() && mcpSourceCurrent();
   const verifyCatalog = async (signal?: AbortSignal): Promise<boolean> => {
     if (!policy) return true;
     let invocation: number | undefined;
     const assertCurrent = () => {
-      if (sealed || !context.isCurrent() || !capturedMcpSourceCurrent(profile))
+      if (sealed || !isCurrent() || !mcpSourceCurrent())
         throw new Error('Captured MCP authority changed');
     };
     try {
@@ -189,13 +213,13 @@ export function createCodexMemberProvider(
       if (
         allocated ||
         sealed ||
-        !context.isCurrent() ||
-        !context.canAllocate() ||
+        !isCurrent() ||
+        !allocationCurrent() ||
         JSON.stringify(request) !== JSON.stringify(context.request)
       )
         return undefined;
-      if (!capturedMcpSourceCurrent(profile) || !(await verifyCatalog())) return undefined;
-      if (sealed || !context.isCurrent() || !context.canAllocate()) return undefined;
+      if (!mcpSourceCurrent() || !(await verifyCatalog())) return undefined;
+      if (sealed || !isCurrent() || !allocationCurrent()) return undefined;
       allocated = true;
       const args = codexLaunchArguments({ ...context, profile: captured });
       const child = custody.launch({

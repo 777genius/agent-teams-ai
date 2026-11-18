@@ -3558,13 +3558,16 @@ test('finite V2 P11 admission rejects mixed selectors before any fixture or proc
     return actual();
   };
   assert.equal(await select({}), false); assert.equal(await select(allowed), true);
-  for (const override of [{ LEGACY_DESKTOP_FINITE_V2_MEMBERSHIP: 'yes' }, { LEGACY_DESKTOP_BACKEND_GO: '0' },
+  const finiteHeap = { ...allowed, LEGACY_DESKTOP_TEST_FINITE_HEAP_1536: '1' };
+  assert.equal(await select(finiteHeap), true);
+  for (const context of [allowed, finiteHeap]) for (const override of [{ LEGACY_DESKTOP_FINITE_V2_MEMBERSHIP: 'yes' }, { LEGACY_DESKTOP_BACKEND_GO: '0' },
     { LEGACY_DESKTOP_PROOF_MODE: 'team-ui' }, { LEGACY_DESKTOP_MIXED_MEMBERSHIP_UI: undefined },
     { LEGACY_DESKTOP_OPENCODE_GENERATION: 'v1' }, { LEGACY_DESKTOP_EMULATED_ONLY: '1' },
     { LEGACY_DESKTOP_CLAUDE_PATH: '/TEST-unselected' }, { LEGACY_DESKTOP_CODEX_PATH: '/TEST-unselected' },
-    { LEGACY_DESKTOP_PACKED_CAPTURE_PATH: '/TEST-other.json' }, { OPENCODE_V2_EMBEDDED_GRAPH: undefined },
+    { LEGACY_DESKTOP_PACKED_CAPTURE_PATH: '/TEST-other.json' }, { LEGACY_DESKTOP_TEST_FINITE_HEAP_8192: '1' },
+    { OPENCODE_V2_EMBEDDED_GRAPH: undefined },
     { OPENCODE_V2_EMBEDDED_BUN_SHA256: 'bad' }])
-    await assert.rejects(select({ ...allowed, ...override }), assert.AssertionError);
+    await assert.rejects(select({ ...context, ...override }), assert.AssertionError);
   await assert.rejects(select(allowed, 'darwin'), assert.AssertionError);
   await assert.rejects(select(allowed, 'linux', 'arm64'), assert.AssertionError);
 });

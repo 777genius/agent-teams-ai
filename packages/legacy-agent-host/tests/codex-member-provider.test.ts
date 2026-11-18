@@ -3,6 +3,7 @@ import type { CodexConfiguredMcpCatalog } from '@agent-teams/provider-implementa
 import assert from 'node:assert/strict';
 import { channel } from 'node:diagnostics_channel';
 import { readFileSync } from 'node:fs';
+import { performance } from 'node:perf_hooks';
 import { managementDigest } from '../dist/management/identity.js';
 import { ChildProcess } from 'node:child_process';
 import { PassThrough, Writable } from 'node:stream';
@@ -1042,16 +1043,22 @@ const readinessChannel = () => channel('agent-teams.legacy-host.codex-readiness'
 const readinessBinding = () => managementDigest({ backendId: 'TEST-backend', teamId: 'TEST-team',
   runId: 'TEST-run', memberId: 'bob', generation: '1' });
 
-test('original Codex open and readiness retain captured await boundaries without extra provider work', async () => {
+test('original Codex open and readiness retain captured await boundaries without extra provider work', async t => {
+  let now = 0;
+  t.mock.method(performance, 'now', () => now);
   const run = async (observe: boolean) => {
-    const rows: unknown[] = [], diagnostic = readinessChannel(), receive = (value: unknown) => { rows.push(value); };
+    now = 0;
+    let catalogs = 0, current = 0, allocations = 0;
+    const rows: unknown[] = [], counts: number[][] = [], diagnostic = readinessChannel();
+    const receive = (value: unknown) => { rows.push(value); counts.push([current, allocations, now]); };
     if (observe) diagnostic.subscribe(receive);
-    let catalogs = 0, current = 0;
     const origin = readinessOrigin();
     const f = fixture({ processOrigin: origin, capturedMcpServers: {}, capturedMcpCatalog: policyCatalog,
       readCatalog: async () => { catalogs++; return policyCatalog; } });
     const originalCurrent = f.context.isCurrent;
-    f.context.isCurrent = () => { current++; return originalCurrent(); };
+    f.context.isCurrent = function () { assert.equal(this, f.context); current++; now += 0.25; return originalCurrent(); };
+    const originalAllocate = f.context.canAllocate;
+    f.context.canAllocate = function () { assert.equal(this, f.context); allocations++; now += 0.5; return originalAllocate(); };
     try {
       const opened = await f.provider.factory.open(f.context.request);
       Object.assign(origin, { sourceId: 'f'.repeat(64), revision: 'e'.repeat(64) });
@@ -1060,9 +1067,13 @@ test('original Codex open and readiness retain captured await boundaries without
       assert.equal(proof.ok, true); assert.equal(f.provider.isReady(), true);
       assert.equal(f.launches.length, 1); assert.equal(f.child.turns, 0);
       assert.equal(catalogs, 4);
-      const work = { catalogs, current, frames: f.child.frames.map(frame => frame.method), launches: f.launches.length };
+      const work = { catalogs, current, allocations, now, frames: f.child.frames.map(frame => frame.method), launches: f.launches.length };
+      const failure = new Error('PRIVATE-original-current-error'), prior = f.context.isCurrent;
+      f.context.isCurrent = function () { assert.equal(this, f.context); throw failure; };
+      assert.throws(() => f.provider.isReady(), error => error === failure, 'timing preserves the exact original throw');
+      f.context.isCurrent = prior;
       await opened.driver.close(); await f.provider.cleanup(); assert.equal(f.running(), false);
-      return { work, rows };
+      return { work, rows, counts };
     } finally { diagnostic.unsubscribe(receive); await f.provider.cleanup(); }
   };
   const plain = await run(false), observed = await run(true);
@@ -1071,14 +1082,20 @@ test('original Codex open and readiness retain captured await boundaries without
   const rows = observed.rows.map(record), invocations = new Map<number, { operation: unknown; phases: unknown[] }>();
   for (const [index, row] of rows.entries()) {
     assert.deepEqual(Object.keys(row).sort(), ['schemaVersion', 'bindingDigest', 'sourceId', 'sourceRevision',
-      'sequence', 'invocation', 'operation', 'phase', 'result'].sort());
-    assert.equal(row.schemaVersion, 1); assert.equal(row.bindingDigest, readinessBinding());
+      'sequence', 'invocation', 'operation', 'phase', 'result', 'timing'].sort());
+    assert.equal(row.schemaVersion, 2); assert.equal(row.bindingDigest, readinessBinding());
     assert.equal(row.sourceId, '1'.repeat(64)); assert.equal(row.sourceRevision, '2'.repeat(64)); assert.equal(row.sequence, index + 1);
     assert.equal(typeof row.invocation, 'number'); const invocation = row.invocation as number;
     let retained = invocations.get(invocation);
     if (!retained) { assert.equal(invocation, invocations.size + 1); retained = { operation: row.operation, phases: [] }; invocations.set(invocation, retained); }
     assert.equal(row.operation, retained.operation); retained.phases.push(row.phase);
     assert.equal(row.result, row.phase === 'returned' ? true : null);
+    const timing = row.timing; assert.ok(Array.isArray(timing)); assert.equal(timing.length, 10);
+    const count = observed.counts[index]!;
+    assert.deepEqual(timing.slice(0, 7), [Math.floor(count[2]! * 10), count[0], Math.floor(count[0]! * 2.5),
+      count[0] ? 2 : 0, count[1], count[1]! * 5, count[1] ? 5 : 0]);
+    assert.ok(timing[7] > 0); assert.deepEqual(timing.slice(8), [0, 0]);
+    assert.ok(timing.every((value, field) => index === 0 || value >= (record(rows[index - 1]).timing as number[])[field]!));
   }
   assert.deepEqual([...invocations.values()].map(row => row.operation), ['open', 'catalog', 'catalog', 'catalog', 'readiness', 'catalog']);
   for (const row of invocations.values()) assert.deepEqual(row.phases,
@@ -1140,22 +1157,34 @@ test('Codex diagnostic publication failure and missing identity preserve ordinar
   } finally { await f.provider.cleanup(); }
 });
 
-test('Codex finite observation saturation stops diagnostics once while all original readiness calls continue', async () => {
-  const rows: unknown[] = [], diagnostic = readinessChannel(), receive = (value: unknown) => { rows.push(value); };
-  diagnostic.subscribe(receive);
-  const f = fixture({ processOrigin: readinessOrigin() });
-  try {
-    const opened = await f.provider.factory.open(f.context.request);
-    for (let index = 0; index < 20; index++) assert.equal((await opened.driver.checkReadiness()).ok, true);
-    assert.equal(f.launches.length, 1); assert.equal(f.child.turns, 0);
-    await opened.driver.close(); assert.equal(f.running(), false);
-    const limits = rows.map(record).filter(row => row.limit === true);
-    assert.deepEqual(limits, [{ schemaVersion: 1, bindingDigest: readinessBinding(), sourceId: '1'.repeat(64),
-      sourceRevision: '2'.repeat(64), limit: true }]);
-    assert.equal(record(rows.at(-1)).limit, true);
-    const phases = rows.map(record).filter(row => row.limit !== true);
-    assert.ok(phases.length <= 64); assert.equal(Math.max(...phases.map(row => Number(row.invocation))), 16);
-  } finally { diagnostic.unsubscribe(receive); await f.provider.cleanup(); }
+test('Codex finite observation saturation stops diagnostics once while all original readiness calls continue', async t => {
+  let now = 0;
+  t.mock.method(performance, 'now', () => now);
+  for (const limit of ['phases', 'time', 'calls'] as const) {
+    now = 0;
+    const rows: unknown[] = [], diagnostic = readinessChannel(), receive = (value: unknown) => { rows.push(value); };
+    diagnostic.subscribe(receive);
+    const f = fixture({ processOrigin: readinessOrigin() });
+    try {
+      const opened = await f.provider.factory.open(f.context.request);
+      if (limit === 'time') now = 100000;
+      if (limit === 'calls') {
+        assert.equal((await opened.driver.checkReadiness()).ok, true);
+        for (let index = 0; index < 4100; index++) assert.equal(f.provider.isReady(), true);
+      }
+      for (let index = 0; index < 20; index++) assert.equal((await opened.driver.checkReadiness()).ok, true);
+      assert.equal(f.launches.length, 1); assert.equal(f.child.turns, 0);
+      await opened.driver.close(); assert.equal(f.running(), false);
+      const limits = rows.map(record).filter(row => row.limit === true);
+      assert.deepEqual(limits, [{ schemaVersion: 2, bindingDigest: readinessBinding(), sourceId: '1'.repeat(64),
+        sourceRevision: '2'.repeat(64), limit: true }]);
+      assert.equal(record(rows.at(-1)).limit, true);
+      const phases = rows.map(record).filter(row => row.limit !== true);
+      assert.ok(phases.length <= 64);
+      assert.equal(Math.max(...phases.map(row => Number(row.invocation))), limit === 'phases' ? 16 : limit === 'calls' ? 2 : 1);
+      assert.ok(phases.every(row => (row.timing as number[]).every((value, index) => value >= 0 && value <= ([1, 4, 7].includes(index) ? 4096 : 999999))));
+    } finally { diagnostic.unsubscribe(receive); await f.provider.cleanup(); }
+  }
 });
 
 test('actual Codex readiness wrapper preserves proof/error identity and original short-circuit operand order', async () => {

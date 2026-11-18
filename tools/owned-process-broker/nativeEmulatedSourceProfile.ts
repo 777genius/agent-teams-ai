@@ -233,7 +233,7 @@ channel('agent-teams.legacy-host.first-refusal').subscribe(value => { try {
   if (pair !== null) references.add(pair);
 } catch { disabled = true; } });
 const projectionLedger = ${JSON.stringify(runtimeProjectionLedger)};
-const codexContexts = [], codexEvents = [], codexStates = [], codexViews = new Map(); let codexUnknown = false;
+const codexContexts = [], codexEvents = [], codexStates = [], codexViews = new Map(); let codexUnknown = false, codexTimed = false;
 const codexReject = () => { codexUnknown = true; codexContexts.length = 0; codexEvents.length = 0; codexStates.length = 0; codexViews.clear(); };
 const codexTuple = (value, fields) => {
   assert.ok(value && typeof value === 'object' && !Array.isArray(value));
@@ -245,9 +245,10 @@ const codexTuple = (value, fields) => {
 };
 try { channel('agent-teams.legacy-host.codex-readiness').subscribe(value => { try {
   if (codexUnknown) return;
-  const [schemaVersion, bindingDigest, sourceId, sourceRevision, sequence, invocation, operation, phase, result] = codexTuple(value,
-    ['schemaVersion', 'bindingDigest', 'sourceId', 'sourceRevision', 'sequence', 'invocation', 'operation', 'phase', 'result']);
-  assert.equal(schemaVersion, 1);
+  const timed = Object.hasOwn(value, 'timing');
+  const [schemaVersion, bindingDigest, sourceId, sourceRevision, sequence, invocation, operation, phase, result, rawTiming] = codexTuple(value,
+    ['schemaVersion', 'bindingDigest', 'sourceId', 'sourceRevision', 'sequence', 'invocation', 'operation', 'phase', 'result', ...(timed ? ['timing'] : [])]);
+  assert.equal(schemaVersion, timed ? 2 : 1);
   assert.ok([bindingDigest, sourceId, sourceRevision].every(value => typeof value === 'string' && /^[a-f0-9]{64}$/.test(value)));
   assert.ok(Number.isInteger(sequence) && sequence >= 1 && sequence <= 64 && Number.isInteger(invocation) && invocation >= 1 && invocation <= 16);
   assert.ok(['open', 'catalog', 'readiness'].includes(operation) && ['before-await', 'after-await', 'returned', 'threw'].includes(phase));
@@ -256,9 +257,28 @@ try { channel('agent-teams.legacy-host.codex-readiness').subscribe(value => { tr
   let contextIndex = codexContexts.findIndex(row => row.every((value, index) => value === identity[index]));
   if (contextIndex < 0) {
     assert.ok(codexContexts.length < 4); contextIndex = codexContexts.length;
-    codexContexts.push(identity); codexStates.push({ sequence: 0, invocations: new Map() });
+    codexContexts.push(identity); codexStates.push({ sequence: 0, invocations: new Map(), schemaVersion, timing: [] });
   }
   const state = codexStates[contextIndex]; assert.equal(sequence, state.sequence + 1);
+  assert.equal(schemaVersion, state.schemaVersion);
+  let timing;
+  if (timed) {
+    assert.ok(Array.isArray(rawTiming) && Object.getOwnPropertySymbols(rawTiming).length === 0);
+    const descriptors = Object.getOwnPropertyDescriptors(rawTiming);
+    assert.deepEqual(Object.keys(descriptors), [...Array.from({ length: 10 }, (_, index) => String(index)), 'length']);
+    assert.ok(Object.values(descriptors).every(row => 'value' in row));
+    assert.equal(descriptors.length.value, 10);
+    timing = Array.from({ length: 10 }, (_, index) => descriptors[index].value);
+    assert.ok(timing.every(number => Number.isSafeInteger(number) && number >= 0 && number <= 999999));
+    for (const index of [1, 4, 7]) {
+      assert.ok(timing[index] <= 4096 && timing[index + 2] <= timing[index + 1]);
+      if (timing[index] === 0) assert.ok(timing[index + 1] === 0 && timing[index + 2] === 0);
+      if (state.timing.length && timing[index] === state.timing[index])
+        assert.ok(timing[index + 1] === state.timing[index + 1] && timing[index + 2] === state.timing[index + 2]);
+    }
+    assert.ok(timing.every((number, index) => !state.timing.length || number >= state.timing[index]));
+    state.timing = timing; codexTimed = true;
+  }
   const prior = state.invocations.get(invocation);
   if (phase === 'before-await') {
     assert.equal(prior, undefined); assert.equal(invocation, state.invocations.size + 1);
@@ -270,7 +290,7 @@ try { channel('agent-teams.legacy-host.codex-readiness').subscribe(value => { tr
   }
   assert.ok(codexEvents.length < 64);
   state.sequence = sequence; state.invocations.set(invocation, [operation, phase]);
-  codexEvents.push([contextIndex, sequence, invocation, operation, phase, result]);
+  codexEvents.push([contextIndex, sequence, invocation, operation, phase, result, ...(timed ? [timing] : [])]);
 } catch { codexReject(); } }); } catch { codexReject(); }
 try { channel('agent-teams.legacy-host.runtime-projection').subscribe(value => { try {
   if (codexUnknown) return;
@@ -284,7 +304,7 @@ try { channel('agent-teams.legacy-host.runtime-projection').subscribe(value => {
 } catch { codexReject(); } }); } catch { codexReject(); }
 try { process.once('exit', () => { try {
   const value = codexUnknown ? { schemaVersion: 1, status: 'unknown', reason: 'invalid-overflow-or-observer-failure' }
-    : { schemaVersion: 1, status: 'observed', contexts: codexContexts, events: codexEvents, views: [...codexViews] };
+    : { schemaVersion: codexTimed ? 2 : 1, status: 'observed', contexts: codexContexts, events: codexEvents, views: [...codexViews] };
   const raw = JSON.stringify(value);
   writeFileSync(projectionLedger + '.codex-readiness', Buffer.byteLength(raw) <= 8192 ? raw :
     '{"schemaVersion":1,"status":"unknown","reason":"invalid-overflow-or-observer-failure"}', { mode: 0o600, flag: 'wx' });

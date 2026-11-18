@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 
 type NodeEnvironment = Record<string, string | undefined>;
 
-/** Fixed optional build budget for two isolated finite Linux proofs, never ambient Node flags. */
+/** Fixed optional build budget for explicitly admitted finite Linux proofs, never ambient Node flags. */
 export function desktopFiniteHeapNodeOptions(
   environment: Readonly<NodeEnvironment> = process.env,
   platform: string = process.platform,
@@ -14,9 +14,23 @@ export function desktopFiniteHeapNodeOptions(
   assert.equal(platform, 'linux', 'finite TEST heap requires Linux');
   assert.equal(arch, 'x64', 'finite TEST heap requires x64');
   assert.equal(environment.LEGACY_DESKTOP_BACKEND_GO, '1', 'finite TEST heap requires explicit launch admission');
-  assert.equal(environment.LEGACY_DESKTOP_EMULATED_ONLY, '1', 'finite TEST heap requires provider emulation');
-  assert.ok(['emulated-retained-original-ui', 'emulated-import-lifecycle-ui'].includes(
-    environment.LEGACY_DESKTOP_PROOF_MODE ?? ''), 'finite TEST heap requires an exact finite lifecycle mode');
+  const mode = environment.LEGACY_DESKTOP_PROOF_MODE;
+  if (mode === 'opencode-v2-management-ui' || mode === 'native-mixed-create-launch-ui') {
+    assert.equal(environment.LEGACY_DESKTOP_EMULATED_ONLY, undefined,
+      'finite TEST heap requires the original native V2 scope');
+    if (mode === 'native-mixed-create-launch-ui') {
+      assert.equal(environment.LEGACY_DESKTOP_MIXED_MEMBERSHIP_UI, '1',
+        'finite TEST heap requires the original membership journey');
+      assert.equal(environment.LEGACY_DESKTOP_OPENCODE_GENERATION, 'v2',
+        'finite TEST heap requires OpenCode V2 membership');
+      assert.equal(environment.LEGACY_DESKTOP_FINITE_V2_MEMBERSHIP, '1',
+        'finite TEST heap requires finite initial membership peers');
+    }
+  } else {
+    assert.equal(environment.LEGACY_DESKTOP_EMULATED_ONLY, '1', 'finite TEST heap requires provider emulation');
+    assert.ok(['emulated-retained-original-ui', 'emulated-import-lifecycle-ui'].includes(mode ?? ''),
+      'finite TEST heap requires an exact finite lifecycle mode');
+  }
   return '--max-old-space-size=1536';
 }
 
@@ -29,8 +43,13 @@ export function desktopFiniteHeapAppEnvironment(
     NODE_OPTIONS: options,
     LEGACY_DESKTOP_TEST_FINITE_HEAP_1536: '1',
     LEGACY_DESKTOP_BACKEND_GO: '1',
-    LEGACY_DESKTOP_EMULATED_ONLY: '1',
     LEGACY_DESKTOP_PROOF_MODE: environment.LEGACY_DESKTOP_PROOF_MODE!,
+    ...(environment.LEGACY_DESKTOP_EMULATED_ONLY === '1' ? { LEGACY_DESKTOP_EMULATED_ONLY: '1' } : {}),
+    ...(environment.LEGACY_DESKTOP_PROOF_MODE === 'native-mixed-create-launch-ui' ? {
+      LEGACY_DESKTOP_MIXED_MEMBERSHIP_UI: '1',
+      LEGACY_DESKTOP_OPENCODE_GENERATION: 'v2',
+      LEGACY_DESKTOP_FINITE_V2_MEMBERSHIP: '1',
+    } : {}),
   };
 }
 

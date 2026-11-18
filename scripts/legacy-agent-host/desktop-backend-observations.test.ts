@@ -293,6 +293,78 @@ test('ordinary dev normalization stays exact and a future finite floor regressio
     /must retain its fixed Node option/);
 });
 
+const finiteV2HeapContexts: ReadonlyArray<Record<string, string>> = [
+  { LEGACY_DESKTOP_PROOF_MODE: 'opencode-v2-management-ui' },
+  { LEGACY_DESKTOP_PROOF_MODE: 'native-mixed-create-launch-ui', LEGACY_DESKTOP_MIXED_MEMBERSHIP_UI: '1',
+    LEGACY_DESKTOP_OPENCODE_GENERATION: 'v2', LEGACY_DESKTOP_FINITE_V2_MEMBERSHIP: '1' },
+];
+
+test('finite TEST heap admits only original V2 management and finite V2 membership scopes', () => {
+  const common = { LEGACY_DESKTOP_BACKEND_GO: '1', LEGACY_DESKTOP_TEST_FINITE_HEAP_1536: '1' };
+  for (const context of finiteV2HeapContexts) {
+    const admitted = { ...common, ...context };
+    assert.equal(desktopFiniteHeapNodeOptions(admitted, 'linux', 'x64'), '--max-old-space-size=1536');
+    for (const value of ['', '0', '1'])
+      assert.throws(() => desktopFiniteHeapNodeOptions({ ...admitted, LEGACY_DESKTOP_EMULATED_ONLY: value },
+        'linux', 'x64'), /finite TEST heap requires/);
+    assert.throws(() => desktopFiniteHeapNodeOptions(admitted, 'darwin', 'x64'), /requires Linux/);
+    assert.throws(() => desktopFiniteHeapNodeOptions(admitted, 'linux', 'arm64'), /requires x64/);
+  }
+  const membership = { ...common, ...finiteV2HeapContexts[1]! };
+  for (const key of ['LEGACY_DESKTOP_MIXED_MEMBERSHIP_UI', 'LEGACY_DESKTOP_OPENCODE_GENERATION',
+    'LEGACY_DESKTOP_FINITE_V2_MEMBERSHIP'])
+    for (const value of [undefined, '', '0', 'v1', 'forged', '1 '])
+      assert.throws(() => desktopFiniteHeapNodeOptions({ ...membership, [key]: value }, 'linux', 'x64'),
+        /finite TEST heap requires/);
+  for (const mode of ['native-launch-ui', 'opencode-v2-review-ui', 'team-ui', 'opencode-v2-management-ui '])
+    assert.throws(() => desktopFiniteHeapNodeOptions({ ...common, LEGACY_DESKTOP_PROOF_MODE: mode },
+      'linux', 'x64'), /finite TEST heap requires/);
+});
+
+test('original finite V2 fixture and dev startup retain only the validated 1536 MiB context', {
+  skip: process.platform !== 'linux' || process.arch !== 'x64',
+}, (t) => {
+  const controlled = (key: string) => key.startsWith('LEGACY_DESKTOP_') || key === 'NODE_OPTIONS';
+  const original = Object.fromEntries(Object.entries(process.env).filter(([key]) => controlled(key)));
+  const clear = () => { for (const key of Object.keys(process.env)) if (controlled(key)) delete process.env[key]; };
+  t.after(() => { clear(); Object.assign(process.env, original); });
+  for (const context of finiteV2HeapContexts) {
+    clear();
+    Object.assign(process.env, { ...context, LEGACY_DESKTOP_BACKEND_GO: '1',
+      LEGACY_DESKTOP_TEST_DISPLAY: ':97', LEGACY_DESKTOP_TEST_XAUTHORITY: '/TEST/Xauthority',
+      NODE_OPTIONS: '--require=/TEST/ambient.cjs --max-old-space-size=8192' });
+    const environment = () => desktopBackendEnvironment('/TEST/finite-v2-root', '/TEST/node', '/TEST/descriptor.json', 'a'.repeat(64));
+    const ordinary = environment();
+    assert.equal(Object.hasOwn(ordinary, 'NODE_OPTIONS'), false);
+    process.env.LEGACY_DESKTOP_TEST_FINITE_HEAP_1536 = '1';
+    assert.doesNotThrow(() => assertDesktopProofEnvironment(true));
+    const fixtureEnv = environment();
+    assert.deepEqual(fixtureEnv, { ...ordinary, ...context, NODE_OPTIONS: '--max-old-space-size=1536',
+      LEGACY_DESKTOP_TEST_FINITE_HEAP_1536: '1', LEGACY_DESKTOP_BACKEND_GO: '1' });
+    assert.equal(Object.hasOwn(fixtureEnv, 'LEGACY_DESKTOP_EMULATED_ONLY'), false);
+    const uiEnv = { ...fixtureEnv, UV_THREADPOOL_SIZE: '16' }, before = { ...uiEnv };
+    const originalFloor = { ...uiEnv };
+    originalDevNodeOptions(originalFloor);
+    assert.equal(originalFloor.NODE_OPTIONS, '--max-old-space-size=2048');
+    normalizeDesktopDevNodeOptions(uiEnv, originalDevNodeOptions);
+    assert.deepEqual(uiEnv, before, 'the original normalizer retains the exact option and closed context');
+    const refuse = (overrides: Record<string, string | undefined>) => {
+      let normalized = false;
+      assert.throws(() => normalizeDesktopDevNodeOptions({ ...uiEnv, ...overrides }, () => { normalized = true; }));
+      assert.equal(normalized, false, 'invalid finite context is refused before the original normalizer');
+    };
+    for (const selected of ['', '0', '1536', '1 ']) refuse({ LEGACY_DESKTOP_TEST_FINITE_HEAP_1536: selected });
+    for (const option of [undefined, '--max-old-space-size=2048', '--max-old-space-size=1536 --trace-gc',
+      '--require=/TEST/ambient.cjs --max-old-space-size=1536']) refuse({ NODE_OPTIONS: option });
+    refuse({ LEGACY_DESKTOP_BACKEND_GO: undefined });
+    refuse({ LEGACY_DESKTOP_EMULATED_ONLY: '1' });
+    for (const key of Object.keys(context)) refuse({ [key]: undefined });
+    process.env.LEGACY_DESKTOP_TEST_FINITE_HEAP_1536 = '0';
+    assert.throws(() => assertDesktopProofEnvironment(true), /exact selector/);
+    assert.throws(environment, /exact selector/);
+  }
+});
+
 test('TEST management admission retains only the exact direct detached Host peer without signaling', (t) => {
   const fixture = { node: '/TEST/node', hostEntry: '/TEST/host.js' };
   const peer = { command: '/TEST/node /TEST/peer.ts serve --hostname 127.0.0.1 --port 12345', observedPeerPids: [] as number[] };

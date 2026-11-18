@@ -261,7 +261,7 @@ export function readEmulatedCodexReadinessObservation(options: Record<string, un
     const raw = readFileSync(input.ledgerPath, 'utf8'); assert.ok(Buffer.byteLength(raw) <= 8192);
     const ledger = object(JSON.parse(raw));
     assert.equal(Object.keys(ledger).sort().join(' '), 'contexts events schemaVersion status views');
-    assert.equal(ledger.schemaVersion, 1); assert.equal(ledger.status, 'observed');
+    assert.ok(ledger.schemaVersion === 1 || ledger.schemaVersion === 2); assert.equal(ledger.status, 'observed');
     assert.ok(Array.isArray(ledger.contexts) && ledger.contexts.length <= 4);
     assert.ok(Array.isArray(ledger.events) && ledger.events.length <= 64);
     assert.ok(Array.isArray(ledger.views) && ledger.views.length <= 4);
@@ -272,15 +272,30 @@ export function readEmulatedCodexReadinessObservation(options: Record<string, un
       const key = tuple.join(':'); assert.equal(identities.has(key), false); identities.add(key);
       return [tuple[0], tuple[1], tuple[2]];
     });
-    const states = contexts.map(() => ({ sequence: 0, invocations: new Map() }));
+    const states = contexts.map(() => ({ sequence: 0, invocations: new Map(), timed: false, timing: Array.of(0, 0, 0, 0, 0, 0, 0, 0, 0, 0) }));
     const events = ledger.events.map(tuple => {
-      assert.ok(Array.isArray(tuple) && tuple.length === 6);
-      const [contextIndex, sequence, invocation, operation, phase, result] = tuple;
+      assert.ok(Array.isArray(tuple) && (tuple.length === 6 || ledger.schemaVersion === 2 && tuple.length === 7));
+      const [contextIndex, sequence, invocation, operation, phase, result, timing] = tuple;
       assert.ok(Number.isInteger(contextIndex) && contextIndex >= 0 && contextIndex < contexts.length);
       assert.ok(Number.isInteger(sequence) && sequence >= 1 && sequence <= 64 && Number.isInteger(invocation) && invocation >= 1 && invocation <= 16);
       assert.ok(['open', 'catalog', 'readiness'].includes(operation) && ['before-await', 'after-await', 'returned', 'threw'].includes(phase));
       assert.ok(phase === 'returned' ? operation !== 'open' && typeof result === 'boolean' : result === null);
       const state = states[contextIndex]; assert.ok(state); assert.equal(sequence, state.sequence + 1);
+      const timed = tuple.length === 7;
+      if (state.sequence) assert.equal(timed, state.timed);
+      if (timed) {
+        assert.ok(Array.isArray(timing) && timing.length === 10);
+        assert.ok(timing.every(number => Number.isSafeInteger(number) && number >= 0 && number <= 999999));
+        for (const index of [1, 4, 7]) {
+          assert.ok(timing[index] <= 4096 && timing[index + 2] <= timing[index + 1]);
+          if (timing[index] === 0) assert.ok(timing[index + 1] === 0 && timing[index + 2] === 0);
+          if (state.sequence && timing[index] === state.timing[index])
+            assert.ok(timing[index + 1] === state.timing[index + 1] && timing[index + 2] === state.timing[index + 2]);
+        }
+        assert.ok(timing.every((number, index) => number >= Number(state.timing[index])));
+        state.timing = timing;
+      }
+      state.timed = timed;
       const prior = state.invocations.get(invocation);
       if (phase === 'before-await') {
         assert.equal(prior, undefined); assert.equal(invocation, state.invocations.size + 1);
@@ -291,8 +306,9 @@ export function readEmulatedCodexReadinessObservation(options: Record<string, un
           : prior[1] === 'before-await' || prior[1] === 'after-await');
       }
       state.sequence = sequence; state.invocations.set(invocation, [operation, phase]);
-      return [contextIndex, sequence, invocation, operation, phase, result];
+      return [contextIndex, sequence, invocation, operation, phase, result, ...(timed ? [timing] : [])];
     });
+    assert.equal(ledger.schemaVersion === 2, states.some(state => state.timed));
     assert.ok(states.every(state => state.sequence > 0));
     const digests = new Set();
     const views = ledger.views.map(tuple => {
@@ -307,11 +323,19 @@ export function readEmulatedCodexReadinessObservation(options: Record<string, un
     const matchingViews = views.filter(tuple => tuple[0] === input.lastRuntimeViewDigest);
     assert.equal(matchingViews.length, 1); const view = matchingViews[0]; assert.ok(view);
     const observedEventCount = view[1];
-    const result = { schemaVersion: 1, status: 'observed', atomicWithFailure: false,
+    const selectedEvents = events.slice(0, observedEventCount).filter(tuple => tuple[0] === context.index);
+    const lastEvent = selectedEvents.at(-1), timing = lastEvent?.[6];
+    const result = { schemaVersion: ledger.schemaVersion, status: 'observed', atomicWithFailure: false,
       samplePoint: 'last-original-projection-with-matching-view-digest',
       source: { sourceId: source.sourceId, revision: source.revision }, bindingDigest: context.tuple[0], viewDigest: view[0],
       mainEpoch: epoch.mainEpoch, launchId: launch.launchId, observedEventCount,
-      events: events.slice(0, observedEventCount).filter(tuple => tuple[0] === context.index).map(tuple => tuple.slice(1)) };
+      events: selectedEvents.map(tuple => tuple.slice(1, 6)),
+      // Guard tuples are [count, totalDeciMs, maxDeciMs]. Preserve legacy phase rows.
+      // Only the last original phase supplies cumulative guard costs;
+      // this is not an atomic deadline sample, including when a later catalogue is still pending.
+      ...(lastEvent && timing ? { timing: { samplePoint: 'last-original-codex-phase-event', sequence: lastEvent[1],
+        elapsedDeciMs: selectedEvents.map(tuple => tuple[6][0]),
+        isCurrent: timing.slice(1, 4), canAllocate: timing.slice(4, 7), mcpSourceCurrent: timing.slice(7, 10) } } : {}) };
     assert.ok(Buffer.byteLength(JSON.stringify(result)) <= 8192); return result;
   } catch { return unavailable; }
 }
