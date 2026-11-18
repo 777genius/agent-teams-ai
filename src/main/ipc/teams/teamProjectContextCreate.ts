@@ -1,12 +1,12 @@
 import * as path from 'node:path';
 
 import {
+  isConfirmedStoppedTeamRuntime,
   TeamProjectContextCreateCoordinator,
   TeamProjectContextDraftMaterializer,
   TeamProjectContextLaunchGate,
   TeamProjectContextRegistry,
   TeamProjectContextRuntimeResolver,
-  isConfirmedStoppedTeamRuntime,
 } from '@features/team-project-context/main';
 import {
   readTeamOwnerProfileScope,

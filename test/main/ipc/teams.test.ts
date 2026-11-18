@@ -2900,7 +2900,7 @@ describe('ipc teams handlers', () => {
         // Electron transports a plain result, not the original Error instance.
         return JSON.parse(JSON.stringify(result)) as unknown;
       });
-      const request = { teamName: 'cleanup-fixture', cwd: fixtureRoot, members: [] };
+      const request = { teamName: 'cleanup-fixture', projectContextMode: 'shared' as const, cwd: fixtureRoot, members: [] };
       const message = new OpenCodeStartupCleanupBusyError().message;
       for (const operation of ['createTeam', 'launchTeam'] as const) {
         await expect(api.teams[operation](request)).rejects.toThrow(message);
@@ -3116,9 +3116,7 @@ describe('ipc teams handlers', () => {
     };
     expect(first.success).toBe(true);
     teamHandlerMocks.createTeam.mockRejectedValueOnce(new Error('bootstrap failed early'));
-    service.listTeams
-      .mockResolvedValueOnce([{ teamName: 'background-fresh', displayName: 'Background Fresh' }])
-      .mockResolvedValueOnce([{ teamName: 'fresh-team', displayName: 'Fresh' }]);
+    service.listTeams.mockResolvedValue([{ teamName: 'fresh-team', displayName: 'Fresh' }]);
 
     const createResult = (await legacyCreateHandler({ sender: { send: vi.fn() } } as never, {
       teamName: 'my-team',
@@ -3136,7 +3134,7 @@ describe('ipc teams handlers', () => {
     };
     expect(second.success).toBe(true);
     expect(second.data).toEqual([{ teamName: 'fresh-team', displayName: 'Fresh' }]);
-    expect(service.listTeams).toHaveBeenCalledTimes(3);
+    expect(service.listTeams).toHaveBeenCalledTimes(2);
   });
 
   it('does not route TEAM_GET_MESSAGES_PAGE through the launch IO governor', async () => {
@@ -5272,7 +5270,7 @@ describe('ipc teams handlers', () => {
       result = (await permanentlyDeleteHandler({} as never, 'my-team')) as { success: boolean };
       expect(result.success).toBe(true);
       expect(teamBackupService.beginPermanentDeletion).toHaveBeenCalledWith('my-team', {
-        draft: undefined,
+        draft: false,
       });
       expect(teamBackupService.commitPermanentDeletionBoundary).toHaveBeenCalledWith(
         permanentDeletionIntent
@@ -7343,7 +7341,7 @@ describe('ipc teams handlers', () => {
           path.join(teamDir, 'team.meta.json'),
           JSON.stringify({ version: 1, cwd: '/Users/test/project', createdAt: Date.now() })
         );
-        service.getSavedRequest.mockResolvedValueOnce({
+        service.getSavedRequest.mockResolvedValue({
           teamName: 'draft-team',
           cwd: '/Users/test/project',
           extraCliArgs: '--disallowed-tools x',
@@ -7894,7 +7892,7 @@ describe('ipc teams handlers', () => {
             fs.writeFileSync(path.join(teamDir, 'team.meta.json'), meta);
             if (entry !== 'draft')
               fs.writeFileSync(path.join(teamDir, 'config.json'), JSON.stringify({ members: [] }));
-            service.getSavedRequest.mockResolvedValueOnce({
+            service.getSavedRequest.mockResolvedValue({
               teamName,
               cwd,
               runtimeSelectionVersion: 1,
@@ -7948,7 +7946,7 @@ describe('ipc teams handlers', () => {
           );
           if (!draft)
             fs.writeFileSync(path.join(teamDir, 'config.json'), JSON.stringify({ members: [] }));
-          service.getSavedRequest.mockResolvedValueOnce({
+          service.getSavedRequest.mockResolvedValue({
             teamName: 'marker-team',
             runtimeSelectionVersion: 1,
             providerId: 'codex',
@@ -7990,7 +7988,7 @@ describe('ipc teams handlers', () => {
             createdAt: Date.now(),
           })
         );
-        service.getSavedRequest.mockResolvedValueOnce({
+        service.getSavedRequest.mockResolvedValue({
           teamName: 'draft-team',
           displayName: 'Draft Team',
           description: 'Saved draft',

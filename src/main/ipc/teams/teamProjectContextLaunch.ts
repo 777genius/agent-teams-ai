@@ -5,8 +5,8 @@ import { parseOptionalTeamEffort, parseOptionalTeamFastMode } from '../teamIpcRe
 import { createProjectContextRuntimeParts } from './teamProjectContextCreate';
 import { rememberProjectRunIdentity } from './teamProjectContextProgressIdentity';
 
-import type { IpcResult, TeamLaunchRequest, TeamLaunchResponse, TeamProvisioningProgress } from '@shared/types';
 import type { ProjectTeamRuntimePorts } from './teamProjectContextCreate';
+import type { IpcResult, TeamLaunchRequest, TeamLaunchResponse, TeamProvisioningProgress } from '@shared/types';
 
 export type ProjectContextProgressMapper = (
   progress: TeamProvisioningProgress,

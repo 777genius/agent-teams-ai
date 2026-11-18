@@ -204,6 +204,18 @@ import { TeamMetaStore } from '../services/team/TeamMetaStore';
 import { TeamTaskAttachmentStore } from '../services/team/TeamTaskAttachmentStore';
 import { TeamWorktreeGitService } from '../services/team/TeamWorktreeGitService';
 
+import { waitForOpenCodeRuntimeRelayForUi } from './teams/openCodeRuntimeDeliveryRelayUi';
+import { deleteLogicalTeamWithContexts, isLogicalTeamProcessAlive, permanentlyDeleteLogicalTeam, projectAliveTeamNames, restoreLogicalTeamWithContexts, stopLogicalTeam } from './teams/teamContextLifecycle';
+import { withTeamLaunchAdmission } from './teams/teamLaunchAdmission';
+import { teamMessageNotificationScanner } from './teams/teamMessageNotificationScanner';
+import { createMessagesPageHandler } from './teams/teamMessagesPageHandler';
+import { TeamPermanentDeletionTransactionCoordinator } from './teams/TeamPermanentDeletionTransactionCoordinator';
+import { createTeamWithProjectContext } from './teams/teamProjectContextCreate';
+import { buildTeamProgressReporter, withPreparedContextLaunch } from './teams/teamProjectContextLaunch';
+import { projectPublicProvisioningProgress, resolveProjectRunDiagnosticsTeam } from './teams/teamProjectContextProgressIdentity';
+import { discardQueuedUserMessages, listQueuedUserMessages } from './teams/teamQueuedUserMessages';
+import { createTeamSoftDeleteRequests } from './teams/teamSoftDeleteFlow';
+import { withTimeoutValue } from './teams/withTimeoutValue';
 import {
   validateFromField,
   validateMemberName,
@@ -222,18 +234,6 @@ import {
   parseOptionalTeamProviderId,
   parseTeamProvisioningBooleanOptions,
 } from './teamIpcRequestParsers';
-import { waitForOpenCodeRuntimeRelayForUi } from './teams/openCodeRuntimeDeliveryRelayUi';
-import { deleteLogicalTeamWithContexts, isLogicalTeamProcessAlive, permanentlyDeleteLogicalTeam, projectAliveTeamNames, restoreLogicalTeamWithContexts, stopLogicalTeam } from './teams/teamContextLifecycle';
-import { withTeamLaunchAdmission } from './teams/teamLaunchAdmission';
-import { teamMessageNotificationScanner } from './teams/teamMessageNotificationScanner';
-import { createMessagesPageHandler } from './teams/teamMessagesPageHandler';
-import { TeamPermanentDeletionTransactionCoordinator } from './teams/TeamPermanentDeletionTransactionCoordinator';
-import { createTeamWithProjectContext } from './teams/teamProjectContextCreate';
-import { buildTeamProgressReporter, withPreparedContextLaunch } from './teams/teamProjectContextLaunch';
-import { projectPublicProvisioningProgress, resolveProjectRunDiagnosticsTeam } from './teams/teamProjectContextProgressIdentity';
-import { discardQueuedUserMessages, listQueuedUserMessages } from './teams/teamQueuedUserMessages';
-import { createTeamSoftDeleteRequests } from './teams/teamSoftDeleteFlow';
-import { withTimeoutValue } from './teams/withTimeoutValue';
 
 import type {
   BoardTaskActivityDetailService,

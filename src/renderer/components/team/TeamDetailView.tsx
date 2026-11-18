@@ -110,7 +110,6 @@ import {
 } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
 
-import { deriveMetrics } from './context-metric-alias';
 import { AddMemberDialog } from './dialogs/AddMemberDialog';
 import { EditTeamDialog } from './dialogs/EditTeamDialog';
 import { LaunchTeamDialogLoadingFallback } from './dialogs/LaunchTeamDialogLoadingFallback';
@@ -123,6 +122,7 @@ import { TrashDialog } from './kanban/TrashDialog';
 import { useTeamTaskFilters } from './kanban/useTeamTaskFilters';
 import { MemberDetailDialog } from './members/MemberDetailDialog';
 import { type MemberActivityFilter, type MemberDetailTab } from './members/memberDetailTypes';
+import { deriveMetrics } from './context-metric-alias';
 import { toLogicalProjectLaunchRequest } from './projectTeamLaunchRequest';
 import { TeamDeleteButton } from './TeamDeleteButton';
 import { showTeamDeleteError } from './teamDeleteErrorDialog';
@@ -182,8 +182,6 @@ const CreateTaskDialog = lazy(() =>
 const ChangeReviewDialog = lazy(() =>
   import('./review/ChangeReviewDialog').then((m) => ({ default: m.ChangeReviewDialog }))
 );
-import { ClaudeLogsSection } from './ClaudeLogsSection';
-import { CollapsibleTeamSection } from './CollapsibleTeamSection';
 import { MemberList } from './members/MemberList';
 import { MessagesPanel } from './messages/MessagesPanel';
 import { type ExpandedChatHost } from './messages/MessagesThreadPlacement';
@@ -192,6 +190,8 @@ import { ScheduleSection } from './schedule/ScheduleSection';
 import { TeamSidebarHost } from './sidebar/TeamSidebarHost';
 import { TeamSidebarPortalSource } from './sidebar/TeamSidebarPortalSource';
 import { TeamSidebarRail } from './sidebar/TeamSidebarRail';
+import { ClaudeLogsSection } from './ClaudeLogsSection';
+import { CollapsibleTeamSection } from './CollapsibleTeamSection';
 // import { deriveLeadLoadButtonLabel } from './lead-load-guards';
 import { LeadSessionDetailGate } from './LeadSessionDetailGate';
 import { LiveRuntimeStatusBridge } from './LiveRuntimeStatusBridge';

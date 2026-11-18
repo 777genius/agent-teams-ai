@@ -19,6 +19,7 @@ import type { TeamProvisioningService } from '@main/services/team/TeamProvisioni
 import type { CrossTeamSendRequest, TeamConfig } from '@shared/types';
 
 vi.mock('@main/utils/pathDecoder', () => ({
+  getAppDataBasePath: () => `${process.cwd()}/.cross-team-test-nonexistent-dir-${process.pid}`,
   getTeamsBasePath: () => `${process.cwd()}/.cross-team-test-nonexistent-dir-${process.pid}/teams`,
   getTasksBasePath: () => `${process.cwd()}/.cross-team-test-nonexistent-dir-${process.pid}/tasks`,
   getClaudeBasePath: () => `${process.cwd()}/.cross-team-test-nonexistent-dir-${process.pid}`,

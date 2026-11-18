@@ -12,6 +12,8 @@ import { constants as fsConstants } from 'fs';
 import { access } from 'fs/promises';
 import { join } from 'path';
 
+import { registerTeamLifecycleRoutes } from './teams/teamLifecycleRoutes';
+import { registerTeamManagementRoutes } from './teams/teamManagementRoutes';
 import { registerTeamMemberDiagnosticsRoute } from './teamMemberDiagnostics';
 import { rejectUnsupportedProjectContextHttpLaunch } from './teamProjectContextLaunchGuard';
 import {
@@ -23,8 +25,6 @@ import {
   withRuntimeTeamName,
 } from './teamRouteParsers';
 import { rememberMemberWorkSyncRuntimeStop } from './teamRuntimeStopReplay';
-import { registerTeamLifecycleRoutes } from './teams/teamLifecycleRoutes';
-import { registerTeamManagementRoutes } from './teams/teamManagementRoutes';
 
 import type { HttpServices } from './index';
 import type { AppConnectionContext } from '@features/external-agent-connection/contracts';

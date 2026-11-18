@@ -2,9 +2,9 @@ export { projectTeamSummaries } from './projectTeamSummaries';
 export { TeamProjectContextCreateCoordinator } from './TeamProjectContextCreateCoordinator';
 export { TeamProjectContextDraftMaterializer } from './TeamProjectContextDraftMaterializer';
 export {
-  TeamProjectContextLaunchGate,
-  TeamProjectContextLaunchConflictError,
   isConfirmedStoppedTeamRuntime,
+  TeamProjectContextLaunchConflictError,
+  TeamProjectContextLaunchGate,
 } from './TeamProjectContextLaunchGate';
 export {
   registerTeamProjectContextModeHandler,

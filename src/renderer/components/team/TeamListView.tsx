@@ -73,9 +73,9 @@ import { TeamManagementNotice } from './TeamManagementNotice';
 import {
   findTeamProjectSelectionTarget,
   resolveCreateTeamDefaultProjectPath,
+  resolveTeamLaunchDefaultProjectPath,
   resolveTeamProjectSelection,
   resolveTeamsProjectNavigationPath,
-  resolveTeamLaunchDefaultProjectPath,
   teamMatchesProjectSelection,
 } from './teamProjectSelection';
 import { TeamStatusBadge } from './TeamStatusBadge';

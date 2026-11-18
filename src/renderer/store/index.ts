@@ -2442,9 +2442,7 @@ export function initializeNotificationListeners(): () => void {
     }
   }
 
-  // Listen for SSH connection status changes from main process
-  // NOTE: Only syncs connection status here. Data fetching is handled by
-  // connectionSlice.connectSsh/disconnectSsh and contextSlice.switchContext.
+  // Sync SSH status; connection and context slices own data fetching.
   if (api.ssh?.onStatus) {
     const cleanup = api.ssh.onStatus((_event: unknown, status: unknown) => {
       const s = status as { state: string; host: string | null; error: string | null };

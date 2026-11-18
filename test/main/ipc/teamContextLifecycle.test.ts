@@ -379,6 +379,9 @@ describe('project team lifecycle projection', () => {
     );
     expect(projected).toContain('builders');
     expect(projected).toContain('other-team');
+    // Unreadable metadata is logged without hiding healthy runtime state.
+    expect(vi.mocked(console.warn)).toHaveBeenCalled();
+    vi.mocked(console.warn).mockClear();
   });
 
   it('does not orphan retained histories when permanently deleting a now-shared team', async () => {
