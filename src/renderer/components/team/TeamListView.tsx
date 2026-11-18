@@ -143,6 +143,13 @@ function resolveLaunchDialogMembers(members: readonly TeamMemberSnapshot[]): Res
   });
 }
 
+function resolveSavedLaunchDialogMembers(members: TeamCreateRequest['members']): ResolvedTeamMember[] {
+  return members.map((member) => ({
+    ...member, joinedAt: 0, currentTaskId: null, taskCount: 0,
+    messageCount: 0, lastActiveAt: null, status: 'idle' as const,
+  }));
+}
+
 function renderMemberNames(members: TeamSummaryMember[]): React.JSX.Element {
   const teamColorMap = buildMemberColorMap(members);
   return (
@@ -963,10 +970,12 @@ export const TeamListView = memo(function TeamListView({
         if (!(err instanceof Error && err.message.includes('TEAM_DRAFT'))) {
           console.error('Failed to load team data for launch dialog:', err);
         }
-        // Fallback: open dialog with minimal data
+        // Logical per-project teams have no native config.json. Recover their
+        // authored roster instead of opening a relaunch dialog with no members.
+        const saved = await api.teams.getSavedRequest(teamName).catch(() => null);
         setLaunchDialogMode(mode);
         setLaunchDialogTeamName(teamName);
-        setLaunchDialogMembers([]);
+        setLaunchDialogMembers(resolveSavedLaunchDialogMembers(saved?.members ?? []));
         setLaunchDialogDefaultPath(projectPath);
         setLaunchDialogOpen(true);
       }
