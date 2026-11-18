@@ -62,7 +62,7 @@ import {
   continueAcceptedTeamManagementChange,
 } from './team/teamManagementNotices';
 import { scheduleAllToolApprovalSettingsSync } from './team/teamToolApprovalSettingsSync';
-import { getVisibleTeamNamesInAnyPane } from './team/teamViewVisibility';
+import { getVisibleTeamNamesInAnyPane, subscribeVisiblePhysicalTeamChanges } from './team/teamViewVisibility';
 import { installCodexStartupStatusRevalidation } from './codexStartupStatusRevalidation';
 import { nextTeamAliveFromLeadActivity } from './leadActivityTeamAlive';
 import {
@@ -1327,6 +1327,7 @@ export function initializeNotificationListeners(): () => void {
     };
 
     syncVisibleTeamTracking();
+    const unsubscribePhysicalTeams = subscribeVisiblePhysicalTeamChanges(syncVisibleTeamTracking);
 
     const unsubscribeVisibleTeamTracking = useStore.subscribe((state, prevState) => {
       if (state.paneLayout === prevState.paneLayout) {
@@ -1336,6 +1337,7 @@ export function initializeNotificationListeners(): () => void {
     });
 
     cleanupFns.push(() => {
+      unsubscribePhysicalTeams();
       unsubscribeVisibleTeamTracking();
       for (const teamName of trackedTeamNames) {
         void api.teams.setToolActivityTracking(teamName, false).catch(() => undefined);

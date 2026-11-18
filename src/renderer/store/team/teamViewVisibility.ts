@@ -5,11 +5,23 @@ import type { AppState } from '../types';
 // Multiple panes may show the same owned native project context. Reference
 // counting prevents one pane's cleanup from hiding the other pane's updates.
 const mountedPhysicalTeams = new Map<string, number>();
+const visibilitySubscribers = new Set<() => void>();
+
+/** Lifecycle subscribers are notified on project-context activation and cleanup. */
+export function subscribeVisiblePhysicalTeamChanges(listener: () => void): () => void {
+  visibilitySubscribers.add(listener);
+  return () => { visibilitySubscribers.delete(listener); };
+}
+
+function notifyVisiblePhysicalTeamChanges(): void {
+  for (const subscriber of visibilitySubscribers) subscriber();
+}
 
 /** Register a verified physical team while its logical-team view is active. */
 export function registerVisiblePhysicalTeam(teamName: string): () => void {
   if (!teamName) return () => undefined;
   mountedPhysicalTeams.set(teamName, (mountedPhysicalTeams.get(teamName) ?? 0) + 1);
+  notifyVisiblePhysicalTeamChanges();
   let disposed = false;
   return () => {
     if (disposed) return;
@@ -17,6 +29,7 @@ export function registerVisiblePhysicalTeam(teamName: string): () => void {
     const remaining = (mountedPhysicalTeams.get(teamName) ?? 0) - 1;
     if (remaining > 0) mountedPhysicalTeams.set(teamName, remaining);
     else mountedPhysicalTeams.delete(teamName);
+    notifyVisiblePhysicalTeamChanges();
   };
 }
 

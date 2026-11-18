@@ -13,6 +13,7 @@ import { access } from 'fs/promises';
 import { join } from 'path';
 
 import { registerTeamMemberDiagnosticsRoute } from './teamMemberDiagnostics';
+import { rememberMemberWorkSyncRuntimeStop } from './teamRuntimeStopReplay';
 import { rejectUnsupportedProjectContextHttpLaunch } from './teamProjectContextLaunchGuard';
 import {
   HttpBadRequestError,
@@ -42,29 +43,6 @@ import type {
 import type { FastifyInstance } from 'fastify';
 
 const logger = createLogger('HTTP:teams');
-
-const RUNTIME_STOP_REPLAY_LIMIT = 64;
-const runtimeStopReplay = new Map<
-  string,
-  { ok: true; status: unknown; runtimeAdmission: { state: string } }
->();
-
-function rememberMemberWorkSyncRuntimeStop(
-  localStopId: string,
-  value?: { ok: true; status: unknown; runtimeAdmission: { state: string } }
-) {
-  if (value) {
-    if (runtimeStopReplay.size >= RUNTIME_STOP_REPLAY_LIMIT) {
-      const oldest = runtimeStopReplay.keys().next().value;
-      if (oldest) {
-        runtimeStopReplay.delete(oldest);
-      }
-    }
-    runtimeStopReplay.set(localStopId, value);
-    return value;
-  }
-  return runtimeStopReplay.get(localStopId);
-}
 
 type LaunchBody = Omit<TeamLaunchRequest, 'teamName'>;
 type CreateTeamBody = TeamCreateConfigRequest;
