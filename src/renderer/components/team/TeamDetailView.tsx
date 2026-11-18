@@ -551,11 +551,12 @@ type TeamMemberListBridgeProps = Omit<
   'leadActivity' | 'memberSpawnStatuses' | 'pendingRepliesByMember'
 > & {
   teamName: string;
+  provisioningTeamName?: string;
 };
 type TeamMemberDetailDialogBridgeProps = Omit<
   ComponentProps<typeof MemberDetailDialog>,
   'leadActivity' | 'spawnEntry' | 'runtimeEntry'
->;
+> & { provisioningTeamName?: string };
 type EditTarget = { kind: 'team' } | { kind: 'member'; memberName: string } | null;
 type TeamSidebarRailBridgeProps = Omit<
   ComponentProps<typeof TeamSidebarRail>,
@@ -976,6 +977,7 @@ const LeadLoadBridge = memo(function LeadLoadBridge({
 
 const TeamMemberListBridge = memo(function TeamMemberListBridge({
   teamName,
+  provisioningTeamName,
   ...props
 }: TeamMemberListBridgeProps): React.JSX.Element {
   const pendingRepliesByMember = useTeamPendingReplies(teamName);
@@ -989,7 +991,7 @@ const TeamMemberListBridge = memo(function TeamMemberListBridge({
   } = useStore(
     useShallow((s) => ({
       leadActivity: s.leadActivityByTeam[teamName],
-      progress: getCurrentProvisioningProgressForTeam(s, teamName),
+      progress: getCurrentProvisioningProgressForTeam(s, provisioningTeamName ?? teamName),
       memberSpawnStatuses: s.memberSpawnStatusesByTeam[teamName],
       memberSpawnSnapshot: s.memberSpawnSnapshotsByTeam[teamName],
       runtimeSnapshot: s.teamAgentRuntimeByTeam[teamName],
@@ -1225,6 +1227,7 @@ const SendMessageDialogBridge = memo(function SendMessageDialogBridge({
 
 const TeamMemberDetailDialogBridge = memo(function TeamMemberDetailDialogBridge({
   teamName,
+  provisioningTeamName,
   member,
   ...props
 }: TeamMemberDetailDialogBridgeProps): React.JSX.Element | null {
@@ -1243,7 +1246,7 @@ const TeamMemberDetailDialogBridge = memo(function TeamMemberDetailDialogBridge(
     useShallow((s) => ({
       leadActivity: s.leadActivityByTeam[teamName],
       liveMember: member ? selectResolvedMemberForTeamName(s, teamName, member.name) : null,
-      progress: getCurrentProvisioningProgressForTeam(s, teamName),
+      progress: getCurrentProvisioningProgressForTeam(s, provisioningTeamName ?? teamName),
       launchMembers: selectTeamMemberSnapshotsForName(s, teamName),
       memberSpawnStatuses: s.memberSpawnStatusesByTeam[teamName],
       memberSpawnSnapshot: s.memberSpawnSnapshotsByTeam[teamName],
@@ -1251,7 +1254,7 @@ const TeamMemberDetailDialogBridge = memo(function TeamMemberDetailDialogBridge(
       runtimeRunId:
         s.teamAgentRuntimeByTeam[teamName]?.runId ??
         s.memberSpawnSnapshotsByTeam[teamName]?.runId ??
-        getCurrentProvisioningProgressForTeam(s, teamName)?.runId,
+        getCurrentProvisioningProgressForTeam(s, provisioningTeamName ?? teamName)?.runId,
       runtimeEntries: s.teamAgentRuntimeByTeam[teamName]?.members,
       runtimeEntry: member ? s.teamAgentRuntimeByTeam[teamName]?.members[member.name] : undefined,
     }))
@@ -1503,9 +1506,9 @@ export const TeamDetailView = memo(function TeamDetailView({
       removeMember: s.removeMember,
       restoreMember: s.restoreMember,
       launchTeam: s.launchTeam,
-      provisioningError: teamName ? (s.provisioningErrorByTeam[teamName] ?? null) : null,
+      provisioningError: teamName ? (s.provisioningErrorByTeam[logicalTeamName ?? teamName] ?? null) : null,
       clearProvisioningError: s.clearProvisioningError,
-      isTeamProvisioning: teamName ? isTeamProvisioningActive(s, teamName) : false,
+      isTeamProvisioning: teamName ? isTeamProvisioningActive(s, logicalTeamName ?? teamName) : false,
       data: s.selectedTeamName === teamName ? s.selectedTeamData : null,
       members: selectResolvedMembersForTeamName(s, teamName),
       summaryKnownTeammateCount: teamName
@@ -1528,7 +1531,7 @@ export const TeamDetailView = memo(function TeamDetailView({
       restoreTask: s.restoreTask,
       fetchDeletedTasks: s.fetchDeletedTasks,
       deletedTasks: s.deletedTasks,
-      launchParams: teamName ? s.launchParamsByTeam[teamName] : undefined,
+      launchParams: teamName ? s.launchParamsByTeam[logicalTeamName ?? teamName] : undefined,
       messagesPanelMode: s.messagesPanelMode,
       messagesPanelWidth: s.messagesPanelWidth,
       sidebarLogsHeight: s.sidebarLogsHeight,
@@ -2786,7 +2789,7 @@ export const TeamDetailView = memo(function TeamDetailView({
       return (
         <div className="size-full overflow-auto p-6">
           <div ref={provisioningBannerRef}>
-            <TeamProvisioningBanner teamName={teamName} />
+            <TeamProvisioningBanner teamName={logicalTeamName ?? teamName} />
           </div>
           <div className="flex min-h-[calc(100vh-12rem)] items-center justify-center">
             <div className="max-w-md text-center">
@@ -2835,7 +2838,7 @@ export const TeamDetailView = memo(function TeamDetailView({
       return (
         <div className="size-full overflow-auto p-4">
           <div ref={provisioningBannerRef}>
-            <TeamProvisioningBanner teamName={teamName} />
+            <TeamProvisioningBanner teamName={logicalTeamName ?? teamName} />
           </div>
           <div className="flex flex-1 items-center justify-center p-6 text-sm text-[var(--color-text-muted)]">
             {t('detail.waitingForProvisioning')}
@@ -3097,7 +3100,7 @@ export const TeamDetailView = memo(function TeamDetailView({
               ) : null}
 
               <div ref={provisioningBannerRef}>
-                <TeamProvisioningBanner teamName={teamName} />
+                <TeamProvisioningBanner teamName={logicalTeamName ?? teamName} />
               </div>
 
               {data.warnings?.some((warning) => warning.toLowerCase().includes('kanban')) ? (
@@ -3155,6 +3158,7 @@ export const TeamDetailView = memo(function TeamDetailView({
                   <div className="px-[calc(1rem-5px)]">
                     <TeamMemberListBridge
                       teamName={teamName}
+                      provisioningTeamName={logicalTeamName}
                       members={membersWithLiveBranches}
                       expectedTeammateCount={activeTeammateCount}
                       memberTaskCounts={memberTaskCounts}
@@ -3357,6 +3361,7 @@ export const TeamDetailView = memo(function TeamDetailView({
                 open={selectedMember !== null}
                 member={selectedMember}
                 teamName={teamName}
+                provisioningTeamName={logicalTeamName}
                 members={membersWithLiveBranches}
                 tasks={data.tasks}
                 initialTab={selectedMemberView?.initialTab}
