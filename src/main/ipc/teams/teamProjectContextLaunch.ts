@@ -1,11 +1,12 @@
 import { TeamMetaStore } from '@main/services/team/TeamMetaStore';
+import { rememberProjectRunIdentity } from './teamProjectContextProgressIdentity';
 
 import { parseOptionalTeamEffort, parseOptionalTeamFastMode } from '../teamIpcRequestParsers';
 
 import { createProjectContextRuntimeParts } from './teamProjectContextCreate';
 
 import type { ProjectTeamRuntimePorts } from './teamProjectContextCreate';
-import type { TeamLaunchRequest, TeamProvisioningProgress } from '@shared/types';
+import type { IpcResult, TeamLaunchRequest, TeamLaunchResponse, TeamProvisioningProgress } from '@shared/types';
 
 export type ProjectContextProgressMapper = (
   progress: TeamProvisioningProgress,
@@ -101,11 +102,12 @@ export function buildTeamProgressReporter(
 }
 
 /** Resolve only when needed, preserving the existing native launch path. */
-export async function withPreparedContextLaunch<T>(
+export async function withPreparedContextLaunch(
   request: TeamLaunchRequest,
   ports: ProjectTeamRuntimePorts,
-  invoke: (request: TeamLaunchRequest, mapper?: ProjectContextProgressMapper) => Promise<T>
-): Promise<T | null> {
+  invoke: (request: TeamLaunchRequest, mapper?: ProjectContextProgressMapper) =>
+    Promise<IpcResult<TeamLaunchResponse>>
+): Promise<IpcResult<TeamLaunchResponse> | null> {
   // Validate explicit overrides BEFORE reserving native files. The original
   // IPC handler still validates effective persisted settings before spawn.
   // A missing provider override inherits the saved provider; Codex and
@@ -117,5 +119,11 @@ export async function withPreparedContextLaunch<T>(
   if (!fastMode.valid) throw new Error(fastMode.error);
   const selected = await prepareTeamContextLaunch(request, ports);
   if (selected.request.teamName === request.teamName) return null;
-  return invoke(selected.request, selected.mapProgress);
+  const result = await invoke(selected.request, selected.mapProgress);
+  if (result.success && result.data) {
+    rememberProjectRunIdentity(
+      result.data.runId, request.teamName, selected.request.teamName
+    );
+  }
+  return result;
 }

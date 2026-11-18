@@ -1,5 +1,7 @@
 import * as path from 'node:path';
 
+import { rememberProjectRunIdentity } from './teamProjectContextProgressIdentity';
+
 import {
   TeamProjectContextCreateCoordinator,
   TeamProjectContextDraftMaterializer,
@@ -80,9 +82,11 @@ export async function createTeamWithProjectContext(
     assertOtherContextsStopped: (name, execution) =>
       gate.assertOtherContextsStopped(name, execution),
     ensurePhysicalDraft: (address) => materializer.ensureProjectDraft(address),
-    createNativeTeam: (creation, report) => {
+    createNativeTeam: async (creation, report) => {
       ports.watchNativeTeam(creation.teamName);
-      return ports.start.createTeam(creation, report);
+      const result = await ports.start.createTeam(creation, report);
+      rememberProjectRunIdentity(result.runId, request.teamName, creation.teamName);
+      return result;
     },
     confirmReady: (address, execution) =>
       resolver.confirmProvisionedContext(address, execution),

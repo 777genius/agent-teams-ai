@@ -229,6 +229,7 @@ import { teamMessageNotificationScanner } from './teams/teamMessageNotificationS
 import { createMessagesPageHandler } from './teams/teamMessagesPageHandler';
 import { TeamPermanentDeletionTransactionCoordinator } from './teams/TeamPermanentDeletionTransactionCoordinator';
 import { createTeamWithProjectContext } from './teams/teamProjectContextCreate';
+import { projectPublicProvisioningProgress } from './teams/teamProjectContextProgressIdentity';
 import { buildTeamProgressReporter, withPreparedContextLaunch } from './teams/teamProjectContextLaunch';
 import { discardQueuedUserMessages, listQueuedUserMessages } from './teams/teamQueuedUserMessages';
 import { createTeamSoftDeleteRequests } from './teams/teamSoftDeleteFlow';
@@ -2579,8 +2580,10 @@ async function handleProvisioningStatus(
   if (typeof runId !== 'string' || runId.trim().length === 0) {
     return { success: false, error: 'runId is required' };
   }
-  return wrapTeamHandler('provisioningStatus', () =>
-    getTeamProvisioningStatusApi().getProvisioningStatus(runId.trim())
+  return wrapTeamHandler('provisioningStatus', async () =>
+    projectPublicProvisioningProgress(
+      await getTeamProvisioningStatusApi().getProvisioningStatus(runId.trim())
+    )
   );
 }
 
