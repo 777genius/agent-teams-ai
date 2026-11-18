@@ -42,7 +42,12 @@ export async function waitForNativeProcessServices(
   assert.ok(Number.isSafeInteger(timeoutMs) && timeoutMs > 0 && timeoutMs <= 10_000);
   const deadline = Date.now() + timeoutMs;
   for (;;) {
-    try { return await read(); }
+    assert.ok(Date.now() < deadline, 'original native services did not publish before the deadline');
+    try {
+      const services = await read();
+      assert.ok(Date.now() < deadline, 'original native services did not publish before the deadline');
+      return services;
+    }
     catch (error) {
       if (!error || typeof error !== 'object' || !('code' in error) || error.code !== 'ENOENT') throw error;
       assert.ok(Date.now() < deadline, 'original native services did not publish before the deadline');

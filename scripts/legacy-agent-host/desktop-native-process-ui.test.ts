@@ -89,7 +89,7 @@ test('initial original-ref observation remains exact and cannot select a replace
     assert.equal(duplicate.requests.length, 1);
   })();
 });
-test('background acceptance waits for atomic service publication without masking corrupt readiness', async () => {
+test('background acceptance waits for atomic service publication without masking corrupt readiness', async (t) => {
   const root = await mkdtemp(join(tmpdir(), 'TEST-native-service-readiness-'));
   const path = join(root, 'services.json');
   const services = { primary: { role: 'primary', nonce: 'TEST-primary', pid: 123, port: 1234, url: 'http://127.0.0.1:1234/TEST-primary' },
@@ -117,6 +117,32 @@ test('background acceptance waits for atomic service publication without masking
       await readFile(join(root, 'never-published'));
       return services;
     }, 25), /did not publish before the deadline/);
+    t.mock.timers.enable({ apis: ['Date', 'setTimeout'], now: 1000 });
+    try {
+      for (const elapsed of [9, 10, 11]) {
+        t.mock.timers.setTime(1000);
+        let completedReads = 0;
+        const completed = waitForNativeProcessServices(async () => {
+          completedReads++;
+          t.mock.timers.setTime(1000 + elapsed);
+          return services;
+        }, 10);
+        if (elapsed < 10) assert.deepEqual(await completed, services);
+        else await assert.rejects(completed, /did not publish before the deadline/);
+        assert.equal(completedReads, 1, 'the original read is never replayed');
+      }
+      t.mock.timers.setTime(1000);
+      let cutoffReads = 0;
+      const cutoff = waitForNativeProcessServices(async () => {
+        cutoffReads++;
+        throw Object.assign(new Error('TEST missing publication'), { code: 'ENOENT' });
+      }, 50);
+      const rejected = assert.rejects(cutoff, /did not publish before the deadline/);
+      await Promise.resolve();
+      t.mock.timers.tick(50);
+      await rejected;
+      assert.equal(cutoffReads, 1, 'the expired deadline cannot start another read');
+    } finally { t.mock.timers.reset(); }
   } finally { await publication; await rm(root, { recursive: true, force: true }); }
 });
 
