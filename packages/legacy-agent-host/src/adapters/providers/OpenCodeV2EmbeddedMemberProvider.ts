@@ -16,6 +16,8 @@ import { captureOpenCodeV2Configuration } from './OpenCodeV2CapturedConfiguratio
 import { runtimeDigest } from '../../runtime/identity.js';
 import { capturedMcpSourceCurrent } from '../../mcp-catalog/capturedSource.js';
 import { hasUntrustedOpenCodeBinaryOverride } from '../../composition/openCodeV2Environment.js';
+import { openCodeV2ImageMimes, openCodeV2MediaMimes, openCodeV2MediaRevision } from './OpenCodeV2MediaReceipt.js';
+import type { NativeAttachmentCapabilities } from '../../attachments/attachmentTypes.js';
 import type { MemberProvider, MemberProviderContext } from './MemberProvider.js';
 import type { OpenCodeV2OwnedSession } from './OpenCodeV2OwnedSession.js';
 import type { NativeInitialContextCapture } from './OpenCodeV2InitialContextReadback.js';
@@ -39,7 +41,7 @@ export function createOpenCodeV2EmbeddedMemberProvider(context: MemberProviderCo
   const capturedRequest = runtimeDigest(context.request), capturedProfile = runtimeDigest(context.profile);
   const capturedEndpoint = runtimeDigest(context.endpoint.binding), instructions = context.instructions;
   const abort = new AbortController();
-  let sealed = false, opened = false, cleanupUnknown = false, nativeImages = false;
+  let sealed = false, opened = false, cleanupUnknown = false, nativeImages = false, nativeDocuments = false;
   let delegate: MemberProvider | undefined;
   let server: ReturnType<typeof createOpenCodeV2EmbeddedServer> | undefined;
   let nativePin: Readonly<OpenCodeV2EmbeddedReady> | undefined;
@@ -115,15 +117,18 @@ export function createOpenCodeV2EmbeddedMemberProvider(context: MemberProviderCo
   const attachmentSource = context.attachments, attachmentResolve = attachmentSource?.resolve,
     attachmentModel = attachmentSource?.model, attachmentRevision = attachmentSource?.revision,
     attachmentMimes = attachmentSource?.mimeTypes;
-  const attachments = attachmentMimes?.includes('image/png') && attachmentResolve &&
+  const imageMimes = openCodeV2ImageMimes.filter(mime => attachmentMimes?.includes(mime));
+  const mediaMimes = openCodeV2MediaMimes.filter(mime => attachmentMimes?.includes(mime));
+  const attachments = mediaMimes.length && attachmentResolve &&
     attachmentModel === `${profile.nativeOptions.providerId}/${profile.model}` && attachmentRevision ? {
-      model: attachmentModel, revision: attachmentRevision, mimeTypes: ['image/png'],
+      model: attachmentModel, revision: attachmentRevision, mimeTypes: mediaMimes,
       async resolve(binding: Parameters<NonNullable<MemberProviderContext['attachments']>['resolve']>[0], signal: AbortSignal) {
         assertCurrent(); signal.throwIfAborted();
         const deadline = Date.now() + profile.limits.timeoutMs;
         const catalog = await withReadOnlyClient(signal, deadline, client => client.readCatalog(profile.nativeOptions.providerId));
         const model = catalog.models.find(row => row.id === profile.model);
-        if (!model?.enabled || !model.inputModalities.includes('image')) return undefined;
+        const modality = binding.reference.mimeType === 'application/pdf' ? 'pdf' : 'image';
+        if (!model?.enabled || !model.inputModalities.includes(modality)) return undefined;
         assertCurrent(); signal.throwIfAborted();
         const value = await Reflect.apply(attachmentResolve, attachmentSource, [binding, signal]);
         assertCurrent(); signal.throwIfAborted(); return value;
@@ -159,6 +164,7 @@ export function createOpenCodeV2EmbeddedMemberProvider(context: MemberProviderCo
       check();
       server = createOpenCodeV2EmbeddedServer({
         profile, embedded, databasePath, configDirectory: configuration, config,
+        ...(attachments ? { mediaSessionId: nativeSessionId } : {}),
         endpoint: profile.endpoint, canAllocate: () => current() && context.canAllocate(),
         canCaptureRegisteredProcess: () => current() &&
           (context.canCaptureRegisteredProcess?.() ?? context.isCurrent()),
@@ -208,6 +214,10 @@ export function createOpenCodeV2EmbeddedMemberProvider(context: MemberProviderCo
       configRevision: capture.configRevision, generation: capture.generation };
   }
   const owned: OpenCodeV2OwnedSession = {
+    verifyMediaReceipt(proof) {
+      return current() && nativePin !== undefined && nativeSessionId === proof.sessionId &&
+        server?.verifyMediaReceipt(nativePin, proof) === true;
+    },
     requiredExternalDirectory: embedded.externalDirectory,
     readPassword: () => { assertCurrent(); if (!server) return unavailable(); return server.readPassword(); },
     async probe(signal) {
@@ -215,7 +225,7 @@ export function createOpenCodeV2EmbeddedMemberProvider(context: MemberProviderCo
       const scoped = AbortSignal.any([signal, abort.signal,
         AbortSignal.timeout(Math.max(0, deadline - Date.now()))]);
       await start(scoped, deadline);
-      nativeImages = false;
+      nativeImages = false; nativeDocuments = false;
       for (;;) {
         if (scoped.aborted || !current() || Date.now() >= deadline) return false;
         const accepted = await withReadOnlyClient(scoped, deadline, async client => {
@@ -232,15 +242,16 @@ export function createOpenCodeV2EmbeddedMemberProvider(context: MemberProviderCo
               runtimeDigest(receipt.binding) !== capturedEndpoint ||
               runtimeDigest([...receipt.toolNames].sort()) !== runtimeDigest(requiredToolNames)) return undefined;
           const catalog = attachments ? await client.readCatalog(profile.nativeOptions.providerId) : undefined;
-          return { images: catalog?.models.some(model => model.id === profile.model && model.enabled &&
-            model.inputModalities.includes('image')) ?? false };
+          const model = catalog?.models.find(model => model.id === profile.model && model.enabled);
+          return { images: model?.inputModalities.includes('image') ?? false,
+            documents: model?.inputModalities.includes('pdf') ?? false };
         });
         // The result is detached and fully re-attested. A late successful read
         // cannot renew the original absolute launch/probe budget.
         if (scoped.aborted || !current() || Date.now() >= deadline) return false;
         if (accepted) {
           configuration.bindRunningSession();
-          nativeImages = accepted.images;
+          nativeImages = accepted.images; nativeDocuments = accepted.documents;
           return true;
         }
         await delay(50, undefined, { signal: scoped });
@@ -276,8 +287,13 @@ export function createOpenCodeV2EmbeddedMemberProvider(context: MemberProviderCo
     async confirmStopped() { const stopped = await (server?.confirmStopped() ?? Promise.resolve(true)); return stopped && !cleanupUnknown; },
   };
   return {
-    get attachmentCapabilities() {
-      return { images: !!attachments && current() && nativeImages, documents: false, textFiles: false };
+    get attachmentCapabilities(): NativeAttachmentCapabilities {
+      const images = !!attachments && current() && nativeImages && imageMimes.length > 0;
+      const documents = !!attachments && current() && nativeDocuments && mediaMimes.includes('application/pdf');
+      return { images, documents, textFiles: false,
+        ...(attachments ? { nativeMedia: { revision: openCodeV2MediaRevision,
+          mimeTypes: [...(images ? imageMimes : []), ...(documents ? ['application/pdf' as const] : [])],
+          maxBytes: 4 * 1024 * 1024, maxCount: 5, maxTotalBytes: 8 * 1024 * 1024, videos: false as const } } : {}) };
     },
     factory: { async open(request) {
       if (opened || runtimeDigest(request) !== capturedRequest || !context.canAllocate()) return unavailable();

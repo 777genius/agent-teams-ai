@@ -8,6 +8,8 @@ import { createWindowsJobCustody } from './WindowsJobCustody.js';
 import { AcceptedOpenCodeV2FileKey, DeferredOpenCodeV2FileKey,
   openCodeV2SelectedSourceReference } from './OpenCodeV2SelectedFileKey.js';
 import type { OpenCodeV2SelectedFileMode } from './OpenCodeV2SelectedFileKey.js';
+import { verifyOpenCodeV2MediaWitness } from './OpenCodeV2MediaReceipt.js';
+import type { OpenCodeV2MediaProof } from './OpenCodeV2MediaReceipt.js';
 import {
   verifyOpenCodeV2EmbeddedGraph,
   verifyOpenCodeV2EmbeddedManifest,
@@ -56,6 +58,8 @@ export interface OpenCodeV2EmbeddedServerOptions {
   startupTimeoutMs?: number;
   endpoint?: string;
   selectedFile?: Readonly<{ source: DeferredOpenCodeV2FileKey; mode: OpenCodeV2SelectedFileMode }>;
+  /** Only this original child/session may attest its actual image normalization. */
+  mediaSessionId?: string;
   /** Synchronous observation only; never an admission, timer or cleanup callback. */
   observeStartupPhase?(phase: 'graph-start' | 'graph-done' | 'native-launch'): void;
 }
@@ -115,6 +119,9 @@ export function createOpenCodeV2EmbeddedServer(options: OpenCodeV2EmbeddedServer
   const startupTimeoutMs = options.startupTimeoutMs ?? 120_000;
   const requestedEndpoint = options.endpoint;
   const selectedFile = options.selectedFile;
+  const mediaSessionId = options.mediaSessionId;
+  if (mediaSessionId !== undefined && !/^ses_[A-Za-z0-9_-]+$/u.test(mediaSessionId)) return fail();
+  const mediaKey = mediaSessionId === undefined ? undefined : randomBytes(32).toString('hex');
   let observeStartupPhase: OpenCodeV2EmbeddedServerOptions['observeStartupPhase'];
   try { observeStartupPhase = options.observeStartupPhase; }
   catch { /* An unavailable optional observer does not change startup. */ }
@@ -294,6 +301,7 @@ export function createOpenCodeV2EmbeddedServer(options: OpenCodeV2EmbeddedServer
           configDirectory,
           databasePath,
           config,
+          ...(mediaKey ? { media: { key: mediaKey, sessionId: mediaSessionId } } : {}),
           ...(selectedFile ? { selectedFile: { descriptor: selectedFile.source.descriptor, mode: selectedFile.mode } } : {}),
         });
         if (Buffer.byteLength(input) + 1 > 256 * 1024) return fail();
@@ -406,6 +414,11 @@ export function createOpenCodeV2EmbeddedServer(options: OpenCodeV2EmbeddedServer
 
   return {
     start,
+    verifyMediaReceipt(capture: Readonly<OpenCodeV2EmbeddedReady>, proof: OpenCodeV2MediaProof): boolean {
+      if (!mediaKey || proof.sessionId !== mediaSessionId || ready === undefined || capture !== ready ||
+          readyChild === undefined || child !== readyChild || stopping || lifecycle.signal.aborted || !alive()) return false;
+      return verifyOpenCodeV2MediaWitness(mediaKey, proof);
+    },
     /** Only the original catalog-selected relation and nonce-checked ready object can issue this reference. */
     selectedFileKey(capture: Readonly<OpenCodeV2EmbeddedReady>, integrationId: string) {
       const current = () => !!selectedFile && selectedFile.source.isCurrent() && ready !== undefined &&

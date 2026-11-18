@@ -260,6 +260,23 @@ function runtime(value: unknown, request: BackendOperationRequest): BackendRunti
       documents: boolean(capabilities.documents),
       textFiles: boolean(capabilities.textFiles),
     };
+    if (capabilities.nativeMedia !== undefined) {
+      const transport = row(capabilities.nativeMedia);
+      const mimeTypes = array(transport.mimeTypes, value => oneOf(value,
+        ['image/png', 'image/jpeg', 'image/gif', 'image/webp', 'application/pdf'] as const));
+      if (transport.revision !== 'opencode-2.1.4-native-media-v1' || transport.videos !== false ||
+          new Set(mimeTypes).size !== mimeTypes.length || mimeTypes.length > 5 ||
+          mimeTypes.some(mime => mime.startsWith('image/')) !== result.attachmentCapabilities.images ||
+          mimeTypes.includes('application/pdf') !== result.attachmentCapabilities.documents ||
+          !Number.isSafeInteger(transport.maxBytes) || Number(transport.maxBytes) < 1 || Number(transport.maxBytes) > 4 * 1024 * 1024 ||
+          !Number.isSafeInteger(transport.maxCount) || Number(transport.maxCount) < 1 || Number(transport.maxCount) > 5 ||
+          !Number.isSafeInteger(transport.maxTotalBytes) || Number(transport.maxTotalBytes) < 1 || Number(transport.maxTotalBytes) > 8 * 1024 * 1024) {
+        throw new Error('Invalid native media transport capability');
+      }
+      result.attachmentCapabilities.nativeMedia = { revision: transport.revision, mimeTypes,
+        maxBytes: Number(transport.maxBytes), maxCount: Number(transport.maxCount),
+        maxTotalBytes: Number(transport.maxTotalBytes), videos: false };
+    }
   }
   if (source.diagnostic !== undefined)
     result.diagnostic = oneOf(source.diagnostic, [

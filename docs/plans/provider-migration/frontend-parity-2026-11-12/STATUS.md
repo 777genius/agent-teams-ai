@@ -30,7 +30,7 @@ provider #8 `f5d632a6122df2f6995451bd33e6a0fbcda67680`.
 | --- | --- | --- | --- |
 | F1 | Реализация и R2 готовы; UI E2E остаётся | Main интегрирован. Settings/defaults/overrides, human authority и Lead cycles используют текущего owner/controller. Существующий task-board UI journey дополнен default → override → inherit → Approve → reopen; нужен исполненный результат. | reviewflow; root |
 | F2 | Реализация и focused contracts готовы | Canonical Host agenda блокирует review work при lead/user clarification до review cycle; старый app path — re-export. Agenda 26/26 и cycle 3/3 PASS. | reviewflow |
-| M1 | В работе: реализация | Восстановить поддерживаемые текущим frontend MIME/размеры вложений V2 и точно отразить возможности model+transport в UI; исходники провайдера меняются только в provider repo, приложение получает проверенный immutable artifact. | stage2_v2 |
+| M1 | Реализация, R2 и package checks готовы; native E2E остаётся | Provider `aad5c2f8` и immutable archive интегрированы: PNG/JPEG/GIF/WebP/PDF, 5 файлов / 4 MiB каждый / 8 MiB суммарно, model modality gates. Existing native journey дополнен normalization и cold readback; нужен фактический результат. | media; root |
 | E1 | Исправление готово; E2E остаётся | Полный status wire finite peer исправляет отказ Create/import; 2 contract checks PASS. Остальные исходные Create/import/retained/Resume/installer/Add journeys требуют текущего результата. | pr_graph; product ownership root |
 | W1 | x64 исправление готово; ARM64 открыт | Синхронное чтение configured key входит в прежнюю closing freshness-проверку; 36 focused checks PASS. ARM64: 6 последовательных MCP probes не укладываются в исходные 15 секунд. Итоговый cleanup подтверждён; deadlines и currentness сохранены. | pr_graph; root |
 | P9 | Открыто: контракт | Установить выполнимую границу original-path / writer / consumed bytes; текущую гарантию не сужать без явного решения. Независимые работы продолжаются. | root |
@@ -122,7 +122,9 @@ P9 не имеет подтверждённого конечного LOC до р
   отбрасывает video. UI должен честно показать эту границу. Нормализация изображения
   может изменить байты: приватный authenticated native receipt связывает исходный
   digest, фактический normalized digest, session/input и captured child generation;
-  ACK/history и cold restore проверяют его. Raw/text-only wire limits не повышаются.
+  ACK/active history проверяют его. Cold checkpoint сохраняет session identity и
+  media revision; повторная аттестация всех прошлых ACK после restart не заявляется.
+  Raw/text-only wire limits не повышаются.
 - 18 ноября, R2 W1: финальные receipts обоих Windows jobs подтверждают cleanup;
   промежуточная false строка не считается утечкой. x64: повторное полное обследование
   съедает lease; ARM64: шесть физических MCP probes вокруг одного запуска съедают
@@ -179,3 +181,45 @@ P9 не имеет подтверждённого конечного LOC до р
 - 18 ноября, ограничения локальной проверки: полный app workspace typecheck
   дважды остановлен с exit 137 без TS diagnostics (включая bounded heap run).
   Это не PASS; узкие успешно завершённые проверки выше сохраняют свой scope.
+
+- 18 ноября, публикация: E1/W1 `26d1600d`, F1/CI/Unicode `88cc5828` и provider
+  `aad5c2f8bedc7782f6d5f3746a47b74f0c3735d6` опубликованы сразу после commit.
+  Provider tree `a2d6de72a62c778642b207dff5939d1e1cc9ff43` clean; retained
+  archives сверены с 252 implementation + 10 SPI dist files. App получает новый
+  immutable каталог `v2-media-aad5c2f8`; старые archives не менялись.
+  Frozen pnpm 11.22 install и 2533 supply-chain checks PASS.
+- 18 ноября, M1 R2: private authenticated receipt связывает исходный prompt body,
+  фактическую normalization, original child/session/input и конечный deadline.
+  Native limits: 5 файлов всего, 4 MiB/source, 8 MiB/source total; public/raw
+  budgets не повышены, video не рекламируется. PDF допускается только при model
+  modality и сохранении исходных байтов. Unsupported media не превращается в reference.
+  Source build/types и original packed consumer PASS; первоначальный source run
+  577/577, финальный 576/577 с unchanged Codex fixture timing failure, затем
+  original Codex file 4/4 и affected suites 19/19 PASS. Полный `pnpm check`
+  одним непрерывным зелёным run не заявляется. App media 19/19 и native harness
+  targeted TS 7.0.2 PASS. Native execution ещё остаётся.
+- 18 ноября, review closure: 23 подтверждённо исправленных #1192 threads resolved
+  после source/R2 аудита. Для failed Host acceptance установщика добавлен regression
+  warm/cold status: принятой остаётся старая revision/version; при отсутствии
+  подтверждённой версии другой installed candidate не даёт ready. 34/34 PASS
+  (Node 24.22.3); source не менялся. Root R2 и diff check PASS.
+- 18 ноября, текущая E2E диагностика: Darwin ARM Resume job 134984181853
+  ([run 44356006994](https://github.com/777genius/agent-teams-ai/actions/runs/44356006994))
+  остановился на original preflight до Resume. Probe cleanup подтверждён;
+  внутренние 30 секунд startup расходуются в том числе на graph verification
+  (~23 секунды). Диагностика безопасного parallel inventory продолжается;
+  deadline и graph/source проверки не ослаблены.
+
+- 18 ноября, E1 graph R2: независимые каталоги проверяются ограниченными batch
+  по 12, только после принятого parent read. Каждый исходный batch полностью
+  settles до отказа или следующего чтения. Сохранены symlink/unlisted/type/count,
+  per-file fd/stat/hash/mode, abort и closing manifest checks; cache не добавлен.
+  На тех же 24 664 files / 5073 directories: inventory 2095 → 583 ms, full
+  verification 8473 → 6430 ms (Linux Node 24.21). File phase не менялась;
+  её часть разницы timing не считается отдельным улучшением. Original + extended
+  graph invariants 12/12 PASS, root R2 PASS. Darwin startup qualification остаётся.
+- 18 ноября, full typecheck: дополнительный diagnostic run с реальным native
+  compiler и GOMEMLIMIT=768MiB/GOGC=50/GOMAXPROCS=2 также exit 137 без TS
+  diagnostics. Ledger и Host prebuild прошли; полный workspace gate не подтверждён.
+  Новые тяжёлые локальные повторы не запускаются; successful narrow checks
+  сохраняют только свой указанный scope.

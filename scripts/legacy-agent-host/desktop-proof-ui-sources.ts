@@ -37,4 +37,5 @@ export const desktopProofUiSources = [
   'scripts/legacy-agent-host/desktop-mixed-create-launch-ui-smoke.ts',
   'packages/legacy-agent-host/tests/fixtures/native-codex-team/model.ts',
   'packages/legacy-agent-host/tests/fixtures/native-opencode-team/model.ts',
+  'packages/legacy-agent-host/tests/fixtures/native-message-media.ts',
 ] as const;

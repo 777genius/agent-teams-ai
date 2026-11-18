@@ -1,14 +1,18 @@
 import {
+  AGENT_IMAGE_MIME_TYPES,
   CLAUDE_IMAGE_MIME_TYPES,
   NATIVE_IMAGE_MIME_TYPES,
   NATIVE_VIDEO_MIME_TYPES,
 } from './mimeTypes.js';
+import type { NativeMediaTransport } from './attachmentTypes.js';
 
 export interface MessageAttachmentTarget {
   providerId: string;
   isLeadRecipient: boolean;
   /** Explicit protocol ceiling; model admission still runs after route selection. */
   nativeInboxTextAttachmentsSupported?: boolean;
+  /** Current captured transport; omission preserves the legacy provider route. */
+  nativeMediaTransport?: NativeMediaTransport['revision'];
 }
 
 /** Select transport before capability/model admission; a selected native route cannot downgrade. */
@@ -23,8 +27,10 @@ export function getMessageAttachmentRoute(
   }
   if (mimeType === 'text/plain' && !validUtf8) return 'reference';
   const images: readonly string[] =
-    providerId === 'anthropic' ? CLAUDE_IMAGE_MIME_TYPES : NATIVE_IMAGE_MIME_TYPES;
+    target.nativeMediaTransport ? AGENT_IMAGE_MIME_TYPES :
+      providerId === 'anthropic' ? CLAUDE_IMAGE_MIME_TYPES : NATIVE_IMAGE_MIME_TYPES;
   if (images.includes(mimeType)) return 'native';
+  if (providerId === 'opencode' && target.nativeMediaTransport && mimeType === 'application/pdf') return 'native';
   if (providerId === 'anthropic' && ['application/pdf', 'text/plain'].includes(mimeType))
     return 'native';
   if (

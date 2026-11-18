@@ -9,7 +9,7 @@ import type { Input } from '@agent-teams/provider-session-contracts';
 import { AttachmentArtifactStore } from '../attachments/AttachmentArtifactStore.js';
 import { TeamOwnerStore } from '../adapters/team/TeamOwnerStore.js';
 import { resolveAgentAttachmentCapability } from '../attachments/capabilities.js';
-import { NATIVE_IMAGE_MIME_TYPES, NATIVE_VIDEO_MIME_TYPES } from '../attachments/mimeTypes.js';
+import { AGENT_IMAGE_MIME_TYPES, NATIVE_IMAGE_MIME_TYPES, NATIVE_VIDEO_MIME_TYPES } from '../attachments/mimeTypes.js';
 import { TeamOwnerError } from '../team/contracts.js';
 import type { MemberProviderContext } from '../adapters/providers/MemberProvider.js';
 import type { MemberEntry } from './MemberEntry.js';
@@ -56,7 +56,9 @@ export function createMemberAttachmentPort(options: {
   // Transport ceiling only; the captured OpenCode adapter independently admits its current model declaration.
   const mimeTypes =
     entry.profile.provider === 'opencode'
-      ? [...NATIVE_IMAGE_MIME_TYPES, ...NATIVE_VIDEO_MIME_TYPES]
+      ? entry.profile.nativeGeneration === 'v2'
+        ? [...AGENT_IMAGE_MIME_TYPES, 'application/pdf']
+        : [...NATIVE_IMAGE_MIME_TYPES, ...NATIVE_VIDEO_MIME_TYPES]
       : [
           ...(capability.supportsImages ? capability.supportedImageMimeTypes : []),
           ...(capability.supportsFiles ? capability.supportedFileMimeTypes : []),
@@ -101,6 +103,8 @@ export function createMemberAttachmentPort(options: {
           isLeadRecipient: target.role === 'lead',
           // Current D Codex SPI supports image refs only, never native text file input.
           nativeInboxTextAttachmentsSupported: false,
+          ...(entry.profile.provider === 'opencode' && entry.profile.nativeGeneration === 'v2'
+            ? { nativeMediaTransport: 'opencode-2.1.4-native-media-v1' as const } : {}),
         },
         reference.mimeType,
         reference.mimeType !== 'text/plain' || isStrictUtf8(artifact.bytes)

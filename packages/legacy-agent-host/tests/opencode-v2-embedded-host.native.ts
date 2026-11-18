@@ -14,7 +14,7 @@ import { fileHash, nativeHostEnvironment, startHost, tick, treeHash, writeNative
 import { CONTEXT_MARKER, startOpenCodeModel } from './fixtures/native-opencode-team/model.ts';
 import { captureOpenCodeConfigurationSource } from '../dist/adapters/providers/OpenCodeConfigurationSource.js';
 import { assertNativeV1Build, buildNativeV1Host } from './opencode-v1-version-source.ts';
-import { readNativeMessageImage, uploadNativeMessageImage } from './fixtures/native-message-image.ts';
+import { readNativeMessageMedia, uploadNativeMessageMedia } from './fixtures/native-message-media.ts';
 
 async function endpoint(): Promise<string> {
   const server = createServer();
@@ -171,7 +171,7 @@ export async function runOpenCodeV2EmbeddedHostNative(packaged?: PackagedNativeH
       assert.ok((await stat(shell)).isFile(), 'actual Windows PowerShell is required for the native shell turn');
       windowsShellSha256 = await fileHash(shell);
     }
-    model = await startOpenCodeModel({ nativeGeneration: 'v2', nativeMessageImage: true,
+    model = await startOpenCodeModel({ nativeGeneration: 'v2', nativeMessageMedia: true,
       ...(qualifyCoordination ? { coordinationProof: true as const, localReadinessProof: true as const } : {}),
       selectedModel: { id: 'TEST-model-B', effort: 'high' },
       selectedConfiguration: { scope: 'project-A' } });
@@ -229,7 +229,7 @@ export async function runOpenCodeV2EmbeddedHostNative(packaged?: PackagedNativeH
         options: { baseURL: `${model.url}/v1`, ...(qualifyCoordination ? {} : { apiKey: 'TEST-LOCALHOST-ONLY' }) },
         models: Object.fromEntries(['TEST-model', 'TEST-model-B'].map(id => [id, {
           name: id, limit: { context: 200000, output: 2000 },
-          capabilities: { tools: true, input: ['text', 'image'], output: ['text'] },
+          capabilities: { tools: true, input: ['text', 'image', 'pdf'], output: ['text'] },
           body: { test_config_scope: 'global' }, headers: { 'x-test-config-scope': 'global' },
           ...(id.endsWith('-B') ? { variants: [{ id: 'high', body: { reasoning_effort: 'high' } }] } : {}),
         }])),
@@ -308,10 +308,10 @@ export async function runOpenCodeV2EmbeddedHostNative(packaged?: PackagedNativeH
     lastInputProgress = nativeInputProgress(record(opened.value));
     assert.equal(record(opened.value).nativeReady, true, JSON.stringify(opened));
     completeStep('original_host_embedded_native_and_mcp_ready');
-    const imageReference = await uploadNativeMessageImage(host, envelope, 'carol');
+    const mediaReferences = await uploadNativeMessageMedia(host, envelope, 'carol');
     const commands = ['ONE', 'TWO'].map(label => envelope(`TEST-original-message-${label}`, {
       operation: 'message.send', payload: { to: 'carol', text: `OPENCODE_TEAM_${label}`,
-        ...(label === 'TWO' ? { attachments: [imageReference] } : {}) },
+        attachments: label === 'TWO' ? mediaReferences.two : mediaReferences.one },
     }));
     const originals: Record<string, unknown>[] = [], inputIds: string[] = [];
     const replies = new Set<string>();
@@ -363,8 +363,8 @@ export async function runOpenCodeV2EmbeddedHostNative(packaged?: PackagedNativeH
     assert.ok(model.observations.every(row => row.contextEffective));
     const imageObservations = model.observations.filter(row => row.turn === 'OPENCODE_TEAM_TWO');
     assert.equal(imageObservations.length, 3);
-    assert.ok(imageObservations.every(row => row.priorTurn && row.nativeImage?.exactCanonicalBytes));
-    const imageRead = await readNativeMessageImage(host, envelope, originals[1]!);
+    assert.ok(imageObservations.every(row => row.priorTurn && row.nativeMedia?.normalized && row.nativeMedia.pdf.exactBytes));
+    const imageRead = await readNativeMessageMedia(host, envelope, originals);
     assert.equal(await readFile(join(root, 'workspace/native-effect.txt'), 'utf8'), 'ONE\nTWO\n');
     const listed = await host.rpc('team.tasks.list', envelope('TEST-tasks', null));
     assert.equal(listed.ok, true); const tasks = listed.value as unknown[];
@@ -381,6 +381,7 @@ export async function runOpenCodeV2EmbeddedHostNative(packaged?: PackagedNativeH
     completeStep('native_model_tool_effect_permission_mcp_task_and_reply_completed_once');
     completeStep('changed_project_config_did_not_retarget_running_native_session');
     completeStep('original_uploaded_PNG_native_image_inference_and_public_readback');
+    completeStep('all_image_MIMEs_exact_PDF_and_4MiB_PNG_native_normalization_and_public_readback');
     const checkpoint = await host.rpc('runtime.checkpoint', envelope('TEST-checkpoint', {
       memberId: 'carol-id', checkpointId: 'TEST-before-cold',
     }));
@@ -397,7 +398,7 @@ export async function runOpenCodeV2EmbeddedHostNative(packaged?: PackagedNativeH
       assert.deepEqual(await host.rpc('team.lookup', command), originals[index]);
       assert.deepEqual(await host.rpc('team.execute', command), originals[index]);
     }
-    assert.deepEqual(await readNativeMessageImage(host, envelope, originals[1]!), imageRead);
+    assert.deepEqual(await readNativeMessageMedia(host, envelope, originals), imageRead);
     const recovered = await host.rpc('runtime.read', envelope('TEST-recovered', { memberId: 'carol-id' }));
     assert.equal(recovered.ok, true); assert.equal(record(recovered.value).attached, false);
     const inputs = (record(recovered.value).inputs as unknown[]).map(record);
@@ -466,6 +467,7 @@ export async function runOpenCodeV2EmbeddedHostNative(packaged?: PackagedNativeH
         modelOrigin: 'localhost-scripted', modelRequests: model?.observations.length ?? 0, modelProgress,
         coordination: coordination?.evidence ?? { status: 'unqualified', cleanup: null },
         modelFailures: model?.failures ?? [], vendorAuthQualified: false,
+        nativeMedia: model?.observations.find(row => row.nativeMedia)?.nativeMedia ?? null,
         desktopQualified: false, releaseQualified: false,
       };
       serialized = JSON.stringify(receipt, null, 2) + '\n';
