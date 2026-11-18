@@ -84,6 +84,10 @@
       "types": "./dist/composition/TeamHost.d.ts",
       "import": "./dist/composition/TeamHost.js"
     },
+    "./team-host/readiness": {
+      "types": "./dist/composition/teamHostReadiness.d.ts",
+      "import": "./dist/composition/teamHostReadiness.js"
+    },
     "./runtime/identity": {
       "types": "./dist/runtime/identity.d.ts",
       "import": "./dist/runtime/identity.js"

@@ -28,7 +28,7 @@ provider #8 `f5d632a6122df2f6995451bd33e6a0fbcda67680`.
 
 | ID | Состояние | Остаток и критерий готовности | Исполнитель |
 | --- | --- | --- | --- |
-| F1 | Реализация и R2 готовы; UI E2E остаётся | Шестой original GUI на `9f63bec3` также получил explicit V8 OOM при 768 MiB до Electron. Новый профиль 1024+UV4 прошёл 10/10 и R2; main dependency roots исследуются отдельно. Все 6 attempts до UI, epochs=0. | pr_graph; media; reviewflow; root |
+| F1 | Реализация и R2 готовы; UI E2E остаётся | После 6 отказов до UI подготовлены fixed1024+UV4 и узкий Main readiness entrypoint. Strict Host build и scoped public consumer TS7 PASS; original GUI нового среза ожидается. /owned-process provider roots остаются. | pr_graph; media; reviewflow; root |
 | F2 | Реализация и focused contracts готовы | Canonical Host agenda блокирует review work при lead/user clarification до review cycle; старый app path — re-export. Agenda 26/26 и cycle 3/3 PASS. | reviewflow |
 | M1 | Native E2E PASS на `2f33d566` | Все 8 original steps за 151754 ms: media bytes/4 MiB normalization, 11 model requests, cold history/attachments, restored native readiness, no replay, оба stop custody=released и cleanup=true. Desktop GUI и vendor auth этим результатом не квалифицируются. | media; R2 reviewflow; root |
 | E1 | Исходные отказы исправлены; текущий E2E остаётся | Композиция 22 source закрывает HTTP/store cycle, finite metadata, retained authority, trusted input, Kanban и точечные type/test отказы.611 frontend/IPC PASS в 20 файлах по отдельным scoped runs; полный текущий Host/GUI verdict остаётся. | root |
@@ -536,3 +536,22 @@ P9 не имеет подтверждённого конечного LOC до р
   Receipt побайтово исходный; log хранится как UTF-8 text в JSON с original
   byte count/hash и восстанавливается побайтово. Их sourceHead остаётся 2f33;
   на новый срез native результат не переносится.
+- 18 ноября, Main readiness R1/R2: CapturedLocalModelReadiness получал три
+  pure values из /team-host, чья статическая runtime closure имеет 572 Host
+  modules и все 3 provider barrels. Defining modules имеют 13/12 local modules
+  без provider imports. Новый public ./team-host/readiness реэкспортирует
+  только actualCaptureReadinessCommandId, localModelReadinessCaptureViewSchema
+  и parseLiveRosterResponse из прежних определений; Main меняет только value
+  import, type-only imports и реализация неизменны. Прямые exports целых
+  defining modules отклонены R2: они открыли бы 24 дополнительных внутренних
+  runtime values. Facade 6 lines добавлен в existing source roster.
+  Source graph — не memory proof: отдельный /owned-process entry имеет 104
+  local modules и независимо достигает provider/SDK barrels; он не изменён.
+- Четырёхфайловый readiness diff: final R2 и static full/fast import-boundary
+  review PASS без изменения lint policy. Strict Host TS7 --singleThreaded
+  build с compiler 512MiB/50/2 и прежними 60 s PASS за 10.318 s. Новый JS/d.ts
+  выпущен штатно. Scoped strict consumer NodeNext TS7 через actual package
+  export map, без paths aliases и runtime SDK imports, PASS за 0.867 s;
+  все три значения совместимы с прежними public types. Diff check PASS.
+  Provider artifacts, runtime/authority/deadline/oracle и bundler configuration
+  не менялись. Следующий GUI проверяет полную композицию; OOM fix ещё не доказан.

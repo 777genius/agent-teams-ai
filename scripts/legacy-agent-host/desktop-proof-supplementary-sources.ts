@@ -111,6 +111,7 @@ export const desktopProofSupplementarySources = [
   'packages/legacy-agent-host/src/composition/RuntimeTeamCoordinator.ts',
   'packages/legacy-agent-host/src/composition/createRuntimeTeamReadViews.ts',
   'packages/legacy-agent-host/src/composition/TeamHost.ts',
+  'packages/legacy-agent-host/src/composition/teamHostReadiness.ts',
   'packages/legacy-agent-host/src/composition/captureCreateTeamDraft.ts',
   'packages/legacy-agent-host/src/composition/captureLiveRosterMember.ts',
   'packages/legacy-agent-host/src/composition/liveRuntimeCaptureSchema.ts',
