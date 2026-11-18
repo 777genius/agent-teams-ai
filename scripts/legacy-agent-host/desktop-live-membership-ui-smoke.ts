@@ -479,8 +479,8 @@ export async function runDesktopLiveMembershipUiSmoke(cdp: UiCdpPort, options: {
     };
     await backToChats();
     const beforeAdd = await owner();
-    await ui.scrollTo('[data-section-id="team"] button', 'original Add Members control', 'Add');
-    await ui.click('[data-section-id="team"] button', 'open original Add Members dialog', 'Add');
+    await ui.scrollTo('[data-section-id="team"] button[aria-label="Add"]', 'original Add Members control');
+    await ui.click('[data-section-id="team"] button[aria-label="Add"]', 'open original Add Members dialog');
     await ui.waitRead('Boolean(document.querySelector(\'[role="dialog"] input[aria-label="Member 1 name"]\'))', 'original member name input');
     await replace(cdp, ui, '[role="dialog"] input[aria-label="Member 1 name"]', 'carol', 'exact new member name');
     const picker = '[role="dialog"] button[aria-label*=" provider,"]';

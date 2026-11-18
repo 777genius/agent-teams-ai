@@ -11,6 +11,7 @@ import { fileHash as fileDigest } from '../../packages/legacy-agent-host/tests/f
 import { waitFor } from '../e2e/release-updater/cdp.mts';
 import { createDesktopUiControls, desktopJsLiteral } from './desktop-ui-controls.ts';
 import { startRetainedOpenCodeModel } from './desktop-retained-opencode-model.ts';
+import { retainedOpenCodeLaunchExpression, RETAINED_OPENCODE_LAUNCH_TIMEOUT_MS } from './desktop-retained-opencode-launch.ts';
 import {
   exerciseRetainedDonorHistory,
   originalLinuxProcessPresent,
@@ -308,8 +309,9 @@ test('original Electron retains legacy fork V1 while routing new Host V2 and iso
     assert.equal(await callTeams<boolean>('processAlive', [legacyTeam]), false);
     assert.equal(model.observations.length, callsBeforeUpgrade, 'Host selection never replays retained V1 input');
     legacyStopped = false;
-    const retainedLaunch = await callTeams('launchTeam', [{ teamName: legacyTeam, cwd: legacyProject,
-      providerId: 'opencode', model: 'test-legacy/TEST-model', skipPermissions: true, runtimeSelectionVersion: 1 }], 240_000);
+    const retainedLaunch = await app.call(retainedOpenCodeLaunchExpression({ intentId: 'TEST-coexist-retained-original-once',
+      request: { teamName: legacyTeam, cwd: legacyProject, providerId: 'opencode', model: 'test-legacy/TEST-model',
+        skipPermissions: true, runtimeSelectionVersion: 1 } }), RETAINED_OPENCODE_LAUNCH_TIMEOUT_MS);
     assert.equal(typeof retainedLaunch.runId, 'string'); assert.notEqual(retainedLaunch.runId, created.runId);
     await waitLegacyRuntime(retainedLaunch.runId);
     const legacyProcesses = await legacyChildren();
@@ -346,8 +348,9 @@ test('original Electron retains legacy fork V1 while routing new Host V2 and iso
     await waitFor(async () => await callTeams<boolean>('processAlive', [legacyTeam]) === false || null, 'retained V1 Stop settles', 120_000);
     assert.ok(hostProcesses.every(originalLinuxProcessPresent), 'legacy Stop preserves all original V2 native children');
     await send(hostKey, 'alice', 'TEST_OWNED_V2_AFTER_STOP');
-    const relaunched = await callTeams('launchTeam', [{ teamName: legacyTeam, cwd: legacyProject,
-      providerId: 'opencode', model: 'test-legacy/TEST-model', skipPermissions: true, runtimeSelectionVersion: 1 }], 240_000);
+    const relaunched = await app.call(retainedOpenCodeLaunchExpression({ intentId: 'TEST-coexist-retained-after-stop-once',
+      request: { teamName: legacyTeam, cwd: legacyProject, providerId: 'opencode', model: 'test-legacy/TEST-model',
+        skipPermissions: true, runtimeSelectionVersion: 1 } }), RETAINED_OPENCODE_LAUNCH_TIMEOUT_MS);
     assert.equal(typeof relaunched.runId, 'string'); assert.notEqual(relaunched.runId, retainedLaunch.runId);
     const relaunchedRuntime = await waitLegacyRuntime(relaunched.runId);
     const relaunchedMember = record(record(relaunchedRuntime.members).bob);

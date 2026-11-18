@@ -756,7 +756,7 @@ jobs:
           OPENCODE_V1_V2_COEXISTENCE_GO: '1'
         run: |
           set -euo pipefail
-          node --test scripts/legacy-agent-host/desktop-retained-opencode-model.test.ts
+          node --test scripts/legacy-agent-host/desktop-retained-opencode-model.test.ts scripts/legacy-agent-host/desktop-retained-opencode-launch.test.ts
           node --test scripts/legacy-agent-host/desktop-retained-opencode-coexistence.native.ts 2>&1 | tee "$RUNNER_TEMP/retained-opencode-coexistence.log"
       - name: Exercise original OpenCode Install Refresh and Update controls once
         env:

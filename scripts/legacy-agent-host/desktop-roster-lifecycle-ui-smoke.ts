@@ -173,7 +173,7 @@ export async function runDesktopRosterLifecycleUiSmoke(
     `document.querySelector('[data-section-id="team"]')?.textContent.includes('Solo')`,
     'existing Solo badge'
   );
-  await ui.click('[data-section-id="team"] button', 'open existing Add Members dialog', 'Add');
+  await ui.click('[data-section-id="team"] button[aria-label="Add"]', 'open existing Add Members dialog');
   await ui.waitRead(
     `Boolean(document.querySelector('[role="dialog"] input[aria-label="Member 1 name"]'))`,
     'original teammate name input'

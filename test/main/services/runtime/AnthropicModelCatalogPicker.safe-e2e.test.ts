@@ -1,5 +1,12 @@
 // @vitest-environment node
+import { spawnSync } from 'node:child_process';
+import { mkdirSync, mkdtempSync, readdirSync, readFileSync, realpathSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join, resolve } from 'node:path';
+
 import { ClaudeMultimodelBridgeService } from '@main/services/runtime/ClaudeMultimodelBridgeService';
+import { buildRuntimeProviderLaunchFacts } from '@main/services/team/provisioning/TeamProvisioningLaunchIdentity';
+import { resolveProviderCompatibilityModel } from '@main/services/team/provisioning/TeamProvisioningProviderPreflight';
 import {
   addModelCatalogLaunchModels,
   validateRuntimeLaunchSelection,
@@ -158,6 +165,77 @@ function createLaunchFacts(provider: CliProviderStatus): RuntimeProviderLaunchFa
 }
 
 describe('Anthropic model catalog picker safe e2e', () => {
+  it.skipIf(process.platform === 'win32')(
+    'keeps the finite legacy peer concrete model through original Main and picker validation',
+    () => {
+      const root = realpathSync(mkdtempSync(join(tmpdir(), 'TEST-desktop-backend-')));
+      try {
+        for (const name of ['claude', 'workspace', 'tmp', 'home']) {
+          mkdirSync(join(root, name), { mode: 0o700 });
+        }
+        const peer = resolve('tools/owned-process-broker/fixtures/legacyBootstrapPeer.mjs');
+        const env = {
+          TEST_LEGACY_BOOTSTRAP: 'current-solo-v1',
+          TEST_LEGACY_BOOTSTRAP_ROOT: root,
+          TEST_LEGACY_BOOTSTRAP_REPO: root,
+          HOME: join(root, 'home'),
+          CLAUDE_ROOT: join(root, 'claude'),
+          CLAUDE_CONFIG_DIR: join(root, 'claude'),
+          TMPDIR: join(root, 'tmp'),
+        };
+        const metadata = (operation: 'runtime' | 'model') => {
+          const result = spawnSync(
+            process.execPath,
+            [peer, operation, operation === 'runtime' ? 'status' : 'list', '--json', '--provider', 'anthropic'],
+            { cwd: join(root, 'workspace'), env, encoding: 'utf8', timeout: 3000, maxBuffer: 64 * 1024 }
+          );
+          expect(result.error).toBeUndefined();
+          expect(result.signal).toBeNull();
+          expect(result.status, result.stderr).toBe(0);
+          return result.stdout;
+        };
+        const runtimeStatusStdout = metadata('runtime');
+        const modelListStdout = metadata('model');
+        const wire = JSON.parse(runtimeStatusStdout).providers.anthropic;
+        const provider = mapRuntimeProviderStatus('anthropic', wire);
+        const options = getAvailableTeamProviderModelOptions('anthropic', provider);
+        const sonnet = options.filter((option) => option.label === 'Sonnet 4.6');
+        expect(sonnet.map((option) => option.value)).toEqual(['claude-sonnet-4-6']);
+        expect(options.map((option) => option.value)).toEqual(['', 'claude-sonnet-4-6']);
+        expect(provider.modelCatalog?.diagnostics.message).toContain('Finite TEST');
+        expect(provider.modelCatalog?.source).toBe('anthropic-models-api');
+        expect(provider.runtimeCapabilities?.modelCatalog?.dynamic).toBe(false);
+        const facts = buildRuntimeProviderLaunchFacts({
+          providerId: 'anthropic', modelListStdout, runtimeStatusStdout, limitContext: false,
+        });
+        expect([...facts.modelIds]).toEqual(['claude-sonnet-4-6']);
+        const compatibility = (model: string) => resolveProviderCompatibilityModel({
+          providerId: 'anthropic', requestedModelId: model, runtimeFacts: facts, limitContext: false,
+        });
+        expect(compatibility(sonnet[0]!.value)).toEqual({
+          kind: 'available', resolvedModelId: 'claude-sonnet-4-6',
+        });
+        for (const model of ['sonnet', 'claude-TEST-unadvertised']) {
+          expect(compatibility(model)).toMatchObject({ kind: 'unavailable' });
+          expect(() => validateRuntimeLaunchSelection({
+            actorLabel: 'TEST finite source', providerId: 'anthropic', model, facts,
+            anthropicFastModeDefault: false, getProviderLabel: () => 'Anthropic',
+          })).toThrow('current runtime does not list it as launchable');
+        }
+        const effects = readFileSync(join(root, 'finite-legacy-peer.ndjson'), 'utf8')
+          .trim().split('\n').map((line) => JSON.parse(line));
+        expect(effects.map((row) => [row.event, row.operation])).toEqual([
+          ['metadata-control', 'runtime'], ['metadata-control', 'model'],
+        ]);
+        expect(readdirSync(join(root, 'claude'))).toEqual([]);
+        expect(readdirSync(join(root, 'workspace'))).toEqual([]);
+        expect(readdirSync(join(root, 'tmp'))).toEqual([]);
+      } finally {
+        rmSync(root, { recursive: true, force: true });
+      }
+    }
+  );
+
   it('uses the runtime catalog as the account-scoped picker surface', () => {
     const provider = mapRuntimeProviderStatus(
       'anthropic',

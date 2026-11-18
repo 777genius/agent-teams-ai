@@ -67,12 +67,24 @@ if (['model', 'runtime', 'auth'].includes(control[0])) {
   assert.deepEqual(remaining, []);
   assert.ok([workspace, process.env.TEST_LEGACY_BOOTSTRAP_REPO].includes(process.cwd()));
   const model = 'claude-sonnet-4-6';
+  const fetchedAt = Date.now();
+  // Emulate the original catalog wire contract, not a vendor discovery result.
+  // The picker must retain this concrete identity instead of its static family alias.
+  const modelCatalog = { schemaVersion: 1, providerId: 'anthropic', source: 'anthropic-models-api',
+    status: 'ready', fetchedAt: new Date(fetchedAt).toISOString(), staleAt: new Date(fetchedAt + 60_000).toISOString(),
+    defaultModelId: model, defaultLaunchModel: model,
+    models: [{ id: model, launchModel: model, displayName: 'Sonnet 4.6', hidden: false,
+      supportedReasoningEfforts: [], defaultReasoningEffort: null, supportsFastMode: false,
+      inputModalities: ['text'], supportsPersonality: false, isDefault: true, upgrade: false,
+      source: 'anthropic-models-api', statusMessage: 'Finite TEST legacy protocol model' }],
+    diagnostics: { configReadState: 'ready', appServerState: 'healthy',
+      message: 'Finite TEST legacy protocol catalog; no vendor discovery.' } };
   const provider = { providerId: 'anthropic', displayName: 'Claude', supported: true,
     authenticated: true, authMethod: 'api_key', verificationState: 'verified', statusCheckOutcome: 'authoritative',
     statusMessage: 'Finite TEST protocol readiness', models: [model], defaultModel: model, effectiveDefaultModel: model,
     canLoginFromUi: false, capabilities: { teamLaunch: true, oneShot: true,
       extensions: { plugins: false, mcp: false, skills: false } },
-    runtimeCapabilities: { modelCatalog: { dynamic: false, source: 'runtime' },
+    modelCatalog, runtimeCapabilities: { modelCatalog: { dynamic: false, source: 'anthropic-models-api' },
       reasoningEffort: { supported: false, values: [], configPassthrough: false } } };
   const response = kind === 'auth' ? { schemaVersion: 1, provider: 'anthropic', status: provider }
     : { schemaVersion: 1, providers: { anthropic: kind === 'model'
