@@ -594,6 +594,7 @@ jobs:
               'native_model_tool_effect_permission_mcp_task_and_reply_completed_once',
               'changed_project_config_did_not_retarget_running_native_session',
               'original_uploaded_PNG_native_image_inference_and_public_readback',
+              'all_image_MIMEs_exact_PDF_and_4MiB_PNG_native_normalization_and_public_readback',
               'checkpoint_and_original_host_native_cleanup_confirmed',
               'cold_host_restored_native_history_without_model_or_tool_replay',
             ]);

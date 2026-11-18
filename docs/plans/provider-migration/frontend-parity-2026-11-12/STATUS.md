@@ -41,10 +41,10 @@ Desktop frontend для Claude, Codex, OpenCode V1/V2. Работать авто
 | F1 | Taskboard PASS на 823; review cycle PASS на f60; ReviewFlow INCOMPLETE | Проверить reload и исправленный footer на ограниченном 1536 + UV4 профиле; затем original Settings/Approved/reopen и все три owner-routing epochs. Сохранить current request/cycle, final receipt и пустой cleanup. | pr_graph; media; reviewflow; root |
 | F2 | Реализация и focused contracts PASS | Сохранить canonical Host agenda: lead/user clarification блокирует review work до review cycle; app path остаётся re-export. Не выдавать UI сохранение lead_then_human за исполненный lead handoff. | reviewflow |
 | M1 | Native E2E PASS только на 2f33d566 | Сохранить точный native receipt; новый package оценить по затронутым boundaries. Desktop/vendor auth/release этим native run не квалифицированы. | media; R2 reviewflow |
-| E1 | Исходные source/fixture отказы исправлены; текущий GUI остаётся | После первого GUI выполнить минимальную очередь изменённых Create/import/retained/Resume/Add/collaboration путей; исходные authority/source/no-replay/cleanup assertions обязательны. | root; pr_graph |
+| E1 | Исходные source/fixture отказы исправлены; пять follow-up готовы; текущий GUI остаётся | Restart исходного cross-provider callback RED→GREEN, 3 negative PASS; 3 feature-lint исправления и точный CI media roster проверены. После первого GUI выполнить минимальную очередь изменённых Create/import/retained/Resume/Add/collaboration путей; исходные authority/source/no-replay/cleanup assertions обязательны. | root; pr_graph |
 | W1 | x64 source fix готов; Windows acceptance открыт | Нужны original Windows x64/ARM64 gates и same-Main packaged recovery. ARM64 первая причина отказа не установлена; 15 s и все шесть разделённых probe boundaries сохраняются. | root; media |
 | P09 | Открыто: решение о контракте | Установить выполнимую границу original pathname / разрешённый writer / consumed bytes; до отдельного решения не сужать гарантию и не менять failed oracle. | root |
-| D1 | Композиция и независимое ревью готовы; gates открыты | Получить обязательные current-tree CI, полный workspace typecheck и необходимые platform результаты. Pending/исторические scoped PASS не заменяют их. | root |
+| D1 | Композиция и независимое ревью готовы; gates открыты | Пять postimages привязаны к 547e603c с сохранением нового provider archive и import-only изменений. Получить обязательные current-tree CI, полный workspace typecheck и необходимые platform результаты. Исторические scoped PASS не заменяют их. | root |
 
 Уже реализованы базовый Host/Session SPI, embedded V2 2.1.4,
 Logs/Thinking/source/filter/fullscreen/stderr, accounts/models, native suggestions,
@@ -284,9 +284,18 @@ build/Sentry qualification не заявлены. Explicit OOM меньших he
 ## CI snapshot, исходные receipts и решения
 
 Снимок GitHub на 823ef00a: **43 review threads resolved**, новых open findings нет.
-29 runs: 14 skipped / 15 queued. CI proof / Host emulated / process / packaged /
-Teams creation / V2 static — **queued, не PASS**. Повторные workflow не запрашиваются; отменённые cohorts
-и skipped jobs не квалифицируют новый срез.
+Последующие original results 823: frontend shard 4/4 — 549 PASS / 2 SKIP files,
+6790 PASS / 7 SKIP tests, 0 FAIL; Teams Ubuntu и macOS — SUCCESS. Skills и
+Codex-login GUI jobs также SUCCESS. Это их исходные scopes, не весь frontend
+или новый source. Windows x64 manual и automatic native cases прошли каждый
+1/1; итоговый job FAILURE из-за устаревшего точного CI roster после native PASS.
+Проверка нового roster на двух неизменённых receipts описана ниже; исходный
+GitHub conclusion не переписывается. Host Windows ARM64 отказал в ожидании
+original source Team readiness: последний read — allocated/sealed=false при
+nativeReady/attached=true около 15.299 s; исходные 15 s сохранены. Связь этого
+отказа с подготовленным factory fix не установлена, нужна current acceptance.
+Текущий 547 original CI отслеживается отдельно. Повторные workflows не
+запрашиваются; cancelled/skipped/queued и отдельные PASS не квалифицируют весь срез.
 
 | Исторический source 9a8d7ffd | Результат и исходный run |
 | --- | --- |
@@ -303,3 +312,52 @@ Teams creation / V2 static — **queued, не PASS**. Повторные workflo
 [Report 90: source/evidence follow-up](90-original-9a8-failure-followup-2026-11-18.md).
 Registration/settlement замечания #1188 и token identity #1227 уже исправлены;
 повторно в backlog не включать. Все historical evidence остаются по своим SHA.
+
+## E1/D1 follow-up: native Restart, feature lint и receipt roster
+
+- Устранён вложенный захват одной authority-блокировки через разные Team и
+  launch store instances при consumption model readiness. Исправление ограничено
+  provider factory: существующий небатчированный inspector сохраняет полную
+  authority/assertAllocation проверку; исходные Team/owner pointers проверяются
+  до и после неё. R2 подтвердил read/control во всех ветвях, account/source,
+  completion/retirement, expiry, equality и final-authority guards. Preclaim
+  batching, правила блокировок, deadlines и test oracle сохранены.
+- Неизменённый исходный cross-provider callback: RED на 9f, GREEN на 9f+factory;
+  три существующих negative cases на exact 4f+factory: 3 PASS /0 FAIL /0 SKIP.
+  Первый отказ изоляции из-за отсутствующего prepared policy asset сохранён
+  отдельно; после восстановления одного ранее закреплённого JS asset исходный
+  отказ воспроизведён. Пассивная встроенная диагностика установила reference
+  inspector boundary до account capture/probe expiry при consumer cutoff margin
+  71659 ms. Это finite actual TS source, ControlledSession/probe doubles,
+  временная файловая система и loopback MCP; native/compiled/GUI qualification
+  и performance-вывод этим результатом не заявляются.
+- Type-only ReviewFlowElectronApi импорт теперь проходит через существующий
+  public contracts barrel; два других lint-изменения сортируют renderer exports
+  и member-work-sync imports. Scoped checks на 9f: actual fast config —
+  2 errors → 0 errors/0 warnings; actual architecture rule — private leaf
+  refused → public barrel accepted. Unchanged preimages/rules приняты на 4f,
+  затем исходные изменения сохранены при f60 и 547 adoption; нового lint run нет.
+- Actual complete size evaluator на f60+4 (historical execution): 5162 production paths, 141 frozen,
+  800 limit, 0 violations. Изменённые production LOC: 116→116,42→42,186→186,
+  factory367→371; frozen/coordinator/readiness bodies сохранены. При 823/547
+  adoption прежние source tuples сохранены, кроме внешних bounded TEST helpers:
+  ReviewFlow223→226, observations720→720, finite-node-options84→85. Новый
+  workflow diff630→631; новый полный evaluator run не заявляется. Historical
+  22 postimages — 21 exact и один supplementary roster с внешним новым pin.
+- Новый f60 provider archive сохраняется целиком. Его entrypoints и смена
+  dependency — отдельная область qualification; результаты 9f/4f не
+  переименовываются в новый native/GUI PASS. Полные snapshots, хеши, R2,
+  retained isolation refusal, passive diagnostic и current adoption:
+  [restart/lint evidence index](evidence/parity-restart-lint-followup-20261118.json).
+
+- Original Windows x64 verifier после native PASS ожидал старый шестишаговый
+  roster. Добавлен ровно один уже безусловно записываемый producer marker всех
+  image MIME/PDF/4 MiB normalization, между PNG и checkpoint. Остальные bytes
+  workflow, producer, runtime/approval/currentness/cleanup assertions сохранены.
+  Один finite запуск фактического inline verifier: исходный RED воспроизведён;
+  GREEN полностью проверил оба original 823 manual/auto receipts; три negative
+  варианта missing/extra/reordered steps отвергнуты. Node24.22.3/Linux VM с явно
+  заданным Windows context и read-only receipt port — не новый native/GUI/CI run.
+  Исходный artifact ZIP сохранён с API SHA256 для последующей проверки; новый
+  CI gate остаётся отдельным. Все post-roster qualification и shell assertions
+  выполнены на обоих исходных receipts.

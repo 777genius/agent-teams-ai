@@ -39,7 +39,6 @@ import type { ProcessCustody } from './processCustody.js';
 import type { HostWindowsLaunch } from '../owned-process/HostWindowsLaunch.js';
 import type { RuntimeSourceProcessOrigin } from './runtimeSourceProcessOrigin.js';
 import { consumeMemberModelReadiness } from './prepareTeamModelReadiness.js';
-import { captureTeamAccountRead } from './captureTeamAccountRead.js';
 import type { ProviderManagementCoordinator } from './ProviderManagementCoordinator.js';
 import type { TeamLaunchOwner } from '../team-launch/TeamLaunchOwner.js';
 
@@ -149,11 +148,16 @@ export function createRuntimeMemberProviderFactory(options: {
           if (entry.profile.provider !== 'opencode') return undefined;
           const launch = options.readinessLaunch?.(entry);
           if (!launch) throw new RuntimeOwnerError('hold');
-          const assertCurrent = () => { authority.assertCurrent(); assertAllocation(); };
+          const team = entry.team, owner = team.owner;
+          const assertCaptured = () => {
+            if (entry.team !== team || team.owner !== owner) throw new RuntimeOwnerError('forbidden');
+          };
+          const assertCurrent = () => {
+            assertCaptured(); authority.assertCurrent(); assertAllocation(); assertCaptured();
+          };
+          // Allocation reads its separate launch store; do not enclose it in the Team owner's fence.
           return consumeMemberModelReadiness({ ...(options.modelReadiness ? { management: options.modelReadiness } : {}),
-            launch, entry, hostIncarnation: options.hostIncarnation,
-            assertCurrent, withAccountRead: captureTeamAccountRead({ entry,
-              principalId: entry.profile.principalId, assertCurrent }) });
+            launch, entry, hostIncarnation: options.hostIncarnation, assertCurrent });
         })();
         const setupCurrent = () => {
           try {

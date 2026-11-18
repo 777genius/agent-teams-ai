@@ -1,0 +1,86 @@
+{
+  "schemaVersion": 1,
+  "kind": "independent-source-review",
+  "head": "9f63bec37c2596676bd1761e74a41b272b0ef956",
+  "reviewedAt": "2026-11-18T20:25:53.996081+00:00",
+  "reviewer": "lint_review_ui_ci",
+  "verdict": "PASS_FOR_THREE_DECLARED_NARROW_CHANGES",
+  "files": [
+    {
+      "path": "src/features/agent-backend/renderer/createHostReviewFlowApi.ts",
+      "beforeSha256": "231ad4589a47dc582d00fab686627295cd72d937f7598f84cd58d93cb80a97eb",
+      "afterSha256": "f0fe5d12f1e5cd0e8069e81e914b6b6a725cf783f346ddb61b0c71e6747e24a1",
+      "beforeLines": 116,
+      "afterLines": 116,
+      "preimageGitBlob": "f7d138abec3e44b6ed2cc720e880da2612c0cc56",
+      "afterBytes": 5289,
+      "exactDeclaredChangeOnly": true,
+      "meaning": "One type-only import uses the existing public contracts barrel; all other bytes unchanged."
+    },
+    {
+      "path": "src/features/agent-backend/renderer/index.ts",
+      "beforeSha256": "daf3ed19ed112e48fe0624211b7eb0a0b18ad0b0d5bb9d456537248386c633e3",
+      "afterSha256": "240827e8dcafe4cf846f134c962ae980b8cf788c8112ca5b68b4271951102a70",
+      "beforeLines": 42,
+      "afterLines": 42,
+      "preimageGitBlob": "241e69441ad9c944c5b97d31b3cf0a664c5741c5",
+      "afterBytes": 1804,
+      "exactDeclaredChangeOnly": true,
+      "meaning": "Two adjacent re-export declarations swap order; their export names and module paths are unchanged."
+    },
+    {
+      "path": "src/features/member-work-sync/main/composition/createMemberWorkSyncPersistence.ts",
+      "beforeSha256": "7eb7f824ee83d0ca2a5b27ab73ed16994667f556cab4b35af466f4fb776de5b6",
+      "afterSha256": "0c0df1106d20727d8b5f3405097cebb711ad850319499fa1e69684720ce672d6",
+      "beforeLines": 186,
+      "afterLines": 186,
+      "preimageGitBlob": "24375e09c65253c0fc99b3b0b879b9f02ea88477",
+      "afterBytes": 7738,
+      "exactDeclaredChangeOnly": true,
+      "meaning": "Existing readFailureDetail import moves into its sorted infrastructure group; all other bytes and function body are unchanged."
+    }
+  ],
+  "supportingSourcePins": [
+    {
+      "path": "src/features/review-flow/contracts/index.ts",
+      "sha256": "d990cccf509a2292ad7ffa69c27aee6b0439676ede4e06b5352263f960e9e420",
+      "unchanged356To9f": true
+    },
+    {
+      "path": "src/features/review-flow/contracts/api.ts",
+      "sha256": "cdcdbe93a2a112fb22d418aff9f1bcb7a2cb8ca9e05af13f4f9a5368db0759dd",
+      "unchanged356To9f": true
+    },
+    {
+      "path": "src/features/review-flow/index.ts",
+      "sha256": "e180aa7f92e28d0da7ddca9013ee04787d4bacbc5183027089bcda46ce504bdd",
+      "unchanged356To9f": true
+    },
+    {
+      "path": "src/features/agent-backend/renderer/createHostReviewApi.ts",
+      "sha256": "b9f4cf304c94760aa25e4d2f7ab8a887cd64b92911f59abe628d899a65c79d39",
+      "unchanged356To9f": true
+    },
+    {
+      "path": "src/features/member-work-sync/main/infrastructure/memberWorkSyncPreparationDiagnostics.ts",
+      "sha256": "a0e0422f4cd75d8cc145b0fff921177fd2fa47bb85fa18e31d34982b68a4312c",
+      "unchanged356To9f": true
+    }
+  ],
+  "publicTypeBinding": "contracts/index.ts export type * from api exposes the same ReviewFlowElectronApi declaration; import type is retained, so the new barrel adds no runtime import. Feature root does not export this API type. No rule/config/API declaration change is needed.",
+  "orderReview": "Reviewed direct reordered target modules. Review API targets contain function declarations and imports; diagnostics target contains functions and a fixed string constant. No changed declaration body or direct import-time call was introduced. This is a bounded source review, not a universal proof of import-order invariance over the entire dependency graph.",
+  "productionSize": {
+    "beforeAfterLines": [
+      116,
+      42,
+      186
+    ],
+    "limit": 800,
+    "countGrowth": 0
+  },
+  "limits": [
+    "No tests, builds, installs, app, native or vendor executions by this reviewer.",
+    "Root owns separate actual fast-lint and exported-feature-boundary checks; this receipt does not claim full typed lint or native E2E.",
+    "No changes to source/test/config files by this reviewer."
+  ]
+}

@@ -1,0 +1,103 @@
+{
+  "schemaVersion": 1,
+  "kind": "independent-final823-candidate-approval",
+  "reviewer": "finite_restart_current",
+  "recordedAt": "2026-11-18T21:29:16.471Z",
+  "verdict": "PASS_EXACT823_CANDIDATE_TREE_AND_INCREMENTAL_ADOPTION",
+  "parent": "823ef00a5cd081ccc3efdad85faf41e1cd888a27",
+  "baseTree": "d1c7d5e1e541b65f348b1c5bef9e92d42016ad5f",
+  "candidateTree": "a50141c0f0a80723aefc51aefd7303e54cec0087",
+  "fullTreeComparison": {
+    "completeRecursiveTrees": true,
+    "baseLeafEntries": 11451,
+    "candidateLeafEntries": 11466,
+    "changedPaths": [
+      "docs/plans/provider-migration/frontend-parity-2026-11-12/STATUS.md",
+      "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/parity-lint-three-20261118.json",
+      "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/parity-lint-three-r2-20261118.json",
+      "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/parity-native-restart-diagnostic-20261118.json",
+      "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/parity-native-restart-final-20261118.json",
+      "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/parity-native-restart-green-20261118.json",
+      "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/parity-native-restart-negative-20261118.json",
+      "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/parity-native-restart-r2-20261118.json",
+      "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/parity-native-restart-red-20261118.json",
+      "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/parity-original-4f-ui-static-qa-20261118.json",
+      "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/parity-original-4f-ui-terminal-20261118.json",
+      "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/parity-original-f60-skipped-terminal-20261118.json",
+      "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/parity-original-f60-ubuntu-gui-20261118.json",
+      "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/parity-restart-lint-adoption-4f-20261118.json",
+      "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/parity-restart-lint-adoption-f60-20261118.json",
+      "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/parity-restart-lint-followup-20261118.json",
+      "packages/legacy-agent-host/src/composition/createRuntimeMemberProviderFactory.ts",
+      "src/features/agent-backend/renderer/createHostReviewFlowApi.ts",
+      "src/features/agent-backend/renderer/index.ts",
+      "src/features/member-work-sync/main/composition/createMemberWorkSyncPersistence.ts"
+    ],
+    "unexpectedChanges": [],
+    "sourceBindings": 4,
+    "proofBindings": 14
+  },
+  "documents": {
+    "statusBlob": "6be895cfa19821661f457c1aa29a94dcab9a6071",
+    "statusSha256": "6058034f380e1b3cff10891641e88d4238098d155fc072c1d05a92d76234c364",
+    "indexBlob": "d5da2da8d67cb7b168f0ee2ebc2e6ffe958881d6",
+    "indexSha256": "4ab4a6e9cbe4d6ab69ee5da7ecbfa4db5763c8808b27bb29612cd0939725aa4a",
+    "statusAllowedChangesOnly": true,
+    "statusChanges": [
+      {
+        "operation": "replace",
+        "baseStartLine": 44,
+        "baseEndLine": 44,
+        "candidateStartLine": 44,
+        "candidateEndLine": 44
+      },
+      {
+        "operation": "replace",
+        "baseStartLine": 47,
+        "baseEndLine": 47,
+        "candidateStartLine": 47,
+        "candidateEndLine": 47
+      },
+      {
+        "operation": "replace",
+        "baseStartLine": 254,
+        "baseEndLine": 256,
+        "candidateStartLine": 254,
+        "candidateEndLine": 264
+      },
+      {
+        "operation": "insert",
+        "baseStartLine": 273,
+        "baseEndLine": 272,
+        "candidateStartLine": 281,
+        "candidateEndLine": 314
+      }
+    ]
+  },
+  "preservation": {
+    "externalHelperAndGuiProof": true,
+    "providerAndLock": true
+  },
+  "helperSize": {
+    "production": true,
+    "before": 223,
+    "after": 226,
+    "limit": 800,
+    "frozen": false
+  },
+  "sourceSizeQualification": "Actual completef60+4 evaluation remains historical; only823 helper223->226 is newproductiondelta, with unchangedclassifier/policy and nofrozen/newoversizedfiles. No newcompleteevaluator orruntimeexecution claimed.",
+  "proofContentVerification": {
+    "count": 14,
+    "exactBytesSha256AndGitBlob": true,
+    "checkpoint": "final-index-proof-bindings.json",
+    "reviewedBeforeFinal823Tree": true
+  },
+  "execution": {
+    "tests": 0,
+    "builds": 0,
+    "CIEndpointCalls": 0,
+    "sourceEdits": 0,
+    "gitRefWrites": 0
+  },
+  "qualification": "Approval of the exact immutable candidate Git tree and its declared composition. This receipt records the completed prior read-only review; no checks were rerun to create it and no old runtime/GUI result was rebound to this tree."
+}

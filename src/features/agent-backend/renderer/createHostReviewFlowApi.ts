@@ -5,7 +5,7 @@ import { hostTeamSelectionKey, isHostTeamSelectionKey } from './hostTeamRouting'
 
 import type { AgentBackendApi, BackendOperationResult } from '../contracts/operations';
 import type { ReviewFlowOverview, ReviewFlowSettings } from '@features/review-flow';
-import type { ReviewFlowElectronApi } from '@features/review-flow/contracts/api';
+import type { ReviewFlowElectronApi } from '@features/review-flow/contracts';
 
 /** Global defaults retain their existing owner; each Host override stays with its captured Team. */
 export function createHostReviewFlowApi(

@@ -1,0 +1,3303 @@
+{
+  "schemaVersion": 1,
+  "kind": "independent-f60-source-provider-dependency-publication-adoption",
+  "reviewer": "finite_restart_current",
+  "observedAt": "2026-11-18T21:16:32.863522+00:00",
+  "repository": "777genius/agent-teams-ai",
+  "parent": "f60dcc107c00c58c0a577f2661f9f0eaf80a596f",
+  "parentTree": "10d775966f685afd58b750d2a78f775627cc8c5a",
+  "previousParent": "4f5ae2dcb10c83fb6b3a3862b8d5065e0c7843ab",
+  "verdict": "PASS_FOUR_UNCHANGED_FIX_POSTIMAGES_ON_F60_WITH_NEW_DEPENDENCY_LIMITS",
+  "summary": {
+    "fourFixPreimagesExact": true,
+    "fourFixPostimagesUnchanged": true,
+    "productionFiles": 5162,
+    "frozenExceptions": 141,
+    "lineLimit": 800,
+    "sourceSizeViolations": 0,
+    "existingProviderDistMembersByteIdentical": 252,
+    "newProviderEntryFiles": 4,
+    "newProviderRuntimeEntryPoints": 2,
+    "sameOriginalFunctionDefinitions": 5,
+    "hostImportOnlyFiles": 4,
+    "newTests": 0,
+    "newBuilds": 0,
+    "newInstalls": 0
+  },
+  "sourceReview": {
+    "schemaVersion": 1,
+    "kind": "independent-four-postimage-source-adoption-and-pure-size-evaluation",
+    "reviewer": "finite_restart_current",
+    "observedAt": "2026-11-18T21:13:21.919Z",
+    "repository": "777genius/agent-teams-ai",
+    "parent": "f60dcc107c00c58c0a577f2661f9f0eaf80a596f",
+    "parentTree": "10d775966f685afd58b750d2a78f775627cc8c5a",
+    "verdict": "PASS_SOURCE_ADOPTION_AND_SIZE",
+    "sourceChanges": [
+      {
+        "path": "src/features/agent-backend/renderer/createHostReviewFlowApi.ts",
+        "mode": "100644",
+        "preimageGitBlob": "f7d138abec3e44b6ed2cc720e880da2612c0cc56",
+        "preimageSha256": "231ad4589a47dc582d00fab686627295cd72d937f7598f84cd58d93cb80a97eb",
+        "gitBlob": "e5044eb33cda7dda3be51415e6f94d6c265d03fa",
+        "sha256": "f0fe5d12f1e5cd0e8069e81e914b6b6a725cf783f346ddb61b0c71e6747e24a1",
+        "bytes": 5289,
+        "beforeLines": 116,
+        "lineCount": 116,
+        "frozenException": false
+      },
+      {
+        "path": "src/features/agent-backend/renderer/index.ts",
+        "mode": "100644",
+        "preimageGitBlob": "241e69441ad9c944c5b97d31b3cf0a664c5741c5",
+        "preimageSha256": "daf3ed19ed112e48fe0624211b7eb0a0b18ad0b0d5bb9d456537248386c633e3",
+        "gitBlob": "021024bb4890779c3565931391993e08cc577be6",
+        "sha256": "240827e8dcafe4cf846f134c962ae980b8cf788c8112ca5b68b4271951102a70",
+        "bytes": 1804,
+        "beforeLines": 42,
+        "lineCount": 42,
+        "frozenException": false
+      },
+      {
+        "path": "src/features/member-work-sync/main/composition/createMemberWorkSyncPersistence.ts",
+        "mode": "100644",
+        "preimageGitBlob": "24375e09c65253c0fc99b3b0b879b9f02ea88477",
+        "preimageSha256": "7eb7f824ee83d0ca2a5b27ab73ed16994667f556cab4b35af466f4fb776de5b6",
+        "gitBlob": "b346b22478aafd5f938fecedb15f835378c8305b",
+        "sha256": "0c0df1106d20727d8b5f3405097cebb711ad850319499fa1e69684720ce672d6",
+        "bytes": 7738,
+        "beforeLines": 186,
+        "lineCount": 186,
+        "frozenException": false
+      },
+      {
+        "path": "packages/legacy-agent-host/src/composition/createRuntimeMemberProviderFactory.ts",
+        "mode": "100644",
+        "preimageGitBlob": "6564afa0153446efef60a7dc20e23fcd1f466514",
+        "preimageSha256": "6eddff59c94ed0d9639d7066a0e2ce3aaf2954753f2370496c8cb793620b6e69",
+        "gitBlob": "a47682f91e49ace6ea4dd80d1cd6280a421a6a4e",
+        "sha256": "f92b0a41feaf0de8085b118f1642b514b4340cdcf6551b65fac48f153caaaa38",
+        "bytes": 18591,
+        "beforeLines": 367,
+        "lineCount": 371,
+        "frozenException": false
+      }
+    ],
+    "sourceSize": {
+      "guard": {
+        "path": "scripts/ci/check-source-file-size.mjs",
+        "sha256": "5462ce152af3e3beddabc51ccbb4bf9b74219ebe128664e27e046142382d6bb2",
+        "gitBlob": "65775f7889470056ef7cd91ad6c56d9351e6cdfc"
+      },
+      "policy": {
+        "path": "scripts/ci/source-file-size-baseline.json",
+        "sha256": "e3d651eb260ba35b467dd7b49255af66e290ea58bbd1eb570114afb213aa36e3",
+        "gitBlob": "730dd19fb082ff5f5cb39af3f759e9fdae706506",
+        "maxLines": 800,
+        "legacyCount": 141
+      },
+      "inheritedCountedRecordsSha256": "565224ae1d887b0356aa490a7867febc8190bfa68ebc58b829c20c15585e18a5",
+      "inheritedTupleSha256": "8b7bffe54aef75aaec6347082d60ae82e0047cff4f95ee4ef849b86c98522562",
+      "inheritedRecords": 5161,
+      "externalProductionUpdates": [
+        {
+          "path": "packages/legacy-agent-host/src/adapters/providers/readCodexMcpCatalog.ts",
+          "mode": "100644",
+          "type": "blob",
+          "gitBlob": "d4c8a8bb161bb814407ca42edcf9ada3f88d8fcf",
+          "sha256": "800ac4f16d38a21138da92bf4509053d869a185449a871cd3554f03c6f7a7a8f",
+          "bytes": 2236,
+          "lineCount": 62,
+          "previousBlob": "7230804bd10e8a521cb3e1b1e9760920e9ebcef5"
+        },
+        {
+          "path": "packages/legacy-agent-host/src/composition/capturedRuntimeMcpRecipes.ts",
+          "mode": "100644",
+          "type": "blob",
+          "gitBlob": "b3f03e34694107fca0d802cd8ad355330403a3e1",
+          "sha256": "821bad65f0debf38390a92bf3c24bba2f87c0346f64d2c2df3a43d2f4da9a1c2",
+          "bytes": 11053,
+          "lineCount": 280,
+          "previousBlob": "80e5681ca56624e70ab3a239559b3508b73e6d59"
+        },
+        {
+          "path": "packages/legacy-agent-host/src/composition/runtimeExtraArgs.ts",
+          "mode": "100644",
+          "type": "blob",
+          "gitBlob": "6746b43e64dd0fae1f0cc3792a7bd7b3d60af23e",
+          "sha256": "aa3b3683ec607a6b7c390c6f7ef1164b936f9054144cc30f84adfa8c687e1033",
+          "bytes": 1228,
+          "lineCount": 34,
+          "previousBlob": "e60476f05f6a87619b3ea89128388abf7dc9dbeb"
+        },
+        {
+          "path": "packages/legacy-agent-host/src/composition/runtimeProfile.ts",
+          "mode": "100644",
+          "type": "blob",
+          "gitBlob": "9a744543376bd271ae7ed45f607954623822ceb0",
+          "sha256": "52f086743adc674ef5c68ef00e0e3e8482674aa7424b4eba40948da427eb1228",
+          "bytes": 10386,
+          "lineCount": 261,
+          "previousBlob": "7dcaecc2d76bf568347082b5f82f0d738e0bfaa1"
+        },
+        {
+          "path": "packages/legacy-agent-host/src/composition/teamHostReadiness.ts",
+          "mode": "100644",
+          "type": "blob",
+          "gitBlob": "02e7f6b58b6c6ddf7f98590c49f972faf85c3a5d",
+          "sha256": "7da6b03c063d19c19dfd22ee08dd11684e81e8d0bc49486e608f949cb321e3c4",
+          "bytes": 275,
+          "lineCount": 6,
+          "previousBlob": null
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-backend-observations.ts",
+          "mode": "100644",
+          "type": "blob",
+          "gitBlob": "53339a2f6987180dc997bf96a67fcd58411705f9",
+          "sha256": "7d40a1bfff068e9a9958d0a38c1204db0a9bfcd54023a9325bf17f41e6e3077d",
+          "bytes": 34984,
+          "lineCount": 720,
+          "previousBlob": "5fc332a08c1170a82d6f32932c57f3b4eb165429"
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts",
+          "mode": "100644",
+          "type": "blob",
+          "gitBlob": "b42cee83d3526df26ce749e3b7b6c076b48a9257",
+          "sha256": "a9de6fd64ac4e335d24e2454242454a6214e764374dea3b4903b389830bad645",
+          "bytes": 25230,
+          "lineCount": 389,
+          "previousBlob": "20ff0af5b1d83a4ee48b53e8ac5def8da69f88e5"
+        },
+        {
+          "path": "scripts/lib/desktop-finite-node-options.ts",
+          "mode": "100644",
+          "type": "blob",
+          "gitBlob": "c23a994bc072e57203781e5bd1efa10c2433d658",
+          "sha256": "f09c6f0bf56764227f39841e1793d13ebda032dfb15ce61df100d1f39db93e27",
+          "bytes": 4941,
+          "lineCount": 84,
+          "previousBlob": "3a47e027c6350c24d6b03123012e5f3efb64a8f1"
+        },
+        {
+          "path": "src/features/agent-backend/main/infrastructure/CapturedLocalModelReadiness.ts",
+          "mode": "100644",
+          "type": "blob",
+          "gitBlob": "e3c3d71939b220e329d41e149791d2b9ca30e87d",
+          "sha256": "436d8810befc71d7e75bb0fa692d530e24daf1a1cd9a423d071a3e6adef8ab0b",
+          "bytes": 41314,
+          "lineCount": 692,
+          "previousBlob": "3f73c810a03342c9e286b50cbaf1cf3f6637e1c6"
+        }
+      ],
+      "removedProduction": [],
+      "fullProductionJoin": {
+        "records": 5162,
+        "sha256": "74e899aede51f42f5d3d75b481409b46690920d91b27ae46672e230cc00f557d",
+        "bytes": 644696,
+        "fields": [
+          "path",
+          "mode",
+          "type",
+          "Git blob"
+        ],
+        "complete": true
+      },
+      "evaluation": {
+        "checkedFiles": 5162,
+        "legacyFiles": 141,
+        "maxLines": 800,
+        "ratchetCandidates": [
+          {
+            "path": "agent-teams-controller/src/internal/agenda.js",
+            "lineCount": 905,
+            "legacyCap": 914
+          },
+          {
+            "path": "agent-teams-controller/src/internal/taskStore.js",
+            "lineCount": 1296,
+            "legacyCap": 1302
+          },
+          {
+            "path": "agent-teams-controller/src/internal/tasks.js",
+            "lineCount": 1097,
+            "legacyCap": 1149
+          },
+          {
+            "path": "landing/components/sections/ComparisonSection.vue",
+            "lineCount": 1057,
+            "legacyCap": 1081
+          },
+          {
+            "path": "src/features/codex-account/main/composition/createCodexAccountFeature.ts",
+            "lineCount": 981,
+            "legacyCap": 998
+          },
+          {
+            "path": "src/features/member-work-sync/main/infrastructure/JsonMemberWorkSyncStore.ts",
+            "lineCount": 1576,
+            "legacyCap": 2355
+          },
+          {
+            "path": "src/features/runtime-provider-management/main/infrastructure/AgentTeamsRuntimeProviderManagementCliClient.ts",
+            "lineCount": 2586,
+            "legacyCap": 2642
+          },
+          {
+            "path": "src/features/token-usage/core/domain/snapshotProjection.ts",
+            "lineCount": 894,
+            "legacyCap": 918
+          },
+          {
+            "path": "src/features/token-usage/renderer/ui/TokenUsageDashboard.tsx",
+            "lineCount": 1369,
+            "legacyCap": 1376
+          },
+          {
+            "path": "src/main/index.ts",
+            "lineCount": 3630,
+            "legacyCap": 3677
+          },
+          {
+            "path": "src/main/ipc/config.ts",
+            "lineCount": 1224,
+            "legacyCap": 1230
+          },
+          {
+            "path": "src/main/ipc/configValidation.ts",
+            "lineCount": 1049,
+            "legacyCap": 1050
+          },
+          {
+            "path": "src/main/ipc/teams.ts",
+            "lineCount": 5372,
+            "legacyCap": 5436
+          },
+          {
+            "path": "src/main/services/infrastructure/FileWatcher.ts",
+            "lineCount": 1439,
+            "legacyCap": 1504
+          },
+          {
+            "path": "src/main/services/infrastructure/NotificationManager.ts",
+            "lineCount": 1489,
+            "legacyCap": 1526
+          },
+          {
+            "path": "src/main/services/infrastructure/OpenCodeRuntimeInstallerService.ts",
+            "lineCount": 1001,
+            "legacyCap": 1042
+          },
+          {
+            "path": "src/main/services/runtime/ClaudeMultimodelBridgeService.ts",
+            "lineCount": 1955,
+            "legacyCap": 2010
+          },
+          {
+            "path": "src/main/services/runtime/ProviderConnectionService.ts",
+            "lineCount": 1761,
+            "legacyCap": 1762
+          },
+          {
+            "path": "src/main/services/team/AgentTeamsMcpHttpServer.ts",
+            "lineCount": 1388,
+            "legacyCap": 1410
+          },
+          {
+            "path": "src/main/services/team/ChangeExtractorService.ts",
+            "lineCount": 1737,
+            "legacyCap": 1739
+          },
+          {
+            "path": "src/main/services/team/TaskChangeComputer.ts",
+            "lineCount": 1308,
+            "legacyCap": 1312
+          },
+          {
+            "path": "src/main/services/team/TeamBackupService.ts",
+            "lineCount": 1232,
+            "legacyCap": 1236
+          },
+          {
+            "path": "src/main/services/team/TeamConfigReader.ts",
+            "lineCount": 1150,
+            "legacyCap": 1151
+          },
+          {
+            "path": "src/main/services/team/TeamDataService.ts",
+            "lineCount": 4008,
+            "legacyCap": 4102
+          },
+          {
+            "path": "src/main/services/team/TeamLaunchStateEvaluator.ts",
+            "lineCount": 1023,
+            "legacyCap": 1059
+          },
+          {
+            "path": "src/main/services/team/TeamLogSourceTracker.ts",
+            "lineCount": 974,
+            "legacyCap": 1088
+          },
+          {
+            "path": "src/main/services/team/TeamMemberRuntimeAdvisoryService.ts",
+            "lineCount": 936,
+            "legacyCap": 964
+          },
+          {
+            "path": "src/main/services/team/TeamMessageFeedService.ts",
+            "lineCount": 833,
+            "legacyCap": 871
+          },
+          {
+            "path": "src/main/services/team/TeamTaskActivityIntervalService.ts",
+            "lineCount": 889,
+            "legacyCap": 892
+          },
+          {
+            "path": "src/main/services/team/TeamTranscriptProjectResolver.ts",
+            "lineCount": 1557,
+            "legacyCap": 1558
+          },
+          {
+            "path": "src/main/services/team/opencode/bridge/OpenCodeReadinessBridge.ts",
+            "lineCount": 897,
+            "legacyCap": 898
+          },
+          {
+            "path": "src/main/services/team/opencode/delivery/OpenCodePromptDeliveryLedger.ts",
+            "lineCount": 1114,
+            "legacyCap": 1286
+          },
+          {
+            "path": "src/main/services/team/opencode/store/OpenCodeRuntimeManifestEvidenceReader.ts",
+            "lineCount": 1053,
+            "legacyCap": 1087
+          },
+          {
+            "path": "src/main/services/team/opencode/store/RuntimeStoreManifest.ts",
+            "lineCount": 1202,
+            "legacyCap": 1210
+          },
+          {
+            "path": "src/main/services/team/provisioning/TeamProvisioningInboxRelayPolicy.ts",
+            "lineCount": 862,
+            "legacyCap": 890
+          },
+          {
+            "path": "src/main/services/team/provisioning/TeamProvisioningMemberLifecycle.ts",
+            "lineCount": 2666,
+            "legacyCap": 2678
+          },
+          {
+            "path": "src/main/services/team/provisioning/TeamProvisioningOpenCodeRuntimeEvidencePolicy.ts",
+            "lineCount": 942,
+            "legacyCap": 964
+          },
+          {
+            "path": "src/main/services/team/provisioning/TeamProvisioningPrepareCoordinator.ts",
+            "lineCount": 941,
+            "legacyCap": 946
+          },
+          {
+            "path": "src/main/services/team/provisioning/TeamProvisioningProviderDiagnostics.ts",
+            "lineCount": 1286,
+            "legacyCap": 1287
+          },
+          {
+            "path": "src/main/services/team/provisioning/TeamProvisioningRuntimeLaunchSelection.ts",
+            "lineCount": 940,
+            "legacyCap": 945
+          },
+          {
+            "path": "src/main/services/team/provisioning/TeamProvisioningRuntimeSnapshot.ts",
+            "lineCount": 2051,
+            "legacyCap": 2062
+          },
+          {
+            "path": "src/main/services/team/provisioning/TeamProvisioningStreamEvents.ts",
+            "lineCount": 1116,
+            "legacyCap": 1178
+          },
+          {
+            "path": "src/main/services/team/runtime/OpenCodeTeamRuntimeAdapter.ts",
+            "lineCount": 1432,
+            "legacyCap": 1591
+          },
+          {
+            "path": "src/main/services/team/taskLogs/stream/OpenCodeTaskLogStreamSource.ts",
+            "lineCount": 1327,
+            "legacyCap": 1364
+          },
+          {
+            "path": "src/main/workers/team-fs-worker.ts",
+            "lineCount": 2143,
+            "legacyCap": 2151
+          },
+          {
+            "path": "src/preload/constants/ipcChannels.ts",
+            "lineCount": 827,
+            "legacyCap": 843
+          },
+          {
+            "path": "src/preload/index.ts",
+            "lineCount": 2063,
+            "legacyCap": 2094
+          },
+          {
+            "path": "src/renderer/components/dashboard/CliStatusBanner.tsx",
+            "lineCount": 2708,
+            "legacyCap": 2835
+          },
+          {
+            "path": "src/renderer/components/runtime/providerConnectionUi.ts",
+            "lineCount": 987,
+            "legacyCap": 989
+          },
+          {
+            "path": "src/renderer/components/settings/sections/CliStatusSection.tsx",
+            "lineCount": 849,
+            "legacyCap": 878
+          },
+          {
+            "path": "src/renderer/components/sidebar/DateGroupedSessions.tsx",
+            "lineCount": 1129,
+            "legacyCap": 1130
+          },
+          {
+            "path": "src/renderer/components/sidebar/GlobalTaskList.tsx",
+            "lineCount": 1299,
+            "legacyCap": 1719
+          },
+          {
+            "path": "src/renderer/components/team/TeamDetailView.tsx",
+            "lineCount": 3738,
+            "legacyCap": 3746
+          },
+          {
+            "path": "src/renderer/components/team/activity/ActivityItem.tsx",
+            "lineCount": 1669,
+            "legacyCap": 1670
+          },
+          {
+            "path": "src/renderer/components/team/activity/ActivityTimeline.tsx",
+            "lineCount": 864,
+            "legacyCap": 870
+          },
+          {
+            "path": "src/renderer/components/team/activity/LeadThoughtsGroup.tsx",
+            "lineCount": 1162,
+            "legacyCap": 1186
+          },
+          {
+            "path": "src/renderer/components/team/dialogs/ProvisioningProviderStatusList.tsx",
+            "lineCount": 1205,
+            "legacyCap": 1206
+          },
+          {
+            "path": "src/renderer/components/team/dialogs/providerPrepareDiagnostics.ts",
+            "lineCount": 1450,
+            "legacyCap": 1452
+          },
+          {
+            "path": "src/renderer/components/team/editor/ProjectEditorOverlay.tsx",
+            "lineCount": 923,
+            "legacyCap": 929
+          },
+          {
+            "path": "src/renderer/components/team/kanban/KanbanBoard.tsx",
+            "lineCount": 899,
+            "legacyCap": 919
+          },
+          {
+            "path": "src/renderer/components/team/members/MemberCard.tsx",
+            "lineCount": 1578,
+            "legacyCap": 1586
+          },
+          {
+            "path": "src/renderer/components/team/members/MemberDraftRow.tsx",
+            "lineCount": 814,
+            "legacyCap": 1001
+          },
+          {
+            "path": "src/renderer/components/team/members/MemberList.tsx",
+            "lineCount": 1347,
+            "legacyCap": 1364
+          },
+          {
+            "path": "src/renderer/components/team/messages/MessageComposer.tsx",
+            "lineCount": 1173,
+            "legacyCap": 1175
+          },
+          {
+            "path": "src/renderer/components/team/messages/MessagesPanel.tsx",
+            "lineCount": 1530,
+            "legacyCap": 1543
+          },
+          {
+            "path": "src/renderer/components/team/review/ChangeReviewDialog.tsx",
+            "lineCount": 5405,
+            "legacyCap": 5441
+          },
+          {
+            "path": "src/renderer/components/team/review/CodeMirrorDiffView.tsx",
+            "lineCount": 956,
+            "legacyCap": 975
+          },
+          {
+            "path": "src/renderer/components/ui/MentionableTextarea.tsx",
+            "lineCount": 1376,
+            "legacyCap": 1431
+          },
+          {
+            "path": "src/renderer/store/index.ts",
+            "lineCount": 2513,
+            "legacyCap": 2537
+          },
+          {
+            "path": "src/renderer/store/slices/changeReviewSlice.ts",
+            "lineCount": 2414,
+            "legacyCap": 2417
+          },
+          {
+            "path": "src/renderer/store/slices/editorSlice.ts",
+            "lineCount": 1224,
+            "legacyCap": 1483
+          },
+          {
+            "path": "src/renderer/store/slices/extensionsSlice.ts",
+            "lineCount": 1277,
+            "legacyCap": 1420
+          },
+          {
+            "path": "src/renderer/store/slices/tabSlice.ts",
+            "lineCount": 882,
+            "legacyCap": 886
+          },
+          {
+            "path": "src/renderer/store/slices/teamSlice.ts",
+            "lineCount": 5003,
+            "legacyCap": 5020
+          },
+          {
+            "path": "src/renderer/utils/memberHelpers.ts",
+            "lineCount": 1628,
+            "legacyCap": 1756
+          },
+          {
+            "path": "src/renderer/utils/openCodeModelRecommendations.ts",
+            "lineCount": 1330,
+            "legacyCap": 1335
+          },
+          {
+            "path": "src/renderer/utils/teamModelAvailability.ts",
+            "lineCount": 982,
+            "legacyCap": 983
+          },
+          {
+            "path": "src/renderer/utils/teamModelCatalog.ts",
+            "lineCount": 863,
+            "legacyCap": 868
+          },
+          {
+            "path": "src/shared/types/api.ts",
+            "lineCount": 1104,
+            "legacyCap": 1158
+          },
+          {
+            "path": "src/shared/types/team.ts",
+            "lineCount": 1824,
+            "legacyCap": 1839
+          }
+        ],
+        "violations": []
+      },
+      "actualPureEvaluatorCalls": 1,
+      "fourChangesWithin800": true,
+      "all141FrozenExceptionsUnchangedByFollowup": true,
+      "frozenMechanismPins": [
+        {
+          "path": "packages/legacy-agent-host/src/composition/RuntimeTeamCoordinator.ts",
+          "gitBlob": "c500e8e7377c600587790dc494ea673381f4791c",
+          "unchanged": true
+        },
+        {
+          "path": "packages/legacy-agent-host/src/composition/prepareTeamModelReadiness.ts",
+          "gitBlob": "ae5a20a2800b6725937ff0083838b0c2f9a1edcf",
+          "unchanged": true
+        }
+      ]
+    },
+    "historical22Adoption": {
+      "unchangedOriginal": 21,
+      "extendedOriginal": 1,
+      "exactAll22OriginalClaim": false,
+      "onlyExtension": "One teamHostReadiness.ts entry in the existing supplementary source roster.",
+      "pins": [
+        {
+          "path": "tools/owned-process-broker/nativeEmulatedSourceProfile.ts",
+          "originalPostBlob": "a8f9591cbec7a8b36bc8e4e12549415f6b45c4ef",
+          "currentBlob": "a8f9591cbec7a8b36bc8e4e12549415f6b45c4ef",
+          "candidateBlob": "a8f9591cbec7a8b36bc8e4e12549415f6b45c4ef",
+          "unchangedOriginal": true
+        },
+        {
+          "path": "packages/legacy-agent-host/tests/runtime-team-host.test.ts",
+          "originalPostBlob": "6ba2a053de06b1b6f1068cebd56582f0d71c1e43",
+          "currentBlob": "6ba2a053de06b1b6f1068cebd56582f0d71c1e43",
+          "candidateBlob": "6ba2a053de06b1b6f1068cebd56582f0d71c1e43",
+          "unchangedOriginal": true
+        },
+        {
+          "path": "test/main/services/runtime/AnthropicModelCatalogPicker.safe-e2e.test.ts",
+          "originalPostBlob": "7a484b411fb0912dae6c129c522eb6c2e239f9c6",
+          "currentBlob": "7a484b411fb0912dae6c129c522eb6c2e239f9c6",
+          "candidateBlob": "7a484b411fb0912dae6c129c522eb6c2e239f9c6",
+          "unchangedOriginal": true
+        },
+        {
+          "path": "tools/owned-process-broker/fixtures/retainedLegacyBootstrapPeer.mjs",
+          "originalPostBlob": "e9718755874f15e6e34a68d0c6d023a607f0f232",
+          "currentBlob": "e9718755874f15e6e34a68d0c6d023a607f0f232",
+          "candidateBlob": "e9718755874f15e6e34a68d0c6d023a607f0f232",
+          "unchangedOriginal": true
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-retained-opencode-authority.ts",
+          "originalPostBlob": "a70c1bc6443f34f4f20bab7864af662ec65e9a6a",
+          "currentBlob": "a70c1bc6443f34f4f20bab7864af662ec65e9a6a",
+          "candidateBlob": "a70c1bc6443f34f4f20bab7864af662ec65e9a6a",
+          "unchangedOriginal": true
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-retained-opencode-coexistence.native.ts",
+          "originalPostBlob": "cbb8fa9df92c73f6aba8ecc34147ec26cd12ce19",
+          "currentBlob": "cbb8fa9df92c73f6aba8ecc34147ec26cd12ce19",
+          "candidateBlob": "cbb8fa9df92c73f6aba8ecc34147ec26cd12ce19",
+          "unchangedOriginal": true
+        },
+        {
+          "path": "test/features/agent-backend/desktopBackendFeature.test.ts",
+          "originalPostBlob": "5ddbca20786812c1506a8d04fe281668dda770ca",
+          "currentBlob": "5ddbca20786812c1506a8d04fe281668dda770ca",
+          "candidateBlob": "5ddbca20786812c1506a8d04fe281668dda770ca",
+          "unchangedOriginal": true
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts",
+          "originalPostBlob": "20ff0af5b1d83a4ee48b53e8ac5def8da69f88e5",
+          "currentBlob": "b42cee83d3526df26ce749e3b7b6c076b48a9257",
+          "candidateBlob": "b42cee83d3526df26ce749e3b7b6c076b48a9257",
+          "unchangedOriginal": false
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+          "originalPostBlob": "a58d5e94ede5e1385c33646f5ecb8e3ebe01ad68",
+          "currentBlob": "a58d5e94ede5e1385c33646f5ecb8e3ebe01ad68",
+          "candidateBlob": "a58d5e94ede5e1385c33646f5ecb8e3ebe01ad68",
+          "unchangedOriginal": true
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-ui-controls-deadline.test.ts",
+          "originalPostBlob": "ec92f7de267420694aa9e0b66b54f3854bba1621",
+          "currentBlob": "ec92f7de267420694aa9e0b66b54f3854bba1621",
+          "candidateBlob": "ec92f7de267420694aa9e0b66b54f3854bba1621",
+          "unchangedOriginal": true
+        },
+        {
+          "path": "src/renderer/api/httpClient.ts",
+          "originalPostBlob": "d8dd28286d22799642ca35c9806c542ab3ff9822",
+          "currentBlob": "d8dd28286d22799642ca35c9806c542ab3ff9822",
+          "candidateBlob": "d8dd28286d22799642ca35c9806c542ab3ff9822",
+          "unchangedOriginal": true
+        },
+        {
+          "path": "src/features/review-flow/renderer/http/index.ts",
+          "originalPostBlob": "124519eda6a605c262593fed10e949fcf5fcd0fb",
+          "currentBlob": "124519eda6a605c262593fed10e949fcf5fcd0fb",
+          "candidateBlob": "124519eda6a605c262593fed10e949fcf5fcd0fb",
+          "unchangedOriginal": true
+        },
+        {
+          "path": "eslint.review-flow-boundaries.mts",
+          "originalPostBlob": "9b29411a63d3f6114dab09197d7a6b112ca6b5fb",
+          "currentBlob": "9b29411a63d3f6114dab09197d7a6b112ca6b5fb",
+          "candidateBlob": "9b29411a63d3f6114dab09197d7a6b112ca6b5fb",
+          "unchangedOriginal": true
+        },
+        {
+          "path": "test/main/services/team/TeamDataService.test.ts",
+          "originalPostBlob": "60becfc73eb68c1a661125f77e1d81319ff153bd",
+          "currentBlob": "60becfc73eb68c1a661125f77e1d81319ff153bd",
+          "candidateBlob": "60becfc73eb68c1a661125f77e1d81319ff153bd",
+          "unchangedOriginal": true
+        },
+        {
+          "path": "agent-teams-controller/test/reviewFlow.test.js",
+          "originalPostBlob": "c4f61aeedbfe790e4e036ee645774449ddf8e7e1",
+          "currentBlob": "c4f61aeedbfe790e4e036ee645774449ddf8e7e1",
+          "candidateBlob": "c4f61aeedbfe790e4e036ee645774449ddf8e7e1",
+          "unchangedOriginal": true
+        },
+        {
+          "path": "eslint.config.js",
+          "originalPostBlob": "72ebcd803dd7a3365285f3beb4a06f8fe428bf5e",
+          "currentBlob": "72ebcd803dd7a3365285f3beb4a06f8fe428bf5e",
+          "candidateBlob": "72ebcd803dd7a3365285f3beb4a06f8fe428bf5e",
+          "unchangedOriginal": true
+        },
+        {
+          "path": "eslint.fast.config.js",
+          "originalPostBlob": "417c9b2de448d3c03f971224887e49499c2f2c2d",
+          "currentBlob": "417c9b2de448d3c03f971224887e49499c2f2c2d",
+          "candidateBlob": "417c9b2de448d3c03f971224887e49499c2f2c2d",
+          "unchangedOriginal": true
+        },
+        {
+          "path": "src/features/agent-attachments/core/domain/validation.test.ts",
+          "originalPostBlob": "66de3a34ef3cdfb46ac14889162131c8fbc34dd5",
+          "currentBlob": "66de3a34ef3cdfb46ac14889162131c8fbc34dd5",
+          "candidateBlob": "66de3a34ef3cdfb46ac14889162131c8fbc34dd5",
+          "unchangedOriginal": true
+        },
+        {
+          "path": "agent-teams-controller/src/internal/kanban.js",
+          "originalPostBlob": "cd3fd1f6ab9564cc4bd244e1ce0d58c7e6b013a6",
+          "currentBlob": "cd3fd1f6ab9564cc4bd244e1ce0d58c7e6b013a6",
+          "candidateBlob": "cd3fd1f6ab9564cc4bd244e1ce0d58c7e6b013a6",
+          "unchangedOriginal": true
+        },
+        {
+          "path": "agent-teams-controller/test/controller.test.js",
+          "originalPostBlob": "36b6bdfc132020f3e14b84d609ba2a9339df0f32",
+          "currentBlob": "36b6bdfc132020f3e14b84d609ba2a9339df0f32",
+          "candidateBlob": "36b6bdfc132020f3e14b84d609ba2a9339df0f32",
+          "unchangedOriginal": true
+        },
+        {
+          "path": "src/features/localization/renderer/resources.d.ts",
+          "originalPostBlob": "66c6b12b4c338f8825ffd831839b0ea79a907ed7",
+          "currentBlob": "66c6b12b4c338f8825ffd831839b0ea79a907ed7",
+          "candidateBlob": "66c6b12b4c338f8825ffd831839b0ea79a907ed7",
+          "unchangedOriginal": true
+        },
+        {
+          "path": "test/features/agent-backend/hostReviewFlow.test.ts",
+          "originalPostBlob": "74e80e374efe9271bc48f97b9825fc4b508358ae",
+          "currentBlob": "74e80e374efe9271bc48f97b9825fc4b508358ae",
+          "candidateBlob": "74e80e374efe9271bc48f97b9825fc4b508358ae",
+          "unchangedOriginal": true
+        }
+      ]
+    },
+    "externalReadinessPreserved": {
+      "narrowRuntimeValues": [
+        "actualCaptureReadinessCommandId",
+        "localModelReadinessCaptureViewSchema",
+        "parseLiveRosterResponse"
+      ],
+      "pins": [
+        {
+          "path": "packages/legacy-agent-host/package.json",
+          "gitBlob": "39bfdc27581109c10fa5362375dcbe2c33d44791",
+          "sha256": "a2cfca3f7911d08d4382554c10b254dc7756e5bfa546f50314f116e746d1d8d9",
+          "bytes": 12519,
+          "lines": 308,
+          "unchangedByFollowup": true
+        },
+        {
+          "path": "packages/legacy-agent-host/src/composition/teamHostReadiness.ts",
+          "gitBlob": "02e7f6b58b6c6ddf7f98590c49f972faf85c3a5d",
+          "sha256": "7da6b03c063d19c19dfd22ee08dd11684e81e8d0bc49486e608f949cb321e3c4",
+          "bytes": 275,
+          "lines": 6,
+          "unchangedByFollowup": true
+        },
+        {
+          "path": "src/features/agent-backend/main/infrastructure/CapturedLocalModelReadiness.ts",
+          "gitBlob": "e3c3d71939b220e329d41e149791d2b9ca30e87d",
+          "sha256": "436d8810befc71d7e75bb0fa692d530e24daf1a1cd9a423d071a3e6adef8ab0b",
+          "bytes": 41314,
+          "lines": 692,
+          "unchangedByFollowup": true
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts",
+          "gitBlob": "b42cee83d3526df26ce749e3b7b6c076b48a9257",
+          "sha256": "a9de6fd64ac4e335d24e2454242454a6214e764374dea3b4903b389830bad645",
+          "bytes": 25230,
+          "lines": 389,
+          "unchangedByFollowup": true
+        }
+      ]
+    },
+    "lintEvidenceAdoption": {
+      "executionBase": "9f63bec37c2596676bd1761e74a41b272b0ef956",
+      "adoptedParent": "f60dcc107c00c58c0a577f2661f9f0eaf80a596f",
+      "evidenceSha256": "e619b5b0662fa52c746c65025f278c2db34a2902cddeb6a4e3aff0c48b30cb09",
+      "unchangedInputs": [
+        {
+          "path": "eslint.fast.config.js",
+          "gitBlob": "417c9b2de448d3c03f971224887e49499c2f2c2d",
+          "sha256": "bf8a72be9244d217ad2e5687bfda735642592430924307bd9ba94666487f1335",
+          "unchanged9fTo4f": true
+        },
+        {
+          "path": "eslint.config.js",
+          "gitBlob": "72ebcd803dd7a3365285f3beb4a06f8fe428bf5e",
+          "sha256": "8c28e3af29eca6659bcef7988af3a3de75101f7960b194f101215172968697a0",
+          "unchanged9fTo4f": true
+        },
+        {
+          "path": "eslint.review-flow-boundaries.mts",
+          "gitBlob": "9b29411a63d3f6114dab09197d7a6b112ca6b5fb",
+          "sha256": "6c79ec2b184bd7f6959a72d38975d6c16495b6796878863859e726a64b1e8c3f",
+          "unchanged9fTo4f": true
+        },
+        {
+          "path": "eslint.feature-overrides.mts",
+          "gitBlob": "9c6450d54b87ce33f7d799f900226c316e367937",
+          "sha256": "a90a4b08c1d5f56021c50fe5f5ababa70c3de0732acec173624da51254dc883e",
+          "unchanged9fTo4f": true
+        },
+        {
+          "path": "eslint.gateway-boundaries.mts",
+          "gitBlob": "4975b20df1353a9687fd479ab043beb025e967ba",
+          "sha256": "0c68ab55ac206b45d8d01a75cd2877fbda9352955df1a687ff17b58cba3171e4",
+          "unchanged9fTo4f": true
+        },
+        {
+          "path": "package.json",
+          "gitBlob": "1d2d7e8913d17b97176b09ac580ec189da8fe710",
+          "sha256": "eef83d66950dc58d3482924f591815ffb76d6d536060e665e80e24fcf134839e",
+          "unchanged9fTo4f": true
+        },
+        {
+          "path": "src/features/review-flow/contracts/index.ts",
+          "gitBlob": "d78f5f6e20217b2fc8c59c43c2b858054fbde62b",
+          "sha256": "d990cccf509a2292ad7ffa69c27aee6b0439676ede4e06b5352263f960e9e420",
+          "unchanged9fTo4f": true
+        },
+        {
+          "path": "src/features/review-flow/contracts/api.ts",
+          "gitBlob": "b2cee674a2970325fdf8e5b7cb150bb3fd509e6a",
+          "sha256": "cdcdbe93a2a112fb22d418aff9f1bcb7a2cb8ca9e05af13f4f9a5368db0759dd",
+          "unchanged9fTo4f": true
+        },
+        {
+          "path": "src/features/review-flow/index.ts",
+          "gitBlob": "3bdf698a163f0df1e5c73dfd6f5d75ad7c79d831",
+          "sha256": "e180aa7f92e28d0da7ddca9013ee04787d4bacbc5183027089bcda46ce504bdd",
+          "unchanged9fTo4f": true
+        },
+        {
+          "path": "src/features/agent-backend/renderer/createHostReviewApi.ts",
+          "gitBlob": "d49b08ecfa8aff382847236bec52633c13e1253c",
+          "sha256": "b9f4cf304c94760aa25e4d2f7ab8a887cd64b92911f59abe628d899a65c79d39",
+          "unchanged9fTo4f": true
+        },
+        {
+          "path": "src/features/member-work-sync/main/infrastructure/memberWorkSyncPreparationDiagnostics.ts",
+          "gitBlob": "a2671abdb373d0e251adf939cb785f8698657de0",
+          "sha256": "a0e0422f4cd75d8cc145b0fff921177fd2fa47bb85fa18e31d34982b68a4312c",
+          "unchanged9fTo4f": true
+        }
+      ],
+      "preimagesAndPostimages": [
+        {
+          "path": "src/features/agent-backend/renderer/createHostReviewFlowApi.ts",
+          "mode": "100644",
+          "preimageGitBlob": "f7d138abec3e44b6ed2cc720e880da2612c0cc56",
+          "preimageSha256": "231ad4589a47dc582d00fab686627295cd72d937f7598f84cd58d93cb80a97eb",
+          "gitBlob": "e5044eb33cda7dda3be51415e6f94d6c265d03fa",
+          "sha256": "f0fe5d12f1e5cd0e8069e81e914b6b6a725cf783f346ddb61b0c71e6747e24a1",
+          "bytes": 5289,
+          "beforeLines": 116,
+          "lineCount": 116,
+          "frozenException": false
+        },
+        {
+          "path": "src/features/agent-backend/renderer/index.ts",
+          "mode": "100644",
+          "preimageGitBlob": "241e69441ad9c944c5b97d31b3cf0a664c5741c5",
+          "preimageSha256": "daf3ed19ed112e48fe0624211b7eb0a0b18ad0b0d5bb9d456537248386c633e3",
+          "gitBlob": "021024bb4890779c3565931391993e08cc577be6",
+          "sha256": "240827e8dcafe4cf846f134c962ae980b8cf788c8112ca5b68b4271951102a70",
+          "bytes": 1804,
+          "beforeLines": 42,
+          "lineCount": 42,
+          "frozenException": false
+        },
+        {
+          "path": "src/features/member-work-sync/main/composition/createMemberWorkSyncPersistence.ts",
+          "mode": "100644",
+          "preimageGitBlob": "24375e09c65253c0fc99b3b0b879b9f02ea88477",
+          "preimageSha256": "7eb7f824ee83d0ca2a5b27ab73ed16994667f556cab4b35af466f4fb776de5b6",
+          "gitBlob": "b346b22478aafd5f938fecedb15f835378c8305b",
+          "sha256": "0c0df1106d20727d8b5f3405097cebb711ad850319499fa1e69684720ce672d6",
+          "bytes": 7738,
+          "beforeLines": 186,
+          "lineCount": 186,
+          "frozenException": false
+        }
+      ],
+      "noNewLintExecution": true,
+      "dependencyLockUnchanged": false,
+      "dependencyQualification": "The provider archive pin and lock changed externally at f60; lint policies and source declarations are unchanged, but old runtime/lint outcomes are not renamed as new f60 executions."
+    },
+    "execution": {
+      "nodeVersion": "v24.22.3",
+      "tests": 0,
+      "typecheck": 0,
+      "lint": 0,
+      "build": 0,
+      "app": 0,
+      "native": 0,
+      "vendor": 0,
+      "CIEndpointCalls": 0,
+      "gitRefWrites": 0,
+      "repositorySourceEdits": 0
+    },
+    "qualification": "Read-only exactf60 plus four existing postimages reviewed as a map overlay. The repository pure source-size classifier/counter/evaluator ran once on complete pinned production records with changed blobs counted directly. This is not a candidate Git tree publication or a new runtime/compiled/native/UI result. Root owns later exact candidate-tree validation."
+  },
+  "sourceReviewPin": {
+    "sha256": "c3a3e6b29097142044d84ad635dc94c34e0dad66bbdf2b5545dfe26815c6bec9",
+    "bytes": 34928,
+    "scriptSha256": "83edae17b2049412e3e43c82b1a0c7fa476d69363bfc2043da091ea7ca04a959"
+  },
+  "providerArchiveReview": {
+    "schemaVersion": 1,
+    "kind": "independent-read-only-provider-archive-and-import-adoption",
+    "reviewer": "finite_restart_current",
+    "observedAt": "2026-11-18T21:14:09.791730+00:00",
+    "oldAppHead": "4f5ae2dcb10c83fb6b3a3862b8d5065e0c7843ab",
+    "newAppHead": "f60dcc107c00c58c0a577f2661f9f0eaf80a596f",
+    "verdict": "PASS_ADDITIVE_EXPORTS_UNCHANGED_DEFINITIONS_AND_HOST_BODIES",
+    "archives": {
+      "old": {
+        "path": "vendor/provider-migration/v2-media-aad5c2f8/agent-teams-provider-implementations-0.0.0.tgz",
+        "gitBlob": "f6ea4b51dcd580b2710ce75282c11ddec66f790a",
+        "sha256": "91a1c6f62ccd249868adfa0299ea03d828e50db1ca6821beb9d0a65e26cdc4ca",
+        "bytes": 190710,
+        "members": 255
+      },
+      "new": {
+        "path": "vendor/provider-migration/captured-config-b19494fd/agent-teams-provider-implementations-0.0.0.tgz",
+        "gitBlob": "34b07f65c71ba13ad0749cdc8a01c4932325d6f3",
+        "sha256": "ad05bd8c799c4d2c366a6eab72f937466355a5994eac6bd201ee754217cf5aa7",
+        "integrity": "sha512-HchjDstKjTtlCfY6lQSxxboowxBVd93rTQbuNNeia/0FY98Is8kXm+fI6tLdNPH0ToCawPxJWZBmI1wuaoSpXw==",
+        "bytes": 191145,
+        "members": 259
+      },
+      "addedMembers": [
+        "package/dist/captured-configuration.d.ts",
+        "package/dist/captured-configuration.js",
+        "package/dist/codex-mcp-catalog.d.ts",
+        "package/dist/codex-mcp-catalog.js"
+      ],
+      "removedMembers": [],
+      "changedExistingMembers": [
+        "package/package.json"
+      ],
+      "changedExistingModes": [],
+      "all252ExistingDistMembersByteIdentical": true,
+      "newDistMembers": 256,
+      "allOtherPackageFieldsAndExportsUnchanged": true,
+      "addedExports": {
+        "./captured-configuration": {
+          "types": "./dist/captured-configuration.d.ts",
+          "import": "./dist/captured-configuration.js"
+        },
+        "./codex-mcp-catalog": {
+          "types": "./dist/codex-mcp-catalog.d.ts",
+          "import": "./dist/codex-mcp-catalog.js"
+        }
+      },
+      "addedFileContents": {
+        "package/dist/captured-configuration.d.ts": "/** Existing capture validators for consumers that do not open provider sessions. */\nexport { captureClaudeExtraArgs, captureCodexExtraArgs, captureOpenCodeExtraArgs, } from './features/provider-session-implementation/adapters/provider-session-io/extra-argv.ts';\nexport { captureCodexConfiguredMcpCatalog } from './features/provider-session-implementation/adapters/codex-protocol/mcp-catalog.ts';\n",
+        "package/dist/captured-configuration.js": "/** Existing capture validators for consumers that do not open provider sessions. */\nexport { captureClaudeExtraArgs, captureCodexExtraArgs, captureOpenCodeExtraArgs, } from './features/provider-session-implementation/adapters/provider-session-io/extra-argv.js';\nexport { captureCodexConfiguredMcpCatalog } from './features/provider-session-implementation/adapters/codex-protocol/mcp-catalog.js';\n",
+        "package/dist/codex-mcp-catalog.d.ts": "/** Catalog IO retains the caller's original launch, authority and disposal ports. */\nexport { readCodexConfiguredMcpCatalog } from './features/provider-session-implementation/adapters/codex-protocol/mcp-catalog-probe.ts';\nexport type { CodexConfiguredMcpCatalog } from './features/provider-session-implementation/adapters/codex-protocol/mcp-catalog.ts';\n",
+        "package/dist/codex-mcp-catalog.js": "/** Catalog IO retains the caller's original launch, authority and disposal ports. */\nexport { readCodexConfiguredMcpCatalog } from './features/provider-session-implementation/adapters/codex-protocol/mcp-catalog-probe.js';\n"
+      },
+      "newCensusSha256": "5610fd1735dd0ef0324405b0c01b90843b75a140f6ac9ac3c25e99df509a6a53",
+      "memberCensus": [
+        {
+          "path": "package/LICENSE",
+          "mode": 420,
+          "bytes": 11357,
+          "sha256": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/README.md",
+          "mode": 420,
+          "bytes": 1168,
+          "sha256": "8c3404eedacc82e94aa0498ebf4cc427b931da526a0efba8f65d922a01a718a5",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/captured-configuration.d.ts",
+          "mode": 420,
+          "bytes": 397,
+          "sha256": "31878caa7fb90e1cd917c7689ef03ac706041f2e162640ad4a7898a4a2b2c003",
+          "status": "added"
+        },
+        {
+          "path": "package/dist/captured-configuration.js",
+          "mode": 420,
+          "bytes": 397,
+          "sha256": "08bcea93779ed40064b44bec2b1c06e50ba4ba131a752a6b7ba8505b7bf4f48e",
+          "status": "added"
+        },
+        {
+          "path": "package/dist/claude.d.ts",
+          "mode": 420,
+          "bytes": 1391,
+          "sha256": "d6b7b163fda17f744bb1a476ed7c64836e4caca04260bbd5a29b665e29735f22",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/claude.js",
+          "mode": 420,
+          "bytes": 473,
+          "sha256": "051dd54c08fe710e2ec217538eee87c91adf1e4a2431e89842210000f41abb6a",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/codex-mcp-catalog.d.ts",
+          "mode": 420,
+          "bytes": 355,
+          "sha256": "250de906dc3ba8553eff6054ae240c239ed4836569e0665a02cd05bc5268c659",
+          "status": "added"
+        },
+        {
+          "path": "package/dist/codex-mcp-catalog.js",
+          "mode": 420,
+          "bytes": 223,
+          "sha256": "da83e186185d8576d176129ed5760b4f855d369def4e2141852c5c649a7de493",
+          "status": "added"
+        },
+        {
+          "path": "package/dist/codex.d.ts",
+          "mode": 420,
+          "bytes": 3532,
+          "sha256": "a62f45eea9fb0088722b6ae63edff5ba2f3626a75d3b270e880d4e4cf0c12362",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/codex.js",
+          "mode": 420,
+          "bytes": 1265,
+          "sha256": "6d84de0e4e4645834aeb036f6e9b4cd15ed908ce7726dd6e8b4bb313df96da65",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/composition.d.ts",
+          "mode": 420,
+          "bytes": 345,
+          "sha256": "9d51402d45c213e4a8421640f930963d09aedd842892d51a7b9e1f0503cb5733",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/composition.js",
+          "mode": 420,
+          "bytes": 188,
+          "sha256": "57fad57b8282b0e014002c80f70d8056c941a0ca06969584accf493075e10a28",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/native-prompt-suggestions/adapters/claude-sdk.d.ts",
+          "mode": 420,
+          "bytes": 372,
+          "sha256": "798fc87bc61519fc5428a8cf263d6045f2cec6085890d118d62ac663f27b15cf",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/native-prompt-suggestions/adapters/claude-sdk.js",
+          "mode": 420,
+          "bytes": 610,
+          "sha256": "9bf0d5d04b87e2e9c904c2921551c0059343ea707d152c4a270dcf382e0f72af",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/native-prompt-suggestions/adapters/codex-sample.d.ts",
+          "mode": 420,
+          "bytes": 889,
+          "sha256": "ac969d3a15e8ad7cc2709dff3ceaf7c7706dba43d93297659371f6d2821118aa",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/native-prompt-suggestions/adapters/codex-sample.js",
+          "mode": 420,
+          "bytes": 1302,
+          "sha256": "121a0c892c1e7b76e363f26ae042a09c9035da7adec0809ac4f26130153752a8",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/native-prompt-suggestions/contracts.d.ts",
+          "mode": 420,
+          "bytes": 944,
+          "sha256": "f06593a3d859af127567e011a3f93dfe187744eece768e39f31c7d139fe12cef",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/native-prompt-suggestions/contracts.js",
+          "mode": 420,
+          "bytes": 11,
+          "sha256": "8e609bb71c20b858c77f0e9f90bb1319db8477b13f9f965f1a1e18524bf50881",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/native-prompt-suggestions/core/policy.d.ts",
+          "mode": 420,
+          "bytes": 1003,
+          "sha256": "610384470297dbabe012f73c7a43d6e394975884db8f8a7066998ba3152f6b65",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/native-prompt-suggestions/core/policy.js",
+          "mode": 420,
+          "bytes": 1727,
+          "sha256": "fabee6d29e46a7333b9a9c91d228e2138cec06341dfa7addae229208c3c8d150",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/native-prompt-suggestions/index.d.ts",
+          "mode": 420,
+          "bytes": 514,
+          "sha256": "1a1b6ede4ca82f4351a3794fcbd272565d2645441b57002c90fd6c3053316cba",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/native-prompt-suggestions/index.js",
+          "mode": 420,
+          "bytes": 381,
+          "sha256": "ae3c9d901b16743a1770c5b5d49f226f199610762af437b2aafce2ab015ff341",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/claude-sdk/capture.d.ts",
+          "mode": 420,
+          "bytes": 4635,
+          "sha256": "35d2f9448e3b612a18e9afe08086d7fb806af651bdd0aea340a1a072186e810b",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/claude-sdk/capture.js",
+          "mode": 420,
+          "bytes": 28084,
+          "sha256": "d8341e183e75388d5bc47e1914f41273d213bd0f94f9ee7339fae82c95ca61cb",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/claude-sdk/commands.d.ts",
+          "mode": 420,
+          "bytes": 1940,
+          "sha256": "c66795b3e2c2044f0b45e9f0c65bff1e49b912667ff500f0eac337ce5eaed918",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/claude-sdk/commands.js",
+          "mode": 420,
+          "bytes": 5395,
+          "sha256": "9db2db8af5c372c42a8f4b1684c8abca3efa1281eb338111f52b47c967f6da57",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/claude-sdk/config.d.ts",
+          "mode": 420,
+          "bytes": 4341,
+          "sha256": "61db99a45f15c13e8b79eca23f1fb0db4922dee75f8efbf8175b916eb83da035",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/claude-sdk/config.js",
+          "mode": 420,
+          "bytes": 10245,
+          "sha256": "b8c08abf2fae5349aee07b04f93bc60fbb0c3742ee725822198fba2abbbcd3e7",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/claude-sdk/factory.d.ts",
+          "mode": 420,
+          "bytes": 1224,
+          "sha256": "05208a31a45d8b823217f0d8981296c19a18a28472aa78550f9917f4b501eb96",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/claude-sdk/factory.js",
+          "mode": 420,
+          "bytes": 2433,
+          "sha256": "3536d93e6875096195dfd03dce11e156a8009ff5bdaf75c2498b9f4f2d89f390",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/claude-sdk/interactions.d.ts",
+          "mode": 420,
+          "bytes": 602,
+          "sha256": "0eea93a5fd74a4b0da8c5add40992a8994825451567e6a7ab99d69d69176d2f3",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/claude-sdk/interactions.js",
+          "mode": 420,
+          "bytes": 4467,
+          "sha256": "e37b1a35a3212e89e42c1a59ec6fe45edfecc9345ac86a6c9734e8b3e1aa1b48",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/claude-sdk/metadata.d.ts",
+          "mode": 420,
+          "bytes": 2024,
+          "sha256": "e639d1f743398de38e75a26d0a183500b93f7f8660e809f83372faff003b458a",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/claude-sdk/metadata.js",
+          "mode": 420,
+          "bytes": 5056,
+          "sha256": "e2d385711e29639271b961c993b68431152e4f14733c99d46b37dfe502796f68",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/claude-sdk/model-probe.d.ts",
+          "mode": 420,
+          "bytes": 944,
+          "sha256": "2b0c9d421900849a64908f0f5000d3f136fffbdd07353147eacfc62b1d52f563",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/claude-sdk/model-probe.js",
+          "mode": 420,
+          "bytes": 9388,
+          "sha256": "5dab5e13899144ec2c52817f368a0b1da795014caed086154267c6be3b654952",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/claude-sdk/native-management-config.d.ts",
+          "mode": 420,
+          "bytes": 1613,
+          "sha256": "7cfe2380a6ca8d89e52e07caa66cada770e8bebdf7a9156a239bb9bf1ffbb355",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/claude-sdk/native-management-config.js",
+          "mode": 420,
+          "bytes": 1235,
+          "sha256": "d2543cfb273fc4352fd9ba677cc83d5f0fbd74f2e2ee15161d6c77bd7aea2c62",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/claude-sdk/normalize.d.ts",
+          "mode": 420,
+          "bytes": 772,
+          "sha256": "14e82c5bf7fbcc428e07922eae56ea983985eb8b8581a53ae4f9adabe6fcf590",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/claude-sdk/normalize.js",
+          "mode": 420,
+          "bytes": 6441,
+          "sha256": "2ce47fffe1ab96d25211c77e14d59466ab180fc59f96eb6a92974fc9f05df814",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/claude-sdk/open-session.d.ts",
+          "mode": 420,
+          "bytes": 1186,
+          "sha256": "5d4664f2537093b81b0abc81e8693bafcefb002b7a4ae86f64298bef69646ccb",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/claude-sdk/open-session.js",
+          "mode": 420,
+          "bytes": 3392,
+          "sha256": "427307e3178f1025347c5b632e4beb99de8837edc20d29fd20799ce19d0e109b",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/claude-sdk/primitives.d.ts",
+          "mode": 420,
+          "bytes": 144,
+          "sha256": "9e2685ec48ec5b63df205452da0af318e50d2e4862a4a98e1ddc674983bcb81f",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/claude-sdk/primitives.js",
+          "mode": 420,
+          "bytes": 53,
+          "sha256": "fc388c5441e94093dbddc9aac2a9f25d00900e734d2dc0052c6e973fca86475d",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/claude-sdk/session.d.ts",
+          "mode": 420,
+          "bytes": 3034,
+          "sha256": "18cbfd127816d2c54dc7d921eacc2dc3781981c8223b2b4936aff6b6a9728252",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/claude-sdk/session.js",
+          "mode": 420,
+          "bytes": 37818,
+          "sha256": "ce8ab463d180cc319e91c344b716c705fa1be1420b5782c0d1211d199e00bd94",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/claude-sdk/subagents.d.ts",
+          "mode": 420,
+          "bytes": 3350,
+          "sha256": "45b0798bfdebdf36d9dbe4d632237421966f8ad1dad70a6a9c91d9037457c1c7",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/claude-sdk/subagents.js",
+          "mode": 420,
+          "bytes": 15975,
+          "sha256": "1340dc4c757c4683ffa8cc22f1df75d4bc9a841487b42b1a2e701ba5a02d1825",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/claude-sdk/tool-binding.d.ts",
+          "mode": 420,
+          "bytes": 993,
+          "sha256": "76a49eeff85e436faa903bce019048e54607ca47d01875154b9a52ca1920a30d",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/claude-sdk/tool-binding.js",
+          "mode": 420,
+          "bytes": 3042,
+          "sha256": "a82ee88763d9c033d007d7c957d04c495ed4b3192c74c3d3aa06bb39deee5d91",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/codex-protocol/account-login.d.ts",
+          "mode": 420,
+          "bytes": 1334,
+          "sha256": "c7bb0689505643125f91db123ac79f738fafab95468eec377a1113e0a368165f",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/codex-protocol/account-login.js",
+          "mode": 420,
+          "bytes": 2325,
+          "sha256": "d5557f12fbb90566a75accedb46fc1fa8a70fdf36671971fc8295f79b303b11e",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/codex-protocol/app-server.d.ts",
+          "mode": 420,
+          "bytes": 5972,
+          "sha256": "3e0c355aa1e45a900fd6bbbe1dc7546c549980486cd255415049afac593cbe73",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/codex-protocol/app-server.js",
+          "mode": 420,
+          "bytes": 16387,
+          "sha256": "834333a5f573e8e03a28faadf0f6f67e01df5fa7cd53c6d60b67214b38bdfe1d",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/codex-protocol/approval-request.d.ts",
+          "mode": 420,
+          "bytes": 395,
+          "sha256": "fdbb32a1d1ac02f18f850da4583f3ccc0775251215ebc5e798ac49b7c8b9352e",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/codex-protocol/approval-request.js",
+          "mode": 420,
+          "bytes": 7473,
+          "sha256": "dafe31dbad1f82d68ed9c73c6d441b015e8ae5fac6ab1e10c6e9a6cdcadd9d9e",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/codex-protocol/approval-response.d.ts",
+          "mode": 420,
+          "bytes": 1199,
+          "sha256": "5e3739383403ec0b8115c620acc3e7d0cc59758bbeba04ded0c8cc902b89ea1a",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/codex-protocol/approval-response.js",
+          "mode": 420,
+          "bytes": 2032,
+          "sha256": "206ae9a1f85c7e25c3c118d10b6612d9977dc4e8f8838b3461c4912cb5578a92",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/codex-protocol/connection-notifications.d.ts",
+          "mode": 420,
+          "bytes": 878,
+          "sha256": "f250728f37290684bbdfd292d8e92c368dd87c97f6b2eb01c515321fc3d0157a",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/codex-protocol/connection-notifications.js",
+          "mode": 420,
+          "bytes": 2698,
+          "sha256": "e213e68307001675388f2d5c990efff22ba3cccd29a5b86e8bef4035b05b97fc",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/codex-protocol/driver-config.d.ts",
+          "mode": 420,
+          "bytes": 3018,
+          "sha256": "dc0266e4bd912875cf61ff1ac5c532b3533075d50a7e0ab41760b21617a5fcc2",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/codex-protocol/driver-config.js",
+          "mode": 420,
+          "bytes": 10069,
+          "sha256": "75912d243cf293162dcd2edf66102a68d4da03f02082f7a51f94dc0fc02944c8",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/codex-protocol/driver-factory.d.ts",
+          "mode": 420,
+          "bytes": 615,
+          "sha256": "ab798f1bd786d6b33bc09d0c6aa0d6b4bd487714cee4e62f54a416231a351926",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/codex-protocol/driver-factory.js",
+          "mode": 420,
+          "bytes": 3144,
+          "sha256": "708f3427816e4ba07fcf7d5bcb9f5b6d42fb0c419074fb448b9e19bb51d9d6a2",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/codex-protocol/driver-interactions.d.ts",
+          "mode": 420,
+          "bytes": 806,
+          "sha256": "57e832eb7b2720992fbffd2b36adff57778a2c5da21cda44979f62afe7033859",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/codex-protocol/driver-interactions.js",
+          "mode": 420,
+          "bytes": 4515,
+          "sha256": "9ed5171c8171fdfa6e21009398af51ab746c56b05794ea00db496b15dede6332",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/codex-protocol/driver-output.d.ts",
+          "mode": 420,
+          "bytes": 342,
+          "sha256": "75a9ecd55505da199463354fd5925cfa284359e26710ea64f8578fc0b6ccf0e5",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/codex-protocol/driver-output.js",
+          "mode": 420,
+          "bytes": 1373,
+          "sha256": "e324f9b3b936977c5bc711d8cc2efe6248af00b67639c56a0bea61def85fcad3",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/codex-protocol/driver-session.d.ts",
+          "mode": 420,
+          "bytes": 1940,
+          "sha256": "39e829d97ebd56613c39324cdcc02e936e418cf83f2133adcf9296d0baa0b782",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/codex-protocol/driver-session.js",
+          "mode": 420,
+          "bytes": 21029,
+          "sha256": "720e7a0c93d06c5694750ddf759bc3cf1d09f2df23079de96cf166461e4d68bc",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/codex-protocol/exec-jsonl.d.ts",
+          "mode": 420,
+          "bytes": 426,
+          "sha256": "c06b4bfc1f874663ff69329c2d17c58caf32e8d3e445cf3b2cbdfc52f83d9928",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/codex-protocol/exec-jsonl.js",
+          "mode": 420,
+          "bytes": 15795,
+          "sha256": "2461b176f69309f662c8a61338f98a55833402d86a98555f73ca3c3a84faf360",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/codex-protocol/input-window-capture.d.ts",
+          "mode": 420,
+          "bytes": 2557,
+          "sha256": "569a5a1ee2ff2d9ec038c2960f0a13fa7ef90414bcd348d53ddd1fa5cf3d33f4",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/codex-protocol/input-window-capture.js",
+          "mode": 420,
+          "bytes": 7608,
+          "sha256": "2ad19494ac921d09a13f5e12d985aeb70506bbbf366e4d41c1cc96ff447d707e",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/codex-protocol/mcp-catalog-probe.d.ts",
+          "mode": 420,
+          "bytes": 1154,
+          "sha256": "c5e12daa2255df9104ebe802a602d024c4cfa20dbe80263416af43855561b839",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/codex-protocol/mcp-catalog-probe.js",
+          "mode": 420,
+          "bytes": 4361,
+          "sha256": "8443a7935d15e7507c894e229a300bf5bfb6b4f01fd002fdb101343bb0612eb4",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/codex-protocol/mcp-catalog.d.ts",
+          "mode": 420,
+          "bytes": 858,
+          "sha256": "d71ebc2aafd560c90bd915ad309a03a3f88d76d6a8f1e955a95a0209a3bdf4a2",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/codex-protocol/mcp-catalog.js",
+          "mode": 420,
+          "bytes": 4870,
+          "sha256": "2997cd8af95c16e07010bf20839e8337a1e7d401571d35555dd6283102fe356e",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/codex-protocol/mcp-policy.d.ts",
+          "mode": 420,
+          "bytes": 2101,
+          "sha256": "0059efd658851f892ee9a5144715cbcf3e54a03fc5b5691955f2907c7ca3342e",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/codex-protocol/mcp-policy.js",
+          "mode": 420,
+          "bytes": 4951,
+          "sha256": "2c47d11da65b7a5603a99a474bf0f96e283bcdd6f0c7e65a76b79db371d8a264",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/codex-protocol/mcp-status.d.ts",
+          "mode": 420,
+          "bytes": 1866,
+          "sha256": "1bbbf92c8fe1f7693945785393d4b502b1d6ca4d39af9b8f4b0c1b7bfaf919f9",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/codex-protocol/mcp-status.js",
+          "mode": 420,
+          "bytes": 8102,
+          "sha256": "db63509d2f5fbeb4e26e0bd600cbcd0b7c8e70ff926e0b8cb8fafa9f1af0c8e9",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/codex-protocol/metadata.d.ts",
+          "mode": 420,
+          "bytes": 2107,
+          "sha256": "845e9470131a791ac2c4ce4099ab32afb5ac03a252a4393f51d930b442e49504",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/codex-protocol/metadata.js",
+          "mode": 420,
+          "bytes": 4954,
+          "sha256": "183e7b8e46300b9cd1aed157d64137730de7aa1f1b7ed020ad12d95fcda098e9",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/codex-protocol/model-options.d.ts",
+          "mode": 420,
+          "bytes": 412,
+          "sha256": "b709a5fcfd3f9a383cd22c29e5ca7b1548c5c0f9914163c8ddf5bc615e0b3af5",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/codex-protocol/model-options.js",
+          "mode": 420,
+          "bytes": 1001,
+          "sha256": "90ba2bac87fa4e991c3ee04b3d06610ee2325f53415ade6298c9d703e302786e",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/codex-protocol/model-probe-config.d.ts",
+          "mode": 420,
+          "bytes": 939,
+          "sha256": "f6c557eb3316de1418af909ba712ad78f7bd13746fcb7127f70a9fed767cd611",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/codex-protocol/model-probe-config.js",
+          "mode": 420,
+          "bytes": 1762,
+          "sha256": "6e83f4ea69e4eae79d36f22ee064c186b62834dd1603237613ff89af0537b36e",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/codex-protocol/model-probe.d.ts",
+          "mode": 420,
+          "bytes": 301,
+          "sha256": "12e735d3ebff0ffea284735df41b3071757028b7fc3937921b12502fcba96931",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/codex-protocol/model-probe.js",
+          "mode": 420,
+          "bytes": 12966,
+          "sha256": "ea460de2348dea659081265796c570f8f1d036bd56da2c0d84ee01b9621c5fe2",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/codex-protocol/notification-items.d.ts",
+          "mode": 420,
+          "bytes": 321,
+          "sha256": "4450f3fea3364c0a65d5bf6800f1fe691af986798d6808e7b8ef13ae801d74a6",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/codex-protocol/notification-items.js",
+          "mode": 420,
+          "bytes": 4498,
+          "sha256": "2d034281c3c0e444ad114905c3eb75649a2e642aff7f0e3b42cd03780032c69f",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/codex-protocol/notification-mapper.d.ts",
+          "mode": 420,
+          "bytes": 1080,
+          "sha256": "d2ca062b7aa9591799d4b43d0a55aef233699037ca6fb6eb0467c5145c9a8ee6",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/codex-protocol/notification-mapper.js",
+          "mode": 420,
+          "bytes": 6507,
+          "sha256": "b8a0a6c6d7944cc97fcff3f45cec59053f1279763ba9ddcde565da81dc6cd91c",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/codex-protocol/rate-limits.d.ts",
+          "mode": 420,
+          "bytes": 767,
+          "sha256": "68cd8d8e19600b91f977a1c8ed622396453d38f4d0203f321f1bb720755bb93d",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/codex-protocol/rate-limits.js",
+          "mode": 420,
+          "bytes": 1904,
+          "sha256": "77a488b3adafc414a8e0453e92f13c478c0a3b24845921561b231f979e4d76dd",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/codex-protocol/rpc-client.d.ts",
+          "mode": 420,
+          "bytes": 1188,
+          "sha256": "9867853461f77842c70b052512baf80b277f78037624518ae5daa1b0b2704d77",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/codex-protocol/rpc-client.js",
+          "mode": 420,
+          "bytes": 9006,
+          "sha256": "34b4ac1c25271b9f5f4a6a165108b57134df46347be9574443bd7f5aabcdf264",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/codex-protocol/rpc-types.d.ts",
+          "mode": 420,
+          "bytes": 1785,
+          "sha256": "8960d392ae89695e18e42ccb6a47c603efd337a6d9ba5dcda1a8a4bc8232c753",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/codex-protocol/rpc-types.js",
+          "mode": 420,
+          "bytes": 855,
+          "sha256": "cca6b6ff55cf3e219fd4c08a0966ebb516ccf761d0ca6c04248d17314ce8cb77",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/codex-protocol/session-types.d.ts",
+          "mode": 420,
+          "bytes": 1932,
+          "sha256": "05805188422543c9c39cccbd9b8005a101939e14ba79c02cdda0c4c9f686faa2",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/codex-protocol/session-types.js",
+          "mode": 420,
+          "bytes": 850,
+          "sha256": "8858cbbb8bdb83eca9db24c89024aac666fbab18139d72c9369c128371e88a8b",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/codex-protocol/thread-session.d.ts",
+          "mode": 420,
+          "bytes": 1650,
+          "sha256": "d03f46352f5f8edf50b61d8c1a57bed2895b9499af13df09beb39806fc2e4b60",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/codex-protocol/thread-session.js",
+          "mode": 420,
+          "bytes": 11167,
+          "sha256": "adee075b39c242b5a617f22fc67e4a3bd39115a740690917817109de8cafe776",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/codex-protocol/user-questions.d.ts",
+          "mode": 420,
+          "bytes": 1136,
+          "sha256": "a636eed6a9113fcc7ca6d29a05cbab22394b01bfb89e6a4d0edaa93cf1cd9e49",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/codex-protocol/user-questions.js",
+          "mode": 420,
+          "bytes": 7624,
+          "sha256": "5b2b07db2fec7a89041ef9337adae66ccc38039e6c693f193eae9bb96dfbabab",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/codex-protocol/wire-frames.d.ts",
+          "mode": 420,
+          "bytes": 732,
+          "sha256": "ec179b29fd288c394b90096118cef3d610396f53b951187d074f279536596796",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/codex-protocol/wire-frames.js",
+          "mode": 420,
+          "bytes": 3432,
+          "sha256": "3381cd9e28b7249a1d166dd7361f281c8dc3cc461958eeb94aca3fa759634f59",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/OpenCodeBoundedHttpResponse.d.ts",
+          "mode": 420,
+          "bytes": 355,
+          "sha256": "8d3eda2fed0ef5aaa164e2f31cfc5f6a7035b49633fc24003707b5c11f8a7e55",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/OpenCodeBoundedHttpResponse.js",
+          "mode": 420,
+          "bytes": 4842,
+          "sha256": "7bc2e8933f06f469afddd29e8bdb1991844374ccb358172a5c72dbca3a2fc368",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/OpenCodeClientFactory.d.ts",
+          "mode": 420,
+          "bytes": 705,
+          "sha256": "5f7d63e1acbe01a24e46b4fb537060e69c80faf726402ef223788cfaa9457c2a",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/OpenCodeClientFactory.js",
+          "mode": 420,
+          "bytes": 1023,
+          "sha256": "5ef6c6d4f192e2abc12676244f5bda5c5715645e734f24acfdcbf2d964d0cfbd",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/OpenCodeClientRequestContext.d.ts",
+          "mode": 420,
+          "bytes": 234,
+          "sha256": "e25a83fc12057b1ea81a52d170db59227f7c2a22172543ca4a846a58446a62af",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/OpenCodeClientRequestContext.js",
+          "mode": 420,
+          "bytes": 11,
+          "sha256": "8e609bb71c20b858c77f0e9f90bb1319db8477b13f9f965f1a1e18524bf50881",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/OpenCodeMessageIds.d.ts",
+          "mode": 420,
+          "bytes": 632,
+          "sha256": "5317e9df15090465fabec2816019c1ef7a97f8cc36995591fbc3f6b5a99ebb7d",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/OpenCodeMessageIds.js",
+          "mode": 420,
+          "bytes": 3507,
+          "sha256": "a12bc7ecb17cba1d4dbac1af16cebecd30ff1c1ee6239de30b6eed76b0bfb356",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/OpenCodeSseEventStream.d.ts",
+          "mode": 420,
+          "bytes": 1553,
+          "sha256": "dd30a53b3d53217f0e83b1a201b71cab5007834015fa2636dcb9a167c29c5637",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/OpenCodeSseEventStream.js",
+          "mode": 420,
+          "bytes": 7367,
+          "sha256": "0d9db39ce9f4280813fa2e3ad19ae0653996b4be61ae9a357417571282298407",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/bound-session.d.ts",
+          "mode": 420,
+          "bytes": 762,
+          "sha256": "9516c6f43ea617797e27b26bd6ff30015f1e31893bde1087d2d393f61731710f",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/bound-session.js",
+          "mode": 420,
+          "bytes": 2897,
+          "sha256": "1b873dcfdf5cad8db93fa18aca2bf115758cee5831fa6bfeb1206078dd790393",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/canonical-message-types.d.ts",
+          "mode": 420,
+          "bytes": 2220,
+          "sha256": "11743a9305965d89ca97ec4905497fb4329e419b66288594f1cd9c960f6d06d5",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/canonical-message-types.js",
+          "mode": 420,
+          "bytes": 11,
+          "sha256": "8e609bb71c20b858c77f0e9f90bb1319db8477b13f9f965f1a1e18524bf50881",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/catalog-operations.d.ts",
+          "mode": 420,
+          "bytes": 450,
+          "sha256": "6c0d24db9490a887c19429496b05ea8731b0c187a9308ab48230db99e08718a7",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/catalog-operations.js",
+          "mode": 420,
+          "bytes": 1977,
+          "sha256": "014ade27d0fd1a6b26d9a5372e3333b7d635e8b42a70541af242a4da2fbada7d",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/client-types.d.ts",
+          "mode": 420,
+          "bytes": 3487,
+          "sha256": "b40a5dc2e6a8422f9a386d1a81aeb7e12856c990b06154af9771128982255546",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/client-types.js",
+          "mode": 420,
+          "bytes": 11,
+          "sha256": "8e609bb71c20b858c77f0e9f90bb1319db8477b13f9f965f1a1e18524bf50881",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/driver-protocol.d.ts",
+          "mode": 420,
+          "bytes": 1723,
+          "sha256": "21d9072d29fea8cc880cf4a646e08e100e6ac4901262b7d67871d8ea1fc5afb6",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/driver-protocol.js",
+          "mode": 420,
+          "bytes": 11,
+          "sha256": "8e609bb71c20b858c77f0e9f90bb1319db8477b13f9f965f1a1e18524bf50881",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/driver-session.d.ts",
+          "mode": 420,
+          "bytes": 1923,
+          "sha256": "53fa37d5268022d4806df794117f45facf440e5b54aa6055d6e2785de32a5dcc",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/driver-session.js",
+          "mode": 420,
+          "bytes": 18264,
+          "sha256": "c262a80688541760dfdc95e015f9e4c9576fdb2d389bd9607f0a5770e97a8e67",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/http-request.d.ts",
+          "mode": 420,
+          "bytes": 527,
+          "sha256": "7bb6526aee6aadec09b8376531bb3431866c098abc0cf01f3c74a504c18984b3",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/http-request.js",
+          "mode": 420,
+          "bytes": 4211,
+          "sha256": "f28c52f69def572b4ecb1ede2b16592f4b6887406476df56da8e389c3ce51d4e",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/input-window-capture.d.ts",
+          "mode": 420,
+          "bytes": 2909,
+          "sha256": "1d2574fed7e71f9d0f0d99a7574f2861e230deb9f44bb8b9dc74551b4c699049",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/input-window-capture.js",
+          "mode": 420,
+          "bytes": 6381,
+          "sha256": "22f5b230d4c806b82c5b8ef5b6635edc256d00b46eb79160dc560d1aab62b56a",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/query-path.d.ts",
+          "mode": 420,
+          "bytes": 112,
+          "sha256": "1d00dd6a80433eb412854eb0e4b42731c5494b7eb657ec580d872d9dd245be32",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/query-path.js",
+          "mode": 420,
+          "bytes": 378,
+          "sha256": "f4a054e3c7564dd0bf28af633b87e65551693afbc2cccc105f35e5db5ddf64fb",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/request-limits.d.ts",
+          "mode": 420,
+          "bytes": 433,
+          "sha256": "4c1f92477fe66da280accf22ff21a5d293e383788acea3a3c14c700ffef367a0",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/request-limits.js",
+          "mode": 420,
+          "bytes": 756,
+          "sha256": "af51114056b8a6125523a95661628a853e065287993c6d63bd8952a8c9cb14d6",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/session-binding-codec.d.ts",
+          "mode": 420,
+          "bytes": 832,
+          "sha256": "132de4ab613c6b332c421ba0b76921ed90af0ce5bea893e019abcc9d10f7fcc7",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/session-binding-codec.js",
+          "mode": 420,
+          "bytes": 3272,
+          "sha256": "ff91c31b9ac03a843b6631b5bf682cc9528241841a3f76319a738ea1f8310c38",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/session-binding-types.d.ts",
+          "mode": 420,
+          "bytes": 1112,
+          "sha256": "8ec86ac1ce41c27f5a78dbbc88112786c7c36df5a49fe2ccc3a5c145d70e5af0",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/session-binding-types.js",
+          "mode": 420,
+          "bytes": 11,
+          "sha256": "8e609bb71c20b858c77f0e9f90bb1319db8477b13f9f965f1a1e18524bf50881",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/session-bindings.d.ts",
+          "mode": 420,
+          "bytes": 539,
+          "sha256": "42adaf6f8b819ea196554cec362d8acc0a80bc368e7b6fb507e938d7245a3ef2",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/session-bindings.js",
+          "mode": 420,
+          "bytes": 3587,
+          "sha256": "a0cc99fb675ffcf8e860341628ef215f171a545591421ae8331020f6b95977f3",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/session-operations.d.ts",
+          "mode": 420,
+          "bytes": 593,
+          "sha256": "35666891e3e9805cbf8fa628a96fe6db76d50fa1b33645af56061f0eb312e5b2",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/session-operations.js",
+          "mode": 420,
+          "bytes": 4374,
+          "sha256": "5dd57b3444a223417082567656b2345c5a1f49f5481e120670b9b66172dee523",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/terminal-proof.d.ts",
+          "mode": 420,
+          "bytes": 2130,
+          "sha256": "7c41ab23fce0fe4fe71160aa0df4a43ba4a18868021d92173e22720b27f3cad0",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/terminal-proof.js",
+          "mode": 420,
+          "bytes": 6527,
+          "sha256": "a1a7bcd30946cbc27250d4f320c852c4106dd77e10589237b0b89f8ca4a5653b",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/types.d.ts",
+          "mode": 420,
+          "bytes": 3925,
+          "sha256": "420cbd3b7637d27a749f6345f5045c03f6ca474460c1b7f3327678d98dd9bbd6",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/types.js",
+          "mode": 420,
+          "bytes": 11,
+          "sha256": "8e609bb71c20b858c77f0e9f90bb1319db8477b13f9f965f1a1e18524bf50881",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v1-driver-backend.d.ts",
+          "mode": 420,
+          "bytes": 245,
+          "sha256": "076b478891bb7a7d6fd93481cd467cd096081c974f6193f8e4fcdc98889d017d",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v1-driver-backend.js",
+          "mode": 420,
+          "bytes": 5945,
+          "sha256": "c1421536d4a825cd70b16f571ef10a9319afc651f283c1cbdfc155ebdd5582cd",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v1-driver-config.d.ts",
+          "mode": 420,
+          "bytes": 1327,
+          "sha256": "a7066748096ba01e9aa895179eef4f6df23a972bddb3c7afb1fc28ba2f055cd7",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v1-driver-config.js",
+          "mode": 420,
+          "bytes": 2622,
+          "sha256": "3d1fcf5b158d071ec4e191833c6c9885b6aa9f16e53de6358857823c78b63671",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v1-driver-cut.d.ts",
+          "mode": 420,
+          "bytes": 871,
+          "sha256": "518b4629d9a333bbd3d52d857e07aff368d5cc45cbe62c8a7e7340d83344f57f",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v1-driver-cut.js",
+          "mode": 420,
+          "bytes": 8244,
+          "sha256": "cc35b52ddac285274a006c3f774d1bdf790b7889246d9d6af08a5bf7933a500b",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v1-driver-factory.d.ts",
+          "mode": 420,
+          "bytes": 802,
+          "sha256": "b99d0fe24db5c5d77692cb9cdb217d2ef9955a3e05d0cf93782d18e755099549",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v1-driver-factory.js",
+          "mode": 420,
+          "bytes": 3545,
+          "sha256": "abfb59476452808383a4a40658fb655d02459f5006ef284d59c20adcd24b41e1",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v1-driver-output.d.ts",
+          "mode": 420,
+          "bytes": 363,
+          "sha256": "498433eaee5077ad243235e96d70f3883ed0fc2a11528370e3ce72df84b8606b",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v1-driver-output.js",
+          "mode": 420,
+          "bytes": 1892,
+          "sha256": "03a4e48d50e9c5e8b061686cbc1cd27af5b74bfcec3a1dec627aedaec2c5cf89",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v1-driver-wire.d.ts",
+          "mode": 420,
+          "bytes": 547,
+          "sha256": "87ed5cb611a8449e0589c6b8374359765ec58f367ce3098d89e35544f599fe8e",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v1-driver-wire.js",
+          "mode": 420,
+          "bytes": 6652,
+          "sha256": "a7e2b507cd10c9b8030741dd56c9995446008c2a8afbc5e178ebbf6c9f58e79f",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v1-native-read.d.ts",
+          "mode": 420,
+          "bytes": 403,
+          "sha256": "1411e8f420691c68c69d119c218bae05fd28605677bc4a9ae13dd7b9994f9efe",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v1-native-read.js",
+          "mode": 420,
+          "bytes": 2779,
+          "sha256": "88958c8367f29a6d61ed92f395c61b34b9b0bc542c6f831ca17eaf1edb1702d8",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v1-permission-normalizer.d.ts",
+          "mode": 420,
+          "bytes": 535,
+          "sha256": "e65f3757edd14a88e916f5500dd69a0490f7d7318df49562ec44dc00f6b41a7b",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v1-permission-normalizer.js",
+          "mode": 420,
+          "bytes": 1914,
+          "sha256": "64efa765e4baf7ff4ad99dbde57e8b2beebb022d543fb9abb122ecdc4cebabe0",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v1-transcript-projector.d.ts",
+          "mode": 420,
+          "bytes": 594,
+          "sha256": "7244253952a99d1c9e68f3c7ef4a64f298b2c06a9b787aa1f8c228e280d16c37",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v1-transcript-projector.js",
+          "mode": 420,
+          "bytes": 8635,
+          "sha256": "d516f585975e965401f17c4db3a26081d2d92bc8979ddcd5ef2f28a8b4c8890c",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-assistant-projection.d.ts",
+          "mode": 420,
+          "bytes": 1011,
+          "sha256": "dd87b3fb98fefa0ccd7871b7413bf5420f7b9912b229aad576cacd4adff6a0b3",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-assistant-projection.js",
+          "mode": 420,
+          "bytes": 7604,
+          "sha256": "ca6a0c7795a3ebe98f93d3ec29003c89f4db9bf9d956122c9c7691b805488c44",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-attachments.d.ts",
+          "mode": 420,
+          "bytes": 582,
+          "sha256": "b999ff38cd292258a657f9f7fa0a8e7d4ac06c264015fd1bb441b471748e0cf6",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-attachments.js",
+          "mode": 420,
+          "bytes": 3092,
+          "sha256": "e41c34efe783dfcce1d93114b81e2422b3671ef7d74929c9504255288f29a2b7",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-bounded-await.d.ts",
+          "mode": 420,
+          "bytes": 198,
+          "sha256": "eb5b605ac35517ba9f2c29340ba5d49273ef0a8f54d3eb50da7b4d970b5a8549",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-bounded-await.js",
+          "mode": 420,
+          "bytes": 739,
+          "sha256": "13e7088437799b4f424a3c3db91ea545266399694652a0b64784c5bdb89be506",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-canonical-json.d.ts",
+          "mode": 420,
+          "bytes": 337,
+          "sha256": "f22412490dfb9bd1196ec9f28a26190c0e914ede8e875493a2021ee393d6cb1c",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-canonical-json.js",
+          "mode": 420,
+          "bytes": 3633,
+          "sha256": "2663f31b6844618883e834cd11bf87ecdc9d23236289ed087b23a5fa161e3404",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-control-transport.d.ts",
+          "mode": 420,
+          "bytes": 609,
+          "sha256": "efc2360574a702fe44d8e123f26c8ca78b6500140f54b7047bc6db48bad435f5",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-control-transport.js",
+          "mode": 420,
+          "bytes": 15272,
+          "sha256": "7d0ccaa0fe81a1438452d46fdbf349d61dedd68b95479f83207ea77edb68d9b7",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-credential-binding.d.ts",
+          "mode": 420,
+          "bytes": 300,
+          "sha256": "1ba865d2bb7ca5d1a00446f4f87a3337591313a2d05199ff385c9140e521795d",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-credential-binding.js",
+          "mode": 420,
+          "bytes": 664,
+          "sha256": "972f26a073563f44ba38d8548a19f9ccd3a0b15810d3d2e5914ac1114c6d193f",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-credential-client.d.ts",
+          "mode": 420,
+          "bytes": 1961,
+          "sha256": "574cdc50ddf2292bffb3317755d8e67d161b3ea6d4ad7291fcfa8c69b8abed53",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-credential-client.js",
+          "mode": 420,
+          "bytes": 7443,
+          "sha256": "34d14c30787e5fad11722aa9e207eda7ec5174637ef917af21aa36458851af99",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-credential-wire.d.ts",
+          "mode": 420,
+          "bytes": 929,
+          "sha256": "4184b7cbd0f59912218ab77c3c4d657f567a4eeb81bc8159fa6ae2ca37a1cc9f",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-credential-wire.js",
+          "mode": 420,
+          "bytes": 11279,
+          "sha256": "38721308fe447772321c249bbbc7313fd9082d7e9b5c65968f5aead530044b67",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-cut-codecs.d.ts",
+          "mode": 420,
+          "bytes": 1114,
+          "sha256": "b4672bb591207516f82b66ad2c0d1c2882464b75f144def7365b41c30b4e7d45",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-cut-codecs.js",
+          "mode": 420,
+          "bytes": 6608,
+          "sha256": "04ced155d0862bfcc34c8b2a1a4782f954c1246056b0584dc9cd01060ab06eb2",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-driver-backend.d.ts",
+          "mode": 420,
+          "bytes": 245,
+          "sha256": "578b262dec201cc0bbe2beeb7e9f8bc7198e97dfde4bcaac6a76d4f353ddbae8",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-driver-backend.js",
+          "mode": 420,
+          "bytes": 4496,
+          "sha256": "08ac2e50660d6cde38c3068ee5f299cf2197091782ab88b76e8a05bffe933fc3",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-driver-config.d.ts",
+          "mode": 420,
+          "bytes": 2162,
+          "sha256": "5cbf791961a2895572834e8b69b0da9f8f331ab354fdaf46e13ab4f9364e1bee",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-driver-config.js",
+          "mode": 420,
+          "bytes": 7937,
+          "sha256": "78f133558fd179364dadbe0c2376505c80d0598067f2c00aeefd04f61de55c31",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-driver-factory.d.ts",
+          "mode": 420,
+          "bytes": 700,
+          "sha256": "2a19594a3660d712f199d7d3971c8722085926af6b6c50cf29e98f0cef9a62fa",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-driver-factory.js",
+          "mode": 420,
+          "bytes": 3401,
+          "sha256": "c066c0efd3c1fd21e4c06f6149739ec250f43028a3f734a671a6fe43a2c5321d",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-driver-native.d.ts",
+          "mode": 420,
+          "bytes": 1489,
+          "sha256": "523376266c5953aec5d7ec1eefb992d862275efcc1aee0d346e9247c439545a0",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-driver-native.js",
+          "mode": 420,
+          "bytes": 12918,
+          "sha256": "a348ae31bafe45292aa3133f98a8bd6d2a3cc8bc60d5ffd000a51f89e494fb44",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-driver-output.d.ts",
+          "mode": 420,
+          "bytes": 546,
+          "sha256": "3ee24a5452f1b38866a3d3757b55733c303c0ac9309b2f2fc04a4193ff6fef73",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-driver-output.js",
+          "mode": 420,
+          "bytes": 2325,
+          "sha256": "5d44d9596042625d446b474f3272136ee41ef7a0f2d02d9920e775b48bc4d6cb",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-driver-session.d.ts",
+          "mode": 420,
+          "bytes": 232,
+          "sha256": "07da64bc44653f3ccbaef9c8a80743da54a9611a0e38577f2377d9b317a92900",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-driver-session.js",
+          "mode": 420,
+          "bytes": 1002,
+          "sha256": "1d5a74bfdc4a62a468c267ce1b5406cd851782ee9f9c625d0734c8cef64634ad",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-execution-transport.d.ts",
+          "mode": 420,
+          "bytes": 2840,
+          "sha256": "cfff705021129d824c761bcb0644fa332d2c5229e5863699dc7279b5dd2b326b",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-execution-transport.js",
+          "mode": 420,
+          "bytes": 20239,
+          "sha256": "1a4c82ddbd641c2fd3f0e004ccd2e08efbab6340e475ffa5f2dc2a66c9809c2e",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-failures.d.ts",
+          "mode": 420,
+          "bytes": 836,
+          "sha256": "81b4def4faaabed6d17d9b882eded96a5e98f1c188f7de391b48ac945a187be6",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-failures.js",
+          "mode": 420,
+          "bytes": 1627,
+          "sha256": "a9ba44e693ad54b925f8f1abe3ff070a4836f8248e4aa1c03e6264caba0d5e67",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-input-validation.d.ts",
+          "mode": 420,
+          "bytes": 571,
+          "sha256": "c0d555c981ca6a147476bea38f2e6c616249d44bd2462c6f9fc994fa59c80fe4",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-input-validation.js",
+          "mode": 420,
+          "bytes": 6682,
+          "sha256": "7b02184f6801114460848f4d5e138278fa34036a7b1e5a2611050c0b84ceee77",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-json-budget.d.ts",
+          "mode": 420,
+          "bytes": 194,
+          "sha256": "96c8f1d27119197cd60fce540980b16060f9abca16a3628ecf0333f0f01a3543",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-json-budget.js",
+          "mode": 420,
+          "bytes": 2319,
+          "sha256": "941110f5c2dfb35d9de33742326ebf28f9bc3f98d0d51a8dd1780502ed2d27b7",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-loopback-endpoint.d.ts",
+          "mode": 420,
+          "bytes": 339,
+          "sha256": "c0472a01d30669d0685a79c153ff870c9a82ba849224f51bfce0083e530d17e3",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-loopback-endpoint.js",
+          "mode": 420,
+          "bytes": 500,
+          "sha256": "61c5991ccd11f97d8c5dff67e7e5bd411df6a12483fe920c4bcd1014787e7b67",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-media.d.ts",
+          "mode": 420,
+          "bytes": 1860,
+          "sha256": "06a00851f73691f5acb3e7e94a15dfb6e123b6600bd09a883b03f916a4f4194e",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-media.js",
+          "mode": 420,
+          "bytes": 6511,
+          "sha256": "6c6887c8ca48b6689d61d399a37c7aed989144acd364d05f38941a54b7c34dde",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-native-byte-view.d.ts",
+          "mode": 420,
+          "bytes": 77,
+          "sha256": "af25bc294e5cef19954de797cd15dc3990058f1d8b9405046d571d214727f728",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-native-byte-view.js",
+          "mode": 420,
+          "bytes": 1283,
+          "sha256": "2c44239ef8c55cbe9b0661f24f168c5f527c35ee6e28c71ca9473d4fff4f43c6",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-native-cut.d.ts",
+          "mode": 420,
+          "bytes": 1212,
+          "sha256": "cc95be5521ccebb1baaf829fabf7420c14a8baed8740bbac2dc544f91fb4a341",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-native-cut.js",
+          "mode": 420,
+          "bytes": 18831,
+          "sha256": "0b6217054f013185a7e4c4330ced3ed8f4f2d9b9b964cbeb51b00d3727d35058",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-native-identifiers.d.ts",
+          "mode": 420,
+          "bytes": 225,
+          "sha256": "1de1d29e2cb85fc482355bfbfa25fe39b02873e87afd08712a3de3b3f57ad55e",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-native-identifiers.js",
+          "mode": 420,
+          "bytes": 752,
+          "sha256": "5e7eaa7f942e17695d37ea1a35abd989141c2127cdada0f1c87f0bcb96d32aee",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-owned-catalog.d.ts",
+          "mode": 420,
+          "bytes": 1484,
+          "sha256": "580f3d9e383b6bd35a8e2f8cc1eda7cb3cea9571e87393b85dc6e45cd4caf3d2",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-owned-catalog.js",
+          "mode": 420,
+          "bytes": 4581,
+          "sha256": "fafe154567074993e8505b3c5dce9a0a9dc5368c41382e5a3c499766d6a09d6e",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-owned-directory.d.ts",
+          "mode": 420,
+          "bytes": 895,
+          "sha256": "416631579799a674424744afed60f4157bdb12c4de28fbb94459f7d3f173dad2",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-owned-directory.js",
+          "mode": 420,
+          "bytes": 2594,
+          "sha256": "f7428d119ebabbdae77c7fa101f8cecee376eb611063c12640a281f13e16c86a",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-owned-session-client.d.ts",
+          "mode": 420,
+          "bytes": 3313,
+          "sha256": "a7dcb9baccefc22133b5f7e414582e8fc18dacb366031c84f8854db0df194c84",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-owned-session-client.js",
+          "mode": 420,
+          "bytes": 8535,
+          "sha256": "7876f55d85ed25994a124f7a6307af2d1c0033510b2ec9dda7145a015279f42c",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-projection-helpers.d.ts",
+          "mode": 420,
+          "bytes": 882,
+          "sha256": "e57cac3b3f970edaf9d20e07df56ba888b1994ecc337a42c8b0565069eac77e4",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-projection-helpers.js",
+          "mode": 420,
+          "bytes": 2973,
+          "sha256": "dba974e9f7691d4ebb33a9e7dee8b844319bf03cdee1d69caed4e862a594e183",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-projection-types.d.ts",
+          "mode": 420,
+          "bytes": 1719,
+          "sha256": "04c870698d31294d1ea6e0ab20087e5375671378cfc73cfa2d7262d34003c54c",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-projection-types.js",
+          "mode": 420,
+          "bytes": 11,
+          "sha256": "8e609bb71c20b858c77f0e9f90bb1319db8477b13f9f965f1a1e18524bf50881",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-protocol-version.d.ts",
+          "mode": 420,
+          "bytes": 336,
+          "sha256": "936db88ddb70677c0d31e4f042356c8a44d83a3ac9905be9b373c03e7fc956a7",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-protocol-version.js",
+          "mode": 420,
+          "bytes": 285,
+          "sha256": "346bf94bbfc8474c1cc94038e95f8efc01131cd8d57b816e0dbde0a3e2d79b40",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-request-admission.d.ts",
+          "mode": 420,
+          "bytes": 414,
+          "sha256": "1ec58a224a97d7633e62a0f12d3c5fe587a11c1accbc33a41d919efcbfba1bf9",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-request-admission.js",
+          "mode": 420,
+          "bytes": 2030,
+          "sha256": "0032b2b343bbedbf6a6405a1d4a0700fb52cc7e9f5b694c97892277e44e1fbdb",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-session-control.d.ts",
+          "mode": 420,
+          "bytes": 1038,
+          "sha256": "c1c146deb4fe10284d6a4a6c110d4298c871a370d0540bb7755c6416635a5a0a",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-session-control.js",
+          "mode": 420,
+          "bytes": 6935,
+          "sha256": "51bb35aeaee64d2d146ba7e837b420d1ac9f3e857809eb59b6300dd2cb49063b",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-turn-projection.d.ts",
+          "mode": 420,
+          "bytes": 286,
+          "sha256": "a40c24b1967186085ebeee3407600cee361aaeacf81d05e258a4910fb0aa5168",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-turn-projection.js",
+          "mode": 420,
+          "bytes": 7766,
+          "sha256": "cc3420b66e48d3ac2f09b3c5128bd79fd54f640f0396145c0baf39b0fb630a08",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/provider-session-io/attachments.d.ts",
+          "mode": 420,
+          "bytes": 2166,
+          "sha256": "201ecdd555abab6b021f1f0654cb03222c1dfb9e44da7ee05b170bff5192caf9",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/provider-session-io/attachments.js",
+          "mode": 420,
+          "bytes": 7542,
+          "sha256": "9465c275f3984bb4a5ba7c37ce962a93e6514cc747d35965f1b016ee114b0491",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/provider-session-io/extra-argv.d.ts",
+          "mode": 420,
+          "bytes": 283,
+          "sha256": "acd722cad0730f543038cc7508b326314a8f9957dfb14aab81082e2b2282f6ef",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/provider-session-io/extra-argv.js",
+          "mode": 420,
+          "bytes": 5683,
+          "sha256": "80c8b67e3e032c294671d27e260f114fad4bbf1713f08b2103dc5c91d11f0b3e",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/provider-session-io/io.d.ts",
+          "mode": 420,
+          "bytes": 734,
+          "sha256": "4cfdc811acf4b505d16ddae5af3971c922e58deef86699be4cc4d28fca5cb092",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/provider-session-io/io.js",
+          "mode": 420,
+          "bytes": 2107,
+          "sha256": "71871dc78923a98462515981862f9ea8d3a105b4385501026fe9f4917278a2a2",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/provider-session-io/native-path.d.ts",
+          "mode": 420,
+          "bytes": 205,
+          "sha256": "9b9dd6222d8a3dfed067d9585f88f687c363a47b95f3f5eb7c39d9032f6bfbdb",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/adapters/provider-session-io/native-path.js",
+          "mode": 420,
+          "bytes": 865,
+          "sha256": "ec0c213b115e310d41d3855ce23554754b55e37a7c75d9ee76de2814a615525b",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/contracts/codex-approval.d.ts",
+          "mode": 420,
+          "bytes": 974,
+          "sha256": "861548c592b89fd5484bb68d4172710a01cfa7546f1026cd53fec3847448dfca",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/contracts/codex-approval.js",
+          "mode": 420,
+          "bytes": 11,
+          "sha256": "8e609bb71c20b858c77f0e9f90bb1319db8477b13f9f965f1a1e18524bf50881",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/contracts/codex-events.d.ts",
+          "mode": 420,
+          "bytes": 1347,
+          "sha256": "02a4ea18ec9694170c28bb36201df5141f594f9f1e771e1d362561539fd07a5b",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/contracts/codex-events.js",
+          "mode": 420,
+          "bytes": 11,
+          "sha256": "8e609bb71c20b858c77f0e9f90bb1319db8477b13f9f965f1a1e18524bf50881",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/index.d.ts",
+          "mode": 420,
+          "bytes": 300,
+          "sha256": "1281ec3430dc50ad9d379f79656c11a8cd79b18030ed811d779680b4c7c6ec9b",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/index.js",
+          "mode": 420,
+          "bytes": 11,
+          "sha256": "8e609bb71c20b858c77f0e9f90bb1319db8477b13f9f965f1a1e18524bf50881",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/internal.d.ts",
+          "mode": 420,
+          "bytes": 8805,
+          "sha256": "fa01cf688cc56795615e97c8d0247ce34149b2300f37210e7c6ac658814a8dd8",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/features/provider-session-implementation/internal.js",
+          "mode": 420,
+          "bytes": 3577,
+          "sha256": "42096f9552dd6a326b2886e47f1e5054a3a6105079e772b9c636e1a0c6670ccb",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/index.d.ts",
+          "mode": 420,
+          "bytes": 271,
+          "sha256": "8416c97b6138d2c0b99f3828945f8ca2b073a2e9ab8ddc8cadfe7ec281238904",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/index.js",
+          "mode": 420,
+          "bytes": 11,
+          "sha256": "8e609bb71c20b858c77f0e9f90bb1319db8477b13f9f965f1a1e18524bf50881",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/opencode.d.ts",
+          "mode": 420,
+          "bytes": 4337,
+          "sha256": "0188b0aceb959fb63334ec5b83d2ed94aae51b0a1fa64041f083a6dad7c98ada",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/opencode.js",
+          "mode": 420,
+          "bytes": 2068,
+          "sha256": "b47254c4297fffa117eb6993418d84f68a3ea45b8e53c8751347788943b861e9",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/prompt-suggestions.d.ts",
+          "mode": 420,
+          "bytes": 569,
+          "sha256": "94afbcfc1c8ae7ab5876332f6d8970a58c8e90c7fd1bc88031c28424368d5fc9",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/prompt-suggestions.js",
+          "mode": 420,
+          "bytes": 405,
+          "sha256": "c4b71d45e2ccaefc1a4cca08d825b15db5236c37424a91a56103885898d64799",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/session-io.d.ts",
+          "mode": 420,
+          "bytes": 103,
+          "sha256": "5124c3472289156e0662b65de49c7ca9a5f031f92d8b097f01bdbec667f64218",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/dist/session-io.js",
+          "mode": 420,
+          "bytes": 103,
+          "sha256": "e6d4922408a4c73412f91e02530a97d296221ddf47829a173df923d42a20c1fa",
+          "status": "unchanged"
+        },
+        {
+          "path": "package/package.json",
+          "mode": 420,
+          "bytes": 2617,
+          "sha256": "57786cb1dd1689ece2ce15aedb05e9c362cdc55febf4c6156300474cdfbc29a9",
+          "status": "changed-package-metadata"
+        }
+      ]
+    },
+    "sameFunctionDefinitions": [
+      {
+        "name": "captureClaudeExtraArgs",
+        "oldEntry": "package/dist/claude.js",
+        "oldForwarder": "package/dist/features/provider-session-implementation/internal.js",
+        "newEntry": "package/dist/captured-configuration.js",
+        "sameDefiningModule": "package/dist/features/provider-session-implementation/adapters/provider-session-io/extra-argv.js",
+        "definingModuleSha256": "80c8b67e3e032c294671d27e260f114fad4bbf1713f08b2103dc5c91d11f0b3e",
+        "definingModuleBytes": 5683,
+        "existingDefinitionByteIdentical": true
+      },
+      {
+        "name": "captureCodexConfiguredMcpCatalog",
+        "oldEntry": "package/dist/codex.js",
+        "oldForwarder": "package/dist/features/provider-session-implementation/internal.js",
+        "newEntry": "package/dist/captured-configuration.js",
+        "sameDefiningModule": "package/dist/features/provider-session-implementation/adapters/codex-protocol/mcp-catalog.js",
+        "definingModuleSha256": "2997cd8af95c16e07010bf20839e8337a1e7d401571d35555dd6283102fe356e",
+        "definingModuleBytes": 4870,
+        "existingDefinitionByteIdentical": true
+      },
+      {
+        "name": "captureCodexExtraArgs",
+        "oldEntry": "package/dist/codex.js",
+        "oldForwarder": "package/dist/features/provider-session-implementation/internal.js",
+        "newEntry": "package/dist/captured-configuration.js",
+        "sameDefiningModule": "package/dist/features/provider-session-implementation/adapters/provider-session-io/extra-argv.js",
+        "definingModuleSha256": "80c8b67e3e032c294671d27e260f114fad4bbf1713f08b2103dc5c91d11f0b3e",
+        "definingModuleBytes": 5683,
+        "existingDefinitionByteIdentical": true
+      },
+      {
+        "name": "captureOpenCodeExtraArgs",
+        "oldEntry": "package/dist/opencode.js",
+        "oldForwarder": "package/dist/features/provider-session-implementation/internal.js",
+        "newEntry": "package/dist/captured-configuration.js",
+        "sameDefiningModule": "package/dist/features/provider-session-implementation/adapters/provider-session-io/extra-argv.js",
+        "definingModuleSha256": "80c8b67e3e032c294671d27e260f114fad4bbf1713f08b2103dc5c91d11f0b3e",
+        "definingModuleBytes": 5683,
+        "existingDefinitionByteIdentical": true
+      },
+      {
+        "name": "readCodexConfiguredMcpCatalog",
+        "oldEntry": "package/dist/codex.js",
+        "oldForwarder": "package/dist/features/provider-session-implementation/internal.js",
+        "newEntry": "package/dist/codex-mcp-catalog.js",
+        "sameDefiningModule": "package/dist/features/provider-session-implementation/adapters/codex-protocol/mcp-catalog-probe.js",
+        "definingModuleSha256": "8443a7935d15e7507c894e229a300bf5bfb6b4f01fd002fdb101343bb0612eb4",
+        "definingModuleBytes": 4361,
+        "existingDefinitionByteIdentical": true
+      }
+    ],
+    "literalStaticGraph": {
+      "newEntries": [
+        {
+          "entry": "package/dist/captured-configuration.js",
+          "localModules": 5,
+          "paths": [
+            "package/dist/captured-configuration.js",
+            "package/dist/features/provider-session-implementation/adapters/codex-protocol/mcp-catalog.js",
+            "package/dist/features/provider-session-implementation/adapters/codex-protocol/rpc-types.js",
+            "package/dist/features/provider-session-implementation/adapters/codex-protocol/wire-frames.js",
+            "package/dist/features/provider-session-implementation/adapters/provider-session-io/extra-argv.js"
+          ],
+          "externalSpecifiers": [
+            "node:buffer",
+            "node:crypto"
+          ],
+          "edges": [
+            {
+              "from": "package/dist/captured-configuration.js",
+              "specifier": "./features/provider-session-implementation/adapters/provider-session-io/extra-argv.js",
+              "to": "package/dist/features/provider-session-implementation/adapters/provider-session-io/extra-argv.js"
+            },
+            {
+              "from": "package/dist/captured-configuration.js",
+              "specifier": "./features/provider-session-implementation/adapters/codex-protocol/mcp-catalog.js",
+              "to": "package/dist/features/provider-session-implementation/adapters/codex-protocol/mcp-catalog.js"
+            },
+            {
+              "from": "package/dist/features/provider-session-implementation/adapters/codex-protocol/mcp-catalog.js",
+              "specifier": "./wire-frames.js",
+              "to": "package/dist/features/provider-session-implementation/adapters/codex-protocol/wire-frames.js"
+            },
+            {
+              "from": "package/dist/features/provider-session-implementation/adapters/codex-protocol/wire-frames.js",
+              "specifier": "./rpc-types.js",
+              "to": "package/dist/features/provider-session-implementation/adapters/codex-protocol/rpc-types.js"
+            }
+          ],
+          "literalStaticImportsOnly": true
+        },
+        {
+          "entry": "package/dist/codex-mcp-catalog.js",
+          "localModules": 7,
+          "paths": [
+            "package/dist/codex-mcp-catalog.js",
+            "package/dist/features/provider-session-implementation/adapters/codex-protocol/mcp-catalog-probe.js",
+            "package/dist/features/provider-session-implementation/adapters/codex-protocol/mcp-catalog.js",
+            "package/dist/features/provider-session-implementation/adapters/codex-protocol/rpc-types.js",
+            "package/dist/features/provider-session-implementation/adapters/codex-protocol/wire-frames.js",
+            "package/dist/features/provider-session-implementation/adapters/provider-session-io/io.js",
+            "package/dist/features/provider-session-implementation/adapters/provider-session-io/native-path.js"
+          ],
+          "externalSpecifiers": [
+            "node:buffer",
+            "node:crypto",
+            "node:path",
+            "zod"
+          ],
+          "edges": [
+            {
+              "from": "package/dist/codex-mcp-catalog.js",
+              "specifier": "./features/provider-session-implementation/adapters/codex-protocol/mcp-catalog-probe.js",
+              "to": "package/dist/features/provider-session-implementation/adapters/codex-protocol/mcp-catalog-probe.js"
+            },
+            {
+              "from": "package/dist/features/provider-session-implementation/adapters/codex-protocol/mcp-catalog-probe.js",
+              "specifier": "../provider-session-io/native-path.js",
+              "to": "package/dist/features/provider-session-implementation/adapters/provider-session-io/native-path.js"
+            },
+            {
+              "from": "package/dist/features/provider-session-implementation/adapters/codex-protocol/mcp-catalog-probe.js",
+              "specifier": "../provider-session-io/io.js",
+              "to": "package/dist/features/provider-session-implementation/adapters/provider-session-io/io.js"
+            },
+            {
+              "from": "package/dist/features/provider-session-implementation/adapters/codex-protocol/mcp-catalog-probe.js",
+              "specifier": "./mcp-catalog.js",
+              "to": "package/dist/features/provider-session-implementation/adapters/codex-protocol/mcp-catalog.js"
+            },
+            {
+              "from": "package/dist/features/provider-session-implementation/adapters/codex-protocol/mcp-catalog.js",
+              "specifier": "./wire-frames.js",
+              "to": "package/dist/features/provider-session-implementation/adapters/codex-protocol/wire-frames.js"
+            },
+            {
+              "from": "package/dist/features/provider-session-implementation/adapters/codex-protocol/wire-frames.js",
+              "specifier": "./rpc-types.js",
+              "to": "package/dist/features/provider-session-implementation/adapters/codex-protocol/rpc-types.js"
+            }
+          ],
+          "literalStaticImportsOnly": true
+        }
+      ],
+      "originalProviderEntries": [
+        {
+          "entry": "package/dist/claude.js",
+          "localModules": 108,
+          "externalSpecifiers": [
+            "@anthropic-ai/claude-agent-sdk",
+            "node:buffer",
+            "node:crypto",
+            "node:diagnostics_channel",
+            "node:path",
+            "node:timers/promises",
+            "node:util",
+            "zod"
+          ],
+          "pathsSha256": "cbe7a2d152d2211829792c4cbf65999457d069c0ef30308f8a775ba10efc708a"
+        },
+        {
+          "entry": "package/dist/codex.js",
+          "localModules": 108,
+          "externalSpecifiers": [
+            "@anthropic-ai/claude-agent-sdk",
+            "node:buffer",
+            "node:crypto",
+            "node:diagnostics_channel",
+            "node:path",
+            "node:timers/promises",
+            "node:util",
+            "zod"
+          ],
+          "pathsSha256": "65a0982d3f72c64e0f49440e2e70c26ef232bce8b12c3bd01266ef5bdaf5916a"
+        },
+        {
+          "entry": "package/dist/opencode.js",
+          "localModules": 108,
+          "externalSpecifiers": [
+            "@anthropic-ai/claude-agent-sdk",
+            "node:buffer",
+            "node:crypto",
+            "node:diagnostics_channel",
+            "node:path",
+            "node:timers/promises",
+            "node:util",
+            "zod"
+          ],
+          "pathsSha256": "076fa19b12048df2b8e36ad3843422aef002865a1baee52f69179ae28d6f7ab4"
+        }
+      ],
+      "qualification": "Literal static ESM dependency graph from archive bytes only. No entry was imported or executed. Counts and absence of SDK imports from the new static closures are not runtime, startup memory or full Host closure measurements."
+    },
+    "hostImportChanges": [
+      {
+        "path": "packages/legacy-agent-host/src/adapters/providers/readCodexMcpCatalog.ts",
+        "beforeBlob": "7230804bd10e8a521cb3e1b1e9760920e9ebcef5",
+        "afterBlob": "d4c8a8bb161bb814407ca42edcf9ada3f88d8fcf",
+        "beforeSha256": "1cb3368063310cde3d3824709dcbb941738e65b8beee283c005fbd493d84ae0c",
+        "afterSha256": "800ac4f16d38a21138da92bf4509053d869a185449a871cd3554f03c6f7a7a8f",
+        "beforeLines": 62,
+        "afterLines": 62,
+        "importsOnly": true,
+        "remainingBytesIdentical": true
+      },
+      {
+        "path": "packages/legacy-agent-host/src/composition/capturedRuntimeMcpRecipes.ts",
+        "beforeBlob": "80e5681ca56624e70ab3a239559b3508b73e6d59",
+        "afterBlob": "b3f03e34694107fca0d802cd8ad355330403a3e1",
+        "beforeSha256": "33cf0c576039ff24b9a2b9feea96c2353c70f21f9df03c8a27fe7ea3f188cf2f",
+        "afterSha256": "821bad65f0debf38390a92bf3c24bba2f87c0346f64d2c2df3a43d2f4da9a1c2",
+        "beforeLines": 280,
+        "afterLines": 280,
+        "importsOnly": true,
+        "remainingBytesIdentical": true
+      },
+      {
+        "path": "packages/legacy-agent-host/src/composition/runtimeProfile.ts",
+        "beforeBlob": "7dcaecc2d76bf568347082b5f82f0d738e0bfaa1",
+        "afterBlob": "9a744543376bd271ae7ed45f607954623822ceb0",
+        "beforeSha256": "8d01aa3189e83512c25b1b5f2a5fc3f0a427da7be979291127179914489b9cc8",
+        "afterSha256": "52f086743adc674ef5c68ef00e0e3e8482674aa7424b4eba40948da427eb1228",
+        "beforeLines": 261,
+        "afterLines": 261,
+        "importsOnly": true,
+        "remainingBytesIdentical": true
+      },
+      {
+        "path": "packages/legacy-agent-host/src/composition/runtimeExtraArgs.ts",
+        "beforeBlob": "e60476f05f6a87619b3ea89128388abf7dc9dbeb",
+        "afterBlob": "6746b43e64dd0fae1f0cc3792a7bd7b3d60af23e",
+        "beforeSha256": "040970421796c1536cf31333e338262d51e5bacb4ea6869bda55b22e7aba223f",
+        "afterSha256": "aa3b3683ec607a6b7c390c6f7ef1164b936f9054144cc30f84adfa8c687e1033",
+        "beforeLines": 32,
+        "afterLines": 34,
+        "importsOnly": true,
+        "remainingBytesIdentical": true
+      }
+    ],
+    "metadataChanges": {
+      "hostPackage": {
+        "path": "packages/legacy-agent-host/package.json",
+        "beforeBlob": "6bb3f48b3790bef2099c24e3a5379fbeb047e024",
+        "afterBlob": "39bfdc27581109c10fa5362375dcbe2c33d44791",
+        "beforeSha256": "dfcd70e7c5f5d8c8fc00a5396cdfbe920e94f0d69849f3abcdd33b3cf4e3610a",
+        "afterSha256": "a2cfca3f7911d08d4382554c10b254dc7756e5bfa546f50314f116e746d1d8d9",
+        "onlyImplementationArchiveSpecifierChanged": true
+      },
+      "lock": {
+        "path": "pnpm-lock.yaml",
+        "beforeBlob": "0883ef60d1d1dd05785663deed272a557c100923",
+        "afterBlob": "ad48ecf352ce8387cee03979979c836deb8c35ff",
+        "beforeSha256": "79c04e3ff0066df4ce4b5c57b25d0b3a9e76fb59ca33600812c3f7cf38573be3",
+        "afterSha256": "a5f86d17d45636223357e24e682122100243bbb9fdfe2614b0fd0a754d9980c6",
+        "onlyImplementationArchivePathAndIntegrityChanged": true,
+        "snapshotDependencyValuesUnchanged": true
+      },
+      "sessionContracts": {
+        "path": "vendor/provider-migration/v2-media-aad5c2f8/agent-teams-provider-session-contracts-0.0.0.tgz",
+        "gitBlob": "33c2944ff8a52a9c087fba9d3cab1daffe2604d8",
+        "sha256": "0ea08bacd3f19a54c065cfaebbe8ae0fb3a8e6770886402f435a96e97867d2bc",
+        "bytes": 6230,
+        "byteIdentical": true
+      }
+    },
+    "incomingProviderReceipt": {
+      "path": "vendor/provider-migration/captured-config-b19494fd/source-receipt.json",
+      "gitBlob": "cc67576d441dcd28d1ae28bc1741f33373b053ac",
+      "sha256": "eabc4336b239d5981033daa6eb055312c275ec594e649e23ce459ed2b5169c43",
+      "bytes": 6011,
+      "sourceCommit": "b19494fd2de47538a1c9315e338199ff41bbe497",
+      "sourceTree": "43c3778781815b87269056d3a6ceafb16cb28f08",
+      "qualification": "source-and-packed-consumer-only",
+      "nativeHostQualified": false,
+      "packagedElectronQualified": false,
+      "reportedChecks": [
+        {
+          "command": "pnpm --config.verify-deps-before-run=false check",
+          "node": "24.21.0",
+          "pnpm": "11.18.0",
+          "exitCode": 0,
+          "elapsedSeconds": 143.529,
+          "sourceTests": {
+            "passed": 577,
+            "failed": 0
+          },
+          "packedConsumers": {
+            "passed": 2,
+            "failed": 0
+          },
+          "logFile": "capture-check-restored-20261118.log",
+          "logBytes": 64580,
+          "logSha256": "481878e00eb87136e602a6f01f915c9e62fe98fc1af5d1e0f5d7cf26f84eb8fe"
+        }
+      ],
+      "independentScope": "Archive compatibility, exact hashes, exports, static bindings and Host/lock diff were independently checked here. Incoming source/build/577 tests/2 packed-consumer executions are recorded external evidence, not re-executed or relabeled by this review."
+    },
+    "qualification": {
+      "originalGreenBase": "9f63bec37c2596676bd1761e74a41b272b0ef956",
+      "originalNegativeBase": "4f5ae2dcb10c83fb6b3a3862b8d5065e0c7843ab",
+      "newDependencyQualification": "f60 replaces the provider implementation archive and changes the Host import graph. Earlier finite original GREEN and three-negative PASS retain their exact source/dependency scopes and are not claimed as f60 runtime executions. This additive-definition comparison supports source adoption of the four unchanged fix postimages, not a new current native/compiled/GUI verdict."
+    },
+    "execution": {
+      "archiveExtractionToFilesystem": 0,
+      "archiveEntryExecutions": 0,
+      "tests": 0,
+      "lint": 0,
+      "build": 0,
+      "install": 0,
+      "native": 0,
+      "app": 0,
+      "vendor": 0,
+      "CIEndpointCalls": 0,
+      "sourceEdits": 0,
+      "refWrites": 0
+    },
+    "inspectionHelperCorrections": [
+      "The initial read-only parser stopped on unrelated aliased named exports; it was corrected to retain public export names.",
+      "The next read-only parser pass stopped on existing capture validators declared as exported const arrow functions; that observed declaration form was included. Neither inspection imported archive entries or executed tests."
+    ]
+  },
+  "providerArchiveReviewPin": {
+    "sha256": "fd12a367b5b1031c74247cbdb87f9c1bde0074bfffaded1958f646d6e17b5c7e",
+    "bytes": 93504,
+    "scriptSha256": "124c665210914bca1ebbaf11bd47a83dae17e6b58e7b497b536b2287cc163e74"
+  },
+  "exactExternalChanges": [
+    {
+      "change": "M",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/STATUS.md",
+      "gitBlob": "5e6a9507ed08c398973d14f1995edcf97c9912b4",
+      "sha256": "b17cb6424c64e4ebdf4ea65d677bd1c398501cf5fb27beb42e7a12be91375347",
+      "bytes": 24544,
+      "preserveAsIncomingBase": true
+    },
+    {
+      "change": "M",
+      "path": "packages/legacy-agent-host/package.json",
+      "gitBlob": "39bfdc27581109c10fa5362375dcbe2c33d44791",
+      "sha256": "a2cfca3f7911d08d4382554c10b254dc7756e5bfa546f50314f116e746d1d8d9",
+      "bytes": 12519,
+      "preserveAsIncomingBase": true
+    },
+    {
+      "change": "M",
+      "path": "packages/legacy-agent-host/src/adapters/providers/readCodexMcpCatalog.ts",
+      "gitBlob": "d4c8a8bb161bb814407ca42edcf9ada3f88d8fcf",
+      "sha256": "800ac4f16d38a21138da92bf4509053d869a185449a871cd3554f03c6f7a7a8f",
+      "bytes": 2236,
+      "preserveAsIncomingBase": true
+    },
+    {
+      "change": "M",
+      "path": "packages/legacy-agent-host/src/composition/capturedRuntimeMcpRecipes.ts",
+      "gitBlob": "b3f03e34694107fca0d802cd8ad355330403a3e1",
+      "sha256": "821bad65f0debf38390a92bf3c24bba2f87c0346f64d2c2df3a43d2f4da9a1c2",
+      "bytes": 11053,
+      "preserveAsIncomingBase": true
+    },
+    {
+      "change": "M",
+      "path": "packages/legacy-agent-host/src/composition/runtimeExtraArgs.ts",
+      "gitBlob": "6746b43e64dd0fae1f0cc3792a7bd7b3d60af23e",
+      "sha256": "aa3b3683ec607a6b7c390c6f7ef1164b936f9054144cc30f84adfa8c687e1033",
+      "bytes": 1228,
+      "preserveAsIncomingBase": true
+    },
+    {
+      "change": "M",
+      "path": "packages/legacy-agent-host/src/composition/runtimeProfile.ts",
+      "gitBlob": "9a744543376bd271ae7ed45f607954623822ceb0",
+      "sha256": "52f086743adc674ef5c68ef00e0e3e8482674aa7424b4eba40948da427eb1228",
+      "bytes": 10386,
+      "preserveAsIncomingBase": true
+    },
+    {
+      "change": "M",
+      "path": "pnpm-lock.yaml",
+      "gitBlob": "ad48ecf352ce8387cee03979979c836deb8c35ff",
+      "sha256": "a5f86d17d45636223357e24e682122100243bbb9fdfe2614b0fd0a754d9980c6",
+      "bytes": 956703,
+      "preserveAsIncomingBase": true
+    },
+    {
+      "change": "A",
+      "path": "vendor/provider-migration/captured-config-b19494fd/agent-teams-provider-implementations-0.0.0.tgz",
+      "gitBlob": "34b07f65c71ba13ad0749cdc8a01c4932325d6f3",
+      "sha256": "ad05bd8c799c4d2c366a6eab72f937466355a5994eac6bd201ee754217cf5aa7",
+      "bytes": 191145,
+      "preserveAsIncomingBase": true
+    },
+    {
+      "change": "A",
+      "path": "vendor/provider-migration/captured-config-b19494fd/source-receipt.json",
+      "gitBlob": "cc67576d441dcd28d1ae28bc1741f33373b053ac",
+      "sha256": "eabc4336b239d5981033daa6eb055312c275ec594e649e23ce459ed2b5169c43",
+      "bytes": 6011,
+      "preserveAsIncomingBase": true
+    }
+  ],
+  "incomingStatus": {
+    "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/STATUS.md",
+    "gitBlob": "5e6a9507ed08c398973d14f1995edcf97c9912b4",
+    "sha256": "b17cb6424c64e4ebdf4ea65d677bd1c398501cf5fb27beb42e7a12be91375347",
+    "bytes": 24544,
+    "reviewBoundary": "This is the externally rewritten f60 STATUS base, whose historical journal is now linked to4f. Root owns a follow-up candidate preserving this base. The previous approval of4f STATUS bytes is not carried over to an unseen f60 candidate; exact candidate-tree/STATUS/evidence-index review is separate."
+  },
+  "priorProofs": {
+    "fourFixPublicationReview": {
+      "blob": "c13a5cfb2eeaadfdb43470de21e6ee599c0ff938",
+      "sha256": "3c7e879a4d533c2c85ee02f0688fb21a2d6296dc5f147f953b43fdf3387a685e",
+      "qualification": "Original4f adoption andSTATUS proof retain their original parent anddocument bytes."
+    },
+    "factoryManifest": {
+      "blob": "73594cd741ed5414c78bc8e4210180b7dbb2a17f",
+      "sha256": "ae8fcee7e5283762a8395d3aab3376531396466d1a132cb5ada675e22a3d96ab"
+    },
+    "factoryR2": {
+      "blob": "e5491b6ae09b99106b44b7225c554b75aa69fc6c",
+      "sha256": "69c2647b33366ad4ae9582928cbee8f4248bad73a1c90e61c706faa6168feab6"
+    },
+    "originalGreen": {
+      "blob": "e0b88a3f3c5a479b79e7a4a3876aa516c91e84e2",
+      "sha256": "6b38af89b7a57350af366e70d485b9d113a4d94d344ad497c4be41f8319f397e",
+      "executionBase": "9f63bec37c2596676bd1761e74a41b272b0ef956"
+    },
+    "threeNegatives": {
+      "blob": "42c3883afb0240d05e8631a70f93c40479c15a67",
+      "sha256": "a81f3264d6c7da6acdff3fc6fb32f483b31b3416ddbd2bc49c956d48f926b8a2",
+      "executionBase": "4f5ae2dcb10c83fb6b3a3862b8d5065e0c7843ab"
+    },
+    "lint": {
+      "blob": "0256fc22a2b2b7d496a6dcd46ca9275d4814d35f",
+      "sha256": "e619b5b0662fa52c746c65025f278c2db34a2902cddeb6a4e3aff0c48b30cb09",
+      "executionBase": "9f63bec37c2596676bd1761e74a41b272b0ef956"
+    }
+  },
+  "currentDependencyQualification": [
+    "f60 changes the provider implementation archive, Host package/lock pins and four Host runtime import edges. Even though original definitions and all existing compiled provider outputs are byte-identical, the complete module-load dependency graph differs.",
+    "Original finite callback GREEN remains9f+factory with its recorded prepared dependencies. Three negative PASS remain4f+factory with their recorded dependencies. Neither is renamed as an f60 execution or current compiled/native/GUI qualification.",
+    "The new entries statically forward exactly the same five existing symbols. Capture entry reaches5 local JS modules with node:buffer/crypto; catalog IO entry reaches7 with node:buffer/crypto/path andzod. No archive entry was imported here, and these counts are not a memory/performance proof.",
+    "Incoming provider receipt records its own577source tests/2packed consumers, source/build/install venue and nativeHostQualified=false/packagedElectronQualified=false. This reviewer independently checked archive bytes/bindings; those execution claims were not re-executed.",
+    "The four fix source preimages/postimages are unchanged and nonconflicting with the external import-only changes. Source/size adoption is PASS while current runtime, requiredCI and whole-tree acceptance remain separate gates."
+  ],
+  "execution": {
+    "pureRepositorySizeEvaluatorCalls": 1,
+    "readOnlyArchiveInspection": true,
+    "tests": 0,
+    "lint": 0,
+    "typecheck": 0,
+    "build": 0,
+    "install": 0,
+    "archiveImports": 0,
+    "app": 0,
+    "native": 0,
+    "vendor": 0,
+    "CIEndpointCalls": 0,
+    "repositorySourceEdits": 0,
+    "statusEdits": 0,
+    "commits": 0,
+    "gitRefUpdates": 0
+  },
+  "nextBoundary": "Root owns actual candidateGitTree composition; requested review must verify these four postimages, preservedf60 source/dependency pins, newSTATUS bytes and evidence-index references."
+}

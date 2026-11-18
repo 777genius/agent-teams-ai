@@ -1,4 +1,3 @@
-import { readFailureDetail } from '../infrastructure/memberWorkSyncPreparationDiagnostics';
 import { AsyncLocalStorage } from 'node:async_hooks';
 
 import { MemberWorkSyncTeamQuiescedError } from '../../core/application';
@@ -10,6 +9,7 @@ import {
   buildPendingReportIntentId,
   JsonMemberWorkSyncStore,
 } from '../infrastructure/JsonMemberWorkSyncStore';
+import { readFailureDetail } from '../infrastructure/memberWorkSyncPreparationDiagnostics';
 import { createJsonPreparedStatusBackend } from '../infrastructure/memberWorkSyncPreparedStatusBackend';
 import { MemberWorkSyncSqliteImporter } from '../infrastructure/MemberWorkSyncSqliteImporter';
 import { MemberWorkSyncStatusAuthority } from '../infrastructure/MemberWorkSyncStatusAuthority';
