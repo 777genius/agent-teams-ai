@@ -3134,7 +3134,10 @@ describe('ipc teams handlers', () => {
     };
     expect(second.success).toBe(true);
     expect(second.data).toEqual([{ teamName: 'fresh-team', displayName: 'Fresh' }]);
-    expect(service.listTeams).toHaveBeenCalledTimes(2);
+    // The quiet-window timer may refresh independently before this explicit TEAM_LIST.
+    // Both paths must return fresh data once the failed launch releases pressure.
+    expect(launchIoGovernor.hasLaunchPressureForTests()).toBe(false);
+    expect(service.listTeams.mock.calls.length).toBeGreaterThanOrEqual(2);
   });
 
   it('does not route TEAM_GET_MESSAGES_PAGE through the launch IO governor', async () => {
