@@ -5,8 +5,57 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
 import { isDeepStrictEqual } from 'node:util';
-import { closeNativeHostInput, startHost } from './fixtures/native-host.ts';
+import { closeNativeHostInput, readNativeHostFrame, startHost } from './fixtures/native-host.ts';
+import { ATTACHMENT_CHUNK_BYTES } from '../dist/attachments/contracts.js';
 import { createPassiveNativeDiagnosticCapture, readOriginalHostCpuProfile } from './fixtures/native-opencode-team/passive-diagnostics.ts';
+
+test('native Host keeps ordinary frame bounds and accepts only an exact request-bound attachment chunk', () => {
+  const request = { method: 'team.message.attachment.read', messageAttachmentRead: {
+    reference: 'TEST-message', attachmentId: 'TEST-image', offset: 0, expectedSha256: 'a'.repeat(64),
+  } };
+  const pending = new Map([[7, request]]);
+  const value = { attachment: { id: 'TEST-image', filename: 'TEST-image.png', mimeType: 'image/png', size: 4 * 1024 * 1024 },
+    offset: 0, sha256: request.messageAttachmentRead.expectedSha256,
+    base64: Buffer.alloc(ATTACHMENT_CHUNK_BYTES, 0x61).toString('base64'), nextOffset: ATTACHMENT_CHUNK_BYTES };
+  const frame = { jsonrpc: '2.0', id: 7, result: { ok: true, value } };
+  const line = JSON.stringify(frame);
+  assert.ok(Buffer.byteLength(line) > 256 * 1024 && Buffer.byteLength(line) < 1024 * 1024);
+  assert.deepEqual(readNativeHostFrame(line, pending), frame);
+  assert.throws(() => readNativeHostFrame(' '.repeat(256 * 1024) + line, pending),
+    'raw whitespace overhead must not disappear through JSON reserialization');
+  const finalOffset = 10 * ATTACHMENT_CHUNK_BYTES;
+  const final = { ...frame, result: { ok: true, value: { ...value, offset: finalOffset,
+    base64: Buffer.alloc(value.attachment.size - finalOffset, 0x61).toString('base64'), nextOffset: null } } };
+  assert.deepEqual(readNativeHostFrame(JSON.stringify(final), new Map([[7, { ...request,
+    messageAttachmentRead: { ...request.messageAttachmentRead, offset: finalOffset } }]])), final);
+  const ordinary = { jsonrpc: '2.0', id: 7, result: { ok: true, value: 'x'.repeat(256 * 1024 - 100) } };
+  assert.deepEqual(readNativeHostFrame(JSON.stringify(ordinary), new Map()), ordinary);
+  for (const reply of [
+    { ...ordinary, result: { ok: true, value: 'x'.repeat(256 * 1024) } },
+    { ...ordinary, result: { ok: true, value: 'x'.repeat(1024 * 1024) } },
+    { jsonrpc: '2.0', method: 'host.gap', params: value },
+    { jsonrpc: '2.0', id: 7, error: { code: -1, message: value.base64 } },
+    { ...frame, id: 8 }, { ...frame, jsonrpc: 'TEST-invalid' }, { ...frame, privatePath: '/TEST-private' },
+    { ...frame, result: { ...frame.result, privatePath: '/TEST-private' } },
+    { ...frame, result: { ...frame.result, ok: false } },
+  ]) assert.throws(() => readNativeHostFrame(JSON.stringify(reply), pending));
+  for (const changed of [
+    { ...value, privatePath: '/TEST-private' },
+    { ...value, attachment: { ...value.attachment, privatePath: '/TEST-private' } },
+    { ...value, attachment: { ...value.attachment, id: 'TEST-other' } },
+    { ...value, offset: 1 }, { ...value, sha256: 'b'.repeat(64) }, { ...value, nextOffset: null },
+    { ...value, base64: value.base64.slice(0, -1) + '\n' },
+    { ...value, base64: Buffer.alloc(ATTACHMENT_CHUNK_BYTES + 1).toString('base64') },
+    { ...value, base64: Buffer.alloc(ATTACHMENT_CHUNK_BYTES - 1).toString('base64'), nextOffset: ATTACHMENT_CHUNK_BYTES - 1 },
+  ]) assert.throws(() => readNativeHostFrame(JSON.stringify({ ...frame, result: { ok: true, value: changed } }), pending));
+  for (const captured of [
+    { ...request, method: 'runtime.read' }, { method: request.method },
+    { ...request, messageAttachmentRead: { ...request.messageAttachmentRead, expectedSha256: undefined } },
+    { ...request, messageAttachmentRead: { ...request.messageAttachmentRead, attachmentId: 'TEST-other' } },
+    { ...request, messageAttachmentRead: { ...request.messageAttachmentRead, offset: 1 } },
+    { ...request, messageAttachmentRead: { ...request.messageAttachmentRead, expectedSha256: 'b'.repeat(64) } },
+  ]) assert.throws(() => readNativeHostFrame(line, new Map([[7, captured]])));
+});
 
 test('a failed original Node child retains CPU evidence and bounded file refusals stay distinguishable', {
   timeout: 10000,

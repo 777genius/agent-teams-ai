@@ -30,7 +30,7 @@ provider #8 `f5d632a6122df2f6995451bd33e6a0fbcda67680`.
 | --- | --- | --- | --- |
 | F1 | Реализация и R2 готовы; UI E2E остаётся | Main интегрирован. Settings/defaults/overrides, human authority и Lead cycles используют текущего owner/controller. Существующий task-board UI journey дополнен default → override → inherit → Approve → reopen; нужен исполненный результат. | reviewflow; root |
 | F2 | Реализация и focused contracts готовы | Canonical Host agenda блокирует review work при lead/user clarification до review cycle; старый app path — re-export. Agenda 26/26 и cycle 3/3 PASS. | reviewflow |
-| M1 | Реализация, R2 и package checks готовы; native E2E остаётся | Provider `aad5c2f8` и immutable archive интегрированы: PNG/JPEG/GIF/WebP/PDF, 5 файлов / 4 MiB каждый / 8 MiB суммарно, model modality gates. Existing native journey дополнен normalization и cold readback; нужен фактический результат. | media; root |
+| M1 | Native delivery подтверждена; общий E2E не завершён | На `047f002e` оба input succeeded, 11 business model requests без ошибок; normalization большого PNG и exact PNG/JPEG/GIF/WebP/PDF проверены. Readback остановлен несовпадением TEST parser и существующего chunk contract; cold restore и итоговый cleanup остаются. | media; root |
 | E1 | Исправление готово; E2E остаётся | Полный status wire finite peer исправляет отказ Create/import; 2 contract checks PASS. Остальные исходные Create/import/retained/Resume/installer/Add journeys требуют текущего результата. | pr_graph; product ownership root |
 | W1 | x64 исправление готово; ARM64 открыт | Синхронное чтение configured key входит в прежнюю closing freshness-проверку; 36 focused checks PASS. ARM64: 6 последовательных MCP probes не укладываются в исходные 15 секунд. Итоговый cleanup подтверждён; deadlines и currentness сохранены. | pr_graph; root |
 | P9 | Открыто: контракт | Установить выполнимую границу original-path / writer / consumed bytes; текущую гарантию не сужать без явного решения. Независимые работы продолжаются. | root |
@@ -267,3 +267,31 @@ P9 не имеет подтверждённого конечного LOC до р
   XAUTHORITY успешно проверен по разрешённому harness localhost TCP пути.
   GUI journey ещё не исполнялся; запланирован после native run без одновременной
   тяжёлой нагрузки и изменения исходных deadlines.
+
+- 18 ноября, actual native `047f002e`: original source/build gates, compound
+  readiness и business nativeReady прошли; оба input terminal succeeded, все
+  11 business model requests завершились без modelFailures. PNG 4 MiB реально
+  нормализован до 159 bytes / 2000×1 с точными red pixels и новым digest;
+  PNG/JPEG/GIF/WebP и PDF 589 bytes прошли exact-byte проверки. На сохранённом
+  attachment read исходный TEST parser отказал: source API возвращает chunk
+  384 KiB, base64 512 KiB, а generic TEST line guard допускает лишь 256 KiB.
+  Полный run INCOMPLETE, elapsed 144388 ms; business exit 0 не заменяет cleanup
+  (overall false). Cold readback/restore не заявляются как PASS.
+- 18 ноября, CI compile follow-up: исходный Darwin x64 process job
+  [135015705253](https://github.com/777genius/agent-teams-ai/actions/runs/44364834233/job/135015705253)
+  на `747123a6` обнаружил TS2322 в projection `reviewFlow`. Один `as const`
+  сохраняет исходные три литерала вместо widened string; runtime не меняется.
+  Exact affected CI project `tools/owned-process-broker/tsconfig.retained-host.json`
+  прошёл pinned TS 7.0.2; resolved file list подтверждает включение projection.
+  Independent R2 и diff check PASS; полный workspace typecheck этим не заменяется.
+- 18 ноября, M1 frame R2: TEST parser согласован с уже существующим exact
+  384 KiB attachment contract. Только успешный ответ на pending message attachment
+  read с исходным digest, закрытыми envelope/metadata, canonical base64 и точными
+  offset/nextOffset/byte count может превышать generic 256 KiB. Сохраняются
+  исходные 256 KiB для raw envelope без base64 и всех остальных frames, а также
+  существующий абсолютный Host limit 1 MiB. Product chunk/upload alignment,
+  raw/public provider budgets, deadlines и original native assertions не менялись.
+  Регрессии отвергают неизвестный id, другой method, notifications/errors,
+  лишние поля, неправильные digest/offset/size, noncanonical base64 и raw padding.
+  Existing observer/close suite 5/5, scoped strict TS 7.0.2 и независимое R2 PASS.
+  Schema загружается lazily из исходного Host dist после build, сохраняя bootstrap.

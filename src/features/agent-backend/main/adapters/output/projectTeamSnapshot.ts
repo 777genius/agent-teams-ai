@@ -248,7 +248,7 @@ function kanban(value: unknown, teamName: string): KanbanState {
     };
   }
   if (source.reviewFlow !== undefined) {
-    result.reviewFlow = choice(source.reviewFlow, ['agent_approval', 'human_approval', 'lead_then_human']);
+    result.reviewFlow = choice(source.reviewFlow, ['agent_approval', 'human_approval', 'lead_then_human'] as const);
     if (source.reviewFlowPrompt !== undefined) result.reviewFlowPrompt = text(source.reviewFlowPrompt);
   } else if (source.reviewFlowPrompt !== undefined) throw new Error('Invalid review flow override');
   if (source.columnOrder !== undefined) {
