@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { projectAliveTeamNames, stopLogicalTeam, permanentlyDeleteLogicalTeam, restoreLogicalTeamWithContexts } from '../../../src/main/ipc/teams/teamContextLifecycle';
+import { projectAliveTeamNames, isLogicalTeamProcessAlive, stopLogicalTeam, permanentlyDeleteLogicalTeam, restoreLogicalTeamWithContexts } from '../../../src/main/ipc/teams/teamContextLifecycle';
 
 import type { TeamMetaFile } from '../../../src/main/services/team/TeamMetaStore';
 import type { TeamSummary } from '../../../src/shared/types/team';
@@ -44,6 +44,57 @@ describe('project team lifecycle projection', () => {
       .resolves.toMatchObject({ success: true });
     expect(stopNative).toHaveBeenCalledExactlyOnceWith('legacy');
     expect(f.registry.list).not.toHaveBeenCalled();
+  });
+
+  it('probes the owned physical runtime after a logical stop transport error', async () => {
+    const f = fixture('per_project');
+    const check = vi.fn(async (name: string) => name === 'ptc-a');
+    expect(await isLogicalTeamProcessAlive('builders', check, f.meta, f.registry as never))
+      .toBe(true);
+    expect(check).toHaveBeenCalledWith('builders');
+    expect(check).toHaveBeenCalledWith('ptc-a');
+  });
+
+  it('returns stopped only after every owned project is confirmed not alive', async () => {
+    const f = fixture('per_project');
+    const check = vi.fn(async () => false);
+    expect(await isLogicalTeamProcessAlive('builders', check, f.meta, f.registry as never))
+      .toBe(false);
+    expect(check).toHaveBeenCalledTimes(2);
+  });
+
+  it('preserves legacy shared process checks without probing unrelated aliases', async () => {
+    const f = fixture('shared');
+    const check = vi.fn(async () => false);
+    expect(await isLogicalTeamProcessAlive('builders', check, f.meta, f.registry as never))
+      .toBe(false);
+    expect(check).toHaveBeenCalledExactlyOnceWith('builders');
+  });
+
+  it('also probes retained native histories after switching back to shared', async () => {
+    const f = fixture('shared');
+    f.registry.listRetained.mockResolvedValue([entry]);
+    expect(await isLogicalTeamProcessAlive(
+      'builders', (name) => name === 'ptc-a', f.meta, f.registry as never
+    )).toBe(true);
+  });
+
+  it('fails closed when a reserved runtime cannot prove termination', async () => {
+    const f = fixture('per_project');
+    f.registry.list.mockResolvedValue([{ ...entry, state: 'reserved' }]);
+    f.registry.assertReservedStopOwnership.mockResolvedValue(undefined);
+    await expect(isLogicalTeamProcessAlive(
+      'builders', async () => false, f.meta, f.registry as never
+    )).rejects.toThrow('cannot be confirmed');
+    expect(f.registry.assertReservedStopOwnership).toHaveBeenCalledWith('builders', 'ptc-a');
+  });
+
+  it('does not conceal lost ownership or corrupt mapping during stop confirmation', async () => {
+    const f = fixture('per_project');
+    f.registry.list.mockRejectedValue(new Error('foreign or corrupt manifest'));
+    await expect(isLogicalTeamProcessAlive(
+      'builders', async () => false, f.meta, f.registry as never
+    )).rejects.toThrow('foreign or corrupt manifest');
   });
 
   it('stops every ready verified project before acknowledging logical stop', async () => {

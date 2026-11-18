@@ -36,6 +36,33 @@ async function ownedHistoryContexts(
 
 
 /**
+ * The renderer re-probes this after a stop transport error. A logical team
+ * may have no native process of its own, so false is authoritative only after
+ * checking all owned project runtimes (including retained shared histories).
+ * Unknown/pending ownership fails closed rather than reporting "stopped".
+ */
+export async function isLogicalTeamProcessAlive(
+  logicalTeamName: string,
+  isNativeAlive: (teamName: string) => boolean | Promise<boolean>,
+  meta: LifecycleReader = new TeamMetaStore(),
+  registry: TeamProjectContextRegistry = TeamProjectContextRegistry.fromCurrentApp()
+): Promise<boolean> {
+  if (await isNativeAlive(logicalTeamName)) return true;
+  const contexts = await ownedHistoryContexts(logicalTeamName, meta, registry);
+  for (const context of contexts) {
+    if (context.state !== 'ready') {
+      // A reserved alias can already have spawned a native process. Only an
+      // owner-verified alias can be probed; lack of liveness is still unknown.
+      await registry.assertReservedStopOwnership(logicalTeamName, context.executionTeamName);
+      if (await isNativeAlive(context.executionTeamName)) return true;
+      throw new Error('Project runtime stop cannot be confirmed while a context is pending');
+    }
+    if (await isNativeAlive(context.executionTeamName)) return true;
+  }
+  return false;
+}
+
+/**
  * Stop only verified owned native contexts. Do not kill unknown/foreign aliases
  * merely because their name resembles an internal identifier.
  */
