@@ -376,10 +376,16 @@ describe('targeted self-heal of status rows left by an earlier team identity', (
     );
   });
 
-  it('keeps SQLite-only current status readable through JSON fallback after cleanup crash', async () => {
+  it('refuses to rebind a foreign clean replica when SQLite-only status continuity is unprovable', async () => {
     const h = await setup('sqlite', { fallbackRequiresReplica: true });
     await importPrimary(h, [mk('bob', CURRENT)]);
     await writeReplica(h, 'clean', FOREIGN, snap([mk('alice', FOREIGN)]));
+    const primaryBefore = await primary(h);
+    const replicaPath = h.paths.getSqliteFallbackReplicaPath(TEAM);
+    const replicaBefore = await readFile(replicaPath, 'utf8');
+
+    // A replacement worker can report 'ok' even after a previous worker
+    // recreated SQLite and lost statuses that never reached the foreign replica.
     const heal = await healStaleIncarnationStatuses({
       teamName: TEAM,
       incarnation: CURRENT,
@@ -391,35 +397,14 @@ describe('targeted self-heal of status rows left by an earlier team identity', (
       readTeamRootStats: h.readTeamRootStats,
       logger: { warn: h.warn },
     });
-    expect(heal).toBe('healed');
-    // Simulate process death here: there is no authority preparation retry.
-    const envelope = JSON.parse(
-      await readFile(h.paths.getSqliteFallbackReplicaPath(TEAM), 'utf8')
-    ) as { state: string; incarnation: string; snapshot: MemberWorkSyncStoreSnapshot };
-    expect(envelope.state).toBe('clean');
-    expect(envelope.incarnation).toBe(CURRENT);
-    expect(envelope.snapshot.statuses.map((status) => status.memberName)).toEqual(['bob']);
-
-    const jsonFallback = new BackendSelectingMemberWorkSyncStore(
-      new InternalStorageBackendSelector(() => Promise.reject(new Error('SQLite unavailable'))),
-      h.sqlite,
-      h.json,
-      { gateway: h.gateway, paths: h.paths, fallbackRequiresReplica: true }
+    expect(heal).toBe('refused');
+    expect(await primary(h)).toEqual(primaryBefore);
+    expect(await readFile(replicaPath, 'utf8')).toBe(replicaBefore);
+    expect(await quarantineFiles(h)).toEqual([]);
+    expect(h.warn).toHaveBeenCalledWith(
+      'member-work-sync stale status cleanup refused',
+      expect.objectContaining({ reason: 'sqlite_primary_continuity_unverified' })
     );
-    const authority = new MemberWorkSyncStatusAuthority({
-      identity: createTestWorkSyncIdentity(CURRENT),
-      withPreparedBackend: (binding, operation) =>
-        jsonFallback.withPreparedBackend(binding, operation),
-    });
-    const read = authority.startRead({ teamName: TEAM, memberName: 'bob' });
-    const result = await read.result;
-    await read.settled;
-    expect(result).toMatchObject({
-      ok: true,
-      snapshot: {
-        status: { memberName: 'bob', statusRevision: { incarnation: CURRENT } },
-      },
-    });
   });
 
   it('refuses a foreign dirty replica without a candidate before deleting SQLite statuses', async () => {
@@ -585,10 +570,10 @@ describe('targeted self-heal of status rows left by an earlier team identity', (
   });
 
   it('refuses clean replica promotion when SQLite was recreated after corruption', async () => {
-    // The selector initially reported 'ok', but an independently replaced
-    // worker now reports that its SQLite database was recreated.
+    // The current-bound replica still contains a stale status. The live
+    // worker reports recovery, so no status cleanup can promote it.
     const h = await setup('sqlite', { integrity: 'ok' });
-    await writeReplica(h, 'clean', FOREIGN, snap([mk('alice', FOREIGN)]));
+    await writeReplica(h, 'clean', CURRENT, snap([mk('alice', FOREIGN)]));
     const originalPing = h.gateway.ping.bind(h.gateway);
     const livePing = vi.spyOn(h.gateway, 'ping').mockImplementation(async () => ({
       ...(await originalPing()),
@@ -635,7 +620,7 @@ describe('targeted self-heal of status rows left by an earlier team identity', (
   it('converges after a crash between the primary cleanup and the replica rewrite', async () => {
     const h = await setup('sqlite');
     await importPrimary(h, [mk('alice', FOREIGN), mk('bob', CURRENT)]);
-    await writeReplica(h, 'clean', FOREIGN, snap([mk('alice', FOREIGN), mk('bob', CURRENT)]));
+    await writeReplica(h, 'clean', CURRENT, snap([mk('alice', FOREIGN), mk('bob', CURRENT)]));
     vi.spyOn(InternalStorageJsonReplica.prototype, 'writeClean').mockRejectedValueOnce(
       new Error('simulated crash')
     );

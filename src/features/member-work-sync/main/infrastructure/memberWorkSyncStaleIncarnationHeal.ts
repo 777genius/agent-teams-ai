@@ -364,6 +364,14 @@ async function planReplica(input: StaleIncarnationHealInput, plan: Plan): Promis
     plan.refusal = 'foreign_replica_requires_primary';
     return;
   }
+  if (wrapperForeign && envelope.state === 'clean') {
+    // A foreign clean replica predates this incarnation. Even a live worker's
+    // 'ok' ping cannot prove that a previously recovered SQLite database still
+    // contains current-only statuses: a later worker opens that empty file as
+    // healthy. Never make this partial snapshot authoritative for JSON fallback.
+    plan.refusal = 'sqlite_primary_continuity_unverified';
+    return;
+  }
   plan.replica = {
     state: envelope.state,
     snapshot: retained,
