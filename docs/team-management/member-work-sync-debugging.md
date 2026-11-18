@@ -50,3 +50,22 @@ The indexes are implementation details used to avoid scanning every member direc
 A scheduled dispatch timeout aborts that dispatch pass so a late readiness or revalidation result
 cannot write a new inbox nudge after shutdown. If the pass already acquired an outbox claim, the
 item remains fenced and can be reclaimed after the five-minute claim lease expires.
+
+## Status left by an earlier team identity (`incarnation_mismatch`)
+
+A status mutation that fails with reason `corrupt` and detail `incarnation_mismatch` means stored
+status (SQLite row, JSON status file, pre-sqlite archive or the fallback replica) was written under
+another identity of the same team name, for example after the team directory was removed by hand and
+recreated. The log line `member-work-sync stored state belongs to another team identity` names the
+source and both incarnations.
+
+Preparation removes such state automatically, once per preparation attempt, only when all of this
+holds: the team's `config.json` `_backupIdentityId` equals the current incarnation, no purge is
+pending, the stale status is older than the current team directory, and the call is not a backup
+restore or preflight. Only status entries written under another incarnation are removed (SQLite
+rows by a filtered team import, per-member and legacy status files and pre-sqlite archives are
+moved aside as `*.stale-incarnation.<stamp>`, the replica is rewritten). Report intents, outbox,
+metrics, journals, `report-token-secret.json`, current-incarnation status and other teams are never
+touched. Everything removed is recorded first in
+`.member-work-sync/stale-incarnation-<stamp>.json`. If any condition is unproven the failure stays
+fail-closed and the log says `member-work-sync stale status cleanup refused` with the reason.

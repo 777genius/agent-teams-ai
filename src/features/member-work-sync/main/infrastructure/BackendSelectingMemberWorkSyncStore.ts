@@ -51,6 +51,7 @@ import {
   recordsToSnapshot,
   snapshotToRecords,
 } from './memberWorkSyncSqliteMappers';
+import { healStaleIncarnationStatuses } from './memberWorkSyncStaleIncarnationHeal';
 import { preflightMemberWorkSyncStatusSources } from './memberWorkSyncStatusPreflight';
 import {
   type MemberWorkSyncBackupCandidate,
@@ -202,7 +203,9 @@ export class BackendSelectingMemberWorkSyncStore
       if (!preflightOnly) this.authorityPreparationFailures.delete(normalizeTeamKey(teamName));
       let prepared = false;
       let stage: MemberWorkSyncPreparationStage = 'replica_wrapper';
-      try {
+      const attempt = async (): Promise<T> => {
+        prepared = false;
+        stage = 'replica_wrapper';
         if (await this.readPendingPrimaryPurge(teamName))
           throw new MemberWorkSyncSafetyJsonReadError('unavailable');
         const source = await replica.readForAuthorityPreparation(teamName, incarnation);
@@ -331,6 +334,29 @@ export class BackendSelectingMemberWorkSyncStore
           await replica.writeClean(teamName, snapshot, incarnation);
         }
         return result;
+      };
+      try {
+        try {
+          return await attempt();
+        } catch (error) {
+          // One targeted attempt per preparation; restore/preflight and later failures never heal.
+          const healable = !preflightOnly && !backup && !prepared;
+          if (
+            !healable ||
+            (await healStaleIncarnationStatuses({
+              teamName,
+              incarnation,
+              backend,
+              error,
+              gateway,
+              paths,
+              replica,
+              logger,
+            })) !== 'healed'
+          )
+            throw error;
+        }
+        return await attempt();
       } catch (error) {
         logIncarnationMismatch(logger, {
           teamName,

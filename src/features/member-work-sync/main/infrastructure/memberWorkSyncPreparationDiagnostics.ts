@@ -19,8 +19,10 @@ export type MemberWorkSyncPreparationStage =
 
 export const INCARNATION_MISMATCH_HINT =
   'Stored work-sync status was written under an earlier identity of this team (recreated or ' +
-  'restored). Nothing was changed and preparation stays fail-closed. Permanent team deletion ' +
-  'purges this state; there is no automatic cleanup yet.';
+  'restored). Nothing was changed and preparation stays fail-closed. Only status entries that ' +
+  'are provably older than this team are cleaned up automatically (the removed entries are kept ' +
+  'in a stale-incarnation-*.json record next to the status files); permanent team deletion ' +
+  'purges the rest.';
 
 /** Present when the error means "stored state belongs to another lifecycle incarnation". */
 export function readIncarnationMismatch(error: unknown): { foreignIncarnation?: string } | null {
