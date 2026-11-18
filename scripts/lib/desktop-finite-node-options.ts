@@ -31,6 +31,8 @@ export function desktopFiniteHeapNodeOptions(
     assert.ok(['emulated-retained-original-ui', 'emulated-import-lifecycle-ui'].includes(mode ?? ''),
       'finite TEST heap requires an exact finite lifecycle mode');
   }
+  if (environment.AGENT_TEAMS_DISABLE_SOURCEMAPS !== undefined)
+    assert.equal(environment.AGENT_TEAMS_DISABLE_SOURCEMAPS, '1', 'finite TEST source maps require their exact selector');
   return '--max-old-space-size=1536';
 }
 
@@ -44,6 +46,7 @@ export function desktopFiniteHeapAppEnvironment(
     LEGACY_DESKTOP_TEST_FINITE_HEAP_1536: '1',
     LEGACY_DESKTOP_BACKEND_GO: '1',
     LEGACY_DESKTOP_PROOF_MODE: environment.LEGACY_DESKTOP_PROOF_MODE!,
+    ...(environment.AGENT_TEAMS_DISABLE_SOURCEMAPS === '1' ? { AGENT_TEAMS_DISABLE_SOURCEMAPS: '1' } : {}),
     ...(environment.LEGACY_DESKTOP_EMULATED_ONLY === '1' ? { LEGACY_DESKTOP_EMULATED_ONLY: '1' } : {}),
     ...(environment.LEGACY_DESKTOP_PROOF_MODE === 'native-mixed-create-launch-ui' ? {
       LEGACY_DESKTOP_MIXED_MEMBERSHIP_UI: '1',

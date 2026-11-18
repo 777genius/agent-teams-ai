@@ -137,6 +137,11 @@ test('finite TEST heap selector admits only the two exact Linux x64 emulated lif
   for (const mode of ['emulated-retained-original-ui', 'emulated-import-lifecycle-ui'])
     assert.equal(desktopFiniteHeapNodeOptions({ ...admitted, LEGACY_DESKTOP_PROOF_MODE: mode }, 'linux', 'x64'),
       '--max-old-space-size=1536');
+  assert.equal(desktopFiniteHeapNodeOptions({ ...admitted, AGENT_TEAMS_DISABLE_SOURCEMAPS: '1' }, 'linux', 'x64'),
+    '--max-old-space-size=1536');
+  for (const value of ['', '0', 'true', 'false', '1 ', '1\n'])
+    assert.throws(() => desktopFiniteHeapNodeOptions({ ...admitted, AGENT_TEAMS_DISABLE_SOURCEMAPS: value },
+      'linux', 'x64'), /source maps require their exact selector/);
   for (const value of ['', '0', 'true', '1536', '8192', '1 ', '--max-old-space-size=1536', '1\n'])
     assert.throws(() => desktopFiniteHeapNodeOptions({ ...admitted, LEGACY_DESKTOP_TEST_FINITE_HEAP_1536: value },
       'linux', 'x64'), /exact selector/);
@@ -165,7 +170,8 @@ test('absent finite heap selector is inert on every platform and never reads amb
 test('finite heap admission and closed app environment preserve every other field and reject ambient flags', {
   skip: process.platform !== 'linux' || process.arch !== 'x64',
 }, (t) => {
-  const keys = (key: string) => key.startsWith('LEGACY_DESKTOP_') || key === 'NODE_OPTIONS';
+  const keys = (key: string) => key.startsWith('LEGACY_DESKTOP_') ||
+    ['NODE_OPTIONS', 'AGENT_TEAMS_DISABLE_SOURCEMAPS', 'SENTRY_AUTH_TOKEN'].includes(key);
   const original = Object.fromEntries(Object.entries(process.env).filter(([key]) => keys(key)));
   for (const key of Object.keys(original)) delete process.env[key];
   t.after(() => {
@@ -174,19 +180,34 @@ test('finite heap admission and closed app environment preserve every other fiel
   });
   Object.assign(process.env, { LEGACY_DESKTOP_BACKEND_GO: '1', LEGACY_DESKTOP_EMULATED_ONLY: '1',
     LEGACY_DESKTOP_TEST_DISPLAY: ':97', LEGACY_DESKTOP_TEST_XAUTHORITY: '/TEST/Xauthority',
-    NODE_OPTIONS: '--require=/TEST/ambient.cjs --max-old-space-size=8192' });
+    NODE_OPTIONS: '--require=/TEST/ambient.cjs --max-old-space-size=8192', SENTRY_AUTH_TOKEN: 'PRIVATE-ambient-token' });
   const environment = () => desktopBackendEnvironment('/TEST/finite-root', '/TEST/node', '/TEST/descriptor.json', 'a'.repeat(64));
   for (const mode of ['emulated-retained-original-ui', 'emulated-import-lifecycle-ui']) {
     process.env.LEGACY_DESKTOP_PROOF_MODE = mode;
     delete process.env.LEGACY_DESKTOP_TEST_FINITE_HEAP_1536;
+    process.env.AGENT_TEAMS_DISABLE_SOURCEMAPS = 'PRIVATE-ordinary-inert';
     assert.doesNotThrow(() => assertDesktopProofEnvironment(false));
     const ordinary = environment();
     assert.equal(Object.hasOwn(ordinary, 'NODE_OPTIONS'), false);
+    assert.equal(Object.hasOwn(ordinary, 'AGENT_TEAMS_DISABLE_SOURCEMAPS'), false);
+    assert.equal(Object.hasOwn(ordinary, 'SENTRY_AUTH_TOKEN'), false);
+    delete process.env.AGENT_TEAMS_DISABLE_SOURCEMAPS;
     process.env.LEGACY_DESKTOP_TEST_FINITE_HEAP_1536 = '1';
     assert.doesNotThrow(() => assertDesktopProofEnvironment(false));
     assert.deepEqual(environment(), { ...ordinary, NODE_OPTIONS: '--max-old-space-size=1536',
       LEGACY_DESKTOP_TEST_FINITE_HEAP_1536: '1', LEGACY_DESKTOP_BACKEND_GO: '1',
       LEGACY_DESKTOP_EMULATED_ONLY: '1', LEGACY_DESKTOP_PROOF_MODE: mode });
+    const finite = environment();
+    process.env.AGENT_TEAMS_DISABLE_SOURCEMAPS = '1';
+    assert.deepEqual(environment(), { ...finite, AGENT_TEAMS_DISABLE_SOURCEMAPS: '1' },
+      'explicit selection adds only the existing build setting');
+    assert.equal(Object.hasOwn(environment(), 'SENTRY_AUTH_TOKEN'), false);
+    for (const value of ['', '0', 'true', '1 ', '1\n']) {
+      process.env.AGENT_TEAMS_DISABLE_SOURCEMAPS = value;
+      assert.throws(() => assertDesktopProofEnvironment(false), /source maps require their exact selector/);
+      assert.throws(environment, /source maps require their exact selector/);
+    }
+    delete process.env.AGENT_TEAMS_DISABLE_SOURCEMAPS;
   }
   process.env.LEGACY_DESKTOP_TEST_FINITE_HEAP_1536 = '1536';
   assert.throws(() => assertDesktopProofEnvironment(false), /exact selector/);
@@ -324,7 +345,8 @@ test('finite TEST heap admits only original V2 management and finite V2 membersh
 test('original finite V2 fixture and dev startup retain only the validated 1536 MiB context', {
   skip: process.platform !== 'linux' || process.arch !== 'x64',
 }, (t) => {
-  const controlled = (key: string) => key.startsWith('LEGACY_DESKTOP_') || key === 'NODE_OPTIONS';
+  const controlled = (key: string) => key.startsWith('LEGACY_DESKTOP_') ||
+    ['NODE_OPTIONS', 'AGENT_TEAMS_DISABLE_SOURCEMAPS', 'SENTRY_AUTH_TOKEN'].includes(key);
   const original = Object.fromEntries(Object.entries(process.env).filter(([key]) => controlled(key)));
   const clear = () => { for (const key of Object.keys(process.env)) if (controlled(key)) delete process.env[key]; };
   t.after(() => { clear(); Object.assign(process.env, original); });
@@ -332,17 +354,26 @@ test('original finite V2 fixture and dev startup retain only the validated 1536 
     clear();
     Object.assign(process.env, { ...context, LEGACY_DESKTOP_BACKEND_GO: '1',
       LEGACY_DESKTOP_TEST_DISPLAY: ':97', LEGACY_DESKTOP_TEST_XAUTHORITY: '/TEST/Xauthority',
-      NODE_OPTIONS: '--require=/TEST/ambient.cjs --max-old-space-size=8192' });
+      NODE_OPTIONS: '--require=/TEST/ambient.cjs --max-old-space-size=8192',
+      SENTRY_AUTH_TOKEN: 'PRIVATE-ambient-token', AGENT_TEAMS_DISABLE_SOURCEMAPS: 'PRIVATE-ordinary-inert' });
     const environment = () => desktopBackendEnvironment('/TEST/finite-v2-root', '/TEST/node', '/TEST/descriptor.json', 'a'.repeat(64));
     const ordinary = environment();
     assert.equal(Object.hasOwn(ordinary, 'NODE_OPTIONS'), false);
+    assert.equal(Object.hasOwn(ordinary, 'AGENT_TEAMS_DISABLE_SOURCEMAPS'), false);
+    assert.equal(Object.hasOwn(ordinary, 'SENTRY_AUTH_TOKEN'), false);
+    delete process.env.AGENT_TEAMS_DISABLE_SOURCEMAPS;
     process.env.LEGACY_DESKTOP_TEST_FINITE_HEAP_1536 = '1';
     assert.doesNotThrow(() => assertDesktopProofEnvironment(true));
     const fixtureEnv = environment();
     assert.deepEqual(fixtureEnv, { ...ordinary, ...context, NODE_OPTIONS: '--max-old-space-size=1536',
       LEGACY_DESKTOP_TEST_FINITE_HEAP_1536: '1', LEGACY_DESKTOP_BACKEND_GO: '1' });
     assert.equal(Object.hasOwn(fixtureEnv, 'LEGACY_DESKTOP_EMULATED_ONLY'), false);
-    const uiEnv = { ...fixtureEnv, UV_THREADPOOL_SIZE: '16' }, before = { ...uiEnv };
+    assert.equal(Object.hasOwn(fixtureEnv, 'AGENT_TEAMS_DISABLE_SOURCEMAPS'), false, '1536 alone keeps existing maps');
+    process.env.AGENT_TEAMS_DISABLE_SOURCEMAPS = '1';
+    const selected = environment();
+    assert.deepEqual(selected, { ...fixtureEnv, AGENT_TEAMS_DISABLE_SOURCEMAPS: '1' });
+    assert.equal(Object.hasOwn(selected, 'SENTRY_AUTH_TOKEN'), false, 'the finite map choice never enables covered release uploads');
+    const uiEnv = { ...selected, UV_THREADPOOL_SIZE: '16' }, before = { ...uiEnv };
     const originalFloor = { ...uiEnv };
     originalDevNodeOptions(originalFloor);
     assert.equal(originalFloor.NODE_OPTIONS, '--max-old-space-size=2048');
@@ -356,6 +387,13 @@ test('original finite V2 fixture and dev startup retain only the validated 1536 
     for (const selected of ['', '0', '1536', '1 ']) refuse({ LEGACY_DESKTOP_TEST_FINITE_HEAP_1536: selected });
     for (const option of [undefined, '--max-old-space-size=2048', '--max-old-space-size=1536 --trace-gc',
       '--require=/TEST/ambient.cjs --max-old-space-size=1536']) refuse({ NODE_OPTIONS: option });
+    for (const value of ['', '0', 'true', '1 ', '1\n']) {
+      refuse({ AGENT_TEAMS_DISABLE_SOURCEMAPS: value });
+      process.env.AGENT_TEAMS_DISABLE_SOURCEMAPS = value;
+      assert.throws(() => assertDesktopProofEnvironment(true), /source maps require their exact selector/);
+      assert.throws(environment, /source maps require their exact selector/);
+    }
+    process.env.AGENT_TEAMS_DISABLE_SOURCEMAPS = '1';
     refuse({ LEGACY_DESKTOP_BACKEND_GO: undefined });
     refuse({ LEGACY_DESKTOP_EMULATED_ONLY: '1' });
     for (const key of Object.keys(context)) refuse({ [key]: undefined });
