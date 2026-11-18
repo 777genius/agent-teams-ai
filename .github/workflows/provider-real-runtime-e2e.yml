@@ -6,6 +6,7 @@ on:
     branches: [main]
     paths:
       - 'scripts/e2e/provider-real-runtime-*.ts'
+      - 'scripts/e2e/opencode-alice-bob-local-model.mjs'
       - 'scripts/e2e/opencode-diagnostics/startup-resources.mjs'
       - 'scripts/e2e/opencode-diagnostics/startup-resources.test.mjs'
       - 'scripts/e2e/opencode-diagnostics/run.mjs'
@@ -27,6 +28,7 @@ on:
     types: [opened, synchronize, reopened, ready_for_review, converted_to_draft]
     paths:
       - 'scripts/e2e/provider-real-runtime-*.ts'
+      - 'scripts/e2e/opencode-alice-bob-local-model.mjs'
       - 'scripts/e2e/opencode-diagnostics/startup-resources.mjs'
       - 'scripts/e2e/opencode-diagnostics/startup-resources.test.mjs'
       - 'scripts/e2e/opencode-diagnostics/run.mjs'
@@ -101,6 +103,17 @@ jobs:
         run: node scripts/e2e/provider-real-runtime-e2e.ts
       - name: Install desktop Electron test dependencies
         run: node ./scripts/ci/install-dependencies-with-retry.mjs
+      # Keep the Windows desktop preflight identical to the passing 3-OS
+      # native Teams Create harness. Do not make CDP readiness wait for a
+      # cold Electron install or terminal-platform runtime publication.
+      - name: Ensure Electron installed before Windows UI startup
+        if: runner.os == 'Windows'
+        run: node ./scripts/ensure-electron-install.cjs --strict
+      - name: Stage pinned terminal platform runtime on Windows
+        if: runner.os == 'Windows'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: node ./scripts/ensure-terminal-platform-runtime.mjs
       - name: Verify isolated desktop harness guardrails
         run: node --test scripts/e2e/opencode-diagnostics/platform.test.mjs
       - name: Verify real pinned runtime through Linux Electron IPC and UI
@@ -112,6 +125,23 @@ jobs:
         run: |
           node scripts/e2e/opencode-diagnostics/run.mjs --real-runtime
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      # Model decisions are local/deterministic, while OpenCode, team IPC,
+      # physical inboxes and delivery-ledger read commits are genuine.
+      - name: Real OpenCode Alice/Bob peer delivery with localhost model
+        if: runner.os == 'Linux'
+        env:
+          OPENCODE_PEER_E2E_EVIDENCE: ${{ runner.temp }}/opencode-peer-local-model
+        run: |
+          node --check scripts/e2e/opencode-alice-bob-local-model.mjs
+          xvfb-run -a node scripts/e2e/opencode-alice-bob-local-model.mjs
+      - name: Preserve Alice/Bob original peer/read receipts
+        if: always() && runner.os == 'Linux'
+        uses: actions/upload-artifact@v4
+        with:
+          name: opencode-alice-bob-local-model-${{ github.sha }}
+          retention-days: 14
+          if-no-files-found: warn
+          path: ${{ runner.temp }}/opencode-peer-local-model/
       - name: Preserve sanitized real Electron connection evidence
         if: always()
         uses: actions/upload-artifact@v4
@@ -124,6 +154,15 @@ jobs:
             ${{ runner.temp }}/opencode-diagnostics-e2e-*/real-connection.png
             ${{ runner.temp }}/opencode-diagnostics-e2e-*/cold-dashboard.json
             ${{ runner.temp }}/opencode-diagnostics-e2e-*/cold-dashboard.png
+      - name: Preserve isolated desktop startup log after failed E2E
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: real-runtime-startup-log-${{ matrix.platform }}-${{ github.sha }}
+          retention-days: 14
+          if-no-files-found: warn
+          # The disposable fixture strips inherited provider credentials.
+          path: ${{ runner.temp }}/opencode-diagnostics-e2e-*/desktop.log
       - name: Preserve owned startup resource samples
         if: always()
         uses: actions/upload-artifact@v4

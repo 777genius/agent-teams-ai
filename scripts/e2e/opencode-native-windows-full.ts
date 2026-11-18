@@ -23,6 +23,7 @@ import { promisify } from 'node:util';
 import { stripAgentBlocks, unwrapAgentBlock } from '../../src/shared/constants/agentBlocks';
 import { parseSingleBridgeJsonResult, validateBridgeResultEnvelope } from '../../src/main/services/team/opencode/bridge/OpenCodeBridgeCommandContract';
 import { projectTaskPersistenceDifference } from './opencode-diagnostics/task-persistence';
+import { readReadinessProbeReceipts } from './opencode-diagnostics/readiness-probe-receipt';
 import { reprojectV2OwnedSessionDiagnostic, v2TerminalFailureReaderCode } from './opencode-diagnostics/v2-terminal-failure';
 import { projectV2NativeTranscript } from './opencode-native-v2-transcript';
 import { stageNativeTestNode } from './opencode-native-test-node';
@@ -1338,6 +1339,7 @@ async function packagedStartupSnapshot(
   dataRoot: string,
   team: string,
   runId: string,
+  selectedModel: string,
   timing: 'before_stop' | 'after_original_stop' = 'before_stop'
 ) {
   const row = (value: unknown): Record<string, unknown> =>
@@ -1551,6 +1553,7 @@ async function packagedStartupSnapshot(
       dataRoot === path.join(testRoot, 'runtime-data')
   );
   assert(/^test-opencode-[a-f0-9-]+$/.test(team) && /^[a-f0-9-]{36}$/.test(runId));
+  const readinessProbes = readReadinessProbeReceipts(testRoot, dataRoot, selectedModel);
   const read = async (directory: string, name: string, plain = false, limit = 65536) => {
     try {
       const parent = await lstat(directory, { bigint: true });
@@ -2170,6 +2173,7 @@ async function packagedStartupSnapshot(
   return {
     observation: timing === 'after_original_stop' ? 'after_original_stop_snapshot_only' : 'before_stop_snapshot_only',
     authority: 'no_authority_minted',
+    readinessProbes: await readinessProbes,
     launchManifest,
     stdio,
     diagnostics,
@@ -3232,7 +3236,8 @@ async function main() {
               desktop.root,
               desktop.env.CLAUDE_MULTIMODEL_DATA_HOME!,
               desktop.teamName,
-              proof.runIds.at(-1)!
+              proof.runIds.at(-1)!,
+              model
             ),
             new Promise((resolve) => {
               snapshotTimer = setTimeout(() => resolve({ observation: 'unavailable' }), 8000);
@@ -3358,7 +3363,7 @@ async function main() {
           try {
             proof.postStopSnapshot = await Promise.race([
               packagedStartupSnapshot(desktop.root, desktop.env.CLAUDE_MULTIMODEL_DATA_HOME!,
-                desktop.teamName, proof.runIds.at(-1)!, 'after_original_stop'),
+                desktop.teamName, proof.runIds.at(-1)!, model, 'after_original_stop'),
               new Promise(resolve => { timer = setTimeout(() => resolve({ observation: 'unavailable' }), 8000); }),
             ]);
           } catch { proof.postStopSnapshot = { observation: 'unavailable' }; }

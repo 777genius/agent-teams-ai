@@ -24,8 +24,9 @@ try {
   // eslint-disable-next-line @typescript-eslint/no-require-imports -- node-pty is optional native addon
   nodePty = require('node-pty') as NodePtyModule;
 } catch {
-  logger.warn('node-pty not available - doctor fallback disabled');
+  // The doctor fallback is optional; importing its module is not a request to use it.
 }
+let warnedMissingNodePty = false;
 
 function stripAnsiSequences(value: string): string {
   return value
@@ -92,6 +93,10 @@ export function extractDoctorInvokedCandidates(output: string): string[] {
 
 async function captureDoctorOutput(commandName: string): Promise<string | null> {
   if (!nodePty) {
+    if (!warnedMissingNodePty) {
+      warnedMissingNodePty = true;
+      logger.warn('node-pty not available - doctor fallback disabled');
+    }
     return null;
   }
 
