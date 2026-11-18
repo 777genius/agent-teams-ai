@@ -20,7 +20,9 @@ export type InternalStorageReplicaRecoverySource<TSnapshot> =
 export class InternalStorageFallbackUnsafeError extends Error {
   constructor(
     readonly replicaPath: string,
-    reason: string
+    reason: string,
+    /** Machine-readable cause for diagnostics; the error still fails closed. */
+    readonly meta?: { code: 'incarnation_mismatch'; foreignIncarnation: string }
   ) {
     super(`Internal storage JSON fallback is unsafe: ${reason}`);
     this.name = 'InternalStorageFallbackUnsafeError';
@@ -80,7 +82,8 @@ export class InternalStorageJsonReplica<TSnapshot> {
     if ('incarnation' in envelope && envelope.incarnation !== incarnation) {
       throw new InternalStorageFallbackUnsafeError(
         this.getPath(teamName),
-        'replica incarnation mismatch'
+        'replica incarnation mismatch',
+        { code: 'incarnation_mismatch', foreignIncarnation: String(envelope.incarnation) }
       );
     }
     if (envelope.state === 'dirty' && !('snapshot' in envelope)) {

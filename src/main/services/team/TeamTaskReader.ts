@@ -9,6 +9,12 @@ import * as path from 'path';
 
 import { estimateCachedValueBytes } from './cacheMemoryEstimate';
 import { getTeamFsWorkerClient } from './TeamFsWorkerClient';
+import {
+  listTaskFileNames,
+  prefetchTaskFileBatch,
+  statTaskFiles,
+  type TaskFileReadResult,
+} from './teamTaskFileIo';
 import { compactTeamTaskForSnapshot } from './teamTaskSnapshotCompaction';
 
 import type {
@@ -241,7 +247,7 @@ export class TeamTaskReader {
     scannedFiles: readonly ScannedTaskFile[]
   ): readonly TeamTask[] | null {
     const cached = TeamTaskReader.teamTasksCache.get(teamName);
-    if (!cached || cached.signaturesByFile.size !== scannedFiles.length) {
+    if (cached?.signaturesByFile.size !== scannedFiles.length) {
       if (cached) {
         TeamTaskReader.deleteCachedTeamTasks(teamName);
       }
@@ -336,19 +342,14 @@ export class TeamTaskReader {
 
     const scannedFiles: ScannedTaskFile[] = [];
     let canCacheTeamSnapshot = true;
-    for (const file of entries) {
-      if (
-        !file.endsWith('.json') ||
-        file.startsWith('.') ||
-        file === '.lock' ||
-        file === '.highwatermark'
-      ) {
-        continue;
-      }
-
+    const taskFiles = listTaskFileNames(entries);
+    const stats = await statTaskFiles(taskFiles.map((file) => path.join(tasksDir, file)));
+    for (const [statIndex, file] of taskFiles.entries()) {
       const taskPath = path.join(tasksDir, file);
       try {
-        const fileStat = await fs.promises.stat(taskPath);
+        const statResult = stats[statIndex];
+        if ('error' in statResult) throw statResult.error;
+        const fileStat = statResult.stat;
         if (!fileStat.isFile() || fileStat.size > MAX_TASK_FILE_BYTES) {
           logger.debug(`Skipping suspicious task file: ${taskPath}`);
           TeamTaskReader.deleteCachedTaskFile(taskPath);
@@ -379,8 +380,13 @@ export class TeamTaskReader {
 
     const tasks: TeamTask[] = [];
     let processed = 0;
-    for (const scannedFile of scannedFiles) {
+    const prefetched = new Map<string, TaskFileReadResult>();
+    const isCached = ({ taskPath, signature }: ScannedTaskFile): boolean =>
+      canUseProjectionCache &&
+      TeamTaskReader.getCachedTaskFileSnapshot(taskPath, signature) !== undefined;
+    for (const [index, scannedFile] of scannedFiles.entries()) {
       const { taskPath, signature } = scannedFile;
+      await prefetchTaskFileBatch(scannedFiles, index, isCached, prefetched);
       try {
         const cachedTask = canUseProjectionCache
           ? TeamTaskReader.getCachedTaskFileSnapshot(taskPath, signature)
@@ -391,7 +397,10 @@ export class TeamTaskReader {
           }
           continue;
         }
-        const raw = await readFileUtf8WithTimeout(taskPath, 5_000);
+        const read = prefetched.get(taskPath);
+        prefetched.delete(taskPath);
+        if (read && 'error' in read) throw read.error;
+        const raw = read ? read.raw : await readFileUtf8WithTimeout(taskPath, 5_000);
         const parsed = JSON.parse(raw) as Record<string, unknown>;
         // Skip internal CLI tracking entries (spawned subagent bookkeeping)
         const metadata = parsed.metadata as Record<string, unknown> | undefined;
