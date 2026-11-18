@@ -472,8 +472,21 @@ async function run() {
   let success = false;
   try {
     await start(f);
-    await waitFor('window.electronAPI?.teams && window.__agentTeamsDevStore', 'renderer bridge', 60_000);
-    await waitFor('(async () => Boolean((await window.electronAPI.startup.getStatus()).ready))()', 'app startup', 60_000);
+    // On Windows the same real Electron renderer startup can exceed 60 s:
+    // the separate creation-page E2E reaches its first interaction after
+    // ~75 s on GitHub-hosted Windows. Do not misclassify a slow startup as
+    // a project-history regression. Keep one bounded, observed readiness gate.
+    const rendererStartupBudgetMs = process.platform === 'win32' ? 180_000 : 60_000;
+    await waitFor(
+      'window.electronAPI?.teams && window.__agentTeamsDevStore',
+      'renderer bridge',
+      rendererStartupBudgetMs
+    );
+    await waitFor(
+      '(async () => Boolean((await window.electronAPI.startup.getStatus()).ready))()',
+      'app startup',
+      rendererStartupBudgetMs
+    );
     const beforeIndex = await readFile(f.indexPath, 'utf8');
     await verifyNative(f);
     assert.equal(await readFile(f.indexPath, 'utf8'), beforeIndex,
