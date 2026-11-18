@@ -8,12 +8,18 @@ import fsp from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { performance } from 'node:perf_hooks';
+import { runInNewContext } from 'node:vm';
 import type { TestContext } from 'node:test';
 import { digest } from './desktop-backend-fixture.ts';
 import { desktopBackendEnvironment } from './desktop-runtime-source-fixture.ts';
 import { desktopFiniteHeapNodeOptions, normalizeDesktopDevNodeOptions } from '../lib/desktop-finite-node-options.ts';
 import { observeDesktopEmulatedRuntimeChildren } from './desktop-emulated-runtime-fixture.ts';
 import { createDesktopProcessRootOracle } from './desktop-process-root-oracle.ts';
+import { waitForDesktopOpenCodePreflight } from './desktop-launch-ui-smoke.ts';
+import { FileManagementCommandStore } from '../../packages/legacy-agent-host/dist/adapters/providers/FileManagementCommandStore.js';
+import { managementDigest } from '../../packages/legacy-agent-host/dist/management/identity.js';
+import { runtimeDigest } from '../../packages/legacy-agent-host/dist/runtime/identity.js';
+import type { StoredModelProbe } from '../../packages/legacy-agent-host/dist/management/commandRecords.js';
 import {
   assertDesktopProofEnvironment,
   assertNoNativeHostChildren,
@@ -1657,4 +1663,244 @@ test('actual packaged final summary composes the same failure projection without
       ...(status !== 'PASS' ? { emulatedReadinessFailure: projectDesktopEmulatedReadinessFailure(evidence) } : {}) });
     assert.equal(JSON.stringify(evidence), before);
   }
+});
+
+
+function originalOpenCodePreflightFixture(t: TestContext, publish = true) {
+  t.mock.timers.enable({ apis: ['Date'], now: 1000 });
+  const root = fs.mkdtempSync(join(fs.realpathSync(tmpdir()), 'TEST-original-preflight-'));
+  t.after(() => { t.mock.timers.reset(); fs.rmSync(root, { recursive: true, force: true }); });
+  const storageRoot = join(root, 'hoststore'), workspace = join(root, 'workspace');
+  fs.mkdirSync(storageRoot, { mode: 0o700 });
+  const owner = { ownerId: 'TEST-owner', storageRoot }, binding = {
+    backendId: owner.ownerId, teamId: 'TEST-team', teamName: 'test-desktop-backend',
+  };
+  const profile = { owner, teams: [{ binding, scope: { teamId: binding.teamId, runId: 'TEST-run' } }] };
+  const profilePath = join(root, 'host-profile.json'), profileBytes = JSON.stringify(profile);
+  fs.writeFileSync(profilePath, profileBytes, { mode: 0o600 });
+  const store = new FileManagementCommandStore(storageRoot), hash = managementDigest;
+  const commandId = 'team-preflight-' + hash('TEST-command'), profileId = 'team-probe-' + hash('TEST-profile');
+  const origin: NonNullable<StoredModelProbe['localModelReadinessOrigin']> = {
+    schemaVersion: 1, kind: 'team', ownerDigest: hash(owner), contextId: 'local', commandId,
+    selectionDigest: hash('origin-selection'), workspaces: [{ path: workspace, project: {
+      sources: ['opencode.json', 'opencode.jsonc', '.opencode/opencode.json', '.opencode/opencode.jsonc']
+        .map(name => ({ root: workspace, path: join(workspace, name), present: false, digest: hash(name) })),
+      providers: [], selectedPath: join(workspace, 'opencode.json'), invalid: false,
+    }, global: { notConsulted: 'project-precedence' } }], approval: { notConsulted: 'no-private-target' },
+  };
+  const probe: StoredModelProbe = {
+    schemaVersion: 1, kind: 'model.probe', purpose: 'native-local-readiness-v1', commandId,
+    profileId, configRevision: profileId, providerId: 'test-local', modelId: 'TEST-model',
+    fingerprint: hash('fingerprint'), selectionDigest: hash('selection'), resourceId: hash('resource'),
+    resourceHeld: true, phase: 'running', ok: false, context: hash('context'), expiresAt: 91_000,
+    localModelReadinessOrigin: origin, localModelReadinessPreparation: {
+      originDigest: hash(origin), ownerDigest: origin.ownerDigest, contextId: 'local', commandId,
+      selectionDigest: origin.selectionDigest, anchorCommandId: commandId, expiresAt: 101_000,
+    }, readinessScope: { schemaVersion: 1, kind: 'team', teamBindingDigest: runtimeDigest(binding),
+      actionDigest: hash('action'), selectionDigest: hash('scoped-selection'), sourceRevision: 'TEST-run',
+      rosterRevision: hash('roster'), mechanismDigest: hash('mechanism'), workspace, cutoff: 101_000,
+      destinationKeys: [hash('destination')] },
+  };
+  if (publish) store.write(probe);
+  const state = { ready: false, current: true, owned: true, reads: 0, ownerReads: 0,
+    binding: { ...binding } as Record<string, unknown> };
+  const hooks: { evaluate?(): void; ownerRead?(): void; input?(type: string): void } = {};
+  const commands: { method: string; params?: Record<string, unknown> }[] = [];
+  const proof: Record<string, unknown> = {}, refusal = new Error('TEST original renderer revoked');
+  const rectangle = () => ({ x: 100, y: 100, top: 100, bottom: 140, width: 160, height: 40 });
+  const button = { get textContent() { return state.ready ? 'Launch team' : 'Skip preflight and launch'; },
+    disabled: false, tagName: 'BUTTON', contains: () => false, matches: () => false,
+    getAttribute: () => null, getBoundingClientRect: rectangle, getAnimations: () => [],
+    closest: () => dialog };
+  const dialog = { getBoundingClientRect: rectangle, getAnimations: () => [],
+    querySelectorAll: () => [button], querySelector(selector: string) {
+      if (selector === '#dialog-skip-permissions') return { getAttribute: () => 'checked' };
+      assert.equal(selector, 'button[aria-label*=" provider,"]');
+      return { getAttribute: () => 'OpenCode provider, TEST-model' };
+    } };
+  const prompt = { get value() { return state.current ? 'OPENCODE_TEAM_ONE' : 'OTHER'; }, closest: () => dialog };
+  const cdp = {
+    async evaluate(expression: string) {
+      state.reads++; hooks.evaluate?.();
+      return runInNewContext(expression, { innerWidth: 1400, innerHeight: 900,
+        getComputedStyle: () => ({ pointerEvents: 'auto' }), document: {
+          fonts: { status: 'loaded' }, elementFromPoint: () => button,
+          querySelectorAll(selector: string) {
+            if (selector === '[role="dialog"] #dialog-prompt') return [prompt];
+            assert.equal(selector, '[role="dialog"] button'); return [button];
+          },
+        } });
+    },
+    async send(method: string, params?: Record<string, unknown>) {
+      commands.push({ method, params });
+      if (method === 'Input.dispatchMouseEvent') hooks.input?.(String(params?.type));
+      return {};
+    },
+  };
+  const start = () => waitForDesktopOpenCodePreflight(cdp, {
+    fixture: { root, profilePath, pins: { profileSha256: digest(profileBytes) },
+      openCodeV2: { model: 'test-local/TEST-model', displayName: 'TEST-model' } },
+    prompt: 'OPENCODE_TEAM_ONE', proof, step() {},
+    assertOwnedRenderer() { if (!state.owned) throw refusal; },
+    async ownerState() { state.ownerReads++; hooks.ownerRead?.(); return { binding: state.binding }; },
+  });
+  const complete = () => {
+    Object.assign(probe, { phase: 'completed', ok: true, resourceHeld: false, readiness: {
+      context: probe.context, selectionDigest: probe.selectionDigest, evidence: {
+        schemaVersion: 1, ordinary: 'confirmed', coordination: 'not-applicable', decision: 'allow', reasons: [],
+        routeDigest: hash('route'), configurationDigest: hash('configuration'), accountDigest: hash('account'),
+        metadata: { provider: 'custom', tools: true, modelListed: true, contextTokens: 32768,
+          parameterCount: null, configuredContextTokens: 32768, trainedContextTokens: 32768, contextSource: 'local-metadata' },
+      },
+    } });
+    store.write(probe);
+  };
+  const inputCount = () => commands.filter(row => row.method.startsWith('Input.')).length;
+  return { root, storageRoot, store, profilePath, probe, state, hooks, commands, proof, refusal,
+    start, complete, inputCount, journalPath: join(storageRoot, 'management-commands', hash(commandId) + '.json') };
+}
+
+test('original OpenCode preflight waits past 30s only inside its existing cutoff before one original click', async t => {
+  const f = originalOpenCodePreflightFixture(t);
+  f.hooks.evaluate = () => {
+    if (f.state.reads === 2) { t.mock.timers.setTime(40_000); f.complete(); f.state.ready = true; }
+  };
+  const ui = await f.start();
+  assert.equal(f.commands.length, 0, 'the entire extended observation is passive');
+  const wait = f.proof.originalPreflightWait as Record<string, unknown>;
+  assert.equal(wait.deadline, 91_000, 'never replace the original cutoff with now plus 90s');
+  assert.equal(wait.acquisitionDeadline, 31_000);
+  assert.equal(wait.authority, 'wait-bound-only');
+  f.hooks.input = type => {
+    if (type === 'mousePressed') f.store.write({ ...f.probe, readinessRetired: true });
+  };
+  await ui.click('[role="dialog"] button', 'submit original Launch team once', 'Launch team');
+  assert.deepEqual(f.commands.filter(row => row.method === 'Input.dispatchMouseEvent').map(row => row.params?.type),
+    ['mouseMoved', 'mousePressed', 'mouseReleased'], 'one original click; consumption cannot suppress its release');
+});
+
+test('original OpenCode preflight missing command refuses at the original 30s acquisition deadline', async t => {
+  const f = originalOpenCodePreflightFixture(t, false);
+  f.hooks.evaluate = () => { t.mock.timers.setTime(31_000); f.state.ready = true; };
+  await assert.rejects(f.start(), /UI read timed out: one original OpenCode preflight command/);
+  assert.equal(f.state.reads, 1); assert.equal(f.inputCount(), 0);
+  assert.equal(f.proof.originalPreflightWait, undefined);
+});
+
+for (const change of ['replacement', 'fingerprint', 'probe-cutoff', 'scope-cutoff', 'preparation-cutoff',
+  'owner-binding', 'profile-bytes', 'renderer', 'form'] as const) {
+  test(`original OpenCode preflight refuses ${change} before further input`, async t => {
+    const f = originalOpenCodePreflightFixture(t);
+    f.hooks.evaluate = () => {
+      if (f.state.reads !== 1) return;
+      if (change === 'renderer') { f.state.owned = false; return; }
+      if (change === 'owner-binding') { f.state.binding.teamId = 'OTHER'; return; }
+      if (change === 'profile-bytes') { fs.appendFileSync(f.profilePath, ' '); return; }
+      if (change === 'form') { f.state.current = false; return; }
+      if (change === 'replacement') {
+        fs.unlinkSync(f.journalPath);
+        const next = 'team-preflight-' + managementDigest('replacement');
+        f.probe.commandId = next;
+        f.probe.localModelReadinessOrigin!.commandId = next;
+        Object.assign(f.probe.localModelReadinessPreparation!, { commandId: next, anchorCommandId: next,
+          originDigest: managementDigest(f.probe.localModelReadinessOrigin) });
+      } else if (change === 'fingerprint') f.probe.fingerprint = managementDigest('replacement');
+      else if (change === 'probe-cutoff') f.probe.expiresAt++;
+      else if (change === 'scope-cutoff') f.probe.readinessScope!.cutoff++;
+      else f.probe.localModelReadinessPreparation!.expiresAt++;
+      f.store.write(f.probe);
+    };
+    await assert.rejects(f.start(), error => {
+      if (change === 'renderer') assert.equal(error, f.refusal);
+      else assert.match(String(error), /changed|replaced|pinned/);
+      return true;
+    });
+    assert.equal(f.state.reads, 1, 'no readiness or target read after original identity changed');
+    assert.equal(f.inputCount(), 0);
+  });
+}
+
+for (const refusal of ['ambiguous', 'held', 'cancelled', 'corrupt-envelope'] as const) {
+  test(`original OpenCode preflight refuses ${refusal} before a DOM read`, async t => {
+    const f = originalOpenCodePreflightFixture(t);
+    if (refusal === 'ambiguous') {
+      const second = structuredClone(f.probe), commandId = 'team-preflight-' + managementDigest('second');
+      second.commandId = commandId; second.localModelReadinessOrigin!.commandId = commandId;
+      Object.assign(second.localModelReadinessPreparation!, { commandId, anchorCommandId: commandId,
+        originDigest: managementDigest(second.localModelReadinessOrigin) }); f.store.write(second);
+    } else if (refusal === 'corrupt-envelope') {
+      const saved = JSON.parse(fs.readFileSync(f.journalPath, 'utf8')) as Record<string, unknown>;
+      saved.digest = managementDigest('unrelated'); fs.writeFileSync(f.journalPath, JSON.stringify(saved));
+    } else f.store.write({ ...f.probe, phase: refusal, resourceHeld: refusal === 'held', ok: false });
+    await assert.rejects(f.start(), /ambiguous|refused|held/);
+    assert.equal(f.state.reads, 0); assert.equal(f.inputCount(), 0);
+  });
+}
+
+for (const boundary of ['acquisition-owner-read', 'native-owner-read', 'native-dom-result', 'before-click'] as const) {
+  test(`original OpenCode preflight refuses ${boundary} at its exact cutoff with zero input`, async t => {
+    const f = originalOpenCodePreflightFixture(t);
+    if (boundary === 'acquisition-owner-read' || boundary === 'native-owner-read') f.hooks.ownerRead = () => {
+      if (f.state.ownerReads === (boundary === 'acquisition-owner-read' ? 1 : 2))
+        t.mock.timers.setTime(boundary === 'acquisition-owner-read' ? 31_000 : 91_000);
+    };
+    else f.hooks.evaluate = () => {
+      if (f.state.reads === 2) {
+        f.complete(); f.state.ready = true;
+        if (boundary === 'native-dom-result') t.mock.timers.setTime(91_000);
+      }
+    };
+    if (boundary === 'before-click') {
+      const ui = await f.start(); t.mock.timers.setTime(91_000);
+      await assert.rejects(ui.click('[role="dialog"] button', 'submit once', 'Launch team'), /expired/);
+    } else await assert.rejects(f.start(), /expired|UI read timed out/);
+    assert.equal(f.inputCount(), 0);
+    assert.ok(f.state.reads <= 2, 'late results cannot start another observation window');
+  });
+}
+
+
+for (const mismatch of ['owner', 'team', 'run', 'workspace', 'model'] as const) {
+  test(`original OpenCode preflight never borrows another ${mismatch} receipt`, async t => {
+    const f = originalOpenCodePreflightFixture(t);
+    if (mismatch === 'owner') {
+      f.probe.localModelReadinessOrigin!.ownerDigest = managementDigest('OTHER-owner');
+      Object.assign(f.probe.localModelReadinessPreparation!, {
+        ownerDigest: f.probe.localModelReadinessOrigin!.ownerDigest,
+        originDigest: managementDigest(f.probe.localModelReadinessOrigin),
+      });
+    } else if (mismatch === 'team') f.probe.readinessScope!.teamBindingDigest = managementDigest('OTHER-team');
+    else if (mismatch === 'run') f.probe.readinessScope!.sourceRevision = 'OTHER-run';
+    else if (mismatch === 'workspace') f.probe.readinessScope!.workspace = join(f.root, 'OTHER-workspace');
+    else f.probe.modelId = 'OTHER-model';
+    f.store.write(f.probe);
+    f.hooks.evaluate = () => { f.state.ready = true; t.mock.timers.setTime(31_000); };
+    await assert.rejects(f.start(), /UI read timed out: one original OpenCode preflight command/);
+    assert.equal(f.proof.originalPreflightWait, undefined);
+    assert.equal(f.inputCount(), 0);
+  });
+}
+
+for (const earliest of ['scope', 'preparation'] as const) {
+  test(`original OpenCode preflight honors an earlier ${earliest} cutoff without extending it`, async t => {
+    const f = originalOpenCodePreflightFixture(t);
+    if (earliest === 'scope') f.probe.readinessScope!.cutoff = 50_000;
+    else f.probe.localModelReadinessPreparation!.expiresAt = 50_000;
+    f.store.write(f.probe);
+    f.hooks.evaluate = () => {
+      if (f.state.reads === 2) { f.complete(); f.state.ready = true; t.mock.timers.setTime(50_000); }
+    };
+    await assert.rejects(f.start(), /UI read timed out/);
+    assert.equal((f.proof.originalPreflightWait as Record<string, unknown>).deadline, 50_000);
+    assert.equal(f.inputCount(), 0);
+  });
+}
+
+test('original OpenCode preflight rechecks the original form in the final controls before input', async t => {
+  const f = originalOpenCodePreflightFixture(t);
+  f.hooks.evaluate = () => { if (f.state.reads === 2) { f.complete(); f.state.ready = true; } };
+  const ui = await f.start();
+  f.state.current = false;
+  await assert.rejects(ui.click('[role="dialog"] button', 'submit original once', 'Launch team'), /original OpenCode launch form changed/);
+  assert.equal(f.inputCount(), 0, 'a matching Launch team label on a changed form cannot admit a click');
 });

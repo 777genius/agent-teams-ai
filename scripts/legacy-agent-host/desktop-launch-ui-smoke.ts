@@ -6,6 +6,10 @@ import { join } from 'node:path';
 import { performance } from 'node:perf_hooks';
 import { fileDigest } from './desktop-backend-fixture.ts';
 import { replaceRosterSchema } from '../../packages/legacy-agent-host/dist/team/rosterSchema.js';
+import { FileManagementCommandStore } from '../../packages/legacy-agent-host/dist/adapters/providers/FileManagementCommandStore.js';
+import { managementDigest } from '../../packages/legacy-agent-host/dist/management/identity.js';
+import { runtimeDigest } from '../../packages/legacy-agent-host/dist/runtime/identity.js';
+import type { StoredModelProbe } from '../../packages/legacy-agent-host/dist/management/commandRecords.js';
 import { readDesktopNativeStopSessions, readDesktopNativeHostProcesses, separateDesktopOpenCodeRuntimeChildren, observeDesktopOpenCodeMetadata, captureDesktopOpenCodeGlobalMetadata, captureDesktopOpenCodeProjectMetadata } from './desktop-native-stop-fixture.ts';
 import { command, processTable } from './desktop-backend-observations.ts';
 import { captureCodexCodeModeProcess, observeCodexCodeModeProcess } from '../../packages/legacy-agent-host/tests/fixtures/codex-native-closure.ts';
@@ -28,6 +32,149 @@ const record = (raw: unknown): Record<string, unknown> => {
   return raw as Record<string, unknown>;
 };
 const json = async (path: string) => JSON.parse(await readFile(path, 'utf8')) as unknown;
+
+/** Observe one original TEST probe's remaining time; this grants no readiness or launch authority. */
+export async function waitForDesktopOpenCodePreflight(cdp: UiCdpPort, options: {
+  fixture: { root: string; profilePath: string; pins: { profileSha256: string };
+    openCodeV2: { model: string; displayName: string } };
+  prompt: string;
+  proof: Record<string, unknown>;
+  ownerState(): Promise<Record<string, unknown>>;
+  assertOwnedRenderer(): void;
+  step(value: Record<string, unknown>): void;
+}): Promise<ReturnType<typeof createDesktopUiControls>> {
+  const acquisitionDeadline = Date.now() + 30_000;
+  let original: { commandId: string; identity: string; deadline: number } | undefined;
+  let store: FileManagementCommandStore | undefined, completedEnvelope: string | undefined;
+  const assertWithin = (): void => {
+    options.assertOwnedRenderer();
+    assert.ok(Date.now() < (original?.deadline ?? acquisitionDeadline),
+      'Original OpenCode preflight observation expired; no replacement probe');
+  };
+  const readProfile = async () => {
+    assertWithin();
+    const bytes = await readFile(options.fixture.profilePath);
+    assertWithin();
+    assert.equal(createHash('sha256').update(bytes).digest('hex'), options.fixture.pins.profileSha256,
+      'original TEST profile bytes remain pinned');
+    return record(JSON.parse(bytes.toString('utf8')));
+  };
+  const profile = await readProfile(), owner = record(profile.owner);
+  const teams = profile.teams;
+  assert.ok(Array.isArray(teams) && teams.length === 1, 'one original TEST team');
+  const team = record(teams[0]), binding = record(team.binding), scope = record(team.scope);
+  const workspace = join(options.fixture.root, 'workspace'), storageRoot = join(options.fixture.root, 'hoststore');
+  assert.equal(owner.storageRoot, storageRoot);
+  assert.equal(binding.teamName, 'test-desktop-backend');
+  assert.equal(binding.backendId, owner.ownerId);
+  assert.equal(scope.teamId, binding.teamId);
+  assert.equal(typeof scope.runId, 'string');
+  assert.equal(options.fixture.openCodeV2.model, 'test-local/TEST-model', 'only the existing localhost TEST model');
+  const ownerDigest = managementDigest(owner), bindingDigest = runtimeDigest(binding);
+  const stableIdentity = (probe: StoredModelProbe): string => {
+    const stable: Record<string, unknown> = { ...probe };
+    for (const key of ['phase', 'ok', 'resourceHeld', 'readiness', 'nativeFileKeyWitness']) delete stable[key];
+    return managementDigest(stable);
+  };
+  const readOriginal = (): StoredModelProbe | undefined => {
+    assertWithin();
+    if (!store) try { store = new FileManagementCommandStore(storageRoot, true); }
+    catch (error) { if ((error as NodeJS.ErrnoException).code === 'ENOENT' && !original) return; throw error; }
+    const matches: StoredModelProbe[] = [];
+    let count = 0;
+    for (const probe of store.list()) {
+      assert.ok(++count <= 32, 'bounded original TEST management journal');
+      if (probe.kind === 'model.probe' && probe.purpose === 'native-local-readiness-v1' &&
+          probe.providerId === 'test-local' && probe.modelId === 'TEST-model' &&
+          probe.readinessScope?.kind === 'team' && probe.readinessScope.teamBindingDigest === bindingDigest &&
+          probe.readinessScope.sourceRevision === scope.runId && probe.readinessScope.workspace === workspace &&
+          probe.localModelReadinessOrigin?.kind === 'team' && probe.localModelReadinessOrigin.ownerDigest === ownerDigest)
+        matches.push(probe);
+    }
+    assertWithin();
+    assert.ok(matches.length <= 1, 'ambiguous original OpenCode preflight probe');
+    if (!matches.length) {
+      assert.equal(original, undefined, 'original OpenCode preflight probe disappeared or was replaced');
+      return;
+    }
+    const probe = matches[0]!, origin = probe.localModelReadinessOrigin!, preparation = probe.localModelReadinessPreparation!;
+    assert.equal(origin.contextId, 'local');
+    assert.equal(origin.commandId, probe.commandId);
+    assert.equal(preparation.anchorCommandId, probe.commandId);
+    assert.equal(preparation.originDigest, managementDigest(origin));
+    assert.deepEqual(origin.workspaces.map(value => value.path), [workspace]);
+    assert.equal(probe.profileId, probe.configRevision);
+    assert.match(probe.profileId, /^team-probe-[a-f0-9]{64}$/);
+    assert.match(probe.commandId, /^team-preflight-[a-f0-9]{64}$/);
+    assert.equal(probe.readinessRetired, undefined, 'original readiness was not consumed or retired');
+    assert.ok(probe.phase === 'running' || probe.phase === 'completed' && probe.ok && !probe.resourceHeld,
+      'original preflight refused or cleanup is unresolved');
+    const deadline = Math.min(probe.expiresAt, probe.readinessScope!.cutoff, preparation.expiresAt);
+    assert.ok(Number.isSafeInteger(deadline) && Date.now() < deadline, 'original preflight cutoff expired');
+    const identity = stableIdentity(probe);
+    if (!original) {
+      assert.ok(Date.now() < acquisitionDeadline, 'original probe acquisition exceeded its original 30 seconds');
+      original = { commandId: probe.commandId, identity, deadline };
+      options.proof.originalPreflightWait = { authority: 'wait-bound-only', commandId: probe.commandId,
+        profileId: probe.profileId, fingerprint: probe.fingerprint, context: probe.context,
+        ownerDigest, bindingDigest, initialEnvelopeDigest: managementDigest(probe), identity,
+        acquisitionDeadline, deadline, probeExpiresAt: probe.expiresAt,
+        scopeCutoff: probe.readinessScope!.cutoff, preparationExpiresAt: preparation.expiresAt };
+    } else assert.deepEqual({ commandId: probe.commandId, identity, deadline }, original,
+      'original OpenCode preflight identity or cutoff changed');
+    if (probe.phase === 'completed') {
+      const envelope = managementDigest(probe);
+      if (completedEnvelope) assert.equal(envelope, completedEnvelope, 'original completed preflight changed');
+      completedEnvelope = envelope;
+    } else assert.equal(completedEnvelope, undefined, 'original completed preflight regressed');
+    assertWithin();
+    return probe;
+  };
+  const beforeRead = async (): Promise<void> => {
+    await readProfile();
+    const state = await options.ownerState();
+    assertWithin();
+    assert.deepEqual(state.binding, binding, 'original Team owner binding changed');
+    readOriginal();
+  };
+  const expression = `(() => {
+    const prompts=[...document.querySelectorAll('[role="dialog"] #dialog-prompt')];
+    if(prompts.length!==1)return {current:false,ready:false};
+    const prompt=prompts[0],dialog=prompt.closest('[role="dialog"]');
+    const current=Boolean(dialog&&prompt.value===${JSON.stringify(options.prompt)}&&
+      dialog.querySelector('#dialog-skip-permissions')?.getAttribute('data-state')==='checked'&&
+      dialog.querySelector('button[aria-label*=" provider,"]')?.getAttribute('aria-label')===
+        ${JSON.stringify('OpenCode provider, ' + options.fixture.openCodeV2.displayName)});
+    const launch=dialog?[...dialog.querySelectorAll('button')].filter(button=>button.textContent.trim()==='Launch team'):[];
+    return {current,ready:launch.length===1&&!launch[0].disabled};
+  })()`;
+  const currentForm = (value: unknown): Record<string, unknown> => {
+    const form = record(value);
+    assert.equal(form.current, true, 'original OpenCode launch form changed during preflight');
+    return form;
+  };
+  const observationUi = createDesktopUiControls(cdp, { assertOwnedRenderer: assertWithin, step: options.step });
+  await observationUi.waitRead(expression, 'one original OpenCode preflight command', 30_000,
+    value => { currentForm(value); return original !== undefined; }, { deadline: acquisitionDeadline, beforeRead });
+  assert.ok(original);
+  await observationUi.waitRead(expression, 'original OpenCode preflight within its immutable cutoff',
+    original.deadline - Date.now(), value => currentForm(value).ready === true, { deadline: original.deadline, beforeRead });
+  await beforeRead(); // A late DOM result cannot outlive the original receipt or owner.
+  assertWithin();
+  const assertCurrent = (): void => { assertWithin(); assert.ok(readOriginal()); };
+  // These controls are used only for the existing pre-submit scroll/click. Their
+  // reads stay bound to the original owner/receipt; Input dispatch remains unchanged.
+  return createDesktopUiControls({
+    async evaluate(source) {
+      await beforeRead();
+      const value = record(await cdp.evaluate(`(() => { const form=${expression}; const value=(${source}); return {form,value}; })()`));
+      await beforeRead();
+      currentForm(value.form);
+      return value.value;
+    },
+    send: (method, params) => cdp.send(method, params),
+  }, { assertOwnedRenderer: assertCurrent, step: options.step });
+}
 
 /** Renderer source only: the Main normalization and original Host envelope remain unobserved. */
 function projectSubmittedRoster(raw: unknown, handleId: string): Record<string, unknown> {
@@ -374,10 +521,14 @@ export async function runDesktopLaunchUiSmoke(cdp: UiCdpPort, options: {
     await ui.click('[role="dialog"] #dialog-skip-permissions', 'select original automatic tool permission mode');
   assert.equal(await cdp.evaluate(`document.querySelector('[role="dialog"] #dialog-skip-permissions')?.getAttribute('data-state')`), 'checked');
   // Do not click the optional preflight bypass: readiness must settle first.
-  await ui.scrollTo('[role="dialog"] button', 'visible original Launch team control', 'Launch team');
+  const launchUi = opencode ? await waitForDesktopOpenCodePreflight(cdp, {
+    fixture: { ...fixture, openCodeV2: opencode }, prompt: firstPrompt, proof, ownerState,
+    assertOwnedRenderer: options.assertOwnedRenderer, step,
+  }) : ui;
+  await launchUi.scrollTo('[role="dialog"] button', 'visible original Launch team control', 'Launch team');
   let metadataObservation: ReturnType<typeof readDesktopNativeHostProcesses> | undefined;
   if (opencode) {
-    await ui.waitRead(`[...document.querySelectorAll('[role="dialog"] button')].some(e=>e.textContent.trim()==='Launch team'&&!e.disabled)`, 'original preflight completes before any runtime allocation');
+    await launchUi.waitRead(`[...document.querySelectorAll('[role="dialog"] button')].some(e=>e.textContent.trim()==='Launch team'&&!e.disabled)`, 'original preflight completes before any runtime allocation');
     assert.ok(globalMetadata);
     const selected = await captureDesktopOpenCodeProjectMetadata(fixture, options.capturedGroup(), globalMetadata);
     metadataObservation = selected.captured; proof.metadataSources = selected.metadataSources;
@@ -392,7 +543,7 @@ export async function runDesktopLaunchUiSmoke(cdp: UiCdpPort, options: {
     'before-original-submit'
   );
   try {
-    await ui.click('[role="dialog"] button', 'submit original Launch team once', 'Launch team');
+    await launchUi.click('[role="dialog"] button', 'submit original Launch team once', 'Launch team');
     await ui.waitRead(`!document.querySelector('[role="dialog"] #dialog-prompt')`, 'original launch dialog closes', 60000);
   } catch (error) {
     await captureReadiness(
