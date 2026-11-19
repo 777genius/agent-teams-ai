@@ -229,6 +229,8 @@ describe('ProjectScopedTeamDetailView project switching', () => {
   });
 
   it('keeps old shared tasks readable after switching their logical team to per-project mode', async () => {
+    // The retained shared view must never be overridden by the current project's physical alias.
+    state.selectedTeamName = 'builders';
     getView.mockResolvedValue({
       mode: 'per_project', state: 'ready',
       executionTeamName: 'ptc-current', workContextId: 'current-project',
@@ -240,6 +242,7 @@ describe('ProjectScopedTeamDetailView project switching', () => {
       })
     ));
     await settle();
+    expect(selectTeam).not.toHaveBeenCalledWith('ptc-current');
     expect(host.querySelector('[data-team]')?.getAttribute('data-team')).toBe('builders');
     expect(host.querySelector('[data-team]')?.getAttribute('data-retained')).toBe('true');
     expect(host.querySelector('[data-team-name="ptc-current"]')).toBeNull();

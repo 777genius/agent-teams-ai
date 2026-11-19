@@ -215,7 +215,7 @@ export const ProjectScopedTeamDetailView = ({
   // Activating an already-open logical tab can reselect the logical team.
   // Restore the verified physical runtime whenever that occurs while focused.
   const readyExecutionTeamName =
-    context?.mode === 'per_project' && context.state === 'ready'
+    !retainedSharedHistory && context?.mode === 'per_project' && context.state === 'ready'
       ? context.executionTeamName
       : null;
   useEffect(() => {
