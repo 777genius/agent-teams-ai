@@ -1,11 +1,14 @@
 import { and, desc, eq, inArray } from 'drizzle-orm';
 
+import { isSameMemberWorkSyncTeam } from '../../../contracts/memberWorkSyncTeamIdentity';
+
 import { memberWorkSyncMetricEvents, memberWorkSyncStatus } from './internalStorageSchema';
 
 import type {
   MemberWorkSyncMetricEventRecord,
   MemberWorkSyncStatusCompareAndWriteInput,
   MemberWorkSyncStatusCompareAndWriteResult,
+  MemberWorkSyncStatusDeleteTarget,
   MemberWorkSyncStatusRecord,
 } from '../../../contracts/internalStorageContracts';
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
@@ -67,6 +70,52 @@ function appendMetrics(
       )
       .run();
   }
+}
+
+/**
+ * Exact-key-and-payload guarded deletion. All matches must succeed in one
+ * transaction; a concurrent replacement or an unrelated team cannot be removed.
+ */
+export function deleteMemberWorkSyncStatusesMatching(
+  orm: BetterSQLite3Database,
+  teamName: string,
+  targets: MemberWorkSyncStatusDeleteTarget[]
+): number {
+  if (!Array.isArray(targets) || targets.length === 0) {
+    throw new Error('Invalid member-work-sync status deletion target set');
+  }
+  const keys = new Set<string>();
+  for (const target of targets) {
+    if (
+      !target ||
+      !isSameMemberWorkSyncTeam(target.teamName, teamName) ||
+      typeof target.memberKey !== 'string' ||
+      !target.memberKey ||
+      typeof target.statusJson !== 'string' ||
+      !target.statusJson
+    ) {
+      throw new Error('Invalid member-work-sync status deletion target');
+    }
+    const key = JSON.stringify([target.teamName, target.memberKey]);
+    if (keys.has(key)) throw new Error('Duplicate member-work-sync status deletion target');
+    keys.add(key);
+  }
+  return orm.transaction(() => {
+    for (const target of targets) {
+      const deleted = orm
+        .delete(memberWorkSyncStatus)
+        .where(
+          and(
+            eq(memberWorkSyncStatus.teamName, target.teamName),
+            eq(memberWorkSyncStatus.memberKey, target.memberKey),
+            eq(memberWorkSyncStatus.statusJson, target.statusJson)
+          )
+        )
+        .run().changes;
+      if (deleted !== 1) throw new Error('Stale member-work-sync status changed before deletion');
+    }
+    return targets.length;
+  });
 }
 
 /** Kept only for existing writers during migration; normal writers will move to CAS. */
