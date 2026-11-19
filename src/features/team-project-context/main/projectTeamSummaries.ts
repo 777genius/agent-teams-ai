@@ -69,6 +69,7 @@ export async function projectTeamSummaries(
               return {
                 executionTeamName,
                 projectPath,
+                ...(native ? { memberCount: native.memberCount } : {}),
                 ...(native?.leadSessionId ? { leadSessionId: native.leadSessionId } : {}),
                 ...(native?.sessionHistory?.length ? { sessionHistory: native.sessionHistory } : {}),
               };

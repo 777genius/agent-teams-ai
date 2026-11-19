@@ -35,7 +35,7 @@ describe('projectTeamSummaries', () => {
     expect(visible[0]?.pendingCreate).toBe(false);
     expect(visible[0]?.taskCount).toBe(3);
     expect(visible[0]?.projectHistoryContexts).toEqual([
-      { executionTeamName: 'ptc-owned', projectPath: '/sandbox/a' },
+      { executionTeamName: 'ptc-owned', projectPath: '/sandbox/a', memberCount: 1 },
     ]);
   });
 
@@ -51,6 +51,7 @@ describe('projectTeamSummaries', () => {
     expect(visible[0]?.projectHistoryContexts).toEqual([{
       executionTeamName: 'ptc-owned',
       projectPath: '/sandbox/a',
+      memberCount: 1,
       leadSessionId: 'physical-lead',
       sessionHistory: ['physical-old'],
     }]);
@@ -65,6 +66,15 @@ describe('projectTeamSummaries', () => {
     expect(visible.map((v) => v.teamName)).toEqual(['builders', 'ptc-foreign', 'old-team']);
     expect(visible[0]?.projectContextMode).toBe('shared');
     expect(f.registry.listRetained).toHaveBeenCalledWith('builders');
+    expect(visible[0]?.projectHistoryContexts).toEqual([
+      { executionTeamName: 'ptc-owned', projectPath: '/sandbox/a', memberCount: 1 },
+    ]);
+  });
+
+  it('does not invent a solo member count for an owned context without a native summary', async () => {
+    const f = fixture();
+    const withoutNative = teams.filter((team) => team.teamName !== 'ptc-owned');
+    const visible = await projectTeamSummaries(withoutNative, f.meta, f.registry);
     expect(visible[0]?.projectHistoryContexts).toEqual([
       { executionTeamName: 'ptc-owned', projectPath: '/sandbox/a' },
     ]);

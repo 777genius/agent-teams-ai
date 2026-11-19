@@ -94,6 +94,8 @@ export interface TeamSummary {
   projectHistoryContexts?: readonly {
     executionTeamName: string;
     projectPath: string;
+    /** Native teammate count, absent until the owned physical summary is available. */
+    memberCount?: number;
     /** Native session associations, retained only for verified physical histories. */
     leadSessionId?: string;
     sessionHistory?: readonly string[];
