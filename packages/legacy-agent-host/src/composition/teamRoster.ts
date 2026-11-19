@@ -123,7 +123,7 @@ export function readCreatedLaunchAdmission(options: {
   return { launch, partialCreated: true as const };
 }
 
-/** A prospective model check is available only before any admission on the current complete capture. */
+/** An unadmitted seed or complete capture can inspect prospective models only with released custody. */
 export function isUnstartedCaptureEditable(options: {
   team: HostedTeam | undefined;
   launch: TeamLaunchOwner | undefined;
@@ -132,13 +132,23 @@ export function isUnstartedCaptureEditable(options: {
   runtime: RuntimeOwner;
 }): boolean {
   const { team, launch } = options;
-  if (!team?.capture || !launch || !neverStarted(launch.read())) return false;
-  assertCapturedRosterCurrent(team);
-  for (const retained of options.retainedLaunches.values()) {
-    if (retained.team.definition.binding.teamId !== team.definition.binding.teamId) continue;
-    const entries = retained.entries ?? options.entries.filter(entry => entry.team === retained.team);
-    assertRosterEditable({ members: runtimeLaunchMembers(retained.team, entries), entries,
-      launch: retained.launch, runtime: options.runtime, action: 'read' });
+  if (!team || !launch) return false;
+  const seed = team.capture === undefined && team.configurationRevision === undefined &&
+    team.launchId === undefined;
+  if (!team.capture && !seed) return false;
+  try {
+    if (!neverStarted(launch.read())) return false;
+    assertCapturedRosterCurrent(team);
+    for (const retained of options.retainedLaunches.values()) {
+      if (retained.team.definition.binding.teamId !== team.definition.binding.teamId) continue;
+      const entries = retained.entries ?? options.entries.filter(entry => entry.team === retained.team);
+      assertRosterEditable({ members: runtimeLaunchMembers(retained.team, entries), entries,
+        launch: retained.launch, runtime: options.runtime, action: 'read' });
+    }
+    return true;
+  } catch (error) {
+    // A seed keeps its retained model read when prospective release cannot be proven.
+    if (seed) return false;
+    throw error;
   }
-  return true;
 }

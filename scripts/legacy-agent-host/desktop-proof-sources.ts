@@ -132,6 +132,7 @@ const desktopProofBaseSources = [
   'scripts/legacy-agent-host/desktop-host-routing-proof.ts',
   'scripts/legacy-agent-host/desktop-readback-fixture.ts',
   'scripts/legacy-agent-host/desktop-ui-controls.ts',
+  'scripts/legacy-agent-host/desktop-ui-read-observation.ts',
   'scripts/legacy-agent-host/desktop-reply-visibility.ts',
   'packages/legacy-agent-host/src/team/TeamProductChanges.ts',
   'packages/legacy-agent-host/src/team/TeamOwner.ts',

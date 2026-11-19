@@ -1,0 +1,185 @@
+{
+  "schemaVersion": 1,
+  "kind": "existing-read-cut-final-reason-test-observability",
+  "status": "FINITE_RED_GREEN_AND_FOCUSED_TYPECHECK_PASS",
+  "sourceHead": "42a4ee210aff6ffa310025d024fd55cfbdbcd277",
+  "sourceTree": "06ddfb2e88ee1e049f14a9c6c11290004d16dda2",
+  "createdAt": "2026-11-19T02:57:43.458955+00:00",
+  "candidateManifest": {
+    "path": "/workspace/scratch/c714f5bce554/read-cut-finalreason-42a4-candidate/candidate-manifest.json",
+    "bytes": 2887,
+    "lines": 59,
+    "sha256": "6919d4e42be603fe7e548cc6593765db1e55f3cf2d89f2607b1b724415aecc79",
+    "gitBlobComputed": "a8ac285ea8847e9a941c71d210808c6bfd1a2a13"
+  },
+  "originalFailureEvidence": {
+    "path": "/workspace/scratch/c714f5bce554/ci-current-42a4/stage1-linux-credential-protocol-dispose-failure-42a4.json",
+    "bytes": 48662,
+    "lines": 1285,
+    "sha256": "c81c5670dfb6e9ae9ac0d3769fe1c215f7ff430c91f4cdece7a065c6463d0466",
+    "gitBlobComputed": "8c33910012e224b540c153238cb4c7ad73709072"
+  },
+  "sourceGapReview": {
+    "path": "/workspace/scratch/c714f5bce554/ci-current-42a4/linux-credential-dispose-source-gap-42a4.json",
+    "bytes": 10633,
+    "lines": 160,
+    "sha256": "15d7e49a607e893c2be1b354a45d84a1a00de04e86397ca6673db64657799e66",
+    "gitBlobComputed": "f05a42f70ee8214069e50a0be262cccdc036fa05"
+  },
+  "dto": {
+    "field": "finalReason",
+    "optional": "An absent own property remains absent at emission and receipt; inherited values are ignored. An own invalid field, including undefined/null/accessor/non-string, rejects only that malformed event without consuming the first-read slot.",
+    "vocabulary": "Exact existing pinned producer failureReasons vocabulary, including declared unknown fallback and mutable_native_readback; arbitrary unknown strings and oversized strings rejected.",
+    "sameRecord": true,
+    "firstReasonPreserved": true,
+    "rawErrorForwarded": false
+  },
+  "execution": {
+    "runtime": "Existing Node v24.22.3 executable, pinned by SHA256 in all run records. No Host/native/app process was started.",
+    "method": "Actual complete fixture bodies stripped by Node intrinsic and evaluated with real diagnostics_channel and in-memory process streams; subscriptions/stdin listeners removed after each finite case.",
+    "before": {
+      "command": [
+        "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+        "--test",
+        "--test-concurrency=1",
+        "--test-name-pattern=^original read-cut final reason reaches",
+        "packages/legacy-agent-host/tests/passive-driver-close-diagnostics.test.ts"
+      ],
+      "cwd": "/workspace/scratch/c714f5bce554/read-cut-finalreason-42a4-candidate/verify-before",
+      "exitCode": 1,
+      "completedAt": "2026-11-19T02:54:39.292651+00:00",
+      "nodeSha256": "acbe4b8d9153b841ed0697cbfc4f93e767386620edb745ab9358306c0a6f31aa",
+      "logSha256": "425f1d1e6e7df38f170a602c9bb6bfc73f6eeeb008a388a9488595f6a28b229b",
+      "selected": 1,
+      "pass": 0,
+      "fail": 1,
+      "skip": 0,
+      "failure": "Missing existing finalReason label: actual undefined, expected native_read_cleanup_unknown",
+      "log": {
+        "path": "/workspace/scratch/c714f5bce554/read-cut-finalreason-42a4-candidate/before-run.log",
+        "bytes": 1389,
+        "lines": 34,
+        "sha256": "425f1d1e6e7df38f170a602c9bb6bfc73f6eeeb008a388a9488595f6a28b229b",
+        "gitBlobComputed": "4a2bd6302fc4c1a0e742b355e26de014496136ea"
+      }
+    },
+    "after": {
+      "command": [
+        "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+        "--test",
+        "--test-concurrency=1",
+        "packages/legacy-agent-host/tests/passive-driver-close-diagnostics.test.ts"
+      ],
+      "cwd": "/workspace/scratch/c714f5bce554/read-cut-finalreason-42a4-candidate/candidate",
+      "exitCode": 0,
+      "completedAt": "2026-11-19T02:55:11.430796+00:00",
+      "nodeSha256": "acbe4b8d9153b841ed0697cbfc4f93e767386620edb745ab9358306c0a6f31aa",
+      "logSha256": "87851a6d77ffe50c40dccefdb501bc3893a5c432823d91442b8b861bb31a0f6c",
+      "selected": 10,
+      "pass": 10,
+      "fail": 0,
+      "skip": 0,
+      "existingInvariantTests": 6,
+      "newFinalReasonTests": 4,
+      "log": {
+        "path": "/workspace/scratch/c714f5bce554/read-cut-finalreason-42a4-candidate/after-run.log",
+        "bytes": 1388,
+        "lines": 20,
+        "sha256": "87851a6d77ffe50c40dccefdb501bc3893a5c432823d91442b8b861bb31a0f6c",
+        "gitBlobComputed": "fc5ef457cc9f104a0f9ee7604facfa3c8ff20c74"
+      }
+    },
+    "sameRegressionFileBytesBeforeAndAfter": true,
+    "focusedTypecheck": {
+      "command": [
+        "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+        "/workspace/scratch/1d5114b8d2ee/agent-teams-ai/node_modules/@typescript/native/bin/tsc",
+        "-p",
+        "tsconfig.final-reason-focused.json",
+        "--pretty",
+        "false"
+      ],
+      "cwd": "/workspace/scratch/c714f5bce554/read-cut-finalreason-42a4-candidate/candidate/packages/legacy-agent-host",
+      "exitCode": 0,
+      "completedAt": "2026-11-19T02:56:52.171853+00:00",
+      "nodeSha256": "acbe4b8d9153b841ed0697cbfc4f93e767386620edb745ab9358306c0a6f31aa",
+      "compilerEntrySha256": "2219f428a7e55aaf1f7ad85b9b0f0cf5078aeb76ccc9a7c6036c92d48f492ffd",
+      "logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "config": {
+        "compilerOptions": {
+          "target": "ES2024",
+          "module": "NodeNext",
+          "moduleResolution": "NodeNext",
+          "strict": true,
+          "noUncheckedIndexedAccess": true,
+          "exactOptionalPropertyTypes": true,
+          "noUnusedLocals": true,
+          "noUnusedParameters": true,
+          "verbatimModuleSyntax": true,
+          "declaration": true,
+          "rootDir": ".",
+          "outDir": "dist",
+          "types": [
+            "node"
+          ],
+          "skipLibCheck": true,
+          "noEmit": true,
+          "allowImportingTsExtensions": true,
+          "typeRoots": [
+            "/workspace/scratch/1d5114b8d2ee/agent-teams-ai/node_modules/@types"
+          ]
+        },
+        "files": [
+          "tests/passive-driver-close-diagnostics.test.ts",
+          "tests/fixtures/native-opencode-team/passive-diagnostics.ts"
+        ]
+      },
+      "diagnostics": 0,
+      "scope": "Only the two TEST source paths; exact Host strict/noUnchecked/exactOptional options, noEmit. Existing prepared TS7 and Node typings reused without install/build.",
+      "log": {
+        "path": "/workspace/scratch/c714f5bce554/read-cut-finalreason-42a4-candidate/typecheck.log",
+        "bytes": 0,
+        "lines": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "gitBlobComputed": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+      },
+      "configPin": {
+        "path": "/workspace/scratch/c714f5bce554/read-cut-finalreason-42a4-candidate/candidate/packages/legacy-agent-host/tsconfig.final-reason-focused.json",
+        "bytes": 734,
+        "lines": 29,
+        "sha256": "248490ee0f2d6c1dbddc0c2d3ff7c8e789564bf8008ff29b78cc78fea9e35485",
+        "gitBlobComputed": "203acdd0c4175726422ed2a285466522440a478b"
+      }
+    }
+  },
+  "bounds": {
+    "rawLineBytes": 512,
+    "serializedEntryIncludingNewlineBytes": 513,
+    "traceBytes": 65536,
+    "totalRows": 257,
+    "ordinaryEmitterRows": 251,
+    "ordinaryReceiptRows": 250,
+    "unchanged": true,
+    "verifiedCases": [
+      "Every closed final reason at both actual projections with maximum admitted atMs/elapsedMs and longest first-reason label",
+      "All existing failure families remain after ordinary saturation within unchanged total row/byte/line bounds",
+      "Receipt byte pressure before ordinary row ceiling preserves the existing reserved first-read slot",
+      "First-only receipt semantics across Host epochs, optional absence, malformed values, getters, hostile descriptor traps, and passive import/subscription cleanup"
+    ]
+  },
+  "sourceInvariants": {
+    "sameSubscriptions": true,
+    "sameAwaits": true,
+    "sameTimeoutOccurrences": true,
+    "sameEmitCallOccurrences": true,
+    "sameGlobalBudgets": true,
+    "newFailureRows": 0,
+    "newCallbackOrPollingLoop": false
+  },
+  "limits": [
+    "Diagnostic capture for the next original CI only; does not fix or qualify the source42a4 credential failure.",
+    "Original source42a4 credential status remains INCOMPLETE, cleanup=false, epoch3 Host exit1, held/resourceHeld=true.",
+    "No provider/runtime production source, cleanup verdict, guard, deadline, workflow, frozen a7 tree, Git ref or index changed.",
+    "No endpoint requery, native/application execution, dependency install or product build occurred."
+  ]
+}

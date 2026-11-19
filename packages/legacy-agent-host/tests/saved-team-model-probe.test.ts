@@ -42,6 +42,8 @@ import { attachInitialRuntimeModelAdmission, captureInitialRuntimeModelAdmission
   captureInitialRuntimeMemberAdmission, initialRuntimeModelProbeScope } from '../dist/composition/initialRuntimeModelAdmission.js';
 import { resolveTeamModelProbeRecipe, applyTeamModelProbeSelection } from '../dist/composition/teamModelProbeRecipe.js';
 import { runtimeDigest } from '../dist/runtime/identity.js';
+import { RuntimeOwner } from '../dist/runtime/RuntimeOwner.js';
+import { emptySession } from '../dist/runtime/sessionState.js';
 import { teamHostProfileSchema } from '../dist/composition/TeamHost.js';
 import { runtimeSourceSelectionFixture } from './fixtures/runtime-source-selection.ts';
 import type { HostedTeam, MemberEntry } from '../dist/composition/MemberEntry.js';
@@ -282,6 +284,87 @@ test('saved model evidence follows the published source and cannot authorize a l
   assert.equal(cleanup.context, captured.context);
   assert.deepEqual(f.owner.runtimeCaptures('TEST-human'), []);
 });
+
+function initialSeedFixture(t: TestContext, onAllocation?: () => void) {
+  return fixture(t, true, profile => {
+    const definition = profile.teams[0]!;
+    const lead = definition.members.find(member => member.role === 'lead')!;
+    definition.members = [{ ...lead, delivery: {
+      backendId: definition.binding.backendId, teamId: definition.binding.teamId,
+      teamName: definition.binding.teamName, runId: definition.scope.runId,
+      memberId: lead.memberId, generation: '1',
+    } }];
+    definition.grants.push({ principalId: 'TEST-seed-agent', memberName: lead.name,
+      permissions: ['read', 'task.write', 'message.write'] });
+    const seed = profile.runtime!.providerTemplates![0]!;
+    seed.teamId = definition.binding.teamId;
+    seed.memberId = lead.memberId;
+    seed.principalId = 'TEST-seed-agent';
+    seed.sessionId = 'TEST-original-seed-session';
+    seed.model = definition.savedSettings!.model!;
+    profile.runtime!.members = [seed];
+  }, onAllocation);
+}
+
+test('unstarted seed model preflight follows current published source without allocating or rebinding the original runtime', async t => {
+  let allocations = 0;
+  const f = initialSeedFixture(t, () => { allocations++; });
+  const selected = await f.sources!.publish('TEST-initial-seed-source-B');
+  const before = files(f.root);
+  const view = f.view();
+  const input: TeamModelProbeSelection = { ...f.selection(),
+    draft: { providerId: 'anthropic', target: { kind: 'lead' }, workspace: f.root } };
+  const probe = f.runtime.captureLaunchModelProbe('TEST-imported-team', input, 'start');
+  assert.equal(probe.profile?.executable.path, selected.executable.path);
+  assert.match(view.source.sourceId, /^saved-model-/u);
+  assert.equal(probe.isCurrent(), true);
+  assert.equal(allocations, 0);
+  assert.deepEqual(f.owner.runtimeCaptures('TEST-human'), []);
+  assert.deepEqual(files(f.root), before);
+  const original = f.runtime.executeLaunch('TEST-imported-team', 'configuration.read', 'TEST-original-read', {});
+  assert.equal((original as { launch: { launchId: string } }).launch.launchId,
+    f.profile.teams[0]!.scope.runId);
+  await f.sources!.publish('TEST-initial-seed-source-C');
+  assert.equal(probe.isCurrent(), false);
+  assert.throws(() => f.runtime.captureLaunchModelProbe('TEST-imported-team', input, 'start'),
+    { reason: 'saved-model-source' });
+  assert.equal(allocations, 0);
+  assert.deepEqual(f.owner.runtimeCaptures('TEST-human'), []);
+});
+
+for (const blocked of ['attached', 'held', 'pending-input', 'unavailable'] as const) {
+  test(`unstarted seed retains current model reads and refuses prospective evidence when ${blocked}`, async t => {
+    let allocations = 0;
+    const f = initialSeedFixture(t, () => { allocations++; });
+    await f.sources!.publish(`TEST-seed-guard-${blocked}`);
+    const input: TeamModelProbeSelection = { ...f.selection(),
+      draft: { providerId: 'anthropic', target: { kind: 'lead' }, workspace: f.root } };
+    assert.match(input.launchId, /^saved-model-/u);
+    const probe = f.runtime.captureLaunchModelProbe('TEST-imported-team', input, 'start');
+    assert.equal(probe.isCurrent(), true);
+    const before = files(f.root);
+    const originalRead = RuntimeOwner.prototype.readCapturedSession;
+    t.mock.method(RuntimeOwner.prototype, 'readCapturedSession', function (this: RuntimeOwner,
+      binding: Parameters<RuntimeOwner['readCapturedSession']>[0]) {
+      if (blocked === 'unavailable') throw new Error('TEST-original-runtime-read-unavailable');
+      const observed = originalRead.call(this, binding);
+      if (blocked === 'attached') return { ...observed, attached: true };
+      const record = emptySession(binding, f.profile.owner.profileId, 'TEST-original-incarnation');
+      if (blocked === 'held') { record.phase = 'held'; record.custody = 'unknown'; }
+      else record.inputs.push({ phase: 'admitted', operationRef: 'TEST-pending-operation',
+        fingerprint: 'a'.repeat(64), intent: { binding, deliveryId: 'TEST-pending-delivery',
+          inputId: 'TEST-pending-input', messageId: 'TEST-pending-message', content: 'TEST-pending' } });
+      return { ...observed, record };
+    });
+    assert.equal(f.view().source.sourceId, f.profile.teams[0]!.scope.runId);
+    assert.equal(probe.isCurrent(), false);
+    assert.throws(() => f.runtime.captureLaunchModelProbe('TEST-imported-team', input, 'start'),
+      { reason: 'saved-model-runtime-history' });
+    assert.equal(allocations, 0);
+    assert.deepEqual(f.owner.runtimeCaptures('TEST-human'), []);
+    assert.deepEqual(files(f.root), before);
+  });
+}
 
 test('saved no-draft and same-provider draft probes retain their source origin outside original profile and journal bytes', async t => {
   const f = fixture(t, true, undefined, undefined, true), published = await f.sources!.publish('TEST-saved-source-A');

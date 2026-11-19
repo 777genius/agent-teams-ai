@@ -15,6 +15,7 @@ import { readDesktopNativeStopSessions, readDesktopNativeHostProcesses, separate
 import { command, processTable } from './desktop-backend-observations.ts';
 import { captureCodexCodeModeProcess, observeCodexCodeModeProcess } from '../../packages/legacy-agent-host/tests/fixtures/codex-native-closure.ts';
 import { createDesktopUiControls } from './desktop-ui-controls.ts';
+import { createDesktopOriginalActionReadTiming } from './desktop-ui-read-observation.ts';
 import { runDesktopRelaunchUiSmoke } from './desktop-relaunch-ui-smoke.ts';
 import { runDesktopNativeCommandsUiProof } from './desktop-native-commands-ui-proof.ts';
 import { runDesktopCodexCostUiProof } from './desktop-codex-cost-ui-proof.ts';
@@ -455,6 +456,9 @@ export async function runDesktopLaunchUiSmoke(cdp: UiCdpPort, options: {
     excluded: [evidence.mode === 'native-resume-ui' ? 'Create controls' : 'Create/Resume controls', 'real vendor authentication/inference', 'all advanced settings', 'full Stage1'],
   };
   evidence.launchDialogProof = proof;
+  const originalActionReadTiming = opencode && evidence.mode === 'native-resume-ui'
+    ? createDesktopOriginalActionReadTiming() : undefined;
+  if (originalActionReadTiming) proof.originalActionReadTiming = originalActionReadTiming.data;
   const step = (value: Record<string, unknown>) => steps.push({ monotonicMs: Math.round(performance.now()), ...value });
   let ui = createDesktopUiControls(cdp, { assertOwnedRenderer: () => {
     options.assertOwnedRenderer(); sourceSelection?.observe();
@@ -496,8 +500,8 @@ export async function runDesktopLaunchUiSmoke(cdp: UiCdpPort, options: {
     ? await captureDesktopOpenCodeGlobalMetadata(cdp, fixture, options.capturedGroup(), options.assertOwnedRenderer) : undefined;
   if (globalMetadata) proof.originalGlobalMetadata = globalMetadata;
   await ui.observeInput();
-  await ui.clickSidebar(options.seed.subject);
-  await ui.click('button', 'open original Launch dialog', 'Launch');
+  await ui.clickSidebar(options.seed.subject, undefined, originalActionReadTiming?.openTeam);
+  await ui.click('button', 'open original Launch dialog', 'Launch', undefined, undefined, originalActionReadTiming?.openLaunch);
   await ui.waitRead(`Boolean(document.querySelector('[role="dialog"]'))`, 'original Launch dialog');
   // The Host seed hydrates asynchronously; its initial default summary is not ready for input.
   const hydratedSummary = await ui.waitRead(`(() => {

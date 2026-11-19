@@ -1,0 +1,86 @@
+{
+  "kind": "exact-reviewed-candidate-adoption",
+  "sourceHead": "9ec6cb6f567af14233965a77c4c4a043adc29487",
+  "recordedAt": "2026-11-19T10:53:10.431611+00:00",
+  "changes": [
+    {
+      "path": "packages/legacy-agent-host/src/composition/teamRoster.ts",
+      "beforeSha256": "df2cec75fd0a276566d57f391fa9ddac69db334a698e3e2c0d6043bf725230ed",
+      "afterSha256": "6d24ab3558f6f36af846692d97db805c55533178572288af8471a6d652d2326b",
+      "bytes": 7384,
+      "lines": 154,
+      "candidate": "initial-seed-readiness-42a4-candidate"
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/saved-team-model-probe.test.ts",
+      "beforeSha256": "0b328c82c22451867d28c7337ad6d6efd6732d441d0bfac502d54be15b26630e",
+      "afterSha256": "cb72828779a52b88c38675aef761df4a8daa8c58ac3fc21ebbe5ea90e1da8cac",
+      "bytes": 99809,
+      "lines": 1826,
+      "candidate": "initial-seed-readiness-42a4-candidate"
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/fixtures/native-opencode-team/passive-diagnostics.ts",
+      "beforeSha256": "89bddd71c36ae06f8d6d398571175a6f31112039fed2b63f2bd51a031b676f4d",
+      "afterSha256": "31a236606f13b7ac6b677d85a74060fe41221b488bd9a205c7f1b020f310e094",
+      "bytes": 45233,
+      "lines": 695,
+      "candidate": "read-cut-finalreason-42a4-candidate"
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/passive-driver-close-diagnostics.test.ts",
+      "beforeSha256": "16f2216fbf96eced2addb983dc83d4a00f4116d3cb432511d70bb8143a5a4009",
+      "afterSha256": "a5f40a040b17bd438e32edc1a1eaf9a833f16d4c5e860a35c54a0c269ee40963",
+      "bytes": 19833,
+      "lines": 318,
+      "candidate": "read-cut-finalreason-42a4-candidate"
+    }
+  ],
+  "evidence": [
+    {
+      "path": "/workspace/scratch/c714f5bce554/initial-seed-readiness-42a4-candidate/candidate-manifest.json",
+      "bytes": 2503,
+      "sha256": "0c50b1271025bc4f46fb791f091a83e9febc6e09a76215ef98a883aaaeb68998"
+    },
+    {
+      "path": "/workspace/scratch/c714f5bce554/initial-seed-readiness-42a4-candidate/verification.json",
+      "bytes": 20565,
+      "sha256": "77301a050c82a9fc1e5dbe81dce0b2dea85b7a1e86a4626749ec844252e5fe3d"
+    },
+    {
+      "path": "/workspace/scratch/c714f5bce554/initial-seed-readiness-42a4-candidate/r2-approval.json",
+      "bytes": 17534,
+      "sha256": "9692cfe475821478bf6c5cce683e25893c2a28299ff4ebb80ca132f69c1fe908"
+    },
+    {
+      "path": "/workspace/scratch/c714f5bce554/read-cut-finalreason-42a4-candidate/candidate-manifest.json",
+      "bytes": 2887,
+      "sha256": "6919d4e42be603fe7e548cc6593765db1e55f3cf2d89f2607b1b724415aecc79"
+    },
+    {
+      "path": "/workspace/scratch/c714f5bce554/read-cut-finalreason-42a4-candidate/verification.json",
+      "bytes": 8738,
+      "sha256": "4f02114db0d49aa1d9b4e717cf447f897ad5b52fa83c36b7191fea12ff533b8b"
+    },
+    {
+      "path": "/workspace/scratch/c714f5bce554/read-cut-finalreason-42a4-candidate/r2-approval.json",
+      "bytes": 12571,
+      "sha256": "a44b9d20a8387469785e7343d46de955e86d5d6cac024b502f3896244e330f96"
+    }
+  ],
+  "reusedVerification": {
+    "initialSeed": "Same final test bytes: 5 existing +5 added, baseline5PASS/5FAIL, candidate10PASS/0FAIL; source/runtime guard attempts0; full changed files strict declaration-backed noEmit PASS, not a regenerated project build.",
+    "readCutFinalReason": "Actual TEST fixture six original +four added tests10/10 PASS; selected baseline failure retained; strict focused noEmit PASS.",
+    "runtime": "Historical saved finite commands used existing Node24.22.3; no new runtime execution claimed.",
+    "rebase": "42a4\u21929ec in Host/ledger/controller changes only unrelated native-host-close.test.ts type arguments; all adopted preimages match exact before pins."
+  },
+  "newTestsExecuted": 0,
+  "builds": 0,
+  "installs": 0,
+  "gitRefOrIndexWrites": 0,
+  "scopeLimits": [
+    "Initial seed inconsistency independently reproduced; original capture-result-unknown cause not fully qualified.",
+    "read-cut finalReason changes TEST projection only; no native/WindowsA-B/cleanup gate completion is inferred.",
+    "All original source/roster/custody/deadline checks remain; complete-capture exceptions still propagate."
+  ]
+}

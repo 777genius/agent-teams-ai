@@ -1,0 +1,59 @@
+{
+  "schemaVersion": 1,
+  "kind": "initial-unstarted-seed-current-model-source",
+  "sourceHead": "42a4ee210aff6ffa310025d024fd55cfbdbcd277",
+  "sourceTree": "06ddfb2e88ee1e049f14a9c6c11290004d16dda2",
+  "createdAt": "2026-11-19T03:27:24.608613+00:00",
+  "changes": [
+    {
+      "path": "packages/legacy-agent-host/src/composition/teamRoster.ts",
+      "mode": "100644",
+      "kind": "production",
+      "before": {
+        "path": "/workspace/scratch/c714f5bce554/initial-seed-readiness-42a4-candidate/before/packages/legacy-agent-host/src/composition/teamRoster.ts",
+        "bytes": 7027,
+        "lines": 144,
+        "gitBlob": "dccbc1b57913b1f713b6f45ae75c4a0659fe22a7",
+        "sha256": "df2cec75fd0a276566d57f391fa9ddac69db334a698e3e2c0d6043bf725230ed"
+      },
+      "after": {
+        "path": "/workspace/scratch/c714f5bce554/initial-seed-readiness-42a4-candidate/after/packages/legacy-agent-host/src/composition/teamRoster.ts",
+        "bytes": 7384,
+        "lines": 154,
+        "gitBlob": "1c67bcf7d50e4ab415c3e2af3ed0ab4f5bcf8386",
+        "sha256": "6d24ab3558f6f36af846692d97db805c55533178572288af8471a6d652d2326b"
+      }
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/saved-team-model-probe.test.ts",
+      "mode": "100644",
+      "kind": "test",
+      "before": {
+        "path": "/workspace/scratch/c714f5bce554/initial-seed-readiness-42a4-candidate/before/packages/legacy-agent-host/tests/saved-team-model-probe.test.ts",
+        "bytes": 95105,
+        "lines": 1743,
+        "gitBlob": "a36e8d8c9a74bdef6f133f522132d0847a1fde25",
+        "sha256": "0b328c82c22451867d28c7337ad6d6efd6732d441d0bfac502d54be15b26630e"
+      },
+      "after": {
+        "path": "/workspace/scratch/c714f5bce554/initial-seed-readiness-42a4-candidate/after/packages/legacy-agent-host/tests/saved-team-model-probe.test.ts",
+        "bytes": 99809,
+        "lines": 1826,
+        "gitBlob": "2a88045f035b2cfae748e05d4c5664ae66e8af04",
+        "sha256": "cb72828779a52b88c38675aef761df4a8daa8c58ac3fc21ebbe5ea90e1da8cac"
+      }
+    }
+  ],
+  "patch": {
+    "path": "/workspace/scratch/c714f5bce554/initial-seed-readiness-42a4-candidate/candidate.patch",
+    "bytes": 8060,
+    "lines": 142,
+    "gitBlob": "cfa631efdb9050a588fc8a803f1e648f796a1187",
+    "sha256": "8619af2d170d73cb28530877de78cad062aea02f64b4c6e37cc434d185538507"
+  },
+  "productionPathsAdded": 0,
+  "productionPathsRemoved": 0,
+  "sourceRostersChanged": false,
+  "productionLineCap": 800,
+  "refsOrIndexWritten": false
+}

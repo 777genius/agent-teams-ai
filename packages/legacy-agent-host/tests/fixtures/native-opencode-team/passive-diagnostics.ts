@@ -34,6 +34,7 @@ const readCutReasons = ['deadline', 'cleanup_unknown', 'native_read_cleanup_unkn
   'invalid_native_model', 'invalid_native_position', 'invalid_native_identity', 'incomplete_native_log',
   'incomplete_native_transcript', 'native_cut_byte_budget', 'frame_limit', 'body_limit', 'transport_failure',
   'authority_mismatch', 'disposed', 'media_type', 'http_failure', 'unknown'] as const;
+const readCutFinalReasons = [...readCutReasons, 'mutable_native_readback'] as const;
 
 /** The private D channel carries only fixed data; never execute a diagnostic getter. */
 function projectReadCutFailure(value: unknown) {
@@ -45,9 +46,12 @@ function projectReadCutFailure(value: unknown) {
     };
     const stage = choice(own('stage'), readCutStages), reason = choice(own('reason'), readCutReasons);
     const elapsedMs = integer(own('elapsedMs'), 60_000), deadlineExpired = own('deadlineExpired'), aborted = own('aborted');
-    if (!stage || !reason || elapsedMs === null || typeof deadlineExpired !== 'boolean' || typeof aborted !== 'boolean')
+    const finalField = Object.getOwnPropertyDescriptor(value, 'finalReason');
+    const finalReason = finalField && 'value' in finalField ? choice(finalField.value, readCutFinalReasons) : null;
+    if (!stage || !reason || elapsedMs === null || typeof deadlineExpired !== 'boolean' || typeof aborted !== 'boolean' ||
+      finalField && !finalReason)
       return undefined;
-    return { stage, reason, elapsedMs, deadlineExpired, aborted };
+    return { stage, reason, elapsedMs, deadlineExpired, aborted, ...(finalReason ? { finalReason } : {}) };
   } catch { return undefined; }
 }
 
@@ -210,6 +214,7 @@ export function createPassiveNativeDiagnosticCapture() {
             code: failedClose?.reason ?? failure?.reason ?? choice(value.code, codes),
             exitCode: integer(value.exitCode, 255), signal: choice(value.signal, signals),
             ...(failure ? { deadlineExpired: failure.deadlineExpired, aborted: failure.aborted } : {}),
+            ...(failedCut?.finalReason ? { finalReason: failedCut.finalReason } : {}),
             ...(failedClose ? { probeDigest: failedClose.probeDigest, runState: failedClose.runState,
               outcome: failedClose.outcome, errorClass: failedClose.errorClass,
               ...('runErrorCode' in failedClose ? { runErrorCode: failedClose.runErrorCode } : {}),

@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { createDesktopReadWait, type DesktopActionTiming } from './desktop-ui-read-observation.ts';
 import { PROVIDER_LAUNCH_AUTHORITY_MARKER_ATTRIBUTE, PROVIDER_LAUNCH_AUTHORITY_MARKER_LIMIT,
   readProviderLaunchAuthorityMarker, UNKNOWN_PROVIDER_LAUNCH_AUTHORITY_MARKER
 } from '../../src/shared/utils/providerLaunchAuthorityMarker.ts';
@@ -206,76 +207,7 @@ export function createDesktopUiControls(
       'captured TEST renderer is visible before dispatching user input'
     );
   };
-  const waitRead = async (
-    expression: string,
-    label: string,
-    timeoutMs = 30_000,
-    isReady: (value: unknown) => boolean = Boolean,
-    readOptions?: { deadline: number; beforeRead?(): Promise<void> },
-    diagnosticPhase: 'initial' | 'after-hover' | 'stable' | 'other' = 'other'
-  ): Promise<unknown> => {
-    const deadline = readOptions?.deadline ?? Date.now() + timeoutMs;
-    const observation = {
-      phase: ['initial', 'after-hover', 'stable'].includes(diagnosticPhase) ? diagnosticPhase : 'other',
-      boundary: 'loop', cutoff: 'none', firstCheckAtMs: null as number | null, lastCheckAtMs: null as number | null,
-      ownerStarted: 0, ownerResolved: 0, preparationStarted: 0, preparationResolved: 0,
-      readsStarted: 0, readsResolved: 0, postReadLate: 0, contextRetries: 0,
-    };
-    const checkTime = (): number => {
-      const now = Date.now();
-      observation.firstCheckAtMs ??= now; observation.lastCheckAtMs = now;
-      return now;
-    };
-    try {
-      while (checkTime() < deadline) {
-        observation.boundary = 'owner'; observation.ownerStarted = Math.min(observation.ownerStarted + 1, 4096);
-        options.assertOwnedRenderer();
-        observation.ownerResolved = Math.min(observation.ownerResolved + 1, 4096);
-        if (readOptions?.beforeRead) {
-          // Preparation failures are terminal, including context-like input errors.
-          observation.boundary = 'preparation'; observation.preparationStarted = Math.min(observation.preparationStarted + 1, 4096);
-          await readOptions.beforeRead();
-          observation.preparationResolved = Math.min(observation.preparationResolved + 1, 4096);
-          observation.boundary = 'owner'; observation.ownerStarted = Math.min(observation.ownerStarted + 1, 4096);
-          options.assertOwnedRenderer();
-          observation.ownerResolved = Math.min(observation.ownerResolved + 1, 4096);
-          if (checkTime() >= deadline) { observation.cutoff = 'after-preparation'; break; }
-        }
-        try {
-          observation.boundary = 'evaluate'; observation.readsStarted = Math.min(observation.readsStarted + 1, 4096);
-          const value = await cdp.evaluate(expression);
-          observation.readsResolved = Math.min(observation.readsResolved + 1, 4096);
-          if (checkTime() >= deadline) { observation.cutoff = 'after-evaluate'; observation.postReadLate++; break; }
-          observation.boundary = 'predicate';
-          if (isReady(value)) return value;
-        } catch (error) {
-          if (
-            !/execution context was destroyed|cannot find (?:default )?execution context|cannot find context with specified id/i.test(
-              String(error)
-            )
-          )
-            throw error;
-          observation.contextRetries = Math.min(observation.contextRetries + 1, 4096);
-        }
-        observation.boundary = 'pause';
-        await new Promise<void>((done) => setTimeout(done, 100));
-      }
-      if (observation.cutoff === 'none') observation.cutoff = 'loop';
-      throw new Error(`UI read timed out: ${label}; no mutation retry`);
-    } catch (error) {
-      try {
-        const stamp = (value: number | null): number | null =>
-          typeof value === 'number' && Number.isSafeInteger(value) && value >= 0 ? value : null;
-        console.log(JSON.stringify({ kind: 'TEST_DESKTOP_READ_WAIT', read: {
-          ...observation, deadlineMs: stamp(deadline),
-          firstCheckAtMs: stamp(observation.firstCheckAtMs), lastCheckAtMs: stamp(observation.lastCheckAtMs),
-        } }));
-      } catch {
-        // Reporting uses no extra clock, owner or DOM read and cannot replace the original refusal.
-      }
-      throw error;
-    }
-  };
+  const waitRead = createDesktopReadWait(cdp, options);
   const finiteSourceCreate = (selector: string | undefined, label: string, text: string | undefined): boolean =>
     selector === '[data-testid="create-team-page"] button' &&
     label === 'Create and Launch original solo source exactly once' && text === 'Create';
@@ -337,12 +269,16 @@ export function createDesktopUiControls(
     label: string,
     selector?: string,
     text?: string,
-    readiness?: { waitForFinalReadiness?: true; waitForRenderFrames?: true; scrollBeforeClick?: ScrollBeforeClick }
+    readiness?: { waitForFinalReadiness?: true; waitForRenderFrames?: true; scrollBeforeClick?: ScrollBeforeClick },
+    timing?: DesktopActionTiming
   ): Promise<void> => {
+    timing?.start('bringToFront');
     await cdp.send('Page.bringToFront');
     // Every passive phase spends the original first-read budget, including a
     // temporarily pending owner at the final lookup. Never reset it after hover.
     const readDeadline = Date.now() + 30_000;
+    timing?.end('bringToFront');
+    timing?.deadline(readDeadline);
     const assertReadDeadline = (): void => {
       if (Date.now() >= readDeadline) {
         // Preserve any stricter caller-owned cutoff or renderer refusal.
@@ -478,7 +414,8 @@ export function createDesktopUiControls(
             }
           }
           return Boolean(value);
-        }, readOptions, phase === label ? 'initial' : phase === label + ' after pointer enter' ? 'after-hover' : 'stable'));
+        }, readOptions, phase === label ? 'initial' : phase === label + ' after pointer enter' ? 'after-hover' : 'stable',
+          timing?.reads[phase === label ? 'initial' : phase === label + ' after pointer enter' ? 'after-hover' : 'stable']));
         observeGeometry(phase === label ? 'initial' : phase === label + ' after pointer enter' ? 'after-hover' : 'stable', observed);
         return observed;
       } catch (error) {
@@ -489,13 +426,17 @@ export function createDesktopUiControls(
       }
     };
     let point = await readPoint(label);
+    timing?.start('postInitialOwner');
     options.assertOwnedRenderer();
+    timing?.end('postInitialOwner');
     step({ action: 'mouseMoved', label: 'hover ' + label, selector, target: point, geometryTrace });
+    timing?.start('hoverDispatch');
     await cdp.send('Input.dispatchMouseEvent', {
       type: 'mouseMoved',
       x: point.x,
       y: point.y,
     });
+    timing?.end('hoverDispatch');
     point = await readPoint(label + ' after pointer enter');
     // Async Host hydration can shift the DOM after hover. Check the original
     // target is stable before ONE physical click, never replay an uncertain click.
@@ -596,6 +537,7 @@ export function createDesktopUiControls(
       state: 'attempted',
     });
     // Never repeat a click after an uncertain response.
+    timing?.start('pressDispatch');
     await cdp.send('Input.dispatchMouseEvent', {
       type: 'mousePressed',
       x: point.x,
@@ -603,6 +545,8 @@ export function createDesktopUiControls(
       button: 'left',
       clickCount: 1,
     });
+    timing?.end('pressDispatch');
+    timing?.start('releaseDispatch');
     await cdp.send('Input.dispatchMouseEvent', {
       type: 'mouseReleased',
       x: point.x,
@@ -610,10 +554,11 @@ export function createDesktopUiControls(
       button: 'left',
       clickCount: 1,
     });
+    timing?.end('releaseDispatch');
   };
   const click = (selector: string, label: string, text?: string, requiredContent?: string,
-    readiness?: { scrollBeforeClick?: ScrollBeforeClick }): Promise<void> =>
-    clickExpression(target(selector, text, requiredContent, finiteSourceCreate(selector, label, text)), label, selector, text, readiness);
+    readiness?: { scrollBeforeClick?: ScrollBeforeClick }, timing?: DesktopActionTiming): Promise<void> =>
+    clickExpression(target(selector, text, requiredContent, finiteSourceCreate(selector, label, text)), label, selector, text, readiness, timing);
   const hoverExpression = async (expression: string, label: string): Promise<void> => {
     let previous: { x: number; y: number } | undefined, stable = 0;
     // Canonical effects can settle before their renderer layout. Sample the
@@ -714,7 +659,8 @@ export function createDesktopUiControls(
     return true;
   })()`;
   // Subject span selection is exact, and the click targets its ordinary button.
-  const clickSidebar = async (subject: string, readiness?: { waitForRenderFrames: true }): Promise<void> => {
+  const clickSidebar = async (subject: string, readiness?: { waitForRenderFrames: true },
+    timing?: DesktopActionTiming): Promise<void> => {
     await cdp.send('Page.bringToFront');
     // The dev renderer can expose its bridge while modules and the first Team
     // snapshot are still loading. Only this initial read gets a startup budget;
@@ -776,7 +722,7 @@ export function createDesktopUiControls(
         '({focused:document.hasFocus(),visibility:document.visibilityState,events:window.__TEST_desktopInputEvents})'
       ),
     });
-    await clickExpression(target('[role="dialog"] button', 'Open team'), 'Open team', '[role="dialog"] button', 'Open team', readiness);
+    await clickExpression(target('[role="dialog"] button', 'Open team'), 'Open team', '[role="dialog"] button', 'Open team', readiness, timing);
   };
   return { observeInput, waitRead, click, clickExpression, clickSidebar, scrollTo, hoverExpression };
 }
