@@ -6,11 +6,6 @@ export {
   TeamProjectContextLaunchConflictError,
   TeamProjectContextLaunchGate,
 } from './TeamProjectContextLaunchGate';
-export {
-  registerTeamProjectContextModeHandler,
-  unregisterTeamProjectContextModeHandler,
-} from './TeamProjectContextModeIpc';
-export { changeTeamProjectContextMode } from './TeamProjectContextModeService';
 export type {
   PersistedTeamWorkContext,
   TeamProjectContextRegistryPaths,

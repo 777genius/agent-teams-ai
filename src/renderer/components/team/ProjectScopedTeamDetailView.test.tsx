@@ -3,7 +3,7 @@ import { createRoot } from 'react-dom/client';
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { state, getView, launchTeam, launchTeamIpc, openTeamTab, updateTabLabel, selectTeam } = vi.hoisted(() => {
+const { state, getView, launchTeam, launchTeamIpc, openTeamTab, selectTeam } = vi.hoisted(() => {
   const state = {
     repositoryGroups: [],
     projects: [
@@ -28,7 +28,6 @@ const { state, getView, launchTeam, launchTeamIpc, openTeamTab, updateTabLabel, 
     launchTeam: vi.fn(),
     launchTeamIpc: vi.fn(),
     openTeamTab: vi.fn(),
-    updateTabLabel: vi.fn(),
     selectTeam: vi.fn(async (_teamName: string) => undefined),
   };
 });
@@ -42,7 +41,6 @@ vi.mock('@renderer/store', () => ({
         activeTabId: 'alias-tab',
         getAllPaneTabs: () => [{ id: 'alias-tab', type: 'team', teamName: 'ptc-a' }],
         openTeamTab,
-        updateTabLabel,
         selectTeam,
         launchTeam,
       }),
@@ -68,9 +66,6 @@ vi.mock('./TeamDetailView', () => ({
       },
       React.createElement('div', { 'data-section-id': 'kanban' })
     ),
-}));
-vi.mock('./TeamHistoryModePicker', () => ({
-  TeamHistoryModePicker: () => React.createElement('div', { 'data-testid': 'mode-picker' }),
 }));
 vi.mock('./dialogs/LaunchTeamDialog', () => ({
   LaunchTeamDialog: ({
@@ -120,7 +115,6 @@ describe('ProjectScopedTeamDetailView project switching', () => {
     launchTeam.mockReset();
     launchTeamIpc.mockReset();
     openTeamTab.mockReset();
-    updateTabLabel.mockReset();
     selectTeam.mockReset();
     state.selectedTeamName = null;
     state.selectedProjectId = 'project-a';
@@ -228,7 +222,6 @@ describe('ProjectScopedTeamDetailView project switching', () => {
     await settle();
     expect(openTeamTab).toHaveBeenCalledWith('builders', '/TEST/a');
     expect(host.querySelector('[data-team]')).toBeNull();
-    expect(host.querySelector('[data-testid="mode-picker"]')).toBeNull();
   });
 
   it('defers alias navigation until its original pane becomes focused', async () => {
@@ -253,56 +246,6 @@ describe('ProjectScopedTeamDetailView project switching', () => {
     expect(openTeamTab).toHaveBeenCalledWith('builders', '/TEST/a');
   });
 
-  it('keeps old shared tasks readable after switching their logical team to per-project mode', async () => {
-    // The retained shared view must never be overridden by the current project's physical alias.
-    state.selectedTeamName = 'builders';
-    getView.mockResolvedValue({
-      mode: 'per_project', state: 'ready',
-      executionTeamName: 'ptc-current', workContextId: 'current-project',
-      projectPath: '/TEST/a',
-    });
-    await act(async () => root.render(
-      React.createElement(ProjectScopedTeamDetailView, {
-        teamName: 'builders', retainedSharedHistory: true,
-      })
-    ));
-    await settle();
-    expect(selectTeam).not.toHaveBeenCalledWith('ptc-current');
-    expect(host.querySelector('[data-team]')?.getAttribute('data-team')).toBe('builders');
-    expect(host.querySelector('[data-team]')?.getAttribute('data-retained')).toBe('true');
-    expect(host.querySelector('[data-team-name="ptc-current"]')).toBeNull();
-    expect(host.textContent).toContain('projectContextView.retainedHistory');
-    const button = host.querySelector('button');
-    await act(async () => button?.click());
-    expect(openTeamTab).toHaveBeenCalledWith('builders');
-  });
-
-  it('keeps a retained native task/chat history open after the logical team switches to shared', async () => {
-    getView.mockResolvedValue({
-      mode: 'per_project',
-      state: 'retained',
-      logicalTeamName: 'builders',
-      executionTeamName: 'ptc-a',
-      workContextId: 'context-ptc-a',
-      projectPath: '/TEST/a',
-    });
-    await act(async () => root.render(
-      React.createElement(ProjectScopedTeamDetailView, { teamName: 'ptc-a' })
-    ));
-    await settle();
-    expect(getView).toHaveBeenCalledWith('ptc-a', '/TEST/a');
-    expect(host.querySelector('[data-team]')?.getAttribute('data-team')).toBe('ptc-a');
-    expect(host.querySelector('[data-team]')?.getAttribute('data-retained')).toBe('true');
-    expect(openTeamTab).not.toHaveBeenCalled();
-    expect(updateTabLabel).toHaveBeenCalledWith(
-      'alias-tab', expect.stringContaining('builders')
-    );
-    expect(host.textContent).toContain('projectContextView.retainedHistory');
-    const button = host.querySelector('button');
-    await act(async () => button?.click());
-    expect(openTeamTab).toHaveBeenCalledWith('builders');
-  });
-
   it('preserves verified physical task history when its worktree disappeared from discovery', async () => {
     getView.mockResolvedValue({
       mode: 'per_project',
@@ -315,8 +258,29 @@ describe('ProjectScopedTeamDetailView project switching', () => {
     ));
     await settle();
     expect(host.querySelector('[data-team]')?.getAttribute('data-team')).toBe('ptc-removed');
-    expect(host.textContent).toContain('/removed/worktree');
-    expect(host.textContent).not.toContain('projectContextView.empty');
+    expect(host.querySelector('[data-team]')?.getAttribute('data-retained')).toBe('true');
+    // One read-only line explains why it is shown; no raw path, no actions of its own.
+    expect(host.textContent).toBe('projectContextView.projectMissing');
+    expect(host.textContent).not.toContain('/removed/worktree');
+    expect(host.querySelector('button')).toBeNull();
+  });
+
+  it('adds no chrome of its own around a ready team (no path bar, no mode control)', async () => {
+    for (const view of [
+      { mode: 'shared', state: 'ready', executionTeamName: 'builders' },
+      native('ptc-a', '/TEST/a'),
+    ]) {
+      getView.mockResolvedValue(view);
+      await act(async () => root.render(
+        React.createElement(ProjectScopedTeamDetailView, { teamName: 'builders' })
+      ));
+      await settle();
+      expect(host.querySelector('[data-team]')).not.toBeNull();
+      expect(host.textContent).toBe('');
+      expect(host.querySelector('button, select, [role="combobox"]')).toBeNull();
+      await act(async () => root.unmount());
+      root = createRoot(host);
+    }
   });
 
   it('keeps the pre-feature shared team name unchanged', async () => {
@@ -353,6 +317,35 @@ describe('ProjectScopedTeamDetailView project switching', () => {
     expect(host.textContent).toContain('projectContextView.empty');
   });
 
+  it('does not invite to Launch when no Launch button is available', async () => {
+    getView.mockResolvedValue({ mode: 'per_project', state: 'empty' });
+    state.currentProvisioningRunIdByTeam.builders = 'run-from-team-list';
+    state.provisioningRuns['run-from-team-list'] = {
+      runId: 'run-from-team-list', teamName: 'builders', state: 'spawning',
+    };
+    await act(async () => root.render(
+      React.createElement(ProjectScopedTeamDetailView, { teamName: 'builders' })
+    ));
+    await settle();
+    expect(host.textContent).not.toContain('projectContextView.emptyTitle');
+    expect(host.textContent).not.toContain('projectContextView.empty');
+    expect(host.textContent).toContain('projectContextView.pending');
+    expect(host.querySelector('button')).toBeNull();
+  });
+
+  it('asks to open a project when none is selected, without a Launch button', async () => {
+    getView.mockResolvedValue({ mode: 'per_project', state: 'needs_project' });
+    (state as { selectedProjectId: string | null }).selectedProjectId = null;
+    (state as { activeProjectId: string | null }).activeProjectId = null;
+    await act(async () => root.render(
+      React.createElement(ProjectScopedTeamDetailView, { teamName: 'builders' })
+    ));
+    await settle();
+    expect(host.textContent).toContain('projectContextView.selectProject');
+    expect(host.textContent).not.toContain('projectContextView.emptyTitle');
+    expect(host.querySelector('button')).toBeNull();
+  });
+
   it('blocks duplicate launch while Team List is provisioning the selected project', async () => {
     getView.mockResolvedValue({ mode: 'per_project', state: 'pending' });
     state.currentProvisioningRunIdByTeam.builders = 'run-from-team-list';
@@ -382,9 +375,13 @@ describe('ProjectScopedTeamDetailView project switching', () => {
     ));
     await settle();
     expect(host.querySelector('[data-team]')).toBeNull();
+    // An empty project reads like any not-yet-launched team: one Launch action,
+    // no destructive action and no history-mode control.
+    expect(host.textContent).toContain('projectContextView.emptyTitle');
     expect(host.textContent).toContain('projectContextView.empty');
+    expect(host.querySelectorAll('button')).toHaveLength(1);
     const button = host.querySelector('button');
-    expect(button).not.toBeNull();
+    expect(button?.textContent).toBe('detail.actions.launch');
     await act(async () => button?.click());
     await vi.waitFor(() => expect(
       host.querySelector('[data-testid="launch-with-provider"]')

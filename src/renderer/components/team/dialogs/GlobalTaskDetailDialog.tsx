@@ -128,7 +128,7 @@ export const GlobalTaskDetailDialog = (): React.JSX.Element | null => {
         );
         openTeamTab(target.teamName, target.projectPath);
       } else {
-        openTeamTab(identity.teamName, undefined, identity.taskId);
+        openTeamTab(identity.teamName);
       }
     })();
   }, [closeGlobalTaskDetail, identity, openTeamTab]);

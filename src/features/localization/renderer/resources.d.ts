@@ -3945,22 +3945,6 @@ export default interface Resources {
       "tooltipContent": "Keeps launches within a 200K-token context window when supported.",
       "tooltipTitle": "Context limit"
     },
-      "projectContextView": {
-      "retainedHistory": "Retained project history",
-      "openCurrent": "Open current team history",
-
-      "modeChange": {
-        "title": "Change team history mode?",
-        "description": "Stop the team first. Existing tasks, conversations and sessions remain where they are; histories are never combined or deleted.",
-        "confirm": "Change mode"
-      },
-        "loading": "Loading team project history…",
-        "selectProject": "Select a project in the sidebar to view this team's tasks and chats.",
-        "empty": "No tasks or conversations in this project yet. Start the team to create a separate history.",
-        "pending": "Preparing this project's team context. Tasks and messages will appear once the runtime is ready.",
-        "start": "Start team in this project",
-        "retry": "Retry"
-      },
     "create": {
       "actions": {
         "backToTeams": "Back to teams",
@@ -4001,12 +3985,6 @@ export default interface Resources {
         "description": "Description (optional)",
         "prompt": "Prompt for team lead (optional)",
         "teamName": "Team name"
-      },
-      "projectContextMode": {
-        "label": "Team history",
-        "perProject": "Separate tasks and chats for each project (default)",
-        "shared": "Shared across projects",
-        "description": "Existing teams keep their current mode. This choice only affects this new team's work history."
       },
       "launchAfterCreate": {
         "description": "Start the team immediately using its configured agent runtimes.",
@@ -4072,6 +4050,12 @@ export default interface Resources {
         "selectedProvidersReadyWithNotes": "Selected providers ready (with notes)",
         "someProvidersNeedAttention": "Some selected providers need attention.",
         "unsupportedPreload": "Current preload version does not support team:prepareProvisioning. Restart the dev app."
+      },
+      "projectContextMode": {
+        "description": "This can't be changed after the team is created.",
+        "label": "Team history",
+        "perProject": "Separate tasks and chats for each project (default)",
+        "shared": "Shared across projects"
       },
       "saved": "Saved",
       "solo": {
@@ -4588,7 +4572,6 @@ export default interface Resources {
       }
     },
     "launch": {
-      "projectScopedRosterReadOnly": "The team roster is shared across projects and cannot be edited while launching this project.",
       "actions": {
         "createSchedule": "Create Schedule",
         "creating": "Creating...",
@@ -4650,6 +4633,7 @@ export default interface Resources {
         "someProvidersNeedAttention": "Some selected providers need attention.",
         "unsupportedPreload": "Current preload version does not support team:prepareProvisioning. Restart the dev app."
       },
+      "projectScopedRosterReadOnly": "The team roster is shared across projects and cannot be edited while launching this project.",
       "prompt": {
         "label": "Prompt",
         "oneShotPrefix": "This prompt will be passed to",
@@ -5886,6 +5870,15 @@ export default interface Resources {
       "stopped": "Stopped",
       "stoppedAgo": "stopped {{time}} ago",
       "title": "CLI Processes"
+    },
+    "projectContextView": {
+      "empty": "{{team}} has no tasks or chats in this project yet. Click Launch to start it here.",
+      "emptyTitle": "Not launched in this project yet",
+      "loading": "Loading team project history…",
+      "pending": "Preparing this project's team context. Tasks and messages will appear once the runtime is ready.",
+      "projectMissing": "This history belongs to a project that is no longer in your project list.",
+      "retry": "Retry",
+      "selectProject": "Open a project to see this team's tasks and chats."
     },
     "projectPath": {
       "browse": "Browse",

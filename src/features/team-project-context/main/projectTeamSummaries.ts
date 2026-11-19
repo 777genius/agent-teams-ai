@@ -42,8 +42,8 @@ export async function projectTeamSummaries(
       const mode = saved.projectContextMode ?? 'shared';
       projected[position] = { ...team, projectContextMode: mode };
       try {
-        // The selected mode controls future writes, not historical ownership.
-        // Retained native aliases must remain folded after switching to shared.
+        // Owned native aliases stay folded under their logical team whatever
+        // its saved mode says; only a verified owner can hide a native team.
         const contexts = mode === 'per_project'
           ? await registry.list(team.teamName)
           : await registry.listRetained(team.teamName);
