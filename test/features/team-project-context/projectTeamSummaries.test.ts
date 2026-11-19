@@ -34,6 +34,9 @@ describe('projectTeamSummaries', () => {
     expect(visible[0]?.projectContextMode).toBe('per_project');
     expect(visible[0]?.pendingCreate).toBe(false);
     expect(visible[0]?.taskCount).toBe(3);
+    expect(visible[0]?.projectHistoryContexts).toEqual([
+      { executionTeamName: 'ptc-owned', projectPath: '/sandbox/a' },
+    ]);
   });
 
   it('keeps owned historical native aliases hidden after switching to shared mode', async () => {
@@ -45,6 +48,9 @@ describe('projectTeamSummaries', () => {
     expect(visible.map((v) => v.teamName)).toEqual(['builders', 'ptc-foreign', 'old-team']);
     expect(visible[0]?.projectContextMode).toBe('shared');
     expect(f.registry.listRetained).toHaveBeenCalledWith('builders');
+    expect(visible[0]?.projectHistoryContexts).toEqual([
+      { executionTeamName: 'ptc-owned', projectPath: '/sandbox/a' },
+    ]);
   });
 
   it('does not trust a pending reservation as authority to hide a physical team', async () => {
@@ -52,6 +58,7 @@ describe('projectTeamSummaries', () => {
     f.registry.list.mockResolvedValue([{ ...ctx, state: 'reserved' }]);
     const visible = await projectTeamSummaries(teams, f.meta, f.registry);
     expect(visible.some((t) => t.teamName === 'ptc-owned')).toBe(true);
+    expect(visible.find((t) => t.teamName === 'builders')?.projectHistoryContexts).toBeUndefined();
   });
 
   it('fails open for visibility, never silently hides teams after mapping errors', async () => {

@@ -90,6 +90,8 @@ export interface TeamSummary {
   teamName: string;
   /** Absent on old/foreign teams; never interpret as an isolated history. */
   projectContextMode?: TeamProjectContextMode;
+  /** Verified, ready native histories folded into this logical row. For reads only, not authorization. */
+  projectHistoryContexts?: readonly { executionTeamName: string; projectPath: string }[];
   displayName: string;
   description: string;
   color?: string;

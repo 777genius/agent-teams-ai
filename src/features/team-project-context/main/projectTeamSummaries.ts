@@ -64,6 +64,9 @@ export async function projectTeamSummaries(
           projected[position] = {
             ...team,
             projectContextMode: mode,
+            projectHistoryContexts: ownedReady.map(({ executionTeamName, projectPath }) => ({
+              executionTeamName, projectPath,
+            })),
             // A valid native context means this is no longer just an unlaunched
             // metadata-only draft, even though the logical team has no config.json.
             pendingCreate: false,
