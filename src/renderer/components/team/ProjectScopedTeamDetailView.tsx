@@ -379,19 +379,6 @@ export const ProjectScopedTeamDetailView = ({
     );
   }
 
-  let message = t('projectContextView.loading');
-  if (error) message = error;
-  else if (context?.state === 'needs_project') message = t('projectContextView.selectProject');
-  else if (context?.state === 'empty') {
-    message = awaitingReadyKey === key
-      ? t('projectContextView.pending')
-      : t('projectContextView.empty', { team: logicalDisplayName });
-  }
-  else if (context?.state === 'pending') message = t('projectContextView.pending');
-
-  // A project without history looks like any not-yet-launched team.
-  const showNotLaunched = !error && context?.state === 'empty' && awaitingReadyKey !== key;
-
   const canStart =
     Boolean(selectedProjectPath) &&
     launchingKey === null &&
@@ -399,6 +386,19 @@ export const ProjectScopedTeamDetailView = ({
     !provisioningActive &&
     !error &&
     (context?.state === 'empty' || context?.state === 'pending');
+  // Only invite to Launch when the button is really there, and say "in this
+  // project": the team may already be running in another one.
+  const showEmptyPrompt = canStart && context?.state === 'empty';
+
+  let message = t('projectContextView.loading');
+  if (error) message = error;
+  else if (context?.state === 'needs_project') message = t('projectContextView.selectProject');
+  else if (context?.state === 'empty') {
+    message = showEmptyPrompt
+      ? t('projectContextView.empty', { team: logicalDisplayName })
+      : t('projectContextView.pending');
+  }
+  else if (context?.state === 'pending') message = t('projectContextView.pending');
 
   return (
     <div className="flex min-h-0 min-w-0 flex-1 flex-col">
@@ -408,8 +408,8 @@ export const ProjectScopedTeamDetailView = ({
         </div>
       )}
       <div className="flex flex-1 flex-col items-center justify-center gap-3 p-6 text-center">
-      <h2 className={showNotLaunched ? 'text-sm font-medium text-text' : 'text-base font-semibold'}>
-        {showNotLaunched ? t('detail.draft.title') : logicalDisplayName}
+      <h2 className={showEmptyPrompt ? 'text-sm font-medium text-text' : 'text-base font-semibold'}>
+        {showEmptyPrompt ? t('projectContextView.emptyTitle') : logicalDisplayName}
       </h2>
       {!(context?.state === 'pending' && provisioningError) && (
         <p className="max-w-md text-xs text-text-secondary" role={error ? 'alert' : 'status'}>

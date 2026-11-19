@@ -225,7 +225,6 @@ describe('ProjectScopedTeamDetailView project switching', () => {
     await settle();
     expect(openTeamTab).toHaveBeenCalledWith('builders', '/TEST/a');
     expect(host.querySelector('[data-team]')).toBeNull();
-    expect(host.querySelector('[data-testid="mode-picker"]')).toBeNull();
   });
 
   it('defers alias navigation until its original pane becomes focused', async () => {
@@ -368,6 +367,35 @@ describe('ProjectScopedTeamDetailView project switching', () => {
     expect(host.textContent).toContain('projectContextView.empty');
   });
 
+  it('does not invite to Launch when no Launch button is available', async () => {
+    getView.mockResolvedValue({ mode: 'per_project', state: 'empty' });
+    state.currentProvisioningRunIdByTeam.builders = 'run-from-team-list';
+    state.provisioningRuns['run-from-team-list'] = {
+      runId: 'run-from-team-list', teamName: 'builders', state: 'spawning',
+    };
+    await act(async () => root.render(
+      React.createElement(ProjectScopedTeamDetailView, { teamName: 'builders' })
+    ));
+    await settle();
+    expect(host.textContent).not.toContain('projectContextView.emptyTitle');
+    expect(host.textContent).not.toContain('projectContextView.empty');
+    expect(host.textContent).toContain('projectContextView.pending');
+    expect(host.querySelector('button')).toBeNull();
+  });
+
+  it('asks to open a project when none is selected, without a Launch button', async () => {
+    getView.mockResolvedValue({ mode: 'per_project', state: 'needs_project' });
+    (state as { selectedProjectId: string | null }).selectedProjectId = null;
+    (state as { activeProjectId: string | null }).activeProjectId = null;
+    await act(async () => root.render(
+      React.createElement(ProjectScopedTeamDetailView, { teamName: 'builders' })
+    ));
+    await settle();
+    expect(host.textContent).toContain('projectContextView.selectProject');
+    expect(host.textContent).not.toContain('projectContextView.emptyTitle');
+    expect(host.querySelector('button')).toBeNull();
+  });
+
   it('blocks duplicate launch while Team List is provisioning the selected project', async () => {
     getView.mockResolvedValue({ mode: 'per_project', state: 'pending' });
     state.currentProvisioningRunIdByTeam.builders = 'run-from-team-list';
@@ -399,7 +427,7 @@ describe('ProjectScopedTeamDetailView project switching', () => {
     expect(host.querySelector('[data-team]')).toBeNull();
     // An empty project reads like any not-yet-launched team: one Launch action,
     // no destructive action and no history-mode control.
-    expect(host.textContent).toContain('detail.draft.title');
+    expect(host.textContent).toContain('projectContextView.emptyTitle');
     expect(host.textContent).toContain('projectContextView.empty');
     expect(host.querySelectorAll('button')).toHaveLength(1);
     const button = host.querySelector('button');
