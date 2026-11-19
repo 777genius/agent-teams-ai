@@ -1629,6 +1629,25 @@ async function main() {
     const replaceDraftConfirm =
       `Array.from(document.querySelectorAll('[role="dialog"] button'))` +
       `.find(button => button.textContent?.trim() === 'Replace draft' && button.getClientRects().length > 0)`;
+    // The config-only team can open its Launch Team dialog after the
+    // earlier visibility check. It intercepts real pointer events on Copy.
+    // Recover only when that exact modal is present and copy has not begun.
+    await cdp.waitFor(
+      `${copyStarted} || Boolean(${replaceDraftConfirm}) || Boolean(${launchDialog})`,
+      'copy editor, replace-draft confirmation, or late launch dialog',
+      30_000
+    );
+    if (
+      !(await cdp.evaluate(`${copyStarted} || Boolean(${replaceDraftConfirm})`)) &&
+      (await cdp.evaluate(`Boolean(${launchDialog})`))
+    ) {
+      await cdp.click(
+        launchDialog +
+          `?.querySelector('button[aria-label="Close"]') || Array.from(${launchDialog}?.querySelectorAll('button') ?? []).find(b => b.textContent?.trim() === 'Close')`
+      );
+      await cdp.waitFor(`!${launchDialog}`, 'dismiss late launch dialog before copy');
+      await cdp.click(copyTarget);
+    }
     await cdp.waitFor(
       `${copyStarted} || Boolean(${replaceDraftConfirm})`,
       'copy editor or explicit replace-draft confirmation',
