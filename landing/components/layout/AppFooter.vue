@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import robotLeadLounge from "~/assets/images/footer/robot-lead-lounge-v1.webp";
 import { buildDocsHref } from "~/utils/docsUrl";
+import { legalNavigation } from "~/data/legal";
 
 const { t, locale } = useI18n();
 const { repoUrl } = useGithubRepo();
@@ -40,6 +41,10 @@ const docsHref = computed(() => buildDocsHref({
         <a class="app-footer__link" :href="repoUrl" target="_blank">GitHub</a>
         <span class="app-footer__divider" />
         <a class="app-footer__link" :href="docsHref">{{ t('footer.links.docs') }}</a>
+        <template v-for="link in legalNavigation" :key="link.href">
+          <span class="app-footer__divider" />
+          <NuxtLink class="app-footer__link" :to="link.href">{{ link.label }}</NuxtLink>
+        </template>
       </div>
     </v-container>
   </footer>
@@ -99,6 +104,8 @@ const docsHref = computed(() => buildDocsHref({
 
 .app-footer__inner {
   display: flex;
+  flex-wrap: wrap;
+  gap: 16px 24px;
   align-items: center;
   justify-content: space-between;
 }
@@ -111,6 +118,7 @@ const docsHref = computed(() => buildDocsHref({
 
 .app-footer__links {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 12px;
 }
@@ -172,6 +180,10 @@ const docsHref = computed(() => buildDocsHref({
     flex-direction: column;
     gap: 10px;
     text-align: center;
+  }
+
+  .app-footer__links {
+    justify-content: center;
   }
 }
 </style>

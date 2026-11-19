@@ -3,10 +3,17 @@ import { mdiMenu, mdiClose, mdiGithub } from '@mdi/js';
 import { buildDocsHref } from '~/utils/docsUrl';
 
 const { t, locale } = useI18n();
+const route = useRoute();
+const localePath = useLocalePath();
 const { repoUrl } = useGithubRepo();
 const runtimeConfig = useRuntimeConfig();
 const { baseURL } = runtimeConfig.app;
 const menuOpen = ref(false);
+const homePath = computed(() => localePath('/'));
+const sectionHref = (hash: string) =>
+  route.path.replace(/\/+$/, '') === homePath.value.replace(/\/+$/, '')
+    ? hash
+    : `${baseURL.replace(/\/+$/, '')}${homePath.value}${hash}`;
 
 const docsHref = computed(() => buildDocsHref({
   locale: locale.value,
@@ -18,12 +25,12 @@ const openMenuLabel = computed(() => (isRu.value ? 'Открыть меню' : '
 const closeMenuLabel = computed(() => (isRu.value ? 'Закрыть меню' : 'Close menu'));
 
 const navItems = computed(() => [
-  { href: '#screenshots', label: t('nav.screenshots'), shortLabel: isRu.value ? 'Скрины' : 'Shots' },
+  { href: sectionHref('#screenshots'), label: t('nav.screenshots'), shortLabel: isRu.value ? 'Скрины' : 'Shots' },
   { href: docsHref.value, label: t('nav.docs'), shortLabel: isRu.value ? 'Док' : 'Docs' },
-  { href: '#download', label: t('nav.download'), shortLabel: isRu.value ? 'Скачать' : 'Get' },
-  { href: '#comparison', label: t('nav.comparison'), shortLabel: isRu.value ? 'Сравн.' : 'Compare' },
-  { href: '#pricing', label: t('nav.pricing'), shortLabel: isRu.value ? 'Беспл.' : 'Free' },
-  { href: '#faq', label: t('nav.faq'), shortLabel: 'FAQ' },
+  { href: sectionHref('#download'), label: t('nav.download'), shortLabel: isRu.value ? 'Скачать' : 'Get' },
+  { href: sectionHref('#comparison'), label: t('nav.comparison'), shortLabel: isRu.value ? 'Сравн.' : 'Compare' },
+  { href: sectionHref('#pricing'), label: t('nav.pricing'), shortLabel: isRu.value ? 'Беспл.' : 'Free' },
+  { href: sectionHref('#faq'), label: t('nav.faq'), shortLabel: 'FAQ' },
 ]);
 </script>
 
