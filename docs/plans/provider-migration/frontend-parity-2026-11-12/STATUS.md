@@ -2,7 +2,19 @@
 
 Обновлено: **19 ноября 2026**. Единственный текущий рабочий план.
 
-**Полная E2E-приёмка ещё не завершена.** Последний полный проверенный CI-срез —
+**Полная E2E-приёмка ещё не завершена.** Текущий опубликованный source —
+`7fe15c471c00e4d8d3252e8e3ee36ec972e2c9fe`, база `8d46f13f`.
+[Актуальный снимок CI](evidence/ci-7fe15c47-20261119.json) сохраняет исходные
+workflow/job verdict и проверенный SHA. На этом source **original import lifecycle
+PASS**, Windows x64 source fixtures PASS, Creation page PASS на трёх платформах.
+Новые отказы: обход aggregate Stop в публичном фасаде, отсутствие hydration
+сохранённых настроек retained original в Launch, гонка TEST process census,
+устаревшие архитектурные/initial-seed expectations и одна typed-lint ошибка.
+Это конкретный текущий объём исправлений; ранее пройденные неизменённые сценарии
+повторно не разрабатываются. Следующий цикл: исправления → затронутые исходные
+проверки → независимое ревью → немедленная публикация каждого коммита.
+
+Последний полный просмотренный исторический CI-срез —
 `9ec6cb6f567af14233965a77c4c4a043adc29487`, база `8d46f13f`.
 На нём прошли полный cross-team/ReviewFlow GUI, workspace typecheck и fast lint,
 четыре frontend shards, все пять packaged-платформ и их общий gate.
@@ -23,13 +35,15 @@ messages; значения и predicates сохранены, независим�
 polls, actions или deadlines. Один целевой regression PASS; строгая типизация
 двух затронутых scripts и transitive imports PASS за4.244s; независимый R2 PASS.
 
-**Локальная среда недоступна.** Общий application compiler завершился SIGKILL
+**Историческая потеря среды на664.** Общий application compiler завершился SIGKILL
 через164.465s, без TS-diagnostics; затем execution server отключился.
 Отдельный targeted compiler для четырёх typing-правок не смог запуститься.
 Это не compiler PASS. Проверенные файлы восстановлены из immutable GitHub664
 и совпали SHA256 с исходным R2-срезом; публикация выполняется через GitHub.
-Independent retained UI, следующие original smoke и их mode validators пока
-не выполнены. Очередь CI не ожидается и вручную не перезапускается.
+Текущий checkout7fe и зависимости восстановлены; source review и целевые проверки
+продолжаются. Свежий CI уже завершил import lifecycle и выявил конкретный retained
+UI отказ на hydration prompt. Старый startup timeout не переносится на эти новые
+результаты. CI не перезапускается, не отменяется и не dispatch-ится вручную.
 
 ## Доставка и границы
 
@@ -74,14 +88,15 @@ resolved; approval review этим не заявляется.
 
 | ID | Исходный отказ | Текущая работа и критерий завершения | Владелец |
 | --- | --- | --- | --- |
-| E1-Stop / Import | На664 producer PASS; consumer startup `Runtime.evaluate` timeout до import proof. | Физическая app-group cleanup подтверждена; отдельная Host/emulated-runtime absence не квалифицирована. Passive startup diagnostics и её целевой test/types/R2 готовы. После восстановления среды нужны complete original smoke, successful Quit и отдельный CI mode validator. | root; pr_graph |
-| E1-Retained | [Retained UI9ec](https://github.com/777genius/agent-teams-ai/actions/runs/44455698034/job/135330056793): prepare/held. На664 native coexistence: `native_custody_protocol` первого V1 launch, cleanup=true. | Independent original UI подготовлен отдельно от import, ещё не запущен. Exact V1 helper требует AF_UNIX socket до native creation; локальный syscall возвращает EPERM. Нужен original native CI gate в поддерживающей среде; UNKNOWN не заменять PASS. | pr_graph; media |
+| E1-Stop / Import | [Original import lifecycle7fe PASS](https://github.com/777genius/agent-teams-ai/actions/runs/44539501369/job/135613921599). | Старый startup отказ664 закрыт этим исходным job. Новый Stop regression из frontend shard2/4 учитывается отдельно ниже; PASS импорта не квалифицирует все Stop paths. | root |
+| E1-Stop / Aggregate | На7fe семь failures launch matrix и один cancellation failure. | Публичный stopTeam обходит inherited aggregate cancellation и ожидание in-flight Stop. Восстановить прежнюю цепочку с тем же source fence; исходные assertions и deadlines сохранить. | parity_review |
+| E1-Retained | На7fe original UI доходит до выбора retained runtime, затем не получает сохранённый prompt. На664 native coexistence: `native_custody_protocol` первого V1 launch. | Гидратировать настройки из уже захваченного private retained owner; проверить исходный UI. Native coexistence и supported-environment gate остаются отдельными требованиями. | root; retained_e2e |
 | E1-Add | [Linux V2 management9ec](https://github.com/777genius/agent-teams-ai/actions/runs/44455698034/job/135330056490): `original add completes`. На664 Settings ещё не прошёл startup. | First-close Host→Main диагностика готова, 30/30 actual-source checks и R2 PASS. Native664 model requests/children=0; membership не запускался. После startup нужны исходные Settings verifier, Add/Remove/Restore/Stop/cold и membership verifier. | media; root |
 | E1-Review | [Darwin ARM V2 Review](https://github.com/777genius/agent-teams-ai/actions/runs/44455698034/job/135330056601): исходный preflight deadline. | Initial-seed/model-source fix опубликован в90b, exact-byte focused proof и R2 сохранены. Нужен affected original preflight/Review. Source test не заменяет Darwin acceptance. | media |
 | E1-Resume | [Darwin ARM V2 Resume](https://github.com/777genius/agent-teams-ai/actions/runs/44455698034/job/135330056653): `one fresh Team capture`. | Проверенный numeric observation patch опубликован в90b без нового read/await/input/retry. Нужны новая исходная диагностика и успешный Resume; старый отказ произошёл ещё до первого Stop/cold boundary. | pr_graph |
-| W1 | [Windows ARM Codex](https://github.com/777genius/agent-teams-ai/actions/runs/44455697852/job/135330054589) и [x64 OpenCode](https://github.com/777genius/agent-teams-ai/actions/runs/44455697852/job/135330054744): original source readiness. | Установить причинный участок по current original evidence; native OpenCode finalReason не является Windows observer. Сохранить исходный cutoff и все authority probes; получить current source A/B и recovery evidence. Закрытые причины отказа observation сохранены отдельной TEST-правкой, 2/2 actual-source checks и R2 PASS; native gate этим не закрыт. | media; root |
+| W1 | [Windows x64 source7fe PASS](https://github.com/777genius/agent-teams-ai/actions/runs/44539500343/job/135613817235); ARM Codex A всё ещё не достигает nativeReady до исходного cutoff. | Исследовать текущую ARM readiness/cleanup evidence. Успех x64 не переносится на ARM; cutoff, currentness и authority probes сохраняются. | delivery_review; root |
 | P09 | Darwin x64/ARM mutation witness остаются отрицательными. | Требуется отдельный выбор контракта original pathname / writer / consumed bytes по Report40. До решения не сужать гарантию и не менять failed oracle. Независимые исправления продолжаются. | root / owner |
-| D1-current | CI664: четыре TS-errors в двух TEST-файлах, до Creation page и Windows updater. | Четыре правки сохраняют прежние oracles; R2 PASS. Общий local compiler SIGKILL; targeted run не стартовал после потери среды. Нужен current-head compiler PASS. | root |
+| D1-current | На7fe compiler-шаги завершаются; typed lint сообщает redundant optional на sourceWriteAdmission. Frontend shards1/2/4 FAIL. | Устранить lint; синхронизировать guard с уже существующим Stop entrypoint/constructor port; проверить initial-seed roster assertion против актуального контракта. Stop behavior исправляется отдельно, без изменения его test oracles. | root; parity_review |
 | Delivery | Четыре acceptance workflows красные из-за перечисленных отказов. | Проверять только затронутые сценарии, сохранить обязательные current-head gates. После qualification завершить разрешённый PR-маршрут. Не останавливать независимую работу из-за CI queue. | root |
 
 ## Что уже реализовано и повторно не разрабатывается
