@@ -43,13 +43,13 @@ describe('viewedTeamNotificationSync', () => {
     const state = createState('logical');
     state.teamByName = {
       logical: { teamName: 'logical', projectContextMode: 'per_project' },
-    } as AppState['teamByName'];
+    } as unknown as AppState['teamByName'];
     state.selectedTeamName = 'project-a-native';
     state.selectedTeamData = { teamName: 'project-a-native' } as AppState['selectedTeamData'];
     state.teamDataCacheByName = {
       'project-a-native': { teamName: 'project-a-native' },
       logical: { teamName: 'logical' },
-    } as AppState['teamDataCacheByName'];
+    } as unknown as AppState['teamDataCacheByName'];
 
     expect(getFocusedVisibleTeamName(state)).toBeNull();
     const store = { getState: () => state, subscribe: () => () => undefined };
@@ -70,7 +70,7 @@ describe('viewedTeamNotificationSync', () => {
     const state = createState('logical');
     state.teamByName = {
       logical: { teamName: 'logical', projectContextMode: 'per_project' },
-    } as AppState['teamByName'];
+    } as unknown as AppState['teamByName'];
     const release = registerFocusedProjectTeam('logical', 'not-loaded');
     try {
       expect(getFocusedVisibleTeamName(state)).toBeNull();
