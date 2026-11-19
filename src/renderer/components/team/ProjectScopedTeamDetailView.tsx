@@ -6,7 +6,10 @@ import { Button } from '@renderer/components/ui/button';
 import { useStore } from '@renderer/store';
 import { isTeamProvisioningActive } from '@renderer/store/slices/teamSlice';
 import { redirectProjectAliasTaskNavigation } from '@renderer/store/team/projectAliasTaskNavigation';
-import { registerVisiblePhysicalTeam } from '@renderer/store/team/teamViewVisibility';
+import {
+  registerFocusedProjectTeam,
+  registerVisiblePhysicalTeam,
+} from '@renderer/store/team/teamViewVisibility';
 import { useShallow } from 'zustand/react/shallow';
 
 import { TeamDetailView } from './TeamDetailView';
@@ -211,6 +214,20 @@ export const ProjectScopedTeamDetailView = ({
   useEffect(
     () => visiblePhysicalTeam ? registerVisiblePhysicalTeam(visiblePhysicalTeam) : undefined,
     [visiblePhysicalTeam]
+  );
+
+  // Register only the focused ready project; background/retained tabs do not
+  // constitute the viewed native notification owner.
+  const focusedProjectTeamName =
+    isActive && isPaneFocused && !retainedSharedHistory &&
+    context?.mode === 'per_project' && context.state === 'ready'
+      ? context.executionTeamName
+      : null;
+  useEffect(
+    () => focusedProjectTeamName
+      ? registerFocusedProjectTeam(teamName, focusedProjectTeamName)
+      : undefined,
+    [focusedProjectTeamName, teamName]
   );
 
   // Activating an already-open logical tab can reselect the logical team.

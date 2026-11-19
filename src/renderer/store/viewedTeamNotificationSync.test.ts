@@ -2,6 +2,7 @@ import {
   getFocusedVisibleTeamName,
   startViewedTeamNotificationSync,
 } from '@renderer/store/viewedTeamNotificationSync';
+import { registerFocusedProjectTeam } from '@renderer/store/team/teamViewVisibility';
 import { describe, expect, it, vi } from 'vitest';
 
 import type { AppState } from '@renderer/store/types';
@@ -36,6 +37,46 @@ describe('viewedTeamNotificationSync', () => {
       'mixed-v2150-20260917'
     );
     expect(getFocusedVisibleTeamName(createState(null))).toBeNull();
+  });
+
+  it('tracks only the verified focused physical project, not its logical team', async () => {
+    const state = createState('logical');
+    state.teamByName = {
+      logical: { teamName: 'logical', projectContextMode: 'per_project' },
+    } as AppState['teamByName'];
+    state.selectedTeamName = 'project-a-native';
+    state.selectedTeamData = { teamName: 'project-a-native' } as AppState['selectedTeamData'];
+    state.teamDataCacheByName = {
+      'project-a-native': { teamName: 'project-a-native' },
+      logical: { teamName: 'logical' },
+    } as AppState['teamDataCacheByName'];
+
+    expect(getFocusedVisibleTeamName(state)).toBeNull();
+    const store = { getState: () => state, subscribe: () => () => undefined };
+    const stopSync = startViewedTeamNotificationSync(store);
+    const release = registerFocusedProjectTeam('logical', 'project-a-native');
+    try {
+      expect(getFocusedVisibleTeamName(state)).toBe('project-a-native');
+      expect(state.setViewedTeamForNotifications).toHaveBeenCalledWith('project-a-native');
+      await Promise.resolve();
+    } finally {
+      release();
+      stopSync();
+    }
+    expect(state.setViewedTeamForNotifications).toHaveBeenCalledWith(null);
+  });
+
+  it('does not register an unloaded native context as viewed', () => {
+    const state = createState('logical');
+    state.teamByName = {
+      logical: { teamName: 'logical', projectContextMode: 'per_project' },
+    } as AppState['teamByName'];
+    const release = registerFocusedProjectTeam('logical', 'not-loaded');
+    try {
+      expect(getFocusedVisibleTeamName(state)).toBeNull();
+    } finally {
+      release();
+    }
   });
 
   it('notifies main once when the focused team changes', () => {

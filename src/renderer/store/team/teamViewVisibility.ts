@@ -6,6 +6,7 @@ import type { AppState } from '../types';
 // counting prevents one pane's cleanup from hiding the other pane's updates.
 const mountedPhysicalTeams = new Map<string, number>();
 const visibilitySubscribers = new Set<() => void>();
+const focusedProjectTeams = new Map<string, { executionTeamName: string }>();
 
 /** Lifecycle subscribers are notified on project-context activation and cleanup. */
 export function subscribeVisiblePhysicalTeamChanges(listener: () => void): () => void {
@@ -31,6 +32,25 @@ export function registerVisiblePhysicalTeam(teamName: string): () => void {
     else mountedPhysicalTeams.delete(teamName);
     notifyVisiblePhysicalTeamChanges();
   };
+}
+
+/** Associate the focused logical tab only with its backend-verified ready native context. */
+export function registerFocusedProjectTeam(
+  logicalTeamName: string,
+  executionTeamName: string
+): () => void {
+  const entry = { executionTeamName };
+  focusedProjectTeams.set(logicalTeamName, entry);
+  notifyVisiblePhysicalTeamChanges();
+  return () => {
+    if (focusedProjectTeams.get(logicalTeamName) !== entry) return;
+    focusedProjectTeams.delete(logicalTeamName);
+    notifyVisiblePhysicalTeamChanges();
+  };
+}
+
+export function getFocusedProjectTeamName(logicalTeamName: string): string | null {
+  return focusedProjectTeams.get(logicalTeamName)?.executionTeamName ?? null;
 }
 
 export const getVisibleTeamNamesInAnyPane = (state: Pick<AppState, 'paneLayout'>): Set<string> => {
