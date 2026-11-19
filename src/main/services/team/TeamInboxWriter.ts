@@ -362,12 +362,8 @@ export class TeamInboxWriter {
     // silently would lose it rather than raise the collision the caller can
     // act on. findRuntimeDeliveryDuplicateIndex below is the separate,
     // intentionally more tolerant match used for non-explicit retries.
-    // Compare attachment metadata exactly as durable JSON sees it: optional
-    // undefined properties disappear during serializeInboxRows.
-    const storedMetadata = JSON.parse(JSON.stringify({
-      attachments: message.attachments,
-      fileReferences: message.fileReferences,
-    })) as Pick<InboxMessage, 'attachments' | 'fileReferences'>;
+    const persistedMetadata = <T>(value: T): T =>
+      value === undefined ? value : (JSON.parse(JSON.stringify(value)) as T);
     return {
       groupChatId: message.groupChatId,
       groupChatName: message.groupChatName,
@@ -385,8 +381,8 @@ export class TeamInboxWriter {
       relayOfMessageId: isRuntimeDelivery
         ? message.relayOfMessageId?.trim()
         : message.relayOfMessageId,
-      attachments: storedMetadata.attachments,
-      fileReferences: storedMetadata.fileReferences,
+      attachments: persistedMetadata(message.attachments),
+      fileReferences: persistedMetadata(message.fileReferences),
       nativeAttachmentDelivery: message.nativeAttachmentDelivery,
       source: message.source,
       conversationId: message.conversationId,
