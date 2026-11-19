@@ -209,8 +209,11 @@ export abstract class TeamProvisioningStopCleanupCompatibilityFacade<
    * Stop the running process for a team. No-op if team is not running.
    * Always uses SIGKILL via killTeamProcess() to prevent CLI cleanup.
    */
-  async stopTeam(teamName: string): Promise<void> {
-    return this.stopTeamWithSourceFence(teamName);
+  async stopTeam(
+    teamName: string,
+    captureSourceFence?: CaptureLegacyNativeStopSourceFence
+  ): Promise<void> {
+    return this.stopTeamWithSourceFence(teamName, captureSourceFence);
   }
 
   protected async stopTeamWithSourceFence(

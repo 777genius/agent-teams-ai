@@ -215,6 +215,8 @@ function fixture() {
   );
   Object.assign(service, {
     stopTeamGenerationByTeam: new Map(),
+    openCodeAggregatePrimaryRestartByTeam: new Map(),
+    openCodeRuntimeAdapterStopInFlightByTeam: new Map(),
     runs,
     runtimeAdapterRunByTeam: ports.runtimeAdapterRunByTeam,
     runTracking: { getTrackedRunId: ports.getTrackedRunId },

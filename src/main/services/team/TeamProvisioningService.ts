@@ -116,7 +116,7 @@ export class TeamProvisioningService extends TeamProvisioningOpenCodeAggregatePr
   }
 
   override stopTeam(teamName: string): Promise<void> {
-    return this.stopTeamWithSourceFence(teamName, this.captureNativeStopSourceFence);
+    return super.stopTeam(teamName, this.captureNativeStopSourceFence);
   }
 
   /** Teams of other app profiles and native sessions are read-only for background passes. */
