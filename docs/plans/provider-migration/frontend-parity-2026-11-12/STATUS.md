@@ -2,48 +2,50 @@
 
 Обновлено: **19 ноября 2026**. Единственный текущий рабочий план.
 
-**Полная E2E-приёмка ещё не завершена.** Текущий опубликованный source —
-`7fe15c471c00e4d8d3252e8e3ee36ec972e2c9fe`, база `8d46f13f`.
-[Актуальный снимок CI](evidence/ci-7fe15c47-20261119.json) сохраняет исходные
-workflow/job verdict и проверенный SHA. На этом source **original import lifecycle
-PASS**, Windows x64 source fixtures PASS, Creation page PASS на трёх платформах.
-Новые отказы: обход aggregate Stop в публичном фасаде, отсутствие hydration
-сохранённых настроек retained original в Launch, гонка TEST process census,
-устаревшие архитектурные/initial-seed expectations и одна typed-lint ошибка.
-Это конкретный текущий объём исправлений; ранее пройденные неизменённые сценарии
-повторно не разрабатываются. Следующий цикл: исправления → затронутые исходные
-проверки → независимое ревью → немедленная публикация каждого коммита.
+**Полная E2E-приёмка ещё не завершена.** Stop-fix опубликован в
+`960ed53c88e664c45a9fe0cc3d054ea83ae50dd3`. В этом срезе исправлены сохранённые
+настройки retained original, начальную папку его private selector, гонку TEST
+process census и выявленные code gates. [Evidence и source hashes](evidence/parity-fixes-20261119.json)
+отделяют исходные отказы, целевые PASS и ещё не выполненные native проверки.
+[Журналы и точные compiler configs](evidence/parity-fixes-20261119-logs.tar.gz)
+содержат воспроизводимые входы и manifest размеров/SHA-256.
 
-Последний полный просмотренный исторический CI-срез —
-`9ec6cb6f567af14233965a77c4c4a043adc29487`, база `8d46f13f`.
-На нём прошли полный cross-team/ReviewFlow GUI, workspace typecheck и fast lint,
-четыре frontend shards, все пять packaged-платформ и их общий gate.
-Из 25 Desktop lanes прошли 20. Новые изменения не получают эти PASS автоматически.
+Проверено локально: восемь исходных Stop regressions, шесть WorkSync ordering
+cases, восемь facade guards, одиннадцать owner-hydration cases, оба OpenCode
+transfer сценария, шесть source-readiness/projection cases и process-census test
+с десятью внутренними вариантами. Независимый R2 — PASS. Typed lint затронутых
+файлов: 0 errors, 36 warnings; source-size и provisioning architecture guards PASS.
+Исходные deadlines, authority/custody проверки и отрицательные outcomes сохранены.
 
-[Исходные запуски664](evidence/original-e2e-66444904-20261119.json): producer
-импорта PASS, включая canonical release, Task и обычный Quit. Consumer и native
-V2 Settings остановились на одной startup-ветке `Runtime.evaluate`, до своих
-business proofs. Retained V1/V2 coexistence выполнил обязательные сборки, но
-первый V1 launch отказал с `native_custody_protocol`, до model requests.
+Полный workspace compiler дважды завершился exit137 без TS-diagnostics.
+Повтор того же канонического TS7 command ограничивал только память и параллелизм
+compiler (`GOMEMLIMIT=4GiB`, `GOMAXPROCS=2`); исходные проекты и compiler options
+не изменены. Это INCOMPLETE, а не compiler PASS. Отдельная scoped strict проверка
+TS7 завершилась PASS: все14 изменённых файлов и их transitive imports, с исходными
+compiler options и шестью ambient declarations. Desktop scripts проверены отдельно
+с исходным NodeNext config. Этот scoped PASS не заменяет полный workspace gate.
+Локальный исходный Desktop run невозможен: штатный установленный Xorg не смог
+открыть требуемые local/unix sockets. Transport, display policy и native oracles
+не обходятся; чистый CI остаётся обязательной частью приёмки.
 
-[Текущий CI664](evidence/ci-typecheck-66444904-20261119.json) обнаружил четыре
-ошибки типизации в двух TEST-файлах: они останавливают Creation page и Windows
-updater до E2E. Исправлены zero-emission assertion и расположение трёх Vitest
-messages; значения и predicates сохранены, независимый R2 PASS.
-[Startup-диагностика](evidence/startup-readiness-66444904-20261119.json)
-сохраняет последнюю выполняемую попытку и время отказа без новых CDP reads,
-polls, actions или deadlines. Один целевой regression PASS; строгая типизация
-двух затронутых scripts и transitive imports PASS за4.244s; независимый R2 PASS.
+[Исходный CI7fe](evidence/ci-7fe15c47-20261119.json) уже подтвердил import lifecycle,
+Windows x64 source fixtures, Creation page на трёх платформах и native V2 на Linux
+и обеих Windows architectures. V2 Settings завершился до отдельного membership
+отказа. Windows ARM source readiness остаётся INCOMPLETE, но final receipt
+подтверждает cleanup=true и отсутствие всех семи исходных HANDLE. Промежуточные
+false до witness.wait не являются финальным cleanup outcome.
 
-**Историческая потеря среды на664.** Общий application compiler завершился SIGKILL
-через164.465s, без TS-diagnostics; затем execution server отключился.
-Отдельный targeted compiler для четырёх typing-правок не смог запуститься.
-Это не compiler PASS. Проверенные файлы восстановлены из immutable GitHub664
-и совпали SHA256 с исходным R2-срезом; публикация выполняется через GitHub.
-Текущий checkout7fe и зависимости восстановлены; source review и целевые проверки
-продолжаются. Свежий CI уже завершил import lifecycle и выявил конкретный retained
-UI отказ на hydration prompt. Старый startup timeout не переносится на эти новые
-результаты. CI не перезапускается, не отменяется и не dispatch-ится вручную.
+На7fe cross-team прошёл предшествующие Taskboard/ReviewFlow пути, но final reload
+не загрузил main.tsx: Chromium ERR_INSUFFICIENT_RESOURCES. Installer не начал
+сценарий: original ps census превысил свой3s предел. Эти исходные проверки не
+ослабляются. Неисполненные Resume, attachments и Darwin ARM process jobs на7fe
+позже cancelled; текущие source jobs должны дать собственный результат.
+
+Исторический9ec6cb6f содержит полный cross-team/ReviewFlow GUI, четыре frontend
+shards, workspace typecheck, fast lint,20/25 Desktop lanes и пять packaged
+платформ с aggregate PASS. Эти доказательства остаются привязаны к исходному
+source. Success metadata-only packaged workflow7fe с пропущенной матрицей не
+является новым packaged PASS. CI вручную не перезапускается и не отменяется.
 
 ## Доставка и границы
 
@@ -90,14 +92,15 @@ resolved; approval review этим не заявляется.
 | --- | --- | --- | --- |
 | E1-Stop / Import | [Original import lifecycle7fe PASS](https://github.com/777genius/agent-teams-ai/actions/runs/44539501369/job/135613921599). | Старый startup отказ664 закрыт этим исходным job. Новый Stop regression из frontend shard2/4 учитывается отдельно ниже; PASS импорта не квалифицирует все Stop paths. | root |
 | E1-Stop / Aggregate | На7fe семь failures launch matrix и один cancellation failure. | Исправлено: source fence передаётся через исходную public Stop chain. Все8 исходных падавших cases PASS, прежние6 WorkSync ordering cases PASS, facade guard8/8 PASS, Fast lint и независимое R2 PASS. Assertions, actions и deadlines не изменены. Это целевые локальные результаты; current source acceptance ещё нужна. | root; parity_review |
-| E1-Retained | На7fe original UI доходит до выбора retained runtime, затем не получает сохранённый prompt. На664 native coexistence: `native_custody_protocol` первого V1 launch. | Гидратировать настройки из уже захваченного private retained owner; проверить исходный UI. Native coexistence и supported-environment gate остаются отдельными требованиями. | root; retained_e2e |
-| E1-Add | [Linux V2 management9ec](https://github.com/777genius/agent-teams-ai/actions/runs/44455698034/job/135330056490): `original add completes`. На664 Settings ещё не прошёл startup. | First-close Host→Main диагностика готова, 30/30 actual-source checks и R2 PASS. Native664 model requests/children=0; membership не запускался. После startup нужны исходные Settings verifier, Add/Remove/Restore/Stop/cold и membership verifier. | media; root |
-| E1-Review | [Darwin ARM V2 Review](https://github.com/777genius/agent-teams-ai/actions/runs/44455698034/job/135330056601): исходный preflight deadline. | Initial-seed/model-source fix опубликован в90b, exact-byte focused proof и R2 сохранены. Нужен affected original preflight/Review. Source test не заменяет Darwin acceptance. | media |
+| E1-Retained | На7fe original UI доходит до выбора retained runtime, затем не получает сохранённый prompt. | Исправлены hydration из private owner и начальная папка selector из captured scope.11 выбранных UI cases PASS, включая Host/retained, user edits и late draft; R2 PASS. Нужен исходный Desktop и отдельный native V1/V2 coexistence gate. | root |
+| E1-Add | На7fe Settings command PASS; membership прерван на исчезнувшем metadata child между ps и первым /proc stat. | Исправлено только первое ENOENT не-Host кандидата;10 вариантов PASS, R2 PASS. Исходные required Runtime count/lineage, Host и later disappearance failures сохранены. Нужны Add/Remove/Restore/Stop/cold и membership verifier. | root |
+| E1-Review | На7fe renderer READY; model preflight held. Parent graph verification27.597s оставила около2.4s до исходного30s startup cutoff. | Штатный verifier уже параллелен12 workers. Linux профиль5.345s не воспроизводит Darwin отказ и не доказывает оптимизацию. Timeout/bytes/authority не изменены; нужен исходный Darwin Review PASS. | root |
 | E1-Resume | [Darwin ARM V2 Resume](https://github.com/777genius/agent-teams-ai/actions/runs/44455698034/job/135330056653): `one fresh Team capture`. | Проверенный numeric observation patch опубликован в90b без нового read/await/input/retry. Нужны новая исходная диагностика и успешный Resume; старый отказ произошёл ещё до первого Stop/cold boundary. | pr_graph |
-| W1 | [Windows x64 source7fe PASS](https://github.com/777genius/agent-teams-ai/actions/runs/44539500343/job/135613817235); ARM Codex A всё ещё не достигает nativeReady до исходного cutoff. | Исследовать текущую ARM readiness/cleanup evidence. Успех x64 не переносится на ARM; cutoff, currentness и authority probes сохраняются. | delivery_review; root |
+| W1 | [Windows x64 source7fe PASS](https://github.com/777genius/agent-teams-ai/actions/runs/44539500343/job/135613817235); ARM Codex A всё ещё не достигает nativeReady до исходного cutoff. | ARM final cleanup=true, все7 original HANDLE absent. Последний catalog leg завершён; окончания всей readiness и Runtime publication нет. Provider/scenario clocks имеют разные anchors, их elapsed нельзя напрямую вычитать. Обоснованного source fix не найдено; нужен original ARM PASS без изменения cutoff/currentness/authority. | root |
 | P09 | Darwin x64/ARM mutation witness остаются отрицательными. | Требуется отдельный выбор контракта original pathname / writer / consumed bytes по Report40. До решения не сужать гарантию и не менять failed oracle. Независимые исправления продолжаются. | root / owner |
-| D1-current | На7fe compiler-шаги завершаются; typed lint сообщает redundant optional на sourceWriteAdmission. Frontend shards1/2/4 FAIL. | Устранить lint; синхронизировать guard с уже существующим Stop entrypoint/constructor port; проверить initial-seed roster assertion против актуального контракта. Stop behavior исправляется отдельно, без изменения его test oracles. | root; parity_review |
-| Delivery | Четыре acceptance workflows красные из-за перечисленных отказов. | Проверять только затронутые сценарии, сохранить обязательные current-head gates. После qualification завершить разрешённый PR-маршрут. Не останавливать независимую работу из-за CI queue. | root |
+| D1-current | На7fe compiler-шаги завершались; frontend shards1/2/4 и typed lint FAIL. | Lint исправлен, facade guard8/8 и оба старый/новый OpenCode transfer пути PASS. Passive refusal join перенесён в существующий helper:794 строки вместо812, guard PASS. Full local compiler дважды exit137; scoped TS7 для14 изменённых файлов и transitive imports PASS. Нужен полный current-source workspace gate. | root |
+| E1-Other | На7fe cross-team final reload: Chromium resource failure; installer startup: original ps timeout. Attachments, Resume и Darwin ARM process jobs cancelled без выполнения. | Сохранить исходные сценарии и deadlines; нужны собственные выполненные результаты текущего source. Предшествующие taskboard/review steps и cleanup учитываются отдельно от полного PASS. | root |
+| Delivery | Исходные7fe acceptance workflows содержат перечисленные отказы; проверенные960 source jobs стоят в очереди. | Проверять только затронутые сценарии, сохранить обязательные current-head gates. После qualification завершить разрешённый PR-маршрут. Не останавливать независимую работу из-за CI queue. | root |
 
 ## Что уже реализовано и повторно не разрабатывается
 
@@ -130,7 +133,12 @@ Resume без model/tool replay и cleanup на пяти платформах. W
 заявляется. Provider pin `b19494fd` неизменён: implementation archive191145B,
 SHA256 `ad05bd8c799c4d2c366a6eab72f937466355a5994eac6bd201ee754217cf5aa7`.
 Canonical provider check ранее PASS; все252 старых compiled outputs и SPI archive
-побайтово сохранены. Новый provider source или перепаковка не нужны.
+побайтово сохранены. Audit19nov: текущий archive содержит256 dist outputs плюс
+10 SPI outputs; SHA-256/SHA-512/Git blob, manifest и lock совпадают с receipt.
+В provider#8 нет inline threads или review submissions. Его единственный
+coordination comment указывает на [#11](https://github.com/agent-teams-ai/old-provider-implementations/pull/11),
+уже merged17nov в ветку#8 и включённый в pin `b19494fd`. Это read-only audit,
+не новый build или approval. Новый provider source или перепаковка не нужны.
 
 ## Восстановленные кандидаты и порядок проверки
 

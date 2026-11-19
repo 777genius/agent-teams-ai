@@ -33,6 +33,7 @@ import { fileHash } from './nativeEmulatedProfile';
 import { finiteSourceProbe, prepareEmulatedSourceProfile } from './nativeEmulatedSourceProfile';
 import { nativeEmulatedSourceCold } from './nativeEmulatedSourceCold';
 import { readEmulatedSourceActionProbe, observeEmulatedSourcePeerReadiness,
+  joinEmulatedSourceRefusalObservations,
   readEmulatedCodexReadinessObservation, readEmulatedSourceJournal as journal,
   validateEmulatedSourceRefusal, unwrapEmulatedSourceResult as unwrap,
   type EmulatedSourceCustodyTiming as CustodyTiming } from './nativeEmulatedSourceReadiness';
@@ -776,26 +777,7 @@ export async function nativeEmulatedSourceScenario(sandbox: string, broker: stri
         validateSourceRefusal(row, true); assert.equal(row.ordinal, index + 1); assert.ok(index < 64); assert.notEqual(row.kind, 'limit');
         if (row.kind === 'reference') { const pair = text(row.commandDigest) + ':' + text(row.contextDigest); assert.equal(references.has(pair), false); references.add(pair); }
       }
-      const consumers = records.filter(row => row.kind === 'consumer').map(row => {
-        const matches = diagnosticLaunches.filter(value => value.actionDigest === row.actionDigest && value.bindingDigests.includes(text(row.bindingDigest)));
-        assert.equal(matches.length, 1); return { row, launch: matches[0]! };
-      });
-      const observations = records.map(row => {
-        if (row.kind === 'opencode-open') {
-          const matches = diagnosticLaunches.filter(value => value.bindingDigests.includes(text(row.bindingDigest)));
-          assert.equal(matches.length, 1); return { ...row, launchId: matches[0]!.launchId, source: matches[0]!.source };
-        }
-        if (row.kind === 'native') { const matches = epochs.flatMap(epoch => epoch.jobs.map((job, jobSlot) => ({ epoch, job, jobSlot })))
-          .filter(value => value.job.capability === row.capability);
-          assert.equal(matches.length, 1); const match = matches[0]!; assert.ok(match.job.origin);
-          const mainEpoch = match.epoch.physical.mainEpoch; assert.ok(typeof mainEpoch === 'string' && mainEpoch.length > 0 && mainEpoch.length <= 256 && !mainEpoch.includes('\0'));
-          return { ...row, mainEpoch, jobSlot: match.jobSlot, source: sourceRef(match.job.origin) };
-        }
-        const matches = row.kind === 'consumer' ? consumers.filter(value => value.row === row) :
-          consumers.filter(value => value.row.groupDigest === runtimeDigest({ commandDigest: row.commandDigest, contextDigest: row.contextDigest }));
-        assert.ok(matches.length > 0); assert.equal(new Set(matches.map(value => JSON.stringify(value.launch))).size, 1);
-        return { ...row, launchId: matches[0]!.launch.launchId, source: matches[0]!.launch.source };
-      });
+      const observations = joinEmulatedSourceRefusalObservations(records, diagnosticLaunches, epochs);
       evidence.firstRefusal = records.length ? { status: 'observed', observations } : { status: 'unknown', reason: 'empty' };
     } catch { evidence.firstRefusal = { status: 'unknown', reason: 'unreadable-invalid-overflow-or-unjoined' }; }
     if (failure) try {

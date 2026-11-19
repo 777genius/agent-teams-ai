@@ -14,9 +14,9 @@ type Props = ComponentProps<typeof ProjectPathSelector> & { markEdited: () => vo
 const OriginalProjectSelector = (props: Props) => {
   const original = useRetainedLegacyLaunch()!;
   const rebind = useRetainedLegacyProjectRebind()!;
-  const [mode, setMode] = useState(props.cwdMode);
-  const [project, setProject] = useState(props.selectedProjectPath);
-  const [custom, setCustom] = useState(props.customCwd);
+  const [mode, setMode] = useState<Props['cwdMode']>('custom');
+  const [project, setProject] = useState(original.choice.projectPath);
+  const [custom, setCustom] = useState(original.choice.projectPath);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const path = (mode === 'project' ? project : custom).trim();

@@ -3876,8 +3876,12 @@ test('finite V2 P11 Linux projection keeps exact kernel identity and refuses cha
   const peer = { pid: 201, parentPid: 200, groupId: 201, birth: 'original ps peer', command: 'node' };
   const native = { pid: 202, parentPid: 200, groupId: 202, birth: 'original ps V2', command: 'bun' };
   const unrelated = { pid: 300, parentPid: 1, groupId: 300, birth: 'original other', command: 'other' };
-  const exercise = async (variant: 'ready' | 'no-host' | 'changed-birth' | 'foreign-executable' | 'foreign-wrapper' | 'wrong-parent') => {
+  const exercise = async (variant: 'ready' | 'no-host' | 'changed-birth' | 'foreign-executable' | 'foreign-wrapper' | 'wrong-parent' |
+    'candidate-exited-before-capture' | 'host-exited-before-capture' | 'candidate-exited-after-capture' | 'candidate-denied') => {
     const reads: string[] = [], stats = new Map<number, number>(); let censuses = 0;
+    const observationError = Object.assign(new Error('original process observation failed'), {
+      code: variant === 'candidate-denied' ? 'EACCES' : 'ENOENT',
+    });
     const table = variant === 'no-host' ? [unrelated] : [host, peer, native, unrelated];
     const fixture = { node: '/TEST/node', hostEntry: '/TEST/host/cli.js', finiteInitialPeers: {
       peers: [{ provider: 'claude', executable: { path: '/TEST/peer' } }] } };
@@ -3895,6 +3899,9 @@ test('finite V2 P11 Linux projection keeps exact kernel identity and refuses cha
           reads.push(path); const pid = Number(path.split('/')[2]), row = table.find(value => value.pid === pid); assert.ok(row);
           if (path.endsWith('/stat')) {
             const count = (stats.get(pid) ?? 0) + 1; stats.set(pid, count);
+            if ((pid === 201 && count === 1 && ['candidate-exited-before-capture', 'candidate-denied'].includes(variant)) ||
+              (pid === 200 && count === 1 && variant === 'host-exited-before-capture') ||
+              (pid === 201 && count === 2 && variant === 'candidate-exited-after-capture')) throw observationError;
             const fields = Array<string>(20).fill('0'); fields[0] = 'S';
             fields[1] = String(variant === 'wrong-parent' && pid === 201 ? 299 : row.parentPid);
             fields[2] = String(row.groupId); fields[19] = String(pid * 10 + (variant === 'changed-birth' && pid === 201 && count === 2 ? 1 : 0));
@@ -3908,19 +3915,23 @@ test('finite V2 P11 Linux projection keeps exact kernel identity and refuses cha
         },
       });
     const promise = actual(100, fixture) as Promise<unknown>;
-    if (variant !== 'ready' && variant !== 'no-host') await assert.rejects(promise, assert.AssertionError);
+    if (['host-exited-before-capture', 'candidate-exited-after-capture', 'candidate-denied'].includes(variant))
+      await assert.rejects(promise, error => error === observationError);
+    else if (variant !== 'ready' && variant !== 'no-host' && variant !== 'candidate-exited-before-capture')
+      await assert.rejects(promise, assert.AssertionError);
     else {
       const result = await promise;
       assert.deepEqual(result, variant === 'no-host' ? table : [
         { ...host, birth: 'linux-starttime:2000', command: '/TEST/node' },
-        { ...peer, birth: 'linux-starttime:2010', command: '/TEST/node' },
+        ...(variant === 'candidate-exited-before-capture' ? [] : [{ ...peer, birth: 'linux-starttime:2010', command: '/TEST/node' }]),
         { ...native, birth: 'linux-starttime:2020', command: '/TEST/bun' }, unrelated]);
       assert.equal(censuses, 1); assert.ok(reads.every(path => !path.includes('/300/')));
-      assert.equal(reads.length, variant === 'no-host' ? 0 : 12);
+      assert.equal(reads.length, variant === 'no-host' ? 0 : variant === 'candidate-exited-before-capture' ? 9 : 12);
     }
     assert.deepEqual(table, variant === 'no-host' ? [unrelated] : [host, peer, native, unrelated]);
   };
-  for (const variant of ['ready', 'no-host', 'changed-birth', 'foreign-executable', 'foreign-wrapper', 'wrong-parent'] as const)
+  for (const variant of ['ready', 'no-host', 'changed-birth', 'foreign-executable', 'foreign-wrapper', 'wrong-parent',
+    'candidate-exited-before-capture', 'host-exited-before-capture', 'candidate-exited-after-capture', 'candidate-denied'] as const)
     await exercise(variant);
 });
 

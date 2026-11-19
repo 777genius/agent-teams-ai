@@ -176,8 +176,19 @@ export async function desktopFiniteMembershipProcesses(group: number, fixture: {
     return { parentPid: Number(fields[1]), groupId: Number(fields[2]), birth: fields[19]! };
   };
   const replacements = new Map<number, ProcessFact>();
+  const absent = new Set<number>();
   for (const row of selected) {
-    const before = await readIdentity(row.pid), executable = await realpath(`/proc/${row.pid}/exe`);
+    let before: Awaited<ReturnType<typeof readIdentity>>;
+    try { before = await readIdentity(row.pid); }
+    catch (error) {
+      // A short-lived metadata candidate can exit after ps. This is current absence only,
+      // never a captured birth or owner release; the Runtime/lineage oracles still apply.
+      if (row.pid !== host.pid && (error as NodeJS.ErrnoException | null)?.code === 'ENOENT') {
+        absent.add(row.pid); continue;
+      }
+      throw error;
+    }
+    const executable = await realpath(`/proc/${row.pid}/exe`);
     const bytes = await readFile(`/proc/${row.pid}/cmdline`); assert.ok(bytes.length <= 128 * 1024);
     const args = bytes.toString('utf8').split('\0').filter(Boolean);
     assert.deepEqual(await readIdentity(row.pid), before, 'the observed original Linux process did not change');
@@ -194,7 +205,7 @@ export async function desktopFiniteMembershipProcesses(group: number, fixture: {
     if (row.pid === host.pid) assert.equal(executable, fixture.node);
     replacements.set(row.pid, { ...row, birth: 'linux-starttime:' + before.birth, command: executable });
   }
-  return table.map(row => replacements.get(row.pid) ?? row);
+  return table.filter(row => !absent.has(row.pid)).map(row => replacements.get(row.pid) ?? row);
 }
 
 export function captureDesktopFiniteMembershipScope(evidence: Row, selected: DesktopFiniteMembership) {

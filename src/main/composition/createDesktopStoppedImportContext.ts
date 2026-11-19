@@ -56,7 +56,7 @@ export function createDesktopStoppedImportContext(read: () => ContextOwners) {
 /** The ordinary Main producer has no Host descriptor, but its qualified native cut is still immutable. */
 export function createDesktopWorkSyncSourceAdmission(
   backup: {
-    sourceWriteAdmission?: LegacySourceWriteAdmissionPolicy | undefined;
+    sourceWriteAdmission?: LegacySourceWriteAdmissionPolicy;
     withTeamIdentityFence<T>(teamName: string, operation: () => Promise<T>): Promise<T>;
   },
   isCurrentOwner: () => boolean

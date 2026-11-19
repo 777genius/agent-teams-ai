@@ -1007,7 +1007,7 @@ const LaunchTeamDialogContent = (props: LaunchTeamDialogProps): React.JSX.Elemen
       savedRequest?.skipPermissions ??
         (isHostSavedRequest(savedRequest) ? true : storedSkipPermissions)
     );
-    if (savedRequest && isHostSavedRequest(savedRequest)) {
+    if (savedRequest && savedLaunchSource.host) {
       hydrateOwnerPrompt(savedRequest.prompt ?? '');
       hydrateAdvancedSettings(savedRequest);
       setCustomCwd(savedRequest.cwd);

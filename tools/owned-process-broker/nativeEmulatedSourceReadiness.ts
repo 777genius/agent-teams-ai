@@ -222,6 +222,48 @@ export function validateEmulatedSourceRefusal(value: Record<string, unknown>, pe
   }
 }
 
+/** Join only the already-read original refusal records to their retained source and owner. */
+export function joinEmulatedSourceRefusalObservations(
+  records: readonly Record<string, unknown>[],
+  diagnosticLaunches: readonly {
+    actionDigest: string;
+    bindingDigests: readonly string[];
+    launchId: string;
+    source: { sourceId: string; revision: string };
+  }[],
+  epochs: readonly {
+    physical: { mainEpoch: string };
+    jobs: readonly {
+      capability: string;
+      origin?: { sourceId: string; revision: string };
+    }[];
+  }[]
+) {
+  const text = (raw: unknown): string => { assert.equal(typeof raw, 'string'); return raw as string; };
+  const sourceRef = (value: { sourceId: string; revision: string }) => ({ sourceId: value.sourceId, revision: value.revision });
+  const consumers = records.filter(row => row.kind === 'consumer').map(row => {
+    const matches = diagnosticLaunches.filter(value => value.actionDigest === row.actionDigest && value.bindingDigests.includes(text(row.bindingDigest)));
+    assert.equal(matches.length, 1); return { row, launch: matches[0]! };
+  });
+  const observations = records.map(row => {
+    if (row.kind === 'opencode-open') {
+      const matches = diagnosticLaunches.filter(value => value.bindingDigests.includes(text(row.bindingDigest)));
+      assert.equal(matches.length, 1); return { ...row, launchId: matches[0]!.launchId, source: matches[0]!.source };
+    }
+    if (row.kind === 'native') { const matches = epochs.flatMap(epoch => epoch.jobs.map((job, jobSlot) => ({ epoch, job, jobSlot })))
+      .filter(value => value.job.capability === row.capability);
+      assert.equal(matches.length, 1); const match = matches[0]!; assert.ok(match.job.origin);
+      const mainEpoch = match.epoch.physical.mainEpoch; assert.ok(typeof mainEpoch === 'string' && mainEpoch.length > 0 && mainEpoch.length <= 256 && !mainEpoch.includes('\0'));
+      return { ...row, mainEpoch, jobSlot: match.jobSlot, source: sourceRef(match.job.origin) };
+    }
+    const matches = row.kind === 'consumer' ? consumers.filter(value => value.row === row) :
+      consumers.filter(value => value.row.groupDigest === runtimeDigest({ commandDigest: row.commandDigest, contextDigest: row.contextDigest }));
+    assert.ok(matches.length > 0); assert.equal(new Set(matches.map(value => JSON.stringify(value.launch))).size, 1);
+    return { ...row, launchId: matches[0]!.launch.launchId, source: matches[0]!.launch.source };
+  });
+  return observations;
+}
+
 /** TEST-only completed-exit observation; never substitutes for Runtime readiness or custody. */
 export function readEmulatedCodexReadinessObservation(options: Record<string, unknown>) {
   const unavailable = { status: 'unknown', reason: 'missing-invalid-overflow-conflicting-or-unjoined' };

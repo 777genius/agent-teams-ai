@@ -765,6 +765,7 @@ vi.mock('@renderer/components/team/dialogs/CodexFastModeSelector', () => ({
     ),
 }));
 
+import { createRetainedLegacyLaunchClient } from '@features/agent-backend/renderer';
 import { sanitizeProviderStatusAuthority } from '@main/services/runtime/providerStatusCheckContract';
 import { api } from '@renderer/api';
 import { CreateTeamDialog } from '@renderer/components/team/dialogs/CreateTeamDialog';
@@ -1852,17 +1853,26 @@ describe('LaunchTeamDialog', () => {
     }
   );
 
-  it.each([false, true])(
-    'hydrates owner launch fields without overwriting user edits (%s)',
-    async (edited) => {
+  it.each([
+    { retained: false, edited: false }, { retained: false, edited: true },
+    { retained: true, edited: false }, { retained: true, edited: true },
+  ])(
+    'hydrates owner launch fields without overwriting user edits (retained=$retained, edited=$edited)',
+    async ({ retained, edited }) => {
       vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
-      let resolveSaved: (value: any) => void = () => {};
-      vi.mocked(api.teams.getSavedRequest).mockReturnValueOnce(
-        new Promise((resolve) => {
-          resolveSaved = resolve;
-        })
-      );
-      const key = 'host-team:TEST-owner';
+      let resolveSaved!: (value: TeamCreateRequest) => void;
+      const saved = new Promise<TeamCreateRequest>((resolve) => { resolveSaved = resolve; });
+      const key = retained ? 'TEST-retained-owner' : 'host-team:TEST-owner';
+      const choice = retained ? { scopeId: `TEST-retained-hydration-${edited}`, teamName: key,
+        mode: 'original-runtime' as const, expiresAt: Date.now() + 60_000,
+        projectPath: '/tmp/TEST-owner' } : undefined;
+      if (choice) createRetainedLegacyLaunchClient(choice, async (request) => {
+        if (request.action === 'read') return { ok: true, action: 'read', value: await saved };
+        if (request.action === 'status') return { ok: true, action: 'status', value: storeState.cliStatus as CliInstallationStatus };
+        if (request.action === 'close') return { ok: true, action: 'close', value: null };
+        return { ok: false, reason: 'unavailable', outcome: 'not-dispatched' };
+      });
+      else vi.mocked(api.teams.getSavedRequest).mockReturnValueOnce(saved);
       localStorage.setItem(`team:lastCustomArgs:${key}`, 'WRONG-local-args');
       const host = document.createElement('div');
       document.body.appendChild(host);
@@ -1874,6 +1884,7 @@ describe('LaunchTeamDialog', () => {
               mode: 'launch',
               open: true,
               teamName: key,
+              retainedLegacyLaunch: choice,
               members: [],
               defaultProjectPath: '/tmp/project',
               provisioningError: null,
@@ -1885,6 +1896,7 @@ describe('LaunchTeamDialog', () => {
           );
           await flush();
         });
+        expect(host.querySelector<HTMLTextAreaElement>('#dialog-prompt')?.closest('fieldset')?.disabled).toBe(true);
         await act(async () => {
           resolveSaved({
             teamName: key,
@@ -1900,6 +1912,7 @@ describe('LaunchTeamDialog', () => {
           await flush();
           await flush();
         });
+        if (retained) expect(api.teams.getSavedRequest).not.toHaveBeenCalled();
         if (edited)
           await act(async () => {
             advancedCliMock.lastProps.onCustomArgsChange('--user-args');
