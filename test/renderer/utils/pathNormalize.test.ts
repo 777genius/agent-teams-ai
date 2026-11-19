@@ -1,12 +1,37 @@
 import {
   buildTaskCountsByOwner,
   buildTaskCountsByProject,
+  buildTaskCountsByTeam,
   normalizePath,
   normalizePathForMatching,
 } from '@renderer/utils/pathNormalize';
 import { describe, expect, it } from 'vitest';
 
 describe('pathNormalize task counts', () => {
+  it('rolls up verified physical histories into the logical card without leaking unrelated aliases', () => {
+    const tasks = [
+      { teamName: 'builders', status: 'pending' },
+      { teamName: 'ptc-a', status: 'in_progress' },
+      { teamName: 'ptc-b', status: 'completed' },
+      { teamName: 'ptc-other', status: 'completed' },
+      { teamName: 'ptc-a', status: 'deleted' },
+    ] as Parameters<typeof buildTaskCountsByTeam>[0];
+    const counts = buildTaskCountsByTeam(tasks, [{
+      teamName: 'builders',
+      projectHistoryContexts: [
+        { executionTeamName: 'ptc-a', projectPath: '/A' },
+        { executionTeamName: 'ptc-b', projectPath: '/B' },
+      ],
+    }]);
+
+    expect(counts.get('builders')).toEqual({ pending: 1, inProgress: 1, completed: 1 });
+    expect(counts.get('ptc-a')).toEqual({ pending: 0, inProgress: 1, completed: 0 });
+    expect(counts.get('ptc-other')).toEqual({ pending: 0, inProgress: 0, completed: 1 });
+    expect(buildTaskCountsByTeam(tasks).get('builders')).toEqual({
+      pending: 1, inProgress: 0, completed: 0,
+    });
+  });
+
   it('normalizes Windows paths case-insensitively but keeps POSIX casing', () => {
     expect(normalizePath('C:\\Users\\Alice\\Repo\\')).toBe('c:/users/alice/repo');
     expect(normalizePath('/Users/Alice/Repo/')).toBe('/Users/Alice/Repo');

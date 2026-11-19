@@ -192,6 +192,7 @@ import {
 import { resolveConfigOnlyCwd } from './resolveConfigOnlyCwd';
 import { CreateTeamProviderStatusStrip } from './RetryOpenCodeStatus';
 import { SkipPermissionsCheckbox } from './SkipPermissionsCheckbox';
+import { TeamHistoryAndLaunchControls } from './TeamHistoryAndLaunchControls';
 import {
   analyzeTeammateRuntimeCompatibility,
   useTmuxRuntimeReadiness,
@@ -328,6 +329,8 @@ export const CreateTeamDialog = ({
     setRuntimeSelection,
     teamName,
     setTeamName,
+    projectContextMode,
+    setProjectContextMode,
     members,
     setMembers,
     syncModelsWithLead,
@@ -1801,6 +1804,7 @@ export const CreateTeamDialog = ({
     () => ({
       runtimeSelectionVersion,
       teamName: sanitizedTeamName,
+      projectContextMode,
       description: description.trim() || undefined,
       color: teamColor || undefined,
       members: soloTeam
@@ -1834,6 +1838,7 @@ export const CreateTeamDialog = ({
       runtimeSelectionVersion,
       runtimeSelectionUnresolved,
       sanitizedTeamName,
+      projectContextMode,
       description,
       teamColor,
       soloTeam,
@@ -2185,6 +2190,7 @@ export const CreateTeamDialog = ({
             api.teams.createConfig({
               runtimeSelectionVersion: request.runtimeSelectionVersion,
               teamName: request.teamName,
+              projectContextMode: request.projectContextMode,
               displayName: request.displayName,
               description: request.description,
               color: request.color,
@@ -2761,35 +2767,12 @@ export const CreateTeamDialog = ({
                   : 'var(--color-surface-overlay)',
               }}
             >
-              <div className="flex items-start gap-3">
-                <Checkbox
-                  id="launch-team"
-                  className="mt-1 shrink-0"
-                  checked={launchTeam}
-                  onCheckedChange={(checked) => setLaunchTeam(checked === true)}
-                />
-                <div className="flex items-center gap-1.5">
-                  <Label htmlFor="launch-team" className="cursor-pointer text-sm font-semibold">
-                    {t('create.launchAfterCreate.label')}
-                  </Label>
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <button
-                          type="button"
-                          aria-label={t('create.launchAfterCreate.description')}
-                          className="rounded text-[var(--color-text-muted)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--color-border-emphasis)]"
-                        >
-                          <Info className="size-3.5" />
-                        </button>
-                      </TooltipTrigger>
-                      <TooltipContent className="max-w-72">
-                        {t('create.launchAfterCreate.description')}
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                </div>
-              </div>
+              <TeamHistoryAndLaunchControls
+                projectContextMode={projectContextMode}
+                onProjectContextModeChange={setProjectContextMode}
+                launchTeam={launchTeam}
+                onLaunchTeamChange={setLaunchTeam}
+              />
               {launchTeam ? (
                 <div className="mt-4 space-y-4">
                   <ProjectPathSelector

@@ -6,7 +6,7 @@ import {
   isTeamTaskNeedsFixActionable,
 } from '@shared/utils/teamTaskState';
 
-import type { GlobalTask } from '@shared/types';
+import type { GlobalTask, TeamSummary } from '@shared/types';
 
 export function normalizePath(p: string): string {
   return stripTrailingSeparators(normalizePathForComparison(p));
@@ -61,13 +61,30 @@ export function buildTaskCountsByProject(tasks: GlobalTask[]): Map<string, TaskS
   return map;
 }
 
-/** Build a map of team name -> task status counts */
-export function buildTaskCountsByTeam(tasks: GlobalTask[]): Map<string, TaskStatusCounts> {
+/** Preserve physical team counts; also roll up only backend-verified aliases into their logical team. */
+export function buildTaskCountsByTeam(
+  tasks: GlobalTask[],
+  teams: readonly Pick<TeamSummary, 'teamName' | 'projectHistoryContexts'>[] = []
+): Map<string, TaskStatusCounts> {
+  const logicalByAlias = new Map<string, string>();
+  for (const team of teams) {
+    for (const context of team.projectHistoryContexts ?? []) {
+      if (context.executionTeamName !== team.teamName) {
+        logicalByAlias.set(context.executionTeamName, team.teamName);
+      }
+    }
+  }
+
   const map = new Map<string, TaskStatusCounts>();
   for (const task of tasks) {
     const key = task.teamName;
     const counts = map.get(key) ?? { pending: 0, inProgress: 0, completed: 0 };
     map.set(key, incrementTaskStatus(counts, task));
+    const logicalName = logicalByAlias.get(key);
+    if (logicalName) {
+      const logicalCounts = map.get(logicalName) ?? { pending: 0, inProgress: 0, completed: 0 };
+      map.set(logicalName, incrementTaskStatus(logicalCounts, task));
+    }
   }
   return map;
 }

@@ -1,11 +1,7 @@
+import { isReviewFlow, MAX_REVIEW_FLOW_PROMPT_LENGTH } from '@features/review-flow';
 import { FileReadTimeoutError, readFileUtf8WithTimeout } from '@main/utils/fsRead';
 import { getTeamsBasePath } from '@main/utils/pathDecoder';
-import {
-  DEFAULT_REVIEW_FLOW,
-  isReviewFlow,
-  KANBAN_COLUMN_IDS,
-  MAX_REVIEW_FLOW_PROMPT_LENGTH,
-} from '@shared/constants/kanban';
+import { KANBAN_COLUMN_IDS } from '@shared/constants/kanban';
 import { createLogger } from '@shared/utils/logger';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -15,14 +11,13 @@ import { atomicWriteAsync } from './atomicWrite';
 import type { KanbanColumnId, KanbanState, UpdateKanbanPatch } from '@shared/types';
 
 const logger = createLogger('Service:TeamKanbanManager');
-const MAX_KANBAN_STATE_BYTES = 512 * 1024;
+export const MAX_KANBAN_STATE_BYTES = 512 * 1024;
 
 function createDefaultState(teamName: string): KanbanState {
   return {
     teamName,
     reviewers: [],
     tasks: {},
-    reviewFlow: DEFAULT_REVIEW_FLOW,
   };
 }
 
@@ -71,6 +66,7 @@ function validateSafetyState(value: unknown, teamName: string): void {
   if (
     value.reviewFlowPrompt !== undefined &&
     (typeof value.reviewFlowPrompt !== 'string' ||
+      value.reviewFlow === undefined || // a prompt only exists as part of a team override
       value.reviewFlowPrompt.trim().length > MAX_REVIEW_FLOW_PROMPT_LENGTH)
   )
     return invalid();
@@ -152,8 +148,10 @@ export class TeamKanbanManager {
         ? parsed.reviewers.filter((r): r is string => typeof r === 'string' && r.trim().length > 0)
         : [],
       tasks: sanitizedTasks,
-      reviewFlow: isReviewFlow(parsed.reviewFlow) ? parsed.reviewFlow : DEFAULT_REVIEW_FLOW,
-      ...(reviewFlowPrompt ? { reviewFlowPrompt } : {}),
+      // Present only when the team overrides the default; absent means it follows the default.
+      ...(isReviewFlow(parsed.reviewFlow)
+        ? { reviewFlow: parsed.reviewFlow, ...(reviewFlowPrompt ? { reviewFlowPrompt } : {}) }
+        : {}),
       columnOrder: sanitizeColumnOrder(parsed.columnOrder),
     };
   }
@@ -243,8 +241,14 @@ export class TeamKanbanManager {
       teamName,
       reviewers: state.reviewers,
       tasks: state.tasks,
-      reviewFlow: isReviewFlow(state.reviewFlow) ? state.reviewFlow : DEFAULT_REVIEW_FLOW,
-      ...(state.reviewFlowPrompt?.trim() ? { reviewFlowPrompt: state.reviewFlowPrompt.trim() } : {}),
+      ...(isReviewFlow(state.reviewFlow)
+        ? {
+            reviewFlow: state.reviewFlow,
+            ...(state.reviewFlowPrompt?.trim()
+              ? { reviewFlowPrompt: state.reviewFlowPrompt.trim() }
+              : {}),
+          }
+        : {}),
       ...(state.columnOrder && Object.keys(state.columnOrder).length > 0
         ? { columnOrder: state.columnOrder }
         : {}),

@@ -193,6 +193,7 @@ import {
   structurallySharePlainValue,
   structurallyShareTeamSnapshot,
 } from '../team/teamSnapshotStructuralSharing';
+import { buildTeamSummaryIndexes } from '../team/teamSummaryIndexes';
 import {
   collectTaskChangeInvalidationState,
   preserveKnownTaskChangePresence,
@@ -205,6 +206,7 @@ import {
   saveToolApprovalSettingsForTeam,
 } from '../team/teamToolApprovalSettings';
 import {
+  persistAndAwaitToolApprovalSettingsSync,
   persistAndScheduleToolApprovalSettingsSync,
   resetToolApprovalSettingsSync,
   scheduleToolApprovalSettingsSync,
@@ -245,7 +247,6 @@ import type {
   MemberSpawnStatusesSnapshot,
   NotificationTarget,
   RetryFailedOpenCodeSecondaryLanesResult,
-  ReviewFlowSettings,
   SendMessageRequest,
   SendMessageResult,
   TaskChangePresenceState,
@@ -673,28 +674,6 @@ function isTeamRequestScopeCurrent(
     isContextRequestScopeCurrent(get, scope) &&
     isTeamLocalStateEpochCurrent(teamName, scope.teamStateEpoch)
   );
-}
-
-function buildTeamSummaryIndexes(teams: readonly TeamSummary[]): {
-  teamByName: Record<string, TeamSummary>;
-  teamBySessionId: Record<string, TeamSummary>;
-} {
-  const teamByName: Record<string, TeamSummary> = {};
-  const teamBySessionId: Record<string, TeamSummary> = {};
-  for (const team of teams) {
-    teamByName[team.teamName] = team;
-    if (team.leadSessionId) {
-      teamBySessionId[team.leadSessionId] = team;
-    }
-    if (Array.isArray(team.sessionHistory)) {
-      for (const sid of team.sessionHistory) {
-        if (typeof sid === 'string' && sid) {
-          teamBySessionId[sid] = team;
-        }
-      }
-    }
-  }
-  return { teamByName, teamBySessionId };
 }
 
 function removeProvisioningSnapshotsForTeams(
@@ -1531,7 +1510,6 @@ export interface TeamSlice extends SidebarLogsHeightSlice, DeletedTaskFeed {
   sendCrossTeamMessage: (request: CrossTeamSendRequest) => Promise<CrossTeamSendResult | null>;
   requestReview: (teamName: string, taskId: string) => Promise<void>;
   updateKanban: (teamName: string, taskId: string, patch: UpdateKanbanPatch) => Promise<void>;
-  setReviewFlowSettings: (teamName: string, settings: ReviewFlowSettings) => Promise<void>;
   updateKanbanColumnOrder: (
     teamName: string,
     columnId: KanbanColumnId,
@@ -2295,40 +2273,58 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
     if (!teamName.trim()) {
       return;
     }
-
     // If projectPath is provided, immediately select the matching project in the sidebar.
     // This avoids a race condition where config.json hasn't been updated with projectPath yet.
     if (projectPath) {
       const stateForProject = get();
       const normalizedPath = normalizePath(projectPath);
-      const matchingProject = stateForProject.projects.find(
+      const matchingProject = (stateForProject.projects ?? []).find(
         (p) => normalizePath(p.path) === normalizedPath
       );
       if (matchingProject && stateForProject.selectedProjectId !== matchingProject.id) {
         stateForProject.selectProject(matchingProject.id);
+      } else if (!matchingProject) {
+        // Grouped worktrees are stored separately from the flat projects list.
+        // The path must select the matching worktree before opening a logical tab.
+        for (const group of stateForProject.repositoryGroups ?? []) {
+          const worktree = group.worktrees.find(
+            (candidate) => normalizePath(candidate.path) === normalizedPath
+          );
+          if (!worktree) continue;
+          if (stateForProject.selectedRepositoryId !== group.id ||
+              stateForProject.selectedWorktreeId !== worktree.id ||
+              stateForProject.selectedProjectId !== worktree.id) {
+            set(getWorktreeNavigationState(group.id, worktree.id));
+            void get().fetchSessionsInitial(worktree.id);
+          }
+          break;
+        }
       }
     }
-
     const state = get();
     // Use display name from teams list or selected team data if available
     const teamSummary = state.teamByName[teamName];
     const selectedTeamDisplayName =
       state.selectedTeamName === teamName ? state.selectedTeamData?.config.name : undefined;
     const displayName = teamSummary?.displayName || selectedTeamDisplayName || teamName;
-
+    const retainedSharedHistory = Boolean(
+      _taskId && state.teamByName[teamName]?.projectContextMode === 'per_project'
+    );
+    const label = retainedSharedHistory ? displayName + ' · Shared history' : displayName;
     const allTabs = state.getAllPaneTabs();
-    const existing = allTabs.find((tab) => isOrdinaryTeamTab(tab) && tab.teamName === teamName);
+    const existing = allTabs.find(
+      (tab) => isOrdinaryTeamTab(tab) && tab.teamName === teamName &&
+        Boolean(tab.retainedSharedHistory) === retainedSharedHistory
+    );
     if (existing) {
       state.setActiveTab(existing.id);
-      // Sync label in case display name changed
-      if (existing.label !== displayName) {
-        state.updateTabLabel(existing.id, displayName);
-      }
+      if (existing.label !== label) state.updateTabLabel(existing.id, label);
     } else {
       state.openTab({
         type: 'team',
-        label: displayName,
+        label,
         teamName,
+        ...(retainedSharedHistory ? { retainedSharedHistory: true } : {}),
       });
     }
   },
@@ -3569,23 +3565,6 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
     }
   },
 
-  setReviewFlowSettings: async (teamName: string, settings: ReviewFlowSettings) => {
-    try {
-      set({ reviewActionError: null });
-      await unwrapIpc('team:setReviewFlowSettings', () =>
-        api.teams.setReviewFlowSettings(teamName, settings)
-      );
-      await get().refreshTeamData(teamName);
-    } catch (error) {
-      set({ reviewActionError: mapReviewError(error) });
-      try {
-        await get().refreshTeamData(teamName);
-      } catch {
-        // Keep the original policy-write error; a subsequent refresh will retry.
-      }
-      throw error;
-    }
-  },
   updateKanbanColumnOrder: async (
     teamName: string,
     columnId: KanbanColumnId,
@@ -4516,17 +4495,25 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
         [request.teamName]: optimisticLaunchParams,
       },
     }));
-    // Initialize per-team tool approval settings based on skipPermissions flag
-    {
-      const launchSettings: ToolApprovalSettings =
-        request.skipPermissions === false
-          ? DEFAULT_TOOL_APPROVAL_SETTINGS
-          : { ...DEFAULT_TOOL_APPROVAL_SETTINGS, autoAllowAll: true };
-      saveToolApprovalSettingsForTeam(request.teamName, launchSettings);
-      set((state) => projectToolApprovalSettings(state, request.teamName, launchSettings));
-    }
+    // Initialize per-team tool approval settings based on skipPermissions flag.
+    const launchSettings: ToolApprovalSettings =
+      request.skipPermissions === false
+        ? DEFAULT_TOOL_APPROVAL_SETTINGS
+        : { ...DEFAULT_TOOL_APPROVAL_SETTINGS, autoAllowAll: true };
+    saveToolApprovalSettingsForTeam(request.teamName, launchSettings);
+    set((state) => projectToolApprovalSettings(state, request.teamName, launchSettings));
     let responseRunId: string | null = null;
     try {
+      // The runtime is addressed by a verified physical alias, even when UI
+      // launch/progress uses the logical team. Reset its persisted policy before
+      // native launch; otherwise an old "allow all" selection survives relaunch.
+      const context = await api.teams.getProjectContextView(request.teamName, request.cwd);
+      if (context.mode === 'per_project' && context.state === 'ready') {
+        set((state) =>
+          projectToolApprovalSettings(state, context.executionTeamName, launchSettings)
+        );
+        await persistAndAwaitToolApprovalSettingsSync(context.executionTeamName, launchSettings);
+      }
       const response = await unwrapIpc('team:launch', () => api.teams.launchTeam(request));
       responseRunId = response.runId;
       teamLaunchAnalyticsByRunId.set(response.runId, launchAnalyticsContext);

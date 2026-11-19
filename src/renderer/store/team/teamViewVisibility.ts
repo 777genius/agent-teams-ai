@@ -2,6 +2,57 @@ import { isOrdinaryTeamTab } from '@renderer/types/tabs';
 
 import type { AppState } from '../types';
 
+// Multiple panes may show the same owned native project context. Reference
+// counting prevents one pane's cleanup from hiding the other pane's updates.
+const mountedPhysicalTeams = new Map<string, number>();
+const visibilitySubscribers = new Set<() => void>();
+const focusedProjectTeams = new Map<string, { executionTeamName: string }>();
+
+/** Lifecycle subscribers are notified on project-context activation and cleanup. */
+export function subscribeVisiblePhysicalTeamChanges(listener: () => void): () => void {
+  visibilitySubscribers.add(listener);
+  return () => { visibilitySubscribers.delete(listener); };
+}
+
+function notifyVisiblePhysicalTeamChanges(): void {
+  for (const subscriber of visibilitySubscribers) subscriber();
+}
+
+/** Register a verified physical team while its logical-team view is active. */
+export function registerVisiblePhysicalTeam(teamName: string): () => void {
+  if (!teamName) return () => undefined;
+  mountedPhysicalTeams.set(teamName, (mountedPhysicalTeams.get(teamName) ?? 0) + 1);
+  notifyVisiblePhysicalTeamChanges();
+  let disposed = false;
+  return () => {
+    if (disposed) return;
+    disposed = true;
+    const remaining = (mountedPhysicalTeams.get(teamName) ?? 0) - 1;
+    if (remaining > 0) mountedPhysicalTeams.set(teamName, remaining);
+    else mountedPhysicalTeams.delete(teamName);
+    notifyVisiblePhysicalTeamChanges();
+  };
+}
+
+/** Associate the focused logical tab only with its backend-verified ready native context. */
+export function registerFocusedProjectTeam(
+  logicalTeamName: string,
+  executionTeamName: string
+): () => void {
+  const entry = { executionTeamName };
+  focusedProjectTeams.set(logicalTeamName, entry);
+  notifyVisiblePhysicalTeamChanges();
+  return () => {
+    if (focusedProjectTeams.get(logicalTeamName) !== entry) return;
+    focusedProjectTeams.delete(logicalTeamName);
+    notifyVisiblePhysicalTeamChanges();
+  };
+}
+
+export function getFocusedProjectTeamName(logicalTeamName: string): string | null {
+  return focusedProjectTeams.get(logicalTeamName)?.executionTeamName ?? null;
+}
+
 export const getVisibleTeamNamesInAnyPane = (state: Pick<AppState, 'paneLayout'>): Set<string> => {
   const { paneLayout } = state;
   const visibleTeamNames = new Set<string>();
@@ -14,6 +65,9 @@ export const getVisibleTeamNamesInAnyPane = (state: Pick<AppState, 'paneLayout'>
     ) {
       visibleTeamNames.add(activeTab.teamName);
     }
+  }
+  for (const physicalTeamName of mountedPhysicalTeams.keys()) {
+    visibleTeamNames.add(physicalTeamName);
   }
   return visibleTeamNames;
 };

@@ -10,9 +10,15 @@ import { createMemberWorkSyncBridge } from '@features/member-work-sync/preload';
 import { createOrganizationsBridge } from '@features/organizations/preload';
 import { createProjectFolderBridge } from '@features/project-folder/preload';
 import { createRecentProjectsBridge } from '@features/recent-projects/preload';
+import { createReviewFlowBridge } from '@features/review-flow/preload';
 import { createRuntimeProviderManagementBridge } from '@features/runtime-provider-management/preload';
 import { createTeamGroupChatsBridge } from '@features/team-group-chats/preload';
 import { createTeamImportBridge } from '@features/team-import/preload';
+import {
+  TEAM_PROJECT_CONTEXT_SET_MODE_CHANNEL,
+  TEAM_PROJECT_CONTEXT_VIEW_CHANNEL,
+  type TeamProjectContextView,
+} from '@features/team-project-context/contracts';
 import { createTeamMemberSettingsBridge } from '@features/team-provisioning/preload';
 import { createTeamReadRecoveryBridge } from '@features/team-read-recovery/preload';
 import { createTerminalWorkspaceBridge } from '@features/terminal-workspace/preload';
@@ -218,7 +224,6 @@ import {
   TEAM_SEND_MESSAGE,
   TEAM_SET_CHANGE_PRESENCE_TRACKING,
   TEAM_SET_PROJECT_BRANCH_TRACKING,
-  TEAM_SET_REVIEW_FLOW_SETTINGS,
   TEAM_SET_TASK_CLARIFICATION,
   TEAM_SET_TASK_LOG_STREAM_TRACKING,
   TEAM_SET_TOOL_ACTIVITY_TRACKING,
@@ -359,7 +364,6 @@ import type {
   ReviewConflictResolution,
   ReviewDecisionConflictCandidateSummary,
   ReviewFileScope,
-  ReviewFlowSettings,
   ReviewRedoAction,
   ReviewRenameRecoveryExpectation,
   ReviewUndoAction,
@@ -519,6 +523,7 @@ const electronAPI: ElectronAPI = {
     ipcRenderer,
   }),
   ...createRecentProjectsBridge(),
+  reviewFlow: createReviewFlowBridge(),
   teamGroupChats: createTeamGroupChatsBridge(),
   announcements: createAnnouncementsBridge(),
   gatewayProvider: createGatewayProviderBridge(),
@@ -927,6 +932,12 @@ const electronAPI: ElectronAPI = {
     list: async () => {
       return invokeIpcWithResult<TeamSummary[]>(TEAM_LIST);
     },
+    getProjectContextView: async (logicalName: string, projectPath?: string | null) =>
+      invokeIpcWithResult<TeamProjectContextView>(
+        TEAM_PROJECT_CONTEXT_VIEW_CHANNEL, logicalName, projectPath ?? null
+      ),
+    setProjectContextMode: async (logicalName: string, mode: 'shared' | 'per_project') =>
+      invokeIpcWithResult<void>(TEAM_PROJECT_CONTEXT_SET_MODE_CHANNEL, logicalName, mode),
     getData: async (teamName: string, options?: TeamGetDataOptions) => {
       if (options === undefined) {
         return invokeIpcWithResult<TeamViewSnapshot>(TEAM_GET_DATA, teamName);
@@ -1050,9 +1061,6 @@ const electronAPI: ElectronAPI = {
     },
     updateKanban: async (teamName: string, taskId: string, patch: UpdateKanbanPatch) => {
       return invokeIpcWithResult<void>(TEAM_UPDATE_KANBAN, teamName, taskId, patch);
-    },
-    setReviewFlowSettings: async (teamName: string, settings: ReviewFlowSettings) => {
-      return invokeIpcWithResult<void>(TEAM_SET_REVIEW_FLOW_SETTINGS, teamName, settings);
     },
     updateKanbanColumnOrder: async (
       teamName: string,

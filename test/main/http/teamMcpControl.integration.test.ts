@@ -1591,6 +1591,7 @@ describe('MCP team tools over the local REST control API', () => {
     try {
       await teamDataService.createTeamConfig({
         teamName: source,
+        projectContextMode: 'shared',
         cwd: root,
         members: [],
         runtimeSelectionVersion: 1,

@@ -285,6 +285,11 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
   );
   // Effective team name: from props if provided, otherwise from local selection
   const effectiveTeamName = propsTeamName || selectedTeamName;
+  const projectPermissionTeamName =
+    props.mode === 'schedule' ? undefined : props.projectPermissionTeamName;
+  const launchHydrationKey = projectPermissionTeamName === undefined
+    ? effectiveTeamName
+    : `${effectiveTeamName}:${projectPermissionTeamName ?? 'unresolved'}`;
   const defaultProjectPath = isLaunchMode ? props.defaultProjectPath : undefined;
   const [launchHydratedTeamName, setLaunchHydratedTeamName] = useState<string | null>(null);
   const needsTeamSelector = isSchedule && !propsTeamName;
@@ -438,7 +443,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
       : selectedProjectPath.trim();
   const effectiveCwd = cwdMode === 'project' ? selectedProjectCwd : customCwd.trim();
   const launchPreflightSelectionReady = isLaunchPreflightProjectSelectionReady({
-    draftLoaded: !isLaunchMode || launchHydratedTeamName === effectiveTeamName,
+    draftLoaded: !isLaunchMode || launchHydratedTeamName === launchHydrationKey,
     effectiveCwd,
     cwdMode,
     projectsLoading,
@@ -753,6 +758,13 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
     setSkipPermissionsRaw(value);
     localStorage.setItem('team:lastSkipPermissions', String(value));
   };
+  const requireExplicitPermissionsForOtherProject = (path: string): void => {
+    // Never carry auto-approval from an owned runtime into a different project.
+    if (projectPermissionTeamName !== undefined &&
+        normalizePath(path) !== normalizePath(defaultProjectPath ?? '')) {
+      setSkipPermissions(false);
+    }
+  };
   const setSelectedEffort = (value: string): void => {
     // Always an explicit user choice, including Default (''); programmatic clears
     // go through autoResetSelectedEffort instead.
@@ -897,7 +909,6 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
       setSavedLaunchProviderBackendId(null);
       setScheduleHydrationKey(null);
     }
-
     setLocalError(null);
     setScheduleFormTouched(false);
     setIsSubmitting(false);
@@ -907,11 +918,10 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
   useEffect(() => {
     if (!open || !isLaunchMode) return;
     // Hydrate at most once per open dialog, and never on top of user edits.
-    if (hydrationRef.current.dirty || hydrationRef.current.key === effectiveTeamName) {
-      setLaunchHydratedTeamName(effectiveTeamName);
+    if (hydrationRef.current.dirty || hydrationRef.current.key === launchHydrationKey) {
+      setLaunchHydratedTeamName(launchHydrationKey);
       return;
     }
-
     if (memberSettingsDraft?.targetKind === 'lead') {
       setSelectedModelRaw(memberSettingsDraft.settings.model ?? '');
       setSelectedEffortRaw(memberSettingsDraft.settings.effort ?? '');
@@ -956,7 +966,6 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
     };
     if (memberSettingsDraft ? members.length > 0 : filterEditableMemberInputs(members).length > 0)
       applyEditableRoster();
-
     let cancelled = false;
     void (async () => {
       let savedRequest = null;
@@ -972,10 +981,23 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
         }
         savedRequest = null;
       }
+      let projectSkipPermissions: boolean | undefined;
+      if (projectPermissionTeamName !== undefined) {
+        // No verified runtime means manual approval, never the logical team's stale policy.
+        projectSkipPermissions = false;
+        if (projectPermissionTeamName && projectPermissionTeamName !== effectiveTeamName) {
+          try {
+            const projectSavedRequest = await api.teams.getSavedRequest(projectPermissionTeamName);
+            projectSkipPermissions = projectSavedRequest?.skipPermissions === true;
+          } catch {
+            projectSkipPermissions = false;
+          }
+        }
+      }
       // Edits made while the request was in flight win over it, but an unrelated control is
       // not a roster edit — and with no live members the saved request is its only source.
       if (cancelled) return;
-      setLaunchHydratedTeamName(effectiveTeamName);
+      setLaunchHydratedTeamName(launchHydrationKey);
       if (!relaunchSyncEditedRef.current) {
         setRelaunchInheritedSync(savedRequest?.syncModelsWithLead);
       }
@@ -983,7 +1005,6 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
         applyEditableRoster(savedRequest?.members, savedRequest?.syncModelsWithLead);
       }
       if (hydrationRef.current.dirty) return;
-
       const storedEffort = localStorage.getItem('team:lastSelectedEffort');
       const launchPrefill = resolveLaunchDialogPrefill({
         members,
@@ -1001,7 +1022,6 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
       setSavedLaunchProviderId(normalizeOptionalTeamProviderId(savedRequest?.providerId) ?? null);
       const savedBackendId = normalizeSavedBackendId(savedRequest?.providerBackendId);
       setSavedLaunchProviderBackendId(launchPrefill.providerBackendId ?? savedBackendId);
-
       const leadProviderId = normalizeLeadProviderForMode(
         launchPrefill.providerId,
         multimodelEnabled
@@ -1022,10 +1042,11 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
       setSelectedFastModeRaw(launchPrefill.fastMode);
       setLimitContextRaw(launchPrefill.limitContext);
       const storedSkipPermissions = localStorage.getItem('team:lastSkipPermissions') !== 'false';
-      setSkipPermissionsRaw(savedRequest?.skipPermissions ?? storedSkipPermissions);
-      hydrationRef.current.key = effectiveTeamName;
+      setSkipPermissionsRaw(
+        projectSkipPermissions ?? savedRequest?.skipPermissions ?? storedSkipPermissions
+      );
+      hydrationRef.current.key = launchHydrationKey;
     })();
-
     return () => {
       cancelled = true;
     };
@@ -1033,6 +1054,8 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
     open,
     isLaunchMode,
     effectiveTeamName,
+    launchHydrationKey,
+    projectPermissionTeamName,
     members,
     multimodelEnabled,
     previousLaunchParams,
@@ -1203,7 +1226,6 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
         return;
       }
     }
-
     if (selectedProviderId !== 'anthropic' && selectedProviderId !== 'codex') {
       setAnthropicRuntimeNotice(null);
       return;
@@ -1212,7 +1234,6 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
       setAnthropicRuntimeNotice(null);
       return;
     }
-
     const reconciliation =
       selectedProviderId === 'anthropic'
         ? reconcileAnthropicRuntimeSelections({
@@ -1256,7 +1277,6 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
               selectedFastMode,
             }),
           };
-
     const notices: string[] = [];
     if (selectedEffortForCurrentSelection !== selectedEffort) {
       setSelectedEffortRaw(selectedEffortForCurrentSelection);
@@ -1324,12 +1344,10 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
     if (!isLaunchMode) {
       return [] as { key: string; memberName: string; message: string }[];
     }
-
     const notes: { key: string; memberName: string; message: string }[] = [];
     const previousLeadModel = previousLaunchParams?.model?.trim() || '';
     const previousLeadEffort = previousLaunchParams?.effort;
     const currentLeadDisplayModel = selectedModel.trim() || effectiveLeadRuntimeModel;
-
     if (
       previousProviderId &&
       (previousProviderId !== selectedProviderId ||
@@ -1351,26 +1369,21 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
         )}`,
       });
     }
-
     const previousMembersByName = new Map(
       members.map((member) => [member.name.trim().toLowerCase(), member] as const)
     );
-
     for (const member of effectiveMemberDrafts) {
       if (member.removedAt) {
         continue;
       }
-
       const name = member.name.trim();
       if (!name) {
         continue;
       }
-
       const previousMember = previousMembersByName.get(name.toLowerCase());
       if (!previousMember) {
         continue;
       }
-
       const {
         providerId: currentProviderId,
         model: currentModel,
@@ -1381,7 +1394,6 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
         currentLeadDisplayModel,
         (selectedEffortForCurrentSelection as EffortLevel) || undefined
       );
-
       const {
         providerId: previousProvider,
         model: previousModel,
@@ -1392,7 +1404,6 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
         previousLeadModel,
         previousLeadEffort
       );
-
       if (
         previousProvider === currentProviderId &&
         previousModel === currentModel &&
@@ -1401,7 +1412,6 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
       ) {
         continue;
       }
-
       const runtimeMessage =
         previousProvider !== currentProviderId ||
         previousModel !== currentModel ||
@@ -1418,7 +1428,6 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
               previousMember.isolation === 'worktree' ? 'separate worktree' : 'shared workspace'
             }`
           : null;
-
       notes.push({
         key: `member:${name.toLowerCase()}`,
         memberName: name,
@@ -1427,7 +1436,6 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
           .join('; '),
       });
     }
-
     return notes;
   }, [
     isLaunchMode,
@@ -1533,7 +1541,6 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
     const modelUnavailableReasonByProvider: Partial<
       Record<TeamProviderId, Record<string, string>>
     > = {};
-
     if (!isLaunchMode) {
       return {
         modelAdvisoryReasonByProvider,
@@ -1541,7 +1548,6 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
         modelUnavailableReasonByProvider,
       };
     }
-
     for (const providerId of selectedMemberProviders) {
       const backendSummary = runtimeBackendSummaryByProvider.get(providerId) ?? null;
       const providerRuntimeStatusSignature = buildProviderPrepareRuntimeStatusSignature(
@@ -1573,7 +1579,6 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
         modelUnavailableReasonByProvider[providerId] = issueReasons.modelUnavailableReasonByValue;
       }
     }
-
     return {
       modelAdvisoryReasonByProvider,
       modelIssueReasonByProvider,
@@ -1620,7 +1625,6 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
       setPrepareMessage(t('launch.prepare.checkingProviders'));
       return;
     }
-
     if (typeof api.teams.prepareProvisioning !== 'function') {
       prepareRequestSeqRef.current += 1;
       lastPrepareProviderSignatureByIdRef.current.clear();
@@ -1632,7 +1636,6 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
       setPrepareMessage(t('launch.prepare.unsupportedPreload'));
       return;
     }
-
     const selectedProviderIdSet = new Set(selectedMemberProviders);
     for (const providerId of Array.from(lastPrepareProviderSignatureByIdRef.current.keys())) {
       if (!selectedProviderIdSet.has(providerId)) {
@@ -1641,7 +1644,6 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
         prepareWarningsByProviderIdRef.current.delete(providerId);
       }
     }
-
     const loadingProviderIds = selectedMemberProviders.filter((providerId) =>
       runtimeProviderLoadingById.get(providerId)
     );
@@ -1678,13 +1680,11 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
     ): void => {
       const selectedWarnings = getSelectedWarnings();
       setPrepareWarnings(selectedWarnings);
-
       if (nextChecks.some((check) => check.status === 'pending' || check.status === 'checking')) {
         setPrepareState('loading');
         setPrepareMessage(pendingMessage);
         return;
       }
-
       const anyFailure = nextChecks.some((check) => check.status === 'failed');
       const anyNotes =
         selectedWarnings.length > 0 || nextChecks.some((check) => check.status === 'notes');
@@ -1700,7 +1700,6 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
             : t('launch.prepare.ready')
       );
     };
-
     let checks = alignProvisioningChecks(prepareChecksRef.current, selectedMemberProviders);
     for (const providerId of loadingProviderIds) {
       const current = providerPlans.find(
@@ -1737,11 +1736,9 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
         : (prepareMessageRef.current ??
             getProvisioningProviderProgressMessage([], selectedMemberProviders.length, t))
     );
-
     if (changedPlans.length === 0) {
       return;
     }
-
     const generation = prepareRequestSeqRef.current;
     const runningPlans = changedPlans.map((plan) => {
       const requestSeq = (prepareProviderRequestSeqByIdRef.current.get(plan.providerId) ?? 0) + 1;
@@ -1753,7 +1750,6 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
       prepareRequestSeqRef.current === generation &&
       lastPrepareProviderSignatureByIdRef.current.get(plan.providerId) === plan.requestSignature &&
       prepareProviderRequestSeqByIdRef.current.get(plan.providerId) === plan.requestSeq;
-
     void (async () => {
       await Promise.all(
         runningPlans.map(async (plan) => {
@@ -1864,17 +1860,14 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
       setProjectsLoadRequested(false);
       return;
     }
-
     if (shouldDeferProjectListLoad && defaultProjectPath) {
       setProjects([syntheticProjectFromPath(defaultProjectPath)]);
       setProjectsLoading(false);
       setProjectsError(null);
       return;
     }
-
     setProjectsLoading(true);
     setProjectsError(null);
-
     let cancelled = false;
     void (async () => {
       try {
@@ -1883,7 +1876,6 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
           repositoryGroups,
         });
         if (cancelled) return;
-
         setProjects(nextProjects);
       } catch (error) {
         if (cancelled) return;
@@ -1895,7 +1887,6 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
         if (!cancelled) setProjectsLoading(false);
       }
     })();
-
     return () => {
       cancelled = true;
     };
@@ -2008,7 +1999,6 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
 
   const launchOptionalSummary = useMemo(() => {
     if (!isLaunchMode) return [];
-
     const summary: string[] = [];
     if (promptDraft.value.trim()) summary.push('Lead prompt');
     const worktreeMemberCount = effectiveMemberDrafts.filter(
@@ -2635,11 +2625,20 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
 
           {!usesSavedTeamRuntime ? <ProjectPathSelector
             cwdMode={cwdMode}
-            onCwdModeChange={setCwdMode}
+            onCwdModeChange={(mode) => {
+              if (projectPermissionTeamName !== undefined && mode !== cwdMode) setSkipPermissions(false);
+              setCwdMode(mode);
+            }}
             selectedProjectPath={selectedProjectPath}
-            onSelectedProjectPathChange={setSelectedProjectPath}
+            onSelectedProjectPathChange={(path) => {
+              requireExplicitPermissionsForOtherProject(path);
+              setSelectedProjectPath(path);
+            }}
             customCwd={customCwd}
-            onCustomCwdChange={setCustomCwd}
+            onCustomCwdChange={(path) => {
+              requireExplicitPermissionsForOtherProject(path);
+              setCustomCwd(path);
+            }}
             projects={projects}
             projectsLoading={projectsLoading}
             projectsError={projectsError}
@@ -2709,7 +2708,8 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
                   </div>
                 ) : null}
 
-                <TeamRosterEditorSection
+                {props.rosterReadOnly && <p className="text-xs text-text-muted">{t('launch.projectScopedRosterReadOnly')}</p>}
+                {!props.rosterReadOnly && <TeamRosterEditorSection
                   runtimeSelectionUnresolved={runtimeSelectionUnresolved}
                   members={membersDrafts}
                   onMembersChange={setMembersDraftsFromUser}
@@ -2786,7 +2786,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
                       </div>
                     ) : null
                   }
-                />
+                />}
 
                 <div className="space-y-1.5">
                   <Label htmlFor="dialog-prompt" className="label-optional">

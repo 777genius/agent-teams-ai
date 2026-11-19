@@ -25,6 +25,8 @@ export type {
   NativeAttachmentDeliveryEnvelope,
 } from '@features/agent-attachments/contracts';
 
+export type TeamProjectContextMode = 'shared' | 'per_project';
+
 export interface TeamMember {
   name: string;
   agentId?: string;
@@ -86,6 +88,18 @@ export interface TeamSummaryMember {
 
 export interface TeamSummary {
   teamName: string;
+  /** Absent on old/foreign teams; never interpret as an isolated history. */
+  projectContextMode?: TeamProjectContextMode;
+  /** Verified, ready native histories folded into this logical row. For reads only, not authorization. */
+  projectHistoryContexts?: readonly {
+    executionTeamName: string;
+    projectPath: string;
+    /** Native teammate count, absent until the owned physical summary is available. */
+    memberCount?: number;
+    /** Native session associations, retained only for verified physical histories. */
+    leadSessionId?: string;
+    sessionHistory?: readonly string[];
+  }[];
   displayName: string;
   description: string;
   color?: string;
@@ -181,6 +195,10 @@ export interface TaskReviewRequestedEvent extends TaskHistoryEventBase {
   to: 'review';
   reviewer?: string;
   note?: string;
+  /** Set on the second review cycle of the lead_then_human flow: the lead signs off after the reviewer. */
+  stage?: 'lead_signoff';
+  /** The reviewer's request this lead sign-off follows. */
+  afterReviewRequestId?: string;
 }
 
 export interface TaskReviewChangesRequestedEvent extends TaskHistoryEventBase {
@@ -208,6 +226,8 @@ export interface TaskReviewCompletedEvent extends TaskHistoryEventBase {
   to: 'reviewed';
   reviewRequestId: string;
   note?: string;
+  /** lead_then_human only: why the lead's sign-off stage was skipped for this cycle. */
+  leadSignoffSkipped?: 'actor_is_lead' | 'work_by_lead' | 'no_lead';
 }
 
 export interface TaskReviewStartedEvent extends TaskHistoryEventBase {
@@ -1308,24 +1328,11 @@ export interface TeamProvisioningMemberInput {
   mcpPolicy?: TeamMemberMcpPolicy;
 }
 
-export type TeamWorktreeGitBlockReason =
-  | 'invalid_project_path'
-  | 'not_git_repo'
-  | 'missing_head'
-  | 'git_unavailable'
-  | 'git_error';
-export interface TeamWorktreeGitStatus {
-  projectPath: string;
-  isGitRepo: boolean;
-  hasHead: boolean;
-  canUseWorktrees: boolean;
-  rootPath?: string;
-  branch?: string;
-  reason?: TeamWorktreeGitBlockReason;
-  message?: string;
-}
+export type { TeamWorktreeGitBlockReason, TeamWorktreeGitStatus } from './teamWorktree';
 
 export interface TeamCreateRequest extends TeamProvisioningTypes.LocalModelLaunchOptions {
+  /** New logical teams default to per-project history; missing legacy stored mode means shared. */
+  projectContextMode?: TeamProjectContextMode;
   /** Read-only saved defaults token returned by getSavedRequest. */
   savedSettingsFingerprint?: string;
   teamName: string;
@@ -1352,6 +1359,7 @@ export interface TeamCreateRequest extends TeamProvisioningTypes.LocalModelLaunc
 
 export interface TeamCreateConfigRequest extends TeamProvisioningTypes.RuntimeSelectionVersioned {
   teamName: string;
+  projectContextMode?: TeamProjectContextMode;
   displayName?: string;
   description?: string;
   color?: string;

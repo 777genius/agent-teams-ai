@@ -3588,6 +3588,10 @@ export default interface Resources {
       "notifications": {
         "description": "Control when and how you get notified about agent activity, task completions, and errors.",
         "label": "Notifications"
+      },
+      "reviewFlow": {
+        "description": "Choose who gives final approval after AI review, for all teams or for individual ones.",
+        "label": "Review flow"
       }
     },
     "view": {
@@ -3941,6 +3945,22 @@ export default interface Resources {
       "tooltipContent": "Keeps launches within a 200K-token context window when supported.",
       "tooltipTitle": "Context limit"
     },
+      "projectContextView": {
+      "retainedHistory": "Retained project history",
+      "openCurrent": "Open current team history",
+
+      "modeChange": {
+        "title": "Change team history mode?",
+        "description": "Stop the team first. Existing tasks, conversations and sessions remain where they are; histories are never combined or deleted.",
+        "confirm": "Change mode"
+      },
+        "loading": "Loading team project history…",
+        "selectProject": "Select a project in the sidebar to view this team's tasks and chats.",
+        "empty": "No tasks or conversations in this project yet. Start the team to create a separate history.",
+        "pending": "Preparing this project's team context. Tasks and messages will appear once the runtime is ready.",
+        "start": "Start team in this project",
+        "retry": "Retry"
+      },
     "create": {
       "actions": {
         "backToTeams": "Back to teams",
@@ -3981,6 +4001,12 @@ export default interface Resources {
         "description": "Description (optional)",
         "prompt": "Prompt for team lead (optional)",
         "teamName": "Team name"
+      },
+      "projectContextMode": {
+        "label": "Team history",
+        "perProject": "Separate tasks and chats for each project (default)",
+        "shared": "Shared across projects",
+        "description": "Existing teams keep their current mode. This choice only affects this new team's work history."
       },
       "launchAfterCreate": {
         "description": "Start the team immediately using its configured agent runtimes.",
@@ -4462,25 +4488,6 @@ export default interface Resources {
       "trashAvailable": "Reversible trash for draft/stopped teams is available."
     },
     "kanban": {
-      "approvalSettings": {
-        "cancel": "Cancel",
-        "flowLegend": "Who gives final approval",
-        "flows": {
-          "agent_approval": {
-            "description": "The reviewer approves and the task moves to Approved.",
-            "label": "Agents approve"
-          },
-          "human_approval": {
-            "description": "The reviewer finishes the review and the task stays in Done as reviewed. Only you move it to Approved.",
-            "label": "I give final approval"
-          }
-        },
-        "promptHint": "Sent to reviewers with each review request and visible to agents on the board. It does not change who may approve.",
-        "promptLabel": "Instructions for agents (optional)",
-        "promptPlaceholder": "For example: run the e2e tests before deciding.",
-        "save": "Save",
-        "title": "Review flow"
-      },
       "board": {
         "addTask": "Add task",
         "columnsView": "Columns view",
@@ -4581,6 +4588,7 @@ export default interface Resources {
       }
     },
     "launch": {
+      "projectScopedRosterReadOnly": "The team roster is shared across projects and cannot be edited while launching this project.",
       "actions": {
         "createSchedule": "Create Schedule",
         "creating": "Creating...",
@@ -6414,6 +6422,80 @@ export default interface Resources {
       "submit": "Submit",
       "title": "Request Changes"
     },
+    "reviewFlow": {
+      "badges": {
+        "custom": "Custom",
+        "default": "Default",
+        "repair": "Needs repair"
+      },
+      "broken": {
+        "defaults": "The saved default for all teams can't be read, so review actions are paused in every team until you save a new default.",
+        "defaultsHint": "The form shows the built-in values. Save them, or change them first, to repair the default.",
+        "details": "Details: {{message}}",
+        "fixDefaults": "Fix the default",
+        "teamHint": "This team's saved settings can't be read, so review actions are paused here. Save new settings, or choose the default and save, to repair it."
+      },
+      "cancel": "Cancel",
+      "discard": "Discard changes",
+      "editor": {
+        "defaultHeading": "Default for all teams",
+        "followingTeams": "Teams following the default: {{count}}",
+        "teamHeading": "This team"
+      },
+      "feedback": {
+        "error": "Could not save: {{message}}",
+        "saved": "Saved",
+        "saving": "Saving…"
+      },
+      "flowLegend": "Who gives final approval",
+      "flows": {
+        "agent_approval": {
+          "description": "The reviewer approves and the task moves to Approved.",
+          "label": "Agents approve"
+        },
+        "human_approval": {
+          "description": "The reviewer finishes the review and the task stays in Done as reviewed. Only you move it to Approved.",
+          "label": "I give final approval"
+        },
+        "lead_then_human": {
+          "description": "After the reviewer, the team lead signs off in a second review. Then the task waits in Done for you. Only you move it to Approved.",
+          "label": "Lead signs off, then I approve"
+        }
+      },
+      "humanApprovalNote": "In this mode agents can never move a task to Approved. Only you can.",
+      "intro": "After a reviewer checks a task, it either goes straight to Approved or waits in Done for you. Set the default for all teams here, and give individual teams their own settings when they need them.",
+      "loadError": "Could not load review flow settings. {{message}}",
+      "loading": "Loading review flow settings…",
+      "overrides": {
+        "empty": "All teams follow the default.",
+        "heading": "Teams with custom settings ({{count}})",
+        "reset": "Reset to default",
+        "resetLabel": "Reset {{team}} to the default"
+      },
+      "popover": {
+        "openSettings": "Change the default for all teams…"
+      },
+      "promptHint": "Sent to reviewers with each review request and visible to agents on the board. It does not change who may approve.",
+      "promptLabel": "Instructions for agents (optional)",
+      "promptPlaceholder": "For example: run the e2e tests before deciding.",
+      "retry": "Retry",
+      "save": "Save",
+      "scope": {
+        "defaultOption": "All teams (default)",
+        "empty": "No teams found.",
+        "label": "Settings for",
+        "searchPlaceholder": "Search teams"
+      },
+      "title": "Review flow",
+      "unreadable": {
+        "heading": "Teams with unreadable settings ({{count}})"
+      },
+      "useDefault": {
+        "custom": "This team has its own review flow.",
+        "following": "Following the default: {{flow}}",
+        "label": "Use the default settings"
+      }
+    },
     "roleSelect": {
       "customRole": "Custom role...",
       "empty": "No roles found.",
@@ -6683,6 +6765,10 @@ export default interface Resources {
         "edit": "Edit description",
         "placeholder": "Task description (supports markdown)"
       },
+      "leadSignoff": {
+        "badge": "Lead sign-off",
+        "hint": "The team lead signs off on this task before it reaches Done."
+      },
       "loading": {
         "fetchingTeamData": "Fetching team data",
         "title": "Loading task..."
@@ -6739,6 +6825,7 @@ export default interface Resources {
         "empty": "No workflow history recorded",
         "humanApproved": "Approved by user",
         "implementationIntervalEnded": "Implementation interval ended at this transition",
+        "leadSignoffRequested": "Lead sign-off requested",
         "ownerChanged": "Owner changed",
         "reassigned": "Reassigned",
         "reviewCompleted": "AI review completed",

@@ -1,3 +1,4 @@
+import { parseNewTeamProjectContextMode } from '@features/team-project-context/core';
 import { getTasksBasePath, getTeamsBasePath } from '@main/utils/pathDecoder';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -120,6 +121,7 @@ export function buildCreateTeamMetaPayload(
   launchIdentity: ProviderModelLaunchIdentity | null,
   createdAt: number = Date.now()
 ): {
+  projectContextMode: TeamCreateRequest['projectContextMode'];
   runtimeSelectionVersion: TeamCreateRequest['runtimeSelectionVersion'];
   displayName: TeamCreateRequest['displayName'];
   description: TeamCreateRequest['description'];
@@ -140,6 +142,7 @@ export function buildCreateTeamMetaPayload(
   createdAt: number;
 } {
   return {
+    projectContextMode: parseNewTeamProjectContextMode(request.projectContextMode),
     runtimeSelectionVersion: request.runtimeSelectionVersion,
     displayName: request.displayName,
     description: request.description,

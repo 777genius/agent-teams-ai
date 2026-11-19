@@ -1,3 +1,12 @@
+import {
+  REVIEW_FLOW_GET_OVERVIEW,
+  REVIEW_FLOW_SET_DEFAULTS,
+  REVIEW_FLOW_SET_TEAM_OVERRIDE,
+} from '@features/review-flow/contracts';
+import {
+  TEAM_PROJECT_CONTEXT_SET_MODE_CHANNEL,
+  TEAM_PROJECT_CONTEXT_VIEW_CHANNEL,
+} from '@features/team-project-context/contracts';
 import { TeamReadFailureError } from '@features/team-read-recovery/main';
 import { bindTeamProvisioningStartApi } from '@main/services/team/contracts/TeamProvisioningApis';
 import {
@@ -254,7 +263,6 @@ import {
   TEAM_SEND_MESSAGE,
   TEAM_SET_CHANGE_PRESENCE_TRACKING,
   TEAM_SET_PROJECT_BRANCH_TRACKING,
-  TEAM_SET_REVIEW_FLOW_SETTINGS,
   TEAM_SET_TASK_CLARIFICATION,
   TEAM_SET_TASK_LOG_STREAM_TRACKING,
   TEAM_SET_TOOL_ACTIVITY_TRACKING,
@@ -298,6 +306,8 @@ type PermanentlyDeleteTeamMock = (
 ) => Promise<boolean>;
 
 const TEAM_HANDLER_KEYS = [
+  TEAM_PROJECT_CONTEXT_SET_MODE_CHANNEL,
+  TEAM_PROJECT_CONTEXT_VIEW_CHANNEL,
   TEAM_ADD_MEMBER,
   TEAM_ADD_TASK_COMMENT,
   TEAM_ADD_TASK_RELATIONSHIP,
@@ -377,7 +387,9 @@ const TEAM_HANDLER_KEYS = [
   TEAM_TOOL_APPROVAL_SETTINGS,
   TEAM_UPDATE_CONFIG,
   TEAM_UPDATE_KANBAN,
-  TEAM_SET_REVIEW_FLOW_SETTINGS,
+  REVIEW_FLOW_GET_OVERVIEW,
+  REVIEW_FLOW_SET_DEFAULTS,
+  REVIEW_FLOW_SET_TEAM_OVERRIDE,
   TEAM_UPDATE_KANBAN_COLUMN_ORDER,
   TEAM_UPDATE_MEMBER_ROLE,
   TEAM_UPDATE_TASK_FIELDS,
@@ -388,6 +400,10 @@ const TEAM_HANDLER_KEYS = [
 
 describe('ipc teams handlers', () => {
   const handlers = new Map<string, (...args: unknown[]) => Promise<unknown>>();
+  // These legacy controller/IPC scenarios deliberately exercise shared mode.
+  // New-team default per_project is covered by its dedicated integration tests.
+  const legacyCreateHandler = (...args: unknown[]): Promise<unknown> =>
+    handlers.get(TEAM_CREATE)!(args[0], { projectContextMode: 'shared', ...(args[1] as object) });
   const ipcMain = {
     handle: vi.fn((channel: string, fn: (...args: unknown[]) => Promise<unknown>) => {
       handlers.set(channel, fn);
@@ -991,38 +1007,6 @@ describe('ipc teams handlers', () => {
     setClaudeBasePathOverride(null);
     setAppDataBasePath(null);
     fs.rmSync(attachmentTestRoot, { recursive: true, force: true });
-  });
-
-  it('routes the review flow only through the validated desktop IPC channel', async () => {
-    const setter = handlers.get(TEAM_SET_REVIEW_FLOW_SETTINGS)!;
-    expect(
-      await setter({} as never, 'my-team', { reviewFlow: 'human_approval', reviewFlowPrompt: 'Run e2e.' })
-    ).toMatchObject({ success: true });
-    expect(service.setReviewFlowSettings).toHaveBeenCalledWith('my-team', {
-      reviewFlow: 'human_approval',
-      reviewFlowPrompt: 'Run e2e.',
-    });
-    expect(await setter({} as never, 'my-team', { reviewFlowPrompt: '' })).toMatchObject({
-      success: true,
-    });
-    expect(service.setReviewFlowSettings).toHaveBeenLastCalledWith('my-team', { reviewFlowPrompt: '' });
-    vi.mocked(service.setReviewFlowSettings).mockClear();
-    const invalid: unknown[] = [
-      true,
-      null,
-      [],
-      {},
-      { reviewFlow: 'everyone' },
-      { reviewFlow: 'human_approval', reviewFlowPrompt: 5 },
-      { reviewFlowPrompt: 'x'.repeat(1001) },
-    ];
-    for (const payload of invalid) {
-      expect(await setter({} as never, 'my-team', payload)).toMatchObject({ success: false });
-    }
-    expect(await setter({} as never, '../outside', { reviewFlow: 'human_approval' })).toMatchObject({
-      success: false,
-    });
-    expect(service.setReviewFlowSettings).not.toHaveBeenCalled();
   });
 
   it('registers all expected handlers', () => {
@@ -2916,7 +2900,7 @@ describe('ipc teams handlers', () => {
         // Electron transports a plain result, not the original Error instance.
         return JSON.parse(JSON.stringify(result)) as unknown;
       });
-      const request = { teamName: 'cleanup-fixture', cwd: fixtureRoot, members: [] };
+      const request = { teamName: 'cleanup-fixture', projectContextMode: 'shared' as const, cwd: fixtureRoot, members: [] };
       const message = new OpenCodeStartupCleanupBusyError().message;
       for (const operation of ['createTeam', 'launchTeam'] as const) {
         await expect(api.teams[operation](request)).rejects.toThrow(message);
@@ -2963,7 +2947,7 @@ describe('ipc teams handlers', () => {
     expect(listResult.success).toBe(true);
     expect(service.listTeams).toHaveBeenCalledTimes(1);
 
-    const createResult = (await handlers.get(TEAM_CREATE)!({ sender: { send: vi.fn() } } as never, {
+    const createResult = (await legacyCreateHandler({ sender: { send: vi.fn() } } as never, {
       teamName: 'my-team',
       members: [{ name: 'alice' }],
       cwd: os.tmpdir(),
@@ -3011,7 +2995,7 @@ describe('ipc teams handlers', () => {
       return resolved({ runId: 'run-created-watch-scope' });
     });
 
-    const result = (await handlers.get(TEAM_CREATE)!({ sender: { send: vi.fn() } } as never, {
+    const result = (await legacyCreateHandler({ sender: { send: vi.fn() } } as never, {
       teamName: createTeam,
       members: [{ name: 'alice' }],
       cwd: os.tmpdir(),
@@ -3132,11 +3116,9 @@ describe('ipc teams handlers', () => {
     };
     expect(first.success).toBe(true);
     teamHandlerMocks.createTeam.mockRejectedValueOnce(new Error('bootstrap failed early'));
-    service.listTeams
-      .mockResolvedValueOnce([{ teamName: 'background-fresh', displayName: 'Background Fresh' }])
-      .mockResolvedValueOnce([{ teamName: 'fresh-team', displayName: 'Fresh' }]);
+    service.listTeams.mockResolvedValue([{ teamName: 'fresh-team', displayName: 'Fresh' }]);
 
-    const createResult = (await handlers.get(TEAM_CREATE)!({ sender: { send: vi.fn() } } as never, {
+    const createResult = (await legacyCreateHandler({ sender: { send: vi.fn() } } as never, {
       teamName: 'my-team',
       members: [{ name: 'alice' }],
       cwd: os.tmpdir(),
@@ -3152,7 +3134,10 @@ describe('ipc teams handlers', () => {
     };
     expect(second.success).toBe(true);
     expect(second.data).toEqual([{ teamName: 'fresh-team', displayName: 'Fresh' }]);
-    expect(service.listTeams).toHaveBeenCalledTimes(3);
+    // The quiet-window timer may refresh independently before this explicit TEAM_LIST.
+    // Both paths must return fresh data once the failed launch releases pressure.
+    expect(launchIoGovernor.hasLaunchPressureForTests()).toBe(false);
+    expect(service.listTeams.mock.calls.length).toBeGreaterThanOrEqual(2);
   });
 
   it('does not route TEAM_GET_MESSAGES_PAGE through the launch IO governor', async () => {
@@ -5288,7 +5273,7 @@ describe('ipc teams handlers', () => {
       result = (await permanentlyDeleteHandler({} as never, 'my-team')) as { success: boolean };
       expect(result.success).toBe(true);
       expect(teamBackupService.beginPermanentDeletion).toHaveBeenCalledWith('my-team', {
-        draft: undefined,
+        draft: false,
       });
       expect(teamBackupService.commitPermanentDeletionBoundary).toHaveBeenCalledWith(
         permanentDeletionIntent
@@ -7249,7 +7234,7 @@ describe('ipc teams handlers', () => {
 
   describe('createTeam prompt validation', () => {
     it('accepts valid prompt in team create request', async () => {
-      const handler = handlers.get(TEAM_CREATE)!;
+      const handler = legacyCreateHandler;
       const result = (await handler({ sender: { send: vi.fn() } } as never, {
         teamName: 'test-team',
         members: [{ name: 'alice' }],
@@ -7262,7 +7247,7 @@ describe('ipc teams handlers', () => {
     });
 
     it('rejects non-string prompt in team create request', async () => {
-      const handler = handlers.get(TEAM_CREATE)!;
+      const handler = legacyCreateHandler;
       const result = (await handler({ sender: { send: vi.fn() } } as never, {
         teamName: 'test-team',
         members: [{ name: 'alice' }],
@@ -7274,7 +7259,7 @@ describe('ipc teams handlers', () => {
     });
 
     it('rejects a non-boolean experimental local-model override', async () => {
-      const handler = handlers.get(TEAM_CREATE)!;
+      const handler = legacyCreateHandler;
       const result = (await handler({ sender: { send: vi.fn() } } as never, {
         teamName: 'test-team',
         members: [{ name: 'alice' }],
@@ -7324,7 +7309,7 @@ describe('ipc teams handlers', () => {
     ] as const;
 
     it.each(blockedArgs)('rejects %s on team create', async (extraCliArgs, error) => {
-      const result = (await handlers.get(TEAM_CREATE)!({ sender: { send: vi.fn() } } as never, {
+      const result = (await legacyCreateHandler({ sender: { send: vi.fn() } } as never, {
         teamName: 'test-team',
         members: [{ name: 'alice' }],
         cwd: os.tmpdir(),
@@ -7359,7 +7344,7 @@ describe('ipc teams handlers', () => {
           path.join(teamDir, 'team.meta.json'),
           JSON.stringify({ version: 1, cwd: '/Users/test/project', createdAt: Date.now() })
         );
-        service.getSavedRequest.mockResolvedValueOnce({
+        service.getSavedRequest.mockResolvedValue({
           teamName: 'draft-team',
           cwd: '/Users/test/project',
           extraCliArgs: '--disallowed-tools x',
@@ -7383,7 +7368,7 @@ describe('ipc teams handlers', () => {
 
     it('passes valid args through to create and launch', async () => {
       const event = { sender: { send: vi.fn() } } as never;
-      const created = (await handlers.get(TEAM_CREATE)!(event, {
+      const created = (await legacyCreateHandler(event, {
         teamName: 'test-team',
         members: [{ name: 'alice' }],
         cwd: os.tmpdir(),
@@ -7558,7 +7543,7 @@ describe('ipc teams handlers', () => {
 
   describe('solo team (zero members)', () => {
     it('createTeam accepts members: [] (provisioning validation)', async () => {
-      const handler = handlers.get(TEAM_CREATE)!;
+      const handler = legacyCreateHandler;
       const result = (await handler({ sender: { send: vi.fn() } } as never, {
         teamName: 'solo-team',
         members: [],
@@ -7571,7 +7556,7 @@ describe('ipc teams handlers', () => {
     });
 
     it('createTeam preserves teammate backend and fast mode metadata', async () => {
-      const handler = handlers.get(TEAM_CREATE)!;
+      const handler = legacyCreateHandler;
       const result = (await handler({ sender: { send: vi.fn() } } as never, {
         teamName: 'runtime-team',
         members: [
@@ -7614,7 +7599,7 @@ describe('ipc teams handlers', () => {
     });
 
     it('createTeam validates teammate runtime fields against inherited team provider metadata', async () => {
-      const handler = handlers.get(TEAM_CREATE)!;
+      const handler = legacyCreateHandler;
       const result = (await handler({ sender: { send: vi.fn() } } as never, {
         teamName: 'inherited-backend-team',
         members: [
@@ -7646,7 +7631,7 @@ describe('ipc teams handlers', () => {
     });
 
     it('createTeam preserves top-level OpenCode provider and inherited teammate backend', async () => {
-      const handler = handlers.get(TEAM_CREATE)!;
+      const handler = legacyCreateHandler;
       const result = (await handler({ sender: { send: vi.fn() } } as never, {
         teamName: 'opencode-runtime-team',
         members: [
@@ -7729,6 +7714,7 @@ describe('ipc teams handlers', () => {
       expect(result.success).toBe(true);
       expect(service.createTeamConfig).toHaveBeenCalledWith({
         teamName: 'draft-team',
+        projectContextMode: 'per_project',
         displayName: 'Draft Team',
         description: 'Saved draft',
         color: '#3366ff',
@@ -7909,7 +7895,7 @@ describe('ipc teams handlers', () => {
             fs.writeFileSync(path.join(teamDir, 'team.meta.json'), meta);
             if (entry !== 'draft')
               fs.writeFileSync(path.join(teamDir, 'config.json'), JSON.stringify({ members: [] }));
-            service.getSavedRequest.mockResolvedValueOnce({
+            service.getSavedRequest.mockResolvedValue({
               teamName,
               cwd,
               runtimeSelectionVersion: 1,
@@ -7963,7 +7949,7 @@ describe('ipc teams handlers', () => {
           );
           if (!draft)
             fs.writeFileSync(path.join(teamDir, 'config.json'), JSON.stringify({ members: [] }));
-          service.getSavedRequest.mockResolvedValueOnce({
+          service.getSavedRequest.mockResolvedValue({
             teamName: 'marker-team',
             runtimeSelectionVersion: 1,
             providerId: 'codex',
@@ -8005,7 +7991,7 @@ describe('ipc teams handlers', () => {
             createdAt: Date.now(),
           })
         );
-        service.getSavedRequest.mockResolvedValueOnce({
+        service.getSavedRequest.mockResolvedValue({
           teamName: 'draft-team',
           displayName: 'Draft Team',
           description: 'Saved draft',
@@ -8049,6 +8035,7 @@ describe('ipc teams handlers', () => {
         expect(teamHandlerMocks.createTeam).toHaveBeenCalledWith(
           {
             teamName: 'draft-team',
+            projectContextMode: 'shared',
             displayName: 'Draft Team',
             description: 'Saved draft',
             color: '#3366ff',
@@ -8580,7 +8567,7 @@ describe('ipc teams handlers', () => {
     });
 
     it('still rejects members as non-array in createTeam', async () => {
-      const handler = handlers.get(TEAM_CREATE)!;
+      const handler = legacyCreateHandler;
       const result = (await handler({ sender: { send: vi.fn() } } as never, {
         teamName: 'solo-team',
         members: 'not-array',
@@ -8667,7 +8654,7 @@ describe('ipc teams handlers', () => {
 
   describe('reserved teammate names', () => {
     it('rejects teammate name "user" in createTeam', async () => {
-      const handler = handlers.get(TEAM_CREATE)!;
+      const handler = legacyCreateHandler;
       const result = (await handler({ sender: { send: vi.fn() } } as never, {
         teamName: 'solo-team',
         members: [{ name: 'user' }],
@@ -8678,7 +8665,7 @@ describe('ipc teams handlers', () => {
     });
 
     it('rejects teammate name "team-lead" in createTeam', async () => {
-      const handler = handlers.get(TEAM_CREATE)!;
+      const handler = legacyCreateHandler;
       const result = (await handler({ sender: { send: vi.fn() } } as never, {
         teamName: 'solo-team',
         members: [{ name: 'team-lead' }],

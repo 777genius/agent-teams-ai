@@ -1729,6 +1729,17 @@ async function main() {
       'Native config-only creation did not persist roster metadata');
     await captureScreenshot(cdp, fixture, 'config-only-created');
 
+    // A config-only team may open its Launch Team dialog when the newly
+    // created tab becomes active. Dismiss it via the real UI before clicking
+    // a different team's card; otherwise the modal intercepts pointer input.
+    const launchDialog = `Array.from(document.querySelectorAll('[role="dialog"]'))` +
+      `.find(dialog => dialog.textContent?.includes('Launch Team') && dialog.getClientRects().length > 0)`;
+    if (await cdp.evaluate(`Boolean(${launchDialog})`)) {
+      await cdp.click(launchDialog +
+        `?.querySelector('button[aria-label="Close"]') || Array.from(${launchDialog}?.querySelectorAll('button') ?? []).find(b => b.textContent?.trim() === 'Close')`);
+      await cdp.waitFor(`!${launchDialog}`, 'dismiss launch dialog before copying a team');
+    }
+
     log('copy an existing sandbox team using the real Teams card');
     await cdp.evaluate(
       `window.__agentTeamsDevStore.getState().openTeamsTab(${JSON.stringify(fixture.projectPath)})`
@@ -1738,11 +1749,39 @@ async function main() {
       ".find(card => card.textContent?.includes(" + JSON.stringify(fixture.teamName) + "))" +
       "?.querySelector('button[aria-label=\"Copy team\"]')";
     await cdp.click(copyTarget);
+    const copyStarted = `document.querySelector('[data-testid=create-team-page] #team-name')?.value?.startsWith(${JSON.stringify(fixture.teamName)})`;
+    const replaceDraftConfirm =
+      `Array.from(document.querySelectorAll('[role="dialog"] button'))` +
+      `.find(button => button.textContent?.trim() === 'Replace draft' && button.getClientRects().length > 0)`;
+    // The config-only team can open its Launch Team dialog after the
+    // earlier visibility check. It intercepts real pointer events on Copy.
+    // Recover only when that exact modal is present and copy has not begun.
     await cdp.waitFor(
-      `document.querySelector('[data-testid=create-team-page] #team-name')?.value?.startsWith(${JSON.stringify(fixture.teamName)})`,
-      'copy action initialized the new team identity from the selected card',
+      `${copyStarted} || Boolean(${replaceDraftConfirm}) || Boolean(${launchDialog})`,
+      'copy editor, replace-draft confirmation, or late launch dialog',
       30_000
     );
+    if (
+      !(await cdp.evaluate(`${copyStarted} || Boolean(${replaceDraftConfirm})`)) &&
+      (await cdp.evaluate(`Boolean(${launchDialog})`))
+    ) {
+      await cdp.click(
+        launchDialog +
+          `?.querySelector('button[aria-label="Close"]') || Array.from(${launchDialog}?.querySelectorAll('button') ?? []).find(b => b.textContent?.trim() === 'Close')`
+      );
+      await cdp.waitFor(`!${launchDialog}`, 'dismiss late launch dialog before copy');
+      await cdp.click(copyTarget);
+    }
+    await cdp.waitFor(
+      `${copyStarted} || Boolean(${replaceDraftConfirm})`,
+      'copy editor or explicit replace-draft confirmation',
+      30_000
+    );
+    if (await cdp.evaluate(`Boolean(${replaceDraftConfirm})`)) {
+      await cdp.click(replaceDraftConfirm);
+    }
+    await cdp.waitFor(copyStarted,
+      'copy action initialized the new team identity from the selected card', 30_000);
     const copiedName = await cdp.evaluate(
       "document.querySelector('[data-testid=create-team-page] #team-name')?.value"
     );

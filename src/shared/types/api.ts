@@ -82,7 +82,6 @@ import type {
   QueuedUserMessagesSnapshot,
   ReplaceMembersRequest,
   RetryFailedOpenCodeSecondaryLanesResult,
-  ReviewFlowSettings,
   SendMessageRequest,
   SendMessageResult,
   TaskAttachmentMeta,
@@ -144,9 +143,11 @@ import type {
 import type { OrganizationsElectronApi } from '@features/organizations/contracts';
 import type { ProjectFolderElectronApi } from '@features/project-folder/contracts';
 import type { RecentProjectsElectronApi } from '@features/recent-projects/contracts';
+import type { ReviewFlowElectronApi } from '@features/review-flow/contracts';
 import type { RuntimeProviderManagementApi } from '@features/runtime-provider-management/contracts';
 import type { TeamGroupChatsAPI } from '@features/team-group-chats/contracts';
 import type { TeamImportApi } from '@features/team-import/contracts';
+import type { TeamProjectContextViewApi } from '@features/team-project-context/contracts';
 import type { TeamMemberSettingsApi } from '@features/team-provisioning/contracts';
 import type {
   TeamReadLegacyApi,
@@ -449,7 +450,7 @@ export interface HttpServerAPI {
 // Teams API
 // =============================================================================
 
-export interface TeamsAPI extends TeamMemberSettingsApi, TeamReadLegacyApi {
+export interface TeamsAPI extends TeamMemberSettingsApi, TeamReadLegacyApi, TeamProjectContextViewApi {
   readRecovery?: TeamReadRecoveryApi;
   list: () => Promise<TeamSummary[]>;
   getTaskChangePresence: (teamName: string) => Promise<Record<string, TaskChangePresenceState>>;
@@ -490,7 +491,6 @@ export interface TeamsAPI extends TeamMemberSettingsApi, TeamReadLegacyApi {
   getTask: (teamName: string, taskId: string) => Promise<TeamTaskWithKanban | null>;
   requestReview: (teamName: string, taskId: string) => Promise<void>;
   updateKanban: (teamName: string, taskId: string, patch: UpdateKanbanPatch) => Promise<void>;
-  setReviewFlowSettings: (teamName: string, settings: ReviewFlowSettings) => Promise<void>;
   updateKanbanColumnOrder: (
     teamName: string,
     columnId: KanbanColumnId,
@@ -862,6 +862,7 @@ export interface ElectronAPI
     TokenUsageElectronApi,
     ProjectFolderElectronApi {
   teamGroupChats: TeamGroupChatsAPI;
+  reviewFlow: ReviewFlowElectronApi;
   announcements: AnnouncementsApi;
   gatewayProvider: GatewayProviderApi;
   externalAgentConnection: ExternalAgentConnectionApi;

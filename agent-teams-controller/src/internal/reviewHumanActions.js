@@ -12,6 +12,7 @@ function createReviewHumanActions({
   closeReviewIntervals,
   resolveLeadSessionId,
   warnNonCritical,
+  leadSignoff,
 }) {
   /** Finish a particular AI review cycle without granting human acceptance. */
   function completeReview(context, taskId, flags = {}) {
@@ -20,6 +21,17 @@ function createReviewHumanActions({
       const expectedId = typeof flags.expectedReviewRequestId === 'string'
         ? flags.expectedReviewRequestId.trim() : '';
       if (!expectedId) throw new Error('review_complete requires expectedReviewRequestId');
+      leadSignoff.assertExplicitActor(context, task, flags, 'review_complete');
+      // A retry by the reviewer who handed off reports the sign-off request, not "stale".
+      const handedOff = leadSignoff.findHandoff(context, task, expectedId, flags.from);
+      if (handedOff) {
+        const state = getEffectiveReviewState(context, task);
+        return {
+          handoff: { event: handedOff, replay: state === 'review' },
+          payload: leadSignoff.buildPayload(task, handedOff, true, state),
+          task, leadSessionId: resolveLeadSessionId(context, flags),
+        };
+      }
       const request = getLatestReviewRequestEvent(task);
       if (!request || request.id !== expectedId) {
         throw new Error(`Stale review request for task #${task.displayId || task.id}; review_complete rejected`);
@@ -62,12 +74,25 @@ function createReviewHumanActions({
       const actor = getReviewDecisionActor(context, task, flags, 'complete review');
       const note = typeof flags.note === 'string' && flags.note.trim()
         ? flags.note.trim() : 'AI review completed';
+      const plan = leadSignoff.planCompletion(context, task, actor, request);
+      if (plan.leadName) {
+        const event = leadSignoff.recordHandoff(context, task, {
+          leadName: plan.leadName, actor, note: flags.note && String(flags.note).trim(), expectedReviewRequestId: expectedId,
+        });
+        const current = tasks.getTask(context, task.id);
+        return {
+          handoff: { event, replay: true },
+          payload: leadSignoff.buildPayload(current, event, false, 'review'),
+          task: current, leadSessionId: resolveLeadSessionId(context, flags),
+        };
+      }
       const timestamp = new Date().toISOString();
       tasks.updateTask(context, task.id, (current) => {
         closeReviewIntervals(current, timestamp);
         current.historyEvents = tasks.appendHistoryEvent(current.historyEvents, {
           type: 'review_completed', from: 'review', to: 'reviewed',
           reviewRequestId: expectedId, note, actor, timestamp,
+          ...(plan.skipped ? { leadSignoffSkipped: plan.skipped } : {}),
         });
         current.reviewState = 'reviewed';
         return current;
@@ -78,10 +103,19 @@ function createReviewHumanActions({
       return { duplicate: false, payload: {
         ok: true, taskId: task.id, displayId: task.displayId, column: 'done',
         reviewState: 'reviewed', reviewRequestId: expectedId, alreadyCompleted: false,
+        ...(plan.skipped ? { leadSignoffSkipped: plan.skipped } : {}),
       }, task: tasks.getTask(context, task.id), actor, note,
       leadSessionId: resolveLeadSessionId(context, flags),
       humanApproval: kanban.isHumanApprovalFlow(context) };
     });
+    if (result.handoff) {
+      if (result.handoff.replay) {
+        leadSignoff.notifyLead(context, {
+          task: result.task, event: result.handoff.event, leadSessionId: result.leadSessionId,
+        });
+      }
+      return result.payload;
+    }
     // Retry post-commit notices with the same event ID. Inbox rows and dependency
     // comments deduplicate it, even if a prior overlay write already succeeded.
     const event = [...(result.task.historyEvents || [])].reverse()
@@ -92,18 +126,20 @@ function createReviewHumanActions({
     } catch (error) {
       warnNonCritical('[review] dependency review completion notification failed', error);
     }
-    try {
-      messages.sendMessage(context, {
-        to: runtimeHelpers.inferLeadName(context.paths),
-        from: result.actor,
-        text: `AI review completed for task #${result.task.displayId || result.task.id}. The task is in Done${result.humanApproval ? ' awaiting human acceptance' : ''}.\n\n${result.note}`,
-        summary: `AI review completed #${result.task.displayId || result.task.id}`,
-        ...(event?.id ? { messageId: event.id } : {}),
-        source: 'system_notification',
-        ...(result.leadSessionId ? { leadSessionId: result.leadSessionId } : {}),
-      });
-    } catch (error) {
-      warnNonCritical(`[review] lead notification failed for task ${result.task.id}`, error);
+    if (!leadSignoff.isSelfNotice(context, result.actor)) {
+      try {
+        messages.sendMessage(context, {
+          to: runtimeHelpers.inferLeadName(context.paths),
+          from: result.actor,
+          text: `AI review completed for task #${result.task.displayId || result.task.id}. The task is in Done${result.humanApproval ? ' awaiting human acceptance' : ''}.\n\n${result.note}`,
+          summary: `AI review completed #${result.task.displayId || result.task.id}`,
+          ...(event?.id ? { messageId: event.id } : {}),
+          source: 'system_notification',
+          ...(result.leadSessionId ? { leadSessionId: result.leadSessionId } : {}),
+        });
+      } catch (error) {
+        warnNonCritical(`[review] lead notification failed for task ${result.task.id}`, error);
+      }
     }
     return result.payload;
   }

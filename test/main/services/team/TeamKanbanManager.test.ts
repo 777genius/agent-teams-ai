@@ -72,7 +72,6 @@ describe('TeamKanbanManager', () => {
       teamName: 'my-team',
       reviewers: [],
       tasks: {},
-      reviewFlow: 'agent_approval',
     });
   });
 
@@ -83,7 +82,6 @@ describe('TeamKanbanManager', () => {
       teamName: 'my-team',
       reviewers: [],
       tasks: {},
-      reviewFlow: 'agent_approval',
     });
   });
 
@@ -109,6 +107,21 @@ describe('TeamKanbanManager', () => {
 
     hoisted.files.set(statePath, JSON.stringify({
       teamName: 'my-team', reviewers: [], tasks: {}, reviewFlow: 'everyone',
+    }));
+    await expect(manager.getState('my-team', { strict: true })).rejects.toThrow('corrupt');
+  });
+
+  it('never materialises the default into a team that follows it', async () => {
+    await manager.updateTask('my-team', '1', { op: 'set_column', column: 'review' });
+    const disk = JSON.parse(hoisted.files.get(statePath) ?? '{}');
+    expect(disk).not.toHaveProperty('reviewFlow');
+    expect(disk).not.toHaveProperty('reviewFlowPrompt');
+    expect(await manager.getState('my-team')).not.toHaveProperty('reviewFlow');
+  });
+
+  it('treats an owner prompt without its own flow as a corrupt override', async () => {
+    hoisted.files.set(statePath, JSON.stringify({
+      teamName: 'my-team', reviewers: [], tasks: {}, reviewFlowPrompt: 'Run the e2e suite first.',
     }));
     await expect(manager.getState('my-team', { strict: true })).rejects.toThrow('corrupt');
   });

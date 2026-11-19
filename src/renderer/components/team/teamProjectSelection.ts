@@ -1,5 +1,6 @@
 import { normalizePathForMatching } from '@renderer/utils/pathNormalize';
 
+import type { TeamProjectContextView } from '@features/team-project-context/contracts';
 import type { Project, RepositoryGroup } from '@renderer/types/data';
 import type { TeamSummary } from '@shared/types';
 
@@ -143,6 +144,55 @@ export function resolveTeamProjectSelection({
     worktreeId: null,
     projectId: null,
   };
+}
+
+/**
+ * A previously shared team retains its last native project path. Once switched
+ * to per-project mode, launching from the team list must use the selected
+ * project rather than silently returning to that old shared checkout.
+ */
+export function resolveTeamLaunchDefaultProjectPath(
+  mode: TeamSummary['projectContextMode'],
+  selectedProjectPath: string,
+  savedProjectPath: string | null | undefined
+): string {
+  return mode === 'per_project' ? selectedProjectPath : (savedProjectPath ?? selectedProjectPath);
+}
+
+/**
+ * Only a backend-verified runtime for the selected project may supply relaunch permissions.
+ * null makes missing, stale, or unowned contexts fall back to manual approval.
+ */
+export function resolveTeamListProjectPermissionAlias(
+  logicalTeamName: string,
+  selectedProjectPath: string,
+  context: TeamProjectContextView
+): string | null {
+  if (
+    context.mode !== 'per_project' ||
+    context.state !== 'ready' ||
+    context.executionTeamName === logicalTeamName ||
+    normalizePathForMatching(context.projectPath) !== normalizePathForMatching(selectedProjectPath)
+  ) {
+    return null;
+  }
+  return context.executionTeamName;
+}
+
+/**
+ * A verified physical task link may navigate to the logical team only when
+ * openTeamTab can select that project's flat or grouped worktree. Otherwise
+ * keep the verified physical identity for read-only historical navigation.
+ */
+export function resolveVerifiedProjectTaskNavigation(
+  physicalTeamName: string,
+  redirect: Extract<TeamProjectContextView, { state: 'redirect' }>,
+  repositoryGroups: readonly RepositoryGroup[],
+  projects: readonly Project[]
+): { teamName: string; projectPath?: string } {
+  return findTeamProjectSelectionTarget(repositoryGroups, projects, redirect.projectPath)
+    ? { teamName: redirect.logicalTeamName, projectPath: redirect.projectPath }
+    : { teamName: physicalTeamName };
 }
 
 export function resolveCreateTeamDefaultProjectPath({

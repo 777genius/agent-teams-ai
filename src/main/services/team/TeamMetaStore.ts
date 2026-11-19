@@ -1,3 +1,4 @@
+import { parsePersistedTeamProjectContextMode } from '@features/team-project-context/core';
 import { FileReadTimeoutError, readFileUtf8WithTimeout } from '@main/utils/fsRead';
 import { getTeamsBasePath } from '@main/utils/pathDecoder';
 import { migrateProviderBackendId } from '@shared/utils/providerBackend';
@@ -10,7 +11,7 @@ import { atomicWriteAsync } from './atomicWrite';
 import { hasCompleteKnownMetadata } from './TeamMetadataReadFidelity';
 import { MAX_TEAM_METADATA_BYTES, serializeTeamMetadata } from './TeamMetadataSerialization';
 
-import type { ProviderModelLaunchIdentity, TeamFastMode, TeamProviderId } from '@shared/types';
+import type { ProviderModelLaunchIdentity, TeamFastMode, TeamProjectContextMode, TeamProviderId } from '@shared/types';
 
 /**
  * Persisted team-level metadata saved by the UI before CLI provisioning.
@@ -20,6 +21,8 @@ import type { ProviderModelLaunchIdentity, TeamFastMode, TeamProviderId } from '
  */
 export interface TeamMetaFile {
   version: 1;
+  /** Missing in persisted legacy teams means shared; explicit invalid values are corruption. */
+  projectContextMode?: TeamProjectContextMode;
   runtimeSelectionVersion?: 1;
   deletedAt?: string;
   displayName?: string;
@@ -147,7 +150,37 @@ function normalizeLaunchIdentity(value: unknown): ProviderModelLaunchIdentity | 
   };
 }
 
+/**
+ * getMeta() deliberately reports null for missing *and* unreadable metadata.
+ * Before replacing it, distinguish these cases to prevent silent loss of
+ * projectContextMode (and other saved fields) on a transient read failure.
+ */
+async function assertExistingMetadataWasReadable(metaPath: string, current: TeamMetaFile | null): Promise<void> {
+  if (current !== null) return;
+  try {
+    await fs.promises.lstat(metaPath);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return;
+    throw error;
+  }
+  throw new Error('Existing team metadata is unreadable; refusing to overwrite it');
+}
+
 export class TeamMetaStore {
+  /** Fail closed when a persisted metadata file exists but cannot be parsed. */
+  async metadataFileExists(
+    teamName: string,
+    teamsBasePath = getTeamsBasePath()
+  ): Promise<boolean> {
+    try {
+      await fs.promises.lstat(this.getMetaPath(teamName, teamsBasePath));
+      return true;
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT') return false;
+      throw error;
+    }
+  }
+
   private getMetaPath(teamName: string, teamsBasePath = getTeamsBasePath()): string {
     return path.join(teamsBasePath, teamName, 'team.meta.json');
   }
@@ -206,6 +239,9 @@ export class TeamMetaStore {
     try {
       const normalized: TeamMetaFile = {
         version: 1,
+        ...(Object.hasOwn(file, 'projectContextMode')
+          ? { projectContextMode: parsePersistedTeamProjectContextMode(file.projectContextMode, true) }
+          : {}),
         deletedAt: typeof file.deletedAt === 'string' ? file.deletedAt : undefined,
         runtimeSelectionVersion: normalizeRuntimeSelectionVersion(file.runtimeSelectionVersion),
         displayName:
@@ -251,11 +287,13 @@ export class TeamMetaStore {
     const metaPath = this.getMetaPath(teamName, teamsBasePath);
     await withMetaMutationLock(metaPath, async () => {
       const current = await this.getMeta(teamName, teamsBasePath);
+      await assertExistingMetadataWasReadable(metaPath, current);
       await this.writeMetaUnlocked(metaPath, {
         ...data,
         runtimeSelectionVersion:
           normalizeRuntimeSelectionVersion(data.runtimeSelectionVersion) ??
           current?.runtimeSelectionVersion,
+        projectContextMode: data.projectContextMode ?? current?.projectContextMode,
       });
     });
   }
@@ -268,8 +306,13 @@ export class TeamMetaStore {
   ): Promise<void> {
     const metaPath = this.getMetaPath(teamName);
     await withMetaMutationLock(metaPath, async () => {
-      const data = await update(await this.getMeta(teamName));
-      await this.writeMetaUnlocked(metaPath, data);
+      const current = await this.getMeta(teamName);
+      await assertExistingMetadataWasReadable(metaPath, current);
+      const data = await update(current);
+      await this.writeMetaUnlocked(metaPath, {
+        ...data,
+        projectContextMode: data.projectContextMode ?? current?.projectContextMode,
+      });
     });
   }
 
@@ -283,6 +326,7 @@ export class TeamMetaStore {
   serializeMeta(data: Omit<TeamMetaFile, 'version'>): string {
     return serializeTeamMetadata({
       version: 1,
+      projectContextMode: data.projectContextMode,
       deletedAt: data.deletedAt,
       runtimeSelectionVersion: normalizeRuntimeSelectionVersion(data.runtimeSelectionVersion),
       displayName: data.displayName?.trim() || undefined,

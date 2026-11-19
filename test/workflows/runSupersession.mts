@@ -33,6 +33,7 @@ export const RUN_SUPERSESSION_POLICY = {
     'opencode-desktop-e2e',
     'opencode-v2-cold-dashboard-e2e',
     'provider-real-runtime-e2e',
+    'project-scoped-team-history-desktop-e2e',
     'prepare-updater-native-inputs',
     'runtime-bootstrap-smoke',
     'sentry-owned-process-native',

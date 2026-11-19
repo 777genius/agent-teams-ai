@@ -2053,6 +2053,94 @@ describe('agent-teams-mcp stdio e2e', () => {
     }
   });
 
+  it('enforces human_approval that comes only from the global default file over stdio', async () => {
+    const teamName = 'stdio-default-flow-team';
+    await writeTeamConfig(claudeDir, teamName);
+    await writeFile(
+      path.join(claudeDir, 'review-flow-defaults.json'),
+      JSON.stringify({ reviewFlow: 'human_approval', reviewFlowPrompt: 'Default: check migrations.' })
+    );
+    const client = new McpStdIoClient(serverPath, workspaceRoot);
+    const context = { claudeDir, teamName };
+
+    try {
+      await client.initialize();
+      const kanban = parseJsonToolResult((await client.callTool(
+        'kanban_get', context, 230
+      ) as { result: unknown }).result);
+      expect(kanban.reviewFlow).toBe('human_approval');
+      expect(kanban.reviewFlowPrompt).toBe('Default: check migrations.');
+      expect(kanban.reviewFlowSource).toBe('default');
+
+      const task = parseJsonToolResult((await client.callTool(
+        'task_create', { ...context, subject: 'Default governed task', owner: 'alice' }, 231
+      ) as { result: unknown }).result);
+      await client.callTool('task_complete', { ...context, taskId: task.id, actor: 'alice' }, 232);
+      await client.callTool('review_request', {
+        ...context, taskId: task.id, from: 'team-lead', reviewer: 'bob',
+      }, 233);
+      const rejected = await client.callTool(
+        'review_approve', { ...context, taskId: task.id, from: 'bob' }, 234
+      );
+      expect(JSON.stringify(rejected)).toMatch(/Human approval required/);
+    } finally {
+      await client.close();
+    }
+  });
+
+  it('hands a completed review to the Lead sign-off stage over stdio (lead_then_human)', async () => {
+    const teamName = 'stdio-lead-signoff-team';
+    await writeTeamConfig(claudeDir, teamName);
+    await writeFile(
+      path.join(claudeDir, 'review-flow-defaults.json'),
+      JSON.stringify({ reviewFlow: 'lead_then_human' })
+    );
+    const client = new McpStdIoClient(serverPath, workspaceRoot);
+    const context = { claudeDir, teamName };
+    const call = async (name: string, args: Record<string, unknown>, id: number) =>
+      (await client.callTool(name, { ...context, ...args }, id)) as { result: unknown };
+
+    try {
+      await client.initialize();
+      const task = parseJsonToolResult((await call('task_create', { subject: 'Sign-off E2E', owner: 'alice' }, 240)).result);
+      await call('task_complete', { taskId: task.id, actor: 'alice' }, 241);
+      await call('review_request', { taskId: task.id, from: 'team-lead', reviewer: 'bob' }, 242);
+      const started = parseJsonToolResult((await call('review_start', { taskId: task.id, from: 'bob' }, 243)).result);
+
+      const handoff = parseJsonToolResult((await call('review_complete', {
+        taskId: task.id, from: 'bob', expectedReviewRequestId: started.reviewRequestId,
+      }, 244)).result);
+      expect(handoff).toMatchObject({
+        stage: 'lead_signoff', handedOffTo: 'team-lead', column: 'review', reviewState: 'review',
+      });
+      expect(handoff.reviewRequestId).toBe(started.reviewRequestId);
+      expect(handoff.leadSignoffRequestId).not.toBe(started.reviewRequestId);
+
+      const bobAgain = await call('review_complete', {
+        taskId: task.id, from: 'bob', expectedReviewRequestId: handoff.leadSignoffRequestId,
+      }, 245);
+      const bobNoActor = await call('review_complete', {
+        taskId: task.id, expectedReviewRequestId: handoff.leadSignoffRequestId,
+      }, 2450);
+      expect(JSON.stringify(bobNoActor)).toMatch(/requires an explicit \\"from\\"/);
+      expect(JSON.stringify(bobAgain)).toMatch(/assigned to reviewer team-lead/);
+
+      const briefing = (await call('lead_briefing', {}, 246)).result as { content?: Array<{ text?: string }> };
+      const text = briefing.content?.[0]?.text ?? '';
+      expect(text).toContain('Awaiting your sign-off:');
+      expect(text).toContain(`expectedReviewRequestId="${handoff.leadSignoffRequestId}"`);
+
+      const signed = parseJsonToolResult((await call('review_complete', {
+        taskId: task.id, from: 'team-lead', expectedReviewRequestId: handoff.leadSignoffRequestId,
+      }, 247)).result);
+      expect(signed).toMatchObject({ column: 'done', reviewState: 'reviewed' });
+      const approve = await call('review_approve', { taskId: task.id, from: 'team-lead' }, 248);
+      expect(JSON.stringify(approve)).toMatch(/Human approval required/);
+    } finally {
+      await client.close();
+    }
+  });
+
   it('guards review lifecycle bypasses and deleted resurrection over stdio', async () => {
     await writeTeamConfig(claudeDir, 'stdio-hardening-team');
     const client = new McpStdIoClient(serverPath, workspaceRoot);
