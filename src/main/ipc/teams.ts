@@ -699,9 +699,7 @@ export function registerTeamHandlers(ipcMain: IpcMain): void {
     getClaudeDir: getClaudeBasePath, getTeamsDir: getTeamsBasePath,
   }));
   ipcMain.handle(TEAM_LIST, handleListTeams);
-  registerTeamProjectContextViewHandler(ipcMain, () => ({
-    data: getTeamDataService(), runtime: getTeamRuntimeApi(), run: getTeamProvisioningRunApi(),
-  }));
+  registerTeamProjectContextViewHandler(ipcMain);
   ipcMain.handle(TEAM_GET_DATA, handleGetData);
   ipcMain.handle(TEAM_GET_TASK_CHANGE_PRESENCE, handleGetTaskChangePresence);
   ipcMain.handle(TEAM_SET_CHANGE_PRESENCE_TRACKING, handleSetChangePresenceTracking);

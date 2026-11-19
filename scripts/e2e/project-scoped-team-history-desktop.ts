@@ -383,92 +383,31 @@ async function verifyUi(f: Fixture) {
   await cdp.screenshot(path.join(f.screenshots, 'history-after-reload.png'));
 }
 
-async function verifyRetainedAfterModeChange(f: Fixture) {
+async function verifyAliasRedirect(f: Fixture) {
   assert(cdp);
-  const result = await cdp.evaluate('(async () => {' +
+  const view = await cdp.evaluate('(async () => {' +
     'const f = ' + JSON.stringify(f) + ';' +
-    'await window.electronAPI.teams.setProjectContextMode(f.logical, "shared");' +
-    'const current = await window.electronAPI.teams.getProjectContextView(f.logical, f.projectA);' +
-    'const old = await window.electronAPI.teams.getProjectContextView(f.nativeA, f.projectA);' +
-    'return { current, old };' +
-    '})()') as {
-      current: { mode: string; state: string; executionTeamName?: string };
-      old: { mode: string; state: string; executionTeamName?: string; logicalTeamName?: string };
-    };
-  assert.deepEqual(result.current, {
-    mode: 'shared', state: 'ready', executionTeamName: f.logical,
-  }, 'The shared mode must govern new work after switching');
-  assert.equal(result.old.state, 'retained', 'Previously isolated project history was lost');
-  assert.equal(result.old.executionTeamName, f.nativeA);
-  assert.equal(result.old.logicalTeamName, f.logical);
+    'return window.electronAPI.teams.getProjectContextView(f.nativeA, f.projectA);' +
+    '})()') as { mode: string; state: string; logicalTeamName?: string; projectPath?: string };
+  assert.deepEqual(view, {
+    mode: 'per_project', state: 'redirect',
+    logicalTeamName: f.logical, projectPath: f.projectA,
+  }, 'A verified project alias must resolve to its logical team and project');
 
-  // Open via the original physical task identity, as global task deep links do.
+  // Open via the original physical task identity, as global task deep links do,
+  // while another project is selected: it must land on the logical team tab.
+  await selectProject(f, 'project-b');
   await cdp.evaluate('(() => window.__agentTeamsDevStore.getState().openTeamTab(' +
-    JSON.stringify(f.nativeA) + ', ' + JSON.stringify(f.projectA) + '))()');
+    JSON.stringify(f.nativeA) + '))()');
+  await waitFor('(() => { const s = window.__agentTeamsDevStore.getState();' +
+    'const tab = s.getAllPaneTabs().find((t) => t.id === s.activeTabId);' +
+    'return tab?.teamName === ' + JSON.stringify(f.logical) + '; })()',
+    'alias deep link redirected to the logical team tab');
   await waitFor(visibleTask(f.nativeA, 'PROJECT_A_TASK_ONLY'),
-    'retained project A task through real Electron after switching to shared');
+    'project A task after the alias redirect');
   assert.equal(await cdp.evaluate(hasVisibleTeam(f.nativeB)), false,
-    'Old project B leaked into retained A history');
-  await cdp.screenshot(path.join(f.screenshots, 'history-retained-after-shared.png'));
-}
-
-async function verifyRetainedSharedAfterProjectIsolation(f: Fixture) {
-  assert(cdp);
-  const teamDir = path.join(f.rootTeams, f.logical);
-  const joinedAt = Date.now() - 90_000;
-  // Simulate a previously shared native team whose tasks and inbox must stay
-  // addressable after the user opts into per-project isolation.
-  await json(path.join(teamDir, 'config.json'), {
-    name: f.logical, createdAt: joinedAt, projectPath: f.projectA,
-    projectPathHistory: [f.projectA],
-    leadAgentId: 'lead@' + f.logical,
-    leadSessionId: 'lead-legacy-shared', members: [
-      {
-        name: 'lead', agentId: 'lead@' + f.logical, agentType: 'team-lead',
-        role: 'Lead', providerId: 'opencode', providerBackendId: 'opencode-cli',
-        model: 'test-model', joinedAt, cwd: f.projectA,
-      },
-      {
-        name: 'alice', agentId: 'alice@' + f.logical, agentType: 'developer',
-        role: 'Developer', providerId: 'opencode', providerBackendId: 'opencode-cli',
-        model: 'test-model', joinedAt, cwd: f.projectA,
-      },
-    ],
-  });
-  await json(path.join(f.claudeRoot, 'tasks', f.logical, '1.json'), {
-    id: '1', subject: 'LEGACY_SHARED_TASK_ONLY', description: 'Previously shared history',
-    owner: 'alice', status: 'pending', createdAt: new Date().toISOString(),
-    projectPath: f.projectA,
-  });
-  await json(path.join(teamDir, 'inboxes', 'user.json'), [{
-    from: 'alice', to: 'user', text: 'LEGACY_SHARED_CHAT_ONLY',
-    timestamp: new Date().toISOString(), read: false, messageId: randomUUID(),
-  }]);
-
-  await cdp.evaluate('(async () => {' +
-    'const f = ' + JSON.stringify(f) + ';' +
-    'await window.electronAPI.teams.setProjectContextMode(f.logical, "per_project");' +
-    'await window.__agentTeamsDevStore.getState().fetchTeams();' +
-    'return true; })()');
-  await waitFor('(() => window.__agentTeamsDevStore?.getState()?.teamByName?.[' +
-    JSON.stringify(f.logical) + ']?.projectContextMode === "per_project")()',
-    'per-project mode after legacy shared history');
-
-  // Task navigation explicitly requests the old physical logical-team
-  // history; ordinary team navigation must still use the selected project.
-  await cdp.evaluate('(() => window.__agentTeamsDevStore.getState().openTeamTab(' +
-    JSON.stringify(f.logical) + ', undefined, "1"))()');
-  await waitFor(visibleTask(f.logical, 'LEGACY_SHARED_TASK_ONLY'),
-    'retained shared task through real Electron after enabling isolation');
-  assert.equal(await cdp.evaluate(hasVisibleTeam(f.nativeB)), false,
-    'Project B data leaked into retained shared history');
-  await cdp.screenshot(path.join(f.screenshots, 'history-retained-shared-after-project.png'));
-
-  await selectProject(f, 'project-a');
-  await cdp.evaluate('(() => window.__agentTeamsDevStore.getState().openTeamTab(' +
-    JSON.stringify(f.logical) + ', ' + JSON.stringify(f.projectA) + '))()');
-  await waitFor(visibleTask(f.nativeA, 'PROJECT_A_TASK_ONLY'),
-    'current A history remains available after retained shared task');
+    'Project B leaked into the redirected project A history');
+  await cdp.screenshot(path.join(f.screenshots, 'history-alias-redirect.png'));
 }
 
 async function run() {
@@ -496,8 +435,7 @@ async function run() {
     assert.equal(await readFile(f.indexPath, 'utf8'), beforeIndex,
       'Read-only project navigation mutated durable context mapping');
     await verifyUi(f);
-    await verifyRetainedAfterModeChange(f);
-    await verifyRetainedSharedAfterProjectIsolation(f);
+    await verifyAliasRedirect(f);
     // Even in CI, never launch an actual provider or substitute test credentials.
     const audit = (await readFile(f.audit, 'utf8')).trim().split('\n').filter(Boolean)
       .map((line) => JSON.parse(line) as string[]);

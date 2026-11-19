@@ -126,9 +126,6 @@
     }
   },
   "projectContextView": {
-      "retainedHistory": "Retained project history",
-      "openCurrent": "Open current team history",
-
     "loading": "Loading team project history…",
     "selectProject": "Open a project to see this team's tasks and chats.",
     "empty": "{{team}} has no tasks or chats in this project yet. Click Launch to start it here.",

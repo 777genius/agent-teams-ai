@@ -38,7 +38,7 @@ export function queueTaskDetailReview(
   )
     return false;
   const scope = captureTaskDetailReadScope(identity.teamName, identity.contextId);
-  before.openTeamTab(identity.teamName, undefined, identity.taskId);
+  before.openTeamTab(identity.teamName);
   const state = get();
   if (
     state.isContextSwitching ||

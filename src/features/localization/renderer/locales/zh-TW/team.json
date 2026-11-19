@@ -126,9 +126,6 @@
     }
   },
   "projectContextView": {
-      "retainedHistory": "保留的專案歷史紀錄",
-      "openCurrent": "開啟目前的團隊歷史",
-
     "loading": "正在載入團隊專案歷史紀錄…",
     "selectProject": "請開啟一個專案，以查看此團隊的任務與對話。",
     "empty": "{{team}} 在此專案中尚無任務或對話。點擊「啟動」即可在此開始。",

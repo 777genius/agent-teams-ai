@@ -6,15 +6,9 @@ import {
   type TeamProjectContextView,
 } from '../contracts';
 
-import { registerTeamProjectContextModeHandler, unregisterTeamProjectContextModeHandler } from './TeamProjectContextModeIpc';
 import { TeamProjectContextRegistry } from './TeamProjectContextRegistry';
 import { TeamProjectContextRuntimeResolver } from './TeamProjectContextRuntimeResolver';
 
-import type {
-  TeamProvisioningRunApi,
-  TeamRuntimeApi,
-} from '@main/services/team/contracts/TeamProvisioningApis';
-import type { TeamDataService } from '@main/services/team/TeamDataService';
 import type { IpcResult } from '@shared/types';
 import type { IpcMain } from 'electron';
 
@@ -39,29 +33,15 @@ async function resolveContextView(
     if (mode === 'shared') {
       const alias = await registry.resolveOwnedExecutionAlias(checked.value!);
       if (alias) {
-        // A history-mode change only changes the destination for NEW work.
-        // A verified old project task must still open its original physical
-        // history, not silently redirect into the new shared workspace.
         const logicalMeta = await new TeamMetaStore().getMeta(alias.logicalTeamName);
         if (logicalMeta?.deletedAt) {
           return { success: false, error: 'TEAM_TRASHED: Restore the team before opening history' };
         }
         const logicalMode = await resolver.getMode(alias.logicalTeamName);
-        if (logicalMode === 'shared') {
-          if (alias.context.state !== 'ready') {
-            return { success: false, error: 'Retained project context is not ready' };
-          }
-          return {
-            success: true,
-            data: {
-              mode: 'per_project',
-              state: 'retained',
-              logicalTeamName: alias.logicalTeamName,
-              executionTeamName: checked.value!,
-              workContextId: alias.context.id,
-              projectPath: alias.context.projectPath,
-            },
-          };
+        // The mode is fixed when a team is created, so a project alias always
+        // belongs to a per-project team. Never redirect into another history.
+        if (logicalMode !== 'per_project') {
+          return { success: false, error: 'Project history owner is not a per-project team' };
         }
         return {
           success: true,
@@ -101,27 +81,11 @@ async function resolveContextView(
   }
 }
 
-export function registerTeamProjectContextViewHandler(
-  ipcMain: IpcMain,
-  getPorts?: () => {
-    data: Pick<TeamDataService, 'runConfigurationOperation'>;
-    runtime: Pick<TeamRuntimeApi, 'getRuntimeState'>;
-    run: Pick<TeamProvisioningRunApi, 'hasProvisioningRun'>;
-  }
-): void {
+export function registerTeamProjectContextViewHandler(ipcMain: IpcMain): void {
   ipcMain.handle(TEAM_PROJECT_CONTEXT_VIEW_CHANNEL, (_event, teamName, projectPath) =>
     resolveContextView(teamName, projectPath));
-  if (getPorts) {
-    registerTeamProjectContextModeHandler(ipcMain, {
-      withLogicalTeamLock: (name, operation) =>
-        getPorts().data.runConfigurationOperation(name, operation),
-      getRuntimeState: (name) => getPorts().runtime.getRuntimeState(name),
-      hasProvisioningRun: (name) => getPorts().run.hasProvisioningRun(name),
-    });
-  }
 }
 
 export function unregisterTeamProjectContextViewHandler(ipcMain: IpcMain): void {
   ipcMain.removeHandler(TEAM_PROJECT_CONTEXT_VIEW_CHANNEL);
-  unregisterTeamProjectContextModeHandler(ipcMain);
 }

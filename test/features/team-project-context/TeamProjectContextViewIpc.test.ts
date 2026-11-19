@@ -129,7 +129,7 @@ describe('project context view IPC (read-only)', () => {
     });
   });
 
-  it('opens a verified old project alias after switching its logical team back to shared', async () => {
+  it('refuses an alias whose logical team is not per-project instead of opening another history', async () => {
     const f = await fixture('per_project');
     const registry = TeamProjectContextRegistry.fromCurrentApp();
     const reserved = await registry.reserve('builders', f.projectA);
@@ -154,19 +154,12 @@ describe('project context view IPC (read-only)', () => {
       success: true,
       data: { mode: 'shared', state: 'ready', executionTeamName: 'builders' },
     });
-    expect(await f.resolve(null, reserved.executionTeamName)).toEqual({
-      success: true,
-      data: {
-        mode: 'per_project',
-        state: 'retained',
-        logicalTeamName: 'builders',
-        executionTeamName: reserved.executionTeamName,
-        workContextId: reserved.id,
-        projectPath: reserved.projectPath,
-      },
+    // The app never produces this combination (the mode is fixed at creation).
+    // Fail closed rather than redirect into an unrelated shared history.
+    expect(await f.resolve(null, reserved.executionTeamName)).toMatchObject({
+      success: false,
+      error: expect.stringContaining('not a per-project team'),
     });
-    await fs.unlink(path.join(teamDir, '.agent-teams-owner.json'));
-    expect(await f.resolve(null, reserved.executionTeamName)).toMatchObject({ success: false });
   });
 
   it('never reveals an unowned alias even if the manifest says ready', async () => {

@@ -1450,7 +1450,7 @@ export interface TeamSlice extends SidebarLogsHeightSlice, DeletedTaskFeed {
   fetchTeams: () => Promise<void>;
   fetchAllTasks: () => Promise<void>;
   openTeamsTab: (projectPath?: string) => void;
-  openTeamTab: (teamName: string, projectPath?: string, taskId?: string) => void;
+  openTeamTab: (teamName: string, projectPath?: string) => void;
   clearKanbanFilter: () => void;
   ensureTeamGraphSlotAssignments: (
     teamName: string,
@@ -2269,7 +2269,7 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
     });
   },
 
-  openTeamTab: (teamName: string, projectPath?: string, _taskId?: string) => {
+  openTeamTab: (teamName: string, projectPath?: string) => {
     if (!teamName.trim()) {
       return;
     }
@@ -2307,14 +2307,10 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
     const selectedTeamDisplayName =
       state.selectedTeamName === teamName ? state.selectedTeamData?.config.name : undefined;
     const displayName = teamSummary?.displayName || selectedTeamDisplayName || teamName;
-    const retainedSharedHistory = Boolean(
-      _taskId && state.teamByName[teamName]?.projectContextMode === 'per_project'
-    );
-    const label = retainedSharedHistory ? displayName + ' · Shared history' : displayName;
+    const label = displayName;
     const allTabs = state.getAllPaneTabs();
     const existing = allTabs.find(
-      (tab) => isOrdinaryTeamTab(tab) && tab.teamName === teamName &&
-        Boolean(tab.retainedSharedHistory) === retainedSharedHistory
+      (tab) => isOrdinaryTeamTab(tab) && tab.teamName === teamName
     );
     if (existing) {
       state.setActiveTab(existing.id);
@@ -2324,7 +2320,6 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
         type: 'team',
         label,
         teamName,
-        ...(retainedSharedHistory ? { retainedSharedHistory: true } : {}),
       });
     }
   },

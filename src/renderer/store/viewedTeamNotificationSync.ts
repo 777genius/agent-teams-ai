@@ -30,19 +30,15 @@ export function getFocusedVisibleTeamName(state: AppState): string | null {
   }
 
   const logicalName = activeTab.teamName;
-  const retainedSharedHistory =
-    'retainedSharedHistory' in activeTab && activeTab.retainedSharedHistory === true;
-  if (!retainedSharedHistory) {
-    const verifiedPhysicalName = getFocusedProjectTeamName(logicalName);
-    if (verifiedPhysicalName) {
-      return selectTeamDataForName(state, verifiedPhysicalName)
-        ? verifiedPhysicalName
-        : null;
-    }
-    // An unmounted logical project tab cannot own native unread notifications.
-    if (state.teamByName?.[logicalName]?.projectContextMode === 'per_project') {
-      return null;
-    }
+  const verifiedPhysicalName = getFocusedProjectTeamName(logicalName);
+  if (verifiedPhysicalName) {
+    return selectTeamDataForName(state, verifiedPhysicalName)
+      ? verifiedPhysicalName
+      : null;
+  }
+  // An unmounted logical project tab cannot own native unread notifications.
+  if (state.teamByName?.[logicalName]?.projectContextMode === 'per_project') {
+    return null;
   }
   return selectTeamDataForName(state, logicalName) ? logicalName : null;
 }

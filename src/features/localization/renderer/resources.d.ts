@@ -5874,9 +5874,7 @@ export default interface Resources {
     "projectContextView": {
       "empty": "{{team}} has no tasks or chats in this project yet. Click Launch to start it here.",
       "loading": "Loading team project history…",
-      "openCurrent": "Open current team history",
       "pending": "Preparing this project's team context. Tasks and messages will appear once the runtime is ready.",
-      "retainedHistory": "Retained project history",
       "retry": "Retry",
       "selectProject": "Open a project to see this team's tasks and chats."
     },
