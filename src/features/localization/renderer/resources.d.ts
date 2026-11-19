@@ -5873,6 +5873,7 @@ export default interface Resources {
     },
     "projectContextView": {
       "empty": "{{team}} has no tasks or chats in this project yet. Click Launch to start it here.",
+      "emptyTitle": "Not launched in this project yet",
       "loading": "Loading team project history…",
       "pending": "Preparing this project's team context. Tasks and messages will appear once the runtime is ready.",
       "retry": "Retry",
