@@ -1034,7 +1034,7 @@ export default defineConfig([
                 '@features/*/core/**',
                 '@features/*/main/*',
                 '@features/*/preload/*',
-                '@features/*/renderer/*', '!@features/review-flow/renderer/http', '@features/review-flow/renderer/http/**',
+                '@features/*/renderer/*', '!@features/review-flow/renderer/http', '@features/review-flow/renderer/http/**', '!@features/team-task-detail/renderer/shell', '@features/team-task-detail/renderer/shell/**',
               ],
               message: 'Import feature public entrypoints only.',
             },

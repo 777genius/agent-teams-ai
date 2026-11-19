@@ -1,0 +1,114 @@
+{
+  "schemaVersion": 1,
+  "sourceRepository": "agent-teams-ai/old-provider-implementations",
+  "sourceCommit": "45a569bd70607480e650fb12be5c0cce6884f9da",
+  "sourceTree": "cc428cf17e7cd9323135ef612331c659900970b4",
+  "sourceParent": "e458b7f5513a55122905205bd22bcb25977643b0",
+  "qualification": "source-and-packed-consumer-only",
+  "nativeHostQualified": false,
+  "packagedElectronQualified": false,
+  "previousPublishedAppConsumer": {
+    "sourceCommit": "b19494fd2de47538a1c9315e338199ff41bbe497",
+    "path": "vendor/provider-migration/captured-config-b19494fd/agent-teams-provider-implementations-0.0.0.tgz",
+    "sha256": "ad05bd8c799c4d2c366a6eab72f937466355a5994eac6bd201ee754217cf5aa7"
+  },
+  "intermediateRejectedConsumer": {
+    "sourceCommit": "e458b7f5513a55122905205bd22bcb25977643b0",
+    "sha256": "ccc36bfab30ecb73185ede9ecb335bb1c0808ca646b9c5fb600527a085d5d700",
+    "publishedInApp": false,
+    "runtime": "23PASS/1 original pending-custody15000ms timeout",
+    "finding": "R2-E458-01",
+    "retainedHistoryUrl": "https://github.com/agent-teams-ai/old-provider-implementations/blob/45a569bd70607480e650fb12be5c0cce6884f9da/docs/plans/evidence/v2-admission-lifecycle-20261119.json"
+  },
+  "implementation": {
+    "file": "agent-teams-provider-implementations-0.0.0.tgz",
+    "bytes": 191469,
+    "sha256": "ee1ed16c939dbdab4ee6b31941b4bff5d7e1e423224f8ca32e65f3a6ec25aed4",
+    "integrity": "sha512-BB1ZtUjb9qVyhhETHCCrmXJFCjz9qdGCGUEE7V3iUdvh5Gs0MEHc9tMnRppLKlYNrulWgOMs+/XVzgh6mD8brg==",
+    "gitBlob": "dfb85b7e74f8cccad3db5b02aa7ca7035b08108d"
+  },
+  "sessionContracts": {
+    "existingPath": "../v2-media-aad5c2f8/agent-teams-provider-session-contracts-0.0.0.tgz",
+    "bytes": 6230,
+    "sha256": "0ea08bacd3f19a54c065cfaebbe8ae0fb3a8e6770886402f435a96e97867d2bc",
+    "byteIdentical": true
+  },
+  "archiveCompatibility": {
+    "files": 259,
+    "addedMembers": [],
+    "removedMembers": [],
+    "changedMembersFromPublishedAppConsumer": [
+      {
+        "archivePath": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-control-transport.js",
+        "beforeSha256": "7d0ccaa0fe81a1438452d46fdbf349d61dedd68b95479f83207ea77edb68d9b7",
+        "afterSha256": "48748ad0f5ad0f4b3a9f0e981809db4c4515dd5d0254d2c3ef6759736cffcf32",
+        "bytes": 15476
+      },
+      {
+        "archivePath": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-execution-transport.js",
+        "beforeSha256": "1a4c82ddbd641c2fd3f0e004ccd2e08efbab6340e475ffa5f2dc2a66c9809c2e",
+        "afterSha256": "8c0fbd3fa415424ec95c4ee62dae3fbce0c7ac06128d4244b7d4e7563c8bf61a",
+        "bytes": 20354
+      },
+      {
+        "archivePath": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-request-admission.d.ts",
+        "beforeSha256": "1ec58a224a97d7633e62a0f12d3c5fe587a11c1accbc33a41d919efcbfba1bf9",
+        "afterSha256": "f9856d005e0557fbd944e6352f3136b47cc4b88189fc2f4d205a230de0afb398",
+        "bytes": 445
+      },
+      {
+        "archivePath": "package/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-request-admission.js",
+        "beforeSha256": "0032b2b343bbedbf6a6405a1d4a0700fb52cc7e9f5b694c97892277e44e1fbdb",
+        "afterSha256": "21a605364eeed78a7bb07501e7429c432bc87c266c2447f94f8ea9766213cb55",
+        "bytes": 3172
+      }
+    ],
+    "privateHelperDeclarationChanged": true,
+    "publicFacadeBytesSignaturesMetadataAndAllOtherMembersByteIdentical": true,
+    "typeGraphNote": "The changed private helper declaration is transitively reachable through the unchanged V2RequestAdmission type alias. The helper is not re-exported by any public entry; public signatures are unchanged. The whole transitive declaration graph is not claimed byte-identical."
+  },
+  "checks": {
+    "command": [
+      "pnpm",
+      "check"
+    ],
+    "node": "24.21.0",
+    "pnpm": "11.18.0",
+    "exitCode": 0,
+    "sourceTests": 601,
+    "packedConsumerTests": 2,
+    "finalLogSha256": "db4927aee8a269e820203486554f3427fb2a6b70eb067c97d6fff830c191d7a1",
+    "sourceAndProtectedHashesUnchanged": true,
+    "sourceEvidenceUrl": "https://github.com/agent-teams-ai/old-provider-implementations/blob/45a569bd70607480e650fb12be5c0cce6884f9da/docs/plans/evidence/v2-admission-lifecycle-20261119.json"
+  },
+  "archiveCustody": "Exact retained archive created and installed by original final packed-consumer gate; no repack or installed-dist mutation. Published source/tree/seven Git blobs read back exactly.",
+  "consumerInstallation": {
+    "status": "PASS_CONTROLLED_APP_CONSUMER",
+    "node": "24.21.0",
+    "pnpm": "11.22.0",
+    "installFlags": [
+      "--frozen-lockfile",
+      "--ignore-scripts",
+      "--prefer-offline"
+    ],
+    "installRecordSha256": "9f2aa29eff865834fed36197d97caa1ff69f5fac38779a03c7a0a0dd54410c21",
+    "installedImplementationFiles": 259,
+    "installedSessionContractFiles": 12,
+    "allFilesByteIdentical": true,
+    "installedCensusSha256": "c683b3be22b328eb3abe46e69f4275888fe1008073505e5354106393b0fd554d",
+    "lockSha256": "aff1db2f4c9ff64993cfabf3d2c892e94144df5eb89e2803264b48ea0e1b0dc7",
+    "lockDelta": "Exactly implementation directory and integrity; no unrelated dependency changes.",
+    "testFile": "test/features/agent-backend/hostOpenCodeV2ModelProbeLifecycle.test.ts",
+    "testSha256": "789c73dcec0a1621088614b34bd1a3ef7fa1c3cd8bf24aeeec94d98e1b89931d",
+    "testCases": 24,
+    "passed": 24,
+    "originalPendingCaseMs": 7078,
+    "originalPendingCaseTimeoutMs": 15000,
+    "canonicalScopedTs7": "PASS",
+    "focusedFastLint": "PASS",
+    "testAndProtectedBytesUnchanged": true,
+    "finalCheckRecordSha256": "c39b10be32f7c3a0cf8a6ad4b2ae57f8c652edf5b487e6072542307b6ee8a2f8",
+    "qualificationLimits": "Controlled finite original consumer only; original published-source native/GUI qualification remains separate."
+  },
+  "executionLimits": "TEST finite peers/local models only; no real Claude/Codex, release/default activation or Stage2."
+}

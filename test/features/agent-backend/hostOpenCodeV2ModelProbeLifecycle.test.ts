@@ -59,7 +59,7 @@ async function within<T>(work: Promise<T>, label: string): Promise<T> {
  * Production ModelProbe, its private configuration, both D clients and global fetch
  * remain real. These checks do not qualify an actual native process or credential.
  */
-async function fixture(mode: 'http' | 'custody' | 'stop-unknown' = 'http', startFailure?: unknown,
+async function fixture(mode: 'http' | 'custody' | 'stop-unknown' | 'final-cut' = 'http', startFailure?: unknown,
   isCurrent: () => boolean = () => true) {
   const root = realpathSync(mkdtempSync(join(tmpdir(), 'TEST-v2-model-probe-lifecycle-')));
   const pid = 48101, startIdentity = 'TEST-original-start-identity', password = 'TEST-loopback-only';
@@ -71,11 +71,29 @@ async function fixture(mode: 'http' | 'custody' | 'stop-unknown' = 'http', start
   let logReads = 0, promptPosts = 0, holdNextCustody = false, custodyHeld = false;
   let heldSignal: AbortSignal | undefined, stop: Promise<boolean> | undefined;
   let run: Promise<boolean> | undefined;
+  const finalGates = [Promise.withResolvers<void>(), Promise.withResolvers<void>()] as const;
+  const finalReturned = [Promise.withResolvers<void>(), Promise.withResolvers<void>()] as const;
+  const finalHttp = [Promise.withResolvers<void>(), Promise.withResolvers<void>()] as const;
+  const finalDisconnected = [Promise.withResolvers<void>(), Promise.withResolvers<void>()] as const;
+  const finalEntered = Promise.withResolvers<void>(), cutFailed = Promise.withResolvers<void>();
+  const finalSignals: AbortSignal[] = [], finalRequests: [number, number] = [0, 0];
+  const unfinishedClosed: [boolean, boolean] = [false, false];
+  const cutFailures: unknown[] = [], driverFailures: unknown[] = [];
+  let finalArmed = false, finalCustodyCalls = 0, finalCustodyReturns = 0, messageReads = 0;
+  let cutFailureCount = 0, driverFailureCount = 0, nativeInput: { id: string; text: string } | undefined;
   const parent = new AbortController();
   const location = { directory: root };
   const json = (res: ServerResponse, value: unknown) => {
     res.writeHead(200, { 'content-type': 'application/json' });
     res.end(JSON.stringify(value));
+  };
+  const holdFinalResponse = (index: 0 | 1, res: ServerResponse) => {
+    assert.equal(++finalRequests[index], 1, 'each original final GET reaches HTTP at most once');
+    res.once('close', () => {
+      unfinishedClosed[index] = !res.writableFinished;
+      finalDisconnected[index].resolve();
+    });
+    finalHttp[index].resolve();
   };
   const serve = async (req: IncomingMessage, res: ServerResponse) => {
     assert.ok(++requests <= 64, 'finite original HTTP requests');
@@ -106,7 +124,21 @@ async function fixture(mode: 'http' | 'custody' | 'stop-unknown' = 'http', start
       return json(res, { data: session });
     }
     if (req.method === 'GET' && url.pathname === '/api/session/' + sessionId) {
+      if (mode === 'final-cut' && finalArmed) return holdFinalResponse(1, res);
       assert.ok(session); return json(res, { data: session });
+    }
+    if (mode === 'final-cut' && req.method === 'GET' && url.pathname === '/api/session/' + sessionId + '/message') {
+      assert.ok(nativeInput); assert.ok(++messageReads <= 2);
+      assert.equal(url.searchParams.get('limit'), '200');
+      if (messageReads === 1) {
+        assert.equal(url.searchParams.get('order'), 'asc'); assert.equal(url.searchParams.get('cursor'), null);
+        return json(res, { data: [{ id: nativeInput.id, sessionID: sessionId, type: 'user',
+          time: { created: 2 }, payload: { text: nativeInput.text } }],
+        cursor: { previous: 'TEST-page-before', next: 'TEST-page-after' } });
+      }
+      assert.equal(url.searchParams.get('order'), null); assert.equal(url.searchParams.get('cursor'), 'TEST-page-after');
+      finalArmed = true;
+      return json(res, { data: [], cursor: { previous: null, next: null } });
     }
     if (req.method === 'GET' && url.pathname === '/api/permission/saved')
       return json(res, { data: [] });
@@ -114,10 +146,17 @@ async function fixture(mode: 'http' | 'custody' | 'stop-unknown' = 'http', start
       return json(res, { location, data: [] });
     if (req.method === 'GET' && url.pathname === '/api/experimental/session/' + sessionId + '/log') {
       assert.ok(session); assert.equal(url.searchParams.get('follow'), 'false');
-      assert.equal(++logReads, 1, 'one original D queue preflight, never a replay');
-      if (mode === 'custody') {
-        // Let this original read complete, then stop the next admission BEFORE credentials.
-        holdNextCustody = true;
+      ++logReads;
+      if (mode === 'final-cut') {
+        assert.ok(logReads <= 3, 'original queue, before-log and after-log only');
+        if (finalArmed) {
+          assert.equal(logReads, 3);
+          return holdFinalResponse(0, res);
+        }
+      } else assert.equal(logReads, 1, 'one original D queue preflight, never a replay');
+      if (mode === 'custody' || mode === 'final-cut') {
+        // The controlled peer retains the original owned pre-execution prefix.
+        if (mode === 'custody') holdNextCustody = true;
         res.writeHead(200, { 'content-type': 'text/event-stream' });
         const events = [{ id: 'evt_TESTcreated', type: 'session.created',
           durable: { aggregateID: sessionId, seq: 0 }, data: { sessionID: sessionId }, location },
@@ -132,6 +171,21 @@ async function fixture(mode: 'http' | 'custody' | 'stop-unknown' = 'http', start
         blocked.resolve();
       }
       return;
+    }
+    if (mode === 'final-cut' && req.method === 'POST' && url.pathname === '/api/session/' + sessionId + '/prompt') {
+      assert.equal(++promptPosts, 1, 'one original prompt, never a replay');
+      const chunks: Buffer[] = []; let bytes = 0;
+      for await (const chunk of req) {
+        const value = Buffer.from(chunk); bytes += value.length; assert.ok(bytes <= 65536); chunks.push(value);
+      }
+      const body = JSON.parse(Buffer.concat(chunks).toString('utf8')) as Record<string, unknown>;
+      assert.deepEqual(Object.keys(body).sort(), ['delivery', 'id', 'resume', 'text']);
+      assert.equal(typeof body.id, 'string'); assert.match(body.id as string, /^msg_[A-Za-z0-9_-]{1,256}$/);
+      assert.equal(body.resume, true); assert.equal(body.delivery, 'queue');
+      assert.equal(body.text, 'Reply only OK. Do not use tools, access files or run commands.');
+      nativeInput = { id: body.id as string, text: body.text as string };
+      return json(res, { data: { id: nativeInput.id, sessionID: sessionId, type: 'user',
+        delivery: 'queue', payload: { text: nativeInput.text } } });
     }
     if (req.method === 'POST' && url.pathname.endsWith('/prompt')) promptPosts++;
     throw new Error('TEST unexpected native route: ' + req.method + ' ' + url.pathname);
@@ -178,6 +232,14 @@ async function fixture(mode: 'http' | 'custody' | 'stop-unknown' = 'http', start
       },
       readPassword: () => { passwordReads++; return password; },
       async readNativeCustody(signal: AbortSignal) {
+        if (mode === 'final-cut' && finalArmed) {
+          const index = finalCustodyCalls++;
+          assert.ok(index === 0 || index === 1, 'only the two original final custody admissions');
+          finalSignals.push(signal);
+          if (finalCustodyCalls === 2) finalEntered.resolve();
+          await finalGates[index].promise;
+          finalCustodyReturns++; finalReturned[index].resolve();
+        }
         if (holdNextCustody) {
           holdNextCustody = false; custodyHeld = true; heldSignal = signal; blocked.resolve();
           await returnCustody.promise; custodyReturned.resolve();
@@ -193,6 +255,14 @@ async function fixture(mode: 'http' | 'custody' | 'stop-unknown' = 'http', start
   const observations: unknown[] = [], diagnostic = channel('agent-teams:opencode-v2:host-probe-close-failed');
   const observe = (value: unknown) => { observations.push(value); };
   diagnostic.subscribe(observe);
+  const cutDiagnostic = channel('agent-teams:opencode-v2:read-cut-failed');
+  const driverDiagnostic = channel('agent-teams:opencode-v2:driver-close-failed');
+  const observeCut = (value: unknown) => {
+    if (++cutFailureCount <= 2) cutFailures.push(value);
+    cutFailed.resolve();
+  };
+  const observeDriver = (value: unknown) => { if (++driverFailureCount <= 2) driverFailures.push(value); };
+  if (mode === 'final-cut') { cutDiagnostic.subscribe(observeCut); driverDiagnostic.subscribe(observeDriver); }
   const probe = createOpenCodeV2ModelProbe(management, {
     commandId: 'TEST-original-probe', profileId: management.profileId, configRevision: management.configRevision,
     providerId: 'TEST-provider', modelId: 'TEST-model',
@@ -202,6 +272,14 @@ async function fixture(mode: 'http' | 'custody' | 'stop-unknown' = 'http', start
     probe, parent, disconnected: disconnected.promise, custodyReturned: custodyReturned.promise,
     releaseCustody: () => returnCustody.resolve(),
     heldSignal: () => heldSignal,
+    finalCut: {
+      entered: finalEntered.promise, http: finalHttp.map(value => value.promise),
+      disconnected: finalDisconnected.map(value => value.promise), failed: cutFailed.promise,
+      returned: finalReturned.map(value => value.promise), release: (index: 0 | 1) => finalGates[index].resolve(),
+      signals: finalSignals, failures: cutFailures, driverFailures,
+      counts: () => ({ messageReads, finalCustodyCalls, finalCustodyReturns,
+        finalRequests: [...finalRequests], unfinishedClosed: [...unfinishedClosed], cutFailureCount, driverFailureCount }),
+    },
     counts: () => ({ requests, passwordReads, physicalStops, nativeCreations, logReads, promptPosts, custodyHeld,
       sessionCreates: session === undefined ? 0 : 1 }),
     start() {
@@ -214,17 +292,19 @@ async function fixture(mode: 'http' | 'custody' | 'stop-unknown' = 'http', start
         throw new Error('TEST probe ended before the original D request barrier');
       })]), 'original D queue preflight');
     },
-    assertClosed() {
+    assertClosed(expected = { logReads: 1, promptPosts: 0 }) {
       expect(failures).toEqual([]);
-      expect(nativeCreations).toBe(1); expect(logReads).toBe(1); expect(promptPosts).toBe(0);
+      expect(nativeCreations).toBe(1); expect(logReads).toBe(expected.logReads); expect(promptPosts).toBe(expected.promptPosts);
       expect(physicalStops).toBe(1);
       expect(probe.wasRejected()).toBe(false);
     },
     async dispose() {
       const close = probe.close(); returnCustody.resolve();
+      for (const gate of finalGates) gate.resolve();
       try { await close; if (run) await run.catch(() => {}); }
       finally {
         diagnostic.unsubscribe(observe);
+        if (mode === 'final-cut') { cutDiagnostic.unsubscribe(observeCut); driverDiagnostic.unsubscribe(observeDriver); }
         server.closeAllConnections();
         await new Promise<void>((resolve, reject) => server.close(error => error ? reject(error) : resolve()));
         rmSync(root, { recursive: true, force: true });
@@ -279,6 +359,94 @@ test('pending original custody stays UNKNOWN after the existing drain bound and 
     f.assertClosed();
   } finally { await f.dispose(); }
 });
+
+test.each(['admitted', 'pending', 'abort-responsive'] as const)(
+  'original ModelProbe final read-cut cancellation retains the %s sibling cleanup obligation', async sibling => {
+    const f = await fixture('final-cut');
+    const cleanupExpected = sibling !== 'pending';
+    const cooperative = { responses: 0, events: [] as string[], returnedAtFailure: [] as number[] };
+    const note = (event: string) => { if (cooperative.events.length < 4) cooperative.events.push(event); };
+    const diagnostic = channel('agent-teams:opencode-v2:read-cut-failed');
+    let abortSource: AbortSignal | undefined, respond: (() => void) | undefined;
+    let observeFailure: (() => void) | undefined, returnedObservation: Promise<void> | undefined;
+    try {
+      const running = f.start(), cut = f.finalCut;
+      await within(cut.entered, 'both original final custody admissions');
+      expect(cut.signals).toHaveLength(2); expect(cut.signals.every(signal => !signal.aborted)).toBe(true);
+      expect(cut.counts()).toMatchObject({ messageReads: 2, finalCustodyCalls: 2, finalCustodyReturns: 0,
+        finalRequests: [0, 0], cutFailureCount: 0, driverFailureCount: 0 });
+      cut.release(0); await within(cut.http[0]!, 'original after-log HTTP');
+      if (sibling === 'admitted') {
+        cut.release(1); await within(cut.http[1]!, 'original after-session HTTP');
+      }
+      if (sibling === 'abort-responsive') {
+        abortSource = cut.signals[1]!;
+        respond = () => { cooperative.responses++; note('abort'); cut.release(1); };
+        returnedObservation = cut.returned[1]!.then(() => { note('custody-return'); });
+        observeFailure = () => {
+          if (cooperative.returnedAtFailure.length < 2)
+            cooperative.returnedAtFailure.push(cut.counts().finalCustodyReturns);
+          note('cut-failure');
+        };
+        diagnostic.subscribe(observeFailure);
+        abortSource.addEventListener('abort', respond, { once: true });
+      }
+      const before = f.counts();
+      expect(before).toMatchObject({ nativeCreations: 1, sessionCreates: 1, promptPosts: 1, logReads: 3 });
+      f.parent.abort();
+      await within(cut.disconnected[0]!, 'original after-log cancellation');
+      if (sibling === 'admitted') await within(cut.disconnected[1]!, 'original after-session cancellation');
+      await within(cut.failed, 'original final read-cut failure');
+      if (sibling === 'pending') {
+        expect(cut.signals[1]!.aborted).toBe(true);
+        expect(cut.counts().finalCustodyReturns).toBe(1);
+        expect(cut.failures).toEqual([expect.objectContaining({ stage: 'after-log', reason: 'transport_failure',
+          deadlineExpired: false, aborted: false, finalReason: 'native_read_cleanup_unknown' })]);
+        // Release the same original acquisition only after its UNKNOWN was observed.
+        cut.release(1); await within(cut.returned[1]!, 'original pending custody return');
+      } else if (sibling === 'abort-responsive') {
+        await within(returnedObservation!, 'original abort-responsive custody return');
+        expect(cut.signals[1]!.aborted).toBe(true);
+        expect(cooperative).toEqual({ responses: 1, events: ['abort', 'custody-return', 'cut-failure'],
+          returnedAtFailure: [2] });
+        expect(cut.failures).toEqual([expect.objectContaining({ stage: 'after-log', reason: 'transport_failure',
+          deadlineExpired: false, aborted: false, finalReason: 'invalid_native_read_response' })]);
+      } else {
+        expect(cut.failures).toEqual([expect.objectContaining({
+          stage: expect.stringMatching(/^after-(log|session)$/), reason: 'transport_failure',
+          deadlineExpired: false, aborted: false, finalReason: 'invalid_native_read_response' })]);
+      }
+      await expect(within(running, 'original probe run settlement')).rejects.toBe(f.parent.signal.reason);
+      const closing = f.probe.close();
+      expect(f.probe.close()).toBe(closing);
+      const cleanup = await closing;
+      expect(cleanup).toBe(cleanupExpected);
+      expect(f.counts().requests).toBe(before.requests); expect(f.counts().passwordReads).toBe(before.passwordReads);
+      expect(cut.counts()).toEqual({ messageReads: 2, finalCustodyCalls: 2, finalCustodyReturns: 2,
+        finalRequests: sibling === 'admitted' ? [1, 1] : [1, 0],
+        unfinishedClosed: sibling === 'admitted' ? [true, true] : [true, false],
+        cutFailureCount: 1, driverFailureCount: cleanupExpected ? 0 : 1 });
+      if (sibling === 'pending') {
+        expect(cut.driverFailures).toEqual([expect.objectContaining({ stage: 'protocol-dispose', outcome: 'threw' })]);
+        expect(f.observations).toEqual([expect.objectContaining({ stage: 'driver-close', reason: 'unconfirmed' })]);
+      } else { expect(cut.driverFailures).toEqual([]); expect(f.observations).toEqual([]); }
+      const retained = JSON.stringify([cut.failures, cut.driverFailures, f.observations, cooperative]);
+      const retainedCounts = f.counts(), retainedCutCounts = cut.counts();
+      if (sibling !== 'abort-responsive') cut.release(1);
+      await expect(f.probe.close()).resolves.toBe(cleanupExpected);
+      expect(JSON.stringify([cut.failures, cut.driverFailures, f.observations, cooperative])).toBe(retained);
+      expect(f.counts()).toEqual(retainedCounts); expect(cut.counts()).toEqual(retainedCutCounts);
+      f.assertClosed({ logReads: 3, promptPosts: 1 });
+      console.info('TEST-final-cut-cancellation ' + JSON.stringify({ sibling, cleanup, counts: f.counts(),
+        cut: cut.counts(), readCut: cut.failures, driverClose: cut.driverFailures, hostClose: f.observations,
+        ...(sibling === 'abort-responsive' ? { cooperative } : {}) }));
+    } finally {
+      if (abortSource && respond) abortSource.removeEventListener('abort', respond);
+      if (observeFailure) diagnostic.unsubscribe(observeFailure);
+      await f.dispose();
+    }
+  }
+);
 
 test('confirmed HTTP cancellation cannot repair an unknown original physical stop', async () => {
   const f = await fixture('stop-unknown');

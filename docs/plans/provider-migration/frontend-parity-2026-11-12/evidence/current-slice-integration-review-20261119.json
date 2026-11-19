@@ -1,0 +1,549 @@
+{
+  "schemaVersion": 1,
+  "kind": "independent-current-slice-integration-documentation-review",
+  "recordedAt": "2026-11-19T22:28:48.700042+00:00",
+  "author": "/root",
+  "reviewer": "/root/task_detail_finish",
+  "status": "PASS_SCOPED_INTEGRATION_DOCUMENTATION_REVIEW",
+  "openFindings": [],
+  "scope": [
+    "Only the new STATUS section above the published639 history.",
+    "Only the new current P09 A source-acceptance update in Plan40.",
+    "Provider adoption evidence JSON and frozen source receipt, checked against already accepted independent R2 records.",
+    "One read-only refresh of PR1192 inline review-thread resolution inventory."
+  ],
+  "reviewedInputs": {
+    "status": {
+      "path": "/workspace/scratch/f45fed8e9067/agent-teams-ai/docs/plans/provider-migration/frontend-parity-2026-11-12/STATUS.md",
+      "bytes": 68450,
+      "sha256": "f44b7a0d7097205cef980bb6616c29553e4eab75029de7a445c04f0c0422072d"
+    },
+    "statusNewSectionSha256": "94e6f2f0840bd0dbbfd5cda12490fb691230d1c4b8ac047d28799a329338a8b4",
+    "p09": {
+      "path": "/workspace/scratch/f45fed8e9067/agent-teams-ai/docs/plans/provider-migration/frontend-parity-2026-11-12/40-p09-source-writer-decision-2026-11-16.md",
+      "bytes": 26258,
+      "sha256": "610cfaadea12d54bebff1e629307f215ac6889dda0bccf5f1bbf32a1d1c1c816"
+    },
+    "p09NewSectionSha256": "570c33f0fa8619a2062a579b92b040cf135c6d9e4597671b1321db7ccb87cc5f",
+    "providerEvidence": {
+      "path": "/workspace/scratch/f45fed8e9067/agent-teams-ai/docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/provider-admission-adoption-20261119.json",
+      "bytes": 26359,
+      "sha256": "c537744a710112fd48553a6c0700e30c96d0dfec636549166cb50b29b7e6c350"
+    },
+    "sourceReceipt": {
+      "path": "/workspace/scratch/f45fed8e9067/agent-teams-ai/vendor/provider-migration/v2-admission-45a569bd/source-receipt.json",
+      "bytes": 6025,
+      "sha256": "abdb69a1e33c1c862eb2f2953dc532412c2244b79405ea97dcdd9afb1152ee2d"
+    },
+    "darwinBoundedAudit": {
+      "path": "/workspace/scratch/f45fed8e9067/audit1192/darwin-review-63927ae-prelaunch-probe-audit.json",
+      "bytes": 25449,
+      "sha256": "52a9d2e79db3c1e14f85e1f9ed45867b22643c67dfd241359e4501ba7ccf6dc7"
+    },
+    "acceptedSourceConsumerR2": {
+      "path": "/workspace/scratch/f45fed8e9067/audit1192/app-admission-lifecycle-final-r2.json",
+      "bytes": 7710,
+      "sha256": "8d571f84d636a484023b5f59bf86e0dfb9f9ff1a6850c7047694bfdd04102828"
+    }
+  },
+  "crossChecks": {
+    "sourceReceiptCopiedFields": "PASS: implementation, Session SPI, archive compatibility and consumerInstallation are exact copies of the frozen receipt.",
+    "acceptedLocalEvidence": "PASS: embedded consumerChecks, independentR2 and finalCutReceipts exactly equal their accepted immutable records.",
+    "producerTerminalClaims": "PASS_DOCUMENT_LINKAGE: same45a source, 601 source tests plus2 packed consumers on each recorded Node version, 53/53 permitted native jobs. The exact observer terminal audit is included in the36-entry raw evidence archive and matches its cited SHA256. No CI was queried or independently rerun in this review.",
+    "historicalProducerSnapshot": "The earlier producerCI object retains its observedAt timestamp and then-running native statement; the separate producerTerminalCI object supplies the final terminal result. Historical snapshot bytes were not rewritten.",
+    "appQualificationBoundary": "Resulting app source CI remains an explicit required gate; neither producer native success nor24/24 controlled app tests are represented as final app/GUI/merge qualification.",
+    "publicApiBoundary": "Private helper declaration change and its transitive reachability through an unchanged callback alias are stated accurately; public facade/signature and SPI compatibility claims match accepted R2.",
+    "p09Boundary": "A is bounded to the selected trusted-writer fixture source on one639 revision across the three named POSIX platforms; installed/release stay false and strict counterexamples, INCOMPLETE and unrelated Desktop/process failures remain separate.",
+    "taskDetailBoundary": "The new summary retains the accepted71 unique cases, affected4/4, sequential scoped TS7/lint/import-probe results and historical warnings; static eager graph projection is explicitly distinguished from runtime/resource-cause proof. Accepted source/tests were not reopened.",
+    "retainedFailures": "e458 pending-custody timeout remains historical FAIL with R2-E458-01 resolved only for45a controlled consumer; Windows and Darwin original failures are not repaired by unrelated success.",
+    "deliveryBoundary": "The documented route1192→1186→982 retains the existing real-CLI prohibition and workflow conflict; thread resolution does not imply formal approval or permission to change Ready/base/guards."
+  },
+  "resolvedFindings": [
+    {
+      "id": "INTEGRATION-DOC-01",
+      "category": "qualification wording",
+      "status": "RESOLVED_BEFORE_PUBLICATION",
+      "location": "STATUS.md current app639 CI paragraph",
+      "finding": "The initial summary named Darwin INCOMPLETE and app/group/Host cleanup but omitted the explicit original job FAIL and retained held probe obligation.",
+      "resolution": "Frozen STATUS now states original Darwin Review job FAIL, business flow INCOMPLETE before Launch, held/resourceHeld=true and no independent proof that the separate detached probe child is absent. It makes no45a native-fix claim.",
+      "verifiedStatusSha256": "f44b7a0d7097205cef980bb6616c29553e4eab75029de7a445c04f0c0422072d",
+      "sourceBasis": "The bounded Darwin audit preserves durable UNKNOWN/held and distinguishes app/group/Host process cleanup from the separate probe-native child."
+    }
+  ],
+  "reviewThreadInventory": {
+    "kind": "single-read-only-pr-review-thread-inventory",
+    "repository": "777genius/agent-teams-ai",
+    "pr": 1192,
+    "observedAt": "2026-11-19T22:26:18.481Z",
+    "tool": "github_list_pull_request_review_threads",
+    "readCount": 1,
+    "count": 43,
+    "resolved": 43,
+    "unresolved": 0,
+    "outdated": 28,
+    "sourceHeads": [
+      "63927aecd95c814f66db23d7bd4aef6975110168"
+    ],
+    "threads": [
+      {
+        "id": "PRRT_kwDORVTEtM63PxiA",
+        "isResolved": true,
+        "isOutdated": true,
+        "headSha": "63927aecd95c814f66db23d7bd4aef6975110168",
+        "path": "packages/legacy-agent-host/src/adapters/providers/capturedNativeProcessFactory.ts",
+        "line": null,
+        "originalLine": 19,
+        "commentCount": 3
+      },
+      {
+        "id": "PRRT_kwDORVTEtM63PxiI",
+        "isResolved": true,
+        "isOutdated": false,
+        "headSha": "63927aecd95c814f66db23d7bd4aef6975110168",
+        "path": "packages/legacy-agent-host/src/owned-process/capturedWindowsLauncher.ts",
+        "line": 218,
+        "originalLine": 117,
+        "commentCount": 1
+      },
+      {
+        "id": "PRRT_kwDORVTEtM63PxiT",
+        "isResolved": true,
+        "isOutdated": false,
+        "headSha": "63927aecd95c814f66db23d7bd4aef6975110168",
+        "path": "packages/legacy-agent-host/src/owned-process/hostCustody.ts",
+        "line": 435,
+        "originalLine": 424,
+        "commentCount": 2
+      },
+      {
+        "id": "PRRT_kwDORVTEtM63Qn_a",
+        "isResolved": true,
+        "isOutdated": true,
+        "headSha": "63927aecd95c814f66db23d7bd4aef6975110168",
+        "path": ".github/workflows/ci.yml",
+        "line": null,
+        "originalLine": 834,
+        "commentCount": 1
+      },
+      {
+        "id": "PRRT_kwDORVTEtM63Qn_f",
+        "isResolved": true,
+        "isOutdated": false,
+        "headSha": "63927aecd95c814f66db23d7bd4aef6975110168",
+        "path": "packages/legacy-agent-host/src/process/LinuxWarmProcess.ts",
+        "line": 126,
+        "originalLine": 105,
+        "commentCount": 1
+      },
+      {
+        "id": "PRRT_kwDORVTEtM63Qn_m",
+        "isResolved": true,
+        "isOutdated": true,
+        "headSha": "63927aecd95c814f66db23d7bd4aef6975110168",
+        "path": "scripts/legacy-agent-host/desktop-backend-observations.test.ts",
+        "line": null,
+        "originalLine": 70,
+        "commentCount": 1
+      },
+      {
+        "id": "PRRT_kwDORVTEtM63Qn_0",
+        "isResolved": true,
+        "isOutdated": true,
+        "headSha": "63927aecd95c814f66db23d7bd4aef6975110168",
+        "path": "scripts/legacy-agent-host/desktop-emulated-management-fixture.ts",
+        "line": null,
+        "originalLine": 26,
+        "commentCount": 1
+      },
+      {
+        "id": "PRRT_kwDORVTEtM63Qn_6",
+        "isResolved": true,
+        "isOutdated": true,
+        "headSha": "63927aecd95c814f66db23d7bd4aef6975110168",
+        "path": "scripts/legacy-agent-host/desktop-emulated-runtime-fixture.ts",
+        "line": null,
+        "originalLine": 150,
+        "commentCount": 1
+      },
+      {
+        "id": "PRRT_kwDORVTEtM63QoAA",
+        "isResolved": true,
+        "isOutdated": true,
+        "headSha": "63927aecd95c814f66db23d7bd4aef6975110168",
+        "path": "scripts/legacy-agent-host/desktop-emulated-runtime-fixture.ts",
+        "line": null,
+        "originalLine": 151,
+        "commentCount": 1
+      },
+      {
+        "id": "PRRT_kwDORVTEtM63QoAE",
+        "isResolved": true,
+        "isOutdated": false,
+        "headSha": "63927aecd95c814f66db23d7bd4aef6975110168",
+        "path": "scripts/legacy-agent-host/qualify-linux-process-sdk.ts",
+        "line": 133,
+        "originalLine": 132,
+        "commentCount": 2
+      },
+      {
+        "id": "PRRT_kwDORVTEtM63QoAn",
+        "isResolved": true,
+        "isOutdated": true,
+        "headSha": "63927aecd95c814f66db23d7bd4aef6975110168",
+        "path": "src/features/codex-runtime-installer/main/adapters/input/ipc/registerCodexRuntimeInstallerIpc.ts",
+        "line": null,
+        "originalLine": 20,
+        "commentCount": 1
+      },
+      {
+        "id": "PRRT_kwDORVTEtM63QoA0",
+        "isResolved": true,
+        "isOutdated": true,
+        "headSha": "63927aecd95c814f66db23d7bd4aef6975110168",
+        "path": "src/features/codex-runtime-installer/main/infrastructure/CodexRuntimeInstallerService.ts",
+        "line": null,
+        "originalLine": 771,
+        "commentCount": 1
+      },
+      {
+        "id": "PRRT_kwDORVTEtM63QoA_",
+        "isResolved": true,
+        "isOutdated": true,
+        "headSha": "63927aecd95c814f66db23d7bd4aef6975110168",
+        "path": "src/main/services/schedule/JsonScheduleRepository.ts",
+        "line": 176,
+        "originalLine": 159,
+        "commentCount": 1
+      },
+      {
+        "id": "PRRT_kwDORVTEtM63QoBH",
+        "isResolved": true,
+        "isOutdated": true,
+        "headSha": "63927aecd95c814f66db23d7bd4aef6975110168",
+        "path": "src/renderer/store/slices/cliInstallerSlice.ts",
+        "line": 1634,
+        "originalLine": 1630,
+        "commentCount": 2
+      },
+      {
+        "id": "PRRT_kwDORVTEtM63QoBO",
+        "isResolved": true,
+        "isOutdated": true,
+        "headSha": "63927aecd95c814f66db23d7bd4aef6975110168",
+        "path": "tools/owned-process-broker/fixtures/providerDesktopPeer.mjs",
+        "line": 284,
+        "originalLine": 148,
+        "commentCount": 2
+      },
+      {
+        "id": "PRRT_kwDORVTEtM63QoBU",
+        "isResolved": true,
+        "isOutdated": true,
+        "headSha": "63927aecd95c814f66db23d7bd4aef6975110168",
+        "path": "tools/owned-process-broker/nativeEmulatedProviderGate.ts",
+        "line": null,
+        "originalLine": 109,
+        "commentCount": 1
+      },
+      {
+        "id": "PRRT_kwDORVTEtM63QoBZ",
+        "isResolved": true,
+        "isOutdated": true,
+        "headSha": "63927aecd95c814f66db23d7bd4aef6975110168",
+        "path": "tools/owned-process-broker/nativeVendorGate.ts",
+        "line": null,
+        "originalLine": 158,
+        "commentCount": 1
+      },
+      {
+        "id": "PRRT_kwDORVTEtM63QoBf",
+        "isResolved": true,
+        "isOutdated": true,
+        "headSha": "63927aecd95c814f66db23d7bd4aef6975110168",
+        "path": "tools/owned-process-broker/serviceDebugLoop.h",
+        "line": null,
+        "originalLine": 58,
+        "commentCount": 1
+      },
+      {
+        "id": "PRRT_kwDORVTEtM63QoBj",
+        "isResolved": true,
+        "isOutdated": true,
+        "headSha": "63927aecd95c814f66db23d7bd4aef6975110168",
+        "path": "tools/owned-process-broker/serviceScopes.h",
+        "line": null,
+        "originalLine": 145,
+        "commentCount": 1
+      },
+      {
+        "id": "PRRT_kwDORVTEtM63ReVT",
+        "isResolved": true,
+        "isOutdated": false,
+        "headSha": "63927aecd95c814f66db23d7bd4aef6975110168",
+        "path": "packages/legacy-agent-host/src/output.ts",
+        "line": 53,
+        "originalLine": 53,
+        "commentCount": 2
+      },
+      {
+        "id": "PRRT_kwDORVTEtM63ReVZ",
+        "isResolved": true,
+        "isOutdated": true,
+        "headSha": "63927aecd95c814f66db23d7bd4aef6975110168",
+        "path": "packages/legacy-agent-host/src/owned-process/hostCustody.ts",
+        "line": null,
+        "originalLine": 420,
+        "commentCount": 2
+      },
+      {
+        "id": "PRRT_kwDORVTEtM63ReVe",
+        "isResolved": true,
+        "isOutdated": false,
+        "headSha": "63927aecd95c814f66db23d7bd4aef6975110168",
+        "path": "packages/legacy-agent-host/src/process/LinuxWarmProcess.ts",
+        "line": 119,
+        "originalLine": 98,
+        "commentCount": 1
+      },
+      {
+        "id": "PRRT_kwDORVTEtM63ReVm",
+        "isResolved": true,
+        "isOutdated": false,
+        "headSha": "63927aecd95c814f66db23d7bd4aef6975110168",
+        "path": "packages/legacy-agent-host/src/process/TeamProcessCommands.ts",
+        "line": 254,
+        "originalLine": 251,
+        "commentCount": 1
+      },
+      {
+        "id": "PRRT_kwDORVTEtM63ReVt",
+        "isResolved": true,
+        "isOutdated": false,
+        "headSha": "63927aecd95c814f66db23d7bd4aef6975110168",
+        "path": "packages/legacy-agent-host/src/process/WindowsTeamProcessCommands.ts",
+        "line": 131,
+        "originalLine": 122,
+        "commentCount": 1
+      },
+      {
+        "id": "PRRT_kwDORVTEtM63ReVx",
+        "isResolved": true,
+        "isOutdated": true,
+        "headSha": "63927aecd95c814f66db23d7bd4aef6975110168",
+        "path": "packages/legacy-agent-host/src/process/WindowsTeamProcessCommands.ts",
+        "line": null,
+        "originalLine": 238,
+        "commentCount": 3
+      },
+      {
+        "id": "PRRT_kwDORVTEtM63ReV1",
+        "isResolved": true,
+        "isOutdated": false,
+        "headSha": "63927aecd95c814f66db23d7bd4aef6975110168",
+        "path": "packages/legacy-agent-host/tests/registered-process-commands.test.ts",
+        "line": 430,
+        "originalLine": 425,
+        "commentCount": 1
+      },
+      {
+        "id": "PRRT_kwDORVTEtM63ReV-",
+        "isResolved": true,
+        "isOutdated": false,
+        "headSha": "63927aecd95c814f66db23d7bd4aef6975110168",
+        "path": "scripts/legacy-agent-host/desktop-backend-smoke.ts",
+        "line": 299,
+        "originalLine": 282,
+        "commentCount": 1
+      },
+      {
+        "id": "PRRT_kwDORVTEtM63ReWE",
+        "isResolved": true,
+        "isOutdated": false,
+        "headSha": "63927aecd95c814f66db23d7bd4aef6975110168",
+        "path": "scripts/legacy-agent-host/desktop-emulated-management-ui.ts",
+        "line": 180,
+        "originalLine": 139,
+        "commentCount": 1
+      },
+      {
+        "id": "PRRT_kwDORVTEtM63ReWJ",
+        "isResolved": true,
+        "isOutdated": false,
+        "headSha": "63927aecd95c814f66db23d7bd4aef6975110168",
+        "path": "scripts/legacy-agent-host/desktop-emulated-management-ui.ts",
+        "line": 189,
+        "originalLine": 146,
+        "commentCount": 1
+      },
+      {
+        "id": "PRRT_kwDORVTEtM63ReWT",
+        "isResolved": true,
+        "isOutdated": true,
+        "headSha": "63927aecd95c814f66db23d7bd4aef6975110168",
+        "path": "scripts/legacy-agent-host/desktop-emulated-runtime-ui.ts",
+        "line": null,
+        "originalLine": 84,
+        "commentCount": 1
+      },
+      {
+        "id": "PRRT_kwDORVTEtM63ReWY",
+        "isResolved": true,
+        "isOutdated": false,
+        "headSha": "63927aecd95c814f66db23d7bd4aef6975110168",
+        "path": "scripts/legacy-agent-host/desktop-emulated-runtime-ui.ts",
+        "line": 622,
+        "originalLine": 199,
+        "commentCount": 1
+      },
+      {
+        "id": "PRRT_kwDORVTEtM63ReWd",
+        "isResolved": true,
+        "isOutdated": true,
+        "headSha": "63927aecd95c814f66db23d7bd4aef6975110168",
+        "path": "tools/owned-process-broker/nativeEmulatedProviderGate.ts",
+        "line": 183,
+        "originalLine": 96,
+        "commentCount": 2
+      },
+      {
+        "id": "PRRT_kwDORVTEtM63SW3y",
+        "isResolved": true,
+        "isOutdated": true,
+        "headSha": "63927aecd95c814f66db23d7bd4aef6975110168",
+        "path": "packages/legacy-agent-host/src/adapters/providers/ClaudeMemberProvider.ts",
+        "line": null,
+        "originalLine": 43,
+        "commentCount": 3
+      },
+      {
+        "id": "PRRT_kwDORVTEtM63SW32",
+        "isResolved": true,
+        "isOutdated": true,
+        "headSha": "63927aecd95c814f66db23d7bd4aef6975110168",
+        "path": "packages/legacy-agent-host/src/owned-process/HostWindowsLaunch.ts",
+        "line": null,
+        "originalLine": 512,
+        "commentCount": 1
+      },
+      {
+        "id": "PRRT_kwDORVTEtM63SW38",
+        "isResolved": true,
+        "isOutdated": true,
+        "headSha": "63927aecd95c814f66db23d7bd4aef6975110168",
+        "path": "packages/legacy-agent-host/src/owned-process/RetainedWindowsCustody.ts",
+        "line": null,
+        "originalLine": 487,
+        "commentCount": 1
+      },
+      {
+        "id": "PRRT_kwDORVTEtM63SW4C",
+        "isResolved": true,
+        "isOutdated": true,
+        "headSha": "63927aecd95c814f66db23d7bd4aef6975110168",
+        "path": "packages/legacy-agent-host/src/owned-process/windowsBroker.ts",
+        "line": null,
+        "originalLine": 585,
+        "commentCount": 1
+      },
+      {
+        "id": "PRRT_kwDORVTEtM63SW4G",
+        "isResolved": true,
+        "isOutdated": false,
+        "headSha": "63927aecd95c814f66db23d7bd4aef6975110168",
+        "path": "packages/legacy-agent-host/src/process/WindowsTeamProcessCommands.ts",
+        "line": 285,
+        "originalLine": 255,
+        "commentCount": 2
+      },
+      {
+        "id": "PRRT_kwDORVTEtM63SW4L",
+        "isResolved": true,
+        "isOutdated": true,
+        "headSha": "63927aecd95c814f66db23d7bd4aef6975110168",
+        "path": "packages/legacy-agent-host/src/process/WindowsTeamProcessCommands.ts",
+        "line": null,
+        "originalLine": 298,
+        "commentCount": 2
+      },
+      {
+        "id": "PRRT_kwDORVTEtM63SW4N",
+        "isResolved": true,
+        "isOutdated": false,
+        "headSha": "63927aecd95c814f66db23d7bd4aef6975110168",
+        "path": "packages/legacy-agent-host/src/work-sync/policy/core/domain/MemberWorkSyncNudge.ts",
+        "line": 183,
+        "originalLine": 183,
+        "commentCount": 1
+      },
+      {
+        "id": "PRRT_kwDORVTEtM63SW4S",
+        "isResolved": true,
+        "isOutdated": true,
+        "headSha": "63927aecd95c814f66db23d7bd4aef6975110168",
+        "path": "src/features/agent-backend/main/infrastructure/CapturedWindowsCustody.ts",
+        "line": null,
+        "originalLine": 78,
+        "commentCount": 1
+      },
+      {
+        "id": "PRRT_kwDORVTEtM63SW4a",
+        "isResolved": true,
+        "isOutdated": true,
+        "headSha": "63927aecd95c814f66db23d7bd4aef6975110168",
+        "path": "src/features/agent-backend/main/infrastructure/CapturedWindowsCustody.ts",
+        "line": null,
+        "originalLine": 77,
+        "commentCount": 1
+      },
+      {
+        "id": "PRRT_kwDORVTEtM63SW4g",
+        "isResolved": true,
+        "isOutdated": true,
+        "headSha": "63927aecd95c814f66db23d7bd4aef6975110168",
+        "path": "src/features/codex-runtime-installer/main/application/CapturedCodexRuntimeInstaller.ts",
+        "line": null,
+        "originalLine": 141,
+        "commentCount": 2
+      },
+      {
+        "id": "PRRT_kwDORVTEtM63SW4j",
+        "isResolved": true,
+        "isOutdated": true,
+        "headSha": "63927aecd95c814f66db23d7bd4aef6975110168",
+        "path": "tools/owned-process-broker/nativeLauncherScenario.ts",
+        "line": null,
+        "originalLine": 27,
+        "commentCount": 1
+      }
+    ],
+    "qualification": "Inline resolved-state inventory only; no formal approval or current-source correctness inferred.",
+    "actions": {
+      "commentsPosted": false,
+      "statusMutations": false,
+      "ciQueries": false
+    }
+  },
+  "reviewThreadInventoryRecord": {
+    "path": "/workspace/scratch/f45fed8e9067/audit1192/app-admission-integration-review-threads1192.json",
+    "bytes": 14086,
+    "sha256": "6bf3acce5e0ff5cb74b1ec0c24926fe04643b96d6ba86c00072771b8d8296c39"
+  },
+  "qualificationLimits": [
+    "This is a documentation and review-inventory integration review, not a rerun of accepted source/runtime tests.",
+    "43 resolved inline threads are not formal GitHub approval and do not establish correctness of a future app source head.",
+    "Original provider terminal CI is consumed from the existing observer audit; CI snapshots/logs/artifacts were not polled or downloaded.",
+    "Original app639 failures remain historical failures; new app source CI/GUI qualification and authorized delivery remain required."
+  ],
+  "actions": {
+    "sourceOrTestReinspection": false,
+    "sourceEdits": false,
+    "docsEditsByReviewer": false,
+    "testsOrCompiler": false,
+    "nativeOrCli": false,
+    "ciQueries": false,
+    "githubMutations": false,
+    "reviewCommentsPosted": false,
+    "reviewThreadRefreshes": 1,
+    "writtenFiles": "Only new scratch review inventory and this final integration record."
+  }
+}

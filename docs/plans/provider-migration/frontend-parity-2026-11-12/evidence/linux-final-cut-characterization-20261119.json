@@ -1,0 +1,1544 @@
+{
+  "schemaVersion": 1,
+  "kind": "original-final-cut-cancellation-characterization-work-record",
+  "sourceBase": "63927aecd95c814f66db23d7bd4aef6975110168",
+  "updatedAt": "2026-11-19T21:11:56.729414+00:00",
+  "status": "THREE_CONTROLLED_SCHEDULES_AND_INDEPENDENT_R2_PASS_PRODUCTION_UNCHANGED",
+  "plan": {
+    "path": "linux-credentials-final-cut-regression-r1-plan.json",
+    "bytes": 15492,
+    "sha256": "ecbd2d5edf8dfd281ab4882e47c1a9db46bf5ce2087cea8cc62cd7492bba80de",
+    "record": {
+      "schemaVersion": 1,
+      "kind": "R1-finite-original-model-probe-final-cut-cancellation-regression",
+      "status": "AWAITING_ROOT_R1_REVIEW_NO_IMPLEMENTATION",
+      "recordedAt": "2026-11-19T20:52:04.068811+00:00",
+      "owner": "/root/delivery_review",
+      "baselineHead": "63927aecd95c814f66db23d7bd4aef6975110168",
+      "originalFailure": {
+        "head": "3f78524c84829d6b87025fde5c8fe9d8481a4485",
+        "job": 135829274828,
+        "audit": "/workspace/scratch/f45fed8e9067/audit1192/linux-credentials-3f-first-cause-audit.json",
+        "sha256": "6022eac297e277baaba77ab89195d8e52986eb903f10cd7e2d4f2c3c25c4b74c"
+      },
+      "question": "Can original cancellation of an admitted final after-log HTTP request cause its parallel, still-pending original custody admission to retain UNKNOWN after the Host has subsequently drained that same lease?",
+      "purpose": "Controlled causal characterization of the observed failure shape. Preserve current UNKNOWN semantics; this R1 does not propose a cleanup-policy fix or assert the native run had this cause.",
+      "scope": {
+        "onlyEditableRepositoryPath": "test/features/agent-backend/hostOpenCodeV2ModelProbeLifecycle.test.ts",
+        "testPreimage": {
+          "path": "test/features/agent-backend/hostOpenCodeV2ModelProbeLifecycle.test.ts",
+          "bytes": 31862,
+          "lines": 565,
+          "sha256": "6d8e0008c0ad6468f0810db68d88e40c9987b642de1b2d1ed6e8bb40cf6f9c8c"
+        },
+        "newModule": false,
+        "productionChanges": false,
+        "newTests": 2,
+        "estimatedAddedLines": [
+          120,
+          170
+        ],
+        "frozenCore17Files": "untouched",
+        "nativeOrVendorInvocation": false
+      },
+      "preimages": {
+        "hostProduction": [
+          {
+            "path": "packages/legacy-agent-host/src/adapters/providers/OpenCodeV2ModelProbe.ts",
+            "sha256": "295bc0b8020a1f2a22145cb98497c0253d726ca75384b71a3552e95de57d05ee",
+            "matches3f": true
+          },
+          {
+            "path": "packages/legacy-agent-host/src/adapters/providers/OpenCodeV2CredentialOperation.ts",
+            "sha256": "9de31be2a9cd399ab644c2d16649ec0f000561dab105490dc86267a55291c067",
+            "matches3f": true
+          },
+          {
+            "path": "packages/legacy-agent-host/src/adapters/providers/OpenCodeV2EmbeddedServer.ts",
+            "sha256": "c187afaccb488b648d6a525fa56212bcc2f684733030ccbe6dce402599fde229",
+            "matches3f": true
+          }
+        ],
+        "providerArchive": {
+          "path": "vendor/provider-migration/captured-config-b19494fd/agent-teams-provider-implementations-0.0.0.tgz",
+          "sha256": "ad05bd8c799c4d2c366a6eab72f937466355a5994eac6bd201ee754217cf5aa7",
+          "matchesCredentialReceipt": true
+        },
+        "providerFiles": [
+          {
+            "path": "dist/features/provider-session-implementation/adapters/opencode-protocol/v2-native-cut.js",
+            "sha256": "0b6217054f013185a7e4c4330ced3ed8f4f2d9b9b964cbeb51b00d3727d35058",
+            "matchesPinnedArchive": true
+          },
+          {
+            "path": "dist/features/provider-session-implementation/adapters/opencode-protocol/v2-driver-native.js",
+            "sha256": "a348ae31bafe45292aa3133f98a8bd6d2a3cc8bc60d5ffd000a51f89e494fb44",
+            "matchesPinnedArchive": true
+          },
+          {
+            "path": "dist/features/provider-session-implementation/adapters/opencode-protocol/driver-session.js",
+            "sha256": "c262a80688541760dfdc95e015f9e4c9576fdb2d389bd9607f0a5770e97a8e67",
+            "matchesPinnedArchive": true
+          },
+          {
+            "path": "dist/features/provider-session-implementation/adapters/opencode-protocol/v2-execution-transport.js",
+            "sha256": "1a4c82ddbd641c2fd3f0e004ccd2e08efbab6340e475ffa5f2dc2a66c9809c2e",
+            "matchesPinnedArchive": true
+          },
+          {
+            "path": "dist/features/provider-session-implementation/adapters/opencode-protocol/v2-request-admission.js",
+            "sha256": "0032b2b343bbedbf6a6405a1d4a0700fb52cc7e9f5b694c97892277e44e1fbdb",
+            "matchesPinnedArchive": true
+          },
+          {
+            "path": "dist/features/provider-session-implementation/adapters/opencode-protocol/v2-bounded-await.js",
+            "sha256": "13e7088437799b4f424a3c3db91ea545266399694652a0b64784c5bdb89be506",
+            "matchesPinnedArchive": true
+          },
+          {
+            "path": "dist/features/provider-session-implementation/adapters/opencode-protocol/v2-driver-backend.js",
+            "sha256": "08ac2e50660d6cde38c3068ee5f299cf2197091782ab88b76e8a05bffe933fc3",
+            "matchesPinnedArchive": true
+          },
+          {
+            "path": "dist/features/provider-session-implementation/adapters/opencode-protocol/v2-cut-codecs.js",
+            "sha256": "04ced155d0862bfcc34c8b2a1a4782f954c1246056b0584dc9cd01060ab06eb2",
+            "matchesPinnedArchive": true
+          },
+          {
+            "path": "dist/features/provider-session-implementation/adapters/opencode-protocol/v2-input-validation.js",
+            "sha256": "7b02184f6801114460848f4d5e138278fa34036a7b1e5a2611050c0b84ceee77",
+            "matchesPinnedArchive": true
+          }
+        ],
+        "canonicalCheckConfigs": [
+          {
+            "path": "vitest.config.ts",
+            "bytes": 1187,
+            "sha256": "877867b6b52de7919946cc62501a18eb39e78d689d10128011151cf83cd2edbc"
+          },
+          {
+            "path": "test/features/agent-backend/tsconfig.json",
+            "bytes": 379,
+            "sha256": "4b6372a0f31b366a07f02aa7e70d106dcc98d3cacdbad9c57bb4856a88b74f79"
+          },
+          {
+            "path": "tsconfig.json",
+            "bytes": 1235,
+            "sha256": "43729cf95a74178589329b25cdcecbcccf43e55e23a547d21b7df8fede77948a"
+          },
+          {
+            "path": "eslint.fast.config.js",
+            "bytes": 7350,
+            "sha256": "bf8a72be9244d217ad2e5687bfda735642592430924307bd9ba94666487f1335"
+          }
+        ],
+        "sourceCustodyRecord": {
+          "path": "/workspace/scratch/f45fed8e9067/audit1192/linux-credentials-3f-source-custody.json",
+          "sha256": "26691853012398f4f7d8d091890a82aff7720849b4aee928aeb87df2923650c9"
+        }
+      },
+      "existingRealBoundary": {
+        "real": [
+          "createOpenCodeV2ModelProbe imported from production source",
+          "private configuration/currentness/credential selection",
+          "pinned provider-owned clients and DriverSession/native read-cut/admission implementation",
+          "global fetch and finite loopback HTTP",
+          "original driver/Host cleanup and existing diagnostics"
+        ],
+        "controlled": [
+          "existing native EmbeddedServer creation and readNativeCustody precondition",
+          "existing constant TEST native identity/password",
+          "finite local protocol peer responses"
+        ],
+        "forbiddenMocks": [
+          "provider modules",
+          "driver factory",
+          "native read-cut",
+          "request-admission wrapper",
+          "fetch",
+          "production clock/timers",
+          "cleanup return values of the provider DriverSession"
+        ],
+        "spawn": "Existing controlled.spawn remains a tripwire and must never be invoked."
+      },
+      "fixtureDelta": [
+        "Add one finite mode (final-cut) to the existing fixture. Keep http/custody/stop-unknown branches and their original assertions unchanged.",
+        "Reuse existing session creation, model selection, currentness, password and native identity. Return the existing exact session.created/log.synced prefix for queue preflight and first cut before-log; all log requests require follow=false.",
+        "Accept exactly one actual prompt POST: read a bounded body, validate the original prompt/id/delivery/resume, retain that original id/text and return its exact {data:{id,sessionID,type:user,delivery:queue,payload:{text}}} acknowledgement. This is a controlled protocol peer, not a native inference or terminal proof.",
+        "Serve a finite original message page containing that same user input plus one empty terminal page; require limit=200, original order=asc first and the one fixed returned cursor next. The empty terminal page arms the final-read barrier. No terminal event or model success is invented.",
+        "Only after that terminal page, hold exactly the next two original readNativeCustody calls with two independent promises. Both retain their original signals and return the same captured identity when released; capture entry/return counters without changing production callbacks.",
+        "Release the first admission and await the actual original after-log GET at the local peer. Leave its response unfinished with no headers, retaining the existing socket-close witness style.",
+        "The second call is proved to be after-session in the released control by its actual GET route; the production pinned read-cut invokes after-log then after-session as its only final pair. Pending case must never reach that GET.",
+        "Subscribe only to the existing read-cut-failed and driver-close-failed channels for this finite case, alongside existing Host close observations. Store finite observations and resolve test barriers; make all assertions outside producer callbacks. Unsubscribe and release both gates in fixture cleanup."
+      ],
+      "cases": [
+        {
+          "name": "original ModelProbe final read-cut cancellation after both admissions retains confirmed cleanup",
+          "schedule": [
+            "Reach both original final custody gates after the owned message pages.",
+            "Release first; await after-log HTTP arrival.",
+            "Release second; await after-session HTTP arrival. Keep both original responses unfinished.",
+            "Call the original parent AbortController.abort once.",
+            "Observe both original unfinished sockets close, and await the original probe run settlement.",
+            "Call original probe.close and inspect the existing cleanup result."
+          ],
+          "expected": [
+            "One native creation, one session, one prompt, two message pages and exactly the two original final custody calls.",
+            "Both original final HTTP admissions reached the peer before cancellation; no new request after cancellation.",
+            "No final native_read_cleanup_unknown or driver-close failure; close=true and one physical stop.",
+            "Run rejection retains the original parent cancellation identity after the handed input; no qualified failed native terminal/key-rejection proof.",
+            "Repeated close returns the same promise/result and creates no HTTP/custody work."
+          ],
+          "qualificationLimit": "This confirms controlled cancellation/cleanup only, not a real native process, model terminal or credential."
+        },
+        {
+          "name": "original ModelProbe final read-cut cancellation retains pending sibling admission UNKNOWN after its original release",
+          "schedule": [
+            "Reach both original final custody gates.",
+            "Release only first; await after-log HTTP arrival. Keep its response unfinished; second admission remains pending before password/native fetch.",
+            "Call original parent abort once; await original after-log disconnect and the existing read-cut failure record.",
+            "While second gate is still pending, require first stage after-log/transport_failure and final native_read_cleanup_unknown. Its original signal must have been aborted by the cut.",
+            "Immediately release that same pending custody promise from the recorded-failure barrier, before invoking Host close; await its return and original run settlement.",
+            "Call original probe.close, preserving original sticky UNKNOWN semantics."
+          ],
+          "expected": [
+            "Exactly one final HTTP request is admitted; second pending admission cannot read credentials or issue HTTP before or after its late original return.",
+            "Original read-cut first-failure shape is captured separately from final UNKNOWN; no synthetic failure object is injected.",
+            "The original pending promise eventually returns captured identity; no second admission, retry, newly captured source or fabricated release.",
+            "Host first close failure is driver-close/unconfirmed, not request-drain; provider close record is protocol-dispose/threw; cleanup=false.",
+            "One controlled physical stop does not upgrade provider I/O custody; repeated close stays same false promise and existing observations remain unchanged.",
+            "wasRejected=false and no model success/failed-terminal qualification."
+          ],
+          "qualificationLimit": "A successful reproduction establishes this controlled mechanism is possible. It does not identify the unrecorded native admission/fetch/body substage in job135829274828."
+        }
+      ],
+      "commonNegativeOracles": [
+        "Retain the existing max64 HTTP request cap, original 30s ModelProbe limits, 30s native-cut limit, 2s existing test barrier helper and original 5s Host drain; no fake timers or deadline changes.",
+        "Validate exact original prompt/session/cursor binding before arming final barriers; import/schema/route errors or an unreached barrier are fixture failures, never causal reproduction.",
+        "No extra model prompt, mutation, restart, HTTP replay, custody acquisition or fresh callback can satisfy a failed barrier.",
+        "Existing pending-custody-beyond-drain and unknown-physical-stop negatives remain unchanged and run in the one affected file.",
+        "Cleanup releases outstanding test gates, closes real loopback sockets, unsubscribes original diagnostics and removes only the fixture temporary root; no native process is started.",
+        "Failing observer/decoder or timeout does not count as reproduced native cause."
+      ],
+      "checksAfterApproval": {
+        "executionOrder": "No test/build/compiler before root R1 approval; coordinate memory with root, then one affected-file Vitest run and one narrow type/lint check. No Host build needed because fixture imports production source and existing pinned provider dist.",
+        "vitestArgv": [
+          "node",
+          "node_modules/vitest/vitest.mjs",
+          "run",
+          "test/features/agent-backend/hostOpenCodeV2ModelProbeLifecycle.test.ts",
+          "--maxWorkers=1"
+        ],
+        "typescript": {
+          "command": [
+            "node",
+            "node_modules/@typescript/native/bin/tsc",
+            "--project",
+            "<temporary-root-config>"
+          ],
+          "environment": {
+            "GOMEMLIMIT": "1536MiB",
+            "GOMAXPROCS": "2"
+          },
+          "config": {
+            "extends": "./test/features/agent-backend/tsconfig.json",
+            "files": [
+              "test/features/agent-backend/hostOpenCodeV2ModelProbeLifecycle.test.ts",
+              "test/types/better-sqlite3-node.d.ts",
+              "src/renderer/vite-env.d.ts",
+              "src/types/pica.d.ts",
+              "src/types/agent-teams-controller.d.ts"
+            ],
+            "include": []
+          },
+          "compilerOptionsOverridden": false
+        },
+        "lintArgv": [
+          "node",
+          "node_modules/eslint/bin/eslint.js",
+          "--config",
+          "eslint.fast.config.js",
+          "test/features/agent-backend/hostOpenCodeV2ModelProbeLifecycle.test.ts"
+        ],
+        "evidence": "Exact commands, exit statuses, assertions, original observed counters/diagnostic rows, logs and final file hashes saved under audit1192; any unexpected result remains explicit."
+      },
+      "stopConditions": [
+        "Any need for a production change or a new provider API returns to R1.",
+        "Any need to enlarge original caps/deadlines or change expected UNKNOWN semantics returns to R1.",
+        "Any source preimage mismatch is reported before edits."
+      ],
+      "confidence": {
+        "scheduleFeasibility": "high from actual pinned call order and existing finite HTTP/custody seam",
+        "nativeFirstCause": "unproven; controlled reproduction cannot upgrade attribution"
+      },
+      "actionsSoFar": {
+        "repositoryEdits": 0,
+        "tests": 0,
+        "builds": 0,
+        "nativeOrVendorExecutions": 0,
+        "ciQueries": 0,
+        "onlyWrite": "this scratch R1 plan"
+      }
+    }
+  },
+  "independentR1": {
+    "path": "linux-credentials-final-cut-regression-root-r1.json",
+    "bytes": 1894,
+    "sha256": "bc1be3cce11dea376b25c7383192472bdbd77fc6c15fe49c8a6d35d150ecef6e",
+    "record": {
+      "kind": "root-independent-R1-review",
+      "planSha256": "ecbd2d5edf8dfd281ab4882e47c1a9db46bf5ce2087cea8cc62cd7492bba80de",
+      "reviewer": "/root",
+      "author": "/root/delivery_review",
+      "at": "2026-11-19T20:53:14.262139+00:00",
+      "result": "PASS_FOR_CONTROLLED_CHARACTERIZATION_ONLY",
+      "approvedRepositoryPaths": [
+        "test/features/agent-backend/hostOpenCodeV2ModelProbeLifecycle.test.ts"
+      ],
+      "preimagesVerified": true,
+      "productionChangesAuthorized": false,
+      "conditions": [
+        "Use the existing pinned Node24.21.0 binary for exact local commands; do not start a native/vendor executable.",
+        "Retain both original final admissions, one prompt and same pending promise; native read-cut/transport/admission/fetch stay actual pinned production.",
+        "Do not claim RED or native root cause from a positive controlled reproduction. Unexpected result is evidence requiring analysis, never a weakened oracle.",
+        "New failure channel observers only resolve or record bounded facts; assertions stay outside producer callbacks. All pending test gates, subscriptions and sockets must settle in cleanup.",
+        "No root compiler/build currently running. One affected-file Vitest run then canonical inherited scoped TS7 and focused lint are allowed.",
+        "Root R2 remains required after implementation and result."
+      ],
+      "sourceReview": [
+        "Host beforeRequest reserves request lease before native custody and releases on the original thrown abort.",
+        "Pinned cut joins only the original after-log and after-session; first failure aborts the sibling and preserves any unresolved cleanup over the first failure.",
+        "Pinned admission marks pending late custody UNKNOWN; later original return cannot create HTTP admission after cancellation.",
+        "This preserves UNKNOWN and tests a concrete interoperation schedule, without claiming process absence can discharge I/O debt."
+      ]
+    }
+  },
+  "checks": {
+    "path": "linux-credentials-final-cut-regression-local-checks.json",
+    "bytes": 19816,
+    "sha256": "10c3298e735778f1e455335de32910d8f56564e38aac9c08a0f69b9e34f16f9e",
+    "record": {
+      "schemaVersion": 1,
+      "kind": "controlled-original-model-probe-final-cut-cancellation-local-checks",
+      "recordedAt": "2026-11-19T21:00:58.338029+00:00",
+      "owner": "/root/delivery_review",
+      "status": "PASS_CONTROLLED_CHARACTERIZATION_ONLY",
+      "rootFinalR2": "requested; not self-approved",
+      "baselineHead": "63927aecd95c814f66db23d7bd4aef6975110168",
+      "currentHead": "63927aecd95c814f66db23d7bd4aef6975110168",
+      "r1Plan": {
+        "path": "/workspace/scratch/f45fed8e9067/audit1192/linux-credentials-final-cut-regression-r1-plan.json",
+        "bytes": 15492,
+        "sha256": "ecbd2d5edf8dfd281ab4882e47c1a9db46bf5ce2087cea8cc62cd7492bba80de"
+      },
+      "rootR1": {
+        "path": "/workspace/scratch/f45fed8e9067/audit1192/linux-credentials-final-cut-regression-root-r1.json",
+        "bytes": 1894,
+        "sha256": "bc1be3cce11dea376b25c7383192472bdbd77fc6c15fe49c8a6d35d150ecef6e"
+      },
+      "onlyRepositoryEdit": "test/features/agent-backend/hostOpenCodeV2ModelProbeLifecycle.test.ts",
+      "postimage": {
+        "path": "test/features/agent-backend/hostOpenCodeV2ModelProbeLifecycle.test.ts",
+        "bytes": 41142,
+        "sha256": "e35a1e07890cf9e1735caa2a1551764082133bec18858a0a165309e0a9a8bc56",
+        "lines": 702
+      },
+      "preimage": {
+        "path": "test/features/agent-backend/hostOpenCodeV2ModelProbeLifecycle.test.ts",
+        "bytes": 31862,
+        "lines": 565,
+        "sha256": "6d8e0008c0ad6468f0810db68d88e40c9987b642de1b2d1ed6e8bb40cf6f9c8c"
+      },
+      "preRepeatClosePostimage": {
+        "path": "test/features/agent-backend/hostOpenCodeV2ModelProbeLifecycle.test.ts",
+        "sha256": "8a20a67fe0b6d99077f84b3bb9f3b2f4f3c077e5a1cde3035b561c517e27791c",
+        "bytes": 40968,
+        "lines": 700,
+        "r1PlanSha256": "ecbd2d5edf8dfd281ab4882e47c1a9db46bf5ce2087cea8cc62cd7492bba80de",
+        "rootR1Sha256": "bc1be3cce11dea376b25c7383192472bdbd77fc6c15fe49c8a6d35d150ecef6e"
+      },
+      "r2Delta": "Two lines snapshot f.counts()/cut.counts() before the repeated original close and assert both remain unchanged afterward. No changed existing expected outcome.",
+      "checks": [
+        {
+          "check": "full affected Vitest file",
+          "command": "/workspace/scratch/f45fed8e9067/audit1192/TEST-node-inputs/node/v24.21.0/linux-x64/node node_modules/vitest/vitest.mjs run test/features/agent-backend/hostOpenCodeV2ModelProbeLifecycle.test.ts --maxWorkers=1 > /workspace/scratch/f45fed8e9067/audit1192/linux-credentials-final-cut-regression-vitest.log 2>&1",
+          "cwd": "/workspace/scratch/f45fed8e9067/agent-teams-ai",
+          "exitCode": 0,
+          "passed": 23,
+          "failed": 0,
+          "skipped": 0,
+          "sourceSha256": "8a20a67fe0b6d99077f84b3bb9f3b2f4f3c077e5a1cde3035b561c517e27791c",
+          "log": {
+            "path": "/workspace/scratch/f45fed8e9067/audit1192/linux-credentials-final-cut-regression-vitest.log",
+            "bytes": 29298,
+            "sha256": "86d6e98b32882ff3f04e33e900d5e192da823f05abbe6656e34e14fe31432013"
+          }
+        },
+        {
+          "check": "two affected cases after final R2 delta",
+          "command": "/workspace/scratch/f45fed8e9067/audit1192/TEST-node-inputs/node/v24.21.0/linux-x64/node node_modules/vitest/vitest.mjs run test/features/agent-backend/hostOpenCodeV2ModelProbeLifecycle.test.ts --maxWorkers=1 -t 'original ModelProbe final read-cut cancellation' > /workspace/scratch/f45fed8e9067/audit1192/linux-credentials-final-cut-regression-repeat-close.log 2>&1",
+          "cwd": "/workspace/scratch/f45fed8e9067/agent-teams-ai",
+          "exitCode": 0,
+          "passed": 2,
+          "failed": 0,
+          "nonselected": 21,
+          "sourceSha256": "e35a1e07890cf9e1735caa2a1551764082133bec18858a0a165309e0a9a8bc56",
+          "log": {
+            "path": "/workspace/scratch/f45fed8e9067/audit1192/linux-credentials-final-cut-regression-repeat-close.log",
+            "bytes": 10619,
+            "sha256": "2b00dba3f5a77ef70c49edb0ad94bd517793869ca654cec25ccb48a4bb342617"
+          }
+        },
+        {
+          "check": "canonical inherited scoped TS7",
+          "command": "GOMEMLIMIT=1536MiB GOMAXPROCS=2 /workspace/scratch/f45fed8e9067/audit1192/TEST-node-inputs/node/v24.21.0/linux-x64/node node_modules/@typescript/native/bin/tsc --project tsconfig.linux-final-cut-scope.json > /workspace/scratch/f45fed8e9067/audit1192/linux-credentials-final-cut-regression-types.log 2>&1",
+          "cwd": "/workspace/scratch/f45fed8e9067/agent-teams-ai",
+          "exitCode": 0,
+          "sourceSha256": "e35a1e07890cf9e1735caa2a1551764082133bec18858a0a165309e0a9a8bc56",
+          "compilerOptionsOverridden": false,
+          "scopeConfig": {
+            "path": "/workspace/scratch/f45fed8e9067/audit1192/linux-credentials-final-cut-regression-tsconfig.json",
+            "bytes": 323,
+            "sha256": "151f0207e556020a75bbac51ef99fd6364537888ef04db2ec0360bce47c24e20"
+          },
+          "temporaryRootConfigRemoved": true,
+          "log": {
+            "path": "/workspace/scratch/f45fed8e9067/audit1192/linux-credentials-final-cut-regression-types.log",
+            "bytes": 0,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          }
+        },
+        {
+          "check": "focused fast lint",
+          "command": "/workspace/scratch/f45fed8e9067/audit1192/TEST-node-inputs/node/v24.21.0/linux-x64/node node_modules/eslint/bin/eslint.js --config eslint.fast.config.js test/features/agent-backend/hostOpenCodeV2ModelProbeLifecycle.test.ts > /workspace/scratch/f45fed8e9067/audit1192/linux-credentials-final-cut-regression-lint.log 2>&1",
+          "cwd": "/workspace/scratch/f45fed8e9067/agent-teams-ai",
+          "exitCode": 0,
+          "errors": 0,
+          "warnings": 0,
+          "sourceSha256": "e35a1e07890cf9e1735caa2a1551764082133bec18858a0a165309e0a9a8bc56",
+          "log": {
+            "path": "/workspace/scratch/f45fed8e9067/audit1192/linux-credentials-final-cut-regression-lint.log",
+            "bytes": 0,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          }
+        },
+        {
+          "check": "git diff --check",
+          "command": "git diff --check -- test/features/agent-backend/hostOpenCodeV2ModelProbeLifecycle.test.ts",
+          "cwd": "/workspace/scratch/f45fed8e9067/agent-teams-ai",
+          "exitCode": 0,
+          "log": {
+            "path": "/workspace/scratch/f45fed8e9067/audit1192/linux-credentials-final-cut-regression-diff-check.log",
+            "bytes": 0,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          }
+        }
+      ],
+      "node": {
+        "path": "/workspace/scratch/f45fed8e9067/audit1192/TEST-node-inputs/node/v24.21.0/linux-x64/node",
+        "bytes": 126595440,
+        "sha256": "7fde7b8afa198da66257f42ee2001d874c7355631e6d1579a5fb5ef1f246df4c"
+      },
+      "unchangedR1Inputs": [
+        {
+          "path": "packages/legacy-agent-host/src/adapters/providers/OpenCodeV2ModelProbe.ts",
+          "expectedSha256": "295bc0b8020a1f2a22145cb98497c0253d726ca75384b71a3552e95de57d05ee",
+          "sha256": "295bc0b8020a1f2a22145cb98497c0253d726ca75384b71a3552e95de57d05ee",
+          "matches": true
+        },
+        {
+          "path": "packages/legacy-agent-host/src/adapters/providers/OpenCodeV2CredentialOperation.ts",
+          "expectedSha256": "9de31be2a9cd399ab644c2d16649ec0f000561dab105490dc86267a55291c067",
+          "sha256": "9de31be2a9cd399ab644c2d16649ec0f000561dab105490dc86267a55291c067",
+          "matches": true
+        },
+        {
+          "path": "packages/legacy-agent-host/src/adapters/providers/OpenCodeV2EmbeddedServer.ts",
+          "expectedSha256": "c187afaccb488b648d6a525fa56212bcc2f684733030ccbe6dce402599fde229",
+          "sha256": "c187afaccb488b648d6a525fa56212bcc2f684733030ccbe6dce402599fde229",
+          "matches": true
+        },
+        {
+          "path": "vendor/provider-migration/captured-config-b19494fd/agent-teams-provider-implementations-0.0.0.tgz",
+          "expectedSha256": "ad05bd8c799c4d2c366a6eab72f937466355a5994eac6bd201ee754217cf5aa7",
+          "sha256": "ad05bd8c799c4d2c366a6eab72f937466355a5994eac6bd201ee754217cf5aa7",
+          "matches": true
+        },
+        {
+          "path": "vitest.config.ts",
+          "expectedSha256": "877867b6b52de7919946cc62501a18eb39e78d689d10128011151cf83cd2edbc",
+          "sha256": "877867b6b52de7919946cc62501a18eb39e78d689d10128011151cf83cd2edbc",
+          "matches": true
+        },
+        {
+          "path": "test/features/agent-backend/tsconfig.json",
+          "expectedSha256": "4b6372a0f31b366a07f02aa7e70d106dcc98d3cacdbad9c57bb4856a88b74f79",
+          "sha256": "4b6372a0f31b366a07f02aa7e70d106dcc98d3cacdbad9c57bb4856a88b74f79",
+          "matches": true
+        },
+        {
+          "path": "tsconfig.json",
+          "expectedSha256": "43729cf95a74178589329b25cdcecbcccf43e55e23a547d21b7df8fede77948a",
+          "sha256": "43729cf95a74178589329b25cdcecbcccf43e55e23a547d21b7df8fede77948a",
+          "matches": true
+        },
+        {
+          "path": "eslint.fast.config.js",
+          "expectedSha256": "bf8a72be9244d217ad2e5687bfda735642592430924307bd9ba94666487f1335",
+          "sha256": "bf8a72be9244d217ad2e5687bfda735642592430924307bd9ba94666487f1335",
+          "matches": true
+        },
+        {
+          "path": "packages/legacy-agent-host/node_modules/@agent-teams/provider-implementations/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-native-cut.js",
+          "expectedSha256": "0b6217054f013185a7e4c4330ced3ed8f4f2d9b9b964cbeb51b00d3727d35058",
+          "sha256": "0b6217054f013185a7e4c4330ced3ed8f4f2d9b9b964cbeb51b00d3727d35058",
+          "matches": true
+        },
+        {
+          "path": "packages/legacy-agent-host/node_modules/@agent-teams/provider-implementations/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-driver-native.js",
+          "expectedSha256": "a348ae31bafe45292aa3133f98a8bd6d2a3cc8bc60d5ffd000a51f89e494fb44",
+          "sha256": "a348ae31bafe45292aa3133f98a8bd6d2a3cc8bc60d5ffd000a51f89e494fb44",
+          "matches": true
+        },
+        {
+          "path": "packages/legacy-agent-host/node_modules/@agent-teams/provider-implementations/dist/features/provider-session-implementation/adapters/opencode-protocol/driver-session.js",
+          "expectedSha256": "c262a80688541760dfdc95e015f9e4c9576fdb2d389bd9607f0a5770e97a8e67",
+          "sha256": "c262a80688541760dfdc95e015f9e4c9576fdb2d389bd9607f0a5770e97a8e67",
+          "matches": true
+        },
+        {
+          "path": "packages/legacy-agent-host/node_modules/@agent-teams/provider-implementations/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-execution-transport.js",
+          "expectedSha256": "1a4c82ddbd641c2fd3f0e004ccd2e08efbab6340e475ffa5f2dc2a66c9809c2e",
+          "sha256": "1a4c82ddbd641c2fd3f0e004ccd2e08efbab6340e475ffa5f2dc2a66c9809c2e",
+          "matches": true
+        },
+        {
+          "path": "packages/legacy-agent-host/node_modules/@agent-teams/provider-implementations/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-request-admission.js",
+          "expectedSha256": "0032b2b343bbedbf6a6405a1d4a0700fb52cc7e9f5b694c97892277e44e1fbdb",
+          "sha256": "0032b2b343bbedbf6a6405a1d4a0700fb52cc7e9f5b694c97892277e44e1fbdb",
+          "matches": true
+        },
+        {
+          "path": "packages/legacy-agent-host/node_modules/@agent-teams/provider-implementations/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-bounded-await.js",
+          "expectedSha256": "13e7088437799b4f424a3c3db91ea545266399694652a0b64784c5bdb89be506",
+          "sha256": "13e7088437799b4f424a3c3db91ea545266399694652a0b64784c5bdb89be506",
+          "matches": true
+        },
+        {
+          "path": "packages/legacy-agent-host/node_modules/@agent-teams/provider-implementations/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-driver-backend.js",
+          "expectedSha256": "08ac2e50660d6cde38c3068ee5f299cf2197091782ab88b76e8a05bffe933fc3",
+          "sha256": "08ac2e50660d6cde38c3068ee5f299cf2197091782ab88b76e8a05bffe933fc3",
+          "matches": true
+        },
+        {
+          "path": "packages/legacy-agent-host/node_modules/@agent-teams/provider-implementations/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-cut-codecs.js",
+          "expectedSha256": "04ced155d0862bfcc34c8b2a1a4782f954c1246056b0584dc9cd01060ab06eb2",
+          "sha256": "04ced155d0862bfcc34c8b2a1a4782f954c1246056b0584dc9cd01060ab06eb2",
+          "matches": true
+        },
+        {
+          "path": "packages/legacy-agent-host/node_modules/@agent-teams/provider-implementations/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-input-validation.js",
+          "expectedSha256": "7b02184f6801114460848f4d5e138278fa34036a7b1e5a2611050c0b84ceee77",
+          "sha256": "7b02184f6801114460848f4d5e138278fa34036a7b1e5a2611050c0b84ceee77",
+          "matches": true
+        }
+      ],
+      "inputMismatches": [],
+      "observations": {
+        "full": [
+          {
+            "sibling": "admitted",
+            "cleanup": true,
+            "counts": {
+              "requests": 22,
+              "passwordReads": 22,
+              "physicalStops": 1,
+              "nativeCreations": 1,
+              "logReads": 3,
+              "promptPosts": 1,
+              "custodyHeld": false,
+              "sessionCreates": 1
+            },
+            "cut": {
+              "messageReads": 2,
+              "finalCustodyCalls": 2,
+              "finalCustodyReturns": 2,
+              "finalRequests": [
+                1,
+                1
+              ],
+              "unfinishedClosed": [
+                true,
+                true
+              ],
+              "cutFailureCount": 1,
+              "driverFailureCount": 0
+            },
+            "readCut": [
+              {
+                "stage": "after-log",
+                "reason": "transport_failure",
+                "elapsedMs": 34,
+                "deadlineExpired": false,
+                "aborted": false,
+                "finalReason": "invalid_native_read_response"
+              }
+            ],
+            "driverClose": [],
+            "hostClose": []
+          },
+          {
+            "sibling": "pending",
+            "cleanup": false,
+            "counts": {
+              "requests": 21,
+              "passwordReads": 21,
+              "physicalStops": 1,
+              "nativeCreations": 1,
+              "logReads": 3,
+              "promptPosts": 1,
+              "custodyHeld": false,
+              "sessionCreates": 1
+            },
+            "cut": {
+              "messageReads": 2,
+              "finalCustodyCalls": 2,
+              "finalCustodyReturns": 2,
+              "finalRequests": [
+                1,
+                0
+              ],
+              "unfinishedClosed": [
+                true,
+                false
+              ],
+              "cutFailureCount": 1,
+              "driverFailureCount": 1
+            },
+            "readCut": [
+              {
+                "stage": "after-log",
+                "reason": "transport_failure",
+                "elapsedMs": 24,
+                "deadlineExpired": false,
+                "aborted": false,
+                "finalReason": "native_read_cleanup_unknown"
+              }
+            ],
+            "driverClose": [
+              {
+                "stage": "protocol-dispose",
+                "outcome": "threw",
+                "trustedBinding": "4b307a9d2e3c5e7d8cf2c2af0c9b0bcac49feff33a82f47bf9d17de31436905d"
+              }
+            ],
+            "hostClose": [
+              {
+                "probeDigest": "4b307a9d2e3c5e7d8cf2c2af0c9b0bcac49feff33a82f47bf9d17de31436905d",
+                "runState": "threw",
+                "outcome": "unobserved",
+                "errorClass": "unknown",
+                "stage": "driver-close",
+                "reason": "unconfirmed",
+                "runErrorCode": null,
+                "runCauseCode": null
+              }
+            ]
+          }
+        ],
+        "affected": [
+          {
+            "sibling": "admitted",
+            "cleanup": true,
+            "counts": {
+              "requests": 22,
+              "passwordReads": 22,
+              "physicalStops": 1,
+              "nativeCreations": 1,
+              "logReads": 3,
+              "promptPosts": 1,
+              "custodyHeld": false,
+              "sessionCreates": 1
+            },
+            "cut": {
+              "messageReads": 2,
+              "finalCustodyCalls": 2,
+              "finalCustodyReturns": 2,
+              "finalRequests": [
+                1,
+                1
+              ],
+              "unfinishedClosed": [
+                true,
+                true
+              ],
+              "cutFailureCount": 1,
+              "driverFailureCount": 0
+            },
+            "readCut": [
+              {
+                "stage": "after-log",
+                "reason": "transport_failure",
+                "elapsedMs": 44,
+                "deadlineExpired": false,
+                "aborted": false,
+                "finalReason": "invalid_native_read_response"
+              }
+            ],
+            "driverClose": [],
+            "hostClose": []
+          },
+          {
+            "sibling": "pending",
+            "cleanup": false,
+            "counts": {
+              "requests": 21,
+              "passwordReads": 21,
+              "physicalStops": 1,
+              "nativeCreations": 1,
+              "logReads": 3,
+              "promptPosts": 1,
+              "custodyHeld": false,
+              "sessionCreates": 1
+            },
+            "cut": {
+              "messageReads": 2,
+              "finalCustodyCalls": 2,
+              "finalCustodyReturns": 2,
+              "finalRequests": [
+                1,
+                0
+              ],
+              "unfinishedClosed": [
+                true,
+                false
+              ],
+              "cutFailureCount": 1,
+              "driverFailureCount": 1
+            },
+            "readCut": [
+              {
+                "stage": "after-log",
+                "reason": "transport_failure",
+                "elapsedMs": 21,
+                "deadlineExpired": false,
+                "aborted": false,
+                "finalReason": "native_read_cleanup_unknown"
+              }
+            ],
+            "driverClose": [
+              {
+                "stage": "protocol-dispose",
+                "outcome": "threw",
+                "trustedBinding": "7c5bf94c51a292252aedf1fad7069fed0e51b057270c4bc598d2e3d151c04d27"
+              }
+            ],
+            "hostClose": [
+              {
+                "probeDigest": "7c5bf94c51a292252aedf1fad7069fed0e51b057270c4bc598d2e3d151c04d27",
+                "runState": "threw",
+                "outcome": "unobserved",
+                "errorClass": "unknown",
+                "stage": "driver-close",
+                "reason": "unconfirmed",
+                "runErrorCode": null,
+                "runCauseCode": null
+              }
+            ]
+          }
+        ]
+      },
+      "interpretation": [
+        "Both admitted original final HTTP requests cancel and retain cleanup=true in the finite controlled peer.",
+        "Pending original sibling custody at cancellation produces the actual pinned provider native_read_cleanup_unknown and protocol-dispose/threw; after the SAME pending promise returns, Host records driver-close/unconfirmed and close=false.",
+        "Repeated original close preserves every HTTP/password/native creation/physical stop/final custody/request/failure counter and all diagnostic observations.",
+        "Exactly one original prompt and session, two message pages and two final custody admissions; no new requests after cancellation, no retries, no native/vendor process.",
+        "All assertions remain outside diagnostic subscribers. Fixture cleanup releases the same gates, closes real sockets, unsubscribes, and removes its original temporary directory."
+      ],
+      "limits": [
+        "Positive controlled characterization only: not a production fix, not RED, not proof of the unrecorded native job admission/fetch/body first cause.",
+        "Native creation/custody and peer responses are controlled; ModelProbe, pinned driver/read-cut/admission/transport, global fetch and cleanup are actual.",
+        "No production source, vendor archive, native actions, CI query/download, Host build, deadlines, original caps or UNKNOWN semantics changed.",
+        "Original 23/23 run predates only the final two repeated-close snapshot/assertion lines; final source has affected2/2 plus scoped types/lint."
+      ],
+      "patch": {
+        "path": "/workspace/scratch/f45fed8e9067/audit1192/linux-credentials-final-cut-regression.patch",
+        "bytes": 15834,
+        "sha256": "afeb3f6f0865a71e4876d70ce6cf64476f97b171885e6b07540932a7b80c1fcc"
+      },
+      "postimageCopy": {
+        "path": "/workspace/scratch/f45fed8e9067/audit1192/linux-credentials-final-cut-regression.postimage.ts",
+        "bytes": 41142,
+        "sha256": "e35a1e07890cf9e1735caa2a1551764082133bec18858a0a165309e0a9a8bc56"
+      },
+      "worktreeStatus": " M test/features/agent-backend/hostOpenCodeV2ModelProbeLifecycle.test.ts\n"
+    }
+  },
+  "independentR2": {
+    "path": "linux-credentials-final-cut-regression-root-r2.json",
+    "bytes": 2652,
+    "sha256": "2cba464f461767b795bd2a32f0ff6d7233e34cbcb941abe637f5256af787620c",
+    "record": {
+      "schemaVersion": 1,
+      "kind": "root-independent-R2-original-model-probe-final-cut-characterization",
+      "reviewer": "/root",
+      "author": "/root/delivery_review",
+      "recordedAt": "2026-11-19T21:02:26.853570+00:00",
+      "result": "PASS_CONTROLLED_CHARACTERIZATION_ONLY",
+      "sourceBase": "63927aecd95c814f66db23d7bd4aef6975110168",
+      "postimage": {
+        "path": "test/features/agent-backend/hostOpenCodeV2ModelProbeLifecycle.test.ts",
+        "bytes": 41142,
+        "sha256": "e35a1e07890cf9e1735caa2a1551764082133bec18858a0a165309e0a9a8bc56",
+        "lines": 702
+      },
+      "localChecksSha256": "10c3298e735778f1e455335de32910d8f56564e38aac9c08a0f69b9e34f16f9e",
+      "findings": [],
+      "resolvedFinding": "Repeated close originally lacked after-repeat HTTP/password/custody counter equality. Two final snapshot/assertion lines close it, with final affected2/2 and single TS7/lint pass.",
+      "reviewed": [
+        "Real original prompt/session/pages reach actual parallel pinned read-cut; final gate arming and exact counters reject additional admissions or requests.",
+        "Control has both original HTTP requests admitted before abort and confirmed cleanup. Pending case holds original second custody promise until actual provider failure then releases the same promise.",
+        "Diagnostic subscribers record bounded facts and resolve barriers without assertions or synthetic errors. Source assertions remain outside them.",
+        "Final driver and Host close observations preserve UNKNOWN; process absence and late original return cannot upgrade an already unknown cut.",
+        "All original non-final-cut fixture branches preserve prior assertions and actions. Cleanup releases gates and closes only the fixture server/connections/root.",
+        "Full23/23 predates exactly the two reviewed repeated-close lines; affected2/2, canonical inherited TS7 and focused lint qualify the final file.",
+        "All17 R1 source/provider/config bytes and native spawn tripwire preserved. No production, real CLI, GUI, CI or original native acceptance is claimed."
+      ],
+      "limits": [
+        "Positive controlled characterization only: not a production fix, not RED, not proof of the unrecorded native job admission/fetch/body first cause.",
+        "Native creation/custody and peer responses are controlled; ModelProbe, pinned driver/read-cut/admission/transport, global fetch and cleanup are actual.",
+        "No production source, vendor archive, native actions, CI query/download, Host build, deadlines, original caps or UNKNOWN semantics changed.",
+        "Original 23/23 run predates only the final two repeated-close snapshot/assertion lines; final source has affected2/2 plus scoped types/lint."
+      ]
+    }
+  },
+  "limit": "Controlled mechanism is established; original native first cause and a production fix are not established. UNKNOWN is preserved.",
+  "cooperativeFollowup": {
+    "plan": {
+      "path": "linux-credentials-cooperative-cut-r1-plan.json",
+      "bytes": 13104,
+      "sha256": "2f2f8ff2d5f897d53f5f6521b87891a5fa790509ac073fd79f4b2aabd83c2b53",
+      "record": {
+        "schemaVersion": 1,
+        "kind": "R1-original-model-probe-final-cut-cooperative-custody-cancellation",
+        "status": "AWAITING_ROOT_R1_REVIEW_NO_IMPLEMENTATION",
+        "recordedAt": "2026-11-19T21:04:58.412323+00:00",
+        "owner": "/root/delivery_review",
+        "question": "Does cancelling the same original final after-session admission retain cleanup_unknown even when its original custody promise is settled synchronously by its own existing abort event, without waiting for a failure observer?",
+        "priorControlledEvidence": {
+          "localChecks": {
+            "path": "/workspace/scratch/f45fed8e9067/audit1192/linux-credentials-final-cut-regression-local-checks.json",
+            "sha256": "10c3298e735778f1e455335de32910d8f56564e38aac9c08a0f69b9e34f16f9e",
+            "bytes": 19816
+          },
+          "rootR2": {
+            "path": "/workspace/scratch/f45fed8e9067/audit1192/linux-credentials-final-cut-regression-root-r2.json",
+            "sha256": "2cba464f461767b795bd2a32f0ff6d7233e34cbcb941abe637f5256af787620c",
+            "bytes": 2652
+          },
+          "result": "Two controlled schedules passed: both admitted -> clean, deliberately held sibling -> sticky UNKNOWN. The second did not prove behavior for cooperative cancellation."
+        },
+        "scope": {
+          "onlyEditableRepositoryPath": "test/features/agent-backend/hostOpenCodeV2ModelProbeLifecycle.test.ts",
+          "testPreimage": {
+            "path": "test/features/agent-backend/hostOpenCodeV2ModelProbeLifecycle.test.ts",
+            "sha256": "e35a1e07890cf9e1735caa2a1551764082133bec18858a0a165309e0a9a8bc56",
+            "bytes": 41142,
+            "lines": 702
+          },
+          "newTests": 1,
+          "estimatedNetAdditionalLines": [
+            25,
+            55
+          ],
+          "productionChanges": false,
+          "providerChanges": false,
+          "newModule": false,
+          "nativeOrVendorInvocation": false
+        },
+        "sourcePreimages": [
+          {
+            "path": "packages/legacy-agent-host/src/adapters/providers/OpenCodeV2ModelProbe.ts",
+            "sha256": "295bc0b8020a1f2a22145cb98497c0253d726ca75384b71a3552e95de57d05ee",
+            "bytes": 24202,
+            "matchesPriorControlledInput": true
+          },
+          {
+            "path": "packages/legacy-agent-host/node_modules/@agent-teams/provider-implementations/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-request-admission.js",
+            "sha256": "0032b2b343bbedbf6a6405a1d4a0700fb52cc7e9f5b694c97892277e44e1fbdb",
+            "bytes": 2030,
+            "matchesPriorControlledInput": true
+          },
+          {
+            "path": "packages/legacy-agent-host/node_modules/@agent-teams/provider-implementations/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-bounded-await.js",
+            "sha256": "13e7088437799b4f424a3c3db91ea545266399694652a0b64784c5bdb89be506",
+            "bytes": 739,
+            "matchesPriorControlledInput": true
+          },
+          {
+            "path": "packages/legacy-agent-host/node_modules/@agent-teams/provider-implementations/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-execution-transport.js",
+            "sha256": "1a4c82ddbd641c2fd3f0e004ccd2e08efbab6340e475ffa5f2dc2a66c9809c2e",
+            "bytes": 20239,
+            "matchesPriorControlledInput": true
+          },
+          {
+            "path": "packages/legacy-agent-host/node_modules/@agent-teams/provider-implementations/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-native-cut.js",
+            "sha256": "0b6217054f013185a7e4c4330ced3ed8f4f2d9b9b964cbeb51b00d3727d35058",
+            "bytes": 18831,
+            "matchesPriorControlledInput": true
+          },
+          {
+            "path": "packages/legacy-agent-host/node_modules/@agent-teams/provider-implementations/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-driver-native.js",
+            "sha256": "a348ae31bafe45292aa3133f98a8bd6d2a3cc8bc60d5ffd000a51f89e494fb44",
+            "bytes": 12918,
+            "matchesPriorControlledInput": true
+          },
+          {
+            "path": "packages/legacy-agent-host/node_modules/@agent-teams/provider-implementations/dist/features/provider-session-implementation/adapters/opencode-protocol/driver-session.js",
+            "sha256": "c262a80688541760dfdc95e015f9e4c9576fdb2d389bd9607f0a5770e97a8e67",
+            "bytes": 18264,
+            "matchesPriorControlledInput": true
+          }
+        ],
+        "sourceReasoning": [
+          {
+            "source": "packages/legacy-agent-host/node_modules/@agent-teams/provider-implementations/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-request-admission.js",
+            "finding": "acquire sets pending=true, constructs tracked original beforeRequest promise, then calls boundV2Request immediately. beforeRequest is invoked from Promise.resolve().then, so the bounded abort subscription already exists before the controlled custody callback is entered."
+          },
+          {
+            "source": "packages/legacy-agent-host/node_modules/@agent-teams/provider-implementations/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-request-admission.js",
+            "finding": "pending is cleared only in the terminal then of that original work. Its abort catch emits typed ExecutionTransportFailure(cleanup_unknown,unknown) if pending remains true at that instant. It does not join the original admission before choosing that outcome."
+          },
+          {
+            "source": "packages/legacy-agent-host/src/adapters/providers/OpenCodeV2ModelProbe.ts",
+            "finding": "beforeRequest reserves its request lease before awaiting native custody. On cancellation observed after the same custody returns, assertCurrent throws and the original catch releases that same lease synchronously before rejecting."
+          },
+          {
+            "source": "packages/legacy-agent-host/node_modules/@agent-teams/provider-implementations/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-native-cut.js",
+            "finding": "Final after-log and after-session are the only parallel reads; first rejection aborts their original cut. Typed cleanup_unknown is translated to native_read_cleanup_unknown and preferred when final results join. Later return does not replace that original result."
+          },
+          {
+            "source": "packages/legacy-agent-host/node_modules/@agent-teams/provider-implementations/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-driver-native.js",
+            "finding": "The same driver lifetime retains read-cut UNKNOWN and refuses confirmed dispose. Host close separately drains original request leases before the actual driver close, so an original driver-close first-failure is distinct from unresolved Host request drainage."
+          }
+        ],
+        "hypothesis": {
+          "expected": "The cooperative callback can settle immediately on its original abort yet typed UNKNOWN can already be selected while the original promise chain is still pending. Expected final cut UNKNOWN/driver-close unconfirmed; not yet run or established.",
+          "confidence": "High on exact source ordering; outcome under the real pinned asynchronous call chain remains the test question.",
+          "notClaimed": [
+            "A production bug or native job135829274828 cause.",
+            "That passing AbortSignal into fs.readFile alone would prevent this latch.",
+            "That a test custody-return marker is itself proof of the private Host lease being released at the admission catch instant."
+          ]
+        },
+        "minimalFixturePlan": [
+          "Reuse final-cut mode and extend only the existing two-case parameter table with one abort-responsive variant; existing admitted/pending schedules and exact expected outcomes remain.",
+          "After both original final custody admissions are entered, release only the first original gate and await its actual after-log HTTP as before.",
+          "For the new variant only, attach one once abort listener to the already-captured second original custody signal. Its entire mutating action is to resolve that SAME existing second gate immediately, with a bounded response counter. No timer, delay, fresh promise, retry, replacement callback, or failure-observer dependency.",
+          "Observe the existing second finalReturned promise and existing read-cut failure channel with bounded local event/snapshot records. These callbacks contain no assertions, release, abort, retry or other production action. No second observer is required if equivalent finite snapshots can be added to the existing subscriber without changing its behavior.",
+          "All assertions remain in the test body. Remove the added listener/subscriber in finally even if a barrier fails; existing fixture dispose still releases original outstanding gates, closes real sockets and unsubscribes. Never wait for a failure callback to release the cooperative gate."
+        ],
+        "schedule": [
+          "Require exactly two original custody calls and neither completed; signals not aborted, one session and one prompt.",
+          "Release first and await after-log HTTP. Arm only second signal-responsive release and finite observations before the parent abort.",
+          "Abort the original parent once. Await original after-log disconnect and original second custody-return marker, then existing cut failure/run settlement using the unchanged helper bound.",
+          "Require one abort-response invocation, original second signal aborted, original two custody calls both returned, and second HTTP never entered. No manual release of gate1 appears in this variant nominal path.",
+          "Compare captured event order/return-count-at-cut-failure to establish whether the controlled custody callback responded before the final cut diagnostic. Do not equate that marker with the private Host release at the earlier admission-catch instant.",
+          "Check the source-derived predicted final native_read_cleanup_unknown, first after-log transport failure, actual protocol-dispose/threw, original parent run-rejection identity and Host first-close driver-close/unconfirmed. The actual Host close drain must not report request-drain.",
+          "Verify no additional HTTP/password requests, one original physical stop, no rejection/terminal/model qualification. Repeated close keeps the same promise/result, every f.counts()/cut.counts() value and all diagnostics unchanged.",
+          "Always cleanup the same original gates, added subscriptions/listener and real sockets; no native process is invoked."
+        ],
+        "requiredOracles": [
+          "Original prompt/session/message/cursor bindings and max64 HTTP cap unchanged; exactly two final admissions and finalRequests [1,0].",
+          "The listener responds synchronously to its OWN original signal without an await or a test-driven postfailure release.",
+          "Late callback completion cannot issue the second HTTP request or read another password.",
+          "Real ModelProbe request drain is observed by driver-close being the first Host close failure. This confirms release before driver close, not a claim of release before admission-catch classification.",
+          "Keep original parent error identity, no replacement source, unchanged UNKNOWN semantics and cached close identity.",
+          "Failure observer never releases a gate and no new production observer, lease, authority API or timer is introduced."
+        ],
+        "interpretationLimits": [
+          "The third schedule distinguishes deliberate noncooperation from a callback that responds immediately to its original abort. It is controlled characterization, not a production repair.",
+          "Actual private lease release at the precise moment the admission pending flag is sampled is not publicly observable without additional producer instrumentation. We will report event/Host-drain evidence at its real boundary.",
+          "If cleanup is confirmed, if final UNKNOWN differs, or if promised event order is not observed, preserve the result and return to R1; do not change the oracle to make the run pass.",
+          "No millisecond cleanup guarantee or native first-cause attribution follows from this finite loopback schedule."
+        ],
+        "checksAfterApproval": {
+          "execution": "No edits or runs until root R1. After approval, one focused three-schedule Vitest invocation (same existing final-cut name filter) on pinned Node24.21.0; old full23 PASS remains historical. Focused lint and narrow canonical inherited TS7 only once, sequenced with the frontend author compiler by root.",
+          "vitestArgv": [
+            "/workspace/scratch/f45fed8e9067/audit1192/TEST-node-inputs/node/v24.21.0/linux-x64/node",
+            "node_modules/vitest/vitest.mjs",
+            "run",
+            "test/features/agent-backend/hostOpenCodeV2ModelProbeLifecycle.test.ts",
+            "--maxWorkers=1",
+            "-t",
+            "original ModelProbe final read-cut cancellation"
+          ],
+          "noBuild": true,
+          "noNative": true,
+          "noCI": true,
+          "noFullSuiteRepeat": true,
+          "typescript": "Same approved canonical inherited test/features/agent-backend/tsconfig.json with target+required ambient files only, no compilerOptions override; GOMEMLIMIT1536MiB/GOMAXPROCS2.",
+          "lintInput": "Capture the current approved eslint.fast.config.js postimage at actual run; sibling frontend work may add its reviewed shell boundary. Prior lint evidence remains tied to historical config bytes."
+        },
+        "actionsSoFar": {
+          "sourceEdits": 0,
+          "testEdits": 0,
+          "tests": 0,
+          "nativeActions": 0,
+          "ciQueries": 0,
+          "onlyWrite": "this scratch R1 plan"
+        }
+      }
+    },
+    "independentR1": {
+      "path": "linux-credentials-cooperative-cut-root-r1.json",
+      "bytes": 1582,
+      "sha256": "7bf84ca9210318f5216ea06b5f64af02293872703b7489ad4914542fbb8866ef",
+      "record": {
+        "kind": "root-independent-R1-cooperative-original-cut-characterization",
+        "recordedAt": "2026-11-19T21:05:58.388185+00:00",
+        "planSha256": "2f2f8ff2d5f897d53f5f6521b87891a5fa790509ac073fd79f4b2aabd83c2b53",
+        "reviewer": "/root",
+        "author": "/root/delivery_review",
+        "result": "PASS_FOR_ONE_CONTROLLED_SCHEDULE",
+        "editablePaths": [
+          "test/features/agent-backend/hostOpenCodeV2ModelProbeLifecycle.test.ts"
+        ],
+        "preimagesVerified": true,
+        "productionChangesAuthorized": false,
+        "conditions": [
+          "The existing original second gate alone is resolved from its own captured abort signal, synchronously and once. No replacement promise, model request, timeout or failure-dependent release.",
+          "Keep actual provider/driver/cut/global fetch and existing negative oracles. If observed outcome refutes the predicted UNKNOWN or ordering, retain that result and analyze; do not silently alter the oracle.",
+          "Record bounded event order and actual Host drain evidence without claiming an internal lease release instant that was not observed.",
+          "One focused three-schedule run, then one inherited scoped TS7 and focused lint. Coordinate the compiler with root; no full23 repeat or Host/native build.",
+          "Final independent R2 is required; prior e35a1e results remain tied to their exact bytes."
+        ],
+        "sourceFinding": "The existing admission pending flag is sampled in a bounded-abort catch before full promise-chain settlement. A cooperative release schedule is necessary to distinguish deliberate withheld custody from prompt original cancellation response."
+      }
+    },
+    "checks": {
+      "path": "linux-credentials-cooperative-cut-local-checks.json",
+      "bytes": 16931,
+      "sha256": "d744fd071d4a9ddb0e89faccbdc47e7bb5627fbb54399f8ae85d06fbf8ab0f36",
+      "record": {
+        "schemaVersion": 1,
+        "kind": "controlled-original-custody-cooperative-cancellation-local-checks",
+        "recordedAt": "2026-11-19T21:08:50.861956+00:00",
+        "owner": "/root/delivery_review",
+        "status": "PASS_CONTROLLED_CHARACTERIZATION_ONLY",
+        "rootFinalR2": "requested; not self-approved",
+        "onlyAuthorRepositoryEdit": "test/features/agent-backend/hostOpenCodeV2ModelProbeLifecycle.test.ts",
+        "preimage": {
+          "path": "test/features/agent-backend/hostOpenCodeV2ModelProbeLifecycle.test.ts",
+          "sha256": "e35a1e07890cf9e1735caa2a1551764082133bec18858a0a165309e0a9a8bc56",
+          "bytes": 41142,
+          "lines": 702
+        },
+        "postimage": {
+          "path": "test/features/agent-backend/hostOpenCodeV2ModelProbeLifecycle.test.ts",
+          "bytes": 43062,
+          "sha256": "eac52e13a12e00337f9c03bb541b812e037757ffe1d855abeb698bcd8797b95d",
+          "lines": 732
+        },
+        "r1": {
+          "path": "/workspace/scratch/f45fed8e9067/audit1192/linux-credentials-cooperative-cut-r1-plan.json",
+          "bytes": 13104,
+          "sha256": "2f2f8ff2d5f897d53f5f6521b87891a5fa790509ac073fd79f4b2aabd83c2b53"
+        },
+        "rootR1": {
+          "path": "/workspace/scratch/f45fed8e9067/audit1192/linux-credentials-cooperative-cut-root-r1.json",
+          "bytes": 1582,
+          "sha256": "7bf84ca9210318f5216ea06b5f64af02293872703b7489ad4914542fbb8866ef"
+        },
+        "previousTwoScheduleChecks": {
+          "path": "/workspace/scratch/f45fed8e9067/audit1192/linux-credentials-final-cut-regression-local-checks.json",
+          "bytes": 19816,
+          "sha256": "10c3298e735778f1e455335de32910d8f56564e38aac9c08a0f69b9e34f16f9e"
+        },
+        "previousTwoScheduleRootR2": {
+          "path": "/workspace/scratch/f45fed8e9067/audit1192/linux-credentials-final-cut-regression-root-r2.json",
+          "bytes": 2652,
+          "sha256": "2cba464f461767b795bd2a32f0ff6d7233e34cbcb941abe637f5256af787620c"
+        },
+        "checks": [
+          {
+            "name": "focused original final-cut schedules",
+            "command": "/workspace/scratch/f45fed8e9067/audit1192/TEST-node-inputs/node/v24.21.0/linux-x64/node node_modules/vitest/vitest.mjs run test/features/agent-backend/hostOpenCodeV2ModelProbeLifecycle.test.ts --maxWorkers=1 -t 'original ModelProbe final read-cut cancellation' > /workspace/scratch/f45fed8e9067/audit1192/linux-credentials-cooperative-cut-vitest.log 2>&1",
+            "cwd": "/workspace/scratch/f45fed8e9067/agent-teams-ai",
+            "exitCode": 0,
+            "passed": 3,
+            "failed": 0,
+            "nonselected": 21,
+            "sourceSha256": "eac52e13a12e00337f9c03bb541b812e037757ffe1d855abeb698bcd8797b95d",
+            "log": {
+              "path": "/workspace/scratch/f45fed8e9067/audit1192/linux-credentials-cooperative-cut-vitest.log",
+              "bytes": 16261,
+              "sha256": "120b90dc69168ae413e87097284adedb2a247c2c3b04f703089c876d3c5fb317"
+            }
+          },
+          {
+            "name": "canonical inherited scoped TS7",
+            "command": "GOMEMLIMIT=1536MiB GOMAXPROCS=2 /workspace/scratch/f45fed8e9067/audit1192/TEST-node-inputs/node/v24.21.0/linux-x64/node node_modules/@typescript/native/bin/tsc --project tsconfig.linux-cooperative-cut-scope.json > /workspace/scratch/f45fed8e9067/audit1192/linux-credentials-cooperative-cut-types.log 2>&1",
+            "cwd": "/workspace/scratch/f45fed8e9067/agent-teams-ai",
+            "exitCode": 0,
+            "sourceSha256": "eac52e13a12e00337f9c03bb541b812e037757ffe1d855abeb698bcd8797b95d",
+            "compilerOptionsOverridden": false,
+            "scopeConfig": {
+              "path": "/workspace/scratch/f45fed8e9067/audit1192/linux-credentials-cooperative-cut-tsconfig.json",
+              "bytes": 323,
+              "sha256": "151f0207e556020a75bbac51ef99fd6364537888ef04db2ec0360bce47c24e20"
+            },
+            "temporaryRootConfigRemoved": true,
+            "log": {
+              "path": "/workspace/scratch/f45fed8e9067/audit1192/linux-credentials-cooperative-cut-types.log",
+              "bytes": 0,
+              "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            }
+          },
+          {
+            "name": "focused fast lint",
+            "command": "/workspace/scratch/f45fed8e9067/audit1192/TEST-node-inputs/node/v24.21.0/linux-x64/node node_modules/eslint/bin/eslint.js --config eslint.fast.config.js test/features/agent-backend/hostOpenCodeV2ModelProbeLifecycle.test.ts > /workspace/scratch/f45fed8e9067/audit1192/linux-credentials-cooperative-cut-lint.log 2>&1",
+            "cwd": "/workspace/scratch/f45fed8e9067/agent-teams-ai",
+            "exitCode": 0,
+            "errors": 0,
+            "warnings": 0,
+            "sourceSha256": "eac52e13a12e00337f9c03bb541b812e037757ffe1d855abeb698bcd8797b95d",
+            "log": {
+              "path": "/workspace/scratch/f45fed8e9067/audit1192/linux-credentials-cooperative-cut-lint.log",
+              "bytes": 0,
+              "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            }
+          },
+          {
+            "name": "git diff --check",
+            "command": "git diff --check -- test/features/agent-backend/hostOpenCodeV2ModelProbeLifecycle.test.ts",
+            "cwd": "/workspace/scratch/f45fed8e9067/agent-teams-ai",
+            "exitCode": 0,
+            "log": {
+              "path": "/workspace/scratch/f45fed8e9067/audit1192/linux-credentials-cooperative-cut-diff-check.log",
+              "bytes": 0,
+              "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            }
+          }
+        ],
+        "node": {
+          "path": "/workspace/scratch/f45fed8e9067/audit1192/TEST-node-inputs/node/v24.21.0/linux-x64/node",
+          "bytes": 126595440,
+          "sha256": "7fde7b8afa198da66257f42ee2001d874c7355631e6d1579a5fb5ef1f246df4c"
+        },
+        "unchangedSourceInputs": [
+          {
+            "path": "packages/legacy-agent-host/src/adapters/providers/OpenCodeV2ModelProbe.ts",
+            "bytes": 24202,
+            "sha256": "295bc0b8020a1f2a22145cb98497c0253d726ca75384b71a3552e95de57d05ee",
+            "expectedSha256": "295bc0b8020a1f2a22145cb98497c0253d726ca75384b71a3552e95de57d05ee",
+            "matches": true
+          },
+          {
+            "path": "packages/legacy-agent-host/node_modules/@agent-teams/provider-implementations/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-request-admission.js",
+            "bytes": 2030,
+            "sha256": "0032b2b343bbedbf6a6405a1d4a0700fb52cc7e9f5b694c97892277e44e1fbdb",
+            "expectedSha256": "0032b2b343bbedbf6a6405a1d4a0700fb52cc7e9f5b694c97892277e44e1fbdb",
+            "matches": true
+          },
+          {
+            "path": "packages/legacy-agent-host/node_modules/@agent-teams/provider-implementations/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-bounded-await.js",
+            "bytes": 739,
+            "sha256": "13e7088437799b4f424a3c3db91ea545266399694652a0b64784c5bdb89be506",
+            "expectedSha256": "13e7088437799b4f424a3c3db91ea545266399694652a0b64784c5bdb89be506",
+            "matches": true
+          },
+          {
+            "path": "packages/legacy-agent-host/node_modules/@agent-teams/provider-implementations/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-execution-transport.js",
+            "bytes": 20239,
+            "sha256": "1a4c82ddbd641c2fd3f0e004ccd2e08efbab6340e475ffa5f2dc2a66c9809c2e",
+            "expectedSha256": "1a4c82ddbd641c2fd3f0e004ccd2e08efbab6340e475ffa5f2dc2a66c9809c2e",
+            "matches": true
+          },
+          {
+            "path": "packages/legacy-agent-host/node_modules/@agent-teams/provider-implementations/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-native-cut.js",
+            "bytes": 18831,
+            "sha256": "0b6217054f013185a7e4c4330ced3ed8f4f2d9b9b964cbeb51b00d3727d35058",
+            "expectedSha256": "0b6217054f013185a7e4c4330ced3ed8f4f2d9b9b964cbeb51b00d3727d35058",
+            "matches": true
+          },
+          {
+            "path": "packages/legacy-agent-host/node_modules/@agent-teams/provider-implementations/dist/features/provider-session-implementation/adapters/opencode-protocol/v2-driver-native.js",
+            "bytes": 12918,
+            "sha256": "a348ae31bafe45292aa3133f98a8bd6d2a3cc8bc60d5ffd000a51f89e494fb44",
+            "expectedSha256": "a348ae31bafe45292aa3133f98a8bd6d2a3cc8bc60d5ffd000a51f89e494fb44",
+            "matches": true
+          },
+          {
+            "path": "packages/legacy-agent-host/node_modules/@agent-teams/provider-implementations/dist/features/provider-session-implementation/adapters/opencode-protocol/driver-session.js",
+            "bytes": 18264,
+            "sha256": "c262a80688541760dfdc95e015f9e4c9576fdb2d389bd9607f0a5770e97a8e67",
+            "expectedSha256": "c262a80688541760dfdc95e015f9e4c9576fdb2d389bd9607f0a5770e97a8e67",
+            "matches": true
+          }
+        ],
+        "checkConfigPreAndPostImages": [
+          {
+            "path": "test/features/agent-backend/hostOpenCodeV2ModelProbeLifecycle.test.ts",
+            "bytes": 43062,
+            "sha256": "eac52e13a12e00337f9c03bb541b812e037757ffe1d855abeb698bcd8797b95d",
+            "postSha256": "eac52e13a12e00337f9c03bb541b812e037757ffe1d855abeb698bcd8797b95d",
+            "unchangedDuringChecks": true
+          },
+          {
+            "path": "vitest.config.ts",
+            "bytes": 1187,
+            "sha256": "877867b6b52de7919946cc62501a18eb39e78d689d10128011151cf83cd2edbc",
+            "postSha256": "877867b6b52de7919946cc62501a18eb39e78d689d10128011151cf83cd2edbc",
+            "unchangedDuringChecks": true
+          },
+          {
+            "path": "test/features/agent-backend/tsconfig.json",
+            "bytes": 379,
+            "sha256": "4b6372a0f31b366a07f02aa7e70d106dcc98d3cacdbad9c57bb4856a88b74f79",
+            "postSha256": "4b6372a0f31b366a07f02aa7e70d106dcc98d3cacdbad9c57bb4856a88b74f79",
+            "unchangedDuringChecks": true
+          },
+          {
+            "path": "tsconfig.json",
+            "bytes": 1235,
+            "sha256": "43729cf95a74178589329b25cdcecbcccf43e55e23a547d21b7df8fede77948a",
+            "postSha256": "43729cf95a74178589329b25cdcecbcccf43e55e23a547d21b7df8fede77948a",
+            "unchangedDuringChecks": true
+          },
+          {
+            "path": "eslint.fast.config.js",
+            "bytes": 7476,
+            "sha256": "fcc7d6aefb1413787842a1d66950b039d5206381c3c92b7f83e33533a8bb2c52",
+            "postSha256": "fcc7d6aefb1413787842a1d66950b039d5206381c3c92b7f83e33533a8bb2c52",
+            "unchangedDuringChecks": true
+          }
+        ],
+        "receipts": [
+          {
+            "sibling": "admitted",
+            "cleanup": true,
+            "counts": {
+              "requests": 22,
+              "passwordReads": 22,
+              "physicalStops": 1,
+              "nativeCreations": 1,
+              "logReads": 3,
+              "promptPosts": 1,
+              "custodyHeld": false,
+              "sessionCreates": 1
+            },
+            "cut": {
+              "messageReads": 2,
+              "finalCustodyCalls": 2,
+              "finalCustodyReturns": 2,
+              "finalRequests": [
+                1,
+                1
+              ],
+              "unfinishedClosed": [
+                true,
+                true
+              ],
+              "cutFailureCount": 1,
+              "driverFailureCount": 0
+            },
+            "readCut": [
+              {
+                "stage": "after-log",
+                "reason": "transport_failure",
+                "elapsedMs": 31,
+                "deadlineExpired": false,
+                "aborted": false,
+                "finalReason": "invalid_native_read_response"
+              }
+            ],
+            "driverClose": [],
+            "hostClose": []
+          },
+          {
+            "sibling": "pending",
+            "cleanup": false,
+            "counts": {
+              "requests": 21,
+              "passwordReads": 21,
+              "physicalStops": 1,
+              "nativeCreations": 1,
+              "logReads": 3,
+              "promptPosts": 1,
+              "custodyHeld": false,
+              "sessionCreates": 1
+            },
+            "cut": {
+              "messageReads": 2,
+              "finalCustodyCalls": 2,
+              "finalCustodyReturns": 2,
+              "finalRequests": [
+                1,
+                0
+              ],
+              "unfinishedClosed": [
+                true,
+                false
+              ],
+              "cutFailureCount": 1,
+              "driverFailureCount": 1
+            },
+            "readCut": [
+              {
+                "stage": "after-log",
+                "reason": "transport_failure",
+                "elapsedMs": 47,
+                "deadlineExpired": false,
+                "aborted": false,
+                "finalReason": "native_read_cleanup_unknown"
+              }
+            ],
+            "driverClose": [
+              {
+                "stage": "protocol-dispose",
+                "outcome": "threw",
+                "trustedBinding": "668fdcfc0e3cc3d6ed1a76bbe0e8d604ae3d7378e50236fb0262102de02d41ac"
+              }
+            ],
+            "hostClose": [
+              {
+                "probeDigest": "668fdcfc0e3cc3d6ed1a76bbe0e8d604ae3d7378e50236fb0262102de02d41ac",
+                "runState": "threw",
+                "outcome": "unobserved",
+                "errorClass": "unknown",
+                "stage": "driver-close",
+                "reason": "unconfirmed",
+                "runErrorCode": null,
+                "runCauseCode": null
+              }
+            ]
+          },
+          {
+            "sibling": "abort-responsive",
+            "cleanup": false,
+            "counts": {
+              "requests": 21,
+              "passwordReads": 21,
+              "physicalStops": 1,
+              "nativeCreations": 1,
+              "logReads": 3,
+              "promptPosts": 1,
+              "custodyHeld": false,
+              "sessionCreates": 1
+            },
+            "cut": {
+              "messageReads": 2,
+              "finalCustodyCalls": 2,
+              "finalCustodyReturns": 2,
+              "finalRequests": [
+                1,
+                0
+              ],
+              "unfinishedClosed": [
+                true,
+                false
+              ],
+              "cutFailureCount": 1,
+              "driverFailureCount": 1
+            },
+            "readCut": [
+              {
+                "stage": "after-log",
+                "reason": "transport_failure",
+                "elapsedMs": 16,
+                "deadlineExpired": false,
+                "aborted": false,
+                "finalReason": "native_read_cleanup_unknown"
+              }
+            ],
+            "driverClose": [
+              {
+                "stage": "protocol-dispose",
+                "outcome": "threw",
+                "trustedBinding": "1b96d61b7b462e6b43183486ad85589638798aa723d54d8943cac5f98c7c065b"
+              }
+            ],
+            "hostClose": [
+              {
+                "probeDigest": "1b96d61b7b462e6b43183486ad85589638798aa723d54d8943cac5f98c7c065b",
+                "runState": "threw",
+                "outcome": "unobserved",
+                "errorClass": "unknown",
+                "stage": "driver-close",
+                "reason": "unconfirmed",
+                "runErrorCode": null,
+                "runCauseCode": null
+              }
+            ],
+            "cooperative": {
+              "responses": 1,
+              "events": [
+                "abort",
+                "custody-return",
+                "cut-failure"
+              ],
+              "returnedAtFailure": [
+                2
+              ]
+            }
+          }
+        ],
+        "conclusions": [
+          "The same second original custody gate was resolved by one synchronous invocation of its own existing abort listener, before the failure observer; the failure observer never released it.",
+          "Finite recorded order was abort -> custody-return -> cut-failure, with both original custody return markers already recorded at the cut diagnostic.",
+          "The actual pinned read-cut still returned native_read_cleanup_unknown; driver close emitted protocol-dispose/threw; original Host close first failure was driver-close/unconfirmed and result false.",
+          "Original parent rejection identity, final HTTP[1,0], no new password/HTTP work, one original physical stop, original two admission calls, and repeated-close counters/diagnostics all held.",
+          "Existing admitted and deliberately pending scenarios retained their previous outcomes; no expected outcome was modified after execution."
+        ],
+        "limits": [
+          "Controlled cooperative cancellation behavior only; does not identify the unobserved original native job admission/fetch/body substage or prove a production bug.",
+          "Custody-return is the existing fixture callback marker, not direct observation of the private Host lease release at acquire.catch. Driver-close as first Host close failure confirms its original request drain finished before driver close.",
+          "No production/vendor/archive/deadline/cap/UNKNOWN semantics changed, no native or vendor executable started, no CI query/download or Host build.",
+          "Only three final-cut schedules ran at this postimage. Historical full23 PASS remains tied to8a20a67f and historical final2/types/lint to e35a1e; nonselected tests are not new passes.",
+          "The current lint uses separately approved frontend shell-boundary config fcc7d6ae; it was unchanged across this run. Historical lint inputs remain separately pinned."
+        ],
+        "cleanup": "The cooperative abort listener and diagnostic subscriber are removed in finally; fixture dispose resolves only original outstanding gates, closes real loopback sockets, unsubscribes existing observers and removes its temporary root.",
+        "deltaPatchFromE35": {
+          "path": "/workspace/scratch/f45fed8e9067/audit1192/linux-credentials-cooperative-cut.patch",
+          "bytes": 5283,
+          "sha256": "3534eb1b563dd266dd1eb5a78694ca94612475bfd7d5841fd4da035d4183dd12"
+        },
+        "combinedUnpublishedTestPatch": {
+          "path": "/workspace/scratch/f45fed8e9067/audit1192/linux-credentials-final-cut-three-schedules.patch",
+          "bytes": 17784,
+          "sha256": "e44e69a2dcb7058c1d1875cd9ea40ac6e2c796ec9477c4747f2c8e1b33bba563"
+        },
+        "postimageCopy": {
+          "path": "/workspace/scratch/f45fed8e9067/audit1192/linux-credentials-cooperative-cut.postimage.ts",
+          "bytes": 43062,
+          "sha256": "eac52e13a12e00337f9c03bb541b812e037757ffe1d855abeb698bcd8797b95d"
+        },
+        "executionCounts": {
+          "focusedVitestRuns": 1,
+          "scopedTS7Runs": 1,
+          "focusedLintRuns": 1,
+          "nativeExecutions": 0,
+          "vendorExecutions": 0,
+          "ciQueries": 0,
+          "hostBuilds": 0
+        }
+      }
+    },
+    "independentR2": {
+      "path": "linux-credentials-cooperative-cut-root-r2.json",
+      "bytes": 4569,
+      "sha256": "7c74476b98965f0ab92ee5a647ec4177364e4182feb23b7ad42511ca459d8ef1",
+      "record": {
+        "kind": "root-independent-R2-cooperative-original-cut-characterization",
+        "recordedAt": "2026-11-19T21:10:46.303496+00:00",
+        "reviewer": "/root",
+        "author": "/root/delivery_review",
+        "result": "PASS_CONTROLLED_CHARACTERIZATION_ONLY",
+        "sourceBase": "63927aecd95c814f66db23d7bd4aef6975110168",
+        "postimage": {
+          "path": "test/features/agent-backend/hostOpenCodeV2ModelProbeLifecycle.test.ts",
+          "bytes": 43062,
+          "sha256": "eac52e13a12e00337f9c03bb541b812e037757ffe1d855abeb698bcd8797b95d",
+          "lines": 732
+        },
+        "checksSha256": "d744fd071d4a9ddb0e89faccbdc47e7bb5627fbb54399f8ae85d06fbf8ab0f36",
+        "findings": [],
+        "reviewed": [
+          "Third variant resolves only the same existing second gate, synchronously and once from its own captured original abort signal; neither observer nor nominal path releases it after failure.",
+          "Bounded event order is abort then custody-return then final cut failure; exactly two original custody calls return and only after-log HTTP is sent.",
+          "All existing production and pinned provider layers stay actual; signal/diagnostic listeners are confined to the controlled case and removed in finally.",
+          "Parent abort identity, native spawn tripwire, one physical stop, Host first-failure stage and all repeated-close counters remain enforced.",
+          "Admitted and deliberately pending schedules preserve their old outcomes. Cooperative schedule retains native_read_cleanup_unknown and driver-close/unconfirmed despite prompt callback response.",
+          "Original Host request drain completes before driver-close failure. The exact private lease release instant at earlier admission classification is not observed and is not claimed.",
+          "Final3/3, canonical inherited scoped TS7, focused lint and exact logs/source hashes verified. No additional source/test changes requested."
+        ],
+        "receipt": {
+          "sibling": "abort-responsive",
+          "cleanup": false,
+          "counts": {
+            "requests": 21,
+            "passwordReads": 21,
+            "physicalStops": 1,
+            "nativeCreations": 1,
+            "logReads": 3,
+            "promptPosts": 1,
+            "custodyHeld": false,
+            "sessionCreates": 1
+          },
+          "cut": {
+            "messageReads": 2,
+            "finalCustodyCalls": 2,
+            "finalCustodyReturns": 2,
+            "finalRequests": [
+              1,
+              0
+            ],
+            "unfinishedClosed": [
+              true,
+              false
+            ],
+            "cutFailureCount": 1,
+            "driverFailureCount": 1
+          },
+          "readCut": [
+            {
+              "stage": "after-log",
+              "reason": "transport_failure",
+              "elapsedMs": 16,
+              "deadlineExpired": false,
+              "aborted": false,
+              "finalReason": "native_read_cleanup_unknown"
+            }
+          ],
+          "driverClose": [
+            {
+              "stage": "protocol-dispose",
+              "outcome": "threw",
+              "trustedBinding": "1b96d61b7b462e6b43183486ad85589638798aa723d54d8943cac5f98c7c065b"
+            }
+          ],
+          "hostClose": [
+            {
+              "probeDigest": "1b96d61b7b462e6b43183486ad85589638798aa723d54d8943cac5f98c7c065b",
+              "runState": "threw",
+              "outcome": "unobserved",
+              "errorClass": "unknown",
+              "stage": "driver-close",
+              "reason": "unconfirmed",
+              "runErrorCode": null,
+              "runCauseCode": null
+            }
+          ],
+          "cooperative": {
+            "responses": 1,
+            "events": [
+              "abort",
+              "custody-return",
+              "cut-failure"
+            ],
+            "returnedAtFailure": [
+              2
+            ]
+          }
+        },
+        "limits": [
+          "Controlled cooperative cancellation behavior only; does not identify the unobserved original native job admission/fetch/body substage or prove a production bug.",
+          "Custody-return is the existing fixture callback marker, not direct observation of the private Host lease release at acquire.catch. Driver-close as first Host close failure confirms its original request drain finished before driver close.",
+          "No production/vendor/archive/deadline/cap/UNKNOWN semantics changed, no native or vendor executable started, no CI query/download or Host build.",
+          "Only three final-cut schedules ran at this postimage. Historical full23 PASS remains tied to8a20a67f and historical final2/types/lint to e35a1e; nonselected tests are not new passes.",
+          "The current lint uses separately approved frontend shell-boundary config fcc7d6ae; it was unchanged across this run. Historical lint inputs remain separately pinned."
+        ],
+        "nextStep": "Read-only review of a minimal correction within existing original request/cleanup budgets; do not clear already emitted UNKNOWN or change any production API without a separate reviewed R1."
+      }
+    }
+  },
+  "checksArchive": {
+    "path": "linux-final-cut-checks-20261119.tar.gz",
+    "bytes": 39159,
+    "sha256": "872f3cff568504e5897529a65ed8deaf0c85451ef18903bcfe7e04a58ad50039",
+    "entries": 26
+  },
+  "nextStep": "Read-only provider source design for original admission settlement before UNKNOWN classification, within unchanged original request/cleanup bounds. No production fix authorized or claimed by these tests."
+}

@@ -2,8 +2,44 @@
 
 **19 ноября 2026 владелец явно выбрал A в текущем чате.** Ниже зафиксирована
 разрешённая граница; source-срез реализован и независимо проверен. Native A на
-Linux x64 и Darwin x64 прошёл; Darwin ARM ещё ожидает своего исходного job. Исторические
+Linux x64, Darwin x64 и Darwin ARM прошёл в отдельных исходных jobs. Исторические
 INCOMPLETE и контрпримеры прежней гарантии сохраняют свои исходные результаты.
+
+## Полная текущая source-приёмка A на `63927ae`
+
+Исходный Native V2 run `44612379988` завершён: все девять jobs PASS. На одной
+ревизии `63927aecd95c814f66db23d7bd4aef6975110168` Linux x64, Darwin x64 и
+Darwin ARM подтвердили по восемь trusted-writer A observations с cleanup=true.
+Native C source во всех трёх receipts имеет SHA-256
+`1cd5b353aaf58305fa2f55564be579d4dc97321a79c9046ab3abf0506797f152`.
+
+| Платформа | Original job | Raw receipt SHA-256 |
+| --- | --- | --- |
+| Linux x64 | 135872085072 | `980ec2a831e856c9cf3e2ee57196fe7f4fad537720f5e88514177e3fd83bd19d` |
+| Darwin x64 | 135872084989 | `9217ad74fcac1c02f05c094ee020ce5b0314706c2b9dd636a346029a7440453f` |
+| Darwin ARM | 135872085347 | `bdef914e8da2d05251406f4fb6ea0e439b1d425eaa144368caf370afe6867d11` |
+
+[Terminal audit и границы](evidence/ci-63927ae-incremental-20261119.json) и
+[все original receipts](evidence/native-source-receipts-63927ae-20261119.tar.gz)
+сохранены. Это выбранная fixture-приёмка A. Installed-runtime/release остаются
+false, прежние strict counterexamples и INCOMPLETE сохранены. Остальные Desktop
+и source-process failures не переклассифицированы успехом Native V2.
+
+## Первое полученное подтверждение Darwin ARM
+
+На `63927aecd95c814f66db23d7bd4aef6975110168` исходный
+[Darwin ARM job135872085347](https://github.com/777genius/agent-teams-ai/actions/runs/44612379988/job/135872085347)
+полностью SUCCESS, включая P09 step25. Все восемь trusted-writer A observations
+PASS, cleanup=true. Artifact14576330728:11956 bytes, SHA-256
+`1fed57f82a10d70c5da1b4537cc942a689026fe853ad849a7ceb23cdab15f153`.
+Raw receipt SHA-256 `bdef914e8da2d05251406f4fb6ea0e439b1d425eaa144368caf370afe6867d11`;
+native C source digest сверён с точным commit и рабочими bytes. Это отдельное
+подтверждение недостающей ARM платформы, дополняющее прежние Linux x64 и Darwin x64
+receipts ниже. `installedRuntimeQualified=false`, `releaseQualified=false`.
+Legacy strict остаётся INCOMPLETE; оба script schedules сохраняют COUNTEREXAMPLE.
+[Исходный receipt](evidence/native-source-receipts-63927ae-20261119.tar.gz)
+и [сверка source/job/digest и границ](evidence/ci-63927ae-incremental-20261119.json)
+сохранены. Остальная frontend/Stage1 приёмка остаётся отдельной задачей.
 
 ## Принятое A: конкретная граница
 

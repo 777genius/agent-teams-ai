@@ -2,6 +2,83 @@
 
 Обновлено: **19 ноября 2026**. Единственный текущий рабочий план.
 
+## Текущий срез поверх `63927ae`
+
+Этот срез объединяет точное подключение provider `45a569bd` и исправление eager
+загрузки Task Detail. Локальные проверки и независимые R1/R2 завершены; original
+CI получившегося app source остаётся следующим обязательным gate. Родитель
+`63927aecd95c814f66db23d7bd4aef6975110168` опубликован в прежнюю Draft-ветку #1192.
+На его последнем review-read все 43 inline threads закрыты; формальное approval
+не заявляется. Результаты старого source не переносятся на следующий автоматически.
+[Финальное integration review и актуальная сверка threads](evidence/current-slice-integration-review-20261119.json).
+
+- **Provider admission и lifecycle — исправлены и приняты локальным consumer.**
+  Provider `45a569bd70607480e650fb12be5c0cce6884f9da` опубликован и прочитан обратно:
+  семь точных Git blobs, parent и tree совпали. Original check на pinned Node 24.21
+  прошёл 601 source test и два packed consumers; то же подтвердили CI Node 24/26.
+  Все 53 original provider native jobs PASS. Exact checked archive: 191469 bytes,
+  SHA-256 `ee1ed16c939dbdab4ee6b31941b4bff5d7e1e423224f8ca32e65f3a6ec25aed4`;
+  CI archive побайтово совпал. Изменились три private JS и helper declaration.
+  Public facade bytes, signatures, callback alias и Session SPI сохранены; весь
+  transitive declaration graph не объявляется побайтово прежним.
+  App pointer/lock созданы штатным pnpm 11.22, frozen install и все 259 implementation
+  плюс 12 SPI installed files сверены. Тот же полный ModelProbe файл — **24/24 PASS**;
+  canonical scoped TS7, focused lint и независимый R2 PASS. Исходный pending-custody
+  case завершился за 7078 ms при прежнем лимите 15000 ms: close сохраняет UNKNOWN
+  до освобождения того же gate, повторный close и counters неизменны.
+  Отдельный request/cut abort может дождаться своего исходного callback в прежнем
+  request cutoff; существующий transport lifecycle abort прерывает это ожидание.
+  Host drain, native-cut/body/dispose budgets и sticky UNKNOWN не менялись.
+  [Проверки, source/CI/archive custody и финальный review](evidence/provider-admission-adoption-20261119.json)
+  и [raw logs/reviews](evidence/provider-admission-adoption-checks-20261119.tar.gz) сохранены.
+- **Найденная промежуточная регрессия сохранена в истории.** На provider e458
+  прежний consumer дал 23 PASS / 1 timeout pending-custody; это не принятие архива.
+  Новые четыре lifecycle regressions дали RED на e458 и GREEN на correction.
+  Новые ожидания или сроки в consumer не вводились: весь файл
+  `789c73dc…` остался прежним между FAIL и PASS. Начальные три controlled schedules
+  и наблюдение ошибочного cooperative UNKNOWN на b194 сохранены отдельно:
+  [характеристика](evidence/linux-final-cut-characterization-20261119.json),
+  [исходные TEST/configs/logs](evidence/linux-final-cut-checks-20261119.tar.gz).
+  Неуспешный native read остаётся неуспешным; cleanup outcomes трёх final-cut
+  schedules теперь true / false / true. Native причина старого Linux3f этим
+  не доказана; Linux639 с прежним b194 отдельно прошёл весь credential journey.
+- **Task Detail lazy boundary — реализация, проверки и R2 завершены.**
+  Четыре eager imports полного renderer barrel заменены на пять именованных
+  exports публичного renderer/shell. Исходные React context, полный API и lazy
+  loaders сохраняются. Оба actual lint configs допускают только точный public
+  shell; descendants остаются закрыты. Original-source RED подтвердил eager путь
+  к шести тяжёлым узлам; 71 уникальный UI/source case PASS. После трёх замечаний
+  полного lint исправлен только синтаксис нового теста: affected 4/4, scoped TS7,
+  оба lint configs и по пять boundary probes PASS. Frozen cap ESLint — 1168.
+  Source pin включён; оба архитектурных guard PASS. Lint: 0 errors, три dynamic
+  fs-path warnings и четыре прежних FileLink warnings только в полном config.
+  Source graph 900 → 796 — прогноз числа eager scripts, не runtime measurement
+  и не доказанная причина прежнего `ERR_INSUFFICIENT_RESOURCES`.
+  [Точный scope и review](evidence/task-detail-load-boundary-20261119.json),
+  [RED/GREEN, final sources и проверки](evidence/task-detail-load-boundary-checks-20261119.tar.gz).
+- **Original app639 CI — результаты разделены по исходным gates.** Все четыре
+  frontend shards и Fast feedback PASS. Все девять Native V2 jobs PASS; в том числе
+  Linux credential journey и P09 A по 8/8 на Linux x64, Darwin x64 и Darwin ARM
+  одной ревизии. Это закрывает выбранную fixture-приёмку A; installed/release=false,
+  strict counterexamples и INCOMPLETE сохранены. Process run завершён: три POSIX
+  jobs PASS, Windows x64 OpenCode Team A и ARM Codex Team A остаются FAIL при
+  подтверждённой cleanup. Original Darwin Review639 job остаётся FAIL, business flow — INCOMPLETE перед
+  Launch. App/group/Host завершились, но original probe сохраняет held/resourceHeld=true;
+  отсутствие отдельного detached probe child не доказано. Source-разбор сохранён;
+  новый provider archive не объявляется исправлением этого native случая.
+  Остальные исходные Desktop/retained lanes ожидаются штатно; manual CI действий нет.
+  [Source jobs, terminal verdicts и bounded audits](evidence/ci-63927ae-incremental-20261119.json),
+  [original receipts/logs](evidence/native-source-receipts-63927ae-20261119.tar.gz).
+- **Доставка сохраняет выбранный маршрут #1192 → #1186 → #982.** Ready1192
+  автоматически выбирает real Codex installer/version; изменение receiving-ветки
+  уже Ready1186 выбирает original real Claude/Codex Desktop lifecycle. Этот
+  последующий переход требует согласования с действующим запретом real CLI.
+  Independent source/review и текущая разрешённая квалификация продолжаются.
+  Метаданные1186 и guards не меняются; main/default merge и Stage2 не выбраны.
+  [Точные workflow условия и штатные способы](evidence/delivery-route-63927ae-20261119.json).
+
+## Уже опубликованный срез `63927ae`
+
 **Срез этой ревизии поверх `3f78524c84829d6b87025fde5c8fe9d8481a4485`:**
 обычный свежий OpenCode launch объединяет provider/allocation checks внутри
 исходного provider Team fence. Физических публикаций две → одна; все восемь
@@ -280,6 +357,11 @@ resolved; approval review этим не заявляется.
 
 ## Осталось: один план и один владелец
 
+Текущие результаты и обязательные следующие gates приведены в верхнем разделе.
+Ниже сохранены исходные границы приёмки и исторические findings; новые source
+results не меняют старые verdicts. P09 A уже подтверждён на всех трёх POSIX
+платформах `63927ae`; новый app source проходит собственные original gates.
+
 | ID | Исходный отказ | Текущая работа и критерий завершения | Владелец |
 | --- | --- | --- | --- |
 | E1-Stop / Import | [Original import lifecycle7fe PASS](https://github.com/777genius/agent-teams-ai/actions/runs/44539501369/job/135613921599). | Старый startup отказ664 закрыт этим исходным job. Новый Stop regression из frontend shard2/4 учитывается отдельно ниже; PASS импорта не квалифицирует все Stop paths. | root |
@@ -510,7 +592,7 @@ source B вернул ready=true за 15184.6772ms и был отклонён и
 Новые закрытые причины различают invalid/conflict/capacity/byte budget и boundary
 reader; UNKNOWN остаётся UNKNOWN. Новых reads, действий, ожиданий или deadlines нет.
 
-## P09: выбран A, реализация и приёмка в работе
+## P09: выбран A, fixture-приёмка завершена на `63927ae`
 
 [Report40](40-p09-source-writer-decision-2026-11-16.md) описывает две разные границы:
 A — original path с доверием всем сохраняющим write/rename/FD/mmap authority writers
