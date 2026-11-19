@@ -2,26 +2,34 @@
 
 Обновлено: **19 ноября 2026**. Единственный текущий рабочий план.
 
-**Полная E2E-приёмка ещё не завершена.** Последний проверенный CI-срез —
+**Полная E2E-приёмка ещё не завершена.** Последний полный проверенный CI-срез —
 `9ec6cb6f567af14233965a77c4c4a043adc29487`, база `8d46f13f`.
 На нём прошли полный cross-team/ReviewFlow GUI, workspace typecheck и fast lint,
 четыре frontend shards, все пять packaged-платформ и их общий gate.
-Из 25 Desktop lanes прошли 20. Оставшиеся отказы перечислены ниже.
-Функциональные и TEST-исправления опубликованы; точные срезы указаны ниже. Строгая локальная
-[Host-сборка e754](evidence/host-build-e754d233-20261119.json) PASS за 10.064s,
-все 14 input pins совпали. Новые правки не получают результаты приёмки9ec
-автоматически. При последнем чтении CI на 036 — 15 queued и 14 skipped;
-новых CI PASS не заявляется, локальная работа очередь не ожидает.
-На 036 внутренний import GUI proof прошёл все 58 шагов, включая fresh Host Stop,
-release, отсутствие peer и reload; общий запуск отказал на sentinel guard.
-На 588 ложное объявление установленного Codex устранено (`refused=[]`), но
-source producer остановился на отдельном диагностическом child read после Stop
-и Task: wrapper не вернул ожидаемые boolean. Исходная ошибка не была сохранена.
-Пассивный перенос записи diagnostics перед assertions исправляет этот пробел.
-Один AFTER-EXIT read за 2.934s дал оба true и 11 неизменных файлов; он не меняет
-588 INCOMPLETE и не доказывает причину прежней exec/parse ошибки.
-Следом выполняются независимые native V2 checks; original import/retained
-и их final validators остаются в плане.
+Из 25 Desktop lanes прошли 20. Новые изменения не получают эти PASS автоматически.
+
+[Исходные запуски664](evidence/original-e2e-66444904-20261119.json): producer
+импорта PASS, включая canonical release, Task и обычный Quit. Consumer и native
+V2 Settings остановились на одной startup-ветке `Runtime.evaluate`, до своих
+business proofs. Retained V1/V2 coexistence выполнил обязательные сборки, но
+первый V1 launch отказал с `native_custody_protocol`, до model requests.
+
+[Текущий CI664](evidence/ci-typecheck-66444904-20261119.json) обнаружил четыре
+ошибки типизации в двух TEST-файлах: они останавливают Creation page и Windows
+updater до E2E. Исправлены zero-emission assertion и расположение трёх Vitest
+messages; значения и predicates сохранены, независимый R2 PASS.
+[Startup-диагностика](evidence/startup-readiness-66444904-20261119.json)
+сохраняет последнюю выполняемую попытку и время отказа без новых CDP reads,
+polls, actions или deadlines. Один целевой regression PASS; строгая типизация
+двух затронутых scripts и transitive imports PASS за4.244s; независимый R2 PASS.
+
+**Локальная среда недоступна.** Общий application compiler завершился SIGKILL
+через164.465s, без TS-diagnostics; затем execution server отключился.
+Отдельный targeted compiler для четырёх typing-правок не смог запуститься.
+Это не compiler PASS. Проверенные файлы восстановлены из immutable GitHub664
+и совпали SHA256 с исходным R2-срезом; публикация выполняется через GitHub.
+Independent retained UI, следующие original smoke и их mode validators пока
+не выполнены. Очередь CI не ожидается и вручную не перезапускается.
 
 ## Доставка и границы
 
@@ -64,15 +72,16 @@ resolved; approval review этим не заявляется.
 
 ## Осталось: один план и один владелец
 
-| ID | Первый отказ на 9ec | Текущая работа и критерий завершения | Владелец |
+| ID | Исходный отказ | Текущая работа и критерий завершения | Владелец |
 | --- | --- | --- | --- |
-| E1-Stop / Import | На 036 внутренний GUI proof PASS58; на 588 sentinel refused=[], но producer потерял диагностический exec/parse error после Stop/Task. | Исходный child read сохраняет прежние 10s/128KiB. Diagnostics теперь сохраняется до assertions; R2 PASS. AFTER-EXIT debug не является E2E. Нужны complete original smoke, successful Quit и отдельный CI mode validator. | root; pr_graph |
-| E1-Retained | [Retained UI](https://github.com/777genius/agent-teams-ai/actions/runs/44455698034/job/135330056793): prepare/held. [Main retained V1/V2](https://github.com/777genius/agent-teams-ai/actions/runs/44455698135/job/135350275468): coordinator admission, not-eligible/not-dispatched. | Закрытая prepare-boundary диагностика готова: 42/42 tests и R2 PASS. Read-fence использует исправленный drain существующей очереди; связь с исходным отказом ещё проверяется. Требуются исходный UI и отдельный V1/V2 coexistence open/history/Stop/cold/cleanup. | pr_graph; media |
-| E1-Add | [Linux V2 management](https://github.com/777genius/agent-teams-ai/actions/runs/44455698034/job/135330056490): `original add completes`. | По current receipt Add сохранён held до member publication, model probe не прошёл credential preparation/cleanup. Закрытая first-close диагностика передана Host→Main, 30/30 actual-source checks и R2 PASS. Нужен исходный Add/Remove/Restore/Stop/cold после сборки. | media |
+| E1-Stop / Import | На664 producer PASS; consumer startup `Runtime.evaluate` timeout до import proof. | Физическая app-group cleanup подтверждена; отдельная Host/emulated-runtime absence не квалифицирована. Passive startup diagnostics и её целевой test/types/R2 готовы. После восстановления среды нужны complete original smoke, successful Quit и отдельный CI mode validator. | root; pr_graph |
+| E1-Retained | [Retained UI9ec](https://github.com/777genius/agent-teams-ai/actions/runs/44455698034/job/135330056793): prepare/held. На664 native coexistence: `native_custody_protocol` первого V1 launch, cleanup=true. | Independent original UI подготовлен отдельно от import, ещё не запущен. Exact V1 helper требует AF_UNIX socket до native creation; локальный syscall возвращает EPERM. Нужен original native CI gate в поддерживающей среде; UNKNOWN не заменять PASS. | pr_graph; media |
+| E1-Add | [Linux V2 management9ec](https://github.com/777genius/agent-teams-ai/actions/runs/44455698034/job/135330056490): `original add completes`. На664 Settings ещё не прошёл startup. | First-close Host→Main диагностика готова, 30/30 actual-source checks и R2 PASS. Native664 model requests/children=0; membership не запускался. После startup нужны исходные Settings verifier, Add/Remove/Restore/Stop/cold и membership verifier. | media; root |
 | E1-Review | [Darwin ARM V2 Review](https://github.com/777genius/agent-teams-ai/actions/runs/44455698034/job/135330056601): исходный preflight deadline. | Initial-seed/model-source fix опубликован в90b, exact-byte focused proof и R2 сохранены. Нужен affected original preflight/Review. Source test не заменяет Darwin acceptance. | media |
 | E1-Resume | [Darwin ARM V2 Resume](https://github.com/777genius/agent-teams-ai/actions/runs/44455698034/job/135330056653): `one fresh Team capture`. | Проверенный numeric observation patch опубликован в90b без нового read/await/input/retry. Нужны новая исходная диагностика и успешный Resume; старый отказ произошёл ещё до первого Stop/cold boundary. | pr_graph |
 | W1 | [Windows ARM Codex](https://github.com/777genius/agent-teams-ai/actions/runs/44455697852/job/135330054589) и [x64 OpenCode](https://github.com/777genius/agent-teams-ai/actions/runs/44455697852/job/135330054744): original source readiness. | Установить причинный участок по current original evidence; native OpenCode finalReason не является Windows observer. Сохранить исходный cutoff и все authority probes; получить current source A/B и recovery evidence. Закрытые причины отказа observation сохранены отдельной TEST-правкой, 2/2 actual-source checks и R2 PASS; native gate этим не закрыт. | media; root |
 | P09 | Darwin x64/ARM mutation witness остаются отрицательными. | Требуется отдельный выбор контракта original pathname / writer / consumed bytes по Report40. До решения не сужать гарантию и не менять failed oracle. Независимые исправления продолжаются. | root / owner |
+| D1-current | CI664: четыре TS-errors в двух TEST-файлах, до Creation page и Windows updater. | Четыре правки сохраняют прежние oracles; R2 PASS. Общий local compiler SIGKILL; targeted run не стартовал после потери среды. Нужен current-head compiler PASS. | root |
 | Delivery | Четыре acceptance workflows красные из-за перечисленных отказов. | Проверять только затронутые сценарии, сохранить обязательные current-head gates. После qualification завершить разрешённый PR-маршрут. Не останавливать независимую работу из-за CI queue. | root |
 
 ## Что уже реализовано и повторно не разрабатывается
@@ -227,8 +236,40 @@ cwd, closed env, 10s и 128KiB. Его exit0/оба true/11 неизменных
 44.10.1 ensure (18.860s) завершились с exit0. Donor SQLite ABI149 (171.019s),
 runtime0.0.160 (22.276s), controller (0.234s) и MCP (2.599s) также готовы.
 Исходники/lockfile и SQLite основного app неизменны; провайдеры не исполнялись.
-Остались подготовка current-source V2 и исходный native coexistence тест;
-подготовка не является результатом E2E.
+Current-source V2 подготовлен на664 за73.933s; canonical coexistence preparation
+PASS за13.124s. [Общий evidence664](evidence/original-e2e-66444904-20261119.json)
+сохраняет исходные verdicts, hashes и cleanup каждого отдельного запуска.
+Native coexistence завершился FAIL за312.951s: первый retained V1 не подтвердил
+custody protocol, native session/bootstrap отсутствуют, model observations=0.
+Original cleanup=true и cleanupFailures=[] не заменяют бизнес-приёмку.
+
+Exact f5c helper использует abstract AF_UNIX, поэтому глубина TMPDIR не объясняет
+лимит socket name. Версии, helper/image hashes, argv/env и packet limits совпали.
+Один отдельный local capability check вернул EPERM на создание AF_UNIX socket,
+без bind/connect/listen или native process. Source/R2 подтверждает: helper
+требует этот syscall уже при measure, до image open/fork. Это установленное
+ограничение текущей среды, отдельно от несохранённой причины664.
+WeakMap diagnostic теряется внутри исторического runtime до JSON projection;
+current Main не может восстановить исходный объект ошибки. Замена transport,
+изменение frozen source или повтор того же local coexistence не выполнялись.
+
+На664 import producer прошёл исходные Stop/read/Task/Quit и сохранил все входы.
+Consumer завершился INCOMPLETE до import UI: physical app group пуста,
+failure Quit ACK/exit0/listener absent, но Host не наблюдался и отдельный
+emulated-runtime census сообщил observationFailed. Native Settings тоже
+остановился на startup readiness; Host/native cleanup подтверждён, обычный Quit
+не подтверждён. Mode validators не выполнялись на failed receipts.
+
+[Пассивный startup-срез](evidence/startup-readiness-66444904-20261119.json)
+сохраняет прежние первые24 samples и одну последнюю закрытую запись. В ней есть
+номер и фаза попытки, последний завершённый snapshot, monotonic/epoch время
+call/completion/failure/final rejection и закрытая категория отказа.
+Исходный evaluate, порядок commands/owner guards, READY predicate, deadline,
+context retry и объект ошибки сохранены. Один new test проходит25 ответов и
+отказ26-го вызова, проверяя cap, отсутствие новых reads/discovery и утечки
+private error payload. Его PASS и strict types/R2 не являются GUI PASS.
+Существующие Main app-errors уже содержат время renderer killed/recovery;
+причина kill, включая OOM или отправителя сигнала, остаётся UNKNOWN.
 
 [Retained prepare evidence](evidence/retained-prepare-boundary-20261119.json)
 содержит 42/42 checks и независимый R2. Единственная существующая diagnostic

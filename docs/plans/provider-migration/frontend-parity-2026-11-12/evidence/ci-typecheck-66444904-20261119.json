@@ -1,0 +1,383 @@
+{
+  "schemaVersion": 1,
+  "kind": "CURRENT_CI_TYPECHECK_REFUSAL_AND_EXACT_TEST_REPAIR",
+  "source": {
+    "head": "664449047d3e901c58c0e1ffa77b10d3e8df7b10",
+    "base": "8d46f13fe87b4a25156b6be8331119eb8d0f790e",
+    "merge": "bc3b8f1eba93d4d9247b71a9cdae50409c5ae7ec",
+    "draft": true
+  },
+  "originalRunSnapshot": [
+    {
+      "id": 44529853247,
+      "name": "Anthropic compatible status packaged Windows E2E",
+      "status": "completed",
+      "conclusion": "skipped",
+      "run_number": 1727,
+      "jobs_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/44529853247/jobs",
+      "logs_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/44529853247/logs",
+      "workflow_id": 364835390
+    },
+    {
+      "id": 44529853318,
+      "name": "Anthropic environment portability",
+      "status": "completed",
+      "conclusion": "skipped",
+      "run_number": 1019,
+      "jobs_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/44529853318/jobs",
+      "logs_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/44529853318/logs",
+      "workflow_id": 398730798
+    },
+    {
+      "id": 44529853253,
+      "name": "Prepare immutable Windows native updater inputs",
+      "status": "queued",
+      "conclusion": null,
+      "run_number": 1190,
+      "jobs_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/44529853253/jobs",
+      "logs_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/44529853253/logs",
+      "workflow_id": 375535509
+    },
+    {
+      "id": 44529852905,
+      "name": "Host process fixture acceptance",
+      "status": "queued",
+      "conclusion": null,
+      "run_number": 171,
+      "jobs_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/44529852905/jobs",
+      "logs_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/44529852905/logs",
+      "workflow_id": 417565613
+    },
+    {
+      "id": 44529853394,
+      "name": "OpenCode V2 cold Dashboard packaged E2E",
+      "status": "completed",
+      "conclusion": "skipped",
+      "run_number": 346,
+      "jobs_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/44529853394/jobs",
+      "logs_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/44529853394/logs",
+      "workflow_id": 412550494
+    },
+    {
+      "id": 44529853148,
+      "name": "OpenCode diagnostics desktop E2E",
+      "status": "completed",
+      "conclusion": "skipped",
+      "run_number": 861,
+      "jobs_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/44529853148/jobs",
+      "logs_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/44529853148/logs",
+      "workflow_id": 354578294
+    },
+    {
+      "id": 44529853244,
+      "name": "Real Runtime Provider Count E2E",
+      "status": "completed",
+      "conclusion": "skipped",
+      "run_number": 333,
+      "jobs_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/44529853244/jobs",
+      "logs_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/44529853244/logs",
+      "workflow_id": 411332435
+    },
+    {
+      "id": 44529853356,
+      "name": "Public Runtime Bootstrap Smoke",
+      "status": "completed",
+      "conclusion": "skipped",
+      "run_number": 966,
+      "jobs_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/44529853356/jobs",
+      "logs_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/44529853356/logs",
+      "workflow_id": 314773900
+    },
+    {
+      "id": 44529853223,
+      "name": "Build Hetzner landing and docs release",
+      "status": "queued",
+      "conclusion": null,
+      "run_number": 568,
+      "jobs_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/44529853223/jobs",
+      "logs_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/44529853223/logs",
+      "workflow_id": 409757946
+    },
+    {
+      "id": 44529853479,
+      "name": "CI proof: PR=1192 | head=664449047d3e901c58c0e1ffa77b10d3e8df7b10 | base=8d46f13fe87b4a25156b6be8331119eb8d0f790e | merge=bc3b8f1eba93d4d9247b71a9cdae50409c5ae7ec | action=synchronize | draft=true",
+      "status": "queued",
+      "conclusion": null,
+      "run_number": 12431,
+      "jobs_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/44529853479/jobs",
+      "logs_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/44529853479/logs",
+      "workflow_id": 236915316
+    },
+    {
+      "id": 44529853051,
+      "name": "Windows packaged backfill diagnostic",
+      "status": "completed",
+      "conclusion": "skipped",
+      "run_number": 1753,
+      "jobs_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/44529853051/jobs",
+      "logs_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/44529853051/logs",
+      "workflow_id": 353684594
+    },
+    {
+      "id": 44529853383,
+      "name": "Dependency Review",
+      "status": "queued",
+      "conclusion": null,
+      "run_number": 2429,
+      "jobs_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/44529853383/jobs",
+      "logs_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/44529853383/logs",
+      "workflow_id": 282510049
+    },
+    {
+      "id": 44529853398,
+      "name": "Native prompt suggestions exact vendor staging (TEST only)",
+      "status": "completed",
+      "conclusion": "skipped",
+      "run_number": 270,
+      "jobs_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/44529853398/jobs",
+      "logs_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/44529853398/logs",
+      "workflow_id": 418399400
+    },
+    {
+      "id": 44529853241,
+      "name": "Native prompt suggestions - Host ownership TEST E2E",
+      "status": "completed",
+      "conclusion": "skipped",
+      "run_number": 230,
+      "jobs_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/44529853241/jobs",
+      "logs_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/44529853241/logs",
+      "workflow_id": 418407143
+    },
+    {
+      "id": 44529853271,
+      "name": "CodeQL",
+      "status": "completed",
+      "conclusion": "skipped",
+      "run_number": 8144,
+      "jobs_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/44529853271/jobs",
+      "logs_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/44529853271/logs",
+      "workflow_id": 287665407
+    },
+    {
+      "id": 44529853082,
+      "name": "Native Linux package updater",
+      "status": "queued",
+      "conclusion": null,
+      "run_number": 1169,
+      "jobs_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/44529853082/jobs",
+      "logs_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/44529853082/logs",
+      "workflow_id": 375389856
+    },
+    {
+      "id": 44529852909,
+      "name": "Kanban Table Desktop E2E",
+      "status": "completed",
+      "conclusion": "skipped",
+      "run_number": 827,
+      "jobs_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/44529852909/jobs",
+      "logs_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/44529852909/logs",
+      "workflow_id": 410354645
+    },
+    {
+      "id": 44529852907,
+      "name": "OpenCode V2 Stage1 static preflight (TEST only)",
+      "status": "queued",
+      "conclusion": null,
+      "run_number": 836,
+      "jobs_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/44529852907/jobs",
+      "logs_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/44529852907/logs",
+      "workflow_id": 408464117
+    },
+    {
+      "id": 44529853191,
+      "name": "Codex Runtime Smoke",
+      "status": "completed",
+      "conclusion": "skipped",
+      "run_number": 3150,
+      "jobs_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/44529853191/jobs",
+      "logs_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/44529853191/logs",
+      "workflow_id": 276323833
+    },
+    {
+      "id": 44529853240,
+      "name": "Electron packaged CI",
+      "status": "queued",
+      "conclusion": null,
+      "run_number": 2208,
+      "jobs_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/44529853240/jobs",
+      "logs_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/44529853240/logs",
+      "workflow_id": 368482949
+    },
+    {
+      "id": 44529853117,
+      "name": "Announcements Content",
+      "status": "queued",
+      "conclusion": null,
+      "run_number": 5756,
+      "jobs_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/44529853117/jobs",
+      "logs_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/44529853117/logs",
+      "workflow_id": 350445454
+    },
+    {
+      "id": 44529853389,
+      "name": "Sentry owned process native gates",
+      "status": "completed",
+      "conclusion": "skipped",
+      "run_number": 475,
+      "jobs_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/44529853389/jobs",
+      "logs_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/44529853389/logs",
+      "workflow_id": 375930633
+    },
+    {
+      "id": 44529853520,
+      "name": "OpenCode packaged Windows E2E",
+      "status": "completed",
+      "conclusion": "skipped",
+      "run_number": 1135,
+      "jobs_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/44529853520/jobs",
+      "logs_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/44529853520/logs",
+      "workflow_id": 354658917
+    },
+    {
+      "id": 44529853453,
+      "name": "Host Emulated Acceptance",
+      "status": "queued",
+      "conclusion": null,
+      "run_number": 176,
+      "jobs_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/44529853453/jobs",
+      "logs_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/44529853453/logs",
+      "workflow_id": 417564953
+    },
+    {
+      "id": 44529852991,
+      "name": "Teams creation page Electron E2E",
+      "status": "completed",
+      "conclusion": "failure",
+      "run_number": 1075,
+      "jobs_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/44529852991/jobs",
+      "logs_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/44529852991/logs",
+      "workflow_id": 410738474
+    },
+    {
+      "id": 44529853089,
+      "name": "Windows native updater predecessor feasibility",
+      "status": "completed",
+      "conclusion": "failure",
+      "run_number": 1184,
+      "jobs_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/44529853089/jobs",
+      "logs_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/44529853089/logs",
+      "workflow_id": 375294731
+    },
+    {
+      "id": 44529853255,
+      "name": "Windows official installer fresh and native OTA",
+      "status": "completed",
+      "conclusion": "failure",
+      "run_number": 1213,
+      "jobs_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/44529853255/jobs",
+      "logs_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/44529853255/logs",
+      "workflow_id": 375548930
+    },
+    {
+      "id": 44529853337,
+      "name": "Deploy Landing to GitHub Pages",
+      "status": "completed",
+      "conclusion": "success",
+      "run_number": 2035,
+      "jobs_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/44529853337/jobs",
+      "logs_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/44529853337/logs",
+      "workflow_id": 250250191
+    },
+    {
+      "id": 44529853380,
+      "name": "Native updater feasibility (Linux predecessor)",
+      "status": "in_progress",
+      "conclusion": null,
+      "run_number": 1276,
+      "jobs_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/44529853380/jobs",
+      "logs_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/44529853380/logs",
+      "workflow_id": 375243389
+    }
+  ],
+  "completedJobEvidence": [
+    {
+      "job": 135579981736,
+      "run": 44529852991,
+      "url": "https://github.com/777genius/agent-teams-ai/actions/runs/44529852991/job/135579981736",
+      "decodedLogBytes": 47388,
+      "decodedLogSha256": "82afc066517621d04fcda88f292ffe26aba58ba95955832a4abc1d238e8cdbd6",
+      "originalTypeErrors": [
+        "2026-11-19T13:30:33.0626892Z ##[error]test/features/agent-backend/claudeCloseDiagnostics.test.ts(411,112): error TS2345: Argument of type 'string' is not assignable to parameter of type 'never'.",
+        "2026-11-19T13:30:33.0632301Z ##[error]test/features/agent-backend/hostOpenCodeV2ModelProbeLifecycle.test.ts(317,33): error TS2554: Expected 1 arguments, but got 2.",
+        "2026-11-19T13:30:33.0633277Z ##[error]test/features/agent-backend/hostOpenCodeV2ModelProbeLifecycle.test.ts(331,54): error TS2554: Expected 1 arguments, but got 2.",
+        "2026-11-19T13:30:33.0634185Z ##[error]test/features/agent-backend/hostOpenCodeV2ModelProbeLifecycle.test.ts(334,37): error TS2554: Expected 1 arguments, but got 2."
+      ]
+    },
+    {
+      "job": 135579980006,
+      "run": 44529853089,
+      "url": "https://github.com/777genius/agent-teams-ai/actions/runs/44529853089/job/135579980006",
+      "decodedLogBytes": 37494,
+      "decodedLogSha256": "f36dac34aa9a2c203b02ca2ea8ef85830fd5c52159e05772540fe633e1c57f08",
+      "originalTypeErrors": [
+        "2026-11-19T13:32:35.3847908Z ##[error]test/features/agent-backend/claudeCloseDiagnostics.test.ts(411,112): error TS2345: Argument of type 'string' is not assignable to parameter of type 'never'.",
+        "2026-11-19T13:32:35.3854816Z ##[error]test/features/agent-backend/hostOpenCodeV2ModelProbeLifecycle.test.ts(317,33): error TS2554: Expected 1 arguments, but got 2.",
+        "2026-11-19T13:32:35.3856289Z ##[error]test/features/agent-backend/hostOpenCodeV2ModelProbeLifecycle.test.ts(331,54): error TS2554: Expected 1 arguments, but got 2.",
+        "2026-11-19T13:32:35.3857521Z ##[error]test/features/agent-backend/hostOpenCodeV2ModelProbeLifecycle.test.ts(334,37): error TS2554: Expected 1 arguments, but got 2."
+      ]
+    }
+  ],
+  "repair": {
+    "scope": "Four TEST-only typing corrections; original values, predicates and all production source preserved",
+    "changes": [
+      "Use lines.length === 0 to preserve the zero-emission oracle without assertion-induced never[] narrowing",
+      "Place three Vitest messages in expect(actual,message), preserving matcher operands"
+    ],
+    "files": [
+      {
+        "path": "test/features/agent-backend/claudeCloseDiagnostics.test.ts",
+        "sha256": "1e47f907b86483c78e4e7e10f4e905199ded5e76de180766a64f97abf812ffbb",
+        "bytes": 31420
+      },
+      {
+        "path": "test/features/agent-backend/hostOpenCodeV2ModelProbeLifecycle.test.ts",
+        "sha256": "81042e47aef5c39918991603bfd1c0599738f96bef9ee84c1154c8e99f9dd556",
+        "bytes": 27816
+      }
+    ],
+    "independentReview": {
+      "owner": "/root/pr_graph",
+      "status": "PASS"
+    },
+    "functionalTestsRepeated": false
+  },
+  "applicationCompiler": {
+    "command": [
+      "resources/legacy-agent-host/node/v24.21.0/linux-x64/node",
+      "node_modules/@typescript/native/bin/tsc",
+      "--noEmit"
+    ],
+    "configuration": "tsconfig.json; full original application/test includes",
+    "resourceEnvironment": {
+      "GOMEMLIMIT": "512MiB",
+      "GOGC": "50",
+      "GOMAXPROCS": "2"
+    },
+    "exitCode": -9,
+    "elapsedSeconds": 164.465,
+    "logBytes": 0,
+    "logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "modifiedTestHashesBeforeAfterEqual": true,
+    "status": "TERMINATED",
+    "qualification": "No compiler PASS and no OOM attribution. Original seven unrelated downstream pnpm typecheck projects were not rerun."
+  },
+  "targetedTypingCompiler": {
+    "status": "NOT_RUN",
+    "reason": "Unified exec-server transport disconnected; recovery timed out. Environment reported unavailable."
+  },
+  "recovery": {
+    "method": "Read immutable GitHub664 originals, replay exact four reviewed replacements, independently hash restored UTF-8 bytes",
+    "allRestoredHashesMatchOriginalReview": true,
+    "permissionScope": "Existing Draft1192 branch only; expected-head lease, no force/main merge/release/CI dispatch or rerun"
+  }
+}

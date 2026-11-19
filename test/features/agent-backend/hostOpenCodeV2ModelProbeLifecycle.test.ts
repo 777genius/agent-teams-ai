@@ -314,7 +314,7 @@ test.each(['getter', 'proxy', 'held'] as const)('original probe exception surviv
   let f: Awaited<ReturnType<typeof fixture>> | undefined;
   try {
     f = await fixture('stop-unknown', failure);
-    expect(records).toEqual([], 'construction cannot invent a failed close');
+    expect(records, 'construction cannot invent a failed close').toEqual([]);
     await expect(f.start()).rejects.toBe(failure);
     const closing = f.probe.close();
     await expect(closing).resolves.toBe(false);
@@ -328,10 +328,10 @@ test.each(['getter', 'proxy', 'held'] as const)('original probe exception surviv
     const { profileHash, commandHash, ...channelFields } = first;
     expect(profileHash).toMatch(/^[a-f0-9]{64}$/);
     expect(commandHash).toBe(createHash('sha256').update(JSON.stringify('TEST-original-probe')).digest('hex'));
-    expect(channelFields).toEqual(f.observations[0], 'stderr retains the same original scalar failure as the existing channel');
+    expect(channelFields, 'stderr retains the same original scalar failure as the existing channel').toEqual(f.observations[0]);
     expect(JSON.stringify(records)).not.toContain(secret);
     await expect(f.probe.close()).resolves.toBe(false);
-    expect(records).toHaveLength(1, 'repeated close cannot publish another failure or change UNKNOWN');
+    expect(records, 'repeated close cannot publish another failure or change UNKNOWN').toHaveLength(1);
     expect(f.counts()).toMatchObject({ requests: 0, nativeCreations: 1, physicalStops: 1 });
   } finally { diagnostic.mockRestore(); await f?.dispose(); }
 });

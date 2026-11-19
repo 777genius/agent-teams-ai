@@ -89,6 +89,40 @@ test('the original remaining startup deadline rejects a pending snapshot without
   held.resolve(ready); await setImmediate(); assert.equal(f.discovery(), 0);
 });
 
+test('startup diagnostics retain the final call and completed observation after the original 24 history cap', { timeout: 5000 }, async () => {
+  let rejectLast!: (reason: unknown) => void;
+  const failed = { promise: new Promise<Record<string, unknown>>((_, reject) => { rejectLast = reject; }),
+    resolve(_value: Record<string, unknown>) { assert.fail('the final TEST CDP call must reject'); } };
+  const reads = [...Array.from({ length: 25 }, () => deferred<Record<string, unknown>>()), failed];
+  const f = fixture(reads), pending = f.start(4500);
+  const original = Object.assign(new Error('CDP command timed out: Runtime.evaluate'), { private: 'TEST-private-error-payload' });
+  const rejected = assert.rejects(pending, error => error === original, 'retain the original rejection object');
+  for (let index = 0; index < 25; index++) {
+    await f.acknowledgments[index]!.promise;
+    reads[index]!.resolve({ ...ready, mainReady: index === 24, uiDidInit: false, storePresent: false, rootChildCount: 0 });
+  }
+  await f.acknowledgments[25]!.promise;
+  const diagnostic = (f.evidence.rendererDiagnostics as { startup: { appReadiness: {
+    observations: Record<string, unknown>[]; contextRetries: number; last: Record<string, unknown>;
+  } } }).startup.appReadiness;
+  assert.equal(diagnostic.observations.length, 24);
+  assert.ok(diagnostic.observations.every(value => value.mainReady === false));
+  assert.equal(diagnostic.last.attempt, 26); assert.equal(diagnostic.last.phase, 'evaluate');
+  assert.equal(diagnostic.last.completedAt, null); assert.equal(diagnostic.last.failure, null);
+  const observation = diagnostic.last.observation as Record<string, unknown>;
+  assert.equal(observation.attempt, 25); assert.equal(observation.mainReady, true);
+  rejectLast(original); await rejected;
+  assert.equal(diagnostic.last.failure, 'cdp-timeout'); assert.equal(diagnostic.last.phase, 'evaluate');
+  const call = diagnostic.last.callAt as { monotonicMs: number; epochMs: number };
+  const failure = diagnostic.last.failedAt as typeof call;
+  assert.ok(Number.isSafeInteger(call.monotonicMs) && Number.isSafeInteger(call.epochMs));
+  assert.ok(failure.monotonicMs >= call.monotonicMs); assert.ok(Number.isSafeInteger(failure.epochMs));
+  assert.equal(diagnostic.contextRetries, 0); assert.equal(f.observations(), 26); assert.equal(f.discovery(), 0);
+  assert.deepEqual(f.commands, ['Page.enable', 'Runtime.enable', 'Page.getFrameTree', 'Runtime.evaluate', 'Log.enable', 'Network.enable']);
+  assert.equal(JSON.stringify(f.evidence).includes('TEST-private-error-payload'), false);
+  assert.ok(Buffer.byteLength(JSON.stringify(diagnostic.last)) < 2048, 'one fixed closed record beyond the unchanged history');
+});
+
 
 const viewLoadSample = {
   kind: 'runtime-provider-view-load-v1', owner: 1, request: 1, phase: 'view-set', silent: false,

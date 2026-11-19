@@ -391,7 +391,7 @@ test('probe close failure bridge retains one original closed observation without
     { ...probeCloseFailure, outcome: secret }, { ...probeCloseFailure, errorClass: secret },
     { ...probeCloseFailure, runErrorCode: secret }, { ...probeCloseFailure, runCauseCode: undefined },
   ]) assert.doesNotThrow(() => observe(invalid));
-  assert.equal(getterReads, 0); assert.deepEqual(lines, []);
+  assert.equal(getterReads, 0); assert.equal(lines.length, 0);
   observe(probeCloseFailure);
   for (let i = 0; i < 20; i++) observe({ ...probeCloseFailure, stage: 'namespace', reason: 'identity' });
   assert.equal(lines.length, 1); assert.ok(Buffer.byteLength(lines[0]!) <= 768);
