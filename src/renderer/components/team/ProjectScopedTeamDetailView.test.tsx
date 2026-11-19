@@ -3,7 +3,7 @@ import { createRoot } from 'react-dom/client';
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { state, getView, launchTeam, openTeamTab, updateTabLabel, selectTeam } = vi.hoisted(() => {
+const { state, getView, launchTeam, launchTeamIpc, openTeamTab, updateTabLabel, selectTeam } = vi.hoisted(() => {
   const state = {
     repositoryGroups: [],
     projects: [
@@ -26,6 +26,7 @@ const { state, getView, launchTeam, openTeamTab, updateTabLabel, selectTeam } = 
     state,
     getView: vi.fn(),
     launchTeam: vi.fn(),
+    launchTeamIpc: vi.fn(),
     openTeamTab: vi.fn(),
     updateTabLabel: vi.fn(),
     selectTeam: vi.fn(async (_teamName: string) => undefined),
@@ -43,11 +44,12 @@ vi.mock('@renderer/store', () => ({
         openTeamTab,
         updateTabLabel,
         selectTeam,
+        launchTeam,
       }),
     }
   ),
 }));
-vi.mock('@renderer/api', () => ({ api: { teams: { getProjectContextView: getView, launchTeam, onProvisioningProgress: () => () => undefined } } }));
+vi.mock('@renderer/api', () => ({ api: { teams: { getProjectContextView: getView, launchTeam: launchTeamIpc, onProvisioningProgress: () => () => undefined } } }));
 vi.mock('@features/localization/renderer', () => ({
   useAppTranslation: () => ({ t: (key: string) => key }),
 }));
@@ -116,6 +118,7 @@ describe('ProjectScopedTeamDetailView project switching', () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     getView.mockReset();
     launchTeam.mockReset();
+    launchTeamIpc.mockReset();
     openTeamTab.mockReset();
     updateTabLabel.mockReset();
     selectTeam.mockReset();
@@ -390,7 +393,10 @@ describe('ProjectScopedTeamDetailView project switching', () => {
       .toBe('manual');
     expect(launchTeam).not.toHaveBeenCalled();
     getView.mockResolvedValue(native('ptc-b', '/TEST/b'));
-    launchTeam.mockResolvedValue({ runId: 'b' });
+    // A previous project may leave a stale logical run. Only the canonical
+    // store launch action can reset it and adopt the new project's progress.
+    state.currentProvisioningRunIdByTeam.builders = 'stale-project-a-run';
+    launchTeam.mockResolvedValue('b');
     await act(async () => {
       host.querySelector<HTMLButtonElement>('[data-testid="launch-with-provider"]')!.click();
     });
@@ -398,6 +404,8 @@ describe('ProjectScopedTeamDetailView project switching', () => {
     expect(launchTeam).toHaveBeenCalledWith({
       teamName: 'builders', cwd: '/TEST/b', providerId: 'anthropic',
     });
+    // Never bypass successor-run initialization with a raw API invocation.
+    expect(launchTeamIpc).not.toHaveBeenCalled();
     expect(host.querySelector('[data-team]')?.getAttribute('data-team')).toBe('ptc-b');
   });
 });

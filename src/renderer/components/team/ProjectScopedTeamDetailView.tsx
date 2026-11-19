@@ -250,8 +250,10 @@ export const ProjectScopedTeamDetailView = ({
     setAwaitingReadyKey(targetKey);
     launchRef.current = { key: targetKey, runId: null };
     try {
-      const outcome = await api.teams.launchTeam({ ...request, teamName, cwd });
-      if (launchRef.current?.key === targetKey) launchRef.current.runId = outcome.runId;
+      // The store owns successor-run adoption, optimistic status and polling.
+      // Direct IPC would leave the previous project's logical run pinned.
+      const runId = await useStore.getState().launchTeam({ ...request, teamName, cwd });
+      if (launchRef.current?.key === targetKey) launchRef.current.runId = runId;
       if (activeKeyRef.current === targetKey) {
         await refresh(() => activeKeyRef.current === targetKey);
       }
