@@ -61,7 +61,9 @@ export interface OpenCodeV2EmbeddedServerOptions {
   /** Only this original child/session may attest its actual image normalization. */
   mediaSessionId?: string;
   /** Synchronous observation only; never an admission, timer or cleanup callback. */
-  observeStartupPhase?(phase: 'graph-start' | 'graph-done' | 'native-launch'): void;
+  observeStartupPhase?(phase: 'graph-start' | 'graph-done' | 'native-launch' | 'native-launch-returned' |
+    'native-endpoint-resolved' | 'startup-timer-aborted' | 'startup-parent-aborted' |
+    'startup-lifecycle-aborted' | 'startup-failed'): void;
 }
 export interface OpenCodeV2EmbeddedReady {
   endpoint: string;
@@ -317,6 +319,7 @@ export function createOpenCodeV2EmbeddedServer(options: OpenCodeV2EmbeddedServer
           ],
           cwd: profile.cwd,
         });
+        observe('native-launch-returned');
         child.stdin.on('error', () => {});
         const launched = child;
         const endpoint = await new Promise<string>((resolve, reject) => {
@@ -392,6 +395,7 @@ export function createOpenCodeV2EmbeddedServer(options: OpenCodeV2EmbeddedServer
             if (error) rejectReady();
           });
         });
+        observe('native-endpoint-resolved');
         launched.stdout.resume();
         const observed = await measure(combined);
         readyChild = launched;
@@ -402,6 +406,12 @@ export function createOpenCodeV2EmbeddedServer(options: OpenCodeV2EmbeddedServer
         });
         return ready;
       } catch (error) {
+        // Observe existing flags before cleanup aborts lifecycle; this does not identify the cause.
+        try {
+          observe(startupController.signal.aborted ? 'startup-timer-aborted' :
+            signal?.aborted ? 'startup-parent-aborted' :
+            lifecycle.signal.aborted ? 'startup-lifecycle-aborted' : 'startup-failed');
+        } catch { /* A diagnostic property read cannot replace the original failure or cleanup. */ }
         const stopped = await stopOwned();
         if (!stopped) throw new Error('OpenCode V2 embedded cleanup unknown', { cause: error });
         throw error;

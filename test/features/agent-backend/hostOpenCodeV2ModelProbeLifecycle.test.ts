@@ -2,12 +2,13 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { channel } from 'node:diagnostics_channel';
-import { once } from 'node:events';
+import { EventEmitter, once } from 'node:events';
 import { mkdtempSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
 import { realpath } from 'node:fs/promises';
 import { createServer } from 'node:http';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { PassThrough } from 'node:stream';
 import { setImmediate } from 'node:timers';
 import { fileURLToPath } from 'node:url';
 
@@ -25,6 +26,7 @@ vi.mock('node:child_process', async importOriginal => ({
 vi.mock('../../../packages/legacy-agent-host/src/adapters/providers/OpenCodeV2EmbeddedServer.js',
   () => ({ createOpenCodeV2EmbeddedServer: (options: unknown) => controlled.create(options) }));
 
+import * as capturedProcess from '../../../packages/legacy-agent-host/src/adapters/providers/CapturedProcess';
 import * as probeDiagnostics from '../../../packages/legacy-agent-host/src/adapters/providers/createClaudeCloseDiagnostic';
 import * as embeddedGraph from '../../../packages/legacy-agent-host/src/adapters/providers/OpenCodeV2EmbeddedGraph';
 import { createOpenCodeV2ModelProbe } from '../../../packages/legacy-agent-host/src/adapters/providers/OpenCodeV2ModelProbe';
@@ -171,6 +173,7 @@ async function fixture(mode: 'http' | 'custody' | 'stop-unknown' = 'http', start
         observe?.('graph-start');
         if (startFailure !== undefined) throw startFailure;
         observe?.('graph-done'); observe?.('native-launch');
+        observe?.('native-launch-returned'); observe?.('native-endpoint-resolved');
         return { endpoint, pid, startIdentity };
       },
       readPassword: () => { passwordReads++; return password; },
@@ -337,7 +340,7 @@ test.each(['getter', 'proxy', 'held'] as const)('original probe exception surviv
 });
 
 const probePrefix = 'legacy-agent-host: opencode-probe ';
-const phases = ['run', 'graph-start', 'graph-done', 'native-launch', 'native-ready',
+const phases = ['run', 'graph-start', 'graph-done', 'native-launch', 'native-launch-returned', 'native-endpoint-resolved', 'native-ready',
   'credential', 'attestation', 'session-create', 'driver-open', 'first-submit'];
 
 test('phase sink failure preserves the original probe HTTP, single run and physical cleanup', async () => {
@@ -411,9 +414,10 @@ test.each(['native-ready', 'session-create', 'first-submit'] as const)(
 
 type StartupPhase = Parameters<NonNullable<OpenCodeV2EmbeddedServerOptions['observeStartupPhase']>>[0];
 
-/** The real server verifies a tiny TEST file; its original allocation guard never permits a child. */
+/** Actual server/abort/endpoint parsing; any returned child is a finite in-memory TEST stream. */
 async function embeddedBoundary(
-  observer: 'absent' | 'throw' | 'getter' | 'captured', graphFailure: boolean, abortAt?: StartupPhase
+  observer: 'absent' | 'throw' | 'getter' | 'captured', graphFailure: boolean,
+  abortAt?: StartupPhase | 'timer' | 'lifecycle'
 ) {
   const entry = fileURLToPath(new URL('../../../packages/legacy-agent-host/src/adapters/providers/OpenCodeV2EmbeddedChild.ts', import.meta.url));
   expect(await realpath(entry), 'the original source child entry must already have its native canonical spelling').toBe(entry);
@@ -426,14 +430,43 @@ async function embeddedBoundary(
   const originalAbort = new Error('TEST original startup abort');
   const controller = new AbortController(), observed: StartupPhase[] = [];
   let graphReads = 0, allocationChecks = 0, custodyCalls = 0, getterReads = 0;
-  const graph = vi.spyOn(embeddedGraph, 'verifyOpenCodeV2EmbeddedGraph').mockImplementation(async () => {
+  const graphEntered = Promise.withResolvers<void>();
+  let cancelledGraphReason: unknown, launchCalls = 0, stopCalls = 0, inputWrites = 0;
+  const returnedChild = abortAt === 'native-launch-returned' || abortAt === 'native-endpoint-resolved';
+  const child = Object.assign(new EventEmitter(), { pid: 48101, stdin: new PassThrough(), stdout: new PassThrough(),
+    stderr: new PassThrough(), exitCode: null, signalCode: null, killed: false,
+    kill() { assert.fail('TEST stream is not native process or termination authority'); } });
+  child.stdin.on('data', (bytes: Buffer) => {
+    expect(++inputWrites).toBe(1);
+    const input = JSON.parse(bytes.toString('utf8')) as { nonce: string };
+    child.stdout.write(JSON.stringify({ type: 'ready', nonce: input.nonce, pid: child.pid,
+      version: '2.1.4', endpoint: 'http://127.0.0.1:48102' }) + '\n');
+  });
+  const OriginalProcess = capturedProcess.CapturedProcess;
+  const custody = returnedChild ? vi.spyOn(capturedProcess, 'CapturedProcess').mockImplementation(function (...args) {
+    return Object.assign(new OriginalProcess(...args), {
+      launch: () => { launchCalls++; return child; },
+      confirmStopped: async () => { stopCalls++; return true; },
+    });
+  }) : undefined;
+  const cancelGraph = async (signal?: AbortSignal) => {
+    if (abortAt !== 'timer' && abortAt !== 'lifecycle') return;
+    assert.ok(signal); graphEntered.resolve();
+    await new Promise<void>((_resolve, reject) => {
+      const fail = () => { cancelledGraphReason = signal.reason; reject(signal.reason); };
+      if (signal.aborted) fail(); else signal.addEventListener('abort', fail, { once: true });
+    });
+  };
+  const graph = vi.spyOn(embeddedGraph, 'verifyOpenCodeV2EmbeddedGraph').mockImplementation(async (_embedded, signal) => {
     graphReads++;
     if (graphFailure) throw originalFailure;
+    await cancelGraph(signal);
     return { modulePath: executable, effectPath: executable, requiredBunVersion: 'TEST-unused' };
   });
-  const windows = vi.spyOn(windowsCustody, 'createWindowsJobCustody').mockImplementation(async () => {
+  const windows = vi.spyOn(windowsCustody, 'createWindowsJobCustody').mockImplementation(async (_embedded, signal) => {
     graphReads++;
     if (graphFailure) throw originalFailure;
+    await cancelGraph(signal);
     return { capture() { custodyCalls++; throw new Error('TEST unexpected native custody'); } };
   });
   const options: OpenCodeV2EmbeddedServerOptions = {
@@ -442,6 +475,7 @@ async function embeddedBoundary(
     embedded: { directory: root, manifestSha256: 'a'.repeat(64), version: '2.1.4',
       platform: process.platform, arch: process.arch },
     databasePath: join(root, 'TEST-unused.sqlite'), configDirectory: root, config: {},
+    ...(abortAt === 'timer' ? { startupTimeoutMs: 1000 } : {}),
     canAllocate: () => { allocationChecks++; return false; },
     processCustody: {
       captureRoot() { custodyCalls++; throw new Error('TEST unexpected root capture'); },
@@ -462,22 +496,44 @@ async function embeddedBoundary(
       '../../../packages/legacy-agent-host/src/adapters/providers/OpenCodeV2EmbeddedServer');
     server = actual.createOpenCodeV2EmbeddedServer(options);
     if (observer === 'captured') options.observeStartupPhase = () => { throw diagnosticFailure; };
-    const failure = await server.start(controller.signal).then(() => {
+    if (abortAt === 'timer') vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    const completion = server.start(controller.signal).then(() => {
       throw new Error('TEST unadmitted native startup unexpectedly succeeded');
     }, error => error as unknown);
-    if (abortAt) expect(failure).toBe(originalAbort);
+    if (abortAt === 'timer' || abortAt === 'lifecycle') {
+      await graphEntered.promise;
+      if (abortAt === 'timer') {
+        await vi.advanceTimersByTimeAsync(999);
+        expect(cancelledGraphReason).toBeUndefined();
+        await vi.advanceTimersByTimeAsync(1);
+      } else await expect(server.stopOwned()).resolves.toBe(true);
+    }
+    const failure = await completion;
+    if (abortAt === 'timer' || abortAt === 'lifecycle') expect(failure).toBe(cancelledGraphReason);
+    else if (abortAt === 'native-launch-returned') expect(failure).toMatchObject({ message: 'OpenCode V2 embedded startup failed' });
+    else if (abortAt) expect(failure).toBe(originalAbort);
     else if (graphFailure) expect(failure).toBe(originalFailure);
     else expect(failure).toMatchObject({ message: 'Native launch unavailable' });
-    const expectedPhases: StartupPhase[] = graphFailure || abortAt === 'graph-start'
+    const expectedPhases: StartupPhase[] = graphFailure || abortAt === 'graph-start' || abortAt === 'timer' || abortAt === 'lifecycle'
       ? ['graph-start'] : ['graph-start', 'graph-done', 'native-launch'];
+    if (returnedChild) expectedPhases.push('native-launch-returned');
+    if (abortAt === 'native-endpoint-resolved') expectedPhases.push('native-endpoint-resolved');
+    expectedPhases.push(abortAt === 'timer' ? 'startup-timer-aborted' : abortAt === 'lifecycle'
+      ? 'startup-lifecycle-aborted' : abortAt ? 'startup-parent-aborted' : 'startup-failed');
     expect(observed).toEqual(observer === 'absent' || observer === 'getter' ? [] : expectedPhases);
     expect(graphReads).toBe(abortAt === 'graph-start' ? 0 : 1);
     expect(allocationChecks).toBe(graphFailure || abortAt ? 0 : 1);
     expect(getterReads).toBe(observer === 'getter' ? 1 : 0);
     expect(custodyCalls).toBe(0); expect(controlled.spawn).not.toHaveBeenCalled();
     await expect(server.stopOwned()).resolves.toBe(true);
+    expect(launchCalls).toBe(returnedChild ? 1 : 0);
+    expect(stopCalls).toBe(returnedChild ? 1 : 0);
+    expect(inputWrites).toBe(abortAt === 'native-endpoint-resolved' ? 1 : 0);
   } finally {
     await server?.stopOwned();
+    if (abortAt === 'timer') vi.useRealTimers();
+    custody?.mockRestore();
+    child.stdin.destroy(); child.stdout.destroy(); child.stderr.destroy();
     windows.mockRestore(); graph.mockRestore();
     rmSync(root, { recursive: true, force: true });
   }
@@ -493,5 +549,17 @@ test.each(['absent', 'throw', 'getter', 'captured'] as const)(
 test.each(['graph-start', 'native-launch'] as const)(
   'original startup cutoff immediately after %s refuses even if the observer throws', async phase => {
     await embeddedBoundary('throw', false, phase);
+  }
+);
+
+test.each(['native-launch-returned', 'native-endpoint-resolved'] as const)(
+  'actual embedded %s preserves the original abort and one cleanup when its observer throws', async phase => {
+    await embeddedBoundary('throw', false, phase);
+  }
+);
+
+test.each(['timer', 'lifecycle'] as const)(
+  'actual embedded startup observes the existing %s abort without extending it', async reason => {
+    await embeddedBoundary('throw', false, reason);
   }
 );

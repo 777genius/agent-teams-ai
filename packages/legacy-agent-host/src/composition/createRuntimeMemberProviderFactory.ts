@@ -14,6 +14,8 @@ import { startTeamMcpEndpoint } from '../mcp/endpoint.js';
 import { RuntimeOwnerError } from '../runtime/contracts.js';
 import { createRuntimeOpenDiagnostic } from '../diagnostics/runtimeOpenDiagnostic.js';
 import type { RuntimeOpenPhase } from '../diagnostics/runtimeOpenDiagnostic.js';
+import { beginModelReadinessAuthorityTiming } from '../diagnostics/modelReadinessTiming.js';
+import type { ModelReadinessAuthorityTiming } from '../diagnostics/modelReadinessTiming.js';
 import { runtimeDigest } from '../runtime/identity.js';
 import { captureMemberProviderAuthority } from './captureMemberProviderAuthority.js';
 import { captureNativeInputAuthority } from './captureNativeInputAuthority.js';
@@ -152,12 +154,18 @@ export function createRuntimeMemberProviderFactory(options: {
           const assertCaptured = () => {
             if (entry.team !== team || team.owner !== owner) throw new RuntimeOwnerError('forbidden');
           };
+          const authorityTiming: ModelReadinessAuthorityTiming = {};
           const assertCurrent = () => {
-            assertCaptured(); authority.assertCurrent(); assertAllocation(); assertCaptured();
+            assertCaptured();
+            const endProvider = beginModelReadinessAuthorityTiming(authorityTiming, 'provider');
+            try { authority.assertCurrent(); } finally { endProvider?.(); }
+            const endAllocation = beginModelReadinessAuthorityTiming(authorityTiming, 'allocation');
+            try { assertAllocation(); } finally { endAllocation?.(); }
+            assertCaptured();
           };
           // Allocation reads its separate launch store; do not enclose it in the Team owner's fence.
           return consumeMemberModelReadiness({ ...(options.modelReadiness ? { management: options.modelReadiness } : {}),
-            launch, entry, hostIncarnation: options.hostIncarnation, assertCurrent });
+            launch, entry, hostIncarnation: options.hostIncarnation, assertCurrent, authorityTiming });
         })();
         const setupCurrent = () => {
           try {

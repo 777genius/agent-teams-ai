@@ -1,8 +1,8 @@
 # P09: решение о записи в выбранный источник и потреблении его байтов
 
 **19 ноября 2026 владелец явно выбрал A в текущем чате.** Ниже зафиксирована
-разрешённая граница; source-срез реализован и независимо проверен, native-приёмка
-ещё не завершена. Исторические
+разрешённая граница; source-срез реализован и независимо проверен. Native A на
+Linux x64 и Darwin x64 прошёл; Darwin ARM ещё ожидает своего исходного job. Исторические
 INCOMPLETE и контрпримеры прежней гарантии сохраняют свои исходные результаты.
 
 ## Принятое A: конкретная граница
@@ -70,8 +70,8 @@ scanner, permission repair, copy execution, новый job или матрица
 Все исходные100s observation,120s outer test и cleanup deadlines сохраняются.
 
 Независимый R2 exact diff завершён. TS7 Host build, все Host test types, строгая
-C-компиляция controller/library/payload и source-size guard прошли. Следующий шаг —
-frozen source native lane на Linux и двух Darwin architectures. Нативные Claude/Codex не запускаются. Используются только
+C-компиляция controller/library/payload и source-size guard прошли. Native lane
+исполняется на frozen source для Linux и двух Darwin architectures. Нативные Claude/Codex не запускаются. Используются только
 исходные TEST actors; vendor/provider pins и остальные обязательные E2E неизменны.
 PASS A не заменяет readiness, Desktop, packaged или остальную Stage1-приёмку.
 
@@ -90,6 +90,26 @@ control, но PTRACE_TRACEME вернул EPERM до исходного stop/bir
 Receipt сохраняет INCOMPLETE, original child/group cleanup=true и отсутствие
 исполненных product rows. [Полный receipt и журнал](evidence/p09-contract-a-local-linux-20261119.json)
 не выдаются за A PASS; дальнейшая проверка проходит в существующей CI lane.
+
+Исходный [Darwin x64 job135773065012](https://github.com/777genius/agent-teams-ai/actions/runs/44584326495/job/135773065012)
+на `fbc77ea6b9a35f4be640d7b1e103b992a3f3a45e` полностью завершился SUCCESS,
+включая native V2 journey и P09 step25. A receipt:
+`PASS_TRUSTED_WRITER_FIXTURE_ONLY`, все8 CapturedProcess observations PASS,
+cleanup=true. Старый strict cohort остаётся INCOMPLETE: compiler-default baseline
+EACCES/-67062, after-check и writer-open INCOMPLETE; оба script mutation schedules
+сохраняют COUNTEREXAMPLE с SCRIPT:B. Все11 strict cleanups подтверждены.
+`installedRuntimeQualified=false`, `releaseQualified=false`. Artifact14561975640:
+12099bytes, SHA-256 `fd97a3d781e46b8b8608bb210509675a387f19089c82570fd5afad608dd0550c`.
+Это отдельный результат Darwin x64, который не квалифицирует другие платформы
+или оставшиеся Desktop paths.
+
+Исходный [Linux x64 job135773064871](https://github.com/777genius/agent-teams-ai/actions/runs/44584326495/job/135773064871)
+на том же fbc также полностью SUCCESS, включая P09 step25. Все8 A observations
+PASS, cleanup=true, installed/release=false. Linux legacy strict сохраняет
+`PASS_NATIVE_FIXTURE_ONLY`, script-negative — COUNTEREXAMPLE с SCRIPT:B,
+scriptQualified/productQualified=false. Artifact14563098271:24851bytes,
+SHA-256 `aa9398579e16ad42825674d6cecc1842f17d7f9cfb9a27508b4d235b029146a1`.
+Darwin ARM ещё queued; его исходный результат остаётся обязательным.
 
 Отдельный read-only review встроенных writers подтвердил существующую совместимость
 с A: OpenCode V1 сохраняет проверенные существующие bytes и отказывает перед

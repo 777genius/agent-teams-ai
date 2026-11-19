@@ -206,7 +206,11 @@ export function validateEmulatedSourceRefusal(value: Record<string, unknown>, pe
         const regions = sourceRecord(timing.regions);
         assert.ok(regions && typeof regions === 'object' && !Array.isArray(regions) && [Object.prototype, null].includes(Object.getPrototypeOf(regions)));
         assert.ok(Object.getOwnPropertySymbols(regions).length === 0 && Object.values(Object.getOwnPropertyDescriptors(regions)).every(row => 'value' in row));
-        const names = ['initialAuthority', 'readConsumer', 'reference', 'finalAuthority', ...(Object.hasOwn(regions, 'referenceAccountCount') ? ['referenceAccount', 'referenceAccountAuthority'] : [])];
+        const authorityParts = Object.hasOwn(regions, 'referenceAccountProviderCount');
+        assert.ok(!authorityParts || Object.hasOwn(regions, 'referenceAccountCount'));
+        const names = ['initialAuthority', 'readConsumer', 'reference', 'finalAuthority',
+          ...(Object.hasOwn(regions, 'referenceAccountCount') ? ['referenceAccount', 'referenceAccountAuthority'] : []),
+          ...(authorityParts ? ['referenceAccountProvider', 'referenceAccountAllocation'] : [])];
         assert.deepEqual(Object.keys(regions).sort(), names.flatMap(name => [name + 'Count', name + 'Ms']).sort());
         for (const name of names) {
           const count = regions[name + 'Count'], milliseconds = regions[name + 'Ms'];

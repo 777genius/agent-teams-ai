@@ -127,8 +127,12 @@ export function createOpenCodeMetadataDiagnostic(
 }
 
 export type OpenCodeProbePhase = 'run' | 'graph-start' | 'graph-done' | 'native-launch'
+  | 'native-launch-returned' | 'native-endpoint-resolved' | 'startup-timer-aborted'
+  | 'startup-parent-aborted' | 'startup-lifecycle-aborted' | 'startup-failed'
   | 'native-ready' | 'credential' | 'attestation' | 'session-create' | 'driver-open' | 'first-submit';
 const probePhases = new Set<OpenCodeProbePhase>(['run', 'graph-start', 'graph-done', 'native-launch',
+  'native-launch-returned', 'native-endpoint-resolved', 'startup-timer-aborted',
+  'startup-parent-aborted', 'startup-lifecycle-aborted', 'startup-failed',
   'native-ready', 'credential', 'attestation', 'session-create', 'driver-open', 'first-submit']);
 
 /** Last observed phase only: no readiness, failure, process identity or release authority. */

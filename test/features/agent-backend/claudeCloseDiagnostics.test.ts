@@ -207,8 +207,9 @@ const probePrefix = 'legacy-agent-host: opencode-probe ';
 const probeClosePrefix = 'legacy-agent-host: opencode-probe-close-failed ';
 const probeCloseFailure = { probeDigest: 'a'.repeat(64), runState: 'threw', outcome: 'unobserved',
   errorClass: 'held', stage: 'owner-client', reason: 'threw', runErrorCode: null, runCauseCode: 'ECONNRESET' };
-const probePhases = ['run', 'graph-start', 'graph-done', 'native-launch', 'native-ready',
+const probePhases = ['run', 'graph-start', 'graph-done', 'native-launch', 'native-launch-returned', 'native-endpoint-resolved', 'native-ready',
   'credential', 'attestation', 'session-create', 'driver-open', 'first-submit'] as const;
+const startupFailurePhases = ['startup-timer-aborted', 'startup-parent-aborted', 'startup-lifecycle-aborted', 'startup-failed'] as const;
 
 test('probe phase observations retain captured hashes, a lazy clock and at most twelve transitions', () => {
   const secret = 'TEST-private-command-path-key';
@@ -220,8 +221,9 @@ test('probe phase observations retain captured hashes, a lazy clock and at most 
   selected.profileId = secret; selected.configRevision = secret; clock = 500;
   assert.equal(clockReads, 0); assert.deepEqual(lines, [], 'construction does not observe or start a probe');
   for (const phase of probePhases) { observe(phase); clock += 7; }
+  for (const phase of startupFailurePhases) observe(phase);
   for (let repeat = 0; repeat < 20; repeat++) for (const phase of probePhases) observe(phase);
-  assert.equal(lines.length, probePhases.length); assert.ok(lines.length <= 12);
+  assert.equal(lines.length, probePhases.length); assert.equal(lines.length, 12);
   assert.equal(clockReads, probePhases.length, 'duplicate transitions do not read the clock or write again');
   assert.ok(lines.every(line => Buffer.byteLength(line) < 8192));
   assert.equal(lines.join('').includes(secret), false);
@@ -238,6 +240,19 @@ test('probe phase observations retain captured hashes, a lazy clock and at most 
   assert.ok(retained.every(Object.isFrozen));
   assert.ok(retained.every(value => !Object.hasOwn(value, 'pid') && !Object.hasOwn(value, 'ready') &&
     !Object.hasOwn(value, 'released') && !Object.hasOwn(value, 'failed')));
+});
+
+test.each(startupFailurePhases)('probe decoder retains only the existing startup observation %s', phase => {
+  const lines: string[] = [], records: OpenCodeProbeDiagnostic[] = [];
+  const observe = createOpenCodeProbeDiagnostic({ profileId: 'TEST-profile', configRevision: 'TEST-revision' },
+    'TEST-command', 'a'.repeat(64), line => lines.push(line), () => 100);
+  observe('run'); observe('graph-start'); observe(phase); observe(phase);
+  const decode = decodeClaudeCloseDiagnostics(() => {}, undefined, undefined, value => { records.push(value); });
+  decode(Buffer.from(lines.join('')));
+  assert.equal(lines.length, 3); assert.equal(records.length, 3);
+  assert.equal(records[2]!.phase, phase); assert.equal(records[2]!.sequence, 3);
+  assert.deepEqual(Object.keys(records[2]!).sort(), ['commandHash', 'elapsedMs', 'phase', 'probeDigest', 'profileHash', 'sequence']);
+  assert.ok(records.every(Object.isFrozen));
 });
 
 test('probe diagnostics cannot replace clock, write or sink failures with authority', async () => {

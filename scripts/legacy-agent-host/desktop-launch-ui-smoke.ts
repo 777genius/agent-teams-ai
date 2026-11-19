@@ -6,10 +6,11 @@ import { readFile, readdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { performance } from 'node:perf_hooks';
 import { fileDigest } from './desktop-backend-fixture.ts';
-import { replaceRosterSchema } from '../../packages/legacy-agent-host/dist/team/rosterSchema.js';
+import { replaceRosterSchema, savedTeamSettingsSchema, teamRosterRevision } from '../../packages/legacy-agent-host/dist/team/rosterSchema.js';
 import { FileManagementCommandStore } from '../../packages/legacy-agent-host/dist/adapters/providers/FileManagementCommandStore.js';
 import { managementDigest } from '../../packages/legacy-agent-host/dist/management/identity.js';
 import { runtimeDigest } from '../../packages/legacy-agent-host/dist/runtime/identity.js';
+import { teamModelProbeContext, teamModelProbeActionDigest } from '../../packages/legacy-agent-host/dist/composition/teamLaunchModelProbe.js';
 import type { StoredModelProbe } from '../../packages/legacy-agent-host/dist/management/commandRecords.js';
 import { readDesktopNativeStopSessions, readDesktopNativeHostProcesses, separateDesktopOpenCodeRuntimeChildren, observeDesktopOpenCodeMetadata, captureDesktopOpenCodeGlobalMetadata, captureDesktopOpenCodeProjectMetadata } from './desktop-native-stop-fixture.ts';
 import { command, processTable } from './desktop-backend-observations.ts';
@@ -37,7 +38,7 @@ const json = async (path: string) => JSON.parse(await readFile(path, 'utf8')) as
 
 /** Observe one original TEST probe's remaining time; this grants no readiness or launch authority. */
 export async function waitForDesktopOpenCodePreflight(cdp: UiCdpPort, options: {
-  fixture: { root: string; profilePath: string; pins: { profileSha256: string };
+  fixture: { root: string; profilePath: string; handleId: string; pins: { profileSha256: string };
     openCodeV2: { model: string; displayName: string } };
   prompt: string;
   proof: Record<string, unknown>;
@@ -79,12 +80,39 @@ export async function waitForDesktopOpenCodePreflight(cdp: UiCdpPort, options: {
   assert.equal(typeof scope.runId, 'string');
   assert.equal(options.fixture.openCodeV2.model, 'test-local/TEST-model', 'only the existing localhost TEST model');
   const ownerDigest = managementDigest(owner), bindingDigest = runtimeDigest(binding);
+  // This joins one prospective request to the original form, not an independent
+  // proof of its saved source. Only Host admission and the unchanged UI qualify readiness.
+  const matchesSavedRequest = (probe: StoredModelProbe, state: Record<string, unknown>): boolean => {
+    const captured = probe.readinessScope!, origin = probe.localModelReadinessOrigin!;
+    if (!/^saved-model-[a-f0-9]{64}$/.test(captured.sourceRevision)) return false;
+    assert.ok(typeof options.fixture.handleId === 'string' && options.fixture.handleId.length > 0);
+    const rosterRevision = (value: Record<string, unknown>): string => {
+      assert.ok(Array.isArray(value.members), 'original TEST roster members are present');
+      for (const member of value.members.map(record)) assert.ok(typeof member.memberId === 'string' &&
+        typeof member.name === 'string' && (member.role === 'lead' || member.role === 'member'));
+      assert.ok(value.rosterVersion === undefined || Number.isSafeInteger(value.rosterVersion) && Number(value.rosterVersion) >= 0);
+      return teamRosterRevision(value.members as Parameters<typeof teamRosterRevision>[0],
+        value.rosterVersion as number | undefined, savedTeamSettingsSchema.parse(value.savedSettings));
+    };
+    const originalRoster = rosterRevision(team);
+    const leads = (team.members as unknown[]).map(record).filter(member => member.role === 'lead');
+    assert.equal(leads.length, 1, 'one original TEST lead');
+    if (captured.rosterRevision !== originalRoster || rosterRevision(state) !== originalRoster) return false;
+    const payload = { launchId: captured.sourceRevision, rosterRevision: originalRoster,
+      memberId: leads[0]!.memberId as string, model: options.fixture.openCodeV2.model,
+      draft: { providerId: 'opencode' as const, target: { kind: 'lead' as const }, workspace } };
+    const context = teamModelProbeContext(binding.teamId as string, payload);
+    return captured.selectionDigest === runtimeDigest(payload) && probe.context === context &&
+      captured.actionDigest === teamModelProbeActionDigest(probe.commandId, context) &&
+      captured.destinationKeys.length === 1 && captured.destinationKeys[0] === runtimeDigest(payload.draft.target) &&
+      origin.selectionDigest === managementDigest({ handleId: options.fixture.handleId, scope, payload });
+  };
   const stableIdentity = (probe: StoredModelProbe): string => {
     const stable: Record<string, unknown> = { ...probe };
     for (const key of ['phase', 'ok', 'resourceHeld', 'readiness', 'nativeFileKeyWitness']) delete stable[key];
     return managementDigest(stable);
   };
-  const readOriginal = (): StoredModelProbe | undefined => {
+  const readOriginal = (state: Record<string, unknown>): StoredModelProbe | undefined => {
     assertWithin();
     if (!store) try { store = new FileManagementCommandStore(storageRoot, true); }
     catch (error) { if ((error as NodeJS.ErrnoException).code === 'ENOENT' && !original) return; throw error; }
@@ -95,8 +123,9 @@ export async function waitForDesktopOpenCodePreflight(cdp: UiCdpPort, options: {
       if (probe.kind === 'model.probe' && probe.purpose === 'native-local-readiness-v1' &&
           probe.providerId === 'test-local' && probe.modelId === 'TEST-model' &&
           probe.readinessScope?.kind === 'team' && probe.readinessScope.teamBindingDigest === bindingDigest &&
-          probe.readinessScope.sourceRevision === scope.runId && probe.readinessScope.workspace === workspace &&
-          probe.localModelReadinessOrigin?.kind === 'team' && probe.localModelReadinessOrigin.ownerDigest === ownerDigest)
+          probe.readinessScope.workspace === workspace &&
+          probe.localModelReadinessOrigin?.kind === 'team' && probe.localModelReadinessOrigin.ownerDigest === ownerDigest &&
+          (probe.readinessScope.sourceRevision === scope.runId || matchesSavedRequest(probe, state)))
         matches.push(probe);
     }
     assertWithin();
@@ -125,6 +154,7 @@ export async function waitForDesktopOpenCodePreflight(cdp: UiCdpPort, options: {
       original = { commandId: probe.commandId, identity, deadline };
       options.proof.originalPreflightWait = { authority: 'wait-bound-only', commandId: probe.commandId,
         profileId: probe.profileId, fingerprint: probe.fingerprint, context: probe.context,
+        sourceRevision: probe.readinessScope!.sourceRevision,
         ownerDigest, bindingDigest, initialEnvelopeDigest: managementDigest(probe), identity,
         acquisitionDeadline, deadline, probeExpiresAt: probe.expiresAt,
         scopeCutoff: probe.readinessScope!.cutoff, preparationExpiresAt: preparation.expiresAt };
@@ -143,7 +173,7 @@ export async function waitForDesktopOpenCodePreflight(cdp: UiCdpPort, options: {
     const state = await options.ownerState();
     assertPinnedProfile();
     assert.deepEqual(state.binding, binding, 'original Team owner binding changed');
-    readOriginal();
+    readOriginal(state);
   };
   const expression = `(() => {
     const prompts=[...document.querySelectorAll('[role="dialog"] #dialog-prompt')];
@@ -176,7 +206,7 @@ export async function waitForDesktopOpenCodePreflight(cdp: UiCdpPort, options: {
     )));
     assertWithin();
     assert.deepEqual(state.binding, binding, 'original Team owner binding changed');
-    assert.ok(readOriginal());
+    assert.ok(readOriginal(state));
   };
   // These controls are used only for the existing pre-submit scroll/click. Their
   // reads stay bound to the original owner/receipt; Input dispatch remains unchanged.

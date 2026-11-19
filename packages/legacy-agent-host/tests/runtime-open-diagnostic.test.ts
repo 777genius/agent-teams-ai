@@ -1,14 +1,19 @@
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { mkdtemp, realpath, rm } from 'node:fs/promises';
 import { Server } from 'node:http';
+import { stripTypeScriptTypes } from 'node:module';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { performance } from 'node:perf_hooks';
 import { PassThrough } from 'node:stream';
 import { test } from 'node:test';
+import { runInNewContext } from 'node:vm';
 
 import { FileRuntimeStore } from '../dist/adapters/runtime/FileRuntimeStore.js';
 import { createRuntimeMemberProviderFactory } from '../dist/composition/createRuntimeMemberProviderFactory.js';
 import { createTeamHost } from '../dist/composition/TeamHost.js';
+import { beginModelReadinessAuthorityTiming, createModelReadinessTiming } from '../dist/diagnostics/modelReadinessTiming.js';
 import { RuntimeOwnerError } from '../dist/runtime/contracts.js';
 import { runtimeDigest } from '../dist/runtime/identity.js';
 import { RuntimeOwner } from '../dist/runtime/RuntimeOwner.js';
@@ -16,11 +21,154 @@ import { RuntimeOwner } from '../dist/runtime/RuntimeOwner.js';
 import type { MemberProvider, MemberProviderContext } from '../dist/adapters/providers/MemberProvider.js';
 import type { MemberEntry } from '../dist/composition/MemberEntry.js';
 import type { TeamHostProfile } from '../dist/composition/TeamHost.js';
+import type { ModelReadinessAuthorityTiming } from '../dist/diagnostics/modelReadinessTiming.js';
 import type { RuntimeBinding } from '../dist/runtime/contracts.js';
 import type { DriverFactory, OpenConfig, Session } from '@agent-teams/provider-session-contracts';
 import type { TestContext } from 'node:test';
 
 const diagnosticPrefix = 'legacy-agent-host: runtime-open ';
+
+test('original factory account checks preserve order and exact errors through passive observer failures', () => {
+  const source = readFileSync(new URL('../src/composition/createRuntimeMemberProviderFactory.ts', import.meta.url), 'utf8');
+  const begin = '          const assertCurrent = () => {\n';
+  const end = '\n          // Allocation reads its separate launch store;';
+  assert.equal(source.split(begin).length, 2); assert.equal(source.split(end).length, 2);
+  const program = source.slice(source.indexOf(begin), source.indexOf(end)) + '\nassertCurrent;';
+  for (const refusal of ['none', 'first-capture', 'provider', 'allocation', 'last-capture']) {
+    for (const observer of ['none', 'getter-throw', 'begin-throw', 'end-throw', 'observed']) {
+      const calls: string[] = [], observations: string[] = [], original = Error('TEST original authority failure');
+      const sink: ModelReadinessAuthorityTiming = {};
+      if (observer === 'getter-throw') Object.defineProperty(sink, 'observe', { get() { throw Error('TEST observer getter'); } });
+      else if (observer !== 'none') sink.observe = function (part) {
+        assert.equal(arguments.length, 1, 'no executable authority callback crosses the observation seam');
+        observations.push('begin-' + part);
+        if (observer === 'begin-throw') throw Error('TEST observer begin');
+        return () => { observations.push('end-' + part); if (observer === 'end-throw') throw Error('TEST observer end'); };
+      };
+      let captures = 0;
+      const current = runInNewContext(program, {
+        authorityTiming: sink, beginModelReadinessAuthorityTiming,
+        assertCaptured() {
+          const phase = ++captures === 1 ? 'first-capture' : 'last-capture';
+          calls.push(phase); if (refusal === phase) throw original;
+        },
+        authority: { assertCurrent() { calls.push('provider'); if (refusal === 'provider') throw original; } },
+        assertAllocation() { calls.push('allocation'); if (refusal === 'allocation') throw original; },
+      }) as () => void;
+      if (refusal === 'none') assert.doesNotThrow(current);
+      else assert.throws(current, error => error === original);
+      const expected = ['first-capture', 'provider', 'allocation', 'last-capture'];
+      assert.deepEqual(calls, refusal === 'none' ? expected : expected.slice(0, expected.indexOf(refusal) + 1));
+      if (observer === 'observed' || observer === 'end-throw') {
+        assert.deepEqual(observations, calls.filter(part => part === 'provider' || part === 'allocation')
+          .flatMap(part => ['begin-' + part, 'end-' + part]), 'throwing original calls still finish their partial interval');
+      }
+    }
+  }
+});
+
+test('account timing restores synchronous nested observers and retains throwing partial intervals', t => {
+  let now = 0, clockReads = 0;
+  t.mock.method(performance, 'now', () => { clockReads++; return now; });
+  const subscriber = { hasSubscribers: true }, timing = createModelReadinessTiming(subscriber);
+  const previous = () => { assert.fail('the replaced observer is not called'); };
+  const sink: ModelReadinessAuthorityTiming = { observe: previous };
+  const originalDescriptor = Object.getOwnPropertyDescriptor(sink, 'observe');
+  const outer = timing.begin(true, sink);
+  assert.equal(sink.observe, previous, 'activation does not precede the original account interval');
+  const endOuterAccount = outer.beginAccount!(), outerObserver = sink.observe;
+  const endProvider = beginModelReadinessAuthorityTiming(sink, 'provider'); now += 2;
+  const original = Error('TEST nested original allocation failure');
+  assert.throws(() => {
+    const inner = timing.begin(true, sink), endInnerAccount = inner.beginAccount!();
+    assert.notEqual(sink.observe, outerObserver);
+    try {
+      const endAllocation = beginModelReadinessAuthorityTiming(sink, 'allocation');
+      try { now += 5; throw original; } finally { endAllocation?.(); }
+    } finally { endInnerAccount(); inner.finish(); }
+  }, error => error === original);
+  assert.equal(sink.observe, outerObserver, 'the nested finally restores the still-active outer interval');
+  endProvider?.();
+  const endAllocation = beginModelReadinessAuthorityTiming(sink, 'allocation'); now += 3; endAllocation?.();
+  endOuterAccount(); outer.finish();
+  assert.deepEqual(Object.getOwnPropertyDescriptor(sink, 'observe'), originalDescriptor);
+  const result = timing.snapshot(); assert.equal(result.count, 2); assert.equal(result.truncated, false);
+  assert.equal(result.regions!.referenceAccountProviderCount, 1);
+  assert.equal(result.regions!.referenceAccountProviderMs, 7);
+  assert.equal(result.regions!.referenceAccountAllocationCount, 2);
+  assert.equal(result.regions!.referenceAccountAllocationMs, 8);
+  const previousReads = clockReads;
+  const afterRefusal = timing.begin(false, sink); afterRefusal.beginAccountAuthority()(); afterRefusal.finish();
+  subscriber.hasSubscribers = false;
+  const disabled = timing.begin(true, sink); disabled.beginAccountAuthority()(); disabled.finish();
+  assert.equal(afterRefusal.beginAccount, undefined); assert.equal(disabled.beginAccount, undefined);
+  assert.equal(clockReads, previousReads, 'no subscriber or a latched refusal adds no diagnostic clocks');
+  assert.deepEqual(Object.getOwnPropertyDescriptor(sink, 'observe'), originalDescriptor);
+});
+
+test('account timing preserves the original 4096 interval bound and ignores sink setup failure', t => {
+  let clocks = 0;
+  t.mock.method(performance, 'now', () => { clocks++; return 0; });
+  const timing = createModelReadinessTiming({ hasSubscribers: true });
+  for (let count = 0; count < 4096; count++) { const sample = timing.begin(true); sample.finish(); }
+  assert.equal(clocks, 8192);
+  const overflow = timing.begin(true, {}); overflow.beginAccountAuthority()(); overflow.finish();
+  assert.equal(overflow.beginAccount, undefined); assert.equal(clocks, 8192);
+  assert.equal(timing.snapshot().count, 4096); assert.equal(timing.snapshot().lastMs, null);
+  assert.equal(timing.snapshot().truncated, true);
+  const broken = createModelReadinessTiming({ hasSubscribers: true });
+  const sample = broken.begin(true, Object.freeze({})), endAccount = sample.beginAccount!();
+  assert.doesNotThrow(endAccount); assert.doesNotThrow(sample.finish);
+  assert.equal(broken.snapshot().truncated, true);
+  assert.equal(broken.snapshot().regions!.referenceAccountCount, 1);
+});
+
+test('original refusal emitter and collector allow only paired bounded authority timing keys', () => {
+  const profile = readFileSync(new URL('../../../tools/owned-process-broker/nativeEmulatedSourceProfile.ts', import.meta.url), 'utf8');
+  const reader = readFileSync(new URL('../../../tools/owned-process-broker/nativeEmulatedSourceReadiness.ts', import.meta.url), 'utf8');
+  const emitterStart = 'function validateSourceRefusal(value, persisted) {';
+  const emitterEnd = '\nconst ledger = ${JSON.stringify(refusals)}';
+  const readerStart = 'export function validateEmulatedSourceRefusal(';
+  const readerEnd = '\n/** Join only the already-read original refusal records';
+  for (const [source, begin, end] of [[profile, emitterStart, emitterEnd], [reader, readerStart, readerEnd]]) {
+    assert.equal(source!.split(begin!).length, 2); assert.equal(source!.split(end!).length, 2);
+  }
+  const sourceRecord = reader.slice(reader.indexOf('const sourceRecord ='), reader.indexOf('export const unwrapEmulatedSourceResult'));
+  const programs = [profile.slice(profile.indexOf(emitterStart), profile.indexOf(emitterEnd)),
+    stripTypeScriptTypes(sourceRecord + reader.slice(reader.indexOf(readerStart), reader.indexOf(readerEnd)).replace('export function', 'function'))];
+  const regions = { initialAuthorityCount: 1, initialAuthorityMs: 1, readConsumerCount: 1, readConsumerMs: 0,
+    referenceCount: 1, referenceMs: 6, finalAuthorityCount: 1, finalAuthorityMs: 1,
+    referenceAccountCount: 1, referenceAccountMs: 6, referenceAccountAuthorityCount: 1, referenceAccountAuthorityMs: 5,
+    referenceAccountProviderCount: 1, referenceAccountProviderMs: 2, referenceAccountAllocationCount: 1, referenceAccountAllocationMs: 3 };
+  const make = () => ({ kind: 'consumer', actionDigest: 'a'.repeat(64), groupDigest: 'b'.repeat(64),
+    bindingDigest: 'c'.repeat(64), consumerId: 'd'.repeat(64), phase: 'reference', reason: 'threw', cutoff: null, observedAt: null,
+    currentCalls: { count: 1, totalMs: 8, maxMs: 8, lastMs: 8, truncated: false, regions: { ...regions } as Record<string, number> } });
+  const optional = ['referenceAccountProviderCount', 'referenceAccountProviderMs', 'referenceAccountAllocationCount', 'referenceAccountAllocationMs'];
+  for (const [index, program] of programs.entries()) {
+    const name = index === 0 ? 'validateSourceRefusal' : 'validateEmulatedSourceRefusal';
+    const validate = runInNewContext(program + '\n(raw, persisted) => ' + name + '(JSON.parse(raw), persisted);', { assert }) as (raw: string, persisted: boolean) => void;
+    assert.doesNotThrow(() => validate(JSON.stringify(make()), false));
+    assert.doesNotThrow(() => validate(JSON.stringify({ ...make(), ordinal: 1 }), true));
+    const old = make(); for (const key of optional) delete old.currentCalls.regions[key];
+    assert.doesNotThrow(() => validate(JSON.stringify(old), false), 'the old exact timing shape remains valid');
+    for (const key of optional) {
+      const partial = make(); delete partial.currentCalls.regions[key];
+      assert.throws(() => validate(JSON.stringify(partial), false), { code: 'ERR_ASSERTION' });
+    }
+    for (const [key, value] of [['referenceAccountProviderCount', 2], ['referenceAccountAllocationMs', -1],
+      ['referenceAccountUnknownCount', 0], ['referenceAccountUnknownMs', 0]] as const) {
+      const unknown = make(); unknown.currentCalls.regions[key] = value;
+      assert.throws(() => validate(JSON.stringify(unknown), false), { code: 'ERR_ASSERTION' });
+    }
+    const orphan = make(); delete orphan.currentCalls.regions.referenceAccountCount;
+    delete orphan.currentCalls.regions.referenceAccountMs; delete orphan.currentCalls.regions.referenceAccountAuthorityCount;
+    delete orphan.currentCalls.regions.referenceAccountAuthorityMs;
+    assert.throws(() => validate(JSON.stringify(orphan), false), { code: 'ERR_ASSERTION' });
+    const overflow = make(); overflow.currentCalls.count = 4097;
+    assert.throws(() => validate(JSON.stringify(overflow), false), { code: 'ERR_ASSERTION' });
+  }
+});
+
 const binding: RuntimeBinding = {
   backendId: 'TEST-backend', teamId: 'TEST-team', runId: 'TEST-run',
   memberId: 'alice-id', generation: '1',

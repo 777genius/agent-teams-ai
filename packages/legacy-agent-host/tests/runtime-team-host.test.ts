@@ -2,7 +2,9 @@ import { initialContextDigest } from '../dist/team-launch/context.js';
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { channel } from 'node:diagnostics_channel';
+import fs from 'node:fs';
 import { lstatSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
+import { syncBuiltinESMExports } from 'node:module';
 import { tmpdir } from 'node:os';
 import { dirname, join, parse as parsePath, sep } from 'node:path';
 import { PassThrough } from 'node:stream';
@@ -13,6 +15,10 @@ import { FileRuntimeStore } from '../dist/adapters/runtime/FileRuntimeStore.js';
 import { FileTeamRuntimeBindings } from '../dist/adapters/team/FileTeamRuntimeBindings.js';
 import { TeamOwnerStore } from '../dist/adapters/team/TeamOwnerStore.js';
 import { createTeamHost } from '../dist/composition/TeamHost.js';
+import { RuntimeTeamCoordinator } from '../dist/composition/RuntimeTeamCoordinator.js';
+import { RuntimeOwner } from '../dist/runtime/RuntimeOwner.js';
+import { TeamOwner } from '../dist/team/TeamOwner.js';
+import { TeamLiveRosterMembership } from '../dist/team/liveRosterMembership.js';
 import { projectRuntimeMember } from '../dist/composition/projectRuntimeMember.js';
 import { normalizeBinding, runtimeDigest } from '../dist/runtime/identity.js';
 import { ClaudeManagementCoordinator } from '../dist/composition/ClaudeManagementCoordinator.js';
@@ -27,7 +33,8 @@ import { RetainedWindowsCustody, createWindowsOwnedLaunchPort, sameOwner } from 
 import type { HostCustodyCall, HostCustodyOwner, HostCustodyResult, PendingOwnedProcess, TreeReceipt } from '../dist/owned-process/index.js';
 
 import type { TeamHostProfile } from '../dist/composition/TeamHost.js';
-import type { MemberEntry } from '../dist/composition/MemberEntry.js';
+import type { HostedTeam, MemberEntry } from '../dist/composition/MemberEntry.js';
+import type { OwnerState } from '../dist/team/ownerState.js';
 import type { LocalModelReadinessOrigin, ReadinessSourceReference } from '../dist/management/commandRecords.js';
 import type {
   MemberProvider,
@@ -1147,8 +1154,166 @@ test('NDJSON roster replacement refuses live allocation, then saves only after c
   assert.equal(live.opens(), initialOpens + 2, 'cold retained outcomes cannot repeat native attachment');
 });
 
+function checkLiveRosterProbeAuthority(t: TestContext, live: Awaited<ReturnType<typeof fixture>>,
+  coordinator: RuntimeTeamCoordinator, isCurrent: () => boolean): void {
+  // Observe the actual first flight retained by the NDJSON composition, not a fabricated receipt.
+  const retained = coordinator as unknown as { capturedTeams: Map<string, HostedTeam>;
+    entries: Map<string, MemberEntry>; options: { teams: ReadonlyMap<string, HostedTeam> } };
+  const teamId = live.binding.scope.teamId, team = retained.options.teams.get(teamId)!;
+  const capturedTeam = retained.capturedTeams.get(teamId)!;
+  const leadId = capturedTeam.definition.members.find(member => member.role === 'lead')!.memberId;
+  const lead = [...retained.entries.values()].find(entry => entry.binding.memberId === leadId &&
+    entry.binding.runId === capturedTeam.launchId)!;
+  assert.ok(lead); assert.equal(lead.team.owner, team.owner); assert.equal(capturedTeam.owner, team.owner);
+  const owner = team.owner, principal = live.selected.principalId;
+  const store = new TeamOwnerStore(live.root, team.definition.binding.teamName);
+  const lock = join(store.directory, 'authority.lock'), directory = join(live.root, 'teams', team.definition.binding.teamName);
+  const state = store.fenced(() => store.read<OwnerState>('state.json')!);
+  const write = (next: OwnerState) => store.fenced(() => store.write('state.json', next));
+  const empty = () => ({ publications: 0, namespaceReads: 0, tokens: [] as string[], checks: [] as string[] });
+  let segment = empty(), observing = false, afterOriginal: (() => void) | undefined;
+  let segments: ReturnType<typeof empty>[] = [], originalCutoff = 0;
+  const link = fs.linkSync, directories = fs.readdirSync, read = TeamOwnerStore.prototype.read;
+  const original = TeamLiveRosterMembership.prototype.withOriginal;
+  const execution = TeamOwner.prototype.assertExecutionAllowed, launchRead = TeamOwner.prototype.withLaunchAuthority;
+  const runtimeRead = RuntimeOwner.prototype.readCapturedSession;
+  const mocks = [
+    t.mock.method(fs, 'linkSync', (...args: Parameters<typeof fs.linkSync>) => {
+      if (observing && args[1] === lock) segment.publications++;
+      return link(...args);
+    }),
+    t.mock.method(fs, 'readdirSync', (...args: Parameters<typeof fs.readdirSync>) => {
+      if (observing && args[0] === directory) segment.namespaceReads++;
+      return directories(...args);
+    }),
+    t.mock.method(TeamOwnerStore.prototype, 'read', function<T>(this: TeamOwnerStore, name: string): T | undefined {
+      if (observing && this.directory === store.directory && name === 'state.json') {
+        const [pid, , token] = fs.readFileSync(lock, 'utf8').split('\n');
+        assert.equal(pid, String(process.pid)); assert.match(token!, /^[a-f0-9-]{36}$/);
+        segment.tokens.push(token!);
+      }
+      return (read<T>).call(this, name);
+    }),
+    t.mock.method(TeamLiveRosterMembership.prototype, 'withOriginal', function<T>(this: TeamLiveRosterMembership,
+      source: Parameters<typeof original>[0], callback: (row: Parameters<Parameters<typeof original>[1]>[0]) => T): T {
+      if (observing) {
+        assert.equal(source.principalId, principal); originalCutoff = source.cutoff;
+        segment.checks.push('original:' + source.principalId);
+      }
+      const result = original.call(this, source, callback) as T;
+      if (observing) afterOriginal?.();
+      return result;
+    }),
+    t.mock.method(TeamOwner.prototype, 'assertExecutionAllowed', function(this: TeamOwner, actor: string) {
+      if (observing) { assert.equal(this, owner); segment.checks.push('execution:' + actor); }
+      return execution.call(this, actor);
+    }),
+    t.mock.method(TeamOwner.prototype, 'withLaunchAuthority', function<T>(this: TeamOwner, actor: string,
+      action: 'read' | 'control', callback: (revision: number) => T): T {
+      if (observing) {
+        assert.equal(this, owner); assert.equal(action, 'read');
+        segment.checks.push('read:' + actor);
+      }
+      return launchRead.call(this, actor, action, callback) as T;
+    }),
+    t.mock.method(RuntimeOwner.prototype, 'readCapturedSession', function(this: RuntimeOwner,
+      binding: Parameters<typeof runtimeRead>[0]) {
+      if (!observing) return runtimeRead.call(this, binding);
+      assert.equal(fs.existsSync(lock), false, 'the original Runtime custody read stays outside the released Team lock');
+      assert.equal(binding.memberId, lead.binding.memberId);
+      segments.push(segment); segment = empty(); observing = false;
+      try { return runtimeRead.call(this, binding); } finally { observing = true; }
+    }),
+  ];
+  syncBuiltinESMExports();
+  const measure = () => {
+    segment = empty(); segments = []; observing = true;
+    try { return { current: isCurrent(), segments, tail: segment }; }
+    finally { observing = false; assert.equal(fs.existsSync(lock), false, 'no Team lock survives the original synchronous check'); }
+  };
+  const changedSource = capturedTeam.capture;
+  assert.ok(changedSource !== undefined, 'the actual captured run retains its original source');
+  const leadTeam = lead.team;
+  const teams = [...new Set([team, capturedTeam, lead.team])];
+  try {
+    const first = measure();
+    assert.equal(first.current, true); assert.equal(first.segments.length, 2);
+    t.diagnostic(JSON.stringify({ liveRosterAuthority: first.segments.map(row => ({
+      publications: row.publications, namespaceReads: row.namespaceReads, stateReads: row.tokens.length })) }));
+    for (const row of first.segments) {
+      assert.equal(row.publications, 1, 'each actual original-plus-execution check shares one physical Team publication');
+      assert.equal(row.namespaceReads, 4, 'all four original namespace observations remain');
+      assert.equal(row.tokens.length, 6, 'all five original state reads plus the outer read grant remain fresh');
+      assert.equal(new Set(row.tokens).size, 1);
+      assert.deepEqual(row.checks, ['read:' + principal, 'original:' + principal, 'execution:' + principal]);
+    }
+    assert.deepEqual(first.tail, empty());
+    assert.notEqual(first.segments[0]!.tokens[0], first.segments[1]!.tokens[0],
+      'captured-source recursion begins after the preceding Team lock is released');
+    const later = measure(); assert.equal(later.current, true);
+    assert.equal(later.segments.length, 2);
+    assert.ok(later.segments.every(row => row.publications === 1 && row.namespaceReads === 4 && row.tokens.length === 6));
+    assert.notEqual(first.segments[0]!.tokens[0], later.segments[0]!.tokens[0], 'no token is reused by a later check');
+    lead.team = { ...leadTeam };
+    const replacedTeam = measure(); assert.equal(replacedTeam.current, false);
+    assert.equal(replacedTeam.tail.publications, 0); lead.team = leadTeam;
+    // A coherent replacement keeps the same persisted policy; only immutable owner identity can reject it early.
+    const replacementOwner = Object.create(owner) as TeamOwner;
+    for (const target of teams) target.owner = replacementOwner;
+    const foreign = measure(); assert.equal(foreign.current, false);
+    assert.equal(foreign.tail.publications, 0); assert.equal(foreign.segments.length, 0);
+    for (const target of teams) target.owner = owner;
+    capturedTeam.capture = { TEST: 'different-original-source' };
+    const stale = measure(); assert.equal(stale.current, false); assert.equal(stale.tail.publications, 0);
+    capturedTeam.capture = changedSource;
+    const changes: [string, (next: OwnerState) => void][] = [
+      ['read-only', next => { next.grants.find(grant => grant.principalId === principal)!.permissions = ['read']; }],
+      ['admin-only', next => { next.grants.find(grant => grant.principalId === principal)!.permissions = ['admin']; }],
+      ['revoked', next => { next.grants.find(grant => grant.principalId === principal)!.revoked = true; }],
+      ['revision', next => { const grant = next.grants.find(value => value.principalId === principal)!;
+        grant.revision = (grant.revision ?? 1) + 1; }],
+      ['lifecycle', next => { next.lifecycle = { cleanupCommandId: 'TEST-pending', cleanupPending: true }; }],
+    ];
+    for (const [name, change] of changes) {
+      const next = structuredClone(state); change(next); write(next);
+      if (name === 'read-only' || name === 'lifecycle')
+        assert.equal(owner.withLaunchAuthority(principal, 'read', () => true), true, 'legitimate read alone cannot authorize live execution');
+      if (name === 'admin-only')
+        assert.equal(owner.withLaunchAuthority(principal, 'control', () => true), true, 'control alone cannot replace the original read grant');
+      if (name === 'revoked')
+        assert.equal(owner.withLaunchAuthority(lead.profile.principalId, 'read', () => true), true,
+          'the lead read grant cannot substitute for the original operator');
+      const refused = measure(); assert.equal(refused.current, false, name);
+      assert.equal(refused.segments.length, 0, name + ' refuses before Runtime custody');
+      write(state); assert.equal(measure().current, true, name + ' does not poison a later fresh check');
+    }
+    if (process.platform !== 'win32') {
+      const path = join(directory, 'TEST-foreign-link');
+      afterOriginal = () => { afterOriginal = undefined; fs.symlinkSync(live.root, path, 'dir'); };
+      try {
+        const refused = measure(); assert.equal(refused.current, false);
+        assert.equal(refused.segments.length, 0, 'the execution fence rechecks namespace after original authority');
+      } finally { afterOriginal = undefined; fs.rmSync(path, { force: true }); }
+    }
+    const now = t.mock.method(Date, 'now', () => originalCutoff);
+    try {
+      const expired = measure(); assert.equal(expired.current, false);
+      assert.equal(expired.segments.length, 0, 'the unchanged original cutoff precedes Runtime custody');
+    } finally { now.mock.restore(); }
+    assert.equal(measure().current, true);
+  } finally {
+    afterOriginal = undefined; observing = false;
+    lead.team = leadTeam;
+    for (const target of teams) target.owner = owner;
+    capturedTeam.capture = changedSource; write(state);
+    for (const mock of mocks) mock.mock.restore();
+    syncBuiltinESMExports();
+  }
+}
+
 test('captured-run OpenCode live Add reaches its original model probe and preserves failed-probe refusal', async t => {
-  let preparations = 0, runs = 0, closes = 0;
+  let preparations = 0, runs = 0, closes = 0, authorityChecks = false, authorityFailure: unknown;
+  const invocations = t.mock.method(RuntimeTeamCoordinator.prototype, 'executeLiveRoster');
   const prepare: ProviderManagementCoordinator['prepareTeamProbe'] = (selected, processOrigin) => {
     assert.equal(selected.provider, 'opencode');
     assert.equal(processOrigin, undefined, 'this controlled recipe has no Windows process authority');
@@ -1162,7 +1327,14 @@ test('captured-run OpenCode live Add reaches its original model probe and preser
       assert.equal(purpose, 'native-local-readiness-v1');
       assert.equal(origin?.workspaces[0]?.path, selected.cwd);
       return { timeoutMs: 1000,
-        run: async () => { runs++; assert.equal(isCurrent(), true); return false; },
+        run: async () => {
+          runs++; assert.equal(isCurrent(), true);
+          const coordinator = invocations.mock.calls.at(-1)?.this;
+          assert.ok(coordinator instanceof RuntimeTeamCoordinator);
+          try { checkLiveRosterProbeAuthority(t, live, coordinator, isCurrent); authorityChecks = true; }
+          catch (error) { authorityFailure = error; throw error; }
+          return false;
+        },
         close: async () => { closes++; return true; } };
     };
   };
@@ -1255,6 +1427,8 @@ test('captured-run OpenCode live Add reaches its original model probe and preser
   const envelope = { commandId, liveRoster: { phase: 'continue', captureDigest: view.captureDigest, remainingMs },
     localModelReadinessOrigin: { origin, remainingMs } };
   const rejected = await live.rpc('team.roster.replace', payload, envelope);
+  if (authorityFailure) throw authorityFailure;
+  assert.equal(authorityChecks, true, 'the actual retained probe guard must exercise its original Team fences');
   assert.equal(preparations, 1, 'the original captured run must reach the closed model-probe boundary');
   assert.equal(runs, 1); assert.equal(closes, 1);
   assert.deepEqual(rejected, { ok: false, code: 'hold', outcome: 'rejected' });

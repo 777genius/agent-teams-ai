@@ -174,7 +174,9 @@ if(argv.length===1&&argv[0]==='--version'){
   });
   const cli = realpathSync(fileURLToPath(new URL('../../packages/legacy-agent-host/dist/cli.js', import.meta.url)));
   const hostEntry = join(root, 'TEST-source-host.mjs');
-  const diagnosticPins = ['owned-process/HostWindowsLaunch', 'composition/prepareTeamModelReadiness', 'management/ModelProbeOwner', 'composition/projectRuntimeMember', 'adapters/providers/OpenCodeMemberProvider', 'adapters/providers/CodexMemberProvider']
+  const diagnosticPins = ['owned-process/HostWindowsLaunch', 'composition/prepareTeamModelReadiness',
+    'diagnostics/modelReadinessTiming', 'composition/createRuntimeMemberProviderFactory',
+    'management/ModelProbeOwner', 'composition/projectRuntimeMember', 'adapters/providers/OpenCodeMemberProvider', 'adapters/providers/CodexMemberProvider']
     .flatMap(name => (['src', 'dist'] as const).map(directory => {
       const path = fileURLToPath(new URL(`../../packages/legacy-agent-host/${directory}/${name}${directory === 'src' ? '.ts' : '.js'}`, import.meta.url));
       assert.equal(realpathSync(path), path); return { path, sha256: fileHash(path) };
@@ -224,7 +226,11 @@ function validateSourceRefusal(value, persisted) {
         const regions = timing.regions;
         assert.ok(regions && typeof regions === 'object' && !Array.isArray(regions) && [Object.prototype, null].includes(Object.getPrototypeOf(regions)));
         assert.ok(Object.getOwnPropertySymbols(regions).length === 0 && Object.values(Object.getOwnPropertyDescriptors(regions)).every(row => 'value' in row));
-        const names = ['initialAuthority', 'readConsumer', 'reference', 'finalAuthority', ...(Object.hasOwn(regions, 'referenceAccountCount') ? ['referenceAccount', 'referenceAccountAuthority'] : [])];
+        const authorityParts = Object.hasOwn(regions, 'referenceAccountProviderCount');
+        assert.ok(!authorityParts || Object.hasOwn(regions, 'referenceAccountCount'));
+        const names = ['initialAuthority', 'readConsumer', 'reference', 'finalAuthority',
+          ...(Object.hasOwn(regions, 'referenceAccountCount') ? ['referenceAccount', 'referenceAccountAuthority'] : []),
+          ...(authorityParts ? ['referenceAccountProvider', 'referenceAccountAllocation'] : [])];
         assert.deepEqual(Object.keys(regions).sort(), names.flatMap(name => [name + 'Count', name + 'Ms']).sort());
         for (const name of names) {
           const count = regions[name + 'Count'], milliseconds = regions[name + 'Ms'];

@@ -332,6 +332,8 @@ export function createDesktopUiControls(
     const readPoint = async (phase: string): Promise<Record<string, unknown>> => {
       const bootstrapRead = phase === label && label === 'open existing More menu' &&
         selector === 'button[aria-label="More actions"]';
+      const launchRead = phase === label && label === 'open original Launch dialog' &&
+        selector === 'button' && text === 'Launch';
       const readExpression = bootstrapRead
         ? `(() => {
             const point = ${expression};
@@ -353,6 +355,26 @@ export function createDesktopUiControls(
                   child?.matches('div.flex.h-screen.flex-col.items-center.justify-center') &&
                   child.querySelector(':scope > div > h1.text-2xl.font-semibold') &&
                   child.querySelector(':scope > div > svg.size-10.text-red-500'))
+              } };
+            } catch { return point; }
+          })()`
+        : launchRead ? `(() => {
+            const point = ${expression};
+            if (!point || point.unavailableTarget !== true) return point;
+            try {
+              const state = window.__agentTeamsDevStore?.getState();
+              if (!state || typeof state !== 'object' || Array.isArray(state))
+                return { ...point, launchFacts: { launchStoreAvailable: false } };
+              const data = state.selectedTeamData, selected = state.selectedTeamName;
+              const present = data !== null && typeof data === 'object' && !Array.isArray(data);
+              const loading = state.selectedTeamLoading, error = state.selectedTeamError;
+              return { ...point, launchFacts: {
+                launchStoreAvailable: true, launchTeamDataPresent: present,
+                ...(typeof loading === 'boolean' ? { launchTeamLoading: loading } : {}),
+                ...(error == null || typeof error === 'string' ? { launchTeamErrorPresent: Boolean(error) } : {}),
+                ...(present && typeof selected === 'string' && typeof data.teamName === 'string'
+                  ? { launchTeamDataMatches: data.teamName === selected } : {}),
+                ...(present && typeof data.isAlive === 'boolean' ? { launchTeamAlive: data.isAlive } : {})
               } };
             } catch { return point; }
           })()`
@@ -409,6 +431,21 @@ export function createDesktopUiControls(
                   if (Number.isSafeInteger(bootstrap[key]) && Number(bootstrap[key]) >= 0)
                     facts[key] = Math.min(Number(bootstrap[key]), limit);
                 }
+              }
+              if (launchRead) {
+                // A passive renderer-state sample in this same unavailable-target evaluation.
+                // It cannot qualify the target or change the original deadline/owner refusal.
+                try {
+                  const descriptor = Object.getOwnPropertyDescriptor(row, 'launchFacts');
+                  const launch = descriptor && 'value' in descriptor ? descriptor.value : undefined;
+                  if (launch && typeof launch === 'object' && !Array.isArray(launch)) {
+                    for (const key of ['launchStoreAvailable', 'launchTeamLoading', 'launchTeamDataPresent',
+                      'launchTeamDataMatches', 'launchTeamAlive', 'launchTeamErrorPresent']) {
+                      const value = Object.getOwnPropertyDescriptor(launch, key);
+                      if (value && 'value' in value && typeof value.value === 'boolean') facts[key] = value.value;
+                    }
+                  }
+                } catch { /* Optional facts never replace the original target result. */ }
               }
               return false;
             }

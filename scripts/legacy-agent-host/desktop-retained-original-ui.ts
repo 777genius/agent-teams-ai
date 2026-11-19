@@ -114,8 +114,8 @@ export async function runDesktopRetainedOriginalUi(cdp: UiCdpPort, options: {
   assert.ok(reads.every(value => value.event !== 'bootstrap' && value.event !== 'turn-completed'));
   proof.originalReadEffects = reads; proof.readyScreenshot = await screenshot('ui-retained-original-ready.png');
   await assertNoHostLaunch();
-  await ui.scrollTo('[role="dialog"] button', 'original scoped Launch', 'Launch');
-  await ui.click('[role="dialog"] button', 'submit original scoped Launch exactly once', 'Launch');
+  await ui.scrollTo('[role="dialog"] button', 'original scoped Launch', 'Launch team');
+  await ui.click('[role="dialog"] button', 'submit original scoped Launch exactly once', 'Launch team');
   await ui.waitRead(`!document.querySelector('[role="dialog"] #dialog-prompt')`, 'original scoped Launch accepted', 90_000);
   const launch = await poll(() => optionalJson(join(team, 'launch-state.json')),
     value => value.version === 2 && typeof value.publicationRunId === 'string' && typeof value.leadSessionId === 'string', 'original Main publication');

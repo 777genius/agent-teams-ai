@@ -11,6 +11,115 @@ type Frame = { settlesAt: number; value: unknown; animationFrames?: true };
 const offeredValue = { kind: 'TEST-read-value' };
 const point = { x: 100, y: 100 };
 
+for (const mode of ['loading', 'offline', 'other-team', 'missing-store', 'store-throws',
+  'response-accessor', 'malformed-fields', 'different-label', 'late'] as const) {
+  test('original unavailable Launch target retains bounded hydration facts: ' + mode,
+    { timeout: 5000 }, async t => {
+      const reports = readWaitReports(t), sends: string[] = [], ticks: number[] = [];
+      let reads = 0, owners = 0, samples = 0, responseGetterReads = 0, steps = 0;
+      const label = mode === 'different-label' ? 'other Launch action' : 'open original Launch dialog';
+      try {
+        t.mock.timers.enable({ apis: ['Date'], now: 0 });
+        t.mock.method(globalThis, 'setTimeout', (done: () => void, delay: number) => {
+          ticks.push(delay); t.mock.timers.setTime(Date.now() + delay); done();
+          return {} as ReturnType<typeof setTimeout>;
+        });
+        const ui = createDesktopUiControls({
+          async evaluate(expression) {
+            assert.equal(++reads, 1, 'diagnostics add no CDP lookup');
+            const value = runInNewContext(expression, {
+              document: { querySelectorAll(selector: string) {
+                assert.equal(selector, 'button'); return [];
+              } },
+              window: mode === 'missing-store' ? {} : { __agentTeamsDevStore: {
+                getState() {
+                  samples++;
+                  if (mode === 'store-throws') throw new Error('PRIVATE-observer-failure');
+                  return { selectedTeamName: 'PRIVATE-original-team', selectedTeamLoading: mode === 'loading',
+                    selectedTeamData: mode === 'loading' ? null : {
+                      teamName: mode === 'other-team' ? 'PRIVATE-other-team' : 'PRIVATE-original-team',
+                      isAlive: mode === 'other-team',
+                    }, selectedTeamError: null };
+                },
+              } },
+            }) as Record<string, unknown>;
+            if (mode === 'response-accessor') Object.defineProperty(value, 'launchFacts', {
+              get() { responseGetterReads++; throw new Error('PRIVATE-response-accessor'); },
+            });
+            if (mode === 'malformed-fields') value.launchFacts = {
+              launchStoreAvailable: true, launchTeamLoading: 'PRIVATE',
+              launchTeamDataPresent: 1, launchTeamDataMatches: null,
+              launchTeamAlive: false, launchTeamErrorPresent: {}, privateExtra: 'PRIVATE',
+            };
+            t.mock.timers.setTime(mode === 'late' ? 30_000 : 29_900);
+            return value;
+          },
+          async send(method, params) { sends.push(String(params?.type ?? method)); return {}; },
+        }, { assertOwnedRenderer() { owners++; }, step() { steps++; } });
+        let failure: Error | undefined;
+        await assert.rejects(ui.click('button', label, 'Launch'), error => {
+          assert.ok(error instanceof Error); failure = error; return true;
+        });
+        assert.ok(failure);
+        if (mode === 'late') {
+          assert.equal(failure.message, 'UI read timed out: ' + label + '; no mutation retry');
+          assert.deepEqual(ticks, [], 'late observations do not enter the predicate or poll again');
+        } else {
+          const facts = JSON.parse(failure.message.split('facts=')[1]!) as Record<string, unknown>;
+          const original = Object.fromEntries(Object.entries(facts).filter(([key]) => !key.startsWith('launch')));
+          assert.deepEqual(original, { matches: 0, disabled: false, ariaDisabled: false,
+            pointerEventsNone: false, centerInViewport: false, hitPresent: false });
+          const hydration = Object.fromEntries(Object.entries(facts).filter(([key]) => key.startsWith('launch')));
+          const unavailable = ['store-throws', 'response-accessor', 'different-label'].includes(mode);
+          assert.deepEqual(hydration, unavailable ? {} : mode === 'missing-store'
+            ? { launchStoreAvailable: false } : mode === 'malformed-fields'
+              ? { launchStoreAvailable: true, launchTeamAlive: false }
+              : { launchStoreAvailable: true, launchTeamLoading: mode === 'loading',
+                launchTeamDataPresent: mode !== 'loading', launchTeamErrorPresent: false,
+                ...(mode === 'loading' ? {} : { launchTeamDataMatches: mode !== 'other-team',
+                  launchTeamAlive: mode === 'other-team' }) });
+          assert.ok(failure.cause instanceof Error);
+          assert.equal(failure.cause.message, 'UI read timed out: ' + label + '; no mutation retry');
+          assert.deepEqual(ticks, [100], 'original cadence spends the original deadline');
+          assert.doesNotMatch(JSON.stringify(facts), /PRIVATE/);
+        }
+        assert.equal(reads, 1); assert.equal(owners, 1); assert.equal(steps, 0);
+        assert.equal(samples, mode === 'missing-store' || mode === 'different-label' ? 0 : 1);
+        assert.equal(responseGetterReads, 0, 'only own data properties cross the closed projection');
+        assert.deepEqual(sends, ['Page.bringToFront'], 'unavailable target never dispatches input');
+        assert.doesNotMatch(reports.output.join(''), /PRIVATE/);
+      } finally { t.mock.restoreAll(); t.mock.timers.reset(); }
+    });
+}
+
+test('ready original Launch target does not sample hydration or replace the following owner refusal',
+  { timeout: 5000 }, async t => {
+    const refusal = new Error('TEST original owner refusal'), sends: string[] = [];
+    let samples = 0, reads = 0, owners = 0;
+    const button = { textContent: 'Launch', tagName: 'BUTTON',
+      getBoundingClientRect() { return { x: 20, y: 20, width: 100, height: 40 }; },
+      matches() { return false; }, closest() { return null; }, getAnimations() { return []; } };
+    try {
+      t.mock.timers.enable({ apis: ['Date'], now: 0 });
+      const ui = createDesktopUiControls({
+        async evaluate(expression) {
+          reads++;
+          return runInNewContext(expression, {
+            document: { querySelectorAll() { return [button]; }, elementFromPoint() { return button; } },
+            window: { __agentTeamsDevStore: { getState() {
+              samples++; throw new Error('PRIVATE-observer-must-not-run');
+            } } },
+          });
+        },
+        async send(method) { sends.push(method); return {}; },
+      }, { assertOwnedRenderer() { if (++owners === 2) throw refusal; },
+        step() { assert.fail('original owner refusal precedes hover'); } });
+      await assert.rejects(ui.click('button', 'open original Launch dialog', 'Launch'), error => error === refusal);
+      assert.equal(samples, 0); assert.equal(reads, 1); assert.equal(owners, 2);
+      assert.deepEqual(sends, ['Page.bringToFront']);
+    } finally { t.mock.restoreAll(); t.mock.timers.reset(); }
+  });
+
 async function withReadFixture(
   t: TestContext,
   frames: readonly Frame[],

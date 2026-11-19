@@ -19,6 +19,8 @@ import { waitForDesktopOpenCodePreflight } from './desktop-launch-ui-smoke.ts';
 import { FileManagementCommandStore } from '../../packages/legacy-agent-host/dist/adapters/providers/FileManagementCommandStore.js';
 import { managementDigest } from '../../packages/legacy-agent-host/dist/management/identity.js';
 import { runtimeDigest } from '../../packages/legacy-agent-host/dist/runtime/identity.js';
+import { teamRosterRevision } from '../../packages/legacy-agent-host/dist/team/rosterSchema.js';
+import { teamModelProbeContext, teamModelProbeActionDigest } from '../../packages/legacy-agent-host/dist/composition/teamLaunchModelProbe.js';
 import type { StoredModelProbe } from '../../packages/legacy-agent-host/dist/management/commandRecords.js';
 import {
   assertDesktopProofEnvironment,
@@ -1990,7 +1992,7 @@ test('actual packaged final summary composes the same failure projection without
 });
 
 
-function originalOpenCodePreflightFixture(t: TestContext, publish = true) {
+function originalOpenCodePreflightFixture(t: TestContext, publish = true, leadCount = 1) {
   t.mock.timers.enable({ apis: ['Date'], now: 1000 });
   const root = fs.mkdtempSync(join(fs.realpathSync(tmpdir()), 'TEST-original-preflight-'));
   t.after(() => { t.mock.timers.reset(); fs.rmSync(root, { recursive: true, force: true }); });
@@ -1999,14 +2001,21 @@ function originalOpenCodePreflightFixture(t: TestContext, publish = true) {
   const owner = { ownerId: 'TEST-owner', storageRoot }, binding = {
     backendId: owner.ownerId, teamId: 'TEST-team', teamName: 'test-desktop-backend',
   };
-  const profile = { owner, teams: [{ binding, scope: { teamId: binding.teamId, runId: 'TEST-run' } }] };
+  const handleId = 'TEST-original-handle', members = Array.from({ length: leadCount }, (_, index) => ({
+    memberId: index === 0 ? 'alice-id' : `other-lead-${index}`, name: index === 0 ? 'alice' : `other-${index}`, role: 'lead' as const,
+  }));
+  const savedSettings = { cwd: workspace, providerId: 'opencode' as const, model: 'test-local/TEST-model', skipPermissions: true };
+  const scope = { projectId: 'TEST-project', workspaceId: 'TEST-workspace', teamId: binding.teamId,
+    runId: 'TEST-run', memberId: 'human', generation: '1' };
+  const profile = { owner, teams: [{ binding, scope, members, savedSettings }] };
   const profilePath = join(root, 'host-profile.json'), profileBytes = JSON.stringify(profile);
   fs.writeFileSync(profilePath, profileBytes, { mode: 0o600 });
   const ownerDirectory = join(storageRoot, 'teams/test-desktop-backend/.host-owner');
   fs.mkdirSync(ownerDirectory, { recursive: true, mode: 0o700 });
   const ownerStatePath = join(ownerDirectory, 'state.json');
-  const writeOwner = (next: Record<string, unknown>) =>
-    fs.writeFileSync(ownerStatePath, JSON.stringify({ binding: next }), { mode: 0o600 });
+  const writeOwner = (next: Record<string, unknown>, changes: Record<string, unknown> = {}) =>
+    fs.writeFileSync(ownerStatePath, JSON.stringify({ binding: next, members, savedSettings,
+      rosterVersion: 0, ...changes }), { mode: 0o600 });
   writeOwner(binding);
   const store = new FileManagementCommandStore(storageRoot), hash = managementDigest;
   const commandId = 'team-preflight-' + hash('TEST-command'), profileId = 'team-probe-' + hash('TEST-profile');
@@ -2032,6 +2041,24 @@ function originalOpenCodePreflightFixture(t: TestContext, publish = true) {
       destinationKeys: [hash('destination')] },
   };
   if (publish) store.write(probe);
+  const selectSaved = (selection: { sourceRevision?: string; handleId?: string; scope?: typeof scope;
+    memberId?: string; rosterRevision?: string; commandId?: string } = {}) => {
+    const payload = { launchId: selection.sourceRevision ?? 'saved-model-' + hash('TEST-saved-source'),
+      rosterRevision: selection.rosterRevision ?? teamRosterRevision(members, 0, savedSettings),
+      memberId: selection.memberId ?? members[0]?.memberId ?? 'alice-id', model: 'test-local/TEST-model',
+      draft: { providerId: 'opencode' as const, target: { kind: 'lead' as const }, workspace } };
+    probe.commandId = selection.commandId ?? commandId;
+    probe.context = teamModelProbeContext(binding.teamId, payload);
+    Object.assign(probe.readinessScope!, { sourceRevision: payload.launchId, rosterRevision: payload.rosterRevision,
+      selectionDigest: runtimeDigest(payload), actionDigest: teamModelProbeActionDigest(probe.commandId, probe.context),
+      destinationKeys: [runtimeDigest(payload.draft.target)] });
+    Object.assign(origin, { commandId: probe.commandId,
+      selectionDigest: hash({ handleId: selection.handleId ?? handleId, scope: selection.scope ?? scope, payload }) });
+    Object.assign(probe.localModelReadinessPreparation!, { commandId: probe.commandId, anchorCommandId: probe.commandId,
+      selectionDigest: origin.selectionDigest, originDigest: hash(origin) });
+    store.write(probe);
+    return payload;
+  };
   const state = { ready: false, current: true, owned: true, reads: 0, ownerReads: 0, x: 100,
     binding: { ...binding } as Record<string, unknown> };
   const hooks: { evaluate?(): void; afterEvaluate?(): void; ownerRead?(): void; input?(type: string): void } = {};
@@ -2070,7 +2097,7 @@ function originalOpenCodePreflightFixture(t: TestContext, publish = true) {
     },
   };
   const start = () => waitForDesktopOpenCodePreflight(cdp, {
-    fixture: { root, profilePath, pins: { profileSha256: digest(profileBytes) },
+    fixture: { root, profilePath, handleId, pins: { profileSha256: digest(profileBytes) },
       openCodeV2: { model: 'test-local/TEST-model', displayName: 'TEST-model' } },
     prompt: 'OPENCODE_TEAM_ONE', proof, step() {},
     assertOwnedRenderer() { if (!state.owned) throw refusal; },
@@ -2092,8 +2119,90 @@ function originalOpenCodePreflightFixture(t: TestContext, publish = true) {
   };
   const inputCount = () => commands.filter(row => row.method.startsWith('Input.')).length;
   return { root, storageRoot, store, profilePath, ownerStatePath, writeOwner, probe, state, hooks, commands, proof, refusal,
-    start, complete, inputCount, journalPath: join(storageRoot, 'management-commands', hash(commandId) + '.json') };
+    scope, selectSaved, start, complete, inputCount,
+    journalPath: join(storageRoot, 'management-commands', hash(commandId) + '.json') };
 }
+
+test('original OpenCode prospective preflight observes its saved-source request within the original cutoff', async t => {
+  const f = originalOpenCodePreflightFixture(t), payload = f.selectSaved();
+  f.hooks.evaluate = () => {
+    if (f.state.reads === 2) { t.mock.timers.setTime(40_000); f.complete(); f.state.ready = true; }
+  };
+  const ui = await f.start();
+  assert.equal(f.commands.length, 0, 'observing a prospective request grants no input or source authority');
+  const wait = f.proof.originalPreflightWait as Record<string, unknown>;
+  assert.equal(wait.authority, 'wait-bound-only');
+  assert.equal(wait.sourceRevision, payload.launchId);
+  assert.equal(wait.deadline, 91_000);
+  assert.equal(wait.acquisitionDeadline, 31_000);
+  assert.equal(wait.commandId, f.probe.commandId);
+  await ui.click('[role="dialog"] button', 'submit original Launch team once', 'Launch team');
+  assert.deepEqual(f.commands.filter(row => row.method === 'Input.dispatchMouseEvent').map(row => row.params?.type),
+    ['mouseMoved', 'mousePressed', 'mouseReleased']);
+});
+
+for (const mismatch of ['handle', 'projectId', 'workspaceId', 'teamId', 'runId', 'memberId', 'generation'] as const) {
+  test(`original OpenCode prospective preflight never borrows a coherent saved request from another ${mismatch}`, async t => {
+    const f = originalOpenCodePreflightFixture(t);
+    f.selectSaved({ sourceRevision: 'saved-model-' + managementDigest('OTHER-saved-source'),
+      ...(mismatch === 'handle' ? { handleId: 'OTHER-handle' } : { scope: { ...f.scope, [mismatch]: 'OTHER' } }) });
+    f.hooks.evaluate = () => { f.state.ready = true; t.mock.timers.setTime(31_000); };
+    await assert.rejects(f.start(), /UI read timed out: one original OpenCode preflight command/);
+    assert.equal(f.proof.originalPreflightWait, undefined);
+    assert.equal(f.inputCount(), 0);
+  });
+}
+
+for (const mismatch of ['roster', 'lead', 'context', 'selection', 'action', 'destination', 'owner-roster'] as const) {
+  test(`original OpenCode prospective preflight refuses a different ${mismatch} before acquisition`, async t => {
+    const f = originalOpenCodePreflightFixture(t);
+    f.selectSaved(mismatch === 'roster' ? { rosterRevision: managementDigest('OTHER-roster') } :
+      mismatch === 'lead' ? { memberId: 'OTHER-lead' } : {});
+    if (mismatch === 'context') f.probe.context = managementDigest('OTHER-context');
+    else if (mismatch === 'selection') f.probe.readinessScope!.selectionDigest = managementDigest('OTHER-selection');
+    else if (mismatch === 'action') f.probe.readinessScope!.actionDigest = managementDigest('OTHER-action');
+    else if (mismatch === 'destination') f.probe.readinessScope!.destinationKeys = [runtimeDigest({ kind: 'member', name: 'OTHER' })];
+    else if (mismatch === 'owner-roster') f.writeOwner(f.state.binding, { rosterVersion: 1 });
+    f.store.write(f.probe);
+    f.hooks.evaluate = () => { f.state.ready = true; t.mock.timers.setTime(31_000); };
+    await assert.rejects(f.start(), /UI read timed out: one original OpenCode preflight command/);
+    assert.equal(f.proof.originalPreflightWait, undefined);
+    assert.equal(f.inputCount(), 0);
+  });
+}
+
+for (const leadCount of [0, 2]) {
+  test(`original OpenCode prospective preflight refuses ${leadCount} original leads`, async t => {
+    const f = originalOpenCodePreflightFixture(t, true, leadCount); f.selectSaved();
+    await assert.rejects(f.start(), /one original TEST lead/);
+    assert.equal(f.state.reads, 0); assert.equal(f.inputCount(), 0);
+  });
+}
+
+test('original OpenCode prospective preflight refuses two matching commands before a DOM read', async t => {
+  const f = originalOpenCodePreflightFixture(t); f.selectSaved();
+  f.selectSaved({ commandId: 'team-preflight-' + managementDigest('second-saved-command') });
+  await assert.rejects(f.start(), /ambiguous original OpenCode preflight probe/);
+  assert.equal(f.state.reads, 0); assert.equal(f.inputCount(), 0);
+});
+
+test('original OpenCode prospective preflight freezes the first source even when its replacement is coherent', async t => {
+  const f = originalOpenCodePreflightFixture(t), original = f.selectSaved();
+  f.hooks.evaluate = () => {
+    if (f.state.reads === 1) f.selectSaved({ sourceRevision: 'saved-model-' + managementDigest('replacement-source') });
+  };
+  await assert.rejects(f.start(), /original OpenCode preflight identity or cutoff changed/);
+  assert.equal((f.proof.originalPreflightWait as Record<string, unknown>).sourceRevision, original.launchId);
+  assert.equal(f.state.reads, 1); assert.equal(f.inputCount(), 0);
+});
+
+test('original OpenCode prospective request never grants readiness without the original UI result', async t => {
+  const f = originalOpenCodePreflightFixture(t); f.selectSaved(); f.complete();
+  f.hooks.evaluate = () => { if (f.state.reads === 2) t.mock.timers.setTime(91_000); };
+  await assert.rejects(f.start(), /expired|UI read timed out/);
+  assert.equal((f.proof.originalPreflightWait as Record<string, unknown>).authority, 'wait-bound-only');
+  assert.equal(f.state.ready, false); assert.equal(f.inputCount(), 0);
+});
 
 test('original OpenCode preflight waits past 30s only inside its existing cutoff before one original click', async t => {
   const f = originalOpenCodePreflightFixture(t);

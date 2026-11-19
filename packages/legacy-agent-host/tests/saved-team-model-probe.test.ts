@@ -1774,6 +1774,46 @@ async function assertRetainedProductRosterTransfer(t: TestContext) {
             diagnostic.unsubscribe(capturePartial); manager.readinessTarget = originalTarget; authorityCost = 11;
           }
         }
+        const authorityTiming: { observe?(part: 'provider' | 'allocation'): (() => void) | undefined } = {};
+        const parts: unknown[] = [], observeParts = (value: unknown) => { parts.push(value); };
+        const previousAuthorityCalls = authorityCalls, previousClockReads = performanceReads;
+        const timedInspection = { ...inspection, authorityTiming,
+          assertCurrent() {
+            const endProvider = authorityTiming.observe?.('provider');
+            try { originalCheck(); } finally { endProvider?.(); }
+            const endAllocation = authorityTiming.observe?.('allocation');
+            try { diagnosticNow += 7; } finally { endAllocation?.(); }
+          } };
+        diagnostic.subscribe(observeParts);
+        try {
+          const original = inspectMemberModelReadiness(timedInspection);
+          assert.equal(authorityCalls - previousAuthorityCalls, 11,
+            'all eight account callbacks and the three surrounding checks still run');
+          assert.equal(Object.hasOwn(authorityTiming, 'observe'), false, 'the original synchronous account interval releases its observer');
+          timedInspection.assertCurrent = () => { diagnosticNow += 11; throw failure; };
+          assert.throws(original.assertCurrent, error => error === failure);
+          assert.throws(original.assertCurrent, error => error === failure);
+          assert.equal(parts.length, 1, 'the existing first-refusal latch is unchanged');
+          const observed = parts[0] as { currentCalls: { count: number; truncated: boolean; regions: Record<string, number> } };
+          assert.equal(observed.currentCalls.count, 2); assert.equal(observed.currentCalls.truncated, false);
+          assert.deepEqual(Object.fromEntries(Object.entries(observed.currentCalls.regions)
+            .filter(([name]) => /^referenceAccount(?:Provider|Allocation)/.test(name))), {
+            referenceAccountProviderCount: 1, referenceAccountProviderMs: 8 * 11,
+            referenceAccountAllocationCount: 1, referenceAccountAllocationMs: 8 * 7,
+          }, 'new counts retain one containing interval, while milliseconds sum all original callbacks');
+          assert.equal(observed.currentCalls.regions.referenceAccountAuthorityMs, 8 * (11 + 7));
+          assert.equal(performanceReads - previousClockReads, 25 + 4 * 8 + 2,
+            'only the original timed account callbacks add two clock pairs each');
+          assert.deepEqual(read(), pending);
+        } finally { diagnostic.unsubscribe(observeParts); }
+        const clocksWithoutSubscriber = performanceReads;
+        let diagnosticReads = 0, originalChecks = 0;
+        const brokenObservation = { ...inspection,
+          get authorityTiming(): never { diagnosticReads++; throw Error('TEST private diagnostic getter failure'); },
+          assertCurrent() { originalChecks++; throw failure; } };
+        assert.throws(() => inspectMemberModelReadiness(brokenObservation), error => error === failure);
+        assert.equal(diagnosticReads, 1); assert.equal(originalChecks, 1);
+        assert.equal(performanceReads, clocksWithoutSubscriber, 'disabled observation adds no clock reads even when its field throws');
         diagnosticReadsAfterUnsubscribe = performanceReads;
       }
       if (change === 'shadowed-native') {
@@ -1811,7 +1851,7 @@ async function assertRetainedProductRosterTransfer(t: TestContext) {
       assert.equal(allocations, 0); assert.equal(businessOpens, 0);
       if (change === 'unchanged') {
         assert.equal(performanceReads, diagnosticReadsAfterUnsubscribe, 'fresh original consumption checks add no diagnostic clocks without a subscriber');
-        assert.equal(targetReads, 7, 'the two partial checks and original three consumption checks inspect the target freshly');
+        assert.equal(targetReads, 8, 'the two partial checks, one timed inspection and original three consumption checks inspect the target freshly');
       }
     } finally {
       measuredRead?.mock.restore();

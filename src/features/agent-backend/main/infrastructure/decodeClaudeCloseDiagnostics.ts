@@ -52,6 +52,8 @@ export interface OpenCodeProbeCloseDiagnostic {
   readonly runCauseCode?: string | null;
 }
 const probePhases = new Set(['run', 'graph-start', 'graph-done', 'native-launch', 'native-ready',
+  'native-launch-returned', 'native-endpoint-resolved', 'startup-timer-aborted',
+  'startup-parent-aborted', 'startup-lifecycle-aborted', 'startup-failed',
   'credential', 'attestation', 'session-create', 'driver-open', 'first-submit']);
 export interface OpenCodeProbeDiagnostic {
   readonly profileHash: string;
