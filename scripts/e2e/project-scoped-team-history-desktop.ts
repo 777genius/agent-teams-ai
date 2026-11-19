@@ -503,9 +503,17 @@ async function run() {
       .map((line) => JSON.parse(line) as string[]);
     // Startup probes may query runtime read-only capabilities; any provider or
     // team launch command is forbidden by the synthetic runtime fixture.
-    assert(audit.every((args) =>
-      args[0] === 'runtime' && ['status', 'providers', 'opencode-command'].includes(args[1])
-    ), 'Unexpected native model/provider lifecycle call');
+    const unexpected = audit.filter((args) =>
+      args[0] !== 'runtime' || !['status', 'providers', 'opencode-command'].includes(args[1])
+    );
+    // Preserve the strict deny policy. Report only command/subcommand tokens,
+    // never full argv, user paths, provider settings or possible credentials.
+    const commandHeads = unexpected.map((args) =>
+      args.slice(0, 2).map((token) =>
+        /^(?:--?)?[a-zA-Z][a-zA-Z0-9-]{0,32}$/.test(token) ? token : '[redacted]')
+    );
+    assert.equal(unexpected.length, 0,
+      'Unexpected native model/provider lifecycle call: ' + JSON.stringify(commandHeads));
     success = true;
     console.log(JSON.stringify({
       ok: true, scope: 'real Electron / typed preload / main / native task + inbox / A-B-A / renderer reload',
