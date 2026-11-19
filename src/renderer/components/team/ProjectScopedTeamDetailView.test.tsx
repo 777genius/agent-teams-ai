@@ -3,7 +3,7 @@ import { createRoot } from 'react-dom/client';
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { state, getView, launchTeam, launchTeamIpc, openTeamTab, updateTabLabel, selectTeam } = vi.hoisted(() => {
+const { state, getView, launchTeam, launchTeamIpc, openTeamTab, selectTeam } = vi.hoisted(() => {
   const state = {
     repositoryGroups: [],
     projects: [
@@ -28,7 +28,6 @@ const { state, getView, launchTeam, launchTeamIpc, openTeamTab, updateTabLabel, 
     launchTeam: vi.fn(),
     launchTeamIpc: vi.fn(),
     openTeamTab: vi.fn(),
-    updateTabLabel: vi.fn(),
     selectTeam: vi.fn(async (_teamName: string) => undefined),
   };
 });
@@ -42,7 +41,6 @@ vi.mock('@renderer/store', () => ({
         activeTabId: 'alias-tab',
         getAllPaneTabs: () => [{ id: 'alias-tab', type: 'team', teamName: 'ptc-a' }],
         openTeamTab,
-        updateTabLabel,
         selectTeam,
         launchTeam,
       }),
@@ -117,7 +115,6 @@ describe('ProjectScopedTeamDetailView project switching', () => {
     launchTeam.mockReset();
     launchTeamIpc.mockReset();
     openTeamTab.mockReset();
-    updateTabLabel.mockReset();
     selectTeam.mockReset();
     state.selectedTeamName = null;
     state.selectedProjectId = 'project-a';
@@ -249,56 +246,6 @@ describe('ProjectScopedTeamDetailView project switching', () => {
     expect(openTeamTab).toHaveBeenCalledWith('builders', '/TEST/a');
   });
 
-  it('keeps old shared tasks readable after switching their logical team to per-project mode', async () => {
-    // The retained shared view must never be overridden by the current project's physical alias.
-    state.selectedTeamName = 'builders';
-    getView.mockResolvedValue({
-      mode: 'per_project', state: 'ready',
-      executionTeamName: 'ptc-current', workContextId: 'current-project',
-      projectPath: '/TEST/a',
-    });
-    await act(async () => root.render(
-      React.createElement(ProjectScopedTeamDetailView, {
-        teamName: 'builders', retainedSharedHistory: true,
-      })
-    ));
-    await settle();
-    expect(selectTeam).not.toHaveBeenCalledWith('ptc-current');
-    expect(host.querySelector('[data-team]')?.getAttribute('data-team')).toBe('builders');
-    expect(host.querySelector('[data-team]')?.getAttribute('data-retained')).toBe('true');
-    expect(host.querySelector('[data-team-name="ptc-current"]')).toBeNull();
-    expect(host.textContent).toContain('projectContextView.retainedHistory');
-    const button = host.querySelector('button');
-    await act(async () => button?.click());
-    expect(openTeamTab).toHaveBeenCalledWith('builders');
-  });
-
-  it('keeps a retained native task/chat history open after the logical team switches to shared', async () => {
-    getView.mockResolvedValue({
-      mode: 'per_project',
-      state: 'retained',
-      logicalTeamName: 'builders',
-      executionTeamName: 'ptc-a',
-      workContextId: 'context-ptc-a',
-      projectPath: '/TEST/a',
-    });
-    await act(async () => root.render(
-      React.createElement(ProjectScopedTeamDetailView, { teamName: 'ptc-a' })
-    ));
-    await settle();
-    expect(getView).toHaveBeenCalledWith('ptc-a', '/TEST/a');
-    expect(host.querySelector('[data-team]')?.getAttribute('data-team')).toBe('ptc-a');
-    expect(host.querySelector('[data-team]')?.getAttribute('data-retained')).toBe('true');
-    expect(openTeamTab).not.toHaveBeenCalled();
-    expect(updateTabLabel).toHaveBeenCalledWith(
-      'alias-tab', expect.stringContaining('builders')
-    );
-    expect(host.textContent).toContain('projectContextView.retainedHistory');
-    const button = host.querySelector('button');
-    await act(async () => button?.click());
-    expect(openTeamTab).toHaveBeenCalledWith('builders');
-  });
-
   it('preserves verified physical task history when its worktree disappeared from discovery', async () => {
     getView.mockResolvedValue({
       mode: 'per_project',
@@ -311,8 +258,11 @@ describe('ProjectScopedTeamDetailView project switching', () => {
     ));
     await settle();
     expect(host.querySelector('[data-team]')?.getAttribute('data-team')).toBe('ptc-removed');
-    expect(host.textContent).toContain('/removed/worktree');
-    expect(host.textContent).not.toContain('projectContextView.empty');
+    expect(host.querySelector('[data-team]')?.getAttribute('data-retained')).toBe('true');
+    // One read-only line explains why it is shown; no raw path, no actions of its own.
+    expect(host.textContent).toBe('projectContextView.projectMissing');
+    expect(host.textContent).not.toContain('/removed/worktree');
+    expect(host.querySelector('button')).toBeNull();
   });
 
   it('adds no chrome of its own around a ready team (no path bar, no mode control)', async () => {

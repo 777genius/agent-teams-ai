@@ -325,7 +325,7 @@ export class TeamProjectContextRegistry {
     return (await this.resolveOwnedExecutionAlias(executionTeamName)) !== null;
   }
 
-  /** A retained index may outlive the selected history mode. */
+  /** True when the logical team has a project-contexts index on disk. */
   async hasRetainedIndex(logicalTeamName: string): Promise<boolean> {
     return exists(this.indexPath(logicalTeamName));
   }

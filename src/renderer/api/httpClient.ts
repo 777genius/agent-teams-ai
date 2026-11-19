@@ -1047,9 +1047,6 @@ export class HttpAPIClient implements ElectronAPI {
     getProjectContextView: async () => {
       throw new Error('Project-scoped local team history is only available in Electron mode');
     },
-    setProjectContextMode: async () => {
-      throw new Error('Project-scoped local team history is only available in Electron mode');
-    },
     list: async (): Promise<TeamSummary[]> => {
       console.warn('[HttpAPIClient] teams API is not available in browser mode');
       return [];

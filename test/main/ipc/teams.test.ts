@@ -4,7 +4,6 @@ import {
   REVIEW_FLOW_SET_TEAM_OVERRIDE,
 } from '@features/review-flow/contracts';
 import {
-  TEAM_PROJECT_CONTEXT_SET_MODE_CHANNEL,
   TEAM_PROJECT_CONTEXT_VIEW_CHANNEL,
 } from '@features/team-project-context/contracts';
 import { TeamReadFailureError } from '@features/team-read-recovery/main';
@@ -306,7 +305,6 @@ type PermanentlyDeleteTeamMock = (
 ) => Promise<boolean>;
 
 const TEAM_HANDLER_KEYS = [
-  TEAM_PROJECT_CONTEXT_SET_MODE_CHANNEL,
   TEAM_PROJECT_CONTEXT_VIEW_CHANNEL,
   TEAM_ADD_MEMBER,
   TEAM_ADD_TASK_COMMENT,

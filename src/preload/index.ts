@@ -15,7 +15,6 @@ import { createRuntimeProviderManagementBridge } from '@features/runtime-provide
 import { createTeamGroupChatsBridge } from '@features/team-group-chats/preload';
 import { createTeamImportBridge } from '@features/team-import/preload';
 import {
-  TEAM_PROJECT_CONTEXT_SET_MODE_CHANNEL,
   TEAM_PROJECT_CONTEXT_VIEW_CHANNEL,
   type TeamProjectContextView,
 } from '@features/team-project-context/contracts';
@@ -936,8 +935,6 @@ const electronAPI: ElectronAPI = {
       invokeIpcWithResult<TeamProjectContextView>(
         TEAM_PROJECT_CONTEXT_VIEW_CHANNEL, logicalName, projectPath ?? null
       ),
-    setProjectContextMode: async (logicalName: string, mode: 'shared' | 'per_project') =>
-      invokeIpcWithResult<void>(TEAM_PROJECT_CONTEXT_SET_MODE_CHANNEL, logicalName, mode),
     getData: async (teamName: string, options?: TeamGetDataOptions) => {
       if (options === undefined) {
         return invokeIpcWithResult<TeamViewSnapshot>(TEAM_GET_DATA, teamName);

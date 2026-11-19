@@ -57,7 +57,7 @@ describe('projectTeamSummaries', () => {
     }]);
   });
 
-  it('keeps owned historical native aliases hidden after switching to shared mode', async () => {
+  it('keeps owned native aliases hidden for a team whose saved mode is shared', async () => {
     const f = fixture();
     f.meta.getMeta.mockImplementation(async (name: string) => name === 'builders'
       ? { version: 1 as const, cwd: '/sandbox/a', createdAt: 1, projectContextMode: 'shared' as const }

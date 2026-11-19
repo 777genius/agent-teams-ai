@@ -115,7 +115,7 @@ describe('TeamProjectContextRegistry', () => {
     expect(await readFile(indexPath, 'utf8')).toBe(mixedCaseIndex);
   });
 
-  it('keeps retained contexts discoverable after switching history mode', async () => {
+  it('lists the contexts of a logical team once its index exists', async () => {
     const f = await fixture();
     expect(await f.registry.hasRetainedIndex('logical-team')).toBe(false);
     expect(await f.registry.listRetained('logical-team')).toEqual([]);

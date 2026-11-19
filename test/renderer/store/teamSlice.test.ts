@@ -489,9 +489,11 @@ function createRuntimeSnapshot(
 }
 
 describe('teamSlice actions', () => {
-  it('keeps old shared task deep links separate from the current per-project tab', () => {
+  it('reuses the existing team tab instead of opening a second one', () => {
     const store = createSliceStore();
+    const existing = createTestTab({ id: 'team-tab', type: 'team', teamName: 'builders', label: 'Builders' });
     store.setState({
+      getAllPaneTabs: vi.fn(() => [existing]),
       teamByName: {
         builders: {
           teamName: 'builders', displayName: 'Builders', description: '',
@@ -499,29 +501,9 @@ describe('teamSlice actions', () => {
         },
       } as AppState['teamByName'],
     });
-
-    store.getState().openTeamTab('builders', undefined, 'legacy-task-id');
-    expect(store.getState().openTab).toHaveBeenCalledWith(expect.objectContaining({
-      teamName: 'builders', retainedSharedHistory: true,
-      label: 'Builders · Shared history',
-    }));
-
-    const history = createTestTab({
-      id: 'history-tab', type: 'team', teamName: 'builders',
-      retainedSharedHistory: true, label: 'Builders · Shared history',
-    });
-    store.setState({ getAllPaneTabs: vi.fn(() => [history]) });
-    vi.mocked(store.getState().openTab).mockClear();
-    store.getState().openTeamTab('builders', undefined, 'legacy-task-id');
-    expect(store.getState().setActiveTab).toHaveBeenCalledWith('history-tab');
-    expect(store.getState().openTab).not.toHaveBeenCalled();
-
     store.getState().openTeamTab('builders', '/TEST/current-project');
-    expect(store.getState().openTab).toHaveBeenCalledWith(expect.objectContaining({
-      teamName: 'builders', label: 'Builders',
-    }));
-    expect(vi.mocked(store.getState().openTab).mock.calls.at(-1)?.[0])
-      .not.toHaveProperty('retainedSharedHistory');
+    expect(store.getState().setActiveTab).toHaveBeenCalledWith('team-tab');
+    expect(store.getState().openTab).not.toHaveBeenCalled();
   });
 
   it('selects a grouped worktree before opening the logical project team tab', () => {
@@ -552,24 +534,6 @@ describe('teamSlice actions', () => {
     expect(store.getState().openTab).toHaveBeenCalledWith(expect.objectContaining({
       type: 'team', teamName: 'builders',
     }));
-  });
-
-  it('does not misclassify a verified native project task as old shared history', () => {
-    const store = createSliceStore();
-    store.setState({
-      teamByName: {
-        builders: {
-          teamName: 'builders', displayName: 'Builders', description: '',
-          memberCount: 0, taskCount: 0, lastActivity: null, projectContextMode: 'per_project',
-        },
-      } as AppState['teamByName'],
-    });
-    store.getState().openTeamTab('ptc-native', undefined, 'physical-task-id');
-    expect(store.getState().openTab).toHaveBeenCalledWith(expect.objectContaining({
-      teamName: 'ptc-native',
-    }));
-    expect(vi.mocked(store.getState().openTab).mock.calls.at(-1)?.[0])
-      .not.toHaveProperty('retainedSharedHistory');
   });
 
   it('addresses group tasks to the existing team tab and consumes only the newest intent', () => {

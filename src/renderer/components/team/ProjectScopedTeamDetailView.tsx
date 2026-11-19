@@ -21,8 +21,6 @@ import type { TeamLaunchRequest } from '@shared/types';
 
 interface Props {
   teamName: string;
-  /** Route from an old shared task after this team was switched to per-project mode. */
-  retainedSharedHistory?: boolean;
   isActive?: boolean;
   isPaneFocused?: boolean;
 }
@@ -44,7 +42,6 @@ const LaunchTeamDialog = lazy(() =>
  */
 export const ProjectScopedTeamDetailView = ({
   teamName,
-  retainedSharedHistory = false,
   isActive = true,
   isPaneFocused = true,
 }: Readonly<Props>): React.JSX.Element => {
@@ -169,19 +166,6 @@ export const ProjectScopedTeamDetailView = ({
 
   const context = result?.key === key ? result.context : undefined;
   const error = result?.key === key ? result.error : undefined;
-  const retainedOwner = context?.state === 'retained' ? context.logicalTeamName : null;
-  useEffect(() => {
-    if (!isActive || !retainedOwner) return;
-    const state = useStore.getState();
-    const current = state.getAllPaneTabs().find(
-      (tab) => tab.id === state.activeTabId && tab.type === 'team' && tab.teamName === teamName
-    );
-    if (current) {
-      state.updateTabLabel(
-        current.id, `${retainedOwner} · ${t('projectContextView.retainedHistory')}`
-      );
-    }
-  }, [isActive, retainedOwner, teamName, t]);
   const redirectTeam = context?.state === 'redirect' ? context.logicalTeamName : null;
   const redirectProject = context?.state === 'redirect' ? context.projectPath : null;
   // Deep links can outlive a deleted worktree. Never route their physical
@@ -205,7 +189,7 @@ export const ProjectScopedTeamDetailView = ({
   const visiblePhysicalTeam =
     !isActive || context?.mode !== 'per_project'
       ? null
-      : (context.state === 'ready' || context.state === 'retained')
+      : context.state === 'ready'
         ? context.executionTeamName
         : (context.state === 'redirect' && !redirectProjectListed)
           ? teamName
@@ -215,10 +199,10 @@ export const ProjectScopedTeamDetailView = ({
     [visiblePhysicalTeam]
   );
 
-  // Register only the focused ready project; background/retained tabs do not
+  // Register only the focused ready project; background tabs do not
   // constitute the viewed native notification owner.
   const focusedProjectTeamName =
-    isActive && isPaneFocused && !retainedSharedHistory &&
+    isActive && isPaneFocused &&
     context?.mode === 'per_project' && context.state === 'ready'
       ? context.executionTeamName
       : null;
@@ -232,7 +216,7 @@ export const ProjectScopedTeamDetailView = ({
   // Activating an already-open logical tab can reselect the logical team.
   // Restore the verified physical runtime whenever that occurs while focused.
   const readyExecutionTeamName =
-    !retainedSharedHistory && context?.mode === 'per_project' && context.state === 'ready'
+    context?.mode === 'per_project' && context.state === 'ready'
       ? context.executionTeamName
       : null;
   useEffect(() => {
@@ -271,75 +255,18 @@ export const ProjectScopedTeamDetailView = ({
     }
   }, [launchingKey, refresh, teamName]);
 
-  if (retainedSharedHistory && context?.mode === 'per_project' &&
-      context.state !== 'redirect' && context.state !== 'retained') {
-    // The task identity still belongs to the pre-isolation physical team,
-    // even though all NEW work now goes to a project-specific runtime.
-    return (
-      <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-        <div className="flex items-center justify-between gap-2 border-b border-border px-4 py-2 text-xs text-text-muted">
-          <span>{logicalDisplayName} · {t('projectContextView.retainedHistory')}</span>
-          <Button size="sm" variant="outline" onClick={() => useStore.getState().openTeamTab(teamName)}>
-            {t('projectContextView.openCurrent')}
-          </Button>
-        </div>
-        <div className="flex min-h-0 min-w-0 flex-1" data-team-name={teamName}>
-          <TeamDetailView
-            teamName={teamName}
-            logicalTeamName={teamName}
-            retainedHistory
-            isActive={isActive}
-            isPaneFocused={isPaneFocused}
-          />
-        </div>
-      </div>
-    );
-  }
-
   if (context?.state === 'redirect' && !redirectProjectListed) {
     // The verified physical alias remains readable even when the worktree
     // disappeared from project discovery. Do not dispatch new work to a
     // missing/unknown project or discard pending physical task navigation.
     return (
       <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-        <div className="border-b border-border px-4 py-2 text-xs text-text-muted">
-          {context.logicalTeamName} · {context.projectPath} · {t('projectContextView.retainedHistory')}
-        </div>
+        <p role="status" className="border-b border-border px-4 py-2 text-xs text-text-muted">
+          {t('projectContextView.projectMissing')}
+        </p>
         <div className="flex min-h-0 min-w-0 flex-1" data-team-name={teamName}>
           <TeamDetailView
             teamName={teamName}
-            logicalTeamName={context.logicalTeamName}
-            teamDisplayName={context.logicalTeamName}
-            retainedHistory
-            isActive={isActive}
-            isPaneFocused={isPaneFocused}
-          />
-        </div>
-      </div>
-    );
-  }
-
-  if (context?.state === 'retained') {
-    // Only a backend-verified, owned historical alias can reach this branch.
-    // The logical team's selected mode still controls all future launches.
-    return (
-      <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border px-4 py-2 text-xs text-text-muted">
-          <span>
-            {context.logicalTeamName} · {t('projectContextView.retainedHistory')} · {context.projectPath}
-          </span>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => useStore.getState().openTeamTab(context.logicalTeamName)}
-          >
-            {t('projectContextView.openCurrent')}
-          </Button>
-        </div>
-        <div className="flex min-h-0 min-w-0 flex-1" data-team-name={context.executionTeamName}>
-          <TeamDetailView
-            key={context.workContextId}
-            teamName={context.executionTeamName}
             logicalTeamName={context.logicalTeamName}
             teamDisplayName={context.logicalTeamName}
             retainedHistory
