@@ -362,9 +362,8 @@ export class TeamInboxWriter {
     // silently would lose it rather than raise the collision the caller can
     // act on. findRuntimeDeliveryDuplicateIndex below is the separate,
     // intentionally more tolerant match used for non-explicit retries.
-    const persistedMetadata = <T>(value: T): T =>
-      value === undefined ? value : (JSON.parse(JSON.stringify(value)) as T);
-    return {
+    // Compare the same full JSON representation used by serializeInboxRows.
+    return JSON.parse(JSON.stringify({
       groupChatId: message.groupChatId,
       groupChatName: message.groupChatName,
       groupMessageId: message.groupMessageId,
@@ -381,8 +380,8 @@ export class TeamInboxWriter {
       relayOfMessageId: isRuntimeDelivery
         ? message.relayOfMessageId?.trim()
         : message.relayOfMessageId,
-      attachments: persistedMetadata(message.attachments),
-      fileReferences: persistedMetadata(message.fileReferences),
+      attachments: message.attachments,
+      fileReferences: message.fileReferences,
       nativeAttachmentDelivery: message.nativeAttachmentDelivery,
       source: message.source,
       conversationId: message.conversationId,
@@ -396,7 +395,7 @@ export class TeamInboxWriter {
       ...pickTeamInboxWorkSyncFields(message),
       slashCommand: message.slashCommand,
       commandOutput: message.commandOutput,
-    };
+    })) as Record<string, unknown>;
   }
 
   async updateMessageText(
