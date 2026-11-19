@@ -68,6 +68,7 @@ export const desktopProofIntegratedSources = [
   'src/features/agent-backend/renderer/createHostTaskReads.ts',
   'test/features/agent-backend/hostDeletedTasks.test.ts',
   'packages/legacy-agent-host/tests/team-host.test.ts',
+  'packages/legacy-agent-host/tests/stopped-team-import.test.ts',
   'src/renderer/utils/memberHelpers.ts',
   'src/features/team-direct-chats/renderer/ui/ChatListRow.tsx',
   'test/features/agent-backend/hostTeamRouting.test.ts',

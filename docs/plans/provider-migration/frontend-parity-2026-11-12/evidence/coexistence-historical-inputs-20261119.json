@@ -1,0 +1,236 @@
+{
+  "schemaVersion": 1,
+  "kind": "immutable-historical-coexistence-inputs",
+  "qualification": "Preparation only; no native or E2E pass. Histories retain their own exact SHAs, not current source qualification.",
+  "plan": {
+    "kind": "ORIGINAL_RETAINED_V1_V2_COEXISTENCE_PREPARATION",
+    "status": "HISTORICAL_CHECKOUTS_READY_OTHER_PREPARATION_NOT_RUN",
+    "sourceHead": null,
+    "sourceHeadRequirement": "Final published clean SHA after Stop/read-fence batch; no historical result is rebound.",
+    "workflow": ".github/workflows/ci.yml:retained-opencode-coexistence",
+    "checkoutMethod": "Four separate unfiltered depth1 fetches of exact workflow SHAs, detached clean checkouts under ignored .runtime-download. App refs/index untouched.",
+    "checkouts": [
+      {
+        "path": "/workspace/scratch/1d5114b8d2ee/agent-teams-ai/.runtime-download/TEST-retained-release-158",
+        "commit": "1d0f97f55de566036c970eab4f36b84620afdb3f",
+        "tree": "ec540290c86af9755c94e52ac795aeda8586a98f",
+        "evidence": "/workspace/scratch/de9d4631e21c/coexistence-checkouts-20261119/TEST-retained-release-158.json",
+        "evidenceSha256": "2dd7b38905f9302e3a530ab6a35ee4345c4b3efb9ffba3cb3fd3430039ec8eea"
+      },
+      {
+        "path": "/workspace/scratch/1d5114b8d2ee/agent-teams-ai/.runtime-download/TEST-retained-runtime-source",
+        "commit": "f5c69c2e9024ffc36a5db5eafe30f53539b52f62",
+        "tree": "0dbb5a59f199337dec51c82c16b81eb277cd7457",
+        "evidence": "/workspace/scratch/de9d4631e21c/coexistence-checkouts-20261119/TEST-retained-runtime-source.json",
+        "evidenceSha256": "5c214948b55e3d3e1e27b01185c3d919d298c34012d7afe15481e6f2676657e9"
+      },
+      {
+        "path": "/workspace/scratch/1d5114b8d2ee/agent-teams-ai/.runtime-download/TEST-donor-4a",
+        "commit": "4a0e06277fe216d9f82dbbede362668fe46622ee",
+        "tree": "4bb456a5b35b6fca0e795bc8b19a13f5f1f6defd",
+        "evidence": "/workspace/scratch/de9d4631e21c/coexistence-checkouts-20261119/TEST-donor-4a.json",
+        "evidenceSha256": "d1c258dbdc875f5396d7674d23a840dfe321fa74828e503a60d460fd512b56b3"
+      },
+      {
+        "path": "/workspace/scratch/1d5114b8d2ee/agent-teams-ai/.runtime-download/TEST-donor-runtime-source",
+        "commit": "e13edcd3d4ffbecc0272ae30195cc6b15b710ee7",
+        "tree": "a5ed6ffc453a68a5454328bd79a9422ce1e4e3e9",
+        "evidence": "/workspace/scratch/de9d4631e21c/coexistence-checkouts-20261119/TEST-donor-runtime-source.json",
+        "evidenceSha256": "1e03f33787c14b3d3d9ee9b3806976522bfd7873573db316cbf60b91d4e2b22c"
+      }
+    ],
+    "sharedV2Inputs": "Reuse the fresh same-finalHEAD canonical V2 Bun/graph selections and receipt already planned for management. Coexistence does not require host-emulated-inputs.json or a Settings receipt; it has a separate original retained input capture.",
+    "remainingPrerequisites": [
+      "One isolated package root with opencode-ai@1.19.4, opencode-linux-x64@1.19.4 and corepack@0.36.0; V1 native SHA538fcb1b6408c8d4608822acee19f7ff5b3a3eb3383c0633c4f06170857312a7. No copy found in three inspected existing pnpm virtual stores.",
+      "Original retained release158 stage-runtime at its immutable checkout. Locked archive SHA4c106fcebab79de525aa7c9bb7636aa91fa43e76b4d567a00f98b2e6650ab29d; runtime executable SHAb9b4c9f786238922cad49f46e5ac147b4e361b182bd250e5fbb47571571059cd.",
+      "Original donor4a frozen pnpm11.22 install, Electron44.10.1 + SQLite ABI149, runtime0.0.160 stage, controller and MCP build. All are required by the existing same test.",
+      "Reuse/revalidate existing LinuxChildExec pin and Corepack cache; keep original source/hash validation. No optional V2 CLI2.0.21/2.3.0 update packages needed for this single coexistence branch."
+    ],
+    "environment": {
+      "OPENCODE_V2_TEST_SOURCE_HEAD": "<FINAL_PUBLISHED_SHA>",
+      "OPENCODE_V2_TEST_PLATFORM": "linux-x64",
+      "OPENCODE_V1_V2_TEST_PACKAGES": "<isolated pinned V1 package root>",
+      "OPENCODE_V1_V2_RETAINED_REPO": "/workspace/scratch/1d5114b8d2ee/agent-teams-ai/.runtime-download/TEST-retained-release-158",
+      "OPENCODE_V1_V2_RETAINED_CUSTODY_SOURCE": "/workspace/scratch/1d5114b8d2ee/agent-teams-ai/.runtime-download/TEST-retained-runtime-source",
+      "OPENCODE_V1_V2_DONOR_REPO": "/workspace/scratch/1d5114b8d2ee/agent-teams-ai/.runtime-download/TEST-donor-4a",
+      "OPENCODE_V1_V2_DONOR_CUSTODY_SOURCE": "/workspace/scratch/1d5114b8d2ee/agent-teams-ai/.runtime-download/TEST-donor-runtime-source",
+      "OPENCODE_V1_V2_INPUTS_RECEIPT": "<fresh RUNNER_TEMP>/retained-opencode-inputs.json",
+      "OPENCODE_V1_V2_COEXISTENCE_RECEIPT": "<fresh RUNNER_TEMP>/retained-opencode-coexistence.json",
+      "RUNNER_TEMP": "<fresh retained run directory>",
+      "TMPDIR": "<same fresh retained run directory>",
+      "GITHUB_ENV": "<fresh selection output file>"
+    },
+    "originalCommands": [
+      "node scripts/legacy-agent-host/prepare-retained-opencode-coexistence.ts",
+      "OPENCODE_V1_V2_COEXISTENCE_GO=1 node --test scripts/legacy-agent-host/desktop-retained-opencode-coexistence.native.ts"
+    ],
+    "selection": "Both OPENCODE_V1_UI_SOURCE_SELECTION_GO and OPENCODE_V2_UI_SOURCE_SELECTION_GO must be absent. Import only the new original preparation selections; no old READY receipt reuse.",
+    "resourceAndBuilds": "Original test timeout900000ms. Its app helper already sets CLI --max-old-space-size=1536, maps-off and headless Ozone. No Xvfb/finite heap selector/UV override is required. Test unconditionally fresh-builds ledger+Host (60s each), controller30s, MCP60s and retained custody helper60s; donor preparation may build its source helper60s. Preserve these original bounds; shared build/resource freeze is required.",
+    "coverage": "Original current Main legacy Launch, real V1 history, Host V2 selection/Launch and one preparation, both owners live, independent retained-V1 Stop and Host-V2 Stop, legacy relaunch, cold no-replay histories, mandatory donor4a native producer then current/cold readback with original Task/Review proof, physical cleanup.",
+    "providerScope": "Real pinned OpenCode V1/V2 with finite localhost model. Closed sentinels for Claude/Codex and OPENCODE_DISABLE_CLAUDE_CODE=1; neither real Claude nor real Codex is selected. No vendor auth/release qualification.",
+    "acceptance": "Only the original single native test is prepared here. Its final status and cleanup must both pass, including mandatory donorHistory. Separate CI source-selection/update journeys are excluded, not claimed passed.",
+    "notRun": [
+      "package install",
+      "runtime stage",
+      "helper/compiler build",
+      "input capture",
+      "native providers",
+      "GUI",
+      "test",
+      "existing final CI verifier"
+    ],
+    "executionOwner": "/root/pr_graph after root GO and previous GUI cleanup/release",
+    "canonicalOneTimePreparation": {
+      "toolchain": "Exact Node24.21.0 and pnpm11.22.0; existing captured Corepack0.36.0 launcher/cache may supply pnpm. No execution yet.",
+      "v1Packages": [
+        "selected_inputs=\"$(mktemp -d \"$RUNNER_TEMP/TEST-retained-opencode-inputs-XXXXXX\")\"",
+        "printf '{\"name\":\"test-retained-opencode-inputs\",\"private\":true}\\n' > \"$selected_inputs/package.json\"",
+        "pnpm --dir \"$selected_inputs\" add --ignore-scripts --save-exact opencode-ai@1.19.4 opencode-linux-x64@1.19.4 corepack@0.36.0",
+        "export OPENCODE_V1_V2_TEST_PACKAGES=\"$selected_inputs\""
+      ],
+      "retained158": {
+        "cwd": "/workspace/scratch/1d5114b8d2ee/agent-teams-ai/.runtime-download/TEST-retained-release-158",
+        "command": "node scripts/stage-runtime.mjs --platform linux-x64"
+      },
+      "donor4a": {
+        "cwd": "/workspace/scratch/1d5114b8d2ee/agent-teams-ai/.runtime-download/TEST-donor-4a",
+        "commands": [
+          "node scripts/ci/install-dependencies-with-retry.mjs",
+          "node scripts/ensure-electron-install.cjs --strict",
+          "pnpm exec electron-rebuild --module-dir . --force --only better-sqlite3 --version 44.10.1",
+          "node scripts/stage-runtime.mjs --platform linux-x64",
+          "node agent-teams-controller/scripts/build.mjs",
+          "pnpm --filter agent-teams-mcp build"
+        ]
+      },
+      "sourceGuards": "Retain original expected commit/tree, package-manager, release lock/stage-script hashes and clean-source checks before and after these commands. Existing validators run again in canonical prepare/test. Do not add source-selection flags or run their optional V2 package installs."
+    }
+  },
+  "index": {
+    "kind": "BOUNDED_HISTORICAL_INPUT_PREPARATION_INDEX",
+    "status": "TWO_PREPARATION_OPERATIONS_SUCCEEDED",
+    "files": [
+      {
+        "path": "/workspace/scratch/de9d4631e21c/coexistence-input-preparation-20261119/v1-packages-result.json",
+        "bytes": 3266,
+        "sha256": "5508f8a19f5ec2076d57a3d0814019fa9d0efd79f875def77d97b77ead3d4bab"
+      },
+      {
+        "path": "/workspace/scratch/de9d4631e21c/coexistence-input-preparation-20261119/retained158-stage-result.json",
+        "bytes": 1545,
+        "sha256": "74545c0073c3f4350222a765a35cdb0bc9fe55d27bb59c359b68c6e4d7b823e7"
+      }
+    ],
+    "nativeProvidersExecuted": false,
+    "buildsExecuted": false,
+    "currentAppSourceOrRefsChanged": false,
+    "qualification": "Only isolated pinned V1 packages and original retained0.0.158 runtime staging. Not a fresh app input capture or native/E2E PASS.",
+    "stillRequired": [
+      "donor4a frozen dependencies/Electron ABI/runtime/controller/MCP preparation",
+      "original custody helper builds",
+      "fresh same-finalHEAD V2/native input qualification",
+      "original retained input capture",
+      "one original coexistence run with its mandatory builds and all assertions"
+    ],
+    "plan": "/workspace/scratch/de9d4631e21c/coexistence-checkouts-20261119/run-plan.json"
+  },
+  "v1Packages": {
+    "kind": "HISTORICAL_INPUT_PREPARATION",
+    "operation": "isolated-v1-packages",
+    "status": "PREPARED",
+    "argv": [
+      "/workspace/scratch/1d5114b8d2ee/agent-teams-ai/resources/legacy-agent-host/node/v24.21.0/linux-x64/node",
+      "--max-old-space-size=512",
+      "/workspace/scratch/de9d4631e21c/gui-prerequisites-20261118/runner/TEST-emulated-ui-inputs-HHScGL/corepack/node_modules/.pnpm/corepack@0.36.0/node_modules/corepack/dist/pnpm.js",
+      "--dir",
+      "/workspace/scratch/de9d4631e21c/coexistence-input-preparation-20261119/TEST-retained-opencode-inputs-3jpvtksk",
+      "add",
+      "--ignore-scripts",
+      "--save-exact",
+      "opencode-ai@1.19.4",
+      "opencode-linux-x64@1.19.4",
+      "corepack@0.36.0"
+    ],
+    "cwd": "/workspace/scratch/1d5114b8d2ee/agent-teams-ai",
+    "packageDirectory": "/workspace/scratch/de9d4631e21c/coexistence-input-preparation-20261119/TEST-retained-opencode-inputs-3jpvtksk",
+    "log": "/workspace/scratch/de9d4631e21c/coexistence-input-preparation-20261119/v1-packages-install.log",
+    "nodeHeapMiB": 512,
+    "ignoreScripts": true,
+    "nativeProviderExecuted": false,
+    "exitCode": 0,
+    "packages": [
+      {
+        "name": "opencode-ai",
+        "version": "1.19.4",
+        "packageJson": "/workspace/scratch/de9d4631e21c/coexistence-input-preparation-20261119/TEST-retained-opencode-inputs-3jpvtksk/node_modules/.pnpm/opencode-ai@1.19.4/node_modules/opencode-ai/package.json",
+        "sha256": "96a86bbaad6c6fce496e8e2504758a1c6a630aca18b82c4009e2d272ea23a7d6"
+      },
+      {
+        "name": "opencode-linux-x64",
+        "version": "1.19.4",
+        "packageJson": "/workspace/scratch/de9d4631e21c/coexistence-input-preparation-20261119/TEST-retained-opencode-inputs-3jpvtksk/node_modules/.pnpm/opencode-linux-x64@1.19.4/node_modules/opencode-linux-x64/package.json",
+        "sha256": "4ecaa3280873d0c7b2b1727b8eb20e83b0a5350437a37f779d47c7a1ff887875"
+      },
+      {
+        "name": "corepack",
+        "version": "0.36.0",
+        "packageJson": "/workspace/scratch/de9d4631e21c/coexistence-input-preparation-20261119/TEST-retained-opencode-inputs-3jpvtksk/node_modules/.pnpm/corepack@0.36.0/node_modules/corepack/package.json",
+        "sha256": "6f431b9a91afe6b4757f4b5a3855e2f79e2f366dd4242fd397713932aa3a2714"
+      }
+    ],
+    "binary": {
+      "path": "/workspace/scratch/de9d4631e21c/coexistence-input-preparation-20261119/TEST-retained-opencode-inputs-3jpvtksk/node_modules/.pnpm/opencode-linux-x64@1.19.4/node_modules/opencode-linux-x64/bin/opencode",
+      "sha256": "538fcb1b6408c8d4608822acee19f7ff5b3a3eb3383c0633c4f06170857312a7",
+      "bytes": 214522032
+    },
+    "corepack": {
+      "path": "/workspace/scratch/de9d4631e21c/coexistence-input-preparation-20261119/TEST-retained-opencode-inputs-3jpvtksk/node_modules/.pnpm/corepack@0.36.0/node_modules/corepack/dist/pnpm.js",
+      "sha256": "7c2a67995976b5b592b611d8b236e3b0633bd654fb49aedd96c6eb7ce04c9cbb"
+    },
+    "packageLock": {
+      "path": "/workspace/scratch/de9d4631e21c/coexistence-input-preparation-20261119/TEST-retained-opencode-inputs-3jpvtksk/pnpm-lock.yaml",
+      "sha256": "4e4d1559a2f2046cf36fb6ceb171029399db1e81417d05800af051f6ca44f3e8",
+      "bytes": 4335
+    },
+    "elapsedSeconds": 22.448,
+    "logSha256": "6b73a5cb7964e173bf695b6034147cd9fd10e1a5c180a57bbe01482c8f08cb28",
+    "logBytes": 1941
+  },
+  "retained158Stage": {
+    "kind": "HISTORICAL_INPUT_PREPARATION",
+    "operation": "original-retained158-stage-runtime",
+    "status": "PREPARED",
+    "argv": [
+      "/workspace/scratch/1d5114b8d2ee/agent-teams-ai/resources/legacy-agent-host/node/v24.21.0/linux-x64/node",
+      "scripts/stage-runtime.mjs",
+      "--platform",
+      "linux-x64"
+    ],
+    "cwd": "/workspace/scratch/1d5114b8d2ee/agent-teams-ai/.runtime-download/TEST-retained-release-158",
+    "sourceHead": "1d0f97f55de566036c970eab4f36b84620afdb3f",
+    "sourceTree": "ec540290c86af9755c94e52ac795aeda8586a98f",
+    "log": "/workspace/scratch/de9d4631e21c/coexistence-input-preparation-20261119/retained158-stage.log",
+    "asset": {
+      "file": "agent-teams-runtime-linux-x64-v0.0.158.tar.gz",
+      "archiveKind": "tar.gz",
+      "binaryName": "claude-multimodel",
+      "sha256": "4c106fcebab79de525aa7c9bb7636aa91fa43e76b4d567a00f98b2e6650ab29d"
+    },
+    "nativeProviderExecuted": false,
+    "buildExecuted": false,
+    "exitCode": 0,
+    "sourceCleanAfter": true,
+    "runtime": {
+      "path": "/workspace/scratch/1d5114b8d2ee/agent-teams-ai/.runtime-download/TEST-retained-release-158/resources/runtime/claude-multimodel",
+      "bytes": 120727008,
+      "sha256": "b9b4c9f786238922cad49f46e5ac147b4e361b182bd250e5fbb47571571059cd",
+      "version": "0.0.158",
+      "sourceCommit": "f5c69c2e9024ffc36a5db5eafe30f53539b52f62"
+    },
+    "archiveChecksumVerifiedByOriginalScript": true,
+    "archiveRetained": false,
+    "elapsedSeconds": 22.047,
+    "logSha256": "db2799cc0ee924841c1ad57e9b21136e1b9aab7e4e874b584fcc707a5afc4637",
+    "logBytes": 437
+  }
+}

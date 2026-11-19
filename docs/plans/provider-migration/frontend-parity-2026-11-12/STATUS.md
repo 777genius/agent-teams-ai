@@ -7,10 +7,13 @@
 На нём прошли полный cross-team/ReviewFlow GUI, workspace typecheck и fast lint,
 четыре frontend shards, все пять packaged-платформ и их общий gate.
 Из 25 Desktop lanes прошли 20. Оставшиеся отказы перечислены ниже.
-Продолжения `90b7fb4a` и `e754d233` опубликованы. Последняя строгая локальная
+Продолжения `90b7fb4a`, `e754d233` и `917a7d3c` опубликованы. Строгая локальная
 [Host-сборка e754](evidence/host-build-e754d233-20261119.json) PASS за 10.064s,
 все 14 input pins совпали. Новые правки не получают результаты приёмки9ec
 автоматически; новые CI workflows при последнем чтении ещё queued.
+На917 исходный solo producer впервые прошёл native Stop, post-Stop ProductTask
+и cleanup. Общий import lifecycle дошёл до consumer и выявил следующий отказ
+на `snapshot-export`; retained GUI после него не запускался.
 
 ## Доставка и границы
 
@@ -55,7 +58,7 @@ resolved; approval review этим не заявляется.
 
 | ID | Первый отказ на 9ec | Текущая работа и критерий завершения | Владелец |
 | --- | --- | --- | --- |
-| E1-Stop | [Import lifecycle](https://github.com/777genius/agent-teams-ai/actions/runs/44455698034/job/135330056657): producer дошёл до `phase=stop`, original Main Stop release не подтверждён. | Canonical census и WorkSync ordering реализованы; 153/153 focused tests и независимый source R2 PASS. Ещё16 selected feature tests, final6 ordering tests, strict scoped TS7 и21-file Fast lint PASS. Следом исходный producer/import lifecycle с native release, cold readback и cleanup. | reviewflow; root |
+| E1-Stop / Import | На9ec producer останавливался на Stop. На917 producer PASS с actual release и ProductTask; consumer отказал на `snapshot-export`. | Stop/WorkSync исправление принято исходным producer. Экспортеру добавлены точные канонические служебные файлы Main: owner/recovery/cache только в census, журнал уведомлений только в archive. 17/17 import/RPC checks, строгая Host-сборка и R2 PASS; нужен новый полный original import lifecycle с cold readback. | root; pr_graph |
 | E1-Retained | [Retained UI](https://github.com/777genius/agent-teams-ai/actions/runs/44455698034/job/135330056793): prepare/held. [Main retained V1/V2](https://github.com/777genius/agent-teams-ai/actions/runs/44455698135/job/135350275468): coordinator admission, not-eligible/not-dispatched. | Закрытая prepare-boundary диагностика готова: 42/42 tests и R2 PASS. Read-fence использует исправленный drain существующей очереди; связь с исходным отказом ещё проверяется. Требуются исходный UI и отдельный V1/V2 coexistence open/history/Stop/cold/cleanup. | pr_graph; media |
 | E1-Add | [Linux V2 management](https://github.com/777genius/agent-teams-ai/actions/runs/44455698034/job/135330056490): `original add completes`. | По current receipt Add сохранён held до member publication, model probe не прошёл credential preparation/cleanup. Закрытая first-close диагностика передана Host→Main, 30/30 actual-source checks и R2 PASS. Нужен исходный Add/Remove/Restore/Stop/cold после сборки. | media |
 | E1-Review | [Darwin ARM V2 Review](https://github.com/777genius/agent-teams-ai/actions/runs/44455698034/job/135330056601): исходный preflight deadline. | Initial-seed/model-source fix опубликован в90b, exact-byte focused proof и R2 сохранены. Нужен affected original preflight/Review. Source test не заменяет Darwin acceptance. | media |
@@ -143,6 +146,21 @@ compiler result. Последние6 ordering cases — повтор после 
 поля, ≤768B, первая на probe; прежние phase, 8192B framing, clocks, authority,
 request/Stop/drain и UNKNOWN сохраняются. 30/30 focused tests PASS и independent
 R2 подтверждают эту диагностику; продуктовая причина ещё не квалифицирована.
+
+[Original import lifecycle917](evidence/gui-import-lifecycle-917a7d3c-20261119.json)
+сохраняет producer PASS и consumer INCOMPLETE отдельно. Ровно один bootstrap/turn,
+подтверждённый native release, post-Stop ProductTask и1908 неизменных source hashes.
+Consumer app завершился с exit0/remaining=[], но Host не был наблюдён:
+`capturedHostAbsent=null`, строгий collector cleanup=false.
+[Исправление export](evidence/stopped-import-canonical-artifacts-917a7d3c-20261119.json)
+связано с11 неизменными original source files и их каноническими writers.
+Соседние неизвестные пути, неканонические URI stems и прежние negative oracles
+по-прежнему отклоняются; native authority и notification delivery не переносятся.
+
+[Исторические входы coexistence](evidence/coexistence-historical-inputs-20261119.json)
+подготовлены отдельно: четыре clean pinned checkout, проверенные V1 packages1.19.4
+и runtime0.0.158. Donor зависимости/ABI/builds и исходный native тест ещё впереди;
+подготовка не является результатом E2E.
 
 [Retained prepare evidence](evidence/retained-prepare-boundary-20261119.json)
 содержит 42/42 checks и независимый R2. Единственная существующая diagnostic
