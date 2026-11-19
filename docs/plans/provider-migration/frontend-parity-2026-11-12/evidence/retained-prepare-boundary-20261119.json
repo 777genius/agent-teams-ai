@@ -1,0 +1,151 @@
+{
+  "schemaVersion": 1,
+  "kind": "retained-ui-prepare-boundary-diagnostic",
+  "owner": "/root/pr_graph",
+  "status": "FOCUSED_PASS_INDEPENDENT_REVIEW_PASS",
+  "createdAt": "2026-11-19T11:17:58.828303+00:00",
+  "sourceHead": "90b7fb4a7095f47c4416b58a183769761d837cb3",
+  "sourceQualification": "Unpublished exact five-file working slice on recorded base, not a new original GUI result.",
+  "paths": [
+    {
+      "path": "src/features/agent-backend/main/application/importStoppedLegacyTeam.ts",
+      "bytes": 6591,
+      "sha256": "0ea6bd4d3b7da6815fa0c5a37c36d79aff1f4b974b073b7046059e0387ccbbc8",
+      "gitBlob": "b7459ae870c2140adfb072f3420b085a3744af4a"
+    },
+    {
+      "path": "src/features/agent-backend/main/infrastructure/stopped-import/prepareStoppedLegacyImport.ts",
+      "bytes": 3268,
+      "sha256": "299e5064f21681e3a3b80ba7088b41c6cdc2bf25c47875713d7a192113784909",
+      "gitBlob": "87e250dba6417687c651aae7409508580ce3d16b"
+    },
+    {
+      "path": "src/features/agent-backend/main/infrastructure/stopped-import/createStoppedImportDiagnostic.ts",
+      "bytes": 6143,
+      "sha256": "e240d795dad3c9cb1b9dc5ac2d1e92fdc4353aa8f357b67193aaf48a3194a89f",
+      "gitBlob": "40c0577790123d91412bad834e4a4da72ec4e32d"
+    },
+    {
+      "path": "test/features/agent-backend/legacyStoppedImportSource.test.ts",
+      "bytes": 26436,
+      "sha256": "4d817603ddedef0e6452d0b2c4205fff7c0aed974be6ab0392f7d86c55b35414",
+      "gitBlob": "674744ae0135a1807c1299069e473135f7fce0b9"
+    },
+    {
+      "path": "test/features/agent-backend/stoppedImportDiagnostics.test.ts",
+      "bytes": 15249,
+      "sha256": "2d5cb3fd9fd18bb332d602bd80cbeb1a17abcaef69ac90378f9956ad0f0fa8b1",
+      "gitBlob": "edd062e535514de40e960142b29e223949caf38d"
+    }
+  ],
+  "actualFailingEvidence": {
+    "sourceHead": "9ec6cb6f567af14233965a77c4c4a043adc29487",
+    "runId": 44455698034,
+    "jobId": 135330056793,
+    "artifactId": 14502971024,
+    "zipSha256": "e57af406f4dab0bf900881b0763b1911caaf196bb3c3c4bc904d86eeea37efe4",
+    "failure": "UI read timed out: visible explicit original runtime choice; no mutation retry",
+    "diagnostic": {
+      "source": "application",
+      "phase": "prepare",
+      "category": "held",
+      "outcome": "not-dispatched"
+    },
+    "cleanup": {
+      "remaining": [],
+      "appExitCode": 0,
+      "capturedHostObserved": false,
+      "capturedHostAbsent": null
+    },
+    "cause": "Inner prepare boundary was absent from the original one-shot record; no unobserved product cause is asserted."
+  },
+  "invariants": {
+    "unchangedOperationCounts": {
+      "await": [
+        2,
+        2
+      ],
+      "source.isCurrent": [
+        2,
+        2
+      ],
+      "target.assertCurrent": [
+        2,
+        2
+      ],
+      "exportStoppedTeam": [
+        1,
+        1
+      ],
+      "original.describe": [
+        1,
+        1
+      ],
+      "original.fenced": [
+        1,
+        1
+      ],
+      "snapshot.stage": [
+        1,
+        1
+      ]
+    },
+    "originalSourceHoldRestoration": true,
+    "diagnosticOnlyPrivateScalarSlot": true,
+    "noNewReadActionAwaitTimerRetrySinkOrDeadline": true,
+    "oneShotRecord": true,
+    "noRawErrorIdentifiersPathsOrTokens": true,
+    "existingSourcePinsCoverAllThreeSources": true,
+    "loggerPath": "createDesktopStoppedTeamOperations \u2192 createLogger.diagnostic \u2192 formatPersistentLogMessage \u2192 existing app-errors*.ndjson artifact",
+    "lastEnteredBoundaryNotProofOfWhichPredicateFailed": true
+  },
+  "verification": {
+    "metadata": {
+      "sourceHead": "90b7fb4a7095f47c4416b58a183769761d837cb3",
+      "command": [
+        "/workspace/scratch/1d5114b8d2ee/agent-teams-ai/resources/legacy-agent-host/node/v24.21.0/linux-x64/node",
+        "/workspace/scratch/1d5114b8d2ee/agent-teams-ai/node_modules/vitest/vitest.mjs",
+        "run",
+        "test/features/agent-backend/legacyStoppedImportSource.test.ts",
+        "test/features/agent-backend/stoppedImportDiagnostics.test.ts",
+        "--maxWorkers=1",
+        "--minWorkers=1"
+      ],
+      "cwd": "/workspace/scratch/1d5114b8d2ee/agent-teams-ai",
+      "startedAt": "2026-11-19T11:16:20.838713+00:00",
+      "sourceBefore": {
+        "src/features/agent-backend/main/application/importStoppedLegacyTeam.ts": "0ea6bd4d3b7da6815fa0c5a37c36d79aff1f4b974b073b7046059e0387ccbbc8",
+        "src/features/agent-backend/main/infrastructure/stopped-import/prepareStoppedLegacyImport.ts": "299e5064f21681e3a3b80ba7088b41c6cdc2bf25c47875713d7a192113784909",
+        "src/features/agent-backend/main/infrastructure/stopped-import/createStoppedImportDiagnostic.ts": "e240d795dad3c9cb1b9dc5ac2d1e92fdc4353aa8f357b67193aaf48a3194a89f",
+        "test/features/agent-backend/legacyStoppedImportSource.test.ts": "4d817603ddedef0e6452d0b2c4205fff7c0aed974be6ab0392f7d86c55b35414",
+        "test/features/agent-backend/stoppedImportDiagnostics.test.ts": "2d5cb3fd9fd18bb332d602bd80cbeb1a17abcaef69ac90378f9956ad0f0fa8b1"
+      },
+      "status": "finished",
+      "log": "/workspace/scratch/de9d4631e21c/retained-prepare-boundary-focused-20261119.log",
+      "exitCode": 0,
+      "elapsedSeconds": 23.119,
+      "sourceAfter": {
+        "src/features/agent-backend/main/application/importStoppedLegacyTeam.ts": "0ea6bd4d3b7da6815fa0c5a37c36d79aff1f4b974b073b7046059e0387ccbbc8",
+        "src/features/agent-backend/main/infrastructure/stopped-import/prepareStoppedLegacyImport.ts": "299e5064f21681e3a3b80ba7088b41c6cdc2bf25c47875713d7a192113784909",
+        "src/features/agent-backend/main/infrastructure/stopped-import/createStoppedImportDiagnostic.ts": "e240d795dad3c9cb1b9dc5ac2d1e92fdc4353aa8f357b67193aaf48a3194a89f",
+        "test/features/agent-backend/legacyStoppedImportSource.test.ts": "4d817603ddedef0e6452d0b2c4205fff7c0aed974be6ab0392f7d86c55b35414",
+        "test/features/agent-backend/stoppedImportDiagnostics.test.ts": "2d5cb3fd9fd18bb332d602bd80cbeb1a17abcaef69ac90378f9956ad0f0fa8b1"
+      },
+      "logSha256": "91349e790f8a0d22a37fc4d3255ccfb7e6e7374cd5adf0ae2e33a539218ac5af"
+    },
+    "log": "\n RUN  v3.2.6 /workspace/scratch/1d5114b8d2ee/agent-teams-ai\n\nstderr | test/features/agent-backend/legacyStoppedImportSource.test.ts\n[ClaudeDoctorProbe] node-pty not available - doctor fallback disabled\n\nstderr | test/features/agent-backend/legacyStoppedImportSource.test.ts\n[Feature:tmux-installer:pty] node-pty not available - interactive tmux installer terminal input disabled\n\n \u2713 test/features/agent-backend/legacyStoppedImportSource.test.ts (25 tests) 686ms\n   \u2713 actual legacy source owners and existing fences > preserves removed teammate identity/settings at 0 through import, cold read and the existing roster restore  387ms\n \u2713 test/features/agent-backend/stoppedImportDiagnostics.test.ts (17 tests) 26ms\n\n Test Files  2 passed (2)\n      Tests  42 passed (42)\n   Start at  13:16:21\n   Duration  22.17s (transform 11.69s, setup 928ms, collect 19.41s, tests 712ms, environment 0ms, prepare 221ms)\n\n",
+    "pass": 42,
+    "fail": 0,
+    "skip": 0,
+    "files": 2,
+    "sourceUnchanged": true,
+    "independentR2": {
+      "reviewer": "/root",
+      "verdict": "PASS",
+      "reviewedAt": "2026-11-19T11:21:40.410030+00:00",
+      "scope": "Exact five-file slice; actual original-error identity, closed boundary vocabulary, one-shot sink and persistent log transport. No new I/O, await, action, retry or deadline. Existing sourceHold restoration and source/target guards retained. 42 original-source test results reused; no redundant rerun.",
+      "sourceBaseNow": "e754d23317ae5c8d12f48b2ece39a91167e40481"
+    }
+  },
+  "acceptance": "Retained-original GUI remains INCOMPLETE until the original affected mode succeeds."
+}

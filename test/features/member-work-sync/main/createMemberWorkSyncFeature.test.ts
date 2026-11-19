@@ -90,6 +90,50 @@ it('resumes a deleted same-name team only after config is materialized again', a
   }
 });
 
+it('retains admitted member-spawn fallback across an async roster read without a source policy', async () => {
+  const rosterStarted = createDeferred();
+  const releaseRoster = createDeferred();
+  const teamName = 'team-spawn-fallback';
+  const feature = createMemberWorkSyncFeature({
+    isManagedByThisProfile: async () => true,
+    lifecycleIdentity: createTestWorkSyncIdentity(),
+    teamsBasePath: path.join(makeTempRoot(), 'teams'),
+    startBackground: false,
+    configReader: {
+      getConfig: vi.fn(async () => {
+        rosterStarted.resolve();
+        await releaseRoster.promise;
+        return { name: teamName, members: [{ name: 'bob' }] };
+      }),
+    } as never,
+    taskReader: { getTasks: vi.fn(async () => []) } as never,
+    kanbanManager: { getState: vi.fn(async () => null) } as never,
+    membersMetaStore: { getMembers: vi.fn(async () => []) } as never,
+  });
+  let fence: ReturnType<typeof feature.captureNativeStopFence> | undefined;
+  try {
+    feature.noteTeamChange({ type: 'member-spawn', teamName });
+    await rosterStarted.promise;
+    fence = feature.captureNativeStopFence(teamName);
+    releaseRoster.resolve();
+    await vi.waitFor(() => expect(feature.getQueueDiagnostics().queued).toBe(1));
+    const before = feature.getQueueDiagnostics();
+    expect(before.queuedItems).toMatchObject([
+      { teamName, memberName: 'bob', triggerReasons: ['member_spawned'] },
+    ]);
+    const item = before.queuedItems[0]!;
+    expect(Date.parse(item.runAt) - Date.parse(item.firstQueuedAt)).toBe(30_000);
+    expect(before.running).toBe(0);
+    feature.noteTeamChange({ type: 'member-spawn', teamName, detail: 'late-member' });
+    expect(feature.getQueueDiagnostics().queuedItems).toEqual(before.queuedItems);
+    expect(feature.getQueueDiagnostics().dropped).toBe(0);
+  } finally {
+    releaseRoster.resolve();
+    fence?.release();
+    await feature.dispose();
+  }
+});
+
 it('replays pending reports when a team process or teammate spawn becomes active', async () => {
   const listPendingReports = vi
     .spyOn(JsonMemberWorkSyncStore.prototype, 'listPendingReports')
@@ -835,7 +879,9 @@ describe('createMemberWorkSyncFeature composition', () => {
       await feature.dispose();
       expect(close).toHaveBeenCalledOnce();
       expect(awaitIdle).toHaveBeenCalledOnce();
-      expect(close.mock.invocationCallOrder[0]!).toBeLessThan(awaitIdle.mock.invocationCallOrder[0]!);
+      expect(close.mock.invocationCallOrder[0]!).toBeLessThan(
+        awaitIdle.mock.invocationCallOrder[0]!
+      );
       await expect(gate.run('team-a', async () => 'late')).rejects.toBeInstanceOf(
         MemberWorkSyncTeamQuiescedError
       );

@@ -7,9 +7,10 @@
 На нём прошли полный cross-team/ReviewFlow GUI, workspace typecheck и fast lint,
 четыре frontend shards, все пять packaged-платформ и их общий gate.
 Из 25 Desktop lanes прошли 20. Оставшиеся отказы перечислены ниже.
-Продолжение `90b7fb4a` уже опубликовано; его строгая локальная Host-сборка
-PASS за 11.108s, все 14 input pins совпали. Новые правки не получают результаты
-приёмки9ec автоматически.
+Продолжения `90b7fb4a` и `e754d233` опубликованы. Последняя строгая локальная
+[Host-сборка e754](evidence/host-build-e754d233-20261119.json) PASS за 10.064s,
+все 14 input pins совпали. Новые правки не получают результаты приёмки9ec
+автоматически; новые CI workflows при последнем чтении ещё queued.
 
 ## Доставка и границы
 
@@ -54,11 +55,11 @@ resolved; approval review этим не заявляется.
 
 | ID | Первый отказ на 9ec | Текущая работа и критерий завершения | Владелец |
 | --- | --- | --- | --- |
-| E1-Stop | [Import lifecycle](https://github.com/777genius/agent-teams-ai/actions/runs/44455698034/job/135330056657): producer дошёл до `phase=stop`, original Main Stop release не подтверждён. | Восстановить готовый canonical-config census; завершить WorkSync ordering и строгую квалификацию его artifacts. Затем один исходный producer/import lifecycle с native release, cold readback и cleanup. | reviewflow |
-| E1-Retained | [Retained UI](https://github.com/777genius/agent-teams-ai/actions/runs/44455698034/job/135330056793): prepare/held. [Main retained V1/V2](https://github.com/777genius/agent-teams-ai/actions/runs/44455698135/job/135350275468): coordinator admission, not-eligible/not-dispatched. | Установить отдельные первые причины по original receipts. Сохранить закрытые bounded diagnostics; исправлять подтверждённую причину. Требуется исходный V1/V2 open, selection/history/Stop/cold/cleanup. | pr_graph |
+| E1-Stop | [Import lifecycle](https://github.com/777genius/agent-teams-ai/actions/runs/44455698034/job/135330056657): producer дошёл до `phase=stop`, original Main Stop release не подтверждён. | Canonical census и WorkSync ordering реализованы; 153/153 focused tests и независимый source R2 PASS. Ещё16 selected feature tests, final6 ordering tests, strict scoped TS7 и21-file Fast lint PASS. Следом исходный producer/import lifecycle с native release, cold readback и cleanup. | reviewflow; root |
+| E1-Retained | [Retained UI](https://github.com/777genius/agent-teams-ai/actions/runs/44455698034/job/135330056793): prepare/held. [Main retained V1/V2](https://github.com/777genius/agent-teams-ai/actions/runs/44455698135/job/135350275468): coordinator admission, not-eligible/not-dispatched. | Закрытая prepare-boundary диагностика готова: 42/42 tests и R2 PASS. Read-fence использует исправленный drain существующей очереди; связь с исходным отказом ещё проверяется. Требуются исходный UI и отдельный V1/V2 coexistence open/history/Stop/cold/cleanup. | pr_graph; media |
 | E1-Add | [Linux V2 management](https://github.com/777genius/agent-teams-ai/actions/runs/44455698034/job/135330056490): `original add completes`. | По current receipt Add сохранён held до member publication, model probe не прошёл credential preparation/cleanup. Закрытая first-close диагностика передана Host→Main, 30/30 actual-source checks и R2 PASS. Нужен исходный Add/Remove/Restore/Stop/cold после сборки. | media |
-| E1-Review | [Darwin ARM V2 Review](https://github.com/777genius/agent-teams-ai/actions/runs/44455698034/job/135330056601): исходный preflight deadline. | Проверить готовый initial-seed/model-source fix против текущего дерева. Focused actual-source proof и R2; затем affected original preflight/Review. Source test не заменяет Darwin acceptance. | media |
-| E1-Resume | [Darwin ARM V2 Resume](https://github.com/777genius/agent-teams-ai/actions/runs/44455698034/job/135330056653): `one fresh Team capture`. | Восстановить проверенный numeric observation patch без нового read/await/input/retry. Локализовать первый отказ и завершить исходный Resume. | pr_graph |
+| E1-Review | [Darwin ARM V2 Review](https://github.com/777genius/agent-teams-ai/actions/runs/44455698034/job/135330056601): исходный preflight deadline. | Initial-seed/model-source fix опубликован в90b, exact-byte focused proof и R2 сохранены. Нужен affected original preflight/Review. Source test не заменяет Darwin acceptance. | media |
+| E1-Resume | [Darwin ARM V2 Resume](https://github.com/777genius/agent-teams-ai/actions/runs/44455698034/job/135330056653): `one fresh Team capture`. | Проверенный numeric observation patch опубликован в90b без нового read/await/input/retry. Нужны новая исходная диагностика и успешный Resume; старый отказ произошёл ещё до первого Stop/cold boundary. | pr_graph |
 | W1 | [Windows ARM Codex](https://github.com/777genius/agent-teams-ai/actions/runs/44455697852/job/135330054589) и [x64 OpenCode](https://github.com/777genius/agent-teams-ai/actions/runs/44455697852/job/135330054744): original source readiness. | Установить причинный участок по current original evidence; native OpenCode finalReason не является Windows observer. Сохранить исходный cutoff и все authority probes; получить current source A/B и recovery evidence. Закрытые причины отказа observation сохранены отдельной TEST-правкой, 2/2 actual-source checks и R2 PASS; native gate этим не закрыт. | media; root |
 | P09 | Darwin x64/ARM mutation witness остаются отрицательными. | Требуется отдельный выбор контракта original pathname / writer / consumed bytes по Report40. До решения не сужать гарантию и не менять failed oracle. Независимые исправления продолжаются. | root / owner |
 | Delivery | Четыре acceptance workflows красные из-за перечисленных отказов. | Проверять только затронутые сценарии, сохранить обязательные current-head gates. После qualification завершить разрешённый PR-маршрут. Не останавливать независимую работу из-за CI queue. | root |
@@ -112,8 +113,14 @@ checks до/после, восемь новых checks, focused TS7 и independe
 Исходные read/await/input/deadline не изменены; это диагностика, не Resume PASS.
 [Readiness evidence](evidence/recovered-readiness-9ec6cb6f-20261119/index.json) и
 [Resume adoption](evidence/recovered-resume-9ec6cb6f-adoption.json) содержат pins.
-Canonical solo config census и WorkSync integration завершаются отдельно. Незавершённые WorkSync, retained и
-membership designs не выдаются за готовые fixes.
+Canonical solo config census и WorkSync integration прошли 153 focused checks и
+независимое source review; original GUI ещё предстоит. Source proof, diagnostics
+и успешная интеграционная приёмка учитываются отдельно.
+[Stop / WorkSync evidence](evidence/solo-stop-work-sync-e754d233-20261119.json)
+содержит точные pre/post hashes, исходные test logs, независимый R2 и scoped
+compiler result. Последние6 ordering cases — повтор после test-typing fix,
+они не суммируются с153. Actual42 archive принят только как canonical content;
+исторический INCOMPLETE и отсутствие original release не изменены.
 
 1. Независимые владельцы завершают назначенные patches; root сохраняет один план
    и публикует конкретный diff вместе с source-scoped evidence.
@@ -136,6 +143,12 @@ membership designs не выдаются за готовые fixes.
 поля, ≤768B, первая на probe; прежние phase, 8192B framing, clocks, authority,
 request/Stop/drain и UNKNOWN сохраняются. 30/30 focused tests PASS и independent
 R2 подтверждают эту диагностику; продуктовая причина ещё не квалифицирована.
+
+[Retained prepare evidence](evidence/retained-prepare-boundary-20261119.json)
+содержит 42/42 checks и независимый R2. Единственная существующая diagnostic
+запись сохраняет закрытое имя последнего внутреннего этапа; исходная ошибка,
+source/target guards, число чтений/await и deadline не изменены. Следующий GUI
+покажет недостающее наблюдение; текущий held не объявляется исправленным заранее.
 
 ## Новые исходные Windows observations
 

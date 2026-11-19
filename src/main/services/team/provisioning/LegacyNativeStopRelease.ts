@@ -37,7 +37,7 @@ export interface LegacyNativeStopRelease {
 }
 export interface CapturedLegacyNativeStop {
   /** Returns no proof until the exact original process owner confirmed exit. */
-  complete(): LegacyNativeStopRelease | null;
+  complete(assertWorkSyncDrained?: () => void): LegacyNativeStopRelease | null;
 }
 const capturedProofs = new WeakMap<LegacyNativeStopRelease, string>();
 
@@ -52,7 +52,8 @@ function identityText(value: unknown): value is string {
 export function captureLegacyNativeStop(
   teamsBasePath: string,
   run: LegacyNativeStopRun,
-  current: () => boolean
+  current: () => boolean,
+  capturePendingWorkSync = false
 ): CapturedLegacyNativeStop | null {
   try {
     if (
@@ -100,15 +101,31 @@ export function captureLegacyNativeStop(
       freshness.runId !== target.runId
     )
       return null;
-    const original = readLegacyNativeCensus(teamDir, target, expectedMarker);
+    const original = readLegacyNativeCensus(
+      teamDir,
+      target,
+      expectedMarker,
+      capturePendingWorkSync ? 'pending' : 'absent'
+    );
     return Object.freeze({
-      complete() {
+      complete(assertWorkSyncDrained?: () => void) {
         try {
           if (!current()) return null;
+          if (capturePendingWorkSync) {
+            if (!assertWorkSyncDrained) return null;
+            assertWorkSyncDrained();
+          }
           const verified = readVerifiedCliProcessRelease(processCapture);
           if (!verified) return null;
-          const census = readLegacyNativeCensus(teamDir, target, expectedMarker);
+          const census = readLegacyNativeCensus(
+            teamDir,
+            target,
+            expectedMarker,
+            capturePendingWorkSync ? 'qualified' : 'absent'
+          );
           if (!sameDirectory(original, census)) return null;
+          if (!current()) return null;
+          if (capturePendingWorkSync) assertWorkSyncDrained!();
           const proof: LegacyNativeStopRelease = {
             version: 1,
             kind: 'desktop-owned-unix-cli',

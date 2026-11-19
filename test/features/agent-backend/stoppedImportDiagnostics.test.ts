@@ -4,6 +4,8 @@ import { describe, expect, it, vi } from 'vitest';
 import { importStoppedLegacyTeam } from '../../../src/features/agent-backend/main/application/importStoppedLegacyTeam';
 import { LegacyStoppedImportHold } from '../../../src/features/agent-backend/main/infrastructure/stopped-import/createLegacyStoppedTeamSource';
 import { createStoppedImportDiagnostic } from '../../../src/features/agent-backend/main/infrastructure/stopped-import/createStoppedImportDiagnostic';
+import { formatPersistentLogMessage } from '../../../src/main/utils/persistentAppLog';
+import { addLogSink, createLogger } from '../../../src/shared/utils/logger';
 
 import type {
   DesktopBackendFeature,
@@ -12,6 +14,7 @@ import type {
 import type {
   StoppedImportDiagnostic,
   StoppedImportDiagnosticSink,
+  StoppedImportPrepareObservation,
 } from '../../../src/features/agent-backend/main/infrastructure/stopped-import/createStoppedImportDiagnostic';
 
 const prepared = vi.hoisted(() => vi.fn());
@@ -23,8 +26,7 @@ vi.mock(
 const receipt = {
   commandId: 'TEST-original',
   phase: 'published' as 'published' | 'held',
-  source: { sourceId: 'TEST-source',
-  snapshotDigest: 'a'.repeat(64) },
+  source: { sourceId: 'TEST-source', snapshotDigest: 'a'.repeat(64) },
   record: {
     contextId: 'TEST-private-context',
     teamName: 'TEST-private-team',
@@ -103,12 +105,14 @@ describe('stopped import refusal diagnostics at the actual application boundary'
       reason: 'held',
       outcome: 'not-dispatched',
     });
-    expect(f.observations).toEqual([{
-      source: 'application',
-      phase: 'host-capture',
-      category: 'denied',
-      outcome: 'not-dispatched',
-    }]);
+    expect(f.observations).toEqual([
+      {
+        source: 'application',
+        phase: 'host-capture',
+        category: 'denied',
+        outcome: 'not-dispatched',
+      },
+    ]);
     expect(readMessage).not.toHaveBeenCalled();
     expect(JSON.stringify(f.observations)).not.toMatch(/PRIVATE|TEST-private/);
     expect(f.client.list).not.toHaveBeenCalled();
@@ -123,14 +127,59 @@ describe('stopped import refusal diagnostics at the actual application boundary'
       reason: 'native-custody-unverified',
       outcome: 'not-dispatched',
     });
-    expect(f.observations).toEqual([{
-      source: 'application',
-      phase: 'prepare',
-      category: 'native-custody-unverified',
-      outcome: 'not-dispatched',
-    }]);
+    expect(f.observations).toEqual([
+      {
+        source: 'application',
+        phase: 'prepare',
+        category: 'native-custody-unverified',
+        outcome: 'not-dispatched',
+      },
+    ]);
     expect(f.client.publish).not.toHaveBeenCalled();
     expect(f.client.retry).not.toHaveBeenCalled();
+  });
+
+  it('retains one closed prepare boundary through the original logger and persistent message formatter', async () => {
+    const f = fixture(),
+      messages: string[] = [];
+    prepared.mockImplementationOnce(
+      async (options: { observation: StoppedImportPrepareObservation }) => {
+        options.observation.boundary = 'source-fence-before-callback';
+        throw Object.assign(new Error('PRIVATE-fence-path-token'), { code: 'hold' });
+      }
+    );
+    const remove = addLogSink((entry) => {
+      if (entry.namespace === 'StoppedTeamImport')
+        messages.push(formatPersistentLogMessage(entry.args));
+    });
+    try {
+      expect(
+        await importStoppedLegacyTeam({
+          ...f.options,
+          observeFailure: (observation) => {
+            f.observeFailure(observation);
+            createLogger('StoppedTeamImport').diagnostic(
+              'Stopped Team import refusal',
+              observation
+            );
+          },
+        })
+      ).toEqual({ ok: false, reason: 'held', outcome: 'not-dispatched' });
+      const expected = {
+        source: 'application',
+        phase: 'prepare',
+        category: 'held',
+        outcome: 'not-dispatched',
+        prepareBoundary: 'source-fence-before-callback',
+      };
+      expect(f.observations).toEqual([expected]);
+      expect(messages).toEqual(['Stopped Team import refusal ' + JSON.stringify(expected)]);
+      expect(messages.join()).not.toMatch(/PRIVATE|TEST-private/);
+      expect(f.client.publish).not.toHaveBeenCalled();
+      expect(f.client.retry).not.toHaveBeenCalled();
+    } finally {
+      remove();
+    }
   });
 
   it('distinguishes duplicate receipts before any publication or recovery lookup', async () => {
@@ -141,12 +190,14 @@ describe('stopped import refusal diagnostics at the actual application boundary'
       reason: 'held',
       outcome: 'not-dispatched',
     });
-    expect(f.observations).toEqual([{
-      source: 'application',
-      phase: 'receipts',
-      category: 'receipt-conflict',
-      outcome: 'not-dispatched',
-    }]);
+    expect(f.observations).toEqual([
+      {
+        source: 'application',
+        phase: 'receipts',
+        category: 'receipt-conflict',
+        outcome: 'not-dispatched',
+      },
+    ]);
     expect(f.client.lookup).not.toHaveBeenCalled();
     expect(f.client.publish).not.toHaveBeenCalled();
   });
@@ -159,12 +210,14 @@ describe('stopped import refusal diagnostics at the actual application boundary'
       reason: 'unknown',
       outcome: 'unknown',
     });
-    expect(f.observations).toEqual([{
-      source: 'application',
-      phase: 'receipt',
-      category: 'receipt-absent',
-      outcome: 'unknown',
-    }]);
+    expect(f.observations).toEqual([
+      {
+        source: 'application',
+        phase: 'receipt',
+        category: 'receipt-absent',
+        outcome: 'unknown',
+      },
+    ]);
     expect(f.client.publish).toHaveBeenCalledTimes(1);
     expect(f.client.lookup).toHaveBeenCalledTimes(2);
     expect(f.client.lookup.mock.calls[1]).toEqual(f.client.lookup.mock.calls[0]);
@@ -194,12 +247,14 @@ describe('stopped import refusal diagnostics at the actual application boundary'
       reason: 'unknown',
       outcome: 'unknown',
     });
-    expect(f.observations).toEqual([{
-      source: 'application',
-      phase: 'register',
-      category: 'denied',
-      outcome: 'unknown',
-    }]);
+    expect(f.observations).toEqual([
+      {
+        source: 'application',
+        phase: 'register',
+        category: 'denied',
+        outcome: 'unknown',
+      },
+    ]);
     expect(f.client.publish).toHaveBeenCalledTimes(1);
     expect(f.client.retry).not.toHaveBeenCalled();
   });
@@ -212,12 +267,14 @@ describe('stopped import refusal diagnostics at the actual application boundary'
       reason: 'held',
       outcome: 'not-dispatched',
     });
-    expect(f.observations).toEqual([{
-      source: 'application',
-      phase: 'receipt',
-      category: 'receipt-held',
-      outcome: 'not-dispatched',
-    }]);
+    expect(f.observations).toEqual([
+      {
+        source: 'application',
+        phase: 'receipt',
+        category: 'receipt-held',
+        outcome: 'not-dispatched',
+      },
+    ]);
     expect(prepared).not.toHaveBeenCalled();
     expect(f.client.publish).not.toHaveBeenCalled();
     expect(f.client.retry).not.toHaveBeenCalled();
@@ -226,7 +283,9 @@ describe('stopped import refusal diagnostics at the actual application boundary'
   for (const failure of ['throw', 'reject', 'getter'] as const) {
     it('keeps the original result when the diagnostic sink fails by ' + failure, async () => {
       const f = fixture();
-      f.captureStoppedImport.mockRejectedValue(Object.assign(new Error('PRIVATE'), { code: 'hold' }));
+      f.captureStoppedImport.mockRejectedValue(
+        Object.assign(new Error('PRIVATE'), { code: 'hold' })
+      );
       const failedSink: StoppedImportDiagnosticSink = () => {
         if (failure === 'throw') throw new Error('PRIVATE-observer');
         return Promise.reject(new Error('PRIVATE-observer'));
@@ -321,6 +380,45 @@ describe('private stopped import diagnostic vocabulary and observer lifetime', (
       undefined,
       'not-dispatched',
       'PRIVATE' as never
+    );
+    expect(sink).not.toHaveBeenCalled();
+  });
+
+  it('never invokes a prepare slot getter or forwards an unlisted boundary or wrong phase', () => {
+    const getter = vi.fn(() => 'PRIVATE-boundary'),
+      sink = vi.fn();
+    const hostile = Object.defineProperty({}, 'boundary', { get: getter });
+    createStoppedImportDiagnostic('application', sink)(
+      'prepare',
+      { code: 'hold' },
+      'not-dispatched',
+      undefined,
+      hostile
+    );
+    expect(getter).not.toHaveBeenCalled();
+    expect(sink).toHaveBeenCalledExactlyOnceWith({
+      source: 'application',
+      phase: 'prepare',
+      category: 'held',
+      outcome: 'not-dispatched',
+    });
+    sink.mockClear();
+    createStoppedImportDiagnostic('application', sink)(
+      'prepare',
+      undefined,
+      'not-dispatched',
+      undefined,
+      { boundary: 'PRIVATE-boundary' as never }
+    );
+    createStoppedImportDiagnostic('application', sink)('publish', undefined, 'unknown', undefined, {
+      boundary: 'snapshot-staging',
+    });
+    createStoppedImportDiagnostic('desktop', sink)(
+      'request',
+      undefined,
+      'not-dispatched',
+      undefined,
+      { boundary: 'snapshot-staging' }
     );
     expect(sink).not.toHaveBeenCalled();
   });

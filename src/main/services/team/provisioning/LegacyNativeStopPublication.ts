@@ -7,9 +7,24 @@ import type {
   LegacyNativeStopRun,
 } from './LegacyNativeStopRelease';
 
-const pendingCaptures = new WeakMap<LegacyNativeStopRun, CapturedLegacyNativeStop>();
+const pendingCaptures = new WeakMap<
+  LegacyNativeStopRun,
+  { captured: CapturedLegacyNativeStop; workSync: boolean }
+>();
+
+export interface LegacyNativeStopSourceFence {
+  drain(): Promise<void>;
+  assertDrained(): void;
+  release(): void;
+}
+export type CaptureLegacyNativeStopSourceFence = (
+  teamName: string
+) => LegacyNativeStopSourceFence | null;
 
 export interface LegacyNativeStopPublication {
+  /** If present, the original Stop must release its team lock before draining. */
+  drain?(): Promise<void>;
+  release?(): void;
   /** Called only after every existing owned Stop/cancellation/helper branch succeeded. */
   complete(): Promise<boolean>;
 }
@@ -19,6 +34,8 @@ export function captureLegacyNativeStopPublication(options: {
   teamsBasePath: string;
   run: LegacyNativeStopRun;
   current(): boolean;
+  isCurrentAttempt?(): boolean;
+  captureSourceFence?: CaptureLegacyNativeStopSourceFence;
   beginStop(teamName: string): Promise<TeamLaunchStopAuthority>;
   publishStopped(
     teamName: string,
@@ -27,12 +44,43 @@ export function captureLegacyNativeStopPublication(options: {
   ): Promise<boolean>;
   unavailable?(): void;
 }): LegacyNativeStopPublication | null {
-  const { teamsBasePath, run, current, beginStop, publishStopped, unavailable } = options;
+  const {
+    teamsBasePath,
+    run,
+    current,
+    beginStop,
+    publishStopped,
+    unavailable,
+    captureSourceFence,
+  } = options;
+  const currentAttempt = () => current() && options.isCurrentAttempt?.() !== false;
+  if (!currentAttempt()) return null;
   const teamName = run.teamName,
     runId = run.runId;
-  const captured = pendingCaptures.get(run) ?? captureLegacyNativeStop(teamsBasePath, run, current);
+  const previous = pendingCaptures.get(run);
+  const workSync = captureSourceFence !== undefined;
+  if (previous && previous.workSync !== workSync) return null;
+  const captured =
+    previous?.captured ?? captureLegacyNativeStop(teamsBasePath, run, current, workSync);
   if (!captured) return null;
-  pendingCaptures.set(run, captured);
+  let sourceFence: LegacyNativeStopSourceFence | null = null;
+  try {
+    sourceFence = captureSourceFence?.(teamName) ?? null;
+  } catch {
+    return null;
+  }
+  if (workSync && !sourceFence) return null;
+  pendingCaptures.set(run, { captured, workSync });
+  let released = false;
+  const release = () => {
+    if (released) return;
+    released = true;
+    sourceFence?.release();
+  };
+  const assertSourceDrained = () => {
+    if (released || !currentAttempt()) throw new Error('Original native Stop owner changed');
+    sourceFence?.assertDrained();
+  };
   const report = () => {
     try {
       unavailable?.();
@@ -54,27 +102,43 @@ export function captureLegacyNativeStopPublication(options: {
     admission = admit().promise;
   } catch {
     report();
+    release();
     return null;
   }
   let completion: Promise<boolean> | undefined;
   return Object.freeze({
+    ...(sourceFence
+      ? {
+          async drain() {
+            if (released || !currentAttempt())
+              throw new Error('Original native Stop owner changed');
+            await sourceFence.drain();
+            assertSourceDrained();
+          },
+          release,
+        }
+      : {}),
     complete() {
       if (completion === undefined) {
         completion = (async () => {
           const authority = await admission;
           if (
             !authority ||
-            !current() ||
+            !currentAttempt() ||
+            released ||
             authority.teamName !== teamName ||
             (authority.freshness?.kind === 'launch'
               ? authority.freshness.runId !== runId
               : authority.freshness?.kind !== 'stop' || authority.freshness.stoppedRunId !== runId)
           )
             return false;
-          const proof = captured.complete();
+          if (sourceFence) assertSourceDrained();
+          const proof = captured.complete(sourceFence ? assertSourceDrained : undefined);
           if (!proof) return false;
           try {
-            return await publishStopped(teamName, authority, proof);
+            const published = await publishStopped(teamName, authority, proof);
+            if (sourceFence) assertSourceDrained();
+            return published && currentAttempt() && !released;
           } catch {
             report();
             return false;
@@ -94,7 +158,7 @@ export function captureTrackedLegacyNativeStopPublication(
   teamName: string,
   owners: Pick<
     Parameters<typeof captureLegacyNativeStopPublication>[0],
-    'beginStop' | 'publishStopped' | 'unavailable'
+    'beginStop' | 'publishStopped' | 'unavailable' | 'captureSourceFence' | 'isCurrentAttempt'
   > & {
     getTeamsBasePath(): string;
     getTrackedRunId(teamName: string): string | null;

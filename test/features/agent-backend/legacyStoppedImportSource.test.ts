@@ -43,6 +43,7 @@ import type {
   ApplicationCommandLedgerRecord,
   ApplicationCommandLedgerStore,
 } from '../../../src/features/application-command-ledger';
+import type { StoppedImportPrepareObservation } from '../../../src/features/agent-backend/main/infrastructure/stopped-import/createStoppedImportDiagnostic';
 import type { ChildProcess } from 'node:child_process';
 
 const paths = vi.hoisted(() => ({ root: '/TEST-unconfigured-stopped-import' }));
@@ -450,6 +451,137 @@ describe('actual legacy source owners and existing fences', () => {
       });
     }
   });
+  it.each([
+    'initial-source-guard',
+    'initial-target-guard',
+    'source-construction',
+    'source-fence-before-callback',
+    'source-describe',
+    'snapshot-export',
+    'final-source-guard',
+    'final-target-guard',
+    'snapshot-staging',
+  ] as const)(
+    'records the last entered prepare boundary %s without changing its refusal',
+    async (boundary) => {
+      const f = fixture(),
+        observation: StoppedImportPrepareObservation = {};
+      const captured = captureLegacyStoppedSource(f.teamName, 'TEST-context', () => true);
+      let current = true;
+      const source = { ...captured, isCurrent: () => current && captured.isCurrent() };
+      let owners: Parameters<typeof prepareStoppedLegacyImport>[0]['owners'] = f.owners;
+      const original = new Error('PRIVATE-original-target-refusal');
+      let targetChecks = 0;
+      const target = {
+        root: join(f.root, 'target'),
+        ownerId: 'TEST-host',
+        profileId: 'TEST-profile',
+        principalId: 'TEST-human',
+        contextIds: ['TEST-context'],
+        assertCurrent: () => {
+          targetChecks++;
+          if (
+            boundary === 'initial-target-guard' ||
+            (boundary === 'final-target-guard' && targetChecks === 2)
+          )
+            throw original;
+        },
+      };
+      if (boundary !== 'snapshot-staging') mkdirSync(target.root);
+      if (boundary === 'initial-source-guard') current = false;
+      if (boundary === 'source-construction') source.roots = [];
+      if (boundary === 'snapshot-export')
+        source.roots = source.roots.filter((root) => root.category !== 'tasks');
+      if (boundary === 'source-describe') {
+        const path = join(f.team, 'config.json');
+        writeFileSync(
+          path,
+          JSON.stringify({
+            ...JSON.parse(readFileSync(path, 'utf8')),
+            leadSessionId: 'TEST-retained-native',
+          })
+        );
+      }
+      if (boundary === 'source-fence-before-callback' || boundary === 'final-source-guard') {
+        owners = {
+          ...owners,
+          backup: {
+            withTeamIdentityFence: async <T>(
+              teamName: string,
+              read: () => Promise<T>
+            ): Promise<T> => {
+              if (boundary === 'source-fence-before-callback') throw original;
+              const value = await f.owners.backup.withTeamIdentityFence(teamName, read);
+              current = false;
+              return value;
+            },
+          },
+        };
+      }
+      const error = await prepareStoppedLegacyImport({
+        source,
+        owners,
+        target,
+        destinationTeamName: f.teamName,
+        observation,
+      }).then(
+        () => {
+          throw new Error('Expected original prepare refusal');
+        },
+        (error: unknown) => error
+      );
+      expect(observation).toEqual({ boundary });
+      if (boundary === 'initial-target-guard' || boundary === 'final-target-guard')
+        expect(error).toBe(original);
+      else if (boundary === 'source-describe')
+        expect(error).toMatchObject({ reason: 'native-custody-unverified' });
+      else if (boundary === 'source-construction')
+        expect(error).toMatchObject({ reason: 'source-unreadable' });
+      else if (boundary === 'initial-source-guard' || boundary === 'final-source-guard')
+        expect(error).toMatchObject({ reason: 'source-changed' });
+      else if (boundary === 'snapshot-staging') expect(error).toMatchObject({ code: 'ENOENT' });
+      else expect(error).toMatchObject({ code: 'hold' });
+      expect(existsSync(join(target.root, '.host-team-registry'))).toBe(false);
+      expect(JSON.stringify(observation)).not.toMatch(/PRIVATE|TEST-/);
+    }
+  );
+
+  it.each(['frozen', 'setter', 'absent'] as const)(
+    'keeps an original authority error with a %s prepare observation slot',
+    async (kind) => {
+      const f = fixture(),
+        original = new Error('PRIVATE-original-authority');
+      const observation =
+        kind === 'absent'
+          ? undefined
+          : kind === 'frozen'
+            ? Object.freeze({})
+            : Object.defineProperty({}, 'boundary', {
+                set() {
+                  throw new Error('PRIVATE-observer');
+                },
+              });
+      await expect(
+        prepareStoppedLegacyImport({
+          source: captureLegacyStoppedSource(f.teamName, 'TEST-context', () => true),
+          owners: f.owners,
+          target: {
+            root: '/TEST-must-not-stage',
+            ownerId: 'TEST-host',
+            profileId: 'TEST-profile',
+            principalId: 'TEST-human',
+            contextIds: ['TEST-context'],
+            assertCurrent() {
+              throw original;
+            },
+          },
+          destinationTeamName: f.teamName,
+          observation,
+        })
+      ).rejects.toBe(original);
+    }
+  );
+
   it('binds the original directory identity rather than mutable content and rejects same-name replacement', () => {
     const f = fixture();
     const original = captureLegacyStoppedSource(f.teamName, 'TEST-context', () => true);

@@ -8,6 +8,8 @@ import {
   isLegacyNativeIdentityKey,
   isLegacySavedTeamProductRecords,
 } from '../LegacySavedTeamNativeIdentity';
+
+import { readLegacyNativeWorkSyncCensus } from './LegacyNativeStopWorkSyncCensus';
 const nativeName =
   /^(launch-|bootstrap-|stop-|runtime-|opencode-|\.opencode-runtime|\.member-work-sync|\.bootstrap)/;
 const publicationFiles = new Set([
@@ -23,7 +25,10 @@ const configKeys = new Set([
   'createdAt',
   'leadAgentId',
   'leadSessionId',
+  'sessionHistory',
+  'language',
   'projectPath',
+  'projectPathHistory',
   'members',
   '_backupIdentityId',
 ]);
@@ -130,10 +135,19 @@ function nativeProjection(value: unknown, target: LegacyNativeTarget, depth = 0)
 }
 
 /** Bounded private native files are evidence only; none is repaired or executed. */
-function assertQualifiedArtifacts(teamDir: string): void {
+function assertQualifiedArtifacts(
+  teamDir: string,
+  workSync: 'qualified' | 'absent' | 'pending'
+): void {
   const names = readdirSync(teamDir).sort();
   if (names.length > 1024) throw new Error('Native Team census exceeds bound');
   for (const name of names) {
+    if (name === '.member-work-sync' && workSync !== 'absent') {
+      const directory = lstatSync(join(teamDir, name));
+      if (!directory.isDirectory() || directory.isSymbolicLink())
+        throw new Error('Invalid native WorkSync directory');
+      continue;
+    }
     if (nativeName.test(name) && !publicationFiles.has(name))
       throw new Error('Unqualified native artifact inventory');
   }
@@ -180,7 +194,8 @@ function productMetadata(teamName: string, meta: Row): boolean {
 export function readLegacyNativeCensus(
   teamDir: string,
   target: LegacyNativeTarget,
-  expectedMarker?: LegacyBackupIdentityMarker
+  expectedMarker?: LegacyBackupIdentityMarker,
+  workSync: 'qualified' | 'absent' | 'pending' = 'qualified'
 ): LegacyNativeCensus {
   const directory = lstatSync(teamDir);
   if (!directory.isDirectory() || directory.isSymbolicLink())
@@ -198,6 +213,11 @@ export function readLegacyNativeCensus(
   if (
     config.name !== target.teamName ||
     Object.keys(config).some((key) => !configKeys.has(key)) ||
+    (config.sessionHistory !== undefined && !Array.isArray(config.sessionHistory)) ||
+    (config.language !== undefined && typeof config.language !== 'string') ||
+    (config.projectPathHistory !== undefined &&
+      (!Array.isArray(config.projectPathHistory) ||
+        !config.projectPathHistory.every((path) => typeof path === 'string'))) ||
     !Array.isArray(config.members) ||
     config.members.length !== 1 ||
     meta.version !== 1 ||
@@ -232,7 +252,15 @@ export function readLegacyNativeCensus(
     nativeProjection(meta, target),
   ];
   if (marker.present) identities.push({ _backupIdentityId: marker.value });
-  assertQualifiedArtifacts(teamDir);
+  assertQualifiedArtifacts(teamDir, workSync);
+  // A pending cut is private capture evidence only. It is never placed in a release proof.
+  if (workSync !== 'pending') {
+    const history = readLegacyNativeWorkSyncCensus(teamDir, target, marker);
+    if (history !== null) {
+      if (workSync === 'absent') throw new Error('WorkSync Stop owner is unavailable');
+      identities.push({ workSync: history });
+    }
+  }
   const after = lstatSync(teamDir);
   if (after.dev !== directory.dev || after.ino !== directory.ino)
     throw new Error('Native Team directory replaced');

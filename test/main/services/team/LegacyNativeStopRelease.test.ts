@@ -27,6 +27,7 @@ import {
   readLegacyNativeStopRelease,
   selectLegacyNativeStopReleaseProof,
 } from '../../../../src/main/services/team/provisioning/LegacyNativeStopRelease';
+import { applyConfigPostLaunchMaterialization } from '../../../../src/main/services/team/provisioning/TeamProvisioningConfigMaterialization';
 import {
   captureCliProcessStop,
   readVerifiedCliProcessRelease,
@@ -127,6 +128,24 @@ function fixture() {
   };
 }
 
+function materializeCurrentSoloConfig(f: ReturnType<typeof fixture>): Record<string, unknown> {
+  const config = JSON.parse(readFileSync(join(f.teamDir, 'config.json'), 'utf8')) as Record<
+    string,
+    unknown
+  >;
+  applyConfigPostLaunchMaterialization({
+    teamName: f.teamName,
+    config,
+    projectPath: '/TEST/workspace',
+    newSessionId: 'TEST-session',
+    sessionHistory: [],
+    language: 'en',
+    launchState: { providerId: 'anthropic', model: 'claude-sonnet-4-6', members: [] },
+  });
+  f.write('config.json', config);
+  return config;
+}
+
 describe('bounded old Desktop native release proof (no native process execution)', () => {
   const changeMarker = (f: ReturnType<typeof fixture>, marker: unknown) => {
     const config = JSON.parse(readFileSync(join(f.teamDir, 'config.json'), 'utf8'));
@@ -134,6 +153,58 @@ describe('bounded old Desktop native release proof (no native process execution)
     else config._backupIdentityId = marker;
     f.write('config.json', config);
   };
+
+  it('qualifies the current post-launch solo config only after its exact owned Stop release', () => {
+    const f = fixture();
+    const config = materializeCurrentSoloConfig(f);
+    expect(config).toMatchObject({
+      sessionHistory: ['TEST-session'],
+      language: 'en',
+      projectPathHistory: ['/TEST/workspace'],
+    });
+    const attempt = f.capture();
+    expect(attempt).not.toBeNull();
+    expect(attempt!.complete()).toBeNull();
+    recordVerifiedCliProcessRelease(f.child, [f.identity]);
+    const proof = attempt!.complete();
+    expect(proof).not.toBeNull();
+    f.publish(proof!);
+    expect(readLegacyNativeStopRelease(f.teamDir, f.teamName)).toEqual(proof);
+
+    f.write('config.json', { ...config, sessionHistory: ['TEST-session', 'TEST-foreign-session'] });
+    expect(readLegacyNativeStopRelease(f.teamDir, f.teamName)).toBeNull();
+  });
+
+  it.each([
+    { name: 'foreign session history', patch: { sessionHistory: ['TEST-foreign-session'] } },
+    { name: 'mixed session history', patch: { sessionHistory: ['TEST-session', 'TEST-foreign'] } },
+    { name: 'non-array session history', patch: { sessionHistory: { sessionId: 'TEST-session' } } },
+    { name: 'non-text language', patch: { language: 7 } },
+    { name: 'null language', patch: { language: null } },
+    { name: 'non-array path history', patch: { projectPathHistory: '/TEST/workspace' } },
+    { name: 'non-text path history', patch: { projectPathHistory: ['/TEST/workspace', null] } },
+    { name: 'nested native path data', patch: { projectPathHistory: [{ pid: 44101 }] } },
+  ])('refuses current solo config with $name', ({ patch }) => {
+    const f = fixture();
+    const config = materializeCurrentSoloConfig(f);
+    f.write('config.json', { ...config, ...patch });
+    expect(f.capture()).toBeNull();
+  });
+
+  it('keeps unqualified work-sync artifacts outside a current solo Stop proof', () => {
+    const f = fixture();
+    materializeCurrentSoloConfig(f);
+    const attempt = f.capture();
+    expect(attempt).not.toBeNull();
+    recordVerifiedCliProcessRelease(f.child, [f.identity]);
+    const proof = attempt!.complete();
+    expect(proof).not.toBeNull();
+    f.publish(proof!);
+    mkdirSync(join(f.teamDir, '.member-work-sync'));
+    f.write('.member-work-sync/sqlite-fallback-replica.json', { schemaVersion: 1, state: 'clean' });
+    expect(readLegacyNativeStopRelease(f.teamDir, f.teamName)).toBeNull();
+    expect(attempt!.complete()).toBeNull();
+  });
   it('keeps the original absent-marker digest bytes and private proof shape unchanged', () => {
     const f = fixture(),
       attempt = f.capture()!;

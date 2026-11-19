@@ -18,6 +18,7 @@ import type {
 import type {
   StoppedImportDiagnosticPhase,
   StoppedImportDiagnosticSink,
+  StoppedImportPrepareObservation,
 } from '../infrastructure/stopped-import/createStoppedImportDiagnostic';
 import type { BackendRequestGuard } from './backendBinding';
 
@@ -44,6 +45,7 @@ export async function importStoppedLegacyTeam(options: {
   observeFailure?: StoppedImportDiagnosticSink;
 }): Promise<StoppedTeamImportResult> {
   let effect = false;
+  const prepareObservation: StoppedImportPrepareObservation = {};
   const observe = createStoppedImportDiagnostic('application', (observation) =>
     options.observeFailure?.(observation)
   );
@@ -105,6 +107,7 @@ export async function importStoppedLegacyTeam(options: {
         owners: options.owners,
         target: target.authority,
         destinationTeamName: input.teamName,
+        observation: prepareObservation,
       });
       phase = 'publish-guard';
       assertBackendRequestGuard(live);
@@ -139,7 +142,13 @@ export async function importStoppedLegacyTeam(options: {
     assertBackendRequestGuard(guard, 'unknown');
     return { ok: true, selection: hostTeamSelectionKey(receipt.record.binding.handleId) };
   } catch (error) {
-    observe(phase, error, effect ? 'unknown' : 'not-dispatched');
+    observe(
+      phase,
+      error,
+      effect ? 'unknown' : 'not-dispatched',
+      undefined,
+      phase === 'prepare' ? prepareObservation : undefined
+    );
     return {
       ok: false,
       reason:

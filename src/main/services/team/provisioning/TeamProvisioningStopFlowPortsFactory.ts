@@ -9,6 +9,7 @@ import {
 } from './TeamProvisioningOpenCodeRuntimeStopFlow';
 import { killTeamProcessAndWait as killTeamProcessAndWaitDefault } from './TeamProvisioningRunProgress';
 import {
+  prepareNativeStopTeamFlow,
   stopTeamFlow,
   type TeamProvisioningStopRun,
   type TeamProvisioningStopTeamPorts,
@@ -68,6 +69,10 @@ export interface TeamProvisioningStopFlowFactoryDeps<TRun extends TeamProvisioni
 
 export interface TeamProvisioningStopFlowBoundary {
   stopTeam(teamName: string, publication?: LegacyNativeStopPublication | null): Promise<void>;
+  prepareNativeStop(
+    teamName: string,
+    publication: LegacyNativeStopPublication
+  ): Promise<() => Promise<void>>;
   stopMixedSecondaryRuntimeLanes(teamName: string): Promise<void>;
   stopOpenCodeRuntimeAdapterTeam(teamName: string, runId: string): Promise<void>;
 }
@@ -275,6 +280,12 @@ export function createTeamProvisioningStopFlowBoundary<TRun extends TeamProvisio
   return {
     stopTeam: (teamName, publication) =>
       stopTeamFlow(teamName, createTeamProvisioningStopTeamPortsFromDeps(deps), publication),
+    prepareNativeStop: (teamName, publication) =>
+      prepareNativeStopTeamFlow(
+        teamName,
+        createTeamProvisioningStopTeamPortsFromDeps(deps),
+        publication
+      ),
     stopMixedSecondaryRuntimeLanes: (teamName) =>
       stopMixedSecondaryRuntimeLanes(teamName, createOpenCodeRuntimeStopFlowPortsFromDeps(deps)),
     stopOpenCodeRuntimeAdapterTeam: (teamName, runId) =>

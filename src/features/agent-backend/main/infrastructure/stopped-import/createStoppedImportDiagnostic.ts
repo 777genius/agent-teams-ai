@@ -1,4 +1,21 @@
 export type StoppedImportDiagnosticSource = 'desktop' | 'application';
+export const STOPPED_IMPORT_PREPARE_BOUNDARIES = [
+  'capture-inputs',
+  'initial-source-guard',
+  'initial-target-guard',
+  'source-construction',
+  'source-fence-before-callback',
+  'source-describe',
+  'snapshot-export',
+  'final-source-guard',
+  'final-target-guard',
+  'snapshot-staging',
+] as const;
+export type StoppedImportPrepareBoundary = (typeof STOPPED_IMPORT_PREPARE_BOUNDARIES)[number];
+/** Private scalar slot, never an import input or an authority decision. */
+export interface StoppedImportPrepareObservation {
+  boundary?: StoppedImportPrepareBoundary;
+}
 export type StoppedImportDiagnosticPhase =
   | 'request'
   | 'source-owner'
@@ -50,6 +67,7 @@ export interface StoppedImportDiagnostic {
   phase: StoppedImportDiagnosticPhase;
   category: StoppedImportDiagnosticCategory;
   outcome: 'not-dispatched' | 'unknown';
+  prepareBoundary?: StoppedImportPrepareBoundary;
 }
 export type StoppedImportDiagnosticSink = (observation: StoppedImportDiagnostic) => unknown;
 
@@ -113,6 +131,7 @@ const explicitCategories = new Set<StoppedImportDiagnosticCategory>([
   'receipt-held',
   'receipt-absent',
 ]);
+const prepareBoundaries = new Set<string>(STOPPED_IMPORT_PREPARE_BOUNDARIES);
 
 function ownString(error: unknown, key: 'reason' | 'code' | 'name'): string | undefined {
   if ((!error || typeof error !== 'object') && typeof error !== 'function') return undefined;
@@ -145,10 +164,11 @@ export function createStoppedImportDiagnostic(
   phase: StoppedImportDiagnosticPhase,
   error: unknown,
   outcome: StoppedImportDiagnostic['outcome'],
-  explicitCategory?: StoppedImportDiagnosticCategory
+  explicitCategory?: StoppedImportDiagnosticCategory,
+  prepare?: StoppedImportPrepareObservation
 ) => void {
   let observed = false;
-  return (phase, error, outcome, explicitCategory) => {
+  return (phase, error, outcome, explicitCategory, prepare) => {
     if (observed) return;
     observed = true;
     try {
@@ -160,7 +180,25 @@ export function createStoppedImportDiagnostic(
         (explicitCategory !== undefined && !explicitCategories.has(explicitCategory))
       )
         return;
-      const observation = { source, phase, category: explicitCategory ?? category(error), outcome };
+      const descriptor = prepare && Object.getOwnPropertyDescriptor(prepare, 'boundary');
+      const boundary = descriptor && 'value' in descriptor ? descriptor.value : undefined;
+      if (
+        prepare !== undefined &&
+        (source !== 'application' ||
+          phase !== 'prepare' ||
+          (boundary !== undefined &&
+            (typeof boundary !== 'string' || !prepareBoundaries.has(boundary))))
+      )
+        return;
+      const observation: StoppedImportDiagnostic = {
+        source,
+        phase,
+        category: explicitCategory ?? category(error),
+        outcome,
+        ...(boundary === undefined
+          ? {}
+          : { prepareBoundary: boundary as StoppedImportPrepareBoundary }),
+      };
       void Promise.resolve(sink(observation)).catch(() => {
         // Diagnostics cannot replace the original refusal or its uncertainty.
       });
