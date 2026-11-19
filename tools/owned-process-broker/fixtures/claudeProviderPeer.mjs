@@ -414,7 +414,8 @@ function input(frame) {
   seenInputs.add(frame.uuid); active = { id: frame.uuid, marker: text, messageId: randomUUID() };
   const selected = active;
   remember('user', selected.id, raw);
-  effect({ event: 'input', inputId: selected.id, marker: text === probe ? 'TEST_MODEL_PROBE' : text, sessionId: session, wrapped: raw !== text });
+  effect({ event: 'input', inputId: selected.id, marker: text === probe ? 'TEST_MODEL_PROBE' : text, sessionId: session, wrapped: raw !== text,
+    ...(importLifecycle ? { nativePayloadHash: createHash('sha256').update(raw).digest('hex') } : {}) });
   if (collaboration?.collaborationMarkers.includes(text)) void collaboration.runCollaboration({ marker: text, raw,
     inputId: selected.id, mcp, tools: nativeTools, current: () => assert.equal(active, selected, 'authority'), effect,
     ...(attached ? { attachments: collaboration.verifyCollaborationAttachments(content) } : {}) })

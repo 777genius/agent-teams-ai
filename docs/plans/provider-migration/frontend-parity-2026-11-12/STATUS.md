@@ -7,13 +7,16 @@
 На нём прошли полный cross-team/ReviewFlow GUI, workspace typecheck и fast lint,
 четыре frontend shards, все пять packaged-платформ и их общий gate.
 Из 25 Desktop lanes прошли 20. Оставшиеся отказы перечислены ниже.
-Продолжения `90b7fb4a`, `e754d233` и `917a7d3c` опубликованы. Строгая локальная
+Продолжения `90b7fb4a`, `e754d233`, `917a7d3c` и `41ab8f64` опубликованы. Строгая локальная
 [Host-сборка e754](evidence/host-build-e754d233-20261119.json) PASS за 10.064s,
 все 14 input pins совпали. Новые правки не получают результаты приёмки9ec
-автоматически; новые CI workflows при последнем чтении ещё queued.
-На917 исходный solo producer впервые прошёл native Stop, post-Stop ProductTask
-и cleanup. Общий import lifecycle дошёл до consumer и выявил следующий отказ
-на `snapshot-export`; retained GUI после него не запускался.
+автоматически. При последнем чтении workflows 917 были автоматически отменены
+после supersession; на 41ab — 16 queued и 14 skipped, новых PASS не заявляется.
+На 41ab исходный import lifecycle прошёл producer Stop/release, export/import,
+reload, ProductTask readback и ровно один fresh Host launch с успешным input.
+Следующий отказ — неверное TEST-сравнение логического Host inputId с отдельным
+SDK wire UUID. Полный lifecycle пока INCOMPLETE; строгий cleanup=true,
+все 1909 source hashes неизменны. Retained GUI после первого отказа не запускался.
 
 ## Доставка и границы
 
@@ -58,7 +61,7 @@ resolved; approval review этим не заявляется.
 
 | ID | Первый отказ на 9ec | Текущая работа и критерий завершения | Владелец |
 | --- | --- | --- | --- |
-| E1-Stop / Import | На9ec producer останавливался на Stop. На917 producer PASS с actual release и ProductTask; consumer отказал на `snapshot-export`. | Stop/WorkSync исправление принято исходным producer. Экспортеру добавлены точные канонические служебные файлы Main: owner/recovery/cache только в census, журнал уведомлений только в archive. 17/17 import/RPC checks, строгая Host-сборка и R2 PASS; нужен новый полный original import lifecycle с cold readback. | root; pr_graph |
+| E1-Stop / Import | На 9ec отказ на producer Stop; на 917 — consumer `snapshot-export`. На 41ab оба участка пройдены; следующий отказ — TEST input correlation. | TEST-связь разных Host logical inputId и SDK wire UUID исправлена через exact payload, полную binding, session/PID и terminal. Целевые tests, strict types и R2 PASS. Нужен полный исходный lifecycle с visible reply, Stop и cold readback. | root; pr_graph |
 | E1-Retained | [Retained UI](https://github.com/777genius/agent-teams-ai/actions/runs/44455698034/job/135330056793): prepare/held. [Main retained V1/V2](https://github.com/777genius/agent-teams-ai/actions/runs/44455698135/job/135350275468): coordinator admission, not-eligible/not-dispatched. | Закрытая prepare-boundary диагностика готова: 42/42 tests и R2 PASS. Read-fence использует исправленный drain существующей очереди; связь с исходным отказом ещё проверяется. Требуются исходный UI и отдельный V1/V2 coexistence open/history/Stop/cold/cleanup. | pr_graph; media |
 | E1-Add | [Linux V2 management](https://github.com/777genius/agent-teams-ai/actions/runs/44455698034/job/135330056490): `original add completes`. | По current receipt Add сохранён held до member publication, model probe не прошёл credential preparation/cleanup. Закрытая first-close диагностика передана Host→Main, 30/30 actual-source checks и R2 PASS. Нужен исходный Add/Remove/Restore/Stop/cold после сборки. | media |
 | E1-Review | [Darwin ARM V2 Review](https://github.com/777genius/agent-teams-ai/actions/runs/44455698034/job/135330056601): исходный preflight deadline. | Initial-seed/model-source fix опубликован в90b, exact-byte focused proof и R2 сохранены. Нужен affected original preflight/Review. Source test не заменяет Darwin acceptance. | media |
@@ -87,8 +90,8 @@ Host agenda блокирует review work на lead/user clarification до rev
 только при точном run/session/child birth, пустых roster и сохранённой currentness
 до/после await. Publication/release fencing, rejection и rollback сохранены.
 Ранее выполненные 126/126 Linux checks остаются доказательством этих неизменённых
-boundaries; это не новый aggregate9ec и не Windows PASS. Original lifecycle теперь
-проходит публикацию и останавливается позже, на Stop.
+boundaries; это не новый aggregate9ec и не Windows PASS. Original 41ab lifecycle
+прошёл публикацию, native Stop/release и последующий импорт.
 
 **Media и provider.** Native TEST receipts030 подтверждают PNG/JPEG/GIF/WebP,
 точный PDF, нормализацию PNG 4,194,304→159 bytes, public readback, Stop, cold Host
@@ -117,8 +120,8 @@ checks до/после, восемь новых checks, focused TS7 и independe
 [Readiness evidence](evidence/recovered-readiness-9ec6cb6f-20261119/index.json) и
 [Resume adoption](evidence/recovered-resume-9ec6cb6f-adoption.json) содержат pins.
 Canonical solo config census и WorkSync integration прошли 153 focused checks и
-независимое source review; original GUI ещё предстоит. Source proof, diagnostics
-и успешная интеграционная приёмка учитываются отдельно.
+независимое source review; original producer 917 и 41ab подтвердили native Stop.
+Source proof, diagnostics и полная интеграционная приёмка учитываются отдельно.
 [Stop / WorkSync evidence](evidence/solo-stop-work-sync-e754d233-20261119.json)
 содержит точные pre/post hashes, исходные test logs, независимый R2 и scoped
 compiler result. Последние6 ordering cases — повтор после test-typing fix,
@@ -157,10 +160,25 @@ Consumer app завершился с exit0/remaining=[], но Host не был �
 Соседние неизвестные пути, неканонические URI stems и прежние negative oracles
 по-прежнему отклоняются; native authority и notification delivery не переносятся.
 
+[Original import lifecycle 41ab](evidence/gui-import-lifecycle-41ab8f64-20261119.json)
+подтверждает export/import, dialog после reload, Task и единственный новый Host
+input с terminal=succeeded. Отказ исходной проверки logical inputId == SDK UUID
+сохранён как INCOMPLETE; visible reply, последующий UI Stop и cold readback этим
+запуском не заявляются. Строгий cleanup=true, Host absence подтверждён, все 1909
+source hashes совпали; отдельный exit code Host не выдумывается.
+[TEST input correlation](evidence/finite-import-correlation-41ab8f64-20261119.json):
+3/3 целевых tests PASS, включая 31 подмену, strict TS7 PASS за 2.546s и R2 PASS.
+GUI и final validator используют одну функцию; canonical preparation validator
+переиспользован. Peer добавляет только SHA256 уже прочитанных raw SDK bytes.
+Production source, действия, read/await и deadlines не менялись; точная Host-сборка
+41ab используется повторно. Исторический failed run не превращается в PASS.
+
 [Исторические входы coexistence](evidence/coexistence-historical-inputs-20261119.json)
 подготовлены отдельно: четыре clean pinned checkout, проверенные V1 packages1.19.4
-и runtime0.0.158. Donor зависимости/ABI/builds и исходный native тест ещё впереди;
-подготовка не является результатом E2E.
+и runtime0.0.158. Исходные donor dependency install (49.793s) и strict Electron
+44.10.1 ensure (18.860s) завершились с exit0, исходники/lockfile неизменны.
+Остались donor SQLite ABI, runtime0.0.160, controller/MCP builds и исходный native
+тест; подготовка не является результатом E2E.
 
 [Retained prepare evidence](evidence/retained-prepare-boundary-20261119.json)
 содержит 42/42 checks и независимый R2. Единственная существующая diagnostic

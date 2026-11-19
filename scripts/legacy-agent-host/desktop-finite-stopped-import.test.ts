@@ -6,11 +6,124 @@ import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { test, type TestContext } from 'node:test';
 import { runInNewContext } from 'node:vm';
+import type { RuntimeInput } from '../../packages/legacy-agent-host/dist/runtime/contracts.js';
 
 const source = join(import.meta.dirname, '../../tools/owned-process-broker/fixtures/legacyBootstrapPeer.mjs');
 const prompt = 'TEST_CURRENT_LEGACY_SOLO_ONE';
 const deferredPrompt = 'You are "team-lead", the team lead.\nYour team is "test-stopped-legacy".\nUser instructions:\n' + prompt;
 const sha = (value: string) => createHash('sha256').update(value).digest('hex');
+
+async function inputCorrelationFixture(prefix = '') {
+  const { assertFiniteImportInputCorrelation } = await import('./desktop-finite-stopped-import-fixture.ts');
+  const { deliveryFingerprint } = await import('../../packages/legacy-agent-host/dist/runtime/identity.js');
+  const { prepareRuntimeInput } = await import('../../packages/legacy-agent-host/dist/runtime/inputPreparation.js');
+  const binding = { backendId: 'TEST-backend', teamId: randomUUID(), runId: randomUUID(),
+    memberId: 'team-lead', generation: 'TEST-original-generation' };
+  const logicalId = randomUUID(), operationRef = randomUUID(), nativeId = randomUUID(), nativeSessionId = randomUUID();
+  const intent = { binding: structuredClone(binding), deliveryId: logicalId, inputId: logicalId,
+    messageId: randomUUID(), content: 'TEST_UI_BOOT' };
+  const fingerprint = deliveryFingerprint(intent);
+  const input: RuntimeInput = { intent, fingerprint, operationRef, phase: 'terminal', terminal: 'succeeded' };
+  if (prefix) input.preparation = prepareRuntimeInput(binding, input,
+    { epochIds: [sha('TEST-context-epoch')], teamProof: sha('TEST-context-proof'), prefix }, 65536);
+  const capture = { launchId: binding.runId, members: [{ memberId: 'team-lead', principalId: 'TEST-new-principal',
+    delivery: { ...binding, teamName: 'test-stopped-legacy' } }] };
+  const session = { binding: structuredClone(binding), inputs: [input], phase: 'allocated', custody: 'owned' };
+  const peer = { provider: 'claude', role: 'runtime', event: 'input', pid: 202,
+    inputId: nativeId, sessionId: nativeSessionId, marker: 'TEST_UI_BOOT', nativePayloadHash: sha(prefix + intent.content) };
+  const launch = { provider: 'claude', role: 'runtime', event: 'launch', pid: peer.pid, parentPid: 101,
+    sessionId: nativeSessionId, restored: false };
+  const initialized = { provider: 'claude', role: 'runtime', event: 'initialized', pid: peer.pid,
+    sessionId: nativeSessionId, restored: false };
+  const terminal = { provider: 'claude', role: 'runtime', event: 'terminal', pid: peer.pid,
+    inputId: nativeId, marker: 'TEST_UI_BOOT', outcome: 'succeeded', text: 'TEST boot ready' };
+  const options = { capture, session, effects: [launch, initialized, peer, terminal],
+    host: { pid: 101, observedBeforeShutdown: true }, sourceSessionId: randomUUID() };
+  return { assertFiniteImportInputCorrelation, options, binding, capture, session, input, peer, launch, initialized, terminal };
+}
+
+test('finite import correlation binds distinct logical and wire IDs through exact content and the original owner', async () => {
+  for (const prefix of ['', 'TEST native context π\n']) {
+    const f = await inputCorrelationFixture(prefix);
+    assert.notEqual(f.input.intent.inputId, f.peer.inputId);
+    const before = f.assertFiniteImportInputCorrelation(f.options);
+    assert.equal(before.inputId, f.input.intent.inputId); assert.equal(before.nativeInputId, f.peer.inputId);
+    assert.equal(before.operationRef, f.input.operationRef); assert.equal(before.nativePayloadHash, sha(prefix + f.input.intent.content));
+    const stopped = structuredClone(f.options); stopped.session.phase = 'closed'; stopped.session.custody = 'released';
+    assert.deepEqual(f.assertFiniteImportInputCorrelation(stopped), before, 'same frozen input survives Stop');
+    stopped.session.inputs[0]!.operationRef = randomUUID();
+    assert.throws(() => assert.deepEqual(f.assertFiniteImportInputCorrelation(stopped), before),
+      'a different logical operation cannot inherit the original frozen correlation');
+  }
+});
+
+test('finite import correlation rejects forged payload, logical input, binding, session and owner observations', async () => {
+  type Fixture = Awaited<ReturnType<typeof inputCorrelationFixture>>;
+  const cases: Array<[string, (f: Fixture) => void]> = [
+    ['missing payload witness', f => { Object.assign(f.peer, { nativePayloadHash: undefined }); }],
+    ['different exact bytes with same visible marker', f => { f.peer.nativePayloadHash = sha('different prefix\nTEST_UI_BOOT'); }],
+    ['changed logical identity with old fingerprint', f => {
+      f.input.intent.inputId = randomUUID(); f.input.intent.deliveryId = f.input.intent.inputId;
+    }],
+    ['changed logical content with old fingerprint', f => { f.input.intent.content = 'TEST_UI_HOLD'; }],
+    ['changed logical delivery', f => { f.input.intent.deliveryId = randomUUID(); }],
+    ['foreign binding generation', f => { f.input.intent.binding.generation = 'TEST-successor'; }],
+    ['foreign session binding', f => { f.session.binding.runId = randomUUID(); }],
+    ['foreign captured member', f => { f.capture.members[0]!.delivery.memberId = 'other-member'; }],
+    ['attachments outside finite text input', f => { Object.assign(f.input.intent, { attachments: [] }); }],
+    ['duplicate logical input', f => { f.session.inputs.push(structuredClone(f.input)); }],
+    ['duplicate native input', f => { f.options.effects.push(structuredClone(f.peer)); }],
+    ['wrong peer role', f => { f.peer.role = 'management'; }],
+    ['foreign native session', f => { f.peer.sessionId = randomUUID(); }],
+    ['old original source session', f => { f.options.sourceSessionId = f.peer.sessionId; }],
+    ['foreign peer process', f => { f.peer.pid += 1; }],
+    ['foreign Host owner', f => { f.options.host.pid += 1; }],
+    ['Host never physically observed', f => { f.options.host.observedBeforeShutdown = false; }],
+    ['native restored instead of fresh', f => { f.launch.restored = true; }],
+    ['native terminal from another input', f => { f.terminal.inputId = randomUUID(); }],
+    ['native terminal failure', f => { f.terminal.outcome = 'failed'; }],
+    ['different native reply', f => { f.terminal.text = 'other reply'; }],
+    ['logical terminal failure', f => { f.input.terminal = 'failed'; }],
+  ];
+  for (const [label, mutate] of cases) {
+    const f = await inputCorrelationFixture(); mutate(f);
+    assert.throws(() => f.assertFiniteImportInputCorrelation(f.options), label);
+  }
+  for (const key of ['inputId', 'operationRef', 'intentFingerprint', 'bindingFingerprint', 'prefixHash', 'nativePayloadHash'] as const) {
+    const f = await inputCorrelationFixture('TEST original prefix\n');
+    f.input.preparation![key] = key.endsWith('Hash') || key.endsWith('Fingerprint') ? '0'.repeat(64) : randomUUID();
+    assert.throws(() => f.assertFiniteImportInputCorrelation(f.options), 'forged preparation ' + key);
+  }
+  for (const malformed of ['missing-epochs', 'missing-team-proof', 'empty-prefix'] as const) {
+    const f = await inputCorrelationFixture('TEST original prefix\n');
+    if (malformed === 'missing-epochs') Object.assign(f.input.preparation!, { epochIds: undefined });
+    if (malformed === 'missing-team-proof') Object.assign(f.input.preparation!, { teamProof: undefined });
+    if (malformed === 'empty-prefix') Object.assign(f.input.preparation!, { prefix: '', prefixHash: sha(''),
+      nativePayloadHash: sha(f.input.intent.content) });
+    assert.throws(() => f.assertFiniteImportInputCorrelation(f.options), malformed);
+  }
+});
+
+test('finite import peer payload witness hashes the actual parsed SDK bytes without changing ordinary peer records', async () => {
+  const peer = await readFile(new URL('../../tools/owned-process-broker/fixtures/claudeProviderPeer.mjs', import.meta.url), 'utf8');
+  const start = "  effect({ event: 'input', inputId: selected.id, marker:";
+  const end = '\n  if (collaboration?.collaborationMarkers.includes(text))';
+  assert.equal(peer.split(start).length, 2); assert.equal(peer.split(end).length, 2);
+  const emitOriginalInput = peer.slice(peer.indexOf(start), peer.indexOf(end));
+  const raw = 'TEST original SDK context π\nTEST_UI_BOOT', text = 'TEST_UI_BOOT';
+  for (const importLifecycle of [false, true]) {
+    const observed: Record<string, unknown>[] = [];
+    runInNewContext(emitOriginalInput, { importLifecycle, selected: { id: 'TEST-native-uuid' },
+      text, raw, probe: 'TEST-probe', session: 'TEST-native-session', createHash,
+      effect: (value: Record<string, unknown>) => observed.push(value) });
+    assert.equal(observed.length, 1);
+    const expected = { event: 'input', inputId: 'TEST-native-uuid', marker: text,
+      sessionId: 'TEST-native-session', wrapped: true,
+      ...(importLifecycle ? { nativePayloadHash: sha(raw) } : {}) };
+    assert.deepEqual(JSON.parse(JSON.stringify(observed[0])), expected);
+    if (importLifecycle) assert.notEqual(observed[0]!.nativePayloadHash, sha(text), 'stripped marker is not the payload witness');
+  }
+});
 
 /** Synthetic protocol inputs only; these unit fixtures never claim an original Main release. */
 async function fixture(t: TestContext) {

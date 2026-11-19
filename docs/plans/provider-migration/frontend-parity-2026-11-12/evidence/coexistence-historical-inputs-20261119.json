@@ -232,5 +232,124 @@
     "elapsedSeconds": 22.047,
     "logSha256": "db2799cc0ee924841c1ad57e9b21136e1b9aab7e4e874b584fcc707a5afc4637",
     "logBytes": 437
-  }
+  },
+  "donor4aDependencies": {
+    "artifact": {
+      "path": "/workspace/scratch/de9d4631e21c/coexistence-input-preparation-20261119/donor4a-dependencies-result.json",
+      "bytes": 3592,
+      "sha256": "384c33f679e1d94a099c270cfdb57f30a525bed87e6868cbdd166885e1c2dde0"
+    },
+    "result": {
+      "kind": "HISTORICAL_INPUT_PREPARATION",
+      "operation": "canonical-donor4a-dependency-install",
+      "status": "PREPARED",
+      "argv": [
+        "/workspace/scratch/1d5114b8d2ee/agent-teams-ai/resources/legacy-agent-host/node/v24.21.0/linux-x64/node",
+        "scripts/ci/install-dependencies-with-retry.mjs"
+      ],
+      "cwd": "/workspace/scratch/1d5114b8d2ee/agent-teams-ai/.runtime-download/TEST-donor-4a",
+      "sourceHead": "4a0e06277fe216d9f82dbbede362668fe46622ee",
+      "sourceTree": "4bb456a5b35b6fca0e795bc8b19a13f5f1f6defd",
+      "sourceHashesBefore": {
+        "package.json": "77d38aa6501f49e42cc556c47446c269cc05e76fc2ae0dc4c6a8b66705a296f9",
+        "pnpm-lock.yaml": "ee36f9b252359d02f164eaa61ce847f6056370e5a6c900f2928f9175c9c74571",
+        "pnpm-workspace.yaml": "a5074fe53c697ac3d8ea2693d43e6c0c9b5d1bcc9253ec0cdb2cb7b850e21f36",
+        ".npmrc": "7151cf397def0c2cb0ab65643701d27d335a72c90f775675b5f826bc7005818a",
+        "scripts/ci/install-dependencies-with-retry.mjs": "509a91f84a072bc076de0dc29bd49cf1017126435a68b2a4f30ec318624d610f",
+        "scripts/postinstall-electron.cjs": "28e967a5ebc00448d1c79ef388344e822ba893a6ec6fdc4e78cfdbaab7411dae"
+      },
+      "node": {
+        "path": "/workspace/scratch/1d5114b8d2ee/agent-teams-ai/resources/legacy-agent-host/node/v24.21.0/linux-x64/node",
+        "version": "v24.21.0",
+        "sha256": "7fde7b8afa198da66257f42ee2001d874c7355631e6d1579a5fb5ef1f246df4c"
+      },
+      "pnpm": {
+        "version": "11.22.0",
+        "launcher": "/workspace/scratch/de9d4631e21c/gui-prerequisites-20261118/runner/TEST-emulated-ui-inputs-HHScGL/corepack/node_modules/.bin/pnpm",
+        "corepackEntry": "/workspace/scratch/de9d4631e21c/gui-prerequisites-20261118/runner/TEST-emulated-ui-inputs-HHScGL/corepack/node_modules/.pnpm/corepack@0.36.0/node_modules/corepack/dist/pnpm.js",
+        "entrySha256": "7c2a67995976b5b592b611d8b236e3b0633bd654fb49aedd96c6eb7ce04c9cbb",
+        "corepackVersion": "0.36.0"
+      },
+      "profile": "node-ci",
+      "CI": true,
+      "retryPolicy": "unchanged original script: at most3 attempts,10s/20s only on classified transient network errors",
+      "addedRetryOrTimeout": false,
+      "log": "/workspace/scratch/de9d4631e21c/coexistence-input-preparation-20261119/donor4a-dependencies-install.log",
+      "nativeProviderExecuted": false,
+      "separateEnsureElectronRebuildStageBuildTestExecuted": false,
+      "exitCode": 0,
+      "sourceHashesAfter": {
+        "package.json": "77d38aa6501f49e42cc556c47446c269cc05e76fc2ae0dc4c6a8b66705a296f9",
+        "pnpm-lock.yaml": "ee36f9b252359d02f164eaa61ce847f6056370e5a6c900f2928f9175c9c74571",
+        "pnpm-workspace.yaml": "a5074fe53c697ac3d8ea2693d43e6c0c9b5d1bcc9253ec0cdb2cb7b850e21f36",
+        ".npmrc": "7151cf397def0c2cb0ab65643701d27d335a72c90f775675b5f826bc7005818a",
+        "scripts/ci/install-dependencies-with-retry.mjs": "509a91f84a072bc076de0dc29bd49cf1017126435a68b2a4f30ec318624d610f",
+        "scripts/postinstall-electron.cjs": "28e967a5ebc00448d1c79ef388344e822ba893a6ec6fdc4e78cfdbaab7411dae"
+      },
+      "sourceUnchanged": true,
+      "installedMetadata": [
+        {
+          "path": "/workspace/scratch/1d5114b8d2ee/agent-teams-ai/.runtime-download/TEST-donor-4a/node_modules/.modules.yaml",
+          "bytes": 162556,
+          "sha256": "ad000b2d3890fa24b703839ff6aaa458ebaa2d3ca2ac1a6ccd92d3b95af928ee"
+        },
+        {
+          "path": "/workspace/scratch/1d5114b8d2ee/agent-teams-ai/.runtime-download/TEST-donor-4a/node_modules/.pnpm/lock.yaml",
+          "bytes": 948020,
+          "sha256": "ee36f9b252359d02f164eaa61ce847f6056370e5a6c900f2928f9175c9c74571"
+        }
+      ],
+      "elapsedSeconds": 49.793,
+      "logBytes": 22517,
+      "logSha256": "8f1f11637d5d40113a5fb294136be4883890d80d3fc32be10530d7877aeda0d2"
+    }
+  },
+  "donor4aElectron": {
+    "artifact": {
+      "path": "/workspace/scratch/de9d4631e21c/coexistence-input-preparation-20261119/donor4a-electron-ensure-result.json",
+      "bytes": 2136,
+      "sha256": "96983cbd62106e2c9661e3ff98f097d121ebd579c6645115c0b4936beb2573ba"
+    },
+    "result": {
+      "kind": "HISTORICAL_INPUT_PREPARATION",
+      "operation": "canonical-donor4a-ensure-electron-strict",
+      "status": "PREPARED",
+      "argv": [
+        "/workspace/scratch/1d5114b8d2ee/agent-teams-ai/resources/legacy-agent-host/node/v24.21.0/linux-x64/node",
+        "scripts/ensure-electron-install.cjs",
+        "--strict"
+      ],
+      "cwd": "/workspace/scratch/1d5114b8d2ee/agent-teams-ai/.runtime-download/TEST-donor-4a",
+      "sourceHead": "4a0e06277fe216d9f82dbbede362668fe46622ee",
+      "sourceTree": "4bb456a5b35b6fca0e795bc8b19a13f5f1f6defd",
+      "scriptSha256": "9bd7bd4a400eeb7ef4987189ffc9d64774677576a9198e417839989401bf4edb",
+      "node": {
+        "path": "/workspace/scratch/1d5114b8d2ee/agent-teams-ai/resources/legacy-agent-host/node/v24.21.0/linux-x64/node",
+        "version": "v24.21.0",
+        "sha256": "7fde7b8afa198da66257f42ee2001d874c7355631e6d1579a5fb5ef1f246df4c"
+      },
+      "packageVersion": "44.10.1",
+      "log": "/workspace/scratch/de9d4631e21c/coexistence-input-preparation-20261119/donor4a-electron-ensure.log",
+      "addedRetryOrTimeout": false,
+      "providerOrElectronBinaryExecuted": false,
+      "abiRebuildStageBuildTestExecuted": false,
+      "binaryExistedBefore": false,
+      "exitCode": 0,
+      "sourceUnchanged": true,
+      "electron": {
+        "packageJson": "/workspace/scratch/1d5114b8d2ee/agent-teams-ai/.runtime-download/TEST-donor-4a/node_modules/.pnpm/electron@44.10.1_supports-color@10.2.2/node_modules/electron/package.json",
+        "packageJsonSha256": "00bc5ed2f6c11af917e98158476941e9e432c2acce33a798ed77318406fbe32c",
+        "path": "/workspace/scratch/1d5114b8d2ee/agent-teams-ai/.runtime-download/TEST-donor-4a/node_modules/.pnpm/electron@44.10.1_supports-color@10.2.2/node_modules/electron/dist/electron",
+        "bytes": 228924744,
+        "sha256": "7722b3b95b0a31e24906f8046c1bf29cb03c1b99f67058b0b9a4c0e8681c0d87",
+        "version": "44.10.1",
+        "versionFileSha256": "2c07439deb43470b14fd0311b1c2d0959cdc284ebe917af526b65df8766f2b84",
+        "pathMarkerSha256": "88b1deea6a18cfd0d1df1f0048d0946332fe61d1adc2bacb25e5f6a774b56cc5"
+      },
+      "elapsedSeconds": 18.86,
+      "logBytes": 229,
+      "logSha256": "b2b07aae3e75a8388f9bac07254deeb4e2331c839f1b00e300c5a72e6591b87c"
+    }
+  },
+  "remaining": "Original donor SQLite ABI rebuild, runtime0.0.160 stage, controller/MCP builds and original native V1/V2 coexistence test. No native/E2E PASS from preparation."
 }

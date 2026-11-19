@@ -7,7 +7,7 @@ import { readDesktopNativeStopSessions } from './desktop-native-stop-fixture.ts'
 import { finiteImportRecords } from './desktop-finite-stopped-import-ui.ts';
 import { FINITE_IMPORT_MODE, FINITE_SOURCE_TEAM, FINITE_SOURCE_PROMPT, FINITE_SOURCE_REPLY,
   FINITE_HOST_PROMPT, finiteImportJson as json, finiteImportRow as row, readFiniteLegacyEffects,
-  type FiniteImportRow } from './desktop-finite-stopped-import-fixture.ts';
+  assertFiniteImportInputCorrelation, type FiniteImportRow } from './desktop-finite-stopped-import-fixture.ts';
 
 /** Immutable receipt validation only. No launch, import mutation, recovery or process signaling. */
 export async function validateDesktopFiniteStoppedImport(root: string, receipt: FiniteImportRow) {
@@ -85,13 +85,18 @@ export async function validateDesktopFiniteStoppedImport(root: string, receipt: 
   assert.equal(after.phase, 'closed'); assert.equal(after.custody, 'released');
   assert.ok(Array.isArray(after.inputs) && after.inputs.length === 1);
   const terminal = row(after.inputs[0]); assert.equal(terminal.phase, 'terminal'); assert.equal(terminal.terminal, 'succeeded');
-  assert.equal(row(terminal.intent).inputId, input.inputId);
+  assert.deepEqual(after.inputs, before.inputs); assert.deepEqual(after.binding, before.binding);
   assert.equal(row(proof.stop).runtimePid, input.pid); assert.equal(row(proof.stop).releasedBeforeQuit, true); assert.equal(row(proof.stop).peerAbsent, true);
   const cleanup = row(receipt.emulatedRuntimeCleanup);
   assert.equal(cleanup.absent, true); assert.deepEqual(cleanup.remaining, []);
   assert.equal(cleanup.observationFailed, undefined);
   assert.ok(Array.isArray(cleanup.originalPeerPids) && cleanup.originalPeerPids.includes(input.pid));
   assert.ok(Array.isArray(cleanup.effects));
+  const correlationOptions = { capture, effects: cleanup.effects.map(row),
+    host: row(receipt.hostChildAfterImport), sourceSessionId: seed.sourceSessionId };
+  assert.deepEqual(assertFiniteImportInputCorrelation({ ...correlationOptions, session: before }), proof.inputCorrelation);
+  assert.deepEqual(assertFiniteImportInputCorrelation({ ...correlationOptions, session: after }), proof.inputCorrelation);
+  assert.equal(row(receipt.hostChild).pid, correlationOptions.host.pid);
   assert.deepEqual(cleanup.effects.filter(value => row(value).event === 'input' && row(value).marker !== 'TEST_MODEL_PROBE'), [input]);
   assert.ok(cleanup.effects.every(value => row(value).provider === 'claude' &&
     ['management', 'runtime'].includes(String(row(value).role)) && row(value).event !== 'failure'));

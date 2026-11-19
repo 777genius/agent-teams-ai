@@ -4,6 +4,9 @@ import { createServer } from 'node:http';
 import { basename, dirname, join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { readTeamHostProfile } from '../../packages/legacy-agent-host/dist/composition/readProfile.js';
+import { deliveryFingerprint } from '../../packages/legacy-agent-host/dist/runtime/identity.js';
+import { validatePreparedInput } from '../../packages/legacy-agent-host/dist/runtime/inputPreparation.js';
+import type { RuntimeBinding, RuntimeInput } from '../../packages/legacy-agent-host/dist/runtime/contracts.js';
 import { desktopNodeScriptHeader, digest, fileDigest } from './desktop-backend-fixture.ts';
 import { prepareDesktopEmulatedRuntimeFixture } from './desktop-emulated-runtime-fixture.ts';
 import { publishDesktopEmulatedClaudeSettingsProfile } from './desktop-emulated-claude-settings-fixture.ts';
@@ -21,6 +24,69 @@ export const finiteImportRow = (value: unknown): FiniteImportRow => {
 };
 export const finiteImportJson = async (path: string): Promise<FiniteImportRow> =>
   finiteImportRow(JSON.parse(await readFile(path, 'utf8')));
+
+/** Host input IDs and the SDK wire UUID are separate; bind their exact consumed payload and owner. */
+export function assertFiniteImportInputCorrelation(options: {
+  capture: FiniteImportRow; session: FiniteImportRow; effects: FiniteImportRow[];
+  host: FiniteImportRow; sourceSessionId: unknown;
+}): FiniteImportRow {
+  const { capture, session, effects, host, sourceSessionId } = options;
+  const row = finiteImportRow;
+  const uuid = (value: unknown) => {
+    assert.equal(typeof value, 'string');
+    assert.match(value as string, /^[a-f0-9]{8}-(?:[a-f0-9]{4}-){3}[a-f0-9]{12}$/u);
+    return value as string;
+  };
+  assert.ok(Array.isArray(capture.members) && capture.members.length === 1);
+  const member = row(capture.members[0]); assert.equal(member.memberId, 'team-lead');
+  const { teamName, ...binding } = row(member.delivery);
+  assert.equal(teamName, FINITE_SOURCE_TEAM); assert.equal(binding.runId, capture.launchId);
+  assert.equal(binding.memberId, member.memberId);
+  assert.deepEqual(Object.keys(binding).sort(), ['backendId', 'generation', 'memberId', 'runId', 'teamId']);
+  assert.ok(Object.values(binding).every(value => typeof value === 'string' && value.length > 0 && value.length <= 256));
+  assert.deepEqual(session.binding, binding);
+  assert.ok(Array.isArray(session.inputs) && session.inputs.length === 1);
+  const input = row(session.inputs[0]), intent = row(input.intent);
+  assert.deepEqual(intent.binding, binding); assert.equal(input.phase, 'terminal');
+  assert.equal(input.terminal, 'succeeded');
+  const inputId = uuid(intent.inputId), operationRef = uuid(input.operationRef);
+  assert.equal(intent.deliveryId, inputId); const messageId = uuid(intent.messageId);
+  assert.equal(typeof intent.content, 'string'); assert.equal(intent.attachments, undefined);
+  const content = intent.content as string;
+  assert.equal(typeof input.fingerprint, 'string'); assert.match(input.fingerprint as string, /^[a-f0-9]{64}$/u);
+  assert.equal(input.fingerprint, deliveryFingerprint({ binding: binding as unknown as RuntimeBinding,
+    deliveryId: inputId, inputId, messageId, content }));
+  let prefix = '';
+  if (input.preparation !== undefined) {
+    const preparation = row(input.preparation);
+    validatePreparedInput(binding as unknown as RuntimeBinding, input as unknown as RuntimeInput);
+    assert.equal(typeof preparation.prefix, 'string'); prefix = preparation.prefix as string;
+  }
+  const nativePayload = prefix + content;
+  assert.ok(Buffer.byteLength(nativePayload) > 0 && Buffer.byteLength(nativePayload) <= 65536);
+  const nativePayloadHash = digest(nativePayload);
+  const business = effects.filter(value => value.event === 'input' && value.marker !== 'TEST_MODEL_PROBE');
+  assert.equal(business.length, 1); const peer = business[0]!;
+  assert.equal(peer.provider, 'claude'); assert.equal(peer.role, 'runtime');
+  assert.equal(peer.marker, FINITE_HOST_PROMPT); assert.equal(peer.nativePayloadHash, nativePayloadHash);
+  const nativeInputId = uuid(peer.inputId), nativeSessionId = uuid(peer.sessionId);
+  assert.notEqual(nativeSessionId, sourceSessionId);
+  assert.ok(Number.isSafeInteger(peer.pid) && Number(peer.pid) > 1);
+  assert.ok(Number.isSafeInteger(host.pid) && Number(host.pid) > 1);
+  assert.equal(host.observedBeforeShutdown, true);
+  const owned = effects.filter(value => value.pid === peer.pid);
+  assert.ok(owned.every(value => value.provider === 'claude' && value.role === 'runtime' && value.event !== 'failure'));
+  const launches = owned.filter(value => value.event === 'launch'); assert.equal(launches.length, 1);
+  assert.equal(launches[0]!.parentPid, host.pid); assert.equal(launches[0]!.sessionId, nativeSessionId);
+  assert.equal(launches[0]!.restored, false);
+  const initialized = owned.filter(value => value.event === 'initialized'); assert.equal(initialized.length, 1);
+  assert.equal(initialized[0]!.sessionId, nativeSessionId); assert.equal(initialized[0]!.restored, false);
+  const terminal = owned.filter(value => value.event === 'terminal'); assert.equal(terminal.length, 1);
+  assert.equal(terminal[0]!.inputId, nativeInputId); assert.equal(terminal[0]!.marker, FINITE_HOST_PROMPT);
+  assert.equal(terminal[0]!.outcome, 'succeeded'); assert.equal(terminal[0]!.text, FINITE_HOST_REPLY);
+  return { binding, inputId, operationRef, intentFingerprint: input.fingerprint,
+    nativeInputId, nativeSessionId, peerPid: peer.pid, nativePayloadHash };
+}
 
 /** This fixture never creates any source Team, run record, transcript or release receipt. */
 export async function prepareDesktopFiniteStoppedImportFixture(repo: string, pnpmEntry: string) {

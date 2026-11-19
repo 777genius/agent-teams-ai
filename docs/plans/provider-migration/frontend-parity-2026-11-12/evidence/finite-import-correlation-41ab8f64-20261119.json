@@ -1,0 +1,230 @@
+{
+  "schemaVersion": 1,
+  "kind": "finite-import-logical-native-input-correlation",
+  "parentSourceHead": "41ab8f644e0e98ba29ba6c615168f0d00dd27c25",
+  "qualification": "TEST-only exact-source verification. Original41ab remains INCOMPLETE; not GUI, native-provider, Windows, release or Stage2 acceptance.",
+  "originalEvidence": "gui-import-lifecycle-41ab8f64-20261119.json",
+  "cause": {
+    "hostLogicalInputId": "597adee8-8118-5253-8430-195e7c9ac312",
+    "sdkWireInputId": "1b602dc8-f817-499c-aa97-b738ae74dfc3",
+    "description": "Installed provider allocates nativeRef=randomUUID, sends SDK frame uuid=nativeRef, and maps echoed user_message_uuid back to original logical inputId/operationRef. Direct cross-namespace equality was invalid.",
+    "installedProviderModule": "/workspace/scratch/1d5114b8d2ee/agent-teams-ai/packages/legacy-agent-host/node_modules/@agent-teams/provider-implementations/dist/features/provider-session-implementation/adapters/claude-sdk/session.js",
+    "installedProviderModuleSha256": "ce8ab463d180cc319e91c344b716c705fa1be1420b5782c0d1211d199e00bd94",
+    "productionChanges": false
+  },
+  "changes": [
+    "One pure GUI/final helper reuses canonical deliveryFingerprint and validatePreparedInput.",
+    "One logical input and one peer business input; complete binding, exact payload, Host parent PID, native session and successful native/logical terminals.",
+    "SHA256 of already parsed raw SDK bytes only in existing finite import peer effect; no added read/await/UI action/retry/deadline.",
+    "Absent preparation allowed; present preparation uses canonical validator. Finite boot attachments absent.",
+    "Before/after Stop retains identical input and binding. Source freeze, no replay and cleanup preserved."
+  ],
+  "tests": {
+    "schemaVersion": 1,
+    "kind": "TEST_ONLY_CORRELATION_FOCUSED_CHECK",
+    "baseSourceHead": "41ab8f644e0e98ba29ba6c615168f0d00dd27c25",
+    "command": [
+      "/workspace/scratch/1d5114b8d2ee/agent-teams-ai/resources/legacy-agent-host/node/v24.21.0/linux-x64/node",
+      "--test",
+      "--test-name-pattern",
+      "^finite import (correlation|peer payload witness)",
+      "scripts/legacy-agent-host/desktop-finite-stopped-import.test.ts"
+    ],
+    "cwd": "/workspace/scratch/1d5114b8d2ee/agent-teams-ai",
+    "startedAt": "2026-11-19T12:11:15.301887+00:00",
+    "finishedAt": "2026-11-19T12:11:16.698546+00:00",
+    "elapsedSeconds": 1.394,
+    "exitCode": 0,
+    "counts": {
+      "tests": 3,
+      "suites": 0,
+      "pass": 3,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0,
+      "todo": 0
+    },
+    "sourceBefore": [
+      {
+        "path": "scripts/legacy-agent-host/desktop-finite-stopped-import-fixture.ts",
+        "bytes": 12889,
+        "sha256": "01dcada70b58462e91d1a69800b2f3c5b94bcd3cf99536fddb38b98af219401c"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-finite-stopped-import-ui.ts",
+        "bytes": 16567,
+        "sha256": "b85bfb07a3c42760a3b79a4e2852619c1c41839c05c024d00ac37f6e9581b946"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-finite-stopped-import-validation.ts",
+        "bytes": 10878,
+        "sha256": "cffc1c9dda6fd2cd701141bf69e1a1e557813157d8c4cbb87dc673a422992cb4"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-finite-stopped-import.test.ts",
+        "bytes": 22600,
+        "sha256": "cd659eab046b437c82e6232c8c3e9c94e3113f43d390f0851441f9886b0635b6"
+      },
+      {
+        "path": "tools/owned-process-broker/fixtures/claudeProviderPeer.mjs",
+        "bytes": 33780,
+        "sha256": "75d0a5dac336a20fc0b46ed6c9c87aa8532622fa318e3b8e17f342b07741318e"
+      }
+    ],
+    "sourceAfter": [
+      {
+        "path": "scripts/legacy-agent-host/desktop-finite-stopped-import-fixture.ts",
+        "bytes": 12889,
+        "sha256": "01dcada70b58462e91d1a69800b2f3c5b94bcd3cf99536fddb38b98af219401c"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-finite-stopped-import-ui.ts",
+        "bytes": 16567,
+        "sha256": "b85bfb07a3c42760a3b79a4e2852619c1c41839c05c024d00ac37f6e9581b946"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-finite-stopped-import-validation.ts",
+        "bytes": 10878,
+        "sha256": "cffc1c9dda6fd2cd701141bf69e1a1e557813157d8c4cbb87dc673a422992cb4"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-finite-stopped-import.test.ts",
+        "bytes": 22600,
+        "sha256": "cd659eab046b437c82e6232c8c3e9c94e3113f43d390f0851441f9886b0635b6"
+      },
+      {
+        "path": "tools/owned-process-broker/fixtures/claudeProviderPeer.mjs",
+        "bytes": 33780,
+        "sha256": "75d0a5dac336a20fc0b46ed6c9c87aa8532622fa318e3b8e17f342b07741318e"
+      }
+    ],
+    "sourceUnchanged": true,
+    "log": {
+      "path": "/workspace/scratch/de9d4631e21c/finite-import-correlation-41ab8f64-20261119/focused-tests.log",
+      "bytes": 492,
+      "sha256": "d01ca0b2d418fbb6f3d726830db0bafbff5e5d0d54b24390a36c6bff695a6d2c"
+    },
+    "capturedOutput": "✔ finite import correlation binds distinct logical and wire IDs through exact content and the original owner (849.070555ms)\n✔ finite import correlation rejects forged payload, logical input, binding, session and owner observations (31.345483ms)\n✔ finite import peer payload witness hashes the actual parsed SDK bytes without changing ordinary peer records (14.168738ms)\nℹ tests 3\nℹ suites 0\nℹ pass 3\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 1224.340658\n",
+    "scope": "Only three new finite TEST cases; unchanged bootstrap tests not selected; no GUI or product build."
+  },
+  "strictTypes": {
+    "kind": "finite-import-correlation-scoped-types",
+    "sourceHead": "41ab8f644e0e98ba29ba6c615168f0d00dd27c25",
+    "scope": "Four changed TypeScript entrypoints plus actual transitive closure; original strict script options. Not full workspace typecheck.",
+    "startedAt": "2026-11-19T12:11:21.877440+00:00",
+    "command": [
+      "/workspace/scratch/1d5114b8d2ee/agent-teams-ai/resources/legacy-agent-host/node/v24.21.0/linux-x64/node",
+      "node_modules/@typescript/native/bin/tsc",
+      "--noEmit",
+      "--singleThreaded",
+      "-p",
+      "/workspace/scratch/1d5114b8d2ee/agent-teams-ai/.runtime-download/import-correlation-types-41ab/tsconfig.json"
+    ],
+    "project": {
+      "extends": "../../tsconfig.legacy-agent-host-scripts.json",
+      "files": [
+        "../../scripts/legacy-agent-host/desktop-finite-stopped-import-fixture.ts",
+        "../../scripts/legacy-agent-host/desktop-finite-stopped-import-ui.ts",
+        "../../scripts/legacy-agent-host/desktop-finite-stopped-import-validation.ts",
+        "../../scripts/legacy-agent-host/desktop-finite-stopped-import.test.ts"
+      ],
+      "include": []
+    },
+    "compilerProfile": {
+      "GOMEMLIMIT": "512MiB",
+      "GOGC": "50",
+      "GOMAXPROCS": "2"
+    },
+    "exitCode": 0,
+    "error": null,
+    "elapsedSeconds": 2.546,
+    "sourceBefore": {
+      "scripts/legacy-agent-host/desktop-finite-stopped-import-fixture.ts": "01dcada70b58462e91d1a69800b2f3c5b94bcd3cf99536fddb38b98af219401c",
+      "scripts/legacy-agent-host/desktop-finite-stopped-import-ui.ts": "b85bfb07a3c42760a3b79a4e2852619c1c41839c05c024d00ac37f6e9581b946",
+      "scripts/legacy-agent-host/desktop-finite-stopped-import-validation.ts": "cffc1c9dda6fd2cd701141bf69e1a1e557813157d8c4cbb87dc673a422992cb4",
+      "scripts/legacy-agent-host/desktop-finite-stopped-import.test.ts": "cd659eab046b437c82e6232c8c3e9c94e3113f43d390f0851441f9886b0635b6",
+      "tools/owned-process-broker/fixtures/claudeProviderPeer.mjs": "75d0a5dac336a20fc0b46ed6c9c87aa8532622fa318e3b8e17f342b07741318e"
+    },
+    "sourceAfter": {
+      "scripts/legacy-agent-host/desktop-finite-stopped-import-fixture.ts": "01dcada70b58462e91d1a69800b2f3c5b94bcd3cf99536fddb38b98af219401c",
+      "scripts/legacy-agent-host/desktop-finite-stopped-import-ui.ts": "b85bfb07a3c42760a3b79a4e2852619c1c41839c05c024d00ac37f6e9581b946",
+      "scripts/legacy-agent-host/desktop-finite-stopped-import-validation.ts": "cffc1c9dda6fd2cd701141bf69e1a1e557813157d8c4cbb87dc673a422992cb4",
+      "scripts/legacy-agent-host/desktop-finite-stopped-import.test.ts": "cd659eab046b437c82e6232c8c3e9c94e3113f43d390f0851441f9886b0635b6",
+      "tools/owned-process-broker/fixtures/claudeProviderPeer.mjs": "75d0a5dac336a20fc0b46ed6c9c87aa8532622fa318e3b8e17f342b07741318e"
+    },
+    "sourceUnchanged": true,
+    "logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "initialTypeCorrection": {
+    "result": {
+      "kind": "finite-import-correlation-scoped-types",
+      "sourceHead": "41ab8f644e0e98ba29ba6c615168f0d00dd27c25",
+      "scope": "Four changed TypeScript entrypoints plus actual transitive closure; original strict script options. Not full workspace typecheck.",
+      "startedAt": "2026-11-19T12:10:24.051755+00:00",
+      "command": [
+        "/workspace/scratch/1d5114b8d2ee/agent-teams-ai/resources/legacy-agent-host/node/v24.21.0/linux-x64/node",
+        "node_modules/@typescript/native/bin/tsc",
+        "--noEmit",
+        "--singleThreaded",
+        "-p",
+        "/workspace/scratch/1d5114b8d2ee/agent-teams-ai/.runtime-download/import-correlation-types-41ab/tsconfig.json"
+      ],
+      "project": {
+        "extends": "../../tsconfig.legacy-agent-host-scripts.json",
+        "files": [
+          "../../scripts/legacy-agent-host/desktop-finite-stopped-import-fixture.ts",
+          "../../scripts/legacy-agent-host/desktop-finite-stopped-import-ui.ts",
+          "../../scripts/legacy-agent-host/desktop-finite-stopped-import-validation.ts",
+          "../../scripts/legacy-agent-host/desktop-finite-stopped-import.test.ts"
+        ],
+        "include": []
+      },
+      "compilerProfile": {
+        "GOMEMLIMIT": "512MiB",
+        "GOGC": "50",
+        "GOMAXPROCS": "2"
+      },
+      "exitCode": 1,
+      "error": null,
+      "elapsedSeconds": 2.604,
+      "sourceBefore": {
+        "scripts/legacy-agent-host/desktop-finite-stopped-import-fixture.ts": "01dcada70b58462e91d1a69800b2f3c5b94bcd3cf99536fddb38b98af219401c",
+        "scripts/legacy-agent-host/desktop-finite-stopped-import-ui.ts": "b85bfb07a3c42760a3b79a4e2852619c1c41839c05c024d00ac37f6e9581b946",
+        "scripts/legacy-agent-host/desktop-finite-stopped-import-validation.ts": "cffc1c9dda6fd2cd701141bf69e1a1e557813157d8c4cbb87dc673a422992cb4",
+        "scripts/legacy-agent-host/desktop-finite-stopped-import.test.ts": "43a2a025c5d5b860aca71a7bde5995748ef68da6b37cdc7823c7ebd20b9c87be",
+        "tools/owned-process-broker/fixtures/claudeProviderPeer.mjs": "75d0a5dac336a20fc0b46ed6c9c87aa8532622fa318e3b8e17f342b07741318e"
+      },
+      "sourceAfter": {
+        "scripts/legacy-agent-host/desktop-finite-stopped-import-fixture.ts": "01dcada70b58462e91d1a69800b2f3c5b94bcd3cf99536fddb38b98af219401c",
+        "scripts/legacy-agent-host/desktop-finite-stopped-import-ui.ts": "b85bfb07a3c42760a3b79a4e2852619c1c41839c05c024d00ac37f6e9581b946",
+        "scripts/legacy-agent-host/desktop-finite-stopped-import-validation.ts": "cffc1c9dda6fd2cd701141bf69e1a1e557813157d8c4cbb87dc673a422992cb4",
+        "scripts/legacy-agent-host/desktop-finite-stopped-import.test.ts": "43a2a025c5d5b860aca71a7bde5995748ef68da6b37cdc7823c7ebd20b9c87be",
+        "tools/owned-process-broker/fixtures/claudeProviderPeer.mjs": "75d0a5dac336a20fc0b46ed6c9c87aa8532622fa318e3b8e17f342b07741318e"
+      },
+      "sourceUnchanged": true,
+      "logSha256": "8cb822a91d052a83d39bcea4e348d5220065bb3f1984cb2d326043bafc588817"
+    },
+    "diagnostics": "scripts/legacy-agent-host/desktop-finite-stopped-import.test.ts(90,74): error TS2345: Argument of type 'undefined' is not assignable to parameter of type 'AssertPredicate'.\nscripts/legacy-agent-host/desktop-finite-stopped-import.test.ts(95,74): error TS2345: Argument of type 'undefined' is not assignable to parameter of type 'AssertPredicate'.\nscripts/legacy-agent-host/desktop-finite-stopped-import.test.ts(103,74): error TS2345: Argument of type 'undefined' is not assignable to parameter of type 'AssertPredicate'.\n",
+    "correction": "Three assert.throws(fn, undefined, label) overloads corrected to (fn, label), preserving all negative cases/labels. Final focused tests and strict types ran afterward."
+  },
+  "independentReview": {
+    "reviewer": "reviewflow",
+    "status": "PASS",
+    "sourcePins": {
+      "scripts/legacy-agent-host/desktop-finite-stopped-import-fixture.ts": "01dcada70b58462e91d1a69800b2f3c5b94bcd3cf99536fddb38b98af219401c",
+      "scripts/legacy-agent-host/desktop-finite-stopped-import-ui.ts": "b85bfb07a3c42760a3b79a4e2852619c1c41839c05c024d00ac37f6e9581b946",
+      "scripts/legacy-agent-host/desktop-finite-stopped-import-validation.ts": "cffc1c9dda6fd2cd701141bf69e1a1e557813157d8c4cbb87dc673a422992cb4",
+      "scripts/legacy-agent-host/desktop-finite-stopped-import.test.ts": "cd659eab046b437c82e6232c8c3e9c94e3113f43d390f0851441f9886b0635b6",
+      "tools/owned-process-broker/fixtures/claudeProviderPeer.mjs": "75d0a5dac336a20fc0b46ed6c9c87aa8532622fa318e3b8e17f342b07741318e"
+    },
+    "checks": [
+      "Canonical optional preparation replaces duplicated partial validator.",
+      "31 forged cases:22 base,6 preparation keys,3 malformed records.",
+      "Exact payload/owner correlation permits distinct logical/native UUIDs.",
+      "No production changes, additional async reads/actions, replay or deadline changes."
+    ],
+    "finalAssertionOverloadDelta": "reviewflow independently rechecked the final three correct assert.throws overloads and exact final test SHA cd659eab046b437c82e6232c8c3e9c94e3113f43d390f0851441f9886b0635b6 without repeating tests; final PASS applies to all five exact source pins."
+  },
+  "reusedBuild": "Exact41ab Host build PASS retained; Host source unchanged, no rebuild.",
+  "remaining": "Publish clean source, then original import lifecycle and retained UI; stop on first INCOMPLETE."
+}

@@ -10,7 +10,8 @@ import { readDesktopNativeStopSessions } from './desktop-native-stop-fixture.ts'
 import { stoppedImportSourceBytes } from './desktop-stopped-import-fixture.ts';
 import { createDesktopUiControls, desktopJsLiteral as literal, type UiCdpPort } from './desktop-ui-controls.ts';
 import { FINITE_IMPORT_MODE, FINITE_SOURCE_TEAM, FINITE_HOST_PROMPT, FINITE_HOST_REPLY,
-  finiteImportJson as json, finiteImportRow as row, type FiniteImportFixture, type FiniteImportRow } from './desktop-finite-stopped-import-fixture.ts';
+  assertFiniteImportInputCorrelation, finiteImportJson as json, finiteImportRow as row,
+  type FiniteImportFixture, type FiniteImportRow } from './desktop-finite-stopped-import-fixture.ts';
 export { prepareDesktopFiniteStoppedImportFixture } from './desktop-finite-stopped-import-fixture.ts';
 export { produceDesktopFiniteStoppedTeam } from './desktop-finite-stopped-import-producer.ts';
 
@@ -142,9 +143,12 @@ export async function runDesktopFiniteStoppedImportUi(cdp: UiCdpPort, options: {
   assert.notEqual(members[0]!.principalId, seed.sourceSessionId);
   const sessions = () => readDesktopNativeStopSessions(fixture.root).then(values => values.filter(value => row(value.binding).runId === capture.launchId));
   const started = await poll(sessions, values => values.length === 1 && array(values[0]!.inputs).length === 1 && array(values[0]!.inputs).every(input => input.phase === 'terminal' && input.terminal === 'succeeded'), 'fresh correlated Host reply');
-  const inputs = await business(); assert.equal(inputs.length, 1); assert.equal(inputs[0]!.marker, FINITE_HOST_PROMPT);
+  const inputEffects = await effects();
+  const inputs = inputEffects.filter(value => value.event === 'input' && value.marker !== 'TEST_MODEL_PROBE');
+  assert.equal(inputs.length, 1); assert.equal(inputs[0]!.marker, FINITE_HOST_PROMPT);
   assert.notEqual(inputs[0]!.sessionId, seed.sourceSessionId);
-  const input = array(started[0]!.inputs)[0]!; assert.equal(row(input.intent).inputId, inputs[0]!.inputId);
+  const inputCorrelation = assertFiniteImportInputCorrelation({ capture, session: started[0]!, effects: inputEffects,
+    host: row(options.evidence.hostChildAfterImport), sourceSessionId: seed.sourceSessionId });
   await openDesktopEmulatedBootChat(cdp, { selector: 'button[aria-label^="lead,"]', timeoutMs: 60_000,
     replyLabel: 'distinct fresh Host finite reply', assertOwnedRenderer: options.assertOwnedRenderer, step,
     open: controls => controls.click('button[aria-label^="lead,"]', 'open original imported lead conversation') });
@@ -157,6 +161,8 @@ export async function runDesktopFiniteStoppedImportUi(cdp: UiCdpPort, options: {
   await ui.scrollTo('button[aria-label="Stop"]', 'original fresh Host Stop');
   await ui.click('button[aria-label="Stop"]', 'stop fresh Host generation exactly once');
   const stopped = await poll(sessions, values => values.length === 1 && values[0]!.phase === 'closed' && values[0]!.custody === 'released', 'fresh Host custody released');
+  assert.deepEqual(stopped[0]!.inputs, started[0]!.inputs, 'Stop retains the original correlated logical input');
+  assert.deepEqual(stopped[0]!.binding, started[0]!.binding);
   await poll(async () => processTable(), values => !values.some(value => value.pid === runtimePid), 'fresh Host peer physically absent');
   await assertSource(); assert.deepEqual(await json(taskPath), sourceTask);
   await reload(); await openTeam(String(originalLookup.selection)); await openDialog(FINITE_HOST_PROMPT);
@@ -168,7 +174,7 @@ export async function runDesktopFiniteStoppedImportUi(cdp: UiCdpPort, options: {
   Object.assign(proof, { status: 'PASS', importRecord: imported[0], lookup: originalLookup, dialogTarget: target,
     importedTask: sourceTask, sourceAfter: seed.before, originalLookupRetained: true,
     runtimeSessionsBeforeLaunch: sessionsBefore, capture, sessionBeforeStop: started[0], sessionAfterStop: stopped[0],
-    freshInput: inputs[0], sourcePromptReplays: 0, freshInputCount: 1,
+    freshInput: inputs[0], inputCorrelation, sourcePromptReplays: 0, freshInputCount: 1,
     stop: { runtimePid, releasedBeforeQuit: true, peerAbsent: true },
     fixturePins: await verifyDesktopEmulatedRuntimeFixture(fixture) });
 }
