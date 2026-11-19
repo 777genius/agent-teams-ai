@@ -31,7 +31,7 @@ function fixture(mode?: 'shared' | 'per_project') {
     hasRetainedIndex: vi.fn(async () => mode === 'per_project'),
     beginSoftDelete: vi.fn(async () => undefined),
     cancelSoftDelete: vi.fn(async () => undefined),
-    assertReservedStopOwnership: vi.fn(async () => { throw new Error('unowned pending alias'); }),
+    assertReservedStopOwnership: vi.fn(async (): Promise<void> => { throw new Error('unowned pending alias'); }),
   };
   return { meta, registry };
 }

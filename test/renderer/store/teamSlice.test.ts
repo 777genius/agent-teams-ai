@@ -225,7 +225,10 @@ type TeamSliceHarnessState = TeamSlice &
     | 'setActiveTab'
     | 'updateTabLabel'
     | 'warmTaskChangeSummaries'
-  >;
+  > & Partial<Pick<AppState,
+    'projects' | 'repositoryGroups' | 'selectedRepositoryId' | 'selectedWorktreeId' |
+    'fetchSessionsInitial' | 'activeProjectId'
+  >>;
 
 type TestTabInput = Omit<AppState['paneLayout']['panes'][number]['tabs'][number], 'createdAt'> & {
   createdAt?: number;
@@ -489,7 +492,8 @@ describe('teamSlice actions', () => {
     store.setState({
       teamByName: {
         builders: {
-          teamName: 'builders', displayName: 'Builders', projectContextMode: 'per_project',
+          teamName: 'builders', displayName: 'Builders', description: '',
+          memberCount: 0, taskCount: 0, lastActivity: null, projectContextMode: 'per_project',
         },
       } as AppState['teamByName'],
     });
@@ -553,7 +557,8 @@ describe('teamSlice actions', () => {
     store.setState({
       teamByName: {
         builders: {
-          teamName: 'builders', displayName: 'Builders', projectContextMode: 'per_project',
+          teamName: 'builders', displayName: 'Builders', description: '',
+          memberCount: 0, taskCount: 0, lastActivity: null, projectContextMode: 'per_project',
         },
       } as AppState['teamByName'],
     });

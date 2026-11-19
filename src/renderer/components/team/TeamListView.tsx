@@ -1069,7 +1069,7 @@ export const TeamListView = memo(function TeamListView({
     void fetchAllTasks();
   }, [electronMode, fetchTeams, fetchAllTasks]);
 
-  const taskCountsByTeam = useMemo(() => buildTaskCountsByTeam(globalTasks), [globalTasks]);
+  const taskCountsByTeam = useMemo(() => buildTaskCountsByTeam(globalTasks, teams), [globalTasks, teams]);
 
   const activeTeams = useMemo<ActiveTeamRef[]>(() => {
     const aliveSet = new Set(aliveTeams);
