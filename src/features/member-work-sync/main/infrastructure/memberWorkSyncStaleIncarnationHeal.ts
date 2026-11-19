@@ -12,11 +12,11 @@ import {
 } from '@main/utils/atomicWrite';
 
 import { readMemberWorkSyncStatusRevision } from '../../core/domain/MemberWorkSyncStatusRevision';
+
 import {
   decodeMemberWorkSyncStoredStatus,
   MemberWorkSyncStatusDecodeError,
 } from './decodeMemberWorkSyncStoredStatus';
-
 import { validateMemberWorkSyncAuthoritySnapshot, validateMemberWorkSyncPrimaryRecords } from './memberWorkSyncAuthorityPreparation';
 import { mergeDomainSnapshots } from './memberWorkSyncDomainSnapshotMerge';
 import { readIncarnationMismatch } from './memberWorkSyncPreparationDiagnostics';
