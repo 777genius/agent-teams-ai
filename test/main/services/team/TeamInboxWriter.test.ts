@@ -373,6 +373,33 @@ describe('TeamInboxWriter', () => {
     });
   });
 
+  it('deduplicates persisted optional attachment metadata after a lost verification read', async () => {
+    hoisted.setFailTransientReadAfterWrite(1);
+    const meta = {
+      id: 'att-1', filename: 'image.png', mimeType: 'image/png', size: 3,
+      filePath: undefined, sha256: undefined,
+    };
+    const result = await writer.sendMessage('my-team', {
+      member: 'alice',
+      text: 'same generated message with attachments',
+      attachments: [{ ...meta }],
+      fileReferences: [{ ...meta }],
+    } as Parameters<TeamInboxWriter['sendMessage']>[1]);
+
+    const persisted = JSON.parse(hoisted.files.get(inboxPath) ?? '[]') as Array<{
+      messageId: string;
+      attachments?: Array<Record<string, unknown>>;
+      fileReferences?: Array<Record<string, unknown>>;
+    }>;
+    expect(result.deliveredToInbox).toBe(true);
+    expect(result.deduplicated).toBe(true);
+    expect(hoisted.atomicWrite).toHaveBeenCalledTimes(1);
+    expect(persisted).toHaveLength(1);
+    expect(persisted[0].messageId).toBe(result.messageId);
+    expect(persisted[0].attachments?.[0]).not.toHaveProperty('filePath');
+    expect(persisted[0].fileReferences?.[0]).not.toHaveProperty('sha256');
+  });
+
   it('reports a committed row when ownership changes after transient read failure', async () => {
     let stillCurrent = true;
     hoisted.atomicWrite.mockImplementationOnce(async (filePath, data, options) => {
