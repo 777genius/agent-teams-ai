@@ -109,7 +109,10 @@ PASS, cleanup=true, installed/release=false. Linux legacy strict сохраня�
 `PASS_NATIVE_FIXTURE_ONLY`, script-negative — COUNTEREXAMPLE с SCRIPT:B,
 scriptQualified/productQualified=false. Artifact14563098271:24851bytes,
 SHA-256 `aa9398579e16ad42825674d6cecc1842f17d7f9cfb9a27508b4d235b029146a1`.
-Darwin ARM ещё queued; его исходный результат остаётся обязательным.
+Darwin ARM этого fbc run позже штатно cancelled до начала при публикации
+проверенного source a813; native receipt отсутствует, PASS не заявляется.
+Его новый исходный результат остаётся обязательным. [Terminal delta и новый source CI](evidence/ci-a81340c-incremental-20261119.json)
+сохранены отдельно; ручных отмен или повторных запусков не было.
 
 Отдельный read-only review встроенных writers подтвердил существующую совместимость
 с A: OpenCode V1 сохраняет проверенные существующие bytes и отказывает перед

@@ -2,14 +2,44 @@
 
 Обновлено: **19 ноября 2026**. Единственный текущий рабочий план.
 
-**Текущее продолжение:** владелец выбрал P09 **A** — исходный путь с доверием всем
+**Срез этой ревизии поверх `a81340ccc205946548b9e7da1cfefbabc37fb421`:**
+закрыта доказанная несовместимость текущего Save-only формата. Настоящий
+`createDraftTeamConfig → TeamMetaStore` сохраняет `runtimeSelectionVersion: 1`;
+finite reader теперь принимает только этот существующий числовой литерал и
+переносит его в Host savedSettings. Это сохраняет требование явного providerId
+в действующей Host semantics. Старый формат без поля, отказ для других значений,
+launchIdentity/посторонних полей и все custody/owner/currentness проверки сохранены.
+RED на настоящем writer сменился30/30 PASS:3 новых cases и27 прежних source cases.
+Canonical scoped TS7, lint и независимый R2 PASS.
+
+Отдельно добавлена пассивная конечная причина `sourceBoundary` для прежнего
+coordinator-admission/source-unreadable:19 закрытых значений в существующей private
+диагностике. Чтения, fences, awaits, ошибки, действия и admission не меняются;
+повторно использованная ошибка остаётся неоднозначной.46/46 source/producer и28/28
+scanner cases PASS; после TS-only исправления21 затронутый case PASS, canonical
+app/scripts scopes и R2 PASS. Два новых module literals включены в прежний Desktop
+source freeze. [Точные два среза и сверка10 файлов](evidence/retained-source-format-fixes-20261119.json),
+[пассивные checks](evidence/retained-source-boundary-checks-20261119.tar.gz) и
+[Save-only RED/GREEN и compiler scope](evidence/saved-draft-format-checks-20261119.tar.gz)
+сохранены. Эти локальные результаты не подменяют original native/GUI приёмку.
+
+**Последний наблюдённый source CI:** наa813 в19:31:02UTC Import Desktop и nativeV2
+static Windows PASS; другие lanes выполняются или queued. Windows x64 source
+OpenCode A INCOMPLETE: original consumer cutoff+15ms, cleanup=true, все3 HANDLE
+absent. Новые23 account intervals содержат provider2128ms/allocation2714ms внутри
+общих authority4847ms; это накопленные вложенные интервалы, не23 callbacks и не
+отдельная задержка2714ms. [Точные jobs, timing и прежний terminal delta](evidence/ci-a81340c-incremental-20261119.json)
+сохранены. После публикации a813 GitHub штатно отменил оставшиеся fbc jobs;
+Darwin ARM P09 не начал работу и не имеет native receipt. Ручных CI действий нет.
+
+**P09 — принятое продолжение:** владелец выбрал **A** — исходный путь с доверием всем
 writers выбранной ревизии до завершения её использования. [Принятый контракт](40-p09-source-writer-decision-2026-11-16.md)
 зафиксирован. Срез source/native acceptance реализован и прошёл независимый R2;
 [проверки, точные hashes и исправленные замечания](evidence/p09-contract-a-review-20261119.json)
 сохранены отдельно от native приёмки. На текущем fbc Darwin x64 job135773065012
 и Linux x64 job135773064871 полностью PASS: по8 original-path A observations PASS,
 cleanup=true; strict counterexamples и INCOMPLETE сохранены отдельно,
-installed/release qualification=false. Darwin ARM A ещё queued. Полные оригинальные
+installed/release qualification=false. Darwin ARM A ещё не квалифицирован. Полные оригинальные
 [native receipts](evidence/p09-contract-a-native-receipts-fbc77ea-20261119.tar.gz)
 сохранены. A и два независимо проверенных исправления ниже опубликованы в1192 как
 `fbc77ea6b9a35f4be640d7b1e103b992a3f3a45e`. Его source CI на19:09:24UTC:
@@ -18,7 +48,7 @@ shards PASS. Очередь не является отказом или PASS. [�
 отделены от PR-body edited run: его metadata gate ожидаемо отказал для Draft и
 не исполнял source qualification.
 
-**Новый срез поверх fbc, локально проверен и прошёл независимый R2:** Live Add сохраняет
+**Опубликованный вa813 срез поверх fbc, локально проверен и прошёл независимый R2:** Live Add сохраняет
 исходные authority observations при одной same-Team physical publication вместо
 двух; Runtime/captured проверки остаются после освобождения Team lock. Resume
 observer связывает исходную prospective saved command с Main handle/scope и
@@ -59,9 +89,10 @@ Original group пуст, оба management peer absent; bootstrap/reply/Stop е�
 fbc PASS; это не заменяет pending native/GUI paths. Отдельный retained V1/V2 coexistence
 job135782182242 прочитал исходную V1 history, выполнил Stop/reopen без replay, затем
 отказал до original runtime dispatch: coordinator-admission/source-unreadable.
-Точный внутренний source boundary не наблюдён; cleanup=true. Допуск не ослабляется,
-следующая отдельная работа — конечная пассивная причина в существующей private
-диагностике без нового чтения или действия.
+Точный внутренний source boundary не наблюдён; cleanup=true. Конечная пассивная
+причина теперь добавлена без нового чтения или действия. Несовместимость общего
+Save-only writer исправлена отдельно; причиной именно этого pure OpenCode отказа
+она не объявляется.
 
 **Текущий проверенный срез поверх A:**
 
@@ -198,16 +229,18 @@ resolved; approval review этим не заявляется.
 | --- | --- | --- | --- |
 | E1-Stop / Import | [Original import lifecycle7fe PASS](https://github.com/777genius/agent-teams-ai/actions/runs/44539501369/job/135613921599). | Старый startup отказ664 закрыт этим исходным job. Новый Stop regression из frontend shard2/4 учитывается отдельно ниже; PASS импорта не квалифицирует все Stop paths. | root |
 | E1-Stop / Aggregate | На7fe семь failures launch matrix и один cancellation failure. | Исправлено: source fence передаётся через исходную public Stop chain. Все8 исходных падавших cases PASS, прежние6 WorkSync ordering cases PASS, facade guard8/8 PASS, Fast lint и независимое R2 PASS. Assertions, actions и deadlines не изменены. Это целевые локальные результаты; current source acceptance ещё нужна. | root; parity_review |
-| E1-Retained | На33 metadata отказывала после Main control URL. На fbc original135773059015 runtime/model/PONG readiness PASS, затем scoped Launch selector mismatch. | Published ambient identity fix33/33/R2 подтверждён прохождением прежней границы. Actual frontend footer «Launch team» вместо ожидаемого «Launch»; исправлены только scroll/click literals, R2/lint PASS.192 original DOM reads resolved, retries0, bootstrap/reply/Stop ещё нет. Original group пуст/2 management peer absent. Нужны полный original Desktop и отдельный native V1/V2 coexistence. | root |
+| E1-Retained | На33 metadata отказывала после Main control URL. На fbc original135773059015 runtime/model/PONG readiness PASS, затем scoped Launch selector mismatch. | Published ambient identity fix33/33/R2 подтверждён прохождением прежней границы. Вa813 опубликован actual footer «Launch team» для исходных scroll/click.192 прежних DOM reads resolved, retries0, bootstrap/reply/Stop ещё нет. Original group пуст/2 management peer absent. Нужен полный original Desktop на исправленном source. | root |
+| E1-Coexistence | fbc135782182242: V1 history/Stop/reopened history без replay PASS, затем original retained runtime not-dispatched: coordinator-admission/source-unreadable. | Точный source branch UNKNOWN, final cleanup=true. Пассивные19 finite boundaries, strict decoder и R2 PASS; исходные authority/read/action/deadline не меняются. Actual Save-only writer format исправлен отдельно и не объявляется причиной pure OpenCode отказа. Нужен original V1/V2 coexistence/cold PASS. | root |
+| E1-SaveOnly | Actual current writer сохраняет runtimeSelectionVersion1, который finite reader отклонял и терял в Host settings. | Две production строки принимают только literal1 и сохраняют исходную explicit-provider semantics. Реальный writer/stores/fenced source:30/30, canonical scoped TS7/lint/R2 PASS. Controlled owner facts не являются native/import qualification; current source gates остаются обязательны. | root |
 | E1-Add | На33 прежний /proc ENOENT не повторился; Settings PASS, исходный Add Carol остановился на held native model probe. | Exact command: native-ready → credential, без attestation/session-create; первый отказ не установлен. Same-Team fix готов:2→1 publications, все4 namespace scans и5 исходных state reads сохранены, добавлен внешний read grant; Runtime/captured checks вне lock.3 сценария, Host TS7 build/test types/lint/source guard и R2 PASS. Immutable owner check теперь также отказывает при owner replacement на cleanup пути. Native влияние ещё не измерено. | delivery_review; root |
 | E1-Review | На33 preflight дошёл до attestation; на fbc остановился раньше, после graph23.309s/native-launch, без native-ready. | К native-launch оставалось≤6.688s исходного startup30s, но конкретный отказ не установлен. resourceHeld=false, final group/Host absent. Пассивные отметки после original custody launch/endpoint и в existing catch готовы;38/38 controlled cases, final affected2, canonical scoped TS7/lint/R2 PASS. Без новых authority reads/I/O/deadlines. Нужен original Darwin Review PASS. | root |
 | E1-Resume | На33 observer сравнивал saved-model revision со старым runId. На fbc новый более ранний отказ: original Open Team прошёл, Launch не найден за30s; до preflight не дошёл. | Observer fix57/57 и R2 PASS: original Main handle/full scope/payload/roster/context/action/destination, один command/source/cutoff, без новых read/await/retry. Только wait-bound contract, не source qualification. Свежая post-failure кнопка не доказывает её наличие во время121 исходного DOM read. Route audit не доказал transport serialization; selectedTeamLoading отсутствует в старом snapshot. Пассивные hydration facts в исходном CDP read62/62/R2 PASS. Original group PID10102 остаётся, Host absence unknown. | root |
 | W1 | fbc Windows ARM135773054102:110 original reads/15.207s; последний read уже nativeReady=true/allocated/owned/attached, но после исходного15s cutoff. | Provider readiness true на14.6823s другого clock anchor; first-refusal ledger пуст. Не переносить33 before-await как новую причину. Final cleanup=true/7 original HANDLE absent. Original cutoff/currentness/authority сохранены; текущий gate INCOMPLETE, не PASS. | root; delivery_review |
-| W2 | fbc Windows x64 job135773054657: Codex/Claude A/B PASS; OpenCode A probe-expiry+214ms, final cleanup=true/3 HANDLE absent. | Published default launch fix сохраняет checks под одним Team lock;18/18/R2 PASS. В22 account intervals176 callbacks,4705ms; provider и allocation уже имеют по одному fence. Общий generic wrapper недопустим из-за отдельного launch-store suffix в других routes. Пассивное разделение исходного timing готово:5/5, Host TS7 build/test types/lint/R2 PASS; count означает outer intervals, не вложенные callbacks. Безопасная новая оптимизация пока не доказана. | root |
-| P09 | Darwin strict mutation witnesses остаются отрицательными либо INCOMPLETE. | A принят: current fbc Darwin x64 job135773065012 и Linux x64 job135773064871 PASS, по8/8 product-path rows, cleanup=true. Строгие script/mmap counterexamples, Darwin EACCES/-67062 и все45 assertions сохранены; installed/release=false. Отдельный native receipt Darwin ARM ещё queued и обязателен. | root; retained_e2e |
+| W2 | a813 Windows x64 job135814632127: Codex/Claude A/B PASS; OpenCode A consumer cutoff+15ms, final cleanup=true/3 HANDLE absent. | Новый timing:23 account intervals/5316ms, authority4847ms, provider2128ms/allocation2714ms; intervals не равны вложенным callbacks. Оба leaf уже используют по одному original Team fence на callback; Runtime availability остаётся вне Team lock. Blanket wrapper для generic restart/live недопустим. Дальнейшая оптимизация требует доказанного сохранения lock order и каждой authority observation. | coexistence_audit; root |
+| P09 | Darwin strict mutation witnesses остаются отрицательными либо INCOMPLETE. | A принят: fbc Darwin x64 job135773065012 и Linux x64 job135773064871 PASS, по8/8 product-path rows, cleanup=true. Строгие script/mmap counterexamples, Darwin EACCES/-67062 и все45 assertions сохранены; installed/release=false. fbc Darwin ARM cancelled до начала при штатном обновлении source; новый original native receipt обязателен. | root |
 | D1-current | fbc canonical Team135773058570 и все4 frontend shards PASS. | Полный workspace typecheck, исходные typed-lint scopes, Runtime/Team contracts и Team UI завершены. Прежние локальные exit137 и scoped TS7 сохранены отдельно. Следующий изменённый source требует собственных gates. | root |
 | E1-Other | Cross-team33 и Darwin pending-open Quit PASS. Active Quit33 не достигнут: исходная180s launch setup истекла с custody-unresolved. Installer/attachments queued. | Active probe ранее завершён; launch started с14.810s оставшегося original probe lifetime, это не доказанная первопричина. App exit0/group empty, Host не наблюдён. Сохранить исходные сценарии, deadlines и UNKNOWN; нужны новые actual results. | root |
-| Delivery | fbc77ea6 опубликован в1192; новый проверенный срез опирается на этот parent. На18:52 все43 inline threads resolved, formal approval не заявляется. | Публикация каждого source с expected SHA; затем обычный current-source CI и исправление доказанных причин. Observer один, чтения не чаще5min; никаких ручных rerun/dispatch/cancel. Ready/parent merge имеют отдельно описанный конфликт автоматического real-provider execution; independent Draft-safe work продолжается. | root |
+| Delivery | a81340c опубликован в1192 с exact25path verification; срез этой ревизии опирается на него. На последней проверке все43 baseline inline threads resolved, formal approval не заявляется. | Публикация каждого source с expected SHA; затем обычный current-source CI и исправление доказанных причин. Observer один, чтения не чаще5min; никаких ручных rerun/dispatch/cancel. Ready/parent merge имеют отдельно описанный конфликт автоматического real-provider execution; independent Draft-safe work продолжается. | root |
 
 ## Что уже реализовано и повторно не разрабатывается
 

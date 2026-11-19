@@ -150,6 +150,7 @@ export function isLegacySavedTeamProductRecords(
       !timestamp(meta.createdAt) ||
       !Object.entries(meta).every(([key, item]) => {
         if (key === 'version') return item === 1;
+        if (key === 'runtimeSelectionVersion') return item === 1;
         if (key === 'createdAt') return timestamp(item);
         if (metaText.has(key)) return text(item);
         if (metaBooleans.has(key)) return typeof item === 'boolean';

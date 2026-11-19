@@ -14,6 +14,9 @@ import { withTeamLaunchStatePublicationLock } from '@main/services/team/TeamLaun
 import { rosterSettings } from '../../adapters/rosterValues';
 import { captureConfiguredHostTeamDraft } from '../../application/createConfiguredHostTeam';
 
+import { rememberLegacyStoppedSourceBoundary } from './legacyStoppedSourceDiagnostic';
+
+import type { LegacyStoppedSourceDiagnosticBoundary } from './retainedLegacyOpenDiagnosticContract';
 import type {
   SnapshotHeader,
   StoppedTeamSource,
@@ -69,6 +72,7 @@ export interface LegacyStoppedSourceOwners {
 }
 
 const settings = [
+  'runtimeSelectionVersion',
   'cwd',
   'displayName',
   'description',
@@ -99,8 +103,13 @@ const memberSettings = [
   'mcpPolicy',
 ] as const;
 const hash = (value: unknown) => createHash('sha256').update(JSON.stringify(value)).digest('hex');
-const hold = (reason: LegacyStoppedImportReason): never => {
-  throw new LegacyStoppedImportHold(reason);
+const hold = (
+  reason: LegacyStoppedImportReason,
+  boundary?: LegacyStoppedSourceDiagnosticBoundary
+): never => {
+  const error = new LegacyStoppedImportHold(reason);
+  if (boundary !== undefined) rememberLegacyStoppedSourceBoundary(error, boundary);
+  throw error;
 };
 function row(value: unknown): Record<string, unknown> {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return hold('source-unreadable');
@@ -158,6 +167,7 @@ export function createLegacyStoppedTeamSource(
     },
     async describe(): Promise<SnapshotHeader> {
       current();
+      let boundary: LegacyStoppedSourceDiagnosticBoundary = 'config-read';
       try {
         let config: Record<string, unknown> | null = null;
         try {
@@ -165,10 +175,14 @@ export function createLegacyStoppedTeamSource(
         } catch (error) {
           if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
         }
-        const meta = read('team.meta.json'),
-          roster = read('members.meta.json');
+        boundary = 'team-meta-read';
+        const meta = read('team.meta.json');
+        boundary = 'members-meta-read';
+        const roster = read('members.meta.json');
+        boundary = 'private-configuration';
         if ([config, meta, roster].some((value) => privateConfiguration(value)))
           return hold('source-unreadable');
+        boundary = 'record-shape';
         if (
           (config !== null && config.name !== binding.teamName) ||
           meta.version !== 1 ||
@@ -177,6 +191,7 @@ export function createLegacyStoppedTeamSource(
           (config !== null && !Array.isArray(config.members))
         )
           return hold('source-unreadable');
+        boundary = 'lead-roster';
         const rosterMembers = roster.members.map(row);
         const members = rosterMembers.filter((member) => member.removedAt === undefined);
         // Actual save-only output has metadata/roster, but no CLI config or native lead.
@@ -187,6 +202,7 @@ export function createLegacyStoppedTeamSource(
         if (leads.length !== 1 || typeof leads[0].name !== 'string')
           return hold('source-unreadable');
         const leadName = leads[0].name;
+        boundary = 'removed-members';
         const removedMembers = rosterMembers
           .filter((member) => member.removedAt !== undefined)
           .map((member) => {
@@ -205,9 +221,11 @@ export function createLegacyStoppedTeamSource(
               removedAt: new Date(member.removedAt).toISOString(),
             };
           });
+        boundary = 'draft-roster';
         if (config === null && members.some((member) => member.name === leadName))
           return hold('source-unreadable');
         const nonLead = members.filter((member) => member.name !== leadName);
+        boundary = 'saved-settings';
         const draft = captureConfiguredHostTeamDraft(binding.contextId, {
           teamName: binding.teamName,
           ...pick(meta, settings),
@@ -217,17 +235,20 @@ export function createLegacyStoppedTeamSource(
           })),
         });
         const lead = members.find((member) => member.name === leadName) ?? leads[0];
+        boundary = 'native-identity';
         const nativeIdentity = classifyLegacySavedTeamNativeRecords(binding.teamName, {
           config,
           meta,
           roster,
         });
         if (nativeIdentity === 'unknown') return hold('source-unreadable');
+        boundary = 'product-records';
         if (
           nativeIdentity === 'empty' &&
           !isLegacySavedTeamProductRecords(binding.teamName, { config, meta, roster })
         )
           return hold('source-unreadable');
+        boundary = 'owner-facts';
         const facts = {
           runtime: owners.provisioning.readStoppedTeamImportRuntimeFacts(binding.teamName),
           lifecycle: owners.provisioning.readStoppedTeamImportLifecycleFacts(binding.teamName),
@@ -246,10 +267,12 @@ export function createLegacyStoppedTeamSource(
           )
         )
           return hold('owner-active');
+        boundary = 'notification-facts';
         const notifications = await owners.data.readStoppedTeamImportNotificationFacts(
           binding.teamName
         );
         if (!notifications.known || notifications.pending) return hold('delivery-unknown');
+        boundary = 'delivery-outbox';
         try {
           const outbox = JSON.parse(
             new TextDecoder('utf-8', { fatal: true }).decode(
@@ -260,10 +283,13 @@ export function createLegacyStoppedTeamSource(
         } catch (error) {
           if ((error as NodeJS.ErrnoException).code !== 'ENOENT') return hold('delivery-unknown');
         }
+        boundary = 'command-facts';
         const command = await owners.data.readStoppedTeamImportCommandFacts(binding.teamName);
         if (!command.known || command.pending) return hold('command-unknown');
+        boundary = 'launch-state';
         const launch = await owners.launch.readResult(binding.teamName);
         // Exact original owner release is independent of stopped display or PID liveness.
+        boundary = 'native-release';
         const nativeRelease = config ? readLegacyNativeStopRelease(team, binding.teamName) : null;
         if (
           launch.status !== 'absent' ||
@@ -276,6 +302,7 @@ export function createLegacyStoppedTeamSource(
               )))
         )
           return hold('native-custody-unverified');
+        boundary = 'source-roots';
         const gaps: SnapshotHeader['gaps'] = [];
         for (const root of binding.roots) {
           try {
@@ -287,6 +314,7 @@ export function createLegacyStoppedTeamSource(
           }
         }
         current();
+        boundary = 'snapshot-header';
         // Each release derives from the checked owner maps, strict command read and absent native census above.
         const released = 'released' as const;
         return {
@@ -334,8 +362,11 @@ export function createLegacyStoppedTeamSource(
           gaps,
         };
       } catch (error) {
-        if (error instanceof LegacyStoppedImportHold) throw error;
-        return hold('source-unreadable');
+        if (error instanceof LegacyStoppedImportHold) {
+          rememberLegacyStoppedSourceBoundary(error, boundary);
+          throw error;
+        }
+        return hold('source-unreadable', boundary);
       }
     },
   };

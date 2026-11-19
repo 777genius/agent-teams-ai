@@ -37,6 +37,29 @@ export const RETAINED_LEGACY_OPEN_DIAGNOSTIC_CATEGORIES = [
   'unknown',
 ] as const satisfies readonly StoppedImportDiagnosticCategory[];
 export const RETAINED_LEGACY_OPEN_DIAGNOSTIC_OUTCOMES = ['not-dispatched', 'unknown'] as const;
+export const LEGACY_STOPPED_SOURCE_DIAGNOSTIC_BOUNDARIES = [
+  'config-read',
+  'team-meta-read',
+  'members-meta-read',
+  'private-configuration',
+  'record-shape',
+  'lead-roster',
+  'removed-members',
+  'draft-roster',
+  'saved-settings',
+  'native-identity',
+  'product-records',
+  'owner-facts',
+  'notification-facts',
+  'delivery-outbox',
+  'command-facts',
+  'launch-state',
+  'native-release',
+  'source-roots',
+  'snapshot-header',
+] as const;
+export type LegacyStoppedSourceDiagnosticBoundary =
+  (typeof LEGACY_STOPPED_SOURCE_DIAGNOSTIC_BOUNDARIES)[number];
 
 export type RetainedLegacyOpenDiagnosticPhase =
   (typeof RETAINED_LEGACY_OPEN_DIAGNOSTIC_PHASES)[number];
@@ -49,4 +72,6 @@ export interface RetainedLegacyOpenDiagnostic {
   phase: RetainedLegacyOpenDiagnosticPhase;
   category: StoppedImportDiagnosticCategory;
   outcome: (typeof RETAINED_LEGACY_OPEN_DIAGNOSTIC_OUTCOMES)[number];
+  /** Original describe refusal only; no raw source data or admission meaning. */
+  sourceBoundary?: LegacyStoppedSourceDiagnosticBoundary;
 }

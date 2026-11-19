@@ -3,6 +3,7 @@ import { createHash } from 'node:crypto';
 import { validateRetainedLegacyLaunchRequest } from '../../application/validateRetainedLegacyLaunchRequest';
 
 import { createStoppedImportDiagnostic } from './createStoppedImportDiagnostic';
+import { readLegacyStoppedSourceBoundary } from './legacyStoppedSourceDiagnostic';
 import { RETAINED_LEGACY_OPEN_DIAGNOSTIC_PHASES } from './retainedLegacyOpenDiagnosticContract';
 
 import type {
@@ -53,12 +54,20 @@ function operationHash(request: unknown, mainPid: number): string | undefined {
 function normalized(
   phase: RetainedLegacyOpenDiagnosticPhase,
   error: unknown
-): Pick<RetainedLegacyOpenDiagnostic, 'phase' | 'category'> {
-  let category: RetainedLegacyOpenDiagnostic['category'] = 'unknown';
+): Pick<RetainedLegacyOpenDiagnostic, 'phase' | 'category' | 'sourceBoundary'> {
+  const classification: Pick<RetainedLegacyOpenDiagnostic, 'category'> = { category: 'unknown' };
   createStoppedImportDiagnostic('desktop', (observation) => {
-    category = observation.category;
+    classification.category = observation.category;
   })('request', error, 'not-dispatched');
-  return { phase, category };
+  const sourceBoundary =
+    phase === 'coordinator-admission' && classification.category === 'source-unreadable'
+      ? readLegacyStoppedSourceBoundary(error)
+      : undefined;
+  return {
+    phase,
+    category: classification.category,
+    ...(sourceBoundary === undefined ? {} : { sourceBoundary }),
+  };
 }
 
 /** One private record after the original open result, with no raw exception retained. */
@@ -71,7 +80,7 @@ export function createRetainedLegacyOpenDiagnostic(
   finish(phase: RetainedLegacyOpenDiagnosticPhase, result: unknown): void;
 } {
   const hash = operationHash(request, mainPid);
-  let first: Pick<RetainedLegacyOpenDiagnostic, 'phase' | 'category'> | undefined;
+  let first: Pick<RetainedLegacyOpenDiagnostic, 'phase' | 'category' | 'sourceBoundary'> | undefined;
   let finished = false;
   return {
     remember(phase, error) {
@@ -96,6 +105,7 @@ export function createRetainedLegacyOpenDiagnostic(
           phase: refusal.phase,
           category: refusal.category,
           outcome,
+          ...(refusal.sourceBoundary === undefined ? {} : { sourceBoundary: refusal.sourceBoundary }),
         });
         void Promise.resolve(sink(observation)).catch(() => {
           // A rejected observer is not an open or cleanup failure.

@@ -7,6 +7,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
 import type { TestContext } from 'node:test';
+import { LEGACY_STOPPED_SOURCE_DIAGNOSTIC_BOUNDARIES } from '../../src/features/agent-backend/main/infrastructure/stopped-import/retainedLegacyOpenDiagnosticContract.ts';
 import {
   projectRetainedOpenDiagnostics,
   readRetainedOpenDiagnostic,
@@ -47,6 +48,25 @@ test('retained open projection preserves the two distinct original call identiti
   assert.deepEqual(projectRetainedOpenDiagnostics({ main: line({ operationHash: operationHash(second) }) }, second), observed);
   assert.deepEqual(projectRetainedOpenDiagnostics({ main: line() }, second),
     { status: 'diagnostic-unknown', reason: 'foreign-record' });
+});
+
+test('retained source boundary is finite and restricted to the original unreadable admission', () => {
+  const original = { phase: 'coordinator-admission', category: 'source-unreadable' };
+  for (const sourceBoundary of LEGACY_STOPPED_SOURCE_DIAGNOSTIC_BOUNDARIES) {
+    assert.deepEqual(projectRetainedOpenDiagnostics({ main: line({ ...original, sourceBoundary }) }, binding),
+      { status: 'observed', ...original, outcome: 'not-dispatched', sourceBoundary });
+  }
+  for (const value of [
+    { ...original, sourceBoundary: 'TEST-private-path' },
+    { ...original, sourceBoundary: null }, { ...original, sourceBoundary: 1 },
+    { ...original, sourceBoundary: 'config-read', phase: 'runtime-capture' },
+    { ...original, sourceBoundary: 'config-read', category: 'native-custody-unverified' },
+    { ...original, sourceBoundary: 'config-read', rawError: 'TEST-private' },
+  ]) {
+    const result = projectRetainedOpenDiagnostics({ main: line(value) }, binding);
+    assert.deepEqual(result, { status: 'diagnostic-unknown', reason: 'invalid-log' });
+    assert.equal(JSON.stringify(result).includes('TEST-private'), false);
+  }
 });
 
 test('retained open projection refuses foreign process hash envelope or platform instead of choosing a record', () => {

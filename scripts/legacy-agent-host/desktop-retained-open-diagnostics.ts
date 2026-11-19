@@ -5,6 +5,7 @@ import { lstat, open, realpath } from 'node:fs/promises';
 import { isAbsolute, join } from 'node:path';
 import { TextDecoder } from 'node:util';
 import {
+  LEGACY_STOPPED_SOURCE_DIAGNOSTIC_BOUNDARIES,
   RETAINED_LEGACY_OPEN_DIAGNOSTIC_CATEGORIES,
   RETAINED_LEGACY_OPEN_DIAGNOSTIC_NAMESPACE,
   RETAINED_LEGACY_OPEN_DIAGNOSTIC_OUTCOMES,
@@ -33,6 +34,7 @@ interface ObservedProjection {
   readonly phase: Phase;
   readonly category: Category;
   readonly outcome: Outcome;
+  readonly sourceBoundary?: (typeof LEGACY_STOPPED_SOURCE_DIAGNOSTIC_BOUNDARIES)[number];
 }
 interface UnknownProjection {
   readonly status: 'diagnostic-unknown';
@@ -141,8 +143,11 @@ function project(input: LogInput, binding: ExpectedBinding): RetainedOpenDiagnos
       if (record.namespace !== RETAINED_LEGACY_OPEN_DIAGNOSTIC_NAMESPACE) continue;
       if (record.level !== 'diagnostic' || record.process !== 'main' || record.platform !== 'linux')
         refuse('foreign-record');
-      const payload = exactObject(parse(record.message), [
+      const parsed = parse(record.message);
+      const sourceBoundary = own(parsed, 'sourceBoundary');
+      const payload = exactObject(parsed, [
         'v', 'mainPid', 'operationHash', 'phase', 'category', 'outcome',
+        ...(sourceBoundary === undefined ? [] : ['sourceBoundary']),
       ]);
       if (JSON.stringify(payload) !== record.message || payload.v !== 1 ||
           !Number.isSafeInteger(payload.mainPid) || Number(payload.mainPid) <= 0 ||
@@ -150,11 +155,15 @@ function project(input: LogInput, binding: ExpectedBinding): RetainedOpenDiagnos
           !oneOf(payload.phase, RETAINED_LEGACY_OPEN_DIAGNOSTIC_PHASES) ||
           !oneOf(payload.category, RETAINED_LEGACY_OPEN_DIAGNOSTIC_CATEGORIES) ||
           !oneOf(payload.outcome, RETAINED_LEGACY_OPEN_DIAGNOSTIC_OUTCOMES)) refuse('invalid-log');
+      if (sourceBoundary !== undefined &&
+          (payload.phase !== 'coordinator-admission' || payload.category !== 'source-unreadable' ||
+           !oneOf(sourceBoundary, LEGACY_STOPPED_SOURCE_DIAGNOSTIC_BOUNDARIES))) refuse('invalid-log');
       if (payload.mainPid !== binding.mainPid || payload.operationHash !== binding.operationHash)
         refuse('foreign-record');
       if (selected) refuse('duplicate-record');
       selected = Object.freeze({ status: 'observed', phase: payload.phase,
-        category: payload.category, outcome: payload.outcome });
+        category: payload.category, outcome: payload.outcome,
+        ...(sourceBoundary === undefined ? {} : { sourceBoundary }) });
     }
   }
   return selected ?? unknown('record-absent');
