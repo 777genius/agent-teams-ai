@@ -78,9 +78,36 @@ async function canonicalProjectPath(value: string): Promise<string> {
 }
 
 /**
+ * Real path of a path that may not exist any more: the deepest existing
+ * ancestor is resolved with the same realpath as canonicalProjectPath (so a
+ * symlinked parent such as /var -> /private/var maps to the stored key) and
+ * the missing tail is appended unchanged. Different missing paths therefore
+ * never collapse, and a dangling link is not followed. Only a missing path
+ * component (ENOENT/ENOTDIR) is tolerated; any other error propagates.
+ */
+async function realpathOfMissingPath(value: string): Promise<string> {
+  const missingTail: string[] = [];
+  let current = path.normalize(value);
+  for (;;) {
+    try {
+      const real = await fs.realpath(current);
+      return missingTail.length > 0 ? path.join(real, ...missingTail.reverse()) : real;
+    } catch (error) {
+      const code = (error as NodeJS.ErrnoException).code;
+      const parent = path.dirname(current);
+      if ((code !== 'ENOENT' && code !== 'ENOTDIR') || parent === current) throw error;
+      missingTail.push(path.basename(current));
+      current = parent;
+    }
+  }
+}
+
+/**
  * Already persisted history must remain addressable after a worktree or
- * project folder is deleted. Only missing paths get a lexical lookup key;
- * new provisioning still requires an existing real directory.
+ * project folder is deleted. A missing path is keyed by the real path of its
+ * deepest existing ancestor plus the missing tail, which is how its key was
+ * stored while it still existed; new provisioning still requires an existing
+ * real directory.
  */
 async function historicalProjectPathKey(value: string): Promise<string> {
   if (typeof value !== 'string' || !path.isAbsolute(value)) {
@@ -95,8 +122,8 @@ async function historicalProjectPathKey(value: string): Promise<string> {
     ) {
       throw error;
     }
-    const normalized = path.normalize(value);
-    return process.platform === 'win32' ? normalized.toLowerCase() : normalized;
+    const resolved = await realpathOfMissingPath(value);
+    return process.platform === 'win32' ? path.normalize(resolved).toLowerCase() : resolved;
   }
 }
 
