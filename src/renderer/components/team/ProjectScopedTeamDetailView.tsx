@@ -13,7 +13,6 @@ import {
 import { useShallow } from 'zustand/react/shallow';
 
 import { TeamDetailView } from './TeamDetailView';
-import { TeamHistoryModePicker } from './TeamHistoryModePicker';
 import { findTeamProjectSelectionTarget, resolveTeamProjectSelection } from './teamProjectSelection';
 import { TeamProvisioningBanner } from './TeamProvisioningBanner';
 
@@ -353,18 +352,11 @@ export const ProjectScopedTeamDetailView = ({
   }
 
   if (context?.state === 'ready') {
+    // The history mode is fixed when the team is created, so a ready team shows
+    // its normal screen with no mode control; the project is in the team header.
     if (context.mode === 'shared') {
       return (
         <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-          <div className="border-b border-border px-4 py-2">
-            <TeamHistoryModePicker
-              teamName={teamName} mode="shared"
-              onChanged={async () => {
-                await useStore.getState().fetchTeams();
-                await refresh(() => activeKeyRef.current === key);
-              }}
-            />
-          </div>
           <div className="flex min-h-0 min-w-0 flex-1">
             <TeamDetailView teamName={teamName} isActive={isActive} isPaneFocused={isPaneFocused} />
           </div>
@@ -373,16 +365,6 @@ export const ProjectScopedTeamDetailView = ({
     }
     return (
       <div className="flex min-h-0 min-w-0 flex-1 flex-col" data-team-name={teamName}>
-        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border px-4 py-2 text-xs text-text-muted">
-          <span>{logicalDisplayName} · {selectedProjectPath}</span>
-          <TeamHistoryModePicker
-            teamName={teamName} mode="per_project"
-            onChanged={async () => {
-                await useStore.getState().fetchTeams();
-                await refresh(() => activeKeyRef.current === key);
-              }}
-          />
-        </div>
         <div className="flex min-h-0 min-w-0 flex-1" data-team-name={context.executionTeamName}>
           <TeamDetailView
             key={context.workContextId}
@@ -401,9 +383,14 @@ export const ProjectScopedTeamDetailView = ({
   if (error) message = error;
   else if (context?.state === 'needs_project') message = t('projectContextView.selectProject');
   else if (context?.state === 'empty') {
-    message = t(awaitingReadyKey === key ? 'projectContextView.pending' : 'projectContextView.empty');
+    message = awaitingReadyKey === key
+      ? t('projectContextView.pending')
+      : t('projectContextView.empty', { team: logicalDisplayName });
   }
   else if (context?.state === 'pending') message = t('projectContextView.pending');
+
+  // A project without history looks like any not-yet-launched team.
+  const showNotLaunched = !error && context?.state === 'empty' && awaitingReadyKey !== key;
 
   const canStart =
     Boolean(selectedProjectPath) &&
@@ -415,33 +402,29 @@ export const ProjectScopedTeamDetailView = ({
 
   return (
     <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-      {context && context.state !== 'redirect' && (
-        <div className="border-b border-border px-4 py-2">
-          <TeamHistoryModePicker
-            teamName={teamName} mode={context.mode}
-            onChanged={async () => {
-                await useStore.getState().fetchTeams();
-                await refresh(() => activeKeyRef.current === key);
-              }}
-          />
-        </div>
-      )}
       {context?.state === 'pending' && (
         <div className="px-4 pt-3">
           <TeamProvisioningBanner teamName={teamName} />
         </div>
       )}
       <div className="flex flex-1 flex-col items-center justify-center gap-3 p-6 text-center">
-      <h2 className="text-base font-semibold">{logicalDisplayName}</h2>
+      <h2 className={showNotLaunched ? 'text-sm font-medium text-text' : 'text-base font-semibold'}>
+        {showNotLaunched ? t('detail.draft.title') : logicalDisplayName}
+      </h2>
       {!(context?.state === 'pending' && provisioningError) && (
-        <p className="max-w-lg text-sm text-text-muted" role={error ? 'alert' : 'status'}>
+        <p className="max-w-md text-xs text-text-secondary" role={error ? 'alert' : 'status'}>
           {message}
         </p>
       )}
       {canStart && (
-        <Button onClick={() => setLaunchDialogOpen(true)} disabled={launching}>
-          {t('projectContextView.start')}
-        </Button>
+        <button
+          type="button"
+          className="mt-1 rounded-md bg-blue-600 px-4 py-1.5 text-xs font-medium text-white transition-colors hover:bg-blue-500 disabled:opacity-50"
+          onClick={() => setLaunchDialogOpen(true)}
+          disabled={launching}
+        >
+          {t('detail.actions.launch')}
+        </button>
       )}
       {error && (
         <Button variant="outline" onClick={() => { void refresh(() => activeKeyRef.current === key); }}>

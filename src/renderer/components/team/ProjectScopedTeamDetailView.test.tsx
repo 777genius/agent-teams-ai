@@ -69,9 +69,6 @@ vi.mock('./TeamDetailView', () => ({
       React.createElement('div', { 'data-section-id': 'kanban' })
     ),
 }));
-vi.mock('./TeamHistoryModePicker', () => ({
-  TeamHistoryModePicker: () => React.createElement('div', { 'data-testid': 'mode-picker' }),
-}));
 vi.mock('./dialogs/LaunchTeamDialog', () => ({
   LaunchTeamDialog: ({
     onLaunch, teamName, defaultProjectPath, projectPermissionTeamName,
@@ -319,6 +316,24 @@ describe('ProjectScopedTeamDetailView project switching', () => {
     expect(host.textContent).not.toContain('projectContextView.empty');
   });
 
+  it('adds no chrome of its own around a ready team (no path bar, no mode control)', async () => {
+    for (const view of [
+      { mode: 'shared', state: 'ready', executionTeamName: 'builders' },
+      native('ptc-a', '/TEST/a'),
+    ]) {
+      getView.mockResolvedValue(view);
+      await act(async () => root.render(
+        React.createElement(ProjectScopedTeamDetailView, { teamName: 'builders' })
+      ));
+      await settle();
+      expect(host.querySelector('[data-team]')).not.toBeNull();
+      expect(host.textContent).toBe('');
+      expect(host.querySelector('button, select, [role="combobox"]')).toBeNull();
+      await act(async () => root.unmount());
+      root = createRoot(host);
+    }
+  });
+
   it('keeps the pre-feature shared team name unchanged', async () => {
     getView.mockResolvedValue({
       mode: 'shared', state: 'ready', executionTeamName: 'builders',
@@ -382,9 +397,13 @@ describe('ProjectScopedTeamDetailView project switching', () => {
     ));
     await settle();
     expect(host.querySelector('[data-team]')).toBeNull();
+    // An empty project reads like any not-yet-launched team: one Launch action,
+    // no destructive action and no history-mode control.
+    expect(host.textContent).toContain('detail.draft.title');
     expect(host.textContent).toContain('projectContextView.empty');
+    expect(host.querySelectorAll('button')).toHaveLength(1);
     const button = host.querySelector('button');
-    expect(button).not.toBeNull();
+    expect(button?.textContent).toBe('detail.actions.launch');
     await act(async () => button?.click());
     await vi.waitFor(() => expect(
       host.querySelector('[data-testid="launch-with-provider"]')
