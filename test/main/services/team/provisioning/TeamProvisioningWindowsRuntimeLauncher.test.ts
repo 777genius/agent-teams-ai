@@ -77,6 +77,23 @@ describe('Windows team runtime Job launcher', () => {
     });
   });
 
+  it('prefers the packaged resources wrapper when a development fallback also exists', () => {
+    const { root, binaryPath, wrapperPath } = sandbox();
+    const resourcesPath = path.join(root, 'packaged-resources');
+    const packagedPath = path.join(resourcesPath, 'runtime', 'teammate-console', 'teammate.exe');
+    fs.mkdirSync(path.dirname(wrapperPath), { recursive: true });
+    fs.mkdirSync(path.dirname(packagedPath), { recursive: true });
+    fs.writeFileSync(wrapperPath, 'dev-wrapper');
+    fs.writeFileSync(packagedPath, 'packaged-wrapper');
+
+    expect(resolveWindowsTeamRuntimeLauncher(binaryPath, {
+      platform: 'win32', resourcesPath, requireWrapper: true,
+    })).toEqual({
+      binaryPath: packagedPath,
+      targetEnv: { AGENT_TEAMS_TEAMMATE_WRAPPER_TARGET: binaryPath },
+    });
+  });
+
   it('preserves non-Windows spawn behavior', () => {
     const { root, binaryPath } = sandbox();
     expect(resolveWindowsTeamRuntimeLauncher(binaryPath, {

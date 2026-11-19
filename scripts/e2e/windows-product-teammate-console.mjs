@@ -736,30 +736,25 @@ try {
   await mainInspector?.close().catch(() => undefined);
   await client?.close().catch(() => undefined);
   let cleanupOk = true;
-  // The original ChildProcess handle stays owned even when the first CIM lookup
-  // fails. Do not abandon a live launcher or delete its profile under Electron.
-  if (app && !appBirth && app.pid) {
+  // When the first CIM read fails, use only the original Node/libuv process
+  // handle. Never authorize a PID-scoped tree kill without verified birth.
+  if (app && !appBirth) {
     if (app.exitCode === null && app.signalCode === null) {
       try {
-        const killed = spawnSync('taskkill.exe', ['/PID', String(app.pid), '/T', '/F'], {
-          windowsHide: true, timeout: 15_000, encoding: 'utf8',
+        const closed = new Promise(resolve => {
+          const timer = setTimeout(() => resolve(false), 10_000);
+          app.once('close', () => { clearTimeout(timer); resolve(true); });
         });
-        if (killed.error || killed.status !== 0)
-          throw new Error('Unidentified owned launcher tree termination failed');
-        const deadline = Date.now() + 10_000;
-        while (app.exitCode === null && app.signalCode === null && Date.now() < deadline)
-          await delay(200);
-        if (app.exitCode === null && app.signalCode === null)
-          throw new Error('Unidentified owned launcher did not settle');
+        const signalled = app.kill('SIGKILL');
+        const retired = await closed;
+        if (!signalled || !retired) throw new Error('Original launcher handle did not retire');
       } catch (error) {
-        app.kill('SIGKILL');
-        cleanupOk = false;
-        process.stderr.write('Owned launcher fallback cleanup failed: ' + String(error) + '\n');
+        process.stderr.write('Owned launcher handle cleanup failed: ' + String(error) + '\n');
       }
     }
-    // Without the original verified birth, descendant cleanup cannot be proven.
-    // Retain the disposable profile instead of removing live/unknown state.
-    if (!mainBirth) cleanupOk = false;
+    // The Electron descendant cannot be proven retired without original birth
+    // evidence. Retain this disposable profile rather than reporting cleanup.
+    cleanupOk = false;
   }
   // The dev launcher can exit before Electron or a native teammate does.
   // Verify each original process birth and command before touching its PID;
