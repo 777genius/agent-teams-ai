@@ -1,8 +1,8 @@
+import { registerFocusedProjectTeam } from '@renderer/store/team/teamViewVisibility';
 import {
   getFocusedVisibleTeamName,
   startViewedTeamNotificationSync,
 } from '@renderer/store/viewedTeamNotificationSync';
-import { registerFocusedProjectTeam } from '@renderer/store/team/teamViewVisibility';
 import { describe, expect, it, vi } from 'vitest';
 
 import type { AppState } from '@renderer/store/types';
