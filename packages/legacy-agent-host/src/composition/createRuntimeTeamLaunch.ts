@@ -79,10 +79,14 @@ export function createRuntimeTeamLaunch(options: {
           assertWriter: options.assertWriter,
           isSealed: options.isSealed,
         });
-        return () => {
+        // Only these original synchronous Team checks share the lock; the
+        // caller's separate launch-store allocation fences stay outside it.
+        const withAuthorityRead = captureTeamAccountRead({ entry,
+          principalId: options.principalId, assertCurrent: options.assertWriter });
+        return () => withAuthorityRead(() => {
           team.owner.assertExecutionAllowed(options.principalId);
           captured();
-        };
+        });
       },
       read(memberId) {
         const entry = entries.find((candidate) => candidate.profile.memberId === memberId);

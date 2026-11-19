@@ -18,13 +18,27 @@ import {
   captureRetainedLegacySourceConfiguration,
   retainedLegacySourceOperationKey,
 } from '../../../src/features/agent-backend/main/infrastructure/RetainedLegacyRuntimeScope';
-import { retainedLegacyAccountPaths } from '../../../src/main/composition/captureDesktopRetainedLegacyRuntime';
+import {
+  captureDesktopRetainedLegacyRuntime,
+  retainedLegacyAccountPaths,
+} from '../../../src/main/composition/captureDesktopRetainedLegacyRuntime';
+import { CodexBinaryResolver } from '../../../src/main/services/infrastructure/codexAppServer';
 import { readGeminiGlobalConfig } from '../../../src/main/services/runtime/geminiRuntimeAuth';
+import { readOriginalRuntimeScope } from '../../../src/main/services/runtime/OriginalRuntimeScope';
+import { ClaudeBinaryResolver } from '../../../src/main/services/team/ClaudeBinaryResolver';
+import {
+  clearTeamControlApiState,
+  writeTeamControlApiState,
+} from '../../../src/main/services/team/TeamControlApiState';
 
 import type { CapturedLegacyStoppedSource } from '../../../src/features/agent-backend/main/infrastructure/stopped-import/createLegacyStoppedTeamSource';
+import type { RetainedLegacyRuntimeOwners } from '../../../src/main/composition/captureDesktopRetainedLegacyRuntime';
 
 const roots: string[] = [];
-const paths = vi.hoisted(() => ({ root: '/TEST-retained-identity-not-initialized' }));
+const paths = vi.hoisted(() => ({
+  root: '/TEST-retained-identity-not-initialized',
+  shell: {} as NodeJS.ProcessEnv,
+}));
 vi.mock('node:os', async (importOriginal) => ({
   ...(await importOriginal<typeof import('node:os')>()),
   homedir: () => paths.root,
@@ -34,7 +48,15 @@ vi.mock('../../../src/main/utils/pathDecoder', async (importOriginal) => ({
   getClaudeBasePath: () => join(paths.root, '.claude'),
   getAppDataPath: () => join(paths.root, 'app'),
 }));
+vi.mock('../../../src/main/utils/shellEnv', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../../src/main/utils/shellEnv')>()),
+  resolveInteractiveShellEnvBestEffort: async () => paths.shell,
+  getAmbientCachedShellEnv: () => paths.shell,
+}));
 afterEach(() => {
+  vi.restoreAllMocks();
+  vi.unstubAllEnvs();
+  paths.shell = {};
   for (const root of roots.splice(0)) rmSync(root, { recursive: true, force: true });
 });
 function fixture() {
@@ -80,7 +102,124 @@ function fixture() {
   };
 }
 
+/** Real scope capture and atomic Main publication; no runtime executable is invoked. */
+async function capturedRuntime(
+  f: ReturnType<typeof fixture>,
+  prepare: RetainedLegacyRuntimeOwners['provisioning']['prepareForProvisioning']
+) {
+  vi.stubEnv('CLAUDE_TEAM_CONTROL_URL', process.env.CLAUDE_TEAM_CONTROL_URL);
+  for (const [key, value] of Object.entries({
+    HOME: f.root,
+    USERPROFILE: f.root,
+    CLAUDE_CONFIG_DIR: join(f.root, '.claude'),
+    CODEX_HOME: join(f.root, '.codex'),
+    XDG_CONFIG_HOME: join(f.root, '.config'),
+    XDG_DATA_HOME: join(f.root, '.local/share'),
+    CLAUDE_MULTIMODEL_OPENCODE_BIN_PATH: f.executable,
+    ANTHROPIC_API_KEY: 'TEST-captured-account',
+  }))
+    vi.stubEnv(key, value);
+  paths.shell = { HOME: f.root, PATH: process.env.PATH };
+  mkdirSync(join(f.root, '.claude'), { recursive: true });
+  const credentials = join(f.root, '.claude', '.credentials.json');
+  writeFileSync(credentials, '{"TEST-account":"original"}');
+  vi.spyOn(ClaudeBinaryResolver, 'resolve').mockResolvedValue(f.executable);
+  vi.spyOn(ClaudeBinaryResolver, 'resolveNative').mockResolvedValue(f.executable);
+  vi.spyOn(CodexBinaryResolver, 'resolve').mockResolvedValue(null);
+  const owners: RetainedLegacyRuntimeOwners = {
+    data: {
+      getSavedRequest: async () => ({ teamName: f.source.teamName, cwd: f.root, members: [] }),
+      replaceMembers: async () => {
+        throw new Error('TEST unexpected roster mutation');
+      },
+      runConfigurationOperation: async (_team, operation) => operation(),
+      invalidateMessageFeed() {},
+      invalidateTeamRuntimeAdvisories() {},
+    },
+    provisioning: {
+      prepareForProvisioning: prepare,
+      launchTeam: async () => {
+        throw new Error('TEST unexpected launch');
+      },
+      readStoppedTeamImportRuntimeFacts: () => ({}),
+      isTeamAlive: () => false,
+      hasProvisioningRun: () => false,
+    },
+  };
+  const runtime = await captureDesktopRetainedLegacyRuntime(f.source, () => true, owners);
+  return {
+    runtime,
+    credentials,
+    prepare: () =>
+      runtime.run({
+        action: 'prepare',
+        scopeId: 'TEST-original-scope',
+        args: [f.root, 'anthropic', ['anthropic'], ['TEST-model'], false, 'compatibility'],
+      }),
+    async close() {
+      try {
+        await runtime.close();
+      } finally {
+        await clearTeamControlApiState();
+      }
+    },
+  };
+}
+
 describe('retained legacy physical source and private account identity', () => {
+  it.each([undefined, 'http://127.0.0.1:4567'])(
+    'keeps the original scope current across Main control publication (initial=%s)',
+    async (initial) => {
+      const f = fixture(),
+        endpoint = 'http://127.0.0.1:4567';
+      vi.stubEnv('CLAUDE_TEAM_CONTROL_URL', initial);
+      const prepare = vi.fn(async () => {
+        await writeTeamControlApiState(endpoint);
+        const scope = readOriginalRuntimeScope();
+        expect(scope?.processEnv.CLAUDE_TEAM_CONTROL_URL).toBe(initial);
+        expect(scope?.processEnv.ANTHROPIC_API_KEY).toBe('TEST-captured-account');
+        expect(Object.isFrozen(scope?.processEnv)).toBe(true);
+        expect(Object.isFrozen(scope?.shellEnv)).toBe(true);
+        return { ready: true, message: 'TEST original preparation completed' };
+      });
+      const captured = await capturedRuntime(f, prepare);
+      try {
+        await expect(captured.prepare()).resolves.toMatchObject({ ready: true });
+        await expect(captured.prepare()).resolves.toMatchObject({ ready: true });
+        expect(prepare).toHaveBeenCalledTimes(2);
+        expect(
+          JSON.parse(readFileSync(join(f.root, '.claude/team-control-api.json'), 'utf8'))
+        ).toMatchObject({ baseUrl: endpoint, pid: process.pid });
+        expect(captured.runtime.assertCurrent).not.toThrow();
+      } finally {
+        await captured.close();
+      }
+    }
+  );
+  it.each(['account', 'credential-file', 'PATH', 'source', 'shell-control'] as const)(
+    'still refuses changed %s before original preparation dispatch',
+    async (change) => {
+      const f = fixture(),
+        prepare = vi.fn(async () => ({ ready: true, message: 'TEST' }));
+      const captured = await capturedRuntime(f, prepare);
+      try {
+        if (change === 'account') vi.stubEnv('ANTHROPIC_API_KEY', 'TEST-replaced-account');
+        if (change === 'credential-file')
+          writeFileSync(captured.credentials, '{"TEST-account":"replaced"}');
+        if (change === 'PATH') vi.stubEnv('PATH', join(f.root, 'TEST-replaced-bin'));
+        if (change === 'source')
+          writeFileSync(join(f.team, 'team.meta.json'), '{"model":"TEST-replaced"}');
+        if (change === 'shell-control')
+          paths.shell.CLAUDE_TEAM_CONTROL_URL = 'http://127.0.0.1:4568';
+        await expect(captured.prepare()).rejects.toThrow(
+          'Original runtime selection is unavailable'
+        );
+        expect(prepare).not.toHaveBeenCalled();
+      } finally {
+        await captured.close();
+      }
+    }
+  );
   it.each(['default-home', 'selected-config'] as const)(
     'rejects a Gemini backend/account edit in the original %s global config',
     async (kind) => {

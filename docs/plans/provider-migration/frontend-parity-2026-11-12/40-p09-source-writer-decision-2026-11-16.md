@@ -85,6 +85,12 @@ baseline failures остаются fatal. Ошибка реально предп
 сохранён. [Evidence source review](evidence/p09-contract-a-review-20261119.json)
 содержит preimages, итоговые hashes, проверки и границы полученного результата.
 
+Первая original Linux-попытка на опубликованном чистом `f6c223c9` завершила plain
+control, но PTRACE_TRACEME вернул EPERM до исходного stop/birth observation.
+Receipt сохраняет INCOMPLETE, original child/group cleanup=true и отсутствие
+исполненных product rows. [Полный receipt и журнал](evidence/p09-contract-a-local-linux-20261119.json)
+не выдаются за A PASS; дальнейшая проверка проходит в существующей CI lane.
+
 Отдельный read-only review встроенных writers подтвердил существующую совместимость
 с A: OpenCode V1 сохраняет проверенные существующие bytes и отказывает перед
 перезаписью несовпадающего destination; V2 CLI/support и Codex устанавливают новую

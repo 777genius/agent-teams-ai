@@ -6,10 +6,47 @@
 writers выбранной ревизии до завершения её использования. [Принятый контракт](40-p09-source-writer-decision-2026-11-16.md)
 зафиксирован. Срез source/native acceptance реализован и прошёл независимый R2;
 [проверки, точные hashes и исправленные замечания](evidence/p09-contract-a-review-20261119.json)
-сохранены отдельно от ещё не полученного native PASS. Независимые source/GUI проверки
-`33ea959ad1b2496ab393e04fa50e610e092224ec` продолжаются штатно. Свежий Windows ARM
-job135707175233 подтвердил native Jobs и final cleanup всех7 HANDLE, но source-A
-readiness не завершилась; последний matching event — catalog before-await.
+сохранены отдельно от ещё не полученного native PASS. На завершившихся source/GUI
+jobs `33ea959ad1b2496ab393e04fa50e610e092224ec` подтверждены новые PASS и точные
+границы оставшихся отказов. В снимке17:55:56UTC running=0, пять jobs queued;
+их очередь не является отказом или PASS. Следующий настоящий source update
+включает A и два независимо проверенных исправления ниже, без ручных CI actions.
+
+**Текущий проверенный срез поверх A:**
+
+- Default launch authority удерживает один исходный Team lock на прежние
+  синхронные execution/control/revision checks. Реальный путь
+  createRuntimeTeamLaunch → startMember → RuntimeOwner.openSession воспроизводил
+  две physical publications; теперь одна, все исходные проверки сохранены.
+  18/18 regressions, TS7 Host build/test types, lint, source guard и R2 PASS.
+- Retained scope больше не принимает публикацию Main-owned
+  `CLAUDE_TEAM_CONTROL_URL` за смену account/runtime. Исключено только это поле
+  из трёх ambient process identity сравнений; frozen child environment,
+  shell/config/account/PATH/executable guards сохранены. Два RED cases через
+  настоящий publisher сменились33/33 PASS; scoped TS7 и R2 PASS.
+
+[Точные diff hashes, RED/GREEN и границы](evidence/parity-retained-authority-fixes-20261119.json)
+и [журналы](evidence/parity-retained-authority-checks-20261119.tar.gz) привязаны к
+четырём изменённым файлам. Windows readiness и original retained Desktop должны
+дать собственный результат; локальный PASS не подменяет эти проверки.
+
+A опубликован на checkpoint `f6c223c9f83224218214e6c79643588a3369e3ba`.
+[Исходная локальная Linux-попытка](evidence/p09-contract-a-local-linux-20261119.json)
+на чистом source и pinned Node24.21.0 завершилась exit1: plain control PASS,
+затем PTRACE_TRACEME вернул EPERM на `trace-initial`. Original children/group
+подтверждённо очищены; до восьми product rows выполнение не дошло. Общий receipt
+INCOMPLETE. Изменения oracle, привилегий, budgets и повторный запуск не применялись;
+native qualification остаётся задачей штатных CI runners.
+
+[Свежий33 Team gate](https://github.com/777genius/agent-teams-ai/actions/runs/44565800673/job/135707276069)
+прошёл полный workspace typecheck, исходные typed-lint scopes, Runtime/Team
+contracts и Team UI. [Taskboard](https://github.com/777genius/agent-teams-ai/actions/runs/44565800673/job/135707275138)
+также PASS. [Точные jobs, artifact digests и Windows ARM audit](evidence/ci33-incremental-20261119.json)
+отделяют эти выполненные результаты от остальных gates. Все4 frontend shards,
+cross-team, три POSIX process architectures и native V2 Linux/Windows x64/ARM64
+также PASS. Darwin V2 Quit во время открытия прошёл original journey и cold
+readback. Retained, Membership, Darwin Review/Resume/active Quit и Windows source
+readiness остаются открыты; их оригинальные failures и cleanup сохранены.
 
 **Полная E2E-приёмка ещё не завершена.** Stop-fix опубликован в
 `960ed53c88e664c45a9fe0cc3d054ea83ae50dd3`. В этом срезе исправлены сохранённые
@@ -58,6 +95,15 @@ source. Success metadata-only packaged workflow7fe с пропущенной м�
 
 ## Доставка и границы
 
+[Проверка маршрута и автоматических запусков](evidence/delivery-route-20261119.json)
+подтвердила отдельную границу доставки: перевод1192 в Ready запускает настоящий
+Codex installer smoke с `--version`; обновление уже Ready1186 выбирает native
+Desktop с настоящими Claude/Codex. Штатного Ready/merge пути, одновременно
+исполняющего эти gates и сохраняющего текущий запрет таких запусков, в workflows
+нет. Перед этим переходом требуется согласовать именно объём автоматических
+native запусков. Это не останавливает независимые исправления, ревью и Draft-safe
+CI. Gates, protection, labels и статусы ради обхода не изменялись.
+
 - App [#1192](https://github.com/777genius/agent-teams-ai/pull/1192) и
   [provider #8](https://github.com/agent-teams-ai/old-provider-implementations/pull/8)
   остаются Draft. Маршрут: **#1192 → #1186 → #982**. Main merge, release,
@@ -101,15 +147,16 @@ resolved; approval review этим не заявляется.
 | --- | --- | --- | --- |
 | E1-Stop / Import | [Original import lifecycle7fe PASS](https://github.com/777genius/agent-teams-ai/actions/runs/44539501369/job/135613921599). | Старый startup отказ664 закрыт этим исходным job. Новый Stop regression из frontend shard2/4 учитывается отдельно ниже; PASS импорта не квалифицирует все Stop paths. | root |
 | E1-Stop / Aggregate | На7fe семь failures launch matrix и один cancellation failure. | Исправлено: source fence передаётся через исходную public Stop chain. Все8 исходных падавших cases PASS, прежние6 WorkSync ordering cases PASS, facade guard8/8 PASS, Fast lint и независимое R2 PASS. Assertions, actions и deadlines не изменены. Это целевые локальные результаты; current source acceptance ещё нужна. | root; parity_review |
-| E1-Retained | На7fe original UI доходит до выбора retained runtime, затем не получает сохранённый prompt. | Исправлены hydration из private owner и начальная папка selector из captured scope.11 выбранных UI cases PASS, включая Host/retained, user edits и late draft; R2 PASS. Нужен исходный Desktop и отдельный native V1/V2 coexistence gate. | root |
-| E1-Add | На7fe Settings command PASS; membership прерван на исчезнувшем metadata child между ps и первым /proc stat. | Исправлено только первое ENOENT не-Host кандидата;10 вариантов PASS, R2 PASS. Исходные required Runtime count/lineage, Host и later disappearance failures сохранены. Нужны Add/Remove/Restore/Stop/cold и membership verifier. | root |
-| E1-Review | На7fe renderer READY; model preflight held. Parent graph verification27.597s оставила около2.4s до исходного30s startup cutoff. | Штатный verifier уже параллелен12 workers. Linux профиль5.345s не воспроизводит Darwin отказ и не доказывает оптимизацию. Timeout/bytes/authority не изменены; нужен исходный Darwin Review PASS. | root |
-| E1-Resume | [Darwin ARM V2 Resume](https://github.com/777genius/agent-teams-ai/actions/runs/44455698034/job/135330056653): `one fresh Team capture`. | Проверенный numeric observation patch опубликован в90b без нового read/await/input/retry. Нужны новая исходная диагностика и успешный Resume; старый отказ произошёл ещё до первого Stop/cold boundary. | pr_graph |
+| E1-Retained | На33 hydration/private-selector waits прошли; metadata effect отсутствовал после собственной публикации Main control URL. | Исправлены три ambient identity сравнения; 33/33 cases, scoped TS7 и независимый R2 PASS. Original33 scope очищен, launch не достигнут. Нужен новый полный original Desktop и native V1/V2 coexistence. | parity_review; root |
+| E1-Add | На33 прежний /proc ENOENT не повторился; Settings PASS, исходный Add Carol остановился на held native model probe. | Exact command связан с trace: native-ready → credential, без attestation/session-create. Inline credential path содержит catalog/connect/readback; существующие данные не отделяют конкретную операцию от currentness refusal. No Carol Runtime allocation. Изменять TTL/guards оснований нет; нужны причина и исходные Add/Remove/Restore/Stop/cold. | delivery_review; root |
+| E1-Review | На33 READY, но Team preflight held до Launch. Native-ready и credential пройдены; после attestation нет session-create. | Граница: attestOpenCodeV2ModelSelection → readiness.observeProvider. Close через1.322s после исходного probe expiry не доказывает первопричину. Original Quit/group/Host absence подтверждены. Нужны обоснованное исправление и исходный Darwin Review PASS без изменения budgets/custody. | parity_review; root |
+| E1-Resume | На33 READY; исходный wait `one original OpenCode preflight command; no mutation retry` истёк до Launch/Stop/cold/Resume. | Numeric observation patch исполнен; receipt и source hashes сохранены. Quit timeout/unconfirmed, app exit0/group empty, Host не наблюдён. Анализировать уже полученные counts/trace, затем пройти исходный Resume; неизвестную custody не считать PASS. | parity_review; root |
 | W1 | [Windows x64 source7fe PASS](https://github.com/777genius/agent-teams-ai/actions/runs/44539500343/job/135613817235); ARM Codex A всё ещё не достигает nativeReady до исходного cutoff. | [Свежий33 ARM](https://github.com/777genius/agent-teams-ai/actions/runs/44565800920/job/135707175233): final cleanup=true, все7 original HANDLE absent; последний event catalog before-await, окончания readiness/Runtime publication нет. На7fe catalog успел завершиться. Provider/scenario clocks имеют разные anchors. Обоснованного source fix не найдено; нужен original ARM PASS без изменения cutoff/currentness/authority. | root; delivery_review |
+| W2 | [Свежий33 Windows x64](https://github.com/777genius/agent-teams-ai/actions/runs/44565800920/job/135707175584): Codex и Claude source A/B PASS; OpenCode A отклонён на probe-expiry,183ms после исходного cutoff. | Все3 original HANDLE absent, final cleanup=true. Default launch authority теперь объединяет прежние синхронные checks под тем же Team lock; RED2/GREEN1 publications,18/18 cases и R2 PASS. Сэкономленные миллисекунды не заявлены; нужен original Windows result с прежним cutoff/actions. | delivery_review; root |
 | P09 | Darwin x64/ARM mutation witness прежней гарантии остаются отрицательными. | A принят. Два раунда плана и независимый R2 source завершены; 8 product-path rows используют настоящий CapturedProcess, отдельный Darwin mmap schedule сохраняет контрпример. TS7 Host build/test types и C compile PASS. Старые45 strict assertion lines сохранены. Нужны native результаты Linux и обеих Darwin architectures на frozen source; прежние outcomes не переклассифицируются. | root; parity_review |
-| D1-current | На7fe compiler-шаги завершались; frontend shards1/2/4 и typed lint FAIL. | Lint исправлен, facade guard8/8 и оба старый/новый OpenCode transfer пути PASS. Passive refusal join перенесён в существующий helper:794 строки вместо812, guard PASS. Full local compiler дважды exit137; scoped TS7 для14 изменённых файлов и transitive imports PASS. Нужен полный current-source workspace gate. | root |
-| E1-Other | На7fe cross-team final reload: Chromium resource failure; installer startup: original ps timeout. Attachments, Resume и Darwin ARM process jobs cancelled без выполнения. | Сохранить исходные сценарии и deadlines; нужны собственные выполненные результаты текущего source. Предшествующие taskboard/review steps и cleanup учитываются отдельно от полного PASS. | root |
-| Delivery | Исходные7fe acceptance workflows содержат перечисленные отказы; текущие33 source jobs в очереди/выполняются, Windows ARM завершён указанным отказом. | Проверять только затронутые сценарии, сохранить обязательные current-head gates. A сначала публикуется отдельной checkpoint branch для локальной frozen-source приёмки без отмены running33 workspace gate; затем входит в тот же PR. После qualification завершить разрешённый PR-маршрут. | root |
+| D1-current | На7fe compiler-шаги завершались; frontend shards1/2/4 и typed lint FAIL. | Полный workspace typecheck и исходные typed-lint scopes в33 Team job135707276069 PASS; все4 frontend shards33 также PASS. Локальные exit137 сохранены отдельно, scoped TS7 не подменяет полный CI результат. Facade guard8/8, оба OpenCode transfer paths и source guard PASS. | root |
+| E1-Other | Cross-team33 и Darwin pending-open Quit PASS. Active Quit33 не достигнут: исходная180s launch setup истекла с custody-unresolved. Installer/attachments queued. | Active probe ранее завершён; launch started с14.810s оставшегося original probe lifetime, это не доказанная первопричина. App exit0/group empty, Host не наблюдён. Сохранить исходные сценарии, deadlines и UNKNOWN; нужны новые actual results. | root |
+| Delivery | Снимок33: Host22success/5failure, process3success/2failure, V2 7success/1failure; running0, fivequeued. | Опубликовать reviewed source поверх checkpointA в1192, дождаться обычного current-source CI, исправлять доказанные причины. Не выполнять ручных rerun/dispatch/cancel. Ready/parent merge имеют отдельно описанный конфликт автоматического real-provider execution; independent Draft-safe work продолжается. | root |
 
 ## Что уже реализовано и повторно не разрабатывается
 

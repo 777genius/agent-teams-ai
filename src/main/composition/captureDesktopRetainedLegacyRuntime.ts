@@ -121,6 +121,13 @@ export function retainedLegacyAccountPaths(env: NodeJS.ProcessEnv, project: stri
   return { files, directories: [join(codex, 'accounts')] };
 }
 
+function readOriginalProcessSelection(): NodeJS.ProcessEnv {
+  // Main publishes this derived endpoint during preparation. Child launches obtain it
+  // from the current control resolver; publication does not change the selected account.
+  const { CLAUDE_TEAM_CONTROL_URL: _controlPublication, ...selection } = process.env;
+  return selection;
+}
+
 /** Captures the ordinary original runtime without replacing the application's selected Host. */
 export async function captureDesktopRetainedLegacyRuntime(
   source: CapturedLegacyStoppedSource,
@@ -141,7 +148,7 @@ export async function captureDesktopRetainedLegacyRuntime(
   const project = resolve(selectedProjectPath ?? saved.cwd);
   const configManager = ConfigManager.getInstance();
   const ambientBefore = JSON.stringify([
-    process.env,
+    readOriginalProcessSelection(),
     configManager.getConfig().runtime,
     configManager.getConfig().providerConnections,
   ]);
@@ -167,7 +174,7 @@ export async function captureDesktopRetainedLegacyRuntime(
   if (
     !binaryPath ||
     JSON.stringify([
-      process.env,
+      readOriginalProcessSelection(),
       configManager.getConfig().runtime,
       configManager.getConfig().providerConnections,
     ]) !== ambientBefore
@@ -176,7 +183,7 @@ export async function captureDesktopRetainedLegacyRuntime(
   const environment = { ...processEnv, ...shellEnv };
   const paths = retainedLegacyAccountPaths(environment, project);
   const readSelection = () => ({
-    process: process.env,
+    process: readOriginalProcessSelection(),
     shell: getAmbientCachedShellEnv(),
     root: getClaudeBasePath(),
     app: getAppDataPath(),
