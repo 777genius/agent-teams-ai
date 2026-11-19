@@ -196,7 +196,8 @@ export function validateEmulatedSourceRefusal(value: Record<string, unknown>, pe
       const timing = sourceRecord(value.currentCalls);
       assert.ok(timing && typeof timing === 'object' && !Array.isArray(timing) && [Object.prototype, null].includes(Object.getPrototypeOf(timing)));
       assert.ok(Object.getOwnPropertySymbols(timing).length === 0 && Object.values(Object.getOwnPropertyDescriptors(timing)).every(row => 'value' in row));
-      assert.deepEqual(Object.keys(timing).sort(), ['count', 'lastMs', 'maxMs', 'totalMs', 'truncated', ...(Object.hasOwn(timing, 'regions') ? ['regions'] : [])].sort());
+      assert.deepEqual(Object.keys(timing).sort(), ['count', 'lastMs', 'maxMs', 'totalMs', 'truncated',
+        ...['regions', 'namespace'].filter(key => Object.hasOwn(timing, key))].sort());
       assert.ok(clock(timing.count) && (timing.count as number) <= 4096 && clock(timing.totalMs) && clock(timing.maxMs) && (timing.maxMs as number) <= (timing.totalMs as number));
       assert.equal(typeof timing.truncated, 'boolean');
       assert.ok(timing.lastMs === null || clock(timing.lastMs) && (timing.lastMs as number) <= (timing.maxMs as number));
@@ -215,6 +216,19 @@ export function validateEmulatedSourceRefusal(value: Record<string, unknown>, pe
         for (const name of names) {
           const count = regions[name + 'Count'], milliseconds = regions[name + 'Ms'];
           assert.ok(clock(count) && (count as number) <= (timing.count as number) && clock(milliseconds) && (count !== 0 || milliseconds === 0));
+        }
+      }
+      if (Object.hasOwn(timing, 'namespace')) {
+        const namespace = sourceRecord(timing.namespace);
+        assert.ok(namespace && typeof namespace === 'object' && !Array.isArray(namespace) && [Object.prototype, null].includes(Object.getPrototypeOf(namespace)));
+        assert.ok(Object.getOwnPropertySymbols(namespace).length === 0 && Object.values(Object.getOwnPropertyDescriptors(namespace)).every(row => 'value' in row));
+        assert.deepEqual(Object.keys(namespace).sort(), ['referenceSamples', 'referenceDirectoryPathMs', 'referenceTreeMs', 'accountSamples', 'accountDirectoryPathMs', 'accountTreeMs'].sort());
+        assert.ok(Object.values(namespace).every(clock) && (timing.count as number) > 0 && Object.hasOwn(timing, 'regions'));
+        assert.ok((namespace.referenceSamples as number) <= 4096 && (namespace.accountSamples as number) <= (namespace.referenceSamples as number));
+        for (const part of ['DirectoryPathMs', 'TreeMs']) {
+          assert.ok((namespace['account' + part] as number) <= (namespace['reference' + part] as number));
+          for (const scope of ['reference', 'account'])
+            assert.ok(namespace[scope + 'Samples'] !== 0 || namespace[scope + part] === 0);
         }
       }
     }

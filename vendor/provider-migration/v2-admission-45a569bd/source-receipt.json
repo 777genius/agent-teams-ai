@@ -20,18 +20,20 @@
     "finding": "R2-E458-01",
     "retainedHistoryUrl": "https://github.com/agent-teams-ai/old-provider-implementations/blob/45a569bd70607480e650fb12be5c0cce6884f9da/docs/plans/evidence/v2-admission-lifecycle-20261119.json"
   },
-  "implementation": {
-    "file": "agent-teams-provider-implementations-0.0.0.tgz",
-    "bytes": 191469,
-    "sha256": "ee1ed16c939dbdab4ee6b31941b4bff5d7e1e423224f8ca32e65f3a6ec25aed4",
-    "integrity": "sha512-BB1ZtUjb9qVyhhETHCCrmXJFCjz9qdGCGUEE7V3iUdvh5Gs0MEHc9tMnRppLKlYNrulWgOMs+/XVzgh6mD8brg==",
-    "gitBlob": "dfb85b7e74f8cccad3db5b02aa7ca7035b08108d"
-  },
-  "sessionContracts": {
-    "existingPath": "../v2-media-aad5c2f8/agent-teams-provider-session-contracts-0.0.0.tgz",
-    "bytes": 6230,
-    "sha256": "0ea08bacd3f19a54c065cfaebbe8ae0fb3a8e6770886402f435a96e97867d2bc",
-    "byteIdentical": true
+  "packages": {
+    "agent-teams-provider-implementations-0.0.0.tgz": {
+      "file": "agent-teams-provider-implementations-0.0.0.tgz",
+      "bytes": 191469,
+      "sha256": "ee1ed16c939dbdab4ee6b31941b4bff5d7e1e423224f8ca32e65f3a6ec25aed4",
+      "integrity": "sha512-BB1ZtUjb9qVyhhETHCCrmXJFCjz9qdGCGUEE7V3iUdvh5Gs0MEHc9tMnRppLKlYNrulWgOMs+/XVzgh6mD8brg==",
+      "gitBlob": "dfb85b7e74f8cccad3db5b02aa7ca7035b08108d"
+    },
+    "agent-teams-provider-session-contracts-0.0.0.tgz": {
+      "existingPath": "../v2-media-aad5c2f8/agent-teams-provider-session-contracts-0.0.0.tgz",
+      "bytes": 6230,
+      "sha256": "0ea08bacd3f19a54c065cfaebbe8ae0fb3a8e6770886402f435a96e97867d2bc",
+      "byteIdentical": true
+    }
   },
   "archiveCompatibility": {
     "files": 259,

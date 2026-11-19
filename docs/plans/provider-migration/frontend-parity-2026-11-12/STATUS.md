@@ -2,15 +2,20 @@
 
 Обновлено: **19 ноября 2026**. Единственный текущий рабочий план.
 
-## Текущий срез поверх `63927ae`
+## Текущий срез поверх `d8a0c29`
 
-Этот срез объединяет точное подключение provider `45a569bd` и исправление eager
-загрузки Task Detail. Локальные проверки и независимые R1/R2 завершены; original
-CI получившегося app source остаётся следующим обязательным gate. Родитель
-`63927aecd95c814f66db23d7bd4aef6975110168` опубликован в прежнюю Draft-ветку #1192.
-На его последнем review-read все 43 inline threads закрыты; формальное approval
-не заявляется. Результаты старого source не переносятся на следующий автоматически.
-[Финальное integration review и актуальная сверка threads](evidence/current-slice-integration-review-20261119.json).
+Этот срез исправляет canonical provider receipt и добавляет ограниченные пассивные
+измерения исходных Windows namespace checks. Оба изменения проверены локально и
+прошли независимое R2; обязательная следующая граница — original CI нового source.
+База `d8a0c2965740789008ee0b8965f0889fbff5b712` уже опубликована в прежнюю Draft-ветку
+#1192 и прочитана обратно по всем 27 Git blobs. Она подключила provider `45a569bd`
+и lazy boundary Task Detail поверх `63927aecd95c814f66db23d7bd4aef6975110168`.
+Свежий review-read 23:08 UTC: все 43 inline threads закрыты, 20 review submissions
+имеют COMMENTED, формальное approval не заявляется. Provider#8 не имеет открытых
+threads или review submissions. Результаты старого source автоматически не переносятся.
+[Предыдущее integration review d8](evidence/current-slice-integration-review-20261119.json),
+[свежая сверка threads и маршрута](evidence/delivery-review-d8a0c29-20261119.json)
+и [итоговое review текущих receipt/namespace срезов](evidence/receipt-namespace-integration-review-20261119.json).
 
 - **Provider admission и lifecycle — исправлены и приняты локальным consumer.**
   Provider `45a569bd70607480e650fb12be5c0cce6884f9da` опубликован и прочитан обратно:
@@ -66,9 +71,52 @@ CI получившегося app source остаётся следующим о�
   Launch. App/group/Host завершились, но original probe сохраняет held/resourceHeld=true;
   отсутствие отдельного detached probe child не доказано. Source-разбор сохранён;
   новый provider archive не объявляется исправлением этого native случая.
-  Остальные исходные Desktop/retained lanes ожидаются штатно; manual CI действий нет.
+  Все runs639 теперь terminal: Host 15 PASS / 1 FAIL / 14 natural cancellations;
+  отменённые Desktop/retained lanes не квалифицированы. Source CI — 2 PASS /
+  11 skipped / 2 cancellations. Draft edited metadata-gate отказал отдельно и
+  не является source qualification. Manual CI действий нет.
   [Source jobs, terminal verdicts и bounded audits](evidence/ci-63927ae-incremental-20261119.json),
   [original receipts/logs](evidence/native-source-receipts-63927ae-20261119.tar.gz).
+- **Original appd8 CI — source snapshot 23:15 UTC.** Все три POSIX process jobs PASS.
+  Windows x64 process job135930971049 FAIL в исходном OpenCode V1 TEST A/B пути:
+  Team A выполнил 65 reads за 15021.4266 ms, первый reference/probe-expiry отказ —
+  cutoff +339 ms; held/open-unknown сохранён. Финальный receipt подтверждает
+  cleanup=true и отсутствие всех трёх original HANDLE. Provider45a V2 admission
+  в этом пути не участвует. Source analysis ведёт provider_cut_design; остальные
+  original source runs ожидаются штатно. Windows ARM Codex A также INCOMPLETE:
+  109 reads / 15019.7985 ms, последний nativeReady=true; firstRefusal UNKNOWN/empty.
+  Четыре catalog await intervals — 2425.1/2394.8/2362.5/2357.3 ms. Phase clock
+  имеет другой anchor, поэтому returned true на 14533.5 ms не доказывает in-time
+  consumer readiness. Cleanup=true, семь original HANDLE absent. Native V2 Darwin
+  x64/ARM, Windows x64/ARM, Windows static и HTTP durability PASS; P09 A по 8/8
+  на обоих Darwin подтверждён именно на d8. Linux native lanes ещё queued.
+  Два frontend shards PASS; Fast feedback и retained Desktop queued. Body-only
+  metadata run изолирован. [Source jobs и bounded clock/source audits](evidence/ci-d8a0c29-incremental-20261119.json),
+  [original native receipts](evidence/native-source-receipts-d8a0c29-20261119.tar.gz).
+- **Общий Desktop prerequisite — выявлен и исправлен локально.** На d8 installer
+  job135931029036 завершил Host/controller/MCP builds, затем прежний selected-provider
+  test отказал до UI: новый receipt45a не содержал обязательного `packages`.
+  Те же early failures подтверждены в Resume и Quit-active. Два исходных metadata
+  objects перенесены под canonical archive-basename keys; все значения, archive,
+  manifest, lock, strict decoder и четыре прежних tests сохранены. Тот же набор
+  дал RED 3 PASS / 1 FAIL → GREEN 4/4; original artifact verifier подтвердил выбранный
+  manifest archive и все installed JS bytes. Это producer-only correction, без
+  перепаковки или ослабления admission. Независимое R2 — PASS, findings отсутствуют;
+  original Desktop CI нового source остаётся обязательным. Прежние d8 failures не
+  переименовываются в PASS. [Точный producer-only diff и review](evidence/provider-receipt-schema-correction-20261119.json),
+  [исходный CI log, RED/GREEN и installed verification](evidence/provider-receipt-schema-checks-20261119.tar.gz).
+- **Windows namespace timing — готова диагностика, runtime fix не заявлен.**
+  В исходной синхронной reference/account области измеряются прежние directoryPath
+  и tree calls. Шесть конечных чисел различают reference/account samples и длительности;
+  это не прежние outer Count. После 4096 попыток сбор прекращается; вне активного
+  исходного TEST subscriber clocks не читаются. Ошибки/порядок файловых вызовов,
+  lock scope, authority/currentness reads, deadlines и negative oracles сохранены.
+  Обе строгие allowlists обновлены; TeamOwnerStore добавлен одной записью в прежние
+  source/dist pins. 16/16 focused regressions, canonical scoped TS7, lint и оба
+  architecture/size guards PASS; независимое R2 не нашло замечаний. Эти измерения
+  должны дать следующий original Windows receipt; исходные x64/ARM failures ими
+  не исправлены. [Точные пять файлов, source analysis и R2](evidence/windows-namespace-timing-20261119.json),
+  [frozen diff, configs и raw checks](evidence/windows-namespace-timing-checks-20261119.tar.gz).
 - **Доставка сохраняет выбранный маршрут #1192 → #1186 → #982.** Ready1192
   автоматически выбирает real Codex installer/version; изменение receiving-ветки
   уже Ready1186 выбирает original real Claude/Codex Desktop lifecycle. Этот
@@ -76,6 +124,10 @@ CI получившегося app source остаётся следующим о�
   Independent source/review и текущая разрешённая квалификация продолжаются.
   Метаданные1186 и guards не меняются; main/default merge и Stage2 не выбраны.
   [Точные workflow условия и штатные способы](evidence/delivery-route-63927ae-20261119.json).
+  Свежая read-only подготовка подтвердила: receiving1186 и Stage1 являются предками
+  d8, actual PR event merge tree равен source tree. Конфликтных code changes для
+  этих двух feature edges не требуется. [Ancestry, review и все 14 оставшихся gates](evidence/delivery-review-d8a0c29-20261119.json)
+  сохранены; это не исполненный merge и не разрешение запрещённых CLI запусков.
 
 ## Уже опубликованный срез `63927ae`
 
@@ -402,12 +454,12 @@ Host agenda блокирует review work на lead/user clarification до rev
 boundaries; это не новый aggregate9ec и не Windows PASS. Original 41ab lifecycle
 прошёл публикацию, native Stop/release и последующий импорт.
 
-**Media и provider.** Native TEST receipts030 подтверждают PNG/JPEG/GIF/WebP,
+**Историческая квалификация media/provider до45a.** Native TEST receipts030 подтверждают PNG/JPEG/GIF/WebP,
 точный PDF, нормализацию PNG 4,194,304→159 bytes, public readback, Stop, cold Host
 Resume без model/tool replay и cleanup на пяти платформах. Windows manual/auto
 сохранены отдельно. OpenCode2.1.4 не принимает video; UI не должен обещать его
 отправку. Desktop/vendor-auth/release qualification этими media receipts не
-заявляется. Provider pin `b19494fd` неизменён: implementation archive191145B,
+заявляется. Прежний provider pin `b19494fd`: implementation archive191145B,
 SHA256 `ad05bd8c799c4d2c366a6eab72f937466355a5994eac6bd201ee754217cf5aa7`.
 Canonical provider check ранее PASS; все252 старых compiled outputs и SPI archive
 побайтово сохранены. Audit19nov: текущий archive содержит256 dist outputs плюс
@@ -415,7 +467,7 @@ Canonical provider check ранее PASS; все252 старых compiled output
 В provider#8 нет inline threads или review submissions. Его единственный
 coordination comment указывает на [#11](https://github.com/agent-teams-ai/old-provider-implementations/pull/11),
 уже merged17nov в ветку#8 и включённый в pin `b19494fd`. Это read-only audit,
-не новый build или approval. Новый provider source или перепаковка не нужны.
+не новый build или approval. Текущая qualification45a и correction receipt описаны выше.
 
 ## Восстановленные кандидаты и порядок проверки
 

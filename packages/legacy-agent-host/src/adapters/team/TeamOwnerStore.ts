@@ -12,6 +12,7 @@ import {
 } from 'node:fs';
 import { isAbsolute, join, parse, resolve, sep } from 'node:path';
 
+import { beginModelReadinessNamespaceTiming } from '../../diagnostics/modelReadinessTiming.js';
 import { TeamOwnerError } from '../../team/contracts.js';
 import { digest, safeSegment } from '../../team/identity.js';
 
@@ -97,10 +98,14 @@ export class TeamOwnerStore implements TeamStore {
     };
     const team = join(this.root, 'teams', this.teamName);
     const tasks = join(this.root, 'tasks', this.teamName);
-    directoryPath(this.directory, true);
-    directoryPath(tasks);
-    tree(team);
-    tree(tasks);
+    const timing = beginModelReadinessNamespaceTiming();
+    try {
+      directoryPath(this.directory, true);
+      directoryPath(tasks);
+      timing?.tree();
+      tree(team);
+      tree(tasks);
+    } finally { timing?.finish(); }
   }
 
   read<T>(name: string): T | undefined {

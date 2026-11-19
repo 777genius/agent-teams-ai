@@ -4,7 +4,7 @@ import { mkdtemp, realpath, rm } from 'node:fs/promises';
 import { Server } from 'node:http';
 import { stripTypeScriptTypes } from 'node:module';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { join, posix } from 'node:path';
 import { performance } from 'node:perf_hooks';
 import { PassThrough } from 'node:stream';
 import { test } from 'node:test';
@@ -13,10 +13,11 @@ import { runInNewContext } from 'node:vm';
 import { FileRuntimeStore } from '../dist/adapters/runtime/FileRuntimeStore.js';
 import { createRuntimeMemberProviderFactory } from '../dist/composition/createRuntimeMemberProviderFactory.js';
 import { createTeamHost } from '../dist/composition/TeamHost.js';
-import { beginModelReadinessAuthorityTiming, createModelReadinessTiming } from '../dist/diagnostics/modelReadinessTiming.js';
+import { beginModelReadinessAuthorityTiming, beginModelReadinessNamespaceTiming, createModelReadinessTiming } from '../dist/diagnostics/modelReadinessTiming.js';
 import { RuntimeOwnerError } from '../dist/runtime/contracts.js';
 import { runtimeDigest } from '../dist/runtime/identity.js';
 import { RuntimeOwner } from '../dist/runtime/RuntimeOwner.js';
+import { TeamOwnerError } from '../dist/team/contracts.js';
 
 import type { MemberProvider, MemberProviderContext } from '../dist/adapters/providers/MemberProvider.js';
 import type { MemberEntry } from '../dist/composition/MemberEntry.js';
@@ -38,6 +39,198 @@ function factoryAccountGuard(context: Record<string, unknown>): () => void {
     beginModelReadinessAuthorityTiming, RuntimeOwnerError, defaultAllocation: undefined, ...context,
   }) as () => void;
 }
+
+function originalNamespaceValidator(context: Record<string, unknown>): () => void {
+  const source = readFileSync(new URL('../src/adapters/team/TeamOwnerStore.ts', import.meta.url), 'utf8');
+  const begin = '  private validateNamespace(): void {', end = '\n  read<T>';
+  assert.equal(source.split(begin).length, 2); assert.equal(source.split(end).length, 2);
+  const program = source.slice(source.indexOf(begin), source.indexOf(end)).replace(begin,
+    'function validateNamespace(this: { root: string; directory: string; teamName: string }): void {');
+  return runInNewContext(stripTypeScriptTypes(program) + '\n() => validateNamespace.call(store);', {
+    beginModelReadinessNamespaceTiming, TeamOwnerError, join: posix.join, parse: posix.parse, sep: posix.sep,
+    store: { root: '/TEST', directory: '/TEST/teams/team/.host-owner', teamName: 'team' }, ...context,
+  }) as () => void;
+}
+
+test('original namespace validation preserves every filesystem call and exact throw with enabled, disabled and broken timing', t => {
+  let now = 0, clocks = 0, broken = false;
+  t.mock.method(performance, 'now', () => { clocks++; if (broken) throw Error('TEST diagnostic clock'); return now; });
+  const expected = ['lstat:/TEST', 'lstat:/TEST/teams', 'lstat:/TEST/teams/team', 'lstat:/TEST/teams/team/.host-owner',
+    'lstat:/TEST', 'lstat:/TEST/tasks', 'lstat:/TEST/tasks/team',
+    'readdir:/TEST/teams/team', 'readdir:/TEST/teams/team/child', 'readdir:/TEST/tasks/team'];
+  for (const mode of ['enabled', 'disabled', 'broken']) for (const refusal of ['none', 'directory', 'tree']) {
+    now = 0;
+    const calls: string[] = [], original = Error('TEST exact filesystem failure');
+    const validate = originalNamespaceValidator({
+      lstatSync(target: string) {
+        calls.push('lstat:' + target); now++;
+        if (refusal === 'directory' && calls.length === 2) throw original;
+        return { isDirectory: () => true, isSymbolicLink: () => false };
+      },
+      readdirSync(target: string, options: unknown) {
+        assert.equal((options as { withFileTypes: boolean }).withFileTypes, true);
+        calls.push('readdir:' + target); now += 2;
+        if (refusal === 'tree' && target.endsWith('/child')) throw original;
+        return target === '/TEST/teams/team' ? [{ name: 'child', isSymbolicLink: () => false,
+          isDirectory: () => true, isFile: () => false }] : [];
+      },
+    });
+    const timing = createModelReadinessTiming({ hasSubscribers: mode !== 'disabled' }), sample = timing.begin(true);
+    sample.boundary?.('reference'); broken = mode === 'broken'; const before = clocks;
+    try {
+      if (refusal === 'none') assert.doesNotThrow(validate);
+      else assert.throws(validate, error => error === original);
+    } finally { broken = false; sample.finish(); }
+    assert.deepEqual(calls, expected.slice(0, refusal === 'directory' ? 2 : refusal === 'tree' ? 9 : 10));
+    const result = timing.snapshot();
+    // The original sample finish uses one clock; only the validator's added clocks are counted here.
+    assert.equal(clocks - before - (mode === 'disabled' ? 0 : 1), mode === 'disabled' ? 0 : mode === 'broken' ? 1 : refusal === 'directory' ? 2 : 3);
+    if (mode === 'disabled') assert.equal(result.namespace, undefined);
+    else if (mode === 'broken') { assert.equal(result.namespace!.referenceSamples, 0); assert.equal(result.truncated, true); }
+    else assert.deepEqual(result.namespace, { referenceSamples: 1, referenceDirectoryPathMs: refusal === 'directory' ? 2 : 7,
+      referenceTreeMs: refusal === 'directory' ? 0 : refusal === 'tree' ? 4 : 6,
+      accountSamples: 0, accountDirectoryPathMs: 0, accountTreeMs: 0 });
+  }
+});
+
+test('namespace timing measures only original reference scopes and rounds raw account subsets once', t => {
+  let now = 0, clocks = 0;
+  t.mock.method(performance, 'now', () => { clocks++; return now; });
+  const timing = createModelReadinessTiming({ hasSubscribers: true }), sample = timing.begin(true);
+  const ignored = () => { const before = clocks; assert.equal(beginModelReadinessNamespaceTiming(), undefined); assert.equal(clocks, before); };
+  const observe = () => { const before = clocks, span = beginModelReadinessNamespaceTiming()!;
+    now += 0.3; span.tree(); now += 0.6; span.finish(); assert.equal(clocks - before, 3); };
+  try {
+    ignored(); sample.boundary!('readConsumer'); ignored(); sample.boundary!('reference'); observe();
+    const endAccount = sample.beginAccount!();
+    try { observe(); observe(); } finally { endAccount(); }
+    sample.boundary!('finalAuthority'); ignored();
+  } finally { sample.finish(); }
+  ignored();
+  assert.deepEqual(timing.snapshot().namespace, { referenceSamples: 3, referenceDirectoryPathMs: 1, referenceTreeMs: 2,
+    accountSamples: 2, accountDirectoryPathMs: 1, accountTreeMs: 1 });
+  assert.equal(timing.snapshot().truncated, false);
+  assert.equal(timing.snapshot().regions!.referenceCount, 1, 'validator Samples are not containing outer Count');
+  const projection = timing.snapshot().namespace!; projection.referenceSamples = 99;
+  assert.equal(timing.snapshot().namespace!.referenceSamples, 3, 'snapshots do not expose the accumulator');
+});
+
+test('namespace timing restores nested and disabled scopes after throws and cannot attribute late callbacks to a new owner', t => {
+  let now = 0, clocks = 0;
+  t.mock.method(performance, 'now', () => { clocks++; return now; });
+  const timing = createModelReadinessTiming({ hasSubscribers: true }), innerTiming = createModelReadinessTiming({ hasSubscribers: true });
+  const outer = timing.begin(true); outer.boundary!('reference'); const endOuterAccount = outer.beginAccount!();
+  const span = beginModelReadinessNamespaceTiming()!; now = 1; span.tree(); now = 2;
+  const original = Error('TEST reentrant namespace failure');
+  assert.throws(() => {
+    const inner = innerTiming.begin(true); inner.boundary!('reference'); const endInnerAccount = inner.beginAccount!();
+    try {
+      const nested = beginModelReadinessNamespaceTiming()!; now = 3; nested.tree();
+      try { now = 5; throw original; } finally { nested.finish(); }
+    } finally { endInnerAccount(); inner.finish(); }
+  }, error => error === original);
+  for (const [subscriber, beforeRefusal] of [[false, true], [true, false]]) {
+    const before = clocks, disabled = createModelReadinessTiming({ hasSubscribers: subscriber! }).begin(beforeRefusal!);
+    assert.equal(beginModelReadinessNamespaceTiming(), undefined); disabled.finish(); assert.equal(clocks, before);
+  }
+  now = 6; span.finish();
+  const late = beginModelReadinessNamespaceTiming()!;
+  endOuterAccount(); outer.finish();
+  assert.deepEqual(timing.snapshot().namespace, { referenceSamples: 1, referenceDirectoryPathMs: 1, referenceTreeMs: 5,
+    accountSamples: 1, accountDirectoryPathMs: 1, accountTreeMs: 5 });
+  assert.deepEqual(innerTiming.snapshot().namespace, { referenceSamples: 1, referenceDirectoryPathMs: 1, referenceTreeMs: 2,
+    accountSamples: 1, accountDirectoryPathMs: 1, accountTreeMs: 2 });
+  const nextTiming = createModelReadinessTiming({ hasSubscribers: true }), next = nextTiming.begin(true); next.boundary!('reference');
+  try {
+    const nextSpan = beginModelReadinessNamespaceTiming()!, beforeLate = clocks;
+    late.tree(); late.finish(); late.finish(); outer.finish(); outer.boundary!('reference');
+    assert.equal(clocks, beforeLate, 'closed observations cannot read clocks or replace a live scope');
+    now = 7; nextSpan.tree(); now = 8; nextSpan.finish();
+  } finally { next.finish(); }
+  assert.equal(timing.snapshot().truncated, true);
+  assert.deepEqual(nextTiming.snapshot().namespace, { referenceSamples: 1, referenceDirectoryPathMs: 1, referenceTreeMs: 1,
+    accountSamples: 0, accountDirectoryPathMs: 0, accountTreeMs: 0 });
+  assert.equal(nextTiming.snapshot().truncated, false);
+  const before = clocks; assert.equal(beginModelReadinessNamespaceTiming(), undefined); assert.equal(clocks, before);
+});
+
+test('namespace timing omits invalid and overflowing samples without clamping or replacing original results', t => {
+  let now = 10, invalid: (() => number) | undefined;
+  t.mock.method(performance, 'now', () => invalid ? invalid() : now);
+  for (const stage of ['start', 'tree', 'finish']) for (const value of ['throw', Number.NaN, Infinity, -1, Number.MAX_SAFE_INTEGER + 1, 'backward']) {
+    if (stage === 'start' && value === 'backward') continue;
+    now = 10;
+    const timing = createModelReadinessTiming({ hasSubscribers: true }), sample = timing.begin(true); sample.boundary!('reference');
+    const bad = () => { if (value === 'throw') throw Error('TEST clock'); return value === 'backward' ? 9 : value as number; };
+    try {
+      if (stage === 'start') invalid = bad;
+      const span = beginModelReadinessNamespaceTiming(); invalid = undefined;
+      if (span) {
+        now = 12; if (stage === 'tree') invalid = bad; span.tree(); invalid = undefined;
+        now = 14; if (stage === 'finish') invalid = bad; span.finish(); invalid = undefined;
+      }
+    } finally { invalid = undefined; sample.finish(); }
+    assert.equal(timing.snapshot().truncated, true);
+    assert.deepEqual(timing.snapshot().namespace, { referenceSamples: 0, referenceDirectoryPathMs: 0, referenceTreeMs: 0,
+      accountSamples: 0, accountDirectoryPathMs: 0, accountTreeMs: 0 });
+  }
+  now = 0;
+  const timing = createModelReadinessTiming({ hasSubscribers: true }), sample = timing.begin(true); sample.boundary!('reference');
+  const outer = beginModelReadinessNamespaceTiming()!; now = 1;
+  const nested = beginModelReadinessNamespaceTiming()!; now = Number.MAX_SAFE_INTEGER; nested.finish(); outer.finish();
+  sample.finish();
+  assert.equal(timing.snapshot().truncated, true);
+  assert.equal(timing.snapshot().namespace!.referenceSamples, 1, 'overflow does not discard the earlier valid observation');
+  assert.equal(timing.snapshot().namespace!.referenceDirectoryPathMs, Number.MAX_SAFE_INTEGER - 1);
+});
+
+test('namespace scope restores its enclosing reference when original sample clocks throw at begin, boundary or finish', t => {
+  let now = 0, broken = false, clocks = 0;
+  t.mock.method(performance, 'now', () => { clocks++; if (broken) throw Error('TEST sample clock'); return now; });
+  const timing = createModelReadinessTiming({ hasSubscribers: true }), outer = timing.begin(true);
+  outer.boundary!('reference'); const endAccount = outer.beginAccount!();
+  try {
+    for (const stage of ['begin', 'boundary', 'finish']) {
+      const innerTiming = createModelReadinessTiming({ hasSubscribers: true });
+      broken = stage === 'begin'; const inner = innerTiming.begin(true); broken = false;
+      try {
+        broken = stage === 'boundary'; inner.boundary?.('reference'); broken = false;
+        const nested = beginModelReadinessNamespaceTiming();
+        if (stage === 'begin') assert.equal(nested, undefined, 'failed activation cannot inherit the enclosing recorder');
+        else { nested!.tree(); nested!.finish(); }
+      } finally {
+        broken = stage === 'finish'; inner.finish(); broken = false;
+      }
+      assert.equal(innerTiming.snapshot().truncated, true);
+      const restored = beginModelReadinessNamespaceTiming()!;
+      now++; restored.tree(); now++; restored.finish();
+    }
+  } finally { broken = false; endAccount(); outer.finish(); }
+  assert.deepEqual(timing.snapshot().namespace, { referenceSamples: 3, referenceDirectoryPathMs: 3, referenceTreeMs: 3,
+    accountSamples: 3, accountDirectoryPathMs: 3, accountTreeMs: 3 });
+  assert.equal(timing.snapshot().truncated, false);
+  const before = clocks; assert.equal(beginModelReadinessNamespaceTiming(), undefined); assert.equal(clocks, before);
+});
+
+test('namespace timing caps measurement attempts while original work continues and disabled scopes use zero clocks', t => {
+  let clocks = 0, originalCalls = 0, failNext = false;
+  t.mock.method(performance, 'now', () => { clocks++; if (failNext) { failNext = false; throw Error('TEST clock'); } return 0; });
+  const timing = createModelReadinessTiming({ hasSubscribers: true }), sample = timing.begin(true); sample.boundary!('reference');
+  const before = clocks;
+  for (let attempt = 0; attempt < 4100; attempt++) {
+    failNext = attempt === 0;
+    const span = beginModelReadinessNamespaceTiming(); originalCalls++; span?.tree(); originalCalls++; span?.finish();
+  }
+  assert.equal(clocks - before, 1 + 4095 * 3); assert.equal(originalCalls, 8200);
+  sample.finish();
+  assert.equal(timing.snapshot().namespace!.referenceSamples, 4095); assert.equal(timing.snapshot().truncated, true);
+  const beforeDisabled = clocks;
+  for (const [subscriber, beforeRefusal] of [[false, true], [true, false]]) {
+    const disabled = createModelReadinessTiming({ hasSubscribers: subscriber! }).begin(beforeRefusal!);
+    assert.equal(beginModelReadinessNamespaceTiming(), undefined); disabled.finish();
+  }
+  assert.equal(beginModelReadinessNamespaceTiming(), undefined); assert.equal(clocks, beforeDisabled);
+});
 
 test('original factory account checks preserve order and exact errors through passive observer failures', () => {
   for (const refusal of ['none', 'first-capture', 'provider', 'allocation', 'last-capture']) {
@@ -349,7 +542,7 @@ test('account timing preserves the original 4096 interval bound and ignores sink
   assert.equal(broken.snapshot().regions!.referenceAccountCount, 1);
 });
 
-test('original refusal emitter and collector allow only paired bounded authority timing keys', () => {
+test('original refusal emitter and collector allow only paired bounded authority and namespace timing keys', () => {
   const profile = readFileSync(new URL('../../../tools/owned-process-broker/nativeEmulatedSourceProfile.ts', import.meta.url), 'utf8');
   const reader = readFileSync(new URL('../../../tools/owned-process-broker/nativeEmulatedSourceReadiness.ts', import.meta.url), 'utf8');
   const emitterStart = 'function validateSourceRefusal(value, persisted) {';
@@ -392,6 +585,35 @@ test('original refusal emitter and collector allow only paired bounded authority
     assert.throws(() => validate(JSON.stringify(orphan), false), { code: 'ERR_ASSERTION' });
     const overflow = make(); overflow.currentCalls.count = 4097;
     assert.throws(() => validate(JSON.stringify(overflow), false), { code: 'ERR_ASSERTION' });
+    const withNamespace = () => ({ ...make(), currentCalls: { ...make().currentCalls,
+      namespace: { referenceSamples: 3, referenceDirectoryPathMs: 2, referenceTreeMs: 3,
+        accountSamples: 2, accountDirectoryPathMs: 1, accountTreeMs: 2 } as Record<string, unknown> } });
+    assert.doesNotThrow(() => validate(JSON.stringify(withNamespace()), false), 'nested validator samples can exceed outer count');
+    assert.doesNotThrow(() => validate(JSON.stringify({ ...withNamespace(), ordinal: 1 }), true));
+    for (const key of Object.keys(withNamespace().currentCalls.namespace)) {
+      const partial = withNamespace(); delete partial.currentCalls.namespace[key];
+      assert.throws(() => validate(JSON.stringify(partial), false), { code: 'ERR_ASSERTION' });
+      for (const invalid of [-1, 0.5, Number.NaN, Infinity, Number.MAX_SAFE_INTEGER + 1, 'TEST-private-path', {}]) {
+        const malformed = withNamespace(); malformed.currentCalls.namespace[key] = invalid;
+        assert.throws(() => validate(JSON.stringify(malformed), false), { code: 'ERR_ASSERTION' });
+      }
+    }
+    for (const [key, value] of [['referenceSamples', 4097], ['accountSamples', 4], ['referenceSamples', 0], ['accountSamples', 0],
+      ['accountDirectoryPathMs', 3], ['accountTreeMs', 4], ['privatePath', 'TEST-private-path']] as const) {
+      const malformed = withNamespace(); malformed.currentCalls.namespace[key] = value;
+      assert.throws(() => validate(JSON.stringify(malformed), false), { code: 'ERR_ASSERTION' });
+    }
+    const noRegions = { ...withNamespace().currentCalls } as Record<string, unknown>; delete noRegions.regions;
+    assert.throws(() => validate(JSON.stringify({ ...make(), currentCalls: noRegions }), false), { code: 'ERR_ASSERTION' });
+    const validateMalformed = runInNewContext(program + `\n(raw, kind) => {
+      const value = JSON.parse(raw), namespace = value.currentCalls.namespace;
+      if (kind === 'getter') Object.defineProperty(namespace, 'referenceSamples', { get() { throw Error('TEST getter must not run'); } });
+      else if (kind === 'symbol') namespace[Symbol('TEST')] = 1;
+      else Object.setPrototypeOf(namespace, { TEST: true });
+      ${name}(value, false);
+    };`, { assert }) as (raw: string, kind: string) => void;
+    for (const kind of ['getter', 'symbol', 'prototype'])
+      assert.throws(() => validateMalformed(JSON.stringify(withNamespace()), kind), { code: 'ERR_ASSERTION' });
   }
 });
 

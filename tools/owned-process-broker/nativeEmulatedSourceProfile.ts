@@ -177,7 +177,7 @@ if(argv.length===1&&argv[0]==='--version'){
   const diagnosticPins = ['owned-process/HostWindowsLaunch', 'composition/prepareTeamModelReadiness',
     'diagnostics/modelReadinessTiming', 'composition/createRuntimeMemberProviderFactory',
     'composition/runtimeControlAuthority', 'composition/createRuntimeTeamLaunch', 'composition/captureTeamAccountRead',
-    'team/TeamOwner', 'composition/teamRoster', 'composition/RuntimeTeamCoordinator', 'composition/captureMemberProviderAuthority',
+    'team/TeamOwner', 'adapters/team/TeamOwnerStore', 'composition/teamRoster', 'composition/RuntimeTeamCoordinator', 'composition/captureMemberProviderAuthority',
     'management/ModelProbeOwner', 'composition/projectRuntimeMember', 'adapters/providers/OpenCodeMemberProvider', 'adapters/providers/CodexMemberProvider']
     .flatMap(name => (['src', 'dist'] as const).map(directory => {
       const path = fileURLToPath(new URL(`../../packages/legacy-agent-host/${directory}/${name}${directory === 'src' ? '.ts' : '.js'}`, import.meta.url));
@@ -218,7 +218,8 @@ function validateSourceRefusal(value, persisted) {
       const timing = value.currentCalls;
       assert.ok(timing && typeof timing === 'object' && !Array.isArray(timing) && [Object.prototype, null].includes(Object.getPrototypeOf(timing)));
       assert.ok(Object.getOwnPropertySymbols(timing).length === 0 && Object.values(Object.getOwnPropertyDescriptors(timing)).every(row => 'value' in row));
-      assert.deepEqual(Object.keys(timing).sort(), ['count', 'lastMs', 'maxMs', 'totalMs', 'truncated', ...(Object.hasOwn(timing, 'regions') ? ['regions'] : [])].sort());
+      assert.deepEqual(Object.keys(timing).sort(), ['count', 'lastMs', 'maxMs', 'totalMs', 'truncated',
+        ...['regions', 'namespace'].filter(key => Object.hasOwn(timing, key))].sort());
       assert.ok(clock(timing.count) && timing.count <= 4096 && clock(timing.totalMs) && clock(timing.maxMs) && timing.maxMs <= timing.totalMs);
       assert.equal(typeof timing.truncated, 'boolean');
       assert.ok(timing.lastMs === null || clock(timing.lastMs) && timing.lastMs <= timing.maxMs);
@@ -237,6 +238,19 @@ function validateSourceRefusal(value, persisted) {
         for (const name of names) {
           const count = regions[name + 'Count'], milliseconds = regions[name + 'Ms'];
           assert.ok(clock(count) && count <= timing.count && clock(milliseconds) && (count !== 0 || milliseconds === 0));
+        }
+      }
+      if (Object.hasOwn(timing, 'namespace')) {
+        const namespace = timing.namespace;
+        assert.ok(namespace && typeof namespace === 'object' && !Array.isArray(namespace) && [Object.prototype, null].includes(Object.getPrototypeOf(namespace)));
+        assert.ok(Object.getOwnPropertySymbols(namespace).length === 0 && Object.values(Object.getOwnPropertyDescriptors(namespace)).every(row => 'value' in row));
+        assert.deepEqual(Object.keys(namespace).sort(), ['referenceSamples', 'referenceDirectoryPathMs', 'referenceTreeMs', 'accountSamples', 'accountDirectoryPathMs', 'accountTreeMs'].sort());
+        assert.ok(Object.values(namespace).every(clock) && timing.count > 0 && Object.hasOwn(timing, 'regions'));
+        assert.ok(namespace.referenceSamples <= 4096 && namespace.accountSamples <= namespace.referenceSamples);
+        for (const part of ['DirectoryPathMs', 'TreeMs']) {
+          assert.ok(namespace['account' + part] <= namespace['reference' + part]);
+          for (const scope of ['reference', 'account'])
+            assert.ok(namespace[scope + 'Samples'] !== 0 || namespace[scope + part] === 0);
         }
       }
     }
