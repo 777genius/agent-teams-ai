@@ -9,6 +9,7 @@ import type { RuntimeMemberBinding, TeamMember } from '../team/contracts.js';
 import type { RuntimeOwner } from '../runtime/RuntimeOwner.js';
 import type { TeamLaunchOwner } from '../team-launch/TeamLaunchOwner.js';
 import type { MemberEntry, HostedTeam } from './MemberEntry.js';
+import type { CapturedProviderCurrent } from '../team/TeamOwner.js';
 export interface RetainedLaunchInspection {
   team: HostedTeam;
   launch: TeamLaunchOwner;
@@ -28,10 +29,11 @@ function capturedRosterExpectation(team: HostedTeam, principalId?: string) {
 }
 
 /** Closed provider path; only validated unavailable native lineage may use the old fallback. */
-export function readCapturedProviderAuthority(team: HostedTeam, principalId: string, binding: RuntimeMemberBinding) {
+export function readCapturedProviderAuthority(team: HostedTeam, principalId: string, binding: RuntimeMemberBinding,
+  onCurrent?: CapturedProviderCurrent) {
   const expected = capturedRosterExpectation(team, principalId);
   return team.owner.capturedProviderAuthority(principalId, binding, expected.revision,
-    expected.member, team.definition.savedSettings);
+    expected.member, team.definition.savedSettings, onCurrent);
 }
 
 /** A static native capture must not silently launch old options after a saved roster edit. */

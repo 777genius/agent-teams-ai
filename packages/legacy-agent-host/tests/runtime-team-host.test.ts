@@ -34,6 +34,7 @@ import type { HostCustodyCall, HostCustodyOwner, HostCustodyResult, PendingOwned
 
 import type { TeamHostProfile } from '../dist/composition/TeamHost.js';
 import type { HostedTeam, MemberEntry } from '../dist/composition/MemberEntry.js';
+import type { OpenCodeMemberProfile } from '../dist/composition/runtimeProfile.js';
 import type { OwnerState } from '../dist/team/ownerState.js';
 import type { LocalModelReadinessOrigin, ReadinessSourceReference } from '../dist/management/commandRecords.js';
 import type {
@@ -53,6 +54,7 @@ import type {
   Session,
 } from '@agent-teams/provider-session-contracts';
 import type { TestContext } from 'node:test';
+import { checkDefaultFreshAuthority } from './default-fresh-authority-observer.ts';
 
 const tick = (): Promise<void> => new Promise((resolve) => setImmediate(resolve));
 test('ordinary lead replies replace their original signed conversation row without inbox writes or product feed churn', async t => {
@@ -398,6 +400,52 @@ test('mixed Host boots V2 Session SPI profile without invoking V1 management reg
   await initial.restart();
   assert.equal(initial.opens(), 2, 'a selected cold entry retains source provenance without minting initial admission');
   assert.equal(JSON.stringify(launchStore.read<TeamLaunchRecord>(launchPath)), restoredLaunch);
+});
+
+test('default fresh OpenCode launch retains every provider and allocation observation under one Team fence', async t => {
+  const commandId = 'TEST-default-fresh-authority';
+  let checked = false, failure: unknown;
+  const f = await fixture(t, { independentProviders: true, changeProfile(selected) {
+    const original = selected.runtime!.members[0]!, root = selected.owner.storageRoot;
+    const team = selected.teams[0]!;
+    team.members = team.members.slice(0, 1); team.members[0]!.role = 'lead';
+    const platform = process.platform, arch = process.arch;
+    if ((platform !== 'linux' && platform !== 'darwin' && platform !== 'win32') ||
+        (arch !== 'x64' && arch !== 'arm64')) assert.fail();
+    const environment = { HOME: join(root, 'home'), XDG_CONFIG_HOME: join(root, 'config'),
+      XDG_DATA_HOME: join(root, 'data'), XDG_CACHE_HOME: join(root, 'cache') };
+    for (const directory of Object.values(environment)) mkdirSync(directory);
+    writeFileSync(join(root, 'opencode.json'), JSON.stringify({ provider: { 'TEST-provider': {
+      npm: '@ai-sdk/openai-compatible', options: { apiKey: 'TEST-key', baseURL: 'http://127.0.0.1:9/v1' },
+      models: { 'TEST-model': { name: 'TEST original model' } },
+    } } }), { mode: 0o600 });
+    const member: OpenCodeMemberProfile = {
+      provider: 'opencode' as const, nativeGeneration: 'v2' as const, protocolRevision: '2.1.4' as const,
+      teamId: original.teamId, memberId: original.memberId, principalId: original.principalId,
+      sessionId: original.sessionId, generation: original.generation, configRevision: original.configRevision,
+      cwd: root, model: 'TEST-model', accountBinding: 'TEST-account', executable: original.executable,
+      environment, endpoint: 'http://127.0.0.1:19181', nativeOptions: { providerId: 'TEST-provider', agent: 'build' },
+      limits: { ...original.limits, timeoutMs: 30000 },
+      embedded: { directory: join(root, 'engine'), manifestSha256: 'e'.repeat(64), version: '2.1.4' as const,
+        platform, arch, externalDirectory: 'deny' as const },
+    };
+    member.embedded!.configurationSource = captureOpenCodeConfigurationSource(member).reference;
+    selected.runtime!.members = [member];
+    selected.runtime!.initialModelAdmissions = [captureInitialRuntimeModelAdmission(selected, {
+      method: 'team.launch.start', teamId: member.teamId, commandId, payload: {},
+    })];
+  }, onProvider(context) {
+    try { checkDefaultFreshAuthority(t, context, f.root, f.selected.teams[0]!.binding.teamName, f.selected.principalId); checked = true; }
+    catch (error) { failure = error; throw error; }
+  } });
+  const launch = await f.rpc('team.launch.read', {}) as { value: { launchId: string; rosterRevision: string } };
+  assert.equal((await f.rpc('team.launch.start', {
+    launchId: launch.value.launchId, rosterRevision: launch.value.rosterRevision,
+  }, { commandId }) as { ok: boolean }).ok, true);
+  await eventually(() => checked || failure !== undefined, 'the actual default fresh provider boundary is reached');
+  if (failure) throw failure;
+  assert.equal(checked, true);
+  await eventually(() => f.opens() === 1, 'only the controlled original provider is opened');
 });
 
 test('two captured teams may share an original run ID without sharing launch ownership', async (t) => {

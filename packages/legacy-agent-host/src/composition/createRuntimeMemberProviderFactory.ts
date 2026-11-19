@@ -18,6 +18,7 @@ import { beginModelReadinessAuthorityTiming } from '../diagnostics/modelReadines
 import type { ModelReadinessAuthorityTiming } from '../diagnostics/modelReadinessTiming.js';
 import { runtimeDigest } from '../runtime/identity.js';
 import { captureMemberProviderAuthority } from './captureMemberProviderAuthority.js';
+import { readDefaultFreshAllocationContinuation } from './runtimeControlAuthority.js';
 import { captureNativeInputAuthority } from './captureNativeInputAuthority.js';
 import { createClaudeSubagents } from './createClaudeSubagents.js';
 import { createClaudeCheckpointSource } from './createClaudeCheckpointSource.js';
@@ -43,6 +44,7 @@ import type { RuntimeSourceProcessOrigin } from './runtimeSourceProcessOrigin.js
 import { consumeMemberModelReadiness } from './prepareTeamModelReadiness.js';
 import type { ProviderManagementCoordinator } from './ProviderManagementCoordinator.js';
 import type { TeamLaunchOwner } from '../team-launch/TeamLaunchOwner.js';
+import type { CapturedProviderCurrent } from '../team/TeamOwner.js';
 
 export type MemberInputCapture = (
   requireLead?: boolean
@@ -86,7 +88,7 @@ export function createRuntimeMemberProviderFactory(options: {
   assertWriter(): void;
   beforeTeamAuthority?(entry: MemberEntry): void;
   assertCurrent(entry: MemberEntry): void;
-  assertProviderAuthority?(entry: MemberEntry): 'current' | 'roster-not-applicable';
+  assertProviderAuthority?(entry: MemberEntry, onCurrent?: CapturedProviderCurrent): 'current' | 'roster-not-applicable';
   captureInteractions(entry: MemberEntry): void;
   readRuntime: RuntimeOwner['readCapturedSession'];
   readCheckpoint: RuntimeOwner['readCheckpoint'];
@@ -134,7 +136,8 @@ export function createRuntimeMemberProviderFactory(options: {
           assertAllocation,
           assertWriter: options.assertWriter,
           ...(options.assertProviderAuthority
-            ? { assertProviderAuthority: () => options.assertProviderAuthority!(entry) } : {}),
+            ? { assertProviderAuthority: (onCurrent?: CapturedProviderCurrent) => onCurrent
+              ? options.assertProviderAuthority!(entry, onCurrent) : options.assertProviderAuthority!(entry) } : {}),
           ...(beforeTeamAuthority ? { beforeTeamAuthority: () => beforeTeamAuthority(entry) } : {}),
           assertCurrent: () => options.assertCurrent(entry),
           readRuntime: () => options.readRuntime(entry.binding),
@@ -155,15 +158,34 @@ export function createRuntimeMemberProviderFactory(options: {
             if (entry.team !== team || team.owner !== owner) throw new RuntimeOwnerError('forbidden');
           };
           const authorityTiming: ModelReadinessAuthorityTiming = {};
+          const defaultAllocation = readDefaultFreshAllocationContinuation(assertAllocation, entry);
           const assertCurrent = () => {
             assertCaptured();
+            let active = true, invoked = false;
+            let allocationMs: number | undefined;
             const endProvider = beginModelReadinessAuthorityTiming(authorityTiming, 'provider');
-            try { authority.assertCurrent(); } finally { endProvider?.(); }
-            const endAllocation = beginModelReadinessAuthorityTiming(authorityTiming, 'allocation');
-            try { assertAllocation(); } finally { endAllocation?.(); }
+            const onCurrent: CapturedProviderCurrent | undefined = defaultAllocation ? (owner, binding) => {
+              if (!active || invoked) throw new RuntimeOwnerError('forbidden');
+              invoked = true;
+              const endAllocation = beginModelReadinessAuthorityTiming(authorityTiming, 'allocation');
+              try { defaultAllocation(owner, binding); } finally { allocationMs = endAllocation?.(); }
+            } : undefined;
+            try {
+              if (onCurrent) authority.assertCurrent(onCurrent);
+              else authority.assertCurrent();
+            } finally {
+              active = false;
+              // The provider interval retains the shared unlock, excluding only the original allocation checks.
+              if (invoked) endProvider?.({ nestedAllocationMs: allocationMs });
+              else endProvider?.();
+            }
+            if (!invoked) {
+              const endAllocation = beginModelReadinessAuthorityTiming(authorityTiming, 'allocation');
+              try { assertAllocation(); } finally { endAllocation?.(); }
+            }
             assertCaptured();
           };
-          // Allocation reads its separate launch store; do not enclose it in the Team owner's fence.
+          // Generic allocation may read a separate Launch store; only the nominal default guard joins Team.
           return consumeMemberModelReadiness({ ...(options.modelReadiness ? { management: options.modelReadiness } : {}),
             launch, entry, hostIncarnation: options.hostIncarnation, assertCurrent, authorityTiming });
         })();

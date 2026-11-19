@@ -599,7 +599,7 @@ process.stderr.write('', () => process.exit(1));
     const ordinary = passive.entries.length;
     const beforeBytes = passive.entries.reduce((sum, row) => sum + Buffer.byteLength(JSON.stringify(row)) + 1, 0);
     assert.ok(ordinary < 253, 'closed-row bytes saturate before ordinary count in this capture');
-    assert.ok(beforeBytes > 64 * 1024 - 7 * 513 && beforeBytes <= 64 * 1024 - 6 * 513);
+    assert.ok(beforeBytes > 64 * 1024 - 8 * 513 && beforeBytes <= 64 * 1024 - 7 * 513);
     const terminal = { event: 'metadata-read-failed', atMs: 11, stage: 'admission', reason: 'held',
       elapsedMs: 0, deadlineExpired: true, aborted: null, raw: secret };
     const lateRead = { event: 'read-cut-failed', atMs: 12, stage: 'after-log', reason: 'cleanup_unknown',

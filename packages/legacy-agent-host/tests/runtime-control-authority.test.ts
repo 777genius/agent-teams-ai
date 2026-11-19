@@ -7,9 +7,11 @@ import type { TestContext } from 'node:test';
 import { acquireProfileWriterLease } from '../dist/adapters/profile/ProfileWriterLease.js';
 import { TeamOwnerStore } from '../dist/adapters/team/TeamOwnerStore.js';
 import { createRuntimeTeamLaunch } from '../dist/composition/createRuntimeTeamLaunch.js';
-import { captureRuntimeControlAuthority } from '../dist/composition/runtimeControlAuthority.js';
+import { captureRuntimeControlAuthority, readDefaultFreshAllocationContinuation } from '../dist/composition/runtimeControlAuthority.js';
+import { readCapturedProviderAuthority } from '../dist/composition/teamRoster.js';
 import { runtimeDigest } from '../dist/runtime/identity.js';
 import type { OwnerState } from '../dist/team/ownerState.js';
+import type { TeamLaunchRecord } from '../dist/team-launch/contracts.js';
 import { fixture } from './native-member-actions-fixture.ts';
 
 test('runtime control checks share one real Team lock and reread grant, binding and namespace each time', async (t) => {
@@ -143,7 +145,7 @@ async function defaultLaunch(t: TestContext) {
     const current = retained;
     const prior = captureRuntimeControlAuthority({ entry, principalId: 'profile-admin', assertWriter,
       isSealed: () => sealed });
-    return { ...f, entry, lock, current, dispose,
+    return { ...f, entry, lock, current, dispose, actualLaunch: launch, assertWriter,
       baseline: () => { f.team.owner.assertExecutionAllowed('profile-admin'); prior(); },
       failWriter: (value: Error | undefined) => { writerFailure = value; },
       setSealed: (value: boolean) => { sealed = value; } };
@@ -276,3 +278,146 @@ test('default launch authority still refuses namespace replacement between its o
       observe.measure(f.current);
     } finally { fs.rmSync(changed, { force: true }); f.dispose(); }
   });
+
+test('only the actual default fresh callback retains its original owner, source and binding provenance', async t => {
+  const f = await defaultLaunch(t), observe = observeDefaultAuthority(t, f);
+  const continuation = readDefaultFreshAllocationContinuation(f.current, f.entry);
+  assert.ok(continuation, 'the real plain openSession branch supplies nominal provenance');
+  const originalTeam = f.entry.team, originalOwner = f.team.owner, originalBinding = f.entry.binding;
+  const originalDefinition = f.team.definition, originalConfig = f.entry.config;
+  const selection = { binding: originalBinding, generation: f.entry.profile.generation,
+    configurationDigest: runtimeDigest(f.entry.profile), baseConfigurationDigest: runtimeDigest(f.entry.baseProfile) };
+  const checkpoint = { commandId: 'TEST-original', reference: 'TEST-checkpoint', sourceBinding: originalBinding };
+  const current = () => continuation(originalOwner, originalBinding);
+  try {
+    assert.equal(readDefaultFreshAllocationContinuation(() => f.current(), f.entry), undefined,
+      'an unregistered delegating callback cannot borrow inherited authority');
+    assert.equal(readDefaultFreshAllocationContinuation(Object.assign(() => {}, { entry: f.entry, team: f.team }), f.entry), undefined,
+      'public properties cannot fabricate nominal provenance');
+    const plain = observe.measure(f.current);
+    const arbitraryArgument = observe.measure(() => Reflect.apply(f.current, undefined, [{}]));
+    assert.equal(plain.namespaceReads, 5);
+    assert.equal(arbitraryArgument.namespaceReads, plain.namespaceReads, 'a caller cannot select the private inherited mode');
+    const changed: [string, () => void, () => void][] = [
+      ['entry Team', () => { f.entry.team = { ...originalTeam }; }, () => { f.entry.team = originalTeam; }],
+      ['owner', () => { f.team.owner = Object.create(originalOwner) as typeof originalOwner; }, () => { f.team.owner = originalOwner; }],
+      ['binding', () => { f.entry.binding = { ...originalBinding, generation: 'TEST-replaced' }; }, () => { f.entry.binding = originalBinding; }],
+      ['capture', () => { f.team.capture = { TEST: 'changed-source' }; }, () => { delete f.team.capture; }],
+      ['configuration revision', () => { f.team.configurationRevision = 'TEST-replaced'; }, () => { delete f.team.configurationRevision; }],
+      ['launch', () => { f.team.launchId = 'TEST-replaced'; }, () => { delete f.team.launchId; }],
+      ['definition', () => { f.team.definition = { ...originalDefinition, scope: { ...originalDefinition.scope, runId: 'TEST-replaced' } }; },
+        () => { f.team.definition = originalDefinition; }],
+      ['checkpoint request', () => { f.entry.config = { ...originalConfig, checkpointRef: 'TEST-checkpoint' }; },
+        () => { f.entry.config = originalConfig; }],
+      ['selected restore', () => { f.entry.selection = { ...selection, restore: checkpoint }; },
+        () => { delete f.entry.selection; }],
+      ['checkpoint source', () => { f.entry.selection = { ...selection, checkpointSource: { ...checkpoint,
+        attemptId: 'TEST-attempt', hostIncarnation: 'TEST-host', baseConfigurationDigest: selection.baseConfigurationDigest } }; },
+        () => { delete f.entry.selection; }],
+      ['live roster capture', () => { const hash = runtimeDigest('TEST-live-source'); f.entry.liveRosterCapture = {
+        schemaVersion: 1, commandId: 'TEST-live', requestDigest: hash, sourceCaptureDigest: hash,
+        expectedRevision: hash, launchId: 'TEST-run', sourceCwd: f.root, savedSettings: { cwd: f.root }, leadProvider: 'anthropic',
+        member: { memberId: f.entry.profile.memberId, name: 'alice', role: 'member', settings: {} },
+        templateDigest: hash, previous: null, workspace: f.root,
+        mcpRecipeReference: { memberId: f.entry.profile.memberId, digest: hash }, recipeDigest: hash,
+        configurationDigest: selection.configurationDigest, runtimeGeneration: f.entry.profile.generation,
+      }; }, () => { delete f.entry.liveRosterCapture; }],
+    ];
+    for (const [name, change, restore] of changed) {
+      change();
+      try {
+        const refused = observe.measure(() => assert.throws(current, { code: 'forbidden' }, name));
+        assert.deepEqual(refused.publications, [], name + ' cannot publish any allocation lock');
+        assert.deepEqual(refused.checks, [], name + ' cannot reach execution or control');
+      } finally { restore(); }
+    }
+    const another = readDefaultFreshAllocationContinuation(f.current, { ...f.entry });
+    assert.ok(another, 'known but mismatched provenance must refuse, never become a generic fallback');
+    observe.measure(() => assert.throws(() => another(originalOwner, originalBinding), { code: 'forbidden' }));
+    observe.measure(() => assert.throws(() => continuation(originalOwner, { ...originalBinding, memberId: 'TEST-other' }), { code: 'forbidden' }));
+    const pair = observe.measure(() => assert.equal(readCapturedProviderAuthority(f.team,
+      f.entry.profile.principalId, f.entry.binding, continuation), 'current'));
+    assert.deepEqual(pair.publications, [f.lock]); assert.equal(pair.namespaceReads, 8);
+    assert.equal(pair.tokens.length, 7); assert.equal(new Set(pair.tokens).size, 1);
+    f.entry.selection = selection;
+    try {
+      const ordinary = observe.measure(() => assert.equal(readCapturedProviderAuthority(f.team,
+        f.entry.profile.principalId, f.entry.binding, continuation), 'current'));
+      assert.equal(ordinary.namespaceReads, 8); assert.equal(ordinary.tokens.length, 7);
+      assert.deepEqual(ordinary.publications, [f.lock], 'ordinary launch selection remains eligible');
+    } finally { delete f.entry.selection; }
+  } finally { f.dispose(); }
+});
+
+test('a real shared Team release failure preserves its exact error and cannot admit a later native action', async t => {
+  const f = await defaultLaunch(t), observe = observeDefaultAuthority(t, f);
+  const continuation = readDefaultFreshAllocationContinuation(f.current, f.entry);
+  assert.ok(continuation);
+  const original = Error('TEST original Team release failure'), unlink = fs.unlinkSync;
+  let armed = false, releases = 0, laterActions = 0, allocationCalls = 0;
+  const release = t.mock.method(fs, 'unlinkSync', (...args: Parameters<typeof fs.unlinkSync>) => {
+    const result = unlink(...args);
+    if (armed && args[0] === f.lock) { releases++; throw original; }
+    return result;
+  });
+  syncBuiltinESMExports();
+  try {
+    armed = true;
+    const refused = observe.measure(() => assert.throws(() => {
+      readCapturedProviderAuthority(f.team, f.entry.profile.principalId, f.entry.binding, (owner, binding) => {
+        allocationCalls++; continuation(owner, binding);
+      });
+      laterActions++;
+    }, error => error === original));
+    armed = false;
+    assert.deepEqual(refused.publications, [f.lock]); assert.equal(refused.namespaceReads, 8);
+    assert.equal(refused.tokens.length, 7); assert.equal(allocationCalls, 1);
+    assert.equal(releases, 1); assert.equal(laterActions, 0);
+    assert.equal(fs.existsSync(f.lock), false, 'the fault follows the original physical unlink');
+  } finally { armed = false; release.mock.restore(); syncBuiltinESMExports(); f.dispose(); }
+});
+
+test('the actual selected restore branch keeps its original allocation callback outside the fresh registry', async t => {
+  const f = await defaultLaunch(t), entry = f.entry;
+  let launch: ReturnType<typeof createRuntimeTeamLaunch> | undefined;
+  try {
+    const stopped = Error('TEST stop at original restore boundary');
+    const closed = await f.runtime.stopSession(entry.binding);
+    assert.equal(closed.phase, 'closed'); assert.equal(closed.custody, 'released');
+    const record = f.store.fenced(() => f.store.read<TeamLaunchRecord>(`launches/${runtimeDigest('TEST-run')}.json`)!);
+    const previous = record.definition.members.find(member => member.memberId === entry.profile.memberId)!;
+    const profile = { ...entry.profile, generation: entry.profile.generation + 1 };
+    const selected = f.actualLaunch.selectRestore({ commandId: 'TEST-original-restore', member: { ...previous,
+      binding: { ...entry.binding, generation: 'TEST-selected-restore' }, runtimeGeneration: profile.generation,
+      configurationDigest: runtimeDigest(profile),
+      restore: { commandId: 'TEST-original-restore', reference: 'cp1-' + runtimeDigest('TEST-checkpoint'), sourceBinding: entry.binding },
+    } }, () => {}); // Controlled checkpoint verifier; this test stops before Runtime restore or provider work.
+    assert.ok(selected.binding); assert.ok(selected.restore);
+    entry.binding = selected.binding; entry.delivery = { ...entry.delivery, generation: selected.binding.generation };
+    entry.profile = profile; entry.config = { ...entry.config, generation: profile.generation };
+    entry.selection = { binding: selected.binding, generation: profile.generation,
+      configurationDigest: selected.configurationDigest!, baseConfigurationDigest: selected.baseConfigurationDigest!,
+      restore: selected.restore };
+    let restoreCalls = 0, freshCalls = 0, checked = false, verificationFailure: unknown;
+    t.mock.method(f.runtime, 'restoreSession', async (_input: Parameters<typeof f.runtime.restoreSession>[0], authority?: () => void) => {
+      restoreCalls++;
+      try {
+        assert.ok(authority);
+        assert.equal(readDefaultFreshAllocationContinuation(authority, entry), undefined,
+          'the original restore callback is never marked as the plain fresh branch');
+        authority(); checked = true;
+      } catch (error) { verificationFailure = error; throw error; }
+      throw stopped;
+    });
+    t.mock.method(f.runtime, 'openSession', async () => { freshCalls++; throw Error('TEST unexpected fresh open'); });
+    launch = createRuntimeTeamLaunch({ root: f.root, team: f.team, entries: [...f.entries.values()],
+      principalId: 'profile-admin', hostIncarnation: 'TEST-host', runtime: f.runtime,
+      isCurrent: () => true, isSealed: () => false, assertWriter: f.assertWriter,
+      trackOpening: pending => pending, onProgress() {} });
+    const opening = launch.startMember('A'); assert.ok(opening);
+    await opening; // The existing launch owner deliberately settles failed open attempts without rejection.
+    if (verificationFailure) throw verificationFailure;
+    assert.equal(checked, true); assert.equal(restoreCalls, 1); assert.equal(freshCalls, 0);
+    assert.equal(fs.existsSync(join(f.store.directory, 'authority.lock')), false);
+  } finally { try { launch?.seal(); } finally { f.dispose(); } }
+});

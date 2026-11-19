@@ -114,6 +114,25 @@ Darwin ARM этого fbc run позже штатно cancelled до начал�
 Его новый исходный результат остаётся обязательным. [Terminal delta и новый source CI](evidence/ci-a81340c-incremental-20261119.json)
 сохранены отдельно; ручных отмен или повторных запусков не было.
 
+На `3f78524c84829d6b87025fde5c8fe9d8481a4485` исходный
+[Darwin x64 job135829274690](https://github.com/777genius/agent-teams-ai/actions/runs/44600150583/job/135829274690)
+снова полностью SUCCESS:8/8 A observations PASS, cleanup=true,
+installed/release=false. Strict compiler-default errno13/-67062 и after-check/
+writer-open остаются INCOMPLETE; оба script schedules сохраняют SCRIPT:B
+COUNTEREXAMPLE, все11 strict cleanups подтверждены. Artifact14569535847:
+12170bytes, SHA-256 `9c1efe0bb175f7cdbf1da2ad0c046a6df4fa98860862deea557853cc7b87b409`.
+[Оригинальный receipt](evidence/native-source-receipts-3f78524-20261119.tar.gz)
+и [проверка digest, job и границ](evidence/ci-3f78524-incremental-20261119.json)
+сохранены. На том же source [Linux job135829274828](https://github.com/777genius/agent-teams-ai/actions/runs/44600150583/job/135829274828)
+отказал в отдельном credential cold-intent recovery с cleanup=false, но его
+независимый always-step25 действительно завершил P09 A:8/8 PASS, cleanup=true,
+installed/release=false. Artifact14571633230 имеет SHA-256
+`d7f6d17739108ba8dc9e45f24f2dfac13496ee9e46ba2abf1b151f6f227a591a`;
+полный receipt находится в том же архиве. Успех P09 не отменяет отказ credential
+сценария и не даёт PASS всему job. Darwin ARM ещё queued на снимке20:37:30UTC;
+ожидание не является отказом или квалификацией. Локальная оптимизация Team
+authority не меняет договор A и требует собственного source CI.
+
 Отдельный read-only review встроенных writers подтвердил существующую совместимость
 с A: OpenCode V1 сохраняет проверенные существующие bytes и отказывает перед
 перезаписью несовпадающего destination; V2 CLI/support и Codex устанавливают новую

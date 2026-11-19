@@ -28,12 +28,18 @@ import type { TestContext } from 'node:test';
 
 const diagnosticPrefix = 'legacy-agent-host: runtime-open ';
 
-test('original factory account checks preserve order and exact errors through passive observer failures', () => {
+function factoryAccountGuard(context: Record<string, unknown>): () => void {
   const source = readFileSync(new URL('../src/composition/createRuntimeMemberProviderFactory.ts', import.meta.url), 'utf8');
   const begin = '          const assertCurrent = () => {\n';
-  const end = '\n          // Allocation reads its separate launch store;';
+  const end = '\n          return consumeMemberModelReadiness(';
   assert.equal(source.split(begin).length, 2); assert.equal(source.split(end).length, 2);
   const program = source.slice(source.indexOf(begin), source.indexOf(end)) + '\nassertCurrent;';
+  return runInNewContext(stripTypeScriptTypes(program), {
+    beginModelReadinessAuthorityTiming, RuntimeOwnerError, defaultAllocation: undefined, ...context,
+  }) as () => void;
+}
+
+test('original factory account checks preserve order and exact errors through passive observer failures', () => {
   for (const refusal of ['none', 'first-capture', 'provider', 'allocation', 'last-capture']) {
     for (const observer of ['none', 'getter-throw', 'begin-throw', 'end-throw', 'observed']) {
       const calls: string[] = [], observations: string[] = [], original = Error('TEST original authority failure');
@@ -46,15 +52,18 @@ test('original factory account checks preserve order and exact errors through pa
         return () => { observations.push('end-' + part); if (observer === 'end-throw') throw Error('TEST observer end'); };
       };
       let captures = 0;
-      const current = runInNewContext(program, {
-        authorityTiming: sink, beginModelReadinessAuthorityTiming,
+      const current = factoryAccountGuard({
+        authorityTiming: sink,
         assertCaptured() {
           const phase = ++captures === 1 ? 'first-capture' : 'last-capture';
           calls.push(phase); if (refusal === phase) throw original;
         },
-        authority: { assertCurrent() { calls.push('provider'); if (refusal === 'provider') throw original; } },
+        authority: { assertCurrent() {
+          assert.equal(arguments.length, 0, 'generic authority has no inherited-fence continuation');
+          calls.push('provider'); if (refusal === 'provider') throw original;
+        } },
         assertAllocation() { calls.push('allocation'); if (refusal === 'allocation') throw original; },
-      }) as () => void;
+      });
       if (refusal === 'none') assert.doesNotThrow(current);
       else assert.throws(current, error => error === original);
       const expected = ['first-capture', 'provider', 'allocation', 'last-capture'];
@@ -64,6 +73,121 @@ test('original factory account checks preserve order and exact errors through pa
           .flatMap(part => ['begin-' + part, 'end-' + part]), 'throwing original calls still finish their partial interval');
       }
     }
+  }
+});
+
+test('original factory shares only the successful provider continuation and preserves every refusal through observer failures', () => {
+  const owner = {}, selectedBinding = { memberId: 'TEST-original-member' };
+  for (const refusal of ['none', 'first-capture', 'provider', 'continuation', 'allocation', 'release', 'last-capture']) {
+    for (const observer of ['none', 'getter-throw', 'begin-throw', 'end-throw', 'observed']) {
+      const calls: string[] = [], observations: string[] = [], original = Error('TEST exact original failure');
+      const providerFinishes: { lastCall: string | undefined; nestedAllocationMs: number | undefined }[] = [];
+      const sink: ModelReadinessAuthorityTiming = {};
+      if (observer === 'getter-throw') Object.defineProperty(sink, 'observe', { get() { throw Error('TEST getter'); } });
+      else if (observer !== 'none') sink.observe = part => {
+        observations.push('begin-' + part);
+        if (observer === 'begin-throw') throw Error('TEST begin');
+        return deduction => {
+          observations.push('end-' + part);
+          if (part === 'provider' && calls.includes('continuation'))
+            providerFinishes.push({ lastCall: calls.at(-1), nestedAllocationMs: deduction?.nestedAllocationMs });
+          if (observer === 'end-throw') throw Error('TEST end');
+          return part === 'allocation' ? 5 : 10;
+        };
+      };
+      let captures = 0, laterActions = 0;
+      const assertAllocation = () => { calls.push('allocation'); if (refusal === 'allocation') throw original; };
+      const current = factoryAccountGuard({
+        authorityTiming: sink,
+        assertCaptured() {
+          const phase = ++captures === 1 ? 'first-capture' : 'last-capture';
+          calls.push(phase); if (refusal === phase) throw original;
+        },
+        authority: { assertCurrent(onCurrent: (owner: object, binding: object) => void) {
+          assert.equal(arguments.length, 1);
+          calls.push('provider'); if (refusal === 'provider') throw original;
+          let failed = false, failure: unknown;
+          try { onCurrent(owner, selectedBinding); } catch (error) { failed = true; failure = error; }
+          calls.push('release');
+          if (refusal === 'release') throw original;
+          if (failed) throw failure;
+        } },
+        defaultAllocation(actualOwner: object, actualBinding: object) {
+          calls.push('continuation');
+          assert.equal(actualOwner, owner); assert.equal(actualBinding, selectedBinding);
+          if (refusal === 'continuation') throw original;
+          assertAllocation();
+        },
+        assertAllocation,
+      });
+      const action = () => { current(); laterActions++; };
+      if (refusal === 'none') assert.doesNotThrow(action);
+      else assert.throws(action, error => error === original);
+      const expected = ['first-capture', 'provider', 'continuation', 'allocation', 'release', 'last-capture'];
+      const stopped = refusal === 'none' ? expected : expected.slice(0, expected.indexOf(refusal) + 1);
+      if (refusal === 'continuation' || refusal === 'allocation') stopped.push('release');
+      assert.deepEqual(calls, stopped, 'no ordinary allocation retry follows a shared refusal or failed unlock');
+      assert.equal(laterActions, refusal === 'none' ? 1 : 0);
+      if (observer === 'observed' || observer === 'end-throw') {
+        const observed = calls.includes('provider') ? ['begin-provider'] : [];
+        if (calls.includes('continuation')) observed.push('begin-allocation', 'end-allocation');
+        if (calls.includes('provider')) observed.push('end-provider');
+        assert.deepEqual(observations, observed, 'each throwing partial interval settles exactly once');
+        assert.deepEqual(providerFinishes, calls.includes('continuation')
+          ? [{ lastCall: 'release', nestedAllocationMs: observer === 'observed' ? 5 : undefined }] : [],
+          'shared release precedes provider finish and only the measured allocation interval is deducted');
+      }
+    }
+  }
+});
+
+test('original factory fallback stays outside the provider fence and rejects duplicate or late continuations', () => {
+  const owner = {}, selectedBinding = {};
+  for (const mode of ['fallback', 'duplicate', 'late', 'fallback-error']) {
+    const calls: string[] = [], observations: string[] = [], original = Error('TEST fallback refusal');
+    let retained: ((owner: object, binding: object) => void) | undefined, released = false;
+    const current = factoryAccountGuard({
+      authorityTiming: { observe(part: string) {
+        observations.push('begin-' + part);
+        return (deduction?: { nestedAllocationMs: number | undefined }) => {
+          observations.push('end-' + part + (deduction ? '-nested' : ''));
+          return 1;
+        };
+      } },
+      assertCaptured() { calls.push('capture'); },
+      authority: { assertCurrent(onCurrent: (owner: object, binding: object) => void) {
+        calls.push('provider'); retained = onCurrent;
+        try {
+          if (mode === 'duplicate') { onCurrent(owner, selectedBinding); onCurrent(owner, selectedBinding); }
+        } finally { released = true; calls.push('release'); }
+        if (mode === 'fallback' || mode === 'fallback-error') {
+          calls.push('legacy-fallback');
+          if (mode === 'fallback-error') throw original;
+        }
+      } },
+      defaultAllocation() { assert.equal(released, false); calls.push('inherited-allocation'); },
+      assertAllocation() { assert.equal(released, true); calls.push('ordinary-allocation'); },
+    });
+    if (mode === 'duplicate') {
+      assert.throws(current, { code: 'forbidden' });
+      assert.deepEqual(calls, ['capture', 'provider', 'inherited-allocation', 'release']);
+    } else if (mode === 'fallback-error') {
+      assert.throws(current, error => error === original);
+      assert.deepEqual(calls, ['capture', 'provider', 'release', 'legacy-fallback']);
+    } else {
+      current();
+      assert.deepEqual(calls, ['capture', 'provider', 'release',
+        ...(mode === 'fallback' ? ['legacy-fallback'] : []), 'ordinary-allocation', 'capture']);
+    }
+    assert.deepEqual(observations, mode === 'duplicate'
+      ? ['begin-provider', 'begin-allocation', 'end-allocation', 'end-provider-nested']
+      : mode === 'fallback-error' ? ['begin-provider', 'end-provider']
+        : ['begin-provider', 'end-provider', 'begin-allocation', 'end-allocation']);
+    const beforeLate = [...calls], beforeLateTiming = [...observations];
+    assert.ok(retained);
+    assert.throws(() => retained!(owner, selectedBinding), { code: 'forbidden' });
+    assert.deepEqual(calls, beforeLate, 'retained continuation cannot execute after the original synchronous call');
+    assert.deepEqual(observations, beforeLateTiming, 'late continuation cannot open another diagnostic interval');
   }
 });
 
@@ -104,6 +228,108 @@ test('account timing restores synchronous nested observers and retains throwing 
   assert.equal(afterRefusal.beginAccount, undefined); assert.equal(disabled.beginAccount, undefined);
   assert.equal(clockReads, previousReads, 'no subscriber or a latched refusal adds no diagnostic clocks');
   assert.deepEqual(Object.getOwnPropertyDescriptor(sink, 'observe'), originalDescriptor);
+});
+
+test('shared account timing stays exclusive, includes final release in Provider and uses only four pair clocks', t => {
+  let now = 0, clocks = 0;
+  t.mock.method(performance, 'now', () => { clocks++; return now; });
+  const subscriber = { hasSubscribers: true }, timing = createModelReadinessTiming(subscriber);
+  const sink: ModelReadinessAuthorityTiming = {};
+  const sample = timing.begin(true, sink), endAccount = sample.beginAccount!();
+  const endAuthority = sample.beginAccountAuthority(), beforePair = clocks;
+  const endProvider = beginModelReadinessAuthorityTiming(sink, 'provider'); now += 2;
+  const endAllocation = beginModelReadinessAuthorityTiming(sink, 'allocation'); now += 5;
+  const allocationMs = endAllocation?.();
+  assert.equal(allocationMs, 5);
+  now += 3; // The original shared fence releases after allocation, before Provider finishes.
+  assert.equal(endProvider?.({ nestedAllocationMs: allocationMs }), 10, 'finish returns raw enclosing duration');
+  assert.equal(clocks - beforePair, 4);
+  endAuthority(); endAccount(); sample.finish();
+  const result = timing.snapshot();
+  assert.equal(result.truncated, false);
+  assert.equal(result.regions!.referenceAccountProviderCount, 1);
+  assert.equal(result.regions!.referenceAccountProviderMs, 5);
+  assert.equal(result.regions!.referenceAccountAllocationCount, 1);
+  assert.equal(result.regions!.referenceAccountAllocationMs, 5);
+  assert.equal(result.regions!.referenceAccountAuthorityMs, 10);
+  assert.equal(Object.hasOwn(sink, 'observe'), false);
+  subscriber.hasSubscribers = false;
+  const beforeDisabled = clocks, disabled = timing.begin(true, sink);
+  const disabledProvider = beginModelReadinessAuthorityTiming(sink, 'provider');
+  const disabledAllocation = beginModelReadinessAuthorityTiming(sink, 'allocation');
+  disabledProvider?.({ nestedAllocationMs: disabledAllocation?.() }); disabled.finish();
+  assert.equal(clocks, beforeDisabled, 'disabled nested timing introduces no clocks');
+});
+
+test('shared account timing rounds accumulated raw exclusive intervals once per original account sample', t => {
+  let now = 0;
+  t.mock.method(performance, 'now', () => now);
+  const timing = createModelReadinessTiming({ hasSubscribers: true }), sink: ModelReadinessAuthorityTiming = {};
+  const sample = timing.begin(true, sink), endAccount = sample.beginAccount!();
+  for (let pair = 0; pair < 2; pair++) {
+    const endProvider = beginModelReadinessAuthorityTiming(sink, 'provider'); now += 0.3;
+    const endAllocation = beginModelReadinessAuthorityTiming(sink, 'allocation'); now += 0.6;
+    const allocationMs = endAllocation?.(); now += 0.3;
+    endProvider?.({ nestedAllocationMs: allocationMs });
+  }
+  endAccount(); sample.finish();
+  const result = timing.snapshot();
+  assert.equal(result.truncated, false);
+  assert.equal(result.regions!.referenceAccountProviderCount, 1);
+  assert.equal(result.regions!.referenceAccountProviderMs, 1);
+  assert.equal(result.regions!.referenceAccountAllocationCount, 1);
+  assert.equal(result.regions!.referenceAccountAllocationMs, 1);
+});
+
+test('shared account timing omits an invalid enclosing sample without clamping or hiding allocation observations', t => {
+  let now = 0;
+  t.mock.method(performance, 'now', () => now);
+  for (const nestedAllocationMs of [undefined, -1, Number.NaN, Number.POSITIVE_INFINITY, 11]) {
+    now = 0;
+    const timing = createModelReadinessTiming({ hasSubscribers: true }), sink: ModelReadinessAuthorityTiming = {};
+    const sample = timing.begin(true, sink), endAccount = sample.beginAccount!();
+    const endProvider = beginModelReadinessAuthorityTiming(sink, 'provider'); now = 2;
+    const endAllocation = beginModelReadinessAuthorityTiming(sink, 'allocation'); now = 7;
+    assert.equal(endAllocation?.(), 5); now = 10;
+    assert.doesNotThrow(() => endProvider?.({ nestedAllocationMs }));
+    endAccount(); sample.finish();
+    const result = timing.snapshot();
+    assert.equal(result.truncated, true);
+    assert.equal(result.regions!.referenceAccountProviderCount, 0);
+    assert.equal(result.regions!.referenceAccountProviderMs, 0);
+    assert.equal(result.regions!.referenceAccountAllocationCount, 1);
+    assert.equal(result.regions!.referenceAccountAllocationMs, 5);
+    assert.equal(result.regions!.referenceAccountMs, 10);
+    assert.equal(Object.hasOwn(sink, 'observe'), false);
+  }
+});
+
+test('shared exclusive timing keeps each reentrant account duration and restores the original observer', t => {
+  let now = 0;
+  t.mock.method(performance, 'now', () => now);
+  const timing = createModelReadinessTiming({ hasSubscribers: true });
+  const previous = () => undefined, sink: ModelReadinessAuthorityTiming = { observe: previous };
+  const descriptor = Object.getOwnPropertyDescriptor(sink, 'observe');
+  const outer = timing.begin(true, sink), endOuterAccount = outer.beginAccount!(), outerObserver = sink.observe;
+  const endOuterProvider = beginModelReadinessAuthorityTiming(sink, 'provider'); now = 2;
+  const endOuterAllocation = beginModelReadinessAuthorityTiming(sink, 'allocation'); now = 3;
+  const inner = timing.begin(true, sink), endInnerAccount = inner.beginAccount!();
+  const endInnerProvider = beginModelReadinessAuthorityTiming(sink, 'provider'); now = 5;
+  const endInnerAllocation = beginModelReadinessAuthorityTiming(sink, 'allocation'); now = 8;
+  const innerAllocationMs = endInnerAllocation?.(); now = 9;
+  endInnerProvider?.({ nestedAllocationMs: innerAllocationMs }); endInnerAccount(); inner.finish();
+  assert.equal(sink.observe, outerObserver);
+  now = 10;
+  const outerAllocationMs = endOuterAllocation?.(); now = 14;
+  assert.equal(innerAllocationMs, 3); assert.equal(outerAllocationMs, 8);
+  endOuterProvider?.({ nestedAllocationMs: outerAllocationMs }); endOuterAccount(); outer.finish();
+  assert.deepEqual(Object.getOwnPropertyDescriptor(sink, 'observe'), descriptor);
+  const result = timing.snapshot();
+  assert.equal(result.truncated, false); assert.equal(result.count, 2);
+  assert.equal(result.regions!.referenceAccountProviderCount, 2);
+  assert.equal(result.regions!.referenceAccountProviderMs, 9);
+  assert.equal(result.regions!.referenceAccountAllocationCount, 2);
+  assert.equal(result.regions!.referenceAccountAllocationMs, 11);
 });
 
 test('account timing preserves the original 4096 interval bound and ignores sink setup failure', t => {

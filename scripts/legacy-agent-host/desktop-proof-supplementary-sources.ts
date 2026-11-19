@@ -127,6 +127,7 @@ export const desktopProofSupplementarySources = [
   'packages/legacy-agent-host/src/composition/capturedRuntimeMcpReferences.ts',
   'packages/legacy-agent-host/src/composition/claudeSettingSources.ts',
   'packages/legacy-agent-host/src/composition/createRuntimeTeamLaunch.ts',
+  'packages/legacy-agent-host/src/composition/captureTeamAccountRead.ts',
   'packages/legacy-agent-host/src/composition/executeRuntimeLaunch.ts',
   'packages/legacy-agent-host/src/composition/executeLiveRosterMembership.ts',
   'packages/legacy-agent-host/src/composition/initialRuntimeModelAdmission.ts',

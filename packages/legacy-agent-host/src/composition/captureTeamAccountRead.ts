@@ -7,12 +7,12 @@ export function captureTeamAccountRead(options: {
   entry: MemberEntry;
   principalId: string;
   assertCurrent(): void;
-}): <T>(read: () => T) => T {
+}): <T>(read: () => T, inheritedNamespace?: true) => T {
   const { entry, principalId } = options, team = entry.team, owner = team.owner;
   const assertCaptured = () => {
     if (entry.team !== team || team.owner !== owner) throw new RuntimeOwnerError('forbidden');
   };
-  return read => {
+  return (read, inheritedNamespace) => {
     assertCaptured();
     // Preserve the writer/source prelude before publishing any Team lock.
     options.assertCurrent();
@@ -25,6 +25,6 @@ export function captureTeamAccountRead(options: {
       options.assertCurrent();
       assertCaptured();
       return result;
-    });
+    }, inheritedNamespace);
   };
 }

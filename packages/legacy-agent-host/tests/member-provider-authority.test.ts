@@ -335,7 +335,7 @@ test('only validated legacy roster applicability can fall back after all common 
   const authority = captureMemberProviderAuthority({
     entry, request: entry.config, profileId: 'TEST-profile', hostIncarnation: 'TEST-host',
     assertWriter: writer.assertCurrent,
-    assertProviderAuthority: () => readCapturedProviderAuthority(entry.team, entry.profile.principalId, entry.binding),
+    assertProviderAuthority: onCurrent => readCapturedProviderAuthority(entry.team, entry.profile.principalId, entry.binding, onCurrent),
     assertCurrent() {
       fallbacks++;
       assertCapturedRosterCurrent(entry.team, entry.profile.principalId);
@@ -352,7 +352,7 @@ test('only validated legacy roster applicability can fall back after all common 
     ['malformed roster history', state => { state.rosterCommands = [{ commandId: 'TEST-invalid-roster', principalId: 'human', fingerprint: 'invalid', revision: 'a'.repeat(64) }]; }],
   ];
   try {
-    assert.equal(authority.isCurrent(), true);
+    assert.doesNotThrow(() => authority.assertCurrent(() => assert.fail('legacy fallback cannot invoke a closed-provider continuation')));
     assert.equal(fallbacks, 1, 'the original full fallback still supports this legacy capture');
     for (const [name, mutate] of faults) {
       const changed = structuredClone(original);

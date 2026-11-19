@@ -2,15 +2,25 @@ import { performance } from 'node:perf_hooks';
 
 type AuthorityRegion = 'provider' | 'allocation';
 
+export interface ModelReadinessAuthorityDeduction {
+  nestedAllocationMs: number | undefined;
+}
+
 /** Private observation only; no authority callback or result crosses this sink. */
 export interface ModelReadinessAuthorityTiming {
-  observe?(region: AuthorityRegion): (() => void) | undefined;
+  observe?(region: AuthorityRegion): ((deduction?: ModelReadinessAuthorityDeduction) => number | void) | undefined;
 }
 
 export function beginModelReadinessAuthorityTiming(sink: ModelReadinessAuthorityTiming, region: AuthorityRegion) {
   try {
     const finish = sink.observe?.(region);
-    if (finish) return () => { try { finish(); } catch { /* Observation cannot replace the original result. */ } };
+    if (finish) return (deduction?: ModelReadinessAuthorityDeduction) => {
+      try {
+        const elapsed = deduction === undefined ? finish() : finish(deduction);
+        return typeof elapsed === 'number' ? elapsed : undefined;
+      } catch { /* Observation cannot replace the original result. */ }
+      return undefined;
+    };
   } catch { /* Observation cannot skip the original check. */ }
   return undefined;
 }
@@ -56,14 +66,21 @@ export function createModelReadinessTiming(subscriber: { readonly hasSubscribers
                 const observe = (part: AuthorityRegion) => {
                   let entered: number | undefined;
                   try { entered = performance.now(); } catch { currentCalls.truncated = true; }
-                  return () => {
+                  return (deduction?: ModelReadinessAuthorityDeduction) => {
                     try {
                       if (entered !== undefined) {
                         const elapsed = performance.now() - entered;
-                        if (!Number.isFinite(elapsed) || elapsed < 0) currentCalls.truncated = true;
-                        else authorityMs[part] = (authorityMs[part] ?? 0) + elapsed;
+                        const nested = deduction?.nestedAllocationMs;
+                        if (!Number.isFinite(elapsed) || elapsed < 0 || deduction !== undefined &&
+                          (part !== 'provider' || typeof nested !== 'number' || !Number.isFinite(nested) ||
+                            nested < 0 || nested > elapsed)) currentCalls.truncated = true;
+                        else {
+                          authorityMs[part] = (authorityMs[part] ?? 0) + (elapsed - (nested ?? 0));
+                          return elapsed;
+                        }
                       }
                     } catch { currentCalls.truncated = true; }
+                    return undefined;
                   };
                 };
                 Object.defineProperty(sink, 'observe', { value: observe, configurable: true, writable: true, enumerable: true });

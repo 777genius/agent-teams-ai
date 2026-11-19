@@ -166,7 +166,7 @@ export class RuntimeTeamCoordinator {
       driverFactory: createRuntimeMemberProviderFactory({
         entries: this.entries,
         assertWriter: () => options.assertWriter(),
-        assertProviderAuthority: entry => this.assertProviderAuthority(entry),
+        assertProviderAuthority: (entry, onCurrent) => this.assertProviderAuthority(entry, onCurrent),
         captureProcessOrigin: entry => captureMemberProcessOrigin(options.profile, entry, options.sources),
         storageRoot: options.profile.owner.storageRoot,
         profileId: options.profile.owner.profileId,
@@ -783,13 +783,14 @@ export class RuntimeTeamCoordinator {
     )
       throw new RuntimeOwnerError('forbidden');
   }
-  private assertProviderAuthority(entry: MemberEntry): 'current' | 'roster-not-applicable' {
+  private assertProviderAuthority(entry: MemberEntry,
+    onCurrent?: Parameters<typeof readCapturedProviderAuthority>[3]): 'current' | 'roster-not-applicable' {
     this.options.assertWriter();
     this.captures.assertAvailable(entry.binding.teamId);
     if (this.sealed ||
       (entry.endpointExpiresAtMs !== undefined && Date.now() >= entry.endpointExpiresAtMs))
       throw new RuntimeOwnerError('forbidden');
-    return readCapturedProviderAuthority(entry.team, entry.profile.principalId, entry.binding);
+    return readCapturedProviderAuthority(entry.team, entry.profile.principalId, entry.binding, onCurrent);
   }
   private async closeEndpoint(entry: MemberEntry): Promise<void> {
     entry.endpoint?.revoke();

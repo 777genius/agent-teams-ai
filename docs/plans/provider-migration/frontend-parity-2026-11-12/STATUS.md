@@ -2,7 +2,41 @@
 
 Обновлено: **19 ноября 2026**. Единственный текущий рабочий план.
 
-**Срез этой ревизии поверх `a81340ccc205946548b9e7da1cfefbabc37fb421`:**
+**Срез этой ревизии поверх `3f78524c84829d6b87025fde5c8fe9d8481a4485`:**
+обычный свежий OpenCode launch объединяет provider/allocation checks внутри
+исходного provider Team fence. Физических публикаций две → одна; все восемь
+namespace validations и семь свежих state reads сохранены. Реальный NDJSON
+`team.launch.start → RuntimeOwner.openSession → factory` показал это для всех17
+исходных readiness pairs. Приватная регистрация точного callback связывает его
+с исходными entry/Team/owner/binding/source; currentness не кешируется. Ранние
+отказы провайдера остаются перед его fence. Fallback, restore, Restart/live и
+обычные callbacks сохраняют прежние пути; обычная launch selection допустима.
+Повторный/поздний continuation и продолжение после ошибки unlock запрещены.
+Allocation вычитается из Provider timing до накопления суммы; четыре clock-read
+при включённой диагностике и ноль при отключённой сохранены.
+
+Финальные42 core и8 Host/recovery cases — **50/50 PASS**. Canonical Host build и
+полный Host test types на TS7 PASS; lint и оба архитектурных guard PASS. Первый
+параллельный compiler завершился SIGKILL; ошибки типов и некорректная начальная
+restore-фикстура исправлены до финального полного прохода. Независимые R1/R2
+закрыты. Все16 source/test файлов и девять собранных модулей сверены; native
+src/dist pins дополнены семью исходными модулями, Desktop freeze — одним.
+[Точные изменения и границы](evidence/default-fresh-authority-pair-20261119.json)
+и [RED/GREEN, журналы, compiler configs и review](evidence/default-fresh-authority-pair-checks-20261119.tar.gz)
+сохранены. Успех исходного Windows15s readiness пока не заявляется: его новый
+source CI остаётся обязательным. Во время краткой недоступности среды новые
+коммиты не создавались; после восстановления все16 hashes повторно совпали.
+
+Отдельно исправлена одна устаревшая граница TEST assertion в
+`native-host-close.test.ts`: существующий receiver резервирует семь строк по513
+bytes, поэтому насыщение обычных строк находится в `(65536−8×513,65536−7×513]`.
+Receiver, production limits и остальные проверки не менялись. Исходный конечный
+Node test воспроизвёл RED на старой строке и прошёл **1/1 PASS** после исправления;
+независимый root R2 PASS. [Точная строка, RED/GREEN и review](evidence/passive-diagnostic-byte-bound-20261119.json)
+сохранены. Это семнадцатый source/test файл этой публикации; он не меняет проверенные
+16 файлов основного среза и не считается native приёмкой.
+
+**Опубликованный `3f78524` срез поверх `a81340c`:**
 закрыта доказанная несовместимость текущего Save-only формата. Настоящий
 `createDraftTeamConfig → TeamMetaStore` сохраняет `runtimeSelectionVersion: 1`;
 finite reader теперь принимает только этот существующий числовой литерал и
@@ -23,20 +57,41 @@ source freeze. [Точные два среза и сверка10 файлов](e
 [Save-only RED/GREEN и compiler scope](evidence/saved-draft-format-checks-20261119.tar.gz)
 сохранены. Эти локальные результаты не подменяют original native/GUI приёмку.
 
-**Последний наблюдённый source CI:** наa813 в19:31:02UTC Import Desktop и nativeV2
-static Windows PASS; другие lanes выполняются или queued. Windows x64 source
-OpenCode A INCOMPLETE: original consumer cutoff+15ms, cleanup=true, все3 HANDLE
-absent. Новые23 account intervals содержат provider2128ms/allocation2714ms внутри
-общих authority4847ms; это накопленные вложенные интервалы, не23 callbacks и не
-отдельная задержка2714ms. [Точные jobs, timing и прежний terminal delta](evidence/ci-a81340c-incremental-20261119.json)
-сохранены. После публикации a813 GitHub штатно отменил оставшиеся fbc jobs;
-Darwin ARM P09 не начал работу и не имеет native receipt. Ручных CI действий нет.
+**Последний сохранённый CI на `3f78524`,20:43:05UTC:** Extensions/Import GUI и все четыре
+frontend shards PASS; nativeV2 Darwin x64, Windows x64/ARM, static Windows/Ubuntu,
+SPI instructions и HTTP durability PASS. Linux и Darwin x64 process PASS. Windows x64 source
+OpenCode A остаётся INCOMPLETE: consumer cutoff+33ms, cleanup=true/3 HANDLE absent;
+26 account intervals содержат provider2097ms/allocation2867ms. Windows ARM Codex
+TeamA не подтвердил readiness за исходный срок; cleanup=true/7 HANDLE absent,
+причина не установлена. Darwin Review прошёл app startup и metadata, затем отказал
+на исходном ожидании readiness перед Launch; original probe зафиксировал graph23.345s
+и startup timer abort. Cleanup app0/group empty/Host absent подтверждён; дальнейший
+разбор причины продолжается. Linux credential cold-intent recovery отказал на
+epoch3 close: transport failure, cleanup_unknown, journal held/resourceHeld;
+cleanup=false сохраняется. Независимый always-step P09 Linux в том же job прошёл
+8/8 A с cleanup=true. Это не PASS всего Linux job. Cross-team job подтвердил исходные
+taskBoard/review/notification/crossTeam сценарии, затем получил timeout в
+`Runtime.evaluate`; точный следующий вызов ещё не установлен. Quit не подтверждён,
+listener остаётся, после harness SIGTERM один PID исходной группы остался:
+cleanup debt сохраняется. Это не PASS всего cross-team E2E. [Точные source jobs, receipts
+и ограниченные audits](evidence/ci-3f78524-incremental-20261119.json) сохранены.
+Остальные lanes выполняются или queued; прежние source results не переносятся на
+новую ревизию. Ручных CI действий нет.
+
+[Явная коррекция derived count](evidence/windows-authority-count-correction-20261119.json):
+в default allocation пять namespace validations, а не четыре из первой версии
+timing audit. Исходная регрессия сравнивает baseline/current, оба равны пяти;
+четыре остаются верными для отдельной LiveRoster цепочки. Native timings, receipts
+и production checks не изменились. Независимый call-graph review подтвердил
+поправку. Первый вариант с новым внешним Team fence отклонён: он менял placement
+ранних отказов и fallback/restore. Финальный проверенный срез выше продолжает
+исходный provider fence после его последней namespace validation.
 
 **P09 — принятое продолжение:** владелец выбрал **A** — исходный путь с доверием всем
 writers выбранной ревизии до завершения её использования. [Принятый контракт](40-p09-source-writer-decision-2026-11-16.md)
 зафиксирован. Срез source/native acceptance реализован и прошёл независимый R2;
 [проверки, точные hashes и исправленные замечания](evidence/p09-contract-a-review-20261119.json)
-сохранены отдельно от native приёмки. На текущем fbc Darwin x64 job135773065012
+сохранены отдельно от native приёмки. На fbc Darwin x64 job135773065012
 и Linux x64 job135773064871 полностью PASS: по8 original-path A observations PASS,
 cleanup=true; strict counterexamples и INCOMPLETE сохранены отдельно,
 installed/release qualification=false. Darwin ARM A ещё не квалифицирован. Полные оригинальные

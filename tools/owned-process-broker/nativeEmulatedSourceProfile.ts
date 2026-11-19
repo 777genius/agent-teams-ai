@@ -176,6 +176,8 @@ if(argv.length===1&&argv[0]==='--version'){
   const hostEntry = join(root, 'TEST-source-host.mjs');
   const diagnosticPins = ['owned-process/HostWindowsLaunch', 'composition/prepareTeamModelReadiness',
     'diagnostics/modelReadinessTiming', 'composition/createRuntimeMemberProviderFactory',
+    'composition/runtimeControlAuthority', 'composition/createRuntimeTeamLaunch', 'composition/captureTeamAccountRead',
+    'team/TeamOwner', 'composition/teamRoster', 'composition/RuntimeTeamCoordinator', 'composition/captureMemberProviderAuthority',
     'management/ModelProbeOwner', 'composition/projectRuntimeMember', 'adapters/providers/OpenCodeMemberProvider', 'adapters/providers/CodexMemberProvider']
     .flatMap(name => (['src', 'dist'] as const).map(directory => {
       const path = fileURLToPath(new URL(`../../packages/legacy-agent-host/${directory}/${name}${directory === 'src' ? '.ts' : '.js'}`, import.meta.url));

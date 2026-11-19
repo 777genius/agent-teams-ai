@@ -1,4 +1,4 @@
-import { captureRuntimeControlAuthority } from './runtimeControlAuthority.js';
+import { captureDefaultRuntimeAllocationAuthority, bindDefaultFreshAllocationAuthority } from './runtimeControlAuthority.js';
 import { captureTeamAccountRead } from './captureTeamAccountRead.js';
 import { createCapturedTeamLaunch, memberInitialInstructions } from './TeamLaunchComposition.js';
 import { RuntimeOwnerError } from '../runtime/contracts.js';
@@ -73,19 +73,11 @@ export function createRuntimeTeamLaunch(options: {
       captureAuthority(memberId) {
         const entry = entries.find((candidate) => candidate.profile.memberId === memberId);
         if (!entry) throw new RuntimeOwnerError('invalid');
-        const captured = captureRuntimeControlAuthority({
-          entry,
+        return captureDefaultRuntimeAllocationAuthority({
+          entry, team,
           principalId: options.principalId,
           assertWriter: options.assertWriter,
           isSealed: options.isSealed,
-        });
-        // Only these original synchronous Team checks share the lock; the
-        // caller's separate launch-store allocation fences stay outside it.
-        const withAuthorityRead = captureTeamAccountRead({ entry,
-          principalId: options.principalId, assertCurrent: options.assertWriter });
-        return () => withAuthorityRead(() => {
-          team.owner.assertExecutionAllowed(options.principalId);
-          captured();
         });
       },
       read(memberId) {
@@ -137,7 +129,7 @@ export function createRuntimeTeamLaunch(options: {
                     )
                   : runtime.openSession(
                       { binding: entry.binding, config: entry.config },
-                      assertAuthority
+                      assertAuthority && bindDefaultFreshAllocationAuthority(assertAuthority, entry)
                     );
               })()
         );
