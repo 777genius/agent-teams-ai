@@ -1,0 +1,118 @@
+{
+  "schemaVersion": 1,
+  "bundle": {
+    "path": "/workspace/scratch/c714f5bce554/solo-exitcode-types-42a4-candidate/finite-receipts.json.gz",
+    "bytes": 400600,
+    "sha256": "820dff22b34148f2b5e4e6059a448292a607ceac4115b539689f44a4d2c9429b",
+    "gitBlob": "d592aeda8ecfa65ca1faf1a1f9cb65c36282d498"
+  },
+  "uncompressed": {
+    "bytes": 1423341,
+    "sha256": "8a51d05fb5b0a6140acf021aa86cbf007e49e6a77e8fed3ba10f71412d01f535",
+    "gitBlob": "acd9452d0cf0632b85c37141209971d47b4b7409"
+  },
+  "members": [
+    {
+      "relativeFile": "candidate-manifest.json",
+      "bytes": 1183,
+      "sha256": "1d37ab907a6c6b5a60514945379a423431a432120d38e3d6b93982fac7ce982b",
+      "gitBlob": "5b5b231add2ca75b4821e613f2d2659392527954"
+    },
+    {
+      "relativeFile": "candidate.patch",
+      "bytes": 717,
+      "sha256": "61c50b56cbdd75263cfcbf89df4799c1c1198618bd905713b3c78d3471dd5eff",
+      "gitBlob": "ed6216e2e2bc4ee83f13f8690538fc470e34b951"
+    },
+    {
+      "relativeFile": "excerpt-source-map.json",
+      "bytes": 1651,
+      "sha256": "322a825f84218ece383e3ec9d209cdd4c1329db1ae42595c665b653cedea385d",
+      "gitBlob": "ca425d770cb21809e196d5bd3294a53131fd5c05"
+    },
+    {
+      "relativeFile": "verify-type-before/fixture-type-excerpt.ts",
+      "bytes": 287,
+      "sha256": "f0b92d2347d453b3120a207954915ebf6e128e31fa933314f161d07da609929e",
+      "gitBlob": "d3c2c0d5f2245f7c9122d6fc06984e06bae0f9c7"
+    },
+    {
+      "relativeFile": "verify-type-after/fixture-type-excerpt.ts",
+      "bytes": 336,
+      "sha256": "8f6a461016249cd62f042ba6a4f70ac72c210749d9c6b3e21e439e12013e1449",
+      "gitBlob": "90ae4948f31d719d04847ed5964d8f0315d0078d"
+    },
+    {
+      "relativeFile": "verify-type-before/tsconfig.json",
+      "bytes": 977,
+      "sha256": "b0ddc75f55428e9f044a832a717d5a36b661e1c6d645e1080114756ca03773b9",
+      "gitBlob": "3574610045e3d3714dbd04ceef1a482207619636"
+    },
+    {
+      "relativeFile": "verify-type-after/tsconfig.json",
+      "bytes": 977,
+      "sha256": "b0ddc75f55428e9f044a832a717d5a36b661e1c6d645e1080114756ca03773b9",
+      "gitBlob": "3574610045e3d3714dbd04ceef1a482207619636"
+    },
+    {
+      "relativeFile": "typecheck-before.log",
+      "bytes": 110,
+      "sha256": "de92bc198304cf349fded2172aee5d21421a41db24995987a5ab64d369f9ee69",
+      "gitBlob": "b484a1d5dbc8043a5bdc4365c31b4b14d0e5451d"
+    },
+    {
+      "relativeFile": "typecheck-after.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+    },
+    {
+      "relativeFile": "typecheck-results.json",
+      "bytes": 1834,
+      "sha256": "4303ffe0c6a53d0256802379b606c220e3a0694806a9e5feb61e31ef3e369a9b",
+      "gitBlob": "cd9a9976cadbc5b64e3108a9ba25550ca570c91f"
+    },
+    {
+      "relativeFile": "runtime-erasure-result.json",
+      "bytes": 453,
+      "sha256": "6936792e346a2dbb046dad0496397567800bff9ad42bab2d8d78af0f5db986b1",
+      "gitBlob": "1b218af9214e20361185acb8dede4f2f3021b756"
+    },
+    {
+      "relativeFile": "erasure/before.js",
+      "bytes": 28578,
+      "sha256": "c7ef76da83f0bfba7d9059e996b51c05c52405e35c7ab869c993e81a3b774246",
+      "gitBlob": "e37860fc4eec8c0e68e5a4958dc0383ecf02759d"
+    },
+    {
+      "relativeFile": "erasure/after.js",
+      "bytes": 28578,
+      "sha256": "c7ef76da83f0bfba7d9059e996b51c05c52405e35c7ab869c993e81a3b774246",
+      "gitBlob": "e37860fc4eec8c0e68e5a4958dc0383ecf02759d"
+    },
+    {
+      "relativeFile": "finite-runtime-after.log",
+      "bytes": 123,
+      "sha256": "549ce04e9e9a60f36b25561895eede725c60f695500bc28ca3953033a0692141",
+      "gitBlob": "df712e8be26725274a3e8636aa5d0f69a92b9388"
+    },
+    {
+      "relativeFile": "finite-runtime-after-result.json",
+      "bytes": 7332,
+      "sha256": "6788c1f86df72292407d709ce142a5cfcd2b4696ee21f8d64d9a193d4e389e81",
+      "gitBlob": "05ea87c0d92bcc6b1c3538b7130323e927d3c795"
+    },
+    {
+      "relativeFile": "finite-runtime-execution.json",
+      "bytes": 1465,
+      "sha256": "ef8f472ee6e9ce6bd85767f6af54c038bab53173754027afda16f0b5b4449f8a",
+      "gitBlob": "111792763341ec83786c6abe357713af0c02a38d"
+    },
+    {
+      "relativeFile": "runtime-inputs.json",
+      "bytes": 1246226,
+      "sha256": "1f9f92569462ff6a961c465e23c021e35b97a9fc7d350127f281c61230fd4ef2",
+      "gitBlob": "755fb148d5d9b4b570585efe4ba1557def4d3aaa"
+    }
+  ]
+}

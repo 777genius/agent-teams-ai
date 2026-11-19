@@ -1,0 +1,15 @@
+--- a/packages/legacy-agent-host/tests/native-host-close.test.ts
++++ b/packages/legacy-agent-host/tests/native-host-close.test.ts
+@@ -82,10 +82,10 @@
+     const fixture = evaluate(...Object.values(bindings));
+     const ordinary = { jsonrpc: '2.0', id: 1, result: { ok: true } };
+     assert.deepEqual(fixture.readNativeHostFrame(JSON.stringify(ordinary), new Map()), ordinary);
+-    assert.deepEqual(loads, [], 'ordinary helpers remain lazy before a compiled attachment contract is needed');
++    assert.deepEqual<typeof loads>(loads, [], 'ordinary helpers remain lazy before a compiled attachment contract is needed');
+     const host = fixture.startHost({ node: process.execPath, entry: selectedEntry, root,
+       profile: join(root, 'TEST-unused-profile.json'), profileHash: 'b'.repeat(64) });
+-    assert.equal(spawns, 1); assert.deepEqual(loads, []);
++    assert.equal(spawns, 1); assert.deepEqual<typeof loads>(loads, []);
+     return { host, child, loads };
+   }
+   for (const [reply, request, invalid] of [

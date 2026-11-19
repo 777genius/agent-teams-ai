@@ -1,0 +1,112 @@
+{
+  "schemaVersion": 1,
+  "kind": "current-head-original-selected-ui-lane-success",
+  "sourceHead": "42a4ee210aff6ffa310025d024fd55cfbdbcd277",
+  "event": "pull_request",
+  "runAttempt": 1,
+  "runId": 44434982606,
+  "job": {
+    "id": 135261470836,
+    "name": "Offline Host Desktop (linux-x64, import)",
+    "head_sha": "42a4ee210aff6ffa310025d024fd55cfbdbcd277",
+    "run_id": 44434982606,
+    "run_attempt": 1,
+    "status": "completed",
+    "conclusion": "success",
+    "started_at": "2026-11-19T02:18:39Z",
+    "completed_at": "2026-11-19T02:23:32Z",
+    "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/44434982606/job/135261470836",
+    "runner_name": "GitHub Actions 1000396254"
+  },
+  "rawLog": {
+    "phase": "permanently-retired",
+    "jobId": 135261470836,
+    "head": "42a4ee210aff6ffa310025d024fd55cfbdbcd277",
+    "runId": 44434982606,
+    "runAttempt": 1,
+    "conclusion": "success",
+    "requestedAt": "2026-11-19 02:29:26 UTC",
+    "bytes": 298050,
+    "sha256": "d7f3f1216738517366c0e5e82b7dfec4ab0b6e2a89e443aaefa3ec80c96a9863",
+    "computedGitBlobSha": "37714a3305e2610a254b6a19c171132a42a78c7a",
+    "rawLogLocal": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-42a4/job-135261470836-terminal.log",
+    "rawToolResponseLocal": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-42a4/job-135261470836-log-response-raw.json",
+    "rawResponsePersistedBeforeDecode": true,
+    "endpointRetired": true,
+    "publishedBlobSha": "37714a3305e2610a254b6a19c171132a42a78c7a",
+    "exactReadback": true
+  },
+  "originalUnitSummaryLines": [
+    "ℹ tests 514",
+    "ℹ pass 514",
+    "ℹ fail 0",
+    "ℹ cancelled 0",
+    "ℹ skipped 0",
+    "ℹ todo 0",
+    "ℹ duration_ms 33763.249577",
+    "ℹ tests 7",
+    "ℹ pass 7",
+    "ℹ fail 0",
+    "ℹ cancelled 0",
+    "ℹ skipped 0",
+    "ℹ todo 0",
+    "ℹ duration_ms 245.157017"
+  ],
+  "originalConsolePass": [
+    {
+      "status": "PASS",
+      "receipt": "/home/runner/work/_temp/TEST-desktop-backend-fJMWlB/desktop-backend-receipt.json"
+    }
+  ],
+  "originalScenarioAndVerificationSteps": [
+    {
+      "name": "Verify original checkout and runner tuple",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 5,
+      "started_at": "2026-11-19T02:19:08Z",
+      "completed_at": "2026-11-19T02:19:08Z"
+    },
+    {
+      "name": "Exercise original collaboration, Extensions and import controls through finite peers",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 19,
+      "started_at": "2026-11-19T02:21:19Z",
+      "completed_at": "2026-11-19T02:23:27Z"
+    },
+    {
+      "name": "Verify exact source, original screenshots, receipts and cleanup",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 38,
+      "started_at": "2026-11-19T02:23:27Z",
+      "completed_at": "2026-11-19T02:23:28Z"
+    }
+  ],
+  "originalSafetyAndCleanupVerifierProgramLines": [
+    "  LEGACY_DESKTOP_EMULATED_ONLY: 1",
+    "  LEGACY_DESKTOP_PROOF_MODE: emulated-import-ui",
+    "assert.equal(inputs.nativeProviders, 'forbidden');",
+    "    assert.equal(proof.fixturePins.vendorsAllowed, false);",
+    "    assert.equal(receipt.emulatedRuntimeCleanup.absent, true);",
+    "    assert.deepEqual(receipt.emulatedRuntimeCleanup.remaining, []);",
+    "    assert.equal(proof.fixturePins.vendorsAllowed, false);",
+    "    assert.equal(receipt.emulatedRuntimeCleanup.absent, true); assert.deepEqual(receipt.emulatedRuntimeCleanup.remaining, []);",
+    "    assert.equal(proof.fixturePins.vendorsAllowed, false); assert.equal(proof.fixturePins.runtimeConfigured, true);",
+    "    assert.equal(receipt.emulatedRuntimeCleanup.absent, true); assert.deepEqual(receipt.emulatedRuntimeCleanup.remaining, []);",
+    "  nativeProviders: 'not executed', vendorAuthQualified: false, releaseQualified: false,",
+    "  LEGACY_DESKTOP_EMULATED_ONLY: 1",
+    "  LEGACY_DESKTOP_EMULATED_ONLY: 1"
+  ],
+  "artifactFromOriginalUploadLog": {
+    "artifactId": 14492132653,
+    "bytes": 1174967,
+    "sha256": "6b6480565fa933cb04bd5d66174f808be953a836caaa57dab40f03197aaba9a1",
+    "downloaded": false,
+    "visualInspection": false
+  },
+  "scope": "Original exact42a4 finite Import UI controls and original exact source/receipt/cleanup verifier passed. This is the ordinary import lane, not the separate solo import lifecycle producer lane. No separate success ZIP decoding or visual audit.",
+  "verificationLimit": "Original scenario PASS plus original source/receipt/cleanup verifier SUCCESS; full artifact receipt was not separately downloaded. Verifier program lines are original assertions, not separately decoded field observations. Common source unit tests repeat across jobs and are not summed as unique tests.",
+  "jobLogEndpointRetired": true
+}

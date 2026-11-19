@@ -1,0 +1,54 @@
+{
+  "schemaVersion": 1,
+  "kind": "independent-final-publication-tree-approval",
+  "reviewer": "composition_review_030",
+  "reviewedAt": "2026-11-19T01:10:21.904072+00:00",
+  "verdict": "APPROVE_REVIEWED_TREE_FOR_PARENT_PUBLICATION",
+  "approvedGitTree": "06ddfb2e88ee1e049f14a9c6c11290004d16dda2",
+  "parentHead": "030b21f0765d1a6e6572f46d262c672d63e69eb7",
+  "parentTree": "292b3cc975b5c927233fb85b73aed1411753efd1",
+  "actualGitTreeRecord": {
+    "path": "/workspace/scratch/c714f5bce554/publication-followup-030/publication-created-tree.json",
+    "gitBlob": "80a88a4b732465ab5ade3d59f921d7428de6c173",
+    "sha256": "709a58539b67d6bd069a20ec1b2573778a43856c6b357de30681c873e0862a02",
+    "bytes": 736
+  },
+  "independentReconstruction": {
+    "path": "/workspace/scratch/c714f5bce554/publication-followup-030/independent-final-candidate-tree-reconstruction.json",
+    "gitBlob": "114fec2039a0700e7db979126ee10040bb23d2a4",
+    "sha256": "5871e315e94934aca7776127c1477c37db92773433246ecb521743b24270cf35",
+    "bytes": 39169
+  },
+  "sourceCompositionReview": {
+    "path": "/workspace/scratch/c714f5bce554/publication-followup-030/integration-publication-source-review.json",
+    "gitBlob": "fd7038f734066e942374745cbfcf71798fd46999",
+    "sha256": "dc7d0f80c4f3bca60b1e02718ac4e6872ac1ee294661399bab333a14c94ae253",
+    "bytes": 19270
+  },
+  "verified": {
+    "baseLeaves": 11476,
+    "candidateLeaves": 11561,
+    "changedLeaves": 107,
+    "sourceLeaves": 25,
+    "evidenceLeaves": 80,
+    "documentLeaves": 2,
+    "addedLeaves": 85,
+    "modifiedExistingLeaves": 22,
+    "deletions": 0,
+    "allUnchangedLeavesPreserved": true,
+    "allLocalInputByteHashBindingsValid": true,
+    "indexMatchesFinalSourceProofStatusRows": true,
+    "historical42ProofRowsPreservedExactly": true,
+    "historical12And22SourceReviewScopesPreserved": true,
+    "fullSourceSize": "5162 production /141 legacy caps /800 default /0 violations; unchanged policy",
+    "blockingFindings": []
+  },
+  "finalDocuments": {
+    "statusBlob": "4a0cb44e3616a214dc7c6ff69fb9f842bdb9a21c",
+    "indexBlob": "66bd8228b70828981f05e84a4c95fd7720bbd84c",
+    "claimReview": "Successor acceptance remains pending; original030 is identified as last completed CI source. F1 guarded SIGTERM, native/retained diagnostic limits, metadata rejected-promise clarification and terminal observer collection gap are explicit."
+  },
+  "method": "Independent canonical full-tree SHA1 reconstruction from read-only immutable547 ls-tree plus verified030 delta and all107 publication rows, compared to actual Git tree SHA in parent-created record. Reviewer did not query remote, write Git objects/index/refs, edit source, execute tests/build/apps/native/providers, or revisit retired CI endpoints.",
+  "approvalBoundary": "Approval is for this exact tree and documented source/finite evidence scope. It is not successor E2E acceptance. Root owns final remote expected-head/base/PR checks and the already-authorized commit/immediate push.",
+  "preservation": "This approval/reconstruction report is a scratch review record, not an additional leaf in the approved tree; adding it would require a new tree hash."
+}

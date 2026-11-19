@@ -1,0 +1,329 @@
+{
+  "schemaVersion": 1,
+  "status": "FINITE_FOCUSED_RED_TO_GREEN",
+  "sourceHead": "42a4ee210aff6ffa310025d024fd55cfbdbcd277",
+  "sourceTree": "06ddfb2e88ee1e049f14a9c6c11290004d16dda2",
+  "capturedAt": "2026-11-19T01:29:21.668340+00:00",
+  "cause": "node:assert/strict aliases deepEqual to generic deepStrictEqual<T>(actual:unknown,expected:T):asserts actual is T. Inferring T from [] narrows loads to never[]; open() returns that narrowed property despite later injected callback mutations.",
+  "change": "Specify the existing declared array type via <typeof loads> on both existing assertions. No cast, callback, expected value, loader boundary, runtime assertion, timeout, schema or production change.",
+  "candidateManifest": {
+    "path": "/workspace/scratch/c714f5bce554/native-host-types-42a4-candidate/candidate-manifest.json",
+    "bytes": 1107,
+    "sha256": "54ed710405256cf64199e91cfab5c540edaa3f1737b213ee2365727ef8d025dc",
+    "gitBlob": "ab34fa4e08c365dba324e062aa62b2b4695a3eec"
+  },
+  "sourcePins": [
+    {
+      "path": "packages/legacy-agent-host/tests/native-host-close.test.ts",
+      "mode": "100644",
+      "before": {
+        "gitBlob": "1e4522ba6e600545535c116e59a53a95f6120b37",
+        "sha256": "be61f648fec4c3b73a2c98eeb9f3428708007dc3abccb421ad6e35ecb3be8708",
+        "bytes": 52804,
+        "lines": 744
+      },
+      "after": {
+        "gitBlob": "4a64e6228f2b44f42ec9f3d24cca63272915291e",
+        "sha256": "e8fb716e45691705683ad88e3b22cf25511bdb485d09dd9cce951d8470513c65",
+        "bytes": 52832,
+        "lines": 744
+      }
+    }
+  ],
+  "patch": {
+    "path": "/workspace/scratch/c714f5bce554/native-host-types-42a4-candidate/candidate.patch",
+    "bytes": 1017,
+    "sha256": "06931113a12bfc7f8258085aeac20ac5b8da3bcd60a174782201d6da4f6c1738",
+    "gitBlob": "b9614152548b846349b52ca91a4bffab6b749a19"
+  },
+  "originalFailure": {
+    "path": "ci-current-42a4/host-arm-test-compilation-failure-42a4.json",
+    "bytes": 11673,
+    "sha256": "a8fbbc42e2d9ca70694172eecdd38094fd06353652b54644a812d7582baff780",
+    "gitBlob": "6764914c3099dba4fb84a60b770f25d33f2b5a26"
+  },
+  "toolchain": {
+    "node": {
+      "version": "v24.22.3",
+      "path": "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+      "bytes": 126951512,
+      "sha256": "acbe4b8d9153b841ed0697cbfc4f93e767386620edb745ab9358306c0a6f31aa",
+      "gitBlob": "578c139c661b1a3eb68abc5886f01d9b3cbe3dd5"
+    },
+    "typescript": {
+      "version": "7.0.2",
+      "files": [
+        {
+          "path": "/workspace/scratch/1d5114b8d2ee/agent-teams-ai/node_modules/@typescript/native/package.json",
+          "bytes": 3087,
+          "sha256": "3722b30210616a13a3213ded11575ba6b2dbab10c32a5ef67afca8513e27017e",
+          "gitBlob": "f4242a69df961fcaf5210ac08ace176ced18c6a4"
+        },
+        {
+          "path": "/workspace/scratch/1d5114b8d2ee/agent-teams-ai/node_modules/@typescript/native/bin/tsc",
+          "bytes": 44,
+          "sha256": "2219f428a7e55aaf1f7ad85b9b0f0cf5078aeb76ccc9a7c6036c92d48f492ffd",
+          "gitBlob": "34638f82f78ad0641bd169a41a598ed3a73b63d5"
+        },
+        {
+          "path": "/workspace/scratch/1d5114b8d2ee/agent-teams-ai/node_modules/@typescript/native/lib/tsc.js",
+          "bytes": 609,
+          "sha256": "cbdfbf11c26ed00dfc073155e316a42d6d6d8a387be61006b82fa9aa93ac572e",
+          "gitBlob": "eb869b715737e45fcf1af33d1af3157b59ba08de"
+        },
+        {
+          "path": "/workspace/scratch/1d5114b8d2ee/agent-teams-ai/node_modules/@typescript/native/lib/getExePath.js",
+          "bytes": 3051,
+          "sha256": "96c10fd3a18e165d7323de8e314ac8d755ad96811f9fbc304a5b3ba4e05285cc",
+          "gitBlob": "ade3d7bb92e2125c4306d71620666c0eba3371d4"
+        },
+        {
+          "path": "/workspace/scratch/1d5114b8d2ee/agent-teams-ai/node_modules/.pnpm/typescript@7.0.2/node_modules/@typescript/typescript-linux-x64/lib/tsc",
+          "bytes": 24101026,
+          "sha256": "4f2de678286401759b3fb4475bafe35b8f32b4b3a07d92642bbf37eadc9b34a4",
+          "gitBlob": "3cf53c3bee5833a49d5c9be19cdfab4f790fab58"
+        }
+      ]
+    },
+    "nodeTypes": {
+      "version": "24.12.4",
+      "files": [
+        {
+          "path": "/workspace/scratch/1d5114b8d2ee/agent-teams-ai/node_modules/@types/node/package.json",
+          "bytes": 4510,
+          "sha256": "456b1366f1966515c4dfec48446c82275502a2d5ea7cfbc74874323b39e3776f",
+          "gitBlob": "836c645b60e453f09f8740976505058b08b61501"
+        },
+        {
+          "path": "/workspace/scratch/1d5114b8d2ee/agent-teams-ai/node_modules/@types/node/assert.d.ts",
+          "bytes": 46664,
+          "sha256": "4ea15fd99b2e34cb25fe8346c955000bb70c8b423ae4377a972ef46bfb37f595",
+          "gitBlob": "cd6d6df9ff33d4291585ffedd0a8619c9e98afdb"
+        },
+        {
+          "path": "/workspace/scratch/1d5114b8d2ee/agent-teams-ai/node_modules/@types/node/assert/strict.d.ts",
+          "bytes": 3003,
+          "sha256": "7cf69dd5502c41644c9e5106210b5da7144800670cbe861f66726fa209e231c4",
+          "gitBlob": "4ed7395a6bc76a40bdf26f2905a217bdd464fac4"
+        }
+      ]
+    },
+    "zodPackage": {
+      "path": "/workspace/scratch/1d5114b8d2ee/agent-teams-ai/packages/legacy-agent-host/node_modules/zod/package.json",
+      "bytes": 4142,
+      "sha256": "c2d190d9ee4e0bdb60332aaa2130a6a98d65ddb903fe1d29248b15de57832c45",
+      "gitBlob": "5ba776c0d5bdf1487da2f26af302a1ab7e1e40ce"
+    }
+  },
+  "inputs": {
+    "testSource": "Exact published42a4 preimage and candidate differing only by two generic arguments.",
+    "sourceFiles": [
+      {
+        "path": "/workspace/scratch/c714f5bce554/native-host-types-42a4-candidate/verify-after/packages/legacy-agent-host/tests/fixtures/native-host.ts",
+        "bytes": 20176,
+        "sha256": "a7a3fb47fa680bb9c6193657437b860c58526a2fb87f6e5d2327a865c90f10fb",
+        "gitBlob": "025a124b317917cdceb5d6072977bd2d24508cdd"
+      },
+      {
+        "path": "/workspace/scratch/c714f5bce554/native-host-types-42a4-candidate/verify-after/packages/legacy-agent-host/tests/fixtures/native-opencode-team/passive-diagnostics.ts",
+        "bytes": 44790,
+        "sha256": "89bddd71c36ae06f8d6d398571175a6f31112039fed2b63f2bd51a031b676f4d",
+        "gitBlob": "3022c10041dd8bceabdd9e9982ab78a305e9c167"
+      },
+      {
+        "path": "/workspace/scratch/c714f5bce554/native-host-types-42a4-candidate/verify-after/packages/legacy-agent-host/src/contracts.ts",
+        "bytes": 5570,
+        "sha256": "c9c5686a8f6ccf6abfe2518edf713d34f48641b79ede32f070048c46c0ae4b3d",
+        "gitBlob": "5d5743e8728ff3f16dcc09ad822804e4952632e1"
+      },
+      {
+        "path": "/workspace/scratch/c714f5bce554/native-host-types-42a4-candidate/verify-after/packages/legacy-agent-host/package.json",
+        "bytes": 12519,
+        "sha256": "a2cfca3f7911d08d4382554c10b254dc7756e5bfa546f50314f116e746d1d8d9",
+        "gitBlob": "39bfdc27581109c10fa5362375dcbe2c33d44791"
+      },
+      {
+        "path": "/workspace/scratch/c714f5bce554/native-host-types-42a4-candidate/verify-after/packages/legacy-agent-host/tsconfig.focused.json",
+        "bytes": 552,
+        "sha256": "b0ff4f425499c558b69c8e67510ae3a0d44580342e4aeb68a02d293b82a96508",
+        "gitBlob": "f56d7d47ded3c3963a206caaa00b33b5eb7b42f7"
+      },
+      {
+        "path": "/workspace/scratch/1d5114b8d2ee/agent-teams-ai/packages/legacy-agent-host/tsconfig.json",
+        "bytes": 456,
+        "sha256": "54be9b6021660d54c06c14fd25cc5c4484b7615f01d9eb033fc52edfded095ab",
+        "gitBlob": "9fad9f8a73e1cfffd382c0ba76f2945e5c361531"
+      },
+      {
+        "path": "/workspace/scratch/1d5114b8d2ee/agent-teams-ai/packages/legacy-agent-host/tsconfig.test.json",
+        "bytes": 174,
+        "sha256": "5f1f3e6842c4087e0f834895fbde59769240c68a98ff15c24ac1677d0e5b9356",
+        "gitBlob": "65edbd94041b7d9a986480badd6802b1dd0a8837"
+      }
+    ],
+    "preparedCompiledInputs": [
+      {
+        "path": "/workspace/scratch/1d5114b8d2ee/agent-teams-ai/packages/legacy-agent-host/dist/attachments/contracts.d.ts",
+        "bytes": 1385,
+        "sha256": "ef3a18f4d868c31db1c05e30977e9521e0e619dfbe8a75693befa9bdd35d00e3",
+        "gitBlob": "95ff3e2165fe4aea465fcfe3b61582102cc4203c"
+      },
+      {
+        "path": "/workspace/scratch/1d5114b8d2ee/agent-teams-ai/packages/legacy-agent-host/dist/attachments/portable.d.ts",
+        "bytes": 1463,
+        "sha256": "0d3a539e36394d3f46e1e2b0596433414b74aa73ab32d1d4b0e738d6c156c28d",
+        "gitBlob": "8c0ffe51355a04a96364d1aa3a6282100d0297c0"
+      },
+      {
+        "path": "/workspace/scratch/1d5114b8d2ee/agent-teams-ai/packages/legacy-agent-host/dist/attachments/contracts.js",
+        "bytes": 1834,
+        "sha256": "bc29eb0e932947fcf3533ee15e25c745e0dd275a7ba87f839dad78ece7f88398",
+        "gitBlob": "71299218af858ff27f1b4301d9ec0723752652e3"
+      },
+      {
+        "path": "/workspace/scratch/1d5114b8d2ee/agent-teams-ai/packages/legacy-agent-host/dist/attachments/portable.js",
+        "bytes": 5280,
+        "sha256": "95c09abe52a842b87ca0d15a53d18e0ac0a6ab9649561faf7ac811c04ed58b30",
+        "gitBlob": "bbb7e9cec47ea2f2e5403b8f24495a1ff1d959ca"
+      },
+      {
+        "path": "/workspace/scratch/1d5114b8d2ee/agent-teams-ai/packages/legacy-agent-host/dist/attachments/messageFileReferences.js",
+        "bytes": 2298,
+        "sha256": "908751deb095ff022598209bd4f409610ee84b43ccf2d64ce1d937ccf60bf029",
+        "gitBlob": "104f3334870145c6951c1aa67e6822122ffe8ead"
+      },
+      {
+        "path": "/workspace/scratch/1d5114b8d2ee/agent-teams-ai/packages/legacy-agent-host/dist/attachments/mimeTypes.js",
+        "bytes": 723,
+        "sha256": "4fb9dd95b2f6377f7c0febf4fb3e4f406c789fc70a0c5821ec0a4f5e7bf51881",
+        "gitBlob": "ff8f3ee57ca52e564b7a9deb10bca9dc3a82f613"
+      }
+    ],
+    "provenance": [
+      "native-host.ts blob025a124b317917cdceb5d6072977bd2d24508cdd and passive-diagnostics.ts blob3022c10041dd8bceabdd9e9982ab78a305e9c167 match final42a4 publication source rows.",
+      "src/contracts.ts remains prepared unchanged source blob5d5743e8728ff3f16dcc09ad822804e4952632e1; no source runtime altered.",
+      "Focused configs preserve all prepared Host/test compiler options, replace broad include with one exact existing test file, noEmit true, no exclusions or error suppression. Transitive local fixture/source imports are included by TypeScript.",
+      "Existing compiled contract declarations and pure JS plus prepared Zod were read/copy inputs; no compiler emit, dependency installation or product build.",
+      "Both focused roots copy the prepared full Host package.json (blob39bfdc27581109c10fa5362375dcbe2c33d44791, type=module) for module and dependency context; dependency and dist links target the prepared read-only external tree."
+    ]
+  },
+  "typecheck": {
+    "scope": "Focused TS7 noEmit with exact Host compiler flags and single existing test plus transitive imports; no project build or native/app execution",
+    "runs": [
+      {
+        "side": "before",
+        "command": [
+          "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+          "/workspace/scratch/1d5114b8d2ee/agent-teams-ai/node_modules/@typescript/native/bin/tsc",
+          "-p",
+          "tsconfig.focused.json",
+          "--pretty",
+          "false"
+        ],
+        "cwd": "/workspace/scratch/c714f5bce554/native-host-types-42a4-candidate/verify-before/packages/legacy-agent-host",
+        "startedAt": "2026-11-19T01:27:21.432108+00:00",
+        "durationMs": 654.025,
+        "exitCode": 1,
+        "log": "/workspace/scratch/c714f5bce554/native-host-types-42a4-candidate/typecheck-before.log",
+        "logBytes": 211,
+        "logSha256": "733ab4fd7cb0fe20c229f0ffdecbc5e87eab10c3418aab1f8030c7113412699d",
+        "output": "tests/native-host-close.test.ts(107,42): error TS2339: Property 'base' does not exist on type 'never'.\ntests/native-host-close.test.ts(107,65): error TS2339: Property 'specifier' does not exist on type 'never'.\n"
+      },
+      {
+        "side": "after",
+        "command": [
+          "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+          "/workspace/scratch/1d5114b8d2ee/agent-teams-ai/node_modules/@typescript/native/bin/tsc",
+          "-p",
+          "tsconfig.focused.json",
+          "--pretty",
+          "false"
+        ],
+        "cwd": "/workspace/scratch/c714f5bce554/native-host-types-42a4-candidate/verify-after/packages/legacy-agent-host",
+        "startedAt": "2026-11-19T01:27:22.086258+00:00",
+        "durationMs": 429.976,
+        "exitCode": 0,
+        "log": "/workspace/scratch/c714f5bce554/native-host-types-42a4-candidate/typecheck-after.log",
+        "logBytes": 0,
+        "logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "output": ""
+      }
+    ],
+    "verdict": "RED_TO_GREEN",
+    "receiptVerifierNote": "Initial outer verifier expected TS exit2; actual prepared TS7 exits1 for diagnostic failure. Both runs/logs had already been persisted; corrected receipt expectation locally, no compiler rerun."
+  },
+  "runtimeErasure": {
+    "runtime": "v24.22.3",
+    "mode": "transform",
+    "identicalJavaScriptBytes": true,
+    "byteLength": 74665,
+    "sha256": "bb6e1ef9341667a35b58c99b68f77494d405084febc35eb4d15fb3b8becde722",
+    "whitespacePreservingStrip": {
+      "typeArguments": 2,
+      "erasedColumnsEach": 14,
+      "allOtherBytesIdentical": true,
+      "beforeSha256": "c74656179f19a2202516b7f1702106ab58c103a7d61df491dda4e6e0d4c7b971",
+      "afterSha256": "4cef88833f2f2914dd432d85855c671eb84d7174b76e442793e4a2c42d2215a0"
+    }
+  },
+  "finiteRegression": {
+    "scope": "Exactly two existing finite source-fixture regressions with in-memory child transport and prepared pure compiled schemas; no app/native/build/install",
+    "command": [
+      "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+      "--test",
+      "--test-concurrency=1",
+      "--test-name-pattern=^(relocated TEST fixture reads attachment contracts|native Host keeps ordinary frame bounds)",
+      "tests/native-host-close.test.ts"
+    ],
+    "cwd": "/workspace/scratch/c714f5bce554/native-host-types-42a4-candidate/verify-after/packages/legacy-agent-host",
+    "startedAt": "2026-11-19T01:28:03.513676+00:00",
+    "durationMs": 2904.137,
+    "exitCode": 0,
+    "log": "/workspace/scratch/c714f5bce554/native-host-types-42a4-candidate/finite-runtime-after.log",
+    "logSha256": "c15e2d53b22709fd97e55e18301c72d6fa1bc54451ad2f72fd0bba69eaef28db",
+    "output": "(node:13) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n\u2714 relocated TEST fixture reads attachment contracts from its captured Host entry without a checkout fallback (1648.609401ms)\n\u2714 native Host keeps ordinary frame bounds and accepts only an exact request-bound attachment chunk (148.519604ms)\n\u2139 tests 2\n\u2139 suites 0\n\u2139 pass 2\n\u2139 fail 0\n\u2139 cancelled 0\n\u2139 skipped 0\n\u2139 todo 0\n\u2139 duration_ms 2647.365624\n"
+  },
+  "files": [
+    {
+      "path": "/workspace/scratch/c714f5bce554/native-host-types-42a4-candidate/typecheck-before.log",
+      "bytes": 211,
+      "sha256": "733ab4fd7cb0fe20c229f0ffdecbc5e87eab10c3418aab1f8030c7113412699d",
+      "gitBlob": "af607b43f703ca18b91f698423fd1df498af51c8"
+    },
+    {
+      "path": "/workspace/scratch/c714f5bce554/native-host-types-42a4-candidate/typecheck-after.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+    },
+    {
+      "path": "/workspace/scratch/c714f5bce554/native-host-types-42a4-candidate/typecheck-results.json",
+      "bytes": 2201,
+      "sha256": "c9ccab88d5fefb9d7df5953cafce77e79baf5e45bd22e02cf4dc39e82e16577d",
+      "gitBlob": "de274effb82d2b264405fc20e7a49b4b1ea26ade"
+    },
+    {
+      "path": "/workspace/scratch/c714f5bce554/native-host-types-42a4-candidate/runtime-erasure-result.json",
+      "bytes": 491,
+      "sha256": "218ff86f5d4378e4648781098cb6db95668a253dfb8ba2fbcc81c594bc5dac90",
+      "gitBlob": "d4a5d97c9793a6991adab8e4e06eb36e6c96b657"
+    },
+    {
+      "path": "/workspace/scratch/c714f5bce554/native-host-types-42a4-candidate/finite-runtime-after.log",
+      "bytes": 539,
+      "sha256": "c15e2d53b22709fd97e55e18301c72d6fa1bc54451ad2f72fd0bba69eaef28db",
+      "gitBlob": "22c9ca765cffc2543faa269ecc354a78a4c820ca"
+    },
+    {
+      "path": "/workspace/scratch/c714f5bce554/native-host-types-42a4-candidate/finite-runtime-result.json",
+      "bytes": 1456,
+      "sha256": "177b8995bdc53eb1d464923984f10923dca5b4e7a7e1946e585bfd60612eaed3",
+      "gitBlob": "d184bc9864349b82c3198bbd830c85ac1b4c51a9"
+    }
+  ],
+  "limits": [
+    "Focused source/type and two selected finite loader/frame regressions only; this is not full project typecheck/build or native/E2E qualification.",
+    "Original CI failure remains failed; new candidate not committed or source-published while useful original42a4 jobs execute.",
+    "No app, browser, native child, real vendor CLI, build, dependency install, CI rerun/cancel/dispatch or external checkout write."
+  ]
+}

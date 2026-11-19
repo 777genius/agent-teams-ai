@@ -1,0 +1,16 @@
+--- a/src/main/services/team/provisioning/__tests__/TeamProvisioningPersistenceReconcileFacade.test.ts
++++ b/src/main/services/team/provisioning/__tests__/TeamProvisioningPersistenceReconcileFacade.test.ts
+@@ -458,7 +458,12 @@
+       const teamName = 'TEST-solo',
+         teamDir = join(teamsBasePath, teamName);
+       await mkdir(teamDir, { recursive: true });
+-      const child = { pid: 44101, exitCode: null, signalCode: null, killed: false } as ChildProcess;
++      const child = {
++        pid: 44101,
++        exitCode: null,
++        signalCode: null,
++        killed: false,
++      } as ChildProcess & { exitCode: number | null };
+       const identity = {
+         pid: child.pid!,
+         parentPid: 1,

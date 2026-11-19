@@ -458,7 +458,12 @@ describe.skipIf(process.platform === 'win32')(
       const teamName = 'TEST-solo',
         teamDir = join(teamsBasePath, teamName);
       await mkdir(teamDir, { recursive: true });
-      const child = { pid: 44101, exitCode: null, signalCode: null, killed: false } as ChildProcess;
+      const child = {
+        pid: 44101,
+        exitCode: null,
+        signalCode: null,
+        killed: false,
+      } as ChildProcess & { exitCode: number | null };
       const identity = {
         pid: child.pid!,
         parentPid: 1,

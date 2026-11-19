@@ -1,0 +1,583 @@
+{
+  "schemaVersion": 1,
+  "kind": "executor-outage-recovery-and-type-only-delivery",
+  "createdAt": "2026-11-19 03:53:10 UTC",
+  "sourceHead": "42a4ee210aff6ffa310025d024fd55cfbdbcd277",
+  "sourceTree": "06ddfb2e88ee1e049f14a9c6c11290004d16dda2",
+  "delivery": {
+    "repository": "777genius/agent-teams-ai",
+    "draftPr": 1192,
+    "branch": "fix/frontend-parity-completion-20261113",
+    "fixedBase": "8d46f13fe87b4a25156b6be8331119eb8d0f790e",
+    "route": [
+      1192,
+      1186,
+      982
+    ],
+    "sourceTreeBasis": "a7c092df216f79504d93d2be94cc3e92bb4bba0a",
+    "independentTypeTreeReview": "5f267813046b375d12b615c7eafbf5fbeb98b483",
+    "scope": "Only two previously frozen and independently reviewed existing-test type fixes are delivered. All5162 production blobs remain identical to42a4. This extension adds documentation and already captured CI evidence only.",
+    "fullE2EComplete": false
+  },
+  "outage": {
+    "environment": "unavailable",
+    "workspace": "/workspace/scratch/c714f5bce554",
+    "externalCheckout": "/workspace/scratch/1d5114b8d2ee/agent-teams-ai",
+    "externalCheckoutPolicy": "Read-only; existing unrelated dirty work is preserved. Never use dirty bytes as exact-head source.",
+    "localArtifacts": "Saved before disconnect but now inaccessible. A computed local Git blob hash is NOT a remote upload claim.",
+    "rawCIRecovery": "New live-jobs request markers and complete raw responses are saved directly as immutable Git blobs BEFORE decoding. Earlier retired endpoints are not queried again.",
+    "noExecutorRetry": true,
+    "noLocalAppNativeBuildInstall": true
+  },
+  "currentOriginalCensus": {
+    "observedAt": "2026-11-19 03:48:16 UTC",
+    "census": [
+      {
+        "runId": 44434982617,
+        "rawBlob": "2772377a7329a9d1857c7eddbb3ad7752f3ff9db",
+        "totalCount": 7,
+        "returned": 7,
+        "completed": 6,
+        "nonterminal": [
+          {
+            "id": 135316000926,
+            "name": "packaged full gate",
+            "status": "queued",
+            "runner_id": 0,
+            "runner_name": "",
+            "started_at": "2026-11-19T03:26:12Z",
+            "steps": []
+          }
+        ],
+        "terminalJobs": [
+          {
+            "id": 135261470268,
+            "name": "classify packaged smoke",
+            "conclusion": "success",
+            "completed_at": "2026-11-19T02:00:53Z"
+          },
+          {
+            "id": 135282043337,
+            "name": "packaged smoke (darwin-arm64)",
+            "conclusion": "success",
+            "completed_at": "2026-11-19T02:09:28Z"
+          },
+          {
+            "id": 135282043407,
+            "name": "packaged smoke (win32-x64)",
+            "conclusion": "success",
+            "completed_at": "2026-11-19T02:54:04Z"
+          },
+          {
+            "id": 135282043418,
+            "name": "packaged smoke (win32-arm64)",
+            "conclusion": "success",
+            "completed_at": "2026-11-19T02:55:18Z"
+          },
+          {
+            "id": 135282043439,
+            "name": "packaged smoke (darwin-x64)",
+            "conclusion": "success",
+            "completed_at": "2026-11-19T02:49:27Z"
+          },
+          {
+            "id": 135282043490,
+            "name": "packaged smoke (linux-x64)",
+            "conclusion": "success",
+            "completed_at": "2026-11-19T03:26:12Z"
+          }
+        ]
+      },
+      {
+        "runId": 44434982410,
+        "rawBlob": "4423e0dbdd4a4f9c3938d6fa6bb85df17925d042",
+        "totalCount": 15,
+        "returned": 15,
+        "completed": 14,
+        "nonterminal": [
+          {
+            "id": 135320218337,
+            "name": "Full qualification",
+            "status": "queued",
+            "runner_id": 0,
+            "runner_name": "",
+            "started_at": "2026-11-19T03:37:07Z",
+            "steps": []
+          }
+        ],
+        "terminalJobs": [
+          {
+            "id": 135261470821,
+            "name": "plan",
+            "conclusion": "success",
+            "completed_at": "2026-11-19T02:44:37Z"
+          },
+          {
+            "id": 135261472822,
+            "name": "Stage 1 source Desktop (${{ matrix.label }})",
+            "conclusion": "skipped",
+            "completed_at": "2026-11-19T01:11:27Z"
+          },
+          {
+            "id": 135261472892,
+            "name": "Stage 1 current-tuple process and packed qualification",
+            "conclusion": "skipped",
+            "completed_at": "2026-11-19T01:11:27Z"
+          },
+          {
+            "id": 135261472909,
+            "name": "Stage 1 process tuple diagnostic (unqualified)",
+            "conclusion": "skipped",
+            "completed_at": "2026-11-19T01:11:27Z"
+          },
+          {
+            "id": 135299854804,
+            "name": "Fast feedback",
+            "conclusion": "failure",
+            "completed_at": "2026-11-19T03:28:08Z"
+          },
+          {
+            "id": 135299855013,
+            "name": "Retained OpenCode V1 and Host V2 original Desktop",
+            "conclusion": "failure",
+            "completed_at": "2026-11-19T03:37:07Z"
+          },
+          {
+            "id": 135299856479,
+            "name": "Focused documentation and asset validation",
+            "conclusion": "skipped",
+            "completed_at": "2026-11-19T02:44:38Z"
+          },
+          {
+            "id": 135299856579,
+            "name": "macOS DMG artwork end-to-end",
+            "conclusion": "skipped",
+            "completed_at": "2026-11-19T02:44:38Z"
+          },
+          {
+            "id": 135299856697,
+            "name": "${{ (((github.event_name == 'pull_request') && (github.event.action == 'edited') && (((needs.plan.result != 'success') || (needs.plan.outputs.metadata != 'false'))) && 'Metadata lint') || 'lint') }} (${{ matrix.scope }})",
+            "conclusion": "skipped",
+            "completed_at": "2026-11-19T02:44:38Z"
+          },
+          {
+            "id": 135299856892,
+            "name": "${{ (((github.event_name == 'pull_request') && (github.event.action == 'edited') && (((needs.plan.result != 'success') || (needs.plan.outputs.metadata != 'false'))) && 'Metadata test') || 'test') }} (${{ matrix.shard }}/4)",
+            "conclusion": "skipped",
+            "completed_at": "2026-11-19T02:44:38Z"
+          },
+          {
+            "id": 135299857149,
+            "name": "Renderer source validation",
+            "conclusion": "skipped",
+            "completed_at": "2026-11-19T02:44:38Z"
+          },
+          {
+            "id": 135299857532,
+            "name": "github.event_name == 'pull_request' && github.event.action == 'edited' && (needs.plan.result != 'success' || needs.plan.outputs.metadata != 'false') && 'Metadata Windows smoke' || 'Task change ledger Windows smoke'",
+            "conclusion": "skipped",
+            "completed_at": "2026-11-19T02:44:38Z"
+          },
+          {
+            "id": 135299857617,
+            "name": "Codex login Desktop (Linux x64)",
+            "conclusion": "skipped",
+            "completed_at": "2026-11-19T02:44:38Z"
+          },
+          {
+            "id": 135299857787,
+            "name": "github.event_name == 'pull_request' && github.event.action == 'edited' && (needs.plan.result != 'success' || needs.plan.outputs.metadata != 'false') && 'Metadata validate' || 'validate'",
+            "conclusion": "skipped",
+            "completed_at": "2026-11-19T02:44:38Z"
+          }
+        ]
+      },
+      {
+        "runId": 44434982606,
+        "rawBlob": "8f24d4b060c11112bf63e430d3479f75e2bf385c",
+        "totalCount": 30,
+        "returned": 30,
+        "completed": 29,
+        "nonterminal": [
+          {
+            "id": 135314788375,
+            "name": "Offline Host Desktop",
+            "status": "queued",
+            "runner_id": 0,
+            "runner_name": "",
+            "started_at": "2026-11-19T03:23:09Z",
+            "steps": []
+          }
+        ],
+        "terminalJobs": [
+          {
+            "id": 135261470422,
+            "name": "Offline frontend tests (2/4)",
+            "conclusion": "success",
+            "completed_at": "2026-11-19T01:50:09Z"
+          },
+          {
+            "id": 135261470570,
+            "name": "Offline frontend tests (3/4)",
+            "conclusion": "success",
+            "completed_at": "2026-11-19T02:10:04Z"
+          },
+          {
+            "id": 135261470581,
+            "name": "Offline frontend tests (1/4)",
+            "conclusion": "success",
+            "completed_at": "2026-11-19T02:30:25Z"
+          },
+          {
+            "id": 135261470745,
+            "name": "Offline Host Desktop (linux-x64, skills)",
+            "conclusion": "success",
+            "completed_at": "2026-11-19T02:21:53Z"
+          },
+          {
+            "id": 135261470831,
+            "name": "Offline frontend tests (4/4)",
+            "conclusion": "success",
+            "completed_at": "2026-11-19T03:23:09Z"
+          },
+          {
+            "id": 135261470836,
+            "name": "Offline Host Desktop (linux-x64, import)",
+            "conclusion": "success",
+            "completed_at": "2026-11-19T02:23:32Z"
+          },
+          {
+            "id": 135261470873,
+            "name": "Offline Host Desktop (linux-x64, cross-team)",
+            "conclusion": "success",
+            "completed_at": "2026-11-19T02:59:03Z"
+          },
+          {
+            "id": 135261470882,
+            "name": "Offline Host Desktop (linux-x64, claude-lifecycle)",
+            "conclusion": "success",
+            "completed_at": "2026-11-19T02:37:40Z"
+          },
+          {
+            "id": 135261470887,
+            "name": "Offline Host Desktop (linux-x64, management)",
+            "conclusion": "success",
+            "completed_at": "2026-11-19T02:27:22Z"
+          },
+          {
+            "id": 135261470910,
+            "name": "Offline Host Desktop (darwin-arm64, installer)",
+            "conclusion": "success",
+            "completed_at": "2026-11-19T01:53:57Z"
+          },
+          {
+            "id": 135261470918,
+            "name": "Offline Host Desktop (linux-x64, codex-login)",
+            "conclusion": "success",
+            "completed_at": "2026-11-19T02:53:06Z"
+          },
+          {
+            "id": 135261470937,
+            "name": "Offline Host Desktop (linux-x64, retained-original)",
+            "conclusion": "failure",
+            "completed_at": "2026-11-19T03:02:09Z"
+          },
+          {
+            "id": 135261470952,
+            "name": "Offline Host Desktop (linux-x64, processes)",
+            "conclusion": "success",
+            "completed_at": "2026-11-19T03:08:28Z"
+          },
+          {
+            "id": 135261470953,
+            "name": "Offline Host Desktop (linux-x64, review)",
+            "conclusion": "success",
+            "completed_at": "2026-11-19T03:02:20Z"
+          },
+          {
+            "id": 135261470979,
+            "name": "Offline Host Desktop (linux-x64, import-lifecycle)",
+            "conclusion": "failure",
+            "completed_at": "2026-11-19T02:36:11Z"
+          },
+          {
+            "id": 135261470984,
+            "name": "Offline Host Desktop (linux-x64, extensions)",
+            "conclusion": "success",
+            "completed_at": "2026-11-19T02:28:15Z"
+          },
+          {
+            "id": 135261471007,
+            "name": "Offline Host Desktop (darwin-arm64, opencode-v2-resume)",
+            "conclusion": "failure",
+            "completed_at": "2026-11-19T02:05:51Z"
+          },
+          {
+            "id": 135261471038,
+            "name": "Offline Host Desktop (linux-x64, taskboard)",
+            "conclusion": "success",
+            "completed_at": "2026-11-19T03:04:19Z"
+          },
+          {
+            "id": 135261471040,
+            "name": "Offline Host Desktop (linux-x64, team)",
+            "conclusion": "failure",
+            "completed_at": "2026-11-19T03:15:31Z"
+          },
+          {
+            "id": 135261471063,
+            "name": "Offline Host Desktop (linux-x64, claude)",
+            "conclusion": "success",
+            "completed_at": "2026-11-19T03:10:52Z"
+          },
+          {
+            "id": 135261471070,
+            "name": "Offline Host Desktop (darwin-arm64, opencode-v2-chat-attachments)",
+            "conclusion": "success",
+            "completed_at": "2026-11-19T02:02:29Z"
+          },
+          {
+            "id": 135261471094,
+            "name": "Offline Host Desktop (linux-x64, selection)",
+            "conclusion": "success",
+            "completed_at": "2026-11-19T03:13:13Z"
+          },
+          {
+            "id": 135261471102,
+            "name": "Offline Host Desktop (linux-x64, opencode-v2-management)",
+            "conclusion": "failure",
+            "completed_at": "2026-11-19T03:19:45Z"
+          },
+          {
+            "id": 135261471115,
+            "name": "Offline Host Desktop (linux-x64, collaboration)",
+            "conclusion": "success",
+            "completed_at": "2026-11-19T01:59:21Z"
+          },
+          {
+            "id": 135261471120,
+            "name": "Offline Host Desktop (darwin-arm64, opencode-v2-quit-pending-open)",
+            "conclusion": "success",
+            "completed_at": "2026-11-19T02:34:05Z"
+          },
+          {
+            "id": 135261471138,
+            "name": "Offline Host Desktop (linux-x64, codex)",
+            "conclusion": "success",
+            "completed_at": "2026-11-19T01:52:59Z"
+          },
+          {
+            "id": 135261471191,
+            "name": "Offline Host Desktop (darwin-arm64, opencode-v2-review)",
+            "conclusion": "failure",
+            "completed_at": "2026-11-19T02:25:38Z"
+          },
+          {
+            "id": 135261471212,
+            "name": "Offline Host Desktop (linux-x64, opencode)",
+            "conclusion": "success",
+            "completed_at": "2026-11-19T03:22:50Z"
+          },
+          {
+            "id": 135261471246,
+            "name": "Offline Host Desktop (darwin-arm64, opencode-v2-quit-active)",
+            "conclusion": "failure",
+            "completed_at": "2026-11-19T02:45:19Z"
+          }
+        ]
+      }
+    ]
+  },
+  "original42Facts": {
+    "frontend": {
+      "filesPassed": 2199,
+      "filesSkipped": 7,
+      "testsPassed": 26410,
+      "testsSkipped": 38,
+      "testsFailed": 0,
+      "evidenceBlob": "b7e41a326c0d14147cbaac704c31a4d5a5713935",
+      "scope": "Four unique safe frontend shards; repeated common suites in UI lanes not added."
+    },
+    "ui": {
+      "substantive": 32,
+      "success": 22,
+      "failure": 10,
+      "indexBlob": "7ca3d8517ae982b3f22e35030396f81037531529",
+      "scope": "29 Host scenarios plus3 Teams lanes. Settings success remains separate from later native membership pre-Add failure."
+    },
+    "packaged": {
+      "successfulPlatformJobs": 5,
+      "scope": "Job success does not widen receipt/platform/native/Desktop/vendor qualification. WindowsARM full ZIP was not recovered; log-only limits persist."
+    },
+    "main": {
+      "fastFeedbackJob": 135299854804,
+      "failure": "TS2540 readonly synthetic exitCode, covered by the frozen test-only candidate",
+      "retainedDesktopJob": 135299855013,
+      "retainedFailure": "Original runtime open not-eligible/not-dispatched; coordinator-admission/unknown; cleanup=true in original receipt. Inner cause unqualified."
+    }
+  },
+  "deferredLocalOnlyCandidates": [
+    {
+      "name": "initial-seed-current-model-source",
+      "directory": "initial-seed-readiness-42a4-candidate",
+      "manifest": "f5d012f77c1d0ec812e3b8dafe1bb4da627730f3",
+      "verification": "23a666cb419fb2fd377f5d78cdae810ef816a402",
+      "causalAnalysis": "67c99319aec723ff6ac2a64b19dd1366ba5a89e8",
+      "patch": "cfa631efdb9050a588fc8a803f1e648f796a1187",
+      "archive": "b1506f40b3962b15b66ccfd08a1ea7e1f2f99c4b",
+      "independentR2": "ea67b4ba5e9db4f8377617d60bfcbed2d6cdaa9a",
+      "changes": [
+        {
+          "path": "packages/legacy-agent-host/src/composition/teamRoster.ts",
+          "before": "dccbc1b57913b1f713b6f45ae75c4a0659fe22a7",
+          "after": "1c67bcf7d50e4ab415c3e2af3ed0ab4f5bcf8386"
+        },
+        {
+          "path": "packages/legacy-agent-host/tests/saved-team-model-probe.test.ts",
+          "before": "a36e8d8c9a74bdef6f133f522132d0847a1fde25",
+          "after": "2a88045f035b2cfae748e05d4c5664ae66e8af04"
+        }
+      ],
+      "validation": "Same final test: original5PASS/5RED to10PASS0skip; forbidden native/net/fetch attempts0. Full changed-file types with prepared declarations PASS; earlier actual-source transitive attempt killed−9. Independent local R2 verified628present source files,629prepared declarations,28archive members. Not full project typecheck or original Review E2E/root-cause proof."
+    },
+    {
+      "name": "solo-canonical-config-fields",
+      "directory": "solo-current-stop-census-42a4-candidate",
+      "manifest": "074d216d62a4a8c7bde49659751040884d605069",
+      "verification": "f953dad953ae743e88c1fbb73114bd345a138453",
+      "causalAnalysis": "0ac40ad67475d575cd6c64cd5c0f876f84a12d22",
+      "patch": "040310c72c0410494d952cbbf58f2cf6d958de92",
+      "independentR2": "a93bcfef59cf17fab5e5be3f2846f3fdcc9d20db",
+      "changes": [
+        {
+          "path": "src/main/services/team/provisioning/LegacyNativeStopCensus.ts",
+          "before": "b67251c70fd30f7d3747798f45c10d4eecf7f53c",
+          "after": "8e4929a060b27845a887ff5b9b726117a0bb602a"
+        },
+        {
+          "path": "test/main/services/team/LegacyNativeStopRelease.test.ts",
+          "before": "e89eb3398256c826e0f6c4315b86a363b104074a",
+          "after": "ead8042c29bfac6e0e5299bdcba03cb67b7c8f10"
+        }
+      ],
+      "validation": "36PASS/2RED to38PASS. Three fields already written by ConfigMaterialization plus strict shape checks; same-session and unknown artifact refusal unchanged. Full ESLint137 is not PASS. No WorkSync allowance or Solo E2E acceptance."
+    },
+    {
+      "name": "passive-read-cut-finalReason",
+      "directory": "read-cut-finalreason-42a4-candidate",
+      "manifest": "a8ac285ea8847e9a941c71d210808c6bfd1a2a13",
+      "verification": "c13f3cc35521c89afbf46ed4103ffdc6a6f949da",
+      "patch": "8aaff8140d87f9ade9744da8c81ab50e19b5bddb",
+      "independentR2": "3792320fc8f3392bc6c939b812fd718c935c83a9",
+      "changes": [
+        {
+          "path": "packages/legacy-agent-host/tests/fixtures/native-opencode-team/passive-diagnostics.ts",
+          "after": "7675e9d9f09931ae793217e0fdd272e608ee026a"
+        },
+        {
+          "path": "packages/legacy-agent-host/tests/passive-driver-close-diagnostics.test.ts",
+          "after": "d888c0642b0755123176126ce35cf51250d6997f"
+        }
+      ],
+      "validation": "1RED to10PASS; strict focused types PASS; existing optional finalReason only, closed23labels, same first-event/bounds/no new runtime actions. Diagnostic only."
+    },
+    {
+      "name": "resume-numeric-observation",
+      "directory": "resume-numeric-timing-42-candidate",
+      "manifest": "15998468760d7bd13354a71ce786145f0a956737",
+      "patch": "c5f6f4f4261f9570f2b6ca6654d78a8c0994c3c2",
+      "independentR2": "c1c1e1372ce492370909156a0d482c2586363a2a",
+      "changes": [
+        {
+          "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+          "after": "ba0ef6adf0445a3a899b4ac4d2bce484c6c92475"
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-launch-ui-smoke.ts",
+          "after": "821682c100a2bd352f0814de7db12add6ff6ebfd"
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-proof-sources.ts",
+          "after": "c67235f1df8d65c5b50a9e2a3f9c2f7e87eb0143"
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-ui-read-observation.ts",
+          "after": "0d946bb6e6014e19af0d2b71e9c5ff9b63eafbae"
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-ui-read-observation.test.ts",
+          "after": "8a9931bb246b7cdbbbcefe457c806b2777e90f78"
+        }
+      ],
+      "validation": "52existing before/afterPASS+8newPASS, focused noEmit0; old read loop byte-identical after only hooks removed. Two original actions, fixed numeric DTO. No extra read/await/input/retry/cutoff or acceptance change."
+    }
+  ],
+  "pendingDesigns": {
+    "soloWorkSync": {
+      "directory": "solo-work-sync-ordering-42a4-design",
+      "design": "a1ff8a9d1014945281760b4a08248f10e4b7f92a",
+      "verification": "5a482ca4688d56b6b00c0d096cf5856ccccec58e",
+      "status": "Not implemented. Actual-source1intentionalRED+3boundaryPASS: native proof may precede an admitted queue writer.",
+      "requirements": "Preserve original synchronous native authority, native Stop once under original lock, drain outside identity/team/publication locks, exact original epoch/successor recheck and strict canonical artifact qualification. A queued drain cannot be replaced with dropTeam or a gate that parks queued work.",
+      "additionalFinding": "Selected-Host legacySourceWriteAdmission becomes read-only after qualified native release; later WorkSync notify is skipped and old queued execution loses currentness. Product Task writes must remain separate and allowed. A strict product/history subset is definable but not implemented or qualified."
+    },
+    "retainedDiagnostics": {
+      "directory": "retained-original-causal-42",
+      "analysis": "329ac0b51b0a3fb6e2df28e33b159c71caf71b3e",
+      "status": "No candidate authored. Prepare/held UI and coordinator-admission/unknown Main are separate original failures. Proposed closed one-shot boundary tags only; no added await/I/O/locks/logrows or business authority."
+    },
+    "membershipDiagnostics": {
+      "directory": "v2-membership-causal-42a4",
+      "analysis": "d3a81c42aed239f0654defdb984bb50816900f83",
+      "status": "6/6 finite actual-source causal boundary checks; pre-ready metadata may remain in strict child count and successful currentPhysical is stale on failure. Original third child unattributed. Full diagnostic candidate/tests do not exist.",
+      "pendingWrite": "Scratch failed-census-helper.ts apply_patch was interrupted by executor failure. Inspect file after recovery before writing; result indeterminate, no production source/ref/index change."
+    }
+  },
+  "retired": {
+    "policy": "Never repeat any original terminal log/artifact/run endpoint already captured through42a4; no manual rerun/cancel/dispatch.",
+    "runs": [
+      44434982317,
+      44434982357,
+      44434982522,
+      44434982536,
+      44434982538,
+      44434982541,
+      44434982571,
+      44434982585,
+      44434982588,
+      44434982592,
+      44434982622,
+      44434982634
+    ],
+    "stillLiveRunsAtCut": [
+      44434982617,
+      44434982410,
+      44434982606
+    ],
+    "onlyPendingKnownOriginalJobs": [
+      135316000926,
+      135320218337,
+      135314788375
+    ],
+    "newlyCapturedLocalOnlyJobLogs": [
+      135282043490,
+      135299854804,
+      135299855013
+    ],
+    "newlyCapturedLocalOnlyArtifacts": [
+      14495787013,
+      14495629701
+    ],
+    "permanentCaptureGap": {
+      "artifactId": 14494077201,
+      "scope": "WindowsARM packaged original response lost; log-only proof retained, no full ZIP qualification or retry."
+    }
+  },
+  "recoveryNext": [
+    "Restore access to the existing workspace and inspect pending scratch write before editing; no replacement toolchain or real Claude/Codex.",
+    "Use this committed type-only source as new base. Recover exact candidate bytes and all local-only evidence; rebase overlays by explicit source preimages, retain a7 and other frozen trees unchanged.",
+    "Complete remaining functional WorkSync integration and bounded diagnostics with finite actual-source checks and independent R2; do not declare source mismatches the proven original private cause.",
+    "Observe only current exact-head attempt1 pull_request CI. Save raw before decode and retire terminal endpoints. Obtain fresh global no executing/no live-assigned useful jobs and exact Draft PR/ref/base before each commit; push immediately nonforce.",
+    "P09 contract in Report40 remains unselected; never weaken source-writer/path/consumed-byte assertions silently. No Ready/merge/release/default activation/Stage2."
+  ]
+}

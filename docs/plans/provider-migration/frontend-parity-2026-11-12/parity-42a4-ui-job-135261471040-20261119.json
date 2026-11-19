@@ -1,0 +1,102 @@
+{
+  "schemaVersion": 1,
+  "kind": "current-head-original-team-d1-ui-blocked-by-root-typecheck",
+  "sourceHead": "42a4ee210aff6ffa310025d024fd55cfbdbcd277",
+  "event": "pull_request",
+  "runAttempt": 1,
+  "runId": 44434982606,
+  "job": {
+    "id": 135261471040,
+    "name": "Offline Host Desktop (linux-x64, team)",
+    "head_sha": "42a4ee210aff6ffa310025d024fd55cfbdbcd277",
+    "run_id": 44434982606,
+    "run_attempt": 1,
+    "status": "completed",
+    "conclusion": "failure",
+    "started_at": "2026-11-19T03:10:39Z",
+    "completed_at": "2026-11-19T03:15:31Z",
+    "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/44434982606/job/135261471040",
+    "runner_name": "GitHub Actions 1000396476"
+  },
+  "rawLog": {
+    "phase": "permanently-retired",
+    "jobId": 135261471040,
+    "head": "42a4ee210aff6ffa310025d024fd55cfbdbcd277",
+    "runId": 44434982606,
+    "runAttempt": 1,
+    "conclusion": "failure",
+    "requestedAt": "2026-11-19 03:15:58 UTC",
+    "bytes": 279099,
+    "sha256": "93aeb73213bb963400d712679a1b1f57d4b00996919525e0b89165f0f485c50a",
+    "computedGitBlobSha": "d7a3513b6d7d5ab7d83bb9d8818fe41e698d25e6",
+    "rawLogLocal": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-42a4/job-135261471040-terminal.log",
+    "rawToolResponseLocal": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-42a4/job-135261471040-log-response-raw.json",
+    "rawResponsePersistedBeforeDecode": true,
+    "endpointRetired": true,
+    "publishedBlobSha": "d7a3513b6d7d5ab7d83bb9d8818fe41e698d25e6",
+    "exactReadback": true
+  },
+  "failedSteps": [
+    {
+      "name": "Verify complete workspace types and original typed lint scopes",
+      "status": "completed",
+      "conclusion": "failure",
+      "number": 12,
+      "started_at": "2026-11-19T03:14:43Z",
+      "completed_at": "2026-11-19T03:15:28Z"
+    }
+  ],
+  "originalContractStep": [
+    {
+      "name": "Verify original Runtime and Team conversation contracts",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 11,
+      "started_at": "2026-11-19T03:13:08Z",
+      "completed_at": "2026-11-19T03:14:43Z"
+    }
+  ],
+  "originalUnitSummaryLines": [
+    "2026-11-19T03:13:08.7249090Z ℹ tests 514",
+    "2026-11-19T03:13:08.7249457Z ℹ pass 514",
+    "2026-11-19T03:13:08.7249658Z ℹ fail 0",
+    "2026-11-19T03:13:08.7249847Z ℹ cancelled 0",
+    "2026-11-19T03:13:08.7250070Z ℹ skipped 0",
+    "2026-11-19T03:13:08.7250260Z ℹ todo 0",
+    "2026-11-19T03:13:08.7250464Z ℹ duration_ms 31792.97075",
+    "2026-11-19T03:13:08.9540988Z ℹ tests 7",
+    "2026-11-19T03:13:08.9541747Z ℹ pass 7",
+    "2026-11-19T03:13:08.9542105Z ℹ fail 0",
+    "2026-11-19T03:13:08.9542447Z ℹ cancelled 0",
+    "2026-11-19T03:13:08.9542810Z ℹ skipped 0",
+    "2026-11-19T03:13:08.9543172Z ℹ todo 0",
+    "2026-11-19T03:13:08.9543573Z ℹ duration_ms 197.9632",
+    "2026-11-19T03:14:27.1462006Z ℹ tests 202",
+    "2026-11-19T03:14:27.1462808Z ℹ pass 202",
+    "2026-11-19T03:14:27.1463072Z ℹ fail 0",
+    "2026-11-19T03:14:27.1463446Z ℹ cancelled 0",
+    "2026-11-19T03:14:27.1463808Z ℹ skipped 0",
+    "2026-11-19T03:14:27.1464129Z ℹ todo 0",
+    "2026-11-19T03:14:27.1464515Z ℹ duration_ms 78151.05747",
+    "2026-11-19T03:14:43.7849616Z ℹ tests 134",
+    "2026-11-19T03:14:43.7849990Z ℹ pass 132",
+    "2026-11-19T03:14:43.7850154Z ℹ fail 0",
+    "2026-11-19T03:14:43.7850485Z ℹ cancelled 0",
+    "2026-11-19T03:14:43.7850675Z ℹ skipped 2",
+    "2026-11-19T03:14:43.7850851Z ℹ todo 0",
+    "2026-11-19T03:14:43.7851058Z ℹ duration_ms 16600.659539"
+  ],
+  "exactErrors": [
+    "2026-11-19T03:15:27.4791154Z ##[error]src/main/services/team/provisioning/__tests__/TeamProvisioningPersistenceReconcileFacade.test.ts(607,15): error TS2540: Cannot assign to 'exitCode' because it is a read-only property."
+  ],
+  "artifactUploadWarning": [
+    "2026-11-19T03:15:28.2568503Z ##[warning]No files were found with the provided path: /home/runner/work/_temp/host-emulated-*.json"
+  ],
+  "uploadRecordedArtifactIds": [],
+  "scope": "Original D1 Team lane application typecheck failed before the renderer/UI scenario. Shared finite unit514+7 and original Runtime/Team conversation contracts202pass plus132pass/2skip are separate prerequisite results and do not qualify D1 UI. Original screenshot, receipt, physical UI or runtime cleanup proof is unavailable.",
+  "failure": "TS2540 readonly exitCode in original TeamProvisioningPersistenceReconcileFacade.test.ts line607, column15",
+  "firstBusinessBoundaryNotCompleted": "All original D1 Team renderer/UI scenario actions; prerequisite complete workspace types failed before finite provider setup and app launch.",
+  "candidateRelationship": "Recorded location matches the previously isolated Solo type-only fake-child correction. No source was changed or rerun for this original job.",
+  "artifactInventoryQualification": "Original upload warning reports no files and no upload artifact ID. Final run inventory, when the run is terminal, remains a separate once-only capture.",
+  "jobLogEndpointRetired": true
+}

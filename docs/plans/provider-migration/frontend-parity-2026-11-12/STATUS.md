@@ -1,14 +1,25 @@
 # Завершение Host / frontend parity
 
 Обновлено: 19 ноября 2026. Единственный текущий рабочий план.
-Последний завершённый original CI source: `030b21f0765d1a6e6572f46d262c672d63e69eb7`.
-Полный F1 на030 PASS: Taskboard, review cycle, ReviewFlow, Settings/Approved/reopen
-и все три холодные owner-routing epochs подтверждены final receipt. Последняя
-rollback epoch завершена guarded SIGTERM с последующим Host absence; естественный
-exit всех epochs не заявляется. Полный typecheck/typed-lint scope D1 на030 PASS.
-Provider `b19494fd`: canonical check PASS; узкие Host imports опубликованы.
-Следующая композиция: четыре узких исправления и два диагностических дополнения;
-finite проверки и independent R2 завершены, original acceptance нового source требуется.
+**Полная E2E-приёмка остаётся незавершённой.** Этот коммит содержит только два
+проверенных исправления типов существующих tests; runtime JavaScript обоих tests
+побайтово сохранён. Все5162 production leaves идентичны опубликованному42a4.
+Original результаты ниже относятся к `42a4ee210aff6ffa310025d024fd55cfbdbcd277`,
+а собственная проверка следующего source остаётся обязательной.
+
+Все четыре исходных frontend safe shards на42a4 завершены: **26410 tests passed,
+38 skipped,0failed**;2199 test files passed/7skipped. Повторяемые UI contract suites
+к этой сумме не прибавляются. Все пять packaged platform jobs также SUCCESS,
+но их receipt/platform qualification и Windows ARM capture gap разделены ниже.
+Main Fast feedback остановлен тем же TS2540, а original retained Desktop —
+`coordinator-admission / unknown / not-dispatched`; это отдельный незакрытый путь.
+
+Рабочая среда стала unavailable до загрузки остальных подготовленных кандидатов.
+В этот коммит они **не входят**. Их точные local-only pins, проверки, оставшиеся
+дизайны и запреты повторного чтения CI сохранены в
+[записи восстановления](parity-executor-outage-recovery-20261119.json).
+Provider `b19494fd` сохраняет ранее подтверждённый canonical PASS; нового provider
+source нет. Полный F1/source scope030 остаётся историческим подтверждением.
 
 ## Цель, доставка и неизменные границы
 
@@ -255,8 +266,11 @@ build/Sentry qualification не заявлены. Explicit OOM меньших he
 
 1. Original030 F1 завершён: footer исполнялся, final receipt и все три холодные
    epochs PASS. Provider archive/install/Host build не повторять без причины.
-2. Опубликовать проверенную композицию25source paths после завершения полезных
-   original jobs030; каждый commit сразу expected-SHA push. Сохранить Draft/base.
+2. Композиция25source paths опубликована как42a4 после завершения полезных
+   original jobs030. Подготовлены два type-only исправления: generic arguments в
+   тесте загрузчика и mutable exitCode у локального synthetic child в solo test. Публиковать только после свежей проверки отсутствия полезных
+   executing/live-assigned jobs42a4; каждый commit сразу expected-SHA push.
+   Сохранить Draft/base и все ранее опубликованные source/proof leaves.
 3. Новые original CI должны проверить конкретные исправленные boundaries:
    active Quit, scheduler metadata, packaged loader и original solo producer.
    Selection/import/collaboration/taskboard и finite provider conversations уже
@@ -682,3 +696,140 @@ SCRIPT:B после успешной mutation. Все десять original proc
 groups absent, cleanup=true; controllerInterrupted=false. Qualification flags
 остаются false, общий статус INCOMPLETE. Прежнее решение о writer/path/consumed
 bytes не принято; oracle, исходная поддержка scripts и граница доверия не меняются.
+
+
+## Original 42a4: исправление типизации теста до native acceptance
+
+Original Host process jobs Windows ARM64 (135261468433) и Darwin ARM64
+(135261468917) остановились на компиляции Host tests: TS2339 в
+`native-host-close.test.ts(107,42)` и `(107,65)` для `base` и `specifier` у `never`.
+Их native/process acceptance steps не исполнялись. Это отдельная ошибка нового
+теста; прежняя runtime причина packaged `MODULE_NOT_FOUND` здесь не проверялась.
+Исходные журналы сохранены, их terminal log endpoints выведены из наблюдения.
+
+Причина установлена по фактической декларации `@types/node`24.12.4:
+`node:assert/strict` использует generic assertion `deepStrictEqual<T>`, поэтому
+`assert.deepEqual(loads, [])` сужает массив до `never[]`, несмотря на последующие
+записи через callback. Изменены только две строки — добавлены `<typeof loads>`.
+Оба исходных сравнения с пустым массивом, callback, проверки captured entry и
+specifier, отказ при отсутствующем contract и frame oracle сохранены.
+
+Фактический TS7.0.2 на исходном тесте воспроизвёл ровно обе исходные ошибки;
+кандидат прошёл focused noEmit без diagnostics. Полный JavaScript после удаления
+типов идентичен байт в байт. Два существующих finite loader/frame regressions
+прошли2/2 без skips. Использованы подготовленные compiled declarations/pure schemas;
+это не новый product build, не Windows/native acceptance и не полный workspace gate.
+Independent R2 подтвердил ровно два type arguments и32 pinned input/receipt files.
+
+Индекс исправления и исходных доказательств:
+[parity-test-types-index-20261119.json](parity-test-types-index-20261119.json).
+Production source, deadlines, runtime cleanup, source rosters и size policy не
+меняются. Предыдущие F1/D1/native результаты остаются привязанными к030; текущие
+original42a4 и будущий successor требуют своих результатов. P09 writer/path
+решение не выбрано, причины остальных incomplete boundaries не подменяются
+этой ошибкой компиляции.
+
+
+## Original 42a4: второй test-only type отказ и независимый native PASS
+
+Весь Host process workflow44434982536 завершён: все пять исходных платформ
+отказали на той же компиляции теста TS2339; последующие native steps10–23 не
+выполнялись. Сохранены все пять journals, final workflow metadata, canonical
+job page и inventory пяти artifacts; повторное чтение этих endpoints запрещено.
+Содержимое ZIP artifacts для compile-only failure не загружалось.
+
+Original Teams Ubuntu135261468624 и Windows135261468308 отдельно подтвердили
+другую ошибку: root TypeScript проверка отказала с TS2540 в
+`TeamProvisioningPersistenceReconcileFacade.test.ts(607,15)` при присваивании
+`f.child.exitCode = 0`. Isolated Host production build в обеих jobs прошёл;
+Create/Back/Resume/Copy/Launch E2E и его screenshots/receipts не созданы.
+
+Причина — локальный synthetic child был объявлен как `ChildProcess`, чей Node
+type имеет readonly `exitCode`. Сам объект создан тестом и его изменение
+имитирует подтверждённое завершение: после `recordVerifiedCliProcessRelease`,
+перед `processClosed` и проверкой Stop completion. Только его local TEST view
+теперь явно содержит mutable `exitCode: number | null`. Runtime object, custody,
+очередность release/exit/Stop, отрицательные проверки и production types сохранены.
+Actual TS7 source-excerpt noEmit воспроизвёл TS2540 и прошёл после изменения;
+полный преобразованный JavaScript теста совпадает. Это ограниченное доказательство
+типов, а не полный file/project typecheck. Один существующий positive Stop case
+проверен в подготовленном finite harness без native child/build/install.
+
+Отдельный native Stage1 Windows ARM64 job135261468893 на том же42a4 завершился
+SUCCESS. Его original artifact подтверждает manual и auto OpenCode2.1.4 journeys:
+в каждом11 TEST-local model requests,0model failures, семь completed stages,
+media/tool/MCP/permission, сохранение исходной config, Stop и cold Host Resume
+без model/tool replay. В каждом два captured Hosts завершились exit0/no signal,
+stdout valid и cleanup=true. Windows original/neighbor Job custody cleanup
+подтверждён отдельным receipt. Это не Desktop/vendor-auth/release qualification;
+Linux coordination на этом tuple остаётся unqualified. Отсутствие close-failure
+events само по себе не использовано как доказательство cleanup.
+
+Оба source исправления затрагивают только типы существующих tests. Все5162
+production leaves идентичны опубликованному42a4, исходный size guard не менялся
+и повторный его запуск не заявляется. Прочие original CI продолжают сохранять
+свои самостоятельные verdicts; полноценный successor gate ещё требуется.
+
+
+### Дополнительные original42a4 результаты на момент сборки исправлений
+
+Frontend shard2 job135261470422 завершился SUCCESS:550files passed/2skipped,
+6891tests passed/18skipped/0failures. SmartSchedules.safe-e2e14 и live snapshot
+factory8 входят в эти6891, а не прибавляются к ним. Shard1, полный typecheck,
+actual Solo producer и native UI этим результатом не квалифицируются.
+
+Finite Codex UI job135261471138 прошёл original conversations/schedules через
+pinned TEST peers и final exact-source/receipt/cleanup verifier. Installer UI
+job135261470910 прошёл stock Codex Update с retained original Team source и
+тот же штатный verifier. Оба режима emulated; реальный vendor Codex не запускался.
+Общие исходные unit counts между lanes не суммируются как уникальные тесты.
+Artifact metadata сохранены из original uploads, отдельные ZIP/visual audits
+для этих UI jobs не заявляются.
+
+Darwin x64 job135261468754 и ARM64 job135261468687 имеют отдельные completed
+embedded Host PASS/cleanup=true и custody PASS/cleanup=confirmed receipts.
+Оба job в целом FAILURE на последующем P09 POSIX witness step25. На x64 первый
+сохранённый assert476:18 относится к `SecCodeCheckValidity` return−67062:
+helper отображает отказ в свой default EACCES13, но `execErrno=0`; это не
+наблюдавшийся execve denial. ARM compiler-default baseline PASS, первый отказ
+assert496:24 — after-check markers. На обеих архитектурах after-check и
+writer-open допускают успешную mutation и затем `LIB/BIN:A/MAIN:A`, что нарушает
+существующий no-user-markers oracle. Script-negative сохраняет явный `SCRIPT:B`
+COUNTEREXAMPLE. Все10 children/groups на каждой архитектуре очищены; это не
+доказательство byte identity или mutation prevention. Native runtime PASS и
+POSIX INCOMPLETE не объединяются в общий PASS; P09 contract остаётся невыбранным.
+
+
+## Поздний original42a4 срез и недоступность рабочей среды
+
+[Индекс32 исходных Host/Teams jobs](parity-42a4-ui-final32-index-20261119.json)
+содержит22success/10failure с точными log/evidence hashes. Settings native PASS
+сохраняется отдельно от следующего membership отказа `3 !== 2` до Add. Failed
+three-child snapshot отсутствует; последний successful currentPhysical нельзя
+использовать для определения лишнего PID. Resume остановлен до исходного Launch
+click; active Quit — при setup до Quit business; Review — после исходного click
+и успешного model preflight, но до подтверждённого capture. Полного native UI PASS
+эти observations не дают. Original Solo Create/reply/Stop достигнуты, required
+nativeRelease отсутствует, WorkSync и cleanup debt остаются открытыми.
+
+[Четыре frontend shards](parity-42a4-frontend-four-shards-20261119.json) дают
+26410PASS/38SKIP/0FAIL. Source-only finite cases из других lanes не прибавляются.
+Main job135299854804 воспроизводит readonly exitCode TS2540, который исправлен
+здесь только в synthetic test view. Job135299855013 дошёл до original V1 history,
+затем retained open отказал not-eligible/not-dispatched; исходный receipt имеет
+cleanup=true. Подробный новый Main receipt/ZIP и Linux packaged receipts были
+сохранены локально до отключения среды; их bytes сейчас недоступны. Их hashes в
+записи восстановления не выдаются за удалённые uploads, endpoints не повторяются.
+
+На свежем объединённом census03:48:16 UTC все полезные42a4 jobs завершены; остаются
+три служебных queued/unassigned aggregators. Это наблюдение сохранено как три
+полных raw response объекта; непосредственно перед commit требуется новый gate.
+Сам по себе queued статус недостаточен: runner assignment также должен отсутствовать.
+
+Независимое review frozen type-only tree a7c092df сохранено в
+[type-tree R2](parity-type-tree-r2-20261119.json). Новая запись состояния добавляет
+только документацию/evidence поверх того же проверенного source. Draft PR1192,
+исходный base, маршрут1192→1186→982, provider pin, source-size baseline и runtime
+oracles сохранены. P09 contract из Report40 не выбран. После восстановления среды
+нужно завершить WorkSync integration и незакрытые runtime/UI причины; этот коммит
+не является завершением всей миграции.
