@@ -51,6 +51,10 @@ import {
   recordsToSnapshot,
   snapshotToRecords,
 } from './memberWorkSyncSqliteMappers';
+import {
+  healStaleIncarnationStatuses,
+  type StaleIncarnationHealInput,
+} from './memberWorkSyncStaleIncarnationHeal';
 import { preflightMemberWorkSyncStatusSources } from './memberWorkSyncStatusPreflight';
 import {
   type MemberWorkSyncBackupCandidate,
@@ -91,6 +95,7 @@ export interface BackendSelectingMemberWorkSyncStoreOptions {
   gateway: MemberWorkSyncStorageGateway;
   paths: MemberWorkSyncStorePaths;
   fallbackRequiresReplica: boolean;
+  readTeamRootStats?: StaleIncarnationHealInput['readTeamRootStats'];
   logger?: { warn(message: string, metadata?: Record<string, unknown>): void };
 }
 
@@ -186,7 +191,7 @@ export class BackendSelectingMemberWorkSyncStore
     const { teamName, incarnation } = identity;
     if (!this.options || !this.replica || !incarnation.trim())
       throw new MemberWorkSyncSafetyJsonReadError('unavailable');
-    const { gateway, paths, fallbackRequiresReplica, logger } = this.options;
+    const { gateway, paths, fallbackRequiresReplica, logger, readTeamRootStats } = this.options;
     const replica = this.replica;
     const backend = await this.selector.select<'sqlite' | 'json'>('sqlite', 'json');
     return this.replicaMutex.run(teamName, async () => {
@@ -202,7 +207,9 @@ export class BackendSelectingMemberWorkSyncStore
       if (!preflightOnly) this.authorityPreparationFailures.delete(normalizeTeamKey(teamName));
       let prepared = false;
       let stage: MemberWorkSyncPreparationStage = 'replica_wrapper';
-      try {
+      const attempt = async (): Promise<T> => {
+        prepared = false;
+        stage = 'replica_wrapper';
         if (await this.readPendingPrimaryPurge(teamName))
           throw new MemberWorkSyncSafetyJsonReadError('unavailable');
         const source = await replica.readForAuthorityPreparation(teamName, incarnation);
@@ -331,6 +338,30 @@ export class BackendSelectingMemberWorkSyncStore
           await replica.writeClean(teamName, snapshot, incarnation);
         }
         return result;
+      };
+      try {
+        try {
+          return await attempt();
+        } catch (error) {
+          // One targeted attempt per preparation; restore/preflight and later failures never heal.
+          const healable = !preflightOnly && !backup && !prepared;
+          if (
+            !healable ||
+            (await healStaleIncarnationStatuses({
+              teamName,
+              incarnation,
+              backend,
+              error,
+              gateway,
+              paths,
+              replica,
+              readTeamRootStats,
+              logger,
+            })) !== 'healed'
+          )
+            throw error;
+        }
+        return await attempt();
       } catch (error) {
         logIncarnationMismatch(logger, {
           teamName,
