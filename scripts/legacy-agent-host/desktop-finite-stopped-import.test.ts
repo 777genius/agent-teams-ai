@@ -13,6 +13,116 @@ const prompt = 'TEST_CURRENT_LEGACY_SOLO_ONE';
 const deferredPrompt = 'You are "team-lead", the team lead.\nYour team is "test-stopped-legacy".\nUser instructions:\n' + prompt;
 const sha = (value: string) => createHash('sha256').update(value).digest('hex');
 
+test('finite import factory keeps only the explicit fresh-launch template and refuses unrelated Runtime seeds',
+  { skip: process.platform === 'win32', timeout: 20_000 }, async t => {
+    const root = await realpath(await mkdtemp(join(tmpdir(), 'TEST-finite-import-preparation-')));
+    t.after(() => rm(root, { recursive: true, force: true }));
+    for (const name of ['home', 'tmp', 'corepack/dist/lib'])
+      await mkdir(join(root, name), { recursive: true, mode: 0o700 });
+    await writeFile(join(root, 'corepack/package.json'), JSON.stringify({ name: 'corepack', version: 'TEST' }), { mode: 0o600 });
+    for (const name of ['dist/pnpm.js', 'dist/lib/corepack.cjs'])
+      await writeFile(join(root, 'corepack', name), 'throw new Error("TEST must never execute Corepack");\n', { mode: 0o600 });
+    const repo = await realpath(join(import.meta.dirname, '../..'));
+    const result = spawnSync(process.execPath, ['--input-type=module', '-e', `
+import assert from 'node:assert/strict';
+import { lstat, readFile, readdir } from 'node:fs/promises';
+import { dirname, join } from 'node:path';
+import { pathToFileURL } from 'node:url';
+const [repo, pnpmEntry, temporary] = process.argv.slice(1);
+const load = relative => import(pathToFileURL(join(repo, relative)).href);
+const { prepareDesktopFiniteStoppedImportFixture } = await load('scripts/legacy-agent-host/desktop-finite-stopped-import-fixture.ts');
+const { verifyDesktopEmulatedRuntimeFixture } = await load('scripts/legacy-agent-host/desktop-emulated-runtime-fixture.ts');
+const { publishDesktopEmulatedClaudeSettingsProfile } = await load('scripts/legacy-agent-host/desktop-emulated-claude-settings-fixture.ts');
+const { readTeamHostProfile } = await load('packages/legacy-agent-host/dist/composition/readProfile.js');
+const { teamHostProfileSchema } = await load('packages/legacy-agent-host/dist/composition/teamHostProfile.js');
+const { resolveRuntimeRecipe } = await load('packages/legacy-agent-host/dist/composition/runtimeRecipe.js');
+assert.deepEqual(await readdir(temporary), []);
+const fixture = await prepareDesktopFiniteStoppedImportFixture(repo, pnpmEntry);
+assert.equal(dirname(fixture.root), temporary);
+const profile = readTeamHostProfile(fixture.profilePath, fixture.pins.profileSha256);
+assert.deepEqual(profile.runtime.members, []); assert.equal(profile.runtime.providerTemplates.length, 1);
+assert.equal(profile.management.length, 1);
+const template = profile.runtime.providerTemplates[0];
+const selected = resolveRuntimeRecipe(profile.runtime, 'TEST-fresh-import-team', 'team-lead', 'anthropic');
+assert.deepEqual(selected, resolveRuntimeRecipe({ ...profile.runtime, members: [template] },
+  'TEST-fresh-import-team', 'team-lead', 'anthropic'), 'unused seed removal cannot change the fresh captured recipe');
+assert.equal(selected.memberId, 'team-lead'); assert.notEqual(selected.sessionId, template.sessionId);
+const descriptor = JSON.parse(await readFile(fixture.descriptorPath, 'utf8'));
+assert.equal(descriptor.creation.importAuthority.principalId, profile.principalId);
+assert.equal(descriptor.owners[0].profile.env.LEGACY_AGENT_HOST_PROFILE_SHA256, fixture.pins.profileSha256);
+assert.deepEqual(descriptor.handles[0].members, [{ memberId: 'alice-id', label: 'alice' }]);
+assert.equal((await verifyDesktopEmulatedRuntimeFixture(fixture)).protocolRevision, 'sdk-0.3.305');
+process.env.LEGACY_DESKTOP_PROOF_MODE = 'emulated-import-ui';
+await assert.rejects(verifyDesktopEmulatedRuntimeFixture(fixture));
+process.env.LEGACY_DESKTOP_PROOF_MODE = 'emulated-import-lifecycle-ui';
+const peer = fixture.emulatedRuntime.peers[0], flag = peer.environment.TEST_DESKTOP_IMPORT_LIFECYCLE;
+peer.environment.TEST_DESKTOP_IMPORT_LIFECYCLE = 'malformed';
+await assert.rejects(verifyDesktopEmulatedRuntimeFixture(fixture));
+peer.environment.TEST_DESKTOP_IMPORT_LIFECYCLE = flag;
+const withSeed = structuredClone(profile); withSeed.runtime.members = [structuredClone(template)];
+await publishDesktopEmulatedClaudeSettingsProfile(fixture, withSeed);
+await assert.rejects(verifyDesktopEmulatedRuntimeFixture(fixture));
+await publishDesktopEmulatedClaudeSettingsProfile(fixture, profile);
+const malformed = structuredClone(profile);
+malformed.runtime.providerTemplates[0].environment.TEST_DESKTOP_IMPORT_LIFECYCLE = 'malformed';
+await publishDesktopEmulatedClaudeSettingsProfile(fixture, malformed);
+await assert.rejects(verifyDesktopEmulatedRuntimeFixture(fixture));
+await publishDesktopEmulatedClaudeSettingsProfile(fixture, profile,
+  descriptor => { descriptor.creation.importAuthority = { principalId: 'TEST-foreign-principal' }; });
+await assert.rejects(verifyDesktopEmulatedRuntimeFixture(fixture));
+await publishDesktopEmulatedClaudeSettingsProfile(fixture, profile,
+  descriptor => { descriptor.creation.importAuthority = { principalId: profile.principalId }; });
+assert.equal(teamHostProfileSchema.safeParse({ ...profile, runtime: { members: [], providerTemplates: [] } }).success, false);
+await verifyDesktopEmulatedRuntimeFixture(fixture);
+for (const path of [join(fixture.root, 'hoststore/runtime-sessions'), join(fixture.root, 'claude/teams/test-stopped-legacy'),
+  fixture.sentinelLog, ...fixture.emulatedRuntime.peers.map(peer => join(peer.root, 'effects.ndjson'))])
+  await assert.rejects(lstat(path), { code: 'ENOENT' });
+process.stdout.write(JSON.stringify({ templateOnly: true, nativeEffects: 0 }));
+`, repo, join(root, 'corepack/dist/pnpm.js'), join(root, 'tmp')], {
+      cwd: repo, encoding: 'utf8', timeout: 15_000, maxBuffer: 128 * 1024,
+      env: { HOME: join(root, 'home'), TMPDIR: join(root, 'tmp'), PATH: dirname(process.execPath) + ':/usr/bin:/bin',
+        LANG: 'C.UTF-8', LC_ALL: 'C.UTF-8', LEGACY_DESKTOP_EMULATED_ONLY: '1',
+        LEGACY_DESKTOP_PROOF_MODE: 'emulated-import-lifecycle-ui' },
+    });
+    assert.equal(result.error, undefined, result.stderr); assert.equal(result.signal, null);
+    assert.equal(result.status, 0, result.stderr);
+    assert.deepEqual(JSON.parse(result.stdout), { templateOnly: true, nativeEffects: 0 });
+  });
+
+test('finite import conversation readback binds the complete public reply to its original Runtime generation', async () => {
+  const { assertFiniteImportConversationReadback } = await import('./desktop-finite-stopped-import-fixture.ts');
+  const { runtimeDigest, normalizeBinding } = await import('../../packages/legacy-agent-host/dist/runtime/identity.js');
+  const f = await inputCorrelationFixture(), correlation = f.assertFiniteImportInputCorrelation(f.options);
+  const reply = { from: 'team-lead', to: 'user', text: 'TEST boot ready', timestamp: '2026-11-19T12:00:00.000Z',
+    read: true, source: 'lead_session', messageId: 'host-reply-' + sha('TEST-original-message'),
+    leadSessionId: 'host-lead-' + runtimeDigest(normalizeBinding(f.binding)) };
+  const page = { teamName: 'test-stopped-legacy', revision: sha('TEST-original-page'),
+    conversation: { revision: sha('TEST-original-conversation'), gaps: [] as string[] },
+    messages: [{ from: 'user', to: 'team-lead', text: 'TEST original product message',
+      timestamp: reply.timestamp, read: true, source: 'inbox', messageId: randomUUID() }, reply],
+    hasMore: false, nextCursor: null as string | null };
+  assert.deepEqual(assertFiniteImportConversationReadback(page, correlation), page);
+  const cases: Array<[string, (value: typeof page) => void]> = [
+    ['product snapshot is not the conversation port', value => { Object.assign(value, { conversation: undefined }); }],
+    ['foreign Team', value => { value.teamName = 'TEST-foreign-team'; }],
+    ['foreign Runtime generation', value => { Object.assign(value.messages[1]!, { leadSessionId: 'host-lead-' + sha('TEST-successor') }); }],
+    ['matching product text cannot substitute for native reply', value => { value.messages[1]!.source = 'inbox'; }],
+    ['wrong reply bytes', value => { value.messages[1]!.text = 'TEST different reply'; }],
+    ['duplicate native reply', value => { value.messages.push(structuredClone(value.messages[1]!)); }],
+    ['incomplete page', value => { value.hasMore = true; value.nextCursor = '1.' + sha('TEST-cursor'); }],
+    ['conversation gap', value => { value.conversation.gaps.push('storage'); }],
+    ['fragmented reply', value => { Object.assign(value, { messageTotal: 1, messageParts: [{ index: 0, part: 0, total: 2 }] }); }],
+    ['oversized product row', value => { value.messages[0]!.text = 'x'.repeat(384 * 1024); }],
+  ];
+  for (const [label, change] of cases) {
+    const invalid = structuredClone(page); change(invalid);
+    assert.throws(() => assertFiniteImportConversationReadback(invalid, correlation), label);
+  }
+  const successor = structuredClone(correlation);
+  (successor.binding as Record<string, unknown>).generation = 'TEST-successor';
+  assert.throws(() => assertFiniteImportConversationReadback(page, successor), 'same text cannot cross the original generation');
+});
+
 async function inputCorrelationFixture(prefix = '') {
   const { assertFiniteImportInputCorrelation } = await import('./desktop-finite-stopped-import-fixture.ts');
   const { deliveryFingerprint } = await import('../../packages/legacy-agent-host/dist/runtime/identity.js');

@@ -4,7 +4,7 @@ import { createServer } from 'node:http';
 import { basename, dirname, join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { readTeamHostProfile } from '../../packages/legacy-agent-host/dist/composition/readProfile.js';
-import { deliveryFingerprint } from '../../packages/legacy-agent-host/dist/runtime/identity.js';
+import { deliveryFingerprint, normalizeBinding, runtimeDigest } from '../../packages/legacy-agent-host/dist/runtime/identity.js';
 import { validatePreparedInput } from '../../packages/legacy-agent-host/dist/runtime/inputPreparation.js';
 import type { RuntimeBinding, RuntimeInput } from '../../packages/legacy-agent-host/dist/runtime/contracts.js';
 import { desktopNodeScriptHeader, digest, fileDigest } from './desktop-backend-fixture.ts';
@@ -88,6 +88,36 @@ export function assertFiniteImportInputCorrelation(options: {
     nativeInputId, nativeSessionId, peerPid: peer.pid, nativePayloadHash };
 }
 
+// This is a finite-fixture assertion over the existing public Main projection, not a new DTO mapper.
+export function assertFiniteImportConversationReadback(value: unknown, correlation: FiniteImportRow): FiniteImportRow {
+  const page = finiteImportRow(value);
+  assert.ok(Buffer.byteLength(JSON.stringify(page)) <= 384 * 1024);
+  assert.deepEqual(Object.keys(page).sort(), ['conversation', 'hasMore', 'messages', 'nextCursor', 'revision', 'teamName']);
+  assert.equal(page.teamName, FINITE_SOURCE_TEAM);
+  assert.equal(typeof page.revision, 'string'); assert.match(page.revision as string, /^[a-f0-9]{64}$/u);
+  assert.equal(page.hasMore, false); assert.equal(page.nextCursor, null);
+  const conversation = finiteImportRow(page.conversation);
+  assert.deepEqual(Object.keys(conversation).sort(), ['gaps', 'revision']);
+  assert.equal(typeof conversation.revision, 'string'); assert.match(conversation.revision as string, /^[a-f0-9]{64}$/u);
+  assert.deepEqual(conversation.gaps, []);
+  assert.ok(Array.isArray(page.messages) && page.messages.length > 0 && page.messages.length <= 50);
+  const replies = page.messages.map(finiteImportRow).filter(message => message.source === 'lead_session');
+  assert.equal(replies.length, 1);
+  const reply = replies[0]!;
+  const binding = normalizeBinding(finiteImportRow(correlation.binding) as unknown as RuntimeBinding);
+  assert.deepEqual(binding, correlation.binding); assert.equal(binding.memberId, 'team-lead');
+  assert.equal(typeof reply.messageId, 'string'); assert.match(reply.messageId as string, /^host-reply-[a-f0-9]{64}$/u);
+  assert.equal(typeof reply.timestamp, 'string');
+  assert.match(reply.timestamp as string, /^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d\.\d{3}Z$/u);
+  assert.ok(Number.isFinite(Date.parse(reply.timestamp as string)));
+  assert.deepEqual(reply, { from: 'team-lead', to: 'user', text: FINITE_HOST_REPLY,
+    timestamp: reply.timestamp, read: true, source: 'lead_session', messageId: reply.messageId,
+    leadSessionId: 'host-lead-' + runtimeDigest(binding) });
+  // The selected original backend has already applied its canonical public DTO projection.
+  // Retain that complete, unfragmented page; no second read or private Runtime-file projection.
+  return structuredClone(page);
+}
+
 /** This fixture never creates any source Team, run record, transcript or release receipt. */
 export async function prepareDesktopFiniteStoppedImportFixture(repo: string, pnpmEntry: string) {
   assert.equal(process.env.LEGACY_DESKTOP_EMULATED_ONLY, '1');
@@ -98,6 +128,12 @@ export async function prepareDesktopFiniteStoppedImportFixture(repo: string, pnp
     peer.environment.TEST_DESKTOP_IMPORT_LIFECYCLE = 'current-solo-v1';
   for (const selected of [...profile.runtime!.members, ...profile.runtime!.providerTemplates!, ...profile.management!])
     selected.environment.TEST_DESKTOP_IMPORT_LIFECYCLE = 'current-solo-v1';
+  // Only the imported captured lead is runnable in this proof. Retain its explicit
+  // provider template without installing the unrelated sidebar seed as a Runtime entry.
+  assert.equal(profile.runtime!.members.length, 1);
+  assert.equal(profile.runtime!.providerTemplates!.length, 1);
+  assert.deepEqual(profile.runtime!.members[0], profile.runtime!.providerTemplates![0]);
+  profile.runtime!.members = [];
   await publishDesktopEmulatedClaudeSettingsProfile(fixture, profile, descriptor => {
     finiteImportRow(descriptor.creation).importAuthority = { principalId: profile.principalId };
   });

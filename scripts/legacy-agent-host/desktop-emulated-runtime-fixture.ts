@@ -193,14 +193,32 @@ export async function verifyDesktopEmulatedRuntimeFixture(fixture: Awaited<Retur
   assert.equal(await fileDigest(fixture.profilePath), fixture.pins.profileSha256);
   assert.equal(await fileDigest(fixture.descriptorPath), fixture.pins.descriptorSha256);
   const profile = readTeamHostProfile(fixture.profilePath, fixture.pins.profileSha256);
-  assert.equal(profile.runtime?.members.length, 1); assert.equal(profile.runtime?.providerTemplates?.length, 1);
+  assert.equal(profile.runtime?.providerTemplates?.length, 1);
+  const template = profile.runtime!.providerTemplates![0]!;
+  const finiteImport = template.environment.TEST_DESKTOP_IMPORT_LIFECYCLE === 'current-solo-v1';
+  assert.equal(finiteImport, process.env.LEGACY_DESKTOP_PROOF_MODE === 'emulated-import-lifecycle-ui');
+  if (finiteImport) {
+    assert.equal(process.env.LEGACY_DESKTOP_EMULATED_ONLY, '1');
+    assert.equal(selected.provider, 'claude'); assert.equal(selected.variant, undefined);
+    assert.deepEqual(profile.runtime?.members, []);
+    assert.deepEqual(selected.peers.map(peer => [peer.role, peer.environment.TEST_DESKTOP_IMPORT_LIFECYCLE]),
+      [['runtime', 'current-solo-v1'], ['management', 'current-solo-v1']]);
+    assert.deepEqual(selected.sources.map(source => source.path),
+      [join(import.meta.dirname, '../../tools/owned-process-broker/fixtures/claudeProviderPeer.mjs')]);
+    assert.equal(selected.executable.path, join(fixture.root, 'bin/TEST-claude-peer'));
+    const descriptor = record(JSON.parse(await readFile(fixture.descriptorPath, 'utf8')));
+    assert.deepEqual(descriptor.creation, {
+      owner: { ownerId: profile.owner.ownerId, revision: profile.owner.revision },
+      contextIds: ['local'], importAuthority: { principalId: profile.principalId },
+    });
+  } else assert.equal(profile.runtime?.members.length, 1);
   assert.equal(profile.management?.length, 1);
   for (const row of [...profile.runtime!.members, ...profile.runtime!.providerTemplates!, ...profile.management!]) {
     assert.equal(row.provider, selected.provider); assert.deepEqual(row.executable, selected.executable);
     const peer = selected.peers.find(peer => peer.role === row.environment.TEST_PEER_ROLE);
     assert.ok(peer); assert.deepEqual(row.environment, peer.environment);
   }
-  const member = profile.runtime!.members[0]!;
+  const member = finiteImport ? profile.runtime!.providerTemplates![0]! : profile.runtime!.members[0]!;
   return { executable: selected.executable, sources: selected.sources, provider: selected.provider,
     ...(selected.installer ? { installer: await verifyDesktopEmulatedCodexInstaller(selected.installer) } : {}),
     ...(selected.variant === 'selection' || selected.variant === 'installer' ? { selectionVariant: 'two-models-v1' } : {}),

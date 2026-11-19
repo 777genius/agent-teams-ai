@@ -351,5 +351,170 @@
       "logSha256": "b2b07aae3e75a8388f9bac07254deeb4e2331c839f1b00e300c5a72e6591b87c"
     }
   },
-  "remaining": "Original donor SQLite ABI rebuild, runtime0.0.160 stage, controller/MCP builds and original native V1/V2 coexistence test. No native/E2E PASS from preparation."
+  "remaining": "Historical input preparation complete. Original current-source V2 preparation and native Main retained V1/V2 coexistence test remain; no native or E2E PASS from preparation.",
+  "donor4aRemaining": {
+    "artifact": {
+      "path": "/workspace/scratch/de9d4631e21c/coexistence-input-preparation-20261119/donor4a-remaining-preparation-result.json",
+      "bytes": 7990,
+      "sha256": "0390e531f76f1e2deaa613750204dbfa36525fd569c7c66dfd758c3edcc02f43"
+    },
+    "result": {
+      "kind": "HISTORICAL_INPUT_PREPARATION",
+      "operation": "canonical-donor4a-remaining-preparation",
+      "status": "PREPARED",
+      "sourceHead": "4a0e06277fe216d9f82dbbede362668fe46622ee",
+      "sourceTree": "4bb456a5b35b6fca0e795bc8b19a13f5f1f6defd",
+      "cwd": "/workspace/scratch/1d5114b8d2ee/agent-teams-ai/.runtime-download/TEST-donor-4a",
+      "sourceHashesBefore": {
+        "package.json": "77d38aa6501f49e42cc556c47446c269cc05e76fc2ae0dc4c6a8b66705a296f9",
+        "pnpm-lock.yaml": "ee36f9b252359d02f164eaa61ce847f6056370e5a6c900f2928f9175c9c74571",
+        "pnpm-workspace.yaml": "a5074fe53c697ac3d8ea2693d43e6c0c9b5d1bcc9253ec0cdb2cb7b850e21f36",
+        "runtime.lock.json": "fa614f6dcc672b47342a838300f4c1c7b82ae0f05899c108af17838c58c53a87",
+        "scripts/stage-runtime.mjs": "7ee8a9036562728a66d5a1dcd3ce7c97abf75cabeb97092eb9b87171ed2e29be",
+        "agent-teams-controller/scripts/build.mjs": "a7afb7428749efcd15c45acf9b4da03ce4d529ff663b57af876a55b373b97399",
+        "agent-teams-controller/package.json": "2f1b7c7f690adacb009e3aa513dba9c1a54fd4e83c6f0e08d5c521d6e4dfa3bf",
+        "mcp-server/package.json": "b6b245a0062d111cee110ec7222ce00c3730e03a70cf99a29b92bfda245efa5f",
+        "mcp-server/tsup.config.ts": "691c8486f95f360f0ac8985ad42ba17e81100cac6989317bfb75981552833321"
+      },
+      "node": {
+        "path": "/workspace/scratch/1d5114b8d2ee/agent-teams-ai/resources/legacy-agent-host/node/v24.21.0/linux-x64/node",
+        "version": "v24.21.0",
+        "sha256": "7fde7b8afa198da66257f42ee2001d874c7355631e6d1579a5fb5ef1f246df4c"
+      },
+      "pnpm": {
+        "version": "11.22.0",
+        "launcher": "/workspace/scratch/de9d4631e21c/gui-prerequisites-20261118/runner/TEST-emulated-ui-inputs-HHScGL/corepack/node_modules/.bin/pnpm",
+        "corepackEntry": "/workspace/scratch/de9d4631e21c/gui-prerequisites-20261118/runner/TEST-emulated-ui-inputs-HHScGL/corepack/node_modules/.pnpm/corepack@0.36.0/node_modules/corepack/dist/pnpm.js",
+        "entrySha256": "7c2a67995976b5b592b611d8b236e3b0633bd654fb49aedd96c6eb7ce04c9cbb",
+        "corepackVersion": "0.36.0"
+      },
+      "profile": "node-ci",
+      "addedRetriesOrTimeouts": false,
+      "stopAtFirstFailure": true,
+      "nativeProvidersExecuted": false,
+      "steps": [
+        {
+          "name": "sqlite-electron-abi",
+          "argv": [
+            "/workspace/scratch/de9d4631e21c/gui-prerequisites-20261118/runner/TEST-emulated-ui-inputs-HHScGL/corepack/node_modules/.bin/pnpm",
+            "exec",
+            "electron-rebuild",
+            "--module-dir",
+            ".",
+            "--force",
+            "--only",
+            "better-sqlite3",
+            "--version",
+            "44.10.1"
+          ],
+          "status": "PREPARED",
+          "log": "/workspace/scratch/de9d4631e21c/coexistence-input-preparation-20261119/donor4a-sqlite-electron-abi.log",
+          "exitCode": 0,
+          "elapsedSeconds": 171.019,
+          "logBytes": 80,
+          "logSha256": "e327f3f386d1e62d0832199f0c96042a9fc60b6ecafc41c13b3b5f448c5193d3",
+          "artifact": {
+            "path": "/workspace/scratch/1d5114b8d2ee/agent-teams-ai/.runtime-download/TEST-donor-4a/node_modules/.pnpm/better-sqlite3@12.11.1/node_modules/better-sqlite3/build/Release/better_sqlite3.node",
+            "bytes": 2253784,
+            "sha256": "258b95b005a5204143577a31c95303cf274f662b2db78450d5d562039f2acae4"
+          },
+          "electronVersion": "44.10.1",
+          "requestedElectronAbi": 149,
+          "runtimeLoadPerformed": false,
+          "rebuildMetadata": {
+            "path": "/workspace/scratch/1d5114b8d2ee/agent-teams-ai/.runtime-download/TEST-donor-4a/node_modules/.pnpm/better-sqlite3@12.11.1/node_modules/better-sqlite3/build/Release/.forge-meta",
+            "bytes": 8,
+            "sha256": "a5cb14b5f4229839c3142d43b2bdc05abc749cd1bf982f081647ebdd5599f38b"
+          },
+          "rebuildMetadataText": "x64--149"
+        },
+        {
+          "name": "runtime160-stage",
+          "argv": [
+            "/workspace/scratch/1d5114b8d2ee/agent-teams-ai/resources/legacy-agent-host/node/v24.21.0/linux-x64/node",
+            "scripts/stage-runtime.mjs",
+            "--platform",
+            "linux-x64"
+          ],
+          "status": "PREPARED",
+          "log": "/workspace/scratch/de9d4631e21c/coexistence-input-preparation-20261119/donor4a-runtime160-stage.log",
+          "exitCode": 0,
+          "elapsedSeconds": 22.276,
+          "logBytes": 356,
+          "logSha256": "2fc3d1b590742128230cd47d3d76470c093f4c35753d11d4f643da10af4b3d97",
+          "artifact": {
+            "path": "/workspace/scratch/1d5114b8d2ee/agent-teams-ai/.runtime-download/TEST-donor-4a/resources/runtime/claude-multimodel",
+            "bytes": 120731104,
+            "sha256": "fa3100f6476ce4c2d449f8991ab464874e3b04a7d7fc18555eaeffd8d6a41437"
+          },
+          "version": "0.0.160",
+          "runtimeSource": "e13edcd3d4ffbecc0272ae30195cc6b15b710ee7",
+          "archiveSha256": "09b174841e74c95337f8b1be986f1501a71582ce190671c548bf4c70ab814e10",
+          "archiveVerifiedByCanonicalScript": true
+        },
+        {
+          "name": "controller-build",
+          "argv": [
+            "/workspace/scratch/1d5114b8d2ee/agent-teams-ai/resources/legacy-agent-host/node/v24.21.0/linux-x64/node",
+            "agent-teams-controller/scripts/build.mjs"
+          ],
+          "status": "PREPARED",
+          "log": "/workspace/scratch/de9d4631e21c/coexistence-input-preparation-20261119/donor4a-controller-build.log",
+          "exitCode": 0,
+          "elapsedSeconds": 0.234,
+          "logBytes": 0,
+          "logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "artifact": {
+            "path": "/workspace/scratch/1d5114b8d2ee/agent-teams-ai/.runtime-download/TEST-donor-4a/agent-teams-controller/dist/index.js",
+            "bytes": 163,
+            "sha256": "985ab5bba96a4b79bf8d7efb7bfbdc6ad64e42db23ab3f8e393e10e244ef49a7"
+          }
+        },
+        {
+          "name": "mcp-build",
+          "argv": [
+            "/workspace/scratch/de9d4631e21c/gui-prerequisites-20261118/runner/TEST-emulated-ui-inputs-HHScGL/corepack/node_modules/.bin/pnpm",
+            "--filter",
+            "agent-teams-mcp",
+            "build"
+          ],
+          "status": "PREPARED",
+          "log": "/workspace/scratch/de9d4631e21c/coexistence-input-preparation-20261119/donor4a-mcp-build.log",
+          "exitCode": 0,
+          "elapsedSeconds": 2.599,
+          "logBytes": 375,
+          "logSha256": "5b04e68a82ddee863cb2afe36c3585f1c4a0b80c86b9506e559d4c699917c156",
+          "artifact": {
+            "path": "/workspace/scratch/1d5114b8d2ee/agent-teams-ai/.runtime-download/TEST-donor-4a/mcp-server/dist/index.js",
+            "bytes": 3172479,
+            "sha256": "5a4985383037d5f618dea4c31be208f27a19fdb6c25076e808e5714073e68dc7"
+          },
+          "packageManifest": {
+            "path": "/workspace/scratch/1d5114b8d2ee/agent-teams-ai/.runtime-download/TEST-donor-4a/mcp-server/dist/package.json",
+            "bytes": 175,
+            "sha256": "3c36dea0664aa0718a7925777783ffe4b98f20a196d9ea0e3aa5f11493310ea0"
+          }
+        }
+      ],
+      "appSqliteBefore": {
+        "path": "/workspace/scratch/1d5114b8d2ee/agent-teams-ai/node_modules/.pnpm/better-sqlite3@12.11.1/node_modules/better-sqlite3/build/Release/better_sqlite3.node",
+        "bytes": 2253784,
+        "sha256": "258b95b005a5204143577a31c95303cf274f662b2db78450d5d562039f2acae4"
+      },
+      "sourceHashesAfter": {
+        "package.json": "77d38aa6501f49e42cc556c47446c269cc05e76fc2ae0dc4c6a8b66705a296f9",
+        "pnpm-lock.yaml": "ee36f9b252359d02f164eaa61ce847f6056370e5a6c900f2928f9175c9c74571",
+        "pnpm-workspace.yaml": "a5074fe53c697ac3d8ea2693d43e6c0c9b5d1bcc9253ec0cdb2cb7b850e21f36",
+        "runtime.lock.json": "fa614f6dcc672b47342a838300f4c1c7b82ae0f05899c108af17838c58c53a87",
+        "scripts/stage-runtime.mjs": "7ee8a9036562728a66d5a1dcd3ce7c97abf75cabeb97092eb9b87171ed2e29be",
+        "agent-teams-controller/scripts/build.mjs": "a7afb7428749efcd15c45acf9b4da03ce4d529ff663b57af876a55b373b97399",
+        "agent-teams-controller/package.json": "2f1b7c7f690adacb009e3aa513dba9c1a54fd4e83c6f0e08d5c521d6e4dfa3bf",
+        "mcp-server/package.json": "b6b245a0062d111cee110ec7222ce00c3730e03a70cf99a29b92bfda245efa5f",
+        "mcp-server/tsup.config.ts": "691c8486f95f360f0ac8985ad42ba17e81100cac6989317bfb75981552833321"
+      },
+      "sourceUnchanged": true,
+      "appSqliteUnchanged": true,
+      "elapsedSeconds": 196.437
+    }
+  }
 }

@@ -7,7 +7,7 @@ import { readDesktopNativeStopSessions } from './desktop-native-stop-fixture.ts'
 import { finiteImportRecords } from './desktop-finite-stopped-import-ui.ts';
 import { FINITE_IMPORT_MODE, FINITE_SOURCE_TEAM, FINITE_SOURCE_PROMPT, FINITE_SOURCE_REPLY,
   FINITE_HOST_PROMPT, finiteImportJson as json, finiteImportRow as row, readFiniteLegacyEffects,
-  assertFiniteImportInputCorrelation, type FiniteImportRow } from './desktop-finite-stopped-import-fixture.ts';
+  assertFiniteImportInputCorrelation, assertFiniteImportConversationReadback, type FiniteImportRow } from './desktop-finite-stopped-import-fixture.ts';
 
 /** Immutable receipt validation only. No launch, import mutation, recovery or process signaling. */
 export async function validateDesktopFiniteStoppedImport(root: string, receipt: FiniteImportRow) {
@@ -96,6 +96,7 @@ export async function validateDesktopFiniteStoppedImport(root: string, receipt: 
     host: row(receipt.hostChildAfterImport), sourceSessionId: seed.sourceSessionId };
   assert.deepEqual(assertFiniteImportInputCorrelation({ ...correlationOptions, session: before }), proof.inputCorrelation);
   assert.deepEqual(assertFiniteImportInputCorrelation({ ...correlationOptions, session: after }), proof.inputCorrelation);
+  assertFiniteImportConversationReadback(proof.conversationReadback, row(proof.inputCorrelation));
   assert.equal(row(receipt.hostChild).pid, correlationOptions.host.pid);
   assert.deepEqual(cleanup.effects.filter(value => row(value).event === 'input' && row(value).marker !== 'TEST_MODEL_PROBE'), [input]);
   assert.ok(cleanup.effects.every(value => row(value).provider === 'claude' &&

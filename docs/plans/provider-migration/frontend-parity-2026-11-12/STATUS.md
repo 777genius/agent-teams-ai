@@ -7,16 +7,19 @@
 На нём прошли полный cross-team/ReviewFlow GUI, workspace typecheck и fast lint,
 четыре frontend shards, все пять packaged-платформ и их общий gate.
 Из 25 Desktop lanes прошли 20. Оставшиеся отказы перечислены ниже.
-Продолжения `90b7fb4a`, `e754d233`, `917a7d3c` и `41ab8f64` опубликованы. Строгая локальная
+Продолжения `90b7fb4a`, `e754d233`, `917a7d3c`, `41ab8f64` и `3b459631` опубликованы. Строгая локальная
 [Host-сборка e754](evidence/host-build-e754d233-20261119.json) PASS за 10.064s,
 все 14 input pins совпали. Новые правки не получают результаты приёмки9ec
 автоматически. При последнем чтении workflows 917 были автоматически отменены
 после supersession; на 41ab — 16 queued и 14 skipped, новых PASS не заявляется.
-На 41ab исходный import lifecycle прошёл producer Stop/release, export/import,
-reload, ProductTask readback и ровно один fresh Host launch с успешным input.
-Следующий отказ — неверное TEST-сравнение логического Host inputId с отдельным
-SDK wire UUID. Полный lifecycle пока INCOMPLETE; строгий cleanup=true,
-все 1909 source hashes неизменны. Retained GUI после первого отказа не запускался.
+На 3b исходный import lifecycle прошёл producer Stop/release, export/import,
+reload, ProductTask readback, точную input correlation и видимый fresh Host reply.
+Следующий отказ — TEST читает ответ сессии из product-only `team.snapshot`.
+Проверка исправлена на тот же `team.messages.page`, который использует чат.
+Также убран неиспользуемый static Runtime seed этой фикстуры: штатный Quit
+иначе оставляет для него техническую tombstone. Production shutdown и строгий
+final sessions oracle сохраняются. Полный lifecycle пока INCOMPLETE;
+cleanup=true, все 1909 source hashes совпали. Retained после отказа не запускался.
 
 ## Доставка и границы
 
@@ -61,7 +64,7 @@ resolved; approval review этим не заявляется.
 
 | ID | Первый отказ на 9ec | Текущая работа и критерий завершения | Владелец |
 | --- | --- | --- | --- |
-| E1-Stop / Import | На 9ec отказ на producer Stop; на 917 — consumer `snapshot-export`. На 41ab оба участка пройдены; следующий отказ — TEST input correlation. | TEST-связь разных Host logical inputId и SDK wire UUID исправлена через exact payload, полную binding, session/PID и terminal. Целевые tests, strict types и R2 PASS. Нужен полный исходный lifecycle с visible reply, Stop и cold readback. | root; pr_graph |
+| E1-Stop / Import | Producer Stop, export/import и input correlation уже пройдены. На 3b после visible reply отказал неправильный TEST read из product snapshot. | Canonical conversation page и template-only fixture готовы: 2/2 новых tests, strict types и R2 PASS. Exact final oracle сохранён. Далее исходные fresh Host Stop, cold readback и полный final validator. | root; pr_graph |
 | E1-Retained | [Retained UI](https://github.com/777genius/agent-teams-ai/actions/runs/44455698034/job/135330056793): prepare/held. [Main retained V1/V2](https://github.com/777genius/agent-teams-ai/actions/runs/44455698135/job/135350275468): coordinator admission, not-eligible/not-dispatched. | Закрытая prepare-boundary диагностика готова: 42/42 tests и R2 PASS. Read-fence использует исправленный drain существующей очереди; связь с исходным отказом ещё проверяется. Требуются исходный UI и отдельный V1/V2 coexistence open/history/Stop/cold/cleanup. | pr_graph; media |
 | E1-Add | [Linux V2 management](https://github.com/777genius/agent-teams-ai/actions/runs/44455698034/job/135330056490): `original add completes`. | По current receipt Add сохранён held до member publication, model probe не прошёл credential preparation/cleanup. Закрытая first-close диагностика передана Host→Main, 30/30 actual-source checks и R2 PASS. Нужен исходный Add/Remove/Restore/Stop/cold после сборки. | media |
 | E1-Review | [Darwin ARM V2 Review](https://github.com/777genius/agent-teams-ai/actions/runs/44455698034/job/135330056601): исходный preflight deadline. | Initial-seed/model-source fix опубликован в90b, exact-byte focused proof и R2 сохранены. Нужен affected original preflight/Review. Source test не заменяет Darwin acceptance. | media |
@@ -173,12 +176,28 @@ GUI и final validator используют одну функцию; canonical p
 Production source, действия, read/await и deadlines не менялись; точная Host-сборка
 41ab используется повторно. Исторический failed run не превращается в PASS.
 
+[Original import lifecycle 3b](evidence/gui-import-lifecycle-3b459631-20261119.json)
+прошёл новую корреляцию и показывает ответ в original lead chat. Product snapshot
+доступен, но по контракту не содержит Runtime conversation; исходный assert на
+его `messages` сохранился как failure. UI Stop и последующий cold readback ещё
+не выполнены. Все 1909 pins равны, cleanup квалифицирован; это не общий PASS.
+[Два TEST-исправления](evidence/finite-import-followup-3b459631-20261119.json)
+прошли 2/2 целевых cases, strict TS7 за 2.525s и независимое ревью. Первый
+положительный test run и исправление единственной union-typing ошибки сохранены
+отдельно; повторные 2 cases не суммируются. Публичная conversation проверяется
+одним общим helper с прежним 384KiB cap, точной binding и без pagination/gaps.
+Пустой Runtime members допускается только в этой pinned import-фикстуре;
+остальные режимы сохраняют одного member. Исходный final census `[after]`,
+production tombstone и все UI Stop/cold/no-replay assertions сохранены.
+
 [Исторические входы coexistence](evidence/coexistence-historical-inputs-20261119.json)
 подготовлены отдельно: четыре clean pinned checkout, проверенные V1 packages1.19.4
 и runtime0.0.158. Исходные donor dependency install (49.793s) и strict Electron
-44.10.1 ensure (18.860s) завершились с exit0, исходники/lockfile неизменны.
-Остались donor SQLite ABI, runtime0.0.160, controller/MCP builds и исходный native
-тест; подготовка не является результатом E2E.
+44.10.1 ensure (18.860s) завершились с exit0. Donor SQLite ABI149 (171.019s),
+runtime0.0.160 (22.276s), controller (0.234s) и MCP (2.599s) также готовы.
+Исходники/lockfile и SQLite основного app неизменны; провайдеры не исполнялись.
+Остались подготовка current-source V2 и исходный native coexistence тест;
+подготовка не является результатом E2E.
 
 [Retained prepare evidence](evidence/retained-prepare-boundary-20261119.json)
 содержит 42/42 checks и независимый R2. Единственная существующая diagnostic

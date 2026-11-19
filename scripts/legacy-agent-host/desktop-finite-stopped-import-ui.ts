@@ -10,7 +10,7 @@ import { readDesktopNativeStopSessions } from './desktop-native-stop-fixture.ts'
 import { stoppedImportSourceBytes } from './desktop-stopped-import-fixture.ts';
 import { createDesktopUiControls, desktopJsLiteral as literal, type UiCdpPort } from './desktop-ui-controls.ts';
 import { FINITE_IMPORT_MODE, FINITE_SOURCE_TEAM, FINITE_HOST_PROMPT, FINITE_HOST_REPLY,
-  assertFiniteImportInputCorrelation, finiteImportJson as json, finiteImportRow as row,
+  assertFiniteImportInputCorrelation, assertFiniteImportConversationReadback, finiteImportJson as json, finiteImportRow as row,
   type FiniteImportFixture, type FiniteImportRow } from './desktop-finite-stopped-import-fixture.ts';
 export { prepareDesktopFiniteStoppedImportFixture } from './desktop-finite-stopped-import-fixture.ts';
 export { produceDesktopFiniteStoppedTeam } from './desktop-finite-stopped-import-producer.ts';
@@ -153,9 +153,11 @@ export async function runDesktopFiniteStoppedImportUi(cdp: UiCdpPort, options: {
     replyLabel: 'distinct fresh Host finite reply', assertOwnedRenderer: options.assertOwnedRenderer, step,
     open: controls => controls.click('button[aria-label^="lead,"]', 'open original imported lead conversation') });
   await ui.waitRead(`document.body.innerText.includes(${literal(FINITE_HOST_REPLY)})`, 'fresh Host reply visible');
-  const snapshot = row(await cdp.evaluate(`window.electronAPI.agentBackend.invoke(${literal({ handle: { handleId }, commandId: randomUUID(), operation: 'team.snapshot', payload: {} })})`));
-  assert.equal(snapshot.ok, true);
-  assert.ok(array(row(snapshot.value).messages).some(message => message.text === FINITE_HOST_REPLY));
+  // The ordinary lead chat reads native replies through the original Owner message page.
+  const conversation = row(await cdp.evaluate(`window.electronAPI.agentBackend.invoke(${literal({ handle: { handleId }, commandId: randomUUID(), operation: 'team.messages.page', payload: {} })})`));
+  assert.equal(conversation.ok, true);
+  const conversationReadback = assertFiniteImportConversationReadback(conversation.value, inputCorrelation);
+  proof.conversationReadback = conversationReadback;
   proof.freshLaunchScreenshot = await screenshot('ui-finite-import-fresh-launch.png');
   const runtimePid = Number(inputs[0]!.pid); assert.ok(processTable().some(value => value.pid === runtimePid));
   await ui.scrollTo('button[aria-label="Stop"]', 'original fresh Host Stop');
