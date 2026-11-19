@@ -91,7 +91,13 @@ export interface TeamSummary {
   /** Absent on old/foreign teams; never interpret as an isolated history. */
   projectContextMode?: TeamProjectContextMode;
   /** Verified, ready native histories folded into this logical row. For reads only, not authorization. */
-  projectHistoryContexts?: readonly { executionTeamName: string; projectPath: string }[];
+  projectHistoryContexts?: readonly {
+    executionTeamName: string;
+    projectPath: string;
+    /** Native session associations, retained only for verified physical histories. */
+    leadSessionId?: string;
+    sessionHistory?: readonly string[];
+  }[];
   displayName: string;
   description: string;
   color?: string;

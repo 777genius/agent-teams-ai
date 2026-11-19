@@ -39,6 +39,23 @@ describe('projectTeamSummaries', () => {
     ]);
   });
 
+  it('retains verified physical lead and historical session IDs without showing alias rows', async () => {
+    const f = fixture();
+    const nativeTeams = teams.map((team) => team.teamName === 'ptc-owned'
+      ? { ...team, leadSessionId: 'physical-lead', sessionHistory: ['physical-old'] }
+      : team);
+    const visible = await projectTeamSummaries(nativeTeams, f.meta, f.registry);
+    expect(visible.map((team) => team.teamName)).toEqual([
+      'builders', 'ptc-foreign', 'old-team',
+    ]);
+    expect(visible[0]?.projectHistoryContexts).toEqual([{
+      executionTeamName: 'ptc-owned',
+      projectPath: '/sandbox/a',
+      leadSessionId: 'physical-lead',
+      sessionHistory: ['physical-old'],
+    }]);
+  });
+
   it('keeps owned historical native aliases hidden after switching to shared mode', async () => {
     const f = fixture();
     f.meta.getMeta.mockImplementation(async (name: string) => name === 'builders'

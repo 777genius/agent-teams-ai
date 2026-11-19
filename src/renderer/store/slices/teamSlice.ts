@@ -193,6 +193,7 @@ import {
   structurallySharePlainValue,
   structurallyShareTeamSnapshot,
 } from '../team/teamSnapshotStructuralSharing';
+import { buildTeamSummaryIndexes } from '../team/teamSummaryIndexes';
 import {
   collectTaskChangeInvalidationState,
   preserveKnownTaskChangePresence,
@@ -672,28 +673,6 @@ function isTeamRequestScopeCurrent(
     isContextRequestScopeCurrent(get, scope) &&
     isTeamLocalStateEpochCurrent(teamName, scope.teamStateEpoch)
   );
-}
-
-function buildTeamSummaryIndexes(teams: readonly TeamSummary[]): {
-  teamByName: Record<string, TeamSummary>;
-  teamBySessionId: Record<string, TeamSummary>;
-} {
-  const teamByName: Record<string, TeamSummary> = {};
-  const teamBySessionId: Record<string, TeamSummary> = {};
-  for (const team of teams) {
-    teamByName[team.teamName] = team;
-    if (team.leadSessionId) {
-      teamBySessionId[team.leadSessionId] = team;
-    }
-    if (Array.isArray(team.sessionHistory)) {
-      for (const sid of team.sessionHistory) {
-        if (typeof sid === 'string' && sid) {
-          teamBySessionId[sid] = team;
-        }
-      }
-    }
-  }
-  return { teamByName, teamBySessionId };
 }
 
 function removeProvisioningSnapshotsForTeams(

@@ -64,9 +64,15 @@ export async function projectTeamSummaries(
           projected[position] = {
             ...team,
             projectContextMode: mode,
-            projectHistoryContexts: ownedReady.map(({ executionTeamName, projectPath }) => ({
-              executionTeamName, projectPath,
-            })),
+            projectHistoryContexts: ownedReady.map(({ executionTeamName, projectPath }) => {
+              const native = nativeSummaries.find((row) => row.teamName === executionTeamName);
+              return {
+                executionTeamName,
+                projectPath,
+                ...(native?.leadSessionId ? { leadSessionId: native.leadSessionId } : {}),
+                ...(native?.sessionHistory?.length ? { sessionHistory: native.sessionHistory } : {}),
+              };
+            }),
             // A valid native context means this is no longer just an unlaunched
             // metadata-only draft, even though the logical team has no config.json.
             pendingCreate: false,
