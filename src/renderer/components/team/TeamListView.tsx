@@ -661,7 +661,6 @@ export const TeamListView = memo(function TeamListView({
 
   const filteredTeams = useMemo<TeamSummary[]>(() => {
     let result = teamsWithProvisioning;
-
     const q = searchQuery.trim().toLowerCase();
     if (q) {
       result = result.filter(
@@ -671,7 +670,6 @@ export const TeamListView = memo(function TeamListView({
           t.description.toLowerCase().includes(q)
       );
     }
-
     if (filter.selectedStatuses.size > 0) {
       result = result.filter((t) => {
         const status = resolveTeamStatus(
@@ -687,7 +685,6 @@ export const TeamListView = memo(function TeamListView({
         return false;
       });
     }
-
     const matchesCurrentProject = currentProjectPath
       ? (team: TeamSummary): boolean => teamMatchesProjectSelection(team, currentProjectPath)
       : null;
@@ -701,29 +698,24 @@ export const TeamListView = memo(function TeamListView({
         leadActivityByTeam,
         nowMs
       );
-
     result = [...result].sort((a, b) => {
       // 1. Running teams first, including the short ready-before-alive-list gap.
       const runningA = isTeamListStatusRunning(statusForTeam(a)) ? 0 : 1;
       const runningB = isTeamListStatusRunning(statusForTeam(b)) ? 0 : 1;
       if (runningA !== runningB) return runningA - runningB;
-
       // 2. Teams related to the selected project are prioritized next
       if (matchesCurrentProject) {
         const projectA = matchesCurrentProject(a) ? 0 : 1;
         const projectB = matchesCurrentProject(b) ? 0 : 1;
         if (projectA !== projectB) return projectA - projectB;
       }
-
       // 3. Most recently active teams first (stable secondary sort)
       const tsA = a.lastActivity ? new Date(a.lastActivity).getTime() : 0;
       const tsB = b.lastActivity ? new Date(b.lastActivity).getTime() : 0;
       if (tsA !== tsB) return tsB - tsA;
-
       // 4. Fallback: alphabetical by team name for deterministic order
       return a.teamName.localeCompare(b.teamName);
     });
-
     return result;
   }, [
     teamsWithProvisioning,
@@ -743,20 +735,17 @@ export const TeamListView = memo(function TeamListView({
         useStore.setState(getProjectSelectionResetState());
         return;
       }
-
       setTeamPriorityProjectPath(projectPath);
       const target = findTeamProjectSelectionTarget(repositoryGroups, projects, projectPath);
       if (!target) {
         return;
       }
-
       if (target.kind === 'grouped') {
         useStore.setState(getWorktreeNavigationState(target.repositoryId, target.worktreeId));
         void useStore.getState().fetchSessionsInitial(target.worktreeId);
         recordRecentProjectOpenPaths([projectPath]);
         return;
       }
-
       useStore.getState().selectProject(target.projectId);
       recordRecentProjectOpenPaths([projectPath]);
     },
@@ -900,7 +889,6 @@ export const TeamListView = memo(function TeamListView({
             });
             return;
           }
-
           const data = await api.teams.getData(teamName, {
             includeMemberBranches: false,
           });
@@ -1301,7 +1289,6 @@ export const TeamListView = memo(function TeamListView({
         </div>
       );
     }
-
     if (teamsWithProvisioning.length === 0) {
       return (
         <TeamEmptyState
@@ -1312,7 +1299,6 @@ export const TeamListView = memo(function TeamListView({
         />
       );
     }
-
     const hasActiveFilters = filter.selectedStatuses.size > 0;
     if (filteredTeams.length === 0 && (searchQuery.trim() || hasActiveFilters)) {
       return (
@@ -1321,7 +1307,6 @@ export const TeamListView = memo(function TeamListView({
         </div>
       );
     }
-
     const recentTeams = selectRecentManagedTeams(filteredTeams, teams, teamManagementNoticeByTeam);
     const recentNames = new Set(recentTeams.map((team) => team.teamName));
     const activeFiltered = filteredTeams.filter(
@@ -1362,14 +1347,12 @@ export const TeamListView = memo(function TeamListView({
               teams: activeFiltered,
             },
           ];
-
     if (recentTeams.length)
       activeSections.unshift({
         key: 'recent-management',
         title: t('managementChanges.title'),
         teams: recentTeams,
       });
-
     return (
       <>
         {activeSections.map((section, sectionIndex) => (

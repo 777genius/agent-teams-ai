@@ -11,8 +11,8 @@ import { useShallow } from 'zustand/react/shallow';
 
 import { TeamDetailView } from './TeamDetailView';
 import { TeamHistoryModePicker } from './TeamHistoryModePicker';
-import { TeamProvisioningBanner } from './TeamProvisioningBanner';
 import { findTeamProjectSelectionTarget, resolveTeamProjectSelection } from './teamProjectSelection';
+import { TeamProvisioningBanner } from './TeamProvisioningBanner';
 
 import type { TeamProjectContextView } from '@features/team-project-context/contracts';
 import type { TeamLaunchRequest } from '@shared/types';

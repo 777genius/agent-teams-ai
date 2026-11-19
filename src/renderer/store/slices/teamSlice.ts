@@ -2293,7 +2293,6 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
     if (!teamName.trim()) {
       return;
     }
-
     // If projectPath is provided, immediately select the matching project in the sidebar.
     // This avoids a race condition where config.json hasn't been updated with projectPath yet.
     if (projectPath) {
@@ -2322,14 +2321,12 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
         }
       }
     }
-
     const state = get();
     // Use display name from teams list or selected team data if available
     const teamSummary = state.teamByName[teamName];
     const selectedTeamDisplayName =
       state.selectedTeamName === teamName ? state.selectedTeamData?.config.name : undefined;
     const displayName = teamSummary?.displayName || selectedTeamDisplayName || teamName;
-
     const retainedSharedHistory = Boolean(
       _taskId && state.teamByName[teamName]?.projectContextMode === 'per_project'
     );
