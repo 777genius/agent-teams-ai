@@ -122,7 +122,7 @@ export function assertFiniteImportConversationReadback(value: unknown, correlati
 export async function prepareDesktopFiniteStoppedImportFixture(repo: string, pnpmEntry: string) {
   assert.equal(process.env.LEGACY_DESKTOP_EMULATED_ONLY, '1');
   assert.equal(process.env.LEGACY_DESKTOP_PROOF_MODE, FINITE_IMPORT_MODE);
-  const fixture = await prepareDesktopEmulatedRuntimeFixture(repo, pnpmEntry, 'claude');
+  const fixture = await prepareDesktopEmulatedRuntimeFixture(repo, pnpmEntry, 'claude', undefined, undefined, true);
   const profile = readTeamHostProfile(fixture.profilePath, fixture.pins.profileSha256);
   for (const peer of fixture.emulatedRuntime.peers)
     peer.environment.TEST_DESKTOP_IMPORT_LIFECYCLE = 'current-solo-v1';

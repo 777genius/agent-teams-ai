@@ -89,6 +89,7 @@ export async function prepareDesktopBackendFixture(
     nativeReviewUi?: boolean;
     stoppedImportUi?: boolean;
     donorSavedOnly?: true;
+    finiteStoppedImport?: true;
     pnpmEntry: string;
     nativeCodex?: { path: string; sha256: string };
     nativeClaude?: { path: string; sha256: string; modelUrl?: string };
@@ -118,6 +119,12 @@ export async function prepareDesktopBackendFixture(
     options.claudeCheckpointDonor || options.diagnosticHostEntry || options.capturedMcpNonce ||
     options.nativeGroupChats || options.nativeChatAttachments || options.nativeReviewUi || options.reviewUi || options.approvalUi))
     throw new Error('Saved-only donor requires its original isolated Claude Create fixture');
+  if (options.finiteStoppedImport !== undefined && (options.finiteStoppedImport !== true ||
+    process.env.LEGACY_DESKTOP_EMULATED_ONLY !== '1' ||
+    process.env.LEGACY_DESKTOP_PROOF_MODE !== 'emulated-import-lifecycle-ui' ||
+    options.creation !== true || options.seedUiPreferences !== true ||
+    Object.keys(options).some(key => !['pnpmEntry', 'seedUiPreferences', 'creation', 'finiteStoppedImport'].includes(key))))
+    throw new Error('Finite stopped import requires its original isolated emulated Claude Create fixture');
   const nativeNextPromptUi = process.env.LEGACY_DESKTOP_NATIVE_NEXT_PROMPT_UI === '1';
   if (nativeNextPromptUi && (!options.nativeClaude?.modelUrl || !options.seedUiTask ||
       options.nativeOpenCodeV2 || options.nativeChatAttachments || options.nativeGroupChats))
@@ -738,7 +745,7 @@ export async function prepareDesktopBackendFixture(
   const sentinelLog = join(root, 'sentinel-invocations.ndjson');
   // No inherited environment or user config. The sentinel can never run an agent.
   const sentinelSource = desktopAgentSentinelSource(node, sentinelLog, lock.cliVersion,
-    options.candidateRuntime ? 'refused' : options.donorSavedOnly ? 'donor-saved-only' : 'metadata');
+    options.candidateRuntime ? 'refused' : options.donorSavedOnly || options.finiteStoppedImport ? 'donor-saved-only' : 'metadata');
   for (const name of [
     'claude',
     'codex',

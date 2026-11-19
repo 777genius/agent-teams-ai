@@ -25,18 +25,33 @@ test('finite import factory keeps only the explicit fresh-launch template and re
     const repo = await realpath(join(import.meta.dirname, '../..'));
     const result = spawnSync(process.execPath, ['--input-type=module', '-e', `
 import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
 import { lstat, readFile, readdir } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 const [repo, pnpmEntry, temporary] = process.argv.slice(1);
 const load = relative => import(pathToFileURL(join(repo, relative)).href);
 const { prepareDesktopFiniteStoppedImportFixture } = await load('scripts/legacy-agent-host/desktop-finite-stopped-import-fixture.ts');
-const { verifyDesktopEmulatedRuntimeFixture } = await load('scripts/legacy-agent-host/desktop-emulated-runtime-fixture.ts');
+const { prepareDesktopEmulatedRuntimeFixture, verifyDesktopEmulatedRuntimeFixture } = await load('scripts/legacy-agent-host/desktop-emulated-runtime-fixture.ts');
+const { prepareDesktopBackendFixture } = await load('scripts/legacy-agent-host/desktop-backend-fixture.ts');
 const { publishDesktopEmulatedClaudeSettingsProfile } = await load('scripts/legacy-agent-host/desktop-emulated-claude-settings-fixture.ts');
 const { readTeamHostProfile } = await load('packages/legacy-agent-host/dist/composition/readProfile.js');
 const { teamHostProfileSchema } = await load('packages/legacy-agent-host/dist/composition/teamHostProfile.js');
 const { resolveRuntimeRecipe } = await load('packages/legacy-agent-host/dist/composition/runtimeRecipe.js');
 assert.deepEqual(await readdir(temporary), []);
+for (const [provider, variant, candidate, selected] of [
+  ['codex', undefined, undefined, true], ['claude', 'lifecycle', undefined, true],
+  ['claude', undefined, {}, true], ['claude', undefined, undefined, false],
+]) await assert.rejects(prepareDesktopEmulatedRuntimeFixture(repo, pnpmEntry, provider, variant, candidate, selected));
+process.env.LEGACY_DESKTOP_PROOF_MODE = 'emulated-import-ui';
+await assert.rejects(prepareDesktopEmulatedRuntimeFixture(repo, pnpmEntry, 'claude', undefined, undefined, true));
+process.env.LEGACY_DESKTOP_PROOF_MODE = 'emulated-import-lifecycle-ui';
+process.env.LEGACY_DESKTOP_EMULATED_ONLY = '0';
+await assert.rejects(prepareDesktopEmulatedRuntimeFixture(repo, pnpmEntry, 'claude', undefined, undefined, true));
+process.env.LEGACY_DESKTOP_EMULATED_ONLY = '1';
+await assert.rejects(prepareDesktopBackendFixture(repo, { pnpmEntry, seedUiPreferences: true, creation: true,
+  finiteStoppedImport: true, seedUiTask: true }));
+assert.deepEqual(await readdir(temporary), [], 'out-of-scope selection creates no fixture');
 const fixture = await prepareDesktopFiniteStoppedImportFixture(repo, pnpmEntry);
 assert.equal(dirname(fixture.root), temporary);
 const profile = readTeamHostProfile(fixture.profilePath, fixture.pins.profileSha256);
@@ -77,7 +92,26 @@ await verifyDesktopEmulatedRuntimeFixture(fixture);
 for (const path of [join(fixture.root, 'hoststore/runtime-sessions'), join(fixture.root, 'claude/teams/test-stopped-legacy'),
   fixture.sentinelLog, ...fixture.emulatedRuntime.peers.map(peer => join(peer.root, 'effects.ndjson'))])
   await assert.rejects(lstat(path), { code: 'ENOENT' });
-process.stdout.write(JSON.stringify({ templateOnly: true, nativeEffects: 0 }));
+// Exercise only generated UNIT sentinels after proving preparation itself has no effects.
+const invokeSentinel = (name, argument, status) => {
+  const result = spawnSync(fixture.node, [join(fixture.root, 'bin', name), argument], {
+    env: {}, encoding: 'utf8', timeout: 1500, maxBuffer: 4096,
+  });
+  assert.equal(result.error, undefined); assert.equal(result.signal, null); assert.equal(result.status, status);
+  return result;
+};
+const version = invokeSentinel('codex', '--version', 78);
+assert.equal(version.stdout, ''); assert.equal(version.stderr, '');
+const refused = invokeSentinel('codex', 'app-server', 78);
+assert.equal(refused.stdout, ''); assert.equal(refused.stderr, 'TEST sentinel refuses native agent invocation\\n');
+const claudeVersion = invokeSentinel('claude-multimodel', '--version', 0);
+assert.match(claudeVersion.stdout, /\\(TEST sentinel\\)/u); assert.equal(claudeVersion.stderr, '');
+assert.deepEqual((await readFile(fixture.sentinelLog, 'utf8')).trim().split('\\n').map(JSON.parse), [
+  { executable: 'codex', allowed: true, argc: 1, command: null, flags: ['--version'] },
+  { executable: 'codex', allowed: false, argc: 1, command: 'app-server', flags: [] },
+  { executable: 'claude-multimodel', allowed: true, argc: 1, command: null, flags: ['--version'] },
+]);
+process.stdout.write(JSON.stringify({ templateOnly: true, nativeEffects: 0, unselectedCodexUnavailable: true }));
 `, repo, join(root, 'corepack/dist/pnpm.js'), join(root, 'tmp')], {
       cwd: repo, encoding: 'utf8', timeout: 15_000, maxBuffer: 128 * 1024,
       env: { HOME: join(root, 'home'), TMPDIR: join(root, 'tmp'), PATH: dirname(process.execPath) + ':/usr/bin:/bin',
@@ -86,7 +120,7 @@ process.stdout.write(JSON.stringify({ templateOnly: true, nativeEffects: 0 }));
     });
     assert.equal(result.error, undefined, result.stderr); assert.equal(result.signal, null);
     assert.equal(result.status, 0, result.stderr);
-    assert.deepEqual(JSON.parse(result.stdout), { templateOnly: true, nativeEffects: 0 });
+    assert.deepEqual(JSON.parse(result.stdout), { templateOnly: true, nativeEffects: 0, unselectedCodexUnavailable: true });
   });
 
 test('finite import conversation readback binds the complete public reply to its original Runtime generation', async () => {

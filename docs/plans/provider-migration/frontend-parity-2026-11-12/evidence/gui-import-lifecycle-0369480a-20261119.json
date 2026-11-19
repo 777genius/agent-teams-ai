@@ -1,0 +1,276 @@
+{
+  "schemaVersion": 1,
+  "kind": "DERIVED_FINAL_GUI_AGGREGATE",
+  "fullReceipt": false,
+  "qualification": "Original per-run verdicts only; no new overall PASS or cross-source qualification. Raw receipt hashes bind exact evidence. Canonical JSON hashes use sorted keys, compact separators, original arrays and unescaped Unicode. Missing resource observations remain unobserved. Cumulative CPU ticks require the same process birth for deltas; no OOM or kill-sender inference.",
+  "runs": [
+    {
+      "mode": "emulated-import-lifecycle-ui",
+      "originalStatus": "INCOMPLETE",
+      "scope": "Original Electron controls, standalone Host persistence and renderer reload; only separately pinned TEST provider peers permitted",
+      "excluded": [
+        "vendor authentication",
+        "native model execution",
+        "full Stage1/release/default activation"
+      ],
+      "metadataStatus": "INCOMPLETE",
+      "harnessExitCode": 1,
+      "source": {
+        "head": "0369480a62d80620fb425a736bff8d69090223c1",
+        "tree": "1dc54bbdb19d254e91e2a13c42af5084740b36e1",
+        "dirty": false,
+        "snapshot": {
+          "path": "/workspace/scratch/de9d4631e21c/gui-0369480a-import-lifecycle-derived-20261119/source-snapshot.json",
+          "bytes": 211,
+          "sha256": "ecade0a56f03ef0a2e02e2b60c517b21b78d88df771555186805d0304d1675b5"
+        },
+        "selectedSourceCount": 1909,
+        "beforeAfterSourceListsEqual": true,
+        "sourceListCanonicalJsonSha256": "84d4167bc2828ef547e1df781e2c19f9698ed4af35be1f9940b493c1312b76a3"
+      },
+      "profile": null,
+      "modeResourceSelectors": {
+        "LEGACY_DESKTOP_TEST_FINITE_HEAP_1536_UV4": "1",
+        "AGENT_TEAMS_DISABLE_SOURCEMAPS": "1"
+      },
+      "elapsedSeconds": null,
+      "startedAt": "2026-11-19T12:35:20.921020+00:00",
+      "finishedAt": "2026-11-19T12:40:40.955770+00:00",
+      "artifacts": {
+        "finalMetadata": {
+          "path": "/workspace/scratch/de9d4631e21c/gui-prerequisites-20261118/queued-results-finite1536-uv4/0369480a62d80620fb425a736bff8d69090223c1/emulated-import-lifecycle-ui.result.json",
+          "bytes": 2203,
+          "sha256": "f7bcfa35413fe48a27f6d96a4ef75e0b9c07b99e1cab67158e7b816cc1167cda"
+        },
+        "postExitObservation": {
+          "path": "/workspace/scratch/de9d4631e21c/gui-prerequisites-20261118/queued-results-finite1536-uv4/0369480a62d80620fb425a736bff8d69090223c1/emulated-import-lifecycle-ui.observation.json",
+          "bytes": 2562,
+          "sha256": "e9e5dcc47fcb04d070d45b5116e730eeff9eda59c6ecba76ae5e651a9e2759ff"
+        },
+        "originalReceipt": {
+          "path": "/tmp/TEST-desktop-backend-9B2JhC/desktop-backend-receipt.json",
+          "bytes": 1163904,
+          "sha256": "e1fe09a6153d62cdcc2c5209e01ef00189aa1cfacce258de9d67e256dd811607"
+        },
+        "originalHarnessLog": "/workspace/scratch/de9d4631e21c/gui-prerequisites-20261118/queued-results-finite1536-uv4/0369480a62d80620fb425a736bff8d69090223c1/emulated-import-lifecycle-ui.log"
+      },
+      "proofs": {
+        "finiteStoppedProducer": {
+          "status": "PASS",
+          "scope": "Current frontend Create/Launch, visible finite reply, original Main Stop/release, UI Task and ordinary Quit",
+          "excluded": [
+            "genuine historical donor frontend",
+            "vendor CLI/inference/auth qualification",
+            "multi-member or Windows source release",
+            "native session adoption"
+          ],
+          "sourceKind": "actual-current-finite-solo",
+          "execution": "finite-legacy-bootstrap-protocol",
+          "canonicalJsonSha256": "e409a4aef1d4340cf45033faf2abb9b1ab54938ccebc167f923d873ba370d31f",
+          "stepCount": 36,
+          "quitRequested": true,
+          "originalRequestedQuitExit": {
+            "initialExitCode": 0,
+            "initialSignalCode": null,
+            "exitCode": 0,
+            "signalCode": null
+          },
+          "sourcePeerAbsentAfterCleanup": true,
+          "inputsFrozen": true,
+          "failure": {
+            "message": null,
+            "messageCanonicalJsonSha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+            "source": null,
+            "sourceFreeze": null
+          },
+          "cleanup": {
+            "remaining": [],
+            "capturedHostAbsent": null
+          },
+          "cleanupCanonicalJsonSha256": "bcade01c8dadceb08fd5a753999d790765949788afeca720a65b8283bbcfd8f1",
+          "beforeHarnessCleanup": {
+            "count": 0,
+            "canonicalJsonSha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+          }
+        },
+        "finiteStoppedImportUiProof": {
+          "status": "PASS",
+          "scope": "Original current frontend finite solo producer and Main Stop/release, cold Main import, saved Task/settings readback, distinct fresh Host SDK generation, reply, Stop and reload",
+          "excluded": [
+            "genuine historical donor frontend",
+            "vendor CLI/inference/auth qualification",
+            "multi-member or Windows source release",
+            "native source session adoption"
+          ],
+          "sourceKind": "actual-current-finite-solo",
+          "execution": "finite-protocol-peer",
+          "canonicalJsonSha256": "abbe63db9f511c72fde1bb5ff28d00c6ef2a09c8e1c2937f53a259fa742a834a",
+          "stepCount": 58
+        }
+      },
+      "ownerRoutingEpochs": [],
+      "screenshots": [
+        {
+          "path": "/tmp/TEST-desktop-backend-9B2JhC/ui-failure.png",
+          "bytes": 104212,
+          "sha256": "df5bda8a06d3c8291118146db51378a1290aea75589564ecb8b46c94069aef30"
+        },
+        {
+          "path": "/tmp/TEST-desktop-backend-9B2JhC/ui-finite-import-dialog-reloaded.png",
+          "bytes": 132229,
+          "sha256": "d03fb747be68eedb40b996b525d6c306181d3fa42a0d09bc09a5ff5a89aa009f"
+        },
+        {
+          "path": "/tmp/TEST-desktop-backend-9B2JhC/ui-finite-import-dialog.png",
+          "bytes": 126582,
+          "sha256": "aecf93fcf4b0577c973d944b7a80f59334952f93995473ec372015e10266b5f7"
+        },
+        {
+          "path": "/tmp/TEST-desktop-backend-9B2JhC/ui-finite-import-fresh-launch.png",
+          "bytes": 116126,
+          "sha256": "bed662673d013eab5f0fcf9953a040d2b48c1a607d84e6dd9fbfb4dbf9cd04f1"
+        },
+        {
+          "path": "/tmp/TEST-desktop-backend-9B2JhC/ui-finite-import-source.png",
+          "bytes": 95941,
+          "sha256": "172bdf6067124e43562a437d04663d8f1008881d751ddf22d9308520ed1939c3"
+        },
+        {
+          "path": "/tmp/TEST-desktop-backend-9B2JhC/ui-finite-import-stopped-reloaded.png",
+          "bytes": 123887,
+          "sha256": "c4c156b85234ea46fd897cad93c146d1b58243409bc7f1660766c0622a60de91"
+        },
+        {
+          "path": "/tmp/TEST-desktop-backend-9B2JhC/ui-finite-import-task.png",
+          "bytes": 103853,
+          "sha256": "a2b4898a891ec179328351313ffa1ad3496bc224c3850b6390de3900e7947f49"
+        }
+      ],
+      "failure": {
+        "message": "no agent invocation through legacy sentinels is permitted",
+        "messageCanonicalJsonSha256": "ff10a13ed2d932b26e46314a751ae098375b32c6981eb1699ef70ba57495ae2f",
+        "source": {
+          "canonicalJsonSha256": "a17622cc8af915bae3b465859759756150dc929d31060d5b6b8b76e2ac5d65f0",
+          "kind": "assertion",
+          "omittedFieldCount": 1,
+          "frameCount": 2
+        },
+        "sourceFreeze": null
+      },
+      "cleanup": {
+        "remaining": [],
+        "capturedHostObserved": true,
+        "capturedHostAbsent": true,
+        "appExitCode": 0,
+        "appSignalCode": null,
+        "hostExitCode": "not exposed by main-owned transport; no separate Host exit code recorded"
+      },
+      "cleanupObservation": "observed in original outer receipt",
+      "failureQuit": {
+        "attempted": true,
+        "scope": "Close only the verified TEST window before stopping its dev wrapper",
+        "reply": "acknowledged",
+        "listenerAbsent": true
+      },
+      "originalRequestedQuitExit": {
+        "initialExitCode": 0,
+        "initialSignalCode": null,
+        "exitCode": 0,
+        "signalCode": null
+      },
+      "finiteImportMilestones": {
+        "originalProducer": "PASS",
+        "originalConsumerUiHelper": "PASS",
+        "uiSteps": 58,
+        "sourceTaskAndSavedSettingsReadback": "PASS",
+        "realRendererReloadBeforeFreshLaunch": "PASS",
+        "exactOriginalInputCorrelation": "PASS",
+        "originalPublicConversationPort": "team.messages.page",
+        "conversationReadback": {
+          "complete": true,
+          "messageCount": 2,
+          "gaps": [],
+          "uniqueLeadReply": true,
+          "pageSha256": "dd9a9b6d9276daa82f50e6f55f8b3d90338ed013ff6db1580d2f73ea07807615"
+        },
+        "freshInputCount": 1,
+        "sourcePromptReplays": 0,
+        "ordinaryUiStop": {
+          "runtimePid": 7930,
+          "releasedBeforeQuit": true,
+          "peerAbsent": true
+        },
+        "stoppedRendererReload": "PASS",
+        "immutableSourceRoots": "PASS",
+        "scope": "Actual completed original UI helper and recorded physical cleanup; top-level negative sentinel oracle still failed.",
+        "ordinarySuccessQuit": "NOT_REACHED; catch-only observed Close acknowledged and physical cleanup qualified",
+        "wholeOriginalAcceptance": "INCOMPLETE",
+        "retainedOriginalMode": "NOT_RUN; original queue stopped at first INCOMPLETE",
+        "automaticRetries": 0
+      },
+      "sentinelFailure": {
+        "originalAssertion": "no agent invocation through legacy sentinels is permitted",
+        "sourcePath": "scripts/legacy-agent-host/desktop-backend-smoke.ts",
+        "boundary": "after completed UI helper and actual Host observation; before normal Quit and final acceptance",
+        "totalInvocations": 10,
+        "refusedInvocations": [
+          {
+            "executable": "codex",
+            "allowed": false,
+            "argc": 1,
+            "command": "app-server",
+            "flags": []
+          }
+        ],
+        "preQuitCount": null,
+        "postQuitOrCleanupAttribution": null,
+        "recordedPid": null,
+        "recordedAt": null,
+        "phaseInference": {
+          "scope": "no-Host source producer",
+          "basis": "offending row5 precedes row6 claude-multimodel --version, the unique consumer dev:mcp runtime preflight; source producer uses TEST-legacy-bootstrap-peer override instead",
+          "exactTimestampUnavailable": true
+        },
+        "negativeOracle": "unchanged; no whitelist expansion or posthoc PASS",
+        "vendorCodexExecuted": false,
+        "vendorCodexClaimBasis": "Existing TEST sentinel refuses all non-version requests with exit78; only TEST sentinel executed."
+      },
+      "additionalArtifacts": [
+        {
+          "path": "/tmp/TEST-desktop-backend-9B2JhC/finite-stopped-import-producer.json",
+          "bytes": 149165,
+          "sha256": "ce0c87476a5e6036ac8f1a23c4374c08e092907aaf0009ba357384e3350d9797"
+        },
+        {
+          "path": "/tmp/TEST-desktop-backend-9B2JhC/sentinel-invocations.ndjson",
+          "bytes": 830,
+          "sha256": "7c51efe750b071aa857c14392a447d058761d2da0664c2053258726254b5fd5a"
+        },
+        {
+          "path": "/tmp/TEST-desktop-backend-9B2JhC/finite-stopped-import-source-app.log",
+          "bytes": 14396,
+          "sha256": "36b02397908f5eb49d558c27187db6f40f8051619b03784ef6637b105a9a25f3"
+        }
+      ]
+    }
+  ],
+  "derivation": {
+    "capturedAt": "2026-11-19T12:44:29.202800+00:00",
+    "collector": {
+      "path": "/workspace/scratch/de9d4631e21c/collect-derived-gui-evidence.py",
+      "bytes": 13665,
+      "sha256": "afd6aad2d3bed0191b66878ce56645b72eed51128c5cfa52fb92de4578f8d9c9"
+    },
+    "unchangedCollectorOutput": {
+      "path": "/workspace/scratch/de9d4631e21c/gui-0369480a-import-lifecycle-derived-20261119/original-collector-summary.json",
+      "bytes": 8191,
+      "sha256": "5dfc5a1e5805c082edee2cc5755fc3156edbe52990af8889f22302d8135f35ba"
+    },
+    "sourceSnapshot": {
+      "path": "/workspace/scratch/de9d4631e21c/gui-0369480a-import-lifecycle-derived-20261119/source-snapshot.json",
+      "bytes": 211,
+      "sha256": "ecade0a56f03ef0a2e02e2b60c517b21b78d88df771555186805d0304d1675b5"
+    },
+    "method": "Unchanged existing post-exit collector, then bounded projection of finalized original receipt; raw receipts/fixtures/logs remain unmodified."
+  }
+}

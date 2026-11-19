@@ -33,7 +33,13 @@ export const desktopRuntimePeerSources = [
 ] as const;
 
 /** TEST executables implement a finite native protocol; the original Host and D remain unchanged. */
-export async function prepareDesktopEmulatedRuntimeFixture(repo: string, pnpmEntry: string, provider: 'codex' | 'claude' | 'opencode' = 'codex', variant?: 'selection' | 'installer' | 'lifecycle' | 'collaboration', candidateRuntime?: Parameters<typeof prepareDesktopBackendFixture>[1]['candidateRuntime']) {
+export async function prepareDesktopEmulatedRuntimeFixture(repo: string, pnpmEntry: string, provider: 'codex' | 'claude' | 'opencode' = 'codex', variant?: 'selection' | 'installer' | 'lifecycle' | 'collaboration', candidateRuntime?: Parameters<typeof prepareDesktopBackendFixture>[1]['candidateRuntime'], finiteStoppedImport?: true) {
+  if (finiteStoppedImport !== undefined) {
+    assert.equal(finiteStoppedImport, true); assert.equal(provider, 'claude');
+    assert.equal(variant, undefined); assert.equal(candidateRuntime, undefined);
+    assert.equal(process.env.LEGACY_DESKTOP_EMULATED_ONLY, '1');
+    assert.equal(process.env.LEGACY_DESKTOP_PROOF_MODE, 'emulated-import-lifecycle-ui');
+  }
   if (candidateRuntime) assert.ok(provider === 'claude' && variant === 'lifecycle', 'One captured packaged Launch/Stop lifecycle');
   if (variant === 'collaboration') {
     assert.equal(provider, 'claude'); return prepareDesktopEmulatedCollaborationFixture(repo, pnpmEntry);
@@ -42,7 +48,8 @@ export async function prepareDesktopEmulatedRuntimeFixture(repo: string, pnpmEnt
   if (variant === 'installer') {
     assert.equal(process.platform, 'darwin'); assert.equal(process.arch, 'arm64');
   }
-  const fixture = await prepareDesktopBackendFixture(repo, { pnpmEntry, seedUiPreferences: true, creation: true, ...(candidateRuntime ? { candidateRuntime } : {}) });
+  const fixture = await prepareDesktopBackendFixture(repo, { pnpmEntry, seedUiPreferences: true, creation: true,
+    ...(candidateRuntime ? { candidateRuntime } : {}), ...(finiteStoppedImport ? { finiteStoppedImport } : {}) });
   const selectedSources = provider === 'claude' ? ['tools/owned-process-broker/fixtures/claudeProviderPeer.mjs'] :
     [...desktopRuntimePeerSources, ...(provider === 'opencode'
       ? ['packages/legacy-agent-host/dist/adapters/providers/OpenCodeMcpPolicyPlugin.js'] : [])];

@@ -1,0 +1,221 @@
+{
+  "schemaVersion": 1,
+  "kind": "finite-import-source-sentinel-availability",
+  "parentSourceHead": "0369480a62d80620fb425a736bff8d69090223c1",
+  "qualification": "TEST-only source verification. Original036 internal GUI proof PASS58 is distinct from overall INCOMPLETE. No posthoc PASS, native provider execution, final acceptance or retained qualification.",
+  "originalEvidence": "gui-import-lifecycle-0369480a-20261119.json",
+  "cause": {
+    "refusedObservation": {
+      "executable": "codex",
+      "allowed": false,
+      "argc": 1,
+      "command": "app-server",
+      "flags": []
+    },
+    "description": "The no-Host Claude source producer was given a generic TEST metadata sentinel advertising an installed Codex version. Ordinary legacy account discovery may then invoke app-server. Actual sentinel refused it; no native Codex ran. The same denied row precedes consumer preflight in41ab/3b/036. Producer attribution is an append-order inference; sentinel PID/time were not recorded."
+  },
+  "change": "Explicit finiteStoppedImport TEST option selects the existing donor-saved-only sentinel generator mode. Codex --version remains allowed metadata but exits78 to report unavailable; app-server remains refused with allowed=false/exit78. Other metadata behavior unchanged.",
+  "scope": "Closed exact base option set; emulated wrapper requires Claude/default variant/no native candidate plus original finite-import mode and emulated flag. Existing native donor recipe guards and defaults are unchanged.",
+  "tests": {
+    "sourceHead": "0369480a62d80620fb425a736bff8d69090223c1",
+    "scope": "one affected existing factory case; generated UNIT sentinels only; no original GUI or native provider",
+    "command": [
+      "/workspace/scratch/1d5114b8d2ee/agent-teams-ai/resources/legacy-agent-host/node/v24.21.0/linux-x64/node",
+      "--test",
+      "--test-name-pattern",
+      "^finite import factory keeps only",
+      "scripts/legacy-agent-host/desktop-finite-stopped-import.test.ts"
+    ],
+    "cwd": "/workspace/scratch/1d5114b8d2ee/agent-teams-ai",
+    "startedAt": "2026-11-19T12:49:19.329259+00:00",
+    "sourceBefore": [
+      {
+        "path": "scripts/legacy-agent-host/desktop-backend-fixture.ts",
+        "sha256": "c3d96dd14444e9fc6dcaf5bb357589779e7403d550dce2372a60f9f48c432ce7",
+        "bytes": 35713
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-emulated-runtime-fixture.ts",
+        "sha256": "18fd8252aceb08287377e6c2e76a171b28cdec0a3512a0c5c13db5cb4dc9f991",
+        "bytes": 23753
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-finite-stopped-import-fixture.ts",
+        "sha256": "c48ca8470ce61ddc1cdd6b97ad55c081fb22ddcbd569719f3eef8e610c995922",
+        "bytes": 15608
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-finite-stopped-import.test.ts",
+        "sha256": "823bdff05fbdf81767696c2580b2feb466852d5a3e6baf48809c6ea3c020b5d3",
+        "bytes": 34101
+      }
+    ],
+    "exitCode": 0,
+    "durationMs": 6405,
+    "finishedAt": "2026-11-19T12:49:25.735301+00:00",
+    "sourceAfter": [
+      {
+        "path": "scripts/legacy-agent-host/desktop-backend-fixture.ts",
+        "sha256": "c3d96dd14444e9fc6dcaf5bb357589779e7403d550dce2372a60f9f48c432ce7",
+        "bytes": 35713
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-emulated-runtime-fixture.ts",
+        "sha256": "18fd8252aceb08287377e6c2e76a171b28cdec0a3512a0c5c13db5cb4dc9f991",
+        "bytes": 23753
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-finite-stopped-import-fixture.ts",
+        "sha256": "c48ca8470ce61ddc1cdd6b97ad55c081fb22ddcbd569719f3eef8e610c995922",
+        "bytes": 15608
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-finite-stopped-import.test.ts",
+        "sha256": "823bdff05fbdf81767696c2580b2feb466852d5a3e6baf48809c6ea3c020b5d3",
+        "bytes": 34101
+      }
+    ],
+    "log": "/workspace/scratch/de9d4631e21c/finite-import-sentinel-0369480a-20261119/factory-test.log",
+    "logSha256": "0600fa23c0469c3616163ae9d0fbd8b5744967f2745929b7194068e3afdbf2f0",
+    "sourceUnchanged": true,
+    "result": {
+      "tests": 1,
+      "pass": 1,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0,
+      "testDurationMs": 5240.054681,
+      "runnerDurationMs": 5673.713534
+    },
+    "review": {
+      "independentAgent": "pr_graph",
+      "verdict": "PASS",
+      "scope": "exact 4-file candidate; source-only review; no duplicate tests"
+    }
+  },
+  "strictTypes": {
+    "kind": "finite-import-sentinel-scoped-types",
+    "sourceHead": "0369480a62d80620fb425a736bff8d69090223c1",
+    "scope": "Six affected TypeScript entrypoints plus actual transitive closure; original strict script options. Not full workspace typecheck.",
+    "startedAt": "2026-11-19T12:49:22.518744+00:00",
+    "command": [
+      "/workspace/scratch/1d5114b8d2ee/agent-teams-ai/resources/legacy-agent-host/node/v24.21.0/linux-x64/node",
+      "node_modules/@typescript/native/bin/tsc",
+      "--noEmit",
+      "--singleThreaded",
+      "-p",
+      "/workspace/scratch/1d5114b8d2ee/agent-teams-ai/.runtime-download/import-sentinel-types-0369480a/tsconfig.json"
+    ],
+    "project": {
+      "extends": "../../tsconfig.legacy-agent-host-scripts.json",
+      "files": [
+        "../../scripts/legacy-agent-host/desktop-finite-stopped-import-fixture.ts",
+        "../../scripts/legacy-agent-host/desktop-emulated-runtime-fixture.ts",
+        "../../scripts/legacy-agent-host/desktop-backend-fixture.ts",
+        "../../scripts/legacy-agent-host/desktop-finite-stopped-import-ui.ts",
+        "../../scripts/legacy-agent-host/desktop-finite-stopped-import-validation.ts",
+        "../../scripts/legacy-agent-host/desktop-finite-stopped-import.test.ts"
+      ],
+      "include": []
+    },
+    "compilerProfile": {
+      "GOMEMLIMIT": "512MiB",
+      "GOGC": "50",
+      "GOMAXPROCS": "2"
+    },
+    "exitCode": 0,
+    "error": null,
+    "elapsedSeconds": 6.646,
+    "sourceBefore": {
+      "scripts/legacy-agent-host/desktop-finite-stopped-import-fixture.ts": "c48ca8470ce61ddc1cdd6b97ad55c081fb22ddcbd569719f3eef8e610c995922",
+      "scripts/legacy-agent-host/desktop-emulated-runtime-fixture.ts": "18fd8252aceb08287377e6c2e76a171b28cdec0a3512a0c5c13db5cb4dc9f991",
+      "scripts/legacy-agent-host/desktop-backend-fixture.ts": "c3d96dd14444e9fc6dcaf5bb357589779e7403d550dce2372a60f9f48c432ce7",
+      "scripts/legacy-agent-host/desktop-finite-stopped-import-ui.ts": "414394dad81b0ba912fdb2a81a8d6276bbd502a15d87f7d6356345aa9b38fdab",
+      "scripts/legacy-agent-host/desktop-finite-stopped-import-validation.ts": "437811b692ea57a8042bf5600376ab3fd412301e0b259942f6e79161e6b0a9d1",
+      "scripts/legacy-agent-host/desktop-finite-stopped-import.test.ts": "823bdff05fbdf81767696c2580b2feb466852d5a3e6baf48809c6ea3c020b5d3",
+      "tools/owned-process-broker/fixtures/claudeProviderPeer.mjs": "75d0a5dac336a20fc0b46ed6c9c87aa8532622fa318e3b8e17f342b07741318e"
+    },
+    "sourceAfter": {
+      "scripts/legacy-agent-host/desktop-finite-stopped-import-fixture.ts": "c48ca8470ce61ddc1cdd6b97ad55c081fb22ddcbd569719f3eef8e610c995922",
+      "scripts/legacy-agent-host/desktop-emulated-runtime-fixture.ts": "18fd8252aceb08287377e6c2e76a171b28cdec0a3512a0c5c13db5cb4dc9f991",
+      "scripts/legacy-agent-host/desktop-backend-fixture.ts": "c3d96dd14444e9fc6dcaf5bb357589779e7403d550dce2372a60f9f48c432ce7",
+      "scripts/legacy-agent-host/desktop-finite-stopped-import-ui.ts": "414394dad81b0ba912fdb2a81a8d6276bbd502a15d87f7d6356345aa9b38fdab",
+      "scripts/legacy-agent-host/desktop-finite-stopped-import-validation.ts": "437811b692ea57a8042bf5600376ab3fd412301e0b259942f6e79161e6b0a9d1",
+      "scripts/legacy-agent-host/desktop-finite-stopped-import.test.ts": "823bdff05fbdf81767696c2580b2feb466852d5a3e6baf48809c6ea3c020b5d3",
+      "tools/owned-process-broker/fixtures/claudeProviderPeer.mjs": "75d0a5dac336a20fc0b46ed6c9c87aa8532622fa318e3b8e17f342b07741318e"
+    },
+    "sourceUnchanged": true,
+    "logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "independentReview": {
+    "kind": "independent-source-r2",
+    "reviewer": "pr_graph",
+    "verdict": "PASS",
+    "baseHead": "0369480a62d80620fb425a736bff8d69090223c1",
+    "files": [
+      {
+        "path": "scripts/legacy-agent-host/desktop-backend-fixture.ts",
+        "bytes": 35713,
+        "sha256": "c3d96dd14444e9fc6dcaf5bb357589779e7403d550dce2372a60f9f48c432ce7"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-emulated-runtime-fixture.ts",
+        "bytes": 23753,
+        "sha256": "18fd8252aceb08287377e6c2e76a171b28cdec0a3512a0c5c13db5cb4dc9f991"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-finite-stopped-import-fixture.ts",
+        "bytes": 15608,
+        "sha256": "c48ca8470ce61ddc1cdd6b97ad55c081fb22ddcbd569719f3eef8e610c995922"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-finite-stopped-import.test.ts",
+        "bytes": 34101,
+        "sha256": "823bdff05fbdf81767696c2580b2feb466852d5a3e6baf48809c6ea3c020b5d3"
+      }
+    ],
+    "unchangedOriginalOracleAndActionPaths": [
+      {
+        "path": "scripts/legacy-agent-host/desktop-backend-smoke.ts",
+        "bytes": 57563,
+        "sha256": "51d056aeff4ce159eab1533ca68838c768dc978f851a41687bb81e49a4863221"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-finite-stopped-import-producer.ts",
+        "bytes": 21339,
+        "sha256": "626dfe43fc3cf2f90cf1663120824423b463a48e09748caf2cef2bb0ed95712a"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-finite-stopped-import-ui.ts",
+        "bytes": 16770,
+        "sha256": "414394dad81b0ba912fdb2a81a8d6276bbd502a15d87f7d6356345aa9b38fdab"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-finite-stopped-import-validation.ts",
+        "bytes": 11017,
+        "sha256": "437811b692ea57a8042bf5600376ab3fd412301e0b259942f6e79161e6b0a9d1"
+      }
+    ],
+    "findings": [
+      "Closed explicit finiteStoppedImport flag is accepted only for exact emulated import mode, Claude/default variant/no captured packaged candidate; backend only accepts its original four fixture options before allocation.",
+      "Existing donor-saved-only sentinel code generator is reused without changing its body or donor prerequisites/seeding. Codex --version records permitted metadata then exits78; app-server remains refused/allowedfalse/exit78.",
+      "Other modes/providers/defaults and packed denied mode retain previous bytes/selection. No product implementation, fallback, command, source authority, polling, original deadline, or no-agent negative oracle changed.",
+      "Affected factory test preserves pre-effect ENOENT proof; deliberately executes generated UNIT sentinel metadata/refusal after that check, and tests foreign selections refuse before allocation."
+    ],
+    "evidenceLimitations": [
+      "Static cause route supported; exact old PID/timestamp/IPC caller was not recorded. Producer attribution uses original append order before consumer preflight.",
+      "The 036 original UI helper PASS58 is retained; original top-level remains INCOMPLETE. New original acceptance requires a fresh run.",
+      "No tests/builds/GUI executed by this independent review; sole affected factory test and scoped compiler are coordinated separately."
+    ]
+  },
+  "preserved": [
+    "No production edits",
+    "Original no-agent sentinel guard is byte-identical",
+    "Original producer/UI/final-validator sources byte-identical",
+    "No extra UI actions/reads/polling/retries/deadlines",
+    "Existing generated refusal implementation reused, no widened allowlist",
+    "Original template-only Runtime and canonical conversation proofs retained"
+  ],
+  "reusedBuild": "Exact41ab Host source/build retained; no rebuild required.",
+  "remaining": "Publish clean source, run unchanged original import lifecycle and retained queue, then authorized native V2 management and Main retained coexistence."
+}

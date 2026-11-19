@@ -7,19 +7,18 @@
 На нём прошли полный cross-team/ReviewFlow GUI, workspace typecheck и fast lint,
 четыре frontend shards, все пять packaged-платформ и их общий gate.
 Из 25 Desktop lanes прошли 20. Оставшиеся отказы перечислены ниже.
-Продолжения `90b7fb4a`, `e754d233`, `917a7d3c`, `41ab8f64` и `3b459631` опубликованы. Строгая локальная
+Продолжения до `0369480a` опубликованы. Строгая локальная
 [Host-сборка e754](evidence/host-build-e754d233-20261119.json) PASS за 10.064s,
 все 14 input pins совпали. Новые правки не получают результаты приёмки9ec
-автоматически. При последнем чтении workflows 917 были автоматически отменены
-после supersession; на 41ab — 16 queued и 14 skipped, новых PASS не заявляется.
-На 3b исходный import lifecycle прошёл producer Stop/release, export/import,
-reload, ProductTask readback, точную input correlation и видимый fresh Host reply.
-Следующий отказ — TEST читает ответ сессии из product-only `team.snapshot`.
-Проверка исправлена на тот же `team.messages.page`, который использует чат.
-Также убран неиспользуемый static Runtime seed этой фикстуры: штатный Quit
-иначе оставляет для него техническую tombstone. Production shutdown и строгий
-final sessions oracle сохраняются. Полный lifecycle пока INCOMPLETE;
-cleanup=true, все 1909 source hashes совпали. Retained после отказа не запускался.
+автоматически. При последнем чтении CI на 036 — 15 queued и 14 skipped;
+новых CI PASS не заявляется, локальная работа очередь не ожидает.
+На 036 внутренний import GUI proof прошёл все 58 шагов, включая fresh Host Stop,
+release, отсутствие peer и reload. Общий запуск остаётся INCOMPLETE: следующий
+negative oracle обнаружил одну отклонённую попытку `codex app-server`.
+Реальный Codex не запускался. No-Host producer получил от TEST sentinel ложный
+сигнал об установленном Codex; выбор уже существующего режима метаданных фикстуры
+исправлен и проверен. Запрет native invocation сохраняется. Cleanup квалифицирован,
+все 1909 source hashes совпали. Final acceptance и retained ещё не выполнены.
 
 ## Доставка и границы
 
@@ -64,7 +63,7 @@ resolved; approval review этим не заявляется.
 
 | ID | Первый отказ на 9ec | Текущая работа и критерий завершения | Владелец |
 | --- | --- | --- | --- |
-| E1-Stop / Import | Producer Stop, export/import и input correlation уже пройдены. На 3b после visible reply отказал неправильный TEST read из product snapshot. | Canonical conversation page и template-only fixture готовы: 2/2 новых tests, strict types и R2 PASS. Exact final oracle сохранён. Далее исходные fresh Host Stop, cold readback и полный final validator. | root; pr_graph |
+| E1-Stop / Import | На 036 внутренний GUI proof PASS: все 58 шагов, fresh Host Stop/release и reload. Общий guard отклонил попытку `codex app-server`. | Scoped fixture mode исправлен: 1/1 affected factory test, strict types и R2 PASS; native refusal guard сохранён. Далее original successful Quit, весь final validator и retained UI. | root; pr_graph |
 | E1-Retained | [Retained UI](https://github.com/777genius/agent-teams-ai/actions/runs/44455698034/job/135330056793): prepare/held. [Main retained V1/V2](https://github.com/777genius/agent-teams-ai/actions/runs/44455698135/job/135350275468): coordinator admission, not-eligible/not-dispatched. | Закрытая prepare-boundary диагностика готова: 42/42 tests и R2 PASS. Read-fence использует исправленный drain существующей очереди; связь с исходным отказом ещё проверяется. Требуются исходный UI и отдельный V1/V2 coexistence open/history/Stop/cold/cleanup. | pr_graph; media |
 | E1-Add | [Linux V2 management](https://github.com/777genius/agent-teams-ai/actions/runs/44455698034/job/135330056490): `original add completes`. | По current receipt Add сохранён held до member publication, model probe не прошёл credential preparation/cleanup. Закрытая first-close диагностика передана Host→Main, 30/30 actual-source checks и R2 PASS. Нужен исходный Add/Remove/Restore/Stop/cold после сборки. | media |
 | E1-Review | [Darwin ARM V2 Review](https://github.com/777genius/agent-teams-ai/actions/runs/44455698034/job/135330056601): исходный preflight deadline. | Initial-seed/model-source fix опубликован в90b, exact-byte focused proof и R2 сохранены. Нужен affected original preflight/Review. Source test не заменяет Darwin acceptance. | media |
@@ -189,6 +188,22 @@ Production source, действия, read/await и deadlines не менялис
 Пустой Runtime members допускается только в этой pinned import-фикстуре;
 остальные режимы сохраняют одного member. Исходный final census `[after]`,
 production tombstone и все UI Stop/cold/no-replay assertions сохранены.
+
+[Original import lifecycle 036](evidence/gui-import-lifecycle-0369480a-20261119.json)
+разделяет GUI proof PASS (58 steps) и общий INCOMPLETE. Producer завершён штатно;
+consumer прошёл single input, public conversation, Stop/release, peer absence и
+stopped reload. Перед successful Quit общий guard обнаружил один refused
+`codex app-server`; sentinel остановил вызов, vendor Codex не исполнялся.
+Та же строка есть в 41ab и 3b до consumer preflight; attribution к no-Host producer
+следует из append order, точные PID/time отсутствуют. Cleanup после отказа
+квалифицирован; он не заменяет successful Quit/final acceptance.
+[Sentinel-исправление](evidence/finite-import-sentinel-0369480a-20261119.json)
+переиспользует существующий режим: разрешённый metadata-запрос Codex version
+теперь сообщает «не установлен» через exit78, а app-server остаётся запрещён.
+Закрытый opt-in действует только для исходного finite Claude import recipe;
+native donor guards и прочие modes неизменны. Единственный затронутый factory
+case PASS, strict TS7 PASS за 6.646s, independent R2 PASS. Production, original
+producer/UI/final validator и общий no-agent guard побайтово сохранены.
 
 [Исторические входы coexistence](evidence/coexistence-historical-inputs-20261119.json)
 подготовлены отдельно: четыре clean pinned checkout, проверенные V1 packages1.19.4
