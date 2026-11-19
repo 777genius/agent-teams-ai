@@ -32,6 +32,11 @@ export function createCapturedHostDiagnostics(hostPid: () => number | undefined)
       const pid = hostPid();
       if (pid !== undefined)
         createLogger('Host:RuntimeOpen').diagnostic('Runtime open refusal', { ...observation, hostPid: pid });
+    },
+    observation => {
+      const pid = hostPid();
+      if (pid !== undefined)
+        createLogger('Host:OpenCodeProbeClose').diagnostic('OpenCode probe close failure', { ...observation, hostPid: pid });
     }
   );
 }

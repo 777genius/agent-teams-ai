@@ -724,28 +724,40 @@ export async function nativeEmulatedSourceScenario(sandbox: string, broker: stri
     for (const child of observedChildren) if (child.exitCode === null && child.signalCode === null) child.kill();
     if (errors.length) failure = new AggregateError([...(failure ? [failure] : []), ...errors], 'TEST source scenario cleanup incomplete');
     // TEST_RUNTIME_PROJECTION_READER_BEGIN
-    if (failure) try {
-      assert.equal(epochs.length, 1);
-      assert.equal(epochs[0]?.projectionHostExit, 'confirmed');
-      const stat = lstatSync(fixture.runtimeProjectionLedger);
-      assert.ok(stat.isFile() && !stat.isSymbolicLink() && stat.size <= 512);
-      const raw = readFileSync(fixture.runtimeProjectionLedger, 'utf8'); assert.ok(Buffer.byteLength(raw) <= 512);
-      const ledger = object(JSON.parse(raw)); assert.deepEqual(Object.keys(ledger).sort(), ['rows', 'status']);
-      assert.equal(ledger.status, 'observed'); assert.ok(Array.isArray(ledger.rows) && ledger.rows.length <= 4);
-      const digests = new Set<string>();
-      const records = ledger.rows.map((tuple: unknown) => {
-        assert.ok(Array.isArray(tuple) && tuple.length === 6);
-        const digest = text(tuple[0]); assert.match(digest, /^[a-f0-9]{64}$/); assert.equal(digests.has(digest), false); digests.add(digest);
-        assert.equal(typeof tuple[1], 'boolean'); assert.equal(typeof tuple[5], 'boolean');
-        for (let index = 2; index <= 4; index++)
-          assert.ok(tuple.slice(1, index).every(value => value === true) ? typeof tuple[index] === 'boolean' : tuple[index] === null);
-        assert.equal(tuple[5], tuple.slice(1, 5).every(value => value === true));
-        return { viewDigest: digest, bindingMatches: tuple[1], recordReady: tuple[2],
-          providerReady: tuple[3], ownerCurrent: tuple[4], nativeReady: tuple[5] };
-      });
-      const matches = records.filter(row => row.viewDigest === lastRuntimeViewDigest); assert.equal(matches.length, 1);
-      evidence.runtimeProjection = { status: 'observed', atomicWithFailure: false, ...matches[0] };
-    } catch { evidence.runtimeProjection = { status: 'unknown', reason: 'missing-invalid-overflow-conflicting-or-unjoined' }; }
+    if (failure) {
+      let projectionBoundary = 'epoch-count';
+      try {
+        assert.equal(epochs.length, 1);
+        projectionBoundary = 'host-exit';
+        assert.equal(epochs[0]?.projectionHostExit, 'confirmed');
+        projectionBoundary = 'ledger-stat';
+        const stat = lstatSync(fixture.runtimeProjectionLedger);
+        assert.ok(stat.isFile() && !stat.isSymbolicLink() && stat.size <= 512);
+        projectionBoundary = 'ledger-read';
+        const raw = readFileSync(fixture.runtimeProjectionLedger, 'utf8'); assert.ok(Buffer.byteLength(raw) <= 512);
+        const ledger = object(JSON.parse(raw));
+        projectionBoundary = ledger.status === 'unknown' && Object.keys(ledger).sort().join(' ') === 'reason status' &&
+          typeof ledger.reason === 'string' && ['invalid', 'conflict', 'capacity', 'byte-budget'].includes(ledger.reason)
+          ? 'receiver-' + ledger.reason : 'ledger-format';
+        assert.deepEqual(Object.keys(ledger).sort(), ['rows', 'status']);
+        assert.equal(ledger.status, 'observed'); assert.ok(Array.isArray(ledger.rows) && ledger.rows.length <= 4);
+        projectionBoundary = 'ledger-rows';
+        const digests = new Set<string>();
+        const records = ledger.rows.map((tuple: unknown) => {
+          assert.ok(Array.isArray(tuple) && tuple.length === 6);
+          const digest = text(tuple[0]); assert.match(digest, /^[a-f0-9]{64}$/); assert.equal(digests.has(digest), false); digests.add(digest);
+          assert.equal(typeof tuple[1], 'boolean'); assert.equal(typeof tuple[5], 'boolean');
+          for (let index = 2; index <= 4; index++)
+            assert.ok(tuple.slice(1, index).every(value => value === true) ? typeof tuple[index] === 'boolean' : tuple[index] === null);
+          assert.equal(tuple[5], tuple.slice(1, 5).every(value => value === true));
+          return { viewDigest: digest, bindingMatches: tuple[1], recordReady: tuple[2],
+            providerReady: tuple[3], ownerCurrent: tuple[4], nativeReady: tuple[5] };
+        });
+        projectionBoundary = 'view-match';
+        const matches = records.filter(row => row.viewDigest === lastRuntimeViewDigest); assert.equal(matches.length, 1);
+        evidence.runtimeProjection = { status: 'observed', atomicWithFailure: false, ...matches[0] };
+      } catch { evidence.runtimeProjection = { status: 'unknown', reason: projectionBoundary }; }
+    }
     // TEST_RUNTIME_PROJECTION_READER_END
     if (failure) try {
       evidence.codexReadinessObservation = readEmulatedCodexReadinessObservation({

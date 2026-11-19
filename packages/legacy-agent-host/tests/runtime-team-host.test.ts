@@ -3698,7 +3698,7 @@ test('the original passive Runtime projection receiver writes only bounded exit 
     new Proxy(Object.create(null) as Record<string, unknown>, { ownKeys() { throw new Error('PRIVATE-proxy'); } })];
   for (const value of bad) {
     const rejected = create(); rejected.receive(row); rejected.receive(value); rejected.receive(row); rejected.exit();
-    assert.deepEqual(JSON.parse(rejected.writes[0]!), { status: 'unknown' });
+    assert.deepEqual(JSON.parse(rejected.writes[0]!), { status: 'unknown', reason: 'invalid' });
     assert.equal(rejected.writes[0]!.includes('PRIVATE-'), false);
   }
   assert.equal(getterCalls, 0);
@@ -3709,33 +3709,36 @@ test('the original passive Runtime projection receiver writes only bounded exit 
     rows: [[row.viewDigest, true, true, true, false, false]] });
   const ready = copy({ recordReady: true, providerReady: true, ownerCurrent: true, nativeReady: true });
   const conflict = create(); conflict.receive(row); conflict.receive(ready); conflict.receive(row); conflict.exit();
-  assert.deepEqual(JSON.parse(conflict.writes[0]!), { status: 'unknown' });
+  assert.deepEqual(JSON.parse(conflict.writes[0]!), { status: 'unknown', reason: 'conflict' });
   const reversed = create(); reversed.receive(ready); reversed.receive(row); reversed.receive(ready); reversed.exit();
-  assert.deepEqual(JSON.parse(reversed.writes[0]!), { status: 'unknown' });
+  assert.deepEqual(JSON.parse(reversed.writes[0]!), { status: 'unknown', reason: 'conflict' });
   const bounded = create(); for (const digit of 'abcd') bounded.receive(copy({ viewDigest: digit.repeat(64) })); bounded.exit();
   assert.equal(JSON.parse(bounded.writes[0]!).rows.length, 4); assert.ok(Buffer.byteLength(bounded.writes[0]!) <= 512);
   const overflow = create(); for (const digit of 'abcde') overflow.receive(copy({ viewDigest: digit.repeat(64) })); overflow.exit();
-  assert.deepEqual(JSON.parse(overflow.writes[0]!), { status: 'unknown' });
+  assert.deepEqual(JSON.parse(overflow.writes[0]!), { status: 'unknown', reason: 'capacity' });
 
   const scenario = readFileSync(new URL('../../../tools/owned-process-broker/nativeEmulatedSourceScenario.ts', import.meta.url), 'utf8');
-  const statLine = '      const stat = lstatSync(fixture.runtimeProjectionLedger);';
-  const readerEnd = "    } catch { evidence.runtimeProjection = { status: 'unknown', reason: 'missing-invalid-overflow-conflicting-or-unjoined' }; }";
-  assert.equal(scenario.split(statLine).length, 2); assert.equal(scenario.split(readerEnd).length, 2);
-  const statOffset = scenario.indexOf(statLine), start = scenario.lastIndexOf('    if (failure) try {', statOffset);
-  const stop = scenario.indexOf(readerEnd) + readerEnd.length;
-  assert.ok(start >= 0 && start < statOffset && statOffset < stop);
+  const readerBegin = '    // TEST_RUNTIME_PROJECTION_READER_BEGIN';
+  const readerEnd = '    // TEST_RUNTIME_PROJECTION_READER_END';
+  assert.equal(scenario.split(readerBegin).length, 2); assert.equal(scenario.split(readerEnd).length, 2);
+  const start = scenario.indexOf(readerBegin) + readerBegin.length, stop = scenario.indexOf(readerEnd);
+  assert.ok(start >= 0 && stop > start);
   let reader = scenario.slice(start, stop);
   // Erase only these two uniquely checked type annotations; execute the original reader body.
   for (const [before, after] of [['new Set<string>()', 'new Set()'], ['(tuple: unknown)', '(tuple)']] as const) {
     assert.equal(reader.split(before).length, 2); reader = reader.replace(before, after);
   }
   for (const kind of ['observed', 'two-epochs', 'no-epoch', 'unknown-exit', 'missing-exit',
-    'wrong-digest', 'missing-ledger', 'empty-ledger', 'conflicting-ledger'] as const) {
+    'wrong-digest', 'missing-ledger', 'empty-ledger', 'conflicting-ledger', 'overflow-ledger',
+    'invalid-ledger', 'private-reason', 'legacy-unknown', 'large-ledger'] as const) {
     const evidence: Record<string, unknown> = {};
     let stats = 0, reads = 0;
     const epochs = Array.from({ length: kind === 'no-epoch' ? 0 : kind === 'two-epochs' ? 2 : 1 },
       () => kind === 'missing-exit' ? {} : { projectionHostExit: kind === 'unknown-exit' ? 'unknown' : 'confirmed' });
-    const raw = kind === 'empty-ledger' ? empty.writes[0]! : kind === 'conflicting-ledger' ? conflict.writes[0]! : good.writes[0]!;
+    const raw = kind === 'empty-ledger' ? empty.writes[0]! : kind === 'conflicting-ledger' ? conflict.writes[0]!
+      : kind === 'overflow-ledger' ? overflow.writes[0]! : kind === 'invalid-ledger' ? '{"status":"unknown","reason":"invalid"}'
+      : kind === 'private-reason' ? '{"status":"unknown","reason":"PRIVATE-secret"}'
+      : kind === 'legacy-unknown' ? '{"status":"unknown"}' : kind === 'large-ledger' ? 'x'.repeat(513) : good.writes[0]!;
     runInNewContext(reader, { assert, Buffer, failure: new Error('TEST original readiness failure'),
       fixture: { runtimeProjectionLedger: 'TEST-private-ledger' }, evidence, epochs,
       lastRuntimeViewDigest: kind === 'wrong-digest' ? 'b'.repeat(64) : row.viewDigest,
@@ -3752,10 +3755,15 @@ test('the original passive Runtime projection receiver writes only bounded exit 
     });
     const blocked = ['no-epoch', 'two-epochs', 'unknown-exit', 'missing-exit'].includes(kind);
     assert.equal(stats, blocked ? 0 : 1, kind + ': original epoch and confirmed exit are required before any ledger read');
-    assert.equal(reads, blocked || kind === 'missing-ledger' ? 0 : 1);
+    assert.equal(reads, blocked || kind === 'missing-ledger' || kind === 'large-ledger' ? 0 : 1);
+    const reason = kind === 'no-epoch' || kind === 'two-epochs' ? 'epoch-count'
+      : kind === 'unknown-exit' || kind === 'missing-exit' ? 'host-exit'
+      : kind === 'missing-ledger' || kind === 'large-ledger' ? 'ledger-stat'
+      : kind === 'conflicting-ledger' ? 'receiver-conflict' : kind === 'overflow-ledger' ? 'receiver-capacity'
+      : kind === 'invalid-ledger' ? 'receiver-invalid' : kind === 'private-reason' || kind === 'legacy-unknown' ? 'ledger-format' : 'view-match';
     assert.deepEqual(JSON.parse(JSON.stringify(evidence.runtimeProjection)), kind === 'observed'
       ? { status: 'observed', atomicWithFailure: false, ...row }
-      : { status: 'unknown', reason: 'missing-invalid-overflow-conflicting-or-unjoined' }, kind);
+      : { status: 'unknown', reason }, kind);
     assert.doesNotMatch(JSON.stringify(evidence), /TEST-private|PRIVATE-|sessionRef|operationRef/);
     assert.ok(Buffer.byteLength(JSON.stringify(evidence)) <= 512);
   }

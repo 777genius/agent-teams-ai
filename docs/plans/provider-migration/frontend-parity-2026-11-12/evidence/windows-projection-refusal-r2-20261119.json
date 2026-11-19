@@ -1,0 +1,89 @@
+{
+  "schemaVersion": 1,
+  "kind": "independent-windows-passive-projection-refusal-r2",
+  "reviewer": "/root/pr_graph",
+  "observedAt": "2026-11-19T11:08:50.166626+00:00",
+  "sourceHead": "90b7fb4a7095f47c4416b58a183769761d837cb3",
+  "status": "PASS_SCOPED_DIAGNOSTIC_ONLY",
+  "paths": [
+    {
+      "path": "tools/owned-process-broker/nativeEmulatedSourceProfile.ts",
+      "bytes": 32742,
+      "sha256": "cf2d799ca4db3015779ccf2e755879e2a44f14d23fe9ea6b6f39ad426bff9311",
+      "gitBlob": "d4706c6a05725e797f9a4914bee1af0f5333f022"
+    },
+    {
+      "path": "tools/owned-process-broker/nativeEmulatedSourceScenario.ts",
+      "bytes": 60440,
+      "sha256": "6c1025b2a9b95aa86713ab026f7c1633f9102f2bb7b3c955ff99be51633c1ef3",
+      "gitBlob": "8d8cc4416e012f2f65706babcd560915de272a1a"
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/runtime-team-host.test.ts",
+      "bytes": 275128,
+      "sha256": "a3d3f0eced2fcf66cfca03eff85e75b8acc0d48f6f453cecd166add7fdcae241",
+      "gitBlob": "76b3cb8b5257805c983d79e6d367f2a5ce6f8b36"
+    }
+  ],
+  "review": {
+    "receiverOwnDataAndTupleValidationPreserved": true,
+    "firstRefusalOnly": true,
+    "receiverReasons": [
+      "invalid",
+      "conflict",
+      "capacity",
+      "byte-budget"
+    ],
+    "rowsMax": 4,
+    "ledgerBytesMax": 512,
+    "writeOnlyAtOriginalHostExitWithExclusiveCreate": true,
+    "readerOriginalOneEpochAndConfirmedExitBeforeIO": true,
+    "readerExactClosedShapeAndLastRuntimeViewDigestJoin": true,
+    "untrustedOrLegacyUnknownReasonsDoNotBecomeObserved": true,
+    "noExtraIOAwaitInputRuntimeReadDeadlineOrCleanupChange": true,
+    "privacyAndIOCountNegativesExecuteActualReaderSource": true
+  },
+  "verification": {
+    "reusedRootRun": {
+      "command": [
+        "pnpm",
+        "--config.verify-deps-before-run=false",
+        "exec",
+        "node",
+        "--test",
+        "--test-concurrency=1",
+        "--test-name-pattern=Runtime projection privately|original passive Runtime projection receiver",
+        "packages/legacy-agent-host/tests/runtime-team-host.test.ts"
+      ],
+      "exitCode": 0,
+      "elapsedSeconds": 3.563,
+      "sourcePins": {
+        "tools/owned-process-broker/nativeEmulatedSourceProfile.ts": "cf2d799ca4db3015779ccf2e755879e2a44f14d23fe9ea6b6f39ad426bff9311",
+        "tools/owned-process-broker/nativeEmulatedSourceScenario.ts": "6c1025b2a9b95aa86713ab026f7c1633f9102f2bb7b3c955ff99be51633c1ef3",
+        "packages/legacy-agent-host/tests/runtime-team-host.test.ts": "a3d3f0eced2fcf66cfca03eff85e75b8acc0d48f6f453cecd166add7fdcae241"
+      },
+      "logSha256": "9fa6e27419637cc8d981d102918c18484f00f9ad71dd0683344f12ea7cf109a7"
+    },
+    "runPin": {
+      "path": "/workspace/scratch/de9d4631e21c/windows-projection-refusal-focused-90b.json",
+      "bytes": 862,
+      "sha256": "5729eb5f11d92dee106bf8e0588383cbdfc92ec569dc3c81a0a9b73a21c4a1be",
+      "gitBlob": "4b33ce625dd2e23d4f72cc0eb5999e62fe6c389e"
+    },
+    "logPin": {
+      "path": "/workspace/scratch/de9d4631e21c/windows-projection-refusal-focused-90b.log",
+      "bytes": 383,
+      "sha256": "9fa6e27419637cc8d981d102918c18484f00f9ad71dd0683344f12ea7cf109a7",
+      "gitBlob": "4dee4bec6296646d3e7661da6919e2e49f36dffc"
+    },
+    "pass": 2,
+    "fail": 0,
+    "skip": 0,
+    "duplicateRun": false
+  },
+  "limits": [
+    "Diagnostic refinement only. Windows ARM/x64 original source Team readiness remains unqualified until an original affected E2E succeeds.",
+    "Observed projection is still atomicWithFailure:false; ledger failure reason does not establish the runtime cause.",
+    "JSON parse failure is labeled ledger-read, the last entered boundary, not a specific parser diagnosis."
+  ]
+}

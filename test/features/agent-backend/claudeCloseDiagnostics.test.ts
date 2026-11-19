@@ -3,12 +3,12 @@ import { createHash } from 'node:crypto';
 
 import { it as test } from 'vitest';
 
-import { createClaudeCloseDiagnostic, createClaudeManagementDiagnostic, createOpenCodeMetadataDiagnostic, createOpenCodeProbeDiagnostic } from '../../../packages/legacy-agent-host/src/adapters/providers/createClaudeCloseDiagnostic';
+import { createClaudeCloseDiagnostic, createClaudeManagementDiagnostic, createOpenCodeMetadataDiagnostic, createOpenCodeProbeCloseDiagnostic, createOpenCodeProbeDiagnostic } from '../../../packages/legacy-agent-host/src/adapters/providers/createClaudeCloseDiagnostic';
 import { createCapturedHostDiagnostics } from '../../../src/features/agent-backend/main/infrastructure/createCapturedHostDiagnostics';
 import { decodeClaudeCloseDiagnostics } from '../../../src/features/agent-backend/main/infrastructure/decodeClaudeCloseDiagnostics';
 import { addLogSink } from '../../../src/shared/utils/logger';
 
-import type { OpenCodeProbeDiagnostic } from '../../../src/features/agent-backend/main/infrastructure/decodeClaudeCloseDiagnostics';
+import type { OpenCodeProbeCloseDiagnostic, OpenCodeProbeDiagnostic } from '../../../src/features/agent-backend/main/infrastructure/decodeClaudeCloseDiagnostics';
 
 const binding = { backendId: 'TEST-backend', teamId: 'TEST-team', runId: 'TEST-run',
   memberId: 'TEST-member', generation: 'restore-123' };
@@ -204,6 +204,9 @@ test('metadata read failures retain closed original facts before ready without a
 });
 
 const probePrefix = 'legacy-agent-host: opencode-probe ';
+const probeClosePrefix = 'legacy-agent-host: opencode-probe-close-failed ';
+const probeCloseFailure = { probeDigest: 'a'.repeat(64), runState: 'threw', outcome: 'unobserved',
+  errorClass: 'held', stage: 'owner-client', reason: 'threw', runErrorCode: null, runCauseCode: 'ECONNRESET' };
 const probePhases = ['run', 'graph-start', 'graph-done', 'native-launch', 'native-ready',
   'credential', 'attestation', 'session-create', 'driver-open', 'first-submit'] as const;
 
@@ -342,8 +345,10 @@ test('captured Host logs retain the new phase separately from original metadata 
     createClaudeCloseDiagnostic(binding, 'TEST-session', line => decode(Buffer.from(line)))({ stage: 'custody', outcome: 'confirmed' });
     createClaudeManagementDiagnostic({ profileId: 'TEST-profile', configRevision: 'TEST-revision', environment: {} },
       undefined, line => decode(Buffer.from(line)))('host-cleanup', new Error('cleanup-unconfirmed'));
+    createOpenCodeProbeCloseDiagnostic({ profileId: 'TEST-profile', configRevision: 'TEST-revision' },
+      'TEST-command', 'a'.repeat(64), line => decode(Buffer.from(line)))(probeCloseFailure);
     assert.deepEqual(entries.map(entry => entry.namespace),
-      ['Host:OpenCodeProbe', 'Host:OpenCodeMetadata', 'Host:ClaudeClose', 'Host:ClaudeManagement']);
+      ['Host:OpenCodeProbe', 'Host:OpenCodeMetadata', 'Host:ClaudeClose', 'Host:ClaudeManagement', 'Host:OpenCodeProbeClose']);
     assert.deepEqual(entries[0]!.args, ['OpenCode probe phase', {
       profileHash: createHash('sha256').update(JSON.stringify(['TEST-profile', 'TEST-revision'])).digest('hex'),
       commandHash: createHash('sha256').update(JSON.stringify('TEST-command')).digest('hex'),
@@ -354,9 +359,93 @@ test('captured Host logs retain the new phase separately from original metadata 
       mode: 'directory', providerHash: null, pid: 732, stage: 'ready',
       startIdentityHash: createHash('sha256').update('TEST:original:732', 'utf8').digest('hex'), hostPid: 731,
     }]);
+    assert.deepEqual(entries[4]!.args, ['OpenCode probe close failure', {
+      profileHash: createHash('sha256').update(JSON.stringify(['TEST-profile', 'TEST-revision'])).digest('hex'),
+      commandHash: createHash('sha256').update(JSON.stringify('TEST-command')).digest('hex'),
+      ...probeCloseFailure, hostPid: 731,
+    }]);
     pid = undefined;
     createOpenCodeProbeDiagnostic({ profileId: 'TEST-profile', configRevision: 'TEST-revision' },
       'TEST-command', 'a'.repeat(64), line => decode(Buffer.from(line)), () => 100)('run');
-    assert.equal(entries.length, 4, 'no Host identity is invented for a missing original child');
+    createOpenCodeProbeCloseDiagnostic({ profileId: 'TEST-profile', configRevision: 'TEST-revision' },
+      'TEST-command', 'a'.repeat(64), line => decode(Buffer.from(line)))(probeCloseFailure);
+    assert.equal(entries.length, 5, 'no Host identity is invented for a missing original child');
   } finally { remove(); removeBroken(); }
+});
+
+test('probe close failure bridge retains one original closed observation without opaque values or getters', () => {
+  const secret = 'TEST-private-close-error-path-key', selected = { profileId: 'TEST-original', configRevision: 'TEST-revision' };
+  const original = { ...selected }, lines: string[] = [];
+  const observe = createOpenCodeProbeCloseDiagnostic(selected, secret, probeCloseFailure.probeDigest, line => lines.push(line));
+  selected.profileId = secret; selected.configRevision = secret;
+  let getterReads = 0;
+  const getter = Object.defineProperty({ ...probeCloseFailure }, 'stage', { enumerable: true,
+    get() { getterReads++; throw new Error(secret); } });
+  const { stage, ...withoutStage } = probeCloseFailure;
+  for (const invalid of [
+    getter, Object.assign(Object.create({ stage }), withoutStage),
+    new Proxy({}, { ownKeys() { throw new Error(secret); } }),
+    { ...probeCloseFailure, [Symbol(secret)]: secret }, { ...probeCloseFailure, raw: secret },
+    { ...probeCloseFailure, probeDigest: 'b'.repeat(64) }, { ...probeCloseFailure, runState: secret },
+    { ...probeCloseFailure, stage: secret }, { ...probeCloseFailure, reason: secret },
+    { ...probeCloseFailure, outcome: secret }, { ...probeCloseFailure, errorClass: secret },
+    { ...probeCloseFailure, runErrorCode: secret }, { ...probeCloseFailure, runCauseCode: undefined },
+  ]) assert.doesNotThrow(() => observe(invalid));
+  assert.equal(getterReads, 0); assert.deepEqual(lines, []);
+  observe(probeCloseFailure);
+  for (let i = 0; i < 20; i++) observe({ ...probeCloseFailure, stage: 'namespace', reason: 'identity' });
+  assert.equal(lines.length, 1); assert.ok(Buffer.byteLength(lines[0]!) <= 768);
+  assert.equal(lines.join('').includes(secret), false); assert.equal(lines.join('').includes('TEST-original'), false);
+  const retained: OpenCodeProbeCloseDiagnostic[] = [];
+  const decode = decodeClaudeCloseDiagnostics(() => {}, undefined, undefined, undefined, undefined,
+    value => { retained.push(value); });
+  for (const byte of Buffer.from(lines[0]!)) decode(Buffer.from([byte]));
+  const hash = (value: unknown) => createHash('sha256').update(JSON.stringify(value)).digest('hex');
+  assert.deepEqual(retained, [{ profileHash: hash([original.profileId, original.configRevision]),
+    commandHash: hash(secret), ...probeCloseFailure }]);
+  assert.ok(retained.every(Object.isFrozen));
+  assert.ok(retained.every(value => !Object.hasOwn(value, 'elapsedMs') && !Object.hasOwn(value, 'ready') && !Object.hasOwn(value, 'released')));
+
+  const selectedGetter = Object.defineProperty({ ...original }, 'profileId', {
+    get() { getterReads++; throw new Error(secret); } });
+  createOpenCodeProbeCloseDiagnostic(selectedGetter, secret, probeCloseFailure.probeDigest, line => lines.push(line))(probeCloseFailure);
+  assert.equal(getterReads, 0); assert.equal(lines.length, 1);
+  let writeAttempts = 0;
+  const failedSink = createOpenCodeProbeCloseDiagnostic(original, secret, probeCloseFailure.probeDigest,
+    () => { writeAttempts++; throw new Error(secret); });
+  assert.doesNotThrow(() => failedSink(probeCloseFailure));
+  assert.doesNotThrow(() => failedSink({ ...probeCloseFailure, stage: 'namespace', reason: 'identity' }));
+  assert.equal(writeAttempts, 1, 'a lost first diagnostic is never replaced by a later close stage');
+});
+
+test('probe close decoder rejects noncanonical shapes and oversized raw frames without changing existing framing', async () => {
+  const valid = { profileHash: 'b'.repeat(64), commandHash: 'c'.repeat(64), ...probeCloseFailure };
+  const { runErrorCode: _error, runCauseCode: _cause, ...plain } = valid;
+  const nonthrowing = { ...plain, runState: 'false', errorClass: 'none', stage: 'server-stop', reason: 'unconfirmed' };
+  const values: unknown[] = [];
+  const decode = decodeClaudeCloseDiagnostics(() => {}, undefined, undefined, undefined, undefined,
+    value => { values.push(value); });
+  const frame = (value: unknown) => probeClosePrefix + JSON.stringify(value) + '\n';
+  for (const invalid of [
+    { ...valid, extra: 'TEST-secret' }, { ...valid, cleanupConfirmed: true }, { ...valid, elapsedMs: 0 },
+    { ...valid, profileHash: 'TEST-private-path' }, { ...valid, commandHash: null }, { ...valid, probeDigest: '' },
+    { ...valid, runState: 'completed' }, { ...valid, outcome: 'allowed' }, { ...valid, errorClass: 'TEST-raw-error' },
+    { ...valid, stage: 'released' }, { ...valid, reason: 'confirmed' },
+    { ...valid, runErrorCode: 'TEST-secret' }, { ...valid, runCauseCode: false },
+    plain, { ...valid, runCauseCode: undefined }, { ...nonthrowing, runErrorCode: null, runCauseCode: null },
+  ]) decode(Buffer.from(frame(invalid)));
+  decode(Buffer.from(probeClosePrefix + ' '.repeat(768) + JSON.stringify(valid) + '\n'));
+  decode(Buffer.concat([Buffer.from(probeClosePrefix), Buffer.from([0xff]), Buffer.from('\n')]));
+  assert.deepEqual(values, []);
+  decode(Buffer.from(probeClosePrefix + 'x'.repeat(8193)));
+  decode(Buffer.from('\n' + frame(valid) + frame(nonthrowing)));
+  assert.deepEqual(values, [valid, nonthrowing]);
+  let attempts = 0;
+  const broken = decodeClaudeCloseDiagnostics(() => {}, undefined, undefined, undefined, undefined, () => {
+    if (++attempts === 1) throw new Error('TEST-private-sink');
+    return Promise.reject(new Error('TEST-private-sink'));
+  });
+  assert.doesNotThrow(() => broken(Buffer.from(frame(valid) + frame(nonthrowing))));
+  await new Promise<void>(resolve => setImmediate(resolve));
+  assert.equal(attempts, 2);
 });

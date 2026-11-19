@@ -1,0 +1,195 @@
+{
+  "kind": "original-Windows-source-refusals",
+  "sourceHead": "9ec6cb6f567af14233965a77c4c4a043adc29487",
+  "runs": [
+    {
+      "artifactId": 14497817938,
+      "archive": "ci-9ec6cb6f-windows-arm-original-20261119.zip",
+      "archiveBytes": 49893,
+      "archiveSha256": "4c241fa307136524d1e8b02aff8f8d0be052b7ee2355d703ac94ce72a9d8ca88",
+      "sourceHead": "9ec6cb6f567af14233965a77c4c4a043adc29487",
+      "platform": "win32-arm64",
+      "status": "INCOMPLETE",
+      "receiptSha256": "42523e199f964abd70851b743551f3d06422ad906f2d33be2c58ad8681678671",
+      "cleanup": true,
+      "stage": "Team-B",
+      "lastLaunchReadiness": {
+        "source": {
+          "sourceId": "9dd82f9324c4dd99ca961a17b2108e805339e699af8a9bcb417781d0da3b7475",
+          "revision": "a5883f0427c5d4208d23e1ed829974dcf3ebc68b5a8c0b5a69c1f6aced90f214"
+        },
+        "image": "B",
+        "launchId": "eca13de8-3599-5b26-bdf8-ae13b6dfa550",
+        "readCount": 111,
+        "elapsedMs": 15184.677199999998,
+        "lastRuntimeRead": {
+          "viewDigest": "322d611415d1de09975bb832e4f366a34c8a315a2594c0d6f7e9444463a1c6a9",
+          "memberId": "alice-id",
+          "generation": "capture-83ed1d4d-5f5f-53aa-bb2b-02b0d7bbc36c",
+          "phase": "allocated",
+          "sealed": false,
+          "custody": "owned",
+          "nativeReady": true,
+          "attached": true
+        }
+      },
+      "firstRefusal": {
+        "status": "unknown",
+        "reason": "empty"
+      },
+      "runtimeProjection": {
+        "status": "unknown",
+        "reason": "missing-invalid-overflow-conflicting-or-unjoined"
+      },
+      "codexReadinessObservation": {
+        "status": "unknown",
+        "reason": "missing-invalid-overflow-conflicting-or-unjoined"
+      }
+    },
+    {
+      "artifactId": 14499569169,
+      "archive": "ci-9ec6cb6f-windows-x64-original-20261119.zip",
+      "archiveBytes": 70109,
+      "archiveSha256": "9f6f7fbad4095c602a5a3f054a16bafe6731dee3a4cca59025a496493ccd43a5",
+      "sourceHead": "9ec6cb6f567af14233965a77c4c4a043adc29487",
+      "platform": "win32-x64",
+      "status": "INCOMPLETE",
+      "receiptSha256": "e2673c5b5a3a599b490be7481c0119967c2baed6265e3d7e18bb0c59bfcceed0",
+      "cleanup": true,
+      "stage": "Team-A",
+      "lastLaunchReadiness": {
+        "source": {
+          "sourceId": "fcd0230d58b3c37dd5221da77381a72a08bd213ed17dffcbee2c288b0de9313c",
+          "revision": "c9d71b48a5f8216a7b5ad59c0c131b63211a3a528c10c6450f924f1c455b219f"
+        },
+        "image": "A",
+        "launchId": "faed95fc-2132-54f1-aad3-c38a59bc4a41",
+        "readCount": 70,
+        "elapsedMs": 15017.6631,
+        "lastRuntimeRead": {
+          "viewDigest": "2482152c872f99c40989051f1a3c09249dc8fb28fead0023e4d6a8c9bf5e39e2",
+          "memberId": "alice-id",
+          "generation": "capture-8c4bb2ea-dc48-52bb-ae92-41d7dce103d5",
+          "phase": "held",
+          "sealed": false,
+          "custody": "unknown",
+          "nativeReady": false,
+          "attached": false,
+          "diagnostic": "open-unknown"
+        }
+      },
+      "firstRefusal": {
+        "status": "observed",
+        "observations": [
+          {
+            "kind": "reference",
+            "commandDigest": "ba31c5da628f1a06a22cdec490f9d634bb80c421dfa9668617dec4e9e5a52004",
+            "contextDigest": "c513c6fe92cc87caea191651397552cccf9c4b805306e2c2be57c2ae5139af2a",
+            "phase": "probe-expiry",
+            "reason": "held",
+            "probeCutoff": 1795064107801,
+            "probeNow": 1795064107904,
+            "scopeCutoff": null,
+            "scopeNow": null,
+            "preparationCutoff": null,
+            "preparationNow": null,
+            "ordinal": 1,
+            "launchId": "faed95fc-2132-54f1-aad3-c38a59bc4a41",
+            "source": {
+              "sourceId": "fcd0230d58b3c37dd5221da77381a72a08bd213ed17dffcbee2c288b0de9313c",
+              "revision": "c9d71b48a5f8216a7b5ad59c0c131b63211a3a528c10c6450f924f1c455b219f"
+            }
+          },
+          {
+            "kind": "consumer",
+            "actionDigest": "0999f35342307166abf6addfd3031950d31858d19f9b349ce1a23447a7d9253d",
+            "groupDigest": "5ac9d7d3a41b8311dd51f62c1e641158ed96d13bba12506125d47c9f3a19aaef",
+            "bindingDigest": "44ff1bf060c1145ab37e1e326a65106eb1ee708bbbbc5c5c4f6dbeb0a29a57ae",
+            "consumerId": "0d5fa9d6e2edb363a6234aad1b17f279e72562c55aecebca785ffb0857cd3925",
+            "phase": "reference",
+            "reason": "threw",
+            "cutoff": 1795064107801,
+            "observedAt": 1795064107469,
+            "currentCalls": {
+              "count": 21,
+              "totalMs": 10417,
+              "maxMs": 674,
+              "lastMs": 458,
+              "truncated": false,
+              "regions": {
+                "initialAuthorityCount": 21,
+                "initialAuthorityMs": 369,
+                "readConsumerCount": 21,
+                "readConsumerMs": 100,
+                "referenceCount": 21,
+                "referenceMs": 9597,
+                "finalAuthorityCount": 20,
+                "finalAuthorityMs": 346,
+                "referenceAccountCount": 21,
+                "referenceAccountMs": 5527,
+                "referenceAccountAuthorityCount": 21,
+                "referenceAccountAuthorityMs": 5083
+              }
+            },
+            "ordinal": 2,
+            "launchId": "faed95fc-2132-54f1-aad3-c38a59bc4a41",
+            "source": {
+              "sourceId": "fcd0230d58b3c37dd5221da77381a72a08bd213ed17dffcbee2c288b0de9313c",
+              "revision": "c9d71b48a5f8216a7b5ad59c0c131b63211a3a528c10c6450f924f1c455b219f"
+            }
+          },
+          {
+            "kind": "native",
+            "capability": "b2ec7e1e-141f-4ff9-b174-310488dd382e",
+            "phase": "resume",
+            "reason": "preparation-failed",
+            "dispatched": true,
+            "staged": true,
+            "rootCaptured": true,
+            "deadlineExpired": null,
+            "checkSite": null,
+            "ordinal": 3,
+            "mainEpoch": "854521a0-b5b5-4f73-b23e-05d92bcd8358",
+            "jobSlot": 2,
+            "source": {
+              "sourceId": "fcd0230d58b3c37dd5221da77381a72a08bd213ed17dffcbee2c288b0de9313c",
+              "revision": "c9d71b48a5f8216a7b5ad59c0c131b63211a3a528c10c6450f924f1c455b219f"
+            }
+          },
+          {
+            "kind": "opencode-open",
+            "bindingDigest": "44ff1bf060c1145ab37e1e326a65106eb1ee708bbbbc5c5c4f6dbeb0a29a57ae",
+            "phase": "native-ready",
+            "reason": "threw",
+            "ordinal": 4,
+            "launchId": "faed95fc-2132-54f1-aad3-c38a59bc4a41",
+            "source": {
+              "sourceId": "fcd0230d58b3c37dd5221da77381a72a08bd213ed17dffcbee2c288b0de9313c",
+              "revision": "c9d71b48a5f8216a7b5ad59c0c131b63211a3a528c10c6450f924f1c455b219f"
+            }
+          }
+        ]
+      },
+      "runtimeProjection": {
+        "status": "observed",
+        "atomicWithFailure": false,
+        "viewDigest": "2482152c872f99c40989051f1a3c09249dc8fb28fead0023e4d6a8c9bf5e39e2",
+        "bindingMatches": true,
+        "recordReady": false,
+        "providerReady": null,
+        "ownerCurrent": null,
+        "nativeReady": false
+      },
+      "codexReadinessObservation": {
+        "status": "unknown",
+        "reason": "missing-invalid-overflow-conflicting-or-unjoined"
+      }
+    }
+  ],
+  "qualifications": [
+    "Original ARM Codex sourceA accepted in14803.6281ms; sourceB finalreadytrue arrived15184.6772ms and originalpostawait15scheckrefused. NoCPU/guard/rootcause inferred from this non-atomic view.",
+    "Original x64 OpenCode sourceA firstprobe-expiry103mslate;21existing consumer checks10417ms, reference9597ms, account5527ms inclauthority5083ms. Laternative resume preparation-failed. No speculative cache/deadline/authority change.",
+    "Both final originalreceipts cleanuptrue; this does not qualify readiness or full sourceA/B.",
+    "Projectionunknown source lacked distinct cause; boundedTESTdiagnostic patch only preserves the firstrefusal, never changesUNKNOWN intoPASS."
+  ]
+}

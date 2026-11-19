@@ -1,0 +1,23 @@
+{
+  "kind": "independent-source-review",
+  "status": "PASS",
+  "reviewer": "/root",
+  "candidateManifestSha256": "e6e1585ec779784167d4d2b37b04a2f0d14f7ed493eff4ade3ea10f9000e7168",
+  "reviewedProductionPaths": [
+    "packages/legacy-agent-host/src/adapters/providers/createClaudeCloseDiagnostic.ts",
+    "packages/legacy-agent-host/src/adapters/providers/OpenCodeV2ModelProbe.ts",
+    "src/features/agent-backend/main/infrastructure/decodeClaudeCloseDiagnostics.ts",
+    "src/features/agent-backend/main/infrastructure/createCapturedHostDiagnostics.ts"
+  ],
+  "findings": [
+    "Per-probe first valid failure captures only own-data closed scalar fields and existing digests; no raw exceptions/getters or new authority/read/deadline checks.",
+    "Existing original diagnostics channel still publishes when the private stderr sink fails.",
+    "Decoder enforces exact shapes, hash fields and threw-code coupling within768bytes under unchanged8192byte framing.",
+    "Main PID correlation uses the existing captured Host diagnostic path.",
+    "Existing30test source validation accepted without a duplicate full gate."
+  ],
+  "limitations": [
+    "This is a passive diagnostic bridge; it does not fix or qualify the original failed membership operation.",
+    "A new source-qualified Host build is required before a future original GUI run; no such rerun is claimed here."
+  ]
+}

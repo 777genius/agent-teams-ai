@@ -21,7 +21,7 @@ import { captureCoordinationConfiguration, runNativeCoordination, readNativeCoor
 import { attestOpenCodeV2ModelSelection } from './OpenCodeV2ModelSelection.js';
 import { captureOpenCodeV2SessionCredential } from './OpenCodeV2SessionCredential.js';
 import { captureOpenCodeV2Configuration } from './OpenCodeV2CapturedConfiguration.js';
-import { createOpenCodeProbeDiagnostic } from './createClaudeCloseDiagnostic.js';
+import { createOpenCodeProbeCloseDiagnostic, createOpenCodeProbeDiagnostic } from './createClaudeCloseDiagnostic.js';
 
 import type { NativeCoordinationObservation } from './OpenCodeCoordinationProbe.js';
 import type { Session } from '@agent-teams/provider-session-contracts';
@@ -62,6 +62,8 @@ export function createOpenCodeV2ModelProbe(
     ...(options.readiness ? { readinessPhase: options.coordination ? 'coordination' : 'ordinary' } : {}) });
   const observePhase = options.coordination ? undefined
     : createOpenCodeProbeDiagnostic(profile, input.commandId, captured);
+  const observeCloseFailure = options.coordination ? undefined
+    : createOpenCodeProbeCloseDiagnostic(profile, input.commandId, captured);
   const purposeBound = options.coordination || options.readiness !== undefined;
   const timeoutMs = purposeBound ? Math.min(profile.modelProbeTimeoutMs ?? 90000, 90000)
     : profile.modelProbeTimeoutMs ?? 90000;
@@ -510,11 +512,14 @@ export function createOpenCodeV2ModelProbe(
           released = clean;
           if (!clean && !coordination) {
             noteCloseFailure('close-result', 'unconfirmed');
+            const failure = { probeDigest: captured, runState, outcome,
+              errorClass, ...firstCloseFailure,
+              ...(runState === 'threw' ? { runErrorCode, runCauseCode } : {}) };
+            try { observeCloseFailure?.(failure); }
+            catch { /* Diagnostic sink failure cannot replace the original channel or cleanup. */ }
             try {
               const diagnostic = channel('agent-teams:opencode-v2:host-probe-close-failed');
-              if (diagnostic.hasSubscribers) diagnostic.publish({ probeDigest: captured, runState, outcome,
-                errorClass, ...firstCloseFailure,
-                ...(runState === 'threw' ? { runErrorCode, runCauseCode } : {}) });
+              if (diagnostic.hasSubscribers) diagnostic.publish(failure);
             } catch { /* Failure-only observation cannot change the original cleanup result. */ }
           }
           return clean;

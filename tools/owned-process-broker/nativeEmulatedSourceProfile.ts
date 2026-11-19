@@ -340,9 +340,10 @@ try { process.once('exit', () => { try {
   writeFileSync(projectionLedger + '.codex-readiness', Buffer.byteLength(raw) <= 8192 ? raw :
     '{"schemaVersion":1,"status":"unknown","reason":"invalid-overflow-or-observer-failure"}', { mode: 0o600, flag: 'wx' });
 } catch { /* A missing separate ledger remains unknown; preserve the original exit listener. */ } }); } catch { codexReject(); }
-const runtimeProjectionRows = new Map(); let projectionUnknown = false;
+const runtimeProjectionRows = new Map(); let projectionUnknown = false, projectionRefusal = 'invalid';
 channel('agent-teams.legacy-host.runtime-projection').subscribe(value => { try {
   if (projectionUnknown) return;
+  projectionRefusal = 'invalid';
   assert.ok(value && typeof value === 'object' && !Array.isArray(value));
   assert.ok([Object.prototype, null].includes(Object.getPrototypeOf(value)) && Object.getOwnPropertySymbols(value).length === 0);
   const fields = ['viewDigest', 'bindingMatches', 'recordReady', 'providerReady', 'ownerCurrent', 'nativeReady'];
@@ -356,14 +357,14 @@ channel('agent-teams.legacy-host.runtime-projection').subscribe(value => { try {
     assert.ok(tuple.slice(1, index).every(value => value === true) ? typeof tuple[index] === 'boolean' : tuple[index] === null);
   assert.equal(tuple[5], tuple.slice(1, 5).every(value => value === true));
   const prior = runtimeProjectionRows.get(tuple[0]);
-  if (prior !== undefined) assert.equal(tuple[5], prior[5]);
-  else assert.ok(runtimeProjectionRows.size < 4);
+  if (prior !== undefined) { projectionRefusal = 'conflict'; assert.equal(tuple[5], prior[5]); }
+  else { projectionRefusal = 'capacity'; assert.ok(runtimeProjectionRows.size < 4); }
   runtimeProjectionRows.set(tuple[0], tuple);
 } catch { projectionUnknown = true; runtimeProjectionRows.clear(); } });
 process.once('exit', () => { try {
-  const value = projectionUnknown ? { status: 'unknown' } : { status: 'observed', rows: [...runtimeProjectionRows.values()] };
+  const value = projectionUnknown ? { status: 'unknown', reason: projectionRefusal } : { status: 'observed', rows: [...runtimeProjectionRows.values()] };
   const raw = JSON.stringify(value);
-  writeFileSync(projectionLedger, Buffer.byteLength(raw) <= 512 ? raw : '{"status":"unknown"}', { mode: 0o600, flag: 'wx' });
+  writeFileSync(projectionLedger, Buffer.byteLength(raw) <= 512 ? raw : '{"status":"unknown","reason":"byte-budget"}', { mode: 0o600, flag: 'wx' });
 } catch { /* Missing exit evidence remains unknown; never replace an earlier Host ledger. */ } });
 await import(${JSON.stringify(pathToFileURL(cli).href)});
 `, { flag: 'wx' });

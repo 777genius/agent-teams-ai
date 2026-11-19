@@ -31,6 +31,26 @@ export interface RuntimeOpenDiagnostic {
 }
 const metadataPrefix = 'legacy-agent-host: opencode-metadata ';
 const probePrefix = 'legacy-agent-host: opencode-probe ';
+const probeClosePrefix = 'legacy-agent-host: opencode-probe-close-failed ';
+const probeCloseRunStates = new Set(['not-started', 'pending', 'true', 'false', 'threw']);
+const probeCloseOutcomes = new Set(['unobserved', 'succeeded', 'failed', 'cancelled', 'unknown']);
+const probeCloseErrorClasses = new Set(['none', 'held', 'invalid', 'conflict', 'busy', 'unknown']);
+const probeCloseStages = new Set(['request-drain', 'owner-client', 'driver-close', 'server-stop', 'namespace', 'close-result']);
+const probeCloseReasons = new Set(['unconfirmed', 'threw', 'identity']);
+const probeCloseCodes = new Set(['ABORT_ERR', 'ECONNRESET', 'ECONNREFUSED', 'EPIPE', 'ETIMEDOUT',
+  'UND_ERR_ABORTED', 'UND_ERR_SOCKET', 'UND_ERR_HEADERS_TIMEOUT', 'UND_ERR_BODY_TIMEOUT']);
+export interface OpenCodeProbeCloseDiagnostic {
+  readonly profileHash: string;
+  readonly commandHash: string;
+  readonly probeDigest: string;
+  readonly runState: string;
+  readonly outcome: string;
+  readonly errorClass: string;
+  readonly stage: string;
+  readonly reason: string;
+  readonly runErrorCode?: string | null;
+  readonly runCauseCode?: string | null;
+}
 const probePhases = new Set(['run', 'graph-start', 'graph-done', 'native-launch', 'native-ready',
   'credential', 'attestation', 'session-create', 'driver-open', 'first-submit']);
 export interface OpenCodeProbeDiagnostic {
@@ -143,7 +163,8 @@ export function decodeClaudeCloseDiagnostics(
   retainManagement?: (value: ClaudeManagementDiagnostic) => void | Promise<void>,
   retainMetadata?: (value: OpenCodeMetadataDiagnostic) => void | Promise<void>,
   retainProbe?: (value: OpenCodeProbeDiagnostic) => void | Promise<void>,
-  retainRuntimeOpen?: (value: RuntimeOpenDiagnostic) => void | Promise<void>
+  retainRuntimeOpen?: (value: RuntimeOpenDiagnostic) => void | Promise<void>,
+  retainProbeClose?: (value: OpenCodeProbeCloseDiagnostic) => void | Promise<void>
 ): (chunk: Buffer) => void {
   let pending = Buffer.alloc(0);
   let discard = false;
@@ -167,6 +188,36 @@ export function decodeClaudeCloseDiagnostics(
         });
         void Promise.resolve(retainRuntimeOpen(diagnostic)).catch(() => {
           /* Diagnostic loss cannot settle an original Runtime open or cleanup. */
+        });
+        return;
+      }
+      if (text.startsWith(probeClosePrefix)) {
+        if (!retainProbeClose || line.length + 1 > 768) return;
+        const value: unknown = JSON.parse(text.slice(probeClosePrefix.length));
+        const keys = ['profileHash', 'commandHash', 'probeDigest', 'runState', 'outcome', 'errorClass', 'stage', 'reason'];
+        if (!exact(value, keys) && !exact(value, [...keys, 'runErrorCode', 'runCauseCode'])) return;
+        if (!hash(value.profileHash) || !hash(value.commandHash) || !hash(value.probeDigest) ||
+            typeof value.runState !== 'string' || !probeCloseRunStates.has(value.runState) ||
+            typeof value.outcome !== 'string' || !probeCloseOutcomes.has(value.outcome) ||
+            typeof value.errorClass !== 'string' || !probeCloseErrorClasses.has(value.errorClass) ||
+            typeof value.stage !== 'string' || !probeCloseStages.has(value.stage) ||
+            typeof value.reason !== 'string' || !probeCloseReasons.has(value.reason) ||
+            (value.runState === 'threw') !== Object.hasOwn(value, 'runErrorCode')) return;
+        const code = (field: unknown): field is string | null =>
+          field === null || typeof field === 'string' && probeCloseCodes.has(field);
+        let runCodes: { runErrorCode: string | null; runCauseCode: string | null } | undefined;
+        if (value.runState === 'threw') {
+          if (!code(value.runErrorCode) || !code(value.runCauseCode)) return;
+          runCodes = { runErrorCode: value.runErrorCode, runCauseCode: value.runCauseCode };
+        }
+        const diagnostic: OpenCodeProbeCloseDiagnostic = Object.freeze({
+          profileHash: value.profileHash, commandHash: value.commandHash, probeDigest: value.probeDigest,
+          runState: value.runState, outcome: value.outcome, errorClass: value.errorClass,
+          stage: value.stage, reason: value.reason,
+          ...runCodes,
+        });
+        void Promise.resolve(retainProbeClose(diagnostic)).catch(() => {
+          /* Failure observations never settle original probe cleanup or release debt. */
         });
         return;
       }

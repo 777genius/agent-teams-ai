@@ -1,0 +1,48 @@
+{
+  "kind": "focused-source-validation",
+  "status": "PASS_SCOPED_DIAGNOSTIC_ONLY",
+  "sourceManifestSha256": "e6e1585ec779784167d4d2b37b04a2f0d14f7ed493eff4ade3ea10f9000e7168",
+  "command": "resources/legacy-agent-host/node/v24.21.0/linux-x64/node --max-old-space-size=512 node_modules/vitest/vitest.mjs run --maxWorkers=1 --no-file-parallelism test/features/agent-backend/claudeCloseDiagnostics.test.ts test/features/agent-backend/hostOpenCodeV2ModelProbeLifecycle.test.ts",
+  "cwd": "/workspace/scratch/1d5114b8d2ee/agent-teams-ai",
+  "nodeVersion": "v24.21.0",
+  "exitCode": 0,
+  "durationSeconds": 15.59,
+  "testFilesPassed": 2,
+  "testsPassed": 30,
+  "suites": [
+    {
+      "path": "test/features/agent-backend/claudeCloseDiagnostics.test.ts",
+      "passed": 13
+    },
+    {
+      "path": "test/features/agent-backend/hostOpenCodeV2ModelProbeLifecycle.test.ts",
+      "passed": 17
+    }
+  ],
+  "log": {
+    "path": "/workspace/scratch/de9d4631e21c/membership-close-diagnostic-90b7fb4a-20261119/focused-vitest.log",
+    "bytes": 16511,
+    "sha256": "6a78d75b700fa970cf824e3b87792faf8c71a57c53a510fb9ec36ba958cf0c2f"
+  },
+  "candidatePatch": {
+    "path": "/workspace/scratch/de9d4631e21c/membership-close-diagnostic-90b7fb4a-20261119/candidate.patch",
+    "bytes": 27484,
+    "sha256": "0d89d0e77722dbdc72c19f87c4ef587b40652030dbdeaf8acddb047d982f0180"
+  },
+  "diffCheck": "PASS",
+  "meaningfulAssertions": [
+    "Actual TS encoder, decoder and Main logger; captured identity hashes, same original failed-close payload, first valid record only.",
+    "Reject own accessor/proxy failures, inherited/missing/extra/symbol/raw fields, unknown vocab, invalid hashes, malformed code pair, non-UTF8 and raw oversized records; recover existing framing.",
+    "Keep the original thrown object, zero getter calls, physical stop once, no added HTTP/password reads or prompt, no repeated close repair; a throwing private diagnostic sink preserves the original channel.",
+    "Existing 5-second drain and late custody UNKNOWN tests, phase order/clock/counter tests and startup revocation counterexamples remain green."
+  ],
+  "executionScope": {
+    "actualSourceImports": true,
+    "nativeChildSpawn": "forbidden by existing fixture mock; asserted after every lifecycle test",
+    "network": "finite loopback TEST peer only",
+    "originalGuiRerun": false,
+    "hostBuildForNewSource": false,
+    "workspaceTypecheck": false,
+    "nativeOrVendorQualification": false
+  }
+}

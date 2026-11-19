@@ -162,3 +162,63 @@ export function createOpenCodeProbeDiagnostic(
     };
   } catch { return () => {}; }
 }
+
+const probeCloseRunStates = new Set(['not-started', 'pending', 'true', 'false', 'threw']);
+const probeCloseOutcomes = new Set(['unobserved', 'succeeded', 'failed', 'cancelled', 'unknown']);
+const probeCloseErrorClasses = new Set(['none', 'held', 'invalid', 'conflict', 'busy', 'unknown']);
+const probeCloseStages = new Set(['request-drain', 'owner-client', 'driver-close', 'server-stop', 'namespace', 'close-result']);
+const probeCloseReasons = new Set(['unconfirmed', 'threw', 'identity']);
+const probeCloseCodes = new Set(['ABORT_ERR', 'ECONNRESET', 'ECONNREFUSED', 'EPIPE', 'ETIMEDOUT',
+  'UND_ERR_ABORTED', 'UND_ERR_SOCKET', 'UND_ERR_HEADERS_TIMEOUT', 'UND_ERR_BODY_TIMEOUT']);
+
+/** One already captured failed-close observation; no clock, authority read or error unwrapping. */
+export function createOpenCodeProbeCloseDiagnostic(
+  selected: { profileId: string; configRevision: string },
+  commandId: string,
+  probeDigest: string,
+  write: (line: string) => void = writeDiagnostic
+): (observation: unknown) => void {
+  try {
+    const profile = Object.getOwnPropertyDescriptor(selected, 'profileId');
+    const revision = Object.getOwnPropertyDescriptor(selected, 'configRevision');
+    if (!profile || !('value' in profile) || !revision || !('value' in revision) ||
+        ![profile.value, revision.value, commandId].every(value => typeof value === 'string' && value.length > 0 && value.length <= 256) ||
+        typeof probeDigest !== 'string' || !/^[a-f0-9]{64}$/.test(probeDigest)) return () => {};
+    const hash = (value: unknown) => createHash('sha256').update(JSON.stringify(value)).digest('hex');
+    const identity = Object.freeze({ profileHash: hash([profile.value, revision.value]),
+      commandHash: hash(commandId), probeDigest });
+    let emitted = false;
+    return observation => {
+      try {
+        if (emitted || !observation || typeof observation !== 'object' || Array.isArray(observation)) return;
+        const fields = Object.getOwnPropertyDescriptors(observation);
+        const read = (key: string): unknown => {
+          const field = fields[key]; return field && 'value' in field ? field.value : undefined;
+        };
+        const runState = read('runState'), outcome = read('outcome'), errorClass = read('errorClass');
+        const stage = read('stage'), reason = read('reason');
+        const keys = ['probeDigest', 'runState', 'outcome', 'errorClass', 'stage', 'reason',
+          ...(runState === 'threw' ? ['runErrorCode', 'runCauseCode'] : [])];
+        if (Reflect.ownKeys(fields).length !== keys.length || keys.some(key => {
+          const field = fields[key]; return !Object.hasOwn(fields, key) || !field || !('value' in field);
+        }) ||
+            read('probeDigest') !== probeDigest ||
+            typeof runState !== 'string' || !probeCloseRunStates.has(runState) ||
+            typeof outcome !== 'string' || !probeCloseOutcomes.has(outcome) ||
+            typeof errorClass !== 'string' || !probeCloseErrorClasses.has(errorClass) ||
+            typeof stage !== 'string' || !probeCloseStages.has(stage) ||
+            typeof reason !== 'string' || !probeCloseReasons.has(reason)) return;
+        const runErrorCode = read('runErrorCode'), runCauseCode = read('runCauseCode');
+        if (runState === 'threw' && ![runErrorCode, runCauseCode].every(value =>
+          value === null || typeof value === 'string' && probeCloseCodes.has(value))) return;
+        const line = 'legacy-agent-host: opencode-probe-close-failed ' + JSON.stringify({
+          ...identity, runState, outcome, errorClass, stage, reason,
+          ...(runState === 'threw' ? { runErrorCode, runCauseCode } : {}),
+        }) + '\n';
+        if (Buffer.byteLength(line) > 768) return;
+        emitted = true; // A lost sink write cannot select a later failure instead.
+        write(line);
+      } catch { /* Private observation cannot alter the original failed close or channel. */ }
+    };
+  } catch { return () => {}; }
+}

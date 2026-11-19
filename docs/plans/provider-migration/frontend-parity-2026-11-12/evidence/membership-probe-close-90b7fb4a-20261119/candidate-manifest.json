@@ -1,0 +1,91 @@
+{
+  "kind": "scoped-existing-probe-failure-diagnostic-candidate",
+  "baseHead": "90b7fb4a7095f47c4416b58a183769761d837cb3",
+  "files": [
+    {
+      "path": "packages/legacy-agent-host/src/adapters/providers/createClaudeCloseDiagnostic.ts",
+      "before": {
+        "bytes": 9588,
+        "lines": 164,
+        "sha256": "7ce55390821516370c231d160b19dc64979466a7dfa55e2d05878c6cc5d2907c"
+      },
+      "after": {
+        "bytes": 13546,
+        "lines": 224,
+        "sha256": "49b36fd56b4eeca611294eb8f1beef5965ee2d84ac1aff11e84281db7d18da9a"
+      }
+    },
+    {
+      "path": "packages/legacy-agent-host/src/adapters/providers/OpenCodeV2ModelProbe.ts",
+      "before": {
+        "bytes": 23840,
+        "lines": 525,
+        "sha256": "8bba637526af85f6fe1df8eda76df7afb92fceca2c746c341a3440169ab21d5f"
+      },
+      "after": {
+        "bytes": 24202,
+        "lines": 530,
+        "sha256": "295bc0b8020a1f2a22145cb98497c0253d726ca75384b71a3552e95de57d05ee"
+      }
+    },
+    {
+      "path": "src/features/agent-backend/main/infrastructure/decodeClaudeCloseDiagnostics.ts",
+      "before": {
+        "bytes": 13809,
+        "lines": 310,
+        "sha256": "d31349999f215639a0ea7d43981ec52629825ad32ec708d196fb0a5f59fe8e8d"
+      },
+      "after": {
+        "bytes": 17106,
+        "lines": 361,
+        "sha256": "e0ad0446f5facb2b7153f0db4223373695ab1d93971b8152e4c776f38e1cb097"
+      }
+    },
+    {
+      "path": "src/features/agent-backend/main/infrastructure/createCapturedHostDiagnostics.ts",
+      "before": {
+        "bytes": 1456,
+        "lines": 37,
+        "sha256": "2391db2fb9f90a265bd82c10ea3c2a0db080270319fd19b85bedad0d88e6f315"
+      },
+      "after": {
+        "bytes": 1668,
+        "lines": 42,
+        "sha256": "572db42278f5299a230d0a5d6915bea4260f117ae323ec2645012769f20b8a81"
+      }
+    },
+    {
+      "path": "test/features/agent-backend/claudeCloseDiagnostics.test.ts",
+      "before": {
+        "bytes": 24799,
+        "lines": 362,
+        "sha256": "64292b0d53a254a5943e5ffe84e634056f80357bb89ec169ce4d9dcc8bd00654"
+      },
+      "after": {
+        "bytes": 31418,
+        "lines": 451,
+        "sha256": "684f58bad67e10191304311780c0926925453a8aa3ff64dfa089a3a0c3804b37"
+      }
+    },
+    {
+      "path": "test/features/agent-backend/hostOpenCodeV2ModelProbeLifecycle.test.ts",
+      "before": {
+        "bytes": 26270,
+        "lines": 476,
+        "sha256": "f18d20cb6950b97824d0369dab498a352a1d6fdafa4e2c2fec42f180ed8fc21a"
+      },
+      "after": {
+        "bytes": 27816,
+        "lines": 497,
+        "sha256": "c1d9d6264440c793a29d92c79ce817a3c0dd504bbc54200cf79092d7054ba64d"
+      }
+    }
+  ],
+  "publicBehavior": "Existing failed-close verdict, custody debt, original diagnostics channel, phase sequence, clocks, deadlines and request/cleanup ordering remain unchanged. Only the existing captured scalar failure gets a bounded private Host stderr bridge to Main.",
+  "newFiles": false,
+  "newSourcePinsRequired": false,
+  "recordBoundBytes": 768,
+  "existingDecoderFrameBoundBytes": 8192,
+  "recordLimit": "first valid observation per probe; a lost write does not select a later failure",
+  "noProductRootCauseOrE2EPassClaim": true
+}

@@ -7,7 +7,9 @@
 На нём прошли полный cross-team/ReviewFlow GUI, workspace typecheck и fast lint,
 четыре frontend shards, все пять packaged-платформ и их общий gate.
 Из 25 Desktop lanes прошли 20. Оставшиеся отказы перечислены ниже.
-Новые локальные правки не получают эти результаты автоматически.
+Продолжение `90b7fb4a` уже опубликовано; его строгая локальная Host-сборка
+PASS за 11.108s, все 14 input pins совпали. Новые правки не получают результаты
+приёмки9ec автоматически.
 
 ## Доставка и границы
 
@@ -54,10 +56,10 @@ resolved; approval review этим не заявляется.
 | --- | --- | --- | --- |
 | E1-Stop | [Import lifecycle](https://github.com/777genius/agent-teams-ai/actions/runs/44455698034/job/135330056657): producer дошёл до `phase=stop`, original Main Stop release не подтверждён. | Восстановить готовый canonical-config census; завершить WorkSync ordering и строгую квалификацию его artifacts. Затем один исходный producer/import lifecycle с native release, cold readback и cleanup. | reviewflow |
 | E1-Retained | [Retained UI](https://github.com/777genius/agent-teams-ai/actions/runs/44455698034/job/135330056793): prepare/held. [Main retained V1/V2](https://github.com/777genius/agent-teams-ai/actions/runs/44455698135/job/135350275468): coordinator admission, not-eligible/not-dispatched. | Установить отдельные первые причины по original receipts. Сохранить закрытые bounded diagnostics; исправлять подтверждённую причину. Требуется исходный V1/V2 open, selection/history/Stop/cold/cleanup. | pr_graph |
-| E1-Add | [Linux V2 management](https://github.com/777genius/agent-teams-ai/actions/runs/44455698034/job/135330056490): `original add completes`. | Восстановить causal analysis; зафиксировать census именно отказавшего Add. Не выводить лишний PID из старого successful snapshot. Затем original Add/Remove/Restore/Stop/cold. | media |
+| E1-Add | [Linux V2 management](https://github.com/777genius/agent-teams-ai/actions/runs/44455698034/job/135330056490): `original add completes`. | По current receipt Add сохранён held до member publication, model probe не прошёл credential preparation/cleanup. Закрытая first-close диагностика передана Host→Main, 30/30 actual-source checks и R2 PASS. Нужен исходный Add/Remove/Restore/Stop/cold после сборки. | media |
 | E1-Review | [Darwin ARM V2 Review](https://github.com/777genius/agent-teams-ai/actions/runs/44455698034/job/135330056601): исходный preflight deadline. | Проверить готовый initial-seed/model-source fix против текущего дерева. Focused actual-source proof и R2; затем affected original preflight/Review. Source test не заменяет Darwin acceptance. | media |
 | E1-Resume | [Darwin ARM V2 Resume](https://github.com/777genius/agent-teams-ai/actions/runs/44455698034/job/135330056653): `one fresh Team capture`. | Восстановить проверенный numeric observation patch без нового read/await/input/retry. Локализовать первый отказ и завершить исходный Resume. | pr_graph |
-| W1 | [Windows ARM Codex](https://github.com/777genius/agent-teams-ai/actions/runs/44455697852/job/135330054589) и [x64 OpenCode](https://github.com/777genius/agent-teams-ai/actions/runs/44455697852/job/135330054744): original source readiness. | Установить причинный участок по current original evidence; native OpenCode finalReason не является Windows observer. Сохранить исходный cutoff и все authority probes; получить current source A/B и recovery evidence. | media; root |
+| W1 | [Windows ARM Codex](https://github.com/777genius/agent-teams-ai/actions/runs/44455697852/job/135330054589) и [x64 OpenCode](https://github.com/777genius/agent-teams-ai/actions/runs/44455697852/job/135330054744): original source readiness. | Установить причинный участок по current original evidence; native OpenCode finalReason не является Windows observer. Сохранить исходный cutoff и все authority probes; получить current source A/B и recovery evidence. Закрытые причины отказа observation сохранены отдельной TEST-правкой, 2/2 actual-source checks и R2 PASS; native gate этим не закрыт. | media; root |
 | P09 | Darwin x64/ARM mutation witness остаются отрицательными. | Требуется отдельный выбор контракта original pathname / writer / consumed bytes по Report40. До решения не сужать гарантию и не менять failed oracle. Независимые исправления продолжаются. | root / owner |
 | Delivery | Четыре acceptance workflows красные из-за перечисленных отказов. | Проверять только затронутые сценарии, сохранить обязательные current-head gates. После qualification завершить разрешённый PR-маршрут. Не останавливать независимую работу из-за CI queue. | root |
 
@@ -126,6 +128,29 @@ membership designs не выдаются за готовые fixes.
    Повторное исполнение original action и увеличение deadline не допускаются.
 5. Успешные неизменённые проверки не повторять без конкретного риска; текущие
    обязательные CI gates не заменять историческими результатами.
+
+[V2 membership evidence](evidence/membership-probe-close-90b7fb4a-20261119/index.json)
+сохраняет актуальный original Add: один command, held model probe, отсутствие
+публикации участника/session. Последний marker — credential, до attestation.
+Новая failure-only Host→Main запись передаёт только уже захваченные closed scalar
+поля, ≤768B, первая на probe; прежние phase, 8192B framing, clocks, authority,
+request/Stop/drain и UNKNOWN сохраняются. 30/30 focused tests PASS и independent
+R2 подтверждают эту диагностику; продуктовая причина ещё не квалифицирована.
+
+## Новые исходные Windows observations
+
+[Два оригинальных Windows artifact](evidence/ci-9ec6cb6f-windows-refusals-20261119.json)
+сверены с API digest и сохранены. ARM Codex прошёл source A за 14803.6281ms;
+source B вернул ready=true за 15184.6772ms и был отклонён исходным post-await
+15s cutoff. На x64 OpenCode source A остался held: first probe-expiry +103ms;
+21 consumer check заняли 10417ms, из них reference9597ms и account5527ms
+(включая authority5083ms). Эти измерения не разрешают кешировать authority
+или считать поздний readiness своевременным. Оба original cleanup=true.
+
+[TEST observer R2](evidence/windows-projection-refusal-r2-20261119.json) подтверждает
+сохранённые 4 rows/512B, exact epoch/Host exit/digest join и все negative checks.
+Новые закрытые причины различают invalid/conflict/capacity/byte budget и boundary
+reader; UNKNOWN остаётся UNKNOWN. Новых reads, действий, ожиданий или deadlines нет.
 
 ## P09: решение ещё не выбрано
 

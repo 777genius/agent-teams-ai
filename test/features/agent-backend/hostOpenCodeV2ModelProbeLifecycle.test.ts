@@ -32,9 +32,10 @@ import * as windowsCustody from '../../../packages/legacy-agent-host/src/adapter
 import { runtimeMemberProfileSchema } from '../../../packages/legacy-agent-host/src/composition/runtimeProfile';
 import { teamModelProbeProfile } from '../../../packages/legacy-agent-host/src/composition/teamLaunchModelProbe';
 import { openCodeManagementProfileSchema } from '../../../packages/legacy-agent-host/src/management/profile';
+import { decodeClaudeCloseDiagnostics } from '../../../src/features/agent-backend/main/infrastructure/decodeClaudeCloseDiagnostics';
 
 import type { OpenCodeV2EmbeddedServerOptions } from '../../../packages/legacy-agent-host/src/adapters/providers/OpenCodeV2EmbeddedServer';
-import type { OpenCodeProbeDiagnostic } from '../../../src/features/agent-backend/main/infrastructure/decodeClaudeCloseDiagnostics';
+import type { OpenCodeProbeCloseDiagnostic, OpenCodeProbeDiagnostic } from '../../../src/features/agent-backend/main/infrastructure/decodeClaudeCloseDiagnostics';
 
 afterEach(() => {
   controlled.create = () => { throw new Error('TEST native factory unset'); };
@@ -301,8 +302,19 @@ test.each(['getter', 'proxy', 'held'] as const)('original probe exception surviv
     stack: { get() { getterCalls++; throw new Error(secret); } },
     token: { value: secret },
   });
-  const f = await fixture('stop-unknown', failure);
+  const records: OpenCodeProbeCloseDiagnostic[] = [];
+  const decode = decodeClaudeCloseDiagnostics(() => {}, undefined, undefined, undefined, undefined,
+    value => { records.push(value); });
+  const originalFactory = probeDiagnostics.createOpenCodeProbeCloseDiagnostic;
+  const diagnostic = vi.spyOn(probeDiagnostics, 'createOpenCodeProbeCloseDiagnostic')
+    .mockImplementation((selected, command, digest) => originalFactory(selected, command, digest, line => {
+      decode(Buffer.from(line));
+      if (kind === 'proxy') throw new Error(secret);
+    }));
+  let f: Awaited<ReturnType<typeof fixture>> | undefined;
   try {
+    f = await fixture('stop-unknown', failure);
+    expect(records).toEqual([], 'construction cannot invent a failed close');
     await expect(f.start()).rejects.toBe(failure);
     const closing = f.probe.close();
     await expect(closing).resolves.toBe(false);
@@ -311,8 +323,17 @@ test.each(['getter', 'proxy', 'held'] as const)('original probe exception surviv
       errorClass: kind === 'held' ? 'held' : 'unknown', stage: 'server-stop', reason: 'unconfirmed' })]);
     expect(getterCalls).toBe(0);
     expect(JSON.stringify(f.observations)).not.toContain(secret);
+    expect(records).toHaveLength(1);
+    const first = records[0]; assert.ok(first);
+    const { profileHash, commandHash, ...channelFields } = first;
+    expect(profileHash).toMatch(/^[a-f0-9]{64}$/);
+    expect(commandHash).toBe(createHash('sha256').update(JSON.stringify('TEST-original-probe')).digest('hex'));
+    expect(channelFields).toEqual(f.observations[0], 'stderr retains the same original scalar failure as the existing channel');
+    expect(JSON.stringify(records)).not.toContain(secret);
+    await expect(f.probe.close()).resolves.toBe(false);
+    expect(records).toHaveLength(1, 'repeated close cannot publish another failure or change UNKNOWN');
     expect(f.counts()).toMatchObject({ requests: 0, nativeCreations: 1, physicalStops: 1 });
-  } finally { await f.dispose(); }
+  } finally { diagnostic.mockRestore(); await f?.dispose(); }
 });
 
 const probePrefix = 'legacy-agent-host: opencode-probe ';
