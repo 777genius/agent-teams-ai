@@ -2307,18 +2307,17 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
     const selectedTeamDisplayName =
       state.selectedTeamName === teamName ? state.selectedTeamData?.config.name : undefined;
     const displayName = teamSummary?.displayName || selectedTeamDisplayName || teamName;
-    const label = displayName;
     const allTabs = state.getAllPaneTabs();
     const existing = allTabs.find(
       (tab) => isOrdinaryTeamTab(tab) && tab.teamName === teamName
     );
     if (existing) {
       state.setActiveTab(existing.id);
-      if (existing.label !== label) state.updateTabLabel(existing.id, label);
+      if (existing.label !== displayName) state.updateTabLabel(existing.id, displayName);
     } else {
       state.openTab({
         type: 'team',
-        label,
+        label: displayName,
         teamName,
       });
     }

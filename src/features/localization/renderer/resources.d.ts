@@ -5876,6 +5876,7 @@ export default interface Resources {
       "emptyTitle": "Not launched in this project yet",
       "loading": "Loading team project history…",
       "pending": "Preparing this project's team context. Tasks and messages will appear once the runtime is ready.",
+      "projectMissing": "This history belongs to a project that is no longer in your project list.",
       "retry": "Retry",
       "selectProject": "Open a project to see this team's tasks and chats."
     },

@@ -3,7 +3,7 @@ import { createRoot } from 'react-dom/client';
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { state, getView, launchTeam, launchTeamIpc, openTeamTab, updateTabLabel, selectTeam } = vi.hoisted(() => {
+const { state, getView, launchTeam, launchTeamIpc, openTeamTab, selectTeam } = vi.hoisted(() => {
   const state = {
     repositoryGroups: [],
     projects: [
@@ -28,7 +28,6 @@ const { state, getView, launchTeam, launchTeamIpc, openTeamTab, updateTabLabel, 
     launchTeam: vi.fn(),
     launchTeamIpc: vi.fn(),
     openTeamTab: vi.fn(),
-    updateTabLabel: vi.fn(),
     selectTeam: vi.fn(async (_teamName: string) => undefined),
   };
 });
@@ -42,7 +41,6 @@ vi.mock('@renderer/store', () => ({
         activeTabId: 'alias-tab',
         getAllPaneTabs: () => [{ id: 'alias-tab', type: 'team', teamName: 'ptc-a' }],
         openTeamTab,
-        updateTabLabel,
         selectTeam,
         launchTeam,
       }),
@@ -117,7 +115,6 @@ describe('ProjectScopedTeamDetailView project switching', () => {
     launchTeam.mockReset();
     launchTeamIpc.mockReset();
     openTeamTab.mockReset();
-    updateTabLabel.mockReset();
     selectTeam.mockReset();
     state.selectedTeamName = null;
     state.selectedProjectId = 'project-a';
@@ -262,8 +259,9 @@ describe('ProjectScopedTeamDetailView project switching', () => {
     await settle();
     expect(host.querySelector('[data-team]')?.getAttribute('data-team')).toBe('ptc-removed');
     expect(host.querySelector('[data-team]')?.getAttribute('data-retained')).toBe('true');
-    // The read-only alias needs no extra header: the team screen shows its own project.
-    expect(host.textContent).toBe('');
+    // One read-only line explains why it is shown; no raw path, no actions of its own.
+    expect(host.textContent).toBe('projectContextView.projectMissing');
+    expect(host.textContent).not.toContain('/removed/worktree');
     expect(host.querySelector('button')).toBeNull();
   });
 

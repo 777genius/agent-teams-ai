@@ -260,15 +260,20 @@ export const ProjectScopedTeamDetailView = ({
     // disappeared from project discovery. Do not dispatch new work to a
     // missing/unknown project or discard pending physical task navigation.
     return (
-      <div className="flex min-h-0 min-w-0 flex-1" data-team-name={teamName}>
-        <TeamDetailView
-          teamName={teamName}
-          logicalTeamName={context.logicalTeamName}
-          teamDisplayName={context.logicalTeamName}
-          retainedHistory
-          isActive={isActive}
-          isPaneFocused={isPaneFocused}
-        />
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+        <p role="status" className="border-b border-border px-4 py-2 text-xs text-text-muted">
+          {t('projectContextView.projectMissing')}
+        </p>
+        <div className="flex min-h-0 min-w-0 flex-1" data-team-name={teamName}>
+          <TeamDetailView
+            teamName={teamName}
+            logicalTeamName={context.logicalTeamName}
+            teamDisplayName={context.logicalTeamName}
+            retainedHistory
+            isActive={isActive}
+            isPaneFocused={isPaneFocused}
+          />
+        </div>
       </div>
     );
   }
