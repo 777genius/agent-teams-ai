@@ -31,7 +31,8 @@ interface NativeHostPendingRequest {
 }
 
 /** Keep the ordinary TEST frame bound; only the exact existing attachment chunk contract is larger. */
-export function readNativeHostFrame(line: string, pending: ReadonlyMap<number, NativeHostPendingRequest>) {
+export function readNativeHostFrame(line: string, pending: ReadonlyMap<number, NativeHostPendingRequest>,
+  loadAttachmentContracts: typeof attachmentContracts = attachmentContracts) {
   const size = Buffer.byteLength(line);
   assert.ok(size <= DEFAULT_HOST_LIMITS.maxFrameBytes);
   const frame = record(JSON.parse(line) as unknown);
@@ -43,7 +44,7 @@ export function readNativeHostFrame(line: string, pending: ReadonlyMap<number, N
   assert.equal(request?.method, 'team.message.attachment.read');
   const captured = request?.messageAttachmentRead;
   assert.ok(captured?.expectedSha256, 'large read must bind the original attachment digest');
-  const { ATTACHMENT_CHUNK_BYTES, attachmentMetadataSchema } = attachmentContracts();
+  const { ATTACHMENT_CHUNK_BYTES, attachmentMetadataSchema } = loadAttachmentContracts();
   const result = record(frame.result);
   assert.deepEqual(Object.keys(result).sort(), ['ok', 'value']);
   assert.equal(result.ok, true);
@@ -219,6 +220,10 @@ export function startHost(options: {
   gitBinDirectory?: string;
   onNotification?(method: string, params: unknown): void;
 }) {
+  // A bundled TEST harness moves independently; retain the already selected Host's contracts.
+  const requireFromHost = createRequire(options.entry);
+  const hostAttachmentContracts = () => requireFromHost('./attachments/contracts.js') as
+    typeof import('../../dist/attachments/contracts.js');
   const testCpuProfilePath = options.testCpuProfile
     ? join(options.root, 'TEST-original-host.cpuprofile') : undefined;
   const testCpuProfileIntervalUs = testCpuProfilePath ? 10_000 as const : undefined;
@@ -276,7 +281,7 @@ export function startHost(options: {
   });
   lines.on('line', (line) => {
     try {
-      const frame = readNativeHostFrame(line, pending);
+      const frame = readNativeHostFrame(line, pending, hostAttachmentContracts);
       assert.equal(frame.jsonrpc, '2.0');
       if (frame.id === undefined && typeof frame.method === 'string') {
         options.onNotification?.(frame.method, frame.params);
@@ -316,7 +321,7 @@ export function startHost(options: {
       );
       const id = ++nextId;
       const attachmentRead = method === 'team.message.attachment.read'
-        ? attachmentContracts().messageAttachmentReadSchema.safeParse(record(params).payload) : undefined;
+        ? hostAttachmentContracts().messageAttachmentReadSchema.safeParse(record(params).payload) : undefined;
       const response = new Promise<unknown>((resolve, reject) => {
         const timer = setTimeout(() => {
           pending.delete(id);

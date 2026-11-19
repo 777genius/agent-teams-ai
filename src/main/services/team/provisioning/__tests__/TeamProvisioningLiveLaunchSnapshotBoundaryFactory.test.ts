@@ -1,3 +1,4 @@
+import { recordOwnedUnixProcessGroup } from '@main/utils/cliProcessCustody';
 import { describe, expect, it, vi } from 'vitest';
 
 import {
@@ -10,6 +11,7 @@ import type {
   TeamProvisioningLiveLaunchSnapshotRun,
 } from '../TeamProvisioningLiveLaunchSnapshotBoundaryFactory';
 import type { MemberSpawnStatusEntry } from '@shared/types';
+import type { ChildProcess } from 'node:child_process';
 
 const NOW = '2026-07-03T00:00:00.000Z';
 
@@ -145,6 +147,46 @@ describe('TeamProvisioningLiveLaunchSnapshotBoundaryFactory', () => {
     });
     expect(buildRuntimeSpawnStatusRecord).toHaveBeenCalledTimes(1);
   });
+
+  it.skipIf(process.platform === 'win32').each([false, true])(
+    'projects completed owned solo run when isLaunch=%s',
+    (isLaunch) => {
+      const child = { pid: 44101, exitCode: null, signalCode: null } as ChildProcess;
+      recordOwnedUnixProcessGroup(child, {
+        pid: child.pid!,
+        parentPid: 1,
+        processGroupId: child.pid!,
+        startIdentity: 'TEST-solo-birth',
+      });
+      const targetRun = run({
+        isLaunch,
+        child,
+        provisioningComplete: true,
+        expectedMembers: [],
+        allEffectiveMembers: [],
+        mixedSecondaryLanes: [],
+        request: { providerId: 'anthropic', members: [] },
+        cancelRequested: false,
+        processKilled: false,
+        processClosed: false,
+        memberSpawnStatuses: new Map(),
+      });
+      const boundary = createBoundary();
+      expect(boundary.buildLiveLaunchSnapshotForRun(targetRun, 'finished')).toMatchObject({
+        version: 2,
+        teamName: targetRun.teamName,
+        leadSessionId: targetRun.detectedSessionId,
+        launchPhase: 'finished',
+        expectedMembers: [],
+        members: {},
+        teamLaunchState: 'clean_success',
+      });
+      // The admitted completion never changes into an active bootstrap or a non-owned snapshot.
+      expect(boundary.buildLiveLaunchSnapshotForRun(targetRun, 'active')).toBeNull();
+      targetRun.processClosed = true;
+      expect(boundary.buildLiveLaunchSnapshotForRun(targetRun, 'finished')).toBeNull();
+    }
+  );
 
   it('emits member spawn changes and checks launch notification readiness for the tracked run', () => {
     const trackedRun = run();

@@ -11,7 +11,7 @@ const maximum = 256;
 const maximumTraceBytes = 64 * 1024, maximumLineBytes = 512, reservedLineBytes = maximumLineBytes + 1;
 const events = ['child-spawn', 'child-ready', 'child-failed', 'child-exit', 'child-output-limit',
   'child-input-ended', 'host-input-ended', 'request', 'request-send-headers', 'request-body-sent',
-  'response', 'response-end', 'request-error', 'read-cut-failed', 'metadata-read-failed', 'host-probe-close-failed',
+  'response', 'response-end', 'request-error', 'read-cut-failed', 'metadata-read-failed', 'host-probe-close-failed', 'driver-close-failed',
   'readiness-refused', 'trace-limit'] as const;
 const routes = ['info', 'session-create', 'session-read', 'instructions', 'permissions', 'plugins',
   'mcp', 'log', 'prompt', 'provider-catalog', 'model-catalog', 'model-default', 'integration-read',
@@ -71,6 +71,23 @@ function projectMetadataReadFailure(value: unknown) {
     if (!stage || !reason || elapsedMs === null || typeof deadlineExpired !== 'boolean' ||
         !(typeof aborted === 'boolean' || aborted === null && stage === 'admission')) return undefined;
     return { stage, reason, elapsedMs, deadlineExpired, aborted };
+  } catch { return undefined; }
+}
+
+/** Existing D close failure only; the opaque binding identifies an observation, never a grant. */
+function projectDriverCloseFailure(value: unknown) {
+  try {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) return undefined;
+    const own = (key: string): unknown => {
+      const field = Object.getOwnPropertyDescriptor(value, key);
+      return field && 'value' in field ? field.value : undefined;
+    };
+    const trustedBinding = own('trustedBinding');
+    const stage = choice(own('stage'), ['original-work', 'protocol-dispose', 'confirm-stopped']);
+    const outcome = choice(own('outcome'), ['threw', 'unconfirmed']);
+    if (typeof trustedBinding !== 'string' || !/^[a-f0-9]{64}$/.test(trustedBinding) || !stage || !outcome)
+      return undefined;
+    return { trustedBinding, stage, outcome };
   } catch { return undefined; }
 }
 
@@ -155,7 +172,7 @@ function projectReadinessRefusal(value: unknown) {
 export function createPassiveNativeDiagnosticCapture() {
   const entries: Record<string, unknown>[] = [];
   let pending = '', ordinary = 0, bytes = 0, readObserved = false, metadataObserved = false,
-    closeObserved = false, readinessObserved = false, runtimeOpenObserved = false, limitObserved = false, limited = false;
+    closeObserved = false, driverCloseObserved = false, readinessObserved = false, runtimeOpenObserved = false, limitObserved = false, limited = false;
   // These counters belong to this one original capture, including all of its Host epochs.
   return {
     entries,
@@ -176,11 +193,14 @@ export function createPassiveNativeDiagnosticCapture() {
           const failedCut = event === 'read-cut-failed' ? projectReadCutFailure(value) : undefined;
           const failedMetadata = event === 'metadata-read-failed' ? projectMetadataReadFailure(value) : undefined;
           const failedClose = event === 'host-probe-close-failed' ? projectHostProbeCloseFailure(value) : undefined;
+          const failedDriverClose = event === 'driver-close-failed' ? projectDriverCloseFailure(value) : undefined;
           const refusedReadiness = event === 'readiness-refused' ? projectReadinessRefusal(value) : undefined;
           if (event === 'read-cut-failed' && !failedCut || event === 'metadata-read-failed' && !failedMetadata ||
-              event === 'host-probe-close-failed' && !failedClose || event === 'readiness-refused' && !refusedReadiness) continue;
+              event === 'host-probe-close-failed' && !failedClose || event === 'driver-close-failed' && !failedDriverClose ||
+              event === 'readiness-refused' && !refusedReadiness) continue;
           const failure = failedMetadata ?? failedCut;
           const entry = failedRuntimeOpen ? { epoch, event, ...failedRuntimeOpen }
+            : failedDriverClose ? { epoch, event, atMs, ...failedDriverClose }
             : refusedReadiness ? { epoch, event, atMs, ...refusedReadiness }
             : { epoch, event, atMs, child: integer(value.child, 5), request: integer(value.request, 4096),
             route: choice(value.route, routes), method: choice(value.method, ['GET', 'POST', 'PUT', 'DELETE']),
@@ -198,10 +218,14 @@ export function createPassiveNativeDiagnosticCapture() {
           if (size > reservedLineBytes) continue;
           const reserve = (readObserved ? 0 : reservedLineBytes) + (metadataObserved ? 0 : reservedLineBytes) +
             (closeObserved ? 0 : reservedLineBytes) + (readinessObserved ? 0 : reservedLineBytes) +
-            (runtimeOpenObserved ? 0 : reservedLineBytes) + (limitObserved ? 0 : reservedLineBytes);
+            (runtimeOpenObserved ? 0 : reservedLineBytes) + (driverCloseObserved ? 0 : reservedLineBytes) +
+            (limitObserved ? 0 : reservedLineBytes);
           if (failedRuntimeOpen) {
             if (runtimeOpenObserved || bytes + size > maximumTraceBytes - reserve + reservedLineBytes) continue;
             runtimeOpenObserved = true;
+          } else if (failedDriverClose) {
+            if (driverCloseObserved || bytes + size > maximumTraceBytes - reserve + reservedLineBytes) continue;
+            driverCloseObserved = true;
           } else if (refusedReadiness) {
             if (readinessObserved || bytes + size > maximumTraceBytes - reserve + reservedLineBytes) continue;
             readinessObserved = true;
@@ -218,8 +242,8 @@ export function createPassiveNativeDiagnosticCapture() {
             if (limitObserved || bytes + size > maximumTraceBytes - reserve + reservedLineBytes) continue;
             limitObserved = true; limited = true;
           } else {
-            // Reserve all five failure observations within the original 257-row ceiling.
-            if (ordinary >= maximum - 5 || bytes + size > maximumTraceBytes - reserve) { limited = true; continue; }
+            // Reserve all six failure observations within the original 257-row ceiling.
+            if (ordinary >= maximum - 6 || bytes + size > maximumTraceBytes - reserve) { limited = true; continue; }
             ordinary++;
           }
           bytes += size;
@@ -506,7 +530,7 @@ function responseContentEncoding(headers: unknown): typeof contentEncodings[numb
 function observeOriginalHost(): void {
   const started = performance.now();
   let ordinary = 0, emittedBytes = 0, children = 0, requests = 0, readObserved = false,
-    metadataObserved = false, closeObserved = false, readinessObserved = false, limited = false;
+    metadataObserved = false, closeObserved = false, driverCloseObserved = false, readinessObserved = false, limited = false;
   const elapsed = () => Math.max(0, Math.round(performance.now() - started));
   const line = (value: Record<string, unknown>) => prefix + JSON.stringify({ atMs: elapsed(), ...value }) + '\n';
   const write = (value: string) => { emittedBytes += Buffer.byteLength(value); process.stderr.write(value); };
@@ -515,10 +539,14 @@ function observeOriginalHost(): void {
     if (size > reservedLineBytes) return;
     const reserve = (readObserved ? 0 : reservedLineBytes) + (metadataObserved ? 0 : reservedLineBytes) +
       (closeObserved ? 0 : reservedLineBytes) + (readinessObserved ? 0 : reservedLineBytes) +
-      (limited ? 0 : reservedLineBytes);
+      (driverCloseObserved ? 0 : reservedLineBytes) + (limited ? 0 : reservedLineBytes);
     if (value.event === 'readiness-refused') {
       if (readinessObserved || emittedBytes + size > maximumTraceBytes - reserve + reservedLineBytes) return;
       readinessObserved = true; write(frame); return;
+    }
+    if (value.event === 'driver-close-failed') {
+      if (driverCloseObserved || emittedBytes + size > maximumTraceBytes - reserve + reservedLineBytes) return;
+      driverCloseObserved = true; write(frame); return;
     }
     if (value.event === 'host-probe-close-failed') {
       if (closeObserved || emittedBytes + size > maximumTraceBytes - reserve + reservedLineBytes) return;
@@ -533,7 +561,7 @@ function observeOriginalHost(): void {
       readObserved = true; write(frame); return;
     }
     if (limited) return;
-    if (ordinary >= maximum - 4 || emittedBytes + size > maximumTraceBytes - reserve) {
+    if (ordinary >= maximum - 5 || emittedBytes + size > maximumTraceBytes - reserve) {
       limited = true; write(line({ event: 'trace-limit' })); return;
     }
     ordinary++; write(frame);
@@ -550,6 +578,12 @@ function observeOriginalHost(): void {
       const failure = projectMetadataReadFailure(message);
       if (failure) emit({ event: 'metadata-read-failed', ...failure });
     } catch { /* A passive TEST subscriber cannot replace original metadata failure/cleanup. */ }
+  });
+  channel('agent-teams:opencode-v2:driver-close-failed').subscribe(message => {
+    try {
+      const failure = projectDriverCloseFailure(message);
+      if (failure) emit({ event: 'driver-close-failed', ...failure });
+    } catch { /* Passive observation cannot change original driver cleanup. */ }
   });
   channel('agent-teams:opencode-v2:host-probe-close-failed').subscribe(message => {
     try {

@@ -578,6 +578,9 @@ export const desktopProofIntegratedSources = [
   'src/main/utils/cliProcessCustody.ts',
   'src/main/utils/childProcess.ts',
   'src/main/services/team/TeamLaunchStateStore.ts',
+  'src/main/services/team/provisioning/TeamProvisioningLaunchStateStoreBoundary.ts',
+  'src/main/services/team/provisioning/TeamProvisioningLiveLaunchSnapshotBoundaryFactory.ts',
+  'src/main/services/team/provisioning/TeamProvisioningPersistenceReconcileFacade.ts',
   // The selected V2 source Desktop path uses the same captured Host and native graph.
   'scripts/legacy-agent-host/desktop-opencode-v2-fixture.ts',
   'scripts/legacy-agent-host/prepare-opencode-v2-native.ts',

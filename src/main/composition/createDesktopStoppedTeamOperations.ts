@@ -207,7 +207,11 @@ export function createDesktopStoppedTeamOperations(readShell: () => ShellOwner |
       try {
         const request = validateRetainedLegacyLaunchRequest(value);
         if (request.action === 'open')
-          observe = createRetainedLegacyOpenDiagnostic(request, process.pid, observeRetainedOpenFailure);
+          observe = createRetainedLegacyOpenDiagnostic(
+            request,
+            process.pid,
+            observeRetainedOpenFailure
+          );
         // Authenticated cleanup can release an effect-free choice after its selected context changes.
         if (
           request.action === 'close' ||
@@ -246,7 +250,8 @@ export function createDesktopStoppedTeamOperations(readShell: () => ShellOwner |
                 selectedSource ?? captureLegacyStoppedSource(teamName, contextId, isCurrent);
               phase = 'source-key';
               const key = retainedLegacySourceOperationKey(source);
-              if (importOutcomes.has(key)) throw new RetainedLegacyLaunchRefusal('import-not-absent');
+              if (importOutcomes.has(key))
+                throw new RetainedLegacyLaunchRefusal('import-not-absent');
               if (captureDebts.has(key)) throw new RetainedLegacyLaunchRefusal('outcome-unknown');
               phase = 'target-capture';
               const target = await original.feature.captureStoppedImport(contextId, { isCurrent });
@@ -268,6 +273,8 @@ export function createDesktopStoppedTeamOperations(readShell: () => ShellOwner |
                   target,
                   guard: { isCurrent },
                   runtime,
+                  onEligibilityRefusal: (error) =>
+                    observe?.remember('coordinator-admission', error),
                 });
                 phase = 'coordinator-admission';
                 return authority;

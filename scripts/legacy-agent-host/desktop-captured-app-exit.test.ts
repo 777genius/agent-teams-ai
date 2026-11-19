@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { execFileSync, spawn } from 'node:child_process';
 import { once } from 'node:events';
 import test from 'node:test';
+import './desktop-native-quit-command-snapshot.test.mjs';
 import { cleanupCapturedDesktopApp } from './desktop-captured-app.ts';
 
 test('requested Quit lets the original child report its natural exit before the cleanup census', {

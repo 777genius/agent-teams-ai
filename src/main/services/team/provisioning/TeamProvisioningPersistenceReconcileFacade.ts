@@ -1,9 +1,15 @@
+import { captureTeamLaunchPublicationAuthority } from '../TeamLaunchStateStore';
+
 import { getPersistedLaunchMemberNames } from './TeamProvisioningLaunchStateProjection';
 import {
   type LaunchStateWriteOptions,
   type LaunchStateWriteResult,
   type TeamProvisioningLaunchStateStoreBoundary,
 } from './TeamProvisioningLaunchStateStoreBoundary';
+import {
+  captureOwnedSoloLaunchSnapshotRun,
+  type OwnedSoloLaunchSnapshotRun,
+} from './TeamProvisioningLiveLaunchSnapshotBoundaryFactory';
 import { filterRemovedMembersFromLaunchSnapshot } from './TeamProvisioningMemberStatusProjection';
 import {
   reconcilePersistedLaunchStateWithTeamProvisioningPorts,
@@ -17,11 +23,8 @@ import type {
   TeamMember,
 } from '@shared/types';
 
-export interface TeamProvisioningPersistenceReconcileRun {
-  teamName: string;
-  runId: string;
+export interface TeamProvisioningPersistenceReconcileRun extends OwnedSoloLaunchSnapshotRun {
   isLaunch: boolean;
-  provisioningComplete: boolean;
 }
 
 /**
@@ -50,6 +53,7 @@ export interface TeamProvisioningPersistenceReconcileFacadePorts<
     | 'enqueue'
   >;
   readLaunchState(teamName: string): Promise<PersistedTeamLaunchSnapshot | null>;
+  getRun(runId: string): TRun | undefined;
   readMembersMeta(teamName: string): Promise<readonly TeamMember[]>;
   overlayPrimaryBootstrapTruthIntoRunStatusesFromBootstrapState(run: TRun): Promise<void>;
   buildLiveLaunchSnapshotForRun(
@@ -67,6 +71,7 @@ export interface TeamProvisioningPersistenceReconcileFacadePorts<
 export interface TeamProvisioningPersistenceReconcileFacadeServiceHost<
   TRun extends TeamProvisioningPersistenceReconcileRun,
 > extends TeamProvisioningPersistenceReconcileRuntimePorts {
+  runs: ReadonlyMap<string, TRun>;
   launchStateStore: {
     read(teamName: string): Promise<PersistedTeamLaunchSnapshot | null>;
   };
@@ -145,13 +150,22 @@ export class TeamProvisioningPersistenceReconcileFacade<
     run: TRun,
     launchPhase: PersistedTeamLaunchPhase = run.provisioningComplete ? 'finished' : 'active'
   ): Promise<PersistedTeamLaunchSnapshot | null> {
+    const ownedSoloIsCurrent =
+      launchPhase === 'finished' ? this.captureOwnedSoloPublication(run) : null;
+    if (ownedSoloIsCurrent) {
+      // This branch captures the original child/session and publication epoch before queueing.
+      // It cannot share the fresh-state-only coalescing used by ordinary member snapshots.
+      return this.ports.launchStateStoreBoundary.enqueue(run.teamName, () =>
+        this.persistLaunchStateSnapshotNow(run, launchPhase, ownedSoloIsCurrent)
+      );
+    }
     // The operation below captures nothing besides (run, launchPhase) — everything else is
     // read fresh from live state when it executes — so a request that arrives before the
     // queued entry starts is fully covered by it. If a future change captures more at
     // enqueue time (e.g. publication authority), fold it into the key or stop coalescing.
     return this.ports.launchStateStoreBoundary.enqueue(
       run.teamName,
-      () => this.persistLaunchStateSnapshotNow(run, launchPhase),
+      () => this.persistLaunchStateSnapshotNow(run, launchPhase, null),
       {
         coalesce: {
           subject: run,
@@ -163,9 +177,15 @@ export class TeamProvisioningPersistenceReconcileFacade<
 
   async persistLaunchStateSnapshotNow(
     run: TRun,
-    launchPhase: PersistedTeamLaunchPhase
+    launchPhase: PersistedTeamLaunchPhase,
+    ownedSoloIsCurrent: (() => boolean) | null = launchPhase === 'finished'
+      ? this.captureOwnedSoloPublication(run)
+      : null
   ): Promise<PersistedTeamLaunchSnapshot | null> {
+    if (ownedSoloIsCurrent && !ownedSoloIsCurrent()) return null;
     await this.ports.overlayPrimaryBootstrapTruthIntoRunStatusesFromBootstrapState(run);
+    if (ownedSoloIsCurrent && !ownedSoloIsCurrent()) return null;
+    if (!ownedSoloIsCurrent && captureOwnedSoloLaunchSnapshotRun(run)) return null;
     const snapshot = this.ports.buildLiveLaunchSnapshotForRun(run, launchPhase);
     if (!snapshot) {
       if (run.isLaunch) {
@@ -174,14 +194,22 @@ export class TeamProvisioningPersistenceReconcileFacade<
       return null;
     }
 
-    const metaMembers = await this.ports.readMembersMeta(run.teamName).catch(() => []);
+    const metaMembers = await this.ports
+      .readMembersMeta(run.teamName)
+      .catch(() => (ownedSoloIsCurrent ? null : []));
+    if (metaMembers === null) return null;
+    if (ownedSoloIsCurrent && (!ownedSoloIsCurrent() || metaMembers.length !== 0)) return null;
     const filteredSnapshot = filterRemovedMembersFromLaunchSnapshot(
       snapshot,
       metaMembers,
       getPersistedLaunchMemberNames(snapshot)
     );
 
-    if (filteredSnapshot.teamLaunchState === 'clean_success' && launchPhase !== 'active') {
+    if (
+      filteredSnapshot.teamLaunchState === 'clean_success' &&
+      launchPhase !== 'active' &&
+      !ownedSoloIsCurrent
+    ) {
       await this.clearPersistedLaunchStateNow(run.teamName, { expectedRunId: run.runId });
       // Disk cleanup must not discard the current evidence needed by live run/status consumers.
       return filteredSnapshot;
@@ -191,11 +219,32 @@ export class TeamProvisioningPersistenceReconcileFacade<
       allowNoopSkip: true,
       runId: run.runId,
       metaMembers,
+      ...(ownedSoloIsCurrent
+        ? {
+            ownedSoloLaunch: true,
+            requireTrackedRun: true,
+            isAuthorized: ownedSoloIsCurrent,
+          }
+        : {}),
     });
     if (writeResult.wrote) {
       this.ports.invalidateRuntimeSnapshotCaches(run.teamName);
     }
+    if (ownedSoloIsCurrent && !ownedSoloIsCurrent()) return null;
     return writeResult.snapshot;
+  }
+
+  private captureOwnedSoloPublication(run: TRun): (() => boolean) | null {
+    const ownerIsCurrent = captureOwnedSoloLaunchSnapshotRun(run);
+    if (!ownerIsCurrent) return null;
+    const { teamName, runId } = run;
+    const publicationIsCurrent = captureTeamLaunchPublicationAuthority(teamName);
+    const current = (): boolean =>
+      ownerIsCurrent() &&
+      publicationIsCurrent() &&
+      this.ports.getRun(runId) === run &&
+      this.ports.reconcile.getTrackedRunId?.(teamName) === runId;
+    return current;
   }
 
   async reconcilePersistedLaunchState(
@@ -224,6 +273,7 @@ export function createTeamProvisioningPersistenceReconcileFacadeFromService<
   return new TeamProvisioningPersistenceReconcileFacade<TRun>({
     launchStateStoreBoundary: service.launchStateStoreBoundary,
     readLaunchState: (teamName) => service.launchStateStore.read(teamName),
+    getRun: (runId) => service.runs.get(runId),
     readMembersMeta: (teamName) => service.membersMetaStore.getMembers(teamName),
     overlayPrimaryBootstrapTruthIntoRunStatusesFromBootstrapState: (run) =>
       service.primaryBootstrapTruthReporting.overlayPrimaryBootstrapTruthIntoRunStatusesFromBootstrapState(

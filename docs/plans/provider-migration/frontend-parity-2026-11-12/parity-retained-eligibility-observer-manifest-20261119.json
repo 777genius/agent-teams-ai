@@ -1,0 +1,149 @@
+{
+  "schemaVersion": 1,
+  "sourceHead": "030b21f0765d1a6e6572f46d262c672d63e69eb7",
+  "sourceTree": "292b3cc975b5c927233fb85b73aed1411753efd1",
+  "changes": [
+    {
+      "path": "src/features/agent-backend/main/application/createRetainedLegacyLaunchScope.ts",
+      "preimage": {
+        "bytes": 4399,
+        "sha256": "46d7684927485c4124c07147c384644a849df7134a74edfff30f0af2481c2e9a",
+        "gitBlob": "5531bed60214eae761028dd534a05ee3a6db67e2"
+      },
+      "postimage": {
+        "bytes": 4875,
+        "sha256": "9022504401848b9ec452fcb59e696a3c3e6c70410a68a88c5766a44e9678c4fc",
+        "gitBlob": "48601395b8993858c5c03dc391f32620bff6d6cf"
+      }
+    },
+    {
+      "path": "src/main/composition/createDesktopStoppedTeamOperations.ts",
+      "preimage": {
+        "bytes": 13120,
+        "sha256": "884a2de9e9bdb6e42f80579b65d5ddfe6e60e2b3d0c921d41cea686671fc7939",
+        "gitBlob": "0387d24830f45fa722b2e71765fdfde4c9a98f0d"
+      },
+      "postimage": {
+        "bytes": 13306,
+        "sha256": "9d84942df095ebe4350ad9336031e896885275165e1558ba0b349f4cfbe18a87",
+        "gitBlob": "fbcf8cef5d9c9258418bd4aa98c4a6b15cd5a547"
+      }
+    },
+    {
+      "path": "test/features/agent-backend/retainedLegacyEligibilityDiagnostics.test.ts",
+      "preimage": null,
+      "postimage": {
+        "bytes": 11154,
+        "sha256": "11bae932d7b9bb2a6d73bbbd2cfb4c1841bc14a715fd925f7b42faf368154144",
+        "gitBlob": "5db9d3cde4be97705bdd1218037dffc7d7771acf"
+      }
+    }
+  ],
+  "patch": {
+    "path": "/workspace/scratch/c714f5bce554/retained-eligibility-diagnostic-candidate-030/candidate.patch",
+    "bytes": 14754,
+    "sha256": "a234628a2d445ed6d623a8351ac348a18997dc6136641cdc816b735abccf86e7",
+    "gitBlob": "cd9c8e828bab9cd7d6b730b5e067ce8471487b59"
+  },
+  "testDiscovery": {
+    "path": "test/features/agent-backend/retainedLegacyEligibilityDiagnostics.test.ts",
+    "selection": "Existing vitest.config.ts include test/**/*.test.ts; existing original frontend shard discovery needs no change."
+  },
+  "sourceFreezeProposal": {
+    "owner": "root additive shared roster; ready22 historical roster remains untouched",
+    "productionLiterals": [
+      "src/features/agent-backend/main/application/createRetainedLegacyLaunchScope.ts",
+      "src/main/composition/createDesktopStoppedTeamOperations.ts",
+      "src/features/agent-backend/main/infrastructure/stopped-import/createRetainedLegacyOpenDiagnostic.ts",
+      "src/features/agent-backend/main/infrastructure/stopped-import/retainedLegacyOpenDiagnosticContract.ts",
+      "src/features/agent-backend/main/infrastructure/stopped-import/createStoppedImportDiagnostic.ts",
+      "src/features/agent-backend/main/application/validateRetainedLegacyLaunchRequest.ts"
+    ],
+    "regressionLiteralRequired": false
+  },
+  "verification": {
+    "before": {
+      "counts": {
+        "numTotalTests": 70,
+        "numPassedTests": 62,
+        "numFailedTests": 8,
+        "numPendingTests": 0,
+        "success": false
+      },
+      "receipt": {
+        "path": "/workspace/scratch/c714f5bce554/retained-eligibility-diagnostic-candidate-030/receipts/before-result.json",
+        "bytes": 31790,
+        "sha256": "48ff5ce69ae8acfb7d1d93e7fa36ea246873ed2ba3f7e0cc90ffc4e45814f151",
+        "gitBlob": "753dc4f0464ce9fad2c42a0913dc9b2330d358c7"
+      },
+      "tests": [
+        {
+          "file": "retainedLegacyEligibilityDiagnostics.test.ts",
+          "total": 13,
+          "passed": 5,
+          "failed": 8
+        },
+        {
+          "file": "retainedLegacyLaunchCoordinator.test.ts",
+          "total": 38,
+          "passed": 38,
+          "failed": 0
+        },
+        {
+          "file": "retainedLegacyOpenDiagnostics.test.ts",
+          "total": 19,
+          "passed": 19,
+          "failed": 0
+        }
+      ]
+    },
+    "after": {
+      "counts": {
+        "numTotalTests": 70,
+        "numPassedTests": 70,
+        "numFailedTests": 0,
+        "numPendingTests": 0,
+        "success": true
+      },
+      "receipt": {
+        "path": "/workspace/scratch/c714f5bce554/retained-eligibility-diagnostic-candidate-030/receipts/after-result.json",
+        "bytes": 27298,
+        "sha256": "648418fab2daebfe208a7c55a7e2bd1dfee4519f1af23b128e14ed4696804e2a",
+        "gitBlob": "cf1763329c1f7f64c5de09389b6237ab792599ab"
+      },
+      "tests": [
+        {
+          "file": "retainedLegacyEligibilityDiagnostics.test.ts",
+          "total": 13,
+          "passed": 13,
+          "failed": 0
+        },
+        {
+          "file": "retainedLegacyLaunchCoordinator.test.ts",
+          "total": 38,
+          "passed": 38,
+          "failed": 0
+        },
+        {
+          "file": "retainedLegacyOpenDiagnostics.test.ts",
+          "total": 19,
+          "passed": 19,
+          "failed": 0
+        }
+      ]
+    }
+  },
+  "fastLint": {
+    "errors": 0,
+    "warnings": 0,
+    "receipt": {
+      "path": "/workspace/scratch/c714f5bce554/retained-eligibility-diagnostic-candidate-030/receipts/after-fastlint.json",
+      "bytes": 1013,
+      "sha256": "2f7f6069bea859484c05380e50cb431a486430d0b45e068579e5f42aaf248be2",
+      "gitBlob": "f6bd275ec67f2bff9d13350a0ecd90b8c702083c"
+    }
+  },
+  "harness": "Prepared Node 24.22.3/Vitest3.2.6 dependencies read from existing workspace; exact030 source/static assets isolated in verify-before/after, with local Vite cache. Two initial loader-only setup failures preserved separately, not counted as semantic RED. No app/native/build/install or external checkout edit.",
+  "scope": "Only private refusal observation. other/admitted/currentness/dispatch/cleanup/expiry/public result/diagnostic projection contracts unchanged. Generic fence errors remain unknown. Does not fix or qualify original failed retained V1 runtime flow.",
+  "updatedAt": "2026-11-19T01:02:08.830840+00:00"
+}

@@ -1,13 +1,129 @@
 import assert from 'node:assert/strict';
-import { once } from 'node:events';
-import { closeSync, existsSync, ftruncateSync, mkdtempSync, openSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
+import { EventEmitter, once } from 'node:events';
+import { closeSync, cpSync, existsSync, ftruncateSync, mkdirSync, mkdtempSync, openSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
+import { createRequire, stripTypeScriptTypes } from 'node:module';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { delimiter, dirname, isAbsolute, join } from 'node:path';
+import { createInterface } from 'node:readline';
+import { PassThrough } from 'node:stream';
 import { test } from 'node:test';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { isDeepStrictEqual } from 'node:util';
 import { closeNativeHostInput, readNativeHostFrame, startHost } from './fixtures/native-host.ts';
 import { ATTACHMENT_CHUNK_BYTES } from '../dist/attachments/contracts.js';
 import { createPassiveNativeDiagnosticCapture, readOriginalHostCpuProfile } from './fixtures/native-opencode-team/passive-diagnostics.ts';
+import { DEFAULT_HOST_LIMITS, TEAM_HOST_DISPOSE_TIMEOUT_MS } from '../src/contracts.ts';
+
+test('relocated TEST fixture reads attachment contracts from its captured Host entry without a checkout fallback', async t => {
+  const root = realpathSync(mkdtempSync(join(tmpdir(), 'TEST-host-attachment-relocation-')));
+  t.after(() => rmSync(root, { recursive: true, force: true }));
+  const hostPackage = join(root, 'relocated bundle', 'host');
+  const entry = join(hostPackage, 'dist', 'cli.js');
+  const attachmentDirectory = join(dirname(entry), 'attachments');
+  mkdirSync(attachmentDirectory, { recursive: true });
+  writeFileSync(join(hostPackage, 'package.json'), '{"type":"module"}');
+  writeFileSync(entry, 'throw new Error("TEST Host entry is never executed");');
+  const originalContracts = fileURLToPath(new URL('../dist/attachments/contracts.js', import.meta.url));
+  for (const name of ['contracts.js', 'portable.js', 'messageFileReferences.js', 'mimeTypes.js']) {
+    const bytes = readFileSync(join(dirname(originalContracts), name));
+    writeFileSync(join(attachmentDirectory, name), bytes);
+    assert.deepEqual(readFileSync(join(attachmentDirectory, name)), bytes);
+  }
+  const zod = dirname(createRequire(originalContracts).resolve('zod/package.json'));
+  cpSync(zod, join(hostPackage, 'node_modules', 'zod'), { recursive: true });
+
+  const harness = join(root, 'runner', 'temp', 'TEST-packaged-v2-host.mjs');
+  assert.equal(existsSync(join(dirname(harness), '../../dist/attachments/contracts.js')), false);
+  const source = readFileSync(new URL('./fixtures/native-host.ts', import.meta.url), 'utf8');
+  // Same fixture bodies and relocated import.meta.url as the generated harness.
+  // Only process creation is replaced; real Node resolution and copied schemas remain.
+  const body = stripTypeScriptTypes(source).replace(/^import [^\n]+;\r?\n/gm, '')
+    .replace(/^export /gm, '')
+    .replaceAll('import.meta.url', JSON.stringify(pathToFileURL(harness).href));
+  const value = { attachment: { id: 'TEST-image', filename: 'TEST-image.png', mimeType: 'image/png', size: 4 * 1024 * 1024 },
+    offset: 0, sha256: 'a'.repeat(64), base64: Buffer.alloc(ATTACHMENT_CHUNK_BYTES, 0x61).toString('base64'),
+    nextOffset: ATTACHMENT_CHUNK_BYTES };
+  const payload = { reference: 'TEST-message', attachmentId: 'TEST-image', offset: 0, expectedSha256: value.sha256 };
+  function open(reply: unknown, selectedEntry = entry) {
+    const loads: { base: string; specifier: string }[] = [];
+    class MemoryChild extends EventEmitter {
+      stdin = new PassThrough();
+      stdout = new PassThrough();
+      stderr = new PassThrough();
+      exitCode: number | null = null;
+      signalCode = null;
+      kill(): never { return assert.fail('TEST in-memory transport never requires a process signal'); }
+    }
+    const child = new MemoryChild();
+    child.stdin.on('data', (chunk: Buffer) => {
+      const request = JSON.parse(chunk.toString('utf8')) as { id: number };
+      child.stdout.write(JSON.stringify({ jsonrpc: '2.0', id: request.id, result: { ok: true, value: reply } }) + '\n');
+    });
+    child.stdin.once('finish', () => {
+      child.exitCode = 0; child.emit('exit', 0, null);
+      child.stdout.end(); child.stderr.end();
+    });
+    let spawns = 0;
+    const bindings = { assert, existsSync, delimiter, dirname, isAbsolute, join, createInterface,
+      DEFAULT_HOST_LIMITS, TEAM_HOST_DISPOSE_TIMEOUT_MS,
+      createRequire: (base: string | URL) => {
+        const required = createRequire(base);
+        return (specifier: string) => { loads.push({ base: String(base), specifier }); return required(specifier); };
+      },
+      spawn: (node: string, args: string[], options: { cwd: string }) => {
+        assert.equal(node, process.execPath); assert.deepEqual(args, [selectedEntry]);
+        assert.equal(options.cwd, root); spawns++; return child;
+      },
+    };
+    const evaluate = new Function(...Object.keys(bindings), '"use strict";\n' + body +
+      '\nreturn { startHost, readNativeHostFrame };') as (...args: unknown[]) => {
+        startHost: typeof startHost; readNativeHostFrame: typeof readNativeHostFrame;
+      };
+    const fixture = evaluate(...Object.values(bindings));
+    const ordinary = { jsonrpc: '2.0', id: 1, result: { ok: true } };
+    assert.deepEqual(fixture.readNativeHostFrame(JSON.stringify(ordinary), new Map()), ordinary);
+    assert.deepEqual(loads, [], 'ordinary helpers remain lazy before a compiled attachment contract is needed');
+    const host = fixture.startHost({ node: process.execPath, entry: selectedEntry, root,
+      profile: join(root, 'TEST-unused-profile.json'), profileHash: 'b'.repeat(64) });
+    assert.equal(spawns, 1); assert.deepEqual(loads, []);
+    return { host, child, loads };
+  }
+  for (const [reply, request, invalid] of [
+    [value, payload, false],
+    [{ ...value, attachment: { ...value.attachment, privatePath: '/TEST-unexpected' } }, payload, true],
+    [{ ...value, base64: 'x'.repeat(DEFAULT_HOST_LIMITS.maxFrameBytes) }, payload, true],
+    [{ ...value, sha256: 'c'.repeat(64) }, payload, true],
+    [value, { ...payload, privatePath: '/TEST-unexpected' }, true],
+  ] as const) {
+    const { host, child, loads } = open(reply);
+    let protocolRejected = false;
+    try {
+      const read = host.rpc('team.message.attachment.read', { payload: request });
+      if (invalid) await assert.rejects(read, error => {
+        assert.match(String(error), /Host stdout protocol violation/); protocolRejected = true; return true;
+      });
+      else assert.deepEqual(await read, { ok: true, value });
+      assert.ok(loads.length >= 1);
+      assert.ok(loads.every(load => load.base === entry && load.specifier === './attachments/contracts.js'));
+      if (!invalid) assert.equal(loads.length, 2, 'request schema and large response use the same captured contract');
+    } finally {
+      if (protocolRejected) await assert.rejects(host.close(), { code: 'ERR_ASSERTION' });
+      else await host.close();
+      child.stdin.destroy(); child.stdout.destroy(); child.stderr.destroy();
+    }
+    assert.equal(child.exitCode, 0);
+  }
+  const missingEntry = join(root, 'missing captured Host', 'dist', 'cli.js');
+  const missing = open(value, missingEntry);
+  try {
+    await assert.rejects(missing.host.rpc('team.message.attachment.read', { payload }), { code: 'MODULE_NOT_FOUND' });
+    assert.deepEqual(missing.loads, [{ base: missingEntry, specifier: './attachments/contracts.js' }],
+      'a missing captured contract cannot use the checkout or a neighboring Host');
+  } finally {
+    await missing.host.close();
+    missing.child.stdin.destroy(); missing.child.stdout.destroy(); missing.child.stderr.destroy();
+  }
+});
 
 test('native Host keeps ordinary frame bounds and accepts only an exact request-bound attachment chunk', () => {
   const request = { method: 'team.message.attachment.read', messageAttachmentRead: {

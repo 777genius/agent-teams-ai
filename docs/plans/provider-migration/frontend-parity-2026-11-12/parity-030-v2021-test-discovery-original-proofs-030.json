@@ -1,0 +1,1358 @@
+{
+  "schemaVersion": 1,
+  "kind": "Original030V2021NativeSPIAndHTTPDiscoveryScopedSuccess",
+  "sourceHead": "030b21f0765d1a6e6572f46d262c672d63e69eb7",
+  "runId": 44407826476,
+  "runAttempt": 1,
+  "cases": [
+    {
+      "job": {
+        "id": 135167673643,
+        "run_id": 44407826476,
+        "workflow_name": "OpenCode V2 Stage1 static preflight (TEST only)",
+        "head_branch": "fix/frontend-parity-completion-20261113",
+        "run_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/44407826476",
+        "run_attempt": 1,
+        "node_id": "CR_kwDORVTEtM8AAAAfeJ8FKw",
+        "head_sha": "030b21f0765d1a6e6572f46d262c672d63e69eb7",
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/jobs/135167673643",
+        "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/44407826476/job/135167673643",
+        "status": "completed",
+        "conclusion": "success",
+        "created_at": "2026-11-18T22:03:45Z",
+        "started_at": "2026-11-18T23:24:17Z",
+        "completed_at": "2026-11-18T23:25:33Z",
+        "name": "Native V2.0.21 Host SPI instructions (Ubuntu TEST only)",
+        "steps": [
+          {
+            "name": "Set up job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 1,
+            "started_at": "2026-11-18T23:24:17Z",
+            "completed_at": "2026-11-18T23:24:20Z"
+          },
+          {
+            "name": "Run actions/checkout@v6",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 2,
+            "started_at": "2026-11-18T23:24:20Z",
+            "completed_at": "2026-11-18T23:24:30Z"
+          },
+          {
+            "name": "Require immutable PR native source HEAD",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 3,
+            "started_at": "2026-11-18T23:24:30Z",
+            "completed_at": "2026-11-18T23:24:30Z"
+          },
+          {
+            "name": "Run pnpm/action-setup@v6",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 4,
+            "started_at": "2026-11-18T23:24:30Z",
+            "completed_at": "2026-11-18T23:24:39Z"
+          },
+          {
+            "name": "Run actions/setup-node@v6",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 5,
+            "started_at": "2026-11-18T23:24:39Z",
+            "completed_at": "2026-11-18T23:24:48Z"
+          },
+          {
+            "name": "Install pinned Host workspace dependencies",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 6,
+            "started_at": "2026-11-18T23:24:48Z",
+            "completed_at": "2026-11-18T23:25:15Z"
+          },
+          {
+            "name": "Build Host V2 SPI with real pinned private driver",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 7,
+            "started_at": "2026-11-18T23:25:15Z",
+            "completed_at": "2026-11-18T23:25:18Z"
+          },
+          {
+            "name": "Check native TEST proof syntax",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 8,
+            "started_at": "2026-11-18T23:25:18Z",
+            "completed_at": "2026-11-18T23:25:18Z"
+          },
+          {
+            "name": "Test direct-shell HTTP mutation/no-replay diagnostic boundary",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 9,
+            "started_at": "2026-11-18T23:25:18Z",
+            "completed_at": "2026-11-18T23:25:19Z"
+          },
+          {
+            "name": "Install exact official V2 CLI in isolated runner prefix, without scripts",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 10,
+            "started_at": "2026-11-18T23:25:19Z",
+            "completed_at": "2026-11-18T23:25:25Z"
+          },
+          {
+            "name": "Confirm native ELF interruption and original process identity",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 11,
+            "started_at": "2026-11-18T23:25:25Z",
+            "completed_at": "2026-11-18T23:25:27Z"
+          },
+          {
+            "name": "Exercise real pinned native server against existing Host Session SPI",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 12,
+            "started_at": "2026-11-18T23:25:27Z",
+            "completed_at": "2026-11-18T23:25:30Z"
+          },
+          {
+            "name": "Require complete native TEST receipt before success",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 13,
+            "started_at": "2026-11-18T23:25:30Z",
+            "completed_at": "2026-11-18T23:25:30Z"
+          },
+          {
+            "name": "Preserve exact native TEST proof or HOLD receipt",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 14,
+            "started_at": "2026-11-18T23:25:30Z",
+            "completed_at": "2026-11-18T23:25:31Z"
+          },
+          {
+            "name": "Post Run actions/setup-node@v6",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 26,
+            "started_at": "2026-11-18T23:25:31Z",
+            "completed_at": "2026-11-18T23:25:31Z"
+          },
+          {
+            "name": "Post Run pnpm/action-setup@v6",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 27,
+            "started_at": "2026-11-18T23:25:31Z",
+            "completed_at": "2026-11-18T23:25:31Z"
+          },
+          {
+            "name": "Post Run actions/checkout@v6",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 28,
+            "started_at": "2026-11-18T23:25:31Z",
+            "completed_at": "2026-11-18T23:25:32Z"
+          },
+          {
+            "name": "Complete job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 29,
+            "started_at": "2026-11-18T23:25:32Z",
+            "completed_at": "2026-11-18T23:25:32Z"
+          }
+        ],
+        "check_run_url": "https://api.github.com/repos/777genius/agent-teams-ai/check-runs/135167673643",
+        "labels": [
+          "ubuntu-24.04"
+        ],
+        "runner_id": 1000395391,
+        "runner_name": "GitHub Actions 1000395391",
+        "runner_group_id": 0,
+        "runner_group_name": "GitHub Actions"
+      },
+      "rawLog": {
+        "jobId": 135167673643,
+        "requestedAt": "2026-11-18T23:27:26.235852+00:00",
+        "status": "captured-permanently-retired",
+        "localPath": "/workspace/scratch/c714f5bce554/ci-current-030/job-135167673643-terminal.log",
+        "bytes": 69212,
+        "sha256": "2cc589d1f3222d1c00c2dc7f7667883be4f86679c0e353fcf6f2383b16fe3463",
+        "gitBlob": "98b4f26e38193ac6748d39594956af32956475ba",
+        "exactImmutableReadback": true
+      },
+      "scope": "V2.0.21 original native ELF Host SPI TEST only; direct-shell12/12, native interruption2/2 with2published-only skips, physical scenario and native receipt verifier success; no model/Desktop/release qualification inferred.",
+      "exactRelevantLogLines": [
+        {
+          "line": 640,
+          "text": "2026-11-18T23:25:18.9846818Z ##[group]Run node --test packages/legacy-agent-host/tests/opencode-v2-direct-shell-probe.test.mjs\n"
+        },
+        {
+          "line": 641,
+          "text": "2026-11-18T23:25:18.9847457Z \u001b[36;1mnode --test packages/legacy-agent-host/tests/opencode-v2-direct-shell-probe.test.mjs\u001b[0m\n"
+        },
+        {
+          "line": 642,
+          "text": "2026-11-18T23:25:18.9869303Z shell: /usr/bin/bash -e {0}\n"
+        },
+        {
+          "line": 643,
+          "text": "2026-11-18T23:25:18.9869586Z env:\n"
+        },
+        {
+          "line": 644,
+          "text": "2026-11-18T23:25:18.9869904Z   AGENT_TEAMS_INSTALL_PROFILE: node-ci\n"
+        },
+        {
+          "line": 645,
+          "text": "2026-11-18T23:25:18.9870208Z   ELECTRON_SKIP_BINARY_DOWNLOAD: 1\n"
+        },
+        {
+          "line": 646,
+          "text": "2026-11-18T23:25:18.9870493Z   npm_config_audit: false\n"
+        },
+        {
+          "line": 647,
+          "text": "2026-11-18T23:25:18.9870734Z   npm_config_fund: false\n"
+        },
+        {
+          "line": 648,
+          "text": "2026-11-18T23:25:18.9871040Z   PNPM_HOME: /home/runner/setup-pnpm/node_modules/.bin\n"
+        },
+        {
+          "line": 649,
+          "text": "2026-11-18T23:25:18.9871360Z ##[endgroup]\n"
+        },
+        {
+          "line": 650,
+          "text": "2026-11-18T23:25:19.0612198Z \u2714 one owned direct shell file effect is not a model/tool authorization certificate (2.200546ms)\n"
+        },
+        {
+          "line": 651,
+          "text": "2026-11-18T23:25:19.0613562Z \u2714 unsupported direct shell endpoint is HOLD with no mutation replay (0.217568ms)\n"
+        },
+        {
+          "line": 652,
+          "text": "2026-11-18T23:25:19.0614714Z \u2714 success without an actual file effect is HOLD, not fabricated proof (0.235038ms)\n"
+        },
+        {
+          "line": 653,
+          "text": "2026-11-18T23:25:19.0615612Z \u2714 uncertain HTTP ACK remains HOLD even if the TEST file was written (0.229024ms)\n"
+        },
+        {
+          "line": 654,
+          "text": "2026-11-18T23:25:19.0620798Z \u2714 foreign-session native readback refuses shell mutation and foreign cleanup (0.397278ms)\n"
+        },
+        {
+          "line": 655,
+          "text": "2026-11-18T23:25:19.0622758Z \u2714 unexpected workspace contents never count as successful direct shell (0.19468ms)\n"
+        },
+        {
+          "line": 656,
+          "text": "2026-11-18T23:25:19.0623360Z \u2714 uncertain cleanup is an error even after native shell success (0.190317ms)\n"
+        },
+        {
+          "line": 657,
+          "text": "2026-11-18T23:25:19.0623940Z \u2714 a preexisting marker cannot counterfeit a fresh native shell effect (0.18376ms)\n"
+        },
+        {
+          "line": 658,
+          "text": "2026-11-18T23:25:19.0624509Z \u2714 post-mutation foreign session never qualifies an observed file effect (0.318544ms)\n"
+        },
+        {
+          "line": 659,
+          "text": "2026-11-18T23:25:19.0625105Z \u2714 post-mutation unreadable session remains HOLD, without retry (0.328557ms)\n"
+        },
+        {
+          "line": 660,
+          "text": "2026-11-18T23:25:19.0625719Z \u2714 identity swap before cleanup blocks DELETE after a successful native effect (0.245244ms)\n"
+        },
+        {
+          "line": 661,
+          "text": "2026-11-18T23:25:19.0626469Z \u2714 unreadable pre-cleanup ownership cannot cause blind DELETE (0.213604ms)\n"
+        },
+        {
+          "line": 662,
+          "text": "2026-11-18T23:25:19.0679925Z \u2139 tests 12\n"
+        },
+        {
+          "line": 663,
+          "text": "2026-11-18T23:25:19.0680346Z \u2139 suites 0\n"
+        },
+        {
+          "line": 664,
+          "text": "2026-11-18T23:25:19.0680754Z \u2139 pass 12\n"
+        },
+        {
+          "line": 665,
+          "text": "2026-11-18T23:25:19.0681106Z \u2139 fail 0\n"
+        },
+        {
+          "line": 666,
+          "text": "2026-11-18T23:25:19.0681388Z \u2139 cancelled 0\n"
+        },
+        {
+          "line": 667,
+          "text": "2026-11-18T23:25:19.0681764Z \u2139 skipped 0\n"
+        },
+        {
+          "line": 668,
+          "text": "2026-11-18T23:25:19.0682076Z \u2139 todo 0\n"
+        },
+        {
+          "line": 669,
+          "text": "2026-11-18T23:25:19.0682430Z \u2139 duration_ms 53.925648\n"
+        },
+        {
+          "line": 708,
+          "text": "2026-11-18T23:25:25.1761345Z ##[group]Run node --test packages/legacy-agent-host/tests/opencode-v2-http-interrupt-negative.test.mjs\n"
+        },
+        {
+          "line": 709,
+          "text": "2026-11-18T23:25:25.1762024Z \u001b[36;1mnode --test packages/legacy-agent-host/tests/opencode-v2-http-interrupt-negative.test.mjs\u001b[0m\n"
+        },
+        {
+          "line": 710,
+          "text": "2026-11-18T23:25:25.1788153Z shell: /usr/bin/bash -e {0}\n"
+        },
+        {
+          "line": 711,
+          "text": "2026-11-18T23:25:25.1788460Z env:\n"
+        },
+        {
+          "line": 712,
+          "text": "2026-11-18T23:25:25.1788710Z   AGENT_TEAMS_INSTALL_PROFILE: node-ci\n"
+        },
+        {
+          "line": 713,
+          "text": "2026-11-18T23:25:25.1789054Z   ELECTRON_SKIP_BINARY_DOWNLOAD: 1\n"
+        },
+        {
+          "line": 714,
+          "text": "2026-11-18T23:25:25.1789328Z   npm_config_audit: false\n"
+        },
+        {
+          "line": 715,
+          "text": "2026-11-18T23:25:25.1789631Z   npm_config_fund: false\n"
+        },
+        {
+          "line": 716,
+          "text": "2026-11-18T23:25:25.1789915Z   PNPM_HOME: /home/runner/setup-pnpm/node_modules/.bin\n"
+        },
+        {
+          "line": 717,
+          "text": "2026-11-18T23:25:25.1790351Z   OPENCODE_V2_TEST_NPM_ROOT: /home/runner/work/_temp/opencode-v2-host-cli/node_modules/@opencode\n"
+        },
+        {
+          "line": 718,
+          "text": "2026-11-18T23:25:25.1790867Z   OPENCODE_V2_TEST_SOURCE_HEAD: 030b21f0765d1a6e6572f46d262c672d63e69eb7\n"
+        },
+        {
+          "line": 719,
+          "text": "2026-11-18T23:25:25.1791186Z ##[endgroup]\n"
+        },
+        {
+          "line": 720,
+          "text": "2026-11-18T23:25:25.2488447Z \ufe63 SIGINT reaps the owned published HTTP server and emits a HOLD receipt (0.576567ms) # SKIP\n"
+        },
+        {
+          "line": 721,
+          "text": "2026-11-18T23:25:25.2489579Z \ufe63 SIGTERM reaps the owned published HTTP server and emits a HOLD receipt (0.78493ms) # SKIP\n"
+        },
+        {
+          "line": 722,
+          "text": "2026-11-18T23:25:26.5817209Z \u2714 SIGINT reaps the owned native ELF server and emits a HOLD receipt (1335.423884ms)\n"
+        },
+        {
+          "line": 723,
+          "text": "2026-11-18T23:25:27.8124875Z \u2714 SIGTERM reaps the owned native ELF server and emits a HOLD receipt (1232.104295ms)\n"
+        },
+        {
+          "line": 724,
+          "text": "2026-11-18T23:25:27.8185904Z \u2139 tests 4\n"
+        },
+        {
+          "line": 725,
+          "text": "2026-11-18T23:25:27.8186281Z \u2139 suites 0\n"
+        },
+        {
+          "line": 726,
+          "text": "2026-11-18T23:25:27.8186949Z \u2139 pass 2\n"
+        },
+        {
+          "line": 727,
+          "text": "2026-11-18T23:25:27.8187306Z \u2139 fail 0\n"
+        },
+        {
+          "line": 728,
+          "text": "2026-11-18T23:25:27.8187602Z \u2139 cancelled 0\n"
+        },
+        {
+          "line": 729,
+          "text": "2026-11-18T23:25:27.8188022Z \u2139 skipped 2\n"
+        },
+        {
+          "line": 730,
+          "text": "2026-11-18T23:25:27.8188318Z \u2139 todo 0\n"
+        },
+        {
+          "line": 731,
+          "text": "2026-11-18T23:25:27.8188681Z \u2139 duration_ms 2611.268095\n"
+        },
+        {
+          "line": 732,
+          "text": "2026-11-18T23:25:27.8265418Z ##[group]Run node packages/legacy-agent-host/tests/opencode-v2-native-instructions.mjs\n"
+        },
+        {
+          "line": 733,
+          "text": "2026-11-18T23:25:27.8266312Z \u001b[36;1mnode packages/legacy-agent-host/tests/opencode-v2-native-instructions.mjs\u001b[0m\n"
+        },
+        {
+          "line": 734,
+          "text": "2026-11-18T23:25:27.8354223Z shell: /usr/bin/bash -e {0}\n"
+        },
+        {
+          "line": 735,
+          "text": "2026-11-18T23:25:27.8354677Z env:\n"
+        },
+        {
+          "line": 736,
+          "text": "2026-11-18T23:25:27.8355226Z   AGENT_TEAMS_INSTALL_PROFILE: node-ci\n"
+        },
+        {
+          "line": 737,
+          "text": "2026-11-18T23:25:27.8355789Z   ELECTRON_SKIP_BINARY_DOWNLOAD: 1\n"
+        },
+        {
+          "line": 738,
+          "text": "2026-11-18T23:25:27.8356256Z   npm_config_audit: false\n"
+        },
+        {
+          "line": 739,
+          "text": "2026-11-18T23:25:27.8356885Z   npm_config_fund: false\n"
+        },
+        {
+          "line": 740,
+          "text": "2026-11-18T23:25:27.8357380Z   PNPM_HOME: /home/runner/setup-pnpm/node_modules/.bin\n"
+        },
+        {
+          "line": 741,
+          "text": "2026-11-18T23:25:27.8358407Z   OPENCODE_V2_TEST_NPM_ROOT: /home/runner/work/_temp/opencode-v2-host-cli/node_modules/@opencode\n"
+        },
+        {
+          "line": 742,
+          "text": "2026-11-18T23:25:27.8359820Z   OPENCODE_V2_HOST_NATIVE_RECEIPT: /home/runner/work/agent-teams-ai/agent-teams-ai/opencode-v2-host-native-instructions.json\n"
+        },
+        {
+          "line": 743,
+          "text": "2026-11-18T23:25:27.8361094Z   OPENCODE_V2_TEST_SOURCE_HEAD: 030b21f0765d1a6e6572f46d262c672d63e69eb7\n"
+        },
+        {
+          "line": 744,
+          "text": "2026-11-18T23:25:27.8361815Z ##[endgroup]\n"
+        },
+        {
+          "line": 745,
+          "text": "2026-11-18T23:25:30.8828150Z ##[group]Run set -euo pipefail\n"
+        },
+        {
+          "line": 746,
+          "text": "2026-11-18T23:25:30.8828414Z \u001b[36;1mset -euo pipefail\u001b[0m\n"
+        },
+        {
+          "line": 747,
+          "text": "2026-11-18T23:25:30.8828667Z \u001b[36;1mtest -s opencode-v2-host-native-instructions.json\u001b[0m\n"
+        },
+        {
+          "line": 748,
+          "text": "2026-11-18T23:25:30.8829176Z \u001b[36;1mnode packages/legacy-agent-host/tests/opencode-v2-native-receipt-verify.mjs opencode-v2-host-native-instructions.json\u001b[0m\n"
+        },
+        {
+          "line": 749,
+          "text": "2026-11-18T23:25:30.8857291Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}\n"
+        },
+        {
+          "line": 750,
+          "text": "2026-11-18T23:25:30.8857703Z env:\n"
+        },
+        {
+          "line": 751,
+          "text": "2026-11-18T23:25:30.8857933Z   AGENT_TEAMS_INSTALL_PROFILE: node-ci\n"
+        },
+        {
+          "line": 752,
+          "text": "2026-11-18T23:25:30.8858188Z   ELECTRON_SKIP_BINARY_DOWNLOAD: 1\n"
+        },
+        {
+          "line": 753,
+          "text": "2026-11-18T23:25:30.8858429Z   npm_config_audit: false\n"
+        },
+        {
+          "line": 754,
+          "text": "2026-11-18T23:25:30.8858667Z   npm_config_fund: false\n"
+        },
+        {
+          "line": 755,
+          "text": "2026-11-18T23:25:30.8858942Z   PNPM_HOME: /home/runner/setup-pnpm/node_modules/.bin\n"
+        },
+        {
+          "line": 756,
+          "text": "2026-11-18T23:25:30.8859348Z   OPENCODE_V2_TEST_SOURCE_HEAD: 030b21f0765d1a6e6572f46d262c672d63e69eb7\n"
+        },
+        {
+          "line": 757,
+          "text": "2026-11-18T23:25:30.8859712Z ##[endgroup]\n"
+        }
+      ],
+      "receiptArtifact": "Not downloaded; scope is bounded to actual successful original job steps and original logged checker, not an independent field-by-field receipt readback."
+    },
+    {
+      "job": {
+        "id": 135167673660,
+        "run_id": 44407826476,
+        "workflow_name": "OpenCode V2 Stage1 static preflight (TEST only)",
+        "head_branch": "fix/frontend-parity-completion-20261113",
+        "run_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/44407826476",
+        "run_attempt": 1,
+        "node_id": "CR_kwDORVTEtM8AAAAfeJ8FPA",
+        "head_sha": "030b21f0765d1a6e6572f46d262c672d63e69eb7",
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/jobs/135167673660",
+        "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/44407826476/job/135167673660",
+        "status": "completed",
+        "conclusion": "success",
+        "created_at": "2026-11-18T22:03:45Z",
+        "started_at": "2026-11-18T23:07:53Z",
+        "completed_at": "2026-11-18T23:09:38Z",
+        "name": "Published V2.0.21 durable HTTP process (TEST discovery only)",
+        "steps": [
+          {
+            "name": "Set up job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 1,
+            "started_at": "2026-11-18T23:07:53Z",
+            "completed_at": "2026-11-18T23:07:56Z"
+          },
+          {
+            "name": "Run actions/checkout@v6",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 2,
+            "started_at": "2026-11-18T23:07:56Z",
+            "completed_at": "2026-11-18T23:08:10Z"
+          },
+          {
+            "name": "Require immutable PR source HEAD",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 3,
+            "started_at": "2026-11-18T23:08:10Z",
+            "completed_at": "2026-11-18T23:08:11Z"
+          },
+          {
+            "name": "Run pnpm/action-setup@v6",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 4,
+            "started_at": "2026-11-18T23:08:11Z",
+            "completed_at": "2026-11-18T23:08:21Z"
+          },
+          {
+            "name": "Run actions/setup-node@v6",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 5,
+            "started_at": "2026-11-18T23:08:21Z",
+            "completed_at": "2026-11-18T23:08:25Z"
+          },
+          {
+            "name": "Install exact private Stage1 Session SPI dependencies",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 6,
+            "started_at": "2026-11-18T23:08:25Z",
+            "completed_at": "2026-11-18T23:09:03Z"
+          },
+          {
+            "name": "Build isolated Stage1 V2 Session SPI for TEST-only HTTP proof",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 7,
+            "started_at": "2026-11-18T23:09:03Z",
+            "completed_at": "2026-11-18T23:09:06Z"
+          },
+          {
+            "name": "Check isolated durable-HTTP TEST harness syntax",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 8,
+            "started_at": "2026-11-18T23:09:06Z",
+            "completed_at": "2026-11-18T23:09:06Z"
+          },
+          {
+            "name": "Check TEST shell-flag permission split diagnostic (no tool execution)",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 9,
+            "started_at": "2026-11-18T23:09:06Z",
+            "completed_at": "2026-11-18T23:09:06Z"
+          },
+          {
+            "name": "Negative SDK setup cleanup and HOLD receipt (no worker launch)",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 10,
+            "started_at": "2026-11-18T23:09:06Z",
+            "completed_at": "2026-11-18T23:09:06Z"
+          },
+          {
+            "name": "Install official pinned SDK without scripts in TEST-owned npm prefix",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 11,
+            "started_at": "2026-11-18T23:09:06Z",
+            "completed_at": "2026-11-18T23:09:27Z"
+          },
+          {
+            "name": "Negative valid-SDK post-copy cleanup cannot touch shared package prefix",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 12,
+            "started_at": "2026-11-18T23:09:27Z",
+            "completed_at": "2026-11-18T23:09:27Z"
+          },
+          {
+            "name": "Negative owned-worker cleanup on parent SIGINT and SIGTERM",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 13,
+            "started_at": "2026-11-18T23:09:27Z",
+            "completed_at": "2026-11-18T23:09:31Z"
+          },
+          {
+            "name": "Probe actual published server HTTP durable-log and cold restart",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 14,
+            "started_at": "2026-11-18T23:09:31Z",
+            "completed_at": "2026-11-18T23:09:35Z"
+          },
+          {
+            "name": "Require exact-HEAD TEST receipt (never a Host/model certificate)",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 15,
+            "started_at": "2026-11-18T23:09:35Z",
+            "completed_at": "2026-11-18T23:09:35Z"
+          },
+          {
+            "name": "Preserve TEST-only receipt on success or safe failure",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 16,
+            "started_at": "2026-11-18T23:09:35Z",
+            "completed_at": "2026-11-18T23:09:36Z"
+          },
+          {
+            "name": "Post Run actions/setup-node@v6",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 30,
+            "started_at": "2026-11-18T23:09:36Z",
+            "completed_at": "2026-11-18T23:09:36Z"
+          },
+          {
+            "name": "Post Run pnpm/action-setup@v6",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 31,
+            "started_at": "2026-11-18T23:09:36Z",
+            "completed_at": "2026-11-18T23:09:36Z"
+          },
+          {
+            "name": "Post Run actions/checkout@v6",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 32,
+            "started_at": "2026-11-18T23:09:36Z",
+            "completed_at": "2026-11-18T23:09:36Z"
+          },
+          {
+            "name": "Complete job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 33,
+            "started_at": "2026-11-18T23:09:36Z",
+            "completed_at": "2026-11-18T23:09:36Z"
+          }
+        ],
+        "check_run_url": "https://api.github.com/repos/777genius/agent-teams-ai/check-runs/135167673660",
+        "labels": [
+          "ubuntu-24.04"
+        ],
+        "runner_id": 1000395338,
+        "runner_name": "GitHub Actions 1000395338",
+        "runner_group_id": 0,
+        "runner_group_name": "GitHub Actions"
+      },
+      "rawLog": {
+        "jobId": 135167673660,
+        "requestedAt": "2026-11-18T23:17:01.639492+00:00",
+        "status": "captured-permanently-retired",
+        "capturedAt": "2026-11-18T23:19:01.642102+00:00",
+        "localPath": "/workspace/scratch/c714f5bce554/ci-current-030/job-135167673660-terminal.log",
+        "sha256": "68cc3c8dcf433317a4644b112cba6ce9a1d67621f4e77da1609d8f43848d9d9e",
+        "bytes": 74039,
+        "gitBlob": "e32c85a9b991bed9415c5cdbaded157e931f6b74",
+        "exactImmutableReadback": true
+      },
+      "scope": "V2.0.21 published HTTP discovery TEST only; shell flag6/6, setup negatives5pass1skip before SDK then6/6, HTTP interruption2pass2native-only skips; twelve ordered discovery stages and explicit qualified/modelTurn/processCustody/packagedElectron false enforced by successful final checker.",
+      "exactRelevantLogLines": [
+        {
+          "line": 628,
+          "text": "2026-11-18T23:09:06.0365058Z ##[group]Run node --test packages/legacy-agent-host/tests/opencode-v2-shell-flag-policy-probe.test.mjs\n"
+        },
+        {
+          "line": 629,
+          "text": "2026-11-18T23:09:06.0365659Z \u001b[36;1mnode --test packages/legacy-agent-host/tests/opencode-v2-shell-flag-policy-probe.test.mjs\u001b[0m\n"
+        },
+        {
+          "line": 630,
+          "text": "2026-11-18T23:09:06.0388004Z shell: /usr/bin/bash -e {0}\n"
+        },
+        {
+          "line": 631,
+          "text": "2026-11-18T23:09:06.0388257Z env:\n"
+        },
+        {
+          "line": 632,
+          "text": "2026-11-18T23:09:06.0388476Z   ELECTRON_SKIP_BINARY_DOWNLOAD: 1\n"
+        },
+        {
+          "line": 633,
+          "text": "2026-11-18T23:09:06.0388749Z   npm_config_audit: false\n"
+        },
+        {
+          "line": 634,
+          "text": "2026-11-18T23:09:06.0388998Z   npm_config_fund: false\n"
+        },
+        {
+          "line": 635,
+          "text": "2026-11-18T23:09:06.0389270Z   PNPM_HOME: /home/runner/setup-pnpm/node_modules/.bin\n"
+        },
+        {
+          "line": 636,
+          "text": "2026-11-18T23:09:06.0389547Z ##[endgroup]\n"
+        },
+        {
+          "line": 637,
+          "text": "2026-11-18T23:09:06.1035851Z \u2714 native decision split is never a tool-execution certificate (1.311794ms)\n"
+        },
+        {
+          "line": 638,
+          "text": "2026-11-18T23:09:06.1037232Z \u2714 foreign native workspace fails before permission evaluation and sends zero DELETEs (1.056737ms)\n"
+        },
+        {
+          "line": 639,
+          "text": "2026-11-18T23:09:06.1038399Z \u2714 external ALLOW fails closed with exactly one cleanup (0.219011ms)\n"
+        },
+        {
+          "line": 640,
+          "text": "2026-11-18T23:09:06.1039533Z \u2714 shell ASK fails before external request with exactly one cleanup (0.209158ms)\n"
+        },
+        {
+          "line": 641,
+          "text": "2026-11-18T23:09:06.1040376Z \u2714 foreign session at pre-cleanup attestation blocks DELETE (0.19931ms)\n"
+        },
+        {
+          "line": 642,
+          "text": "2026-11-18T23:09:06.1041254Z \u2714 unreadable pre-cleanup attestation blocks DELETE (0.234655ms)\n"
+        },
+        {
+          "line": 643,
+          "text": "2026-11-18T23:09:06.1103300Z \u2139 tests 6\n"
+        },
+        {
+          "line": 644,
+          "text": "2026-11-18T23:09:06.1103889Z \u2139 suites 0\n"
+        },
+        {
+          "line": 645,
+          "text": "2026-11-18T23:09:06.1104270Z \u2139 pass 6\n"
+        },
+        {
+          "line": 646,
+          "text": "2026-11-18T23:09:06.1104629Z \u2139 fail 0\n"
+        },
+        {
+          "line": 647,
+          "text": "2026-11-18T23:09:06.1105144Z \u2139 cancelled 0\n"
+        },
+        {
+          "line": 648,
+          "text": "2026-11-18T23:09:06.1105523Z \u2139 skipped 0\n"
+        },
+        {
+          "line": 649,
+          "text": "2026-11-18T23:09:06.1105887Z \u2139 todo 0\n"
+        },
+        {
+          "line": 650,
+          "text": "2026-11-18T23:09:06.1106269Z \u2139 duration_ms 45.014643\n"
+        },
+        {
+          "line": 651,
+          "text": "2026-11-18T23:09:06.1160502Z ##[group]Run node --test packages/legacy-agent-host/tests/opencode-v2-http-setup-negative.test.mjs\n"
+        },
+        {
+          "line": 652,
+          "text": "2026-11-18T23:09:06.1161068Z \u001b[36;1mnode --test packages/legacy-agent-host/tests/opencode-v2-http-setup-negative.test.mjs\u001b[0m\n"
+        },
+        {
+          "line": 653,
+          "text": "2026-11-18T23:09:06.1182490Z shell: /usr/bin/bash -e {0}\n"
+        },
+        {
+          "line": 654,
+          "text": "2026-11-18T23:09:06.1182792Z env:\n"
+        },
+        {
+          "line": 655,
+          "text": "2026-11-18T23:09:06.1183318Z   ELECTRON_SKIP_BINARY_DOWNLOAD: 1\n"
+        },
+        {
+          "line": 656,
+          "text": "2026-11-18T23:09:06.1183587Z   npm_config_audit: false\n"
+        },
+        {
+          "line": 657,
+          "text": "2026-11-18T23:09:06.1183871Z   npm_config_fund: false\n"
+        },
+        {
+          "line": 658,
+          "text": "2026-11-18T23:09:06.1184140Z   PNPM_HOME: /home/runner/setup-pnpm/node_modules/.bin\n"
+        },
+        {
+          "line": 659,
+          "text": "2026-11-18T23:09:06.1184486Z   OPENCODE_V2_TEST_SOURCE_HEAD: 030b21f0765d1a6e6572f46d262c672d63e69eb7\n"
+        },
+        {
+          "line": 660,
+          "text": "2026-11-18T23:09:06.1184854Z ##[endgroup]\n"
+        },
+        {
+          "line": 661,
+          "text": "2026-11-18T23:09:06.4811584Z \u2714 published package snapshot detects nested mutation even with unchanged directory entries (1.820041ms)\n"
+        },
+        {
+          "line": 662,
+          "text": "2026-11-18T23:09:06.4843187Z \u2714 failed published V2 SDK setup emits HOLD receipt and cleans only its TEST root (32.515731ms)\n"
+        },
+        {
+          "line": 663,
+          "text": "2026-11-18T23:09:06.4844440Z \u2714 opencode-v2-published-http-persist.mjs records namespace allocation failure before any process exists (39.076396ms)\n"
+        },
+        {
+          "line": 664,
+          "text": "2026-11-18T23:09:06.4856041Z \u2714 opencode-v2-native-instructions.mjs records namespace allocation failure before any process exists (192.129826ms)\n"
+        },
+        {
+          "line": 665,
+          "text": "2026-11-18T23:09:06.4857235Z \u2714 receipt IO failure preserves the first sanitized setup error and removes its namespace (31.362256ms)\n"
+        },
+        {
+          "line": 666,
+          "text": "2026-11-18T23:09:06.4858139Z \ufe63 valid published SDK post-copy failure cannot modify its shared prefix (0.10229ms) # SKIP\n"
+        },
+        {
+          "line": 667,
+          "text": "2026-11-18T23:09:06.4917699Z \u2139 tests 6\n"
+        },
+        {
+          "line": 668,
+          "text": "2026-11-18T23:09:06.4918478Z \u2139 suites 0\n"
+        },
+        {
+          "line": 669,
+          "text": "2026-11-18T23:09:06.4919075Z \u2139 pass 5\n"
+        },
+        {
+          "line": 670,
+          "text": "2026-11-18T23:09:06.4919799Z \u2139 fail 0\n"
+        },
+        {
+          "line": 671,
+          "text": "2026-11-18T23:09:06.4920106Z \u2139 cancelled 0\n"
+        },
+        {
+          "line": 672,
+          "text": "2026-11-18T23:09:06.4920443Z \u2139 skipped 1\n"
+        },
+        {
+          "line": 673,
+          "text": "2026-11-18T23:09:06.4920660Z \u2139 todo 0\n"
+        },
+        {
+          "line": 674,
+          "text": "2026-11-18T23:09:06.4920949Z \u2139 duration_ms 346.358069\n"
+        },
+        {
+          "line": 703,
+          "text": "2026-11-18T23:09:27.3586391Z ##[group]Run node --test packages/legacy-agent-host/tests/opencode-v2-http-setup-negative.test.mjs\n"
+        },
+        {
+          "line": 704,
+          "text": "2026-11-18T23:09:27.3587001Z \u001b[36;1mnode --test packages/legacy-agent-host/tests/opencode-v2-http-setup-negative.test.mjs\u001b[0m\n"
+        },
+        {
+          "line": 705,
+          "text": "2026-11-18T23:09:27.3685137Z shell: /usr/bin/bash -e {0}\n"
+        },
+        {
+          "line": 706,
+          "text": "2026-11-18T23:09:27.3685403Z env:\n"
+        },
+        {
+          "line": 707,
+          "text": "2026-11-18T23:09:27.3685637Z   ELECTRON_SKIP_BINARY_DOWNLOAD: 1\n"
+        },
+        {
+          "line": 708,
+          "text": "2026-11-18T23:09:27.3685903Z   npm_config_audit: false\n"
+        },
+        {
+          "line": 709,
+          "text": "2026-11-18T23:09:27.3686162Z   npm_config_fund: false\n"
+        },
+        {
+          "line": 710,
+          "text": "2026-11-18T23:09:27.3686425Z   PNPM_HOME: /home/runner/setup-pnpm/node_modules/.bin\n"
+        },
+        {
+          "line": 711,
+          "text": "2026-11-18T23:09:27.3686836Z   OPENCODE_V2_TEST_SDK_PREFIX: /home/runner/work/_temp/opencode-v2-http-test\n"
+        },
+        {
+          "line": 712,
+          "text": "2026-11-18T23:09:27.3687271Z   OPENCODE_V2_TEST_SOURCE_HEAD: 030b21f0765d1a6e6572f46d262c672d63e69eb7\n"
+        },
+        {
+          "line": 713,
+          "text": "2026-11-18T23:09:27.3687591Z ##[endgroup]\n"
+        },
+        {
+          "line": 714,
+          "text": "2026-11-18T23:09:27.7828326Z \u2714 published package snapshot detects nested mutation even with unchanged directory entries (1.866734ms)\n"
+        },
+        {
+          "line": 715,
+          "text": "2026-11-18T23:09:27.7832184Z \u2714 failed published V2 SDK setup emits HOLD receipt and cleans only its TEST root (33.497689ms)\n"
+        },
+        {
+          "line": 716,
+          "text": "2026-11-18T23:09:27.7833161Z \u2714 opencode-v2-published-http-persist.mjs records namespace allocation failure before any process exists (32.03327ms)\n"
+        },
+        {
+          "line": 717,
+          "text": "2026-11-18T23:09:27.7833900Z \u2714 opencode-v2-native-instructions.mjs records namespace allocation failure before any process exists (196.414299ms)\n"
+        },
+        {
+          "line": 718,
+          "text": "2026-11-18T23:09:27.7863809Z \u2714 receipt IO failure preserves the first sanitized setup error and removes its namespace (32.666221ms)\n"
+        },
+        {
+          "line": 719,
+          "text": "2026-11-18T23:09:27.7865133Z \u2714 valid published SDK post-copy failure cannot modify its shared prefix (48.538387ms)\n"
+        },
+        {
+          "line": 720,
+          "text": "2026-11-18T23:09:27.7928557Z \u2139 tests 6\n"
+        },
+        {
+          "line": 721,
+          "text": "2026-11-18T23:09:27.7928822Z \u2139 suites 0\n"
+        },
+        {
+          "line": 722,
+          "text": "2026-11-18T23:09:27.7933233Z \u2139 pass 6\n"
+        },
+        {
+          "line": 723,
+          "text": "2026-11-18T23:09:27.7947529Z \u2139 fail 0\n"
+        },
+        {
+          "line": 724,
+          "text": "2026-11-18T23:09:27.7947723Z \u2139 cancelled 0\n"
+        },
+        {
+          "line": 725,
+          "text": "2026-11-18T23:09:27.7947927Z \u2139 skipped 0\n"
+        },
+        {
+          "line": 726,
+          "text": "2026-11-18T23:09:27.7948093Z \u2139 todo 0\n"
+        },
+        {
+          "line": 727,
+          "text": "2026-11-18T23:09:27.7948279Z \u2139 duration_ms 395.526308\n"
+        },
+        {
+          "line": 728,
+          "text": "2026-11-18T23:09:27.7986628Z ##[group]Run node --test packages/legacy-agent-host/tests/opencode-v2-http-interrupt-negative.test.mjs\n"
+        },
+        {
+          "line": 729,
+          "text": "2026-11-18T23:09:27.7987189Z \u001b[36;1mnode --test packages/legacy-agent-host/tests/opencode-v2-http-interrupt-negative.test.mjs\u001b[0m\n"
+        },
+        {
+          "line": 730,
+          "text": "2026-11-18T23:09:27.8015274Z shell: /usr/bin/bash -e {0}\n"
+        },
+        {
+          "line": 731,
+          "text": "2026-11-18T23:09:27.8015479Z env:\n"
+        },
+        {
+          "line": 732,
+          "text": "2026-11-18T23:09:27.8015648Z   ELECTRON_SKIP_BINARY_DOWNLOAD: 1\n"
+        },
+        {
+          "line": 733,
+          "text": "2026-11-18T23:09:27.8015854Z   npm_config_audit: false\n"
+        },
+        {
+          "line": 734,
+          "text": "2026-11-18T23:09:27.8016032Z   npm_config_fund: false\n"
+        },
+        {
+          "line": 735,
+          "text": "2026-11-18T23:09:27.8016242Z   PNPM_HOME: /home/runner/setup-pnpm/node_modules/.bin\n"
+        },
+        {
+          "line": 736,
+          "text": "2026-11-18T23:09:27.8016571Z   OPENCODE_V2_TEST_SDK_PREFIX: /home/runner/work/_temp/opencode-v2-http-test\n"
+        },
+        {
+          "line": 737,
+          "text": "2026-11-18T23:09:27.8016931Z   OPENCODE_V2_TEST_SOURCE_HEAD: 030b21f0765d1a6e6572f46d262c672d63e69eb7\n"
+        },
+        {
+          "line": 738,
+          "text": "2026-11-18T23:09:27.8017240Z ##[endgroup]\n"
+        },
+        {
+          "line": 739,
+          "text": "2026-11-18T23:09:29.5795507Z \u2714 SIGINT reaps the owned published HTTP server and emits a HOLD receipt (1715.96491ms)\n"
+        },
+        {
+          "line": 740,
+          "text": "2026-11-18T23:09:31.1886642Z \u2714 SIGTERM reaps the owned published HTTP server and emits a HOLD receipt (1610.603224ms)\n"
+        },
+        {
+          "line": 741,
+          "text": "2026-11-18T23:09:31.1888000Z \ufe63 SIGINT reaps the owned native ELF server and emits a HOLD receipt (0.228543ms) # SKIP\n"
+        },
+        {
+          "line": 742,
+          "text": "2026-11-18T23:09:31.1888941Z \ufe63 SIGTERM reaps the owned native ELF server and emits a HOLD receipt (0.111692ms) # SKIP\n"
+        },
+        {
+          "line": 743,
+          "text": "2026-11-18T23:09:31.1952173Z \u2139 tests 4\n"
+        },
+        {
+          "line": 744,
+          "text": "2026-11-18T23:09:31.1952604Z \u2139 suites 0\n"
+        },
+        {
+          "line": 745,
+          "text": "2026-11-18T23:09:31.1953166Z \u2139 pass 2\n"
+        },
+        {
+          "line": 746,
+          "text": "2026-11-18T23:09:31.1953412Z \u2139 fail 0\n"
+        },
+        {
+          "line": 747,
+          "text": "2026-11-18T23:09:31.1953639Z \u2139 cancelled 0\n"
+        },
+        {
+          "line": 748,
+          "text": "2026-11-18T23:09:31.1953897Z \u2139 skipped 2\n"
+        },
+        {
+          "line": 749,
+          "text": "2026-11-18T23:09:31.1972368Z \u2139 todo 0\n"
+        },
+        {
+          "line": 750,
+          "text": "2026-11-18T23:09:31.1972751Z \u2139 duration_ms 3367.6877\n"
+        },
+        {
+          "line": 751,
+          "text": "2026-11-18T23:09:31.2014904Z ##[group]Run node packages/legacy-agent-host/tests/opencode-v2-published-http-persist.mjs\n"
+        },
+        {
+          "line": 752,
+          "text": "2026-11-18T23:09:31.2015393Z \u001b[36;1mnode packages/legacy-agent-host/tests/opencode-v2-published-http-persist.mjs\u001b[0m\n"
+        },
+        {
+          "line": 753,
+          "text": "2026-11-18T23:09:31.2042451Z shell: /usr/bin/bash -e {0}\n"
+        },
+        {
+          "line": 754,
+          "text": "2026-11-18T23:09:31.2042700Z env:\n"
+        },
+        {
+          "line": 755,
+          "text": "2026-11-18T23:09:31.2043019Z   ELECTRON_SKIP_BINARY_DOWNLOAD: 1\n"
+        },
+        {
+          "line": 756,
+          "text": "2026-11-18T23:09:31.2043277Z   npm_config_audit: false\n"
+        },
+        {
+          "line": 757,
+          "text": "2026-11-18T23:09:31.2043458Z   npm_config_fund: false\n"
+        },
+        {
+          "line": 758,
+          "text": "2026-11-18T23:09:31.2043675Z   PNPM_HOME: /home/runner/setup-pnpm/node_modules/.bin\n"
+        },
+        {
+          "line": 759,
+          "text": "2026-11-18T23:09:31.2043990Z   OPENCODE_V2_TEST_SDK_PREFIX: /home/runner/work/_temp/opencode-v2-http-test\n"
+        },
+        {
+          "line": 760,
+          "text": "2026-11-18T23:09:31.2044323Z   OPENCODE_V2_TEST_SOURCE_HEAD: 030b21f0765d1a6e6572f46d262c672d63e69eb7\n"
+        },
+        {
+          "line": 761,
+          "text": "2026-11-18T23:09:31.2044739Z   OPENCODE_V2_TEST_HTTP_RECEIPT: /home/runner/work/agent-teams-ai/agent-teams-ai/opencode-v2-http-persist.json\n"
+        },
+        {
+          "line": 762,
+          "text": "2026-11-18T23:09:31.2045099Z ##[endgroup]\n"
+        },
+        {
+          "line": 763,
+          "text": "2026-11-18T23:09:35.5634647Z ##[group]Run set -euo pipefail\n"
+        },
+        {
+          "line": 764,
+          "text": "2026-11-18T23:09:35.5635025Z \u001b[36;1mset -euo pipefail\u001b[0m\n"
+        },
+        {
+          "line": 765,
+          "text": "2026-11-18T23:09:35.5635239Z \u001b[36;1mtest -s opencode-v2-http-persist.json\u001b[0m\n"
+        },
+        {
+          "line": 766,
+          "text": "2026-11-18T23:09:35.5635472Z \u001b[36;1mnode --input-type=module -e \"\u001b[0m\n"
+        },
+        {
+          "line": 767,
+          "text": "2026-11-18T23:09:35.5635675Z \u001b[36;1m  import fs from 'node:fs';\u001b[0m\n"
+        },
+        {
+          "line": 768,
+          "text": "2026-11-18T23:09:35.5635970Z \u001b[36;1m  const r=JSON.parse(fs.readFileSync('opencode-v2-http-persist.json','utf8'));\u001b[0m\n"
+        },
+        {
+          "line": 769,
+          "text": "2026-11-18T23:09:35.5636308Z \u001b[36;1m  if(r.sourceHead!==process.env.EXPECTED_PR_HEAD ||\u001b[0m\n"
+        },
+        {
+          "line": 770,
+          "text": "2026-11-18T23:09:35.5636613Z \u001b[36;1m     r.kind!=='TEST_V2_HTTP_DURABLE_DISCOVERY' || r.qualified!==false ||\u001b[0m\n"
+        },
+        {
+          "line": 771,
+          "text": "2026-11-18T23:09:35.5636956Z \u001b[36;1m     r.packagedElectronQualified!==false || r.modelTurnProven!==false ||\u001b[0m\n"
+        },
+        {
+          "line": 772,
+          "text": "2026-11-18T23:09:35.5637290Z \u001b[36;1m     r.processCustodyQualified!==false || r.cleanup!==true ||\u001b[0m\n"
+        },
+        {
+          "line": 773,
+          "text": "2026-11-18T23:09:35.5637614Z \u001b[36;1m     r.durableHTTPEvents!==1 || r.hostSpiReadinessProven!==true ||\u001b[0m\n"
+        },
+        {
+          "line": 774,
+          "text": "2026-11-18T23:09:35.5637967Z \u001b[36;1m     r.nativeSessionPermissionOrderReadbackProven!==true ||\u001b[0m\n"
+        },
+        {
+          "line": 775,
+          "text": "2026-11-18T23:09:35.5638382Z \u001b[36;1m     r.nativeShellFlagPermissionSplitObserved!==true ||\u001b[0m\n"
+        },
+        {
+          "line": 776,
+          "text": "2026-11-18T23:09:35.5638668Z \u001b[36;1m     r.nativePermissionResolverProven!==true ||\u001b[0m\n"
+        },
+        {
+          "line": 777,
+          "text": "2026-11-18T23:09:35.5638982Z \u001b[36;1m     r.nativePermissionReplyRejectNoReplayProven!==true ||\u001b[0m\n"
+        },
+        {
+          "line": 778,
+          "text": "2026-11-18T23:09:35.5639294Z \u001b[36;1m     r.nativeSavedAlwaysOverridesAskProven!==true ||\u001b[0m\n"
+        },
+        {
+          "line": 779,
+          "text": "2026-11-18T23:09:35.5639605Z \u001b[36;1m     r.nativeExplicitDenyBeatsSavedAlwaysProven!==true ||\u001b[0m\n"
+        },
+        {
+          "line": 780,
+          "text": "2026-11-18T23:09:35.5639920Z \u001b[36;1m     r.nativeSavedGrantSurvivesColdRestartProven!==true ||\u001b[0m\n"
+        },
+        {
+          "line": 781,
+          "text": "2026-11-18T23:09:35.5640280Z \u001b[36;1m     r.nativeFreshSessionSavedGrantSurvivesColdRestartProven!==true ||\u001b[0m\n"
+        },
+        {
+          "line": 782,
+          "text": "2026-11-18T23:09:35.5640685Z \u001b[36;1m     r.nativeSavedGrantRemainsProjectScopedAfterRestartProven!==true ||\u001b[0m\n"
+        },
+        {
+          "line": 783,
+          "text": "2026-11-18T23:09:35.5641038Z \u001b[36;1m     r.nativeUnauthenticatedDeleteRejected!==true ||\u001b[0m\n"
+        },
+        {
+          "line": 784,
+          "text": "2026-11-18T23:09:35.5641355Z \u001b[36;1m     r.nativeUnauthenticatedPermissionGrantRejected!==true ||\u001b[0m\n"
+        },
+        {
+          "line": 785,
+          "text": "2026-11-18T23:09:35.5641692Z \u001b[36;1m     r.nativeStalePermissionAfterRestartRejected!==true ||\u001b[0m\n"
+        },
+        {
+          "line": 786,
+          "text": "2026-11-18T23:09:35.5642013Z \u001b[36;1m     r.nativeStaleGrantAfterRestartRejected!==true ||\u001b[0m\n"
+        },
+        {
+          "line": 787,
+          "text": "2026-11-18T23:09:35.5642286Z \u001b[36;1m     r.failure !== undefined) process.exit(1);\u001b[0m\n"
+        },
+        {
+          "line": 788,
+          "text": "2026-11-18T23:09:35.5642579Z \u001b[36;1m  // A fabricated six-element receipt is not a completed native proof.\u001b[0m\n"
+        },
+        {
+          "line": 789,
+          "text": "2026-11-18T23:09:35.5643239Z \u001b[36;1m  // Require each physical TEST stage in its original order.\u001b[0m\n"
+        },
+        {
+          "line": 790,
+          "text": "2026-11-18T23:09:35.5643505Z \u001b[36;1m  const requiredSteps=[\u001b[0m\n"
+        },
+        {
+          "line": 791,
+          "text": "2026-11-18T23:09:35.5643739Z \u001b[36;1m    'TEST_published_server_real_authenticated_HTTP_ready',\u001b[0m\n"
+        },
+        {
+          "line": 792,
+          "text": "2026-11-18T23:09:35.5644000Z \u001b[36;1m    'TEST_no_unauthenticated_HTTP_access',\u001b[0m\n"
+        },
+        {
+          "line": 793,
+          "text": "2026-11-18T23:09:35.5644280Z \u001b[36;1m    'TEST_native_shell_flag_permission_split_not_tool_enforcement',\u001b[0m\n"
+        },
+        {
+          "line": 794,
+          "text": "2026-11-18T23:09:35.5644582Z \u001b[36;1m    'TEST_native_unauthenticated_mutations_rejected',\u001b[0m\n"
+        },
+        {
+          "line": 795,
+          "text": "2026-11-18T23:09:35.5644868Z \u001b[36;1m    'TEST_published_native_permission_resolver_and_nonreplay',\u001b[0m\n"
+        },
+        {
+          "line": 796,
+          "text": "2026-11-18T23:09:35.5645168Z \u001b[36;1m    'TEST_real_pending_permission_exists_before_cold_restart',\u001b[0m\n"
+        },
+        {
+          "line": 797,
+          "text": "2026-11-18T23:09:35.5645512Z \u001b[36;1m    'TEST_official_HTTP_session_created_event_persisted',\u001b[0m\n"
+        },
+        {
+          "line": 798,
+          "text": "2026-11-18T23:09:35.5645792Z \u001b[36;1m    'TEST_cold_native_permission_not_replayed_or_accepted',\u001b[0m\n"
+        },
+        {
+          "line": 799,
+          "text": "2026-11-18T23:09:35.5646087Z \u001b[36;1m    'TEST_native_persisted_always_vs_deny_survives_cold_restart',\u001b[0m\n"
+        },
+        {
+          "line": 800,
+          "text": "2026-11-18T23:09:35.5646420Z \u001b[36;1m    'TEST_durable_HTTP_session_identity_survives_cold_restart_no_prompt',\u001b[0m\n"
+        },
+        {
+          "line": 801,
+          "text": "2026-11-18T23:09:35.5646742Z \u001b[36;1m    'TEST_real_published_HTTP_Stage1_SPI_ready_no_model_turn',\u001b[0m\n"
+        },
+        {
+          "line": 802,
+          "text": "2026-11-18T23:09:35.5647049Z \u001b[36;1m    'TEST_Stage1_SPI_readiness_recheck_and_owned_cleanup_no_replay',\u001b[0m\n"
+        },
+        {
+          "line": 803,
+          "text": "2026-11-18T23:09:35.5647321Z \u001b[36;1m  ];\u001b[0m\n"
+        },
+        {
+          "line": 804,
+          "text": "2026-11-18T23:09:35.5647588Z \u001b[36;1m  if(!Array.isArray(r.steps) || r.steps.length!==requiredSteps.length ||\u001b[0m\n"
+        },
+        {
+          "line": 805,
+          "text": "2026-11-18T23:09:35.5648087Z \u001b[36;1m     r.steps.some((step,index)=>step!==requiredSteps[index])) process.exit(1);\u001b[0m\n"
+        },
+        {
+          "line": 806,
+          "text": "2026-11-18T23:09:35.5648369Z \u001b[36;1m\"\u001b[0m\n"
+        },
+        {
+          "line": 807,
+          "text": "2026-11-18T23:09:35.5676375Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}\n"
+        },
+        {
+          "line": 808,
+          "text": "2026-11-18T23:09:35.5676621Z env:\n"
+        },
+        {
+          "line": 809,
+          "text": "2026-11-18T23:09:35.5676788Z   ELECTRON_SKIP_BINARY_DOWNLOAD: 1\n"
+        },
+        {
+          "line": 810,
+          "text": "2026-11-18T23:09:35.5677012Z   npm_config_audit: false\n"
+        },
+        {
+          "line": 811,
+          "text": "2026-11-18T23:09:35.5677198Z   npm_config_fund: false\n"
+        },
+        {
+          "line": 812,
+          "text": "2026-11-18T23:09:35.5677403Z   PNPM_HOME: /home/runner/setup-pnpm/node_modules/.bin\n"
+        },
+        {
+          "line": 813,
+          "text": "2026-11-18T23:09:35.5677668Z   EXPECTED_PR_HEAD: 030b21f0765d1a6e6572f46d262c672d63e69eb7\n"
+        },
+        {
+          "line": 814,
+          "text": "2026-11-18T23:09:35.5677908Z ##[endgroup]\n"
+        }
+      ],
+      "receiptArtifact": "Not downloaded; scope is bounded to actual successful original job steps and original logged checker, not an independent field-by-field receipt readback."
+    }
+  ]
+}

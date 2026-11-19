@@ -34,6 +34,10 @@ export const desktopProofProcessSources = [
 
 /** Finite additions from the accepted horizontal/auth/harness handoffs; no filesystem discovery. */
 export const desktopProofSupplementarySources = [
+  'agent-teams-controller/src/internal/atomicFile.js',
+  'agent-teams-controller/src/internal/fileLock.js',
+  'scripts/legacy-agent-host/desktop-captured-app-exit.test.ts',
+  'scripts/legacy-agent-host/desktop-native-quit-command-snapshot.test.mjs',
   'src/shared/utils/providerLaunchAuthorityMarker.ts',
   'src/renderer/components/team/dialogs/ProviderLaunchAuthorityNotice.tsx',
   'src/renderer/components/team/dialogs/ProviderLaunchAuthorityNotice.test.tsx',
@@ -93,6 +97,9 @@ export const desktopProofSupplementarySources = [
   'packages/legacy-agent-host/src/composition/teamHostEnvelope.ts',
   'src/features/agent-backend/main/adapters/output/HostSmartScheduleRuntimeAdapter.ts',
   'src/features/agent-backend/main/application/captureHostScheduleTarget.ts',
+  'src/main/services/schedule/JsonScheduleRepository.ts',
+  'src/main/services/schedule/ScheduleRepository.ts',
+  'src/main/services/schedule/SchedulerService.ts',
   'src/features/agent-backend/main/infrastructure/CapturedLocalModelReadiness.ts',
   'src/shared/types/teamProvisioning.ts',
   'packages/legacy-agent-host/src/adapters/providers/ClaudeMemberProvider.ts',
@@ -194,6 +201,7 @@ export const desktopProofSupplementarySources = [
   'test/renderer/components/common/ProviderActivityStatusStrip.test.ts',
   'src/renderer/components/team/messages/useComposerTextarea.ts',
   'packages/legacy-agent-host/tests/fixtures/native-host.ts',
+  'packages/legacy-agent-host/tests/fixtures/native-opencode-team/passive-diagnostics.ts',
   'packages/legacy-agent-host/tests/fixtures/native-message-image.ts',
   'packages/legacy-agent-host/tests/fixtures/native-message-pdf.ts',
   'scripts/legacy-agent-host/desktop-activity-readback-fixture.ts',
@@ -335,6 +343,12 @@ export const desktopProofSupplementarySources = [
   'src/renderer/components/team/members/TeamRosterEditorSection.tsx',
   'src/features/localization/renderer/locales/en/team.json',
   'scripts/legacy-agent-host/desktop-retained-opencode-authority.ts',
+  'src/features/agent-backend/main/application/createRetainedLegacyLaunchScope.ts',
+  'src/main/composition/createDesktopStoppedTeamOperations.ts',
+  'src/features/agent-backend/main/infrastructure/stopped-import/createRetainedLegacyOpenDiagnostic.ts',
+  'src/features/agent-backend/main/infrastructure/stopped-import/retainedLegacyOpenDiagnosticContract.ts',
+  'src/features/agent-backend/main/infrastructure/stopped-import/createStoppedImportDiagnostic.ts',
+  'src/features/agent-backend/main/application/validateRetainedLegacyLaunchRequest.ts',
   'src/features/review-flow/renderer/http/index.ts',
 ];
 

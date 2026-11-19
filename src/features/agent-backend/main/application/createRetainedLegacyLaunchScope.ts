@@ -53,6 +53,8 @@ export function createRetainedLegacyLaunchScope(options: {
   target: Awaited<ReturnType<DesktopBackendFeature['captureStoppedImport']>>;
   guard: BackendRequestGuard;
   runtime: CapturedRetainedLegacyRuntime;
+  /** Private observation only; it cannot decide eligibility or delay original cleanup. */
+  onEligibilityRefusal?: (error: unknown) => unknown;
 }): RetainedLegacyLaunchAuthority {
   const { source, owners, target, guard, runtime } = options;
   const commandId = stoppedLegacyImportCommandId(source, source.contextId, source.teamName);
@@ -96,10 +98,19 @@ export function createRetainedLegacyLaunchScope(options: {
         return 'stopped';
       } catch (error) {
         current();
-        return error instanceof LegacyStoppedImportHold &&
+        if (
+          error instanceof LegacyStoppedImportHold &&
           error.reason === 'native-custody-unverified'
-          ? 'native-custody-unverified'
-          : 'other';
+        )
+          return 'native-custody-unverified';
+        try {
+          void Promise.resolve(options.onEligibilityRefusal?.(error)).catch(() => {
+            // A rejected observer cannot replace the original eligibility refusal.
+          });
+        } catch {
+          // A broken observer cannot change admission, currentness or cleanup.
+        }
+        return 'other';
       }
     },
     async run(request) {

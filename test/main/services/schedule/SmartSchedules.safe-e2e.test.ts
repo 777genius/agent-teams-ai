@@ -434,13 +434,14 @@ describe('Smart schedules filesystem safe E2E', () => {
     let releaseWrite!: () => void;
     const writeGate = new Promise<void>((resolve) => { releaseWrite = resolve; });
     let writeStarted = false;
-    const saveSchedule = repository.saveSchedule.bind(repository);
-    vi.spyOn(repository, 'saveSchedule').mockImplementation(async (candidate) => {
-      if (candidate.id === schedule.id && candidate.lastRunAt) {
+    const metadata = repository as unknown as { writeSchedulesFile(rows: Schedule[]): Promise<void> };
+    const writeSchedulesFile = metadata.writeSchedulesFile.bind(repository);
+    vi.spyOn(metadata, 'writeSchedulesFile').mockImplementation(async (rows) => {
+      if (rows.some((candidate) => candidate.id === schedule.id && candidate.lastRunAt)) {
         writeStarted = true;
         await writeGate;
       }
-      return saveSchedule(candidate);
+      return writeSchedulesFile(rows);
     });
 
     await scheduler.triggerNow(schedule.id);

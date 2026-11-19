@@ -112,6 +112,8 @@ export function readPersistedLaunchRuntimePidsSync(teamName: string): number[] {
 }
 
 export interface TeamLaunchStatePublicationOptions {
+  /** Opt-in from the live solo owner; completion retains its real finished phase. */
+  ownedSoloLaunch?: boolean;
   /**
    * True when the write republishes launch truth that already existed instead
    * of starting a launch: the rollback of a stale write restoring what it
@@ -308,7 +310,10 @@ export class TeamLaunchStateStore {
       this.writeNow(teamName, snapshot, {
         ...options,
         runId: options?.runId ?? snapshot.publicationRunId,
-        isAuthorized: () => options?.isAuthorized?.() !== false && publicationIsCurrent(),
+        isAuthorized: () =>
+          (options?.ownedSoloLaunch === true
+            ? options.isAuthorized?.() === true
+            : options?.isAuthorized?.() !== false) && publicationIsCurrent(),
       })
     );
   }
@@ -320,12 +325,39 @@ export class TeamLaunchStateStore {
     beginsLaunch = false
   ): Promise<boolean> {
     if (options.isAuthorized?.() === false) return false;
+    const ownedSoloLaunch = options.ownedSoloLaunch === true;
+    if (
+      ownedSoloLaunch &&
+      (snapshot.version !== 2 ||
+        snapshot.teamName !== teamName ||
+        snapshot.launchPhase !== 'finished' ||
+        !Array.isArray(snapshot.expectedMembers) ||
+        snapshot.expectedMembers.length !== 0 ||
+        !snapshot.members ||
+        typeof snapshot.members !== 'object' ||
+        Array.isArray(snapshot.members) ||
+        Object.keys(snapshot.members).length !== 0 ||
+        typeof snapshot.leadSessionId !== 'string' ||
+        snapshot.leadSessionId.length === 0 ||
+        snapshot.leadSessionId.length > 256 ||
+        snapshot.leadSessionId.trim() !== snapshot.leadSessionId ||
+        snapshot.leadSessionId.includes('\0') ||
+        typeof options.runId !== 'string' ||
+        options.runId.length === 0 ||
+        options.runId.length > 256 ||
+        options.runId.trim() !== options.runId ||
+        options.runId.includes('\0') ||
+        snapshot.publicationRunId !== options.runId ||
+        options.isAuthorized?.() !== true ||
+        options.authorizesNewRun?.() !== true)
+    )
+      return false;
     const freshness = await readTeamLaunchFreshness(teamName);
     if (options.isAuthorized?.() === false) return false;
     // Existing native launch flows publish their first active snapshot through the
     // boundary. Only their current, explicitly checked new run can begin here.
     beginsLaunch ||=
-      snapshot.launchPhase === 'active' &&
+      (snapshot.launchPhase === 'active' || ownedSoloLaunch) &&
       options.republishesExistingLaunch !== true &&
       !!options.runId &&
       options.authorizesNewRun?.() === true &&

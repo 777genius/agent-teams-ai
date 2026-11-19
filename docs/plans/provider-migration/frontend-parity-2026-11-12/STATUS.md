@@ -1,11 +1,14 @@
 # Завершение Host / frontend parity
 
-Обновлено: 18 ноября 2026. Единственный текущий рабочий план.
-Последний original GUI source: `823ef00a5cd081ccc3efdad85faf41e1cd888a27`.
+Обновлено: 19 ноября 2026. Единственный текущий рабочий план.
+Последний завершённый original CI source: `030b21f0765d1a6e6572f46d262c672d63e69eb7`.
+Полный F1 на030 PASS: Taskboard, review cycle, ReviewFlow, Settings/Approved/reopen
+и все три холодные owner-routing epochs подтверждены final receipt. Последняя
+rollback epoch завершена guarded SIGTERM с последующим Host absence; естественный
+exit всех epochs не заявляется. Полный typecheck/typed-lint scope D1 на030 PASS.
 Provider `b19494fd`: canonical check PASS; узкие Host imports опубликованы.
-Taskboard PASS на 823; review cycle PASS только на f60. Последний прогон
-остановился при reload после Approved; footer fix ещё не был исполнен.
-Следующий ограниченный эксперимент: 1536 MiB + UV4, focused 10/10 и R2 PASS.
+Следующая композиция: четыре узких исправления и два диагностических дополнения;
+finite проверки и independent R2 завершены, original acceptance нового source требуется.
 
 ## Цель, доставка и неизменные границы
 
@@ -38,13 +41,13 @@ Desktop frontend для Claude, Codex, OpenCode V1/V2. Работать авто
 
 | ID | Состояние | Следующий результат и критерий готовности | Владелец |
 | --- | --- | --- | --- |
-| F1 | Taskboard PASS на 823; review cycle PASS на f60; ReviewFlow INCOMPLETE | Проверить reload и исправленный footer на ограниченном 1536 + UV4 профиле; затем original Settings/Approved/reopen и все три owner-routing epochs. Сохранить current request/cycle, final receipt и пустой cleanup. | pr_graph; media; reviewflow; root |
+| F1 | Полный original030 PASS | Final receipt подтверждает Settings/override/inherit/Approved/reopen, ровно3 completed commands и3 холодные owner epochs. Guarded SIGTERM в rollback epoch отдельно от natural exit. Следующая source-композиция требует собственного original gate. | root |
 | F2 | Реализация и focused contracts PASS | Сохранить canonical Host agenda: lead/user clarification блокирует review work до review cycle; app path остаётся re-export. Не выдавать UI сохранение lead_then_human за исполненный lead handoff. | reviewflow |
-| M1 | Native E2E PASS только на 2f33d566 | Сохранить точный native receipt; новый package оценить по затронутым boundaries. Desktop/vendor auth/release этим native run не квалифицированы. | media; R2 reviewflow |
-| E1 | Исходные source/fixture отказы исправлены; пять follow-up готовы; текущий GUI остаётся | Restart исходного cross-provider callback RED→GREEN, 3 negative PASS; 3 feature-lint исправления и точный CI media roster проверены. После первого GUI выполнить минимальную очередь изменённых Create/import/retained/Resume/Add/collaboration путей; исходные authority/source/no-replay/cleanup assertions обязательны. | root; pr_graph |
-| W1 | x64 source fix готов; Windows acceptance открыт | Нужны original Windows x64/ARM64 gates и same-Main packaged recovery. ARM64 первая причина отказа не установлена; 15 s и все шесть разделённых probe boundaries сохраняются. | root; media |
+| M1 | Original030 native PASS: Darwin x64/ARM64 и Linux x64 manual; Windows x64/ARM64 manual/automatic | Corrected media-roster verifier прошёл на Darwin/Windows; Darwin job падает отдельно на P09, Linux — на credentials до финального verifier. Сохранить точные receipt/platform scopes; Desktop/vendor auth/release не квалифицированы. | media; R2 reviewflow |
+| E1 | Teams GUI3OS, finite Claude/Codex/OpenCode и ряд desktop routes PASS на030; active Quit/Review/Resume, live Add и retained paths INCOMPLETE | Quit11+15, schedule3RED→80PASS, packaged RED→2PASS и solo publication4RED→98PASS подтверждены finite actual-source checks. Native diagnostic capture6PASS улучшает только активированные native fixtures; retained private observer8RED→70PASS сохраняет причину отказа. Original acceptance нового source, неизвестные отказы и cleanup debt остаются открытыми. | root |
+| W1 | Windows ARM64 native OpenCode PASS; Host source A/B acceptance открыт | На030 ARM Codex read109 вернулся ready=true после15s; x64 Codex/Claude A/B PASS, OpenCode A/B отказал по expiry. Разные original failures не объединяются; guard timings не дают разрешения ослаблять cutoff. Packaged Darwin require defect исправлен в отдельном TEST fixture follow-up, его native qualification ещё требуется. | root; media |
 | P09 | Открыто: решение о контракте | Установить выполнимую границу original pathname / разрешённый writer / consumed bytes; до отдельного решения не сужать гарантию и не менять failed oracle. | root |
-| D1 | Композиция и независимое ревью готовы; gates открыты | Пять postimages привязаны к 547e603c с сохранением нового provider archive и import-only изменений. Получить обязательные current-tree CI, полный workspace typecheck и необходимые platform результаты. Исторические scoped PASS не заменяют их. | root |
+| D1 | Полный canonical workspace typecheck + feature tsc и original typed lint PASS на030; Frontend shard1 FAIL на schedule race | Для новой композиции нужны её original gates и обязательные platform checks; F1 на030 завершён. Локальные80 schedule tests не заменяют полный shard. D1 подтверждён отдельным Host Desktop linux-x64/team; Main merge сохраняет собственный Node26/merge provenance. | root |
 
 Уже реализованы базовый Host/Session SPI, embedded V2 2.1.4,
 Logs/Thinking/source/filter/fullscreen/stderr, accounts/models, native suggestions,
@@ -90,7 +93,7 @@ source receipt записан. Main SSR на исходном профиле 153
 Server/StreamableHTTP/request-schema imports у OpenCodeCoordinationEndpoint
 остаются необходимыми protocol imports. Устранение всех SDK не заявляется.
 
-## Сейчас выполняется: завершить original ReviewFlow GUI
+## История F1 до успешного original030
 
 На exact f60 source `taskBoardUiProof=PASS`, `taskReviewCycleUiProof=PASS`.
 Taskboard прошёл create/dependency/association/assignee/clarification/order,
@@ -210,7 +213,7 @@ TEST parser допускает исходный 384 KiB chunk только дл�
 с canonical base64/closed envelope/offset/digest; прочие frames и stripped envelope
 сохраняют 256 KiB, абсолютный Host frame 1 MiB. Product/raw budgets не увеличены.
 
-## Original GUI: компактная история незавершённых запусков
+## Original GUI: история прежних незавершённых запусков
 
 Все запуски пока **INCOMPLETE** и без финальных owner epochs. Два последних
 прогона с original 1536 дошли до реального UI; меньшие heaps завершались до него. Cleanup.remaining пуст;
@@ -250,28 +253,28 @@ build/Sentry qualification не заявлены. Explicit OOM меньших he
 
 ## Оставшиеся обязательные gates и минимальная очередь
 
-1. Footer navigation опубликована; source-R2 PASS, фактическое исполнение ещё
-   требуется. Provider archive/install/Host build неизменны и не повторяются.
-2. Один original task-board-cross-team-ui на чистом source с 1536 + UV4. Читать
-   final durable receipt после exit и всех трёх owner-routing epochs: ранняя
-   console PASS недостаточна. Host/source/owner/cleanup guards обязательны.
-3. Затем очередь без duplicate basic taskboard: emulated-selection-ui,
-   emulated-import-ui, emulated-import-lifecycle-ui, emulated-retained-original-ui,
-   emulated-claude-lifecycle-ui, emulated-collaboration-ui. Запускать только нужные
-   изменённые boundaries; перенос старого PASS требует доказанного scope equality.
-4. emulated-installer-ui локально BLOCKED_PLATFORM: требуется исходный Darwin
-   qualification; Linux selection не объявляется его заменой. Darwin ARM original
-   preflight 30 s и native startup/Resume остаются отдельными gates.
-5. W1: final catalog staged около 14993 ms, prepare/resume=0, cleanup подтверждён;
-   first checkSite/deadlineExpired неизвестен. Все шесть probes разделены async/
-   state/native boundaries. Два sync guard формально дублируются, но измеренного
-   вклада нет: patch отклонён. Нужен исходный ARM64 результат с прежними 15 s,
-   плюс Windows same-Main recovery на обеих архитектурах по Report 30.
-6. Полный workspace typecheck остаётся INCOMPLETE: последний root app TS7
-   --noEmit --singleThreaded на c8, GOMEMLIMIT=512MiB/GOGC=50/GOMAXPROCS=2 — SIGKILL
-   за 36229 ms, 0 bytes diagnostics; остальные 11 canonical invocations не запускались.
-   Предыдущие exit 137 и full typed lint interruption также не PASS. Scoped Host/consumer
-   checks не заменяют gate; новый тяжёлый повтор требует конкретного основания.
+1. Original030 F1 завершён: footer исполнялся, final receipt и все три холодные
+   epochs PASS. Provider archive/install/Host build не повторять без причины.
+2. Опубликовать проверенную композицию25source paths после завершения полезных
+   original jobs030; каждый commit сразу expected-SHA push. Сохранить Draft/base.
+3. Новые original CI должны проверить конкретные исправленные boundaries:
+   active Quit, scheduler metadata, packaged loader и original solo producer.
+   Selection/import/collaboration/taskboard и finite provider conversations уже
+   имеют отдельные PASS030; их данные не перепривязываются к новому source.
+4. Review, первая Resume epoch, native live Add, retained-original preparation
+   и retained V1 relaunch требуют доказанной причины и original приёмки.
+   Не увеличивать deadlines и не принимать поздний snapshot за готовность до cutoff.
+5. W1: original 823 Windows ARM64 source-A Codex получил nativeReady=true на
+   109-м read за 15298.7404 ms; post-await assertion исходных 15000 ms отказал
+   до принятия true. allocated/sealed=false совместимо с готовым active Runtime.
+   OpenCode-only factory fix не исполняется в этой Codex ветви. Причинный вклад
+   отдельных guards не измерен; deadline и все шесть probes сохранены. Нужны
+   current ARM64 и Windows same-Main recovery на обеих архитектурах по Report 30.
+6. На030 original Host Desktop linux-x64/team завершил полный canonical workspace
+   typecheck (12 invocations), отдельный agent-backend tsc и все исходные typed lint
+   scopes с0errors. Это закрывает полный typecheck/typed-lint scope D1 именно для030; следующая source-композиция
+   требует собственного original gate. Старые локальные SIGKILL/exit137 остаются
+   историческими отказами и не меняются на PASS; нового локального heavy retry нет.
 7. P09: прежний contract original path/argv/env/cwd/resources и защита от writer
    пока не доказаны для исходных Darwin adversarial cases. Направления A/B из
    Report 40 не выбраны. Не вводить silent copy, запрет scripts, новый permission
@@ -291,10 +294,11 @@ Codex-login GUI jobs также SUCCESS. Это их исходные scopes, н
 1/1; итоговый job FAILURE из-за устаревшего точного CI roster после native PASS.
 Проверка нового roster на двух неизменённых receipts описана ниже; исходный
 GitHub conclusion не переписывается. Host Windows ARM64 отказал в ожидании
-original source Team readiness: последний read — allocated/sealed=false при
-nativeReady/attached=true около 15.299 s; исходные 15 s сохранены. Связь этого
-отказа с подготовленным factory fix не установлена, нужна current acceptance.
-Текущий 547 original CI отслеживается отдельно. Повторные workflows не
+original source Team readiness: nativeReady=true вернулся за 15.2987404 s, после
+исходного 15 s deadline. allocated/sealed=false означает допустимый active Runtime,
+а не незавершённый seal. Codex не проходит изменённую OpenCode-only ветвь factory;
+этот fix не заявляется исправлением W1. Все original endpoints до 547 включительно
+сохранены и выведены из повторного опроса; текущий 030 отслеживается отдельно. Повторные workflows не
 запрашиваются; cancelled/skipped/queued и отдельные PASS не квалифицируют весь срез.
 
 | Исторический source 9a8d7ffd | Результат и исходный run |
@@ -361,3 +365,320 @@ Registration/settlement замечания #1188 и token identity #1227 уже 
   Исходный artifact ZIP сохранён с API SHA256 для последующей проверки; новый
   CI gate остаётся отдельным. Все post-roster qualification и shell assertions
   выполнены на обоих исходных receipts.
+
+## Original 030: подтверждённые отдельные scopes и сохранённые отказы
+
+- Host Darwin x64, original job `135167669442`: SUCCESS на exact 030. Node Host
+  contracts: 190 PASS / 2 SKIP; broker: 63 PASS в четырёх файлах; retained Main:
+  128 PASS в девяти; POSIX Node/shell lifecycle: 29 PASS / 0 SKIP. Исходные
+  source-before/after assertions прошли. Provider source-A/B gates на Darwin
+  пропущены; native provider, Desktop, executable admission и release этим job
+  не квалифицированы. Negative custody cases сохраняют собственные отказы,
+  blanket cleanup/handle-absence PASS не заявляется.
+- Teams Windows, original job `135167670062`: SUCCESS; 28 census/teardown tests
+  и полный исходный Create/Back/tab/process-restart/Copy/Launch flow. Подтверждены
+  retained draft, provider navigation, advanced CLI/native overrides, config-only
+  rejection, template/organization, schedule create/delete и zh-TW native TaskTab.
+  Windows cleanup: три завершения по 17 captured process identities, точное
+  отсутствие процессов/CDP ports, taskkill exit0 и temporary profile removed.
+  processGroupAbsent=null не переименовывается в POSIX qualification.
+- Восемь из 40 исходных Windows PNG осмотрены: Create/edited/restarted,
+  localized TaskTab, dark/light, CSS200/nativeElectron200. Исходный artifact result
+  точно совпадает с final log object; ZIP SHA совпадает с original upload log.
+  При CSS200 видны горизонтальная прокрутка/выход контента вправо; native200
+  сохраняет split pane с узким scrollable editor и обрезанной подписью template.
+  Исходные Rendered flags не являются полной responsive/usability qualification;
+  по этим кадрам отдельная новая регрессия не установлена.
+- Native Quit Darwin ARM64, original job `135167683004`: FAILURE до intended
+  guarded active Quit. Main/native setup готовы; два исходных Send зафиксированы.
+  Первый отказ — строгий `files()` при чтении commands: три regular entries,
+  два допустимых JSON names. Имя третьего файла исходный diagnostic не сохранил.
+  После отказа guarded failure Quit acknowledged, app exit0, remaining=[],
+  captured Host absent; это не PASS исходного active Quit/cold readback.
+- Actual source связывает writer с Team authority fence и атомарным
+  `.tmp.<uuid>` в той же commands directory. Незаблокированный async scanner
+  может пересечь это промежуточное состояние. Такая гонка установлена по коду;
+  фактическое имя третьего файла в original failed run остаётся неизвестным.
+  Live snapshot исправлен в кандидате под тем же fence:11 Node regression cases
+  и15 finite source checks PASS, включая исходный RED. Intended native Quit
+  ещё требует original приёмки нового source; failure cleanup не заменяет её.
+
+Teams workflow завершён SUCCESS на трёх OS и навсегда выведен из наблюдения
+после одного terminal capture. Host workflow завершён FAILURE:22successful useful jobs,7failed useful jobs и
+failed aggregate;30terminal jobs,29artifact metadata records сохранены однократно.
+Все его endpoints выведены из наблюдения. Exact-head full D1
+завершён SUCCESS в Host Desktop `linux-x64, team`, job135167682454:
+полный canonical workspace typecheck, дополнительный feature tsc и исходные typed lint
+scopes. Step12 исполнялся23:21:20–23:35:12 UTC; main/preload/shared/types0errors/3361warnings,
+renderer0/1464, features0/1554, MCP0/4. Fast prefix0/14 — отдельный scope.
+Team UI/source/receipt/cleanup verifier также SUCCESS. Full F1 завершён SUCCESS в
+`linux-x64, cross-team`, original job135167682430: полный final receipt и все три
+owner-routing epochs проверены после завершения. Scope и guarded rollback exit
+описаны ниже; ordinary Team UI сам по себе этого не доказывает. Main CI
+использует merge commit, и его результат сохраняет собственный source provenance.
+Root проверил immutable merge `e1cd736d`: его tree точно равен tree 030. Поэтому
+отдельный Linux tooling PASS связывается с теми же bytes: восемь noEmit configs,
+25 tests и scoped Linux lint (0 errors / 72 warnings). Исполнялся Node26.12.1
+с предупреждением о требуемом Node24; это не полный D1 и не Node24 runtime gate.
+
+
+## Follow-up: четыре исправления и два диагностических дополнения
+
+Независимый source review завершён для четырёх исправлений и двух diagnostic captures. Source/owner fences,
+исходные deadlines, строгие negative oracles и состав workflow не ослаблены.
+Подробные hashes, исходные failures и finite results собраны в
+[индексе follow-up](parity-030-followup-index-20261119.json).
+
+1. **Quit:** live polling теперь получает existing Team authority lock с
+   `acquireTimeoutMs=0`, читает directory и все JSON под одним fence и всегда
+   освобождает его. Busy writer оставляет ожидание в прежнем20s/100ms poll.
+   Неизвестные файлы, stale temp, symlink/directory, malformed/non-object JSON
+   и превышение256 по-прежнему дают отказ. Original strict quiescent snapshots
+   не изменены. Три изменённых scheduler production paths дополнительно включены
+   в существующий finite source freeze; прежние pins сохранены. Existing Node suite подключает новый regression test; его11 cases
+   PASS, отдельная actual-source проверка дала15 PASS, включая RED→GREEN против
+   настоящего atomic writer. Scoped fast lint0errors/0warnings. Это Linux finite
+   witness с Worker/shared PID, не отдельный Darwin native Quit PASS.
+2. **Schedules:** исходный frontend shard1 на030 дал550PASS/1FAIL файлов,
+   6349PASS/1FAIL/6SKIP tests. Единственный отказ — после actual cron, pause и
+   restart persisted status стал active. Фоновый finalizer читал запись до
+   metadata queue, а затем сохранял её целиком поверх уже committed pause/edit.
+   Новый обязательный `ScheduleRepository.updateSchedule` читает, выполняет
+   синхронный updater и пишет под существующей queue. Три background операции
+   timestamps/reset/increment используют этот порт. Missing/deleted row остаётся
+   отсутствующей; смена ID, ошибка callback/I/O отвергаются, queue восстанавливается.
+   Старый код провалил три детерминированные interleavings; кандидат прошёл80/80
+   tests в четырёх файлах, включая8 новых concurrency cases. Пауза и редактирование
+   проверяются после настоящего stop/start; provider execution запрещён TEST port.
+   R2 PASS. Production LOC: Scheduler847→836 при прежнем frozen cap847,
+   repository219→236, interface24→26; policy/baseline не изменены.
+   Final new test fast lint0/0; inherited7errors в старом SchedulerService.test.ts
+   и2warnings в неизменённом dispatch body сохраняются. Global lint/typecheck PASS
+   из этого результата не следует; original Host cron/restart ждёт нового CI source.
+3. **Packaged attachments:** TEST harness может находиться вне captured Host.
+   `startHost` создаёт lazy `createRequire` от уже выбранного абсолютного Host entry;
+   один loader обслуживает request schema и large response. Standalone helper
+   остаётся lazy; manifest/hash/path/source-hidden assertions, schema/digest/offset/
+   size guards сохранены. Original030 source воспроизвёл MODULE_NOT_FOUND; кандидат
+   дал2/2 PASS: relocation regression и прежний strict-frame test. Negative cases
+   включают foreign metadata, oversize, wrong digest, invalid request и отсутствие
+   captured contract без checkout fallback. Это actual fixture/Node resolution
+   с in-memory transport и pinned pure schemas, без запуска Host/native/app/build.
+   Root R2 PASS; packaged native journey ещё требует original CI.
+
+4. **Owned solo publication.** Original finite Create producer976 ожидал90s
+   `launch-state.json` version2 с publicationRunId/leadSessionId и не дошёл до import.
+   Исходный Main factory безусловно отвергал Create (`isLaunch=false`) и empty roster.
+   Принят ранее сохранённый, но не опубликованный workspace-кандидат; внешние файлы
+   не изменялись. Допуск ограничен captured POSIX Anthropic solo child с исходной
+   birth identity, тем же run/session, строго пустыми rosters, tracked run и текущим
+   publication/Stop epoch. Finished phase сохраняется; rejected facade
+   readMembersMeta Promise не становится пустым roster. Прежний canonical reader
+   сохраняет null→[] для absent/malformed/timeout metadata; новая строгая проверка
+   этого reader не заявляется. В полном final artifact976 root members.meta.json
+   имеет35bytes и {version:1,members:[]}; это поздний retained snapshot, не атомарный
+   срез момента отказа. [Уточнение metadata scope](parity-solo-metadata-scope-clarification-20261119.json)
+   ограничивает соответствующие широкие фразы исторических reviews. Очереди,
+   beforeCommit guards и rollback прежние.
+   Четыре семантических RED assertions на original bodies; затем98/98 PASS в четырёх
+   связанных suites,0skip. Начальный missing runtime.lock harness error сохранён
+   отдельно и исправлен immutable030 файлом. Fast lint8paths0errors/0warnings,
+   independent R2 PASS; POSIX custody tests явно ограничены соответствующей платформой.
+   In-memory custody/real filesystem proof не квалифицирует native GUI и отдельный
+   orphan cleanup отказ original976.
+5. **Native passive diagnostics.** Подписка на уже существующий producer channel
+   `driver-close-failed` сохраняет только закрытые stage/outcome и opaque binding.
+   First-event reserve, прежние row/byte caps, own-data projection и отказ malformed
+   payloads проверены actual-source RED→6PASS. Runtime/provider cleanup и verdict
+   не меняются. Observer действует только в уже активирующих его native fixtures;
+   Desktop/Main его не активируют, поэтому отказы Review/Add/retained этим не
+   диагностированы. Дополнительный literal source pin включает сам helper.
+
+6. **Private retained eligibility diagnostics.** При original V1 action=open
+   coordinator-admission возвращал not-eligible/not-dispatched; исходная причина
+   readEligibility была потеряна при сведении к `other`. Два production owners
+   теперь передают её существующему bounded observer после currentness check.
+   Допущенный native-custody-unverified branch, public result и cleanup прежние;
+   observer не ожидается, его throw/rejection не меняет отказ. Existing projection
+   сохраняет только закрытые category/phase и hash, без raw error/path/token.
+   Actual-source8RED→70/70PASS:13новых случаев и57существующих coordinator/projection
+   tests; fast lint3paths0/0, independent R2 PASS. Первые missing-static-asset
+   harness attempts сохранены отдельно и не считаются RED. Generic fence errors
+   остаются unknown; original V1 отказ не объявлен исправленным или принятым.
+
+Полная финальная source-size композиция030+25source paths проверена actual
+неизменёнными classifier/counter/evaluator:5162 production files,141 frozen legacy
+caps, предел800 для новых production files,0violations. Scheduler836≤847;
+baseline/policy не изменены. Исторические12path и22path проверки сохранены с
+собственными hashes; итоговый25path report отдельно. Supplementary403lines
+сохраняет прежние Quit/scheduler/native-helper pins и добавляет ровно шесть
+production owners/dependencies retained observer в общей supplementary array.
+Новый regression выбирается прежним Vitest test/**/*.test.ts. Integrated603lines
+сохраняет исходный список и три solo source dependencies.
+
+## Original 030: дополнительные UI, native и packaged результаты
+
+- Teams Ubuntu/macOS/Windows GUI SUCCESS. Ubuntu28/28 teardown/census; исходные
+  flow flags true и POSIX processGroupAbsent/temporaryProfileRemoved true.
+  Windows имеет собственные captured-identity cleanup semantics, описанные выше.
+  Только8/40 Windows screenshots осмотрены; другие visual scopes не приписываются.
+- TEST installer UI SUCCESS: настоящий stock app Update route с emulated A/B
+  версиями0.162.0→0.169.0, один download/update/sourcewrite, A runtime сохранён,
+  B использует опубликованный TEST executable. `vendorsAllowed=false`,
+  `nativeQualification=false`; реальный Codex не запускался.
+- OpenCode QuitPendingOpen и chat-attachments original jobs SUCCESS. PendingOpen
+   verifier допускает released-close либо retained held/open-unknown debt; без
+   decoded final receipt одна из этих ветвей не заявляется. Chat: два original
+   inputs, PNG2x1, cold0replay/0runtime allocations; metadata count1 — отдельно.
+   Оба jobs имеют original source/physical-cleanup verifier PASS.
+- Retained-original UI остановился после одного detail Launch, до explicit original
+   runtime choice. Prepare held/not-dispatched записан примерно54ms после начала ожидания;
+   последующий30s read-only poll ожидал другой dialog. Это отказ подготовки,
+   не доказанная медленная готовность. Его внутренняя причина не установлена;
+   typed native-custody-unverified имел бы отдельный explicit-choice route.
+   App0,remaining[],TEST peers absent; capturedHostObserved=false/Absent=null.
+   Повтор action и смягчение deadline не применялись.
+- Finite Linux Claude/Codex conversations и schedules SUCCESS. В каждом job
+  исходные503 common tests и7 tests PASS, source/selected-lane/cleanup verifier
+  SUCCESS. Повторённые common tests не суммируются как уникальное покрытие;
+  реальные vendor executables запрещены в обоих modes.
+- Native Darwin x64 manual: original receipt PASS,11 model requests,
+  zero model failures, все7 media/checkpoint/cold-no-replay steps и cleanup=true.
+  Corrected roster step24 PASS; entire job FAIL отдельно на P09. Native Darwin
+  ARM64 manual и его roster verifier также PASS, auto пропущен; P09 отдельно FAIL.
+- Native Windows x64 и ARM64 manual и automatic: original receipts PASS,
+  по11 requests, zero failures, все7 steps, cleanup=true. Это native/local-model
+  qualification; vendorAuth/Desktop/release flags false.
+- Host Linux x64 SUCCESS:192 Node contracts,63 broker,128 retained Main,
+ 29 POSIX, descriptor closure6+6 и retained-pidfd63. Два original native custody
+  receipts completed/cleaned и automatic/warm=true. Этот scope не квалифицирует
+  SDK/Desktop/older ABI или Windows source A/B.
+- OpenCode Review Darwin ARM64: исходный preflight120s истёк до Launch.
+  Final dialog blocked, captured model check unsuccessful; durable ordinary
+  `model.probe` retained held/resourceHeld=true. Источник и журнал подтверждают
+  отсутствие clean-close acknowledgement к original cutoff, но не точную
+  причину. Main HOME/config-invalid сам по себе не объясняет отказ: для данного
+  provider coordination not-applicable, ordinary success/clean close допустил бы
+  готовность. Failure Quit app0/remaining[]/captured Host absent — отдельный scope.
+- OpenCode Resume Darwin ARM64: истёк original preflight в ПЕРВОЙ epoch,
+  до Launch/Stop/cold boundary. Поздний snapshot показывает readiness verified
+  и enabled Launch; durable probe completed/ok/clean. Это не доказывает готовность
+  до cutoff1795043837560. Failure Quit app0/remaining[], но capturedHostObserved=false
+  и capturedHostAbsent=null; captured Host absence PASS не заявляется.
+- Packaged Darwin x64/ARM64, Linux x64 и Windows x64/ARM64: все пять original
+  targets повторили один дефект. Relocated generated TEST Host требует
+  `../../dist/attachments/contracts.js` относительно RUNNER_TEMP и падает
+  MODULE_NOT_FOUND. Native receipt INCOMPLETE,11requests/0model failures и cleanup=true;
+  wrapper подтверждает restoration source/bundle/legacy. TEST fixture теперь
+  загружает contracts от уже captured packaged Host entry. Actual finite RED→2PASS
+  и независимый root R2 завершены; original native receipt остаётся INCOMPLETE.
+- Windows Host ARM64 Codex: read109 ready=true на15436.7295ms после исходных15s.
+  allocated/unsealed — нормальный active Runtime. Поздние non-atomic snapshots
+  не заменяют predicate. Windows x64 Codex/Claude source A/B SUCCESS; OpenCode A/B
+  held/open-unknown, expiry/currentness отказ — отдельный original boundary.
+  Эти отказы не исправляются увеличением budgets или повтором исходного action.
+
+## Original 030: поздние gates и отдельные оставшиеся отказы
+
+- Management UI SUCCESS: model/effort/credential controls на TEST peers, original
+  source/receipt/cleanup verifier PASS. Шарды frontend2,3 и4 завершены SUCCESS:
+  shard2:549PASS/2SKIP files,6873PASS/18SKIP tests;
+  shard3:548PASS/3SKIP files,6358PASS/7SKIP tests;
+  shard4:549PASS/2SKIP files,6790PASS/7SKIP tests. Shard1 остаётся FAIL;
+  общего frontend-suite PASS нет.
+- Linux x64 native manual receipt PASS:11requests,0model failures,cleanup=true,
+  восемь stages с initial coordination. Native catalog/model probe также PASS:
+  семь stages, original cancellation, selected variant, published global/project
+  source и cold management readback. Поздний credential scenario INCOMPLETE:
+  после пяти stages и намеренного четвёртого timeout request Host epoch3 exit1,
+  driver-close unconfirmed, journal held/resourceHeld=true, cleanup=false.
+  Первая observed read-cut after-log имеет transport_failure при deadlineExpired=false
+  и aborted=false; trace cap не позволяет восстановить полный transport timeline.
+  Последующие permission/MCP/final-product verifier steps21–24 пропущены.
+  Server-stop сам по себе не заменяет driver cleanup, причина не объявлена исправленной.
+- Linux V1 original native versions1.19.4/1.19.5/latest→1.19.6 PASS, по8requests.
+  Managed update1.19.4→1.19.6 сохранил исходную pending native session и её pinned
+  process/source/state bytes. Это TEST-local-model scope без Desktop/vendor/release.
+- Main FastFeedback SUCCESS на actual mergee1cd736d (tree030), Node26.12.1:
+  полный canonical workspace typecheck, lint:fast0errors/228warnings и actual
+  source-size5162/141/800 PASS. Его runtime provenance не заменяет отдельный D1.
+- Main retained Desktop FAIL на повторном запуске сохранённого V1 после выбора
+  Host в app1, до нового V2 business runtime. Coordinator вернул
+  not-eligible/not-dispatched; app diagnostic discover-bindings/unavailable —
+  отдельное наблюдение, не доказанная атомарная причина. Первая legacy V1 history
+  сохранилась (два сообщения); cleanup=true,cleanupFailures=[],modelFailures=[].
+  Coexistence, последующие V2/source/donor-history stages не квалифицированы.
+  Main final aggregate завершился FAILURE по RETAINED_COEXISTENCE_RESULT=failure;
+  это dependency verdict на прежних merge bytes, а не новое runtime исполнение.
+  Полный terminal capture Main завершён однократно, scope выведен из наблюдения.
+
+## Original 030: полный F1 и поздние Desktop scopes
+
+Original cross-team job135167682430 завершён SUCCESS. Полный receipt сохранён
+побайтово:21382647bytes,SHA256`ed994cbd73c010eb4050785a58ddf230d02d4215a755522453d85860b9d88674`;
+его deterministic gzip приложен к индексу. ReviewFlow override `lead_then_human`,
+inherit=null и approve дали ровно3 completed Host commands, actor=user;
+`human_approved`, inheritedAfterReload=true, default agent_approval restored,
+reopen без replay. Footer исполнялся через6 wheel и22 click inputs.
+
+Все три cold epochs default-b/unavailable-a/rollback-a PASS с исходными source
+assertions. Trusted descriptor менял defaultOwner и creation.owner; это именно
+cold owner-routing TEST scope. Восемь product census comparisons совпали по
+файлам и hashes;1883source pins до/после равны,dirty=false. Root app и первые две
+cold epochs exit0. Rollback-a потребовал guarded SIGTERM; затем hostsAbsent=true,
+remaining=[],cleanupFailure отсутствует. Всеобщий natural exit не заявляется.
+Сохранение lead_then_human не означает исполненный native lead handoff;
+реальных vendor runtimes и native Host children в этом TEST proof нет.
+
+Поздние original TEST UI jobs extensions/taskboard/collaboration/processes/import/
+selection/review и Codex login завершены SUCCESS. Finite OpenCode conversations
+также SUCCESS; повторные503+7 common checks не суммируются как уникальные тесты.
+Каждый compact сохраняет собственные source/receipt/cleanup scopes и raw-log hashes.
+
+Native Desktop management983 имеет два разных результата. Settings PASS:
+5scripted model requests и5original probe processes, все probes absent,
+capturedHostAbsent=true,app0,1895source pins равны. Следующий live membership
+сценарий выполнил один Carol Add, но original90s completion assertion отказал.
+Поздние roster/launch и native-local-readiness journal held/resourceHeld=true
+не устанавливают внутреннюю причину или выжившего физического ребёнка.
+Later Remove/Restore/Stop/cold/history не квалифицированы. Live failure cleanup:
+remaining[],app0,finite peers absent,capturedHostObserved=false/Absent=null,
+1883source pins равны. Step31 был receipt/physical-cleanup verifier Settings,
+не permission/MCP exercise. Native passive observer в Desktop не активирован.
+
+Original solo producer976 остановился до import; его обычный Stop и успешный
+freeze не достигнуты. Failure Quit завершил app0 и подтвердил TEST peer absence,
+но оставил pid4745/ppid1/pgid4671: captured leader absent, cleanup debt retained
+без сигнализации чужой группе. Новый solo snapshot fix не выдаётся за исправление
+этого отдельного cleanup debt; оригинальный общий FAIL сохранён.
+
+## Завершённое наблюдение original030 и предел сохранённого журнала
+
+Все полезные original jobs030 завершены; новый source не отправлялся во время
+их исполнения. Native/Main owner закрыл13workflow scopes:12 имеют полный terminal
+capture, последний packaged scope — полный canonical jobs page с7terminal jobs
+и явно записанный пробел сохранения. Его aggregate failure00:58:41 подтверждён
+job page; последующие однократные запросы final log/run metadata/artifact inventory
+не были сохранены из-за ошибки локального decoder. Эти endpoints не перечитывались,
+а их содержимое не объявлено полученным. Все пять исходных platform raw proofs
+и MODULE_NOT_FOUND failures сохранены независимо. Host/Teams terminal capture
+полон и также выведен из наблюдения. Это предел evidence, не изменение verdict.
+
+## P09: исходный полный Darwin x64 журнал на 030 и исторический 547
+
+Отдельный native OpenCode E2E и corrected media verifier на030 прошли; весь
+original Darwin Stage1 job FAILURE на P09. Полный x64 journal030 сохраняет те же
+case classifications, что исторический original547; результаты не перепривязаны.
+Полный Darwin ARM64 journal отличается:7 PASS/2 INCOMPLETE/1 COUNTEREXAMPLE,
+compiler-default baseline PASS. На ARM не переносятся x64 unsigned-baseline refusal
+и его6/3/1 counts. Оба ARM incomplete — ad-hoc after-check/writer-open; script
+COUNTEREXAMPLE тот же по классификации. Все10 ARM cleanup/reaped/group-absence true.
+POSIX journal содержит 10 исходных witnesses: 6 PASS, 3 INCOMPLETE и один явный
+script COUNTEREXAMPLE. Unsigned compiler baseline отказал на kernel-image-validity
+с errno13 / codeSigningError -67062. Ad-hoc after-check и writer-open дали
+mutationErrno0, затем LIB/BIN:A/MAIN:A и exit0: это нарушение прежнего oracle,
+а не доказательство исполнения native B. Script-negative действительно дал
+SCRIPT:B после успешной mutation. Все десять original processes reaped,
+groups absent, cleanup=true; controllerInterrupted=false. Qualification flags
+остаются false, общий статус INCOMPLETE. Прежнее решение о writer/path/consumed
+bytes не принято; oracle, исходная поддержка scripts и граница доверия не меняются.

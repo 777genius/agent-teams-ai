@@ -1,0 +1,340 @@
+{
+  "schemaVersion": 1,
+  "reviewer": "composition_review_030",
+  "reviewedAt": "2026-11-19T00:32:45.321827+00:00",
+  "sourceHead": "030b21f0765d1a6e6572f46d262c672d63e69eb7",
+  "sourceTree": "292b3cc975b5c927233fb85b73aed1411753efd1",
+  "verdict": "PASS_SOURCE_AND_FINITE_SCOPE",
+  "scope": "Copied unpublished Solo candidate, independently bound to immutable030. No reviewer executions, external worktree edits, Git writes, app/provider/native launches, CI queries or reruns.",
+  "candidateManifest": {
+    "path": "solo-publication-030-candidate/candidate-manifest.json",
+    "gitBlob": "65af99844299af94128c5ac7f3551a2e83244c48",
+    "sha256": "7f71a8362e8d2f622a28d7c6f86c443a614fc46fb3b8192db8cec1e32c575921",
+    "bytes": 5341
+  },
+  "capturedOriginManifest": {
+    "path": "solo-publication-030-candidate/origin-captured-manifest.json",
+    "gitBlob": "fe3259c377e8f44d1fe730ea6cede11874b2371a",
+    "sha256": "088d32905df7146118ea704bf4ae4ba35158d5722ea8a57f9a5f31642a89d696",
+    "bytes": 5134
+  },
+  "candidatePatch": {
+    "path": "solo-publication-030-candidate/candidate.patch",
+    "gitBlob": "51e83850e051d2243a5726a0922133bf16cbc996",
+    "sha256": "683481884334488606861d822bc5675e4a66c3f0b41aa8e65a3af338ac7b04c8",
+    "bytes": 41157
+  },
+  "changes": [
+    {
+      "path": "scripts/legacy-agent-host/desktop-proof-integrated-sources.ts",
+      "mode": "100644",
+      "before": {
+        "gitBlob": "083522612dd93e77dbb0e79c966103b03a71fe87",
+        "sha256": "555a309f762015659a3b7a0d44522785fa7ea171aedf77392020c25dc5d70e33",
+        "bytes": 44561,
+        "lines": 600
+      },
+      "after": {
+        "gitBlob": "de7adc5a25d63b84888460dc08a518de426946e7",
+        "sha256": "8de1ca5ecbfbfe9823478dd370f861234c05c74e3bf67f35a7fb95fc5ecbf798",
+        "bytes": 44827,
+        "lines": 603
+      }
+    },
+    {
+      "path": "src/main/services/team/TeamLaunchStateStore.ts",
+      "mode": "100644",
+      "before": {
+        "gitBlob": "b376015ab1f2ebb2dd17e72f95616e9ef38afa6c",
+        "sha256": "8b24a41e9bdc89dcdfdb66f905eb196961314821ce5e5bd7389241e4c14116a0",
+        "bytes": 21967,
+        "lines": 564
+      },
+      "after": {
+        "gitBlob": "b1aa8fe6afded73ad22b41784e94ce42b18142a4",
+        "sha256": "f44abe9b34f83a2738342ba84f0cf99ed134b357eb36b9e51844b94249604c41",
+        "bytes": 23353,
+        "lines": 596
+      }
+    },
+    {
+      "path": "src/main/services/team/provisioning/TeamProvisioningLaunchStateStoreBoundary.ts",
+      "mode": "100644",
+      "before": {
+        "gitBlob": "9bb0d8ba6f4f9b97cd85060f17dfa56d28bbb58f",
+        "sha256": "32acec3ecb7fb22993ef573311945885955d8d10f31373cf3a7014dc8285aca4",
+        "bytes": 18578,
+        "lines": 473
+      },
+      "after": {
+        "gitBlob": "f8e2479b4b5c3a555f94bb283e4a1cdd65ccfa59",
+        "sha256": "7465b7a62856f0cc6d654df57033cec3b48e63b1b4ee763ec920a949c143fb97",
+        "bytes": 19156,
+        "lines": 491
+      }
+    },
+    {
+      "path": "src/main/services/team/provisioning/TeamProvisioningLiveLaunchSnapshotBoundaryFactory.ts",
+      "mode": "100644",
+      "before": {
+        "gitBlob": "d1f772de3f883e6f420d1261a0fbeff5ee3cd034",
+        "sha256": "5e8c407802b207883f5f080663351fd06e471e4b10e5981f89037e9d3b1f7a07",
+        "bytes": 7339,
+        "lines": 181
+      },
+      "after": {
+        "gitBlob": "2f61a31f00a759a68091b0fd9c90df1c7259713e",
+        "sha256": "dce03e1761ad9886296e930422b8242f7330c183a8254f2c477e587e4e96c161",
+        "bytes": 10081,
+        "lines": 256
+      }
+    },
+    {
+      "path": "src/main/services/team/provisioning/TeamProvisioningPersistenceReconcileFacade.ts",
+      "mode": "100644",
+      "before": {
+        "gitBlob": "0ee8c0fe11176e181d9c2a1f5df87ad2a5eb99b5",
+        "sha256": "1e5f5861084a4fd47c354837d3d70ffa482668fc0f75b59ff9d2198bbd518769",
+        "bytes": 10687,
+        "lines": 259
+      },
+      "after": {
+        "gitBlob": "1af3316624c7d46629ca275638f38707259ae0d1",
+        "sha256": "e3f57dcb97331a166751395bdccddc41538b686061cd7574a05e855eb3486bdc",
+        "bytes": 12871,
+        "lines": 309
+      }
+    },
+    {
+      "path": "src/main/services/team/provisioning/__tests__/TeamProvisioningLiveLaunchSnapshotBoundaryFactory.test.ts",
+      "mode": "100644",
+      "before": {
+        "gitBlob": "2ff65bb7cb7ff8f79d5d43b59e47b965660e3812",
+        "sha256": "02fde2ac79d77be3310fba387b746709853101d7e2ce3e77ed2b04265d333c8e",
+        "bytes": 9591,
+        "lines": 257
+      },
+      "after": {
+        "gitBlob": "ff077d66c2f1b027d8fc42bd4e517090b4df1316",
+        "sha256": "7b154e6a055f067315f4d414f9241356696ca680376b2ed67feeeb28a0ff47cd",
+        "bytes": 11223,
+        "lines": 299
+      }
+    },
+    {
+      "path": "src/main/services/team/provisioning/__tests__/TeamProvisioningPersistenceReconcileFacade.test.ts",
+      "mode": "100644",
+      "before": {
+        "gitBlob": "1e16d14d9b5daf96c102d4df2d90e80a981dd14f",
+        "sha256": "15dce5094aa3bf3056af2bec3e27073a3924fae5d5d76a9270c7c6f92b3af38c",
+        "bytes": 16831,
+        "lines": 418
+      },
+      "after": {
+        "gitBlob": "7ca326f89632042a98c5bc459250df221980bdd4",
+        "sha256": "529f8a1252abc5c71f8363ff6771dc34c073758fe7dbb0172c8e5dcfc78df335",
+        "bytes": 28169,
+        "lines": 684
+      }
+    },
+    {
+      "path": "test/main/services/team/TeamLaunchStateStore.test.ts",
+      "mode": "100644",
+      "before": {
+        "gitBlob": "d310431a7424065600ff28668f32184d80e2dc3a",
+        "sha256": "f2509b229cc09cef7e997f707a7b6b3bd2d87cd9b72b89da6e2b1e727c63388e",
+        "bytes": 27999,
+        "lines": 731
+      },
+      "after": {
+        "gitBlob": "ebc6e322cc41d83fd8ecb07b5d4bdc7dab927c6e",
+        "sha256": "f198cafb5532b7028d7c50537592f2ceda7afdcc73735e0c2ce29fa56c916843",
+        "bytes": 33407,
+        "lines": 892
+      }
+    }
+  ],
+  "provenance": {
+    "allEightPreimagesMatchImmutable030": true,
+    "immutableGitReadBase": "547e603c555be471394e9c6e4b6a53092a33a6d7",
+    "deltaMethod": "Every candidate path is absent from exact547to030 delta; before bytes and Git blobs match immutable547. All candidate bytes match final manifest.",
+    "oldExternalStatusOrRuntimeClaimsAdopted": false,
+    "fiveProductionPaths": "four edited runtime bodies plus existing integrated source roster; all below unchanged800-line default",
+    "frozenOtherSourcePathsEditedByReviewer": false
+  },
+  "causalBoundary": [
+    "Original Create sets isLaunch=false, initializes false lifecycle flags and empty solo expected/all/lane arrays.",
+    "Original TurnComplete marks provisioning complete and calls final launch reporting on Create as well as Launch. Empty secondary-lane queue delegates persistLaunchStateSnapshot(run, finished).",
+    "Original live snapshot factory rejects !isLaunch or empty expectedMembers unconditionally. Original Reconcile consequently returns null without writing a Create snapshot. An empty normal finished clean_success snapshot would also follow the former clear branch.",
+    "Candidate admits only finished POSIX Anthropic/default solo runs with exact live child custody, then retains their version2 snapshot and atomically establishes launch freshness through the existing store."
+  ],
+  "guards": [
+    "Capture binds exact team/run/session/child identity, root PID/process group/root start identity, live child status, completed provisioning, explicit false cancellation/killed/closed flags and empty expected/all/mixed/request rosters.",
+    "Publication captures Stop epoch before the queue and requires both service.runs.get(runId)===run and current tracked runId. Solo requests bypass fresh-state coalescing so captured authority is not merged across epochs.",
+    "Checks repeat after bootstrap await, metadata read and final write. Unreadable metadata is unknown and returns null; nonempty metadata rejects solo publication.",
+    "Facade delegates to boundary.writeLaunchStateSnapshotNow inside one existing boundary queue. Store retains its distinct existing publication queue; no recursive acquisition of the same queue was introduced.",
+    "Store requires exact version2/team/finished/empty-member/session/run shape plus strict owner and new-run authorization before first freshness publication.",
+    "Each file commit rechecks original authority and directory identity. Lost authority rolls back prior state/summary/freshness/stop-marker bytes; acknowledgment waits for strict freshness durability.",
+    "Same stopped run cannot lift its Stop marker. Existing stop runtime sets killed and cancelled flags synchronously before physical-stop awaits, preventing fresh recapture of the original solo owner. A later stale publication captured before Stop also fails its epoch check.",
+    "Native Stop authority still requires exact persisted run/session plus original process identity and verified release. The candidate does not manufacture custody, native release proof, or physical process observations."
+  ],
+  "callSiteCompatibility": {
+    "census": "Immutable git grep for constructor, ports and service-host types, plus final candidate tests.",
+    "productionConstruction": "Only createTeamProvisioningPersistenceReconcileFacadeFromService constructs the production facade; it now provides getRun via service.runs.get. Existing ServiceComposition passes the same service object; ServiceRuntimeStateFacade already owns protected readonly runs = new Map<string, ProvisioningRun>().",
+    "tests": "All direct test construction paths now provide getRun. Service-shaped test host supplies runs. No additional unmodified production constructor or ports-object call site was found.",
+    "typecheckClaim": "Source compatibility review and finite Vitest/fastlint only; no new full repository typecheck was run by this reviewer."
+  },
+  "independentFindingResolved": {
+    "problem": "Positive custody tests initially ran unconditionally although production intentionally rejects win32.",
+    "resolution": "Factory positive it.each and real-owner Reconcile describe are explicitly skipIf(win32). Store option tests remain platform-neutral and unconditional.",
+    "scopePreserved": "Linux executes all98 assertions with0skips; these guards do not claim Windows solo custody support.",
+    "productionPostimagesUnchangedByResolution": true
+  },
+  "finiteVerification": {
+    "mode": "Read and hash parent-produced actual Vitest JSON receipts; reviewer did not rerun.",
+    "redFactory": {
+      "receipt": {
+        "path": "solo-publication-030-candidate/before-result.json",
+        "gitBlob": "94ac1b42d5a90104b0ca52d50d9e5d3661856521",
+        "sha256": "6e17e64af4d34b193a2cb22cefe2d4d68f193dbb2c66ccecdeda63e2c75a9447",
+        "bytes": 7580
+      },
+      "semanticFailures": 2,
+      "reason": "Original factory returned null for both completed owned solo Create and Launch.",
+      "qualification": "Same initial attempt had two other module-resolution failures due missing runtime.lock.json; those infrastructure failures are not semantic RED evidence."
+    },
+    "redRemaining": {
+      "receipt": {
+        "path": "solo-publication-030-candidate/before-fixed-harness-result.json",
+        "gitBlob": "01efe58bb2953924511d4011ec216d2e038091f4",
+        "sha256": "2112f9138ecbb40f263c548aecd463ea967a10dc6ea4fbf51cde4224de1a82a9",
+        "bytes": 20130
+      },
+      "semanticFailures": 2,
+      "passed": 0,
+      "skipped": 53,
+      "failures": [
+        "Store expected3 writes including freshness but original produced2.",
+        "Composed Reconcile expected durable version2 snapshot but original returned null."
+      ],
+      "fixtureRepair": "Immutable runtime.lock.json blob1757d79786da78e739a322e8bba81cd3dc88dcaa copied to isolated verification roots; no product edit or original Factory rerun."
+    },
+    "green": {
+      "receipt": {
+        "path": "solo-publication-030-candidate/after-result.json",
+        "gitBlob": "4f8cffc6e8ca73d6294298bae6ab9231d98b7a4e",
+        "sha256": "4c4e46abf94f258e9ff28c17f0d6d97d5b232706565d1c67cf6b38cfe723ea43",
+        "bytes": 36397
+      },
+      "passed": 98,
+      "failed": 0,
+      "skipped": 0,
+      "files": {
+        "TeamLaunchStateStore.test.ts": 38,
+        "TeamProvisioningLaunchStateStoreBoundary.test.ts": 35,
+        "TeamProvisioningLiveLaunchSnapshotBoundaryFactory.test.ts": 8,
+        "TeamProvisioningPersistenceReconcileFacade.test.ts": 17
+      },
+      "coverage": [
+        "durable solo publication and repeated live read",
+        "exact native Stop binding and release dependency",
+        "late publication cannot resurrect Stop",
+        "six ownership changes across first await",
+        "rollback after first state-file commit",
+        "unreadable roster remains unknown",
+        "strict freshness acknowledgment and five invalid owned-solo shapes",
+        "existing boundary/coalescing/ordinary publication behavior"
+      ]
+    },
+    "fastLint": {
+      "receipt": {
+        "path": "solo-publication-030-candidate/after-fastlint.json",
+        "gitBlob": "052bab995bbbf9a1093fb0d816f3a5e4c9cb755e",
+        "sha256": "67117ea7b68df7b7ffb4404a13d930b17dcaa7f3e780801c9e716756e630e9dc",
+        "bytes": 2631
+      },
+      "files": 8,
+      "errors": 0,
+      "warnings": 0
+    }
+  },
+  "sourceFreeze": "Integrated source roster adds exactly three literal runtime file pins beside already-pinned TeamLaunchStateStore. No recursive discovery, fixture gate, oracle or production source-size policy change.",
+  "backgroundSourcePins": [
+    {
+      "path": "src/main/services/team/provisioning/TeamProvisioningCreateTeamFlow.ts",
+      "gitBlob": "933b07504cd718f9099bc237c75bcdc5dc54fb2a",
+      "sha256": "c5e8750f655b73e0c935bf5b593092976ba29a10ee9f8eff69fbe1f68d723607",
+      "bytes": 17244,
+      "source": "immutable547, unchanged in exact547to030delta"
+    },
+    {
+      "path": "src/main/services/team/provisioning/TeamProvisioningTurnComplete.ts",
+      "gitBlob": "43d9bb669de1a0736f37292211af9cbbf2450b33",
+      "sha256": "939c52c0c7264acfe0b4d9412eb049dc93db8ded327b5fd8229f30ce7526e5e5",
+      "bytes": 21007,
+      "source": "immutable547, unchanged in exact547to030delta"
+    },
+    {
+      "path": "src/main/services/team/provisioning/TeamProvisioningMixedSecondaryLaunchQueue.ts",
+      "gitBlob": "c4f3b3126e9df9321a21c6b012631ffbadad2592",
+      "sha256": "c6f78c99d8aae36c4dbd8c55c8116187f9f8dcbbf3a5c25b89837b623b69cdb3",
+      "bytes": 10642,
+      "source": "immutable547, unchanged in exact547to030delta"
+    },
+    {
+      "path": "src/main/services/team/provisioning/TeamProvisioningMemberSpawnSnapshots.ts",
+      "gitBlob": "f47b0e96963a5be650f798db38bd1046d9e6d876",
+      "sha256": "749e603211f8e401b916b1fd3cb81f926a268c8da3ca76d1137f525eadcd288a",
+      "bytes": 27912,
+      "source": "immutable547, unchanged in exact547to030delta"
+    },
+    {
+      "path": "src/main/services/team/provisioning/TeamProvisioningStopCleanupCompatibilityFacade.ts",
+      "gitBlob": "4cc644e40a481379308fd54fc2216f1fa66b6093",
+      "sha256": "28afeea504d600405fb5549fd6b0033d7cc1405857d6ccca2e2693dbab15f693",
+      "bytes": 14731,
+      "source": "immutable547, unchanged in exact547to030delta"
+    },
+    {
+      "path": "src/main/services/team/provisioning/TeamProvisioningStopFlow.ts",
+      "gitBlob": "1a455bb92d3b1e13ce1b025c3be42b92ef5486a7",
+      "sha256": "e0488f5061b91133cc48c19bd452b0ca2f6a4e4e435146922b8cc8d31b5dfd0e",
+      "bytes": 12832,
+      "source": "immutable547, unchanged in exact547to030delta"
+    },
+    {
+      "path": "src/main/services/team/provisioning/TeamProvisioningRequestAdmissionContext.ts",
+      "gitBlob": "6784718b3b303a9500ca230afb89e236fdb908c6",
+      "sha256": "d89262bb4c4e83b86abd4752ebbbdac09c8e4fc2619b2a97098636143d12ebbd",
+      "bytes": 884,
+      "source": "immutable547, unchanged in exact547to030delta"
+    },
+    {
+      "path": "src/main/services/team/provisioning/TeamProvisioningServiceComposition.ts",
+      "gitBlob": "142767a1bc6ab462a415c1b70c71f864032cbb1e",
+      "sha256": "11fc51a41c5679b60d5e2ea71f7338bbcdef38e500693dc17984eaee094a38e6",
+      "bytes": 37403,
+      "source": "immutable547, unchanged in exact547to030delta"
+    },
+    {
+      "path": "src/main/services/team/provisioning/TeamProvisioningServiceRuntimeStateFacade.ts",
+      "gitBlob": "7139532daacb1bbc587f0358dafd329c0b08dff4",
+      "sha256": "c6e6a04e34e27f00c57d32697b3151cfcd25aed4a5329d1f9ec4f1d5f77835e6",
+      "bytes": 26930,
+      "source": "immutable547, unchanged in exact547to030delta"
+    },
+    {
+      "path": "src/main/services/team/provisioning/LegacyNativeStopPublication.ts",
+      "gitBlob": "d16f80defd325c5dfb0c8171964da0d7e010ce2c",
+      "sha256": "20646a83494b7cfdfaf0984bc0da792b2ca349fd3a434903ce6554f393307be1",
+      "bytes": 4674,
+      "source": "immutable547, unchanged in exact547to030delta"
+    }
+  ],
+  "limits": [
+    "Finite witnesses use in-memory ChildProcess-shaped objects and recorded TEST custody; no real CLI spawn, physical native release or packaged Main runtime was exercised.",
+    "Scope is POSIX Anthropic/default solo owner; this does not establish Windows, OpenCode, Codex or all-provider solo parity.",
+    "Original030 native/GUI observations remain historical and incomplete where previously classified; successor Main integration/E2E acceptance remains separate.",
+    "Final22-source composition and eventual Git tree require separate composition review."
+  ]
+}

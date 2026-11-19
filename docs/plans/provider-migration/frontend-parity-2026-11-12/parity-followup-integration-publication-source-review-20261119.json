@@ -1,0 +1,432 @@
+{
+  "schemaVersion": 1,
+  "kind": "independent-publication25-source-composition-review",
+  "reviewer": "composition_review_030",
+  "reviewedAt": "2026-11-19T01:05:19.440118+00:00",
+  "verdict": "PASS_SOURCE_COMPOSITION_PENDING_FINAL_DOCS_AND_ACTUAL_GIT_TREE",
+  "sourceHead": "030b21f0765d1a6e6572f46d262c672d63e69eb7",
+  "sourceTree": "292b3cc975b5c927233fb85b73aed1411753efd1",
+  "method": "Read immutable547 tree and exact030 delta, validate canonical tree hashes, then bind25 publication source rows to all original preimages and local candidate postimages. Compare reviewed historical22 composition and complete immutable production-record sets. No test, product execution, build, native/provider/app run, CI query, or external Git/worktree mutation.",
+  "inputPins": [
+    {
+      "path": "publication-followup-030/source-rows-publication.json",
+      "gitBlob": "94d3567f0c66b730142b46977dfcc77290f1c9c0",
+      "sha256": "fde3bf37ac2cdb4727c1e69091527ce0fa42fc049414fdee05fcd220c4ff8b9b",
+      "bytes": 14213
+    },
+    {
+      "path": "publication-followup-030/source-rows-final.json",
+      "gitBlob": "2471707a5c319573cabf9a64b6f5e86dff2030e7",
+      "sha256": "da3cc981eed4e8bd28a5ff9cd75ccad2e4fac7d856b5b7d39964f541864a1588",
+      "bytes": 12461
+    },
+    {
+      "path": "publication-followup-030/delta547to030.json",
+      "gitBlob": "1c901ac60800dd48f600b3bc7e554610b77e9b87",
+      "sha256": "f869f380914a7a4528827a68cf0d5b3a1dbc222ce32923fddc1d1d3c2cac4a5f",
+      "bytes": 7561
+    },
+    {
+      "path": "publication-followup-030/source-freeze-publication-amendment.json",
+      "gitBlob": "839c16b7396094fd6dc92e1538910f207565e986",
+      "sha256": "80e15b8e6e33a1da9b0e2569841ed31a0075038b366d3b8166b5700a324c53b9",
+      "bytes": 2906
+    },
+    {
+      "path": "publication-followup-030/parity-followup-source-size-publication-20261119.json",
+      "gitBlob": "8f215f414a4b4d67fa8bddec78d4ea6d5ad8d663",
+      "sha256": "22f020d07c5665a0f076340aba70ea3bdb4c958a55c561e62d83c852d484407b",
+      "bytes": 22113
+    },
+    {
+      "path": "publication-followup-030/counted-production-records-publication.json",
+      "gitBlob": "501c51ec421d2f36c72e2cd4ddb0a44dcac11e99",
+      "sha256": "e9a37beb52621bb5cdc39f14f398faa8d7ba30042355ea5395ff061941101b77",
+      "bytes": 1369730
+    },
+    {
+      "path": "publication-followup-030/evaluate-composition-size-publication.mjs",
+      "gitBlob": "6b89b981d6d98cc27ab969484831e06193914107",
+      "sha256": "dced7f291885b52ce5999c267bb80d3e18ce7456c5a9283bd22410102081fc37",
+      "bytes": 5236
+    }
+  ],
+  "componentReviewPins": [
+    {
+      "path": "publication-followup-030/integration-final22-source-review.json",
+      "gitBlob": "e78bfc3c8d6e6cfb55eabcf6db212ce7c8ec8a26",
+      "sha256": "d9e4518e048f54f6ebe470e5efd1627e44930b0b5a8cbab3ca05cab1a72d5424",
+      "bytes": 16914
+    },
+    {
+      "path": "/workspace/scratch/c714f5bce554/retained-eligibility-diagnostic-candidate-030/manifest.json",
+      "gitBlob": "15f9cec259b074ca5a073d6b9d6d571a13ddea7c",
+      "sha256": "f6d7fb4a1d6ce391300c4b1b5e340b7ca97629d0c49949ea3dbca35dd409795a",
+      "bytes": 5811
+    },
+    {
+      "path": "/workspace/scratch/c714f5bce554/retained-eligibility-diagnostic-candidate-030/r2-source-review.json",
+      "gitBlob": "4fd0e12979e4cdd97ac3fd22b0cb315a94db3afb",
+      "sha256": "7fcb5a18caa1a0ab3c2b6cc50a1eff383e1a64427def2784655cca3213a4ad36",
+      "bytes": 13603
+    },
+    {
+      "path": "/workspace/scratch/c714f5bce554/solo-publication-030-candidate/r2-metadata-scope-clarification.json",
+      "gitBlob": "fef1ddc854219e5ae4ff7db71fcf892a5a5f133c",
+      "sha256": "109fbdcaad068c73dd85a7a30ec8fdf52056f1f5c60e8a5f379e88bddc4cf2c1",
+      "bytes": 4090
+    }
+  ],
+  "composition": {
+    "totalSourcePaths": 25,
+    "historical22SourcePaths": 22,
+    "unchangedHistorical22Postimages": 21,
+    "historical22PathAmendments": 1,
+    "retainedObserverAdditionalPaths": 3,
+    "productionPathsChanged": 12,
+    "nonProductionPathsChanged": 13,
+    "newSourceLeaves": 4,
+    "sourceOnlyTree": "da2979d418f1dfc6aa7ae3ea3dc1f7c1ca89037c",
+    "sourceOnlyTreeMeaning": "Immutable030 plus25 reviewed source paths; excludes forthcoming final docs/evidence publication tree.",
+    "allOriginalPreimagesMatch030": true,
+    "allFinalLocalBytesMatchManifest": true,
+    "duplicatePaths": 0,
+    "deletions": 0,
+    "historical12And22FilesMutated": false
+  },
+  "additionalSourceScope": {
+    "owners": [
+      "src/features/agent-backend/main/application/createRetainedLegacyLaunchScope.ts",
+      "src/main/composition/createDesktopStoppedTeamOperations.ts"
+    ],
+    "regression": "test/features/agent-backend/retainedLegacyEligibilityDiagnostics.test.ts",
+    "change": "Optional rejected-eligibility observer feeds the existing bounded remember projection after currentness. Public decisions, accepted native-custody branch, dispatch, deadlines, queues and cleanup are unchanged.",
+    "finiteResults": "Original62 PASS/8 semanticFAIL; candidate70/70 PASS/0skip across new13, existing coordinator38 and projection19; fastlint3 files/0errors/0warnings.",
+    "meaning": "Observation only; original retained V1 failure remains unqualified, generic untyped fence errors remain unknown.",
+    "finalMainFormatting": "Two existing line wraps plus callback only."
+  },
+  "metadataScopeClarification": "Frozen Solo review broad metadata phrases mean a rejected facade readMembersMeta promise remains unknown. Existing TeamMembersMetaStore.getMeta null-to-getMembers empty normalization is unchanged. Full976 archive positively contains a35B empty root members.meta.json; retained state is not an atomic-at-failure observation. No source/test behavior changed for this clarification.",
+  "sourceFreeze": {
+    "targetPath": "scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts",
+    "targetArray": "desktopProofSupplementarySources",
+    "priorBlob": "4d6636e83415012b511f22273dc8068d1e3e9c5f",
+    "publicationBlob": "566b24275d634a213d732564fc3319631f2de0d1",
+    "priorLines": 397,
+    "publicationLines": 403,
+    "exactOnlyAdditions": [
+      "src/features/agent-backend/main/application/createRetainedLegacyLaunchScope.ts",
+      "src/main/composition/createDesktopStoppedTeamOperations.ts",
+      "src/features/agent-backend/main/infrastructure/stopped-import/createRetainedLegacyOpenDiagnostic.ts",
+      "src/features/agent-backend/main/infrastructure/stopped-import/retainedLegacyOpenDiagnosticContract.ts",
+      "src/features/agent-backend/main/infrastructure/stopped-import/createStoppedImportDiagnostic.ts",
+      "src/features/agent-backend/main/application/validateRetainedLegacyLaunchRequest.ts"
+    ],
+    "position": "Immediately after desktop-retained-opencode-authority.ts in the shared platform-neutral supplementary array.",
+    "allPriorLiteralsAndExecutableBodiesPreserved": true,
+    "newTestUsesExistingDiscovery": true,
+    "workflowOrPolicyChange": false
+  },
+  "sizeGuard": {
+    "parentActualGuardResultVerified": true,
+    "reviewerReranEvaluator": false,
+    "guardAndPolicyUnchanged": true,
+    "checkedFiles": 5162,
+    "legacyFiles": 141,
+    "maxLines": 800,
+    "violations": [],
+    "schedulerLines": 836,
+    "schedulerCap": 847,
+    "changedProductionRecordsSinceHistorical22": [
+      "scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts",
+      "src/features/agent-backend/main/application/createRetainedLegacyLaunchScope.ts",
+      "src/main/composition/createDesktopStoppedTeamOperations.ts"
+    ],
+    "remainingProductionRecordsByteIdentical": 5159,
+    "recordBinding": "Whole-record and path/mode/blob tuple hashes match reports. Identical5162 production path set; exactly3 existing records changed (two retained owners and supplementary403). Every25 overlay tuple/physical line count matches local bytes.",
+    "finalCountedRecordsSha256": "89134aafb813be4c89355cfe30e04c9dc497f05a1b76d52e723ad8f8545a93d3",
+    "finalProductionTuplesSha256": "73d4c993567adeeea85ba327bd4054c9543db96e1a7b1591e16f021c532ef826"
+  },
+  "finalSourceRows": [
+    {
+      "path": "packages/legacy-agent-host/tests/fixtures/native-host.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "025a124b317917cdceb5d6072977bd2d24508cdd",
+      "sha256": "a7a3fb47fa680bb9c6193657437b860c58526a2fb87f6e5d2327a865c90f10fb",
+      "bytes": 20176,
+      "lines": 465,
+      "preimage": "7e1c3760f572d1648768a721b590cb343d015b01",
+      "scope": "packaged-030-candidate"
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/fixtures/native-opencode-team/passive-diagnostics.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "3022c10041dd8bceabdd9e9982ab78a305e9c167",
+      "sha256": "89bddd71c36ae06f8d6d398571175a6f31112039fed2b63f2bd51a031b676f4d",
+      "bytes": 44790,
+      "lines": 690,
+      "preimage": "e2b14e9e1118948e4f0159c25aa0f4d34dd138b5",
+      "scope": "credential-diagnostics-030-candidate"
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/native-host-close.test.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "1e4522ba6e600545535c116e59a53a95f6120b37",
+      "sha256": "be61f648fec4c3b73a2c98eeb9f3428708007dc3abccb421ad6e35ecb3be8708",
+      "bytes": 52804,
+      "lines": 744,
+      "preimage": "6e914e68cbbe229ed99d232aab7cb6c7adc330ec",
+      "scope": "packaged-030-candidate"
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/passive-driver-close-diagnostics.test.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "4dbce7ddf863f4b1513bdb018c67b29ec31eac71",
+      "sha256": "16f2216fbf96eced2addb983dc83d4a00f4116d3cb432511d70bb8143a5a4009",
+      "bytes": 11220,
+      "lines": 182,
+      "preimage": null,
+      "scope": "credential-diagnostics-030-candidate"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-captured-app-exit.test.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "4765acd5e153d6fd601e2cd9645ab6966e042400",
+      "sha256": "62358a4efb31ae20948c1e81571780742121304d4b302ecb513efa3c58801dc6",
+      "bytes": 2173,
+      "lines": 47,
+      "preimage": "be1826fce2de43cb6af3b1ca0fb87a683985be99",
+      "scope": "quit-active-030-candidate"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-native-quit-command-snapshot.test.mjs",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "7733ec9dd14269c6ba4d8c276fbb0bf64849019e",
+      "sha256": "56fbdd59fbb15dc7e9bf2543b9ae92011e46fd7ba671381f7eae6ab6e4df3614",
+      "bytes": 9836,
+      "lines": 182,
+      "preimage": null,
+      "scope": "quit-active-030-candidate"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-native-quit-ui-smoke.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "05b5b1f8d17396c2c690d6e0c7b0c896abad1d7a",
+      "sha256": "3f750eef4be35d55fbffa81640e27f97f22f5504ed6adaeb3f6490fa66b99a3e",
+      "bytes": 22749,
+      "lines": 510,
+      "preimage": "cce4088737ff0eb4174746bf6fff49a22aded264",
+      "scope": "quit-active-030-candidate"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-proof-integrated-sources.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "de7adc5a25d63b84888460dc08a518de426946e7",
+      "sha256": "8de1ca5ecbfbfe9823478dd370f861234c05c74e3bf67f35a7fb95fc5ecbf798",
+      "bytes": 44827,
+      "lines": 603,
+      "preimage": "083522612dd93e77dbb0e79c966103b03a71fe87",
+      "scope": "solo-publication-030-candidate"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "566b24275d634a213d732564fc3319631f2de0d1",
+      "sha256": "67d52fa4e5e0fcf56dcaa5a07184c8eaeb5f04c27e33be87ba40fd7887987fe4",
+      "bytes": 26283,
+      "lines": 403,
+      "preimage": "b42cee83d3526df26ce749e3b7b6c076b48a9257",
+      "scope": "publication-shared-source-freeze",
+      "quitIntermediateBlob": "c60111361cf3dba3bf395081ec751ec8d3bb8681"
+    },
+    {
+      "path": "src/features/agent-backend/main/application/createRetainedLegacyLaunchScope.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "48601395b8993858c5c03dc391f32620bff6d6cf",
+      "sha256": "9022504401848b9ec452fcb59e696a3c3e6c70410a68a88c5766a44e9678c4fc",
+      "bytes": 4875,
+      "lines": 125,
+      "preimage": "5531bed60214eae761028dd534a05ee3a6db67e2",
+      "scope": "retained-eligibility-private-observer"
+    },
+    {
+      "path": "src/main/composition/createDesktopStoppedTeamOperations.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "fbcf8cef5d9c9258418bd4aa98c4a6b15cd5a547",
+      "sha256": "9d84942df095ebe4350ad9336031e896885275165e1558ba0b349f4cfbe18a87",
+      "bytes": 13306,
+      "lines": 337,
+      "preimage": "0387d24830f45fa722b2e71765fdfde4c9a98f0d",
+      "scope": "retained-eligibility-private-observer"
+    },
+    {
+      "path": "src/main/services/schedule/JsonScheduleRepository.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "7a77c040eea4d316cd2f0fec5596bbebc31210ca",
+      "sha256": "765d969d6956679e0559017507d5f7289859ba81abd988a8f85fc97ed657bdc2",
+      "bytes": 8604,
+      "lines": 236,
+      "preimage": "2f0ef6e8a4d6506ecb20322af5626bb193db3f31",
+      "scope": "schedule-030-candidate"
+    },
+    {
+      "path": "src/main/services/schedule/ScheduleRepository.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "052e724d9ddc699b24c96aaf563cf874d475720a",
+      "sha256": "ff0b29ebbbf8936c01d94916798889185d3336081000d1327f428f885cfb883f",
+      "bytes": 1307,
+      "lines": 26,
+      "preimage": "9ccc8524d62b5de7c2f4d1b377c2ce93426276dc",
+      "scope": "schedule-030-candidate"
+    },
+    {
+      "path": "src/main/services/schedule/SchedulerService.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "7e80ea7cb896ec3c802f130afff36f32f48b1483",
+      "sha256": "a42eeacd8e4ad2dda44b9941a18d9c4b8023a2a3711f625d81142e63065a5235",
+      "bytes": 32983,
+      "lines": 836,
+      "preimage": "b85244125521fce56e3cf2f320a07ae1d4ca0469",
+      "scope": "schedule-030-candidate"
+    },
+    {
+      "path": "src/main/services/team/TeamLaunchStateStore.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "b1aa8fe6afded73ad22b41784e94ce42b18142a4",
+      "sha256": "f44abe9b34f83a2738342ba84f0cf99ed134b357eb36b9e51844b94249604c41",
+      "bytes": 23353,
+      "lines": 596,
+      "preimage": "b376015ab1f2ebb2dd17e72f95616e9ef38afa6c",
+      "scope": "solo-publication-030-candidate"
+    },
+    {
+      "path": "src/main/services/team/provisioning/TeamProvisioningLaunchStateStoreBoundary.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "f8e2479b4b5c3a555f94bb283e4a1cdd65ccfa59",
+      "sha256": "7465b7a62856f0cc6d654df57033cec3b48e63b1b4ee763ec920a949c143fb97",
+      "bytes": 19156,
+      "lines": 491,
+      "preimage": "9bb0d8ba6f4f9b97cd85060f17dfa56d28bbb58f",
+      "scope": "solo-publication-030-candidate"
+    },
+    {
+      "path": "src/main/services/team/provisioning/TeamProvisioningLiveLaunchSnapshotBoundaryFactory.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "2f61a31f00a759a68091b0fd9c90df1c7259713e",
+      "sha256": "dce03e1761ad9886296e930422b8242f7330c183a8254f2c477e587e4e96c161",
+      "bytes": 10081,
+      "lines": 256,
+      "preimage": "d1f772de3f883e6f420d1261a0fbeff5ee3cd034",
+      "scope": "solo-publication-030-candidate"
+    },
+    {
+      "path": "src/main/services/team/provisioning/TeamProvisioningPersistenceReconcileFacade.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "1af3316624c7d46629ca275638f38707259ae0d1",
+      "sha256": "e3f57dcb97331a166751395bdccddc41538b686061cd7574a05e855eb3486bdc",
+      "bytes": 12871,
+      "lines": 309,
+      "preimage": "0ee8c0fe11176e181d9c2a1f5df87ad2a5eb99b5",
+      "scope": "solo-publication-030-candidate"
+    },
+    {
+      "path": "src/main/services/team/provisioning/__tests__/TeamProvisioningLiveLaunchSnapshotBoundaryFactory.test.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "ff077d66c2f1b027d8fc42bd4e517090b4df1316",
+      "sha256": "7b154e6a055f067315f4d414f9241356696ca680376b2ed67feeeb28a0ff47cd",
+      "bytes": 11223,
+      "lines": 299,
+      "preimage": "2ff65bb7cb7ff8f79d5d43b59e47b965660e3812",
+      "scope": "solo-publication-030-candidate"
+    },
+    {
+      "path": "src/main/services/team/provisioning/__tests__/TeamProvisioningPersistenceReconcileFacade.test.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "7ca326f89632042a98c5bc459250df221980bdd4",
+      "sha256": "529f8a1252abc5c71f8363ff6771dc34c073758fe7dbb0172c8e5dcfc78df335",
+      "bytes": 28169,
+      "lines": 684,
+      "preimage": "1e16d14d9b5daf96c102d4df2d90e80a981dd14f",
+      "scope": "solo-publication-030-candidate"
+    },
+    {
+      "path": "test/features/agent-backend/retainedLegacyEligibilityDiagnostics.test.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "5db9d3cde4be97705bdd1218037dffc7d7771acf",
+      "sha256": "11bae932d7b9bb2a6d73bbbd2cfb4c1841bc14a715fd925f7b42faf368154144",
+      "bytes": 11154,
+      "lines": 298,
+      "preimage": null,
+      "scope": "retained-eligibility-private-observer"
+    },
+    {
+      "path": "test/main/services/schedule/SchedulerMetadataConcurrency.test.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "fa4fc950036305a7f5f2de09e1508f652ff655c1",
+      "sha256": "4d8459485db324be9989ad837b1bfe475006cc141915fddeec9bf0c1a9060caa",
+      "bytes": 9242,
+      "lines": 220,
+      "preimage": null,
+      "scope": "schedule-030-candidate"
+    },
+    {
+      "path": "test/main/services/schedule/SchedulerService.test.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "f04861c30e17c66e13f433a997a121e42d4150ac",
+      "sha256": "0e3882d1cd88571759a59fc29c5352b5baf9298283d9685c8fd7026134d27a22",
+      "bytes": 41784,
+      "lines": 1219,
+      "preimage": "35073d552b8928f969490f7d68028fa11f3ead34",
+      "scope": "schedule-030-candidate"
+    },
+    {
+      "path": "test/main/services/schedule/SmartSchedules.safe-e2e.test.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "434b4689a4e9ca01243e7f2da5af21d803252094",
+      "sha256": "4d0dadaeda026ec8836539ca34212bc98a1c0a05b6788ef3f41d396f794b86aa",
+      "bytes": 21111,
+      "lines": 496,
+      "preimage": "214670d5f0780307de13b14c86d19b885f10fc0e",
+      "scope": "schedule-030-candidate"
+    },
+    {
+      "path": "test/main/services/team/TeamLaunchStateStore.test.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "ebc6e322cc41d83fd8ecb07b5d4bdc7dab927c6e",
+      "sha256": "f198cafb5532b7028d7c50537592f2ceda7afdcc73735e0c2ce29fa56c916843",
+      "bytes": 33407,
+      "lines": 892,
+      "preimage": "d310431a7424065600ff28668f32184d80e2dc3a",
+      "scope": "solo-publication-030-candidate"
+    }
+  ],
+  "limits": [
+    "Historical12/22 and component witnesses retain their exact source and runtime scopes; this review does not convert original030 evidence into successor acceptance.",
+    "Final docs/index/evidence rows and actual complete Git tree require the next separate final-tree review.",
+    "Remote ref/base/PR state, live original job leases and commit/push remain parent publication gates."
+  ]
+}
