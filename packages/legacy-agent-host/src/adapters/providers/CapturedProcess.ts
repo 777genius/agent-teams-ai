@@ -15,7 +15,16 @@ import type { ObservableNativeProcess } from '../../owned-process/processFacade.
 import type { OwnedLaunchPort } from '../../owned-process/contract.js';
 import type { WindowsServiceIntent } from '../../owned-process/retainedServiceContracts.js';
 
-/** Process custody needs native selection only, independent of a Team member/session. */
+/**
+ * Private native selection, independent of a Team member/session.
+ *
+ * Original-path contract A binds trust to this executable/script's captured
+ * path and sha256. All actors retaining write or pathname-replacement authority,
+ * including same-UID actors and holders of already-open writable FD/mmap, are
+ * trusted to preserve that revision from verification through confirmed cleanup
+ * of every original process scope consuming it. This is a composition
+ * precondition, not a claim that other writers have been excluded.
+ */
 export type CapturedProcessProfile = NativeProcessProfile & {
   provider: 'claude' | 'codex' | 'opencode';
 };
@@ -58,6 +67,12 @@ export interface CapturedProcessTreeSource {
   ): CapturedProcessTree;
 }
 
+/**
+ * Copies the selected path, digest, cwd and environment. POSIX launches use the
+ * original pathname and caller's arguments without relocating scripts or resources.
+ * Sealing, currentness loss or root exit does not end the source trust obligation;
+ * cleanup of one scope cannot release another scope still consuming the source.
+ */
 export class CapturedProcess implements CapturedProcessPort {
   private readonly processRoots = new Map<
     ChildProcess,
@@ -273,6 +288,8 @@ export class CapturedProcess implements CapturedProcessPort {
     }
   }
   private verifyExecutable(): void {
+    // Observe the selected revision at this boundary. Hash/stat checks do not
+    // exclude later writes; original-path contract A covers the consumption lifetime.
     const { path, sha256 } = this.profile.executable;
     const before = lstatSync(path, { bigint: true });
     if (

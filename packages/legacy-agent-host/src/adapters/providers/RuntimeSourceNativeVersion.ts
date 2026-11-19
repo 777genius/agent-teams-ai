@@ -28,7 +28,13 @@ export function parseRuntimeSourceNativeVersion(
   return value;
 }
 
-/** At most two owned, noninteractive --version children under one existing source receipt. */
+/**
+ * At most two owned, noninteractive --version children under one existing source receipt.
+ * Each seed/candidate executable inherits CapturedProcess's original-path contract A,
+ * bound to its own copied path and sha256. Version output or allocation cancellation
+ * does not release that contract: retain each original process until close confirms
+ * cleanup, while any other original scope consuming the source remains covered.
+ */
 export class RuntimeSourceNativeVersion implements RuntimeSourceNativeCheck {
   private readonly processes = new Set<CapturedProcessPort>();
   private readonly abort = new AbortController();

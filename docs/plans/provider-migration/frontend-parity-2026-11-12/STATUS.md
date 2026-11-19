@@ -2,6 +2,15 @@
 
 Обновлено: **19 ноября 2026**. Единственный текущий рабочий план.
 
+**Текущее продолжение:** владелец выбрал P09 **A** — исходный путь с доверием всем
+writers выбранной ревизии до завершения её использования. [Принятый контракт](40-p09-source-writer-decision-2026-11-16.md)
+зафиксирован. Срез source/native acceptance реализован и прошёл независимый R2;
+[проверки, точные hashes и исправленные замечания](evidence/p09-contract-a-review-20261119.json)
+сохранены отдельно от ещё не полученного native PASS. Независимые source/GUI проверки
+`33ea959ad1b2496ab393e04fa50e610e092224ec` продолжаются штатно. Свежий Windows ARM
+job135707175233 подтвердил native Jobs и final cleanup всех7 HANDLE, но source-A
+readiness не завершилась; последний matching event — catalog before-await.
+
 **Полная E2E-приёмка ещё не завершена.** Stop-fix опубликован в
 `960ed53c88e664c45a9fe0cc3d054ea83ae50dd3`. В этом срезе исправлены сохранённые
 настройки retained original, начальную папку его private selector, гонку TEST
@@ -96,11 +105,11 @@ resolved; approval review этим не заявляется.
 | E1-Add | На7fe Settings command PASS; membership прерван на исчезнувшем metadata child между ps и первым /proc stat. | Исправлено только первое ENOENT не-Host кандидата;10 вариантов PASS, R2 PASS. Исходные required Runtime count/lineage, Host и later disappearance failures сохранены. Нужны Add/Remove/Restore/Stop/cold и membership verifier. | root |
 | E1-Review | На7fe renderer READY; model preflight held. Parent graph verification27.597s оставила около2.4s до исходного30s startup cutoff. | Штатный verifier уже параллелен12 workers. Linux профиль5.345s не воспроизводит Darwin отказ и не доказывает оптимизацию. Timeout/bytes/authority не изменены; нужен исходный Darwin Review PASS. | root |
 | E1-Resume | [Darwin ARM V2 Resume](https://github.com/777genius/agent-teams-ai/actions/runs/44455698034/job/135330056653): `one fresh Team capture`. | Проверенный numeric observation patch опубликован в90b без нового read/await/input/retry. Нужны новая исходная диагностика и успешный Resume; старый отказ произошёл ещё до первого Stop/cold boundary. | pr_graph |
-| W1 | [Windows x64 source7fe PASS](https://github.com/777genius/agent-teams-ai/actions/runs/44539500343/job/135613817235); ARM Codex A всё ещё не достигает nativeReady до исходного cutoff. | ARM final cleanup=true, все7 original HANDLE absent. Последний catalog leg завершён; окончания всей readiness и Runtime publication нет. Provider/scenario clocks имеют разные anchors, их elapsed нельзя напрямую вычитать. Обоснованного source fix не найдено; нужен original ARM PASS без изменения cutoff/currentness/authority. | root |
-| P09 | Darwin x64/ARM mutation witness остаются отрицательными. | Требуется отдельный выбор контракта original pathname / writer / consumed bytes по Report40. До решения не сужать гарантию и не менять failed oracle. Независимые исправления продолжаются. | root / owner |
+| W1 | [Windows x64 source7fe PASS](https://github.com/777genius/agent-teams-ai/actions/runs/44539500343/job/135613817235); ARM Codex A всё ещё не достигает nativeReady до исходного cutoff. | [Свежий33 ARM](https://github.com/777genius/agent-teams-ai/actions/runs/44565800920/job/135707175233): final cleanup=true, все7 original HANDLE absent; последний event catalog before-await, окончания readiness/Runtime publication нет. На7fe catalog успел завершиться. Provider/scenario clocks имеют разные anchors. Обоснованного source fix не найдено; нужен original ARM PASS без изменения cutoff/currentness/authority. | root; delivery_review |
+| P09 | Darwin x64/ARM mutation witness прежней гарантии остаются отрицательными. | A принят. Два раунда плана и независимый R2 source завершены; 8 product-path rows используют настоящий CapturedProcess, отдельный Darwin mmap schedule сохраняет контрпример. TS7 Host build/test types и C compile PASS. Старые45 strict assertion lines сохранены. Нужны native результаты Linux и обеих Darwin architectures на frozen source; прежние outcomes не переклассифицируются. | root; parity_review |
 | D1-current | На7fe compiler-шаги завершались; frontend shards1/2/4 и typed lint FAIL. | Lint исправлен, facade guard8/8 и оба старый/новый OpenCode transfer пути PASS. Passive refusal join перенесён в существующий helper:794 строки вместо812, guard PASS. Full local compiler дважды exit137; scoped TS7 для14 изменённых файлов и transitive imports PASS. Нужен полный current-source workspace gate. | root |
 | E1-Other | На7fe cross-team final reload: Chromium resource failure; installer startup: original ps timeout. Attachments, Resume и Darwin ARM process jobs cancelled без выполнения. | Сохранить исходные сценарии и deadlines; нужны собственные выполненные результаты текущего source. Предшествующие taskboard/review steps и cleanup учитываются отдельно от полного PASS. | root |
-| Delivery | Исходные7fe acceptance workflows содержат перечисленные отказы; проверенные960 source jobs стоят в очереди. | Проверять только затронутые сценарии, сохранить обязательные current-head gates. После qualification завершить разрешённый PR-маршрут. Не останавливать независимую работу из-за CI queue. | root |
+| Delivery | Исходные7fe acceptance workflows содержат перечисленные отказы; текущие33 source jobs в очереди/выполняются, Windows ARM завершён указанным отказом. | Проверять только затронутые сценарии, сохранить обязательные current-head gates. A сначала публикуется отдельной checkpoint branch для локальной frozen-source приёмки без отмены running33 workspace gate; затем входит в тот же PR. После qualification завершить разрешённый PR-маршрут. | root |
 
 ## Что уже реализовано и повторно не разрабатывается
 
@@ -315,14 +324,15 @@ source B вернул ready=true за 15184.6772ms и был отклонён и
 Новые закрытые причины различают invalid/conflict/capacity/byte budget и boundary
 reader; UNKNOWN остаётся UNKNOWN. Новых reads, действий, ожиданий или deadlines нет.
 
-## P09: решение ещё не выбрано
+## P09: выбран A, реализация и приёмка в работе
 
 [Report40](40-p09-source-writer-decision-2026-11-16.md) описывает две разные границы:
-A — original path с явно доверенными оставшимися writers и исключением остальных
-на всё время consumption; B — отдельная фиксированная версия executable/script
+A — original path с доверием всем сохраняющим write/rename/FD/mmap authority writers
+до подтверждённой очистки всех consuming scopes; B — отдельная фиксированная версия executable/script
 с согласованным изменением path/provenance, `$0`, self-read и ресурсов.
-Ни один вариант не принят. Silent copy/chmod, запрет scripts или доверие writer
-не являются разрешённым исправлением исходного контракта.
+Владелец явно принял A19nov. В текущем срезе доверены все субъекты с возможностью
+изменить выбранный source; исключение иных writers не заявляется. Silent copy/chmod
+или запрет scripts не входят в выбранное изменение.
 
 В original Darwin witness после mutation исполняется `SCRIPT:B`; cleanup всех
 children/groups не доказывает byte identity. Исторические x64 code-signing errno

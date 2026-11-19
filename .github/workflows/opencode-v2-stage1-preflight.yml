@@ -603,12 +603,12 @@ jobs:
             if (process.platform === 'win32') assert.match(r.digests.windowsShell, /^[a-f0-9]{64}$/);
             }
           "
-      - name: Observe POSIX original-path exec and explicit mutation counterexamples
+      - name: Verify POSIX trusted-writer contract A and preserve strict mutation counterexamples
         if: always() && runner.os != 'Windows'
         env:
           OPENCODE_V2_POSIX_EXEC_GO: '1'
           OPENCODE_V2_POSIX_EXEC_RECEIPT: ${{ github.workspace }}/opencode-v2-posix-exec.json
-          # This independent TEST syscall proof admits no production tuple or module mock.
+          # Original product path plus separate legacy strict verdicts; no tuple override or module mock.
           OPENCODE_V2_EMBEDDED_DARWIN_CANDIDATE_BUILD: ''
         run: node --test --test-name-pattern='^POSIX original-path' packages/legacy-agent-host/tests/registered-process-executable.native.ts
       - name: Preserve exact native evidence or candidate HOLD
