@@ -75,6 +75,23 @@ describe('redirectProjectAliasTaskNavigation', () => {
     expect(f.state.setPendingTaskDetailEditorRequest).not.toHaveBeenCalled();
   });
 
+  it('does not navigate when the source alias is not the active tab', () => {
+    const f = fixture();
+    f.state.activeTabId = 'logical-tab';
+    redirectProjectAliasTaskNavigation(f.get, 'ptc-a', 'builders', '/projects/a');
+    expect(f.state.openTeamTab).not.toHaveBeenCalled();
+    expect(f.state.setPendingReviewRequest).not.toHaveBeenCalled();
+    expect(f.state.setPendingTaskDetailEditorRequest).not.toHaveBeenCalled();
+    expect(f.state.activeTabId).toBe('logical-tab');
+  });
+
+  it('does not navigate while the app context is switching', () => {
+    const f = fixture();
+    f.state.isContextSwitching = true;
+    redirectProjectAliasTaskNavigation(f.get, 'ptc-a', 'builders', '/projects/a');
+    expect(f.state.openTeamTab).not.toHaveBeenCalled();
+  });
+
   it('does not transfer requests if their context changed while navigating', () => {
     const f = fixture();
     f.state.openTeamTab.mockImplementationOnce(() => {

@@ -191,13 +191,14 @@ export const ProjectScopedTeamDetailView = ({
     [redirectProject, repositoryGroups, projects]
   );
   useEffect(() => {
-    if (!isActive || !redirectTeam || !redirectProject || !redirectProjectListed) return;
+    if (!isActive || !isPaneFocused || !redirectTeam ||
+        !redirectProject || !redirectProjectListed) return;
     // A deep link may still use the physical alias. Navigate through its
     // verified owner; never mount the alias as an independent team editor.
     redirectProjectAliasTaskNavigation(
       () => useStore.getState(), teamName, redirectTeam, redirectProject
     );
-  }, [isActive, redirectTeam, redirectProject, redirectProjectListed, teamName]);
+  }, [isActive, isPaneFocused, redirectTeam, redirectProject, redirectProjectListed, teamName]);
 
   const visiblePhysicalTeam =
     !isActive || context?.mode !== 'per_project'

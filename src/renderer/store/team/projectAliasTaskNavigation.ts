@@ -18,6 +18,9 @@ export function redirectProjectAliasTaskNavigation(
     (tab) => tab.id === before.activeTabId &&
       isOrdinaryTeamTab(tab) && tab.teamName === physicalTeamName
   );
+  // This mounted alias may belong to an unfocused pane. Never change the
+  // user's focused project or tab unless its physical source is still active.
+  if (!sourceTab || before.isContextSwitching) return;
   const review = before.pendingReviewRequest;
   const editor = before.pendingTaskDetailEditorRequest;
   before.openTeamTab(logicalTeamName, projectPath);
@@ -27,7 +30,7 @@ export function redirectProjectAliasTaskNavigation(
     (tab) => tab.id === after.activeTabId &&
       isOrdinaryTeamTab(tab) && tab.teamName === logicalTeamName
   );
-  if (!sourceTab || !destinationTab || after.isContextSwitching ||
+  if (!destinationTab || after.isContextSwitching ||
       after.activeContextId !== initialContextId) return;
 
   if (review && review.teamName === physicalTeamName &&

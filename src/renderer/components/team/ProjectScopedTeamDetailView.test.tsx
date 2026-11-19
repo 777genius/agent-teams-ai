@@ -228,6 +228,28 @@ describe('ProjectScopedTeamDetailView project switching', () => {
     expect(host.querySelector('[data-testid="mode-picker"]')).toBeNull();
   });
 
+  it('defers alias navigation until its original pane becomes focused', async () => {
+    getView.mockResolvedValue({
+      mode: 'per_project', state: 'redirect',
+      logicalTeamName: 'builders', projectPath: '/TEST/a',
+    });
+    await act(async () => root.render(
+      React.createElement(ProjectScopedTeamDetailView, {
+        teamName: 'ptc-a', isActive: true, isPaneFocused: false,
+      })
+    ));
+    await settle();
+    expect(openTeamTab).not.toHaveBeenCalled();
+
+    await act(async () => root.render(
+      React.createElement(ProjectScopedTeamDetailView, {
+        teamName: 'ptc-a', isActive: true, isPaneFocused: true,
+      })
+    ));
+    await settle();
+    expect(openTeamTab).toHaveBeenCalledWith('builders', '/TEST/a');
+  });
+
   it('keeps old shared tasks readable after switching their logical team to per-project mode', async () => {
     // The retained shared view must never be overridden by the current project's physical alias.
     state.selectedTeamName = 'builders';
