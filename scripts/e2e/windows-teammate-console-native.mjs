@@ -325,9 +325,9 @@ async function runCustodyProbe() {
     // The separate real Electron product E2E requires wrapper, member and
     // held tool original PIDs all retire after the actual Main force-exit.
   } finally {
-    terminateOwnedTree(app, marker);
-    // Cleanup must attempt *both* original PIDs even if the first lookup/kill fails.
+    // An app-tree cleanup failure must never skip either original descendant.
     const cleanupErrors = [];
+    try { terminateOwnedTree(app, marker); } catch (error) { cleanupErrors.push(error); }
     for (const pid of [matePid, toolPid]) {
       if (!pid) continue;
       try {
