@@ -16,6 +16,8 @@ const state = vi.hoisted(() => ({ teamsBase: '', tasksBase: '' }));
 vi.mock('@main/utils/pathDecoder', () => ({
   getTeamsBasePath: () => state.teamsBase,
   getTasksBasePath: () => state.tasksBase,
+  getClaudeBasePath: () => state.teamsBase.replace(/[/\\]teams$/, ''),
+  getAppDataBasePath: () => state.teamsBase.replace(/[/\\]teams$/, '/app'),
 }));
 
 interface Delivery {

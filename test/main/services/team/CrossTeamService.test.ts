@@ -19,7 +19,9 @@ import type { TeamProvisioningService } from '@main/services/team/TeamProvisioni
 import type { CrossTeamSendRequest, TeamConfig } from '@shared/types';
 
 vi.mock('@main/utils/pathDecoder', () => ({
+  getAppDataBasePath: () => `${process.cwd()}/.cross-team-test-nonexistent-dir-${process.pid}`,
   getTeamsBasePath: () => `${process.cwd()}/.cross-team-test-nonexistent-dir-${process.pid}/teams`,
+  getTasksBasePath: () => `${process.cwd()}/.cross-team-test-nonexistent-dir-${process.pid}/tasks`,
   getClaudeBasePath: () => `${process.cwd()}/.cross-team-test-nonexistent-dir-${process.pid}`,
 }));
 
@@ -156,6 +158,30 @@ describe('CrossTeamService', () => {
   });
 
   describe('send', () => {
+    it('rejects direct delivery to an isolated logical team before inbox writes', async () => {
+      const directory = path.join(MOCK_TEAMS_BASE_PATH, 'teams', 'team-b');
+      fs.mkdirSync(directory, { recursive: true });
+      fs.writeFileSync(path.join(directory, 'team.meta.json'), JSON.stringify({
+        version: 1, cwd: '/sandbox/project', projectContextMode: 'per_project',
+      }));
+      await expect(service.send(makeRequest())).rejects.toThrow(
+        'Project-scoped cross-team delivery requires an explicit project context'
+      );
+      expect(inboxWriter.sendMessage).not.toHaveBeenCalled();
+    });
+
+    it('rejects direct sends FROM a logical team switched to isolated mode', async () => {
+      const directory = path.join(MOCK_TEAMS_BASE_PATH, 'teams', 'team-a');
+      fs.mkdirSync(directory, { recursive: true });
+      fs.writeFileSync(path.join(directory, 'team.meta.json'), JSON.stringify({
+        version: 1, cwd: '/sandbox/project', projectContextMode: 'per_project',
+      }));
+      await expect(service.send(makeRequest())).rejects.toThrow(
+        'Project-scoped cross-team delivery requires an explicit project context'
+      );
+      expect(inboxWriter.sendMessage).not.toHaveBeenCalled();
+    });
+
     it('delivers message to inbox via inboxWriter', async () => {
       const result = await service.send(makeRequest());
 
@@ -1298,6 +1324,17 @@ describe('CrossTeamService', () => {
       dataService.listTeams.mockRejectedValue(new Error('ENOENT'));
       const result = await service.listAvailableTargets();
       expect(result).toEqual([]);
+    });
+
+    it('does not offer a project-scoped logical team without an explicit target context', async () => {
+      dataService.listTeams.mockResolvedValue([
+        { teamName: 'scoped-team', displayName: 'Scoped', memberCount: 2,
+          projectContextMode: 'per_project', pendingCreate: false },
+        { teamName: 'legacy-target', displayName: 'Legacy', memberCount: 2,
+          members: [], pendingCreate: false },
+      ]);
+      const result = await service.listAvailableTargets();
+      expect(result.map((target) => target.teamName)).toEqual(['legacy-target']);
     });
 
     it('uses team summaries instead of verified config reads for target discovery', async () => {

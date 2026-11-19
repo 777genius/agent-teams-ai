@@ -12,6 +12,8 @@ interface LaunchDialogBase {
   validateMemberSettings?: () => Promise<void>;
   open: boolean;
   teamName: string;
+  /** Verified owned runtime alias; null means no readable project policy (manual approval). */
+  projectPermissionTeamName?: string | null;
   onClose: () => void;
 }
 
@@ -53,6 +55,7 @@ interface LaunchDialogScheduleMode {
 }
 
 export type LaunchTeamDialogProps =
-  | LaunchDialogLaunchMode
-  | LaunchDialogRelaunchMode
-  | LaunchDialogScheduleMode;
+  (LaunchDialogLaunchMode | LaunchDialogRelaunchMode | LaunchDialogScheduleMode) & {
+    /** Project runtimes may adjust provider/permissions, but not the shared roster. */
+    rosterReadOnly?: boolean;
+  };

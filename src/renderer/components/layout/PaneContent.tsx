@@ -42,8 +42,8 @@ const SchedulesView = lazy(() =>
   }))
 );
 const TeamDetailView = lazy(() =>
-  import('../team/TeamDetailView').then((module) => ({
-    default: module.TeamDetailView,
+  import('../team/ProjectScopedTeamDetailView').then((module) => ({
+    default: module.ProjectScopedTeamDetailView,
   }))
 );
 const TeamListView = lazy(() =>
@@ -193,6 +193,7 @@ const PaneTabSlot = ({ tab, isActive, isPaneFocused }: PaneTabSlotProps): React.
             <TabUIProvider tabId={tab.id}>
               <TeamDetailView
                 teamName={tab.teamName ?? ''}
+                retainedSharedHistory={tab.retainedSharedHistory === true}
                 isActive={isActive}
                 isPaneFocused={isPaneFocused}
               />

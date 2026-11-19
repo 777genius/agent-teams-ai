@@ -15,6 +15,7 @@ import { join } from 'path';
 import { registerTeamLifecycleRoutes } from './teams/teamLifecycleRoutes';
 import { registerTeamManagementRoutes } from './teams/teamManagementRoutes';
 import { registerTeamMemberDiagnosticsRoute } from './teamMemberDiagnostics';
+import { rejectUnsupportedProjectContextHttpLaunch } from './teamProjectContextLaunchGuard';
 import {
   HttpBadRequestError,
   parseCreateTeamRequest,
@@ -23,6 +24,7 @@ import {
   parseTeamConfigurationReadQuery,
   withRuntimeTeamName,
 } from './teamRouteParsers';
+import { rememberMemberWorkSyncRuntimeStop } from './teamRuntimeStopReplay';
 
 import type { HttpServices } from './index';
 import type { AppConnectionContext } from '@features/external-agent-connection/contracts';
@@ -41,29 +43,6 @@ import type {
 import type { FastifyInstance } from 'fastify';
 
 const logger = createLogger('HTTP:teams');
-
-const RUNTIME_STOP_REPLAY_LIMIT = 64;
-const runtimeStopReplay = new Map<
-  string,
-  { ok: true; status: unknown; runtimeAdmission: { state: string } }
->();
-
-function rememberMemberWorkSyncRuntimeStop(
-  localStopId: string,
-  value?: { ok: true; status: unknown; runtimeAdmission: { state: string } }
-) {
-  if (value) {
-    if (runtimeStopReplay.size >= RUNTIME_STOP_REPLAY_LIMIT) {
-      const oldest = runtimeStopReplay.keys().next().value;
-      if (oldest) {
-        runtimeStopReplay.delete(oldest);
-      }
-    }
-    runtimeStopReplay.set(localStopId, value);
-    return value;
-  }
-  return runtimeStopReplay.get(localStopId);
-}
 
 type LaunchBody = Omit<TeamLaunchRequest, 'teamName'>;
 type CreateTeamBody = TeamCreateConfigRequest;
@@ -294,6 +273,15 @@ export function registerTeamRoutes(app: FastifyInstance, services: HttpServices)
   app.post<{ Body: CreateTeamBody }>('/api/teams', async (request, reply) => {
     try {
       const createRequest = parseCreateTeamRequest(request.body);
+      // HTTP launch does not yet support project-context admission. Preserve
+      // create-then-launch for existing HTTP clients rather than writing an
+      // unlaunchable per_project draft when their request omits the mode.
+      if ((request.body as Partial<TeamCreateRequest>)?.projectContextMode === 'per_project') {
+        throw new HttpBadRequestError(
+          'Project-isolated teams currently require Electron; use shared for HTTP create/launch'
+        );
+      }
+      createRequest.projectContextMode = 'shared';
       const management = managementFeature
         ? await managementFeature.create(
             createRequest,
@@ -379,7 +367,7 @@ export function registerTeamRoutes(app: FastifyInstance, services: HttpServices)
           return reply.status(400).send({ error: validatedTeamName.error });
         }
 
-        const teamName = validatedTeamName.value!;
+        const teamName = await rejectUnsupportedProjectContextHttpLaunch(validatedTeamName.value!);
         const launch = async (): Promise<TeamCreateResponse | TeamLaunchResponse> => {
           const draftSavedRequest = await getDraftSavedRequest(services, teamName);
           let response!: TeamCreateResponse | TeamLaunchResponse;

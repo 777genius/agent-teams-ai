@@ -95,7 +95,6 @@ import type { TaskCommentNotificationJournalStore } from './TaskCommentNotificat
 import type { TeamFileWritePolicy } from './teamFileWritePolicy';
 import type { TeamLogSourceTracker } from './TeamLogSourceTracker';
 import type { TeamMetaFile } from './TeamMetaStore';
-import type { AgentActionMode } from '@shared/types';
 import type {
   AddMemberRequest,
   AttachmentMeta,
@@ -131,6 +130,7 @@ import type {
   ToolCallMeta,
   UpdateKanbanPatch,
 } from '@shared/types';
+import type { AgentActionMode } from '@shared/types';
 import type { AgentTeamsController } from 'agent-teams-controller';
 
 const { createController } = agentTeamsControllerModule;
@@ -1120,7 +1120,7 @@ export class TeamDataService {
     const selection = resolveTeamRuntimeSelection(meta);
     const resolvedProviderId = selection.status === 'selected' ? selection.providerId : undefined;
     return {
-      teamName,
+      teamName, projectContextMode: meta.projectContextMode,
       displayName: meta.displayName,
       description: meta.description,
       color: meta.color,
@@ -3514,12 +3514,15 @@ export class TeamDataService {
     });
   }
 
-  createTeamConfig(request: TeamCreateConfigRequest): Promise<void> {
+  createTeamConfig(
+    request: TeamCreateConfigRequest,
+    options?: { claimOwnerOnCreate?: boolean }
+  ): Promise<void> {
     return this.runConfigurationOperation(request.teamName, () =>
       createDraftTeamConfig(request, {
         teamMetaStore: this.teamMetaStore,
         membersMetaStore: this.membersMetaStore,
-      })
+      }, options)
     );
   }
 

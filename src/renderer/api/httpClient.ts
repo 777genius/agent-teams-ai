@@ -163,7 +163,6 @@ import type {
 import type { AgentConfig, MemberWorkSyncElectronApi } from '@shared/types/api';
 import type { EditorAPI, ProjectAPI } from '@shared/types/editor';
 import type { TerminalAPI } from '@shared/types/terminal';
-
 function buildTokenUsageSnapshotRoute(request?: TokenUsageSnapshotRequest): string {
   const query = new URLSearchParams();
   if (request?.teamIds !== undefined) {
@@ -183,7 +182,6 @@ function buildTokenUsageSnapshotRoute(request?: TokenUsageSnapshotRequest): stri
   const suffix = query.toString();
   return suffix ? `${TOKEN_USAGE_SNAPSHOT_ROUTE}?${suffix}` : TOKEN_USAGE_SNAPSHOT_ROUTE;
 }
-
 function createBrowserCompanionStatus(
   input: RuntimeProviderCompanionInput,
   operation: 'status' | 'install' | 'connect' | 'action'
@@ -211,7 +209,6 @@ function createBrowserCompanionStatus(
     updatedAt: new Date().toISOString(),
   };
 }
-
 function createBrowserRuntimeProviderError(
   runtimeId: RuntimeProviderManagementRuntimeId,
   code: 'runtime-unhealthy' | 'unsupported-action'
@@ -226,7 +223,6 @@ function createBrowserRuntimeProviderError(
     },
   };
 }
-
 function gatewayUnavailable(): never {
   throw new Error('Gateway providers are available in the desktop app.');
 }
@@ -1047,8 +1043,13 @@ export class HttpAPIClient implements ElectronAPI {
     getStatus: (): Promise<HttpServerStatus> =>
       Promise.resolve({ running: true, port: parseInt(new URL(this.baseUrl).port, 10) }),
   };
-
   teams: TeamsAPI = {
+    getProjectContextView: async () => {
+      throw new Error('Project-scoped local team history is only available in Electron mode');
+    },
+    setProjectContextMode: async () => {
+      throw new Error('Project-scoped local team history is only available in Electron mode');
+    },
     list: async (): Promise<TeamSummary[]> => {
       console.warn('[HttpAPIClient] teams API is not available in browser mode');
       return [];

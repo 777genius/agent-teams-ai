@@ -12,6 +12,8 @@ import type { TaskDetailReadScope } from '@features/team-task-detail/core';
 export interface TaskDetailEditorRequest extends TaskDetailReadScope {
   nonce: string;
   targetTeamTabId: string;
+  /** The visible logical tab hosting a physical project-team editor. */
+  navigationTeamName?: string;
   projectPath: string;
   filePath: string;
   line: number | null;
@@ -41,7 +43,7 @@ export function queueTaskDetailEditor(
   )
     return false;
   const scope = captureTaskDetailReadScope(identity.teamName, identity.contextId);
-  before.openTeamTab(identity.teamName);
+  before.openTeamTab(identity.teamName, undefined, intent.filePath);
   const state = get();
   if (
     state.isContextSwitching ||
@@ -74,6 +76,7 @@ export function isTaskDetailEditorTargetCurrent(
   teamName: string,
   tabId: string | null
 ): boolean {
+  const tabTeamName = request.navigationTeamName ?? teamName;
   return (
     request.status !== 'blocked' &&
     !state.isContextSwitching &&
@@ -85,7 +88,7 @@ export function isTaskDetailEditorTargetCurrent(
       (pane) =>
         pane.activeTabId === tabId &&
         pane.tabs.some(
-          (tab) => tab.id === tabId && isOrdinaryTeamTab(tab) && tab.teamName === teamName
+          (tab) => tab.id === tabId && isOrdinaryTeamTab(tab) && tab.teamName === tabTeamName
         )
     )
   );

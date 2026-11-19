@@ -1,3 +1,4 @@
+import { parseNewTeamProjectContextMode } from '@features/team-project-context/core';
 import {
   validateTeammateName,
   validateTeamName,
@@ -369,8 +370,15 @@ export function parseCreateTeamRequest(body: unknown): TeamCreateConfigRequest {
   const worktree = assertOptionalString(payload.worktree, 'worktree');
   const extraCliArgs = assertOptionalExtraCliArgs(payload.extraCliArgs);
 
+  let projectContextMode: TeamCreateConfigRequest['projectContextMode'];
+  try {
+    projectContextMode = parseNewTeamProjectContextMode(payload.projectContextMode);
+  } catch {
+    throw new TeamRequestValidationError('projectContextMode must be shared or per_project');
+  }
   const request: TeamCreateConfigRequest = {
     teamName,
+    projectContextMode,
     runtimeSelectionVersion,
     members: parseCreateMembers(payload.members, providerId ?? 'anthropic'),
     ...(displayName ? { displayName } : {}),
@@ -491,6 +499,9 @@ export function parseDraftLaunchCreateRequest(
 
   return {
     teamName,
+    // An HTTP draft is an existing persisted team, never a new create request.
+    // Missing legacy mode remains shared and overrides cannot silently migrate it.
+    projectContextMode: savedRequest.projectContextMode ?? 'shared',
     runtimeSelectionVersion: normalizeRuntimeSelectionVersion(savedRequest.runtimeSelectionVersion),
     displayName: savedRequest.displayName,
     description: savedRequest.description,

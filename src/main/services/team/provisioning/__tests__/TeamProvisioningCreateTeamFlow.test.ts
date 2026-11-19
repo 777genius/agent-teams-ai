@@ -209,6 +209,7 @@ describe('TeamProvisioningCreateTeamFlow', () => {
     const payload = buildCreateTeamMetaPayload(buildRequest(), null, 12345);
 
     expect(payload).toEqual({
+      projectContextMode: 'per_project',
       displayName: 'Runtime Team',
       description: 'Build runtime features',
       color: '#336699',

@@ -113,6 +113,8 @@ export interface Tab {
 
   /** Team name (required when type === 'team'; optional for graph/token-usage deep links) */
   teamName?: string;
+  /** Explicit task navigation to pre-isolation shared history; does not change new-work mode. */
+  retainedSharedHistory?: boolean;
 
   /** Discriminator for a full task-detail surface hosted by an otherwise rollback-compatible team tab. */
   taskDetail?: {

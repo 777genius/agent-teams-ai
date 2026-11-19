@@ -14,6 +14,11 @@ import { createReviewFlowBridge } from '@features/review-flow/preload';
 import { createRuntimeProviderManagementBridge } from '@features/runtime-provider-management/preload';
 import { createTeamGroupChatsBridge } from '@features/team-group-chats/preload';
 import { createTeamImportBridge } from '@features/team-import/preload';
+import {
+  TEAM_PROJECT_CONTEXT_SET_MODE_CHANNEL,
+  TEAM_PROJECT_CONTEXT_VIEW_CHANNEL,
+  type TeamProjectContextView,
+} from '@features/team-project-context/contracts';
 import { createTeamMemberSettingsBridge } from '@features/team-provisioning/preload';
 import { createTeamReadRecoveryBridge } from '@features/team-read-recovery/preload';
 import { createTerminalWorkspaceBridge } from '@features/terminal-workspace/preload';
@@ -927,6 +932,12 @@ const electronAPI: ElectronAPI = {
     list: async () => {
       return invokeIpcWithResult<TeamSummary[]>(TEAM_LIST);
     },
+    getProjectContextView: async (logicalName: string, projectPath?: string | null) =>
+      invokeIpcWithResult<TeamProjectContextView>(
+        TEAM_PROJECT_CONTEXT_VIEW_CHANNEL, logicalName, projectPath ?? null
+      ),
+    setProjectContextMode: async (logicalName: string, mode: 'shared' | 'per_project') =>
+      invokeIpcWithResult<void>(TEAM_PROJECT_CONTEXT_SET_MODE_CHANNEL, logicalName, mode),
     getData: async (teamName: string, options?: TeamGetDataOptions) => {
       if (options === undefined) {
         return invokeIpcWithResult<TeamViewSnapshot>(TEAM_GET_DATA, teamName);

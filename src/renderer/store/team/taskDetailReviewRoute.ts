@@ -16,6 +16,8 @@ import type { TaskChangeRequestOptions } from '@renderer/utils/taskChangeRequest
 export interface TaskDetailReviewRequest extends TaskDetailReadScope {
   nonce: string;
   targetTeamTabId: string;
+  /** The visible logical tab hosting a physical project-team review. */
+  navigationTeamName?: string;
   taskId: string;
   filePath?: string;
   requestOptions: TaskChangeRequestOptions;
@@ -36,7 +38,7 @@ export function queueTaskDetailReview(
   )
     return false;
   const scope = captureTaskDetailReadScope(identity.teamName, identity.contextId);
-  before.openTeamTab(identity.teamName);
+  before.openTeamTab(identity.teamName, undefined, identity.taskId);
   const state = get();
   if (
     state.isContextSwitching ||
@@ -70,6 +72,7 @@ export function isTaskDetailReviewTargetCurrent(
   teamName: string,
   tabId: string | null
 ): boolean {
+  const tabTeamName = request.navigationTeamName ?? teamName;
   if (
     state.isContextSwitching ||
     request.teamName !== teamName ||
@@ -83,7 +86,7 @@ export function isTaskDetailReviewTargetCurrent(
     (pane) =>
       pane.activeTabId === tabId &&
       pane.tabs.some(
-        (tab) => tab.id === tabId && isOrdinaryTeamTab(tab) && tab.teamName === teamName
+        (tab) => tab.id === tabId && isOrdinaryTeamTab(tab) && tab.teamName === tabTeamName
       )
   );
 }

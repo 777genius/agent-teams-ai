@@ -333,7 +333,15 @@ vi.mock('@renderer/components/team/dialogs/ProvisioningProviderRuntimeSettingsDi
 }));
 
 vi.mock('@renderer/components/team/dialogs/SkipPermissionsCheckbox', () => ({
-  SkipPermissionsCheckbox: () => React.createElement('div', null, 'skip-permissions'),
+  SkipPermissionsCheckbox: ({ checked }: { checked: boolean }) =>
+    React.createElement(
+      'div',
+      {
+        'data-testid': 'skip-permissions',
+        'data-checked': String(checked),
+      },
+      'skip-permissions'
+    ),
 }));
 
 vi.mock('@renderer/components/team/dialogs/AdvancedCliSection', () => ({
@@ -6679,4 +6687,143 @@ describe('LaunchTeamDialog', () => {
       }
     }
   );
+
+  it.each([
+    { logical: true, project: false },
+    { logical: false, project: true },
+  ])(
+    'hydrates project relaunch permissions from the native runtime (logical $logical, project $project)',
+    async ({ logical, project }) => {
+      vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+      vi.mocked(api.teams.getSavedRequest).mockImplementation(async (teamName) => ({
+        teamName,
+        cwd: '/tmp/project',
+        providerId: 'anthropic',
+        model: 'opus',
+        members: [],
+        skipPermissions: teamName === 'ptc-project-a' ? project : logical,
+      }));
+      const host = document.createElement('div');
+      document.body.appendChild(host);
+      const root = createRoot(host);
+      try {
+        await act(async () => {
+          root.render(
+            React.createElement(LaunchTeamDialog, {
+              mode: 'relaunch',
+              open: true,
+              teamName: 'team-alpha',
+              projectPermissionTeamName: 'ptc-project-a',
+              members: [],
+              defaultProjectPath: '/tmp/project',
+              provisioningError: null,
+              activeTeams: [],
+              onClose: vi.fn(),
+              onRelaunch: vi.fn(async () => {}),
+            })
+          );
+          await flush();
+        });
+        expect(api.teams.getSavedRequest).toHaveBeenCalledWith('team-alpha');
+        expect(api.teams.getSavedRequest).toHaveBeenCalledWith('ptc-project-a');
+        expect(
+          host.querySelector('[data-testid="skip-permissions"]')?.getAttribute('data-checked')
+        ).toBe(String(project));
+      } finally {
+        await act(async () => root.unmount());
+        host.remove();
+        vi.mocked(api.teams.getSavedRequest).mockReset().mockResolvedValue(null);
+      }
+    }
+  );
+
+
+  it('fails closed to manual approval when a team-list project runtime is unverified', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    vi.mocked(api.teams.getSavedRequest).mockResolvedValue({
+      teamName: 'team-alpha',
+      cwd: '/tmp/project',
+      providerId: 'anthropic',
+      model: 'opus',
+      members: [],
+      skipPermissions: true,
+    });
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    try {
+      await act(async () => {
+        root.render(
+          React.createElement(LaunchTeamDialog, {
+            mode: 'relaunch',
+            open: true,
+            teamName: 'team-alpha',
+            projectPermissionTeamName: null,
+            members: [],
+            defaultProjectPath: '/tmp/project',
+            provisioningError: null,
+            activeTeams: [],
+            onClose: vi.fn(),
+            onRelaunch: vi.fn(async () => {}),
+          })
+        );
+        await flush();
+      });
+      expect(api.teams.getSavedRequest).toHaveBeenCalledWith('team-alpha');
+      expect(
+        host.querySelector('[data-testid="skip-permissions"]')?.getAttribute('data-checked')
+      ).toBe('false');
+    } finally {
+      await act(async () => root.unmount());
+      host.remove();
+      vi.mocked(api.teams.getSavedRequest).mockReset().mockResolvedValue(null);
+    }
+  });
+
+  it('does not carry auto-approval from project A into another relaunch project', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    vi.mocked(api.teams.getSavedRequest).mockImplementation(async (teamName) => ({
+      teamName,
+      cwd: '/tmp/project',
+      providerId: 'anthropic',
+      model: 'opus',
+      members: [],
+      skipPermissions: true,
+    }));
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const checkbox = () =>
+      host.querySelector('[data-testid="skip-permissions"]')?.getAttribute('data-checked');
+    try {
+      await act(async () => {
+        root.render(
+          React.createElement(LaunchTeamDialog, {
+            mode: 'relaunch',
+            open: true,
+            teamName: 'team-alpha',
+            projectPermissionTeamName: 'ptc-project-a',
+            members: [],
+            defaultProjectPath: '/tmp/project',
+            provisioningError: null,
+            activeTeams: [],
+            onClose: vi.fn(),
+            onRelaunch: vi.fn(async () => {}),
+          })
+        );
+        await flush();
+      });
+      expect(checkbox()).toBe('true');
+      await act(async () => {
+        projectPathSelectorMock.onSelect('/tmp/different-project');
+        await flush();
+      });
+      expect(checkbox()).toBe('false');
+    } finally {
+      await act(async () => root.unmount());
+      host.remove();
+      vi.mocked(api.teams.getSavedRequest).mockReset().mockResolvedValue(null);
+    }
+  });
+
 });

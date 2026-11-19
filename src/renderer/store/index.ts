@@ -62,7 +62,7 @@ import {
   continueAcceptedTeamManagementChange,
 } from './team/teamManagementNotices';
 import { scheduleAllToolApprovalSettingsSync } from './team/teamToolApprovalSettingsSync';
-import { getVisibleTeamNamesInAnyPane } from './team/teamViewVisibility';
+import { getVisibleTeamNamesInAnyPane, subscribeVisiblePhysicalTeamChanges } from './team/teamViewVisibility';
 import { installCodexStartupStatusRevalidation } from './codexStartupStatusRevalidation';
 import { nextTeamAliveFromLeadActivity } from './leadActivityTeamAlive';
 import {
@@ -1327,6 +1327,7 @@ export function initializeNotificationListeners(): () => void {
     };
 
     syncVisibleTeamTracking();
+    const unsubscribePhysicalTeams = subscribeVisiblePhysicalTeamChanges(syncVisibleTeamTracking);
 
     const unsubscribeVisibleTeamTracking = useStore.subscribe((state, prevState) => {
       if (state.paneLayout === prevState.paneLayout) {
@@ -1336,6 +1337,7 @@ export function initializeNotificationListeners(): () => void {
     });
 
     cleanupFns.push(() => {
+      unsubscribePhysicalTeams();
       unsubscribeVisibleTeamTracking();
       for (const teamName of trackedTeamNames) {
         void api.teams.setToolActivityTracking(teamName, false).catch(() => undefined);
@@ -2440,9 +2442,7 @@ export function initializeNotificationListeners(): () => void {
     }
   }
 
-  // Listen for SSH connection status changes from main process
-  // NOTE: Only syncs connection status here. Data fetching is handled by
-  // connectionSlice.connectSsh/disconnectSsh and contextSlice.switchContext.
+  // Sync SSH status; connection and context slices own data fetching.
   if (api.ssh?.onStatus) {
     const cleanup = api.ssh.onStatus((_event: unknown, status: unknown) => {
       const s = status as { state: string; host: string | null; error: string | null };

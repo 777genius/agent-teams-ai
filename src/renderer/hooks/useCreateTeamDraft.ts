@@ -34,7 +34,7 @@ import {
 import { normalizeTeamMemberMcpPolicy } from '@shared/utils/teamMemberMcpPolicy';
 
 import type { MemberDraft } from '@renderer/components/team/members/membersEditorTypes';
-import type { TeamFastMode } from '@shared/types';
+import type { TeamFastMode, TeamProjectContextMode } from '@shared/types';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -51,6 +51,8 @@ export interface UseCreateTeamDraftResult {
   ) => void;
   teamName: string;
   setTeamName: (v: string) => void;
+  projectContextMode: TeamProjectContextMode;
+  setProjectContextMode: (v: TeamProjectContextMode) => void;
   members: MemberDraft[];
   setMembers: (v: MemberDraft[]) => void;
   syncModelsWithLead: boolean;
@@ -173,6 +175,7 @@ export function useCreateTeamDraft(): UseCreateTeamDraftResult {
   }>({});
   const runtimeSelectionRef = useRef(runtimeSelection);
   const [teamName, setTeamNameState] = useState('');
+  const [projectContextMode, setProjectContextModeState] = useState<TeamProjectContextMode>('per_project');
   const [members, setMembersState] = useState<MemberDraft[]>([]);
   const [syncModelsWithLead, setSyncModelsWithLeadState] = useState(storedSyncModelsWithLead);
   const [teammateWorktreeDefault, setTeammateWorktreeDefaultState] = useState(false);
@@ -194,6 +197,7 @@ export function useCreateTeamDraft(): UseCreateTeamDraftResult {
 
   // ── Refs (latest values for debounced callbacks) ───────────────────────
   const teamNameRef = useRef('');
+  const projectContextModeRef = useRef<TeamProjectContextMode>('per_project');
   const membersRef = useRef<MemberDraft[]>([]);
   const syncModelsWithLeadRef = useRef(storedSyncModelsWithLead);
   const teammateWorktreeDefaultRef = useRef(false);
@@ -229,6 +233,7 @@ export function useCreateTeamDraft(): UseCreateTeamDraftResult {
     return {
       version: 1,
       teamName: teamNameRef.current,
+      projectContextMode: projectContextModeRef.current,
       runtimeSelectionVersion: runtimeSelectionRef.current.version,
       runtimeProviderId: runtimeSelectionRef.current.providerId,
       runtimeModel: runtimeSelectionRef.current.model,
@@ -304,6 +309,7 @@ export function useCreateTeamDraft(): UseCreateTeamDraftResult {
     };
     setRuntimeSelectionState(runtimeSelectionRef.current);
     teamNameRef.current = snap.teamName;
+    projectContextModeRef.current = snap.projectContextMode ?? 'per_project';
     membersRef.current = deserialized;
     syncModelsWithLeadRef.current = nextSyncModelsWithLead;
     teammateWorktreeDefaultRef.current = snap.teammateWorktreeDefault === true;
@@ -323,6 +329,7 @@ export function useCreateTeamDraft(): UseCreateTeamDraftResult {
     organizationPlacementParentIdRef.current = snap.organizationPlacementParentId ?? '';
 
     setTeamNameState(snap.teamName);
+    setProjectContextModeState(projectContextModeRef.current);
     setMembersState(deserialized);
     setSyncModelsWithLeadState(nextSyncModelsWithLead);
     setTeammateWorktreeDefaultState(snap.teammateWorktreeDefault === true);
@@ -397,6 +404,16 @@ export function useCreateTeamDraft(): UseCreateTeamDraftResult {
       userTouchedRef.current = true;
       teamNameRef.current = v;
       setTeamNameState(v);
+      scheduleSave();
+    },
+    [scheduleSave]
+  );
+
+  const setProjectContextMode = useCallback(
+    (mode: TeamProjectContextMode) => {
+      userTouchedRef.current = true;
+      projectContextModeRef.current = mode;
+      setProjectContextModeState(mode);
       scheduleSave();
     },
     [scheduleSave]
@@ -560,6 +577,7 @@ export function useCreateTeamDraft(): UseCreateTeamDraftResult {
     runtimeSelectionRef.current = {};
     setRuntimeSelectionState({});
     teamNameRef.current = '';
+    projectContextModeRef.current = 'per_project';
     membersRef.current = [];
     syncModelsWithLeadRef.current = nextStoredSyncModelsWithLead;
     teammateWorktreeDefaultRef.current = false;
@@ -579,6 +597,7 @@ export function useCreateTeamDraft(): UseCreateTeamDraftResult {
     organizationPlacementParentIdRef.current = '';
 
     setTeamNameState('');
+    setProjectContextModeState('per_project');
     setMembersState([]);
     setSyncModelsWithLeadState(nextStoredSyncModelsWithLead);
     setTeammateWorktreeDefaultState(false);
@@ -606,6 +625,8 @@ export function useCreateTeamDraft(): UseCreateTeamDraftResult {
     setRuntimeSelection,
     teamName,
     setTeamName,
+    projectContextMode,
+    setProjectContextMode,
     members,
     setMembers,
     syncModelsWithLead,
