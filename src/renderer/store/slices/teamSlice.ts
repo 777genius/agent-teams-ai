@@ -206,6 +206,7 @@ import {
   saveToolApprovalSettingsForTeam,
 } from '../team/teamToolApprovalSettings';
 import {
+  persistAndAwaitToolApprovalSettingsSync,
   persistAndScheduleToolApprovalSettingsSync,
   resetToolApprovalSettingsSync,
   scheduleToolApprovalSettingsSync,
@@ -4494,17 +4495,25 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
         [request.teamName]: optimisticLaunchParams,
       },
     }));
-    // Initialize per-team tool approval settings based on skipPermissions flag
-    {
-      const launchSettings: ToolApprovalSettings =
-        request.skipPermissions === false
-          ? DEFAULT_TOOL_APPROVAL_SETTINGS
-          : { ...DEFAULT_TOOL_APPROVAL_SETTINGS, autoAllowAll: true };
-      saveToolApprovalSettingsForTeam(request.teamName, launchSettings);
-      set((state) => projectToolApprovalSettings(state, request.teamName, launchSettings));
-    }
+    // Initialize per-team tool approval settings based on skipPermissions flag.
+    const launchSettings: ToolApprovalSettings =
+      request.skipPermissions === false
+        ? DEFAULT_TOOL_APPROVAL_SETTINGS
+        : { ...DEFAULT_TOOL_APPROVAL_SETTINGS, autoAllowAll: true };
+    saveToolApprovalSettingsForTeam(request.teamName, launchSettings);
+    set((state) => projectToolApprovalSettings(state, request.teamName, launchSettings));
     let responseRunId: string | null = null;
     try {
+      // The runtime is addressed by a verified physical alias, even when UI
+      // launch/progress uses the logical team. Reset its persisted policy before
+      // native launch; otherwise an old "allow all" selection survives relaunch.
+      const context = await api.teams.getProjectContextView(request.teamName, request.cwd);
+      if (context.mode === 'per_project' && context.state === 'ready') {
+        set((state) =>
+          projectToolApprovalSettings(state, context.executionTeamName, launchSettings)
+        );
+        await persistAndAwaitToolApprovalSettingsSync(context.executionTeamName, launchSettings);
+      }
       const response = await unwrapIpc('team:launch', () => api.teams.launchTeam(request));
       responseRunId = response.runId;
       teamLaunchAnalyticsByRunId.set(response.runId, launchAnalyticsContext);

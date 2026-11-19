@@ -49,6 +49,7 @@ const hoisted = vi.hoisted(() => ({
   getMemberActivityMeta: vi.fn(),
   createTeam: vi.fn(),
   launchTeam: vi.fn(),
+  getProjectContextView: vi.fn(),
   getProvisioningStatus: vi.fn(),
   getMemberSpawnStatuses: vi.fn(),
   getTeamAgentRuntime: vi.fn(),
@@ -98,6 +99,7 @@ vi.mock('@renderer/api', () => ({
       getMemberActivityMeta: hoisted.getMemberActivityMeta,
       createTeam: hoisted.createTeam,
       launchTeam: hoisted.launchTeam,
+      getProjectContextView: hoisted.getProjectContextView,
       getProvisioningStatus: hoisted.getProvisioningStatus,
       getMemberSpawnStatuses: hoisted.getMemberSpawnStatuses,
       getTeamAgentRuntime: hoisted.getTeamAgentRuntime,
@@ -649,6 +651,9 @@ describe('teamSlice actions', () => {
     hoisted.getDeletedTasks.mockResolvedValue([]);
     hoisted.createTeam.mockResolvedValue({ runId: 'run-1' });
     hoisted.launchTeam.mockResolvedValue({ runId: 'run-1' });
+    hoisted.getProjectContextView.mockImplementation(async (teamName: string) => ({
+      mode: 'shared', state: 'ready', executionTeamName: teamName,
+    }));
     hoisted.invalidateTaskChangeSummaries.mockResolvedValue(undefined);
     hoisted.getProvisioningStatus.mockResolvedValue({
       runId: 'run-1',
@@ -7556,6 +7561,69 @@ describe('teamSlice actions', () => {
       } finally {
         vi.useRealTimers();
       }
+    });
+
+    it('resets the verified physical runtime policy before relaunch even with an older sync in flight', async () => {
+      const store = createSliceStore();
+      const oldSettings = {
+        autoAllowAll: true,
+        autoAllowFileEdits: false,
+        autoAllowSafeBash: false,
+        timeoutAction: 'wait' as const,
+        timeoutSeconds: 30,
+      };
+      store.setState({
+        selectedTeamName: 'ptc-project-a',
+        toolApprovalSettings: oldSettings,
+        toolApprovalSettingsByTeam: { 'ptc-project-a': oldSettings },
+      });
+      window.localStorage.setItem(
+        'team:toolApprovalSettings:ptc-project-a',
+        JSON.stringify(oldSettings)
+      );
+      hoisted.getProjectContextView.mockResolvedValue({
+        mode: 'per_project', state: 'ready',
+        executionTeamName: 'ptc-project-a',
+        workContextId: 'work-a', projectPath: '/tmp/project-a',
+      });
+      const priorWrite = createDeferredPromise<void>();
+      hoisted.updateToolApprovalSettings
+        .mockImplementationOnce(() => priorWrite.promise)
+        .mockResolvedValueOnce(undefined);
+
+      // The user previously enabled auto-allow in the physical approval sheet.
+      await store.getState().updateToolApprovalSettings(
+        { autoAllowAll: true }, 'ptc-project-a'
+      );
+      const launching = store.getState().launchTeam({
+        teamName: 'builders',
+        cwd: '/tmp/project-a',
+        skipPermissions: false,
+      });
+      await vi.waitFor(() =>
+        expect(hoisted.getProjectContextView).toHaveBeenCalledWith(
+          'builders', '/tmp/project-a'
+        )
+      );
+      expect(hoisted.launchTeam).not.toHaveBeenCalled();
+      priorWrite.resolve();
+      await launching;
+
+      const expected = { ...oldSettings, autoAllowAll: false };
+      expect(hoisted.updateToolApprovalSettings).toHaveBeenLastCalledWith(
+        'ptc-project-a', expected
+      );
+      expect(store.getState().toolApprovalSettingsByTeam['ptc-project-a']).toEqual(expected);
+      expect(store.getState().toolApprovalSettings).toEqual(expected);
+      expect(JSON.parse(
+        window.localStorage.getItem('team:toolApprovalSettings:ptc-project-a') ?? '{}'
+      )).toEqual(expected);
+      expect(hoisted.launchTeam).toHaveBeenCalledWith({
+        teamName: 'builders', cwd: '/tmp/project-a', skipPermissions: false,
+      });
+
+      await store.getState().selectTeam('ptc-project-a');
+      expect(store.getState().toolApprovalSettings.autoAllowAll).toBe(false);
     });
 
     it('stages launch settings for the target team without replacing another selected team projection', async () => {
