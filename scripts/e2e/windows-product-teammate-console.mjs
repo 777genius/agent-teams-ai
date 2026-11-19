@@ -27,8 +27,10 @@ assert(matchesRuntimeCliVersion(version.stdout, getExpectedRuntimeCliVersion(loc
 
 const fixture = await prepareNativeDesktopEnvironment();
 const { root, projectPath, teamName, env } = fixture;
-const receiptDir = process.env.WINDOWS_PRODUCT_CONSOLE_EVIDENCE ||
-  path.join(process.env.RUNNER_TEMP || os.tmpdir(), 'windows-product-console-' + randomUUID());
+// Each attempt owns fresh observer handshake/result files; CI still uploads the parent directory.
+const evidenceRoot = process.env.WINDOWS_PRODUCT_CONSOLE_EVIDENCE ||
+  path.join(process.env.RUNNER_TEMP || os.tmpdir(), 'windows-product-console');
+const receiptDir = path.join(evidenceRoot, 'run-' + randomUUID());
 await mkdir(receiptDir, { recursive: true });
 const receiptPath = path.join(receiptDir, 'windows-product-console.json');
 const modelPath = path.join(receiptDir, 'model-requests.ndjson');
@@ -48,6 +50,7 @@ const usageProcessScript = [
 const proofs = new Map();
 const expected = new Map();
 let app;
+let appSpawnError = null;
 let appBirth;
 let mainBirth;
 let client;
@@ -66,6 +69,7 @@ let forceExitOwnedLauncher;
 let forceExitHeldTool;
 let forceExitPidEvidence = null;
 let hwndObserver;
+let hwndObserverSpawnError = null;
 let hwndObserverLog = '';
 let hwndEvidence;
 let usageImporterProcesses = [];
@@ -128,7 +132,7 @@ function modelToolDecision(body) {
   // EncodedCommand avoids quoting or Git Bash path rewriting of the TEST marker.
   const heldScript = "$ErrorActionPreference='Stop';" +
     "[System.IO.File]::WriteAllText('" + heldToolPidPath.replaceAll("'", "''") +
-    "',[string]$PID);Start-Sleep -Seconds 120";
+    "',[string]$PID);while ($true) { Start-Sleep -Seconds 10 }";
   // Git Bash/MSYS translates native /c into a drive path; //c reaches cmd.exe as /c.
   const command = kind === 'hold'
     ? 'powershell.exe -NoProfile -NonInteractive -EncodedCommand ' +
@@ -166,7 +170,7 @@ async function getProcess(pid) {
   const script = "$ErrorActionPreference='Stop';" +
     "$p=Get-CimInstance Win32_Process -Filter 'ProcessId = " + pid + "' -ErrorAction Stop;" +
     "if(-not $p){Write-Output 'null';exit 0};" +
-    "@{pid=[int]$p.ProcessId;creation=[string]$p.CreationDate;" +
+    "@{pid=[int]$p.ProcessId;creation=([datetime]$p.CreationDate).ToUniversalTime().ToString('o',[System.Globalization.CultureInfo]::InvariantCulture);" +
     "command=[string]$p.CommandLine;parent=[int]$p.ParentProcessId}|ConvertTo-Json -Compress";
   const found = spawnSync('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', script], {
     encoding: 'utf8', windowsHide: true, timeout: 15_000,
@@ -294,10 +298,12 @@ async function run() {
     path.join(repoRoot, 'scripts/dev-with-runtime.mjs'),
     '--remoteDebuggingPort', String(port), '--inspect=' + inspectorPort,
   ], { cwd: repoRoot, env, windowsHide: true, detached: false, stdio: ['ignore', 'pipe', 'pipe'] });
+  app.once('error', error => { appSpawnError = error; });
   for (const stream of [app.stdout, app.stderr]) stream.on('data', b => {
     log = (log + b.toString()).slice(-30_000);
   });
   await wait('original desktop launcher PID', async () => {
+    if (appSpawnError) throw new Error('Owned desktop spawn failed: ' + String(appSpawnError));
     if (!app.pid) return false;
     const p = await getProcess(app.pid);
     if (!p || !p.command.includes('dev-with-runtime.mjs') || !p.command.includes(String(port))) return false;
@@ -359,10 +365,13 @@ async function run() {
     '-ReadyPath', hwndReady, '-StopPath', hwndStop,
     '-EvidencePath', hwndProof, '-MainPid', String(mainBirth.pid),
   ], { windowsHide: true, cwd: repoRoot, stdio: ['ignore', 'pipe', 'pipe'] });
+  hwndObserver.once('error', error => { hwndObserverSpawnError = error; });
   for (const stream of [hwndObserver.stdout, hwndObserver.stderr]) stream.on('data', chunk => {
     hwndObserverLog = (hwndObserverLog + chunk.toString()).slice(-4000);
   });
   await wait('owned native HWND observer ready', async () => {
+    if (hwndObserverSpawnError)
+      throw new Error('Native HWND observer spawn failed: ' + String(hwndObserverSpawnError));
     if (hwndObserver.exitCode !== null)
       throw new Error('Native HWND observer failed: ' + hwndObserverLog);
     return (await readFile(hwndReady, 'utf8').catch(() => '')) === 'ready';
@@ -727,6 +736,31 @@ try {
   await mainInspector?.close().catch(() => undefined);
   await client?.close().catch(() => undefined);
   let cleanupOk = true;
+  // The original ChildProcess handle stays owned even when the first CIM lookup
+  // fails. Do not abandon a live launcher or delete its profile under Electron.
+  if (app && !appBirth && app.pid) {
+    if (app.exitCode === null && app.signalCode === null) {
+      try {
+        const killed = spawnSync('taskkill.exe', ['/PID', String(app.pid), '/T', '/F'], {
+          windowsHide: true, timeout: 15_000, encoding: 'utf8',
+        });
+        if (killed.error || killed.status !== 0)
+          throw new Error('Unidentified owned launcher tree termination failed');
+        const deadline = Date.now() + 10_000;
+        while (app.exitCode === null && app.signalCode === null && Date.now() < deadline)
+          await delay(200);
+        if (app.exitCode === null && app.signalCode === null)
+          throw new Error('Unidentified owned launcher did not settle');
+      } catch (error) {
+        app.kill('SIGKILL');
+        cleanupOk = false;
+        process.stderr.write('Owned launcher fallback cleanup failed: ' + String(error) + '\n');
+      }
+    }
+    // Without the original verified birth, descendant cleanup cannot be proven.
+    // Retain the disposable profile instead of removing live/unknown state.
+    if (!mainBirth) cleanupOk = false;
+  }
   // The dev launcher can exit before Electron or a native teammate does.
   // Verify each original process birth and command before touching its PID;
   // never kill unknown/recycled PIDs or discard a still-in-use test profile.
