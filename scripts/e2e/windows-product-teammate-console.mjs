@@ -369,6 +369,8 @@ async function run() {
   }, 45_000);
   phase = 'real-product-team-create';
   const request = {
+    // Qualify Windows direct-process custody without unrelated project-context alias admission.
+    projectContextMode: 'shared',
     teamName, cwd: projectPath, providerId: 'anthropic', model: 'claude-sonnet-4-6',
     skipPermissions: true, syncModelsWithLead: false,
     prompt: 'Disposable Windows product E2E. Do not use tools or access files unless an explicit WIN_NATIVE_TOOL directive arrives.',
