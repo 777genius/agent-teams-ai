@@ -518,6 +518,36 @@ describe('teamSlice actions', () => {
       .not.toHaveProperty('retainedSharedHistory');
   });
 
+  it('selects a grouped worktree before opening the logical project team tab', () => {
+    const store = createSliceStore();
+    const fetchSessionsInitial = vi.fn().mockResolvedValue(undefined);
+    store.setState({
+      projects: [],
+      repositoryGroups: [{
+        id: 'repo-b', identity: null, name: 'B', mostRecentSession: 0, totalSessions: 0,
+        worktrees: [{
+          id: 'worktree-b', path: '/TEST/project-b', name: 'project-b',
+          isMainWorktree: false, source: 'git', sessions: [], totalSessions: 0, createdAt: 1,
+        }],
+      }] as AppState['repositoryGroups'],
+      selectedProjectId: 'unrelated-project',
+      selectedWorktreeId: null,
+      selectedRepositoryId: null,
+      fetchSessionsInitial,
+    });
+    store.getState().openTeamTab('builders', '/TEST/project-b');
+    expect(store.getState()).toMatchObject({
+      selectedRepositoryId: 'repo-b',
+      selectedWorktreeId: 'worktree-b',
+      selectedProjectId: 'worktree-b',
+      activeProjectId: 'worktree-b',
+    });
+    expect(fetchSessionsInitial).toHaveBeenCalledWith('worktree-b');
+    expect(store.getState().openTab).toHaveBeenCalledWith(expect.objectContaining({
+      type: 'team', teamName: 'builders',
+    }));
+  });
+
   it('does not misclassify a verified native project task as old shared history', () => {
     const store = createSliceStore();
     store.setState({

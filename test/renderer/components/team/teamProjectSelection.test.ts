@@ -5,6 +5,7 @@ import {
   resolveTeamsProjectNavigationPath,
   resolveTeamLaunchDefaultProjectPath,
   resolveTeamListProjectPermissionAlias,
+  resolveVerifiedProjectTaskNavigation,
   teamMatchesProjectSelection,
 } from '@renderer/components/team/teamProjectSelection';
 import { describe, expect, it } from 'vitest';
@@ -235,6 +236,24 @@ describe('teamProjectSelection', () => {
       projectId: 'project-standalone',
       projectPath: '/Users/test/standalone',
     });
+  });
+
+  it('keeps verified physical task history when its project is no longer discovered', () => {
+    const verified = {
+      mode: 'per_project' as const, state: 'redirect' as const,
+      logicalTeamName: 'builders', projectPath: '/Users/test/deleted-worktree',
+    };
+    expect(resolveVerifiedProjectTaskNavigation(
+      'ptc-owned', verified, repositoryGroups, projects
+    )).toEqual({ teamName: 'ptc-owned' });
+    expect(resolveVerifiedProjectTaskNavigation(
+      'ptc-owned', { ...verified, projectPath: '/Users/test/headless' },
+      repositoryGroups, projects
+    )).toEqual({ teamName: 'builders', projectPath: '/Users/test/headless' });
+    expect(resolveVerifiedProjectTaskNavigation(
+      'ptc-owned', { ...verified, projectPath: '/Users/test/standalone' },
+      repositoryGroups, projects
+    )).toEqual({ teamName: 'builders', projectPath: '/Users/test/standalone' });
   });
 
   it('matches team project history against the selected project', () => {

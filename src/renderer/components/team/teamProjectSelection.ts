@@ -179,6 +179,22 @@ export function resolveTeamListProjectPermissionAlias(
   return context.executionTeamName;
 }
 
+/**
+ * A verified physical task link may navigate to the logical team only when
+ * openTeamTab can select that project's flat or grouped worktree. Otherwise
+ * keep the verified physical identity for read-only historical navigation.
+ */
+export function resolveVerifiedProjectTaskNavigation(
+  physicalTeamName: string,
+  redirect: Extract<TeamProjectContextView, { state: 'redirect' }>,
+  repositoryGroups: readonly RepositoryGroup[],
+  projects: readonly Project[]
+): { teamName: string; projectPath?: string } {
+  return findTeamProjectSelectionTarget(repositoryGroups, projects, redirect.projectPath)
+    ? { teamName: redirect.logicalTeamName, projectPath: redirect.projectPath }
+    : { teamName: physicalTeamName };
+}
+
 export function resolveCreateTeamDefaultProjectPath({
   initialProjectPath,
   selectedProjectPath,

@@ -12,6 +12,8 @@ import { buildTaskChangeRequestOptions } from '@renderer/utils/taskChangeRequest
 import { ExternalLink } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
 
+import { resolveVerifiedProjectTaskNavigation } from '../teamProjectSelection';
+
 import {
   hasSelectedTargetTeamData,
   shouldKeepGlobalTaskDialogLoading,
@@ -119,9 +121,12 @@ export const GlobalTaskDetailDialog = (): React.JSX.Element | null => {
       if (!destination) return;
       closeGlobalTaskDetail();
       if (destination.state === 'redirect') {
-        // A verified native alias owns this project task. Do not mark its
-        // logical navigation as an old shared-history task.
-        openTeamTab(destination.logicalTeamName, destination.projectPath);
+        // The backend verified the physical alias. If its project disappeared
+        // from discovery, keep that exact history rather than the sidebar's project.
+        const target = resolveVerifiedProjectTaskNavigation(
+          identity.teamName, destination, current.repositoryGroups, current.projects
+        );
+        openTeamTab(target.teamName, target.projectPath);
       } else {
         openTeamTab(identity.teamName, undefined, identity.taskId);
       }

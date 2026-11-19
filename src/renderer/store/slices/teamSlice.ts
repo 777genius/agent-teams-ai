@@ -2304,6 +2304,22 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
       );
       if (matchingProject && stateForProject.selectedProjectId !== matchingProject.id) {
         stateForProject.selectProject(matchingProject.id);
+      } else if (!matchingProject) {
+        // Grouped worktrees are stored separately from the flat projects list.
+        // The path must select the matching worktree before opening a logical tab.
+        for (const group of stateForProject.repositoryGroups ?? []) {
+          const worktree = group.worktrees.find(
+            (candidate) => normalizePath(candidate.path) === normalizedPath
+          );
+          if (!worktree) continue;
+          if (stateForProject.selectedRepositoryId !== group.id ||
+              stateForProject.selectedWorktreeId !== worktree.id ||
+              stateForProject.selectedProjectId !== worktree.id) {
+            set(getWorktreeNavigationState(group.id, worktree.id));
+            void get().fetchSessionsInitial(worktree.id);
+          }
+          break;
+        }
       }
     }
 
