@@ -402,9 +402,8 @@ describe('TeamInboxWriter', () => {
     expect(persisted[0]).toMatchObject({
       toolCalls: [{ name: 'SendMessage' }],
     });
-    expect((persisted[0] as Record<string, unknown>).toolCalls).not.toEqual([
-      { name: 'SendMessage', preview: undefined },
-    ]);
+    expect((persisted[0] as { toolCalls?: Record<string, unknown>[] }).toolCalls?.[0])
+      .not.toHaveProperty('preview');
     await expect(writer.sendMessage('my-team', {
       member: 'alice', text: 'same generated message with attachments',
       messageId: result.messageId,
