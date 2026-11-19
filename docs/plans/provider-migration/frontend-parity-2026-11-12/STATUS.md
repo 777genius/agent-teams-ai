@@ -7,18 +7,21 @@
 На нём прошли полный cross-team/ReviewFlow GUI, workspace typecheck и fast lint,
 четыре frontend shards, все пять packaged-платформ и их общий gate.
 Из 25 Desktop lanes прошли 20. Оставшиеся отказы перечислены ниже.
-Продолжения до `0369480a` опубликованы. Строгая локальная
+Функциональные и TEST-исправления опубликованы; точные срезы указаны ниже. Строгая локальная
 [Host-сборка e754](evidence/host-build-e754d233-20261119.json) PASS за 10.064s,
 все 14 input pins совпали. Новые правки не получают результаты приёмки9ec
 автоматически. При последнем чтении CI на 036 — 15 queued и 14 skipped;
 новых CI PASS не заявляется, локальная работа очередь не ожидает.
 На 036 внутренний import GUI proof прошёл все 58 шагов, включая fresh Host Stop,
-release, отсутствие peer и reload. Общий запуск остаётся INCOMPLETE: следующий
-negative oracle обнаружил одну отклонённую попытку `codex app-server`.
-Реальный Codex не запускался. No-Host producer получил от TEST sentinel ложный
-сигнал об установленном Codex; выбор уже существующего режима метаданных фикстуры
-исправлен и проверен. Запрет native invocation сохраняется. Cleanup квалифицирован,
-все 1909 source hashes совпали. Final acceptance и retained ещё не выполнены.
+release, отсутствие peer и reload; общий запуск отказал на sentinel guard.
+На 588 ложное объявление установленного Codex устранено (`refused=[]`), но
+source producer остановился на отдельном диагностическом child read после Stop
+и Task: wrapper не вернул ожидаемые boolean. Исходная ошибка не была сохранена.
+Пассивный перенос записи diagnostics перед assertions исправляет этот пробел.
+Один AFTER-EXIT read за 2.934s дал оба true и 11 неизменных файлов; он не меняет
+588 INCOMPLETE и не доказывает причину прежней exec/parse ошибки.
+Следом выполняются независимые native V2 checks; original import/retained
+и их final validators остаются в плане.
 
 ## Доставка и границы
 
@@ -63,7 +66,7 @@ resolved; approval review этим не заявляется.
 
 | ID | Первый отказ на 9ec | Текущая работа и критерий завершения | Владелец |
 | --- | --- | --- | --- |
-| E1-Stop / Import | На 036 внутренний GUI proof PASS: все 58 шагов, fresh Host Stop/release и reload. Общий guard отклонил попытку `codex app-server`. | Scoped fixture mode исправлен: 1/1 affected factory test, strict types и R2 PASS; native refusal guard сохранён. Далее original successful Quit, весь final validator и retained UI. | root; pr_graph |
+| E1-Stop / Import | На 036 внутренний GUI proof PASS58; на 588 sentinel refused=[], но producer потерял диагностический exec/parse error после Stop/Task. | Исходный child read сохраняет прежние 10s/128KiB. Diagnostics теперь сохраняется до assertions; R2 PASS. AFTER-EXIT debug не является E2E. Нужны complete original smoke, successful Quit и отдельный CI mode validator. | root; pr_graph |
 | E1-Retained | [Retained UI](https://github.com/777genius/agent-teams-ai/actions/runs/44455698034/job/135330056793): prepare/held. [Main retained V1/V2](https://github.com/777genius/agent-teams-ai/actions/runs/44455698135/job/135350275468): coordinator admission, not-eligible/not-dispatched. | Закрытая prepare-boundary диагностика готова: 42/42 tests и R2 PASS. Read-fence использует исправленный drain существующей очереди; связь с исходным отказом ещё проверяется. Требуются исходный UI и отдельный V1/V2 coexistence open/history/Stop/cold/cleanup. | pr_graph; media |
 | E1-Add | [Linux V2 management](https://github.com/777genius/agent-teams-ai/actions/runs/44455698034/job/135330056490): `original add completes`. | По current receipt Add сохранён held до member publication, model probe не прошёл credential preparation/cleanup. Закрытая first-close диагностика передана Host→Main, 30/30 actual-source checks и R2 PASS. Нужен исходный Add/Remove/Restore/Stop/cold после сборки. | media |
 | E1-Review | [Darwin ARM V2 Review](https://github.com/777genius/agent-teams-ai/actions/runs/44455698034/job/135330056601): исходный preflight deadline. | Initial-seed/model-source fix опубликован в90b, exact-byte focused proof и R2 сохранены. Нужен affected original preflight/Review. Source test не заменяет Darwin acceptance. | media |
@@ -204,6 +207,19 @@ stopped reload. Перед successful Quit общий guard обнаружил �
 native donor guards и прочие modes неизменны. Единственный затронутый factory
 case PASS, strict TS7 PASS за 6.646s, independent R2 PASS. Production, original
 producer/UI/final validator и общий no-agent guard побайтово сохранены.
+
+[Original 588](evidence/gui-import-lifecycle-58851e65-20261119.json) остановился
+после native Stop и единственного post-Stop Task, до consumer. Source peers/groups
+удалены, inputs frozen; обычный successful Quit не достигнут, top-level collector
+cleanup/child-input qualification не получена. Retained и mode validators не
+запускались. Отсутствующие boolean означают diagnostic exec/parse failure;
+реальный отказ canonical release дал бы boolean false.
+[Пассивная диагностика](evidence/finite-import-diagnostic-58851e65-20261119.json)
+перемещает одну существующую строку присваивания перед прежними assertions;
+остальной source побайтово одинаков, R2 PASS. Новых tests/read/action/deadline нет.
+Единственный отдельно разрешённый AFTER-EXIT child использует исходные command,
+cwd, closed env, 10s и 128KiB. Его exit0/оба true/11 неизменных файлов сохранены
+как debug; первоначальная причина 588 остаётся UNKNOWN.
 
 [Исторические входы coexistence](evidence/coexistence-historical-inputs-20261119.json)
 подготовлены отдельно: четыре clean pinned checkout, проверенные V1 packages1.19.4

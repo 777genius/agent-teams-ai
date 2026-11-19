@@ -201,9 +201,9 @@ export async function produceDesktopFiniteStoppedTeam(options: {
     const task = created[0]!; assert.equal(task.status, 'pending'); assert.equal(typeof task.id, 'string');
     assert.equal(task.subject, 'TEST task saved after original finite source Stop');
     const diagnostics = await readStoppedImportSourceDiagnostics(fixture.root, { node: fixture.node, electron: options.electron });
+    proof.originalStopDiagnostics = diagnostics; proof.sourceTask = task;
     assert.equal(row(diagnostics.canonicalNodeRead).canonicalReleaseCurrent, true);
     assert.equal(row(diagnostics.canonicalNodeRead).proofParseable, true);
-    proof.originalStopDiagnostics = diagnostics; proof.sourceTask = task;
     phase = 'quit'; quitRequested = true; proof.quitRequested = true;
     await renderer.evaluate('window.electronAPI.windowControls.close()').catch(() => undefined);
     const quitDeadline = Date.now() + 30_000;
