@@ -757,7 +757,7 @@ export function registerTeamHandlers(ipcMain: IpcMain): void {
   ipcMain.handle(TEAM_GET_TASK_EXACT_LOG_SUMMARIES, handleGetTaskExactLogSummaries);
   ipcMain.handle(TEAM_GET_TASK_EXACT_LOG_DETAIL, handleGetTaskExactLogDetail);
   ipcMain.handle(TEAM_GET_MEMBER_STATS, handleGetMemberStats);
-  ipcMain.handle(TEAM_UPDATE_CONFIG, projectEdit.route(handleUpdateConfig));
+  ipcMain.handle(TEAM_UPDATE_CONFIG, projectEdit.route(handleUpdateConfig, projectEdit.refuseLeadPromptOfNativeTeam));
   ipcMain.handle(TEAM_START_TASK, handleStartTask);
   ipcMain.handle(TEAM_START_TASK_BY_USER, handleStartTaskByUser);
   ipcMain.handle(TEAM_GET_ALL_TASKS, handleGetAllTasks);

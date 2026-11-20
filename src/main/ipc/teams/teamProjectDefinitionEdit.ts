@@ -22,6 +22,14 @@ const logger = createLogger('IPC:teams:definitionEdit');
 export const PROJECT_COPY_EDIT_MESSAGE =
   'This is a project copy of a team. Edit the team itself; the copy is refreshed from it.';
 
+/**
+ * Saved lead instructions are part of the definition of a team with separate
+ * history per project. An ordinary team keeps the prompt of its launch, which
+ * its running lead already started from, so the edit dialog never changes it.
+ */
+export const NATIVE_LEAD_PROMPT_MESSAGE =
+  'Lead instructions can be edited here only for teams with separate history per project; an ordinary team takes them from its launch settings';
+
 type EditHandler<R> = (
   event: IpcMainInvokeEvent,
   teamName: unknown,
@@ -81,7 +89,16 @@ export function createProjectDefinitionEditRouting(
   ports: DefinitionEditPorts,
   createEditor: (ports: DefinitionEditPorts) => TeamProjectDefinitionEditor = buildEditor
 ) {
-  return function withProjectDefinitionEdit<R>(handler: EditHandler<R>): EditHandler<R> {
+  /**
+   * `refuseNative` lets a handler name the writes that exist only for a
+   * per-project definition (it returns the refusal message when an ordinary
+   * team is given such a write), so they cannot reach a native team, running
+   * or not.
+   */
+  return function withProjectDefinitionEdit<R>(
+    handler: EditHandler<R>,
+    refuseNative?: (...rest: unknown[]) => string | null
+  ): EditHandler<R> {
     return async (event, teamName, ...rest) => {
       const name = validateTeamName(teamName);
       if (!name.valid || !name.value) return handler(event, teamName, ...rest);
@@ -93,7 +110,10 @@ export function createProjectDefinitionEditRouting(
       } catch (error) {
         return failure(error);
       }
-      if (target === 'native') return handler(event, teamName, ...rest);
+      if (target === 'native') {
+        const refusal = refuseNative?.(...rest) ?? null;
+        return refusal ? { success: false, error: refusal } : handler(event, teamName, ...rest);
+      }
       if (target === 'alias') return { success: false, error: PROJECT_COPY_EDIT_MESSAGE };
       try {
         return await ports.data().runConfigurationOperation(logicalName, async () => {
@@ -163,6 +183,13 @@ export const route = createProjectDefinitionEditRouting({
   runtime: () => requireBound().apis.runtime,
   run: () => requireBound().apis.provisioningRun,
 });
+
+/** Refusal for the update-config call: lead instructions exist only in a per-project definition. */
+export function refuseLeadPromptOfNativeTeam(updates: unknown): string | null {
+  return updates && typeof updates === 'object' && 'prompt' in updates && updates.prompt !== undefined
+    ? NATIVE_LEAD_PROMPT_MESSAGE
+    : null;
+}
 
 /** The roster a live roster mutation rolls back to (empty for a per-project definition). */
 export async function rosterOf(

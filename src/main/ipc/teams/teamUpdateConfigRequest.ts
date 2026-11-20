@@ -1,8 +1,9 @@
+import { MAX_TEAM_DEFINITION_TEXT_LENGTH } from '@shared/constants/teamLimits';
+
 import type { TeamConfigurationUpdate } from '@main/services/team/TeamConfigurationMutations';
 import type { TeamUpdateConfigRequest } from '@shared/types';
 
-/** Same bound as the external (HTTP/MCP) lead instructions. */
-export const MAX_LEAD_PROMPT_LENGTH = 200_000;
+export const LEAD_PROMPT_TOO_LONG_MESSAGE = `Lead instructions are too long (at most ${MAX_TEAM_DEFINITION_TEXT_LENGTH} characters)`;
 
 export type ParsedUpdateConfig =
   | { ok: true; value: TeamConfigurationUpdate }
@@ -23,11 +24,11 @@ export function parseUpdateConfigRequest(updates: unknown): ParsedUpdateConfig {
   if (color !== undefined && typeof color !== 'string') {
     return { ok: false, error: 'color must be a string' };
   }
-  if (
-    prompt !== undefined &&
-    (typeof prompt !== 'string' || prompt.length > MAX_LEAD_PROMPT_LENGTH)
-  ) {
-    return { ok: false, error: 'prompt must be a bounded string' };
+  if (prompt !== undefined && typeof prompt !== 'string') {
+    return { ok: false, error: 'prompt must be a string' };
+  }
+  if (typeof prompt === 'string' && prompt.length > MAX_TEAM_DEFINITION_TEXT_LENGTH) {
+    return { ok: false, error: LEAD_PROMPT_TOO_LONG_MESSAGE };
   }
   return { ok: true, value: { name, description, color, prompt } };
 }

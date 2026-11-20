@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
 import {
-  MAX_LEAD_PROMPT_LENGTH,
+  LEAD_PROMPT_TOO_LONG_MESSAGE,
   parseUpdateConfigRequest,
 } from '../../../src/main/ipc/teams/teamUpdateConfigRequest';
+import { MAX_TEAM_DEFINITION_TEXT_LENGTH } from '../../../src/shared/constants/teamLimits';
 
 describe('parseUpdateConfigRequest', () => {
   it('passes the known fields through and ignores unknown ones', () => {
@@ -43,8 +44,8 @@ describe('parseUpdateConfigRequest', () => {
     [{ name: 1 }, 'name must be a string'],
     [{ description: {} }, 'description must be a string'],
     [{ color: [] }, 'color must be a string'],
-    [{ prompt: 5 }, 'prompt must be a bounded string'],
-    [{ prompt: 'x'.repeat(MAX_LEAD_PROMPT_LENGTH + 1) }, 'prompt must be a bounded string'],
+    [{ prompt: 5 }, 'prompt must be a string'],
+    [{ prompt: 'x'.repeat(MAX_TEAM_DEFINITION_TEXT_LENGTH + 1) }, LEAD_PROMPT_TOO_LONG_MESSAGE],
   ])('rejects %j', (input, error) => {
     expect(parseUpdateConfigRequest(input)).toEqual({ ok: false, error });
   });

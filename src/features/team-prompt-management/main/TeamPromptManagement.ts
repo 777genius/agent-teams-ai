@@ -306,6 +306,20 @@ export class TeamPromptManagement {
     allowTrashed: boolean,
     purpose: 'edit' | 'trash'
   ): Promise<{ snapshot: ConfigurationSnapshot; kind: ProjectDefinitionKind }> {
+    // The configuration read refuses a team that does not exist or whose saved
+    // metadata is malformed, each with its specific code; only then is the team
+    // classified, and a classification that fails also rejects. A project copy is
+    // refused first, so an agent never has to stop a copy only to learn that it
+    // cannot be edited at all.
+    const snapshot = await this.read(target.teamName);
+    const kind = await this.classify(target.teamName);
+    if (kind === 'alias')
+      throw new TeamManagementError(
+        'PROJECT_COPY_NOT_EDITABLE',
+        purpose === 'trash'
+          ? 'This is a project copy of a team and cannot be trashed on its own. Teams with separate history per project are trashed in the app'
+          : 'This is a project copy of a team. Edit the team itself; its copies are updated from it'
+      );
     const runtime = await this.ports.getRuntimeState(target.teamName);
     if (
       runtime.progress &&
@@ -319,16 +333,6 @@ export class TeamPromptManagement {
       throw new TeamManagementError(
         'TEAM_ACTIVE',
         'Stop the team in the app before changing configuration'
-      );
-    // The configuration read refuses a team that does not exist or whose saved
-    // metadata is malformed, each with its specific code; only then is the team
-    // classified, and a classification that fails also rejects.
-    const snapshot = await this.read(target.teamName);
-    const kind = await this.classify(target.teamName);
-    if (kind === 'alias')
-      throw new TeamManagementError(
-        'PROJECT_COPY_NOT_EDITABLE',
-        'This is a project copy of a team. Use the team itself; its copies are refreshed from it'
       );
     if (kind === 'logical') {
       // Trashing needs the permanent-deletion lifecycle fence of the app.

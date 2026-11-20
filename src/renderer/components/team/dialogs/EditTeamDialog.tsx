@@ -33,6 +33,7 @@ import {
   buildMemberColorMap,
   displayMemberName,
 } from '@renderer/utils/memberHelpers';
+import { MAX_TEAM_DEFINITION_TEXT_LENGTH } from '@shared/constants/teamLimits';
 import { parseNumericSuffixName } from '@shared/utils/teamMemberName';
 import { Loader2 } from 'lucide-react';
 
@@ -599,10 +600,12 @@ export const EditTeamDialog = ({
                   setLeadPrompt(e.target.value);
                 }}
                 rows={4}
+                maxLength={MAX_TEAM_DEFINITION_TEXT_LENGTH}
+                aria-describedby="edit-team-lead-prompt-hint"
                 className="w-full resize-none rounded-md border border-[var(--color-border)] bg-[var(--color-form-control-bg)] px-3 py-1.5 text-sm text-[var(--color-text)] outline-none focus:border-[var(--color-border-emphasis)]"
                 placeholder={t('editTeam.placeholders.leadPrompt')}
               />
-              <p className="mt-1 text-xs text-[var(--color-text-muted)]">
+              <p id="edit-team-lead-prompt-hint" className="mt-1 text-xs text-[var(--color-text-muted)]">
                 {t('editTeam.leadPromptHint')}
               </p>
             </div>

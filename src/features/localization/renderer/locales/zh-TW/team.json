@@ -303,7 +303,7 @@
     "fields": {
       "colorOptional": "顏色（選填）",
       "description": "描述",
-      "leadPrompt": "主管指示（選填）",
+      "leadPrompt": "負責人指示（選填）",
       "name": "姓名"
     },
     "leadRestartWarning": "儲存後會重新啟動負責人，以套用模型或推理強度的變更。隊友處理程序會繼續執行。",
@@ -318,10 +318,10 @@
       "restartOne": "儲存後會重新啟動或重新開啟這位隊友，以套用角色、工作流程、worktree 隔離、供應商、模型、推理強度或 MCP 存取權的變更：{{names}}。",
       "unsupportedMixedPrimaryMutation": "對混合 OpenCode 團隊中主要擁有的隊友進行即時編輯/刪除需要停止並重新啟動團隊：{{names}}。"
     },
-    "leadPromptHint": "下次在任何專案啟動團隊時使用。在啟動對話框中輸入的提示僅用於該次啟動。",
+    "leadPromptHint": "下次在任何專案啟動團隊時使用。在啟動對話框中輸入的提示僅適用於該次啟動；之後團隊會回到這裡儲存的指示（若此欄位為空，則表示沒有指示）。",
     "placeholders": {
       "description": "團隊描述（選填）",
-      "leadPrompt": "已儲存的團隊主管指示",
+      "leadPrompt": "已儲存的團隊負責人指示",
       "teamName": "團隊名稱"
     },
     "teamLead": {

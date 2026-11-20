@@ -24,6 +24,7 @@ function management(options: {
   assertEditable?: () => Promise<void>;
   refreshCopies?: () => Promise<void>;
   read?: () => Promise<unknown>;
+  runtimeState?: { isAlive: boolean; progress: { state: string } | null };
 }) {
   const order: string[] = [];
   let meta: Record<string, unknown> = { description: 'old', displayName: 'Builders' };
@@ -36,12 +37,19 @@ function management(options: {
     savedRequest: null,
   });
   const ports = {
-    run: vi.fn(async (_name: string, operation: () => Promise<unknown>) => operation()),
+    run: vi.fn(async (_name: string, operation: () => Promise<unknown>) => {
+      order.push('lock:enter');
+      try {
+        return await operation();
+      } finally {
+        order.push('lock:exit');
+      }
+    }),
     withExpectedContext: vi.fn(async (_expected: unknown, operation: () => Promise<unknown>) =>
       operation()
     ),
     getContext: vi.fn(),
-    getRuntimeState: vi.fn(async () => ({ isAlive: false, progress: null })),
+    getRuntimeState: vi.fn(async () => options.runtimeState ?? { isAlive: false, progress: null }),
     projectDefinition: {
       classify: vi.fn(options.classify ?? (async () => 'native' as const)),
       assertEditable: vi.fn(async () => {
@@ -77,7 +85,14 @@ describe('external (HTTP/MCP) edits of teams with separate history per project',
     const m = management({ classify: async () => 'logical' });
     const result = await m.management.update('builders', body);
     expect(result).toMatchObject({ teamName: 'builders', changed: true });
-    expect(m.order).toEqual(['assertEditable', 'write', 'refreshCopies']);
+    // The gate, the write and the projection all happen inside the one operation lock.
+    expect(m.order).toEqual([
+      'lock:enter',
+      'assertEditable',
+      'write',
+      'refreshCopies',
+      'lock:exit',
+    ]);
     expect(m.ports.run).toHaveBeenCalledWith('builders', expect.any(Function));
   });
 
@@ -103,6 +118,37 @@ describe('external (HTTP/MCP) edits of teams with separate history per project',
     });
     expect(m.ports.projectDefinition.assertEditable).not.toHaveBeenCalled();
     expect(m.updateMeta).not.toHaveBeenCalled();
+  });
+
+  it('refuses a project copy with its own code even while the copy runs or launches', async () => {
+    for (const runtimeState of [
+      { isAlive: true, progress: null },
+      { isAlive: false, progress: { state: 'spawning' } },
+    ]) {
+      const m = management({ classify: async () => 'alias', runtimeState });
+      await expect(m.management.update('ptc-builders-a', body)).rejects.toMatchObject({
+        code: 'PROJECT_COPY_NOT_EDITABLE',
+      });
+      expect(m.updateMeta).not.toHaveBeenCalled();
+    }
+  });
+
+  it('still asks to stop a running or launching ordinary or per-project team', async () => {
+    const running = management({
+      classify: async () => 'native',
+      runtimeState: { isAlive: true, progress: null },
+    });
+    await expect(running.management.update('legacy', body)).rejects.toMatchObject({
+      code: 'TEAM_ACTIVE',
+    });
+    const launching = management({
+      classify: async () => 'logical',
+      runtimeState: { isAlive: false, progress: { state: 'spawning' } },
+    });
+    await expect(launching.management.update('builders', body)).rejects.toMatchObject({
+      code: 'TEAM_PROVISIONING',
+    });
+    expect(launching.ports.projectDefinition.assertEditable).not.toHaveBeenCalled();
   });
 
   it('rejects an existing team whose kind cannot be determined, before any write (update and trash)', async () => {
@@ -145,7 +191,13 @@ describe('external (HTTP/MCP) edits of teams with separate history per project',
       },
     });
     await expect(m.management.update('builders', body)).resolves.toMatchObject({ changed: true });
-    expect(m.order).toEqual(['assertEditable', 'write', 'refreshCopies']);
+    expect(m.order).toEqual([
+      'lock:enter',
+      'assertEditable',
+      'write',
+      'refreshCopies',
+      'lock:exit',
+    ]);
   });
 
   it('does not refresh the copies when the edit changed nothing', async () => {
