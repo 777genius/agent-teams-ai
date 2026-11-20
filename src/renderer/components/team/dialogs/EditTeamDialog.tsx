@@ -606,7 +606,7 @@ export const EditTeamDialog = ({
                       lockedModelAction={{
                         label: t('editTeam.teamLead.changeRuntime'),
                         description: t('editTeam.teamLead.changeRuntimeDescription'),
-                        onClick: onChangeLeadRuntime,
+                        onClick: () => onChangeLeadRuntime(),
                         disabled: isTeamProvisioning,
                       }}
                     />

@@ -425,7 +425,6 @@
     }
   },
   "detail": {
-    "editDefinition": {"notFound": "The team settings could not be found", "loadFailed": "Could not load the team settings"},
     "actions": {
       "add": "Add",
       "cancel": "Cancel",
@@ -456,6 +455,10 @@
       "member_one": "member",
       "member_other": "members",
       "title": "Team not launched yet"
+    },
+    "editDefinition": {
+      "loadFailed": "Could not load the team settings",
+      "notFound": "The team settings could not be found"
     },
     "stopFailed": {
       "title": "Unable to stop team",
@@ -2301,9 +2304,9 @@
     }
   },
   "schedule": {
-    "perProjectUnavailable": "Schedules are not available for teams with separate history for each project yet.",
     "actionFailed": "Schedule action failed",
     "deleteConfirmation": "Delete schedule \"{{label}}\"? Its run history will also be removed.",
+    "perProjectUnavailable": "Schedules are not available for teams with separate history for each project yet.",
     "runRequested": "Run requested. Check history to see whether work was handed off.",
     "count": "{{count}} schedules",
     "count_one": "{{count}} schedule",

@@ -3,6 +3,8 @@ import { TeamPromptManagement } from '@features/team-prompt-management/main';
 import { getTeamDataWorkerClient } from '@main/services/team/TeamDataWorkerClient';
 import { TeamMetaStore } from '@main/services/team/TeamMetaStore';
 
+import { isProjectScopedTeam } from './teamProjectScope';
+
 import type { DesktopExternalAgentConnection } from '@features/external-agent-connection/main';
 import type { TeamDataService } from '@main/services/team/TeamDataService';
 import type { TeamChangeEvent, TeamRuntimeState } from '@shared/types';
@@ -36,6 +38,7 @@ export function composeTeamPromptManagement(
       connection.withExpectedContext(expected, operation),
     getContext: async () => (await connection.getConnectionInfo()).context,
     getRuntimeState: (name) => lifecycle.getRuntimeState(name),
+    isProjectScoped: (name) => isProjectScopedTeam(name),
     getSavedRequest: (name) => data.getSavedRequest(name),
     getTeamData: (name) => data.getTeamData(name),
     createTeamConfig: (request) => data.createTeamConfig(request),

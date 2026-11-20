@@ -47,9 +47,9 @@ describe('TeamProjectDefinitionEditor', () => {
     await expect(f.editor.classify('legacy')).resolves.toBe('native');
   });
 
-  it('keeps the native behavior when the metadata cannot be read', async () => {
+  it('fails closed when the metadata cannot be read: not proof of an ordinary team', async () => {
     const f = fixture({ modes: { broken: new Error('unreadable') }, aliases: ['broken'] });
-    await expect(f.editor.classify('broken')).resolves.toBe('native');
+    await expect(f.editor.classify('broken')).rejects.toThrow('unreadable');
     expect(f.registry.isOwnedExecutionAlias).not.toHaveBeenCalled();
   });
 

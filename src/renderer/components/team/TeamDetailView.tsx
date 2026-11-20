@@ -110,6 +110,7 @@ import {
 } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
 
+import { buildChangeRuntimeLaunchState } from './definitionEdit/changeRuntimeLaunch';
 import { getDefinitionEditAccess } from './definitionEdit/definitionEditAccess';
 import { refreshAfterDefinitionEdit, routeMemberActions } from './definitionEdit/definitionEditActions';
 import { TeamDefinitionEditDialog } from './definitionEdit/TeamDefinitionEditDialog';
@@ -2182,16 +2183,20 @@ export const TeamDetailView = memo(function TeamDetailView({
   const handleChangeLeadRuntime = useCallback(
     (memberSettingsDraft?: MemberSettingsRelaunchDraft) => {
       setEditTarget(null);
-      setLaunchDialogState({
-        open: true,
-        mode: data?.isAlive && !isTeamProvisioning ? 'relaunch' : 'launch',
+      setLaunchDialogState(buildChangeRuntimeLaunchState({
+        logicalTeamName,
+        isAlive: data?.isAlive === true,
+        isProvisioning: isTeamProvisioning,
         memberSettingsDraft,
         baselineMembers: membersWithLiveBranches,
-      });
+      }));
     },
-    [data?.isAlive, isTeamProvisioning, membersWithLiveBranches]
+    [data?.isAlive, isTeamProvisioning, logicalTeamName, membersWithLiveBranches]
   );
-  const memberActions = routeMemberActions(logicalTeamName, teamName, { addMember, removeMember });
+  const memberActions = useMemo(
+    () => routeMemberActions(logicalTeamName, teamName, { addMember, removeMember, restoreMember }),
+    [logicalTeamName, teamName, addMember, removeMember, restoreMember]
+  );
   const handleRestartMember = useCallback(
     async (memberName: string, expectedSecondary?: boolean): Promise<void> => {
       await restartMember(
@@ -2207,12 +2212,6 @@ export const TeamDetailView = memo(function TeamDetailView({
       await skipMemberForLaunch(teamName, memberName);
     },
     [skipMemberForLaunch, teamName]
-  );
-  const handleRestoreMember = useCallback(
-    async (memberName: string): Promise<void> => {
-      await restoreMember(teamName, memberName);
-    },
-    [restoreMember, teamName]
   );
   const handleSelectMember = useCallback((member: ResolvedTeamMember) => {
     setSelectedMember(member);
@@ -3179,7 +3178,7 @@ export const TeamDetailView = memo(function TeamDetailView({
                       onOpenTask={handleOpenTaskById}
                       onRestartMember={handleRestartMember}
                       onSkipMemberForLaunch={handleSkipMemberForLaunch}
-                      onRestoreMember={handleRestoreMember}
+                      onRestoreMember={memberActions.restore}
                     />
                   </div>
                 </CollapsibleTeamSection>
@@ -3401,7 +3400,7 @@ export const TeamDetailView = memo(function TeamDetailView({
                   openTaskDetailDialog(task);
                 }}
                 onEditMember={logicalTeamName ? undefined : handleEditMember}
-                onRemoveMember={canEditDefinition ? () => {
+                onRemoveMember={canEditDefinition && !(logicalTeamName && editUnavailableKey) ? () => {
                   const name = selectedMember?.name;
                   if (!name) return;
                   setRemoveMemberConfirm(name);
@@ -3485,6 +3484,7 @@ export const TeamDetailView = memo(function TeamDetailView({
                 <AddMemberDialog
                   open={addMemberDialogOpen}
                   teamName={teamName}
+                  displayName={logicalTeamName ? data.config.name : undefined}
                   existingNames={membersWithLiveBranches.map((m) => m.name)}
                   existingMembers={membersWithLiveBranches}
                   projectPath={data.config.projectPath}
@@ -3520,10 +3520,10 @@ export const TeamDetailView = memo(function TeamDetailView({
                 <RemoveMemberConfirmDialog
                   memberName={removeMemberConfirm}
                   onCancel={() => setRemoveMemberConfirm(null)}
-                  onConfirm={(name) => {
+                  onConfirm={async (name) => {
+                    await memberActions.remove(name);
                     setRemoveMemberConfirm(null);
                     closeSelectedMemberDialog();
-                    void memberActions.remove(name);
                   }}
                 />
               )}

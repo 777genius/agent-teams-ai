@@ -764,8 +764,8 @@ export function registerTeamHandlers(ipcMain: IpcMain): void {
   ipcMain.handle(TEAM_ADD_MEMBER, withProjectDefinitionEdit(handleAddMember));
   ipcMain.handle(TEAM_REPLACE_MEMBERS, withProjectDefinitionEdit(handleReplaceMembers));
   ipcMain.handle(TEAM_REMOVE_MEMBER, withProjectDefinitionEdit(handleRemoveMember));
-  ipcMain.handle(TEAM_RESTORE_MEMBER, handleRestoreMember);
-  ipcMain.handle(TEAM_UPDATE_MEMBER_ROLE, handleUpdateMemberRole);
+  ipcMain.handle(TEAM_RESTORE_MEMBER, withProjectDefinitionEdit(handleRestoreMember));
+  ipcMain.handle(TEAM_UPDATE_MEMBER_ROLE, withProjectDefinitionEdit(handleUpdateMemberRole));
   ipcMain.handle(TEAM_GET_PROJECT_BRANCH, handleGetProjectBranch);
   ipcMain.handle(TEAM_GET_ATTACHMENTS, handleGetAttachments);
   ipcMain.handle(TEAM_KILL_PROCESS, handleKillProcess);
@@ -4694,7 +4694,7 @@ async function handleRestoreMember(
       const name = vMember.value!;
       const teamDataService = getTeamDataService();
       const previousMembersMeta = await new TeamMembersMetaStore().getMeta(tn).catch(() => null);
-      const previousTeamData = await teamDataService.getTeamData(tn);
+      const previousTeamData = await readRosterForMutation(teamDataService, tn);
       const previousMembers = previousTeamData.members as RuntimeRosterMutationMember[];
       const memberLifecycle = getTeamMemberLifecycleApi();
       const isTeamAlive = getTeamRuntimeApi().isTeamAlive(tn);

@@ -12,7 +12,7 @@ import type { AddMemberRequest } from '@shared/types';
 export async function refreshAfterDefinitionEdit(visibleTeamName: string): Promise<void> {
   const state = useStore.getState();
   await state.fetchTeams();
-  await state.selectTeam(visibleTeamName);
+  await state.refreshTeamData(visibleTeamName);
 }
 
 export async function addDefinitionMember(
@@ -33,18 +33,36 @@ export async function removeDefinitionMember(
   await refreshAfterDefinitionEdit(visibleTeamName);
 }
 
+export async function restoreDefinitionMember(
+  logicalTeamName: string,
+  visibleTeamName: string,
+  memberName: string
+): Promise<void> {
+  await api.teams.restoreMember(logicalTeamName, memberName);
+  await refreshAfterDefinitionEdit(visibleTeamName);
+}
+
 interface NativeMemberActions {
   addMember: (teamName: string, request: AddMemberRequest) => Promise<void>;
   removeMember: (teamName: string, memberName: string) => Promise<void>;
+  restoreMember: (teamName: string, memberName: string) => Promise<void>;
 }
 
-/** Add/remove a member of the open team: a per-project team writes to its logical team. */
+/** Add/remove/restore a member of the open team: a per-project team writes to its logical team. */
 export function routeMemberActions(
   logicalTeamName: string | undefined,
   visibleTeamName: string,
   native: NativeMemberActions
-): { add: (request: AddMemberRequest) => Promise<void>; remove: (name: string) => Promise<void> } {
+): {
+  add: (request: AddMemberRequest) => Promise<void>;
+  remove: (name: string) => Promise<void>;
+  restore: (name: string) => Promise<void>;
+} {
   return {
+    restore: (name) =>
+      logicalTeamName
+        ? restoreDefinitionMember(logicalTeamName, visibleTeamName, name)
+        : native.restoreMember(visibleTeamName, name),
     add: (request) =>
       logicalTeamName
         ? addDefinitionMember(logicalTeamName, visibleTeamName, request)

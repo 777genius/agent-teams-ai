@@ -101,7 +101,7 @@ export function buildExternalAgentPrompt(
     instructions.push(
       'Resolve each existing target with team_list and team_get using its exact canonical teamName. Ask if the target is ambiguous.',
       'Before every update or trash call, freshly call team_get with configuration=true and supply its configurationRevision as expectedRevision, plus the live expectedContext.',
-      'Only drafts and stopped teams outside provisioning are supported. On TEAM_ACTIVE or TEAM_PROVISIONING, explain that the user must stop the team in the app; do not stop it yourself.',
+      'Only drafts and stopped teams outside provisioning are supported. On TEAM_ACTIVE or TEAM_PROVISIONING, explain that the user must stop the team in the app; do not stop it yourself. On PROJECT_TEAM_DESKTOP_ONLY, explain that teams with separate history per project are edited in the app.',
       'Preserve provider/model/MCP settings, runtime selection, project paths and teamName identity. Do not replace an edit with a newly created team.',
       'Each tool call commits separately. After each call, team_get with configuration=true for the same teamName and report actual confirmed fields. Partial success stays saved; no automatic rollback.',
       'On stale revision or lost mutation response, read back the original teamName. Confirm desired state or report conflicting/uncertain state; never blindly retry a write.'

@@ -12,10 +12,10 @@ interface SavedTeamRequestPort {
   assertOwnedAlias(teamName: string): Promise<void>;
   replaceMembers(teamName: string, request: ReplaceMembersRequest): Promise<void>;
   assertStoppedForRosterSync(teamName: string): Promise<void>;
-  /** Description and color of the logical team, projected onto its native alias. */
+  /** Name, description and color of the logical team, projected onto its native alias. */
   updateDisplayMetadata(
     teamName: string,
-    update: { description: string; color: string }
+    update: { name?: string; description: string; color: string }
   ): Promise<void>;
 }
 

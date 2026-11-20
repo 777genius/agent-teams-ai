@@ -394,6 +394,7 @@ export const ProjectScopedTeamDetailView = ({
             teamName={teamName}
             members={[]}
             projectPermissionTeamName={null}
+            rosterReadOnly
             defaultProjectPath={selectedProjectPath}
             provisioningError={error ?? null}
             onClose={() => setLaunchDialogOpen(false)}

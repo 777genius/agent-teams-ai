@@ -3,18 +3,30 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const addMember = vi.fn(async (..._args: unknown[]) => undefined);
 const removeMember = vi.fn(async (..._args: unknown[]) => undefined);
 const fetchTeams = vi.fn(async () => undefined);
-const selectTeam = vi.fn(async (..._args: unknown[]) => undefined);
+const refreshTeamData = vi.fn(async (..._args: unknown[]) => undefined);
+const restoreMember = vi.fn(async (..._args: unknown[]) => undefined);
+const replaceMembers = vi.fn(async (..._args: unknown[]) => undefined);
 
 vi.mock('@renderer/api', () => ({
-  api: { teams: { addMember: (...args: unknown[]) => addMember(...args), removeMember: (...args: unknown[]) => removeMember(...args) } },
+  api: {
+    teams: {
+      addMember: (...args: unknown[]) => addMember(...args),
+      removeMember: (...args: unknown[]) => removeMember(...args),
+      restoreMember: (...args: unknown[]) => restoreMember(...args),
+      replaceMembers: (...args: unknown[]) => replaceMembers(...args),
+    },
+  },
 }));
 vi.mock('@renderer/store', () => ({
-  useStore: { getState: () => ({ fetchTeams, selectTeam }) },
+  useStore: { getState: () => ({ fetchTeams, refreshTeamData }) },
 }));
 
+import { buildChangeRuntimeLaunchState } from '@renderer/components/team/definitionEdit/changeRuntimeLaunch';
 import { routeMemberActions } from '@renderer/components/team/definitionEdit/definitionEditActions';
 import { getDefinitionEditAccess } from '@renderer/components/team/definitionEdit/definitionEditAccess';
 import { buildDefinitionEditorInput } from '@renderer/components/team/definitionEdit/definitionEditorInput';
+
+import { persistRosterBeforeLaunch } from '@renderer/components/team/dialogs/launchRosterPersistence';
 
 import type { TeamCreateRequest } from '@shared/types';
 
@@ -115,6 +127,7 @@ describe('routeMemberActions', () => {
   const native = {
     addMember: vi.fn(async (..._args: unknown[]) => undefined),
     removeMember: vi.fn(async (..._args: unknown[]) => undefined),
+    restoreMember: vi.fn(async (..._args: unknown[]) => undefined),
   };
 
   beforeEach(() => vi.clearAllMocks());
@@ -123,8 +136,10 @@ describe('routeMemberActions', () => {
     const actions = routeMemberActions(undefined, 'legacy', native);
     await actions.add({ name: 'bob' });
     await actions.remove('bob');
+    await actions.restore('bob');
     expect(native.addMember).toHaveBeenCalledWith('legacy', { name: 'bob' });
     expect(native.removeMember).toHaveBeenCalledWith('legacy', 'bob');
+    expect(native.restoreMember).toHaveBeenCalledWith('legacy', 'bob');
     expect(addMember).not.toHaveBeenCalled();
     expect(removeMember).not.toHaveBeenCalled();
   });
@@ -135,10 +150,58 @@ describe('routeMemberActions', () => {
     expect(addMember).toHaveBeenCalledWith('builders', { name: 'bob' });
     await actions.remove('bob');
     expect(removeMember).toHaveBeenCalledWith('builders', 'bob');
+    await actions.restore('bob');
+    expect(restoreMember).toHaveBeenCalledWith('builders', 'bob');
     expect(native.addMember).not.toHaveBeenCalled();
     expect(native.removeMember).not.toHaveBeenCalled();
-    expect(fetchTeams).toHaveBeenCalledTimes(2);
-    expect(selectTeam).toHaveBeenCalledWith('ptc-a');
-    expect(selectTeam).toHaveBeenCalledTimes(2);
+    expect(native.restoreMember).not.toHaveBeenCalled();
+    expect(fetchTeams).toHaveBeenCalledTimes(3);
+    // The refresh action, not selectTeam: the visible team is not re-selected globally.
+    expect(refreshTeamData).toHaveBeenCalledWith('ptc-a');
+    expect(refreshTeamData).toHaveBeenCalledTimes(3);
+  });
+});
+
+describe('change runtime for a per-project team', () => {
+  const baselineMembers = [{ name: 'alice' }] as never;
+  const draft = { targetKind: 'lead' } as never;
+
+  it('always opens relaunch mode without a member settings draft, so the definition is never written', () => {
+    for (const isAlive of [false, true]) {
+      expect(
+        buildChangeRuntimeLaunchState({
+          logicalTeamName: 'builders',
+          isAlive,
+          isProvisioning: false,
+          memberSettingsDraft: draft,
+          baselineMembers,
+        })
+      ).toEqual({ open: true, mode: 'relaunch', memberSettingsDraft: undefined, baselineMembers });
+    }
+  });
+
+  it('keeps the existing behavior for an ordinary team', () => {
+    const input = { logicalTeamName: undefined, isProvisioning: false, memberSettingsDraft: draft, baselineMembers };
+    expect(buildChangeRuntimeLaunchState({ ...input, isAlive: false })).toMatchObject({
+      mode: 'launch',
+      memberSettingsDraft: draft,
+    });
+    expect(buildChangeRuntimeLaunchState({ ...input, isAlive: true })).toMatchObject({ mode: 'relaunch' });
+  });
+});
+
+describe('a launch dialog never writes the definition of a per-project team', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it('skips the roster save for a read-only roster (stale project copy members must not overwrite it)', async () => {
+    await persistRosterBeforeLaunch(true, 'builders', { members: [{ name: 'stale' }] });
+    expect(replaceMembers).not.toHaveBeenCalled();
+  });
+
+  it('keeps saving the roster of an ordinary team before launch', async () => {
+    await persistRosterBeforeLaunch(false, 'legacy', { members: [{ name: 'a' }] });
+    await persistRosterBeforeLaunch(undefined, 'legacy', { members: [{ name: 'b' }] });
+    expect(replaceMembers).toHaveBeenCalledTimes(2);
+    expect(replaceMembers).toHaveBeenCalledWith('legacy', { members: [{ name: 'a' }] });
   });
 });

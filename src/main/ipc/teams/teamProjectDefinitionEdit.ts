@@ -9,6 +9,7 @@ import { createLogger } from '@shared/utils/logger';
 import { createProjectContextRuntimeParts } from './teamProjectContextCreate';
 
 import type { ProjectTeamRuntimePorts } from './teamProjectContextCreate';
+import type { DefinitionEditTarget } from '@features/team-project-context/main';
 import type { TeamDataService } from '@main/services/team/TeamDataService';
 import type { TeamViewSnapshot } from '@shared/types';
 import type { IpcResult } from '@shared/types/ipc';
@@ -59,13 +60,20 @@ function buildEditor(ports: DefinitionEditPorts): TeamProjectDefinitionEditor {
   );
 }
 
+function failure(error: unknown): { success: false; error: string } {
+  return { success: false, error: error instanceof Error ? error.message : String(error) };
+}
+
 /**
- * Route the ordinary team edit handlers (name/description/color, add, replace
- * and remove members) by what the team name means:
- * - a per-project (logical) team: refuse while any project runs, run the
- *   ordinary handler against the logical definition, refresh stopped copies;
+ * Route every ordinary team definition writer (name/description/color, add,
+ * replace, remove, restore and role of members) by what the team name means:
+ * - a per-project (logical) team: under the same logical-team operation lock
+ *   that launch admission takes, refuse while any project runs, run the
+ *   ordinary handler against the logical definition and refresh stopped
+ *   copies, so a context cannot start between the check and the write;
  * - a project copy (alias): refused, the definition lives in the logical team;
- * - anything else: the handler runs exactly as before.
+ * - anything else: the handler runs exactly as before;
+ * - unreadable team metadata: refused (fail closed).
  */
 export function createProjectDefinitionEditRouting(
   ports: DefinitionEditPorts,
@@ -75,31 +83,44 @@ export function createProjectDefinitionEditRouting(
     return async (event, teamName, ...rest) => {
       const name = validateTeamName(teamName);
       if (!name.valid || !name.value) return handler(event, teamName, ...rest);
+      const logicalName = name.value;
       const editor = createEditor(ports);
-      const target = await editor.classify(name.value);
+      let target: DefinitionEditTarget;
+      try {
+        target = await editor.classify(logicalName);
+      } catch (error) {
+        return failure(error);
+      }
       if (target === 'native') return handler(event, teamName, ...rest);
       if (target === 'alias') return { success: false, error: PROJECT_COPY_EDIT_MESSAGE };
       try {
-        await editor.assertEditable(name.value);
+        return await ports.data().runConfigurationOperation(logicalName, async () => {
+          await editor.assertEditable(logicalName);
+          const result = await handler(event, teamName, ...rest);
+          if (result.success) await refreshProjectCopies(editor, logicalName);
+          return result;
+        });
       } catch (error) {
-        return { success: false, error: error instanceof Error ? error.message : String(error) };
+        return failure(error);
       }
-      const result = await handler(event, teamName, ...rest);
-      if (result.success) {
-        try {
-          const report = await editor.projectToAliases(name.value);
-          for (const failure of report.failed) {
-            logger.warn(
-              `Could not refresh project copy ${failure.executionTeamName} of ${name.value}: ${failure.message}`
-            );
-          }
-        } catch (error) {
-          logger.warn(`Could not refresh project copies of ${name.value}: ${String(error)}`);
-        }
-      }
-      return result;
     };
   };
+}
+
+async function refreshProjectCopies(
+  editor: TeamProjectDefinitionEditor,
+  logicalName: string
+): Promise<void> {
+  try {
+    const report = await editor.projectToAliases(logicalName);
+    for (const failed of report.failed) {
+      logger.warn(
+        `Could not refresh project copy ${failed.executionTeamName} of ${logicalName}: ${failed.message}`
+      );
+    }
+  } catch (error) {
+    logger.warn(`Could not refresh project copies of ${logicalName}: ${String(error)}`);
+  }
 }
 
 /**

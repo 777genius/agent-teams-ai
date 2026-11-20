@@ -41,6 +41,8 @@ export interface TeamPromptManagementPorts {
   withExpectedContext<T>(expected: AppConnectionContext, operation: () => Promise<T>): Promise<T>;
   getContext(): Promise<AppConnectionContext>;
   getRuntimeState(teamName: string): Promise<TeamRuntimeState>;
+  /** Per-project teams and their project copies are edited by the desktop app only. */
+  isProjectScoped(teamName: string): Promise<boolean>;
   getSavedRequest(teamName: string): Promise<TeamCreateRequest | null>;
   getTeamData(teamName: string): Promise<TeamViewSnapshot>;
   createTeamConfig(request: TeamCreateConfigRequest): Promise<void>;
@@ -264,10 +266,28 @@ export class TeamPromptManagement {
     });
   }
 
+  private async assertNotProjectScoped(teamName: string): Promise<void> {
+    let projectScoped: boolean;
+    try {
+      projectScoped = await this.ports.isProjectScoped(teamName);
+    } catch {
+      throw new TeamManagementError(
+        'TEAM_METADATA_UNREADABLE',
+        'Team metadata is unreadable; fix the team in the app before editing it'
+      );
+    }
+    if (projectScoped)
+      throw new TeamManagementError(
+        'PROJECT_TEAM_DESKTOP_ONLY',
+        'Teams with separate history per project are edited in the app'
+      );
+  }
+
   private async admit(
     target: TeamManagementTarget,
     allowTrashed: boolean
   ): Promise<ConfigurationSnapshot> {
+    await this.assertNotProjectScoped(target.teamName);
     const runtime = await this.ports.getRuntimeState(target.teamName);
     if (
       runtime.progress &&

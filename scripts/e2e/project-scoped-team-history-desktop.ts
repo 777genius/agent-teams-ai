@@ -528,19 +528,33 @@ async function verifyDefinitionEdit(f: Fixture) {
   for (const alias of [f.nativeA, f.nativeB]) {
     await waitForJson<Record<string, unknown>>(
       aliasFile(alias, 'config.json'),
-      (config) => config.description === 'Edited through the real dialog' && config.color === 'orange',
-      'project copy ' + alias + ' shows the edited description and color'
+      (config) => config.description === 'Edited through the real dialog' && config.color === 'orange' &&
+        config.name === 'History fixture edited',
+      'project copy ' + alias + ' shows the edited name, description and color'
     );
   }
   await waitFor('document.querySelector(' + JSON.stringify('[data-team-name="' + f.nativeA + '"] h2') +
     ')?.textContent?.trim() === "History fixture edited"', 'edited team name visible on the screen');
   await cdp.screenshot(path.join(f.screenshots, 'edit-after-metadata.png'));
 
-  // 2. Roster: add a teammate (the endpoint of the Add member dialog), see it in the
-  // logical definition and in every project copy.
-  const added = await ipcOutcome('window.electronAPI.teams.addMember(' + JSON.stringify(f.logical) +
-    ', { name: "carol", role: "Reviewer" })');
-  assert(added.ok, 'Adding a member to a stopped per-project team failed: ' + added.error);
+  // 2. Roster: add a teammate through the real Add member dialog of the team screen, see it
+  // in the logical definition and in every project copy.
+  await selectProject(f, 'project-a');
+  await cdp.evaluate('(() => window.__agentTeamsDevStore.getState().openTeamTab(' +
+    JSON.stringify(f.logical) + ', ' + JSON.stringify(f.projectA) + '))()');
+  await waitFor(visibleTask(f.nativeA, 'PROJECT_A_TASK_ONLY'), 'project A open for adding a member');
+  await clickSelector('button[aria-label="Add"]', 'Add member button of a per-project team');
+  await setField('[role=dialog] input[placeholder="member-name"]', 'carol');
+  const dialogText = await cdp.evaluate('document.querySelector("[role=dialog]").innerText') as string;
+  assert(dialogText.includes('History fixture edited') && !dialogText.includes('ptc-'),
+    'The Add member dialog must name the team, not its project copy: ' + dialogText.slice(0, 200));
+  await cdp.screenshot(path.join(f.screenshots, 'add-member-dialog.png'));
+  const addSubmit = '(() => Array.from(document.querySelectorAll("[role=dialog] button"))' +
+    '.find((b) => b.textContent?.trim() === "Add member"))()';
+  await waitFor('(() => { const b = ' + addSubmit + '; return Boolean(b) && !b.disabled; })()', 'Add member enabled');
+  await cdp.evaluate('(() => { ' + 'const b = ' + addSubmit + '; b.click(); return true; })()');
+  await waitFor('!document.querySelector("[role=dialog] input[placeholder=\"member-name\"]")',
+    'Add member dialog closed after save');
   const logicalMembers = await waitForJson<{ members: { name: string; removedAt?: number }[] }>(
     path.join(logicalDir, 'members.meta.json'),
     (file) => activeNames(file).includes('carol'),

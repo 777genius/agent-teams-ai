@@ -1,16 +1,10 @@
+import { classifyDefinitionTarget } from './classifyDefinitionTarget';
 import { projectDefinitionToAlias } from './projectDefinitionToAlias';
 
+import type { DefinitionEditTarget } from './classifyDefinitionTarget';
 import type { TeamProjectContextLaunchGate } from './TeamProjectContextLaunchGate';
 import type { PersistedTeamWorkContext } from './TeamProjectContextRegistry';
 import type { ReplaceMembersRequest, TeamCreateRequest, TeamProjectContextMode } from '@shared/types';
-
-/**
- * How an edit request for a team name must be handled:
- * - `logical`: the user-visible team of the per-project mode; its definition is the only authority.
- * - `alias`: a native project copy; a projection, never edited directly.
- * - `native`: any other team (legacy/shared); unchanged behavior.
- */
-export type DefinitionEditTarget = 'logical' | 'alias' | 'native';
 
 interface EditorRegistry {
   list(logicalTeamName: string): Promise<
@@ -25,7 +19,7 @@ export interface TeamProjectDefinitionEditorPorts {
   replaceMembers(teamName: string, request: ReplaceMembersRequest): Promise<void>;
   updateDisplayMetadata(
     teamName: string,
-    update: { description: string; color: string }
+    update: { name?: string; description: string; color: string }
   ): Promise<void>;
 }
 
@@ -48,16 +42,15 @@ export class TeamProjectDefinitionEditor {
     private readonly assertAliasStopped: (executionTeamName: string) => Promise<void>
   ) {}
 
-  async classify(teamName: string): Promise<DefinitionEditTarget> {
-    let mode: TeamProjectContextMode;
-    try {
-      mode = await this.ports.getMode(teamName);
-    } catch {
-      // Unreadable metadata is not proof of anything: keep the native behavior.
-      return 'native';
-    }
-    if (mode === 'per_project') return 'logical';
-    return (await this.registry.isOwnedExecutionAlias(teamName)) ? 'alias' : 'native';
+  /** Fails closed: unreadable team metadata rejects instead of falling back to a native edit. */
+  classify(teamName: string): Promise<DefinitionEditTarget> {
+    return classifyDefinitionTarget(
+      {
+        getMode: (name) => this.ports.getMode(name),
+        isOwnedExecutionAlias: (name) => this.registry.isOwnedExecutionAlias(name),
+      },
+      teamName
+    );
   }
 
   async assertEditable(logicalTeamName: string): Promise<void> {

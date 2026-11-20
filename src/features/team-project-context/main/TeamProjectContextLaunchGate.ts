@@ -45,7 +45,8 @@ export class TeamProjectContextLaunchGate {
     const all = await this.contexts.list(logicalTeamName);
     if (all.some((context) => context.state !== 'ready')) {
       throw new TeamProjectContextLaunchConflictError(
-        'A project of this team is still being prepared; finish or stop it before editing the team'
+        'A project of this team is still being prepared, or its last start was interrupted. '
+          + 'Open that project and launch the team there again so it can finish, then edit the team'
       );
     }
     for (const name of [logicalTeamName, ...all.map((context) => context.executionTeamName)]) {

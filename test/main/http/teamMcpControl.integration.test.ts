@@ -11,6 +11,7 @@ import { TeamMembersMetaStore } from '@main/services/team/TeamMembersMetaStore';
 import { TeamMetaStore } from '@main/services/team/TeamMetaStore';
 import { TeamProvisioningService } from '@main/services/team/TeamProvisioningService';
 import { setAppDataBasePath, setClaudeBasePathOverride } from '@main/utils/pathDecoder';
+import { isProjectScopedTeam } from '@main/teamProjectScope';
 import Fastify, { type FastifyInstance } from 'fastify';
 import { mkdir, mkdtemp, readFile, rm, writeFile } from 'fs/promises';
 import { tmpdir } from 'os';
@@ -373,6 +374,7 @@ function enableManagement(services: HttpServices, teamDataService: TeamDataServi
     },
     getContext: () => Promise.resolve(context.snapshot()),
     getRuntimeState: (name) => services.teamApis!.runtime.getRuntimeState(name),
+    isProjectScoped: (name) => isProjectScopedTeam(name),
     getSavedRequest: (name) => teamDataService.getSavedRequest(name),
     getTeamData: (name) => teamDataService.getTeamData(name),
     createTeamConfig: (request) => teamDataService.createTeamConfig(request),

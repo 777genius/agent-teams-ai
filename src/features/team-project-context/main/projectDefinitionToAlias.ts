@@ -30,7 +30,7 @@ export interface DefinitionProjectionPorts {
   replaceMembers(aliasTeamName: string, request: ReplaceMembersRequest): Promise<void>;
   updateDisplayMetadata(
     aliasTeamName: string,
-    update: { description: string; color: string }
+    update: { name?: string; description: string; color: string }
   ): Promise<void>;
 }
 
@@ -41,18 +41,24 @@ export interface DefinitionProjectionResult {
 
 /**
  * The logical team is the only authority for the authored roster and the
- * display metadata (description, color). A physical project alias is a
+ * display metadata (name, description, color). The alias keeps its own
+ * directory identity; only the shown name is refreshed (the runtime reads it
+ * for recovery and notifications). A physical project alias is a
  * projection of it: this copies only those fields, never tasks, inboxes or
  * sessions, and keeps the alias's run identities (the roster mutation is the
  * existing stopped-only one).
  */
 export async function projectDefinitionToAlias(
   ports: DefinitionProjectionPorts,
-  logical: Pick<TeamCreateRequest, 'members' | 'description' | 'color'>,
-  alias: Pick<TeamCreateRequest, 'members' | 'description' | 'color'> & { teamName: string }
+  logical: Pick<TeamCreateRequest, 'members' | 'displayName' | 'description' | 'color'>,
+  alias: Pick<TeamCreateRequest, 'members' | 'displayName' | 'description' | 'color'> & {
+    teamName: string;
+  }
 ): Promise<DefinitionProjectionResult> {
   const roster = !isDeepStrictEqual(authoredRoster(logical.members), authoredRoster(alias.members));
+  const nextName = displayText(logical.displayName);
   const metadata =
+    (nextName !== '' && nextName !== displayText(alias.displayName)) ||
     displayText(logical.description) !== displayText(alias.description) ||
     displayText(logical.color) !== displayText(alias.color);
   if (!roster && !metadata) return { roster, metadata };
@@ -62,6 +68,7 @@ export async function projectDefinitionToAlias(
   }
   if (metadata) {
     await ports.updateDisplayMetadata(alias.teamName, {
+      ...(nextName ? { name: nextName } : {}),
       description: displayText(logical.description),
       color: displayText(logical.color),
     });

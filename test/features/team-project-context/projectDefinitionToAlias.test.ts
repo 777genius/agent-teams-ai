@@ -85,4 +85,29 @@ describe('projectDefinitionToAlias', () => {
     expect(p.replaceMembers).not.toHaveBeenCalled();
     expect(p.updateDisplayMetadata).not.toHaveBeenCalled();
   });
+
+  it('projects a renamed team: the runtime reads the name of the copy, its directory identity stays', async () => {
+    const p = ports();
+    const result = await projectDefinitionToAlias(
+      p,
+      { members: [{ name: 'alice', role: 'dev' }], displayName: ' New name ', description: 'Old', color: 'blue' },
+      alias({ displayName: 'Old name' })
+    );
+    expect(result).toEqual({ roster: false, metadata: true });
+    expect(p.updateDisplayMetadata).toHaveBeenCalledWith('ptc-a', {
+      name: 'New name',
+      description: 'Old',
+      color: 'blue',
+    });
+  });
+
+  it('never blanks the name of a copy when the definition has no name', async () => {
+    const p = ports();
+    const result = await projectDefinitionToAlias(
+      p,
+      { members: [{ name: 'alice', role: 'dev' }], displayName: '  ', description: 'Old', color: 'blue' },
+      alias({ displayName: 'Kept' })
+    );
+    expect(result).toEqual({ roster: false, metadata: false });
+  });
 });
