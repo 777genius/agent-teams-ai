@@ -1,4 +1,4 @@
-import { isDeepStrictEqual } from 'node:util';
+import { projectDefinitionToAlias } from './projectDefinitionToAlias';
 
 import type { ResolvedTeamWorkContext, TeamWorkContextAddress } from './TeamProjectContextRuntimeResolver';
 import type { ReplaceMembersRequest, TeamCreateConfigRequest, TeamCreateRequest } from '@shared/types';
@@ -12,24 +12,11 @@ interface SavedTeamRequestPort {
   assertOwnedAlias(teamName: string): Promise<void>;
   replaceMembers(teamName: string, request: ReplaceMembersRequest): Promise<void>;
   assertStoppedForRosterSync(teamName: string): Promise<void>;
-}
-
-type AuthoringMember = TeamCreateRequest['members'][number];
-
-/** Runtime cwd/agentId are per-run; only the authored roster belongs to the logical team. */
-function authoredRoster(members: readonly AuthoringMember[]): unknown[] {
-  return members.map((member) => ({
-    name: member.name,
-    role: member.role,
-    workflow: member.workflow,
-    isolation: member.isolation,
-    providerId: member.providerId,
-    providerBackendId: member.providerBackendId,
-    model: member.model,
-    effort: member.effort,
-    fastMode: member.fastMode,
-    mcpPolicy: member.mcpPolicy,
-  }));
+  /** Name, description and color of the logical team, projected onto its native alias. */
+  updateDisplayMetadata(
+    teamName: string,
+    update: { name?: string; description: string; color: string }
+  ): Promise<void>;
 }
 
 interface ContextResolverPort {
@@ -67,14 +54,17 @@ export class TeamProjectContextDraftMaterializer {
       }
       const logical = await this.teamStore.getSavedRequest(address.logicalTeamName);
       if (!logical) throw new Error('Logical team settings are unavailable');
-      if (!isDeepStrictEqual(authoredRoster(logical.members), authoredRoster(existing.members))) {
-        // Preserve physical run identities and old tasks/chats: only sync
-        // member authoring metadata using the existing stopped-only mutation.
-        await this.teamStore.assertStoppedForRosterSync(resolved.executionTeamName);
-        await this.teamStore.replaceMembers(resolved.executionTeamName, {
-          members: logical.members,
-        });
-      }
+      // Preserve physical run identities and old tasks/chats: only the authored
+      // roster and display metadata are synced, with the stopped-only mutation.
+      await projectDefinitionToAlias(
+        {
+          assertStoppedForSync: (name) => this.teamStore.assertStoppedForRosterSync(name),
+          replaceMembers: (name, request) => this.teamStore.replaceMembers(name, request),
+          updateDisplayMetadata: (name, update) => this.teamStore.updateDisplayMetadata(name, update),
+        },
+        logical,
+        existing
+      );
       return resolved;
     }
     const source = await this.teamStore.getSavedRequest(address.logicalTeamName);

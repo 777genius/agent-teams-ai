@@ -30,7 +30,10 @@ import type {
 } from '@shared/types';
 
 export interface ProjectTeamRuntimePorts {
-  data: Pick<TeamDataService, 'createTeamConfig' | 'getSavedRequest' | 'replaceMembers' | 'runConfigurationOperation'>;
+  data: Pick<
+    TeamDataService,
+    'createTeamConfig' | 'getSavedRequest' | 'replaceMembers' | 'runConfigurationOperation' | 'updateConfig'
+  >;
   runtime: Pick<TeamRuntimeApi, 'getRuntimeState'>;
   run: Pick<TeamProvisioningRunApi, 'hasProvisioningRun'>;
 }
@@ -47,6 +50,9 @@ export function createProjectContextRuntimeParts(ports: ProjectTeamRuntimePorts)
     getSavedRequest: (teamName) => ports.data.getSavedRequest(teamName),
     createTeamConfig: (config, options) => ports.data.createTeamConfig(config, options),
     replaceMembers: (name, request) => ports.data.replaceMembers(name, request),
+    updateDisplayMetadata: async (name, update) => {
+      await ports.data.updateConfig(name, update);
+    },
     assertStoppedForRosterSync: async (name) => {
       if (ports.run.hasProvisioningRun(name) ||
           !isConfirmedStoppedTeamRuntime(await ports.runtime.getRuntimeState(name))) {

@@ -1,3 +1,6 @@
+export type { DefinitionEditTarget } from './classifyDefinitionTarget';
+export { classifyDefinitionTarget } from './classifyDefinitionTarget';
+export { projectDefinitionToAlias } from './projectDefinitionToAlias';
 export { projectTeamSummaries } from './projectTeamSummaries';
 export { TeamProjectContextCreateCoordinator } from './TeamProjectContextCreateCoordinator';
 export { TeamProjectContextDraftMaterializer } from './TeamProjectContextDraftMaterializer';
@@ -29,3 +32,4 @@ export {
   recoverMissingProjectTeamDefinition,
   recoverMissingProjectTeamDefinitions,
 } from './TeamProjectDefinitionBackup';
+export { TeamProjectDefinitionEditor } from './TeamProjectDefinitionEditor';

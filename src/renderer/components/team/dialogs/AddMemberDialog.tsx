@@ -47,6 +47,8 @@ export interface AddMemberEntry {
 interface AddMemberDialogProps {
   open: boolean;
   teamName: string;
+  /** Shown instead of the internal name when the open copy is a project copy of a team. */
+  displayName?: string;
   existingNames: string[];
   onClose: () => void;
   /** Called with the list of new members to add. */
@@ -99,6 +101,7 @@ export const AddMemberDialog = ({
   adding,
   projectPath,
   existingMembers,
+  displayName,
 }: AddMemberDialogProps): React.JSX.Element => {
   const { t } = useAppTranslation('team');
   useOpenCodePassiveStatusPrefetch({
@@ -111,7 +114,7 @@ export const AddMemberDialog = ({
     buildInitialDrafts(existingNames, existingWorktreeDefault)
   );
   const [error, setError] = useState<string | null>(null);
-  const gatewayBindings = useGatewayMemberBindings(open ? teamName : undefined, {
+  const gatewayBindings = useGatewayMemberBindings(open && !displayName ? teamName : undefined, {
     memberNames: members.map((member) => member.name),
     mode: 'addition',
   });
@@ -212,7 +215,7 @@ export const AddMemberDialog = ({
         <DialogHeader>
           <DialogTitle>{t('memberDraft.addMembers.title')}</DialogTitle>
           <DialogDescription>
-            {t('memberDraft.addMembers.description', { teamName })}
+            {t('memberDraft.addMembers.description', { teamName: displayName ?? teamName })}
           </DialogDescription>
         </DialogHeader>
 
