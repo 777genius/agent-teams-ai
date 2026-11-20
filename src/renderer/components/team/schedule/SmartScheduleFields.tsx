@@ -197,7 +197,7 @@ export const SmartScheduleFields = ({
         ) : null}
       </div>
       <div className="space-y-1.5">
-        <Label htmlFor="schedule-label" className="label-optional">
+        <Label htmlFor="schedule-label">
           {t('launch.schedule.labelOptional')}
         </Label>
         <Input

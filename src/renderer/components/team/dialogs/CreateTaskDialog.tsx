@@ -243,7 +243,7 @@ export const CreateTaskDialog = ({
 
   const assigneeField = (
     <div className="grid gap-2">
-      <Label className={requiresOwner ? undefined : 'label-optional'}>
+      <Label>
         {requiresOwner ? t('tasks.createTask.assignee') : t('tasks.createTask.assigneeOptional')}
       </Label>
       <MemberSelect
@@ -329,7 +329,7 @@ export const CreateTaskDialog = ({
             <div className="min-h-0 overflow-hidden">
               <div className="grid gap-4">
                 <div className="grid gap-2">
-                  <Label className="label-optional">
+                  <Label>
                     {t('tasks.createTask.descriptionOptional')}
                   </Label>
                   <TiptapEditor
@@ -346,7 +346,7 @@ export const CreateTaskDialog = ({
                 </div>
 
                 <div className="grid gap-2">
-                  <Label htmlFor="task-prompt" className="label-optional">
+                  <Label htmlFor="task-prompt">
                     {t('tasks.createTask.promptOptional')}
                   </Label>
                   <MentionableTextarea
@@ -374,7 +374,7 @@ export const CreateTaskDialog = ({
 
                 {availableTasks.length > 0 ? (
                   <div className="grid gap-2">
-                    <Label className="label-optional">
+                    <Label>
                       {t('tasks.createTask.blockedByOptional')}
                     </Label>
                     <div className="overflow-hidden rounded-md border border-[var(--color-border)] bg-[var(--color-surface)]">
@@ -448,7 +448,7 @@ export const CreateTaskDialog = ({
 
                 {availableTasks.length > 0 ? (
                   <div className="grid gap-2">
-                    <Label className="label-optional">
+                    <Label>
                       {t('tasks.createTask.relatedOptional')}
                     </Label>
                     <div className="overflow-hidden rounded-md border border-[var(--color-border)] bg-[var(--color-surface)]">

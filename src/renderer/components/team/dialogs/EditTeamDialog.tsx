@@ -528,7 +528,7 @@ export const EditTeamDialog = ({
           <div>
             <label
               htmlFor="edit-team-name"
-              className="mb-1 block text-xs font-medium text-[var(--color-text-secondary)]"
+              className="mb-1 block text-xs font-medium text-text"
             >
               {t('editTeam.fields.name')}
             </label>
@@ -550,7 +550,7 @@ export const EditTeamDialog = ({
           <div>
             <label
               htmlFor="edit-team-description"
-              className="mb-1 block text-xs font-medium text-[var(--color-text-secondary)]"
+              className="mb-1 block text-xs font-medium text-text"
             >
               {t('editTeam.fields.description')}
             </label>
@@ -662,7 +662,7 @@ export const EditTeamDialog = ({
           ) : null}
           <div>
             {/* eslint-disable-next-line jsx-a11y/label-has-associated-control -- Color picker is a group of buttons, not a single input */}
-            <label className="label-optional mb-1 block text-xs font-medium">
+            <label className="mb-1 block text-xs font-medium text-[var(--color-text)]">
               {t('editTeam.fields.colorOptional')}
             </label>
             <div className="flex flex-wrap gap-2">

@@ -2859,7 +2859,7 @@ export const CreateTeamDialog = ({
                           </div>
                         ) : null}
                         <div className="space-y-1.5">
-                          <Label htmlFor="team-prompt" className="label-optional">
+                          <Label htmlFor="team-prompt">
                             {t('create.fields.prompt')}
                           </Label>
                           <MentionableTextarea
@@ -3035,7 +3035,7 @@ export const CreateTeamDialog = ({
                     </div>
                   </div>
                   <div className="space-y-1.5">
-                    <Label htmlFor="team-description" className="label-optional">
+                    <Label htmlFor="team-description">
                       {t('create.fields.description')}
                     </Label>
                     <AutoResizeTextarea
@@ -3054,7 +3054,7 @@ export const CreateTeamDialog = ({
                     ) : null}
                   </div>
                   <div className="space-y-1.5">
-                    <Label className="label-optional">{t('create.fields.color')}</Label>
+                    <Label>{t('create.fields.color')}</Label>
                     <div className="flex flex-wrap gap-2">
                       {TEAM_COLOR_NAMES.map((colorName) => {
                         const colorSet = getTeamColorSet(colorName);

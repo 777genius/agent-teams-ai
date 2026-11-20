@@ -2789,7 +2789,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
                 />}
 
                 <div className="space-y-1.5">
-                  <Label htmlFor="dialog-prompt" className="label-optional">
+                  <Label htmlFor="dialog-prompt">
                     {t('launch.prompt.teamLeadOptional')}
                   </Label>
                   <MentionableTextarea
@@ -2986,9 +2986,9 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
                 <Label
-                  htmlFor="schedule-max-turns"
-                  className="text-[11px] text-[var(--color-text-muted)]"
-                >
+ htmlFor="schedule-max-turns"
+ className="text-[11px]"
+ >
                   {t('launch.schedule.maxTurns')}
                 </Label>
                 <Input
@@ -3004,9 +3004,9 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
 
               <div className="space-y-1">
                 <Label
-                  htmlFor="schedule-max-budget"
-                  className="text-[11px] text-[var(--color-text-muted)]"
-                >
+ htmlFor="schedule-max-budget"
+ className="text-[11px]"
+ >
                   {t('launch.schedule.maxBudgetUsd')}
                 </Label>
                 <Input

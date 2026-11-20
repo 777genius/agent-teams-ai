@@ -252,9 +252,9 @@ export const MemberGatewaySelector = ({
       <div className="grid gap-2 sm:grid-cols-[minmax(160px,220px)_1fr]">
         <div className="space-y-1">
           <Label
-            htmlFor={`member-${trimmedMemberName}-gateway-profile`}
-            className="text-[10px] text-[var(--color-text-muted)]"
-          >
+ htmlFor={`member-${trimmedMemberName}-gateway-profile`}
+ className="text-[10px]"
+ >
             {t('memberDraft.gateway.profileLabel')}
           </Label>
           <Select value={profileId} onValueChange={handleProfileChange} disabled={busy}>
@@ -275,9 +275,9 @@ export const MemberGatewaySelector = ({
         </div>
         <div className="space-y-1">
           <Label
-            htmlFor={`member-${trimmedMemberName}-gateway-key`}
-            className="text-[10px] text-[var(--color-text-muted)]"
-          >
+ htmlFor={`member-${trimmedMemberName}-gateway-key`}
+ className="text-[10px]"
+ >
             {t('memberDraft.gateway.apiKeyLabel')}
           </Label>
           <div className="flex gap-2">
@@ -312,9 +312,9 @@ export const MemberGatewaySelector = ({
         <div className="flex flex-wrap items-end gap-2">
           <div className="min-w-[160px] flex-1 space-y-1">
             <Label
-              htmlFor={`member-${trimmedMemberName}-gateway-model`}
-              className="text-[10px] text-[var(--color-text-muted)]"
-            >
+ htmlFor={`member-${trimmedMemberName}-gateway-model`}
+ className="text-[10px]"
+ >
               {t('memberDraft.gateway.modelLabel')}
             </Label>
             <Select value={modelChoice} onValueChange={setModelChoice} disabled={busy}>
