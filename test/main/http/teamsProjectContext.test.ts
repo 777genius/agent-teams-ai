@@ -200,9 +200,10 @@ describe('HTTP routes for a per-project (logical) team', () => {
 
   it('stop answers 409 with a machine-readable body when a copy cannot be stopped', async () => {
     const f = await fixture();
-    const { app, stopTeam } = await createApp(f, [f.aliasA, f.aliasB]);
+    const { app, stopTeam, alive } = await createApp(f, [f.aliasA, f.aliasB]);
     stopTeam.mockImplementation(async (team: string) => {
       if (team === f.aliasB) throw new Error('stop command exited with 1');
+      alive.delete(team);
     });
     // The native stop of the failing copy logs its escalation; that is expected here.
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
@@ -235,12 +236,16 @@ describe('HTTP routes for a per-project (logical) team', () => {
     // The process is gone but the copy still reports a settled "ready" run: the same
     // evidence the launch gate refuses to call stopped.
     progress.set(f.aliasA, { runId: 'run-x', state: 'ready' } as TeamRuntimeState['progress']);
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
     try {
       const response = await app.inject({ method: 'POST', url: '/api/teams/builders/stop' });
       expect(response.statusCode).toBe(409);
       expect(response.json().code).toBe('LOGICAL_STOP_INCOMPLETE');
       expect(response.json().error).toContain('still running after the stop');
+      // An operator must be able to see which copy kept running.
+      expect(warn.mock.calls.flat().join('\n')).toContain('POST /api/teams/builders/stop');
     } finally {
+      warn.mockRestore();
       await app.close();
     }
   });
@@ -257,12 +262,14 @@ describe('HTTP routes for a per-project (logical) team', () => {
         alive.add(added.alias);
       }
     });
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
     try {
       const response = await app.inject({ method: 'POST', url: '/api/teams/builders/stop' });
       expect(response.statusCode).toBe(409);
       expect(response.json().error).toContain('started while the stop was running');
       expect(response.json().error).toContain(appeared);
     } finally {
+      warn.mockRestore();
       await app.close();
     }
   });
@@ -286,12 +293,14 @@ describe('HTTP routes for a per-project (logical) team', () => {
     // Reserved in the index, but its directory was never claimed by this profile.
     const reserved = await f.registry.reserve('builders', os.tmpdir());
     const { app, stopTeam } = await createApp(f, [f.aliasA, reserved.executionTeamName]);
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
     try {
       const response = await app.inject({ method: 'POST', url: '/api/teams/builders/stop' });
       expect(response.statusCode).toBe(409);
       expect(response.json().error).toContain('owner cannot be verified');
       expect(stopTeam).not.toHaveBeenCalled();
     } finally {
+      warn.mockRestore();
       await app.close();
     }
   });

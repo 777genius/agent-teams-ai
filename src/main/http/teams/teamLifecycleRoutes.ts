@@ -112,7 +112,7 @@ export function registerTeamLifecycleRoutes(
   function withUnresolvedFlag<T extends object>(
     state: T,
     target: ResolvedTeamTarget
-  ): T | (T & { projectContextUnresolved: true }) {
+  ): T & { projectContextUnresolved?: true } {
     return target.kind === 'native' && target.projectContextUnresolved
       ? { ...state, projectContextUnresolved: true }
       : state;
@@ -178,7 +178,10 @@ export function registerTeamLifecycleRoutes(
     assertEscalatedStopConfirmed(result);
   }
 
-  function forceStopExactTeam(teamName: string, teamRuntimeApi: TeamHttpRuntimeApi) {
+  function forceStopExactTeam(
+    teamName: string,
+    teamRuntimeApi: TeamHttpRuntimeApi
+  ): ReturnType<typeof runTeamForceStopFlow> {
     return runTeamForceStopFlow(teamName, {
       stopTeam: (name) => teamRuntimeApi.stopTeam(name),
       observeOwnedRuntimeRunIds: (name) =>
