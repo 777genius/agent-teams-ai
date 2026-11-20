@@ -20,12 +20,30 @@ export function admissionRefusal(admission: boolean | ScheduleAdmission): string
 }
 
 /**
- * Asked when a schedule is created, edited, triggered or fired. `cwd` is the project folder the
- * schedule is about; a per-project team's schedule is refused when it is not a real folder.
+ * The project folder a create or edit gives a schedule. `from` is the folder the schedule already
+ * has (an edit): the project of a schedule of a per-project team is fixed once it is created.
  */
+export interface ScheduleFolderChange {
+  cwd?: string;
+  from?: string;
+}
+
+/** What an edit does to the folder: `cwd` is set only when the patch names one (even blank). */
+export function folderChange(
+  existing: { launchConfig: { cwd: string } },
+  patch: { launchConfig?: { cwd?: string } }
+): ScheduleFolderChange {
+  const config = patch.launchConfig;
+  return {
+    cwd: config && 'cwd' in config ? (config.cwd ?? '') : undefined,
+    from: existing.launchConfig.cwd,
+  };
+}
+
+/** Asked when a schedule is created, edited, triggered or fired. */
 export type ScheduleAdmissionCheck = (
   teamName: string,
-  cwd?: string
+  change?: ScheduleFolderChange
 ) => Promise<boolean | ScheduleAdmission>;
 
 /** What the scheduler needs from the layer that knows about per-project teams. */

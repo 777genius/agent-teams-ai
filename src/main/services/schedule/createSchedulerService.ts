@@ -80,6 +80,6 @@ export function createSchedulerService(
       return { ready: result.ready, message: result.message };
     },
     dispatcher,
-    (teamName, cwd) => targets.admit(teamName, cwd)
+    (teamName, change) => targets.admit(teamName, change)
   );
 }

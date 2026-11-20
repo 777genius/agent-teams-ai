@@ -4,6 +4,11 @@ import {
 } from '@features/team-project-context/main';
 import { describe, expect, it, vi } from 'vitest';
 
+const log = vi.hoisted(() => ({ warn: vi.fn() }));
+vi.mock('@shared/utils/logger', () => ({
+  createLogger: () => ({ warn: log.warn, info: vi.fn(), error: vi.fn(), debug: vi.fn() }),
+}));
+
 import {
   ProjectScheduleTargets,
   type ProjectScheduleTargetPorts,
@@ -95,22 +100,60 @@ describe('ProjectScheduleTargets.admit', () => {
     expect(await targets.admit('legacy')).toMatchObject({ allowed: false });
   });
 
-  it('refuses a schedule of a per-project team whose project folder does not exist', async () => {
+  it('refuses a new schedule of a per-project team whose project folder does not exist', async () => {
     const ports = makePorts({ isDirectory: vi.fn(async () => false) });
-    const result = await targetsOf(ports).admit('builders', '/work/gone');
+    const result = await targetsOf(ports).admit('builders', { cwd: '/work/gone' });
     expect(result).toMatchObject({ allowed: false });
     expect(reasonOf(result)).toMatch(/folder/i);
     expect(ports.isDirectory).toHaveBeenCalledWith('/work/gone');
   });
 
-  it('accepts an existing project folder and never asks about it for ordinary teams', async () => {
-    expect(await targetsOf(makePorts()).admit('builders', '/work/a')).toEqual({ allowed: true });
+  it('refuses a relative project folder: it would resolve against the app, not the project', async () => {
+    const ports = makePorts();
+    const result = await targetsOf(ports).admit('builders', { cwd: 'projects/a' });
+    expect(result).toMatchObject({ allowed: false });
+    expect(ports.isDirectory).not.toHaveBeenCalled();
+  });
+
+  it('accepts an existing absolute project folder and never asks about it for ordinary teams', async () => {
+    expect(await targetsOf(makePorts()).admit('builders', { cwd: '/work/a' })).toEqual({
+      allowed: true,
+    });
     const legacy = makePorts({
       getMode: vi.fn(async () => 'shared' as const),
       isDirectory: vi.fn(async () => false),
     });
-    expect(await targetsOf(legacy).admit('legacy', '/anything')).toEqual({ allowed: true });
+    expect(await targetsOf(legacy).admit('legacy', { cwd: '/anything', from: '/other' })).toEqual({
+      allowed: true,
+    });
     expect(legacy.isDirectory).not.toHaveBeenCalled();
+  });
+
+  // Moving a schedule between projects is a non-goal: it must hold on the server, not only in
+  // the dialog that hides the picker.
+  it('refuses to move a schedule of a per-project team to another project', async () => {
+    const ports = makePorts();
+    for (const cwd of ['/work/b', '', 'relative']) {
+      const result = await targetsOf(ports).admit('builders', { cwd, from: '/work/a' });
+      expect(result).toMatchObject({ allowed: false });
+      expect(reasonOf(result)).toMatch(/can not be changed/i);
+    }
+  });
+
+  it('lets an edit that keeps the project through, even when its folder was deleted', async () => {
+    const ports = makePorts({ isDirectory: vi.fn(async () => false) });
+    for (const cwd of ['/work/a', '/work/a/', '/work/../work/a']) {
+      expect(await targetsOf(ports).admit('builders', { cwd, from: '/work/a' })).toEqual({
+        allowed: true,
+      });
+    }
+    expect(ports.isDirectory).not.toHaveBeenCalled();
+  });
+
+  it('allows an edit that does not name a folder at all', async () => {
+    expect(await targetsOf(makePorts()).admit('builders', { from: '/work/a' })).toEqual({
+      allowed: true,
+    });
   });
 });
 
@@ -193,15 +236,54 @@ describe('ProjectScheduleTargets.resolve', () => {
     expect(ports.launchPhysical).not.toHaveBeenCalled();
   });
 
-  it('records a skip when reading the copy fails for any other reason', async () => {
+  it('records a skip with an honest reason and logs the cause for an unexpected error', async () => {
+    log.warn.mockClear();
+    const cause = Object.assign(new Error('EACCES: permission denied, open /secret/path'), {
+      code: 'EACCES',
+    });
     const ports = makePorts({
       forRead: vi.fn(async () => {
-        throw Object.assign(new Error('EACCES: permission denied'), { code: 'EACCES' });
+        throw cause;
       }),
     });
     const result = await targetsOf(ports).resolve(schedule);
     expect(result.kind).toBe('refused');
-    expect(reasonOf(result)).not.toContain('EACCES');
+    // Not blamed on the team metadata, names the code, leaks no path, points at the log.
+    expect(reasonOf(result)).not.toMatch(/metadata/i);
+    expect(reasonOf(result)).toContain('EACCES');
+    expect(reasonOf(result)).not.toContain('/secret/path');
+    expect(reasonOf(result)).toMatch(/log/i);
+    expect(log.warn).toHaveBeenCalledWith(expect.any(String), cause);
+  });
+
+  it('keeps the metadata reason for unreadable metadata, and logs it too', async () => {
+    log.warn.mockClear();
+    const ports = makePorts({
+      getMode: vi.fn(async () => {
+        throw new Error('Team metadata is unreadable; refusing shared-history fallback');
+      }),
+    });
+    expect(reasonOf(await targetsOf(ports).resolve(schedule))).toMatch(/metadata is unreadable/i);
+    expect(log.warn).toHaveBeenCalled();
+  });
+
+  it('does not log the known refusals as errors', async () => {
+    log.warn.mockClear();
+    const ports = makePorts({
+      forRead: vi.fn(async () => {
+        throw new TeamProjectContextUnavailableError('Project context creation is incomplete');
+      }),
+    });
+    await targetsOf(ports).resolve(schedule);
+    expect(log.warn).not.toHaveBeenCalled();
+  });
+
+  it('refuses before any task is written when the project folder was deleted', async () => {
+    const ports = makePorts({ isDirectory: vi.fn(async () => false) });
+    const result = await targetsOf(ports).resolve(schedule);
+    expect(result.kind).toBe('refused');
+    expect(reasonOf(result)).toMatch(/no longer exists/i);
+    expect(ports.assertOtherContextsStopped).not.toHaveBeenCalled();
   });
 
   it('records a skip when the trash state cannot be read', async () => {
@@ -231,7 +313,8 @@ describe('ProjectScheduleTargets.launch', () => {
     expect(result).toEqual({ runId: 'run-1' });
     expect(ports.withLogicalLock).toHaveBeenCalledWith('builders', expect.any(Function));
     expect(ports.prepareLaunch).toHaveBeenCalledWith(
-      expect.objectContaining({ teamName: 'builders', cwd: '/work/a' })
+      expect.objectContaining({ teamName: 'builders', cwd: '/work/a' }),
+      'ptc-x-a'
     );
     expect(ports.launchPhysical).toHaveBeenCalledWith(
       expect.objectContaining({ teamName: 'ptc-x-a' }),
@@ -304,6 +387,19 @@ describe('ProjectScheduleTargets.launch', () => {
     expect(result).toMatchObject({ refused: expect.stringMatching(/changed/i) });
     expect(ports.launchPhysical).not.toHaveBeenCalled();
     expect(ports.rememberRunIdentity).not.toHaveBeenCalled();
+  });
+
+  it('refuses without preparing anything when the project folder was deleted meanwhile', async () => {
+    const ports = makePorts({ isDirectory: vi.fn(async () => false) });
+    const result = await targetsOf(ports).launch(schedule, launchRequest);
+    expect(result).toMatchObject({ refused: expect.stringMatching(/no longer exists/i) });
+    expect(ports.prepareLaunch).not.toHaveBeenCalled();
+  });
+
+  it('tells the preparation which copy it may use, so it can abort before materializing', async () => {
+    const ports = makePorts();
+    await targetsOf(ports).launch(schedule, launchRequest);
+    expect(ports.prepareLaunch).toHaveBeenCalledWith(expect.anything(), 'ptc-x-a');
   });
 
   it('refuses when the copy can no longer be read', async () => {

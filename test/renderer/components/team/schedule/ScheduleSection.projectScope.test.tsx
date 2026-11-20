@@ -4,7 +4,7 @@ import { createRoot } from 'react-dom/client';
 import { TeamScheduleSection } from '@renderer/components/team/definitionEdit/TeamScheduleSection';
 import { ScheduleSection } from '@renderer/components/team/schedule/ScheduleSection';
 import {
-  canSchedule,
+  scheduleCwd,
   scheduleScope,
   validateScheduleForm,
 } from '@renderer/components/team/schedule/validateScheduleForm';
@@ -164,6 +164,15 @@ describe('schedules of a team with separate history per project', () => {
       ).toEqual({ projectScope: { projectPath: '/shown' }, defaultProjectPath: '/shown' });
     });
 
+    it('is decided by the screen alone when the team list does not know the team yet', () => {
+      // Unloaded store, or metadata the list could not read: no mode, but the screen says so.
+      const scope = { mode: 'schedule', projectScope: { projectPath: '/shown' } };
+      expect(scheduleScope(scope, undefined).projectScope).toEqual({ projectPath: '/shown' });
+      expect(scheduleScope(scope, { projectPath: '/p' }).projectScope).toEqual({
+        projectPath: '/shown',
+      });
+    });
+
     it('leaves ordinary teams and launches alone', () => {
       expect(scheduleScope({ mode: 'schedule' }, { projectPath: '/p' }).projectScope).toBeUndefined();
       expect(scheduleScope({ mode: 'schedule' }, undefined).projectScope).toBeUndefined();
@@ -188,11 +197,32 @@ describe('schedules of a team with separate history per project', () => {
     expect(validateScheduleForm({ ...base, usesSavedTeamRuntime: false, cwd: '/work/a' })).toEqual([]);
   });
 
-  it('a saved team backs a schedule with a provider, and a folder unless the schedule names one', () => {
-    expect(canSchedule({ providerId: 'anthropic', cwd: '/a' })).toBe(true);
-    expect(canSchedule({ providerId: 'anthropic', cwd: ' ' })).toBe(false);
-    expect(canSchedule({ providerId: 'anthropic', cwd: ' ' }, { projectPath: '/b' })).toBe(true);
-    expect(canSchedule({ cwd: '/a' }, { projectPath: '/b' })).toBe(false);
-    expect(canSchedule(null, { projectPath: '/b' })).toBe(false);
+  describe('scheduleCwd: the folder a saved schedule is made for', () => {
+    const created = { cwd: '/created-in', projectContextMode: 'per_project' };
+    const existing = { launchConfig: { cwd: '/project-b' } };
+    const scope = { projectPath: '/chosen' };
+
+    it('uses the folder picked in the dialog for a one-shot schedule (no saved team)', () => {
+      expect(scheduleCwd(null, null, '/picked')).toBe('/picked');
+    });
+
+    it('keeps the saved folder of an ordinary team', () => {
+      expect(scheduleCwd({ cwd: '/team' }, null, '/picked')).toBe('/team');
+      expect(scheduleCwd({ cwd: '/team', projectContextMode: 'shared' }, existing, '/x')).toBe('/team');
+    });
+
+    it('a per-project team keeps the project of its schedule, never the folder it was created in', () => {
+      // Known from the saved team although the dialog could not tell at render time.
+      expect(scheduleCwd(created, existing, '/picked')).toBe('/project-b');
+      expect(scheduleCwd(created, existing, '/picked', scope)).toBe('/project-b');
+    });
+
+    it('a new schedule of a per-project team takes the project chosen in the dialog', () => {
+      expect(scheduleCwd(created, null, '/chosen', scope)).toBe('/chosen');
+    });
+
+    it('fails closed for a new schedule when the dialog did not know the team keeps history per project', () => {
+      expect(() => scheduleCwd(created, null, '/first-in-list')).toThrow(/separate history per project/);
+    });
   });
 });

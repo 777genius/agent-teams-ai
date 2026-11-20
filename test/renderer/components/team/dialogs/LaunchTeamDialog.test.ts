@@ -5006,6 +5006,88 @@ describe('LaunchTeamDialog', () => {
       }
     });
 
+    const scheduleOfB = {
+      id: 'schedule-b',
+      teamName: 'team-alpha',
+      executionMode: 'agent',
+      taskFirst: true,
+      cronExpression: '0 9 * * 1-5',
+      timezone: 'UTC',
+      status: 'active',
+      warmUpMinutes: 0,
+      maxConsecutiveFailures: 3,
+      consecutiveFailures: 0,
+      maxTurns: 50,
+      createdAt: '2026-11-20T00:00:00.000Z',
+      updatedAt: '2026-11-20T00:00:00.000Z',
+      launchConfig: { cwd: '/tmp/project-b', prompt: 'Check bugs', providerId: 'anthropic' },
+    };
+
+    it('keeps the project of an existing schedule when the team list does not know the team', async () => {
+      vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+      // Store not loaded yet (or metadata the list could not read): no mode at render time.
+      storeState.teamByName = {};
+      vi.mocked(api.teams.getSavedRequest).mockResolvedValue({
+        ...savedFromCreationProject,
+        projectContextMode: 'per_project',
+      } as any);
+      const dialog = await renderScheduleDialog({ schedule: scheduleOfB });
+      try {
+        await flushCustomFolderProbe();
+        await click(dialog.host, 'Save Changes');
+        expect(updateSchedule).toHaveBeenCalledTimes(1);
+        expect(updateSchedule.mock.calls[0]?.[1]).toMatchObject({
+          launchConfig: { cwd: '/tmp/project-b' },
+        });
+      } finally {
+        await dialog.unmount();
+        vi.mocked(api.teams.getSavedRequest).mockReset();
+        storeState.teamByName = {};
+      }
+    });
+
+    it('does not guess a project for a new schedule when the team list does not know the team', async () => {
+      vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+      storeState.teamByName = {};
+      vi.mocked(api.teams.getSavedRequest).mockResolvedValue({
+        ...savedFromCreationProject,
+        projectContextMode: 'per_project',
+      } as any);
+      const dialog = await renderScheduleDialog({});
+      try {
+        await typePrompt(dialog.host, 'Check bugs');
+        await click(dialog.host, 'Create Schedule');
+        expect(createSchedule).not.toHaveBeenCalled();
+        expect(dialog.host.textContent).toContain('separate history per project');
+      } finally {
+        await dialog.unmount();
+        vi.mocked(api.teams.getSavedRequest).mockReset();
+        storeState.teamByName = {};
+      }
+    });
+
+    it('can still save an existing schedule whose project folder was deleted', async () => {
+      vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+      storeState.teamByName = perProjectTeam;
+      vi.mocked(api.teams.getSavedRequest).mockResolvedValue(savedFromCreationProject as any);
+      vi.mocked(api.projectFolder!.getState).mockResolvedValue({ state: 'missing' } as any);
+      const dialog = await renderScheduleDialog({ schedule: scheduleOfB });
+      try {
+        await flushCustomFolderProbe();
+        // The picker is hidden for an existing schedule, so a missing folder must not trap the form.
+        await click(dialog.host, 'Save Changes');
+        expect(updateSchedule).toHaveBeenCalledTimes(1);
+        expect(updateSchedule.mock.calls[0]?.[1]).toMatchObject({
+          launchConfig: { cwd: '/tmp/project-b' },
+        });
+      } finally {
+        await dialog.unmount();
+        vi.mocked(api.projectFolder!.getState).mockResolvedValue({ state: 'exists' } as any);
+        vi.mocked(api.teams.getSavedRequest).mockReset();
+        storeState.teamByName = {};
+      }
+    });
+
     it('uses the project picked in the dialog, never the saved team path, from the global page', async () => {
       vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
       storeState.teamByName = {

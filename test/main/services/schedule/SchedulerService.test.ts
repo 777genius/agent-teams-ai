@@ -247,8 +247,10 @@ describe('SchedulerService', () => {
   });
 
   it('asks the admission about the project folder when a schedule is created or edited', async () => {
-    const admit = vi.fn(async (_team: string, cwd?: string) =>
-      cwd === '/tmp/gone' ? { allowed: false as const, reason: 'The project folder does not exist' } : { allowed: true as const }
+    const admit = vi.fn(async (_team: string, change?: { cwd?: string }) =>
+      change?.cwd === '/tmp/gone'
+        ? { allowed: false as const, reason: 'The project folder does not exist' }
+        : { allowed: true as const }
     );
     const service = new SchedulerService(repo, executor as never, warmUpFn, undefined, admit);
     const input = {
@@ -258,7 +260,7 @@ describe('SchedulerService', () => {
       launchConfig: { cwd: '/tmp/project-a', prompt: 'go' },
     };
     const created = await service.createSchedule(input);
-    expect(admit).toHaveBeenCalledWith('builders', '/tmp/project-a');
+    expect(admit).toHaveBeenCalledWith('builders', { cwd: '/tmp/project-a' });
 
     await expect(
       service.createSchedule({ ...input, launchConfig: { cwd: '/tmp/gone', prompt: 'go' } })
@@ -267,6 +269,10 @@ describe('SchedulerService', () => {
       service.updateSchedule(created.id, { launchConfig: { cwd: '/tmp/gone', prompt: 'go' } })
     ).rejects.toThrow('The project folder does not exist');
     expect((await repo.getSchedule(created.id))?.launchConfig.cwd).toBe('/tmp/project-a');
+    // An edit also tells the admission which folder the schedule has now (a project can not move).
+    expect(admit).toHaveBeenCalledWith('builders', { cwd: '/tmp/gone', from: '/tmp/project-a' });
+    await service.updateSchedule(created.id, { label: 'no folder named' });
+    expect(admit).toHaveBeenLastCalledWith('builders', { cwd: undefined, from: '/tmp/project-a' });
     await service.stop();
   });
 

@@ -80,7 +80,7 @@ Status words: **works**, **hidden** (the control is not shown), **refuses** (an 
 
 | Feature | Legacy | Logical | Copy | Evidence |
 | --- | --- | --- | --- | --- |
-| Create, edit, run, pause schedules | works | works: one list under the team; each schedule names its project (its working directory, an existing folder, fixed once created). A run goes to the ready copy of that project. It is recorded as skipped, with a reason and never as a failure, when there is no launched copy there, the copy is stuck or unreadable, the team is trashed, or the team runs in another project | refuses (a copy is never scheduled) | `projectScheduleTargets.ts`, `SmartScheduleDispatcher.ts`, E2E `verifySchedules` |
+| Create, edit, run, pause schedules | works | works: one list under the team; each schedule names its project (its working directory, an existing absolute folder, fixed once created and enforced by the server). A run goes to the ready copy of that project. It is recorded as skipped, with a reason and never as a failure, when there is no launched copy there, the copy is stuck or unreadable, the team is trashed, or the team runs in another project | refuses (a copy is never scheduled) | `projectScheduleTargets.ts`, `SmartScheduleDispatcher.ts`, E2E `verifySchedules` |
 
 ### E. Listing and aggregate views
 

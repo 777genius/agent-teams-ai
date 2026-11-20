@@ -727,6 +727,20 @@ async function verifySchedules(f: Fixture) {
     'A schedule for a project copy must be refused: ' + JSON.stringify(forCopy));
   assert.equal((await readSchedules()).length, 1, 'A refused schedule must not be stored');
 
+  // The project of a schedule is fixed: moving it to another project is refused by the server too.
+  const moved = await ipcOutcome('window.electronAPI.schedules.update(' + JSON.stringify(created.id) +
+    ', ' + JSON.stringify({ launchConfig: { cwd: f.projectB } }) + ')');
+  assert(!moved.ok && /can not be changed/i.test(moved.error ?? ''),
+    'Moving a schedule to another project must be refused: ' + JSON.stringify(moved));
+  assert.equal((await readSchedules())[0].launchConfig.cwd, f.projectA,
+    'A refused move must leave the project of the schedule unchanged');
+  const relative = await ipcOutcome('window.electronAPI.schedules.create(' + JSON.stringify({
+    teamName: f.logical, executionMode: 'agent', taskFirst: true, cronExpression: '0 9 * * 1-5',
+    timezone: 'UTC', launchConfig: { cwd: 'project-a', prompt: 'relative', providerId: 'opencode' },
+  }) + ')');
+  assert(!relative.ok && /absolute folder/i.test(relative.error ?? ''),
+    'A relative project folder must be refused: ' + JSON.stringify(relative));
+
   // 5. Run now: the work goes to the copy of the chosen project; the run is recorded either way.
   const runsFile = path.join(schedulesDir, 'runs', created.id + '.json');
   const tasksOfCopy = path.join(f.claudeRoot, 'tasks', f.nativeA);

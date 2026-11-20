@@ -70,23 +70,25 @@ export interface ScheduleProjectScope {
 
 interface DialogProjectProps {
   mode: string;
-  /** Where the dialog was opened from: the default project of a new schedule. */
+  /** Where the dialog was opened from: set only by the screen of a per-project team. */
   projectScope?: ScheduleProjectScope;
   defaultProjectPath?: string;
 }
 
 /**
  * A team with separate history per project: its schedule names its own project, and the saved
- * team path (the project the team was created in) is only a default. The scope follows the team,
- * never the page the dialog was opened from, so every entry point gets it.
+ * team path (the project the team was created in) is only a default. The scope follows the team
+ * (and the screen that opened the dialog), never only one of them, so every entry point gets it.
  */
 export function scheduleScope(
   props: DialogProjectProps,
   team?: Pick<TeamSummary, 'projectContextMode' | 'projectPath'>
 ): { projectScope?: ScheduleProjectScope; defaultProjectPath?: string } {
-  const scoped = props.mode === 'schedule' && team?.projectContextMode === 'per_project';
+  const scoped =
+    props.mode === 'schedule' &&
+    (props.projectScope !== undefined || team?.projectContextMode === 'per_project');
   const projectScope = scoped
-    ? { projectPath: props.projectScope?.projectPath ?? team.projectPath }
+    ? { projectPath: props.projectScope?.projectPath ?? team?.projectPath }
     : undefined;
   return {
     projectScope,
@@ -94,10 +96,28 @@ export function scheduleScope(
   };
 }
 
-/** The saved team can back a schedule: a provider, and a folder unless the schedule names one. */
-export function canSchedule(
-  saved: { cwd?: string; providerId?: string } | null,
+/**
+ * The folder a saved schedule is made for, decided when it is saved. The saved team is read at
+ * that moment, so its mode is known even when the team list was not loaded at render time:
+ * - a one-shot schedule (no saved team) uses the folder picked in the dialog;
+ * - an ordinary team uses its saved folder;
+ * - a per-project team never falls back to the folder it was created in: an existing schedule
+ *   keeps its own project, a new one needs the project chosen in the dialog.
+ */
+export function scheduleCwd(
+  saved: { cwd?: string; projectContextMode?: string } | null,
+  schedule: { launchConfig: { cwd: string } } | null,
+  effectiveCwd: string,
   projectScope?: ScheduleProjectScope
-): boolean {
-  return Boolean(saved?.providerId) && (Boolean(projectScope) || Boolean(saved?.cwd?.trim()));
+): string {
+  if (!saved) return effectiveCwd;
+  if (!projectScope && saved.projectContextMode !== 'per_project') return saved.cwd ?? '';
+  if (schedule) return schedule.launchConfig.cwd;
+  if (!projectScope) {
+    throw new Error(
+      'This team keeps separate history per project. ' +
+        'Close this dialog, open it again and choose the project'
+    );
+  }
+  return effectiveCwd;
 }

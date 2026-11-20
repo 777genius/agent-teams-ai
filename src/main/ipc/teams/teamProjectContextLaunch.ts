@@ -1,3 +1,4 @@
+import { TeamProjectContextLaunchConflictError } from '@features/team-project-context/main';
 import { TeamMetaStore } from '@main/services/team/TeamMetaStore';
 
 import { parseOptionalTeamEffort, parseOptionalTeamFastMode } from '../teamIpcRequestParsers';
@@ -25,7 +26,8 @@ export interface PreparedTeamContextLaunch {
  */
 export async function prepareTeamContextLaunch(
   request: TeamLaunchRequest,
-  ports: ProjectTeamRuntimePorts
+  ports: ProjectTeamRuntimePorts,
+  options: { expectedExecutionTeamName?: string } = {}
 ): Promise<PreparedTeamContextLaunch> {
   const parts = createProjectContextRuntimeParts(ports);
   const mode = await parts.resolver.getMode(request.teamName);
@@ -51,6 +53,16 @@ export async function prepareTeamContextLaunch(
   };
 
   try {
+    // A caller that must reuse one existing project copy (a schedule) aborts before anything is
+    // materialized when the reservation points anywhere else; the catch below releases it.
+    if (
+      options.expectedExecutionTeamName !== undefined &&
+      reserved.executionTeamName !== options.expectedExecutionTeamName
+    ) {
+      throw new TeamProjectContextLaunchConflictError(
+        'The project copy of this team changed while the schedule was starting. Nothing was started'
+      );
+    }
     await parts.gate.assertOtherContextsStopped(
       address.logicalTeamName, reserved.executionTeamName
     );
