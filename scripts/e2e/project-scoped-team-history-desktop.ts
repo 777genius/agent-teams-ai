@@ -963,6 +963,10 @@ async function verifyCrossTeam(f: Fixture) {
   await selectProject(f, 'project-a');
   await cdp.evaluate('(() => window.__agentTeamsDevStore.getState().openTeamTab(' +
     JSON.stringify(f.partnerA) + ', ' + JSON.stringify(f.projectA) + '))()');
+  // Messages open as a list of conversations; cross-team messages live in the team feed.
+  await waitFor('(() => { const row = Array.from(document.querySelectorAll(' +
+    '"button[aria-label^=\\"Group chat\\"]")).find(el => el.getClientRects().length > 0);' +
+    ' if (!row) return false; row.click(); return true; })()', 'team feed conversation row');
   const badge = JSON.stringify('[data-cross-team-badge="' + f.nativeB + '"]');
   await waitFor('Array.from(document.querySelectorAll(' + badge + ')).some(el => ' +
     'el.getClientRects().length > 0 && el.textContent.endsWith(" · project-b") && ' +
