@@ -447,6 +447,13 @@ async function ipcOutcome(
 }
 
 /**
+ * The app's own sign-in check of the runtime (CLI installer status and provider status, run at
+ * start-up and whenever a status panel refreshes): it reads the state and starts nothing. When it
+ * runs is timing-dependent (earlier on Windows), so every audit of the denying runtime allows it.
+ */
+const isAuthStatusQuery = (args: string[]): boolean => args[0] === 'auth' && args[1] === 'status';
+
+/**
  * A scheduled run on a runtime that denies agents ends only after the dispatcher has waited for
  * the agent to become ready (45 checks, 2 s apart: 90 s and a little more, longer on slow CI
  * runners). Every wait for the final status of such a run must be longer than that.
@@ -1033,7 +1040,7 @@ async function verifyLaunchSettings(f: Fixture) {
     .slice(auditStart).map((line) => JSON.parse(line) as string[]);
   const allowed = (args: string[]) => (args.includes('--print') && args.includes('stream-json')) ||
     (args[0] === 'runtime' && ['status', 'providers', 'opencode-command'].includes(args[1])) ||
-    (args[0] === 'auth' && args[1] === 'status') || (args[0] === 'model' && args[1] === 'list');
+    isAuthStatusQuery(args) || (args[0] === 'model' && args[1] === 'list');
   const unexpected = audit.filter((args) => !allowed(args));
   assert.equal(unexpected.length, 0, 'Unexpected runtime calls in the launch settings section: ' +
     JSON.stringify(unexpected.map((args) => args.slice(0, 2))));
@@ -1098,7 +1105,7 @@ async function run() {
     const isLaunch = (args: string[]) => args.includes('--print') && args.includes('stream-json');
     const isReadOnly = (args: string[]) =>
       (args[0] === 'runtime' && ['status', 'providers', 'opencode-command'].includes(args[1])) ||
-      (args[0] === 'auth' && args[1] === 'status') || (args[0] === 'model' && args[1] === 'list');
+      isAuthStatusQuery(args) || (args[0] === 'model' && args[1] === 'list');
     assert.equal(afterSchedule.filter(isLaunch).length, 1,
       'The scheduled run must reach the runtime with exactly one launch of the project copy');
     const unexpectedAfter = afterSchedule.filter((args) => !isLaunch(args) && !isReadOnly(args));
@@ -1107,8 +1114,8 @@ async function run() {
         /^(?:--?)?[a-zA-Z][a-zA-Z0-9-]{0,32}$/.test(token) ? token : '[redacted]'))));
     // Startup probes may query runtime read-only capabilities; any provider or
     // team launch command is forbidden by the synthetic runtime fixture.
-    const unexpected = audit.filter((args) =>
-      args[0] !== 'runtime' || !['status', 'providers', 'opencode-command'].includes(args[1])
+    const unexpected = audit.filter((args) => !isAuthStatusQuery(args) &&
+      (args[0] !== 'runtime' || !['status', 'providers', 'opencode-command'].includes(args[1]))
     );
     // Preserve the strict deny policy. Report only command/subcommand tokens,
     // never full argv, user paths, provider settings or possible credentials.
