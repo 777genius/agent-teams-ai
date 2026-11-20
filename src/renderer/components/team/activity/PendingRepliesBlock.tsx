@@ -1,6 +1,7 @@
 import { memo, useState } from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
+import { TeamDisplayLabel } from '@features/team-project-context/renderer';
 import { api } from '@renderer/api';
 import { confirm } from '@renderer/components/common/ConfirmDialog';
 import { ParticipantAvatar } from '@renderer/components/team/ParticipantAvatar';
@@ -23,7 +24,6 @@ import {
   countQueuedUserMessages,
   getPendingMemberDeliveryState,
 } from '../messages/messagesPanelLogic';
-import { TeamDisplayLabel } from '../TeamDisplayLabel';
 
 import type {
   DiscardQueuedUserMessagesResult,

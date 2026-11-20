@@ -186,6 +186,8 @@ describe('CrossTeamService', () => {
           provisioning as unknown as TeamProvisioningService,
           recipientMetadataReader,
           {
+            findCopyOwners: (names) =>
+              Promise.resolve(new Map(names.map((name) => [name, { alias: null }]))),
             getMode: (teamName) =>
               Promise.resolve(teamName === 'builders' ? 'per_project' : 'shared'),
             inspectContext: (_team, projectPath) => {

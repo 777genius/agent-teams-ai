@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useAppTranslation } from '@features/localization/renderer';
 import { useDirectMessageQueue } from '@features/manual-message-queue/renderer';
 import { normalizeConversationParticipant } from '@features/team-direct-chats/renderer';
+import { useProjectCopyOwnerName } from '@features/team-project-context/renderer';
 import { api } from '@renderer/api';
 import { AttachmentCatalogRefresh } from '@renderer/components/team/attachments/AttachmentCatalogRefresh';
 import { AttachmentPreviewList } from '@renderer/components/team/attachments/AttachmentPreviewList';
@@ -10,7 +11,6 @@ import { DropZoneOverlay } from '@renderer/components/team/attachments/DropZoneO
 import { ComposerSurface } from '@renderer/components/team/composer/ComposerSurface';
 import { ActionModeSelector } from '@renderer/components/team/messages/ActionModeSelector';
 import { ComposerLockedRecipient } from '@renderer/components/team/messages/ComposerLockedRecipient';
-import { useProjectCopyOwnerName } from '@renderer/components/team/TeamDisplayLabel';
 import { useTeamStartupCopy } from '@renderer/components/team/useTeamStartupCopy';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
 import { getTeamColorSet } from '@renderer/constants/teamColors';

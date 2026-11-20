@@ -1,4 +1,4 @@
-import { useTeamDisplayLabel } from '../TeamDisplayLabel';
+import { useTeamDisplayLabel } from '@features/team-project-context/renderer';
 
 const BADGE_CLASS =
   'inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium tracking-wide';
@@ -12,13 +12,11 @@ export const CrossTeamTeamBadge = ({
   onClick?: (teamName: string) => void;
 }): React.JSX.Element => {
   const label = useTeamDisplayLabel(teamName);
-  const title = label === teamName ? undefined : teamName;
   if (onClick) {
     return (
       <button
         type="button"
         className={BADGE_CLASS}
-        title={title}
         data-cross-team-badge={teamName}
         style={{
           backgroundColor: 'rgba(168, 85, 247, 0.15)',
@@ -39,7 +37,6 @@ export const CrossTeamTeamBadge = ({
   return (
     <span
       className={BADGE_CLASS}
-      title={title}
       data-cross-team-badge={teamName}
       style={{ backgroundColor: 'rgba(168, 85, 247, 0.15)', color: '#c084fc' }}
     >

@@ -1,9 +1,9 @@
 import {
-  createCrossTeamRecipientPorts,
+  assertCrossTeamSender,
+  createAppCrossTeamRecipientPorts,
   findProjectCopyOwner,
   projectTeamSummaries,
   resolveCrossTeamRecipient,
-  TeamProjectContextRegistry,
 } from '@features/team-project-context/main';
 import { getClaudeBasePath } from '@main/utils/pathDecoder';
 import { CROSS_TEAM_SENT_SOURCE, CROSS_TEAM_SOURCE, formatCrossTeamText } from '@shared/constants';
@@ -107,15 +107,16 @@ export class CrossTeamService {
     return this.route(fromTeam, toTeam, await this.configReader.getConfig(fromTeam));
   }
 
+  private ports(): CrossTeamRecipientPorts {
+    return this.recipientPorts ?? createAppCrossTeamRecipientPorts();
+  }
+
   private route(
     fromTeam: string,
     toTeam: string,
     sourceConfig: TeamConfig | null
   ): Promise<CrossTeamRecipient> {
-    const ports =
-      this.recipientPorts ??
-      createCrossTeamRecipientPorts(new TeamMetaStore(), TeamProjectContextRegistry.fromCurrentApp());
-    return resolveCrossTeamRecipient(ports, {
+    return resolveCrossTeamRecipient(this.ports(), {
       fromTeam,
       toTeam,
       senderProjectPath: sourceConfig?.projectPath,
@@ -145,10 +146,12 @@ export class CrossTeamService {
     // A per-project team has no inbox of its own: it receives through its copy for
     // the sender's project. Everything below works on that physical team.
     const sourceConfig = await this.configReader.getConfig(fromTeam);
-    const toTeam = (await this.route(fromTeam, request.toTeam, sourceConfig)).teamName;
     if (!sourceConfig || sourceConfig.deletedAt) {
+      // A per-project team has no config of its own: say why it cannot send.
+      await assertCrossTeamSender(this.ports(), fromTeam);
       throw new Error(`Source team not found: ${fromTeam}`);
     }
+    const toTeam = (await this.route(fromTeam, request.toTeam, sourceConfig)).teamName;
     const inferredReplyMeta =
       !request.conversationId && !request.replyToConversationId
         ? (this.messaging?.resolveCrossTeamReplyMetadata(fromTeam, toTeam) ?? null)

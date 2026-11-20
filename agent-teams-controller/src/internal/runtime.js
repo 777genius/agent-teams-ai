@@ -33,7 +33,6 @@ const POLL_INTERVAL_MS = 1000;
 const STOP_REQUEST_TIMEOUT_MS = 5 * 60 * 1000;
 const TEAM_CONTROL_API_STATE_FILE = 'team-control-api.json';
 const RETRYABLE_CONTROL_ERROR = 'retryableControlError';
-const CONTROL_API_UNAVAILABLE = 'CONTROL_API_UNAVAILABLE';
 const BOOTSTRAP_CHECKIN_MAX_ATTEMPTS = 3;
 const BOOTSTRAP_CHECKIN_ATTEMPT_TIMEOUT_MS = 4000;
 const BOOTSTRAP_CHECKIN_RETRY_DELAYS_MS = [300, 900];
@@ -102,7 +101,7 @@ function resolveControlBaseUrls(context, flags = {}) {
   const candidates = uniqueNonEmpty([explicit, stateFileUrl, envUrl]);
 
   if (candidates.length === 0) {
-    const error = new Error(
+    throw new Error(
       `Team control API is unavailable. Start the desktop app team runtime first so it can publish CLAUDE_TEAM_CONTROL_URL. Lookup: ${describeControlApiLookup(
         context,
         flags,
@@ -110,8 +109,6 @@ function resolveControlBaseUrls(context, flags = {}) {
         envUrl
       )}.`
     );
-    error.code = CONTROL_API_UNAVAILABLE;
-    throw error;
   }
 
   return candidates;
@@ -544,21 +541,27 @@ async function getTeam(context, flags = {}) {
 
 /**
  * Cross-team routing is decided by the app, one rule for every sender. `null`
- * means the app cannot answer here (not running, unreachable, or an app without
- * the route), so the caller keeps its offline behaviour; a refusal is thrown.
+ * means the app cannot answer here (no published address, unreachable, timed
+ * out, or an app without the route), so the caller keeps its offline behaviour.
+ * An answer of the app, a refusal or a server error included, is thrown.
  */
 async function requestCrossTeamRouting(context, pathname) {
   let baseUrls;
   try {
     baseUrls = resolveControlBaseUrls(context);
   } catch (error) {
-    if (error && error.code === CONTROL_API_UNAVAILABLE) return null;
-    throw error;
+    if (error && error.code === 'APP_CONTEXT_MISMATCH') throw error;
+    return null;
   }
   try {
     return await requestJsonWithFallback(baseUrls, pathname);
   } catch (error) {
-    if (isRetryableControlError(error)) return null;
+    const unreachable =
+      isRetryableControlError(error) &&
+      (error.retryableKind === 'network' ||
+        error.retryableKind === 'timeout' ||
+        error.statusCode === 404);
+    if (unreachable) return null;
     throw error;
   }
 }

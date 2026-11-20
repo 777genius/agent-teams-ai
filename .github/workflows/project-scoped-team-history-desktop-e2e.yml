@@ -16,6 +16,10 @@ on:
       - 'src/main/services/team/CrossTeamService.ts'
       - 'src/main/http/crossTeam.ts'
       - 'agent-teams-controller/src/internal/crossTeam.js'
+      - 'agent-teams-controller/src/internal/runtime.js'
+      - 'src/main/http/index.ts'
+      - 'src/main/services/team/provisioning/TeamProvisioningRuntimeDeliveryIdentity.ts'
+      - 'src/renderer/components/team/activity/CrossTeamTeamBadge.tsx'
   push:
     branches: [main]
     paths:
@@ -31,6 +35,10 @@ on:
       - 'src/main/services/team/CrossTeamService.ts'
       - 'src/main/http/crossTeam.ts'
       - 'agent-teams-controller/src/internal/crossTeam.js'
+      - 'agent-teams-controller/src/internal/runtime.js'
+      - 'src/main/http/index.ts'
+      - 'src/main/services/team/provisioning/TeamProvisioningRuntimeDeliveryIdentity.ts'
+      - 'src/renderer/components/team/activity/CrossTeamTeamBadge.tsx'
 
 permissions:
   contents: read

@@ -8,6 +8,8 @@ export type {
   CrossTeamRoute,
 } from './crossTeamRecipient';
 export {
+  assertCrossTeamSender,
+  createAppCrossTeamRecipientPorts,
   createCrossTeamRecipientPorts,
   CrossTeamRecipientError,
   resolveCrossTeamRecipient,

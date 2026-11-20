@@ -387,29 +387,24 @@ function sendCrossTeamMessage(context, flags) {
 }
 
 /**
- * The team a message to `flags.toTeam` is written to. A team with its own config
- * receives it under its own name (a project copy included, so a reply reaches the
- * copy that wrote). A name without one may be a team that keeps a separate
- * history per project; only the app knows which project copy receives from this
- * sender, so the app is asked and its refusal is passed on. Without the app the
- * name is kept and the delivery reports it as unknown, as before.
+ * The team a message to `flags.toTeam` is written to. The app decides it, with
+ * the same rule as its own sends: a team that keeps a separate history per
+ * project receives through its copy for this team's project, and a refusal is
+ * passed on. Without a reachable app the name is kept, as before: the delivery
+ * then reports a name without a config of its own as unknown.
  */
 async function resolveCrossTeamRecipient(context, flags) {
   const toTeam = typeof flags?.toTeam === 'string' ? flags.toTeam.trim() : '';
   if (!TEAM_NAME_PATTERN.test(toTeam) || toTeam === context.teamName) return toTeam;
-  const targetPaths = createTargetContext(context, toTeam).paths;
-  if (!fs.existsSync(targetPaths.teamDir) || runtimeHelpers.readTeamConfig(targetPaths)) {
-    return toTeam;
-  }
   const recipient = await runtime.getCrossTeamRecipient(context, toTeam);
   const routed = recipient && typeof recipient.teamName === 'string' ? recipient.teamName : '';
   return TEAM_NAME_PATTERN.test(routed) ? routed : toTeam;
 }
 
 /**
- * The app lists targets with project copies folded into their team. Without the
- * app the configured teams are scanned locally, which cannot tell a project copy
- * from an ordinary team.
+ * The app lists targets with project copies folded into their team. Without a
+ * reachable app the configured teams are scanned locally, which cannot tell a
+ * project copy from an ordinary team.
  */
 async function listCrossTeamTargets(context, flags) {
   const excludeTeam =
@@ -417,10 +412,15 @@ async function listCrossTeamTargets(context, flags) {
       ? flags.excludeTeam
       : context.teamName;
   const fromApp = await runtime.getCrossTeamTargets(context);
-  if (Array.isArray(fromApp)) {
-    return fromApp.filter((target) => target && target.teamName !== excludeTeam);
-  }
-  return listConfiguredTeams(context, excludeTeam);
+  if (!Array.isArray(fromApp)) return listConfiguredTeams(context, excludeTeam);
+  return fromApp
+    .filter((target) => target && target.teamName !== excludeTeam)
+    .map((target) => ({
+      teamName: target.teamName,
+      displayName: target.displayName || target.teamName,
+      description: target.description || undefined,
+      ...(typeof target.isOnline === 'boolean' ? { isOnline: target.isOnline } : {}),
+    }));
 }
 
 function listConfiguredTeams(context, excludeTeam) {

@@ -970,17 +970,41 @@ describe('crossTeam module', () => {
     const inbox = (claudeDir, team) =>
       path.join(claudeDir, 'teams', team, 'inboxes', 'team-lead.json');
 
-    it('keeps the name of a team with its own config without asking the app', async () => {
+    it('asks the app for every target, a team with its own config included', async () => {
       const claudeDir = perProjectWorld();
-      await startApp(claudeDir, () => ({ statusCode: 500, body: { error: 'must not be asked' } }));
+      await startApp(claudeDir, (url) => ({
+        body: { teamName: new URL(url, 'http://app').searchParams.get('toTeam') },
+      }));
       const controller = createController({ teamName: 'team-a', claudeDir });
       await expect(
         controller.crossTeam.resolveCrossTeamRecipient({ toTeam: 'ptc-builders-b' })
       ).resolves.toBe('ptc-builders-b');
+      expect(requests).toEqual(['/api/teams/team-a/cross-team/recipient?toTeam=ptc-builders-b']);
+    });
+
+    it('passes on a server error of the app instead of keeping the name', async () => {
+      const claudeDir = perProjectWorld();
+      await startApp(claudeDir, () => ({
+        statusCode: 500,
+        body: { error: 'Unable to resolve the cross-team recipient' },
+      }));
+      const controller = createController({ teamName: 'team-a', claudeDir });
       await expect(
-        controller.crossTeam.resolveCrossTeamRecipient({ toTeam: 'missing-team' })
-      ).resolves.toBe('missing-team');
-      expect(requests).toEqual([]);
+        controller.crossTeam.resolveCrossTeamRecipient({ toTeam: 'builders' })
+      ).rejects.toThrow('Unable to resolve the cross-team recipient');
+    });
+
+    it('keeps the name when the app has no such route or its address file is damaged', async () => {
+      const claudeDir = perProjectWorld();
+      await startApp(claudeDir, () => ({ statusCode: 404, body: { error: 'Not Found' } }));
+      const controller = createController({ teamName: 'team-a', claudeDir });
+      await expect(
+        controller.crossTeam.resolveCrossTeamRecipient({ toTeam: 'builders' })
+      ).resolves.toBe('builders');
+      fs.writeFileSync(path.join(claudeDir, 'team-control-api.json'), '{not json');
+      await expect(
+        controller.crossTeam.resolveCrossTeamRecipient({ toTeam: 'builders' })
+      ).resolves.toBe('builders');
     });
 
     it('writes a message for a per-project team into the copy the app names', async () => {
@@ -1039,14 +1063,23 @@ describe('crossTeam module', () => {
       const claudeDir = perProjectWorld();
       await startApp(claudeDir, () => ({
         body: [
-          { teamName: 'builders', displayName: 'Builders', isOnline: true },
+          {
+            teamName: 'builders',
+            displayName: 'Builders',
+            isOnline: true,
+            members: [{ name: 'team-lead', color: 'blue' }],
+            leadColor: 'blue',
+          },
           { teamName: 'team-z', displayName: 'Team Z' },
         ],
       }));
       const controller = createController({ teamName: 'team-a', claudeDir });
+      // Only what an agent needs to choose a team; rosters and colours stay in the app.
       await expect(
         controller.crossTeam.listCrossTeamTargets({ excludeTeam: 'team-z' })
-      ).resolves.toEqual([{ teamName: 'builders', displayName: 'Builders', isOnline: true }]);
+      ).resolves.toEqual([
+        { teamName: 'builders', displayName: 'Builders', description: undefined, isOnline: true },
+      ]);
       expect(requests).toEqual(['/api/teams/team-a/cross-team/targets']);
     });
 

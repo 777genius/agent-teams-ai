@@ -1,9 +1,12 @@
-import { readTeamProjectContextMode } from './projectContextMode';
+import { TeamMetaStore } from '@main/services/team/TeamMetaStore';
+
+import { readTeamProjectContextMode, TeamMetadataUnreadableError } from './projectContextMode';
+import { TeamProjectContextRegistry } from './TeamProjectContextRegistry';
 
 import type { TeamModeMetaReader } from './projectContextMode';
 import type {
+  OwnedExecutionAliasLookup,
   PersistedTeamWorkContext,
-  TeamProjectContextRegistry,
 } from './TeamProjectContextRegistry';
 import type { TeamProjectContextMode } from '@shared/types';
 
@@ -16,6 +19,8 @@ export interface CrossTeamRecipientPorts {
     logicalTeamName: string,
     projectPath: string
   ): Promise<PersistedTeamWorkContext | null>;
+  /** Which of the names are project copies, and of which team (one scan for all). */
+  findCopyOwners(teamNames: readonly string[]): Promise<Map<string, OwnedExecutionAliasLookup>>;
 }
 
 export interface CrossTeamRoute {
@@ -55,16 +60,93 @@ export class CrossTeamRecipientError extends Error {
   }
 }
 
+function reasonOf(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
+async function modeOf(ports: CrossTeamRecipientPorts, teamName: string) {
+  try {
+    return await ports.getMode(teamName);
+  } catch (error) {
+    // Unreadable metadata keeps its own error (and code); anything else is still a refusal.
+    if (error instanceof TeamMetadataUnreadableError) throw error;
+    throw new CrossTeamRecipientError(
+      'UNRESOLVED',
+      `Cannot read how team "${teamName}" keeps its history: ${reasonOf(error)}`
+    );
+  }
+}
+
+/** A per-project team has no inbox or process of its own, so it never sends. */
+export async function assertCrossTeamSender(
+  ports: CrossTeamRecipientPorts,
+  fromTeam: string
+): Promise<void> {
+  if ((await modeOf(ports, fromTeam)) === 'per_project') {
+    throw new CrossTeamRecipientError(
+      'SENDER_IS_PROJECT_TEAM',
+      `Team "${fromTeam}" keeps a separate history per project and has no inbox of its own. ` +
+        'Send from the team opened in a project.'
+    );
+  }
+}
+
+/**
+ * A project copy named exactly: it stays addressable (the `from` of a message a
+ * copy sent is its own name, and the reply has to reach that copy), unless it is
+ * a copy of the sender's own team or its launch never finished.
+ */
+async function exactName(
+  ports: CrossTeamRecipientPorts,
+  { fromTeam, toTeam }: CrossTeamRoute
+): Promise<CrossTeamRecipient> {
+  let owners: Map<string, OwnedExecutionAliasLookup>;
+  try {
+    owners = await ports.findCopyOwners([fromTeam, toTeam]);
+  } catch (error) {
+    throw new CrossTeamRecipientError(
+      'UNRESOLVED',
+      `Cannot tell which teams are project copies: ${reasonOf(error)}`
+    );
+  }
+  const ownerOf = (name: string) => {
+    const lookup = owners.get(name);
+    if (lookup && 'error' in lookup) {
+      throw new CrossTeamRecipientError(
+        'UNRESOLVED',
+        `Cannot tell whether "${name}" is a project copy: ${lookup.error.message}`
+      );
+    }
+    return lookup?.alias ?? null;
+  };
+  const target = ownerOf(toTeam);
+  if (!target) return { teamName: toTeam };
+  const sender = ownerOf(fromTeam);
+  if (sender && sender.logicalTeamName === target.logicalTeamName) {
+    throw new CrossTeamRecipientError(
+      'SAME_TEAM',
+      'Cannot send cross-team message to the same team'
+    );
+  }
+  if (target.context.state !== 'ready') {
+    throw new CrossTeamRecipientError(
+      'PROJECT_LAUNCH_PENDING',
+      `Team "${target.logicalTeamName}" is being launched in project ${target.context.projectPath}. ` +
+        'Send again when the launch has finished.'
+    );
+  }
+  return { teamName: toTeam };
+}
+
 /**
  * The one rule for which physical team receives a cross-team message.
  *
- * - An ordinary team, or a project copy named exactly, receives it under that
- *   name. A copy must stay addressable: the `from` of a message a copy sent is
- *   its own name, and the reply has to reach that copy, not another project.
+ * - An ordinary team receives it under its name; so does a ready project copy
+ *   named exactly (see `exactName`).
  * - A per-project team has no inbox or process of its own. It receives through
- *   its copy for the project the sender works in, and only a ready one: the
- *   message never crosses into the history of another project, and no copy is
- *   created to receive it. Anything else is refused with what to do instead.
+ *   its ready copy for the project the sender works in: the message never goes to
+ *   the history of another project, and no copy is created to receive it.
+ *   Anything else is refused with what to do instead.
  * - A per-project team cannot be the sender, for the same reason.
  *
  * Unreadable metadata and an index that cannot be read fail closed.
@@ -74,14 +156,8 @@ export async function resolveCrossTeamRecipient(
   route: CrossTeamRoute
 ): Promise<CrossTeamRecipient> {
   const { fromTeam, toTeam } = route;
-  if ((await ports.getMode(fromTeam)) === 'per_project') {
-    throw new CrossTeamRecipientError(
-      'SENDER_IS_PROJECT_TEAM',
-      `Team "${fromTeam}" keeps a separate history per project and has no inbox of its own. ` +
-        'Send from the team opened in a project.'
-    );
-  }
-  if ((await ports.getMode(toTeam)) !== 'per_project') return { teamName: toTeam };
+  await assertCrossTeamSender(ports, fromTeam);
+  if ((await modeOf(ports, toTeam)) !== 'per_project') return exactName(ports, route);
 
   const projectPath = route.senderProjectPath?.trim();
   if (!projectPath) {
@@ -95,10 +171,9 @@ export async function resolveCrossTeamRecipient(
   try {
     context = await ports.inspectContext(toTeam, projectPath);
   } catch (error) {
-    const reason = error instanceof Error ? error.message : String(error);
     throw new CrossTeamRecipientError(
       'UNRESOLVED',
-      `Cannot find the history of team "${toTeam}" in project ${projectPath}: ${reason}`
+      `Cannot find the history of team "${toTeam}" in project ${projectPath}: ${reasonOf(error)}`
     );
   }
   if (!context) {
@@ -128,14 +203,28 @@ export async function resolveCrossTeamRecipient(
   };
 }
 
-/** The ports every production caller uses; tests inject a temp-dir registry. */
+type RecipientRegistry = Pick<
+  TeamProjectContextRegistry,
+  'inspect' | 'resolveOwnedExecutionAliases'
+>;
+
+/** The ports over any metadata store and registry; tests inject a temp-dir registry. */
 export function createCrossTeamRecipientPorts(
   meta: TeamModeMetaReader,
-  registry: Pick<TeamProjectContextRegistry, 'inspect'>
+  registry: RecipientRegistry
 ): CrossTeamRecipientPorts {
   return {
     getMode: (teamName) => readTeamProjectContextMode(meta, teamName, UNREADABLE_MESSAGE),
     inspectContext: (logicalTeamName, projectPath) =>
       registry.inspect(logicalTeamName, projectPath),
+    findCopyOwners: (teamNames) => registry.resolveOwnedExecutionAliases(teamNames),
   };
+}
+
+/** The ports of the running app (read per call: the data root can change at runtime). */
+export function createAppCrossTeamRecipientPorts(): CrossTeamRecipientPorts {
+  return createCrossTeamRecipientPorts(
+    new TeamMetaStore(),
+    TeamProjectContextRegistry.fromCurrentApp()
+  );
 }

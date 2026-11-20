@@ -4,10 +4,11 @@ import * as path from 'path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { createOpenCodeRuntimeDeliveryPorts } from '../../../../src/main/services/team/opencode/delivery/OpenCodeRuntimeDeliveryPorts';
+import { canonicalizeRuntimeDeliveryJournalRecordIdentities } from '../../../../src/main/services/team/provisioning/TeamProvisioningOpenCodeRuntimeDelivery';
 import {
   canonicalizeRuntimeDeliveryCrossTeamIdentities,
-  canonicalizeRuntimeDeliveryJournalRecordIdentities,
-} from '../../../../src/main/services/team/provisioning/TeamProvisioningOpenCodeRuntimeDelivery';
+  type CrossTeamTargetRoute,
+} from '../../../../src/main/services/team/provisioning/TeamProvisioningRuntimeDeliveryIdentity';
 import {
   buildRuntimeDestinationMessageId,
   createRuntimeDeliveryJournalStore,
@@ -1942,7 +1943,8 @@ describe('RuntimeDeliveryReconciler', () => {
       const canonicalOriginal = await canonicalizeRuntimeDeliveryCrossTeamIdentities(
         original,
         readBuilderLeadConfig,
-        readMetaMembers
+        readMetaMembers,
+        keepCrossTeamTarget
       );
       await expect(recoveryJournal.get(journalKey(original))).resolves.toMatchObject({
         status: 'committed',
@@ -1967,7 +1969,8 @@ describe('RuntimeDeliveryReconciler', () => {
             canonicalizeRuntimeDeliveryCrossTeamIdentities(
               message,
               readBuilderLeadConfig,
-              readMetaMembers
+              readMetaMembers,
+              keepCrossTeamTarget
             ),
         }
       );
@@ -2019,7 +2022,8 @@ describe('RuntimeDeliveryReconciler', () => {
       const canonical = await canonicalizeRuntimeDeliveryCrossTeamIdentities(
         original,
         readBuilderLeadConfig,
-        () => Promise.resolve([])
+        () => Promise.resolve([]),
+        keepCrossTeamTarget
       );
       const forgedVerify = vi.fn(() =>
         Promise.resolve({
@@ -2333,6 +2337,60 @@ function envelope(overrides: Partial<RuntimeDeliveryEnvelope> = {}): RuntimeDeli
     ...overrides,
   };
 }
+
+const keepCrossTeamTarget: CrossTeamTargetRoute = ({ toTeam }) => Promise.resolve(toTeam);
+
+describe('canonicalizeRuntimeDeliveryCrossTeamIdentities routing', () => {
+  const readConfig = (teamName: string): Promise<TeamConfig | null> =>
+    Promise.resolve(
+      teamName === 'team-a' || teamName === 'ptc-builders-alpha'
+        ? {
+            name: teamName,
+            projectPath: '/work/alpha',
+            members: [{ name: 'lead', agentType: 'team-lead' }],
+          }
+        : null
+    );
+  const toBuilders = envelope({
+    fromMemberName: 'lead',
+    to: { teamName: 'builders', memberName: 'lead' },
+  });
+
+  it('names the copy of the sender project before the message is journaled', async () => {
+    const route = vi.fn<CrossTeamTargetRoute>((request) =>
+      Promise.resolve(request.toTeam === 'builders' ? 'ptc-builders-alpha' : request.toTeam)
+    );
+    const canonical = await canonicalizeRuntimeDeliveryCrossTeamIdentities(
+      toBuilders,
+      readConfig,
+      () => Promise.resolve([]),
+      route
+    );
+    expect(route).toHaveBeenCalledWith({
+      fromTeam: 'team-a',
+      toTeam: 'builders',
+      senderProjectPath: '/work/alpha',
+    });
+    expect(canonical.to).toEqual({ teamName: 'ptc-builders-alpha', memberName: 'lead' });
+    // The journal destination, and so the delivery proof, name the copy too.
+    expect(resolveRuntimeDeliveryDestination(canonical)).toMatchObject({
+      kind: 'cross_team_outbox',
+      toTeamName: 'ptc-builders-alpha',
+    });
+  });
+
+  it('refuses before anything is journaled when the rule refuses', async () => {
+    await expect(
+      canonicalizeRuntimeDeliveryCrossTeamIdentities(
+        toBuilders,
+        readConfig,
+        () => Promise.resolve([]),
+        () =>
+          Promise.reject(new Error('Team "builders" has no history in project /work/alpha yet.'))
+      )
+    ).rejects.toThrow('has no history in project /work/alpha');
+  });
+});
 
 function journalKey(message: RuntimeDeliveryEnvelope = envelope()) {
   return {

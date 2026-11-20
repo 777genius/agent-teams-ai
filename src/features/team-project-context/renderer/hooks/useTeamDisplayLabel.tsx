@@ -1,5 +1,6 @@
-import { findProjectCopyOwner, formatProjectCopyLabel } from '@features/team-project-context/core';
 import { useStore } from '@renderer/store';
+
+import { findProjectCopyOwner, formatProjectCopyLabel } from '../../core';
 
 /**
  * How a physical team name is shown to a person. A project copy (`ptc-…`) of a

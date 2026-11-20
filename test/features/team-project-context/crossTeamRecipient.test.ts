@@ -104,6 +104,19 @@ describe('resolveCrossTeamRecipient', () => {
     ).resolves.toEqual({ teamName: w.copies.b });
   });
 
+  it('refuses an exact copy name of the sender team and of a copy still being launched', async () => {
+    const w = await world();
+    // Project A's copy cannot write into project B's history of the same team.
+    const sibling = await refusal(
+      resolveCrossTeamRecipient(w.ports, { fromTeam: w.copies.a, toTeam: w.copies.b })
+    );
+    expect(sibling.code).toBe('SAME_TEAM');
+    const pending = await refusal(
+      resolveCrossTeamRecipient(w.ports, { fromTeam: 'partner', toTeam: w.copies.c })
+    );
+    expect(pending.code).toBe('PROJECT_LAUNCH_PENDING');
+  });
+
   it('delivers to the copy of the sender project and never to the copy of another project', async () => {
     const w = await world();
     const toA = await resolveCrossTeamRecipient(w.ports, {

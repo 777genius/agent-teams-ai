@@ -31,7 +31,7 @@ function sendRefusal(reply: FastifyReply, error: unknown): FastifyReply {
     return reply.code(409).send({ code: error.code, error: error.message });
   }
   logger.error('Cross-team recipient lookup failed:', getErrorMessage(error));
-  return reply.code(500).send({ error: getErrorMessage(error) });
+  return reply.code(500).send({ error: 'Unable to resolve the cross-team recipient' });
 }
 
 export function registerCrossTeamRoutes(app: FastifyInstance, api: CrossTeamHttpApi): void {
