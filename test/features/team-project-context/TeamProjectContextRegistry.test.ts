@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { mkdtemp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
+import { mkdtemp, mkdir, readFile, rm, symlink, writeFile } from 'node:fs/promises';
 import * as os from 'node:os';
 import * as path from 'node:path';
 
@@ -163,6 +163,113 @@ describe('TeamProjectContextRegistry', () => {
       .toContain('saved');
     await expect(f.registry.reserve('logical-team', f.workspaceA)).rejects.toMatchObject({
       code: 'ENOENT',
+    });
+  });
+
+  describe('history of a deleted project below a symlinked directory', () => {
+    // Independent of the OS temp dir: the symlink is created here, so Linux and
+    // Windows (junction, no privileges needed) exercise the same path as macOS.
+    async function symlinkedFixture(ctx: { skip: (note?: string) => never }) {
+      const f = await fixture();
+      const realParent = path.join(f.root, 'real-parent');
+      const linkParent = path.join(f.root, 'link-parent');
+      await mkdir(realParent);
+      try {
+        await symlink(realParent, linkParent, process.platform === 'win32' ? 'junction' : 'dir');
+      } catch (error) {
+        const code = (error as NodeJS.ErrnoException).code;
+        if (code === 'EPERM' || code === 'EACCES') ctx.skip('symlink creation is not permitted here');
+        throw error;
+      }
+      return { ...f, realParent, linkParent };
+    }
+
+    async function readyContext(
+      f: Awaited<ReturnType<typeof symlinkedFixture>>,
+      projectDir: string
+    ) {
+      const reserved = await f.registry.reserve('logical-team', projectDir);
+      await simulateNativeProvisioning(f, reserved.executionTeamName);
+      return f.registry.confirmReady('logical-team', projectDir, reserved.executionTeamName);
+    }
+
+    it('finds saved history through the symlinked and the real path after the folder is deleted', async (ctx) => {
+      const f = await symlinkedFixture(ctx);
+      const viaLink = path.join(f.linkParent, 'project');
+      await mkdir(path.join(f.realParent, 'project'));
+      const ready = await readyContext(f, viaLink);
+      await rm(path.join(f.realParent, 'project'), { recursive: true });
+
+      expect(await f.registry.inspect('logical-team', viaLink)).toEqual(ready);
+      expect(await f.registry.inspect('logical-team', path.join(f.realParent, 'project')))
+        .toEqual(ready);
+      expect(await f.registry.find('logical-team', viaLink)).toEqual(ready);
+    });
+
+    it('keeps different missing paths distinct', async (ctx) => {
+      const f = await symlinkedFixture(ctx);
+      await mkdir(path.join(f.realParent, 'project'));
+      const ready = await readyContext(f, path.join(f.linkParent, 'project'));
+      await rm(path.join(f.realParent, 'project'), { recursive: true });
+
+      expect(await f.registry.inspect('logical-team', path.join(f.linkParent, 'other')))
+        .toBeNull();
+      expect(await f.registry.inspect('logical-team', path.join(f.linkParent, 'project', 'sub')))
+        .toBeNull();
+      expect(await f.registry.inspect('logical-team', path.join(f.root, 'project'))).toBeNull();
+      expect(await f.registry.inspect('logical-team', path.join(f.linkParent, 'project')))
+        .toEqual(ready);
+    });
+
+    it('does not throw for a path below a regular file and finds nothing there', async (ctx) => {
+      const f = await symlinkedFixture(ctx);
+      const file = path.join(f.realParent, 'not-a-dir');
+      await writeFile(file, 'x');
+      expect(await f.registry.inspect('logical-team', path.join(file, 'project'))).toBeNull();
+    });
+
+    it('finds history below a missing multi-segment tail', async (ctx) => {
+      const f = await symlinkedFixture(ctx);
+      await mkdir(path.join(f.realParent, 'G', 'W'), { recursive: true });
+      const ready = await readyContext(f, path.join(f.linkParent, 'G', 'W'));
+      await rm(path.join(f.realParent, 'G'), { recursive: true });
+
+      expect(await f.registry.inspect('logical-team', path.join(f.linkParent, 'G', 'W')))
+        .toEqual(ready);
+      // The order of the missing segments is part of the identity.
+      expect(await f.registry.inspect('logical-team', path.join(f.linkParent, 'W', 'G')))
+        .toBeNull();
+      expect(await f.registry.inspect('logical-team', path.join(f.linkParent, 'G'))).toBeNull();
+    });
+
+    it('opens the target project, never the deleted one, when a deleted path becomes a link', async (ctx) => {
+      // Identity is the real path, exactly as for any existing path (this holds
+      // with or without the missing-path handling): a link to project b is
+      // project b and never the deleted project a.
+      const f = await symlinkedFixture(ctx);
+      await mkdir(path.join(f.realParent, 'a'));
+      await mkdir(path.join(f.realParent, 'b'));
+      const readyA = await readyContext(f, path.join(f.linkParent, 'a'));
+      const readyB = await readyContext(f, path.join(f.linkParent, 'b'));
+      await rm(path.join(f.realParent, 'a'), { recursive: true });
+      await symlink(
+        path.join(f.realParent, 'b'), path.join(f.realParent, 'a'),
+        process.platform === 'win32' ? 'junction' : 'dir'
+      );
+      const opened = await f.registry.inspect('logical-team', path.join(f.linkParent, 'a'));
+      expect(opened).toEqual(readyB);
+      expect(opened).not.toEqual(readyA);
+    });
+
+    it('resolves an existing project path exactly as before', async (ctx) => {
+      const f = await symlinkedFixture(ctx);
+      await mkdir(path.join(f.realParent, 'project'));
+      const ready = await readyContext(f, path.join(f.linkParent, 'project'));
+      expect(await f.registry.inspect('logical-team', path.join(f.linkParent, 'project')))
+        .toEqual(ready);
+      expect(await f.registry.inspect('logical-team', path.join(f.realParent, 'project')))
+        .toEqual(ready);
+      expect(await f.registry.inspect('logical-team', f.workspaceB)).toBeNull();
     });
   });
 
