@@ -15,6 +15,7 @@ The cells below were written before #1247 and are kept as they were; where they 
 - Gap 4 (ranked list): closed, except trashing a per-project team over HTTP/MCP, which stays in the app (`PROJECT_TEAM_DESKTOP_ONLY`).
 - Gap 5: `prompt` is no longer among the drifting fields (it is part of the definition now); provider, model, effort, fast mode, auto-approve, context limit and worktree still drift.
 - Step 2 of the recommended order ("External edit and lead instructions"): done, with the same exception for trash.
+- Schedules (section D, gap 1, step 3 of the recommended order): closed in #1246; the rows of those sections already describe the new state. A schedule stays keyed by the team and names its project (fixed once created, enforced by the server); a run goes to the ready copy of that project and is recorded as skipped, never as a failure, when none can be used. A schedule never creates a copy, so the first launch in a new project stays manual.
 
 ## 1. How a team name is resolved today
 
