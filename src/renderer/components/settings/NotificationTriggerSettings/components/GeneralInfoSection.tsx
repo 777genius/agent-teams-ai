@@ -50,7 +50,7 @@ export const GeneralInfoSection = ({
 
       {/* Scope/Tool Name */}
       <div className="flex items-center justify-between border-b border-border-subtle py-2">
-        <label htmlFor="new-trigger-tool-name" className="text-sm text-[var(--color-text)]">
+        <label htmlFor="new-trigger-tool-name" className="text-sm text-text">
           {t('notificationTriggers.fields.scopeToolNameOptional')}
         </label>
         <select

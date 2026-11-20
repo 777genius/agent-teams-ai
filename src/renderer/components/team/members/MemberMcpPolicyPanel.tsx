@@ -102,10 +102,7 @@ export const MemberMcpPolicyPanel = ({
       <div className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] p-3">
         <div className="grid gap-3 sm:grid-cols-[minmax(160px,220px)_1fr]">
           <div className="space-y-1">
-            <Label
- htmlFor={`member-${memberId}-mcp-mode`}
- className="text-[10px]"
- >
+            <Label htmlFor={`member-${memberId}-mcp-mode`} className="text-[10px]">
               {t('memberDraft.mcp.mode')}
             </Label>
             <Select
@@ -154,10 +151,7 @@ export const MemberMcpPolicyPanel = ({
             </div>
             {mcpMode === 'strictAllowlist' ? (
               <div className="space-y-1">
-                <Label
- htmlFor={`member-${memberId}-mcp-servers`}
- className="text-[10px]"
- >
+                <Label htmlFor={`member-${memberId}-mcp-servers`} className="text-[10px]">
                   {t('memberDraft.mcp.serverNames')}
                 </Label>
                 <Input

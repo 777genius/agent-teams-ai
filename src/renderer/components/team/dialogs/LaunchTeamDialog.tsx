@@ -2985,10 +2985,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
           {isSchedule && !usesSavedTeamRuntime ? (
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
-                <Label
- htmlFor="schedule-max-turns"
- className="text-[11px]"
- >
+                <Label htmlFor="schedule-max-turns" className="text-[11px]">
                   {t('launch.schedule.maxTurns')}
                 </Label>
                 <Input
@@ -3003,10 +3000,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
               </div>
 
               <div className="space-y-1">
-                <Label
- htmlFor="schedule-max-budget"
- className="text-[11px]"
- >
+                <Label htmlFor="schedule-max-budget" className="text-[11px]">
                   {t('launch.schedule.maxBudgetUsd')}
                 </Label>
                 <Input

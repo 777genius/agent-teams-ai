@@ -237,9 +237,7 @@ export const MemberGatewaySelector = ({
   return (
     <div className="space-y-2 rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] p-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <Label className="text-[11px] font-medium text-[var(--color-text)]">
-          {t('memberDraft.gateway.title')}
-        </Label>
+        <Label className="text-[11px] font-semibold">{t('memberDraft.gateway.title')}</Label>
       </div>
       <p className="text-[10px] leading-snug text-[var(--color-text-muted)]">
         {t('memberDraft.gateway.nextLaunchHint')}
@@ -251,10 +249,7 @@ export const MemberGatewaySelector = ({
       ) : null}
       <div className="grid gap-2 sm:grid-cols-[minmax(160px,220px)_1fr]">
         <div className="space-y-1">
-          <Label
- htmlFor={`member-${trimmedMemberName}-gateway-profile`}
- className="text-[10px]"
- >
+          <Label htmlFor={`member-${trimmedMemberName}-gateway-profile`} className="text-[10px]">
             {t('memberDraft.gateway.profileLabel')}
           </Label>
           <Select value={profileId} onValueChange={handleProfileChange} disabled={busy}>
@@ -274,10 +269,7 @@ export const MemberGatewaySelector = ({
           </Select>
         </div>
         <div className="space-y-1">
-          <Label
- htmlFor={`member-${trimmedMemberName}-gateway-key`}
- className="text-[10px]"
- >
+          <Label htmlFor={`member-${trimmedMemberName}-gateway-key`} className="text-[10px]">
             {t('memberDraft.gateway.apiKeyLabel')}
           </Label>
           <div className="flex gap-2">
@@ -311,10 +303,7 @@ export const MemberGatewaySelector = ({
       {models && models.length > 0 ? (
         <div className="flex flex-wrap items-end gap-2">
           <div className="min-w-[160px] flex-1 space-y-1">
-            <Label
- htmlFor={`member-${trimmedMemberName}-gateway-model`}
- className="text-[10px]"
- >
+            <Label htmlFor={`member-${trimmedMemberName}-gateway-model`} className="text-[10px]">
               {t('memberDraft.gateway.modelLabel')}
             </Label>
             <Select value={modelChoice} onValueChange={setModelChoice} disabled={busy}>
