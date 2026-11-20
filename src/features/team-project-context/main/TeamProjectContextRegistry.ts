@@ -11,6 +11,8 @@ import { validateTeamName } from '@main/services/team/TeamIdentifierValidation';
 import { atomicWriteAsync } from '@main/utils/atomicWrite';
 import { getTasksBasePath, getTeamsBasePath } from '@main/utils/pathDecoder';
 
+import { realpathOfMissingPath } from './realpathOfMissingPath';
+
 const INDEX_FILE = 'project-contexts.json';
 const MAX_INDEX_BYTES = 256 * 1024;
 const MAX_PROJECT_CONTEXTS = 128;
@@ -75,31 +77,6 @@ async function canonicalProjectPath(value: string): Promise<string> {
     throw new TeamProjectContextUnavailableError('Project path is not a directory');
   }
   return process.platform === 'win32' ? path.normalize(canonical).toLowerCase() : canonical;
-}
-
-/**
- * Real path of a path that may not exist any more: the deepest existing
- * ancestor is resolved with the same realpath as canonicalProjectPath (so a
- * symlinked parent such as /var -> /private/var maps to the stored key) and
- * the missing tail is appended unchanged. Different missing paths therefore
- * never collapse, and a dangling link is not followed. Only a missing path
- * component (ENOENT/ENOTDIR) is tolerated; any other error propagates.
- */
-async function realpathOfMissingPath(value: string): Promise<string> {
-  const missingTail: string[] = [];
-  let current = path.normalize(value);
-  for (;;) {
-    try {
-      const real = await fs.realpath(current);
-      return missingTail.length > 0 ? path.join(real, ...missingTail.reverse()) : real;
-    } catch (error) {
-      const code = (error as NodeJS.ErrnoException).code;
-      const parent = path.dirname(current);
-      if ((code !== 'ENOENT' && code !== 'ENOTDIR') || parent === current) throw error;
-      missingTail.push(path.basename(current));
-      current = parent;
-    }
-  }
 }
 
 /**
