@@ -9,33 +9,43 @@ import type { TeamProjectContextMode } from '@shared/types';
 
 /**
  * What a team name means at an application boundary that takes names literally
- * (HTTP, MCP, scheduler, directory views):
- * - `native`: an ordinary team (legacy/shared); the name is the physical team.
+ * (HTTP, MCP, directory views). The kind is decided by the team's history mode,
+ * never by whether it happens to own a contexts index:
  * - `logical`: the user-visible team of the per-project mode. It has no process of
  *   its own; its runtime, tasks and chats live in its project contexts.
- * - `alias`: one native project copy of a logical team.
+ * - `native`: an ordinary team (legacy/shared); the name is the physical team and
+ *   the process. A shared team that kept a project-contexts index from an earlier
+ *   per-project period lists those `retained` contexts too: they may still run.
+ *   `projectContextUnresolved` marks a team whose metadata is unreadable and that
+ *   has no contexts index, so it can only be treated by its exact name.
+ *
+ * A project copy (`ptc-…` alias) is an ordinary native team here: its name is
+ * physical, and the callers that need its logical team look it up themselves.
  */
 export type ResolvedTeamTarget =
-  | { kind: 'native'; team: string }
-  | { kind: 'logical'; logical: string; contexts: readonly PersistedTeamWorkContext[] }
-  | { kind: 'alias'; alias: string; logical: string; context: PersistedTeamWorkContext };
+  | {
+      kind: 'native';
+      team: string;
+      retained: readonly PersistedTeamWorkContext[];
+      projectContextUnresolved?: true;
+    }
+  | { kind: 'logical'; logical: string; contexts: readonly PersistedTeamWorkContext[] };
 
 export interface TeamTargetPorts {
   getMode(teamName: string): Promise<TeamProjectContextMode>;
-  /** Owned project contexts of a logical team; rejects when ownership cannot be proven. */
+  /** Owned project contexts of a team; rejects when ownership cannot be proven. */
   listContexts(
     logicalTeamName: string,
     mode: TeamProjectContextMode
   ): Promise<readonly PersistedTeamWorkContext[]>;
-  resolveOwnedAlias(
-    teamName: string
-  ): Promise<{ logicalTeamName: string; context: PersistedTeamWorkContext } | null>;
+  /** Whether the team has a project-contexts index on disk (cheap, no ownership proof). */
+  hasContextsIndex(teamName: string): Promise<boolean>;
 }
 
 /**
- * The name cannot be classified (unreadable metadata, unproven ownership, an
- * ambiguous alias). Callers must refuse: treating an unknown team as an
- * ordinary one is what makes a stop or a read silently wrong.
+ * The name cannot be classified (unreadable metadata of a team that owns project
+ * contexts, or unproven context ownership). Callers must refuse: treating an
+ * unknown team as an ordinary one is what makes a stop or a read silently wrong.
  */
 export class TeamTargetUnresolvedError extends Error {
   readonly code = 'TEAM_TARGET_UNRESOLVED';
@@ -61,19 +71,40 @@ export async function resolveTeamTarget(
   ports: TeamTargetPorts,
   teamName: string
 ): Promise<ResolvedTeamTarget> {
-  const mode = await guarded(teamName, () => ports.getMode(teamName));
-  if (mode === 'per_project') {
-    const contexts = await guarded(teamName, () => ports.listContexts(teamName, mode));
-    return { kind: 'logical', logical: teamName, contexts };
+  let mode: TeamProjectContextMode;
+  try {
+    mode = await ports.getMode(teamName);
+  } catch (error) {
+    // Unreadable metadata only matters for a team that owns project contexts.
+    // Without a contexts index the exact name is the only team there is, which
+    // is what every caller did before project contexts existed.
+    if (await guarded(teamName, () => ports.hasContextsIndex(teamName))) {
+      throw new TeamTargetUnresolvedError(teamName, error);
+    }
+    return { kind: 'native', team: teamName, retained: [], projectContextUnresolved: true };
   }
-  const alias = await guarded(teamName, () => ports.resolveOwnedAlias(teamName));
-  if (alias) {
-    return { kind: 'alias', alias: teamName, logical: alias.logicalTeamName, context: alias.context };
+  const contexts = await guarded(teamName, () => ports.listContexts(teamName, mode));
+  if (mode === 'per_project') return { kind: 'logical', logical: teamName, contexts };
+  return { kind: 'native', team: teamName, retained: contexts };
+}
+
+/**
+ * The project contexts a team has to be asked about, and whether the team's own
+ * name hosts a process too. `null` for a team without contexts.
+ */
+export interface ContextGroup {
+  team: string;
+  contexts: readonly PersistedTeamWorkContext[];
+  /** A shared team with retained contexts runs under its own name as well. */
+  ownRuntime: boolean;
+}
+
+export function contextGroupOf(target: ResolvedTeamTarget): ContextGroup | null {
+  if (target.kind === 'logical') {
+    return { team: target.logical, contexts: target.contexts, ownRuntime: false };
   }
-  // A shared team with a project-contexts index owns verified contexts too.
-  const retained = await guarded(teamName, () => ports.listContexts(teamName, mode));
-  if (retained.length > 0) return { kind: 'logical', logical: teamName, contexts: retained };
-  return { kind: 'native', team: teamName };
+  if (target.retained.length === 0) return null;
+  return { team: target.team, contexts: target.retained, ownRuntime: true };
 }
 
 interface TeamMetaReader {
@@ -89,7 +120,7 @@ type TargetRegistry = Pick<
   | 'releaseUnusedReservation'
   | 'list'
   | 'listRetained'
-  | 'resolveOwnedExecutionAlias'
+  | 'hasRetainedIndex'
 >;
 
 /** The ports every production caller uses; tests inject fakes or a temp-dir registry. */
@@ -102,6 +133,6 @@ export function createTeamTargetPorts(
     getMode: (teamName) => resolver.getMode(teamName),
     listContexts: (logicalTeamName, mode) =>
       mode === 'per_project' ? registry.list(logicalTeamName) : registry.listRetained(logicalTeamName),
-    resolveOwnedAlias: (teamName) => registry.resolveOwnedExecutionAlias(teamName),
+    hasContextsIndex: (teamName) => registry.hasRetainedIndex(teamName),
   };
 }

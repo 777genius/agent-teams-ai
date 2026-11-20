@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  contextGroupOf,
   resolveTeamTarget,
   TeamTargetUnresolvedError,
   type PersistedTeamWorkContext,
@@ -14,14 +15,22 @@ function ports(overrides: Partial<TeamTargetPorts> = {}): TeamTargetPorts {
   return {
     getMode: async () => 'shared',
     listContexts: async () => [],
-    resolveOwnedAlias: async () => null,
+    hasContextsIndex: async () => false,
     ...overrides,
   };
 }
 
+const unreadable = async () => {
+  throw new Error('Team metadata is unreadable; refusing shared-history fallback');
+};
+
 describe('resolveTeamTarget', () => {
-  it('treats an ordinary team as native', async () => {
-    expect(await resolveTeamTarget(ports(), 'legacy')).toEqual({ kind: 'native', team: 'legacy' });
+  it('treats an ordinary team as native with nothing retained', async () => {
+    expect(await resolveTeamTarget(ports(), 'legacy')).toEqual({
+      kind: 'native',
+      team: 'legacy',
+      retained: [],
+    });
   });
 
   it('resolves a per-project team to its logical target with every context', async () => {
@@ -41,27 +50,33 @@ describe('resolveTeamTarget', () => {
     expect(target.kind).toBe('logical');
   });
 
-  it('resolves an owned project copy to its logical team and project', async () => {
-    const context = ctx('ptc-a', '/p/a');
-    const target = await resolveTeamTarget(
-      ports({ resolveOwnedAlias: async () => ({ logicalTeamName: 'builders', context }) }),
-      'ptc-a'
-    );
-    expect(target).toEqual({ kind: 'alias', alias: 'ptc-a', logical: 'builders', context });
-  });
-
-  it('treats a shared team that owns a contexts index as logical', async () => {
+  it('keeps a shared team native even when it retained contexts: its own name is still a process', async () => {
     const contexts = [ctx('ptc-a', '/p/a')];
     const target = await resolveTeamTarget(ports({ listContexts: async () => contexts }), 'old');
-    expect(target).toEqual({ kind: 'logical', logical: 'old', contexts });
+    expect(target).toEqual({ kind: 'native', team: 'old', retained: contexts });
   });
 
-  it('fails closed when metadata is unreadable: never native', async () => {
-    const failing = ports({
-      getMode: async () => {
-        throw new Error('Team metadata is unreadable; refusing shared-history fallback');
-      },
-    });
+  it('asks for retained contexts of a shared team in its own mode, never as per-project', async () => {
+    const seen: string[] = [];
+    await resolveTeamTarget(
+      ports({
+        listContexts: async (_team, mode) => {
+          seen.push(mode);
+          return [];
+        },
+      }),
+      'old'
+    );
+    expect(seen).toEqual(['shared']);
+  });
+
+  it('does not look up an ordinary or copy name as an alias: a copy is a native team', async () => {
+    const target = await resolveTeamTarget(ports(), 'ptc-a1b2c3d4e5f6');
+    expect(target).toMatchObject({ kind: 'native', team: 'ptc-a1b2c3d4e5f6' });
+  });
+
+  it('fails closed when metadata is unreadable and the team owns a contexts index', async () => {
+    const failing = ports({ getMode: unreadable, hasContextsIndex: async () => true });
     await expect(resolveTeamTarget(failing, 'broken')).rejects.toBeInstanceOf(TeamTargetUnresolvedError);
     await expect(resolveTeamTarget(failing, 'broken')).rejects.toMatchObject({
       statusCode: 409,
@@ -70,27 +85,60 @@ describe('resolveTeamTarget', () => {
     });
   });
 
-  it('fails closed on an ambiguous alias and on unproven context ownership', async () => {
+  it('falls back to the exact name when metadata is unreadable but no contexts index exists', async () => {
+    const target = await resolveTeamTarget(ports({ getMode: unreadable }), 'broken');
+    expect(target).toEqual({
+      kind: 'native',
+      team: 'broken',
+      retained: [],
+      projectContextUnresolved: true,
+    });
+  });
+
+  it('fails closed when it cannot even tell whether a contexts index exists', async () => {
     await expect(
       resolveTeamTarget(
         ports({
-          resolveOwnedAlias: async () => {
-            throw new Error('Ambiguous project runtime alias');
+          getMode: unreadable,
+          hasContextsIndex: async () => {
+            throw new Error('EACCES');
           },
         }),
-        'ptc-a'
+        'broken'
       )
+    ).rejects.toBeInstanceOf(TeamTargetUnresolvedError);
+  });
+
+  it('fails closed on unproven context ownership, for per-project and for shared teams', async () => {
+    const notOwned = async () => {
+      throw new Error('not owned by this profile');
+    };
+    await expect(
+      resolveTeamTarget(ports({ getMode: async () => 'per_project', listContexts: notOwned }), 'builders')
     ).rejects.toBeInstanceOf(TeamTargetUnresolvedError);
     await expect(
-      resolveTeamTarget(
-        ports({
-          getMode: async () => 'per_project',
-          listContexts: async () => {
-            throw new Error('not owned by this profile');
-          },
-        }),
-        'builders'
-      )
+      resolveTeamTarget(ports({ listContexts: notOwned }), 'old')
     ).rejects.toBeInstanceOf(TeamTargetUnresolvedError);
+  });
+});
+
+describe('contextGroupOf', () => {
+  it('has no own runtime for a logical team', () => {
+    const contexts = [ctx('ptc-a', '/p/a')];
+    expect(contextGroupOf({ kind: 'logical', logical: 'builders', contexts })).toEqual({
+      team: 'builders',
+      contexts,
+      ownRuntime: false,
+    });
+  });
+
+  it('has an own runtime for a native team that retained contexts and none for one that did not', () => {
+    const contexts = [ctx('ptc-a', '/p/a')];
+    expect(contextGroupOf({ kind: 'native', team: 'old', retained: contexts })).toEqual({
+      team: 'old',
+      contexts,
+      ownRuntime: true,
+    });
+    expect(contextGroupOf({ kind: 'native', team: 'plain', retained: [] })).toBeNull();
   });
 });

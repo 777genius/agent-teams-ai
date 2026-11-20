@@ -8,6 +8,8 @@ import {
 import { buildMemberColorMap } from '@renderer/utils/memberHelpers';
 import { useShallow } from 'zustand/react/shallow';
 
+import { executionTeamOfTask, scopeInspectorTasks } from './organizationInspectorTaskScope';
+
 import type { OrganizationAgentTaskDto } from '../../contracts';
 import type { TeamTask, TeamTaskWithKanban } from '@shared/types';
 
@@ -30,7 +32,14 @@ export interface OrganizationInspectorTaskBindings {
   onMoveBackToDone: (taskId: string) => void;
 }
 
-export function useOrganizationInspectorTasks(teamName: string): OrganizationInspectorTaskBindings {
+/**
+ * `executionTeamNames` are the project copies a per-project team keeps its tasks in.
+ * Task actions run against the copy that owns the task, not the team the node shows.
+ */
+export function useOrganizationInspectorTasks(
+  teamName: string,
+  executionTeamNames: readonly string[] = []
+): OrganizationInspectorTaskBindings {
   const {
     contextId,
     globalTasks,
@@ -55,11 +64,23 @@ export function useOrganizationInspectorTasks(teamName: string): OrganizationIns
     }))
   );
 
-  const tasks = useMemo<TeamTaskWithKanban[]>(() => {
-    if (!teamName) return [];
-    if (teamData?.tasks) return teamData.tasks;
-    return globalTasks.filter((task) => task.teamName === teamName);
-  }, [globalTasks, teamData?.tasks, teamName]);
+  // A stable key: the caller builds the list on every render.
+  const executionKey = executionTeamNames.join('\n');
+  const tasks = useMemo<TeamTaskWithKanban[]>(
+    () =>
+      scopeInspectorTasks({
+        teamName,
+        executionTeamNames: executionKey ? executionKey.split('\n') : [],
+        teamDataTasks: teamData?.tasks,
+        globalTasks,
+      }),
+    [executionKey, globalTasks, teamData?.tasks, teamName]
+  );
+
+  const executionTeamFor = useCallback(
+    (taskId: string): string => executionTeamOfTask(tasks, taskId, teamName),
+    [tasks, teamName]
+  );
 
   const taskMap = useMemo<Map<string, TeamTask>>(() => {
     const map = new Map<string, TeamTask>();
@@ -71,12 +92,17 @@ export function useOrganizationInspectorTasks(teamName: string): OrganizationIns
 
   const memberColorMap = useMemo(() => buildMemberColorMap(members), [members]);
 
-  const openTaskById = useCallback(
-    (taskId: string): void => {
-      if (!teamName) return;
-      openGlobalTaskDetail(teamName, taskId);
+  const openTaskIn = useCallback(
+    (executionTeam: string, taskId: string): void => {
+      if (!executionTeam) return;
+      openGlobalTaskDetail(executionTeam, taskId);
     },
-    [openGlobalTaskDetail, teamName]
+    [openGlobalTaskDetail]
+  );
+
+  const openTaskById = useCallback(
+    (taskId: string): void => openTaskIn(executionTeamFor(taskId), taskId),
+    [executionTeamFor, openTaskIn]
   );
 
   const openTaskDetail = useCallback(
@@ -88,66 +114,72 @@ export function useOrganizationInspectorTasks(teamName: string): OrganizationIns
 
   const openTaskSummaryDetail = useCallback(
     (task: OrganizationAgentTaskDto): void => {
-      openTaskById(task.id);
+      openTaskIn(task.executionTeamName ?? teamName, task.id);
     },
-    [openTaskById]
+    [openTaskIn, teamName]
   );
 
   const onStartTask = useCallback(
     (taskId: string): void => {
-      if (!teamName) return;
-      void startTaskByUser(teamName, taskId).catch(() => undefined);
+      const executionTeam = executionTeamFor(taskId);
+      if (!executionTeam) return;
+      void startTaskByUser(executionTeam, taskId).catch(() => undefined);
     },
-    [startTaskByUser, teamName]
+    [executionTeamFor, startTaskByUser]
   );
 
   const onCompleteTask = useCallback(
     (taskId: string): void => {
-      if (!teamName) return;
-      void updateTaskStatus(teamName, taskId, 'completed').catch(() => undefined);
+      const executionTeam = executionTeamFor(taskId);
+      if (!executionTeam) return;
+      void updateTaskStatus(executionTeam, taskId, 'completed').catch(() => undefined);
     },
-    [teamName, updateTaskStatus]
+    [executionTeamFor, updateTaskStatus]
   );
 
   const onCancelTask = useCallback(
     (taskId: string): void => {
-      if (!teamName) return;
-      void updateTaskStatus(teamName, taskId, 'pending').catch(() => undefined);
+      const executionTeam = executionTeamFor(taskId);
+      if (!executionTeam) return;
+      void updateTaskStatus(executionTeam, taskId, 'pending').catch(() => undefined);
     },
-    [teamName, updateTaskStatus]
+    [executionTeamFor, updateTaskStatus]
   );
 
   const onApproveTask = useCallback(
     (taskId: string): void => {
-      if (!teamName) return;
-      void updateKanban(teamName, taskId, { op: 'set_column', column: 'approved' }).catch(
+      const executionTeam = executionTeamFor(taskId);
+      if (!executionTeam) return;
+      void updateKanban(executionTeam, taskId, { op: 'set_column', column: 'approved' }).catch(
         () => undefined
       );
     },
-    [teamName, updateKanban]
+    [executionTeamFor, updateKanban]
   );
 
   const onRequestReview = useCallback(
     (taskId: string): void => {
-      if (!teamName) return;
-      void requestReview(teamName, taskId).catch(() => undefined);
+      const executionTeam = executionTeamFor(taskId);
+      if (!executionTeam) return;
+      void requestReview(executionTeam, taskId).catch(() => undefined);
     },
-    [requestReview, teamName]
+    [executionTeamFor, requestReview]
   );
 
   const onMoveBackToDone = useCallback(
     (taskId: string): void => {
-      if (!teamName) return;
+      const executionTeam = executionTeamFor(taskId);
+      if (!executionTeam) return;
       void (async () => {
         try {
-          await updateKanban(teamName, taskId, { op: 'remove' });
-          await updateTaskStatus(teamName, taskId, 'completed');
+          await updateKanban(executionTeam, taskId, { op: 'remove' });
+          await updateTaskStatus(executionTeam, taskId, 'completed');
         } catch {
           // Store state surfaces the error.
         }
       })();
     },
-    [teamName, updateKanban, updateTaskStatus]
+    [executionTeamFor, updateKanban, updateTaskStatus]
   );
 
   return {

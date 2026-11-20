@@ -6,18 +6,18 @@ import {
   LogicalStopIncompleteError,
   readLogicalRuntimeState,
   stopLogicalContexts,
+  type ContextGroup,
+  type OwnedExecutionAliasLookup,
   type PersistedTeamWorkContext,
-  type ResolvedTeamTarget,
 } from '../../../src/features/team-project-context/main';
 
 import type { TeamRuntimeState } from '../../../src/shared/types';
 
-type Logical = Extract<ResolvedTeamTarget, { kind: 'logical' }>;
-
 const ctx = (alias: string, projectPath: string, state: 'ready' | 'reserved' = 'ready') =>
   ({ id: `id-${alias}`, projectKey: projectPath, projectPath, executionTeamName: alias, state }) as PersistedTeamWorkContext;
 
-const progress = { runId: 'run-b', state: 'spawning' } as unknown as TeamRuntimeState['progress'];
+const progressOf = (state: string, runId = 'run-b') =>
+  ({ runId, state }) as unknown as TeamRuntimeState['progress'];
 const down = (teamName: string): TeamRuntimeState => ({ teamName, isAlive: false, runId: null, progress: null });
 const up = (teamName: string, runId = `run-${teamName}`): TeamRuntimeState => ({
   teamName,
@@ -26,8 +26,8 @@ const up = (teamName: string, runId = `run-${teamName}`): TeamRuntimeState => ({
   progress: null,
 });
 
-function target(...contexts: PersistedTeamWorkContext[]): Logical {
-  return { kind: 'logical', logical: 'builders', contexts };
+function group(contexts: PersistedTeamWorkContext[], ownRuntime = false, team = 'builders'): ContextGroup {
+  return { team, contexts, ownRuntime };
 }
 
 function runtimeOf(states: Record<string, TeamRuntimeState>) {
@@ -37,7 +37,7 @@ function runtimeOf(states: Record<string, TeamRuntimeState>) {
 describe('readLogicalRuntimeState', () => {
   it('is alive when any project context is alive and names the live run and the contexts', async () => {
     const state = await readLogicalRuntimeState(
-      target(ctx('ptc-a', '/p/a'), ctx('ptc-b', '/p/b')),
+      group([ctx('ptc-a', '/p/a'), ctx('ptc-b', '/p/b')]),
       runtimeOf({ 'ptc-a': down('ptc-a'), 'ptc-b': up('ptc-b') })
     );
     expect(state).toMatchObject({ teamName: 'builders', isAlive: true, runId: 'run-ptc-b' });
@@ -48,25 +48,51 @@ describe('readLogicalRuntimeState', () => {
   });
 
   it('is not alive, with no run, when every context is down', async () => {
-    const state = await readLogicalRuntimeState(
-      target(ctx('ptc-a', '/p/a')),
-      runtimeOf({})
-    );
+    const state = await readLogicalRuntimeState(group([ctx('ptc-a', '/p/a')]), runtimeOf({}));
     expect(state).toMatchObject({ isAlive: false, runId: null, progress: null });
   });
 
   it('reports the provisioning progress of a context that is not alive yet', async () => {
+    const progress = progressOf('spawning');
     const state = await readLogicalRuntimeState(
-      target(ctx('ptc-a', '/p/a'), ctx('ptc-b', '/p/b', 'reserved')),
+      group([ctx('ptc-a', '/p/a'), ctx('ptc-b', '/p/b', 'reserved')]),
       runtimeOf({ 'ptc-b': { teamName: 'ptc-b', isAlive: false, runId: 'run-b', progress } })
     );
     expect(state).toMatchObject({ isAlive: false, runId: 'run-b', progress });
     expect(state.contexts[1]?.state).toBe('reserved');
   });
 
+  it('prefers a provisioning run over an earlier copy that only keeps a settled progress', async () => {
+    const settled = progressOf('failed', 'run-old');
+    const launching = progressOf('configuring', 'run-new');
+    const state = await readLogicalRuntimeState(
+      group([ctx('ptc-a', '/p/a'), ctx('ptc-b', '/p/b')]),
+      runtimeOf({
+        'ptc-a': { teamName: 'ptc-a', isAlive: false, runId: 'run-old', progress: settled },
+        'ptc-b': { teamName: 'ptc-b', isAlive: false, runId: 'run-new', progress: launching },
+      })
+    );
+    expect(state).toMatchObject({ runId: 'run-new', progress: launching });
+  });
+
+  it('folds the own process of a shared team that retained contexts', async () => {
+    const state = await readLogicalRuntimeState(
+      group([ctx('ptc-a', '/p/a')], true, 'old'),
+      runtimeOf({ old: up('old'), 'ptc-a': down('ptc-a') })
+    );
+    expect(state).toMatchObject({ teamName: 'old', isAlive: true, runId: 'run-old' });
+    expect(state.contexts).toHaveLength(1);
+  });
+
+  it('does not read the logical name when the team has no process of its own', async () => {
+    const runtime = runtimeOf({});
+    await readLogicalRuntimeState(group([ctx('ptc-a', '/p/a')]), runtime);
+    expect(runtime.getRuntimeState.mock.calls.map(([name]) => name)).toEqual(['ptc-a']);
+  });
+
   it('propagates a runtime read failure instead of reporting the team as stopped', async () => {
     await expect(
-      readLogicalRuntimeState(target(ctx('ptc-a', '/p/a')), {
+      readLogicalRuntimeState(group([ctx('ptc-a', '/p/a')]), {
         getRuntimeState: async () => {
           throw new Error('runtime unavailable');
         },
@@ -76,16 +102,19 @@ describe('readLogicalRuntimeState', () => {
 });
 
 describe('listAliveRuntimeStates', () => {
-  const resolver = (known: Record<string, PersistedTeamWorkContext>) =>
-    vi.fn(async (name: string) => {
-      const context = known[name];
-      return context ? { logicalTeamName: 'builders', context } : null;
+  const resolver = (known: Record<string, PersistedTeamWorkContext>, logical = 'builders') =>
+    vi.fn(async (names: readonly string[]) => {
+      const lookups = new Map<string, OwnedExecutionAliasLookup>();
+      for (const name of names) {
+        const context = known[name];
+        lookups.set(name, { alias: context ? { logicalTeamName: logical, context } : null });
+      }
+      return lookups;
     });
 
   it('keeps native and physical entries and adds one logical entry per live team', async () => {
-    const aliveTeams = ['legacy', 'ptc-a', 'ptc-b'];
     const entries = await listAliveRuntimeStates(
-      aliveTeams,
+      ['legacy', 'ptc-a', 'ptc-b'],
       runtimeOf({ legacy: up('legacy'), 'ptc-a': up('ptc-a'), 'ptc-b': up('ptc-b') }),
       resolver({ 'ptc-a': ctx('ptc-a', '/p/a'), 'ptc-b': ctx('ptc-b', '/p/b') })
     );
@@ -95,18 +124,52 @@ describe('listAliveRuntimeStates', () => {
     expect(logical?.contexts?.map((c) => c.projectPath)).toEqual(['/p/a', '/p/b']);
   });
 
-  it('only looks up project copies, never ordinary teams', async () => {
-    const resolve = resolver({});
-    await listAliveRuntimeStates(['legacy'], runtimeOf({ legacy: up('legacy') }), resolve);
-    expect(resolve).not.toHaveBeenCalled();
+  it('resolves every project copy with one batch lookup and never asks for ordinary teams', async () => {
+    const resolve = resolver({ 'ptc-a': ctx('ptc-a', '/p/a'), 'ptc-b': ctx('ptc-b', '/p/b') });
+    await listAliveRuntimeStates(
+      ['legacy', 'ptc-a', 'ptc-b'],
+      runtimeOf({ legacy: up('legacy'), 'ptc-a': up('ptc-a'), 'ptc-b': up('ptc-b') }),
+      resolve
+    );
+    expect(resolve).toHaveBeenCalledTimes(1);
+    expect(resolve.mock.calls[0]?.[0]).toEqual(['ptc-a', 'ptc-b']);
+
+    const none = resolver({});
+    await listAliveRuntimeStates(['legacy'], runtimeOf({ legacy: up('legacy') }), none);
+    expect(none).not.toHaveBeenCalled();
+  });
+
+  it('merges the contexts into the entry of an alive shared team instead of listing it twice', async () => {
+    const entries = await listAliveRuntimeStates(
+      ['old', 'ptc-a'],
+      runtimeOf({ old: up('old'), 'ptc-a': up('ptc-a') }),
+      resolver({ 'ptc-a': ctx('ptc-a', '/p/a') }, 'old')
+    );
+    expect(entries.map((e) => e.teamName)).toEqual(['old', 'ptc-a']);
+    expect(entries[0]).toMatchObject({ teamName: 'old', isAlive: true, runId: 'run-old' });
+    expect(entries[0]?.contexts?.map((c) => c.projectPath)).toEqual(['/p/a']);
   });
 
   it('flags a copy that cannot be resolved instead of hiding or guessing it', async () => {
     const entries = await listAliveRuntimeStates(
+      ['ptc-a', 'ptc-b'],
+      runtimeOf({ 'ptc-a': up('ptc-a'), 'ptc-b': up('ptc-b') }),
+      async () =>
+        new Map<string, OwnedExecutionAliasLookup>([
+          ['ptc-a', { error: new Error('Ambiguous project runtime alias') }],
+          ['ptc-b', { alias: { logicalTeamName: 'builders', context: ctx('ptc-b', '/p/b') } }],
+        ])
+    );
+    expect(entries[0]).toEqual({ ...up('ptc-a'), projectContextUnresolved: true });
+    expect(entries.find((e) => e.teamName === 'builders')?.contexts).toHaveLength(1);
+  });
+
+  it('flags every copy when the whole lookup fails', async () => {
+    const entries = await listAliveRuntimeStates(
       ['ptc-a'],
       runtimeOf({ 'ptc-a': up('ptc-a') }),
       async () => {
-        throw new Error('Ambiguous project runtime alias');
+        throw new Error('teams directory unreadable');
       }
     );
     expect(entries).toEqual([{ ...up('ptc-a'), projectContextUnresolved: true }]);
@@ -121,7 +184,8 @@ describe('stopLogicalContexts', () => {
         alive.delete(alias);
         return { stopped: alias };
       }),
-      isAlive: vi.fn((alias: string) => alive.has(alias)),
+      isStopped: vi.fn(async (alias: string) => !alive.has(alias)),
+      listContexts: vi.fn(async () => [] as PersistedTeamWorkContext[]),
       ...overrides,
     };
   }
@@ -129,17 +193,26 @@ describe('stopLogicalContexts', () => {
   it('stops every project context, not just the logical name', async () => {
     const alive = new Set(['ptc-a', 'ptc-b']);
     const p = ports(alive);
-    const outcome = await stopLogicalContexts(target(ctx('ptc-a', '/p/a'), ctx('ptc-b', '/p/b')), p);
+    const outcome = await stopLogicalContexts(group([ctx('ptc-a', '/p/a'), ctx('ptc-b', '/p/b')]), p);
     expect(p.stopContext.mock.calls.map(([alias]) => alias)).toEqual(['ptc-a', 'ptc-b']);
     expect(outcome.complete).toBe(true);
     expect(() => assertLogicalStopComplete(outcome)).not.toThrow();
+  });
+
+  it('also stops the own process of a shared team that retained contexts, after its contexts', async () => {
+    const alive = new Set(['old', 'ptc-a']);
+    const p = ports(alive);
+    const outcome = await stopLogicalContexts(group([ctx('ptc-a', '/p/a')], true, 'old'), p);
+    expect(p.stopContext.mock.calls.map(([alias]) => alias)).toEqual(['ptc-a', 'old']);
+    expect(outcome.contexts[1]).toMatchObject({ executionTeamName: 'old', projectPath: null });
+    expect(outcome.complete).toBe(true);
   });
 
   it('is only complete when the contexts are really down, naming the one that still runs', async () => {
     const alive = new Set(['ptc-a', 'ptc-b']);
     // The stop call "succeeds" but ptc-b stays alive: exactly the silent no-op.
     const p = ports(alive, { stopContext: vi.fn(async () => ({ ok: true })) });
-    const outcome = await stopLogicalContexts(target(ctx('ptc-a', '/p/a'), ctx('ptc-b', '/p/b')), p);
+    const outcome = await stopLogicalContexts(group([ctx('ptc-a', '/p/a'), ctx('ptc-b', '/p/b')]), p);
     expect(outcome.complete).toBe(false);
     let error: unknown;
     try {
@@ -148,7 +221,7 @@ describe('stopLogicalContexts', () => {
       error = caught;
     }
     expect(error).toBeInstanceOf(LogicalStopIncompleteError);
-    expect(error).toMatchObject({ statusCode: 409, code: 'LOGICAL_STOP_INCOMPLETE' });
+    expect(error).toMatchObject({ statusCode: 409, code: 'LOGICAL_STOP_INCOMPLETE', outcome });
     expect((error as Error).message).toContain('/p/a');
     expect((error as Error).message).toContain('/p/b');
     expect((error as Error).message).toContain('still running');
@@ -162,12 +235,50 @@ describe('stopLogicalContexts', () => {
       return {};
     });
     const outcome = await stopLogicalContexts(
-      target(ctx('ptc-a', '/p/a'), ctx('ptc-b', '/p/b')),
+      group([ctx('ptc-a', '/p/a'), ctx('ptc-b', '/p/b')]),
       ports(alive, { stopContext })
     );
     expect(stopContext).toHaveBeenCalledTimes(2);
     expect(outcome.contexts[0]).toMatchObject({ error: 'escalation did not confirm', stillAlive: true });
     expect(outcome.contexts[1]).toMatchObject({ stillAlive: false });
+    expect(outcome.complete).toBe(false);
+  });
+
+  it('is not complete when a context appeared while the stop was running and is not down', async () => {
+    const alive = new Set(['ptc-a', 'ptc-new']);
+    const p = ports(alive, {
+      listContexts: vi.fn(async () => [ctx('ptc-a', '/p/a'), ctx('ptc-new', '/p/new', 'reserved')]),
+    });
+    const outcome = await stopLogicalContexts(group([ctx('ptc-a', '/p/a')]), p);
+    expect(p.stopContext.mock.calls.map(([alias]) => alias)).toEqual(['ptc-a']);
+    expect(outcome.contexts[1]).toMatchObject({
+      executionTeamName: 'ptc-new',
+      appearedDuringStop: true,
+      stillAlive: true,
+    });
+    expect(outcome.complete).toBe(false);
+    expect(() => assertLogicalStopComplete(outcome)).toThrow(/started while the stop was running/);
+  });
+
+  it('is not complete when the contexts cannot be re-read after the stop', async () => {
+    const p = ports(new Set(), {
+      listContexts: vi.fn(async () => {
+        throw new Error('index unreadable');
+      }),
+    });
+    const outcome = await stopLogicalContexts(group([ctx('ptc-a', '/p/a')]), p);
+    expect(outcome).toMatchObject({ complete: false, verificationError: 'index unreadable' });
+    expect(() => assertLogicalStopComplete(outcome)).toThrow(/could not re-read the project contexts/);
+  });
+
+  it('treats a runtime that cannot be read after the stop as still running', async () => {
+    const p = ports(new Set(), {
+      isStopped: vi.fn(async () => {
+        throw new Error('runtime unavailable');
+      }),
+    });
+    const outcome = await stopLogicalContexts(group([ctx('ptc-a', '/p/a')]), p);
+    expect(outcome.contexts[0]).toMatchObject({ stillAlive: true, error: 'runtime unavailable' });
     expect(outcome.complete).toBe(false);
   });
 
@@ -179,13 +290,13 @@ describe('stopLogicalContexts', () => {
       }),
     });
     await expect(
-      stopLogicalContexts(target(ctx('ptc-a', '/p/a'), ctx('ptc-b', '/p/b', 'reserved')), p)
+      stopLogicalContexts(group([ctx('ptc-a', '/p/a'), ctx('ptc-b', '/p/b', 'reserved')]), p)
     ).rejects.toThrow(/pending and its owner cannot be verified: owner marker missing/);
     expect(p.stopContext).not.toHaveBeenCalled();
   });
 
   it('a team without contexts is trivially stopped', async () => {
-    const outcome = await stopLogicalContexts(target(), ports(new Set()));
+    const outcome = await stopLogicalContexts(group([]), ports(new Set()));
     expect(outcome).toMatchObject({ complete: true, contexts: [] });
   });
 });

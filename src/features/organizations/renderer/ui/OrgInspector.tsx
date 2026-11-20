@@ -4,7 +4,12 @@ import { Badge } from '@renderer/components/ui/badge';
 import { Button } from '@renderer/components/ui/button';
 import { getTeamTaskWorkflowColumn } from '@shared/utils/teamTaskState';
 import { Activity, ChevronDown, ChevronRight, ExternalLink, Network, Users, X } from 'lucide-react';
+import { useMemo } from 'react';
 
+import {
+  collectExecutionTeamNames,
+  executionTeamOfTask,
+} from '../hooks/organizationInspectorTaskScope';
 import { useOrganizationInspectorTasks } from '../hooks/useOrganizationInspectorTasks';
 import { getNodeDisplayLabel } from '../view-models/organizationMapViewModel';
 
@@ -65,7 +70,11 @@ export const OrgInspector = ({
 }: OrgInspectorProps): React.JSX.Element | null => {
   const { t } = useAppTranslation('team');
   const teamName = node?.team?.teamName ?? '';
-  const inspectorTasks = useOrganizationInspectorTasks(teamName);
+  const executionTeamNames = useMemo(
+    () => collectExecutionTeamNames(node?.team?.agents ?? []),
+    [node?.team?.agents]
+  );
+  const inspectorTasks = useOrganizationInspectorTasks(teamName, executionTeamNames);
 
   if (!node) {
     return null;
@@ -249,7 +258,7 @@ export const OrgInspector = ({
                     key={`${agent.id}:${task.id}`}
                     task={fullTask}
                     contextId={inspectorTasks.contextId}
-                    teamName={team.teamName}
+                    teamName={executionTeamOfTask(inspectorTasks.tasks, fullTask.id, team.teamName)}
                     columnId={resolveKanbanColumn(fullTask)}
                     kanbanTaskState={inspectorTasks.kanbanTaskStateById?.[fullTask.id]}
                     hasReviewers={false}

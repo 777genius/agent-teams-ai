@@ -69,6 +69,26 @@ describe('TeamDirectoryOrganizationAdapter', () => {
     ]);
   });
 
+  it('marks every task of a project copy with the copy that owns it, and leaves the team own tasks unmarked', async () => {
+    const adapter = new TeamDirectoryOrganizationAdapter(
+      service(rawTeams, [...rawTasks, task('builders', '9')], []),
+      fold
+    );
+    const candidates = await adapter.listTeams({ includeDeletedTeams: false });
+    const logical = candidates.find((candidate) => candidate.teamName === 'builders');
+    expect(
+      logical?.tasks.map((candidate) => [candidate.id, candidate.executionTeamName ?? null])
+    ).toEqual(
+      expect.arrayContaining([
+        ['1', 'ptc-a'],
+        ['1', 'ptc-b'],
+        ['9', null],
+      ])
+    );
+    const legacy = candidates.find((candidate) => candidate.teamName === 'legacy');
+    expect(legacy?.tasks.every((candidate) => candidate.executionTeamName === undefined)).toBe(true);
+  });
+
   it('is online when any project context is alive', async () => {
     const adapter = new TeamDirectoryOrganizationAdapter(
       service(rawTeams, rawTasks, ['ptc-b']),

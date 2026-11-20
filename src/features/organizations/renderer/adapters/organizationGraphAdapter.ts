@@ -381,7 +381,8 @@ function buildAgentTaskNodes(
       taskZoomVisibility: options.taskZoomVisibility,
       domainRef: {
         kind: 'task',
-        teamName: team.teamName,
+        // The task lives in the project copy that owns it, not in the logical team.
+        teamName: task.executionTeamName ?? team.teamName,
         taskId: task.id,
       },
     };
@@ -1652,7 +1653,18 @@ export function getOrganizationNodeIdFromGraphRef(
     return ref.memberName;
   }
   if (ref.kind === 'task') {
-    return viewModel.teamNodes.find((node) => node.team?.teamName === ref.teamName)?.id ?? null;
+    // A task of a per-project team is referenced by the project copy that owns it.
+    return (
+      viewModel.teamNodes.find(
+        (node) =>
+          node.team?.teamName === ref.teamName ||
+          node.team?.agents.some((agent) =>
+            agent.currentTasks.some(
+              (task) => task.executionTeamName === ref.teamName && task.id === ref.taskId
+            )
+          )
+      )?.id ?? null
+    );
   }
   if (ref.kind === 'crossteam') {
     return (

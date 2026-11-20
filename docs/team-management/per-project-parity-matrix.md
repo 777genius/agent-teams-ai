@@ -168,6 +168,27 @@ Each step ships with an E2E on the real Electron flow, like #1244.
 - Hosted web and the real MCP controller were not exercised.
 - Windows and macOS behavior of any of the above.
 
+## Update after #1248
+
+The tables above describe the state before #1248 and are kept as the audit record. #1248 changes these rows (see [per-project-team-targets.md](./per-project-team-targets.md)):
+
+| Row | Before | After |
+| --- | --- | --- |
+| Stop through HTTP / MCP `team_stop` | silently wrong | stops every owned context (and the own process of a shared team that retained contexts) with the escalated in-app flow, verifies each is confirmed stopped, answers 409 `LOGICAL_STOP_INCOMPLETE` with the per-context outcome otherwise |
+| Runtime state / alive list through HTTP / MCP | silently wrong | the logical team is alive when any context is, with `contexts[]`; the alive list keeps physical entries and adds the logical one (a shared team that is itself alive absorbs its contexts) |
+| Force stop through HTTP | exact name only | every context; answers `complete`, which a client must read |
+| HTTP `/api/teams` and MCP `team_list` | silently wrong | one row per team, copies folded away. **Not additive**: the copies are no longer listed as separate teams |
+| Organization map | silently wrong | one candidate; tasks of all contexts, each carrying the copy that owns it, so the graph, the inspector and task actions address the copy |
+| MCP team tools `team_stop`, `team_list` | silently wrong | as above; the controller allows a stop request 5 minutes instead of 10 s |
+
+Decisions worth knowing:
+
+- **A shared team that kept a contexts index stays native**: it is classified by its history mode, not by owning an index, because its own name is still a process. The retained contexts are covered in addition.
+- **Unreadable metadata** refuses (409) only for a team that owns a contexts index; otherwise the exact name is used and the answer carries `projectContextUnresolved: true`.
+- **Gap 8 (alias names visible) stays deferred**: the names are routing identities in agent prompts, and `TeamProvisioningPromptBuilders.ts` is a frozen size-capped file.
+
+Still open: gaps 1, 4, 5, 6, 7, 9, 10, 11, 12. The organization map does not count a reserved copy that is still provisioning as online, and the inspector does not load a copy's kanban state.
+
 ## Appendix: probe of the raw team list
 
 Run on a Linux host at `75d4f8b152` with a temporary directory and synthetic data: one logical team `builders` (mode `per_project`, no `config.json`) and two project copies with their own config and one task each. `TeamDataService.listTeams()` is what the HTTP list, MCP `team_list` and the organization adapter read.

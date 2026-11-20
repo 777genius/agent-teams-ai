@@ -9,14 +9,19 @@
  *
  * A team of the per-project history mode has no process of its own: its
  * runtime is the runtime of its project contexts. Every route resolves the name
- * first, so a logical team is stopped, read and listed through its contexts
- * instead of silently acting on a name that never has a process.
+ * first, so a team that owns project contexts (a logical team, or a shared team
+ * that retained some) is stopped, read and listed through them instead of
+ * silently acting on a name that may never have a process.
  */
 import {
   assertLogicalStopComplete,
+  contextGroupOf,
+  isConfirmedStoppedTeamRuntime,
   listAliveRuntimeStates,
+  LogicalStopIncompleteError,
   readLogicalRuntimeState,
   stopLogicalContexts,
+  TeamTargetUnresolvedError,
 } from '@features/team-project-context/main';
 import {
   clearPendingOpenCodePromptDeliveriesForTeam,
@@ -41,7 +46,7 @@ import { createProjectContextHttp } from './projectContextHttp';
 
 import type { HttpServices } from '../index';
 import type { TeamHttpRuntimeApi } from '@main/services/team/contracts/TeamProvisioningApis';
-import type { FastifyInstance } from 'fastify';
+import type { FastifyInstance, FastifyReply } from 'fastify';
 
 /** Error handling shared with the routes that stayed in `../teams`. */
 export interface TeamLifecycleRouteDeps {
@@ -71,6 +76,43 @@ export function registerTeamLifecycleRoutes(
       );
     }
     return api;
+  }
+
+  function sendError(reply: FastifyReply, error: unknown, route: string) {
+    if (shouldLogError(error)) {
+      logger.error(`Error in ${route}:`, getErrorMessage(error));
+    } else if (error instanceof LogicalStopIncompleteError) {
+      // A 409 is not an app error, but an operator needs to see which copy kept running.
+      logger.warn(`${route}: ${error.message}`);
+    }
+    const body: Record<string, unknown> = { error: getResponseErrorMessage(error) };
+    if (error instanceof LogicalStopIncompleteError || error instanceof TeamTargetUnresolvedError) {
+      body.code = error.code;
+    }
+    if (error instanceof LogicalStopIncompleteError && error.outcome) body.outcome = error.outcome;
+    return reply.status(getStatusCode(error)).send(body);
+  }
+
+  function groupStopPorts<Result>(
+    projectContext: ReturnType<typeof createProjectContextHttp>,
+    api: TeamHttpRuntimeApi,
+    stopContext: (name: string) => Promise<Result>
+  ) {
+    return {
+      assertReservedStopOwnership: (team: string, alias: string) =>
+        projectContext.registry.assertReservedStopOwnership(team, alias),
+      stopContext,
+      // Only a confirmed-down runtime counts: not alive, no run, no provisioning.
+      isStopped: async (name: string) => isConfirmedStoppedTeamRuntime(await api.getRuntimeState(name)),
+      listContexts: (team: string) => projectContext.registry.list(team),
+    };
+  }
+
+  function withUnresolvedFlag<T extends object>(
+    state: T,
+    target: { projectContextUnresolved?: true }
+  ): T | (T & { projectContextUnresolved: true }) {
+    return target.projectContextUnresolved ? { ...state, projectContextUnresolved: true } : state;
   }
 
   // Stops exactly one native team and rejects unless the stop is confirmed.
@@ -184,28 +226,26 @@ export function registerTeamLifecycleRoutes(
         const teamRuntimeApi = getTeamRuntimeApi(services);
         const projectContext = createProjectContextHttp(services.projectContext);
         const target = await projectContext.resolve(teamName);
-        if (target.kind === 'logical') {
+        const group = contextGroupOf(target);
+        if (group) {
           // A logical team has no process: stopping its own name would succeed
-          // while its project keeps running. Stop every context, then verify.
-          const outcome = await stopLogicalContexts(target, {
-            assertReservedStopOwnership: (logical, alias) =>
-              projectContext.registry.assertReservedStopOwnership(logical, alias),
-            stopContext: (alias) => stopExactTeam(alias, teamRuntimeApi),
-            isAlive: (alias) => teamRuntimeApi.getAliveTeams().includes(alias),
-          });
+          // while its project keeps running. Stop every context (and the team's
+          // own process when it has one), then verify each is really down.
+          const outcome = await stopLogicalContexts(
+            group,
+            groupStopPorts(projectContext, teamRuntimeApi, (alias) =>
+              stopExactTeam(alias, teamRuntimeApi)
+            )
+          );
           assertLogicalStopComplete(outcome);
-          return reply.send(await readLogicalRuntimeState(target, teamRuntimeApi));
+          return reply.send(await readLogicalRuntimeState(group, teamRuntimeApi));
         }
         await stopExactTeam(teamName, teamRuntimeApi);
-        return reply.send(await teamRuntimeApi.getRuntimeState(teamName));
+        return reply.send(
+          withUnresolvedFlag(await teamRuntimeApi.getRuntimeState(teamName), target)
+        );
       } catch (error) {
-        if (shouldLogError(error)) {
-          logger.error(
-            `Error in POST /api/teams/${request.params.teamName}/stop:`,
-            getErrorMessage(error)
-          );
-        }
-        return reply.status(getStatusCode(error)).send({ error: getResponseErrorMessage(error) });
+        return sendError(reply, error, `POST /api/teams/${request.params.teamName}/stop`);
       }
     }
   );
@@ -228,30 +268,28 @@ export function registerTeamLifecycleRoutes(
         const teamRuntimeApi = getTeamRuntimeApi(services);
         const projectContext = createProjectContextHttp(services.projectContext);
         const target = await projectContext.resolve(teamName);
-        if (target.kind === 'logical') {
+        const group = contextGroupOf(target);
+        if (group) {
           // Like the native force-stop this answers with what the cleanup did;
           // `complete` says whether every project context is really down.
-          const outcome = await stopLogicalContexts(target, {
-            assertReservedStopOwnership: (logical, alias) =>
-              projectContext.registry.assertReservedStopOwnership(logical, alias),
-            stopContext: (alias) => forceStopExactTeam(alias, teamRuntimeApi),
-            isAlive: (alias) => teamRuntimeApi.getAliveTeams().includes(alias),
-          });
+          const outcome = await stopLogicalContexts(
+            group,
+            groupStopPorts(projectContext, teamRuntimeApi, (alias) =>
+              forceStopExactTeam(alias, teamRuntimeApi)
+            )
+          );
           return reply.send({
-            teamName: target.logical,
+            teamName: group.team,
             complete: outcome.complete,
             contexts: outcome.contexts,
+            ...(outcome.verificationError ? { verificationError: outcome.verificationError } : {}),
           });
         }
-        return reply.send(await forceStopExactTeam(teamName, teamRuntimeApi));
+        return reply.send(
+          withUnresolvedFlag(await forceStopExactTeam(teamName, teamRuntimeApi), target)
+        );
       } catch (error) {
-        if (shouldLogError(error)) {
-          logger.error(
-            `Error in POST /api/teams/${request.params.teamName}/force-stop:`,
-            getErrorMessage(error)
-          );
-        }
-        return reply.status(getStatusCode(error)).send({ error: getResponseErrorMessage(error) });
+        return sendError(reply, error, `POST /api/teams/${request.params.teamName}/force-stop`);
       }
     }
   );
@@ -268,18 +306,15 @@ export function registerTeamLifecycleRoutes(
         const teamName = validatedTeamName.value!;
         const teamRuntimeApi = getTeamRuntimeApi(services);
         const target = await createProjectContextHttp(services.projectContext).resolve(teamName);
-        if (target.kind === 'logical') {
-          return reply.send(await readLogicalRuntimeState(target, teamRuntimeApi));
+        const group = contextGroupOf(target);
+        if (group) {
+          return reply.send(await readLogicalRuntimeState(group, teamRuntimeApi));
         }
-        return reply.send(await teamRuntimeApi.getRuntimeState(teamName));
+        return reply.send(
+          withUnresolvedFlag(await teamRuntimeApi.getRuntimeState(teamName), target)
+        );
       } catch (error) {
-        if (shouldLogError(error)) {
-          logger.error(
-            `Error in GET /api/teams/${request.params.teamName}/runtime:`,
-            getErrorMessage(error)
-          );
-        }
-        return reply.status(getStatusCode(error)).send({ error: getResponseErrorMessage(error) });
+        return sendError(reply, error, `GET /api/teams/${request.params.teamName}/runtime`);
       }
     }
   );
@@ -289,15 +324,12 @@ export function registerTeamLifecycleRoutes(
       const teamRuntimeApi = getTeamRuntimeApi(services);
       const { registry } = createProjectContextHttp(services.projectContext);
       return reply.send(
-        await listAliveRuntimeStates(teamRuntimeApi.getAliveTeams(), teamRuntimeApi, (name) =>
-          registry.resolveOwnedExecutionAlias(name)
+        await listAliveRuntimeStates(teamRuntimeApi.getAliveTeams(), teamRuntimeApi, (names) =>
+          registry.resolveOwnedExecutionAliases(names)
         )
       );
     } catch (error) {
-      if (shouldLogError(error)) {
-        logger.error('Error in GET /api/teams/runtime/alive:', getErrorMessage(error));
-      }
-      return reply.status(getStatusCode(error)).send({ error: getResponseErrorMessage(error) });
+      return sendError(reply, error, 'GET /api/teams/runtime/alive');
     }
   });
 }

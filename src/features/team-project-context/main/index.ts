@@ -1,7 +1,7 @@
 export type { DefinitionEditTarget } from './classifyDefinitionTarget';
 export { classifyDefinitionTarget } from './classifyDefinitionTarget';
 export type {
-  AliasResolver,
+  AliasBatchResolver,
   AliveRuntimeEntry,
   ContextRuntimeSnapshot,
   LogicalContextStopOutcome,
@@ -19,8 +19,9 @@ export {
 } from './logicalTeamRuntime';
 export { projectDefinitionToAlias } from './projectDefinitionToAlias';
 export { projectTeamSummaries } from './projectTeamSummaries';
-export type { ResolvedTeamTarget, TeamTargetPorts } from './resolveTeamTarget';
+export type { ContextGroup, ResolvedTeamTarget, TeamTargetPorts } from './resolveTeamTarget';
 export {
+  contextGroupOf,
   createTeamTargetPorts,
   resolveTeamTarget,
   TeamTargetUnresolvedError,
@@ -33,6 +34,8 @@ export {
   TeamProjectContextLaunchGate,
 } from './TeamProjectContextLaunchGate';
 export type {
+  OwnedExecutionAlias,
+  OwnedExecutionAliasLookup,
   PersistedTeamWorkContext,
   TeamProjectContextRegistryPaths,
 } from './TeamProjectContextRegistry';

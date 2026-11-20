@@ -1,4 +1,4 @@
-import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, realpath, rm, writeFile } from 'node:fs/promises';
 import * as os from 'node:os';
 import * as path from 'node:path';
 
@@ -13,6 +13,30 @@ import type { HttpServices } from '../../../src/main/http';
 import type { TeamMetaFile } from '../../../src/main/services/team/TeamMetaStore';
 import type { TeamRuntimeState, TeamSummary } from '../../../src/shared/types';
 
+// The force-stop flow reaches for the real home directory (launch state, retained
+// runtime processes). Nothing of that belongs in a route test.
+vi.mock('@main/services/team/lifecycle/teamForceStopFlow', async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import('@main/services/team/lifecycle/teamForceStopFlow')>();
+  return {
+    ...actual,
+    killRetainedOpenCodeRuntimeProcessesForTeam: vi.fn(() =>
+      Promise.resolve({ killedPids: [], diagnostics: [] })
+    ),
+    clearPendingOpenCodePromptDeliveriesForTeam: vi.fn(() =>
+      Promise.resolve({ cleared: 0, diagnostics: [] })
+    ),
+  };
+});
+
+vi.mock('@main/services/team/TeamLaunchStateStore', () => ({
+  TeamLaunchStateStore: vi.fn(() => ({
+    read: vi.fn(() => Promise.resolve(null)),
+    beginStop: async (teamName: string) => ({ teamName, stopIntent: 1, freshness: null }),
+    markStopped: vi.fn(() => Promise.resolve()),
+  })),
+}));
+
 const roots: string[] = [];
 
 afterEach(async () => {
@@ -26,6 +50,10 @@ interface Fixture {
   aliasB: string;
   projectA: string;
   projectB: string;
+  /** A claimed team directory, like one a user created. */
+  claimTeam(teamName: string): Promise<void>;
+  /** A project copy of `team`: ready (materialized) or only reserved (an owner-marked directory). */
+  addCopy(team: string, state: 'ready' | 'reserved'): Promise<{ alias: string; project: string }>;
 }
 
 /** A per-project team `builders` with two ready project copies, on a real temp dir. */
@@ -34,49 +62,50 @@ async function fixture(): Promise<Fixture> {
   roots.push(root);
   const teamsBasePath = path.join(root, 'teams');
   const tasksBasePath = path.join(root, 'tasks');
-  const projectA = path.join(root, 'a');
-  const projectB = path.join(root, 'b');
   await Promise.all([
     mkdir(path.join(teamsBasePath, 'builders'), { recursive: true }),
     mkdir(tasksBasePath, { recursive: true }),
-    mkdir(projectA),
-    mkdir(projectB),
   ]);
-  await claimTeamForThisProfile({
-    teamsBasePath, teamName: 'builders', reason: 'create', profileScope: 'test-profile',
-  });
+  const claim = (teamName: string) =>
+    claimTeamForThisProfile({ teamsBasePath, teamName, reason: 'create', profileScope: 'test-profile' });
+  await claim('builders');
   const registry = new TeamProjectContextRegistry({
     teamsBasePath, tasksBasePath, profileScope: 'test-profile',
   });
-  const materialize = async (project: string): Promise<string> => {
-    const reserved = await registry.reserve('builders', project);
-    await mkdir(path.join(teamsBasePath, reserved.executionTeamName), { recursive: true });
-    await mkdir(path.join(tasksBasePath, reserved.executionTeamName), { recursive: true });
-    await writeFile(
-      path.join(teamsBasePath, reserved.executionTeamName, 'config.json'),
-      JSON.stringify({ name: reserved.executionTeamName })
-    );
-    await claimTeamForThisProfile({
-      teamsBasePath,
-      teamName: reserved.executionTeamName,
-      reason: 'create',
-      profileScope: 'test-profile',
-    });
-    await registry.confirmReady('builders', project, reserved.executionTeamName);
-    return reserved.executionTeamName;
+  let projects = 0;
+  const addCopy: Fixture['addCopy'] = async (team, state) => {
+    const dir = path.join(root, `project-${projects++}`);
+    await mkdir(dir);
+    // The registry stores the canonical path (macOS tmp is a symlink).
+    const project = await realpath(dir);
+    const reserved = await registry.reserve(team, project);
+    const alias = reserved.executionTeamName;
+    await mkdir(path.join(teamsBasePath, alias), { recursive: true });
+    await mkdir(path.join(tasksBasePath, alias), { recursive: true });
+    if (state === 'ready') {
+      await writeFile(path.join(teamsBasePath, alias, 'config.json'), JSON.stringify({ name: alias }));
+    }
+    await claim(alias);
+    if (state === 'ready') await registry.confirmReady(team, project, alias);
+    return { alias, project };
   };
-  const aliasA = await materialize(projectA);
-  const aliasB = await materialize(projectB);
+  const a = await addCopy('builders', 'ready');
+  const b = await addCopy('builders', 'ready');
   return {
     registry,
-    aliasA,
-    aliasB,
-    projectA,
-    projectB,
+    aliasA: a.alias,
+    aliasB: b.alias,
+    projectA: a.project,
+    projectB: b.project,
+    claimTeam: async (teamName) => {
+      await mkdir(path.join(teamsBasePath, teamName), { recursive: true });
+      await claim(teamName);
+    },
+    addCopy,
     meta: {
       builders: { projectContextMode: 'per_project' } as TeamMetaFile,
-      [aliasA]: { projectContextMode: 'shared' } as TeamMetaFile,
-      [aliasB]: { projectContextMode: 'shared' } as TeamMetaFile,
+      [a.alias]: { projectContextMode: 'shared' } as TeamMetaFile,
+      [b.alias]: { projectContextMode: 'shared' } as TeamMetaFile,
     },
   };
 }
@@ -135,7 +164,7 @@ async function createApp(f: Fixture, initialAlive: string[]) {
   const app = Fastify();
   registerTeamRoutes(app, services);
   await app.ready();
-  return { app, stopTeam, getRuntimeState, listTeams, alive };
+  return { app, stopTeam, getRuntimeState, listTeams, alive, progress };
 }
 
 describe('HTTP routes for a per-project (logical) team', () => {
@@ -155,20 +184,21 @@ describe('HTTP routes for a per-project (logical) team', () => {
     }
   });
 
-  it('stop of one running copy leaves the idle copy alone and still succeeds', async () => {
+  it('stop with one running copy also stops the idle copy and succeeds', async () => {
     const f = await fixture();
     const { app, stopTeam } = await createApp(f, [f.aliasB]);
     try {
       const response = await app.inject({ method: 'POST', url: '/api/teams/builders/stop' });
       expect(response.statusCode).toBe(200);
       expect(response.json().isAlive).toBe(false);
-      expect(stopTeam).toHaveBeenCalledWith(f.aliasB);
+      // Every copy is asked: an idle one is already down, which the stop flow accepts.
+      expect(stopTeam.mock.calls.map(([team]) => team).sort()).toEqual([f.aliasA, f.aliasB].sort());
     } finally {
       await app.close();
     }
   });
 
-  it('stop answers 409 and names the project when a copy cannot be stopped', async () => {
+  it('stop answers 409 with a machine-readable body when a copy cannot be stopped', async () => {
     const f = await fixture();
     const { app, stopTeam } = await createApp(f, [f.aliasA, f.aliasB]);
     stopTeam.mockImplementation(async (team: string) => {
@@ -179,12 +209,124 @@ describe('HTTP routes for a per-project (logical) team', () => {
     try {
       const response = await app.inject({ method: 'POST', url: '/api/teams/builders/stop' });
       expect(response.statusCode).toBe(409);
-      expect(response.json().error).toContain(f.projectB);
-      expect(response.json().error).toContain(f.aliasB);
+      const body = response.json();
+      expect(body.error).toContain(f.projectB);
+      expect(body.error).toContain(f.aliasB);
+      expect(body.code).toBe('LOGICAL_STOP_INCOMPLETE');
+      expect(body.outcome.complete).toBe(false);
+      expect(
+        body.outcome.contexts.map((c: { executionTeamName: string; stillAlive: boolean }) => [
+          c.executionTeamName,
+          c.stillAlive,
+        ])
+      ).toEqual(expect.arrayContaining([[f.aliasA, false], [f.aliasB, true]]));
       // The other copy was still stopped: one failure does not abandon the rest.
       expect(stopTeam).toHaveBeenCalledWith(f.aliasA);
       expect(warn).toHaveBeenCalled();
     } finally {
+      warn.mockRestore();
+      await app.close();
+    }
+  });
+
+  it('stop is not a success while a copy still reports a run after it was stopped', async () => {
+    const f = await fixture();
+    const { app, progress } = await createApp(f, [f.aliasA]);
+    // The process is gone but the copy still reports a settled "ready" run: the same
+    // evidence the launch gate refuses to call stopped.
+    progress.set(f.aliasA, { runId: 'run-x', state: 'ready' } as TeamRuntimeState['progress']);
+    try {
+      const response = await app.inject({ method: 'POST', url: '/api/teams/builders/stop' });
+      expect(response.statusCode).toBe(409);
+      expect(response.json().code).toBe('LOGICAL_STOP_INCOMPLETE');
+      expect(response.json().error).toContain('still running after the stop');
+    } finally {
+      await app.close();
+    }
+  });
+
+  it('stop answers 409 when a project copy appeared while the stop was running', async () => {
+    const f = await fixture();
+    const { app, stopTeam, alive } = await createApp(f, [f.aliasA]);
+    let appeared = '';
+    stopTeam.mockImplementation(async (team: string) => {
+      alive.delete(team);
+      if (!appeared) {
+        const added = await f.addCopy('builders', 'ready');
+        appeared = added.alias;
+        alive.add(added.alias);
+      }
+    });
+    try {
+      const response = await app.inject({ method: 'POST', url: '/api/teams/builders/stop' });
+      expect(response.statusCode).toBe(409);
+      expect(response.json().error).toContain('started while the stop was running');
+      expect(response.json().error).toContain(appeared);
+    } finally {
+      await app.close();
+    }
+  });
+
+  it('stops a pending (reserved) copy only after its owner is proven', async () => {
+    const f = await fixture();
+    const pending = await f.addCopy('builders', 'reserved');
+    const { app, stopTeam, alive } = await createApp(f, [pending.alias]);
+    try {
+      const response = await app.inject({ method: 'POST', url: '/api/teams/builders/stop' });
+      expect(response.statusCode).toBe(200);
+      expect(stopTeam).toHaveBeenCalledWith(pending.alias);
+      expect(alive.size).toBe(0);
+    } finally {
+      await app.close();
+    }
+  });
+
+  it('refuses to stop anything when a pending copy has no owner marker', async () => {
+    const f = await fixture();
+    // Reserved in the index, but its directory was never claimed by this profile.
+    const reserved = await f.registry.reserve('builders', os.tmpdir());
+    const { app, stopTeam } = await createApp(f, [f.aliasA, reserved.executionTeamName]);
+    try {
+      const response = await app.inject({ method: 'POST', url: '/api/teams/builders/stop' });
+      expect(response.statusCode).toBe(409);
+      expect(response.json().error).toContain('owner cannot be verified');
+      expect(stopTeam).not.toHaveBeenCalled();
+    } finally {
+      await app.close();
+    }
+  });
+
+  it('force-stop answers with what the cleanup did for every copy', async () => {
+    const f = await fixture();
+    const { app, stopTeam, alive } = await createApp(f, [f.aliasA, f.aliasB]);
+    try {
+      const response = await app.inject({ method: 'POST', url: '/api/teams/builders/force-stop' });
+      expect(response.statusCode).toBe(200);
+      const body = response.json();
+      expect(body).toMatchObject({ teamName: 'builders', complete: true });
+      expect(body.contexts.map((c: { executionTeamName: string }) => c.executionTeamName).sort()).toEqual(
+        [f.aliasA, f.aliasB].sort()
+      );
+      expect(stopTeam).toHaveBeenCalledWith(f.aliasA);
+      expect(alive.size).toBe(0);
+    } finally {
+      await app.close();
+    }
+  });
+
+  it('force-stop reports complete: false, not a success, when a copy keeps running', async () => {
+    const f = await fixture();
+    const { app, stopTeam } = await createApp(f, [f.aliasA, f.aliasB]);
+    stopTeam.mockImplementation(async (team: string) => {
+      if (team === f.aliasB) throw new Error('stop command exited with 1');
+    });
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    try {
+      const response = await app.inject({ method: 'POST', url: '/api/teams/builders/force-stop' });
+      expect(response.statusCode).toBe(200);
+      expect(response.json().complete).toBe(false);
+    } finally {
+      warn.mockRestore();
       await app.close();
     }
   });
@@ -219,6 +361,21 @@ describe('HTTP routes for a per-project (logical) team', () => {
     }
   });
 
+  it('runtime/alive proves every copy with one scan of the teams directory', async () => {
+    const f = await fixture();
+    const batch = vi.spyOn(f.registry, 'resolveOwnedExecutionAliases');
+    const single = vi.spyOn(f.registry, 'resolveOwnedExecutionAlias');
+    const { app } = await createApp(f, [f.aliasA, f.aliasB]);
+    try {
+      const response = await app.inject({ method: 'GET', url: '/api/teams/runtime/alive' });
+      expect(response.statusCode).toBe(200);
+      expect(batch).toHaveBeenCalledTimes(1);
+      expect(single).not.toHaveBeenCalled();
+    } finally {
+      await app.close();
+    }
+  });
+
   it('stopping one project copy by its own name stays an exact stop', async () => {
     const f = await fixture();
     const { app, stopTeam } = await createApp(f, [f.aliasA, f.aliasB]);
@@ -232,8 +389,10 @@ describe('HTTP routes for a per-project (logical) team', () => {
     }
   });
 
-  it('refuses with 409 when the team metadata is unreadable: never an ordinary team', async () => {
+  it('refuses with 409 when the metadata is unreadable and the team owns project contexts', async () => {
     const f = await fixture();
+    await f.claimTeam('broken-team');
+    await f.addCopy('broken-team', 'ready');
     f.meta['broken-team'] = 'unreadable';
     const { app, stopTeam } = await createApp(f, ['broken-team']);
     try {
@@ -245,8 +404,23 @@ describe('HTTP routes for a per-project (logical) team', () => {
         const response = await app.inject(request);
         expect(response.statusCode).toBe(409);
         expect(response.json().error).toContain('unreadable');
+        expect(response.json().code).toBe('TEAM_TARGET_UNRESOLVED');
       }
       expect(stopTeam).not.toHaveBeenCalled();
+    } finally {
+      await app.close();
+    }
+  });
+
+  it('still stops a team with unreadable metadata and no project contexts by its exact name', async () => {
+    const f = await fixture();
+    f.meta['plain-broken'] = 'unreadable';
+    const { app, stopTeam } = await createApp(f, ['plain-broken']);
+    try {
+      const response = await app.inject({ method: 'POST', url: '/api/teams/plain-broken/stop' });
+      expect(response.statusCode).toBe(200);
+      expect(stopTeam).toHaveBeenCalledWith('plain-broken');
+      expect(response.json()).toMatchObject({ teamName: 'plain-broken', projectContextUnresolved: true });
     } finally {
       await app.close();
     }
@@ -260,6 +434,68 @@ describe('HTTP routes for a per-project (logical) team', () => {
       expect(response.statusCode).toBe(200);
       expect(stopTeam).toHaveBeenCalledWith('legacy');
       expect(response.json()).toEqual({ teamName: 'legacy', isAlive: false, runId: null, progress: null });
+    } finally {
+      await app.close();
+    }
+  });
+});
+
+describe('HTTP routes for a shared team that retained project contexts', () => {
+  async function retained(): Promise<{ f: Fixture; alias: string; project: string }> {
+    const f = await fixture();
+    await f.claimTeam('old-shared');
+    f.meta['old-shared'] = { projectContextMode: 'shared' } as TeamMetaFile;
+    const copy = await f.addCopy('old-shared', 'ready');
+    f.meta[copy.alias] = { projectContextMode: 'shared' } as TeamMetaFile;
+    return { f, alias: copy.alias, project: copy.project };
+  }
+
+  it('stop brings down both its own process and the retained copy', async () => {
+    const { f, alias } = await retained();
+    const { app, stopTeam, alive } = await createApp(f, ['old-shared', alias]);
+    try {
+      const response = await app.inject({ method: 'POST', url: '/api/teams/old-shared/stop' });
+      expect(response.statusCode).toBe(200);
+      expect(stopTeam.mock.calls.map(([team]) => team).sort()).toEqual(['old-shared', alias].sort());
+      expect(alive.size).toBe(0);
+      expect(response.json()).toMatchObject({ teamName: 'old-shared', isAlive: false });
+    } finally {
+      await app.close();
+    }
+  });
+
+  it('stop still stops its own process when no retained copy is running', async () => {
+    const { f } = await retained();
+    const { app, stopTeam } = await createApp(f, ['old-shared']);
+    try {
+      const response = await app.inject({ method: 'POST', url: '/api/teams/old-shared/stop' });
+      expect(response.statusCode).toBe(200);
+      expect(stopTeam).toHaveBeenCalledWith('old-shared');
+    } finally {
+      await app.close();
+    }
+  });
+
+  it('runtime is alive from its own process even when every retained copy is down', async () => {
+    const { f } = await retained();
+    const { app } = await createApp(f, ['old-shared']);
+    try {
+      const response = await app.inject({ method: 'GET', url: '/api/teams/old-shared/runtime' });
+      expect(response.statusCode).toBe(200);
+      expect(response.json()).toMatchObject({ teamName: 'old-shared', isAlive: true, runId: 'run-old-shared' });
+    } finally {
+      await app.close();
+    }
+  });
+
+  it('runtime/alive lists it once, absorbing the live retained copy', async () => {
+    const { f, alias } = await retained();
+    const { app } = await createApp(f, ['old-shared', alias]);
+    try {
+      const response = await app.inject({ method: 'GET', url: '/api/teams/runtime/alive' });
+      const entries = response.json() as { teamName: string; contexts?: unknown[] }[];
+      expect(entries.filter((entry) => entry.teamName === 'old-shared')).toHaveLength(1);
+      expect(entries.find((entry) => entry.teamName === 'old-shared')?.contexts).toHaveLength(1);
     } finally {
       await app.close();
     }

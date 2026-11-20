@@ -27,6 +27,10 @@ const DEFAULT_WAIT_TIMEOUT_MS = 120000;
 const MIN_WAIT_TIMEOUT_MS = 1000;
 const MAX_WAIT_TIMEOUT_MS = 10 * 60 * 1000;
 const POLL_INTERVAL_MS = 1000;
+// The app escalates a stop that does not confirm for up to 120s per team, and stops the
+// project copies of a per-project team one after another, so the default 10s request
+// timeout would abort a stop that is still doing its work.
+const STOP_REQUEST_TIMEOUT_MS = 5 * 60 * 1000;
 const TEAM_CONTROL_API_STATE_FILE = 'team-control-api.json';
 const RETRYABLE_CONTROL_ERROR = 'retryableControlError';
 const BOOTSTRAP_CHECKIN_MAX_ATTEMPTS = 3;
@@ -594,6 +598,7 @@ async function stopTeam(context, flags = {}) {
     `/api/teams/${encodeURIComponent(context.teamName)}/stop`,
     {
       method: 'POST',
+      timeoutMs: STOP_REQUEST_TIMEOUT_MS,
     }
   );
 

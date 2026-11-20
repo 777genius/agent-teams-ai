@@ -3,7 +3,7 @@ import type { OrgTaskCandidate, OrgTeamCandidate } from '../../../core/domain';
 import type { TeamDataService } from '@main/services/team/TeamDataService';
 import type { GlobalTask, TeamSummary, TeamSummaryMember } from '@shared/types';
 
-function toTaskCandidate(task: GlobalTask): OrgTaskCandidate {
+function toTaskCandidate(task: GlobalTask, logicalTeamName: string): OrgTaskCandidate {
   return {
     id: task.id,
     subject: task.subject,
@@ -11,6 +11,7 @@ function toTaskCandidate(task: GlobalTask): OrgTaskCandidate {
     status: task.status,
     updatedAt: task.updatedAt,
     kanbanColumn: task.kanbanColumn,
+    ...(task.teamName === logicalTeamName ? {} : { executionTeamName: task.teamName }),
   };
 }
 
@@ -51,11 +52,11 @@ export class TeamDirectoryOrganizationAdapter implements OrganizationsTeamDirect
     ]);
     const teams = await this.projectTeams(allTeams);
     const aliveSet = new Set(aliveTeams);
-    const tasksByTeam = new Map<string, OrgTaskCandidate[]>();
+    const tasksByTeam = new Map<string, GlobalTask[]>();
 
     for (const task of globalTasks) {
       const list = tasksByTeam.get(task.teamName) ?? [];
-      list.push(toTaskCandidate(task));
+      list.push(task);
       tasksByTeam.set(task.teamName, list);
     }
 
@@ -85,7 +86,9 @@ export class TeamDirectoryOrganizationAdapter implements OrganizationsTeamDirect
           deletedAt: team.deletedAt,
           pendingCreate: team.pendingCreate,
           members,
-          tasks: names.flatMap((name) => tasksByTeam.get(name) ?? []),
+          tasks: names
+            .flatMap((name) => tasksByTeam.get(name) ?? [])
+            .map((task) => toTaskCandidate(task, team.teamName)),
         };
       });
   }

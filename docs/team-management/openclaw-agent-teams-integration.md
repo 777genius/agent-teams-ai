@@ -689,6 +689,8 @@ BASE_URL="http://127.0.0.1:3456"
 | `GET`  | `/api/teams/provisioning/:runId` | Poll launch/provisioning status   |
 | `GET`  | `/api/teams/runtime/alive`       | List alive team runtime states    |
 
+A team of the per-project history mode has no process of its own: `stop`, `runtime` and `runtime/alive` act on its project contexts and answer with an additive `contexts[]`. See [per-project-team-targets.md](./per-project-team-targets.md) for the contract, including the non-additive change to the list.
+
 Advanced OpenCode runtime bridge endpoints:
 
 | Method | Path                                                      |
