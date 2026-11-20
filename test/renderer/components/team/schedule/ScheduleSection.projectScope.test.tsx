@@ -3,7 +3,11 @@ import { createRoot } from 'react-dom/client';
 
 import { TeamScheduleSection } from '@renderer/components/team/definitionEdit/TeamScheduleSection';
 import { ScheduleSection } from '@renderer/components/team/schedule/ScheduleSection';
-import { projectScopeOf } from '@renderer/components/team/schedule/validateScheduleForm';
+import {
+  canSchedule,
+  scheduleScope,
+  validateScheduleForm,
+} from '@renderer/components/team/schedule/validateScheduleForm';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { Schedule } from '@shared/types';
@@ -33,6 +37,9 @@ vi.mock('@renderer/components/team/schedule/useScheduleActions', () => ({
 }));
 vi.mock('@renderer/components/team/schedule/ScheduleRunLogDialog', () => ({
   ScheduleRunLogDialog: () => null,
+}));
+vi.mock('@renderer/components/team/CollapsibleTeamSection', () => ({
+  CollapsibleTeamSection: ({ children }: { children?: React.ReactNode }) => <section>{children}</section>,
 }));
 vi.mock('@renderer/components/ui/tooltip', () => {
   const Slot = ({ children }: { children?: React.ReactNode }) => <>{children}</>;
@@ -140,9 +147,52 @@ describe('schedules of a team with separate history per project', () => {
     expect(host.querySelectorAll('[title^="/work/"]')).toHaveLength(0);
   });
 
-  it('projectScopeOf only applies to the schedule mode of a scoped dialog', () => {
-    expect(projectScopeOf({ mode: 'schedule', projectScope: { projectPath: '/p' } })).toEqual({ projectPath: '/p' });
-    expect(projectScopeOf({ mode: 'schedule' })).toBeUndefined();
-    expect(projectScopeOf({ mode: 'launch', projectScope: { projectPath: '/p' } })).toBeUndefined();
+  describe('scheduleScope', () => {
+    const perProject = { projectContextMode: 'per_project' as const, projectPath: '/created-in' };
+
+    it('follows the team mode, whatever page the dialog was opened from', () => {
+      // The global Schedules page passes no scope at all.
+      expect(scheduleScope({ mode: 'schedule' }, perProject)).toEqual({
+        projectScope: { projectPath: '/created-in' },
+        defaultProjectPath: '/created-in',
+      });
+    });
+
+    it('prefers the project of the screen the dialog was opened from', () => {
+      expect(
+        scheduleScope({ mode: 'schedule', projectScope: { projectPath: '/shown' } }, perProject)
+      ).toEqual({ projectScope: { projectPath: '/shown' }, defaultProjectPath: '/shown' });
+    });
+
+    it('leaves ordinary teams and launches alone', () => {
+      expect(scheduleScope({ mode: 'schedule' }, { projectPath: '/p' }).projectScope).toBeUndefined();
+      expect(scheduleScope({ mode: 'schedule' }, undefined).projectScope).toBeUndefined();
+      expect(scheduleScope({ mode: 'launch', defaultProjectPath: '/p' }, perProject)).toEqual({
+        projectScope: undefined,
+        defaultProjectPath: '/p',
+      });
+    });
+  });
+
+  it('a schedule of a per-project team can not be saved without a project folder', () => {
+    const base = {
+      isSchedule: true, mode: 'agent' as const, targetMember: '', teamName: 'builders',
+      prompt: 'go', cronExpression: '0 9 * * 1-5', timezone: 'UTC', selectedProjectPathDeleted: false,
+      isCustomCwd: false, customFolderBlocksSubmit: false, worktreeGitBlockingMessage: null,
+      rosterUnavailable: 'roster', recipientUnavailable: 'recipient',
+    };
+    // A scoped team is validated like a one-shot schedule: the folder is its own, not the saved one.
+    expect(validateScheduleForm({ ...base, usesSavedTeamRuntime: false, cwd: '' })).toContain(
+      'Working directory is required'
+    );
+    expect(validateScheduleForm({ ...base, usesSavedTeamRuntime: false, cwd: '/work/a' })).toEqual([]);
+  });
+
+  it('a saved team backs a schedule with a provider, and a folder unless the schedule names one', () => {
+    expect(canSchedule({ providerId: 'anthropic', cwd: '/a' })).toBe(true);
+    expect(canSchedule({ providerId: 'anthropic', cwd: ' ' })).toBe(false);
+    expect(canSchedule({ providerId: 'anthropic', cwd: ' ' }, { projectPath: '/b' })).toBe(true);
+    expect(canSchedule({ cwd: '/a' }, { projectPath: '/b' })).toBe(false);
+    expect(canSchedule(null, { projectPath: '/b' })).toBe(false);
   });
 });

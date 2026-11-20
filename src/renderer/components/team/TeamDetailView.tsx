@@ -92,7 +92,6 @@ import { isLeadMember } from '@shared/utils/leadDetection';
 import { deriveTaskDisplayId, formatTaskDisplayLabel } from '@shared/utils/taskIdentity';
 import {
   BarChart3,
-  Clock,
   Code,
   Columns3,
   FolderOpen,
@@ -3280,12 +3279,11 @@ export const TeamDetailView = memo(function TeamDetailView({
                 />
               </CollapsibleTeamSection>
               {canEditDefinition && (
-                <CollapsibleTeamSection
-                  sectionId="schedules" variant="flat" title={t('schedule.title')}
-                  icon={<Clock size={14} />} defaultOpen={false}
-                >
-                  <TeamScheduleSection teamName={teamName} logicalTeamName={logicalTeamName} projectPath={data.config.projectPath} />
-                </CollapsibleTeamSection>
+                <TeamScheduleSection
+                  teamName={teamName}
+                  logicalTeamName={logicalTeamName}
+                  projectPath={data.config.projectPath}
+                />
               )}
               <LiveRuntimeStatusBridge
                 teamName={teamName}

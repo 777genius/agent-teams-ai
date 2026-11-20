@@ -242,6 +242,7 @@ import { initializeIpcHandlers, removeIpcHandlers } from './ipc/handlers';
 import { registerOpenCodeStartupCleanupHandlers } from './ipc/openCodeStartupCleanup';
 import { registerRendererLogHandlers } from './ipc/rendererLogs';
 import { setReviewMainWindow } from './ipc/review';
+import { createProjectScheduleTargets } from './ipc/teams/projectScheduleTargets';
 import { setTmuxMainWindow } from './ipc/tmux';
 import { configureWindowLifecycleActions } from './ipc/window';
 import {
@@ -2193,7 +2194,8 @@ async function initializeServices(): Promise<void> {
   schedulerService = createSchedulerService(
     teamIpcHandlerApis,
     teamDataService,
-    teamProvisioningService
+    teamProvisioningService,
+    createProjectScheduleTargets(teamIpcHandlerApis, teamDataService, teamProvisioningService)
   );
   // Extension Store services
   const pluginCatalogService = new PluginCatalogService();

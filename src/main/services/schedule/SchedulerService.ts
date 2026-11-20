@@ -14,7 +14,7 @@ import { randomUUID } from 'crypto';
 import { computeScheduleNextRunAt } from './computeScheduleNextRunAt';
 import { recoverInterruptedScheduleRuns } from './recoverInterruptedScheduleRuns';
 import { SchedulerStopBarrier } from './SchedulerStopBarrier';
-import { admissionRefusal, type ScheduleAdmission } from './scheduleTarget';
+import { admissionRefusal, type ScheduleAdmissionCheck } from './scheduleTarget';
 
 import type { ScheduledTaskExecutor } from './ScheduledTaskExecutor';
 import type { ScheduleRepository } from './ScheduleRepository';
@@ -81,16 +81,15 @@ export class SchedulerService {
     executor: ScheduledTaskExecutor,
     warmUpFn?: WarmUpFn,
     smartDispatcher?: SmartScheduleDispatcher,
-    private readonly allowTeamSchedule: (teamName: string) => Promise<boolean | ScheduleAdmission> =
-      async () => true
+    private readonly allowTeamSchedule: ScheduleAdmissionCheck = async () => true
   ) {
     this.repository = repository;
     this.executor = executor;
     this.smartDispatcher = smartDispatcher ?? null;
     this.warmUpFn = warmUpFn ?? (async () => ({ ready: true, message: 'warm-up skipped' }));
   }
-  private async assertSchedulableTeam(teamName: string): Promise<void> {
-    const refusal = admissionRefusal(await this.allowTeamSchedule(teamName));
+  private async assertSchedulableTeam(teamName: string, cwd?: string): Promise<void> {
+    const refusal = admissionRefusal(await this.allowTeamSchedule(teamName, cwd));
     if (refusal) throw new Error(refusal);
   }
 
@@ -179,7 +178,7 @@ export class SchedulerService {
   }
 
   async createSchedule(input: CreateScheduleInput): Promise<Schedule> {
-    await this.assertSchedulableTeam(input.teamName);
+    await this.assertSchedulableTeam(input.teamName, input.launchConfig.cwd);
     const cronExpression = input.cronExpression.trim();
     const timezone = input.timezone.trim();
     getValidScheduleNextRuns(cronExpression, timezone);
@@ -228,7 +227,7 @@ export class SchedulerService {
   async updateSchedule(id: string, patch: UpdateSchedulePatch): Promise<Schedule> {
     const existing = await this.repository.getSchedule(id);
     if (!existing) throw new Error(`Schedule not found: ${id}`);
-    await this.assertSchedulableTeam(existing.teamName);
+    await this.assertSchedulableTeam(existing.teamName, patch.launchConfig?.cwd);
     if (patch.reviewedSavedPrompt && !existing.taskFirst) throw new Error('Review requires task-first schedule');
     const cronChanged = patch.cronExpression !== undefined || patch.timezone !== undefined;
     const cronExpression = (patch.cronExpression ?? existing.cronExpression).trim();

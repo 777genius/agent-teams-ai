@@ -64,11 +64,40 @@ export function validateScheduleForm(input: ScheduleFormValidation): string[] {
   return errors;
 }
 
-/**
- * A team with separate history per project: its schedule names its own project.
- * Absent for ordinary teams, whose saved team path is the schedule's directory.
- */
-export const projectScopeOf = (props: {
+export interface ScheduleProjectScope {
+  projectPath?: string;
+}
+
+interface DialogProjectProps {
   mode: string;
-  projectScope?: { projectPath?: string };
-}): { projectPath?: string } | undefined => (props.mode === 'schedule' ? props.projectScope : undefined);
+  /** Where the dialog was opened from: the default project of a new schedule. */
+  projectScope?: ScheduleProjectScope;
+  defaultProjectPath?: string;
+}
+
+/**
+ * A team with separate history per project: its schedule names its own project, and the saved
+ * team path (the project the team was created in) is only a default. The scope follows the team,
+ * never the page the dialog was opened from, so every entry point gets it.
+ */
+export function scheduleScope(
+  props: DialogProjectProps,
+  team?: Pick<TeamSummary, 'projectContextMode' | 'projectPath'>
+): { projectScope?: ScheduleProjectScope; defaultProjectPath?: string } {
+  const scoped = props.mode === 'schedule' && team?.projectContextMode === 'per_project';
+  const projectScope = scoped
+    ? { projectPath: props.projectScope?.projectPath ?? team.projectPath }
+    : undefined;
+  return {
+    projectScope,
+    defaultProjectPath: projectScope ? projectScope.projectPath : props.defaultProjectPath,
+  };
+}
+
+/** The saved team can back a schedule: a provider, and a folder unless the schedule names one. */
+export function canSchedule(
+  saved: { cwd?: string; providerId?: string } | null,
+  projectScope?: ScheduleProjectScope
+): boolean {
+  return Boolean(saved?.providerId) && (Boolean(projectScope) || Boolean(saved?.cwd?.trim()));
+}

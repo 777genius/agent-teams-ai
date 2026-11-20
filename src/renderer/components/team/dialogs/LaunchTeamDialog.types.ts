@@ -56,8 +56,11 @@ interface LaunchDialogScheduleMode {
   projectScope?: { projectPath?: string };
 }
 
-export type LaunchTeamDialogProps =
-  (LaunchDialogLaunchMode | LaunchDialogRelaunchMode | LaunchDialogScheduleMode) & {
-    /** Project runtimes may adjust provider/permissions, but not the shared roster. */
-    rosterReadOnly?: boolean;
-  };
+export type LaunchTeamDialogProps = (
+  | LaunchDialogLaunchMode
+  | LaunchDialogRelaunchMode
+  | LaunchDialogScheduleMode
+) & {
+  /** Project runtimes may adjust provider/permissions, but not the shared roster. */
+  rosterReadOnly?: boolean;
+};

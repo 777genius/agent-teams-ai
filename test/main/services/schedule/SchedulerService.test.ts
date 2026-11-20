@@ -246,6 +246,30 @@ describe('SchedulerService', () => {
     })).rejects.toThrow('Scheduling is unavailable for this team');
   });
 
+  it('asks the admission about the project folder when a schedule is created or edited', async () => {
+    const admit = vi.fn(async (_team: string, cwd?: string) =>
+      cwd === '/tmp/gone' ? { allowed: false as const, reason: 'The project folder does not exist' } : { allowed: true as const }
+    );
+    const service = new SchedulerService(repo, executor as never, warmUpFn, undefined, admit);
+    const input = {
+      teamName: 'builders',
+      cronExpression: '0 9 * * *',
+      timezone: 'UTC',
+      launchConfig: { cwd: '/tmp/project-a', prompt: 'go' },
+    };
+    const created = await service.createSchedule(input);
+    expect(admit).toHaveBeenCalledWith('builders', '/tmp/project-a');
+
+    await expect(
+      service.createSchedule({ ...input, launchConfig: { cwd: '/tmp/gone', prompt: 'go' } })
+    ).rejects.toThrow('The project folder does not exist');
+    await expect(
+      service.updateSchedule(created.id, { launchConfig: { cwd: '/tmp/gone', prompt: 'go' } })
+    ).rejects.toThrow('The project folder does not exist');
+    expect((await repo.getSchedule(created.id))?.launchConfig.cwd).toBe('/tmp/project-a');
+    await service.stop();
+  });
+
   it('records a team refused at fire time as a skipped run with the reason, never executing it', async () => {
     let calls = 0;
     // Allowed at the manual trigger, refused when the run itself is admitted (state changed in between).

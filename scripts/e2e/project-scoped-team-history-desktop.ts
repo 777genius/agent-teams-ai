@@ -643,7 +643,7 @@ async function verifyDefinitionEdit(f: Fixture) {
 }
 
 interface StoredSchedule {
-  id: string; teamName: string; executionMode?: string; taskFirst?: boolean;
+  id: string; teamName: string; executionMode?: string; taskFirst?: boolean; cronExpression: string;
   launchConfig: { cwd: string; prompt: string };
 }
 interface StoredRun {
@@ -746,17 +746,75 @@ async function verifySchedules(f: Fixture) {
   );
   const recorded = runs[0];
   assert.equal(recorded.teamName, f.logical, 'The run belongs to the logical team');
-  if (recorded.linkedTaskId) {
-    assert.equal(recorded.executionTeamName, f.nativeA,
-      'The run must say which project copy holds its task: ' + JSON.stringify(recorded));
-    const taskFile = await readJsonFile<{ subject?: string; description?: string }>(
-      path.join(tasksOfCopy, recorded.linkedTaskId + '.json')
-    ).catch(() => null);
-    assert(taskFile, 'The scheduled task must be on the board of the project copy');
-  }
+  // The fixture runtime denies every agent, so the launch of the copy is refused by it: the work
+  // is saved, the run is a recorded skip (never a failure that counts toward auto-pause).
+  assert.equal(recorded.status, 'skipped', 'Unexpected run: ' + JSON.stringify(recorded));
+  assert.match(recorded.summary ?? '',
+    /^Task saved; (selected agent did not become ready|team launch failed)/,
+    'Unexpected run reason: ' + JSON.stringify(recorded));
+  assert(recorded.linkedTaskId, 'The run must link the task it saved: ' + JSON.stringify(recorded));
+  assert.equal(recorded.executionTeamName, f.nativeA,
+    'The run must say which project copy holds its task: ' + JSON.stringify(recorded));
+  const taskFile = await readJsonFile<Record<string, unknown>>(
+    path.join(tasksOfCopy, recorded.linkedTaskId + '.json')
+  ).catch(() => null);
+  assert(taskFile, 'The scheduled task must be on the board of the project copy');
+  assert(JSON.stringify(taskFile).includes('SCHEDULED_PROJECT_A_PROMPT'),
+    'The task on the copy must carry the scheduled instructions');
+  assert.deepEqual(
+    (await readdir(path.join(f.claudeRoot, 'tasks', f.nativeB))).sort(), ['1.json'],
+    'The other project must not get the scheduled task'
+  );
   assert.deepEqual(await readdir(path.join(f.claudeRoot, 'tasks', f.logical)), [],
     'The logical team must never get a board of its own');
   await cdp.screenshot(path.join(f.screenshots, 'schedule-run.png'));
+
+  // 6. The global Schedules page opens the same dialog without any project: editing a schedule
+  // made for project B must keep B, although the team was created in project A.
+  const forB = await ipcOutcome('window.electronAPI.schedules.create(' + JSON.stringify({
+    teamName: f.logical, executionMode: 'agent', taskFirst: true, reviewedSavedPrompt: true,
+    label: 'SCHEDULE_FOR_B', cronExpression: '0 9 * * 1-5', timezone: 'UTC',
+    launchConfig: { cwd: f.projectB, prompt: 'SCHEDULED_PROJECT_B_PROMPT', providerId: 'anthropic' },
+  }) + ')');
+  assert(forB.ok, 'A schedule for project B must be accepted: ' + JSON.stringify(forB));
+  const gone = await ipcOutcome('window.electronAPI.schedules.create(' + JSON.stringify({
+    teamName: f.logical, executionMode: 'agent', taskFirst: true, reviewedSavedPrompt: true,
+    cronExpression: '0 9 * * 1-5', timezone: 'UTC',
+    launchConfig: { cwd: path.join(f.root, 'no-such-project'), prompt: 'never', providerId: 'anthropic' },
+  }) + ')');
+  assert(!gone.ok && /folder/i.test(gone.error ?? ''),
+    'A schedule for a folder that does not exist must be refused: ' + JSON.stringify(gone));
+  const both = await waitForJson<StoredSchedule[]>(
+    schedulesFile, (list) => list.length === 2, 'both schedules are stored'
+  );
+  const scheduleB = both.find((item) => item.launchConfig.cwd === f.projectB);
+  assert(scheduleB, 'The schedule for project B is stored');
+
+  await cdp.evaluate('(() => window.__agentTeamsDevStore.getState().openSchedulesTab())()');
+  const rowOfB = '(() => Array.from(document.querySelectorAll("[data-testid=schedule-list-item]"))' +
+    '.find((row) => row.querySelector("button[aria-label=SCHEDULE_FOR_B]")))()';
+  await waitFor('Boolean(' + rowOfB + ')', 'the schedule of project B on the Schedules page');
+  await cdp.evaluate('(() => { const row = ' + rowOfB + ';' +
+    'row.querySelector("button[aria-label=\\"More actions\\"]").click(); return true; })()');
+  const editItem = '(() => Array.from(document.querySelectorAll("button"))' +
+    '.find((b) => b.textContent?.trim() === "Edit"))()';
+  await waitFor('Boolean(' + editItem + ')', 'Edit in the schedule menu');
+  await cdp.evaluate('(() => { const b = ' + editItem + '; b.click(); return true; })()');
+  await setField('[role=dialog] input[placeholder="0 9 * * 1-5"]', '0 10 * * 1-5');
+  await cdp.screenshot(path.join(f.screenshots, 'schedules-page-edit.png'));
+  const save = '(() => Array.from(document.querySelectorAll("[role=dialog] button"))' +
+    '.find((b) => b.textContent?.trim() === "Save Changes"))()';
+  await waitFor('(() => { const b = ' + save + '; return Boolean(b) && !b.disabled; })()',
+    'Save Changes enabled', 60_000);
+  await cdp.evaluate('(() => { const b = ' + save + '; b.click(); return true; })()');
+  await waitFor('!document.querySelector("#dialog-prompt")', 'schedule dialog closed after save');
+  const edited = await waitForJson<StoredSchedule[]>(
+    schedulesFile,
+    (list) => list.some((item) => item.id === scheduleB.id && item.cronExpression === '0 10 * * 1-5'),
+    'the edited time of the schedule of project B is saved'
+  );
+  assert.equal(edited.find((item) => item.id === scheduleB.id)?.launchConfig.cwd, f.projectB,
+    'Editing the time on the Schedules page must keep the project of the schedule');
   return recorded;
 }
 
@@ -794,8 +852,19 @@ async function run() {
     // Even in CI, never launch an actual provider or substitute test credentials.
     // Only the scheduled launch of the stopped project copy may reach the denying runtime.
     const fullAudit = await readAudit();
-    assert(['skipped', 'failed', 'dispatched'].includes(scheduledRun.status), 'Unexpected scheduled run status: ' + scheduledRun.status);
+    assert.equal(scheduledRun.status, 'skipped');
     const audit = fullAudit.slice(0, auditBeforeSchedule);
+    const afterSchedule = fullAudit.slice(auditBeforeSchedule);
+    const isLaunch = (args: string[]) => args.includes('--print') && args.includes('stream-json');
+    const isReadOnly = (args: string[]) =>
+      (args[0] === 'runtime' && ['status', 'providers', 'opencode-command'].includes(args[1])) ||
+      (args[0] === 'auth' && args[1] === 'status') || (args[0] === 'model' && args[1] === 'list');
+    assert.equal(afterSchedule.filter(isLaunch).length, 1,
+      'The scheduled run must reach the runtime with exactly one launch of the project copy');
+    const unexpectedAfter = afterSchedule.filter((args) => !isLaunch(args) && !isReadOnly(args));
+    assert.equal(unexpectedAfter.length, 0, 'Unexpected runtime calls after the scheduled run: ' +
+      JSON.stringify(unexpectedAfter.map((args) => args.slice(0, 2).map((token) =>
+        /^(?:--?)?[a-zA-Z][a-zA-Z0-9-]{0,32}$/.test(token) ? token : '[redacted]'))));
     // Startup probes may query runtime read-only capabilities; any provider or
     // team launch command is forbidden by the synthetic runtime fixture.
     const unexpected = audit.filter((args) =>

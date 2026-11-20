@@ -238,7 +238,10 @@ const ScheduleRow = ({
 // ScheduleSection
 // =============================================================================
 
-export const ScheduleSection = ({ teamName, projectScope }: ScheduleSectionProps): React.JSX.Element => {
+export const ScheduleSection = ({
+  teamName,
+  projectScope,
+}: ScheduleSectionProps): React.JSX.Element => {
   const { t } = useAppTranslation('team');
   const { schedules, fetchSchedules } = useStore(useShallow((s) => ({
     schedules: s.schedules.filter((sch) => sch.teamName === teamName),

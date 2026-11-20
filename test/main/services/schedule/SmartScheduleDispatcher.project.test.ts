@@ -68,7 +68,10 @@ function makePort(alive: boolean): SmartScheduleRuntimePort {
     getRuntime: vi.fn(async (team: string) => runtime(team, alive && team === COPY)),
     getMemberStatuses: vi.fn(async () => ({ runId: 'run-1', statuses: {} })),
     getLeadName: vi.fn(async () => 'lead'),
-    getSavedRequest: vi.fn(async (team: string) => (team === COPY ? saved : null)),
+    // The team definition (logical team) and the project copy each have their own saved request.
+    getSavedRequest: vi.fn(async (team: string) =>
+      team === COPY ? saved : team === LOGICAL ? { ...saved, teamName: LOGICAL } : null
+    ),
     hasRunnableConfig: vi.fn(async (team: string) => team === COPY),
     hasActiveOwnedTask: vi.fn(() => false),
     getPreviousRuns: vi.fn(async () => []),
@@ -156,6 +159,60 @@ describe('SmartScheduleDispatcher for a per-project team', () => {
     expect(second).toEqual({ kind: 'skipped', summary: 'Another schedule is already dispatching this team' });
     release();
     await first;
+  });
+
+  // The instructions the user reviewed in the dialog are those of the team definition (the
+  // logical team). The project copy keeps its own, sticky, copy of them.
+  describe('saved instructions review', () => {
+    const withPrompts = (logical: string | undefined, copy: string | undefined) => {
+      port = makePort(false);
+      port.getSavedRequest = vi.fn(async (team: string) => {
+        if (team === COPY) {
+          return { teamName: COPY, cwd: '/work/a', providerId: 'anthropic', prompt: copy, members: [{ name: 'alice' }] } as TeamCreateRequest;
+        }
+        return team === LOGICAL
+          ? ({ teamName: LOGICAL, cwd: '/work/a', providerId: 'anthropic', prompt: logical, members: [{ name: 'alice' }] } as TeamCreateRequest)
+          : null;
+      });
+      port.launchProjectTeam = vi.fn(async () => ({ refused: 'stop here' }));
+      dispatcher = new SmartScheduleDispatcher(port);
+    };
+    const REVIEW = 'Review historical team instructions before enabling task-first launch';
+
+    it('does not ask for a review the dialog never offered: only the copy has old instructions', async () => {
+      withPrompts(undefined, 'Old launch instructions kept by the copy');
+      const outcome = await dispatcher.dispatch(makeSchedule(), 'run-r1', notCancelled);
+      expect((outcome as { summary: string }).summary).not.toBe(REVIEW);
+      expect(port.createTask).toHaveBeenCalledWith(COPY, expect.anything());
+    });
+
+    it('asks for the review when the team definition has old instructions', async () => {
+      withPrompts('Old team instructions', undefined);
+      const outcome = await dispatcher.dispatch(makeSchedule(), 'run-r2', notCancelled);
+      expect(outcome).toEqual({ kind: 'skipped', summary: REVIEW });
+      expect(port.createTask).not.toHaveBeenCalled();
+    });
+
+    it('proceeds once the instructions of the team definition were reviewed', async () => {
+      withPrompts('Old team instructions', 'Copy instructions');
+      const outcome = await dispatcher.dispatch(
+        makeSchedule({ reviewedSavedPrompt: true }), 'run-r3', notCancelled
+      );
+      expect((outcome as { summary: string }).summary).not.toBe(REVIEW);
+      expect(port.createTask).toHaveBeenCalledWith(COPY, expect.anything());
+    });
+
+    it('fails closed when the team definition cannot be read', async () => {
+      withPrompts(undefined, undefined);
+      port.getSavedRequest = vi.fn(async (team: string) =>
+        team === COPY
+          ? ({ teamName: COPY, cwd: '/work/a', providerId: 'anthropic', members: [{ name: 'alice' }] } as TeamCreateRequest)
+          : null
+      );
+      const outcome = await dispatcher.dispatch(makeSchedule(), 'run-r4', notCancelled);
+      expect(outcome.kind).toBe('skipped');
+      expect(port.createTask).not.toHaveBeenCalled();
+    });
   });
 
   it('keeps ordinary teams on their own name when there is no target port', async () => {
