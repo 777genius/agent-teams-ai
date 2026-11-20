@@ -19,11 +19,11 @@ import { nameColorSet } from '@renderer/utils/projectColor';
 import { Check, Clock3, Loader2, ShieldQuestion, Users, X } from 'lucide-react';
 
 import { MemberBadge } from '../MemberBadge';
-import { TeamDisplayLabel } from '../TeamDisplayLabel';
 import {
   countQueuedUserMessages,
   getPendingMemberDeliveryState,
 } from '../messages/messagesPanelLogic';
+import { TeamDisplayLabel } from '../TeamDisplayLabel';
 
 import type {
   DiscardQueuedUserMessagesResult,
