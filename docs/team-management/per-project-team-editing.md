@@ -26,7 +26,8 @@ A failed refresh of a copy does not fail the edit (the definition is already sav
 
 Two more rules keep the router the only writer of the definition:
 
-- External HTTP/MCP edits (`TeamPromptManagement`) refuse a per-project team and a project copy (`PROJECT_TEAM_DESKTOP_ONLY`) and reject a team whose kind cannot be determined; the desktop app is the only editor of such a team (a behaviour change, see the pull request).
+- External HTTP/MCP edits (`TeamPromptManagement`) follow the same rules through one port (`createTeamProjectDefinitionPort`, which builds the router's editor): a per-project team is classified, its stopped-gate runs inside the same logical-team operation lock, the ordinary write happens (metadata, lead instructions, members) and the stopped project copies are refreshed afterwards. A project that runs, launches or stops blocks the edit with `TEAM_ACTIVE` / `TEAM_PROVISIONING` (or `TEAM_PROJECT_CONTEXT_UNRECONCILED` for an interrupted start); a project copy is refused with `PROJECT_COPY_NOT_EDITABLE`; a team whose kind cannot be determined is rejected before any write (`TEAM_METADATA_UNREADABLE`). Trashing a per-project team stays in the app (`PROJECT_TEAM_DESKTOP_ONLY`): it needs the permanent-deletion lifecycle fence.
+- The saved lead instructions (`team.meta.json` `prompt`) belong to the definition too. They are edited in the same dialog (a field shown only for a per-project team), written through the same `updateConfig` router, projected onto stopped copies and repaired at launch. A prompt typed in the launch dialog is used for that start; the copy keeps it until the next projection resets it to the definition.
 - No launch or relaunch flow writes the definition: the dialogs are `rosterReadOnly` for a per-project team, `executeTeamRelaunch` requires the flag and skips the roster save when it is set, and "Change runtime" opens relaunch mode without a member settings draft.
 
 ## Not supported yet

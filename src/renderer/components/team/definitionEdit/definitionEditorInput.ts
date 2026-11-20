@@ -5,6 +5,8 @@ export interface DefinitionEditorInput {
   currentName: string;
   currentDescription: string;
   currentColor: string;
+  /** The saved lead instructions of the definition (the next launch uses them). */
+  currentLeadPrompt: string;
   currentMembers: ResolvedTeamMember[];
   leadMember: ResolvedTeamMember;
 }
@@ -47,6 +49,7 @@ export function buildDefinitionEditorInput(
     currentName: saved.displayName?.trim() || logicalTeamName,
     currentDescription: saved.description ?? '',
     currentColor: saved.color ?? '',
+    currentLeadPrompt: saved.prompt ?? '',
     currentMembers: saved.members.map(toEditorMember),
     leadMember: {
       ...toEditorMember({

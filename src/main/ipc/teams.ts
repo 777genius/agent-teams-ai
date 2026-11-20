@@ -214,6 +214,7 @@ import { createTeamWithProjectContext } from './teams/teamProjectContextCreate';
 import { buildTeamProgressReporter, withPreparedContextLaunch } from './teams/teamProjectContextLaunch';
 import { projectPublicProvisioningProgress, resolveProjectRunDiagnosticsTeam } from './teams/teamProjectContextProgressIdentity';
 import * as projectEdit from './teams/teamProjectDefinitionEdit';
+import { parseUpdateConfigRequest } from './teams/teamUpdateConfigRequest';
 import { discardQueuedUserMessages, listQueuedUserMessages } from './teams/teamQueuedUserMessages';
 import { createTeamSoftDeleteRequests } from './teams/teamSoftDeleteFlow';
 import { withTimeoutValue } from './teams/withTimeoutValue';
@@ -327,7 +328,6 @@ import type {
   TeamTask,
   TeamTaskStatus,
   TeamTaskWithKanban,
-  TeamUpdateConfigRequest,
   TeamViewSnapshot,
   TeamWorktreeGitStatus,
   ToolApprovalFileContent,
@@ -1493,29 +1493,15 @@ async function handleUpdateConfig(
   if (!validated.valid) {
     return { success: false, error: validated.error ?? 'Invalid teamName' };
   }
-  if (!updates || typeof updates !== 'object') {
-    return { success: false, error: 'Invalid updates object' };
-  }
-  const { name, description, color } = updates as TeamUpdateConfigRequest;
-  if (name !== undefined && typeof name !== 'string') {
-    return { success: false, error: 'name must be a string' };
-  }
-  if (description !== undefined && typeof description !== 'string') {
-    return { success: false, error: 'description must be a string' };
-  }
-  if (color !== undefined && typeof color !== 'string') {
-    return { success: false, error: 'color must be a string' };
-  }
+  const parsed = parseUpdateConfigRequest(updates);
+  if (!parsed.ok) return { success: false, error: parsed.error };
+  const { name } = parsed.value;
   return wrapTeamHandler('updateConfig', async () => {
     const tn = validated.value!;
     const teamDataService = getTeamDataService();
     const previousDisplayName = await teamDataService.getTeamDisplayName(tn).catch(() => tn);
     const requestedName = typeof name === 'string' ? name.trim() : '';
-    const result = await getTeamDataService().updateConfig(tn, {
-      name,
-      description,
-      color,
-    });
+    const result = await getTeamDataService().updateConfig(tn, parsed.value);
     if (!result) {
       throw new Error('Team config not found');
     }

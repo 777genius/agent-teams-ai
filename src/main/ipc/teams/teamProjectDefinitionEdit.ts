@@ -35,7 +35,7 @@ export interface DefinitionEditPorts {
   run: () => ProjectTeamRuntimePorts['run'];
 }
 
-function buildEditor(ports: DefinitionEditPorts): TeamProjectDefinitionEditor {
+export function buildEditor(ports: DefinitionEditPorts): TeamProjectDefinitionEditor {
   const data = ports.data();
   const runtime = ports.runtime();
   const run = ports.run();
@@ -109,7 +109,8 @@ export function createProjectDefinitionEditRouting(
   };
 }
 
-async function refreshProjectCopies(
+/** Best effort: the definition is already saved, and a launch repeats the projection. */
+export async function refreshProjectCopies(
   editor: TeamProjectDefinitionEditor,
   logicalName: string
 ): Promise<void> {

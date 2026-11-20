@@ -296,6 +296,7 @@
     "fields": {
       "colorOptional": "Цвет (необязательно)",
       "description": "Описание",
+      "leadPrompt": "Инструкции для лида (необязательно)",
       "name": "Имя"
     },
     "memberRestartWarning": "Сохранение перезапустит этого teammate, чтобы применить изменения роли, workflow, worktree isolation, provider, model, effort или MCP access.",
@@ -309,8 +310,10 @@
       "restartOne": "Сохранение перезапустит или перезапустит заново этого teammate, чтобы применить изменения роли, workflow, worktree isolation, provider, model, effort или MCP access: {{names}}.",
       "unsupportedMixedPrimaryMutation": "Live-изменения или удаления primary-owned teammates в mixed OpenCode teams требуют остановки и повторного запуска команды: {{names}}."
     },
+    "leadPromptHint": "Используются при следующем запуске команды в любом проекте. Промпт, введённый в диалоге запуска, применяется для этого запуска.",
     "placeholders": {
       "description": "Описание команды (необязательно)",
+      "leadPrompt": "Сохранённые инструкции для лида команды",
       "teamName": "Имя команды"
     },
     "teamLead": {

@@ -104,3 +104,38 @@ describe('updateTeamConfiguration for a per-project team definition', () => {
     expect(s.configReader.updateConfig).toHaveBeenCalledWith('native', { description: 'Text' });
   });
 });
+
+describe('updateTeamConfiguration with lead instructions', () => {
+  it('saves the prompt of a per-project definition trimmed, without creating a config', async () => {
+    const s = stores({ meta: { projectContextMode: 'per_project', displayName: 'Builders' } });
+    await updateTeamConfiguration('builders', { prompt: '  Be brief  ' }, s.all);
+    expect(s.saved()).toMatchObject({ projectContextMode: 'per_project', prompt: 'Be brief' });
+    expect(s.configReader.updateConfig).not.toHaveBeenCalled();
+  });
+
+  it('clears the saved prompt when it is emptied and keeps it when it is not part of the update', async () => {
+    const s = stores({
+      meta: { projectContextMode: 'per_project', displayName: 'Builders', prompt: 'Old' },
+    });
+    await updateTeamConfiguration('builders', { description: 'Text' }, s.all);
+    expect(s.saved()?.prompt).toBe('Old');
+    await updateTeamConfiguration('builders', { prompt: '   ' }, s.all);
+    expect(s.saved()?.prompt).toBeUndefined();
+  });
+
+  it('keeps the prompt in team.meta.json only for a team that has a config.json', async () => {
+    const s = stores({ config: { name: 'Native' }, meta: { displayName: 'Native' } });
+    await updateTeamConfiguration('native', { description: 'Text', prompt: 'Lead text' }, s.all);
+    expect(s.saved()?.prompt).toBe('Lead text');
+    expect(s.configReader.updateConfig).toHaveBeenCalledWith('native', { description: 'Text' });
+  });
+
+  it('refuses a prompt for a team without saved launch settings instead of dropping it', async () => {
+    const s = stores({ config: { name: 'Imported' }, meta: null });
+    await expect(
+      updateTeamConfiguration('imported', { prompt: 'Lead text' }, s.all)
+    ).rejects.toThrow('no saved launch settings');
+    expect(s.configReader.updateConfig).not.toHaveBeenCalled();
+    expect(s.teamMetaStore.updateMeta).not.toHaveBeenCalled();
+  });
+});

@@ -1,2 +1,7 @@
 export { TeamManagementError } from '../core/managementPolicy';
-export { TeamPromptManagement, type TeamPromptManagementPorts } from './TeamPromptManagement';
+export {
+  type ProjectDefinitionKind,
+  TeamPromptManagement,
+  type TeamProjectDefinitionPort,
+  type TeamPromptManagementPorts,
+} from './TeamPromptManagement';

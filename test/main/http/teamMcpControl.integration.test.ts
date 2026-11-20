@@ -10,8 +10,8 @@ import { TeamDataService } from '@main/services/team/TeamDataService';
 import { TeamMembersMetaStore } from '@main/services/team/TeamMembersMetaStore';
 import { TeamMetaStore } from '@main/services/team/TeamMetaStore';
 import { TeamProvisioningService } from '@main/services/team/TeamProvisioningService';
+import { createTeamProjectDefinitionPort } from '@main/teamProjectDefinitionPort';
 import { setAppDataBasePath, setClaudeBasePathOverride } from '@main/utils/pathDecoder';
-import { isProjectScopedTeam } from '@main/teamProjectScope';
 import Fastify, { type FastifyInstance } from 'fastify';
 import { mkdir, mkdtemp, readFile, rm, writeFile } from 'fs/promises';
 import { tmpdir } from 'os';
@@ -374,7 +374,13 @@ function enableManagement(services: HttpServices, teamDataService: TeamDataServi
     },
     getContext: () => Promise.resolve(context.snapshot()),
     getRuntimeState: (name) => services.teamApis!.runtime.getRuntimeState(name),
-    isProjectScoped: (name) => isProjectScopedTeam(name),
+    projectDefinition: createTeamProjectDefinitionPort({
+      data: () => teamDataService,
+      runtime: () => ({
+        getRuntimeState: (name) => services.teamApis!.runtime.getRuntimeState(name),
+      }),
+      run: () => lifecycle,
+    }),
     getSavedRequest: (name) => teamDataService.getSavedRequest(name),
     getTeamData: (name) => teamDataService.getTeamData(name),
     createTeamConfig: (request) => teamDataService.createTeamConfig(request),
@@ -1003,6 +1009,93 @@ describe('MCP team tools over the local REST control API', () => {
         code: 'ENOENT',
       });
       expect(events).toHaveLength(0);
+    } finally {
+      await app.close();
+      setAppDataBasePath(null);
+      setClaudeBasePathOverride(null);
+      TeamConfigReader.clearCacheForTests();
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  // A team with separate history per project is edited through its definition (no config.json),
+  // with the same revision/context contract as any team; trashing stays in the app.
+  it('edits the definition of a per-project team over HTTP and keeps trashing in the app', async () => {
+    const root = await mkdtemp(path.join(tmpdir(), 'TEST-team-management-per-project-'));
+    setClaudeBasePathOverride(root);
+    const app = Fastify();
+    const { services, teamDataService } = createServices(root);
+    const { context, events } = enableManagement(services, teamDataService, root);
+    registerTeamRoutes(app, services);
+    const teamName = 'per-project-team';
+    const directory = path.join(root, 'teams', teamName);
+    try {
+      await teamDataService.createTeamConfig({
+        projectContextMode: 'per_project',
+        teamName,
+        cwd: root,
+        members: [{ name: 'builder', role: 'Engineer' }],
+        prompt: 'Saved lead instructions',
+      });
+      const readMeta = async () =>
+        JSON.parse(await readFile(path.join(directory, 'team.meta.json'), 'utf8')) as Record<
+          string,
+          unknown
+        >;
+      const get = async () => {
+        const response = await app.inject({
+          method: 'GET',
+          url: `/api/teams/${teamName}?configuration=1`,
+        });
+        expect(response.statusCode).toBe(200);
+        return response.json<{ configurationRevision: string }>();
+      };
+      const update = (expectedRevision: string, edit: Record<string, unknown>) =>
+        app.inject({
+          method: 'POST',
+          url: `/api/teams/${teamName}/update`,
+          payload: { expectedContext: context.snapshot(), expectedRevision, ...edit },
+        });
+
+      let revision = (await get()).configurationRevision;
+      const metadata = await update(revision, { metadata: { description: 'Edited over HTTP' } });
+      expect(metadata.statusCode).toBe(200);
+      expect(await readMeta()).toMatchObject({
+        projectContextMode: 'per_project',
+        description: 'Edited over HTTP',
+      });
+
+      revision = metadata.json<{ configurationRevision: string }>().configurationRevision;
+      const instructions = await update(revision, { leadInstructions: 'New lead instructions' });
+      expect(instructions.statusCode).toBe(200);
+      expect(await readMeta()).toMatchObject({ prompt: 'New lead instructions' });
+
+      revision = instructions.json<{ configurationRevision: string }>().configurationRevision;
+      const roster = await update(revision, {
+        members: [{ name: 'builder', role: 'Senior engineer' }, { name: 'tester' }],
+      });
+      expect(roster.statusCode).toBe(200);
+      expect(await new TeamMembersMetaStore().getMembers(teamName)).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ name: 'builder', role: 'Senior engineer' }),
+          expect.objectContaining({ name: 'tester' }),
+        ])
+      );
+      // One definition: editing never creates a runtime config for the logical team.
+      await expect(readFile(path.join(directory, 'config.json'))).rejects.toMatchObject({
+        code: 'ENOENT',
+      });
+      expect(events.length).toBeGreaterThan(0);
+
+      revision = roster.json<{ configurationRevision: string }>().configurationRevision;
+      const trash = await app.inject({
+        method: 'POST',
+        url: `/api/teams/${teamName}/trash`,
+        payload: { expectedContext: context.snapshot(), expectedRevision: revision },
+      });
+      expect(trash.statusCode).toBe(409);
+      expect(trash.json<{ code: string }>().code).toBe('PROJECT_TEAM_DESKTOP_ONLY');
+      expect((await readMeta()).deletedAt).toBeUndefined();
     } finally {
       await app.close();
       setAppDataBasePath(null);

@@ -12,8 +12,18 @@ interface RuntimeStateReader {
   hasProvisioningRun(teamName: string): boolean;
 }
 
+/** Why a project context blocks an edit, for callers that map it to their own error codes. */
+export type TeamProjectContextConflictReason = 'unreconciled' | 'launching' | 'running';
+
 export class TeamProjectContextLaunchConflictError extends Error {
   readonly code = 'TEAM_PROJECT_CONTEXT_RUNNING';
+
+  constructor(
+    message: string,
+    readonly reason: TeamProjectContextConflictReason = 'running'
+  ) {
+    super(message);
+  }
 }
 
 export function isConfirmedStoppedTeamRuntime(state: TeamRuntimeState): boolean {
@@ -46,13 +56,15 @@ export class TeamProjectContextLaunchGate {
     if (all.some((context) => context.state !== 'ready')) {
       throw new TeamProjectContextLaunchConflictError(
         'A project of this team is still being prepared, or its last start was interrupted. '
-          + 'Open that project and launch the team there again so it can finish, then edit the team'
+          + 'Open that project and launch the team there again so it can finish, then edit the team',
+        'unreconciled'
       );
     }
     for (const name of [logicalTeamName, ...all.map((context) => context.executionTeamName)]) {
       if (this.runtime.hasProvisioningRun(name)) {
         throw new TeamProjectContextLaunchConflictError(
-          'This team is still launching or stopping in a project; wait for it before editing the team'
+          'This team is still launching or stopping in a project; wait for it before editing the team',
+          'launching'
         );
       }
       if (!isConfirmedStoppedTeamRuntime(await this.runtime.getRuntimeState(name))) {
