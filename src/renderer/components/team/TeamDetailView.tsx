@@ -114,6 +114,7 @@ import { buildChangeRuntimeLaunchState } from './definitionEdit/changeRuntimeLau
 import { getDefinitionEditAccess } from './definitionEdit/definitionEditAccess';
 import { refreshAfterDefinitionEdit, routeMemberActions } from './definitionEdit/definitionEditActions';
 import { TeamDefinitionEditDialog } from './definitionEdit/TeamDefinitionEditDialog';
+import { TeamScheduleSection } from './definitionEdit/TeamScheduleSection';
 import { AddMemberDialog } from './dialogs/AddMemberDialog';
 import { EditTeamDialog } from './dialogs/EditTeamDialog';
 import { LaunchTeamDialogLoadingFallback } from './dialogs/LaunchTeamDialogLoadingFallback';
@@ -191,7 +192,6 @@ import { MemberList } from './members/MemberList';
 import { MessagesPanel } from './messages/MessagesPanel';
 import { type ExpandedChatHost } from './messages/MessagesThreadPlacement';
 import { useExpandedTeamChat } from './messages/useExpandedTeamChat';
-import { ScheduleSection } from './schedule/ScheduleSection';
 import { TeamSidebarHost } from './sidebar/TeamSidebarHost';
 import { TeamSidebarPortalSource } from './sidebar/TeamSidebarPortalSource';
 import { TeamSidebarRail } from './sidebar/TeamSidebarRail';
@@ -3284,13 +3284,7 @@ export const TeamDetailView = memo(function TeamDetailView({
                   sectionId="schedules" variant="flat" title={t('schedule.title')}
                   icon={<Clock size={14} />} defaultOpen={false}
                 >
-                  {logicalTeamName ? (
-                    <p className="text-xs text-[var(--color-text-muted)]">
-                      {t('schedule.perProjectUnavailable')}
-                    </p>
-                  ) : (
-                    <ScheduleSection teamName={teamName} />
-                  )}
+                  <TeamScheduleSection teamName={teamName} perProject={Boolean(logicalTeamName)} />
                 </CollapsibleTeamSection>
               )}
               <LiveRuntimeStatusBridge

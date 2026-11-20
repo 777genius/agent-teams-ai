@@ -8,9 +8,9 @@ import { createLogger } from '@shared/utils/logger';
 
 import { createProjectContextRuntimeParts } from './teamProjectContextCreate';
 
+import type { RuntimeRosterMutationMember } from './runtimeRosterMutationMember';
 import type { ProjectTeamRuntimePorts } from './teamProjectContextCreate';
 import type { DefinitionEditTarget } from '@features/team-project-context/main';
-import type { RuntimeRosterMutationMember } from './runtimeRosterMutationMember';
 import type { TeamIpcHandlerApis } from '@main/services/team/contracts/TeamProvisioningApis';
 import type { TeamDataService } from '@main/services/team/TeamDataService';
 import type { TeamViewSnapshot } from '@shared/types';
