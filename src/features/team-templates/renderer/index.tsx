@@ -20,34 +20,15 @@ import {
   SelectValue,
 } from '@renderer/components/ui/select';
 import { useStore } from '@renderer/store';
-import {
-  CodeXml,
-  FlaskConical,
-  GraduationCap,
-  Headset,
-  type LucideIcon,
-  Megaphone,
-  PenTool,
-  TrendingUp,
-  Workflow,
-} from 'lucide-react';
 
 import { applyTeamTemplate, TEAM_TEMPLATES } from '../core';
+
+import { TEAM_TEMPLATE_ICONS } from './templateIcons';
 
 import type { TeamCreateConfigRequest } from '@shared/types';
 import type { TeamProviderId } from '@shared/types';
 
-/** Icon per catalogue entry; a new template without an entry simply shows no icon. */
-const TEMPLATE_ICONS: Readonly<Record<string, LucideIcon>> = {
-  'software-product': CodeXml,
-  marketing: Megaphone,
-  content: PenTool,
-  research: FlaskConical,
-  sales: TrendingUp,
-  'customer-support': Headset,
-  operations: Workflow,
-  learning: GraduationCap,
-};
+export { TEAM_TEMPLATE_ICONS } from './templateIcons';
 
 export const TeamTemplatePicker = ({
   onApply,
@@ -88,16 +69,14 @@ export const TeamTemplatePicker = ({
         </SelectTrigger>
         <SelectContent>
           {TEAM_TEMPLATES.map((template) => {
-            const Icon = TEMPLATE_ICONS[template.id];
+            const Icon = TEAM_TEMPLATE_ICONS[template.id];
             return (
               <SelectItem key={template.id} value={template.id}>
                 <span className="flex items-center gap-2">
-                  {Icon ? (
-                    <Icon
-                      className="size-4 shrink-0 text-[var(--color-text-muted)]"
-                      aria-hidden="true"
-                    />
-                  ) : null}
+                  <Icon
+                    className="size-4 shrink-0 text-[var(--color-text-muted)]"
+                    aria-hidden="true"
+                  />
                   {t(`templates.names.${template.id}`)}
                 </span>
               </SelectItem>

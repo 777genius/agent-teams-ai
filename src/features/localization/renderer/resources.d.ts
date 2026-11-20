@@ -3994,8 +3994,10 @@ export default interface Resources {
       "memberModelLockReason": "This teammate is synced with the lead model. Turn off sync to set a custom provider, model, or effort.",
       "onDisk": "On disk:",
       "optional": {
-        "launchSettingsDescription": "Prompt, safety, and CLI overrides live here when you need them.",
+        "historyOnlyDescription": "Choose how this team keeps its tasks and chats.",
+        "launchSettingsDescription": "Team history, prompt, safety, and CLI overrides live here when you need them.",
         "launchSettingsTitle": "Optional launch settings",
+        "settingsTitle": "Optional settings",
         "summary": {
           "anthropicLimitedContext": "Anthropic limited to 200K context",
           "autoApproveTools": "Auto-approve tools",
