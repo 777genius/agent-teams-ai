@@ -177,10 +177,14 @@
     },
     "optional": {
       "launchSettingsTitle": "Необов'язкові налаштування запуску",
-      "launchSettingsDescription": "Промпт, безпека та перевизначення CLI знаходяться тут, коли вони вам потрібні.",
+      "launchSettingsDescription": "Історія команди, промпт, безпека та перевизначення CLI знаходяться тут, коли вони вам потрібні.",
+      "settingsTitle": "Необов'язкові налаштування",
+      "historyOnlyDescription": "Виберіть, як команда зберігає задачі та розмови.",
       "teamDetailsTitle": "Необов'язкові деталі команди",
       "teamDetailsDescription": "Тримайте стандартний процес компактним і відкривайте це, лише коли хочете додатковий контекст чи власний колір.",
       "summary": {
+        "historyPerProject": "Окремо за проєктами",
+        "historyShared": "Спільна історія",
         "leadPrompt": "Промпт лідера",
         "autoApproveTools": "Автосхвалення tools",
         "fastMode": "Fast mode увімкнено",
