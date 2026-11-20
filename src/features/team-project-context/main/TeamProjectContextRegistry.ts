@@ -11,6 +11,8 @@ import { validateTeamName } from '@main/services/team/TeamIdentifierValidation';
 import { atomicWriteAsync } from '@main/utils/atomicWrite';
 import { getTasksBasePath, getTeamsBasePath } from '@main/utils/pathDecoder';
 
+import { realpathOfMissingPath } from './realpathOfMissingPath';
+
 const INDEX_FILE = 'project-contexts.json';
 const MAX_INDEX_BYTES = 256 * 1024;
 const MAX_PROJECT_CONTEXTS = 128;
@@ -79,8 +81,10 @@ async function canonicalProjectPath(value: string): Promise<string> {
 
 /**
  * Already persisted history must remain addressable after a worktree or
- * project folder is deleted. Only missing paths get a lexical lookup key;
- * new provisioning still requires an existing real directory.
+ * project folder is deleted. A missing path is keyed by the real path of its
+ * deepest existing ancestor plus the missing tail, which is how its key was
+ * stored while it still existed; new provisioning still requires an existing
+ * real directory.
  */
 async function historicalProjectPathKey(value: string): Promise<string> {
   if (typeof value !== 'string' || !path.isAbsolute(value)) {
@@ -95,8 +99,8 @@ async function historicalProjectPathKey(value: string): Promise<string> {
     ) {
       throw error;
     }
-    const normalized = path.normalize(value);
-    return process.platform === 'win32' ? normalized.toLowerCase() : normalized;
+    const resolved = await realpathOfMissingPath(value);
+    return process.platform === 'win32' ? path.normalize(resolved).toLowerCase() : resolved;
   }
 }
 
