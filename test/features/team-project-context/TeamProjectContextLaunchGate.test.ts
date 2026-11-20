@@ -145,6 +145,21 @@ describe('TeamProjectContextLaunchGate', () => {
         .rejects.toBeInstanceOf(TeamProjectContextLaunchConflictError);
     });
 
+    it('tells a stopped run that is still tracked apart from a run that is going', async () => {
+      const f = fixture();
+      // A dead bootstrap owner: stopped, but its run id is not released yet.
+      f.states.set('ptc-first', {
+        teamName: 'ptc-first',
+        isAlive: false,
+        runId: 'run-dead',
+        progress: { runId: 'run-dead', teamName: 'ptc-first', state: 'failed' } as TeamRuntimeState['progress'],
+      });
+      await expect(f.gate.assertAllContextsStopped('builders')).rejects.toThrow('not released yet');
+
+      f.states.set('ptc-first', { teamName: 'ptc-first', isAlive: true, runId: 'run', progress: null });
+      await expect(f.gate.assertAllContextsStopped('builders')).rejects.toThrow('stop it in every project');
+    });
+
     it('refuses while a project is launching or stopping', async () => {
       const f = fixture();
       f.runtime.hasProvisioningRun.mockImplementation((name: string) => name === 'ptc-first');

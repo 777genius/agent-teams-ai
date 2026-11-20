@@ -326,6 +326,20 @@ describe('HTTP routes for a per-project (logical) team', () => {
     }
   });
 
+  it('stop is a 409 when the launch state is unreadable: it is no proof that no host survived', async () => {
+    const f = await fixture();
+    const { app } = await createApp(f, [f.aliasA]);
+    liveRuntimeHosts.mockImplementation(async () => null);
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    try {
+      const response = await app.inject({ method: 'POST', url: '/api/teams/builders/stop' });
+      expect(response.statusCode).toBe(409);
+    } finally {
+      warn.mockRestore();
+      await app.close();
+    }
+  });
+
   it('stop is a 409 when recorded runtime hosts of a stopped copy survive', async () => {
     const f = await fixture();
     const { app } = await createApp(f, [f.aliasA]);
@@ -429,16 +443,21 @@ describe('HTTP routes for a per-project (logical) team', () => {
     }
   });
 
-  it('stops a pending (reserved) copy only after its owner is proven', async () => {
+  it('asks a pending (reserved) copy to stop only after its owner is proven, but never confirms it', async () => {
     const f = await fixture();
     const pending = await f.addCopy('builders', 'reserved');
     const { app, stopTeam, alive } = await createApp(f, [pending.alias]);
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
     try {
       const response = await app.inject({ method: 'POST', url: '/api/teams/builders/stop' });
-      expect(response.statusCode).toBe(200);
+      // The copy is down, but a launch is in progress there (no run registered yet): not a success.
+      expect(response.statusCode).toBe(409);
+      expect(response.json().error).toContain('a launch is in progress in this project');
+      expect(response.json().error).toContain(pending.alias);
       expect(stopTeam).toHaveBeenCalledWith(pending.alias);
       expect(alive.size).toBe(0);
     } finally {
+      warn.mockRestore();
       await app.close();
     }
   });

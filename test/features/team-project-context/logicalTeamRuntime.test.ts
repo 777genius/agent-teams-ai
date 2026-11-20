@@ -337,6 +337,18 @@ describe('stopLogicalContexts', () => {
     expect((await stop(group([ctx('ptc-a', '/p/a')]), ready)).complete).toBe(true);
   });
 
+  it('never confirms a context that was already reserved before the stop, even though it reads stopped', async () => {
+    // A launch is under way in that project: no run is registered yet, so it reads as down.
+    const p = ports(new Set());
+    const outcome = await stop(group([ctx('ptc-a', '/p/a'), ctx('ptc-b', '/p/b', 'reserved')]), p);
+    expect(outcome.contexts[1]).toMatchObject({ executionTeamName: 'ptc-b', pendingLaunch: true, stillAlive: true });
+    expect(outcome.contexts[0]?.pendingLaunch).toBeUndefined();
+    expect(outcome.complete).toBe(false);
+    // It is still asked to stop (a process may exist), after its owner was proven.
+    expect(p.stopContext.mock.calls.map(([alias]) => alias)).toEqual(['ptc-a', 'ptc-b']);
+    expect(() => assertLogicalStopComplete(outcome)).toThrow(/a launch is in progress in this project/);
+  });
+
   it('waits a bounded number of reads for a stop that is still settling, then reports the truth', async () => {
     // The stop call returned, but the tracked run id is cleared a moment later.
     let reads = 0;

@@ -187,6 +187,12 @@ export interface LogicalContextStopOutcome<Result> {
   stillAlive: boolean;
   /** A context that was not there when the stop started. It was verified, not stopped. */
   appearedDuringStop?: true;
+  /**
+   * The project is still `reserved`: a launch is in progress there (or was interrupted)
+   * and no run is registered yet, so the copy reads as down whatever it is about to do.
+   * Such a context is never confirmed stopped.
+   */
+  pendingLaunch?: true;
 }
 
 export interface LogicalStopOutcome<Result> {
@@ -269,14 +275,20 @@ export async function stopLogicalContexts<Result>(
   }
 
   let verificationError: string | undefined;
-  // A reservation that appeared while stopping has no run registered yet, so it
-  // reads as stopped even though a launch is under way: it is never a success.
-  const appearedReserved = new Set<string>();
+  // A `reserved` context (before the stop or appearing during it) has no run
+  // registered yet, so it reads as stopped even though a launch is under way (or was
+  // interrupted): it is never confirmed stopped, like the app, which refuses to
+  // confirm a stop while a context is pending.
+  const pending = new Set(
+    group.contexts
+      .filter((context) => context.state === 'reserved')
+      .map((context) => context.executionTeamName)
+  );
   try {
     const known = new Set([group.team, ...targets.map((target) => target.executionTeamName)]);
     for (const context of await ports.listContexts(group.team)) {
       if (known.has(context.executionTeamName)) continue;
-      if (context.state === 'reserved') appearedReserved.add(context.executionTeamName);
+      if (context.state === 'reserved') pending.add(context.executionTeamName);
       contexts.push({
         executionTeamName: context.executionTeamName,
         projectPath: context.projectPath,
@@ -289,8 +301,9 @@ export async function stopLogicalContexts<Result>(
   }
   await Promise.all(
     contexts.map(async (outcome) => {
-      if (appearedReserved.has(outcome.executionTeamName)) {
+      if (pending.has(outcome.executionTeamName)) {
         outcome.stillAlive = true;
+        outcome.pendingLaunch = true;
         return;
       }
       for (let attempt = 1; ; attempt += 1) {
@@ -324,9 +337,14 @@ export function assertLogicalStopComplete(outcome: LogicalStopOutcome<unknown>):
       (context) =>
         `${context.projectPath ?? 'own process'} (${context.executionTeamName}): ` +
         (context.error ??
-          (context.appearedDuringStop
-            ? 'started while the stop was running'
-            : 'still running after the stop'))
+          (context.pendingLaunch
+            ? 'a launch is in progress in this project (or was interrupted): the copy is still ' +
+              'pending, so it cannot be confirmed stopped. Wait for the launch, or open the team in ' +
+              'that project in the app to finish it, then stop it' +
+              (context.appearedDuringStop ? ' (it started while the stop was running)' : '')
+            : context.appearedDuringStop
+              ? 'started while the stop was running'
+              : 'still running after the stop'))
     );
   if (outcome.verificationError) {
     failed.push(`could not re-read the project contexts: ${outcome.verificationError}`);

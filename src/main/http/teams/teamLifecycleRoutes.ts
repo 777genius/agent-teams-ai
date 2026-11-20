@@ -106,10 +106,11 @@ export function registerTeamLifecycleRoutes(
       stopContext,
       // Down means no live process, no tracked run and no run in flight; a dead
       // run that only left a failed record counts as down (it is what the in-app
-      // Stop reports too). Recorded runtime hosts that survived the stop do not.
+      // Stop reports too). Recorded runtime hosts that survived the stop do not, and
+      // an unreadable launch state (null) is not proof that none survived.
       isStopped: async (name: string) =>
         isStoppedTeamRuntime(await api.getRuntimeState(name)) &&
-        ((await countLiveRecordedRuntimeHostsForTeam({ teamName: name })) ?? 0) === 0,
+        (await countLiveRecordedRuntimeHostsForTeam({ teamName: name })) === 0,
       listContexts: (team: string) => projectContext.registry.list(team),
     };
   }

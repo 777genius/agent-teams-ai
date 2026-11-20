@@ -14,7 +14,7 @@ The kind follows the team's **history mode**, never whether it happens to own a 
 - anything else → `native`. The name is the process. A shared team that kept a project-contexts index from an earlier per-project period lists those contexts in `retained`, because they may still run.
 - A project copy (`ptc-…`) is an ordinary native team. Every route keeps addressing it by its exact name, so the resolver does not scan the teams directory to classify it.
 
-`contextGroupOf` turns a target into the group a route works on: the team's name plus its contexts (a logical team, or a native team with retained contexts). For every group the team's **own name is read and, when it has a live process, stopped too**, like the in-app Stop does: a shared team always runs under its name, and a logical team should not have a process but is reported and stopped if it somehow has one. An idle own name is left alone.
+`contextGroupOf` turns a target into the group a route works on: the team's name plus its contexts (a logical team, or a native team with retained contexts). For every group the team's **own name is read and stopped too when it does not read as down** (a live process, a run in flight, or a run that is still tracked), like the in-app Stop does: a shared team runs under its name, and a logical team should not have a process but is reported and stopped if it somehow has one. A name that reads as down is left alone.
 
 It fails closed where being wrong is silent:
 
@@ -28,7 +28,7 @@ This closes gaps 2 and 3 of the [parity matrix](./per-project-parity-matrix.md) 
 
 | Consumer | Team with contexts (logical, or shared with retained contexts) | Project copy / native team |
 | --- | --- | --- |
-| `POST /api/teams/:team/stop` | stops every owned context and the own process when it is live, with the same escalated flow as the in-app Stop, then verifies each is down; 409 naming the project if one still runs | exact stop (unchanged) |
+| `POST /api/teams/:team/stop` | stops every owned context and the own name when it does not read as down, with the same escalated flow as the in-app Stop, then verifies each is down; 409 naming the project if one still runs or one is pending a launch | exact stop (unchanged) |
 | `POST /api/teams/:team/force-stop` | the same with the force-stop flow; answers `{ teamName, complete, contexts[] }`, the own process is listed with `projectPath: null` | exact (unchanged) |
 | `GET /api/teams/:team/runtime` | aggregated state (own process and contexts) plus `contexts[]` | exact (unchanged) |
 | `GET /api/teams/runtime/alive` | one added entry per logical team with a live context; a live shared team absorbs its contexts into its own entry | physical entry stays |
@@ -42,13 +42,13 @@ Everything is additive except the list. **The list change is not additive**: the
 - `runtime` of a team that owns contexts keeps `{ teamName, isAlive, runId, progress }` and adds `contexts[]`: `{ executionTeamName, projectPath, state, isAlive, runId, progress }`. `isAlive` is true when the own process or any context is; `runId` and `progress` are those of the live one, else of one that is **still provisioning**, else of one that keeps a settled progress. `team_stop`'s wait loop (which polls `runtime`) therefore waits for the real state.
 - `runtime/alive` keeps every physical entry. A project copy that cannot be tied to its logical team stays in the list with `projectContextUnresolved: true`. All copies are proven with one scan of the teams directory.
 - `stop` of a team with contexts answers 409 when something did not come down. The body is `{ error, code: 'LOGICAL_STOP_INCOMPLETE', outcome }`; `outcome.contexts[]` has one entry per context (and the own process) with `executionTeamName`, `projectPath` (`null` for the own process), `error?`, `stillAlive`, `appearedDuringStop?`. The stop of the others still runs: one failure does not abandon the rest. The refusal is also logged.
-- `force-stop` of a team with contexts answers 200 with what the cleanup did. `complete` is true only when every context verified as down **and** no confirmed stop left its cleanup incomplete (`cleanupOutcome`) **and** no recorded runtime host survived; `verificationError` appears when the contexts could not be re-read. A client must read `complete`, it is not an error status. After a regular stop that failed, the flow always reports its cleanup as incomplete, so there the verification of the runtime decides.
-- A second `stop` or `force-stop` of the same team that arrives while the first is still running **joins it** (same answer, no second stop of the copies). That is what makes a client retry after a timeout safe.
+- `force-stop` of a team with contexts answers 200 with what the cleanup did. `complete` is true only when every context verified as down **and** no confirmed stop left its cleanup incomplete (`cleanupOutcome`) **and** no recorded runtime host survived (an unreadable launch state is not proof that none did); `verificationError` appears when the contexts could not be re-read. A client must read `complete`, it is not an error status. After a regular stop that failed, the flow always reports its cleanup as incomplete, so there the verification of the runtime decides.
+- A second `stop` of a team that arrives while a `stop` of it is still running **joins it** (same answer, no second stop of the copies), and likewise a second `force-stop` joins a running `force-stop`. A `stop` and a `force-stop` of the same team do **not** join each other: they use separate keys and can run in parallel. The join is per app process and is what makes a client retry after a timeout safe.
 - A copy stays addressable by its exact name for stop, force-stop and runtime. Edits of a copy are refused elsewhere (see the editing page).
 
 ### MCP
 
-- `team_stop` accepts a per-project team: its MCP guard (`assertConfiguredOrDraftTeam`) accepts a configured team, a draft, or a `team.meta.json` of the per-project mode, because a logical team has no `config.json`. Anything else is still refused as an unknown team before any call. (`team_launch` uses the same guard; for a logical team it now reaches the API and gets its honest 409 that launching needs the desktop project-context API.)
+- `team_stop` accepts a per-project team: its MCP guard (`assertConfiguredOrDraftTeam`) accepts a configured team, a draft, or a `team.meta.json` of the per-project mode, because a logical team has no `config.json`. Anything else is still refused as an unknown team before any call. The widened guard also applies to `team_launch` (it uses the same function; for a logical team it now reaches the API and gets its honest 409 that launching needs the desktop project-context API) and to **draft** teams in `team_stop` (the HTTP stop then writes a stop marker into the draft's directory).
 - MCP has no tools for `runtime`, `runtime/alive` or `force-stop`; those are HTTP routes.
 - The MCP error text is the HTTP `error` message, which already names every project and copy that did not stop. The structured `code` and `outcome` are kept on the controller error (`error.code`, `error.outcome`) for programmatic callers and are what HTTP clients receive in the body.
 - `team_stop` posts the stop and then polls `runtime`. The server may spend up to 120 s per team escalating a stop that does not confirm, and stops the copies of a logical team one after another, so the controller gives the stop request 5 minutes (`stopRequestTimeoutMs` overrides it) instead of the 10 s default. When it still times out it does **not** ask another address to stop the team: the first server may still be working. A retry to the same server joins the stop in progress (above).
@@ -66,12 +66,24 @@ A stop only counts when each context is **down**, judged by one shared predicate
 | progress `failed` with retained secondary lanes | not down | not down |
 | progress `ready` / `disconnected`, or any run still in flight (a live bootstrap owner) | not down | not down |
 
-A context that does not read as down is re-read a bounded number of times (8 reads, 500 ms apart) before the stop is reported incomplete, because a run id can be cleared a moment after the stop call returns. Recorded runtime hosts that are still alive also keep a context from reading as down.
+A context that does not read as down is re-read a bounded number of times (8 reads, 500 ms apart) before the stop is reported incomplete, because a run id can be cleared a moment after the stop call returns. Recorded runtime hosts that are still alive, or a launch state that cannot be read, also keep a context from reading as down.
 
-After all contexts were asked to stop, the contexts are listed again. A copy that appeared meanwhile is reported as `appearedDuringStop`. A `reserved` one always makes the stop incomplete: its run is not registered yet, so it reads as down while a launch is under way. A ready one must verify as down.
+A context in state `reserved` is **never** confirmed stopped, whether it existed before the stop or appeared during it (`pendingLaunch` in the outcome): a launch is in progress there (or was interrupted), no run is registered yet, so it reads as down while the copy is about to start. The app is fail-closed the same way. Such a copy is still asked to stop (after its owner is proven), and the stop answers 409 naming the project and the copy with the reason `a launch is in progress in this project`; the way out is to wait for the launch, or to open the team in that project in the app to finish it. After all contexts were asked to stop, the contexts are listed again: a copy that appeared meanwhile is reported as `appearedDuringStop`, and a ready one must verify as down.
 
 - A pending (`reserved`) context may already host a process. It is only stopped after its owner marker is verified, like the in-app stop; if that fails nothing is stopped and the request answers 409.
 - The stop takes no logical-team lock (the in-app stop does not either): holding it for the whole escalation budget would block launches. The verification is therefore a check of the state at that moment, not a guarantee: a launch that starts after it is outside the contract.
+
+## Stop, then edit
+
+A 200 from `team_stop` means every context read as down, which includes a dead run that is still tracked (its run id is released only by the app). Editing is stricter: `team_update` / HTTP update need every context *confirmed* stopped, so right after such a stop it can still answer `TEAM_ACTIVE`. The message then says `A run of this team in a project has stopped but is not released yet. Open the team in that project in the app so it is reconciled, then edit the team`. Stopping again changes nothing; this cannot be released over HTTP/MCP, so a headless agent should report it to the user instead of retrying. (A run that is really going keeps the message `stop it in every project`.)
+
+## Not covered
+
+- A step of the stop flow that hangs without a timeout (`beginStop`, `markStopped`, the lead-tree reap) would leave its in-flight join entry in place, so later stops of that team would join the hung one until the app restarts.
+- `runtime_already_down` right after a stop: the run id can be cleared a moment later, so the verification waits about 3.5 s (8 reads). A logical stop can answer 409 where a stop of a native team answers 200; that is the safe direction.
+- The bootstrap owner check in `TeamBootstrapStateReader` can mistake a reused pid for a live owner. It is old behaviour that is now visible over HTTP/MCP as a context that does not read as down.
+- In the organization inspector, lookups keyed by task id alone (the kanban state) are not owner-scoped; cards and actions are. Legacy numeric ids repeat across copies.
+- There is no integration test against a real runtime or a killed CLI; the route tests use a fake runtime over a real temp-dir registry.
 
 ## Known limits
 

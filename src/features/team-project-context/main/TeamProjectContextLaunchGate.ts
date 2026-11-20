@@ -87,9 +87,14 @@ export class TeamProjectContextLaunchGate {
           'launching'
         );
       }
-      if (!isConfirmedStoppedTeamRuntime(await this.runtime.getRuntimeState(name))) {
+      const state = await this.runtime.getRuntimeState(name);
+      if (!isConfirmedStoppedTeamRuntime(state)) {
         throw new TeamProjectContextLaunchConflictError(
-          'This team is running in a project; stop it in every project before editing the team'
+          isStoppedTeamRuntime(state)
+            // A stopped run that is still tracked: stopping again changes nothing.
+            ? 'A run of this team in a project has stopped but is not released yet. '
+              + 'Open the team in that project in the app so it is reconciled, then edit the team'
+            : 'This team is running in a project; stop it in every project before editing the team'
         );
       }
     }
