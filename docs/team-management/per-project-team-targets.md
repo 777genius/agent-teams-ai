@@ -48,7 +48,7 @@ Everything is additive except the list. **The list change is not additive**: the
 
 ### MCP
 
-- `team_stop` accepts a per-project team: its MCP guard (`assertConfiguredOrDraftTeam`) accepts a configured team, a draft, or a `team.meta.json` of the per-project mode, because a logical team has no `config.json`. Anything else is still refused as an unknown team before any call. The widened guard also applies to `team_launch` (it uses the same function; for a logical team it now reaches the API and gets its honest 409 that launching needs the desktop project-context API) and to **draft** teams in `team_stop` (the HTTP stop then writes a stop marker into the draft's directory).
+- `team_stop` accepts a per-project team: its MCP guard (`assertConfiguredOrDraftTeam`) accepts a configured team, a draft, or a `team.meta.json` of the per-project mode, because a logical team has no `config.json`. Anything else is still refused as an unknown team before any call. The widened guard also applies to `team_launch` (it uses the same function; a logical team is launched in a project, see [below](#create-and-launch-over-http-and-mcp)) and to **draft** teams in `team_stop` (the HTTP stop then writes a stop marker into the draft's directory).
 - MCP has no tools for `runtime`, `runtime/alive` or `force-stop`; those are HTTP routes.
 - The MCP error text is the HTTP `error` message, which already names every project and copy that did not stop. The structured `code` and `outcome` are kept on the controller error (`error.code`, `error.outcome`) for programmatic callers and are what HTTP clients receive in the body.
 - `team_stop` posts the stop and then polls `runtime`. The server may spend up to 120 s per team escalating a stop that does not confirm, and stops the copies of a logical team one after another, so the controller gives the stop request 5 minutes (`stopRequestTimeoutMs` overrides it) instead of the 10 s default. When it still times out it does **not** ask another address to stop the team: the first server may still be working. A retry to the same server joins the stop in progress (above).
@@ -94,4 +94,44 @@ A 200 from `team_stop` means every context read as down, which includes a dead r
 ## What stays out of this change
 
 - The cross-team `from` attribute (`team.member`) and every `teamName: "..."` in an agent prompt are routing identities and keep the physical name; only labels that are purely cosmetic could show the display name, and the member prompts already print both (`team "<display>" (<physical>)`).
-- Schedules, the lead prompt, MCP/HTTP update and trash, launch-settings drift, cross-team delivery, live edit and hosted web are separate gaps (see the [parity matrix](./per-project-parity-matrix.md)).
+- Schedules, the lead prompt, MCP/HTTP update and trash, launch-settings drift, cross-team delivery and live edit are separate gaps (see the [parity matrix](./per-project-parity-matrix.md)). Create and launch over HTTP/MCP are described below.
+
+## Create and launch over HTTP and MCP
+
+### Create
+
+`POST /api/teams` and MCP `team_create` take `projectContextMode` (`per_project` or `shared`). Without it the team gets the default of the create form in the app, `per_project` (`DEFAULT_NEW_TEAM_PROJECT_CONTEXT_MODE`); the answer echoes the mode. A per-project team is created as a draft of the logical team (`team.meta.json`, `members.meta.json`, no `config.json`, no copy yet), the same files the app writes. `cwd` is optional and stays the folder shown by default; it does not create a project copy.
+
+This is **not additive**: before, HTTP always created `shared` (and refused an explicit `per_project`). A client that needs one history for every folder must send `projectContextMode: "shared"`. Trashing a per-project team over HTTP/MCP still answers `PROJECT_TEAM_DESKTOP_ONLY`.
+
+### Launch
+
+`POST /api/teams/:team/launch` and MCP `team_launch` of a logical team launch it **in the project `cwd`**, through the use case the app uses for its launch dialog, `launchInProjectContext` (`src/main/ipc/teams/teamProjectContextLaunch.ts`; the desktop IPC calls it through `withPreparedContextLaunch`):
+
+1. under the configuration lock of the team (the same lock as the app, held by the management feature),
+2. the explicit effort and fast mode are checked against the provider the team has saved,
+3. the copy of that project is reserved or reused, the launch gate refuses while the team runs or launches in another project, and a new copy is materialized from the definition,
+4. the copy is launched by the same draft/launch code as an ordinary team: its first launch creates it, later launches reuse it with its tasks and chats,
+5. readiness of the copy confirms the project context, and the run is remembered under the team, so `GET /api/teams/provisioning/:runId` (what `team_launch` polls) reports the team's name, not the copy's.
+
+An ordinary team, or a draft of one, launches exactly as before.
+
+Refusals of the project context carry their reason in `code`, next to `error`.
+
+| Answer | When |
+| --- | --- |
+| 200 with the run of the copy | launched (or already launching or running in that project) |
+| 400 | no `cwd`, `cwd` not an existing absolute folder, an invalid field or effort, or a `teamName` in the body (a per-project team cannot be renamed at launch) |
+| 409 `TEAM_PROJECT_CONTEXT_RUNNING` | the team runs, launches or has an unreconciled copy in another project |
+| 409 `TEAM_PROJECT_CONTEXT_UNAVAILABLE` | the contexts index cannot be used (being trashed or deleted, damaged, too many projects) |
+| 409 `TEAM_METADATA_UNREADABLE` | the team metadata cannot be read: the kind of the team is unknown, nothing is launched |
+| 409 `PROJECT_COPY_NOT_LAUNCHABLE` | the name is a project copy (`ptc-` followed by 24 hex characters, refused by its shape even when its owner cannot be proven) |
+| 409, `error` starting with `TEAM_TRASHED` | the team is in the trash (as for any team) |
+
+Everything that can be checked without the copy is checked **before anything is reserved**: a reservation left behind by a refused request would block the team in every other project until it is launched in this one. A launch that fails after the copy was reserved (a provider or runtime error of the copy) leaves it like a failed launch in the app does: launching the team in that project again completes it.
+
+### Not verified
+
+- Real agent execution after an HTTP/MCP launch: the Electron E2E (`verifyHttpCreateAndLaunch` in `scripts/e2e/project-scoped-team-history-desktop.ts`) launches against a runtime that denies agents, so it proves the files, the index and the refusals, not a running team.
+- The hosted web client was not driven; it uses the same routes.
+

@@ -32,6 +32,7 @@ function createHttpServices(
       provisioningStatus: {
         getProvisioningStatus: unexpectedTeamApiCall,
       },
+      provisioningRun: { hasProvisioningRun: unexpectedTeamApiCall },
       taskActivity: {
         repairStaleTaskActivityIntervalsBeforeSnapshot: unexpectedTeamApiCall,
       },

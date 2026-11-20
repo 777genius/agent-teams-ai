@@ -3,6 +3,7 @@ import {
   TeamProjectContextLaunchConflictError,
 } from '@features/team-project-context/main';
 import { TeamMetaStore } from '@main/services/team/TeamMetaStore';
+import { TeamRequestValidationError } from '@main/services/team/TeamRequestValidation';
 
 import { parseOptionalTeamEffort, parseOptionalTeamFastMode } from '../teamIpcRequestParsers';
 
@@ -114,29 +115,53 @@ export function buildTeamProgressReporter(
   };
 }
 
-/** Resolve only when needed, preserving the existing native launch path. */
-export async function withPreparedContextLaunch(
+/** How a transport launches the chosen project copy through its own native launch path. */
+export interface ProjectCopyLauncher<T> {
+  /** Launch `request` (the copy, with the canonical project path); progress goes through `mapper`. */
+  invoke(request: TeamLaunchRequest, mapper?: ProjectContextProgressMapper): Promise<T>;
+  /** The run the launch started, or null when it did not start one. */
+  started(result: T): TeamLaunchResponse | null;
+}
+
+/**
+ * The one launch path of a team with separate history per project, for every
+ * transport (the desktop IPC, HTTP and MCP): the logical team is launched as
+ * the project copy of `request.cwd`, through the same override validation,
+ * reservation, launch gate and materializer. Any other team returns null and
+ * the caller launches it natively. The caller holds the logical-team
+ * configuration lock.
+ */
+export async function launchInProjectContext<T>(
+  request: TeamLaunchRequest,
+  ports: ProjectTeamRuntimePorts,
+  launcher: ProjectCopyLauncher<T>
+): Promise<T | null> {
+  // Validate explicit overrides BEFORE reserving native files. The native
+  // launch path still validates effective persisted settings before spawn.
+  // A missing provider override inherits the saved provider; Codex and
+  // Anthropic support levels beyond the legacy default set.
+  const saved = request.providerId ? null : await ports.data.getSavedRequest(request.teamName);
+  const effort = parseOptionalTeamEffort(request.effort, request.providerId ?? saved?.providerId);
+  if (!effort.valid) throw new TeamRequestValidationError(effort.error);
+  const fastMode = parseOptionalTeamFastMode(request.fastMode);
+  if (!fastMode.valid) throw new TeamRequestValidationError(fastMode.error);
+  const selected = await prepareTeamContextLaunch(request, ports);
+  if (selected.request.teamName === request.teamName) return null;
+  const result = await launcher.invoke(selected.request, selected.mapProgress);
+  const run = launcher.started(result);
+  if (run) rememberProjectRunIdentity(run.runId, request.teamName, selected.request.teamName);
+  return result;
+}
+
+/** The desktop IPC adapter: resolve only when needed, preserving the native launch path. */
+export function withPreparedContextLaunch(
   request: TeamLaunchRequest,
   ports: ProjectTeamRuntimePorts,
   invoke: (request: TeamLaunchRequest, mapper?: ProjectContextProgressMapper) =>
     Promise<IpcResult<TeamLaunchResponse>>
 ): Promise<IpcResult<TeamLaunchResponse> | null> {
-  // Validate explicit overrides BEFORE reserving native files. The original
-  // IPC handler still validates effective persisted settings before spawn.
-  // A missing provider override inherits the saved provider; Codex and
-  // Anthropic support levels beyond the legacy default set.
-  const saved = request.providerId ? null : await ports.data.getSavedRequest(request.teamName);
-  const effort = parseOptionalTeamEffort(request.effort, request.providerId ?? saved?.providerId);
-  if (!effort.valid) throw new Error(effort.error);
-  const fastMode = parseOptionalTeamFastMode(request.fastMode);
-  if (!fastMode.valid) throw new Error(fastMode.error);
-  const selected = await prepareTeamContextLaunch(request, ports);
-  if (selected.request.teamName === request.teamName) return null;
-  const result = await invoke(selected.request, selected.mapProgress);
-  if (result.success && result.data) {
-    rememberProjectRunIdentity(
-      result.data.runId, request.teamName, selected.request.teamName
-    );
-  }
-  return result;
+  return launchInProjectContext(request, ports, {
+    invoke,
+    started: (result) => (result.success ? (result.data ?? null) : null),
+  });
 }

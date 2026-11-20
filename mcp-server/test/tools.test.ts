@@ -392,6 +392,8 @@ describe('agent-teams-mcp tools', () => {
     expect(parameters?.safeParse({ teamName: 'alpha', members: 'builder' }).success).toBe(false);
     expect(parameters?.safeParse({ teamName: 'alpha', members: null }).success).toBe(false);
     expect(parameters?.safeParse({ teamName: 'alpha', members: [{}] }).success).toBe(false);
+    expect(parameters?.safeParse({ teamName: 'alpha', projectContextMode: 'shared' }).success).toBe(true);
+    expect(parameters?.safeParse({ teamName: 'alpha', projectContextMode: 'project' }).success).toBe(false);
   });
 
   it('launches and stops teams through the runtime MCP tools', async () => {
@@ -642,6 +644,7 @@ describe('agent-teams-mcp tools', () => {
             },
           ],
           cwd: '/tmp/project',
+          projectContextMode: 'per_project',
           providerId: 'codex',
           model: 'gpt-5.2',
           effort: 'high',
@@ -686,6 +689,7 @@ describe('agent-teams-mcp tools', () => {
               },
             ],
             cwd: '/tmp/project',
+            projectContextMode: 'per_project',
             providerId: 'codex',
             model: 'gpt-5.2',
             effort: 'high',

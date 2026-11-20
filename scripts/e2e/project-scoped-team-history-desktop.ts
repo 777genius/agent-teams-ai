@@ -6,7 +6,9 @@
 import assert from 'node:assert/strict';
 import { spawn, spawnSync, type ChildProcess } from 'node:child_process';
 import { createHash, randomUUID } from 'node:crypto';
+import { once } from 'node:events';
 import { chmod, mkdir, mkdtemp, readdir, readFile, realpath, rm, writeFile } from 'node:fs/promises';
+import { createServer } from 'node:net';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -115,8 +117,14 @@ async function fixture() {
   const rootTeams = path.join(claudeRoot, 'teams');
   const rootTasks = path.join(claudeRoot, 'tasks');
   const logicalDir = path.join(rootTeams, logical);
+  // The HTTP control API is started by the HTTP section only, on a port of its own.
+  const probe = createServer().listen(0, '127.0.0.1');
+  await once(probe, 'listening');
+  const controlPort = (probe.address() as { port: number }).port;
+  await new Promise((resolve) => probe.close(resolve));
   await json(path.join(claudeRoot, 'agent-teams-config.json'), {
     general: { appLocale: 'en', agentLanguage: 'en', theme: 'dark', defaultTab: 'teams' },
+    httpServer: { enabled: false, port: controlPort, host: '127.0.0.1' },
   });
   await json(path.join(logicalDir, 'team.meta.json'), {
     version: 1, createdAt: joinedAt, cwd: projectA, displayName: 'History fixture',
@@ -858,6 +866,115 @@ async function verifySchedules(f: Fixture) {
   return recorded;
 }
 
+/**
+ * Hosted web and MCP use the HTTP control API of the app: create a team there without a history
+ * mode, launch it in a project it never ran in, and check that the copy is made by the launch of
+ * the app (index, copy files, progress named after the team) and that refusals change nothing.
+ */
+async function verifyHttpCreateAndLaunch(f: Fixture) {
+  assert(cdp);
+  const status = await cdp.evaluate('(async () => window.electronAPI.httpServer.start())()') as {
+    running: boolean; port: number;
+  };
+  assert(status.running, 'The HTTP control API must start: ' + JSON.stringify(status));
+  const base = 'http://127.0.0.1:' + status.port;
+  const call = async (method: 'GET' | 'POST', url: string, body?: unknown) => {
+    const response = await fetch(base + url, {
+      method,
+      headers: body === undefined ? undefined : { 'content-type': 'application/json' },
+      body: body === undefined ? undefined : JSON.stringify(body),
+    });
+    return {
+      status: response.status,
+      body: await response.json().catch(() => null) as Record<string, unknown> | null,
+    };
+  };
+  const team = 'http-' + f.logical.slice('history-'.length);
+  const teamDir = path.join(f.rootTeams, team);
+
+  // 1. No mode in the request: the default of the create form of the app.
+  const created = await call('POST', '/api/teams', {
+    teamName: team, displayName: 'HTTP per-project team', cwd: f.projectA,
+    providerId: 'opencode', model: 'test-model',
+    members: [{ name: 'alice', role: 'Developer', providerId: 'opencode', model: 'test-model' }],
+  });
+  assert.equal(created.status, 201, 'HTTP create: ' + JSON.stringify(created));
+  assert.equal(created.body?.projectContextMode, 'per_project');
+  assert.equal((await readJsonFile(path.join(teamDir, 'team.meta.json'))).projectContextMode, 'per_project');
+  await assert.rejects(readFile(path.join(teamDir, 'config.json')), { code: 'ENOENT' });
+
+  // 2. Launch it in a project it never ran in: one copy, made from the definition, in that folder.
+  const launched = await call('POST', '/api/teams/' + team + '/launch', { cwd: f.projectC });
+  const index = await waitForJson<{ contexts: { projectPath: string; executionTeamName: string }[] }>(
+    path.join(teamDir, 'project-contexts.json'),
+    (value) => value.contexts?.length === 1,
+    'the project copy of the HTTP launch is registered'
+  );
+  const copy = index.contexts[0];
+  assert.equal(copy.projectPath, f.projectC, 'The copy must belong to the project of the launch');
+  assert.match(copy.executionTeamName, /^ptc-[a-f0-9]{24}$/);
+  const copyMeta = await readJsonFile(path.join(f.rootTeams, copy.executionTeamName, 'team.meta.json'));
+  assert.equal(copyMeta.projectContextMode, 'shared', 'A copy is an ordinary team');
+  assert.equal(copyMeta.cwd, f.projectC);
+  await assert.rejects(readFile(path.join(teamDir, 'config.json')), { code: 'ENOENT' },
+    'The team itself must never become a runnable team');
+  // The fixture runtime denies every agent: the run is accepted and then fails, or is refused.
+  let finalState: unknown = null;
+  if (launched.status === 200) {
+    const runId = String(launched.body?.runId);
+    const deadline = Date.now() + 90_000;
+    for (;;) {
+      const progress = await call('GET', '/api/teams/provisioning/' + encodeURIComponent(runId));
+      assert.equal(progress.status, 200, 'Provisioning status: ' + JSON.stringify(progress));
+      assert.equal(progress.body?.teamName, team, 'The progress must name the team, not its copy');
+      finalState = progress.body?.state;
+      if (['ready', 'failed', 'cancelled', 'disconnected'].includes(String(finalState))) break;
+      assert(Date.now() < deadline, 'The HTTP launch did not settle: ' + JSON.stringify(progress.body));
+      await pause(500);
+    }
+  } else {
+    assert(launched.status >= 400 && launched.status < 500,
+      'A launch the fixture runtime denies must be refused, not crash: ' + JSON.stringify(launched));
+  }
+  await cdp.screenshot(path.join(f.screenshots, 'http-launch.png'));
+
+  // 3. The app and HTTP list the team once; its copy is folded away.
+  const listed = await cdp.evaluate(
+    '(async () => (await window.electronAPI.teams.list()).map((t) => t.teamName))()'
+  ) as string[];
+  assert(listed.includes(team) && !listed.includes(copy.executionTeamName),
+    'The app must list the team, not its copy: ' + JSON.stringify(listed.filter((n) => n.includes(team) || n.startsWith('ptc-'))));
+  const httpList = await call('GET', '/api/teams');
+  const httpNames = (httpList.body as unknown as { teamName: string }[]).map((t) => t.teamName);
+  assert(httpNames.includes(team) && !httpNames.includes(copy.executionTeamName));
+
+  // 4. Refusals change nothing: a copy by its own name, a folder that does not exist, and a
+  // second project while the first copy is not reconciled (the failed run above).
+  const byCopyName = await call('POST', '/api/teams/' + f.nativeA + '/launch', { cwd: f.projectA });
+  assert.equal(byCopyName.status, 409, 'Copy by name: ' + JSON.stringify(byCopyName));
+  assert.equal(byCopyName.body?.code, 'PROJECT_COPY_NOT_LAUNCHABLE');
+  const fixtureIndex = await readFile(f.indexPath, 'utf8');
+  const missing = await call('POST', '/api/teams/' + f.logical + '/launch', {
+    cwd: path.join(f.root, 'no-such-project'),
+  });
+  assert.equal(missing.status, 400, 'Missing folder: ' + JSON.stringify(missing));
+  assert.equal(await readFile(f.indexPath, 'utf8'), fixtureIndex,
+    'A refused launch must not touch the contexts index');
+  if (finalState !== 'ready') {
+    const elsewhere = await call('POST', '/api/teams/' + team + '/launch', { cwd: f.projectA });
+    assert.equal(elsewhere.status, 409, 'Second project: ' + JSON.stringify(elsewhere));
+    assert.equal(elsewhere.body?.code, 'TEAM_PROJECT_CONTEXT_RUNNING');
+    const after = await readJsonFile<{ contexts: unknown[] }>(path.join(teamDir, 'project-contexts.json'));
+    assert.equal(after.contexts.length, 1, 'A refused launch must release its reservation');
+  }
+  const shared = await call('POST', '/api/teams', {
+    teamName: team + '-shared', cwd: f.projectA, projectContextMode: 'shared', members: [],
+  });
+  assert.equal(shared.status, 201, 'Explicit shared create: ' + JSON.stringify(shared));
+  assert.equal(shared.body?.projectContextMode, 'shared');
+  return { launchStatus: launched.status, finalState, copy: copy.executionTeamName };
+}
+
 async function run() {
   const f = await fixture();
   let success = false;
@@ -918,11 +1035,19 @@ async function run() {
     );
     assert.equal(unexpected.length, 0,
       'Unexpected native model/provider lifecycle call: ' + JSON.stringify(commandHeads));
+    const auditBeforeHttp = fullAudit.length;
+    const httpLaunch = await verifyHttpCreateAndLaunch(f);
+    const afterHttp = (await readAudit()).slice(auditBeforeHttp);
+    assert(afterHttp.filter(isLaunch).length <= 1,
+      'The HTTP launch may reach the runtime only once, for its one project copy');
+    assert.equal(afterHttp.filter((args) => !isLaunch(args) && !isReadOnly(args)).length, 0,
+      'Unexpected runtime calls after the HTTP launch');
     success = true;
     console.log(JSON.stringify({
-      ok: true, scope: 'real Electron / typed preload / main / native task + inbox / A-B-A / renderer reload / edit the per-project team definition / schedules of a per-project team',
+      ok: true, scope: 'real Electron / typed preload / main / native task + inbox / A-B-A / renderer reload / edit the per-project team definition / schedules of a per-project team / HTTP create and launch of a per-project team',
       team: f.logical, sandbox: f.root, screenshotDir: f.screenshots,
       providerExecution: false, scheduledRun: { status: scheduledRun.status, summary: scheduledRun.summary },
+      httpLaunch,
     }, null, 2));
   } catch (error) {
     await cdp?.screenshot(path.join(f.screenshots, 'failure.png')).catch(() => undefined);

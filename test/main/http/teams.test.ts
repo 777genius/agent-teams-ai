@@ -129,6 +129,7 @@ describe('HTTP team runtime routes', () => {
     const teamApis = {
       provisioningStart: teamProvisioningStartApi,
       provisioningStatus: teamProvisioningStatusApi,
+      provisioningRun: { hasProvisioningRun: vi.fn(() => false) },
       taskActivity: teamTaskActivityRepairApi,
       runtime: teamRuntimeApi,
       runtimeControl: teamRuntimeControlApi,
@@ -252,12 +253,13 @@ describe('HTTP team runtime routes', () => {
         },
       });
       expect(createResponse.statusCode).toBe(201);
+      // No mode in the request: the same default as the create form of the app.
       expect(createResponse.json()).toEqual({
-        teamName: 'new-team', draft: true, runtimeSelection: 'selected',
+        teamName: 'new-team', draft: true, projectContextMode: 'per_project', runtimeSelection: 'selected',
       });
       expect(createTeamConfig).toHaveBeenCalledWith({
         teamName: 'new-team',
-        projectContextMode: 'shared',
+        projectContextMode: 'per_project',
         displayName: 'New Team',
         members: [
           {
@@ -286,22 +288,24 @@ describe('HTTP team runtime routes', () => {
     }
   });
 
-  it('rejects explicit project-isolated HTTP create before persisting an unlaunchable draft', async () => {
+  it('keeps an explicitly chosen shared history mode on HTTP create', async () => {
     const { app, createTeamConfig } = await createApp();
     try {
       const response = await app.inject({
         method: 'POST',
         url: '/api/teams',
         payload: {
-          teamName: 'http-scoped-team',
+          teamName: 'http-shared-team',
           cwd: '/Users/test/project',
           members: [],
-          projectContextMode: 'per_project',
+          projectContextMode: 'shared',
         },
       });
-      expect(response.statusCode).toBe(400);
-      expect(response.json().error).toContain('require Electron');
-      expect(createTeamConfig).not.toHaveBeenCalled();
+      expect(response.statusCode).toBe(201);
+      expect(response.json()).toMatchObject({ projectContextMode: 'shared' });
+      expect(createTeamConfig).toHaveBeenCalledWith(
+        expect.objectContaining({ teamName: 'http-shared-team', projectContextMode: 'shared' })
+      );
     } finally {
       await app.close();
     }
@@ -577,7 +581,7 @@ describe('HTTP team runtime routes', () => {
       expect(response.statusCode).toBe(201);
       expect(createTeamConfig).toHaveBeenCalledWith({
         teamName: 'default-anthropic-effort-team',
-        projectContextMode: 'shared',
+        projectContextMode: 'per_project',
         members: [{ name: 'builder' }],
         cwd: '/Users/test/project',
         effort: 'max',
@@ -606,7 +610,7 @@ describe('HTTP team runtime routes', () => {
       expect(response.statusCode).toBe(201);
       expect(createTeamConfig).toHaveBeenCalledWith({
         teamName: 'inherited-backend-team',
-        projectContextMode: 'shared',
+        projectContextMode: 'per_project',
         members: [{ name: 'builder', providerBackendId: 'codex-native', effort: 'xhigh' }],
         cwd: '/Users/test/project',
         providerId: 'codex',

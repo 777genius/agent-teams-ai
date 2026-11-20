@@ -1,27 +1,22 @@
 import { readNativeWorkSyncCurrentRuntimeInstanceId } from '@features/member-work-sync/main';
-import { TeamConfigReader } from '@main/services/team/TeamConfigReader';
+import { projectPublicProvisioningProgress } from '@main/ipc/teams/teamProjectContextProgressIdentity';
 import { validateMemberName, validateTeamName } from '@main/services/team/TeamIdentifierValidation';
 import { getTeamsBasePath } from '@main/utils/pathDecoder';
 import { getErrorMessage } from '@shared/utils/errorHandling';
 import { createLogger } from '@shared/utils/logger';
-import {
-  requireTeamRuntimeSelection,
-  TeamRuntimeSelectionError,
-} from '@shared/utils/teamRuntimeSelection';
+import { TeamRuntimeSelectionError } from '@shared/utils/teamRuntimeSelection';
 import { constants as fsConstants } from 'fs';
 import { access } from 'fs/promises';
 import { join } from 'path';
 
 import { createProjectContextHttp } from './teams/projectContextHttp';
+import { registerTeamLaunchRoute } from './teams/teamLaunchRoute';
 import { registerTeamLifecycleRoutes } from './teams/teamLifecycleRoutes';
 import { registerTeamManagementRoutes } from './teams/teamManagementRoutes';
 import { registerTeamMemberDiagnosticsRoute } from './teamMemberDiagnostics';
-import { rejectUnsupportedProjectContextHttpLaunch } from './teamProjectContextLaunchGuard';
 import {
   HttpBadRequestError,
   parseCreateTeamRequest,
-  parseDraftLaunchCreateRequest,
-  parseLaunchRequest,
   parseTeamConfigurationReadQuery,
   withRuntimeTeamName,
 } from './teamRouteParsers';
@@ -34,23 +29,15 @@ import type {
   TeamHttpHandlerApis,
   TeamHttpRuntimeApi,
 } from '@main/services/team/contracts/TeamProvisioningApis';
-import type {
-  TeamCreateConfigRequest,
-  TeamCreateRequest,
-  TeamCreateResponse,
-  TeamLaunchRequest,
-  TeamLaunchResponse,
-} from '@shared/types/team';
+import type { TeamCreateConfigRequest, TeamCreateRequest } from '@shared/types/team';
 import type { FastifyInstance } from 'fastify';
 
 const logger = createLogger('HTTP:teams');
 
-type LaunchBody = Omit<TeamLaunchRequest, 'teamName'>;
 type CreateTeamBody = TeamCreateConfigRequest;
 
 class HttpFeatureUnavailableError extends Error {}
 
-type TeamHttpProvisioningStartApi = TeamHttpHandlerApis['provisioningStart'];
 type TeamHttpProvisioningStatusApi = TeamHttpHandlerApis['provisioningStatus'];
 type TeamHttpRuntimeControlApi = TeamHttpHandlerApis['runtimeControl'];
 
@@ -64,14 +51,6 @@ function assertValidMemberName(memberName: string): string {
     throw new HttpBadRequestError(validatedMemberName.error ?? 'Invalid memberName');
   }
   return validatedMemberName.value!;
-}
-
-function getTeamProvisioningStartApi(services: HttpServices): TeamHttpProvisioningStartApi {
-  const api = services.teamApis?.provisioningStart;
-  if (!api) {
-    throw new HttpFeatureUnavailableError('Team launch control is not available in this mode');
-  }
-  return api;
 }
 
 function getTeamProvisioningStatusApi(services: HttpServices): TeamHttpProvisioningStatusApi {
@@ -259,6 +238,16 @@ export function registerTeamRoutes(app: FastifyInstance, services: HttpServices)
     getResponseErrorMessage,
     createFeatureUnavailableError: (message) => new HttpFeatureUnavailableError(message),
   });
+  registerTeamLaunchRoute(app, services, {
+    logger,
+    shouldLogError,
+    getStatusCode,
+    getResponseErrorMessage,
+    createFeatureUnavailableError: (message) => new HttpFeatureUnavailableError(message),
+    getDraftSavedRequest: (teamName) => getDraftSavedRequest(services, teamName),
+    getTeamDataApi: () => getTeamDataApi(services),
+    management: managementFeature,
+  });
 
   app.get('/api/teams', async (_request, reply) => {
     try {
@@ -276,16 +265,8 @@ export function registerTeamRoutes(app: FastifyInstance, services: HttpServices)
 
   app.post<{ Body: CreateTeamBody }>('/api/teams', async (request, reply) => {
     try {
+      // Same history mode default as the create form of the app: separate per project.
       const createRequest = parseCreateTeamRequest(request.body);
-      // HTTP launch does not yet support project-context admission. Preserve
-      // create-then-launch for existing HTTP clients rather than writing an
-      // unlaunchable per_project draft when their request omits the mode.
-      if ((request.body as Partial<TeamCreateRequest>)?.projectContextMode === 'per_project') {
-        throw new HttpBadRequestError(
-          'Project-isolated teams currently require Electron; use shared for HTTP create/launch'
-        );
-      }
-      createRequest.projectContextMode = 'shared';
       const management = managementFeature
         ? await managementFeature.create(
             createRequest,
@@ -302,6 +283,7 @@ export function registerTeamRoutes(app: FastifyInstance, services: HttpServices)
         ...management,
         teamName: createRequest.teamName,
         draft: true,
+        projectContextMode: createRequest.projectContextMode,
         runtimeSelectionVersion: createRequest.runtimeSelectionVersion,
         runtimeSelection:
           createRequest.runtimeSelectionVersion === 1 && !createRequest.providerId
@@ -362,65 +344,6 @@ export function registerTeamRoutes(app: FastifyInstance, services: HttpServices)
     }
   );
 
-  app.post<{ Params: { teamName: string }; Body: LaunchBody }>(
-    '/api/teams/:teamName/launch',
-    async (request, reply) => {
-      try {
-        const validatedTeamName = validateTeamName(request.params.teamName);
-        if (!validatedTeamName.valid) {
-          return reply.status(400).send({ error: validatedTeamName.error });
-        }
-
-        const teamName = await rejectUnsupportedProjectContextHttpLaunch(validatedTeamName.value!);
-        const launch = async (): Promise<TeamCreateResponse | TeamLaunchResponse> => {
-          const draftSavedRequest = await getDraftSavedRequest(services, teamName);
-          let response!: TeamCreateResponse | TeamLaunchResponse;
-          if (draftSavedRequest) {
-            const createRequest = parseDraftLaunchCreateRequest(draftSavedRequest, request.body);
-            requireTeamRuntimeSelection(createRequest);
-            const provision = async () => {
-              response = await getTeamProvisioningStartApi(services).createTeam(
-                createRequest,
-                () => undefined
-              );
-              services.memberWorkSyncFeature?.resumeTeam(createRequest.teamName);
-            };
-            if (createRequest.teamName !== teamName)
-              await getTeamDataApi(services).renameDraftTeam(
-                teamName,
-                createRequest.teamName,
-                provision
-              );
-            else await provision();
-          } else {
-            response = await getTeamProvisioningStartApi(services).launchTeam(
-              parseLaunchRequest(teamName, request.body),
-              () => undefined
-            );
-          }
-          return response;
-        };
-        const response = managementFeature
-          ? await managementFeature.runLaunch(teamName, launch)
-          : await launch();
-        TeamConfigReader.invalidateListTeamsCache();
-        return reply.send(response);
-      } catch (error) {
-        const statusCode = getStatusCode(error);
-        if (shouldLogError(error)) {
-          logger.error(
-            `Error in POST /api/teams/${request.params.teamName}/launch:`,
-            getErrorMessage(error)
-          );
-        }
-        return reply.status(statusCode).send({
-          error: getResponseErrorMessage(error, statusCode),
-          ...(error instanceof TeamRuntimeSelectionError ? { code: error.code } : {}),
-        });
-      }
-    }
-  );
-
   app.get<{ Params: { runId: string } }>(
     '/api/teams/provisioning/:runId',
     async (request, reply) => {
@@ -430,8 +353,11 @@ export function registerTeamRoutes(app: FastifyInstance, services: HttpServices)
           return reply.status(400).send({ error: 'runId is required' });
         }
 
+        // A run of a project copy reports its team, like the progress the app shows.
         return reply.send(
-          await getTeamProvisioningStatusApi(services).getProvisioningStatus(runId)
+          projectPublicProvisioningProgress(
+            await getTeamProvisioningStatusApi(services).getProvisioningStatus(runId)
+          )
         );
       } catch (error) {
         const message = getErrorMessage(error);
