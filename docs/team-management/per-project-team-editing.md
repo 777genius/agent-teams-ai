@@ -15,10 +15,13 @@ The logical team has no `config.json`. A native alias is a **projection** of the
 ## How an edit flows
 
 1. The user opens the ordinary Edit Team dialog (pencil on the team screen, or "Edit team" on the screen of a project without history). The dialog is fed by `getSavedRequest(logicalTeam)`, not by the snapshot of one project's run, so what is edited is exactly what is saved.
-2. The ordinary handlers (`updateConfig`, `addMember`, `replaceMembers`, `removeMember`) receive the logical team name. `withProjectDefinitionEdit` (`src/main/ipc/teams/teamProjectDefinitionEdit.ts`) routes by what the name means:
-   - **per-project (logical) team**: refused unless every project context is confirmed stopped (`TeamProjectContextLaunchGate.assertAllContextsStopped`), then the handler writes to the logical definition, then the stopped project copies are refreshed (`TeamProjectDefinitionEditor.projectToAliases`);
+2. The ordinary handlers (`updateConfig`, `addMember`, `replaceMembers`, `removeMember`, `restoreMember`, `updateMemberRole`) receive the logical team name. `withProjectDefinitionEdit` (`src/main/ipc/teams/teamProjectDefinitionEdit.ts`) routes by what the name means:
+   - **per-project (logical) team**: inside the logical-team operation lock that launch admission takes, refused unless every project context is confirmed stopped (`TeamProjectContextLaunchGate.assertAllContextsStopped`), then the handler writes to the logical definition, then the stopped project copies are refreshed (`TeamProjectDefinitionEditor.projectToAliases`);
    - **project copy**: refused ("edit the team itself"), so there is no second roster;
-   - **any other team**: the handler runs exactly as before, including live editing of a running team.
+   - **any other team**: the handler runs exactly as before, including live editing of a running team;
+   - **unreadable team metadata**: refused (fail closed).
+
+External HTTP/MCP edits (`TeamPromptManagement`) refuse a per-project team and a project copy (`PROJECT_TEAM_DESKTOP_ONLY`) and reject a team whose kind cannot be determined; the desktop app is the only editor of such a team. A launch or relaunch dialog never writes the definition.
 3. The same projection (`projectDefinitionToAlias`) runs at launch in `TeamProjectContextDraftMaterializer`, so a copy that could not be refreshed at edit time is refreshed before it starts.
 
 A failed refresh of a copy does not fail the edit (the definition is already saved); it is logged and repeated at the next launch.
@@ -28,7 +31,8 @@ A failed refresh of a copy does not fail the edit (the definition is already sav
 - Editing while the team runs, launches or stops in any project. One rule keeps the roster of a running copy from diverging from the definition it started from.
 - Schedules for per-project teams (the scheduler refuses them; the screen says so).
 - The per-member settings dialog on the team screen (it is a relaunch flow); members are edited in the Edit Team dialog.
-- Gateway member bindings are keyed by team name and are not projected onto project copies.
+- Gateway member bindings are keyed by team name and are not projected onto project copies (the selector is not mounted in member rows in this build).
+- A project context stuck in `reserved` after a crash blocks editing until the team is launched in that project again.
 - A settings-originated relaunch (`memberSettingsRelaunch`) for the logical team.
 
 ## Why the split is awkward, and a better target
