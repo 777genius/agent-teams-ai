@@ -401,6 +401,10 @@ describe('packaged Agent Teams MCP launch integration', () => {
       server = new AgentTeamsMcpHttpServer({
         statePath: path.join(tempDir!, 'packaged-entry-fallback-mcp-http-state.json'),
         disableOrphanCleanup: true,
+        // The app's stable port is derived from the user's profile, so it is the same on
+        // every run and is held by a running app or by any parallel run. Port choice is
+        // not under test here, so never depend on that fixed port being free.
+        allocatePort: () => allocateLoopbackPort(),
         resolveLaunchSpec: () =>
           Promise.resolve({
             command: nodeBinary,
@@ -436,6 +440,7 @@ describe('packaged Agent Teams MCP launch integration', () => {
       server = new AgentTeamsMcpHttpServer({
         statePath: path.join(tempDir!, 'packaged-env-mcp-http-state.json'),
         disableOrphanCleanup: true,
+        allocatePort: () => allocateLoopbackPort(),
         resolveLaunchSpec: () =>
           Promise.resolve({
             command,
@@ -520,6 +525,7 @@ describePosix('AgentTeamsMcpHttpServer integration', () => {
     const server = new AgentTeamsMcpHttpServer({
       statePath: path.join(tempDir!, 'actual-mcp-http-state.json'),
       disableOrphanCleanup: true,
+      allocatePort: () => allocateLoopbackPort(),
     });
     servers.push(server);
 
