@@ -10,7 +10,7 @@ import type { ReplaceMembersRequest } from '@shared/types';
  * must never write it back (a stale copy would overwrite the definition and
  * spread to every project). Such a dialog is `rosterReadOnly`.
  */
-export async function persistRosterBeforeLaunch(
+export async function saveLaunchRoster(
   rosterReadOnly: boolean | undefined,
   teamName: string,
   members: ReplaceMembersRequest['members'],

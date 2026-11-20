@@ -26,7 +26,7 @@ import { routeMemberActions } from '@renderer/components/team/definitionEdit/def
 import { getDefinitionEditAccess } from '@renderer/components/team/definitionEdit/definitionEditAccess';
 import { buildDefinitionEditorInput } from '@renderer/components/team/definitionEdit/definitionEditorInput';
 
-import { persistRosterBeforeLaunch } from '@renderer/components/team/dialogs/launchRosterPersistence';
+import { saveLaunchRoster } from '@renderer/components/team/dialogs/launchRosterPersistence';
 
 import type { TeamCreateRequest } from '@shared/types';
 
@@ -194,13 +194,13 @@ describe('a launch dialog never writes the definition of a per-project team', ()
   beforeEach(() => vi.clearAllMocks());
 
   it('skips the roster save for a read-only roster (stale project copy members must not overwrite it)', async () => {
-    await persistRosterBeforeLaunch(true, 'builders', [{ name: 'stale' }]);
+    await saveLaunchRoster(true, 'builders', [{ name: 'stale' }]);
     expect(replaceMembers).not.toHaveBeenCalled();
   });
 
   it('keeps saving the roster of an ordinary team before launch', async () => {
-    await persistRosterBeforeLaunch(false, 'legacy', [{ name: 'a' }]);
-    await persistRosterBeforeLaunch(undefined, 'legacy', [{ name: 'b' }]);
+    await saveLaunchRoster(false, 'legacy', [{ name: 'a' }]);
+    await saveLaunchRoster(undefined, 'legacy', [{ name: 'b' }]);
     expect(replaceMembers).toHaveBeenCalledTimes(2);
     expect(replaceMembers).toHaveBeenCalledWith('legacy', {
       members: [{ name: 'a' }],
