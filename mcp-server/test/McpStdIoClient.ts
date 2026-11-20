@@ -107,7 +107,7 @@ export class McpStdIoClient {
       }
 
       // Only give up on a dead child once everything it printed is consumed.
-      if (this.stdoutBuffer.indexOf('\n') === -1 && this.childIsGone()) {
+      if (!this.stdoutBuffer.includes('\n') && this.childIsGone()) {
         throw new Error(this.describeDeadChild(expectedId));
       }
 
