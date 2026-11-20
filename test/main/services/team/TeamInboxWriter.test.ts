@@ -382,7 +382,7 @@ describe('TeamInboxWriter', () => {
     const result = await writer.sendMessage('my-team', {
       member: 'alice',
       text: 'same generated message with attachments',
-      attachments: [{ ...meta }],
+      attachments: [{ ...meta, data: 'YWJj' }],
       fileReferences: [{ ...meta }],
       toolCalls: [{ name: 'SendMessage', preview: undefined }],
     } as Parameters<TeamInboxWriter['sendMessage']>[1]);
@@ -398,6 +398,7 @@ describe('TeamInboxWriter', () => {
     expect(persisted).toHaveLength(1);
     expect(persisted[0].messageId).toBe(result.messageId);
     expect(persisted[0].attachments?.[0]).not.toHaveProperty('filePath');
+    expect(persisted[0].attachments?.[0]).not.toHaveProperty('data');
     expect(persisted[0].fileReferences?.[0]).not.toHaveProperty('sha256');
     expect(persisted[0]).toMatchObject({
       toolCalls: [{ name: 'SendMessage' }],
@@ -407,7 +408,7 @@ describe('TeamInboxWriter', () => {
     await expect(writer.sendMessage('my-team', {
       member: 'alice', text: 'same generated message with attachments',
       messageId: result.messageId,
-      attachments: [{ ...meta }], fileReferences: [{ ...meta }],
+      attachments: [{ ...meta, data: 'YWJj' }], fileReferences: [{ ...meta }],
       toolCalls: [{ name: 'DifferentTool' }],
     } as Parameters<TeamInboxWriter['sendMessage']>[1])
     ).rejects.toThrow('Inbox messageId collision for immutable payload: ' + result.messageId);
