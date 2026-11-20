@@ -216,6 +216,7 @@ import { projectPublicProvisioningProgress, resolveProjectRunDiagnosticsTeam } f
 import * as projectEdit from './teams/teamProjectDefinitionEdit';
 import { discardQueuedUserMessages, listQueuedUserMessages } from './teams/teamQueuedUserMessages';
 import { createTeamSoftDeleteRequests } from './teams/teamSoftDeleteFlow';
+import { parseUpdateConfigRequest } from './teams/teamUpdateConfigRequest';
 import { withTimeoutValue } from './teams/withTimeoutValue';
 import {
   validateFromField,
@@ -327,7 +328,6 @@ import type {
   TeamTask,
   TeamTaskStatus,
   TeamTaskWithKanban,
-  TeamUpdateConfigRequest,
   TeamViewSnapshot,
   TeamWorktreeGitStatus,
   ToolApprovalFileContent,
@@ -757,7 +757,7 @@ export function registerTeamHandlers(ipcMain: IpcMain): void {
   ipcMain.handle(TEAM_GET_TASK_EXACT_LOG_SUMMARIES, handleGetTaskExactLogSummaries);
   ipcMain.handle(TEAM_GET_TASK_EXACT_LOG_DETAIL, handleGetTaskExactLogDetail);
   ipcMain.handle(TEAM_GET_MEMBER_STATS, handleGetMemberStats);
-  ipcMain.handle(TEAM_UPDATE_CONFIG, projectEdit.route(handleUpdateConfig));
+  ipcMain.handle(TEAM_UPDATE_CONFIG, projectEdit.route(handleUpdateConfig, projectEdit.refuseLeadPromptOfNativeTeam));
   ipcMain.handle(TEAM_START_TASK, handleStartTask);
   ipcMain.handle(TEAM_START_TASK_BY_USER, handleStartTaskByUser);
   ipcMain.handle(TEAM_GET_ALL_TASKS, handleGetAllTasks);
@@ -1493,29 +1493,15 @@ async function handleUpdateConfig(
   if (!validated.valid) {
     return { success: false, error: validated.error ?? 'Invalid teamName' };
   }
-  if (!updates || typeof updates !== 'object') {
-    return { success: false, error: 'Invalid updates object' };
-  }
-  const { name, description, color } = updates as TeamUpdateConfigRequest;
-  if (name !== undefined && typeof name !== 'string') {
-    return { success: false, error: 'name must be a string' };
-  }
-  if (description !== undefined && typeof description !== 'string') {
-    return { success: false, error: 'description must be a string' };
-  }
-  if (color !== undefined && typeof color !== 'string') {
-    return { success: false, error: 'color must be a string' };
-  }
+  const parsed = parseUpdateConfigRequest(updates);
+  if (!parsed.ok) return { success: false, error: parsed.error };
+  const { name } = parsed.value;
   return wrapTeamHandler('updateConfig', async () => {
     const tn = validated.value!;
     const teamDataService = getTeamDataService();
     const previousDisplayName = await teamDataService.getTeamDisplayName(tn).catch(() => tn);
     const requestedName = typeof name === 'string' ? name.trim() : '';
-    const result = await getTeamDataService().updateConfig(tn, {
-      name,
-      description,
-      color,
-    });
+    const result = await getTeamDataService().updateConfig(tn, parsed.value);
     if (!result) {
       throw new Error('Team config not found');
     }

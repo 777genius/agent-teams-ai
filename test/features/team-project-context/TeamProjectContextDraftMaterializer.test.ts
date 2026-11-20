@@ -121,6 +121,26 @@ describe('TeamProjectContextDraftMaterializer', () => {
     expect(f.store.replaceMembers).not.toHaveBeenCalled();
   });
 
+  it('repairs a stale saved lead prompt of a stopped ready project at launch', async () => {
+    const f = fixture({ ...reserved, state: 'ready' });
+    f.store.getSavedRequest.mockImplementation(async (name) => ({
+      teamName: name,
+      cwd: '/sandbox/b',
+      members: [{ name: 'alice' }],
+      prompt: name === 'builders' ? 'Edited rules' : 'Rules typed at an old launch',
+    }));
+    await f.materializer.ensureProjectDraft({
+      logicalTeamName: 'builders', projectPath: '/sandbox/b',
+    });
+    expect(f.store.assertStoppedForRosterSync).toHaveBeenCalledWith('ptc-sandbox');
+    expect(f.store.updateDisplayMetadata).toHaveBeenCalledWith('ptc-sandbox', {
+      description: '',
+      color: '',
+      prompt: 'Edited rules',
+    });
+    expect(f.store.replaceMembers).not.toHaveBeenCalled();
+  });
+
   it('refuses to mutate the project roster while its runtime is still live', async () => {
     const f = fixture({ ...reserved, state: 'ready' });
     f.store.getSavedRequest.mockImplementation(async (name) => ({

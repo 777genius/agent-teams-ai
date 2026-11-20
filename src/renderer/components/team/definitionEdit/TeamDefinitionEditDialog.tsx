@@ -91,6 +91,7 @@ export const TeamDefinitionEditDialog = ({
       currentName={input.currentName}
       currentDescription={input.currentDescription}
       currentColor={input.currentColor}
+      currentLeadPrompt={input.currentLeadPrompt}
       currentMembers={input.currentMembers}
       leadMember={input.leadMember}
       resolvedMemberColorMap={resolvedMemberColorMap}

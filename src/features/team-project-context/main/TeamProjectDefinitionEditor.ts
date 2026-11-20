@@ -2,6 +2,7 @@ import { classifyDefinitionTarget } from './classifyDefinitionTarget';
 import { projectDefinitionToAlias } from './projectDefinitionToAlias';
 
 import type { DefinitionEditTarget } from './classifyDefinitionTarget';
+import type { DefinitionMetadataUpdate } from './projectDefinitionToAlias';
 import type { TeamProjectContextLaunchGate } from './TeamProjectContextLaunchGate';
 import type { PersistedTeamWorkContext } from './TeamProjectContextRegistry';
 import type { ReplaceMembersRequest, TeamCreateRequest, TeamProjectContextMode } from '@shared/types';
@@ -17,10 +18,7 @@ export interface TeamProjectDefinitionEditorPorts {
   getMode(teamName: string): Promise<TeamProjectContextMode>;
   getSavedRequest(teamName: string): Promise<TeamCreateRequest | null>;
   replaceMembers(teamName: string, request: ReplaceMembersRequest): Promise<void>;
-  updateDisplayMetadata(
-    teamName: string,
-    update: { name?: string; description: string; color: string }
-  ): Promise<void>;
+  updateDisplayMetadata(teamName: string, update: DefinitionMetadataUpdate): Promise<void>;
 }
 
 export interface DefinitionProjectionReport {
