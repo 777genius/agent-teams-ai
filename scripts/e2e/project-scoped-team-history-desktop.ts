@@ -435,13 +435,23 @@ async function waitForJson<T = Record<string, unknown>>(
   throw new Error('Timed out: ' + label + ' (last: ' + JSON.stringify(last)?.slice(0, 400) + ')');
 }
 
-async function ipcOutcome(expression: string): Promise<{ ok: boolean; error?: string }> {
+async function ipcOutcome(
+  expression: string
+): Promise<{ ok: boolean; error?: string; value?: Record<string, unknown> }> {
   assert(cdp);
-  return await cdp.evaluate('(async () => { try { await (' + expression + '); return { ok: true }; }' +
+  return await cdp.evaluate('(async () => { try { const value = await (' + expression + ');' +
+    ' return { ok: true, value: value && typeof value === "object" ? value : undefined }; }' +
     ' catch (e) { return { ok: false, error: String(e && e.message ? e.message : e) }; } })()') as {
-    ok: boolean; error?: string;
+    ok: boolean; error?: string; value?: Record<string, unknown>;
   };
 }
+
+/**
+ * A scheduled run on a runtime that denies agents ends only after the dispatcher has waited for
+ * the agent to become ready (45 checks, 2 s apart: 90 s and a little more, longer on slow CI
+ * runners). Every wait for the final status of such a run must be longer than that.
+ */
+const SCHEDULED_RUN_SETTLE_MS = 180_000;
 
 async function clickSelector(selector: string, label: string) {
   assert(cdp);
@@ -782,7 +792,7 @@ async function verifySchedules(f: Fixture) {
   const runs = await waitForJson<StoredRun[]>(
     runsFile,
     (list) => list.length > 0 && !['pending', 'warming_up', 'warm', 'running'].includes(list[0].status),
-    'the scheduled run is recorded', 90_000
+    'the scheduled run is recorded', SCHEDULED_RUN_SETTLE_MS
   );
   const recorded = runs[0];
   assert.equal(recorded.teamName, f.logical, 'The run belongs to the logical team');
@@ -879,19 +889,32 @@ async function verifyLaunchSettings(f: Fixture) {
   // IPC keeps keys whose value is undefined, JSON does not: write the object literal by hand.
   const literal = (value: Record<string, unknown>) => '{' + Object.entries(value).map(([key, item]) =>
     JSON.stringify(key) + ':' + (item === undefined ? 'undefined' : JSON.stringify(item))).join(',') + '}';
-  const dialogRequest = (cwd: string, chosen: Record<string, unknown>) => ({
-    runtimeSelectionVersion: undefined, teamName: f.logical, cwd, prompt: undefined,
-    providerId: undefined, providerBackendId: undefined, model: undefined, effort: undefined,
-    fastMode: undefined, syncModelsWithLead: undefined, limitContext: undefined,
-    skipPermissions: undefined, worktree: undefined, extraCliArgs: undefined, ...chosen,
-  });
-  const launch = async (cwd: string, chosen: Record<string, unknown>) => {
-    const deadline = Date.now() + 90_000;
+  const dialogRequest = (cwd: string, chosen: Record<string, unknown>, omit: string[]) => {
+    const request: Record<string, unknown> = {
+      runtimeSelectionVersion: undefined, teamName: f.logical, cwd, prompt: undefined,
+      providerId: undefined, providerBackendId: undefined, model: undefined, effort: undefined,
+      fastMode: undefined, syncModelsWithLead: undefined, limitContext: undefined,
+      skipPermissions: undefined, worktree: undefined, extraCliArgs: undefined, ...chosen,
+    };
+    for (const key of omit) delete request[key];
+    return request;
+  };
+  // A launch that found the team already starting or running applied nothing: wait and repeat it,
+  // so a step never counts as done (or as accepted) because of a race with the previous one.
+  const launch = async (cwd: string, chosen: Record<string, unknown>, omit: string[] = []) => {
+    const deadline = Date.now() + SCHEDULED_RUN_SETTLE_MS;
     for (;;) {
       const outcome = await ipcOutcome('window.electronAPI.teams.launchTeam(' +
-        literal(dialogRequest(cwd, chosen)) + ')');
-      if (outcome.ok || !/running|starting|launching|stop|reconcil/i.test(outcome.error ?? '') ||
-        Date.now() > deadline) return outcome;
+        literal(dialogRequest(cwd, chosen, omit)) + ')');
+      const response = outcome.value ?? {};
+      const appliedNothing = outcome.ok && (
+        response.launchStatus === 'already_running' || response.launchStatus === 'already_launching' ||
+        response.alreadyRunning === true || response.alreadyLaunching === true);
+      const transient = appliedNothing ||
+        (!outcome.ok && /running|starting|launching|stop|reconcil/i.test(outcome.error ?? ''));
+      if (!transient || Date.now() > deadline) {
+        return appliedNothing ? { ok: false, error: 'applied nothing: ' + JSON.stringify(response) } : outcome;
+      }
       await pause(1_000);
     }
   };
@@ -925,11 +948,17 @@ async function verifyLaunchSettings(f: Fixture) {
   assert.equal(afterFirst.projectContextMode, 'per_project', 'The definition keeps its history mode');
   assert.equal((await savedByDialog())?.model, 'e2e-model-x',
     'The launch dialog reads the saved settings of the team, so it shows what project A chose');
+  // What is project-owned went to the copy that was launched (a schedule of project A reads it there).
+  const copyA = await waitForJson(metaPath(f.nativeA),
+    (meta) => meta.extraCliArgs === '--max-turns 5' && meta.skipPermissions === true,
+    'trust and runtime arguments are saved in the launched copy of project A');
+  assert.equal(copyA.model, 'e2e-model-x', 'and so are the team settings');
 
   // 2. A launch in project B that changes them: the team and the launched copy follow, the
   // runtime arguments of project B stay its own.
   const second = await launch(f.projectB, {
     providerId: 'opencode', model: 'e2e-model-y', effort: 'medium', limitContext: true,
+    extraCliArgs: '--own-to-project-b', skipPermissions: false,
   });
   assert(second.ok, 'The launch in project B must be accepted: ' + JSON.stringify(second));
   await definitionWhere((meta) => meta.model === 'e2e-model-y' && meta.effort === 'medium',
@@ -951,9 +980,12 @@ async function verifyLaunchSettings(f: Fixture) {
     'the unset effort is cleared in the team');
   assert.equal(unset.limitContext, true);
 
-  // 4. A provider change in project B drops what belonged to the old provider, and the copy of
-  // project A (still on the old provider and model) is now behind the team.
-  const changed = await launch(f.projectB, { providerId: 'anthropic' });
+  // 4. A provider change in project B drops what belonged to the old provider even where the
+  // request does not state it (model and effort are left out, limitContext is unset as the dialog
+  // sends it for another provider), and the copy of project A (still on the old provider and
+  // model) is now behind the team.
+  assert.equal((await metaOf(f.logical)).limitContext, true, 'The context limit is still saved before the change');
+  const changed = await launch(f.projectB, { providerId: 'anthropic' }, ['model', 'effort']);
   assert(changed.ok, 'The launch that changes the provider must be accepted: ' + JSON.stringify(changed));
   const afterChange = await definitionWhere((meta) => meta.providerId === 'anthropic',
     'the provider change is saved into the team');
@@ -982,6 +1014,8 @@ async function verifyLaunchSettings(f: Fixture) {
     'The scheduled launch must run the provider of the team: ' + JSON.stringify(copyAMeta).slice(0, 300));
   assert.notEqual(copyAMeta.model, 'e2e-model-x', 'The copy of project A must follow the team');
   assert.equal(copyAMeta.providerId, 'anthropic');
+  assert.equal(copyAMeta.extraCliArgs, '--max-turns 5',
+    'The schedule of project A runs with the runtime arguments that project A launched with');
 
   // Nothing but launches of the copies and read-only runtime queries reached the denying runtime.
   const audit = (await readFile(f.audit, 'utf8')).split('\n').filter(Boolean)
@@ -997,14 +1031,14 @@ async function verifyLaunchSettings(f: Fixture) {
 /** Fire the schedule until a run reaches the copy of project A (it may meet a copy still stopping). */
 async function waitForScheduledLaunch(f: Fixture, scheduleId: string, copyMeta: string) {
   const runsFile = path.join(f.claudeRoot, 'agent-teams-schedules', 'runs', scheduleId + '.json');
-  const deadline = Date.now() + 120_000;
+  const deadline = Date.now() + 3 * SCHEDULED_RUN_SETTLE_MS;
   let attempts = 0;
   while (Date.now() < deadline) {
     attempts += 1;
     await ipcOutcome('window.electronAPI.schedules.triggerNow(' + JSON.stringify(scheduleId) + ')');
     const runs = await waitForJson<StoredRun[]>(runsFile,
       (list) => list.length >= attempts && !['pending', 'warming_up', 'warm', 'running'].includes(list[0].status),
-      'the scheduled run is recorded', 90_000);
+      'the scheduled run is recorded', SCHEDULED_RUN_SETTLE_MS);
     const meta = await readJsonFile<Record<string, unknown>>(copyMeta);
     if (runs[0].executionTeamName === f.nativeA && meta.launchIdentity) return meta;
     await pause(4_000);
