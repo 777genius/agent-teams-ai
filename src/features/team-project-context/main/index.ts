@@ -21,6 +21,14 @@ export {
   stopLogicalContexts,
 } from './logicalTeamRuntime';
 export { listOwnedContexts, ownsProjectHistory } from './ownedHistory';
+export type {
+  PreparedProjectContextLaunch,
+  ProjectContextLaunchPorts,
+  ProjectContextProgressMapper,
+  ProjectCopyLauncher,
+  ProjectTeamLaunch,
+} from './projectContextLaunch';
+export { launchInProjectContext, TeamProjectContextLaunchRefusedError } from './projectContextLaunch';
 export type { TeamModeMetaReader } from './projectContextMode';
 export {
   readTeamProjectContextMode,

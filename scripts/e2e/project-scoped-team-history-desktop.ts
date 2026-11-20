@@ -896,9 +896,12 @@ async function verifyHttpCreateAndLaunch(f: Fixture) {
   const projectKey = (value: string) =>
     process.platform === 'win32' ? path.normalize(value).toLowerCase() : value;
 
-  // 1. No mode in the request: the default of the create form of the app.
+  // 1. The history mode is required over HTTP; a per-project team is the same draft as in the app.
+  const withoutMode = await call('POST', '/api/teams', { teamName: team, cwd: f.projectA, members: [] });
+  assert.equal(withoutMode.status, 400, 'HTTP create without a mode: ' + JSON.stringify(withoutMode));
+  assert.equal(withoutMode.body?.code, 'PROJECT_CONTEXT_MODE_REQUIRED');
   const created = await call('POST', '/api/teams', {
-    teamName: team, displayName: 'HTTP per-project team', cwd: f.projectA,
+    teamName: team, projectContextMode: 'per_project', displayName: 'HTTP per-project team', cwd: f.projectA,
     providerId: 'opencode', model: 'test-model',
     members: [{ name: 'alice', role: 'Developer', providerId: 'opencode', model: 'test-model' }],
   });
@@ -923,23 +926,31 @@ async function verifyHttpCreateAndLaunch(f: Fixture) {
   assert.equal(projectKey(String(copyMeta.cwd)), projectKey(f.projectC));
   await assert.rejects(readFile(path.join(teamDir, 'config.json')), { code: 'ENOENT' },
     'The team itself must never become a runnable team');
-  // The fixture runtime denies every agent: the run is accepted and then fails, or is refused.
-  let finalState: unknown = null;
-  if (launched.status === 200) {
-    const runId = String(launched.body?.runId);
+  // The fixture runtime denies every agent: the run is accepted, then fails.
+  assert.equal(launched.status, 200, 'HTTP launch: ' + JSON.stringify(launched));
+  const settle = async (runId: string) => {
     const deadline = Date.now() + 90_000;
     for (;;) {
       const progress = await call('GET', '/api/teams/provisioning/' + encodeURIComponent(runId));
       assert.equal(progress.status, 200, 'Provisioning status: ' + JSON.stringify(progress));
       assert.equal(progress.body?.teamName, team, 'The progress must name the team, not its copy');
-      finalState = progress.body?.state;
-      if (['ready', 'failed', 'cancelled', 'disconnected'].includes(String(finalState))) break;
+      const state = progress.body?.state;
+      if (['ready', 'failed', 'cancelled', 'disconnected'].includes(String(state))) return state;
       assert(Date.now() < deadline, 'The HTTP launch did not settle: ' + JSON.stringify(progress.body));
       await pause(500);
     }
-  } else {
-    assert(launched.status >= 400 && launched.status < 500,
-      'A launch the fixture runtime denies must be refused, not crash: ' + JSON.stringify(launched));
+  };
+  let finalState = await settle(String(launched.body?.runId));
+  if (finalState !== 'ready') {
+    // A failed first run leaves the copy reserved; a retry in the same project reuses it.
+    const retry = await call('POST', '/api/teams/' + team + '/launch', { cwd: f.projectC });
+    assert.equal(retry.status, 200, 'Retry in the same project: ' + JSON.stringify(retry));
+    finalState = await settle(String(retry.body?.runId));
+    const retried = await readJsonFile<{ contexts: { executionTeamName: string }[] }>(
+      path.join(teamDir, 'project-contexts.json')
+    );
+    assert.deepEqual(retried.contexts.map((row) => row.executionTeamName), [copy.executionTeamName],
+      'The retry must reuse the copy of the project');
   }
   await cdp.screenshot(path.join(f.screenshots, 'http-launch.png'));
 
@@ -1051,8 +1062,8 @@ async function run() {
     const auditBeforeHttp = fullAudit.length;
     const httpLaunch = await verifyHttpCreateAndLaunch(f);
     const afterHttp = (await readAudit()).slice(auditBeforeHttp);
-    assert(afterHttp.filter(isLaunch).length <= 1,
-      'The HTTP launch may reach the runtime only once, for its one project copy');
+    assert(afterHttp.filter(isLaunch).length <= 2,
+      'The HTTP launch and its retry may reach the runtime only for their one project copy');
     assert.equal(afterHttp.filter((args) => !isLaunch(args) && !isReadOnly(args)).length, 0,
       'Unexpected runtime calls after the HTTP launch');
     success = true;

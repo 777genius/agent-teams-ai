@@ -34,6 +34,29 @@ const PROVIDER_BACKEND_ERROR =
 
 export class TeamRequestValidationError extends Error {
   readonly name = 'TeamRequestValidationError';
+  /** A stable reason a client can act on, when the message alone is not enough. */
+  constructor(
+    message: string,
+    readonly code?: string
+  ) {
+    super(message);
+  }
+}
+
+/**
+ * HTTP and MCP create require the history mode until their board tools and
+ * trash work for a team with separate history per project. The value itself is
+ * parsed by `parseCreateTeamRequest`, like for the app.
+ */
+export function requireExplicitProjectContextMode(body: unknown): void {
+  const payload = body && typeof body === 'object' ? (body as Record<string, unknown>) : {};
+  if (payload.projectContextMode === undefined) {
+    throw new TeamRequestValidationError(
+      'projectContextMode is required: "shared" (one history for every project folder) or ' +
+        '"per_project" (separate tasks and chats for every project folder)',
+      'PROJECT_CONTEXT_MODE_REQUIRED'
+    );
+  }
 }
 
 /** Reject ambiguous launch requests before admission can replay persisted work. */
@@ -156,7 +179,8 @@ export function assertOptionalEffort(
   value: unknown,
   providerId: TeamLaunchRequest['providerId']
 ): EffortLevel | undefined {
-  if (value == null) {
+  // An empty value is no explicit effort, for HTTP as for the app.
+  if (value == null || value === '') {
     return undefined;
   }
 
@@ -170,7 +194,7 @@ export function assertOptionalEffort(
 }
 
 export function assertOptionalFastMode(value: unknown): TeamFastMode | undefined {
-  if (value == null) {
+  if (value == null || value === '') {
     return undefined;
   }
 

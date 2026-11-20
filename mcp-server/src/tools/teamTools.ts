@@ -161,12 +161,13 @@ export function registerTeamTools(server: Pick<FastMCP, 'addTool'>) {
     name: 'team_create',
     description:
       'Create a draft team configuration through the local Agent Teams control API. This does not launch the team. ' +
-      'projectContextMode is the history mode, fixed at creation: per_project (the default, like the app) keeps tasks and chats separate for every project folder the team is launched in; shared keeps one history for all projects.',
+      'projectContextMode (required, fixed at creation): shared keeps one history for all project folders and works with every MCP tool; ' +
+      'per_project keeps tasks and chats separate for every project folder the team is launched in (team_launch with cwd), but the task, message and review tools do not support it yet.',
     parameters: z
       .object({
         ...teamContextSchema,
         runtimeSelectionVersion: z.literal(1).optional(),
-        projectContextMode: z.enum(['shared', 'per_project']).optional(),
+        projectContextMode: z.enum(['shared', 'per_project']),
         expectedContext: z
           .object({
             appInstanceId: z.string().min(1),
@@ -228,7 +229,7 @@ export function registerTeamTools(server: Pick<FastMCP, 'addTool'>) {
         await getController(teamName, claudeDir).runtime.createTeam({
           ...controlFlags({ controlUrl, waitTimeoutMs }),
           ...(runtimeSelectionVersion !== undefined ? { runtimeSelectionVersion } : {}),
-          ...(projectContextMode ? { projectContextMode } : {}),
+          projectContextMode,
           ...(expectedContext ? { expectedContext } : {}),
           ...(syncModelsWithLead !== undefined ? { syncModelsWithLead } : {}),
           ...(displayName ? { displayName } : {}),

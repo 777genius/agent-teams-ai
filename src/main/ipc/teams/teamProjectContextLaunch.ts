@@ -1,22 +1,22 @@
 import {
   classifyTeamKind,
+  launchInProjectContext,
   TeamProjectContextLaunchConflictError,
 } from '@features/team-project-context/main';
 import { TeamMetaStore } from '@main/services/team/TeamMetaStore';
-import { TeamRequestValidationError } from '@main/services/team/TeamRequestValidation';
-
-import { parseOptionalTeamEffort, parseOptionalTeamFastMode } from '../teamIpcRequestParsers';
 
 import { createProjectContextRuntimeParts } from './teamProjectContextCreate';
 import { rememberProjectRunIdentity } from './teamProjectContextProgressIdentity';
 
 import type { ProjectTeamRuntimePorts } from './teamProjectContextCreate';
+import type {
+  ProjectContextLaunchPorts,
+  ProjectContextProgressMapper,
+} from '@features/team-project-context/main';
 import type { IpcResult, TeamLaunchRequest, TeamLaunchResponse, TeamProvisioningProgress } from '@shared/types';
 
-export type ProjectContextProgressMapper = (
-  progress: TeamProvisioningProgress,
-  deliver: (progress: TeamProvisioningProgress) => void
-) => void;
+export type { ProjectContextProgressMapper };
+export type ProjectContextRuntimeParts = ReturnType<typeof createProjectContextRuntimeParts>;
 
 export interface PreparedTeamContextLaunch {
   request: TeamLaunchRequest;
@@ -31,9 +31,9 @@ export interface PreparedTeamContextLaunch {
 export async function prepareTeamContextLaunch(
   request: TeamLaunchRequest,
   ports: ProjectTeamRuntimePorts,
-  options: { expectedExecutionTeamName?: string } = {}
+  options: { expectedExecutionTeamName?: string; parts?: ProjectContextRuntimeParts } = {}
 ): Promise<PreparedTeamContextLaunch> {
-  const parts = createProjectContextRuntimeParts(ports);
+  const parts = options.parts ?? createProjectContextRuntimeParts(ports);
   const kind = await classifyTeamKind(parts.kinds, request.teamName);
   // Public launch requests must never bypass logical-team admission by
   // addressing the physical runtime alias directly (e.g. global tasks).
@@ -115,42 +115,16 @@ export function buildTeamProgressReporter(
   };
 }
 
-/** How a transport launches the chosen project copy through its own native launch path. */
-export interface ProjectCopyLauncher<T> {
-  /** Launch `request` (the copy, with the canonical project path); progress goes through `mapper`. */
-  invoke(request: TeamLaunchRequest, mapper?: ProjectContextProgressMapper): Promise<T>;
-  /** The run the launch started, or null when it did not start one. */
-  started(result: T): TeamLaunchResponse | null;
-}
-
-/**
- * The one launch path of a team with separate history per project, for every
- * transport (the desktop IPC, HTTP and MCP): the logical team is launched as
- * the project copy of `request.cwd`, through the same override validation,
- * reservation, launch gate and materializer. Any other team returns null and
- * the caller launches it natively. The caller holds the logical-team
- * configuration lock.
- */
-export async function launchInProjectContext<T>(
-  request: TeamLaunchRequest,
+/** The ports of the launch use case, bound to this app; `parts` are shared with the caller. */
+export function projectContextLaunchPorts(
   ports: ProjectTeamRuntimePorts,
-  launcher: ProjectCopyLauncher<T>
-): Promise<T | null> {
-  // Validate explicit overrides BEFORE reserving native files. The native
-  // launch path still validates effective persisted settings before spawn.
-  // A missing provider override inherits the saved provider; Codex and
-  // Anthropic support levels beyond the legacy default set.
-  const saved = request.providerId ? null : await ports.data.getSavedRequest(request.teamName);
-  const effort = parseOptionalTeamEffort(request.effort, request.providerId ?? saved?.providerId);
-  if (!effort.valid) throw new TeamRequestValidationError(effort.error);
-  const fastMode = parseOptionalTeamFastMode(request.fastMode);
-  if (!fastMode.valid) throw new TeamRequestValidationError(fastMode.error);
-  const selected = await prepareTeamContextLaunch(request, ports);
-  if (selected.request.teamName === request.teamName) return null;
-  const result = await launcher.invoke(selected.request, selected.mapProgress);
-  const run = launcher.started(result);
-  if (run) rememberProjectRunIdentity(run.runId, request.teamName, selected.request.teamName);
-  return result;
+  parts: ProjectContextRuntimeParts = createProjectContextRuntimeParts(ports)
+): ProjectContextLaunchPorts {
+  return {
+    getSavedRequest: (teamName) => ports.data.getSavedRequest(teamName),
+    prepare: (request) => prepareTeamContextLaunch(request, ports, { parts }),
+    rememberRunIdentity: rememberProjectRunIdentity,
+  };
 }
 
 /** The desktop IPC adapter: resolve only when needed, preserving the native launch path. */
@@ -160,7 +134,7 @@ export function withPreparedContextLaunch(
   invoke: (request: TeamLaunchRequest, mapper?: ProjectContextProgressMapper) =>
     Promise<IpcResult<TeamLaunchResponse>>
 ): Promise<IpcResult<TeamLaunchResponse> | null> {
-  return launchInProjectContext(request, ports, {
+  return launchInProjectContext(request, projectContextLaunchPorts(ports), {
     invoke,
     started: (result) => (result.success ? (result.data ?? null) : null),
   });

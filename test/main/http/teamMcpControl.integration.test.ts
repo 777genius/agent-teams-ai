@@ -11,6 +11,7 @@ import { TeamDataService } from '@main/services/team/TeamDataService';
 import { TeamMembersMetaStore } from '@main/services/team/TeamMembersMetaStore';
 import { TeamMetaStore } from '@main/services/team/TeamMetaStore';
 import { TeamProvisioningService } from '@main/services/team/TeamProvisioningService';
+import { createProjectTeamLaunch } from '@main/teamProjectContextLaunchPort';
 import { createTeamProjectDefinitionPort } from '@main/teamProjectDefinitionPort';
 import { setAppDataBasePath, setClaudeBasePathOverride } from '@main/utils/pathDecoder';
 import Fastify, { type FastifyInstance } from 'fastify';
@@ -178,11 +179,14 @@ function installControlApiFetchMock(app: FastifyInstance, baseUrl: string): () =
 
 function createServices(claudeRoot: string): {
   createTeamCalls: TeamCreateRequest[];
+  /** Teams whose provisioning run is in flight, as the launch gate sees them. */
+  launching: Set<string>;
   teamDataService: TeamDataService;
   services: HttpServices;
 } {
   const teamDataService = new TeamDataService();
   const createTeamCalls: TeamCreateRequest[] = [];
+  const launching = new Set<string>();
   const aliveTeams = new Set<string>();
   const progressByRunId = new Map<string, TeamProvisioningProgress>();
   const runIdByTeam = new Map<string, string>();
@@ -332,6 +336,7 @@ function createServices(claudeRoot: string): {
 
   return {
     createTeamCalls,
+    launching,
     teamDataService,
     services: {
       projectScanner: {} as HttpServices['projectScanner'],
@@ -345,12 +350,17 @@ function createServices(claudeRoot: string): {
       teamApis: {
         provisioningStart: teamProvisioningStartApi,
         provisioningStatus: teamProvisioningStatusApi,
-        provisioningRun: { hasProvisioningRun: () => false },
         taskActivity: teamTaskActivityRepairApi,
         runtime: teamRuntimeApi,
         runtimeControl: teamRuntimeControlApi,
         memberDiagnostics: teamMemberDiagnosticsApi,
       } satisfies TeamHttpHandlerApis,
+      projectTeamLaunch: () =>
+        createProjectTeamLaunch({
+          data: teamDataService,
+          runtime: teamRuntimeApi,
+          run: { hasProvisioningRun: (teamName) => launching.has(teamName) },
+        }),
     },
   };
 }
@@ -1901,7 +1911,7 @@ describe('MCP team tools over the local REST control API', () => {
     await mkdir(projectA);
     await mkdir(projectB);
     const app = Fastify();
-    const { services, teamDataService, createTeamCalls } = createServices(root);
+    const { services, teamDataService, createTeamCalls, launching } = createServices(root);
     const { context } = enableManagement(services, teamDataService, root);
     registerTeamRoutes(app, services);
     const controlUrl = 'http://per-project-launch.test';
@@ -1915,6 +1925,7 @@ describe('MCP team tools over the local REST control API', () => {
       const created = parseJsonToolResult(
         await getTool('team_create').execute({
           ...base,
+          projectContextMode: 'per_project',
           cwd: projectA,
           providerId: 'codex',
           members: [{ name: 'builder', role: 'Engineer' }],
@@ -1957,12 +1968,20 @@ describe('MCP team tools over the local REST control API', () => {
       await expect(getTool('team_launch').execute({ ...base, cwd: projectB })).rejects.toThrow(
         /another project/
       );
+      // A copy that is still launching blocks the other projects too.
+      launching.add(copy.teamName);
+      const whileLaunching = await launchOverHttp({ cwd: projectB });
+      launching.delete(copy.teamName);
+      expect(whileLaunching.statusCode).toBe(409);
+      expect(whileLaunching.json()).toMatchObject({
+        code: 'TEAM_PROJECT_CONTEXT_RUNNING',
+        error: expect.stringContaining('still launching'),
+      });
       // Requests that can never succeed are refused before anything is reserved.
       for (const payload of [
         { cwd: projectB, teamName: 'renamed-team' },
         { cwd: projectB, prompt: 5 },
         { cwd: projectB, effort: 'not-an-effort' },
-        { cwd: projectB, effort: '' },
         // The first launch in a project creates its copy: a bootstrap-only start cannot.
         { cwd: projectB, bootstrapOnly: true },
         {},
@@ -1979,6 +1998,7 @@ describe('MCP team tools over the local REST control API', () => {
         url: '/api/teams',
         payload: {
           teamName: unresolved,
+          projectContextMode: 'per_project',
           runtimeSelectionVersion: 1,
           expectedContext: context.snapshot(),
           members: [{ name: 'builder' }],
@@ -2006,6 +2026,59 @@ describe('MCP team tools over the local REST control API', () => {
       expect(again.statusCode).toBe(200);
       expect(createTeamCalls.map((call) => call.teamName)).toEqual([copy.teamName, copy.teamName]);
       expect(await registry.list(teamName)).toHaveLength(1);
+
+      // A first launch that fails after its copy was reserved (the provider refuses) can be
+      // retried in the same project, like in the app: the reserved copy is reused, not a new one.
+      const retried = 'per-project-retry';
+      const createOver = (name: string) =>
+        app.inject({
+          method: 'POST',
+          url: '/api/teams',
+          payload: { teamName: name, projectContextMode: 'per_project', providerId: 'codex', members: [] },
+        });
+      expect((await createOver(retried)).statusCode).toBe(201);
+      const start = services.teamApis!.provisioningStart;
+      const realCreate = start.createTeam;
+      start.createTeam = () => {
+        start.createTeam = realCreate;
+        return Promise.reject(
+          Object.assign(new Error('Provider is not authenticated'), {
+            name: 'TeamLaunchValidationError',
+          })
+        );
+      };
+      const launchTeam = (name: string, payload: Record<string, unknown>) =>
+        app.inject({ method: 'POST', url: `/api/teams/${name}/launch`, payload });
+      expect((await launchTeam(retried, { cwd: projectB })).statusCode).toBe(422);
+      const reserved = await registry.inspect(retried, projectB);
+      expect(reserved?.state).toBe('reserved');
+      expect((await launchTeam(retried, { cwd: projectB })).statusCode).toBe(200);
+      await vi.waitFor(async () =>
+        expect(await registry.find(retried, projectB)).toMatchObject({
+          state: 'ready',
+          executionTeamName: reserved?.executionTeamName,
+        })
+      );
+      expect(await registry.list(retried)).toHaveLength(1);
+
+      // Concurrent launches are serialized by the team lock: in two projects one wins and the
+      // other is refused without a reservation; twice in one project both reuse one copy.
+      const raced = 'per-project-race';
+      expect((await createOver(raced)).statusCode).toBe(201);
+      const twoProjects = await Promise.all([
+        launchTeam(raced, { cwd: projectA }),
+        launchTeam(raced, { cwd: projectB }),
+      ]);
+      expect(twoProjects.map((response) => response.statusCode).sort()).toEqual([200, 409]);
+      expect(await registry.list(raced)).toHaveLength(1);
+      const twice = 'per-project-twice';
+      expect((await createOver(twice)).statusCode).toBe(201);
+      const sameProject = await Promise.all([
+        launchTeam(twice, { cwd: projectA }),
+        launchTeam(twice, { cwd: projectA }),
+      ]);
+      expect(sameProject.map((response) => response.statusCode)).toEqual([200, 200]);
+      expect(await registry.list(twice)).toHaveLength(1);
     } finally {
       restoreFetch();
       await app.close();

@@ -26,6 +26,7 @@ import {
   composeExternalAgentConnection,
   refreshDesktopBridgeEnvironment,
 } from './startExternalAgentConnection';
+import { projectTeamLaunchFactory } from './teamProjectContextLaunchPort';
 import {
   assertStartupActive,
   createStartupStage,
@@ -2992,6 +2993,7 @@ async function startHttpServer(
         sshConnectionManager,
         teamDataApi: bindTeamHttpDataApi(teamDataService),
         teamApis: teamHttpHandlerApis,
+        projectTeamLaunch: projectTeamLaunchFactory(teamDataService, teamProvisioningService),
       },
       modeSwitchHandler,
       config.httpServer?.port ?? 3456

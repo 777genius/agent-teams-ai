@@ -7,7 +7,6 @@ import {
 } from '../opencode/bridge/OpenCodeStartupSweepGate';
 
 import type { OpenCodeRuntimeControlAck, OpenCodeRuntimeControlApi } from '../runtime-control';
-import type { TeamConfigurationUpdate } from '../TeamConfigurationMutations';
 import type { TeamProvisioningStatusApi as FeatureTeamProvisioningStatusApi } from '@features/team-provisioning/contracts';
 import type {
   AgentActionMode,
@@ -18,13 +17,11 @@ import type {
   MemberSpawnStatusesSnapshot,
   OpenCodeRuntimeDeliveryStatus,
   OpenCodeRuntimeDeliveryUserVisibleImpact,
-  ReplaceMembersRequest,
   RetryFailedOpenCodeSecondaryLanesResult,
   TaskRef,
   TeamAgentRuntimeSnapshot,
   TeamClaudeLogsQuery,
   TeamClaudeLogsResponse,
-  TeamConfig,
   TeamCreateConfigRequest,
   TeamCreateRequest,
   TeamCreateResponse,
@@ -130,23 +127,13 @@ export interface TeamHttpDataApi {
   listTeams(): Promise<TeamSummary[]>;
   getTeamData(teamName: string): Promise<TeamViewSnapshot>;
   getSavedRequest(teamName: string): Promise<TeamCreateRequest | null>;
-  createTeamConfig(
-    request: TeamCreateConfigRequest,
-    options?: { claimOwnerOnCreate?: boolean }
-  ): Promise<void>;
+  createTeamConfig(request: TeamCreateConfigRequest): Promise<void>;
   renameDraftTeam(
     oldTeamName: string,
     newTeamName: string,
     afterRename?: () => Promise<void>
   ): Promise<void>;
-  /** The rest is what launching a team with separate history per project needs. */
-  replaceMembers(teamName: string, request: ReplaceMembersRequest): Promise<void>;
-  updateConfig(teamName: string, updates: TeamConfigurationUpdate): Promise<TeamConfig | null>;
-  runConfigurationOperation<T>(teamName: string, operation: () => Promise<T>): Promise<T>;
 }
-
-/** Only the question the launch gate of a per-project team asks. */
-export type TeamHttpProvisioningRunApi = Pick<TeamProvisioningRunApi, 'hasProvisioningRun'>;
 
 /**
  * Snapshot reads behind the HTTP member diagnostics route. Same two snapshots
@@ -169,7 +156,6 @@ export interface TeamHttpMemberDiagnosticsApi {
 export interface TeamHttpHandlerApis {
   provisioningStart: TeamProvisioningStartApi;
   provisioningStatus: TeamProvisioningStatusApi;
-  provisioningRun: TeamHttpProvisioningRunApi;
   taskActivity: TeamTaskActivityRepairApi;
   runtime: TeamHttpRuntimeApi;
   runtimeControl: TeamRuntimeControlCompatibilityApi;
@@ -541,16 +527,12 @@ export function bindTeamHttpDataApi(source: TeamHttpDataApi): TeamHttpDataApi {
     getSavedRequest: source.getSavedRequest.bind(source),
     createTeamConfig: source.createTeamConfig.bind(source),
     renameDraftTeam: source.renameDraftTeam.bind(source),
-    replaceMembers: source.replaceMembers.bind(source),
-    updateConfig: source.updateConfig.bind(source),
-    runConfigurationOperation: source.runConfigurationOperation.bind(source),
   };
 }
 
 export function bindTeamHttpHandlerApis(
   source: TeamProvisioningStartApi &
     TeamProvisioningStatusApi &
-    TeamHttpProvisioningRunApi &
     TeamTaskActivityRepairApi &
     TeamHttpRuntimeApi &
     TeamRuntimeControlCompatibilityApi &
@@ -561,7 +543,6 @@ export function bindTeamHttpHandlerApis(
       beforeStart: bindOpenCodeStartPreparation(source),
     }),
     provisioningStatus: bindTeamProvisioningStatusApi(source),
-    provisioningRun: { hasProvisioningRun: source.hasProvisioningRun.bind(source) },
     taskActivity: bindTeamTaskActivityRepairApi(source),
     runtime: bindTeamHttpRuntimeApi(source),
     runtimeControl: bindTeamRuntimeControlCompatibilityApi(source),

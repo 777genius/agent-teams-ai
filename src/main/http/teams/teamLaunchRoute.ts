@@ -11,15 +11,15 @@
  * own name.
  */
 import {
-  classifyTeamKind,
+  readTeamProjectContextMode,
   TeamMetadataUnreadableError,
   TeamProjectContextLaunchConflictError,
+  TeamProjectContextLaunchRefusedError,
   TeamProjectContextUnavailableError,
 } from '@features/team-project-context/main';
-import { createProjectContextRuntimeParts } from '@main/ipc/teams/teamProjectContextCreate';
-import { launchInProjectContext } from '@main/ipc/teams/teamProjectContextLaunch';
 import { TeamConfigReader } from '@main/services/team/TeamConfigReader';
 import { validateTeamName } from '@main/services/team/TeamIdentifierValidation';
+import { TeamMetaStore } from '@main/services/team/TeamMetaStore';
 import { getErrorMessage } from '@shared/utils/errorHandling';
 import {
   requireTeamRuntimeSelection,
@@ -36,8 +36,8 @@ import {
 
 import type { HttpServices } from '../index';
 import type { TeamLifecycleRouteDeps } from './teamLifecycleRoutes';
+import type { ProjectTeamLaunch, TeamKind } from '@features/team-project-context/main';
 import type { TeamPromptManagement } from '@features/team-prompt-management/main';
-import type { ProjectTeamRuntimePorts } from '@main/ipc/teams/teamProjectContextCreate';
 import type {
   TeamHttpDataApi,
   TeamHttpHandlerApis,
@@ -78,6 +78,7 @@ class ProjectCopyLaunchRefusedError extends Error {
 function projectLaunchRefusalCode(error: unknown): string | null {
   return error instanceof ProjectCopyLaunchRefusedError ||
     error instanceof TeamProjectContextLaunchConflictError ||
+    error instanceof TeamProjectContextLaunchRefusedError ||
     error instanceof TeamProjectContextUnavailableError ||
     error instanceof TeamMetadataUnreadableError
     ? error.code
@@ -85,6 +86,30 @@ function projectLaunchRefusalCode(error: unknown): string | null {
 }
 
 const ignoreProgress: Progress = () => undefined;
+
+/** The launch fields of a parsed draft launch, without the keys it left unset. */
+function draftLaunchRequest(
+  create: TeamCreateRequest
+): Omit<TeamLaunchRequest, 'teamName' | 'cwd'> {
+  const fields: Omit<TeamLaunchRequest, 'teamName' | 'cwd'> = {
+    runtimeSelectionVersion: create.runtimeSelectionVersion,
+    prompt: create.prompt,
+    providerId: create.providerId,
+    providerBackendId: create.providerBackendId,
+    model: create.model,
+    effort: create.effort,
+    fastMode: create.fastMode,
+    syncModelsWithLead: create.syncModelsWithLead,
+    limitContext: create.limitContext,
+    skipPermissions: create.skipPermissions,
+    worktree: create.worktree,
+    extraCliArgs: create.extraCliArgs,
+    allowExperimentalLocalModels: create.allowExperimentalLocalModels,
+  };
+  return Object.fromEntries(
+    Object.entries(fields).filter(([, value]) => value !== undefined)
+  ) as typeof fields;
+}
 
 export function registerTeamLaunchRoute(
   app: FastifyInstance,
@@ -99,21 +124,6 @@ export function registerTeamLaunchRoute(
       throw deps.createFeatureUnavailableError('Team launch control is not available in this mode');
     return apis;
   }
-
-  /** Looked up when used: an ordinary team launches without the data API. */
-  const ports: ProjectTeamRuntimePorts = {
-    data: {
-      getSavedRequest: (name) => deps.getTeamDataApi().getSavedRequest(name),
-      createTeamConfig: (request, options) =>
-        deps.getTeamDataApi().createTeamConfig(request, options),
-      replaceMembers: (name, request) => deps.getTeamDataApi().replaceMembers(name, request),
-      updateConfig: (name, updates) => deps.getTeamDataApi().updateConfig(name, updates),
-      runConfigurationOperation: (name, operation) =>
-        deps.getTeamDataApi().runConfigurationOperation(name, operation),
-    },
-    runtime: { getRuntimeState: (name) => teamApis().runtime.getRuntimeState(name) },
-    run: { hasProvisioningRun: (name) => teamApis().provisioningRun.hasProvisioningRun(name) },
-  };
 
   /** The existing launch of one physical team: a draft is created, a configured team launched. */
   async function launchByName(
@@ -141,13 +151,15 @@ export function registerTeamLaunchRoute(
   }
 
   /**
-   * The copy is launched by `launchByName`, which parses the body as a draft
-   * (first launch in the project) or as a launch of a configured team. Parse it
-   * the same way now, before anything is reserved: a reservation left by a
-   * refused request blocks the team in every other project until it is
-   * launched in this one.
+   * Parse the body with the parser `launchByName` will use for the copy: a
+   * configured copy is launched, a draft copy (a first launch, or a retry after
+   * a failed one) is created, and a project without a copy gets one made from
+   * the definition, as an ordinary (shared) team. Doing it before anything is
+   * reserved matters: a reservation left by a refused request blocks the team
+   * in every other project until it is launched in this one.
    */
   async function admitProjectLaunch(
+    port: ProjectTeamLaunch,
     teamName: string,
     copyBody: Record<string, unknown>
   ): Promise<TeamLaunchRequest> {
@@ -155,19 +167,19 @@ export function registerTeamLaunchRoute(
     if (!(await stat(cwd).catch(() => null))?.isDirectory()) {
       throw new HttpBadRequestError('cwd must be an existing project folder');
     }
-    const { resolver } = createProjectContextRuntimeParts(ports);
-    const copy = await resolver.forRead({ logicalTeamName: teamName, projectPath: cwd });
-    const copyDraft = copy ? await deps.getDraftSavedRequest(copy.executionTeamName) : null;
-    if (copy && !copyDraft) {
-      parseLaunchRequest(copy.executionTeamName, copyBody);
-    } else {
-      // No copy yet: it is made from the definition, as an ordinary (shared) team.
+    const copyName = (await port.inspectCopy(teamName, cwd))?.executionTeamName;
+    let draft = copyName ? await deps.getDraftSavedRequest(copyName) : null;
+    if (!draft && copyName && (await deps.getTeamDataApi().getSavedRequest(copyName))) {
+      return { ...parseLaunchRequest(copyName, copyBody), teamName, cwd };
+    }
+    if (!draft) {
       const definition = await deps.getTeamDataApi().getSavedRequest(teamName);
       if (!definition) throw new Error('The team configuration is unavailable');
-      const draft = copyDraft ?? { ...definition, projectContextMode: 'shared' as const };
-      requireTeamRuntimeSelection(parseDraftLaunchCreateRequest(draft, copyBody));
+      draft = { ...definition, projectContextMode: 'shared' };
     }
-    return { ...copyBody, teamName, cwd } as TeamLaunchRequest;
+    const create = parseDraftLaunchCreateRequest(draft, copyBody);
+    requireTeamRuntimeSelection(create);
+    return { ...draftLaunchRequest(create), teamName, cwd };
   }
 
   /** A failed run of a copy (or a failed confirmation of its readiness) has no client to tell. */
@@ -182,6 +194,7 @@ export function registerTeamLaunchRoute(
   }
 
   async function launchProjectTeam(
+    port: ProjectTeamLaunch,
     teamName: string,
     body: Record<string, unknown>
   ): Promise<LaunchResponse> {
@@ -192,8 +205,8 @@ export function registerTeamLaunchRoute(
     }
     // A team name in the body would rename the draft of the copy.
     const copyBody = Object.fromEntries(Object.entries(body).filter(([key]) => key !== 'teamName'));
-    const request = await admitProjectLaunch(teamName, copyBody);
-    const launched = await launchInProjectContext<LaunchResponse>(request, ports, {
+    const request = await admitProjectLaunch(port, teamName, copyBody);
+    const launched = await port.launch<LaunchResponse>(request, {
       invoke: (copy, mapProgress) =>
         // The progress mapper confirms the project context once the copy is ready.
         launchByName(copy.teamName, { ...copyBody, cwd: copy.cwd }, (progress) =>
@@ -206,23 +219,34 @@ export function registerTeamLaunchRoute(
     return launched;
   }
 
+  /** Without the launch port only the history mode is known: a per-project team is refused. */
+  async function kindOf(port: ProjectTeamLaunch | undefined, teamName: string): Promise<TeamKind> {
+    if (port) return port.classify(teamName);
+    const mode = await readTeamProjectContextMode(new TeamMetaStore(), teamName);
+    if (mode === 'per_project') {
+      throw deps.createFeatureUnavailableError(
+        'Launching a team with separate history per project is not available in this mode'
+      );
+    }
+    return 'native';
+  }
+
   async function launch(
     teamName: string,
     body: unknown,
     holdsLock: boolean
   ): Promise<LaunchResponse> {
-    const kind = await classifyTeamKind(createProjectContextRuntimeParts(ports).kinds, teamName);
-    if (kind === 'native') return launchByName(teamName, body, ignoreProgress);
+    const port = services.projectTeamLaunch?.();
+    const kind = await kindOf(port, teamName);
+    if (kind === 'native' || !port) return launchByName(teamName, body, ignoreProgress);
     if (kind === 'alias') throw new ProjectCopyLaunchRefusedError();
     if (body !== undefined && (body === null || typeof body !== 'object' || Array.isArray(body))) {
       throw new HttpBadRequestError('launch body must be an object');
     }
     const payload = (body ?? {}) as Record<string, unknown>;
     return holdsLock
-      ? launchProjectTeam(teamName, payload)
-      : deps
-          .getTeamDataApi()
-          .runConfigurationOperation(teamName, () => launchProjectTeam(teamName, payload));
+      ? launchProjectTeam(port, teamName, payload)
+      : port.withTeamLock(teamName, () => launchProjectTeam(port, teamName, payload));
   }
 
   app.post<{ Params: { teamName: string }; Body: Omit<TeamLaunchRequest, 'teamName'> }>(

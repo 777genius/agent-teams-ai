@@ -404,21 +404,6 @@ describe('TeamProvisioning API binders', () => {
         this.renamedDraft = `${oldTeamName}->${newTeamName}-${this.suffix}`;
         return Promise.resolve();
       },
-      replaceMembers(this: TeamDataSource, teamName: string): Promise<void> {
-        this.createdTeamName = `${teamName}-members-${this.suffix}`;
-        return Promise.resolve();
-      },
-      updateConfig(): Promise<null> {
-        return Promise.resolve(null);
-      },
-      runConfigurationOperation<T>(
-        this: TeamDataSource,
-        teamName: string,
-        operation: () => Promise<T>
-      ): Promise<T> {
-        this.renamedDraft = `${teamName}-locked-${this.suffix}`;
-        return operation();
-      },
     };
 
     const api = bindTeamHttpDataApi(source);
@@ -426,8 +411,6 @@ describe('TeamProvisioning API binders', () => {
     const getTeamData = api.getTeamData.bind(undefined);
     const getSavedRequest = api.getSavedRequest.bind(undefined);
     const createTeamConfig = api.createTeamConfig.bind(undefined);
-    const runConfigurationOperation = api.runConfigurationOperation.bind(undefined);
-    const replaceMembers = api.replaceMembers.bind(undefined);
 
     await expect(listTeams()).resolves.toEqual([
       expect.objectContaining({ teamName: 'team-bound' }),
@@ -446,10 +429,6 @@ describe('TeamProvisioning API binders', () => {
     const renameDraftTeam = api.renameDraftTeam.bind(undefined);
     await renameDraftTeam('old-draft', 'new-draft');
     expect(source.renamedDraft).toBe('old-draft->new-draft-bound');
-    await expect(runConfigurationOperation('locked', () => Promise.resolve(7))).resolves.toBe(7);
-    expect(source.renamedDraft).toBe('locked-locked-bound');
-    await replaceMembers('copy', { members: [] });
-    expect(source.createdTeamName).toBe('copy-members-bound');
   });
 
   it('groups HTTP route controls behind narrow facade ports', async () => {
@@ -493,9 +472,6 @@ describe('TeamProvisioning API binders', () => {
       getAliveTeams: () => ['team-http'],
       isTeamAlive: () => true,
       getCurrentRunId: () => 'run-http',
-      hasProvisioningRun(this: { runId: string }, teamName: string): boolean {
-        return teamName === 'team-http' && this.runId === 'run-http';
-      },
       recordOpenCodeRuntimeBootstrapCheckin: (): Promise<OpenCodeRuntimeControlAck> =>
         Promise.resolve(ack),
       deliverOpenCodeRuntimeMessage: (): Promise<OpenCodeRuntimeControlAck> =>
@@ -536,7 +512,6 @@ describe('TeamProvisioning API binders', () => {
 
     expect(Object.keys(api).sort()).toEqual([
       'memberDiagnostics',
-      'provisioningRun',
       'provisioningStart',
       'provisioningStatus',
       'runtime',
@@ -544,9 +519,6 @@ describe('TeamProvisioning API binders', () => {
       'taskActivity',
     ]);
     expect(Object.keys(runtime).sort()).toEqual(['getAliveTeams', 'getRuntimeState', 'stopTeam']);
-    // The launch gate asks only this; cancelling a run is not an HTTP capability.
-    expect(Object.keys(api.provisioningRun)).toEqual(['hasProvisioningRun']);
-    expect(api.provisioningRun.hasProvisioningRun.bind(undefined)('team-http')).toBe(true);
     // Contract lock: the HTTP member diagnostics facade exposes the write-free
     // reads and nothing else, so quietly re-pointing it at the mutating getters
     // is a CI failure rather than a silent behaviour change.

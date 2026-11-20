@@ -435,6 +435,7 @@ Arguments:
 ```json
 {
   "teamName": "openclaw-review",
+  "projectContextMode": "shared",
   "displayName": "OpenClaw Review",
   "description": "Team used by OpenClaw to cross-check complex work",
   "cwd": "/Users/belief/dev/projects/example-project",
@@ -469,6 +470,11 @@ Arguments:
 ```
 
 This creates a draft team config. It does not start the runtime.
+
+`projectContextMode` is required and fixed at creation:
+
+- `shared`: one history (tasks, chats, reviews) for every project folder. Use it for the flow in this document (`team_create` -> `team_launch` -> `task_*` / `message_send` / `review_*`): every MCP tool works with it.
+- `per_project`: separate tasks and chats for every project folder, the default of the app. `team_launch` takes the project in `cwd` (the first launch in a folder starts its history there), but the task, message and review tools do not support such a team over MCP yet.
 
 Important:
 

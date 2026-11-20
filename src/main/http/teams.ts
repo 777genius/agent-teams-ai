@@ -1,5 +1,4 @@
 import { readNativeWorkSyncCurrentRuntimeInstanceId } from '@features/member-work-sync/main';
-import { projectPublicProvisioningProgress } from '@main/ipc/teams/teamProjectContextProgressIdentity';
 import { validateMemberName, validateTeamName } from '@main/services/team/TeamIdentifierValidation';
 import { getTeamsBasePath } from '@main/utils/pathDecoder';
 import { getErrorMessage } from '@shared/utils/errorHandling';
@@ -18,6 +17,7 @@ import {
   HttpBadRequestError,
   parseCreateTeamRequest,
   parseTeamConfigurationReadQuery,
+  requireExplicitProjectContextMode,
   withRuntimeTeamName,
 } from './teamRouteParsers';
 import { rememberMemberWorkSyncRuntimeStop } from './teamRuntimeStopReplay';
@@ -265,7 +265,8 @@ export function registerTeamRoutes(app: FastifyInstance, services: HttpServices)
 
   app.post<{ Body: CreateTeamBody }>('/api/teams', async (request, reply) => {
     try {
-      // Same history mode default as the create form of the app: separate per project.
+      // No silent default until board tools and trash support per-project teams over HTTP/MCP.
+      requireExplicitProjectContextMode(request.body);
       const createRequest = parseCreateTeamRequest(request.body);
       const management = managementFeature
         ? await managementFeature.create(
@@ -297,6 +298,7 @@ export function registerTeamRoutes(app: FastifyInstance, services: HttpServices)
       return reply.status(getStatusCode(error)).send({
         error: getResponseErrorMessage(error),
         ...(error instanceof TeamRuntimeSelectionError ? { code: error.code } : {}),
+        ...(error instanceof HttpBadRequestError && error.code ? { code: error.code } : {}),
       });
     }
   });
@@ -354,11 +356,8 @@ export function registerTeamRoutes(app: FastifyInstance, services: HttpServices)
         }
 
         // A run of a project copy reports its team, like the progress the app shows.
-        return reply.send(
-          projectPublicProvisioningProgress(
-            await getTeamProvisioningStatusApi(services).getProvisioningStatus(runId)
-          )
-        );
+        const progress = await getTeamProvisioningStatusApi(services).getProvisioningStatus(runId);
+        return reply.send(services.projectTeamLaunch?.().publicProgress(progress) ?? progress);
       } catch (error) {
         const message = getErrorMessage(error);
         const statusCode = message === 'Unknown runId' ? 404 : getStatusCode(error);

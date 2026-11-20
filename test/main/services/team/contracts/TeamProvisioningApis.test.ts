@@ -154,15 +154,12 @@ describe('bindTeamHttpHandlerApis', () => {
     expectTypeOf<TeamHttpHandlerApis>().toEqualTypeOf<Required<TeamHttpHandlerApis>>();
     expect(sortedKeys(api)).toEqual([
       'memberDiagnostics',
-      'provisioningRun',
       'provisioningStart',
       'provisioningStatus',
       'runtime',
       'runtimeControl',
       'taskActivity',
     ]);
-    // Only the launch gate question, never cancel.
-    expect(sortedKeys(api.provisioningRun)).toEqual(['hasProvisioningRun']);
   });
 });
 

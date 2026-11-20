@@ -100,13 +100,13 @@ A 200 from `team_stop` means every context read as down, which includes a dead r
 
 ### Create
 
-`POST /api/teams` and MCP `team_create` take `projectContextMode` (`per_project` or `shared`). Without it the team gets the default of the create form in the app, `per_project` (`DEFAULT_NEW_TEAM_PROJECT_CONTEXT_MODE`); the answer echoes the mode. A per-project team is created as a draft of the logical team (`team.meta.json`, `members.meta.json`, no `config.json`, no copy yet), the same files the app writes. `cwd` is optional and stays the folder shown by default; it does not create a project copy.
+`POST /api/teams` and MCP `team_create` require `projectContextMode` (`per_project` or `shared`); without it they answer 400 with code `PROJECT_CONTEXT_MODE_REQUIRED`, and the answer of a create echoes the mode. There is no silent default (the app's form defaults to `per_project`) while the MCP board tools (`task_*`, `message_send`, `review_*`) and trash do not support a per-project team: they need the `config.json` of a configured team, which the logical team does not have. A per-project team is created as a draft of the logical team (`team.meta.json`, `members.meta.json`, no `config.json`, no copy yet), the same files the app writes. `cwd` is optional and stays the folder shown by default; it does not create a project copy.
 
-This is **not additive**: before, HTTP always created `shared` (and refused an explicit `per_project`). A client that needs one history for every folder must send `projectContextMode: "shared"`. Trashing a per-project team over HTTP/MCP still answers `PROJECT_TEAM_DESKTOP_ONLY`.
+This is **not additive**: before, HTTP always created `shared` (and refused an explicit `per_project`). A client that relied on that sends `projectContextMode: "shared"`.
 
 ### Launch
 
-`POST /api/teams/:team/launch` and MCP `team_launch` of a logical team launch it **in the project `cwd`**, through the use case the app uses for its launch dialog, `launchInProjectContext` (`src/main/ipc/teams/teamProjectContextLaunch.ts`; the desktop IPC calls it through `withPreparedContextLaunch`):
+`POST /api/teams/:team/launch` and MCP `team_launch` of a logical team launch it **in the project `cwd`**, through the use case the app uses for its launch dialog, `launchInProjectContext` (`src/features/team-project-context/main/projectContextLaunch.ts`; the desktop IPC calls it through `withPreparedContextLaunch`, HTTP through the `projectTeamLaunch` port of the HTTP services):
 
 1. under the configuration lock of the team (the same lock as the app, held by the management feature),
 2. the explicit effort and fast mode are checked against the provider the team has saved,
@@ -120,20 +120,21 @@ Refusals of the project context carry their reason in `code`, next to `error`.
 
 | Answer | When |
 | --- | --- |
-| 200 with the run of the copy | launched (or already launching or running in that project) |
+| 200 with the run of the copy | launched; a copy that already runs in that project answers like a running ordinary team (`launchStatus`) |
 | 400 | no `cwd`, `cwd` not an existing absolute folder, an invalid field or effort, `bootstrapOnly` in a project without a copy yet, or a `teamName` in the body (a per-project team cannot be renamed at launch) |
 | 422 `RUNTIME_SELECTION_REQUIRED` | the team has no runtime chosen yet and the request names none |
 | 409 `TEAM_PROJECT_CONTEXT_RUNNING` | the team runs, launches or has an unreconciled copy in another project |
+| 409 | a first launch of the team in that project is still in progress (the native create refuses a second one) |
+| 409 `TEAM_PROJECT_CONTEXT_REFUSED` | an invariant of the copy is broken (an unowned or nested copy, missing settings); the text says which |
 | 409 `TEAM_PROJECT_CONTEXT_UNAVAILABLE` | the contexts index cannot be used (being trashed or deleted, damaged, too many projects) |
 | 409 `TEAM_METADATA_UNREADABLE` | the team metadata cannot be read: the kind of the team is unknown, nothing is launched |
 | 409 `PROJECT_COPY_NOT_LAUNCHABLE` | the name is a project copy (`ptc-` followed by 24 hex characters, refused by its shape even when its owner cannot be proven) |
 | 409, `error` starting with `TEAM_TRASHED` | the team is in the trash (as for any team) |
 
-Everything that can be checked without the copy is checked **before anything is reserved**: a reservation left behind by a refused request would block the team in every other project until it is launched in this one. The body is parsed by the same parser that launches the copy (as a draft when the project has no copy yet, else as a configured team), so no rule exists twice. A launch that fails after the copy was reserved (a provider or runtime error of the copy) leaves it like a failed launch in the app does: launching the team in that project again completes it.
+Everything that can be checked without the copy is checked **before anything is reserved**: a reservation left behind by a refused request would block the team in every other project until it is launched in this one. The body is parsed by the same parser that launches the copy (as a draft when the project has no copy yet, else as a configured team), so no rule exists twice. A launch that fails after the copy was reserved (a provider or runtime error of the copy) leaves the copy reserved, like a failed launch in the app. A retry in the same project reuses it (the reserved row is read with `inspect`, as the reservation of the app does), so it completes there; until then the team is refused in the other projects.
 
 ### Not verified
 
 - Real agent execution after an HTTP/MCP launch: the Electron E2E (`verifyHttpCreateAndLaunch` in `scripts/e2e/project-scoped-team-history-desktop.ts`) launches against a runtime that denies agents, so it proves the files, the index and the refusals, not a running team.
 - The hosted web client was not driven; it uses the same routes.
 - Known limit (as in the app): the team list folds a copy into its team only once the copy was ready. A copy whose first run in a project never got ready (refused or failed after it was reserved) stays visible as its own row until a launch in that project succeeds.
-

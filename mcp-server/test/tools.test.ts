@@ -388,12 +388,15 @@ describe('agent-teams-mcp tools', () => {
   it('accepts an omitted team_create roster while rejecting malformed provided rosters', () => {
     const parameters = getTool('team_create').parameters;
 
-    expect(parameters?.safeParse({ teamName: 'alpha' }).success).toBe(true);
-    expect(parameters?.safeParse({ teamName: 'alpha', members: 'builder' }).success).toBe(false);
-    expect(parameters?.safeParse({ teamName: 'alpha', members: null }).success).toBe(false);
-    expect(parameters?.safeParse({ teamName: 'alpha', members: [{}] }).success).toBe(false);
-    expect(parameters?.safeParse({ teamName: 'alpha', projectContextMode: 'shared' }).success).toBe(true);
-    expect(parameters?.safeParse({ teamName: 'alpha', projectContextMode: 'project' }).success).toBe(false);
+    const team = { teamName: 'alpha', projectContextMode: 'shared' };
+    expect(parameters?.safeParse(team).success).toBe(true);
+    expect(parameters?.safeParse({ ...team, members: 'builder' }).success).toBe(false);
+    expect(parameters?.safeParse({ ...team, members: null }).success).toBe(false);
+    expect(parameters?.safeParse({ ...team, members: [{}] }).success).toBe(false);
+    // The history mode is required: no silent default until board tools support both modes.
+    expect(parameters?.safeParse({ teamName: 'alpha' }).success).toBe(false);
+    expect(parameters?.safeParse({ ...team, projectContextMode: 'per_project' }).success).toBe(true);
+    expect(parameters?.safeParse({ ...team, projectContextMode: 'project' }).success).toBe(false);
   });
 
   it('launches and stops teams through the runtime MCP tools', async () => {

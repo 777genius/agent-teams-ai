@@ -46,7 +46,7 @@ Status words: **works**, **hidden** (the control is not shown), **refuses** (an 
 | Feature | Legacy | Logical | Copy | Evidence |
 | --- | --- | --- | --- | --- |
 | Create in the app | works | works (mode picked in the form) | n/a | #1237, E2E |
-| Create through HTTP / MCP `team_create` | works | works: `projectContextMode` in the request, default `per_project` like the create form of the app | n/a | `http/teams.ts` create route, `teamMcpControl.integration.test.ts`, E2E `verifyHttpCreateAndLaunch` |
+| Create through HTTP / MCP `team_create` | works | works: `projectContextMode` is required (no silent default while the board tools below do not support a per-project team) | n/a | `http/teams.ts` create route, `teamMcpControl.integration.test.ts`, E2E `verifyHttpCreateAndLaunch` |
 | Import a team folder | works | creates a draft with the default mode (per project), no mode choice (untested) | n/a | `createDraftTeamConfig.ts` default mode, import dialog has no mode field (read) |
 | Copy a team | works | works, but the copy form uses the default mode, not the source mode | n/a | `TeamListView.tsx:855` (read) |
 | Edit name, description, color | works | works | refuses (by design) | #1244, E2E |
@@ -108,6 +108,7 @@ Status words: **works**, **hidden** (the control is not shown), **refuses** (an 
 | --- | --- | --- | --- |
 | Hosted web / HTTP create and launch | works | works (create with a mode, launch in a project) | refused |
 | MCP team tools `team_get`, `team_update`, `team_trash`, `team_launch`, `team_stop`, `team_list` | work | read, update, launch, stop and list work; trash refuses (see B) | stop works |
+| MCP board tools (`task_*`, `message_send`, `review_*`, `kanban_*`) | work | **not supported**: they require the `config.json` of a configured team, and the logical team has none (`team_get` answers `pendingCreate: true`). Next step: resolve team + `cwd` to the project copy, as the launch does | work on the copy by its name |
 
 ## 3. Ranked gaps
 
@@ -205,8 +206,8 @@ Still open after #1247 and #1248: gaps 5 (all fields but the prompt), 6, 7, 9, 1
 
 The rows "Create through HTTP / MCP `team_create`", "Launch through HTTP / MCP `team_launch`" and section F were updated in place; gap 12 is closed. Details and the client contract: [per-project-team-targets.md](./per-project-team-targets.md#create-and-launch-over-http-and-mcp).
 
-- **Not additive:** `POST /api/teams` and MCP `team_create` without `projectContextMode` now create a team with separate history per project (the default of the app). A client that relied on the old forced `shared` must send `projectContextMode: "shared"`. Such a team cannot be trashed over HTTP/MCP yet (`PROJECT_TEAM_DESKTOP_ONLY`).
-- One launch use case for every transport: the desktop IPC, HTTP and MCP call `launchInProjectContext`; the HTTP launch guard that refused per-project teams is removed.
+- **Not additive:** `POST /api/teams` and MCP `team_create` now require `projectContextMode` (400 `PROJECT_CONTEXT_MODE_REQUIRED` without it). A client that relied on the old forced `shared` sends `projectContextMode: "shared"`. There is no silent default while the MCP board tools and trash do not support a per-project team (see section F).
+- One launch use case for every transport: the desktop IPC, HTTP and MCP call `launchInProjectContext` (`src/features/team-project-context/main/projectContextLaunch.ts`); the HTTP launch guard that refused per-project teams is removed.
 - Real agent execution after an HTTP/MCP launch was not exercised: the Electron E2E runs against a runtime that denies agents.
 
 ## Appendix: probe of the raw team list
