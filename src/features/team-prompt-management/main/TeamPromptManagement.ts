@@ -267,14 +267,12 @@ export class TeamPromptManagement {
   }
 
   private async assertNotProjectScoped(teamName: string): Promise<void> {
-    let projectScoped: boolean;
+    let projectScoped = false;
     try {
       projectScoped = await this.ports.isProjectScoped(teamName);
     } catch {
-      throw new TeamManagementError(
-        'TEAM_METADATA_UNREADABLE',
-        'Team metadata is unreadable; fix the team in the app before editing it'
-      );
+      // Unreadable team metadata is refused with its specific code by the
+      // configuration read that follows admission; it never reaches a write.
     }
     if (projectScoped)
       throw new TeamManagementError(

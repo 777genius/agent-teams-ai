@@ -553,7 +553,7 @@ async function verifyDefinitionEdit(f: Fixture) {
     '.find((b) => b.textContent?.trim() === "Add member"))()';
   await waitFor('(() => { const b = ' + addSubmit + '; return Boolean(b) && !b.disabled; })()', 'Add member enabled');
   await cdp.evaluate('(() => { ' + 'const b = ' + addSubmit + '; b.click(); return true; })()');
-  await waitFor('!document.querySelector("[role=dialog] input[placeholder=\"member-name\"]")',
+  await waitFor('!document.querySelector("[role=dialog] input[placeholder=\'member-name\']")',
     'Add member dialog closed after save');
   const logicalMembers = await waitForJson<{ members: { name: string; removedAt?: number }[] }>(
     path.join(logicalDir, 'members.meta.json'),

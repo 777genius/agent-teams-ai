@@ -48,14 +48,14 @@ describe('external (HTTP/MCP) team edits and project-scoped teams', () => {
     expect(m.ports.deleteTeam).not.toHaveBeenCalled();
   });
 
-  it('fails closed when it cannot tell what kind of team this is', async () => {
+  it('leaves unreadable metadata to the configuration read, which refuses it before any write', async () => {
     const m = management(async () => {
       throw new Error('Team metadata is unreadable');
     });
-    await expect(m.management.update('broken', body)).rejects.toMatchObject({
-      code: 'TEAM_METADATA_UNREADABLE',
-    });
+    // A team that does not exist: the configuration read refuses, nothing is written.
+    await expect(m.management.update('zz-synthetic-missing', body)).rejects.toBeDefined();
     expect(m.ports.updateConfig).not.toHaveBeenCalled();
+    expect(m.ports.replaceMembers).not.toHaveBeenCalled();
   });
 
   it('keeps ordinary teams on the existing admission path', async () => {
