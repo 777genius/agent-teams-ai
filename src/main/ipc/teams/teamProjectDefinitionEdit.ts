@@ -10,7 +10,7 @@ import { createProjectContextRuntimeParts } from './teamProjectContextCreate';
 
 import type { RuntimeRosterMutationMember } from './runtimeRosterMutationMember';
 import type { ProjectTeamRuntimePorts } from './teamProjectContextCreate';
-import type { DefinitionEditTarget } from '@features/team-project-context/main';
+import type { TeamKind } from '@features/team-project-context/main';
 import type { TeamIpcHandlerApis } from '@main/services/team/contracts/TeamProvisioningApis';
 import type { TeamDataService } from '@main/services/team/TeamDataService';
 import type { TeamViewSnapshot } from '@shared/types';
@@ -109,7 +109,7 @@ export function createProjectDefinitionEditRouting(
       if (!name.valid || !name.value) return handler(event, teamName, ...rest);
       const logicalName = name.value;
       const editor = createEditor(ports);
-      let target: DefinitionEditTarget;
+      let target: TeamKind;
       try {
         target = await editor.classify(logicalName);
       } catch (error) {

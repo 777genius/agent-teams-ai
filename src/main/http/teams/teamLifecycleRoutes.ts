@@ -130,7 +130,7 @@ export function registerTeamLifecycleRoutes(
     state: T,
     target: ResolvedTeamTarget
   ): T & { projectContextUnresolved?: true } {
-    return target.kind === 'native' && target.projectContextUnresolved
+    return target.kind === 'physical' && target.projectContextUnresolved
       ? { ...state, projectContextUnresolved: true }
       : state;
   }

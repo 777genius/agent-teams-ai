@@ -6,8 +6,11 @@ import {
 } from '@features/team-project-context/main';
 import { TeamMetaStore } from '@main/services/team/TeamMetaStore';
 
-import type { ResolvedTeamTarget, StopVerification } from '@features/team-project-context/main';
-import type { TeamMetaFile } from '@main/services/team/TeamMetaStore';
+import type {
+  ResolvedTeamTarget,
+  StopVerification,
+  TeamModeMetaReader,
+} from '@features/team-project-context/main';
 import type { TeamSummary } from '@shared/types';
 
 /**
@@ -16,10 +19,7 @@ import type { TeamSummary } from '@shared/types';
  * and the registry of the running app); tests inject a temp-dir registry.
  */
 export interface ProjectContextHttpHooks {
-  meta?: {
-    getMeta(teamName: string): Promise<TeamMetaFile | null>;
-    metadataFileExists(teamName: string): Promise<boolean>;
-  };
+  meta?: TeamModeMetaReader;
   registry?: TeamProjectContextRegistry;
   /** How long a stop waits for a context to read as down; tests shorten it. */
   stopVerification?: StopVerification;

@@ -24,10 +24,10 @@ import {
   rosterOf,
 } from '../../../src/main/ipc/teams/teamProjectDefinitionEdit';
 
-import type { DefinitionEditTarget } from '../../../src/features/team-project-context/main';
+import type { TeamKind } from '../../../src/features/team-project-context/main';
 import type { TeamProjectDefinitionEditor } from '../../../src/features/team-project-context/main';
 
-function routing(target: DefinitionEditTarget) {
+function routing(target: TeamKind) {
   const editor = {
     classify: vi.fn(async () => target),
     assertEditable: vi.fn(async () => undefined),
@@ -184,7 +184,7 @@ describe('the router bound to the team handlers', () => {
 });
 
 describe('lead instructions in the update-config route', () => {
-  function updateRouting(target: DefinitionEditTarget) {
+  function updateRouting(target: TeamKind) {
     const editor = {
       classify: vi.fn(async () => target),
       assertEditable: vi.fn(async () => undefined),

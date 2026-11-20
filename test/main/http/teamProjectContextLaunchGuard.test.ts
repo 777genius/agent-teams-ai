@@ -31,6 +31,9 @@ describe('HTTP project-context launch boundary', () => {
     const unreadable = meta();
     unreadable.metadataFileExists.mockResolvedValue(true);
     await expect(rejectUnsupportedProjectContextHttpLaunch('builders', unreadable))
-      .rejects.toThrow('unreadable');
+      .rejects.toMatchObject({
+        statusCode: 409,
+        message: 'Existing team metadata is unreadable; refusing shared-history fallback',
+      });
   });
 });

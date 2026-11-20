@@ -1,5 +1,6 @@
-export type { DefinitionEditTarget } from './classifyDefinitionTarget';
-export { classifyDefinitionTarget } from './classifyDefinitionTarget';
+export type { TeamKind } from '../contracts';
+export type { TeamKindPorts } from '../core';
+export { classifyTeamKind, createTeamKindPorts } from '../core';
 export type {
   DefinitionLaunchSettingKey,
   DefinitionLaunchSettings,
@@ -33,6 +34,12 @@ export {
   readLogicalRuntimeState,
   stopLogicalContexts,
 } from './logicalTeamRuntime';
+export { listOwnedContexts, ownsProjectHistory } from './ownedHistory';
+export type { TeamModeMetaReader } from './projectContextMode';
+export {
+  readTeamProjectContextMode,
+  TeamMetadataUnreadableError,
+} from './projectContextMode';
 export { projectDefinitionToAlias } from './projectDefinitionToAlias';
 export { projectTeamSummaries } from './projectTeamSummaries';
 export type { ContextGroup, ResolvedTeamTarget, TeamTargetPorts } from './resolveTeamTarget';

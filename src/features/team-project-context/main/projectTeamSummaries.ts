@@ -1,11 +1,10 @@
+import { listOwnedContexts } from './ownedHistory';
 import { TeamProjectContextRegistry } from './TeamProjectContextRegistry';
 
-import type { TeamMetaFile } from '@main/services/team/TeamMetaStore';
+import type { TeamModeMetaReader } from './projectContextMode';
 import type { TeamSummary } from '@shared/types';
 
-interface MetaReader {
-  getMeta(teamName: string): Promise<TeamMetaFile | null>;
-}
+type MetaReader = Pick<TeamModeMetaReader, 'getMeta'>;
 
 type RegistryReader = Pick<TeamProjectContextRegistry, 'list' | 'listRetained'>;
 
@@ -27,7 +26,7 @@ export async function projectTeamSummaries(
   for (let offset = 0; offset < teams.length; offset += READ_BATCH) {
     await Promise.all(teams.slice(offset, offset + READ_BATCH).map(async (team, index) => {
       const position = offset + index;
-      let saved: TeamMetaFile | null = null;
+      let saved: Awaited<ReturnType<MetaReader['getMeta']>> = null;
       try {
         saved = await meta.getMeta(team.teamName);
       } catch {
@@ -44,9 +43,7 @@ export async function projectTeamSummaries(
       try {
         // Owned native aliases stay folded under their logical team whatever
         // its saved mode says; only a verified owner can hide a native team.
-        const contexts = mode === 'per_project'
-          ? await registry.list(team.teamName)
-          : await registry.listRetained(team.teamName);
+        const contexts = await listOwnedContexts(registry, team.teamName, mode);
         const ownedReady = contexts.filter((context) => context.state === 'ready');
         for (const context of ownedReady) {
           // list() proves ownership for ready aliases. A prefix or reserved

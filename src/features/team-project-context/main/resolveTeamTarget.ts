@@ -1,10 +1,11 @@
-import { TeamProjectContextRuntimeResolver } from './TeamProjectContextRuntimeResolver';
+import { listOwnedContexts } from './ownedHistory';
+import { readTeamProjectContextMode } from './projectContextMode';
 
+import type { TeamModeMetaReader } from './projectContextMode';
 import type {
   PersistedTeamWorkContext,
   TeamProjectContextRegistry,
 } from './TeamProjectContextRegistry';
-import type { TeamMetaFile } from '@main/services/team/TeamMetaStore';
 import type { TeamProjectContextMode } from '@shared/types';
 
 /**
@@ -13,18 +14,21 @@ import type { TeamProjectContextMode } from '@shared/types';
  * never by whether it happens to own a contexts index:
  * - `logical`: the user-visible team of the per-project mode. It has no process of
  *   its own; its runtime, tasks and chats live in its project contexts.
- * - `native`: an ordinary team (legacy/shared); the name is the physical team and
+ * - `physical`: an ordinary team (legacy/shared); the name is the physical team and
  *   the process. A shared team that kept a project-contexts index from an earlier
  *   per-project period lists those `retained` contexts too: they may still run.
  *   `projectContextUnresolved` marks a team whose metadata is unreadable and that
  *   has no contexts index, so it can only be treated by its exact name.
  *
- * A project copy (`ptc-…` alias) is an ordinary native team here: its name is
- * physical, and the callers that need its logical team look it up themselves.
+ * A project copy (`ptc-…` alias) is `physical` here: its name is the process, and
+ * the callers that need its logical team look it up themselves. This is not
+ * `TeamKind` (`classifyTeamKind`), which tells an owned copy (`alias`) from an
+ * ordinary team (`native`) for edits, schedules and launch: the two answer
+ * different questions, which is why they use different words.
  */
 export type ResolvedTeamTarget =
   | {
-      kind: 'native';
+      kind: 'physical';
       team: string;
       retained: readonly PersistedTeamWorkContext[];
       projectContextUnresolved?: true;
@@ -81,11 +85,11 @@ export async function resolveTeamTarget(
     if (await guarded(teamName, () => ports.hasContextsIndex(teamName))) {
       throw new TeamTargetUnresolvedError(teamName, error);
     }
-    return { kind: 'native', team: teamName, retained: [], projectContextUnresolved: true };
+    return { kind: 'physical', team: teamName, retained: [], projectContextUnresolved: true };
   }
   const contexts = await guarded(teamName, () => ports.listContexts(teamName, mode));
   if (mode === 'per_project') return { kind: 'logical', logical: teamName, contexts };
-  return { kind: 'native', team: teamName, retained: contexts };
+  return { kind: 'physical', team: teamName, retained: contexts };
 }
 
 /**
@@ -105,32 +109,19 @@ export function contextGroupOf(target: ResolvedTeamTarget): ContextGroup | null 
   return { team: target.team, contexts: target.retained };
 }
 
-interface TeamMetaReader {
-  getMeta(teamName: string): Promise<TeamMetaFile | null>;
-  metadataFileExists(teamName: string): Promise<boolean>;
-}
-
 type TargetRegistry = Pick<
   TeamProjectContextRegistry,
-  | 'find'
-  | 'reserve'
-  | 'confirmReady'
-  | 'releaseUnusedReservation'
-  | 'list'
-  | 'listRetained'
-  | 'hasRetainedIndex'
+  'list' | 'listRetained' | 'hasRetainedIndex'
 >;
 
 /** The ports every production caller uses; tests inject fakes or a temp-dir registry. */
 export function createTeamTargetPorts(
-  meta: TeamMetaReader,
+  meta: TeamModeMetaReader,
   registry: TargetRegistry
 ): TeamTargetPorts {
-  const resolver = new TeamProjectContextRuntimeResolver(meta, registry);
   return {
-    getMode: (teamName) => resolver.getMode(teamName),
-    listContexts: (logicalTeamName, mode) =>
-      mode === 'per_project' ? registry.list(logicalTeamName) : registry.listRetained(logicalTeamName),
+    getMode: (teamName) => readTeamProjectContextMode(meta, teamName),
+    listContexts: (logicalTeamName, mode) => listOwnedContexts(registry, logicalTeamName, mode),
     hasContextsIndex: (teamName) => registry.hasRetainedIndex(teamName),
   };
 }

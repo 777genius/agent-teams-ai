@@ -1,6 +1,7 @@
 import * as path from 'node:path';
 
 import {
+  createTeamKindPorts,
   isConfirmedStoppedTeamRuntime,
   TeamProjectContextCreateCoordinator,
   TeamProjectContextDraftMaterializer,
@@ -73,7 +74,14 @@ export function createProjectContextRuntimeParts(ports: ProjectTeamRuntimePorts)
     getRuntimeState: (teamName) => ports.runtime.getRuntimeState(teamName),
     hasProvisioningRun: (teamName) => ports.run.hasProvisioningRun(teamName),
   });
-  return { registry, resolver, materializer, gate, launchSettings };
+  return {
+    registry,
+    resolver,
+    materializer,
+    gate,
+    launchSettings,
+    kinds: createTeamKindPorts(resolver, registry),
+  };
 }
 
 /**

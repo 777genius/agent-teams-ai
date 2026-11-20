@@ -1,5 +1,5 @@
 import {
-  classifyDefinitionTarget,
+  classifyTeamKind,
   pickDefinitionLaunchSettings,
   TeamProjectContextLaunchConflictError,
   TeamProjectContextUnavailableError,
@@ -18,6 +18,7 @@ import type { PreparedTeamContextLaunch } from './teamProjectContextLaunch';
 import type {
   DefinitionLaunchSettings,
   ResolvedTeamWorkContext,
+  TeamKindPorts,
   TeamWorkContextAddress,
 } from '@features/team-project-context/main';
 import type {
@@ -30,14 +31,11 @@ import type {
 import type {
   TeamLaunchRequest,
   TeamLaunchResponse,
-  TeamProjectContextMode,
   TeamProvisioningProgress,
 } from '@shared/types';
 
-export interface ProjectScheduleTargetPorts {
-  /** Throws when the team metadata is unreadable (never guess "ordinary"). */
-  getMode(teamName: string): Promise<TeamProjectContextMode>;
-  isOwnedExecutionAlias(teamName: string): Promise<boolean>;
+/** `getMode` throws when the team metadata is unreadable (never guess "ordinary"). */
+export interface ProjectScheduleTargetPorts extends TeamKindPorts {
   isTrashed(teamName: string): Promise<boolean>;
   isDirectory(path: string): Promise<boolean>;
   /** Read-only: never creates or reserves a project context. Throws for a stuck or damaged one. */
@@ -139,7 +137,7 @@ export class ProjectScheduleTargets implements ScheduleTargets {
   async admit(teamName: string, change?: ScheduleFolderChange): Promise<ScheduleAdmission> {
     const ports = this.makePorts();
     try {
-      const kind = await classifyDefinitionTarget(ports, teamName);
+      const kind = await classifyTeamKind(ports, teamName);
       if (kind === 'alias') return { allowed: false, reason: COPY_MESSAGE };
       if (kind === 'logical' && change?.cwd !== undefined) {
         return await admitFolder(ports, { ...change, cwd: change.cwd });
@@ -153,7 +151,7 @@ export class ProjectScheduleTargets implements ScheduleTargets {
   async resolve(schedule: ScheduleIdentity): Promise<ScheduleTarget> {
     const ports = this.makePorts();
     try {
-      const kind = await classifyDefinitionTarget(ports, schedule.teamName);
+      const kind = await classifyTeamKind(ports, schedule.teamName);
       if (kind === 'alias') return { kind: 'refused', reason: COPY_MESSAGE };
       if (kind === 'native') return { kind: 'native' };
       if (await ports.isTrashed(schedule.teamName)) {
@@ -261,8 +259,7 @@ export function createProjectScheduleTargets(
     const parts = createProjectContextRuntimeParts(deps);
     const meta = new TeamMetaStore();
     return {
-      getMode: (teamName) => parts.resolver.getMode(teamName),
-      isOwnedExecutionAlias: (teamName) => parts.registry.isOwnedExecutionAlias(teamName),
+      ...parts.kinds,
       isTrashed: async (teamName) => Boolean((await meta.getMeta(teamName))?.deletedAt),
       isDirectory,
       forRead: (address) => parts.resolver.forRead(address),
