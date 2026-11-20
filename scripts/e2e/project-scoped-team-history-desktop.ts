@@ -509,15 +509,22 @@ async function verifyDefinitionEdit(f: Fixture) {
   await setField('#edit-team-name', 'History fixture edited');
   await setField('#edit-team-description', 'Edited through the real dialog');
   await clickSelector('[role=dialog] button[title="orange"]', 'orange color choice');
+  // Saved lead instructions are part of the same definition and the same dialog.
+  const leadPrompt = 'Lead instructions edited through the real dialog';
+  await waitFor('Boolean(document.querySelector("#edit-team-lead-prompt"))',
+    'lead instructions field in the dialog of a per-project team');
+  await setField('#edit-team-lead-prompt', leadPrompt);
+  await cdp.screenshot(path.join(f.screenshots, 'edit-dialog-lead-prompt.png'));
   await clickDialogSave();
   await waitFor('!document.querySelector("#edit-team-name")', 'Edit team dialog closed after save');
 
   const logicalMeta = await waitForJson<Record<string, unknown>>(
     path.join(logicalDir, 'team.meta.json'),
-    (meta) => meta.displayName === 'History fixture edited',
-    'logical team metadata saved'
+    (meta) => meta.displayName === 'History fixture edited' && meta.prompt === leadPrompt,
+    'logical team metadata and lead instructions saved'
   );
   assert.equal(logicalMeta.description, 'Edited through the real dialog');
+  assert.equal(logicalMeta.prompt, leadPrompt);
   assert.equal(logicalMeta.color, 'orange');
   assert.equal(logicalMeta.projectContextMode, 'per_project');
   const logicalConfigExists = await readFile(path.join(logicalDir, 'config.json'), 'utf8')
@@ -532,7 +539,26 @@ async function verifyDefinitionEdit(f: Fixture) {
         config.name === 'History fixture edited',
       'project copy ' + alias + ' shows the edited name, description and color'
     );
+    // The lead instructions are projected into the stopped copy's saved launch settings,
+    // never into its config.json.
+    await waitForJson<Record<string, unknown>>(
+      aliasFile(alias, 'team.meta.json'),
+      (meta) => meta.prompt === leadPrompt,
+      'project copy ' + alias + ' carries the edited lead instructions'
+    );
+    assert.equal(
+      (await readJsonFile<Record<string, unknown>>(aliasFile(alias, 'config.json'))).prompt,
+      undefined,
+      'Lead instructions must not leak into config.json of ' + alias
+    );
   }
+  // Reopening the dialog shows the saved instructions from the definition.
+  await openEditDialog(f);
+  assert.equal(await cdp.evaluate('document.querySelector("#edit-team-lead-prompt").value'), leadPrompt,
+    'The dialog must show the saved lead instructions after reopening');
+  await cdp.evaluate('(() => Array.from(document.querySelectorAll("[role=dialog] button"))' +
+    '.find((b) => b.textContent?.trim() === "Cancel")?.click())()');
+  await waitFor('!document.querySelector("#edit-team-name")', 'dialog closed after the check');
   await waitFor('document.querySelector(' + JSON.stringify('[data-team-name="' + f.nativeA + '"] h2') +
     ')?.textContent?.trim() === "History fixture edited"', 'edited team name visible on the screen');
   await cdp.screenshot(path.join(f.screenshots, 'edit-after-metadata.png'));

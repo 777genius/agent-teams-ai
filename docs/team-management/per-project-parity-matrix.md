@@ -6,6 +6,16 @@ Method: code reading of main at `75d4f8b152` (file and line references below), p
 
 Related pages: [Editing a per-project team](./per-project-team-editing.md), the project-context feature README (`src/features/team-project-context/README.md`).
 
+## Update after #1247
+
+The cells below were written before #1247 and are kept as they were; where they disagree with this block, this block is newer.
+
+- Lead instructions (the `prompt` row of section 2): editable in the Edit Team dialog of a per-project team and over MCP `team_update` (`leadInstructions`) / HTTP update. The text lives in the logical `team.meta.json`, is projected onto stopped project copies and repaired at launch. A prompt typed in the launch dialog applies to that start only; the next projection resets the copy.
+- MCP team tools (the `team_update` part of the table in section 2): update works for a per-project team when every project is stopped, through the same stopped gate, logical-team lock and projection as the app. A running, launching or unreconciled project answers `TEAM_ACTIVE`, `TEAM_PROVISIONING` or `TEAM_PROJECT_CONTEXT_UNRECONCILED`; a project copy answers `PROJECT_COPY_NOT_EDITABLE`. `team_trash` of a per-project team (and of a copy) and `team_launch` still refuse.
+- Gap 4 (ranked list): closed, except trashing a per-project team over HTTP/MCP, which stays in the app (`PROJECT_TEAM_DESKTOP_ONLY`).
+- Gap 5: `prompt` is no longer among the drifting fields (it is part of the definition now); provider, model, effort, fast mode, auto-approve, context limit and worktree still drift.
+- Step 2 of the recommended order ("External edit and lead instructions"): done, with the same exception for trash.
+
 ## 1. How a team name is resolved today
 
 A per-project team is three kinds of names:

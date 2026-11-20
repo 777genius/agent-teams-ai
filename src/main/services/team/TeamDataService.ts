@@ -92,6 +92,7 @@ import { TeamTranscriptProjectResolver } from './TeamTranscriptProjectResolver';
 import type { PersistedTaskChangePresenceIndex } from './cache/taskChangePresenceCacheTypes';
 import type { TaskChangePresenceRepository } from './cache/TaskChangePresenceRepository';
 import type { TaskCommentNotificationJournalStore } from './TaskCommentNotificationJournalStore';
+import type { TeamConfigurationUpdate } from './TeamConfigurationMutations';
 import type { TeamFileWritePolicy } from './teamFileWritePolicy';
 import type { TeamLogSourceTracker } from './TeamLogSourceTracker';
 import type { TeamMetaFile } from './TeamMetaStore';
@@ -1318,7 +1319,7 @@ export class TeamDataService {
 
   async updateConfig(
     teamName: string,
-    updates: { name?: string; description?: string; color?: string }
+    updates: TeamConfigurationUpdate
   ): Promise<TeamConfig | null> {
     return this.runConfigurationOperation(teamName, () =>
       updateTeamConfiguration(teamName, updates, {

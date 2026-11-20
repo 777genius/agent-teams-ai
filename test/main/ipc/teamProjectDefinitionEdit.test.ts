@@ -16,8 +16,10 @@ vi.mock('../../../src/main/services/team/TeamMetaStore', async (importOriginal) 
 
 import {
   createProjectDefinitionEditRouting,
+  NATIVE_LEAD_PROMPT_MESSAGE,
   PROJECT_COPY_EDIT_MESSAGE,
   readRosterForMutation,
+  refuseLeadPromptOfNativeTeam,
   route,
   rosterOf,
 } from '../../../src/main/ipc/teams/teamProjectDefinitionEdit';
@@ -178,5 +180,57 @@ describe('the router bound to the team handlers', () => {
     metaByTeam.clear();
     const data = { getTeamData: vi.fn(async () => ({ members: [{ name: 'a', role: 'dev' }] })) };
     await expect(rosterOf(data as never, 'legacy')).resolves.toEqual([{ name: 'a', role: 'dev' }]);
+  });
+});
+
+describe('lead instructions in the update-config route', () => {
+  function updateRouting(target: DefinitionEditTarget) {
+    const editor = {
+      classify: vi.fn(async () => target),
+      assertEditable: vi.fn(async () => undefined),
+      projectToAliases: vi.fn(async () => ({ failed: [] as { executionTeamName: string; message: string }[] })),
+    };
+    const handler = vi.fn(async (..._args: unknown[]) => ({ success: true as const, data: undefined }));
+    const wrapped = createProjectDefinitionEditRouting(
+      { data: () => ({ runConfigurationOperation: (_name: string, operation: () => Promise<unknown>) => operation() }) } as never,
+      () => editor as unknown as TeamProjectDefinitionEditor
+    )(handler, refuseLeadPromptOfNativeTeam);
+    return { editor, handler, wrapped };
+  }
+
+  it('refuses a lead prompt for an ordinary team and writes nothing', async () => {
+    const r = updateRouting('native');
+    await expect(r.wrapped(event, 'legacy', { prompt: 'new rules' })).resolves.toEqual({
+      success: false,
+      error: NATIVE_LEAD_PROMPT_MESSAGE,
+    });
+    expect(r.handler).not.toHaveBeenCalled();
+  });
+
+  it('refuses even an empty prompt for an ordinary team, but lets the other fields through', async () => {
+    const r = updateRouting('native');
+    await expect(r.wrapped(event, 'legacy', { prompt: '' })).resolves.toMatchObject({ success: false });
+    await expect(r.wrapped(event, 'legacy', { description: 'x', prompt: undefined })).resolves.toMatchObject({
+      success: true,
+    });
+    expect(r.handler).toHaveBeenCalledTimes(1);
+  });
+
+  it('accepts the lead prompt of a per-project team through the gate and projects it', async () => {
+    const r = updateRouting('logical');
+    await expect(r.wrapped(event, 'builders', { prompt: 'new rules' })).resolves.toMatchObject({
+      success: true,
+    });
+    expect(r.editor.assertEditable).toHaveBeenCalledWith('builders');
+    expect(r.handler).toHaveBeenCalledWith(event, 'builders', { prompt: 'new rules' });
+    expect(r.editor.projectToAliases).toHaveBeenCalledWith('builders');
+  });
+
+  it('only names a refusal when the payload really carries a prompt', () => {
+    expect(refuseLeadPromptOfNativeTeam(null)).toBeNull();
+    expect(refuseLeadPromptOfNativeTeam('text')).toBeNull();
+    expect(refuseLeadPromptOfNativeTeam({ name: 'x' })).toBeNull();
+    expect(refuseLeadPromptOfNativeTeam({ prompt: undefined })).toBeNull();
+    expect(refuseLeadPromptOfNativeTeam({ prompt: '' })).toBe(NATIVE_LEAD_PROMPT_MESSAGE);
   });
 });

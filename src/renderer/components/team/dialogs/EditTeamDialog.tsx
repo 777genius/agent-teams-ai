@@ -33,6 +33,7 @@ import {
   buildMemberColorMap,
   displayMemberName,
 } from '@renderer/utils/memberHelpers';
+import { MAX_TEAM_DEFINITION_TEXT_LENGTH } from '@shared/constants/teamLimits';
 import { parseNumericSuffixName } from '@shared/utils/teamMemberName';
 import { Loader2 } from 'lucide-react';
 
@@ -63,6 +64,11 @@ interface EditTeamDialogProps {
   currentName: string;
   currentDescription: string;
   currentColor: string;
+  /**
+   * Saved lead instructions. Only a team whose definition holds them (a team
+   * with separate history per project) passes it; without it the field is hidden.
+   */
+  currentLeadPrompt?: string;
   currentMembers: ResolvedTeamMember[];
   leadMember?: ResolvedTeamMember | null;
   resolvedMemberColorMap?: ReadonlyMap<string, string>;
@@ -152,6 +158,7 @@ export const EditTeamDialog = ({
   currentName,
   currentDescription,
   currentColor,
+  currentLeadPrompt,
   currentMembers,
   leadMember = null,
   resolvedMemberColorMap,
@@ -167,6 +174,7 @@ export const EditTeamDialog = ({
   const [name, setName] = useState(currentName);
   const [description, setDescription] = useState(currentDescription);
   const [color, setColor] = useState(currentColor);
+  const [leadPrompt, setLeadPrompt] = useState(currentLeadPrompt ?? '');
   const [members, setMembers] = useState(() => membersToDrafts(currentMembers));
   const [teammateWorktreeDefault, setTeammateWorktreeDefault] = useState(() =>
     deriveTeammateWorktreeDefault(currentMembers)
@@ -216,6 +224,7 @@ export const EditTeamDialog = ({
         setName(currentName);
         setDescription(currentDescription);
         setColor(currentColor);
+        setLeadPrompt(currentLeadPrompt ?? '');
         setMembers(membersToDrafts(currentMembers));
         setTeammateWorktreeDefault(deriveTeammateWorktreeDefault(currentMembers));
         setError(null);
@@ -246,8 +255,18 @@ export const EditTeamDialog = ({
       pendingCommittedSourceSnapshotRef.current = null;
     }
     wasOpenRef.current = open;
-  }, [open, teamName, currentName, currentDescription, currentColor, currentMembers]);
+  }, [
+    open,
+    teamName,
+    currentName,
+    currentDescription,
+    currentColor,
+    currentLeadPrompt,
+    currentMembers,
+  ]);
 
+  const leadPromptChanged =
+    currentLeadPrompt !== undefined && leadPrompt.trim() !== currentLeadPrompt.trim();
   const builtMembers = useMemo(() => buildMembersFromDrafts(members), [members]);
   const invalidMemberNamesError = useMemo(
     () =>
@@ -439,6 +458,8 @@ export const EditTeamDialog = ({
           name: name.trim(),
           description: description.trim(),
           color,
+          // Only a changed prompt is written, so a prompt edited elsewhere is never overwritten.
+          ...(leadPromptChanged ? { prompt: leadPrompt.trim() } : {}),
         });
         configSaved = true;
         if (hasMemberRosterChanges) {
@@ -563,6 +584,35 @@ export const EditTeamDialog = ({
               placeholder={t('editTeam.placeholders.description')}
             />
           </div>
+          {currentLeadPrompt !== undefined ? (
+            <div>
+              <label
+                htmlFor="edit-team-lead-prompt"
+                className="mb-1 block text-xs font-medium text-text"
+              >
+                {t('editTeam.fields.leadPrompt')}
+              </label>
+              <textarea
+                id="edit-team-lead-prompt"
+                value={leadPrompt}
+                onChange={(e) => {
+                  clearTransientErrors();
+                  setLeadPrompt(e.target.value);
+                }}
+                rows={4}
+                maxLength={MAX_TEAM_DEFINITION_TEXT_LENGTH}
+                aria-describedby="edit-team-lead-prompt-hint"
+                className="w-full resize-none rounded-md border border-[var(--color-border)] bg-[var(--color-form-control-bg)] px-3 py-1.5 text-sm text-[var(--color-text)] outline-none focus:border-[var(--color-border-emphasis)]"
+                placeholder={t('editTeam.placeholders.leadPrompt')}
+              />
+              <p
+                id="edit-team-lead-prompt-hint"
+                className="mt-1 text-xs text-[var(--color-text-muted)]"
+              >
+                {t('editTeam.leadPromptHint')}
+              </p>
+            </div>
+          ) : null}
           <div>
             <MembersEditorSection
               members={members}

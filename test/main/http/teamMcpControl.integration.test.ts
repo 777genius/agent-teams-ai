@@ -10,8 +10,8 @@ import { TeamDataService } from '@main/services/team/TeamDataService';
 import { TeamMembersMetaStore } from '@main/services/team/TeamMembersMetaStore';
 import { TeamMetaStore } from '@main/services/team/TeamMetaStore';
 import { TeamProvisioningService } from '@main/services/team/TeamProvisioningService';
+import { createTeamProjectDefinitionPort } from '@main/teamProjectDefinitionPort';
 import { setAppDataBasePath, setClaudeBasePathOverride } from '@main/utils/pathDecoder';
-import { isProjectScopedTeam } from '@main/teamProjectScope';
 import Fastify, { type FastifyInstance } from 'fastify';
 import { mkdir, mkdtemp, readFile, rm, writeFile } from 'fs/promises';
 import { tmpdir } from 'os';
@@ -374,7 +374,13 @@ function enableManagement(services: HttpServices, teamDataService: TeamDataServi
     },
     getContext: () => Promise.resolve(context.snapshot()),
     getRuntimeState: (name) => services.teamApis!.runtime.getRuntimeState(name),
-    isProjectScoped: (name) => isProjectScopedTeam(name),
+    projectDefinition: createTeamProjectDefinitionPort({
+      data: () => teamDataService,
+      runtime: () => ({
+        getRuntimeState: (name) => services.teamApis!.runtime.getRuntimeState(name),
+      }),
+      run: () => lifecycle,
+    }),
     getSavedRequest: (name) => teamDataService.getSavedRequest(name),
     getTeamData: (name) => teamDataService.getTeamData(name),
     createTeamConfig: (request) => teamDataService.createTeamConfig(request),
@@ -1003,6 +1009,248 @@ describe('MCP team tools over the local REST control API', () => {
         code: 'ENOENT',
       });
       expect(events).toHaveLength(0);
+    } finally {
+      await app.close();
+      setAppDataBasePath(null);
+      setClaudeBasePathOverride(null);
+      TeamConfigReader.clearCacheForTests();
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  // A team with separate history per project is edited through its definition (no config.json),
+  // with the same revision/context contract as any team; trashing stays in the app.
+  it('edits the definition of a per-project team over HTTP and keeps trashing in the app', async () => {
+    const root = await mkdtemp(path.join(tmpdir(), 'TEST-team-management-per-project-'));
+    setClaudeBasePathOverride(root);
+    const app = Fastify();
+    const { services, teamDataService } = createServices(root);
+    const { context, events } = enableManagement(services, teamDataService, root);
+    registerTeamRoutes(app, services);
+    const teamName = 'per-project-team';
+    const directory = path.join(root, 'teams', teamName);
+    try {
+      await teamDataService.createTeamConfig({
+        projectContextMode: 'per_project',
+        teamName,
+        cwd: root,
+        members: [{ name: 'builder', role: 'Engineer' }],
+        prompt: 'Saved lead instructions',
+      });
+      const readMeta = async () =>
+        JSON.parse(await readFile(path.join(directory, 'team.meta.json'), 'utf8')) as Record<
+          string,
+          unknown
+        >;
+      const get = async () => {
+        const response = await app.inject({
+          method: 'GET',
+          url: `/api/teams/${teamName}?configuration=1`,
+        });
+        expect(response.statusCode).toBe(200);
+        return response.json<{ configurationRevision: string }>();
+      };
+      const update = (expectedRevision: string, edit: Record<string, unknown>) =>
+        app.inject({
+          method: 'POST',
+          url: `/api/teams/${teamName}/update`,
+          payload: { expectedContext: context.snapshot(), expectedRevision, ...edit },
+        });
+
+      let revision = (await get()).configurationRevision;
+      const metadata = await update(revision, { metadata: { description: 'Edited over HTTP' } });
+      expect(metadata.statusCode).toBe(200);
+      expect(await readMeta()).toMatchObject({
+        projectContextMode: 'per_project',
+        description: 'Edited over HTTP',
+      });
+
+      revision = metadata.json<{ configurationRevision: string }>().configurationRevision;
+      const instructions = await update(revision, { leadInstructions: 'New lead instructions' });
+      expect(instructions.statusCode).toBe(200);
+      expect(await readMeta()).toMatchObject({ prompt: 'New lead instructions' });
+
+      revision = instructions.json<{ configurationRevision: string }>().configurationRevision;
+      const roster = await update(revision, {
+        members: [{ name: 'builder', role: 'Senior engineer' }, { name: 'tester' }],
+      });
+      expect(roster.statusCode).toBe(200);
+      expect(await new TeamMembersMetaStore().getMembers(teamName)).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ name: 'builder', role: 'Senior engineer' }),
+          expect.objectContaining({ name: 'tester' }),
+        ])
+      );
+      // One definition: editing never creates a runtime config for the logical team.
+      await expect(readFile(path.join(directory, 'config.json'))).rejects.toMatchObject({
+        code: 'ENOENT',
+      });
+      expect(events.length).toBeGreaterThan(0);
+
+      revision = roster.json<{ configurationRevision: string }>().configurationRevision;
+      const trash = await app.inject({
+        method: 'POST',
+        url: `/api/teams/${teamName}/trash`,
+        payload: { expectedContext: context.snapshot(), expectedRevision: revision },
+      });
+      expect(trash.statusCode).toBe(409);
+      expect(trash.json<{ code: string }>().code).toBe('PROJECT_TEAM_DESKTOP_ONLY');
+      expect((await readMeta()).deletedAt).toBeUndefined();
+    } finally {
+      await app.close();
+      setAppDataBasePath(null);
+      setClaudeBasePathOverride(null);
+      TeamConfigReader.clearCacheForTests();
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  // The real HTTP path with project copies: projection onto stopped copies, a copy is never
+  // edited, and a running / launching / unreconciled project blocks the edit with its own code.
+  it('projects HTTP edits of a per-project team onto its copies and refuses unsafe states', async () => {
+    const root = await mkdtemp(path.join(tmpdir(), 'TEST-team-management-project-copies-'));
+    setClaudeBasePathOverride(root);
+    const app = Fastify();
+    const { services, teamDataService } = createServices(root);
+    const { context, lifecycle } = enableManagement(services, teamDataService, root);
+    registerTeamRoutes(app, services);
+    const teamName = 'copies-team';
+    const teamsBase = path.join(root, 'teams');
+    const aliases = ['ptc-aaaaaaaaaaaaaaaaaaaaaaaa', 'ptc-bbbbbbbbbbbbbbbbbbbbbbbb'];
+    const indexPath = path.join(teamsBase, teamName, 'project-contexts.json');
+    const readJson = async (...parts: string[]) =>
+      JSON.parse(await readFile(path.join(teamsBase, ...parts), 'utf8')) as Record<string, unknown>;
+    try {
+      const members = [{ name: 'builder', role: 'Engineer' }];
+      await teamDataService.createTeamConfig(
+        {
+          projectContextMode: 'per_project',
+          teamName,
+          cwd: root,
+          members,
+          prompt: 'Saved lead instructions',
+        },
+        { claimOwnerOnCreate: true }
+      );
+      for (const alias of aliases) {
+        await teamDataService.createTeamConfig(
+          {
+            projectContextMode: 'shared',
+            teamName: alias,
+            cwd: root,
+            members,
+            prompt: 'Rules typed at an old launch',
+          },
+          { claimOwnerOnCreate: true }
+        );
+        // A launched copy has its own config.json, which never carries the lead instructions.
+        await writeFile(
+          path.join(teamsBase, alias, 'config.json'),
+          JSON.stringify({
+            name: alias,
+            projectPath: root,
+            members: [
+              { name: 'team-lead', role: 'team-lead', agentType: 'team-lead' },
+              { name: 'builder', role: 'Engineer', agentType: 'teammate' },
+            ],
+          }),
+          'utf8'
+        );
+      }
+      const contexts = (state: 'ready' | 'reserved') =>
+        aliases.map((executionTeamName, index) => ({
+          id: `00000000-0000-4000-8000-00000000000${index + 1}`,
+          projectKey: `${root}/project-${index}`,
+          projectPath: `${root}/project-${index}`,
+          executionTeamName,
+          state: index === 1 ? state : 'ready',
+        }));
+      const writeIndex = (state: 'ready' | 'reserved') =>
+        writeFile(
+          indexPath,
+          JSON.stringify({ version: 1, logicalTeamName: teamName, contexts: contexts(state) }),
+          'utf8'
+        );
+      await writeIndex('ready');
+
+      const get = async (name: string) => {
+        const response = await app.inject({
+          method: 'GET',
+          url: `/api/teams/${name}?configuration=1`,
+        });
+        expect(response.statusCode).toBe(200);
+        return response.json<{ configurationRevision: string }>();
+      };
+      const update = (name: string, expectedRevision: string, edit: Record<string, unknown>) =>
+        app.inject({
+          method: 'POST',
+          url: `/api/teams/${name}/update`,
+          payload: { expectedContext: context.snapshot(), expectedRevision, ...edit },
+        });
+      const copiesPrompts = async () =>
+        Promise.all(aliases.map(async (alias) => (await readJson(alias, 'team.meta.json')).prompt));
+      const blocked = async (code: string) => {
+        const revision = (await get(teamName)).configurationRevision;
+        const response = await update(teamName, revision, { leadInstructions: 'Must not apply' });
+        expect(response.statusCode).toBe(409);
+        expect(response.json<{ code: string }>().code).toBe(code);
+        // Nothing was written, neither to the definition nor to any copy.
+        expect((await readJson(teamName, 'team.meta.json')).prompt).toBe('Projected instructions');
+        expect(await copiesPrompts()).toEqual(['Projected instructions', 'Projected instructions']);
+      };
+
+      // Stopped everywhere: the definition is written and both copies receive the instructions.
+      const revision = (await get(teamName)).configurationRevision;
+      const edited = await update(teamName, revision, { leadInstructions: 'Projected instructions' });
+      expect(edited.statusCode).toBe(200);
+      expect((await readJson(teamName, 'team.meta.json')).prompt).toBe('Projected instructions');
+      expect(await copiesPrompts()).toEqual(['Projected instructions', 'Projected instructions']);
+      for (const alias of aliases) {
+        expect((await readJson(alias, 'config.json')).prompt).toBeUndefined();
+      }
+      await expect(readFile(path.join(teamsBase, teamName, 'config.json'))).rejects.toMatchObject({
+        code: 'ENOENT',
+      });
+
+      // A project copy is never edited, even with a stale revision and even while it runs.
+      const refused = await update(aliases[0], 'unknown', { leadInstructions: 'Direct edit' });
+      expect(refused.statusCode).toBe(409);
+      expect(refused.json<{ code: string }>().code).toBe('PROJECT_COPY_NOT_EDITABLE');
+      expect((await readJson(aliases[0], 'team.meta.json')).prompt).toBe('Projected instructions');
+
+      // A running copy blocks the edit of the team.
+      const idle = services.teamApis!.runtime.getRuntimeState;
+      services.teamApis!.runtime.getRuntimeState = (name) =>
+        Promise.resolve({
+          teamName: name,
+          isAlive: name === aliases[0],
+          runId: name === aliases[0] ? 'test-alive' : null,
+          progress: null,
+        });
+      await blocked('TEAM_ACTIVE');
+      const runningCopy = await update(aliases[0], 'unknown', { leadInstructions: 'Direct edit' });
+      expect(runningCopy.json<{ code: string }>().code).toBe('PROJECT_COPY_NOT_EDITABLE');
+      services.teamApis!.runtime.getRuntimeState = idle;
+
+      // A copy that is launching or stopping blocks it too.
+      const provisioning = vi
+        .spyOn(lifecycle, 'hasProvisioningRun')
+        .mockImplementation((name: string) => name === aliases[1]);
+      await blocked('TEAM_PROVISIONING');
+      provisioning.mockRestore();
+
+      // An interrupted start (a context that never became ready) blocks it as well.
+      await writeIndex('reserved');
+      await blocked('TEAM_PROJECT_CONTEXT_UNRECONCILED');
+      await writeIndex('ready');
+
+      // Once everything is stopped again the same edit works.
+      const again = await update(teamName, (await get(teamName)).configurationRevision, {
+        leadInstructions: '',
+      });
+      expect(again.statusCode).toBe(200);
+      expect((await readJson(teamName, 'team.meta.json')).prompt).toBeUndefined();
+      expect(await copiesPrompts()).toEqual([undefined, undefined]);
     } finally {
       await app.close();
       setAppDataBasePath(null);
