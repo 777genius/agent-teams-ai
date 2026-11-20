@@ -243,7 +243,8 @@ function actualScheduleClick(options = {}) {
   const c = { now: 0, frames: 0, hoverFrames: 0, hovers: 0, presses: 0, releases: 0,
     referenceReleases: 0, scrolls: 0, uiMutations: 0, selected: '', open: true, moved: false,
     rect: { left: 130, top: 249, width: 753, height: 44 }, listeners: [], calls: [], writes: [],
-    snapshots: [], waits: [], handles: new Map(), finalReads: 0, detached: false };
+    snapshots: [], waits: [], handles: new Map(), finalReads: 0, detached: false,
+    finalPointReads: { boxes: 0, hits: 0, animations: 0 } };
   class Element {
     constructor(tagName, parentElement = null, attributes = {}) {
       this.tagName = tagName; this.parentElement = parentElement; this.attributes = attributes;
@@ -255,8 +256,14 @@ function actualScheduleClick(options = {}) {
       return this.attributes[name] ?? null;
     }
     matches() { return this.disabled; }
-    getAnimations() { return []; }
-    getBoundingClientRect() { return this.isConnected ? { ...c.rect } : { left: 0, top: 0, width: 0, height: 0 }; }
+    getAnimations() {
+      if (c.finalReadActive) c.finalPointReads.animations++;
+      return c.finalReadActive && c.animation ? [{ playState: 'running' }] : [];
+    }
+    getBoundingClientRect() {
+      if (c.finalReadActive) c.finalPointReads.boxes++;
+      return this.isConnected ? { ...c.rect } : { left: 0, top: 0, width: 0, height: 0 };
+    }
     scrollIntoView() { c.scrolls++; }
     closest() { return this === label ? c.dialog : null; }
     click() { c.uiMutations++; throw new Error('TEST forbidden DOM click'); }
@@ -282,8 +289,9 @@ function actualScheduleClick(options = {}) {
     },
     getElementById(id) { return id === 'TEST-popup' ? c.popup : null; },
     elementFromPoint(x, y) {
+      if (c.finalReadActive) c.finalPointReads.hits++;
       const r = c.rect;
-      return option.isConnected && x >= r.left && x < r.left + r.width && y >= r.top && y < r.top + r.height
+      return !c.blockedHit && option.isConnected && x >= r.left && x < r.left + r.width && y >= r.top && y < r.top + r.height
         ? paragraph : foreign;
     },
     addEventListener(kind, listener, config) { c.listeners.push({ kind, listener, capture: config.capture }); },
@@ -328,7 +336,7 @@ function actualScheduleClick(options = {}) {
         c.now += timeoutMs; throw options.frameTimeout;
       }
       const final = method === 'Runtime.callFunctionOn' && !params.functionDeclaration.includes('await new Promise');
-      if (final) { c.finalReads++; options.beforeFinal?.(c); }
+      if (final) { c.finalReads++; options.beforeFinal?.(c); c.finalReadActive = true; }
       let response;
       try {
         const value = method === 'Runtime.evaluate'
@@ -339,6 +347,7 @@ function actualScheduleClick(options = {}) {
           response = { result: { type: 'object', objectId: 'TEST-original-target' } };
         } else response = { result: { value: copy(value) } };
       } catch (error) { response = { exceptionDetails: { exception: { description: error.message } } }; }
+      finally { if (final) c.finalReadActive = false; }
       if (final) options.afterFinal?.(c);
       options.afterRead?.(c, method, params);
       return response;
@@ -407,11 +416,55 @@ test('schedule preparation refuses replacement of its original node, popup or di
 });
 
 test('schedule final sample refuses geometry or owner mutation instead of rehovering or clicking', async () => {
-  for (const mutate of [c => { c.rect.top += 1; }, c => { c.popup = { ...c.popup }; }]) {
+  for (const [stage, mutate] of [
+    ['geometry-equality', c => { c.rect.top += 1; }],
+    ['owner-before-geometry', c => { c.popup = { ...c.popup }; }],
+  ]) {
     const h = actualScheduleClick({ beforeFinal: mutate });
     await assert.rejects(h.select(), /Original schedule option (geometry|or owner) changed/);
     assert.equal(h.c.finalReads, 1); assert.equal(h.c.hovers, 1);
-    assert.equal(h.c.presses, 0); assert.equal(h.c.referenceReleases, 1);
+    assert.equal(h.c.presses, 0); assert.equal(h.c.releases, 0); assert.equal(h.c.referenceReleases, 1);
+    assert.equal(h.c.frames, 3); assert.equal(h.c.uiMutations, 0);
+    const snapshot = JSON.parse(h.c.writes.at(-1)).snapshot;
+    assert.equal(snapshot.setup, 'refused-before-press'); assert.equal(snapshot.finished, 'failure');
+    assert.equal(snapshot.refusal.stage, stage); assert.deepEqual(snapshot.events, []);
+    assert.deepEqual(snapshot.refusal.expected, { x: 506.5, y: 271, left: 130, top: 249, width: 753, height: 44 });
+    if (stage === 'geometry-equality') {
+      assert.deepEqual(snapshot.refusal.current, { x: 506.5, y: 272, left: 130, top: 250, width: 753, height: 44 });
+      assert.equal(snapshot.refusal.point.stage, 'ready');
+      assert.deepEqual(snapshot.refusal.point.box, [130, 250, 753, 44]);
+      assert.equal(snapshot.refusal.point.hitInOption, true);
+      assert.deepEqual(h.c.finalPointReads, { boxes: 1, hits: 1, animations: 3 });
+    } else {
+      assert.equal(snapshot.refusal.current, null); assert.equal(snapshot.refusal.point.stage, 'not-read');
+      assert.deepEqual(h.c.finalPointReads, { boxes: 0, hits: 0, animations: 0 });
+    }
+    assert.equal(snapshot.cleanupComplete, true); assert.equal(h.c.listeners.length, 0);
+  }
+});
+
+test('final schedule refusal retains failed animation, hit and bounds facts without another DOM sample', async () => {
+  for (const [stage, mutate, reads] of [
+    ['availability', c => { c.option.disabled = true; }, { boxes: 0, hits: 0, animations: 0 }],
+    ['animation', c => { c.animation = true; }, { boxes: 0, hits: 0, animations: 1 }],
+    ['geometry-admission', c => { c.blockedHit = true; }, { boxes: 1, hits: 1, animations: 3 }],
+    ['geometry-admission', c => { c.rect.top = 1_000_001; }, { boxes: 1, hits: 1, animations: 3 }],
+  ]) {
+    const h = actualScheduleClick({ beforeFinal(c) {
+      c.option.textContent = teamName + ' PRIVATE option content'; mutate(c);
+    } });
+    await assert.rejects(h.select(), /Original schedule option geometry changed before press/);
+    const snapshot = JSON.parse(h.c.writes.at(-1)).snapshot;
+    assert.equal(snapshot.refusal.stage, 'geometry-equality');
+    assert.equal(snapshot.refusal.current, null); assert.equal(snapshot.refusal.point.stage, stage);
+    assert.deepEqual(h.c.finalPointReads, reads);
+    if (h.c.blockedHit) assert.equal(snapshot.refusal.point.hitInOption, false);
+    if (h.c.rect.top > 1_000_000) assert.deepEqual(snapshot.refusal.point.box, [130, null, 753, 44]);
+    assert.equal(h.c.frames, 3); assert.equal(h.c.finalReads, 1); assert.equal(h.c.hovers, 1);
+    assert.equal(h.c.presses, 0); assert.equal(h.c.releases, 0); assert.equal(h.c.uiMutations, 0);
+    assert.equal(h.c.referenceReleases, 1); assert.equal(h.c.handles.size, 0); assert.equal(h.c.listeners.length, 0);
+    const raw = JSON.stringify(snapshot);
+    assert.equal(raw.includes('PRIVATE'), false); assert.ok(raw.length < 2048);
   }
 });
 

@@ -12,6 +12,7 @@ import { sendDesktopNativeCommandFromComposer } from './desktop-native-commands-
 import { json, record, rows } from './desktop-resume-records.ts';
 import { revealDesktopReply } from './desktop-reply-visibility.ts';
 import { EDITED_SCHEDULE_LABEL, LEGACY_SCHEDULE_ID, LEGACY_SCHEDULE_LABEL } from './desktop-schedule-fixture.ts';
+import { createDesktopScheduleHistoryObservation } from './desktop-schedule-history-observation.ts';
 import { createDesktopUiControls, desktopJsLiteral as literal, type UiCdpPort } from './desktop-ui-controls.ts';
 import { runDesktopEmulatedSelectionUi } from './desktop-emulated-selection-ui.ts';
 import { runDesktopEmulatedLifecycleUi } from './desktop-emulated-lifecycle-ui.ts';
@@ -674,8 +675,8 @@ export async function runDesktopEmulatedRuntimeUi(cdp: UiCdpPort, options: {
   assert.equal(armed.timezone, timezone); assert.equal(Date.parse(String(armed.nextRunAt)), scheduledAt);
   assert.ok(scheduledAt - Date.now() >= 10_000, 'the real cron occurrence is armed before its wall-clock deadline');
   assert.deepEqual(await history(scheduleId), runs, 'editing the cron does not create an occurrence');
-  const armedAt = new Date().toISOString();
-  const automaticRuns = await poll(() => history(scheduleId), values => values.length === 2 &&
+  const historyObservation = createDesktopScheduleHistoryObservation(proof, armed, runs[0]!.id);
+  const automaticRuns = await poll(async () => historyObservation.observe(await history(scheduleId)), values => values.length === 2 &&
     values.some(row => row.id !== runs[0]!.id && row.status === 'dispatched'), 'real automatic cron dispatch without Run now');
   const automaticRun = automaticRuns.find(row => row.id !== runs[0]!.id)!;
   assert.equal(automaticRun.scheduleId, scheduleId);
@@ -701,7 +702,7 @@ export async function runDesktopEmulatedRuntimeUi(cdp: UiCdpPort, options: {
   await poll(schedules, values => values.find(row => row.id === scheduleId)?.status === 'paused', 'pause after automatic occurrence');
   assert.equal((await history(scheduleId)).length, 2);
   proof.automaticSchedule = { scheduleId, runId: automaticRun.id, taskId: automaticTaskId,
-    cronExpression, timezone, armedAt, selectedNextRunAt: armed.nextRunAt,
+    cronExpression, timezone, armedAt: historyObservation.armedAt, selectedNextRunAt: armed.nextRunAt,
     scheduledFor: automaticRun.scheduledFor, startedAt: automaticRun.startedAt,
     status: automaticRun.status, trigger: 'real-cron-tick', runNowClicks: 0, taskCompleted: true,
     savedPromptNotReplayed: true, peerEffect: automaticEffects[0], paused: true,

@@ -2,17 +2,48 @@ import assert from 'node:assert/strict';
 import process from 'node:process';
 
 // Serialized into the retained original DOM object's realm. This only reads geometry.
-function scheduleOptionPoint(browser, document, element) {
+function scheduleOptionPoint(browser, document, element, sample) {
+  if (sample) sample.stage = 'availability';
   if (!element?.isConnected || element.disabled || element.getAttribute('aria-disabled') === 'true') return null;
+  if (sample) sample.stage = 'animation';
   for (let ancestor = element; ancestor; ancestor = ancestor.parentElement) {
     if (ancestor.getAnimations().some(animation => animation.playState === 'running')) return null;
   }
+  if (sample) sample.stage = 'rectangle';
   const rect = element.getBoundingClientRect();
   const x = rect.left + rect.width / 2, y = rect.top + rect.height / 2;
+  if (sample) { sample.box = [rect.left, rect.top, rect.width, rect.height]; sample.center = [x, y]; sample.stage = 'hit-test'; }
   const hit = document.elementFromPoint(x, y);
-  return rect.width > 0 && rect.height > 0 && x >= 0 && x < browser.innerWidth &&
-    y >= 0 && y < browser.innerHeight && hit && element.contains(hit)
+  let hitInOption = null;
+  const admitted = rect.width > 0 && rect.height > 0 && x >= 0 && x < browser.innerWidth &&
+    y >= 0 && y < browser.innerHeight && hit && (hitInOption = element.contains(hit));
+  if (sample) {
+    sample.hitPresent = Boolean(hit); sample.hitInOption = hitInOption;
+    sample.stage = admitted ? 'ready' : 'geometry-admission';
+  }
+  return admitted
     ? { x, y, left: rect.left, top: rect.top, width: rect.width, height: rect.height } : null;
+}
+
+// A final-sample refusal precedes the event observer. Retain only values already
+// computed by that sample; its existing finally-read will retrieve this record.
+function retainScheduleOptionRefusal(browser, expectedTeamName, stage, expected, current, sample) {
+  const slot = '__teamsScheduleOptionObservation';
+  if (typeof expectedTeamName !== 'string' || expectedTeamName.length > 256 ||
+      !/^[a-z0-9-]+$/.test(expectedTeamName) || Object.getOwnPropertyDescriptor(browser, slot)) return;
+  const number = value => Number.isFinite(value) && Math.abs(value) <= 1_000_000 ? value : null;
+  const point = value => value ? Object.fromEntries(
+    ['x', 'y', 'left', 'top', 'width', 'height'].map(key => [key, number(value[key])])) : null;
+  const record = { version: 1, expectedTeamName, setup: 'refused-before-press', finished: 'failure',
+    events: [], cleanupAttempted: false, cleanupComplete: true,
+    refusal: { stage, expected: point(expected), current: point(current), point: {
+      stage: sample?.stage ?? 'not-read', box: sample?.box?.map(number) ?? null,
+      center: sample?.center?.map(number) ?? null,
+      hitPresent: sample?.hitPresent ?? null, hitInOption: sample?.hitInOption ?? null,
+    } } };
+  Object.defineProperty(browser, slot, { value: Object.freeze({
+    read(teamName, outcome) { return teamName === expectedTeamName && outcome === 'failure' ? record : null; },
+  }) });
 }
 
 /** Prepare only this original schedule option; all commands share the caller's captured deadline. */
@@ -72,16 +103,25 @@ export async function prepareScheduleOptionClick(client, expression, teamName, c
                 document.querySelector('[role=dialog] #schedule-label')?.closest('[role=dialog]') !== dialog)
               throw new Error('Original schedule option or owner changed');
           };
-          current();
-          const point = (${scheduleOptionPoint.toString()})(window, document, element);
-          current();
           const expected = ${JSON.stringify(expected)};
-          if (expected && (!point || !['x','y','left','top','width','height'].every(key => point[key] === expected[key])))
-            throw new Error('Original schedule option geometry changed before press');
-          const target = point && { x: point.x, y: point.y };
-          ${expected ? observation : ''}
-          current();
-          return point;
+          const sample = expected ? {} : null;
+          let stage = 'owner-before-geometry', point = null;
+          try {
+            current();
+            stage = 'geometry';
+            point = (${scheduleOptionPoint.toString()})(window, document, element, sample);
+            stage = 'owner-after-geometry'; current();
+            stage = 'geometry-equality';
+            if (expected && (!point || !['x','y','left','top','width','height'].every(key => point[key] === expected[key])))
+              throw new Error('Original schedule option geometry changed before press');
+            const target = point && { x: point.x, y: point.y };
+            ${expected ? observation : ''}
+            stage = 'owner-after-observation'; current();
+            return point;
+          } catch (error) {
+            ${expected ? `try { (${retainScheduleOptionRefusal.toString()})(window, ${JSON.stringify(teamName)}, stage, expected, point, sample); } catch {}` : ''}
+            throw error;
+          }
         }`,
       });
       const point = result(response);

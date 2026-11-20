@@ -635,6 +635,7 @@ const desktopProofBaseSources = [
   'scripts/legacy-agent-host/desktop-cross-team-ui-smoke.ts',
   'scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts',
   'scripts/legacy-agent-host/desktop-team-ui-smoke.ts',
+  'scripts/legacy-agent-host/desktop-module-load-observation.ts',
   'scripts/legacy-agent-host/reconcile-desktop-native-stop.ts',
   'scripts/legacy-agent-host/stage-candidate.ts',
   'scripts/legacy-agent-host/stage-node.ts',

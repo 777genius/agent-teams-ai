@@ -1,8 +1,69 @@
 # Завершение Host / frontend parity
 
-Обновлено: **19 ноября 2026**. Единственный текущий рабочий план.
+Обновлено: **20 ноября 2026**. Единственный текущий рабочий план.
 
-## Текущий срез поверх `d8a0c29`
+## Текущий срез: продолжение с опубликованного `ada00fd3`
+
+Checkout восстановлен с `ada00fd369bd3cccb0c398bf888557558adca70d`. Последние
+неопубликованные retained/cron/diagnostic черновики из прежней сессии отсутствуют;
+они восстановлены по реальному writer/consumer и исходным CI artifacts.
+Node 24.21.0, pnpm 11.22.0 и native TypeScript 7.0.2 восстановлены, frozen install
+не меняет lockfile. Локальный запрет Unix socket listen учитывается отдельно:
+проверка, не исполнившая исходный socket/native сценарий, не считается E2E PASS.
+
+**Исходная ревизия Ada:** frontend 4/4 PASS, Native V2 9/9 PASS, packaged 5/5
+платформ и полный gate PASS. [Host run44637680026](https://github.com/777genius/agent-teams-ai/actions/runs/44637680026)
+завершён: 23/29 рабочих jobs PASS, 6 FAIL, aggregate FAIL. Ещё открыты два
+Windows process jobs, macOS Teams-create и Full CI retained V1/V2. Все 43 inline
+threads resolved; 20 reviews COMMENTED, формальное APPROVED отсутствует.
+
+| Работа | Проверено локально / осталось | Владелец |
+| --- | --- | --- |
+| Retained reader и TEST-peer | Исправлены два воспроизведённых контракта; 14 writer/reader + 14 actual Main prompt cases PASS, прежние 27 source и 17 finite-peer cases PASS. Остались original retained GUI и V1/V2 coexistence | retained / root |
+| Автоматический cron | Реальный Croner/JSON manual→completed→edit→automatic: 15/15 PASS на прежнем production scheduler. Причина OpenCode GUI отказа ещё не установлена; сохраняются уже выполняемые history reads | scheduler / root |
+| Windows original process | Разобраны x64 V1 readiness и ARM B standalone; подтверждена latency, не transport-capacity defect. Production patch не обоснован; исходные 15s cutoffs и custody сохранены | root |
+| Darwin/Desktop | Review — startup model probe; Resume — загрузка TeamDetail; Quit-active — reference expiry при открытии; membership — 3 вместо 2 children до Add; Teams-create — final geometry refusal. Все original lanes остаются открыты | root |
+| Интеграция | Два независимых технических review, замечания исправлены; scoped app TS7, полный canonical Host scripts TS7, lint, size/architecture guards PASS. Полный local app typecheck дважды exit137, не PASS. Публикация с expected HEAD и затем original source CI | root |
+
+**Что изменено.** Reader принимает конечную `launchIdentity`, которую пишет
+настоящий `TeamMetaStore`; она не переносится в launch settings и не становится
+native custody. Неизвестные поля, credential data и вложенные native identities
+по-прежнему отвергаются. Финальные tests против прежнего reader дали 9 FAIL / 5
+PASS, после исправления — 14/14. Это доказанная совместимость writer/reader;
+отсутствующие raw metadata исходного CI не позволяют назвать её доказанной
+причиной именно того `product-records` отказа.
+
+TEST-peer теперь принимает фактический Main Launch hydration вместо окончания
+Create prompt. Полный конечный English/solo prompt зафиксирован как generated
+TEST input с постоянным digest; actual builder test сверяет все bytes. Замечание
+review о вставке внутри operating context закрыто двумя RED/GREEN regressions.
+Peer не пишет Main lifecycle/release records и остаётся жив до сигнала владельца.
+
+**Диагностика без изменения сценариев.** Уже подключённый CDP observer сохраняет
+последние 256 same-origin script loads, включая pending/finished/failed; URL query,
+fragment, headers и bodies не сохраняются. После review общий network-error text
+ограничен 128 символами. Cron сохраняет последние восемь уже прочитанных run rows,
+membership — уже полученную physical observation до прежнего count assertion.
+Schedule selector сохраняет expected/current geometry и причину отказа из того
+же final DOM sample; прежняя ошибка и запрет press остаются. Его новые assertions
+воспроизвели `snapshot:null` (2 FAIL), после исправления весь файл — 14/14 PASS.
+Новых запросов, действий UI, polling, сроков или ослаблений acceptance нет.
+Полный observer suite до review correction — 255/255 PASS; исправленный bounded
+срез повторно — 2/2, cron observer — 3/3. Это диагностические проверки, не GUI PASS.
+
+**Уточнённые исходные отказы.** Windows ARM Ada дошёл до B standalone (Team A/B
+прошли), а x64 OpenCode остановился на Team A. `receiver-capacity` — cap пассивного
+collector, не доказанная транспортная причина; поздний slot24 refusal произошёл
+при cleanup. В Darwin Quit-active original Runtime session создана за 4.732s до
+expiry model reference; bootstrap instruction записана за 1.054s до expiry,
+driver-open refusal — через 843ms после. Это объясняет точку отказа, но не является
+исправлением и не меняет обязательные freshness/custody checks.
+
+План и исходные результаты сведены в [continuation evidence](evidence/continuation-20261120.json).
+Старые PASS/FAIL сохранены по ревизиям. E2E completion, formal GitHub approval,
+Ready/parent merge и installed/release qualification пока не заявляются.
+
+## Опубликованный срез `ada00fd3` поверх `d8a0c29`
 
 Этот срез исправляет canonical provider receipt и добавляет ограниченные пассивные
 измерения исходных Windows namespace checks. Оба изменения проверены локально и

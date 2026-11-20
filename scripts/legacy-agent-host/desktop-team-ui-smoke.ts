@@ -7,6 +7,7 @@ import { bounded } from './desktop-proof-bounds.ts';
 import { readDesktopNativeStopSessions } from './desktop-native-stop-fixture.ts';
 
 import { createDesktopUiControls } from './desktop-ui-controls.ts';
+import { desktopNetworkFailure, observeDesktopModuleLoads } from './desktop-module-load-observation.ts';
 import type { UiCdpPort } from './desktop-ui-controls.ts';
 export type { UiCdpPort } from './desktop-ui-controls.ts';
 const record = (value: unknown): Record<string, unknown> => {
@@ -247,6 +248,9 @@ export async function attachRendererDiagnostics(
   const contextEvents = startupEvidence.contextEvents as Record<string, unknown>[];
   const contexts = new Map<number, unknown>();
   let mainFrameId: unknown, revision = 0;
+  const moduleLoads = observeDesktopModuleLoads(cdp, rendererUrl, () => mainFrameId);
+  (evidence.rendererDiagnostics as Record<string, unknown>).moduleLoads =
+    moduleLoads.evidence;
   let viewLoadDocumentRevision: number | undefined;
   const noteContext = (event: Record<string, unknown>): void => {
     if (contextEvents.length < 96) contextEvents.push({ monotonicMs: Math.round(performance.now()), ...event });
@@ -310,16 +314,14 @@ export async function attachRendererDiagnostics(
       });
   });
   cdp.on('Network.loadingFailed', (value) => {
+    moduleLoads.loadingFailed(value);
     const entry = record(value);
     add({
       event: 'Network.loadingFailed',
       type: entry.type,
       canceled: entry.canceled,
       blockedReason: entry.blockedReason,
-      errorText:
-        typeof entry.errorText === 'string' && /^net::ERR_[A-Z_]+$/.test(entry.errorText)
-          ? entry.errorText
-          : 'unclassified',
+      errorText: desktopNetworkFailure(entry.errorText),
     });
   });
   cdp.on('Page.frameNavigated', (value) => {

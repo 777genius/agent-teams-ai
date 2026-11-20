@@ -112,6 +112,61 @@ function text(value: unknown): value is string {
 function timestamp(value: unknown): boolean {
   return typeof value === 'number' && Number.isFinite(value) && value >= 0;
 }
+/** Model-selection provenance written by TeamMetaStore, never native process/session evidence. */
+function productLaunchIdentity(value: unknown): boolean {
+  const identity = row(value);
+  const nullableText = [
+    'providerBackendId',
+    'selectedModel',
+    'resolvedLaunchModel',
+    'catalogId',
+    'catalogFetchedAt',
+  ];
+  if (
+    ![
+      ...nullableText,
+      'providerId',
+      'selectedModelKind',
+      'catalogSource',
+      'selectedEffort',
+      'resolvedEffort',
+    ].every((key) => Object.hasOwn(identity, key))
+  )
+    return false;
+  return Object.entries(identity).every(([key, item]) => {
+    if (nullableText.includes(key) || key === 'fastResolutionReason')
+      return item === null || text(item);
+    if (key === 'providerId')
+      return (
+        typeof item === 'string' && ['anthropic', 'codex', 'gemini', 'opencode'].includes(item)
+      );
+    if (key === 'selectedModelKind') return item === 'default' || item === 'explicit';
+    if (key === 'catalogSource')
+      return (
+        typeof item === 'string' &&
+        [
+          'anthropic-models-api',
+          'anthropic-compatible-api',
+          'app-server',
+          'static-fallback',
+          'runtime',
+          'unavailable',
+        ].includes(item)
+      );
+    if (key === 'selectedEffort' || key === 'resolvedEffort')
+      return (
+        item === null ||
+        (typeof item === 'string' &&
+          ['none', 'minimal', 'low', 'medium', 'high', 'xhigh', 'max', 'ultra'].includes(item))
+      );
+    if (key === 'billingMode')
+      return typeof item === 'string' && ['api', 'subscription', 'free', 'unknown'].includes(item);
+    if (key === 'selectedFastMode')
+      return item === null || (typeof item === 'string' && ['inherit', 'on', 'off'].includes(item));
+    if (key === 'resolvedFastMode') return item === null || typeof item === 'boolean';
+    return false;
+  });
+}
 function policy(value: unknown): boolean {
   const source = row(value);
   if (!['inheritLead', 'inheritScopes', 'strictAllowlist', 'appOnly'].includes(String(source.mode)))
@@ -152,6 +207,7 @@ export function isLegacySavedTeamProductRecords(
         if (key === 'version') return item === 1;
         if (key === 'runtimeSelectionVersion') return item === 1;
         if (key === 'createdAt') return timestamp(item);
+        if (key === 'launchIdentity') return productLaunchIdentity(item);
         if (metaText.has(key)) return text(item);
         if (metaBooleans.has(key)) return typeof item === 'boolean';
         return false;

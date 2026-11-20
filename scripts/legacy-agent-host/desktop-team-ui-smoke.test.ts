@@ -248,6 +248,71 @@ test('throwing diagnostic stdout preserves the retained row and the original sta
   assert.equal(diagnostic.viewLoads.events.length, 1);
 });
 
+test('module diagnostics retain late pending, successful and failed loads without adding CDP commands', async () => {
+  const read = deferred<Record<string, unknown>>(), f = fixture([read]);
+  read.resolve(ready); await f.start(1000);
+  const originalCommands = [...f.commands];
+  const emit = (method: string, value: unknown) => f.listeners.get(method)!(value);
+  const request = (requestId: string, url: string) => emit('Network.requestWillBeSent', {
+    requestId, type: 'Script', frameId: 'TEST-frame', request: { url },
+  });
+  for (let index = 0; index < 300; index++) {
+    request(String(index), `http://localhost:5173/initial-${index}.ts`);
+    emit('Network.loadingFinished', { requestId: String(index) });
+  }
+  request('late-pending', 'http://localhost:5173/TeamDetailView.tsx?private=query#secret');
+  request('late-failed', 'http://localhost:5173/late-chunk.js');
+  emit('Network.responseReceived', { requestId: 'late-failed', response: { status: 503, headers: { private: 'secret' } } });
+  emit('Network.loadingFailed', { requestId: 'late-failed', errorText: 'net::ERR_INSUFFICIENT_RESOURCES' });
+  request('late-success', 'http://localhost:5173/shell.ts');
+  emit('Network.responseReceived', { requestId: 'late-success', response: { status: 200 } });
+  emit('Network.loadingFinished', { requestId: 'late-success' });
+  const diagnostics = f.evidence.rendererDiagnostics as { events: Record<string, unknown>[];
+    moduleLoads: { limit: number; overflow: boolean; loads: Record<string, unknown>[] } };
+  assert.equal(diagnostics.moduleLoads.loads.length, 256);
+  assert.equal(diagnostics.moduleLoads.overflow, true);
+  const [pending, failed, succeeded] = diagnostics.moduleLoads.loads.slice(-3);
+  assert.equal(pending!.path, '/TeamDetailView.tsx'); assert.equal(pending!.outcome, 'pending');
+  assert.equal(pending!.finishedMs, null);
+  assert.equal(failed!.outcome, 'failed'); assert.equal(failed!.status, 503);
+  assert.equal(failed!.failure, 'net::ERR_INSUFFICIENT_RESOURCES');
+  assert.equal(succeeded!.outcome, 'finished'); assert.equal(succeeded!.status, 200);
+  assert.ok(Number(succeeded!.finishedMs) >= Number(succeeded!.startedMs));
+  assert.equal(diagnostics.events.at(-1)!.event, 'Network.loadingFailed', 'existing failure subscription remains active');
+  assert.deepEqual(f.commands, originalCommands); assert.equal(f.observations(), 1);
+  assert.equal(JSON.stringify(diagnostics.moduleLoads).includes('secret'), false);
+  assert.equal(JSON.stringify(diagnostics.moduleLoads).includes('private'), false);
+});
+
+test('module diagnostics ignore foreign frames, non-script data and unretained completions', async () => {
+  const read = deferred<Record<string, unknown>>(), f = fixture([read]);
+  read.resolve(ready); await f.start(1000);
+  const emit = (method: string, value: unknown) => f.listeners.get(method)!(value);
+  const base = { requestId: 'TEST-private-id', frameId: 'TEST-frame', type: 'Script',
+    request: { url: 'http://localhost:5173/local.js' } };
+  for (const value of [null, [], {}, { ...base, frameId: 'foreign' }, { ...base, type: 'Fetch' },
+    { ...base, requestId: 'x'.repeat(129) }, { ...base, request: { url: 'https://external.example/private' } },
+    { ...base, request: { url: 'data:text/javascript,private' } }, { ...base, request: { url: 'invalid' } }])
+    assert.doesNotThrow(() => emit('Network.requestWillBeSent', value));
+  emit('Network.loadingFinished', { requestId: 'unobserved' });
+  const diagnostics = f.evidence.rendererDiagnostics as { events: Record<string, unknown>[];
+    moduleLoads: { loads: Record<string, unknown>[] } };
+  assert.equal(diagnostics.moduleLoads.loads.length, 0);
+  emit('Network.requestWillBeSent', base);
+  emit('Network.requestWillBeSent', base);
+  assert.equal(diagnostics.moduleLoads.loads.length, 1, 'duplicate events do not invent new loads');
+  emit('Network.responseReceived', { requestId: base.requestId, response: { status: Infinity } });
+  emit('Network.loadingFailed', { requestId: base.requestId, errorText: 'PRIVATE request payload' });
+  assert.equal(diagnostics.moduleLoads.loads[0]!.status, null);
+  assert.equal(diagnostics.moduleLoads.loads[0]!.failure, 'unclassified');
+  assert.equal(JSON.stringify(diagnostics.moduleLoads).includes('PRIVATE'), false);
+  emit('Network.requestWillBeSent', base);
+  emit('Network.loadingFailed', { requestId: base.requestId, errorText: 'net::ERR_' + 'A'.repeat(1_000_000) });
+  assert.equal(diagnostics.moduleLoads.loads[1]!.failure, 'unclassified');
+  assert.equal(diagnostics.events.at(-1)!.errorText, 'unclassified');
+  assert.ok(JSON.stringify(diagnostics).length < 64 * 1024, 'both passive observers retain bounded error text');
+});
+
 function readinessRuntime(expression: string, href: string, origin: string): Promise<Record<string, unknown>> {
   return Promise.resolve(runInNewContext(expression, {
     URL,

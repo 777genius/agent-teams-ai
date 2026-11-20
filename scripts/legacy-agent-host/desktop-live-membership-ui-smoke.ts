@@ -240,6 +240,8 @@ export async function runDesktopLiveMembershipUiSmoke(cdp: UiCdpPort, options: {
     }
     const natives = children.filter(row => !metadata.some(birth => birth.pid === row.pid));
     const peerEffects = finite ? (await readDesktopFiniteMembershipPeers(finite)).effects : undefined;
+    proof.lastPhysicalObservation = { expectedProviders: providers, host, metadata,
+      nativeCount: natives.length, natives: natives.slice(0, 129), truncated: natives.length > 129 };
     assert.equal(natives.length, providers.length, 'every remaining original Host child is one expected Runtime');
     const selected = new Map<Provider, ProcessFact>();
     for (const provider of providers) {

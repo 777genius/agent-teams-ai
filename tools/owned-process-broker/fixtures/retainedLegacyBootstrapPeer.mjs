@@ -169,10 +169,11 @@ const promptPath = options['team-bootstrap-user-prompt-file'];
 assert.equal(dirname(dirname(promptPath)), tmp);
 assert.match(basename(dirname(promptPath)), /^agent-teams-bootstrap-prompt-[A-Za-z0-9]+$/u);
 const deferredPrompt = privateFile(promptPath, tmp), prompt = 'TEST_RETAINED_ORIGINAL_SOLO_ONE';
-assert.ok(deferredPrompt.endsWith('\nUser instructions:\n' + prompt));
-assert.equal(deferredPrompt.split(prompt).length, 2);
-assert.ok(deferredPrompt.includes('You are "team-lead", the team lead.'));
-assert.ok(deferredPrompt.includes(spec.team.name));
+// This finite Desktop fixture pins English and a solo empty board. Its complete Main-produced
+// hydration input is checked by retainedLegacyBootstrapPrompt.test.ts, including all boilerplate.
+// The digest is fixed here, never supplied by the caller or borrowed as lifecycle authority.
+assert.equal(createHash('sha256').update(deferredPrompt).digest('hex'),
+  '6bd919e892140dc3665f6c517d10b21b9e43ce65607f84210c3af4ec4dc6f0dc', 'finite original Main hydration input');
 // The original Main must have materialized user intent before the runtime is admitted.
 const team = join(claude, 'teams', spec.team.name), configPath = join(team, 'config.json');
 assert.equal(realpathSync(team), team);
