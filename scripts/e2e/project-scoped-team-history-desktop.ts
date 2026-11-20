@@ -83,6 +83,15 @@ async function fixture() {
     '}',
     "if (args.length === 1 && args[0] === '--help') { console.log('Usage: synthetic'); process.exit(0); }",
     'fs.appendFileSync(' + JSON.stringify(audit) + ", JSON.stringify(args) + '\\n');",
+    // The only thing answered: Windows' start-up cleanup of OpenCode hosts (nothing to clean).
+    // Without it the app refuses every launch of the session there. All else is denied below.
+    'const { answerStartupCleanup } = require(' + JSON.stringify(
+      path.join(repoRoot, 'scripts', 'e2e', 'lib', 'opencodeStartupCleanupReply.cjs')) + ');',
+    'const cleanupReply = answerStartupCleanup(args);',
+    'if (cleanupReply) {',
+    "  if (cleanupReply.outputPath) fs.writeFileSync(cleanupReply.outputPath, cleanupReply.line + '\\n');",
+    "  process.stdout.write(cleanupReply.line + '\\n'); process.exit(0);",
+    '}',
     "process.stderr.write('Disposable smoke denies all real agent execution\\n'); process.exit(77);",
   ].join('\n') + '\n');
   if (process.platform === 'win32') {
