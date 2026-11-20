@@ -2,7 +2,83 @@
 
 Обновлено: **20 ноября 2026**. Единственный текущий рабочий план.
 
-## Текущий план после опубликованного `4159f6ce`
+## Проверенный срез поверх `e7ec8337`
+
+`e7ec83372ae0b230711562dd944a34f9167dfe64` опубликован поверх `4159f6ce`;
+обратный Git fetch подтвердил parent, tree и все восемь новых blobs. Original CI
+продвигается штатно, без ручных rerun/cancel или изменения concurrency. Последнее
+общее чтение — **20 ноября, 15:29 UTC**; queued/running/skipped не считаются PASS.
+
+| Original gate | Результат на e7 / следующая работа | Владелец |
+| --- | --- | --- |
+| Teams Desktop | [Все три ОС PASS](https://github.com/777genius/agent-teams-ai/actions/runs/44747148814). macOS artifact: 32 original steps, schedules и zh-TW, trusted click, прежние guards и подтверждённый cleanup | root, закрыто для e7 |
+| Native V2 | [9/9 PASS](https://github.com/777genius/agent-teams-ai/actions/runs/44747148806). Darwin использует те же Node/Bun/graph inputs, что Review; runtime.open 20070 ms. Это отдельный direct-runtime сценарий, не Team preflight | root |
+| Host frontend/Desktop | [14 PASS, 6 FAIL, 3 running, 6 queued](https://github.com/777genius/agent-teams-ai/actions/runs/44747148853). Все четыре frontend shards, основной Team и Darwin V2 Chat/attachments PASS. Открыты cross-team reload, retained Stop, Darwin Review/Resume, membership и import-lifecycle | root |
+| Автоматический cron | Original OpenCode PASS: manual Run Now, reload, edit и automatic run на прежнем peer; automatic Run Now clicks=0. TaskActivity/LogStream, native release и physical cleanup проверены по artifact14639127135 | root, закрыто для e7 |
+| Original process | [2 PASS (Darwin ARM, Linux), 3 FAIL (Windows x64/ARM, Darwin x64)](https://github.com/777genius/agent-teams-ai/actions/runs/44747148475). Windows x64 reference expiry +360 ms; ARM nativeReady на15416.4801 ms при15s cutoff. Darwin x64: реальное переякоривание custody cutoff исправлено локально | process / root |
+| Source CI / packaged | [Source CI](https://github.com/777genius/agent-teams-ai/actions/runs/44747148726) и [packaged](https://github.com/777genius/agent-teams-ai/actions/runs/44747148769): source jobs2 queued, packaged4 running/1 queued. Draft-only skipped real-CLI lanes не квалифицированы | root |
+| Новые source fixes | Namespace traversal, pane boundary, private custody cutoff, retained Stop, V2 startup policy, clean-empty WorkSync reader и finite transport-code diagnostics: RED/GREEN, canonical/scoped TS7 и два независимых review PASS. Собраны одним source/evidence batch; новый original E2E обязателен | три отдельных source owners / root |
+| Полные типы и lint | [Исходный Team job](https://github.com/777genius/agent-teams-ai/actions/runs/44747148853/job/136325301826), step12: полный workspace TS7 и исходные typed lint scopes PASS на e7. Новые worktree changes имеют отдельные scoped/canonical checks; будущий source CI обязателен | root |
+
+**Четыре проверенных исправления следующего среза.** Namespace traversal сохраняет
+число, порядок и аргументы свежих filesystem calls, убирая повторный split/join
+каждого ancestor; RED/GREEN41 cases, final16 и strict TS7 PASS. Linux characterization
+384 reads: медиана191.74→169.27 ms; это не Windows E2E qualification. PaneContent
+откладывает Dashboard/Settings штатными React.lazy/Suspense; начальный локальный
+graph798→679 modules, оставшиеся routes достижимы. RED4FAIL/6PASS→15/15GREEN,
+scoped native TS7 и lint PASS; original Chromium reload ещё требуется.
+
+Private custody protocol v2 передаёт исходный монотонный expiresAtNs из Host в Main.
+Получение и задержка очереди больше не создают новый срок. Контракт ограничен
+прямым локальным child в одном boot/time namespace; уже допущенные effects не
+откатываются. Canonical64 Main-client/deadline +14 recovery cases PASS. Это
+намеренное изменение private wire/exported schema, не прежний claim о319
+неизменных декларациях. Retained Stop использует штатный scrollBeforeClick с
+requireCenterHit внутри прежнего30s click и12-wheel budget: один original click,
+owner/hit/deadline/release guards сохранены, четыре regression PASS.
+
+**Оставшиеся исходные отказы.** Cross-team прошёл TaskBoard, review и notifications
+до Page.reload, затем66 Script ERR_INSUFFICIENT_RESOURCES и main.tsx exception;
+пустой root не доказывает конкретный внутренний Chromium limit. Retained e7 уже
+прошёл actual reader/hydration, один bootstrap/turn и видимый ответ; отказал до
+input по Stop выше viewport. Оба сценария требуют новой original квалификации.
+
+Darwin Review: parent graph29137 ms и synchronous launch4746 ms не уложились
+в производный startup cap30s. Проверенные ускорения графа не дали достаточного
+выигрыша; callback-readFile вариант отвергнут из-за иной error/short-read semantics.
+Выбрана явная V2-only selection policy: меньший runtime limit сохраняется,
+верхняя граница startup — исходные90s model probe, server получает только остаток
+того же срока. Timer остаётся до graph; explicit1000ms negative, Main100s,
+cleanup и внешние E2E waits не меняются. Старые mechanism/selection digests нельзя
+принимать за новые. Изменённая policy имеет отдельный derived ID при прежнем account resource fence. Реальный cap-only mutant воспроизвёл конфликт регистрации; final22 profile/registration,5 remaining-deadline и6 прежних startup-cutoff cases PASS. Десять исходных source-selection cases также PASS.
+
+Darwin Resume отказал на30s acquisition исходного probe record, до graph и Launch;
+финальная запись удовлетворяет всем12 matching predicates, но её более ранняя
+доступность не доказана. Есть cleanup debt: app exit0, orphan8090 в исходной группе.
+Membership e7 прошёл прежний count2, но исходный Add удержан в model readiness:
+credential→attestation31414 ms, close около исходного cutoff, точная причина throw
+не сохранена. Добавляются только конечные SDK error codes в существующую bounded
+диагностику; ни один такой FAIL не переименован в PASS. Import-lifecycle отказал
+при подтверждении Stop release исходного finite producer. Actual writer→census
+и public Main Stop воспроизвели то же сообщение (RED3FAIL/58PASS); reader теперь
+принимает только точный clean-empty replica без marker/secret/journal и native
+authority. GREEN99/99, strict scoped TS7, lint и два review PASS. Непустые,
+неизвестные и неполные состояния по-прежнему отвергаются.
+
+**Проверки и review.** Повторные canonical Host build и весь Host test TS7 после финальной V2 policy PASS; весь Host scripts
+TS7, size/architecture guards и lint изменённых файлов PASS. Scoped renderer TS7
+прошёл с исходными options и всеми шестью ambient declarations. Третья полная
+локальная попытка TS7 завершилась SIGKILL/137 на первом program (471.56s,
+RSS5104608 KiB); дальнейшие такие повторы прекращены. Original e7 CI теперь
+независимо подтвердил полные типы/lint; это не подтверждение новых edits.
+43/43 inline threads resolved,20 COMMENTED,0 APPROVED на последнем чтении.
+Source hashes, RED/GREEN, scoped/canonical checks, независимые reviews и исходные
+e7 receipts собраны в [одном evidence index](evidence/continuation-e7-20261120.json)
+и его проверяемом archive. Все семь slices прошли root R1 и независимое R2.
+Единственный план остаётся здесь; E2E completion, formal approval и delivery
+не заявляются до закрытия соответствующих gates.
+
+## Предыдущий локальный срез после опубликованного `4159f6ce`
 
 `4159f6ce20dc6d37eab2f5f9f079cedc59c59ea0` опубликован с expected parent Ada;
 обратный Git fetch подтвердил parent, tree и все 22 blobs. Его original CI

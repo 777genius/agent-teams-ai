@@ -68,8 +68,13 @@ export class TeamOwnerStore implements TeamStore {
   private validateNamespace(): void {
     const directoryPath = (target: string, required = false): void => {
       let part = parse(target).root;
-      for (const segment of target.slice(part.length).split(sep)) {
-        part = join(part, segment);
+      // Constructor/join already normalize these targets. Keep every fresh
+      // ancestor read without repeatedly normalizing its whole path prefix.
+      let cursor = part.length;
+      while (cursor <= target.length) {
+        const next = target.indexOf(sep, cursor), end = next < 0 ? target.length : next;
+        part = end === cursor ? join(part, '') : target.slice(0, end);
+        cursor = next < 0 ? target.length + 1 : next + 1;
         try {
           const stat = lstatSync(part);
           if (!stat.isDirectory() || stat.isSymbolicLink()) throw new TeamOwnerError('hold');

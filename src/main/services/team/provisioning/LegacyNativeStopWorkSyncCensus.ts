@@ -15,6 +15,13 @@ import type { Stats } from 'node:fs';
 const MAX_BYTES = 1024 * 1024;
 const MAX_ENTRIES = 1024;
 const ROOT = '.member-work-sync';
+const snapshotFields = [
+  'statuses',
+  'reportIntents',
+  'outboxItems',
+  'metricEvents',
+  'filesToArchive',
+];
 type Row = Record<string, unknown>;
 const refuse = (): never => {
   throw new Error('Unqualified native WorkSync inventory');
@@ -185,13 +192,7 @@ function replica(value: unknown, target: LegacyNativeTarget, incarnation: string
     !timestamp(envelope.updatedAt)
   )
     refuse();
-  const snapshot = closed(envelope.snapshot, [
-    'statuses',
-    'reportIntents',
-    'outboxItems',
-    'metricEvents',
-    'filesToArchive',
-  ]);
+  const snapshot = closed(envelope.snapshot, snapshotFields);
   if (
     array(snapshot.reportIntents).length ||
     array(snapshot.outboxItems).length ||
@@ -208,6 +209,15 @@ function replica(value: unknown, target: LegacyNativeTarget, incarnation: string
     if (seen.has(key)) refuse();
     seen.add(key);
   }
+}
+
+/** The unprepared SQLite read path may publish this product-only empty snapshot. */
+function emptyReplica(value: unknown): void {
+  const envelope = closed(value, ['schemaVersion', 'state', 'updatedAt', 'snapshot']);
+  if (envelope.schemaVersion !== 1 || envelope.state !== 'clean' || !timestamp(envelope.updatedAt))
+    refuse();
+  const snapshot = closed(envelope.snapshot, snapshotFields);
+  if (snapshotFields.some((key) => array(snapshot[key]).length !== 0)) refuse();
 }
 
 const auditSources = new Map([
@@ -347,7 +357,13 @@ export function readLegacyNativeWorkSyncCensus(
   const roots = directory('');
   if (roots.some((name) => name.toLowerCase().startsWith(ROOT) && name !== ROOT)) refuse();
   const rootFound = roots.includes(ROOT);
-  if (rootFound) exactFiles(ROOT, ['report-token-secret.json', 'sqlite-fallback-replica.json']);
+  if (rootFound)
+    exactFiles(
+      ROOT,
+      marker.present
+        ? ['report-token-secret.json', 'sqlite-fallback-replica.json']
+        : ['sqlite-fallback-replica.json']
+    );
   if (roots.includes('members')) walkMembers('members');
   const close = (): void => {
     for (const [relative, cut] of directoryCuts) {
@@ -365,7 +381,6 @@ export function readLegacyNativeWorkSyncCensus(
     close();
     return null;
   }
-  if (!rootFound || !journalFound || !marker.present) return refuse();
   const read = (relative: string): string => {
     const path = join(teamDir, relative),
       before = lstatSync(path);
@@ -375,6 +390,24 @@ export function readLegacyNativeWorkSyncCensus(
     fileCuts.set(relative, after);
     return new TextDecoder('utf-8', { fatal: true }).decode(bytes);
   };
+  if (rootFound && !journalFound && !marker.present) {
+    emptyReplica(parse(read(`${ROOT}/sqlite-fallback-replica.json`)));
+    close();
+    // Presence and directory ownership remain in the cut; an empty snapshot
+    // grants neither a report-token owner nor native/recovery authority.
+    return {
+      version: 1,
+      kind: 'empty-replica',
+      teamName: target.teamName,
+      leadName: target.leadName,
+      directories: ['', ROOT].map((path) => ({
+        path,
+        ...directoryIdentity(directoryCuts.get(path)?.stat ?? refuse()),
+      })),
+      files: [`${ROOT}/sqlite-fallback-replica.json`],
+    };
+  }
+  if (!rootFound || !journalFound || !marker.present) return refuse();
   const secretRaw = read(`${ROOT}/report-token-secret.json`);
   closed(parse(secretRaw), ['schemaVersion', 'secret', 'teamName', 'incarnation']);
   const secret = parseMemberWorkSyncTokenSecret(secretRaw);

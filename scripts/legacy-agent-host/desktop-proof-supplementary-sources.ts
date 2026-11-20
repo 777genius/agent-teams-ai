@@ -34,6 +34,20 @@ export const desktopProofProcessSources = [
 
 /** Finite additions from the accepted horizontal/auth/harness handoffs; no filesystem discovery. */
 export const desktopProofSupplementarySources = [
+  // Initial pane load boundaries and fresh namespace traversal retain their full tests.
+  'src/renderer/components/layout/PaneContent.tsx',
+  'src/renderer/components/layout/PaneContent.test.tsx',
+  'test/renderer/components/layout/paneContentLoadBoundary.test.ts',
+  'test/features/team-task-detail/renderer/taskDetailLoadBoundary.test.ts',
+  'test/helpers/sourceModuleGraph.ts',
+  'packages/legacy-agent-host/tests/team-owner-namespace-paths.test.ts',
+  'test/features/agent-backend/capturedHostCustodyDeadline.test.ts',
+  'packages/legacy-agent-host/tests/host-custody-recovery.test.ts',
+  'scripts/legacy-agent-host/desktop-retained-original-stop.test.ts',
+  'test/features/agent-backend/opencodeProbeTransportDiagnostics.test.ts',
+  'packages/legacy-agent-host/tests/opencode-v2-model-probe.test.ts',
+  'packages/legacy-agent-host/tests/fixtures/opencode-v2-model-probe-profile.ts',
+  'test/features/agent-backend/hostOpenCodeV2ProbeStartupBudget.test.ts',
   'agent-teams-controller/src/internal/atomicFile.js',
   'agent-teams-controller/src/internal/fileLock.js',
   'scripts/legacy-agent-host/desktop-captured-app-exit.test.ts',

@@ -15,55 +15,23 @@ import { selectOpenCodeV2ManagementModel } from '../dist/composition/openCodeV2M
 import { runtimeMemberProfileSchema } from '../dist/composition/runtimeProfile.js';
 import { teamModelProbeProfile } from '../dist/composition/teamLaunchModelProbe.js';
 import { applyTeamModelProbeSelection } from '../dist/composition/teamModelProbeRecipe.js';
-import { openCodeManagementProfileSchema } from '../dist/management/profile.js';
+import { openCodeManagementProfileSchema, providerManagementProfileSchema } from '../dist/management/profile.js';
+import { ProviderManagementCoordinator } from '../dist/composition/ProviderManagementCoordinator.js';
+import { FileManagementCommandStore } from '../dist/adapters/providers/FileManagementCommandStore.js';
+import { runtimeDigest } from '../dist/runtime/identity.js';
+import { modelReadinessMechanismDigest } from '../dist/team-launch/launchReadiness.js';
+import { opencodeV2ModelProbeProfile } from './fixtures/opencode-v2-model-probe-profile.ts';
+import type { OpenCodeManagementProfile } from '../dist/management/profile.js';
+import type { ModelProbePreparation } from '../dist/management/ModelProbeOwner.js';
+import type { ModelReadinessProbeScope } from '../dist/management/commandRecords.js';
 
 const supported =
   ['linux', 'darwin', 'win32'].includes(process.platform) &&
   ['x64', 'arm64'].includes(process.arch) &&
   !(process.platform === 'linux' && process.arch === 'arm64');
-function fixture(model = 'TEST-model') {
+function fixture(model = 'TEST-model', timeoutMs = 30000) {
   const root = realpathSync(mkdtempSync(join(tmpdir(), 'TEST-v2-model-probe-')));
-  const profile = runtimeMemberProfileSchema.parse({
-    provider: 'opencode',
-    nativeGeneration: 'v2',
-    protocolRevision: '2.1.4',
-    teamId: 'TEST-team',
-    memberId: 'TEST-member',
-    principalId: 'TEST-principal',
-    sessionId: 'TEST-session',
-    generation: 1,
-    configRevision: 'TEST-revision',
-    cwd: root,
-    accountBinding: 'TEST-account',
-    model,
-    executable: { path: join(root, 'TEST-bun'), sha256: 'a'.repeat(64) },
-    endpoint: 'http://127.0.0.1:19332',
-    environment: Object.fromEntries(
-      ['HOME', 'XDG_CONFIG_HOME', 'XDG_DATA_HOME', 'XDG_CACHE_HOME'].map((key) => [key, root])
-    ),
-    embedded: {
-      version: '2.1.4',
-      platform: process.platform,
-      arch: process.arch,
-      directory: join(root, 'engine'),
-      manifestSha256: 'b'.repeat(64),
-      externalDirectory: 'deny',
-    },
-    nativeOptions: {
-      providerId: 'TEST-provider',
-      agent: 'build',
-      variant: 'high',
-      toolApprovalMode: 'manual',
-    },
-    limits: {
-      queuedInputs: 1,
-      inputBytes: 4096,
-      outputBytes: 8192,
-      outputEvents: 128,
-      pendingInteractions: 1,
-      timeoutMs: 30000,
-    },
-  });
+  const profile = runtimeMemberProfileSchema.parse(opencodeV2ModelProbeProfile(root, model, timeoutMs));
   const management = teamModelProbeProfile(profile);
   assert.equal(management.provider, 'opencode');
   if (management.provider !== 'opencode') throw Error('TEST expected OpenCode');
@@ -81,6 +49,123 @@ function fixture(model = 'TEST-model') {
     input,
     cleanup: () => rmSync(root, { recursive: true, force: true }),
   };
+}
+
+for (const [selected, expected] of [[1000, 1000], [30000, 30000], [30001, 30001],
+  [60000, 60000], [90000, 90000], [120000, 90000]] as const) {
+  test(`embedded V2 startup policy selects ${expected}ms from the original ${selected}ms runtime`,
+    { skip: !supported }, t => {
+      const f = fixture('TEST-model', selected); t.after(f.cleanup);
+      const before = structuredClone(f.profile), derived = teamModelProbeProfile(f.profile);
+      assert.equal(openCodeManagementProfileSchema.parse(derived).timeoutMs, expected);
+      assert.equal(derived.modelProbeTimeoutMs, 90000, 'the outer model probe allowance never increases');
+      assert.deepEqual(f.profile, before, 'derivation cannot mutate the selected runtime');
+      const originalKey = `team-probe-${runtimeDigest(f.profile)}`;
+      if (expected <= 30000) assert.equal(derived.profileId, originalKey, 'unchanged policy keeps its identity');
+      else assert.notEqual(derived.profileId, originalKey, 'a changed policy cannot collide with retained profile bytes');
+      assert.equal(derived.configRevision, derived.profileId);
+      assert.deepEqual(teamModelProbeProfile(structuredClone(f.profile)), derived, 'equal recipes keep equal policy identities');
+    });
+}
+
+for (const provider of ['opencode', 'claude', 'codex'] as const) {
+  for (const [selected, expected] of [[1000, 1000], [120000, 30000]] as const) {
+    test(`${provider} legacy Team probe retains its ${expected}ms startup policy and identity`, t => {
+      const root = realpathSync(mkdtempSync(join(tmpdir(), 'TEST-legacy-probe-policy-')));
+      t.after(() => rmSync(root, { recursive: true, force: true }));
+      const { nativeGeneration: _generation, embedded: _embedded, endpoint: _endpoint,
+        protocolRevision: _revision, nativeOptions: _options, ...base } = opencodeV2ModelProbeProfile(root, 'TEST-model', selected);
+      const profile = runtimeMemberProfileSchema.parse({ ...base, provider,
+        ...(provider === 'opencode' ? { protocolRevision: '1.19.4', endpoint: 'http://127.0.0.1:19332',
+          nativeOptions: { providerId: 'TEST-provider', agent: 'build' } }
+          : provider === 'claude' ? { nativeTools: [], autoAllowedTools: [],
+            environment: { ...base.environment, PATH: root, CLAUDE_CONFIG_DIR: root } }
+            : { protocolRevision: '0.169.0', environment: { ...base.environment, CODEX_HOME: root },
+              nativeOptions: { approvalPolicy: 'never', sandbox: 'read-only' } }),
+      });
+      const derived = providerManagementProfileSchema.parse(teamModelProbeProfile(profile));
+      assert.equal(derived.timeoutMs, expected); assert.equal(derived.modelProbeTimeoutMs, 90000);
+      assert.equal(derived.profileId, `team-probe-${runtimeDigest(profile)}`);
+      assert.equal(derived.configRevision, derived.profileId);
+    });
+  }
+}
+
+for (const clean of [true, false]) {
+  test(`changed V2 startup policy ${clean ? 'requalifies through real registration and cold replay' : 'cannot bypass unknown original resource custody'}`,
+    { skip: !supported }, async t => {
+      const f = fixture('TEST-model', 120000); t.after(f.cleanup);
+      const current = openCodeManagementProfileSchema.parse(f.management);
+      const legacyKey = `team-probe-${runtimeDigest(f.profile)}`;
+      const legacy = { ...current, profileId: legacyKey, configRevision: legacyKey, timeoutMs: 30000 };
+      const storage = join(f.root, 'TEST-management-store'); mkdirSync(storage);
+      const records = new FileManagementCommandStore(storage);
+      let runs = 0, closes = 0;
+      const prepare: ModelProbePreparation = () => ({ timeoutMs: 90000,
+        async run(signal) { signal.throwIfAborted(); runs++; return true; },
+        async close() { closes++; return clean; } });
+      const input = (profile: OpenCodeManagementProfile, commandId: string) => ({ commandId,
+        profileId: profile.profileId, configRevision: profile.configRevision, providerId: 'TEST-provider',
+        modelId: 'TEST-model', context: runtimeDigest(commandId) });
+      const scope = (profile: OpenCodeManagementProfile): ModelReadinessProbeScope => ({
+        schemaVersion: 1, kind: 'native', teamBindingDigest: runtimeDigest('TEST-team'),
+        actionDigest: runtimeDigest('TEST-action'), selectionDigest: runtimeDigest('TEST-selection'),
+        sourceRevision: 'TEST-source', rosterRevision: 'TEST-roster', workspace: f.root,
+        mechanismDigest: modelReadinessMechanismDigest(profile), cutoff: Date.now() + 90000,
+        destinationKeys: ['TEST-member'],
+      });
+      const original = input(legacy, 'TEST-old-policy-probe'), originalScope = scope(legacy);
+      const fresh = input(current, 'TEST-new-policy-probe'), freshScope = scope(current);
+      const coordinator = new ProviderManagementCoordinator([legacy], () => {}, storage);
+      let cold: ProviderManagementCoordinator | undefined;
+      try {
+        coordinator.probes.startPrepared(original, () => true, undefined, originalScope, prepare);
+        await coordinator.probes.awaitPrepared(original.commandId, original.context);
+        const retained = records.read(original.commandId)!;
+        assert.equal(retained.resourceHeld, !clean);
+        coordinator.admitTeamProbeProfile(current);
+        coordinator.admitTeamProbeProfile(structuredClone(current));
+        assert.notEqual(coordinator.readinessTarget(current).selectionDigest,
+          coordinator.readinessTarget(legacy).selectionDigest, 'old proof cannot become a new-policy proof');
+        assert.equal(coordinator.readinessTarget(current).resourceId,
+          coordinator.readinessTarget(legacy).resourceId, 'policy version never creates a new account fence');
+        assert.throws(() => coordinator.admitTeamProbeProfile({ ...current, timeoutMs: current.timeoutMs - 1 }),
+          { code: 'conflict' }, 'different bytes under the new identity remain forbidden');
+        assert.throws(() => coordinator.probes.startPrepared({ ...fresh, commandId: original.commandId },
+          () => true, undefined, freshScope, prepare), { code: 'conflict' }, 'old command cannot replay as a new-policy run');
+        if (!clean) {
+          assert.throws(() => coordinator.probes.startPrepared(fresh, () => true, undefined, freshScope, prepare),
+            { code: 'held' }, 'new identity cannot escape original unknown custody');
+          assert.equal(runs, 1); assert.equal(closes, 1);
+          assert.deepEqual(records.read(original.commandId), retained);
+          return;
+        }
+        assert.throws(() => coordinator.probes.captureReadinessReference(original.commandId, original.context,
+          () => ({ target: coordinator.readinessTarget(current), originCurrent: true })), { code: 'conflict' });
+        coordinator.probes.startPrepared(fresh, () => true, undefined, freshScope, prepare);
+        await coordinator.probes.awaitPrepared(fresh.commandId, fresh.context);
+        const qualified = coordinator.probes.captureReadinessReference(fresh.commandId, fresh.context,
+          () => ({ target: coordinator.readinessTarget(current), originCurrent: true }));
+        assert.equal(qualified.mechanismDigest, modelReadinessMechanismDigest(current));
+        assert.equal(runs, 2); assert.equal(closes, 2);
+        await coordinator.close();
+        cold = new ProviderManagementCoordinator([current], () => {}, storage);
+        cold.admitTeamProbeProfile(structuredClone(current));
+        const replayed = cold.probes.startPrepared(fresh, () => true, undefined, freshScope, prepare);
+        assert.equal(replayed.ok, true); assert.equal(runs, 2, 'cold replay never spends a new native request');
+        const retry = input(current, 'TEST-new-policy-explicit-recheck');
+        cold.probes.startPrepared(retry, () => true, undefined, scope(current), prepare);
+        await cold.probes.awaitPrepared(retry.commandId, retry.context);
+        assert.equal(cold.probes.read({ commandId: retry.commandId,
+          profileId: retry.profileId, configRevision: retry.configRevision })?.ok, true);
+        assert.equal(runs, 3); assert.equal(closes, 3);
+        assert.deepEqual(records.read(original.commandId), retained, 'new qualification never rewrites old evidence');
+      } finally {
+        if (clean) await coordinator.close();
+        else await assert.rejects(coordinator.close(), { code: 'held' });
+        await cold?.close();
+      }
+    });
 }
 
 test(

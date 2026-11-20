@@ -19,6 +19,8 @@ const routes = ['info', 'session-create', 'session-read', 'instructions', 'permi
 const stages = ['input', 'executable', 'profile', 'graph', 'configuration', 'effect', 'runtime', 'scope', 'server', 'address', 'unknown'] as const;
 const codes = ['ABORT_ERR', 'ECONNRESET', 'ECONNREFUSED', 'EPIPE', 'ETIMEDOUT',
   'UND_ERR_ABORTED', 'UND_ERR_SOCKET', 'UND_ERR_HEADERS_TIMEOUT', 'UND_ERR_BODY_TIMEOUT', 'unknown'] as const;
+const probeCloseCodes = [...codes, 'cleanup_unknown', 'authority_or_deadline', 'authority_mismatch',
+  'transport_failure', 'http_failure', 'invalid_response', 'disposed'] as const;
 const signals = ['SIGTERM', 'SIGKILL', 'SIGINT', 'SIGABRT', 'SIGSEGV', 'SIGBUS', 'unknown'] as const;
 const contentEncodings = ['none', 'gzip', 'deflate', 'br', 'other'] as const;
 const record = (value: unknown): Record<string, unknown> =>
@@ -116,7 +118,7 @@ function projectHostProbeCloseFailure(value: unknown) {
       try {
         const field = Object.getOwnPropertyDescriptor(value, key);
         if (field) {
-          const selected = choice('value' in field ? field.value : undefined, codes);
+          const selected = choice('value' in field ? field.value : undefined, probeCloseCodes);
           runCodes[key] = selected === 'unknown' ? null : selected;
         }
       } catch { runCodes[key] = null; }

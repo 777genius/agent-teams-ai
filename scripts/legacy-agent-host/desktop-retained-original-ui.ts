@@ -132,7 +132,8 @@ export async function runDesktopRetainedOriginalUi(cdp: UiCdpPort, options: {
   await ui.waitRead(`document.body.innerText.includes(${literal(RETAINED_ORIGINAL_REPLY)})`, 'finite original reply visible', 90_000);
   proof.replyScreenshot = await screenshot('ui-retained-original-reply.png');
   assert.equal(readFiniteSourceBirth(Number(child.pid)), child.startIdentity, 'original peer remains alive until Main Stop');
-  await ui.click('button[aria-label="Stop"]', 'original Main Stop exactly once');
+  await ui.click('button[aria-label="Stop"]', 'original Main Stop exactly once', undefined, undefined,
+    { scrollBeforeClick: { label: 'original Main Stop', requireCenterHit: true } });
   const stopped = await poll(() => optionalJson(join(team, 'launch-stopped.json')), value => value.nativeRelease !== undefined, 'original Main Stop release');
   const release = row(stopped.nativeRelease), target = row(release.target);
   assert.equal(target.teamName, RETAINED_ORIGINAL_TEAM); assert.equal(target.runId, launch.publicationRunId);

@@ -491,11 +491,12 @@ export class CapturedHostClient {
   }
 
   private receiveNative(value: unknown, frameBytes: number): void {
-    const receivedAt = performance.now(), parsed = hostCustodyRequestSchema.safeParse(value);
+    const receivedAt = performance.now(), receivedAtNs = process.hrtime.bigint();
+    const parsed = hostCustodyRequestSchema.safeParse(value);
     const binding = this.nativeBinding, port = this.nativePort;
     if (!parsed.success || frameBytes > HOST_CUSTODY_FRAME_BYTES || !binding || !port ||
       !sameHostCustodyBinding(parsed.data.params.binding, binding)) throw new Error('Native request');
-    const { id, params: { call, remainingMs } } = parsed.data;
+    const { id, params: { call, remainingMs, expiresAtNs } } = parsed.data;
     const control = hostCustodyControl(call);
     const sequence = hostCustodySequence(id, binding.hostIncarnation, control);
     if (sequence === undefined) throw new Error('Native request ID');
@@ -508,7 +509,11 @@ export class CapturedHostClient {
         other.operation === 'read' && other.capability === call.capability && other.stream === call.stream))) {
       this.replyNative(id, { status: 'refused' }); return;
     }
-    const entry: NativeRequest = { call, deadline: receivedAt + remainingMs, reserved: false };
+    // Sample local time first: transit or a sampling pause cannot renew the Host cutoff.
+    const carried = BigInt(expiresAtNs) - receivedAtNs, bounded = BigInt(remainingMs) * 1_000_000n;
+    if (receivedAtNs <= 0n) throw new Error('Native clock');
+    const remaining = carried <= 0n ? 0 : Number(carried < bounded ? carried : bounded) / 1_000_000;
+    const entry: NativeRequest = { call, deadline: receivedAt + remaining, reserved: false };
     this.nativePending.set(id, entry);
     entry.timer = setTimeout(() => {
       if (this.nativePending.get(id) === entry && !entry.reserved && !entry.reply) {

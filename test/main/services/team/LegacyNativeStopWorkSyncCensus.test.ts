@@ -15,6 +15,9 @@ import { dirname, join } from 'node:path';
 
 import { afterEach, describe, expect, it } from 'vitest';
 
+import { InternalStorageJsonReplica } from '../../../../src/features/internal-storage/main/infrastructure/InternalStorageJsonReplica';
+import { isMemberWorkSyncStoreSnapshot } from '../../../../src/features/member-work-sync/main/infrastructure/JsonMemberWorkSyncStore';
+import { recordsToSnapshot } from '../../../../src/features/member-work-sync/main/infrastructure/memberWorkSyncSqliteMappers';
 import { readLegacyNativeWorkSyncCensus } from '../../../../src/main/services/team/provisioning/LegacyNativeStopWorkSyncCensus';
 
 import type { LegacyNativeTarget } from '../../../../src/main/services/team/provisioning/LegacyNativeStopCensus';
@@ -171,7 +174,125 @@ function fixture(present = true) {
   };
 }
 
+async function emptyReplicaFixture() {
+  const f = fixture(false);
+  const replicaPath = join(f.teamDir, rootPath, 'sqlite-fallback-replica.json');
+  const writer = new InternalStorageJsonReplica(() => replicaPath, isMemberWorkSyncStoreSnapshot);
+  // These are the actual mapper and writer used by the unprepared SQLite read path.
+  await writer.writeClean(
+    f.target.teamName,
+    recordsToSnapshot(f.target.teamName, {
+      statuses: [],
+      reportIntents: [],
+      outboxItems: [],
+      metricEvents: [],
+    })
+  );
+  const envelope = JSON.parse(readFileSync(replicaPath, 'utf8')) as Row;
+  return {
+    ...f,
+    replicaPath,
+    writer,
+    envelope,
+    read: () => readLegacyNativeWorkSyncCensus(f.teamDir, f.target, { present: false }),
+  };
+}
+
 describe('strict native Stop WorkSync product census', () => {
+  it('classifies the real clean-empty SQLite replica without inventing native history or a token owner', async () => {
+    const f = await emptyReplicaFixture();
+    expect(f.envelope).toEqual({
+      schemaVersion: 1,
+      state: 'clean',
+      updatedAt: expect.any(String),
+      snapshot: {
+        statuses: [],
+        reportIntents: [],
+        outboxItems: [],
+        metricEvents: [],
+        filesToArchive: [],
+      },
+    });
+    const proof = f.read() as Row;
+    expect(proof).toMatchObject({
+      version: 1,
+      kind: 'empty-replica',
+      teamName: f.target.teamName,
+      leadName: f.target.leadName,
+      files: [`${rootPath}/sqlite-fallback-replica.json`],
+    });
+    expect((proof.directories as Row[]).map((value) => value.path)).toEqual(['', rootPath]);
+    expect(proof).not.toHaveProperty('incarnation');
+    expect(proof).not.toHaveProperty('secretHash');
+    expect(JSON.stringify(proof)).not.toContain('updatedAt');
+    expect(() => readLegacyNativeWorkSyncCensus(f.teamDir, f.target, f.marker)).toThrow();
+  });
+
+  it.each([
+    ['statuses', [{}]],
+    ['reportIntents', [{}]],
+    ['outboxItems', [{}]],
+    ['metricEvents', [{}]],
+    ['filesToArchive', ['TEST-file']],
+    ['unknown', []],
+    ['statuses', null],
+    ['metricEvents', {}],
+  ])('refuses a clean-empty candidate with snapshot %s=%j', async (key, value) => {
+    const f = await emptyReplicaFixture();
+    (f.envelope.snapshot as Row)[key as string] = value;
+    f.write(`${rootPath}/sqlite-fallback-replica.json`, f.envelope);
+    expect(f.read).toThrow();
+  });
+
+  it.each([
+    ['state', 'dirty'],
+    ['schemaVersion', 2],
+    ['incarnation', 'TEST-incarnation'],
+    ['runtimePid', 123],
+    ['updatedAt', 'invalid'],
+    ['snapshot', null],
+  ])('refuses a clean-empty candidate with envelope %s=%j', async (key, value) => {
+    const f = await emptyReplicaFixture();
+    f.envelope[key as string] = value;
+    f.write(`${rootPath}/sqlite-fallback-replica.json`, f.envelope);
+    expect(f.read).toThrow();
+  });
+
+  it('refuses a missing empty-array field and an incomplete native journal or secret', async () => {
+    const f = await emptyReplicaFixture();
+    delete (f.envelope.snapshot as Row).filesToArchive;
+    f.write(`${rootPath}/sqlite-fallback-replica.json`, f.envelope);
+    expect(f.read).toThrow();
+    for (const path of [
+      `${rootPath}/report-token-secret.json`,
+      journalPath,
+      'members/foreign/.member-work-sync/journal.jsonl',
+      `${rootPath}/unknown.json`,
+    ]) {
+      const incomplete = await emptyReplicaFixture();
+      incomplete.write(path, {});
+      expect(incomplete.read).toThrow();
+    }
+  });
+
+  it.skipIf(process.platform === 'win32')(
+    'keeps fresh file, link and directory fences for the empty replica',
+    async () => {
+      const f = await emptyReplicaFixture(),
+        before = f.read();
+      renameSync(join(f.teamDir, rootPath), join(f.root, 'previous-empty'));
+      f.write(`${rootPath}/sqlite-fallback-replica.json`, f.envelope);
+      expect(f.read()).not.toEqual(before);
+      const external = join(f.root, 'external-empty.json');
+      renameSync(f.replicaPath, external);
+      symlinkSync(external, f.replicaPath);
+      expect(f.read).toThrow();
+      rmSync(f.replicaPath);
+      linkSync(external, f.replicaPath);
+      expect(f.read).toThrow();
+    }
+  );
+
   it('accepts the original inactive solo history but does not return tokens or product content', () => {
     const f = fixture();
     const proof = f.read() as Row;

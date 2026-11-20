@@ -13,12 +13,13 @@ export const HOST_CUSTODY_METHOD = 'host.native-custody';
 export const HOST_CUSTODY_BIND_METHOD = 'host.native-custody.bind';
 export const HOST_CUSTODY_READY_METHOD = 'host.native-custody.ready';
 export const HOST_CUSTODY_SHUTDOWN_METHOD = 'host.native-custody.prepare-shutdown';
-export const HOST_CUSTODY_CAPABILITY = 'transport.native-custody-v1';
+export const HOST_CUSTODY_CAPABILITY = 'transport.native-custody-v2';
 export const HOST_CUSTODY_CHUNK_BYTES = 16 * 1024;
 export const HOST_CUSTODY_FRAME_BYTES = 32 * 1024;
 /** Main retains at most this many allocations, each with state/stdout/stderr readiness. */
 export const HOST_CUSTODY_MAX_ALLOCATIONS = 320;
 const MAX_SEQUENCE = (1n << 64n) - 1n;
+const MAX_CLOCK_NS = (1n << 64n) - 1n;
 const ref = z.string().regex(/^[A-Za-z0-9._:-]{1,128}$/);
 const stream = z.enum(['stdout', 'stderr']);
 const hash = z.string().regex(/^[a-f0-9]{64}$/);
@@ -122,7 +123,9 @@ export const hostCustodyRequestSchema = z
     id: z.string(),
     method: z.literal(HOST_CUSTODY_METHOD),
     params: z.object({ binding: hostCustodyBindingSchema, call: callSchema,
-      remainingMs: z.number().int().min(1).max(30_000) }).strict(),
+      remainingMs: z.number().int().min(1).max(30_000),
+      expiresAtNs: z.string().refine(value => /^[1-9]\d{0,19}$/u.test(value) &&
+        BigInt(value) <= MAX_CLOCK_NS) }).strict(),
   })
   .strict();
 const responseSchema = z
@@ -214,6 +217,7 @@ interface NativeAdmission {
   readonly operation: HostCustodyCall['operation'];
   readonly build: (deadlineMs: number) => HostCustodyCall;
   readonly deadline: number;
+  readonly expiresAtNs: bigint;
   readonly timer: ReturnType<typeof setTimeout>;
   finish(reply: HostCustodyReply): void;
 }
@@ -292,18 +296,24 @@ export class HostCustodyClient {
     build: (deadlineMs: number) => HostCustodyCall,
     deadlineMs?: number
   ): Promise<HostCustodyReply> {
+    // Direct child and Main share the same boot/time namespace's Node/libuv hrtime clock.
+    // Anchor before the process-local sample; a sampling pause can only shorten the cutoff.
+    const startedAtNs = process.hrtime.bigint();
     const now = performance.now();
     const deadline = Math.min(deadlineMs ?? now + this.options.timeoutMs, now + this.options.timeoutMs);
+    const remaining = Math.floor(deadline - now);
     const queued = this.admissions.control.length + this.admissions.work.length;
     if (this.sealed || !this.binding || this.next > MAX_SEQUENCE ||
       (this.inputSealed && !hostCustodyCleanup({ operation })) ||
-      !Number.isFinite(deadline) || deadline <= now || queued + this.pending.size >= 6 * 256)
+      !Number.isFinite(deadline) || remaining <= 0 || queued + this.pending.size >= 6 * 256)
       return Promise.resolve({ status: 'refused' });
+    const expiresAtNs = startedAtNs + BigInt(Math.floor((deadline - now) * 1_000_000));
+    if (startedAtNs <= 0n || expiresAtNs > MAX_CLOCK_NS) return Promise.resolve({ status: 'refused' });
     const lane = hostCustodyControl({ operation }) ? this.admissions.control : this.admissions.work;
     return new Promise((resolve) => {
       let settled = false;
       const admission: NativeAdmission = {
-        operation, build, deadline,
+        operation, build, deadline, expiresAtNs,
         timer: setTimeout(() => admission.finish({ status: 'refused' }), deadline - now),
         finish: (reply) => {
           if (settled) return;
@@ -332,7 +342,7 @@ export class HostCustodyClient {
         const control = hostCustodyControl(admission);
         const capacity = this.options.limits.maxPendingRequests -
           (control ? 0 : this.options.limits.reservedControlRequests);
-        if (admission.deadline <= performance.now() ||
+        if (admission.deadline <= performance.now() || admission.expiresAtNs <= process.hrtime.bigint() ||
           (this.inputSealed && !hostCustodyCleanup(admission))) {
           admission.finish({ status: 'refused' });
           continue;
@@ -347,16 +357,17 @@ export class HostCustodyClient {
           admission.finish({ status: 'refused' }); continue;
         }
         // dispatch rechecks the original deadline after the lazy builder, without extending it.
-        void this.dispatch(parsed.data, admission.deadline).then(admission.finish);
+        void this.dispatch(parsed.data, admission.deadline, admission.expiresAtNs).then(admission.finish);
       }
     } finally { this.admitting = false; }
   }
 
-  private dispatch(call: HostCustodyCall, deadline: number): Promise<HostCustodyReply> {
+  private dispatch(call: HostCustodyCall, deadline: number, expiresAtNs: bigint): Promise<HostCustodyReply> {
     if (this.sealed || !this.binding || this.next > MAX_SEQUENCE ||
       (this.inputSealed && !hostCustodyCleanup(call)))
       return Promise.resolve({ status: 'refused' });
-    const remaining = Math.floor(deadline - performance.now());
+    const remaining = Math.min(Math.floor(deadline - performance.now()),
+      Number((expiresAtNs - process.hrtime.bigint()) / 1_000_000n));
     if (!Number.isFinite(remaining) || remaining <= 0) return Promise.resolve({ status: 'refused' });
     const control = hostCustodyControl(call);
     if (call.operation === 'read' && [...this.pending.values()].some(({ call: other }) =>
@@ -370,12 +381,17 @@ export class HostCustodyClient {
       return runtimeSourceOrigin === undefined ? original : { ...original, runtimeSourceOrigin };
     })() : call;
     const frame: RpcRequest = {
-      jsonrpc: '2.0', id, method: HOST_CUSTODY_METHOD, params: { binding: this.binding, call: wireCall, remainingMs: remaining },
+      jsonrpc: '2.0', id, method: HOST_CUSTODY_METHOD,
+      params: { binding: this.binding, call: wireCall, remainingMs: remaining, expiresAtNs: expiresAtNs.toString() },
     };
     return new Promise((resolve) => {
       let returned = false;
       const settle = (reply: HostCustodyReply) => {
-        if (!returned) { returned = true; resolve(reply); }
+        if (!returned) {
+          returned = true;
+          resolve(reply.status === 'completed' && process.hrtime.bigint() >= expiresAtNs
+            ? { status: 'unknown' } : reply);
+        }
       };
       const finish = (reply: HostCustodyReply) => {
         const pending = this.pending.get(id);
@@ -393,11 +409,20 @@ export class HostCustodyClient {
         this.resumeAdmission();
       };
       // A caller timeout is not an ACK: retain its slot, ID and marker until the original reply.
-      const expire = () => settle({ status: 'unknown' });
+      const expire = () => {
+        const pending = this.pending.get(id);
+        if (!pending) return;
+        const left = expiresAtNs - process.hrtime.bigint();
+        if (left > 0n) {
+          pending.timer = setTimeout(expire, Number((left + 999_999n) / 1_000_000n));
+          return;
+        }
+        settle({ status: 'unknown' });
+      };
       const timer = setTimeout(expire, remaining);
       this.pending.set(id, { call, finish, timer });
       try { if (!this.options.send(frame, control)) finish({ status: 'refused' }); }
-      catch { expire(); }
+      catch { settle({ status: 'unknown' }); }
     });
   }
 

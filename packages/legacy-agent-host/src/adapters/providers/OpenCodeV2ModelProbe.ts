@@ -97,7 +97,9 @@ export function createOpenCodeV2ModelProbe(
   let outcome: 'unobserved' | 'succeeded' | 'failed' | 'cancelled' | 'unknown' = 'unobserved';
   let errorClass: 'none' | 'held' | 'invalid' | 'conflict' | 'busy' | 'unknown' = 'none';
   const runErrorCodes = ['ABORT_ERR', 'ECONNRESET', 'ECONNREFUSED', 'EPIPE', 'ETIMEDOUT',
-    'UND_ERR_ABORTED', 'UND_ERR_SOCKET', 'UND_ERR_HEADERS_TIMEOUT', 'UND_ERR_BODY_TIMEOUT'] as const;
+    'UND_ERR_ABORTED', 'UND_ERR_SOCKET', 'UND_ERR_HEADERS_TIMEOUT', 'UND_ERR_BODY_TIMEOUT',
+    'cleanup_unknown', 'authority_or_deadline', 'authority_mismatch', 'transport_failure',
+    'http_failure', 'invalid_response', 'disposed'] as const;
   type RunErrorCode = typeof runErrorCodes[number];
   let runErrorCode: RunErrorCode | null = null, runCauseCode: RunErrorCode | null = null;
   const projectRunCode = (value: unknown): RunErrorCode | null =>

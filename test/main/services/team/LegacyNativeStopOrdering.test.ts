@@ -5,13 +5,16 @@ import { join } from 'node:path';
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import { InternalStorageJsonReplica } from '../../../../src/features/internal-storage/main/infrastructure/InternalStorageJsonReplica';
 import { MemberWorkSyncTeamOperationGate } from '../../../../src/features/member-work-sync/core/application/MemberWorkSyncTeamOperationGate';
 import {
   captureLegacySourceReadFence,
   createLegacySourceWorkSyncAdmission,
   withLegacySourceReadFence,
 } from '../../../../src/features/member-work-sync/main/composition/legacySourceWorkSyncAdmission';
+import { isMemberWorkSyncStoreSnapshot } from '../../../../src/features/member-work-sync/main/infrastructure/JsonMemberWorkSyncStore';
 import { MemberWorkSyncEventQueue } from '../../../../src/features/member-work-sync/main/infrastructure/MemberWorkSyncEventQueue';
+import { recordsToSnapshot } from '../../../../src/features/member-work-sync/main/infrastructure/memberWorkSyncSqliteMappers';
 import { QuiescingMemberWorkSyncAuditJournal } from '../../../../src/features/member-work-sync/main/infrastructure/QuiescingMemberWorkSyncAuditJournal';
 import {
   captureDesktopNativeStopWorkSyncFence,
@@ -23,8 +26,8 @@ import {
   stopTeamFlow,
 } from '../../../../src/main/services/team/provisioning/TeamProvisioningStopFlow';
 import { TeamProvisioningTransientRunState } from '../../../../src/main/services/team/provisioning/TeamProvisioningTransientRunState';
-import { TeamLaunchStateStore } from '../../../../src/main/services/team/TeamLaunchStateStore';
 import { readTeamLaunchFreshness } from '../../../../src/main/services/team/TeamLaunchFreshness';
+import { TeamLaunchStateStore } from '../../../../src/main/services/team/TeamLaunchStateStore';
 import { TeamProvisioningService } from '../../../../src/main/services/team/TeamProvisioningService';
 import { TeamTaskWriter } from '../../../../src/main/services/team/TeamTaskWriter';
 import {
@@ -297,6 +300,31 @@ function fixture() {
 describe.skipIf(process.platform === 'win32')(
   'original Main native Stop with owned WorkSync drain',
   () => {
+    it('publishes the original native release after draining the real clean-empty replica writer', async () => {
+      const f = fixture();
+      const writer = new InternalStorageJsonReplica(
+        () => join(f.teamDir, '.member-work-sync/sqlite-fallback-replica.json'),
+        isMemberWorkSyncStoreSnapshot
+      );
+      await writer.writeClean(
+        f.teamName,
+        recordsToSnapshot(f.teamName, {
+          statuses: [],
+          reportIntents: [],
+          outboxItems: [],
+          metricEvents: [],
+        })
+      );
+      await f.stop();
+      expect(f.ports.killTeamProcessAndWait).toHaveBeenCalledOnce();
+      expect(f.events).toContain('drain-unlocked');
+      expect(f.readProof()?.target.runId).toBe(f.run.runId);
+      expect(await readTeamLaunchFreshness(f.teamName)).toMatchObject({
+        kind: 'stop',
+        stoppedRunId: f.run.runId,
+      });
+    });
+
     it('waits for physical writer and audit tails outside the lock, then publishes once and fences a queued original writer', async () => {
       const f = fixture(),
         entered = deferred(),

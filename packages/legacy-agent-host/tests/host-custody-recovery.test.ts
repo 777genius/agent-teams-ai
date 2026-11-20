@@ -111,6 +111,7 @@ test('incomplete native drain replies before the original queued Host deadline a
   t.mock.timers.enable({ apis: ['setTimeout'] });
   let clock = 1000;
   t.mock.method(performance, 'now', () => clock);
+  t.mock.method(process.hrtime, 'bigint', () => BigInt(clock) * 1_000_000n);
   const flush = async () => { for (let i = 0; i < 24; i++) await Promise.resolve(); };
   const advance = async (ms: number) => { clock += ms; t.mock.timers.tick(ms); await flush(); };
   for (const scenario of [

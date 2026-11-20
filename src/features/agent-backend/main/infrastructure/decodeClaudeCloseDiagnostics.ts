@@ -38,7 +38,9 @@ const probeCloseErrorClasses = new Set(['none', 'held', 'invalid', 'conflict', '
 const probeCloseStages = new Set(['request-drain', 'owner-client', 'driver-close', 'server-stop', 'namespace', 'close-result']);
 const probeCloseReasons = new Set(['unconfirmed', 'threw', 'identity']);
 const probeCloseCodes = new Set(['ABORT_ERR', 'ECONNRESET', 'ECONNREFUSED', 'EPIPE', 'ETIMEDOUT',
-  'UND_ERR_ABORTED', 'UND_ERR_SOCKET', 'UND_ERR_HEADERS_TIMEOUT', 'UND_ERR_BODY_TIMEOUT']);
+  'UND_ERR_ABORTED', 'UND_ERR_SOCKET', 'UND_ERR_HEADERS_TIMEOUT', 'UND_ERR_BODY_TIMEOUT',
+  'cleanup_unknown', 'authority_or_deadline', 'authority_mismatch', 'transport_failure',
+  'http_failure', 'invalid_response', 'disposed']);
 export interface OpenCodeProbeCloseDiagnostic {
   readonly profileHash: string;
   readonly commandHash: string;
