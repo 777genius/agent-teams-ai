@@ -30,7 +30,11 @@ interface Controller {
     sendMessage(input: { from: string; to: string; text: string; messageId: string }): Delivery;
   };
   crossTeam: {
-    sendCrossTeamMessage(input: { toTeam: string; fromMember: string; text: string }): Delivery;
+    sendCrossTeamMessage(input: {
+      toTeam: string;
+      fromMember: string;
+      text: string;
+    }): Promise<Delivery>;
   };
 }
 const require = createRequire(import.meta.url);
