@@ -80,7 +80,7 @@ Status words: **works**, **hidden** (the control is not shown), **refuses** (an 
 
 | Feature | Legacy | Logical | Copy | Evidence |
 | --- | --- | --- | --- | --- |
-| Create, edit, run, pause schedules | works | refuses and the screen says so | refuses | `createSchedulerService.ts:77-78`, `SchedulerService.ts:91, 182, 231, 322, 374, 600`, `TeamDetailView.tsx:3287` (read) |
+| Create, edit, run, pause schedules | works | works: one list under the team, the project of each schedule is its working directory; a run goes to the ready copy of that project, and is skipped with a reason when there is none | refuses | `projectScheduleTargets.ts`, `SmartScheduleDispatcher.ts`, E2E `verifySchedules` |
 
 ### E. Listing and aggregate views
 
@@ -104,7 +104,7 @@ Impact is for a user who relies on the legacy feature. Effort: S under a day, M 
 
 | # | Gap | Type | Impact | Effort | Why |
 | --- | --- | --- | --- | --- | --- |
-| 1 | Schedules unavailable | honest | high | M-L | A common automation feature; the scheduler launches and creates tasks by physical name and bypasses project routing. A schedule already stores a project path (`ScheduleLaunchConfig.cwd`), which is the missing input. One-shot schedules do not need a team runtime at all and could be allowed first (S). |
+| 1 | ~~Schedules unavailable~~ done (first launch in a new project stays manual) | honest | high | M-L | A common automation feature; the scheduler launches and creates tasks by physical name and bypasses project routing. A schedule already stores a project path (`ScheduleLaunchConfig.cwd`), which is the missing input. One-shot schedules do not need a team runtime at all and could be allowed first (S). |
 | 2 | HTTP / MCP stop, runtime and alive ignore the logical team | **silent** | high | S-M | `team_stop` reports success while the project keeps running. Resolve the logical name to its owned contexts (the IPC already has `stopLogicalTeam`). |
 | 3 | HTTP / MCP list and the organization map show internal copies and a draft | **silent** | medium | S-M | Reuse `projectTeamSummaries` (and the projected alive list) for the HTTP list and the org adapter. |
 | 4 | Lead instructions cannot be edited anywhere; MCP / HTTP update and trash refuse | honest | high | M | Add the field to the edit dialog and route the external update through the same editor (gate plus projection under the logical-team lock). |
@@ -153,7 +153,7 @@ Recommendation: do the resolution layer now. Its callers already pass `(team, co
 
 1. **Make the silent gaps honest** (gaps 2 and 3): resolve stop, runtime, alive and the list/organization views through the layer. Small, removes the misleading results, and the first consumers of the layer.
 2. **External edit and lead instructions** (gap 4): the layer plus the existing editor; closes the biggest regression in the MCP surface.
-3. **Schedules** (gap 1): one-shot schedules first, then task-first schedules through the layer (project path comes from the schedule).
+3. **Schedules** (gap 1): done. Schedules stay keyed by the team and fire against the ready copy of the schedule's project; a scheduler never creates a copy.
 4. **Launch settings as definition** (gap 5): decide the owned fields, project them, make relaunch write to the definition. Needs an E2E that changes a setting and launches in two projects.
 5. **Cross-team and alias naming** (gaps 7, 8), then **live edit** (gap 6), then the hidden UI pieces (gaps 9, 10), then hosted (gap 12).
 
