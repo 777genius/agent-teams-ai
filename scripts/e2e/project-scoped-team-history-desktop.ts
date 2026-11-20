@@ -929,7 +929,13 @@ async function verifyCrossTeam(f: Fixture) {
   // The stored sender stays the copy: a reply to it must reach that copy, not another project.
   assert.equal(fromCopy?.from, f.nativeB + '.lead', 'Reply route lost');
 
-  // The MCP tools run in the controller package, which asks this app over HTTP.
+  // The MCP tools run in the controller package, which asks this app over HTTP. The
+  // app starts its control API on demand (a launch, the agent connection or the HTTP
+  // switch); nothing launched yet, so switch it on and wait until it is published.
+  await cdp.evaluate('(async () => { await window.electronAPI.httpServer.start(); return true; })()');
+  await waitForJson<{ baseUrl?: string }>(path.join(f.claudeRoot, 'team-control-api.json'),
+    (state) => typeof state.baseUrl === 'string' && state.baseUrl.length > 0,
+    'published team control API');
   const { createController } = createRequire(import.meta.url)('agent-teams-controller') as {
     createController(options: { teamName: string; claudeDir: string }): {
       crossTeam: {

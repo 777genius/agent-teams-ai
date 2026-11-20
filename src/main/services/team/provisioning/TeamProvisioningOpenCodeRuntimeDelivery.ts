@@ -54,8 +54,8 @@ import {
   canonicalizeRuntimeDeliveryCrossTeamIdentities,
   readRuntimeDeliveryIdentitySources,
   requireRuntimeDeliveryIdentitySources,
-  type RuntimeDeliveryIdentitySources,
   routeCrossTeamTargetInApp,
+  type RuntimeDeliveryIdentitySources,
 } from './TeamProvisioningRuntimeDeliveryIdentity';
 import {
   asRuntimeRecord,
