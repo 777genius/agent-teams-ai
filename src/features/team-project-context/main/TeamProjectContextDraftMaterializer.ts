@@ -1,5 +1,6 @@
 import { projectDefinitionToAlias } from './projectDefinitionToAlias';
 
+import type { DefinitionLaunchSettings } from './definitionLaunchSettings';
 import type { DefinitionMetadataUpdate } from './projectDefinitionToAlias';
 import type { ResolvedTeamWorkContext, TeamWorkContextAddress } from './TeamProjectContextRuntimeResolver';
 import type { ReplaceMembersRequest, TeamCreateConfigRequest, TeamCreateRequest } from '@shared/types';
@@ -15,6 +16,8 @@ interface SavedTeamRequestPort {
   assertStoppedForRosterSync(teamName: string): Promise<void>;
   /** Name, description, color and lead instructions of the logical team, projected onto its native alias. */
   updateDisplayMetadata(teamName: string, update: DefinitionMetadataUpdate): Promise<void>;
+  /** Team-level launch settings of the logical team, projected onto its native alias. */
+  updateLaunchSettings(teamName: string, settings: DefinitionLaunchSettings): Promise<void>;
 }
 
 interface ContextResolverPort {
@@ -53,12 +56,13 @@ export class TeamProjectContextDraftMaterializer {
       const logical = await this.teamStore.getSavedRequest(address.logicalTeamName);
       if (!logical) throw new Error('Logical team settings are unavailable');
       // Preserve physical run identities and old tasks/chats: only the authored
-      // roster and display metadata are synced, with the stopped-only mutation.
+      // roster, display metadata and launch settings are synced.
       await projectDefinitionToAlias(
         {
           assertStoppedForSync: (name) => this.teamStore.assertStoppedForRosterSync(name),
           replaceMembers: (name, request) => this.teamStore.replaceMembers(name, request),
           updateDisplayMetadata: (name, update) => this.teamStore.updateDisplayMetadata(name, update),
+          updateLaunchSettings: (name, settings) => this.teamStore.updateLaunchSettings(name, settings),
         },
         logical,
         existing

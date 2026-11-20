@@ -1,6 +1,17 @@
 export type { DefinitionEditTarget } from './classifyDefinitionTarget';
 export { classifyDefinitionTarget } from './classifyDefinitionTarget';
 export type {
+  DefinitionLaunchSettingKey,
+  DefinitionLaunchSettings,
+  DefinitionLaunchSettingsStore,
+} from './definitionLaunchSettings';
+export {
+  changedDefinitionLaunchSettings,
+  DEFINITION_LAUNCH_SETTING_KEYS,
+  pickDefinitionLaunchSettings,
+  recordLaunchSettings,
+} from './definitionLaunchSettings';
+export type {
   AliasBatchResolver,
   AliveRuntimeEntry,
   ContextRuntimeSnapshot,

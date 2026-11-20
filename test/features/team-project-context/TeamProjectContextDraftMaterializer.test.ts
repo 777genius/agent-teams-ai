@@ -29,6 +29,7 @@ function fixture(result: ResolvedTeamWorkContext = reserved) {
     assertOwnedAlias: vi.fn(async () => undefined),
     replaceMembers: vi.fn(async () => undefined),
     updateDisplayMetadata: vi.fn(async () => undefined),
+    updateLaunchSettings: vi.fn(async () => undefined),
     assertStoppedForRosterSync: vi.fn(async () => undefined),
   };
   return { materializer: new TeamProjectContextDraftMaterializer(context, store), context, store };
@@ -138,6 +139,25 @@ describe('TeamProjectContextDraftMaterializer', () => {
       color: '',
       prompt: 'Edited rules',
     });
+    expect(f.store.replaceMembers).not.toHaveBeenCalled();
+  });
+
+  it('repairs older project copies with the launch settings of the definition, without demanding a stop', async () => {
+    const f = fixture({ ...reserved, state: 'ready' });
+    f.store.getSavedRequest.mockImplementation(async (name) => ({
+      teamName: name,
+      cwd: '/sandbox/b',
+      members: [{ name: 'alice' }],
+      ...(name === 'builders'
+        ? { providerId: 'codex' as const, model: 'gpt-x', effort: 'high' as const, skipPermissions: true }
+        : { providerId: 'codex' as const, model: 'gpt-old', effort: 'high' as const, skipPermissions: false }),
+    }));
+    await f.materializer.ensureProjectDraft({
+      logicalTeamName: 'builders', projectPath: '/sandbox/b',
+    });
+    expect(f.store.updateLaunchSettings).toHaveBeenCalledOnce();
+    expect(f.store.updateLaunchSettings).toHaveBeenCalledWith('ptc-sandbox', { model: 'gpt-x' });
+    expect(f.store.assertStoppedForRosterSync).not.toHaveBeenCalled();
     expect(f.store.replaceMembers).not.toHaveBeenCalled();
   });
 

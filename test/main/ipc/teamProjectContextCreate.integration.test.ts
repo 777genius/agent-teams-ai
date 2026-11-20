@@ -288,6 +288,60 @@ describe('project-scoped desktop team creation boundary (sandbox disk + fake nat
     expect(invoke.mock.calls[0]?.[0].teamName).not.toBe('builders');
   });
 
+  describe('launch settings of a per-project team', () => {
+    async function perProjectFixture() {
+      const f = await fixture();
+      await f.ports.data.createTeamConfig({
+        teamName: 'builders', cwd: f.projectPath, members: [], projectContextMode: 'per_project',
+      });
+      const metaPath = path.join(getTeamsBasePath(), 'builders', 'team.meta.json');
+      const readMeta = async () => JSON.parse(await fs.readFile(metaPath, 'utf8')) as Record<string, unknown>;
+      const launch = (
+        patch: Partial<TeamLaunchRequest>,
+        result: { success: boolean; data?: object; error?: string } = { success: true, data: { runId: 'r1' } }
+      ) =>
+        withPreparedContextLaunch(
+          { teamName: 'builders', cwd: f.projectPath, ...patch }, f.ports,
+          vi.fn(async () => result) as never
+        );
+      return { f, readMeta, launch };
+    }
+
+    it('saves what the launch chose into the team, but never trust or place of one project', async () => {
+      const { readMeta, launch } = await perProjectFixture();
+      await launch({
+        providerId: 'codex', model: 'gpt-x', effort: 'high', limitContext: true,
+        skipPermissions: true, worktree: 'wt',
+      });
+      const meta = await readMeta();
+      expect(meta).toMatchObject({
+        providerId: 'codex', model: 'gpt-x', effort: 'high', limitContext: true,
+        projectContextMode: 'per_project',
+      });
+      expect(meta).not.toHaveProperty('skipPermissions');
+      expect(meta).not.toHaveProperty('worktree');
+    });
+
+    it('saves nothing when the launch is rejected or the team was already running', async () => {
+      const { readMeta, launch } = await perProjectFixture();
+      await launch({ providerId: 'codex', model: 'rejected' }, { success: false, error: 'no auth' });
+      await launch(
+        { providerId: 'codex', model: 'ignored' },
+        { success: true, data: { runId: 'r2', launchStatus: 'already_running', alreadyRunning: true } }
+      );
+      expect(await readMeta()).not.toHaveProperty('model');
+    });
+
+    it('does not fail an accepted launch when the settings cannot be saved', async () => {
+      const { launch } = await perProjectFixture();
+      const { TeamMetaStore } = await import('../../../src/main/services/team/TeamMetaStore');
+      vi.spyOn(TeamMetaStore.prototype, 'updateMeta').mockRejectedValue(new Error('disk full'));
+      await expect(launch({ providerId: 'codex', model: 'gpt-x' })).resolves.toMatchObject({
+        success: true,
+      });
+    });
+  });
+
   it('refuses project B while A is running and does not leave a dead reservation', async () => {
     const f = await fixture();
     await createTeamWithProjectContext({

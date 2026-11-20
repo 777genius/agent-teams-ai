@@ -28,6 +28,7 @@ function fixture(options: {
     ),
     replaceMembers: vi.fn(async () => undefined),
     updateDisplayMetadata: vi.fn(async () => undefined),
+    updateLaunchSettings: vi.fn(async () => undefined),
   };
   const assertAliasStopped = vi.fn(async (_name: string) => undefined);
   return {

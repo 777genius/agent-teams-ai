@@ -7,6 +7,7 @@ function ports() {
     assertStoppedForSync: vi.fn(async (_name: string) => undefined),
     replaceMembers: vi.fn(async () => undefined),
     updateDisplayMetadata: vi.fn(async () => undefined),
+    updateLaunchSettings: vi.fn(async () => undefined),
   };
 }
 
@@ -26,7 +27,7 @@ describe('projectDefinitionToAlias', () => {
       { members: [{ name: 'alice', role: 'dev' }], description: 'Old', color: 'blue' },
       alias()
     );
-    expect(result).toEqual({ roster: false, metadata: false });
+    expect(result).toEqual({ roster: false, metadata: false, launchSettings: false });
     expect(p.assertStoppedForSync).not.toHaveBeenCalled();
     expect(p.replaceMembers).not.toHaveBeenCalled();
     expect(p.updateDisplayMetadata).not.toHaveBeenCalled();
@@ -39,7 +40,7 @@ describe('projectDefinitionToAlias', () => {
       { members: [{ name: 'alice', role: 'dev' }], description: ' Old ', color: 'blue ' },
       alias({ members: [{ name: 'alice', role: 'dev', cwd: '/generated/worktree' }] })
     );
-    expect(result).toEqual({ roster: false, metadata: false });
+    expect(result).toEqual({ roster: false, metadata: false, launchSettings: false });
     expect(p.replaceMembers).not.toHaveBeenCalled();
   });
 
@@ -51,7 +52,7 @@ describe('projectDefinitionToAlias', () => {
       { members, description: 'Old', color: 'blue' },
       alias()
     );
-    expect(result).toEqual({ roster: true, metadata: false });
+    expect(result).toEqual({ roster: true, metadata: false, launchSettings: false });
     expect(p.assertStoppedForSync).toHaveBeenCalledWith('ptc-a');
     expect(p.replaceMembers).toHaveBeenCalledWith('ptc-a', { members });
     expect(p.updateDisplayMetadata).not.toHaveBeenCalled();
@@ -64,7 +65,7 @@ describe('projectDefinitionToAlias', () => {
       { members: [{ name: 'alice', role: 'dev' }], description: undefined, color: 'green' },
       alias()
     );
-    expect(result).toEqual({ roster: false, metadata: true });
+    expect(result).toEqual({ roster: false, metadata: true, launchSettings: false });
     expect(p.updateDisplayMetadata).toHaveBeenCalledWith('ptc-a', {
       description: '',
       color: 'green',
@@ -93,7 +94,7 @@ describe('projectDefinitionToAlias', () => {
       { members: [{ name: 'alice', role: 'dev' }], displayName: ' New name ', description: 'Old', color: 'blue' },
       alias({ displayName: 'Old name' })
     );
-    expect(result).toEqual({ roster: false, metadata: true });
+    expect(result).toEqual({ roster: false, metadata: true, launchSettings: false });
     expect(p.updateDisplayMetadata).toHaveBeenCalledWith('ptc-a', {
       name: 'New name',
       description: 'Old',
@@ -108,7 +109,7 @@ describe('projectDefinitionToAlias', () => {
       { members: [{ name: 'alice', role: 'dev' }], displayName: '  ', description: 'Old', color: 'blue' },
       alias({ displayName: 'Kept' })
     );
-    expect(result).toEqual({ roster: false, metadata: false });
+    expect(result).toEqual({ roster: false, metadata: false, launchSettings: false });
   });
 
   describe('saved lead instructions', () => {
@@ -121,7 +122,7 @@ describe('projectDefinitionToAlias', () => {
         { ...logicalBase, prompt: ' Be brief ' },
         alias({ prompt: 'Old prompt' })
       );
-      expect(result).toEqual({ roster: false, metadata: true });
+      expect(result).toEqual({ roster: false, metadata: true, launchSettings: false });
       expect(p.assertStoppedForSync).toHaveBeenCalledWith('ptc-a');
       expect(p.updateDisplayMetadata).toHaveBeenCalledWith('ptc-a', {
         description: 'Old',
@@ -148,7 +149,7 @@ describe('projectDefinitionToAlias', () => {
         { ...logicalBase, prompt: ' Same ' },
         alias({ prompt: 'Same' })
       );
-      expect(result).toEqual({ roster: false, metadata: false });
+      expect(result).toEqual({ roster: false, metadata: false, launchSettings: false });
       expect(p.assertStoppedForSync).not.toHaveBeenCalled();
       expect(p.updateDisplayMetadata).not.toHaveBeenCalled();
     });
@@ -160,6 +161,80 @@ describe('projectDefinitionToAlias', () => {
         projectDefinitionToAlias(p, { ...logicalBase, prompt: 'New' }, alias({ prompt: 'Old' }))
       ).rejects.toThrow('Stop this project runtime');
       expect(p.updateDisplayMetadata).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('team-level launch settings', () => {
+    const base = { members: [{ name: 'alice', role: 'dev' }], description: 'Old', color: 'blue' };
+
+    it('projects only the launch settings that differ and never demands a stopped runtime', async () => {
+      const p = ports();
+      const result = await projectDefinitionToAlias(
+        p,
+        { ...base, providerId: 'codex', model: 'gpt-x', effort: 'high', limitContext: true },
+        alias({ providerId: 'codex', model: 'gpt-old', effort: 'high', limitContext: false })
+      );
+      expect(result).toEqual({ roster: false, metadata: false, launchSettings: true });
+      expect(p.updateLaunchSettings).toHaveBeenCalledWith('ptc-a', { model: 'gpt-x', limitContext: true });
+      expect(p.assertStoppedForSync).not.toHaveBeenCalled();
+      expect(p.replaceMembers).not.toHaveBeenCalled();
+      expect(p.updateDisplayMetadata).not.toHaveBeenCalled();
+    });
+
+    it('clears a setting of the copy when the definition has gone back to the default', async () => {
+      const p = ports();
+      await projectDefinitionToAlias(
+        p,
+        { ...base, providerId: 'codex', effort: undefined },
+        alias({ providerId: 'codex', effort: 'high' })
+      );
+      expect(p.updateLaunchSettings).toHaveBeenCalledWith('ptc-a', { effort: undefined });
+    });
+
+    it('does nothing when the copy already has the definition settings', async () => {
+      const p = ports();
+      const result = await projectDefinitionToAlias(
+        p,
+        { ...base, providerId: 'codex', model: 'm', extraCliArgs: '--x' },
+        alias({ providerId: 'codex', model: 'm', extraCliArgs: '--x' })
+      );
+      expect(result.launchSettings).toBe(false);
+      expect(p.updateLaunchSettings).not.toHaveBeenCalled();
+    });
+
+    it('never takes per-project trust or place from the definition', async () => {
+      const p = ports();
+      const logical = { ...base, providerId: 'codex' as const, skipPermissions: true, worktree: 'wt', cwd: '/a' };
+      const result = await projectDefinitionToAlias(
+        p,
+        logical,
+        alias({ providerId: 'codex', skipPermissions: false, worktree: undefined, cwd: '/b' })
+      );
+      expect(result.launchSettings).toBe(false);
+      expect(p.updateLaunchSettings).not.toHaveBeenCalled();
+    });
+
+    it('does not clear the provider of a copy when the definition has none', async () => {
+      const p = ports();
+      await projectDefinitionToAlias(
+        p,
+        { ...base, providerId: undefined, providerBackendId: 'b', model: 'm' },
+        alias({ providerId: 'codex', model: 'old' })
+      );
+      expect(p.updateLaunchSettings).toHaveBeenCalledWith('ptc-a', { model: 'm' });
+    });
+
+    it('still refuses a roster change on a running copy and writes no launch settings then', async () => {
+      const p = ports();
+      p.assertStoppedForSync.mockRejectedValue(new Error('Stop this project runtime'));
+      await expect(
+        projectDefinitionToAlias(
+          p,
+          { ...base, members: [{ name: 'bob' }], model: 'new' },
+          alias({ model: 'old' })
+        )
+      ).rejects.toThrow('Stop this project runtime');
+      expect(p.updateLaunchSettings).not.toHaveBeenCalled();
     });
   });
 });

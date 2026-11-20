@@ -15,6 +15,7 @@ import {
 import { TeamMetaStore } from '@main/services/team/TeamMetaStore';
 import { getTeamsBasePath } from '@main/utils/pathDecoder';
 
+import { createLaunchSettingsStore } from './teamLaunchSettingsStore';
 import { rememberProjectRunIdentity } from './teamProjectContextProgressIdentity';
 
 import type {
@@ -46,6 +47,7 @@ export interface ProjectTeamCreatePorts extends ProjectTeamRuntimePorts {
 export function createProjectContextRuntimeParts(ports: ProjectTeamRuntimePorts) {
   const registry = TeamProjectContextRegistry.fromCurrentApp();
   const resolver = new TeamProjectContextRuntimeResolver(new TeamMetaStore(), registry);
+  const launchSettings = createLaunchSettingsStore();
   const materializer = new TeamProjectContextDraftMaterializer(resolver, {
     getSavedRequest: (teamName) => ports.data.getSavedRequest(teamName),
     createTeamConfig: (config, options) => ports.data.createTeamConfig(config, options),
@@ -53,6 +55,7 @@ export function createProjectContextRuntimeParts(ports: ProjectTeamRuntimePorts)
     updateDisplayMetadata: async (name, update) => {
       await ports.data.updateConfig(name, update);
     },
+    updateLaunchSettings: (name, settings) => launchSettings.save(name, settings),
     assertStoppedForRosterSync: async (name) => {
       if (ports.run.hasProvisioningRun(name) ||
           !isConfirmedStoppedTeamRuntime(await ports.runtime.getRuntimeState(name))) {

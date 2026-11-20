@@ -1,5 +1,8 @@
 import { isDeepStrictEqual } from 'node:util';
 
+import { changedDefinitionLaunchSettings } from './definitionLaunchSettings';
+
+import type { DefinitionLaunchSettings } from './definitionLaunchSettings';
 import type { ReplaceMembersRequest, TeamCreateRequest } from '@shared/types';
 
 type AuthoringMember = TeamCreateRequest['members'][number];
@@ -38,16 +41,26 @@ export interface DefinitionProjectionPorts {
   assertStoppedForSync(aliasTeamName: string): Promise<void>;
   replaceMembers(aliasTeamName: string, request: ReplaceMembersRequest): Promise<void>;
   updateDisplayMetadata(aliasTeamName: string, update: DefinitionMetadataUpdate): Promise<void>;
+  /** Saved launch settings of the copy; no runtime reads them while it runs, so no stop is demanded. */
+  updateLaunchSettings(aliasTeamName: string, settings: DefinitionLaunchSettings): Promise<void>;
 }
 
 export interface DefinitionProjectionResult {
   roster: boolean;
   metadata: boolean;
+  launchSettings: boolean;
 }
+
+type ProjectedFields = Pick<
+  TeamCreateRequest,
+  'members' | 'displayName' | 'description' | 'color' | 'prompt'
+> &
+  DefinitionLaunchSettings;
 
 /**
  * The logical team is the only authority for the authored roster, the
- * display metadata (name, description, color) and the saved lead instructions.
+ * display metadata (name, description, color), the saved lead instructions and
+ * the team-level launch settings (see definitionLaunchSettings).
  * A lead prompt typed at one launch is still used for that run (the launch
  * request wins) but the saved one is the definition's. The alias keeps its own
  * directory identity; only the shown name is refreshed (the runtime reads it
@@ -58,10 +71,8 @@ export interface DefinitionProjectionResult {
  */
 export async function projectDefinitionToAlias(
   ports: DefinitionProjectionPorts,
-  logical: Pick<TeamCreateRequest, 'members' | 'displayName' | 'description' | 'color' | 'prompt'>,
-  alias: Pick<TeamCreateRequest, 'members' | 'displayName' | 'description' | 'color' | 'prompt'> & {
-    teamName: string;
-  }
+  logical: ProjectedFields,
+  alias: ProjectedFields & { teamName: string }
 ): Promise<DefinitionProjectionResult> {
   const roster = !isDeepStrictEqual(authoredRoster(logical.members), authoredRoster(alias.members));
   const nextName = displayText(logical.displayName);
@@ -71,18 +82,24 @@ export async function projectDefinitionToAlias(
     displayText(logical.description) !== displayText(alias.description) ||
     displayText(logical.color) !== displayText(alias.color) ||
     promptChanged;
-  if (!roster && !metadata) return { roster, metadata };
-  await ports.assertStoppedForSync(alias.teamName);
-  if (roster) {
-    await ports.replaceMembers(alias.teamName, { members: logical.members });
+  const launchChanges = changedDefinitionLaunchSettings(logical, alias);
+  const launchSettings = Object.keys(launchChanges).length > 0;
+  if (roster || metadata) {
+    await ports.assertStoppedForSync(alias.teamName);
+    if (roster) {
+      await ports.replaceMembers(alias.teamName, { members: logical.members });
+    }
+    if (metadata) {
+      await ports.updateDisplayMetadata(alias.teamName, {
+        ...(nextName ? { name: nextName } : {}),
+        description: displayText(logical.description),
+        color: displayText(logical.color),
+        ...(promptChanged ? { prompt: displayText(logical.prompt) } : {}),
+      });
+    }
   }
-  if (metadata) {
-    await ports.updateDisplayMetadata(alias.teamName, {
-      ...(nextName ? { name: nextName } : {}),
-      description: displayText(logical.description),
-      color: displayText(logical.color),
-      ...(promptChanged ? { prompt: displayText(logical.prompt) } : {}),
-    });
+  if (launchSettings) {
+    await ports.updateLaunchSettings(alias.teamName, launchChanges);
   }
-  return { roster, metadata };
+  return { roster, metadata, launchSettings };
 }

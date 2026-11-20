@@ -1,13 +1,20 @@
-import { TeamProjectContextLaunchConflictError } from '@features/team-project-context/main';
+import {
+  recordLaunchSettings,
+  TeamProjectContextLaunchConflictError,
+} from '@features/team-project-context/main';
 import { TeamMetaStore } from '@main/services/team/TeamMetaStore';
+import { createLogger } from '@shared/utils/logger';
 
 import { parseOptionalTeamEffort, parseOptionalTeamFastMode } from '../teamIpcRequestParsers';
 
+import { createLaunchSettingsStore } from './teamLaunchSettingsStore';
 import { createProjectContextRuntimeParts } from './teamProjectContextCreate';
 import { rememberProjectRunIdentity } from './teamProjectContextProgressIdentity';
 
 import type { ProjectTeamRuntimePorts } from './teamProjectContextCreate';
 import type { IpcResult, TeamLaunchRequest, TeamLaunchResponse, TeamProvisioningProgress } from '@shared/types';
+
+const logger = createLogger('IPC:teams:projectLaunch');
 
 export type ProjectContextProgressMapper = (
   progress: TeamProvisioningProgress,
@@ -136,6 +143,31 @@ export async function withPreparedContextLaunch(
     rememberProjectRunIdentity(
       result.data.runId, request.teamName, selected.request.teamName
     );
+    // A launch that found the team already starting or running applied nothing.
+    if (isFreshLaunch(result.data)) await recordLaunchSettingsOfDefinition(request);
   }
   return result;
+}
+
+function isFreshLaunch(response: TeamLaunchResponse): boolean {
+  return (
+    !response.alreadyLaunching &&
+    !response.alreadyRunning &&
+    response.launchStatus !== 'already_launching' &&
+    response.launchStatus !== 'already_running'
+  );
+}
+
+/**
+ * What the user chose for this launch becomes the team's saved launch
+ * settings, like for an ordinary team. The launch is already accepted, so a
+ * failure to save is reported but never fails it; the next launch records
+ * again. The caller holds the logical-team configuration lock.
+ */
+async function recordLaunchSettingsOfDefinition(request: TeamLaunchRequest): Promise<void> {
+  try {
+    await recordLaunchSettings(createLaunchSettingsStore(), request.teamName, request);
+  } catch (error) {
+    logger.warn(`Could not save the launch settings of ${request.teamName}: ${String(error)}`);
+  }
 }
