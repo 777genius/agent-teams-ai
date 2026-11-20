@@ -1,3 +1,6 @@
+import { projectTeamSummaries } from '@features/team-project-context/main';
+import { TeamMetaStore } from '@main/services/team/TeamMetaStore';
+
 import {
   GetOrganizationMapUseCase,
   ManageOrganizationStructureUseCase,
@@ -58,7 +61,9 @@ export function createOrganizationsFeature(deps: {
   clock?: OrganizationsClockPort;
 }): OrganizationsFeatureFacade {
   const structureRepository = new JsonOrganizationStructureRepository(deps.logger);
-  const teamDirectory = new TeamDirectoryOrganizationAdapter(deps.teamDataService);
+  const teamDirectory = new TeamDirectoryOrganizationAdapter(deps.teamDataService, (teams) =>
+    projectTeamSummaries(teams, new TeamMetaStore())
+  );
   const clock = deps.clock ?? { now: () => Date.now() };
   const mapUseCase = new GetOrganizationMapUseCase({
     structure: structureRepository,

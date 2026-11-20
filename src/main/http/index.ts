@@ -49,6 +49,7 @@ import type {
   TeamHttpDataApi,
   TeamHttpHandlerApis,
 } from '../services/team/contracts/TeamProvisioningApis';
+import type { ProjectContextHttpHooks } from './teams/projectContextHttp';
 import type { DesktopExternalAgentConnection } from '@features/external-agent-connection/main';
 import type { MemberWorkSyncFeatureFacade } from '@features/member-work-sync/main';
 import type { TeamPromptManagement } from '@features/team-prompt-management/main';
@@ -76,6 +77,8 @@ export interface HttpServices {
   teamApis?: TeamHttpHandlerApis;
   teamDataApi?: TeamHttpDataApi;
   teamPromptManagement?: TeamPromptManagement;
+  /** How routes read project contexts; production leaves it unset. */
+  projectContext?: ProjectContextHttpHooks;
 }
 
 export function registerHttpRoutes(
