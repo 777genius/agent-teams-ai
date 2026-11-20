@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
+import { TeamManagementError } from '../../../src/features/team-prompt-management/core/managementPolicy';
 import { TeamPromptManagement } from '../../../src/features/team-prompt-management/main';
 
 const body = {
@@ -8,7 +9,24 @@ const body = {
   metadata: { description: 'changed from outside' },
 };
 
-function management(isProjectScoped: () => Promise<boolean>) {
+const snapshot = {
+  configurationRevision: 'rev',
+  config: null,
+  meta: {},
+  members: [],
+  membersMetadataPresent: false,
+  savedRequest: null,
+};
+
+/**
+ * `read` is the configuration read of the real class (it refuses missing and
+ * malformed teams with specific codes); it is stubbed here so the unit test
+ * does not depend on the machine's team directory.
+ */
+function management(
+  isProjectScoped: () => Promise<boolean>,
+  read: () => Promise<unknown> = async () => snapshot
+) {
   const ports = {
     run: vi.fn(async (_name: string, operation: () => Promise<unknown>) => operation()),
     withExpectedContext: vi.fn(async (_expected: unknown, operation: () => Promise<unknown>) => operation()),
@@ -23,7 +41,9 @@ function management(isProjectScoped: () => Promise<boolean>) {
     deleteTeam: vi.fn(),
     emit: vi.fn(),
   };
-  return { ports, management: new TeamPromptManagement(ports as never) };
+  const instance = new TeamPromptManagement(ports as never);
+  vi.spyOn(instance as never, 'read').mockImplementation(read as never);
+  return { ports, management: instance };
 }
 
 describe('external (HTTP/MCP) team edits and project-scoped teams', () => {
@@ -32,7 +52,6 @@ describe('external (HTTP/MCP) team edits and project-scoped teams', () => {
     await expect(m.management.update('builders', body)).rejects.toMatchObject({
       code: 'PROJECT_TEAM_DESKTOP_ONLY',
     });
-    expect(m.ports.getRuntimeState).not.toHaveBeenCalled();
     expect(m.ports.updateConfig).not.toHaveBeenCalled();
     expect(m.ports.replaceMembers).not.toHaveBeenCalled();
   });
@@ -48,19 +67,41 @@ describe('external (HTTP/MCP) team edits and project-scoped teams', () => {
     expect(m.ports.deleteTeam).not.toHaveBeenCalled();
   });
 
-  it('leaves unreadable metadata to the configuration read, which refuses it before any write', async () => {
+  it('rejects an existing team whose kind cannot be determined, before any write (update and trash)', async () => {
     const m = management(async () => {
       throw new Error('Team metadata is unreadable');
     });
-    // A team that does not exist: the configuration read refuses, nothing is written.
-    await expect(m.management.update('zz-synthetic-missing', body)).rejects.toBeDefined();
+    await expect(m.management.update('broken', body)).rejects.toMatchObject({
+      code: 'TEAM_METADATA_UNREADABLE',
+    });
+    await expect(
+      m.management.trash('broken', {
+        expectedContext: body.expectedContext,
+        expectedRevision: body.expectedRevision,
+      })
+    ).rejects.toMatchObject({ code: 'TEAM_METADATA_UNREADABLE' });
     expect(m.ports.updateConfig).not.toHaveBeenCalled();
     expect(m.ports.replaceMembers).not.toHaveBeenCalled();
+    expect(m.ports.deleteTeam).not.toHaveBeenCalled();
+  });
+
+  it('a team that does not exist is refused by the configuration read with its own code', async () => {
+    const m = management(
+      async () => false,
+      async () => {
+        throw new TeamManagementError('TEAM_UNSUPPORTED', 'No supported saved team configuration');
+      }
+    );
+    await expect(m.management.update('missing', body)).rejects.toMatchObject({
+      code: 'TEAM_UNSUPPORTED',
+    });
+    expect(m.ports.isProjectScoped).not.toHaveBeenCalled();
   });
 
   it('keeps ordinary teams on the existing admission path', async () => {
     const m = management(async () => false);
-    await m.management.update('legacy', body).catch(() => undefined);
-    expect(m.ports.getRuntimeState).toHaveBeenCalledWith('legacy');
+    await expect(
+      m.management.update('legacy', { ...body, expectedRevision: 'stale' })
+    ).rejects.toMatchObject({ code: 'TEAM_REVISION_MISMATCH' });
   });
 });

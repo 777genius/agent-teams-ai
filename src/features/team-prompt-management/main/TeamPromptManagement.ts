@@ -267,12 +267,16 @@ export class TeamPromptManagement {
   }
 
   private async assertNotProjectScoped(teamName: string): Promise<void> {
-    let projectScoped = false;
+    let projectScoped: boolean;
     try {
       projectScoped = await this.ports.isProjectScoped(teamName);
     } catch {
-      // Unreadable team metadata is refused with its specific code by the
-      // configuration read that follows admission; it never reaches a write.
+      // Fail closed: if the kind of an existing team cannot be determined it is
+      // not proof of an ordinary team, so nothing is written.
+      throw new TeamManagementError(
+        'TEAM_METADATA_UNREADABLE',
+        'Team metadata is unreadable; fix the team in the app before editing it'
+      );
     }
     if (projectScoped)
       throw new TeamManagementError(
@@ -285,7 +289,6 @@ export class TeamPromptManagement {
     target: TeamManagementTarget,
     allowTrashed: boolean
   ): Promise<ConfigurationSnapshot> {
-    await this.assertNotProjectScoped(target.teamName);
     const runtime = await this.ports.getRuntimeState(target.teamName);
     if (
       runtime.progress &&
@@ -300,7 +303,11 @@ export class TeamPromptManagement {
         'TEAM_ACTIVE',
         'Stop the team in the app before changing configuration'
       );
+    // The configuration read refuses a team that does not exist or whose saved
+    // metadata is malformed, each with its specific code; only then is the team
+    // classified, and a classification that fails also rejects.
     const snapshot = await this.read(target.teamName);
+    await this.assertNotProjectScoped(target.teamName);
     if (snapshot.configurationRevision !== target.expectedRevision)
       throw new TeamManagementError('TEAM_REVISION_MISMATCH', 'Get the team again before editing');
     if (!allowTrashed && snapshot.deletedAt)
