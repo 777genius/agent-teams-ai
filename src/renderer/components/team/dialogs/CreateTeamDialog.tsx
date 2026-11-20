@@ -108,6 +108,7 @@ import { consumeTeamCopySeedOnce } from './createTeamCopySeed';
 import { buildDefaultTeamDescription } from './createTeamDescription';
 import { CreateTeamHeaderActions } from './CreateTeamHeaderActions';
 import { buildInitialRosterMemberDrafts } from './createTeamInitialRoster';
+import { buildLaunchOptionalSummary } from './createTeamOptionalSummary';
 import {
   getOrganizationPlacementUnitKindKey,
   getOrganizationPlacementUnitOptions,
@@ -1959,50 +1960,39 @@ export const CreateTeamDialog = ({
     selectedProviderId,
     skipPermissions,
   ]);
-  const launchOptionalSummary = useMemo(() => {
-    const summary: string[] = [];
-    // The launch settings only apply when the team is launched right away.
-    if (launchTeam) {
-      if (prompt.trim()) summary.push(t('create.optional.summary.leadPrompt'));
-      if (skipPermissions) summary.push(t('create.optional.summary.autoApproveTools'));
-      if (selectedProviderId === 'anthropic' || selectedProviderId === 'codex') {
-        if (selectedFastMode === 'on') summary.push(t('create.optional.summary.fastMode'));
-        else if (selectedFastMode === 'off') summary.push(t('create.optional.summary.fastDisabled'));
-        else if (selectedProviderId === 'anthropic' && anthropicProviderFastModeDefault) {
-          summary.push(t('create.optional.summary.fastDefault'));
-        }
-      }
-      if (effectiveAnthropicRuntimeLimitContext) {
-        summary.push(t('create.optional.summary.anthropicLimitedContext'));
-      }
-      if (worktreeEnabled && worktreeName.trim()) {
-        summary.push(t('create.optional.summary.worktree', { name: worktreeName.trim() }));
-      }
-      if (customArgs.trim()) summary.push(t('create.optional.summary.customCliArgs'));
-    }
-    // Last: a changed launch setting should win the limited number of visible chips.
-    summary.push(
-      t(
-        projectContextMode === 'shared'
-          ? 'create.optional.summary.historyShared'
-          : 'create.optional.summary.historyPerProject'
-      )
-    );
-    return summary;
-  }, [
-    anthropicProviderFastModeDefault,
-    customArgs,
-    effectiveAnthropicRuntimeLimitContext,
-    launchTeam,
-    projectContextMode,
-    prompt,
-    selectedFastMode,
-    selectedProviderId,
-    skipPermissions,
-    t,
-    worktreeEnabled,
-    worktreeName,
-  ]);
+  const launchOptionalSummary = useMemo(
+    () =>
+      buildLaunchOptionalSummary(
+        {
+          launchTeam,
+          projectContextMode,
+          prompt,
+          skipPermissions,
+          selectedProviderId,
+          selectedFastMode,
+          anthropicProviderFastModeDefault,
+          limitAnthropicContext: effectiveAnthropicRuntimeLimitContext,
+          worktreeEnabled,
+          worktreeName,
+          customArgs,
+        },
+        t
+      ),
+    [
+      anthropicProviderFastModeDefault,
+      customArgs,
+      effectiveAnthropicRuntimeLimitContext,
+      launchTeam,
+      projectContextMode,
+      prompt,
+      selectedFastMode,
+      selectedProviderId,
+      skipPermissions,
+      t,
+      worktreeEnabled,
+      worktreeName,
+    ]
+  );
   const teamDetailsSummary = useMemo(() => {
     const summary: string[] = [];
     if (description.trim()) summary.push(t('create.optional.summary.description'));

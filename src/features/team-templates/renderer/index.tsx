@@ -20,7 +20,9 @@ import {
   SelectValue,
 } from '@renderer/components/ui/select';
 import { useStore } from '@renderer/store';
+
 import { applyTeamTemplate, TEAM_TEMPLATES } from '../core';
+
 import { TEAM_TEMPLATE_ICONS } from './templateIcons';
 
 import type { TeamCreateConfigRequest } from '@shared/types';
