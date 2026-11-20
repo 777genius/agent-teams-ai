@@ -1960,31 +1960,34 @@ export const CreateTeamDialog = ({
     skipPermissions,
   ]);
   const launchOptionalSummary = useMemo(() => {
-    const summary: string[] = [
+    const summary: string[] = [];
+    // The launch settings only apply when the team is launched right away.
+    if (launchTeam) {
+      if (prompt.trim()) summary.push(t('create.optional.summary.leadPrompt'));
+      if (skipPermissions) summary.push(t('create.optional.summary.autoApproveTools'));
+      if (selectedProviderId === 'anthropic' || selectedProviderId === 'codex') {
+        if (selectedFastMode === 'on') summary.push(t('create.optional.summary.fastMode'));
+        else if (selectedFastMode === 'off') summary.push(t('create.optional.summary.fastDisabled'));
+        else if (selectedProviderId === 'anthropic' && anthropicProviderFastModeDefault) {
+          summary.push(t('create.optional.summary.fastDefault'));
+        }
+      }
+      if (effectiveAnthropicRuntimeLimitContext) {
+        summary.push(t('create.optional.summary.anthropicLimitedContext'));
+      }
+      if (worktreeEnabled && worktreeName.trim()) {
+        summary.push(t('create.optional.summary.worktree', { name: worktreeName.trim() }));
+      }
+      if (customArgs.trim()) summary.push(t('create.optional.summary.customCliArgs'));
+    }
+    // Last: a changed launch setting should win the limited number of visible chips.
+    summary.push(
       t(
         projectContextMode === 'shared'
           ? 'create.optional.summary.historyShared'
           : 'create.optional.summary.historyPerProject'
-      ),
-    ];
-    // The remaining settings only apply when the team is launched right away.
-    if (!launchTeam) return summary;
-    if (prompt.trim()) summary.push(t('create.optional.summary.leadPrompt'));
-    if (skipPermissions) summary.push(t('create.optional.summary.autoApproveTools'));
-    if (selectedProviderId === 'anthropic' || selectedProviderId === 'codex') {
-      if (selectedFastMode === 'on') summary.push(t('create.optional.summary.fastMode'));
-      else if (selectedFastMode === 'off') summary.push(t('create.optional.summary.fastDisabled'));
-      else if (selectedProviderId === 'anthropic' && anthropicProviderFastModeDefault) {
-        summary.push(t('create.optional.summary.fastDefault'));
-      }
-    }
-    if (effectiveAnthropicRuntimeLimitContext) {
-      summary.push(t('create.optional.summary.anthropicLimitedContext'));
-    }
-    if (worktreeEnabled && worktreeName.trim()) {
-      summary.push(t('create.optional.summary.worktree', { name: worktreeName.trim() }));
-    }
-    if (customArgs.trim()) summary.push(t('create.optional.summary.customCliArgs'));
+      )
+    );
     return summary;
   }, [
     anthropicProviderFastModeDefault,
@@ -2801,11 +2804,19 @@ export const CreateTeamDialog = ({
                   />
                 ) : null}
                 <OptionalSettingsSection
-                  title={t('create.optional.launchSettingsTitle')}
-                  description={t('create.optional.launchSettingsDescription')}
+                  title={
+                    launchTeam
+                      ? t('create.optional.launchSettingsTitle')
+                      : t('create.optional.settingsTitle')
+                  }
+                  description={
+                    launchTeam
+                      ? t('create.optional.launchSettingsDescription')
+                      : t('create.optional.historyOnlyDescription')
+                  }
                   summary={launchOptionalSummary}
                   onOpenChange={(isOpen) => {
-                    if (isOpen) {
+                    if (isOpen && launchTeam) {
                       enableWorkflowMentionSuggestions();
                     }
                   }}
