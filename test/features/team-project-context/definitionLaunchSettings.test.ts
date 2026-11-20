@@ -160,6 +160,6 @@ describe('recordLaunchSettings', () => {
     s.save.mockResolvedValueOnce(undefined).mockRejectedValueOnce(new Error('copy locked'));
     const result = await recordLaunchSettings(s, target, { model: 'm' });
     expect(result.recorded).toBe(true);
-    expect(String(result.copyFailure)).toContain('copy locked');
+    expect(result.copyFailure?.message).toBe('copy locked');
   });
 });

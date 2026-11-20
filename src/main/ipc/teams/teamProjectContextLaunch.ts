@@ -178,9 +178,9 @@ async function recordAcceptedLaunch(
       { definition: request.teamName, copy: copyTeamName },
       request
     );
-    if (copyFailure !== undefined) {
+    if (copyFailure) {
       logger.error(
-        `Launch settings of ${request.teamName} were saved, but its project copy ${copyTeamName} still has older ones until the next launch: ${String(copyFailure)}`
+        `Launch settings of ${request.teamName} were saved, but its project copy ${copyTeamName} still has older ones until the next launch: ${copyFailure.message}`
       );
     }
   } catch (error) {

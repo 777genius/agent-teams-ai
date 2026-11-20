@@ -136,7 +136,7 @@ export interface RecordedLaunchSettings {
   /** Whether the definition was changed to what the launch stated. */
   recorded: boolean;
   /** The launched copy could not be brought to the same settings (the definition was). */
-  copyFailure?: unknown;
+  copyFailure?: Error;
 }
 
 /**
@@ -160,7 +160,10 @@ export async function recordLaunchSettings(
   try {
     await store.save(target.copy, settings);
   } catch (copyFailure) {
-    return { recorded: true, copyFailure };
+    return {
+      recorded: true,
+      copyFailure: copyFailure instanceof Error ? copyFailure : new Error(String(copyFailure)),
+    };
   }
   return { recorded: true };
 }
