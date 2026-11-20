@@ -1048,8 +1048,7 @@ export const TeamListView = memo(function TeamListView({
               throw error;
             }
           },
-          replaceMembers: (nextTeamName, nextRequest) =>
-            api.teams.replaceMembers(nextTeamName, nextRequest),
+          replaceMembers: (team, next) => api.teams.replaceMembers(team, next),
           launchTeam,
         });
       } catch (err) {

@@ -2293,10 +2293,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
           } else {
             await props.validateMemberSettings?.();
             await gatewayBindings.run(() =>
-              persistRosterBeforeLaunch(props.rosterReadOnly, effectiveTeamName, {
-                members: nextMembers,
-                memberSettingsRelaunch: intent,
-              })
+              persistRosterBeforeLaunch(props.rosterReadOnly, effectiveTeamName, nextMembers, intent)
             );
             await props.onLaunch(launchRequest);
           }

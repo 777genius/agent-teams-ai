@@ -194,14 +194,17 @@ describe('a launch dialog never writes the definition of a per-project team', ()
   beforeEach(() => vi.clearAllMocks());
 
   it('skips the roster save for a read-only roster (stale project copy members must not overwrite it)', async () => {
-    await persistRosterBeforeLaunch(true, 'builders', { members: [{ name: 'stale' }] });
+    await persistRosterBeforeLaunch(true, 'builders', [{ name: 'stale' }]);
     expect(replaceMembers).not.toHaveBeenCalled();
   });
 
   it('keeps saving the roster of an ordinary team before launch', async () => {
-    await persistRosterBeforeLaunch(false, 'legacy', { members: [{ name: 'a' }] });
-    await persistRosterBeforeLaunch(undefined, 'legacy', { members: [{ name: 'b' }] });
+    await persistRosterBeforeLaunch(false, 'legacy', [{ name: 'a' }]);
+    await persistRosterBeforeLaunch(undefined, 'legacy', [{ name: 'b' }]);
     expect(replaceMembers).toHaveBeenCalledTimes(2);
-    expect(replaceMembers).toHaveBeenCalledWith('legacy', { members: [{ name: 'a' }] });
+    expect(replaceMembers).toHaveBeenCalledWith('legacy', {
+      members: [{ name: 'a' }],
+      memberSettingsRelaunch: undefined,
+    });
   });
 });

@@ -13,8 +13,9 @@ import type { ReplaceMembersRequest } from '@shared/types';
 export async function persistRosterBeforeLaunch(
   rosterReadOnly: boolean | undefined,
   teamName: string,
-  request: ReplaceMembersRequest
+  members: ReplaceMembersRequest['members'],
+  memberSettingsRelaunch?: ReplaceMembersRequest['memberSettingsRelaunch']
 ): Promise<void> {
   if (rosterReadOnly) return;
-  await api.teams.replaceMembers(teamName, request);
+  await api.teams.replaceMembers(teamName, { members, memberSettingsRelaunch });
 }
