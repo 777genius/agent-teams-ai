@@ -134,4 +134,5 @@ Everything that can be checked without the copy is checked **before anything is 
 
 - Real agent execution after an HTTP/MCP launch: the Electron E2E (`verifyHttpCreateAndLaunch` in `scripts/e2e/project-scoped-team-history-desktop.ts`) launches against a runtime that denies agents, so it proves the files, the index and the refusals, not a running team.
 - The hosted web client was not driven; it uses the same routes.
+- Known limit (as in the app): the team list folds a copy into its team only once the copy was ready. A copy whose first run in a project never got ready (refused or failed after it was reserved) stays visible as its own row until a launch in that project succeeds.
 

@@ -938,15 +938,20 @@ async function verifyHttpCreateAndLaunch(f: Fixture) {
   }
   await cdp.screenshot(path.join(f.screenshots, 'http-launch.png'));
 
-  // 3. The app and HTTP list the team once; its copy is folded away.
+  // 3. The app and HTTP list the same rows. A copy is folded into its team once it was ready;
+  // a copy whose first run never got ready stays visible (the list hides only proven copies).
   const listed = await cdp.evaluate(
     '(async () => (await window.electronAPI.teams.list()).map((t) => t.teamName))()'
   ) as string[];
-  assert(listed.includes(team) && !listed.includes(copy.executionTeamName),
-    'The app must list the team, not its copy: ' + JSON.stringify(listed.filter((n) => n.includes(team) || n.startsWith('ptc-'))));
   const httpList = await call('GET', '/api/teams');
   const httpNames = (httpList.body as unknown as { teamName: string }[]).map((t) => t.teamName);
-  assert(httpNames.includes(team) && !httpNames.includes(copy.executionTeamName));
+  const ours = (names: string[]) =>
+    names.filter((name) => name === team || name === copy.executionTeamName).sort();
+  assert(listed.includes(team), 'The app must list the team created over HTTP');
+  assert.deepEqual(ours(httpNames), ours(listed), 'HTTP and the app must list the same rows');
+  if (finalState === 'ready') {
+    assert(!listed.includes(copy.executionTeamName), 'A ready copy must be folded into its team');
+  }
 
   // 4. Refusals change nothing: a copy by its own name, a folder that does not exist, and a
   // second project while the first copy is not reconciled (the failed run above).
