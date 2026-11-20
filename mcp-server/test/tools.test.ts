@@ -2484,6 +2484,27 @@ describe('agent-teams-mcp tools', () => {
     }
   });
 
+  it('cross_team_send reports the team that received the message', async () => {
+    const claudeDir = makeClaudeDir();
+    for (const teamName of ['sender-team', 'receiver-team']) {
+      writeTeamConfig(claudeDir, teamName, { members: [{ name: 'lead', role: 'team-lead' }] });
+    }
+    const result = parseJsonToolResult(
+      await getTool('cross_team_send').execute({
+        claudeDir,
+        teamName: 'sender-team',
+        toTeam: 'receiver-team',
+        text: 'Hello receiver',
+      })
+    );
+    expect(result).toMatchObject({ deliveredToInbox: true, toTeam: 'receiver-team' });
+    expect(
+      JSON.parse(
+        fs.readFileSync(path.join(claudeDir, 'teams', 'receiver-team', 'inboxes', 'lead.json'), 'utf8')
+      )
+    ).toHaveLength(1);
+  });
+
   it('rejects non-configured teams before MCP side-effect writes', async () => {
     const claudeDir = makeClaudeDir();
     writeTeamConfig(claudeDir, 'real-team', {

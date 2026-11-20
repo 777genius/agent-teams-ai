@@ -967,6 +967,7 @@ let teamRuntimeRecoveryFeature: TeamRuntimeRecoveryFeatureFacade | null = null;
 let teamDataService: TeamDataService;
 let teamProvisioningService: ReturnType<typeof createDefaultTeamProvisioningService>;
 let teamHttpHandlerApis: TeamHttpHandlerApis | null = null;
+let crossTeamHttpApi: CrossTeamService | null = null;
 let launchIoGovernor: LaunchIoGovernor | null = null;
 let cliInstallerService: CliInstallerService;
 let openCodeRuntimeInstallerService: OpenCodeRuntimeInstallerService;
@@ -2141,6 +2142,7 @@ async function initializeServices(): Promise<void> {
     bindTeamCrossTeamMessagingApi(teamProvisioningService)
   );
   teamProvisioningService.setCrossTeamSender((request) => crossTeamService.send(request));
+  crossTeamHttpApi = crossTeamService;
 
   const taskChangePresenceRepository = new JsonTaskChangePresenceRepository();
   const memberWorkSyncStallObservation = createDeferredWorkSyncStallObservation();
@@ -2992,6 +2994,7 @@ async function startHttpServer(
         sshConnectionManager,
         teamDataApi: bindTeamHttpDataApi(teamDataService),
         teamApis: teamHttpHandlerApis,
+        crossTeam: crossTeamHttpApi ?? undefined,
       },
       modeSwitchHandler,
       config.httpServer?.port ?? 3456

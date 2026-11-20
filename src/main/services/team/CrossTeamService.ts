@@ -1,4 +1,10 @@
-import { projectTeamSummaries, readTeamProjectContextMode } from '@features/team-project-context/main';
+import {
+  createCrossTeamRecipientPorts,
+  findProjectCopyOwner,
+  projectTeamSummaries,
+  resolveCrossTeamRecipient,
+  TeamProjectContextRegistry,
+} from '@features/team-project-context/main';
 import { getClaudeBasePath } from '@main/utils/pathDecoder';
 import { CROSS_TEAM_SENT_SOURCE, CROSS_TEAM_SOURCE, formatCrossTeamText } from '@shared/constants';
 import { isLeadMember, resolveRuntimeLeadName } from '@shared/utils/leadDetection';
@@ -21,6 +27,10 @@ import type { TeamCrossTeamMessagingApi } from './contracts/TeamProvisioningApis
 import type { TeamConfigReader } from './TeamConfigReader';
 import type { TeamDataService } from './TeamDataService';
 import type { TeamInboxWriter } from './TeamInboxWriter';
+import type {
+  CrossTeamRecipient,
+  CrossTeamRecipientPorts,
+} from '@features/team-project-context/main';
 import type {
   CrossTeamMessage,
   CrossTeamSendRequest,
@@ -61,6 +71,18 @@ export interface CrossTeamRecipientMetadataReader {
   getMembers(teamName: string): Promise<readonly TeamMember[]>;
 }
 
+function assertCrossTeamNames(fromTeam: string, toTeam: string): void {
+  if (!TEAM_NAME_PATTERN.test(fromTeam)) {
+    throw new Error(`Invalid fromTeam: ${fromTeam}`);
+  }
+  if (!TEAM_NAME_PATTERN.test(toTeam)) {
+    throw new Error(`Invalid toTeam: ${toTeam}`);
+  }
+  if (fromTeam === toTeam) {
+    throw new Error('Cannot send cross-team message to the same team');
+  }
+}
+
 export class CrossTeamService {
   private cascadeGuard = new CascadeGuard();
   private outbox = new CrossTeamOutbox();
@@ -70,16 +92,63 @@ export class CrossTeamService {
     private dataService: TeamDataService,
     private inboxWriter: TeamInboxWriter,
     private messaging: TeamCrossTeamMessagingApi | null,
-    private recipientMetadataReader: CrossTeamRecipientMetadataReader = new TeamMembersMetaStore()
+    private recipientMetadataReader: CrossTeamRecipientMetadataReader = new TeamMembersMetaStore(),
+    /** How a name is routed to a physical team; production reads the running app's registry. */
+    private recipientPorts?: CrossTeamRecipientPorts
   ) {}
 
+  /**
+   * The physical team that receives a message from `fromTeam` to `toTeam`
+   * (`resolveCrossTeamRecipient`): every caller, in the app and over HTTP, routes
+   * through here so a per-project team is resolved the same way.
+   */
+  async resolveRecipient(fromTeam: string, toTeam: string): Promise<CrossTeamRecipient> {
+    assertCrossTeamNames(fromTeam, toTeam);
+    return this.route(fromTeam, toTeam, await this.configReader.getConfig(fromTeam));
+  }
+
+  private route(
+    fromTeam: string,
+    toTeam: string,
+    sourceConfig: TeamConfig | null
+  ): Promise<CrossTeamRecipient> {
+    const ports =
+      this.recipientPorts ??
+      createCrossTeamRecipientPorts(new TeamMetaStore(), TeamProjectContextRegistry.fromCurrentApp());
+    return resolveCrossTeamRecipient(ports, {
+      fromTeam,
+      toTeam,
+      senderProjectPath: sourceConfig?.projectPath,
+    });
+  }
+
   async send(request: CrossTeamSendRequest): Promise<CrossTeamSendResult> {
-    const { fromTeam, toTeam, toMember, text, taskRefs, summary, actionMode } = request;
+    const { fromTeam, toMember, text, taskRefs, summary, actionMode } = request;
     const rawFromMember = request.fromMember;
     const chainDepth = request.chainDepth ?? 0;
     const callerMessageId = request.messageId?.trim() || undefined;
     const messageId = callerMessageId || randomUUID();
     const timestamp = request.timestamp ?? new Date().toISOString();
+    const stableDedupeIdentity = Boolean(
+      request.requireRuntimeDelivery && (callerMessageId || request.conversationId?.trim())
+    );
+
+    // 1. Validate
+    assertCrossTeamNames(fromTeam, request.toTeam);
+    if (!rawFromMember || typeof rawFromMember !== 'string' || rawFromMember.trim().length === 0) {
+      throw new Error('fromMember is required');
+    }
+    if (!text || typeof text !== 'string' || text.trim().length === 0) {
+      throw new Error('Message text is required');
+    }
+
+    // A per-project team has no inbox of its own: it receives through its copy for
+    // the sender's project. Everything below works on that physical team.
+    const sourceConfig = await this.configReader.getConfig(fromTeam);
+    const toTeam = (await this.route(fromTeam, request.toTeam, sourceConfig)).teamName;
+    if (!sourceConfig || sourceConfig.deletedAt) {
+      throw new Error(`Source team not found: ${fromTeam}`);
+    }
     const inferredReplyMeta =
       !request.conversationId && !request.replyToConversationId
         ? (this.messaging?.resolveCrossTeamReplyMetadata(fromTeam, toTeam) ?? null)
@@ -93,46 +162,6 @@ export class CrossTeamService {
       inferredReplyMeta?.conversationId ||
       replyToConversationId ||
       randomUUID();
-    const stableDedupeIdentity = Boolean(
-      request.requireRuntimeDelivery && (callerMessageId || request.conversationId?.trim())
-    );
-
-    // 1. Validate
-    if (!TEAM_NAME_PATTERN.test(fromTeam)) {
-      throw new Error(`Invalid fromTeam: ${fromTeam}`);
-    }
-    if (!TEAM_NAME_PATTERN.test(toTeam)) {
-      throw new Error(`Invalid toTeam: ${toTeam}`);
-    }
-    if (fromTeam === toTeam) {
-      throw new Error('Cannot send cross-team message to the same team');
-    }
-    if (!rawFromMember || typeof rawFromMember !== 'string' || rawFromMember.trim().length === 0) {
-      throw new Error('fromMember is required');
-    }
-    if (!text || typeof text !== 'string' || text.trim().length === 0) {
-      throw new Error('Message text is required');
-    }
-
-    // Direct callers can bypass the filtered recipient directory. A logical
-    // project-scoped team is not a delivery endpoint: target one verified
-    // native project context explicitly, never its old shared inbox.
-    const meta = new TeamMetaStore();
-    for (const name of [fromTeam, toTeam]) {
-      const mode = await readTeamProjectContextMode(
-        meta,
-        name,
-        'Team metadata is unreadable; refusing cross-team delivery'
-      );
-      if (mode === 'per_project') {
-        throw new Error('Project-scoped cross-team delivery requires an explicit project context');
-      }
-    }
-
-    const sourceConfig = await this.configReader.getConfig(fromTeam);
-    if (!sourceConfig || sourceConfig.deletedAt) {
-      throw new Error(`Source team not found: ${fromTeam}`);
-    }
     const fromMember = resolveCrossTeamFromMember(sourceConfig, rawFromMember.trim());
 
     const targetConfig = await this.configReader.getConfig(toTeam);
@@ -372,14 +401,20 @@ export class CrossTeamService {
       return [];
     }
 
-    // Only an explicit execution context can receive a project-scoped
-    // cross-team message. Hide verified native aliases and do not offer a
-    // context-less logical team as a delivery target.
+    // Project copies are folded into their per-project team, which is offered
+    // under its own name (a message to it is routed to the copy of the sender's
+    // project). A per-project team that never ran anywhere stays a draft and is
+    // not offered. A sender that is a copy does not see its own team.
     const visible = await projectTeamSummaries(teams, new TeamMetaStore());
+    const ownTeam = excludeTeam ? findProjectCopyOwner(visible, excludeTeam)?.logicalTeamName : null;
+    const isOnline = (team: (typeof visible)[number]): boolean =>
+      [team.teamName, ...(team.projectHistoryContexts ?? []).map((c) => c.executionTeamName)].some(
+        (name) => this.messaging?.isTeamAlive(name) ?? false
+      );
     const targets: CrossTeamTarget[] = visible
-      .filter((team) => team.projectContextMode !== 'per_project')
       .filter((team) => {
         if (excludeTeam && team.teamName === excludeTeam) return false;
+        if (ownTeam && team.teamName === ownTeam) return false;
         if (!TEAM_NAME_PATTERN.test(team.teamName)) return false;
         return !team.deletedAt && !team.pendingCreate;
       })
@@ -405,7 +440,7 @@ export class CrossTeamService {
             ...(member.role ? { role: member.role } : {}),
             ...(member.color ? { color: member.color } : {}),
           })),
-          isOnline: this.messaging?.isTeamAlive(team.teamName) ?? false,
+          isOnline: isOnline(team),
         };
       });
 

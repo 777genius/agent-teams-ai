@@ -201,6 +201,26 @@ Decisions worth knowing:
 
 Still open after #1247 and #1248: gaps 5 (all fields but the prompt), 6, 7, 9, 10, 11, 12, and gap 1 (schedules, which #1246 addresses). Gap 4 was closed by #1247 (except trash over HTTP/MCP), gaps 2 and 3 by this change, gap 8 stays deferred. The organization map does not count a reserved copy that is still provisioning as online, and the inspector does not load a copy's kanban state.
 
+## Update: cross-team messaging
+
+The rows of section C about cross-team messaging and gaps 7 and 8 changed as follows. The tables above keep the audit record.
+
+| Row | Before | After |
+| --- | --- | --- |
+| Cross-team messaging, receiving | hidden/refuses; a copy received by its exact name, in whatever project the sender picked | works: the per-project team is offered under its own name (the app's team picker and the MCP `cross_team_list_targets`), and a message to it goes to its ready copy **for the project the sender works in** (the sender's `config.json` `projectPath`). No copy for that project, a launch still pending there, a sender without a project, or the team being moved to trash refuse with a message that says what to do; no copy is ever created to receive a message, and a message never lands in the history of another project |
+| Cross-team messaging, sending | works, recipients see `ptc-<hash>.lead` | works; the `from` of the message stays the copy name (it is how the reply finds that copy), but the app shows the copy as `<team> · <project folder>` in the activity badge and in "awaiting reply" |
+| A copy addressing its own team | n/a | refused (same team); the composer and `cross_team_list_targets` no longer offer it |
+| A per-project team as the sender | refused | refused with a clear reason (it has no inbox or process); every real sender is a copy |
+| Task refs in a cross-team message | carry the copy name | unchanged: a task ref names the copy that owns the task, and opening a copy redirects to the team and project in the app |
+
+How it is built:
+
+- One rule, `resolveCrossTeamRecipient` in `src/features/team-project-context/main/crossTeamRecipient.ts`, used by `CrossTeamService.send` (app composer, the lead's `SendMessage` to `team.member`, OpenCode runtime delivery) and, over HTTP, by the MCP tools.
+- The MCP `cross_team_send` (the controller writes the target inbox itself) asks the app only when the target has no `config.json` of its own: `GET /api/teams/:team/cross-team/recipient?toTeam=…` answers the copy or a 409 with the reason. `cross_team_list_targets` asks `GET /api/teams/:team/cross-team/targets`, the same list as the app's picker. Without a reachable app (or an app without these routes) the controller keeps its previous behaviour: exact names, and a local scan that still lists copies.
+- One display mapper, `findProjectCopyOwner` / `formatProjectCopyLabel` in the feature `core/`, over the folded team list: the main list uses it to hide a copy's own team, the renderer for labels and for the composer.
+
+Still open: agent prompts and the stored `from` keep the copy name (gap 8 for agents; `TeamProvisioningPromptBuilders.ts` is size-capped); the in-app picker lists a per-project team even when it never ran in the current project (sending then explains it), because the picker list is shared by all open teams; `isOnline` of a per-project team in the list means any of its projects runs; a copy can still be addressed by its exact name, including by a copy of the same team in another project. Gap 7 is closed with these limits.
+
 ## Appendix: probe of the raw team list
 
 Run on a Linux host at `75d4f8b152` with a temporary directory and synthetic data: one logical team `builders` (mode `per_project`, no `config.json`) and two project copies with their own config and one task each. `TeamDataService.listTeams()` is what the HTTP list, MCP `team_list` and the organization adapter read.

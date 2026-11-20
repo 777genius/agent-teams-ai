@@ -10,6 +10,7 @@ import { DropZoneOverlay } from '@renderer/components/team/attachments/DropZoneO
 import { ComposerSurface } from '@renderer/components/team/composer/ComposerSurface';
 import { ActionModeSelector } from '@renderer/components/team/messages/ActionModeSelector';
 import { ComposerLockedRecipient } from '@renderer/components/team/messages/ComposerLockedRecipient';
+import { useProjectCopyOwnerName } from '@renderer/components/team/TeamDisplayLabel';
 import { useTeamStartupCopy } from '@renderer/components/team/useTeamStartupCopy';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
 import { getTeamColorSet } from '@renderer/constants/teamColors';
@@ -264,10 +265,12 @@ const MemberMessageComposer = ({
     void refreshAliveTeams();
   }, [fetchCrossTeamTargets, refreshAliveTeams, teamSelectorOpen]);
 
-  // Always filter out current team on the UI side (store is global, shared across tabs)
+  // Always filter out current team on the UI side (store is global, shared across tabs);
+  // a project copy also hides the per-project team it belongs to.
+  const ownTeam = useProjectCopyOwnerName(teamName);
   const crossTeamTargets = useMemo(
-    () => allCrossTeamTargets.filter((t) => t.teamName !== teamName),
-    [allCrossTeamTargets, teamName]
+    () => allCrossTeamTargets.filter((t) => t.teamName !== teamName && t.teamName !== ownTeam),
+    [allCrossTeamTargets, ownTeam, teamName]
   );
   const sortedCrossTeamTargets = useMemo(
     () =>

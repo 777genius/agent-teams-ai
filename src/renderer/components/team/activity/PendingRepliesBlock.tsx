@@ -19,6 +19,7 @@ import { nameColorSet } from '@renderer/utils/projectColor';
 import { Check, Clock3, Loader2, ShieldQuestion, Users, X } from 'lucide-react';
 
 import { MemberBadge } from '../MemberBadge';
+import { TeamDisplayLabel } from '../TeamDisplayLabel';
 import {
   countQueuedUserMessages,
   getPendingMemberDeliveryState,
@@ -368,7 +369,7 @@ export const PendingRepliesBlock = memo(function PendingRepliesBlock({
                   }}
                   title={entry.teamName}
                 >
-                  {entry.teamName}
+                  <TeamDisplayLabel teamName={entry.teamName} />
                 </span>
                 <span className="text-[10px]" style={{ color: CARD_ICON_MUTED }}>
                   {t('activity.pendingReplies.externalTeam')}

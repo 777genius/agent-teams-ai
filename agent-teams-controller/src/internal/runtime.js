@@ -33,6 +33,7 @@ const POLL_INTERVAL_MS = 1000;
 const STOP_REQUEST_TIMEOUT_MS = 5 * 60 * 1000;
 const TEAM_CONTROL_API_STATE_FILE = 'team-control-api.json';
 const RETRYABLE_CONTROL_ERROR = 'retryableControlError';
+const CONTROL_API_UNAVAILABLE = 'CONTROL_API_UNAVAILABLE';
 const BOOTSTRAP_CHECKIN_MAX_ATTEMPTS = 3;
 const BOOTSTRAP_CHECKIN_ATTEMPT_TIMEOUT_MS = 4000;
 const BOOTSTRAP_CHECKIN_RETRY_DELAYS_MS = [300, 900];
@@ -101,7 +102,7 @@ function resolveControlBaseUrls(context, flags = {}) {
   const candidates = uniqueNonEmpty([explicit, stateFileUrl, envUrl]);
 
   if (candidates.length === 0) {
-    throw new Error(
+    const error = new Error(
       `Team control API is unavailable. Start the desktop app team runtime first so it can publish CLAUDE_TEAM_CONTROL_URL. Lookup: ${describeControlApiLookup(
         context,
         flags,
@@ -109,6 +110,8 @@ function resolveControlBaseUrls(context, flags = {}) {
         envUrl
       )}.`
     );
+    error.code = CONTROL_API_UNAVAILABLE;
+    throw error;
   }
 
   return candidates;
@@ -539,6 +542,43 @@ async function getTeam(context, flags = {}) {
   );
 }
 
+/**
+ * Cross-team routing is decided by the app, one rule for every sender. `null`
+ * means the app cannot answer here (not running, unreachable, or an app without
+ * the route), so the caller keeps its offline behaviour; a refusal is thrown.
+ */
+async function requestCrossTeamRouting(context, pathname) {
+  let baseUrls;
+  try {
+    baseUrls = resolveControlBaseUrls(context);
+  } catch (error) {
+    if (error && error.code === CONTROL_API_UNAVAILABLE) return null;
+    throw error;
+  }
+  try {
+    return await requestJsonWithFallback(baseUrls, pathname);
+  } catch (error) {
+    if (isRetryableControlError(error)) return null;
+    throw error;
+  }
+}
+
+/** The physical team that receives a message from this team to `toTeam`. */
+function getCrossTeamRecipient(context, toTeam) {
+  return requestCrossTeamRouting(
+    context,
+    `/api/teams/${encodeURIComponent(context.teamName)}/cross-team/recipient?toTeam=${encodeURIComponent(toTeam)}`
+  );
+}
+
+/** The teams this team can message, as the app lists them (project copies folded). */
+function getCrossTeamTargets(context) {
+  return requestCrossTeamRouting(
+    context,
+    `/api/teams/${encodeURIComponent(context.teamName)}/cross-team/targets`
+  );
+}
+
 async function updateTeam(context, flags = {}) {
   desktopBinding.assertManagementExpectation(flags);
   return requestJson(
@@ -722,6 +762,8 @@ module.exports = {
   listTeams,
   getConnectionInfo,
   getTeam,
+  getCrossTeamRecipient,
+  getCrossTeamTargets,
   createTeam,
   updateTeam,
   trashTeam,

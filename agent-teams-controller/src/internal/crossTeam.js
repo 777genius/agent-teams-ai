@@ -6,6 +6,7 @@ const { createControllerContext } = require('./context.js');
 const { withFileLockSync } = require('./fileLock.js');
 const messageStore = require('./messageStore.js');
 const cascadeGuard = require('./cascadeGuard.js');
+const runtime = require('./runtime.js');
 const runtimeHelpers = require('./runtimeHelpers.js');
 const {
   formatCrossTeamText,
@@ -385,12 +386,44 @@ function sendCrossTeamMessage(context, flags) {
   return { messageId, deliveredToInbox: true };
 }
 
-function listCrossTeamTargets(context, flags) {
+/**
+ * The team a message to `flags.toTeam` is written to. A team with its own config
+ * receives it under its own name (a project copy included, so a reply reaches the
+ * copy that wrote). A name without one may be a team that keeps a separate
+ * history per project; only the app knows which project copy receives from this
+ * sender, so the app is asked and its refusal is passed on. Without the app the
+ * name is kept and the delivery reports it as unknown, as before.
+ */
+async function resolveCrossTeamRecipient(context, flags) {
+  const toTeam = typeof flags?.toTeam === 'string' ? flags.toTeam.trim() : '';
+  if (!TEAM_NAME_PATTERN.test(toTeam) || toTeam === context.teamName) return toTeam;
+  const targetPaths = createTargetContext(context, toTeam).paths;
+  if (!fs.existsSync(targetPaths.teamDir) || runtimeHelpers.readTeamConfig(targetPaths)) {
+    return toTeam;
+  }
+  const recipient = await runtime.getCrossTeamRecipient(context, toTeam);
+  const routed = recipient && typeof recipient.teamName === 'string' ? recipient.teamName : '';
+  return TEAM_NAME_PATTERN.test(routed) ? routed : toTeam;
+}
+
+/**
+ * The app lists targets with project copies folded into their team. Without the
+ * app the configured teams are scanned locally, which cannot tell a project copy
+ * from an ordinary team.
+ */
+async function listCrossTeamTargets(context, flags) {
   const excludeTeam =
     typeof flags === 'object' && flags && typeof flags.excludeTeam === 'string'
       ? flags.excludeTeam
       : context.teamName;
+  const fromApp = await runtime.getCrossTeamTargets(context);
+  if (Array.isArray(fromApp)) {
+    return fromApp.filter((target) => target && target.teamName !== excludeTeam);
+  }
+  return listConfiguredTeams(context, excludeTeam);
+}
 
+function listConfiguredTeams(context, excludeTeam) {
   const teamsDir = path.dirname(context.paths.teamDir);
   let entries;
   try {
@@ -430,6 +463,7 @@ function getCrossTeamOutbox(context) {
 }
 
 module.exports = {
+  resolveCrossTeamRecipient,
   sendCrossTeamMessage,
   listCrossTeamTargets,
   getCrossTeamOutbox,

@@ -1,4 +1,5 @@
 const fs = require('fs');
+const http = require('http');
 const os = require('os');
 const path = require('path');
 
@@ -916,8 +917,140 @@ describe('crossTeam module', () => {
     });
   });
 
-  describe('listCrossTeamTargets', () => {
-    it('lists valid teams excluding current', () => {
+  describe('routing through the app', () => {
+    const lead = { name: 'team-lead', agentType: 'team-lead' };
+    let previousEnvUrl;
+    let server;
+    let requests;
+
+    beforeEach(() => {
+      previousEnvUrl = process.env.CLAUDE_TEAM_CONTROL_URL;
+      delete process.env.CLAUDE_TEAM_CONTROL_URL;
+      requests = [];
+    });
+
+    afterEach(async () => {
+      if (previousEnvUrl === undefined) delete process.env.CLAUDE_TEAM_CONTROL_URL;
+      else process.env.CLAUDE_TEAM_CONTROL_URL = previousEnvUrl;
+      if (server) await new Promise((resolve) => server.close(resolve));
+      server = undefined;
+    });
+
+    /** A fake app: `answer(url)` returns `{ statusCode?, body }`. */
+    async function startApp(claudeDir, answer) {
+      server = http.createServer((req, res) => {
+        requests.push(req.url);
+        const { statusCode = 200, body } = answer(req.url);
+        res.writeHead(statusCode, { 'content-type': 'application/json' });
+        res.end(JSON.stringify(body));
+      });
+      await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+      fs.writeFileSync(
+        path.join(claudeDir, 'team-control-api.json'),
+        JSON.stringify({ baseUrl: `http://127.0.0.1:${server.address().port}` })
+      );
+    }
+
+    /** `builders` keeps a separate history per project: a definition, no config.json. */
+    function perProjectWorld() {
+      const claudeDir = makeClaudeDir({
+        'team-a': { name: 'team-a', members: [lead] },
+        'ptc-builders-a': { name: 'ptc-builders-a', members: [lead] },
+        'ptc-builders-b': { name: 'ptc-builders-b', members: [lead] },
+      });
+      const logicalDir = path.join(claudeDir, 'teams', 'builders');
+      fs.mkdirSync(logicalDir, { recursive: true });
+      fs.writeFileSync(
+        path.join(logicalDir, 'team.meta.json'),
+        JSON.stringify({ version: 1, projectContextMode: 'per_project' })
+      );
+      return claudeDir;
+    }
+
+    const inbox = (claudeDir, team) =>
+      path.join(claudeDir, 'teams', team, 'inboxes', 'team-lead.json');
+
+    it('keeps the name of a team with its own config without asking the app', async () => {
+      const claudeDir = perProjectWorld();
+      await startApp(claudeDir, () => ({ statusCode: 500, body: { error: 'must not be asked' } }));
+      const controller = createController({ teamName: 'team-a', claudeDir });
+      await expect(
+        controller.crossTeam.resolveCrossTeamRecipient({ toTeam: 'ptc-builders-b' })
+      ).resolves.toBe('ptc-builders-b');
+      await expect(
+        controller.crossTeam.resolveCrossTeamRecipient({ toTeam: 'missing-team' })
+      ).resolves.toBe('missing-team');
+      expect(requests).toEqual([]);
+    });
+
+    it('writes a message for a per-project team into the copy the app names', async () => {
+      const claudeDir = perProjectWorld();
+      await startApp(claudeDir, () => ({
+        body: { teamName: 'ptc-builders-b', logicalTeamName: 'builders', projectPath: '/b' },
+      }));
+      const controller = createController({ teamName: 'team-a', claudeDir });
+      const recipient = await controller.crossTeam.resolveCrossTeamRecipient({
+        toTeam: 'builders',
+      });
+      expect(requests).toEqual(['/api/teams/team-a/cross-team/recipient?toTeam=builders']);
+      expect(recipient).toBe('ptc-builders-b');
+
+      controller.crossTeam.sendCrossTeamMessage({ toTeam: recipient, text: 'Hello builders' });
+      expect(JSON.parse(fs.readFileSync(inbox(claudeDir, 'ptc-builders-b'), 'utf8'))).toHaveLength(
+        1
+      );
+      expect(fs.existsSync(inbox(claudeDir, 'ptc-builders-a'))).toBe(false);
+      expect(fs.existsSync(path.join(claudeDir, 'teams', 'builders', 'inboxes'))).toBe(false);
+    });
+
+    it('passes on the refusal of the app and writes nothing', async () => {
+      const claudeDir = perProjectWorld();
+      await startApp(claudeDir, () => ({
+        statusCode: 409,
+        body: {
+          code: 'NO_PROJECT_HISTORY',
+          error: 'Team "builders" has no history in project /c yet.',
+        },
+      }));
+      const controller = createController({ teamName: 'team-a', claudeDir });
+      await expect(
+        controller.crossTeam.resolveCrossTeamRecipient({ toTeam: 'builders' })
+      ).rejects.toMatchObject({
+        code: 'NO_PROJECT_HISTORY',
+        message: 'Team "builders" has no history in project /c yet.',
+      });
+      expect(fs.existsSync(inbox(claudeDir, 'ptc-builders-a'))).toBe(false);
+      expect(fs.existsSync(inbox(claudeDir, 'ptc-builders-b'))).toBe(false);
+    });
+
+    it('keeps the name when the app cannot be reached, so the delivery reports it as unknown', async () => {
+      const claudeDir = perProjectWorld();
+      const controller = createController({ teamName: 'team-a', claudeDir });
+      const recipient = await controller.crossTeam.resolveCrossTeamRecipient({
+        toTeam: 'builders',
+      });
+      expect(recipient).toBe('builders');
+      expect(() =>
+        controller.crossTeam.sendCrossTeamMessage({ toTeam: recipient, text: 'Hello' })
+      ).toThrow('Target team not found: builders');
+    });
+
+    it('lists the targets of the app, where project copies are folded into their team', async () => {
+      const claudeDir = perProjectWorld();
+      await startApp(claudeDir, () => ({
+        body: [
+          { teamName: 'builders', displayName: 'Builders', isOnline: true },
+          { teamName: 'team-z', displayName: 'Team Z' },
+        ],
+      }));
+      const controller = createController({ teamName: 'team-a', claudeDir });
+      await expect(
+        controller.crossTeam.listCrossTeamTargets({ excludeTeam: 'team-z' })
+      ).resolves.toEqual([{ teamName: 'builders', displayName: 'Builders', isOnline: true }]);
+      expect(requests).toEqual(['/api/teams/team-a/cross-team/targets']);
+    });
+
+    it('scans the configured teams when the app cannot be reached', async () => {
       const claudeDir = makeClaudeDir({
         'team-a': { name: 'Team A' },
         'team-b': { name: 'Team B', description: 'B desc' },
@@ -925,7 +1058,7 @@ describe('crossTeam module', () => {
       });
 
       const controller = createController({ teamName: 'team-a', claudeDir });
-      const targets = controller.crossTeam.listCrossTeamTargets();
+      const targets = await controller.crossTeam.listCrossTeamTargets();
 
       expect(targets).toHaveLength(1);
       expect(targets[0].teamName).toBe('team-b');

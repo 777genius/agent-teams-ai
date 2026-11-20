@@ -13,6 +13,9 @@ on:
       - 'src/renderer/components/team/TeamDetailView.tsx'
       - 'src/main/services/team/TeamTaskReader.ts'
       - 'src/main/services/team/TeamMessageFeedService.ts'
+      - 'src/main/services/team/CrossTeamService.ts'
+      - 'src/main/http/crossTeam.ts'
+      - 'agent-teams-controller/src/internal/crossTeam.js'
   push:
     branches: [main]
     paths:
@@ -25,6 +28,9 @@ on:
       - 'src/renderer/components/team/TeamDetailView.tsx'
       - 'src/main/services/team/TeamTaskReader.ts'
       - 'src/main/services/team/TeamMessageFeedService.ts'
+      - 'src/main/services/team/CrossTeamService.ts'
+      - 'src/main/http/crossTeam.ts'
+      - 'agent-teams-controller/src/internal/crossTeam.js'
 
 permissions:
   contents: read
