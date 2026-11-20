@@ -214,9 +214,9 @@ import { createTeamWithProjectContext } from './teams/teamProjectContextCreate';
 import { buildTeamProgressReporter, withPreparedContextLaunch } from './teams/teamProjectContextLaunch';
 import { projectPublicProvisioningProgress, resolveProjectRunDiagnosticsTeam } from './teams/teamProjectContextProgressIdentity';
 import * as projectEdit from './teams/teamProjectDefinitionEdit';
-import { parseUpdateConfigRequest } from './teams/teamUpdateConfigRequest';
 import { discardQueuedUserMessages, listQueuedUserMessages } from './teams/teamQueuedUserMessages';
 import { createTeamSoftDeleteRequests } from './teams/teamSoftDeleteFlow';
+import { parseUpdateConfigRequest } from './teams/teamUpdateConfigRequest';
 import { withTimeoutValue } from './teams/withTimeoutValue';
 import {
   validateFromField,

@@ -4221,8 +4221,10 @@ export default interface Resources {
       "fields": {
         "colorOptional": "Color (optional)",
         "description": "Description",
+        "leadPrompt": "Lead instructions (optional)",
         "name": "Name"
       },
+      "leadPromptHint": "Used the next time the team starts in any project. A prompt typed in the launch dialog is used for that start.",
       "leadRestartWarning": "Saving will restart the lead to apply model or effort changes. Teammate processes will keep running.",
       "memberRestartWarning": "Saving will restart this teammate to apply role, workflow, worktree isolation, provider, model, effort, or MCP access changes.",
       "notices": {
@@ -4235,6 +4237,7 @@ export default interface Resources {
       },
       "placeholders": {
         "description": "Team description (optional)",
+        "leadPrompt": "Saved instructions for the team lead",
         "teamName": "Team name"
       },
       "teamLead": {
