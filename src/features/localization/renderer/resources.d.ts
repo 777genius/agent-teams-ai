@@ -4005,6 +4005,8 @@ export default interface Resources {
           "fastDefault": "Fast default",
           "fastDisabled": "Fast disabled",
           "fastMode": "Fast mode",
+          "historyPerProject": "Per-project history",
+          "historyShared": "Shared history",
           "leadPrompt": "Lead prompt",
           "worktree": "Worktree: {{name}}"
         },

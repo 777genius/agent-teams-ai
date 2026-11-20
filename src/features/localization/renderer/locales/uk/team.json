@@ -181,6 +181,8 @@
       "teamDetailsTitle": "Необов'язкові деталі команди",
       "teamDetailsDescription": "Тримайте стандартний процес компактним і відкривайте це, лише коли хочете додатковий контекст чи власний колір.",
       "summary": {
+        "historyPerProject": "Історія за проєктами",
+        "historyShared": "Спільна історія",
         "leadPrompt": "Промпт лідера",
         "autoApproveTools": "Автосхвалення tools",
         "fastMode": "Fast mode увімкнено",

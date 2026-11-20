@@ -131,6 +131,7 @@ import {
 } from './dialogIdleScheduling';
 import { ExperimentalLocalModelOverrideCheckbox } from './ExperimentalLocalModelOverride';
 import { resolveExperimentalLocalModelOverride } from './experimentalLocalModelOverrideState';
+import { LaunchAfterCreateControl } from './LaunchAfterCreateControl';
 import {
   clearInheritedMemberModelsUnavailableForProvider,
   getDialogMemberModelIssues,
@@ -192,7 +193,7 @@ import {
 import { resolveConfigOnlyCwd } from './resolveConfigOnlyCwd';
 import { CreateTeamProviderStatusStrip } from './RetryOpenCodeStatus';
 import { SkipPermissionsCheckbox } from './SkipPermissionsCheckbox';
-import { TeamHistoryAndLaunchControls } from './TeamHistoryAndLaunchControls';
+import { TeamHistoryModeField } from './TeamHistoryModeField';
 import {
   analyzeTeammateRuntimeCompatibility,
   useTmuxRuntimeReadiness,
@@ -1959,7 +1960,15 @@ export const CreateTeamDialog = ({
     skipPermissions,
   ]);
   const launchOptionalSummary = useMemo(() => {
-    const summary: string[] = [];
+    const summary: string[] = [
+      t(
+        projectContextMode === 'shared'
+          ? 'create.optional.summary.historyShared'
+          : 'create.optional.summary.historyPerProject'
+      ),
+    ];
+    // The remaining settings only apply when the team is launched right away.
+    if (!launchTeam) return summary;
     if (prompt.trim()) summary.push(t('create.optional.summary.leadPrompt'));
     if (skipPermissions) summary.push(t('create.optional.summary.autoApproveTools'));
     if (selectedProviderId === 'anthropic' || selectedProviderId === 'codex') {
@@ -1981,6 +1990,8 @@ export const CreateTeamDialog = ({
     anthropicProviderFastModeDefault,
     customArgs,
     effectiveAnthropicRuntimeLimitContext,
+    launchTeam,
+    projectContextMode,
     prompt,
     selectedFastMode,
     selectedProviderId,
@@ -2767,14 +2778,12 @@ export const CreateTeamDialog = ({
                   : 'var(--color-surface-overlay)',
               }}
             >
-              <TeamHistoryAndLaunchControls
-                projectContextMode={projectContextMode}
-                onProjectContextModeChange={setProjectContextMode}
+              <LaunchAfterCreateControl
                 launchTeam={launchTeam}
                 onLaunchTeamChange={setLaunchTeam}
               />
-              {launchTeam ? (
-                <div className="mt-4 space-y-4">
+              <div className="mt-4 space-y-4">
+                {launchTeam ? (
                   <ProjectPathSelector
                     cwdMode={cwdMode}
                     onCwdModeChange={setCwdMode}
@@ -2790,105 +2799,113 @@ export const CreateTeamDialog = ({
                     fieldError={fieldErrors.cwd}
                     customFolder={customProjectFolder}
                   />
-                  <OptionalSettingsSection
-                    title={t('create.optional.launchSettingsTitle')}
-                    description={t('create.optional.launchSettingsDescription')}
-                    summary={launchOptionalSummary}
-                    onOpenChange={(isOpen) => {
-                      if (isOpen) {
-                        enableWorkflowMentionSuggestions();
-                      }
-                    }}
-                  >
-                    <div className="space-y-4">
-                      {selectedProviderId === 'anthropic' ? (
-                        <div className="space-y-2">
-                          <AnthropicFastModeSelector
-                            value={selectedFastMode}
-                            onValueChange={setSelectedFastMode}
-                            providerFastModeDefault={anthropicProviderFastModeDefault}
-                            model={selectedModel}
-                            projectPath={effectiveCwd}
-                            limitContext={effectiveAnthropicRuntimeLimitContext}
-                            id="create-fast-mode"
-                          />
-                          {anthropicRuntimeNotice ? (
-                            <div className="bg-amber-500/8 flex items-start gap-2 rounded-md border border-amber-500/25 px-3 py-2 text-[11px] leading-relaxed text-amber-200">
-                              <Info className="mt-0.5 size-3.5 shrink-0 text-amber-300" />
-                              <p>{anthropicRuntimeNotice}</p>
-                            </div>
-                          ) : null}
-                        </div>
-                      ) : null}
-                      {selectedProviderId === 'codex' ? (
-                        <div className="space-y-2">
-                          <CodexFastModeSelector
-                            value={selectedFastMode}
-                            onValueChange={setSelectedFastMode}
-                            model={selectedModel}
-                            providerBackendId={
-                              resolveUiOwnedProviderBackendId(
-                                'codex',
-                                runtimeProviderStatusById.get('codex')
-                              ) ?? undefined
+                ) : null}
+                <OptionalSettingsSection
+                  title={t('create.optional.launchSettingsTitle')}
+                  description={t('create.optional.launchSettingsDescription')}
+                  summary={launchOptionalSummary}
+                  onOpenChange={(isOpen) => {
+                    if (isOpen) {
+                      enableWorkflowMentionSuggestions();
+                    }
+                  }}
+                >
+                  <div className="space-y-4">
+                    <TeamHistoryModeField
+                      value={projectContextMode}
+                      onValueChange={setProjectContextMode}
+                    />
+                    {launchTeam ? (
+                      <>
+                        {selectedProviderId === 'anthropic' ? (
+                          <div className="space-y-2">
+                            <AnthropicFastModeSelector
+                              value={selectedFastMode}
+                              onValueChange={setSelectedFastMode}
+                              providerFastModeDefault={anthropicProviderFastModeDefault}
+                              model={selectedModel}
+                              projectPath={effectiveCwd}
+                              limitContext={effectiveAnthropicRuntimeLimitContext}
+                              id="create-fast-mode"
+                            />
+                            {anthropicRuntimeNotice ? (
+                              <div className="bg-amber-500/8 flex items-start gap-2 rounded-md border border-amber-500/25 px-3 py-2 text-[11px] leading-relaxed text-amber-200">
+                                <Info className="mt-0.5 size-3.5 shrink-0 text-amber-300" />
+                                <p>{anthropicRuntimeNotice}</p>
+                              </div>
+                            ) : null}
+                          </div>
+                        ) : null}
+                        {selectedProviderId === 'codex' ? (
+                          <div className="space-y-2">
+                            <CodexFastModeSelector
+                              value={selectedFastMode}
+                              onValueChange={setSelectedFastMode}
+                              model={selectedModel}
+                              providerBackendId={
+                                resolveUiOwnedProviderBackendId(
+                                  'codex',
+                                  runtimeProviderStatusById.get('codex')
+                                ) ?? undefined
+                              }
+                              id="create-fast-mode"
+                            />
+                            {anthropicRuntimeNotice ? (
+                              <div className="bg-amber-500/8 flex items-start gap-2 rounded-md border border-amber-500/25 px-3 py-2 text-[11px] leading-relaxed text-amber-200">
+                                <Info className="mt-0.5 size-3.5 shrink-0 text-amber-300" />
+                                <p>{anthropicRuntimeNotice}</p>
+                              </div>
+                            ) : null}
+                          </div>
+                        ) : null}
+                        <div className="space-y-1.5">
+                          <Label htmlFor="team-prompt" className="label-optional">
+                            {t('create.fields.prompt')}
+                          </Label>
+                          <MentionableTextarea
+                            id="team-prompt"
+                            className="text-xs"
+                            minRows={3}
+                            maxRows={12}
+                            value={prompt}
+                            onValueChange={promptDraft.setValue}
+                            suggestions={soloTeam ? [] : mentionSuggestions}
+                            teamSuggestions={teamMentionSuggestions}
+                            taskSuggestions={taskSuggestions}
+                            projectPath={effectiveCwd || null}
+                            chips={promptChipDraft.chips}
+                            onChipRemove={promptChipDraft.removeChip}
+                            onFileChipInsert={promptChipDraft.addChip}
+                            placeholder={t('create.placeholders.prompt')}
+                            footerRight={
+                              promptDraft.isSaved ? (
+                                <span className="text-[10px] text-[var(--color-text-muted)]">
+                                  {t('create.saved')}
+                                </span>
+                              ) : null
                             }
-                            id="create-fast-mode"
                           />
-                          {anthropicRuntimeNotice ? (
-                            <div className="bg-amber-500/8 flex items-start gap-2 rounded-md border border-amber-500/25 px-3 py-2 text-[11px] leading-relaxed text-amber-200">
-                              <Info className="mt-0.5 size-3.5 shrink-0 text-amber-300" />
-                              <p>{anthropicRuntimeNotice}</p>
-                            </div>
-                          ) : null}
                         </div>
-                      ) : null}
-                      <div className="space-y-1.5">
-                        <Label htmlFor="team-prompt" className="label-optional">
-                          {t('create.fields.prompt')}
-                        </Label>
-                        <MentionableTextarea
-                          id="team-prompt"
-                          className="text-xs"
-                          minRows={3}
-                          maxRows={12}
-                          value={prompt}
-                          onValueChange={promptDraft.setValue}
-                          suggestions={soloTeam ? [] : mentionSuggestions}
-                          teamSuggestions={teamMentionSuggestions}
-                          taskSuggestions={taskSuggestions}
-                          projectPath={effectiveCwd || null}
-                          chips={promptChipDraft.chips}
-                          onChipRemove={promptChipDraft.removeChip}
-                          onFileChipInsert={promptChipDraft.addChip}
-                          placeholder={t('create.placeholders.prompt')}
-                          footerRight={
-                            promptDraft.isSaved ? (
-                              <span className="text-[10px] text-[var(--color-text-muted)]">
-                                {t('create.saved')}
-                              </span>
-                            ) : null
-                          }
+                        <SkipPermissionsCheckbox
+                          id="create-skip-permissions"
+                          checked={skipPermissions}
+                          onCheckedChange={setSkipPermissions}
                         />
-                      </div>
-                      <SkipPermissionsCheckbox
-                        id="create-skip-permissions"
-                        checked={skipPermissions}
-                        onCheckedChange={setSkipPermissions}
-                      />
-                      <AdvancedCliSection
-                        teamName={advancedKey}
-                        internalArgs={internalArgs}
-                        worktreeEnabled={worktreeEnabled}
-                        onWorktreeEnabledChange={setWorktreeEnabled}
-                        worktreeName={worktreeName}
-                        onWorktreeNameChange={setWorktreeName}
-                        customArgs={customArgs}
-                        onCustomArgsChange={setCustomArgs}
-                      />
-                    </div>
-                  </OptionalSettingsSection>
-                </div>
-              ) : null}
+                        <AdvancedCliSection
+                          teamName={advancedKey}
+                          internalArgs={internalArgs}
+                          worktreeEnabled={worktreeEnabled}
+                          onWorktreeEnabledChange={setWorktreeEnabled}
+                          worktreeName={worktreeName}
+                          onWorktreeNameChange={setWorktreeName}
+                          customArgs={customArgs}
+                          onCustomArgsChange={setCustomArgs}
+                        />
+                      </>
+                    ) : null}
+                  </div>
+                </OptionalSettingsSection>
+              </div>
             </div>
             <div className="md:col-span-2">
               <OptionalSettingsSection

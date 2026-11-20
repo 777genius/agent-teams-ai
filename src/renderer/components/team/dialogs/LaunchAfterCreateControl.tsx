@@ -2,13 +2,6 @@ import { useAppTranslation } from '@features/localization/renderer';
 import { Checkbox } from '@renderer/components/ui/checkbox';
 import { Label } from '@renderer/components/ui/label';
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@renderer/components/ui/select';
-import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
@@ -16,53 +9,21 @@ import {
 } from '@renderer/components/ui/tooltip';
 import { Info } from 'lucide-react';
 
-import type { TeamProjectContextMode } from '@shared/types';
 import type { JSX } from 'react';
 
 interface Props {
-  projectContextMode: TeamProjectContextMode;
-  onProjectContextModeChange(value: TeamProjectContextMode): void;
   launchTeam: boolean;
   onLaunchTeamChange(value: boolean): void;
 }
 
-/** Creation-only controls. No runtime routing or fallback to shared history here. */
-export const TeamHistoryAndLaunchControls = ({
-  projectContextMode,
-  onProjectContextModeChange,
+/** The "run the command after create" checkbox of the Create Team form. */
+export const LaunchAfterCreateControl = ({
   launchTeam,
   onLaunchTeamChange,
 }: Readonly<Props>): JSX.Element => {
   const { t } = useAppTranslation('team');
   return (
     <>
-      <div className="mb-4 space-y-2">
-        <Label htmlFor="team-project-context-mode">
-          {t('create.projectContextMode.label')}
-        </Label>
-        <Select
-          value={projectContextMode}
-          onValueChange={(value) => {
-            if (value === 'shared' || value === 'per_project') onProjectContextModeChange(value);
-          }}
-        >
-          <SelectTrigger
-            id="team-project-context-mode"
-            aria-label={t('create.projectContextMode.label')}
-          >
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="per_project">
-              {t('create.projectContextMode.perProject')}
-            </SelectItem>
-            <SelectItem value="shared">{t('create.projectContextMode.shared')}</SelectItem>
-          </SelectContent>
-        </Select>
-        <p className="text-xs text-[var(--color-text-muted)]">
-          {t('create.projectContextMode.description')}
-        </p>
-      </div>
       <div className="flex items-start gap-3">
         <Checkbox
           id="launch-team"

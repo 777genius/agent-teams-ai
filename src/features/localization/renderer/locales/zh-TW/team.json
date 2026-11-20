@@ -194,6 +194,8 @@
       "teamDetailsTitle": "可選團隊詳情",
       "teamDetailsDescription": "保持預設流程緊湊，僅當您需要額外的上下文或自訂顏色時才開啟它。",
       "summary": {
+        "historyPerProject": "依專案分開的歷史",
+        "historyShared": "共用歷史",
         "leadPrompt": "負責人提示詞",
         "autoApproveTools": "自動核准工具",
         "fastMode": "Fast 模式",

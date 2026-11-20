@@ -194,6 +194,8 @@
       "teamDetailsTitle": "Optional team details",
       "teamDetailsDescription": "Keep the default flow compact and only open this when you want extra context or a custom color.",
       "summary": {
+        "historyPerProject": "Per-project history",
+        "historyShared": "Shared history",
         "leadPrompt": "Lead prompt",
         "autoApproveTools": "Auto-approve tools",
         "fastMode": "Fast mode",
