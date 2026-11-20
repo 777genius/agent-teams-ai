@@ -19,7 +19,7 @@
 
   <sub>Check also:
   - [universal-agent-plugins](https://universal-agent-plugins.com) - Multi-agent CLI to install, update, repair, and remove Agent Plugins 1.0 and Agent Skills across Codex/ChatGPT, Claude, Cursor, Gemini, Copilot, Qoder, Pi, OpenCode, and more. 1,500+ plugins. SDK for universal plugins (hooks, detect, install/manage) 
-  - [review-router-ai](https://github.com/777genius/review-router-ai) - Free, open source CodeRabbit. Powerfull AI code review that runs inside your CI/CD (privacy) using your Claude/Codex/other subscription accounts (pool)/API. Free/self-hosted deployment. Ready github integration. Built using OpenCodeReview. Claude/Codex/OpenRouter/Grok/Kimi/Glm/MiniMax/MiMo...
+  - [review-router-ai](https://github.com/777genius/review-router-ai) - Fast, cost-effective, secure code review that runs inside your CI/CD using your Claude/Codex/other subscription accounts (pool)/API. Free/self-hosted deployment. Ready github integration. Built using OpenCodeReview. Claude/Codex/OpenRouter/Grok/Kimi/Glm/MiniMax/MiMo...
   - [agent-notifications](https://agent-notifications.com) - 🔔 Cross-platform smart notifications for Claude/Codex/OpenCode/Cursor/Gemini/Qoder/Pi. Desktop alerts, sounds, click-to-focus, and webhooks. macOS, Linux, and Windows.
   </sub>
 </p>
