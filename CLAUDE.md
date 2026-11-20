@@ -73,6 +73,10 @@ Use path aliases for imports:
 - `@shared/*` → `src/shared/*`
 - `@preload/*` → `src/preload/*`
 
+## UI Forms
+
+Field headings, secondary text and theme colors in forms follow [`docs/development/ui-form-conventions.md`](docs/development/ui-form-conventions.md).
+
 ## Features Architecture
 
 **All new medium and large features should follow the canonical slice standard in [`docs/FEATURE_ARCHITECTURE_STANDARD.md`](docs/FEATURE_ARCHITECTURE_STANDARD.md).**

@@ -666,7 +666,7 @@ export const MemberDraftRow = ({
         <div className="space-y-0.5 pl-3 md:col-span-3">
           <label
             htmlFor={`member-${member.id}-workflow`}
-            className="block text-[10px] font-medium text-[var(--color-text-muted)]"
+            className="block text-[10px] font-medium text-text"
           >
             {t('memberDraft.workflow.label')}
           </label>
