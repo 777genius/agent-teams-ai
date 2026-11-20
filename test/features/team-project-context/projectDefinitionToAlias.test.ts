@@ -218,7 +218,7 @@ describe('projectDefinitionToAlias', () => {
       const p = ports();
       await projectDefinitionToAlias(
         p,
-        { ...base, providerId: undefined, providerBackendId: 'b', model: 'm' },
+        { ...base, providerId: undefined, providerBackendId: 'b' as never, model: 'm' },
         alias({ providerId: 'codex', model: 'old' })
       );
       expect(p.updateLaunchSettings).toHaveBeenCalledWith('ptc-a', { model: 'm' });
