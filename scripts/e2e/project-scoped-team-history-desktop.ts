@@ -301,10 +301,18 @@ async function selectProject(f: Fixture, id: 'project-a' | 'project-b' | 'projec
     }) + '); return true; })()', 'select project ' + id, 60_000);
 }
 
-async function verifyNative(f: Fixture) {
+interface NativeState {
+  teamNames: string[];
+  a: { state: string; executionTeamName?: string };
+  b: { state: string; executionTeamName?: string };
+  empty: { state: string };
+  taskA: string[]; taskB: string[]; messagesA: string[]; messagesB: string[];
+}
+
+async function readNativeState(f: Fixture): Promise<NativeState> {
   assert(cdp);
   const input = JSON.stringify(f);
-  const state = await cdp.evaluate('(async () => { const f = ' + input + ';' +
+  return await cdp.evaluate('(async () => { const f = ' + input + ';' +
     'const teams = await window.electronAPI.teams.list();' +
     'const a = await window.electronAPI.teams.getProjectContextView(f.logical, f.projectA);' +
     'const b = await window.electronAPI.teams.getProjectContextView(f.logical, f.projectB);' +
@@ -318,25 +326,42 @@ async function verifyNative(f: Fixture) {
       'a, b, empty,' +
       'taskA: aa.tasks.map(t => t.subject), taskB: bb.tasks.map(t => t.subject),' +
       'messagesA: ma.messages.map(m => m.text), messagesB: mb.messages.map(m => m.text)' +
-    '}; })()') as {
-    teamNames: string[];
-    a: { state: string; executionTeamName?: string };
-    b: { state: string; executionTeamName?: string };
-    empty: { state: string };
-    taskA: string[]; taskB: string[]; messagesA: string[]; messagesB: string[];
-  };
-  assert(state.teamNames.includes(f.logical), 'Logical team absent from renderer team list');
-  assert(!state.teamNames.includes(f.nativeA) && !state.teamNames.includes(f.nativeB),
-    'Verified owned aliases leaked into visible team list');
-  assert.equal(state.a.state, 'ready', `Project A native view: ${JSON.stringify(state.a)}`);
-  assert.equal(state.a.executionTeamName, f.nativeA);
-  assert.equal(state.b.state, 'ready', `Project B native view: ${JSON.stringify(state.b)}`);
-  assert.equal(state.b.executionTeamName, f.nativeB);
-  assert.equal(state.empty.state, 'empty');
-  assert(state.taskA.includes('PROJECT_A_TASK_ONLY') && !state.taskA.includes('PROJECT_B_TASK_ONLY'));
-  assert(state.taskB.includes('PROJECT_B_TASK_ONLY') && !state.taskB.includes('PROJECT_A_TASK_ONLY'));
-  assert(state.messagesA.includes('PROJECT_A_CHAT_ONLY') && !state.messagesA.includes('PROJECT_B_CHAT_ONLY'));
-  assert(state.messagesB.includes('PROJECT_B_CHAT_ONLY') && !state.messagesB.includes('PROJECT_A_CHAT_ONLY'));
+    '}; })()') as NativeState;
+}
+
+/**
+ * Isolation is asserted on EVERY read and fails at once: another project's data must never be
+ * seen, not even once. What is only a read of the project's own data (a view or a feed that is
+ * still warming up and answers empty) is read again until it is complete, for up to 30 s; the
+ * failure then says exactly what the last read returned.
+ */
+async function verifyNative(f: Fixture) {
+  const deadline = Date.now() + 30_000;
+  let state = await readNativeState(f);
+  for (let reads = 1; ; reads += 1) {
+    const shown = () => JSON.stringify(state);
+    assert(!state.teamNames.includes(f.nativeA) && !state.teamNames.includes(f.nativeB),
+      'Verified owned aliases leaked into visible team list: ' + shown());
+    assert(!state.taskA.includes('PROJECT_B_TASK_ONLY') && !state.taskB.includes('PROJECT_A_TASK_ONLY'),
+      'A task of another project is visible: ' + shown());
+    assert(!state.messagesA.includes('PROJECT_B_CHAT_ONLY') && !state.messagesB.includes('PROJECT_A_CHAT_ONLY'),
+      'A chat message of another project is visible: ' + shown());
+    const missing: string[] = [];
+    if (!state.teamNames.includes(f.logical)) missing.push('logical team in the team list');
+    if (state.a.state !== 'ready' || state.a.executionTeamName !== f.nativeA) missing.push('project A view');
+    if (state.b.state !== 'ready' || state.b.executionTeamName !== f.nativeB) missing.push('project B view');
+    if (state.empty.state !== 'empty') missing.push('empty project view');
+    if (!state.taskA.includes('PROJECT_A_TASK_ONLY')) missing.push('task of project A');
+    if (!state.taskB.includes('PROJECT_B_TASK_ONLY')) missing.push('task of project B');
+    if (!state.messagesA.includes('PROJECT_A_CHAT_ONLY')) missing.push('chat message of project A');
+    if (!state.messagesB.includes('PROJECT_B_CHAT_ONLY')) missing.push('chat message of project B');
+    if (missing.length === 0) return;
+    assert(Date.now() < deadline,
+      'Own data of the native projects is still missing after ' + reads + ' reads over 30 s (' +
+      missing.join(', ') + '): ' + shown());
+    await pause(1_000);
+    state = await readNativeState(f);
+  }
 }
 
 async function verifyUi(f: Fixture) {
