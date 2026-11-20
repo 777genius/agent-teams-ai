@@ -108,6 +108,7 @@ describe('withProjectDefinitionEdit', () => {
   });
 
   it('keeps the saved edit successful when a project copy cannot be refreshed right now', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
     const r = routing('logical');
     r.editor.projectToAliases.mockResolvedValue({
       failed: [{ executionTeamName: 'ptc-a', message: 'busy' }],
@@ -115,6 +116,12 @@ describe('withProjectDefinitionEdit', () => {
     await expect(r.wrapped(event, 'builders', {})).resolves.toMatchObject({ success: true });
     r.editor.projectToAliases.mockRejectedValue(new Error('registry unreadable'));
     await expect(r.wrapped(event, 'builders', {})).resolves.toMatchObject({ success: true });
+    // The refresh problem is not hidden: it is logged, and the next launch repeats the refresh.
+    expect(warn.mock.calls.map((call) => String(call[0]))).toEqual([
+      expect.stringContaining('ptc-a of builders: busy'),
+      expect.stringContaining('registry unreadable'),
+    ]);
+    warn.mockRestore();
   });
 });
 

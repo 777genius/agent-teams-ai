@@ -410,6 +410,206 @@ async function verifyAliasRedirect(f: Fixture) {
   await cdp.screenshot(path.join(f.screenshots, 'history-alias-redirect.png'));
 }
 
+
+async function readJsonFile<T = Record<string, unknown>>(file: string): Promise<T> {
+  return JSON.parse(await readFile(file, 'utf8')) as T;
+}
+
+async function waitForJson<T = Record<string, unknown>>(
+  file: string,
+  predicate: (value: T) => boolean,
+  label: string,
+  timeoutMs = 30_000
+): Promise<T> {
+  const deadline = Date.now() + timeoutMs;
+  let last: T | null = null;
+  while (Date.now() < deadline) {
+    try {
+      last = await readJsonFile<T>(file);
+      if (predicate(last)) return last;
+    } catch {
+      // The file is being replaced atomically; read again.
+    }
+    await pause(100);
+  }
+  throw new Error('Timed out: ' + label + ' (last: ' + JSON.stringify(last)?.slice(0, 400) + ')');
+}
+
+async function ipcOutcome(expression: string): Promise<{ ok: boolean; error?: string }> {
+  assert(cdp);
+  return await cdp.evaluate('(async () => { try { await (' + expression + '); return { ok: true }; }' +
+    ' catch (e) { return { ok: false, error: String(e && e.message ? e.message : e) }; } })()') as {
+    ok: boolean; error?: string;
+  };
+}
+
+async function clickSelector(selector: string, label: string) {
+  assert(cdp);
+  await waitFor('(() => { const el = document.querySelector(' + JSON.stringify(selector) + ');' +
+    'return Boolean(el) && !el.disabled; })()', label);
+  await cdp.evaluate('document.querySelector(' + JSON.stringify(selector) + ').click()');
+}
+
+async function setField(selector: string, value: string) {
+  assert(cdp);
+  await waitFor('Boolean(document.querySelector(' + JSON.stringify(selector) + '))',
+    'field ' + selector);
+  await cdp.evaluate('(() => { const el = document.querySelector(' + JSON.stringify(selector) + ');' +
+    'const proto = el instanceof HTMLTextAreaElement ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype;' +
+    'Object.getOwnPropertyDescriptor(proto, "value").set.call(el, ' + JSON.stringify(value) + ');' +
+    'el.dispatchEvent(new Event("input", { bubbles: true })); return true; })()');
+}
+
+async function clickDialogSave() {
+  assert(cdp);
+  const save = '(() => Array.from(document.querySelectorAll("[role=dialog] button"))' +
+    '.find((b) => b.textContent?.trim() === "Save"))()';
+  await waitFor('(() => { const b = ' + save + '; return Boolean(b) && !b.disabled; })()',
+    'Save button enabled');
+  await cdp.evaluate('(() => { const b = ' + save + '; b.click(); return true; })()');
+}
+
+async function openEditDialog(f: Fixture) {
+  assert(cdp);
+  await selectProject(f, 'project-a');
+  await cdp.evaluate('(() => window.__agentTeamsDevStore.getState().openTeamTab(' +
+    JSON.stringify(f.logical) + ', ' + JSON.stringify(f.projectA) + '))()');
+  await waitFor(visibleTask(f.nativeA, 'PROJECT_A_TASK_ONLY'), 'project A open for editing');
+  await clickSelector('button[aria-label="Edit team"]', 'the Edit team pencil of a per-project team');
+  await waitFor('Boolean(document.querySelector("#edit-team-name"))', 'Edit team dialog');
+}
+
+/**
+ * A per-project team is one team: the real Edit Team dialog edits its logical
+ * definition (the single source of truth); the project copies are refreshed
+ * from it and their tasks, inboxes and history stay untouched; editing is
+ * refused while a project context is not stopped; a project copy is never
+ * edited directly.
+ */
+async function verifyDefinitionEdit(f: Fixture) {
+  assert(cdp);
+  const logicalDir = path.join(f.rootTeams, f.logical);
+  const aliasFile = (alias: string, name: string) => path.join(f.rootTeams, alias, name);
+  const history = async () => JSON.stringify([
+    await readJsonFile(path.join(f.claudeRoot, 'tasks', f.nativeA, '1.json')),
+    await readJsonFile(path.join(f.claudeRoot, 'tasks', f.nativeB, '1.json')),
+    await readJsonFile(aliasFile(f.nativeA, path.join('inboxes', 'user.json'))),
+    await readJsonFile(aliasFile(f.nativeB, path.join('inboxes', 'user.json'))),
+  ]);
+  const historyBefore = await history();
+  const indexBefore = await readFile(f.indexPath, 'utf8');
+  const activeNames = (file: { members?: { name: string; removedAt?: number }[] }) =>
+    (file.members ?? []).filter((member) => !member.removedAt).map((member) => member.name);
+
+  // 1. The same editor as before, opened from the per-project team screen.
+  await openEditDialog(f);
+  assert.equal(await cdp.evaluate('document.querySelector("#edit-team-name").value'),
+    'History fixture', 'The dialog must show the saved team definition');
+  await cdp.screenshot(path.join(f.screenshots, 'edit-dialog.png'));
+  await setField('#edit-team-name', 'History fixture edited');
+  await setField('#edit-team-description', 'Edited through the real dialog');
+  await clickSelector('[role=dialog] button[title="orange"]', 'orange color choice');
+  await clickDialogSave();
+  await waitFor('!document.querySelector("#edit-team-name")', 'Edit team dialog closed after save');
+
+  const logicalMeta = await waitForJson<Record<string, unknown>>(
+    path.join(logicalDir, 'team.meta.json'),
+    (meta) => meta.displayName === 'History fixture edited',
+    'logical team metadata saved'
+  );
+  assert.equal(logicalMeta.description, 'Edited through the real dialog');
+  assert.equal(logicalMeta.color, 'orange');
+  assert.equal(logicalMeta.projectContextMode, 'per_project');
+  const logicalConfigExists = await readFile(path.join(logicalDir, 'config.json'), 'utf8')
+    .then(() => true, () => false);
+  assert.equal(logicalConfigExists, false,
+    'The logical definition must stay config-less (no second source of truth)');
+  // The stopped project copies are projections of it.
+  for (const alias of [f.nativeA, f.nativeB]) {
+    await waitForJson<Record<string, unknown>>(
+      aliasFile(alias, 'config.json'),
+      (config) => config.description === 'Edited through the real dialog' && config.color === 'orange',
+      'project copy ' + alias + ' shows the edited description and color'
+    );
+  }
+  await waitFor('document.querySelector(' + JSON.stringify('[data-team-name="' + f.nativeA + '"] h2') +
+    ')?.textContent?.trim() === "History fixture edited"', 'edited team name visible on the screen');
+  await cdp.screenshot(path.join(f.screenshots, 'edit-after-metadata.png'));
+
+  // 2. Roster: add a teammate (the endpoint of the Add member dialog), see it in the
+  // logical definition and in every project copy.
+  const added = await ipcOutcome('window.electronAPI.teams.addMember(' + JSON.stringify(f.logical) +
+    ', { name: "carol", role: "Reviewer" })');
+  assert(added.ok, 'Adding a member to a stopped per-project team failed: ' + added.error);
+  const logicalMembers = await waitForJson<{ members: { name: string; removedAt?: number }[] }>(
+    path.join(logicalDir, 'members.meta.json'),
+    (file) => activeNames(file).includes('carol'),
+    'carol in the logical roster'
+  );
+  assert(activeNames(logicalMembers).includes('alice'));
+  for (const alias of [f.nativeA, f.nativeB]) {
+    await waitForJson<{ members: { name: string; removedAt?: number }[] }>(
+      aliasFile(alias, 'members.meta.json'),
+      (file) => activeNames(file).includes('carol') && activeNames(file).includes('alice'),
+      'carol projected into ' + alias
+    );
+  }
+
+  // 3. Roster through the dialog: it lists the saved definition, the trash button removes carol.
+  await openEditDialog(f);
+  await clickSelector('[role=dialog] button[aria-label="Remove carol"]', 'remove carol in the dialog');
+  await clickDialogSave();
+  await waitFor('!document.querySelector("#edit-team-name")', 'Edit team dialog closed after roster save');
+  await waitForJson<{ members: { name: string; removedAt?: number }[] }>(
+    path.join(logicalDir, 'members.meta.json'),
+    (file) => !activeNames(file).includes('carol') && activeNames(file).includes('alice'),
+    'carol removed from the logical roster'
+  );
+  for (const alias of [f.nativeA, f.nativeB]) {
+    await waitForJson<{ members: { name: string; removedAt?: number }[] }>(
+      aliasFile(alias, 'members.meta.json'),
+      (file) => !activeNames(file).includes('carol') && activeNames(file).includes('alice'),
+      'carol removal projected into ' + alias
+    );
+  }
+  await cdp.screenshot(path.join(f.screenshots, 'edit-after-roster.png'));
+
+  // 4. History is never touched by editing.
+  assert.equal(await history(), historyBefore, 'Editing the team mutated project tasks or inboxes');
+  assert.equal(await readFile(f.indexPath, 'utf8'), indexBefore,
+    'Editing the team mutated the durable context mapping');
+
+  // 5. A project copy is a projection: refused, nothing written.
+  const direct = await ipcOutcome('window.electronAPI.teams.updateConfig(' + JSON.stringify(f.nativeA) +
+    ', { description: "direct edit" })');
+  assert(!direct.ok && /project copy/i.test(direct.error ?? ''),
+    'Direct edit of a project copy must be refused: ' + JSON.stringify(direct));
+  assert.notEqual((await readJsonFile<Record<string, unknown>>(aliasFile(f.nativeA, 'config.json'))).description,
+    'direct edit');
+
+  // 6. Gate: a project that is not stopped/reconciled blocks every edit; nothing is written.
+  const blockedContext = {
+    id: randomUUID(), projectKey: f.projectC, projectPath: f.projectC,
+    executionTeamName: f.nativeA.replace(/-a$/, '-c'), state: 'reserved',
+  };
+  const index = JSON.parse(indexBefore) as { contexts: unknown[] };
+  await writeFile(f.indexPath, JSON.stringify({ ...index, contexts: [...index.contexts, blockedContext] }, null, 2));
+  try {
+    const blocked = await ipcOutcome('window.electronAPI.teams.updateConfig(' + JSON.stringify(f.logical) +
+      ', { description: "must not apply" })');
+    assert(!blocked.ok && /prepared|running|launching/i.test(blocked.error ?? ''),
+      'Editing while a project is not stopped must be refused: ' + JSON.stringify(blocked));
+    const blockedMember = await ipcOutcome('window.electronAPI.teams.addMember(' + JSON.stringify(f.logical) +
+      ', { name: "dave" })');
+    assert(!blockedMember.ok, 'Adding a member while a project is not stopped must be refused');
+    assert.equal((await readJsonFile<Record<string, unknown>>(path.join(logicalDir, 'team.meta.json'))).description,
+      'Edited through the real dialog');
+    assert(!activeNames(await readJsonFile(path.join(logicalDir, 'members.meta.json'))).includes('dave'));
+  } finally {
+    await writeFile(f.indexPath, indexBefore);
+  }
+}
+
 async function run() {
   const f = await fixture();
   let success = false;
@@ -436,6 +636,7 @@ async function run() {
       'Read-only project navigation mutated durable context mapping');
     await verifyUi(f);
     await verifyAliasRedirect(f);
+    await verifyDefinitionEdit(f);
     // Even in CI, never launch an actual provider or substitute test credentials.
     const audit = (await readFile(f.audit, 'utf8')).trim().split('\n').filter(Boolean)
       .map((line) => JSON.parse(line) as string[]);
@@ -454,7 +655,7 @@ async function run() {
       'Unexpected native model/provider lifecycle call: ' + JSON.stringify(commandHeads));
     success = true;
     console.log(JSON.stringify({
-      ok: true, scope: 'real Electron / typed preload / main / native task + inbox / A-B-A / renderer reload',
+      ok: true, scope: 'real Electron / typed preload / main / native task + inbox / A-B-A / renderer reload / edit the per-project team definition',
       team: f.logical, sandbox: f.root, screenshotDir: f.screenshots,
       providerExecution: false,
     }, null, 2));
