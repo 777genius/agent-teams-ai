@@ -1,10 +1,16 @@
 import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process';
+import { existsSync } from 'node:fs';
 
 export class McpStdIoClient {
   private readonly child: ChildProcessWithoutNullStreams;
   private stdoutBuffer = '';
+  private stderrBuffer = '';
+  private spawnError: Error | null = null;
+  private childClosed = false;
+  private readonly serverPath: string;
 
   constructor(serverPath: string, cwd: string, args: string[] = [], env?: NodeJS.ProcessEnv) {
+    this.serverPath = serverPath;
     this.child = spawn(process.execPath, [serverPath, ...args], {
       cwd,
       ...(env ? { env: { ...process.env, ...env } } : {}),
@@ -15,6 +21,21 @@ export class McpStdIoClient {
     this.child.stdout.on('data', (chunk: string) => {
       this.stdoutBuffer += chunk;
     });
+    this.child.stderr.setEncoding('utf8');
+    this.child.stderr.on('data', (chunk: string) => {
+      this.stderrBuffer = (this.stderrBuffer + chunk).slice(-4000);
+    });
+    this.child.on('error', (error) => {
+      this.spawnError = error;
+    });
+    // 'close' fires after the process exited AND its stdio streams drained, so
+    // nothing the server printed can still be in flight when it is set.
+    this.child.on('close', () => {
+      this.childClosed = true;
+    });
+    // A dead child makes stdin writes fail asynchronously; the request loop
+    // reports the real reason, so swallow the EPIPE here.
+    this.child.stdin.on('error', () => undefined);
   }
 
   async initialize() {
@@ -85,10 +106,34 @@ export class McpStdIoClient {
         }
       }
 
+      // Only give up on a dead child once everything it printed is consumed.
+      if (this.stdoutBuffer.indexOf('\n') === -1 && this.childIsGone()) {
+        throw new Error(this.describeDeadChild(expectedId));
+      }
+
       await new Promise((resolve) => setTimeout(resolve, 20));
     }
 
     throw new Error(`Timed out waiting for MCP response ${expectedId}`);
+  }
+
+  private childIsGone(): boolean {
+    return this.spawnError !== null || this.childClosed;
+  }
+
+  /** A server that never started must fail the test at once, with the reason. */
+  private describeDeadChild(expectedId: number): string {
+    const how = this.spawnError
+      ? `could not be started: ${this.spawnError.message}`
+      : `exited before answering (code ${this.child.exitCode}, signal ${this.child.signalCode})`;
+    const hint = existsSync(this.serverPath)
+      ? ''
+      : `\nThe entry file does not exist: ${this.serverPath}. Build it first with: pnpm --filter agent-teams-mcp build`;
+    const stderr = this.stderrBuffer.trim();
+    return (
+      `MCP server ${how} while waiting for response ${expectedId}.${hint}` +
+      (stderr ? `\nstderr:\n${stderr}` : '')
+    );
   }
 }
 

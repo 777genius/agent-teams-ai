@@ -339,6 +339,11 @@ describe('packaged Agent Teams MCP launch integration', () => {
       JSON.stringify({ name: 'agent-teams-mcp-e2e', private: true }),
       'utf8'
     );
+    // A symlink or hard link shares its mode with the real Node binary, so a
+    // chmod through it would change the permissions of the developer's Node (and
+    // fails with EPERM when Node is owned by another user, e.g. a system install).
+    // Only a private copy needs to be made executable.
+    let electronBinaryIsPrivateCopy = false;
     try {
       await symlink(nodeBinary, electronBinary, 'file');
     } catch {
@@ -346,9 +351,10 @@ describe('packaged Agent Teams MCP launch integration', () => {
         await link(nodeBinary, electronBinary);
       } catch {
         await copyFile(nodeBinary, electronBinary);
+        electronBinaryIsPrivateCopy = true;
       }
     }
-    if (process.platform !== 'win32') {
+    if (process.platform !== 'win32' && electronBinaryIsPrivateCopy) {
       await chmod(electronBinary, 0o755);
     }
 
