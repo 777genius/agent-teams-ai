@@ -1352,7 +1352,7 @@ function emulatedObserverFixture(t: TestContext, mode: string,
       buildId: 'TEST-build', nodeSha256: executable.sha256, hostEntrySha256: executable.sha256 },
     runtime: { members: [member], providerTemplates: [member] }, management: [{ provider: 'codex', protocolRevision: '0.162.0',
       profileId: 'TEST-management', configRevision: 'TEST-1', accountBinding: 'TEST-account', cwd: root,
-      executable, environment: peers[1]!.environment, timeoutMs: 1000 }] });
+      executable, environment: peers[1]!.environment, timeoutMs: mode.startsWith('startup-') ? 15000 : 1000 }] });
   const profilePath = join(root, 'profile.json'), descriptorPath = join(root, 'descriptor.json');
   fs.writeFileSync(profilePath, profile); fs.writeFileSync(descriptorPath, '{}');
   const fixture = { root, node: '/TEST/node', hostEntry: '/TEST/host.js', profilePath, descriptorPath,
@@ -1363,13 +1363,21 @@ function emulatedObserverFixture(t: TestContext, mode: string,
   const launch = { event: 'launch', provider: 'codex', role: 'management', pid: 4200, parentPid: 4101 };
   const journal = join(root, 'effects.ndjson'), row = JSON.stringify(launch) + '\n';
   const journalText = emptyPhase === undefined
-    ? mode === 'later-row' || mode === 'missing' ? '' : mode === 'duplicate' ? row + row : row
+    ? ['later-row', 'missing', 'startup-row'].includes(mode) ? '' : mode === 'duplicate' ? row + row
+      : mode === 'startup-two-peers' ? row + JSON.stringify({ ...launch, pid: 4201 }) + '\n' : row
     : mode === 'healthy-empty' ? '' : mode === 'retained-failure'
       ? JSON.stringify({ ...launch, event: 'failure' }) + '\n' : mode === 'malformed-json'
         ? '{"event":\n' : JSON.stringify({ ...launch, provider: mode === 'wrong-provider-claude' ? 'claude' : 'opencode' }) + '\n';
   fs.writeFileSync(journal, journalText);
   let now = 0, censusReads = 0, journalReads = 0, signalCalls = 0;
+  const censusTimeouts: number[] = [];
   t.mock.method(performance, 'now', () => now);
+  const realpath = fsp.realpath;
+  t.mock.method(fsp, 'realpath', async (...args: Parameters<typeof realpath>) => {
+    const value = await realpath(...args);
+    if (args[0] === executable.path && mode === 'startup-late-fixture') now = 10000;
+    return value;
+  });
   const readFile = fsp.readFile;
   t.mock.method(fsp, 'readFile', async (...args: Parameters<typeof readFile>) => {
     const value = await readFile(...args);
@@ -1377,6 +1385,10 @@ function emulatedObserverFixture(t: TestContext, mode: string,
       journalReads++;
       if (mode === 'later-row' && journalReads === 1) fs.writeFileSync(journal, row);
       if (mode === 'late' || mode === 'missing' && journalReads === 2) now = 3000;
+      if (mode === 'startup-row' && journalReads === 1) { now = 4000; fs.writeFileSync(journal, row); }
+      if (mode === 'startup-late-read') now = 10000;
+      if (mode === 'startup-near-cutoff') now = 9900;
+      if (mode === 'startup-two-peers' && journalReads >= 2) now = journalReads === 2 ? 6000 : 10000;
     }
     return value;
   });
@@ -1396,6 +1408,8 @@ function emulatedObserverFixture(t: TestContext, mode: string,
     assert.equal(file, '/bin/ps');
     if (args.includes('pid=,ppid=,pgid=,lstart=,command=')) {
       censusReads++; assert.ok(options?.timeout && options.timeout <= 3000);
+      censusTimeouts.push(options.timeout);
+      if (mode === 'startup-late-census' || mode === 'startup-late-recheck' && censusReads === 2) now = 10000;
       assert.equal(options.env?.LC_ALL, process.platform === 'linux' ? 'C.UTF-8' : 'en_US.UTF-8');
       const host = '4100 4000 4100 Sun Nov 15 00:00:00 2026 /TEST/electron\n' +
         (emptyPhase === 'before-first-team-read' ? '' : '4101 4100 4100 Sun Nov 15 00:00:00 2026 /TEST/node /TEST/host.js\n');
@@ -1403,7 +1417,8 @@ function emulatedObserverFixture(t: TestContext, mode: string,
       const birth = censusReads > 1 && mode === 'reuse' ? '00:00:01' : '00:00:00';
       const parent = censusReads > 1 && mode === 'reparent' ? 4999 : 4101;
       const argv = censusReads > 1 && mode === 'argv' ? originalCommand + ' --other' : originalCommand;
-      return host + `4200 ${parent} 4200 Sun Nov 15 ${birth} 2026 ${argv}\n`;
+      return host + `4200 ${parent} 4200 Sun Nov 15 ${birth} 2026 ${argv}\n` +
+        (mode === 'startup-two-peers' ? `4201 4101 4201 Sun Nov 15 00:00:00 2026 ${originalCommand}\n` : '');
     }
     if (args[0] === '-ax') return '4100 4000 4100\n' +
       (emptyPhase === 'before-first-team-read' ? '' : '4101 4100 4100\n') +
@@ -1415,10 +1430,64 @@ function emulatedObserverFixture(t: TestContext, mode: string,
   t.mock.method(process, 'kill', () => { signalCalls++; return assert.fail('observation never signals or adopts a PID'); });
   syncBuiltinESMExports();
   t.after(() => { t.mock.restoreAll(); syncBuiltinESMExports(); });
-  return { fixture, journal, journalText, observe: () => observeDesktopEmulatedRuntimeChildren(4100,
-    fixture as unknown as Parameters<typeof observeDesktopEmulatedRuntimeChildren>[1], emptyPhase ?? 'after-team-read'),
+  return { fixture, journal, journalText, observe: (startupDeadline?: number) => observeDesktopEmulatedRuntimeChildren(4100,
+    fixture as unknown as Parameters<typeof observeDesktopEmulatedRuntimeChildren>[1], emptyPhase ?? 'after-team-read', startupDeadline),
+    censusTimeouts: () => censusTimeouts,
     reads: () => ({ censusReads, journalReads, signalCalls }) };
 }
+
+test('original peer observation shares captured startup while its original launch row is still pending', async t => {
+  const f = emulatedObserverFixture(t, 'startup-row');
+  await f.observe(10000);
+  assert.deepEqual(f.fixture.emulatedRuntime.observedPeerPids, [4200]);
+  assert.deepEqual(f.reads(), { censusReads: 2, journalReads: 2, signalCalls: 0 });
+  assert.deepEqual(f.censusTimeouts(), [3000, 3000], 'startup scope does not extend any census command');
+});
+
+test('original peer observation keeps the default three-second scope outside captured startup', async t => {
+  const f = emulatedObserverFixture(t, 'startup-row');
+  await assert.rejects(f.observe(), /Original peer .*deadline/);
+  assert.deepEqual(f.fixture.emulatedRuntime.observedPeerPids, []);
+});
+
+for (const deadline of [0, -1, NaN, Infinity])
+test(`original peer observation refuses expired or nonfinite startup cutoff ${deadline} before census`, async t => {
+  const f = emulatedObserverFixture(t, 'startup-expired');
+  await assert.rejects(f.observe(deadline));
+  assert.deepEqual(f.reads(), { censusReads: 0, journalReads: 0, signalCalls: 0 });
+  assert.deepEqual(f.fixture.emulatedRuntime.observedPeerPids, []);
+});
+
+for (const mode of ['startup-late-fixture', 'startup-late-read', 'startup-late-census', 'startup-late-recheck'])
+test(`original peer observation refuses ${mode} at the captured cutoff`, async t => {
+  const f = emulatedObserverFixture(t, mode);
+  await assert.rejects(f.observe(10000), /Original peer .*deadline/);
+  assert.deepEqual(f.fixture.emulatedRuntime.observedPeerPids, []);
+  assert.equal(f.reads().signalCalls, 0);
+  if (mode === 'startup-late-fixture') assert.equal(f.reads().censusReads, 0);
+});
+
+test('original peer observation caps census time by the remaining captured startup interval', async t => {
+  const f = emulatedObserverFixture(t, 'startup-near-cutoff');
+  await f.observe(10000);
+  assert.deepEqual(f.censusTimeouts(), [3000, 100]);
+  assert.deepEqual(f.fixture.emulatedRuntime.observedPeerPids, [4200]);
+});
+
+test('original peer observation never renews captured startup for a second original peer', async t => {
+  const f = emulatedObserverFixture(t, 'startup-two-peers');
+  await assert.rejects(f.observe(10000), /Original peer .*deadline/);
+  assert.deepEqual(f.fixture.emulatedRuntime.observedPeerPids, [4200], 'late second peer is never admitted');
+  assert.deepEqual(f.reads(), { censusReads: 2, journalReads: 3, signalCalls: 0 });
+});
+
+for (const mode of ['reuse', 'reparent', 'argv', 'duplicate'])
+test(`original peer observation keeps ${mode} refusal under captured startup`, async t => {
+  const f = emulatedObserverFixture(t, mode);
+  await assert.rejects(f.observe(10000));
+  assert.deepEqual(f.fixture.emulatedRuntime.observedPeerPids, []);
+  assert.equal(f.reads().signalCalls, 0);
+});
 
 for (const mode of ['later-row', 'exit'])
 test(`original peer observation accepts ${mode} only with its retained launch row`, async t => {

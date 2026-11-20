@@ -5,6 +5,7 @@ import { dirname, join } from 'node:path';
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import { TeamPermanentDeletionIdentity } from '../../../packages/legacy-agent-host/src/adapters/lifecycle/TeamPermanentDeletionIdentity';
 import { createLegacyStoppedTeamSource } from '../../../src/features/agent-backend/main/infrastructure/stopped-import/createLegacyStoppedTeamSource';
 import { createDraftTeamConfig } from '../../../src/main/services/team/createDraftTeamConfig';
 import {
@@ -105,7 +106,7 @@ async function savedDraft(
     },
     owners
   );
-  return { teamName, meta, metaPath, roster, source };
+  return { teamName, meta, metaPath, roster, source, owners };
 }
 
 async function stoppedOpenCodeConfig(options: { color?: string; stopped?: boolean } = {}) {
@@ -171,6 +172,67 @@ async function maintainedOpenCodeConfig(mode: 'post-launch' | 'project-path') {
 }
 
 describe('actual saved-draft product format', () => {
+  it.each(['async', 'sync'] as const)(
+    'reads the actual lifecycle %s backup identity writer without adopting its authority', async mode => {
+      const f = await stoppedOpenCodeConfig();
+      const initial = await f.source.fenced(() => f.source.describe());
+      const marker = mode === 'async' ? '10be3c10-d67a-4c20-b0fe-7060100fd632' : 'TEST-existing-lineage';
+      const writer = new TeamPermanentDeletionIdentity(() => false, {
+        teams: join(paths.root, 'claude/teams'), tasks: join(paths.root, 'claude/tasks'),
+        appData: join(paths.root, 'app'), backups: join(paths.root, 'backups'),
+      });
+      const claim = mode === 'async'
+        ? await writer.claimIdentityMarker(f.teamName, marker, true)
+        : writer.claimIdentityMarkerSync(f.teamName, marker);
+      expect(claim).toEqual({ status: 'owned', identityId: marker });
+      const bytes = readFileSync(f.configPath, 'utf8');
+      const config = JSON.parse(bytes) as typeof f.config;
+      expect(config._backupIdentityId).toBe(marker);
+      const records = { config, meta: f.meta, roster: f.roster };
+      expect(classifyLegacySavedTeamNativeRecords(f.teamName, records)).toBe('empty');
+      expect(isLegacySavedTeamProductRecords(f.teamName, records)).toBe(true);
+      const header = await f.source.fenced(() => f.source.describe());
+      expect(header.sourceRevision).not.toBe(initial.sourceRevision);
+      expect(header.savedSettings).not.toHaveProperty('_backupIdentityId');
+      expect(header.members.map(member => member.name)).toEqual(['team-lead', 'worker']);
+      expect(await writer.claimIdentityMarker(f.teamName, 'TEST-other-incarnation', true))
+        .toEqual({ status: 'different', identityId: marker });
+      expect((await f.source.fenced(() => f.source.describe())).sourceRevision).toBe(header.sourceRevision);
+      expect(readFileSync(f.configPath, 'utf8')).toBe(bytes);
+      f.owners.provisioning.readStoppedTeamImportRuntimeFacts = () => ({ active: 1 });
+      await expect(f.source.fenced(() => f.source.describe())).rejects.toMatchObject({ reason: 'owner-active' });
+      expect(readFileSync(f.configPath, 'utf8')).toBe(bytes);
+    }
+  );
+
+  it('refuses malformed or foreign backup identity fields without rewriting saved records', async () => {
+    const f = await stoppedOpenCodeConfig();
+    const variants = [
+      ...['', ' ', ' padded', 'padded ', 'bad\0identity', null, false, 1, {}, [], 'x'.repeat(256 * 1024 + 1)]
+        .map(_backupIdentityId => ({ ...f.config, _backupIdentityId })),
+      { ...f.config, _backupIdentityId: 'TEST-identity', unknownBackupAuthority: true },
+    ];
+    for (const config of variants) {
+      const bytes = JSON.stringify(config); writeFileSync(f.configPath, bytes);
+      expect(isLegacySavedTeamProductRecords(f.teamName, { config, meta: f.meta, roster: f.roster })).toBe(false);
+      await expect(f.source.fenced(() => f.source.describe())).rejects.toMatchObject({ reason: 'source-unreadable' });
+      expect(readFileSync(f.configPath, 'utf8')).toBe(bytes);
+    }
+  });
+
+  it('keeps native release requirements with a valid backup identity marker', async () => {
+    const f = await stoppedOpenCodeConfig();
+    for (const fields of [{ leadSessionId: 'TEST-native-session' }, { sessionHistory: ['TEST-native-session'] }]) {
+      const config = { ...f.config, _backupIdentityId: 'TEST-identity', ...fields };
+      const bytes = JSON.stringify(config); writeFileSync(f.configPath, bytes);
+      const records = { config, meta: f.meta, roster: f.roster };
+      expect(classifyLegacySavedTeamNativeRecords(f.teamName, records)).toBe('retained');
+      expect(isLegacySavedTeamProductRecords(f.teamName, records)).toBe(false);
+      await expect(f.source.fenced(() => f.source.describe())).rejects.toMatchObject({ reason: 'native-custody-unverified' });
+      expect(readFileSync(f.configPath, 'utf8')).toBe(bytes);
+    }
+  });
+
   it.each(['post-launch', 'project-path'] as const)(
     'reads actual maintenance %s writer output at its 500-path bound', async mode => {
       const f = await maintainedOpenCodeConfig(mode);

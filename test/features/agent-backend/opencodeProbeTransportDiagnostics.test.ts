@@ -6,11 +6,11 @@ import { Script } from 'node:vm';
 
 import { it as test } from 'vitest';
 
-import { createOpenCodeProbeCloseDiagnostic } from '../../../packages/legacy-agent-host/src/adapters/providers/createClaudeCloseDiagnostic';
+import { createOpenCodeProbeCloseDiagnostic, createOpenCodeProbeDiagnostic } from '../../../packages/legacy-agent-host/src/adapters/providers/createClaudeCloseDiagnostic';
 import { createPassiveNativeDiagnosticCapture } from '../../../packages/legacy-agent-host/tests/fixtures/native-opencode-team/passive-diagnostics';
 import { decodeClaudeCloseDiagnostics } from '../../../src/features/agent-backend/main/infrastructure/decodeClaudeCloseDiagnostics';
 
-import type { OpenCodeProbeCloseDiagnostic } from '../../../src/features/agent-backend/main/infrastructure/decodeClaudeCloseDiagnostics';
+import type { OpenCodeProbeCloseDiagnostic, OpenCodeProbeDiagnostic } from '../../../src/features/agent-backend/main/infrastructure/decodeClaudeCloseDiagnostics';
 
 const transportCodes = ['cleanup_unknown', 'authority_or_deadline', 'authority_mismatch',
   'transport_failure', 'http_failure', 'invalid_response', 'disposed'] as const;
@@ -145,4 +145,159 @@ test('the original successful and false outcomes remain unchanged', async () => 
     assert.equal(diagnostic.runErrorCode, null); assert.equal(diagnostic.runCauseCode, null);
     assert.equal(diagnostic.calls, 1);
   }
+});
+
+const admissionStart = source.indexOf('  const assertCurrent = (signal?: AbortSignal) => {');
+const admissionEnd = source.indexOf('  const readPassword = () => {', admissionStart);
+const identityStart = source.indexOf('    await withClient(signal, async (client, wire) => {');
+const identityBody = source.indexOf('\n', identityStart);
+const identityEnd = source.indexOf("      observePhase?.('credential');", identityBody);
+assert.ok(admissionStart > 0 && admissionEnd > admissionStart && identityStart > admissionEnd && identityEnd > identityBody);
+// Execute the actual first-identity entry, currentness guards and native lease path.
+// Native measurement and client I/O are finite controlled seams; no provider or socket starts.
+const originalIdentity = new Script(stripTypeScriptTypes(`(() => {
+  ${source.slice(admissionStart, admissionEnd)}
+  return { beforeRequest, async identity(signal) {
+    const client = makeClient(beforeRequest, signal);
+    ${source.slice(identityBody, identityEnd)}
+    observePhase?.('credential');
+    return identity;
+  } };
+})()`));
+type Admission = (signal: AbortSignal) => Promise<() => void>;
+type Identity = { pid: number; version: string };
+const identityPhases = ['identity-start', 'identity-request-start', 'identity-custody-start',
+  'identity-custody-returned', 'identity-request-admitted', 'credential'];
+
+function identitySubject(options: {
+  brokenSink?: boolean; current?: boolean; beforeClientFailure?: Error; earlyClientRejection?: boolean;
+} = {}) {
+  const parent = new AbortController(), abort = new AbortController();
+  const native = Promise.withResolvers<Identity & { startIdentity: string } | undefined>();
+  const response = Promise.withResolvers<Identity>();
+  const clientFailure = Promise.withResolvers<never>(), clientSettled = Promise.withResolvers<void>();
+  const entered = Promise.withResolvers<void>(), fetching = Promise.withResolvers<void>();
+  const requests = new Set<Promise<void>>(), records: OpenCodeProbeDiagnostic[] = [];
+  const ready = { pid: 48101, startIdentity: 'TEST-original-root', version: '2.1.4' };
+  const held = new Error('TEST-original-held');
+  let current = options.current ?? true, now = 100, checks = 0, custody = 0, http = 0;
+  const decode = decodeClaudeCloseDiagnostics(() => {}, undefined, undefined, value => { records.push(value); });
+  const observePhase = createOpenCodeProbeDiagnostic(selected, 'TEST-command', digest, line => {
+    decode(Buffer.from(line));
+    if (options.brokenSink) throw new Error('TEST-private-diagnostic-sink');
+  }, () => now);
+  const subject = originalIdentity.runInNewContext({
+    current: () => { checks++; return current; }, Date: { now: () => now }, deadline: 1000,
+    unavailable: () => { throw held; }, abort, AbortSignal, requests, ready, observePhase,
+    server: { async readNativeCustody(signal: AbortSignal) {
+      custody++; assert.equal(signal.aborted, false); entered.resolve(); return native.promise;
+    } },
+    makeClient: (beforeRequest: Admission, signal: AbortSignal) => ({ async identity() {
+      if (options.beforeClientFailure) throw options.beforeClientFailure;
+      const work = (async () => {
+        const release = await beforeRequest(signal);
+        try { http++; fetching.resolve(); return await response.promise; }
+        finally { release(); }
+      })();
+      void work.then(() => clientSettled.resolve(), () => clientSettled.resolve());
+      return options.earlyClientRejection ? Promise.race([work, clientFailure.promise]) : work;
+    } }),
+  }) as { identity(signal: AbortSignal): Promise<Identity>; beforeRequest: Admission };
+  return { subject, parent, abort, native, response, entered, fetching, requests, records, ready, held,
+    clientFailure, clientSettled,
+    start: () => subject.identity(parent.signal),
+    phases: () => records.map(record => record.phase),
+    counts: () => ({ checks, custody, http, leases: requests.size }),
+    revoke: () => { current = false; }, advance: (at: number) => { now = at; },
+  };
+}
+
+test.each([false, true])('first identity observes the original custody and HTTP boundaries with sink failure=%s', async brokenSink => {
+  const f = identitySubject({ brokenSink }), run = f.start();
+  await f.entered.promise;
+  assert.deepEqual(f.phases(), identityPhases.slice(0, 3));
+  assert.deepEqual(f.counts(), { checks: 1, custody: 1, http: 0, leases: 1 });
+  f.advance(150); f.native.resolve(f.ready);
+  await f.fetching.promise;
+  assert.deepEqual(f.phases(), identityPhases.slice(0, 5));
+  assert.deepEqual(f.counts(), { checks: 2, custody: 1, http: 1, leases: 1 });
+  f.advance(175); f.response.resolve(f.ready);
+  assert.equal(await run, f.ready);
+  assert.deepEqual(f.phases(), identityPhases);
+  assert.deepEqual(f.counts(), { checks: 2, custody: 1, http: 1, leases: 0 });
+  const laterRelease = await f.subject.beforeRequest(f.parent.signal);
+  assert.deepEqual(f.phases(), identityPhases, 'later credential/attestation requests cannot reuse the first-identity token');
+  assert.deepEqual(f.counts(), { checks: 4, custody: 2, http: 1, leases: 1 });
+  laterRelease(); laterRelease();
+  assert.equal(f.requests.size, 0, 'the original lease remains idempotent');
+  assert.deepEqual(f.records.map(record => record.elapsedMs), [0, 0, 0, 50, 50, 75]);
+  assert.ok(f.records.every(record => Object.keys(record).length === 6 && !Object.hasOwn(record, 'ready')));
+});
+
+test.each(['current', 'deadline', 'aborted'] as const)('first identity cannot bypass original %s admission refusal', async kind => {
+  const f = identitySubject({ current: kind !== 'current' });
+  const reason = new Error('TEST-original-abort');
+  if (kind === 'deadline') f.advance(1000);
+  if (kind === 'aborted') f.parent.abort(reason);
+  await assert.rejects(f.start(), error => error === (kind === 'aborted' ? reason : f.held));
+  assert.deepEqual(f.phases(), identityPhases.slice(0, 2));
+  assert.deepEqual(f.counts(), { checks: kind === 'aborted' ? 0 : 1, custody: 0, http: 0, leases: 0 });
+});
+
+test.each(['missing', 'pid', 'startIdentity', 'version', 'current', 'deadline', 'aborted'] as const)(
+  'first identity preserves the original post-custody %s refusal and releases its original lease', async kind => {
+    const f = identitySubject(), run = f.start(), reason = new Error('TEST-original-late-abort');
+    const rejected = assert.rejects(run, error => error === (kind === 'aborted' ? reason : f.held));
+    await f.entered.promise;
+    if (kind === 'current') f.revoke();
+    if (kind === 'deadline') f.advance(1000);
+    if (kind === 'aborted') f.parent.abort(reason);
+    const custody = { ...f.ready,
+      ...(kind === 'pid' ? { pid: f.ready.pid + 1 } : {}),
+      ...(kind === 'startIdentity' ? { startIdentity: 'TEST-different-root' } : {}),
+      ...(kind === 'version' ? { version: '2.1.3' } : {}),
+    };
+    f.native.resolve(kind === 'missing' ? undefined : custody);
+    await rejected;
+    assert.deepEqual(f.phases(), identityPhases.slice(0, 4));
+    assert.deepEqual(f.counts(), { checks: kind === 'aborted' ? 1 : 2, custody: 1, http: 0, leases: 0 });
+  }
+);
+
+test('first identity retains an original thrown custody error without reporting a returned or admitted lease', async () => {
+  const f = identitySubject({ brokenSink: true }), run = f.start();
+  const failure = new Error('TEST-original-custody-failure');
+  const rejected = assert.rejects(run, error => error === failure);
+  await f.entered.promise; f.native.reject(failure);
+  await rejected;
+  assert.deepEqual(f.phases(), identityPhases.slice(0, 3));
+  assert.deepEqual(f.counts(), { checks: 1, custody: 1, http: 0, leases: 0 });
+});
+
+test('late native return after identity rejection observes only the original continuation and releases its lease', async () => {
+  const f = identitySubject({ earlyClientRejection: true }), run = f.start();
+  const failure = new Error('TEST-original-transport-failure');
+  const rejected = assert.rejects(run, error => error === failure);
+  await f.entered.promise;
+  f.parent.abort(failure); f.clientFailure.reject(failure);
+  await rejected;
+  assert.deepEqual(f.phases(), identityPhases.slice(0, 3));
+  assert.deepEqual(f.counts(), { checks: 1, custody: 1, http: 0, leases: 1 });
+  f.advance(250); f.native.resolve(f.ready);
+  await f.clientSettled.promise;
+  assert.deepEqual(f.phases(), identityPhases.slice(0, 4));
+  assert.deepEqual(f.counts(), { checks: 1, custody: 1, http: 0, leases: 0 });
+  await assert.rejects(run, error => error === failure);
+});
+
+test('identity failure before beforeRequest clears observation scope for later calls', async () => {
+  const failure = new Error('TEST-original-client-failure'), f = identitySubject({ beforeClientFailure: failure });
+  await assert.rejects(f.start(), error => error === failure);
+  assert.deepEqual(f.phases(), ['identity-start']);
+  assert.deepEqual(f.counts(), { checks: 0, custody: 0, http: 0, leases: 0 });
+  f.native.resolve(f.ready);
+  const release = await f.subject.beforeRequest(f.parent.signal);
+  release();
+  assert.deepEqual(f.phases(), ['identity-start']);
+  assert.deepEqual(f.counts(), { checks: 2, custody: 1, http: 0, leases: 0 });
 });

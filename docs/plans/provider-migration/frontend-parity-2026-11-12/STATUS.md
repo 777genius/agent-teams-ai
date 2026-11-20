@@ -2,7 +2,156 @@
 
 Обновлено: **20 ноября 2026**. Единственный текущий рабочий план.
 
-## Текущий срез после `a57a706`
+## Текущий план: проверенный срез поверх original `661c320`
+
+Опубликованный source:
+[`661c320b4c09709542f6f231a47ab1814be41dfb`](https://github.com/777genius/agent-teams-ai/commit/661c320b4c09709542f6f231a47ab1814be41dfb).
+Обратный Git fetch подтвердил parent a57, tree b5882b48 и все14 файлов.
+Все шесть original runs завершились; terminal snapshot **20 ноября, 23:04 по Киеву
+(21:04 UTC)**. Переименование FAIL в PASS по локальному тесту не допускается.
+
+| Original gate на661 | Фактический результат | Следующая работа |
+| --- | --- | --- |
+| [Process](https://github.com/777genius/agent-teams-ai/actions/runs/44794256080) | Все5 платформ PASS; run SUCCESS | Завершено для661; Darwin x64 и оба Windows source A/B artifacts проверены |
+| [Native V2](https://github.com/777genius/agent-teams-ai/actions/runs/44794256587) | 8 PASS /1 FAIL; Windows x64 не дождался terminal первого input | Проверенная TEST policy120s из captured runtime; новый original lifecycle обязателен |
+| [Host / frontend](https://github.com/777genius/agent-teams-ai/actions/runs/44794255722) | 25/29 primary PASS; Darwin Resume, Darwin Review, Linux retained-original и Linux V2 management FAIL; aggregate FAIL | Четыре отдельных first-refusal audit и source slices ниже |
+| [Source CI / retained](https://github.com/777genius/agent-teams-ai/actions/runs/44794256111) | Plan и Fast feedback PASS, включая workspace types/guards; retained coexistence FAIL; qualification gate FAIL,11 nonselected SKIP | Actual writer `_backupIdentityId` compatibility исправлена локально; нужен original V1→V2 reopen |
+| [Packaged](https://github.com/777genius/agent-teams-ai/actions/runs/44794256429) | Classifier и4/5 платформ PASS; Darwin x64 FAIL; aggregate FAIL | Native packaged lifecycle уже PASS; первый app peer census получил преждевременный3s cutoff |
+| [Teams](https://github.com/777genius/agent-teams-ai/actions/runs/44794256330) | Все3 платформы и run SUCCESS | Завершено для661 |
+| Review / delivery | Frozen slices прошли независимое техническое ревью; receiving1186 всё ещё не содержит downstream fixes | После разрешённой current-source qualification выполнить #1192→#1186→#982 с учётом уже описанной real-provider execution boundary |
+
+Original CI observer завершил наблюдение; ни rerun, ни cancel, ни dispatch ради
+очереди не делались. Root владеет общими workflow/pins/STATUS/Git. Все семь
+срезов ниже зафиксированы после независимого ревью и входят в один commit.
+Следующая квалификация относится к этому новому source; docs-only push для
+перезапуска очереди не делается.
+
+### Проверенные slices следующего batch
+
+| Срез | Проверка и границы | Владелец / состояние |
+| --- | --- | --- |
+| Retained backup identity | Actual async/sync TeamPermanentDeletionIdentity writer: RED2 FAIL/24 PASS→GREEN26/26; scoped canonical TS7/lint и independent review PASS. Только top-level непустой trimmed NUL-free bounded marker; native identities/owner facts/custody/source bytes сохранены | root; frozen |
+| Windows V2 input observer | Original90s TEST window расходился с captured runtime120s. Один monotonic post-ACK window, smaller ceiling сохранён, progress/grants не продлевают cutoff; late terminal/grant отвергаются. RED3/3 expected FAIL→GREEN11/11; TS7/lint/R1/R2 PASS. Production/Stop/RPC/overall limits не меняются; performance fix не заявляется | windows_v2_fix; frozen |
+| Linux management census | Первый executable ENOENT неизвестного same-birth PID сохраняется как обязательство final cleanup, никогда не native/probe witness. Qualified-child и остальные ошибки сохранены. Дополнительно≤32 final birth reads на вызов, original observation order прежний. RED6 FAIL/7 PASS→GREEN13/13; canonical Host scripts TS7/lint/R1/R2 PASS | ci_watch_661; frozen |
+| Packaged startup peer | Только первый observer разделяет исходный connectCapturedDesktopApp startup cutoff. Остальные callers/post-Stop3s прежние; census min(3s,remaining), late результат отвергается. Внутренние CDP prerequisite ps/lsof bounds прежние, hard cancellation не заявляется. RED8 FAIL/27 PASS→GREEN35/35; TS7/lint/R1/R2 PASS | identity_r2; frozen |
+| First identity diagnostics | Пять bounded меток в первом SDK identity раздельно показывают request/custody/admission. Actual source RED16 FAIL/26 PASS→GREEN43/43; scoped TS7/lint/R1/R2 PASS. Нет новых authority/FS/network reads; есть5 diagnostic stderr writes/clock samples. Production purpose-bound90s сохранён | frozen; диагностика, не runtime fix |
+| Retained-original native Stop | Launch/bootstrap/reply прошли, Main убил exact original child, native release не подтверждён. Actual public Stop воспроизвёл unprepared empty WorkSync replica при marker present: RED60 PASS/2 FAIL→GREEN62/62; scoped strict TS7/lint/R1/R2 PASS. Допускается только прежний strictly empty format без token/journal/incarnation; exact marker digest и custody сохранены | ci_watch_661; frozen |
+| Retained-original provider reads | Account допускается после hydration/project readiness только для выбранного Codex lead/teammate; toolbar пассивный до явного Refresh. R2 нашёл два вложенных обхода: actual FastMode и model-provider hook воспроизведены RED3/3 и закрыты общей границей mount. Полный LaunchTeamDialog+Actions157/157 PASS; strict scoped TS7/lint/R1/R2 PASS; project repair доступен, nonretained/schedule сохранены | windows_v2_fix; frozen |
+
+Оба новых finite tests подключаются к существующим исходным CI lists. Старые FAIL
+сохраняются; локальные counterexamples не объявляются точной телеметрией original
+run, если нужного состояния нет в артефакте.
+
+Общие проверки окончательного среза: Host package build, source-size guard,
+Team Provisioning architecture guard, fast lint всех24 изменённых code/test
+files и `git diff --check` PASS. Fast lint имеет0 errors и4 прежних warnings
+LaunchTeamDialog; новые предупреждения не добавлены. Полные workspace types
+должны пройти на новом original CI; локально проверены canonical scoped TS7
+и соответствующие package/script roots.
+
+При финальной проверке UI обнаружен ambient wrapper pnpm11.25 вместо закреплённого
+11.22. Исходные logs сохранены как supplemental; единственный replacement
+прогон157/157 и lint выполнен через cached corepack pnpm11.22/Node24.21.0.
+TS7.0.2 запускался напрямую корректным Node. Root общий lint/guards также
+использовали pinned pnpm11.22, без install и изменения lockfile.
+
+Полный index source pins, независимых review receipts, исходных CI artifacts
+и RED/GREEN logs: [continuation-661](evidence/continuation-661-20261120.json).
+Архив [continuation-661 evidence](evidence/continuation-661-20261120.tar.gz)
+проверяется побайтно после сборки; он не объявляет новый source E2E-qualified.
+
+Ближайшие шаги:
+
+1. Опубликовать проверенный commit поверх661 с compare-and-swap branch lease
+   и подтвердить его tree/parent/files обратным Git fetch.
+2. Один observer отслеживает только новые original runs. Разобрать first refusal
+   по исходным artifacts, особенно Darwin identity и retained Stop; исправления
+   проходят отдельные regressions/review перед следующей публикацией.
+3. После current-source qualification доставить #1192→#1186→#982 и provider#8
+   в согласованных границах. Ready1192/обновление Ready1186 пока пересекают
+   ранее установленную real-provider execution boundary; этот вопрос решается
+   после завершения всей разрешённой работы, без ослабления CI policy.
+
+### Разбор original661
+
+**Process.** Darwin x64 original136489554103 PASS целиком:196 contracts PASS/2
+platform skips, protocol63/Main transport141/POSIX29 PASS; original descendant
+absent, neighbor preserved. Windows x64 original136489553673 и ARM64 также PASS:
+все три finite source A/B providers,42/42 закрытых Jobs и original HANDLE absence.
+OpenCode readiness x64 A/B15.482/15.541s; ARM64 A/B20.046/20.052s в опубликованной
+TEST policy60s. Это finite peers с настоящим native broker; vendor CLI/Desktop/
+release этим результатом не квалифицированы. Provider archive и source pins
+обоих artifacts совпали с661. Новый source не наследует этот PASS автоматически.
+
+**Darwin Resume** — artifact14660973838, job136489553286. Сохранены все1933
+source pins. Прежний Launch opener пройден; TEST model выбран;256/256 сохранённых
+modules finished200 до выбора, pending/failed0, runtime exception не наблюдён.
+Кольцо переполнялось: вытесненные ранние события неизвестны.101 DOM reads прошли,
+preparation102 завершилась после исходного cutoff19:27:59.002UTC. Graph32.672s,
+endpoint→ready12.672s; native-ready19:27:44.553UTC, до cutoff14.449s. Credential/
+attestation/session-create и model inputs отсутствуют. Late transport_failure
+после shutdown не является установленной первопричиной. Physical group/Host
+absent, но journal held/resourceHeld:true; Launch и cold Resume не достигнуты.
+90s — production whole-operation/validity budget для startup/MCP/prompt/tools/
+terminal/cleanup без renewal; fixture120s/RPC180s его не заменяют.
+
+**Darwin Review** — artifact14662669340, job136489553448. Graph≈29.5s,
+endpoint→native-ready≈9.8s, затем identity credential через17.882s. Attestation
+появилась за≈329ms до исходного90s cutoff; model inputs0, Launch/Review work не
+достигнуты. Точная подоперация timeout не доказана. First-identity diagnostics
+добавлены в исходные awaits; общие validity и полные graph/currentness guards
+не ослаблены.
+
+Read-only source audit первого identity подтвердил9 model-current checks до
+HTTP и отдельные manifest/native/executable brackets. Full embedded graph
+на этом шаге повторно не обходится. Доказанного безопасного сокращения этих
+наблюдений нет; статическая цепочка не является runtime timing trace.
+`identity-request-admitted` стоит до password/currentness/HTTP, поэтому весь
+интервал admitted→credential нельзя приписывать сети.
+
+**Windows V2** — artifact14661673334, job136489555992. Runtime open33.258s,
+native/MCP/context ready40.458s, original input consumed, permission resolved,
+owned/attached/nativeReady true.428reads/8model requests/0model failures; между
+model4 (native PowerShell exit7) и model5 прошло75.172s. Это не измеренная длительность
+самого PowerShell; CPU/namespace samples не имеют достаточной interval correlation.
+Terminal не наблюдён в прежние90s; cleanup true, Host exit0, Windows custody PASS;
+second input и cold Resume не достигнуты. Pinned driver подтверждает120s poll
+после queue/handoff и отдельные operation deadlines. Новый TEST window не
+объявляется единым production deadline или ускорением runtime.
+
+**Retained coexistence** — artifact14662449912, job136517169362. Старый V1 runtime
+создал history, исполнил сообщение/Stop; текущий app прочитал историю. Reopen
+отвергнут coordinator-admission/source-unreadable/product-records/not-dispatched.
+Post-cleanup shape (не failure snapshot) содержит единственный неизвестный top-level
+key длины17, SHA d9562544…; публичный source identifier `_backupIdentityId` точно
+совпадает. Actual async/sync writer воспроизводят прежний reader refusal. Marker —
+backup lineage, а не native session; исправлены только его product-format правила.
+
+**Linux management** — artifact14666630055, job136489553503. Reject-key и replacement
+connect-key прошли, два model inputs; перед global-default click passive census
+получил ENOENT `/proc/9906/exe`, повторный birth ещё существовал. PID ранее не был
+qualified; его состояние не записано и не называется zombie. Global/project
+Default не dispatch. Final group/Host absent/nativeRemaining[] не превращают FAIL
+в PASS. Новый debt сохраняет неизвестный original PID/birth до final absence.
+
+**Packaged Darwin x64** — artifact14666276200, job136512060079. Native bundled
+lifecycle PASS220.831s/cleanup true. Первый app-relaunch peer observer после binding
+не увидел launch row в3s; late cleanup сохранил management launch→started→initialized,
+без input/failure. Peer absent/app exit0/group empty; Host до отказа не captured.
+Точная задержка launch row не измерена.3s был TEST census coherence budget, тогда
+как async metadata startup разрешён15s; первый observer теперь использует остаток
+уже начавшегося application startup, без нового anchor.
+
+**Retained original UI** — artifact14664437771, job136489553213. Явный original
+runtime выбран при включённом Host. Private readiness, один Launch, Main publication,
+finite bootstrap и видимый ответ прошли. Один Stop убил exact child PID7578/birth
+proc:32098, но release publication не подтверждена. После прежнего cleanup peer
+absent/app exit0/group empty; Host absence неизвестна. Отдельно sentinel отказал
+Codex app-server из eager account read; настоящий vendor процесс не запускался.
+Raw WorkSync/census на failure instant в ZIP нет. Старую session как причину не
+утверждаем: finite peer обновляет leadSessionId до Main post-launch writer.
+
+### Источник исправлений: original `a57a706`
 
 `a57a7062166e26050dbcc1aee69fd5cc387c2487` опубликован поверх `5278bfeb`;
 обратный Git fetch подтвердил parent, tree и все девять blobs. В первой попытке
@@ -41,10 +190,10 @@ Production Windows commands, native custody и E2E waits не меняются.
 
 Полный промежуточный файл прошёл18/18; отключение настоящего deadline guard
 через loader даёт2 FAIL. R1 усилил сравнение всего receipt; окончательный case
-прошёл1/1, final canonical Host test TS7 и lint PASS, R2 без замечаний. Новый original
-Darwin PASS ещё требуется. Evidence и source hashes собраны в
-[continuation-a57 index](evidence/continuation-a57-20261120.json); до новой original
-квалификации этот gate остаётся FAIL.
+прошёл1/1, final canonical Host test TS7 и lint PASS, R2 без замечаний. Evidence и
+source hashes собраны в
+[continuation-a57 index](evidence/continuation-a57-20261120.json). Новый original
+Darwin x64 на `661c320` прошёл; исходный FAIL на a57 сохранён в истории.
 
 **Windows x64/ARM64:** actual Codex A/B, standalone и cold retention теперь PASS
 на обеих архитектурах; Claude A/B, standalone и retained history также PASS,
@@ -72,7 +221,8 @@ functional acceptance policy, не измеренное ускорение и н
 15s результата. Actual source RED1 PASS/9 FAIL → GREEN10/10; прежние observer
 cases3/3, lint и общий size guard PASS; scenario ровно800 строк. Final canonical
 Host scripts и Host test TS7 PASS, root R1 и независимый R2 без замечаний.
-Original qualification нового профиля ещё требуется.
+Original qualification нового профиля на Windows x64 и Windows ARM64 `661c320`
+прошла; оба original artifacts прошли независимую проверку.
 
 **Retained V1 → Host V2:** current app с legacy owner и настоящим старым fork
 runtime создал команду, выполнил сообщение и Stop; после включения Host descriptor
@@ -99,8 +249,7 @@ original CI запускает plain Node. Parameter property заменён exp
 final plain Node24.21:12/12 новых cases и5/5 прежних cleanup precedence PASS.
 Canonical Host scripts TS7 и lint PASS; независимое R2 без замечаний.
 
-Дальнейшая работа: закончить общее review и упаковку evidence, опубликовать
-проверенные source/evidence одним batch, получить original квалификацию нового SHA и затем пройти
+Дальнейшая работа: получить original квалификацию опубликованного 661c320 и затем пройти
 уже согласованную feature delivery/runtime-permission границу. E2E completion,
 formal approval, merge и release пока не заявляются.
 

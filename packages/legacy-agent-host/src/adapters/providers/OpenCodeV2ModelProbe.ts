@@ -165,7 +165,12 @@ export function createOpenCodeV2ModelProbe(
     signal?.throwIfAborted();
     if (!current() || Date.now() >= deadline) unavailable();
   };
+  let identityRequestPending = false;
   async function beforeRequest(signal: AbortSignal): Promise<() => void> {
+    // The first identity keeps its observer even if native custody settles after abort.
+    const observeIdentity = identityRequestPending ? observePhase : undefined;
+    identityRequestPending = false;
+    observeIdentity?.('identity-request-start');
     assertCurrent(signal);
     // Reserve before the asynchronous native measurement. Shutdown fences new
     // admissions and drains these leases before aborting the Session transport.
@@ -175,7 +180,9 @@ export function createOpenCodeV2ModelProbe(
       if (requests.delete(settled.promise)) settled.resolve();
     };
     try {
+      observeIdentity?.('identity-custody-start');
       const custody = await server?.readNativeCustody(AbortSignal.any([signal, abort.signal]));
+      observeIdentity?.('identity-custody-returned');
       assertCurrent(signal);
       if (
         !custody ||
@@ -185,6 +192,7 @@ export function createOpenCodeV2ModelProbe(
         custody.version !== '2.1.4'
       )
         unavailable();
+      observeIdentity?.('identity-request-admitted');
       return release;
     } catch (error) {
       release();
@@ -273,7 +281,12 @@ export function createOpenCodeV2ModelProbe(
     observePhase?.('native-ready');
     assertCurrent(signal);
     await withClient(signal, async (client, wire) => {
-      const identity = await client.identity();
+      let identity: Awaited<ReturnType<typeof client.identity>>;
+      try {
+        identityRequestPending = true;
+        observePhase?.('identity-start');
+        identity = await client.identity();
+      } finally { identityRequestPending = false; }
       observePhase?.('credential');
       if (identity.pid !== ready!.pid || identity.version !== '2.1.4') return unavailable();
       nativeCredential = await credential.prepare(wire, client, undefined,

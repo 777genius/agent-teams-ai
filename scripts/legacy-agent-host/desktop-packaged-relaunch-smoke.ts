@@ -5,6 +5,7 @@ import { createWriteStream } from 'node:fs';
 import { lstat, readFile, readdir, realpath, writeFile } from 'node:fs/promises';
 import { createRequire } from 'node:module';
 import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
+import { performance } from 'node:perf_hooks';
 import { pathToFileURL } from 'node:url';
 import { assertNativeV1Source } from '../../packages/legacy-agent-host/tests/opencode-v1-version-source.ts';
 import { fileDigest } from './desktop-backend-fixture.ts';
@@ -114,8 +115,26 @@ async function main() {
     evidence.app = { pid: group, processGroup: group, identity: appIdentity, invocation };
     const connected = await connectCapturedDesktopApp({ app, group, spawnError: () => spawnError, packed, cdpLibrary, evidence });
     cdp = connected.cdp;
-    await verifyCapturedDesktopBinding({ cdp, group, mode, fixture, evidence, repo, packed });
-    await observeDesktopEmulatedRuntimeChildren(group, fixture, 'after-team-read');
+    const startupDeadline = connected.startupStarted + connected.startupBudgetMs;
+    const startupObservation = {
+      clock: 'monotonic performance.now milliseconds',
+      scope: 'Original app/CDP startup, captured binding verification, then first TEST peer census and launch journal',
+      startedAtMs: connected.startupStarted, budgetMs: connected.startupBudgetMs, deadlineMs: startupDeadline,
+      phase: 'binding', steps: [] as { phase: string; elapsedMs: number; remainingMs: number }[],
+    };
+    evidence.packagedStartupObservation = startupObservation;
+    const remainingStartupMs = (phase: 'binding' | 'peer-observation' | 'complete') => {
+      const now = performance.now(), remainingMs = startupDeadline - now;
+      startupObservation.phase = phase;
+      startupObservation.steps.push({ phase, elapsedMs: Math.round(now - connected.startupStarted), remainingMs: Math.floor(remainingMs) });
+      assert.ok(remainingMs > 0, 'Original packaged startup observation deadline');
+      return remainingMs;
+    };
+    await verifyCapturedDesktopBinding({ cdp, group, mode, fixture, evidence, repo, packed,
+      remainingStartupMs: remainingStartupMs('binding') });
+    remainingStartupMs('peer-observation');
+    await observeDesktopEmulatedRuntimeChildren(group, fixture, 'after-team-read', startupDeadline);
+    remainingStartupMs('complete');
     await runDesktopEmulatedLifecycleUi(cdp, { fixture, evidence, assertOwnedRenderer, originalStopOnly: true,
       restartSameProfile: async () => { throw new Error('Automatic app.relaunch cannot become a harness restart'); } });
     assert.equal(record(evidence.emulatedLaunchStopUiProof).status, 'PASS');

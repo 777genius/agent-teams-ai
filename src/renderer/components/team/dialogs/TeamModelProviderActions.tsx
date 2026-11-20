@@ -32,7 +32,7 @@ export const TeamModelProviderActions = ({
   const retained = useRetainedLegacyLaunch();
   const original = useRetainedLegacyRuntimeStatus(projectPath);
   const installers = useRetainedLegacyInstallers();
-  const account = useRetainedLegacyAccount(!!retained);
+  const account = useRetainedLegacyAccount(!!retained, { loadOnMount: false });
   const { t: commonT } = useAppTranslation('common');
   const { t: dashboardT } = useAppTranslation('dashboard');
   const openSettingsTab = useStore((s) => s.openSettingsTab);

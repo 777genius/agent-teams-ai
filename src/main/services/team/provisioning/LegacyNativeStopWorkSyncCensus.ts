@@ -328,13 +328,18 @@ export function readLegacyNativeWorkSyncCensus(
     directoryCuts.set(relative, { stat, names });
     return names;
   };
-  const exactFiles = (relative: string, expected: string[]): void => {
+  const exactFiles = (relative: string, expected: string[], alternative?: string[]): string[] => {
     const names = directory(relative);
-    if (JSON.stringify(names) !== JSON.stringify([...expected].sort())) refuse();
+    if (
+      JSON.stringify(names) !== JSON.stringify([...expected].sort()) &&
+      (!alternative || JSON.stringify(names) !== JSON.stringify([...alternative].sort()))
+    )
+      refuse();
     for (const name of names) {
       const stat = lstatSync(join(teamDir, relative, name));
       if (!stat.isFile() || stat.isSymbolicLink() || stat.nlink !== 1) refuse();
     }
+    return names;
   };
   const walkMembers = (relative: string, depth = 0): void => {
     if (depth > 48) refuse();
@@ -357,13 +362,15 @@ export function readLegacyNativeWorkSyncCensus(
   const roots = directory('');
   if (roots.some((name) => name.toLowerCase().startsWith(ROOT) && name !== ROOT)) refuse();
   const rootFound = roots.includes(ROOT);
-  if (rootFound)
-    exactFiles(
-      ROOT,
-      marker.present
-        ? ['report-token-secret.json', 'sqlite-fallback-replica.json']
-        : ['sqlite-fallback-replica.json']
-    );
+  const rootFiles = rootFound
+    ? exactFiles(
+        ROOT,
+        marker.present
+          ? ['report-token-secret.json', 'sqlite-fallback-replica.json']
+          : ['sqlite-fallback-replica.json'],
+        marker.present ? ['sqlite-fallback-replica.json'] : undefined
+      )
+    : [];
   if (roots.includes('members')) walkMembers('members');
   const close = (): void => {
     for (const [relative, cut] of directoryCuts) {
@@ -390,7 +397,9 @@ export function readLegacyNativeWorkSyncCensus(
     fileCuts.set(relative, after);
     return new TextDecoder('utf-8', { fatal: true }).decode(bytes);
   };
-  if (rootFound && !journalFound && !marker.present) {
+  if (rootFound && !journalFound && rootFiles.length === 1) {
+    // An existing archive marker does not give an empty SQLite read a token owner.
+    // The caller still binds that marker's exact presence/value in its native digest.
     emptyReplica(parse(read(`${ROOT}/sqlite-fallback-replica.json`)));
     close();
     // Presence and directory ownership remain in the cut; an empty snapshot

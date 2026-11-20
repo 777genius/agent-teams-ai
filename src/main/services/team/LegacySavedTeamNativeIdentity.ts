@@ -230,6 +230,8 @@ export function isLegacySavedTeamProductRecords(
       return false;
     if (records.config === null) return true;
     return Object.entries(row(records.config)).every(([key, item]) => {
+      if (key === '_backupIdentityId')
+        return text(item) && item.length > 0 && item === item.trim();
       if (['name', 'description', 'color', 'language', 'projectPath', 'leadAgentId'].includes(key))
         return text(item);
       if (key === 'createdAt') return timestamp(item);

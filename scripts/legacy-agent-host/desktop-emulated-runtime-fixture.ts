@@ -238,16 +238,27 @@ export async function verifyDesktopEmulatedRuntimeFixture(fixture: Awaited<Retur
 
 /** Only direct children of the original Host, with immutable TEST entrypoints and original launch rows. */
 export async function observeDesktopEmulatedRuntimeChildren(group: number,
-  fixture: Awaited<ReturnType<typeof prepareDesktopEmulatedRuntimeFixture>>, phase: 'before-first-team-read' | 'after-team-read') {
-  if (isDesktopEmulatedCollaborationFixture(fixture)) return observeDesktopEmulatedCollaborationChildren(group, fixture, phase);
-  assertOwnedCdpListener(group); await verifyDesktopEmulatedRuntimeFixture(fixture);
-  const deadline = performance.now() + 3000;
+  fixture: Awaited<ReturnType<typeof prepareDesktopEmulatedRuntimeFixture>>, phase: 'before-first-team-read' | 'after-team-read',
+  startupDeadline?: number) {
+  if (isDesktopEmulatedCollaborationFixture(fixture)) {
+    assert.equal(startupDeadline, undefined, 'Captured packaged startup has one original provider');
+    return observeDesktopEmulatedCollaborationChildren(group, fixture, phase);
+  }
+  const assertStartupCurrent = () => {
+    if (startupDeadline !== undefined) assert.ok(Number.isFinite(startupDeadline) && performance.now() < startupDeadline,
+      'Original peer observation deadline');
+  };
+  assertStartupCurrent(); assertOwnedCdpListener(group); assertStartupCurrent();
+  await verifyDesktopEmulatedRuntimeFixture(fixture); assertStartupCurrent();
+  // The first packaged census may race permitted asynchronous metadata startup.
+  // Its caller supplies the already-running app startup cutoff, never a fresh budget.
+  const deadline = startupDeadline ?? performance.now() + 3000;
   // One observation budget, including the original census; these facts never authorize signals.
   const census = () => {
     const remaining = Math.floor(deadline - performance.now());
     assert.ok(remaining > 0, 'Original peer observation deadline');
     const output = execFileSync('/bin/ps', ['-axww', '-o', 'pid=,ppid=,pgid=,lstart=,command='], {
-      encoding: 'utf8', timeout: remaining, maxBuffer: 2 * 1024 * 1024,
+      encoding: 'utf8', timeout: Math.min(3000, remaining), maxBuffer: 2 * 1024 * 1024,
       env: { PATH: '/usr/bin:/bin', LC_ALL: process.platform === 'linux' ? 'C.UTF-8' : 'en_US.UTF-8' },
     });
     const lines = output.trim().split('\n'); assert.ok(lines.length <= 20_000);
@@ -265,7 +276,9 @@ export async function observeDesktopEmulatedRuntimeChildren(group: number,
   const table = census(), hosts = table.filter(row => row.pgid === group && row.command === `${fixture.node} ${fixture.hostEntry}`);
   if (phase === 'before-first-team-read') assert.ok(hosts.length <= 1); else assert.equal(hosts.length, 1);
   await readDesktopEmulatedRuntimeEffects(fixture);
+  assert.ok(performance.now() < deadline, 'Original peer launch read exceeded its deadline');
   const installed = fixture.emulatedRuntime.installer ? await readDesktopEmulatedCodexInstallation(fixture.emulatedRuntime.installer) : undefined;
+  assert.ok(performance.now() < deadline, 'Original peer observation deadline');
   const prefixes = [fixture.emulatedRuntime.commandPrefix,
     ...(installed ? [`${fixture.node} ${installed.executable.path} `] : [])];
   for (const host of hosts) for (const child of table.filter(row => row.ppid === host.pid)) {

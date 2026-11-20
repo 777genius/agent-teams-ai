@@ -300,30 +300,52 @@ function fixture() {
 describe.skipIf(process.platform === 'win32')(
   'original Main native Stop with owned WorkSync drain',
   () => {
-    it('publishes the original native release after draining the real clean-empty replica writer', async () => {
-      const f = fixture();
-      const writer = new InternalStorageJsonReplica(
-        () => join(f.teamDir, '.member-work-sync/sqlite-fallback-replica.json'),
-        isMemberWorkSyncStoreSnapshot
-      );
-      await writer.writeClean(
-        f.teamName,
-        recordsToSnapshot(f.teamName, {
-          statuses: [],
-          reportIntents: [],
-          outboxItems: [],
-          metricEvents: [],
-        })
-      );
-      await f.stop();
-      expect(f.ports.killTeamProcessAndWait).toHaveBeenCalledOnce();
-      expect(f.events).toContain('drain-unlocked');
-      expect(f.readProof()?.target.runId).toBe(f.run.runId);
-      expect(await readTeamLaunchFreshness(f.teamName)).toMatchObject({
-        kind: 'stop',
-        stoppedRunId: f.run.runId,
-      });
-    });
+    it.each([undefined, 'TEST-existing-archive-incarnation'])(
+      'publishes the original native release after the real clean-empty writer with backup marker %s',
+      async (marker) => {
+        const f = fixture();
+        const config = JSON.parse(readFileSync(join(f.teamDir, 'config.json'), 'utf8')) as Record<
+          string,
+          unknown
+        >;
+        if (marker !== undefined) {
+          config._backupIdentityId = marker;
+          f.write('config.json', config);
+        }
+        const writer = new InternalStorageJsonReplica(
+          () => join(f.teamDir, '.member-work-sync/sqlite-fallback-replica.json'),
+          isMemberWorkSyncStoreSnapshot
+        );
+        await writer.writeClean(
+          f.teamName,
+          recordsToSnapshot(f.teamName, {
+            statuses: [],
+            reportIntents: [],
+            outboxItems: [],
+            metricEvents: [],
+          })
+        );
+        await f.stop();
+        expect(f.ports.killTeamProcessAndWait).toHaveBeenCalledOnce();
+        expect(f.events).toContain('drain-unlocked');
+        expect(f.readProof()?.target.runId).toBe(f.run.runId);
+        expect(await readTeamLaunchFreshness(f.teamName)).toMatchObject({
+          kind: 'stop',
+          stoppedRunId: f.run.runId,
+        });
+        const proof = f.readProof();
+        f.write('config.json', { ...config, _backupIdentityId: 'TEST-replacement-incarnation' });
+        expect(f.readProof()).toBeNull();
+        if (marker !== undefined) {
+          const absent = { ...config };
+          delete absent._backupIdentityId;
+          f.write('config.json', absent);
+          expect(f.readProof()).toBeNull();
+        }
+        f.write('config.json', config);
+        expect(f.readProof()).toEqual(proof);
+      }
+    );
 
     it('waits for physical writer and audit tails outside the lock, then publishes once and fences a queued original writer', async () => {
       const f = fixture(),

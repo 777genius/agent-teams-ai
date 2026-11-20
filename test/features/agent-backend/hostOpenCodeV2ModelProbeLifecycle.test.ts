@@ -509,6 +509,7 @@ test.each(['getter', 'proxy', 'held'] as const)('original probe exception surviv
 
 const probePrefix = 'legacy-agent-host: opencode-probe ';
 const phases = ['run', 'graph-start', 'graph-done', 'native-launch', 'native-launch-returned', 'native-endpoint-resolved', 'native-ready',
+  'identity-start', 'identity-request-start', 'identity-custody-start', 'identity-custody-returned', 'identity-request-admitted',
   'credential', 'attestation', 'session-create', 'driver-open', 'first-submit'];
 
 test('phase sink failure preserves the original probe HTTP, single run and physical cleanup', async () => {

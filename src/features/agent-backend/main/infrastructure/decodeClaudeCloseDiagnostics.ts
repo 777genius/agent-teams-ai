@@ -56,6 +56,7 @@ export interface OpenCodeProbeCloseDiagnostic {
 const probePhases = new Set(['run', 'graph-start', 'graph-done', 'native-launch', 'native-ready',
   'native-launch-returned', 'native-endpoint-resolved', 'startup-timer-aborted',
   'startup-parent-aborted', 'startup-lifecycle-aborted', 'startup-failed',
+  'identity-start', 'identity-request-start', 'identity-custody-start', 'identity-custody-returned', 'identity-request-admitted',
   'credential', 'attestation', 'session-create', 'driver-open', 'first-submit']);
 export interface OpenCodeProbeDiagnostic {
   readonly profileHash: string;
@@ -232,7 +233,7 @@ export function decodeClaudeCloseDiagnostics(
             !hash(value.profileHash) || !hash(value.commandHash) || !hash(value.probeDigest) ||
             typeof value.phase !== 'string' || !probePhases.has(value.phase) ||
             typeof value.sequence !== 'number' || !Number.isSafeInteger(value.sequence) ||
-            value.sequence < 1 || value.sequence > 12 ||
+            value.sequence < 1 || value.sequence > 17 ||
             typeof value.elapsedMs !== 'number' || !Number.isSafeInteger(value.elapsedMs) ||
             value.elapsedMs < 0 || value.elapsedMs > 3_600_000) return;
         const diagnostic: OpenCodeProbeDiagnostic = Object.freeze({

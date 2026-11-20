@@ -194,7 +194,12 @@ async function emptyReplicaFixture() {
     replicaPath,
     writer,
     envelope,
-    read: () => readLegacyNativeWorkSyncCensus(f.teamDir, f.target, { present: false }),
+    read: (markerPresent = false) =>
+      readLegacyNativeWorkSyncCensus(
+        f.teamDir,
+        f.target,
+        markerPresent ? f.marker : { present: false }
+      ),
   };
 }
 
@@ -225,7 +230,7 @@ describe('strict native Stop WorkSync product census', () => {
     expect(proof).not.toHaveProperty('incarnation');
     expect(proof).not.toHaveProperty('secretHash');
     expect(JSON.stringify(proof)).not.toContain('updatedAt');
-    expect(() => readLegacyNativeWorkSyncCensus(f.teamDir, f.target, f.marker)).toThrow();
+    expect(f.read(true)).toEqual(proof);
   });
 
   it.each([
@@ -242,6 +247,7 @@ describe('strict native Stop WorkSync product census', () => {
     (f.envelope.snapshot as Row)[key as string] = value;
     f.write(`${rootPath}/sqlite-fallback-replica.json`, f.envelope);
     expect(f.read).toThrow();
+    expect(() => f.read(true)).toThrow();
   });
 
   it.each([
@@ -256,6 +262,7 @@ describe('strict native Stop WorkSync product census', () => {
     f.envelope[key as string] = value;
     f.write(`${rootPath}/sqlite-fallback-replica.json`, f.envelope);
     expect(f.read).toThrow();
+    expect(() => f.read(true)).toThrow();
   });
 
   it('refuses a missing empty-array field and an incomplete native journal or secret', async () => {
@@ -263,6 +270,7 @@ describe('strict native Stop WorkSync product census', () => {
     delete (f.envelope.snapshot as Row).filesToArchive;
     f.write(`${rootPath}/sqlite-fallback-replica.json`, f.envelope);
     expect(f.read).toThrow();
+    expect(() => f.read(true)).toThrow();
     for (const path of [
       `${rootPath}/report-token-secret.json`,
       journalPath,
@@ -272,6 +280,7 @@ describe('strict native Stop WorkSync product census', () => {
       const incomplete = await emptyReplicaFixture();
       incomplete.write(path, {});
       expect(incomplete.read).toThrow();
+      expect(() => incomplete.read(true)).toThrow();
     }
   });
 
@@ -287,9 +296,11 @@ describe('strict native Stop WorkSync product census', () => {
       renameSync(f.replicaPath, external);
       symlinkSync(external, f.replicaPath);
       expect(f.read).toThrow();
+      expect(() => f.read(true)).toThrow();
       rmSync(f.replicaPath);
       linkSync(external, f.replicaPath);
       expect(f.read).toThrow();
+      expect(() => f.read(true)).toThrow();
     }
   );
 

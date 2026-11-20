@@ -12,7 +12,8 @@ const noSubscription = () => () => undefined;
 function useOriginalResource<T>(
   key: string,
   load: (client: RetainedLegacyLaunchClient) => Promise<T>,
-  enabled = true
+  enabled = true,
+  loadOnMount = true
 ) {
   const client = useRetainedLegacyLaunch();
   const resource = client && enabled ? client.resource(key, () => load(client)) : null;
@@ -22,8 +23,8 @@ function useOriginalResource<T>(
     resource?.getSnapshot ?? emptySnapshot
   );
   useEffect(() => {
-    void resource?.ensure();
-  }, [resource]);
+    if (loadOnMount) void resource?.ensure();
+  }, [resource, loadOnMount]);
   const refresh = useCallback(() => resource?.refresh() ?? Promise.resolve(false), [resource]);
   return { ...state, refresh, resource };
 }
@@ -66,12 +67,13 @@ export function useRetainedLegacyRuntimeStatus(
   return { status, ...state };
 }
 
-export function useRetainedLegacyAccount(enabled: boolean) {
+/** Passive subscribers keep explicit refresh available without starting an account process on mount. */
+export function useRetainedLegacyAccount(enabled: boolean, options?: { loadOnMount?: boolean }) {
   const {
     value: snapshot,
     resource: _resource,
     ...state
-  } = useOriginalResource('account', (client) => client.account(), enabled);
+  } = useOriginalResource('account', (client) => client.account(), enabled, options?.loadOnMount);
   return { snapshot, ...state };
 }
 

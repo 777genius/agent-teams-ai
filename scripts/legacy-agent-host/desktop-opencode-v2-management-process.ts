@@ -22,10 +22,12 @@ async function birth(pid: number): Promise<string | undefined> {
 export function observeDesktopV2ManagementProcesses(group: number, fixture: DesktopV2ManagementFixture) {
   const selected = fixture.v2Management;
   const children: { pid: number; ppid: number; pgid: number; birth: string; executableSha256: string; dataRoot: string; role: string }[] = [];
+  const unobservedCandidates: (Pick<(typeof children)[number], 'pid' | 'ppid' | 'pgid' | 'birth'> &
+    { readonly reason: 'unobserved-executable' })[] = [];
   const probes: { step: DesktopV2ManagementStep; pid: number; birth: string; dataRoot: string; absentAfterReceipt: boolean }[] = [];
   let host: { pid: number; birth: string } | undefined;
   return {
-    children, probes,
+    children, probes, unobservedCandidates,
     hostPid: () => host?.pid,
     hostIdentity: () => host ? { ...host } : undefined,
     async observe(step?: DesktopV2ManagementStep) {
@@ -40,14 +42,31 @@ export function observeDesktopV2ManagementProcesses(group: number, fixture: Desk
       for (const child of table.filter(row => row.ppid === pid)) {
         const started = await birth(child.pid);
         if (!started) continue;
+        const candidate = unobservedCandidates.find(value => value.pid === child.pid);
+        if (candidate) assert.equal(started, candidate.birth, 'an unobserved candidate keeps its original birth');
         let executable: string, args: string[], dataRoot: string;
+        let executableObserved = false;
         try {
           executable = await realpath(`/proc/${child.pid}/exe`);
+          executableObserved = true;
           args = (await readFile(`/proc/${child.pid}/cmdline`, 'utf8')).split('\0').filter(Boolean);
           const data = (await readFile(`/proc/${child.pid}/environ`, 'utf8')).split('\0').filter(value => value.startsWith('XDG_DATA_HOME='));
           assert.equal(data.length, 1); dataRoot = data[0]!.slice('XDG_DATA_HOME='.length);
         } catch (error) {
-          if ((error as NodeJS.ErrnoException).code === 'ENOENT' && await birth(child.pid) === undefined) continue;
+          if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+            const after = await birth(child.pid);
+            if (after === undefined) continue;
+            if (!executableObserved && after === started &&
+                !children.some(value => value.pid === child.pid && value.birth === started)) {
+              // An unknown executable is neither a native witness nor evidence of exit.
+              // Retain its original identity for the separate final absence check.
+              if (!candidate) {
+                assert.ok(unobservedCandidates.length < 32, 'finite original unobserved management candidates');
+                unobservedCandidates.push(Object.freeze({ ...child, birth: started, reason: 'unobserved-executable' }));
+              }
+              continue;
+            }
+          }
           throw error;
         }
         if (await birth(child.pid) !== started) continue;
@@ -80,8 +99,14 @@ export function observeDesktopV2ManagementProcesses(group: number, fixture: Desk
       }
     },
     async remaining() {
-      const result = [];
+      const result: ((typeof children)[number] | (typeof unobservedCandidates)[number])[] = [];
       for (const child of children) if (await birth(child.pid) === child.birth) result.push(child);
+      // The candidate may have been reparented. Only this exact original birth matters,
+      // and an already qualified same-birth child is covered by the existing read above.
+      for (const candidate of unobservedCandidates) if (
+        !children.some(child => child.pid === candidate.pid && child.birth === candidate.birth) &&
+        await birth(candidate.pid) === candidate.birth
+      ) result.push(candidate);
       return result;
     },
   };
