@@ -381,11 +381,26 @@ describe('project-scoped desktop team creation boundary (sandbox disk + fake nat
       const projectB = path.join(path.dirname(f.projectPath), 'project-b');
       await fs.mkdir(projectB);
       // A launch in B changes the team's settings.
-      await withPreparedContextLaunch(
+      const preparedB = await prepareTeamContextLaunch(
         { teamName: 'builders', cwd: projectB, providerId: 'codex', model: 'gpt-y', effort: 'high' },
-        f.ports,
-        vi.fn(async () => ({ success: true as const, data: { runId: 'rb' } })) as never
+        f.ports
       );
+      await fs.writeFile(
+        path.join(getTeamsBasePath(), preparedB.request.teamName, 'config.json'),
+        JSON.stringify({ name: preparedB.request.teamName })
+      );
+      preparedB.mapProgress?.(
+        {
+          runId: 'rb', teamName: preparedB.request.teamName, state: 'ready',
+          message: 'ready', startedAt: '', updatedAt: '',
+        },
+        () => undefined
+      );
+      await vi.waitFor(async () => {
+        expect((await registry.find('builders', projectB))?.state).toBe('ready');
+      });
+      await preparedB.recordLaunch?.({ runId: 'rb' });
+      expect(await readMeta('builders')).toMatchObject({ providerId: 'codex', model: 'gpt-y' });
       // The copy of A still has the settings of its own last launch.
       expect(await readMeta(a.executionTeamName)).not.toMatchObject({ model: 'gpt-y' });
       const launched: TeamLaunchRequest[] = [];
