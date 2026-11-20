@@ -339,11 +339,10 @@ describe('packaged Agent Teams MCP launch integration', () => {
       JSON.stringify({ name: 'agent-teams-mcp-e2e', private: true }),
       'utf8'
     );
-    // A symlink or hard link shares its mode with the real Node binary, so a
-    // chmod through it would change the permissions of the developer's Node (and
-    // fails with EPERM when Node is owned by another user, e.g. a system install).
-    // Only a private copy needs to be made executable.
-    let electronBinaryIsPrivateCopy = false;
+    // The fake Electron binary is executable without any chmod: a symlink or a hard
+    // link shares the mode of the real Node binary and copyFile keeps it. Never chmod
+    // it here: through a link that changes the permissions of the developer's Node
+    // and fails with EPERM when Node belongs to another user (a system install).
     try {
       await symlink(nodeBinary, electronBinary, 'file');
     } catch {
@@ -351,11 +350,7 @@ describe('packaged Agent Teams MCP launch integration', () => {
         await link(nodeBinary, electronBinary);
       } catch {
         await copyFile(nodeBinary, electronBinary);
-        electronBinaryIsPrivateCopy = true;
       }
-    }
-    if (process.platform !== 'win32' && electronBinaryIsPrivateCopy) {
-      await chmod(electronBinary, 0o755);
     }
 
     try {
@@ -401,9 +396,10 @@ describe('packaged Agent Teams MCP launch integration', () => {
       server = new AgentTeamsMcpHttpServer({
         statePath: path.join(tempDir!, 'packaged-entry-fallback-mcp-http-state.json'),
         disableOrphanCleanup: true,
-        // The app's stable port is derived from the user's profile, so it is the same on
-        // every run and is held by a running app or by any parallel run. Port choice is
-        // not under test here, so never depend on that fixed port being free.
+        // Without an allocator the server scans the app's stable port range (43100 plus a
+        // hash of the profile path, 20 ports) and warns when a port in it is taken by any
+        // other listener, which test/setup.ts turns into a failure. Port choice is not
+        // under test here, so ask for a free loopback port instead.
         allocatePort: () => allocateLoopbackPort(),
         resolveLaunchSpec: () =>
           Promise.resolve({
@@ -503,6 +499,8 @@ describePosix('AgentTeamsMcpHttpServer integration', () => {
     scriptPath: string;
     controlFile: string;
     allocatePort?: () => Promise<number>;
+    /** Only the stable-port behaviour tests: go through the real stable port scan. */
+    useStablePort?: boolean;
     statePath?: string;
   }): AgentTeamsMcpHttpServer {
     const server = new AgentTeamsMcpHttpServer({
@@ -513,7 +511,9 @@ describePosix('AgentTeamsMcpHttpServer integration', () => {
           command: process.execPath,
           args: [input.scriptPath],
         }),
-      allocatePort: input.allocatePort,
+      allocatePort: input.useStablePort
+        ? undefined
+        : (input.allocatePort ?? (() => allocateLoopbackPort())),
     });
     servers.push(server);
 
@@ -615,7 +615,7 @@ describePosix('AgentTeamsMcpHttpServer integration', () => {
     }
 
     process.env.CLAUDE_TEAM_OPENCODE_MCP_HTTP_PORT = String(stablePort);
-    const server = createControlledServer({ scriptPath, controlFile });
+    const server = createControlledServer({ scriptPath, controlFile, useStablePort: true });
 
     try {
       const handle = await server.ensureStarted();

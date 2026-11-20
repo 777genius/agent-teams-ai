@@ -19,8 +19,11 @@ describe('McpStdIoClient child lifecycle', () => {
     await rm(dir, { recursive: true, force: true });
   });
 
-  const start = (serverPath: string): McpStdIoClient => {
-    const client = new McpStdIoClient(serverPath, dir);
+  const start = (
+    serverPath: string,
+    options?: { responseTimeoutMs?: number }
+  ): McpStdIoClient => {
+    const client = new McpStdIoClient(serverPath, dir, [], undefined, options);
     clients.push(client);
     return client;
   };
@@ -40,6 +43,34 @@ describe('McpStdIoClient child lifecycle', () => {
     expect(error?.message).toContain('pnpm --filter agent-teams-mcp build');
     // The old behaviour was a silent 15 s poll that raced the test timeout.
     expect(Date.now() - startedAt).toBeLessThan(10_000);
+  });
+
+  it('checks a relative entry path against the child working directory', async () => {
+    const client = start(join('dist', 'index.js'));
+
+    await expect(client.initialize()).rejects.toThrow(
+      `The entry file does not exist: ${join(dir, 'dist', 'index.js')}`
+    );
+  });
+
+  it('fails with the reason when the server stays alive but never answers', async () => {
+    const script = join(dir, 'silent.cjs');
+    await writeFile(
+      script,
+      "process.stderr.write('still warming up\\n'); setInterval(() => {}, 1000);\n"
+    );
+    const client = start(script, { responseTimeoutMs: 300 });
+    const startedAt = Date.now();
+
+    const error = await client.initialize().then(
+      () => null,
+      (reason: unknown) => reason as Error
+    );
+
+    expect(error?.message).toMatch(/Timed out after 300 ms waiting for MCP response 1/);
+    expect(error?.message).toContain('still running');
+    expect(error?.message).toContain('still warming up');
+    expect(Date.now() - startedAt).toBeLessThan(5_000);
   });
 
   it('reports the exit code and stderr of a server that crashes on start', async () => {

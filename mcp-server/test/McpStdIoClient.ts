@@ -1,16 +1,39 @@
 import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process';
 import { existsSync } from 'node:fs';
+import { resolve as resolvePath } from 'node:path';
+
+const DEFAULT_RESPONSE_TIMEOUT_MS = 15_000;
+
+export interface McpStdIoClientOptions {
+  /**
+   * How long one request may wait for its answer. Keep it clearly below the
+   * test timeout so a hung server fails the test with the reason below instead
+   * of the runner cutting the test while its body keeps running.
+   */
+  responseTimeoutMs?: number;
+}
 
 export class McpStdIoClient {
   private readonly child: ChildProcessWithoutNullStreams;
   private stdoutBuffer = '';
   private stderrBuffer = '';
   private spawnError: Error | null = null;
+  private stdinError: Error | null = null;
   private childClosed = false;
   private readonly serverPath: string;
+  private readonly cwd: string;
+  private readonly responseTimeoutMs: number;
 
-  constructor(serverPath: string, cwd: string, args: string[] = [], env?: NodeJS.ProcessEnv) {
+  constructor(
+    serverPath: string,
+    cwd: string,
+    args: string[] = [],
+    env?: NodeJS.ProcessEnv,
+    options: McpStdIoClientOptions = {}
+  ) {
     this.serverPath = serverPath;
+    this.cwd = cwd;
+    this.responseTimeoutMs = options.responseTimeoutMs ?? DEFAULT_RESPONSE_TIMEOUT_MS;
     this.child = spawn(process.execPath, [serverPath, ...args], {
       cwd,
       ...(env ? { env: { ...process.env, ...env } } : {}),
@@ -33,9 +56,11 @@ export class McpStdIoClient {
     this.child.on('close', () => {
       this.childClosed = true;
     });
-    // A dead child makes stdin writes fail asynchronously; the request loop
-    // reports the real reason, so swallow the EPIPE here.
-    this.child.stdin.on('error', () => undefined);
+    // A dead child makes stdin writes fail asynchronously (EPIPE). Keep the error
+    // so the failure message can show it, instead of letting it crash the runner.
+    this.child.stdin.on('error', (error) => {
+      this.stdinError = error;
+    });
   }
 
   async initialize() {
@@ -88,7 +113,7 @@ export class McpStdIoClient {
   }
 
   private async readMessage(expectedId: number) {
-    const deadline = Date.now() + 15000;
+    const deadline = Date.now() + this.responseTimeoutMs;
 
     while (Date.now() < deadline) {
       const newlineIndex = this.stdoutBuffer.indexOf('\n');
@@ -114,7 +139,7 @@ export class McpStdIoClient {
       await new Promise((resolve) => setTimeout(resolve, 20));
     }
 
-    throw new Error(`Timed out waiting for MCP response ${expectedId}`);
+    throw new Error(this.describeTimeout(expectedId));
   }
 
   private childIsGone(): boolean {
@@ -126,14 +151,27 @@ export class McpStdIoClient {
     const how = this.spawnError
       ? `could not be started: ${this.spawnError.message}`
       : `exited before answering (code ${this.child.exitCode}, signal ${this.child.signalCode})`;
-    const hint = existsSync(this.serverPath)
+    // The child resolves a relative entry path against its own cwd, so check it there.
+    const entry = resolvePath(this.cwd, this.serverPath);
+    const hint = existsSync(entry)
       ? ''
-      : `\nThe entry file does not exist: ${this.serverPath}. Build it first with: pnpm --filter agent-teams-mcp build`;
+      : `\nThe entry file does not exist: ${entry}. Build it first with: pnpm --filter agent-teams-mcp build`;
+    return `MCP server ${how} while waiting for response ${expectedId}.${hint}${this.diagnostics()}`;
+  }
+
+  /** A server that is alive but silent: say so, with what it printed so far. */
+  private describeTimeout(expectedId: number): string {
+    return (
+      `Timed out after ${this.responseTimeoutMs} ms waiting for MCP response ${expectedId}; ` +
+      `the server process is still running (pid ${this.child.pid ?? 'unknown'}).${this.diagnostics()}`
+    );
+  }
+
+  private diagnostics(): string {
     const stderr = this.stderrBuffer.trim();
     return (
-      `MCP server ${how} while waiting for response ${expectedId}.${hint}` +
+      (this.stdinError ? `\nstdin error: ${this.stdinError.message}` : '') +
       (stderr ? `\nstderr:\n${stderr}` : '')
     );
   }
 }
-
