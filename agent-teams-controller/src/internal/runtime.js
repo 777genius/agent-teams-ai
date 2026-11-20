@@ -541,9 +541,10 @@ async function getTeam(context, flags = {}) {
 
 /**
  * Cross-team routing is decided by the app, one rule for every sender. `null`
- * means the app cannot answer here (no published address, unreachable, timed
- * out, or an app without the route), so the caller keeps its offline behaviour.
- * An answer of the app, a refusal or a server error included, is thrown.
+ * means the app cannot be reached (no published address, network error or
+ * timeout), so the caller keeps its offline behaviour. Any answer of the app is
+ * used or thrown: a refusal, a server error, and also a 404 (an app without the
+ * route must not silently get the old behaviour).
  */
 async function requestCrossTeamRouting(context, pathname) {
   let baseUrls;
@@ -558,9 +559,7 @@ async function requestCrossTeamRouting(context, pathname) {
   } catch (error) {
     const unreachable =
       isRetryableControlError(error) &&
-      (error.retryableKind === 'network' ||
-        error.retryableKind === 'timeout' ||
-        error.statusCode === 404);
+      (error.retryableKind === 'network' || error.retryableKind === 'timeout');
     if (unreachable) return null;
     throw error;
   }

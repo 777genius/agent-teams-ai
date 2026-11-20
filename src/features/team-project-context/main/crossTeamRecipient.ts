@@ -94,7 +94,17 @@ export async function assertCrossTeamSender(
 /**
  * A project copy named exactly: it stays addressable (the `from` of a message a
  * copy sent is its own name, and the reply has to reach that copy), unless it is
- * a copy of the sender's own team or its launch never finished.
+ * a copy of the sender's own team, its launch never finished, or its team is
+ * being deleted or moved to trash.
+ *
+ * Known limit: a copy of another team is reachable from any project, not only
+ * from its own project or from an open conversation with it. Narrowing it needs
+ * conversation evidence that every sender (the controller included) can read.
+ *
+ * Deliberately fail-closed: telling a `ptc-…` name from an ordinary team scans
+ * the contexts indexes, so a damaged index of any per-project team refuses
+ * messages to copies until it is repaired. An unproven owner could be the
+ * sender's own team. Names not shaped like a copy are never scanned.
  */
 async function exactName(
   ports: CrossTeamRecipientPorts,
@@ -133,6 +143,17 @@ async function exactName(
       'PROJECT_LAUNCH_PENDING',
       `Team "${target.logicalTeamName}" is being launched in project ${target.context.projectPath}. ` +
         'Send again when the launch has finished.'
+    );
+  }
+  try {
+    // The same read as a send by the team's name: it refuses a team that is being
+    // deleted or moved to trash.
+    await ports.inspectContext(target.logicalTeamName, target.context.projectPath);
+  } catch (error) {
+    throw new CrossTeamRecipientError(
+      'UNRESOLVED',
+      `Team "${target.logicalTeamName}" cannot receive messages in project ` +
+        `${target.context.projectPath}: ${reasonOf(error)}`
     );
   }
   return { teamName: toTeam };

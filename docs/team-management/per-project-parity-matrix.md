@@ -218,10 +218,31 @@ How it is built:
 - One rule, `resolveCrossTeamRecipient` in `src/features/team-project-context/main/crossTeamRecipient.ts`:
   - `CrossTeamService.send` applies it for the app composer and the lead's `SendMessage` to `team.member`;
   - OpenCode runtime delivery applies it when it canonicalizes a message, before the message is journaled (`TeamProvisioningRuntimeDeliveryIdentity.ts`), so the journal, the destination and its delivery proof all name the copy;
-  - the MCP tools reach it over HTTP. `cross_team_send` (the controller writes the target inbox itself) asks `GET /api/teams/:team/cross-team/recipient?toTeam=…` for every target and gets the physical team or a 409 with the reason; `cross_team_list_targets` asks `GET /api/teams/:team/cross-team/targets`, the list of the app's picker reduced to name, display name, description and online state. Without a reachable app (no published address, network error, timeout, or an app without these routes) the controller keeps its previous behaviour: exact names, and a local scan that still lists copies. A server error of the app is passed on, never turned into the old behaviour.
-- One display mapper, `findProjectCopyOwner` / `formatProjectCopyLabel` in the feature `core/`, over the folded team list: the main list uses it to hide a copy's own team; the feature's `renderer` entrypoint (`useTeamDisplayLabel`, `useProjectCopyOwnerName`) uses it for labels and for the composer.
+  - the MCP tools reach it over HTTP. The controller's `sendCrossTeamMessage` (behind `cross_team_send`; the controller writes the target inbox itself) asks `GET /api/teams/:team/cross-team/recipient?toTeam=…` for every target and gets the physical team or a 409 with the reason; no consumer of the controller can skip that step. `cross_team_list_targets` asks `GET /api/teams/:team/cross-team/targets`, the list of the app's picker reduced to name, display name, description and online state. Only when the app cannot be reached (no published address, network error, timeout) does the controller keep its previous behaviour: exact names, and a local scan that still lists copies. Any answer of the app is used or passed on: a refusal, a server error, a 404 (an app without these routes), or a 200 without a valid team name. The desktop app refuses to start its HTTP server without these routes.
+- One display mapper, `findProjectCopyOwner` / `formatProjectCopyLabel` in the feature `core/`, over the folded team list: the main list uses it to hide a copy's own per-project team; the feature's `renderer` entrypoint (`useTeamDisplayLabel`, `useProjectCopyOwnerName`) uses it for labels and for the composer. Two projects of a team with the same folder name are told apart by their parent folder (`client-one/app`, `client-two/app`).
 
-Still open: agent prompts and the stored `from` keep the copy name (gap 8 for agents; `TeamProvisioningPromptBuilders.ts` is size-capped); when a sender gives no summary, the default summary (`Cross-team message from/to <team>`, written by `CrossTeamService`, OpenCode delivery and the controller) still names the copy and shows up as the preview in the conversation list; the in-app picker lists a per-project team even when it never ran in the current project (sending then explains it), because the picker list is shared by all open teams; `isOnline` of a per-project team in the list means any of its projects runs. Telling whether a `ptc-…` name is a copy scans the teams directory and fails closed, so a damaged contexts index of any per-project team blocks messages to copies until it is repaired. Gap 7 is closed with these limits.
+Changes to existing behaviour (ordinary teams included), on purpose:
+
+- A failure to read a team's mode is a refusal with code `UNRESOLVED` (it was a plain error); the result is the same, the message says which team.
+- A copy named exactly is refused when it is a copy of the sender's own team, its launch never finished, or its team is being deleted or moved to trash. It used to receive.
+- The lead's live sent row names the team that received (the copy for a per-project team); the member part is unchanged.
+- Kept as before after review: a shared team that retained copies from an earlier period is still offered to those copies and still receives from them, and is online only when it runs under its own name.
+
+Where a copy name still reaches a person or an agent (follow-ups):
+
+- agent prompts and the stored `from` (routing identities; gap 8 for agents, `TeamProvisioningPromptBuilders.ts` is size-capped);
+- the default summary `Cross-team message from/to <team>` when a sender gives none, written by `CrossTeamService`, OpenCode delivery and the controller, and shown as the preview in the conversation list;
+- OS notifications for cross-team messages (`src/main/index.ts`, the `from` of the message is the sender label);
+- the node of the other team in the agent graph (`TeamGraphAdapter.ts`, label from the `from` of the message);
+- the in-app badge and "awaiting reply" are mapped; the native tooltip of "awaiting reply" that showed the copy name is removed.
+
+Known limits:
+
+- A copy of another team is reachable by its exact name from any project, not only from its own project or from an open conversation with it. That is what lets a reply reach the copy that wrote. Follow-up: allow an exact copy name only when the projects match or a conversation with that copy is open, which needs conversation evidence every sender (the controller included) can read.
+- Telling whether a `ptc-…` name is a copy scans the teams directory and fails closed on purpose: a damaged contexts index of any per-project team refuses messages to copies until it is repaired, because an unproven owner could be the sender's own team. Other names are never scanned.
+- The in-app picker lists a per-project team even when it never ran in the current project (sending then explains it), because the picker list is shared by all open teams; `isOnline` of a per-project team in the list means any of its projects runs.
+
+Gap 7 is closed with these limits.
 
 ## Appendix: probe of the raw team list
 

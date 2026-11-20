@@ -35,7 +35,7 @@ This closes gaps 2 and 3 of the [parity matrix](./per-project-parity-matrix.md) 
 | `GET /api/teams` and MCP `team_list` | one row with its contexts, copies folded away (same as the in-app list) | copies of a folded team are not listed |
 | Organization map | one candidate; tasks of all contexts, each marked with the copy that owns it | not a candidate |
 | `GET /api/teams/:team/cross-team/targets` (MCP `cross_team_list_targets`) | a per-project team is listed under its own name; the team of a copy that asks is not | copies are not listed |
-| `GET /api/teams/:team/cross-team/recipient?toTeam=` (MCP `cross_team_send`) | the ready copy for the sender's project, or 409 with the reason (`NO_PROJECT_HISTORY`, `PROJECT_LAUNCH_PENDING`, `SENDER_PROJECT_UNKNOWN`, `SENDER_IS_PROJECT_TEAM`, `SAME_TEAM`, `UNRESOLVED`, `TEAM_METADATA_UNREADABLE`) | the exact name; a copy of the sender's own team (`SAME_TEAM`) or one whose launch never finished (`PROJECT_LAUNCH_PENDING`) is refused |
+| `GET /api/teams/:team/cross-team/recipient?toTeam=` (MCP `cross_team_send`) | the ready copy for the sender's project, or 409 with the reason (`NO_PROJECT_HISTORY`, `PROJECT_LAUNCH_PENDING`, `SENDER_PROJECT_UNKNOWN`, `SENDER_IS_PROJECT_TEAM`, `SAME_TEAM`, `UNRESOLVED`, `TEAM_METADATA_UNREADABLE`) | the exact name; a copy of the sender's own team (`SAME_TEAM`), one whose launch never finished (`PROJECT_LAUNCH_PENDING`) or one whose team is being deleted or moved to trash (`UNRESOLVED`) is refused. The controller treats any answer, a 404 included, as the app's; only an unreachable app keeps the old exact-name behaviour |
 
 ## Contract for MCP and HTTP clients
 

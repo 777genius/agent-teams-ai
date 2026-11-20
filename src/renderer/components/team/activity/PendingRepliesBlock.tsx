@@ -367,7 +367,6 @@ export const PendingRepliesBlock = memo(function PendingRepliesBlock({
                     color: colors.text,
                     border: `1px solid ${colors.border}40`,
                   }}
-                  title={entry.teamName}
                 >
                   <TeamDisplayLabel teamName={entry.teamName} />
                 </span>

@@ -2485,18 +2485,25 @@ describe('agent-teams-mcp tools', () => {
   });
 
   it('cross_team_send reports the team that received the message', async () => {
+    // Routing asks the app; none runs here, so the exact name is kept.
+    vi.stubEnv('CLAUDE_TEAM_CONTROL_URL', '');
     const claudeDir = makeClaudeDir();
     for (const teamName of ['sender-team', 'receiver-team']) {
       writeTeamConfig(claudeDir, teamName, { members: [{ name: 'lead', role: 'team-lead' }] });
     }
-    const result = parseJsonToolResult(
-      await getTool('cross_team_send').execute({
-        claudeDir,
-        teamName: 'sender-team',
-        toTeam: 'receiver-team',
-        text: 'Hello receiver',
-      })
-    );
+    let result: unknown;
+    try {
+      result = parseJsonToolResult(
+        await getTool('cross_team_send').execute({
+          claudeDir,
+          teamName: 'sender-team',
+          toTeam: 'receiver-team',
+          text: 'Hello receiver',
+        })
+      );
+    } finally {
+      vi.unstubAllEnvs();
+    }
     expect(result).toMatchObject({ deliveredToInbox: true, toTeam: 'receiver-team' });
     expect(
       JSON.parse(

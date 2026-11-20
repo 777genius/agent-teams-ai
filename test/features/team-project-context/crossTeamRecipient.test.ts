@@ -1,4 +1,4 @@
-import { mkdir, mkdtemp, readFile, realpath, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, realpath, rm, symlink, writeFile } from 'node:fs/promises';
 import * as os from 'node:os';
 import * as path from 'node:path';
 
@@ -51,6 +51,7 @@ async function world() {
 
   /** A copy of a per-project team for one project, `ready` unless asked to stay pending. */
   const copyOf = async (team: string, id: string, ready = true): Promise<string> => {
+    await mkdir(project(id), { recursive: true });
     const reserved = await registry.reserve(team, project(id));
     if (!ready) return reserved.executionTeamName;
     await mkdir(path.join(teamsBasePath, reserved.executionTeamName), { recursive: true });
@@ -78,7 +79,7 @@ async function world() {
     registry
   );
   const indexPath = path.join(teamsBasePath, 'builders', 'project-contexts.json');
-  return { registry, ports, project, copies, copyOf, indexPath, writeMeta };
+  return { root, teamsBasePath, registry, ports, project, copies, copyOf, indexPath, writeMeta };
 }
 
 async function refusal(run: Promise<unknown>): Promise<{ code: string; message: string }> {
@@ -249,5 +250,57 @@ describe('resolveCrossTeamRecipient', () => {
       })
     );
     expect(result.code).toBe('UNRESOLVED');
+    // Its copies named exactly are refused the same way, with the reason.
+    const byCopyName = await refusal(
+      resolveCrossTeamRecipient(w.ports, { fromTeam: 'partner', toTeam: w.copies.b })
+    );
+    expect(byCopyName.code).toBe('UNRESOLVED');
+    expect(byCopyName.message).toContain('moved to trash');
+  });
+
+  it('refuses messages to copies while any contexts index is damaged (deliberate)', async () => {
+    const w = await world();
+    await w.writeMeta(
+      'damaged',
+      JSON.stringify({ version: 1, cwd: '/x', createdAt: 1, projectContextMode: 'per_project' })
+    );
+    await writeFile(path.join(w.teamsBasePath, 'damaged', 'project-contexts.json'), '{not json');
+    // An unproven owner could be the sender's own team, so a copy name is refused...
+    const toCopy = await refusal(
+      resolveCrossTeamRecipient(w.ports, { fromTeam: 'partner', toTeam: w.copies.b })
+    );
+    expect(toCopy.code).toBe('UNRESOLVED');
+    // ...while a name that is not shaped like a copy is never scanned and still works.
+    await expect(
+      resolveCrossTeamRecipient(w.ports, { fromTeam: w.copies.a, toTeam: 'partner' })
+    ).resolves.toEqual({ teamName: 'partner' });
+  });
+
+  it('finds the copy through a symlinked project path and keeps folders of the same name apart', async () => {
+    const w = await world();
+    const link = path.join(w.root, 'link-to-a');
+    await symlink(w.project('a'), link, 'junction');
+    await expect(
+      resolveCrossTeamRecipient(w.ports, {
+        fromTeam: 'partner',
+        toTeam: 'builders',
+        senderProjectPath: link,
+      })
+    ).resolves.toMatchObject({ teamName: w.copies.a });
+
+    const one = await w.copyOf('reviewers', 'one/app');
+    const two = await w.copyOf('reviewers', 'two/app');
+    for (const [id, copy] of [
+      ['one/app', one],
+      ['two/app', two],
+    ] as const) {
+      await expect(
+        resolveCrossTeamRecipient(w.ports, {
+          fromTeam: 'partner',
+          toTeam: 'reviewers',
+          senderProjectPath: w.project(id),
+        })
+      ).resolves.toMatchObject({ teamName: copy });
+    }
   });
 });

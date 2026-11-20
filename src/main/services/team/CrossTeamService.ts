@@ -407,13 +407,17 @@ export class CrossTeamService {
     // Project copies are folded into their per-project team, which is offered
     // under its own name (a message to it is routed to the copy of the sender's
     // project). A per-project team that never ran anywhere stays a draft and is
-    // not offered. A sender that is a copy does not see its own team.
+    // not offered. A sender that is a copy does not see its own per-project team.
+    // A shared team (also one that retained copies) runs and receives under its
+    // own name, as before.
     const visible = await projectTeamSummaries(teams, new TeamMetaStore());
-    const ownTeam = excludeTeam ? findProjectCopyOwner(visible, excludeTeam)?.logicalTeamName : null;
+    const owner = excludeTeam ? findProjectCopyOwner(visible, excludeTeam) : null;
+    const ownTeam = owner?.perProject ? owner.logicalTeamName : null;
+    const isAlive = (name: string): boolean => this.messaging?.isTeamAlive(name) ?? false;
     const isOnline = (team: (typeof visible)[number]): boolean =>
-      [team.teamName, ...(team.projectHistoryContexts ?? []).map((c) => c.executionTeamName)].some(
-        (name) => this.messaging?.isTeamAlive(name) ?? false
-      );
+      isAlive(team.teamName) ||
+      (team.projectContextMode === 'per_project' &&
+        (team.projectHistoryContexts ?? []).some((c) => isAlive(c.executionTeamName)));
     const targets: CrossTeamTarget[] = visible
       .filter((team) => {
         if (excludeTeam && team.teamName === excludeTeam) return false;

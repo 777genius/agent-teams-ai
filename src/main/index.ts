@@ -2973,7 +2973,7 @@ async function startHttpServer(
 
     const config = configManager.getConfig();
     const activeContext = contextRegistry.getActive();
-    if (!teamHttpHandlerApis) {
+    if (!teamHttpHandlerApis || !crossTeamHttpApi) {
       throw new Error('Team HTTP APIs are not initialized');
     }
     const port = await httpServer.start(
@@ -2994,7 +2994,7 @@ async function startHttpServer(
         sshConnectionManager,
         teamDataApi: bindTeamHttpDataApi(teamDataService),
         teamApis: teamHttpHandlerApis,
-        crossTeam: crossTeamHttpApi ?? undefined,
+        crossTeam: crossTeamHttpApi,
       },
       modeSwitchHandler,
       config.httpServer?.port ?? 3456

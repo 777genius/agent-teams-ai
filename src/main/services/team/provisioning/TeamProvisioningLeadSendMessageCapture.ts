@@ -70,7 +70,6 @@ export interface CrossTeamSendResultLike {
   messageId: string;
   /** The physical team that received it (a copy, for a per-project team). */
   toTeam?: string;
-  toMember?: string;
 }
 
 export interface TeamProvisioningLeadSendMessageCaptureLogger {
@@ -322,7 +321,7 @@ function deliverCrossTeamLeadMessage(
         from: request.fromMember,
         to: recipient.startsWith('cross-team:')
           ? recipient
-          : `${result.toTeam ?? request.toTeam}.${result.toMember ?? request.toMember}`,
+          : `${result.toTeam ?? request.toTeam}.${request.toMember}`,
         text: request.text,
         timestamp: request.timestamp,
         read: true,

@@ -2379,16 +2379,61 @@ describe('canonicalizeRuntimeDeliveryCrossTeamIdentities routing', () => {
     });
   });
 
-  it('refuses before anything is journaled when the rule refuses', async () => {
-    await expect(
-      canonicalizeRuntimeDeliveryCrossTeamIdentities(
-        toBuilders,
-        readConfig,
-        () => Promise.resolve([]),
-        () =>
-          Promise.reject(new Error('Team "builders" has no history in project /work/alpha yet.'))
-      )
-    ).rejects.toThrow('has no history in project /work/alpha');
+  describe('through the delivery service and its journal', () => {
+    beforeEach(async () => {
+      tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'opencode-runtime-delivery-route-'));
+      now = new Date('2026-04-21T12:00:00.000Z');
+      journal = createRuntimeDeliveryJournalStore({
+        filePath: path.join(tempDir, 'delivery-journal.json'),
+        clock: () => now,
+      });
+      destination = new FakeDestinationPort('cross_team_outbox');
+      diagnostics = new FakeDiagnosticsSink();
+      emitter = new FakeTeamChangeEmitter();
+      runState = new FakeRunStateReader('run-1');
+    });
+
+    afterEach(async () => {
+      await fs.rm(tempDir, { recursive: true, force: true });
+    });
+
+    const serviceRouting = (route: CrossTeamTargetRoute) =>
+      createService({
+        canonicalize: (message) =>
+          canonicalizeRuntimeDeliveryCrossTeamIdentities(
+            message,
+            readConfig,
+            () => Promise.resolve([]),
+            route
+          ),
+      });
+
+    it('journals, writes and proves the delivery under the copy', async () => {
+      const service = serviceRouting((request) =>
+        Promise.resolve(request.toTeam === 'builders' ? 'ptc-builders-alpha' : request.toTeam)
+      );
+      await expect(service.deliver(toBuilders)).resolves.toMatchObject({
+        ok: true,
+        delivered: true,
+      });
+      await expect(journal.get(journalKey(toBuilders))).resolves.toMatchObject({
+        status: 'committed',
+        destination: { kind: 'cross_team_outbox', toTeamName: 'ptc-builders-alpha' },
+        committedLocation: expect.objectContaining({ toTeamName: 'ptc-builders-alpha' }),
+      });
+      expect(destination.writeCalls).toBe(1);
+    });
+
+    it('refuses before anything is journaled or written when the rule refuses', async () => {
+      const service = serviceRouting(() =>
+        Promise.reject(new Error('Team "builders" has no history in project /work/alpha yet.'))
+      );
+      await expect(service.deliver(toBuilders)).rejects.toThrow(
+        'has no history in project /work/alpha'
+      );
+      await expect(journal.get(journalKey(toBuilders))).resolves.toBeNull();
+      expect(destination.writeCalls).toBe(0);
+    });
   });
 });
 

@@ -117,6 +117,8 @@ describe('CrossTeamService', () => {
   };
 
   beforeEach(() => {
+    // The controller used for cross-path parity asks no app: none runs here.
+    vi.stubEnv('CLAUDE_TEAM_CONTROL_URL', '');
     fs.rmSync(MOCK_TEAMS_BASE_PATH, { recursive: true, force: true });
     configReader = {
       getConfig: vi.fn().mockResolvedValue(makeConfig()),
@@ -154,6 +156,7 @@ describe('CrossTeamService', () => {
 
   afterEach(() => {
     vi.restoreAllMocks();
+    vi.unstubAllEnvs();
     fs.rmSync(MOCK_TEAMS_BASE_PATH, { recursive: true, force: true });
   });
 
@@ -1137,7 +1140,7 @@ describe('CrossTeamService', () => {
           taskRefs,
         } satisfies CrossTeamSendRequest;
 
-        const jsFirst = sourceController.crossTeam.sendCrossTeamMessage(sharedRequest) as {
+        const jsFirst = (await sourceController.crossTeam.sendCrossTeamMessage(sharedRequest)) as {
           messageId: string;
         };
         const tsLeadRetry = await filesystemService.send({
@@ -1168,10 +1171,10 @@ describe('CrossTeamService', () => {
           toMember: 'Captain',
           text: 'TypeScript writes this shared row first',
         });
-        const jsLeadRetry = sourceController.crossTeam.sendCrossTeamMessage({
+        const jsLeadRetry = (await sourceController.crossTeam.sendCrossTeamMessage({
           ...sharedRequest,
           text: 'TypeScript writes this shared row first',
-        }) as { messageId: string; deduplicated?: boolean };
+        })) as { messageId: string; deduplicated?: boolean };
         expect(jsLeadRetry).toMatchObject({
           messageId: tsFirst.messageId,
           deduplicated: true,
@@ -1186,7 +1189,9 @@ describe('CrossTeamService', () => {
           summary: sharedRequest.summary,
         } satisfies CrossTeamSendRequest;
         const reverseFirst = await filesystemService.send(reverseRequest);
-        const reverseRetry = targetController.crossTeam.sendCrossTeamMessage(reverseRequest) as {
+        const reverseRetry = (await targetController.crossTeam.sendCrossTeamMessage(
+          reverseRequest
+        )) as {
           messageId: string;
           deduplicated?: boolean;
         };
@@ -1428,6 +1433,19 @@ describe('CrossTeamService', () => {
       // A copy that asks sees every other team, but not the team it belongs to.
       const fromCopy = await service.listAvailableTargets('ptc-scoped-a');
       expect(fromCopy.map((target) => target.teamName)).toEqual(['legacy-target']);
+    });
+
+    it('keeps a shared team with retained copies as before: offered to them, online by its own name', async () => {
+      dataService.listTeams.mockResolvedValue([
+        { teamName: 'retaining', displayName: 'Retaining', memberCount: 1, members: [],
+          projectContextMode: 'shared', pendingCreate: false,
+          projectHistoryContexts: [{ executionTeamName: 'ptc-retained', projectPath: '/old' }] },
+      ]);
+      provisioning.isTeamAlive.mockImplementation((teamName: string) => teamName === 'ptc-retained');
+      const targets = await service.listAvailableTargets('ptc-retained');
+      expect(targets.map((target) => [target.teamName, target.isOnline])).toEqual([
+        ['retaining', false],
+      ]);
     });
 
     it('uses team summaries instead of verified config reads for target discovery', async () => {

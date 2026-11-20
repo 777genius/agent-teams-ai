@@ -226,7 +226,8 @@ function findRecentDuplicate(outboxList, message, legacyToMember) {
   return null;
 }
 
-function sendCrossTeamMessage(context, flags) {
+/** Writes a message for the physical team `flags.toTeam` (already routed). */
+function deliverCrossTeamMessage(context, flags) {
   const fromTeam = context.teamName;
   const toTeam = typeof flags.toTeam === 'string' ? flags.toTeam.trim() : '';
   const rawFromMember = typeof flags.fromMember === 'string' ? flags.fromMember.trim() : '';
@@ -387,18 +388,33 @@ function sendCrossTeamMessage(context, flags) {
 }
 
 /**
- * The team a message to `flags.toTeam` is written to. The app decides it, with
- * the same rule as its own sends: a team that keeps a separate history per
+ * The physical team a message to `toTeam` is written to. The app decides it,
+ * with the same rule as its own sends: a team that keeps a separate history per
  * project receives through its copy for this team's project, and a refusal is
  * passed on. Without a reachable app the name is kept, as before: the delivery
  * then reports a name without a config of its own as unknown.
  */
-async function resolveCrossTeamRecipient(context, flags) {
-  const toTeam = typeof flags?.toTeam === 'string' ? flags.toTeam.trim() : '';
+async function routeCrossTeamTarget(context, toTeam) {
   if (!TEAM_NAME_PATTERN.test(toTeam) || toTeam === context.teamName) return toTeam;
   const recipient = await runtime.getCrossTeamRecipient(context, toTeam);
-  const routed = recipient && typeof recipient.teamName === 'string' ? recipient.teamName : '';
-  return TEAM_NAME_PATTERN.test(routed) ? routed : toTeam;
+  if (recipient === null) return toTeam;
+  const routed =
+    recipient && typeof recipient.teamName === 'string' ? recipient.teamName.trim() : '';
+  if (!TEAM_NAME_PATTERN.test(routed)) {
+    throw new Error(`The app answered without a valid recipient team for ${toTeam}`);
+  }
+  return routed;
+}
+
+/**
+ * Sends a cross-team message: routes the target through the app, then writes it.
+ * Every consumer goes through here, so none can skip the rule. The result names
+ * the team that received it (`toTeam`).
+ */
+async function sendCrossTeamMessage(context, flags) {
+  const requested = typeof flags?.toTeam === 'string' ? flags.toTeam.trim() : '';
+  const toTeam = await routeCrossTeamTarget(context, requested);
+  return { ...deliverCrossTeamMessage(context, { ...flags, toTeam }), toTeam };
 }
 
 /**
@@ -463,7 +479,6 @@ function getCrossTeamOutbox(context) {
 }
 
 module.exports = {
-  resolveCrossTeamRecipient,
   sendCrossTeamMessage,
   listCrossTeamTargets,
   getCrossTeamOutbox,

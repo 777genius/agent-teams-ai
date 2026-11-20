@@ -939,9 +939,8 @@ async function verifyCrossTeam(f: Fixture) {
   const { createController } = createRequire(import.meta.url)('agent-teams-controller') as {
     createController(options: { teamName: string; claudeDir: string }): {
       crossTeam: {
-        resolveCrossTeamRecipient(flags: { toTeam: string }): Promise<string>;
         listCrossTeamTargets(): Promise<{ teamName: string }[]>;
-        sendCrossTeamMessage(flags: { toTeam: string; text: string }): unknown;
+        sendCrossTeamMessage(flags: { toTeam: string; text: string }): Promise<{ toTeam?: string }>;
       };
     };
   };
@@ -950,12 +949,13 @@ async function verifyCrossTeam(f: Fixture) {
   const mcpTargets = (await fromA.listCrossTeamTargets()).map((target) => target.teamName);
   assert(mcpTargets.includes(f.logical) && !mcpTargets.includes(f.nativeA) &&
     !mcpTargets.includes(f.nativeB), 'MCP targets: ' + JSON.stringify(mcpTargets));
-  const recipient = await fromA.resolveCrossTeamRecipient({ toTeam: f.logical });
-  assert.equal(recipient, f.nativeA, 'MCP routing from project A');
-  fromA.sendCrossTeamMessage({ toTeam: recipient, text: 'MCP_CROSS_TEAM_TO_PROJECT_A' });
+  const mcpSent = await fromA.sendCrossTeamMessage({
+    toTeam: f.logical, text: 'MCP_CROSS_TEAM_TO_PROJECT_A',
+  });
+  assert.equal(mcpSent.toTeam, f.nativeA, 'MCP routing from project A');
   assert((await inboxText(f.nativeA)).includes('MCP_CROSS_TEAM_TO_PROJECT_A'));
   assert(!(await inboxText(f.nativeB)).includes('MCP_CROSS_TEAM_TO_PROJECT_A'));
-  await assert.rejects(fromC.resolveCrossTeamRecipient({ toTeam: f.logical }),
+  await assert.rejects(fromC.sendCrossTeamMessage({ toTeam: f.logical, text: 'MCP_NO_HISTORY' }),
     (error: Error & { code?: string }) => error.code === 'NO_PROJECT_HISTORY');
   assert.equal(await readFile(f.indexPath, 'utf8'), beforeIndex);
 

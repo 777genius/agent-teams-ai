@@ -47,19 +47,18 @@ export function registerCrossTeamTools(server: Pick<FastMCP, 'addTool'>) {
       chainDepth,
     }) => {
       assertConfiguredTeam(teamName, claudeDir);
-      const controller = getController(teamName, claudeDir);
-      const recipient = await controller.crossTeam.resolveCrossTeamRecipient({ toTeam });
-      const result = controller.crossTeam.sendCrossTeamMessage({
-        toTeam: recipient,
-        text,
-        ...(fromMember ? { fromMember } : {}),
-        ...(summary ? { summary } : {}),
-        ...(conversationId ? { conversationId } : {}),
-        ...(replyToConversationId ? { replyToConversationId } : {}),
-        ...(taskRefs?.length ? { taskRefs } : {}),
-        ...(chainDepth !== undefined ? { chainDepth } : {}),
-      });
-      return jsonTextContent({ ...result, toTeam: recipient });
+      return jsonTextContent(
+        await getController(teamName, claudeDir).crossTeam.sendCrossTeamMessage({
+          toTeam,
+          text,
+          ...(fromMember ? { fromMember } : {}),
+          ...(summary ? { summary } : {}),
+          ...(conversationId ? { conversationId } : {}),
+          ...(replyToConversationId ? { replyToConversationId } : {}),
+          ...(taskRefs?.length ? { taskRefs } : {}),
+          ...(chainDepth !== undefined ? { chainDepth } : {}),
+        })
+      );
     },
   });
 

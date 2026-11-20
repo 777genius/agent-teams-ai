@@ -25,7 +25,17 @@ describe('crossTeam module', () => {
     return dir;
   }
 
+  // Every send asks the app that routes cross-team messages: no address from the
+  // environment, only what a test publishes in its own claude dir.
+  let previousEnvUrl;
+  beforeEach(() => {
+    previousEnvUrl = process.env.CLAUDE_TEAM_CONTROL_URL;
+    delete process.env.CLAUDE_TEAM_CONTROL_URL;
+  });
+
   afterEach(() => {
+    if (previousEnvUrl === undefined) delete process.env.CLAUDE_TEAM_CONTROL_URL;
+    else process.env.CLAUDE_TEAM_CONTROL_URL = previousEnvUrl;
     // Reset cascade guard between tests
     const cascadeGuard = require('../src/internal/cascadeGuard.js');
     cascadeGuard.reset();
@@ -35,7 +45,7 @@ describe('crossTeam module', () => {
   });
 
   describe('sendCrossTeamMessage', () => {
-    it('delivers message to target team inbox', () => {
+    it('delivers message to target team inbox', async () => {
       const claudeDir = makeClaudeDir({
         'team-a': {
           name: 'team-a',
@@ -48,7 +58,7 @@ describe('crossTeam module', () => {
       });
 
       const controller = createController({ teamName: 'team-a', claudeDir });
-      const result = controller.crossTeam.sendCrossTeamMessage({
+      const result = await controller.crossTeam.sendCrossTeamMessage({
         toTeam: 'team-b',
         fromMember: 'lead',
         text: 'Hello from team-a',
@@ -70,7 +80,7 @@ describe('crossTeam module', () => {
       expect(inbox[0].text).toContain(`conversationId="${inbox[0].conversationId}"`);
     });
 
-    it('records outbox entry', () => {
+    it('records outbox entry', async () => {
       const claudeDir = makeClaudeDir({
         'team-a': {
           name: 'team-a',
@@ -83,7 +93,7 @@ describe('crossTeam module', () => {
       });
 
       const controller = createController({ teamName: 'team-a', claudeDir });
-      controller.crossTeam.sendCrossTeamMessage({
+      await controller.crossTeam.sendCrossTeamMessage({
         toTeam: 'team-b',
         text: 'Hello',
       });
@@ -104,7 +114,7 @@ describe('crossTeam module', () => {
       expect(sentMessages[0].messageId).toBe(outbox[0].messageId);
     });
 
-    it('preserves taskRefs in target inbox, sender copy and outbox', () => {
+    it('preserves taskRefs in target inbox, sender copy and outbox', async () => {
       const claudeDir = makeClaudeDir({
         'team-a': {
           name: 'team-a',
@@ -118,7 +128,7 @@ describe('crossTeam module', () => {
       const taskRefs = [{ taskId: 'task-1', displayId: 'abcd1234', teamName: 'team-a' }];
 
       const controller = createController({ teamName: 'team-a', claudeDir });
-      controller.crossTeam.sendCrossTeamMessage({
+      await controller.crossTeam.sendCrossTeamMessage({
         toTeam: 'team-b',
         text: 'Please review the linked task',
         taskRefs,
@@ -136,7 +146,7 @@ describe('crossTeam module', () => {
       expect(outbox[0].taskRefs).toEqual(taskRefs);
     });
 
-    it('rejects unknown source fromMember', () => {
+    it('rejects unknown source fromMember', async () => {
       const claudeDir = makeClaudeDir({
         'team-a': {
           name: 'team-a',
@@ -149,16 +159,16 @@ describe('crossTeam module', () => {
       });
 
       const controller = createController({ teamName: 'team-a', claudeDir });
-      expect(() =>
+      await expect(
         controller.crossTeam.sendCrossTeamMessage({
           toTeam: 'team-b',
           fromMember: 'ghost',
           text: 'Hello from nowhere',
         })
-      ).toThrow('Unknown cross-team sender');
+      ).rejects.toThrow('Unknown cross-team sender');
     });
 
-    it('preserves reply conversation metadata for explicit replies', () => {
+    it('preserves reply conversation metadata for explicit replies', async () => {
       const claudeDir = makeClaudeDir({
         'team-a': {
           name: 'team-a',
@@ -171,7 +181,7 @@ describe('crossTeam module', () => {
       });
 
       const controller = createController({ teamName: 'team-a', claudeDir });
-      controller.crossTeam.sendCrossTeamMessage({
+      await controller.crossTeam.sendCrossTeamMessage({
         toTeam: 'team-b',
         text: 'Answering the open question',
         replyToConversationId: 'conv-123',
@@ -185,7 +195,7 @@ describe('crossTeam module', () => {
       expect(inbox[0].text).toContain('replyToConversationId="conv-123"');
     });
 
-    it('deduplicates the same recent cross-team request', () => {
+    it('deduplicates the same recent cross-team request', async () => {
       const claudeDir = makeClaudeDir({
         'team-a': {
           name: 'team-a',
@@ -198,13 +208,13 @@ describe('crossTeam module', () => {
       });
 
       const controller = createController({ teamName: 'team-a', claudeDir });
-      const first = controller.crossTeam.sendCrossTeamMessage({
+      const first = await controller.crossTeam.sendCrossTeamMessage({
         toTeam: 'team-b',
         fromMember: 'lead',
         text: 'Please review the API contract',
         summary: 'Review request',
       });
-      const second = controller.crossTeam.sendCrossTeamMessage({
+      const second = await controller.crossTeam.sendCrossTeamMessage({
         toTeam: 'team-b',
         fromMember: 'lead',
         text: 'Please   review the API contract',
@@ -227,7 +237,7 @@ describe('crossTeam module', () => {
       expect(sentMessages).toHaveLength(1);
     });
 
-    it('does not treat a member-targeted outbox entry as a duplicate of a lead delivery', () => {
+    it('does not treat a member-targeted outbox entry as a duplicate of a lead delivery', async () => {
       const claudeDir = makeClaudeDir({
         'team-a': {
           name: 'team-a',
@@ -263,7 +273,7 @@ describe('crossTeam module', () => {
       );
 
       const controller = createController({ teamName: 'team-a', claudeDir });
-      const result = controller.crossTeam.sendCrossTeamMessage({
+      const result = await controller.crossTeam.sendCrossTeamMessage({
         toTeam: 'team-b',
         fromMember: 'lead',
         text: 'Please review the API contract',
@@ -277,7 +287,7 @@ describe('crossTeam module', () => {
       expect(inbox).toHaveLength(1);
     });
 
-    it('deduplicates a lead delivery already recorded by the member-aware transport', () => {
+    it('deduplicates a lead delivery already recorded by the member-aware transport', async () => {
       const claudeDir = makeClaudeDir({
         'team-a': {
           name: 'team-a',
@@ -306,7 +316,7 @@ describe('crossTeam module', () => {
       );
 
       const controller = createController({ teamName: 'team-a', claudeDir });
-      const result = controller.crossTeam.sendCrossTeamMessage({
+      const result = await controller.crossTeam.sendCrossTeamMessage({
         toTeam: 'team-b',
         fromMember: 'lead',
         text: 'Please review the API contract',
@@ -324,7 +334,7 @@ describe('crossTeam module', () => {
       expect(controller.crossTeam.getCrossTeamOutbox()).toHaveLength(1);
     });
 
-    it('deduplicates a legacy member-blind lead entry', () => {
+    it('deduplicates a legacy member-blind lead entry', async () => {
       const claudeDir = makeClaudeDir({
         'team-a': {
           name: 'team-a',
@@ -351,7 +361,7 @@ describe('crossTeam module', () => {
       );
 
       const controller = createController({ teamName: 'team-a', claudeDir });
-      const result = controller.crossTeam.sendCrossTeamMessage({
+      const result = await controller.crossTeam.sendCrossTeamMessage({
         toTeam: 'team-b',
         text: 'Legacy lead request',
       });
@@ -365,7 +375,7 @@ describe('crossTeam module', () => {
       ).toBe(false);
     });
 
-    it('scans past stale, timestamp-less, null, array, and malformed outbox rows', () => {
+    it('scans past stale, timestamp-less, null, array, and malformed outbox rows', async () => {
       const claudeDir = makeClaudeDir({
         'team-a': {
           name: 'team-a',
@@ -412,7 +422,7 @@ describe('crossTeam module', () => {
       fs.writeFileSync(outboxPath, JSON.stringify(seededRows));
 
       const controller = createController({ teamName: 'team-a', claudeDir });
-      const result = controller.crossTeam.sendCrossTeamMessage({
+      const result = await controller.crossTeam.sendCrossTeamMessage({
         toTeam: 'team-b',
         text: 'Find the valid row behind corruption',
       });
@@ -428,7 +438,7 @@ describe('crossTeam module', () => {
       ).toBe(false);
     });
 
-    it('skips a matching partial row without messageId and finds an earlier valid duplicate', () => {
+    it('skips a matching partial row without messageId and finds an earlier valid duplicate', async () => {
       const claudeDir = makeClaudeDir({
         'team-a': {
           name: 'team-a',
@@ -464,7 +474,7 @@ describe('crossTeam module', () => {
       );
 
       const controller = createController({ teamName: 'team-a', claudeDir });
-      const result = controller.crossTeam.sendCrossTeamMessage({
+      const result = await controller.crossTeam.sendCrossTeamMessage({
         toTeam: 'team-b',
         text: matchingFields.text,
       });
@@ -480,7 +490,7 @@ describe('crossTeam module', () => {
       ).toBe(false);
     });
 
-    it('writes a new delivery when the only matching persisted row has no messageId', () => {
+    it('writes a new delivery when the only matching persisted row has no messageId', async () => {
       const claudeDir = makeClaudeDir({
         'team-a': {
           name: 'team-a',
@@ -508,7 +518,7 @@ describe('crossTeam module', () => {
       );
 
       const controller = createController({ teamName: 'team-a', claudeDir });
-      const result = controller.crossTeam.sendCrossTeamMessage({ toTeam: 'team-b', text });
+      const result = await controller.crossTeam.sendCrossTeamMessage({ toTeam: 'team-b', text });
 
       expect(result.deduplicated).toBeUndefined();
       expect(result.messageId).toBeTruthy();
@@ -519,7 +529,7 @@ describe('crossTeam module', () => {
       expect(JSON.parse(fs.readFileSync(inboxPath, 'utf8'))).toHaveLength(1);
     });
 
-    it('deduplicates at the five-minute boundary and resends immediately after it', () => {
+    it('deduplicates at the five-minute boundary and resends immediately after it', async () => {
       const claudeDir = makeClaudeDir({
         'team-a': {
           name: 'team-a',
@@ -536,7 +546,7 @@ describe('crossTeam module', () => {
       let now = originalNow();
       Date.now = () => now;
       try {
-        const first = controller.crossTeam.sendCrossTeamMessage({
+        const first = await controller.crossTeam.sendCrossTeamMessage({
           toTeam: 'team-b',
           text: 'Need a decision on the schema',
           summary: 'Schema decision',
@@ -545,7 +555,7 @@ describe('crossTeam module', () => {
 
         now = firstTimestamp + 5 * 60 * 1000;
 
-        const boundaryRetry = controller.crossTeam.sendCrossTeamMessage({
+        const boundaryRetry = await controller.crossTeam.sendCrossTeamMessage({
           toTeam: 'team-b',
           text: 'Need a decision on the schema',
           summary: 'Schema decision',
@@ -557,7 +567,7 @@ describe('crossTeam module', () => {
 
         now += 1;
 
-        const afterBoundary = controller.crossTeam.sendCrossTeamMessage({
+        const afterBoundary = await controller.crossTeam.sendCrossTeamMessage({
           toTeam: 'team-b',
           text: 'Need a decision on the schema',
           summary: 'Schema decision',
@@ -577,7 +587,7 @@ describe('crossTeam module', () => {
       }
     });
 
-    it('leaves the verified inbox write intact when the sender-copy write fails', () => {
+    it('leaves the verified inbox write intact when the sender-copy write fails', async () => {
       const claudeDir = makeClaudeDir({
         'team-a': {
           name: 'team-a',
@@ -596,12 +606,12 @@ describe('crossTeam module', () => {
 
       try {
         const controller = createController({ teamName: 'team-a', claudeDir });
-        expect(() =>
+        await expect(
           controller.crossTeam.sendCrossTeamMessage({
             toTeam: 'team-b',
             text: 'Preserve partial-write semantics',
           })
-        ).toThrow('sender copy failed');
+        ).rejects.toThrow('sender copy failed');
       } finally {
         messageStore.appendSentMessage = originalAppendSentMessage;
       }
@@ -616,7 +626,7 @@ describe('crossTeam module', () => {
       );
     });
 
-    it('rejects self-send', () => {
+    it('rejects self-send', async () => {
       const claudeDir = makeClaudeDir({
         'team-a': {
           name: 'team-a',
@@ -625,15 +635,15 @@ describe('crossTeam module', () => {
       });
 
       const controller = createController({ teamName: 'team-a', claudeDir });
-      expect(() =>
+      await expect(
         controller.crossTeam.sendCrossTeamMessage({
           toTeam: 'team-a',
           text: 'Self',
         })
-      ).toThrow('same team');
+      ).rejects.toThrow('same team');
     });
 
-    it('rejects when target not found', () => {
+    it('rejects when target not found', async () => {
       const claudeDir = makeClaudeDir({
         'team-a': {
           name: 'team-a',
@@ -642,15 +652,15 @@ describe('crossTeam module', () => {
       });
 
       const controller = createController({ teamName: 'team-a', claudeDir });
-      expect(() =>
+      await expect(
         controller.crossTeam.sendCrossTeamMessage({
           toTeam: 'team-nonexistent',
           text: 'Hello',
         })
-      ).toThrow('Target team not found');
+      ).rejects.toThrow('Target team not found');
     });
 
-    it('rejects when target is deleted', () => {
+    it('rejects when target is deleted', async () => {
       const claudeDir = makeClaudeDir({
         'team-a': {
           name: 'team-a',
@@ -664,15 +674,15 @@ describe('crossTeam module', () => {
       });
 
       const controller = createController({ teamName: 'team-a', claudeDir });
-      expect(() =>
+      await expect(
         controller.crossTeam.sendCrossTeamMessage({
           toTeam: 'team-b',
           text: 'Hello',
         })
-      ).toThrow('Target team not found');
+      ).rejects.toThrow('Target team not found');
     });
 
-    it('rejects unsafe target lead names before inbox writes', () => {
+    it('rejects unsafe target lead names before inbox writes', async () => {
       const claudeDir = makeClaudeDir({
         'team-a': {
           name: 'team-a',
@@ -687,19 +697,19 @@ describe('crossTeam module', () => {
       const originalConfig = fs.readFileSync(targetConfigPath, 'utf8');
 
       const controller = createController({ teamName: 'team-a', claudeDir });
-      expect(() =>
+      await expect(
         controller.crossTeam.sendCrossTeamMessage({
           toTeam: 'team-b',
           text: 'Hello',
         })
-      ).toThrow('Invalid target lead name');
+      ).rejects.toThrow('Invalid target lead name');
       expect(fs.readFileSync(targetConfigPath, 'utf8')).toBe(originalConfig);
       expect(fs.existsSync(path.join(claudeDir, 'teams', 'team-a', 'sent-cross-team.json'))).toBe(
         false
       );
     });
 
-    it('rejects excessive chain depth', () => {
+    it('rejects excessive chain depth', async () => {
       const claudeDir = makeClaudeDir({
         'team-a': {
           name: 'team-a',
@@ -712,18 +722,18 @@ describe('crossTeam module', () => {
       });
 
       const controller = createController({ teamName: 'team-a', claudeDir });
-      expect(() =>
+      await expect(
         controller.crossTeam.sendCrossTeamMessage({
           toTeam: 'team-b',
           text: 'Hello',
           chainDepth: 5,
         })
-      ).toThrow('chain depth');
+      ).rejects.toThrow('chain depth');
     });
   });
 
   describe('resolveTargetLead', () => {
-    it('resolves lead by agentType', () => {
+    it('resolves lead by agentType', async () => {
       const claudeDir = makeClaudeDir({
         'team-a': {
           name: 'team-a',
@@ -736,7 +746,7 @@ describe('crossTeam module', () => {
       });
 
       const controller = createController({ teamName: 'team-a', claudeDir });
-      controller.crossTeam.sendCrossTeamMessage({
+      await controller.crossTeam.sendCrossTeamMessage({
         toTeam: 'team-b',
         text: 'Hello',
       });
@@ -745,7 +755,7 @@ describe('crossTeam module', () => {
       expect(fs.existsSync(inboxPath)).toBe(true);
     });
 
-    it('resolves supported lead agent types before tech-lead role text', () => {
+    it('resolves supported lead agent types before tech-lead role text', async () => {
       const claudeDir = makeClaudeDir({
         'team-a': {
           name: 'team-a',
@@ -761,7 +771,7 @@ describe('crossTeam module', () => {
       });
 
       const controller = createController({ teamName: 'team-a', claudeDir });
-      controller.crossTeam.sendCrossTeamMessage({
+      await controller.crossTeam.sendCrossTeamMessage({
         toTeam: 'team-b',
         text: 'Hello',
       });
@@ -774,7 +784,7 @@ describe('crossTeam module', () => {
       );
     });
 
-    it('resolves orchestrator lead from members.meta.json', () => {
+    it('resolves orchestrator lead from members.meta.json', async () => {
       const claudeDir = makeClaudeDir({
         'team-a': {
           name: 'team-a',
@@ -798,7 +808,7 @@ describe('crossTeam module', () => {
       );
 
       const controller = createController({ teamName: 'team-a', claudeDir });
-      controller.crossTeam.sendCrossTeamMessage({
+      await controller.crossTeam.sendCrossTeamMessage({
         toTeam: 'team-b',
         text: 'Hello',
       });
@@ -811,7 +821,7 @@ describe('crossTeam module', () => {
       );
     });
 
-    it('rejects phantom source teams before delivery or outbox writes', () => {
+    it('rejects phantom source teams before delivery or outbox writes', async () => {
       const claudeDir = makeClaudeDir({
         'team-b': {
           name: 'team-b',
@@ -821,19 +831,19 @@ describe('crossTeam module', () => {
 
       const controller = createController({ teamName: 'team-a', claudeDir });
 
-      expect(() =>
+      await expect(
         controller.crossTeam.sendCrossTeamMessage({
           toTeam: 'team-b',
           text: 'Hello from nowhere',
         })
-      ).toThrow('Source team not found: team-a');
+      ).rejects.toThrow('Source team not found: team-a');
       expect(fs.existsSync(path.join(claudeDir, 'teams', 'team-a'))).toBe(false);
       expect(
         fs.existsSync(path.join(claudeDir, 'teams', 'team-b', 'inboxes', 'team-lead.json'))
       ).toBe(false);
     });
 
-    it('rejects unknown cross-team senders', () => {
+    it('rejects unknown cross-team senders', async () => {
       const claudeDir = makeClaudeDir({
         'team-a': {
           name: 'team-a',
@@ -847,19 +857,19 @@ describe('crossTeam module', () => {
 
       const controller = createController({ teamName: 'team-a', claudeDir });
 
-      expect(() =>
+      await expect(
         controller.crossTeam.sendCrossTeamMessage({
           toTeam: 'team-b',
           fromMember: 'alicce',
           text: 'Hello',
         })
-      ).toThrow('Unknown cross-team sender: alicce');
+      ).rejects.toThrow('Unknown cross-team sender: alicce');
       expect(
         fs.existsSync(path.join(claudeDir, 'teams', 'team-b', 'inboxes', 'team-lead.json'))
       ).toBe(false);
     });
 
-    it('resolves lead by name fallback', () => {
+    it('resolves lead by name fallback', async () => {
       const claudeDir = makeClaudeDir({
         'team-a': {
           name: 'team-a',
@@ -872,7 +882,7 @@ describe('crossTeam module', () => {
       });
 
       const controller = createController({ teamName: 'team-a', claudeDir });
-      controller.crossTeam.sendCrossTeamMessage({
+      await controller.crossTeam.sendCrossTeamMessage({
         toTeam: 'team-b',
         text: 'Hello',
       });
@@ -881,7 +891,7 @@ describe('crossTeam module', () => {
       expect(fs.existsSync(inboxPath)).toBe(true);
     });
 
-    it('resolves lead from members.meta.json with normalization', () => {
+    it('resolves lead from members.meta.json with normalization', async () => {
       const claudeDir = makeClaudeDir({
         'team-a': {
           name: 'team-a',
@@ -907,7 +917,7 @@ describe('crossTeam module', () => {
       );
 
       const controller = createController({ teamName: 'team-a', claudeDir });
-      controller.crossTeam.sendCrossTeamMessage({
+      await controller.crossTeam.sendCrossTeamMessage({
         toTeam: 'team-b',
         text: 'Hello',
       });
@@ -919,19 +929,14 @@ describe('crossTeam module', () => {
 
   describe('routing through the app', () => {
     const lead = { name: 'team-lead', agentType: 'team-lead' };
-    let previousEnvUrl;
     let server;
     let requests;
 
     beforeEach(() => {
-      previousEnvUrl = process.env.CLAUDE_TEAM_CONTROL_URL;
-      delete process.env.CLAUDE_TEAM_CONTROL_URL;
       requests = [];
     });
 
     afterEach(async () => {
-      if (previousEnvUrl === undefined) delete process.env.CLAUDE_TEAM_CONTROL_URL;
-      else process.env.CLAUDE_TEAM_CONTROL_URL = previousEnvUrl;
       if (server) await new Promise((resolve) => server.close(resolve));
       server = undefined;
     });
@@ -970,41 +975,20 @@ describe('crossTeam module', () => {
     const inbox = (claudeDir, team) =>
       path.join(claudeDir, 'teams', team, 'inboxes', 'team-lead.json');
 
+    const send = (controller, toTeam) =>
+      controller.crossTeam.sendCrossTeamMessage({ toTeam, text: `Hello ${toTeam}` });
+
     it('asks the app for every target, a team with its own config included', async () => {
       const claudeDir = perProjectWorld();
       await startApp(claudeDir, (url) => ({
         body: { teamName: new URL(url, 'http://app').searchParams.get('toTeam') },
       }));
       const controller = createController({ teamName: 'team-a', claudeDir });
-      await expect(
-        controller.crossTeam.resolveCrossTeamRecipient({ toTeam: 'ptc-builders-b' })
-      ).resolves.toBe('ptc-builders-b');
+      await expect(send(controller, 'ptc-builders-b')).resolves.toMatchObject({
+        deliveredToInbox: true,
+        toTeam: 'ptc-builders-b',
+      });
       expect(requests).toEqual(['/api/teams/team-a/cross-team/recipient?toTeam=ptc-builders-b']);
-    });
-
-    it('passes on a server error of the app instead of keeping the name', async () => {
-      const claudeDir = perProjectWorld();
-      await startApp(claudeDir, () => ({
-        statusCode: 500,
-        body: { error: 'Unable to resolve the cross-team recipient' },
-      }));
-      const controller = createController({ teamName: 'team-a', claudeDir });
-      await expect(
-        controller.crossTeam.resolveCrossTeamRecipient({ toTeam: 'builders' })
-      ).rejects.toThrow('Unable to resolve the cross-team recipient');
-    });
-
-    it('keeps the name when the app has no such route or its address file is damaged', async () => {
-      const claudeDir = perProjectWorld();
-      await startApp(claudeDir, () => ({ statusCode: 404, body: { error: 'Not Found' } }));
-      const controller = createController({ teamName: 'team-a', claudeDir });
-      await expect(
-        controller.crossTeam.resolveCrossTeamRecipient({ toTeam: 'builders' })
-      ).resolves.toBe('builders');
-      fs.writeFileSync(path.join(claudeDir, 'team-control-api.json'), '{not json');
-      await expect(
-        controller.crossTeam.resolveCrossTeamRecipient({ toTeam: 'builders' })
-      ).resolves.toBe('builders');
     });
 
     it('writes a message for a per-project team into the copy the app names', async () => {
@@ -1013,13 +997,10 @@ describe('crossTeam module', () => {
         body: { teamName: 'ptc-builders-b', logicalTeamName: 'builders', projectPath: '/b' },
       }));
       const controller = createController({ teamName: 'team-a', claudeDir });
-      const recipient = await controller.crossTeam.resolveCrossTeamRecipient({
-        toTeam: 'builders',
+      await expect(send(controller, 'builders')).resolves.toMatchObject({
+        toTeam: 'ptc-builders-b',
       });
       expect(requests).toEqual(['/api/teams/team-a/cross-team/recipient?toTeam=builders']);
-      expect(recipient).toBe('ptc-builders-b');
-
-      controller.crossTeam.sendCrossTeamMessage({ toTeam: recipient, text: 'Hello builders' });
       expect(JSON.parse(fs.readFileSync(inbox(claudeDir, 'ptc-builders-b'), 'utf8'))).toHaveLength(
         1
       );
@@ -1027,36 +1008,44 @@ describe('crossTeam module', () => {
       expect(fs.existsSync(path.join(claudeDir, 'teams', 'builders', 'inboxes'))).toBe(false);
     });
 
-    it('passes on the refusal of the app and writes nothing', async () => {
+    it('passes on every answer of the app that is not a recipient, and writes nothing', async () => {
       const claudeDir = perProjectWorld();
-      await startApp(claudeDir, () => ({
-        statusCode: 409,
-        body: {
-          code: 'NO_PROJECT_HISTORY',
-          error: 'Team "builders" has no history in project /c yet.',
+      const answers = [
+        {
+          statusCode: 409,
+          body: { code: 'SAME_TEAM', error: 'Cannot send cross-team message to the same team' },
         },
-      }));
-      const controller = createController({ teamName: 'team-a', claudeDir });
-      await expect(
-        controller.crossTeam.resolveCrossTeamRecipient({ toTeam: 'builders' })
-      ).rejects.toMatchObject({
-        code: 'NO_PROJECT_HISTORY',
-        message: 'Team "builders" has no history in project /c yet.',
+        { statusCode: 500, body: { error: 'Unable to resolve the cross-team recipient' } },
+        { statusCode: 404, body: { error: 'Not Found' } },
+        { statusCode: 200, body: { teamName: '../escape' } },
+      ];
+      let answer = answers[0];
+      await startApp(claudeDir, () => answer);
+      const controller = createController({ teamName: 'ptc-builders-a', claudeDir });
+      await expect(send(controller, 'builders')).rejects.toMatchObject({
+        code: 'SAME_TEAM',
+        message: 'Cannot send cross-team message to the same team',
       });
-      expect(fs.existsSync(inbox(claudeDir, 'ptc-builders-a'))).toBe(false);
+      for (const [next, expected] of [
+        [answers[1], 'Unable to resolve the cross-team recipient'],
+        [answers[2], 'Not Found'],
+        [answers[3], 'without a valid recipient team'],
+      ]) {
+        answer = next;
+        await expect(send(controller, 'builders')).rejects.toThrow(expected);
+      }
       expect(fs.existsSync(inbox(claudeDir, 'ptc-builders-b'))).toBe(false);
+      expect(fs.existsSync(path.join(claudeDir, 'teams', 'builders', 'inboxes'))).toBe(false);
     });
 
     it('keeps the name when the app cannot be reached, so the delivery reports it as unknown', async () => {
       const claudeDir = perProjectWorld();
       const controller = createController({ teamName: 'team-a', claudeDir });
-      const recipient = await controller.crossTeam.resolveCrossTeamRecipient({
-        toTeam: 'builders',
+      await expect(send(controller, 'builders')).rejects.toThrow('Target team not found: builders');
+      fs.writeFileSync(path.join(claudeDir, 'team-control-api.json'), '{not json');
+      await expect(send(controller, 'ptc-builders-b')).resolves.toMatchObject({
+        toTeam: 'ptc-builders-b',
       });
-      expect(recipient).toBe('builders');
-      expect(() =>
-        controller.crossTeam.sendCrossTeamMessage({ toTeam: recipient, text: 'Hello' })
-      ).toThrow('Target team not found: builders');
     });
 
     it('lists the targets of the app, where project copies are folded into their team', async () => {
@@ -1101,7 +1090,7 @@ describe('crossTeam module', () => {
   });
 
   describe('getCrossTeamOutbox', () => {
-    it('returns empty for non-existent outbox', () => {
+    it('returns empty for non-existent outbox', async () => {
       const claudeDir = makeClaudeDir({
         'team-a': { name: 'Team A' },
       });

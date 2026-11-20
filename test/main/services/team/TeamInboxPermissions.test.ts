@@ -111,8 +111,10 @@ describe.skipIf(process.platform === 'win32')(
       expect(rows(file).map((row) => row.messageId)).toEqual(['reply-one', 'reply-two']);
     });
 
-    it('keeps public cross-team delivery and atomic append private', () => {
+    it('keeps public cross-team delivery and atomic append private', async () => {
       vi.useFakeTimers({ toFake: ['Date'] });
+      // The controller asks the app that routes cross-team messages; there is none here.
+      vi.stubEnv('CLAUDE_TEAM_CONTROL_URL', '');
       seedTeam('sender');
       seedTeam('receiver');
       const controller = createController({
@@ -124,17 +126,20 @@ describe.skipIf(process.platform === 'win32')(
         fromMember: 'worker',
         text: 'Please review the finished task',
       };
-      expect(controller.crossTeam.sendCrossTeamMessage(request).deliveredToInbox).toBe(true);
+      expect((await controller.crossTeam.sendCrossTeamMessage(request)).deliveredToInbox).toBe(
+        true
+      );
       const file = inbox('receiver', 'team-lead');
       expectPrivate(file);
       vi.setSystemTime(Date.now() + 4000);
-      controller.crossTeam.sendCrossTeamMessage({
+      await controller.crossTeam.sendCrossTeamMessage({
         ...request,
         text: 'A separate task is ready for review',
       });
       expectPrivate(file);
-      controller.crossTeam.sendCrossTeamMessage(request);
+      await controller.crossTeam.sendCrossTeamMessage(request);
       expect(rows(file)).toHaveLength(2);
+      vi.unstubAllEnvs();
     });
 
     it('keeps Electron send, text update, read mark and queued discard private', async () => {
