@@ -1,5 +1,6 @@
 import { projectDefinitionToAlias } from './projectDefinitionToAlias';
 
+import type { DefinitionMetadataUpdate } from './projectDefinitionToAlias';
 import type { ResolvedTeamWorkContext, TeamWorkContextAddress } from './TeamProjectContextRuntimeResolver';
 import type { ReplaceMembersRequest, TeamCreateConfigRequest, TeamCreateRequest } from '@shared/types';
 
@@ -12,11 +13,8 @@ interface SavedTeamRequestPort {
   assertOwnedAlias(teamName: string): Promise<void>;
   replaceMembers(teamName: string, request: ReplaceMembersRequest): Promise<void>;
   assertStoppedForRosterSync(teamName: string): Promise<void>;
-  /** Name, description and color of the logical team, projected onto its native alias. */
-  updateDisplayMetadata(
-    teamName: string,
-    update: { name?: string; description: string; color: string }
-  ): Promise<void>;
+  /** Name, description, color and lead instructions of the logical team, projected onto its native alias. */
+  updateDisplayMetadata(teamName: string, update: DefinitionMetadataUpdate): Promise<void>;
 }
 
 interface ContextResolverPort {

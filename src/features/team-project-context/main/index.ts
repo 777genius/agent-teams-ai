@@ -30,6 +30,7 @@ export {
 } from './resolveTeamTarget';
 export { TeamProjectContextCreateCoordinator } from './TeamProjectContextCreateCoordinator';
 export { TeamProjectContextDraftMaterializer } from './TeamProjectContextDraftMaterializer';
+export type { TeamProjectContextConflictReason } from './TeamProjectContextLaunchGate';
 export {
   isConfirmedStoppedTeamRuntime,
   isStoppedTeamRuntime,
