@@ -574,6 +574,22 @@ async function verifyDefinitionEdit(f: Fixture) {
   }
   await cdp.screenshot(path.join(f.screenshots, 'edit-after-roster.png'));
 
+  // 3b. A project without history shows the placeholder screen; the team is still editable there.
+  await selectProject(f, 'project-empty');
+  await waitFor('document.body.innerText.includes("Not launched in this project yet")',
+    'placeholder screen of a project without history');
+  const editButton = '(() => Array.from(document.querySelectorAll("button"))' +
+    '.find((b) => b.textContent?.trim() === "Edit team"))()';
+  await waitFor('Boolean(' + editButton + ')', 'Edit team on the placeholder screen');
+  await cdp.evaluate('(() => { const b = ' + editButton + '; b.click(); return true; })()');
+  await waitFor('Boolean(document.querySelector("#edit-team-name"))', 'Edit team dialog from the placeholder');
+  assert.equal(await cdp.evaluate('document.querySelector("#edit-team-name").value'),
+    'History fixture edited', 'The placeholder editor must show the same saved definition');
+  await cdp.screenshot(path.join(f.screenshots, 'edit-from-empty-project.png'));
+  await cdp.evaluate('(() => Array.from(document.querySelectorAll("[role=dialog] button"))' +
+    '.find((b) => b.textContent?.trim() === "Cancel")?.click())()');
+  await waitFor('!document.querySelector("#edit-team-name")', 'placeholder editor closed');
+
   // 4. History is never touched by editing.
   assert.equal(await history(), historyBefore, 'Editing the team mutated project tasks or inboxes');
   assert.equal(await readFile(f.indexPath, 'utf8'), indexBefore,

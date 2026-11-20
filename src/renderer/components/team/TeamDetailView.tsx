@@ -3134,6 +3134,7 @@ export const TeamDetailView = memo(function TeamDetailView({
                           size="sm"
                           aria-label={t('detail.actions.add')}
                           className="pointer-events-auto size-6 p-0 text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
+                          disabled={Boolean(logicalTeamName) && editUnavailableKey !== null}
                           onClick={(e) => {
                             e.stopPropagation();
                             setAddMemberDialogOpen(true);

@@ -117,7 +117,7 @@ describe('withProjectDefinitionEdit', () => {
     r.editor.projectToAliases.mockRejectedValue(new Error('registry unreadable'));
     await expect(r.wrapped(event, 'builders', {})).resolves.toMatchObject({ success: true });
     // The refresh problem is not hidden: it is logged, and the next launch repeats the refresh.
-    expect(warn.mock.calls.map((call) => String(call[0]))).toEqual([
+    expect(warn.mock.calls.map((call) => call.map(String).join(' '))).toEqual([
       expect.stringContaining('ptc-a of builders: busy'),
       expect.stringContaining('registry unreadable'),
     ]);

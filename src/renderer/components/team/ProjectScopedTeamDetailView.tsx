@@ -12,6 +12,7 @@ import {
 } from '@renderer/store/team/teamViewVisibility';
 import { useShallow } from 'zustand/react/shallow';
 
+import { TeamDefinitionEditDialog } from './definitionEdit/TeamDefinitionEditDialog';
 import { TeamDetailView } from './TeamDetailView';
 import { findTeamProjectSelectionTarget, resolveTeamProjectSelection } from './teamProjectSelection';
 import { TeamProvisioningBanner } from './TeamProvisioningBanner';
@@ -89,6 +90,7 @@ export const ProjectScopedTeamDetailView = ({
   const key = `${teamName}\u0000${selectedProjectPath ?? ''}`;
   const [result, setResult] = useState<ViewResult | null>(null);
   const [launchDialogOpen, setLaunchDialogOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
   const [launchingKey, setLaunchingKey] = useState<string | null>(null);
   const [awaitingReadyKey, setAwaitingReadyKey] = useState<string | null>(null);
   const activeKeyRef = useRef(key);
@@ -316,6 +318,13 @@ export const ProjectScopedTeamDetailView = ({
   // Only invite to Launch when the button is really there, and say "in this
   // project": the team may already be running in another one.
   const showEmptyPrompt = canStart && context?.state === 'empty';
+  // Editing is refused while any project of the team is running, so offer it only when idle.
+  const canEditHere =
+    !error &&
+    !provisioningActive &&
+    launchingKey === null &&
+    awaitingReadyKey !== key &&
+    (context?.state === 'empty' || context?.state === 'needs_project');
 
   let message = t('projectContextView.loading');
   if (error) message = error;
@@ -358,7 +367,25 @@ export const ProjectScopedTeamDetailView = ({
           {t('projectContextView.retry')}
         </Button>
       )}
+      {canEditHere && (
+        // A team without a history in this project is still one team: it stays editable.
+        <Button variant="ghost" size="sm" onClick={() => setEditOpen(true)}>
+          {t('detail.tooltips.editTeam')}
+        </Button>
+      )}
       </div>
+      {editOpen && (
+        <TeamDefinitionEditDialog
+          logicalTeamName={teamName}
+          projectPath={selectedProjectPath}
+          onClose={() => setEditOpen(false)}
+          onChangeLeadRuntime={() => {
+            setEditOpen(false);
+            if (selectedProjectPath) setLaunchDialogOpen(true);
+          }}
+          onSaved={() => useStore.getState().fetchTeams()}
+        />
+      )}
       {launchDialogOpen && selectedProjectPath && (
         <Suspense fallback={null}>
           <LaunchTeamDialog
