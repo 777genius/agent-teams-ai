@@ -2,7 +2,7 @@ import { isDeepStrictEqual } from 'node:util';
 
 import { changedDefinitionLaunchSettings } from './definitionLaunchSettings';
 
-import type { DefinitionLaunchSettings } from './definitionLaunchSettings';
+import type { DefinitionLaunchSettings, DefinitionLaunchSettingsStore } from './definitionLaunchSettings';
 import type { ReplaceMembersRequest, TeamCreateRequest } from '@shared/types';
 
 type AuthoringMember = TeamCreateRequest['members'][number];
@@ -41,8 +41,8 @@ export interface DefinitionProjectionPorts {
   assertStoppedForSync(aliasTeamName: string): Promise<void>;
   replaceMembers(aliasTeamName: string, request: ReplaceMembersRequest): Promise<void>;
   updateDisplayMetadata(aliasTeamName: string, update: DefinitionMetadataUpdate): Promise<void>;
-  /** Saved launch settings of the copy; no runtime reads them while it runs, so no stop is demanded. */
-  updateLaunchSettings(aliasTeamName: string, settings: DefinitionLaunchSettings): Promise<void>;
+  /** Where the saved launch settings of a copy are written. */
+  launchSettings: Pick<DefinitionLaunchSettingsStore, 'save'>;
 }
 
 export interface DefinitionProjectionResult {
@@ -60,7 +60,10 @@ type ProjectedFields = Pick<
 /**
  * The logical team is the only authority for the authored roster, the
  * display metadata (name, description, color), the saved lead instructions and
- * the team-level launch settings (see definitionLaunchSettings).
+ * the team-level launch settings (see definitionLaunchSettings). A running
+ * runtime re-reads the saved launch settings when its lead or an OpenCode
+ * member restarts, so they are refreshed only in a copy confirmed stopped; a
+ * copy that is not is skipped silently and the next launch refreshes it.
  * A lead prompt typed at one launch is still used for that run (the launch
  * request wins) but the saved one is the definition's. The alias keeps its own
  * directory identity; only the shown name is refreshed (the runtime reads it
@@ -83,7 +86,7 @@ export async function projectDefinitionToAlias(
     displayText(logical.color) !== displayText(alias.color) ||
     promptChanged;
   const launchChanges = changedDefinitionLaunchSettings(logical, alias);
-  const launchSettings = Object.keys(launchChanges).length > 0;
+  let launchSettings = Object.keys(launchChanges).length > 0;
   if (roster || metadata) {
     await ports.assertStoppedForSync(alias.teamName);
     if (roster) {
@@ -99,7 +102,16 @@ export async function projectDefinitionToAlias(
     }
   }
   if (launchSettings) {
-    await ports.updateLaunchSettings(alias.teamName, launchChanges);
+    // Roster or metadata changes have already demanded a stopped copy above.
+    const stopped =
+      roster ||
+      metadata ||
+      (await ports.assertStoppedForSync(alias.teamName).then(
+        () => true,
+        () => false
+      ));
+    if (stopped) await ports.launchSettings.save(alias.teamName, launchChanges);
+    launchSettings = stopped;
   }
   return { roster, metadata, launchSettings };
 }

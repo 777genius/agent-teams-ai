@@ -6,7 +6,6 @@ import { validateTeamName } from '@main/services/team/TeamIdentifierValidation';
 import { TeamMetaStore } from '@main/services/team/TeamMetaStore';
 import { createLogger } from '@shared/utils/logger';
 
-import { createLaunchSettingsStore } from './teamLaunchSettingsStore';
 import { createProjectContextRuntimeParts } from './teamProjectContextCreate';
 
 import type { RuntimeRosterMutationMember } from './runtimeRosterMutationMember';
@@ -48,8 +47,11 @@ export function buildEditor(ports: DefinitionEditPorts): TeamProjectDefinitionEd
   const data = ports.data();
   const runtime = ports.runtime();
   const run = ports.run();
-  const { registry, resolver, gate } = createProjectContextRuntimeParts({ data, runtime, run });
-  const launchSettings = createLaunchSettingsStore();
+  const { registry, resolver, gate, launchSettings } = createProjectContextRuntimeParts({
+    data,
+    runtime,
+    run,
+  });
   return new TeamProjectDefinitionEditor(
     registry,
     gate,
@@ -60,7 +62,7 @@ export function buildEditor(ports: DefinitionEditPorts): TeamProjectDefinitionEd
       updateDisplayMetadata: async (teamName, update) => {
         await data.updateConfig(teamName, update);
       },
-      updateLaunchSettings: (teamName, settings) => launchSettings.save(teamName, settings),
+      launchSettings,
     },
     async (executionTeamName) => {
       if (

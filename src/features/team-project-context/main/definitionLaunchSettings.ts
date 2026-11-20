@@ -1,35 +1,76 @@
 import { isDeepStrictEqual } from 'node:util';
 
-import type { TeamCreateRequest, TeamLaunchRequest } from '@shared/types';
+import type { TeamMetaFile } from '@main/services/team/TeamMetaStore';
+import type { TeamLaunchRequest } from '@shared/types';
+
+type TeamMetaField = Exclude<keyof TeamMetaFile, 'version'>;
 
 /**
- * The launch settings that belong to the team itself, not to one project:
- * which runtime and model the lead starts with and how it is configured.
+ * Who owns each saved field of a team with separate history per project.
+ * Exhaustive on purpose: a new field of `team.meta.json` does not compile until
+ * somebody decides where it belongs.
  *
- * Deliberately NOT here (they stay with the project copy):
- * - cwd and worktree: they name a place inside one project;
- * - skipPermissions: trust is granted per project and must never travel
- *   from one project to another through the definition;
- * - launchIdentity and createdAt: derived by the runtime for one run;
- * - prompt, roster and display metadata: the definition projection owns them.
+ * - `launch-definition`: the team itself; follows it into every project copy
+ *   (this module).
+ * - `display-definition`: name, description, color and lead instructions of
+ *   the team; projected by `projectDefinitionToAlias` with the roster.
+ * - `project`: one project copy only. cwd and worktree name a place; trust
+ *   (skipPermissions) and runtime arguments (extraCliArgs can grant tools or
+ *   directories) must never travel from one project to another through the
+ *   definition; launchIdentity belongs to one run.
+ * - `lifecycle`: identity and state of the definition itself.
  */
-export const DEFINITION_LAUNCH_SETTING_KEYS = [
-  'providerId',
+export const TEAM_META_FIELD_OWNER = {
+  providerId: 'launch-definition',
+  providerBackendId: 'launch-definition',
+  model: 'launch-definition',
+  effort: 'launch-definition',
+  fastMode: 'launch-definition',
+  syncModelsWithLead: 'launch-definition',
+  limitContext: 'launch-definition',
+  displayName: 'display-definition',
+  description: 'display-definition',
+  color: 'display-definition',
+  prompt: 'display-definition',
+  cwd: 'project',
+  skipPermissions: 'project',
+  worktree: 'project',
+  extraCliArgs: 'project',
+  launchIdentity: 'project',
+  projectContextMode: 'lifecycle',
+  runtimeSelectionVersion: 'lifecycle',
+  deletedAt: 'lifecycle',
+  createdAt: 'lifecycle',
+} as const satisfies Record<
+  TeamMetaField,
+  'launch-definition' | 'display-definition' | 'project' | 'lifecycle'
+>;
+
+export type DefinitionLaunchSettingKey = {
+  [K in TeamMetaField]: (typeof TEAM_META_FIELD_OWNER)[K] extends 'launch-definition' ? K : never;
+}[TeamMetaField];
+
+export const DEFINITION_LAUNCH_SETTING_KEYS = (
+  Object.keys(TEAM_META_FIELD_OWNER) as TeamMetaField[]
+).filter(
+  (key): key is DefinitionLaunchSettingKey => TEAM_META_FIELD_OWNER[key] === 'launch-definition'
+);
+
+export type DefinitionLaunchSettings = Partial<Pick<TeamLaunchRequest, DefinitionLaunchSettingKey>>;
+
+/** What a different provider cannot inherit: the native launch resets these on a provider change. */
+const PROVIDER_SCOPED_KEYS = [
   'providerBackendId',
   'model',
   'effort',
   'fastMode',
-  'syncModelsWithLead',
   'limitContext',
-  'extraCliArgs',
-] as const satisfies readonly (keyof TeamLaunchRequest & keyof TeamCreateRequest)[];
+] as const satisfies readonly DefinitionLaunchSettingKey[];
 
-export type DefinitionLaunchSettingKey = (typeof DEFINITION_LAUNCH_SETTING_KEYS)[number];
-
-export type DefinitionLaunchSettings = Partial<Pick<TeamLaunchRequest, DefinitionLaunchSettingKey>>;
-
-/** Where the launch settings of a team definition are persisted. */
+/** Where the launch settings of a team are persisted (the definition and its project copies). */
 export interface DefinitionLaunchSettingsStore {
+  /** The saved settings of the team, every key present (undefined when unset). */
+  read(teamName: string): Promise<DefinitionLaunchSettings>;
   /** Applies exactly these keys; a key set to undefined clears the saved value. */
   save(teamName: string, settings: DefinitionLaunchSettings): Promise<void>;
 }
@@ -71,21 +112,55 @@ export function changedDefinitionLaunchSettings(
 }
 
 /**
+ * What a launch request means for the saved settings. Stated keys win. A
+ * provider change drops what belonged to the old provider (model, effort, fast
+ * mode, context limit, backend) unless the request states it again, exactly
+ * as the native launch does.
+ */
+export function resolveLaunchSettings(
+  request: Readonly<DefinitionLaunchSettings>,
+  saved: Readonly<DefinitionLaunchSettings>
+): DefinitionLaunchSettings {
+  const settings = pickDefinitionLaunchSettings(request);
+  if (settings.providerId !== undefined && settings.providerId !== saved.providerId) {
+    const reset: Record<string, unknown> = {};
+    for (const key of PROVIDER_SCOPED_KEYS) {
+      if (!Object.hasOwn(settings, key)) reset[key] = undefined;
+    }
+    return { ...(reset as DefinitionLaunchSettings), ...settings };
+  }
+  return settings;
+}
+
+export interface RecordedLaunchSettings {
+  /** Whether the definition was changed to what the launch stated. */
+  recorded: boolean;
+  /** The launched copy could not be brought to the same settings (the definition was). */
+  copyFailure?: unknown;
+}
+
+/**
  * What the user chose for a launch becomes the team's saved launch settings,
  * exactly as it does for an ordinary team, so the next launch (from any
  * project) and a schedule start from it. The copy that was launched follows at
  * once: a runtime provider that does not persist its own launch settings
- * would otherwise leave the copy one launch behind its definition.
- * Returns whether anything was saved.
+ * would otherwise leave the copy one launch behind its definition. A failure
+ * to save the definition throws; one to save the copy is reported in the
+ * result, because the definition is already right and a later launch repairs
+ * the copy.
  */
 export async function recordLaunchSettings(
   store: DefinitionLaunchSettingsStore,
   target: { definition: string; copy: string },
   request: Readonly<DefinitionLaunchSettings>
-): Promise<boolean> {
-  const settings = pickDefinitionLaunchSettings(request);
-  if (Object.keys(settings).length === 0) return false;
+): Promise<RecordedLaunchSettings> {
+  if (Object.keys(pickDefinitionLaunchSettings(request)).length === 0) return { recorded: false };
+  const settings = resolveLaunchSettings(request, await store.read(target.definition));
   await store.save(target.definition, settings);
-  await store.save(target.copy, settings);
-  return true;
+  try {
+    await store.save(target.copy, settings);
+  } catch (copyFailure) {
+    return { recorded: true, copyFailure };
+  }
+  return { recorded: true };
 }

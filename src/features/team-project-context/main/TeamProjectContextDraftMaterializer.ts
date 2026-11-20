@@ -1,6 +1,6 @@
 import { projectDefinitionToAlias } from './projectDefinitionToAlias';
 
-import type { DefinitionLaunchSettings } from './definitionLaunchSettings';
+import type { DefinitionLaunchSettingsStore } from './definitionLaunchSettings';
 import type { DefinitionMetadataUpdate } from './projectDefinitionToAlias';
 import type { ResolvedTeamWorkContext, TeamWorkContextAddress } from './TeamProjectContextRuntimeResolver';
 import type { ReplaceMembersRequest, TeamCreateConfigRequest, TeamCreateRequest } from '@shared/types';
@@ -17,7 +17,7 @@ interface SavedTeamRequestPort {
   /** Name, description, color and lead instructions of the logical team, projected onto its native alias. */
   updateDisplayMetadata(teamName: string, update: DefinitionMetadataUpdate): Promise<void>;
   /** Team-level launch settings of the logical team, projected onto its native alias. */
-  updateLaunchSettings(teamName: string, settings: DefinitionLaunchSettings): Promise<void>;
+  launchSettings: Pick<DefinitionLaunchSettingsStore, 'save'>;
 }
 
 interface ContextResolverPort {
@@ -62,7 +62,7 @@ export class TeamProjectContextDraftMaterializer {
           assertStoppedForSync: (name) => this.teamStore.assertStoppedForRosterSync(name),
           replaceMembers: (name, request) => this.teamStore.replaceMembers(name, request),
           updateDisplayMetadata: (name, update) => this.teamStore.updateDisplayMetadata(name, update),
-          updateLaunchSettings: (name, settings) => this.teamStore.updateLaunchSettings(name, settings),
+          launchSettings: this.teamStore.launchSettings,
         },
         logical,
         existing

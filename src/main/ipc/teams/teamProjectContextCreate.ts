@@ -55,7 +55,7 @@ export function createProjectContextRuntimeParts(ports: ProjectTeamRuntimePorts)
     updateDisplayMetadata: async (name, update) => {
       await ports.data.updateConfig(name, update);
     },
-    updateLaunchSettings: (name, settings) => launchSettings.save(name, settings),
+    launchSettings,
     assertStoppedForRosterSync: async (name) => {
       if (ports.run.hasProvisioningRun(name) ||
           !isConfirmedStoppedTeamRuntime(await ports.runtime.getRuntimeState(name))) {
@@ -73,7 +73,7 @@ export function createProjectContextRuntimeParts(ports: ProjectTeamRuntimePorts)
     getRuntimeState: (teamName) => ports.runtime.getRuntimeState(teamName),
     hasProvisioningRun: (teamName) => ports.run.hasProvisioningRun(teamName),
   });
-  return { registry, resolver, materializer, gate };
+  return { registry, resolver, materializer, gate, launchSettings };
 }
 
 /**

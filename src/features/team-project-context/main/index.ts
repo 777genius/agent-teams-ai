@@ -5,11 +5,14 @@ export type {
   DefinitionLaunchSettings,
   DefinitionLaunchSettingsStore,
 } from './definitionLaunchSettings';
+export type { RecordedLaunchSettings } from './definitionLaunchSettings';
 export {
   changedDefinitionLaunchSettings,
   DEFINITION_LAUNCH_SETTING_KEYS,
   pickDefinitionLaunchSettings,
   recordLaunchSettings,
+  resolveLaunchSettings,
+  TEAM_META_FIELD_OWNER,
 } from './definitionLaunchSettings';
 export type {
   AliasBatchResolver,

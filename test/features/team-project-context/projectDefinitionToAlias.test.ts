@@ -7,7 +7,7 @@ function ports() {
     assertStoppedForSync: vi.fn(async (_name: string) => undefined),
     replaceMembers: vi.fn(async () => undefined),
     updateDisplayMetadata: vi.fn(async () => undefined),
-    updateLaunchSettings: vi.fn(async () => undefined),
+    launchSettings: { save: vi.fn(async () => undefined) },
   };
 }
 
@@ -167,7 +167,7 @@ describe('projectDefinitionToAlias', () => {
   describe('team-level launch settings', () => {
     const base = { members: [{ name: 'alice', role: 'dev' }], description: 'Old', color: 'blue' };
 
-    it('projects only the launch settings that differ and never demands a stopped runtime', async () => {
+    it('projects only the launch settings that differ, into a copy confirmed stopped', async () => {
       const p = ports();
       const result = await projectDefinitionToAlias(
         p,
@@ -175,8 +175,8 @@ describe('projectDefinitionToAlias', () => {
         alias({ providerId: 'codex', model: 'gpt-old', effort: 'high', limitContext: false })
       );
       expect(result).toEqual({ roster: false, metadata: false, launchSettings: true });
-      expect(p.updateLaunchSettings).toHaveBeenCalledWith('ptc-a', { model: 'gpt-x', limitContext: true });
-      expect(p.assertStoppedForSync).not.toHaveBeenCalled();
+      expect(p.launchSettings.save).toHaveBeenCalledWith('ptc-a', { model: 'gpt-x', limitContext: true });
+      expect(p.assertStoppedForSync).toHaveBeenCalledOnce();
       expect(p.replaceMembers).not.toHaveBeenCalled();
       expect(p.updateDisplayMetadata).not.toHaveBeenCalled();
     });
@@ -188,30 +188,56 @@ describe('projectDefinitionToAlias', () => {
         { ...base, providerId: 'codex', effort: undefined },
         alias({ providerId: 'codex', effort: 'high' })
       );
-      expect(p.updateLaunchSettings).toHaveBeenCalledWith('ptc-a', { effort: undefined });
+      expect(p.launchSettings.save).toHaveBeenCalledWith('ptc-a', { effort: undefined });
     });
 
     it('does nothing when the copy already has the definition settings', async () => {
       const p = ports();
       const result = await projectDefinitionToAlias(
         p,
-        { ...base, providerId: 'codex', model: 'm', extraCliArgs: '--x' },
-        alias({ providerId: 'codex', model: 'm', extraCliArgs: '--x' })
+        { ...base, providerId: 'codex', model: 'm' },
+        alias({ providerId: 'codex', model: 'm' })
       );
       expect(result.launchSettings).toBe(false);
-      expect(p.updateLaunchSettings).not.toHaveBeenCalled();
+      expect(p.launchSettings.save).not.toHaveBeenCalled();
+      expect(p.assertStoppedForSync).not.toHaveBeenCalled();
     });
 
-    it('never takes per-project trust or place from the definition', async () => {
+    it('skips a copy that is not confirmed stopped, silently, and still projects nothing else', async () => {
       const p = ports();
-      const logical = { ...base, providerId: 'codex' as const, skipPermissions: true, worktree: 'wt', cwd: '/a' };
+      p.assertStoppedForSync.mockRejectedValue(new Error('Stop this project runtime'));
+      const result = await projectDefinitionToAlias(
+        p,
+        { ...base, providerId: 'codex', model: 'new' },
+        alias({ providerId: 'codex', model: 'old' })
+      );
+      expect(result).toEqual({ roster: false, metadata: false, launchSettings: false });
+      expect(p.launchSettings.save).not.toHaveBeenCalled();
+    });
+
+    it('never takes per-project trust, runtime arguments or place from the definition', async () => {
+      const p = ports();
+      const logical = {
+        ...base,
+        providerId: 'codex' as const,
+        skipPermissions: true,
+        worktree: 'wt',
+        extraCliArgs: '--add-dir /a',
+        cwd: '/a',
+      };
       const result = await projectDefinitionToAlias(
         p,
         logical,
-        alias({ providerId: 'codex', skipPermissions: false, worktree: undefined, cwd: '/b' })
+        alias({
+          providerId: 'codex',
+          skipPermissions: false,
+          worktree: undefined,
+          extraCliArgs: undefined,
+          cwd: '/b',
+        })
       );
       expect(result.launchSettings).toBe(false);
-      expect(p.updateLaunchSettings).not.toHaveBeenCalled();
+      expect(p.launchSettings.save).not.toHaveBeenCalled();
     });
 
     it('does not clear the provider of a copy when the definition has none', async () => {
@@ -221,7 +247,7 @@ describe('projectDefinitionToAlias', () => {
         { ...base, providerId: undefined, providerBackendId: 'b' as never, model: 'm' },
         alias({ providerId: 'codex', model: 'old' })
       );
-      expect(p.updateLaunchSettings).toHaveBeenCalledWith('ptc-a', { model: 'm' });
+      expect(p.launchSettings.save).toHaveBeenCalledWith('ptc-a', { model: 'm' });
     });
 
     it('still refuses a roster change on a running copy and writes no launch settings then', async () => {
@@ -234,7 +260,7 @@ describe('projectDefinitionToAlias', () => {
           alias({ model: 'old' })
         )
       ).rejects.toThrow('Stop this project runtime');
-      expect(p.updateLaunchSettings).not.toHaveBeenCalled();
+      expect(p.launchSettings.save).not.toHaveBeenCalled();
     });
   });
 });

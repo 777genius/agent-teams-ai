@@ -55,7 +55,7 @@ function world(options: { contexts?: Context[]; unreadable?: string[] } = {}) {
       writes.push('project:' + name);
     }),
     updateDisplayMetadata: vi.fn(async () => undefined),
-    updateLaunchSettings: vi.fn(async () => undefined),
+    launchSettings: { save: vi.fn(async () => undefined) },
   };
   const editor = new TeamProjectDefinitionEditor(
     registry,

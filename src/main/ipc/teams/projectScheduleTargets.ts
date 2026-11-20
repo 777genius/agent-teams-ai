@@ -1,5 +1,6 @@
 import {
   classifyDefinitionTarget,
+  pickDefinitionLaunchSettings,
   TeamProjectContextLaunchConflictError,
   TeamProjectContextUnavailableError,
 } from '@features/team-project-context/main';
@@ -15,6 +16,7 @@ import { rememberProjectRunIdentity } from './teamProjectContextProgressIdentity
 import type { ProjectTeamRuntimePorts } from './teamProjectContextCreate';
 import type { PreparedTeamContextLaunch } from './teamProjectContextLaunch';
 import type {
+  DefinitionLaunchSettings,
   ResolvedTeamWorkContext,
   TeamWorkContextAddress,
 } from '@features/team-project-context/main';
@@ -48,6 +50,8 @@ export interface ProjectScheduleTargetPorts {
     request: TeamLaunchRequest,
     expectedCopy: string
   ): Promise<PreparedTeamContextLaunch>;
+  /** The launch settings the team definition (the logical team) has saved right now. */
+  readDefinitionLaunchSettings(logicalTeamName: string): Promise<DefinitionLaunchSettings>;
   launchPhysical(
     request: TeamLaunchRequest,
     onProgress: (progress: TeamProvisioningProgress) => void
@@ -210,7 +214,10 @@ export class ProjectScheduleTargets implements ScheduleTargets {
           copyName
         );
         if (prepared.request.teamName !== copyName) return { refused: COPY_CHANGED_MESSAGE };
-        const response = await ports.launchPhysical(prepared.request, (progress) => {
+        // The caller built the request from the settings of the copy, which can be one launch
+        // behind: the definition owns the team-level launch settings, and a schedule runs them.
+        const definition = await ports.readDefinitionLaunchSettings(logicalTeamName);
+        const response = await ports.launchPhysical({ ...prepared.request, ...definition }, (progress) => {
           prepared.mapProgress?.(progress, () => undefined);
         });
         ports.rememberRunIdentity(response.runId, logicalTeamName, copyName);
@@ -262,6 +269,11 @@ export function createProjectScheduleTargets(
       assertOtherContextsStopped: (logical, copy) =>
         parts.gate.assertOtherContextsStopped(logical, copy),
       withLogicalLock: (teamName, operation) => data.runConfigurationOperation(teamName, operation),
+      readDefinitionLaunchSettings: async (teamName) => {
+        const saved = await data.getSavedRequest(teamName);
+        if (!saved) throw new Error('The team configuration is unavailable');
+        return pickDefinitionLaunchSettings(saved);
+      },
       prepareLaunch: (request, copy) =>
         prepareTeamContextLaunch(request, deps, { expectedExecutionTeamName: copy }),
       launchPhysical: (request, onProgress) => provisioning.launchTeam(request, onProgress),

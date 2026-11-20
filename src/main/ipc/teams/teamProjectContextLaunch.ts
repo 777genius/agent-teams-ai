@@ -4,14 +4,15 @@ import {
 } from '@features/team-project-context/main';
 import { TeamMetaStore } from '@main/services/team/TeamMetaStore';
 import { createLogger } from '@shared/utils/logger';
+import { isFreshLaunch } from '@shared/utils/teamLaunchResponse';
 
 import { parseOptionalTeamEffort, parseOptionalTeamFastMode } from '../teamIpcRequestParsers';
 
-import { createLaunchSettingsStore } from './teamLaunchSettingsStore';
 import { createProjectContextRuntimeParts } from './teamProjectContextCreate';
 import { rememberProjectRunIdentity } from './teamProjectContextProgressIdentity';
 
 import type { ProjectTeamRuntimePorts } from './teamProjectContextCreate';
+import type { DefinitionLaunchSettingsStore } from '@features/team-project-context/main';
 import type { IpcResult, TeamLaunchRequest, TeamLaunchResponse, TeamProvisioningProgress } from '@shared/types';
 
 const logger = createLogger('IPC:teams:projectLaunch');
@@ -24,6 +25,12 @@ export type ProjectContextProgressMapper = (
 export interface PreparedTeamContextLaunch {
   request: TeamLaunchRequest;
   mapProgress?: ProjectContextProgressMapper;
+  /**
+   * Saves what the launch stated as the team's launch settings. Only for a
+   * launch the user chose settings for; the caller decides (a schedule runs
+   * what the definition says and never records).
+   */
+  recordLaunch?: (response: TeamLaunchResponse) => Promise<void>;
 }
 
 /**
@@ -79,6 +86,8 @@ export async function prepareTeamContextLaunch(
     }
     return {
       request: { ...request, cwd: reserved.projectPath, teamName: physical.executionTeamName },
+      recordLaunch: (response) =>
+        recordAcceptedLaunch(parts.launchSettings, request, physical.executionTeamName, response),
       mapProgress: (progress, deliver) => {
         const logicalProgress = { ...progress, teamName: address.logicalTeamName };
         if (progress.state !== 'ready') {
@@ -143,38 +152,40 @@ export async function withPreparedContextLaunch(
     rememberProjectRunIdentity(
       result.data.runId, request.teamName, selected.request.teamName
     );
-    // A launch that found the team already starting or running applied nothing.
-    if (isFreshLaunch(result.data)) await recordLaunchSettingsOfDefinition(request, selected.request.teamName);
+    await selected.recordLaunch?.(result.data);
   }
   return result;
 }
 
-function isFreshLaunch(response: TeamLaunchResponse): boolean {
-  return (
-    !response.alreadyLaunching &&
-    !response.alreadyRunning &&
-    response.launchStatus !== 'already_launching' &&
-    response.launchStatus !== 'already_running'
-  );
-}
-
 /**
  * What the user chose for this launch becomes the team's saved launch
- * settings, like for an ordinary team. The launch is already accepted, so a
- * failure to save is reported but never fails it; the next launch records
- * again. The caller holds the logical-team configuration lock.
+ * settings, like for an ordinary team. A launch that found the team already
+ * starting or running applied nothing and records nothing. The launch is
+ * already accepted, so a failure to save is logged as an error and never fails
+ * it; the next launch records again. The caller holds the logical-team
+ * configuration lock.
  */
-async function recordLaunchSettingsOfDefinition(
+async function recordAcceptedLaunch(
+  store: DefinitionLaunchSettingsStore,
   request: TeamLaunchRequest,
-  copyTeamName: string
+  copyTeamName: string,
+  response: TeamLaunchResponse
 ): Promise<void> {
+  if (!isFreshLaunch(response)) return;
   try {
-    await recordLaunchSettings(
-      createLaunchSettingsStore(),
+    const { copyFailure } = await recordLaunchSettings(
+      store,
       { definition: request.teamName, copy: copyTeamName },
       request
     );
+    if (copyFailure !== undefined) {
+      logger.error(
+        `Launch settings of ${request.teamName} were saved, but its project copy ${copyTeamName} still has older ones until the next launch: ${String(copyFailure)}`
+      );
+    }
   } catch (error) {
-    logger.warn(`Could not save the launch settings of ${request.teamName}: ${String(error)}`);
+    logger.error(
+      `Could not save the launch settings of ${request.teamName}; the next launch will try again: ${String(error)}`
+    );
   }
 }
