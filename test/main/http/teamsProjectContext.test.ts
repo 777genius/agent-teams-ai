@@ -376,7 +376,9 @@ describe('HTTP routes for a per-project (logical) team', () => {
       expect(runtime.json()).toMatchObject({ teamName: 'builders', isAlive: true });
       const response = await app.inject({ method: 'POST', url: '/api/teams/builders/stop' });
       expect(response.statusCode).toBe(200);
-      expect(stopTeam.mock.calls.map(([team]) => team).sort()).toEqual(['builders', f.aliasA].sort());
+      expect(stopTeam.mock.calls.map(([team]) => team).sort()).toEqual(
+        ['builders', f.aliasA, f.aliasB].sort()
+      );
       expect(alive.size).toBe(0);
     } finally {
       await app.close();
