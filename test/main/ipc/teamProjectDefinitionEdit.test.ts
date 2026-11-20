@@ -31,7 +31,7 @@ function routing(target: DefinitionEditTarget) {
   };
   const handler = vi.fn(async (..._args: unknown[]) => ({ success: true as const, data: undefined }));
   const wrapped = createProjectDefinitionEditRouting(
-    {} as never,
+    { data: () => ({ runConfigurationOperation: (_name: string, operation: () => Promise<unknown>) => operation() }) } as never,
     () => editor as unknown as TeamProjectDefinitionEditor
   )(handler);
   return { editor, handler, wrapped };

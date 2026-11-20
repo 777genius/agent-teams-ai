@@ -696,7 +696,7 @@ describe('MCP team tools over the local REST control API', () => {
     const membersPath = path.join(directory, 'members.meta.json');
     const metaPath = path.join(directory, 'team.meta.json');
     try {
-      await teamDataService.createTeamConfig({ teamName, cwd: root, members: [] });
+      await teamDataService.createTeamConfig({ projectContextMode: 'shared', teamName, cwd: root, members: [] });
       const initial = await services.teamPromptManagement!.get(teamName);
       const savedMetadata = await readFile(metaPath);
       await writeFile(membersPath, unreadable);
@@ -790,7 +790,7 @@ describe('MCP team tools over the local REST control API', () => {
       const directory = path.join(root, 'teams', teamName);
       const configPath = path.join(directory, 'config.json');
       try {
-        await teamDataService.createTeamConfig({ teamName, cwd: root, members: [] });
+        await teamDataService.createTeamConfig({ projectContextMode: 'shared', teamName, cwd: root, members: [] });
         const initial = await services.teamPromptManagement!.get(teamName);
         const metaBytes = await readFile(path.join(directory, 'team.meta.json'));
         await writeFile(configPath, unreadable);
@@ -849,7 +849,7 @@ describe('MCP team tools over the local REST control API', () => {
     let operation: Promise<void> | undefined;
     let timeout: ReturnType<typeof setTimeout> | undefined;
     try {
-      await teamDataService.createTeamConfig({ teamName, cwd: root, members: [] });
+      await teamDataService.createTeamConfig({ projectContextMode: 'shared', teamName, cwd: root, members: [] });
       await writeFile(
         path.join(directory, 'config.json'),
         JSON.stringify({
@@ -955,6 +955,7 @@ describe('MCP team tools over the local REST control API', () => {
     const membersPath = path.join(directory, 'members.meta.json');
     try {
       await teamDataService.createTeamConfig({
+        projectContextMode: 'shared',
         teamName,
         cwd: root,
         members: [{ name: 'builder', role: 'Engineer' }],
@@ -1041,7 +1042,7 @@ describe('MCP team tools over the local REST control API', () => {
       ];
       let expectedConfigMembers = members;
       try {
-        await teamDataService.createTeamConfig({ teamName, cwd: root, members: [] });
+        await teamDataService.createTeamConfig({ projectContextMode: 'shared', teamName, cwd: root, members: [] });
         await rm(membersPath);
         if (coverage === 'partial')
           await new TeamMembersMetaStore().writeMembers(teamName, [
@@ -1186,7 +1187,7 @@ describe('MCP team tools over the local REST control API', () => {
       const directory = path.join(root, 'teams', teamName);
       const targetPath = path.join(directory, filename);
       try {
-        await teamDataService.createTeamConfig({ teamName, cwd: root, members: [] });
+        await teamDataService.createTeamConfig({ projectContextMode: 'shared', teamName, cwd: root, members: [] });
         const initial = await services.teamPromptManagement!.get(teamName);
         const original =
           filename === 'config.json'
@@ -1245,7 +1246,7 @@ describe('MCP team tools over the local REST control API', () => {
       completedAt: '2026-05-08T10:10:05.000Z',
     };
     try {
-      await teamDataService.createTeamConfig({ teamName, cwd: root, members: [] });
+      await teamDataService.createTeamConfig({ projectContextMode: 'shared', teamName, cwd: root, members: [] });
       await writeFile(
         path.join(root, 'teams', teamName, 'config.json'),
         JSON.stringify({
@@ -1330,6 +1331,7 @@ describe('MCP team tools over the local REST control API', () => {
       });
     try {
       await teamDataService.createTeamConfig({
+        projectContextMode: 'shared',
         teamName,
         runtimeSelectionVersion: 1,
         members: [],
@@ -1488,6 +1490,7 @@ describe('MCP team tools over the local REST control API', () => {
     });
     try {
       await teamDataService.createTeamConfig({
+        projectContextMode: 'shared',
         teamName,
         cwd: root,
         members: [],
@@ -1499,6 +1502,7 @@ describe('MCP team tools over the local REST control API', () => {
         await barrier;
         expect(await teamDataService.permanentlyDeleteTeam(teamName)).toBe(true);
         await teamDataService.createTeamConfig({
+          projectContextMode: 'shared',
           teamName,
           cwd: root,
           members: [],
