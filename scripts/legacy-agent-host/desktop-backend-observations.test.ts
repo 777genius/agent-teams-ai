@@ -2134,7 +2134,7 @@ test('original OpenCode prospective preflight observes its saved-source request 
   assert.equal(wait.authority, 'wait-bound-only');
   assert.equal(wait.sourceRevision, payload.launchId);
   assert.equal(wait.deadline, 91_000);
-  assert.equal(wait.acquisitionDeadline, 31_000);
+  assert.equal(wait.acquisitionDeadline, 101_000);
   assert.equal(wait.commandId, f.probe.commandId);
   await ui.click('[role="dialog"] button', 'submit original Launch team once', 'Launch team');
   assert.deepEqual(f.commands.filter(row => row.method === 'Input.dispatchMouseEvent').map(row => row.params?.type),
@@ -2146,7 +2146,7 @@ for (const mismatch of ['handle', 'projectId', 'workspaceId', 'teamId', 'runId',
     const f = originalOpenCodePreflightFixture(t);
     f.selectSaved({ sourceRevision: 'saved-model-' + managementDigest('OTHER-saved-source'),
       ...(mismatch === 'handle' ? { handleId: 'OTHER-handle' } : { scope: { ...f.scope, [mismatch]: 'OTHER' } }) });
-    f.hooks.evaluate = () => { f.state.ready = true; t.mock.timers.setTime(31_000); };
+    f.hooks.evaluate = () => { f.state.ready = true; t.mock.timers.setTime(101_000); };
     await assert.rejects(f.start(), /UI read timed out: one original OpenCode preflight command/);
     assert.equal(f.proof.originalPreflightWait, undefined);
     assert.equal(f.inputCount(), 0);
@@ -2164,7 +2164,7 @@ for (const mismatch of ['roster', 'lead', 'context', 'selection', 'action', 'des
     else if (mismatch === 'destination') f.probe.readinessScope!.destinationKeys = [runtimeDigest({ kind: 'member', name: 'OTHER' })];
     else if (mismatch === 'owner-roster') f.writeOwner(f.state.binding, { rosterVersion: 1 });
     f.store.write(f.probe);
-    f.hooks.evaluate = () => { f.state.ready = true; t.mock.timers.setTime(31_000); };
+    f.hooks.evaluate = () => { f.state.ready = true; t.mock.timers.setTime(101_000); };
     await assert.rejects(f.start(), /UI read timed out: one original OpenCode preflight command/);
     assert.equal(f.proof.originalPreflightWait, undefined);
     assert.equal(f.inputCount(), 0);
@@ -2213,7 +2213,7 @@ test('original OpenCode preflight waits past 30s only inside its existing cutoff
   assert.equal(f.commands.length, 0, 'the entire extended observation is passive');
   const wait = f.proof.originalPreflightWait as Record<string, unknown>;
   assert.equal(wait.deadline, 91_000, 'never replace the original cutoff with now plus 90s');
-  assert.equal(wait.acquisitionDeadline, 31_000);
+  assert.equal(wait.acquisitionDeadline, 101_000);
   assert.equal(wait.authority, 'wait-bound-only');
   f.hooks.input = type => {
     if (type === 'mousePressed') f.store.write({ ...f.probe, readinessRetired: true });
@@ -2223,9 +2223,37 @@ test('original OpenCode preflight waits past 30s only inside its existing cutoff
     ['mouseMoved', 'mousePressed', 'mouseReleased'], 'one original click; consumption cannot suppress its release');
 });
 
-test('original OpenCode preflight missing command refuses at the original 30s acquisition deadline', async t => {
+test('original OpenCode preflight accepts a live original record first observed after thirty seconds', async t => {
   const f = originalOpenCodePreflightFixture(t, false);
-  f.hooks.evaluate = () => { t.mock.timers.setTime(31_000); f.state.ready = true; };
+  f.hooks.ownerRead = () => {
+    if (f.state.ownerReads === 1) { t.mock.timers.setTime(40_000); f.store.write(f.probe); }
+  };
+  f.hooks.evaluate = () => {
+    if (f.state.reads === 2) { t.mock.timers.setTime(50_000); f.complete(); f.state.ready = true; }
+  };
+  const ui = await f.start();
+  const wait = f.proof.originalPreflightWait as Record<string, unknown>;
+  assert.equal(wait.commandId, f.probe.commandId);
+  assert.equal(wait.acquisitionDeadline, 101_000, 'one preparation-derived observation ceiling from the original entry');
+  assert.equal(wait.deadline, 91_000, 'the later acquisition never renews the original native cutoff');
+  assert.ok(f.state.ownerReads >= 3, 'owner observations remain fresh through readiness and the final guard');
+  assert.equal(f.inputCount(), 0, 'waiting grants no input or readiness authority');
+  await ui.click('[role="dialog"] button', 'submit original Launch team once', 'Launch team');
+  assert.deepEqual(f.commands.filter(row => row.method === 'Input.dispatchMouseEvent').map(row => row.params?.type),
+    ['mouseMoved', 'mousePressed', 'mouseReleased']);
+});
+
+test('original OpenCode preflight rejects an expired first record inside the acquisition ceiling', async t => {
+  const f = originalOpenCodePreflightFixture(t, false);
+  f.hooks.ownerRead = () => { t.mock.timers.setTime(95_000); f.store.write(f.probe); };
+  await assert.rejects(f.start(), /original preflight cutoff expired/);
+  assert.equal(f.proof.originalPreflightWait, undefined, 'the acquisition allowance cannot renew expired evidence');
+  assert.equal(f.state.ownerReads, 1); assert.equal(f.state.reads, 0); assert.equal(f.inputCount(), 0);
+});
+
+test('original OpenCode preflight missing command refuses at the fixed preparation acquisition ceiling', async t => {
+  const f = originalOpenCodePreflightFixture(t, false);
+  f.hooks.evaluate = () => { t.mock.timers.setTime(101_000); f.state.ready = true; };
   await assert.rejects(f.start(), /UI read timed out: one original OpenCode preflight command/);
   assert.equal(f.state.reads, 1); assert.equal(f.inputCount(), 0);
   assert.equal(f.proof.originalPreflightWait, undefined);
@@ -2286,7 +2314,7 @@ for (const boundary of ['acquisition-owner-read', 'native-owner-read', 'native-d
     const f = originalOpenCodePreflightFixture(t);
     if (boundary === 'acquisition-owner-read' || boundary === 'native-owner-read') f.hooks.ownerRead = () => {
       if (f.state.ownerReads === (boundary === 'acquisition-owner-read' ? 1 : 2))
-        t.mock.timers.setTime(boundary === 'acquisition-owner-read' ? 31_000 : 91_000);
+        t.mock.timers.setTime(boundary === 'acquisition-owner-read' ? 101_000 : 91_000);
     };
     else f.hooks.evaluate = () => {
       if (f.state.reads === 2) {
@@ -2318,7 +2346,7 @@ for (const mismatch of ['owner', 'team', 'run', 'workspace', 'model'] as const) 
     else if (mismatch === 'workspace') f.probe.readinessScope!.workspace = join(f.root, 'OTHER-workspace');
     else f.probe.modelId = 'OTHER-model';
     f.store.write(f.probe);
-    f.hooks.evaluate = () => { f.state.ready = true; t.mock.timers.setTime(31_000); };
+    f.hooks.evaluate = () => { f.state.ready = true; t.mock.timers.setTime(101_000); };
     await assert.rejects(f.start(), /UI read timed out: one original OpenCode preflight command/);
     assert.equal(f.proof.originalPreflightWait, undefined);
     assert.equal(f.inputCount(), 0);

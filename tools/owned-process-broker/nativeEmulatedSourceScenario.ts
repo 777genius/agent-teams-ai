@@ -614,11 +614,14 @@ export async function nativeEmulatedSourceScenario(sandbox: string, broker: stri
         const recipe = resolveRuntimeRecipe(fixture.profile.runtime, fixture.profile.teams[1]!.binding.teamId,
           budgetCapture.memberId, scheduled.config.providerId);
         assert.equal(runtimeDigest(recipe), budgetCapture.recipeDigest);
-        // The original post-ACK observation includes these captured-source checks.
-        standaloneDeadline = standaloneStarted + 15000;
+        // Functional observation uses the captured recipe ceiling, not a product latency requirement.
+        standaloneDeadline = standaloneStarted + recipe.limits.timeoutMs;
       }
       let completed: Record<string, unknown> = {};
       const completion = { source: sourceRef(b.source), runId: scheduled.runId, scheduleId: scheduled.scheduleId,
+        ...(standaloneDeadline === undefined ? {} : { observation: {
+          policy: 'captured-recipe-ceiling-v1', anchor: 'post-start-ack', ceilingMs: standaloneDeadline - standaloneStarted,
+          startedAtMs: standaloneStarted, deadlineMs: standaloneDeadline } }),
         readCount: 0, elapsedMs: 0, lastRunRead: null as Record<string, unknown> | null };
       evidence.lastStandaloneCompletion = completion;
       const completionStarted = performance.now();
@@ -638,9 +641,11 @@ export async function nativeEmulatedSourceScenario(sandbox: string, broker: stri
       }
       assert.equal(completed.cleanup, 'confirmed'); assert.equal(object(completed.result).exitCode, 0);
       assert.ok(text(object(completed.result).stdout).includes(provider === 'claude' ? 'TEST standalone complete' : 'OK'));
+      if (standaloneDeadline !== undefined) assert.ok(performance.now() < standaloneDeadline, 'Original standalone completion');
       const capture = readScheduledRunCapture(new TeamOwnerStore(fixture.profile.owner.storageRoot,
         fixture.profile.teams[1]!.binding.teamName), scheduled.runId);
       assert.ok(capture); assert.deepEqual(capture.input, scheduled); assert.deepEqual(capture.source, sourceRef(b.source));
+      if (standaloneDeadline !== undefined) assert.ok(performance.now() < standaloneDeadline, 'Original standalone completion');
       const jobs = first.jobs.slice(before); assertSourceJobs(jobs, b.source, 'B', 'runtime', fixture.profile.teams[1]!.binding.teamId);
       noTeamConnection(jobs); assert.ok(quiescent(jobs));
       if (provider === 'codex') assert.deepEqual(jobs.flatMap(job => job.threadEphemeral), [true]);

@@ -4752,6 +4752,7 @@ async function sourceStandaloneDeadlineFixture(input: {
   now?: number; provider?: 'codex' | 'claude'; ackMs?: number; handoffPause?: number; readCost?: number;
   changeSourceOnRead?: boolean; invalidCapture?: 'input' | 'source' | 'member' | 'scope' | 'recipe';
   cleanup?: 'confirmed' | 'unresolved'; exitCode?: number; throwRead?: Error;
+  selectedTimeoutMs?: number; captureCosts?: number[]; recipeCostMs?: number; resultValidationCostMs?: number; neverTerminal?: boolean;
 }) {
   const clock = await sourceReadinessDeadlineFixture({ now: input.now ?? 0 });
   const { stripTypeScriptTypes } = await import('node:module');
@@ -4761,7 +4762,7 @@ async function sourceStandaloneDeadlineFixture(input: {
   const body = stripTypeScriptTypes(clock.source.slice(clock.source.indexOf(begin), clock.source.indexOf(end)));
   const provider = input.provider ?? 'codex', scope = { projectId: 'TEST-project', contextId: 'TEST-context' };
   const source = { sourceId: 'a'.repeat(64), revision: 'b'.repeat(64) };
-  const recipe = { limits: { timeoutMs: 90_000 } }, runtime = { members: ['TEST original recipe'] };
+  const recipe = { limits: { timeoutMs: input.selectedTimeoutMs ?? 90_000 } }, runtime = { members: ['TEST original recipe'] };
   const scheduled = { runId: 'TEST-source-standalone-B', scheduleId: 'TEST-source-schedule-B',
     expectedRosterRevision: 'TEST-original-roster', config: { cwd: '/TEST/workspace', prompt: 'TEST prompt',
       providerId: provider === 'codex' ? 'codex' : 'anthropic', model: 'TEST-original-model', skipPermissions: true } };
@@ -4792,11 +4793,12 @@ async function sourceStandaloneDeadlineFixture(input: {
         teams: [null, { binding: { teamId: 'TEST-Team-B', teamName: 'TEST Team B' }, scope }] } },
       TeamOwnerStore: OriginalStore, readScheduledRunCapture: (store: OriginalStore, runId: string) => {
         assert.ok(store instanceof OriginalStore); assert.equal(runId, scheduled.runId);
-        trace.push('capture'); captureTimes.push(clock.counts().now); return structuredClone(capture);
+        trace.push('capture'); captureTimes.push(clock.counts().now);
+        clock.advance(input.captureCosts?.[captureTimes.length - 1] ?? 0); return structuredClone(capture);
       }, resolveRuntimeRecipe: (selected: unknown, teamId: string, memberId: string, providerId: string) => {
         assert.equal(selected, runtime); assert.equal(teamId, 'TEST-Team-B');
         assert.equal(memberId, 'alice-id'); assert.equal(providerId, 'codex');
-        trace.push('recipe'); return structuredClone(recipe);
+        trace.push('recipe'); clock.advance(input.recipeCostMs ?? 0); return structuredClone(recipe);
       }, poll: (check: () => Promise<boolean>, message: string, budget?: number, deadline?: number) => {
         assert.equal(message, 'Original standalone completion'); argumentsSeen.push([budget, deadline]);
         clock.advance(input.handoffPause ?? 0); return clock.actualPoll(check, message, budget, deadline);
@@ -4811,33 +4813,84 @@ async function sourceStandaloneDeadlineFixture(input: {
         trace.push('read'); reads++; clock.advance(input.readCost ?? 0);
         if (input.throwRead) throw input.throwRead;
         if (input.changeSourceOnRead) capture.source.revision = 'd'.repeat(64);
+        if (input.neverTerminal) return { phase: 'running', cleanup: 'unresolved' };
         return { phase: 'completed', cleanup: input.cleanup ?? 'confirmed',
           result: { exitCode: input.exitCode ?? 0, stdout: provider === 'codex' ? 'OK' : 'TEST standalone complete' } };
       } }, console: { log: (value: string) => { output.push(value); } },
-      object: (value: unknown) => value, text: (value: unknown) => value,
+      object: (value: unknown) => value, text: (value: unknown) => { clock.advance(input.resultValidationCostMs ?? 0); return value; },
     }),
     trace, captureTimes, argumentsSeen, evidence, output, delays: clock.delays,
     counts: () => ({ now: clock.counts().now, starts, reads }),
   };
 }
 
-test('source standalone refuses expiry during the poll handoff after its original post-ACK 15s budget', async () => {
-  const f = await sourceStandaloneDeadlineFixture({ ackMs: 100, handoffPause: 15_020 });
+test('source standalone refuses expiry during the poll handoff after its captured recipe ceiling', async () => {
+  const f = await sourceStandaloneDeadlineFixture({ ackMs: 100, handoffPause: 90_020 });
   await assert.rejects(f.run(), /Original standalone completion/);
-  assert.deepEqual(f.counts(), { now: 15_120, starts: 1, reads: 0 });
+  assert.deepEqual(f.counts(), { now: 90_120, starts: 1, reads: 0 });
   assert.deepEqual(f.delays, []); assert.deepEqual(f.trace, ['start', 'capture', 'recipe']);
-  assert.deepEqual(f.argumentsSeen, [[undefined, 15_100]]);
+  assert.deepEqual(f.argumentsSeen, [[undefined, 90_100]]);
   assert.equal((f.evidence.lastStandaloneCompletion as Record<string, unknown>).readCount, 0);
 });
 
 test('source standalone refuses a completed result delivered after its original post-ACK absolute deadline', async () => {
-  const f = await sourceStandaloneDeadlineFixture({ ackMs: 100, handoffPause: 14_950, readCost: 60 });
+  const f = await sourceStandaloneDeadlineFixture({ ackMs: 100, handoffPause: 89_950, readCost: 60 });
   await assert.rejects(f.run(), /Original standalone completion/);
-  assert.deepEqual(f.counts(), { now: 15_110, starts: 1, reads: 1 }); assert.deepEqual(f.delays, []);
-  assert.deepEqual(f.argumentsSeen, [[undefined, 15_100]]);
+  assert.deepEqual(f.counts(), { now: 90_110, starts: 1, reads: 1 }); assert.deepEqual(f.delays, []);
+  assert.deepEqual(f.argumentsSeen, [[undefined, 90_100]]);
   const completion = f.evidence.lastStandaloneCompletion as Record<string, unknown>;
-  assert.equal(completion.readCount, 1); assert.equal(completion.elapsedMs, 15_010);
+  assert.equal(completion.readCount, 1); assert.equal(completion.elapsedMs, 90_010);
   assert.equal((completion.lastRunRead as Record<string, unknown>).phase, 'completed');
+});
+
+test('source standalone accepts one clean occurrence after 15s within its captured ceiling and records the policy', async () => {
+  const f = await sourceStandaloneDeadlineFixture({ ackMs: 250, handoffPause: 16_000, readCost: 500, captureCosts: [0, 25] });
+  await f.run(); assert.deepEqual(f.counts(), { now: 16_775, starts: 1, reads: 1 });
+  assert.deepEqual(f.trace, ['start', 'capture', 'recipe', 'read', 'capture']); assert.deepEqual(f.delays, []);
+  assert.deepEqual(f.argumentsSeen, [[undefined, 90_250]]);
+  const completion = f.evidence.lastStandaloneCompletion as Record<string, unknown>;
+  assert.deepEqual(completion.observation, { policy: 'captured-recipe-ceiling-v1', anchor: 'post-start-ack',
+    ceilingMs: 90_000, startedAtMs: 250, deadlineMs: 90_250 });
+  assert.ok(Buffer.byteLength(JSON.stringify(completion.observation)) <= 256);
+  assert.deepEqual((JSON.parse(f.output[0]!) as Record<string, unknown>).observation, completion.observation);
+  assert.deepEqual(completion.lastRunRead, { phase: 'completed', cleanup: 'confirmed', exitCode: 0 });
+});
+
+test('source standalone spends early source checks and handoff inside a smaller selected ceiling', async () => {
+  const timely = await sourceStandaloneDeadlineFixture({ selectedTimeoutMs: 200, ackMs: 100,
+    captureCosts: [25, 24], handoffPause: 50, readCost: 50 });
+  await timely.run(); assert.deepEqual(timely.counts(), { now: 249, starts: 1, reads: 1 });
+  assert.deepEqual(timely.argumentsSeen, [[undefined, 300]]);
+  const expired = await sourceStandaloneDeadlineFixture({ selectedTimeoutMs: 200, ackMs: 100, handoffPause: 200 });
+  await assert.rejects(expired.run(), /Original standalone completion/);
+  assert.deepEqual(expired.counts(), { now: 300, starts: 1, reads: 0 }); assert.deepEqual(expired.delays, []);
+  const checks = await sourceStandaloneDeadlineFixture({ selectedTimeoutMs: 200, ackMs: 100,
+    captureCosts: [150], recipeCostMs: 50 });
+  await assert.rejects(checks.run(), /Original standalone completion/);
+  assert.deepEqual(checks.counts(), { now: 300, starts: 1, reads: 0 });
+  assert.deepEqual(checks.trace, ['start', 'capture', 'recipe']); assert.deepEqual(checks.argumentsSeen, [[undefined, 300]]);
+});
+
+test('source standalone rejects expiry before and during its original final fresh capture despite a timely clean result', async () => {
+  const before = await sourceStandaloneDeadlineFixture({ selectedTimeoutMs: 100, readCost: 90, resultValidationCostMs: 10 });
+  await assert.rejects(before.run(), /Original standalone completion/);
+  assert.deepEqual(before.counts(), { now: 100, starts: 1, reads: 1 }); assert.deepEqual(before.delays, []);
+  assert.deepEqual(before.captureTimes, [0]); assert.deepEqual(before.trace, ['start', 'capture', 'recipe', 'read']);
+  const f = await sourceStandaloneDeadlineFixture({ selectedTimeoutMs: 100, captureCosts: [10, 10], readCost: 80 });
+  await assert.rejects(f.run(), /Original standalone completion/);
+  assert.deepEqual(f.counts(), { now: 100, starts: 1, reads: 1 }); assert.deepEqual(f.delays, []);
+  assert.deepEqual(f.captureTimes, [0, 90]); assert.deepEqual(f.trace, ['start', 'capture', 'recipe', 'read', 'capture']);
+  assert.deepEqual((f.evidence.lastStandaloneCompletion as Record<string, unknown>).lastRunRead,
+    { phase: 'completed', cleanup: 'confirmed', exitCode: 0 });
+});
+
+test('source standalone never renews its selected ceiling for a running occurrence', async () => {
+  const f = await sourceStandaloneDeadlineFixture({ selectedTimeoutMs: 100, ackMs: 50, readCost: 20, neverTerminal: true });
+  await assert.rejects(f.run(), /Original standalone completion/);
+  assert.deepEqual(f.counts(), { now: 160, starts: 1, reads: 3 }); assert.deepEqual(f.delays, [25, 25]);
+  assert.deepEqual(f.argumentsSeen, [[undefined, 150]]); assert.deepEqual(f.captureTimes, [50]);
+  assert.deepEqual((f.evidence.lastStandaloneCompletion as Record<string, unknown>).lastRunRead,
+    { phase: 'running', cleanup: 'unresolved' });
 });
 
 for (const provider of ['codex', 'claude'] as const)

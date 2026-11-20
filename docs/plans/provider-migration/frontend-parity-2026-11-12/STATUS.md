@@ -2,6 +2,40 @@
 
 Обновлено: **20 ноября 2026**. Единственный текущий рабочий план.
 
+## Текущий срез после `5278bfeb`
+
+`5278bfeb40a38706f8ec2d4359f4621622f61674` опубликован поверх `e7ec8337`;
+обратный Git fetch подтвердил parent, tree и все 29 blobs. Семь изменений
+предыдущего среза прошли два технических review и перечисленные ниже локальные
+проверки. Их новая original E2E квалификация ещё не завершена.
+
+Последнее чтение **20 ноября, 16:13 UTC**: Host29 queued, source CI и packaged
+ещё queued; process Windows ARM FAIL, четыре другие платформы queued;
+Teams3 queued; Native V2 Windows ARM original job завершён PASS, включая functional,
+automatic approval и cold Resume; восемь остальных queued. Непройденные сценарии
+остаются открытыми.
+
+| Следующая работа | Проверено / осталось | Владелец |
+| --- | --- | --- |
+| Resume cleanup handoff | Actual initial/census/resumed Host observations передаются существующему cleanup owner до последующего UI failure. RED1PASS/2FAIL → GREEN3/3; весь canonical Host scripts TS7 PASS; R1/R2 без замечаний. Original orphan cleanup ещё требует CI | parity / root |
+| Windows Codex B-standalone | На5278 Team A14.618s и B14.567s PASS в прежних15s; standalone остановлен общим test15s poll. Новый bounded observer берёт selected recipe ceiling от прежнего post-ACK anchor; дополнительные проверки до/после final capture отвергают late result. RED6FAIL/6PASS → GREEN12/12; lint/size/TS7 PASS; R1/R2 без замечаний | ci / recover |
+| Darwin Resume acquisition | Test-only30s acquisition watchdog заменён fixed100s acquisition ceiling по existing preparation bound. После original record остаются его три исходных cutoff и запрет renewal/replacement. Actual helper RED1FAIL → GREEN58/58, lint/TS7 PASS; R1/R2 без замечаний | parity / ci |
+| Original CI и доставка | После review/публикации новых source требуется original qualification. Четыре замечания receiving1186 исправлены только downstream; feature integration и автоматические runtime gates остаются отдельной границей | root |
+
+Изменение двух harness deadlines оформляется как новая functional observation
+policy, а не как исправление исторических15s/30s FAIL или product latency SLO.
+Windows recipe90s является per-operation limit и только выбранным finite ceiling
+наблюдения: внешний controller120s всего сценария может закончиться раньше с
+FAIL. Team15s, native/request/custody/cleanup deadlines и исходные действия остаются
+отдельными неизменными границами. Новый PASS до фактического исполнения не заявляется.
+
+Все три среза проверены по final source hashes. Полные canonical Host scripts и
+Host test TS7 прошли после последних изменений; полная app-компиляция повторно
+локально не запускалась. [Общий evidence index](evidence/continuation-5278-20261120.json)
+содержит source/decision audits, RED/GREEN, две линии review, CI observation и
+проверяемый archive. Физическое исчезновение исходного Darwin esbuild orphan и
+functional PASS новых Windows/Resume сценариев требуют original CI нового HEAD.
+
 ## Проверенный срез поверх `e7ec8337`
 
 `e7ec83372ae0b230711562dd944a34f9167dfe64` опубликован поверх `4159f6ce`;

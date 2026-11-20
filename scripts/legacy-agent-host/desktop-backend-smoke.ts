@@ -516,7 +516,7 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
         fixture, seed: fixture.uiSeed, evidence, ...(conversationModel ? { model: conversationModel } : {}),
         ...(codexResumeModel ? { codexResumeModel } : {}),
         ...(openCodeLifecycleModel ? { openCodeModel: openCodeLifecycleModel } : {}),
-        capturedGroup: () => group,
+        capturedGroup: () => group, onHostObserved: pid => { hostPid = pid; },
         assertOwnedRenderer: () => assertOwnedCdpListener(group),
         ...(mode === 'native-resume-ui' || extensionsUiMode ? { restartSameProfile: (codexSourceSelectionRestart) =>
           restartSameProfile({ model: openCodeLifecycleModel ?? codexResumeModel ?? conversationModel!,

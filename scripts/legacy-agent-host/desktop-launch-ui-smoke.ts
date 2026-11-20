@@ -46,7 +46,10 @@ export async function waitForDesktopOpenCodePreflight(cdp: UiCdpPort, options: {
   assertOwnedRenderer(): void;
   step(value: Record<string, unknown>): void;
 }): Promise<ReturnType<typeof createDesktopUiControls>> {
-  const acquisitionDeadline = Date.now() + 30_000;
+  // Match Main's original OpenCode preparation ceiling; this is observation,
+  // not a UI latency promise or a renewal of any subsequently observed cutoff.
+  const acquisitionTimeoutMs = 100_000;
+  const acquisitionDeadline = Date.now() + acquisitionTimeoutMs;
   let original: { commandId: string; identity: string; deadline: number } | undefined;
   let store: FileManagementCommandStore | undefined, completedEnvelope: string | undefined;
   const assertWithin = (): void => {
@@ -150,7 +153,7 @@ export async function waitForDesktopOpenCodePreflight(cdp: UiCdpPort, options: {
     assert.ok(Number.isSafeInteger(deadline) && Date.now() < deadline, 'original preflight cutoff expired');
     const identity = stableIdentity(probe);
     if (!original) {
-      assert.ok(Date.now() < acquisitionDeadline, 'original probe acquisition exceeded its original 30 seconds');
+      assert.ok(Date.now() < acquisitionDeadline, 'original probe acquisition exceeded its fixed preparation observation ceiling');
       original = { commandId: probe.commandId, identity, deadline };
       options.proof.originalPreflightWait = { authority: 'wait-bound-only', commandId: probe.commandId,
         profileId: probe.profileId, fingerprint: probe.fingerprint, context: probe.context,
@@ -192,7 +195,7 @@ export async function waitForDesktopOpenCodePreflight(cdp: UiCdpPort, options: {
     return form;
   };
   const observationUi = createDesktopUiControls(cdp, { assertOwnedRenderer: assertWithin, step: options.step });
-  await observationUi.waitRead(expression, 'one original OpenCode preflight command', 30_000,
+  await observationUi.waitRead(expression, 'one original OpenCode preflight command', acquisitionTimeoutMs,
     value => { currentForm(value); return original !== undefined; }, { deadline: acquisitionDeadline, beforeRead });
   assert.ok(original);
   await observationUi.waitRead(expression, 'original OpenCode preflight within its immutable cutoff',
@@ -454,6 +457,7 @@ export async function runDesktopLaunchUiSmoke(cdp: UiCdpPort, options: {
   openCodeModel?: Awaited<ReturnType<typeof startOpenCodeModel>>;
   assertOwnedRenderer(): void;
   capturedGroup(): number;
+  onHostObserved(pid: number): void;
   restartSameProfile?(codexSourceSelectionRestart?: typeof import('./desktop-captured-app.ts').restartCapturedDesktopApp): Promise<UiCdpPort>;
   currentFixture?(): Awaited<ReturnType<typeof prepareDesktopProofFixture>>;
 }): Promise<void> {
@@ -528,7 +532,10 @@ export async function runDesktopLaunchUiSmoke(cdp: UiCdpPort, options: {
   }
   const globalMetadata = opencode
     ? await captureDesktopOpenCodeGlobalMetadata(cdp, fixture, options.capturedGroup(), options.assertOwnedRenderer) : undefined;
-  if (globalMetadata) proof.originalGlobalMetadata = globalMetadata;
+  if (globalMetadata) {
+    proof.originalGlobalMetadata = globalMetadata;
+    options.onHostObserved(globalMetadata.captured.host.pid);
+  }
   await ui.observeInput();
   await ui.clickSidebar(options.seed.subject, undefined, originalActionReadTiming?.openTeam);
   await ui.click('button', 'open original Launch dialog', 'Launch', undefined, undefined, originalActionReadTiming?.openLaunch);
@@ -692,6 +699,7 @@ export async function runDesktopLaunchUiSmoke(cdp: UiCdpPort, options: {
   const hostRows = processTable().filter(row => row.pgid === options.capturedGroup() && command(row.pid) === `${fixture.node} ${fixture.hostEntry}`);
   assert.equal(hostRows.length, 1, 'only this TEST Host executable may be selected');
   const hostPid = hostRows[0]!.pid;
+  options.onHostObserved(hostPid);
   const nativeObservation = metadataObservation
     ? await observeDesktopOpenCodeMetadata(fixture, options.capturedGroup(), metadataObservation, 1) : undefined;
   if (nativeObservation) {
@@ -738,6 +746,7 @@ export async function runDesktopLaunchUiSmoke(cdp: UiCdpPort, options: {
   }
   const resumeGlobalMetadata = opencode && options.restartSameProfile && !extensions && evidence.mode === 'native-resume-ui'
     ? await captureDesktopOpenCodeGlobalMetadata(cdp, fixture, options.capturedGroup(), options.assertOwnedRenderer) : undefined;
+  if (resumeGlobalMetadata) options.onHostObserved(resumeGlobalMetadata.captured.host.pid);
   if (opencode && !resumeGlobalMetadata) {
     assert.ok(metadataObservation, 'renderer reload retains the original metadata owners');
     const retained = (await observeDesktopOpenCodeMetadata(fixture, options.capturedGroup(), metadataObservation, 0)).captured;
