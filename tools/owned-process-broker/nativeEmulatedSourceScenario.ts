@@ -33,7 +33,7 @@ import { fileHash } from './nativeEmulatedProfile';
 import { finiteSourceProbe, prepareEmulatedSourceProfile } from './nativeEmulatedSourceProfile';
 import { nativeEmulatedSourceCold } from './nativeEmulatedSourceCold';
 import { readEmulatedSourceActionProbe, observeEmulatedSourcePeerReadiness,
-  joinEmulatedSourceRefusalObservations,
+  joinEmulatedSourceRefusalObservations, captureEmulatedSourceReadinessObservation,
   readEmulatedCodexReadinessObservation, readEmulatedSourceJournal as journal,
   validateEmulatedSourceRefusal, unwrapEmulatedSourceResult as unwrap,
   type EmulatedSourceCustodyTiming as CustodyTiming } from './nativeEmulatedSourceReadiness';
@@ -251,10 +251,11 @@ export async function nativeEmulatedSourceScenario(sandbox: string, broker: stri
       prepareNativeRecovery: () => prepareMainWindowsRuntimeSourceRecovery(physical, grant, current),
       prepareNativeConfiguration: input => prepareMainWindowsRuntimeConfiguration(physical, grant, input, current),
     });
-    const rpc = async (team: number, method: string, commandId: string, payload: unknown) => unwrap(await client.request(method,
+    const rpc = async (team: number, method: string, commandId: string, payload: unknown, deadline?: number) => unwrap(await client.request(method,
       json({ commandId, binding: { schemaVersion: 1, handleId: descriptor.handles[team]!.handleId,
         owner: fixture.profile.owner, scope: fixture.profile.teams[team]!.scope }, payload }),
-      { control: method === 'runtime.read' || method === 'runtime.stop' || method.endsWith('.read') }));
+      { control: method === 'runtime.read' || method === 'runtime.stop' || method.endsWith('.read'),
+        ...(provider === 'opencode' && deadline !== undefined ? { remainingMs: () => deadline - performance.now() } : {}) }));
     const management = (source: RuntimeSourceSummary) => captureProviderManagement({
       targetId: capturedRuntimeSourceGrant(descriptor, { ...selected, profileId: source.profileId,
         configRevision: source.configRevision }).targetId,
@@ -413,7 +414,6 @@ export async function nativeEmulatedSourceScenario(sandbox: string, broker: stri
       const before = epoch.jobs.length, inputsBefore = inputs().length;
       const commandId = `TEST-start-${action}`, payload = { launchId, rosterRevision: text(selectedLaunch.rosterRevision) };
       diagnosticLaunches.push({ actionDigest: runtimeDigest(commandId), bindingDigests: rows(capturedDefinition.members).map(member => managementDigest(object(member.binding))), launchId, source: sourceRef(source) });
-      let memberReadinessDeadline: number | undefined;
       if (provider !== 'claude') {
         assert.equal(capturedDefinition.launchId, payload.launchId);
         assert.equal(capturedDefinition.rosterRevision, payload.rosterRevision);
@@ -471,14 +471,15 @@ export async function nativeEmulatedSourceScenario(sandbox: string, broker: stri
           guard, requestBudget: budget, localModelReadinessOrigin: createReadinessPreparation(origin, budget) }));
       } else await epoch.rpc(team, 'team.launch.start', commandId, payload);
       // Original readiness observation starts once after the Start acknowledgement.
-      if (provider !== 'claude') memberReadinessDeadline = performance.now() + 15000;
+      const observation = captureEmulatedSourceReadinessObservation(provider, fixture.host.requestTimeoutMs);
+      const memberReadinessDeadline = provider === 'claude' ? undefined : observation?.deadlineMs ?? performance.now() + 15000;
       let view: Record<string, unknown> = {};
-      const readiness = { source: sourceRef(source), image, launchId, readCount: 0, elapsedMs: 0,
+      const readiness = { source: sourceRef(source), image, launchId, readCount: 0, elapsedMs: 0, ...(observation ? { observation } : {}),
         lastRuntimeRead: null as Record<string, unknown> | null };
       evidence.lastLaunchReadiness = readiness;
       const readinessStarted = performance.now();
       try {
-        await poll(async () => { view = await epoch.rpc(team, 'runtime.read', `TEST-ready-${action}`, { memberId: 'alice-id' });
+        await poll(async () => { view = await epoch.rpc(team, 'runtime.read', `TEST-ready-${action}`, { memberId: 'alice-id' }, memberReadinessDeadline);
           try { lastRuntimeViewDigest = runtimeDigest(view); } catch { lastRuntimeViewDigest = undefined; }
           Object.assign(readiness, { readCount: readiness.readCount + 1, elapsedMs: performance.now() - readinessStarted,
             lastRuntimeRead: { viewDigest: lastRuntimeViewDigest ?? null, memberId: view.memberId, generation: view.generation, phase: view.phase,

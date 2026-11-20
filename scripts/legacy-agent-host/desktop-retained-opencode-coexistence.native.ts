@@ -13,7 +13,7 @@ import { createDesktopUiControls, desktopJsLiteral } from './desktop-ui-controls
 import { startRetainedOpenCodeModel } from './desktop-retained-opencode-model.ts';
 import { configureRetainedOpenCodeImportAuthority } from './desktop-retained-opencode-authority.ts';
 import { retainedOpenCodeLaunchExpression, RETAINED_OPENCODE_LAUNCH_TIMEOUT_MS } from './desktop-retained-opencode-launch.ts';
-import { readRetainedOpenDiagnostic, type RetainedOpenDiagnosticBinding } from './desktop-retained-open-diagnostics.ts';
+import { readRetainedOpenDiagnostic, type RetainedOpenDiagnosticBinding } from './desktop-retained-product-record-diagnostics.ts';
 import {
   exerciseRetainedDonorHistory,
   originalLinuxProcessPresent,

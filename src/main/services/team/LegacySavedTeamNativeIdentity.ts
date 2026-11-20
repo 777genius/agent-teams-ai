@@ -187,6 +187,7 @@ function productMember(value: unknown): boolean {
     if (memberText.has(key)) return text(item);
     if (key === 'joinedAt' || key === 'removedAt') return timestamp(item);
     if (key === 'mcpPolicy') return policy(item);
+    if (key === 'isActive') return item === false;
     return false;
   });
 }
@@ -229,8 +230,12 @@ export function isLegacySavedTeamProductRecords(
       return false;
     if (records.config === null) return true;
     return Object.entries(row(records.config)).every(([key, item]) => {
-      if (['name', 'description', 'projectPath', 'leadAgentId'].includes(key)) return text(item);
+      if (['name', 'description', 'color', 'language', 'projectPath', 'leadAgentId'].includes(key))
+        return text(item);
       if (key === 'createdAt') return timestamp(item);
+      if (key === 'projectPathHistory')
+        return Array.isArray(item) && item.length <= 500 && item.every(text);
+      if (key === 'sessionHistory') return Array.isArray(item) && item.length === 0;
       if (key === 'members')
         return Array.isArray(item) && item.length <= 128 && item.every(productMember);
       return false;

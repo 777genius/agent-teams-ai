@@ -2,7 +2,109 @@
 
 Обновлено: **20 ноября 2026**. Единственный текущий рабочий план.
 
-## Текущий срез после `5278bfeb`
+## Текущий срез после `a57a706`
+
+`a57a7062166e26050dbcc1aee69fd5cc387c2487` опубликован поверх `5278bfeb`;
+обратный Git fetch подтвердил parent, tree и все девять blobs. В первой попытке
+Teams Linux/macOS и frontend shard4 завершились PASS. Остальные original jobs
+были отменены около16:43 UTC без изменения head/base. Terminal logs не показали
+source/test FAIL до отмены: Windows process остановился на установке dependencies,
+V2 Windows — на staging, frontend1 — без итогового отчёта. Причина инициирования
+общей отмены не установлена. Возобновлены только незавершённые jobs тех же шести
+original runs на том же SHA; три успешных результата сохранены.
+
+Снимок original CI **20 ноября, 20:31 по Киеву (18:31 UTC)**:
+
+| Original gate | Результат на a57 / следующая работа |
+| --- | --- |
+| Teams Desktop | Все три ОС PASS; Windows завершился во второй попытке |
+| Native V2 | Все 9/9 original jobs PASS |
+| Host frontend/Desktop | 8 PASS (все четыре frontend shard, Darwin quit-active, Linux Team, import и Taskboard), остальные21 основных jobs и aggregate отменены; итогового Host PASS нет |
+| Original process | Linux PASS; Darwin x64 и обе Windows архитектуры FAIL; Darwin ARM отменён. Разбор ниже |
+| Source CI / packaged | Draft plan и Fast feedback PASS, включая workspace typecheck, guards и fast lint; original retained Desktop FAIL на product-records до dispatch, aggregate отменён. Full lint/test/validate не выбраны, reuse=false; по policy Draft не квалифицируется для merge. Packaged classification PASS, все пять платформ и aggregate отменены |
+
+Незавершённые jobs второй попытки массово отменены около18:27–18:28 UTC.
+Head/base остались a57/8d46, PR metadata не менялась после16:41, нового same-SHA
+run/event не найдено. Инициатор и причина отмены публичными данными не установлены.
+Повтор на старом коде не запрашивается: следующий original запуск получит
+уже проверенный общий batch. Отмена не считается ни test FAIL, ни PASS.
+
+**Исправлен воспроизводимый synthetic test race.** Darwin x64 остановился в
+Windows command-contract test:194 PASS/1 FAIL/2 skipped. Прежний20ms cutoff мог
+истечь до native query; production корректно отказывал, а тест требовал уже
+поставленный pause. Контролируемая preemption+21ms воспроизводит тот же отказ.
+CI не записал loop variant/clock samples, поэтому конкретная deadline-итерация
+не выдаётся за наблюдённую телеметрию. Тест теперь управляет монотонными часами,
+сохраняет20ms и32-turn pause bound, проверяет exact/+1ms expiry после query и
+отдельно до admission:0 query/settlement/Stop и полная неизменность receipt.
+Production Windows commands, native custody и E2E waits не меняются.
+
+Полный промежуточный файл прошёл18/18; отключение настоящего deadline guard
+через loader даёт2 FAIL. R1 усилил сравнение всего receipt; окончательный case
+прошёл1/1, final canonical Host test TS7 и lint PASS, R2 без замечаний. Новый original
+Darwin PASS ещё требуется. Evidence и source hashes собраны в
+[continuation-a57 index](evidence/continuation-a57-20261120.json); до новой original
+квалификации этот gate остаётся FAIL.
+
+**Windows x64/ARM64:** actual Codex A/B, standalone и cold retention теперь PASS
+на обеих архитектурах; Claude A/B, standalone и retained history также PASS,
+cleanup подтверждён. ARM Codex standalone завершился за16.484s по опубликованной
+finite recipe policy; прежний15s FAIL не переопределяется. OpenCode Team-A ещё
+FAIL: первая reference probe-expiry на78ms/250ms позже исходного cutoff.
+На x64 33 current calls заняли10482ms, reference9579ms, account5453ms
+(интервалы вложены). Team-B и cold OpenCode не квалифицированы. Все три его
+original Jobs остановлены, drained/released и HANDLE absence подтверждены на
+обеих архитектурах; это cleanup, не functional PASS.
+
+**Проверенная новая TEST policy OpenCode.** Clock/source audit
+не нашёл неправильного сокращения срока или peer mismatch. Process fixture
+задаёт captured request ceiling15s, существующий desktop V1 fixture —60s;
+production принимает descriptor policy, универсального literal default нет.
+Выбран явный OpenCode-only functional TEST profile60s. Он меняет внешний срок
+ответа всех OpenCode RPC, включая metadata/probe/Stop/cold lookup. Native
+Stop/drain/release, management15s, probe30s, boot15s, shutdown1s, runtime/probe
+caps и внешний controller120s остаются прежними. Team A/B observer сохраняет
+один post-Start ACK anchor; Main preparation имеет отдельный более ранний cutoff,
+поэтому это не один общий60s interval. Readiness RPC получает только оставшееся
+время observer, late result отвергается до/после await. Codex/Claude и отсутствие
+standalone support в этом original OpenCode scenario сохраняются. Это новая
+functional acceptance policy, не измеренное ускорение и не исправление старого
+15s результата. Actual source RED1 PASS/9 FAIL → GREEN10/10; прежние observer
+cases3/3, lint и общий size guard PASS; scenario ровно800 строк. Final canonical
+Host scripts и Host test TS7 PASS, root R1 и независимый R2 без замечаний.
+Original qualification нового профиля ещё требуется.
+
+**Retained V1 → Host V2:** current app с legacy owner и настоящим старым fork
+runtime создал команду, выполнил сообщение и Stop; после включения Host descriptor
+история, сообщения и задачи совпали. Первый reopen отвергнут как
+coordinator-admission / source-unreadable / product-records до dispatch.
+Cleanup подтверждён. В artifact нет raw product records, поэтому конкретное
+отвергнутое поле не установлено. Реальные unchanged writer-функции доказали
+расхождения config.color и member.isActive=false, а также отдельные maintenance
+форматы: language, projectPathHistory≤500 текстовых элементов и sessionHistory=[];
+вызовы maintenance не установлены для исходного seed-create пути. Reader допускает
+только эти ограниченные формы. Native classifier, непустая история native-сессий,
+custody, owner facts и source fence сохранены. Intermediate RED16PASS/2FAIL →
+GREEN18/18; maintenance RED2FAIL/2PASS → final GREEN22/22. Fast lint, strict scoped
+TS7 всех2369 reachable files, root R1 и независимое R2 PASS. Original FAIL остаётся
+открытым до отдельной E2E квалификации.
+
+**Диагностика retained отказа** добавляет bounded structure-only чтение трёх
+product files только после уже подтверждённого product-records failure и после
+прежнего cleanup. Это не снимок момента отказа: Stop мог изменить записи. Типы,
+размеры и finite field labels не раскрывают значения; неизвестные keys хэшируются.
+Исходные действия, ошибки, cleanup и deadlines не меняются. На R1 найдено и
+исправлено расхождение test runner: первый GREEN использовал tsx, тогда как
+original CI запускает plain Node. Parameter property заменён explicit field;
+final plain Node24.21:12/12 новых cases и5/5 прежних cleanup precedence PASS.
+Canonical Host scripts TS7 и lint PASS; независимое R2 без замечаний.
+
+Дальнейшая работа: закончить общее review и упаковку evidence, опубликовать
+проверенные source/evidence одним batch, получить original квалификацию нового SHA и затем пройти
+уже согласованную feature delivery/runtime-permission границу. E2E completion,
+formal approval, merge и release пока не заявляются.
+
+## Проверенный срез поверх `5278bfeb`
 
 `5278bfeb40a38706f8ec2d4359f4621622f61674` опубликован поверх `e7ec8337`;
 обратный Git fetch подтвердил parent, tree и все 29 blobs. Семь изменений

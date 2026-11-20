@@ -10,6 +10,7 @@ import { readTeamHostProfile } from '../../packages/legacy-agent-host/dist/compo
 import { runtimeMemberProfileSchema } from '../../packages/legacy-agent-host/dist/composition/runtimeProfile.js';
 import { providerManagementProfileSchema } from '../../packages/legacy-agent-host/dist/management/profile.js';
 import { fileHash } from './nativeEmulatedProfile';
+import { emulatedSourceOpenCodeRequestTimeoutMs } from './nativeEmulatedSourceReadiness';
 
 import type { TeamHostProfile } from '../../packages/legacy-agent-host/dist/composition/TeamHost.js';
 import type { DesktopBackendDescriptor } from '../../src/features/agent-backend/main/infrastructure/loadDesktopBackendDescriptor';
@@ -403,7 +404,8 @@ await import(${JSON.stringify(pathToFileURL(cli).href)});
     cwd: root, env: { HOME: join(root, 'host-home'), TMPDIR: join(root, 'host-tmp'), TEMP: join(root, 'host-tmp'),
       TMP: join(root, 'host-tmp'), SystemRoot: systemRoot, PATH: [dirname(node), join(systemRoot, 'System32')].join(';'),
       LEGACY_AGENT_HOST_PROFILE_PATH: profilePath, LEGACY_AGENT_HOST_PROFILE_SHA256: fileHash(profilePath) },
-    startupTimeoutMs: 10000, requestTimeoutMs: 15000, writeTimeoutMs: 5000, shutdownTimeoutMs: 1000 };
+    startupTimeoutMs: 10000, requestTimeoutMs: provider === 'opencode' ? emulatedSourceOpenCodeRequestTimeoutMs : 15000,
+    writeTimeoutMs: 5000, shutdownTimeoutMs: 1000 };
   const owner = { ownerId, revision: profile.owner.revision };
   const descriptor: DesktopBackendDescriptor = { schemaVersion: 1, defaultOwner: owner,
     owners: [{ ...owner, storageRoot: profile.owner.storageRoot, profile: host }],

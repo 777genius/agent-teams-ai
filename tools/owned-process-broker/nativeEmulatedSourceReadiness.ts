@@ -12,6 +12,17 @@ import { readinessOriginDigest } from '../../src/features/agent-backend/main/inf
 import type { TeamHostProfile } from '../../packages/legacy-agent-host/dist/composition/TeamHost.js';
 import type { TeamLaunchRecord } from '../../packages/legacy-agent-host/dist/team-launch/contracts.js';
 
+// Match the existing desktop V1 TEST workflow profile, not a product latency SLO.
+export const emulatedSourceOpenCodeRequestTimeoutMs = 60_000;
+export function captureEmulatedSourceReadinessObservation(provider: string, requestTimeoutMs: number) {
+  if (provider !== 'opencode') return undefined;
+  assert.ok(Number.isSafeInteger(requestTimeoutMs) && requestTimeoutMs > 0);
+  const ceilingMs = Math.min(emulatedSourceOpenCodeRequestTimeoutMs, requestTimeoutMs);
+  const startedAtMs = performance.now();
+  return Object.freeze({ policy: 'desktop-v1-functional-ceiling-v1', anchor: 'post-start-ack',
+    ceilingMs, startedAtMs, deadlineMs: startedAtMs + ceilingMs });
+}
+
 export function readEmulatedSourceActionProbe(options: {
   profile: TeamHostProfile; team: number; handleId: string; contextId: string; commandId: string;
   payload: { launchId: string; rosterRevision: string }; fingerprint: string; captureDigest: string;

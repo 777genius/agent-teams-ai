@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
@@ -11,12 +11,16 @@ import {
   classifyLegacySavedTeamNativeRecords,
   isLegacySavedTeamProductRecords,
 } from '../../../src/main/services/team/LegacySavedTeamNativeIdentity';
+import { persistClearedStoppedTeamLiveRuntimeHandles } from '../../../src/main/services/team/provisioning/TeamProvisioningClearStoppedTeamRuntimeHandles';
+import { TeamProvisioningConfigMaintenance } from '../../../src/main/services/team/provisioning/TeamProvisioningConfigMaintenance';
+import { applyConfigPostLaunchMaterialization } from '../../../src/main/services/team/provisioning/TeamProvisioningConfigMaterialization';
+import { writeOpenCodeTeamConfig } from '../../../src/main/services/team/provisioning/TeamProvisioningOpenCodeTeamConfigWriter';
 import { TeamLaunchStateStore } from '../../../src/main/services/team/TeamLaunchStateStore';
 import { TeamMembersMetaStore } from '../../../src/main/services/team/TeamMembersMetaStore';
 import { TeamMetaStore } from '../../../src/main/services/team/TeamMetaStore';
 
 import type { LegacyStoppedSourceOwners } from '../../../src/features/agent-backend/main/infrastructure/stopped-import/createLegacyStoppedTeamSource';
-import type { ProviderModelLaunchIdentity } from '../../../src/shared/types';
+import type { ProviderModelLaunchIdentity, TeamCreateRequest } from '../../../src/shared/types';
 
 const paths = vi.hoisted(() => ({ root: '/TEST-unconfigured-saved-draft' }));
 vi.mock('@main/utils/pathDecoder', async (importOriginal) => ({
@@ -104,7 +108,169 @@ async function savedDraft(
   return { teamName, meta, metaPath, roster, source };
 }
 
+async function stoppedOpenCodeConfig(options: { color?: string; stopped?: boolean } = {}) {
+  const f = await savedDraft(1, launchIdentity('opencode', 'explicit'));
+  const configPath = join(dirname(f.metaPath), 'config.json');
+  const request: TeamCreateRequest = {
+    teamName: f.teamName, cwd: String(f.meta.cwd), providerId: 'opencode', model: 'TEST-model',
+    ...(options.color === undefined ? {} : { color: options.color }),
+    members: [{ name: 'worker', role: 'developer', providerId: 'opencode', model: 'TEST-model',
+      mcpPolicy: { mode: 'appOnly' } }],
+  };
+  // These two production writer files are identical to the retained release writer.
+  await writeOpenCodeTeamConfig(request, request.members, {
+    getTeamsBasePath: () => join(paths.root, 'claude/teams'),
+    writeFileAtomic: async (path, bytes) => { writeFileSync(path, bytes); }, invalidateTeam() {},
+  });
+  if (options.stopped) {
+    const running = JSON.parse(readFileSync(configPath, 'utf8')) as { members: Record<string, unknown>[] };
+    Object.assign(running.members.find(member => member.name === 'worker')!, {
+      isActive: true, runtimePid: 12345, runtimeSessionId: 'TEST-native-session',
+    });
+    writeFileSync(configPath, JSON.stringify(running));
+    expect(persistClearedStoppedTeamLiveRuntimeHandles(f.teamName, {
+      readTeamConfigJson: () => readFileSync(configPath, 'utf8'),
+      writeTeamConfigJson: (_team, bytes) => { writeFileSync(configPath, bytes); },
+      invalidateTeamConfig() {},
+    })).toBe(true);
+  }
+  const config = JSON.parse(readFileSync(configPath, 'utf8')) as Record<string, unknown> & {
+    members: Record<string, unknown>[];
+  };
+  return { ...f, config, configPath };
+}
+
+async function maintainedOpenCodeConfig(mode: 'post-launch' | 'project-path') {
+  const f = await stoppedOpenCodeConfig();
+  const cwd = String(f.meta.cwd);
+  f.config.projectPathHistory = Array.from({ length: 500 }, (_, i) => `/TEST-prior-${i}`);
+  if (mode === 'post-launch') {
+    applyConfigPostLaunchMaterialization({ teamName: f.teamName, config: f.config,
+      projectPath: cwd, newSessionId: null, sessionHistory: [], language: 'en' });
+    writeFileSync(f.configPath, JSON.stringify(f.config));
+  } else {
+    writeFileSync(f.configPath, JSON.stringify(f.config));
+    const unused = (): never => { throw new Error('Unexpected maintenance port'); };
+    const maintenance = new TeamProvisioningConfigMaintenance({
+      limits: { teamJsonReadTimeoutMs: 1000, teamConfigMaxBytes: 256 * 1024, teamInboxMaxBytes: 256 * 1024 },
+      ports: {
+        getTeamsBasePath: () => join(paths.root, 'claude/teams'), getProjectsBasePath: unused,
+        readRegularFileUtf8: async path => readFileSync(path, 'utf8'),
+        writeFileUtf8: async (path, bytes) => { writeFileSync(path, bytes); },
+        unlink: unused, readDir: unused, stat: unused, withCanonicalInboxLock: unused,
+        scanForNewestProjectSession: unused,
+        membersMetaStore: { getMembers: unused, writeMembers: unused },
+        invalidateTeam() {}, getLanguage: unused, now: unused,
+        logger: { info() {}, warn: unused, debug: unused },
+      },
+    });
+    await maintenance.updateConfigProjectPath(f.teamName, cwd);
+  }
+  const config = JSON.parse(readFileSync(f.configPath, 'utf8')) as typeof f.config;
+  return { ...f, config };
+}
+
 describe('actual saved-draft product format', () => {
+  it.each(['post-launch', 'project-path'] as const)(
+    'reads actual maintenance %s writer output at its 500-path bound', async mode => {
+      const f = await maintainedOpenCodeConfig(mode);
+      const before = readFileSync(f.configPath, 'utf8');
+      expect(f.config.projectPathHistory).toHaveLength(500);
+      expect((f.config.projectPathHistory as string[]).at(-1)).toBe(f.meta.cwd);
+      if (mode === 'post-launch') expect(f.config).toMatchObject({ language: 'en', sessionHistory: [] });
+      else {
+        expect(f.config).not.toHaveProperty('language');
+        expect(f.config).not.toHaveProperty('sessionHistory');
+      }
+      const records = { config: f.config, meta: f.meta, roster: f.roster };
+      expect(classifyLegacySavedTeamNativeRecords(f.teamName, records)).toBe('empty');
+      expect(isLegacySavedTeamProductRecords(f.teamName, records)).toBe(true);
+      expect((await f.source.fenced(() => f.source.describe())).members.map(member => member.name))
+        .toEqual(['team-lead', 'worker']);
+      expect(readFileSync(f.configPath, 'utf8')).toBe(before);
+    }
+  );
+
+  it('refuses malformed, oversized and unknown maintenance product fields', async () => {
+    const f = await maintainedOpenCodeConfig('post-launch');
+    const variants = [
+      ...[null, 1, {}, [], 'bad\0language', 'x'.repeat(256 * 1024 + 1)].map(language => ({ ...f.config, language })),
+      ...[null, 'path', {}, [1], ['bad\0path'], Array(501).fill('/TEST-path')]
+        .map(projectPathHistory => ({ ...f.config, projectPathHistory })),
+      ...[null, ''].map(sessionHistory => ({ ...f.config, sessionHistory })),
+      { ...f.config, unknownMaintenanceField: true },
+    ];
+    for (const config of variants) {
+      const bytes = JSON.stringify(config); writeFileSync(f.configPath, bytes);
+      expect(isLegacySavedTeamProductRecords(f.teamName, { config, meta: f.meta, roster: f.roster })).toBe(false);
+      await expect(f.source.fenced(() => f.source.describe())).rejects.toMatchObject({ reason: 'source-unreadable' });
+      expect(readFileSync(f.configPath, 'utf8')).toBe(bytes);
+    }
+  });
+
+  it('retains original native custody requirements for nonempty maintenance session identity', async () => {
+    const f = await maintainedOpenCodeConfig('post-launch');
+    for (const fields of [{ sessionHistory: ['TEST-native-session'] }, { leadSessionId: 'TEST-native-session' }]) {
+      const config = { ...f.config, ...fields };
+      const bytes = JSON.stringify(config), records = { config, meta: f.meta, roster: f.roster };
+      writeFileSync(f.configPath, bytes);
+      expect(classifyLegacySavedTeamNativeRecords(f.teamName, records)).toBe('retained');
+      expect(isLegacySavedTeamProductRecords(f.teamName, records)).toBe(false);
+      await expect(f.source.fenced(() => f.source.describe())).rejects.toMatchObject({ reason: 'native-custody-unverified' });
+      expect(readFileSync(f.configPath, 'utf8')).toBe(bytes);
+    }
+  });
+
+  it.each([{ color: '#336699' }, { stopped: true }])(
+    'reads the exact OpenCode writer and stopped product shape %j', async (options) => {
+      const f = await stoppedOpenCodeConfig(options);
+      const before = readFileSync(f.configPath, 'utf8');
+      if ('stopped' in options) {
+        expect(f.config.members.find(member => member.name === 'worker')).toMatchObject({ isActive: false });
+        expect(f.config.members.some(member => 'runtimePid' in member || 'runtimeSessionId' in member)).toBe(false);
+      }
+      const records = { config: f.config, meta: f.meta, roster: f.roster };
+      expect(classifyLegacySavedTeamNativeRecords(f.teamName, records)).toBe('empty');
+      expect(isLegacySavedTeamProductRecords(f.teamName, records)).toBe(true);
+      const header = await f.source.fenced(() => f.source.describe());
+      expect(header.savedSettings.providerId).toBe('opencode');
+      expect(header.members.map(member => member.name)).toEqual(['team-lead', 'worker']);
+      expect(readFileSync(f.configPath, 'utf8')).toBe(before);
+    }
+  );
+
+  it('refuses active or malformed member flags, malformed color and unknown product keys', async () => {
+    const f = await stoppedOpenCodeConfig({ stopped: true });
+    const variants = [
+      ...[true, 'false', 0, null, [], {}].map(isActive => ({ ...f.config,
+        members: f.config.members.map(member => member.name === 'worker' ? { ...member, isActive } : member) })),
+      ...[null, 1, {}, [], 'bad\0color'].map(color => ({ ...f.config, color })),
+      { ...f.config, unknownProductField: true },
+      { ...f.config, members: f.config.members.map(member => ({ ...member, unknownProductField: true })) },
+    ];
+    for (const config of variants) {
+      const bytes = JSON.stringify(config); writeFileSync(f.configPath, bytes);
+      expect(isLegacySavedTeamProductRecords(f.teamName, { config, meta: f.meta, roster: f.roster })).toBe(false);
+      await expect(f.source.fenced(() => f.source.describe())).rejects.toMatchObject({ reason: 'source-unreadable' });
+      expect(readFileSync(f.configPath, 'utf8')).toBe(bytes);
+    }
+  });
+
+  it('does not let a stopped member flag replace original native custody requirements', async () => {
+    const f = await stoppedOpenCodeConfig({ stopped: true });
+    for (const [key, value] of [['runtimePid', 12345], ['runtimeSessionId', 'TEST-native-session'],
+      ['runId', 'TEST-native-run']] as const) {
+      const config = { ...f.config, members: f.config.members.map(member => member.name === 'worker'
+        ? { ...member, [key]: value } : member) };
+      const bytes = JSON.stringify(config), records = { config, meta: f.meta, roster: f.roster };
+      writeFileSync(f.configPath, bytes);
+      expect(classifyLegacySavedTeamNativeRecords(f.teamName, records)).toBe('retained');
+      expect(isLegacySavedTeamProductRecords(f.teamName, records)).toBe(false);
+      await expect(f.source.fenced(() => f.source.describe())).rejects.toMatchObject({ reason: 'native-custody-unverified' });
+      expect(readFileSync(f.configPath, 'utf8')).toBe(bytes);
+    }
+  });
+
   it.each([undefined, 1] as const)(
     'retains runtime selection version %s from the real Save-only writer',
     async (version) => {

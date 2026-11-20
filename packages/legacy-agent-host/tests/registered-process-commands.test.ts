@@ -391,7 +391,7 @@ function windowsFixture(t: TestContext) {
   const source = () => ({ mainEpoch: capture.mainEpoch, providerCapability: capture.providerCapability,
     providerGeneration: capture.providerGeneration, root: structuredClone(capture.root) });
   const replies = new Map<string, WindowsServiceOutcome>();
-  let sequence = 0, captures = 0, stops = 0, settlements = 0, absent = false, loseCapture = false;
+  let sequence = 0, captures = 0, queries = 0, stops = 0, settlements = 0, absent = false, loseCapture = false;
   let pause: 'run' | 'lookup' | 'query' | 'admission' | undefined;
   let captureReply: WindowsServiceOutcome | undefined;
   let settlementReply: WindowsServiceOutcome | undefined, lastSettlement: string | undefined;
@@ -452,6 +452,7 @@ function windowsFixture(t: TestContext) {
     async query(selected, _deadline) {
       assert.equal(f.fenceDepth(), 0);
       assert.deepEqual(selected, capture);
+      queries++;
       return holdReply('query', { state: 'observed', capture: structuredClone(capture),
         observation: absent ? 'absent' : 'same-live', evidence: 'native-scope' });
     },
@@ -459,7 +460,7 @@ function windowsFixture(t: TestContext) {
   return { ...f, capture, commands: f.windows(port), cold: () => f.windows(port),
     asPrincipal: (principalId: string) => f.windows(port, principalId),
     deadline: () => performance.now() + 10000,
-    captures: () => captures, stops: () => stops, settlements: () => settlements,
+    captures: () => captures, queries: () => queries, stops: () => stops, settlements: () => settlements,
     loseCapture: () => { loseCapture = true; },
     captureReply: (value: WindowsServiceOutcome) => { captureReply = structuredClone(value); },
     pause: (kind: 'run' | 'lookup' | 'query' | 'admission') => { pause = kind; },
@@ -805,17 +806,20 @@ test('Windows natural settlement preserves pre-dispatch and lost-ACK uncertainty
 });
 
 test('Windows natural evidence cannot cross a changed source, grant, deadline, capture or concurrent original Stop', async t => {
-  for (const change of ['source', 'grant', 'deadline', 'capture'] as const) {
+  let clock = 1000;
+  t.mock.method(performance, 'now', () => clock);
+  for (const change of ['source', 'grant', 'deadline', 'late-deadline', 'capture'] as const) {
     const f = windowsFixture(t);
     const registered = await f.commands.windows!.register('TEST-natural-guard', { pid: 1001, label: 'TEST guard' }, f.deadline());
     f.absent(); f.pause('query');
-    const deadline = change === 'deadline' ? performance.now() + 20 : f.deadline();
+    const expires = change === 'deadline' || change === 'late-deadline';
+    const deadline = expires ? performance.now() + 20 : f.deadline();
     const pending = f.commands.windows!.reconcileNaturalAbsence(deadline);
     await f.atPause();
+    assert.equal(f.queries(), 1, 'Original query is admitted before changing its authority or clock');
     if (change === 'source') f.sourceChanged();
     if (change === 'grant') f.revoke();
-    if (change === 'deadline')
-      await new Promise<void>(resolve => setTimeout(resolve, Math.max(1, Math.ceil(deadline - performance.now()) + 1)));
+    if (expires) clock = deadline + (change === 'late-deadline' ? 1 : 0);
     f.release(change === 'capture' ? { state: 'observed', capture: {
       ...f.capture, root: { ...f.capture.root, birth: '0000000000000020' },
     }, observation: 'absent', evidence: 'native-scope' } : undefined);
@@ -841,4 +845,23 @@ test('Windows natural evidence cannot cross a changed source, grant, deadline, c
   assert.equal(registration.nativeAbsence, undefined, 'Completed genuine Stop keeps its own settlement path');
   assert.equal(f.stops(), 1); assert.equal(f.settlements(), 1); assert.equal(f.captures(), 1);
   f.coldUnavailable().assertReleased();
+});
+
+test('Windows natural evidence refuses expiry before query admission without changing the receipt', async t => {
+  let clock = 1000;
+  t.mock.method(performance, 'now', () => clock);
+  for (const latenessMs of [0, 1]) {
+    const f = windowsFixture(t);
+    await f.commands.windows!.register('TEST-natural-expired', { pid: 1001, label: 'TEST expired' }, f.deadline());
+    const originalReceipt = structuredClone([...f.files.values()][0] as ProcessCommandReceipt);
+    f.absent();
+    const deadline = performance.now() + 20;
+    clock = deadline + latenessMs;
+    await f.commands.windows!.reconcileNaturalAbsence(deadline);
+    const stored = [...f.files.values()][0] as ProcessCommandReceipt;
+    assert.equal(stored.nativeAbsence, undefined);
+    assert.deepEqual(stored, originalReceipt, 'Expired admission preserves every original receipt field');
+    assert.equal(f.queries(), 0, 'Expired work never reaches native query admission');
+    assert.equal(f.settlements(), 0); assert.equal(f.stops(), 0);
+  }
 });
