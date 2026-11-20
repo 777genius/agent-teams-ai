@@ -33,13 +33,7 @@ export async function prepareTeamContextLaunch(
   options: { expectedExecutionTeamName?: string } = {}
 ): Promise<PreparedTeamContextLaunch> {
   const parts = createProjectContextRuntimeParts(ports);
-  const kind = await classifyTeamKind(
-    {
-      getMode: (name) => parts.resolver.getMode(name),
-      isOwnedExecutionAlias: (name) => parts.registry.isOwnedExecutionAlias(name),
-    },
-    request.teamName
-  );
+  const kind = await classifyTeamKind(parts.kinds, request.teamName);
   // Public launch requests must never bypass logical-team admission by
   // addressing the physical runtime alias directly (e.g. global tasks).
   if (kind === 'alias') {

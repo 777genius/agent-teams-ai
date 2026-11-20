@@ -442,3 +442,68 @@ describe('project team lifecycle projection', () => {
     expect(projected).toContain('ptc-a');
   });
 });
+
+describe('which teams the delete paths treat as project-scoped', () => {
+  function indexed(mode: 'shared' | 'per_project', hasIndex: boolean) {
+    const f = fixture(mode);
+    f.registry.hasRetainedIndex.mockImplementation(async () => hasIndex);
+    const permanent = {
+      ...f.registry,
+      beginPermanentDeletion: vi.fn(async () => undefined),
+      cancelPermanentDeletion: vi.fn(async () => undefined),
+      listForPermanentDeletion: vi.fn(async () => []),
+      forgetPermanentlyDeletedContext: vi.fn(async () => true),
+    };
+    return { meta: f.meta, registry: f.registry, permanent };
+  }
+  const okStop = async () => ({ success: true as const, data: undefined });
+
+  it('soft delete: a shared team that kept an index is fenced and its contexts are trashed', async () => {
+    const f = indexed('shared', true);
+    f.registry.listRetained.mockImplementation(async () => [entry]);
+    const trashed: string[] = [];
+    const deleteLogical = vi.fn(async () => ({ success: true as const, data: undefined }));
+    const { deleteLogicalTeamWithContexts } = await import('../../../src/main/ipc/teams/teamContextLifecycle');
+    const result = await deleteLogicalTeamWithContexts(
+      'old', okStop, async (name) => { trashed.push(name); }, deleteLogical,
+      f.meta, f.registry as never, async () => false
+    );
+    expect(result.success).toBe(true);
+    expect(f.registry.beginSoftDelete).toHaveBeenCalledWith('old');
+    expect(trashed).toEqual(['ptc-a']);
+  });
+
+  it('soft delete: a shared team without an index goes straight to the plain delete', async () => {
+    const f = indexed('shared', false);
+    const deleteLogical = vi.fn(async () => ({ success: true as const, data: undefined }));
+    const { deleteLogicalTeamWithContexts } = await import('../../../src/main/ipc/teams/teamContextLifecycle');
+    await deleteLogicalTeamWithContexts(
+      'legacy', okStop, async () => undefined, deleteLogical, f.meta, f.registry as never
+    );
+    expect(deleteLogical).toHaveBeenCalledOnce();
+    expect(f.registry.beginSoftDelete).not.toHaveBeenCalled();
+  });
+
+  it('a per-project team never asks whether an index exists: it always has one', async () => {
+    const f = indexed('per_project', true);
+    const { deleteLogicalTeamWithContexts } = await import('../../../src/main/ipc/teams/teamContextLifecycle');
+    await deleteLogicalTeamWithContexts(
+      'builders', okStop, async () => undefined,
+      async () => ({ success: true as const, data: undefined }),
+      f.meta, f.registry as never, async () => false
+    );
+    expect(f.registry.hasRetainedIndex).not.toHaveBeenCalled();
+    expect(f.registry.beginSoftDelete).toHaveBeenCalledWith('builders');
+  });
+
+  it('permanent delete: a shared team without an index is deleted as a plain team, without a fence', async () => {
+    const f = indexed('shared', false);
+    const deleteLogical = vi.fn(async () => ({ success: true as const, data: undefined }));
+    await permanentlyDeleteLogicalTeam('legacy', {
+      stopNative: okStop, deleteNative: async () => undefined, deleteLogical,
+      meta: f.meta, registry: f.permanent as never,
+    });
+    expect(deleteLogical).toHaveBeenCalledExactlyOnceWith(false);
+    expect(f.permanent.beginPermanentDeletion).not.toHaveBeenCalled();
+  });
+});

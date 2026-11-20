@@ -1,8 +1,8 @@
-import { classifyTeamKind } from '../core';
+import { classifyTeamKind, createTeamKindPorts } from '../core';
 
 import { projectDefinitionToAlias } from './projectDefinitionToAlias';
 
-import type { TeamKind } from '../core';
+import type { TeamKind } from '../contracts';
 import type { DefinitionMetadataUpdate } from './projectDefinitionToAlias';
 import type { TeamProjectContextLaunchGate } from './TeamProjectContextLaunchGate';
 import type { PersistedTeamWorkContext } from './TeamProjectContextRegistry';
@@ -43,13 +43,7 @@ export class TeamProjectDefinitionEditor {
 
   /** Fails closed: unreadable team metadata rejects instead of falling back to a native edit. */
   classify(teamName: string): Promise<TeamKind> {
-    return classifyTeamKind(
-      {
-        getMode: (name) => this.ports.getMode(name),
-        isOwnedExecutionAlias: (name) => this.registry.isOwnedExecutionAlias(name),
-      },
-      teamName
-    );
+    return classifyTeamKind(createTeamKindPorts(this.ports, this.registry), teamName);
   }
 
   async assertEditable(logicalTeamName: string): Promise<void> {

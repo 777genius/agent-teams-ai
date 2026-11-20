@@ -16,10 +16,19 @@ Every caller that has to treat a logical team, a project copy and an ordinary te
 
 | Question | Where | Policy on unreadable state |
 | --- | --- | --- |
-| What mode is the team in? | `main/projectContextMode.ts` `readTeamProjectContextMode` (`TeamProjectContextRuntimeResolver.getMode` delegates) | throws `TeamMetadataUnreadableError`; a caller may name what it refuses, the decision is the same |
-| Which project contexts does it own, and does it carry history at all? | `main/ownedHistory.ts` `listOwnedContexts`, `ownsProjectHistory` | the registry throws for a damaged or deleting index |
-| Logical team, project copy or ordinary team? | `core/classifyTeamKind.ts` `classifyTeamKind` (edit router, editor, schedules, launch) | fails closed |
+| What mode is the team in? | `main/projectContextMode.ts` `readTeamProjectContextMode` (`TeamProjectContextRuntimeResolver.getMode` delegates) | throws `TeamMetadataUnreadableError` for a file that exists but cannot be read, and the parse error for an unknown mode value; a caller may name what it refuses, the decision is the same |
+| Which project contexts does it own, and does it carry history at all? | `main/ownedHistory.ts` `listOwnedContexts`, `ownsProjectHistory` | `listOwnedContexts` goes through the registry, which throws for a damaged or deleting index; `ownsProjectHistory` only checks that the index file exists (no read, never throws for a damaged index) |
+| Logical team, project copy or ordinary team? | `core/classifyTeamKind.ts` `classifyTeamKind` and `createTeamKindPorts`; the `TeamKind` type is in `contracts/` (edit router, editor, schedules, launch, external team management) | fails closed |
 
-`main/resolveTeamTarget.ts` is the one deliberately more tolerant policy on top of the first two: it serves callers that take a name literally (HTTP, MCP) and may stop a team by its exact name when its metadata is unreadable and it has no contexts index. A new consumer adds a capability on top of these primitives; it does not add a branch to them.
+Two vocabularies, on purpose. `TeamKind` (`logical` / `alias` / `native`) tells an **owned project copy** (`alias`) from an ordinary team (`native`), because edits, schedules and launch refuse a copy. `ResolvedTeamTarget.kind` (`logical` / `physical`) answers a different question for HTTP and MCP that take names literally: has the name a process of its own. A project copy is `physical` there (its name is the process) and `alias` in `TeamKind`; a retained shared team is `native` in `TeamKind` and `physical` with `retained` contexts in `ResolvedTeamTarget`.
 
-`test/features/team-project-context/teamKindMatrix.test.ts` pins what every consumer answers for each kind of name on the same on-disk state.
+Policies that are deliberately more tolerant than the fail-closed classification, each by name:
+- `main/resolveTeamTarget.ts`: an HTTP/MCP caller may stop a team by its exact name when its metadata is unreadable and it has no contexts index (`projectContextUnresolved`);
+- `main/projectTeamSummaries.ts`: a team whose metadata cannot be read stays visible and is not folded;
+- `projectAliveTeamNames` in `src/main/ipc/teams/teamContextLifecycle.ts`: one unreadable team does not hide the alive state of the others.
+
+Deliberately left alone, with the reason: `main/TeamProjectContextViewIpc.ts` needs the alias lookup data (logical name, project path), not a yes/no; the HTTP launch guard keeps its `ptc-` name-shape check, which is stricter than ownership; `TeamProjectDefinitionBackup.ts` decides from the raw files of a snapshot it is reading (`hasIndex` and `projectContextMode` come from the same read, so asking the registry again would be a second read); `readRosterForMutation` in `teamProjectDefinitionEdit.ts` and `TeamConfigurationMutations` need the metadata record itself; the create paths read a request field, not a stored team; the MCP server is a separate package.
+
+A new consumer adds a capability on top of these primitives; it does not add a branch to them.
+
+`test/features/team-project-context/teamKindMatrix.test.ts` pins what every consumer answers for each kind of name on the same on-disk state, read through the real metadata store.

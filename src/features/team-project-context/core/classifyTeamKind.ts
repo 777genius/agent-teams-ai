@@ -1,13 +1,4 @@
-import type { TeamProjectContextMode } from '../contracts';
-
-/**
- * What a team name is, for every caller that must treat the kinds differently
- * (definition edits, schedules, launch):
- * - `logical`: the user-visible team of the per-project mode; its definition is the only authority.
- * - `alias`: a native project copy; a projection, never edited or launched directly.
- * - `native`: any other team (legacy/shared); unchanged behavior.
- */
-export type TeamKind = 'logical' | 'alias' | 'native';
+import type { TeamKind, TeamProjectContextMode } from '../contracts';
 
 export interface TeamKindPorts {
   getMode(teamName: string): Promise<TeamProjectContextMode>;
@@ -22,4 +13,15 @@ export interface TeamKindPorts {
 export async function classifyTeamKind(ports: TeamKindPorts, teamName: string): Promise<TeamKind> {
   if ((await ports.getMode(teamName)) === 'per_project') return 'logical';
   return (await ports.isOwnedExecutionAlias(teamName)) ? 'alias' : 'native';
+}
+
+/** The one way to build the ports: callers hold the mode reader and the alias lookup separately. */
+export function createTeamKindPorts(
+  mode: Pick<TeamKindPorts, 'getMode'>,
+  aliases: Pick<TeamKindPorts, 'isOwnedExecutionAlias'>
+): TeamKindPorts {
+  return {
+    getMode: (teamName) => mode.getMode(teamName),
+    isOwnedExecutionAlias: (teamName) => aliases.isOwnedExecutionAlias(teamName),
+  };
 }

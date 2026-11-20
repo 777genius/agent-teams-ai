@@ -23,5 +23,5 @@ export function parseNewTeamProjectContextMode(value: unknown): TeamProjectConte
   throw new Error('projectContextMode must be shared or per_project');
 }
 
-export type { TeamKind, TeamKindPorts } from './classifyTeamKind';
-export { classifyTeamKind } from './classifyTeamKind';
+export type { TeamKindPorts } from './classifyTeamKind';
+export { classifyTeamKind, createTeamKindPorts } from './classifyTeamKind';

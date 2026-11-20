@@ -1,12 +1,10 @@
 import { listOwnedContexts } from './ownedHistory';
 import { TeamProjectContextRegistry } from './TeamProjectContextRegistry';
 
-import type { TeamMetaFile } from '@main/services/team/TeamMetaStore';
+import type { TeamModeMetaReader } from './projectContextMode';
 import type { TeamSummary } from '@shared/types';
 
-interface MetaReader {
-  getMeta(teamName: string): Promise<TeamMetaFile | null>;
-}
+type MetaReader = Pick<TeamModeMetaReader, 'getMeta'>;
 
 type RegistryReader = Pick<TeamProjectContextRegistry, 'list' | 'listRetained'>;
 
@@ -28,7 +26,7 @@ export async function projectTeamSummaries(
   for (let offset = 0; offset < teams.length; offset += READ_BATCH) {
     await Promise.all(teams.slice(offset, offset + READ_BATCH).map(async (team, index) => {
       const position = offset + index;
-      let saved: TeamMetaFile | null = null;
+      let saved: Awaited<ReturnType<MetaReader['getMeta']>> = null;
       try {
         saved = await meta.getMeta(team.teamName);
       } catch {

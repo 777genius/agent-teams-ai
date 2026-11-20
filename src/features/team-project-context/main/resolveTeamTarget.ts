@@ -14,18 +14,21 @@ import type { TeamProjectContextMode } from '@shared/types';
  * never by whether it happens to own a contexts index:
  * - `logical`: the user-visible team of the per-project mode. It has no process of
  *   its own; its runtime, tasks and chats live in its project contexts.
- * - `native`: an ordinary team (legacy/shared); the name is the physical team and
+ * - `physical`: an ordinary team (legacy/shared); the name is the physical team and
  *   the process. A shared team that kept a project-contexts index from an earlier
  *   per-project period lists those `retained` contexts too: they may still run.
  *   `projectContextUnresolved` marks a team whose metadata is unreadable and that
  *   has no contexts index, so it can only be treated by its exact name.
  *
- * A project copy (`ptc-…` alias) is an ordinary native team here: its name is
- * physical, and the callers that need its logical team look it up themselves.
+ * A project copy (`ptc-…` alias) is `physical` here: its name is the process, and
+ * the callers that need its logical team look it up themselves. This is not
+ * `TeamKind` (`classifyTeamKind`), which tells an owned copy (`alias`) from an
+ * ordinary team (`native`) for edits, schedules and launch: the two answer
+ * different questions, which is why they use different words.
  */
 export type ResolvedTeamTarget =
   | {
-      kind: 'native';
+      kind: 'physical';
       team: string;
       retained: readonly PersistedTeamWorkContext[];
       projectContextUnresolved?: true;
@@ -82,11 +85,11 @@ export async function resolveTeamTarget(
     if (await guarded(teamName, () => ports.hasContextsIndex(teamName))) {
       throw new TeamTargetUnresolvedError(teamName, error);
     }
-    return { kind: 'native', team: teamName, retained: [], projectContextUnresolved: true };
+    return { kind: 'physical', team: teamName, retained: [], projectContextUnresolved: true };
   }
   const contexts = await guarded(teamName, () => ports.listContexts(teamName, mode));
   if (mode === 'per_project') return { kind: 'logical', logical: teamName, contexts };
-  return { kind: 'native', team: teamName, retained: contexts };
+  return { kind: 'physical', team: teamName, retained: contexts };
 }
 
 /**

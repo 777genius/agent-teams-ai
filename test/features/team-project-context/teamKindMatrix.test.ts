@@ -11,10 +11,10 @@ import {
   TeamProjectContextRegistry,
   TeamProjectContextRuntimeResolver,
 } from '../../../src/features/team-project-context/main';
+import { TeamMetaStore } from '../../../src/main/services/team/TeamMetaStore';
 import { stopLogicalTeam } from '../../../src/main/ipc/teams/teamContextLifecycle';
 import { claimTeamForThisProfile } from '../../../src/main/services/team/provisioning/TeamProvisioningProfileOwnership';
 
-import type { TeamMetaFile } from '../../../src/main/services/team/TeamMetaStore';
 import type { TeamSummary } from '../../../src/shared/types/team';
 
 /**
@@ -33,8 +33,11 @@ type Mode = 'shared' | 'per_project';
 
 interface Spec {
   name: string;
-  /** What the metadata store returns; 'unreadable' = file exists but cannot be parsed. */
-  meta: Mode | 'none' | 'unreadable';
+  /**
+   * What is on disk, read by the real metadata store: 'unreadable' = a file that is not JSON
+   * (getMeta reports null), 'badmode' = a valid file with an unknown projectContextMode (getMeta throws).
+   */
+  meta: Mode | 'none' | 'unreadable' | 'badmode';
   /** Project contexts to materialize through the real registry. */
   contexts: ('ready' | 'reserved')[];
 }
@@ -47,6 +50,7 @@ const SPECS: Spec[] = [
   { name: 'retained', meta: 'shared', contexts: ['ready'] },
   { name: 'unread-noindex', meta: 'unreadable', contexts: [] },
   { name: 'unread-index', meta: 'unreadable', contexts: ['ready'] },
+  { name: 'badmode', meta: 'badmode', contexts: [] },
 ];
 
 async function world() {
@@ -61,11 +65,18 @@ async function world() {
   });
   const claim = (teamName: string) =>
     claimTeamForThisProfile({ teamsBasePath, teamName, reason: 'create', profileScope: 'matrix-profile' });
-  const metas = new Map<string, Spec['meta']>();
   const labels = new Map<string, string>();
   for (const spec of SPECS) {
-    metas.set(spec.name, spec.meta);
     await mkdir(path.join(teamsBasePath, spec.name), { recursive: true });
+    if (spec.meta !== 'none') {
+      const body = spec.meta === 'unreadable'
+        ? '{not json'
+        : JSON.stringify({
+            version: 1, cwd: '/x', createdAt: 1,
+            projectContextMode: spec.meta === 'badmode' ? 'bogus' : spec.meta,
+          });
+      await writeFile(path.join(teamsBasePath, spec.name, 'team.meta.json'), body);
+    }
     await claim(spec.name);
     for (const [index, state] of spec.contexts.entries()) {
       const project = path.join(workspace, `${spec.name}-${index}`);
@@ -90,15 +101,10 @@ async function world() {
   await claim('ptc-aaaaaaaaaaaaaaaaaaaaaaaa');
   labels.set(root, '<root>');
   labels.set(await realpath(root), '<root>');
+  const store = new TeamMetaStore();
   const meta = {
-    getMeta: async (name: string): Promise<TeamMetaFile | null> => {
-      const kind = metas.get(name);
-      if (kind === 'shared' || kind === 'per_project') {
-        return { version: 1, cwd: '/x', createdAt: 1, projectContextMode: kind };
-      }
-      return null;
-    },
-    metadataFileExists: async (name: string) => metas.get(name) === 'unreadable',
+    getMeta: (name: string) => store.getMeta(name, teamsBasePath),
+    metadataFileExists: (name: string) => store.metadataFileExists(name, teamsBasePath),
   };
   return { registry, meta, labels, root, tasksBasePath };
 }
@@ -130,7 +136,8 @@ async function aliasOf(w: World, logical: string, index: number): Promise<string
   throw new Error('no alias');
 }
 
-describe('team kind matrix (characterization)', () => {
+// Paths in the snapshots are POSIX; Windows paths are not normalized here.
+describe.skipIf(process.platform === 'win32')('team kind matrix (characterization)', () => {
   it('classifyTeamKind: edit / schedule / launch kind of every name', async () => {
     const w = await world();
     const resolver = new TeamProjectContextRuntimeResolver(w.meta, w.registry);
@@ -151,6 +158,9 @@ describe('team kind matrix (characterization)', () => {
       {
         "<builders#0>": {
           "ok": "alias",
+        },
+        "badmode": {
+          "throws": "Invalid persisted projectContextMode",
         },
         "builders": {
           "ok": "logical",
@@ -192,9 +202,17 @@ describe('team kind matrix (characterization)', () => {
       {
         "<builders#0>": {
           "ok": {
-            "kind": "native",
+            "kind": "physical",
             "retained": [],
             "team": "<builders#0>",
+          },
+        },
+        "badmode": {
+          "ok": {
+            "kind": "physical",
+            "projectContextUnresolved": true,
+            "retained": [],
+            "team": "badmode",
           },
         },
         "builders": {
@@ -228,28 +246,28 @@ describe('team kind matrix (characterization)', () => {
         },
         "nometa": {
           "ok": {
-            "kind": "native",
+            "kind": "physical",
             "retained": [],
             "team": "nometa",
           },
         },
         "plain": {
           "ok": {
-            "kind": "native",
+            "kind": "physical",
             "retained": [],
             "team": "plain",
           },
         },
         "ptc-aaaaaaaaaaaaaaaaaaaaaaaa": {
           "ok": {
-            "kind": "native",
+            "kind": "physical",
             "retained": [],
             "team": "ptc-aaaaaaaaaaaaaaaaaaaaaaaa",
           },
         },
         "retained": {
           "ok": {
-            "kind": "native",
+            "kind": "physical",
             "retained": [
               {
                 "executionTeamName": "<retained#0>",
@@ -267,7 +285,7 @@ describe('team kind matrix (characterization)', () => {
         },
         "unread-noindex": {
           "ok": {
-            "kind": "native",
+            "kind": "physical",
             "projectContextUnresolved": true,
             "retained": [],
             "team": "unread-noindex",
@@ -295,8 +313,20 @@ describe('team kind matrix (characterization)', () => {
         return { result, stopped };
       });
     }
+    // NOTE: the raw ENOENT of `builders` (a reserved context with no directory yet) is what
+    // happens today, not a designed contract; it is probably a bug (a stop should report the
+    // pending context, not a lstat error). Update this snapshot when that is fixed.
     expect(rows).toMatchInlineSnapshot(`
       {
+        "badmode": {
+          "ok": {
+            "result": {
+              "error": "Invalid persisted projectContextMode",
+              "success": false,
+            },
+            "stopped": [],
+          },
+        },
         "builders": {
           "ok": {
             "result": {
@@ -440,6 +470,12 @@ describe('team kind matrix (characterization)', () => {
           "folded": null,
           "mode": null,
           "name": "unread-index",
+          "tasks": 1,
+        },
+        {
+          "folded": null,
+          "mode": null,
+          "name": "badmode",
           "tasks": 1,
         },
         {

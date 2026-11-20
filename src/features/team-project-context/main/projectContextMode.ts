@@ -5,11 +5,11 @@ import type { TeamProjectContextMode } from '@shared/types';
 
 /** The part of the team metadata store the mode needs. */
 export interface TeamModeMetaReader {
-  getMeta(teamName: string): Promise<TeamMetaFile | null>;
+  getMeta(teamName: string): Promise<Pick<TeamMetaFile, 'projectContextMode'> | null>;
   metadataFileExists(teamName: string): Promise<boolean>;
 }
 
-export const TEAM_METADATA_UNREADABLE_MESSAGE =
+const DEFAULT_UNREADABLE_MESSAGE =
   'Team metadata is unreadable; refusing shared-history fallback';
 
 /** Thrown when a team has a metadata file that cannot be read; callers map it to their own refusal. */
@@ -28,7 +28,7 @@ export class TeamMetadataUnreadableError extends Error {
 export async function readTeamProjectContextMode(
   reader: TeamModeMetaReader,
   teamName: string,
-  unreadableMessage: string = TEAM_METADATA_UNREADABLE_MESSAGE
+  unreadableMessage: string = DEFAULT_UNREADABLE_MESSAGE
 ): Promise<TeamProjectContextMode> {
   const meta = await reader.getMeta(teamName);
   if (meta === null && (await reader.metadataFileExists(teamName))) {

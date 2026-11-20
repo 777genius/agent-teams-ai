@@ -12,14 +12,14 @@ import { TeamMetaStore } from '@main/services/team/TeamMetaStore';
 import { getTeamsBasePath } from '@main/utils/pathDecoder';
 import { createLogger } from '@shared/utils/logger';
 
-import type { TeamModeMetaReader as LifecycleReader } from '@features/team-project-context/main';
+import type { TeamModeMetaReader } from '@features/team-project-context/main';
 import type { IpcResult, TeamSummary } from '@shared/types';
 
 const logger = createLogger('TeamProjectContextLifecycle');
 
 async function ownedHistoryContexts(
   teamName: string,
-  meta: LifecycleReader,
+  meta: TeamModeMetaReader,
   registry: TeamProjectContextRegistry
 ): Promise<readonly { executionTeamName: string; state: 'ready' | 'reserved' }[]> {
   return listOwnedContexts(registry, teamName, await readTeamProjectContextMode(meta, teamName));
@@ -34,7 +34,7 @@ async function ownedHistoryContexts(
 export async function isLogicalTeamProcessAlive(
   logicalTeamName: string,
   isNativeAlive: (teamName: string) => boolean | Promise<boolean>,
-  meta: LifecycleReader = new TeamMetaStore(),
+  meta: TeamModeMetaReader = new TeamMetaStore(),
   registry: TeamProjectContextRegistry = TeamProjectContextRegistry.fromCurrentApp()
 ): Promise<boolean> {
   if (await isNativeAlive(logicalTeamName)) return true;
@@ -59,7 +59,7 @@ export async function isLogicalTeamProcessAlive(
 export async function stopLogicalTeam(
   logicalTeamName: string,
   stopNative: (teamName: string) => Promise<IpcResult<void>>,
-  meta: LifecycleReader = new TeamMetaStore(),
+  meta: TeamModeMetaReader = new TeamMetaStore(),
   registry: TeamProjectContextRegistry = TeamProjectContextRegistry.fromCurrentApp()
 ): Promise<IpcResult<void>> {
   try {
@@ -92,7 +92,7 @@ export async function deleteLogicalTeamWithContexts(
   stopPhysical: (teamName: string) => Promise<IpcResult<void>>,
   softDeletePhysical: (teamName: string) => Promise<void>,
   deleteLogical: () => Promise<IpcResult<void>>,
-  meta: LifecycleReader = new TeamMetaStore(),
+  meta: TeamModeMetaReader = new TeamMetaStore(),
   registry: TeamProjectContextRegistry = TeamProjectContextRegistry.fromCurrentApp(),
   hasActiveSchedules: (names: readonly string[]) => Promise<boolean> = (names) =>
     hasTeamSchedules(names, false),
@@ -183,7 +183,7 @@ export async function permanentlyDeleteLogicalTeam(
     stopNative(name: string): Promise<IpcResult<void>>;
     deleteNative(name: string, draft: boolean): Promise<void>;
     deleteLogical(draft: boolean): Promise<IpcResult<void>>;
-    meta?: LifecycleReader;
+    meta?: TeamModeMetaReader;
     registry?: PermanentDeleteRegistry;
     isNativePresent?(name: string): Promise<boolean>;
     hasAnySchedules?(names: readonly string[]): Promise<boolean>;
@@ -281,7 +281,7 @@ export async function restoreLogicalTeamWithContexts(
   teamName: unknown,
   restorePhysical: (teamName: string) => Promise<void>,
   restoreLogical: () => Promise<IpcResult<void>>,
-  meta: LifecycleReader = new TeamMetaStore(),
+  meta: TeamModeMetaReader = new TeamMetaStore(),
   registry: TeamProjectContextRegistry = TeamProjectContextRegistry.fromCurrentApp()
 ): Promise<IpcResult<void>> {
   if (typeof teamName !== 'string' || !teamName.trim()) return restoreLogical();
@@ -307,7 +307,7 @@ export async function restoreLogicalTeamWithContexts(
 export async function projectAliveTeamNames(
   physicalAlive: readonly string[],
   visibleTeams: readonly TeamSummary[],
-  meta: LifecycleReader = new TeamMetaStore(),
+  meta: TeamModeMetaReader = new TeamMetaStore(),
   registry: TeamProjectContextRegistry = TeamProjectContextRegistry.fromCurrentApp()
 ): Promise<string[]> {
   const projected = new Set(physicalAlive);

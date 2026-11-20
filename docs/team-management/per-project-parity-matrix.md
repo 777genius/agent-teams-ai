@@ -136,12 +136,12 @@ Most gaps are the same defect: an entry point takes a name literally. A single f
 
 ```
 resolveTeamTarget(name, { projectPath? })
-  -> { kind: 'native', team }
+  -> { kind: 'physical', team, retained }
    | { kind: 'logical', logical, contexts, selected?: { alias, projectPath } }
    | { kind: 'alias', alias, logical, projectPath }
 ```
 
-It is built from what exists: `classifyTeamKind` (logical / alias / native), `TeamProjectContextRuntimeResolver.forRead` (one project) and `TeamProjectContextRegistry.list` (all contexts). Each consumer states what a logical target means for it:
+This is the target shape. What is implemented today is the `logical` / `physical` part (`resolveTeamTarget`, `contextGroupOf`); an owned project copy is `physical` there, and the callers that must refuse or redirect a copy ask `classifyTeamKind` (`logical` / `alias` / `native`) instead. The feature README explains why the two vocabularies differ. The resolution is built from what exists: `readTeamProjectContextMode` and `listOwnedContexts` (mode and all owned contexts), `classifyTeamKind` (project copy or not), and `TeamProjectContextRuntimeResolver.forRead` (one project). Each consumer states what a logical target means for it:
 
 | Operation | Meaning for a logical target |
 | --- | --- |

@@ -170,6 +170,16 @@ describe('CrossTeamService', () => {
       expect(inboxWriter.sendMessage).not.toHaveBeenCalled();
     });
 
+    it('refuses delivery when the metadata of a team cannot be read, with its own text', async () => {
+      const directory = path.join(MOCK_TEAMS_BASE_PATH, 'teams', 'team-b');
+      fs.mkdirSync(directory, { recursive: true });
+      fs.writeFileSync(path.join(directory, 'team.meta.json'), '{not json');
+      await expect(service.send(makeRequest())).rejects.toThrow(
+        'Team metadata is unreadable; refusing cross-team delivery'
+      );
+      expect(inboxWriter.sendMessage).not.toHaveBeenCalled();
+    });
+
     it('rejects direct sends FROM a logical team switched to isolated mode', async () => {
       const directory = path.join(MOCK_TEAMS_BASE_PATH, 'teams', 'team-a');
       fs.mkdirSync(directory, { recursive: true });
