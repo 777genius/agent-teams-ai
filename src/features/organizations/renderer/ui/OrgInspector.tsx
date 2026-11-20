@@ -1,10 +1,11 @@
+import { useMemo } from 'react';
+
 import { useAppTranslation } from '@features/localization/renderer';
 import { KanbanTaskCard } from '@renderer/components/team/kanban/KanbanTaskCard';
 import { Badge } from '@renderer/components/ui/badge';
 import { Button } from '@renderer/components/ui/button';
 import { getTeamTaskWorkflowColumn } from '@shared/utils/teamTaskState';
 import { Activity, ChevronDown, ChevronRight, ExternalLink, Network, Users, X } from 'lucide-react';
-import { useMemo } from 'react';
 
 import {
   collectExecutionTeamNames,

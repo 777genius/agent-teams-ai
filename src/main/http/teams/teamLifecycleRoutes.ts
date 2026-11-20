@@ -45,6 +45,7 @@ import { getErrorMessage } from '@shared/utils/errorHandling';
 import { createProjectContextHttp } from './projectContextHttp';
 
 import type { HttpServices } from '../index';
+import type { LogicalStopPorts, ResolvedTeamTarget } from '@features/team-project-context/main';
 import type { TeamHttpRuntimeApi } from '@main/services/team/contracts/TeamProvisioningApis';
 import type { FastifyInstance, FastifyReply } from 'fastify';
 
@@ -78,7 +79,7 @@ export function registerTeamLifecycleRoutes(
     return api;
   }
 
-  function sendError(reply: FastifyReply, error: unknown, route: string) {
+  function sendError(reply: FastifyReply, error: unknown, route: string): FastifyReply {
     if (shouldLogError(error)) {
       logger.error(`Error in ${route}:`, getErrorMessage(error));
     } else if (error instanceof LogicalStopIncompleteError) {
@@ -97,7 +98,7 @@ export function registerTeamLifecycleRoutes(
     projectContext: ReturnType<typeof createProjectContextHttp>,
     api: TeamHttpRuntimeApi,
     stopContext: (name: string) => Promise<Result>
-  ) {
+  ): LogicalStopPorts<Result> {
     return {
       assertReservedStopOwnership: (team: string, alias: string) =>
         projectContext.registry.assertReservedStopOwnership(team, alias),
@@ -110,9 +111,11 @@ export function registerTeamLifecycleRoutes(
 
   function withUnresolvedFlag<T extends object>(
     state: T,
-    target: { projectContextUnresolved?: true }
+    target: ResolvedTeamTarget
   ): T | (T & { projectContextUnresolved: true }) {
-    return target.projectContextUnresolved ? { ...state, projectContextUnresolved: true } : state;
+    return target.kind === 'native' && target.projectContextUnresolved
+      ? { ...state, projectContextUnresolved: true }
+      : state;
   }
 
   // Stops exactly one native team and rejects unless the stop is confirmed.

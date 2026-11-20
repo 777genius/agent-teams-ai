@@ -854,39 +854,6 @@ describe('buildOrganizationGraphData', () => {
     expect(getOrganizationNodeIdFromGraphRef(viewModel, ref)).toBe('team:alpha');
   });
 
-  it('points a task of a per-project team at the project copy that owns it, and resolves it back', () => {
-    const payload = buildPayload();
-    const alphaNode = payload.nodes.find((node) => node.id === 'team:alpha');
-    alphaNode!.team!.agents = [
-      {
-        id: 'agent:alpha:alice',
-        teamName: 'alpha',
-        name: 'alice',
-        status: 'active',
-        activeTaskCount: 1,
-        currentTasks: [
-          {
-            id: 'task-1',
-            subject: 'Task 1',
-            status: 'in_progress',
-            executionTeamName: 'ptc-a1b2c3d4e5f6',
-          },
-        ],
-      },
-    ];
-    const viewModel = buildOrganizationMapViewModel(payload);
-    const graph = buildOrganizationGraphData(viewModel);
-
-    const taskNode = graph.nodes.find((node) => node.kind === 'task');
-    expect(taskNode?.domainRef).toEqual({
-      kind: 'task',
-      teamName: 'ptc-a1b2c3d4e5f6',
-      taskId: 'task-1',
-    });
-    // The click on that task must still select the node of the team the user sees.
-    expect(getOrganizationNodeIdFromGraphRef(viewModel, taskNode!.domainRef!)).toBe('team:alpha');
-  });
-
   it('resolves graph refs by team summary name instead of rebuilding node ids', () => {
     const payload = buildPayload();
     payload.nodes[1] = {

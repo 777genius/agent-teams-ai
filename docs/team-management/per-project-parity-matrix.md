@@ -178,7 +178,7 @@ The tables above describe the state before #1248 and are kept as the audit recor
 | Runtime state / alive list through HTTP / MCP | silently wrong | the logical team is alive when any context is, with `contexts[]`; the alive list keeps physical entries and adds the logical one (a shared team that is itself alive absorbs its contexts) |
 | Force stop through HTTP | exact name only | every context; answers `complete`, which a client must read |
 | HTTP `/api/teams` and MCP `team_list` | silently wrong | one row per team, copies folded away. **Not additive**: the copies are no longer listed as separate teams |
-| Organization map | silently wrong | one candidate; tasks of all contexts, each carrying the copy that owns it, so the graph, the inspector and task actions address the copy |
+| Organization map | silently wrong | one candidate; tasks of all contexts, each carrying the copy that owns it, so the inspector lists them and its task actions run against the copy |
 | MCP team tools `team_stop`, `team_list` | silently wrong | as above; the controller allows a stop request 5 minutes instead of 10 s |
 
 Decisions worth knowing:

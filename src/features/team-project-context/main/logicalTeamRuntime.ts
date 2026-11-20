@@ -222,7 +222,7 @@ export async function stopLogicalContexts<Result>(
       );
     }
   }
-  const targets: Array<{ executionTeamName: string; projectPath: string | null }> = [
+  const targets: { executionTeamName: string; projectPath: string | null }[] = [
     ...group.contexts.map((context) => ({
       executionTeamName: context.executionTeamName,
       projectPath: context.projectPath,
