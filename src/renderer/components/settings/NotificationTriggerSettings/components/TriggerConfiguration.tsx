@@ -84,7 +84,7 @@ export const TriggerConfiguration = ({
           <div className="flex items-center justify-between border-b border-border-subtle py-2">
             <label
               htmlFor={`trigger-${trigger.id}-tool-name`}
-              className="text-sm text-text-secondary"
+              className="text-sm text-text"
             >
               {t('notificationTriggers.fields.scopeToolName')}
             </label>
@@ -139,7 +139,7 @@ export const TriggerConfiguration = ({
             <div className="flex items-center justify-between border-b border-border-subtle py-2">
               <label
                 htmlFor={`trigger-${trigger.id}-content-type`}
-                className="text-sm text-text-secondary"
+                className="text-sm text-text"
               >
                 {t('notificationTriggers.fields.contentType')}
               </label>
@@ -224,7 +224,7 @@ const ContentMatchConfig = ({
         <div className="flex items-center justify-between border-b border-border-subtle py-2">
           <label
             htmlFor={`trigger-${triggerId}-match-field`}
-            className="text-sm text-text-secondary"
+            className="text-sm text-text"
           >
             {t('notificationTriggers.fields.matchField')}
           </label>
@@ -249,7 +249,7 @@ const ContentMatchConfig = ({
         <div className="mb-2 flex items-center justify-between">
           <label
             htmlFor={`trigger-${triggerId}-match-pattern`}
-            className="text-sm text-text-secondary"
+            className="text-sm text-text"
           >
             {t('notificationTriggers.fields.matchPattern')}
           </label>
@@ -306,7 +306,7 @@ const TokenThresholdConfig = ({
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between border-b border-border-subtle py-2">
-        <label htmlFor={`trigger-${triggerId}-token-type`} className="text-sm text-text-secondary">
+        <label htmlFor={`trigger-${triggerId}-token-type`} className="text-sm text-text">
           {t('notificationTriggers.fields.tokenType')}
         </label>
         <select
@@ -328,7 +328,7 @@ const TokenThresholdConfig = ({
         </select>
       </div>
       <div className="flex items-center justify-between border-b border-border-subtle py-2">
-        <label htmlFor={`trigger-${triggerId}-threshold`} className="text-sm text-text-secondary">
+        <label htmlFor={`trigger-${triggerId}-threshold`} className="text-sm text-text">
           {t('notificationTriggers.fields.threshold')}
         </label>
         <div className="flex items-center gap-2">

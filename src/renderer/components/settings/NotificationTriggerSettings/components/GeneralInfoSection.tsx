@@ -32,7 +32,7 @@ export const GeneralInfoSection = ({
       {/* Trigger Name */}
       <div className="border-b border-border-subtle py-2">
         <div className="mb-2 flex items-center justify-between">
-          <label htmlFor="new-trigger-name" className="text-sm text-text-secondary">
+          <label htmlFor="new-trigger-name" className="text-sm text-text">
             {t('notificationTriggers.fields.triggerNameRequired')}
           </label>
         </div>
@@ -50,7 +50,7 @@ export const GeneralInfoSection = ({
 
       {/* Scope/Tool Name */}
       <div className="flex items-center justify-between border-b border-border-subtle py-2">
-        <label htmlFor="new-trigger-tool-name" className="label-optional text-sm">
+        <label htmlFor="new-trigger-tool-name" className="text-sm text-text">
           {t('notificationTriggers.fields.scopeToolNameOptional')}
         </label>
         <select

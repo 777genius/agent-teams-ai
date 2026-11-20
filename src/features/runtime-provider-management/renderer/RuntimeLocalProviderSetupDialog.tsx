@@ -974,7 +974,7 @@ export const RuntimeLocalProviderSetupDialog = ({
               aria-busy={providerListLoading || projectPickerLoading}
             >
               <div className="grid gap-x-4 gap-y-3 sm:grid-cols-[7rem_minmax(0,1fr)] sm:items-center">
-                <Label className="text-xs text-[var(--color-text-secondary)]">Available for</Label>
+                <Label className="text-xs">Available for</Label>
                 <LocalProviderScopeSelector
                   value={configurationScope}
                   disabled={providerListLoading || projectPickerLoading}

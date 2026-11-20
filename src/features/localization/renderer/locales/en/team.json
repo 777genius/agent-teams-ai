@@ -190,10 +190,14 @@
     },
     "optional": {
       "launchSettingsTitle": "Optional launch settings",
-      "launchSettingsDescription": "Prompt, safety, and CLI overrides live here when you need them.",
+      "launchSettingsDescription": "Team history, prompt, safety, and CLI overrides live here when you need them.",
+      "settingsTitle": "Optional settings",
+      "historyOnlyDescription": "Choose how this team keeps its tasks and chats.",
       "teamDetailsTitle": "Optional team details",
       "teamDetailsDescription": "Keep the default flow compact and only open this when you want extra context or a custom color.",
       "summary": {
+        "historyPerProject": "Per-project history",
+        "historyShared": "Shared history",
         "leadPrompt": "Lead prompt",
         "autoApproveTools": "Auto-approve tools",
         "fastMode": "Fast mode",
