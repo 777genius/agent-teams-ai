@@ -1,7 +1,30 @@
 export type { DefinitionEditTarget } from './classifyDefinitionTarget';
 export { classifyDefinitionTarget } from './classifyDefinitionTarget';
+export type {
+  AliveRuntimeEntry,
+  AliasResolver,
+  ContextRuntimeSnapshot,
+  LogicalContextStopOutcome,
+  LogicalStopOutcome,
+  LogicalStopPorts,
+  LogicalTeamRuntimeState,
+  NativeRuntimeReader,
+} from './logicalTeamRuntime';
+export {
+  assertLogicalStopComplete,
+  listAliveRuntimeStates,
+  LogicalStopIncompleteError,
+  readLogicalRuntimeState,
+  stopLogicalContexts,
+} from './logicalTeamRuntime';
 export { projectDefinitionToAlias } from './projectDefinitionToAlias';
 export { projectTeamSummaries } from './projectTeamSummaries';
+export type { ResolvedTeamTarget, TeamTargetPorts } from './resolveTeamTarget';
+export {
+  createTeamTargetPorts,
+  resolveTeamTarget,
+  TeamTargetUnresolvedError,
+} from './resolveTeamTarget';
 export { TeamProjectContextCreateCoordinator } from './TeamProjectContextCreateCoordinator';
 export { TeamProjectContextDraftMaterializer } from './TeamProjectContextDraftMaterializer';
 export {

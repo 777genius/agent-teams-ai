@@ -6,7 +6,18 @@
  * They are grouped here because they are the only routes in the teams router
  * that talk to the runtime control API, and because the router they came from
  * is at its size limit while this area still has routes to gain.
+ *
+ * A team of the per-project history mode has no process of its own: its
+ * runtime is the runtime of its project contexts. Every route resolves the name
+ * first, so a logical team is stopped, read and listed through its contexts
+ * instead of silently acting on a name that never has a process.
  */
+import {
+  assertLogicalStopComplete,
+  listAliveRuntimeStates,
+  readLogicalRuntimeState,
+  stopLogicalContexts,
+} from '@features/team-project-context/main';
 import {
   clearPendingOpenCodePromptDeliveriesForTeam,
   countLiveRecordedRuntimeHostsForTeam,
@@ -25,6 +36,8 @@ import { validateTeamName } from '@main/services/team/TeamIdentifierValidation';
 import { TeamLaunchStateStore } from '@main/services/team/TeamLaunchStateStore';
 import { getTeamsBasePath } from '@main/utils/pathDecoder';
 import { getErrorMessage } from '@shared/utils/errorHandling';
+
+import { createProjectContextHttp } from './projectContextHttp';
 
 import type { HttpServices } from '../index';
 import type { TeamHttpRuntimeApi } from '@main/services/team/contracts/TeamProvisioningApis';
@@ -60,6 +73,104 @@ export function registerTeamLifecycleRoutes(
     return api;
   }
 
+  // Stops exactly one native team and rejects unless the stop is confirmed.
+  async function stopExactTeam(
+    teamName: string,
+    teamRuntimeApi: TeamHttpRuntimeApi
+  ): Promise<void> {
+    // Same semantics as the in-app Stop control: the regular stop gets a
+    // bounded budget, and only if it does not deliver does the force-stop
+    // cleanup guarantee the team is down.
+    const result = await stopTeamWithEscalation(teamName, {
+      stopTeam: (name) => teamRuntimeApi.stopTeam(name),
+      observeOwnedRuntimeRunIds: (name) =>
+        readOwnedOpenCodeRuntimeRunIdsForTeam({ teamName: name }),
+      observeOwnedRuntimeLaneIds: (name) =>
+        readOpenCodeRuntimeLaneIdsForTeam(getTeamsBasePath(), name),
+      killRetainedRuntimeProcesses: (name, context) =>
+        killRetainedOpenCodeRuntimeProcessesForTeam({
+          teamName: name,
+          requestedAtMs: context.requestedAtMs,
+          otherAliveTeams: teamRuntimeApi.getAliveTeams().filter((alive) => alive !== name),
+        }),
+      clearPendingPromptDeliveries: (name, context) =>
+        clearPendingOpenCodePromptDeliveriesForTeam({
+          teamName: name,
+          ownedRunIds: context.ownedRunIds,
+          ownedLaneIds: context.ownedLaneIds,
+          requestedAtMs: context.requestedAtMs,
+        }),
+      logWarning: (message) => logger.warn(message),
+      stopTimeoutMs: STOP_ESCALATION_TIMEOUT_MS,
+      countLiveRuntimeHosts: (name) => countLiveRecordedRuntimeHostsForTeam({ teamName: name }),
+      markTeamStopped: (name, authority) => new TeamLaunchStateStore().markStopped(name, authority),
+      reapOwnedLeadProcessTrees: (name, context) =>
+        reapCursorAgentLeadTreesForStoppedTeam({
+          teamName: name,
+          requestedAtMs: context.requestedAtMs,
+          otherAliveTeams: teamRuntimeApi.getAliveTeams().filter((alive) => alive !== name),
+        }),
+      releaseSharedRuntimeResources: (name) =>
+        releaseSharedRuntimeResourcesAfterStop({
+          teamName: name,
+          otherAliveTeams: teamRuntimeApi.getAliveTeams().filter((alive) => alive !== name),
+          releaseSharedLocalRuntime: () =>
+            releaseLoopbackRuntimesReservedByTeam(getTeamsBasePath(), name),
+        }),
+    });
+    if (result.stopOutcome === 'runtime_already_down') {
+      logger.info(
+        `[${teamName}] Runtime hosts were already down; finished the stop without the orchestrator acknowledgement (killed ${result.killedRuntimePids.length} runtime pid(s), cancelled ${result.clearedPendingDeliveries} pending deliveries)`
+      );
+    } else if (result.stopOutcome !== 'stopped') {
+      logger.warn(
+        `[${teamName}] Regular stop ${result.stopOutcome}; escalated to force stop (killed ${result.killedRuntimePids.length} runtime pid(s), cancelled ${result.clearedPendingDeliveries} pending deliveries)`
+      );
+    }
+    // Same rejection as the in-app Stop control: a stop that did not
+    // confirm is a failure here too, never a 200 carrying runtime state
+    // a headless caller would trust.
+    assertEscalatedStopConfirmed(result);
+  }
+
+  function forceStopExactTeam(teamName: string, teamRuntimeApi: TeamHttpRuntimeApi) {
+    return runTeamForceStopFlow(teamName, {
+      stopTeam: (name) => teamRuntimeApi.stopTeam(name),
+      observeOwnedRuntimeRunIds: (name) =>
+        readOwnedOpenCodeRuntimeRunIdsForTeam({ teamName: name }),
+      observeOwnedRuntimeLaneIds: (name) =>
+        readOpenCodeRuntimeLaneIdsForTeam(getTeamsBasePath(), name),
+      killRetainedRuntimeProcesses: (name, context) =>
+        killRetainedOpenCodeRuntimeProcessesForTeam({
+          teamName: name,
+          requestedAtMs: context.requestedAtMs,
+          otherAliveTeams: teamRuntimeApi.getAliveTeams().filter((alive) => alive !== name),
+        }),
+      clearPendingPromptDeliveries: (name, context) =>
+        clearPendingOpenCodePromptDeliveriesForTeam({
+          teamName: name,
+          ownedRunIds: context.ownedRunIds,
+          ownedLaneIds: context.ownedLaneIds,
+          requestedAtMs: context.requestedAtMs,
+        }),
+      logWarning: (message) => logger.warn(message),
+      markTeamStopped: (name, authority) => new TeamLaunchStateStore().markStopped(name, authority),
+      reapOwnedLeadProcessTrees: (name, context) =>
+        reapCursorAgentLeadTreesForStoppedTeam({
+          teamName: name,
+          requestedAtMs: context.requestedAtMs,
+          otherAliveTeams: teamRuntimeApi.getAliveTeams().filter((alive) => alive !== name),
+        }),
+      releaseSharedRuntimeResources: (name) =>
+        releaseSharedRuntimeResourcesAfterStop({
+          teamName: name,
+          otherAliveTeams: teamRuntimeApi.getAliveTeams().filter((alive) => alive !== name),
+          releaseSharedLocalRuntime: () =>
+            releaseLoopbackRuntimesReservedByTeam(getTeamsBasePath(), name),
+        }),
+    });
+  }
+
   app.post<{ Params: { teamName: string } }>(
     '/api/teams/:teamName/stop',
     async (request, reply) => {
@@ -71,60 +182,21 @@ export function registerTeamLifecycleRoutes(
 
         const teamName = validatedTeamName.value!;
         const teamRuntimeApi = getTeamRuntimeApi(services);
-        // Same semantics as the in-app Stop control: the regular stop gets a
-        // bounded budget, and only if it does not deliver does the force-stop
-        // cleanup guarantee the team is down.
-        const result = await stopTeamWithEscalation(teamName, {
-          stopTeam: (name) => teamRuntimeApi.stopTeam(name),
-          observeOwnedRuntimeRunIds: (name) =>
-            readOwnedOpenCodeRuntimeRunIdsForTeam({ teamName: name }),
-          observeOwnedRuntimeLaneIds: (name) =>
-            readOpenCodeRuntimeLaneIdsForTeam(getTeamsBasePath(), name),
-          killRetainedRuntimeProcesses: (name, context) =>
-            killRetainedOpenCodeRuntimeProcessesForTeam({
-              teamName: name,
-              requestedAtMs: context.requestedAtMs,
-              otherAliveTeams: teamRuntimeApi.getAliveTeams().filter((alive) => alive !== name),
-            }),
-          clearPendingPromptDeliveries: (name, context) =>
-            clearPendingOpenCodePromptDeliveriesForTeam({
-              teamName: name,
-              ownedRunIds: context.ownedRunIds,
-              ownedLaneIds: context.ownedLaneIds,
-              requestedAtMs: context.requestedAtMs,
-            }),
-          logWarning: (message) => logger.warn(message),
-          stopTimeoutMs: STOP_ESCALATION_TIMEOUT_MS,
-          countLiveRuntimeHosts: (name) => countLiveRecordedRuntimeHostsForTeam({ teamName: name }),
-          markTeamStopped: (name, authority) =>
-            new TeamLaunchStateStore().markStopped(name, authority),
-          reapOwnedLeadProcessTrees: (name, context) =>
-            reapCursorAgentLeadTreesForStoppedTeam({
-              teamName: name,
-              requestedAtMs: context.requestedAtMs,
-              otherAliveTeams: teamRuntimeApi.getAliveTeams().filter((alive) => alive !== name),
-            }),
-          releaseSharedRuntimeResources: (name) =>
-            releaseSharedRuntimeResourcesAfterStop({
-              teamName: name,
-              otherAliveTeams: teamRuntimeApi.getAliveTeams().filter((alive) => alive !== name),
-              releaseSharedLocalRuntime: () =>
-                releaseLoopbackRuntimesReservedByTeam(getTeamsBasePath(), name),
-            }),
-        });
-        if (result.stopOutcome === 'runtime_already_down') {
-          logger.info(
-            `[${teamName}] Runtime hosts were already down; finished the stop without the orchestrator acknowledgement (killed ${result.killedRuntimePids.length} runtime pid(s), cancelled ${result.clearedPendingDeliveries} pending deliveries)`
-          );
-        } else if (result.stopOutcome !== 'stopped') {
-          logger.warn(
-            `[${teamName}] Regular stop ${result.stopOutcome}; escalated to force stop (killed ${result.killedRuntimePids.length} runtime pid(s), cancelled ${result.clearedPendingDeliveries} pending deliveries)`
-          );
+        const projectContext = createProjectContextHttp(services.projectContext);
+        const target = await projectContext.resolve(teamName);
+        if (target.kind === 'logical') {
+          // A logical team has no process: stopping its own name would succeed
+          // while its project keeps running. Stop every context, then verify.
+          const outcome = await stopLogicalContexts(target, {
+            assertReservedStopOwnership: (logical, alias) =>
+              projectContext.registry.assertReservedStopOwnership(logical, alias),
+            stopContext: (alias) => stopExactTeam(alias, teamRuntimeApi),
+            isAlive: (alias) => teamRuntimeApi.getAliveTeams().includes(alias),
+          });
+          assertLogicalStopComplete(outcome);
+          return reply.send(await readLogicalRuntimeState(target, teamRuntimeApi));
         }
-        // Same rejection as the in-app Stop control: a stop that did not
-        // confirm is a failure here too, never a 200 carrying runtime state
-        // a headless caller would trust.
-        assertEscalatedStopConfirmed(result);
+        await stopExactTeam(teamName, teamRuntimeApi);
         return reply.send(await teamRuntimeApi.getRuntimeState(teamName));
       } catch (error) {
         if (shouldLogError(error)) {
@@ -154,43 +226,24 @@ export function registerTeamLifecycleRoutes(
         }
         const teamName = validatedTeamName.value!;
         const teamRuntimeApi = getTeamRuntimeApi(services);
-        const result = await runTeamForceStopFlow(teamName, {
-          stopTeam: (name) => teamRuntimeApi.stopTeam(name),
-          observeOwnedRuntimeRunIds: (name) =>
-            readOwnedOpenCodeRuntimeRunIdsForTeam({ teamName: name }),
-          observeOwnedRuntimeLaneIds: (name) =>
-            readOpenCodeRuntimeLaneIdsForTeam(getTeamsBasePath(), name),
-          killRetainedRuntimeProcesses: (name, context) =>
-            killRetainedOpenCodeRuntimeProcessesForTeam({
-              teamName: name,
-              requestedAtMs: context.requestedAtMs,
-              otherAliveTeams: teamRuntimeApi.getAliveTeams().filter((alive) => alive !== name),
-            }),
-          clearPendingPromptDeliveries: (name, context) =>
-            clearPendingOpenCodePromptDeliveriesForTeam({
-              teamName: name,
-              ownedRunIds: context.ownedRunIds,
-              ownedLaneIds: context.ownedLaneIds,
-              requestedAtMs: context.requestedAtMs,
-            }),
-          logWarning: (message) => logger.warn(message),
-          markTeamStopped: (name, authority) =>
-            new TeamLaunchStateStore().markStopped(name, authority),
-          reapOwnedLeadProcessTrees: (name, context) =>
-            reapCursorAgentLeadTreesForStoppedTeam({
-              teamName: name,
-              requestedAtMs: context.requestedAtMs,
-              otherAliveTeams: teamRuntimeApi.getAliveTeams().filter((alive) => alive !== name),
-            }),
-          releaseSharedRuntimeResources: (name) =>
-            releaseSharedRuntimeResourcesAfterStop({
-              teamName: name,
-              otherAliveTeams: teamRuntimeApi.getAliveTeams().filter((alive) => alive !== name),
-              releaseSharedLocalRuntime: () =>
-                releaseLoopbackRuntimesReservedByTeam(getTeamsBasePath(), name),
-            }),
-        });
-        return reply.send(result);
+        const projectContext = createProjectContextHttp(services.projectContext);
+        const target = await projectContext.resolve(teamName);
+        if (target.kind === 'logical') {
+          // Like the native force-stop this answers with what the cleanup did;
+          // `complete` says whether every project context is really down.
+          const outcome = await stopLogicalContexts(target, {
+            assertReservedStopOwnership: (logical, alias) =>
+              projectContext.registry.assertReservedStopOwnership(logical, alias),
+            stopContext: (alias) => forceStopExactTeam(alias, teamRuntimeApi),
+            isAlive: (alias) => teamRuntimeApi.getAliveTeams().includes(alias),
+          });
+          return reply.send({
+            teamName: target.logical,
+            complete: outcome.complete,
+            contexts: outcome.contexts,
+          });
+        }
+        return reply.send(await forceStopExactTeam(teamName, teamRuntimeApi));
       } catch (error) {
         if (shouldLogError(error)) {
           logger.error(
@@ -212,9 +265,13 @@ export function registerTeamLifecycleRoutes(
           return reply.status(400).send({ error: validatedTeamName.error });
         }
 
-        return reply.send(
-          await getTeamRuntimeApi(services).getRuntimeState(validatedTeamName.value!)
-        );
+        const teamName = validatedTeamName.value!;
+        const teamRuntimeApi = getTeamRuntimeApi(services);
+        const target = await createProjectContextHttp(services.projectContext).resolve(teamName);
+        if (target.kind === 'logical') {
+          return reply.send(await readLogicalRuntimeState(target, teamRuntimeApi));
+        }
+        return reply.send(await teamRuntimeApi.getRuntimeState(teamName));
       } catch (error) {
         if (shouldLogError(error)) {
           logger.error(
@@ -230,10 +287,12 @@ export function registerTeamLifecycleRoutes(
   app.get('/api/teams/runtime/alive', async (_request, reply) => {
     try {
       const teamRuntimeApi = getTeamRuntimeApi(services);
-      const runtimeStates = await Promise.all(
-        teamRuntimeApi.getAliveTeams().map((teamName) => teamRuntimeApi.getRuntimeState(teamName))
+      const { registry } = createProjectContextHttp(services.projectContext);
+      return reply.send(
+        await listAliveRuntimeStates(teamRuntimeApi.getAliveTeams(), teamRuntimeApi, (name) =>
+          registry.resolveOwnedExecutionAlias(name)
+        )
       );
-      return reply.send(runtimeStates);
     } catch (error) {
       if (shouldLogError(error)) {
         logger.error('Error in GET /api/teams/runtime/alive:', getErrorMessage(error));

@@ -12,6 +12,7 @@ import { constants as fsConstants } from 'fs';
 import { access } from 'fs/promises';
 import { join } from 'path';
 
+import { createProjectContextHttp } from './teams/projectContextHttp';
 import { registerTeamLifecycleRoutes } from './teams/teamLifecycleRoutes';
 import { registerTeamManagementRoutes } from './teams/teamManagementRoutes';
 import { registerTeamMemberDiagnosticsRoute } from './teamMemberDiagnostics';
@@ -261,7 +262,10 @@ export function registerTeamRoutes(app: FastifyInstance, services: HttpServices)
 
   app.get('/api/teams', async (_request, reply) => {
     try {
-      return reply.send(await getTeamDataApi(services).listTeams());
+      // Project copies are folded into their logical team, like the in-app list.
+      const projectContext = createProjectContextHttp(services.projectContext);
+      const teams = await getTeamDataApi(services).listTeams();
+      return reply.send(await projectContext.projectTeams(teams));
     } catch (error) {
       if (shouldLogError(error)) {
         logger.error('Error in GET /api/teams:', getErrorMessage(error));

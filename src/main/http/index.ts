@@ -44,6 +44,7 @@ import type {
   SubagentResolver,
   UpdaterService,
 } from '../services';
+import type { ProjectContextHttpHooks } from './teams/projectContextHttp';
 import type { SshConnectionManager } from '../services/infrastructure/SshConnectionManager';
 import type {
   TeamHttpDataApi,
@@ -76,6 +77,8 @@ export interface HttpServices {
   teamApis?: TeamHttpHandlerApis;
   teamDataApi?: TeamHttpDataApi;
   teamPromptManagement?: TeamPromptManagement;
+  /** How routes read project contexts; production leaves it unset. */
+  projectContext?: ProjectContextHttpHooks;
 }
 
 export function registerHttpRoutes(

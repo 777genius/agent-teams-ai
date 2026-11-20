@@ -33,14 +33,23 @@ function ensureLeadMember(team: TeamSummary, members: TeamSummaryMember[]): Team
 }
 
 export class TeamDirectoryOrganizationAdapter implements OrganizationsTeamDirectoryPort {
-  constructor(private readonly teamDataService: TeamDataService) {}
+  /**
+   * `projectTeams` folds the native project copies of a per-project team into its
+   * logical team, so one team is one candidate. It defaults to "no folding".
+   */
+  constructor(
+    private readonly teamDataService: TeamDataService,
+    private readonly projectTeams: (teams: TeamSummary[]) => Promise<TeamSummary[]> = (teams) =>
+      Promise.resolve(teams)
+  ) {}
 
   async listTeams(input: { includeDeletedTeams: boolean }): Promise<OrgTeamCandidate[]> {
-    const [teams, globalTasks, aliveTeams] = await Promise.all([
+    const [allTeams, globalTasks, aliveTeams] = await Promise.all([
       this.teamDataService.listTeams(),
       this.teamDataService.getAllTasks(),
       this.teamDataService.listAliveProcessTeams(),
     ]);
+    const teams = await this.projectTeams(allTeams);
     const aliveSet = new Set(aliveTeams);
     const tasksByTeam = new Map<string, OrgTaskCandidate[]>();
 
@@ -59,17 +68,24 @@ export class TeamDirectoryOrganizationAdapter implements OrganizationsTeamDirect
           color: member.color,
         }));
 
+        // A logical team has no process or board of its own: it is online while any
+        // of its project contexts is, and its tasks are the tasks of those contexts.
+        const names = [
+          team.teamName,
+          ...(team.projectHistoryContexts ?? []).map((context) => context.executionTeamName),
+        ];
+
         return {
           teamName: team.teamName,
           displayName: team.displayName || team.teamName,
           description: team.description,
           color: team.color,
           projectPath: team.projectPath,
-          isOnline: aliveSet.has(team.teamName),
+          isOnline: names.some((name) => aliveSet.has(name)),
           deletedAt: team.deletedAt,
           pendingCreate: team.pendingCreate,
           members,
-          tasks: tasksByTeam.get(team.teamName) ?? [],
+          tasks: names.flatMap((name) => tasksByTeam.get(name) ?? []),
         };
       });
   }
