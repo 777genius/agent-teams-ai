@@ -962,7 +962,7 @@ async function verifyLaunchSettings(f: Fixture) {
   }
   const behind = await metaOf(f.nativeA);
   assert.equal(behind.providerId, 'opencode', 'The copy of project A is still on the old provider');
-  assert.equal(behind.model, 'stale-model');
+  assert.equal(behind.model, 'e2e-model-x', 'and on the model project A chose');
 
   // 5. A schedule in project A runs the settings of the team, not the older ones of its copy:
   // the launch of the copy is an anthropic one, which the runtime records in the copy.
@@ -980,7 +980,7 @@ async function verifyLaunchSettings(f: Fixture) {
   const copyAMeta = await waitForScheduledLaunch(f, stored.id, metaPath(f.nativeA));
   assert.equal((copyAMeta.launchIdentity as { providerId?: string } | undefined)?.providerId, 'anthropic',
     'The scheduled launch must run the provider of the team: ' + JSON.stringify(copyAMeta).slice(0, 300));
-  assert.notEqual(copyAMeta.model, 'stale-model', 'The copy of project A must follow the team');
+  assert.notEqual(copyAMeta.model, 'e2e-model-x', 'The copy of project A must follow the team');
   assert.equal(copyAMeta.providerId, 'anthropic');
 
   // Nothing but launches of the copies and read-only runtime queries reached the denying runtime.
