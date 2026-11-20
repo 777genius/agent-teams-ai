@@ -3,7 +3,7 @@ import { TeamPromptManagement } from '@features/team-prompt-management/main';
 import { getTeamDataWorkerClient } from '@main/services/team/TeamDataWorkerClient';
 import { TeamMetaStore } from '@main/services/team/TeamMetaStore';
 
-import { isProjectScopedTeam } from './teamProjectScope';
+import { createTeamProjectDefinitionPort } from './teamProjectDefinitionPort';
 
 import type { DesktopExternalAgentConnection } from '@features/external-agent-connection/main';
 import type { TeamDataService } from '@main/services/team/TeamDataService';
@@ -23,6 +23,8 @@ export type TeamPromptManagementData = Pick<
 export interface TeamPromptManagementLifecycle {
   runLiveRosterMutation(teamName: string, operation: () => Promise<void>): Promise<void>;
   getRuntimeState(teamName: string): Promise<TeamRuntimeState>;
+  /** Needed by the per-project edit gate: a launching or stopping project blocks an edit. */
+  hasProvisioningRun(teamName: string): boolean;
 }
 /** Bind storage writers and external mutations to one existing lifecycle gate. */
 export function composeTeamPromptManagement(
@@ -38,7 +40,11 @@ export function composeTeamPromptManagement(
       connection.withExpectedContext(expected, operation),
     getContext: async () => (await connection.getConnectionInfo()).context,
     getRuntimeState: (name) => lifecycle.getRuntimeState(name),
-    isProjectScoped: (name) => isProjectScopedTeam(name),
+    projectDefinition: createTeamProjectDefinitionPort({
+      data: () => data,
+      runtime: () => lifecycle,
+      run: () => lifecycle,
+    }),
     getSavedRequest: (name) => data.getSavedRequest(name),
     getTeamData: (name) => data.getTeamData(name),
     createTeamConfig: (request) => data.createTeamConfig(request),

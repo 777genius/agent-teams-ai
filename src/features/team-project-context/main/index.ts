@@ -4,6 +4,7 @@ export { projectDefinitionToAlias } from './projectDefinitionToAlias';
 export { projectTeamSummaries } from './projectTeamSummaries';
 export { TeamProjectContextCreateCoordinator } from './TeamProjectContextCreateCoordinator';
 export { TeamProjectContextDraftMaterializer } from './TeamProjectContextDraftMaterializer';
+export type { TeamProjectContextConflictReason } from './TeamProjectContextLaunchGate';
 export {
   isConfirmedStoppedTeamRuntime,
   TeamProjectContextLaunchConflictError,

@@ -110,4 +110,56 @@ describe('projectDefinitionToAlias', () => {
     );
     expect(result).toEqual({ roster: false, metadata: false });
   });
+
+  describe('saved lead instructions', () => {
+    const logicalBase = { members: [{ name: 'alice', role: 'dev' }], description: 'Old', color: 'blue' };
+
+    it('projects a changed prompt with the other metadata, and only when it differs', async () => {
+      const p = ports();
+      const result = await projectDefinitionToAlias(
+        p,
+        { ...logicalBase, prompt: ' Be brief ' },
+        alias({ prompt: 'Old prompt' })
+      );
+      expect(result).toEqual({ roster: false, metadata: true });
+      expect(p.assertStoppedForSync).toHaveBeenCalledWith('ptc-a');
+      expect(p.updateDisplayMetadata).toHaveBeenCalledWith('ptc-a', {
+        description: 'Old',
+        color: 'blue',
+        prompt: 'Be brief',
+      });
+      expect(p.replaceMembers).not.toHaveBeenCalled();
+    });
+
+    it('clears the prompt of a copy when the definition has none', async () => {
+      const p = ports();
+      await projectDefinitionToAlias(p, logicalBase, alias({ prompt: 'Stale launch prompt' }));
+      expect(p.updateDisplayMetadata).toHaveBeenCalledWith('ptc-a', {
+        description: 'Old',
+        color: 'blue',
+        prompt: '',
+      });
+    });
+
+    it('does nothing, and does not demand a stopped runtime, when the prompts only differ by whitespace', async () => {
+      const p = ports();
+      const result = await projectDefinitionToAlias(
+        p,
+        { ...logicalBase, prompt: ' Same ' },
+        alias({ prompt: 'Same' })
+      );
+      expect(result).toEqual({ roster: false, metadata: false });
+      expect(p.assertStoppedForSync).not.toHaveBeenCalled();
+      expect(p.updateDisplayMetadata).not.toHaveBeenCalled();
+    });
+
+    it('refuses to change the prompt of a copy that is not confirmed stopped', async () => {
+      const p = ports();
+      p.assertStoppedForSync.mockRejectedValue(new Error('Stop this project runtime'));
+      await expect(
+        projectDefinitionToAlias(p, { ...logicalBase, prompt: 'New' }, alias({ prompt: 'Old' }))
+      ).rejects.toThrow('Stop this project runtime');
+      expect(p.updateDisplayMetadata).not.toHaveBeenCalled();
+    });
+  });
 });

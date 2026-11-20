@@ -6,7 +6,7 @@ A team created with separate history for each project is **one team** with one e
 
 | What | Owner | Where it lives |
 | --- | --- | --- |
-| Display name, description, color, lead runtime | the logical team | `team.meta.json` |
+| Display name, description, color, lead instructions (`prompt`), lead runtime | the logical team | `team.meta.json` |
 | Authored roster (name, role, workflow, runtime, MCP policy, isolation) | the logical team | `members.meta.json` |
 | Tasks, inboxes, sessions, run identities | one project context | the native alias (`ptc-*`) |
 
@@ -26,7 +26,8 @@ A failed refresh of a copy does not fail the edit (the definition is already sav
 
 Two more rules keep the router the only writer of the definition:
 
-- External HTTP/MCP edits (`TeamPromptManagement`) refuse a per-project team and a project copy (`PROJECT_TEAM_DESKTOP_ONLY`) and reject a team whose kind cannot be determined; the desktop app is the only editor of such a team (a behaviour change, see the pull request).
+- External HTTP/MCP edits (`TeamPromptManagement`) follow the same rules through one port (`createTeamProjectDefinitionPort`, which builds the router's editor): a per-project team is classified, its stopped-gate runs inside the same logical-team operation lock, the ordinary write happens (metadata, lead instructions, members) and the stopped project copies are refreshed afterwards. A project that runs, launches or stops blocks the edit with `TEAM_ACTIVE` / `TEAM_PROVISIONING` (or `TEAM_PROJECT_CONTEXT_UNRECONCILED` for an interrupted start); a project copy is refused with `PROJECT_COPY_NOT_EDITABLE`; a team whose kind cannot be determined is rejected before any write (`TEAM_METADATA_UNREADABLE`). Trashing a per-project team stays in the app (`PROJECT_TEAM_DESKTOP_ONLY`): it needs the permanent-deletion lifecycle fence. A project copy is classified before any runtime check, so it is refused with `PROJECT_COPY_NOT_EDITABLE` straight away, for edits and for trash alike (before this change trashing a copy answered `PROJECT_TEAM_DESKTOP_ONLY`).
+- The saved lead instructions (`team.meta.json` `prompt`) belong to the definition too. They are edited in the same dialog (a field shown only for a per-project team), written through the same `updateConfig` router, projected onto stopped copies and repaired at launch. A prompt typed in the launch dialog applies to that start only and is no longer the saved one: the next projection (the next edit or the next launch) resets the copy to the definition's prompt, or clears it if the definition has none. The edit dialog says so in its hint. Only a per-project team accepts the prompt in `updateConfig`; for an ordinary team the router refuses it, because the running lead already started from its launch prompt.
 - No launch or relaunch flow writes the definition: the dialogs are `rosterReadOnly` for a per-project team, `executeTeamRelaunch` requires the flag and skips the roster save when it is set, and "Change runtime" opens relaunch mode without a member settings draft.
 
 ## Not supported yet

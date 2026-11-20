@@ -76,6 +76,8 @@ export interface TeamUpdateConfigRequest {
   description?: string;
   color?: string;
   language?: string;
+  /** Saved lead instructions (team.meta.json), used by the next launch. */
+  prompt?: string;
 }
 
 export interface TeamSummaryMember {
