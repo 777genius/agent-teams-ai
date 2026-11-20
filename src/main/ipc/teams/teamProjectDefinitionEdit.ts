@@ -186,7 +186,10 @@ export const route = createProjectDefinitionEditRouting({
 
 /** Refusal for the update-config call: lead instructions exist only in a per-project definition. */
 export function refuseLeadPromptOfNativeTeam(updates: unknown): string | null {
-  return updates && typeof updates === 'object' && 'prompt' in updates && updates.prompt !== undefined
+  return updates &&
+    typeof updates === 'object' &&
+    'prompt' in updates &&
+    updates.prompt !== undefined
     ? NATIVE_LEAD_PROMPT_MESSAGE
     : null;
 }

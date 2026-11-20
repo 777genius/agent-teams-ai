@@ -605,7 +605,10 @@ export const EditTeamDialog = ({
                 className="w-full resize-none rounded-md border border-[var(--color-border)] bg-[var(--color-form-control-bg)] px-3 py-1.5 text-sm text-[var(--color-text)] outline-none focus:border-[var(--color-border-emphasis)]"
                 placeholder={t('editTeam.placeholders.leadPrompt')}
               />
-              <p id="edit-team-lead-prompt-hint" className="mt-1 text-xs text-[var(--color-text-muted)]">
+              <p
+                id="edit-team-lead-prompt-hint"
+                className="mt-1 text-xs text-[var(--color-text-muted)]"
+              >
                 {t('editTeam.leadPromptHint')}
               </p>
             </div>

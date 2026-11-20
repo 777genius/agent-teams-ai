@@ -4224,7 +4224,7 @@ export default interface Resources {
         "leadPrompt": "Lead instructions (optional)",
         "name": "Name"
       },
-      "leadPromptHint": "Used the next time the team starts in any project. A prompt typed in the launch dialog is used for that start.",
+      "leadPromptHint": "Used the next time the team starts in any project. A prompt typed in the launch dialog applies to that start only; afterwards the team goes back to these saved instructions (or to none, if this field is empty).",
       "leadRestartWarning": "Saving will restart the lead to apply model or effort changes. Teammate processes will keep running.",
       "memberRestartWarning": "Saving will restart this teammate to apply role, workflow, worktree isolation, provider, model, effort, or MCP access changes.",
       "notices": {

@@ -38,7 +38,6 @@ export function createTeamProjectDefinitionPort(
         throw error;
       }
     },
-    refreshCopies: (logicalTeamName) =>
-      refreshProjectCopies(buildEditor(ports), logicalTeamName),
+    refreshCopies: (logicalTeamName) => refreshProjectCopies(buildEditor(ports), logicalTeamName),
   };
 }
