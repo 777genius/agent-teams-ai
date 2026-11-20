@@ -28,6 +28,7 @@ import {
 import { stat } from 'fs/promises';
 
 import {
+  assertAbsoluteCwd,
   HttpBadRequestError,
   parseDraftLaunchCreateRequest,
   parseLaunchRequest,
@@ -127,7 +128,7 @@ export function registerTeamLaunchRoute(
     const createRequest = parseDraftLaunchCreateRequest(savedDraft, body);
     requireTeamRuntimeSelection(createRequest);
     let response!: TeamCreateResponse;
-    const provision = async () => {
+    const provision = async (): Promise<void> => {
       response = await teamApis().provisioningStart.createTeam(createRequest, onProgress);
       services.memberWorkSyncFeature?.resumeTeam(createRequest.teamName);
     };
@@ -140,41 +141,63 @@ export function registerTeamLaunchRoute(
   }
 
   /**
-   * Everything that can be checked without the project copy is checked before
-   * anything is reserved: a reservation left by a refused request would block
-   * the team in every other project until it is launched in this one.
+   * The copy is launched by `launchByName`, which parses the body as a draft
+   * (first launch in the project) or as a launch of a configured team. Parse it
+   * the same way now, before anything is reserved: a reservation left by a
+   * refused request blocks the team in every other project until it is
+   * launched in this one.
    */
   async function admitProjectLaunch(
     teamName: string,
-    body: Record<string, unknown>
+    copyBody: Record<string, unknown>
   ): Promise<TeamLaunchRequest> {
-    if (Object.hasOwn(body, 'teamName') && body.teamName !== teamName) {
-      throw new HttpBadRequestError(
-        'A team with separate history per project cannot be renamed at launch'
-      );
-    }
-    // Effort is checked by the use case against the provider the team has saved.
-    const { effort, ...rest } = body;
-    const request: TeamLaunchRequest = parseLaunchRequest(teamName, rest);
-    if (!(await stat(request.cwd).catch(() => null))?.isDirectory()) {
+    const cwd = assertAbsoluteCwd(copyBody.cwd);
+    if (!(await stat(cwd).catch(() => null))?.isDirectory()) {
       throw new HttpBadRequestError('cwd must be an existing project folder');
     }
-    return effort === undefined
-      ? request
-      : { ...request, effort: effort as TeamLaunchRequest['effort'] };
+    const { resolver } = createProjectContextRuntimeParts(ports);
+    const copy = await resolver.forRead({ logicalTeamName: teamName, projectPath: cwd });
+    const copyDraft = copy ? await deps.getDraftSavedRequest(copy.executionTeamName) : null;
+    if (copy && !copyDraft) {
+      parseLaunchRequest(copy.executionTeamName, copyBody);
+    } else {
+      // No copy yet: it is made from the definition, as an ordinary (shared) team.
+      const definition = await deps.getTeamDataApi().getSavedRequest(teamName);
+      if (!definition) throw new Error('The team configuration is unavailable');
+      const draft = copyDraft ?? { ...definition, projectContextMode: 'shared' as const };
+      requireTeamRuntimeSelection(parseDraftLaunchCreateRequest(draft, copyBody));
+    }
+    return { ...copyBody, teamName, cwd } as TeamLaunchRequest;
+  }
+
+  /** A failed run of a copy (or a failed confirmation of its readiness) has no client to tell. */
+  function reportCopyProgress(teamName: string, cwd: string): Progress {
+    return (progress) => {
+      if (progress.state === 'failed') {
+        logger.warn(
+          `Launch of ${teamName} in ${cwd} failed: ${progress.error ?? progress.message ?? ''}`
+        );
+      }
+    };
   }
 
   async function launchProjectTeam(
     teamName: string,
     body: Record<string, unknown>
   ): Promise<LaunchResponse> {
-    const request = await admitProjectLaunch(teamName, body);
-    const { teamName: _sameTeam, ...copyBody } = body;
+    if (Object.hasOwn(body, 'teamName') && body.teamName !== teamName) {
+      throw new HttpBadRequestError(
+        'A team with separate history per project cannot be renamed at launch'
+      );
+    }
+    // A team name in the body would rename the draft of the copy.
+    const copyBody = Object.fromEntries(Object.entries(body).filter(([key]) => key !== 'teamName'));
+    const request = await admitProjectLaunch(teamName, copyBody);
     const launched = await launchInProjectContext<LaunchResponse>(request, ports, {
       invoke: (copy, mapProgress) =>
         // The progress mapper confirms the project context once the copy is ready.
         launchByName(copy.teamName, { ...copyBody, cwd: copy.cwd }, (progress) =>
-          mapProgress ? mapProgress(progress, ignoreProgress) : undefined
+          mapProgress?.(progress, reportCopyProgress(teamName, copy.cwd))
         ),
       started: (response) => response,
     });

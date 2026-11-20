@@ -883,6 +883,7 @@ async function verifyHttpCreateAndLaunch(f: Fixture) {
       method,
       headers: body === undefined ? undefined : { 'content-type': 'application/json' },
       body: body === undefined ? undefined : JSON.stringify(body),
+      signal: AbortSignal.timeout(120_000),
     });
     return {
       status: response.status,
@@ -891,6 +892,9 @@ async function verifyHttpCreateAndLaunch(f: Fixture) {
   };
   const team = 'http-' + f.logical.slice('history-'.length);
   const teamDir = path.join(f.rootTeams, team);
+  // The contexts index keys a Windows project folder in lower case.
+  const projectKey = (value: string) =>
+    process.platform === 'win32' ? path.normalize(value).toLowerCase() : value;
 
   // 1. No mode in the request: the default of the create form of the app.
   const created = await call('POST', '/api/teams', {
@@ -911,11 +915,12 @@ async function verifyHttpCreateAndLaunch(f: Fixture) {
     'the project copy of the HTTP launch is registered'
   );
   const copy = index.contexts[0];
-  assert.equal(copy.projectPath, f.projectC, 'The copy must belong to the project of the launch');
+  assert.equal(projectKey(copy.projectPath), projectKey(f.projectC),
+    'The copy must belong to the project of the launch');
   assert.match(copy.executionTeamName, /^ptc-[a-f0-9]{24}$/);
   const copyMeta = await readJsonFile(path.join(f.rootTeams, copy.executionTeamName, 'team.meta.json'));
   assert.equal(copyMeta.projectContextMode, 'shared', 'A copy is an ordinary team');
-  assert.equal(copyMeta.cwd, f.projectC);
+  assert.equal(projectKey(String(copyMeta.cwd)), projectKey(f.projectC));
   await assert.rejects(readFile(path.join(teamDir, 'config.json')), { code: 'ENOENT' },
     'The team itself must never become a runnable team');
   // The fixture runtime denies every agent: the run is accepted and then fails, or is refused.
@@ -940,18 +945,21 @@ async function verifyHttpCreateAndLaunch(f: Fixture) {
 
   // 3. The app and HTTP list the same rows. A copy is folded into its team once it was ready;
   // a copy whose first run never got ready stays visible (the list hides only proven copies).
-  const listed = await cdp.evaluate(
+  const listTeams = async () => await cdp!.evaluate(
     '(async () => (await window.electronAPI.teams.list()).map((t) => t.teamName))()'
   ) as string[];
+  if (finalState === 'ready') {
+    // Readiness of the copy is confirmed in the background after the run reports ready.
+    await waitFor('(async () => !(await window.electronAPI.teams.list()).some((t) => t.teamName === ' +
+      JSON.stringify(copy.executionTeamName) + '))()', 'the ready copy is folded into its team');
+  }
+  const listed = await listTeams();
   const httpList = await call('GET', '/api/teams');
   const httpNames = (httpList.body as unknown as { teamName: string }[]).map((t) => t.teamName);
   const ours = (names: string[]) =>
     names.filter((name) => name === team || name === copy.executionTeamName).sort();
   assert(listed.includes(team), 'The app must list the team created over HTTP');
   assert.deepEqual(ours(httpNames), ours(listed), 'HTTP and the app must list the same rows');
-  if (finalState === 'ready') {
-    assert(!listed.includes(copy.executionTeamName), 'A ready copy must be folded into its team');
-  }
 
   // 4. Refusals change nothing: a copy by its own name, a folder that does not exist, and a
   // second project while the first copy is not reconciled (the failed run above).

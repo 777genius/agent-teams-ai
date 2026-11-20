@@ -1902,7 +1902,7 @@ describe('MCP team tools over the local REST control API', () => {
     await mkdir(projectB);
     const app = Fastify();
     const { services, teamDataService, createTeamCalls } = createServices(root);
-    enableManagement(services, teamDataService, root);
+    const { context } = enableManagement(services, teamDataService, root);
     registerTeamRoutes(app, services);
     const controlUrl = 'http://per-project-launch.test';
     const restoreFetch = installControlApiFetchMock(app, controlUrl);
@@ -1962,6 +1962,9 @@ describe('MCP team tools over the local REST control API', () => {
         { cwd: projectB, teamName: 'renamed-team' },
         { cwd: projectB, prompt: 5 },
         { cwd: projectB, effort: 'not-an-effort' },
+        { cwd: projectB, effort: '' },
+        // The first launch in a project creates its copy: a bootstrap-only start cannot.
+        { cwd: projectB, bootstrapOnly: true },
         {},
         { cwd: path.join(root, 'no-such-project') },
       ]) {
@@ -1969,6 +1972,27 @@ describe('MCP team tools over the local REST control API', () => {
         expect(refused.statusCode, JSON.stringify(payload)).toBe(400);
       }
       expect(await registry.find(teamName, projectB)).toBeNull();
+      // A team without a chosen runtime is refused before its first copy is reserved.
+      const unresolved = 'per-project-unresolved';
+      const unresolvedCreate = await app.inject({
+        method: 'POST',
+        url: '/api/teams',
+        payload: {
+          teamName: unresolved,
+          runtimeSelectionVersion: 1,
+          expectedContext: context.snapshot(),
+          members: [{ name: 'builder' }],
+        },
+      });
+      expect(unresolvedCreate.statusCode).toBe(201);
+      const unresolvedLaunch = await app.inject({
+        method: 'POST',
+        url: `/api/teams/${unresolved}/launch`,
+        payload: { cwd: projectB },
+      });
+      expect(unresolvedLaunch.statusCode).toBe(422);
+      expect(unresolvedLaunch.json()).toMatchObject({ code: 'RUNTIME_SELECTION_REQUIRED' });
+      expect(await registry.find(unresolved, projectB)).toBeNull();
       const direct = await app.inject({
         method: 'POST',
         url: `/api/teams/${copy.teamName}/launch`,

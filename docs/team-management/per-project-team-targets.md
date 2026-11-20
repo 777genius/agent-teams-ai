@@ -121,14 +121,15 @@ Refusals of the project context carry their reason in `code`, next to `error`.
 | Answer | When |
 | --- | --- |
 | 200 with the run of the copy | launched (or already launching or running in that project) |
-| 400 | no `cwd`, `cwd` not an existing absolute folder, an invalid field or effort, or a `teamName` in the body (a per-project team cannot be renamed at launch) |
+| 400 | no `cwd`, `cwd` not an existing absolute folder, an invalid field or effort, `bootstrapOnly` in a project without a copy yet, or a `teamName` in the body (a per-project team cannot be renamed at launch) |
+| 422 `RUNTIME_SELECTION_REQUIRED` | the team has no runtime chosen yet and the request names none |
 | 409 `TEAM_PROJECT_CONTEXT_RUNNING` | the team runs, launches or has an unreconciled copy in another project |
 | 409 `TEAM_PROJECT_CONTEXT_UNAVAILABLE` | the contexts index cannot be used (being trashed or deleted, damaged, too many projects) |
 | 409 `TEAM_METADATA_UNREADABLE` | the team metadata cannot be read: the kind of the team is unknown, nothing is launched |
 | 409 `PROJECT_COPY_NOT_LAUNCHABLE` | the name is a project copy (`ptc-` followed by 24 hex characters, refused by its shape even when its owner cannot be proven) |
 | 409, `error` starting with `TEAM_TRASHED` | the team is in the trash (as for any team) |
 
-Everything that can be checked without the copy is checked **before anything is reserved**: a reservation left behind by a refused request would block the team in every other project until it is launched in this one. A launch that fails after the copy was reserved (a provider or runtime error of the copy) leaves it like a failed launch in the app does: launching the team in that project again completes it.
+Everything that can be checked without the copy is checked **before anything is reserved**: a reservation left behind by a refused request would block the team in every other project until it is launched in this one. The body is parsed by the same parser that launches the copy (as a draft when the project has no copy yet, else as a configured team), so no rule exists twice. A launch that fails after the copy was reserved (a provider or runtime error of the copy) leaves it like a failed launch in the app does: launching the team in that project again completes it.
 
 ### Not verified
 
