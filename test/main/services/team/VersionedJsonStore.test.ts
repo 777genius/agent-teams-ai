@@ -8,6 +8,7 @@ import {
   VersionedJsonStore,
   VersionedJsonStoreError,
 } from '../../../../src/main/services/team/opencode/store/VersionedJsonStore';
+import { withFileLock } from '../../../../src/main/services/team/fileLock';
 
 describe('VersionedJsonStore', () => {
   let tempDir: string;
@@ -118,7 +119,107 @@ describe('VersionedJsonStore', () => {
       data: ['future'],
     });
   });
+
+  it('queues same-file store instances before starting their cross-process acquire timeout', async () => {
+    const filePath = path.join(tempDir, 'queued.json');
+    const createStore = () =>
+      new VersionedJsonStore<string[]>({
+        filePath,
+        schemaVersion: 1,
+        defaultData: () => [],
+        validate: validateStringArray,
+        lockOptions: { acquireTimeoutMs: 20, retryIntervalMs: 1 },
+      });
+    const entered = deferred();
+    const release = deferred();
+    const first = createStore().updateLocked(async (current) => {
+      entered.resolve();
+      await release.promise;
+      return [...current, 'first'];
+    });
+    await entered.promise;
+    const second = createStore().updateLocked((current) => [...current, 'second']);
+    const results = Promise.allSettled([first, second]);
+    try {
+      // A local predecessor legitimately owns the lock longer than a waiter's
+      // acquire budget. That budget must begin only after the predecessor leaves.
+      await new Promise((resolve) => setTimeout(resolve, 60));
+    } finally {
+      release.resolve();
+    }
+    expect((await results).map((result) => result.status)).toEqual(['fulfilled', 'fulfilled']);
+    await expect(createStore().read()).resolves.toMatchObject({ data: ['first', 'second'] });
+  });
+
+  it('continues after a rejected writer and lets unrelated files progress independently', async () => {
+    const createStore = (name: string) =>
+      new VersionedJsonStore<string[]>({
+        filePath: path.join(tempDir, name),
+        schemaVersion: 1,
+        defaultData: () => [],
+        validate: validateStringArray,
+      });
+    const entered = deferred();
+    const release = deferred();
+    const failure = new Error('TEST updater failure');
+    const first = createStore('a.json').updateLocked(async () => {
+      entered.resolve();
+      await release.promise;
+      throw failure;
+    });
+    await entered.promise;
+    const second = createStore('a.json').updateLocked((current) => [...current, 'after failure']);
+    const results = Promise.allSettled([first, second]);
+    try {
+      await expect(createStore('b.json').updateLocked(() => ['independent'])).resolves.toMatchObject({
+        data: ['independent'],
+      });
+    } finally {
+      release.resolve();
+    }
+    expect(await results).toEqual([
+      { status: 'rejected', reason: failure },
+      { status: 'fulfilled', value: expect.objectContaining({ data: ['after failure'] }) },
+    ]);
+  });
+
+  it('preserves the external lock owner and acquisition timeout outside the local store queue', async () => {
+    const filePath = path.join(tempDir, 'external.json');
+    const store = new VersionedJsonStore<string[]>({
+      filePath,
+      schemaVersion: 1,
+      defaultData: () => [],
+      validate: validateStringArray,
+      lockOptions: { acquireTimeoutMs: 20, retryIntervalMs: 1 },
+    });
+    const entered = deferred();
+    const release = deferred();
+    const external = withFileLock(filePath, async () => {
+      entered.resolve();
+      await release.promise;
+    });
+    await entered.promise;
+    const before = await fs.readFile(`${filePath}.lock`, 'utf8');
+    try {
+      await expect(store.updateLocked(() => ['blocked'])).rejects.toThrow('File lock timeout:');
+      expect(await fs.readFile(`${filePath}.lock`, 'utf8')).toBe(before);
+    } finally {
+      release.resolve();
+      await external;
+    }
+    await expect(store.updateLocked(() => ['after release'])).resolves.toMatchObject({
+      data: ['after release'],
+    });
+  });
 });
+
+function deferred() {
+  let resolve!: () => void;
+  const promise = new Promise<void>((done) => {
+    resolve = done;
+  });
+  return { promise, resolve };
+}
 
 function validateStringArray(value: unknown): string[] {
   if (!Array.isArray(value) || !value.every((item) => typeof item === 'string')) {

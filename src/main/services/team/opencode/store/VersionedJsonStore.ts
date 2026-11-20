@@ -4,6 +4,22 @@ import * as path from 'path';
 
 import { type FileLockOptions, withFileLock } from '../../fileLock';
 
+// Local writers wait their turn before spending the cross-process acquisition
+// budget. Share the queue across store instances and retain it through release.
+const localUpdates = new Map<string, Promise<unknown>>();
+
+function queueLocalUpdate<T>(filePath: string, update: () => Promise<T>): Promise<T> {
+  const key = path.resolve(filePath);
+  const previous = localUpdates.get(key) ?? Promise.resolve();
+  const current = previous.catch(() => undefined).then(update);
+  localUpdates.set(key, current);
+  const retire = () => {
+    if (localUpdates.get(key) === current) localUpdates.delete(key);
+  };
+  void current.then(retire, retire);
+  return current;
+}
+
 export interface VersionedJsonStoreEnvelope<TData> {
   schemaVersion: number;
   updatedAt: string;
@@ -83,6 +99,12 @@ export class VersionedJsonStore<TData> {
   }
 
   async updateLocked(
+    updater: (current: TData) => TData | Promise<TData>
+  ): Promise<VersionedJsonStoreUpdateResult<TData>> {
+    return queueLocalUpdate(this.filePath, () => this.updateAfterLocalQueue(updater));
+  }
+
+  private async updateAfterLocalQueue(
     updater: (current: TData) => TData | Promise<TData>
   ): Promise<VersionedJsonStoreUpdateResult<TData>> {
     return withFileLock(
