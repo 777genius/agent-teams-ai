@@ -877,10 +877,11 @@ async function verifySchedules(f: Fixture) {
  * ones of its project copy. The fixture runtime denies agents: a launch is accepted, then refused
  * there, and nothing is executed.
  *
- * No lead here uses the OpenCode provider: on Windows the app runs an OpenCode startup cleanup
- * through the runtime bridge at start-up, the denying fixture fails it, and the app then refuses
- * every OpenCode lead launch for the session (fail closed). Launch settings are provider-agnostic,
- * so the section switches between two other providers.
+ * No lead here uses the OpenCode or Codex provider: on Windows the app runs an OpenCode startup
+ * cleanup through the runtime bridge at start-up, the denying fixture fails it, and the app then
+ * refuses every OpenCode lead launch for the session (fail closed); Codex needs credentials.
+ * Launch settings are provider-agnostic, so the launches here use the Anthropic provider, which
+ * the denying runtime accepts and then refuses.
  */
 async function verifyLaunchSettings(f: Fixture) {
   assert(cdp);
@@ -932,81 +933,70 @@ async function verifyLaunchSettings(f: Fixture) {
   for (const alias of [f.nativeA, f.nativeB]) {
     const { launchIdentity: _identity, ...rest } = await metaOf(alias);
     await json(metaPath(alias), {
-      ...rest, providerId: 'codex', model: 'stale-model', effort: 'low',
+      ...rest, providerId: 'anthropic', model: 'stale-model', effort: 'low',
       ...(alias === f.nativeB ? { extraCliArgs: '--own-to-project-b' } : {}),
     });
   }
 
   // 1. A launch in project A: the team keeps what was chosen, but not trust or runtime arguments.
   const first = await launch(f.projectA, {
-    providerId: 'codex', model: 'e2e-model-x', effort: 'high', limitContext: true,
+    providerId: 'anthropic', model: 'opus', effort: 'high', limitContext: true,
     skipPermissions: true, extraCliArgs: '--max-turns 5',
   });
   assert(first.ok, 'The launch in project A must be accepted: ' + JSON.stringify(first));
-  const afterFirst = await definitionWhere((meta) => meta.model === 'e2e-model-x',
+  const afterFirst = await definitionWhere((meta) => meta.model === 'opus',
     'launch settings saved into the team definition');
   assert.equal(afterFirst.effort, 'high');
   assert.equal(afterFirst.limitContext, true);
-  assert.equal(afterFirst.providerId, 'codex');
+  assert.equal(afterFirst.providerId, 'anthropic');
   assert(!('skipPermissions' in afterFirst), 'Trust of one project must not enter the team definition');
   assert(!('extraCliArgs' in afterFirst), 'Runtime arguments of one project must not enter the team definition');
   assert.equal(afterFirst.projectContextMode, 'per_project', 'The definition keeps its history mode');
-  assert.equal((await savedByDialog())?.model, 'e2e-model-x',
+  assert.equal((await savedByDialog())?.model, 'opus',
     'The launch dialog reads the saved settings of the team, so it shows what project A chose');
   // What is project-owned went to the copy that was launched (a schedule of project A reads it there).
   const copyA = await waitForJson(metaPath(f.nativeA),
     (meta) => meta.extraCliArgs === '--max-turns 5' && meta.skipPermissions === true,
     'trust and runtime arguments are saved in the launched copy of project A');
-  assert.equal(copyA.model, 'e2e-model-x', 'and so are the team settings');
+  assert.equal(copyA.model, 'opus', 'and so are the team settings');
 
   // 2. A launch in project B that changes them: the team and the launched copy follow, the
-  // runtime arguments of project B stay its own.
+  // runtime arguments of project B stay its own, and the copy of project A is now behind the team.
   const second = await launch(f.projectB, {
-    providerId: 'codex', model: 'e2e-model-y', effort: 'medium', limitContext: true,
+    providerId: 'anthropic', model: 'sonnet', effort: 'medium', limitContext: true,
     extraCliArgs: '--own-to-project-b', skipPermissions: false,
   });
   assert(second.ok, 'The launch in project B must be accepted: ' + JSON.stringify(second));
-  await definitionWhere((meta) => meta.model === 'e2e-model-y' && meta.effort === 'medium',
+  await definitionWhere((meta) => meta.model === 'sonnet' && meta.effort === 'medium',
     'the change made in project B is saved into the team');
-  assert.equal((await savedByDialog())?.model, 'e2e-model-y');
+  assert.equal((await savedByDialog())?.model, 'sonnet');
   const copyB = await waitForJson(metaPath(f.nativeB),
-    (meta) => meta.model === 'e2e-model-y' && meta.effort === 'medium',
+    (meta) => meta.model === 'sonnet' && meta.effort === 'medium',
     'the launched copy of project B has the settings it was launched with');
   assert.notEqual(copyB.skipPermissions, true, 'Trust of project A must not reach project B');
   assert.equal(copyB.extraCliArgs, '--own-to-project-b', 'Project B keeps its own runtime arguments');
   assert(!('extraCliArgs' in await metaOf(f.logical)), 'Runtime arguments still must not be in the team');
+  assert.equal((await metaOf(f.nativeA)).model, 'opus', 'The copy of project A is behind the team');
 
   // 3. An explicit unset goes back to the default for the whole team; the rest is kept.
   const third = await launch(f.projectB, {
-    providerId: 'codex', model: 'e2e-model-y', effort: undefined, limitContext: true,
+    providerId: 'anthropic', model: 'sonnet', effort: undefined, limitContext: true,
+    extraCliArgs: '--own-to-project-b', skipPermissions: false,
   });
   assert(third.ok, 'The launch that unsets the effort must be accepted: ' + JSON.stringify(third));
-  const unset = await definitionWhere((meta) => !('effort' in meta) && meta.model === 'e2e-model-y',
+  const unset = await definitionWhere((meta) => !('effort' in meta) && meta.model === 'sonnet',
     'the unset effort is cleared in the team');
   assert.equal(unset.limitContext, true);
 
-  // 4. A provider change in project B drops what belonged to the old provider even where the
-  // request does not state it (model and effort are left out, limitContext is unset as the dialog
-  // sends it for another provider), and the copy of project A (still on the old provider and
-  // model) is now behind the team.
-  assert.equal((await metaOf(f.logical)).limitContext, true, 'The context limit is still saved before the change');
-  const changed = await launch(f.projectB, { providerId: 'anthropic' }, ['model', 'effort']);
-  assert(changed.ok, 'The launch that changes the provider must be accepted: ' + JSON.stringify(changed));
-  const afterChange = await definitionWhere((meta) => meta.providerId === 'anthropic',
-    'the provider change is saved into the team');
-  for (const key of ['model', 'effort', 'limitContext']) {
-    assert(!(key in afterChange), key + ' of the old provider must be dropped: ' + JSON.stringify(afterChange));
-  }
-  const behind = await metaOf(f.nativeA);
-  assert.equal(behind.providerId, 'codex', 'The copy of project A is still on the old provider');
-  assert.equal(behind.model, 'e2e-model-x', 'and on the model project A chose');
-
-  // 5. A schedule in project A runs the settings of the team, not the older ones of its copy:
-  // the launch of the copy is an anthropic one, which the runtime records in the copy.
+  // 4. A schedule in project A runs the settings of the team, not the older ones of its copy. The
+  // runtime records what it was launched with in the copy: with the stale model of the copy
+  // ("opus") it would write that back; the model of the team is "sonnet".
+  const { launchIdentity: _staleIdentity, ...copyABehind } = await metaOf(f.nativeA);
+  await json(metaPath(f.nativeA), copyABehind);
   const schedule = await ipcOutcome('window.electronAPI.schedules.create(' + JSON.stringify({
     teamName: f.logical, executionMode: 'agent', taskFirst: true, reviewedSavedPrompt: true,
     label: 'SCHEDULE_AFTER_B', cronExpression: '0 9 * * 1-5', timezone: 'UTC',
-    launchConfig: { cwd: f.projectA, prompt: 'SCHEDULED_AFTER_B_PROMPT', providerId: 'codex' },
+    launchConfig: { cwd: f.projectA, prompt: 'SCHEDULED_AFTER_B_PROMPT', providerId: 'anthropic' },
   }) + ')');
   assert(schedule.ok, 'The schedule for project A must be accepted: ' + JSON.stringify(schedule));
   const schedulesFile = path.join(f.claudeRoot, 'agent-teams-schedules', 'schedules.json');
@@ -1015,12 +1005,28 @@ async function verifyLaunchSettings(f: Fixture) {
     'the schedule is stored')).find(isOurs);
   assert(stored);
   const copyAMeta = await waitForScheduledLaunch(f, stored.id, metaPath(f.nativeA));
-  assert.equal((copyAMeta.launchIdentity as { providerId?: string } | undefined)?.providerId, 'anthropic',
-    'The scheduled launch must run the provider of the team: ' + JSON.stringify(copyAMeta).slice(0, 300));
-  assert.notEqual(copyAMeta.model, 'e2e-model-x', 'The copy of project A must follow the team');
-  assert.equal(copyAMeta.providerId, 'anthropic');
+  assert.equal(copyAMeta.model, 'sonnet',
+    'The scheduled launch must run the model of the team: ' + JSON.stringify(copyAMeta).slice(0, 300));
+  assert(!('effort' in copyAMeta), 'and its unset effort, not the older one of the copy');
   assert.equal(copyAMeta.extraCliArgs, '--max-turns 5',
     'The schedule of project A runs with the runtime arguments that project A launched with');
+
+  // 5. A provider change drops what belonged to the old provider even where the request does not
+  // state it (model and effort are left out, limitContext is unset as the dialog sends it for
+  // another provider). Another provider cannot be launched here without credentials, so the team
+  // is seeded as if its last launch had been on one: the part under test is what a launch does to
+  // the saved settings it finds.
+  await json(metaPath(f.logical), {
+    ...(await metaOf(f.logical)), providerId: 'codex', model: 'codex-model', effort: 'medium',
+    limitContext: true,
+  });
+  const changed = await launch(f.projectB, { providerId: 'anthropic' }, ['model', 'effort']);
+  assert(changed.ok, 'The launch that changes the provider must be accepted: ' + JSON.stringify(changed));
+  const afterChange = await definitionWhere((meta) => meta.providerId === 'anthropic',
+    'the provider change is saved into the team');
+  for (const key of ['model', 'effort', 'limitContext']) {
+    assert(!(key in afterChange), key + ' of the old provider must be dropped: ' + JSON.stringify(afterChange));
+  }
 
   // Nothing but launches of the copies and read-only runtime queries reached the denying runtime.
   const audit = (await readFile(f.audit, 'utf8')).split('\n').filter(Boolean)
