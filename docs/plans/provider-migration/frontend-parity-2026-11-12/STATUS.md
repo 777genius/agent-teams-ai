@@ -2,7 +2,31 @@
 
 Обновлено: **20 ноября 2026**. Единственный текущий рабочий план.
 
-## Текущий срез: продолжение с опубликованного `ada00fd3`
+## Текущий план после опубликованного `4159f6ce`
+
+`4159f6ce20dc6d37eab2f5f9f079cedc59c59ea0` опубликован с expected parent Ada;
+обратный Git fetch подтвердил parent, tree и все 22 blobs. Его original CI
+зарегистрирован штатно: [Host44745764310](https://github.com/777genius/agent-teams-ai/actions/runs/44745764310),
+[source CI44745764307](https://github.com/777genius/agent-teams-ai/actions/runs/44745764307).
+На чтении 20 ноября 13:42 UTC все 29 Host jobs ещё queued, runners не назначены;
+plan source CI также queued. Это не PASS. Inline threads остаются 43/43 resolved,
+reviews — 20 COMMENTED, APPROVED — 0.
+
+**Добавка поверх 4159: ограниченное выделение памяти при свежем executable digest.**
+Darwin/Linux custody теперь хеширует тот же исходный открытый fd порциями до
+512 KiB. Все прежние file/native identity, size, timestamp, currentness и
+`finally` close проверки сохранены; кеша, нового допуска или срока нет. Семантика
+positive short read, EOF, текущего offset и zero-size read сверена с pinned Node
+24.21. RED прежнего выражения — 22/23 PASS и отказ bounded-buffer case; GREEN —
+27/27, включая четыре прежних owner cases. Canonical Host build, полный Host test
+TS7, lint и size guard PASS; два независимых review — без замечаний.
+
+Для точного исходного Darwin Bun (88,660,864 bytes) выполнено по 18 свежих hashes
+на Linux, без запуска этого executable: max RSS 226.98–227.25 → 61.04–61.31 MiB,
+peak external allocation 257.56 → 6.90 MiB. Наблюдаемая медиана — 130.62 → 72.45ms;
+filesystem cache не контролировался. Это измерение allocations, не доказанный
+Darwin runtime/E2E fix. [Source, benchmark и reviews](evidence/executable-digest-20261120.json)
+сохранены; original native qualification этой добавки обязательна.
 
 Checkout восстановлен с `ada00fd369bd3cccb0c398bf888557558adca70d`. Последние
 неопубликованные retained/cron/diagnostic черновики из прежней сессии отсутствуют;

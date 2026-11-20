@@ -591,6 +591,8 @@ const desktopProofBaseSources = [
   'packages/legacy-agent-host/src/output.ts',
   'packages/legacy-agent-host/src/process/ControllerProcessPolicy.ts',
   'packages/legacy-agent-host/src/process/DarwinRegisteredProcess.ts',
+  'packages/legacy-agent-host/src/process/digestOpenExecutable.ts',
+  'packages/legacy-agent-host/tests/registered-process-executable-digest.test.ts',
   'packages/legacy-agent-host/src/process/TeamProcessCommands.ts',
   'packages/legacy-agent-host/src/process/createTeamProcessMethods.ts',
   'packages/legacy-agent-host/src/process/projectProcessViews.ts',
