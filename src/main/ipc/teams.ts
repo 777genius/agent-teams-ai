@@ -213,7 +213,7 @@ import { TeamPermanentDeletionTransactionCoordinator } from './teams/TeamPermane
 import { createTeamWithProjectContext } from './teams/teamProjectContextCreate';
 import { buildTeamProgressReporter, withPreparedContextLaunch } from './teams/teamProjectContextLaunch';
 import { projectPublicProvisioningProgress, resolveProjectRunDiagnosticsTeam } from './teams/teamProjectContextProgressIdentity';
-import { createProjectDefinitionEditRouting, readRosterForMutation } from './teams/teamProjectDefinitionEdit';
+import * as projectEdit from './teams/teamProjectDefinitionEdit';
 import { discardQueuedUserMessages, listQueuedUserMessages } from './teams/teamQueuedUserMessages';
 import { createTeamSoftDeleteRequests } from './teams/teamSoftDeleteFlow';
 import { withTimeoutValue } from './teams/withTimeoutValue';
@@ -265,6 +265,7 @@ import type {
 } from '../services/team/contracts/TeamProvisioningApis';
 import type { TeamBackupService } from '../services/team/TeamBackupService';
 import type { TeamMembersMetaFile } from '../services/team/TeamMembersMetaStore';
+import type { RuntimeRosterMutationMember } from './teams/runtimeRosterMutationMember';
 import type { ProjectContextProgressMapper } from './teams/teamProjectContextLaunch';
 import type { TeamScopedResourceReleaser } from './teams/teamScopedResourceReleaser';
 import type { ResolveOpenCodeInputDeclaration } from '@features/agent-attachments';
@@ -336,7 +337,6 @@ import type {
 import type { CliArgsValidationResult } from '@shared/utils/cliArgsParser';
 
 const logger = createLogger('IPC:teams');
-const withProjectDefinitionEdit = createProjectDefinitionEditRouting({ data: getTeamDataService, runtime: getTeamRuntimeApi, run: getTeamProvisioningRunApi });
 
 type VisibleDirectReplyProtocol = 'send_message' | 'agent_teams_message_send';
 function resolveVisibleDirectReplyProtocol(input: {
@@ -636,6 +636,7 @@ export function initializeTeamHandlers(
   retireGatewayBindings?: (teamName: string) => Promise<void>
 ): void {
   teamDataService = service;
+  projectEdit.bind(service, teamHandlerApis);
   resolveOpenCodeInputDeclaration = inputDeclarationResolver;
   teamProvisioningStartApi = teamHandlerApis.provisioningStart;
   teamProvisioningStatusApi = teamHandlerApis.provisioningStatus;
@@ -756,16 +757,16 @@ export function registerTeamHandlers(ipcMain: IpcMain): void {
   ipcMain.handle(TEAM_GET_TASK_EXACT_LOG_SUMMARIES, handleGetTaskExactLogSummaries);
   ipcMain.handle(TEAM_GET_TASK_EXACT_LOG_DETAIL, handleGetTaskExactLogDetail);
   ipcMain.handle(TEAM_GET_MEMBER_STATS, handleGetMemberStats);
-  ipcMain.handle(TEAM_UPDATE_CONFIG, withProjectDefinitionEdit(handleUpdateConfig));
+  ipcMain.handle(TEAM_UPDATE_CONFIG, projectEdit.route(handleUpdateConfig));
   ipcMain.handle(TEAM_START_TASK, handleStartTask);
   ipcMain.handle(TEAM_START_TASK_BY_USER, handleStartTaskByUser);
   ipcMain.handle(TEAM_GET_ALL_TASKS, handleGetAllTasks);
   ipcMain.handle(TEAM_ADD_TASK_COMMENT, handleAddTaskComment);
-  ipcMain.handle(TEAM_ADD_MEMBER, withProjectDefinitionEdit(handleAddMember));
-  ipcMain.handle(TEAM_REPLACE_MEMBERS, withProjectDefinitionEdit(handleReplaceMembers));
-  ipcMain.handle(TEAM_REMOVE_MEMBER, withProjectDefinitionEdit(handleRemoveMember));
-  ipcMain.handle(TEAM_RESTORE_MEMBER, withProjectDefinitionEdit(handleRestoreMember));
-  ipcMain.handle(TEAM_UPDATE_MEMBER_ROLE, withProjectDefinitionEdit(handleUpdateMemberRole));
+  ipcMain.handle(TEAM_ADD_MEMBER, projectEdit.route(handleAddMember));
+  ipcMain.handle(TEAM_REPLACE_MEMBERS, projectEdit.route(handleReplaceMembers));
+  ipcMain.handle(TEAM_REMOVE_MEMBER, projectEdit.route(handleRemoveMember));
+  ipcMain.handle(TEAM_RESTORE_MEMBER, projectEdit.route(handleRestoreMember));
+  ipcMain.handle(TEAM_UPDATE_MEMBER_ROLE, projectEdit.route(handleUpdateMemberRole));
   ipcMain.handle(TEAM_GET_PROJECT_BRANCH, handleGetProjectBranch);
   ipcMain.handle(TEAM_GET_ATTACHMENTS, handleGetAttachments);
   ipcMain.handle(TEAM_KILL_PROCESS, handleKillProcess);
@@ -1541,21 +1542,6 @@ function isProvisioningTeamName(teamName: string): boolean {
   if (teamName.length > 64) return false;
   const parts = teamName.split('-');
   return parts.every((p) => /^[a-z0-9]+$/.test(p));
-}
-
-interface RuntimeRosterMutationMember {
-  name: string;
-  role?: string;
-  workflow?: string;
-  isolation?: 'worktree';
-  cwd?: string;
-  providerId?: TeamProviderId;
-  providerBackendId?: TeamProviderBackendId;
-  model?: string;
-  effort?: EffortLevel;
-  fastMode?: TeamFastMode;
-  mcpPolicy?: ReturnType<typeof normalizeTeamMemberMcpPolicy>;
-  removedAt?: number | string | null;
 }
 
 const OPENCODE_LEAD_LIVE_ROSTER_MUTATION_BLOCK_MESSAGE =
@@ -4314,7 +4300,7 @@ async function handleAddMember(
       const memberName = vName.value!;
       const teamDataService = getTeamDataService();
       const previousMembersMeta = await new TeamMembersMetaStore().getMeta(tn).catch(() => null);
-      const previousMembers = (await readRosterForMutation(teamDataService, tn)).members as RuntimeRosterMutationMember[];
+      const previousMembers = await projectEdit.rosterOf(teamDataService, tn);
       const memberLifecycle = getTeamMemberLifecycleApi();
       const isTeamAlive = getTeamRuntimeApi().isTeamAlive(tn);
       if (isTeamAlive && isOpenCodeLedRoster(previousMembers)) {
@@ -4632,7 +4618,7 @@ async function handleRemoveMember(
       const name = vMember.value!;
       const teamDataService = getTeamDataService();
       const previousMembersMeta = await new TeamMembersMetaStore().getMeta(tn).catch(() => null);
-      const previousMembers = (await readRosterForMutation(teamDataService, tn)).members as RuntimeRosterMutationMember[];
+      const previousMembers = await projectEdit.rosterOf(teamDataService, tn);
       const normalizedMemberName = name.trim().toLowerCase();
       const isAlreadyRemoved = previousMembersMeta?.members.some(
         (member) =>
@@ -4694,8 +4680,7 @@ async function handleRestoreMember(
       const name = vMember.value!;
       const teamDataService = getTeamDataService();
       const previousMembersMeta = await new TeamMembersMetaStore().getMeta(tn).catch(() => null);
-      const previousTeamData = await readRosterForMutation(teamDataService, tn);
-      const previousMembers = previousTeamData.members as RuntimeRosterMutationMember[];
+      const previousMembers = await projectEdit.rosterOf(teamDataService, tn);
       const memberLifecycle = getTeamMemberLifecycleApi();
       const isTeamAlive = getTeamRuntimeApi().isTeamAlive(tn);
       if (isTeamAlive && isOpenCodeLedRoster(previousMembers)) {

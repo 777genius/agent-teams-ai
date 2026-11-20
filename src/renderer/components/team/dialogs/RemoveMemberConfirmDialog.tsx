@@ -36,7 +36,7 @@ export const RemoveMemberConfirmDialog = ({
     }
   };
   return (
-    <Dialog open onOpenChange={(open) => !open && onCancel()}>
+    <Dialog open onOpenChange={(open) => !open && !pending && onCancel()}>
       <DialogContent className="max-w-sm">
         <DialogHeader>
           <DialogTitle>{t('detail.removeMember.title')}</DialogTitle>
@@ -46,7 +46,7 @@ export const RemoveMemberConfirmDialog = ({
         </DialogHeader>
         {error && <p className="text-xs text-red-400">{error}</p>}
         <DialogFooter>
-          <Button variant="ghost" size="sm" onClick={onCancel}>
+          <Button variant="ghost" size="sm" disabled={pending} onClick={onCancel}>
             {t('detail.actions.cancel')}
           </Button>
           <Button variant="destructive" size="sm" disabled={pending} onClick={() => void confirm()}>

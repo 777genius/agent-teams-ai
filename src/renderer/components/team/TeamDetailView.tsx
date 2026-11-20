@@ -2136,6 +2136,7 @@ export const TeamDetailView = memo(function TeamDetailView({
         isTeamAlive: data?.isAlive === true,
         request,
         members: nextMembers,
+        rosterReadOnly: false,
         memberSettingsRelaunch,
         onMembersSaved,
         validateBeforeReplace: validateMemberSettingsRelaunch,
@@ -2164,8 +2165,7 @@ export const TeamDetailView = memo(function TeamDetailView({
             throw error;
           }
         },
-        replaceMembers: (nextTeamName, nextRequest) =>
-          api.teams.replaceMembers(nextTeamName, nextRequest),
+        replaceMembers: (team, next) => api.teams.replaceMembers(team, next),
         launchTeam,
       });
     },

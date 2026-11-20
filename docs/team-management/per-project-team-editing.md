@@ -20,11 +20,14 @@ The logical team has no `config.json`. A native alias is a **projection** of the
    - **project copy**: refused ("edit the team itself"), so there is no second roster;
    - **any other team**: the handler runs exactly as before, including live editing of a running team;
    - **unreadable team metadata**: refused (fail closed).
-
-External HTTP/MCP edits (`TeamPromptManagement`) refuse a per-project team and a project copy (`PROJECT_TEAM_DESKTOP_ONLY`) and reject a team whose kind cannot be determined; the desktop app is the only editor of such a team. A launch or relaunch dialog never writes the definition.
 3. The same projection (`projectDefinitionToAlias`) runs at launch in `TeamProjectContextDraftMaterializer`, so a copy that could not be refreshed at edit time is refreshed before it starts.
 
 A failed refresh of a copy does not fail the edit (the definition is already saved); it is logged and repeated at the next launch.
+
+Two more rules keep the router the only writer of the definition:
+
+- External HTTP/MCP edits (`TeamPromptManagement`) refuse a per-project team and a project copy (`PROJECT_TEAM_DESKTOP_ONLY`) and reject a team whose kind cannot be determined; the desktop app is the only editor of such a team (a behaviour change, see the pull request).
+- No launch or relaunch flow writes the definition: the dialogs are `rosterReadOnly` for a per-project team, `executeTeamRelaunch` requires the flag and skips the roster save when it is set, and "Change runtime" opens relaunch mode without a member settings draft.
 
 ## Not supported yet
 

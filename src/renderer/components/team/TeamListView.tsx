@@ -1027,6 +1027,7 @@ export const TeamListView = memo(function TeamListView({
           isTeamAlive: true,
           request,
           members,
+          rosterReadOnly: launchDialogProjectPermissionTeamName !== undefined,
           onMembersSaved,
           stopTeam: async (nextTeamName) => {
             try {
@@ -1058,7 +1059,7 @@ export const TeamListView = memo(function TeamListView({
         setLaunchingTeamName(null);
       }
     },
-    [launchTeam]
+    [launchTeam, launchDialogProjectPermissionTeamName]
   );
 
   useEffect(() => {

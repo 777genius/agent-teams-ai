@@ -177,9 +177,9 @@ describe('every team definition writer goes through the router', () => {
     'TEAM_REMOVE_MEMBER',
     'TEAM_RESTORE_MEMBER',
     'TEAM_UPDATE_MEMBER_ROLE',
-  ])('%s is registered through withProjectDefinitionEdit', (channel) => {
+  ])('%s is registered through the definition edit router', (channel) => {
     expect(source).toMatch(
-      new RegExp(`ipcMain\\.handle\\(${channel}, withProjectDefinitionEdit\\(`)
+      new RegExp(`ipcMain\\.handle\\(${channel}, projectEdit\\.route\\(`)
     );
   });
 });

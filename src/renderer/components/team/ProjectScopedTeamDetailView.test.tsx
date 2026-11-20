@@ -73,15 +73,17 @@ vi.mock('./definitionEdit/TeamDefinitionEditDialog', () => ({
 }));
 vi.mock('./dialogs/LaunchTeamDialog', () => ({
   LaunchTeamDialog: ({
-    onLaunch, teamName, defaultProjectPath, projectPermissionTeamName,
+    onLaunch, teamName, defaultProjectPath, projectPermissionTeamName, rosterReadOnly,
   }: {
     onLaunch: (request: { teamName: string; cwd: string; providerId: 'anthropic' }) => Promise<void>;
     teamName: string;
     defaultProjectPath: string;
     projectPermissionTeamName?: string | null;
+    rosterReadOnly?: boolean;
   }) => React.createElement('button', {
     'data-testid': 'launch-with-provider',
     'data-permission-policy': projectPermissionTeamName === null ? 'manual' : 'inherited',
+    'data-roster-read-only': String(rosterReadOnly === true),
     onClick: () => { void onLaunch({
       teamName, cwd: defaultProjectPath, providerId: 'anthropic',
     }); },
@@ -421,6 +423,9 @@ describe('ProjectScopedTeamDetailView project switching', () => {
     ).not.toBeNull());
     expect(host.querySelector('[data-testid="launch-with-provider"]')?.getAttribute('data-permission-policy'))
       .toBe('manual');
+    // The roster of a per-project team belongs to its definition: this dialog never saves it.
+    expect(host.querySelector('[data-testid="launch-with-provider"]')?.getAttribute('data-roster-read-only'))
+      .toBe('true');
     expect(launchTeam).not.toHaveBeenCalled();
     getView.mockResolvedValue(native('ptc-b', '/TEST/b'));
     // A previous project may leave a stale logical run. Only the canonical

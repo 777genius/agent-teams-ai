@@ -18,6 +18,8 @@ import {
   createProjectDefinitionEditRouting,
   PROJECT_COPY_EDIT_MESSAGE,
   readRosterForMutation,
+  route,
+  rosterOf,
 } from '../../../src/main/ipc/teams/teamProjectDefinitionEdit';
 
 import type { DefinitionEditTarget } from '../../../src/features/team-project-context/main';
@@ -162,5 +164,19 @@ describe('readRosterForMutation', () => {
       }),
     };
     await expect(readRosterForMutation(broken as never, 'builders')).rejects.toThrow('disk failure');
+  });
+});
+
+describe('the router bound to the team handlers', () => {
+  it('refuses to route before the handlers are initialized instead of skipping the policy', async () => {
+    const handler = vi.fn(async (..._args: unknown[]) => ({ success: true as const, data: undefined }));
+    await expect(route(handler)(event, 'builders')).rejects.toThrow('not initialized');
+    expect(handler).not.toHaveBeenCalled();
+  });
+
+  it('reads the roster a live mutation rolls back to as roster members', async () => {
+    metaByTeam.clear();
+    const data = { getTeamData: vi.fn(async () => ({ members: [{ name: 'a', role: 'dev' }] })) };
+    await expect(rosterOf(data as never, 'legacy')).resolves.toEqual([{ name: 'a', role: 'dev' }]);
   });
 });

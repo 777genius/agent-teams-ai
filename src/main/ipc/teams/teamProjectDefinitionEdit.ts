@@ -10,6 +10,8 @@ import { createProjectContextRuntimeParts } from './teamProjectContextCreate';
 
 import type { ProjectTeamRuntimePorts } from './teamProjectContextCreate';
 import type { DefinitionEditTarget } from '@features/team-project-context/main';
+import type { RuntimeRosterMutationMember } from './runtimeRosterMutationMember';
+import type { TeamIpcHandlerApis } from '@main/services/team/contracts/TeamProvisioningApis';
 import type { TeamDataService } from '@main/services/team/TeamDataService';
 import type { TeamViewSnapshot } from '@shared/types';
 import type { IpcResult } from '@shared/types/ipc';
@@ -140,4 +142,31 @@ export async function readRosterForMutation(
     if (meta?.projectContextMode === 'per_project') return { members: [] };
     throw error;
   }
+}
+
+let bound: { data: ProjectTeamRuntimePorts['data']; apis: TeamIpcHandlerApis } | null = null;
+
+function requireBound(): NonNullable<typeof bound> {
+  if (!bound) throw new Error('Team definition editing is not initialized');
+  return bound;
+}
+
+/** Called once when the team handlers are initialized, with the services they use. */
+export function bind(data: ProjectTeamRuntimePorts['data'], apis: TeamIpcHandlerApis): void {
+  bound = { data, apis };
+}
+
+/** The router of the team handlers, bound to the services given to `bind`. */
+export const route = createProjectDefinitionEditRouting({
+  data: () => requireBound().data,
+  runtime: () => requireBound().apis.runtime,
+  run: () => requireBound().apis.provisioningRun,
+});
+
+/** The roster a live roster mutation rolls back to (empty for a per-project definition). */
+export async function rosterOf(
+  data: Pick<TeamDataService, 'getTeamData'>,
+  teamName: string
+): Promise<RuntimeRosterMutationMember[]> {
+  return (await readRosterForMutation(data, teamName)).members as RuntimeRosterMutationMember[];
 }
