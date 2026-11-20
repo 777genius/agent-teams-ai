@@ -89,6 +89,26 @@ describe('ScheduleRunLogDialog task navigation', () => {
     expect(onClose).toHaveBeenCalledOnce();
   });
 
+  it('opens the task on the project copy that holds it for a per-project team', async () => {
+    await act(async () => {
+      root.render(
+        <ScheduleRunLogDialog
+          open
+          run={{ ...run, teamName: 'builders', executionTeamName: 'ptc-token-a' }}
+          scheduleId={run.scheduleId}
+          onClose={vi.fn()}
+        />
+      );
+    });
+    const button = [...host.querySelectorAll('button')].find(
+      (item) => item.textContent?.trim() === 'Open task'
+    );
+    await act(async () => button?.click());
+    expect(mocks.openTaskDetailTab).toHaveBeenCalledExactlyOnceWith({
+      contextId: 'workspace-1', teamName: 'ptc-token-a', taskId: 'task-1',
+    });
+  });
+
   it('does not create a fake task link for one-shot runs', async () => {
     await act(async () => {
       root.render(

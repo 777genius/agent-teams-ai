@@ -1,8 +1,5 @@
-import { TeamProjectContextRegistry } from '@features/team-project-context/main';
-
 import { isControllerTaskNotFoundError } from '../team/taskCreationIdempotency';
 import { TeamConfigReader } from '../team/TeamConfigReader';
-import { TeamMetaStore } from '../team/TeamMetaStore';
 
 import { JsonScheduleRepository } from './JsonScheduleRepository';
 import { ScheduledTaskExecutor } from './ScheduledTaskExecutor';
@@ -12,15 +9,25 @@ import { SmartScheduleDispatcher } from './SmartScheduleDispatcher';
 import type { TeamIpcHandlerApis } from '../team/contracts/TeamProvisioningApis';
 import type { TeamDataService } from '../team/TeamDataService';
 import type { TeamProvisioningService } from '../team/TeamProvisioningService';
+import type { ScheduleTargets } from './scheduleTarget';
 
 /** Composes the scheduler from existing main-process APIs; no new runtime owner. */
 export function createSchedulerService(
   apis: Pick<TeamIpcHandlerApis, 'runtime' | 'provisioningRun' | 'diagnostics' | 'memberLifecycle'>,
   data: Pick<
     TeamDataService,
-    'getLeadMemberName' | 'getSavedRequest' | 'createTask' | 'getTask' | 'startTaskByUser' | 'hasActiveOwnedTask'
+    | 'getLeadMemberName'
+    | 'getSavedRequest'
+    | 'createTask'
+    | 'getTask'
+    | 'startTaskByUser'
+    | 'hasActiveOwnedTask'
   >,
-  provisioning: Pick<TeamProvisioningService, 'launchTeam' | 'prepareForProvisioning' | 'hasTeamOperationInProgress'>
+  provisioning: Pick<
+    TeamProvisioningService,
+    'launchTeam' | 'prepareForProvisioning' | 'hasTeamOperationInProgress'
+  >,
+  targets: ScheduleTargets
 ): SchedulerService {
   const executor = new ScheduledTaskExecutor();
   const repository = new JsonScheduleRepository();
@@ -47,7 +54,8 @@ export function createSchedulerService(
         if (
           isControllerTaskNotFoundError(error, taskId) ||
           (error instanceof Error && 'code' in error && error.code === 'TASK_NOT_FOUND')
-        ) return null;
+        )
+          return null;
         throw error;
       }
     },
@@ -60,6 +68,8 @@ export function createSchedulerService(
     createTask: (teamName, request) => data.createTask(teamName, request),
     launchTeam: (request) => provisioning.launchTeam(request, () => undefined),
     runOneShot: (request) => executor.execute(request),
+    resolveTarget: (schedule) => targets.resolve(schedule),
+    launchProjectTeam: (schedule, request) => targets.launch(schedule, request),
   });
 
   return new SchedulerService(
@@ -70,12 +80,6 @@ export function createSchedulerService(
       return { ready: result.ready, message: result.message };
     },
     dispatcher,
-    async (teamName) => {
-      const store = new TeamMetaStore();
-      const meta = await store.getMeta(teamName);
-      if (!meta && (await store.metadataFileExists(teamName))) return false;
-      if (meta?.projectContextMode === 'per_project') return false;
-      return !(await TeamProjectContextRegistry.fromCurrentApp().isOwnedExecutionAlias(teamName));
-    }
+    (teamName, change) => targets.admit(teamName, change)
   );
 }

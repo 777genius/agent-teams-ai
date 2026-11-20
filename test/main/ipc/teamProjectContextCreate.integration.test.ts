@@ -149,6 +149,11 @@ describe('project-scoped desktop team creation boundary (sandbox disk + fake nat
       teamName: 'builders', cwd: alias, members: [], projectContextMode: 'per_project',
     };
     await createTeamWithProjectContext(request, f.onProgress, f.ports);
+    // Readiness is confirmed in the background: wait for it, or cleanup races the index write.
+    await vi.waitFor(async () => {
+      const row = await TeamProjectContextRegistry.fromCurrentApp().find('builders', f.projectPath);
+      expect(row?.state).toBe('ready');
+    });
     expect(f.started[0]?.cwd).toBe(await fs.realpath(f.projectPath));
     const meta = JSON.parse(await fs.readFile(
       path.join(getTeamsBasePath(), f.started[0]!.teamName, 'team.meta.json'),
@@ -313,4 +318,53 @@ describe('project-scoped desktop team creation boundary (sandbox disk + fake nat
     expect(prepared.request.teamName).not.toBe(a.executionTeamName);
   });
 
+  // A schedule may only reuse the copy it resolved. Prevention, not detection: the launch
+  // preparation aborts before any copy is materialized and gives the reservation back.
+  describe('a launch that must reuse one existing project copy', () => {
+    it('uses that copy when it is the project copy', async () => {
+      const f = await fixture();
+      await createTeamWithProjectContext({
+        teamName: 'builders', cwd: f.projectPath, members: [], projectContextMode: 'per_project',
+      }, f.onProgress, f.ports);
+      const registry = TeamProjectContextRegistry.fromCurrentApp();
+      const a = await vi.waitFor(async () => {
+        const row = await registry.find('builders', f.projectPath);
+        expect(row?.state).toBe('ready');
+        return row!;
+      });
+      const prepared = await prepareTeamContextLaunch(
+        { teamName: 'builders', cwd: f.projectPath },
+        f.ports,
+        { expectedExecutionTeamName: a.executionTeamName }
+      );
+      expect(prepared.request.teamName).toBe(a.executionTeamName);
+    });
+
+    it('creates and keeps nothing when the project would need another copy', async () => {
+      const f = await fixture();
+      await createTeamWithProjectContext({
+        teamName: 'builders', cwd: f.projectPath, members: [], projectContextMode: 'per_project',
+      }, f.onProgress, f.ports);
+      const registry = TeamProjectContextRegistry.fromCurrentApp();
+      const a = await vi.waitFor(async () => {
+        const row = await registry.find('builders', f.projectPath);
+        expect(row?.state).toBe('ready');
+        return row!;
+      });
+      const projectB = path.join(path.dirname(f.projectPath), 'project-b');
+      await fs.mkdir(projectB);
+      const teamsBefore = (await fs.readdir(getTeamsBasePath())).sort();
+
+      await expect(
+        prepareTeamContextLaunch({ teamName: 'builders', cwd: projectB }, f.ports, {
+          expectedExecutionTeamName: a.executionTeamName,
+        })
+      ).rejects.toThrow(/changed while the schedule was starting/);
+
+      // No copy directory was written, and the reservation of project B was given back.
+      expect((await fs.readdir(getTeamsBasePath())).sort()).toEqual(teamsBefore);
+      expect(await registry.inspect('builders', projectB)).toBeNull();
+      expect((await registry.find('builders', f.projectPath))?.id).toBe(a.id);
+    });
+  });
 });

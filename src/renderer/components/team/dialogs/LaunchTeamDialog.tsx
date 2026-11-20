@@ -92,7 +92,7 @@ import {
 } from '../schedule/resolveScheduleLaunchConfig';
 import { SmartScheduleFields } from '../schedule/SmartScheduleFields';
 import { useSavedPromptReview } from '../schedule/useSavedPromptReview';
-import { validateScheduleForm } from '../schedule/validateScheduleForm';
+import { scheduleCwd, scheduleScope, validateScheduleForm } from '../schedule/validateScheduleForm';
 
 import { AdvancedCliSection } from './AdvancedCliSection';
 import { AnthropicFastModeSelector } from './AnthropicFastModeSelector';
@@ -291,7 +291,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
   const launchHydrationKey = projectPermissionTeamName === undefined
     ? effectiveTeamName
     : `${effectiveTeamName}:${projectPermissionTeamName ?? 'unresolved'}`;
-  const defaultProjectPath = isLaunchMode ? props.defaultProjectPath : undefined;
+  const { projectScope, defaultProjectPath } = scheduleScope(props, teamByName[effectiveTeamName]);
   const [launchHydratedTeamName, setLaunchHydratedTeamName] = useState<string | null>(null);
   const needsTeamSelector = isSchedule && !propsTeamName;
   // Shared form state
@@ -2049,7 +2049,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
   // Validation
 
   const validationErrors = validateScheduleForm({
-    isSchedule, usesSavedTeamRuntime,
+    isSchedule, usesSavedTeamRuntime: usesSavedTeamRuntime && !(projectScope && !isEditing),
     mode: scheduleExecutionMode,
     targetMember: scheduleTargetMember,
     team: teamByName[effectiveTeamName],
@@ -2348,7 +2348,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
             savedTeam,
             edited: scheduleRuntimeEditedRef.current,
             proposed: {
-              cwd: usesSavedTeamRuntime ? savedTeam?.cwd ?? '' : effectiveCwd,
+              cwd: scheduleCwd(savedTeam, schedule, effectiveCwd, projectScope),
               prompt: promptDraft.value.trim(),
               providerId: selectedProviderId,
               providerBackendId: selectedProviderBackendId,
@@ -2621,7 +2621,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
               onConfirmedChange={(confirmed) => setSavedPromptReview((current) => current && ({ ...current, confirmed }))} />
           ) : null}
 
-          {!usesSavedTeamRuntime ? <ProjectPathSelector
+          {!usesSavedTeamRuntime || (projectScope && !isEditing) ? <ProjectPathSelector
             cwdMode={cwdMode}
             onCwdModeChange={(mode) => {
               if (projectPermissionTeamName !== undefined && mode !== cwdMode) setSkipPermissions(false);
@@ -2882,7 +2882,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
                   onValueChange={(value) => { promptDraft.setValue(value); setScheduleFormTouched(true); setLocalError(null); }}
                   suggestions={mentionSuggestions}
                   projectPath={
-                    usesSavedTeamRuntime
+                    usesSavedTeamRuntime && !projectScope
                       ? teamByName[effectiveTeamName]?.projectPath || schedule?.launchConfig.cwd || null
                       : effectiveCwd || null
                   }

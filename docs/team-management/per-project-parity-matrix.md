@@ -15,6 +15,7 @@ The cells below were written before #1247 and are kept as they were; where they 
 - Gap 4 (ranked list): closed, except trashing a per-project team over HTTP/MCP, which stays in the app (`PROJECT_TEAM_DESKTOP_ONLY`).
 - Gap 5: `prompt` is no longer among the drifting fields (it is part of the definition now); provider, model, effort, fast mode, auto-approve, context limit and worktree still drift.
 - Step 2 of the recommended order ("External edit and lead instructions"): done, with the same exception for trash.
+- Schedules (section D, gap 1, step 3 of the recommended order): closed in #1246; the rows of those sections already describe the new state. A schedule stays keyed by the team and names its project (fixed once created, enforced by the server); a run goes to the ready copy of that project and is recorded as skipped, never as a failure, when none can be used. A schedule never creates a copy, so the first launch in a new project stays manual.
 
 ## 1. How a team name is resolved today
 
@@ -32,7 +33,7 @@ Consequences:
 
 - Inside the project screen the renderer mounts the copy as an ordinary team (`ProjectScopedTeamDetailView.tsx` passes the alias to `TeamDetailView` together with `logicalTeamName`). Tasks, messages, kanban, logs, member runtime panels therefore work natively. They are the safe part of the matrix.
 - Any entry point that receives the logical name must resolve it itself. Today only some do: the desktop IPC for launch (`teams.ts:2167`, `withPreparedContextLaunch`), stop (`teams.ts:745`, `stopLogicalTeam`), alive list (`teams.ts:3835`, `projectAliveTeamNames`), delete/restore/permanent delete (`teamContextLifecycle.ts`), definition edits (the router from #1244), the team list (`projectTeamSummaries`) and the cross-team directory. Every other entry point takes the name literally.
-- External entry points (HTTP, MCP controller, scheduler, organization map) were written for one physical name per team and mostly resolve nothing.
+- External entry points (HTTP, MCP controller, organization map) were written for one physical name per team and mostly resolve nothing.
 
 ## 2. Parity matrix
 
@@ -90,7 +91,7 @@ Status words: **works**, **hidden** (the control is not shown), **refuses** (an 
 
 | Feature | Legacy | Logical | Copy | Evidence |
 | --- | --- | --- | --- | --- |
-| Create, edit, run, pause schedules | works | refuses and the screen says so | refuses | `createSchedulerService.ts:77-78`, `SchedulerService.ts:91, 182, 231, 322, 374, 600`, `TeamDetailView.tsx:3287` (read) |
+| Create, edit, run, pause schedules | works | works: one list under the team; each schedule names its project (its working directory, an existing absolute folder, fixed once created and enforced by the server). A run goes to the ready copy of that project. It is recorded as skipped, with a reason and never as a failure, when there is no launched copy there, the copy is stuck or unreadable, the team is trashed, or the team runs in another project | refuses (a copy is never scheduled) | `projectScheduleTargets.ts`, `SmartScheduleDispatcher.ts`, E2E `verifySchedules` |
 
 ### E. Listing and aggregate views
 
@@ -114,7 +115,7 @@ Impact is for a user who relies on the legacy feature. Effort: S under a day, M 
 
 | # | Gap | Type | Impact | Effort | Why |
 | --- | --- | --- | --- | --- | --- |
-| 1 | Schedules unavailable | honest | high | M-L | A common automation feature; the scheduler launches and creates tasks by physical name and bypasses project routing. A schedule already stores a project path (`ScheduleLaunchConfig.cwd`), which is the missing input. One-shot schedules do not need a team runtime at all and could be allowed first (S). |
+| 1 | ~~Schedules unavailable~~ done | honest | high | M-L | Schedules stay keyed by the team and resolve the ready copy of the schedule's project at fire time (read-only, through the same gate as a launch). Remaining limit: a schedule never creates a copy, so the first launch of a team in a new project stays a manual action (the run is skipped until then). |
 | 2 | HTTP / MCP stop, runtime and alive ignore the logical team | **silent** | high | S-M | `team_stop` reports success while the project keeps running. Resolve the logical name to its owned contexts (the IPC already has `stopLogicalTeam`). |
 | 3 | HTTP / MCP list and the organization map show internal copies and a draft | **silent** | medium | S-M | Reuse `projectTeamSummaries` (and the projected alive list) for the HTTP list and the org adapter. |
 | 4 | Lead instructions cannot be edited anywhere; MCP / HTTP update and trash refuse | honest | high | M | Add the field to the edit dialog and route the external update through the same editor (gate plus projection under the logical-team lock). |
@@ -145,7 +146,8 @@ It is built from what exists: `classifyDefinitionTarget` (logical / alias / nati
 | Operation | Meaning for a logical target |
 | --- | --- |
 | stop, runtime, alive | all owned contexts (aggregate) |
-| launch, schedule run | needs a project; resolves or materializes the copy through `prepareTeamContextLaunch` under the logical-team lock |
+| launch | needs a project; resolves or materializes the copy through `prepareTeamContextLaunch` under the logical-team lock |
+| schedule run | needs a project; resolves the existing ready copy read-only, never creates one, then launches it through the same gate under the logical-team lock |
 | edit definition | the edit router (already exists) |
 | list, organization map | fold copies into the logical team (`projectTeamSummaries`) |
 | cross-team delivery | the running context, else an explicit project |
@@ -163,7 +165,7 @@ Recommendation: do the resolution layer now. Its callers already pass `(team, co
 
 1. **Make the silent gaps honest** (gaps 2 and 3): resolve stop, runtime, alive and the list/organization views through the layer. Small, removes the misleading results, and the first consumers of the layer.
 2. **External edit and lead instructions** (gap 4): the layer plus the existing editor; closes the biggest regression in the MCP surface.
-3. **Schedules** (gap 1): one-shot schedules first, then task-first schedules through the layer (project path comes from the schedule).
+3. **Schedules** (gap 1): done. Schedules stay keyed by the team and fire against the ready copy of the schedule's project; a scheduler never creates a copy.
 4. **Launch settings as definition** (gap 5): decide the owned fields, project them, make relaunch write to the definition. Needs an E2E that changes a setting and launches in two projects.
 5. **Cross-team and alias naming** (gaps 7, 8), then **live edit** (gap 6), then the hidden UI pieces (gaps 9, 10), then hosted (gap 12).
 
@@ -172,7 +174,7 @@ Each step ships with an E2E on the real Electron flow, like #1244.
 ## 6. Not verified
 
 - Everything marked **read** was not executed. No real provider was started, so launch, relaunch and stop results are from code and from the existing E2E only.
-- The scheduler: whether one-shot schedules truly do not depend on the team runtime was read from `SmartScheduleDispatcher.ts` and `ScheduledTaskExecutor`, not run.
+- Schedules: the real Electron E2E runs a scheduled launch against a runtime that denies agents, so a real agent run after a scheduled launch was not exercised.
 - The `team_stop` no-op for a logical name rests on the documented behavior of `stopTeam` for a team with no process; the HTTP route was not called.
 - Token usage, task folders, auto-resume, stall monitor and the review-flow per-context behavior were only skimmed.
 - Hosted web and the real MCP controller were not exercised.

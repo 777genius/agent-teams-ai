@@ -2309,7 +2309,6 @@
   "schedule": {
     "actionFailed": "Schedule action failed",
     "deleteConfirmation": "Delete schedule \"{{label}}\"? Its run history will also be removed.",
-    "perProjectUnavailable": "Schedules are not available for teams with separate history for each project yet.",
     "runRequested": "Run requested. Check history to see whether work was handed off.",
     "count": "{{count}} schedules",
     "count_one": "{{count}} schedule",

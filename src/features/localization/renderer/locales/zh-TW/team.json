@@ -2306,7 +2306,6 @@
   "schedule": {
     "actionFailed": "排程動作失敗",
     "deleteConfirmation": "要刪除排程「{{label}}」嗎？它的執行紀錄也會一併移除。",
-    "perProjectUnavailable": "依專案分開歷史的團隊目前不支援排程。",
     "runRequested": "已要求執行。請查看歷史紀錄，確認工作是否已交接。",
     "count": "{{count}} 個排程",
     "count_one": "{{count}} 個排程",
