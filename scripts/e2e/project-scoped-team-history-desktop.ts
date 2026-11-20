@@ -876,6 +876,11 @@ async function verifySchedules(f: Fixture) {
  * (extraCliArgs) stay with the project; a schedule runs the settings of the team, not the older
  * ones of its project copy. The fixture runtime denies agents: a launch is accepted, then refused
  * there, and nothing is executed.
+ *
+ * No lead here uses the OpenCode provider: on Windows the app runs an OpenCode startup cleanup
+ * through the runtime bridge at start-up, the denying fixture fails it, and the app then refuses
+ * every OpenCode lead launch for the session (fail closed). Launch settings are provider-agnostic,
+ * so the section switches between two other providers.
  */
 async function verifyLaunchSettings(f: Fixture) {
   assert(cdp);
@@ -927,14 +932,14 @@ async function verifyLaunchSettings(f: Fixture) {
   for (const alias of [f.nativeA, f.nativeB]) {
     const { launchIdentity: _identity, ...rest } = await metaOf(alias);
     await json(metaPath(alias), {
-      ...rest, providerId: 'opencode', model: 'stale-model', effort: 'low',
+      ...rest, providerId: 'codex', model: 'stale-model', effort: 'low',
       ...(alias === f.nativeB ? { extraCliArgs: '--own-to-project-b' } : {}),
     });
   }
 
   // 1. A launch in project A: the team keeps what was chosen, but not trust or runtime arguments.
   const first = await launch(f.projectA, {
-    providerId: 'opencode', model: 'e2e-model-x', effort: 'high', limitContext: true,
+    providerId: 'codex', model: 'e2e-model-x', effort: 'high', limitContext: true,
     skipPermissions: true, extraCliArgs: '--max-turns 5',
   });
   assert(first.ok, 'The launch in project A must be accepted: ' + JSON.stringify(first));
@@ -942,7 +947,7 @@ async function verifyLaunchSettings(f: Fixture) {
     'launch settings saved into the team definition');
   assert.equal(afterFirst.effort, 'high');
   assert.equal(afterFirst.limitContext, true);
-  assert.equal(afterFirst.providerId, 'opencode');
+  assert.equal(afterFirst.providerId, 'codex');
   assert(!('skipPermissions' in afterFirst), 'Trust of one project must not enter the team definition');
   assert(!('extraCliArgs' in afterFirst), 'Runtime arguments of one project must not enter the team definition');
   assert.equal(afterFirst.projectContextMode, 'per_project', 'The definition keeps its history mode');
@@ -957,7 +962,7 @@ async function verifyLaunchSettings(f: Fixture) {
   // 2. A launch in project B that changes them: the team and the launched copy follow, the
   // runtime arguments of project B stay its own.
   const second = await launch(f.projectB, {
-    providerId: 'opencode', model: 'e2e-model-y', effort: 'medium', limitContext: true,
+    providerId: 'codex', model: 'e2e-model-y', effort: 'medium', limitContext: true,
     extraCliArgs: '--own-to-project-b', skipPermissions: false,
   });
   assert(second.ok, 'The launch in project B must be accepted: ' + JSON.stringify(second));
@@ -973,7 +978,7 @@ async function verifyLaunchSettings(f: Fixture) {
 
   // 3. An explicit unset goes back to the default for the whole team; the rest is kept.
   const third = await launch(f.projectB, {
-    providerId: 'opencode', model: 'e2e-model-y', effort: undefined, limitContext: true,
+    providerId: 'codex', model: 'e2e-model-y', effort: undefined, limitContext: true,
   });
   assert(third.ok, 'The launch that unsets the effort must be accepted: ' + JSON.stringify(third));
   const unset = await definitionWhere((meta) => !('effort' in meta) && meta.model === 'e2e-model-y',
@@ -993,7 +998,7 @@ async function verifyLaunchSettings(f: Fixture) {
     assert(!(key in afterChange), key + ' of the old provider must be dropped: ' + JSON.stringify(afterChange));
   }
   const behind = await metaOf(f.nativeA);
-  assert.equal(behind.providerId, 'opencode', 'The copy of project A is still on the old provider');
+  assert.equal(behind.providerId, 'codex', 'The copy of project A is still on the old provider');
   assert.equal(behind.model, 'e2e-model-x', 'and on the model project A chose');
 
   // 5. A schedule in project A runs the settings of the team, not the older ones of its copy:
@@ -1001,7 +1006,7 @@ async function verifyLaunchSettings(f: Fixture) {
   const schedule = await ipcOutcome('window.electronAPI.schedules.create(' + JSON.stringify({
     teamName: f.logical, executionMode: 'agent', taskFirst: true, reviewedSavedPrompt: true,
     label: 'SCHEDULE_AFTER_B', cronExpression: '0 9 * * 1-5', timezone: 'UTC',
-    launchConfig: { cwd: f.projectA, prompt: 'SCHEDULED_AFTER_B_PROMPT', providerId: 'opencode' },
+    launchConfig: { cwd: f.projectA, prompt: 'SCHEDULED_AFTER_B_PROMPT', providerId: 'codex' },
   }) + ')');
   assert(schedule.ok, 'The schedule for project A must be accepted: ' + JSON.stringify(schedule));
   const schedulesFile = path.join(f.claudeRoot, 'agent-teams-schedules', 'schedules.json');
