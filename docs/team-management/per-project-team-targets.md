@@ -11,6 +11,8 @@ resolveTeamTarget(ports, name)
 
 It fails closed. Unreadable team metadata, an ambiguous alias or contexts whose ownership cannot be proven reject with `TeamTargetUnresolvedError` (HTTP 409, code `TEAM_TARGET_UNRESOLVED`). An unknown team is never treated as an ordinary one.
 
+This closes gaps 2 and 3 of the [parity matrix](./per-project-parity-matrix.md) (the two that returned a wrong result without an error).
+
 ## What a logical team means for each consumer
 
 | Consumer | Logical team | Project copy | Native team |
@@ -35,7 +37,7 @@ All changes are additive except the list, which no longer returns the folded cop
 ## What stays out of this change
 
 - The cross-team `from` attribute (`team.member`) and every `teamName: "..."` in an agent prompt are routing identities and keep the physical name; only labels that are purely cosmetic could show the display name, and the member prompts already print both (`team "<display>" (<physical>)`).
-- Schedules, the lead prompt, MCP/HTTP update and trash, launch-settings drift, cross-team delivery, live edit and hosted web are separate gaps (see the parity matrix).
+- Schedules, the lead prompt, MCP/HTTP update and trash, launch-settings drift, cross-team delivery, live edit and hosted web are separate gaps (see the [parity matrix](./per-project-parity-matrix.md)).
 
 ## Stop semantics and concurrency
 
