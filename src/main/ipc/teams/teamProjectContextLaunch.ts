@@ -144,7 +144,7 @@ export async function withPreparedContextLaunch(
       result.data.runId, request.teamName, selected.request.teamName
     );
     // A launch that found the team already starting or running applied nothing.
-    if (isFreshLaunch(result.data)) await recordLaunchSettingsOfDefinition(request);
+    if (isFreshLaunch(result.data)) await recordLaunchSettingsOfDefinition(request, selected.request.teamName);
   }
   return result;
 }
@@ -164,9 +164,16 @@ function isFreshLaunch(response: TeamLaunchResponse): boolean {
  * failure to save is reported but never fails it; the next launch records
  * again. The caller holds the logical-team configuration lock.
  */
-async function recordLaunchSettingsOfDefinition(request: TeamLaunchRequest): Promise<void> {
+async function recordLaunchSettingsOfDefinition(
+  request: TeamLaunchRequest,
+  copyTeamName: string
+): Promise<void> {
   try {
-    await recordLaunchSettings(createLaunchSettingsStore(), request.teamName, request);
+    await recordLaunchSettings(
+      createLaunchSettingsStore(),
+      { definition: request.teamName, copy: copyTeamName },
+      request
+    );
   } catch (error) {
     logger.warn(`Could not save the launch settings of ${request.teamName}: ${String(error)}`);
   }

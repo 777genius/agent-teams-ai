@@ -51,25 +51,28 @@ describe('changedDefinitionLaunchSettings', () => {
 describe('recordLaunchSettings', () => {
   it('saves what the launch stated into the logical team', async () => {
     const store = { save: vi.fn(async () => undefined) };
-    const saved = await recordLaunchSettings(store, 'builders', {
-      providerId: 'codex',
-      model: 'm',
-      limitContext: true,
-      skipPermissions: true,
-    } as never);
+    const saved = await recordLaunchSettings(
+      store,
+      { definition: 'builders', copy: 'ptc-a' },
+      { providerId: 'codex', model: 'm', limitContext: true, skipPermissions: true } as never
+    );
     expect(saved).toBe(true);
-    expect(store.save).toHaveBeenCalledWith('builders', {
-      providerId: 'codex',
-      model: 'm',
-      limitContext: true,
-    });
+    const settings = { providerId: 'codex', model: 'm', limitContext: true };
+    expect(store.save.mock.calls).toEqual([
+      ['builders', settings],
+      ['ptc-a', settings],
+    ]);
   });
 
   it('saves nothing for a launch that states no team-level setting', async () => {
     const store = { save: vi.fn(async () => undefined) };
-    expect(await recordLaunchSettings(store, 'builders', { skipPermissions: true } as never)).toBe(
-      false
-    );
+    expect(
+      await recordLaunchSettings(
+        store,
+        { definition: 'builders', copy: 'ptc-a' },
+        { skipPermissions: true } as never
+      )
+    ).toBe(false);
     expect(store.save).not.toHaveBeenCalled();
   });
 });

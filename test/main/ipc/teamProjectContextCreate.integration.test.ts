@@ -322,6 +322,23 @@ describe('project-scoped desktop team creation boundary (sandbox disk + fake nat
       expect(meta).not.toHaveProperty('worktree');
     });
 
+    it('brings the launched project copy to the same settings at once', async () => {
+      const { f } = await perProjectFixture();
+      const projectB = path.join(path.dirname(f.projectPath), 'project-b');
+      await fs.mkdir(projectB);
+      const invoke = vi.fn(async () => ({ success: true as const, data: { runId: 'r1' } }));
+      await withPreparedContextLaunch(
+        { teamName: 'builders', cwd: projectB, providerId: 'codex', model: 'gpt-y' },
+        f.ports,
+        invoke as never
+      );
+      const copy = (invoke.mock.calls[0] as unknown as [TeamLaunchRequest])[0].teamName;
+      const copyMeta = JSON.parse(
+        await fs.readFile(path.join(getTeamsBasePath(), copy, 'team.meta.json'), 'utf8')
+      ) as Record<string, unknown>;
+      expect(copyMeta).toMatchObject({ providerId: 'codex', model: 'gpt-y' });
+    });
+
     it('saves nothing when the launch is rejected or the team was already running', async () => {
       const { readMeta, launch } = await perProjectFixture();
       await launch({ providerId: 'codex', model: 'rejected' }, { success: false, error: 'no auth' });

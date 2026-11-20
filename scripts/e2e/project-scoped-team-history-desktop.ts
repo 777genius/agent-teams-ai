@@ -931,6 +931,12 @@ async function verifyLaunchSettings(f: Fixture) {
     'the change made in project B is saved into the team'
   );
   assert.equal((await savedByDialog())?.model, 'e2e-model-y');
+  // The launched copy is brought to the same settings at once, whatever the provider persists itself.
+  await waitForJson(
+    path.join(f.rootTeams, f.nativeB, 'team.meta.json'),
+    (meta) => meta.model === 'e2e-model-y' && meta.effort === 'medium',
+    'the launched copy of project B has the settings it was launched with'
+  );
   await launch({ cwd: f.projectA });
   await waitForJson(
     path.join(f.rootTeams, f.nativeA, 'team.meta.json'),

@@ -73,15 +73,19 @@ export function changedDefinitionLaunchSettings(
 /**
  * What the user chose for a launch becomes the team's saved launch settings,
  * exactly as it does for an ordinary team, so the next launch (from any
- * project) and a schedule start from it. Returns whether anything was saved.
+ * project) and a schedule start from it. The copy that was launched follows at
+ * once: a runtime provider that does not persist its own launch settings
+ * would otherwise leave the copy one launch behind its definition.
+ * Returns whether anything was saved.
  */
 export async function recordLaunchSettings(
   store: DefinitionLaunchSettingsStore,
-  logicalTeamName: string,
+  target: { definition: string; copy: string },
   request: Readonly<DefinitionLaunchSettings>
 ): Promise<boolean> {
   const settings = pickDefinitionLaunchSettings(request);
   if (Object.keys(settings).length === 0) return false;
-  await store.save(logicalTeamName, settings);
+  await store.save(target.definition, settings);
+  await store.save(target.copy, settings);
   return true;
 }
