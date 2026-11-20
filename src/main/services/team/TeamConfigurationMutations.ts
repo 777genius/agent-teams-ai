@@ -50,7 +50,7 @@ async function updateProjectTeamDefinitionMetadata(
   stores: TeamConfigurationMutationStores
 ): Promise<TeamConfig> {
   const meta = await stores.teamMetaStore.getMeta(teamName);
-  if (!meta || meta.projectContextMode !== 'per_project') {
+  if (meta?.projectContextMode !== 'per_project') {
     throw new Error(`Team not found: ${teamName}`);
   }
   if (meta.deletedAt) throw new Error('TEAM_TRASHED: Restore the team before editing');

@@ -110,8 +110,8 @@ import {
 } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
 
-import { refreshAfterDefinitionEdit, routeMemberActions } from './definitionEdit/definitionEditActions';
 import { getDefinitionEditAccess } from './definitionEdit/definitionEditAccess';
+import { refreshAfterDefinitionEdit, routeMemberActions } from './definitionEdit/definitionEditActions';
 import { TeamDefinitionEditDialog } from './definitionEdit/TeamDefinitionEditDialog';
 import { AddMemberDialog } from './dialogs/AddMemberDialog';
 import { EditTeamDialog } from './dialogs/EditTeamDialog';

@@ -1,3 +1,4 @@
+export { projectDefinitionToAlias } from './projectDefinitionToAlias';
 export { projectTeamSummaries } from './projectTeamSummaries';
 export { TeamProjectContextCreateCoordinator } from './TeamProjectContextCreateCoordinator';
 export { TeamProjectContextDraftMaterializer } from './TeamProjectContextDraftMaterializer';
@@ -19,9 +20,6 @@ export type {
   TeamWorkContextAddress,
 } from './TeamProjectContextRuntimeResolver';
 export { TeamProjectContextRuntimeResolver } from './TeamProjectContextRuntimeResolver';
-export { projectDefinitionToAlias } from './projectDefinitionToAlias';
-export type { DefinitionEditTarget } from './TeamProjectDefinitionEditor';
-export { TeamProjectDefinitionEditor } from './TeamProjectDefinitionEditor';
 export {
   registerTeamProjectContextViewHandler,
   unregisterTeamProjectContextViewHandler,
@@ -32,3 +30,5 @@ export {
   recoverMissingProjectTeamDefinition,
   recoverMissingProjectTeamDefinitions,
 } from './TeamProjectDefinitionBackup';
+export type { DefinitionEditTarget } from './TeamProjectDefinitionEditor';
+export { TeamProjectDefinitionEditor } from './TeamProjectDefinitionEditor';
