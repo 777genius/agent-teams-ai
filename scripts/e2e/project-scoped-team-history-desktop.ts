@@ -6,7 +6,7 @@
 import assert from 'node:assert/strict';
 import { spawn, spawnSync, type ChildProcess } from 'node:child_process';
 import { createHash, randomUUID } from 'node:crypto';
-import { chmod, mkdir, mkdtemp, readFile, realpath, rm, writeFile } from 'node:fs/promises';
+import { chmod, mkdir, mkdtemp, readdir, readFile, realpath, rm, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -668,6 +668,196 @@ async function verifyDefinitionEdit(f: Fixture) {
   }
 }
 
+interface StoredSchedule {
+  id: string; teamName: string; executionMode?: string; taskFirst?: boolean; cronExpression: string;
+  launchConfig: { cwd: string; prompt: string };
+}
+interface StoredRun {
+  id: string; teamName: string; status: string; summary?: string; error?: string;
+  linkedTaskId?: string; executionTeamName?: string;
+}
+
+/**
+ * Schedules belong to the one logical team: created from the real team screen with the project
+ * chosen in the dialog, stored once under the logical team, fired against the ready project copy
+ * (the fixture runtime denies agents, so the launch is refused by the runtime and recorded), and
+ * never creatable for a project copy.
+ */
+async function verifySchedules(f: Fixture) {
+  assert(cdp);
+  const schedulesDir = path.join(f.claudeRoot, 'agent-teams-schedules');
+  const schedulesFile = path.join(schedulesDir, 'schedules.json');
+  const readSchedules = async (): Promise<StoredSchedule[]> =>
+    await readJsonFile<StoredSchedule[]>(schedulesFile).catch(() => []);
+  assert.deepEqual(await readSchedules(), [], 'The fixture must start without schedules');
+
+  // 1. The section is available on the per-project team screen (it used to say "unavailable").
+  await selectProject(f, 'project-a');
+  await cdp.evaluate('(() => window.__agentTeamsDevStore.getState().openTeamTab(' +
+    JSON.stringify(f.logical) + ', ' + JSON.stringify(f.projectA) + '))()');
+  await waitFor(visibleTask(f.nativeA, 'PROJECT_A_TASK_ONLY'), 'project A open for schedules');
+  const section = '[data-team-name="' + f.nativeA + '"] [data-section-id="schedules"]';
+  await clickSelector(section + ' > div > button', 'Schedules section header');
+  const addSchedule = '(() => Array.from(document.querySelectorAll(' + JSON.stringify(section + ' button') + '))' +
+    '.find((b) => b.textContent?.trim() === "Add Schedule"))()';
+  await waitFor('Boolean(' + addSchedule + ')', 'Add Schedule button of a per-project team');
+  assert.equal(await cdp.evaluate('document.querySelector(' + JSON.stringify(section) + ').innerText.includes("unavailable")'),
+    false, 'Schedules must not be reported as unavailable for a per-project team');
+  await cdp.screenshot(path.join(f.screenshots, 'schedules-section.png'));
+
+  // 2. Create one through the real dialog; the project is the one shown, set explicitly.
+  await cdp.evaluate('(() => { ' + 'const b = ' + addSchedule + '; b.click(); return true; })()');
+  await waitFor('Boolean(document.querySelector("#dialog-prompt"))', 'schedule dialog');
+  await setField('#dialog-prompt', 'SCHEDULED_PROJECT_A_PROMPT');
+  const dialogText = await cdp.evaluate('document.querySelector("[role=dialog]").innerText') as string;
+  assert(!dialogText.includes('ptc-'), 'The schedule dialog must name the team, not its copy: ' + dialogText.slice(0, 200));
+  await cdp.screenshot(path.join(f.screenshots, 'schedule-dialog.png'));
+  const create = '(() => Array.from(document.querySelectorAll("[role=dialog] button"))' +
+    '.find((b) => b.textContent?.trim() === "Create Schedule"))()';
+  await waitFor('(() => { const b = ' + create + '; return Boolean(b) && !b.disabled; })()', 'Create Schedule enabled', 60_000);
+  await cdp.evaluate('(() => { ' + 'const b = ' + create + '; b.click(); return true; })()');
+  // The team keeps a one-time launch prompt: scheduling asks to review it once, like for any team.
+  await clickSelector('#schedule-saved-prompt-reviewed', 'saved prompt review checkbox');
+  await waitFor('document.querySelector("#schedule-saved-prompt-reviewed")?.getAttribute("data-state") === "checked"',
+    'saved prompt review confirmed');
+  await cdp.evaluate('(() => { ' + 'const b = ' + create + '; b.click(); return true; })()');
+  await waitFor('!document.querySelector("#dialog-prompt")', 'schedule dialog closed after create');
+
+  const created = (await waitForJson<StoredSchedule[]>(
+    schedulesFile, (list) => list.length === 1, 'the schedule is stored'
+  ))[0];
+  assert.equal(created.teamName, f.logical, 'The schedule must be stored under the logical team');
+  assert.equal(created.launchConfig.cwd, f.projectA, 'The schedule must keep the project it was made for');
+  assert.equal(created.launchConfig.prompt, 'SCHEDULED_PROJECT_A_PROMPT');
+  await waitFor('document.querySelector(' + JSON.stringify(section) + ').innerText.includes("project-a")',
+    'the project of the schedule is shown in the list');
+  await cdp.screenshot(path.join(f.screenshots, 'schedules-created.png'));
+
+  // 3. The same single list is shown from the other project, and says which project each is for.
+  await selectProject(f, 'project-b');
+  await cdp.evaluate('(() => window.__agentTeamsDevStore.getState().openTeamTab(' +
+    JSON.stringify(f.logical) + ', ' + JSON.stringify(f.projectB) + '))()');
+  await waitFor(visibleTask(f.nativeB, 'PROJECT_B_TASK_ONLY'), 'project B open for schedules');
+  const sectionB = '[data-team-name="' + f.nativeB + '"] [data-section-id="schedules"]';
+  const openedB = await cdp.evaluate('Boolean(document.querySelector(' + JSON.stringify(sectionB + ' [aria-label=\"Run now\"]') + '))');
+  if (!openedB) await clickSelector(sectionB + ' > div > button', 'Schedules section header of project B');
+  await waitFor('document.querySelector(' + JSON.stringify(sectionB) + ').innerText.includes("project-a")',
+    'the schedule made for project A is listed under the same team in project B');
+
+  // 4. A project copy is never a schedule target; nothing is stored for it.
+  const forCopy = await ipcOutcome('window.electronAPI.schedules.create(' + JSON.stringify({
+    teamName: f.nativeA, executionMode: 'agent', taskFirst: true, cronExpression: '0 9 * * 1-5',
+    timezone: 'UTC', launchConfig: { cwd: f.projectA, prompt: 'copy', providerId: 'opencode' },
+  }) + ')');
+  assert(!forCopy.ok && /project copy|belong to the team/i.test(forCopy.error ?? ''),
+    'A schedule for a project copy must be refused: ' + JSON.stringify(forCopy));
+  assert.equal((await readSchedules()).length, 1, 'A refused schedule must not be stored');
+
+  // The project of a schedule is fixed: moving it to another project is refused by the server too.
+  const moved = await ipcOutcome('window.electronAPI.schedules.update(' + JSON.stringify(created.id) +
+    ', ' + JSON.stringify({ launchConfig: { cwd: f.projectB } }) + ')');
+  assert(!moved.ok && /can not be changed/i.test(moved.error ?? ''),
+    'Moving a schedule to another project must be refused: ' + JSON.stringify(moved));
+  assert.equal((await readSchedules())[0].launchConfig.cwd, f.projectA,
+    'A refused move must leave the project of the schedule unchanged');
+  const relative = await ipcOutcome('window.electronAPI.schedules.create(' + JSON.stringify({
+    teamName: f.logical, executionMode: 'agent', taskFirst: true, cronExpression: '0 9 * * 1-5',
+    timezone: 'UTC', launchConfig: { cwd: 'project-a', prompt: 'relative', providerId: 'opencode' },
+  }) + ')');
+  assert(!relative.ok && /absolute folder/i.test(relative.error ?? ''),
+    'A relative project folder must be refused: ' + JSON.stringify(relative));
+
+  // 5. Run now: the work goes to the copy of the chosen project; the run is recorded either way.
+  const runsFile = path.join(schedulesDir, 'runs', created.id + '.json');
+  const tasksOfCopy = path.join(f.claudeRoot, 'tasks', f.nativeA);
+  await selectProject(f, 'project-a');
+  await cdp.evaluate('(() => window.__agentTeamsDevStore.getState().openTeamTab(' +
+    JSON.stringify(f.logical) + ', ' + JSON.stringify(f.projectA) + '))()');
+  await waitFor(visibleTask(f.nativeA, 'PROJECT_A_TASK_ONLY'), 'project A open for the run');
+  const runNow = section + ' button[aria-label="Run now"]';
+  if (!await cdp.evaluate('Boolean(document.querySelector(' + JSON.stringify(runNow) + '))')) {
+    await clickSelector(section + ' > div > button', 'Schedules section header of project A');
+  }
+  await clickSelector(runNow, 'Run now');
+  const runs = await waitForJson<StoredRun[]>(
+    runsFile,
+    (list) => list.length > 0 && !['pending', 'warming_up', 'warm', 'running'].includes(list[0].status),
+    'the scheduled run is recorded', 90_000
+  );
+  const recorded = runs[0];
+  assert.equal(recorded.teamName, f.logical, 'The run belongs to the logical team');
+  // The fixture runtime denies every agent, so the launch of the copy is refused by it: the work
+  // is saved, the run is a recorded skip (never a failure that counts toward auto-pause).
+  assert.equal(recorded.status, 'skipped', 'Unexpected run: ' + JSON.stringify(recorded));
+  assert.match(recorded.summary ?? '',
+    /^Task saved; (selected agent did not become ready|team launch failed)/,
+    'Unexpected run reason: ' + JSON.stringify(recorded));
+  assert(recorded.linkedTaskId, 'The run must link the task it saved: ' + JSON.stringify(recorded));
+  assert.equal(recorded.executionTeamName, f.nativeA,
+    'The run must say which project copy holds its task: ' + JSON.stringify(recorded));
+  const taskFile = await readJsonFile<Record<string, unknown>>(
+    path.join(tasksOfCopy, recorded.linkedTaskId + '.json')
+  ).catch(() => null);
+  assert(taskFile, 'The scheduled task must be on the board of the project copy');
+  assert(JSON.stringify(taskFile).includes('SCHEDULED_PROJECT_A_PROMPT'),
+    'The task on the copy must carry the scheduled instructions');
+  assert.deepEqual(
+    (await readdir(path.join(f.claudeRoot, 'tasks', f.nativeB))).sort(), ['1.json'],
+    'The other project must not get the scheduled task'
+  );
+  assert.deepEqual(await readdir(path.join(f.claudeRoot, 'tasks', f.logical)), [],
+    'The logical team must never get a board of its own');
+  await cdp.screenshot(path.join(f.screenshots, 'schedule-run.png'));
+
+  // 6. The global Schedules page opens the same dialog without any project: editing a schedule
+  // made for project B must keep B, although the team was created in project A.
+  const forB = await ipcOutcome('window.electronAPI.schedules.create(' + JSON.stringify({
+    teamName: f.logical, executionMode: 'agent', taskFirst: true, reviewedSavedPrompt: true,
+    label: 'SCHEDULE_FOR_B', cronExpression: '0 9 * * 1-5', timezone: 'UTC',
+    launchConfig: { cwd: f.projectB, prompt: 'SCHEDULED_PROJECT_B_PROMPT', providerId: 'anthropic' },
+  }) + ')');
+  assert(forB.ok, 'A schedule for project B must be accepted: ' + JSON.stringify(forB));
+  const gone = await ipcOutcome('window.electronAPI.schedules.create(' + JSON.stringify({
+    teamName: f.logical, executionMode: 'agent', taskFirst: true, reviewedSavedPrompt: true,
+    cronExpression: '0 9 * * 1-5', timezone: 'UTC',
+    launchConfig: { cwd: path.join(f.root, 'no-such-project'), prompt: 'never', providerId: 'anthropic' },
+  }) + ')');
+  assert(!gone.ok && /folder/i.test(gone.error ?? ''),
+    'A schedule for a folder that does not exist must be refused: ' + JSON.stringify(gone));
+  const both = await waitForJson<StoredSchedule[]>(
+    schedulesFile, (list) => list.length === 2, 'both schedules are stored'
+  );
+  const scheduleB = both.find((item) => item.launchConfig.cwd === f.projectB);
+  assert(scheduleB, 'The schedule for project B is stored');
+
+  await cdp.evaluate('(() => window.__agentTeamsDevStore.getState().openSchedulesTab())()');
+  const rowOfB = '(() => Array.from(document.querySelectorAll("[data-testid=schedule-list-item]"))' +
+    '.find((row) => row.querySelector("button[aria-label=SCHEDULE_FOR_B]")))()';
+  await waitFor('Boolean(' + rowOfB + ')', 'the schedule of project B on the Schedules page');
+  await cdp.evaluate('(() => { const row = ' + rowOfB + ';' +
+    'row.querySelector("button[aria-label=\\"More actions\\"]").click(); return true; })()');
+  const editItem = '(() => Array.from(document.querySelectorAll("button"))' +
+    '.find((b) => b.textContent?.trim() === "Edit"))()';
+  await waitFor('Boolean(' + editItem + ')', 'Edit in the schedule menu');
+  await cdp.evaluate('(() => { const b = ' + editItem + '; b.click(); return true; })()');
+  await setField('[role=dialog] input[placeholder="0 9 * * 1-5"]', '0 10 * * 1-5');
+  await cdp.screenshot(path.join(f.screenshots, 'schedules-page-edit.png'));
+  const save = '(() => Array.from(document.querySelectorAll("[role=dialog] button"))' +
+    '.find((b) => b.textContent?.trim() === "Save Changes"))()';
+  await waitFor('(() => { const b = ' + save + '; return Boolean(b) && !b.disabled; })()',
+    'Save Changes enabled', 60_000);
+  await cdp.evaluate('(() => { const b = ' + save + '; b.click(); return true; })()');
+  await waitFor('!document.querySelector("#dialog-prompt")', 'schedule dialog closed after save');
+  const edited = await waitForJson<StoredSchedule[]>(
+    schedulesFile,
+    (list) => list.some((item) => item.id === scheduleB.id && item.cronExpression === '0 10 * * 1-5'),
+    'the edited time of the schedule of project B is saved'
+  );
+  assert.equal(edited.find((item) => item.id === scheduleB.id)?.launchConfig.cwd, f.projectB,
+    'Editing the time on the Schedules page must keep the project of the schedule');
+  return recorded;
+}
+
 async function run() {
   const f = await fixture();
   let success = false;
@@ -695,9 +885,26 @@ async function run() {
     await verifyUi(f);
     await verifyAliasRedirect(f);
     await verifyDefinitionEdit(f);
-    // Even in CI, never launch an actual provider or substitute test credentials.
-    const audit = (await readFile(f.audit, 'utf8')).trim().split('\n').filter(Boolean)
+    const readAudit = async () => (await readFile(f.audit, 'utf8')).trim().split('\n').filter(Boolean)
       .map((line) => JSON.parse(line) as string[]);
+    const auditBeforeSchedule = (await readAudit()).length;
+    const scheduledRun = await verifySchedules(f);
+    // Even in CI, never launch an actual provider or substitute test credentials.
+    // Only the scheduled launch of the stopped project copy may reach the denying runtime.
+    const fullAudit = await readAudit();
+    assert.equal(scheduledRun.status, 'skipped');
+    const audit = fullAudit.slice(0, auditBeforeSchedule);
+    const afterSchedule = fullAudit.slice(auditBeforeSchedule);
+    const isLaunch = (args: string[]) => args.includes('--print') && args.includes('stream-json');
+    const isReadOnly = (args: string[]) =>
+      (args[0] === 'runtime' && ['status', 'providers', 'opencode-command'].includes(args[1])) ||
+      (args[0] === 'auth' && args[1] === 'status') || (args[0] === 'model' && args[1] === 'list');
+    assert.equal(afterSchedule.filter(isLaunch).length, 1,
+      'The scheduled run must reach the runtime with exactly one launch of the project copy');
+    const unexpectedAfter = afterSchedule.filter((args) => !isLaunch(args) && !isReadOnly(args));
+    assert.equal(unexpectedAfter.length, 0, 'Unexpected runtime calls after the scheduled run: ' +
+      JSON.stringify(unexpectedAfter.map((args) => args.slice(0, 2).map((token) =>
+        /^(?:--?)?[a-zA-Z][a-zA-Z0-9-]{0,32}$/.test(token) ? token : '[redacted]'))));
     // Startup probes may query runtime read-only capabilities; any provider or
     // team launch command is forbidden by the synthetic runtime fixture.
     const unexpected = audit.filter((args) =>
@@ -713,9 +920,9 @@ async function run() {
       'Unexpected native model/provider lifecycle call: ' + JSON.stringify(commandHeads));
     success = true;
     console.log(JSON.stringify({
-      ok: true, scope: 'real Electron / typed preload / main / native task + inbox / A-B-A / renderer reload / edit the per-project team definition',
+      ok: true, scope: 'real Electron / typed preload / main / native task + inbox / A-B-A / renderer reload / edit the per-project team definition / schedules of a per-project team',
       team: f.logical, sandbox: f.root, screenshotDir: f.screenshots,
-      providerExecution: false,
+      providerExecution: false, scheduledRun: { status: scheduledRun.status, summary: scheduledRun.summary },
     }, null, 2));
   } catch (error) {
     await cdp?.screenshot(path.join(f.screenshots, 'failure.png')).catch(() => undefined);

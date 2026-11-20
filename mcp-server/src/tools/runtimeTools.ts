@@ -103,7 +103,8 @@ export function registerRuntimeTools(server: Pick<FastMCP, 'addTool'>) {
       waitForStop: z.boolean().optional(),
     }),
     execute: async ({ teamName, claudeDir, controlUrl, waitTimeoutMs, waitForStop }) => {
-      assertConfiguredTeam(teamName, claudeDir);
+      // A per-project (logical) team has no config.json; the desktop API stops its project copies.
+      assertConfiguredOrDraftTeam(teamName, claudeDir);
       return jsonTextContent(
         await getController(teamName, claudeDir).runtime.stopTeam({
           ...(controlUrl !== undefined ? { controlUrl } : {}),

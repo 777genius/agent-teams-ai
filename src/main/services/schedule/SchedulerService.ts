@@ -14,6 +14,7 @@ import { randomUUID } from 'crypto';
 import { computeScheduleNextRunAt } from './computeScheduleNextRunAt';
 import { recoverInterruptedScheduleRuns } from './recoverInterruptedScheduleRuns';
 import { SchedulerStopBarrier } from './SchedulerStopBarrier';
+import { admissionRefusal, folderChange, type ScheduleAdmissionCheck } from './scheduleTarget';
 
 import type { ScheduledTaskExecutor } from './ScheduledTaskExecutor';
 import type { ScheduleRepository } from './ScheduleRepository';
@@ -80,18 +81,16 @@ export class SchedulerService {
     executor: ScheduledTaskExecutor,
     warmUpFn?: WarmUpFn,
     smartDispatcher?: SmartScheduleDispatcher,
-    private readonly allowTeamSchedule: (teamName: string) => Promise<boolean> =
-      async () => true
+    private readonly allowTeamSchedule: ScheduleAdmissionCheck = async () => true
   ) {
     this.repository = repository;
     this.executor = executor;
     this.smartDispatcher = smartDispatcher ?? null;
     this.warmUpFn = warmUpFn ?? (async () => ({ ready: true, message: 'warm-up skipped' }));
   }
-  private async assertSchedulableTeam(teamName: string): Promise<void> {
-    if (!(await this.allowTeamSchedule(teamName))) {
-      throw new Error('Project-context scheduling is unavailable until logical-team admission is supported');
-    }
+  private async assertSchedulableTeam(...args: Parameters<ScheduleAdmissionCheck>): Promise<void> {
+    const refusal = admissionRefusal(await this.allowTeamSchedule(...args));
+    if (refusal) throw new Error(refusal);
   }
 
   setChangeEmitter(emitter: ChangeEmitter): void {
@@ -179,7 +178,7 @@ export class SchedulerService {
   }
 
   async createSchedule(input: CreateScheduleInput): Promise<Schedule> {
-    await this.assertSchedulableTeam(input.teamName);
+    await this.assertSchedulableTeam(input.teamName, { cwd: input.launchConfig.cwd });
     const cronExpression = input.cronExpression.trim();
     const timezone = input.timezone.trim();
     getValidScheduleNextRuns(cronExpression, timezone);
@@ -228,7 +227,7 @@ export class SchedulerService {
   async updateSchedule(id: string, patch: UpdateSchedulePatch): Promise<Schedule> {
     const existing = await this.repository.getSchedule(id);
     if (!existing) throw new Error(`Schedule not found: ${id}`);
-    await this.assertSchedulableTeam(existing.teamName);
+    await this.assertSchedulableTeam(existing.teamName, folderChange(existing, patch));
     if (patch.reviewedSavedPrompt && !existing.taskFirst) throw new Error('Review requires task-first schedule');
     const cronChanged = patch.cronExpression !== undefined || patch.timezone !== undefined;
     const cronExpression = (patch.cronExpression ?? existing.cronExpression).trim();
@@ -597,9 +596,9 @@ export class SchedulerService {
     let finishFinalization: (() => void) | undefined;
 
     try {
-      const permitted = await this.allowTeamSchedule(schedule.teamName);
-      const outcome = !permitted
-        ? { kind: 'skipped' as const, summary: 'Project-context scheduling is unavailable until logical-team admission is supported' }
+      const refusal = admissionRefusal(await this.allowTeamSchedule(schedule.teamName));
+      const outcome = refusal
+        ? { kind: 'skipped' as const, summary: refusal }
         : schedule.executionMode
         ? await this.smartDispatcher?.dispatch(schedule, run.id, () =>
             this.stopped || generation !== this.lifecycleEpoch || this.activeRuns.get(scheduleId)?.id !== run.id
@@ -617,7 +616,7 @@ export class SchedulerService {
       finishFinalization = this.stopBarrier.beginFinalization();
       if (!outcome) throw new Error('Smart schedule dispatcher is unavailable');
       if (outcome.kind === 'skipped' || outcome.kind === 'dispatched') {
-        await this.completeRun(run, outcome.kind, null, outcome.summary, undefined, outcome.taskId);
+        await this.completeRun(run, outcome.kind, null, outcome.summary, undefined, outcome);
         if (outcome.kind === 'dispatched') await this.resetConsecutiveFailures(schedule);
       } else {
         const result = outcome.result;
@@ -732,21 +731,20 @@ export class SchedulerService {
     exitCode: number | null,
     summary?: string,
     error?: string,
-    linkedTaskId?: string
+    link?: { taskId?: string; executionTeamName?: string }
   ): Promise<void> {
     const completedAt = new Date().toISOString();
-    const startedAt = new Date(run.startedAt).getTime();
-    const durationMs = Date.now() - startedAt;
 
     const updatedRun: ScheduleRun = {
       ...run,
       status,
       completedAt,
-      durationMs,
+      durationMs: Date.now() - new Date(run.startedAt).getTime(),
       exitCode,
       summary: summary ?? run.summary,
       error: error ?? run.error,
-      ...(linkedTaskId ? { linkedTaskId } : {}),
+      ...(link?.taskId ? { linkedTaskId: link.taskId } : {}),
+      ...(link?.executionTeamName ? { executionTeamName: link.executionTeamName } : {}),
     };
 
     await this.repository.saveRun(updatedRun);

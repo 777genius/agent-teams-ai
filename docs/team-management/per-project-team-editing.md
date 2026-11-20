@@ -33,7 +33,7 @@ Two more rules keep the router the only writer of the definition:
 ## Not supported yet
 
 - Editing while the team runs, launches or stops in any project. One rule keeps the roster of a running copy from diverging from the definition it started from.
-- Schedules for per-project teams (the scheduler refuses them; the screen says so).
+- A schedule whose project has no launched copy yet: the run is skipped with a reason. Launch the team in that project once.
 - The per-member settings dialog on the team screen (it is a relaunch flow); members are edited in the Edit Team dialog.
 - Gateway member bindings are keyed by team name and are not projected onto project copies (the selector is not mounted in member rows in this build).
 - A project context stuck in `reserved` after a crash blocks editing until the team is launched in that project again.

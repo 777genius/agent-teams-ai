@@ -6569,7 +6569,6 @@ export default interface Resources {
         "title": "No schedules yet"
       },
       "nextRun": "Next: {{next}}",
-      "perProjectUnavailable": "Schedules are not available for teams with separate history for each project yet.",
       "runHistory": {
         "empty": "No runs yet",
         "loading": "Loading run history..."

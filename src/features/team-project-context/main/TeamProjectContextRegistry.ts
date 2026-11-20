@@ -28,6 +28,13 @@ export interface PersistedTeamWorkContext {
   state: 'reserved' | 'ready';
 }
 
+export interface OwnedExecutionAlias {
+  logicalTeamName: string;
+  context: PersistedTeamWorkContext;
+}
+
+export type OwnedExecutionAliasLookup = { alias: OwnedExecutionAlias | null } | { error: Error };
+
 interface TeamProjectContextIndex {
   version: 1;
   logicalTeamName: string;
@@ -298,31 +305,81 @@ export class TeamProjectContextRegistry {
    * logical team's manifest explicitly maps to it. Never trust the prefix.
    * This is used only at schedule admission/dispatch, not on hot UI reads.
    */
-  async resolveOwnedExecutionAlias(executionTeamName: string): Promise<{
-    logicalTeamName: string;
-    context: PersistedTeamWorkContext;
-  } | null> {
-    if (!executionTeamName.startsWith('ptc-')) return null;
-    const entries = await fs.readdir(this.paths.teamsBasePath, { withFileTypes: true })
-      .catch((error: NodeJS.ErrnoException) => {
-        if (error.code === 'ENOENT') return [];
-        throw error;
-      });
-    let match: { logicalTeamName: string; context: PersistedTeamWorkContext } | null = null;
-    for (const entry of entries) {
-      if (!entry.isDirectory() || entry.name === executionTeamName) continue;
-      if (!validateTeamName(entry.name).valid) continue;
-      const dir = path.join(this.paths.teamsBasePath, entry.name);
-      if (!(await exists(path.join(dir, INDEX_FILE)))) continue;
-      if ((await readTeamOwnerProfileScope(dir)) !== this.paths.profileScope) continue;
-      const index = await this.readIndex(entry.name);
-      const context = index.contexts.find((row) => row.executionTeamName === executionTeamName);
-      if (!context) continue;
-      if (match) throw new TeamProjectContextUnavailableError('Ambiguous project runtime alias');
-      if (context.state === 'ready') await this.assertOwnedDirectory(executionTeamName);
-      match = { logicalTeamName: entry.name, context };
+  async resolveOwnedExecutionAlias(executionTeamName: string): Promise<OwnedExecutionAlias | null> {
+    const lookup = (await this.resolveOwnedExecutionAliases([executionTeamName])).get(
+      executionTeamName
+    );
+    if (!lookup) return null;
+    if ('error' in lookup) throw lookup.error;
+    return lookup.alias;
+  }
+
+  /**
+   * The same ownership proof for many names with one scan of the teams
+   * directory. A name that cannot be proven reports its own error, so one bad
+   * copy does not hide the others.
+   */
+  async resolveOwnedExecutionAliases(
+    executionTeamNames: readonly string[]
+  ): Promise<Map<string, OwnedExecutionAliasLookup>> {
+    const results = new Map<string, OwnedExecutionAliasLookup>();
+    const wanted = new Set<string>();
+    for (const name of executionTeamNames) {
+      if (name.startsWith('ptc-')) wanted.add(name);
+      else results.set(name, { alias: null });
     }
-    return match;
+    if (wanted.size === 0) return results;
+
+    const matches = new Map<string, OwnedExecutionAlias[]>();
+    let scanError: Error | null = null;
+    try {
+      const entries = await fs.readdir(this.paths.teamsBasePath, { withFileTypes: true })
+        .catch((error: NodeJS.ErrnoException) => {
+          if (error.code === 'ENOENT') return [];
+          throw error;
+        });
+      for (const entry of entries) {
+        if (!entry.isDirectory() || !validateTeamName(entry.name).valid) continue;
+        const dir = path.join(this.paths.teamsBasePath, entry.name);
+        if (!(await exists(path.join(dir, INDEX_FILE)))) continue;
+        if ((await readTeamOwnerProfileScope(dir)) !== this.paths.profileScope) continue;
+        const index = await this.readIndex(entry.name);
+        for (const context of index.contexts) {
+          if (!wanted.has(context.executionTeamName) || entry.name === context.executionTeamName) {
+            continue;
+          }
+          const list = matches.get(context.executionTeamName) ?? [];
+          list.push({ logicalTeamName: entry.name, context });
+          matches.set(context.executionTeamName, list);
+        }
+      }
+    } catch (error) {
+      scanError = error instanceof Error ? error : new Error(String(error));
+    }
+
+    for (const name of wanted) {
+      if (scanError) {
+        results.set(name, { error: scanError });
+        continue;
+      }
+      const found = matches.get(name) ?? [];
+      if (found.length > 1) {
+        results.set(name, { error: new TeamProjectContextUnavailableError('Ambiguous project runtime alias') });
+        continue;
+      }
+      const [match] = found;
+      if (!match) {
+        results.set(name, { alias: null });
+        continue;
+      }
+      try {
+        if (match.context.state === 'ready') await this.assertOwnedDirectory(name);
+        results.set(name, { alias: match });
+      } catch (error) {
+        results.set(name, { error: error instanceof Error ? error : new Error(String(error)) });
+      }
+    }
+    return results;
   }
 
   async isOwnedExecutionAlias(executionTeamName: string): Promise<boolean> {

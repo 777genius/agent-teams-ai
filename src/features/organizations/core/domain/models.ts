@@ -20,6 +20,11 @@ export interface OrgTaskModel {
   status: OrgTaskStatus;
   updatedAt?: string;
   kanbanColumn?: string;
+  /**
+   * The native team that owns the task when it is not the team the node shows:
+   * a per-project team keeps its tasks in its project copies.
+   */
+  executionTeamName?: string;
 }
 
 export interface OrgMemberCandidate {

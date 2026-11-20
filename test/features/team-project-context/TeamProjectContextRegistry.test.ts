@@ -416,6 +416,38 @@ describe('TeamProjectContextRegistry', () => {
     expect(await f.registry.isOwnedExecutionAlias('ordinary-team')).toBe(false);
   });
 
+  it('proves many aliases with one lookup and reports each name on its own', async () => {
+    const f = await fixture();
+    const a = await f.registry.reserve('logical-team', f.workspaceA);
+    const b = await f.registry.reserve('logical-team', f.workspaceB);
+    const lookups = await f.registry.resolveOwnedExecutionAliases([
+      a.executionTeamName,
+      b.executionTeamName,
+      'ptc-not-owned',
+      'ordinary-team',
+    ]);
+    expect(lookups.get(a.executionTeamName)).toEqual({
+      alias: { logicalTeamName: 'logical-team', context: a },
+    });
+    expect(lookups.get(b.executionTeamName)).toEqual({
+      alias: { logicalTeamName: 'logical-team', context: b },
+    });
+    expect(lookups.get('ptc-not-owned')).toEqual({ alias: null });
+    expect(lookups.get('ordinary-team')).toEqual({ alias: null });
+  });
+
+  it('does not prove an alias when the index that could own it is unreadable', async () => {
+    const f = await fixture();
+    const a = await f.registry.reserve('logical-team', f.workspaceA);
+    await writeFile(path.join(f.teamsBasePath, 'logical-team', 'project-contexts.json'), '{broken');
+    const lookups = await f.registry.resolveOwnedExecutionAliases([a.executionTeamName, 'ordinary']);
+    expect(lookups.get(a.executionTeamName)).toHaveProperty('error');
+    expect(lookups.get('ordinary')).toEqual({ alias: null });
+    await expect(f.registry.resolveOwnedExecutionAlias(a.executionTeamName)).rejects.toBeInstanceOf(
+      Error
+    );
+  });
+
   it('allows ordinary schedule targets before the native teams root exists', async () => {
     const f = await fixture();
     const missingRoot = new TeamProjectContextRegistry({
