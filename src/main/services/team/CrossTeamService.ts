@@ -1,4 +1,4 @@
-import { projectTeamSummaries } from '@features/team-project-context/main';
+import { projectTeamSummaries, readTeamProjectContextMode } from '@features/team-project-context/main';
 import { getClaudeBasePath } from '@main/utils/pathDecoder';
 import { CROSS_TEAM_SENT_SOURCE, CROSS_TEAM_SOURCE, formatCrossTeamText } from '@shared/constants';
 import { isLeadMember, resolveRuntimeLeadName } from '@shared/utils/leadDetection';
@@ -119,11 +119,12 @@ export class CrossTeamService {
     // native project context explicitly, never its old shared inbox.
     const meta = new TeamMetaStore();
     for (const name of [fromTeam, toTeam]) {
-      const record = await meta.getMeta(name);
-      if (!record && await meta.metadataFileExists(name)) {
-        throw new Error('Team metadata is unreadable; refusing cross-team delivery');
-      }
-      if (record?.projectContextMode === 'per_project') {
+      const mode = await readTeamProjectContextMode(
+        meta,
+        name,
+        'Team metadata is unreadable; refusing cross-team delivery'
+      );
+      if (mode === 'per_project') {
         throw new Error('Project-scoped cross-team delivery requires an explicit project context');
       }
     }

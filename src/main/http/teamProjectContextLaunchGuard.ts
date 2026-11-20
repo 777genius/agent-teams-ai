@@ -1,11 +1,10 @@
+import {
+  readTeamProjectContextMode,
+  TeamMetadataUnreadableError,
+} from '@features/team-project-context/main';
 import { TeamMetaStore } from '@main/services/team/TeamMetaStore';
 
-import type { TeamMetaFile } from '@main/services/team/TeamMetaStore';
-
-interface MetadataReader {
-  getMeta(teamName: string): Promise<TeamMetaFile | null>;
-  metadataFileExists(teamName: string): Promise<boolean>;
-}
+import type { TeamModeMetaReader } from '@features/team-project-context/main';
 
 class UnsupportedProjectContextHttpLaunchError extends Error {
   readonly statusCode = 409;
@@ -18,7 +17,7 @@ class UnsupportedProjectContextHttpLaunchError extends Error {
  */
 export async function rejectUnsupportedProjectContextHttpLaunch(
   teamName: string,
-  meta: MetadataReader = new TeamMetaStore()
+  meta: TeamModeMetaReader = new TeamMetaStore()
 ): Promise<string> {
   // Opaque project-native aliases are not public team identifiers.
   if (/^ptc-[a-f0-9]{24}$/.test(teamName)) {
@@ -26,13 +25,16 @@ export async function rejectUnsupportedProjectContextHttpLaunch(
       'Project runtime aliases cannot be launched directly through HTTP'
     );
   }
-  const saved = await meta.getMeta(teamName);
-  if (!saved && await meta.metadataFileExists(teamName)) {
-    throw new UnsupportedProjectContextHttpLaunchError(
-      'Existing team metadata is unreadable; refusing shared-history fallback'
-    );
-  }
-  if (saved?.projectContextMode === 'per_project') {
+  const mode = await readTeamProjectContextMode(
+    meta,
+    teamName,
+    'Existing team metadata is unreadable; refusing shared-history fallback'
+  ).catch((error: unknown) => {
+    throw error instanceof TeamMetadataUnreadableError
+      ? new UnsupportedProjectContextHttpLaunchError(error.message)
+      : error;
+  });
+  if (mode === 'per_project') {
     throw new UnsupportedProjectContextHttpLaunchError(
       'Project-scoped team launch requires the desktop project-context API'
     );

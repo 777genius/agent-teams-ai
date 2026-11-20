@@ -25,9 +25,9 @@ const unreadable = async () => {
 };
 
 describe('resolveTeamTarget', () => {
-  it('treats an ordinary team as native with nothing retained', async () => {
+  it('treats an ordinary team as physical with nothing retained', async () => {
     expect(await resolveTeamTarget(ports(), 'legacy')).toEqual({
-      kind: 'native',
+      kind: 'physical',
       team: 'legacy',
       retained: [],
     });
@@ -42,7 +42,7 @@ describe('resolveTeamTarget', () => {
     expect(target).toEqual({ kind: 'logical', logical: 'builders', contexts });
   });
 
-  it('keeps a logical team without contexts logical, never native', async () => {
+  it('keeps a logical team without contexts logical, never physical', async () => {
     const target = await resolveTeamTarget(
       ports({ getMode: async () => 'per_project', listContexts: async () => [] }),
       'builders'
@@ -50,10 +50,10 @@ describe('resolveTeamTarget', () => {
     expect(target.kind).toBe('logical');
   });
 
-  it('keeps a shared team native even when it retained contexts: its own name is still a process', async () => {
+  it('keeps a shared team physical even when it retained contexts: its own name is still a process', async () => {
     const contexts = [ctx('ptc-a', '/p/a')];
     const target = await resolveTeamTarget(ports({ listContexts: async () => contexts }), 'old');
-    expect(target).toEqual({ kind: 'native', team: 'old', retained: contexts });
+    expect(target).toEqual({ kind: 'physical', team: 'old', retained: contexts });
   });
 
   it('asks for retained contexts of a shared team in its own mode, never as per-project', async () => {
@@ -70,9 +70,9 @@ describe('resolveTeamTarget', () => {
     expect(seen).toEqual(['shared']);
   });
 
-  it('does not look up an ordinary or copy name as an alias: a copy is a native team', async () => {
+  it('does not look up an ordinary or copy name as an alias: a copy is a physical team', async () => {
     const target = await resolveTeamTarget(ports(), 'ptc-a1b2c3d4e5f6');
-    expect(target).toMatchObject({ kind: 'native', team: 'ptc-a1b2c3d4e5f6' });
+    expect(target).toMatchObject({ kind: 'physical', team: 'ptc-a1b2c3d4e5f6' });
   });
 
   it('fails closed when metadata is unreadable and the team owns a contexts index', async () => {
@@ -88,7 +88,7 @@ describe('resolveTeamTarget', () => {
   it('falls back to the exact name when metadata is unreadable but no contexts index exists', async () => {
     const target = await resolveTeamTarget(ports({ getMode: unreadable }), 'broken');
     expect(target).toEqual({
-      kind: 'native',
+      kind: 'physical',
       team: 'broken',
       retained: [],
       projectContextUnresolved: true,
@@ -131,12 +131,12 @@ describe('contextGroupOf', () => {
     });
   });
 
-  it('groups the retained contexts of a native team and has no group for one without', () => {
+  it('groups the retained contexts of a physical team and has no group for one without', () => {
     const contexts = [ctx('ptc-a', '/p/a')];
-    expect(contextGroupOf({ kind: 'native', team: 'old', retained: contexts })).toEqual({
+    expect(contextGroupOf({ kind: 'physical', team: 'old', retained: contexts })).toEqual({
       team: 'old',
       contexts,
     });
-    expect(contextGroupOf({ kind: 'native', team: 'plain', retained: [] })).toBeNull();
+    expect(contextGroupOf({ kind: 'physical', team: 'plain', retained: [] })).toBeNull();
   });
 });
