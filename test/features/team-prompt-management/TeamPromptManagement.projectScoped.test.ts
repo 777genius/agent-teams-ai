@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { TeamManagementError } from '../../../src/features/team-prompt-management/core/managementPolicy';
 import { TeamPromptManagement } from '../../../src/features/team-prompt-management/main';
 
-import type { ProjectDefinitionKind } from '../../../src/features/team-prompt-management/main';
+import type { TeamKind } from '../../../src/features/team-project-context/contracts';
 
 const context = { appInstanceId: 'app', dataRootFingerprint: 'root', connectionGeneration: 1 };
 const body = {
@@ -20,7 +20,7 @@ const trashBody = { expectedContext: context, expectedRevision: 'rev' };
  * the meta store writes land in that team.
  */
 function management(options: {
-  classify?: () => Promise<ProjectDefinitionKind>;
+  classify?: () => Promise<TeamKind>;
   assertEditable?: () => Promise<void>;
   refreshCopies?: () => Promise<void>;
   read?: () => Promise<unknown>;

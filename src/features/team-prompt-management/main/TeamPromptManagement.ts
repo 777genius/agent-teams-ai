@@ -25,6 +25,7 @@ import type {
   TeamManagementTarget,
 } from '../contracts';
 import type { AppConnectionContext } from '@features/external-agent-connection/contracts';
+import type { TeamKind } from '@features/team-project-context/contracts';
 import type {
   ReplaceMembersRequest,
   TeamChangeEvent,
@@ -36,16 +37,13 @@ import type {
   TeamViewSnapshot,
 } from '@shared/types';
 
-/** What an external write to a team means for the per-project history mode. */
-export type ProjectDefinitionKind = 'native' | 'logical' | 'alias';
-
 /**
  * The per-project (logical) team definition has one editor in the app; external
  * writers use it through these rules instead of writing around it.
  */
 export interface TeamProjectDefinitionPort {
   /** Rejects when the kind of an existing team cannot be determined (fail closed). */
-  classify(teamName: string): Promise<ProjectDefinitionKind>;
+  classify(teamName: string): Promise<TeamKind>;
   /**
    * Throws a TeamManagementError unless every project context of the logical
    * team is confirmed stopped. Called inside the logical-team operation lock.
@@ -290,7 +288,7 @@ export class TeamPromptManagement {
    * kind of an existing team cannot be determined it is not proof of an
    * ordinary team, so nothing is written.
    */
-  private async classify(teamName: string): Promise<ProjectDefinitionKind> {
+  private async classify(teamName: string): Promise<TeamKind> {
     try {
       return await this.ports.projectDefinition.classify(teamName);
     } catch {
@@ -305,7 +303,7 @@ export class TeamPromptManagement {
     target: TeamManagementTarget,
     allowTrashed: boolean,
     purpose: 'edit' | 'trash'
-  ): Promise<{ snapshot: ConfigurationSnapshot; kind: ProjectDefinitionKind }> {
+  ): Promise<{ snapshot: ConfigurationSnapshot; kind: TeamKind }> {
     // The configuration read refuses a team that does not exist or whose saved
     // metadata is malformed, each with its specific code; only then is the team
     // classified, and a classification that fails also rejects. A project copy is

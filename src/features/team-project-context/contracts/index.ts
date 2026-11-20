@@ -26,3 +26,11 @@ export interface TeamProjectContextViewApi {
     projectPath?: string | null
   ): Promise<TeamProjectContextView>;
 }
+
+/**
+ * What a team name is for edits, schedules and launch:
+ * - `logical`: the user-visible team of the per-project mode; its definition is the only authority.
+ * - `alias`: a native project copy; a projection, never edited or launched directly.
+ * - `native`: any other team (legacy/shared); unchanged behavior.
+ */
+export type TeamKind = 'logical' | 'alias' | 'native';
