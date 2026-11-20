@@ -284,7 +284,7 @@ async function waitFor(expression: string, label: string, timeoutMs = 45_000) {
   throw new Error('Timed out: ' + label);
 }
 
-async function selectProject(f: Fixture, id: 'project-a' | 'project-b') {
+async function selectProject(f: Fixture, id: 'project-a' | 'project-b' | 'project-empty') {
   assert(cdp);
   const projects = [
     { id: 'project-a', name: 'A', path: f.projectA, sessions: [], createdAt: 1 },
@@ -576,6 +576,8 @@ async function verifyDefinitionEdit(f: Fixture) {
 
   // 3b. A project without history shows the placeholder screen; the team is still editable there.
   await selectProject(f, 'project-empty');
+  await cdp.evaluate('(() => window.__agentTeamsDevStore.getState().openTeamTab(' +
+    JSON.stringify(f.logical) + ', ' + JSON.stringify(f.projectC) + '))()');
   await waitFor('document.body.innerText.includes("Not launched in this project yet")',
     'placeholder screen of a project without history');
   const editButton = '(() => Array.from(document.querySelectorAll("button"))' +
