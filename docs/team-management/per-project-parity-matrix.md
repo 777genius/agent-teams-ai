@@ -221,4 +221,4 @@ The app's own team list folds the copies into the logical team (`projectTeamSumm
 
 ## Update after launch settings
 
-Gap 5 is closed for provider, model, effort, fast mode, context limit, model sync and extra CLI arguments: they belong to the team definition and follow it into every project (see [per-project-launch-settings.md](./per-project-launch-settings.md)). `skipPermissions` and `worktree` stay per project on purpose. The "Launch settings" row of section A and gap 5 above describe the state before this change.
+Gap 5 is closed for provider, model, effort, fast mode, context limit and model sync: they belong to the team definition and follow it into every project (see [per-project-launch-settings.md](./per-project-launch-settings.md)). `skipPermissions`, `worktree` and `extraCliArgs` stay per project on purpose. The "Launch settings" row of section A and gap 5 above describe the state before this change.

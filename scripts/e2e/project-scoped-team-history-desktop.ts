@@ -912,7 +912,7 @@ async function verifyLaunchSettings(f: Fixture) {
   // 1. A launch in project A: the team keeps what was chosen, but not trust or runtime arguments.
   const first = await launch(f.projectA, {
     providerId: 'opencode', model: 'e2e-model-x', effort: 'high', limitContext: true,
-    skipPermissions: true, extraCliArgs: '--verbose',
+    skipPermissions: true, extraCliArgs: '--max-turns 5',
   });
   assert(first.ok, 'The launch in project A must be accepted: ' + JSON.stringify(first));
   const afterFirst = await definitionWhere((meta) => meta.model === 'e2e-model-x',
