@@ -1932,7 +1932,7 @@ describe('MCP team tools over the local REST control API', () => {
       // The progress names the team, not its internal copy.
       expect(launched).toMatchObject({ isAlive: true, progress: { state: 'ready', teamName } });
       expect(createTeamCalls).toHaveLength(1);
-      const copy = createTeamCalls[0]!;
+      const copy = createTeamCalls[0];
       expect(copy.teamName).toMatch(/^ptc-[a-f0-9]{24}$/);
       expect(copy).toMatchObject({
         cwd: projectA,
