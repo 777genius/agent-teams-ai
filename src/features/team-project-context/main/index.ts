@@ -1,8 +1,8 @@
 export type { DefinitionEditTarget } from './classifyDefinitionTarget';
 export { classifyDefinitionTarget } from './classifyDefinitionTarget';
 export type {
-  AliveRuntimeEntry,
   AliasResolver,
+  AliveRuntimeEntry,
   ContextRuntimeSnapshot,
   LogicalContextStopOutcome,
   LogicalStopOutcome,
