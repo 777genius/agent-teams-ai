@@ -9,9 +9,8 @@ import type { TeamRuntimeState } from '@shared/types';
  * Runtime of a team that owns project contexts. A logical team of the
  * per-project mode never has a process: its state is the state of its project
  * contexts (native project copies), reported here so that headless callers
- * (HTTP, MCP) do not have to know about the copies. A shared team that retained
- * contexts has a process of its own as well; `ownRuntime` folds it in. Everything
- * is additive to the native state shape.
+ * (HTTP, MCP) do not have to know about the copies. The team's own name is folded
+ * in too. Everything is additive to the native state shape.
  */
 export interface ContextRuntimeSnapshot {
   executionTeamName: string;
@@ -78,8 +77,10 @@ export async function readLogicalRuntimeState(
   group: ContextGroup,
   runtime: NativeRuntimeReader
 ): Promise<LogicalTeamRuntimeState> {
+  // The team's own name is read too: a shared team runs under it, and a logical team
+  // should not have a process but is reported (and stopped) if it does.
   const [own, contexts] = await Promise.all([
-    group.ownRuntime ? runtime.getRuntimeState(group.team) : Promise.resolve(null),
+    runtime.getRuntimeState(group.team),
     Promise.all(
       group.contexts.map(async (context) =>
         snapshotOf(context, await runtime.getRuntimeState(context.executionTeamName))
@@ -158,15 +159,27 @@ export interface LogicalStopPorts<Result> {
   /** Reserved (pre-ready) contexts may already host a process; only an owner-verified one is stopped. */
   assertReservedStopOwnership(team: string, executionTeamName: string): Promise<void>;
   stopContext(executionTeamName: string): Promise<Result>;
-  /** True only when the runtime is confirmed down: not alive, no run, no provisioning in flight. */
+  /** True only when the runtime is down: no live process, no tracked run, no run in flight. */
   isStopped(executionTeamName: string): Promise<boolean>;
   /** The team's contexts as they are now, to catch one that appeared while stopping. */
   listContexts(team: string): Promise<readonly PersistedTeamWorkContext[]>;
 }
 
+/**
+ * A stop can still be settling when the stop call returns (the run id is cleared
+ * a moment later), so a context that does not read as down is re-read a bounded
+ * number of times before it is reported as still running.
+ */
+export interface StopVerification {
+  attempts: number;
+  delayMs: number;
+}
+
+export const DEFAULT_STOP_VERIFICATION: StopVerification = { attempts: 8, delayMs: 500 };
+
 export interface LogicalContextStopOutcome<Result> {
   executionTeamName: string;
-  /** `null` for the team's own process (a shared team that retained contexts). */
+  /** `null` for the team's own process. */
   projectPath: string | null;
   result?: Result;
   error?: string;
@@ -198,15 +211,29 @@ export class LogicalStopIncompleteError extends Error {
   }
 }
 
+const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
+
+async function ownProcessNeedsStop(
+  team: string,
+  ports: Pick<LogicalStopPorts<unknown>, 'isStopped'>
+): Promise<boolean> {
+  try {
+    return !(await ports.isStopped(team));
+  } catch {
+    return true;
+  }
+}
+
 /**
  * Stop every project context of a team (and its own process when it has one) and
  * report each, then verify everything is really down. A logical team has no
- * process, so stopping its own name would "succeed" while the project keeps
+ * process, so stopping only its own name would "succeed" while the project keeps
  * running.
  */
 export async function stopLogicalContexts<Result>(
   group: ContextGroup,
-  ports: LogicalStopPorts<Result>
+  ports: LogicalStopPorts<Result>,
+  verification: StopVerification = DEFAULT_STOP_VERIFICATION
 ): Promise<LogicalStopOutcome<Result>> {
   for (const context of group.contexts) {
     if (context.state === 'ready') continue;
@@ -222,13 +249,14 @@ export async function stopLogicalContexts<Result>(
       );
     }
   }
-  const targets: { executionTeamName: string; projectPath: string | null }[] = [
-    ...group.contexts.map((context) => ({
-      executionTeamName: context.executionTeamName,
-      projectPath: context.projectPath,
-    })),
-    ...(group.ownRuntime ? [{ executionTeamName: group.team, projectPath: null }] : []),
-  ];
+  const targets: { executionTeamName: string; projectPath: string | null }[] = group.contexts.map(
+    (context) => ({ executionTeamName: context.executionTeamName, projectPath: context.projectPath })
+  );
+  // The own name is only asked to stop when it has something to stop: stopping an
+  // idle name would write stop bookkeeping next to a definition that never ran.
+  if (await ownProcessNeedsStop(group.team, ports)) {
+    targets.push({ executionTeamName: group.team, projectPath: null });
+  }
   const contexts: LogicalContextStopOutcome<Result>[] = [];
   for (const target of targets) {
     const outcome: LogicalContextStopOutcome<Result> = { ...target, stillAlive: false };
@@ -241,10 +269,14 @@ export async function stopLogicalContexts<Result>(
   }
 
   let verificationError: string | undefined;
+  // A reservation that appeared while stopping has no run registered yet, so it
+  // reads as stopped even though a launch is under way: it is never a success.
+  const appearedReserved = new Set<string>();
   try {
-    const known = new Set(targets.map((target) => target.executionTeamName));
+    const known = new Set([group.team, ...targets.map((target) => target.executionTeamName)]);
     for (const context of await ports.listContexts(group.team)) {
       if (known.has(context.executionTeamName)) continue;
+      if (context.state === 'reserved') appearedReserved.add(context.executionTeamName);
       contexts.push({
         executionTeamName: context.executionTeamName,
         projectPath: context.projectPath,
@@ -255,14 +287,25 @@ export async function stopLogicalContexts<Result>(
   } catch (error) {
     verificationError = error instanceof Error ? error.message : String(error);
   }
-  for (const outcome of contexts) {
-    try {
-      outcome.stillAlive = !(await ports.isStopped(outcome.executionTeamName));
-    } catch (error) {
-      outcome.stillAlive = true;
-      outcome.error ??= error instanceof Error ? error.message : String(error);
-    }
-  }
+  await Promise.all(
+    contexts.map(async (outcome) => {
+      if (appearedReserved.has(outcome.executionTeamName)) {
+        outcome.stillAlive = true;
+        return;
+      }
+      for (let attempt = 1; ; attempt += 1) {
+        try {
+          outcome.stillAlive = !(await ports.isStopped(outcome.executionTeamName));
+        } catch (error) {
+          outcome.stillAlive = true;
+          outcome.error ??= error instanceof Error ? error.message : String(error);
+          return;
+        }
+        if (!outcome.stillAlive || attempt >= verification.attempts) return;
+        await sleep(verification.delayMs);
+      }
+    })
+  );
   return {
     team: group.team,
     contexts,

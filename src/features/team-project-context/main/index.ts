@@ -9,9 +9,11 @@ export type {
   LogicalStopPorts,
   LogicalTeamRuntimeState,
   NativeRuntimeReader,
+  StopVerification,
 } from './logicalTeamRuntime';
 export {
   assertLogicalStopComplete,
+  DEFAULT_STOP_VERIFICATION,
   listAliveRuntimeStates,
   LogicalStopIncompleteError,
   readLogicalRuntimeState,
@@ -30,6 +32,7 @@ export { TeamProjectContextCreateCoordinator } from './TeamProjectContextCreateC
 export { TeamProjectContextDraftMaterializer } from './TeamProjectContextDraftMaterializer';
 export {
   isConfirmedStoppedTeamRuntime,
+  isStoppedTeamRuntime,
   TeamProjectContextLaunchConflictError,
   TeamProjectContextLaunchGate,
 } from './TeamProjectContextLaunchGate';

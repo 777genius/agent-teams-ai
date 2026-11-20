@@ -16,7 +16,8 @@
 import {
   assertLogicalStopComplete,
   contextGroupOf,
-  isConfirmedStoppedTeamRuntime,
+  DEFAULT_STOP_VERIFICATION,
+  isStoppedTeamRuntime,
   listAliveRuntimeStates,
   LogicalStopIncompleteError,
   readLogicalRuntimeState,
@@ -103,10 +104,25 @@ export function registerTeamLifecycleRoutes(
       assertReservedStopOwnership: (team: string, alias: string) =>
         projectContext.registry.assertReservedStopOwnership(team, alias),
       stopContext,
-      // Only a confirmed-down runtime counts: not alive, no run, no provisioning.
-      isStopped: async (name: string) => isConfirmedStoppedTeamRuntime(await api.getRuntimeState(name)),
+      // Down means no live process, no tracked run and no run in flight; a dead
+      // run that only left a failed record counts as down (it is what the in-app
+      // Stop reports too). Recorded runtime hosts that survived the stop do not.
+      isStopped: async (name: string) =>
+        isStoppedTeamRuntime(await api.getRuntimeState(name)) &&
+        ((await countLiveRecordedRuntimeHostsForTeam({ teamName: name })) ?? 0) === 0,
       listContexts: (team: string) => projectContext.registry.list(team),
     };
+  }
+
+  // A client that timed out and asks again joins the stop in progress instead of
+  // starting a competing one (the stop of several copies can outlast its timeout).
+  const stopsInFlight = new Map<string, Promise<unknown>>();
+  function joinStopInFlight<T>(key: string, run: () => Promise<T>): Promise<T> {
+    const running = stopsInFlight.get(key);
+    if (running) return running as Promise<T>;
+    const started = run().finally(() => stopsInFlight.delete(key));
+    stopsInFlight.set(key, started);
+    return started;
   }
 
   function withUnresolvedFlag<T extends object>(
@@ -231,25 +247,27 @@ export function registerTeamLifecycleRoutes(
         const teamName = validatedTeamName.value!;
         const teamRuntimeApi = getTeamRuntimeApi(services);
         const projectContext = createProjectContextHttp(services.projectContext);
-        const target = await projectContext.resolve(teamName);
-        const group = contextGroupOf(target);
-        if (group) {
-          // A logical team has no process: stopping its own name would succeed
-          // while its project keeps running. Stop every context (and the team's
-          // own process when it has one), then verify each is really down.
-          const outcome = await stopLogicalContexts(
-            group,
-            groupStopPorts(projectContext, teamRuntimeApi, (alias) =>
-              stopExactTeam(alias, teamRuntimeApi)
-            )
-          );
-          assertLogicalStopComplete(outcome);
-          return reply.send(await readLogicalRuntimeState(group, teamRuntimeApi));
-        }
-        await stopExactTeam(teamName, teamRuntimeApi);
-        return reply.send(
-          withUnresolvedFlag(await teamRuntimeApi.getRuntimeState(teamName), target)
-        );
+        const state = await joinStopInFlight(`stop:${teamName}`, async () => {
+          const target = await projectContext.resolve(teamName);
+          const group = contextGroupOf(target);
+          if (group) {
+            // A logical team has no process: stopping its own name would succeed
+            // while its project keeps running. Stop every context (and the team's
+            // own process when it has one), then verify each is really down.
+            const outcome = await stopLogicalContexts(
+              group,
+              groupStopPorts(projectContext, teamRuntimeApi, (alias) =>
+                stopExactTeam(alias, teamRuntimeApi)
+              ),
+              services.projectContext?.stopVerification ?? DEFAULT_STOP_VERIFICATION
+            );
+            assertLogicalStopComplete(outcome);
+            return readLogicalRuntimeState(group, teamRuntimeApi);
+          }
+          await stopExactTeam(teamName, teamRuntimeApi);
+          return withUnresolvedFlag(await teamRuntimeApi.getRuntimeState(teamName), target);
+        });
+        return reply.send(state);
       } catch (error) {
         return sendError(reply, error, `POST /api/teams/${request.params.teamName}/stop`);
       }
@@ -273,27 +291,40 @@ export function registerTeamLifecycleRoutes(
         const teamName = validatedTeamName.value!;
         const teamRuntimeApi = getTeamRuntimeApi(services);
         const projectContext = createProjectContextHttp(services.projectContext);
-        const target = await projectContext.resolve(teamName);
-        const group = contextGroupOf(target);
-        if (group) {
-          // Like the native force-stop this answers with what the cleanup did;
-          // `complete` says whether every project context is really down.
-          const outcome = await stopLogicalContexts(
-            group,
-            groupStopPorts(projectContext, teamRuntimeApi, (alias) =>
-              forceStopExactTeam(alias, teamRuntimeApi)
-            )
-          );
-          return reply.send({
-            teamName: group.team,
-            complete: outcome.complete,
-            contexts: outcome.contexts,
-            ...(outcome.verificationError ? { verificationError: outcome.verificationError } : {}),
-          });
-        }
-        return reply.send(
-          withUnresolvedFlag(await forceStopExactTeam(teamName, teamRuntimeApi), target)
-        );
+        const answer = await joinStopInFlight(`force-stop:${teamName}`, async () => {
+          const target = await projectContext.resolve(teamName);
+          const group = contextGroupOf(target);
+          if (group) {
+            // Like the native force-stop this answers with what the cleanup did;
+            // `complete` says whether every project context is really down.
+            const outcome = await stopLogicalContexts(
+              group,
+              groupStopPorts(projectContext, teamRuntimeApi, (alias) =>
+                forceStopExactTeam(alias, teamRuntimeApi)
+              ),
+              services.projectContext?.stopVerification ?? DEFAULT_STOP_VERIFICATION
+            );
+            // A stop that confirmed but left its cleanup incomplete (surviving
+            // processes or lead trees) is not a complete stop either. After a
+            // failed regular stop the cleanup is always reported incomplete, so
+            // there the verification of the runtime decides.
+            const cleanupComplete = outcome.contexts.every(
+              (context) =>
+                context.result?.stopOutcome !== 'stopped' ||
+                context.result.cleanupOutcome === 'completed'
+            );
+            return {
+              teamName: group.team,
+              complete: outcome.complete && cleanupComplete,
+              contexts: outcome.contexts,
+              ...(outcome.verificationError
+                ? { verificationError: outcome.verificationError }
+                : {}),
+            };
+          }
+          return withUnresolvedFlag(await forceStopExactTeam(teamName, teamRuntimeApi), target);
+        });
+        return reply.send(answer);
       } catch (error) {
         return sendError(reply, error, `POST /api/teams/${request.params.teamName}/force-stop`);
       }

@@ -174,12 +174,12 @@ The tables above describe the state before #1248 and are kept as the audit recor
 
 | Row | Before | After |
 | --- | --- | --- |
-| Stop through HTTP / MCP `team_stop` | silently wrong | stops every owned context (and the own process of a shared team that retained contexts) with the escalated in-app flow, verifies each is confirmed stopped, answers 409 `LOGICAL_STOP_INCOMPLETE` with the per-context outcome otherwise |
+| Stop through HTTP / MCP `team_stop` | silently wrong | stops every owned context (and the own process of a shared team that retained contexts, or of a logical team that somehow has one) with the escalated in-app flow, verifies each is down (a dead run counts as down, a live one does not; a bounded re-read absorbs a stop that is still settling) and answers 409 `LOGICAL_STOP_INCOMPLETE` with the per-context outcome otherwise. Over MCP the guard now lets a per-project team (no `config.json`) through to the API |
 | Runtime state / alive list through HTTP / MCP | silently wrong | the logical team is alive when any context is, with `contexts[]`; the alive list keeps physical entries and adds the logical one (a shared team that is itself alive absorbs its contexts) |
-| Force stop through HTTP | exact name only | every context; answers `complete`, which a client must read |
+| Force stop through HTTP | exact name only | every context; answers `complete`, which a client must read (it also covers an incomplete cleanup and surviving runtime hosts). MCP has no force-stop tool |
 | HTTP `/api/teams` and MCP `team_list` | silently wrong | one row per team, copies folded away. **Not additive**: the copies are no longer listed as separate teams |
 | Organization map | silently wrong | one candidate; tasks of all contexts, each carrying the copy that owns it, so the inspector lists them and its task actions run against the copy |
-| MCP team tools `team_stop`, `team_list` | silently wrong | as above; the controller allows a stop request 5 minutes instead of 10 s |
+| MCP team tools `team_stop`, `team_list` | silently wrong | as above; the controller allows a stop request 5 minutes instead of 10 s, does not ask another address after a timeout, and keeps `code`/`outcome` on its error |
 
 Decisions worth knowing:
 

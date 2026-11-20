@@ -1,6 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import {
+  isConfirmedStoppedTeamRuntime,
+  isStoppedTeamRuntime,
   TeamProjectContextLaunchConflictError,
   TeamProjectContextLaunchGate,
 } from '../../../src/features/team-project-context/main/TeamProjectContextLaunchGate';
@@ -30,6 +32,57 @@ function fixture() {
   };
   return { states, contexts, runtime, gate: new TeamProjectContextLaunchGate(contexts, runtime) };
 }
+
+const stateOf = (patch: Partial<TeamRuntimeState>): TeamRuntimeState => ({
+  teamName: 'ptc-x',
+  isAlive: false,
+  runId: null,
+  progress: null,
+  ...patch,
+});
+const progressOf = (
+  state: string,
+  extra: Record<string, unknown> = {}
+): TeamRuntimeState['progress'] =>
+  ({ runId: 'run-x', teamName: 'ptc-x', state, ...extra }) as TeamRuntimeState['progress'];
+
+describe('isStoppedTeamRuntime and isConfirmedStoppedTeamRuntime', () => {
+  it('treats a copy that is idle, or whose bootstrap owner died, as stopped', () => {
+    expect(isStoppedTeamRuntime(stateOf({}))).toBe(true);
+    // What a dead bootstrap owner reports: no live process, the run id still set, a failed progress.
+    const deadOwner = stateOf({ runId: 'run-x', progress: progressOf('failed') });
+    expect(isStoppedTeamRuntime(deadOwner)).toBe(true);
+    expect(isStoppedTeamRuntime(stateOf({ runId: 'run-x', progress: progressOf('cancelled') }))).toBe(true);
+    // ...but a launch or an edit still waits for the run id to be released.
+    expect(isConfirmedStoppedTeamRuntime(deadOwner)).toBe(false);
+    expect(isConfirmedStoppedTeamRuntime(stateOf({}))).toBe(true);
+  });
+
+  it('treats a live process or a run that is still going as not stopped', () => {
+    expect(isStoppedTeamRuntime(stateOf({ isAlive: true, runId: 'run-x' }))).toBe(false);
+    // A live bootstrap owner: not alive yet, progress in flight.
+    for (const state of ['validating', 'spawning', 'configuring', 'assembling', 'finalizing', 'verifying']) {
+      expect(isStoppedTeamRuntime(stateOf({ runId: 'run-x', progress: progressOf(state) }))).toBe(false);
+    }
+    // A failed process that is still alive is not stopped.
+    expect(isStoppedTeamRuntime(stateOf({ isAlive: true, progress: progressOf('failed') }))).toBe(false);
+  });
+
+  it('does not take a stale ready or disconnected progress, or a run id that is not cleared yet, for stopped', () => {
+    expect(isStoppedTeamRuntime(stateOf({ runId: 'run-x', progress: progressOf('ready') }))).toBe(false);
+    expect(isStoppedTeamRuntime(stateOf({ runId: 'run-x', progress: progressOf('disconnected') }))).toBe(false);
+    // The transient right after a stop: the tracked run id is not cleared yet.
+    expect(isStoppedTeamRuntime(stateOf({ runId: 'run-x', progress: null }))).toBe(false);
+  });
+
+  it('does not take a failed run that kept secondary lanes alive for stopped', () => {
+    const retained = stateOf({
+      runId: 'run-x',
+      progress: progressOf('failed', { retainedSecondaryRuntime: true }),
+    });
+    expect(isStoppedTeamRuntime(retained)).toBe(false);
+  });
+});
 
 describe('TeamProjectContextLaunchGate', () => {
   it('allows B only when the logical team and A have confirmed stopped ownership', async () => {

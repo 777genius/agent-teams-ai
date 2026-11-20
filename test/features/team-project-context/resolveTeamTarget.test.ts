@@ -123,21 +123,19 @@ describe('resolveTeamTarget', () => {
 });
 
 describe('contextGroupOf', () => {
-  it('has no own runtime for a logical team', () => {
+  it('groups the contexts of a logical team under its name', () => {
     const contexts = [ctx('ptc-a', '/p/a')];
     expect(contextGroupOf({ kind: 'logical', logical: 'builders', contexts })).toEqual({
       team: 'builders',
       contexts,
-      ownRuntime: false,
     });
   });
 
-  it('has an own runtime for a native team that retained contexts and none for one that did not', () => {
+  it('groups the retained contexts of a native team and has no group for one without', () => {
     const contexts = [ctx('ptc-a', '/p/a')];
     expect(contextGroupOf({ kind: 'native', team: 'old', retained: contexts })).toEqual({
       team: 'old',
       contexts,
-      ownRuntime: true,
     });
     expect(contextGroupOf({ kind: 'native', team: 'plain', retained: [] })).toBeNull();
   });

@@ -53,6 +53,15 @@ function isDraftTeamMeta(value: Record<string, unknown> | null): boolean {
   return value?.version === 1 && typeof value.cwd === 'string' && value.cwd.trim().length > 0;
 }
 
+/**
+ * The logical team of the per-project history mode: a definition (team.meta.json)
+ * with no config.json, because it never has a process. Its runtime lives in its
+ * project copies, which the desktop API resolves.
+ */
+function isPerProjectTeamMeta(value: Record<string, unknown> | null): boolean {
+  return value?.version === 1 && value.projectContextMode === 'per_project';
+}
+
 export function assertConfiguredTeam(teamName: string, claudeDir?: string): void {
   const { configPath } = resolveTeamPaths(teamName, claudeDir);
   const parsed = readJsonObject(configPath);
@@ -92,7 +101,8 @@ export function assertConfiguredOrDraftTeam(teamName: string, claudeDir?: string
     return;
   }
 
-  if (isDraftTeamMeta(readJsonObject(metaPath))) {
+  const meta = readJsonObject(metaPath);
+  if (isDraftTeamMeta(meta) || isPerProjectTeamMeta(meta)) {
     return;
   }
 

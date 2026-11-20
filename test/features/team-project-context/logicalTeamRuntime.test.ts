@@ -7,6 +7,7 @@ import {
   readLogicalRuntimeState,
   stopLogicalContexts,
   type ContextGroup,
+  type LogicalStopPorts,
   type OwnedExecutionAliasLookup,
   type PersistedTeamWorkContext,
 } from '../../../src/features/team-project-context/main';
@@ -26,9 +27,17 @@ const up = (teamName: string, runId = `run-${teamName}`): TeamRuntimeState => ({
   progress: null,
 });
 
-function group(contexts: PersistedTeamWorkContext[], ownRuntime = false, team = 'builders'): ContextGroup {
-  return { team, contexts, ownRuntime };
+function group(contexts: PersistedTeamWorkContext[], team = 'builders'): ContextGroup {
+  return { team, contexts };
 }
+
+// One verification read, no waiting: the retry itself is tested with its own settings.
+const quick = { attempts: 1, delayMs: 0 };
+const stop = <Result>(
+  target: ContextGroup,
+  ports: LogicalStopPorts<Result>,
+  verification = quick
+) => stopLogicalContexts(target, ports, verification);
 
 function runtimeOf(states: Record<string, TeamRuntimeState>) {
   return { getRuntimeState: vi.fn(async (team: string) => states[team] ?? down(team)) };
@@ -77,17 +86,19 @@ describe('readLogicalRuntimeState', () => {
 
   it('folds the own process of a shared team that retained contexts', async () => {
     const state = await readLogicalRuntimeState(
-      group([ctx('ptc-a', '/p/a')], true, 'old'),
+      group([ctx('ptc-a', '/p/a')], 'old'),
       runtimeOf({ old: up('old'), 'ptc-a': down('ptc-a') })
     );
     expect(state).toMatchObject({ teamName: 'old', isAlive: true, runId: 'run-old' });
     expect(state.contexts).toHaveLength(1);
   });
 
-  it('does not read the logical name when the team has no process of its own', async () => {
-    const runtime = runtimeOf({});
-    await readLogicalRuntimeState(group([ctx('ptc-a', '/p/a')]), runtime);
-    expect(runtime.getRuntimeState.mock.calls.map(([name]) => name)).toEqual(['ptc-a']);
+  it('reports a logical team that somehow has a process of its own, like the app does', async () => {
+    const state = await readLogicalRuntimeState(
+      group([ctx('ptc-a', '/p/a')]),
+      runtimeOf({ builders: up('builders'), 'ptc-a': down('ptc-a') })
+    );
+    expect(state).toMatchObject({ teamName: 'builders', isAlive: true, runId: 'run-builders' });
   });
 
   it('propagates a runtime read failure instead of reporting the team as stopped', async () => {
@@ -193,7 +204,7 @@ describe('stopLogicalContexts', () => {
   it('stops every project context, not just the logical name', async () => {
     const alive = new Set(['ptc-a', 'ptc-b']);
     const p = ports(alive);
-    const outcome = await stopLogicalContexts(group([ctx('ptc-a', '/p/a'), ctx('ptc-b', '/p/b')]), p);
+    const outcome = await stop(group([ctx('ptc-a', '/p/a'), ctx('ptc-b', '/p/b')]), p);
     expect(p.stopContext.mock.calls.map(([alias]) => alias)).toEqual(['ptc-a', 'ptc-b']);
     expect(outcome.complete).toBe(true);
     expect(() => assertLogicalStopComplete(outcome)).not.toThrow();
@@ -202,7 +213,7 @@ describe('stopLogicalContexts', () => {
   it('also stops the own process of a shared team that retained contexts, after its contexts', async () => {
     const alive = new Set(['old', 'ptc-a']);
     const p = ports(alive);
-    const outcome = await stopLogicalContexts(group([ctx('ptc-a', '/p/a')], true, 'old'), p);
+    const outcome = await stop(group([ctx('ptc-a', '/p/a')], 'old'), p);
     expect(p.stopContext.mock.calls.map(([alias]) => alias)).toEqual(['ptc-a', 'old']);
     expect(outcome.contexts[1]).toMatchObject({ executionTeamName: 'old', projectPath: null });
     expect(outcome.complete).toBe(true);
@@ -212,7 +223,7 @@ describe('stopLogicalContexts', () => {
     const alive = new Set(['ptc-a', 'ptc-b']);
     // The stop call "succeeds" but ptc-b stays alive: exactly the silent no-op.
     const p = ports(alive, { stopContext: vi.fn(async () => ({ ok: true })) });
-    const outcome = await stopLogicalContexts(group([ctx('ptc-a', '/p/a'), ctx('ptc-b', '/p/b')]), p);
+    const outcome = await stop(group([ctx('ptc-a', '/p/a'), ctx('ptc-b', '/p/b')]), p);
     expect(outcome.complete).toBe(false);
     let error: unknown;
     try {
@@ -234,7 +245,7 @@ describe('stopLogicalContexts', () => {
       alive.delete(alias);
       return {};
     });
-    const outcome = await stopLogicalContexts(
+    const outcome = await stop(
       group([ctx('ptc-a', '/p/a'), ctx('ptc-b', '/p/b')]),
       ports(alive, { stopContext })
     );
@@ -249,7 +260,7 @@ describe('stopLogicalContexts', () => {
     const p = ports(alive, {
       listContexts: vi.fn(async () => [ctx('ptc-a', '/p/a'), ctx('ptc-new', '/p/new', 'reserved')]),
     });
-    const outcome = await stopLogicalContexts(group([ctx('ptc-a', '/p/a')]), p);
+    const outcome = await stop(group([ctx('ptc-a', '/p/a')]), p);
     expect(p.stopContext.mock.calls.map(([alias]) => alias)).toEqual(['ptc-a']);
     expect(outcome.contexts[1]).toMatchObject({
       executionTeamName: 'ptc-new',
@@ -266,7 +277,7 @@ describe('stopLogicalContexts', () => {
         throw new Error('index unreadable');
       }),
     });
-    const outcome = await stopLogicalContexts(group([ctx('ptc-a', '/p/a')]), p);
+    const outcome = await stop(group([ctx('ptc-a', '/p/a')]), p);
     expect(outcome).toMatchObject({ complete: false, verificationError: 'index unreadable' });
     expect(() => assertLogicalStopComplete(outcome)).toThrow(/could not re-read the project contexts/);
   });
@@ -277,7 +288,7 @@ describe('stopLogicalContexts', () => {
         throw new Error('runtime unavailable');
       }),
     });
-    const outcome = await stopLogicalContexts(group([ctx('ptc-a', '/p/a')]), p);
+    const outcome = await stop(group([ctx('ptc-a', '/p/a')]), p);
     expect(outcome.contexts[0]).toMatchObject({ stillAlive: true, error: 'runtime unavailable' });
     expect(outcome.complete).toBe(false);
   });
@@ -290,13 +301,55 @@ describe('stopLogicalContexts', () => {
       }),
     });
     await expect(
-      stopLogicalContexts(group([ctx('ptc-a', '/p/a'), ctx('ptc-b', '/p/b', 'reserved')]), p)
+      stop(group([ctx('ptc-a', '/p/a'), ctx('ptc-b', '/p/b', 'reserved')]), p)
     ).rejects.toThrow(/pending and its owner cannot be verified: owner marker missing/);
     expect(p.stopContext).not.toHaveBeenCalled();
   });
 
   it('a team without contexts is trivially stopped', async () => {
-    const outcome = await stopLogicalContexts(group([]), ports(new Set()));
+    const outcome = await stop(group([]), ports(new Set()));
     expect(outcome).toMatchObject({ complete: true, contexts: [] });
+  });
+
+  it('stops the own process of a logical team that somehow has one, and leaves an idle name alone', async () => {
+    const alive = new Set(['builders', 'ptc-a']);
+    const p = ports(alive);
+    await stop(group([ctx('ptc-a', '/p/a')]), p);
+    expect(p.stopContext.mock.calls.map(([alias]) => alias)).toEqual(['ptc-a', 'builders']);
+
+    const idle = ports(new Set(['ptc-a']));
+    await stop(group([ctx('ptc-a', '/p/a')]), idle);
+    expect(idle.stopContext.mock.calls.map(([alias]) => alias)).toEqual(['ptc-a']);
+  });
+
+  it('does not call a reservation that appeared during the stop a success even though it reads stopped', async () => {
+    // A launch has reserved the project but no run is registered yet: it reads as down.
+    const p = ports(new Set(), {
+      listContexts: vi.fn(async () => [ctx('ptc-a', '/p/a'), ctx('ptc-new', '/p/new', 'reserved')]),
+    });
+    const outcome = await stop(group([ctx('ptc-a', '/p/a')]), p);
+    expect(outcome.contexts[1]).toMatchObject({ executionTeamName: 'ptc-new', appearedDuringStop: true, stillAlive: true });
+    expect(outcome.complete).toBe(false);
+    // A ready copy that appeared and is down is fine.
+    const ready = ports(new Set(), {
+      listContexts: vi.fn(async () => [ctx('ptc-a', '/p/a'), ctx('ptc-new', '/p/new')]),
+    });
+    expect((await stop(group([ctx('ptc-a', '/p/a')]), ready)).complete).toBe(true);
+  });
+
+  it('waits a bounded number of reads for a stop that is still settling, then reports the truth', async () => {
+    // The stop call returned, but the tracked run id is cleared a moment later.
+    let reads = 0;
+    const settling = ports(new Set(), {
+      isStopped: vi.fn(async (alias: string) => alias === 'builders' || ++reads >= 3),
+    });
+    const outcome = await stop(group([ctx('ptc-a', '/p/a')]), settling, { attempts: 5, delayMs: 0 });
+    expect(settling.isStopped).toHaveBeenCalledTimes(4); // 1 own-name check + 3 reads
+    expect(outcome.complete).toBe(true);
+
+    const stuck = ports(new Set(['ptc-a']), { isStopped: vi.fn(async (alias: string) => alias !== 'ptc-a') });
+    const failed = await stop(group([ctx('ptc-a', '/p/a')]), stuck, { attempts: 4, delayMs: 0 });
+    expect(stuck.isStopped.mock.calls.filter(([alias]) => alias === 'ptc-a')).toHaveLength(4);
+    expect(failed.complete).toBe(false);
   });
 });

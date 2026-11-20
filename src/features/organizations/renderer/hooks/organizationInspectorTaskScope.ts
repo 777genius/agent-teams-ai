@@ -1,5 +1,5 @@
-import type { OrganizationAgentSummaryDto } from '../../contracts';
-import type { TeamTaskWithKanban } from '@shared/types';
+import type { OrganizationAgentSummaryDto, OrganizationAgentTaskDto } from '../../contracts';
+import type { TeamTask, TeamTaskWithKanban } from '@shared/types';
 
 /** A task as the store lists it: global tasks know the native team that owns them. */
 export type InspectorScopedTask = TeamTaskWithKanban & { teamName?: string };
@@ -24,13 +24,43 @@ export function scopeInspectorTasks(input: {
   return globalTasks.filter((task) => task.teamName !== undefined && names.has(task.teamName));
 }
 
-/** The native team a task action has to run against. */
-export function executionTeamOfTask(
+/** The team that owns a task: the copy for a per-project team, else the node's team. */
+export function taskOwnerTeam(task: InspectorScopedTask, nodeTeamName: string): string {
+  return task.teamName ?? nodeTeamName;
+}
+
+/**
+ * Whether a task is the one a summary names. Ids are only unique inside a team
+ * (legacy numeric ids repeat across copies), so a summary that names its owning
+ * copy only matches that copy's task.
+ */
+export function matchesTaskSummary(
+  task: InspectorScopedTask,
+  summary: OrganizationAgentTaskDto
+): boolean {
+  if (
+    summary.executionTeamName !== undefined &&
+    task.teamName !== undefined &&
+    task.teamName !== summary.executionTeamName
+  ) {
+    return false;
+  }
+  return task.id === summary.id || task.displayId === summary.id;
+}
+
+/** Tasks of each owning team by id, so a lookup never crosses from one copy into another. */
+export function groupTasksByOwner(
   tasks: readonly InspectorScopedTask[],
-  taskId: string,
-  fallbackTeamName: string
-): string {
-  return tasks.find((task) => task.id === taskId)?.teamName ?? fallbackTeamName;
+  nodeTeamName: string
+): Map<string, Map<string, TeamTask>> {
+  const byOwner = new Map<string, Map<string, TeamTask>>();
+  for (const task of tasks) {
+    const owner = taskOwnerTeam(task, nodeTeamName);
+    const map = byOwner.get(owner) ?? new Map<string, TeamTask>();
+    map.set(task.id, task);
+    byOwner.set(owner, map);
+  }
+  return byOwner;
 }
 
 /** The project copies that own the visible tasks of a node (none for an ordinary team). */

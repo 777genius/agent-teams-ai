@@ -13,13 +13,24 @@ import type { HttpServices } from '../../../src/main/http';
 import type { TeamMetaFile } from '../../../src/main/services/team/TeamMetaStore';
 import type { TeamRuntimeState, TeamSummary } from '../../../src/shared/types';
 
-// The force-stop flow reaches for the real home directory (launch state, retained
-// runtime processes). Nothing of that belongs in a route test.
+// The stop flow reaches for the real home directory (lane indexes, runtime manifests,
+// launch state, retained runtime hosts, lead process trees). Nothing of that belongs in
+// a route test: every such read or cleanup is replaced by an empty answer.
+const liveRuntimeHosts = vi.hoisted(() => vi.fn(async (): Promise<number | null> => 0));
+const reapLeadTrees = vi.hoisted(() =>
+  vi.fn(async () => ({ killedPids: [] as number[], incomplete: false, diagnostics: [] as string[] }))
+);
+
 vi.mock('@main/services/team/lifecycle/teamForceStopFlow', async (importOriginal) => {
   const actual =
     await importOriginal<typeof import('@main/services/team/lifecycle/teamForceStopFlow')>();
   return {
     ...actual,
+    readOpenCodeRuntimeLaneIdsForTeam: vi.fn(async () => [] as string[]),
+    readOwnedOpenCodeRuntimeRunIdsForTeam: vi.fn(async () => [] as string[]),
+    countLiveRecordedRuntimeHostsForTeam: liveRuntimeHosts,
+    releaseLoopbackRuntimesReservedByTeam: vi.fn(async () => undefined),
+    releaseSharedRuntimeResourcesAfterStop: vi.fn(async () => ({ diagnostics: [] as string[] })),
     killRetainedOpenCodeRuntimeProcessesForTeam: vi.fn(() =>
       Promise.resolve({ killedPids: [], diagnostics: [] })
     ),
@@ -28,6 +39,10 @@ vi.mock('@main/services/team/lifecycle/teamForceStopFlow', async (importOriginal
     ),
   };
 });
+
+vi.mock('@main/services/team/lifecycle/teamLeadProcessTreeReap', () => ({
+  reapCursorAgentLeadTreesForStoppedTeam: reapLeadTrees,
+}));
 
 vi.mock('@main/services/team/TeamLaunchStateStore', () => ({
   TeamLaunchStateStore: vi.fn(() => ({
@@ -40,6 +55,10 @@ vi.mock('@main/services/team/TeamLaunchStateStore', () => ({
 const roots: string[] = [];
 
 afterEach(async () => {
+  liveRuntimeHosts.mockReset();
+  liveRuntimeHosts.mockResolvedValue(0);
+  reapLeadTrees.mockReset();
+  reapLeadTrees.mockResolvedValue({ killedPids: [], incomplete: false, diagnostics: [] });
   for (const root of roots.splice(0)) await rm(root, { recursive: true, force: true });
 });
 
@@ -122,7 +141,7 @@ function summary(teamName: string, patch: Partial<TeamSummary> = {}): TeamSummar
   };
 }
 
-async function createApp(f: Fixture, initialAlive: string[]) {
+async function createApp(f: Fixture, initialAlive: string[], stopVerification = { attempts: 3, delayMs: 0 }) {
   const alive = new Set(initialAlive);
   const progress = new Map<string, TeamRuntimeState['progress']>();
   const stopTeam = vi.fn(async (team: string) => {
@@ -159,6 +178,7 @@ async function createApp(f: Fixture, initialAlive: string[]) {
         metadataFileExists: async (name: string) => f.meta[name] === 'unreadable',
       },
       registry: f.registry,
+      stopVerification,
     },
   } as HttpServices;
   const app = Fastify();
@@ -230,12 +250,42 @@ describe('HTTP routes for a per-project (logical) team', () => {
     }
   });
 
-  it('stop is not a success while a copy still reports a run after it was stopped', async () => {
+  it('stop counts a copy whose bootstrap owner died as stopped, like the in-app Stop', async () => {
     const f = await fixture();
-    const { app, progress } = await createApp(f, [f.aliasA]);
-    // The process is gone but the copy still reports a settled "ready" run: the same
-    // evidence the launch gate refuses to call stopped.
-    progress.set(f.aliasA, { runId: 'run-x', state: 'ready' } as TeamRuntimeState['progress']);
+    const { app, getRuntimeState } = await createApp(f, [f.aliasA]);
+    // What a dead bootstrap owner reports once the process is gone: not alive, the run id still
+    // set and a failed progress (TeamBootstrapStateReader).
+    getRuntimeState.mockImplementation(async (team: string) => ({
+      teamName: team,
+      isAlive: false,
+      runId: team === f.aliasA ? 'run-dead' : null,
+      progress:
+        team === f.aliasA
+          ? ({ runId: 'run-dead', teamName: team, state: 'failed' } as TeamRuntimeState['progress'])
+          : null,
+    }));
+    try {
+      const response = await app.inject({ method: 'POST', url: '/api/teams/builders/stop' });
+      expect(response.statusCode).toBe(200);
+      expect(response.json().isAlive).toBe(false);
+    } finally {
+      await app.close();
+    }
+  });
+
+  it('stop is a 409 while the bootstrap owner of a copy is still running', async () => {
+    const f = await fixture();
+    const { app, getRuntimeState } = await createApp(f, [f.aliasA]);
+    // Not alive yet, but its bootstrap owner is, and the run is still being provisioned.
+    getRuntimeState.mockImplementation(async (team: string) => ({
+      teamName: team,
+      isAlive: false,
+      runId: team === f.aliasA ? 'run-live' : null,
+      progress:
+        team === f.aliasA
+          ? ({ runId: 'run-live', teamName: team, state: 'configuring' } as TeamRuntimeState['progress'])
+          : null,
+    }));
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
     try {
       const response = await app.inject({ method: 'POST', url: '/api/teams/builders/stop' });
@@ -246,6 +296,89 @@ describe('HTTP routes for a per-project (logical) team', () => {
       expect(warn.mock.calls.flat().join('\n')).toContain('POST /api/teams/builders/stop');
     } finally {
       warn.mockRestore();
+      await app.close();
+    }
+  });
+
+  it('stop waits for a run id that is cleared a moment after the stop, then answers truthfully', async () => {
+    const f = await fixture();
+    const { app, stopTeam, getRuntimeState, alive } = await createApp(f, [f.aliasA], {
+      attempts: 6,
+      delayMs: 0,
+    });
+    // runtime_already_down: the stop is acknowledged but the tracked run id lingers for two reads.
+    let lingering = 0;
+    stopTeam.mockImplementation(async (team: string) => {
+      alive.delete(team);
+      if (team === f.aliasA) lingering = 2;
+    });
+    getRuntimeState.mockImplementation(async (team: string) => {
+      const stale = team === f.aliasA && lingering > 0;
+      if (stale) lingering -= 1;
+      return { teamName: team, isAlive: alive.has(team), runId: stale ? 'run-x' : null, progress: null };
+    });
+    try {
+      const response = await app.inject({ method: 'POST', url: '/api/teams/builders/stop' });
+      expect(response.statusCode).toBe(200);
+      expect(lingering).toBe(0);
+    } finally {
+      await app.close();
+    }
+  });
+
+  it('stop is a 409 when recorded runtime hosts of a stopped copy survive', async () => {
+    const f = await fixture();
+    const { app } = await createApp(f, [f.aliasA]);
+    liveRuntimeHosts.mockImplementation(async () => 1);
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    try {
+      const response = await app.inject({ method: 'POST', url: '/api/teams/builders/stop' });
+      expect(response.statusCode).toBe(409);
+      expect(response.json().error).toContain('still running after the stop');
+    } finally {
+      warn.mockRestore();
+      await app.close();
+    }
+  });
+
+  it('a second stop of the same team joins the one in progress instead of starting another', async () => {
+    const f = await fixture();
+    const { app, stopTeam, alive } = await createApp(f, [f.aliasA, f.aliasB]);
+    let release: () => void = () => undefined;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    stopTeam.mockImplementation(async (team: string) => {
+      await gate;
+      alive.delete(team);
+    });
+    try {
+      const first = app.inject({ method: 'POST', url: '/api/teams/builders/stop' });
+      await vi.waitFor(() => expect(stopTeam).toHaveBeenCalled());
+      const second = app.inject({ method: 'POST', url: '/api/teams/builders/stop' });
+      release();
+      const [a, b] = await Promise.all([first, second]);
+      expect([a.statusCode, b.statusCode]).toEqual([200, 200]);
+      expect(b.json()).toEqual(a.json());
+      // One stop per copy, not one per request.
+      expect(stopTeam).toHaveBeenCalledTimes(2);
+    } finally {
+      release();
+      await app.close();
+    }
+  });
+
+  it('stops the own process of a logical team that somehow has one, as the in-app Stop does', async () => {
+    const f = await fixture();
+    const { app, stopTeam, alive } = await createApp(f, ['builders', f.aliasA]);
+    try {
+      const runtime = await app.inject({ method: 'GET', url: '/api/teams/builders/runtime' });
+      expect(runtime.json()).toMatchObject({ teamName: 'builders', isAlive: true });
+      const response = await app.inject({ method: 'POST', url: '/api/teams/builders/stop' });
+      expect(response.statusCode).toBe(200);
+      expect(stopTeam.mock.calls.map(([team]) => team).sort()).toEqual(['builders', f.aliasA].sort());
+      expect(alive.size).toBe(0);
+    } finally {
       await app.close();
     }
   });
@@ -268,6 +401,26 @@ describe('HTTP routes for a per-project (logical) team', () => {
       expect(response.statusCode).toBe(409);
       expect(response.json().error).toContain('started while the stop was running');
       expect(response.json().error).toContain(appeared);
+    } finally {
+      warn.mockRestore();
+      await app.close();
+    }
+  });
+
+  it('stop is a 409 when a copy was reserved while stopping, even though no run is registered yet', async () => {
+    const f = await fixture();
+    const { app, stopTeam, alive } = await createApp(f, [f.aliasA]);
+    let reserved = '';
+    stopTeam.mockImplementation(async (team: string) => {
+      alive.delete(team);
+      if (!reserved) reserved = (await f.addCopy('builders', 'reserved')).alias;
+    });
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    try {
+      const response = await app.inject({ method: 'POST', url: '/api/teams/builders/stop' });
+      expect(response.statusCode).toBe(409);
+      expect(response.json().error).toContain('started while the stop was running');
+      expect(response.json().error).toContain(reserved);
     } finally {
       warn.mockRestore();
       await app.close();
@@ -334,6 +487,25 @@ describe('HTTP routes for a per-project (logical) team', () => {
       const response = await app.inject({ method: 'POST', url: '/api/teams/builders/force-stop' });
       expect(response.statusCode).toBe(200);
       expect(response.json().complete).toBe(false);
+    } finally {
+      warn.mockRestore();
+      await app.close();
+    }
+  });
+
+  it('force-stop reports complete: false when a confirmed stop left its cleanup incomplete', async () => {
+    const f = await fixture();
+    const { app } = await createApp(f, [f.aliasA]);
+    // The processes are gone, but the lead process tree reap says a tree survived.
+    reapLeadTrees.mockResolvedValue({ killedPids: [], incomplete: true, diagnostics: ['tree survives'] });
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    try {
+      const response = await app.inject({ method: 'POST', url: '/api/teams/builders/force-stop' });
+      expect(response.statusCode).toBe(200);
+      expect(response.json().complete).toBe(false);
+      expect(
+        response.json().contexts.some((c: { result?: { cleanupOutcome: string } }) => c.result?.cleanupOutcome === 'incomplete')
+      ).toBe(true);
     } finally {
       warn.mockRestore();
       await app.close();
@@ -468,6 +640,26 @@ describe('HTTP routes for a shared team that retained project contexts', () => {
       expect(stopTeam.mock.calls.map(([team]) => team).sort()).toEqual(['old-shared', alias].sort());
       expect(alive.size).toBe(0);
       expect(response.json()).toMatchObject({ teamName: 'old-shared', isAlive: false });
+    } finally {
+      await app.close();
+    }
+  });
+
+  it('force-stop covers its own process and the retained copy', async () => {
+    const { f, alias } = await retained();
+    const { app, stopTeam } = await createApp(f, ['old-shared', alias]);
+    try {
+      const response = await app.inject({ method: 'POST', url: '/api/teams/old-shared/force-stop' });
+      expect(response.statusCode).toBe(200);
+      const body = response.json();
+      expect(body).toMatchObject({ teamName: 'old-shared', complete: true });
+      expect(
+        body.contexts.map((c: { executionTeamName: string; projectPath: string | null }) => [
+          c.executionTeamName,
+          c.projectPath === null,
+        ]).sort()
+      ).toEqual([[alias, false], ['old-shared', true]].sort());
+      expect(stopTeam.mock.calls.map(([team]) => team).sort()).toEqual(['old-shared', alias].sort());
     } finally {
       await app.close();
     }

@@ -497,6 +497,60 @@ describe('agent-teams-mcp tools', () => {
     }
   });
 
+  it('lets team_stop reach the desktop API for a per-project team that has no config.json', async () => {
+    const claudeDir = makeClaudeDir();
+    const teamDir = path.join(claudeDir, 'teams', 'builders');
+    fs.mkdirSync(teamDir, { recursive: true });
+    fs.writeFileSync(
+      path.join(teamDir, 'team.meta.json'),
+      JSON.stringify({ version: 1, cwd: '', createdAt: 1, projectContextMode: 'per_project' })
+    );
+    const calls: Array<{ method?: string; url?: string }> = [];
+    const server = await startControlServer(async ({ method, url }) => {
+      calls.push({ method, url });
+      if (method === 'POST' && url === '/api/teams/builders/stop') {
+        return { body: { teamName: 'builders', isAlive: false, runId: null, progress: null, contexts: [] } };
+      }
+      if (method === 'GET' && url === '/api/teams/builders/runtime') {
+        return { body: { teamName: 'builders', isAlive: false, runId: null, progress: null, contexts: [] } };
+      }
+      return { statusCode: 404, body: { error: `Unhandled ${method} ${url}` } };
+    });
+
+    try {
+      const stopped = parseJsonToolResult(
+        await getTool('team_stop').execute({
+          claudeDir,
+          teamName: 'builders',
+          controlUrl: server.baseUrl,
+        })
+      );
+      expect(stopped.isAlive).toBe(false);
+      expect(calls[0]).toEqual({ method: 'POST', url: '/api/teams/builders/stop' });
+    } finally {
+      await server.close();
+    }
+  });
+
+  it('still refuses team_stop for a team that is neither configured, a draft nor per-project', async () => {
+    const claudeDir = makeClaudeDir();
+    const sharedDir = path.join(claudeDir, 'teams', 'shared-meta-only');
+    fs.mkdirSync(sharedDir, { recursive: true });
+    // A meta file of the shared mode (or one without a mode) is not a definition that can run.
+    fs.writeFileSync(
+      path.join(sharedDir, 'team.meta.json'),
+      JSON.stringify({ version: 1, cwd: '', createdAt: 1, projectContextMode: 'shared' })
+    );
+
+    await expect(
+      getTool('team_stop').execute({ claudeDir, teamName: 'typo-team' })
+    ).rejects.toThrow('Unknown team "typo-team"');
+    await expect(
+      getTool('team_stop').execute({ claudeDir, teamName: 'shared-meta-only' })
+    ).rejects.toThrow('Unknown team "shared-meta-only"');
+    expect(fs.existsSync(path.join(claudeDir, 'teams', 'typo-team'))).toBe(false);
+  });
+
   it('lists, gets, and creates teams through the local control API', async () => {
     const claudeDir = makeClaudeDir();
     const calls: Array<{ method?: string; url?: string; body?: unknown }> = [];

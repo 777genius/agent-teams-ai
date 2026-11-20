@@ -89,22 +89,20 @@ export async function resolveTeamTarget(
 }
 
 /**
- * The project contexts a team has to be asked about, and whether the team's own
- * name hosts a process too. `null` for a team without contexts.
+ * The project contexts a team has to be asked about, next to its own name: a
+ * shared team with retained contexts runs under its own name, and even a logical
+ * team is checked (and stopped when it somehow has a process), as the in-app Stop
+ * does. `null` for a team without contexts.
  */
 export interface ContextGroup {
   team: string;
   contexts: readonly PersistedTeamWorkContext[];
-  /** A shared team with retained contexts runs under its own name as well. */
-  ownRuntime: boolean;
 }
 
 export function contextGroupOf(target: ResolvedTeamTarget): ContextGroup | null {
-  if (target.kind === 'logical') {
-    return { team: target.logical, contexts: target.contexts, ownRuntime: false };
-  }
+  if (target.kind === 'logical') return { team: target.logical, contexts: target.contexts };
   if (target.retained.length === 0) return null;
-  return { team: target.team, contexts: target.retained, ownRuntime: true };
+  return { team: target.team, contexts: target.retained };
 }
 
 interface TeamMetaReader {

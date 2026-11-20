@@ -6,7 +6,7 @@ import {
 } from '@features/team-project-context/main';
 import { TeamMetaStore } from '@main/services/team/TeamMetaStore';
 
-import type { ResolvedTeamTarget } from '@features/team-project-context/main';
+import type { ResolvedTeamTarget, StopVerification } from '@features/team-project-context/main';
 import type { TeamMetaFile } from '@main/services/team/TeamMetaStore';
 import type { TeamSummary } from '@shared/types';
 
@@ -21,6 +21,8 @@ export interface ProjectContextHttpHooks {
     metadataFileExists(teamName: string): Promise<boolean>;
   };
   registry?: TeamProjectContextRegistry;
+  /** How long a stop waits for a context to read as down; tests shorten it. */
+  stopVerification?: StopVerification;
 }
 
 export interface ProjectContextHttp {

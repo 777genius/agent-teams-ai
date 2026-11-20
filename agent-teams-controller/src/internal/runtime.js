@@ -175,7 +175,14 @@ async function requestJson(baseUrl, pathname, options = {}) {
           { kind: 'status', statusCode: response.status }
         );
       }
-      throw new Error(detail || 'Team control API request failed');
+      const failure = new Error(detail || 'Team control API request failed');
+      // A structured refusal (for example an incomplete stop) keeps its machine-readable
+      // parts for programmatic callers; the message already names what went wrong.
+      if (payload && typeof payload.code === 'string') failure.code = payload.code;
+      if (payload && payload.outcome && typeof payload.outcome === 'object') {
+        failure.outcome = payload.outcome;
+      }
+      throw failure;
     }
 
     if (payload == null) {
@@ -215,6 +222,11 @@ async function requestJsonWithFallback(baseUrls, pathname, options = {}) {
       return await requestJson(baseUrl, pathname, options);
     } catch (error) {
       lastError = error;
+      // A request that timed out may still be running on that server (a stop that
+      // outlasted its budget): asking another address would start a second one.
+      if (options.fallbackOnTimeout === false && error?.retryableKind === 'timeout') {
+        throw error;
+      }
       if (!isRetryableControlError(error) || index === baseUrls.length - 1) {
         throw error;
       }
@@ -598,7 +610,8 @@ async function stopTeam(context, flags = {}) {
     `/api/teams/${encodeURIComponent(context.teamName)}/stop`,
     {
       method: 'POST',
-      timeoutMs: STOP_REQUEST_TIMEOUT_MS,
+      timeoutMs: normalizeTimeoutMs(flags.stopRequestTimeoutMs || STOP_REQUEST_TIMEOUT_MS),
+      fallbackOnTimeout: false,
     }
   );
 

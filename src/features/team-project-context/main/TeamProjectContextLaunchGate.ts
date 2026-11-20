@@ -16,13 +16,33 @@ export class TeamProjectContextLaunchConflictError extends Error {
   readonly code = 'TEAM_PROJECT_CONTEXT_RUNNING';
 }
 
+/**
+ * Whether a team's runtime is down. The one rule both the launch gate and the
+ * verification after an explicit stop build on:
+ * - a live process is never down;
+ * - no progress means down only without a tracked run (a run id that is not
+ *   cleared yet is a stop still settling);
+ * - a failed or cancelled progress is a dead run, even though a dead bootstrap
+ *   owner is still reported with its run id, unless the failed run kept secondary
+ *   lanes alive;
+ * - a stale "ready" or "disconnected" progress is no proof a process stopped, and
+ *   a progress still in flight is a run that is not down.
+ */
+export function isStoppedTeamRuntime(state: TeamRuntimeState): boolean {
+  if (state.isAlive) return false;
+  const progress = state.progress;
+  if (progress === null) return state.runId === null;
+  if (progress.retainedSecondaryRuntime === true) return false;
+  return progress.state === 'failed' || progress.state === 'cancelled';
+}
+
+/**
+ * The stricter reading used to admit a launch or an edit: a dead run that is
+ * still tracked (its run id is not cleared) does not count, so nothing can start
+ * on top of state that has not been released.
+ */
 export function isConfirmedStoppedTeamRuntime(state: TeamRuntimeState): boolean {
-  // A stale "disconnected" or "ready" progress is not proof a process
-  // stopped. Retained secondaries and unknown run owners must fail closed.
-  if (state.isAlive || state.runId !== null) return false;
-  return state.progress === null ||
-    state.progress.state === 'failed' ||
-    state.progress.state === 'cancelled';
+  return state.runId === null && isStoppedTeamRuntime(state);
 }
 
 /**
