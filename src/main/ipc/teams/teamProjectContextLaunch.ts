@@ -1,4 +1,7 @@
-import { TeamProjectContextLaunchConflictError } from '@features/team-project-context/main';
+import {
+  classifyTeamKind,
+  TeamProjectContextLaunchConflictError,
+} from '@features/team-project-context/main';
 import { TeamMetaStore } from '@main/services/team/TeamMetaStore';
 
 import { parseOptionalTeamEffort, parseOptionalTeamFastMode } from '../teamIpcRequestParsers';
@@ -30,15 +33,19 @@ export async function prepareTeamContextLaunch(
   options: { expectedExecutionTeamName?: string } = {}
 ): Promise<PreparedTeamContextLaunch> {
   const parts = createProjectContextRuntimeParts(ports);
-  const mode = await parts.resolver.getMode(request.teamName);
-  if (mode === 'shared') {
-    // Public launch requests must never bypass logical-team admission by
-    // addressing the physical runtime alias directly (e.g. global tasks).
-    if (await parts.registry.isOwnedExecutionAlias(request.teamName)) {
-      throw new Error('Project runtime alias cannot launch directly; open its logical team');
-    }
-    return { request };
+  const kind = await classifyTeamKind(
+    {
+      getMode: (name) => parts.resolver.getMode(name),
+      isOwnedExecutionAlias: (name) => parts.registry.isOwnedExecutionAlias(name),
+    },
+    request.teamName
+  );
+  // Public launch requests must never bypass logical-team admission by
+  // addressing the physical runtime alias directly (e.g. global tasks).
+  if (kind === 'alias') {
+    throw new Error('Project runtime alias cannot launch directly; open its logical team');
   }
+  if (kind === 'native') return { request };
   const logicalMeta = await new TeamMetaStore().getMeta(request.teamName);
   if (logicalMeta?.deletedAt) {
     throw new Error('TEAM_TRASHED: Restore the team before launching');

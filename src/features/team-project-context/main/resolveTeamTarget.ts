@@ -1,10 +1,11 @@
-import { TeamProjectContextRuntimeResolver } from './TeamProjectContextRuntimeResolver';
+import { listOwnedContexts } from './ownedHistory';
+import { readTeamProjectContextMode } from './projectContextMode';
 
+import type { TeamModeMetaReader } from './projectContextMode';
 import type {
   PersistedTeamWorkContext,
   TeamProjectContextRegistry,
 } from './TeamProjectContextRegistry';
-import type { TeamMetaFile } from '@main/services/team/TeamMetaStore';
 import type { TeamProjectContextMode } from '@shared/types';
 
 /**
@@ -105,32 +106,19 @@ export function contextGroupOf(target: ResolvedTeamTarget): ContextGroup | null 
   return { team: target.team, contexts: target.retained };
 }
 
-interface TeamMetaReader {
-  getMeta(teamName: string): Promise<TeamMetaFile | null>;
-  metadataFileExists(teamName: string): Promise<boolean>;
-}
-
 type TargetRegistry = Pick<
   TeamProjectContextRegistry,
-  | 'find'
-  | 'reserve'
-  | 'confirmReady'
-  | 'releaseUnusedReservation'
-  | 'list'
-  | 'listRetained'
-  | 'hasRetainedIndex'
+  'list' | 'listRetained' | 'hasRetainedIndex'
 >;
 
 /** The ports every production caller uses; tests inject fakes or a temp-dir registry. */
 export function createTeamTargetPorts(
-  meta: TeamMetaReader,
+  meta: TeamModeMetaReader,
   registry: TargetRegistry
 ): TeamTargetPorts {
-  const resolver = new TeamProjectContextRuntimeResolver(meta, registry);
   return {
-    getMode: (teamName) => resolver.getMode(teamName),
-    listContexts: (logicalTeamName, mode) =>
-      mode === 'per_project' ? registry.list(logicalTeamName) : registry.listRetained(logicalTeamName),
+    getMode: (teamName) => readTeamProjectContextMode(meta, teamName),
+    listContexts: (logicalTeamName, mode) => listOwnedContexts(registry, logicalTeamName, mode),
     hasContextsIndex: (teamName) => registry.hasRetainedIndex(teamName),
   };
 }

@@ -1,5 +1,5 @@
 import {
-  classifyDefinitionTarget,
+  classifyTeamKind,
   TeamProjectContextLaunchConflictError,
   TeamProjectContextUnavailableError,
 } from '@features/team-project-context/main';
@@ -135,7 +135,7 @@ export class ProjectScheduleTargets implements ScheduleTargets {
   async admit(teamName: string, change?: ScheduleFolderChange): Promise<ScheduleAdmission> {
     const ports = this.makePorts();
     try {
-      const kind = await classifyDefinitionTarget(ports, teamName);
+      const kind = await classifyTeamKind(ports, teamName);
       if (kind === 'alias') return { allowed: false, reason: COPY_MESSAGE };
       if (kind === 'logical' && change?.cwd !== undefined) {
         return await admitFolder(ports, { ...change, cwd: change.cwd });
@@ -149,7 +149,7 @@ export class ProjectScheduleTargets implements ScheduleTargets {
   async resolve(schedule: ScheduleIdentity): Promise<ScheduleTarget> {
     const ports = this.makePorts();
     try {
-      const kind = await classifyDefinitionTarget(ports, schedule.teamName);
+      const kind = await classifyTeamKind(ports, schedule.teamName);
       if (kind === 'alias') return { kind: 'refused', reason: COPY_MESSAGE };
       if (kind === 'native') return { kind: 'native' };
       if (await ports.isTrashed(schedule.teamName)) {

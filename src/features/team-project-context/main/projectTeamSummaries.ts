@@ -1,3 +1,4 @@
+import { listOwnedContexts } from './ownedHistory';
 import { TeamProjectContextRegistry } from './TeamProjectContextRegistry';
 
 import type { TeamMetaFile } from '@main/services/team/TeamMetaStore';
@@ -44,9 +45,7 @@ export async function projectTeamSummaries(
       try {
         // Owned native aliases stay folded under their logical team whatever
         // its saved mode says; only a verified owner can hide a native team.
-        const contexts = mode === 'per_project'
-          ? await registry.list(team.teamName)
-          : await registry.listRetained(team.teamName);
+        const contexts = await listOwnedContexts(registry, team.teamName, mode);
         const ownedReady = contexts.filter((context) => context.state === 'ready');
         for (const context of ownedReady) {
           // list() proves ownership for ready aliases. A prefix or reserved

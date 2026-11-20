@@ -6,8 +6,8 @@ import {
   type TeamProjectContextView,
 } from '../contracts';
 
+import { readTeamProjectContextMode } from './projectContextMode';
 import { TeamProjectContextRegistry } from './TeamProjectContextRegistry';
-import { TeamProjectContextRuntimeResolver } from './TeamProjectContextRuntimeResolver';
 
 import type { IpcResult } from '@shared/types';
 import type { IpcMain } from 'electron';
@@ -28,16 +28,16 @@ async function resolveContextView(
   }
   try {
     const registry = TeamProjectContextRegistry.fromCurrentApp();
-    const resolver = new TeamProjectContextRuntimeResolver(new TeamMetaStore(), registry);
-    const mode = await resolver.getMode(checked.value!);
+    const metaStore = new TeamMetaStore();
+    const mode = await readTeamProjectContextMode(metaStore, checked.value!);
     if (mode === 'shared') {
       const alias = await registry.resolveOwnedExecutionAlias(checked.value!);
       if (alias) {
-        const logicalMeta = await new TeamMetaStore().getMeta(alias.logicalTeamName);
+        const logicalMeta = await metaStore.getMeta(alias.logicalTeamName);
         if (logicalMeta?.deletedAt) {
           return { success: false, error: 'TEAM_TRASHED: Restore the team before opening history' };
         }
-        const logicalMode = await resolver.getMode(alias.logicalTeamName);
+        const logicalMode = await readTeamProjectContextMode(metaStore, alias.logicalTeamName);
         // The mode is fixed when a team is created, so a project alias always
         // belongs to a per-project team. Never redirect into another history.
         if (logicalMode !== 'per_project') {

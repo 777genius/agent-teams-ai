@@ -1,8 +1,8 @@
-import { parsePersistedTeamProjectContextMode } from '../core';
+import { readTeamProjectContextMode } from './projectContextMode';
 
+import type { TeamModeMetaReader } from './projectContextMode';
 import type { PersistedTeamWorkContext } from './TeamProjectContextRegistry';
 import type { TeamProjectContextRegistry } from './TeamProjectContextRegistry';
-import type { TeamMetaFile } from '@main/services/team/TeamMetaStore';
 import type { TeamProjectContextMode } from '@shared/types';
 
 export interface TeamWorkContextAddress {
@@ -19,11 +19,6 @@ export interface ResolvedTeamWorkContext {
   projectPath?: string;
   /** Reservation does not authorize reads or writes to physical storage. */
   state: 'ready' | 'reserved';
-}
-
-interface TeamMetaReader {
-  getMeta(teamName: string): Promise<TeamMetaFile | null>;
-  metadataFileExists(teamName: string): Promise<boolean>;
 }
 
 type ContextRegistry = Pick<TeamProjectContextRegistry, 'find' | 'reserve' | 'confirmReady' | 'releaseUnusedReservation'>;
@@ -45,19 +40,12 @@ function physical(logicalTeamName: string, context: PersistedTeamWorkContext): R
  */
 export class TeamProjectContextRuntimeResolver {
   constructor(
-    private readonly metaReader: TeamMetaReader,
+    private readonly metaReader: TeamModeMetaReader,
     private readonly registry: ContextRegistry
   ) {}
 
-  async getMode(teamName: string): Promise<TeamProjectContextMode> {
-    const meta = await this.metaReader.getMeta(teamName);
-    if (meta === null && await this.metaReader.metadataFileExists(teamName)) {
-      throw new Error('Team metadata is unreadable; refusing shared-history fallback');
-    }
-    return parsePersistedTeamProjectContextMode(
-      meta?.projectContextMode,
-      meta !== null && Object.hasOwn(meta, 'projectContextMode')
-    );
+  getMode(teamName: string): Promise<TeamProjectContextMode> {
+    return readTeamProjectContextMode(this.metaReader, teamName);
   }
 
   private requireProjectPath(address: TeamWorkContextAddress): string {

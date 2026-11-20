@@ -141,7 +141,7 @@ resolveTeamTarget(name, { projectPath? })
    | { kind: 'alias', alias, logical, projectPath }
 ```
 
-It is built from what exists: `classifyDefinitionTarget` (logical / alias / native), `TeamProjectContextRuntimeResolver.forRead` (one project) and `TeamProjectContextRegistry.list` (all contexts). Each consumer states what a logical target means for it:
+It is built from what exists: `classifyTeamKind` (logical / alias / native), `TeamProjectContextRuntimeResolver.forRead` (one project) and `TeamProjectContextRegistry.list` (all contexts). Each consumer states what a logical target means for it:
 
 | Operation | Meaning for a logical target |
 | --- | --- |

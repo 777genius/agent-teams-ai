@@ -1,7 +1,8 @@
-import { classifyDefinitionTarget } from './classifyDefinitionTarget';
+import { classifyTeamKind } from '../core';
+
 import { projectDefinitionToAlias } from './projectDefinitionToAlias';
 
-import type { DefinitionEditTarget } from './classifyDefinitionTarget';
+import type { TeamKind } from '../core';
 import type { DefinitionMetadataUpdate } from './projectDefinitionToAlias';
 import type { TeamProjectContextLaunchGate } from './TeamProjectContextLaunchGate';
 import type { PersistedTeamWorkContext } from './TeamProjectContextRegistry';
@@ -41,8 +42,8 @@ export class TeamProjectDefinitionEditor {
   ) {}
 
   /** Fails closed: unreadable team metadata rejects instead of falling back to a native edit. */
-  classify(teamName: string): Promise<DefinitionEditTarget> {
-    return classifyDefinitionTarget(
+  classify(teamName: string): Promise<TeamKind> {
+    return classifyTeamKind(
       {
         getMode: (name) => this.ports.getMode(name),
         isOwnedExecutionAlias: (name) => this.registry.isOwnedExecutionAlias(name),

@@ -1,39 +1,29 @@
 import { promises as fs } from 'node:fs';
 import * as path from 'node:path';
 
-import { TeamProjectContextRegistry, TeamProjectContextRuntimeResolver } from '@features/team-project-context/main';
+import {
+  listOwnedContexts,
+  ownsProjectHistory,
+  readTeamProjectContextMode,
+  TeamProjectContextRegistry,
+} from '@features/team-project-context/main';
 import { JsonScheduleRepository } from '@main/services/schedule/JsonScheduleRepository';
 import { TeamMetaStore } from '@main/services/team/TeamMetaStore';
 import { getTeamsBasePath } from '@main/utils/pathDecoder';
 import { createLogger } from '@shared/utils/logger';
 
+import type { TeamModeMetaReader as LifecycleReader } from '@features/team-project-context/main';
 import type { IpcResult, TeamSummary } from '@shared/types';
 
-interface LifecycleReader {
-  getMeta(teamName: string): Promise<Awaited<ReturnType<TeamMetaStore['getMeta']>>>;
-  metadataFileExists(teamName: string): Promise<boolean>;
-}
-
 const logger = createLogger('TeamProjectContextLifecycle');
-
-function contextReader(
-  meta: LifecycleReader,
-  registry: TeamProjectContextRegistry
-): TeamProjectContextRuntimeResolver {
-  return new TeamProjectContextRuntimeResolver(meta, registry);
-}
 
 async function ownedHistoryContexts(
   teamName: string,
   meta: LifecycleReader,
   registry: TeamProjectContextRegistry
 ): Promise<readonly { executionTeamName: string; state: 'ready' | 'reserved' }[]> {
-  const mode = await contextReader(meta, registry).getMode(teamName);
-  return mode === 'per_project'
-    ? registry.list(teamName)
-    : registry.listRetained(teamName);
+  return listOwnedContexts(registry, teamName, await readTeamProjectContextMode(meta, teamName));
 }
-
 
 /**
  * The renderer re-probes this after a stop transport error. A logical team
@@ -113,10 +103,8 @@ export async function deleteLogicalTeamWithContexts(
 ): Promise<IpcResult<void>> {
   if (typeof teamName !== 'string' || !teamName.trim()) return deleteLogical();
   try {
-    const mode = await contextReader(meta, registry).getMode(teamName);
-    if (mode === 'shared' && !(await registry.hasRetainedIndex(teamName))) {
-      return deleteLogical();
-    }
+    const mode = await readTeamProjectContextMode(meta, teamName);
+    if (!(await ownsProjectHistory(registry, teamName, mode))) return deleteLogical();
     await registry.beginSoftDelete(teamName);
     let contexts: Awaited<ReturnType<typeof ownedHistoryContexts>>;
     try {
@@ -208,10 +196,8 @@ export async function permanentlyDeleteLogicalTeam(
   const meta = ports.meta ?? new TeamMetaStore();
   const registry = ports.registry ?? TeamProjectContextRegistry.fromCurrentApp();
   try {
-    const mode = await contextReader(
-      meta, (registry as TeamProjectContextRegistry)
-    ).getMode(logicalTeamName);
-    if (mode === 'shared' && !(await registry.hasRetainedIndex(logicalTeamName))) {
+    const mode = await readTeamProjectContextMode(meta, logicalTeamName);
+    if (!(await ownsProjectHistory(registry, logicalTeamName, mode))) {
       return ports.deleteLogical(false);
     }
 
@@ -327,7 +313,7 @@ export async function projectAliveTeamNames(
   const projected = new Set(physicalAlive);
   for (const team of visibleTeams) {
     try {
-      if (await contextReader(meta, registry).getMode(team.teamName) !== 'per_project') continue;
+      if ((await readTeamProjectContextMode(meta, team.teamName)) !== 'per_project') continue;
       const entries = await registry.list(team.teamName);
       for (const row of entries) {
         if (row.state !== 'ready') continue;

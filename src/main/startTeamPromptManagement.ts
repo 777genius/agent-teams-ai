@@ -1,4 +1,8 @@
-import { TeamProjectContextRegistry } from '@features/team-project-context/main';
+import {
+  ownsProjectHistory,
+  readTeamProjectContextMode,
+  TeamProjectContextRegistry,
+} from '@features/team-project-context/main';
 import { TeamPromptManagement } from '@features/team-prompt-management/main';
 import { getTeamDataWorkerClient } from '@main/services/team/TeamDataWorkerClient';
 import { TeamMetaStore } from '@main/services/team/TeamMetaStore';
@@ -52,15 +56,16 @@ export function composeTeamPromptManagement(
     replaceMembers: (name, request) => data.replaceMembers(name, request),
     deleteTeam: async (name) => {
       const meta = new TeamMetaStore();
-      const stored = await meta.getMeta(name);
-      if (!stored && (await meta.metadataFileExists(name))) {
-        throw new Error('HTTP trash requires readable team metadata');
-      }
+      const mode = await readTeamProjectContextMode(
+        meta,
+        name,
+        'HTTP trash requires readable team metadata'
+      );
+      const registry = TeamProjectContextRegistry.fromCurrentApp();
       // External HTTP trash cannot prove that every native project runtime is
       // stopped. Refuse until HTTP uses the same logical-team lifecycle fence
       // as the desktop, rather than making running aliases disappear.
-      if (stored?.projectContextMode === 'per_project' ||
-          await TeamProjectContextRegistry.fromCurrentApp().hasRetainedIndex(name)) {
+      if (await ownsProjectHistory(registry, name, mode)) {
         throw new Error('Project-scoped teams must be trashed from the desktop');
       }
       await data.deleteTeam(name);
