@@ -858,6 +858,89 @@ async function verifySchedules(f: Fixture) {
   return recorded;
 }
 
+/**
+ * Launch settings belong to the team, not to one project copy: what is chosen for a launch in
+ * project A is what the team shows and uses in project B, a launch with no choices follows the
+ * team, and trust (skipPermissions) never travels between projects. The fixture runtime denies
+ * agents, so a launch that reaches it is refused there; settings are saved once it is accepted.
+ */
+async function verifyLaunchSettings(f: Fixture) {
+  assert(cdp);
+  const metaOf = (name: string) =>
+    readJsonFile<Record<string, unknown>>(path.join(f.rootTeams, name, 'team.meta.json'));
+  const savedByDialog = async () => await cdp!.evaluate(
+    'window.electronAPI.teams.getSavedRequest(' + JSON.stringify(f.logical) + ')'
+  ) as Record<string, unknown> | null;
+  const launch = async (request: Record<string, unknown>) => {
+    const deadline = Date.now() + 90_000;
+    for (;;) {
+      const outcome = await ipcOutcome('window.electronAPI.teams.launchTeam(' +
+        JSON.stringify({ teamName: f.logical, ...request }) + ')');
+      if (outcome.ok || !/running|starting|launching|stop/i.test(outcome.error ?? '') ||
+        Date.now() > deadline) return outcome;
+      await pause(1_000);
+    }
+  };
+
+  // Older copies carry settings of their own from earlier launches; the definition has none yet.
+  const before = await metaOf(f.logical);
+  assert(!('model' in before) && !('effort' in before), 'The fixture definition starts without launch settings');
+  for (const alias of [f.nativeA, f.nativeB]) {
+    await json(path.join(f.rootTeams, alias, 'team.meta.json'), {
+      ...(await metaOf(alias)), providerId: 'opencode', model: 'stale-model', effort: 'low',
+    });
+  }
+
+  // 1. A launch in project A: the team keeps what was chosen, but not the trust of that project.
+  const first = await launch({
+    cwd: f.projectA, providerId: 'opencode', model: 'e2e-model-x', effort: 'high',
+    limitContext: true, skipPermissions: true,
+  });
+  assert(first.ok, 'The launch in project A must be accepted: ' + JSON.stringify(first));
+  const afterFirst = await waitForJson(
+    path.join(f.rootTeams, f.logical, 'team.meta.json'),
+    (meta) => meta.model === 'e2e-model-x', 'launch settings saved into the team definition'
+  );
+  assert.equal(afterFirst.effort, 'high');
+  assert.equal(afterFirst.limitContext, true);
+  assert.equal(afterFirst.providerId, 'opencode');
+  assert(!('skipPermissions' in afterFirst), 'Trust of one project must not enter the team definition');
+  assert.equal(afterFirst.projectContextMode, 'per_project', 'The definition keeps its history mode');
+  assert.equal((await savedByDialog())?.model, 'e2e-model-x',
+    'The launch dialog reads the saved settings of the team, so it shows what project A chose');
+
+  // 2. A launch in project B that chooses nothing follows the team: the older copy is repaired.
+  await launch({ cwd: f.projectB });
+  const repaired = await waitForJson(
+    path.join(f.rootTeams, f.nativeB, 'team.meta.json'),
+    (meta) => meta.model === 'e2e-model-x' && meta.effort === 'high',
+    'the older copy of project B follows the team settings'
+  );
+  assert.notEqual(repaired.skipPermissions, true, 'Trust of project A must not reach project B');
+  assert.equal((await metaOf(f.logical)).model, 'e2e-model-x',
+    'A launch that chose nothing must leave the team settings alone');
+
+  // 3. A launch in project B that changes them: the team, and so project A, follow.
+  const second = await launch({
+    cwd: f.projectB, providerId: 'opencode', model: 'e2e-model-y', effort: 'medium',
+  });
+  assert(second.ok, 'The launch in project B must be accepted: ' + JSON.stringify(second));
+  await waitForJson(
+    path.join(f.rootTeams, f.logical, 'team.meta.json'),
+    (meta) => meta.model === 'e2e-model-y' && meta.effort === 'medium',
+    'the change made in project B is saved into the team'
+  );
+  assert.equal((await savedByDialog())?.model, 'e2e-model-y');
+  await launch({ cwd: f.projectA });
+  await waitForJson(
+    path.join(f.rootTeams, f.nativeA, 'team.meta.json'),
+    (meta) => meta.model === 'e2e-model-y' && meta.effort === 'medium',
+    'project A follows the change made in project B'
+  );
+  assert.equal((await metaOf(f.logical)).limitContext, true,
+    'A setting the later launch did not state is kept');
+}
+
 async function run() {
   const f = await fixture();
   let success = false;
@@ -918,9 +1001,11 @@ async function run() {
     );
     assert.equal(unexpected.length, 0,
       'Unexpected native model/provider lifecycle call: ' + JSON.stringify(commandHeads));
+    // After the strict audit above: the launches of this section reach the denying runtime on purpose.
+    await verifyLaunchSettings(f);
     success = true;
     console.log(JSON.stringify({
-      ok: true, scope: 'real Electron / typed preload / main / native task + inbox / A-B-A / renderer reload / edit the per-project team definition / schedules of a per-project team',
+      ok: true, scope: 'real Electron / typed preload / main / native task + inbox / A-B-A / renderer reload / edit the per-project team definition / schedules of a per-project team / launch settings kept by the team',
       team: f.logical, sandbox: f.root, screenshotDir: f.screenshots,
       providerExecution: false, scheduledRun: { status: scheduledRun.status, summary: scheduledRun.summary },
     }, null, 2));
