@@ -174,11 +174,16 @@ describe('HTTP routes for a per-project (logical) team', () => {
     stopTeam.mockImplementation(async (team: string) => {
       if (team === f.aliasB) throw new Error('stop command exited with 1');
     });
+    // The native stop of the failing copy logs its escalation; that is expected here.
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
     try {
       const response = await app.inject({ method: 'POST', url: '/api/teams/builders/stop' });
       expect(response.statusCode).toBe(409);
       expect(response.json().error).toContain(f.projectB);
       expect(response.json().error).toContain(f.aliasB);
+      // The other copy was still stopped: one failure does not abandon the rest.
+      expect(stopTeam).toHaveBeenCalledWith(f.aliasA);
+      expect(warn).toHaveBeenCalled();
     } finally {
       await app.close();
     }
