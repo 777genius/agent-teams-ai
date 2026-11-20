@@ -2069,7 +2069,9 @@ describe('MCP team tools over the local REST control API', () => {
         launchTeam(raced, { cwd: projectA }),
         launchTeam(raced, { cwd: projectB }),
       ]);
-      expect(twoProjects.map((response) => response.statusCode).sort()).toEqual([200, 409]);
+      expect(twoProjects.map((response) => response.statusCode).sort((a, b) => a - b)).toEqual([
+        200, 409,
+      ]);
       expect(await registry.list(raced)).toHaveLength(1);
       const twice = 'per-project-twice';
       expect((await createOver(twice)).statusCode).toBe(201);

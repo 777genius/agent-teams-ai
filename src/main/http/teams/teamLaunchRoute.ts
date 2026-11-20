@@ -107,7 +107,7 @@ function draftLaunchRequest(
     allowExperimentalLocalModels: create.allowExperimentalLocalModels,
   };
   return Object.fromEntries(
-    Object.entries(fields).filter(([, value]) => value !== undefined)
+    Object.entries(fields).filter(([, value]) => typeof value !== 'undefined')
   ) as typeof fields;
 }
 

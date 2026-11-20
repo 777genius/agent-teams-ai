@@ -41,8 +41,8 @@ async function claudeRoot(teams: Record<string, 'per_project' | 'unreadable'>) {
 }
 
 function app(services: Partial<HttpServices>) {
-  const launchTeam = vi.fn(async () => ({ runId: 'native-run' }));
-  const createTeam = vi.fn(async () => ({ runId: 'copy-run' }));
+  const launchTeam = vi.fn(() => Promise.resolve({ runId: 'native-run' }));
+  const createTeam = vi.fn(() => Promise.resolve({ runId: 'copy-run' }));
   const instance = Fastify();
   registerTeamRoutes(instance, {
     teamApis: { provisioningStart: { launchTeam, createTeam } },
@@ -58,9 +58,9 @@ describe('POST /api/teams/:team/launch of a team with separate history per proje
     const { project } = await claudeRoot({ broken: 'unreadable' });
     const withoutPort = app({});
     const port = {
-      classify: vi.fn(async () => {
-        throw new TeamMetadataUnreadableError('Team metadata is unreadable');
-      }),
+      classify: vi.fn(() =>
+        Promise.reject(new TeamMetadataUnreadableError('Team metadata is unreadable'))
+      ),
     } as unknown as ProjectTeamLaunch;
     const withPort = app({ projectTeamLaunch: () => port });
     try {
@@ -109,19 +109,21 @@ describe('POST /api/teams/:team/launch of a team with separate history per proje
       teamName: 'ptc-copy',
       projectContextMode: 'shared',
     };
-    const getSavedRequest = vi.fn(async (teamName: string) =>
-      teamName === 'builders' ? definition : teamName === 'ptc-copy' ? copyDraft : null
-    );
+    const saved: Record<string, TeamCreateRequest> = {
+      builders: definition,
+      'ptc-copy': copyDraft,
+    };
+    const getSavedRequest = vi.fn((teamName: string) => Promise.resolve(saved[teamName] ?? null));
     const order: string[] = [];
     let useCaseRequest: TeamLaunchRequest | null = null;
     const port: ProjectTeamLaunch = {
-      classify: vi.fn(async () => 'logical' as const),
-      inspectCopy: vi.fn(async () => null),
-      withTeamLock: vi.fn(async (teamName, operation) => {
+      classify: vi.fn(() => Promise.resolve('logical' as const)),
+      inspectCopy: vi.fn(() => Promise.resolve(null)),
+      withTeamLock: vi.fn((teamName, operation) => {
         order.push(`lock:${teamName}`);
         return operation();
       }),
-      launch: vi.fn(async (request, launcher) => {
+      launch: vi.fn((request, launcher) => {
         order.push('launch');
         useCaseRequest = request;
         return launcher.invoke({ ...request, teamName: 'ptc-copy', cwd: project });
