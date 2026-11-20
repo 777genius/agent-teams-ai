@@ -1,0 +1,159 @@
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+const metaByTeam = new Map<string, { projectContextMode?: string } | null>();
+
+vi.mock('../../../src/main/services/team/TeamMetaStore', async (importOriginal) => {
+  const original = await importOriginal<typeof import('../../../src/main/services/team/TeamMetaStore')>();
+  return {
+    ...original,
+    TeamMetaStore: class {
+      async getMeta(teamName: string) {
+        return metaByTeam.get(teamName) ?? null;
+      }
+    },
+  };
+});
+
+import {
+  createProjectDefinitionEditRouting,
+  PROJECT_COPY_EDIT_MESSAGE,
+  readRosterForMutation,
+} from '../../../src/main/ipc/teams/teamProjectDefinitionEdit';
+
+import type { DefinitionEditTarget } from '../../../src/features/team-project-context/main';
+import type { TeamProjectDefinitionEditor } from '../../../src/features/team-project-context/main';
+
+function routing(target: DefinitionEditTarget) {
+  const editor = {
+    classify: vi.fn(async () => target),
+    assertEditable: vi.fn(async () => undefined),
+    projectToAliases: vi.fn(async () => ({ failed: [] as { executionTeamName: string; message: string }[] })),
+  };
+  const handler = vi.fn(async (..._args: unknown[]) => ({ success: true as const, data: undefined }));
+  const wrapped = createProjectDefinitionEditRouting(
+    {} as never,
+    () => editor as unknown as TeamProjectDefinitionEditor
+  )(handler);
+  return { editor, handler, wrapped };
+}
+
+const event = {} as never;
+
+describe('withProjectDefinitionEdit', () => {
+  it('runs the handler unchanged for an ordinary team and never touches the editor policy', async () => {
+    const r = routing('native');
+    await expect(r.wrapped(event, 'legacy', { name: 'x' })).resolves.toEqual({
+      success: true,
+      data: undefined,
+    });
+    expect(r.handler).toHaveBeenCalledWith(event, 'legacy', { name: 'x' });
+    expect(r.editor.assertEditable).not.toHaveBeenCalled();
+    expect(r.editor.projectToAliases).not.toHaveBeenCalled();
+  });
+
+  it('passes an invalid team name to the handler so it keeps its own validation error', async () => {
+    const r = routing('logical');
+    await r.wrapped(event, 42);
+    expect(r.handler).toHaveBeenCalledWith(event, 42);
+    expect(r.editor.classify).not.toHaveBeenCalled();
+  });
+
+  it('refuses to edit a project copy directly: the definition lives in the logical team', async () => {
+    const r = routing('alias');
+    await expect(r.wrapped(event, 'ptc-a', {})).resolves.toEqual({
+      success: false,
+      error: PROJECT_COPY_EDIT_MESSAGE,
+    });
+    expect(r.handler).not.toHaveBeenCalled();
+  });
+
+  it('refuses a per-project edit while any project runs and writes nothing', async () => {
+    const r = routing('logical');
+    r.editor.assertEditable.mockRejectedValue(new Error('Stop it in every project'));
+    await expect(r.wrapped(event, 'builders', {})).resolves.toEqual({
+      success: false,
+      error: 'Stop it in every project',
+    });
+    expect(r.handler).not.toHaveBeenCalled();
+    expect(r.editor.projectToAliases).not.toHaveBeenCalled();
+  });
+
+  it('writes to the logical team first, then refreshes the stopped project copies', async () => {
+    const r = routing('logical');
+    const order: string[] = [];
+    r.handler.mockImplementation(async () => {
+      order.push('write');
+      return { success: true as const, data: undefined };
+    });
+    r.editor.projectToAliases.mockImplementation(async () => {
+      order.push('project');
+      return { failed: [] };
+    });
+    await expect(r.wrapped(event, 'builders', { name: 'x' })).resolves.toEqual({
+      success: true,
+      data: undefined,
+    });
+    expect(order).toEqual(['write', 'project']);
+    expect(r.handler).toHaveBeenCalledWith(event, 'builders', { name: 'x' });
+  });
+
+  it('does not refresh copies when the logical write failed', async () => {
+    const r = routing('logical');
+    r.handler.mockResolvedValue({ success: false as never, error: 'bad member' } as never);
+    await expect(r.wrapped(event, 'builders', {})).resolves.toEqual({
+      success: false,
+      error: 'bad member',
+    });
+    expect(r.editor.projectToAliases).not.toHaveBeenCalled();
+  });
+
+  it('keeps the saved edit successful when a project copy cannot be refreshed right now', async () => {
+    const r = routing('logical');
+    r.editor.projectToAliases.mockResolvedValue({
+      failed: [{ executionTeamName: 'ptc-a', message: 'busy' }],
+    });
+    await expect(r.wrapped(event, 'builders', {})).resolves.toMatchObject({ success: true });
+    r.editor.projectToAliases.mockRejectedValue(new Error('registry unreadable'));
+    await expect(r.wrapped(event, 'builders', {})).resolves.toMatchObject({ success: true });
+  });
+});
+
+describe('readRosterForMutation', () => {
+  beforeEach(() => metaByTeam.clear());
+
+  it('returns the snapshot of an ordinary team', async () => {
+    const data = { getTeamData: vi.fn(async () => ({ members: [{ name: 'a' }] })) };
+    await expect(readRosterForMutation(data as never, 'legacy')).resolves.toEqual({
+      members: [{ name: 'a' }],
+    });
+  });
+
+  it('has no live roster to read for a per-project definition without config.json', async () => {
+    metaByTeam.set('builders', { projectContextMode: 'per_project' });
+    const data = {
+      getTeamData: vi.fn(async () => {
+        throw new Error('Team not found: builders');
+      }),
+    };
+    await expect(readRosterForMutation(data as never, 'builders')).resolves.toEqual({ members: [] });
+  });
+
+  it('keeps every other failure, including a missing ordinary team', async () => {
+    metaByTeam.set('draft', { projectContextMode: 'shared' });
+    const missing = {
+      getTeamData: vi.fn(async () => {
+        throw new Error('Team not found: draft');
+      }),
+    };
+    await expect(readRosterForMutation(missing as never, 'draft')).rejects.toThrow(
+      'Team not found: draft'
+    );
+    metaByTeam.set('builders', { projectContextMode: 'per_project' });
+    const broken = {
+      getTeamData: vi.fn(async () => {
+        throw new Error('disk failure');
+      }),
+    };
+    await expect(readRosterForMutation(broken as never, 'builders')).rejects.toThrow('disk failure');
+  });
+});

@@ -425,6 +425,7 @@
     }
   },
   "detail": {
+    "editDefinition": {"notFound": "找不到團隊設定", "loadFailed": "無法載入團隊設定"},
     "actions": {
       "add": "新增",
       "cancel": "取消",
@@ -497,6 +498,7 @@
       "deleteTeam": "刪除團隊",
       "editTeam": "編輯團隊",
       "editUnavailableProvisioning": "當設定仍在進行時，編輯團隊不可用",
+      "editUnavailableRunningProject": "請先在所有專案中停止此團隊，才能編輯",
       "openBuiltInEditor": "在內建編輯器中開啟專案",
       "openTeamGraph": "開啟團隊圖",
       "openTeamUsage": "開啟團隊使用量",
@@ -2296,6 +2298,7 @@
     }
   },
   "schedule": {
+    "perProjectUnavailable": "依專案分開歷史的團隊目前不支援排程。",
     "actionFailed": "排程動作失敗",
     "deleteConfirmation": "要刪除排程「{{label}}」嗎？它的執行紀錄也會一併移除。",
     "runRequested": "已要求執行。請查看歷史紀錄，確認工作是否已交接。",

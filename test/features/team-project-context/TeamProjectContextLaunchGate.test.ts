@@ -73,4 +73,36 @@ describe('TeamProjectContextLaunchGate', () => {
     await expect(f.gate.assertOtherContextsStopped('builders', 'ptc-second'))
       .rejects.toThrow('launching or stopping');
   });
+
+  describe('assertAllContextsStopped (editing the team definition)', () => {
+    it('allows an edit when the logical team and every project are confirmed stopped', async () => {
+      const f = fixture();
+      await expect(f.gate.assertAllContextsStopped('builders')).resolves.toBeUndefined();
+      for (const name of ['builders', 'ptc-first', 'ptc-second']) {
+        expect(f.runtime.getRuntimeState).toHaveBeenCalledWith(name);
+      }
+    });
+
+    it('refuses while any project runs, including the one that is open', async () => {
+      const f = fixture();
+      f.states.set('ptc-second', {
+        teamName: 'ptc-second', isAlive: true, runId: 'running', progress: null,
+      });
+      await expect(f.gate.assertAllContextsStopped('builders'))
+        .rejects.toBeInstanceOf(TeamProjectContextLaunchConflictError);
+    });
+
+    it('refuses while a project is launching or stopping', async () => {
+      const f = fixture();
+      f.runtime.hasProvisioningRun.mockImplementation((name: string) => name === 'ptc-first');
+      await expect(f.gate.assertAllContextsStopped('builders')).rejects.toThrow('launching');
+    });
+
+    it('refuses while a project context is not yet reconciled', async () => {
+      const f = fixture();
+      f.contexts.list.mockResolvedValue([first, { ...second, state: 'reserved' }]);
+      await expect(f.gate.assertAllContextsStopped('builders')).rejects.toThrow('prepared');
+      expect(f.runtime.getRuntimeState).not.toHaveBeenCalled();
+    });
+  });
 });

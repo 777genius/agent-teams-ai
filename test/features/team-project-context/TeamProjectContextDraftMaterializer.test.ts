@@ -28,6 +28,7 @@ function fixture(result: ResolvedTeamWorkContext = reserved) {
     createTeamConfig: vi.fn(async (_: TeamCreateConfigRequest, _options: { claimOwnerOnCreate: true }) => undefined),
     assertOwnedAlias: vi.fn(async () => undefined),
     replaceMembers: vi.fn(async () => undefined),
+    updateDisplayMetadata: vi.fn(async () => undefined),
     assertStoppedForRosterSync: vi.fn(async () => undefined),
   };
   return { materializer: new TeamProjectContextDraftMaterializer(context, store), context, store };
@@ -97,6 +98,27 @@ describe('TeamProjectContextDraftMaterializer', () => {
       members: [{ name: 'alice', role: 'new role' }, { name: 'bob' }],
     });
     expect(f.store.createTeamConfig).not.toHaveBeenCalled();
+  });
+
+  it('projects the logical description and color onto a stopped ready project at launch', async () => {
+    const f = fixture({ ...reserved, state: 'ready' });
+    f.store.getSavedRequest.mockImplementation(async (name) => ({
+      teamName: name,
+      cwd: '/sandbox/b',
+      members: [{ name: 'alice' }],
+      ...(name === 'builders'
+        ? { description: 'New description', color: 'green' }
+        : { description: 'Old description', color: 'blue' }),
+    }));
+    await f.materializer.ensureProjectDraft({
+      logicalTeamName: 'builders', projectPath: '/sandbox/b',
+    });
+    expect(f.store.assertStoppedForRosterSync).toHaveBeenCalledWith('ptc-sandbox');
+    expect(f.store.updateDisplayMetadata).toHaveBeenCalledWith('ptc-sandbox', {
+      description: 'New description',
+      color: 'green',
+    });
+    expect(f.store.replaceMembers).not.toHaveBeenCalled();
   });
 
   it('refuses to mutate the project roster while its runtime is still live', async () => {

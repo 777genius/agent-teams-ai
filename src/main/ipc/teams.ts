@@ -211,6 +211,7 @@ import { teamMessageNotificationScanner } from './teams/teamMessageNotificationS
 import { createMessagesPageHandler } from './teams/teamMessagesPageHandler';
 import { TeamPermanentDeletionTransactionCoordinator } from './teams/TeamPermanentDeletionTransactionCoordinator';
 import { createTeamWithProjectContext } from './teams/teamProjectContextCreate';
+import { createProjectDefinitionEditRouting, readRosterForMutation } from './teams/teamProjectDefinitionEdit';
 import { buildTeamProgressReporter, withPreparedContextLaunch } from './teams/teamProjectContextLaunch';
 import { projectPublicProvisioningProgress, resolveProjectRunDiagnosticsTeam } from './teams/teamProjectContextProgressIdentity';
 import { discardQueuedUserMessages, listQueuedUserMessages } from './teams/teamQueuedUserMessages';
@@ -335,6 +336,7 @@ import type {
 import type { CliArgsValidationResult } from '@shared/utils/cliArgsParser';
 
 const logger = createLogger('IPC:teams');
+const withProjectDefinitionEdit = createProjectDefinitionEditRouting({ data: getTeamDataService, runtime: getTeamRuntimeApi, run: getTeamProvisioningRunApi });
 
 type VisibleDirectReplyProtocol = 'send_message' | 'agent_teams_message_send';
 function resolveVisibleDirectReplyProtocol(input: {
@@ -754,14 +756,14 @@ export function registerTeamHandlers(ipcMain: IpcMain): void {
   ipcMain.handle(TEAM_GET_TASK_EXACT_LOG_SUMMARIES, handleGetTaskExactLogSummaries);
   ipcMain.handle(TEAM_GET_TASK_EXACT_LOG_DETAIL, handleGetTaskExactLogDetail);
   ipcMain.handle(TEAM_GET_MEMBER_STATS, handleGetMemberStats);
-  ipcMain.handle(TEAM_UPDATE_CONFIG, handleUpdateConfig);
+  ipcMain.handle(TEAM_UPDATE_CONFIG, withProjectDefinitionEdit(handleUpdateConfig));
   ipcMain.handle(TEAM_START_TASK, handleStartTask);
   ipcMain.handle(TEAM_START_TASK_BY_USER, handleStartTaskByUser);
   ipcMain.handle(TEAM_GET_ALL_TASKS, handleGetAllTasks);
   ipcMain.handle(TEAM_ADD_TASK_COMMENT, handleAddTaskComment);
-  ipcMain.handle(TEAM_ADD_MEMBER, handleAddMember);
-  ipcMain.handle(TEAM_REPLACE_MEMBERS, handleReplaceMembers);
-  ipcMain.handle(TEAM_REMOVE_MEMBER, handleRemoveMember);
+  ipcMain.handle(TEAM_ADD_MEMBER, withProjectDefinitionEdit(handleAddMember));
+  ipcMain.handle(TEAM_REPLACE_MEMBERS, withProjectDefinitionEdit(handleReplaceMembers));
+  ipcMain.handle(TEAM_REMOVE_MEMBER, withProjectDefinitionEdit(handleRemoveMember));
   ipcMain.handle(TEAM_RESTORE_MEMBER, handleRestoreMember);
   ipcMain.handle(TEAM_UPDATE_MEMBER_ROLE, handleUpdateMemberRole);
   ipcMain.handle(TEAM_GET_PROJECT_BRANCH, handleGetProjectBranch);
@@ -4312,8 +4314,7 @@ async function handleAddMember(
       const memberName = vName.value!;
       const teamDataService = getTeamDataService();
       const previousMembersMeta = await new TeamMembersMetaStore().getMeta(tn).catch(() => null);
-      const previousTeamData = await teamDataService.getTeamData(tn);
-      const previousMembers = previousTeamData.members as RuntimeRosterMutationMember[];
+      const previousMembers = (await readRosterForMutation(teamDataService, tn)).members as RuntimeRosterMutationMember[];
       const memberLifecycle = getTeamMemberLifecycleApi();
       const isTeamAlive = getTeamRuntimeApi().isTeamAlive(tn);
       if (isTeamAlive && isOpenCodeLedRoster(previousMembers)) {
@@ -4631,8 +4632,7 @@ async function handleRemoveMember(
       const name = vMember.value!;
       const teamDataService = getTeamDataService();
       const previousMembersMeta = await new TeamMembersMetaStore().getMeta(tn).catch(() => null);
-      const previousTeamData = await teamDataService.getTeamData(tn);
-      const previousMembers = previousTeamData.members as RuntimeRosterMutationMember[];
+      const previousMembers = (await readRosterForMutation(teamDataService, tn)).members as RuntimeRosterMutationMember[];
       const normalizedMemberName = name.trim().toLowerCase();
       const isAlreadyRemoved = previousMembersMeta?.members.some(
         (member) =>

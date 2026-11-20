@@ -425,6 +425,7 @@
     }
   },
   "detail": {
+    "editDefinition": {"notFound": "The team settings could not be found", "loadFailed": "Could not load the team settings"},
     "actions": {
       "add": "Add",
       "cancel": "Cancel",
@@ -497,6 +498,7 @@
       "deleteTeam": "Delete team",
       "editTeam": "Edit team",
       "editUnavailableProvisioning": "Edit team is unavailable while provisioning is still in progress",
+      "editUnavailableRunningProject": "Stop this team in every project to edit it",
       "openBuiltInEditor": "Open project in built-in editor",
       "openTeamGraph": "Open team graph",
       "openTeamUsage": "Open usage dashboard",
@@ -2299,6 +2301,7 @@
     }
   },
   "schedule": {
+    "perProjectUnavailable": "Schedules are not available for teams with separate history for each project yet.",
     "actionFailed": "Schedule action failed",
     "deleteConfirmation": "Delete schedule \"{{label}}\"? Its run history will also be removed.",
     "runRequested": "Run requested. Check history to see whether work was handed off.",

@@ -36,6 +36,32 @@ export class TeamProjectContextLaunchGate {
     private readonly runtime: RuntimeStateReader
   ) {}
 
+  /**
+   * Editing the team definition is allowed only when no project context is
+   * running, launching or stopping: a running roster must never silently
+   * diverge from the definition it was started from.
+   */
+  async assertAllContextsStopped(logicalTeamName: string): Promise<void> {
+    const all = await this.contexts.list(logicalTeamName);
+    if (all.some((context) => context.state !== 'ready')) {
+      throw new TeamProjectContextLaunchConflictError(
+        'A project of this team is still being prepared; finish or stop it before editing the team'
+      );
+    }
+    for (const name of [logicalTeamName, ...all.map((context) => context.executionTeamName)]) {
+      if (this.runtime.hasProvisioningRun(name)) {
+        throw new TeamProjectContextLaunchConflictError(
+          'This team is still launching or stopping in a project; wait for it before editing the team'
+        );
+      }
+      if (!isConfirmedStoppedTeamRuntime(await this.runtime.getRuntimeState(name))) {
+        throw new TeamProjectContextLaunchConflictError(
+          'This team is running in a project; stop it in every project before editing the team'
+        );
+      }
+    }
+  }
+
   async assertOtherContextsStopped(
     logicalTeamName: string,
     targetExecutionTeamName: string
