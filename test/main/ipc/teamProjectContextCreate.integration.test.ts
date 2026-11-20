@@ -145,6 +145,13 @@ describe('project-scoped desktop team creation boundary (sandbox disk + fake nat
       teamName: 'builders', cwd: alias, members: [], projectContextMode: 'per_project',
     };
     await createTeamWithProjectContext(request, f.onProgress, f.ports);
+    // Creation acknowledges native spawn before the async ready/index write settles.
+    // Wait for confirmed readiness before teardown can remove its directories.
+    await vi.waitFor(() => {
+      expect(f.onProgress).toHaveBeenCalledWith(expect.objectContaining({
+        teamName: 'builders', state: 'ready',
+      }));
+    });
     expect(f.started[0]?.cwd).toBe(await fs.realpath(f.projectPath));
     const meta = JSON.parse(await fs.readFile(
       path.join(getTeamsBasePath(), f.started[0]!.teamName, 'team.meta.json'),
