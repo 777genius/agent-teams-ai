@@ -2862,7 +2862,7 @@ export const TeamDetailView = memo(function TeamDetailView({
       getDefinitionEditAccess({
         retainedHistory,
         logicalTeamName,
-        isAlive: data.isAlive,
+        isAlive: data.isAlive === true,
         isProvisioning: isTeamProvisioning,
       });
 
