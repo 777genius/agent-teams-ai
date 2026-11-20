@@ -212,24 +212,61 @@ describe('SchedulerService', () => {
     return service;
   }
 
-  it('blocks project aliases at create and manual launch admission', async () => {
+  it('blocks project aliases at create and manual launch admission and says why', async () => {
     const service = new SchedulerService(
       repo, executor as never, warmUpFn, undefined,
-      async (name) => !name.startsWith('ptc-')
+      async (name) => name.startsWith('ptc-')
+        ? { allowed: false, reason: 'Schedule the team itself, not its project copy' }
+        : { allowed: true }
     );
     await expect(service.createSchedule({
       teamName: 'ptc-project-a',
       cronExpression: '0 9 * * *',
       timezone: 'UTC',
       launchConfig: { cwd: '/tmp/project-a', prompt: 'must never dispatch' },
-    })).rejects.toThrow('Project-context scheduling is unavailable');
+    })).rejects.toThrow('Schedule the team itself, not its project copy');
     expect(repo.saveSchedule).not.toHaveBeenCalled();
 
     const previous = makeSchedule({ teamName: 'ptc-project-a' });
     await repo.saveSchedule(previous);
-    await expect(service.triggerNow(previous.id)).rejects.toThrow('Project-context scheduling');
-    await expect(service.resumeSchedule(previous.id)).rejects.toThrow('Project-context scheduling');
+    await expect(service.triggerNow(previous.id)).rejects.toThrow('project copy');
+    await expect(service.resumeSchedule(previous.id)).rejects.toThrow('project copy');
     expect(executor.execute).not.toHaveBeenCalled();
+  });
+
+  it('keeps a generic reason for an admission that only says no', async () => {
+    const service = new SchedulerService(
+      repo, executor as never, warmUpFn, undefined, async () => false
+    );
+    await expect(service.createSchedule({
+      teamName: 'any-team',
+      cronExpression: '0 9 * * *',
+      timezone: 'UTC',
+      launchConfig: { cwd: '/tmp/project-a', prompt: 'must never dispatch' },
+    })).rejects.toThrow('Scheduling is unavailable for this team');
+  });
+
+  it('records a team refused at fire time as a skipped run with the reason, never executing it', async () => {
+    let calls = 0;
+    // Allowed at the manual trigger, refused when the run itself is admitted (state changed in between).
+    const service = new SchedulerService(
+      repo, executor as never, warmUpFn, undefined,
+      async () => (++calls === 1
+        ? { allowed: true }
+        : { allowed: false, reason: 'Team metadata is unreadable' })
+    );
+    service.setChangeEmitter((event) => events.push(event));
+    const schedule = makeSchedule({ teamName: 'builders' });
+    await repo.saveSchedule(schedule);
+    await service.triggerNow(schedule.id);
+    await vi.advanceTimersByTimeAsync(500);
+
+    const runs = await repo.listRuns(schedule.id);
+    expect(runs[0]?.status).toBe('skipped');
+    expect(runs[0]?.summary).toContain('Team metadata is unreadable');
+    expect(executor.execute).not.toHaveBeenCalled();
+    expect(events.some((e) => e.type === 'run-failed')).toBe(false);
+    await service.stop();
   });
 
   // --- Lifecycle ---

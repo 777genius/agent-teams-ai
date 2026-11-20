@@ -63,3 +63,12 @@ export function validateScheduleForm(input: ScheduleFormValidation): string[] {
   }
   return errors;
 }
+
+/**
+ * A team with separate history per project: its schedule names its own project.
+ * Absent for ordinary teams, whose saved team path is the schedule's directory.
+ */
+export const projectScopeOf = (props: {
+  mode: string;
+  projectScope?: { projectPath?: string };
+}): { projectPath?: string } | undefined => (props.mode === 'schedule' ? props.projectScope : undefined);

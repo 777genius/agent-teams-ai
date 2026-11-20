@@ -52,6 +52,8 @@ interface LaunchDialogScheduleMode {
   onClose: () => void;
   /** When provided → edit mode; null/undefined → create mode */
   schedule?: Schedule | null;
+  /** A team with separate history per project: the schedule carries its own project. */
+  projectScope?: { projectPath?: string };
 }
 
 export type LaunchTeamDialogProps =

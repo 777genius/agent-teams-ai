@@ -92,7 +92,7 @@ import {
 } from '../schedule/resolveScheduleLaunchConfig';
 import { SmartScheduleFields } from '../schedule/SmartScheduleFields';
 import { useSavedPromptReview } from '../schedule/useSavedPromptReview';
-import { validateScheduleForm } from '../schedule/validateScheduleForm';
+import { projectScopeOf, validateScheduleForm } from '../schedule/validateScheduleForm';
 
 import { AdvancedCliSection } from './AdvancedCliSection';
 import { AnthropicFastModeSelector } from './AnthropicFastModeSelector';
@@ -291,7 +291,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
   const launchHydrationKey = projectPermissionTeamName === undefined
     ? effectiveTeamName
     : `${effectiveTeamName}:${projectPermissionTeamName ?? 'unresolved'}`;
-  const defaultProjectPath = isLaunchMode ? props.defaultProjectPath : undefined;
+  const defaultProjectPath = projectScopeOf(props)?.projectPath ?? (isLaunchMode ? props.defaultProjectPath : undefined);
   const [launchHydratedTeamName, setLaunchHydratedTeamName] = useState<string | null>(null);
   const needsTeamSelector = isSchedule && !propsTeamName;
   // Shared form state
@@ -2049,7 +2049,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
   // Validation
 
   const validationErrors = validateScheduleForm({
-    isSchedule, usesSavedTeamRuntime,
+    isSchedule, usesSavedTeamRuntime: usesSavedTeamRuntime && !projectScopeOf(props),
     mode: scheduleExecutionMode,
     targetMember: scheduleTargetMember,
     team: teamByName[effectiveTeamName],
@@ -2303,7 +2303,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
           // Whole-team schedules must use the saved team launch profile, never
           // a legacy one-shot cwd or unsaved renderer project selection.
           const savedTeam = usesSavedTeamRuntime ? await api.teams.getSavedRequest(effectiveTeamName) : null;
-          if (usesSavedTeamRuntime && (!savedTeam?.cwd?.trim() || !savedTeam.providerId)) {
+          if (usesSavedTeamRuntime && ((!projectScopeOf(props) && !savedTeam?.cwd?.trim()) || !savedTeam?.providerId)) {
             throw new Error(t('launch.schedule.teamPathMissing'));
           }
           const oldPrompt = savedTeam?.prompt?.trim() ?? '';
@@ -2348,7 +2348,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
             savedTeam,
             edited: scheduleRuntimeEditedRef.current,
             proposed: {
-              cwd: usesSavedTeamRuntime ? savedTeam?.cwd ?? '' : effectiveCwd,
+              cwd: usesSavedTeamRuntime && !projectScopeOf(props) ? savedTeam?.cwd ?? '' : effectiveCwd,
               prompt: promptDraft.value.trim(),
               providerId: selectedProviderId,
               providerBackendId: selectedProviderBackendId,
@@ -2621,7 +2621,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
               onConfirmedChange={(confirmed) => setSavedPromptReview((current) => current && ({ ...current, confirmed }))} />
           ) : null}
 
-          {!usesSavedTeamRuntime ? <ProjectPathSelector
+          {!usesSavedTeamRuntime || projectScopeOf(props) ? <ProjectPathSelector
             cwdMode={cwdMode}
             onCwdModeChange={(mode) => {
               if (projectPermissionTeamName !== undefined && mode !== cwdMode) setSkipPermissions(false);

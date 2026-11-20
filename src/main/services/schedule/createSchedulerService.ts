@@ -1,8 +1,7 @@
-import { TeamProjectContextRegistry } from '@features/team-project-context/main';
+import { createProjectScheduleTargets } from '@main/ipc/teams/projectScheduleTargets';
 
 import { isControllerTaskNotFoundError } from '../team/taskCreationIdempotency';
 import { TeamConfigReader } from '../team/TeamConfigReader';
-import { TeamMetaStore } from '../team/TeamMetaStore';
 
 import { JsonScheduleRepository } from './JsonScheduleRepository';
 import { ScheduledTaskExecutor } from './ScheduledTaskExecutor';
@@ -18,13 +17,21 @@ export function createSchedulerService(
   apis: Pick<TeamIpcHandlerApis, 'runtime' | 'provisioningRun' | 'diagnostics' | 'memberLifecycle'>,
   data: Pick<
     TeamDataService,
-    'getLeadMemberName' | 'getSavedRequest' | 'createTask' | 'getTask' | 'startTaskByUser' | 'hasActiveOwnedTask'
+    | 'getLeadMemberName' | 'getSavedRequest' | 'createTask' | 'getTask' | 'startTaskByUser' | 'hasActiveOwnedTask'
+    | 'createTeamConfig' | 'replaceMembers' | 'runConfigurationOperation' | 'updateConfig'
   >,
   provisioning: Pick<TeamProvisioningService, 'launchTeam' | 'prepareForProvisioning' | 'hasTeamOperationInProgress'>
 ): SchedulerService {
   const executor = new ScheduledTaskExecutor();
   const repository = new JsonScheduleRepository();
   const configReader = new TeamConfigReader();
+  // Per-project teams: schedules stay keyed by the team, and fire against the copy of their project.
+  const targets = createProjectScheduleTargets({
+    data,
+    runtime: apis.runtime,
+    run: apis.provisioningRun,
+    launchTeam: (request, onProgress) => provisioning.launchTeam(request, onProgress),
+  });
   const dispatcher = new SmartScheduleDispatcher({
     isTeamAlive: (teamName) => apis.runtime.isTeamAlive(teamName),
     isTeamLaunching: (teamName) => apis.provisioningRun.hasProvisioningRun(teamName),
@@ -60,6 +67,8 @@ export function createSchedulerService(
     createTask: (teamName, request) => data.createTask(teamName, request),
     launchTeam: (request) => provisioning.launchTeam(request, () => undefined),
     runOneShot: (request) => executor.execute(request),
+    resolveTarget: (schedule) => targets.resolve(schedule),
+    launchProjectTeam: (schedule, request) => targets.launch(schedule, request),
   });
 
   return new SchedulerService(
@@ -70,12 +79,6 @@ export function createSchedulerService(
       return { ready: result.ready, message: result.message };
     },
     dispatcher,
-    async (teamName) => {
-      const store = new TeamMetaStore();
-      const meta = await store.getMeta(teamName);
-      if (!meta && (await store.metadataFileExists(teamName))) return false;
-      if (meta?.projectContextMode === 'per_project') return false;
-      return !(await TeamProjectContextRegistry.fromCurrentApp().isOwnedExecutionAlias(teamName));
-    }
+    (teamName) => targets.admit(teamName)
   );
 }
