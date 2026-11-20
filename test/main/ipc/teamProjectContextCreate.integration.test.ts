@@ -73,6 +73,10 @@ async function fixture() {
     async runConfigurationOperation<T>(_teamName: string, fn: () => Promise<T>): Promise<T> {
       return fn();
     },
+    async updateConfig(): Promise<null> {
+      // Display-metadata projection is covered by the projection and materializer tests.
+      return null;
+    },
   };
   const ports: Parameters<typeof createTeamWithProjectContext>[2] = {
     data,

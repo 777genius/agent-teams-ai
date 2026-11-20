@@ -456,6 +456,10 @@
       "member_other": "成員",
       "title": "團隊尚未啟動"
     },
+    "editDefinition": {
+      "loadFailed": "無法載入團隊設定",
+      "notFound": "找不到團隊設定"
+    },
     "stopFailed": {
       "title": "無法停止團隊",
       "message": "團隊仍在執行。請檢查其狀態，然後再次按下「停止」。"
@@ -497,6 +501,7 @@
       "deleteTeam": "刪除團隊",
       "editTeam": "編輯團隊",
       "editUnavailableProvisioning": "當設定仍在進行時，編輯團隊不可用",
+      "editUnavailableRunningProject": "請先在所有專案中停止此團隊，才能編輯",
       "openBuiltInEditor": "在內建編輯器中開啟專案",
       "openTeamGraph": "開啟團隊圖",
       "openTeamUsage": "開啟團隊使用量",
@@ -2298,6 +2303,7 @@
   "schedule": {
     "actionFailed": "排程動作失敗",
     "deleteConfirmation": "要刪除排程「{{label}}」嗎？它的執行紀錄也會一併移除。",
+    "perProjectUnavailable": "依專案分開歷史的團隊目前不支援排程。",
     "runRequested": "已要求執行。請查看歷史紀錄，確認工作是否已交接。",
     "count": "{{count}} 個排程",
     "count_one": "{{count}} 個排程",

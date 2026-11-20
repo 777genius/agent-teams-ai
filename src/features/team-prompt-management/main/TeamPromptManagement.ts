@@ -41,6 +41,8 @@ export interface TeamPromptManagementPorts {
   withExpectedContext<T>(expected: AppConnectionContext, operation: () => Promise<T>): Promise<T>;
   getContext(): Promise<AppConnectionContext>;
   getRuntimeState(teamName: string): Promise<TeamRuntimeState>;
+  /** Per-project teams and their project copies are edited by the desktop app only. */
+  isProjectScoped(teamName: string): Promise<boolean>;
   getSavedRequest(teamName: string): Promise<TeamCreateRequest | null>;
   getTeamData(teamName: string): Promise<TeamViewSnapshot>;
   createTeamConfig(request: TeamCreateConfigRequest): Promise<void>;
@@ -264,6 +266,25 @@ export class TeamPromptManagement {
     });
   }
 
+  private async assertNotProjectScoped(teamName: string): Promise<void> {
+    let projectScoped: boolean;
+    try {
+      projectScoped = await this.ports.isProjectScoped(teamName);
+    } catch {
+      // Fail closed: if the kind of an existing team cannot be determined it is
+      // not proof of an ordinary team, so nothing is written.
+      throw new TeamManagementError(
+        'TEAM_METADATA_UNREADABLE',
+        'Team metadata is unreadable; fix the team in the app before editing it'
+      );
+    }
+    if (projectScoped)
+      throw new TeamManagementError(
+        'PROJECT_TEAM_DESKTOP_ONLY',
+        'Teams with separate history per project are edited in the app'
+      );
+  }
+
   private async admit(
     target: TeamManagementTarget,
     allowTrashed: boolean
@@ -282,7 +303,11 @@ export class TeamPromptManagement {
         'TEAM_ACTIVE',
         'Stop the team in the app before changing configuration'
       );
+    // The configuration read refuses a team that does not exist or whose saved
+    // metadata is malformed, each with its specific code; only then is the team
+    // classified, and a classification that fails also rejects.
     const snapshot = await this.read(target.teamName);
+    await this.assertNotProjectScoped(target.teamName);
     if (snapshot.configurationRevision !== target.expectedRevision)
       throw new TeamManagementError('TEAM_REVISION_MISMATCH', 'Get the team again before editing');
     if (!allowTrashed && snapshot.deletedAt)

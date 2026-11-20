@@ -67,17 +67,23 @@ vi.mock('./TeamDetailView', () => ({
       React.createElement('div', { 'data-section-id': 'kanban' })
     ),
 }));
+vi.mock('./definitionEdit/TeamDefinitionEditDialog', () => ({
+  TeamDefinitionEditDialog: ({ logicalTeamName }: { logicalTeamName: string }) =>
+    React.createElement('div', { 'data-testid': 'definition-edit', 'data-team': logicalTeamName }),
+}));
 vi.mock('./dialogs/LaunchTeamDialog', () => ({
   LaunchTeamDialog: ({
-    onLaunch, teamName, defaultProjectPath, projectPermissionTeamName,
+    onLaunch, teamName, defaultProjectPath, projectPermissionTeamName, rosterReadOnly,
   }: {
     onLaunch: (request: { teamName: string; cwd: string; providerId: 'anthropic' }) => Promise<void>;
     teamName: string;
     defaultProjectPath: string;
     projectPermissionTeamName?: string | null;
+    rosterReadOnly?: boolean;
   }) => React.createElement('button', {
     'data-testid': 'launch-with-provider',
     'data-permission-policy': projectPermissionTeamName === null ? 'manual' : 'inherited',
+    'data-roster-read-only': String(rosterReadOnly === true),
     onClick: () => { void onLaunch({
       teamName, cwd: defaultProjectPath, providerId: 'anthropic',
     }); },
@@ -333,6 +339,29 @@ describe('ProjectScopedTeamDetailView project switching', () => {
     expect(host.querySelector('button')).toBeNull();
   });
 
+  it('edits the logical team from the screen of a project without history', async () => {
+    getView.mockResolvedValue({ mode: 'per_project', state: 'empty' });
+    await act(async () => root.render(
+      React.createElement(ProjectScopedTeamDetailView, { teamName: 'builders' })
+    ));
+    await settle();
+    expect(host.querySelector('[data-testid="definition-edit"]')).toBeNull();
+    const edit = Array.from(host.querySelectorAll('button'))
+      .find((b) => b.textContent === 'detail.tooltips.editTeam');
+    await act(async () => edit?.click());
+    expect(host.querySelector('[data-testid="definition-edit"]')?.getAttribute('data-team'))
+      .toBe('builders');
+  });
+
+  it('does not offer Edit team on a still-preparing project screen', async () => {
+    getView.mockResolvedValue({ mode: 'per_project', state: 'pending' });
+    await act(async () => root.render(
+      React.createElement(ProjectScopedTeamDetailView, { teamName: 'builders' })
+    ));
+    await settle();
+    expect(host.textContent).not.toContain('detail.tooltips.editTeam');
+  });
+
   it('asks to open a project when none is selected, without a Launch button', async () => {
     getView.mockResolvedValue({ mode: 'per_project', state: 'needs_project' });
     (state as { selectedProjectId: string | null }).selectedProjectId = null;
@@ -343,7 +372,10 @@ describe('ProjectScopedTeamDetailView project switching', () => {
     await settle();
     expect(host.textContent).toContain('projectContextView.selectProject');
     expect(host.textContent).not.toContain('projectContextView.emptyTitle');
-    expect(host.querySelector('button')).toBeNull();
+    // No Launch (there is no project), but the team itself stays editable.
+    expect(Array.from(host.querySelectorAll('button')).map((b) => b.textContent)).toEqual([
+      'detail.tooltips.editTeam',
+    ]);
   });
 
   it('blocks duplicate launch while Team List is provisioning the selected project', async () => {
@@ -375,11 +407,14 @@ describe('ProjectScopedTeamDetailView project switching', () => {
     ));
     await settle();
     expect(host.querySelector('[data-team]')).toBeNull();
-    // An empty project reads like any not-yet-launched team: one Launch action,
-    // no destructive action and no history-mode control.
+    // An empty project reads like any not-yet-launched team: a Launch action and
+    // Edit team, no destructive action and no history-mode control.
     expect(host.textContent).toContain('projectContextView.emptyTitle');
     expect(host.textContent).toContain('projectContextView.empty');
-    expect(host.querySelectorAll('button')).toHaveLength(1);
+    expect(Array.from(host.querySelectorAll('button')).map((b) => b.textContent)).toEqual([
+      'detail.actions.launch',
+      'detail.tooltips.editTeam',
+    ]);
     const button = host.querySelector('button');
     expect(button?.textContent).toBe('detail.actions.launch');
     await act(async () => button?.click());
@@ -388,6 +423,9 @@ describe('ProjectScopedTeamDetailView project switching', () => {
     ).not.toBeNull());
     expect(host.querySelector('[data-testid="launch-with-provider"]')?.getAttribute('data-permission-policy'))
       .toBe('manual');
+    // The roster of a per-project team belongs to its definition: this dialog never saves it.
+    expect(host.querySelector('[data-testid="launch-with-provider"]')?.getAttribute('data-roster-read-only'))
+      .toBe('true');
     expect(launchTeam).not.toHaveBeenCalled();
     getView.mockResolvedValue(native('ptc-b', '/TEST/b'));
     // A previous project may leave a stale logical run. Only the canonical

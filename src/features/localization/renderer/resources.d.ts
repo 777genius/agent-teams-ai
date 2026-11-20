@@ -4124,6 +4124,10 @@ export default interface Resources {
         "member_other": "members",
         "title": "Team not launched yet"
       },
+      "editDefinition": {
+        "loadFailed": "Could not load the team settings",
+        "notFound": "The team settings could not be found"
+      },
       "invalidTab": "Invalid team tab",
       "kanbanSafeData": "Failed to fully load kanban. Displaying safe data.",
       "loadFailed": "Failed to load team",
@@ -4165,6 +4169,7 @@ export default interface Resources {
         "deleteTeam": "Delete team",
         "editTeam": "Edit team",
         "editUnavailableProvisioning": "Edit team is unavailable while provisioning is still in progress",
+        "editUnavailableRunningProject": "Stop this team in every project to edit it",
         "openBuiltInEditor": "Open project in built-in editor",
         "openTeamGraph": "Open team graph",
         "openTeamUsage": "Open usage dashboard",
@@ -6561,6 +6566,7 @@ export default interface Resources {
         "title": "No schedules yet"
       },
       "nextRun": "Next: {{next}}",
+      "perProjectUnavailable": "Schedules are not available for teams with separate history for each project yet.",
       "runHistory": {
         "empty": "No runs yet",
         "loading": "Loading run history..."

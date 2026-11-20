@@ -19,7 +19,7 @@ export async function updateTeamConfiguration(
   stores: TeamConfigurationMutationStores
 ): Promise<TeamConfig | null> {
   const config = await stores.configReader.getConfig(teamName);
-  if (!config) throw new Error(`Team not found: ${teamName}`);
+  if (!config) return updateProjectTeamDefinitionMetadata(teamName, updates, stores);
   if (config.deletedAt) throw new Error('TEAM_TRASHED: Restore the team before editing');
   const meta = await stores.teamMetaStore.getMeta(teamName);
   const applyMetadata = (current: NonNullable<typeof meta>) => ({
@@ -39,6 +39,45 @@ export async function updateTeamConfiguration(
   stores.invalidate(teamName);
   return updated;
 }
+/**
+ * A per-project team has no config.json: its definition is team.meta.json plus
+ * members.meta.json, and that is where the display name, description and color
+ * live. Any other team without a config is not editable here.
+ */
+async function updateProjectTeamDefinitionMetadata(
+  teamName: string,
+  updates: { name?: string; description?: string; color?: string },
+  stores: TeamConfigurationMutationStores
+): Promise<TeamConfig> {
+  const meta = await stores.teamMetaStore.getMeta(teamName);
+  if (meta?.projectContextMode !== 'per_project') {
+    throw new Error(`Team not found: ${teamName}`);
+  }
+  if (meta.deletedAt) throw new Error('TEAM_TRASHED: Restore the team before editing');
+  const applyMetadata = (current: NonNullable<typeof meta>) => ({
+    ...current,
+    ...(updates.name?.trim() ? { displayName: updates.name.trim() } : {}),
+    ...(updates.description !== undefined
+      ? { description: updates.description.trim() || undefined }
+      : {}),
+    ...(updates.color !== undefined ? { color: updates.color.trim() || undefined } : {}),
+  });
+  // Validate the complete saved settings before the first write.
+  stores.teamMetaStore.serializeMeta(applyMetadata(meta));
+  await stores.teamMetaStore.updateMeta(teamName, (current) => {
+    if (!current) throw new Error('Saved team configuration disappeared');
+    return applyMetadata(current);
+  });
+  TeamConfigReader.invalidateListTeamsCache();
+  stores.invalidate(teamName);
+  const saved = applyMetadata(meta);
+  return {
+    name: saved.displayName?.trim() || teamName,
+    ...(saved.description ? { description: saved.description } : {}),
+    ...(saved.color ? { color: saved.color } : {}),
+  };
+}
+
 export async function setTeamDeleted(
   teamName: string,
   deleted: boolean,

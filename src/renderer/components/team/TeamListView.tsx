@@ -1027,6 +1027,7 @@ export const TeamListView = memo(function TeamListView({
           isTeamAlive: true,
           request,
           members,
+          rosterReadOnly: launchDialogProjectPermissionTeamName !== undefined,
           onMembersSaved,
           stopTeam: async (nextTeamName) => {
             try {
@@ -1047,8 +1048,7 @@ export const TeamListView = memo(function TeamListView({
               throw error;
             }
           },
-          replaceMembers: (nextTeamName, nextRequest) =>
-            api.teams.replaceMembers(nextTeamName, nextRequest),
+          replaceMembers: (team, next) => api.teams.replaceMembers(team, next),
           launchTeam,
         });
       } catch (err) {
@@ -1058,7 +1058,7 @@ export const TeamListView = memo(function TeamListView({
         setLaunchingTeamName(null);
       }
     },
-    [launchTeam]
+    [launchTeam, launchDialogProjectPermissionTeamName]
   );
 
   useEffect(() => {

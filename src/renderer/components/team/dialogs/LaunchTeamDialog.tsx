@@ -107,6 +107,7 @@ import { ExperimentalLocalModelOverrideCheckbox } from './ExperimentalLocalModel
 import { resolveExperimentalLocalModelOverride } from './experimentalLocalModelOverrideState';
 import { normalizeSavedBackendId, resolveLaunchDialogPrefill } from './launchDialogPrefill';
 import { migrateLegacyLaunchDialogStorage } from './launchDialogStorageMigration';
+import { saveLaunchRoster } from './launchRosterPersistence';
 import {
   buildWorktreePathByMemberName,
   deriveTeammateWorktreeDefault,
@@ -2292,10 +2293,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
           } else {
             await props.validateMemberSettings?.();
             await gatewayBindings.run(() =>
-              api.teams.replaceMembers(effectiveTeamName, {
-                members: nextMembers,
-                memberSettingsRelaunch: intent,
-              })
+              saveLaunchRoster(props.rosterReadOnly, effectiveTeamName, nextMembers, intent)
             );
             await props.onLaunch(launchRequest);
           }
