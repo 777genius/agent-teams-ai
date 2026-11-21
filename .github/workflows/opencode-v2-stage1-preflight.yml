@@ -20,6 +20,8 @@ on:
       - packages/legacy-agent-host/tests/**
       - packages/legacy-agent-host/native/**
       - packages/legacy-agent-host/scripts/**
+      # Host's ControllerAdapter consumes this workspace dependency directly.
+      - agent-teams-controller/**
       - scripts/legacy-agent-host/**
       - scripts/stage-runtime.mjs
       - scripts/lib/opencode-v2-base-inventory.mts

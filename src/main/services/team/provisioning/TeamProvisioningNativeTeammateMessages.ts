@@ -7,6 +7,7 @@ import {
   parseAllTeammateMessages,
   type ParsedTeammateContent,
 } from '@shared/utils/teammateMessageParser';
+import { classifyUserTurnProvenance } from '@shared/utils/userTurnProvenance';
 
 import {
   type CrossTeamDeliveredLeadBlock,
@@ -68,6 +69,14 @@ export function handleNativeTeammateUserMessage<TRun extends TeamProvisioningNat
 ): void {
   const rawText = extractStreamUserText(msg);
   if (!rawText) return;
+
+  const topLevel = { ...msg, message: undefined };
+  const topKind = classifyUserTurnProvenance(topLevel);
+  const nestedKind = classifyUserTurnProvenance(msg);
+  if (topKind === 'tool-result' || nestedKind === 'tool-result') return;
+  // Classify the same content source the stream reader selected, retaining metadata.
+  const selectedKind = extractStreamUserText(topLevel) === null ? nestedKind : topKind;
+  if (selectedKind !== 'teammate-protocol') return;
 
   const blocks = parseAllTeammateMessages(rawText);
   if (blocks.length === 0) return;

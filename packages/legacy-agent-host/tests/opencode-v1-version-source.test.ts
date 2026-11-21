@@ -83,6 +83,38 @@ test('native V1 source admission rejects changed, staged and untracked relevant 
   } finally {await rm(repo,{recursive:true,force:true});}
 });
 
+test('native source admission includes the controller lock dependency and build inputs', async () => {
+  const { repo, git } = await fixture();
+  const controllerInputs = [
+    'agent-teams-controller/src/internal/fileLock.js',
+    'agent-teams-controller/package.json',
+    'agent-teams-controller/scripts/build.mjs',
+  ];
+  try {
+    for (const relative of controllerInputs) {
+      await mkdir(dirname(join(repo, relative)), { recursive: true });
+      await writeFile(join(repo, relative), 'TEST original controller input\n');
+    }
+    git('add', 'agent-teams-controller');
+    git('-c', 'user.name=TEST', '-c', 'user.email=test@example.invalid',
+      '-c', 'commit.gpgsign=false', 'commit', '-qm', 'TEST controller dependency');
+    const head = git('rev-parse', 'HEAD');
+    assert.doesNotThrow(() => assertNativeV1Source(repo, head));
+    for (const relative of controllerInputs) {
+      await writeFile(join(repo, relative), 'TEST changed controller input\n');
+      assert.throws(() => assertNativeV1Source(repo, head), /must be clean/, relative);
+      git('add', relative);
+      assert.throws(() => assertNativeV1Source(repo, head), /must be clean/, relative);
+      git('restore', '--staged', '--worktree', relative);
+    }
+    const extra = join(repo, 'agent-teams-controller/src/internal/untracked.ts');
+    await writeFile(extra, 'export const TEST = true;\n');
+    assert.throws(() => assertNativeV1Source(repo, head), /untracked native source/);
+    await rm(extra);
+    assert.doesNotThrow(() => assertNativeV1Source(repo, head));
+  } finally { await rm(repo, { recursive: true, force: true }); }
+});
+
 test('native source admission verifies local archives with colon-containing parents and installed bytes before and after execution', async () => {
   // Windows already has a drive colon; POSIX supplies the same GNU tar hazard.
   const { repo, head } = await fixture(process.platform === 'win32' ? 'TEST-provider' : 'TEST:provider');

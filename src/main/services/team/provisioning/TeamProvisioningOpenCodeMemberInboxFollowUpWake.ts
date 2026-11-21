@@ -78,8 +78,10 @@ export async function armOpenCodeInboxFollowUpWake(input: {
   /** The row a scoped (woken) pass was run for; absent for a full walk. */
   wokenMessageId?: string;
   lastDelivery?: OpenCodeMemberInboxDelivery;
+  isCurrent?: () => boolean;
   ports: OpenCodeMemberInboxFollowUpWakePorts;
 }): Promise<void> {
+  if (input.isCurrent?.() === false) return;
   if (input.wokenMessageId && isOpenCodeInboxFollowUpWakeStalled(input.lastDelivery)) return;
   const candidates = selectOpenCodeMemberInboxRelayUnreadMessages({
     inboxMessages: input.inboxMessages,
@@ -91,10 +93,13 @@ export async function armOpenCodeInboxFollowUpWake(input: {
     memberName: input.memberName,
     ports: input.ports,
   });
+  if (input.isCurrent?.() === false) return;
   for (const candidate of candidates) {
     // A row a delivery record already owns belongs to the retry machinery; only
     // a row nothing owns yet needs a fresh wake.
-    if (await hasDeliveryRecord(candidate.messageId)) {
+    const hasRecord = await hasDeliveryRecord(candidate.messageId);
+    if (input.isCurrent?.() === false) return;
+    if (hasRecord) {
       continue;
     }
     // Unscoped and generation-free on purpose: the wake belongs to the row, not

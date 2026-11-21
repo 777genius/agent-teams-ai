@@ -2,7 +2,296 @@
 
 Обновлено: **21 ноября 2026**. Единственный текущий рабочий план.
 
-## Текущий план: изменения поверх `fab40811`, нужна original qualification
+## Продолжение `a0f451bf`: original CI и узкое исправление стоимости lock
+
+Проверенный batch опубликован как
+[`a0f451bff29e8100695bc90c2ee6e23108fb7133`](https://github.com/777genius/agent-teams-ai/commit/a0f451bff29e8100695bc90c2ee6e23108fb7133).
+Обратный Git read подтвердил parent fab40811, tree 2211b10c и все 30 файлов.
+Все шесть original attempt-1 runs завершены на exact a0 head; отмен, rerun или
+dispatch не было. Последний terminal read:21 ноября02:27UTC (04:27по Киеву).
+
+| Original run | Итог | Подтверждённая граница |
+| --- | --- | --- |
+| [Host44842174363](https://github.com/777genius/agent-teams-ai/actions/runs/44842174363) | 23/29 primary PASS,6FAIL; gateFAIL | Все4 frontend shards PASS; Team fixture, retained Stop и4 V2 UI failures сохранены |
+| [Process44842174239](https://github.com/777genius/agent-teams-ai/actions/runs/44842174239) | 5/5PASS | Original finite process/custody contracts |
+| [Teams44842174146](https://github.com/777genius/agent-teams-ai/actions/runs/44842174146) | 3/3PASS | Original Create-page controls |
+| [NativeV244842174254](https://github.com/777genius/agent-teams-ai/actions/runs/44842174254) | 8/9PASS,1FAIL | Darwin x64 secondinput120s deadline |
+| [Packaged44842174204](https://github.com/777genius/agent-teams-ai/actions/runs/44842174204) | 4/5platformsPASS,1FAIL; gateFAIL | Darwin x64 native scenario failure; otherplatformsPASS |
+| [CI44842174303](https://github.com/777genius/agent-teams-ai/actions/runs/44842174303) | FastfeedbackPASS; coexistFAIL,gateFAIL | runtime.watchdog1 at original owner-admission; Draft fullroot jobs skipped |
+
+Новый source пока не квалифицирован. Process и Teams receipts сохраняют собственный
+объём проверки; успешные old-head jobs не заменяют последующий exact-head E2E.
+Windows ARM64 Process прошёл прежний Codex cutoff: readiness 15.2018 s внутри
+остатка исходной 90 s attempt. Все три A/B PASS, 42 original Jobs released/absent;
+129 repository pins совпали. Native Windows x64 manual/auto PASS, source/dist и
+provider hashes проверены; real Claude/Codex executions отсутствуют.
+
+Новый original Darwin x64 Native V2 job 136653011356 отказал на втором input.
+Его captured 120 s window истёк; model 11/11 requests без ошибок и media completed,
+cleanup true. Original profile относит 150.62 s к Team authority, включая 54.17 s
+controller-lock и 45.48 s tree. Это sampled-stack attribution, не доказательство
+конкретной syscalls/CPU причины. Host passive diagnostics и внешний TEST input
+используют разные начала отсчёта; их timestamps напрямую не сопоставляются.
+Исходный SDK с конечным транспортом в памяти воспроизвёл observed after-log
+deadline signature при lifecycle cancellation. Отдельный дефект read-cut этим
+артефактом не доказан; его сроки и admission не меняются.
+
+План следующей узкой правки: заменить exception-based expected ENOENT в
+controller `statOrMissing` на официальный `lstatSync(..., { throwIfNoEntry: false })`.
+На pinned Node 24.21 ENOENT возвращает undefined, ENOTDIR продолжает бросать.
+Финальное finite измерение точных исходников: credential median 77.158 → 74.873 ms
+(−2.96%), saved median 12.411 → 12.032 ms (−3.05%). Все 35 категорий наблюдений
+совпадают, включая 4696 lstat и 54 credential lock acquisitions. Предварительный
+эксперимент дал −7.39%; финальный source receipt сохраняет оба результата и
+не переносит предварительную оценку на финальные bytes. Это Linux measurement,
+не Darwin PASS. Изменена одна production line, добавлены 72 focused test lines;
+сложность 3/10, ожидаемая надёжность 8/10, уверенность в устранении original failure
+только этой правкой 3/10. Baseline/current controller: 17/17 каждый; original
+publication races: 70/70; Host store fences: 4/4; independent R2: 21/21 PASS.
+Scoped TS7, JS syntax и lint нового теста PASS. Root fast lint controller имеет
+те же прежние 14 errors / 3 warnings из-за отсутствующих CommonJS globals;
+baseline/candidate diagnostics идентичны, suppressions не добавлены.
+На финальном ревью усилено сравнение ошибки до точного original object identity;
+тот же новый тест добавлен в существующий Windows controller compatibility step.
+Финальный controller selection: 18/18 PASS на Linux. Native invalid-parent
+проверяет отказ без action/candidate; POSIX дополнительно требует ENOTDIR.
+Injected ENOTDIR на всех платформах требует exact original object, как остальные
+non-ENOENT ошибки. Windows выполнение этого нового теста ещё не квалифицировано.
+Перед публикацией завершаются frozen root R1 / independent R2 и source coverage.
+Busy-spin, retries, deadlines,
+currentness/authority observations и протокол публикации не меняются.
+Root владеет общими файлами/публикацией; текущие original runs должны завершиться.
+
+Root source audit нашёл узкую недостающую зависимость в native qualification:
+`ControllerAdapter` загружает controller `fileLock.js`, но `assertNativeV1Source`
+не включал controller в before/after clean-input check. Actual source mutation
+fixture дал RED: изменение tracked `fileLock.js` не отказывало. В прежний input
+список добавлены controller src/package/build и соответствующий Native V2 path
+trigger. Проверка покрывает tracked/staged/untracked изменения без vendor execution;
+Desktop supplementary и process source lists уже охватывали controller.
+Source mutation fixture: RED → 4/4 PASS, scoped canonical TS7 7.0.2 и lint PASS;
+independent R2 не нашёл замечаний. Полный local Host test typecheck завершился
+exit 137 и не считается PASS; полный штатный CI остаётся обязательным.
+Source-size guard PASS: 5173 production files, прежние 141 legacy exceptions.
+Team Provisioning architecture guard PASS, его policy counts не изменились.
+
+Original a0 Darwin Resume повторно остановился внутри attestation (last phase
+39.733 s, model requests 0). Quit-active отделил native catalog attestation
+13.767 s от следующего observer interval 262 ms; readiness завершён, но runtime
+open начинался с 30.843 s остатка production consumer cutoff. Первый сохранённый
+driver-open refusal записан через 577 ms после cutoff; конкретная predicate не
+записана, поэтому временное совпадение не выдаётся за доказанную причину.
+Оба original inventories: 1935/1935 before/after совпали с a0 Git.
+
+Следующий диагностический срез: первые три фактических catalog HTTP admissions
+отмечаются до исходного current guard, вокруг исходного custody await, после
+исходного admission и при исходном release. Только closed phase names в прежнем
+private diagnostic emitter/decoder; максимум 15 новых строк, общий bound 33.
+Нет дополнительных current/custody calls, retries, смены lease scope или срока;
+pending/error/release наблюдаются на прежних границах. План: ≤140 production
+lines в существующих файлах и ≤120 focused test lines; сложность 3/10,
+ожидаемая надёжность 9/10, это диагностика, исправление E2E не заявляется.
+Перед публикацией: actual ModelProbe fixture с порядком вызовов/исходной ошибкой,
+закрытая schema/bound проверка, TS7/lint, root R1 и independent R2.
+Реализация: 26 production added lines / 94 test added lines; 43/43 diagnostic +
+transport и 4/4 actual ModelProbe cases (12 fault/sink combinations) PASS,
+scoped TS7/lint PASS. Root R1 и independent R2 завершены без open findings.
+Проверен путь stderr → closed decoder → persistent app log → upload glob;
+дополнительного cap 18 после decoder нет, все пять исходников уже входят в
+before/after manifests. Runtime sink/disk failure этим source audit не исключён.
+
+Original retained coexistence a0: первый отказ coordinator-admission /
+owner-active / not-dispatched, единственный ненулевой owner fact —
+`runtime.watchdog = 1`. Это сумма timers + queued + real inFlight, а не общий
+continuity interval. После cold restart inactive work-sync reconciliation может
+прочитать busy status и поставить wake для unread foreground даже когда
+сохранённая lane подтверждённо stopped/degraded и recovery уже отказал.
+Original artifact не содержит inbox/ledger; конкретный producer пока подтверждается
+конечным actual Main regression, не объявляется единственной причиной CI.
+Узкий план: подавить только такое планирование для stopped/degraded, сохранив
+busy:true, unread/history, active/missing lane и cold recovery. Общий
+hasActiveLane gate не подходит: missing-lane wake защищён прежним тестом.
+Оценка: ≤12 production added lines и ≤120 focused test added lines, сложность 3/10,
+надёжность 8/10, уверенность в устранении CI owner-active 6/10. До правки нужен
+actual Main + real scheduler RED, затем targeted GREEN, TS7/lint и R1/R2.
+Owner-facts gate и in-flight counters не ослабляются.
+
+Независимо проверяется Stop-граница scheduler: отмена во время ожидающего inbox
+не должна позволять старому job заново arm unscoped wake. Начальный конечный
+regression/review предшествовал реализации; связь с original coexistence не заявляется.
+Exact a0 scheduler regression теперь подтвердил 2 RED: поздний inbox re-arm и
+поздний relay после recovery продолжаются после cancelTeam; 2 no-cancel controls
+PASS, учёт real inFlight до finally корректен. План исправления: отзываемый
+локальный cancellation token принятого wake, проверки на прежних async границах
+и перенос cancellation в уже существующий relay currentness callback. Новое
+планирование после cancel получает новый token. Сохраняются generation-supersession
+rearm, unscoped intent, earliest deadline, concurrency и все real counters;
+токены не должны образовать неограниченный tombstone map. Оценка: ≤90 production
+added lines / ≤160 focused test lines, сложность 4/10, надёжность 8/10.
+Combined actual Main integration выявил старое exact-args ожидание без нового
+relay cancellation callback:170PASS/1FAIL, исходная earliest-deadline проверка
+сработала. Test-only дополнение≤3 lines: exact callback function плюс current=true,
+без ослабления прежних timing/count/arguments assertions. Общий focused test
+план scheduler увеличен до≤165 lines; сложность1/10, надёжность10/10, R1/R2.
+Проверки: оба RED→GREEN, no-cancel/replacement/inFlight и текущие scheduler tests,
+TS7/lint, root R1 и независимое R2. Это отдельное исправление Stop-границы.
+R2 обнаружил отдельный actual relay хвост: caller timeout120s не завершает работу
+её lease240s. Оба штатных cleanup/reset сначала удаляют relay work map, что
+закрывает ранние awaits (2/2 finite controls PASS), но follow-up helper после
+ожидающего identity снова ставит unscoped timer. Cleanup-shaped actual
+Scheduler→relay→helper дал 2 RED до/после caller timeout и 2 no-cancel PASS.
+План узкой правки: optional admission predicate в private follow-up helper,
+проверки entry/после identity/после ledger await до schedule. Own work передаёт
+исходный isCurrentGeneration, coalesced branch — исходный options.isCurrent.
+Допущенный timer остаётся unscoped и переживает последующую scope revocation;
+новой lifetime API, token retention, lease/deadline изменения нет. Оценка:
+≤14 production added lines / ≤180 focused test lines, сложность3/10,
+надёжность9/10. Relay legacy cap1124 сохраняется локальной нейтральной формой.
+До approval: cleanup RED→GREEN, no-cancel, coalesced и already-admitted unscoped
+controls, scoped TS7/lint/size и root R1 / independent R2.
+Root/R2 нашли дополнительный unscoped coalesced путь: default options={} в
+штатном facade; original work уже нормально завершён, helper identity ещё
+ожидает. Exact currentG regression: cancel1FAIL / normal-settle1PASS.
+План расширен до ≤70 production added lines / ≤300 focused test lines,
+сложность4/10, надёжность9/10: временная отдельная ownership запись в прежнем
+relay inFlight map, с тем же team cleanup prefix и exact Promise identity.
+Регистрация до первого await existing work; прежние cleanup/reset отзывают
+owner, finally удаляет только собственную запись. Прежний base-key coalescing,
+120s caller budget, 240s original work lease и unscoped admitted timer сохранены;
+новая запись не получает lease/timer, epochs или tombstones. Owner relay fact
+честно учитывает pending continuation. Нужны guards для inbox/identity/ledger
+await, normal-settle/Stop-before-settle/error/replacement controls и R1/R2.
+
+Original Main Stop a0 впервые отказал на `proof-census / work-sync-inventory`:
+solo config сохранил дополнительный Alice member-work-sync journal. Exact pinned
+hydration prompt содержит учебный `<teammate-message teammate_id="alice">`;
+actual Main stream RED подтвердил его ошибочный heartbeat/member_spawned при
+эхе обычного user text. План: перед существующим native handler использовать
+общий `classifyUserTurnProvenance`, классифицируя ровно выбранную прежним
+extractor content shape. Guard допускает teammate-protocol; сохраняются explicit
+provenance, Human/User prefix, несколько envelopes и Markdown внутри genuine body.
+Tool-result precedence и конфликтующие top-level/nested shapes проверяются отдельно.
+Prompt/finite peer, census, history, roster и release gates не меняются.
+Оценка: ≤12 production added lines / ≤160 focused test lines, сложность 3/10,
+надёжность 9/10, уверенность в причине original Stop 9/10. До freeze нужны
+оба exact hydration RED→GREEN, genuine/negative controls, TS7/lint, root R1 и R2.
+
+Producer stopped/degraded guard уплотнён в том же изменённом участке: прежний
+boolean заменён captured laneState, решения active/no-active эквивалентны.
+Финальная форма 1009 строк при прежнем cap1009; 10 additions / 10 removals,
+34/34 targeted PASS (108 filtered skips отдельно), scoped TS7/lint/size PASS.
+Root R1 PASS; independent R2 обновляет проверку после compact формы.
+Native-message guard: 9 production added lines, 75/75 PASS; root R1 PASS.
+Только новые test fixture reads нормализуют CRLF в LF перед exact Main hydration
+hash, поскольку Git Windows checkout может менять eol. Raw artifact source hashes,
+сам prompt и peer не изменяются; final test pins и independent R2 обновляются.
+Финальные compact producer и CRLF-safe native-message test pins повторно
+проверены independent R2; оба среза закрыты без открытых замечаний.
+
+Source coverage нового среза: finite Desktop manifest не включал native-message
+handler, busy-read producer и их выбранные classifier/stream зависимости.
+План: 22 явных path additions, включая новые regressions и существующие source
+fixtures; текущие 1935 entries сохраняют порядок. Никакого dynamic discovery,
+смены clean-input gates или runtime поведения. Оценка: 23 manifest lines,
+сложность 1/10, надёжность 10/10. Root проверяет inclusion всех изменённых
+code/test paths и файлов обоих causal chains, существование и уникальность;
+independent R2 подтверждает before/after freeze wiring, затем lint/size gate.
+Root inclusion и independent R2 PASS: 1957 уникальных paths, все 42 selected
+changed/causal-chain files существуют; before-app capture/finally verify wiring
+побайтно прежние. Добавления находятся в common, а не Windows-only roster.
+Финальная проверка новых follow-up/Team изменений выделила ещё7 явных зависимостей:
+relay/helper test, оба штатных cleanup/reset callers, scheduler factory и actual
+source-readiness helper/caller. План расширен до29 path additions /30 manifest
+lines; сложность1/10, надёжность10/10. Все51 selected sources должны войти в
+1964-entry common closure без удаления/перестановки прежних1935 entries.
+До freeze требуется повторный finite inclusion R1 и независимый wiring R2.
+Bounded coalesced owner добавляет изменённый RelayLease source к этому списку:
+финальный план31 path additions /32 manifest lines,55 selected files,
+1966 unique common entries. Добавлены изменённый Main relay test и обе прежние
+owner-fact projection зависимости. R1/R2 сверяют окончательную версию отдельно.
+
+Root original artifact audit: Stop 1935/1935 и management settings/live Add
+1947/1935 before/after совпадают с a0 Git. Stop targetDigest подтверждён по
+teamName/runId; один исходный UI Stop, первый отказ01:16:26.806Z precedes shutdown
+attempt2/3. Snapshot имеет11files/7directories; 4 raw-text hash проверены, secret
+projections не выдаются за исходные байты. Management Settings PASS; live Add
+INCOMPLETE, model requests0. Последняя attestation47786ms оставила6987ms до
+production cutoff01:24:20.035Z; close-result unconfirmed через14ms после него.
+Исходный90s TEST poll завершился позже. Deadline, retry и acceptance не меняются.
+
+Original Host Team lane job136653011974 остановился до GUI: 12 deadline tests
+падают в общем sourceReadinessDeadlineFixture, ожидающем прежний inline `poll`.
+На a0 actual helper уже экспортируется как pollEmulatedSource из отдельного
+nativeEmulatedSourceReadiness.ts и принимает original wall deadline. План:
+test-only обновить extraction на actual export boundaries/import alias и actual
+caller finally boundary, VM inject Date/performance/observation, проверить
+неизменную передачу RPC original deadline. Все12 прежних assertions сохраняются;
+добавляются2 независимых wall-clock before/after-await cases с timely control.
+0 production changes / ≤90 added test lines, сложность2/10, надёжность9/10,
+уверенность в причине failure10/10. Нужны original12 RED → final14 GREEN,
+TS7/lint/diff и root R1 / independent R2; никаких vendor/native executions,
+deadline renewal, retries или изменений actual helper/caller.
+Финальный Team fixture срез:52 additions/20 removals только в тесте,
+исходные12 RED →14/14 PASS, strict Host TS7/lint/diff PASS; actual helper/caller
+равны a0. Root R1 и independent R2 PASS на SHA d1cf6ee283e91004….
+
+Для полной root qualification найден штатный `ci:full` labeled-event путь на
+Draft: CI 11 jobs и Packaged 7 jobs. Source audit 188 файлов подтвердил finite
+TEST Claude/Codex peers в выбранных путях; genuine/native opt-in flags отсутствуют.
+На PR метка пока отсутствует. Этот отдельный full request возможен после terminal
+исходных CI/Packaged на финальном source, одной постановкой метки без toggle,
+rerun или dispatch. Он не заменяет Host/retained/native E2E и не делает PR Ready.
+
+### Финальный проверенный batch поверх `a0f451bf`
+
+Все code/test bytes заморожены после R1/R2. Combined actual Main gate сначала
+обнаружил одно старое expected-args ожидание:170PASS/1FAIL. После двух test-only
+строк final gate дал171/171PASS, без skip; исходный earliest-deadline oracle
+сохранён. Scoped Main TS7, Host strict fixture TS7, Host build, fast lint изменённых
+TS файлов, source-size, Team Provisioning architecture и diff PASS. Source-size:
+5173 production files,141 прежних exceptions, прежние caps1009/1124 сохранены.
+Controller JS baseline lint остаётся отдельно зафиксированным прежним долгом.
+
+| Срез | Добавленные production / test строки | Финальная проверка |
+| --- | ---: | --- |
+| Controller missing-stat | 1 /72 | 18 controller cases,70 publication races,4 Host fences; R1/R2 |
+| Native source guard | 4 /32 | 4 mutation cases; R1/R2 |
+| Catalog admission diagnostics | 26 /94 | 43 transport/schema +4 actual probe cases; R1/R2 |
+| Native hydration provenance | 9 /131 | 75 helper/Main/classifier cases; R1/R2 |
+| Stopped/degraded busy producer | 10 /108 | 34 targeted cases; R1/R2 |
+| Scheduler cancellation | 81 /161 | 26 scheduler +171 combined Main cases; R1/R2 |
+| Follow-up admission ownership | 62 /267 | 110 joint relay/scheduler +8 original regressions; R1/R2 |
+| Team readiness fixture | 0 /52 | Original12 RED →14 PASS; R1/R2 |
+
+Follow-up G и scheduler F публикуются вместе: underlying relay work переживает
+caller120s под прежним lease240s, поэтому штатный map cleanup является отдельной
+границей отмены. Final resolution закрывает связанные R1/R2 findings; изолированное
+ограничение scheduler port не скрыто. Обе currentness проверки, оригинальные
+result/error и уже допущенный unscoped follow-up сохранены.
+
+Final Desktop source manifest:31 literal additions,1966 unique common entries,
+55 required sources, все24 изменённых code/test файла включены; прежний порядок
+1935 entries и before/after wiring сохранены. Финальные R1/R2 подтверждают каждый
+pin. Добавлены5 workflow lines только для source trigger и existing Windows
+controller selection; прежние runtime checks и условия допуска jobs сохранены.
+
+Original packaged Darwin x64 также завершился отказом второго input в прежнем
+120s window150402→270402ms. Первое input успешно, обе permissions resolved,
+11 model requests, model failures0; после первого наблюдения count11 осталось
+11474ms без accepted terminal. Это read-loop timestamps, не фактическое время
+HTTP requests. Шесть native digests равны source-native Darwin x64; Host source
+пересчитан по631 a0 Git blobs. Native cleanup, source/bundle/legacy restoration
+и Host exit0 подтверждены. Wrapper failure производен от native exit1; explicit
+Stop/cold Resume не достигнуты. Packaged trace не содержит CPU/passive attribution,
+новая причина или самостоятельное performance исправление из него не выводятся.
+
+Доказательства собираются в
+[continuation-a0f451-20261121.json](evidence/continuation-a0f451-20261121.json) и
+[continuation-a0f451-20261121.tar.gz](evidence/continuation-a0f451-20261121.tar.gz).
+Ни один original FAIL не переименован в PASS; exact new-head E2E ещё требуется.
+
+## Предыдущий план: изменения поверх `fab40811`
+
 
 Работа продолжается по явному поручению пользователя. Следующий code batch
 содержит проверенные исправления Windows TEST observer и management kind dispatch,

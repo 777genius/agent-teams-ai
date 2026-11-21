@@ -3603,7 +3603,9 @@ Messages:
       expect(relaySpy).toHaveBeenCalledWith('my-team', 'jack', {
         onlyMessageId: 'message-1',
         source: 'watchdog',
+        isCurrent: expect.any(Function),
       });
+      expect(relaySpy.mock.calls[0][2]?.isCurrent?.()).toBe(true);
     } finally {
       vi.useRealTimers();
     }

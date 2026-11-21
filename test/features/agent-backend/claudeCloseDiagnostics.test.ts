@@ -207,12 +207,16 @@ const probePrefix = 'legacy-agent-host: opencode-probe ';
 const probeClosePrefix = 'legacy-agent-host: opencode-probe-close-failed ';
 const probeCloseFailure = { probeDigest: 'a'.repeat(64), runState: 'threw', outcome: 'unobserved',
   errorClass: 'held', stage: 'owner-client', reason: 'threw', runErrorCode: null, runCauseCode: 'ECONNRESET' };
+const catalogPhases = ([1, 2, 3] as const).flatMap(index => [
+  `catalog-${index}-request-start`, `catalog-${index}-custody-start`, `catalog-${index}-custody-returned`,
+  `catalog-${index}-request-admitted`, `catalog-${index}-lease-released`,
+] as const);
 const probePhases = ['run', 'graph-start', 'graph-done', 'native-launch', 'native-launch-returned', 'native-endpoint-resolved', 'native-ready',
   'identity-start', 'identity-request-start', 'identity-custody-start', 'identity-custody-returned', 'identity-request-admitted',
-  'credential', 'attestation', 'attestation-returned', 'session-create', 'driver-open', 'first-submit'] as const;
+  'credential', 'attestation', ...catalogPhases, 'attestation-returned', 'session-create', 'driver-open', 'first-submit'] as const;
 const startupFailurePhases = ['startup-timer-aborted', 'startup-parent-aborted', 'startup-lifecycle-aborted', 'startup-failed'] as const;
 
-test('probe phase observations retain captured hashes, a lazy clock and at most eighteen transitions', () => {
+test('probe phase observations retain captured hashes, a lazy clock and at most thirty-three transitions', () => {
   const secret = 'TEST-private-command-path-key';
   const selected = { profileId: 'TEST-original', configRevision: 'TEST-revision' };
   const original = { ...selected }, lines: string[] = [];
@@ -226,7 +230,7 @@ test('probe phase observations retain captured hashes, a lazy clock and at most 
   for (const phase of probePhases) { observe(phase); clock += 7; }
   for (const phase of startupFailurePhases) observe(phase);
   for (let repeat = 0; repeat < 20; repeat++) for (const phase of probePhases) observe(phase);
-  assert.equal(lines.length, probePhases.length); assert.equal(lines.length, 18);
+  assert.equal(lines.length, probePhases.length); assert.equal(lines.length, 33);
   assert.equal(clockReads, probePhases.length, 'duplicate transitions do not read the clock or write again');
   assert.ok(lines.every(line => Buffer.byteLength(line) < 8192));
   assert.equal(lines.join('').includes(secret), false);
@@ -339,14 +343,16 @@ test('probe decoder rejects raw, nonfinite, extra and custody-like fields and re
     { ...valid, profileHash: 'TEST-path' }, { ...valid, commandHash: '/private/path' },
     { ...valid, probeDigest: null }, { ...valid, phase: 'released' }, { ...valid, phase: 'failure' },
     { ...valid, phase: 'attestation-returned-extra' },
-    { ...valid, sequence: 0 }, { ...valid, sequence: 19 }, { ...valid, sequence: 1.5 },
+    { ...valid, phase: 'catalog-0-request-start' }, { ...valid, phase: 'catalog-4-request-start' },
+    { ...valid, phase: 'catalog-1-http-succeeded' }, { ...valid, phase: 'catalog-3-lease-released-extra' },
+    { ...valid, sequence: 0 }, { ...valid, sequence: 34 }, { ...valid, sequence: 1.5 },
     { ...valid, elapsedMs: -1 }, { ...valid, elapsedMs: 3_600_001 },
     { ...valid, elapsedMs: null }, { ...valid, elapsedMs: undefined },
   ]) decode(Buffer.from(frame(unsafe)));
   assert.deepEqual(values, []);
   decode(Buffer.concat([Buffer.from(probePrefix), Buffer.from([0xff]), Buffer.from('\n')]));
   decode(Buffer.from(probePrefix + 'x'.repeat(8193)));
-  const final = { ...valid, phase: 'attestation-returned', sequence: 18, elapsedMs: 3_600_000 };
+  const final = { ...valid, phase: 'catalog-3-lease-released', sequence: 33, elapsedMs: 3_600_000 };
   decode(Buffer.from('\n' + frame(valid) + frame(final)));
   assert.deepEqual(values, [valid, final]);
 });

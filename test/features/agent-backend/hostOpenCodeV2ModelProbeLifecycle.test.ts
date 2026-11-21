@@ -30,10 +30,12 @@ import * as capturedProcess from '../../../packages/legacy-agent-host/src/adapte
 import * as probeDiagnostics from '../../../packages/legacy-agent-host/src/adapters/providers/createClaudeCloseDiagnostic';
 import * as embeddedGraph from '../../../packages/legacy-agent-host/src/adapters/providers/OpenCodeV2EmbeddedGraph';
 import { createOpenCodeV2ModelProbe } from '../../../packages/legacy-agent-host/src/adapters/providers/OpenCodeV2ModelProbe';
+import * as sessionCredential from '../../../packages/legacy-agent-host/src/adapters/providers/OpenCodeV2SessionCredential';
 import * as windowsCustody from '../../../packages/legacy-agent-host/src/adapters/providers/WindowsJobCustody';
 import { runtimeMemberProfileSchema } from '../../../packages/legacy-agent-host/src/composition/runtimeProfile';
 import { teamModelProbeProfile } from '../../../packages/legacy-agent-host/src/composition/teamLaunchModelProbe';
 import { openCodeManagementProfileSchema } from '../../../packages/legacy-agent-host/src/management/profile';
+import { opencodeV2ModelProbeProfile } from '../../../packages/legacy-agent-host/tests/fixtures/opencode-v2-model-probe-profile';
 import { decodeClaudeCloseDiagnostics } from '../../../src/features/agent-backend/main/infrastructure/decodeClaudeCloseDiagnostics';
 
 import type { OpenCodeV2EmbeddedServerOptions } from '../../../packages/legacy-agent-host/src/adapters/providers/OpenCodeV2EmbeddedServer';
@@ -508,9 +510,89 @@ test.each(['getter', 'proxy', 'held'] as const)('original probe exception surviv
 });
 
 const probePrefix = 'legacy-agent-host: opencode-probe ';
+const catalogPhases = ([1, 2, 3] as const).flatMap(index => [
+  `catalog-${index}-request-start`, `catalog-${index}-custody-start`, `catalog-${index}-custody-returned`,
+  `catalog-${index}-request-admitted`, `catalog-${index}-lease-released`,
+]);
 const phases = ['run', 'graph-start', 'graph-done', 'native-launch', 'native-launch-returned', 'native-endpoint-resolved', 'native-ready',
   'identity-start', 'identity-request-start', 'identity-custody-start', 'identity-custody-returned', 'identity-request-admitted',
-  'credential', 'attestation', 'attestation-returned', 'session-create', 'driver-open', 'first-submit'];
+  'credential', 'attestation', ...catalogPhases, 'attestation-returned', 'session-create', 'driver-open', 'first-submit'];
+
+test.each(['complete', 'custody', 'mismatch', 'http'] as const)(
+  'catalog admissions retain original calls, errors and release with %s in memory', async fault => {
+    let baseline: unknown;
+    const originalDiagnostic = probeDiagnostics.createOpenCodeProbeDiagnostic;
+    const originalCredential = sessionCredential.captureOpenCodeV2SessionCredential;
+    for (const sink of ['absent', 'healthy', 'throws'] as const) {
+      const root = realpathSync(mkdtempSync(join(tmpdir(), 'TEST-catalog-admission-')));
+      const management = openCodeManagementProfileSchema.parse(
+        teamModelProbeProfile(runtimeMemberProfileSchema.parse(opencodeV2ModelProbeProfile(root))));
+      const controller = new AbortController(), failure = new Error('TEST original catalog failure');
+      const records: OpenCodeProbeDiagnostic[] = [], routes: string[] = [];
+      let guards = 0, custody = 0, passwordReads = 0, stops = 0, providers = 0;
+      let admission: Parameters<ReturnType<typeof originalCredential>['prepare']>[0]['beforeRequest'];
+      const diagnostic = vi.spyOn(probeDiagnostics, 'createOpenCodeProbeDiagnostic')
+        .mockImplementation((selected, command, digest) => sink === 'absent' ? () => {}
+          : originalDiagnostic(selected, command, digest, line => {
+            records.push(JSON.parse(line.slice(probePrefix.length)) as OpenCodeProbeDiagnostic);
+            if (sink === 'throws') throw new Error('TEST diagnostic sink failure');
+          }));
+      const credential = vi.spyOn(sessionCredential, 'captureOpenCodeV2SessionCredential').mockImplementation((...args) => {
+        const original = originalCredential(...args);
+        return { ...original, prepare(wire, ...rest) { admission = wire.beforeRequest; return original.prepare(wire, ...rest); } };
+      });
+      const identity = { pid: 48101, startIdentity: 'TEST-original-root', version: '2.1.4' };
+      controlled.create = () => ({
+        start: async () => ({ ...identity, endpoint: management.endpoint }),
+        readPassword: () => { passwordReads++; return 'TEST-private-password'; },
+        readNativeCustody: async () => {
+          custody++;
+          if (custody === 3 && fault === 'custody') throw failure;
+          return { ...identity, pid: custody === 3 && fault === 'mismatch' ? 48102 : identity.pid };
+        },
+        stopOwned: async () => { stops++; return true; },
+      });
+      const fetch = vi.spyOn(globalThis, 'fetch').mockImplementation(async request => {
+        const path = new URL(request instanceof Request ? request.url : String(request)).pathname;
+        expect(['/api/info', '/api/provider', '/api/model', '/api/model/default']).toContain(path);
+        routes.push(path); expect(routes.length).toBeLessThanOrEqual(7);
+        if (path === '/api/model' && fault === 'http') throw failure;
+        const location = { directory: root };
+        const value = path === '/api/info' ? { pid: identity.pid, version: identity.version }
+          : path === '/api/provider' ? { location, data: ++providers === 1 && fault === 'complete' ? []
+            : [{ id: 'TEST-provider', name: 'TEST provider', activation: 'enabled' }] }
+            : path === '/api/model' ? { location, data: [{ id: 'TEST-model', providerID: 'TEST-provider', name: 'TEST model',
+              enabled: true, limit: { context: 4096, output: 512 },
+              capabilities: { tools: false, input: ['text'] }, variants: [{ id: 'high' }] }] }
+              : { location, data: { providerID: 'TEST-provider', id: 'TEST-model' } };
+        return new Response(JSON.stringify(value), { headers: { 'content-type': 'application/json' } });
+      });
+      const probe = createOpenCodeV2ModelProbe(management, { commandId: 'TEST-catalog', profileId: management.profileId,
+        configRevision: management.configRevision, providerId: 'TEST-provider', modelId: 'TEST-model' },
+      () => { guards++; return true; }, { readiness: { observeProvider: () => { throw failure; } } });
+      try {
+        const running = probe.run(controller.signal, Date.now() + 30000);
+        if (fault === 'complete') await expect(running).rejects.toBe(failure);
+        else await expect(running).rejects.toMatchObject({ code: 'transport_failure' });
+        const before = { guards, custody, passwordReads, routes: [...routes] };
+        baseline ??= before; expect(before).toEqual(baseline);
+        const observed = records.map(record => record.phase).filter(phase => phase.startsWith('catalog-'));
+        const second = fault === 'custody' ? [0, 1, 4] : fault === 'mismatch' ? [0, 1, 2, 4] : [0, 1, 2, 3, 4];
+        expect(observed).toEqual(sink === 'absent' ? [] : fault === 'complete' ? catalogPhases
+          : [...catalogPhases.slice(0, 5), ...second.map(index => catalogPhases[5 + index])]);
+        expect(routes.length).toBe(fault === 'complete' ? 7 : fault === 'http' ? 3 : 2);
+        const phaseCount = records.length, release = await admission!(controller.signal);
+        assert.ok(typeof release === 'function'); release(); release();
+        expect(records).toHaveLength(phaseCount); // finally disables catalog marks, even after failure.
+        await expect(probe.close()).resolves.toBe(true);
+        await expect(probe.close()).resolves.toBe(true); expect(stops).toBe(1);
+      } finally {
+        await probe.close(); fetch.mockRestore(); credential.mockRestore(); diagnostic.mockRestore();
+        rmSync(root, { recursive: true, force: true });
+      }
+    }
+  }
+);
 
 test('phase sink failure preserves the original probe HTTP, single run and physical cleanup', async () => {
   const originalFactory = probeDiagnostics.createOpenCodeProbeDiagnostic;

@@ -431,7 +431,9 @@ jobs:
 
       - name: Test controller lock compatibility
         if: steps.windows.outputs.reuse != 'true'
-        run: pnpm --dir agent-teams-controller exec vitest run test/fileLock.test.js
+        run: >-
+          pnpm --dir agent-teams-controller exec vitest run
+          test/fileLock.test.js test/fileLockMissingObservation.test.ts
 
       - name: Test task change ledger
         if: steps.windows.outputs.reuse != 'true'

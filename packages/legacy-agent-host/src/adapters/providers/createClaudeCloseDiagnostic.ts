@@ -130,11 +130,15 @@ export type OpenCodeProbePhase = 'run' | 'graph-start' | 'graph-done' | 'native-
   | 'native-launch-returned' | 'native-endpoint-resolved' | 'startup-timer-aborted'
   | 'startup-parent-aborted' | 'startup-lifecycle-aborted' | 'startup-failed'
   | 'identity-start' | 'identity-request-start' | 'identity-custody-start' | 'identity-custody-returned' | 'identity-request-admitted'
+  | `catalog-${1 | 2 | 3}-${'request-start' | 'custody-start' | 'custody-returned' | 'request-admitted' | 'lease-released'}`
   | 'native-ready' | 'credential' | 'attestation' | 'attestation-returned' | 'session-create' | 'driver-open' | 'first-submit';
 const probePhases = new Set<OpenCodeProbePhase>(['run', 'graph-start', 'graph-done', 'native-launch',
   'native-launch-returned', 'native-endpoint-resolved', 'startup-timer-aborted',
   'startup-parent-aborted', 'startup-lifecycle-aborted', 'startup-failed',
   'identity-start', 'identity-request-start', 'identity-custody-start', 'identity-custody-returned', 'identity-request-admitted',
+  'catalog-1-request-start', 'catalog-1-custody-start', 'catalog-1-custody-returned', 'catalog-1-request-admitted', 'catalog-1-lease-released',
+  'catalog-2-request-start', 'catalog-2-custody-start', 'catalog-2-custody-returned', 'catalog-2-request-admitted', 'catalog-2-lease-released',
+  'catalog-3-request-start', 'catalog-3-custody-start', 'catalog-3-custody-returned', 'catalog-3-request-admitted', 'catalog-3-lease-released',
   'native-ready', 'credential', 'attestation', 'attestation-returned', 'session-create', 'driver-open', 'first-submit']);
 
 /** Last observed phase only: no readiness, failure, process identity or release authority. */
@@ -154,7 +158,7 @@ export function createOpenCodeProbeDiagnostic(
     let started: number | undefined, count = 0;
     return phase => {
       try {
-        if (!valid || count >= 18 || !probePhases.has(phase) || observed.has(phase)) return;
+        if (!valid || count >= 33 || !probePhases.has(phase) || observed.has(phase)) return;
         observed.add(phase); count++;
         if (count > 1 && started === undefined) return;
         const at = now();

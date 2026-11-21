@@ -166,22 +166,32 @@ export function createOpenCodeV2ModelProbe(
     if (!current() || Date.now() >= deadline) unavailable();
   };
   let identityRequestPending = false;
+  let attestationPending = false, attestationRequests = 0;
   async function beforeRequest(signal: AbortSignal): Promise<() => void> {
     // The first identity keeps its observer even if native custody settles after abort.
     const observeIdentity = identityRequestPending ? observePhase : undefined;
     identityRequestPending = false;
+    const catalogIndex = attestationPending && attestationRequests < 3
+      ? ++attestationRequests as 1 | 2 | 3 : undefined;
     observeIdentity?.('identity-request-start');
+    if (catalogIndex) observePhase?.(`catalog-${catalogIndex}-request-start`);
     assertCurrent(signal);
     // Reserve before the asynchronous native measurement. Shutdown fences new
     // admissions and drains these leases before aborting the Session transport.
     const settled = Promise.withResolvers<void>();
     requests.add(settled.promise);
     const release = () => {
-      if (requests.delete(settled.promise)) settled.resolve();
+      if (requests.delete(settled.promise)) {
+        settled.resolve();
+        // This is only lease settlement, including refused requests, never HTTP success.
+        if (catalogIndex) observePhase?.(`catalog-${catalogIndex}-lease-released`);
+      }
     };
     try {
       observeIdentity?.('identity-custody-start');
+      if (catalogIndex) observePhase?.(`catalog-${catalogIndex}-custody-start`);
       const custody = await server?.readNativeCustody(AbortSignal.any([signal, abort.signal]));
+      if (catalogIndex) observePhase?.(`catalog-${catalogIndex}-custody-returned`);
       observeIdentity?.('identity-custody-returned');
       assertCurrent(signal);
       if (
@@ -193,6 +203,7 @@ export function createOpenCodeV2ModelProbe(
       )
         unavailable();
       observeIdentity?.('identity-request-admitted');
+      if (catalogIndex) observePhase?.(`catalog-${catalogIndex}-request-admitted`);
       return release;
     } catch (error) {
       release();
@@ -292,8 +303,11 @@ export function createOpenCodeV2ModelProbe(
       nativeCredential = await credential.prepare(wire, client, undefined,
         integrationId => server!.selectedFileKey(ready!, integrationId));
       observePhase?.('attestation');
-      await attestOpenCodeV2ModelSelection(client, selection.model,
-        { signal, deadline, isCurrent: current });
+      try {
+        attestationPending = true;
+        await attestOpenCodeV2ModelSelection(client, selection.model,
+          { signal, deadline, isCurrent: current });
+      } finally { attestationPending = false; }
       observePhase?.('attestation-returned');
       options.readiness?.observeProvider?.({
         ...observedProvider,

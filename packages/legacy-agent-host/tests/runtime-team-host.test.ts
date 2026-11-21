@@ -4664,45 +4664,54 @@ test('original exit projection is preserved beside a bounded source-bound Codex 
 
 async function sourceReadinessDeadlineFixture(input: {
   now: number; handoffPause?: number; deadline?: number; readCosts?: number[]; ready?: boolean[]; throwRead?: Error;
+  wallNow?: number; wallDeadline?: number; wallHandoffPause?: number; wallReadCosts?: number[];
 }) {
   const { stripTypeScriptTypes } = await import('node:module');
   const source = readFileSync(new URL('../../../tools/owned-process-broker/nativeEmulatedSourceScenario.ts', import.meta.url), 'utf8').replace(/\r\n/gu, '\n');
-  const begin = 'async function poll(', end = 'function validateSourceRefusal(';
+  const helper = readFileSync(new URL('../../../tools/owned-process-broker/nativeEmulatedSourceReadiness.ts', import.meta.url), 'utf8').replace(/\r\n/gu, '\n');
+  const begin = 'export async function pollEmulatedSource(', end = 'export const emulatedSourceOpenCodeRequestTimeoutMs';
+  for (const marker of [begin, end]) assert.equal(helper.split(marker).length, 2);
+  assert.equal(source.split('pollEmulatedSource as poll').length, 2);
+  assert.match(source, /import \{[^}]*\bpollEmulatedSource as poll\b[^}]*\} from '\.\/nativeEmulatedSourceReadiness';/u);
   const callBegin = "        await poll(async () => { view = await epoch.rpc(team, 'runtime.read',";
-  const callEnd = "\n      } finally {\n        console.log(JSON.stringify({ kind: 'TEST_SOURCE_READINESS'";
-  for (const marker of [begin, end, callBegin, callEnd]) assert.equal(source.split(marker).length, 2);
-  const pollSource = stripTypeScriptTypes(source.slice(source.indexOf(begin), source.indexOf(end)));
+  const callEnd = "\n      } finally {\n        if (provider === 'codex') readiness.elapsedMs =";
+  for (const marker of [callBegin, callEnd]) assert.equal(source.split(marker).length, 2);
+  const pollSource = stripTypeScriptTypes(helper.slice(helper.indexOf(begin), helper.indexOf(end)).replace(/^export /u, ''));
   const callerSource = stripTypeScriptTypes(source.slice(source.indexOf(callBegin), source.indexOf(callEnd)));
-  type Poll = (check: () => Promise<boolean>, message: string, budget?: number, deadline?: number) => Promise<void>;
-  let now = input.now, reads = 0;
-  const delays: number[] = [], argumentsSeen: [number | undefined, number | undefined][] = [];
+  type Poll = (check: () => Promise<boolean>, message: string, budget?: number, deadline?: number, wallDeadline?: number) => Promise<void>;
+  let now = input.now, wallNow = input.wallNow ?? input.now, reads = 0;
+  const advance = (milliseconds: number, wallMilliseconds = milliseconds) => { now += milliseconds; wallNow += wallMilliseconds; };
+  const delays: number[] = [], argumentsSeen: [number | undefined, number | undefined, number | undefined][] = [];
   const performance = { now: () => now };
-  const actualPoll = runInNewContext(`(()=>{${pollSource}\nreturn poll;})()`, {
-    assert, performance, delay: async (milliseconds: number) => { assert.equal(milliseconds, 25); delays.push(milliseconds); now += milliseconds; },
+  const actualPoll = runInNewContext(`(()=>{${pollSource}\nreturn pollEmulatedSource;})()`, {
+    assert, performance, Date: { now: () => wallNow },
+    delay: async (milliseconds: number) => { assert.equal(milliseconds, 25); delays.push(milliseconds); advance(milliseconds); },
   }) as Poll;
   const readiness: Record<string, unknown> = { readCount: 0, elapsedMs: 0, lastRuntimeRead: null };
   const run = Function('environment', `'use strict';
-    const {poll,epoch,team,action,runtimeDigest,readiness,readinessStarted,performance,memberReadinessDeadline}=environment;
+    const {poll,epoch,team,action,runtimeDigest,readiness,readinessStarted,performance,memberReadinessDeadline,observation}=environment;
     let view={},lastRuntimeViewDigest;
     return (async()=>{${callerSource}})();`) as (environment: Record<string, unknown>) => Promise<void>;
   return {
     run: () => run({ team: 0, action: 'A', runtimeDigest, readiness, readinessStarted: input.now,
       performance, memberReadinessDeadline: input.deadline,
-      poll: (check: () => Promise<boolean>, message: string, budget?: number, deadline?: number) => {
-        assert.equal(message, 'Original source Team readiness'); argumentsSeen.push([budget, deadline]);
-        now += input.handoffPause ?? 0;
-        return actualPoll(check, message, budget, deadline);
-      }, epoch: { rpc: async (team: number, method: string, command: string, payload: unknown) => {
+      observation: input.wallDeadline === undefined ? undefined : { attemptDeadlineMs: input.wallDeadline },
+      poll: (check: () => Promise<boolean>, message: string, budget?: number, deadline?: number, wallDeadline?: number) => {
+        assert.equal(message, 'Original source Team readiness'); argumentsSeen.push([budget, deadline, wallDeadline]);
+        advance(input.handoffPause ?? 0, input.wallHandoffPause ?? input.handoffPause ?? 0);
+        return actualPoll(check, message, budget, deadline, wallDeadline);
+      }, epoch: { rpc: async (team: number, method: string, command: string, payload: unknown, deadline?: number) => {
         assert.equal(team, 0); assert.equal(method, 'runtime.read'); assert.equal(command, 'TEST-ready-A');
         assert.equal(JSON.stringify(payload), '{"memberId":"alice-id"}');
-        const index = reads++; now += input.readCosts?.[index] ?? 0;
+        assert.equal(deadline, input.deadline, 'Runtime read receives the original monotonic cutoff');
+        const index = reads++; advance(input.readCosts?.[index] ?? 0, input.wallReadCosts?.[index] ?? input.readCosts?.[index] ?? 0);
         if (input.throwRead) throw input.throwRead;
         return { memberId: 'alice-id', generation: 'TEST-original', phase: 'allocated', sealed: false,
           custody: 'owned', nativeReady: input.ready?.[index] ?? true, attached: true };
       } },
     }),
     actualPoll, readiness, argumentsSeen, delays, source, performance,
-    advance: (milliseconds: number) => { now += milliseconds; }, counts: () => ({ now, reads }),
+    advance, counts: () => ({ now, reads }), wallNow: () => wallNow,
   };
 }
 
@@ -4711,7 +4720,7 @@ test('source Codex readiness refuses an expired absolute deadline before its fir
   await assert.rejects(f.run(), /Original source Team readiness/);
   assert.deepEqual(f.counts(), { now: 90_010, reads: 0 });
   assert.deepEqual(f.delays, []); assert.deepEqual(f.readiness, { readCount: 0, elapsedMs: 0, lastRuntimeRead: null });
-  assert.deepEqual(f.argumentsSeen, [[undefined, 90_000]], 'the caller passes the original absolute deadline, not a resampled duration');
+  assert.deepEqual(f.argumentsSeen, [[undefined, 90_000, undefined]], 'the caller passes the original absolute deadline, not a resampled duration');
 });
 
 test('source Codex readiness refuses a ready result delivered after its original deadline despite a handoff pause', async () => {
@@ -4720,7 +4729,7 @@ test('source Codex readiness refuses a ready result delivered after its original
   assert.deepEqual(f.counts(), { now: 90_010, reads: 1 }); assert.deepEqual(f.delays, []);
   assert.equal(f.readiness.readCount, 1); assert.equal(f.readiness.elapsedMs, 110);
   assert.equal((f.readiness.lastRuntimeRead as Record<string, unknown>).nativeReady, true);
-  assert.deepEqual(f.argumentsSeen, [[undefined, 90_000]]);
+  assert.deepEqual(f.argumentsSeen, [[undefined, 90_000, undefined]]);
 });
 
 test('source readiness keeps its timely success, other original budgets, 25ms cadence and exact read errors', async () => {
@@ -4729,7 +4738,7 @@ test('source readiness keeps its timely success, other original budgets, 25ms ca
   assert.deepEqual(timely.delays, []); assert.equal(timely.readiness.readCount, 1);
   const original = await sourceReadinessDeadlineFixture({ now: 0, handoffPause: 20_000, readCosts: [14_999] });
   await original.run(); assert.deepEqual(original.counts(), { now: 34_999, reads: 1 });
-  assert.deepEqual(original.argumentsSeen, [[undefined, undefined]], 'non-Codex still starts its original default 15s poll on entry');
+  assert.deepEqual(original.argumentsSeen, [[undefined, undefined, undefined]], 'non-Codex still starts its original default 15s poll on entry');
   const boundary = await sourceReadinessDeadlineFixture({ now: 0, handoffPause: 20_000, readCosts: [15_000] });
   await assert.rejects(boundary.run(), /Original source Team readiness/);
   assert.deepEqual(boundary.counts(), { now: 35_000, reads: 1 }); assert.deepEqual(boundary.delays, []);
@@ -4746,6 +4755,29 @@ test('source readiness keeps its timely success, other original budgets, 25ms ca
   await assert.rejects(refused.run(), error => error === failure);
   assert.deepEqual(refused.counts(), { now: 0, reads: 1 }); assert.deepEqual(refused.delays, []);
   assert.equal(refused.readiness.readCount, 0);
+});
+
+test('source Codex readiness refuses original wall expiry before its first read despite remaining monotonic time', async () => {
+  const f = await sourceReadinessDeadlineFixture({ now: 0, deadline: 90_000, wallNow: 100_000,
+    wallDeadline: 100_010, wallHandoffPause: 10 });
+  await assert.rejects(f.run(), /Original source Team readiness/);
+  assert.deepEqual(f.counts(), { now: 0, reads: 0 }); assert.equal(f.wallNow(), 100_010);
+  assert.deepEqual(f.delays, []); assert.equal(f.readiness.readCount, 0);
+  assert.deepEqual(f.argumentsSeen, [[undefined, 90_000, 100_010]]);
+  const timely = await sourceReadinessDeadlineFixture({ now: 500, deadline: 90_000, wallNow: 100_000,
+    wallDeadline: 100_010, handoffPause: 1, wallHandoffPause: 9 });
+  await timely.run(); assert.deepEqual(timely.counts(), { now: 501, reads: 1 });
+  assert.equal(timely.wallNow(), 100_009); assert.deepEqual(timely.delays, []);
+});
+
+test('source Codex readiness refuses a ready result at the original wall cutoff with monotonic time remaining', async () => {
+  const f = await sourceReadinessDeadlineFixture({ now: 100, deadline: 90_000, wallNow: 100_000,
+    wallDeadline: 100_010, readCosts: [1], wallReadCosts: [10] });
+  await assert.rejects(f.run(), /Original source Team readiness/);
+  assert.deepEqual(f.counts(), { now: 101, reads: 1 }); assert.equal(f.wallNow(), 100_010);
+  assert.equal(f.readiness.readCount, 1); assert.equal(f.readiness.elapsedMs, 1);
+  assert.equal((f.readiness.lastRuntimeRead as Record<string, unknown>).nativeReady, true);
+  assert.deepEqual(f.delays, []); assert.deepEqual(f.argumentsSeen, [[undefined, 90_000, 100_010]]);
 });
 
 async function sourceStandaloneDeadlineFixture(input: {

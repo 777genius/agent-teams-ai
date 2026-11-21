@@ -41,6 +41,7 @@ import {
 import {
   getActiveOpenCodeMemberInboxRelayWork,
   registerOpenCodeMemberInboxRelayWork,
+  withOpenCodeRelayFollowUpOwner,
 } from './TeamProvisioningOpenCodeMemberInboxRelayLease';
 import {
   buildOpenCodeInboxReadFailedResult,
@@ -194,33 +195,34 @@ export async function relayOpenCodeMemberInboxMessagesWithPorts(
   if (existing) {
     const onlyMessageId = options.onlyMessageId?.trim();
     if (!onlyMessageId) {
-      try {
-        const relayResult = await waitForInboxRelayInFlight({
-          promise: existing,
-          relayName: 'opencode_member_inbox_relay',
-          relayKey,
-        });
-        // The coalesced request ran no walk of its own: rows that landed after
-        // the in-flight walk read its inbox snapshot are invisible to it, so
-        // leave the same follow-up wake a walk leaves for its own leftovers.
-        if (options.isCurrent?.() !== false) {
-          await armOpenCodeInboxFollowUpWake({
-            teamName,
-            memberName,
-            inboxMessages: await ports.readInboxMessages(teamName, memberName).catch(() => []),
-            handledMessageIds: new Set<string>(),
-            ports,
+      return withOpenCodeRelayFollowUpOwner(ports.inFlight, relayKey, async (isCurrent) => {
+        try {
+          const relayResult = await waitForInboxRelayInFlight({
+            promise: existing,
+            relayName: 'opencode_member_inbox_relay',
+            relayKey,
           });
+          // This caller ran no walk: arm rows the existing walk's snapshot missed.
+          if (isCurrent() && options.isCurrent?.() !== false) {
+            await armOpenCodeInboxFollowUpWake({
+              teamName,
+              memberName,
+              inboxMessages: await ports.readInboxMessages(teamName, memberName).catch(() => []),
+              handledMessageIds: new Set<string>(),
+              isCurrent: () => isCurrent() && options.isCurrent?.() !== false,
+              ports,
+            });
+          }
+          return relayResult;
+        } catch (error) {
+          if (!isInboxRelayInFlightTimeoutError(error)) {
+            throw error;
+          }
+          const diagnostic = `opencode_member_inbox_relay_timed_out: ${ports.getErrorMessage(error)}`;
+          ports.logWarning(`[${teamName}] ${diagnostic}`);
+          return buildOpenCodeMemberInboxRelayTimeoutResult({ diagnostic, attempted: 0 });
         }
-        return relayResult;
-      } catch (error) {
-        if (!isInboxRelayInFlightTimeoutError(error)) {
-          throw error;
-        }
-        const diagnostic = `opencode_member_inbox_relay_timed_out: ${ports.getErrorMessage(error)}`;
-        ports.logWarning(`[${teamName}] ${diagnostic}`);
-        return buildOpenCodeMemberInboxRelayTimeoutResult({ diagnostic, attempted: 0 });
-      }
+      });
     }
     const inboxMessages = await ports.readInboxMessages(teamName, memberName).catch(() => []);
     if (options.isCurrent?.() === false)
@@ -251,7 +253,6 @@ export async function relayOpenCodeMemberInboxMessagesWithPorts(
         reason: 'opencode_inbox_message_missing_after_inflight_relay',
       });
     }
-
     ports.scheduleOpenCodeMemberInboxDeliveryWake({
       teamName,
       memberName,
@@ -261,7 +262,6 @@ export async function relayOpenCodeMemberInboxMessagesWithPorts(
     });
     return buildOpenCodeMemberInboxQueuedBehindResult({ relayKey, messageId: onlyMessageId });
   }
-
   const generation: { work?: Promise<OpenCodeMemberInboxRelayResult> } = {};
   const isCurrentGeneration = (): boolean =>
     options.isCurrent?.() !== false && ports.inFlight.get(relayKey) === generation.work;
@@ -883,7 +883,6 @@ async function runOpenCodeMemberInboxRelayWork(
     result.relayed += 1;
     break;
   }
-
   if (options.isCurrent?.() !== false) {
     await armOpenCodeInboxFollowUpWake({
       teamName,
@@ -892,6 +891,7 @@ async function runOpenCodeMemberInboxRelayWork(
       handledMessageIds,
       wokenMessageId: onlyMessageId,
       lastDelivery: result.lastDelivery,
+      isCurrent: isCurrentGeneration,
       ports,
     });
   }
