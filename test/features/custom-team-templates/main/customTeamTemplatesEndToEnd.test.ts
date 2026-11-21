@@ -365,6 +365,9 @@ describe('custom team templates end to end', () => {
       const token = prepared.preview.previewToken;
 
       const saving = app.saveTemplate.execute({ previewToken: token });
+      // Saving re-reads the real team files before dispatching the writer. Wait
+      // for that boundary so the fake deadline cannot expire before it exists.
+      await vi.waitFor(() => expect(create).toHaveBeenCalledTimes(1));
       await vi.advanceTimersByTimeAsync(STORAGE_SETTLEMENT_TIMEOUT_MS);
       await expect(saving).resolves.toMatchObject({ status: 'unresolvedWriteOutcome' });
       expect(create).toHaveBeenCalledTimes(1);

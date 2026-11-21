@@ -1141,7 +1141,8 @@ describe('SaveCustomTeamTemplateUseCase', () => {
       fixture.requests.every((request) => request.template.templateId === preview.stateTemplateId)
     ).toBe(true);
 
-    // Re-check keeps reconciling the original operation, not a fresh one.
+    // The writer has already settled. A fresh successful not-found read can
+    // prove absence, but it must still reconcile the original frozen identity.
     const read = vi.fn().mockResolvedValue({ status: 'notFound' as const });
     fixture.getById.mockImplementation(read);
     await expect(
@@ -1150,13 +1151,27 @@ describe('SaveCustomTeamTemplateUseCase', () => {
         hasher,
         previewStore: preview.store,
       }).execute({ previewToken: preview.token })
-    ).resolves.toEqual({ status: 'unresolved', templateId: preview.stateTemplateId });
+    ).resolves.toEqual({ status: 'notSaved', templateId: preview.stateTemplateId });
     expect(read).toHaveBeenCalledWith({ templateId: preview.stateTemplateId });
-    await expect(save.execute({ previewToken: preview.token })).resolves.toEqual({
-      status: 'unresolvedWriteOutcome',
-      templateId: preview.stateTemplateId,
-    });
+
+    // Clearing uncertainty must not allow either editable field to rebind the token.
+    for (const override of [{ name: 'Different Name' }, { description: 'Other notes' }]) {
+      await expect(save.execute({ previewToken: preview.token, ...override })).resolves.toEqual({
+        status: 'validationFailed',
+        issues: [{ code: 'previewTokenUnknown', field: 'previewToken' }],
+      });
+    }
     expect(fixture.create).toHaveBeenCalledTimes(1);
+
+    // Only the identical request is now safe to retry; it retains the original id.
+    const template = storedTemplate(preview.stateTemplateId);
+    fixture.create.mockResolvedValueOnce({ status: 'created', template });
+    await expect(save.execute({ previewToken: preview.token })).resolves.toEqual({
+      status: 'created',
+      template,
+    });
+    expect(fixture.create).toHaveBeenCalledTimes(2);
+    expect(fixture.create).toHaveBeenLastCalledWith(fixture.requests[0]);
   });
 
   it('allows only the identical request on an exact-identity retry after an uncertain write', async () => {
