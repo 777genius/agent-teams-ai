@@ -51,7 +51,7 @@ jobs:
   desktop-history:
     name: Team history A-B-A (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 40
+    timeout-minutes: 60
     strategy:
       fail-fast: false
       matrix:

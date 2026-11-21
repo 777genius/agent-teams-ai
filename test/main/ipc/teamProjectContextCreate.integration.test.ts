@@ -4,6 +4,7 @@ import * as os from 'node:os';
 import * as path from 'node:path';
 
 import { createTeamWithProjectContext } from '../../../src/main/ipc/teams/teamProjectContextCreate';
+import { createProjectScheduleTargets } from '../../../src/main/ipc/teams/projectScheduleTargets';
 import { prepareTeamContextLaunch, withPreparedContextLaunch } from '../../../src/main/ipc/teams/teamProjectContextLaunch';
 import {
   getTasksBasePath,
@@ -286,6 +287,161 @@ describe('project-scoped desktop team creation boundary (sandbox disk + fake nat
     }, f.ports, invoke)).resolves.toMatchObject({ success: true });
     expect(invoke).toHaveBeenCalledOnce();
     expect(invoke.mock.calls[0]?.[0].teamName).not.toBe('builders');
+  });
+
+  describe('launch settings of a per-project team', () => {
+    async function perProjectFixture() {
+      const f = await fixture();
+      await f.ports.data.createTeamConfig({
+        teamName: 'builders', cwd: f.projectPath, members: [], projectContextMode: 'per_project',
+      });
+      const metaPath = path.join(getTeamsBasePath(), 'builders', 'team.meta.json');
+      const readMeta = async () => JSON.parse(await fs.readFile(metaPath, 'utf8')) as Record<string, unknown>;
+      const launch = (
+        patch: Partial<TeamLaunchRequest>,
+        result: { success: boolean; data?: object; error?: string } = { success: true, data: { runId: 'r1' } }
+      ) =>
+        withPreparedContextLaunch(
+          { teamName: 'builders', cwd: f.projectPath, ...patch }, f.ports,
+          vi.fn(async () => result) as never
+        );
+      return { f, readMeta, launch };
+    }
+
+    it('saves what the launch chose into the team, but never trust or place of one project', async () => {
+      const { readMeta, launch } = await perProjectFixture();
+      await launch({
+        providerId: 'codex', model: 'gpt-x', effort: 'high', limitContext: true,
+        skipPermissions: true, worktree: 'wt',
+      });
+      const meta = await readMeta();
+      expect(meta).toMatchObject({
+        providerId: 'codex', model: 'gpt-x', effort: 'high', limitContext: true,
+        projectContextMode: 'per_project',
+      });
+      expect(meta).not.toHaveProperty('skipPermissions');
+      expect(meta).not.toHaveProperty('worktree');
+    });
+
+    it('brings the launched project copy to the same settings at once, and keeps its own trust and arguments', async () => {
+      const { f } = await perProjectFixture();
+      const projectB = path.join(path.dirname(f.projectPath), 'project-b');
+      await fs.mkdir(projectB);
+      const invoke = vi.fn(async () => ({ success: true as const, data: { runId: 'r1' } }));
+      await withPreparedContextLaunch(
+        {
+          teamName: 'builders', cwd: projectB, providerId: 'codex', model: 'gpt-y',
+          skipPermissions: true, extraCliArgs: '--max-turns 5', worktree: 'wt-b',
+        },
+        f.ports,
+        invoke as never
+      );
+      const copy = (invoke.mock.calls[0] as unknown as [TeamLaunchRequest])[0].teamName;
+      const copyMeta = JSON.parse(
+        await fs.readFile(path.join(getTeamsBasePath(), copy, 'team.meta.json'), 'utf8')
+      ) as Record<string, unknown>;
+      expect(copyMeta).toMatchObject({
+        providerId: 'codex', model: 'gpt-y',
+        skipPermissions: true, extraCliArgs: '--max-turns 5', worktree: 'wt-b',
+      });
+      // Trust, runtime arguments and worktree of project B stay in its copy: not in the team.
+      const team = JSON.parse(await fs.readFile(
+        path.join(getTeamsBasePath(), 'builders', 'team.meta.json'), 'utf8'
+      )) as Record<string, unknown>;
+      expect(team).toMatchObject({ providerId: 'codex', model: 'gpt-y' });
+      for (const key of ['skipPermissions', 'extraCliArgs', 'worktree']) expect(team).not.toHaveProperty(key);
+    });
+
+    it('saves nothing when the launch is rejected or the team was already running', async () => {
+      const { readMeta, launch } = await perProjectFixture();
+      await launch({ providerId: 'codex', model: 'rejected' }, { success: false, error: 'no auth' });
+      await launch(
+        { providerId: 'codex', model: 'ignored' },
+        { success: true, data: { runId: 'r2', launchStatus: 'already_running', alreadyRunning: true } }
+      );
+      expect(await readMeta()).not.toHaveProperty('model');
+    });
+
+    it('does not fail an accepted launch when the settings cannot be saved', async () => {
+      const { launch } = await perProjectFixture();
+      const { TeamMetaStore } = await import('../../../src/main/services/team/TeamMetaStore');
+      vi.spyOn(TeamMetaStore.prototype, 'updateMeta').mockRejectedValue(new Error('disk full'));
+      await expect(launch({ providerId: 'codex', model: 'gpt-x' })).resolves.toMatchObject({
+        success: true,
+      });
+    });
+
+    it('runs a schedule in A with the settings the team got from a launch in B', async () => {
+      const f = await fixture();
+      await createTeamWithProjectContext({
+        teamName: 'builders', cwd: f.projectPath, members: [], projectContextMode: 'per_project',
+      }, f.onProgress, f.ports);
+      const registry = TeamProjectContextRegistry.fromCurrentApp();
+      const a = await vi.waitFor(async () => {
+        const row = await registry.find('builders', f.projectPath);
+        expect(row?.state).toBe('ready');
+        return row!;
+      });
+      // The fixture reads only what it needs elsewhere; scheduling reads the saved launch settings.
+      const readMeta = async (name: string) => JSON.parse(
+        await fs.readFile(path.join(getTeamsBasePath(), name, 'team.meta.json'), 'utf8')
+      ) as Record<string, unknown>;
+      f.ports.data.getSavedRequest = async (name) => {
+        const meta = await readMeta(name).catch(() => null);
+        return meta ? ({ teamName: name, members: [], ...meta } as unknown as TeamCreateRequest) : null;
+      };
+      const projectB = path.join(path.dirname(f.projectPath), 'project-b');
+      await fs.mkdir(projectB);
+      // A launch in B changes the team's settings.
+      const preparedB = await prepareTeamContextLaunch(
+        { teamName: 'builders', cwd: projectB, providerId: 'codex', model: 'gpt-y', effort: 'high' },
+        f.ports
+      );
+      await fs.writeFile(
+        path.join(getTeamsBasePath(), preparedB.request.teamName, 'config.json'),
+        JSON.stringify({ name: preparedB.request.teamName })
+      );
+      preparedB.mapProgress?.(
+        {
+          runId: 'rb', teamName: preparedB.request.teamName, state: 'ready',
+          message: 'ready', startedAt: '', updatedAt: '',
+        },
+        () => undefined
+      );
+      await vi.waitFor(async () => {
+        expect((await registry.find('builders', projectB))?.state).toBe('ready');
+      });
+      await preparedB.recordLaunch?.({ runId: 'rb' });
+      expect(await readMeta('builders')).toMatchObject({ providerId: 'codex', model: 'gpt-y' });
+      // The copy of A still has the settings of its own last launch.
+      expect(await readMeta(a.executionTeamName)).not.toMatchObject({ model: 'gpt-y' });
+      const launched: TeamLaunchRequest[] = [];
+      const targets = createProjectScheduleTargets(
+        { runtime: f.ports.runtime, provisioningRun: f.ports.run },
+        f.ports.data,
+        {
+          launchTeam: async (request) => {
+            launched.push(request);
+            return { runId: 'rs' };
+          },
+        }
+      );
+      const response = await targets.launch(
+        { teamName: 'builders', launchConfig: { cwd: f.projectPath, prompt: 'go' } } as never,
+        {
+          teamName: a.executionTeamName, cwd: f.projectPath, providerId: 'anthropic',
+          model: 'opus-x', effort: 'low', extraCliArgs: '--project-a',
+        }
+      );
+      expect(response).toEqual({ runId: 'rs' });
+      expect(launched).toHaveLength(1);
+      expect(launched[0]).toMatchObject({
+        teamName: a.executionTeamName, providerId: 'codex', model: 'gpt-y', effort: 'high',
+        extraCliArgs: '--project-a',
+      });
+      // And the copy that runs it has the team's settings again.
+      expect(await readMeta(a.executionTeamName)).toMatchObject({ providerId: 'codex', model: 'gpt-y' });
+    });
   });
 
   it('refuses project B while A is running and does not leave a dead reservation', async () => {

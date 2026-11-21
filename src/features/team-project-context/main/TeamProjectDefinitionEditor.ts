@@ -3,6 +3,7 @@ import { classifyTeamKind, createTeamKindPorts } from '../core';
 import { projectDefinitionToAlias } from './projectDefinitionToAlias';
 
 import type { TeamKind } from '../contracts';
+import type { DefinitionLaunchSettingsStore } from './definitionLaunchSettings';
 import type { DefinitionMetadataUpdate } from './projectDefinitionToAlias';
 import type { TeamProjectContextLaunchGate } from './TeamProjectContextLaunchGate';
 import type { PersistedTeamWorkContext } from './TeamProjectContextRegistry';
@@ -20,6 +21,7 @@ export interface TeamProjectDefinitionEditorPorts {
   getSavedRequest(teamName: string): Promise<TeamCreateRequest | null>;
   replaceMembers(teamName: string, request: ReplaceMembersRequest): Promise<void>;
   updateDisplayMetadata(teamName: string, update: DefinitionMetadataUpdate): Promise<void>;
+  launchSettings: Pick<DefinitionLaunchSettingsStore, 'save'>;
 }
 
 export interface DefinitionProjectionReport {
@@ -66,6 +68,7 @@ export class TeamProjectDefinitionEditor {
             assertStoppedForSync: this.assertAliasStopped,
             replaceMembers: (name, request) => this.ports.replaceMembers(name, request),
             updateDisplayMetadata: (name, update) => this.ports.updateDisplayMetadata(name, update),
+            launchSettings: this.ports.launchSettings,
           },
           logical,
           alias

@@ -15,6 +15,23 @@ export {
   resolveCrossTeamRecipient,
 } from './crossTeamRecipient';
 export type {
+  DefinitionLaunchSettingKey,
+  DefinitionLaunchSettings,
+  DefinitionLaunchSettingsStore,
+  ProjectLaunchSettings,
+} from './definitionLaunchSettings';
+export type { RecordedLaunchSettings } from './definitionLaunchSettings';
+export {
+  changedDefinitionLaunchSettings,
+  DEFINITION_LAUNCH_SETTING_KEYS,
+  pickDefinitionLaunchSettings,
+  pickProjectLaunchSettings,
+  PROJECT_LAUNCH_SETTING_KEYS,
+  recordLaunchSettings,
+  resolveLaunchSettings,
+  TEAM_META_FIELD_OWNER,
+} from './definitionLaunchSettings';
+export type {
   AliasBatchResolver,
   AliveRuntimeEntry,
   ContextRuntimeSnapshot,

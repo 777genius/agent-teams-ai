@@ -1,8 +1,11 @@
 import {
   classifyTeamKind,
+  recordLaunchSettings,
   TeamProjectContextLaunchConflictError,
 } from '@features/team-project-context/main';
 import { TeamMetaStore } from '@main/services/team/TeamMetaStore';
+import { createLogger } from '@shared/utils/logger';
+import { isFreshLaunch } from '@shared/utils/teamLaunchResponse';
 
 import { parseOptionalTeamEffort, parseOptionalTeamFastMode } from '../teamIpcRequestParsers';
 
@@ -10,7 +13,10 @@ import { createProjectContextRuntimeParts } from './teamProjectContextCreate';
 import { rememberProjectRunIdentity } from './teamProjectContextProgressIdentity';
 
 import type { ProjectTeamRuntimePorts } from './teamProjectContextCreate';
+import type { DefinitionLaunchSettingsStore } from '@features/team-project-context/main';
 import type { IpcResult, TeamLaunchRequest, TeamLaunchResponse, TeamProvisioningProgress } from '@shared/types';
+
+const logger = createLogger('IPC:teams:projectLaunch');
 
 export type ProjectContextProgressMapper = (
   progress: TeamProvisioningProgress,
@@ -20,6 +26,12 @@ export type ProjectContextProgressMapper = (
 export interface PreparedTeamContextLaunch {
   request: TeamLaunchRequest;
   mapProgress?: ProjectContextProgressMapper;
+  /**
+   * Saves what the launch stated as the team's launch settings. Only for a
+   * launch the user chose settings for; the caller decides (a schedule runs
+   * what the definition says and never records).
+   */
+  recordLaunch?: (response: TeamLaunchResponse) => Promise<void>;
 }
 
 /**
@@ -73,6 +85,8 @@ export async function prepareTeamContextLaunch(
     }
     return {
       request: { ...request, cwd: reserved.projectPath, teamName: physical.executionTeamName },
+      recordLaunch: (response) =>
+        recordAcceptedLaunch(parts.launchSettings, request, physical.executionTeamName, response),
       mapProgress: (progress, deliver) => {
         const logicalProgress = { ...progress, teamName: address.logicalTeamName };
         if (progress.state !== 'ready') {
@@ -137,6 +151,40 @@ export async function withPreparedContextLaunch(
     rememberProjectRunIdentity(
       result.data.runId, request.teamName, selected.request.teamName
     );
+    await selected.recordLaunch?.(result.data);
   }
   return result;
+}
+
+/**
+ * What the user chose for this launch becomes the team's saved launch
+ * settings, like for an ordinary team. A launch that found the team already
+ * starting or running applied nothing and records nothing. The launch is
+ * already accepted, so a failure to save is logged as an error and never fails
+ * it; the next launch records again. The caller holds the logical-team
+ * configuration lock.
+ */
+async function recordAcceptedLaunch(
+  store: DefinitionLaunchSettingsStore,
+  request: TeamLaunchRequest,
+  copyTeamName: string,
+  response: TeamLaunchResponse
+): Promise<void> {
+  if (!isFreshLaunch(response)) return;
+  try {
+    const { copyFailure } = await recordLaunchSettings(
+      store,
+      { definition: request.teamName, copy: copyTeamName },
+      request
+    );
+    if (copyFailure) {
+      logger.error(
+        `Launch settings of ${request.teamName} were saved, but its project copy ${copyTeamName} still has older ones until the next launch: ${copyFailure.message}`
+      );
+    }
+  } catch (error) {
+    logger.error(
+      `Could not save the launch settings of ${request.teamName}; the next launch will try again: ${String(error)}`
+    );
+  }
 }

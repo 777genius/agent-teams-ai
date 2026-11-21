@@ -261,3 +261,7 @@ ORG_CANDIDATES (TeamDirectoryOrganizationAdapter)
 ```
 
 The app's own team list folds the copies into the logical team (`projectTeamSummaries`); the HTTP list and the organization adapter do not call it.
+
+## Update after launch settings
+
+Gap 5 is closed for provider, model, effort, fast mode, context limit and model sync: they belong to the team definition and follow it into every project (see [per-project-launch-settings.md](./per-project-launch-settings.md)). `skipPermissions`, `worktree` and `extraCliArgs` stay per project on purpose. The "Launch settings" row of section A and gap 5 above describe the state before this change.
