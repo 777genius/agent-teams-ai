@@ -113,14 +113,33 @@ export class DefinitionLeadMemberSettingsRepositoryAdapter implements MemberSett
       model: input.settings.model ?? undefined,
       effort: input.settings.effort ?? undefined,
     });
-    const snapshot = await this.findTarget(input.teamName, current.name);
-    if (!snapshot) {
+    // As the team's own repository: a write that cannot be read back is rolled back,
+    // and a failed rollback asks for recovery instead of a retry.
+    try {
+      const snapshot = await this.findTarget(input.teamName, current.name);
+      if (!snapshot) {
+        throw new Error(`The lead of ${input.teamName} disappeared after its settings were saved`);
+      }
+      return { outcome: 'applied', snapshot, rollbackToken };
+    } catch (error) {
+      try {
+        await this.launchSettings.save(input.teamName, {
+          model: rollbackToken.model ?? undefined,
+          effort: rollbackToken.effort ?? undefined,
+        });
+      } catch (rollbackError) {
+        throw new MemberSettingsPersistenceFailedError(
+          `Lead settings persistence and rollback failed for ${input.teamName}/${current.name}`,
+          true,
+          new AggregateError([error, rollbackError])
+        );
+      }
       throw new MemberSettingsPersistenceFailedError(
-        `The lead of ${input.teamName} disappeared after its launch settings were saved`,
-        true
+        `Lead settings persistence failed for ${input.teamName}/${current.name}`,
+        false,
+        error
       );
     }
-    return { outcome: 'applied', snapshot, rollbackToken };
   }
 
   async restoreTarget(input: {
