@@ -72,6 +72,8 @@ export async function executeProjectMemberSettingsRelaunch(input: {
           }
         : { ...common, targetKind: 'member', settings: draft.settings }
     );
+    // recovery_required is an uncertain/partial write, not proof of a committed definition.
+    // Keep launch blocked until the user reopens settings and reconciles the current state.
     if (
       result.outcome !== 'completed' ||
       !['no_changes', 'persisted_only'].includes(result.effect)

@@ -63,6 +63,19 @@ describe('confirmed project member settings relaunch', () => {
     expect(launch).toHaveBeenLastCalledWith(changedRequest);
   });
 
+  it('does not mark an uncertain recovery result committed or launch on retry', async () => {
+    const launch = vi.fn(async () => undefined);
+    const onMembersSaved = vi.fn();
+    mocks.update.mockResolvedValue({ outcome: 'completed', effect: 'recovery_required' });
+    const input = { logicalTeamName: 'builders', baseline: [{ name: 'alice' }] as never,
+      draft, intent, commandId: 'stable-command', request: { teamName: 'builders' } as never, launch, onMembersSaved };
+    await expect(executeProjectMemberSettingsRelaunch(input)).rejects.toThrow(/Reopen the editor/);
+    expect(onMembersSaved).not.toHaveBeenCalled();
+    mocks.validate.mockImplementationOnce(() => { throw new Error('stale after uncertain save'); });
+    await expect(executeProjectMemberSettingsRelaunch(input)).rejects.toThrow('stale after uncertain save');
+    expect(launch).not.toHaveBeenCalled();
+  });
+
   it('never launches when the definition changed or the guarded save is refused', async () => {
     const launch = vi.fn(async () => undefined);
     mocks.validate.mockImplementationOnce(() => { throw new Error('roster changed'); });
