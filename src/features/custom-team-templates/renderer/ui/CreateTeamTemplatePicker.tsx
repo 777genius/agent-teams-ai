@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
 import { TEAM_TEMPLATES } from '@features/team-templates';
@@ -63,9 +63,8 @@ export const CreateTeamTemplatePicker = ({
   const [selection, setSelection] = useState<string>(() =>
     resolveInitialSelection(initialSelection)
   );
-  // A deliberate user choice always outranks a draft selection that arrives
-  // later: draft persistence restores asynchronously, long after mount.
-  const userSelectionMadeRef = useRef(false);
+  // Parent owns the persisted selection: both the header shortcut and this
+  // catalogue must reflect one applied template without re-applying the draft.
   const [lastCustomSnapshot, setLastCustomSnapshot] = useState<CustomTeamTemplateV1 | null>(null);
 
   // Hydration readiness: while the persisted selection has not been restored,
@@ -79,12 +78,9 @@ export const CreateTeamTemplatePicker = ({
     (loading === undefined ? undefined : !loading) ??
     true;
 
-  // Draft persistence restores the saved selection after mount. Adopt it only
-  // while the picker still shows its default, so the visible selection matches
-  // the restored prompt/members without re-applying the template (restoration
-  // must never overwrite user-edited prompt/member data).
+  // Hydration blocks interactions until the parent has restored the selection.
+  // Keep both template entry points synchronized without replacing user edits.
   useEffect(() => {
-    if (userSelectionMadeRef.current) return;
     setSelection((current) => {
       const next = resolveInitialSelection(initialSelection);
       return current === next ? current : next;

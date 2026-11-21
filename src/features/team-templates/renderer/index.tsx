@@ -25,6 +25,7 @@ import { applyTeamTemplate, TEAM_TEMPLATES } from '../core';
 
 import { TEAM_TEMPLATE_ICONS } from './templateIcons';
 
+import type { TeamTemplateV1 } from '../contracts';
 import type { TeamCreateConfigRequest } from '@shared/types';
 import type { TeamProviderId } from '@shared/types';
 
@@ -35,7 +36,7 @@ export const TeamTemplatePicker = ({
   confirmBeforeApply = false,
   disabled = false,
 }: {
-  onApply: (draft: ReturnType<typeof applyTeamTemplate>) => void;
+  onApply: (draft: ReturnType<typeof applyTeamTemplate>, templateId: TeamTemplateV1['id']) => void;
   /** Ask before replacing non-default content in the owning form. */
   confirmBeforeApply?: boolean;
   /** Prevent replacement while persisted form fields are hydrating. */
@@ -58,7 +59,7 @@ export const TeamTemplatePicker = ({
           const template = TEAM_TEMPLATES.find((entry) => entry.id === id);
           if (!template) return;
           if (!confirmBeforeApply) {
-            onApply(applyTeamTemplate(template));
+            onApply(applyTeamTemplate(template), template.id);
             return;
           }
           setPendingTemplate(template);
@@ -105,7 +106,7 @@ export const TeamTemplatePicker = ({
             <AlertDialogAction
               className={buttonVariants({ variant: 'default' })}
               onClick={() => {
-                if (pendingTemplate && !disabled) onApply(applyTeamTemplate(pendingTemplate));
+                if (pendingTemplate && !disabled) onApply(applyTeamTemplate(pendingTemplate), pendingTemplate.id);
                 setPendingTemplate(null);
               }}
             >

@@ -40,7 +40,7 @@ const pristine: DraftState = {
   project: '/tmp/TEST-template-project',
 };
 
-function Form({ initial }: { initial: DraftState }): React.JSX.Element {
+function Form({ initial, onTemplateApplied }: { initial: DraftState; onTemplateApplied?: (id: string) => void }): React.JSX.Element {
   const [draft, setDraft] = useState(initial);
   const update = (patch: Partial<DraftState>) => setDraft((current) => ({ ...current, ...patch }));
   return (
@@ -75,6 +75,7 @@ function Form({ initial }: { initial: DraftState }): React.JSX.Element {
           defaultDescription={buildDefaultTeamDescription()}
           hasPromptChips={draft.chips.length > 0}
           clearPromptChips={() => update({ chips: [] })}
+          onTemplateApplied={onTemplateApplied}
         />
       }
     >
@@ -178,6 +179,23 @@ describe('create team template replacement', () => {
     expect(applied.prompt).toContain('Coordinate a small software product team.');
     expect(applied.teamName).toBe(edited.teamName);
     expect(applied.project).toBe(edited.project);
+  });
+
+  it('notifies the shared picker only after a confirmed header template application', async () => {
+    const onTemplateApplied = vi.fn();
+    await act(async () =>
+      root.render(createElement(Form, {
+        initial: { ...pristine, prompt: 'Preserve my prompt until confirmation' },
+        onTemplateApplied,
+      }))
+    );
+    await selectTemplate();
+    await clickDialogButton('Cancel');
+    expect(onTemplateApplied).not.toHaveBeenCalled();
+
+    await selectTemplate();
+    await clickDialogButton('Apply template');
+    expect(onTemplateApplied).toHaveBeenCalledExactlyOnceWith('software-product');
   });
 
   // RED if any individual edited field incorrectly bypasses replacement confirmation.

@@ -2612,7 +2612,13 @@ export const CreateTeamDialog = ({
               defaultDescription={buildDefaultTeamDescription()}
               hasPromptChips={promptChipDraft.chips.length > 0}
               clearPromptChips={promptChipDraft.clearChipDraft}
-              disabled={isSubmitting || !open || !active}
+              onTemplateApplied={(id) => {
+                templateSelection.setAppliedTemplateSource('builtin');
+                templateSelection.templateSelectionDraft.setValue(
+                  JSON.stringify({ source: 'builtin', value: `builtin:${id}` })
+                );
+              }}
+              disabled={isSubmitting || !open || !active || !templateSelection.templateSelectionDraft.isLoaded}
             />
           }
         >
@@ -2700,8 +2706,14 @@ export const CreateTeamDialog = ({
             <div className="space-y-4 pt-4 md:col-span-2">
               <CreateTeamTemplatePicker
                 open={open}
-                initialSelection={initialData ? '' : templateSelection.storedTemplateSelection.value}
-                initialSelectionReady={draftLoaded && (initialData || templateSelection.templateSelectionDraft.isLoaded)}
+                initialSelection={
+                  initialData && templateSelection.appliedTemplateSource === 'none'
+                    ? ''
+                    : templateSelection.storedTemplateSelection.value
+                }
+                initialSelectionReady={
+                  draftLoaded && templateSelection.templateSelectionDraft.isLoaded
+                }
                 onApply={(draft, source, value) =>
                   applyTemplateToCreateTeam(draft, source, value, {
                     templateSelection, descriptionDraft, promptDraft, promptChipDraft, setMembers,
