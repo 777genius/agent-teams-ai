@@ -168,6 +168,10 @@ async function until(expression: string, label: string, timeout = 30_000) {
 const topDialog = `Array.from(document.querySelectorAll('[role="dialog"]')).at(-1)`;
 const button = (text: string, within = 'document') =>
   `Array.from(${within}.querySelectorAll('button')).find(e => e.textContent?.trim() === ${JSON.stringify(text)} && !e.disabled)`;
+// Build CDP expressions with JSON-string-encoded values, never interpolate an
+// imported record's identifier inside executable JavaScript or a CSS selector.
+const byTestId = (testId: string) =>
+  `Array.from(document.querySelectorAll('[data-testid]')).find(e => e.getAttribute('data-testid') === ${JSON.stringify(testId)})`;
 async function click(expression: string) {
   await until(
     `(() => { const e = ${expression}; if (!(e instanceof HTMLElement)) return false;
@@ -349,7 +353,7 @@ try {
     [descriptionTooLong, 'import-template-validation-failed'],
   ]) {
     await importFile(file);
-    await until(`document.querySelector('[data-testid="${testId}"]')`, testId);
+    await until(byTestId(testId), testId);
     assert.equal(
       await evaluate(
         `Boolean(${button('Import Template', topDialog)} && ${button('Close', topDialog)})`
@@ -373,11 +377,8 @@ try {
   assert.deepEqual(original.members, portable.members);
   await screenshot('03-import-success');
   await closeDialog();
-  await until(
-    `document.querySelector('[data-testid="export-template-${original.templateId}"]')`,
-    'new library row'
-  );
-  await click(`document.querySelector('[data-testid="export-template-${original.templateId}"]')`);
+  await until(byTestId(`export-template-${original.templateId}`), 'new library row');
+  await click(byTestId(`export-template-${original.templateId}`));
   await selection('save', exportedJson);
   await click(button('Export', topDialog));
   await until(`document.querySelector('[data-testid="export-template-done"]')`, 'export success');
@@ -430,7 +431,7 @@ try {
 
   // Mutate existing templates through the real dialogs, not direct storage/API
   // writes. Observe the resulting records through the actual preload + SQLite worker.
-  await click(`document.querySelector('[data-testid="edit-template-${original.templateId}"]')`);
+  await click(byTestId(`edit-template-${original.templateId}`));
   await until("document.querySelector('#edit-template-description')", 'edit template dialog');
   const revisedDescription = 'Updated from Electron E2E — пример';
   await replaceInput('#edit-template-description', revisedDescription);
@@ -442,7 +443,7 @@ try {
   await screenshot('08-edited-saved-template');
   checks.push('Edit dialog updates a saved template and the real SQLite read returns its revisioned change.');
 
-  await click(`document.querySelector('[data-testid="duplicate-template-${original.templateId}"]')`);
+  await click(byTestId(`duplicate-template-${original.templateId}`));
   await until("document.querySelector('#duplicate-template-name')", 'duplicate template dialog');
   const variantName = portable.name + ' variant';
   await replaceInput('#duplicate-template-name', variantName);
@@ -456,7 +457,7 @@ try {
   await screenshot('09-duplicated-template');
   checks.push('Duplicate creates a separate template ID without modifying the source.');
 
-  await click(`document.querySelector('[data-testid="delete-template-${variant.templateId}"]')`);
+  await click(byTestId(`delete-template-${variant.templateId}`));
   await until(
     `${topDialog}?.textContent?.includes('Delete this saved template')`,
     'delete template confirmation'
@@ -475,11 +476,8 @@ try {
   await closeDialog();
   await click(button('Create Team'));
   await until("document.querySelector('[data-testid=\"create-team-template-picker\"]')", 'Create Team template picker');
-  await until(
-    `document.querySelector('[data-testid="create-template-option-custom-${original.templateId}"]')`,
-    'imported custom template visible in Create Team'
-  );
-  await click(`document.querySelector('[data-testid="create-template-option-custom-${original.templateId}"]')`);
+  await until(byTestId(`create-template-option-custom-${original.templateId}`), 'imported custom template visible in Create Team');
+  await click(byTestId(`create-template-option-custom-${original.templateId}`));
   const templateConfirm = "Array.from(document.querySelectorAll('[role=alertdialog]'))" +
     ".find(dialog => dialog.querySelector('h2')?.textContent === 'Apply team template?')";
   await until(
