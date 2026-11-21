@@ -33,6 +33,9 @@ export const SaveAsTemplateAction = ({
 }: SaveAsTemplateActionProps): React.JSX.Element => {
   const { t } = useAppTranslation('team');
   const [open, setOpen] = useState(false);
+  // Keep the lazily loaded flow mounted after first open so an unknown save
+  // retains its exact preview token when the same team row is reopened.
+  const [hasOpened, setHasOpened] = useState(false);
 
   const label = t('customTemplates.actions.saveAsTemplate');
 
@@ -48,6 +51,7 @@ export const SaveAsTemplateAction = ({
             aria-label={label}
             onClick={(event) => {
               event.stopPropagation();
+              setHasOpened(true);
               setOpen(true);
             }}
             onKeyDown={(event) => event.stopPropagation()}
@@ -57,7 +61,7 @@ export const SaveAsTemplateAction = ({
         </TooltipTrigger>
         <TooltipContent side="bottom">{label}</TooltipContent>
       </Tooltip>
-      {open ? (
+      {hasOpened ? (
         // Event-only boundary for everything mounted by this action. The
         // loading fallback renders inline inside the team row (the dialog
         // itself stops its own events), so a click on the overlay or an

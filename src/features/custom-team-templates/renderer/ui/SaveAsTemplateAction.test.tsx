@@ -139,6 +139,48 @@ describe('SaveAsTemplateAction', () => {
     expect(host.querySelector('[role="dialog"]')).not.toBeNull();
   });
 
+
+  it('reopens an unresolved save with its original token and no second create', async () => {
+    saveTemplate.mockResolvedValue({
+      status: 'unresolvedWriteOutcome',
+      templateId: 'template-1',
+    });
+    recheckSave.mockResolvedValue({
+      status: 'saved',
+      template: {
+        templateId: 'template-1',
+        name: 'Alpha',
+        schemaVersion: 1,
+        teamPrompt: 'Lead the work.',
+        members: [{ name: 'ann', role: 'Developer' }],
+      },
+    });
+    await renderAction({ teamName: 'alpha', displayName: 'Alpha' });
+    await act(async () => actionButton().click());
+    await flush();
+    const findButton = (text: string): HTMLButtonElement => {
+      const found = Array.from(host.querySelectorAll('button')).find((button) =>
+        button.textContent?.includes(text)
+      );
+      if (!found) throw new Error('Missing dialog button: ' + text);
+      return found;
+    };
+    await act(async () => findButton('customTemplates.actions.save').click());
+    expect(saveTemplate).toHaveBeenCalledTimes(1);
+    expect(host.textContent).toContain('customTemplates.states.unresolvedTitle');
+
+    await act(async () => findButton('actions.close').click());
+    expect(host.querySelector('[role="dialog"]')).toBeNull();
+    await act(async () => actionButton().click());
+    await flush();
+
+    expect(preparePreview).toHaveBeenCalledTimes(1);
+    expect(host.textContent).toContain('customTemplates.states.unresolvedTitle');
+    await act(async () => findButton('customTemplates.actions.recheck').click());
+    expect(recheckSave).toHaveBeenCalledWith({ previewToken: 'token-1' });
+    expect(saveTemplate).toHaveBeenCalledTimes(1);
+  });
+
   it('does not prepare again on a parent re-render', async () => {
     await renderAction({ teamName: 'alpha', displayName: 'Alpha' });
     await act(async () => {

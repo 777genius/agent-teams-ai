@@ -105,6 +105,8 @@ export function useSaveAsTemplate({
 
   const requestIdRef = useRef(0);
   const busyRef = useRef(false);
+  const sessionOpenRef = useRef(false);
+  const sessionSourceRef = useRef<string | null>(null);
 
   const applyPrepareResult = useCallback((result: PrepareCustomTeamTemplatePreviewResult): void => {
     setIssues([]);
@@ -344,9 +346,24 @@ export function useSaveAsTemplate({
   );
 
   useEffect(() => {
-    if (!open) return;
-    // Any response that arrives after the dialog reopened belongs to a previous
-    // session and must be dropped.
+    if (!open) {
+      sessionOpenRef.current = false;
+      return;
+    }
+    if (sessionOpenRef.current && sessionSourceRef.current === sourceTeamName) return;
+    const sameSource = sessionSourceRef.current === sourceTeamName;
+    sessionOpenRef.current = true;
+    sessionSourceRef.current = sourceTeamName;
+    const unknownOutcome =
+      attempt?.status === 'unresolved' ||
+      attempt?.status === 'requestFailed' ||
+      (attempt?.status === 'unavailable' && attempt.during === 'recheck');
+    if (sameSource && preview && unknownOutcome) {
+      // Closing and reopening may not discard the only retained identity of
+      // a possibly committed save. Offer re-check, never a fresh create.
+      return;
+    }
+    // A genuinely new flow invalidates responses from the previous session.
     requestIdRef.current += 1;
     busyRef.current = false;
     setNameState(initialName);
@@ -359,7 +376,7 @@ export function useSaveAsTemplate({
     setNotice(null);
     setAttempt(null);
     void runPrepare(initialName, '');
-  }, [initialName, open, runPrepare, sourceTeamName]);
+  }, [attempt, initialName, open, preview, runPrepare, sourceTeamName]);
 
   const canSave =
     preview !== null &&
