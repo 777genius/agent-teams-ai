@@ -195,7 +195,8 @@ describe('create team template replacement', () => {
 
     await selectTemplate();
     await clickDialogButton('Apply template');
-    expect(onTemplateApplied).toHaveBeenCalledExactlyOnceWith('software-product');
+    expect(onTemplateApplied).toHaveBeenCalledTimes(1);
+    expect(onTemplateApplied).toHaveBeenCalledWith('software-product');
   });
 
   // RED if any individual edited field incorrectly bypasses replacement confirmation.

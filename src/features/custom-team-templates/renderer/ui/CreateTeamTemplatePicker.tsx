@@ -111,7 +111,6 @@ export const CreateTeamTemplatePicker = ({
 
   const handleSelect = (value: string): void => {
     if (!selectionReady) return;
-    userSelectionMadeRef.current = true;
     if (value === selection) return;
     const result = resolveCreateTeamTemplateDraft(value, {
       builtins: TEAM_TEMPLATES,
