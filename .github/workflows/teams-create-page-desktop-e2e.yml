@@ -6,6 +6,7 @@ on:
     paths:
       - '.github/workflows/teams-create-page-desktop-e2e.yml'
       - 'scripts/e2e/teams-create-page-desktop.mjs'
+      - 'scripts/e2e/custom-template-import-export-desktop.ts'
       # Native desktop create/launch admission and Validate share these guards.
       - 'src/shared/utils/cliArgsParser.ts'
       - 'src/main/services/team/TeamRequestValidation.ts'
@@ -19,6 +20,7 @@ on:
       - 'src/renderer/components/team/**'
       - 'src/features/organizations/**'
       - 'src/features/team-templates/**'
+      - 'src/features/custom-team-templates/**'
       - 'src/features/gateway-provider/renderer/**'
       - 'src/renderer/hooks/useCreateTeamDraft.ts'
       - 'src/renderer/services/createTeamDraftStorage.ts'
@@ -27,6 +29,7 @@ on:
     paths:
       - '.github/workflows/teams-create-page-desktop-e2e.yml'
       - 'scripts/e2e/teams-create-page-desktop.mjs'
+      - 'scripts/e2e/custom-template-import-export-desktop.ts'
       # Native desktop create/launch admission and Validate share these guards.
       - 'src/shared/utils/cliArgsParser.ts'
       - 'src/main/services/team/TeamRequestValidation.ts'
@@ -40,6 +43,7 @@ on:
       - 'src/renderer/components/team/**'
       - 'src/features/organizations/**'
       - 'src/features/team-templates/**'
+      - 'src/features/custom-team-templates/**'
       - 'src/features/gateway-provider/renderer/**'
       - 'src/renderer/hooks/useCreateTeamDraft.ts'
       - 'src/renderer/services/createTeamDraftStorage.ts'
@@ -105,6 +109,11 @@ jobs:
           else
             node scripts/e2e/teams-create-page-desktop.mjs
           fi
+      - name: Exercise real custom-template import/export UI (Linux)
+        if: runner.os == 'Linux'
+        env:
+          CUSTOM_TEMPLATE_E2E_OUTPUT_DIR: ${{ runner.temp }}/teams-create-page-evidence
+        run: xvfb-run -a pnpm test:e2e:custom-template-import-export
       - name: Upload sanitized evidence
         if: always()
         uses: actions/upload-artifact@v4
