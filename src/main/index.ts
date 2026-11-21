@@ -1995,7 +1995,7 @@ async function initializeServices(): Promise<void> {
   const teamDiagnosticsApi = teamIpcHandlerApis.diagnostics;
   const teamMessagingApi = teamIpcHandlerApis.messaging;
   const teamMemberSettingsFeature = composeTeamMemberSettings({
-    commandRunner: applicationCommandRunner,
+    commandLedger: { runner: applicationCommandRunner, backend: applicationCommandLedgerBackend },
     apis: teamIpcHandlerApis,
     data: teamDataService,
     leadRuntime: teamProvisioningService,

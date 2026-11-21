@@ -54,8 +54,16 @@ export function routeMemberSettingsWrites(
   };
 }
 
+/** The part of the internal storage backend that tells whether its SQLite ledger was selected. */
+interface CommandLedgerBackend {
+  selector: { select<T>(sqliteBackend: T, jsonBackend: T): Promise<T> };
+}
+
 export interface TeamMemberSettingsComposition {
-  commandRunner: NodeTeamMemberSettingsFeatureDependencies['commandRunner'];
+  commandLedger: {
+    runner: NodeTeamMemberSettingsFeatureDependencies['commandRunner'];
+    backend: CommandLedgerBackend | null;
+  };
   apis: Pick<TeamIpcHandlerApis, 'memberLifecycle' | 'runtime' | 'provisioningRun'>;
   data: ReturnType<DefinitionEditPorts['data']>;
   leadRuntime: Parameters<typeof createTeamProvisioningLeadRuntimeSettingsCapability>[0];
@@ -66,8 +74,10 @@ export function composeTeamMemberSettings(
   input: TeamMemberSettingsComposition
 ): TeamMemberSettingsFeatureApi {
   const { leadRuntime } = input;
+  const { backend } = input.commandLedger;
   const feature = createNodeTeamMemberSettingsFeature({
-    commandRunner: input.commandRunner,
+    commandRunner: input.commandLedger.runner,
+    isDurableStorageAvailable: backend ? () => backend.selector.select(true, false) : undefined,
     memberLifecycle: input.apis.memberLifecycle,
     runtime: createTeamProvisioningLeadRuntimeSettingsCapability({
       isTeamAlive: (teamName) => leadRuntime.isTeamAlive(teamName),
