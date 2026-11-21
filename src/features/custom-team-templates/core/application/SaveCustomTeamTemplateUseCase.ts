@@ -213,11 +213,6 @@ export class SaveCustomTeamTemplateUseCase {
       },
       contentHash: confirmed.contentHash,
     };
-    // A previous execute may have left an unresolved write for this token
-    // (an earlier attempt with execution 'unknown' whose writer never
-    // settled). That uncertainty must survive into this attempt: a later
-    // `not_started` failure proves nothing about the earlier writer.
-
     // A previous writer may still commit after an IPC timeout. Its unconfirmed
     // absence must never authorize a second dispatch for this token.
     if (this.deps.previewStore.hasUnresolvedWrite(state.token)) {

@@ -24,8 +24,15 @@ export function applyTemplateToCreateTeam(
   options: TemplateApplication
 ): void {
   const {
-    templateSelection, descriptionDraft, promptDraft, promptChipDraft, setMembers,
-    setLaunchTeam, setSoloTeam, setRuntimeSelection, setSyncModelsWithLead,
+    templateSelection,
+    descriptionDraft,
+    promptDraft,
+    promptChipDraft,
+    setMembers,
+    setLaunchTeam,
+    setSoloTeam,
+    setRuntimeSelection,
+    setSyncModelsWithLead,
   } = options;
   templateSelection.setAppliedTemplateSource(source);
   templateSelection.templateSelectionDraft.setValue(JSON.stringify({ source, value: value ?? '' }));
@@ -38,5 +45,7 @@ export function applyTemplateToCreateTeam(
   descriptionDraft.setValue(draft.description ?? '');
   promptDraft.setValue(draft.prompt ?? '');
   promptChipDraft.clearChipDraft();
-  setMembers(buildInitialRosterMemberDrafts({ copiedMembers: draft.members, multimodelEnabled: true }));
+  setMembers(
+    buildInitialRosterMemberDrafts({ copiedMembers: draft.members, multimodelEnabled: true })
+  );
 }

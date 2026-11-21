@@ -128,7 +128,9 @@ export class PrepareCustomTemplatePreviewUseCase {
       contentHash,
     });
     } catch (error) {
-      if (error instanceof CustomTemplatePreviewCapacityError) return { status: 'storageUnavailable' };
+      if (error instanceof CustomTemplatePreviewCapacityError) {
+        return { status: 'storageUnavailable' };
+      }
       throw error;
     }
 

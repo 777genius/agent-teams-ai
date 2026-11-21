@@ -37,7 +37,6 @@ import { Button } from '@renderer/components/ui/button';
 import { Checkbox } from '@renderer/components/ui/checkbox';
 import { Input } from '@renderer/components/ui/input';
 import { Label } from '@renderer/components/ui/label';
-import { MentionableTextarea } from '@renderer/components/ui/MentionableTextarea';
 import {
   Select,
   SelectContent,
@@ -101,6 +100,7 @@ import { AlertTriangle, CheckCircle2, Info, Loader2, X } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
 
 import { AdvancedCliSection } from './AdvancedCliSection';
+import { applyTemplateToCreateTeam } from './applyTemplateToCreateTeam';
 import { AnthropicFastModeSelector } from './AnthropicFastModeSelector';
 import { assignCreatedTeamToOrganization } from './assignCreatedTeamToOrganization';
 import { CodexFastModeSelector } from './CodexFastModeSelector';
@@ -204,10 +204,9 @@ import {
 import { TeammateRuntimeCompatibilityNotice } from './TeammateRuntimeCompatibilityNotice';
 import { computeEffectiveTeamModel } from './TeamModelSelector';
 import { getNextSuggestedTeamName } from './teamNameSets';
+import { useCreateTeamTemplateSelection } from './useCreateTeamTemplateSelection';
 import { useCustomProjectFolder } from './useCustomProjectFolder';
 import { useDialogMemberModelScope } from './useDialogMemberModelScope';
-import { useCreateTeamTemplateSelection } from './useCreateTeamTemplateSelection';
-import { applyTemplateToCreateTeam } from './applyTemplateToCreateTeam';
 import { useMemberWorkspaceInfo } from './useMemberWorkspaceInfo';
 import { useOpenCodeProviderScopedDialogModelState } from './useOpenCodeProviderScopedModelAuthority';
 import { useProjectScopedRuntimeProviderStatuses } from './useProjectScopedRuntimeProviderStatuses';
@@ -2781,7 +2780,7 @@ export const CreateTeamDialog = ({
                 launchTeam={launchTeam}
                 onLaunchTeamChange={setLaunchTeam}
               />
-              {!launchTeam && appliedTemplateSource !== 'none' ? (
+              {!launchTeam && templateSelection.appliedTemplateSource !== 'none' ? (
                 <div className="mt-4">
                   <CreateTeamPromptField
                     promptDraft={promptDraft}

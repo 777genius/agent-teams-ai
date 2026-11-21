@@ -20,7 +20,6 @@ const TOKEN_COLLISION_ATTEMPTS = 8;
 /** Every retained operation may still commit; new previews must not destroy its re-check token. */
 export class CustomTemplatePreviewCapacityError extends Error {}
 
-
 export interface CustomTeamTemplatePreviewStateInput {
   /** Team the projection was read from; a token can never be re-pointed at another team. */
   sourceTeamName: string;

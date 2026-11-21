@@ -1,5 +1,5 @@
-import { ExternalAgentPromptAction } from '@features/external-agent-connection/renderer';
 import { MyTemplatesAction } from '@features/custom-team-templates/renderer';
+import { ExternalAgentPromptAction } from '@features/external-agent-connection/renderer';
 import { useAppTranslation } from '@features/localization/renderer';
 import { Button } from '@renderer/components/ui/button';
 import { Input } from '@renderer/components/ui/input';
