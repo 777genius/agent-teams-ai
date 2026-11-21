@@ -192,7 +192,11 @@ describe('projectTemplateContent', () => {
     if (result.status !== 'ready') return;
     expect(result.content.members.map((member) => member.name)).toEqual(['dev-2']);
     expect(result.warnings).toEqual([]);
-    expect(validateTemplateContent(result.content)).toEqual([]);
+    // Projection remains faithful to the source, but a standalone runtime suffix
+    // cannot enter the reusable library because creation rejects that name.
+    expect(validateTemplateContent(result.content)).toContainEqual({
+      code: 'memberNameInvalid', field: 'members[0].name',
+    });
   });
 
   it('drops only the auto-suffixed duplicate when both dev and dev-2 are present', () => {
@@ -341,6 +345,15 @@ describe('validateTemplateContent', () => {
     expect(
       validateTemplateContent(content([{ name: 'engineer', role: 'R', workflow: 'W' }]))
     ).toEqual([]);
+  });
+
+  it('rejects standalone numeric suffixes reserved by team creation', () => {
+    expect(validateTemplateContent(content([{ name: 'dev-1' }]))).toEqual([]);
+    for (const name of ['dev-2', 'dev-3', 'reviewer-20']) {
+      expect(validateTemplateContent(content([{ name }]))).toContainEqual({
+        code: 'memberNameInvalid', field: 'members[0].name',
+      });
+    }
   });
 
   it('rejects blank, malformed and reserved member names', () => {

@@ -3,6 +3,7 @@ import { isCanonicalSettingsLeadMember } from '@shared/utils/leadDetection';
 import {
   createCliAutoSuffixNameGuard,
   createCliProvisionerNameGuard,
+  parseNumericSuffixName,
   validateTeamMemberNameFormat,
 } from '@shared/utils/teamMemberName';
 
@@ -157,6 +158,9 @@ export function validateTemplateContent(
       if (
         validateTeamMemberNameFormat(name) ||
         isReservedName(name) ||
+        // Team creation rejects all runtime-managed suffixes >= 2, even when
+        // the base name is absent. Import/edit must apply the same policy.
+        ((suffix) => suffix !== null && suffix.suffix >= 2)(parseNumericSuffixName(name)) ||
         !keepAutoSuffixedName(name) ||
         !keepNonProvisionerName(name)
       ) {
