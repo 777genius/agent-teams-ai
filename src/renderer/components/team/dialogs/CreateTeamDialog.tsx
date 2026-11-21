@@ -15,7 +15,6 @@ import {
   resolveCodexFastMode,
   resolveCodexRuntimeSelection,
 } from '@features/codex-runtime-profile/renderer';
-import { CreateTeamTemplatePicker } from '@features/custom-team-templates/renderer';
 import { useAppTranslation } from '@features/localization/renderer';
 import {
   useWorkspaceTrustStatus,
@@ -100,7 +99,6 @@ import { AlertTriangle, CheckCircle2, Info, Loader2, X } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
 
 import { AdvancedCliSection } from './AdvancedCliSection';
-import { applyTemplateToCreateTeam } from './applyTemplateToCreateTeam';
 import { AnthropicFastModeSelector } from './AnthropicFastModeSelector';
 import { assignCreatedTeamToOrganization } from './assignCreatedTeamToOrganization';
 import { CodexFastModeSelector } from './CodexFastModeSelector';
@@ -109,6 +107,7 @@ import { consumeTeamCopySeedOnce } from './createTeamCopySeed';
 import { buildDefaultTeamDescription } from './createTeamDescription';
 import { CreateTeamHeaderActions } from './CreateTeamHeaderActions';
 import { CreateTeamPromptField } from './CreateTeamPromptField';
+import { CreateTeamTemplateSelectionField } from './CreateTeamTemplateSelectionField';
 import { buildInitialRosterMemberDrafts } from './createTeamInitialRoster';
 import { buildLaunchOptionalSummary } from './createTeamOptionalSummary';
 import {
@@ -373,6 +372,7 @@ export const CreateTeamDialog = ({
   const promptDraft = useDraftPersistence({ key: 'createTeam:prompt' });
   const promptChipDraft = useChipDraftPersistence('createTeam:prompt:chips');
   const templateSelection = useCreateTeamTemplateSelection({ initialData: Boolean(initialData) });
+  const templateSelectionReady = templateSelection.templateSelectionDraft.isLoaded;
   const [projects, setProjects] = useState<ProjectPathProject[]>([]);
   const [projectsLoading, setProjectsLoading] = useState(false);
   const [projectsError, setProjectsError] = useState<string | null>(null);
@@ -2612,18 +2612,8 @@ export const CreateTeamDialog = ({
               defaultDescription={buildDefaultTeamDescription()}
               hasPromptChips={promptChipDraft.chips.length > 0}
               clearPromptChips={promptChipDraft.clearChipDraft}
-              onTemplateApplied={(id) => {
-                templateSelection.setAppliedTemplateSource('builtin');
-                templateSelection.templateSelectionDraft.setValue(
-                  JSON.stringify({ source: 'builtin', value: `builtin:${id}` })
-                );
-              }}
-              disabled={
-                isSubmitting ||
-                !open ||
-                !active ||
-                !templateSelection.templateSelectionDraft.isLoaded
-              }
+              onTemplateApplied={templateSelection.applyBuiltinTemplate}
+              disabled={isSubmitting || !open || !active || !templateSelectionReady}
             />
           }
         >
@@ -2709,29 +2699,14 @@ export const CreateTeamDialog = ({
               ) : null}
             </div>
             <div className="space-y-4 pt-4 md:col-span-2">
-              <CreateTeamTemplatePicker
+              <CreateTeamTemplateSelectionField
                 open={open}
-                initialSelection={
-                  initialData && templateSelection.appliedTemplateSource === 'none'
-                    ? ''
-                    : templateSelection.storedTemplateSelection.value
-                }
-                initialSelectionReady={
-                  draftLoaded && templateSelection.templateSelectionDraft.isLoaded
-                }
-                onApply={(draft, source, value) =>
-                  applyTemplateToCreateTeam(draft, source, value, {
-                    templateSelection,
-                    descriptionDraft,
-                    promptDraft,
-                    promptChipDraft,
-                    setMembers,
-                    setLaunchTeam,
-                    setSoloTeam,
-                    setRuntimeSelection,
-                    setSyncModelsWithLead,
-                  })
-                }
+                isCopy={Boolean(initialData)}
+                form={createTeamDraft}
+                templateSelection={templateSelection}
+                descriptionDraft={descriptionDraft}
+                promptDraft={promptDraft}
+                promptChipDraft={promptChipDraft}
               />
               <TeamRosterEditorSection
                 runtimeSelectionUnresolved={runtimeSelectionUnresolved}

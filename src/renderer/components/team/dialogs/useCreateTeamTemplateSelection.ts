@@ -43,6 +43,8 @@ export interface UseCreateTeamTemplateSelectionResult {
    * former inline reset of `setAppliedTemplateSource('none')` +
    * `templateSelectionDraft.clearDraft()` in `resetFormState`. */
   clearTemplateSelection: () => void;
+  /** Mirrors a built-in template applied from the existing header shortcut. */
+  applyBuiltinTemplate: (id: string) => void;
 }
 
 /**
@@ -85,6 +87,11 @@ export function useCreateTeamTemplateSelection({
     if (source) setAppliedTemplateSource(source);
   }, [templateSelectionDraft.value, initialData, templateSelectionDraft]);
 
+  const applyBuiltinTemplate = (id: string): void => {
+    setAppliedTemplateSource('builtin');
+    templateSelectionDraft.setValue(JSON.stringify({ source: 'builtin', value: `builtin:${id}` }));
+  };
+
   const clearTemplateSelection = (): void => {
     setAppliedTemplateSource('none');
     templateSelectionDraft.clearDraft();
@@ -96,6 +103,7 @@ export function useCreateTeamTemplateSelection({
     setAppliedTemplateSource,
     storedTemplateSelection,
     clearTemplateSelection,
+    applyBuiltinTemplate,
     templateSelectionHydrated: templateSelectionDraft.isLoaded,
   };
 }
