@@ -11,7 +11,7 @@ import { createOpenCodeV2OwnedSessionClient } from '@agent-teams/provider-implem
 import { captureOpenCodeV2SessionCredential } from '../dist/adapters/providers/OpenCodeV2SessionCredential.js';
 import { captureOpenCodeConfigurationSource } from '../dist/adapters/providers/OpenCodeConfigurationSource.js';
 import { captureOpenCodeV2Configuration } from '../dist/adapters/providers/OpenCodeV2CapturedConfiguration.js';
-import { OpenCodeV2CredentialScope } from '../dist/adapters/providers/OpenCodeV2CredentialScope.js';
+import { bindOpenCodeV2ConfigurationKey, OpenCodeV2CredentialScope } from '../dist/adapters/providers/OpenCodeV2CredentialScope.js';
 import { AcceptedOpenCodeV2FileKey, createOpenCodeV2FileMaterialization,
   openCodeV2SelectedSourceReference, selectedFilePaths,
 } from '../dist/adapters/providers/OpenCodeV2SelectedFileKey.js';
@@ -34,6 +34,28 @@ function fixture() {
     cleanup: () => rmSync(root, { force: true, recursive: true }),
   };
 }
+
+test('original captured credential absence rejects later keys, revoked owners and throwing callbacks', async t => {
+  const f = fixture(); t.after(f.cleanup);
+  let current = true;
+  const absent = captureOpenCodeV2SessionCredential(f.profile, 'TEST-provider', () => current);
+  assert.equal(absent.isAbsent(), true);
+  f.write({ 'TEST-provider': { type: 'api', key: 'TEST-later-key' } });
+  assert.equal(absent.isAbsent(), false, 'original absent capture cannot accept a newly present key');
+  assert.equal(captureOpenCodeV2SessionCredential(f.profile, 'TEST-provider', () => current).isAbsent(), false);
+  f.write({});
+  const revoked = captureOpenCodeV2SessionCredential(f.profile, 'TEST-provider', () => current);
+  current = false; assert.equal(revoked.isAbsent(), false);
+  const originalFailure = new Error('TEST original owner callback'); let throws = false;
+  const owner = () => { if (throws) throw originalFailure; return true; };
+  const key = bindOpenCodeV2ConfigurationKey(f.scope().capture(), owner);
+  const bound = captureOpenCodeV2SessionCredential(f.profile, 'TEST-provider', owner, key);
+  assert.equal(bound.isAbsent(), true);
+  throws = true; assert.equal(bound.isAbsent(), false, 'only new reuse eligibility fails closed');
+  await assert.rejects(bound.prepare({} as Parameters<typeof bound.prepare>[0],
+    {} as Parameters<typeof bound.prepare>[1]), error => error === originalFailure,
+  'original preparation failure is not swallowed by the compatibility predicate');
+});
 
 test('V2 key publication survives a fresh scope, preserves foreign credentials and only rolls back its own entry', async t => {
   const f = fixture(); t.after(f.cleanup);
@@ -173,6 +195,7 @@ test('V2 key publication survives a fresh scope, preserves foreign credentials a
         { providerId: 'TEST-provider', modelId: 'TEST-model' }, () => true) : undefined;
       const prepared = captureOpenCodeV2SessionCredential(configProfile ?? f.profile, 'TEST-provider',
         originalConfiguration?.isCurrent ?? (() => true), originalConfiguration?.key);
+      assert.equal(prepared.isAbsent(), false, 'original stored/config key never grants absent-credential reuse');
       const original = prepared.prepare(config, owner);
       assert.equal(prepared.prepare(config, owner), original, 'same original pending Promise');
       if (accepted) {
@@ -319,6 +342,7 @@ test('V2 key publication survives a fresh scope, preserves foreign credentials a
         signal: t.signal, deadline: Date.now() + 5000, readPassword: () => 'TEST-server-password' };
       owner = createOpenCodeV2OwnedSessionClient({ ...transport, nativeSessionId: 'ses_TEST' });
       const prepared = captureOpenCodeV2SessionCredential(profile, selection.providerId, configuration.isCurrent, undefined, source);
+      assert.equal(prepared.isAbsent(), false, 'original selected file never grants absent-credential reuse');
       type Binding = NonNullable<Parameters<typeof prepared.prepare>[3]>;
       const originalBinding: Binding = id => {
         assert.equal(id, selection.providerId);

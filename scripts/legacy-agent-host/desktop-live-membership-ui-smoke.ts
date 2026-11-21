@@ -25,7 +25,8 @@ import { createDesktopLinuxMetadataBirthReader, createDesktopMetadataBirthCensus
 import type { DesktopMetadataBirthCensus } from './desktop-metadata-birth-census.ts';
 import { readDesktopMetadataSourceFile } from './desktop-metadata-witness.ts';
 import { readDesktopNativeStopSessions } from './desktop-native-stop-fixture.ts';
-import { captureDesktopSourceMetadataLineage, desktopMetadataProfileHash } from './desktop-opencode-metadata-lineage.ts';
+import { captureDesktopSourceMetadataLineage, desktopMetadataProfileHash, desktopMetadataReadyScopeCount,
+  readDesktopMetadataEvents } from './desktop-opencode-metadata-lineage.ts';
 import type { DesktopSourceMetadataLineage } from './desktop-opencode-metadata-lineage.ts';
 import { revealDesktopReply } from './desktop-reply-visibility.ts';
 import { createDesktopUiControls, desktopJsLiteral as literal } from './desktop-ui-controls.ts';
@@ -330,6 +331,18 @@ export async function runDesktopLiveMembershipUiSmoke(cdp: UiCdpPort, options: {
       return selected.length === 2 && selected.some(row => row.grant.projectPath === null) &&
         selected.some(row => row.grant.projectPath === workspace);
     }, 'original global and project source capture while Create is open', initialLaunchDeadline);
+    if (finite && v2) proof.initialMetadataReady = await poll(async () => {
+      const sources = await sourceProfiles(), sourceHashes = sources.profileHashes.slice(1);
+      assert.equal(sourceHashes.length, 2);
+      const originalHost = metadataCensus!.witness().host;
+      const events = readDesktopMetadataEvents(fixture.root, originalHost.pid, true);
+      assert.ok(events.every(event => sources.profileHashes.includes(event.profileHash)),
+        'only original source scopes precede Create');
+      // This prerequisite is readiness only; the unchanged physical oracle still owns admission.
+      return { hostPid: originalHost.pid, profileHashes: sourceHashes,
+        readyScopes: desktopMetadataReadyScopeCount(events.filter(event => sourceHashes.includes(event.profileHash)),
+          sourceHashes, originalHost.pid) };
+    }, value => value.readyScopes === 2, 'original source metadata owners ready while Create is open', initialLaunchDeadline);
     await ui.scrollTo(create + ' button', 'original save-only Create', 'Create');
     await ui.click(create + ' button', 'save original two-member roster once', 'Create');
     await ui.waitRead('!document.querySelector(' + literal(create + ' #team-name') + ')', 'original Create closes', 90_000);

@@ -131,7 +131,11 @@ export class OpenCodeV2ManagementHost {
   }
 
   matchesCatalog(providerId: string | undefined): boolean {
-    return !this.options.retainedCommandId && this.options.catalogProviderId === providerId;
+    return !this.options.retainedCommandId &&
+      (this.options.catalogProviderId === providerId || (providerId === undefined &&
+        this.options.catalogProviderId === this.profile.nativeModel!.providerId &&
+        this.configuredProviderId === this.options.catalogProviderId &&
+        this.catalogCredential?.isAbsent() === true));
   }
 
   private assertCurrent(signal: AbortSignal): void {

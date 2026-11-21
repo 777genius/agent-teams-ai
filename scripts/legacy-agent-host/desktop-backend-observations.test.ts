@@ -12,7 +12,7 @@ import { runInNewContext } from 'node:vm';
 import type { TestContext } from 'node:test';
 import { digest } from './desktop-backend-fixture.ts';
 import { desktopBackendEnvironment } from './desktop-runtime-source-fixture.ts';
-import { desktopFiniteHeapNodeOptions, normalizeDesktopDevNodeOptions } from '../lib/desktop-finite-node-options.ts';
+import { desktopFiniteHeapNodeOptions, desktopInstallerSourceMapEnvironment, normalizeDesktopDevNodeOptions } from '../lib/desktop-finite-node-options.ts';
 import { observeDesktopEmulatedRuntimeChildren, readDesktopEmulatedPeerRefusal } from './desktop-emulated-runtime-fixture.ts';
 import { createDesktopProcessRootOracle } from './desktop-process-root-oracle.ts';
 import { waitForDesktopOpenCodePreflight } from './desktop-launch-ui-smoke.ts';
@@ -243,6 +243,69 @@ test('finite heap admission and closed app environment preserve every other fiel
 const originalDevNodeOptions = (createRequire(import.meta.url)('../lib/node-options.mjs') as {
   ensureMinimumNodeOldSpaceEnv(environment: Record<string, string | undefined>, minimumMb?: number): void;
 }).ensureMinimumNodeOldSpaceEnv;
+
+test('Installer source maps require only the exact original Darwin ARM TEST scope', () => {
+  const admitted = Object.freeze({ LEGACY_DESKTOP_BACKEND_GO: '1', LEGACY_DESKTOP_EMULATED_ONLY: '1',
+    LEGACY_DESKTOP_PROOF_MODE: 'emulated-installer-ui', AGENT_TEAMS_DISABLE_SOURCEMAPS: '1',
+    NODE_OPTIONS: '--require=/TEST/ambient.cjs', UV_THREADPOOL_SIZE: '128', SENTRY_AUTH_TOKEN: 'TEST-ambient' });
+  const before = { ...admitted }, select = (env: Record<string, string | undefined>, platform = 'darwin', arch = 'arm64') =>
+    desktopInstallerSourceMapEnvironment(env, platform, arch);
+  assert.deepEqual(select(admitted), { AGENT_TEAMS_DISABLE_SOURCEMAPS: '1' });
+  for (const [platform, arch] of [['linux', 'x64'], ['darwin', 'x64'], ['win32', 'arm64']])
+    assert.deepEqual(select(admitted, platform, arch), {});
+  assert.deepEqual(select({ ...admitted, AGENT_TEAMS_DISABLE_SOURCEMAPS: undefined }), {});
+  for (const key of ['LEGACY_DESKTOP_BACKEND_GO', 'LEGACY_DESKTOP_EMULATED_ONLY'])
+    for (const value of [undefined, '', '0', '1\n']) assert.deepEqual(select({ ...admitted, [key]: value }), {});
+  for (const mode of [undefined, '', 'emulated-installer-ui ', 'emulated-selection-ui', 'native-review-ui'])
+    assert.deepEqual(select({ ...admitted, LEGACY_DESKTOP_PROOF_MODE: mode }), {});
+  for (const packed of ['', '/TEST/packed-capture.json'])
+    assert.deepEqual(select({ ...admitted, LEGACY_DESKTOP_PACKED_CAPTURE_PATH: packed }), {});
+  for (const value of ['', '0', 'true', '1\n'])
+    assert.throws(() => select({ ...admitted, AGENT_TEAMS_DISABLE_SOURCEMAPS: value }), /exact selector/);
+  assert.deepEqual(admitted, before, 'selection never mutates or forwards ambient fields');
+});
+
+test('Installer map selection retains the original 8192 heap and UV16 normalization', () => {
+  const selected = desktopInstallerSourceMapEnvironment({ LEGACY_DESKTOP_BACKEND_GO: '1',
+    LEGACY_DESKTOP_EMULATED_ONLY: '1', LEGACY_DESKTOP_PROOF_MODE: 'emulated-installer-ui',
+    AGENT_TEAMS_DISABLE_SOURCEMAPS: '1' }, 'darwin', 'arm64');
+  const environment = { ...selected, NODE_OPTIONS: '--max-old-space-size=8192', UV_THREADPOOL_SIZE: '16' };
+  const before = { ...environment }, minima: Array<number | undefined> = [];
+  normalizeDesktopDevNodeOptions(environment, (target, minimum) => {
+    minima.push(minimum); originalDevNodeOptions(target, minimum);
+  }, 'darwin', 'arm64');
+  assert.deepEqual(minima, [undefined]);
+  assert.deepEqual(environment, before, 'map-only selection keeps the ordinary normalizer and resource profile');
+});
+
+test('Installer closed app environment adds only its validated map choice', {
+  skip: process.platform !== 'darwin' || process.arch !== 'arm64',
+}, (t) => {
+  const controlled = (key: string) => key.startsWith('LEGACY_DESKTOP_') ||
+    ['AGENT_TEAMS_DISABLE_SOURCEMAPS', 'NODE_OPTIONS', 'UV_THREADPOOL_SIZE', 'SENTRY_AUTH_TOKEN'].includes(key);
+  const original = Object.fromEntries(Object.entries(process.env).filter(([key]) => controlled(key)));
+  for (const key of Object.keys(original)) delete process.env[key];
+  t.after(() => {
+    for (const key of Object.keys(process.env)) if (controlled(key)) delete process.env[key];
+    Object.assign(process.env, original);
+  });
+  Object.assign(process.env, { LEGACY_DESKTOP_BACKEND_GO: '1', LEGACY_DESKTOP_EMULATED_ONLY: '1',
+    LEGACY_DESKTOP_PROOF_MODE: 'emulated-installer-ui', NODE_OPTIONS: '--require=/TEST/ambient.cjs',
+    UV_THREADPOOL_SIZE: '128', SENTRY_AUTH_TOKEN: 'TEST-ambient' });
+  const environment = () => desktopBackendEnvironment('/TEST/installer', '/TEST/node', '/TEST/descriptor.json', 'a'.repeat(64));
+  const baseline = environment();
+  assert.equal(baseline.NODE_OPTIONS, '--max-old-space-size=8192');
+  process.env.AGENT_TEAMS_DISABLE_SOURCEMAPS = '1';
+  const selected = environment();
+  assert.deepEqual(selected, { ...baseline, AGENT_TEAMS_DISABLE_SOURCEMAPS: '1' });
+  for (const key of ['SENTRY_AUTH_TOKEN', 'UV_THREADPOOL_SIZE', 'LEGACY_DESKTOP_TEST_FINITE_HEAP_1536',
+    'LEGACY_DESKTOP_TEST_FINITE_HEAP_1536_UV4']) assert.equal(Object.hasOwn(selected, key), false);
+  const ui = { ...selected, UV_THREADPOOL_SIZE: '16' }, before = { ...ui };
+  normalizeDesktopDevNodeOptions(ui, originalDevNodeOptions);
+  assert.deepEqual(ui, before);
+  process.env.AGENT_TEAMS_DISABLE_SOURCEMAPS = 'invalid';
+  assert.throws(environment, /exact selector/);
+});
 
 test('the real fixture and original dev normalizer retain the selected finite heap across startup', {
   skip: process.platform !== 'linux' || process.arch !== 'x64',

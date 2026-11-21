@@ -1167,6 +1167,7 @@ jobs:
             ${{ runner.temp }}/TEST-desktop-backend-*/claude/teams/test-retained-opencode-v1/launch-failure-artifacts/**
             ${{ runner.temp }}/TEST-desktop-backend-*/donor-history/evidence-corpus/**
             ${{ runner.temp }}/TEST-desktop-backend-*/donor-history/donor-history-donor.png
+            ${{ runner.temp }}/TEST-desktop-backend-*/donor-history/donor-history-failure.png
             ${{ runner.temp }}/TEST-desktop-backend-*/donor-history/donor-history-current.png
             ${{ runner.temp }}/TEST-desktop-backend-*/donor-history/donor-history-cold.png
             ${{ runner.temp }}/TEST-desktop-backend-*/donor-history/donor-history-donor-task.png

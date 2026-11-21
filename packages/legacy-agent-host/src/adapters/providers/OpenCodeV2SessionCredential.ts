@@ -97,6 +97,10 @@ export function captureOpenCodeV2SessionCredential(
     return witness;
   }
   return Object.freeze({
+    isAbsent: () => {
+      try { return selectedFile === undefined && captured?.present === false && current(); }
+      catch { return false; }
+    },
     isCurrent: current,
     fileProof: () => fileProof,
     prepare: (config: CredentialTransport, owner: NativeClient,

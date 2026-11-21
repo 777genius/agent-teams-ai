@@ -502,6 +502,7 @@ jobs:
         if: matrix.lane == 'installer'
         env:
           LEGACY_DESKTOP_PROOF_MODE: emulated-installer-ui
+          AGENT_TEAMS_DISABLE_SOURCEMAPS: '1'
         run: |
           set -euo pipefail
           node scripts/legacy-agent-host/desktop-backend-smoke.ts \

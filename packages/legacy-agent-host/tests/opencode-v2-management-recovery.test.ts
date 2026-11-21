@@ -6,6 +6,7 @@ import { join } from 'node:path';
 import { test } from 'node:test';
 import { OpenCodeV2ManagementHost } from '../dist/adapters/providers/OpenCodeV2ManagementHost.js';
 import { OpenCodeV2CredentialScope } from '../dist/adapters/providers/OpenCodeV2CredentialScope.js';
+import { captureOpenCodeConfigurationSource } from '../dist/adapters/providers/OpenCodeConfigurationSource.js';
 import { FileManagementCommandStore } from '../dist/adapters/providers/FileManagementCommandStore.js';
 import { ProviderManagementCoordinator } from '../dist/composition/ProviderManagementCoordinator.js';
 import { CredentialCommandOwner } from '../dist/management/CredentialCommandOwner.js';
@@ -100,9 +101,57 @@ test('only the same account rejected publication admits corrected Connect across
   }
 });
 
+test('credential-absent catalog triplet keeps one owner and three fresh read results', async t => {
+  const root = realpathSync(mkdtempSync(join(tmpdir(), 'TEST-v2-catalog-absent-')));
+  const profile = testProfile(root);
+  profile.embedded!.providerConfiguration = { package: 'aisdk:@ai-sdk/openai-compatible',
+    settings: { baseURL: 'http://127.0.0.1:19332/v1', apiKey: 'TEST-LOCALHOST-ONLY' } };
+  const request = { profileId: profile.profileId, configRevision: profile.configRevision };
+  const entered = Promise.withResolvers<void>(), release = Promise.withResolvers<void>();
+  const calls: { host: OpenCodeV2ManagementHost; providerId: string | undefined;
+    includeModels: boolean | undefined; deadline: number | undefined; result: { profileId: string;
+      configRevision: string; configuredDefaultModelId: string; providers: [] } }[] = [];
+  const closed: OpenCodeV2ManagementHost[] = [];
+  let clock = Date.now(); const admittedAt = clock;
+  t.mock.method(Date, 'now', () => clock);
+  t.mock.method(OpenCodeV2ManagementHost.prototype, 'catalog', async function (
+    this: OpenCodeV2ManagementHost, providerId?: string, includeModels?: boolean, deadline?: number
+  ) {
+    const result = { ...request, configuredDefaultModelId: 'TEST-read-' + (calls.length + 1), providers: [] as [] };
+    calls.push({ host: this, providerId, includeModels, deadline, result });
+    if (calls.length === 1) { entered.resolve(); await release.promise; }
+    return result;
+  });
+  t.mock.method(OpenCodeV2ManagementHost.prototype, 'close', async function (this: OpenCodeV2ManagementHost) {
+    closed.push(this); return true;
+  });
+  const owner = new ProviderManagementCoordinator([profile], () => {}, root);
+  try {
+    const status = owner.catalog({ ...request, includeModels: true });
+    await entered.promise;
+    clock += 11; const directory = owner.catalog(request);
+    clock += 7; const explicit = owner.catalog({ ...request, providerId: profile.nativeModel!.providerId });
+    await Promise.resolve(); assert.equal(calls.length, 1); assert.equal(closed.length, 0);
+    release.resolve();
+    const results = await Promise.all([status, directory, explicit]);
+    assert.equal(calls.length, 3, 'each original request invokes catalog separately');
+    assert.equal(new Set(results).size, 3, 'no result coalescing or cross-read cache');
+    results.forEach((result, index) => assert.equal(result, calls[index]!.result));
+    assert.deepEqual(calls.map(call => [call.providerId, call.includeModels]),
+      [[undefined, true], [undefined, undefined], [profile.nativeModel!.providerId, undefined]]);
+    assert.deepEqual(calls.map(call => call.deadline), [0, 11, 18].map(offset => admittedAt + offset + profile.timeoutMs));
+    assert.equal(new Set(calls.map(call => call.host)).size, 1, 'one original credential-absent default-provider owner');
+    assert.equal(closed.length, 0, 'no unnecessary intermediate native owner retirement');
+  } finally {
+    release.resolve(); await owner.close().catch(() => {}); rmSync(root, { recursive: true, force: true });
+  }
+});
+
 test('overlapping V2 status and directory reads preserve the active owner and original deadlines', async t => {
   const root = realpathSync(mkdtempSync(join(tmpdir(), 'TEST-v2-catalog-overlap-')));
   const profile = testProfile(root);
+  mkdirSync(join(root, 'opencode'), { mode: 0o700 });
+  writeFileSync(join(root, 'opencode/auth.json'), JSON.stringify({ 'TEST-provider': { type: 'api', key: 'TEST-original-key' } }), { mode: 0o600 });
   const originalFailure = new Error('TEST original read failed');
   const catalog = { profileId: profile.profileId, configRevision: profile.configRevision,
     configuredDefaultModelId: null, providers: [] };
@@ -200,6 +249,41 @@ test('overlapping V2 status and directory reads preserve the active owner and or
     closing?.resolve();
     await owner.close().catch(() => {});
     rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('catalog compatibility preserves original credential, configuration and owner boundaries', t => {
+  for (const mode of ['stored-key', 'config-key', 'file-key', 'nondefault', 'configured-other',
+    'retained', 'directory', 'key-appeared', 'revoked', 'source-changed'] as const) {
+    const root = realpathSync(mkdtempSync(join(tmpdir(), 'TEST-v2-catalog-boundary-')));
+    t.after(() => rmSync(root, { recursive: true, force: true }));
+    const profile = testProfile(root), providerId = profile.nativeModel!.providerId;
+    const key = () => {
+      mkdirSync(join(root, 'opencode'), { recursive: true, mode: 0o700 });
+      writeFileSync(join(root, 'opencode/auth.json'), JSON.stringify({ [providerId]: { type: 'api', key: 'TEST-key' } }), { mode: 0o600 });
+    };
+    if (mode === 'stored-key') key();
+    const configuration = join(root, 'opencode.json');
+    if (mode === 'config-key' || mode === 'file-key' || mode === 'source-changed') {
+      writeFileSync(configuration, JSON.stringify({ provider: { [providerId]: {
+        npm: '@ai-sdk/openai-compatible', options: { baseURL: 'http://127.0.0.1:19332/v1',
+          ...(mode === 'source-changed' ? {} : { apiKey: mode === 'file-key' ? '{file:original.key}' : 'TEST-config-key' }) },
+      } } }), { mode: 0o600 });
+      if (mode === 'file-key') writeFileSync(join(root, 'original.key'), 'TEST-manual-key', { mode: 0o600 });
+      profile.embedded!.configurationSource = captureOpenCodeConfigurationSource(profile).reference;
+    }
+    let current = true;
+    const host = new OpenCodeV2ManagementHost(profile, () => current, undefined, {
+      ...(mode === 'directory' ? {} : { catalogProviderId: mode === 'nondefault' ? 'TEST-other' : providerId }),
+      ...(mode === 'retained' ? { retainedCommandId: 'TEST-retained' } : {}),
+      ...(mode === 'configured-other' ? { configurationProviderId: 'TEST-other' } : {}),
+    });
+    if (mode === 'key-appeared') key();
+    if (mode === 'revoked') current = false;
+    if (mode === 'source-changed') writeFileSync(configuration, '{}');
+    assert.equal(host.matchesCatalog(mode === 'directory' ? providerId : undefined), false, mode);
+    if (mode === 'revoked') assert.equal(host.matchesCatalog(providerId), true,
+      'exact-mode matching keeps its existing behavior; original reads still enforce currentness');
   }
 });
 

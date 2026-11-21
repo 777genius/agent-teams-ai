@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { desktopFiniteHeapAppEnvironment } from '../lib/desktop-finite-node-options.ts';
+import { desktopFiniteHeapAppEnvironment, desktopInstallerSourceMapEnvironment } from '../lib/desktop-finite-node-options.ts';
 import { verifyLinuxChildExecInput } from '../../src/main/utils/linuxChildLaunchSelection.ts';
 import { createHash } from 'node:crypto';
 import { lstat, mkdir, open, readFile, realpath } from 'node:fs/promises';
@@ -277,6 +277,7 @@ export function desktopBackendEnvironment(
           !process.env.LEGACY_DESKTOP_PACKED_CAPTURE_PATH))
       ? { NODE_OPTIONS: '--max-old-space-size=8192' } : {}),
     ...finiteHeapEnvironment,
+    ...desktopInstallerSourceMapEnvironment(),
     NO_COLOR: '1',
     // A TEST HOME changes pnpm's store lookup. Report drift without installing
     // into the frozen worktree; the harness verifies its selected archive bytes.

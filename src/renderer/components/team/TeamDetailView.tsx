@@ -33,7 +33,6 @@ import {
 import { TerminalWorkspaceFloatingLauncher } from '@features/terminal-workspace/renderer';
 import { classifyAnalyticsError, recordTeamStop } from '@renderer/analytics/productAnalytics';
 import { api, isElectronMode } from '@renderer/api';
-import { SessionPanel } from '@renderer/components/chat/session-panel';
 import { confirm } from '@renderer/components/common/ConfirmDialog';
 import { resolveBranchDeviation } from '@renderer/components/team/members/memberWorkspace';
 import { Button } from '@renderer/components/ui/button';
@@ -123,7 +122,6 @@ import { KanbanSearchInput } from './kanban/KanbanSearchInput';
 import { TeamKanbanBoardBridge } from './kanban/TeamKanbanBoardBridge';
 import { TrashDialog } from './kanban/TrashDialog';
 import { useTeamTaskFilters } from './kanban/useTeamTaskFilters';
-import { MemberDetailDialog } from './members/MemberDetailDialog';
 import { type MemberActivityFilter, type MemberDetailTab } from './members/memberDetailTypes';
 import { deriveMetrics } from './context-metric-alias';
 import { TeamDeleteButton } from './TeamDeleteButton';
@@ -143,6 +141,12 @@ const hostUi = { useStore, api, isElectronMode };
 const sumInjectionTokens = tokenMath[
   ['sum', 'Con' + 'text', 'InjectionTokens'].join('') as keyof typeof tokenMath
 ] as (injections: readonly unknown[]) => number;
+const SessionPanel = lazy(() =>
+  import('@renderer/components/chat/session-panel').then((m) => ({ default: m.SessionPanel }))
+);
+const MemberDetailDialog = lazy(() =>
+  import('./members/MemberDetailDialog').then((m) => ({ default: m.MemberDetailDialog }))
+);
 const LaunchTeamDialog = lazy(() =>
   import('./dialogs/LaunchTeamDialog').then((m) => ({ default: m.LaunchTeamDialog }))
 );
@@ -900,18 +904,20 @@ const LeadLoadBridge = memo(function LeadLoadBridge({
       {isContextPanelVisible && (
         <div className="w-80 shrink-0">
           {leadSessionLoaded ? (
-            <SessionPanel
-              injections={allContextInjections}
-              onClose={() => setContextPanelVisible(false)}
-              projectRoot={leadSessionDetail?.session?.projectPath ?? fallbackProjectRoot}
-              contextMetrics={contextMetrics}
-              sessionMetrics={leadSessionDetail?.metrics}
-              subagentCostUsd={leadSubagentCostUsd}
-              phaseInfo={leadSessionPhaseInfo ?? undefined}
-              selectedPhase={selectedContextPhase}
-              onPhaseChange={setSelectedContextPhase}
-              side="left"
-            />
+            <Suspense fallback={null}>
+              <SessionPanel
+                injections={allContextInjections}
+                onClose={() => setContextPanelVisible(false)}
+                projectRoot={leadSessionDetail?.session?.projectPath ?? fallbackProjectRoot}
+                contextMetrics={contextMetrics}
+                sessionMetrics={leadSessionDetail?.metrics}
+                subagentCostUsd={leadSubagentCostUsd}
+                phaseInfo={leadSessionPhaseInfo ?? undefined}
+                selectedPhase={selectedContextPhase}
+                onPhaseChange={setSelectedContextPhase}
+                side="left"
+              />
+            </Suspense>
           ) : (
             <div
               className="flex h-full flex-col border-r border-[var(--color-border)] bg-[var(--color-surface)]"
@@ -1286,18 +1292,20 @@ const TeamMemberDetailDialogBridge = memo(function TeamMemberDetailDialogBridge(
     ).hasMembersStillJoining;
   }, [launchMembers, memberSpawnSnapshot, memberSpawnStatuses, progress?.state, runtimeEntries]);
 
-  return (
-    <MemberDetailDialog
-      {...props}
-      teamName={teamName}
-      member={liveMember ?? member}
-      isLaunchSettling={isLaunchSettling}
-      leadActivity={leadActivity}
-      spawnEntry={spawnEntry}
-      runtimeEntry={runtimeEntry}
-      runtimeRunId={runtimeRunId}
-    />
-  );
+  return props.open ? (
+    <Suspense fallback={null}>
+      <MemberDetailDialog
+        {...props}
+        teamName={teamName}
+        member={liveMember ?? member}
+        isLaunchSettling={isLaunchSettling}
+        leadActivity={leadActivity}
+        spawnEntry={spawnEntry}
+        runtimeEntry={runtimeEntry}
+        runtimeRunId={runtimeRunId}
+      />
+    </Suspense>
+  ) : null;
 });
 
 export const TeamDetailView = memo(function TeamDetailView({

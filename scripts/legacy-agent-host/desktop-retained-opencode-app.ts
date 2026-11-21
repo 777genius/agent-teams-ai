@@ -7,6 +7,7 @@ import { fileHash } from '../../packages/legacy-agent-host/tests/fixtures/native
 import { isLeadMember } from '../../src/shared/utils/leadDetection.ts';
 import { Cdp, waitFor } from '../e2e/release-updater/cdp.mts';
 import { createDesktopUiControls, desktopJsLiteral } from './desktop-ui-controls.ts';
+import { bounded } from './desktop-proof-bounds.ts';
 import type { startRetainedOpenCodeModel } from './desktop-retained-opencode-model.ts';
 
 export function linuxProcessIdentity(pid: number) {
@@ -296,6 +297,60 @@ const text = (value: unknown): string => {
   return value;
 };
 type RetainedApp = Awaited<ReturnType<typeof startRetainedOpenCodeApp>>;
+
+/** Optional post-failure evidence only; no product IPC, action retry or cleanup authority. */
+export async function captureRetainedDonorUiFailure(app: Pick<RetainedApp, 'assertCurrent' | 'original' | 'electron'> & {
+  cdp: Pick<Cdp, 'evaluate' | 'send'>;
+}, root: string, epoch: Record<string, unknown> | undefined): Promise<Record<string, unknown>> {
+  const diagnostic: Record<string, unknown> = { status: 'INCOMPLETE',
+    observation: 'after-original-failure-before-cleanup', atomicWithFailure: false,
+    epoch: epoch?.kind ?? null, sourceCommit: epoch?.sourceCommit ?? null,
+    original: app.original, electron: app.electron, observedAtMs: Date.now() };
+  try {
+    app.assertCurrent();
+    const form = await bounded(app.cdp.evaluate(`(() => {
+      const pages=document.querySelectorAll('[data-testid="create-team-page"]');
+      if(pages.length!==1)return {status:'unavailable',pageCount:Math.min(pages.length,2)};
+      const page=pages[0],footer=page.querySelector(':scope > div.grow');
+      const text=(node,limit)=>node instanceof HTMLElement?node.innerText.slice(0,limit):null;
+      const field=selector=>{const node=page.querySelector(selector);return node instanceof HTMLInputElement?
+        {value:node.value.slice(0,1000),valid:node.validity.valid,ariaInvalid:node.getAttribute('aria-invalid')}:null;};
+      return {status:'observed',readyState:document.readyState,pageCount:1,
+        teamName:field('#team-name'),cwd:field('input[aria-label="Custom working directory"]'),
+        solo:page.querySelector('#solo-team')?.getAttribute('aria-checked')??null,
+        lead:text(page.querySelector('[data-role="lead-row"]'),500),
+        formText:text(page,4000),footerText:text(footer,4000),
+        errors:[...page.querySelectorAll('[role="alert"],[aria-invalid="true"],[class*="text-red-"]')]
+          .slice(0,8).map(node=>text(node,300)),
+        buttons:[...footer?.querySelectorAll('button')??[]].slice(0,8).map(node=>({
+          text:text(node,160),disabled:node.disabled,ariaDisabled:node.getAttribute('aria-disabled')}))};
+    })()`), 4000, 'read retained donor failure form');
+    app.assertCurrent();
+    assert.ok(Buffer.byteLength(JSON.stringify(form), 'utf8') <= 64 * 1024);
+    diagnostic.form = form;
+  } catch (error) {
+    diagnostic.form = { unavailable: true, error: error instanceof Error ? error.message.slice(0,1000) : 'unavailable' };
+  }
+  let screenshotOpen = true;
+  try {
+    diagnostic.screenshot = await bounded((async () => {
+      app.assertCurrent();
+      const screenshot = await app.cdp.send<{ data: string }>(
+        'Page.captureScreenshot', { format: 'png', fromSurface: true });
+      if (!screenshotOpen) throw new Error('retained donor screenshot observation closed');
+      app.assertCurrent();
+      assert.ok(typeof screenshot.data === 'string' && screenshot.data.length > 0 && screenshot.data.length <= 8 * 1024 * 1024);
+      const bytes = Buffer.from(screenshot.data, 'base64'), path = join(root, 'donor-history-failure.png');
+      await writeFile(path, bytes, { mode: 0o600, flag: 'wx' });
+      if (!screenshotOpen) throw new Error('retained donor screenshot observation closed');
+      return { path, sha256: createHash('sha256').update(bytes).digest('hex') };
+    })(), 5000, 'retained donor failure screenshot');
+  } catch (error) {
+    diagnostic.screenshot = { unavailable: true, error: error instanceof Error ? error.message.slice(0,1000) : 'unavailable' };
+  } finally { screenshotOpen = false; }
+  diagnostic.finishedAtMs = Date.now();
+  return diagnostic;
+}
 
 /** The same native reader and ambiguity checks serve both original retained epochs. */
 export async function readRetainedNativeReply(input: {
@@ -716,7 +771,14 @@ export async function exerciseRetainedDonorHistory(input: {
       } else assert.equal(model.observations.length, inferenceAtDonorQuit, 'retained UI read never replays inference');
       await input.assertInputs();
     }
-  } catch (error) { failure = error; }
+  } catch (error) {
+    failure = error;
+    if (app) {
+      try { proof.failureUi = await captureRetainedDonorUiFailure(app, root, epochs.at(-1)); }
+      catch (captureError) { proof.failureUi = { status: 'INCOMPLETE', unavailable: true,
+        error: captureError instanceof Error ? captureError.message.slice(0,1000) : 'unavailable' }; }
+    }
+  }
   finally {
     if (app) {
       try { assert.equal(await app.cleanup(), true); } catch (error) { input.cleanupErrors.push(error); }

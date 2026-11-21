@@ -64,6 +64,21 @@ export function desktopFiniteHeapAppEnvironment(
   };
 }
 
+export function desktopInstallerSourceMapEnvironment(
+  environment: Readonly<NodeEnvironment> = process.env,
+  platform: string = process.platform,
+  arch: string = process.arch
+): Record<string, string> {
+  const selected = environment.AGENT_TEAMS_DISABLE_SOURCEMAPS;
+  if (selected === undefined || platform !== 'darwin' || arch !== 'arm64' ||
+      environment.LEGACY_DESKTOP_BACKEND_GO !== '1' ||
+      environment.LEGACY_DESKTOP_EMULATED_ONLY !== '1' ||
+      environment.LEGACY_DESKTOP_PROOF_MODE !== 'emulated-installer-ui' ||
+      environment.LEGACY_DESKTOP_PACKED_CAPTURE_PATH !== undefined) return {};
+  assert.equal(selected, '1', 'finite TEST source maps require their exact selector');
+  return { AGENT_TEAMS_DISABLE_SOURCEMAPS: '1' };
+}
+
 /** The original dev entrypoint supplies its unchanged normalizer at this boundary. */
 export function normalizeDesktopDevNodeOptions(
   environment: NodeEnvironment,

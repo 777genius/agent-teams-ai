@@ -2,6 +2,222 @@
 
 Обновлено: **21 ноября 2026**. Единственный текущий рабочий план.
 
+## Доставка архива после восстановления сессии
+
+Архив `continuation-a0eb-20261121.tar.gz` доставлен семью последовательными
+частями из-за ограничения размера запроса публикации. [Manifest частей](evidence/continuation-a0eb-20261121.parts.json) задаёт
+порядок, размеры и хеши; конкатенация частей восстанавливает исходные
+19 563 877 байт и SHA256 `1012766999eec5e7bc3b9163d9faf3cf4fecf60189ef64d5ef9e5e1438e9f857`.
+Исходные index и независимое review сохранены без изменений. Их pin STATUS
+относится к версии до этой единственной транспортной записи, сохранённой
+как `STATUS.md` внутри архива. Исходники, условия приёмки и результаты
+проверок не изменены; новый original E2E ещё требуется.
+
+## Продолжение `a0eb98f0`: metadata, готовность и холодный UI
+
+Baseline — опубликованный `a0eb98f0775ca8499815c20d459e1c1037ef363d`; Git readback подтвердил
+единственный parent `4ec8e74b`, tree `b08ca7c9` и все 30 файлов. Оба checkout
+приведены к этому SHA без новых веток; fresh Host build TS7 7.0.2 завершился
+exit0, все 631 JS совпали с reviewed build. Новые шесть original attempt-1 runs
+запущены обычным synchronize: Host44926249301, CI44926249295,
+Packaged44926249318, Process44926249189, Teams44926249185,
+NativeV244926249322. Все шесть original attempt-1 runs завершены до следующей
+source publication: Host — 24 SUCCESS / 6 FAILURE; Source — 2 SUCCESS /
+2 FAILURE / 11 SKIPPED; Packaged — 7 SUCCESS; Process — 5 SUCCESS; Teams —
+3 SUCCESS; NativeV2 — 9 SUCCESS. Итого 69 jobs: 50 SUCCESS / 8 FAILURE /
+11 SKIPPED, без cancelled, queued или active. Шесть отказов primary, два —
+derived aggregate gates. Single observer соблюдал пятиминутный интервал;
+rerun, dispatch, cancellation и повторных artifact downloads не было.
+
+Первый новый primary failure — Darwin ARM Resume, job136912875755. Original
+ZIP14716556230 проверен по размеру, SHA256, CRC и 18-file inventory; все 1981
+selected source pins до/после совпали с `a0eb`. Новый requestIdHash trace связал
+фоновые include-models и directory reads с их возвратами. Целевой первый global
+explicit-provider read ждал очередь 17.740s и начал работу лишь за 2.704s до
+первого retained Shutdown. Поздний native-client read-failed последовал после
+Quit; metadata deadline не истёк. Launch имеет 0 steps, model observations и
+probes — 0. Точный CDP send/timeout timestamp и физическое рождение третьего
+metadata child не сохранены; причина его nativeClient await не объявляется.
+
+Перед production edits принят узкий prospective plan:
+
+| Срез | Изменение и сохраняемая граница | Бюджет и оценка |
+| --- | --- | --- |
+| Default-provider metadata owner → directory | Разрешить одностороннюю совместимость только при исходном доказанно отсутствующем credential, совпадающем default/configured provider и прежнем current guard. Predicate использует уже captured source; исключение current означает false и прежний close/replacement path. Exact-mode short-circuit прежний; directory → provider, nondefault, retained, stored/config/file key остаются несовместимыми | Два существующих production файла, ≤15 добавленных строк; без нового state, map, owner, cache, requests или queue policy. Сложность 3/10, надёжность 9/10, уверенность в безопасной compatibility 9/10; устранение original timing failure должен подтвердить новый E2E |
+| Finite regression | Отдельный absent-key triplet должен сохранить три вызова catalog с отдельными результатами/deadlines при одном owner. Старый overlap negative получает исходный TEST stored key; все прежние distinct-owner, failure, cleanup, expiry и seal assertions сохраняются. Key/config/file/nondefault/revoked/appearing-key и throwing-owner controls не допускают расширения compatibility | ≤180 focused test строк; actual native HTTP не заявляется, если test использует исходный catalog mock. Все fresh HTTP/currentness/custody/dispose операции остаются в неизменённом read body |
+
+Отсутствие импортируемого credential в original TEST setup устанавливается
+source construction свежих выделенных HOME/XDG directories и отсутствием auth
+writer до первого read. ZIP не содержит captured.present или полный auth store;
+такое поле не выдумывается. Metadata profileHash сам по себе не доказывает полную
+authority: сохраняются immutable profile, credentialTarget, source/config и
+currentness guards. CDP30s, metadata120s, Host180s и остальные исходные бюджеты
+не меняются. Root R1 и независимый prospective R2 завершены до production edits;
+exact plan, fail-closed addendum и R2 сохранены отдельно.
+
+Узкий diff завершён: production 9+/1−, tests 109+/1−. Один и тот же public
+Coordinator triplet дал baseline RED `3 owners !== 1`, затем candidate GREEN;
+два focused suites имеют 12/12 PASS, 0 skipped. Exact Host TS7 7.0.2 build,
+scoped test TS7 и fast lint четырёх файлов завершились exit0. Первый полный
+targeted запуск имел 10 PASS и две ошибки прав новых TEST auth fixtures;
+исправлены только их права 0600/0700, исходный отказ сохранён. Независимый exact
+R2 проверил 32/32 evidence entries, четыре source и два compiled pins, прежнее
+overlap test body и все guards вне двух approved hunks: blocking findings нет.
+Позитивный triplet использует controlled catalog port; native HTTP и повторный
+Darwin Resume E2E им не квалифицируются. Для этого среза требуется новый
+original E2E на точном публикуемом commit.
+
+Process, Teams и Native терминальны и прошли readback (5/5, 3/3 и 9/9 jobs).
+Host также терминален: 20/25 original UI PASS, 4/4 frontend PASS, пять primary
+failures и один derived aggregate failure. Все 29 ZIP и 842 extracted files
+сверены с final listing и первоначальными индексами. Четыре frontend-шарда
+имеют 26 783 PASS / 38 SKIPPED, 2222 disjoint selected files; из них 2215 executed
+и семь целиком skipped. Genuine/native/actual-SDK opt-in skips не стали PASS.
+В исходном Linux OpenCode cron task completed, runNowClicks=0; cold Claude resume
+подтверждает новый app/Host без replay. Native executable bytes и точные cleanup
+ограничения каждого receipt сохраняются отдельно. Общий E2E остаётся failed
+из-за сохранённых primary failures.
+Source Fast feedback прошёл на original merge checkout `79ca55a6`, а не на
+head checkout `a0eb`: 119 feedback-policy tests, workspace typechecks, fast lint
+(0 errors / 228 warnings) и три guards. Main/Host явно используют native7.0.2;
+два MCP `tsc` command не имеют отдельной runtime compiler pin. Последующий
+immutable Git commit read подтвердил одинаковое полное tree `b08ca7c9` у merge
+и `a0eb`; identity checkout остаётся merge. Per-file runtime/output pins и
+дополнительная compiler-binary qualification отсутствуют.
+Отдельно разобраны ещё три Darwin ARM primary failures:
+Installer — Main ready, но renderer/store отсутствовали до исходного startup
+cutoff; quit-active — первый Quit PASS, cold readback не нашёл Alice за 30s;
+Review — граф полностью проверен, затем исходный saved readiness cutoff
+17:25:12.692Z пересечён внутри второго custody read. Поздний общий UI timeout
+и parent cleanup не объявляются причиной этого Review отказа. Сохранённые
+overflow module traces Installer/quit не устанавливают конкретный predeadline
+module blocker. Следующий source срез требует отдельного causal plan и review;
+таймауты, ownership/custody, currentness и negative oracles остаются прежними.
+
+Следующий Linux V2 membership отказ дошёл до первого `observe([])` после
+save-only Create и до Launch. Прежний source-index fence пройден. Snapshot
+сохранил metadata PID15718 и ещё не классифицированный Bun PID16110; поздний
+original ready связал последний с точным workspace source и kernel birth.
+Это событие появилось уже после начала failure cleanup и не квалифицирует
+исходный snapshot задним числом. Независимого timestamp самого snapshot нет.
+Новый bounded prerequisite ждёт два active ready metadata owner до Create,
+пока исходный source lookup mounted, в том же `initialLaunchDeadline` 90s.
+Readiness не объявляется завершением directory request. Все последующие
+strict physical/lineage/source/runtime/cleanup assertions byte-identical.
+TEST diff 14+/1−; prospective R1/R2 и exact R2 завершены без замечаний.
+Scoped native TS7 scripts project, fast lint и неизменённый critical lifecycle
+suite 22/22 PASS, 0 skipped. Новый original E2E этим не заменён.
+
+Для Darwin Review выполнен ровно один actual saved-Team `isCurrent()` на TEST
+fixture: true, 0 allocations/child attempts, 4 original lock pairs, 8 namespace
+walks, 6 index reads, 17 journal reads и 46 public realpath calls. Все pre/post
+pins совпали, fixture удалён, wrappers восстановлены. Linux 7.249ms включает
+instrumentation и не является Darwin latency benchmark. Объединение fences
+отклонено из-за потери исходных namespace checks; authority cache/guard dedup
+не вводятся. Native-realpath substitution пока не выбрана: case, permission и
+error semantics не квалифицированы. Чистый prefix slicing не имеет измеренного
+выигрыша и не объявляется исправлением исходного 90s cutoff. Дополнительный exact
+source readback подтвердил: два custody catalog admissions принадлежат serial
+GET `/api/provider` и `/api/model` первого `readCatalog`, а не повтору directory.
+Original graph уже читает исходный O_NOFOLLOW FD; named lstat/permissions guards
+различны. Удаление этих проверок или изменение cancellation semantics не выбраны.
+
+Предложенный Vite warmup двух entrypoints остался без source edits. Единственный
+reviewed finite compiler invocation остановился на control через 40.10s:
+esbuild завершился SIGKILL до начала harness cleanup, обязательный static leaf
+не попал в cache. Причина сигнала не установлена; parent timeout отсутствовал.
+Сохранены 128 transform errors и overflow; fulfilled warmup Promises не стали
+PASS. Candidate не запускался, повторов не было, config и dirty source pins
+до/после идентичны. Это не квалификация warmup, ускорения или app readiness.
+
+Для Darwin ARM TEST Installer выбран существующий `AGENT_TEAMS_DISABLE_SOURCEMAPS`
+только в исходном Installer step. Original Main build занимал 64s и выводил
+около 29.65 MB hidden maps; отдельное время их генерации не измерено. Pure helper
+пропускает flag только при точных Darwin/arm64, GO1, emulated-only1, Installer mode
+и отсутствии packed capture. Closed environment, heap8192, UV16 и startup180s
+сохраняются; исходные finite Linux admission/normalizer bodies byte-identical.
+Optional offline Main map symbolication для этого TEST lane теряется; source,
+compiled-JS, custody и cleanup guards прежние. Original failed Installer не
+сохранил compiled output hashes: 14 имён в build log не объявляются 14 pins.
+Prospective R1/R2 до edits: 18+/1− в трёх source/workflow файлах, затем 64+/1−
+test строки при неизменённых прежних test bodies. Focused checks: 12 PASS,
+1 actual Darwin-only integration SKIPPED на Linux; native TS7 7.0.2 scoped
+scripts и fast lint exit0. Первый ошибочный вызов отсутствующего alias `tsgo`
+завершился до compiler и сохранён как NOT PASS. Ускорение и E2E ещё не доказаны.
+Exact final R2 четырёх файлов завершён без замечаний; прежний test file полностью
+восстанавливается обратным удалением только новых imports/cases.
+
+Отложены два optional imports в TeamDetail: SessionPanel и закрытый
+MemberDetailDialog. Существующие visibility/session-ready условия и Bridge hooks
+сохранены, локальные Suspense не скрывают всю Team pane. Один production файл
+34+/26−, net8 до прежнего cap3746. Syntactic main+Team graph исключает 131 local
+script files / 1,085,420 source bytes; это не измерение загрузки или latency.
+Material lifecycle change — unmount закрытого dialog и возможный StrictMode
+replay stats requests. Actual component unmount/reopen success/reject и actual
+stats hook под StrictMode проверены: всего 19/19 PASS, включая 16 прежних и 3
+новых cases; все deferred requests завершены. Tests115 строк при budget120,
+старые assertions byte-identical. Scoped native TS7 exit0/112.123s; fast lint
+exit0, два warning locations исходные. Actual lazy-open/pending-import/cold
+deadline остаются за original CI; executed factory-count claim не делается.
+Независимый final R2 проверил точные три source files, 24 evidence entries и
+сохранённые прежние assertions: findings=[]; root handoff зафиксировал эти pins.
+
+Новый Source retained failure дошёл до donor4a Create после сохранённых actual
+V1/V2 coexistence, обоих Stop и cold history readbacks. В immutable donor
+`4a0e0627` кнопка Create осталась disabled: 294 completed reads за исходные 30s,
+ни одного dispatched Create. Donor epoch имеет один model observation без
+business marker, но ZIP не содержит состояние формы или failure screenshot.
+Общий retained статус FAIL; поздние отсутствующие selection receipts и complete
+verifier failures производные. Cleanup=true/empty failures не заменяет
+отсутствующий успешный donor epoch.quit. Exact donor/runtime source исключил
+wrong-PONG и скрытый начальный teammate roster как установленные причины.
+Missing `claude/projects` в логе относится к session discovery; выбранный
+`donor-history/project` создаётся до app. Реальный blocking operand остаётся
+UNKNOWN; закреплённая старая версия не изменяется.
+
+После prospective R1/R2 выбран diagnostic-only helper в существующем retained
+TEST app: один синхронный DOM snapshot формы/footer/errors и один screenshot
+после original failure, с прежним app owner до/после CDP. Нет product IPC, store
+reads, provider requests, UI actions или retries. Новая запись `failureUi`
+имеет INCOMPLETE и не заменяет successful epoch/cleanup evidence. Initial R2
+нашёл PNG write вне 5s; V2 включает весь awaited capture/write/hash в тот же
+5s bound. Late CDP не начинает запись, late write не публикует success. Promise
+race не отменяет уже начатую физическую запись; её поздний файл без accepted
+receipt остаётся unqualified. DOM bound4s, все original acceptance deadlines и
+cleanup/final-throw tail сохранены. App793≤800; root добавляет ровно один PNG
+upload path. Девять finite controls приняты до edits; final9/9 PASS, scoped native
+TS7 7.0.2 и fast lint завершились exit0/0 warnings, test133≤160. Первые5/9
+сохранены как failed fixture attempt: Node/SSR mode, explicit `.ts` import и
+local HappyDOM исправили перехват actual helper write. Positive case использует
+real FS; pending write достигается до fake timer, все late results оставляют
+receipt неизменным. Это проверка helper completion, не реального app cleanup.
+Final exact R2 сверил 25 entries, source/postimage и unchanged cleanup tail:
+findings=[]. Root handoff и final guards сохранены; cause/Create E2E остаются
+UNKNOWN/FAIL. Общий final source manifest имеет 1985 unique paths и все 14
+изменённых runtime/code-test paths; два workflow отдельно привязаны Git pins.
+Independent integration R2 повторно сверил все 16 current source pins, два
+compiled pins и 1985 source-manifest entries. В общем array ровно четыре test-path
+добавления; оба workflow byte-exact восстанавливаются approved patches (+1 line
+каждый). Jobs, conditions, deadlines и permissions прежние; findings=[].
+
+Финальная Source aggregate-задача реально остановилась на
+`test "$RETAINED_COEXISTENCE_RESULT" = success` при value=failure. Последующий
+`Require complete current-code qualification` был skipped; Draft/full policy
+не объявляется наблюдённой первой причиной. Final Source listing связан с тем
+же единожды скачанным Retained ZIP. Packaged завершился SUCCESS 7/7: все пять
+producer readbacks сверены; единственный producer-complete listing связан с
+terminal metadata после проверки неизменных jobs/upload steps. Runtime binary,
+structural closure, native custody и natural-exit ограничения каждого platform
+receipt остаются отдельными; отсутствие байтов не стало local rehash.
+
+[Архив продолжения a0eb](evidence/continuation-a0eb-20261121.json) связывает
+все шесть terminal original runs, raw UTF8 evidence, точные source/preimages,
+два compiled outputs, scoped checks и independent reviews. Binary/PNG/ZIP/cache
+omissions перечислены с исходными sizes/hashes. Его sibling review проверяет
+фактические bytes отдельно. Этот срез сохраняет старые FAIL/SKIPPED и требует
+новой original E2E-квалификации; PR остаётся Draft, маршрут1192→1186→982 и
+запрет genuine Claude/Codex/main/release/defaultHost/Stage2 сохраняются.
+
 ## Продолжение `4ec8e74b`: исходные E2E и узкий следующий срез
 
 Опубликован `4ec8e74b9a6430143287baa5298a11ade98a5794`; Git readback подтвердил
