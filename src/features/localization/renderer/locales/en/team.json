@@ -298,7 +298,10 @@
       "settingsSavedMembersFailed": "Team settings were saved, but member changes failed: {{message}}",
       "settingsSavedRefreshFailed": "Team settings were saved, but failed to refresh the latest view: {{message}}",
       "teamNameEmpty": "Team name cannot be empty",
-      "unsupportedMixedPrimaryMutation": "Live edits to primary-owned teammates in mixed OpenCode teams are not supported yet. Stop the team, edit the roster, then relaunch. Affected: {{names}}"
+      "unsupportedMixedPrimaryMutation": "Live edits to primary-owned teammates in mixed OpenCode teams are not supported yet. Stop the team, edit the roster, then relaunch. Affected: {{names}}",
+      "refusedProjectCopy": "This is a project copy of a team. Change its settings in the team itself.",
+      "refusedProjectUnreconciled": "A project of this team is still being prepared, or its last start was interrupted. Launch the team in that project again, then edit it.",
+      "refusedTeamUnreadable": "The saved settings of this team cannot be read, so nothing was changed."
     },
     "fields": {
       "colorOptional": "Color (optional)",
@@ -461,7 +464,8 @@
     },
     "editDefinition": {
       "loadFailed": "Could not load the team settings",
-      "notFound": "The team settings could not be found"
+      "notFound": "The team settings could not be found",
+      "memberNotFound": "This member is no longer in the team settings. Reopen the team to see its current members."
     },
     "stopFailed": {
       "title": "Unable to stop team",

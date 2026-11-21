@@ -260,7 +260,10 @@
       "settingsSavedMembersFailed": "Na-save ang mga setting ng team, ngunit nabigo ang mga pagbabago sa miyembro: {{message}}",
       "settingsSavedRefreshFailed": "Na-save ang mga setting ng team, ngunit nabigong i-refresh ang pinakabagong view: {{message}}",
       "teamNameEmpty": "Hindi maaaring blangko ang pangalan ng team",
-      "unsupportedMixedPrimaryMutation": "Hindi pa sinusuportahan ang mga live na pag-edit sa mga primary-owned na teammate sa mga mixed na OpenCode team. Ihinto ang team, i-edit ang roster, pagkatapos ay ilunsad muli. Apektado: {{names}}"
+      "unsupportedMixedPrimaryMutation": "Hindi pa sinusuportahan ang mga live na pag-edit sa mga primary-owned na teammate sa mga mixed na OpenCode team. Ihinto ang team, i-edit ang roster, pagkatapos ay ilunsad muli. Apektado: {{names}}",
+      "refusedProjectCopy": "Isa itong project copy ng isang team. Baguhin ang settings nito sa mismong team.",
+      "refusedProjectUnreconciled": "May project ng team na ito na inihahanda pa, o naputol ang huling pagsisimula nito. Ilunsad muli ang team sa project na iyon, saka i-edit.",
+      "refusedTeamUnreadable": "Hindi mabasa ang naka-save na settings ng team na ito, kaya walang binago."
     },
     "fields": {
       "colorOptional": "Kulay (opsyonal)",
@@ -417,6 +420,11 @@
       "member_other": "mga miyembro",
       "title": "Hindi pa nailulunsad ang team"
     },
+    "editDefinition": {
+      "loadFailed": "Hindi ma-load ang settings ng team",
+      "notFound": "Hindi mahanap ang settings ng team",
+      "memberNotFound": "Wala na ang member na ito sa settings ng team. Buksan muli ang team para makita ang kasalukuyang mga member."
+    },
     "stopFailed": {
       "title": "Hindi maihinto ang team",
       "message": "Tumatakbo pa rin ang team. Tingnan ang status nito at pindutin muli ang Ihinto."
@@ -458,6 +466,7 @@
       "deleteTeam": "Tanggalin ang team",
       "editTeam": "I-edit ang team",
       "editUnavailableProvisioning": "Hindi available ang pag-edit ng team habang isinasagawa pa ang provisioning",
+      "editUnavailableRunningProject": "Ihinto ang team na ito sa bawat project para ma-edit ito",
       "openBuiltInEditor": "Buksan ang proyekto sa built-in editor",
       "openTeamGraph": "Buksan ang team graph",
       "stopTeam": "Ihinto ang team",

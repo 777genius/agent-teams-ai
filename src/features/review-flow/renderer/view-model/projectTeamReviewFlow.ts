@@ -1,5 +1,3 @@
-import { findProjectCopyOwner } from '@features/team-project-context/core';
-
 import { areReviewFlowSettingsEqual } from '../../core/domain/reviewFlowPolicy';
 
 import type {
@@ -59,21 +57,20 @@ function commonSetting(boards: readonly ProjectBoardReviewFlow[]): ReviewFlowSet
  * finished is folded too.
  */
 export function foldProjectTeamBoards(
-  overview: Pick<ReviewFlowOverview, 'overrides' | 'unreadableTeams' | 'projectTeams'>
+  overview: Pick<ReviewFlowOverview, 'overrides' | 'unreadableTeams' | 'projectTeams'>,
+  projectLabel: (teamName: string, executionTeamName: string) => string | null
 ): TeamLevelReviewFlow {
   const overrides = { ...overview.overrides };
   const unreadable = new Set(overview.unreadableTeams);
   const projectTeams: Record<string, ProjectTeamReviewFlowStatus> = {};
   for (const [teamName, team] of Object.entries(overview.projectTeams)) {
-    // The labels follow the rule of the team list ("Team · project"), over this team's projects.
-    const catalog = [{ teamName, projectContextMode: 'per_project' as const, projectHistoryContexts: team.projects }];
     const boards = team.projects.map((project): ProjectBoardReviewFlow => {
       const name = project.executionTeamName;
       const setting: BoardSetting = unreadable.has(name) ? 'unreadable' : (overrides[name] ?? null);
       delete overrides[name];
       unreadable.delete(name);
       return {
-        projectLabel: findProjectCopyOwner(catalog, name)?.projectLabel ?? project.projectPath,
+        projectLabel: projectLabel(teamName, name) ?? project.projectPath,
         setting,
       };
     });

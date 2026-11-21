@@ -1,10 +1,4 @@
 import {
-  findProjectCopyOwner,
-  formatProjectCopyLabel,
-  type ProjectCopyCatalogTeam,
-} from '@features/team-project-context/core';
-
-import {
   areReviewFlowSettingsEqual,
   resolveReviewFlowPolicy,
 } from '../../core/domain/reviewFlowPolicy';
@@ -24,6 +18,12 @@ export const DEFAULT_SCOPE_VALUE = '*';
 export interface TeamIdentity {
   teamName: string;
   displayName?: string;
+}
+
+/** A row of the folded team list, as far as the review flow needs it. */
+export interface BoardCatalogTeam extends TeamIdentity {
+  projectContextMode?: 'shared' | 'per_project';
+  projectHistoryContexts?: readonly { executionTeamName: string }[];
 }
 
 /** Marker next to a team in the scope picker: its own settings, or saved settings that need repair. */
@@ -72,20 +72,18 @@ export function scopeFromValue(value: string): ReviewFlowScope {
  * named after the team and the project.
  */
 export function reviewFlowBoardsOf(
-  teams: readonly ProjectCopyCatalogTeam[],
+  teams: readonly BoardCatalogTeam[],
+  copyLabel: (executionTeamName: string) => string | null,
   projectCopies: ReadonlySet<string>
 ): TeamIdentity[] {
   return teams.flatMap((team): TeamIdentity[] => {
     if (projectCopies.has(team.teamName)) return [];
     const own = { teamName: team.teamName, displayName: team.displayName };
     if (team.projectContextMode === 'per_project') return [own];
-    const copies = (team.projectHistoryContexts ?? []).map((context) => {
-      const owner = findProjectCopyOwner(teams, context.executionTeamName);
-      return {
-        teamName: context.executionTeamName,
-        displayName: owner ? formatProjectCopyLabel(owner) : context.executionTeamName,
-      };
-    });
+    const copies = (team.projectHistoryContexts ?? []).map((context) => ({
+      teamName: context.executionTeamName,
+      displayName: copyLabel(context.executionTeamName) ?? context.executionTeamName,
+    }));
     return [own, ...copies];
   });
 }

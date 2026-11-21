@@ -260,7 +260,10 @@
       "settingsSavedMembersFailed": "Le impostazioni del team sono state salvate, ma le modifiche ai membri non sono riuscite: {{message}}",
       "settingsSavedRefreshFailed": "Le impostazioni del team sono state salvate, ma impossibile aggiornare la vista più recente: {{message}}",
       "teamNameEmpty": "Il nome del team non può essere vuoto",
-      "unsupportedMixedPrimaryMutation": "Le modifiche dal vivo ai membri del team di proprietà primaria nei team OpenCode misti non sono ancora supportate. Ferma il team, modifica l'elenco, quindi riavvialo. Interessati: {{names}}"
+      "unsupportedMixedPrimaryMutation": "Le modifiche dal vivo ai membri del team di proprietà primaria nei team OpenCode misti non sono ancora supportate. Ferma il team, modifica l'elenco, quindi riavvialo. Interessati: {{names}}",
+      "refusedProjectCopy": "Questa è una copia di progetto di un team. Modifica le impostazioni nel team stesso.",
+      "refusedProjectUnreconciled": "Un progetto di questo team è ancora in preparazione o il suo ultimo avvio è stato interrotto. Avvia di nuovo il team in quel progetto, poi modificalo.",
+      "refusedTeamUnreadable": "Le impostazioni salvate di questo team non sono leggibili, quindi non è stato modificato nulla."
     },
     "fields": {
       "colorOptional": "Colore (facoltativo)",
@@ -417,6 +420,11 @@
       "member_other": "membri",
       "title": "Team non ancora avviato"
     },
+    "editDefinition": {
+      "loadFailed": "Impossibile caricare le impostazioni del team",
+      "notFound": "Impostazioni del team non trovate",
+      "memberNotFound": "Questo membro non è più nelle impostazioni del team. Riapri il team per vedere i membri attuali."
+    },
     "stopFailed": {
       "title": "Impossibile arrestare il team",
       "message": "Il team è ancora in esecuzione. Controllane lo stato e premi di nuovo Arresta."
@@ -458,6 +466,7 @@
       "deleteTeam": "Elimina team",
       "editTeam": "Modifica team",
       "editUnavailableProvisioning": "La modifica del team non è disponibile mentre il provisioning è ancora in corso",
+      "editUnavailableRunningProject": "Arresta questo team in ogni progetto per modificarlo",
       "openBuiltInEditor": "Apri il progetto nell'editor integrato",
       "openTeamGraph": "Apri il grafo del team",
       "stopTeam": "Ferma team",

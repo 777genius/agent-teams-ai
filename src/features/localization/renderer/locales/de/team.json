@@ -260,7 +260,10 @@
       "settingsSavedMembersFailed": "Team-Einstellungen wurden gespeichert, aber Mitglieder-Änderungen fehlgeschlagen: {{message}}",
       "settingsSavedRefreshFailed": "Team-Einstellungen wurden gespeichert, aber die neueste Ansicht nicht aktualisieren: {{message}}",
       "teamNameEmpty": "Teamname kann nicht leer sein",
-      "unsupportedMixedPrimaryMutation": "Live-Editionen zu primären Teamkollegen in gemischten OpenCode-Teams werden noch nicht unterstützt. Stoppen Sie das Team, bearbeiten Sie den Rouster, dann relaunch. Betroffen: {{names}}"
+      "unsupportedMixedPrimaryMutation": "Live-Editionen zu primären Teamkollegen in gemischten OpenCode-Teams werden noch nicht unterstützt. Stoppen Sie das Team, bearbeiten Sie den Rouster, dann relaunch. Betroffen: {{names}}",
+      "refusedProjectCopy": "Dies ist eine Projektkopie eines Teams. Ändere die Einstellungen im Team selbst.",
+      "refusedProjectUnreconciled": "Ein Projekt dieses Teams wird noch vorbereitet oder sein letzter Start wurde unterbrochen. Starte das Team in diesem Projekt erneut und bearbeite es danach.",
+      "refusedTeamUnreadable": "Die gespeicherten Einstellungen dieses Teams können nicht gelesen werden, daher wurde nichts geändert."
     },
     "fields": {
       "colorOptional": "Farbe (optional)",
@@ -417,6 +420,11 @@
       "member_other": "Mitglieder",
       "title": "noch nicht gestartet"
     },
+    "editDefinition": {
+      "loadFailed": "Die Teameinstellungen konnten nicht geladen werden",
+      "notFound": "Die Teameinstellungen wurden nicht gefunden",
+      "memberNotFound": "Dieses Mitglied ist nicht mehr in den Teameinstellungen. Öffne das Team erneut, um die aktuellen Mitglieder zu sehen."
+    },
     "stopFailed": {
       "title": "Team konnte nicht gestoppt werden",
       "message": "Das Team läuft noch. Prüfen Sie seinen Status und klicken Sie erneut auf Stoppen."
@@ -458,6 +466,7 @@
       "deleteTeam": "Löschen von Team",
       "editTeam": "Team bearbeiten",
       "editUnavailableProvisioning": "Edit-Team ist nicht verfügbar, während die Bereitstellung noch im Gang ist",
+      "editUnavailableRunningProject": "Stoppe dieses Team in jedem Projekt, um es zu bearbeiten",
       "openBuiltInEditor": "Open-Projekt im integrierten Editor",
       "openTeamGraph": "Teamgraphen öffnen",
       "stopTeam": "Stop Team",

@@ -260,7 +260,10 @@
       "settingsSavedMembersFailed": "As configurações de equipe foram salvas, mas as alterações de membros falharam: {{message}}",
       "settingsSavedRefreshFailed": "As configurações da equipe foram salvas, mas não foi possível atualizar a última visão: {{message}}",
       "teamNameEmpty": "O nome da equipa não pode estar vazio",
-      "unsupportedMixedPrimaryMutation": "Edições ao vivo para colegas de equipe de propriedade primária em equipes mistas do OpenCode ainda não são suportadas. Pare a equipa, edite a lista e depois relanche. Afectado: {{names}}"
+      "unsupportedMixedPrimaryMutation": "Edições ao vivo para colegas de equipe de propriedade primária em equipes mistas do OpenCode ainda não são suportadas. Pare a equipa, edite a lista e depois relanche. Afectado: {{names}}",
+      "refusedProjectCopy": "Esta é uma cópia de projeto de uma equipe. Altere as configurações na própria equipe.",
+      "refusedProjectUnreconciled": "Um projeto desta equipe ainda está sendo preparado ou o último início foi interrompido. Inicie a equipe nesse projeto novamente e depois edite-a.",
+      "refusedTeamUnreadable": "As configurações salvas desta equipe não podem ser lidas, então nada foi alterado."
     },
     "fields": {
       "colorOptional": "Cor (opcional)",
@@ -417,6 +420,11 @@
       "member_other": "membros",
       "title": "Equipe ainda não lançada"
     },
+    "editDefinition": {
+      "loadFailed": "Não foi possível carregar as configurações da equipe",
+      "notFound": "As configurações da equipe não foram encontradas",
+      "memberNotFound": "Este membro não está mais nas configurações da equipe. Reabra a equipe para ver os membros atuais."
+    },
     "stopFailed": {
       "title": "Não foi possível parar a equipa",
       "message": "A equipa continua em execução. Verifique o estado e prima Parar novamente."
@@ -458,6 +466,7 @@
       "deleteTeam": "Apagar a equipa",
       "editTeam": "Editar a equipa",
       "editUnavailableProvisioning": "A equipe de edição não está disponível enquanto o provisionamento ainda está em andamento",
+      "editUnavailableRunningProject": "Pare esta equipe em todos os projetos para editá-la",
       "openBuiltInEditor": "Abrir o projeto no editor incorporado",
       "openTeamGraph": "Abrir gráfico de equipe",
       "stopTeam": "Parar a equipa",

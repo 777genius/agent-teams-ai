@@ -1,5 +1,6 @@
 import { useEffect, useMemo } from 'react';
 
+import { findProjectCopyOwner, projectCopyLabel } from '@features/team-project-context/renderer';
 import { api } from '@renderer/api';
 import { useStore } from '@renderer/store';
 import { useShallow } from 'zustand/react/shallow';
@@ -16,7 +17,7 @@ import { reviewFlowBoardsOf } from '../view-model/reviewFlowViewModel';
 
 import { createReviewFlowStore } from './createReviewFlowStore';
 
-import type { ReviewFlowPolicy, ReviewFlowSettings } from '../../contracts/types';
+import type { ReviewFlowOverview, ReviewFlowPolicy, ReviewFlowSettings } from '../../contracts/types';
 import type { TeamIdentity } from '../view-model/reviewFlowViewModel';
 import type { ReviewFlowLoadStatus, ReviewFlowStoreState } from './createReviewFlowStore';
 
@@ -31,6 +32,22 @@ export const useReviewFlowStore = createReviewFlowStore({
   getApi: () => api.reviewFlow,
   onTeamOverrideChanged: refreshOpenTeam,
 });
+
+/** The folder of a project copy as the team list names it, told apart from the team's other projects. */
+function projectLabelIn(
+  projectTeams: ReviewFlowOverview['projectTeams'],
+  teamName: string,
+  executionTeamName: string
+): string | null {
+  const catalog = [
+    {
+      teamName,
+      projectContextMode: 'per_project' as const,
+      projectHistoryContexts: projectTeams[teamName]?.projects ?? [],
+    },
+  ];
+  return findProjectCopyOwner(catalog, executionTeamName)?.projectLabel ?? null;
+}
 
 /** The shared data with one entry per team (see `foldProjectTeamBoards`). */
 export type TeamLevelReviewFlowState = Omit<ReviewFlowStoreState, keyof TeamLevelReviewFlow> &
@@ -56,7 +73,10 @@ export function useReviewFlowOverview(
   );
   const { load, overrides, unreadableTeams, projectTeams } = state;
   const folded = useMemo(
-    () => foldProjectTeamBoards({ overrides, unreadableTeams, projectTeams }),
+    () =>
+      foldProjectTeamBoards({ overrides, unreadableTeams, projectTeams }, (teamName, copy) =>
+        projectLabelIn(projectTeams, teamName, copy)
+      ),
     [overrides, unreadableTeams, projectTeams]
   );
   const revalidate = options.revalidate === true;
@@ -117,5 +137,9 @@ export function useKnownTeams(): readonly TeamIdentity[] {
   useEffect(() => {
     if (teams.length === 0) void fetchTeams();
   }, [teams.length, fetchTeams]);
-  return useMemo(() => reviewFlowBoardsOf(teams, projectCopyNames(projectTeams)), [teams, projectTeams]);
+  return useMemo(
+    () =>
+      reviewFlowBoardsOf(teams, (name) => projectCopyLabel(teams, name), projectCopyNames(projectTeams)),
+    [teams, projectTeams]
+  );
 }

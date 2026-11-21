@@ -99,3 +99,12 @@ are refused. `getMemberSettingsTarget` reads the saved target through the same
 repository, so an editor of a team without runtime members (such a definition)
 shows the identity and settings the save compares. See
 `docs/team-management/per-project-team-editing.md`.
+
+For a per-project team the lead is edited too: its model and effort are team
+launch settings. `createNodeDefinitionLeadSettingsFeature` runs the same use case
+and command ledger with `DefinitionLeadMemberSettingsRepositoryAdapter` (the lead
+read from and saved to the definition's launch settings, never a member row) and
+a lifecycle without a runtime; the route calls it inside the definition write. A
+refusal of those rules is answered as `refused` with a
+`MemberSettingsRefusalReason` code; the dialog shows its localized text
+(`MEMBER_SETTINGS_REFUSAL_KEYS`).

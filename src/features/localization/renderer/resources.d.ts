@@ -4126,6 +4126,7 @@ export default interface Resources {
       },
       "editDefinition": {
         "loadFailed": "Could not load the team settings",
+        "memberNotFound": "This member is no longer in the team settings. Reopen the team to see its current members.",
         "notFound": "The team settings could not be found"
       },
       "invalidTab": "Invalid team tab",
@@ -4208,6 +4209,9 @@ export default interface Resources {
         "memberNamesUnique": "Member names must be unique before saving",
         "newLiveTeammates": "Add new teammates from the dedicated Add member dialog while the team is live. Edit Team only supports updating existing teammates.",
         "provisioning": "Team settings cannot be edited while provisioning is still in progress. Wait for launch to finish, then try again.",
+        "refusedProjectCopy": "This is a project copy of a team. Change its settings in the team itself.",
+        "refusedProjectUnreconciled": "A project of this team is still being prepared, or its last start was interrupted. Launch the team in that project again, then edit it.",
+        "refusedTeamUnreadable": "The saved settings of this team cannot be read, so nothing was changed.",
         "restartFailedMany": "Team saved, but failed to restart these teammates: {{failures}}",
         "restartFailedOne": "Team saved, but failed to restart this teammate: {{failures}}",
         "saveFailed": "Failed to save",

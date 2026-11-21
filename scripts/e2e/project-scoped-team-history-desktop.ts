@@ -753,8 +753,8 @@ interface MembersFile { members: { name: string; isolation?: string; role?: stri
 /**
  * Member settings of a per-project team are edited in its definition, through the real member
  * settings dialog of the project screen and the same router as the roster: saved in the logical
- * team, projected onto every stopped project copy, refused for a copy, for the lead (its runtime is
- * a launch setting of the team), for a settings-originated relaunch and while a project is not
+ * team (the lead's model and effort into the team launch settings), projected onto every stopped
+ * project copy, refused for a copy, for a settings-originated relaunch and while a project is not
  * stopped. Nothing here reaches the runtime.
  */
 async function verifyMemberSettings(f: Fixture) {
@@ -833,14 +833,12 @@ async function verifyMemberSettings(f: Fixture) {
     commandId: randomUUID(), idempotencyKey: randomUUID(), teamName, memberName: 'alice',
     expectedFingerprint: 'not-checked-before-the-refusal', targetKind: 'member', settings, ...extra,
   });
+  // A refusal is an answer with a stable code (the app shows it in its language), not an error.
+  const isRefused = (outcome: { ok: boolean; value?: Record<string, unknown> }, reason: string) =>
+    outcome.ok && outcome.value?.outcome === 'refused' && outcome.value?.reason === reason;
   const copyEdit = await ipcOutcome('window.electronAPI.teams.updateMemberSettings(' + request(f.nativeA) + ')');
-  assert(!copyEdit.ok && /project copy/i.test(copyEdit.error ?? ''),
+  assert(isRefused(copyEdit, 'project_copy'),
     'Member settings of a project copy must be refused: ' + JSON.stringify(copyEdit));
-  const leadEdit = await ipcOutcome('window.electronAPI.teams.updateMemberSettings(' + request(f.logical, {
-    memberName: 'lead', targetKind: 'lead', leadRuntime: { model: null, effort: null }, settings: undefined,
-  }) + ')');
-  assert(!leadEdit.ok && /Change runtime/.test(leadEdit.error ?? ''),
-    'The lead of a per-project team must be refused with the way to change it: ' + JSON.stringify(leadEdit));
   const relaunch = await ipcOutcome('window.electronAPI.teams.replaceMembers(' + JSON.stringify(f.logical) +
     ', ' + JSON.stringify({
       members: [{ name: 'alice', role: 'Developer' }],
@@ -856,14 +854,81 @@ async function verifyMemberSettings(f: Fixture) {
   }] }, null, 2));
   try {
     const blocked = await ipcOutcome('window.electronAPI.teams.updateMemberSettings(' + request(f.logical) + ')');
-    assert(!blocked.ok && /prepared|running|launching/i.test(blocked.error ?? ''),
+    assert(isRefused(blocked, 'project_unreconciled'),
       'Member settings while a project is not stopped must be refused: ' + JSON.stringify(blocked));
+    const blockedLead = await ipcOutcome('window.electronAPI.teams.updateMemberSettings(' + request(f.logical, {
+      memberName: 'lead', targetKind: 'lead', leadRuntime: { model: 'blocked-model', effort: 'low' },
+      settings: undefined,
+    }) + ')');
+    assert(isRefused(blockedLead, 'project_unreconciled'),
+      'The lead settings while a project is not stopped must be refused: ' + JSON.stringify(blockedLead));
   } finally {
     await writeFile(f.indexPath, indexBefore);
   }
   for (const team of [f.logical, f.nativeA, f.nativeB]) {
     const member = alice(await readJsonFile<MembersFile>(membersOf(team)));
     assert(member && !member.isolation, 'A refused member settings call changed ' + team);
+    const meta = await readJsonFile<Record<string, unknown>>(path.join(f.rootTeams, team, 'team.meta.json'));
+    assert.notEqual(meta.model, 'blocked-model', 'A refused lead settings call changed ' + team);
+  }
+
+  // 2b. The lead: its model and effort are the team launch settings. The real dialog opens for it
+  // with the definition's values; a save goes to the definition and both stopped copies follow.
+  await selectProject(f, 'project-a');
+  await cdp.evaluate('(() => window.__agentTeamsDevStore.getState().openTeamTab(' +
+    JSON.stringify(f.logical) + ', ' + JSON.stringify(f.projectA) + '))()');
+  await waitFor(visibleTask(f.nativeA, 'PROJECT_A_TASK_ONLY'), 'project A open for the lead settings');
+  const leadSettingsButton = '(() => Array.from(document.querySelectorAll(' +
+    JSON.stringify('[data-team-name="' + f.nativeA + '"] button[aria-label="Settings"]') + '))' +
+    '.find((b) => { const text = b.closest("[class*=\\"group/member\\"]")?.textContent ?? "";' +
+    ' return text.includes("lead") && !text.includes("alice"); }))()';
+  await waitFor('Boolean(' + leadSettingsButton + ')', 'settings action on the card of the lead');
+  await cdp.evaluate('(() => { ' + leadSettingsButton + '.click(); return true; })()');
+  const leadDialogOpen = '(() => Array.from(document.querySelectorAll("[role=dialog] h2"))' +
+    '.some((h) => h.textContent?.trim() === "Settings: lead"))()';
+  await waitFor(leadDialogOpen, 'member settings dialog of the lead of a per-project team');
+  assert.equal(await cdp.evaluate('Boolean(document.querySelector(' + JSON.stringify(isolationBox) + '))'),
+    false, 'The lead dialog edits only the lead runtime (no worktree option)');
+  await cdp.screenshot(path.join(f.screenshots, 'lead-settings-dialog.png'));
+  await cdp.evaluate('(() => Array.from(document.querySelectorAll("[role=dialog] button"))' +
+    '.find((b) => b.textContent?.trim() === "Cancel")?.click())()');
+  await waitFor('!' + leadDialogOpen, 'lead settings dialog closed');
+
+  const metaOf = (team: string) => path.join(f.rootTeams, team, 'team.meta.json');
+  const saveLead = async (leadRuntime: { model: string | null; effort: string | null }) => {
+    // The fingerprint of the saved lead, as the dialog sends it (a stale one answers with the actual one).
+    const probe = await ipcOutcome('window.electronAPI.teams.updateMemberSettings(' + request(f.logical, {
+      memberName: 'lead', targetKind: 'lead', leadRuntime, settings: undefined, expectedFingerprint: 'stale',
+    }) + ')');
+    assert(probe.ok && probe.value?.outcome === 'target_conflict' && typeof probe.value.actualFingerprint === 'string',
+      'A stale lead fingerprint must be a conflict with the actual one: ' + JSON.stringify(probe));
+    return ipcOutcome('window.electronAPI.teams.updateMemberSettings(' + request(f.logical, {
+      memberName: 'lead', targetKind: 'lead', leadRuntime, settings: undefined,
+      expectedFingerprint: probe.value.actualFingerprint,
+    }) + ')');
+  };
+  const leadMembersBefore = await readFile(membersOf(f.logical), 'utf8');
+  const leadSaved = await saveLead({ model: 'e2e-lead-model', effort: 'high' });
+  assert(leadSaved.ok && leadSaved.value?.outcome === 'completed' && leadSaved.value?.effect === 'persisted_only',
+    'The lead settings of a stopped per-project team must be saved: ' + JSON.stringify(leadSaved));
+  for (const team of [f.logical, f.nativeA, f.nativeB]) {
+    await waitForJson<Record<string, unknown>>(metaOf(team),
+      (meta) => meta.model === 'e2e-lead-model' && meta.effort === 'high',
+      'lead model and effort in the launch settings of ' + team);
+  }
+  assert.equal(await readFile(membersOf(f.logical), 'utf8'), leadMembersBefore,
+    'The lead settings must not write a member row of the definition');
+  const shownLead = await ipcOutcome('window.electronAPI.teams.getMemberSettingsTarget(' +
+    JSON.stringify({ teamName: f.logical, memberName: 'lead' }) + ')');
+  assert((shownLead.value?.settings as { model?: string })?.model === 'e2e-lead-model',
+    'The lead is shown with the saved launch settings: ' + JSON.stringify(shownLead));
+  // Back to the provider default, so later sections start from the fixture's settings.
+  const leadReset = await saveLead({ model: null, effort: null });
+  assert(leadReset.ok && leadReset.value?.effect === 'persisted_only', 'Lead reset: ' + JSON.stringify(leadReset));
+  for (const team of [f.logical, f.nativeA, f.nativeB]) {
+    await waitForJson<Record<string, unknown>>(metaOf(team),
+      (meta) => meta.model === undefined && meta.effort === undefined,
+      'lead model and effort cleared in ' + team);
   }
 
   assert.equal(await history(), historyBefore, 'Member settings mutated project tasks or inboxes');

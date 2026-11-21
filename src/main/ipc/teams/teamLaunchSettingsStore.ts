@@ -2,7 +2,9 @@ import {
   DEFINITION_LAUNCH_SETTING_KEYS,
   pickDefinitionLaunchSettings,
 } from '@features/team-project-context/main';
+import { applyLeadRuntimeSettingsToLaunchIdentity } from '@main/services/team/provisioning/TeamProvisioningLeadRuntimeRestart';
 import { TeamMetaStore } from '@main/services/team/TeamMetaStore';
+import { isTeamEffortLevel } from '@shared/utils/effortLevels';
 
 import type { DefinitionLaunchSettingsStore } from '@features/team-project-context/main';
 
@@ -13,7 +15,17 @@ import type { DefinitionLaunchSettingsStore } from '@features/team-project-conte
  * rather than inventing a file with an empty working directory.
  */
 export function createLaunchSettingsStore(
-  metaStore: Pick<TeamMetaStore, 'getMeta' | 'updateMeta'> = new TeamMetaStore()
+  metaStore: Pick<TeamMetaStore, 'getMeta' | 'updateMeta'> = new TeamMetaStore(),
+  options: {
+    /**
+     * For a stopped team only (the projection of a definition edit): a saved
+     * lead model or effort also goes into the launch identity of its last run,
+     * as a stopped ordinary team saves its lead (`applyLeadRuntimeSettingsToTeamMeta`),
+     * so the team shows the lead it will start with. A launch replaces the
+     * identity anyway, so the launch path leaves it to the runtime.
+     */
+    followLeadLaunchIdentity?: boolean;
+  } = {}
 ): DefinitionLaunchSettingsStore {
   return {
     async read(teamName) {
@@ -26,7 +38,14 @@ export function createLaunchSettingsStore(
     async save(teamName, settings) {
       await metaStore.updateMeta(teamName, (current) => {
         if (!current) throw new Error(`Saved settings of team ${teamName} are missing`);
-        return { ...current, ...settings };
+        const next = { ...current, ...settings };
+        const leadChanged = Object.hasOwn(settings, 'model') || Object.hasOwn(settings, 'effort');
+        if (!options.followLeadLaunchIdentity || !leadChanged) return next;
+        const launchIdentity = applyLeadRuntimeSettingsToLaunchIdentity(current.launchIdentity, {
+          model: next.model ?? null,
+          effort: isTeamEffortLevel(next.effort) ? next.effort : null,
+        });
+        return launchIdentity ? { ...next, launchIdentity } : next;
       });
     },
   };

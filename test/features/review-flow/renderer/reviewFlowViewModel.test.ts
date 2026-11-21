@@ -20,7 +20,21 @@ import {
   reviewFlowTeamOf,
 } from '../../../../src/features/review-flow/renderer/view-model/projectTeamReviewFlow';
 
+import {
+  projectCopyLabel,
+  type ProjectCopyCatalogTeam,
+} from '../../../../src/features/team-project-context/core';
+
 import type { ReviewFlowSettings } from '../../../../src/features/review-flow/contracts/types';
+
+/** The app's own copy label over the folded list, as the hook passes it in. */
+const labelIn =
+  (teams: readonly ProjectCopyCatalogTeam[]) =>
+  (name: string): string | null =>
+    projectCopyLabel(teams, name);
+/** The folder label of a project, as the hook passes it in. */
+const folderOf = (_team: string, copy: string): string | null =>
+  ({ 'ptc-aaa': 'app-one', 'ptc-bbb': 'app-two' })[copy] ?? null;
 
 const agent: ReviewFlowSettings = { reviewFlow: 'agent_approval', reviewFlowPrompt: '' };
 const human: ReviewFlowSettings = { reviewFlow: 'human_approval', reviewFlowPrompt: 'Run e2e.' };
@@ -125,19 +139,22 @@ describe('review flow of per-project teams', () => {
         projectHistoryContexts: [{ executionTeamName: 'ptc-old', projectPath: '/work/site' }],
       },
     ];
-    expect(reviewFlowBoardsOf(retained, new Set())).toEqual([
+    expect(reviewFlowBoardsOf(retained, labelIn(retained), new Set())).toEqual([
       { teamName: 'old', displayName: 'Old' },
       { teamName: 'ptc-old', displayName: 'Old · site' },
     ]);
     // A copy that an ordinary team kept is a board of its own and is not folded.
-    const view = foldProjectTeamBoards({ overrides: { 'ptc-old': human }, unreadableTeams: ['old'], projectTeams: {} });
+    const view = foldProjectTeamBoards(
+      { overrides: { 'ptc-old': human }, unreadableTeams: ['old'], projectTeams: {} },
+      folderOf
+    );
     expect(view).toEqual({ overrides: { 'ptc-old': human }, unreadableTeams: ['old'], projectTeams: {} });
     expect(reviewFlowTeamOf({}, 'ptc-old')).toBe('ptc-old');
   });
 
   it('lists an ordinary team and a per-project team once each, never a project copy', () => {
     const pending = { builders: team(undefined, [...projects, { executionTeamName: 'ptc-ccc', projectPath: '/work/c' }]) };
-    expect(reviewFlowBoardsOf(teamList, projectCopyNames(pending))).toEqual([
+    expect(reviewFlowBoardsOf(teamList, labelIn(teamList), projectCopyNames(pending))).toEqual([
       { teamName: 'legacy', displayName: 'Legacy' },
       { teamName: 'builders', displayName: 'Builders' },
       { teamName: 'fresh', displayName: 'Fresh' },
@@ -148,11 +165,16 @@ describe('review flow of per-project teams', () => {
 
   it('shows the saved team setting and folds the boards of its copies away', () => {
     const view = foldProjectTeamBoards(
-      overview({ 'ptc-aaa': human, 'ptc-bbb': human, legacy: agent }, team(human))
+      overview({ 'ptc-aaa': human, 'ptc-bbb': human, legacy: agent }, team(human)),
+      folderOf
     );
     expect(view.overrides).toEqual({ legacy: agent, builders: human });
     expect(view.projectTeams.builders).toEqual({ saved: true, unsynced: [] });
-    const boards = reviewFlowBoardsOf(teamList, projectCopyNames({ builders: team(human) }));
+    const boards = reviewFlowBoardsOf(
+      teamList,
+      labelIn(teamList),
+      projectCopyNames({ builders: team(human) })
+    );
     expect(buildOverrideRows(boards, view.overrides).map((row) => row.displayName)).toEqual([
       'Builders',
       'Legacy',
@@ -162,7 +184,7 @@ describe('review flow of per-project teams', () => {
   });
 
   it('names the projects a saved team setting has not reached', () => {
-    const view = foldProjectTeamBoards(overview({ 'ptc-aaa': human }, team(human), ['ptc-bbb']));
+    const view = foldProjectTeamBoards(overview({ 'ptc-aaa': human }, team(human), ['ptc-bbb']), folderOf);
     expect(view.overrides).toEqual({ builders: human });
     expect(view.unreadableTeams).toEqual([]);
     expect(view.projectTeams.builders).toEqual({
@@ -170,17 +192,17 @@ describe('review flow of per-project teams', () => {
       unsynced: [{ projectLabel: 'app-two', setting: 'unreadable' }],
     });
     // A team that follows the default: a board that still carries an override is behind.
-    const cleared = foldProjectTeamBoards(overview({ 'ptc-aaa': human }, team(null)));
+    const cleared = foldProjectTeamBoards(overview({ 'ptc-aaa': human }, team(null)), folderOf);
     expect(cleared.overrides).toEqual({});
     expect(cleared.projectTeams.builders.unsynced).toEqual([{ projectLabel: 'app-one', setting: human }]);
   });
 
   it('before the first save, shows what the projects share, or that they differ', () => {
-    const shared = foldProjectTeamBoards(overview({ 'ptc-aaa': human, 'ptc-bbb': human }));
+    const shared = foldProjectTeamBoards(overview({ 'ptc-aaa': human, 'ptc-bbb': human }), folderOf);
     expect(shared.overrides).toEqual({ builders: human });
     expect(shared.projectTeams.builders).toEqual({ saved: false, unsynced: [] });
 
-    const differ = foldProjectTeamBoards(overview({ 'ptc-aaa': human }));
+    const differ = foldProjectTeamBoards(overview({ 'ptc-aaa': human }), folderOf);
     // No single setting: the team is not shown as custom, and every project is named.
     expect(differ.overrides).toEqual({});
     expect(differ.projectTeams.builders).toEqual({
