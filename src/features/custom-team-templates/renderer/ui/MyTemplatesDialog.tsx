@@ -129,18 +129,16 @@ export const MyTemplatesDialog = ({ open, onClose }: MyTemplatesDialogProps): Re
   };
 
   const handleDuplicated = (): void => {
+    // The child immediately calls onClose, which performs the one library read.
     setDuplicatingTemplate(null);
-    void reload();
   };
 
   const handleDeleted = (): void => {
     setDeletingTemplate(null);
-    void reload();
   };
 
   const handleCopied = (): void => {
     setCopyBuiltinOpen(false);
-    void reload();
   };
 
   const handleExport = (template: CustomTeamTemplateV1): void => {
