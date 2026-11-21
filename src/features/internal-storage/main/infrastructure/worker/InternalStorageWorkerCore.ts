@@ -9,6 +9,10 @@ import {
   handleApplicationCommandLedgerOp,
 } from './applicationCommandLedgerWorkerOps';
 import {
+  CustomTeamTemplateWorkerOps,
+  handleCustomTeamTemplateOp,
+} from './customTeamTemplatesWorkerOps';
+import {
   INTERNAL_STORAGE_SCHEMA_VERSION,
   readSchemaVersion,
   runInternalStorageMigrations,
@@ -82,6 +86,10 @@ export class InternalStorageWorkerCore {
     () => this.open().orm
   );
   private readonly memberWorkSyncOps = new MemberWorkSyncWorkerOps(() => this.open().orm);
+  private readonly customTeamTemplateOps = new CustomTeamTemplateWorkerOps(
+    () => this.open().orm,
+    () => this.options.now?.() ?? new Date()
+  );
 
   constructor(private readonly options: InternalStorageWorkerCoreOptions) {}
 
@@ -126,6 +134,9 @@ export class InternalStorageWorkerCore {
         }
         if (typeof op === 'string' && op.startsWith('mws.')) {
           return handleMemberWorkSyncOp(this.memberWorkSyncOps, op, payload);
+        }
+        if (typeof op === 'string' && op.startsWith('customTemplate.')) {
+          return handleCustomTeamTemplateOp(this.customTeamTemplateOps, op, payload);
         }
         throw new Error(`Unknown internal-storage op: ${String(op)}`);
       }

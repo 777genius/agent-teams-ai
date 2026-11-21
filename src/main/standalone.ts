@@ -16,6 +16,11 @@
 // runtime which is unavailable in standalone (pure Node.js) mode. Standalone
 // error tracking can be added later with @sentry/node if needed.
 
+import * as os from 'node:os';
+import * as path from 'node:path';
+
+import { createCustomTeamTemplatesFeature, type CustomTeamTemplatesFeature } from '@features/custom-team-templates/main';
+import { createInternalStorageFeature } from '@features/internal-storage/main';
 import { createRecentProjectsFeature } from '@features/recent-projects/main';
 import { createWorkspaceTrustFeatures } from '@features/workspace-trust/main';
 import { createLogger } from '@shared/utils/logger';
@@ -92,6 +97,8 @@ const sshConnectionManagerStub = {
 let localContext: ServiceContext;
 let notificationManager: NotificationManager;
 let httpServer: HttpServer;
+let internalStorageFeature: ReturnType<typeof createInternalStorageFeature> | null = null;
+let customTeamTemplatesFeature: CustomTeamTemplatesFeature | null = null;
 
 // =============================================================================
 // Lifecycle
@@ -128,6 +135,12 @@ async function start(): Promise<void> {
     todosDir,
   });
   localContext.start();
+  internalStorageFeature = createInternalStorageFeature({
+    userDataPath: process.env.APP_DATA_DIR ?? path.join(os.homedir(), '.agent-teams-ai'),
+  });
+  customTeamTemplatesFeature = createCustomTeamTemplatesFeature({
+    backend: internalStorageFeature.customTeamTemplatesBackend,
+  });
 
   // Initialize notification manager
   notificationManager = NotificationManager.getInstance();
@@ -168,6 +181,7 @@ async function start(): Promise<void> {
     chunkBuilder: localContext.chunkBuilder,
     dataCache: localContext.dataCache,
     recentProjectsFeature,
+    customTeamTemplatesFeature: customTeamTemplatesFeature ?? undefined,
     workspaceTrust: createWorkspaceTrustFeatures({
       getClaudeConfigDir: getClaudeBasePath,
       getAutoDetectedClaudeConfigDir: getAutoDetectedClaudeBasePath,
@@ -193,6 +207,10 @@ async function shutdown(): Promise<void> {
     await httpServer.stop();
   }
 
+  customTeamTemplatesFeature?.dispose();
+  customTeamTemplatesFeature = null;
+  if (internalStorageFeature) await internalStorageFeature.dispose();
+  internalStorageFeature = null;
   if (localContext) {
     localContext.dispose();
   }

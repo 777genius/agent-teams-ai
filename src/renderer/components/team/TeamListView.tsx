@@ -1,5 +1,6 @@
 import { lazy, memo, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
+import { SaveAsTemplateAction } from '@features/custom-team-templates/renderer';
 import { useAppTranslation } from '@features/localization/renderer';
 import { recordRecentProjectOpenPaths } from '@features/recent-projects/renderer';
 import { classifyAnalyticsError, recordTeamStop } from '@renderer/analytics/productAnalytics';
@@ -379,6 +380,7 @@ const ActiveTeamCard = ({
                   <Copy size={14} />
                 </button>
               ) : null}
+              <SaveAsTemplateAction team={team} />
               <TeamDeleteButton
                 teamName={team.teamName}
                 placement="card"

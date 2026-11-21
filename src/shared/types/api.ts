@@ -129,6 +129,7 @@ import type {
 } from '@features/change-review-history/contracts';
 import type { CodexAccountElectronApi } from '@features/codex-account/contracts';
 import type { CodexRuntimeAPI } from '@features/codex-runtime-installer/contracts';
+import type { CustomTeamTemplatesApi } from '@features/custom-team-templates/contracts';
 import type { ExternalAgentConnectionApi } from '@features/external-agent-connection/contracts';
 import type { GatewayProviderApi } from '@features/gateway-provider/contracts';
 import type { MemberLogStreamApi } from '@features/member-log-stream/contracts';
@@ -862,6 +863,7 @@ export interface ElectronAPI
     TokenUsageElectronApi,
     ProjectFolderElectronApi {
   teamGroupChats: TeamGroupChatsAPI;
+  customTeamTemplates: CustomTeamTemplatesApi;
   reviewFlow: ReviewFlowElectronApi;
   announcements: AnnouncementsApi;
   gatewayProvider: GatewayProviderApi;
