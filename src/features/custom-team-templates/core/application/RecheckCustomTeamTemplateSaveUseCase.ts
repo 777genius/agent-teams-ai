@@ -34,9 +34,10 @@ function parsePreviewToken(payload: unknown): string | null {
  * Every answer stays honest. A read of an absent or conflicting current row
  * does not prove that this earlier operation never committed: the original
  * writer may still be retrying or another editor may have changed the row.
- * Therefore only a positive identity match settles the operation; other
- * outcomes remain unresolved until independent durable evidence or an
- * explicit user decision. Re-check never dispatches a write.
+ * Therefore only a positive identity match settles a confirmed operation;
+ * other outcomes remain unresolved until independent durable evidence or an
+ * explicit user decision. A never-confirmed preview is `notSaved` without
+ * any storage read. Re-check never dispatches a write.
  */
 export class RecheckCustomTeamTemplateSaveUseCase {
   constructor(private readonly deps: RecheckCustomTeamTemplateSaveUseCaseDeps) {}
@@ -62,6 +63,12 @@ export class RecheckCustomTeamTemplateSaveUseCase {
       }
     } else {
       state = resolution.state;
+    }
+
+    // A preview that was never confirmed has never dispatched a save.
+    // Do not classify a matching row from some other operation as our success.
+    if (!state.confirmedSave) {
+      return { status: 'notSaved', templateId: state.templateId };
     }
 
     const gateway = this.deps.gateway;

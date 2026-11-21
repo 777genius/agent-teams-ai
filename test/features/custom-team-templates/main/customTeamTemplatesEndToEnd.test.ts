@@ -300,14 +300,15 @@ describe('custom team templates end to end', () => {
     // Nothing reached the store, and the retained operation keeps its identity.
     expect(library.requests).toEqual([]);
 
-    const notSaved = await app.recheckSave.execute({ previewToken: token });
-    expect(notSaved).toEqual({
-      status: 'notSaved',
+    const uncertain = await app.recheckSave.execute({ previewToken: token });
+    expect(uncertain).toEqual({
+      status: 'unresolved',
       templateId: expect.any(String),
     });
-    if (notSaved.status !== 'notSaved') return;
-    const { templateId } = notSaved;
-    // A re-check never writes: the confirmed-absence read is the whole action.
+    if (uncertain.status !== 'unresolved') return;
+    const { templateId } = uncertain;
+    // A read cannot prove the previous writer will never commit.
+    // Re-check is strictly read-only and cannot retry the create.
     expect(library.requests).toEqual([]);
 
     // The write turns out to have been possible after all: it lands once, and the
@@ -322,11 +323,12 @@ describe('custom team templates end to end', () => {
       template: library.rows.get(templateId),
     });
 
-    // A different record under the same id is a conflict, never an overwrite.
+    // If the confirmed save's row is later changed, the current data
+    // cannot disprove that earlier commit. Re-check stays unresolved.
     const conflicting = { ...library.rows.get(templateId)!, teamPrompt: 'Different.' };
     library.rows.set(templateId, conflicting);
     await expect(app.recheckSave.execute({ previewToken: token })).resolves.toEqual({
-      status: 'templateIdConflict',
+      status: 'unresolved',
       templateId,
     });
     expect(library.rows.get(templateId)).toEqual(conflicting);

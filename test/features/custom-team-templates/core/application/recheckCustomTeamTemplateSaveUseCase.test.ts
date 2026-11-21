@@ -342,5 +342,8 @@ describe('RecheckCustomTeamTemplateSaveUseCase', () => {
       status: 'notSaved',
       templateId: TEMPLATE_ID,
     });
+    // No save was ever dispatched for this preview. Reading a coincidental
+    // matching row cannot turn it into a false positive.
+    expect(read).not.toHaveBeenCalled();
   });
 });

@@ -1112,7 +1112,7 @@ describe('SaveCustomTeamTemplateUseCase', () => {
         hasher,
         previewStore: preview.store,
       }).execute({ previewToken: preview.token })
-    ).resolves.toEqual({ status: 'notSaved', templateId: preview.stateTemplateId });
+    ).resolves.toEqual({ status: 'unresolved', templateId: preview.stateTemplateId });
     expect(read).toHaveBeenCalledWith({ templateId: preview.stateTemplateId });
   });
 
