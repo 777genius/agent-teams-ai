@@ -173,7 +173,7 @@ function alphaCard(): Element {
 
 async function renderView(): Promise<void> {
   await act(async () => {
-    root.render(<TeamListView />);
+    root.render(<TeamListView tabId="templates-integration-test" isActive />);
     await Promise.resolve();
   });
 }
