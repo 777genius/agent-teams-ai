@@ -113,6 +113,7 @@ patchedDependencies:
   '@radix-ui/react-tooltip@1.2.8': 92cb648a695f616d3b7222b90053cb36e162bab4303abf0fe39b517e1d9dd6b8
   brace-expansion@5.0.12: 3ae36edc21bd38f2596d0a98e3d223dc194dd5a639b7cba945ba690dfff4e8a3
   braces@3.0.3: 06548a3666909a7aea1389a8bcf0839aa1d8cc97c21e68092807323bbe28d985
+  croner@10.0.1: 40a5df5b5f714a5efdc2b6116b789fdeb9a00aadb614aed8397be512143c7842
   fastmcp@3.35.0: d75d6f9f9057373a9e00809a3a4a637023626e29e47d5a03c1f299b977455809
   http-cache-semantics@4.2.0: 39b101be02f9463a5819ac4962be9f413d12a4c4d159b3976e2441ec7e6316d7
   mcp-proxy@6.4.1: 7cf3a2a315a73ab85c37769cde2848c5e0c4236b2e384c31b5937b36cbc5bfb5
@@ -384,7 +385,7 @@ importers:
         version: 1.0.4(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
       croner:
         specifier: ^10.0.1
-        version: 10.0.1
+        version: 10.0.1(patch_hash=40a5df5b5f714a5efdc2b6116b789fdeb9a00aadb614aed8397be512143c7842)
       cronstrue:
         specifier: ^3.13.0
         version: 3.13.0
@@ -19343,7 +19344,7 @@ snapshots:
 
   crelt@1.0.6: {}
 
-  croner@10.0.1: {}
+  croner@10.0.1(patch_hash=40a5df5b5f714a5efdc2b6116b789fdeb9a00aadb614aed8397be512143c7842): {}
 
   cronstrue@3.13.0: {}
 
@@ -22957,7 +22958,7 @@ snapshots:
       confbox: 0.2.4
       consola: 3.4.2
       cookie-es: 2.0.1
-      croner: 10.0.1
+      croner: 10.0.1(patch_hash=40a5df5b5f714a5efdc2b6116b789fdeb9a00aadb614aed8397be512143c7842)
       crossws: 0.3.5
       db0: 0.3.4(better-sqlite3@12.11.1)(drizzle-orm@0.45.2(@opentelemetry/api@1.9.0)(@types/better-sqlite3@7.6.13)(@types/pg@8.15.6)(better-sqlite3@12.11.1))
       defu: 6.1.5

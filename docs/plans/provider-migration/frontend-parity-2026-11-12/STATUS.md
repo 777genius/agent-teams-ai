@@ -2,6 +2,101 @@
 
 Обновлено: **21 ноября 2026**. Единственный текущий рабочий план.
 
+## Продолжение `4ec8e74b`: исходные E2E и узкий следующий срез
+
+Опубликован `4ec8e74b9a6430143287baa5298a11ade98a5794`; Git readback подтвердил
+parent, tree и все 27 файлов. Все шесть original attempt-1 runs терминальны:
+Host44912818143 — 24 SUCCESS / 6 FAILURE; CI44912818166 — 2 SUCCESS /
+2 FAILURE / 11 SKIPPED; Packaged44912818208 — 7 SUCCESS;
+Process44912818003 — 5 SUCCESS; Teams44912818150 — 3 SUCCESS;
+NativeV244912817963 — 9 SUCCESS. Итого 69 jobs: 50 SUCCESS, 8 FAILURE,
+11 SKIPPED, без cancelled, queued или active. Восемь отказов включают шесть
+первичных и два производных aggregate gates. Source aggregate остановился на
+требовании retained qualification; следующий Draft/full-policy step не исполнялся.
+SKIPPED не квалифицирует full-workspace gates. Single observer завершил readback
+исходных запусков без rerun, dispatch или cancellation.
+
+План следующего среза зафиксирован до production edits в отдельном detached
+worktree от того же `4ec8e74b`. Исходная tracked рабочая копия остаётся неизменной
+для readback. Новой ветки, rerun, dispatch или cancellation нет; все шесть original
+runs завершены до публикации следующего source.
+
+| Срез | Конкретное изменение и проверка | Оценка |
+| --- | --- | --- |
+| Typed lint | Удалить два избыточных `!` в `legacyStoppedSourceDiagnostic`; runtime JS идентичен, scoped typed lint 2 → 0 ошибок, root R1 завершён | 2 символа; сложность 1/10, надёжность 10/10, уверенность 10/10 |
+| Automatic cron | Pinned Croner 10.0.1 через существующий pnpm patch: общий initial target/delay и сохранение ещё актуального target при раннем timer wake. Сохранить currentRun/trigger, pause/Stop, protect, interval, startAt/stopAt/maxRuns, unref и 30s cap. Common finite baseline имеет два RED на каждый из трёх formats, candidate 45/45; actual Scheduler + JSON repository baseline 2 RED, candidate 6/6. Exact patch R2 завершён; repo integration добавляет 17 finite regression cases с public Croner/Scheduler/JSON API | ≤35 семантических production строк в generated package patch; test-only clock helper ≤160, dependency suite ≤150, Scheduler suite ≤230 строк. Сложность 4/10, надёжность 8/10, уверенность в устранении условного дефекта 9/10, в конкретном исходном CI interleave 3/10 |
+| Darwin graph observation | Закрытые once-only фазы после manifest/index/census и 25/50/75% исходных file checks, затем завершение byte checks. Только уже выполненные проверки; прежние awaits, 12 workers, FD/path/hash/mode guards, error/close/abort order. Observer exceptions не влияют на результат. R1 concept принят, далее exact source и finite tests | ≤50 production добавленных строк в четырёх существующих файлах, ≤90 test строк; сложность 2/10, надёжность 9/10; это диагностика, устранение timing failure не заявляется |
+| Darwin initial catalog | R1 принят: SHA256 существующего строкового RPC ID и closed inputKind; Main `main-admitted` после original pending.set до writeFrame, Host `queued` после queue.set, `started` в исходной callback, `returned` после исходного await pending. Отдельный diagnostic prefix, не lifecycle/custody. Numeric/missing ID не инструментируется, allocation не переносится | ≤110 production добавленных строк в шести существующих файлах, CapturedHostClient ≤800; ≤180 focused test строк. Сложность 3/10, надёжность 9/10. Исходные CDP30s, metadata120s и Host180s неизменны; до RPC allocation capture остаётся некоррелированным |
+| Linux membership | R1 принят: перед единственным save-only Create, пока штатный source-directory UI owner mounted, пассивно дождаться двух исходных validated OpenCode scopes global + workspace через существующий source reader. Взять этот wait из одного исходного 90s initial Launch readiness cutoff и передать тот же deadline downstream; все strict snapshots/lineage/negative guards остаются прежними. После unmount Create такой fence отклонён как причинно недостаточный | ≤17 TEST изменённых строк, без production edits/new requests/actions; сложность 2/10, надёжность 9/10, уверенность в устранении наблюдённого first-snapshot race 9/10. Add/Remove/Restore/Stop и cold boundaries прежние |
+| Retained initial selection | R1 принят: actual pure-OpenCode adapter Create path теряет `runtimeSelectionVersion` при первой записи team metadata; сохранить поле из исходного launchRequest. Existing TeamMetaStore уже валидирует/сохраняет значение, новый fallback не нужен. Actual flow + real TeamMetaStore roundtrip RED→GREEN для fresh version1, unversioned и existing-version controls; strict saved-selection equality и original 240s relaunch allowance прежние | +1 production строка, ≤80 test строк в существующем suite; сложность 2/10, надёжность 10/10, уверенность в дефекте 10/10. Original ZIP не содержит сохранённую metadata, фактическое missing field устанавливается source trace и finite regression, не чтением отсутствующего файла |
+
+Croner RED доказывает дефект при заданных монотонных clock interleavings, но не
+дату его появления и не фактическое чередование событий в исходном CI. Darwin
+Review сохраняет 57s незавершённого graph await до UI cleanup; parent-aborted
+после начала Quit не доказывает собственный timeout probe или deadlock. Resume
+не дошёл до Launch/model probe. Диагностика не заменяет новые original E2E.
+Retained job136883348003 отдельно упал до prepare; его seed epoch0 и Host epoch1
+запускают current app source с исходным retained runtime. Упоминание donor1d0 в
+input manifest не делает его source исполняемым Main этого сценария. Предыдущий
+e8 original остановился ещё на open/not-eligible и не доказывал прохождения
+saved-selection сравнения.
+
+Root владеет plan, graph diagnostic, source manifests и expected-head публикацией;
+restore_scope — Croner; test_oracle_fixes — независимое review и TEST границы;
+ci_audit — единственный CI observer и original artifact readback. До публикации:
+exact source R1/R2, соответствующие scoped TS7/lint/guards и integrity archive.
+Genuine Claude/Codex, default Host, Stage2, release и app main не включаются.
+
+Первая локальная попытка Host build через pnpm в detached worktree запустила
+automatic dependency verification/install, затем отказалась от symlink task-state
+directory; сам build не исполнился. Tracked source и прежний dist не изменились,
+но bookkeeping исходного node_modules нельзя считать byte-frozen. Шесть workspace
+links восстановлены; next node_modules изолирован реальными directories и явными
+dependency links. Прямой запуск того же pinned TS7 7.0.2 build завершился PASS.
+Новые graph tests — 16/16 PASS, Main diagnostic — 17/17 PASS; независимое exact
+graph review завершено. Существующий ModelProbe lifecycle suite на итоговой
+реализации — 32/32 PASS, включая исходные abort/UNKNOWN/cleanup controls.
+
+Первая canonical попытка следующего среза отказала до build из-за скопированного
+symlink task-state directory; локальный task-state отделён без изменения target.
+После этого canonical `pnpm typecheck` выполнил Host/task-ledger prebuild, но
+общий compiler был остановлен с exit137 даже при GOMEMLIMIT=768MiB. Это не PASS;
+ошибок типов до остановки не выведено. Scoped TS7 для Main и TEST scripts — PASS.
+Полная квалификация нового source остаётся обязанностью original CI.
+
+Exact R1/R2 завершены для graph, catalog correlation, membership fence, Croner и
+retained persistence. Catalog finite tests — 25 PASS (23 pure/decoder, 1 actual
+TEST stdio, 1 actual Coordinator overlap); 43 filtered tests не посчитаны PASS.
+Croner repo regression — 17/17, retained actual metadata — 13/13 PASS. После
+style-only test edits эти 17 и 13 проверены повторно; runtime patch/lock/source
+не менялись. Typed lint production scope имеет 0 ошибок. Расширенная попытка
+lint вне canonical src scope выявила 7 новых ошибок в Croner tests, исправленных
+и проверенных отдельно; прежние 56 test-file errors не исправлялись и не скрыты.
+
+Original artifact readback завершён для Native (8 ZIP / 28 receipts), Process
+(5 ZIP), Teams (3 ZIP / 120 screenshots) и Packaged (5 ZIP, все пять platforms).
+Packaged подтверждает только объявленные TEST scopes. На Darwin original app
+relaunch и наблюдаемая очистка прошли, но successorNativeCustody и naturalExit
+остаются неквалифицированными. На Windows same-Main UI Stop и controller drain
+подтверждены исходными receipts; executable bytes и физическое отсутствие не
+проверялись повторным локальным исполнением. Эти результаты не закрывают шесть
+первичных Host/retained отказов и не квалифицируют новый source.
+
+Окончательный source manifest содержит 1981/1981 существующий файл и все 26
+изменённых source/test/dependency files, без missing или drift. Четыре старых
+test pins заменены ровно проверенными style pins; две shared graph diagnostic
+привязки последовательно переходят через catalog preimage к final source.
+Явный финальный scoped TS7 7.0.2 receipt имеет exit0; предыдущий пустой log с
+непрочитанным tool exit не засчитывается отдельным PASS.
+
+Переносимый [index](evidence/continuation-4ec8-20261121.json),
+[архив evidence](evidence/continuation-4ec8-20261121.tar.gz) и
+[независимый archive review](evidence/continuation-4ec8-20261121-review.json)
+сохраняют исходные failures, rejected attempts, superseded pins, final readbacks
+и точные source before/after. ZIP, screenshots и native binaries не дублируются;
+их исходные digests и границы локального readback указаны явно. После публикации
+следуют новые original runs на новом SHA; результат им заранее не присваивается.
+
 ## Продолжение `e8a07e76`: восстановление и завершение исходной квалификации
 
 Живой GitHub подтверждает `e8a07e76a3aa1bcdb54a59d2c6c920db3e29e637`.

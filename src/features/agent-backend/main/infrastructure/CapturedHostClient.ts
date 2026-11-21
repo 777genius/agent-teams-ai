@@ -45,7 +45,7 @@ import { createLogger } from '@shared/utils/logger';
 import { CapturedHostNotificationBuffer } from './CapturedHostNotificationBuffer';
 import { captureNativePromptSettings, type NativePromptSettingsSelection } from './CapturedNativePromptOptions';
 import { captureReviewFlowDefaultsEnvironment } from './CapturedReviewFlowOptions';
-import { createCapturedHostDiagnostics } from './createCapturedHostDiagnostics';
+import { createCapturedHostDiagnostics, observeCapturedCatalogRequest } from './createCapturedHostDiagnostics';
 import {
   capturedHostProfileDigest,
   captureHostProfile,
@@ -365,6 +365,7 @@ export class CapturedHostClient {
         timer,
         maxFrameBytes: hostMethodFrameLimit(method, this.profile.reviewTransport),
       });
+      observeCapturedCatalogRequest(id, method, params);
       if (!this.writeFrame(frame, control))
         this.fail(new HostClientError('transport-closed', 'unknown'));
     });

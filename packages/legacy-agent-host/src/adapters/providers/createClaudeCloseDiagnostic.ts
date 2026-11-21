@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 import { ManagementCommandError } from '../../management/commandRecords.js';
 import type { ClaudeConfig } from '@agent-teams/provider-implementations/claude';
 import type { RuntimeBinding } from '../../runtime/contracts.js';
+import type { OpenCodeV2GraphPhase } from './OpenCodeV2EmbeddedGraph.js';
 
 const prefix = 'legacy-agent-host: claude-close ';
 let stderrObserved = false;
@@ -13,6 +14,26 @@ const writeDiagnostic = (line: string): void => {
   }
   process.stderr.write(line, () => { /* Async write failures are diagnostics only. */ });
 };
+
+const catalogRequestPhases = new Set(['queued', 'started', 'returned']);
+/** Only joins the original RPC to its existing catalog queue; never grants custody. */
+export function createOpenCodeCatalogDiagnostic(requestId: unknown,
+  input: { providerId?: string | undefined; includeModels?: boolean | undefined },
+  write: (line: string) => void = writeDiagnostic) {
+  let identity: { requestIdHash: string; inputKind: string } | undefined;
+  try {
+    if (typeof requestId === 'string') identity = {
+      requestIdHash: createHash('sha256').update(requestId, 'utf8').digest('hex'),
+      inputKind: input.providerId !== undefined ? 'explicit-provider' : input.includeModels === true ? 'include-models' : 'directory',
+    };
+  } catch { /* A diagnostic construction failure cannot reject the catalog. */ }
+  return (phase: 'queued' | 'started' | 'returned'): void => {
+    try {
+      if (identity && catalogRequestPhases.has(phase))
+        write(`legacy-agent-host: opencode-catalog ${JSON.stringify({ ...identity, phase })}\n`);
+    } catch { /* Observations never change the original queue or read outcome. */ }
+  };
+}
 
 /** Captures identifiers once; neither current selectors nor provider error text enter stderr. */
 export function createClaudeCloseDiagnostic(
@@ -126,7 +147,7 @@ export function createOpenCodeMetadataDiagnostic(
   });
 }
 
-export type OpenCodeProbePhase = 'run' | 'graph-start' | 'graph-done' | 'native-launch'
+export type OpenCodeProbePhase = OpenCodeV2GraphPhase | 'run' | 'graph-start' | 'graph-done' | 'native-launch'
   | 'native-launch-returned' | 'native-endpoint-resolved' | 'startup-timer-aborted'
   | 'startup-parent-aborted' | 'startup-lifecycle-aborted' | 'startup-failed'
   | 'identity-start' | 'identity-request-start' | 'identity-custody-start' | 'identity-custody-returned' | 'identity-request-admitted'
@@ -136,6 +157,8 @@ export type OpenCodeProbePhase = 'run' | 'graph-start' | 'graph-done' | 'native-
   | 'attestation-observe-returned' | 'session-current-returned' | 'session-create-returned'
   | 'native-ready' | 'credential' | 'attestation' | 'attestation-returned' | 'session-create' | 'driver-open' | 'first-submit';
 const probePhases = new Set<OpenCodeProbePhase>(['run', 'graph-start', 'graph-done', 'native-launch',
+  'graph-manifest-verified', 'graph-inventory-indexed', 'graph-census-returned',
+  'graph-files-quarter', 'graph-files-half', 'graph-files-three-quarters', 'graph-files-returned',
   'native-launch-returned', 'native-endpoint-resolved', 'startup-timer-aborted',
   'startup-parent-aborted', 'startup-lifecycle-aborted', 'startup-failed',
   'identity-start', 'identity-request-start', 'identity-custody-start', 'identity-custody-returned', 'identity-request-admitted',

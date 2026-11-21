@@ -37,10 +37,10 @@ export function rememberLegacyStoppedOwnerFacts(error: object, facts: unknown): 
     const blocked: LegacyStoppedOwnerFact[] = [];
     for (const name of LEGACY_STOPPED_OWNER_FACT_NAMES) {
       const [group, key] = name.split('.');
-      const parent = Object.getOwnPropertyDescriptor(facts, group!);
+      const parent = Object.getOwnPropertyDescriptor(facts, group);
       if (!parent || !('value' in parent) || !parent.value || typeof parent.value !== 'object')
         continue;
-      const entry = Object.getOwnPropertyDescriptor(parent.value, key!);
+      const entry = Object.getOwnPropertyDescriptor(parent.value, key);
       if (!entry?.enumerable) continue;
       const value: unknown = 'value' in entry ? entry.value : undefined;
       if (value === 0) continue;

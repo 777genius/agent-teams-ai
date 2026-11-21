@@ -17,6 +17,7 @@ import {
   createCapturedHostClient,
   type SelectedHostProfile,
 } from '../../../src/features/agent-backend/main';
+import { captureProviderManagement } from '../../../src/features/agent-backend/main/infrastructure/CapturedProviderManagement';
 import { capturedHostProfileDigest } from '../../../src/features/agent-backend/main/infrastructure/selectedHostProfile';
 import * as nodeLaunch from '../../../src/main/utils/electronNodeLaunch';
 import * as linuxLaunch from '../../../src/main/utils/linuxChildLaunch';
@@ -147,6 +148,41 @@ function client(profile: SelectedHostProfile, owner?: HostCustodyOwner, remainin
   clients.push(instance);
   return instance;
 }
+
+it('correlates the original captured catalog UUID across real TEST stdio without new custody', async () => {
+  const records: { requestIdHash: string; phase: string; inputKind: string }[] = [];
+  const remove = addLogSink(entry => {
+    if (entry.namespace === 'Host:OpenCodeCatalog') records.push(entry.args[1] as typeof records[number]);
+  });
+  try {
+    const transport = client(await fixture(`
+      'management.catalog': { lane: 'work', async handle(params, context) {
+        const { createOpenCodeCatalogDiagnostic } = await import(${JSON.stringify(new URL('./adapters/providers/createClaudeCloseDiagnostic.js', serverUrl).href)});
+        const { createProviderManagementMethods } = await import(${JSON.stringify(new URL('./composition/createProviderManagementMethods.js', serverUrl).href)});
+        const methods = createProviderManagementMethods({ assertTargetAvailable() {}, catalog(raw, requestId) {
+          const observe = createOpenCodeCatalogDiagnostic(requestId, raw);
+          for (const phase of ['queued', 'started', 'returned']) observe(phase);
+          return { requestId, params: raw };
+        } }, () => false);
+        return methods['management.catalog'].handle(params, context);
+      } },
+    `));
+    const target = captureProviderManagement({ targetId: 'TEST-target', profileId: 'TEST-captured-source',
+      configRevision: 'TEST-captured-revision', client: transport, start: () => transport.start(),
+      ownerAvailable: () => true, foregroundCurrent: () => true });
+    const result = await target.request('catalog', { providerId: 'TEST-provider', includeModels: true }) as {
+      ok: boolean; value: { requestId: string; params: unknown };
+    };
+    await transport.shutdown();
+    expect(result.ok).toBe(true);
+    expect(result.value.requestId).toMatch(/^[a-f0-9-]{36}$/);
+    expect(result.value.params).toEqual({ providerId: 'TEST-provider', includeModels: true,
+      profileId: 'TEST-captured-source', configRevision: 'TEST-captured-revision' });
+    const hash = createHash('sha256').update(result.value.requestId, 'utf8').digest('hex');
+    expect(records.map(record => record.phase)).toEqual(['main-admitted', 'queued', 'started', 'returned']);
+    expect(records.every(record => record.requestIdHash === hash && record.inputKind === 'explicit-provider')).toBe(true);
+  } finally { remove(); }
+});
 
 describe('captured legacy host client over real subprocess stdio', () => {
 

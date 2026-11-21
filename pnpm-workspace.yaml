@@ -167,3 +167,4 @@ patchedDependencies:
   '@radix-ui/react-switch@1.3.7': patches/@radix-ui__react-switch@1.3.7.patch
   'braces@3.0.3': 'patches/braces@3.0.3.patch'
   'http-cache-semantics@4.2.0': 'patches/http-cache-semantics@4.2.0.patch'
+  'croner@10.0.1': 'patches/croner@10.0.1.patch'

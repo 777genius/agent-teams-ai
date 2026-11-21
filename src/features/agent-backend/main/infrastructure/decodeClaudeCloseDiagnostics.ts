@@ -30,6 +30,14 @@ export interface RuntimeOpenDiagnostic {
   readonly observedAtMs: number;
 }
 const metadataPrefix = 'legacy-agent-host: opencode-metadata ';
+const catalogPrefix = 'legacy-agent-host: opencode-catalog ';
+const catalogInputKinds = new Set(['explicit-provider', 'include-models', 'directory']);
+const catalogPhases = new Set(['queued', 'started', 'returned']);
+export interface OpenCodeCatalogDiagnostic {
+  readonly requestIdHash: string;
+  readonly inputKind: string;
+  readonly phase: string;
+}
 const probePrefix = 'legacy-agent-host: opencode-probe ';
 const probeClosePrefix = 'legacy-agent-host: opencode-probe-close-failed ';
 const probeCloseRunStates = new Set(['not-started', 'pending', 'true', 'false', 'threw']);
@@ -54,6 +62,8 @@ export interface OpenCodeProbeCloseDiagnostic {
   readonly runCauseCode?: string | null;
 }
 const probePhases = new Set(['run', 'graph-start', 'graph-done', 'native-launch', 'native-ready',
+  'graph-manifest-verified', 'graph-inventory-indexed', 'graph-census-returned',
+  'graph-files-quarter', 'graph-files-half', 'graph-files-three-quarters', 'graph-files-returned',
   'native-launch-returned', 'native-endpoint-resolved', 'startup-timer-aborted',
   'startup-parent-aborted', 'startup-lifecycle-aborted', 'startup-failed',
   'identity-start', 'identity-request-start', 'identity-custody-start', 'identity-custody-returned', 'identity-request-admitted',
@@ -177,13 +187,24 @@ export function decodeClaudeCloseDiagnostics(
   retainMetadata?: (value: OpenCodeMetadataDiagnostic) => void | Promise<void>,
   retainProbe?: (value: OpenCodeProbeDiagnostic) => void | Promise<void>,
   retainRuntimeOpen?: (value: RuntimeOpenDiagnostic) => void | Promise<void>,
-  retainProbeClose?: (value: OpenCodeProbeCloseDiagnostic) => void | Promise<void>
+  retainProbeClose?: (value: OpenCodeProbeCloseDiagnostic) => void | Promise<void>,
+  retainCatalog?: (value: OpenCodeCatalogDiagnostic) => void | Promise<void>
 ): (chunk: Buffer) => void {
   let pending = Buffer.alloc(0);
   let discard = false;
   const emit = (line: Buffer): void => {
     try {
       const text = new TextDecoder('utf-8', { fatal: true }).decode(line);
+      if (text.startsWith(catalogPrefix)) {
+        if (!retainCatalog || line.length + 1 > 256) return;
+        const value: unknown = JSON.parse(text.slice(catalogPrefix.length));
+        if (!exact(value, ['requestIdHash', 'inputKind', 'phase']) || !hash(value.requestIdHash) ||
+            typeof value.inputKind !== 'string' || !catalogInputKinds.has(value.inputKind) ||
+            typeof value.phase !== 'string' || !catalogPhases.has(value.phase)) return;
+        const diagnostic = Object.freeze({ requestIdHash: value.requestIdHash, inputKind: value.inputKind, phase: value.phase });
+        void Promise.resolve(retainCatalog(diagnostic)).catch(() => { /* Never reject transport. */ });
+        return;
+      }
       if (text.startsWith(runtimeOpenPrefix)) {
         if (!retainRuntimeOpen) return;
         const value: unknown = JSON.parse(text.slice(runtimeOpenPrefix.length));

@@ -595,6 +595,7 @@ export const desktopProofIntegratedSources = [
   'scripts/legacy-agent-host/prepare-opencode-v2-native.ts',
   'packages/legacy-agent-host/src/adapters/providers/OpenCodeV2EmbeddedChild.ts',
   'packages/legacy-agent-host/src/adapters/providers/OpenCodeV2EmbeddedGraph.ts',
+  'packages/legacy-agent-host/tests/opencode-v2-embedded-graph.test.ts',
   'packages/legacy-agent-host/src/adapters/providers/OpenCodeV2EmbeddedServer.ts',
   'packages/legacy-agent-host/src/adapters/providers/OpenCodeV2EmbeddedMemberProvider.ts',
   'packages/legacy-agent-host/src/adapters/providers/OpenCodeV2ReadOnlySnapshot.ts',

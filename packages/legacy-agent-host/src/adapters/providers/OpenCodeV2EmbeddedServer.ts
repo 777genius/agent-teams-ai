@@ -17,7 +17,7 @@ import {
 
 import type { ObservableNativeProcess } from '../../owned-process/processFacade.js';
 import type { CapturedProcessProfile, CapturedProcessTreeSource } from './CapturedProcess.js';
-import type { OpenCodeV2EmbeddedSelection } from './OpenCodeV2EmbeddedGraph.js';
+import type { OpenCodeV2EmbeddedSelection, OpenCodeV2GraphPhase } from './OpenCodeV2EmbeddedGraph.js';
 import type {
   RegistrarBinding,
   RegisteredProcessRootSource,
@@ -61,7 +61,7 @@ export interface OpenCodeV2EmbeddedServerOptions {
   /** Only this original child/session may attest its actual image normalization. */
   mediaSessionId?: string;
   /** Synchronous observation only; never an admission, timer or cleanup callback. */
-  observeStartupPhase?(phase: 'graph-start' | 'graph-done' | 'native-launch' | 'native-launch-returned' |
+  observeStartupPhase?(phase: OpenCodeV2GraphPhase | 'graph-start' | 'graph-done' | 'native-launch' | 'native-launch-returned' |
     'native-endpoint-resolved' | 'startup-timer-aborted' | 'startup-parent-aborted' |
     'startup-lifecycle-aborted' | 'startup-failed'): void;
 }
@@ -270,7 +270,7 @@ export function createOpenCodeV2EmbeddedServer(options: OpenCodeV2EmbeddedServer
           // The source verifies the selected graph before loading its exact
           // target N-API binary. Capture remains synchronous before private stdin.
           windowsCustody = await createWindowsJobCustody(embedded, combined);
-        } else await verifyOpenCodeV2EmbeddedGraph(embedded, combined);
+        } else await verifyOpenCodeV2EmbeddedGraph(embedded, combined, observe);
         observe('graph-done');
         for (const directory of [configDirectory, path.dirname(databasePath)]) {
           if (

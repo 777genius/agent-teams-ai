@@ -291,6 +291,8 @@ export const desktopProofManagementSources = [
   'packages/legacy-agent-host/src/adapters/providers/createClaudeCloseDiagnostic.ts',
   'src/features/agent-backend/main/infrastructure/decodeClaudeCloseDiagnostics.ts',
   'test/features/agent-backend/claudeCloseDiagnostics.test.ts',
+  'test/features/agent-backend/catalogRequestDiagnostics.test.ts',
+  'test/features/agent-backend/capturedHostClient.test.ts',
   'packages/legacy-agent-host/src/process/LinuxRegisteredProcess.ts',
   'packages/legacy-agent-host/src/owned-process/windowsCliLauncher.ts',
   'packages/legacy-agent-host/src/owned-process/capturedWindowsLauncher.ts',
@@ -326,4 +328,6 @@ export const desktopProofManagementSources = [
   'src/main/ipc/codexRuntime.ts',
   'src/main/services/infrastructure/codexAppServer/CodexBinaryResolver.ts',
   'packages/legacy-agent-host/src/composition/runtimeSourceQualification.ts',
+  'src/main/services/team/provisioning/TeamProvisioningOpenCodeRuntimeAdapterTeamFlow.ts',
+  'src/main/services/team/provisioning/__tests__/TeamProvisioningOpenCodeRuntimeAdapterTeamFlow.test.ts',
 ] as const;

@@ -98,8 +98,9 @@ export async function runDesktopLiveMembershipUiSmoke(cdp: UiCdpPort, options: {
   };
   const step = (value: Row) => { assert.ok(steps.length < 512); steps.push({ monotonicMs: Math.round(performance.now()), ...value }); };
   let ui = createDesktopUiControls(cdp, { assertOwnedRenderer: current, step });
-  const poll = async <T>(observe: () => Promise<T>, accepts: (value: T) => boolean, label: string) => {
-    const cutoff = Date.now() + 90_000; let value = await observe();
+  const poll = async <T>(observe: () => Promise<T>, accepts: (value: T) => boolean, label: string,
+    cutoff = Date.now() + 90_000) => {
+    let value = await observe();
     assert.ok(Date.now() < cutoff, label);
     while (!accepts(value) && Date.now() < cutoff) {
       current(); await new Promise<void>(resolve => setTimeout(resolve, 100)); value = await observe();
@@ -323,6 +324,12 @@ export async function runDesktopLiveMembershipUiSmoke(cdp: UiCdpPort, options: {
     await ui.waitRead('(() => {const rows=[...document.querySelectorAll(' +
       literal(create + ' [data-role="member-row"] input[aria-label^="Member "]') +
       ')];return rows.length===1&&rows[0].value==="bob"})()', 'one original Codex teammate');
+    const initialLaunchDeadline = v2 ? Date.now() + 90_000 : undefined;
+    if (v2) await poll(sourceProfiles, sources => {
+      const selected = sources.records.filter(row => row.grant.runtimeId === 'opencode');
+      return selected.length === 2 && selected.some(row => row.grant.projectPath === null) &&
+        selected.some(row => row.grant.projectPath === workspace);
+    }, 'original global and project source capture while Create is open', initialLaunchDeadline);
     await ui.scrollTo(create + ' button', 'original save-only Create', 'Create');
     await ui.click(create + ' button', 'save original two-member roster once', 'Create');
     await ui.waitRead('!document.querySelector(' + literal(create + ' #team-name') + ')', 'original Create closes', 90_000);
@@ -353,10 +360,13 @@ export async function runDesktopLiveMembershipUiSmoke(cdp: UiCdpPort, options: {
       await ui.scrollTo(teamSelector, 'exact original Team card'); await ui.click(teamSelector, 'open exact original Team');
     };
     await openTeam(); await observe([]);
+    if (initialLaunchDeadline !== undefined)
+      assert.ok(Date.now() < initialLaunchDeadline, 'original initial Launch readiness deadline');
     await ui.click('button', 'open original Launch dialog once', 'Launch');
     await ui.waitRead('Boolean(document.querySelector("[role=dialog]"))', 'original Launch dialog');
     await ui.waitRead('[...document.querySelectorAll("[role=dialog] button")].some(e=>e.textContent.trim()==="Launch team"&&!e.disabled)',
-      'original selected provider preflights enable Launch', 90_000);
+      'original selected provider preflights enable Launch', 90_000, Boolean,
+      initialLaunchDeadline === undefined ? undefined : { deadline: initialLaunchDeadline });
     assert.equal(models.opencode.probes.length, 0);
     assert.equal(rows((await owner()).runtimeCaptures ?? []).length, 0);
     await ui.scrollTo('[role="dialog"] button', 'original Launch team control', 'Launch team');

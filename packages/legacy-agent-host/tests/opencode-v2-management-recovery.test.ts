@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
 import { mkdirSync, mkdtempSync, realpathSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -107,6 +108,17 @@ test('overlapping V2 status and directory reads preserve the active owner and or
     configuredDefaultModelId: null, providers: [] };
   const calls: { host: OpenCodeV2ManagementHost; deadline: number | undefined }[] = [];
   const closed = new Set<OpenCodeV2ManagementHost>();
+  const observations: { requestIdHash: string; inputKind: string; phase: string }[] = [];
+  t.mock.method(process.stderr, 'write', (chunk: unknown) => {
+    const prefix = 'legacy-agent-host: opencode-catalog ';
+    if (typeof chunk === 'string' && chunk.startsWith(prefix)) {
+      observations.push(JSON.parse(chunk.slice(prefix.length)));
+      throw new Error('TEST diagnostic sink failure must not change catalog behavior');
+    }
+    return true;
+  });
+  const phasesFor = (id: string) => observations.filter(row =>
+    row.requestIdHash === createHash('sha256').update(id, 'utf8').digest('hex')).map(row => row.phase);
   let clock = Date.now(), pending = Promise.withResolvers<void>(), entered = Promise.withResolvers<void>();
   let closing: ReturnType<typeof Promise.withResolvers<void>> | undefined;
   const closeEntered = Promise.withResolvers<void>();
@@ -132,39 +144,46 @@ test('overlapping V2 status and directory reads preserve the active owner and or
   const request = { profileId: profile.profileId, configRevision: profile.configRevision };
   try {
     const admittedAt = clock;
-    const status = owner.catalog({ ...request, includeModels: true });
+    const status = owner.catalog({ ...request, includeModels: true }, 'TEST-status');
     await entered.promise;
-    const directory = owner.catalog(request);
+    const directory = owner.catalog(request, 'TEST-directory');
     await Promise.resolve();
     assert.equal(calls.length, 1);
     assert.equal(closed.size, 0);
+    assert.deepEqual(phasesFor('TEST-status'), ['queued', 'started']);
+    assert.deepEqual(phasesFor('TEST-directory'), ['queued']);
     clock += 50;
     pending.resolve();
     assert.deepEqual(await Promise.all([status, directory]), [catalog, catalog]);
     assert.equal(calls.length, 2);
     assert.notEqual(calls[0]!.host, calls[1]!.host);
+    assert.deepEqual(phasesFor('TEST-status'), ['queued', 'started', 'returned']);
+    assert.deepEqual(phasesFor('TEST-directory'), ['queued', 'started', 'returned']);
+    assert.deepEqual([...new Set(observations.map(row => row.inputKind))], ['include-models', 'directory']);
     assert.deepEqual(calls.map(call => call.deadline), [admittedAt + profile.timeoutMs, admittedAt + profile.timeoutMs],
       'queue wait does not reset the original native read budget');
 
     pending = Promise.withResolvers<void>(); entered = Promise.withResolvers<void>(); fail = true;
-    const failing = owner.catalog(request);
+    const failing = owner.catalog(request, 'TEST-failure');
     const rejected = assert.rejects(failing, error => error === originalFailure);
     await entered.promise;
     const afterFailure = owner.catalog({ ...request, includeModels: true });
     fail = false;
     pending.resolve();
     await rejected;
+    assert.deepEqual(phasesFor('TEST-failure'), ['queued', 'started']);
     assert.deepEqual(await afterFailure, catalog, 'a failed predecessor does not poison later reads');
     assert.notEqual(calls[2]!.host, calls[3]!.host);
 
     pending = Promise.withResolvers<void>(); entered = Promise.withResolvers<void>();
     const active = owner.catalog({ ...request, includeModels: true });
     await entered.promise;
-    const expired = owner.catalog(request);
+    const expired = owner.catalog(request, 'TEST-expired');
     const expiry = assert.rejects(expired, /held/);
     clock += profile.timeoutMs;
     pending.resolve();
     await active; await expiry;
+    assert.deepEqual(phasesFor('TEST-expired'), ['queued', 'started']);
     assert.equal(calls.length, 5, 'an expired queued request cannot allocate or read another owner');
 
     closing = Promise.withResolvers<void>();

@@ -214,6 +214,8 @@ const catalogPhases = ([1, 2, 3] as const).flatMap(index => [
 const credentialPhases = (['catalog', 'directory', 'connect', 'restore', 'dispose'] as const).flatMap(stage =>
   [`credential-${stage}-start`, `credential-${stage}-returned`] as const);
 const probePhases = ['run', 'graph-start', 'graph-done', 'native-launch', 'native-launch-returned', 'native-endpoint-resolved', 'native-ready',
+  'graph-manifest-verified', 'graph-inventory-indexed', 'graph-census-returned',
+  'graph-files-quarter', 'graph-files-half', 'graph-files-three-quarters', 'graph-files-returned',
   'identity-start', 'identity-request-start', 'identity-custody-start', 'identity-custody-returned', 'identity-request-admitted',
   'credential', ...credentialPhases, 'credential-returned', 'attestation', ...catalogPhases,
   'catalog-read-returned', 'catalog-current-returned', 'catalog-repeat', 'attestation-returned',
@@ -234,7 +236,7 @@ test('probe phase observations retain captured hashes, a lazy clock and at most 
   assert.equal(clockReads, 0, 'unknown phases cannot consume a sequence slot or read the clock');
   for (const phase of allowedProbePhases) { observe(phase); clock += 7; }
   for (let repeat = 0; repeat < 20; repeat++) for (const phase of allowedProbePhases) observe(phase);
-  assert.equal(lines.length, allowedProbePhases.length); assert.equal(lines.length, 54);
+  assert.equal(lines.length, allowedProbePhases.length); assert.equal(lines.length, 61);
   assert.equal(clockReads, allowedProbePhases.length, 'duplicate transitions do not read the clock or write again');
   assert.ok(lines.every(line => Buffer.byteLength(line) < 8192));
   assert.equal(lines.join('').includes(secret), false);
