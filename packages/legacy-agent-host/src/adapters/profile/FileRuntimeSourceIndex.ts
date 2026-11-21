@@ -117,7 +117,8 @@ export class FileRuntimeSourceIndex {
       const { digest, ...body } = JSON.parse(
         new TextDecoder('utf-8', { fatal: true }).decode(bytes)
       ) as Record<string, unknown>;
-      if (digest !== runtimeDigest(body) || (this.observedDigest !== undefined && digest !== this.observedDigest)) held();
+      const bodyDigest = runtimeDigest(body);
+      if (digest !== bodyDigest || (this.observedDigest !== undefined && digest !== this.observedDigest)) held();
       const parsed = indexSchema.parse(body);
       if (
         new Set(parsed.records.map((row) => row.revision)).size !== parsed.records.length ||
@@ -139,7 +140,7 @@ export class FileRuntimeSourceIndex {
           held();
       }
       this.check();
-      this.observedDigest = runtimeDigest(body);
+      this.observedDigest = bodyDigest;
       return parsed;
     } catch {
       return held();

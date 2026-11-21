@@ -60,6 +60,11 @@ const probePhases = new Set(['run', 'graph-start', 'graph-done', 'native-launch'
   'catalog-1-request-start', 'catalog-1-custody-start', 'catalog-1-custody-returned', 'catalog-1-request-admitted', 'catalog-1-lease-released',
   'catalog-2-request-start', 'catalog-2-custody-start', 'catalog-2-custody-returned', 'catalog-2-request-admitted', 'catalog-2-lease-released',
   'catalog-3-request-start', 'catalog-3-custody-start', 'catalog-3-custody-returned', 'catalog-3-request-admitted', 'catalog-3-lease-released',
+  'credential-catalog-start', 'credential-catalog-returned', 'credential-directory-start', 'credential-directory-returned',
+  'credential-connect-start', 'credential-connect-returned', 'credential-restore-start', 'credential-restore-returned',
+  'credential-dispose-start', 'credential-dispose-returned', 'credential-returned',
+  'catalog-read-returned', 'catalog-current-returned', 'catalog-repeat',
+  'attestation-observe-returned', 'session-current-returned', 'session-create-returned',
   'credential', 'attestation', 'attestation-returned', 'session-create', 'driver-open', 'first-submit']);
 export interface OpenCodeProbeDiagnostic {
   readonly profileHash: string;
@@ -236,7 +241,7 @@ export function decodeClaudeCloseDiagnostics(
             !hash(value.profileHash) || !hash(value.commandHash) || !hash(value.probeDigest) ||
             typeof value.phase !== 'string' || !probePhases.has(value.phase) ||
             typeof value.sequence !== 'number' || !Number.isSafeInteger(value.sequence) ||
-            value.sequence < 1 || value.sequence > 33 ||
+            value.sequence < 1 || value.sequence > probePhases.size ||
             typeof value.elapsedMs !== 'number' || !Number.isSafeInteger(value.elapsedMs) ||
             value.elapsedMs < 0 || value.elapsedMs > 3_600_000) return;
         const diagnostic: OpenCodeProbeDiagnostic = Object.freeze({

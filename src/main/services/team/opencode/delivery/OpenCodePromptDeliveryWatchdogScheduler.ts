@@ -104,6 +104,12 @@ export class OpenCodePromptDeliveryWatchdogScheduler {
     return enabled;
   }
 
+  /** Fence reads that may schedule a wake after an asynchronous boundary. */
+  captureCancellation(teamName: string): { isCurrent(): boolean; release(): void } {
+    const wake = this.createWake(teamName);
+    return { isCurrent: () => !wake.cancelled, release: () => wake.release() };
+  }
+
   schedule(input: {
     teamName: string;
     memberName: string;
@@ -340,7 +346,7 @@ export class OpenCodePromptDeliveryWatchdogScheduler {
     }
     for (let index = this.queue.length - 1; index >= 0; index -= 1) {
       if (this.queue[index]?.teamName === teamName) {
-        this.queue[index]!.wake.release();
+        this.queue[index].wake.release();
         this.queue.splice(index, 1);
       }
     }

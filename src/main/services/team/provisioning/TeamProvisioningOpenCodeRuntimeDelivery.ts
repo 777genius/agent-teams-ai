@@ -51,6 +51,7 @@ import {
   recordOpenCodeRuntimeHeartbeat,
   recordOpenCodeRuntimeTaskEvent,
 } from './TeamProvisioningOpenCodeRuntimeCheckin';
+import { scheduleOpenCodeUnreadForegroundWake } from './TeamProvisioningOpenCodeUnreadForegroundWake';
 import {
   asRuntimeRecord,
   normalizeRuntimeIso,
@@ -863,13 +864,12 @@ export async function getOpenCodeMemberDeliveryBusyStatus(
         });
       }
     }
-    if (laneState !== 'stopped' && laneState !== 'degraded')
-      ports.scheduleOpenCodeMemberInboxDeliveryWake({
-        teamName: input.teamName,
-        memberName: input.memberName,
-        messageId: unreadForeground.messageId,
-        delayMs: 500,
-      });
+    await scheduleOpenCodeUnreadForegroundWake(
+      { ...input, messageId: unreadForeground.messageId },
+      identity,
+      laneState,
+      ports
+    );
     return {
       busy: true,
       reason: 'opencode_foreground_inbox_unread',

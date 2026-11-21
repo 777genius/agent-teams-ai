@@ -16,7 +16,7 @@ import { captureDesktopRendererFailure, cleanupCapturedDesktopApp, connectCaptur
 import type { DesktopCdpLibrary, DesktopCdpPort } from './desktop-captured-app.ts';
 import { runDesktopEmulatedLifecycleUi } from './desktop-emulated-lifecycle-ui.ts';
 import { observeDesktopEmulatedRuntimeChildren, observeDesktopEmulatedRuntimeCleanup, prepareDesktopEmulatedRuntimeFixture,
-  readDesktopEmulatedRuntimeEffects, verifyDesktopEmulatedRuntimeFixture } from './desktop-emulated-runtime-fixture.ts';
+  readDesktopEmulatedPeerRefusal, readDesktopEmulatedRuntimeEffects, verifyDesktopEmulatedRuntimeFixture } from './desktop-emulated-runtime-fixture.ts';
 import { desktopProofEvidence, projectDesktopEmulatedReadinessFailure } from './desktop-proof-evidence.ts';
 import { bounded } from './desktop-proof-bounds.ts';
 import { desktopProofSources } from './desktop-proof-sources.ts';
@@ -164,6 +164,8 @@ async function main() {
         key: 'failureQuit' }).catch(() => { evidence.failureQuitUnconfirmed = true; });
     }
   } finally {
+    const peerRefusal = readDesktopEmulatedPeerRefusal(fixture);
+    if (peerRefusal) evidence.emulatedRuntimeChildRefusal = peerRefusal;
     if (cdp) await bounded(cdp.close(), 3000, 'disconnect original packaged renderer').catch(() => undefined);
     evidence.quitRequested = quitRequested;
     const cleanup = await cleanupCapturedDesktopApp({ app, group, fixture, evidence, appIdentity,

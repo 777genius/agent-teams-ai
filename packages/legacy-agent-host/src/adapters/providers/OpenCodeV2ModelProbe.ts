@@ -157,7 +157,7 @@ export function createOpenCodeV2ModelProbe(
   let config: Record<string, unknown> = noTool.config;
   let selection: OpenCodeV2OwnedSessionSelection = noTool.selection;
   const credential = captureOpenCodeV2SessionCredential(profile, input.providerId,
-    configuration.isCurrent, configuration.key, configuration.selectedFile);
+    configuration.isCurrent, configuration.key, configuration.selectedFile, observePhase);
   const current = coordinationSource
     ? () => credential.isCurrent() && coordinationSource.isCurrent() : credential.isCurrent;
   let nativeCredential: OpenCodeV2OwnedSessionSelection['credential'];
@@ -302,20 +302,24 @@ export function createOpenCodeV2ModelProbe(
       if (identity.pid !== ready!.pid || identity.version !== '2.1.4') return unavailable();
       nativeCredential = await credential.prepare(wire, client, undefined,
         integrationId => server!.selectedFileKey(ready!, integrationId));
+      observePhase?.('credential-returned');
       observePhase?.('attestation');
       try {
         attestationPending = true;
         await attestOpenCodeV2ModelSelection(client, selection.model,
-          { signal, deadline, isCurrent: current });
+          { signal, deadline, isCurrent: current }, observePhase);
       } finally { attestationPending = false; }
       observePhase?.('attestation-returned');
       options.readiness?.observeProvider?.({
         ...observedProvider,
         ...(nativeCredential ? { credentialScopeDigest: nativeCredential.scopeDigest } : {}),
       }, credential.fileProof());
+      observePhase?.('attestation-observe-returned');
       observePhase?.('session-create');
       assertCurrent(signal);
+      observePhase?.('session-current-returned');
       await client.createSession({ ...selection, ...(nativeCredential ? { credential: nativeCredential } : {}) });
+      observePhase?.('session-create-returned');
     });
     coordination?.bindSession(nativeSessionId);
     const binding = {

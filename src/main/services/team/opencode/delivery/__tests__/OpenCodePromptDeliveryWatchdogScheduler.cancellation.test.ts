@@ -43,6 +43,37 @@ function gate() {
   return value;
 }
 
+it('cancels pending busy reads and releases their scopes without losing a replacement', () => {
+  const f = make({});
+  const original = f.scheduler.captureCancellation(target.teamName);
+  expect(original.isCurrent()).toBe(true);
+  expect(f.facts()).toEqual(empty);
+  f.scheduler.cancelTeam(target.teamName);
+  expect(original.isCurrent()).toBe(false);
+  const replacement = f.scheduler.captureCancellation(target.teamName);
+  original.release();
+  original.release();
+  expect(replacement.isCurrent()).toBe(true);
+  f.scheduler.cancelTeam(target.teamName);
+  expect(replacement.isCurrent()).toBe(false);
+  replacement.release();
+  expect(f.facts()).toEqual(empty);
+});
+
+it('releases a completed busy read without revoking its admitted unscoped wake', async () => {
+  const relay = vi.fn(async () => undefined);
+  const f = make({ relay });
+  const scope = f.scheduler.captureCancellation(target.teamName);
+  f.scheduler.schedule({ ...target, messageId: 'original', delayMs: 500 });
+  scope.release();
+  expect(f.facts()).toEqual({ ...empty, timers: 1 });
+  await vi.advanceTimersByTimeAsync(500);
+  expect(relay).toHaveBeenCalledOnce();
+  expect(f.facts()).toEqual(empty);
+  f.scheduler.cancelTeam(target.teamName);
+  expect(scope.isCurrent()).toBe(true); // Released captures are no longer retained by the scheduler.
+});
+
 it.each(
   (['inbox', 'recovery', 'relay'] as const).flatMap((boundary) =>
     [false, true].map((cancelled) => ({ boundary, cancelled }))

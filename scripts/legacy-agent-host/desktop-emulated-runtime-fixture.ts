@@ -24,6 +24,19 @@ import {
 } from './desktop-emulated-collaboration-fixture.ts';
 
 type Row = Record<string, unknown>;
+type PeerRefusal = Readonly<{
+  phase: 'before-first-team-read' | 'after-team-read';
+  hostPid: number; pid: number; parentPid: number; processGroup: number;
+  commandBytes: number;
+  commandKind: 'selected-node-other-entry' | 'selected-peer-shell-bootstrap' | 'process-observer' | 'other';
+}>;
+const peerRefusals = new WeakMap<object, PeerRefusal>();
+
+/** Closed TEST evidence from the first original census refusal; never launch or signal authority. */
+export function readDesktopEmulatedPeerRefusal(fixture: object): PeerRefusal | undefined {
+  return peerRefusals.get(fixture);
+}
+
 const record = (value: unknown): Row => {
   assert.ok(value && typeof value === 'object' && !Array.isArray(value)); return value as Row;
 };
@@ -283,7 +296,16 @@ export async function observeDesktopEmulatedRuntimeChildren(group: number,
     ...(installed ? [`${fixture.node} ${installed.executable.path} `] : [])];
   for (const host of hosts) for (const child of table.filter(row => row.ppid === host.pid)) {
     assert.equal(child.pgid, child.pid);
-    assert.ok(prefixes.some(prefix => child.command.startsWith(prefix)), 'Only an exact pinned TEST executable from the original seed or stock installation');
+    const pinnedExecutable = prefixes.some(prefix => child.command.startsWith(prefix));
+    if (!pinnedExecutable && !peerRefusals.has(fixture)) try {
+      const shellPrefix = `/bin/sh ${fixture.emulatedRuntime.executable.path}`;
+      const commandKind = child.command.startsWith(fixture.node + ' ') ? 'selected-node-other-entry'
+        : child.command === shellPrefix || child.command.startsWith(shellPrefix + ' ') ? 'selected-peer-shell-bootstrap'
+          : child.command === '/bin/ps' || child.command.startsWith('/bin/ps ') ? 'process-observer' : 'other';
+      peerRefusals.set(fixture, Object.freeze({ phase, hostPid: host.pid, pid: child.pid,
+        parentPid: child.ppid, processGroup: child.pgid, commandBytes: Buffer.byteLength(child.command), commandKind }));
+    } catch { /* Diagnostic failure cannot change the original assertion. */ }
+    assert.ok(pinnedExecutable, 'Only an exact pinned TEST executable from the original seed or stock installation');
     let absent = false;
     for (;;) {
       assert.ok(performance.now() < deadline, 'Original peer observation deadline');

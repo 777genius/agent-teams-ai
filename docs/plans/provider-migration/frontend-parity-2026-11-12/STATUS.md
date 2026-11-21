@@ -2,6 +2,69 @@
 
 Обновлено: **21 ноября 2026**. Единственный текущий рабочий план.
 
+## Продолжение `e8a07e76`: восстановление и завершение исходной квалификации
+
+Живой GitHub подтверждает `e8a07e76a3aa1bcdb54a59d2c6c920db3e29e637`.
+Следующий упомянутый в истории пакет из 23 файлов не опубликован; его исходные
+bytes и окончательное архивное review не восстановлены. Изменения ниже заново
+проверяются на опубликованном source; прежние результаты не переносятся на них.
+
+Все шесть original attempt-1 runs терминальны: Host44856709665 — 23 SUCCESS /
+7 FAILURE; CI44856709807 — 2 SUCCESS / 2 FAILURE / 11 SKIPPED;
+Packaged44856709662 — 5 SUCCESS / 2 FAILURE; Process44856709656 — 5 SUCCESS;
+Teams44856709862 — 3 SUCCESS; NativeV244856709913 — 9 SUCCESS.
+11 failed jobs включают 8 первичных отказов и 3 производных aggregate gates.
+Metadata-only Packaged44856961254 не заменяет исходную проваленную матрицу.
+
+План текущего узкого среза:
+
+| Срез | Изменение и проверка | Оценка |
+| --- | --- | --- |
+| Cold restart | Actual Main RED/GREEN: отменённое выбранное unread-сообщение после Stop и удаления lane не ставит watchdog; missing lane с неотменённым сообщением сохраняет wake. Захват существующего cancellation scope до первого await отзывает pending busy read при Stop | 68 production net; сложность 4/10, ожидаемая надёжность 8/10, уверенность 8/10 |
+| TEST ожидания | Добавить реальный `isCurrent` в strict call assertion; Close использует существующее ожидание final readiness в исходных 30s, один click и прежний owner | ≤8 helper, ≤120 test строк; сложность 2/10, надёжность 9/10, уверенность 9/10 |
+| Typed lint | Удалить один избыточный non-null assertion scheduler | 1 строка; сложность 1/10, надёжность 10/10, уверенность 10/10 |
+| Packaged diagnostic | Сохранить закрытую проекцию первого уже прочитанного rejected child, без argv/paths, новых process reads, сигналов или ослабления executable predicate | ≤55 TEST helper, ≤90 test строк; сложность 2/10, надёжность 9/10; это диагностика, уверенность в исправлении E2E не заявляется |
+| OpenCode | Убрать повторный digest того же JSON body внутри одного fresh read; добавить закрытые once-only фазы на исходных catalog/credential/session границах | 66 изменённых production строк в 6 файлах; сложность 3/10, надёжность 9/10, уверенность в устранении timing E2E только этой правкой 2/10; сроки 60/90/120s сохраняются |
+
+Root владеет общим plan/source manifests и публикацией с expected HEAD. Отдельные
+агенты владеют cold restart, TEST/lint и OpenCode анализом. До публикации: root R1
+и независимый R2 точного diff, scoped TS7, lint, Host build, architecture/size
+guards и source inclusion. Затем original Draft-safe E2E на новом SHA без rerun,
+dispatch или cancellation. Граница genuine Claude/Codex и маршрут доставки ниже
+сохраняются. Local deps установлены с неизменным lockfile; первоначальный install
+завершился exit137, повтор с ограниченным heap/concurrency — exit0.
+
+На окончательном срезе root R1 и независимый R2 завершены без замечаний.
+Cold restart R2 сверил 7/7 pins; OpenCode R2 — 9/9; TEST Close и packaged
+diagnostic проверены отдельно. Четыре production cold-файла сохраняют прежние
+authority facts и существующую scheduler map; новых abstract slots нет.
+Исходный Main inbox race подтверждён отдельным e8 source override. Final release
+capture не отменяет уже допущенный самостоятельный timer и не удаляет replacement.
+
+| Локальная проверка | Результат и границы |
+| --- | --- |
+| Main cold restart + scheduler | Первоначальные RED; 18/18 PASS перед финальными механическими type/release edits; frozen facade compatibility 128/128 PASS |
+| Bootstrap/factory/cancellation и Close | 22/22 и 42/42 PASS; исходные generic deadline controls 62/62 PASS; наборы перекрываются |
+| Packaged executable refusal diagnostic | 37/37 PASS; старый executable assertion, process census, ошибки и cleanup не изменены |
+| OpenCode diagnostic/lifecycle | 75 PASS в первом запуске трёх suites; исправленный новый credential suite отдельно 12/12 PASS. Первый общий command имел syntax load error и целиком PASS не считается |
+| Source index | 17/17 existing integrity PASS на свежем Host dist; 29/29 source-to-source differential; все fresh reads, fd checks и failure order прежние |
+| TS7 | Host prebuild PASS; scoped changed Main/tests и TEST scripts PASS. Полный canonical `pnpm typecheck` после prebuild получил SIGKILL/137 и не считается PASS |
+| Guards и source binding | Source size 5174/141/800 PASS, legacy RuntimeDelivery 1009 строк; architecture 22/50/31/62/154 PASS; 1971 уникальный существующий Desktop source, relaunch дополнительно pin-ит себя |
+
+Один парный локальный замер source index (300 fresh reads, baseline затем
+candidate: 100.595/36.253 ms) не доказывает статистический эффект или Darwin E2E.
+Исходные catalog-1/2/3 — три HTTP-запроса одного readCatalog; новые markers
+покажут возврат полного catalog, повторный проход и точную credential границу.
+Host/Main используют одинаковый закрытый набор 54 фаз; diagnostic exceptions
+не заменяют результат, ошибку или dispose. Никакие исходные 60/90/120s окна
+не расширены. Packaged child refusal сохраняет только scalar/enum проекцию
+первого отказа, без argv/paths или новой process authority.
+
+[Evidence index](evidence/continuation-e8-20261121.json) фиксирует exact source
+pins, исходные 69 jobs и локальные receipts, включая промежуточные ошибки и
+SIGKILL. Старые и локальные PASS не квалифицируют новый commit: остаются
+новые original E2E и полные CI gates. Genuine Claude/Codex не исполнялись.
+
 ## Продолжение `a0f451bf`: original CI и узкое исправление стоимости lock
 
 Проверенный batch опубликован как

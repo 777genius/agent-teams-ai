@@ -30,6 +30,7 @@ import * as capturedProcess from '../../../packages/legacy-agent-host/src/adapte
 import * as probeDiagnostics from '../../../packages/legacy-agent-host/src/adapters/providers/createClaudeCloseDiagnostic';
 import * as embeddedGraph from '../../../packages/legacy-agent-host/src/adapters/providers/OpenCodeV2EmbeddedGraph';
 import { createOpenCodeV2ModelProbe } from '../../../packages/legacy-agent-host/src/adapters/providers/OpenCodeV2ModelProbe';
+import { attestOpenCodeV2ModelSelection } from '../../../packages/legacy-agent-host/src/adapters/providers/OpenCodeV2ModelSelection';
 import * as sessionCredential from '../../../packages/legacy-agent-host/src/adapters/providers/OpenCodeV2SessionCredential';
 import * as windowsCustody from '../../../packages/legacy-agent-host/src/adapters/providers/WindowsJobCustody';
 import { runtimeMemberProfileSchema } from '../../../packages/legacy-agent-host/src/composition/runtimeProfile';
@@ -516,7 +517,8 @@ const catalogPhases = ([1, 2, 3] as const).flatMap(index => [
 ]);
 const phases = ['run', 'graph-start', 'graph-done', 'native-launch', 'native-launch-returned', 'native-endpoint-resolved', 'native-ready',
   'identity-start', 'identity-request-start', 'identity-custody-start', 'identity-custody-returned', 'identity-request-admitted',
-  'credential', 'attestation', ...catalogPhases, 'attestation-returned', 'session-create', 'driver-open', 'first-submit'];
+  'credential', 'credential-returned', 'attestation', ...catalogPhases, 'catalog-read-returned', 'catalog-current-returned',
+  'attestation-returned', 'attestation-observe-returned', 'session-create', 'session-current-returned', 'session-create-returned', 'driver-open', 'first-submit'];
 
 test.each(['complete', 'custody', 'mismatch', 'http'] as const)(
   'catalog admissions retain original calls, errors and release with %s in memory', async fault => {
@@ -576,10 +578,14 @@ test.each(['complete', 'custody', 'mismatch', 'http'] as const)(
         else await expect(running).rejects.toMatchObject({ code: 'transport_failure' });
         const before = { guards, custody, passwordReads, routes: [...routes] };
         baseline ??= before; expect(before).toEqual(baseline);
-        const observed = records.map(record => record.phase).filter(phase => phase.startsWith('catalog-'));
+        const observed = records.map(record => record.phase).filter(phase => /^catalog-[123]-/.test(phase));
         const second = fault === 'custody' ? [0, 1, 4] : fault === 'mismatch' ? [0, 1, 2, 4] : [0, 1, 2, 3, 4];
         expect(observed).toEqual(sink === 'absent' ? [] : fault === 'complete' ? catalogPhases
           : [...catalogPhases.slice(0, 5), ...second.map(index => catalogPhases[5 + index])]);
+        expect(records.map(record => record.phase).filter(phase =>
+          ['catalog-read-returned', 'catalog-current-returned', 'catalog-repeat'].includes(phase)))
+          .toEqual(sink !== 'absent' && fault === 'complete'
+            ? ['catalog-read-returned', 'catalog-current-returned', 'catalog-repeat'] : []);
         expect(routes.length).toBe(fault === 'complete' ? 7 : fault === 'http' ? 3 : 2);
         const phaseCount = records.length, release = await admission!(controller.signal);
         assert.ok(typeof release === 'function'); release(); release();
@@ -590,6 +596,35 @@ test.each(['complete', 'custody', 'mismatch', 'http'] as const)(
         await probe.close(); fetch.mockRestore(); credential.mockRestore(); diagnostic.mockRestore();
         rmSync(root, { recursive: true, force: true });
       }
+    }
+  }
+);
+
+test.each(['complete', 'read-failed', 'current-lost'] as const)(
+  'catalog loop observations preserve original reads and failure for %s', async fault => {
+    let baseline: unknown;
+    for (const sink of ['absent', 'healthy', 'throws'] as const) {
+      const selection = { providerID: 'TEST-provider', id: 'TEST-model' }, phases: string[] = [];
+      const failure = Error('TEST original catalog failure');
+      let reads = 0, checks = 0, current = true;
+      const result = attestOpenCodeV2ModelSelection({ readCatalog: async () => {
+        reads++;
+        if (fault === 'read-failed') throw failure;
+        if (fault === 'current-lost') current = false;
+        return { provider: { id: selection.providerID, activation: 'enabled' },
+          defaultModel: { providerId: selection.providerID, modelId: selection.id },
+          models: reads < 3 ? [] : [{ id: selection.id, enabled: true, variants: [] }] };
+      } }, selection, { signal: new AbortController().signal, deadline: Date.now() + 5000,
+        isCurrent: () => { checks++; return current; } }, sink === 'absent' ? undefined : phase => {
+        phases.push(phase); if (sink === 'throws') throw Error('TEST diagnostic failure');
+      });
+      if (fault === 'complete') await expect(result).resolves.toBeUndefined();
+      else if (fault === 'read-failed') await expect(result).rejects.toBe(failure);
+      else await expect(result).rejects.toMatchObject({ code: 'held' });
+      baseline ??= { reads, checks }; expect({ reads, checks }).toEqual(baseline);
+      expect(phases).toEqual(sink === 'absent' || fault === 'read-failed' ? [] : fault === 'current-lost'
+        ? ['catalog-read-returned'] : ['catalog-read-returned', 'catalog-current-returned', 'catalog-repeat']);
+      expect(reads).toBe(fault === 'complete' ? 3 : 1);
     }
   }
 );

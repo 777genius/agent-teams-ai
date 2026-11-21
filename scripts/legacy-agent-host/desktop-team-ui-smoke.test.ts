@@ -3021,6 +3021,7 @@ function crossCloseFixture(t?: import('node:test').TestContext) {
   };
   let now = 0, owned = 0, reads = 0, front = 0;
   let ownedHook: (check: number) => void = () => undefined;
+  let readHook: (read: number) => void = () => undefined;
   const waits: number[] = [], imports: string[] = [], expressions: string[] = [];
   const events: Record<string, unknown>[] = [];
   if (t) {
@@ -3032,6 +3033,7 @@ function crossCloseFixture(t?: import('node:test').TestContext) {
   }
   const evaluate = async (expression: string) => {
     reads++; expressions.push(expression);
+    readHook(reads);
     return runInNewContext(expression.replaceAll('await import(', 'await __testImport('), {
       window: { __agentTeamsDevStore: { getState: () => state } }, document,
       innerWidth: 2000, innerHeight: 1000, getComputedStyle: () => ({ pointerEvents: 'auto' }),
@@ -3066,6 +3068,8 @@ function crossCloseFixture(t?: import('node:test').TestContext) {
   return { identity, captured, key, controller, detail, storedSession, state, work, geometry,
     trigger, triggers, ui, events, expressions, imports, waits,
     setOwnedHook(callback: (check: number) => void) { ownedHook = callback; },
+    setReadHook(callback: (read: number) => void) { readHook = callback; },
+    advanceTime(milliseconds: number) { now += milliseconds; },
     counts: () => ({ now, owned, reads, front }),
     evaluateTarget: () => {
       const expression = Reflect.apply(desktopTaskBoardAssignmentReadyExpression, undefined,
@@ -3222,11 +3226,59 @@ test('actual original Cross Close refuses disabled covered and absent-hit contro
 test('actual original Cross Close rereads revoked same-Task readiness at unchanged final coordinates', async t => {
   const f = crossCloseFixture(t);
   f.setOwnedHook(check => { if (check === 6) f.detail.refreshPending = true; });
-  await assert.rejects(runActualCrossClose(f));
+  await assert.rejects(runActualCrossClose(f), /UI read timed out: close original Task detail final target; no mutation retry/);
   assert.deepEqual(f.events.map(({ type, x, y }) => [type, x, y]), [['mouseMoved', 1121, 171.125]]);
-  assert.deepEqual(f.counts(), { now: 200, owned: 6, reads: 5, front: 1 });
+  assert.deepEqual(f.counts(), { now: 30_000, owned: 602, reads: 302, front: 1 });
+  assert.deepEqual(f.waits, Array.from({ length: 300 }, () => 100));
   assert.ok(f.expressions.every(value => value === f.expressions[0]), 'the final direct read rechecks readiness');
 });
+
+test('actual original Cross Close waits for a pending final read before its single click', async t => {
+  const f = crossCloseFixture(t);
+  f.setReadHook(read => { f.detail.refreshPending = read === 5; });
+  await runActualCrossClose(f);
+  assert.deepEqual(f.events.map(({ type, x, y }) => [type, x, y]),
+    [['mouseMoved', 1121, 171.125], ['mousePressed', 1121, 171.125], ['mouseReleased', 1121, 171.125]]);
+  assert.deepEqual(f.counts(), { now: 300, owned: 9, reads: 6, front: 1 });
+  assert.deepEqual(f.waits, [100, 100, 100]);
+  assert.ok(f.expressions.every(value => value === f.expressions[0]), 'only the original owner and control are read');
+});
+
+for (const late of [30_000, 30_001]) test(
+  `actual original Cross Close rejects a final ready result at ${late} within its original budget`, async t => {
+    const f = crossCloseFixture(t);
+    f.setReadHook(read => {
+      f.detail.refreshPending = read === 5;
+      if (read === 6) f.advanceTime(late - 300);
+    });
+    await assert.rejects(runActualCrossClose(f), /UI read timed out: close original Task detail final target; no mutation retry/);
+    assert.deepEqual(f.events.map(({ type }) => type), ['mouseMoved']);
+    assert.deepEqual(f.counts(), { now: late, owned: 9, reads: 6, front: 1 });
+    assert.deepEqual(f.waits, [100, 100, 100]);
+    assert.ok(f.expressions.every(value => value === f.expressions[0]));
+  }
+);
+
+for (const failure of ['revoked owner', 'unavailable control', 'transport'] as const) test(
+  `actual original Cross Close preserves ${failure} after a pending final read without input`, async t => {
+    const f = crossCloseFixture(t), refusal = new Error('TEST original final read refusal');
+    f.setReadHook(read => {
+      f.detail.refreshPending = read === 5;
+      if (read === 6) {
+        if (failure === 'transport') throw refusal;
+        f.geometry.disabled = true;
+      }
+    });
+    if (failure === 'revoked owner') f.setOwnedHook(check => { if (check === 7) throw refusal; });
+    await assert.rejects(runActualCrossClose(f), error => failure === 'unavailable control'
+      ? error instanceof Error && /Original UI target unavailable after ownership check/.test(error.message)
+      : error === refusal);
+    assert.deepEqual(f.events.map(({ type }) => type), ['mouseMoved']);
+    assert.equal(f.counts().reads, failure === 'revoked owner' ? 5 : 6);
+    assert.deepEqual(f.waits, failure === 'revoked owner' ? [100, 100] : [100, 100, 100]);
+    assert.ok(f.expressions.every(value => value === f.expressions[0]));
+  }
+);
 
 test('actual original Cross Close preserves final renderer ownership refusal without a press', async t => {
   const refusal = new Error('TEST original renderer ownership lost');

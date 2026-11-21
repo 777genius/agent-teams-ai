@@ -13,7 +13,7 @@ import type { TestContext } from 'node:test';
 import { digest } from './desktop-backend-fixture.ts';
 import { desktopBackendEnvironment } from './desktop-runtime-source-fixture.ts';
 import { desktopFiniteHeapNodeOptions, normalizeDesktopDevNodeOptions } from '../lib/desktop-finite-node-options.ts';
-import { observeDesktopEmulatedRuntimeChildren } from './desktop-emulated-runtime-fixture.ts';
+import { observeDesktopEmulatedRuntimeChildren, readDesktopEmulatedPeerRefusal } from './desktop-emulated-runtime-fixture.ts';
 import { createDesktopProcessRootOracle } from './desktop-process-root-oracle.ts';
 import { waitForDesktopOpenCodePreflight } from './desktop-launch-ui-smoke.ts';
 import { FileManagementCommandStore } from '../../packages/legacy-agent-host/dist/adapters/providers/FileManagementCommandStore.js';
@@ -1360,6 +1360,7 @@ function emulatedObserverFixture(t: TestContext, mode: string,
     emulatedRuntime: { provider: 'codex', sources: [executable], executable, peers,
       commandPrefix: `/TEST/node ${executable.path} `, observedPeerPids: [] as number[] } };
   const originalCommand = fixture.emulatedRuntime.commandPrefix + 'mcp list --json';
+  let initialCensusCommand = originalCommand;
   const launch = { event: 'launch', provider: 'codex', role: 'management', pid: 4200, parentPid: 4101 };
   const journal = join(root, 'effects.ndjson'), row = JSON.stringify(launch) + '\n';
   const journalText = emptyPhase === undefined
@@ -1416,7 +1417,7 @@ function emulatedObserverFixture(t: TestContext, mode: string,
       if (emptyPhase !== undefined || censusReads > 1 && mode === 'exit') return host;
       const birth = censusReads > 1 && mode === 'reuse' ? '00:00:01' : '00:00:00';
       const parent = censusReads > 1 && mode === 'reparent' ? 4999 : 4101;
-      const argv = censusReads > 1 && mode === 'argv' ? originalCommand + ' --other' : originalCommand;
+      const argv = censusReads > 1 && mode === 'argv' ? originalCommand + ' --other' : initialCensusCommand;
       return host + `4200 ${parent} 4200 Sun Nov 15 ${birth} 2026 ${argv}\n` +
         (mode === 'startup-two-peers' ? `4201 4101 4201 Sun Nov 15 00:00:00 2026 ${originalCommand}\n` : '');
     }
@@ -1433,12 +1434,49 @@ function emulatedObserverFixture(t: TestContext, mode: string,
   return { fixture, journal, journalText, observe: (startupDeadline?: number) => observeDesktopEmulatedRuntimeChildren(4100,
     fixture as unknown as Parameters<typeof observeDesktopEmulatedRuntimeChildren>[1], emptyPhase ?? 'after-team-read', startupDeadline),
     censusTimeouts: () => censusTimeouts,
+    setCensusCommand: (value: string) => { initialCensusCommand = value; },
     reads: () => ({ censusReads, journalReads, signalCalls }) };
 }
+
+for (const commandKind of ['selected-node-other-entry', 'selected-peer-shell-bootstrap', 'process-observer', 'other'] as const)
+test(`original rejected peer retains closed ${commandKind} evidence without authorizing its PID`, async t => {
+  const f = emulatedObserverFixture(t, 'diagnostic');
+  const command = commandKind === 'selected-node-other-entry' ? '/TEST/node /PRIVATE/other --secret=TEST-PRIVATE'
+    : commandKind === 'selected-peer-shell-bootstrap' ? `/bin/sh ${f.fixture.emulatedRuntime.executable.path} --secret=TEST-PRIVATE`
+      : commandKind === 'process-observer' ? '/bin/ps -p 4200 --secret=TEST-PRIVATE' : '/PRIVATE/other --secret=TEST-PRIVATE';
+  f.setCensusCommand(command);
+  await assert.rejects(f.observe(10000), {
+    code: 'ERR_ASSERTION', message: 'Only an exact pinned TEST executable from the original seed or stock installation',
+  });
+  assert.deepEqual(readDesktopEmulatedPeerRefusal(f.fixture), {
+    phase: 'after-team-read', hostPid: 4101, pid: 4200, parentPid: 4101, processGroup: 4200,
+    commandBytes: Buffer.byteLength(command), commandKind,
+  });
+  assert.doesNotMatch(JSON.stringify(readDesktopEmulatedPeerRefusal(f.fixture)), /PRIVATE|TEST-peer|--secret|commandPrefix/u);
+  assert.deepEqual(f.reads(), { censusReads: 1, journalReads: 1, signalCalls: 0 });
+  assert.deepEqual(f.fixture.emulatedRuntime.observedPeerPids, []);
+  assert.equal(fs.readFileSync(f.journal, 'utf8'), f.journalText);
+});
+
+test('original peer refusal is immutable, first-only and isolated from successful fixtures', async t => {
+  const f = emulatedObserverFixture(t, 'diagnostic');
+  assert.equal(readDesktopEmulatedPeerRefusal(f.fixture), undefined);
+  f.setCensusCommand('/PRIVATE/first');
+  await assert.rejects(f.observe());
+  const first = readDesktopEmulatedPeerRefusal(f.fixture);
+  assert.ok(first && Object.isFrozen(first));
+  assert.throws(() => Object.defineProperty(first, 'pid', { value: 9999 }), TypeError);
+  f.setCensusCommand('/bin/ps -p 4200');
+  await assert.rejects(f.observe());
+  assert.equal(readDesktopEmulatedPeerRefusal(f.fixture), first);
+  assert.equal(readDesktopEmulatedPeerRefusal({}), undefined);
+  assert.deepEqual(f.reads(), { censusReads: 2, journalReads: 2, signalCalls: 0 });
+});
 
 test('original peer observation shares captured startup while its original launch row is still pending', async t => {
   const f = emulatedObserverFixture(t, 'startup-row');
   await f.observe(10000);
+  assert.equal(readDesktopEmulatedPeerRefusal(f.fixture), undefined);
   assert.deepEqual(f.fixture.emulatedRuntime.observedPeerPids, [4200]);
   assert.deepEqual(f.reads(), { censusReads: 2, journalReads: 2, signalCalls: 0 });
   assert.deepEqual(f.censusTimeouts(), [3000, 3000], 'startup scope does not extend any census command');

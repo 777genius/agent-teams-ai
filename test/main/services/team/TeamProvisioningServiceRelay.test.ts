@@ -5553,6 +5553,7 @@ Messages:
       .spyOn(service, 'scheduleOpenCodeMemberInboxDeliveryWake')
       .mockImplementation(() => undefined);
     vi.spyOn(service as any, 'createOpenCodePromptDeliveryLedger').mockReturnValue({
+      getByInboxMessage: vi.fn(async () => null),
       getActiveForMember: vi.fn(async () => ({
         id: 'ledger-foreground-message-1',
         teamName,

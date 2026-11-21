@@ -211,12 +211,17 @@ const catalogPhases = ([1, 2, 3] as const).flatMap(index => [
   `catalog-${index}-request-start`, `catalog-${index}-custody-start`, `catalog-${index}-custody-returned`,
   `catalog-${index}-request-admitted`, `catalog-${index}-lease-released`,
 ] as const);
+const credentialPhases = (['catalog', 'directory', 'connect', 'restore', 'dispose'] as const).flatMap(stage =>
+  [`credential-${stage}-start`, `credential-${stage}-returned`] as const);
 const probePhases = ['run', 'graph-start', 'graph-done', 'native-launch', 'native-launch-returned', 'native-endpoint-resolved', 'native-ready',
   'identity-start', 'identity-request-start', 'identity-custody-start', 'identity-custody-returned', 'identity-request-admitted',
-  'credential', 'attestation', ...catalogPhases, 'attestation-returned', 'session-create', 'driver-open', 'first-submit'] as const;
+  'credential', ...credentialPhases, 'credential-returned', 'attestation', ...catalogPhases,
+  'catalog-read-returned', 'catalog-current-returned', 'catalog-repeat', 'attestation-returned',
+  'attestation-observe-returned', 'session-create', 'session-current-returned', 'session-create-returned', 'driver-open', 'first-submit'] as const;
 const startupFailurePhases = ['startup-timer-aborted', 'startup-parent-aborted', 'startup-lifecycle-aborted', 'startup-failed'] as const;
+const allowedProbePhases = [...probePhases, ...startupFailurePhases];
 
-test('probe phase observations retain captured hashes, a lazy clock and at most thirty-three transitions', () => {
+test('probe phase observations retain captured hashes, a lazy clock and at most one observation per allowed phase', () => {
   const secret = 'TEST-private-command-path-key';
   const selected = { profileId: 'TEST-original', configRevision: 'TEST-revision' };
   const original = { ...selected }, lines: string[] = [];
@@ -227,20 +232,19 @@ test('probe phase observations retain captured hashes, a lazy clock and at most 
   assert.equal(clockReads, 0); assert.deepEqual(lines, [], 'construction does not observe or start a probe');
   observe('attestation-returned-extra' as typeof probePhases[number]);
   assert.equal(clockReads, 0, 'unknown phases cannot consume a sequence slot or read the clock');
-  for (const phase of probePhases) { observe(phase); clock += 7; }
-  for (const phase of startupFailurePhases) observe(phase);
-  for (let repeat = 0; repeat < 20; repeat++) for (const phase of probePhases) observe(phase);
-  assert.equal(lines.length, probePhases.length); assert.equal(lines.length, 33);
-  assert.equal(clockReads, probePhases.length, 'duplicate transitions do not read the clock or write again');
+  for (const phase of allowedProbePhases) { observe(phase); clock += 7; }
+  for (let repeat = 0; repeat < 20; repeat++) for (const phase of allowedProbePhases) observe(phase);
+  assert.equal(lines.length, allowedProbePhases.length); assert.equal(lines.length, 54);
+  assert.equal(clockReads, allowedProbePhases.length, 'duplicate transitions do not read the clock or write again');
   assert.ok(lines.every(line => Buffer.byteLength(line) < 8192));
   assert.equal(lines.join('').includes(secret), false);
   assert.equal(lines.join('').includes('TEST-original'), false);
   const retained: OpenCodeProbeDiagnostic[] = [];
   const decode = decodeClaudeCloseDiagnostics(() => {}, undefined, undefined, value => { retained.push(value); });
   for (const byte of Buffer.from(lines.join(''))) decode(Buffer.from([byte]));
-  assert.equal(retained.length, probePhases.length);
+  assert.equal(retained.length, allowedProbePhases.length);
   const hash = (value: unknown) => createHash('sha256').update(JSON.stringify(value)).digest('hex');
-  assert.deepEqual(retained, probePhases.map((phase, index) => ({
+  assert.deepEqual(retained, allowedProbePhases.map((phase, index) => ({
     profileHash: hash([original.profileId, original.configRevision]), commandHash: hash(secret),
     probeDigest: 'a'.repeat(64), phase, sequence: index + 1, elapsedMs: index * 7,
   })));
@@ -345,14 +349,14 @@ test('probe decoder rejects raw, nonfinite, extra and custody-like fields and re
     { ...valid, phase: 'attestation-returned-extra' },
     { ...valid, phase: 'catalog-0-request-start' }, { ...valid, phase: 'catalog-4-request-start' },
     { ...valid, phase: 'catalog-1-http-succeeded' }, { ...valid, phase: 'catalog-3-lease-released-extra' },
-    { ...valid, sequence: 0 }, { ...valid, sequence: 34 }, { ...valid, sequence: 1.5 },
+    { ...valid, sequence: 0 }, { ...valid, sequence: allowedProbePhases.length + 1 }, { ...valid, sequence: 1.5 },
     { ...valid, elapsedMs: -1 }, { ...valid, elapsedMs: 3_600_001 },
     { ...valid, elapsedMs: null }, { ...valid, elapsedMs: undefined },
   ]) decode(Buffer.from(frame(unsafe)));
   assert.deepEqual(values, []);
   decode(Buffer.concat([Buffer.from(probePrefix), Buffer.from([0xff]), Buffer.from('\n')]));
   decode(Buffer.from(probePrefix + 'x'.repeat(8193)));
-  const final = { ...valid, phase: 'catalog-3-lease-released', sequence: 33, elapsedMs: 3_600_000 };
+  const final = { ...valid, phase: 'session-create-returned', sequence: allowedProbePhases.length, elapsedMs: 3_600_000 };
   decode(Buffer.from('\n' + frame(valid) + frame(final)));
   assert.deepEqual(values, [valid, final]);
 });

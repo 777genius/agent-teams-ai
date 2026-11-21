@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { hostTeamSelectionKey } from '../../src/features/agent-backend/contracts/teamSelection.ts';
-import { desktopJsLiteral } from './desktop-ui-controls.ts';
+import { desktopJsLiteral, type createDesktopUiControls } from './desktop-ui-controls.ts';
 
 /** Read current owner/surface from the existing React dialog; return its actual input ID, never synthesize one. */
 export function desktopTaskCommentInputExpression(handleId: string, taskId: string): string {
@@ -109,7 +109,7 @@ export function desktopTaskBoardAssignmentReadyExpression(
 
 /** Close the original assigned Task only after its current owner and cleared detail are ready. */
 export function clickDesktopTaskBoardClearedClose(
-  ui: { clickExpression(expression: string, label: string, selector?: string, text?: string): Promise<void> },
+  ui: Pick<ReturnType<typeof createDesktopUiControls>, 'clickExpression'>,
   handleId: string,
   taskId: string,
   captured: { contextId: string; surfaceId: string }
@@ -118,6 +118,7 @@ export function clickDesktopTaskBoardClearedClose(
     desktopTaskBoardAssignmentReadyExpression(handleId, taskId, captured, 'clarification-cleared'),
     'close original Task detail',
     '[role="dialog"] button',
-    'Close'
+    'Close',
+    { waitForFinalReadiness: true }
   );
 }
