@@ -506,6 +506,28 @@ try {
   await screenshot('10-created-team-from-template');
   checks.push('Config-only creation from imported template persists through the real Teams API.');
 
+  // Save the newly created real team back into the same library. This proves
+  // the original A1 preview/confirm action and completes a user-visible cycle.
+  await evaluate('window.__agentTeamsDevStore.getState().openTeamsTab()');
+  await until(
+    `document.querySelector('button[aria-label="Save as Template"]')`,
+    'Save as Template action on the persisted team'
+  );
+  await click(`document.querySelector('button[aria-label="Save as Template"]')`);
+  await until(
+    `document.querySelector('[data-testid="custom-template-preview"]')`,
+    'authoritative team snapshot preview'
+  );
+  await screenshot('11-save-team-as-template-preview');
+  await click(button('Save template', topDialog));
+  await until(
+    `document.querySelector('[data-testid="custom-template-saved"]')`,
+    'confirmed Save as Template'
+  );
+  assert.equal((await library()).length, 3);
+  await screenshot('12-save-team-as-template-confirmed');
+  checks.push('Save as Template previews a real created team and persists the confirmed SQLite record.');
+
   receipt.cdpPort = port;
   receipt.savedTemplateIds = saved.map((t) => t.templateId);
   receipt.rendererErrors = rendererErrors;
