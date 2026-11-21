@@ -171,7 +171,7 @@ const button = (text: string, within = 'document') =>
 async function click(expression: string) {
   await until(
     `(() => { const e = ${expression}; if (!(e instanceof HTMLElement)) return false;
-    e.scrollIntoView({block:'nearest'}); const r=e.getBoundingClientRect();
+    e.scrollIntoView({block:'center'}); const r=e.getBoundingClientRect();
     const hit=document.elementFromPoint(r.x+r.width/2,r.y+r.height/2);
     return r.width>0 && r.height>0 && (hit===e || e.contains(hit)); })()`,
     'unobstructed click target: ' + expression
