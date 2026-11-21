@@ -420,6 +420,11 @@
       "member_other": "সদস্য",
       "title": "টিম এখনও আরম্ভ করা হয়নি"
     },
+    "editDefinition": {
+      "loadFailed": "টিমের সেটিংস লোড করা যায়নি",
+      "notFound": "টিমের সেটিংস খুঁজে পাওয়া যায়নি",
+      "memberNotFound": "এই সদস্য আর টিমের সেটিংসে নেই। বর্তমান সদস্যদের দেখতে টিমটি আবার খুলুন।"
+    },
     "stopFailed": {
       "title": "টিম বন্ধ করা যায়নি",
       "message": "টিমটি এখনও চলছে। এর অবস্থা পরীক্ষা করুন এবং আবার বন্ধ করুন চাপুন।"
@@ -461,6 +466,7 @@
       "deleteTeam": "দল মুছে ফেলুন",
       "editTeam": "সম্পাদনা",
       "editUnavailableProvisioning": "সম্পাদনা গ্রুপ উপলব্ধ নেই",
+      "editUnavailableRunningProject": "সম্পাদনা করতে প্রতিটি প্রজেক্টে এই টিমটি বন্ধ করুন",
       "openBuiltInEditor": "নির্মিত সম্পাদকে প্রকল্প খুলুন",
       "openTeamGraph": "OpenGL গ্রাফ",
       "stopTeam": "বন্ধ করুন",

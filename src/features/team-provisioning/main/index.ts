@@ -1,19 +1,17 @@
 export {
-  fingerprintMemberSettingsTarget,
-  isLeadMemberSettingsTarget,
-  normalizeEditableMemberSettings,
-} from '../core/domain/memberSettingsPolicy';
-export {
   registerTeamMemberSettingsIpc,
   removeTeamMemberSettingsIpc,
 } from './adapters/input/registerTeamMemberSettingsIpc';
+export type { DefinitionLaunchSettingsPort } from './adapters/output/DefinitionLeadMemberSettingsAdapters';
 export {
   createNodeLegacyMemberSettingsRepositoryDependencies,
   type NodeLegacyMemberSettingsRepositoryOptions,
 } from './adapters/output/LegacyMemberSettingsRepositoryAdapter';
 export {
+  createNodeDefinitionLeadSettingsFeature,
   createNodeTeamMemberSettingsFeature,
   createTeamMemberSettingsFeature,
+  type NodeDefinitionLeadSettingsFeatureDependencies,
   type NodeTeamMemberSettingsFeatureDependencies,
   type TeamMemberSettingsFeatureApi,
   type TeamMemberSettingsFeatureDependencies,

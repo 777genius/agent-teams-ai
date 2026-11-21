@@ -3,27 +3,25 @@ import {
   TeamProjectContextLaunchConflictError,
 } from '@features/team-project-context/main';
 import {
+  createNodeDefinitionLeadSettingsFeature,
   createNodeTeamMemberSettingsFeature,
-  isLeadMemberSettingsTarget,
   type NodeTeamMemberSettingsFeatureDependencies,
   type TeamMemberSettingsFeatureApi,
 } from '@features/team-provisioning/main';
 import { createTeamProvisioningLeadRuntimeSettingsCapability } from '@main/services/team/provisioning/TeamProvisioningLeadRuntimeSettingsCapability';
 
+import { createLaunchSettingsStore } from './ipc/teams/teamLaunchSettingsStore';
 import {
-  buildDefinitionWriter,
+  buildEditor,
   classifyDefinitionWrite,
   ProjectCopyEditError,
   runLogicalDefinitionWrite,
 } from './ipc/teams/teamProjectDefinitionEdit';
 import { getTeamDataWorkerClient } from './services/team/TeamDataWorkerClient';
-import { definitionLeadTarget, saveDefinitionLeadRuntime } from './definitionLeadSettings';
 
-import type { DefinitionEditPorts, DefinitionWriter } from './ipc/teams/teamProjectDefinitionEdit';
+import type { DefinitionEditPorts } from './ipc/teams/teamProjectDefinitionEdit';
 import type {
-  GetMemberSettingsTargetRequest,
   MemberSettingsRefusalReason,
-  MemberSettingsTarget,
   UpdateMemberSettingsResult,
 } from '@features/team-provisioning/contracts';
 import type { TeamIpcHandlerApis } from '@main/services/team/contracts/TeamProvisioningApis';
@@ -42,58 +40,50 @@ export function memberSettingsRefusalOf(error: unknown): MemberSettingsRefusalRe
   return null;
 }
 
+/** The member settings of the app: of a team, and of the lead of a team definition. */
+export interface MemberSettingsFeatures {
+  team: TeamMemberSettingsFeatureApi;
+  /** Same use case and ledger; the lead's settings are the definition's launch settings. */
+  definitionLead: TeamMemberSettingsFeatureApi;
+}
+
 /**
  * Member settings follow the rules of the team definition router:
  * - an ordinary team changes its own files, also while it runs (unchanged);
  * - a per-project team changes its definition while every project is stopped,
  *   inside the logical-team lock, and the stopped project copies are refreshed
- *   from it afterwards: a teammate through the ordinary member settings use case
- *   on the logical name (`members.meta.json`), the lead through the team launch
- *   settings (its model and effort are definition launch settings, as a launch
- *   records them), never through a member row;
+ *   from it afterwards: a teammate in `members.meta.json` of the logical team,
+ *   the lead in the definition's launch settings (its model and effort, as a
+ *   launch records them), through the same use case and command ledger;
  * - a project copy is refused, so it never gets settings of its own;
  * - unreadable team metadata is refused before anything is written.
  * Those refusals are answered as `refused` with a code instead of an error.
  */
 export function routeMemberSettingsWrites(
-  feature: TeamMemberSettingsFeatureApi,
+  features: MemberSettingsFeatures,
   ports: DefinitionEditPorts,
-  createWriter: (ports: DefinitionEditPorts) => DefinitionWriter = buildDefinitionWriter
+  createEditor: (ports: DefinitionEditPorts) => ReturnType<typeof buildEditor> = buildEditor
 ): TeamMemberSettingsFeatureApi {
-  const readLogicalTarget = async (
-    writer: DefinitionWriter,
-    request: GetMemberSettingsTargetRequest
-  ): Promise<MemberSettingsTarget | null> => {
-    const target = await feature.getMemberSettingsTarget(request);
-    return target && isLeadMemberSettingsTarget(target)
-      ? definitionLeadTarget(target, await writer.launchSettings.read(request.teamName))
-      : target;
-  };
   return {
     async getMemberSettingsTarget(request) {
-      const writer = createWriter(ports);
-      return (await writer.editor.classify(request.teamName)) === 'logical'
-        ? readLogicalTarget(writer, request)
-        : feature.getMemberSettingsTarget(request);
+      const logical = (await createEditor(ports).classify(request.teamName)) === 'logical';
+      return (logical ? features.definitionLead : features.team).getMemberSettingsTarget(request);
     },
     async updateMemberSettings(request): Promise<UpdateMemberSettingsResult> {
       try {
-        const writer = createWriter(ports);
-        if ((await classifyDefinitionWrite(writer.editor, request.teamName)) === 'native') {
-          return await feature.updateMemberSettings(request);
+        const editor = createEditor(ports);
+        if ((await classifyDefinitionWrite(editor, request.teamName)) === 'native') {
+          return await features.team.updateMemberSettings(request);
         }
         return await runLogicalDefinitionWrite(
           ports,
-          writer.editor,
+          editor,
           request.teamName,
-          async () =>
-            request.targetKind === 'lead'
-              ? saveDefinitionLeadRuntime(
-                  request,
-                  await readLogicalTarget(writer, request),
-                  writer.launchSettings
-                )
-              : feature.updateMemberSettings(request),
+          () =>
+            (request.targetKind === 'lead'
+              ? features.definitionLead
+              : features.team
+            ).updateMemberSettings(request),
           (result) =>
             result.outcome === 'completed' &&
             (result.effect === 'persisted_only' || result.effect === 'recovery_required')
@@ -115,7 +105,7 @@ export function routeMemberSettingsWrites(
 
 /** The part of the internal storage backend that tells whether its SQLite ledger was selected. */
 interface CommandLedgerBackend {
-  isDurable(): Promise<boolean>;
+  isDurable: () => Promise<boolean>;
 }
 
 export interface TeamMemberSettingsComposition {
@@ -133,21 +123,35 @@ export function composeTeamMemberSettings(
   input: TeamMemberSettingsComposition
 ): TeamMemberSettingsFeatureApi {
   const { leadRuntime } = input;
-  const { backend } = input.commandLedger;
-  const feature = createNodeTeamMemberSettingsFeature({
+  const ledger = {
     commandRunner: input.commandLedger.runner,
-    isDurableStorageAvailable: backend?.isDurable,
+    isDurableStorageAvailable: input.commandLedger.backend?.isDurable,
+  };
+  const isTeamAlive = (teamName: string) => leadRuntime.isTeamAlive(teamName);
+  const team = createNodeTeamMemberSettingsFeature({
+    ...ledger,
     memberLifecycle: input.apis.memberLifecycle,
     runtime: createTeamProvisioningLeadRuntimeSettingsCapability({
-      isTeamAlive: (teamName) => leadRuntime.isTeamAlive(teamName),
+      isTeamAlive,
       assessLeadRuntimeRestart: (request) => leadRuntime.assessLeadRuntimeRestart(request),
       restartLeadRuntime: (request) => leadRuntime.restartLeadRuntime(request),
     }),
     getWorkerCache: getTeamDataWorkerClient,
   });
-  return routeMemberSettingsWrites(feature, {
-    data: () => input.data,
-    runtime: () => input.apis.runtime,
-    run: () => input.apis.provisioningRun,
+  const definitionLead = createNodeDefinitionLeadSettingsFeature({
+    ...ledger,
+    memberLifecycle: input.apis.memberLifecycle,
+    // The store a launch records the team's settings into.
+    launchSettings: createLaunchSettingsStore(),
+    isTeamAlive,
+    getWorkerCache: getTeamDataWorkerClient,
   });
+  return routeMemberSettingsWrites(
+    { team, definitionLead },
+    {
+      data: () => input.data,
+      runtime: () => input.apis.runtime,
+      run: () => input.apis.provisioningRun,
+    }
+  );
 }

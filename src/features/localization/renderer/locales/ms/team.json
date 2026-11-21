@@ -420,6 +420,11 @@
       "member_other": "ahli",
       "title": "Pasukan belum dilancarkan"
     },
+    "editDefinition": {
+      "loadFailed": "Tetapan pasukan tidak dapat dimuatkan",
+      "notFound": "Tetapan pasukan tidak ditemui",
+      "memberNotFound": "Ahli ini tiada lagi dalam tetapan pasukan. Buka semula pasukan untuk melihat ahli semasa."
+    },
     "stopFailed": {
       "title": "Pasukan tidak dapat dihentikan",
       "message": "Pasukan masih berjalan. Semak statusnya dan tekan Hentikan sekali lagi."
@@ -461,6 +466,7 @@
       "deleteTeam": "Padam pasukan",
       "editTeam": "Sunting pasukan",
       "editUnavailableProvisioning": "Sunting pasukan tidak tersedia semasa peruntukan masih dijalankan",
+      "editUnavailableRunningProject": "Hentikan pasukan ini dalam setiap projek untuk menyuntingnya",
       "openBuiltInEditor": "Buka projek dalam editor terbina dalam",
       "openTeamGraph": "Buka graf pasukan",
       "stopTeam": "Hentikan pasukan",

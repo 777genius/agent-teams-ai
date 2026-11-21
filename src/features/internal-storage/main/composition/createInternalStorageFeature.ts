@@ -56,7 +56,7 @@ export interface InternalStorageApplicationCommandLedgerBackend {
    * Whether the durable (SQLite) ledger was selected for this session. With the
    * JSON fallback a ledger consumer keeps its non-durable path instead.
    */
-  isDurable(): Promise<boolean>;
+  isDurable: () => Promise<boolean>;
 }
 
 export interface InternalStorageFeature {

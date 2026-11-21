@@ -6,6 +6,7 @@ import { validateTeamName } from '@main/services/team/TeamIdentifierValidation';
 import { TeamMetaStore } from '@main/services/team/TeamMetaStore';
 import { createLogger } from '@shared/utils/logger';
 
+import { createLaunchSettingsStore } from './teamLaunchSettingsStore';
 import { createProjectContextRuntimeParts } from './teamProjectContextCreate';
 
 import type { RuntimeRosterMutationMember } from './runtimeRosterMutationMember';
@@ -56,26 +57,16 @@ export interface DefinitionEditPorts {
   run: () => ProjectTeamRuntimePorts['run'];
 }
 
-/** The definition editor and the launch settings store it projects with (the same parts). */
-export interface DefinitionWriter {
-  editor: TeamProjectDefinitionEditor;
-  launchSettings: ReturnType<typeof createProjectContextRuntimeParts>['launchSettings'];
-}
-
 export function buildEditor(ports: DefinitionEditPorts): TeamProjectDefinitionEditor {
-  return buildDefinitionWriter(ports).editor;
-}
-
-export function buildDefinitionWriter(ports: DefinitionEditPorts): DefinitionWriter {
   const data = ports.data();
   const runtime = ports.runtime();
   const run = ports.run();
-  const { registry, resolver, gate, launchSettings } = createProjectContextRuntimeParts({
+  const { registry, resolver, gate } = createProjectContextRuntimeParts({
     data,
     runtime,
     run,
   });
-  const editor = new TeamProjectDefinitionEditor(
+  return new TeamProjectDefinitionEditor(
     registry,
     gate,
     {
@@ -85,7 +76,8 @@ export function buildDefinitionWriter(ports: DefinitionEditPorts): DefinitionWri
       updateDisplayMetadata: async (teamName, update) => {
         await data.updateConfig(teamName, update);
       },
-      launchSettings,
+      // The copies refreshed here are confirmed stopped: their lead identity follows too.
+      launchSettings: createLaunchSettingsStore(undefined, { followLeadLaunchIdentity: true }),
     },
     async (executionTeamName) => {
       if (
@@ -96,7 +88,6 @@ export function buildDefinitionWriter(ports: DefinitionEditPorts): DefinitionWri
       }
     }
   );
-  return { editor, launchSettings };
 }
 
 function failure(error: unknown): { success: false; error: string } {

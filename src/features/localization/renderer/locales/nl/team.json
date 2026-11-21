@@ -420,6 +420,11 @@
       "member_other": "leden",
       "title": "Team nog niet gestart"
     },
+    "editDefinition": {
+      "loadFailed": "De teaminstellingen konden niet worden geladen",
+      "notFound": "De teaminstellingen zijn niet gevonden",
+      "memberNotFound": "Dit lid staat niet meer in de teaminstellingen. Open het team opnieuw om de huidige leden te zien."
+    },
     "stopFailed": {
       "title": "Team kan niet worden gestopt",
       "message": "Het team is nog actief. Controleer de status en druk opnieuw op Stoppen."
@@ -461,6 +466,7 @@
       "deleteTeam": "Team verwijderen",
       "editTeam": "Team bewerken",
       "editUnavailableProvisioning": "Team bewerken is niet beschikbaar zolang de provisioning nog bezig is",
+      "editUnavailableRunningProject": "Stop dit team in elk project om het te bewerken",
       "openBuiltInEditor": "Project openen in ingebouwde editor",
       "openTeamGraph": "Teamgrafiek openen",
       "stopTeam": "Team stoppen",

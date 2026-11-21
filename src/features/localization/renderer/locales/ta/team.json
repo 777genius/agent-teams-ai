@@ -420,6 +420,11 @@
       "member_other": "உறுப்பினர்கள்",
       "title": "Team இன்னும் தொடங்கப்படவில்லை"
     },
+    "editDefinition": {
+      "loadFailed": "குழு அமைப்புகளை ஏற்ற முடியவில்லை",
+      "notFound": "குழு அமைப்புகள் கிடைக்கவில்லை",
+      "memberNotFound": "இந்த உறுப்பினர் இனி குழு அமைப்புகளில் இல்லை. தற்போதைய உறுப்பினர்களைக் காண குழுவை மீண்டும் திறக்கவும்."
+    },
     "stopFailed": {
       "title": "குழுவை நிறுத்த முடியவில்லை",
       "message": "குழு இன்னும் இயங்குகிறது. அதன் நிலையைச் சரிபார்த்து மீண்டும் நிறுத்து என்பதை அழுத்தவும்."
@@ -461,6 +466,7 @@
       "deleteTeam": "team ஐ நீக்கு",
       "editTeam": "team ஐ திருத்து",
       "editUnavailableProvisioning": "provisioning இன்னும் முன்னேற்றத்தில் இருக்கும்போது team ஐ திருத்துவது கிடைக்காது",
+      "editUnavailableRunningProject": "திருத்த, ஒவ்வொரு திட்டத்திலும் இந்தக் குழுவை நிறுத்துங்கள்",
       "openBuiltInEditor": "project ஐ உள்ளமைந்த editor இல் திற",
       "openTeamGraph": "team graph ஐத் திற",
       "stopTeam": "team ஐ நிறுத்து",

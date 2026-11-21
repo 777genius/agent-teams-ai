@@ -420,6 +420,11 @@
       "member_other": "成员",
       "title": "团队尚未启动"
     },
+    "editDefinition": {
+      "loadFailed": "无法加载团队设置",
+      "notFound": "找不到团队设置",
+      "memberNotFound": "该成员已不在团队设置中。请重新打开团队以查看当前成员。"
+    },
     "stopFailed": {
       "title": "无法停止团队",
       "message": "团队仍在运行。请检查其状态，然后再次按下“停止”。"
@@ -461,6 +466,7 @@
       "deleteTeam": "删除团队",
       "editTeam": "编辑团队",
       "editUnavailableProvisioning": "当配置仍在进行时，编辑团队不可用",
+      "editUnavailableRunningProject": "请在每个项目中停止该团队后再编辑",
       "openBuiltInEditor": "在内置编辑器中打开项目",
       "openTeamGraph": "打开团队图",
       "stopTeam": "停队",

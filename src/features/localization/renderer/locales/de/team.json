@@ -420,6 +420,11 @@
       "member_other": "Mitglieder",
       "title": "noch nicht gestartet"
     },
+    "editDefinition": {
+      "loadFailed": "Die Teameinstellungen konnten nicht geladen werden",
+      "notFound": "Die Teameinstellungen wurden nicht gefunden",
+      "memberNotFound": "Dieses Mitglied ist nicht mehr in den Teameinstellungen. Öffne das Team erneut, um die aktuellen Mitglieder zu sehen."
+    },
     "stopFailed": {
       "title": "Team konnte nicht gestoppt werden",
       "message": "Das Team läuft noch. Prüfen Sie seinen Status und klicken Sie erneut auf Stoppen."
@@ -461,6 +466,7 @@
       "deleteTeam": "Löschen von Team",
       "editTeam": "Team bearbeiten",
       "editUnavailableProvisioning": "Edit-Team ist nicht verfügbar, während die Bereitstellung noch im Gang ist",
+      "editUnavailableRunningProject": "Stoppe dieses Team in jedem Projekt, um es zu bearbeiten",
       "openBuiltInEditor": "Open-Projekt im integrierten Editor",
       "openTeamGraph": "Teamgraphen öffnen",
       "stopTeam": "Stop Team",

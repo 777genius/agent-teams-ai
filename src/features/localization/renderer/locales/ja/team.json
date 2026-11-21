@@ -420,6 +420,11 @@
       "member_other": "メンバー",
       "title": "チームはまだ起動しません"
     },
+    "editDefinition": {
+      "loadFailed": "チームの設定を読み込めませんでした",
+      "notFound": "チームの設定が見つかりませんでした",
+      "memberNotFound": "このメンバーはもうチームの設定にいません。現在のメンバーを見るにはチームを開き直してください。"
+    },
     "stopFailed": {
       "title": "チームを停止できません",
       "message": "チームはまだ実行中です。状態を確認して、もう一度「停止」を押してください。"
@@ -461,6 +466,7 @@
       "deleteTeam": "チーム削除",
       "editTeam": "チーム編集",
       "editUnavailableProvisioning": "暫定中にチームを編集することは利用できません。",
+      "editUnavailableRunningProject": "編集するには、すべてのプロジェクトでこのチームを停止してください",
       "openBuiltInEditor": "組み込みエディタでプロジェクトを開く",
       "openTeamGraph": "チームグラフを開く",
       "stopTeam": "チームの停止",

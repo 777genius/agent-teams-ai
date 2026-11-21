@@ -420,6 +420,11 @@
       "member_other": "wanachama",
       "title": "Timu bado haijazinduliwa"
     },
+    "editDefinition": {
+      "loadFailed": "Imeshindwa kupakia mipangilio ya timu",
+      "notFound": "Mipangilio ya timu haikupatikana",
+      "memberNotFound": "Mwanachama huyu hayupo tena kwenye mipangilio ya timu. Fungua timu tena ili kuona wanachama wa sasa."
+    },
     "stopFailed": {
       "title": "Imeshindikana kusimamisha timu",
       "message": "Timu bado inaendelea. Angalia hali yake kisha ubofye Simamisha tena."
@@ -461,6 +466,7 @@
       "deleteTeam": "Futa timu",
       "editTeam": "Hariri timu",
       "editUnavailableProvisioning": "Hariri timu haipatikani wakati ugavi bado unaendelea",
+      "editUnavailableRunningProject": "Simamisha timu hii katika kila mradi ili uihariri",
       "openBuiltInEditor": "Fungua mradi katika kihariri kilichojengwa ndani",
       "openTeamGraph": "Fungua grafu ya timu",
       "stopTeam": "Simamisha timu",

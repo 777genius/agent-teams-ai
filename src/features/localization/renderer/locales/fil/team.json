@@ -420,6 +420,11 @@
       "member_other": "mga miyembro",
       "title": "Hindi pa nailulunsad ang team"
     },
+    "editDefinition": {
+      "loadFailed": "Hindi ma-load ang settings ng team",
+      "notFound": "Hindi mahanap ang settings ng team",
+      "memberNotFound": "Wala na ang member na ito sa settings ng team. Buksan muli ang team para makita ang kasalukuyang mga member."
+    },
     "stopFailed": {
       "title": "Hindi maihinto ang team",
       "message": "Tumatakbo pa rin ang team. Tingnan ang status nito at pindutin muli ang Ihinto."
@@ -461,6 +466,7 @@
       "deleteTeam": "Tanggalin ang team",
       "editTeam": "I-edit ang team",
       "editUnavailableProvisioning": "Hindi available ang pag-edit ng team habang isinasagawa pa ang provisioning",
+      "editUnavailableRunningProject": "Ihinto ang team na ito sa bawat project para ma-edit ito",
       "openBuiltInEditor": "Buksan ang proyekto sa built-in editor",
       "openTeamGraph": "Buksan ang team graph",
       "stopTeam": "Ihinto ang team",

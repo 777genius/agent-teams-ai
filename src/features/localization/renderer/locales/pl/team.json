@@ -420,6 +420,11 @@
       "member_other": "członkami",
       "title": "Zespół jeszcze nie uruchomiony"
     },
+    "editDefinition": {
+      "loadFailed": "Nie udało się wczytać ustawień zespołu",
+      "notFound": "Nie znaleziono ustawień zespołu",
+      "memberNotFound": "Tego członka nie ma już w ustawieniach zespołu. Otwórz zespół ponownie, aby zobaczyć aktualny skład."
+    },
     "stopFailed": {
       "title": "Nie można zatrzymać zespołu",
       "message": "Zespół nadal działa. Sprawdź jego stan i ponownie naciśnij Zatrzymaj."
@@ -461,6 +466,7 @@
       "deleteTeam": "Usuń zespół",
       "editTeam": "Edytuj zespół",
       "editUnavailableProvisioning": "Edycja zespołu jest niedostępna, gdy przygotowywanie jest wciąż w toku",
+      "editUnavailableRunningProject": "Zatrzymaj ten zespół w każdym projekcie, aby go edytować",
       "openBuiltInEditor": "Otwórz projekt we wbudowanym edytorze",
       "openTeamGraph": "Otwórz graf zespołu",
       "stopTeam": "Zatrzymaj zespół",

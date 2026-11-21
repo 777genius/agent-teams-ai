@@ -420,6 +420,11 @@
       "member_other": "thành viên",
       "title": "Đội ngũ chưa được khởi chạy"
     },
+    "editDefinition": {
+      "loadFailed": "Không tải được cài đặt nhóm",
+      "notFound": "Không tìm thấy cài đặt nhóm",
+      "memberNotFound": "Thành viên này không còn trong cài đặt nhóm. Hãy mở lại nhóm để xem các thành viên hiện tại."
+    },
     "stopFailed": {
       "title": "Không thể dừng nhóm",
       "message": "Nhóm vẫn đang chạy. Hãy kiểm tra trạng thái rồi nhấn Dừng lần nữa."
@@ -461,6 +466,7 @@
       "deleteTeam": "Xóa đội ngũ",
       "editTeam": "Chỉnh sửa đội ngũ",
       "editUnavailableProvisioning": "Chỉnh sửa đội ngũ không khả dụng khi việc tạo vẫn đang diễn ra",
+      "editUnavailableRunningProject": "Hãy dừng nhóm này trong mọi dự án để chỉnh sửa",
       "openBuiltInEditor": "Mở dự án trong trình soạn thảo tích hợp",
       "openTeamGraph": "Mở đồ thị đội ngũ",
       "stopTeam": "Dừng đội ngũ",

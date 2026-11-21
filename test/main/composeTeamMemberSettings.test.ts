@@ -1,16 +1,18 @@
 import { describe, expect, it, vi } from 'vitest';
 
-const captured = vi.hoisted(() => ({ dependencies: null as unknown }));
+const captured = vi.hoisted(() => ({ dependencies: [] as unknown[] }));
 
 vi.mock('../../src/features/team-provisioning/main', async (importOriginal) => {
   const original =
     await importOriginal<typeof import('../../src/features/team-provisioning/main')>();
+  const capture = (dependencies: unknown) => {
+    captured.dependencies.push(dependencies);
+    return { updateMemberSettings: vi.fn(), getMemberSettingsTarget: vi.fn() };
+  };
   return {
     ...original,
-    createNodeTeamMemberSettingsFeature: vi.fn((dependencies: unknown) => {
-      captured.dependencies = dependencies;
-      return { updateMemberSettings: vi.fn(), getMemberSettingsTarget: vi.fn() };
-    }),
+    createNodeTeamMemberSettingsFeature: vi.fn(capture),
+    createNodeDefinitionLeadSettingsFeature: vi.fn(capture),
   };
 });
 
@@ -20,14 +22,19 @@ import {
   TeamProjectContextLaunchGate,
   TeamProjectDefinitionEditor,
 } from '../../src/features/team-project-context/main';
-import { fingerprintMemberSettingsTarget } from '../../src/features/team-provisioning/main';
+import {
+  definitionMemberSettingsLifecycle,
+  DefinitionLeadMemberSettingsRepositoryAdapter,
+} from '../../src/features/team-provisioning/main/adapters/output/DefinitionLeadMemberSettingsAdapters';
+import { createTeamMemberSettingsFeature } from '../../src/features/team-provisioning/main/composition/createTeamMemberSettingsFeature';
+import { fingerprintResolvedMember } from '../../src/features/team-provisioning/renderer/utils/memberSettingsPresentation';
+import { memberSettingsTargetToMember } from '../../src/features/team-provisioning/renderer/utils/memberSettingsTarget';
 import {
   composeTeamMemberSettings,
   memberSettingsRefusalOf,
   routeMemberSettingsWrites,
 } from '../../src/main/composeTeamMemberSettings';
 import { ProjectCopyEditError } from '../../src/main/ipc/teams/teamProjectDefinitionEdit';
-import { definitionLeadTarget } from '../../src/main/definitionLeadSettings';
 
 import type { DefinitionLaunchSettings } from '../../src/features/team-project-context/main';
 import type {
@@ -35,6 +42,8 @@ import type {
   UpdateMemberSettingsRequest,
   UpdateMemberSettingsResult,
 } from '../../src/features/team-provisioning/contracts';
+import type { MemberSettingsRepositoryPort } from '../../src/features/team-provisioning/core/application/ports/UpdateMemberSettingsPorts';
+import type { MemberSettingsTargetSnapshot } from '../../src/features/team-provisioning/core/domain/memberSettingsPolicy';
 import type { TeamMemberSettingsFeatureApi } from '../../src/features/team-provisioning/main';
 import type { TeamCreateRequest, TeamRuntimeState } from '../../src/shared/types/team';
 
@@ -43,11 +52,12 @@ import type { TeamCreateRequest, TeamRuntimeState } from '../../src/shared/types
  * the REAL editor and the REAL stopped gate (storage and runtime are fakes):
  * under the logical-team lock, refused while a project is not stopped, followed
  * by the projection onto every stopped project copy. A teammate is written by
- * the ordinary member settings use case on the logical name; the lead by the
- * definition's launch settings store (the store a launch records into), which
- * the projection then carries into the copies. Copies and unreadable teams are
- * refused with a code before anything is written; an ordinary team is passed
- * through exactly as before.
+ * the team's member settings feature on the logical name. The lead goes through
+ * the SAME use case and command handling (here the real feature with its
+ * process-local idempotency), with the definition's launch settings as its
+ * settings; the projection then carries them into the copies. Copies and
+ * unreadable teams are refused with a code before anything is written; an
+ * ordinary team is passed through exactly as before.
  */
 
 type Context = { executionTeamName: string; state: 'ready' | 'reserved' };
@@ -65,7 +75,9 @@ const NO_SETTINGS = {
   mcpPolicy: null,
 } as const;
 
-function world(options: { contexts?: Context[]; unreadable?: string[] } = {}) {
+function world(
+  options: { contexts?: Context[]; unreadable?: string[]; missingTeams?: string[] } = {}
+) {
   const contexts: Context[] = options.contexts ?? [
     { executionTeamName: 'ptc-a', state: 'ready' },
     { executionTeamName: 'ptc-b', state: 'ready' },
@@ -119,7 +131,9 @@ function world(options: { contexts?: Context[]; unreadable?: string[] } = {}) {
     new TeamProjectContextLaunchGate(registry, runtime),
     {
       getMode: vi.fn(async (name: string) => {
-        if (options.unreadable?.includes(name)) throw new Error('Team metadata is unreadable');
+        if (options.unreadable?.includes(name)) {
+          throw new TeamMetadataUnreadableError('Team metadata is unreadable');
+        }
         return name === 'builders' ? ('per_project' as const) : ('shared' as const);
       }),
       getSavedRequest: vi.fn(
@@ -148,23 +162,7 @@ function world(options: { contexts?: Context[]; unreadable?: string[] } = {}) {
   const writtenInsideLock: boolean[] = [];
   let nextEffect: 'persisted_only' | 'no_changes' | 'recovery_required' | 'team_relaunch_required' =
     'persisted_only';
-  const completed = (): UpdateMemberSettingsResult => ({
-    outcome: 'completed',
-    effect: nextEffect,
-    memberName: 'alice',
-    previousFingerprint: 'before',
-    currentFingerprint: 'after',
-    replayed: false,
-  });
-  // The saved lead of every team: a synthetic lead row without member settings of its own.
-  const savedLead: MemberSettingsTarget = {
-    name: 'team-lead',
-    agentType: 'team-lead',
-    agentId: null,
-    joinedAt: null,
-    settings: { ...NO_SETTINGS, providerId: 'opencode', model: 'row-model-is-not-the-lead' },
-  };
-  const feature = {
+  const teamFeature = {
     updateMemberSettings: vi.fn(async (request: UpdateMemberSettingsRequest) => {
       writtenInsideLock.push(lockHeld);
       // The ordinary use case writes the members file of the name it is given.
@@ -174,24 +172,61 @@ function world(options: { contexts?: Context[]; unreadable?: string[] } = {}) {
           members: roster(request.settings.role ?? ''),
         });
       }
-      return completed();
+      const result: UpdateMemberSettingsResult = {
+        outcome: 'completed',
+        effect: nextEffect,
+        memberName: 'alice',
+        previousFingerprint: 'before',
+        currentFingerprint: 'after',
+        replayed: false,
+      };
+      return result;
     }),
-    getMemberSettingsTarget: vi.fn(async ({ memberName }: { memberName: string }) =>
-      memberName === 'team-lead' ? savedLead : null
-    ),
+    getMemberSettingsTarget: vi.fn(async () => null),
   } satisfies TeamMemberSettingsFeatureApi;
+  // The saved lead of the definition: a member row that owns no settings of its own.
+  const leadRow: MemberSettingsTargetSnapshot = {
+    name: 'team-lead',
+    agentType: 'team-lead',
+    agentId: null,
+    joinedAt: null,
+    settings: { ...NO_SETTINGS, providerId: 'opencode', model: 'row-model-is-not-the-lead' },
+    teamIsAlive: false,
+    leadProviderId: 'opencode',
+    teamIsMixed: false,
+    runtimeLane: 'primary',
+  };
+  const base: MemberSettingsRepositoryPort = {
+    findTarget: vi.fn(async (teamName: string, memberName: string) =>
+      options.missingTeams?.includes(teamName) || memberName !== 'team-lead' ? null : leadRow
+    ),
+    classifyMissingTarget: vi.fn(async (teamName: string) =>
+      options.missingTeams?.includes(teamName)
+        ? ('team_not_found' as const)
+        : ('member_not_found' as const)
+    ),
+    applyTarget: vi.fn(),
+    restoreTarget: vi.fn(),
+  };
+  // The real definition lead feature: the same use case, roster gate and idempotency.
+  const definitionLead = createTeamMemberSettingsFeature({
+    mutationSource: { runLiveRosterMutation: async (_team, operation) => operation() },
+    lifecycle: definitionMemberSettingsLifecycle,
+    repository: new DefinitionLeadMemberSettingsRepositoryAdapter(base, launchSettings as never),
+  });
   const routed = routeMemberSettingsWrites(
-    feature,
+    { team: teamFeature, definitionLead },
     {
       data: () => ({ runConfigurationOperation }) as never,
       runtime: () => ({}) as never,
       run: () => ({}) as never,
     },
-    () => ({ editor, launchSettings: launchSettings as never })
+    () => editor
   );
   return {
     routed,
-    feature,
+    teamFeature,
+    base,
     saved,
     projected,
     launchSaves,
@@ -219,11 +254,12 @@ function memberRequest(teamName: string, role = 'senior dev'): UpdateMemberSetti
 function leadRequest(
   teamName: string,
   expectedFingerprint: string,
-  leadRuntime: { model: string | null; effort: 'high' | 'medium' | null }
+  leadRuntime: { model: string | null; effort: 'high' | 'medium' | null },
+  commandId = 'c-lead-' + Math.random().toString(16).slice(2)
 ): UpdateMemberSettingsRequest {
   return {
-    commandId: 'c-lead',
-    idempotencyKey: 'c-lead',
+    commandId,
+    idempotencyKey: commandId,
     teamName,
     memberName: 'team-lead',
     expectedFingerprint,
@@ -231,6 +267,10 @@ function leadRequest(
     leadRuntime,
   };
 }
+
+/** The fingerprint the dialog sends for a target it shows (the renderer's own mapping). */
+const shownFingerprint = (target: MemberSettingsTarget): string =>
+  fingerprintResolvedMember(memberSettingsTargetToMember(target));
 
 describe('member settings of a per-project team', () => {
   it('writes the definition under the logical lock, then refreshes every stopped project copy', async () => {
@@ -240,14 +280,13 @@ describe('member settings of a per-project team', () => {
     });
     expect(w.runConfigurationOperation).toHaveBeenCalledWith('builders', expect.any(Function));
     expect(w.writtenInsideLock).toEqual([true]);
-    // Both projects see the definition; neither got a value of its own.
     expect(w.projected.sort()).toEqual(['ptc-a', 'ptc-b']);
     for (const copy of ['ptc-a', 'ptc-b']) {
       expect(w.saved.get(copy)?.members?.[0]).toMatchObject({ name: 'alice', role: 'senior dev' });
     }
   });
 
-  it('projects after a partly restored write (recovery required), not after a refusal to relaunch', async () => {
+  it('projects after a partly restored write (recovery required), not when nothing was written', async () => {
     const recovered = world();
     recovered.setEffect('recovery_required');
     await recovered.routed.updateMemberSettings(memberRequest('builders'));
@@ -256,7 +295,6 @@ describe('member settings of a per-project team', () => {
     for (const effect of ['no_changes', 'team_relaunch_required'] as const) {
       const unchanged = world();
       unchanged.setEffect(effect);
-      // Nothing was written by the use case, so the copies are left alone.
       await unchanged.routed.updateMemberSettings(memberRequest('builders', 'dev'));
       expect(unchanged.projected).toEqual([]);
     }
@@ -270,7 +308,7 @@ describe('member settings of a per-project team', () => {
       reason: 'project_running',
       message: expect.stringContaining('stop it in every project'),
     });
-    expect(w.feature.updateMemberSettings).not.toHaveBeenCalled();
+    expect(w.teamFeature.updateMemberSettings).not.toHaveBeenCalled();
     expect(w.projected).toEqual([]);
   });
 
@@ -285,7 +323,7 @@ describe('member settings of a per-project team', () => {
       outcome: 'refused',
       reason: 'project_unreconciled',
     });
-    expect(w.feature.updateMemberSettings).not.toHaveBeenCalled();
+    expect(w.teamFeature.updateMemberSettings).not.toHaveBeenCalled();
   });
 
   it('refuses a project copy with a code: it never gets settings of its own', async () => {
@@ -299,17 +337,18 @@ describe('member settings of a per-project team', () => {
         reason: 'project_copy',
       });
     }
-    expect(w.feature.updateMemberSettings).not.toHaveBeenCalled();
+    expect(w.teamFeature.updateMemberSettings).not.toHaveBeenCalled();
     expect(w.runConfigurationOperation).not.toHaveBeenCalled();
     expect(w.launchSaves).toEqual([]);
   });
 
-  it('fails closed on unreadable team metadata (an unknown error is not turned into a refusal)', async () => {
+  it('refuses unreadable team metadata with its code before anything is written', async () => {
     const w = world({ unreadable: ['broken'] });
-    await expect(w.routed.updateMemberSettings(memberRequest('broken'))).rejects.toThrow(
-      /unreadable/
-    );
-    expect(w.feature.updateMemberSettings).not.toHaveBeenCalled();
+    await expect(w.routed.updateMemberSettings(memberRequest('broken'))).resolves.toMatchObject({
+      outcome: 'refused',
+      reason: 'team_metadata_unreadable',
+    });
+    expect(w.teamFeature.updateMemberSettings).not.toHaveBeenCalled();
   });
 
   it('passes an ordinary team (and its lead) through unchanged: no lock, no gate, no projection', async () => {
@@ -319,7 +358,7 @@ describe('member settings of a per-project team', () => {
     await w.routed.updateMemberSettings(
       leadRequest('legacy', 'any', { model: null, effort: null })
     );
-    expect(w.feature.updateMemberSettings).toHaveBeenCalledTimes(2);
+    expect(w.teamFeature.updateMemberSettings).toHaveBeenCalledTimes(2);
     expect(w.writtenInsideLock).toEqual([false, false]);
     expect(w.runConfigurationOperation).not.toHaveBeenCalled();
     expect(w.projected).toEqual([]);
@@ -344,22 +383,19 @@ describe('the lead of a per-project team', () => {
       model: 'model-one',
       effort: 'medium',
     });
-    // An ordinary team's lead is the saved member target as is.
-    const legacy = await w.routed.getMemberSettingsTarget({
-      teamName: 'legacy',
-      memberName: 'team-lead',
-    });
-    expect(legacy?.settings.model).toBe('row-model-is-not-the-lead');
   });
 
   it('saves model and effort into the definition while every project is stopped, and the copies follow', async () => {
     const w = world();
-    const before = fingerprintMemberSettingsTarget(await shownLead(w));
-    await expect(
-      w.routed.updateMemberSettings(
-        leadRequest('builders', before, { model: 'model-two', effort: 'high' })
-      )
-    ).resolves.toMatchObject({ outcome: 'completed', effect: 'persisted_only' });
+    const request = leadRequest('builders', shownFingerprint(await shownLead(w)), {
+      model: 'model-two',
+      effort: 'high',
+    });
+    await expect(w.routed.updateMemberSettings(request)).resolves.toMatchObject({
+      outcome: 'completed',
+      effect: 'persisted_only',
+      replayed: false,
+    });
     expect(w.launchSaves[0]).toEqual({
       team: 'builders',
       settings: { model: 'model-two', effort: 'high' },
@@ -367,14 +403,33 @@ describe('the lead of a per-project team', () => {
     for (const copy of ['ptc-a', 'ptc-b']) {
       expect(w.saved.get(copy)).toMatchObject({ model: 'model-two', effort: 'high' });
     }
-    // No member row and no use case: the lead is a launch setting of the team.
-    expect(w.feature.updateMemberSettings).not.toHaveBeenCalled();
+    // The team feature (member rows) is not involved; the lead is a launch setting of the team.
+    expect(w.teamFeature.updateMemberSettings).not.toHaveBeenCalled();
     expect((await shownLead(w)).settings).toMatchObject({ model: 'model-two', effort: 'high' });
+  });
+
+  it('replays a repeated command (same command id) instead of answering a conflict', async () => {
+    const w = world();
+    const request = leadRequest(
+      'builders',
+      shownFingerprint(await shownLead(w)),
+      { model: 'model-two', effort: 'high' },
+      'same-command'
+    );
+    const first = await w.routed.updateMemberSettings(request);
+    const again = await w.routed.updateMemberSettings(request);
+    expect(first).toMatchObject({
+      outcome: 'completed',
+      effect: 'persisted_only',
+      replayed: false,
+    });
+    expect(again).toEqual({ ...first, replayed: true });
+    expect(w.launchSaves.filter((save) => save.team === 'builders')).toHaveLength(1);
   });
 
   it('clears to the provider default with null, and writes nothing when nothing changes', async () => {
     const w = world();
-    const same = fingerprintMemberSettingsTarget(await shownLead(w));
+    const same = shownFingerprint(await shownLead(w));
     await expect(
       w.routed.updateMemberSettings(
         leadRequest('builders', same, { model: 'model-one', effort: 'medium' })
@@ -387,9 +442,9 @@ describe('the lead of a per-project team', () => {
     expect(w.launchSaves[0]?.settings).toEqual({ model: undefined, effort: undefined });
   });
 
-  it('is refused while a project runs and on a stale fingerprint, writing nothing', async () => {
+  it('is refused while a project runs, and answers a conflict for a stale fingerprint', async () => {
     const running = world();
-    const fingerprint = fingerprintMemberSettingsTarget(await shownLead(running));
+    const fingerprint = shownFingerprint(await shownLead(running));
     running.running.add('ptc-a');
     await expect(
       running.routed.updateMemberSettings(
@@ -406,26 +461,11 @@ describe('the lead of a per-project team', () => {
     expect([...running.launchSaves, ...stale.launchSaves]).toEqual([]);
   });
 
-  it('keeps the identity of the saved lead and only its launch settings change', () => {
-    const lead: MemberSettingsTarget = {
-      name: 'lead',
-      agentType: 'team-lead',
-      agentId: 'lead@team',
-      joinedAt: 7,
-      settings: { ...NO_SETTINGS, role: 'Lead', providerId: 'opencode', model: 'row' },
-    };
-    expect(
-      definitionLeadTarget(lead, { providerId: 'codex', model: ' m ', effort: 'low' })
-    ).toEqual({
-      ...lead,
-      settings: {
-        ...lead.settings,
-        providerId: 'codex',
-        model: 'm',
-        effort: 'low',
-        fastMode: null,
-      },
-    });
+  it('names a missing team as such in the conflict', async () => {
+    const w = world({ missingTeams: ['builders'] });
+    await expect(
+      w.routed.updateMemberSettings(leadRequest('builders', 'any', { model: 'm', effort: 'high' }))
+    ).resolves.toMatchObject({ outcome: 'target_conflict', reason: 'team_not_found' });
   });
 });
 
@@ -449,28 +489,30 @@ describe('refusal codes', () => {
 });
 
 describe('composeTeamMemberSettings', () => {
-  it('uses the durable ledger only when internal storage selected it for the session', async () => {
-    const isDurable = vi.fn(async () => false);
+  const compose = (backend: { isDurable: () => Promise<boolean> } | null) =>
     composeTeamMemberSettings({
-      commandLedger: { runner: { run: vi.fn() } as never, backend: { isDurable } },
+      commandLedger: { runner: backend ? ({ run: vi.fn() } as never) : null, backend },
       apis: { memberLifecycle: {}, runtime: {}, provisioningRun: {} } as never,
       data: {} as never,
       leadRuntime: {} as never,
     });
-    const dependencies = captured.dependencies as {
-      isDurableStorageAvailable?: () => Promise<boolean>;
-    };
-    await expect(dependencies.isDurableStorageAvailable?.()).resolves.toBe(false);
-    expect(isDurable).toHaveBeenCalledOnce();
 
-    composeTeamMemberSettings({
-      commandLedger: { runner: null, backend: null },
-      apis: { memberLifecycle: {}, runtime: {}, provisioningRun: {} } as never,
-      data: {} as never,
-      leadRuntime: {} as never,
-    });
-    expect(
-      (captured.dependencies as { isDurableStorageAvailable?: unknown }).isDurableStorageAvailable
-    ).toBeUndefined();
+  it('gives both features the durable ledger only when internal storage selected it', async () => {
+    captured.dependencies = [];
+    const isDurable = vi.fn(async () => false);
+    compose({ isDurable });
+    expect(captured.dependencies).toHaveLength(2);
+    for (const dependencies of captured.dependencies as {
+      isDurableStorageAvailable?: () => Promise<boolean>;
+    }[]) {
+      await expect(dependencies.isDurableStorageAvailable?.()).resolves.toBe(false);
+    }
+    expect(isDurable).toHaveBeenCalledTimes(2);
+
+    captured.dependencies = [];
+    compose(null);
+    for (const dependencies of captured.dependencies as { isDurableStorageAvailable?: unknown }[]) {
+      expect(dependencies.isDurableStorageAvailable).toBeUndefined();
+    }
   });
 });

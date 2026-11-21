@@ -420,6 +420,11 @@
       "member_other": "membri",
       "title": "Echipa nu a fost încă lansată"
     },
+    "editDefinition": {
+      "loadFailed": "Setările echipei nu au putut fi încărcate",
+      "notFound": "Setările echipei nu au fost găsite",
+      "memberNotFound": "Acest membru nu mai este în setările echipei. Redeschide echipa pentru a vedea membrii actuali."
+    },
     "stopFailed": {
       "title": "Echipa nu a putut fi oprită",
       "message": "Echipa încă rulează. Verificați starea și apăsați din nou Oprește."
@@ -461,6 +466,7 @@
       "deleteTeam": "Șterge echipa",
       "editTeam": "Editează echipa",
       "editUnavailableProvisioning": "Editarea echipei este indisponibilă cât timp aprovizionarea este încă în curs",
+      "editUnavailableRunningProject": "Oprește această echipă în fiecare proiect pentru a o edita",
       "openBuiltInEditor": "Deschide proiectul în editorul integrat",
       "openTeamGraph": "Deschide graficul echipei",
       "stopTeam": "Oprește echipa",

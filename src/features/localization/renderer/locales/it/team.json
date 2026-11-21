@@ -420,6 +420,11 @@
       "member_other": "membri",
       "title": "Team non ancora avviato"
     },
+    "editDefinition": {
+      "loadFailed": "Impossibile caricare le impostazioni del team",
+      "notFound": "Impostazioni del team non trovate",
+      "memberNotFound": "Questo membro non è più nelle impostazioni del team. Riapri il team per vedere i membri attuali."
+    },
     "stopFailed": {
       "title": "Impossibile arrestare il team",
       "message": "Il team è ancora in esecuzione. Controllane lo stato e premi di nuovo Arresta."
@@ -461,6 +466,7 @@
       "deleteTeam": "Elimina team",
       "editTeam": "Modifica team",
       "editUnavailableProvisioning": "La modifica del team non è disponibile mentre il provisioning è ancora in corso",
+      "editUnavailableRunningProject": "Arresta questo team in ogni progetto per modificarlo",
       "openBuiltInEditor": "Apri il progetto nell'editor integrato",
       "openTeamGraph": "Apri il grafo del team",
       "stopTeam": "Ferma team",

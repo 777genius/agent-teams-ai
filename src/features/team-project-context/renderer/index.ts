@@ -1,5 +1,5 @@
+export { projectCopyLabel } from '../core';
 export {
-  projectCopyLabel,
   TeamDisplayLabel,
   useProjectCopyOwnerName,
   useTeamDisplayLabel,

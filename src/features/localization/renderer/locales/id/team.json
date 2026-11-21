@@ -420,6 +420,11 @@
       "member_other": "anggota",
       "title": "Tim belum diluncurkan"
     },
+    "editDefinition": {
+      "loadFailed": "Pengaturan tim tidak dapat dimuat",
+      "notFound": "Pengaturan tim tidak ditemukan",
+      "memberNotFound": "Anggota ini sudah tidak ada di pengaturan tim. Buka kembali tim untuk melihat anggota saat ini."
+    },
     "stopFailed": {
       "title": "Tim tidak dapat dihentikan",
       "message": "Tim masih berjalan. Periksa statusnya lalu tekan Hentikan lagi."
@@ -461,6 +466,7 @@
       "deleteTeam": "Hapus tim",
       "editTeam": "Sunting tim",
       "editUnavailableProvisioning": "Tim Sunting tidak tersedia ketika pemberian masih dalam proses",
+      "editUnavailableRunningProject": "Hentikan tim ini di setiap proyek untuk mengeditnya",
       "openBuiltInEditor": "Buka projek di penyunting bawaan",
       "openTeamGraph": "Buka grafik tim",
       "stopTeam": "Hentikan tim",

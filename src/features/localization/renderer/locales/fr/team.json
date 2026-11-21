@@ -420,6 +420,11 @@
       "member_other": "membres",
       "title": "Équipe non encore lancée"
     },
+    "editDefinition": {
+      "loadFailed": "Impossible de charger les paramètres de l'équipe",
+      "notFound": "Les paramètres de l'équipe sont introuvables",
+      "memberNotFound": "Ce membre ne fait plus partie des paramètres de l'équipe. Rouvrez l'équipe pour voir ses membres actuels."
+    },
     "stopFailed": {
       "title": "Impossible d'arrêter l'équipe",
       "message": "L'équipe est toujours en cours d'exécution. Vérifiez son état et appuyez de nouveau sur Arrêter."
@@ -461,6 +466,7 @@
       "deleteTeam": "Supprimer l'équipe",
       "editTeam": "Éditer l'équipe",
       "editUnavailableProvisioning": "L'équipe d'édition n'est pas disponible pendant que la fourniture est toujours en cours",
+      "editUnavailableRunningProject": "Arrêtez cette équipe dans chaque projet pour la modifier",
       "openBuiltInEditor": "Ouvrir le projet dans l'éditeur intégré",
       "openTeamGraph": "Ouvrir le graphique de l'équipe",
       "stopTeam": "Arrêter l'équipe",

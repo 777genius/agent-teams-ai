@@ -1,17 +1,6 @@
 import { useStore } from '@renderer/store';
 
-import { findProjectCopyOwner, formatProjectCopyLabel } from '../../core';
-
-import type { ProjectCopyCatalogTeam } from '../../core';
-
-/** "Team · project" for a project copy in the folded team list; null for any other name. */
-export function projectCopyLabel(
-  teams: readonly ProjectCopyCatalogTeam[],
-  teamName: string
-): string | null {
-  const owner = findProjectCopyOwner(teams, teamName);
-  return owner ? formatProjectCopyLabel(owner) : null;
-}
+import { findProjectCopyOwner, projectCopyLabel } from '../../core';
 
 /**
  * How a physical team name is shown to a person. A project copy (`ptc-…`) of a

@@ -15,20 +15,18 @@ import {
   scopeToValue,
 } from '../../../../src/features/review-flow/renderer/view-model/reviewFlowViewModel';
 
-import type { ReviewFlowSettings } from '../../../../src/features/review-flow/contracts/types';
 import {
-  findProjectCopyOwner,
-  formatProjectCopyLabel,
+  projectCopyLabel,
   type ProjectCopyCatalogTeam,
 } from '../../../../src/features/team-project-context/core';
 
-/** The app's copy label over the folded list (what the hook passes in). */
+import type { ReviewFlowSettings } from '../../../../src/features/review-flow/contracts/types';
+
+/** The app's own copy label over the folded list, as the hook passes it in. */
 const labelIn =
   (teams: readonly ProjectCopyCatalogTeam[]) =>
-  (name: string): string | null => {
-    const owner = findProjectCopyOwner(teams, name);
-    return owner ? formatProjectCopyLabel(owner) : null;
-  };
+  (name: string): string | null =>
+    projectCopyLabel(teams, name);
 
 const agent: ReviewFlowSettings = { reviewFlow: 'agent_approval', reviewFlowPrompt: '' };
 const human: ReviewFlowSettings = { reviewFlow: 'human_approval', reviewFlowPrompt: 'Run e2e.' };
