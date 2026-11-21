@@ -12,14 +12,14 @@ import { useStore } from '@renderer/store';
 
 import { applyTeamTemplate, TEAM_TEMPLATES } from '../core';
 
-import { TEAM_TEMPLATE_ICONS } from './templateIcons';
 import { TemplateApplyConfirmDialog } from './TemplateApplyConfirmDialog';
+import { TEAM_TEMPLATE_ICONS } from './templateIcons';
 
 import type { TeamCreateConfigRequest, TeamProviderId } from '@shared/types';
 import type { TeamTemplateV1 } from '../contracts';
 
-export { TEAM_TEMPLATE_ICONS } from './templateIcons';
 export { TemplateApplyConfirmDialog } from './TemplateApplyConfirmDialog';
+export { TEAM_TEMPLATE_ICONS } from './templateIcons';
 
 export const TeamTemplatePicker = ({
   onApply,
