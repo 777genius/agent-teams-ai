@@ -80,8 +80,8 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
-    env:
-      AGENT_TEAMS_INSTALL_PROFILE: node-ci
+    # Electron exercises must build native modules against Electron's ABI;
+    # the node-ci profile skips that rebuild and breaks better-sqlite3.
     steps:
       - uses: actions/checkout@v6
         with:

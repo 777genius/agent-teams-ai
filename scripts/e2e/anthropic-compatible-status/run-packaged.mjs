@@ -439,8 +439,23 @@ try {
   await cdp.clickText('Create Team');
   record('create-team-opened');
   await cdp.wait('Boolean(document.querySelector("[data-testid=create-team-page]"))', 'Create Team page');
-  await cdp.clickText('Custom path', 'document.querySelector("[data-testid=create-team-page]")');
-  await cdp.fill('[data-testid=create-team-page] input[aria-label="Custom working directory"]', data.project);
+  // A provider status refresh can remount the Create Team form during startup.
+  // Require the actual custom-mode input after a real CDP click rather than
+  // mistaking a dispatched click for a persistent React state transition.
+  const customPathInput = '[data-testid=create-team-page] input[aria-label="Custom working directory"]';
+  let customPathVisible = false;
+  for (let attempt = 0; attempt < 3 && !customPathVisible; attempt += 1) {
+    await cdp.clickText('Custom path', 'document.querySelector("[data-testid=create-team-page]")');
+    for (let check = 0; check < 12; check += 1) {
+      customPathVisible = await cdp.evaluate(
+        `Boolean(document.querySelector(${JSON.stringify(customPathInput)}))`
+      );
+      if (customPathVisible) break;
+      await pause(250);
+    }
+  }
+  assert(customPathVisible, 'Create Team did not switch to custom project path mode');
+  await cdp.fill(customPathInput, data.project);
   record('test-project-selected');
   await cdp.click('[data-testid=create-team-page] button[aria-label^="Anthropic provider,"]');
   await cdp.wait(
