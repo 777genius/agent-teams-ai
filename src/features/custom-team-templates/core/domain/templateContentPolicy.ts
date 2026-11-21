@@ -33,6 +33,9 @@ const RESERVED_TEAMMATE_NAMES = new Set(['user', 'system', 'team-lead']);
 // This policy is browser-safe and intentionally has no @main dependency.
 const MAX_TEAM_METADATA_BYTES = 256 * 1024;
 const TEAM_METADATA_HEADROOM_BYTES = 1024;
+// The team-level metadata also carries runtime/provider/creation settings in
+// addition to the prompt. Reserve room for those ordinary creation fields.
+const TEAM_META_RUNTIME_HEADROOM_BYTES = 8192;
 const MEMBER_RUNTIME_HEADROOM_BYTES = 256;
 
 function isReservedName(name: string): boolean {
@@ -145,7 +148,22 @@ export function validateTemplateContent(
   content: CustomTeamTemplateContentV1
 ): readonly CustomTeamTemplateValidationIssue[] {
   const issues: CustomTeamTemplateValidationIssue[] = [];
-  if (content.teamPrompt.length > TEMPLATE_TEAM_PROMPT_MAX_LENGTH) {
+  // TeamMetaStore persists the prompt separately in team.meta.json with the
+  // same 256 KiB UTF-8 bound as members.meta.json. A 100k-character CJK prompt
+  // (or heavily escaped JSON) can exceed that limit despite satisfying the
+  // character-count policy. Estimate the actual pretty-printed JSON bytes,
+  // leaving room for the runtime fields supplied during ordinary team creation.
+  const promptMetadataBytes = new TextEncoder().encode(
+    JSON.stringify(
+      { version: 1, cwd: '/', prompt: content.teamPrompt.trim(), createdAt: 0 },
+      null,
+      2
+    )
+  ).byteLength;
+  if (
+    content.teamPrompt.length > TEMPLATE_TEAM_PROMPT_MAX_LENGTH ||
+    promptMetadataBytes + TEAM_META_RUNTIME_HEADROOM_BYTES > MAX_TEAM_METADATA_BYTES
+  ) {
     issues.push({ code: 'teamPromptTooLong', field: 'teamPrompt' });
   }
   if (content.members.length > TEMPLATE_MAX_MEMBERS) {

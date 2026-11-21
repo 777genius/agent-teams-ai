@@ -417,6 +417,31 @@ describe('validateTemplateContent', () => {
     });
   });
 
+  it('rejects prompts that exceed the team metadata UTF-8 byte budget', () => {
+    // The normal team.meta.json writer has a 256 KiB UTF-8 cap. Each Chinese
+    // character is three UTF-8 bytes even though it counts as one JS character.
+    expect(
+      validateTemplateContent({
+        ...content([]),
+        teamPrompt: '研'.repeat(100_000),
+      })
+    ).toContainEqual({ code: 'teamPromptTooLong', field: 'teamPrompt' });
+    // The equivalent ASCII prompt still fits, preserving legitimate long text.
+    expect(
+      validateTemplateContent({
+        ...content([]),
+        teamPrompt: 'a'.repeat(200_000),
+      })
+    ).toEqual([]);
+    // JSON escaping also increases the on-disk byte count beyond string length.
+    expect(
+      validateTemplateContent({
+        ...content([]),
+        teamPrompt: '\\'.repeat(145_000),
+      })
+    ).toContainEqual({ code: 'teamPromptTooLong', field: 'teamPrompt' });
+  });
+
   it('rejects aggregate UTF-8 member metadata that the team writer cannot serialize', () => {
     const giantWorkflows = content([
       { name: 'first', workflow: 'a'.repeat(150_000) },
