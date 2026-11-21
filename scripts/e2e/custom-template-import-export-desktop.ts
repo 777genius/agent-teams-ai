@@ -486,7 +486,7 @@ try {
     `document.querySelector('#team-prompt')?.value === ${JSON.stringify(portable.teamPrompt)}`,
     'reviewed custom template prompt applied to editable creation draft'
   );
-  await screenshot('08-create-from-custom-template');
+  await screenshot('11-create-from-custom-template');
   checks.push('Real Create Team page restores the imported template prompt without starting a runtime.');
 
   const builtin = `document.querySelector('[data-testid^="create-template-option-builtin-"]')`;
@@ -495,7 +495,14 @@ try {
     `document.querySelector('#team-prompt')?.value && document.querySelector('#team-prompt')?.value !== ${JSON.stringify(portable.teamPrompt)}`,
     'builtin template changes the same editable prompt'
   );
-  await screenshot('09-builtin-template-same-editor');
+  await screenshot('12-builtin-template-same-editor');
+  await click(`document.querySelector('[data-testid="create-template-option-none"]')`);
+  await until(
+    `document.querySelector('[data-testid="create-template-option-none"]')?.getAttribute('aria-pressed') === 'true' && !document.querySelector('#team-prompt')`,
+    'No template clears the template-driven editor in config-only mode'
+  );
+  await screenshot('13-no-template');
+  checks.push('Selecting No template clears the former template prompt; a fresh custom selection restores it.');
   await click(`document.querySelector('[data-testid="create-template-option-custom-${original.templateId}"]')`);
   await until(
     `document.querySelector('#team-prompt')?.value === ${JSON.stringify(portable.teamPrompt)}`,
@@ -512,7 +519,7 @@ try {
     'config-only team persisted from imported template',
     60_000
   );
-  await screenshot('10-created-team-from-template');
+  await screenshot('14-created-team-from-template');
   checks.push('Config-only creation from imported template persists through the real Teams API.');
 
   // Save the newly created real team back into the same library. This proves
@@ -527,14 +534,14 @@ try {
     `document.querySelector('[data-testid="custom-template-preview"]')`,
     'authoritative team snapshot preview'
   );
-  await screenshot('11-save-team-as-template-preview');
+  await screenshot('15-save-team-as-template-preview');
   await click(button('Save template', topDialog));
   await until(
     `document.querySelector('[data-testid="custom-template-saved"]')`,
     'confirmed Save as Template'
   );
   assert.equal((await library()).length, 3);
-  await screenshot('12-save-team-as-template-confirmed');
+  await screenshot('16-save-team-as-template-confirmed');
   checks.push('Save as Template previews a real created team and persists the confirmed SQLite record.');
 
   receipt.cdpPort = port;
