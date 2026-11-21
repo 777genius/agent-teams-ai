@@ -36,33 +36,31 @@ function functionSource(name: string): string {
 
 type ResolverKind = 'provisioning' | 'memberWorkSync';
 
+function resolveControlUrlOption(call: ts.CallExpression): ts.Expression | undefined {
+  const [options] = call.arguments;
+  if (!options || !ts.isObjectLiteralExpression(options)) return undefined;
+  const property = options.properties.find(
+    (candidate): candidate is ts.PropertyAssignment =>
+      ts.isPropertyAssignment(candidate) && candidate.name.getText(source) === 'resolveControlUrl'
+  );
+  return property?.initializer;
+}
+
+function matchResolver(kind: ResolverKind, call: ts.CallExpression): ts.Expression | undefined {
+  const callee = call.expression.getText(source);
+  if (kind === 'provisioning') {
+    return callee === 'teamProvisioningService.setControlApiBaseUrlResolver'
+      ? call.arguments[0]
+      : undefined;
+  }
+  return callee === 'createMemberWorkSyncFeature' ? resolveControlUrlOption(call) : undefined;
+}
+
 function resolverSource(kind: ResolverKind): string {
   const matches: ts.Expression[] = [];
   function visit(node: ts.Node): void {
-    if (ts.isCallExpression(node)) {
-      if (
-        kind === 'provisioning' &&
-        node.expression.getText(source) === 'teamProvisioningService.setControlApiBaseUrlResolver'
-      ) {
-        matches.push(node.arguments[0]);
-      }
-      if (
-        kind === 'memberWorkSync' &&
-        node.expression.getText(source) === 'createMemberWorkSyncFeature'
-      ) {
-        const options = node.arguments[0];
-        if (ts.isObjectLiteralExpression(options)) {
-          for (const property of options.properties) {
-            if (
-              ts.isPropertyAssignment(property) &&
-              property.name.getText(source) === 'resolveControlUrl'
-            ) {
-              matches.push(property.initializer);
-            }
-          }
-        }
-      }
-    }
+    const match = ts.isCallExpression(node) ? matchResolver(kind, node) : undefined;
+    if (match) matches.push(match);
     ts.forEachChild(node, visit);
   }
   visit(source);
@@ -70,7 +68,20 @@ function resolverSource(kind: ResolverKind): string {
   return matches[0].getText(source);
 }
 
-function createHost(publish = writeTeamControlApiState) {
+// Route groups the Host must hand to the HTTP server before it may listen.
+type RequiredTeamRoutes = 'teamHttpHandlerApis' | 'crossTeamHttpApi';
+
+interface HostOptions {
+  publish?: typeof writeTeamControlApiState;
+  missingRoutes?: RequiredTeamRoutes;
+}
+
+function createHost({ publish = writeTeamControlApiState, missingRoutes }: HostOptions = {}) {
+  // Distinct shapes, so equality checks can tell which service reached which route.
+  const routes: Record<RequiredTeamRoutes, object> = {
+    teamHttpHandlerApis: { routes: 'team' },
+    crossTeamHttpApi: { routes: 'cross-team' },
+  };
   let running = false;
   let shuttingDown = false;
   const isShutdownStarted = () => shuttingDown;
@@ -111,7 +122,9 @@ function createHost(publish = writeTeamControlApiState) {
     handleModeSwitch: () => Promise.resolve(),
     configManager: { getConfig: () => ({ httpServer: { port: 3456 } }) },
     contextRegistry: { getActive: () => ({}) },
-    teamHttpHandlerApis: {},
+    teamHttpHandlerApis:
+      missingRoutes === 'teamHttpHandlerApis' ? null : routes.teamHttpHandlerApis,
+    crossTeamHttpApi: missingRoutes === 'crossTeamHttpApi' ? null : routes.crossTeamHttpApi,
     teamGroupChatsFeature: {},
     bindTeamHttpDataApi: () => ({}),
     projectTeamLaunchFactory: () => () => ({}),
@@ -132,6 +145,7 @@ function createHost(publish = writeTeamControlApiState) {
   };
   return {
     server,
+    routes,
     start: () => host.startHttpServer(() => Promise.resolve()),
     resolve: (kind: ResolverKind) => host[kind](),
     shutdown: () => {
@@ -167,7 +181,14 @@ describe('existing app Host endpoint wiring', () => {
   it('publishes the listening fallback port on cold start and already-running start', async () => {
     const host = createHost();
     await host.start();
-    expect(host.server.start).toHaveBeenCalledWith(expect.any(Object), expect.any(Function), 3456);
+    expect(host.server.start).toHaveBeenCalledWith(
+      expect.objectContaining({
+        teamApis: host.routes.teamHttpHandlerApis,
+        crossTeam: host.routes.crossTeamHttpApi,
+      }),
+      expect.any(Function),
+      3456
+    );
     expect(process.env.CLAUDE_TEAM_CONTROL_URL).toBe('http://127.0.0.1:4591');
     expect(
       JSON.parse(await readFile(path.join(root, 'team-control-api.json'), 'utf8')).baseUrl
@@ -188,12 +209,26 @@ describe('existing app Host endpoint wiring', () => {
     });
   });
 
+  it.each(['teamHttpHandlerApis', 'crossTeamHttpApi'] as const)(
+    'refuses to listen without %s and clears both publications',
+    async (missingRoutes) => {
+      await writeTeamControlApiState('http://127.0.0.1:4590');
+      const host = createHost({ missingRoutes });
+      await expect(host.start()).rejects.toThrow('Team HTTP APIs are not initialized');
+      expect(host.server.start).not.toHaveBeenCalled();
+      expect(process.env.CLAUDE_TEAM_CONTROL_URL).toBeUndefined();
+      await expect(readFile(path.join(root, 'team-control-api.json'))).rejects.toMatchObject({
+        code: 'ENOENT',
+      });
+    }
+  );
+
   it.each(['provisioning', 'memberWorkSync'] as const)(
     '%s retries failed publication even when the server is already listening',
     async (kind) => {
       const publish = vi.fn(writeTeamControlApiState);
       publish.mockRejectedValueOnce(new Error('disk unavailable'));
-      const host = createHost(publish);
+      const host = createHost({ publish });
       await expect(host.start()).rejects.toThrow('disk unavailable');
       expect(host.server.isRunning()).toBe(true);
       expect(process.env.CLAUDE_TEAM_CONTROL_URL).toBeUndefined();
@@ -222,7 +257,7 @@ describe('existing app Host endpoint wiring', () => {
         await gate;
         await writeTeamControlApiState(baseUrl);
       });
-      const host = createHost(publish);
+      const host = createHost({ publish });
       const starting = host.start();
       await vi.waitFor(() => expect(publish).toHaveBeenCalledOnce());
       let resolved = false;
