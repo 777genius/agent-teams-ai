@@ -2700,6 +2700,7 @@ export const CreateTeamDialog = ({
             </div>
             <div className="space-y-4 pt-4 md:col-span-2">
               <CreateTeamTemplateSelectionField
+                disabled={isSubmitting}
                 open={open}
                 isCopy={Boolean(initialData)}
                 form={createTeamDraft}

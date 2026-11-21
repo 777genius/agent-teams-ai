@@ -22,6 +22,7 @@ interface TemplateChipDraft {
 
 interface Props {
   open: boolean;
+  disabled?: boolean;
   isCopy: boolean;
   form: Pick<
     UseCreateTeamDraftResult,
@@ -49,6 +50,7 @@ interface Props {
  */
 export function CreateTeamTemplateSelectionField({
   open,
+  disabled = false,
   isCopy,
   form,
   templateSelection,
@@ -68,6 +70,7 @@ export function CreateTeamTemplateSelectionField({
     <CreateTeamTemplatePicker
       confirmBeforeApply={confirmBeforeApply}
       open={open}
+      disabled={disabled}
       initialSelection={
         isCopy && templateSelection.appliedTemplateSource === 'none'
           ? ''

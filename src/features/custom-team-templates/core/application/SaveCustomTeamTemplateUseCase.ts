@@ -379,7 +379,14 @@ export class SaveCustomTeamTemplateUseCase {
     for (let attempt = 1; attempt <= TEMPLATE_CREATE_MAX_ATTEMPTS; attempt++) {
       let decision: WriteDecision;
       try {
-        decision = mapCreateResult(await gateway.customTeamTemplateCreate(request));
+        const response = await gateway.customTeamTemplateCreate(request);
+        if (response.status === 'existingRecordUnreadable') {
+          // This create call has completed. Preserve any earlier unsettled
+          // writer, but record that this particular response cannot commit
+          // later. A subsequent post-settlement read may establish absence.
+          this.deps.previewStore.markUnresolvedWrite(token, Promise.resolve());
+        }
+        decision = mapCreateResult(response);
       } catch (error) {
         decision = await this.classifyFailure(gateway, request, error, hadUnknownExecution, token);
       }

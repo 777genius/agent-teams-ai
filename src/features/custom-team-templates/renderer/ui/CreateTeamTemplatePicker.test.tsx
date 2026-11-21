@@ -331,21 +331,21 @@ describe('CreateTeamTemplatePicker', () => {
       expect(onApply).not.toHaveBeenCalled();
     });
 
-    it('does not overwrite a deliberate user selection made before the restore arrives', async () => {
+    it('synchronizes later parent-owned selection changes without applying twice', async () => {
       listTemplates.mockResolvedValue({ status: 'ready', templates: customTemplates() });
       renderPicker(true, '');
       await flush();
 
-      // The user deliberately picks a built-in template before the draft loads.
       await click(optionBuiltin('marketing'));
       expect(onApply).toHaveBeenCalledTimes(1);
 
-      // A stale saved selection then arrives asynchronously.
+      // The parent now owns the updated selection. A later external change
+      // must update the cards, but must not re-apply or clobber draft fields.
       renderPicker(true, 'custom:tmpl-custom-1');
       await flush();
 
-      expect(optionBuiltin('marketing')?.getAttribute('aria-pressed')).toBe('true');
-      expect(optionCustom('tmpl-custom-1')?.getAttribute('aria-pressed')).toBe('false');
+      expect(optionBuiltin('marketing')?.getAttribute('aria-pressed')).toBe('false');
+      expect(optionCustom('tmpl-custom-1')?.getAttribute('aria-pressed')).toBe('true');
       expect(onApply).toHaveBeenCalledTimes(1);
     });
 

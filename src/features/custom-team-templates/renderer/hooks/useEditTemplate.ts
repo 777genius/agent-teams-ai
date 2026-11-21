@@ -350,6 +350,7 @@ export function useEditTemplate({
     setBusy(true);
 
     let stored: CustomTeamTemplateV1 | null = null;
+    let advancedRecord: CustomTeamTemplateV1 | null = null;
     try {
       const result = await api.customTeamTemplates.listTemplates();
       if (requestId !== requestIdRef.current) return false;
@@ -359,6 +360,10 @@ export function useEditTemplate({
         );
         if (candidate && matchesPendingUpdate(candidate, pending)) {
           stored = candidate;
+        } else if (candidate && resolveTemplateRevision(candidate) > pending.expectedRevision) {
+          // The old expected revision can no longer be written. Preserve the
+          // user's draft and offer the regular explicit conflict choices.
+          advancedRecord = candidate;
         }
       }
     } catch {
@@ -370,7 +375,14 @@ export function useEditTemplate({
       }
     }
 
-    if (requestId !== requestIdRef.current || !stored) return false;
+    if (requestId !== requestIdRef.current) return false;
+    if (advancedRecord) {
+      pendingUpdateRef.current = null;
+      setRevisionConflict(advancedRecord);
+      setStatus('revisionConflict');
+      return false;
+    }
+    if (!stored) return false;
 
     pendingUpdateRef.current = null;
     setStatus('saved');

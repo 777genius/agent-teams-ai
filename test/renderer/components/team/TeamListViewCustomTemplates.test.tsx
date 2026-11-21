@@ -34,6 +34,17 @@ const storeState = vi.hoisted(() => {
       },
     ],
     teamManagementNoticeByTeam: {} as Record<string, unknown>,
+    paneLayout: {
+      panes: [
+        {
+          id: 'test-pane',
+          activeTabId: 'templates-integration-test',
+          tabs: [{ id: 'templates-integration-test', type: 'teams' }],
+        },
+      ],
+    },
+    openTeamsCreationPage: noop,
+    closeTeamsCreationPage: noop,
     teamsLoading: false,
     teamsError: null as string | null,
     fetchTeams: noop,

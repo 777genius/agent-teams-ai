@@ -537,6 +537,14 @@ try {
 
   const newTeam = 'template-e2e-imported-team';
   await click("document.querySelector('#team-name')");
+  // The current Create Team page seeds a suggested draft name. Replace it,
+  // rather than append to it; this is a real keyboard interaction in Electron.
+  await cdp!.send('Input.dispatchKeyEvent', {
+    type: 'rawKeyDown', key: 'a', code: 'KeyA', windowsVirtualKeyCode: 65, modifiers: 2,
+  });
+  await cdp!.send('Input.dispatchKeyEvent', {
+    type: 'keyUp', key: 'a', code: 'KeyA', windowsVirtualKeyCode: 65, modifiers: 2,
+  });
   await cdp!.send('Input.insertText', { text: newTeam });
   await until(`document.querySelector('#team-name')?.value === ${JSON.stringify(newTeam)}`, 'new name entered');
   await click(button('Create'));

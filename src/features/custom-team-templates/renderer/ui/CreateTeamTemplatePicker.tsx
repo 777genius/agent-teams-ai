@@ -20,6 +20,8 @@ import type { CustomTeamTemplateV1 } from '@features/custom-team-templates/contr
 
 export interface CreateTeamTemplatePickerProps {
   open: boolean;
+  /** Prevent selection changes while Create Team submission is in flight. */
+  disabled?: boolean;
   /** Protect existing draft fields (including No template, which clears them). */
   confirmBeforeApply?: boolean;
   initialSelection?: string;
@@ -51,6 +53,7 @@ function resolveInitialSelection(initialSelection: string | undefined): string {
 
 export const CreateTeamTemplatePicker = ({
   open,
+  disabled = false,
   confirmBeforeApply = false,
   initialSelection,
   initialSelectionReady,
@@ -93,8 +96,8 @@ export const CreateTeamTemplatePicker = ({
   }, [initialSelection]);
 
   useEffect(() => {
-    if (!open || !selectionReady) setPendingSelection(null);
-  }, [open, selectionReady]);
+    if (!open || !selectionReady || disabled) setPendingSelection(null);
+  }, [open, selectionReady, disabled]);
 
   const customs = state.status === 'ready' || state.status === 'partial' ? state.templates : [];
   const libraryLoading = state.status === 'idle' || state.status === 'loading';
@@ -119,7 +122,7 @@ export const CreateTeamTemplatePicker = ({
   const previewCustom = selectedCustom ?? (staleCustomId ? lastCustomSnapshot : null);
 
   const applySelection = (value: string): void => {
-    if (!open || !selectionReady || value === selection) return;
+    if (!open || !selectionReady || disabled || value === selection) return;
     const result = resolveCreateTeamTemplateDraft(value, {
       builtins: TEAM_TEMPLATES,
       customs,
@@ -146,7 +149,7 @@ export const CreateTeamTemplatePicker = ({
   };
 
   const handleSelect = (value: string): void => {
-    if (!open || !selectionReady || value === selection || pendingSelection !== null) return;
+    if (!open || !selectionReady || disabled || value === selection || pendingSelection !== null) return;
     const result = resolveCreateTeamTemplateDraft(value, {
       builtins: TEAM_TEMPLATES,
       customs,
@@ -171,7 +174,7 @@ export const CreateTeamTemplatePicker = ({
   return (
     <div data-testid="create-team-template-picker" className="space-y-3">
       <TemplateApplyConfirmDialog
-        open={pendingSelection !== null && open && selectionReady}
+        open={pendingSelection !== null && open && selectionReady && !disabled}
         onCancel={() => setPendingSelection(null)}
         onConfirm={() => {
           if (pendingSelection !== null) applySelection(pendingSelection);
@@ -201,7 +204,7 @@ export const CreateTeamTemplatePicker = ({
         type="button"
         variant="ghost"
         data-testid="create-template-option-none"
-        disabled={!selectionReady}
+        disabled={!selectionReady || disabled}
         aria-pressed={selection === CREATE_TEAM_TEMPLATE_NONE_VALUE}
         aria-busy={!selectionReady}
         className={`h-auto w-full flex-col items-stretch justify-start whitespace-normal ${optionClass(selection === CREATE_TEAM_TEMPLATE_NONE_VALUE)}`}
@@ -231,7 +234,7 @@ export const CreateTeamTemplatePicker = ({
                 type="button"
                 variant="ghost"
                 data-testid={`create-template-option-builtin-${template.id}`}
-                disabled={!selectionReady}
+                disabled={!selectionReady || disabled}
                 aria-pressed={active}
                 aria-busy={!selectionReady}
                 className={`h-auto w-full flex-col items-stretch justify-start whitespace-normal ${optionClass(active)}`}
@@ -311,7 +314,7 @@ export const CreateTeamTemplatePicker = ({
                   type="button"
                   variant="ghost"
                   data-testid={`create-template-option-custom-${template.templateId}`}
-                  disabled={!selectionReady}
+                  disabled={!selectionReady || disabled}
                   aria-pressed={active}
                   aria-busy={!selectionReady}
                   className={`h-auto w-full flex-col items-stretch justify-start whitespace-normal ${optionClass(active)}`}
