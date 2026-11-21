@@ -156,9 +156,13 @@ describe('DuplicateCustomTemplateDialog', () => {
     expect(duplicateTemplate).toHaveBeenCalledTimes(1);
     expect(host.querySelector('[data-testid="duplicate-template-name-conflict"]')).toBeNull();
 
-    // The entered name stays available for recovery.
+    // Preserve the attempted identity for library inspection, but prevent
+    // re-submission under a new name while the original write may still commit.
     expect(nameInput().value).toBe('customTemplates.duplicate.defaultName|name=Release Pipeline');
-    expect(nameInput().disabled).toBe(false);
+    expect(nameInput().disabled).toBe(true);
+    expect(actionButton().disabled).toBe(true);
+    await duplicateOnce();
+    expect(duplicateTemplate).toHaveBeenCalledTimes(1);
   });
 
   it('keeps a known name conflict distinct from an unknown outcome', async () => {
