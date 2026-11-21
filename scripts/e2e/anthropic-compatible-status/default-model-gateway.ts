@@ -13,13 +13,16 @@ export interface GatewayRequest {
   path: string;
   authorized: boolean;
   model?: string;
-  kind?: 'generic-fast-diagnostic' | 'saved-model-inference';
+  kind?: 'generic-fast-diagnostic' | 'saved-model-inference' | 'product-message';
+  productMarkerSeen?: boolean;
   completed?: boolean;
   allowed: boolean;
 }
 
 /** Local-only Messages endpoint. Legacy fast diagnostic and selected Qwen stay distinct. */
-export async function startDefaultModelGateway() {
+export async function startDefaultModelGateway(options: { productMarker?: string } = {}) {
+  const productMarker = options.productMarker;
+  if (productMarker !== undefined) assert(/^WINDOWS_PRODUCT_TEAM_E2E_[0-9a-f-]{36}$/.test(productMarker));
   const token = `default-model-fixture-${randomBytes(18).toString('hex')}`;
   const requests: GatewayRequest[] = [];
   let inFlight = 0;
@@ -84,11 +87,15 @@ export async function startDefaultModelGateway() {
         return;
       }
       entry.model = body.model;
-      entry.kind =
-        body.model === diagnosticModel ? 'generic-fast-diagnostic' : 'saved-model-inference';
-      entry.allowed =
-        [configuredDefault, diagnosticModel].includes(body.model ?? '') &&
-        JSON.stringify(body.messages).includes(probePrompt);
+      const messages = JSON.stringify(body.messages);
+      entry.productMarkerSeen = Boolean(productMarker && messages.includes(productMarker));
+      entry.kind = body.model === diagnosticModel ? 'generic-fast-diagnostic'
+        : entry.productMarkerSeen ? 'product-message' : 'saved-model-inference';
+      // Only this explicit test-only run allows arbitrary startup text. Every
+      // request remains loopback, auth-token checked, and receives synthetic PONG.
+      entry.allowed = [configuredDefault, diagnosticModel].includes(body.model ?? '') &&
+        (messages.includes(probePrompt) ||
+          Boolean(productMarker && body.model === configuredDefault));
       if (!entry.allowed) {
         res.writeHead(400).end('Only bounded fixture PONG inference is permitted');
         return;
