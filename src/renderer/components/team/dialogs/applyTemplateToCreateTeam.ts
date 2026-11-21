@@ -1,8 +1,8 @@
 import { buildInitialRosterMemberDrafts } from './createTeamInitialRoster';
 
+import type { UseCreateTeamTemplateSelectionResult } from './useCreateTeamTemplateSelection';
 import type { CreateTeamTemplatePickerProps } from '@features/custom-team-templates/renderer';
 import type { MemberDraft } from '@renderer/components/team/members/MembersEditorSection';
-import type { UseCreateTeamTemplateSelectionResult } from './useCreateTeamTemplateSelection';
 
 interface TemplateApplication {
   templateSelection: UseCreateTeamTemplateSelectionResult;

@@ -4,7 +4,10 @@
  * Registers all domain-specific route handlers on a Fastify instance.
  * Each route file mirrors the corresponding IPC handler.
  */
-import { registerCustomTeamTemplatesHttp, type CustomTeamTemplatesFeature } from '@features/custom-team-templates/main';
+import {
+  type CustomTeamTemplatesFeature,
+  registerCustomTeamTemplatesHttp,
+} from '@features/custom-team-templates/main';
 import {
   type OrganizationsFeatureFacade,
   registerOrganizationsHttp,

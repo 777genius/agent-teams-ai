@@ -6,8 +6,8 @@ import { applyTemplateToCreateTeam } from './applyTemplateToCreateTeam';
 import { buildDefaultTeamDescription } from './createTeamDescription';
 import { hasExistingCreateTeamDraftContent } from './hasExistingCreateTeamDraftContent';
 
-import type { UseCreateTeamDraftResult } from '@renderer/hooks/useCreateTeamDraft';
 import type { UseCreateTeamTemplateSelectionResult } from './useCreateTeamTemplateSelection';
+import type { UseCreateTeamDraftResult } from '@renderer/hooks/useCreateTeamDraft';
 
 interface TemplateTextDraft {
   value: string;

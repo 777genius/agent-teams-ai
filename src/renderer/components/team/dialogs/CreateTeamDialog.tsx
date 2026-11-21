@@ -106,8 +106,6 @@ import { CodexReconnectPrompt, shouldShowCodexReconnectPrompt } from './CodexRec
 import { consumeTeamCopySeedOnce } from './createTeamCopySeed';
 import { buildDefaultTeamDescription } from './createTeamDescription';
 import { CreateTeamHeaderActions } from './CreateTeamHeaderActions';
-import { CreateTeamPromptField } from './CreateTeamPromptField';
-import { CreateTeamTemplateSelectionField } from './CreateTeamTemplateSelectionField';
 import { buildInitialRosterMemberDrafts } from './createTeamInitialRoster';
 import { buildLaunchOptionalSummary } from './createTeamOptionalSummary';
 import {
@@ -116,12 +114,14 @@ import {
   getOrganizationUnitLabel,
 } from './createTeamOrganizationPlacement';
 import { CreateTeamPageActivityContext } from './createTeamPageActivityContext';
+import { CreateTeamPromptField } from './CreateTeamPromptField';
 import {
   sanitizeTeamName,
   validateRequest,
   validateTeamNameInline,
 } from './createTeamSubmissionValidation';
 import { CreateTeamSurface } from './CreateTeamSurface';
+import { CreateTeamTemplateSelectionField } from './CreateTeamTemplateSelectionField';
 import {
   buildProviderModelChecksMap,
   collectDialogMemberProviderIds,
@@ -216,6 +216,7 @@ import {
   useWorktreeGitReadiness,
   WorktreeGitReadinessBanner,
 } from './WorktreeGitReadinessBanner';
+
 import type { CreateTeamDialogProps } from './CreateTeamDialog.types';
 import type {
   OrganizationPlacementSelection,

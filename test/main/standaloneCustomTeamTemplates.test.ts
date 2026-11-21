@@ -25,6 +25,7 @@ import {
   type ReadCustomTeamTemplateRecordResult,
   type UpdateCustomTeamTemplateRecordResult,
 } from '@features/custom-team-templates/contracts';
+import { TEMPLATE_MAX_CREATE_DRAFT_BYTES } from '@features/custom-team-templates/core/domain/templateLimits';
 import { registerCustomTeamTemplatesHttp } from '@features/custom-team-templates/main/adapters/input/http/registerCustomTeamTemplatesHttp';
 import {
   createCustomTeamTemplatesFeature,
@@ -32,6 +33,10 @@ import {
 } from '@features/custom-team-templates/main/composition/createCustomTeamTemplatesFeature';
 import { applyCustomTeamTemplate } from '@features/custom-team-templates/renderer/templateDraft';
 import { InternalStorageWorkerCore } from '@features/internal-storage/main/infrastructure/worker/InternalStorageWorkerCore';
+import {
+  resolveThisAppProfileScope,
+  TEAM_PROFILE_OWNER_MARKER_FILE,
+} from '@main/services/team/provisioning/TeamProvisioningProfileOwnership';
 import { TeamDataService } from '@main/services/team/TeamDataService';
 import { TeamMembersMetaStore } from '@main/services/team/TeamMembersMetaStore';
 import { setClaudeBasePathOverride } from '@main/utils/pathDecoder';
@@ -239,28 +244,40 @@ describe('standalone custom-team-templates HTTP integration', () => {
     });
   });
 
-  it('persists a valid update larger than 1 MiB and rejects stale edits across reopening', async () => {
+  it('persists a valid JSON-escaped update larger than 1 MiB and rejects stale edits across reopening', async () => {
     tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'standalone-templates-large-update-'));
     const dbPath = path.join(tmpDir, 'storage', 'app.db');
     const core = trackCore(dbPath);
     const first = sqliteFeature(core);
     const app = serve(first.feature);
     const { templateId } = await prepareAndSave(app, 'Release Pipeline');
-    const before = await app.inject({ method: 'GET', url: CUSTOM_TEAM_TEMPLATE_ROUTES.listTemplates });
+    const before = await app.inject({
+      method: 'GET',
+      url: CUSTOM_TEAM_TEMPLATE_ROUTES.listTemplates,
+    });
     const original = before.json().templates[0] as CustomTeamTemplateV1;
     expect(original.revision).toBe(1);
     const fields = {
       name: 'Large release pipeline',
       description: 'Six independently bounded workflows',
       teamPrompt: 'Deliver the updated feature.',
-      members: Array.from({ length: 6 }, (_, index) => ({
-        name: `member-${index}`,
-        role: 'Engineer',
-        workflow: `${index}:` + 'w'.repeat(190_000),
-      })),
+      members: ['architect', 'developer', 'reviewer', 'tester', 'designer', 'writer'].map(
+        (name, index) => ({
+          name,
+          role: 'Engineer',
+          workflow: `${index}:` + 'w'.repeat(30_000),
+        })
+      ),
     };
-    const payload = JSON.stringify({ templateId, expectedRevision: 1, fields });
+    // The decoded content must fit Create Team's aggregate budget. JSON escapes
+    // still exercise an HTTP body beyond Fastify's default 1 MiB without changing it.
+    expect(Buffer.byteLength(JSON.stringify(fields), 'utf8')).toBeLessThan(
+      TEMPLATE_MAX_CREATE_DRAFT_BYTES
+    );
+    const request = { templateId, expectedRevision: 1, fields };
+    const payload = JSON.stringify(request).replaceAll('w', '\\u0077');
     expect(Buffer.byteLength(payload, 'utf8')).toBeGreaterThan(1024 * 1024);
+    expect(JSON.parse(payload)).toEqual(request);
 
     const updated = await app.inject({
       method: 'POST',
@@ -280,7 +297,10 @@ describe('standalone custom-team-templates HTTP integration', () => {
       },
     });
     const persisted = updated.json().template as CustomTeamTemplateV1;
-    const listed = await app.inject({ method: 'GET', url: CUSTOM_TEAM_TEMPLATE_ROUTES.listTemplates });
+    const listed = await app.inject({
+      method: 'GET',
+      url: CUSTOM_TEAM_TEMPLATE_ROUTES.listTemplates,
+    });
     expect(listed.json()).toEqual({ status: 'ready', templates: [persisted] });
 
     await app.close();
@@ -465,10 +485,21 @@ describe('standalone custom-team-templates HTTP integration', () => {
         const directory = path.join(claudeRoot, 'teams', teamName);
         // A draft has no CLI config, session, launch state or copied inbox/task payload.
         expect((await fs.readdir(directory)).sort()).toEqual([
+          TEAM_PROFILE_OWNER_MARKER_FILE,
           'inboxes',
           'members.meta.json',
           'team.meta.json',
         ]);
+        expect(
+          JSON.parse(
+            await fs.readFile(path.join(directory, TEAM_PROFILE_OWNER_MARKER_FILE), 'utf8')
+          )
+        ).toEqual({
+          schemaVersion: 1,
+          profileScope: resolveThisAppProfileScope(),
+          claimedAt: expect.any(String),
+          reason: 'create',
+        });
         expect(await fs.readdir(path.join(directory, 'inboxes'))).toEqual([]);
         expect(await fs.readdir(path.join(claudeRoot, 'tasks', teamName))).toEqual([]);
         const members = await membersStore.getMembers(teamName);

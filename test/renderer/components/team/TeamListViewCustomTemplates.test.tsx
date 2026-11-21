@@ -43,7 +43,8 @@ const storeState = vi.hoisted(() => {
         },
       ],
     },
-    openTeamsCreationPage: noop,
+    getAllPaneTabs: vi.fn(),
+    openTeamsCreationPage: vi.fn(),
     closeTeamsCreationPage: noop,
     teamsLoading: false,
     teamsError: null as string | null,
@@ -84,9 +85,11 @@ vi.mock('@renderer/api', () => ({
   },
 }));
 vi.mock('@renderer/store', () => ({
-  useStore: (selector?: (state: typeof storeState) => unknown) =>
-    typeof selector === 'function' ? selector(storeState) : storeState,
-  getState: () => storeState,
+  useStore: Object.assign(
+    (selector?: (state: typeof storeState) => unknown) =>
+      typeof selector === 'function' ? selector(storeState) : storeState,
+    { getState: () => storeState }
+  ),
 }));
 vi.mock('zustand/react/shallow', () => ({ useShallow: (selector: unknown) => selector }));
 vi.mock('@features/localization/renderer', () => ({
@@ -113,10 +116,6 @@ vi.mock('@renderer/components/team/useTeamStopControl', () => ({
 }));
 vi.mock('@renderer/components/team/dialogs/teamRelaunchFlow', () => ({
   executeTeamRelaunch: vi.fn(),
-}));
-vi.mock('@renderer/components/team/dialogs/CreateTeamDialog', () => ({
-  CreateTeamDialog: ({ open }: { open: boolean }) =>
-    open ? React.createElement('div', { 'data-testid': 'create-team-dialog' }) : null,
 }));
 vi.mock('@renderer/components/ui/dialog', () => ({
   Dialog: ({ open, children }: { open: boolean; children: React.ReactNode }) =>
@@ -195,7 +194,6 @@ async function flush(): Promise<void> {
     await Promise.all([
       import('@features/custom-team-templates/renderer/ui/SaveAsTemplateDialog'),
       import('@features/custom-team-templates/renderer/ui/MyTemplatesDialog'),
-      import('@renderer/components/team/dialogs/CreateTeamDialog'),
     ]);
     await new Promise((resolve) => setTimeout(resolve, 0));
   });
@@ -231,6 +229,11 @@ beforeEach(() => {
     },
   });
   listTemplates.mockResolvedValue({ status: 'empty' });
+  storeState.getAllPaneTabs.mockReset();
+  storeState.getAllPaneTabs.mockReturnValue(
+    storeState.paneLayout.panes.flatMap((pane) => pane.tabs)
+  );
+  storeState.openTeamsCreationPage.mockReset();
   storeState.openTeamTab = vi.fn();
   host = document.createElement('div');
   document.body.appendChild(host);
@@ -268,18 +271,35 @@ describe('TeamListView custom team template actions', () => {
       description: '',
     });
     expect(getSavedRequest).not.toHaveBeenCalled();
-    expect(host.querySelector('[data-testid="create-team-dialog"]')).toBeNull();
+    expect(storeState.openTeamsCreationPage).not.toHaveBeenCalled();
     expect(storeState.openTeamTab).not.toHaveBeenCalled();
 
-    // Copy team still reads the saved request and opens the create dialog.
+    await act(async () => buttonByText('actions.close').click());
+    expect(host.querySelector('[role="dialog"]')).toBeNull();
+
+    // Copy team reads the saved request and seeds the shared creation page.
     await act(async () => {
       buttonByLabel('list.actions.copyTeam', card).click();
       await Promise.resolve();
     });
     await flush();
     expect(getSavedRequest).toHaveBeenCalledWith('alpha');
-    expect(host.querySelector('[data-testid="create-team-dialog"]')).not.toBeNull();
+    expect(storeState.openTeamsCreationPage).toHaveBeenCalledTimes(1);
+    expect(storeState.openTeamsCreationPage).toHaveBeenCalledWith(
+      {
+        copyData: expect.objectContaining({
+          teamName: 'alpha-1',
+          runtimeSelectionVersion: 1,
+          description: 'First team',
+          cwd: '/opt/acme/project',
+          prompt: 'Lead the work.',
+          members: [expect.objectContaining({ name: 'ann' })],
+        }),
+      },
+      true
+    );
     expect(preparePreview).toHaveBeenCalledTimes(1);
+    expect(saveTemplate).not.toHaveBeenCalled();
     expect(storeState.openTeamTab).not.toHaveBeenCalled();
   });
 

@@ -15,8 +15,8 @@ import { applyTeamTemplate, TEAM_TEMPLATES } from '../core';
 import { TemplateApplyConfirmDialog } from './TemplateApplyConfirmDialog';
 import { TEAM_TEMPLATE_ICONS } from './templateIcons';
 
-import type { TeamCreateConfigRequest, TeamProviderId } from '@shared/types';
 import type { TeamTemplateV1 } from '../contracts';
+import type { TeamCreateConfigRequest, TeamProviderId } from '@shared/types';
 
 export { TemplateApplyConfirmDialog } from './TemplateApplyConfirmDialog';
 export { TEAM_TEMPLATE_ICONS } from './templateIcons';
