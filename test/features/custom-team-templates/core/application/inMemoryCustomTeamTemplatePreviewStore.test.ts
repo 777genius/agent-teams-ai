@@ -32,7 +32,11 @@ describe('InMemoryCustomTeamTemplatePreviewStore', () => {
       capacity: 1,
     });
     const pending = store.issue(baseInput);
-    store.confirmSave(pending.token, { templateId: 'tmpl-1', name: 'Template', nameKey: 'template' });
+    store.confirmSave(pending.token, {
+      templateId: 'tmpl-1',
+      name: 'Template',
+      nameKey: 'template',
+    });
     expect(store.tryBeginSave(pending.token)).toBe(true);
     expect(store.tryBeginSave(pending.token)).toBe(false);
     now = 200;

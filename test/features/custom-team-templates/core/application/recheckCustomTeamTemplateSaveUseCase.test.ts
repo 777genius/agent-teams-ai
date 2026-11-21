@@ -158,11 +158,13 @@ describe('RecheckCustomTeamTemplateSaveUseCase', () => {
     const fixture = operation({ read: { status: 'notFound' } });
     expect(fixture.store.tryBeginSave(fixture.token)).toBe(true);
     await expect(fixture.useCase.execute({ previewToken: fixture.token })).resolves.toEqual({
-      status: 'unresolved', templateId: TEMPLATE_ID,
+      status: 'unresolved',
+      templateId: TEMPLATE_ID,
     });
     fixture.store.finishSave(fixture.token);
     await expect(fixture.useCase.execute({ previewToken: fixture.token })).resolves.toEqual({
-      status: 'notSaved', templateId: TEMPLATE_ID,
+      status: 'notSaved',
+      templateId: TEMPLATE_ID,
     });
   });
 

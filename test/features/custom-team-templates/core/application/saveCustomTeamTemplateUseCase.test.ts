@@ -311,7 +311,8 @@ describe('SaveCustomTeamTemplateUseCase', () => {
     await started;
     expect(preview.store.isSaveInFlight(preview.token)).toBe(true);
     await expect(save.execute({ previewToken: preview.token })).resolves.toEqual({
-      status: 'unresolvedWriteOutcome', templateId: preview.stateTemplateId,
+      status: 'unresolvedWriteOutcome',
+      templateId: preview.stateTemplateId,
     });
     expect(write).toHaveBeenCalledTimes(1);
 
