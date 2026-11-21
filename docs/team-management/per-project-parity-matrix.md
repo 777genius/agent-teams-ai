@@ -208,6 +208,7 @@ The rows "Create through HTTP / MCP `team_create`", "Launch through HTTP / MCP `
 
 - **Not additive:** `POST /api/teams` and MCP `team_create` now require `projectContextMode` (400 `PROJECT_CONTEXT_MODE_REQUIRED` without it). A client that relied on the old forced `shared` sends `projectContextMode: "shared"`. There is no silent default while the MCP board tools and trash do not support a per-project team (see section F).
 - One launch use case for every transport: the desktop IPC, HTTP and MCP call `launchInProjectContext` (`src/features/team-project-context/main/projectContextLaunch.ts`); the HTTP launch guard that refused per-project teams is removed.
+- Launches over HTTP and MCP record launch settings into the definition and the copy like a launch from the app (`recordLaunch` is called by `launchInProjectContext`); a launch that found the copy already running records nothing.
 - Real agent execution after an HTTP/MCP launch was not exercised: the Electron E2E runs against a runtime that denies agents.
 
 ## Appendix: probe of the raw team list

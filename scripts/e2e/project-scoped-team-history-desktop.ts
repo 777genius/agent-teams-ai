@@ -918,9 +918,10 @@ async function verifySchedules(f: Fixture) {
 }
 
 /**
- * Hosted web and MCP use the HTTP control API of the app: create a team there without a history
- * mode, launch it in a project it never ran in, and check that the copy is made by the launch of
- * the app (index, copy files, progress named after the team) and that refusals change nothing.
+ * Hosted web and MCP use the HTTP control API of the app: create a per-project team there (the
+ * history mode is required), launch it in a project it never ran in, retry after the denied run,
+ * and check that the copy is made by the launch of the app (index, copy files, progress named
+ * after the team) and that refusals change nothing.
  */
 async function verifyHttpCreateAndLaunch(f: Fixture) {
   assert(cdp);
@@ -1052,6 +1053,7 @@ async function verifyHttpCreateAndLaunch(f: Fixture) {
   return { launchStatus: launched.status, finalState, copy: copy.executionTeamName };
 }
 
+/**
  * Launch settings belong to the team, not to one project copy. Requests have the shape the launch
  * dialog sends (every key, unset ones explicitly undefined). What is chosen for a launch in one
  * project is what the team shows and uses in the others; a provider change drops what belonged to
