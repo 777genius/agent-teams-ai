@@ -2697,7 +2697,7 @@ export const CreateTeamDialog = ({
               <CreateTeamTemplatePicker
                 open={open}
                 initialSelection={initialData ? '' : storedTemplateSelection.value}
-                initialSelectionReady={draftLoaded && (initialData || templateSelectionDraft.isLoaded !== false)}
+                initialSelectionReady={draftLoaded && (Boolean(initialData) || templateSelectionDraft.isLoaded !== false)}
                 confirmBeforeApply={
                   members.length > 0 ||
                   (descriptionDraft.value.trim().length > 0 &&
