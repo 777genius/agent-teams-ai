@@ -428,6 +428,24 @@ try {
     'Closing and reopening My Templates re-reads both saved rows from the real storage worker.'
   );
 
+
+  // Apply the imported record through the actual modern Create Team page,
+  // exercising the shared built-in/custom picker and prompt draft.
+  await closeDialog();
+  await click(button('Create Team'));
+  await until("document.querySelector('[data-testid=\"create-team-template-picker\"]')", 'Create Team template picker');
+  await until(
+    `document.querySelector('[data-testid="create-template-option-custom-${original.templateId}"]')`,
+    'imported custom template visible in Create Team'
+  );
+  await click(`document.querySelector('[data-testid="create-template-option-custom-${original.templateId}"]')`);
+  await until(
+    `document.querySelector('#team-prompt')?.value === ${JSON.stringify(portable.teamPrompt)}`,
+    'imported template prompt applied to the modern form'
+  );
+  await screenshot('08-create-team-from-imported-template');
+  checks.push('Modern Create Team page selects the imported template and restores its prompt with a real renderer click.');
+
   receipt.cdpPort = port;
   receipt.savedTemplateIds = saved.map((t) => t.templateId);
   receipt.rendererErrors = rendererErrors;

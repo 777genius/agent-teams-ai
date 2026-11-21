@@ -1,6 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 
 import { useDraftPersistence } from '@renderer/hooks/useDraftPersistence';
+import { buildInitialRosterMemberDrafts } from './createTeamInitialRoster';
+
+import type { CreateTeamTemplatePickerProps } from '@features/custom-team-templates/renderer';
+import type { MemberDraft } from '@renderer/components/team/members/MembersEditorSection';
 
 import {
   type CreateTeamTemplateSource,
@@ -11,6 +15,12 @@ import {
 export interface UseCreateTeamTemplateSelectionOptions {
   /** True when the dialog was populated from existing team data; template state must be cleared then. */
   initialData: boolean;
+  descriptionDraft: { setValue(value: string): void };
+  promptDraft: { setValue(value: string): void };
+  promptChipDraft: { clearChipDraft(): void };
+  setLaunchTeam(value: boolean): void;
+  setSoloTeam(value: boolean): void;
+  setMembers(members: MemberDraft[]): void;
 }
 
 export interface UseCreateTeamTemplateSelectionResult {
@@ -43,6 +53,7 @@ export interface UseCreateTeamTemplateSelectionResult {
    * former inline reset of `setAppliedTemplateSource('none')` +
    * `templateSelectionDraft.clearDraft()` in `resetFormState`. */
   clearTemplateSelection: () => void;
+  applyTemplate: CreateTeamTemplatePickerProps['onApply'];
 }
 
 /**
@@ -56,6 +67,12 @@ export interface UseCreateTeamTemplateSelectionResult {
  */
 export function useCreateTeamTemplateSelection({
   initialData,
+  descriptionDraft,
+  promptDraft,
+  promptChipDraft,
+  setLaunchTeam,
+  setSoloTeam,
+  setMembers,
 }: UseCreateTeamTemplateSelectionOptions): UseCreateTeamTemplateSelectionResult {
   const templateSelectionDraft = useDraftPersistence({
     key: 'createTeam:templateSelection',
@@ -90,7 +107,21 @@ export function useCreateTeamTemplateSelection({
     templateSelectionDraft.clearDraft();
   };
 
+  const applyTemplate: UseCreateTeamTemplateSelectionResult['applyTemplate'] = (draft, source, value) => {
+    setAppliedTemplateSource(source);
+    templateSelectionDraft.setValue(JSON.stringify({ source, value: value ?? '' }));
+    if (source !== 'none') {
+      setLaunchTeam(false);
+      setSoloTeam(false);
+    }
+    descriptionDraft.setValue(draft.description ?? '');
+    promptDraft.setValue(draft.prompt ?? '');
+    promptChipDraft.clearChipDraft();
+    setMembers(buildInitialRosterMemberDrafts({ copiedMembers: draft.members, multimodelEnabled: true }));
+  };
+
   return {
+    applyTemplate,
     templateSelectionDraft,
     appliedTemplateSource,
     setAppliedTemplateSource,

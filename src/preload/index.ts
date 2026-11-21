@@ -295,7 +295,6 @@ import {
 import { installRendererLogForwarding } from './installRendererLogForwarding';
 import { installSentryRendererIpcBridge } from './installSentryRendererIpcBridge';
 import { createOpenCodeStartupCleanupAPI } from './openCodeStartupCleanup';
-
 import type {
   ReviewDraftHistoryConflictCandidateSummary,
   ReviewDraftHistoryEntry,
@@ -463,14 +462,12 @@ import type {
 } from '@shared/types/extensions';
 import type { PtySpawnOptions } from '@shared/types/terminal';
 import type { CliArgsValidationResult } from '@shared/utils/cliArgsParser';
-
 // Expose Sentry's classic IPC bridge so packaged renderers do not fall back to sentry-ipc:// fetch.
 try {
   installSentryRendererIpcBridge();
 } catch {
   // Sentry telemetry must never block the application preload bridge.
 }
-
 // =============================================================================
 // IPC Result Types and Helpers
 // =============================================================================

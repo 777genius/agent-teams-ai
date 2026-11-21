@@ -441,7 +441,6 @@ function readOptionalEnvArgs(name: string): string[] | undefined {
   const args = value.split(/\s+/).filter(Boolean);
   return args.length > 0 ? args : undefined;
 }
-
 if (
   earlyElectronUserDataMigrationResult.migrated &&
   earlyElectronUserDataMigrationResult.legacyPath &&
@@ -464,14 +463,12 @@ if (
   logger.warn(`Electron userData migration failed, using legacy path for this run`);
 }
 startEventLoopLagMonitor();
-
 // Windows: set AppUserModelId early so native notifications show the correct
 // application title instead of the default "electron.app.{name}" identifier.
 // Must match the appId in electron-builder config (package.json → build.appId).
 if (process.platform === 'win32') {
   app.setAppUserModelId('com.agent-teams.app');
 }
-
 // --- Team message notification tracking ---
 const teamInboxReader = new TeamInboxReader();
 const teamInboxWriter = new TeamInboxWriter();
@@ -485,7 +482,6 @@ const inboxNotifyTimers = new Map<string, ReturnType<typeof setTimeout>>();
 const INBOX_NOTIFY_DEBOUNCE_MS = 500;
 /** Messages sent from our UI (user_sent) - suppress notifications for these. */
 const suppressedSources = new Set(['user_sent']);
-
 async function createOpenCodeRuntimeAdapterRegistry(
   reportProgress: (phase: string, message: string) => void = () => undefined,
   gatewayRuntime?: ReturnType<typeof createGatewayLaunchRuntime>
@@ -506,7 +502,6 @@ async function createOpenCodeRuntimeAdapterRegistry(
     configureCursorAgentAtomicReapBridge(null);
     return new TeamRuntimeAdapterRegistry();
   }
-
   reportProgress('runtime-environment', 'Preparing runtime environment...');
   const bridgeEnv = await createAttachmentBridgeEnvironment(binaryPath);
   let explicitOpenCodeBinaryOverride = hasExplicitOpenCodeBinaryOverride(bridgeEnv);
@@ -577,7 +572,6 @@ async function createOpenCodeRuntimeAdapterRegistry(
       copyOpenCodeLocalMcpLaunchEnv(explicitLocalMcpLaunchEnv, bridgeEnv);
       return;
     }
-
     await applyMcpLaunchSpecEnv(targetEnv, options);
     if (hasOpenCodeLocalMcpLaunchEnv(targetEnv)) {
       copyOpenCodeLocalMcpLaunchEnv(targetEnv, bridgeEnv);
@@ -624,7 +618,6 @@ async function createOpenCodeRuntimeAdapterRegistry(
     );
   }
   await startupStage(() => ensureOpenCodeLocalMcpLaunchEnv(bridgeEnv, { emitProgress: true }));
-
   reportProgress('runtime-bridge', 'Preparing OpenCode bridge...');
 
   const bridgeControlDir = join(app.getPath('userData'), 'opencode-bridge');

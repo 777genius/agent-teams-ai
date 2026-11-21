@@ -227,9 +227,7 @@ function renderTeamRecentPaths(
     </div>
   );
 }
-
 type TeamT = ReturnType<typeof useAppTranslation>['t'];
-
 interface ActiveTeamCardProps {
   managementChange?: TeamManagementCommittedChange;
   team: TeamSummary;
@@ -254,7 +252,6 @@ interface ActiveTeamCardProps {
   onDeleteTeam: (teamName: string, pendingCreate: boolean, event: React.MouseEvent) => void;
   t: TeamT;
 }
-
 const ActiveTeamCard = ({
   managementChange,
   team,

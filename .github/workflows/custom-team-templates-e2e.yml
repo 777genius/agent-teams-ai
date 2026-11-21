@@ -1,0 +1,64 @@
+name: Custom team templates Linux Electron E2E
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize, ready_for_review]
+    paths:
+      - '.github/workflows/custom-team-templates-e2e.yml'
+      - 'scripts/e2e/custom-template-import-export-desktop.ts'
+      - 'src/features/custom-team-templates/**'
+      - 'src/features/internal-storage/**'
+      - 'src/renderer/components/team/**'
+      - 'src/main/startCustomTeamTemplatesFeature.ts'
+      - 'src/main/standalone.ts'
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/custom-team-templates-e2e.yml'
+      - 'scripts/e2e/custom-template-import-export-desktop.ts'
+      - 'src/features/custom-team-templates/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  template-desktop:
+    if: github.event_name != 'pull_request' || github.event.pull_request.draft != true
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      AGENT_TEAMS_INSTALL_PROFILE: node-ci
+      CUSTOM_TEMPLATE_E2E_OUTPUT_DIR: ${{ runner.temp }}/custom-template-evidence
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+      - name: Install Linux display dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y xvfb fonts-noto-cjk
+      - name: Install frozen dependencies
+        run: node ./scripts/ci/install-dependencies-with-retry.mjs
+      - name: Verify Electron installation
+        run: node ./scripts/ensure-electron-install.cjs --strict
+      - name: Native renderer, SQLite, import/export and Create Team picker
+        run: xvfb-run -a pnpm test:e2e:custom-template-import-export
+      - name: Upload evidence and failure screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: custom-team-templates-${{ github.event.pull_request.head.sha || github.sha }}
+          retention-days: 14
+          if-no-files-found: warn
+          path: ${{ runner.temp }}/custom-template-evidence/
