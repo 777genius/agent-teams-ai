@@ -19,6 +19,8 @@ export type CustomTeamTemplateValidationIssueCode =
   | 'duplicateMemberName'
   | 'memberRoleTooLong'
   | 'memberWorkflowTooLong'
+  /** The combined serialized roster exceeds the team metadata UTF-8 byte limit. */
+  | 'membersMetadataTooLarge'
   /**
    * The imported document carries an own property outside the portable
    * allowlist. `field` is the offending path (`templateId`,

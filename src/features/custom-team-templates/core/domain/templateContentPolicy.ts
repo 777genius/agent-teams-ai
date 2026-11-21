@@ -3,7 +3,6 @@ import { isCanonicalSettingsLeadMember } from '@shared/utils/leadDetection';
 import {
   createCliAutoSuffixNameGuard,
   createCliProvisionerNameGuard,
-  parseNumericSuffixName,
   validateTeamMemberNameFormat,
 } from '@shared/utils/teamMemberName';
 
@@ -27,6 +26,14 @@ import type {
 } from '@features/custom-team-templates/contracts';
 
 const RESERVED_TEAMMATE_NAMES = new Set(['user', 'system', 'team-lead']);
+
+// The ordinary team metadata writer caps members.meta.json at 256 KiB UTF-8.
+// Template drafts share that serialized roster, but runtime options will add
+// fields when the team is created; reserve space for those fields up front.
+// This policy is browser-safe and intentionally has no @main dependency.
+const MAX_TEAM_METADATA_BYTES = 256 * 1024;
+const TEAM_METADATA_HEADROOM_BYTES = 1024;
+const MEMBER_RUNTIME_HEADROOM_BYTES = 256;
 
 function isReservedName(name: string): boolean {
   return RESERVED_TEAMMATE_NAMES.has(name.trim().toLowerCase());
@@ -159,7 +166,6 @@ export function validateTemplateContent(
         validateTeamMemberNameFormat(name) ||
         isReservedName(name) ||
         !keepAutoSuffixedName(name) ||
-        (parseNumericSuffixName(name)?.suffix ?? 0) >= 2 ||
         !keepNonProvisionerName(name)
       ) {
         issues.push({ code: 'memberNameInvalid', field: `${baseField}.name` });
@@ -177,6 +183,27 @@ export function validateTemplateContent(
       issues.push({ code: 'memberWorkflowTooLong', field: `${baseField}.workflow` });
     }
   });
+
+  // Validate the combined UTF-8 serialized roster, not merely each workflow's
+  // character count. JSON escaping and multibyte text also count toward the
+  // 256 KiB limit enforced by TeamMembersMetaStore.serializeMembers.
+  const projectedMetadata = {
+    version: 1 as const,
+    members: content.members.map((member) => ({
+      name: member.name.trim(),
+      ...(member.role?.trim() ? { role: member.role.trim() } : {}),
+      ...(member.workflow?.trim() ? { workflow: member.workflow.trim() } : {}),
+    })),
+  };
+  const metadataBytes = new TextEncoder().encode(JSON.stringify(projectedMetadata, null, 2))
+    .byteLength;
+  if (
+    metadataBytes + TEAM_METADATA_HEADROOM_BYTES +
+      content.members.length * MEMBER_RUNTIME_HEADROOM_BYTES >
+    MAX_TEAM_METADATA_BYTES
+  ) {
+    issues.push({ code: 'membersMetadataTooLarge', field: 'members' });
+  }
 
   return issues;
 }

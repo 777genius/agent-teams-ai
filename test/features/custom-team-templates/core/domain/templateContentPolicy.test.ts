@@ -416,6 +416,37 @@ describe('validateTemplateContent', () => {
     });
   });
 
+  it('accepts standalone numeric suffixes but rejects auto-suffix duplicates', () => {
+    expect(validateTemplateContent(content([{ name: 'dev-2' }]))).toEqual([]);
+    expect(validateTemplateContent(content([{ name: 'alice-provisioner-2' }]))).toEqual([]);
+    expect(validateTemplateContent(content([{ name: 'dev' }, { name: 'dev-2' }]))).toContainEqual({
+      code: 'memberNameInvalid',
+      field: 'members[1].name',
+    });
+  });
+
+  it('rejects aggregate UTF-8 member metadata that the team writer cannot serialize', () => {
+    const giantWorkflows = content([
+      { name: 'first', workflow: 'a'.repeat(150_000) },
+      { name: 'second', workflow: 'b'.repeat(150_000) },
+    ]);
+    expect(validateTemplateContent(giantWorkflows)).toContainEqual({
+      code: 'membersMetadataTooLarge',
+      field: 'members',
+    });
+
+    // UTF-8 bytes, not UTF-16 JS string length, must be the limiting unit.
+    const unicodeWorkflows = content([
+      { name: 'first', workflow: '🔍'.repeat(35_000) },
+      { name: 'second', workflow: '✅'.repeat(35_000) },
+    ]);
+    expect(validateTemplateContent(unicodeWorkflows)).toContainEqual({
+      code: 'membersMetadataTooLarge',
+      field: 'members',
+    });
+    expect(validateTemplateContent(content([{ name: 'developer', workflow: 'a'.repeat(200_000) }]))).toEqual([]);
+  });
+
   it('rejects oversized content without truncating it', () => {
     const oversizedPrompt = 'x'.repeat(TEMPLATE_TEAM_PROMPT_MAX_LENGTH + 1);
     expect(
