@@ -40,7 +40,13 @@ const pristine: DraftState = {
   project: '/tmp/TEST-template-project',
 };
 
-function Form({ initial, onTemplateApplied }: { initial: DraftState; onTemplateApplied?: (id: string) => void }): React.JSX.Element {
+function Form({
+  initial,
+  onTemplateApplied,
+}: {
+  initial: DraftState;
+  onTemplateApplied?: (id: string) => void;
+}): React.JSX.Element {
   const [draft, setDraft] = useState(initial);
   const update = (patch: Partial<DraftState>) => setDraft((current) => ({ ...current, ...patch }));
   return (
@@ -184,10 +190,12 @@ describe('create team template replacement', () => {
   it('notifies the shared picker only after a confirmed header template application', async () => {
     const onTemplateApplied = vi.fn();
     await act(async () =>
-      root.render(createElement(Form, {
-        initial: { ...pristine, prompt: 'Preserve my prompt until confirmation' },
-        onTemplateApplied,
-      }))
+      root.render(
+        createElement(Form, {
+          initial: { ...pristine, prompt: 'Preserve my prompt until confirmation' },
+          onTemplateApplied,
+        })
+      )
     );
     await selectTemplate();
     await clickDialogButton('Cancel');

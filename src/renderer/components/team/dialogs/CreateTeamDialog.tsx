@@ -2618,7 +2618,12 @@ export const CreateTeamDialog = ({
                   JSON.stringify({ source: 'builtin', value: `builtin:${id}` })
                 );
               }}
-              disabled={isSubmitting || !open || !active || !templateSelection.templateSelectionDraft.isLoaded}
+              disabled={
+                isSubmitting ||
+                !open ||
+                !active ||
+                !templateSelection.templateSelectionDraft.isLoaded
+              }
             />
           }
         >
@@ -2711,13 +2716,18 @@ export const CreateTeamDialog = ({
                     ? ''
                     : templateSelection.storedTemplateSelection.value
                 }
-                initialSelectionReady={
-                  draftLoaded && templateSelection.templateSelectionDraft.isLoaded
-                }
+                initialSelectionReady={draftLoaded && templateSelection.templateSelectionDraft.isLoaded}
                 onApply={(draft, source, value) =>
                   applyTemplateToCreateTeam(draft, source, value, {
-                    templateSelection, descriptionDraft, promptDraft, promptChipDraft, setMembers,
-                    setLaunchTeam, setSoloTeam, setRuntimeSelection, setSyncModelsWithLead,
+                    templateSelection,
+                    descriptionDraft,
+                    promptDraft,
+                    promptChipDraft,
+                    setMembers,
+                    setLaunchTeam,
+                    setSoloTeam,
+                    setRuntimeSelection,
+                    setSyncModelsWithLead,
                   })
                 }
               />

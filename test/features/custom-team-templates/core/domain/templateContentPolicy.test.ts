@@ -434,16 +434,17 @@ describe('validateTemplateContent', () => {
       { name: 'reviewer', workflow: 'y'.repeat(130_000) },
     ]);
     expect(validateTemplateContent(hugeWorkflows)).toContainEqual({
-      code: 'invalidContent', field: 'members',
+      code: 'invalidContent',
+      field: 'members',
     });
     // A single Unicode workflow fits the character bound but exceeds the
     // byte budget. Counting JavaScript string.length would miss this case.
-    expect(validateTemplateContent(content([
-      { name: 'dev', workflow: '界'.repeat(100_000) },
-    ]))).toContainEqual({ code: 'invalidContent', field: 'members' });
-    expect(validateTemplateContent(content([
-      { name: 'dev', workflow: 'x'.repeat(180_000) },
-    ]))).toEqual([]);
+    expect(
+      validateTemplateContent(content([{ name: 'dev', workflow: '界'.repeat(100_000) }]))
+    ).toContainEqual({ code: 'invalidContent', field: 'members' });
+    expect(
+      validateTemplateContent(content([{ name: 'dev', workflow: 'x'.repeat(180_000) }]))
+    ).toEqual([]);
   });
 
   it('rejects oversized content without truncating it', () => {

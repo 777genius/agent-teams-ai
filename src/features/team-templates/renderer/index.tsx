@@ -35,7 +35,10 @@ export const TeamTemplatePicker = ({
   confirmBeforeApply = false,
   disabled = false,
 }: {
-  onApply: (draft: ReturnType<typeof applyTeamTemplate>, templateId: TeamTemplateV1['id']) => void;
+  onApply: (
+    draft: ReturnType<typeof applyTeamTemplate>,
+    templateId: TeamTemplateV1['id']
+  ) => void;
   /** Ask before replacing non-default content in the owning form. */
   confirmBeforeApply?: boolean;
   /** Prevent replacement while persisted form fields are hydrating. */
@@ -105,7 +108,8 @@ export const TeamTemplatePicker = ({
             <AlertDialogAction
               className={buttonVariants({ variant: 'default' })}
               onClick={() => {
-                if (pendingTemplate && !disabled) onApply(applyTeamTemplate(pendingTemplate), pendingTemplate.id);
+                if (pendingTemplate && !disabled)
+                  onApply(applyTeamTemplate(pendingTemplate), pendingTemplate.id);
                 setPendingTemplate(null);
               }}
             >
