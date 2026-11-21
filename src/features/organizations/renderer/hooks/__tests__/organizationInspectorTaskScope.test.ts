@@ -3,10 +3,10 @@ import { describe, expect, it } from 'vitest';
 import {
   collectExecutionTeamNames,
   groupTasksByOwner,
+  type InspectorScopedTask,
   matchesTaskSummary,
   scopeInspectorTasks,
   taskOwnerTeam,
-  type InspectorScopedTask,
 } from '../organizationInspectorTaskScope';
 
 import type { OrganizationAgentSummaryDto, OrganizationAgentTaskDto } from '../../../contracts';
