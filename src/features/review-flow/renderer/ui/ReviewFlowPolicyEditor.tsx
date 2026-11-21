@@ -20,6 +20,7 @@ import {
 import { ReviewFlowProjectsNotice } from './ReviewFlowProjectsNotice';
 import { ReviewFlowSettingsForm } from './ReviewFlowSettingsForm';
 import { FLOW_TEXT_KEYS } from './reviewFlowText';
+import { useSaveErrorText } from './useSaveErrorText';
 
 import type { ReviewFlowPolicy, ReviewFlowSettings } from '../../contracts/types';
 import type { ProjectTeamReviewFlowStatus } from '../view-model/projectTeamReviewFlow';
@@ -75,25 +76,39 @@ export const ReviewFlowPolicyEditor = ({
   const [baseIdentity, setBaseIdentity] = useState(identity);
   const [draft, setDraft] = useState<EditorDraft>(() => createInitialDraft(policy));
   const [feedback, setFeedback] = useState<Feedback>({ kind: 'idle' });
+  /** The person changed something or took over the settings of a project. */
+  const [chosen, setChosen] = useState(false);
+  const saveErrorText = useSaveErrorText();
 
   if (scopeKey !== baseScopeKey) {
     // Another scope: start clean, including the feedback of the previous one.
     setBaseScopeKey(scopeKey);
     setBaseIdentity(identity);
     setDraft(createInitialDraft(policy));
+    setChosen(false);
     setFeedback({ kind: 'idle' });
   } else if (identity !== baseIdentity) {
     // A save landed (or the data changed underneath): restart from what is persisted.
     setBaseIdentity(identity);
     setDraft(createInitialDraft(policy));
+    setChosen(false);
   }
 
   const isTeam = scope.kind === 'team';
   const saving = feedback.kind === 'saving';
   const dirty = isEditorDraftDirty(scope, draft, policy);
   const unsynced = isTeam && (projects?.unsynced.length ?? 0) > 0;
-  // Saving is the explicit choice that puts one setting on every project of the team.
+  // Saving puts one setting on every project of the team.
   const projectsNeedSave = unsynced || (isTeam && projects?.saveSuggested === true);
+  // Projects that differ and a team that never saved: there is nothing to keep by default, so a
+  // save waits for an explicit choice (an edit, or the settings of one project taken over).
+  const mustChoose = unsynced && projects?.saved === false;
+  const canSave = (): boolean => {
+    // A team whose projects cannot be listed cannot be saved (main refuses it too).
+    if (isTeam && projects?.projectsError !== undefined) return false;
+    if (mustChoose) return chosen;
+    return dirty || repair || projectsNeedSave;
+  };
   const shown = isTeam && draft.inherit ? defaults : draft.settings;
 
   const useDefaultDescription = (): string => {
@@ -115,6 +130,7 @@ export const ReviewFlowPolicyEditor = ({
 
   const edit = (next: EditorDraft): void => {
     setDraft(next);
+    setChosen(true);
     setFeedback({ kind: 'idle' });
   };
 
@@ -131,6 +147,7 @@ export const ReviewFlowPolicyEditor = ({
 
   const handleCancel = (): void => {
     setDraft(createInitialDraft(policy));
+    setChosen(false);
     setFeedback({ kind: 'idle' });
     onCancel?.();
   };
@@ -205,9 +222,7 @@ export const ReviewFlowPolicyEditor = ({
         >
           {feedback.kind === 'saved' ? t('reviewFlow.feedback.saved') : null}
           {feedback.kind === 'saving' ? t('reviewFlow.feedback.saving') : null}
-          {feedback.kind === 'error'
-            ? t('reviewFlow.feedback.error', { message: feedback.message })
-            : null}
+          {feedback.kind === 'error' ? saveErrorText(feedback.message) : null}
         </p>
         <div className="flex shrink-0 gap-2">
           <Button
@@ -222,7 +237,7 @@ export const ReviewFlowPolicyEditor = ({
           <Button
             type="button"
             size="sm"
-            disabled={!(dirty || repair || projectsNeedSave) || saving}
+            disabled={!canSave() || saving}
             data-testid={`${testIdPrefix}-save`}
             onClick={handleSave}
           >

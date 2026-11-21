@@ -212,6 +212,33 @@ describe('review flow of per-project teams', () => {
     ]);
   });
 
+  it('never shows a team whose setting or projects cannot be read as following the default', () => {
+    const broken = foldProjectTeamBoards(
+      {
+        ...overview({ 'ptc-aaa': human }),
+        projectTeams: { builders: { ...team(null), unreadable: true } },
+      },
+      folderOf
+    );
+    // Its saved setting is unreadable: it is offered for repair, its copies are still folded.
+    expect(broken.unreadableTeams).toEqual(['builders']);
+    expect(broken.overrides).toEqual({});
+    const listing = foldProjectTeamBoards(
+      {
+        ...overview({ 'ptc-aaa': human }),
+        projectTeams: { builders: { ...team(human, []), projectsError: 'Corrupt index' } },
+      },
+      folderOf
+    );
+    expect(listing.projectTeams.builders).toEqual({
+      saved: true,
+      unsynced: [],
+      saveSuggested: false,
+      projectsError: 'Corrupt index',
+    });
+    expect(listing.overrides).not.toHaveProperty('builders');
+  });
+
   it('before the first save, shows what the projects share, or that they differ', () => {
     const shared = foldProjectTeamBoards(
       overview({ 'ptc-aaa': human, 'ptc-bbb': human }),

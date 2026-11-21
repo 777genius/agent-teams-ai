@@ -21,7 +21,8 @@ interface SavedTeamRequestPort {
   launchSettings: Pick<DefinitionLaunchSettingsStore, 'save'>;
   /**
    * Copies the review flow saved with the logical team into the task board of the alias (nothing
-   * when the team never saved one). Never fails: the board is not part of the launch itself.
+   * when the team never saved one). Rejects (a launch refusal) when the board cannot take it, so
+   * the copy is not started on another review flow than its team's.
    */
   projectReviewFlow(logicalTeamName: string, executionTeamName: string): Promise<void>;
 }

@@ -5,10 +5,8 @@ import * as os from 'os';
 import * as path from 'path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type {
-  ProjectTeamReviewFlowPorts,
-  ReviewFlowTeamKind,
-} from '@features/review-flow/main/adapters/output/projectTeamReviewFlow';
+import type { ReviewFlowTeamKind } from '@features/review-flow';
+import type { ProjectTeamReviewFlowPorts } from '@features/review-flow/core/application';
 
 const HUMAN = { reviewFlow: 'human_approval', reviewFlowPrompt: '' } as const;
 let teamsDir: string;

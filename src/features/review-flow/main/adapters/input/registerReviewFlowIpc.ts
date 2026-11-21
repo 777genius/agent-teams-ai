@@ -6,7 +6,11 @@ import {
   REVIEW_FLOW_SET_TEAM_OVERRIDE,
   type ReviewFlowIpcResult,
 } from '../../../contracts';
-import { type ReviewFlowService,ReviewFlowValidationError } from '../../../core/application';
+import {
+  ProjectBoardsNotUpdatedError,
+  type ReviewFlowService,
+  ReviewFlowValidationError,
+} from '../../../core/application';
 
 import type { IpcMain } from 'electron';
 
@@ -20,7 +24,9 @@ async function toResult<T>(operation: () => Promise<T>): Promise<ReviewFlowIpcRe
     if (!(error instanceof ReviewFlowValidationError)) {
       logger.error('Review flow request failed', error);
     }
-    return { ok: false, error: message };
+    return error instanceof ProjectBoardsNotUpdatedError
+      ? { ok: false, error: message, code: error.code }
+      : { ok: false, error: message };
   }
 }
 

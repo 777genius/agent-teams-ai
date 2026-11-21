@@ -2807,7 +2807,8 @@
     "feedback": {
       "saved": "Saved",
       "saving": "Saving…",
-      "error": "Could not save: {{message}}"
+      "error": "Could not save: {{message}}",
+      "notApplied": "Saved for the team, but not applied yet in every project: they are listed above. Save again to apply it there."
     },
     "overrides": {
       "heading": "Teams with custom settings ({{count}})",
@@ -2837,7 +2838,8 @@
       "unreadable": "settings that can't be read",
       "prompt": "Instructions: \"{{prompt}}\"",
       "use": "Use these settings",
-      "notSaved": "These settings come from its projects and are not saved for the team yet: a project launched for the first time starts on the default. Save to keep them for every project."
+      "notSaved": "These settings come from its projects and are not saved for the team yet: a project launched for the first time starts on the default. Save to keep them for every project.",
+      "unreadableProjects": "The projects of this team cannot be read, so its review flow cannot be shown or changed: {{message}}"
     }
   },
   "worktreeGitReadiness": {

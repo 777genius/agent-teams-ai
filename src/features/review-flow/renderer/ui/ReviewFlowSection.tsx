@@ -19,6 +19,7 @@ import { ReviewFlowPolicyEditor } from './ReviewFlowPolicyEditor';
 import { ReviewFlowScopePicker } from './ReviewFlowScopePicker';
 import { ReviewFlowTeamList } from './ReviewFlowTeamList';
 import { FLOW_TEXT_KEYS } from './reviewFlowText';
+import { useSaveErrorText } from './useSaveErrorText';
 
 import type { ReviewFlowSettings } from '../../contracts/types';
 
@@ -63,7 +64,7 @@ export const ReviewFlowSection = (): React.JSX.Element => {
     return settings ? overview.saveDefaults(settings) : Promise.resolve();
   };
   const resetTeam = (teamName: string): Promise<void> => overview.saveTeamOverride(teamName, null);
-  const errorText = (message: string): string => t('reviewFlow.feedback.error', { message });
+  const errorText = useSaveErrorText();
   const resetLabel = t('reviewFlow.overrides.reset');
   const resetAriaLabel = (team: string): string => t('reviewFlow.overrides.resetLabel', { team });
 

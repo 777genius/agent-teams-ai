@@ -1000,9 +1000,13 @@ async function verifyTeamReviewFlow(f: Fixture) {
   // 2. Taking over what project A has and one save make it the team's: it reaches project B and
   // nothing project A had is lost.
   const projectA = { reviewFlow: 'human_approval', reviewFlowPrompt: 'E2E project A' };
+  // Save disabled until explicit choice: one click must not put the default on every project.
+  const saveDisabled = 'document.querySelector("[data-testid=kanban-review-flow-save]").disabled';
+  assert.equal(await cdp.evaluate(saveDisabled), true, 'Save must wait for an explicit choice');
   await cdp.evaluate('(() => { const item = Array.from(document.querySelectorAll(' +
     '"[data-testid=kanban-review-flow-panel] li")).find((li) => li.textContent.includes("project-a:"));' +
     ' item.querySelector("[data-testid=kanban-review-flow-use-project]").click(); return true; })()');
+  await waitFor('!' + saveDisabled, 'Save available after the settings of project A were taken over');
   await cdp.evaluate('(() => { document.querySelector("[data-testid=kanban-review-flow-save]").click(); return true; })()');
   await waitForJson(metaPath, (meta) => JSON.stringify(meta.reviewFlowSettings) === JSON.stringify(projectA),
     'the settings of project A are saved for the team');

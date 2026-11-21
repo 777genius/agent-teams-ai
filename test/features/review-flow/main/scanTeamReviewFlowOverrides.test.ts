@@ -40,21 +40,40 @@ describe('scanTeamReviewFlowOverrides', () => {
     });
   });
 
-  it('adds each per-project team with what it saved and its projects, and skips unreadable ones', async () => {
-    for (const team of ['saved', 'follows-default', 'never-saved', 'ordinary', 'unreadable-meta']) {
-      fs.mkdirSync(path.join(root, team));
-    }
+  it('adds each per-project team with what it saved and its projects, and says what it cannot read', async () => {
+    const teams = [
+      'saved',
+      'follows-default',
+      'never-saved',
+      'broken-setting',
+      'ordinary',
+      'broken-index',
+    ];
+    for (const team of teams) fs.mkdirSync(path.join(root, team));
     const lead: ReviewFlowSettings = { reviewFlow: 'lead_then_human', reviewFlowPrompt: '' };
     const projects = [{ executionTeamName: 'ptc-a', projectPath: '/p/a' }];
+    const saved: Record<string, ReviewFlowSettings | null | 'unreadable'> = {
+      saved: lead,
+      'follows-default': null,
+      'broken-setting': 'unreadable',
+    };
     const scan = await scanTeamReviewFlowOverrides(root, async (team) => {
-      if (team === 'unreadable-meta') throw new Error('Team metadata is unreadable');
+      if (team === 'broken-index') throw new Error('Corrupt project-context index');
       if (team === 'ordinary') return undefined;
-      return { saved: { saved: lead, 'follows-default': null }[team], projects };
+      return { saved: saved[team], projects };
     });
     expect(scan.projectTeams).toEqual({
       saved: { saved: true, settings: lead, projects },
       'follows-default': { saved: true, settings: null, projects },
       'never-saved': { saved: false, settings: null, projects },
+      // Never shown as the default: the app says it cannot be read.
+      'broken-setting': { saved: true, settings: null, unreadable: true, projects },
+      'broken-index': {
+        saved: false,
+        settings: null,
+        projects: [],
+        projectsError: 'Corrupt project-context index',
+      },
     });
   });
 

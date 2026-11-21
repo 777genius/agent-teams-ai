@@ -7,7 +7,10 @@ import * as path from 'node:path';
 import { createTeamWithProjectContext } from '../../../src/main/ipc/teams/teamProjectContextCreate';
 import { createProjectScheduleTargets } from '../../../src/main/ipc/teams/projectScheduleTargets';
 import { prepareTeamContextLaunch, withPreparedContextLaunch } from '../../../src/main/ipc/teams/teamProjectContextLaunch';
-import { createTeamReviewFlowService } from '../../../src/main/ipc/teams/teamReviewFlow';
+import {
+  createTeamReviewFlowService,
+  ReviewFlowNotAppliedLaunchError,
+} from '../../../src/main/ipc/teams/teamReviewFlow';
 import {
   getClaudeBasePath,
   getTasksBasePath,
@@ -623,6 +626,69 @@ describe('project-scoped desktop team creation boundary (sandbox disk + fake nat
       expect(c).not.toBe(a);
       expect(await boardFlow(c)).toEqual({ reviewFlow: 'human_approval', reviewFlowPrompt: 'Run e2e' });
       expect(await boardFlow(a)).toEqual({ reviewFlow: 'human_approval', reviewFlowPrompt: 'Run e2e' });
+    });
+
+    it('does not write a project whose launch never created its copy (a bare reservation)', async () => {
+      const { service } = await readyInProjectA();
+      const indexPath = path.join(getTeamsBasePath(), 'builders', 'project-contexts.json');
+      const index = JSON.parse(await fs.readFile(indexPath, 'utf8')) as { contexts: unknown[] };
+      const bare = 'ptc-' + 'b'.repeat(24);
+      await fs.writeFile(indexPath, JSON.stringify({
+        ...index,
+        contexts: [...index.contexts, {
+          id: '22222222-2222-4222-8222-222222222222', projectKey: '/nowhere', projectPath: '/nowhere',
+          executionTeamName: bare, state: 'reserved',
+        }],
+      }));
+      await service.saveTeamOverride('builders', human);
+      await expect(fs.access(path.join(getTeamsBasePath(), bare))).rejects.toMatchObject({ code: 'ENOENT' });
+    });
+
+    it('keeps a copy that an ordinary team kept from an earlier period a board of its own', async () => {
+      const { a, service } = await readyInProjectA();
+      const metaPath = path.join(getTeamsBasePath(), 'builders', 'team.meta.json');
+      const meta = JSON.parse(await fs.readFile(metaPath, 'utf8')) as Record<string, unknown>;
+      await fs.writeFile(metaPath, JSON.stringify({ ...meta, projectContextMode: 'shared' }));
+      await service.saveTeamOverride(a, lead);
+      expect(await boardFlow(a)).toEqual({ reviewFlow: 'lead_then_human', reviewFlowPrompt: undefined });
+    });
+
+    it('refuses a launch whose copy cannot take the team setting, a ready copy and a new one alike', async () => {
+      const { f, a, project, service } = await readyInProjectA();
+      await service.saveTeamOverride('builders', human);
+      // Project A has something else on its board (an earlier save did not reach it).
+      createController({ teamName: a, claudeDir: getClaudeBasePath() }).taskBoard.setReviewFlowSettings(lead);
+      f.ports.data.setReviewFlowSettings = async () => {
+        throw new Error('board lock timed out');
+      };
+      for (const cwd of [f.projectPath, await project('c')]) {
+        const invoke = vi.fn(async () => ({ success: true as const, data: { runId: 'r1' } }));
+        await expect(
+          withPreparedContextLaunch({ teamName: 'builders', cwd }, f.ports, invoke as never)
+        ).rejects.toBeInstanceOf(ReviewFlowNotAppliedLaunchError);
+        // Nothing was started: the copy would otherwise run on another review flow than its team's.
+        expect(invoke).not.toHaveBeenCalled();
+      }
+      expect(await boardFlow(a)).toEqual({ reviewFlow: 'lead_then_human', reviewFlowPrompt: undefined });
+    });
+
+    it('refuses launches while the saved setting cannot be read, keeps it, and a save repairs it', async () => {
+      const { f, service } = await readyInProjectA();
+      const metaPath = path.join(getTeamsBasePath(), 'builders', 'team.meta.json');
+      const meta = JSON.parse(await fs.readFile(metaPath, 'utf8')) as Record<string, unknown>;
+      const broken = { reviewFlow: 'everyone' };
+      await fs.writeFile(metaPath, JSON.stringify({ ...meta, reviewFlowSettings: broken }));
+      const invoke = vi.fn(async () => ({ success: true as const, data: { runId: 'r1' } }));
+      await expect(
+        withPreparedContextLaunch({ teamName: 'builders', cwd: f.projectPath }, f.ports, invoke as never)
+      ).rejects.toThrow(/cannot be read/);
+      expect(invoke).not.toHaveBeenCalled();
+      expect((await read('builders', 'team.meta.json')).reviewFlowSettings).toEqual(broken);
+      expect((await service.getOverview()).projectTeams.builders).toMatchObject({ unreadable: true });
+
+      await service.saveTeamOverride('builders', human);
+      await withPreparedContextLaunch({ teamName: 'builders', cwd: f.projectPath }, f.ports, invoke as never);
+      expect(invoke).toHaveBeenCalledOnce();
     });
   });
 });

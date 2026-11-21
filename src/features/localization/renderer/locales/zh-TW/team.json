@@ -2804,7 +2804,8 @@
     "feedback": {
       "saved": "已儲存",
       "saving": "儲存中…",
-      "error": "無法儲存：{{message}}"
+      "error": "無法儲存：{{message}}",
+      "notApplied": "已為團隊儲存，但尚未套用到所有專案：這些專案列在上方。請再次儲存以套用。"
     },
     "overrides": {
       "heading": "有自訂設定的團隊（{{count}}）",
@@ -2834,7 +2835,8 @@
       "unreadable": "無法讀取的設定",
       "prompt": "指示：「{{prompt}}」",
       "use": "使用這些設定",
-      "notSaved": "這些設定來自各專案，尚未儲存為團隊設定：首次啟動的專案會從預設值開始。請儲存，讓所有專案都使用這些設定。"
+      "notSaved": "這些設定來自各專案，尚未儲存為團隊設定：首次啟動的專案會從預設值開始。請儲存，讓所有專案都使用這些設定。",
+      "unreadableProjects": "無法讀取此團隊的專案，因此無法顯示或變更其審查流程：{{message}}"
     }
   },
   "worktreeGitReadiness": {

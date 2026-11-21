@@ -1,3 +1,4 @@
+import { reviewFlowTeamKindOf } from '@features/review-flow';
 import {
   createProjectBoardReviewFlowSync,
   createReviewFlowFeature,
@@ -10,15 +11,13 @@ import {
   createTeamKindPorts,
   type OwnedExecutionAlias,
   readTeamProjectContextMode,
+  TeamProjectContextLaunchRefusedError,
   TeamProjectContextRegistry,
 } from '@features/team-project-context/main';
-import { TeamMetaStore } from '@main/services/team/TeamMetaStore';
+import { isUnreadableReviewFlowSettings, TeamMetaStore } from '@main/services/team/TeamMetaStore';
 import { getClaudeBasePath, getTeamsBasePath } from '@main/utils/pathDecoder';
-import { createLogger } from '@shared/utils/logger';
 
 import type { TeamDataService } from '@main/services/team/TeamDataService';
-
-const logger = createLogger('IPC:teams:reviewFlow');
 
 type ReviewFlowData = Pick<TeamDataService, 'runConfigurationOperation' | 'setReviewFlowSettings'>;
 
@@ -53,12 +52,12 @@ function createProjectTeamReviewFlowPorts(
         ),
         teamName
       );
-      if (kind === 'logical') return 'project-team';
       const { owner } = proven;
-      // A copy that an ordinary team kept from an earlier period is still a board of its own.
-      return kind === 'alias' && owner && (await getMode(owner.logicalTeamName)) === 'per_project'
-        ? 'project-copy'
-        : 'board';
+      const ownerPerProject =
+        kind === 'alias' &&
+        owner !== null &&
+        (await getMode(owner.logicalTeamName)) === 'per_project';
+      return reviewFlowTeamKindOf(kind, ownerPerProject);
     },
     withTeamLock: (teamName, operation) => data().runConfigurationOperation(teamName, operation),
     async readProjectTeam(teamName) {
@@ -83,11 +82,18 @@ function createProjectTeamReviewFlowPorts(
           projectPath: context.projectPath,
         });
       }
-      return { saved: meta.reviewFlowSettings, projects };
+      const saved = meta.reviewFlowSettings;
+      return { saved: isUnreadableReviewFlowSettings(saved) ? 'unreadable' : saved, projects };
     },
     async readTeamSetting(teamName) {
       const meta = await metaStore.getMeta(teamName);
-      return meta?.projectContextMode === 'per_project' ? meta.reviewFlowSettings : undefined;
+      if (meta?.projectContextMode !== 'per_project') return undefined;
+      if (isUnreadableReviewFlowSettings(meta.reviewFlowSettings)) {
+        throw new Error(
+          'the review flow saved with the team cannot be read; save it again in Settings'
+        );
+      }
+      return meta.reviewFlowSettings;
     },
     saveTeamSetting: (teamName, settings) =>
       metaStore.updateMeta(teamName, (current) => {
@@ -110,11 +116,16 @@ export function createTeamReviewFlowService(data: () => ReviewFlowData): ReviewF
   });
 }
 
+/** A launch refused because the board of its project copy could not take the team's review flow. */
+export class ReviewFlowNotAppliedLaunchError extends TeamProjectContextLaunchRefusedError {
+  readonly reason = 'review_flow_not_applied';
+}
+
 /**
- * Copies the review flow saved with a team into the board of the project copy a launch starts.
- * Best effort: a launch is not refused for it (an ordinary team's launch never depends on its
- * board either). The settings page then lists that project as not carrying the team's setting,
- * and the next save or launch repeats it.
+ * Copies the review flow saved with a team into the board of the project copy a launch starts, a
+ * new copy or an existing one alike. When that fails the launch is refused before the copy starts:
+ * its agents would otherwise run on what the board has, possibly the built-in flow in which agents
+ * approve their own work (the controller refuses unreadable settings for the same reason).
  */
 export function createLaunchReviewFlowProjection(
   data: ReviewFlowData
@@ -128,8 +139,10 @@ export function createLaunchReviewFlowProjection(
     try {
       await sync(teamName, executionTeamName);
     } catch (error) {
-      logger.error(
-        `Could not apply the review flow of ${teamName} to its project copy ${executionTeamName}: ${String(error)}`
+      throw new ReviewFlowNotAppliedLaunchError(
+        `The review flow of this team could not be applied to this project, so the project was not launched (${
+          error instanceof Error ? error.message : String(error)
+        }). Save the review flow of the team again in Settings, then launch again.`
       );
     }
   };

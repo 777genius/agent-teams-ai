@@ -79,8 +79,22 @@ describe('TeamMetaStore review flow of a per-project team', () => {
     });
   });
 
-  it('drops a saved value that is not a complete review flow, like any other invalid field', async () => {
-    await seed({ reviewFlowSettings: { reviewFlow: 'everyone' } });
-    expect((await new TeamMetaStore().getMeta('builders'))?.reviewFlowSettings).toBeUndefined();
+  it('never reads a saved value that is not a review flow as "not saved", and never drops it', async () => {
+    const store = new TeamMetaStore();
+    const broken = { reviewFlow: 'everyone', note: 'from a newer app' };
+    await seed({ reviewFlowSettings: broken });
+    expect((await store.getMeta('builders'))?.reviewFlowSettings).toEqual({ unreadable: broken });
+    // The strict reader keeps the whole record: the value is unreadable, not lost.
+    expect(
+      (await store.getMeta('builders', undefined, { requireCompleteFields: true }))
+        ?.reviewFlowSettings
+    ).toEqual({ unreadable: broken });
+    // A writer that does not state it, or spreads the record, writes it back exactly as it was.
+    await store.writeMeta('builders', { cwd: '/p', createdAt: 1 });
+    await store.updateMeta('builders', (current) => ({ ...current!, model: 'opus' }));
+    expect((await raw()).reviewFlowSettings).toEqual(broken);
+    // Only an explicit save of the review flow replaces it.
+    await store.updateMeta('builders', (current) => ({ ...current!, reviewFlowSettings: human }));
+    expect((await raw()).reviewFlowSettings).toEqual(human);
   });
 });

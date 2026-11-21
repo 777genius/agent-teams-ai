@@ -1,6 +1,5 @@
-import { ReviewFlowService } from '../../core/application';
+import { ReviewFlowService, syncProjectBoardReviewFlow } from '../../core/application';
 import { ControllerReviewFlowDefaultsStore } from '../adapters/output/ControllerReviewFlowDefaultsStore';
-import { syncProjectBoardReviewFlow } from '../adapters/output/projectTeamReviewFlow';
 import {
   TeamKanbanReviewFlowGateway,
   type TeamReviewFlowWriter,
@@ -8,7 +7,7 @@ import {
 import { readBoardReviewFlow } from '../infrastructure/scanTeamReviewFlowOverrides';
 
 import type { ReviewFlowSettings } from '../../contracts/types';
-import type { ProjectTeamReviewFlowPorts } from '../adapters/output/projectTeamReviewFlow';
+import type { ProjectTeamReviewFlowPorts } from '../../core/application';
 
 export interface ReviewFlowFeatureDeps {
   teamWriter: TeamReviewFlowWriter;

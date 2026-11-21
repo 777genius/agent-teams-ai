@@ -2,10 +2,14 @@ import { validateTeamName } from '@main/services/team/TeamIdentifierValidation';
 import * as fs from 'fs';
 import * as path from 'path';
 
-import { ReviewFlowValidationError, type TeamReviewFlowPort, type TeamReviewFlowScan } from '../../../core/application';
+import {
+  type ProjectTeamReviewFlowPorts,
+  ReviewFlowValidationError,
+  saveProjectTeamReviewFlow,
+  type TeamReviewFlowPort,
+  type TeamReviewFlowScan,
+} from '../../../core/application';
 import { scanTeamReviewFlowOverrides } from '../../infrastructure/scanTeamReviewFlowOverrides';
-
-import { type ProjectTeamReviewFlowPorts, saveProjectTeamReviewFlow } from './projectTeamReviewFlow';
 
 import type { ReviewFlowSettings } from '../../../contracts/types';
 

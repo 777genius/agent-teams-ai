@@ -34,6 +34,10 @@ export interface ProjectTeamReviewFlow {
   saved: boolean;
   /** The saved setting: its own, or `null` when it follows the default (also `null` while not saved). */
   settings: ReviewFlowSettings | null;
+  /** What the team saved cannot be read: its launches are refused until a save repairs it. */
+  unreadable?: true;
+  /** Its projects cannot be listed (a damaged contexts index), so nothing can be saved for it. */
+  projectsError?: string;
   /** Its project copies. Their boards are listed in `overrides` and `unreadableTeams` by copy name. */
   projects: { executionTeamName: string; projectPath: string }[];
 }

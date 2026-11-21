@@ -1,6 +1,8 @@
-import { areReviewFlowOverridesEqual } from '../../../core/domain';
+import { REVIEW_FLOW_PROJECT_BOARDS_NOT_UPDATED } from '../../contracts/errors';
+import { areReviewFlowOverridesEqual } from '../domain/reviewFlowPolicy';
 
-import type { ReviewFlowSettings } from '../../../contracts/types';
+import type { ReviewFlowSettings } from '../../contracts/types';
+import type { ReviewFlowTeamKind } from '../domain/reviewFlowTeamKind';
 
 /** The board of one project of a team with separate history per project (its project copy). */
 export interface ProjectBoard {
@@ -8,16 +10,13 @@ export interface ProjectBoard {
   projectPath: string;
 }
 
-/**
- * What a team name means for its review flow: an ordinary board, a team with separate history per
- * project (one setting for the team), or the project copy of such a team (it has none of its own).
- */
-export type ReviewFlowTeamKind = 'board' | 'project-team' | 'project-copy';
-
 /** The review flow of a team with separate history per project, as stored. */
 export interface ProjectTeamState {
-  /** The setting saved with the team; `undefined` when it never saved one. */
-  saved: ReviewFlowSettings | null | undefined;
+  /**
+   * The setting saved with the team; `undefined` when it never saved one, `unreadable` when what
+   * it saved is not a review flow (kept as it is until a save repairs it).
+   */
+  saved: ReviewFlowSettings | null | undefined | 'unreadable';
   /** The boards of its projects that exist on disk, running ones included. */
   projects: readonly ProjectBoard[];
 }
@@ -36,7 +35,8 @@ export interface ProjectTeamReviewFlowPorts {
   readProjectTeam(teamName: string): Promise<ProjectTeamState | undefined>;
   /**
    * Only the setting saved with a team that keeps separate history per project (what a launch
-   * needs; it does not list the projects). `undefined` when there is none.
+   * needs; it does not list the projects). `undefined` when there is none; rejects when what the
+   * team saved cannot be read.
    */
   readTeamSetting(teamName: string): Promise<ReviewFlowSettings | null | undefined>;
   saveTeamSetting(teamName: string, settings: ReviewFlowSettings | null): Promise<void>;
@@ -55,11 +55,13 @@ export type ReadBoardReviewFlow = (
 
 /** The team's setting is saved, but some project boards do not carry it yet. */
 export class ProjectBoardsNotUpdatedError extends Error {
+  readonly code = REVIEW_FLOW_PROJECT_BOARDS_NOT_UPDATED;
+
   constructor(readonly failed: readonly { projectPath: string; message: string }[]) {
     super(
       `The review flow is saved for the team, but it could not be applied in ${failed
         .map((board) => `${board.projectPath} (${board.message})`)
-        .join(', ')}. Save again to apply it there; a project also takes it when it is launched.`
+        .join(', ')}`
     );
     this.name = 'ProjectBoardsNotUpdatedError';
   }
@@ -99,8 +101,8 @@ export async function saveProjectTeamReviewFlow(
 
 /**
  * Brings the board of one project copy to the setting of its team, when the team saved one. A team
- * that never did leaves the board as it is: it keeps what this project had before. Returns whether
- * the board was written.
+ * that never did leaves the board as it is: it keeps what this project had before. Rejects when the
+ * board cannot be brought there (a launch is then refused). Returns whether the board was written.
  */
 export async function syncProjectBoardReviewFlow(
   ports: Pick<ProjectTeamReviewFlowPorts, 'readTeamSetting'>,

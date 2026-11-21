@@ -37,6 +37,9 @@ export const ReviewFlowProjectsNotice = ({
   };
   const { unsynced } = status;
   const message = (): string | null => {
+    if (status.projectsError !== undefined) {
+      return t('reviewFlow.projects.unreadableProjects', { message: status.projectsError });
+    }
     if (unsynced.length > 0) {
       return status.saved ? t('reviewFlow.projects.notApplied') : t('reviewFlow.projects.differ');
     }

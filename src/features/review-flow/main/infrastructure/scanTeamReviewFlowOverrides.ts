@@ -4,8 +4,8 @@ import * as path from 'path';
 
 import { inspectTeamReviewFlowState } from '../../core/domain';
 
-import type { TeamReviewFlowScan } from '../../core/application';
-import type { ProjectTeamState } from '../adapters/output/projectTeamReviewFlow';
+import type { ProjectTeamReviewFlow } from '../../contracts/types';
+import type { ProjectTeamState, TeamReviewFlowScan } from '../../core/application';
 
 const KANBAN_STATE_FILE = 'kanban-state.json';
 const SCAN_CONCURRENCY = 16;
@@ -38,6 +38,22 @@ export async function readBoardReviewFlow(
   }
 }
 
+function toProjectTeamReviewFlow(
+  team: ProjectTeamState | undefined
+): ProjectTeamReviewFlow | undefined {
+  if (!team) return undefined;
+  const { saved } = team;
+  return {
+    saved: saved !== undefined,
+    settings: saved === undefined || saved === 'unreadable' ? null : saved,
+    ...(saved === 'unreadable' ? { unreadable: true as const } : {}),
+    projects: team.projects.map(({ executionTeamName, projectPath }) => ({
+      executionTeamName,
+      projectPath,
+    })),
+  };
+}
+
 /**
  * Finds teams that carry their own review flow, and teams whose saved review-flow fields are
  * invalid (the controller refuses to run those until the override is reset). Bounded parallel reads.
@@ -61,21 +77,17 @@ export async function scanTeamReviewFlowOverrides(
       const teamName = teamNames[next++];
       const [result, projectTeam] = await Promise.all([
         readBoardReviewFlow(teamsDir, teamName),
-        // A team whose metadata or projects cannot be read is not listed; a save refuses it (fail closed).
-        readProjectTeam(teamName).catch(() => undefined),
+        // A team whose projects cannot be read is listed with the reason, never shown as the default.
+        readProjectTeam(teamName).then(toProjectTeamReviewFlow, (error: unknown) => ({
+          saved: false,
+          settings: null,
+          projects: [],
+          projectsError: error instanceof Error ? error.message : String(error),
+        })),
       ]);
       if (result.kind === 'override') scan.overrides[teamName] = result.settings;
       else if (result.kind === 'invalid') scan.unreadable.push(teamName);
-      if (projectTeam) {
-        scan.projectTeams[teamName] = {
-          saved: projectTeam.saved !== undefined,
-          settings: projectTeam.saved ?? null,
-          projects: projectTeam.projects.map(({ executionTeamName, projectPath }) => ({
-            executionTeamName,
-            projectPath,
-          })),
-        };
-      }
+      if (projectTeam) scan.projectTeams[teamName] = projectTeam;
     }
   };
   await Promise.all(Array.from({ length: Math.min(SCAN_CONCURRENCY, teamNames.length) }, worker));

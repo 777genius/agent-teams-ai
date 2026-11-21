@@ -45,10 +45,25 @@ export interface TeamMetaFile {
   /**
    * The review flow of a team with separate history per project, copied to the board of each of
    * its projects. Missing: the team never saved one (each project keeps its own); `null`: the team
-   * follows the default. Writers that do not state it keep the saved value.
+   * follows the default. Writers that do not state it keep the saved value, also an unreadable one.
    */
-  reviewFlowSettings?: ReviewFlowSettings | null;
+  reviewFlowSettings?: ReviewFlowSettings | null | UnreadableReviewFlowSettings;
   createdAt: number;
+}
+
+/**
+ * A saved review flow that is not a complete unit. It is never read as "not saved" (that would let a
+ * project fall back to the built-in flow) and never dropped by a writer: it is written back as it
+ * was until a save of the review flow replaces it.
+ */
+export interface UnreadableReviewFlowSettings {
+  readonly unreadable: unknown;
+}
+
+export function isUnreadableReviewFlowSettings(
+  value: TeamMetaFile['reviewFlowSettings']
+): value is UnreadableReviewFlowSettings {
+  return typeof value === 'object' && value !== null && Object.hasOwn(value, 'unreadable');
 }
 
 /** Fields a writer keeps from the saved file unless it states them (a missing key is not a reset). */
@@ -64,11 +79,23 @@ function keepUnstatedFields(
   };
 }
 
-/** A saved value that is not a complete review-flow unit is dropped, like any other invalid field. */
-function normalizeReviewFlowSettings(value: unknown): ReviewFlowSettings | null | undefined {
+function readReviewFlowSettings(value: unknown): NonNullable<TeamMetaFile['reviewFlowSettings']> | null {
   if (value === null) return null;
   const parsed = parseReviewFlowSettings(value);
-  return parsed.ok ? parsed.settings : undefined;
+  return parsed.ok ? parsed.settings : { unreadable: value };
+}
+
+/** The record as it was read, for the fidelity check: an unreadable review flow is kept, not lost. */
+function asRead(meta: TeamMetaFile): unknown {
+  return isUnreadableReviewFlowSettings(meta.reviewFlowSettings)
+    ? { ...meta, reviewFlowSettings: meta.reviewFlowSettings.unreadable }
+    : meta;
+}
+
+/** What is written: a valid unit normalized, an unreadable value exactly as it was read. */
+function writtenReviewFlowSettings(value: TeamMetaFile['reviewFlowSettings']): unknown {
+  if (value === undefined) return undefined;
+  return isUnreadableReviewFlowSettings(value) ? value.unreadable : readReviewFlowSettings(value);
 }
 
 const metaMutationLocks = new Map<string, Promise<void>>();
@@ -296,11 +323,11 @@ export class TeamMetaStore {
         limitContext: typeof file.limitContext === 'boolean' ? file.limitContext : undefined,
         launchIdentity: normalizeLaunchIdentity(file.launchIdentity),
         ...(Object.hasOwn(file, 'reviewFlowSettings')
-          ? { reviewFlowSettings: normalizeReviewFlowSettings(file.reviewFlowSettings) }
+          ? { reviewFlowSettings: readReviewFlowSettings(file.reviewFlowSettings) }
           : {}),
         createdAt: typeof file.createdAt === 'number' ? file.createdAt : Date.now(),
       };
-      return options?.requireCompleteFields && !hasCompleteKnownMetadata(file, normalized)
+      return options?.requireCompleteFields && !hasCompleteKnownMetadata(file, asRead(normalized))
         ? null
         : normalized;
     } catch (error) {
@@ -375,7 +402,10 @@ export class TeamMetaStore {
       extraCliArgs: data.extraCliArgs?.trim() || undefined,
       limitContext: data.limitContext,
       launchIdentity: normalizeLaunchIdentity(data.launchIdentity),
-      reviewFlowSettings: normalizeReviewFlowSettings(data.reviewFlowSettings),
+      // An unreadable setting goes back to disk exactly as it was read.
+      reviewFlowSettings: writtenReviewFlowSettings(
+        data.reviewFlowSettings
+      ) as TeamMetaFile['reviewFlowSettings'],
       createdAt: data.createdAt,
     } satisfies TeamMetaFile);
   }

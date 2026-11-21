@@ -28,6 +28,8 @@ export interface ProjectTeamReviewFlowStatus {
    * a project launched for the first time would still start on the default until the team saves.
    */
   saveSuggested: boolean;
+  /** Its projects cannot be listed: nothing is shown as its setting and nothing can be saved. */
+  projectsError?: string;
 }
 
 /** The review flow as a person edits it: one entry per team, never one per project copy. */
@@ -69,6 +71,15 @@ export function foldProjectTeamBoards(
   const unreadable = new Set(overview.unreadableTeams);
   const projectTeams: Record<string, ProjectTeamReviewFlowStatus> = {};
   for (const [teamName, team] of Object.entries(overview.projectTeams)) {
+    if (team.projectsError !== undefined) {
+      projectTeams[teamName] = {
+        saved: team.saved,
+        unsynced: [],
+        saveSuggested: false,
+        projectsError: team.projectsError,
+      };
+      continue;
+    }
     const boards = team.projects.map((project): ProjectBoardReviewFlow => {
       const name = project.executionTeamName;
       const setting: BoardSetting = unreadable.has(name) ? 'unreadable' : (overrides[name] ?? null);
@@ -79,10 +90,16 @@ export function foldProjectTeamBoards(
         setting,
       };
     });
-    const setting = team.saved ? team.settings : commonSetting(boards);
     // The team has no board of its own; what it shows is its setting.
     delete overrides[teamName];
     unreadable.delete(teamName);
+    if (team.unreadable) {
+      // What it saved cannot be read: shown for repair, never as the default.
+      unreadable.add(teamName);
+      projectTeams[teamName] = { saved: true, unsynced: [], saveSuggested: false };
+      continue;
+    }
+    const setting = team.saved ? team.settings : commonSetting(boards);
     if (setting) overrides[teamName] = setting;
     projectTeams[teamName] = {
       saved: team.saved,

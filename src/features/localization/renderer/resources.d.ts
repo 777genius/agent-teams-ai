@@ -6454,6 +6454,7 @@ export default interface Resources {
       },
       "feedback": {
         "error": "Could not save: {{message}}",
+        "notApplied": "Saved for the team, but not applied yet in every project: they are listed above. Save again to apply it there.",
         "saved": "Saved",
         "saving": "Saving…"
       },
@@ -6494,6 +6495,7 @@ export default interface Resources {
         "prompt": "Instructions: \"{{prompt}}\"",
         "scope": "One review flow for every project of this team.",
         "unreadable": "settings that can't be read",
+        "unreadableProjects": "The projects of this team cannot be read, so its review flow cannot be shown or changed: {{message}}",
         "use": "Use these settings"
       },
       "promptHint": "Sent to reviewers with each review request and visible to agents on the board. It does not change who may approve.",
