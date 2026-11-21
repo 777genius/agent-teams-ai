@@ -91,7 +91,12 @@ export class RecheckCustomTeamTemplateSaveUseCase {
         // A read that races an earlier unconfirmed writer is only a snapshot.
         // Never present it as safe to retry until the write settles conclusively.
         if (this.deps.previewStore.hasUnresolvedWrite(token)) {
-          return { status: 'unresolved', templateId: check.templateId };
+          if (!this.deps.previewStore.canConfirmAbsenceAfterUnresolvedWrite(token)) {
+            return { status: 'unresolved', templateId: check.templateId };
+          }
+          // All interrupted writers are physically settled. The successful
+          // post-settlement read proves absence without dispatching another write.
+          this.deps.previewStore.clearUnresolvedWrite(token);
         }
         return { status: 'notSaved', templateId: check.templateId };
       case 'unresolved':

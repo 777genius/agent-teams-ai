@@ -129,6 +129,9 @@ export interface InMemoryCustomTeamTemplatePreviewStoreOptions {
 
 export class InMemoryCustomTeamTemplatePreviewStore {
   private readonly entries = new Map<string, CustomTeamTemplatePreviewState>();
+  /** A failed worker can settle after the bounded save wait has timed out. */
+  private readonly unsettledWriters = new Map<string, Set<Promise<void>>>();
+  private readonly trackedWriterTokens = new Set<string>();
   private readonly ttlMs: number;
   private readonly capacity: number;
 
@@ -258,15 +261,34 @@ export class InMemoryCustomTeamTemplatePreviewStore {
    * still commit. The flag is cleared when a save or re-check establishes a
    * definitive outcome.
    */
-  markUnresolvedWrite(token: string): void {
+  markUnresolvedWrite(token: string, settled?: Promise<void>): void {
     const state = this.entries.get(token);
-    if (state) {
-      this.entries.set(token, { ...state, hasUnresolvedWrite: true });
-    }
+    if (!state) return;
+    this.entries.set(token, { ...state, hasUnresolvedWrite: true });
+    if (!settled) return;
+    this.trackedWriterTokens.add(token);
+    const pending = this.unsettledWriters.get(token) ?? new Set<Promise<void>>();
+    pending.add(settled);
+    this.unsettledWriters.set(token, pending);
+    const onSettled = (): void => {
+      const active = this.unsettledWriters.get(token);
+      active?.delete(settled);
+      if (active?.size === 0) this.unsettledWriters.delete(token);
+    };
+    // Rejection also signals the worker has stopped; consume it to avoid
+    // an unhandled rejection after the bounded wait has already returned.
+    void settled.then(onSettled, onSettled);
+  }
+
+  /** Absence is authoritative only after every previously unknown writer exited. */
+  canConfirmAbsenceAfterUnresolvedWrite(token: string): boolean {
+    return this.trackedWriterTokens.has(token) && !this.unsettledWriters.has(token);
   }
 
   /** Clears a previously marked unresolved write once the outcome is definitive. */
   clearUnresolvedWrite(token: string): void {
+    this.unsettledWriters.delete(token);
+    this.trackedWriterTokens.delete(token);
     const state = this.entries.get(token);
     if (state?.hasUnresolvedWrite) {
       const { hasUnresolvedWrite: _removed, ...rest } = state;
@@ -282,6 +304,8 @@ export class InMemoryCustomTeamTemplatePreviewStore {
   /** Drops every retained preview and confirmed operation (used on shutdown). */
   clear(): void {
     this.entries.clear();
+    this.unsettledWriters.clear();
+    this.trackedWriterTokens.clear();
   }
 
   get size(): number {

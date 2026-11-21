@@ -12,6 +12,7 @@ const RETAINED_CREATE_KEYS = new Set([
   'createTeam:description',
   'createTeam:prompt',
   'createTeam:prompt:chips',
+  'createTeam:templateSelection',
 ]);
 const isRetainedCreateKey = (key: string): boolean => RETAINED_CREATE_KEYS.has(key);
 

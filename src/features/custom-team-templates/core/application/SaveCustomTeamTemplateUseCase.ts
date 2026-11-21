@@ -218,7 +218,7 @@ export class SaveCustomTeamTemplateUseCase {
     if (this.deps.previewStore.hasUnresolvedWrite(state.token)) {
       return { status: 'unresolvedWriteOutcome', templateId };
     }
-    const result = await this.createWithRecovery(gateway, request);
+    const result = await this.createWithRecovery(gateway, request, state.token);
     if (result.status === 'unresolvedWriteOutcome') {
       this.deps.previewStore.markUnresolvedWrite(state.token);
     } else if (
@@ -361,6 +361,7 @@ export class SaveCustomTeamTemplateUseCase {
   private async createWithRecovery(
     gateway: CustomTeamTemplateStorageGateway,
     request: CreateCustomTeamTemplateRecordRequest,
+    token: string,
     hadPriorUnresolvedWrite: boolean = false
   ): Promise<ConfirmCustomTeamTemplateSaveResult> {
     const templateId = request.template.templateId;
@@ -375,7 +376,7 @@ export class SaveCustomTeamTemplateUseCase {
       try {
         decision = mapCreateResult(await gateway.customTeamTemplateCreate(request));
       } catch (error) {
-        decision = await this.classifyFailure(gateway, request, error, hadUnknownExecution);
+        decision = await this.classifyFailure(gateway, request, error, hadUnknownExecution, token);
       }
       // If any attempt had unknown execution, remember it for subsequent attempts.
       // We check the error in classifyFailure, but also need to track it here for
@@ -410,9 +411,15 @@ export class SaveCustomTeamTemplateUseCase {
     gateway: CustomTeamTemplateStorageGateway,
     request: CreateCustomTeamTemplateRecordRequest,
     error: unknown,
-    hadUnknownExecution: boolean
+    hadUnknownExecution: boolean,
+    token: string
   ): Promise<WriteDecision> {
     if (error instanceof CustomTeamTemplateStorageInterruptedError) {
+      if (error.execution === 'unknown') {
+        // Retain the real worker's settlement signal even when the bounded wait
+        // returns first. A later read can prove absence only after it settles.
+        this.deps.previewStore.markUnresolvedWrite(token, error.settled);
+      }
       // The settlement promise is bounded: a worker whose termination was never
       // confirmed can leave it pending forever, and a save request must always
       // settle within a finite time.
