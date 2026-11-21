@@ -67,7 +67,12 @@ describe('review flow store', () => {
   it('keeps showing good data when a background refresh fails', async () => {
     const getOverview = vi
       .fn<ReviewFlowElectronApi['getOverview']>()
-      .mockResolvedValueOnce({ defaults: human, overrides: {}, unreadableTeams: [], projectTeams: {} })
+      .mockResolvedValueOnce({
+        defaults: human,
+        overrides: {},
+        unreadableTeams: [],
+        projectTeams: {},
+      })
       .mockRejectedValueOnce(new Error('boom'));
     const store = createReviewFlowStore({ getApi: () => createApi({ getOverview }) });
     await store.getState().load();
@@ -117,7 +122,11 @@ describe('review flow store', () => {
       {
         // The team and one board are written, the other board is not.
         setTeamOverride: vi.fn(async (team: string, settings: ReviewFlowSettings | null) => {
-          main.projectTeams[team] = { saved: true, settings, projects: main.projectTeams[team].projects };
+          main.projectTeams[team] = {
+            saved: true,
+            settings,
+            projects: main.projectTeams[team].projects,
+          };
           main.overrides['ptc-a'] = human;
           throw new Error('not applied in /projects/b');
         }),

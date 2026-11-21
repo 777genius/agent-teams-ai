@@ -148,12 +148,21 @@ describe('review flow of per-project teams', () => {
       { overrides: { 'ptc-old': human }, unreadableTeams: ['old'], projectTeams: {} },
       folderOf
     );
-    expect(view).toEqual({ overrides: { 'ptc-old': human }, unreadableTeams: ['old'], projectTeams: {} });
+    expect(view).toEqual({
+      overrides: { 'ptc-old': human },
+      unreadableTeams: ['old'],
+      projectTeams: {},
+    });
     expect(reviewFlowTeamOf({}, 'ptc-old')).toBe('ptc-old');
   });
 
   it('lists an ordinary team and a per-project team once each, never a project copy', () => {
-    const pending = { builders: team(undefined, [...projects, { executionTeamName: 'ptc-ccc', projectPath: '/work/c' }]) };
+    const pending = {
+      builders: team(undefined, [
+        ...projects,
+        { executionTeamName: 'ptc-ccc', projectPath: '/work/c' },
+      ]),
+    };
     expect(reviewFlowBoardsOf(teamList, labelIn(teamList), projectCopyNames(pending))).toEqual([
       { teamName: 'legacy', displayName: 'Legacy' },
       { teamName: 'builders', displayName: 'Builders' },
@@ -184,7 +193,10 @@ describe('review flow of per-project teams', () => {
   });
 
   it('names the projects a saved team setting has not reached', () => {
-    const view = foldProjectTeamBoards(overview({ 'ptc-aaa': human }, team(human), ['ptc-bbb']), folderOf);
+    const view = foldProjectTeamBoards(
+      overview({ 'ptc-aaa': human }, team(human), ['ptc-bbb']),
+      folderOf
+    );
     expect(view.overrides).toEqual({ builders: human });
     expect(view.unreadableTeams).toEqual([]);
     expect(view.projectTeams.builders).toEqual({
@@ -194,11 +206,16 @@ describe('review flow of per-project teams', () => {
     // A team that follows the default: a board that still carries an override is behind.
     const cleared = foldProjectTeamBoards(overview({ 'ptc-aaa': human }, team(null)), folderOf);
     expect(cleared.overrides).toEqual({});
-    expect(cleared.projectTeams.builders.unsynced).toEqual([{ projectLabel: 'app-one', setting: human }]);
+    expect(cleared.projectTeams.builders.unsynced).toEqual([
+      { projectLabel: 'app-one', setting: human },
+    ]);
   });
 
   it('before the first save, shows what the projects share, or that they differ', () => {
-    const shared = foldProjectTeamBoards(overview({ 'ptc-aaa': human, 'ptc-bbb': human }), folderOf);
+    const shared = foldProjectTeamBoards(
+      overview({ 'ptc-aaa': human, 'ptc-bbb': human }),
+      folderOf
+    );
     expect(shared.overrides).toEqual({ builders: human });
     expect(shared.projectTeams.builders).toEqual({ saved: false, unsynced: [] });
 

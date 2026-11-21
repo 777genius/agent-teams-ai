@@ -5,7 +5,10 @@ import * as path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { TeamMetaStore } from '../../../../src/main/services/team/TeamMetaStore';
-import { getTeamsBasePath, setClaudeBasePathOverride } from '../../../../src/main/utils/pathDecoder';
+import {
+  getTeamsBasePath,
+  setClaudeBasePathOverride,
+} from '../../../../src/main/utils/pathDecoder';
 
 const human = { reviewFlow: 'human_approval', reviewFlowPrompt: 'Run e2e' } as const;
 let root: string;
@@ -28,7 +31,13 @@ const raw = async () =>
 async function seed(extra: Record<string, unknown>): Promise<void> {
   await fs.writeFile(
     path.join(getTeamsBasePath(), 'builders', 'team.meta.json'),
-    JSON.stringify({ version: 1, cwd: '/p', createdAt: 1, projectContextMode: 'per_project', ...extra })
+    JSON.stringify({
+      version: 1,
+      cwd: '/p',
+      createdAt: 1,
+      projectContextMode: 'per_project',
+      ...extra,
+    })
   );
 }
 
@@ -44,7 +53,9 @@ describe('TeamMetaStore review flow of a per-project team', () => {
     expect(await store.getMeta('builders')).not.toHaveProperty('reviewFlowSettings');
     await seed({ reviewFlowSettings: null });
     expect((await store.getMeta('builders'))?.reviewFlowSettings).toBeNull();
-    await seed({ reviewFlowSettings: { reviewFlow: 'human_approval', reviewFlowPrompt: '  Run e2e ' } });
+    await seed({
+      reviewFlowSettings: { reviewFlow: 'human_approval', reviewFlowPrompt: '  Run e2e ' },
+    });
     expect((await store.getMeta('builders'))?.reviewFlowSettings).toEqual(human);
   });
 
@@ -62,7 +73,10 @@ describe('TeamMetaStore review flow of a per-project team', () => {
     await store.updateMeta('builders', (current) => ({ ...current!, effort: 'high' }));
     expect((await raw()).reviewFlowSettings).toEqual(human);
     await store.updateMeta('builders', (current) => ({ ...current!, reviewFlowSettings: null }));
-    expect(await raw()).toMatchObject({ reviewFlowSettings: null, projectContextMode: 'per_project' });
+    expect(await raw()).toMatchObject({
+      reviewFlowSettings: null,
+      projectContextMode: 'per_project',
+    });
   });
 
   it('drops a saved value that is not a complete review flow, like any other invalid field', async () => {

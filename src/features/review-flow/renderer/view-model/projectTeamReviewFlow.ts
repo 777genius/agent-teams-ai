@@ -41,7 +41,9 @@ function sameSetting(a: BoardSetting, b: ReviewFlowSettings | null): boolean {
 }
 
 /** The setting every board shares, `null` for none, or `undefined` when they disagree. */
-function commonSetting(boards: readonly ProjectBoardReviewFlow[]): ReviewFlowSettings | null | undefined {
+function commonSetting(
+  boards: readonly ProjectBoardReviewFlow[]
+): ReviewFlowSettings | null | undefined {
   const [first] = boards;
   if (!first) return null;
   if (first.setting === 'unreadable') return undefined;
@@ -82,7 +84,9 @@ export function foldProjectTeamBoards(
     projectTeams[teamName] = {
       saved: team.saved,
       unsynced:
-        setting === undefined ? boards : boards.filter((board) => !sameSetting(board.setting, setting)),
+        setting === undefined
+          ? boards
+          : boards.filter((board) => !sameSetting(board.setting, setting)),
     };
   }
   return { overrides, unreadableTeams: [...unreadable], projectTeams };
@@ -91,7 +95,9 @@ export function foldProjectTeamBoards(
 /** The project copies of teams with separate history per project: never entries of their own. */
 export function projectCopyNames(projectTeams: ProjectTeams): ReadonlySet<string> {
   return new Set(
-    Object.values(projectTeams).flatMap((team) => team.projects.map((project) => project.executionTeamName))
+    Object.values(projectTeams).flatMap((team) =>
+      team.projects.map((project) => project.executionTeamName)
+    )
   );
 }
 

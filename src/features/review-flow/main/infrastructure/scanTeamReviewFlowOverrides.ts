@@ -11,7 +11,9 @@ const KANBAN_STATE_FILE = 'kanban-state.json';
 const SCAN_CONCURRENCY = 16;
 
 /** The review-flow part of one team's board, or `unavailable` when the board cannot be read. */
-export type BoardReviewFlowState = ReturnType<typeof inspectTeamReviewFlowState> | { kind: 'unavailable' };
+export type BoardReviewFlowState =
+  | ReturnType<typeof inspectTeamReviewFlowState>
+  | { kind: 'unavailable' };
 
 export async function readBoardReviewFlow(
   teamsDir: string,

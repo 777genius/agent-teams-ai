@@ -65,7 +65,10 @@ function createProjectTeamReviewFlowPorts(
         ) {
           continue;
         }
-        projects.push({ executionTeamName: context.executionTeamName, projectPath: context.projectPath });
+        projects.push({
+          executionTeamName: context.executionTeamName,
+          projectPath: context.projectPath,
+        });
       }
       return { saved: meta.reviewFlowSettings, projects };
     },
@@ -80,7 +83,10 @@ function createProjectTeamReviewFlowPorts(
 /** The review-flow settings of the app, routed by what a team name means. */
 export function createTeamReviewFlowService(data: () => ReviewFlowData): ReviewFlowService {
   return createReviewFlowFeature({
-    teamWriter: { setReviewFlowSettings: (teamName, settings) => data().setReviewFlowSettings(teamName, settings) },
+    teamWriter: {
+      setReviewFlowSettings: (teamName, settings) =>
+        data().setReviewFlowSettings(teamName, settings),
+    },
     getClaudeDir: getClaudeBasePath,
     getTeamsDir: getTeamsBasePath,
     projectTeams: createProjectTeamReviewFlowPorts(data),

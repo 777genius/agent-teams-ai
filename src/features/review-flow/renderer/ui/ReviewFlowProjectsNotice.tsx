@@ -2,7 +2,10 @@ import { useAppTranslation } from '@features/localization/renderer';
 
 import { FLOW_TEXT_KEYS } from './reviewFlowText';
 
-import type { BoardSetting, ProjectTeamReviewFlowStatus } from '../view-model/projectTeamReviewFlow';
+import type {
+  BoardSetting,
+  ProjectTeamReviewFlowStatus,
+} from '../view-model/projectTeamReviewFlow';
 
 interface ReviewFlowProjectsNoticeProps {
   status: ProjectTeamReviewFlowStatus;
@@ -21,7 +24,9 @@ export const ReviewFlowProjectsNotice = ({
   const { t } = useAppTranslation('team');
   const settingText = (setting: BoardSetting): string => {
     if (setting === 'unreadable') return t('reviewFlow.projects.unreadable');
-    return setting ? t(FLOW_TEXT_KEYS[setting.reviewFlow].label) : t('reviewFlow.projects.followsDefault');
+    return setting
+      ? t(FLOW_TEXT_KEYS[setting.reviewFlow].label)
+      : t('reviewFlow.projects.followsDefault');
   };
   const { unsynced } = status;
   return (

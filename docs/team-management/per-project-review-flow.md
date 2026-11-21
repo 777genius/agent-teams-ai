@@ -4,10 +4,10 @@ A team with separate history per project has **one** review flow, like an ordina
 
 ## Where it lives
 
-| What | Where | Who reads it |
-| --- | --- | --- |
-| The team's setting | `reviewFlowSettings` in `team.meta.json` of the logical team: missing = the team never saved one, `null` = it follows the default for all teams, `{ reviewFlow, reviewFlowPrompt }` = its own | the app (settings page, board popover) |
-| What agents use | the override in `kanban-state.json` of each project copy, as for any board | the controller, when a task of that project is reviewed |
+| What               | Where                                                                                                                                                                                         | Who reads it                                            |
+| ------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------- |
+| The team's setting | `reviewFlowSettings` in `team.meta.json` of the logical team: missing = the team never saved one, `null` = it follows the default for all teams, `{ reviewFlow, reviewFlowPrompt }` = its own | the app (settings page, board popover)                  |
+| What agents use    | the override in `kanban-state.json` of each project copy, as for any board                                                                                                                    | the controller, when a task of that project is reviewed |
 
 The field is `board-definition` in `TEAM_META_FIELD_OWNER`: it belongs to the team, is copied into the board of every copy, and never into the metadata of a copy. `TeamMetaStore` keeps it through every write that does not state it (as it does for `projectContextMode`), so writers that rebuild the record from a request (launch settings, display metadata, member settings) cannot drop it.
 
@@ -36,13 +36,13 @@ A per-project team that never saved a setting has no field. Nothing writes the b
 
 ## The app
 
-`foldProjectTeamBoards` (renderer view model) turns the per-board overview into one entry per team: the boards of the copies of a per-project team stop being entries of their own, and the team shows its saved setting, or the one its projects share. A copy that an ordinary team retained keeps its own entry. The board popover of a project copy edits its team's setting (`reviewFlowTeamOf`) and reads the overview again when it opens. After any team save the store reads the overview again, because a save of a per-project team changes several boards (and a partial failure changes some).
+The overview (`ReviewFlowOverview.projectTeams`) reports every per-project team with what it saved and its project copies, as the main process proves them from the contexts index (the same list a save writes, so a copy whose first launch never finished is included; the team list of the app folds only ready copies). `foldProjectTeamBoards` (renderer view model) turns the per-board overview into one entry per team: the boards of those copies stop being entries of their own, and the team shows its saved setting, or the one its projects share. A copy that an ordinary team retained keeps its own entry. The board popover of a project copy edits its team's setting (`reviewFlowTeamOf`) and reads the overview again when it opens. After any team save the store reads the overview again, because a save of a per-project team changes several boards (and a partial failure changes some).
 
 ## Verification
 
 - Unit: `TeamKanbanReviewFlowGateway.test.ts` (routing, order under the lock, partial failure, nothing written when listing fails, copy refused, fail closed), `projectBoardReviewFlowSync.test.ts` (launch copy: migration no-op, write only when different, repair), `TeamMetaStore.reviewFlow.test.ts` (missing vs `null`, kept by writers that do not state it), `reviewFlowViewModel.test.ts` (fold, differ, not applied), `ReviewFlowPolicyEditor.test.tsx`, `createReviewFlowStore.test.ts`, `TeamProjectContextDraftMaterializer.test.ts`.
 - Disk integration: `teamProjectContextCreate.integration.test.ts` with the real metadata store, contexts registry and controller board writes: a running copy and a pending copy are written, a copy and unreadable metadata are refused with nothing written, older boards are kept until the first save, a new copy takes the team's setting at launch.
-- Real Electron: `scripts/e2e/project-scoped-team-history-desktop.ts`, section `verifyTeamReviewFlow` (projects that differ shown in the board popover of project A, one Save applies the default to both boards, a team setting written to both boards, a copy refused, the settings page lists the team once) and the HTTP section (a setting saved before the first launch reaches the board of the new copy).
+- Real Electron: `scripts/e2e/project-scoped-team-history-desktop.ts`, section `verifyTeamReviewFlow` (projects that differ shown in the board popover of project A, one Save applies the default to both boards, a team setting written to both boards, a copy refused, the settings page lists the team once) and the HTTP section (a setting saved before the first launch reaches the board of the new copy, which the overview reports as a project of the team while its first run is not ready).
 
 ## Not covered
 

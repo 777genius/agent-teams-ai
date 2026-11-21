@@ -17,7 +17,11 @@ import { reviewFlowBoardsOf } from '../view-model/reviewFlowViewModel';
 
 import { createReviewFlowStore } from './createReviewFlowStore';
 
-import type { ReviewFlowOverview, ReviewFlowPolicy, ReviewFlowSettings } from '../../contracts/types';
+import type {
+  ReviewFlowOverview,
+  ReviewFlowPolicy,
+  ReviewFlowSettings,
+} from '../../contracts/types';
 import type { TeamIdentity } from '../view-model/reviewFlowViewModel';
 import type { ReviewFlowLoadStatus, ReviewFlowStoreState } from './createReviewFlowStore';
 
@@ -139,7 +143,11 @@ export function useKnownTeams(): readonly TeamIdentity[] {
   }, [teams.length, fetchTeams]);
   return useMemo(
     () =>
-      reviewFlowBoardsOf(teams, (name) => projectCopyLabel(teams, name), projectCopyNames(projectTeams)),
+      reviewFlowBoardsOf(
+        teams,
+        (name) => projectCopyLabel(teams, name),
+        projectCopyNames(projectTeams)
+      ),
     [teams, projectTeams]
   );
 }

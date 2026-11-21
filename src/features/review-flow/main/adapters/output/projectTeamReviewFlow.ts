@@ -60,7 +60,8 @@ export class ProjectBoardsNotUpdatedError extends Error {
   }
 }
 
-const messageOf = (error: unknown): string => (error instanceof Error ? error.message : String(error));
+const messageOf = (error: unknown): string =>
+  error instanceof Error ? error.message : String(error);
 
 /**
  * The one write of the review flow of a team with separate history per project: the team's setting,

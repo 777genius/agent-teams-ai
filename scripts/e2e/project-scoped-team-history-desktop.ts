@@ -962,10 +962,16 @@ async function verifyTeamReviewFlow(f: Fixture) {
     .catch(() => ({ teamName: f.nativeA, reviewers: [], tasks: {} }));
   await json(boardPath(f.nativeA), { ...boardA, reviewFlow: 'human_approval', reviewFlowPrompt: 'E2E project A' });
   assert(!('reviewFlowSettings' in await readJsonFile(metaPath)), 'The fixture team starts without a team review flow');
-  const before = await ipcOutcome('window.electronAPI.reviewFlow.getOverview()');
-  const projectTeams = (before.value?.projectTeams ?? {}) as Record<string, unknown>;
-  assert(before.ok && !(f.logical in projectTeams), 'A team that never saved has no team setting: ' +
-    JSON.stringify(before).slice(0, 300));
+  type ProjectTeamFlow = { saved: boolean; settings: unknown; projects: { executionTeamName: string }[] };
+  const teamFlowOf = async () => {
+    const overview = await ipcOutcome('window.electronAPI.reviewFlow.getOverview()');
+    assert(overview.ok, 'The review flow overview must load: ' + JSON.stringify(overview));
+    return (overview.value?.projectTeams as Record<string, ProjectTeamFlow> | undefined)?.[f.logical];
+  };
+  const before = await teamFlowOf();
+  assert(before && !before.saved, 'A team that never saved has no team setting: ' + JSON.stringify(before));
+  assert.deepEqual(before.projects.map((project) => project.executionTeamName).sort(),
+    [f.nativeA, f.nativeB].sort(), 'The overview names both project copies of the team');
 
   // The board popover of project A shows the team's one setting, and that its projects differ.
   await selectProject(f, 'project-a');
@@ -1006,8 +1012,9 @@ async function verifyTeamReviewFlow(f: Fixture) {
   for (const alias of [f.nativeA, f.nativeB]) {
     assert.deepEqual(await boardFlow(alias), human, 'The board of ' + alias + ' carries the team setting');
   }
-  const after = await ipcOutcome('window.electronAPI.reviewFlow.getOverview()');
-  assert.deepEqual((after.value?.projectTeams as Record<string, unknown>)?.[f.logical], human);
+  const after = await teamFlowOf();
+  assert(after?.saved, 'The overview shows the saved team setting: ' + JSON.stringify(after));
+  assert.deepEqual(after.settings, human);
 
   // 4. A project copy has no setting of its own.
   const copyWrite = await setFlow(f.nativeB, null);
@@ -1290,6 +1297,13 @@ async function verifyHttpCreateAndLaunch(f: Fixture) {
   const copyBoard = await waitForJson(path.join(f.rootTeams, copy.executionTeamName, 'kanban-state.json'),
     (board) => board.reviewFlow === 'lead_then_human', 'the new project copy takes the review flow of its team');
   assert.equal(copyBoard.reviewFlowPrompt, 'E2E new copy');
+  // Even before its first run is ready, the copy is reported as a project of the team (never its own entry).
+  const flowOverview = await ipcOutcome('window.electronAPI.reviewFlow.getOverview()');
+  const httpTeamFlow = (flowOverview.value?.projectTeams as Record<string, {
+    projects: { executionTeamName: string }[];
+  }> | undefined)?.[team];
+  assert(httpTeamFlow?.projects.some((project) => project.executionTeamName === copy.executionTeamName),
+    'The review flow overview must fold the new copy into its team: ' + JSON.stringify(httpTeamFlow));
   assert.equal(projectKey(String(copyMeta.cwd)), projectKey(f.projectC));
   await assert.rejects(readFile(path.join(teamDir, 'config.json')), { code: 'ENOENT' },
     'The team itself must never become a runnable team');
