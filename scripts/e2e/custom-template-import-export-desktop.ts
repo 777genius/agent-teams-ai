@@ -184,6 +184,23 @@ async function click(expression: string) {
     await cdp!.send('Input.dispatchMouseEvent', { type, ...point, button: 'left', clickCount: 1 });
   }
 }
+const templateConfirmDialog =
+  `Array.from(document.querySelectorAll('[role="alertdialog"]')).find(e => e.querySelector('h2')?.textContent?.includes('Apply team template?'))`;
+
+async function acceptTemplateSelection(selector: string, appliedPredicate: string) {
+  await click(selector);
+  // An untouched form can apply directly; a populated form must confirm first.
+  await until(
+    `(${templateConfirmDialog}) || (${appliedPredicate})`,
+    'template selection confirmation or application'
+  );
+  if (await evaluate<boolean>(`Boolean(${templateConfirmDialog})`)) {
+    await click(button('Apply template', templateConfirmDialog));
+    await until(`!(${templateConfirmDialog})`, 'template confirmation closes');
+  }
+  await until(appliedPredicate, 'chosen template applied');
+}
+
 async function screenshot(name: string) {
   await pause(250);
   await cdp!.screenshot(path.join(output, name + '.png'));
@@ -482,11 +499,9 @@ try {
     `document.querySelector('[data-testid="create-template-option-custom-${original.templateId}"]')`,
     'custom template available in creation page'
   );
-  await click(`document.querySelector('[data-testid="create-template-option-custom-${original.templateId}"]')`);
-  await until(
-    `document.querySelector('#team-prompt')?.value === ${JSON.stringify(portable.teamPrompt)}`,
-    'reviewed custom template prompt applied to editable creation draft'
-  );
+  const customOption = `document.querySelector('[data-testid="create-template-option-custom-${original.templateId}"]')`;
+  const customApplied = `document.querySelector('#team-prompt')?.value === ${JSON.stringify(portable.teamPrompt)}`;
+  await acceptTemplateSelection(customOption, customApplied);
   await until(
     `Array.from(document.querySelectorAll('[data-testid="create-team-page"] input')).some(input => input.value === 'reviewer')`,
     'custom template roster applied to editable team fields'
@@ -496,23 +511,29 @@ try {
 
   const builtin = `document.querySelector('[data-testid^="create-template-option-builtin-"]')`;
   await click(builtin);
-  await until(
-    `document.querySelector('#team-prompt')?.value && document.querySelector('#team-prompt')?.value !== ${JSON.stringify(portable.teamPrompt)}`,
-    'builtin template changes the same editable prompt'
+  await until(templateConfirmDialog, 'confirm replacement of populated custom draft');
+  assert.equal(await evaluate<string>("document.querySelector('#team-prompt')?.value"), portable.teamPrompt);
+  assert.equal(
+    await evaluate<string>(`document.querySelector('[data-testid="create-template-option-custom-${original.templateId}"]')?.getAttribute('aria-pressed')`),
+    'true'
   );
-  await screenshot('12-builtin-template-same-editor');
-  await click(`document.querySelector('[data-testid="create-template-option-none"]')`);
-  await until(
-    `document.querySelector('[data-testid="create-template-option-none"]')?.getAttribute('aria-pressed') === 'true' && !document.querySelector('#team-prompt')`,
-    'No template clears the template-driven editor in config-only mode'
-  );
-  await screenshot('13-no-template');
-  checks.push('Selecting No template clears the former template prompt; a fresh custom selection restores it.');
-  await click(`document.querySelector('[data-testid="create-template-option-custom-${original.templateId}"]')`);
-  await until(
-    `document.querySelector('#team-prompt')?.value === ${JSON.stringify(portable.teamPrompt)}`,
-    'custom template reselected after builtin'
-  );
+  await click(button('Cancel', templateConfirmDialog));
+  await until(`!(${templateConfirmDialog})`, 'template replacement cancellation');
+  assert.equal(await evaluate<string>("document.querySelector('#team-prompt')?.value"), portable.teamPrompt);
+  await screenshot('12-confirmation-cancel-retains-draft');
+  checks.push('Cancelling a new template selection does not replace the custom prompt or roster.');
+
+  const builtinApplied =
+    `document.querySelector('#team-prompt')?.value && document.querySelector('#team-prompt')?.value !== ${JSON.stringify(portable.teamPrompt)}`;
+  await acceptTemplateSelection(builtin, builtinApplied);
+  await screenshot('13-builtin-template-same-editor');
+
+  const noneApplied =
+    `document.querySelector('[data-testid="create-template-option-none"]')?.getAttribute('aria-pressed') === 'true' && !document.querySelector('#team-prompt')`;
+  await acceptTemplateSelection(`document.querySelector('[data-testid="create-template-option-none"]')`, noneApplied);
+  await screenshot('14-no-template');
+  checks.push('Selecting No template confirms before clearing populated draft content.');
+  await acceptTemplateSelection(customOption, customApplied);
 
   const newTeam = 'template-e2e-imported-team';
   await click("document.querySelector('#team-name')");

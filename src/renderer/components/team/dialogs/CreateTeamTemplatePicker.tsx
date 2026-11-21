@@ -1,6 +1,7 @@
 import { TeamTemplatePicker } from '@features/team-templates/renderer';
 
 import { buildInitialRosterMemberDrafts } from './createTeamInitialRoster';
+import { hasExistingCreateTeamDraftContent } from './hasExistingCreateTeamDraftContent';
 
 import type { TeamTemplateV1 } from '@features/team-templates';
 import type { UseCreateTeamDraftResult } from '@renderer/hooks/useCreateTeamDraft';
@@ -46,15 +47,13 @@ export const CreateTeamTemplatePicker = ({
   onTemplateApplied,
   disabled,
 }: CreateTeamTemplatePickerProps): React.JSX.Element => {
-  const description = descriptionDraft.value.trim();
-  const hasExistingContent =
-    form.members.length > 0 ||
-    (description.length > 0 && description !== defaultDescription.trim()) ||
-    promptDraft.value.length > 0 ||
-    hasPromptChips ||
-    Boolean(form.runtimeProviderId) ||
-    form.soloTeam ||
-    !form.syncModelsWithLead;
+  const hasExistingContent = hasExistingCreateTeamDraftContent({
+    form,
+    description: descriptionDraft.value,
+    prompt: promptDraft.value,
+    defaultDescription,
+    hasPromptChips,
+  });
 
   return (
     <TeamTemplatePicker

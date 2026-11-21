@@ -422,6 +422,54 @@ describe('CreateTeamTemplatePicker', () => {
     );
   });
 
+  it('does not replace edited draft contents until confirmation, and cancel preserves selection', async () => {
+    listTemplates.mockResolvedValue({ status: 'ready', templates: customTemplates() });
+    root.render(<CreateTeamTemplatePicker open confirmBeforeApply onApply={onApply} />);
+    await flush();
+
+    await click(optionCustom('tmpl-custom-1'));
+    const dialog = () => document.querySelector<HTMLElement>('[role="alertdialog"]');
+    const dialogButton = (part: string) =>
+      Array.from(dialog()?.querySelectorAll<HTMLButtonElement>('button') ?? []).find((button) =>
+        button.textContent?.includes(part)
+      ) ?? null;
+
+    expect(dialog()).not.toBeNull();
+    expect(onApply).not.toHaveBeenCalled();
+    expect(optionNone()?.getAttribute('aria-pressed')).toBe('true');
+
+    await click(dialogButton('actions.cancel'));
+    await flush();
+    expect(dialog()).toBeNull();
+    expect(onApply).not.toHaveBeenCalled();
+    expect(optionNone()?.getAttribute('aria-pressed')).toBe('true');
+
+    await click(optionCustom('tmpl-custom-1'));
+    await click(dialogButton('templates.confirmAction'));
+    await flush();
+    expect(onApply).toHaveBeenCalledTimes(1);
+    expect(optionCustom('tmpl-custom-1')?.getAttribute('aria-pressed')).toBe('true');
+
+    // "No template" is also destructive: it clears the editable prompt and members.
+    await click(optionNone());
+    expect(dialog()).not.toBeNull();
+    expect(onApply).toHaveBeenCalledTimes(1);
+    await click(dialogButton('actions.cancel'));
+    await flush();
+    expect(optionCustom('tmpl-custom-1')?.getAttribute('aria-pressed')).toBe('true');
+    expect(onApply).toHaveBeenCalledTimes(1);
+
+    await click(optionNone());
+    await click(dialogButton('templates.confirmAction'));
+    await flush();
+    expect(onApply).toHaveBeenCalledTimes(2);
+    expect(onApply).toHaveBeenLastCalledWith(
+      expect.objectContaining({ prompt: '', members: [] }),
+      'none',
+      'none'
+    );
+  });
+
   it('keeps selection controls keyboard-focusable with accessible pressed state', async () => {
     listTemplates.mockResolvedValueOnce({ status: 'ready', templates: customTemplates() });
     renderPicker(true);

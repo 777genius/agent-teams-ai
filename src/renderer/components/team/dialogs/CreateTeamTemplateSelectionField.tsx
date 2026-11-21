@@ -3,15 +3,20 @@ import React from 'react';
 import { CreateTeamTemplatePicker } from '@features/custom-team-templates/renderer';
 
 import { applyTemplateToCreateTeam } from './applyTemplateToCreateTeam';
+import { buildDefaultTeamDescription } from './createTeamDescription';
+import { hasExistingCreateTeamDraftContent } from './hasExistingCreateTeamDraftContent';
 
 import type { UseCreateTeamDraftResult } from '@renderer/hooks/useCreateTeamDraft';
 import type { UseCreateTeamTemplateSelectionResult } from './useCreateTeamTemplateSelection';
 
 interface TemplateTextDraft {
+  value: string;
+  isLoaded: boolean;
   setValue(value: string): void;
 }
 
 interface TemplateChipDraft {
+  chips: readonly unknown[];
   clearChipDraft(): void;
 }
 
@@ -21,6 +26,10 @@ interface Props {
   form: Pick<
     UseCreateTeamDraftResult,
     | 'isLoaded'
+    | 'members'
+    | 'runtimeProviderId'
+    | 'soloTeam'
+    | 'syncModelsWithLead'
     | 'setMembers'
     | 'setLaunchTeam'
     | 'setSoloTeam'
@@ -47,15 +56,29 @@ export function CreateTeamTemplateSelectionField({
   promptDraft,
   promptChipDraft,
 }: Props): React.JSX.Element {
+  const confirmBeforeApply = hasExistingCreateTeamDraftContent({
+    form,
+    description: descriptionDraft.value,
+    prompt: promptDraft.value,
+    defaultDescription: buildDefaultTeamDescription(),
+    hasPromptChips: promptChipDraft.chips.length > 0,
+  });
+
   return (
     <CreateTeamTemplatePicker
+      confirmBeforeApply={confirmBeforeApply}
       open={open}
       initialSelection={
         isCopy && templateSelection.appliedTemplateSource === 'none'
           ? ''
           : templateSelection.storedTemplateSelection.value
       }
-      initialSelectionReady={form.isLoaded && templateSelection.templateSelectionDraft.isLoaded}
+      initialSelectionReady={
+        form.isLoaded &&
+        templateSelection.templateSelectionDraft.isLoaded &&
+        descriptionDraft.isLoaded &&
+        promptDraft.isLoaded
+      }
       onApply={(draft, source, value) =>
         applyTemplateToCreateTeam(draft, source, value, {
           templateSelection,

@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
 import { TEAM_TEMPLATES } from '@features/team-templates';
+import { TemplateApplyConfirmDialog } from '@features/team-templates/renderer';
 import { Button } from '@renderer/components/ui/button';
 import { AlertTriangle, RefreshCw, ShieldCheck } from 'lucide-react';
 
@@ -19,6 +20,8 @@ import type { CustomTeamTemplateV1 } from '@features/custom-team-templates/contr
 
 export interface CreateTeamTemplatePickerProps {
   open: boolean;
+  /** Protect existing draft fields (including No template, which clears them). */
+  confirmBeforeApply?: boolean;
   initialSelection?: string;
   /** True once the persisted template selection has been restored (or confirmed absent). */
   initialSelectionReady?: boolean;
@@ -48,6 +51,7 @@ function resolveInitialSelection(initialSelection: string | undefined): string {
 
 export const CreateTeamTemplatePicker = ({
   open,
+  confirmBeforeApply = false,
   initialSelection,
   initialSelectionReady,
   hydrated,
@@ -66,6 +70,7 @@ export const CreateTeamTemplatePicker = ({
   // Parent owns the persisted selection: both the header shortcut and this
   // catalogue must reflect one applied template without re-applying the draft.
   const [lastCustomSnapshot, setLastCustomSnapshot] = useState<CustomTeamTemplateV1 | null>(null);
+  const [pendingSelection, setPendingSelection] = useState<string | null>(null);
 
   // Hydration readiness: while the persisted selection has not been restored,
   // option changes are blocked so they cannot race with the pending restore.
@@ -86,6 +91,10 @@ export const CreateTeamTemplatePicker = ({
       return current === next ? current : next;
     });
   }, [initialSelection]);
+
+  useEffect(() => {
+    if (!open || !selectionReady) setPendingSelection(null);
+  }, [open, selectionReady]);
 
   const customs = state.status === 'ready' || state.status === 'partial' ? state.templates : [];
   const libraryLoading = state.status === 'idle' || state.status === 'loading';
@@ -109,9 +118,8 @@ export const CreateTeamTemplatePicker = ({
       : null;
   const previewCustom = selectedCustom ?? (staleCustomId ? lastCustomSnapshot : null);
 
-  const handleSelect = (value: string): void => {
-    if (!selectionReady) return;
-    if (value === selection) return;
+  const applySelection = (value: string): void => {
+    if (!open || !selectionReady || value === selection) return;
     const result = resolveCreateTeamTemplateDraft(value, {
       builtins: TEAM_TEMPLATES,
       customs,
@@ -137,6 +145,22 @@ export const CreateTeamTemplatePicker = ({
     }
   };
 
+  const handleSelect = (value: string): void => {
+    if (!open || !selectionReady || value === selection || pendingSelection !== null) return;
+    const result = resolveCreateTeamTemplateDraft(value, {
+      builtins: TEAM_TEMPLATES,
+      customs,
+    });
+    if (result.status !== 'none' && result.status !== 'builtin' && result.status !== 'custom') {
+      return;
+    }
+    if (confirmBeforeApply) {
+      setPendingSelection(value);
+    } else {
+      applySelection(value);
+    }
+  };
+
   const optionClass = (active: boolean): string =>
     `rounded-md border p-3 text-left transition-colors ${
       active
@@ -146,6 +170,14 @@ export const CreateTeamTemplatePicker = ({
 
   return (
     <div data-testid="create-team-template-picker" className="space-y-3">
+      <TemplateApplyConfirmDialog
+        open={pendingSelection !== null && open && selectionReady}
+        onCancel={() => setPendingSelection(null)}
+        onConfirm={() => {
+          if (pendingSelection !== null) applySelection(pendingSelection);
+          setPendingSelection(null);
+        }}
+      />
       <div>
         <p className="text-sm font-medium text-[var(--color-text)]">
           {t('customTemplates.createFromTemplate.title')}
