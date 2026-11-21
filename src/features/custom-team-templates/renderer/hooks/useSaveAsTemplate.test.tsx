@@ -11,6 +11,7 @@ vi.mock('@renderer/api', () => ({
   api: { customTeamTemplates: { preparePreview, saveTemplate, recheckSave } },
 }));
 
+import { setPendingTemplateMutation } from './pendingTemplateMutation';
 import { useSaveAsTemplate, type UseSaveAsTemplateResult } from './useSaveAsTemplate';
 
 import type {
@@ -90,11 +91,30 @@ beforeEach(() => {
 
 afterEach(() => {
   act(() => root.unmount());
+  setPendingTemplateMutation(null);
   host.remove();
   vi.restoreAllMocks();
 });
 
 describe('useSaveAsTemplate name-conflict recovery', () => {
+  it('does not let save or refresh replace an unresolved operation', async () => {
+    await render();
+    saveTemplate.mockResolvedValueOnce({
+      status: 'unresolvedWriteOutcome',
+      templateId: 'template-1',
+    } satisfies ConfirmCustomTeamTemplateSaveResult);
+    await saveNow();
+    await act(async () => {
+      await latest?.save();
+      await latest?.refresh();
+    });
+    expect(saveTemplate).toHaveBeenCalledTimes(1);
+    expect(preparePreview).toHaveBeenCalledTimes(1);
+    expect(latest?.preview?.previewToken).toBe('token-1');
+    expect(latest?.canRecheck).toBe(true);
+    expect(latest?.canSave).toBe(false);
+  });
+
   it('refreshes the preview on rename after a name conflict and saves without a false expiry', async () => {
     await render();
     expect(latest?.preview?.previewToken).toBe('token-1');

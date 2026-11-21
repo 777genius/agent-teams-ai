@@ -20,6 +20,18 @@ export type TemplateLibraryState =
   | { status: 'idle' }
   | { status: 'loading' }
   | { status: 'empty' }
+  | {
+      status: 'recoveryRequired' | 'recoveryInterrupted';
+      storageDirectory: string;
+      markerPath: string;
+      interruptedMarkerPath: string;
+      markerWriteFailed?: true;
+    }
+  | {
+      status: 'storageVerificationRequired' | 'storageSafetyUnavailable';
+      storageDirectory: string;
+      databasePath: string;
+    }
   | { status: 'ready'; templates: readonly CustomTeamTemplateV1[] }
   | {
       status: 'partial';
@@ -38,38 +50,46 @@ export type TemplateLibraryState =
  */
 export function useCustomTemplateLibrary(open: boolean): {
   state: TemplateLibraryState;
-  reload: () => Promise<void>;
+  /** Distinguishes a complete read from an incomplete snapshot or a failure. */
+  reload: () => Promise<'complete' | 'partial' | 'failed'>;
 } {
   const [state, setState] = useState<TemplateLibraryState>({ status: 'idle' });
   const requestIdRef = useRef(0);
 
-  const reload = useCallback(async (): Promise<void> => {
+  const reload = useCallback(async (): Promise<'complete' | 'partial' | 'failed'> => {
     const requestId = ++requestIdRef.current;
     setState({ status: 'loading' });
     try {
       const result = await api.customTeamTemplates.listTemplates();
-      if (requestId !== requestIdRef.current) return;
+      if (requestId !== requestIdRef.current) return 'failed';
       switch (result.status) {
         case 'empty':
           setState({ status: 'empty' });
-          return;
+          return 'complete';
+        case 'recoveryRequired':
+        case 'recoveryInterrupted':
+        case 'storageVerificationRequired':
+        case 'storageSafetyUnavailable':
+          setState(result);
+          return 'failed';
         case 'ready':
           setState({ status: 'ready', templates: result.templates });
-          return;
+          return 'complete';
         case 'hasUnreadableRecords':
           setState({
             status: 'partial',
             templates: result.templates,
             unreadableRecords: result.unreadableRecords,
           });
-          return;
+          return 'partial';
         case 'storageUnavailable':
           setState({ status: 'storageUnavailable' });
-          return;
+          return 'failed';
       }
     } catch {
-      if (requestId !== requestIdRef.current) return;
+      if (requestId !== requestIdRef.current) return 'failed';
       setState({ status: 'requestFailed' });
+      return 'failed';
     }
   }, []);
 

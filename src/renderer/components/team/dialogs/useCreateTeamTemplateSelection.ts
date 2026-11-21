@@ -19,6 +19,8 @@ export interface UseCreateTeamTemplateSelectionOptions {
   promptDraft: { setValue(value: string): void };
   promptChipDraft: { clearChipDraft(): void };
   setLaunchTeam(value: boolean): void;
+  setRuntimeSelection(version: 1): void;
+  setSyncModelsWithLead(value: boolean, options: { persistStoredPreference: false }): void;
   setSoloTeam(value: boolean): void;
   setMembers(members: MemberDraft[]): void;
 }
@@ -71,6 +73,8 @@ export function useCreateTeamTemplateSelection({
   promptDraft,
   promptChipDraft,
   setLaunchTeam,
+  setRuntimeSelection,
+  setSyncModelsWithLead,
   setSoloTeam,
   setMembers,
 }: UseCreateTeamTemplateSelectionOptions): UseCreateTeamTemplateSelectionResult {
@@ -111,6 +115,8 @@ export function useCreateTeamTemplateSelection({
     setAppliedTemplateSource(source);
     templateSelectionDraft.setValue(JSON.stringify({ source, value: value ?? '' }));
     if (source !== 'none') {
+      setRuntimeSelection(1);
+      setSyncModelsWithLead(true, { persistStoredPreference: false });
       setLaunchTeam(false);
       setSoloTeam(false);
     }

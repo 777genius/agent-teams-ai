@@ -1380,6 +1380,7 @@ describe('SaveCustomTeamTemplateUseCase', () => {
         status: 'unresolvedWriteOutcome',
         templateId: preview.stateTemplateId,
       });
+      expect(fixture.create).toHaveBeenCalledTimes(1);
     } finally {
       vi.useRealTimers();
     }

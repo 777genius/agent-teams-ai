@@ -36,7 +36,7 @@ export const DuplicateCustomTemplateDialog = ({
 }: DuplicateCustomTemplateDialogProps): React.JSX.Element | null => {
   const { t } = useAppTranslation('team');
   const { t: tCommon } = useAppTranslation('common');
-  const { duplicateTemplate, busy } = useTemplateManagement();
+  const { duplicateTemplate, busy, blockedByUnknown, resolvedElsewhere } = useTemplateManagement();
 
   const defaultProposedName = template
     ? t('customTemplates.duplicate.defaultName', { name: template.name })
@@ -49,6 +49,7 @@ export const DuplicateCustomTemplateDialog = ({
     | 'sourceUnreadable'
     | 'storageUnavailable'
     | 'unresolvedWriteOutcome'
+    | 'resolvedElsewhere'
     | 'requestFailed'
     | null
   >(null);
@@ -56,17 +57,22 @@ export const DuplicateCustomTemplateDialog = ({
 
   useEffect(() => {
     if (open && template) {
-      setName(t('customTemplates.duplicate.defaultName', { name: template.name }));
+      setName(defaultProposedName);
       setNameConflict(false);
       setErrorState(null);
       setIssues([]);
     }
-  }, [open, template]);
+  }, [open, template, defaultProposedName]);
+
+  useEffect(() => {
+    if (resolvedElsewhere && errorState === 'unresolvedWriteOutcome')
+      setErrorState('resolvedElsewhere');
+  }, [resolvedElsewhere, errorState]);
 
   if (!template) return null;
 
   const handleDuplicate = async () => {
-    if (busy || !name.trim()) return;
+    if (busy || blockedByUnknown || errorState === 'resolvedElsewhere' || !name.trim()) return;
     setNameConflict(false);
     setErrorState(null);
     setIssues([]);
@@ -99,6 +105,9 @@ export const DuplicateCustomTemplateDialog = ({
           // Distinct from a known name conflict: the copy may exist. Keep the
           // entered name so the user can check My Templates before retrying.
           setErrorState('unresolvedWriteOutcome');
+          return;
+        case 'resolvedElsewhere':
+          setErrorState('resolvedElsewhere');
           return;
       }
     } catch {
@@ -173,6 +182,12 @@ export const DuplicateCustomTemplateDialog = ({
             </div>
           ) : null}
 
+          {errorState === 'resolvedElsewhere' ? (
+            <p role="status" data-testid="duplicate-template-resolved-elsewhere">
+              {t('customTemplates.states.resolvedElsewhere')}
+            </p>
+          ) : null}
+
           {errorState === 'sourceNotFound' ? (
             <div
               role="alert"
@@ -224,7 +239,7 @@ export const DuplicateCustomTemplateDialog = ({
             <Input
               id="duplicate-template-name"
               value={name}
-              disabled={busy}
+              disabled={busy || blockedByUnknown || errorState === 'resolvedElsewhere'}
               aria-invalid={nameIssues.length > 0 || undefined}
               aria-describedby={nameIssues.length > 0 ? 'duplicate-name-error' : undefined}
               onChange={(e) => {
@@ -246,7 +261,9 @@ export const DuplicateCustomTemplateDialog = ({
             {tCommon('actions.cancel')}
           </Button>
           <Button
-            disabled={busy || !name.trim()}
+            disabled={
+              busy || blockedByUnknown || errorState === 'resolvedElsewhere' || !name.trim()
+            }
             aria-busy={busy}
             onClick={() => void handleDuplicate()}
           >

@@ -2,7 +2,17 @@ import React, { useEffect, useRef, useState } from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
 import { TEAM_TEMPLATES } from '@features/team-templates';
-import { Button } from '@renderer/components/ui/button';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@renderer/components/ui/alert-dialog';
+import { Button, buttonVariants } from '@renderer/components/ui/button';
 import { AlertTriangle, RefreshCw, ShieldCheck } from 'lucide-react';
 
 import { useCustomTemplateLibrary } from '../hooks/useCustomTemplateLibrary';
@@ -14,24 +24,18 @@ import {
   resolveCreateTeamTemplateDraft,
 } from '../templateDraft';
 
+import { TemplateRecoveryInstructions } from './TemplateRecoveryInstructions';
+import { TemplateStorageUnavailableInstructions } from './TemplateStorageUnavailableInstructions';
+
 import type { CreateTeamTemplateDraft } from '../templateDraft';
 import type { CustomTeamTemplateV1 } from '@features/custom-team-templates/contracts';
 
 export interface CreateTeamTemplatePickerProps {
   open: boolean;
   initialSelection?: string;
+  confirmBeforeApply?: boolean;
   /** True once the persisted template selection has been restored (or confirmed absent). */
   initialSelectionReady?: boolean;
-  /** Alias for initialSelectionReady, accepted for compatibility. */
-  hydrated?: boolean;
-  /** Alias for initialSelectionReady, accepted for compatibility. */
-  selectionHydrated?: boolean;
-  /** Alias for initialSelectionReady, accepted for compatibility. */
-  isHydrated?: boolean;
-  /** Alias for initialSelectionReady, accepted for compatibility. */
-  ready?: boolean;
-  /** Alias: true means still loading (not ready). */
-  loading?: boolean;
   onApply: (
     draft: CreateTeamTemplateDraft,
     source: 'none' | 'builtin' | 'custom',
@@ -50,14 +54,11 @@ export const CreateTeamTemplatePicker = ({
   open,
   initialSelection,
   initialSelectionReady,
-  hydrated,
-  selectionHydrated,
-  isHydrated,
-  ready,
-  loading,
+  confirmBeforeApply = false,
   onApply,
 }: CreateTeamTemplatePickerProps): React.JSX.Element => {
   const { t } = useAppTranslation('team');
+  const { t: tCommon } = useAppTranslation('common');
   const { state, reload } = useCustomTemplateLibrary(open);
 
   const [selection, setSelection] = useState<string>(() =>
@@ -67,17 +68,11 @@ export const CreateTeamTemplatePicker = ({
   // later: draft persistence restores asynchronously, long after mount.
   const userSelectionMadeRef = useRef(false);
   const [lastCustomSnapshot, setLastCustomSnapshot] = useState<CustomTeamTemplateV1 | null>(null);
+  const [pendingSelection, setPendingSelection] = useState<string | null>(null);
 
   // Hydration readiness: while the persisted selection has not been restored,
   // option changes are blocked so they cannot race with the pending restore.
-  const selectionReady =
-    initialSelectionReady ??
-    hydrated ??
-    selectionHydrated ??
-    isHydrated ??
-    ready ??
-    (loading === undefined ? undefined : !loading) ??
-    true;
+  const selectionReady = initialSelectionReady ?? true;
 
   // Draft persistence restores the saved selection after mount. Adopt it only
   // while the picker still shows its default, so the visible selection matches
@@ -93,7 +88,13 @@ export const CreateTeamTemplatePicker = ({
 
   const customs = state.status === 'ready' || state.status === 'partial' ? state.templates : [];
   const libraryLoading = state.status === 'idle' || state.status === 'loading';
-  const libraryFailed = state.status === 'storageUnavailable' || state.status === 'requestFailed';
+  const libraryFailed =
+    state.status === 'storageUnavailable' ||
+    state.status === 'storageVerificationRequired' ||
+    state.status === 'storageSafetyUnavailable' ||
+    state.status === 'recoveryRequired' ||
+    state.status === 'recoveryInterrupted' ||
+    state.status === 'requestFailed';
   const libraryEmpty = state.status === 'empty';
 
   const parsedSelection = parseTemplateSelectionValue(selection);
@@ -113,10 +114,8 @@ export const CreateTeamTemplatePicker = ({
       : null;
   const previewCustom = selectedCustom ?? (staleCustomId ? lastCustomSnapshot : null);
 
-  const handleSelect = (value: string): void => {
-    if (!selectionReady) return;
+  const applySelection = (value: string): void => {
     userSelectionMadeRef.current = true;
-    if (value === selection) return;
     const result = resolveCreateTeamTemplateDraft(value, {
       builtins: TEAM_TEMPLATES,
       customs,
@@ -140,6 +139,15 @@ export const CreateTeamTemplatePicker = ({
       default:
         return;
     }
+  };
+
+  const handleSelect = (value: string): void => {
+    if (!selectionReady || value === selection) return;
+    if (confirmBeforeApply) {
+      setPendingSelection(value);
+      return;
+    }
+    applySelection(value);
   };
 
   const optionClass = (active: boolean): string =>
@@ -246,11 +254,28 @@ export const CreateTeamTemplatePicker = ({
             className="flex items-start gap-2 rounded-md border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-200"
           >
             <AlertTriangle className="mt-0.5 size-4 shrink-0" />
-            <p>
-              {state.status === 'storageUnavailable'
-                ? t('customTemplates.library.storageUnavailable')
-                : t('customTemplates.library.loadFailed')}
-            </p>
+            {state.status === 'recoveryRequired' || state.status === 'recoveryInterrupted' ? (
+              <TemplateRecoveryInstructions
+                storageDirectory={state.storageDirectory}
+                markerPath={state.markerPath}
+                interruptedMarkerPath={state.interruptedMarkerPath}
+                markerWriteFailed={state.markerWriteFailed}
+                interrupted={state.status === 'recoveryInterrupted'}
+              />
+            ) : state.status === 'storageVerificationRequired' ||
+              state.status === 'storageSafetyUnavailable' ? (
+              <TemplateStorageUnavailableInstructions
+                status={state.status}
+                storageDirectory={state.storageDirectory}
+                databasePath={state.databasePath}
+              />
+            ) : (
+              <p>
+                {state.status === 'storageUnavailable'
+                  ? t('customTemplates.library.storageUnavailable')
+                  : t('customTemplates.library.loadFailed')}
+              </p>
+            )}
           </div>
         ) : null}
         {libraryFailed ? (
@@ -389,6 +414,35 @@ export const CreateTeamTemplatePicker = ({
           </p>
         )}
       </div>
+      <AlertDialog
+        open={pendingSelection !== null}
+        onOpenChange={(next) => !next && setPendingSelection(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {t('templates.confirmTitle', { defaultValue: 'Apply team template?' })}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {t('templates.confirmMessage', {
+                defaultValue: 'This will replace your teammates, instructions and team settings with the template’s values.',
+              })}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{tCommon('actions.cancel')}</AlertDialogCancel>
+            <AlertDialogAction
+              className={buttonVariants({ variant: 'default' })}
+              onClick={() => {
+                if (pendingSelection !== null && selectionReady) applySelection(pendingSelection);
+                setPendingSelection(null);
+              }}
+            >
+              {t('templates.confirmAction', { defaultValue: 'Apply template' })}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

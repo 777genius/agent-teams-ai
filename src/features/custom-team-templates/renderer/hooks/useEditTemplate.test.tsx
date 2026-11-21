@@ -3,6 +3,8 @@ import { createRoot } from 'react-dom/client';
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { setPendingTemplateMutation } from './pendingTemplateMutation';
+
 const updateTemplate = vi.hoisted(() => vi.fn());
 const listTemplates = vi.hoisted(() => vi.fn());
 
@@ -91,6 +93,7 @@ beforeEach(() => {
 
 afterEach(() => {
   act(() => root.unmount());
+  setPendingTemplateMutation(null);
   host.remove();
   vi.restoreAllMocks();
 });

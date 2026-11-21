@@ -98,7 +98,6 @@ import { resolveTeamLeadColorName } from '@shared/utils/teamMemberColors';
 import { isTeamProviderId } from '@shared/utils/teamProvider';
 import { AlertTriangle, CheckCircle2, Info, Loader2, X } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
-
 import { AdvancedCliSection } from './AdvancedCliSection';
 import { AnthropicFastModeSelector } from './AnthropicFastModeSelector';
 import { assignCreatedTeamToOrganization } from './assignCreatedTeamToOrganization';
@@ -216,7 +215,6 @@ import {
   useWorktreeGitReadiness,
   WorktreeGitReadinessBanner,
 } from './WorktreeGitReadinessBanner';
-
 import type { CreateTeamDialogProps } from './CreateTeamDialog.types';
 import type {
   OrganizationPlacementSelection,
@@ -380,7 +378,7 @@ export const CreateTeamDialog = ({
   } = useCreateTeamTemplateSelection({
     initialData: Boolean(initialData),
     descriptionDraft, promptDraft, promptChipDraft,
-    setMembers, setLaunchTeam, setSoloTeam,
+    setMembers, setLaunchTeam, setRuntimeSelection, setSyncModelsWithLead, setSoloTeam,
   });
   const [projects, setProjects] = useState<ProjectPathProject[]>([]);
   const [projectsLoading, setProjectsLoading] = useState(false);
@@ -1082,7 +1080,6 @@ export const CreateTeamDialog = ({
     submissionFence,
     t,
   ]);
-
   useEffect(() => {
     if (submissionFence.busy || (open && !active)) return;
     if (
@@ -2611,12 +2608,6 @@ export const CreateTeamDialog = ({
               local={canCreate}
               isLight={isLight}
               onManagementApplied={onManagementApplied}
-              form={createTeamDraft}
-              descriptionDraft={descriptionDraft}
-              promptDraft={promptDraft}
-              defaultDescription={buildDefaultTeamDescription()}
-              hasPromptChips={promptChipDraft.chips.length > 0}
-              clearPromptChips={promptChipDraft.clearChipDraft}
               disabled={isSubmitting || !open || !active}
             />
           }
@@ -2707,6 +2698,16 @@ export const CreateTeamDialog = ({
                 open={open}
                 initialSelection={initialData ? '' : storedTemplateSelection.value}
                 initialSelectionReady={initialData ? true : templateSelectionDraft.isLoaded !== false}
+                confirmBeforeApply={
+                  members.length > 0 ||
+                  (descriptionDraft.value.trim().length > 0 &&
+                    descriptionDraft.value.trim() !== buildDefaultTeamDescription().trim()) ||
+                  promptDraft.value.length > 0 ||
+                  promptChipDraft.chips.length > 0 ||
+                  Boolean(runtimeProviderId) ||
+                  soloTeam ||
+                  !syncModelsWithLead
+                }
                 onApply={applyTemplate}
               />
               <TeamRosterEditorSection

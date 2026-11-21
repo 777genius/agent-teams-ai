@@ -8,6 +8,10 @@ const saveTemplate = vi.hoisted(() => vi.fn());
 const recheckSave = vi.hoisted(() => vi.fn());
 const listTemplates = vi.hoisted(() => vi.fn());
 const importTemplate = vi.hoisted(() => vi.fn());
+const updateTemplate = vi.hoisted(() => vi.fn());
+const duplicateTemplate = vi.hoisted(() => vi.fn());
+const deleteTemplate = vi.hoisted(() => vi.fn());
+const copyBuiltinTemplate = vi.hoisted(() => vi.fn());
 const browserFile = vi.hoisted(() => ({ importFromFile: vi.fn(), exportToFile: vi.fn() }));
 const desktopFile = vi.hoisted(() => ({ importFromFile: vi.fn(), exportToFile: vi.fn() }));
 
@@ -20,6 +24,10 @@ vi.mock('@renderer/api', () => ({
       recheckSave,
       listTemplates,
       importTemplate,
+      updateTemplate,
+      duplicateTemplate,
+      deleteTemplate,
+      copyBuiltinTemplate,
     },
   },
 }));
@@ -81,6 +89,12 @@ vi.mock('../hooks/useTemplateImport', () => ({
 }));
 
 import { TEAM_TEMPLATES } from '@features/team-templates';
+
+import {
+  getPendingTemplateMutations,
+  resolveTemplateMutation,
+  setPendingTemplateMutation,
+} from '../hooks/pendingTemplateMutation';
 
 import { MyTemplatesDialog } from './MyTemplatesDialog';
 
@@ -153,6 +167,10 @@ beforeEach(() => {
   recheckSave.mockReset();
   listTemplates.mockReset();
   importTemplate.mockReset();
+  updateTemplate.mockReset();
+  duplicateTemplate.mockReset();
+  deleteTemplate.mockReset();
+  copyBuiltinTemplate.mockReset();
   browserFile.importFromFile.mockReset();
   browserFile.exportToFile.mockReset();
   desktopFile.importFromFile.mockReset();
@@ -166,11 +184,311 @@ beforeEach(() => {
 
 afterEach(() => {
   act(() => root.unmount());
+  setPendingTemplateMutation(null);
   host.remove();
   vi.restoreAllMocks();
 });
 
 describe('MyTemplatesDialog', () => {
+  it.each(
+    (['duplicate', 'delete', 'copyBuiltin'] as const).flatMap((kind) =>
+      (['unresolved', 'rejected'] as const).flatMap((outcome) =>
+        (['before', 'after'] as const).map((order) => [kind, outcome, order] as const)
+      )
+    )
+  )(
+    'shows a decision from another window for %s %s (%s response)',
+    async (kind, outcome, order) => {
+      const mutation =
+        kind === 'duplicate'
+          ? duplicateTemplate
+          : kind === 'delete'
+            ? deleteTemplate
+            : copyBuiltinTemplate;
+      let resolveWrite!: (value: { status: 'unresolvedWriteOutcome'; templateId: string }) => void;
+      let rejectWrite!: (error: Error) => void;
+      mutation.mockReturnValueOnce(
+        new Promise((resolve, reject) => {
+          resolveWrite = resolve;
+          rejectWrite = reject;
+        })
+      );
+      await render();
+      if (kind === 'copyBuiltin') {
+        await selectTab('customTemplates.library.tabs.builtIn');
+        await act(async () =>
+          host.querySelector<HTMLButtonElement>('[data-testid="copy-builtin-open"]')?.click()
+        );
+      } else {
+        await act(async () =>
+          host
+            .querySelector<HTMLButtonElement>(`[data-testid="${kind}-template-template-1"]`)
+            ?.click()
+        );
+      }
+      const action =
+        kind === 'duplicate'
+          ? 'customTemplates.duplicate.action'
+          : kind === 'delete'
+            ? 'customTemplates.delete.confirm'
+            : 'customTemplates.copyBuiltin.action';
+      await act(async () => button(action).click());
+      const old = getPendingTemplateMutations()[0];
+      const decideElsewhere = async () =>
+        act(async () => {
+          expect(resolveTemplateMutation(old)).toBe(true);
+          setPendingTemplateMutation({ kind: 'edit', label: 'New action' });
+        });
+      const finish = async () =>
+        act(async () => {
+          if (outcome === 'unresolved')
+            resolveWrite({ status: 'unresolvedWriteOutcome', templateId: 'x' });
+          else rejectWrite(new Error('lost response'));
+        });
+      if (order === 'before') {
+        await decideElsewhere();
+        await finish();
+      } else {
+        await finish();
+        await decideElsewhere();
+      }
+      const testId =
+        kind === 'duplicate'
+          ? 'duplicate-template-resolved-elsewhere'
+          : kind === 'delete'
+            ? 'delete-template-resolved-elsewhere'
+            : 'copy-builtin-resolved-elsewhere';
+      expect(host.querySelector(`[data-testid="${testId}"]`)).not.toBeNull();
+      expect(button(action).disabled).toBe(true);
+      expect(mutation).toHaveBeenCalledTimes(1);
+      expect(getPendingTemplateMutations().map((item) => item.label)).toEqual(['New action']);
+    }
+  );
+  it.each(['duplicate', 'delete', 'copyBuiltin'] as const)(
+    're-reads the library and blocks another %s after an unknown outcome',
+    async (operation) => {
+      const mutation =
+        operation === 'duplicate'
+          ? duplicateTemplate
+          : operation === 'delete'
+            ? deleteTemplate
+            : copyBuiltinTemplate;
+      mutation.mockResolvedValueOnce({
+        status: 'unresolvedWriteOutcome',
+        templateId: 'unknown-id',
+      });
+      await render();
+      if (operation === 'copyBuiltin') {
+        await selectTab('customTemplates.library.tabs.builtIn');
+        await act(async () =>
+          host.querySelector<HTMLButtonElement>('[data-testid="copy-builtin-open"]')?.click()
+        );
+      } else {
+        await act(async () =>
+          host
+            .querySelector<HTMLButtonElement>(`[data-testid="${operation}-template-template-1"]`)
+            ?.click()
+        );
+      }
+      const action =
+        operation === 'duplicate'
+          ? 'customTemplates.duplicate.action'
+          : operation === 'delete'
+            ? 'customTemplates.delete.confirm'
+            : 'customTemplates.copyBuiltin.action';
+      await act(async () => button(action).click());
+      expect(mutation).toHaveBeenCalledTimes(1);
+      expect(button(action).disabled).toBe(true);
+      await act(async () => button(action).click());
+      expect(mutation).toHaveBeenCalledTimes(1);
+
+      const updated = [
+        ...templates,
+        { ...templates[0], templateId: 'new-template', name: 'Fresh' },
+      ];
+      listTemplates.mockResolvedValueOnce({ status: 'ready', templates: updated });
+      await act(async () => button('actions.cancel').click());
+      expect(listTemplates).toHaveBeenCalledTimes(2);
+      expect(host.querySelector('[data-testid="template-library-unresolved"]')).not.toBeNull();
+      if (operation === 'copyBuiltin') await selectTab('customTemplates.library.tabs.myTemplates');
+      expect(host.textContent).toContain('Fresh');
+      expect(
+        host.querySelector<HTMLButtonElement>('[data-testid="duplicate-template-template-1"]')
+          ?.disabled
+      ).toBe(true);
+    }
+  );
+
+  it('keeps an unknown outcome after a read until the user explicitly accepts uncertainty', async () => {
+    duplicateTemplate.mockResolvedValueOnce({ status: 'unresolvedWriteOutcome', templateId: '' });
+    await render();
+    await act(async () =>
+      host
+        .querySelector<HTMLButtonElement>('[data-testid="duplicate-template-template-1"]')
+        ?.click()
+    );
+    await act(async () => button('customTemplates.duplicate.action').click());
+    await act(async () => button('actions.cancel').click());
+    await act(async () => root.unmount());
+    root = createRoot(host);
+    await render();
+    expect(host.querySelector('[data-testid="template-library-unresolved"]')).not.toBeNull();
+    expect(
+      host.querySelector<HTMLButtonElement>('[data-testid="duplicate-template-template-1"]')
+        ?.disabled
+    ).toBe(true);
+
+    listTemplates.mockResolvedValueOnce({ status: 'storageUnavailable' });
+    await act(async () => button('customTemplates.actions.recheck').click());
+    expect(host.querySelector('[data-testid="template-library-unresolved"]')).not.toBeNull();
+    listTemplates.mockResolvedValueOnce({ status: 'ready', templates });
+    await act(async () => button('customTemplates.actions.recheck').click());
+    expect(host.querySelector('[data-testid="template-library-unresolved"]')).not.toBeNull();
+    expect(host.textContent).toContain('customTemplates.states.snapshotWarning');
+    expect(
+      host.querySelector<HTMLButtonElement>('[data-testid="duplicate-template-template-1"]')
+        ?.disabled
+    ).toBe(true);
+    expect(duplicateTemplate).toHaveBeenCalledTimes(1);
+    await act(async () => button('customTemplates.actions.allowNewChanges').click());
+    expect(host.querySelector('[data-testid="template-library-unresolved"]')).toBeNull();
+    expect(
+      host.querySelector<HTMLButtonElement>('[data-testid="duplicate-template-template-1"]')
+        ?.disabled
+    ).toBe(false);
+    expect(duplicateTemplate).toHaveBeenCalledTimes(1);
+  });
+
+  it('offers an explicit external-check decision for an incomplete library without retrying', async () => {
+    duplicateTemplate.mockResolvedValueOnce({ status: 'unresolvedWriteOutcome', templateId: '' });
+    await render();
+    await act(async () =>
+      host
+        .querySelector<HTMLButtonElement>('[data-testid="duplicate-template-template-1"]')
+        ?.click()
+    );
+    await act(async () => button('customTemplates.duplicate.action').click());
+    await act(async () => button('actions.cancel').click());
+    listTemplates.mockResolvedValue({
+      status: 'hasUnreadableRecords',
+      templates,
+      unreadableRecords: [{ templateId: 'broken', reason: 'unreadableRecord' }],
+    });
+    await act(async () => button('customTemplates.actions.recheck').click());
+    expect(host.textContent).toContain('customTemplates.states.partialSnapshotWarning');
+    expect(host.querySelector('[data-testid="template-library-unresolved"]')).not.toBeNull();
+    expect(duplicateTemplate).toHaveBeenCalledTimes(1);
+
+    await act(async () => button('customTemplates.actions.keepChangesBlocked').click());
+    expect(host.querySelector('[data-testid="template-library-unresolved"]')).not.toBeNull();
+    expect(
+      host.querySelector<HTMLButtonElement>('[data-testid="duplicate-template-template-1"]')
+        ?.disabled
+    ).toBe(true);
+    expect(host.textContent).not.toContain('customTemplates.actions.allowAfterExternalCheck');
+
+    await act(async () => button('customTemplates.actions.recheck').click());
+    await act(async () => button('customTemplates.actions.allowAfterExternalCheck').click());
+    expect(host.querySelector('[data-testid="template-library-unresolved"]')).toBeNull();
+    expect(duplicateTemplate).toHaveBeenCalledTimes(1);
+  });
+
+  it('shows every pending operation in this profile and keeps newer markers after a read', async () => {
+    await render();
+    await act(async () => {
+      setPendingTemplateMutation({ kind: 'duplicate', label: 'First copy' });
+      setPendingTemplateMutation({ kind: 'delete', label: 'Second item' });
+    });
+    expect(host.textContent).toContain('First copy');
+    expect(host.textContent).toContain('Second item');
+    await act(async () => button('customTemplates.actions.recheck').click());
+    expect(host.textContent).toContain('customTemplates.actions.allowNewChanges');
+    await act(async () => {
+      localStorage.setItem(
+        'agent-teams:custom-template-pending-mutation:other-window',
+        JSON.stringify({ kind: 'edit', label: 'Third item' })
+      );
+      window.dispatchEvent(
+        new StorageEvent('storage', {
+          key: 'agent-teams:custom-template-pending-mutation:other-window',
+        })
+      );
+    });
+    expect(host.textContent).toContain('Third item');
+    expect(host.textContent).not.toContain('customTemplates.actions.allowNewChanges');
+    await act(async () => button('customTemplates.actions.recheck').click());
+    await act(async () => button('customTemplates.actions.allowNewChanges').click());
+    expect(host.querySelector('[data-testid="template-library-unresolved"]')).toBeNull();
+  });
+
+  it('keeps an unknown import blocked after its dialog closes', async () => {
+    browserFile.importFromFile.mockResolvedValueOnce({
+      status: 'unresolvedWriteOutcome',
+      templateId: '',
+    });
+    await render();
+    await act(async () =>
+      host.querySelector<HTMLButtonElement>('[data-testid="import-template-button"]')?.click()
+    );
+    const input = host.querySelector<HTMLInputElement>('#import-file-input')!;
+    Object.defineProperty(input, 'files', {
+      value: [new File(['{}'], 'unknown.json')],
+      configurable: true,
+    });
+    await act(async () => input.dispatchEvent(new Event('change', { bubbles: true })));
+    expect(browserFile.importFromFile).toHaveBeenCalledTimes(1);
+    const closeButtons = Array.from(host.querySelectorAll('button')).filter((item) =>
+      item.textContent?.includes('actions.close')
+    );
+    await act(async () => closeButtons[closeButtons.length - 1].click());
+    expect(host.textContent).toContain('unknown.json');
+    expect(
+      host.querySelector<HTMLButtonElement>('[data-testid="import-template-button"]')?.disabled
+    ).toBe(true);
+    expect(host.querySelector('[data-testid="template-library-unresolved"]')).not.toBeNull();
+  });
+
+  it('keeps an unknown edit blocked after its dialog closes', async () => {
+    updateTemplate.mockResolvedValueOnce({
+      status: 'unresolvedWriteOutcome',
+      templateId: 'template-1',
+    });
+    await render();
+    await act(async () =>
+      host.querySelector<HTMLButtonElement>('[data-testid="edit-template-template-1"]')?.click()
+    );
+    await act(async () => button('customTemplates.edit.save').click());
+    expect(updateTemplate).toHaveBeenCalledTimes(1);
+    await act(async () => button('actions.cancel').click());
+    expect(
+      host.querySelector<HTMLButtonElement>('[data-testid="edit-template-template-1"]')?.disabled
+    ).toBe(true);
+    expect(host.querySelector('[data-testid="template-library-unresolved"]')).not.toBeNull();
+  });
+
+  it('blocks changes and explains when local recovery storage is unavailable', async () => {
+    const realStorage = localStorage;
+    vi.stubGlobal('localStorage', {
+      get length() {
+        return realStorage.length;
+      },
+      key: realStorage.key.bind(realStorage),
+      getItem: realStorage.getItem.bind(realStorage),
+      removeItem: realStorage.removeItem.bind(realStorage),
+      setItem: () => {
+        throw new Error('storage denied');
+      },
+    });
+    await render();
+    expect(host.textContent).toContain('customTemplates.states.mutationStorageUnavailable');
+    expect(
+      host.querySelector<HTMLButtonElement>('[data-testid="duplicate-template-template-1"]')
+        ?.disabled
+    ).toBe(true);
+    expect(duplicateTemplate).not.toHaveBeenCalled();
+    vi.unstubAllGlobals();
+  });
+
   it('renders the stored templates read-only', async () => {
     await render();
     expect(listTemplates).toHaveBeenCalledTimes(1);
@@ -322,6 +640,90 @@ describe('MyTemplatesDialog', () => {
     expect(host.textContent).toContain('customTemplates.library.emptyDescription');
     expect(host.querySelector('[data-testid="custom-template-library"]')).toBeNull();
     expect(host.querySelector('[data-testid="custom-template-library-error"]')).toBeNull();
+  });
+
+  it('warns about recovered storage and disables template imports', async () => {
+    listTemplates.mockResolvedValue({
+      status: 'recoveryRequired',
+      storageDirectory: '/server/storage with spaces',
+      markerPath: '/server/storage with spaces/app.db.templates-recovery-required',
+      interruptedMarkerPath: '/server/storage with spaces/app.db.recovery-in-progress',
+    } satisfies ListCustomTeamTemplatesResult);
+    await render();
+    expect(host.textContent).toContain('customTemplates.library.recoveryRequired');
+    expect(host.querySelector('[data-testid="template-recovery-directory"]')?.textContent).toBe(
+      '/server/storage with spaces'
+    );
+    expect(host.querySelector('[data-testid="template-recovery-marker"]')?.textContent).toBe(
+      '/server/storage with spaces/app.db.templates-recovery-required'
+    );
+    expect(
+      host.querySelector('[data-testid="template-recovery-interrupted-marker"]')?.textContent
+    ).toBe('/server/storage with spaces/app.db.recovery-in-progress');
+    expect(host.textContent).toContain('customTemplates.library.recoveryStopAndPreserve');
+    expect(host.textContent).toContain('customTemplates.library.recoveryBackupWarning');
+    expect(host.textContent).toContain('customTemplates.library.recoveryMarkerInstructions');
+    expect(host.textContent).not.toContain('customTemplates.library.empty');
+    const importButton = host.querySelector<HTMLButtonElement>(
+      '[data-testid="import-template-button"]'
+    );
+    expect(importButton === null || importButton.disabled).toBe(true);
+  });
+
+  it('warns when the recovery marker write could not be confirmed', async () => {
+    listTemplates.mockResolvedValue({
+      status: 'recoveryRequired',
+      storageDirectory: '/server/storage',
+      markerPath: '/server/storage/app.db.templates-recovery-required',
+      interruptedMarkerPath: '/server/storage/app.db.recovery-in-progress',
+      markerWriteFailed: true,
+    } satisfies ListCustomTeamTemplatesResult);
+    await render();
+    expect(host.textContent).toContain('customTemplates.library.recoveryMarkerWriteFailed');
+    expect(host.querySelector('[data-testid="template-recovery-directory"]')?.textContent).toBe(
+      '/server/storage'
+    );
+    expect(host.textContent).not.toContain('customTemplates.library.empty');
+    const importButton = host.querySelector<HTMLButtonElement>(
+      '[data-testid="import-template-button"]'
+    );
+    expect(importButton === null || importButton.disabled).toBe(true);
+  });
+
+  it('shows how to restore the worker when the existing database cannot be verified', async () => {
+    listTemplates.mockResolvedValue({
+      status: 'storageVerificationRequired',
+      storageDirectory: '/server/storage',
+      databasePath: '/server/storage/app.db',
+    } satisfies ListCustomTeamTemplatesResult);
+    await render();
+    expect(host.textContent).toContain('customTemplates.library.storageVerificationRequired');
+    expect(host.querySelector('[data-testid="template-unverified-database"]')?.textContent).toBe(
+      '/server/storage/app.db'
+    );
+    expect(host.textContent).not.toContain('customTemplates.library.recoveryRequired');
+    const importButton = host.querySelector<HTMLButtonElement>(
+      '[data-testid="import-template-button"]'
+    );
+    expect(importButton === null || importButton.disabled).toBe(true);
+  });
+
+  it('shows interrupted recovery instructions without claiming a rebuilt database', async () => {
+    listTemplates.mockResolvedValue({
+      status: 'recoveryInterrupted',
+      storageDirectory: '/server/storage',
+      markerPath: '/server/storage/app.db.templates-recovery-required',
+      interruptedMarkerPath: '/server/storage/app.db.recovery-in-progress',
+    } satisfies ListCustomTeamTemplatesResult);
+    await render();
+    expect(host.textContent).toContain('customTemplates.library.recoveryInterrupted');
+    expect(host.textContent).not.toContain('customTemplates.library.recoveryRequired');
+    expect(
+      host.querySelector('[data-testid="template-recovery-interrupted-marker"]')?.textContent
+    ).toBe('/server/storage/app.db.recovery-in-progress');
+    expect(host.querySelector('[data-testid="template-recovery-marker"]')?.textContent).toBe(
+      '/server/storage/app.db.templates-recovery-required'
+    );
   });
 
   it('keeps unreadable stored records visible as a warning next to the readable ones', async () => {

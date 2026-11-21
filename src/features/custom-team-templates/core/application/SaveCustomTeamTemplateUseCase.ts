@@ -132,6 +132,15 @@ export class SaveCustomTeamTemplateUseCase {
     }
     const state = resolution.state;
 
+    // Never dispatch a second write while the first outcome is unknown.
+    // Re-check must resolve the original identity before a deliberate retry.
+    if (this.deps.previewStore.hasUnresolvedWrite(state.token)) {
+      return {
+        status: 'unresolvedWriteOutcome',
+        templateId: state.confirmedSave?.templateId ?? state.templateId,
+      };
+    }
+
     // Display edits are validated before the source is re-read, so obvious input
     // problems are reported without a filesystem access.
     const resolved = this.resolveConfirmedIdentity(parsed, state);

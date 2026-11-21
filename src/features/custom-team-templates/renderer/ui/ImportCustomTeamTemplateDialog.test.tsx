@@ -3,6 +3,12 @@ import { createRoot } from 'react-dom/client';
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import {
+  getPendingTemplateMutations,
+  resolveTemplateMutation,
+  setPendingTemplateMutation,
+} from '../hooks/pendingTemplateMutation';
+
 const importTemplate = vi.hoisted(() => vi.fn());
 const browserFile = vi.hoisted(() => ({ importFromFile: vi.fn() }));
 const desktopFile = vi.hoisted(() => ({ importFromFile: vi.fn() }));
@@ -148,6 +154,7 @@ beforeEach(() => {
 
 afterEach(() => {
   act(() => root.unmount());
+  setPendingTemplateMutation(null);
   host.remove();
   vi.restoreAllMocks();
 });
@@ -210,6 +217,73 @@ async function typeRenameName(value: string): Promise<void> {
 }
 
 describe('ImportCustomTeamTemplateDialog', () => {
+  it('recognizes a decision made elsewhere after an unknown import is already shown', async () => {
+    browserFile.importFromFile.mockResolvedValueOnce({
+      status: 'unresolvedWriteOutcome',
+      templateId: 'x',
+    });
+    await render();
+    await selectPortableFile();
+    expect(host.querySelector('[data-testid="import-template-unresolved"]')).not.toBeNull();
+    const old = getPendingTemplateMutations()[0];
+    await act(async () => {
+      expect(resolveTemplateMutation(old)).toBe(true);
+    });
+    expect(host.querySelector('[data-testid="import-template-resolved-elsewhere"]')).not.toBeNull();
+    expect(host.querySelector('[data-testid="import-template-unresolved"]')).toBeNull();
+    expect(browserFile.importFromFile).toHaveBeenCalledTimes(1);
+  });
+  it.each([
+    ['browser', 'unresolved'],
+    ['browser', 'rejected'],
+    ['desktop', 'unresolved'],
+    ['desktop', 'rejected'],
+    ['rename', 'unresolved'],
+    ['rename', 'rejected'],
+  ] as const)(
+    'does not ask again after another window resolved a late %s %s import',
+    async (mode, outcome) => {
+      let resolveWrite!: (value: ImportCustomTeamTemplateResult) => void;
+      let rejectWrite!: (error: Error) => void;
+      const deferred = new Promise<ImportCustomTeamTemplateResult>((resolve, reject) => {
+        resolveWrite = resolve;
+        rejectWrite = reject;
+      });
+      const mutation =
+        mode === 'desktop'
+          ? desktopFile.importFromFile
+          : mode === 'rename'
+            ? importTemplate
+            : browserFile.importFromFile;
+      if (mode === 'desktop') platformRef.current = 'electron';
+      if (mode === 'rename') browserFile.importFromFile.mockResolvedValueOnce(conflictResult());
+      mutation.mockReturnValueOnce(deferred);
+      await render();
+      if (mode === 'desktop') await act(async () => importButton().click());
+      else if (mode === 'browser') await selectPortableFile();
+      else {
+        await selectPortableFile();
+        await typeRenameName('Renamed');
+        await act(async () => confirmButton().click());
+      }
+      const old = getPendingTemplateMutations()[0];
+      await act(async () => {
+        expect(resolveTemplateMutation(old)).toBe(true);
+        setPendingTemplateMutation({ kind: 'edit', label: 'New action' });
+      });
+      await act(async () => {
+        if (outcome === 'unresolved')
+          resolveWrite({ status: 'unresolvedWriteOutcome', templateId: 'x' });
+        else rejectWrite(new Error('lost response'));
+      });
+      expect(
+        host.querySelector('[data-testid="import-template-resolved-elsewhere"]')
+      ).not.toBeNull();
+      expect(host.querySelector('[data-testid="import-template-unresolved"]')).toBeNull();
+      expect(mutation).toHaveBeenCalledTimes(1);
+      expect(getPendingTemplateMutations().map((item) => item.label)).toEqual(['New action']);
+    }
+  );
   it('shows the file input when browser capability is available', async () => {
     await render();
     expect(fileInput()).not.toBeNull();

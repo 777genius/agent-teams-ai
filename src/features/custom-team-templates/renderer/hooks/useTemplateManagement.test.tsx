@@ -9,6 +9,11 @@ const transport = vi.hoisted(() => ({
   copyBuiltinTemplate: vi.fn(),
 }));
 vi.mock('@renderer/api', () => ({ api: { customTeamTemplates: transport } }));
+import {
+  getPendingTemplateMutations,
+  resolveTemplateMutation,
+  setPendingTemplateMutation,
+} from './pendingTemplateMutation';
 import { useTemplateManagement } from './useTemplateManagement';
 
 import type { CustomTeamTemplateV1 } from '../../contracts';
@@ -39,10 +44,81 @@ beforeEach(async () => {
 });
 afterEach(() => {
   act(() => root.unmount());
+  setPendingTemplateMutation(null);
   vi.unstubAllGlobals();
 });
 
 describe('template management single-flight mutations', () => {
+  it.each(['delete', 'duplicate', 'copyBuiltin'] as const)(
+    'recognizes a later decision for an unknown %s',
+    async (kind) => {
+      const method =
+        kind === 'delete'
+          ? transport.deleteTemplate
+          : kind === 'duplicate'
+            ? transport.duplicateTemplate
+            : transport.copyBuiltinTemplate;
+      method.mockResolvedValueOnce({ status: 'unresolvedWriteOutcome', templateId: 'x' });
+      await act(async () => {
+        if (kind === 'delete')
+          await latest.deleteTemplate({ templateId: 'source', expectedRevision: 1 });
+        else if (kind === 'duplicate') await latest.duplicateTemplate('source', 'Copy');
+        else await latest.copyBuiltinTemplate('software-product', 'Copy');
+      });
+      expect(latest.resolvedElsewhere).toBe(false);
+      const old = getPendingTemplateMutations()[0];
+      await act(async () => {
+        expect(resolveTemplateMutation(old)).toBe(true);
+      });
+      expect(latest.resolvedElsewhere).toBe(true);
+      expect(method).toHaveBeenCalledTimes(1);
+    }
+  );
+  it.each([
+    ['delete', 'unresolved'],
+    ['delete', 'rejected'],
+    ['duplicate', 'unresolved'],
+    ['duplicate', 'rejected'],
+    ['copyBuiltin', 'unresolved'],
+    ['copyBuiltin', 'rejected'],
+  ] as const)('retains the decision after a late %s %s response', async (kind, outcome) => {
+    const method =
+      kind === 'delete'
+        ? transport.deleteTemplate
+        : kind === 'duplicate'
+          ? transport.duplicateTemplate
+          : transport.copyBuiltinTemplate;
+    let resolveWrite!: (value: { status: 'unresolvedWriteOutcome'; templateId: string }) => void;
+    let rejectWrite!: (error: Error) => void;
+    method.mockReturnValueOnce(
+      new Promise((resolve, reject) => {
+        resolveWrite = resolve;
+        rejectWrite = reject;
+      })
+    );
+    let pending!: Promise<unknown>;
+    await act(async () => {
+      pending =
+        kind === 'delete'
+          ? latest.deleteTemplate({ templateId: 'source', expectedRevision: 1 })
+          : kind === 'duplicate'
+            ? latest.duplicateTemplate('source', 'Copy')
+            : latest.copyBuiltinTemplate('software-product', 'Copy');
+    });
+    const old = getPendingTemplateMutations()[0];
+    await act(async () => {
+      expect(resolveTemplateMutation(old)).toBe(true);
+      setPendingTemplateMutation({ kind: 'edit', label: 'New action' });
+    });
+    await act(async () => {
+      if (outcome === 'unresolved')
+        resolveWrite({ status: 'unresolvedWriteOutcome', templateId: 'x' });
+      else rejectWrite(new Error('lost response'));
+      expect(await pending).toEqual({ status: 'resolvedElsewhere' });
+    });
+    expect(method).toHaveBeenCalledTimes(1);
+    expect(getPendingTemplateMutations().map((item) => item.label)).toEqual(['New action']);
+  });
   it('refuses a different overlapping request without changing the first result', async () => {
     let finish!: (value: { status: 'duplicated'; template: CustomTeamTemplateV1 }) => void;
     transport.duplicateTemplate.mockReturnValueOnce(

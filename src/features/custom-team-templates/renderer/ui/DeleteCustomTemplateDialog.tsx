@@ -35,7 +35,7 @@ export const DeleteCustomTemplateDialog = ({
 }: DeleteCustomTemplateDialogProps): React.JSX.Element | null => {
   const { t } = useAppTranslation('team');
   const { t: tCommon } = useAppTranslation('common');
-  const { deleteTemplate, busy } = useTemplateManagement();
+  const { deleteTemplate, busy, blockedByUnknown, resolvedElsewhere } = useTemplateManagement();
 
   const [expectedRevision, setExpectedRevision] = useState(
     template ? resolveTemplateRevision(template) : 1
@@ -46,6 +46,7 @@ export const DeleteCustomTemplateDialog = ({
     | 'unreadableRecord'
     | 'storageUnavailable'
     | 'unresolvedWriteOutcome'
+    | 'resolvedElsewhere'
     | 'requestFailed'
     | null
   >(null);
@@ -58,10 +59,15 @@ export const DeleteCustomTemplateDialog = ({
     }
   }, [open, template]);
 
+  useEffect(() => {
+    if (resolvedElsewhere && errorState === 'unresolvedWriteOutcome')
+      setErrorState('resolvedElsewhere');
+  }, [resolvedElsewhere, errorState]);
+
   if (!template) return null;
 
   const handleDelete = async () => {
-    if (busy || revisionConflict) return;
+    if (busy || blockedByUnknown || errorState === 'resolvedElsewhere' || revisionConflict) return;
     setErrorState(null);
 
     try {
@@ -93,6 +99,9 @@ export const DeleteCustomTemplateDialog = ({
           // The row may already be gone. Stay in an explicit unknown state
           // instead of closing as a confirmed delete or offering a blind retry.
           setErrorState('unresolvedWriteOutcome');
+          return;
+        case 'resolvedElsewhere':
+          setErrorState('resolvedElsewhere');
           return;
       }
     } catch {
@@ -166,6 +175,12 @@ export const DeleteCustomTemplateDialog = ({
             </div>
           ) : null}
 
+          {errorState === 'resolvedElsewhere' ? (
+            <p role="status" data-testid="delete-template-resolved-elsewhere">
+              {t('customTemplates.states.resolvedElsewhere')}
+            </p>
+          ) : null}
+
           {errorState === 'notFound' ? (
             <div
               role="alert"
@@ -217,7 +232,12 @@ export const DeleteCustomTemplateDialog = ({
           </Button>
           <Button
             variant="destructive"
-            disabled={busy || revisionConflict !== null}
+            disabled={
+              busy ||
+              blockedByUnknown ||
+              errorState === 'resolvedElsewhere' ||
+              revisionConflict !== null
+            }
             aria-busy={busy}
             onClick={() => void handleDelete()}
           >

@@ -38,7 +38,8 @@ export const CopyBuiltinTemplateDialog = ({
 }: CopyBuiltinTemplateDialogProps): React.JSX.Element | null => {
   const { t } = useAppTranslation('team');
   const { t: tCommon } = useAppTranslation('common');
-  const { copyBuiltinTemplate, busy } = useTemplateManagement();
+  const { copyBuiltinTemplate, busy, blockedByUnknown, resolvedElsewhere } =
+    useTemplateManagement();
 
   const [selectedId, setSelectedId] = useState<BuiltinTeamTemplateId>('software-product');
   const [name, setName] = useState('');
@@ -50,7 +51,12 @@ export const CopyBuiltinTemplateDialog = ({
   const [nameEdited, setNameEdited] = useState(false);
   const [nameConflict, setNameConflict] = useState(false);
   const [errorState, setErrorState] = useState<
-    'builtinNotFound' | 'storageUnavailable' | 'unresolvedWriteOutcome' | 'requestFailed' | null
+    | 'builtinNotFound'
+    | 'storageUnavailable'
+    | 'unresolvedWriteOutcome'
+    | 'resolvedElsewhere'
+    | 'requestFailed'
+    | null
   >(null);
   const [issues, setIssues] = useState<readonly CustomTeamTemplateValidationIssue[]>([]);
 
@@ -65,6 +71,11 @@ export const CopyBuiltinTemplateDialog = ({
       setIssues([]);
     }
   }, [open, initialBuiltinId]);
+
+  useEffect(() => {
+    if (resolvedElsewhere && errorState === 'unresolvedWriteOutcome')
+      setErrorState('resolvedElsewhere');
+  }, [resolvedElsewhere, errorState]);
 
   // Seed the editable name from the same localized label the built-in
   // catalogue renders. This deliberately follows a locale change only while
@@ -84,7 +95,7 @@ export const CopyBuiltinTemplateDialog = ({
   };
 
   const handleCopy = async () => {
-    if (busy || !name.trim()) return;
+    if (busy || blockedByUnknown || errorState === 'resolvedElsewhere' || !name.trim()) return;
     setNameConflict(false);
     setErrorState(null);
     setIssues([]);
@@ -114,6 +125,9 @@ export const CopyBuiltinTemplateDialog = ({
           // The copy may already have been stored. Keep the selection and the
           // name available and never retry automatically.
           setErrorState('unresolvedWriteOutcome');
+          return;
+        case 'resolvedElsewhere':
+          setErrorState('resolvedElsewhere');
           return;
       }
     } catch {
@@ -208,6 +222,12 @@ export const CopyBuiltinTemplateDialog = ({
             </div>
           ) : null}
 
+          {errorState === 'resolvedElsewhere' ? (
+            <p role="status" data-testid="copy-builtin-resolved-elsewhere">
+              {t('customTemplates.states.resolvedElsewhere')}
+            </p>
+          ) : null}
+
           {errorState === 'requestFailed' ? (
             <div
               role="alert"
@@ -233,7 +253,7 @@ export const CopyBuiltinTemplateDialog = ({
                     key={tpl.id}
                     type="button"
                     variant="ghost"
-                    disabled={busy}
+                    disabled={busy || blockedByUnknown || errorState === 'resolvedElsewhere'}
                     aria-pressed={isSelected}
                     data-testid={`builtin-template-${tpl.id}`}
                     className={`h-auto flex-col items-stretch justify-start whitespace-normal rounded-md border p-3 text-left transition-colors ${
@@ -271,7 +291,7 @@ export const CopyBuiltinTemplateDialog = ({
             <Input
               id="copy-builtin-name"
               value={name}
-              disabled={busy}
+              disabled={busy || blockedByUnknown || errorState === 'resolvedElsewhere'}
               aria-invalid={nameIssues.length > 0 || undefined}
               aria-describedby={nameIssues.length > 0 ? 'copy-builtin-name-error' : undefined}
               onChange={(e) => {
@@ -320,7 +340,9 @@ export const CopyBuiltinTemplateDialog = ({
             {tCommon('actions.cancel')}
           </Button>
           <Button
-            disabled={busy || !name.trim()}
+            disabled={
+              busy || blockedByUnknown || errorState === 'resolvedElsewhere' || !name.trim()
+            }
             aria-busy={busy}
             onClick={() => void handleCopy()}
           >

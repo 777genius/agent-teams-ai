@@ -49,6 +49,7 @@ const TEMPLATE_ICONS = {
  * template API, so it stays usable while custom templates load or fail.
  */
 export interface BuiltInTemplateCatalogueProps {
+  copyDisabled?: boolean;
   onCopyBuiltin?: (
     id: import('@features/custom-team-templates/contracts').BuiltinTeamTemplateId
   ) => void;
@@ -56,6 +57,7 @@ export interface BuiltInTemplateCatalogueProps {
 
 export const BuiltInTemplateCatalogue = ({
   onCopyBuiltin,
+  copyDisabled = false,
 }: BuiltInTemplateCatalogueProps = {}): React.JSX.Element => {
   const { t } = useAppTranslation('team');
   const { isLight } = useTheme();
@@ -147,6 +149,7 @@ export const BuiltInTemplateCatalogue = ({
                     variant="outline"
                     size="sm"
                     data-testid={`copy-builtin-${template.id}`}
+                    disabled={copyDisabled}
                     onClick={(e) => {
                       e.stopPropagation();
                       onCopyBuiltin(

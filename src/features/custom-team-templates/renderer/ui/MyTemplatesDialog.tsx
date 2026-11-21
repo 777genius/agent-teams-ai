@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
 import { Button } from '@renderer/components/ui/button';
@@ -13,6 +13,11 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@renderer/components/ui/tabs';
 import { AlertTriangle, Copy, Download, Pencil, RefreshCw, Trash2, Upload } from 'lucide-react';
 
+import {
+  getPendingTemplateMutations,
+  resolveTemplateMutation,
+  usePendingTemplateMutations,
+} from '../hooks/pendingTemplateMutation';
 import { useCustomTemplateLibrary } from '../hooks/useCustomTemplateLibrary';
 import { useTemplateManagement } from '../hooks/useTemplateManagement';
 
@@ -23,7 +28,10 @@ import { DuplicateCustomTemplateDialog } from './DuplicateCustomTemplateDialog';
 import { EditCustomTemplateDialog } from './EditCustomTemplateDialog';
 import { ExportCustomTeamTemplateDialog } from './ExportCustomTeamTemplateDialog';
 import { ImportCustomTeamTemplateDialog } from './ImportCustomTeamTemplateDialog';
+import { TemplateRecoveryInstructions } from './TemplateRecoveryInstructions';
+import { TemplateStorageUnavailableInstructions } from './TemplateStorageUnavailableInstructions';
 
+import type { PendingTemplateMutation } from '../hooks/pendingTemplateMutation';
 import type {
   BuiltinTeamTemplateId,
   CustomTeamTemplateV1,
@@ -47,7 +55,21 @@ export const MyTemplatesDialog = ({ open, onClose }: MyTemplatesDialogProps): Re
   const { t } = useAppTranslation('team');
   const { t: tCommon } = useAppTranslation('common');
   const { state, reload } = useCustomTemplateLibrary(open);
-  const management = useTemplateManagement({ onSuccess: reload });
+  const management = useTemplateManagement({ onSuccess: async () => void (await reload()) });
+  const { operations: pendingMutations, storageAvailable } = usePendingTemplateMutations();
+  const pendingMutation = pendingMutations.length > 0;
+  const mutationsDisabled =
+    pendingMutation ||
+    !storageAvailable ||
+    state.status === 'recoveryRequired' ||
+    state.status === 'recoveryInterrupted' ||
+    state.status === 'storageVerificationRequired' ||
+    state.status === 'storageSafetyUnavailable';
+  const [checkingMutation, setCheckingMutation] = useState(false);
+  const [reviewed, setReviewed] = useState<{
+    operations: readonly PendingTemplateMutation[];
+    completeness: 'complete' | 'partial';
+  } | null>(null);
   const [tab, setTab] = useState<TemplateLibraryTab>('my-templates');
 
   const [editingTemplate, setEditingTemplate] = useState<CustomTeamTemplateV1 | null>(null);
@@ -58,7 +80,48 @@ export const MyTemplatesDialog = ({ open, onClose }: MyTemplatesDialogProps): Re
   const [copyBuiltinId, setCopyBuiltinId] = useState<BuiltinTeamTemplateId | null>(null);
   const [importOpen, setImportOpen] = useState(false);
 
-  const failed = state.status === 'storageUnavailable' || state.status === 'requestFailed';
+  const failed =
+    state.status === 'storageUnavailable' ||
+    state.status === 'storageVerificationRequired' ||
+    state.status === 'storageSafetyUnavailable' ||
+    state.status === 'recoveryRequired' ||
+    state.status === 'recoveryInterrupted' ||
+    state.status === 'requestFailed';
+
+  useEffect(() => {
+    if (open) getPendingTemplateMutations();
+  }, [open]);
+
+  const checkPendingMutation = async (): Promise<void> => {
+    if (checkingMutation) return;
+    const pending = getPendingTemplateMutations();
+    if (!pending.length) return;
+    setCheckingMutation(true);
+    setReviewed(null);
+    try {
+      const completeness = await reload();
+      // A read is only a snapshot. It never proves the earlier writer stopped.
+      if (completeness !== 'failed' && getPendingTemplateMutations() === pending) {
+        setReviewed({ operations: pending, completeness });
+      }
+    } finally {
+      setCheckingMutation(false);
+    }
+  };
+
+  const reloadAfterUnknown = (): void => {
+    if (getPendingTemplateMutations().length) void reload();
+  };
+
+  const mutationLabels: Record<PendingTemplateMutation['kind'], string> = {
+    duplicate: t('customTemplates.actions.duplicate'),
+    copyBuiltin: t('customTemplates.actions.copyToMyTemplates'),
+    delete: t('customTemplates.actions.delete'),
+    save: t('customTemplates.actions.save'),
+    edit: t('customTemplates.actions.edit'),
+    import: t('customTemplates.import.action'),
+    unknown: t('customTemplates.states.unresolvedTitle'),
+  };
 
   const handleEditSaved = (_updated: CustomTeamTemplateV1): void => {
     setEditingTemplate(null);
@@ -91,6 +154,61 @@ export const MyTemplatesDialog = ({ open, onClose }: MyTemplatesDialogProps): Re
           <DialogTitle>{t('customTemplates.library.title')}</DialogTitle>
           <DialogDescription>{t('customTemplates.library.description')}</DialogDescription>
         </DialogHeader>
+
+        {!storageAvailable ? (
+          <p role="alert">{t('customTemplates.states.mutationStorageUnavailable')}</p>
+        ) : null}
+        {pendingMutation ? (
+          <div role="alert" data-testid="template-library-unresolved" className="space-y-2">
+            <p className="font-medium">{t('customTemplates.states.unresolvedTitle')}</p>
+            <p>{t('customTemplates.states.pendingProfileBody')}</p>
+            <ul>
+              {pendingMutations.map((operation) => (
+                <li key={operation.id}>
+                  {mutationLabels[operation.kind]}
+                  {operation.label ? `: ${operation.label}` : ''}
+                </li>
+              ))}
+            </ul>
+            <Button
+              type="button"
+              variant="outline"
+              disabled={checkingMutation || state.status === 'loading'}
+              onClick={() => void checkPendingMutation()}
+            >
+              {t('customTemplates.actions.recheck')}
+            </Button>
+            {reviewed?.operations === pendingMutations ? (
+              <div className="space-y-2">
+                <p>{t('customTemplates.states.snapshotWarning')}</p>
+                {reviewed.completeness === 'partial' ? (
+                  <p role="alert">{t('customTemplates.states.partialSnapshotWarning')}</p>
+                ) : null}
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    if (getPendingTemplateMutations() === reviewed.operations) {
+                      for (const operation of reviewed.operations) {
+                        if (!resolveTemplateMutation(operation)) break;
+                      }
+                      setReviewed(null);
+                    }
+                  }}
+                >
+                  {t(
+                    reviewed.completeness === 'partial'
+                      ? 'customTemplates.actions.allowAfterExternalCheck'
+                      : 'customTemplates.actions.allowNewChanges'
+                  )}
+                </Button>
+                <Button type="button" variant="outline" onClick={() => setReviewed(null)}>
+                  {t('customTemplates.actions.keepChangesBlocked')}
+                </Button>
+              </div>
+            ) : null}
+          </div>
+        ) : null}
 
         <Tabs value={tab} onValueChange={(value) => setTab(value as TemplateLibraryTab)}>
           <TabsList aria-label={t('customTemplates.library.title')}>
@@ -129,7 +247,7 @@ export const MyTemplatesDialog = ({ open, onClose }: MyTemplatesDialogProps): Re
                       variant="outline"
                       size="sm"
                       data-testid="import-template-button"
-                      disabled={management.busy || importOpen}
+                      disabled={management.busy || mutationsDisabled || importOpen}
                       onClick={() => setImportOpen(true)}
                     >
                       <Upload className="mr-1.5 size-3.5" />
@@ -173,7 +291,7 @@ export const MyTemplatesDialog = ({ open, onClose }: MyTemplatesDialogProps): Re
                                 variant="outline"
                                 size="sm"
                                 data-testid={`edit-template-${template.templateId}`}
-                                disabled={management.busy}
+                                disabled={management.busy || mutationsDisabled}
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   setEditingTemplate(template);
@@ -187,7 +305,7 @@ export const MyTemplatesDialog = ({ open, onClose }: MyTemplatesDialogProps): Re
                                 variant="outline"
                                 size="sm"
                                 data-testid={`duplicate-template-${template.templateId}`}
-                                disabled={management.busy}
+                                disabled={management.busy || mutationsDisabled}
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   setDuplicatingTemplate(template);
@@ -201,7 +319,7 @@ export const MyTemplatesDialog = ({ open, onClose }: MyTemplatesDialogProps): Re
                                 variant="outline"
                                 size="sm"
                                 data-testid={`delete-template-${template.templateId}`}
-                                disabled={management.busy}
+                                disabled={management.busy || mutationsDisabled}
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   setDeletingTemplate(template);
@@ -255,11 +373,28 @@ export const MyTemplatesDialog = ({ open, onClose }: MyTemplatesDialogProps): Re
                   className="flex items-start gap-2 rounded-md border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-200"
                 >
                   <AlertTriangle className="mt-0.5 size-4 shrink-0" />
-                  <p>
-                    {state.status === 'storageUnavailable'
-                      ? t('customTemplates.library.storageUnavailable')
-                      : t('customTemplates.library.loadFailed')}
-                  </p>
+                  {state.status === 'recoveryRequired' || state.status === 'recoveryInterrupted' ? (
+                    <TemplateRecoveryInstructions
+                      storageDirectory={state.storageDirectory}
+                      markerPath={state.markerPath}
+                      interruptedMarkerPath={state.interruptedMarkerPath}
+                      markerWriteFailed={state.markerWriteFailed}
+                      interrupted={state.status === 'recoveryInterrupted'}
+                    />
+                  ) : state.status === 'storageVerificationRequired' ||
+                    state.status === 'storageSafetyUnavailable' ? (
+                    <TemplateStorageUnavailableInstructions
+                      status={state.status}
+                      storageDirectory={state.storageDirectory}
+                      databasePath={state.databasePath}
+                    />
+                  ) : (
+                    <p>
+                      {state.status === 'storageUnavailable'
+                        ? t('customTemplates.library.storageUnavailable')
+                        : t('customTemplates.library.loadFailed')}
+                    </p>
+                  )}
                 </div>
               ) : null}
             </div>
@@ -268,6 +403,7 @@ export const MyTemplatesDialog = ({ open, onClose }: MyTemplatesDialogProps): Re
           <TabsContent value="built-in">
             <div className="space-y-3">
               <BuiltInTemplateCatalogue
+                copyDisabled={mutationsDisabled}
                 onCopyBuiltin={(id) => {
                   setCopyBuiltinId(id);
                   setCopyBuiltinOpen(true);
@@ -282,6 +418,7 @@ export const MyTemplatesDialog = ({ open, onClose }: MyTemplatesDialogProps): Re
                   setCopyBuiltinId(null);
                   setCopyBuiltinOpen(true);
                 }}
+                disabled={mutationsDisabled}
               >
                 <Copy className="size-3.5" />
                 {t('customTemplates.actions.copyToMyTemplates')}
@@ -305,25 +442,37 @@ export const MyTemplatesDialog = ({ open, onClose }: MyTemplatesDialogProps): Re
         <EditCustomTemplateDialog
           open={editingTemplate !== null}
           template={editingTemplate}
-          onClose={() => setEditingTemplate(null)}
+          onClose={() => {
+            setEditingTemplate(null);
+            reloadAfterUnknown();
+          }}
           onSaved={handleEditSaved}
         />
         <DuplicateCustomTemplateDialog
           open={duplicatingTemplate !== null}
           template={duplicatingTemplate}
-          onClose={() => setDuplicatingTemplate(null)}
+          onClose={() => {
+            setDuplicatingTemplate(null);
+            reloadAfterUnknown();
+          }}
           onDuplicated={handleDuplicated}
         />
         <DeleteCustomTemplateDialog
           open={deletingTemplate !== null}
           template={deletingTemplate}
-          onClose={() => setDeletingTemplate(null)}
+          onClose={() => {
+            setDeletingTemplate(null);
+            reloadAfterUnknown();
+          }}
           onDeleted={handleDeleted}
           onReload={() => void reload()}
         />
         <CopyBuiltinTemplateDialog
           open={copyBuiltinOpen}
-          onClose={() => setCopyBuiltinOpen(false)}
+          onClose={() => {
+            setCopyBuiltinOpen(false);
+            reloadAfterUnknown();
+          }}
           onCopied={handleCopied}
           initialBuiltinId={copyBuiltinId ?? undefined}
         />

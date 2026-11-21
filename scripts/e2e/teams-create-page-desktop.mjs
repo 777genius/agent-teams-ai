@@ -991,7 +991,7 @@ async function exerciseTraditionalChineseMcpUi(fixture, log) {
   // Match the same enabled template-selector hydration gate as the original
   // English E2E, using its actual Traditional Chinese accessible label.
   await cdp.waitFor(
-    `(() => { const button = document.querySelector('[data-testid=create-team-page] button[aria-label="團隊範本"]'); return button && !button.disabled; })()`,
+    `(() => { const button = document.querySelector('[data-testid=create-team-page] [data-testid=create-template-option-none]'); return button && !button.disabled; })()`,
     'hydrated native zh-TW create-team form', 45_000
   );
   // A previous config-only draft may persist Solo team; use the real toggle to
@@ -1243,10 +1243,20 @@ async function main() {
     // The input can render before the asynchronous persisted form and prompt drafts hydrate.
     // Wait for the real UI's hydration gate before testing per-name defaults.
     await cdp.waitFor(
-      `(() => { const button = document.querySelector('[data-testid=create-team-page] button[aria-label="Team template"]'); return button && !button.disabled; })()`,
+      `(() => { const button = document.querySelector('[data-testid=create-team-page] [data-testid=create-template-option-none]'); return button && !button.disabled; })()`,
       'create-team form and prompt draft hydration'
     );
 
+    assert.equal(
+      await cdp.evaluate("document.querySelectorAll('[data-testid=create-team-page] [data-testid=create-team-template-picker]').length"),
+      1,
+      'Create Team must have exactly one unified template picker'
+    );
+    assert.equal(
+      await cdp.evaluate("document.querySelectorAll('[data-testid=create-team-page] button[aria-label=\"Team template\"]').length"),
+      0,
+      'Obsolete built-in-only template dropdown must not duplicate the unified picker'
+    );
     log('restore unedited Advanced CLI defaults for a saved team name');
     const customArgsSelector = '[data-testid=create-team-page] input[placeholder="--max-turns 5"]';
     const preferencesTeamName = `${unique}-saved-defaults`;
@@ -1314,7 +1324,7 @@ async function main() {
     // Resume hydrates the form and text drafts independently of restoring its name.
     // Do not open the optional controls while they may still remount.
     await cdp.waitFor(
-      `(() => { const button = document.querySelector('[data-testid=create-team-page] button[aria-label="Team template"]'); return button && !button.disabled; })()`,
+      `(() => { const button = document.querySelector('[data-testid=create-team-page] [data-testid=create-template-option-none]'); return button && !button.disabled; })()`,
       'resumed creation form and text drafts hydrated'
     );
     const optionalExpandedAfterResume = await cdp.evaluate(
@@ -1633,7 +1643,7 @@ async function main() {
     // Verify the documented debug override survives actual renderer -> IPC ->
     // persisted metadata. The fixture never launches tmux or a paid provider.
     await cdp.waitFor(
-      `(() => { const button = document.querySelector('[data-testid=create-team-page] button[aria-label="Team template"]'); return button && !button.disabled; })()`,
+      `(() => { const button = document.querySelector('[data-testid=create-team-page] [data-testid=create-template-option-none]'); return button && !button.disabled; })()`,
       'hydrated form before native teammate-mode override'
     );
     const overrideSettingsExpanded = await cdp.evaluate(
@@ -1818,35 +1828,14 @@ async function main() {
       "Array.from(document.querySelectorAll('[role=alertdialog]'))" +
       ".find(dialog => dialog.querySelector('h2')?.textContent === 'Apply team template?')";
     const selectTemplate = async () => {
-      const trigger = "document.querySelector('[data-testid=create-team-page] button[aria-label=\"Team template\"]')";
-      const option = "Array.from(document.querySelectorAll('[role=option]'))" +
-        ".find(item => item.textContent?.includes('Software Product Team'))";
-      // A ready Radix trigger can miss one native click while the creation form
-      // commits its restored draft. Re-check the real hit target before retrying.
-      const triggerReady = "(() => { const button = " + trigger +
+      const option = "document.querySelector('[data-testid=create-team-page] [data-testid=create-template-option-builtin-software-product]')";
+      const ready = "(() => { const button = " + option +
         "; if (!button?.isConnected || button.disabled) return false;" +
         " button.scrollIntoView({block:'center',inline:'nearest'});" +
         " const rect=button.getBoundingClientRect();" +
         " const hit=document.elementFromPoint(rect.left+rect.width/2,rect.top+rect.height/2);" +
         " return rect.width>0 && rect.height>0 && (hit===button || button.contains(hit)); })()";
-      let optionReady = false;
-      for (let attempt = 0; attempt < 3; attempt++) {
-        await cdp.waitFor(triggerReady, 'visible unobstructed team template trigger', 15_000);
-        await cdp.click(trigger);
-        try {
-          await cdp.waitFor(option, 'Software Product Team option', 4_000);
-          optionReady = true;
-          break;
-        } catch (error) {
-          const open = await cdp.evaluate(
-            trigger + "?.getAttribute('aria-expanded') === 'true'"
-          );
-          // An open menu without the expected item is a genuine catalog/locale
-          // mismatch, not a missed click. Do not toggle it closed to hide it.
-          if (open || attempt === 2) throw error;
-        }
-      }
-      assert(optionReady, 'Team template options did not open');
+      await cdp.waitFor(ready, 'unobstructed unified built-in template card', 15_000);
       await cdp.click(option);
       await cdp.waitFor(templateConfirmationExpression, 'template replacement confirmation');
     };

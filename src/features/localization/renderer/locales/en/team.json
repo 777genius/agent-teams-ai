@@ -3537,7 +3537,10 @@
       "edit": "Edit",
       "delete": "Delete",
       "copyToMyTemplates": "Copy to My Templates",
-      "export": "Export"
+      "export": "Export",
+      "allowNewChanges": "I understand; allow new changes",
+      "allowAfterExternalCheck": "I checked externally; allow new changes",
+      "keepChangesBlocked": "Keep changes blocked"
     },
     "createFromTemplate": {
       "builtinGroup": "Built-in templates",
@@ -3608,7 +3611,19 @@
       "unreadableRecords_few": "{{count}} stored templates could not be read and are missing from this list.",
       "unreadableRecords_many": "{{count}} stored templates could not be read and are missing from this list.",
       "unreadableRecords_one": "{{count}} stored template could not be read and is missing from this list.",
-      "unreadableRecords_other": "{{count}} stored templates could not be read and are missing from this list."
+      "unreadableRecords_other": "{{count}} stored templates could not be read and are missing from this list.",
+      "recoveryRequired": "Database damage was detected or an earlier recovery left a marker. Changes are blocked until the files are inspected.",
+      "recoveryInterrupted": "A previous database recovery was interrupted. Its outcome is unknown; changes are blocked until the files are inspected.",
+      "recoveryMarkerWriteFailed": "The recovery marker could not be confirmed as saved. Do not start another app or server instance until the files have been inspected.",
+      "recoveryStopAndPreserve": "Stop all app and server instances using this database, then copy the entire storage directory. Include app.db, its -wal and -shm files, and any app.db.corrupt-* entries if present.",
+      "storageVerificationRequired": "The storage database or recovery markers could not be verified. JSON fallback is disabled to prevent conflicting writes. Stop all instances and preserve the files; check storage permissions and restart the app. If the storage worker is unavailable, reinstall the app without deleting your data.",
+      "storageSafetyUnavailable": "The storage worker is unavailable or its safety checks could not be completed. JSON fallback is disabled to prevent conflicting writes. Check storage permissions and restart the app; if the worker is unavailable, reinstall the app without deleting your data.",
+      "recoveryStorageDirectory": "Storage directory:",
+      "recoveryBackupWarning": "A usable backup may not exist. Restoring an older database or starting over can replace newer data belonging to other features.",
+      "recoveryOtherStores": "New storage operations in this app session are blocked while recovery is required; they do not switch to JSON automatically.",
+      "recoveryMarkerInstructions": "After inspecting the files and deciding how to restore the database or start over, remove these marker files if present, then restart the app or server:",
+      "recoveryMarkerPath": "Marker file:",
+      "recoveryInterruptedMarkerPath": "Interrupted recovery marker:"
     },
     "preview": {
       "membersEmpty": "No members recorded — a prompt-only template",
@@ -3644,7 +3659,13 @@
       "unresolvedDeleteBody": "The deletion could not be confirmed, so nothing was retried automatically. Check My Templates before trying again — the template may already be gone.",
       "unresolvedMutationBody": "The change could not be confirmed, so nothing was retried automatically. Check My Templates before trying again — the change may already have been applied.",
       "unresolvedTitle": "Outcome not confirmed",
-      "unresolvedImportBody": "The import could not be confirmed, so nothing was retried automatically. Check My Templates before trying again — the template may already have been imported."
+      "unresolvedImportBody": "The import could not be confirmed, so nothing was retried automatically. Check My Templates before trying again — the template may already have been imported.",
+      "pendingProfileBody": "These changes in this browser or app profile may still be running or have an unconfirmed outcome. Nothing was retried automatically. Other profiles have separate records.",
+      "pendingSaveHelp": "Close this dialog, open Templates, and select My Templates. Select Re-check outcome, then choose whether to allow new changes. If the list is incomplete, check outside the list first.",
+      "mutationStorageUnavailable": "New changes are blocked because this profile cannot store the recovery record. Enable local storage and reopen the library.",
+      "snapshotWarning": "This list is a snapshot. The previous change could still complete later. Continue only if you accept this uncertainty.",
+      "resolvedElsewhere": "This uncertain change was already reviewed in another window. Close and reopen this dialog to start a new change.",
+      "partialSnapshotWarning": "The list is incomplete and the outcome is unknown. Confirm only after checking outside this list, or keep changes blocked."
     },
     "warnings": {
       "emptyRoster": "The roster was read successfully and is empty. A prompt-only template is valid.",

@@ -2,6 +2,15 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { api } from '@renderer/api';
 
+import {
+  beginTemplateMutation,
+  finishTemplateMutation,
+  getPendingTemplateMutation,
+  usePendingTemplateMutations,
+  wasTemplateMutationResolved,
+} from './pendingTemplateMutation';
+
+import type { PendingTemplateMutation } from './pendingTemplateMutation';
 import type {
   ConfirmCustomTeamTemplateSaveResult,
   CustomTeamTemplatePreview,
@@ -38,7 +47,7 @@ export type SaveAttempt =
   | { status: 'rechecking' }
   | { status: 'saved'; template: CustomTeamTemplateV1; alreadyPresent: boolean }
   | { status: 'unresolved'; templateId: string }
-  | { status: 'notSaved'; templateId: string }
+  | { status: 'resolvedElsewhere' }
   | { status: 'idConflict'; templateId: string }
   | { status: 'requestFailed' }
   | { status: 'unavailable'; during: 'save' | 'recheck' };
@@ -64,6 +73,8 @@ export interface UseSaveAsTemplateResult {
   attempt: SaveAttempt | null;
   canSave: boolean;
   canRecheck: boolean;
+  libraryMutationPending: boolean;
+  mutationStorageAvailable: boolean;
   busy: boolean;
   setName: (value: string) => void;
   setDescription: (value: string) => void;
@@ -77,6 +88,11 @@ const isTokenIssue = (issue: CustomTeamTemplateValidationIssue): boolean =>
   issue.code === 'previewTokenRequired' ||
   issue.code === 'previewTokenUnknown' ||
   issue.code === 'previewTokenExpired';
+
+const hasUnknownOutcome = (attempt: SaveAttempt | null): boolean =>
+  attempt?.status === 'unresolved' ||
+  attempt?.status === 'requestFailed' ||
+  (attempt?.status === 'unavailable' && attempt.during === 'recheck');
 
 /**
  * Drives the "Save as Template" workflow against `api.customTeamTemplates`.
@@ -102,9 +118,24 @@ export function useSaveAsTemplate({
   const [nameConflict, setNameConflict] = useState(false);
   const [notice, setNotice] = useState<SaveNotice>(null);
   const [attempt, setAttempt] = useState<SaveAttempt | null>(null);
+  const { operations: pendingMutations, storageAvailable } = usePendingTemplateMutations();
+  const libraryMutationPending = pendingMutations.length > 0 || !storageAvailable;
 
   const requestIdRef = useRef(0);
   const busyRef = useRef(false);
+  const sessionIsOpenRef = useRef(false);
+  const sessionSourceTeamRef = useRef(sourceTeamName);
+  const lastMutationRef = useRef<PendingTemplateMutation | null>(null);
+
+  useEffect(() => {
+    if (
+      hasUnknownOutcome(attempt) &&
+      lastMutationRef.current &&
+      wasTemplateMutationResolved(lastMutationRef.current)
+    ) {
+      setAttempt({ status: 'resolvedElsewhere' });
+    }
+  }, [attempt, pendingMutations, storageAvailable]);
 
   const applyPrepareResult = useCallback((result: PrepareCustomTeamTemplatePreviewResult): void => {
     setIssues([]);
@@ -144,7 +175,7 @@ export function useSaveAsTemplate({
       setPreparing(true);
       try {
         const result = await api.customTeamTemplates.preparePreview({
-          sourceTeamName,
+          sourceTeamName: sessionSourceTeamRef.current,
           name: nextName,
           description: nextDescription,
         });
@@ -160,7 +191,7 @@ export function useSaveAsTemplate({
         }
       }
     },
-    [applyPrepareResult, sourceTeamName]
+    [applyPrepareResult]
   );
 
   const applyIssues = useCallback(
@@ -229,36 +260,52 @@ export function useSaveAsTemplate({
     [applyIssues, description, name, runPrepare]
   );
 
-  const applyRecheckResult = useCallback(
-    (result: RecheckCustomTeamTemplateSaveResult): void => {
-      switch (result.status) {
-        case 'saved':
-          setAttempt({ status: 'saved', template: result.template, alreadyPresent: true });
-          setNotice(null);
-          return;
-        case 'templateIdConflict':
-          setAttempt({ status: 'idConflict', templateId: result.templateId });
-          return;
-        case 'notSaved':
-          setAttempt({ status: 'notSaved', templateId: result.templateId });
-          return;
-        case 'unresolved':
-          setAttempt({ status: 'unresolved', templateId: result.templateId });
-          return;
-        case 'storageUnavailable':
-          setAttempt({ status: 'unavailable', during: 'recheck' });
-          return;
-        case 'validationFailed':
-          setAttempt(null);
-          applyIssues(result.issues);
-          return;
-      }
-    },
-    [applyIssues]
-  );
+  const applyRecheckResult = useCallback((result: RecheckCustomTeamTemplateSaveResult): void => {
+    if (result.status !== 'validationFailed') setIssues([]);
+    switch (result.status) {
+      case 'saved':
+        setAttempt({ status: 'saved', template: result.template, alreadyPresent: true });
+        setNotice(null);
+        return;
+      case 'templateIdConflict':
+        setAttempt({ status: 'idConflict', templateId: result.templateId });
+        return;
+      case 'notSaved':
+        // An older server may report absence, but a previous writer can still
+        // be running. Do not make the original save retryable from a read.
+        setAttempt({ status: 'unresolved', templateId: result.templateId });
+        return;
+      case 'unresolved':
+        setAttempt({ status: 'unresolved', templateId: result.templateId });
+        return;
+      case 'storageUnavailable':
+        setAttempt({ status: 'unavailable', during: 'recheck' });
+        return;
+      case 'validationFailed':
+        // A failed re-check has not established the outcome. Preserve the
+        // original preview and block a second save, even if its token expired.
+        setIssues(result.issues);
+        setAttempt({ status: 'requestFailed' });
+        return;
+    }
+  }, []);
 
   const save = useCallback(async (): Promise<void> => {
-    if (busyRef.current || !preview) return;
+    if (
+      busyRef.current ||
+      getPendingTemplateMutation() !== null ||
+      !preview ||
+      preparing ||
+      blockedReason !== null ||
+      (attempt !== null && !(attempt.status === 'unavailable' && attempt.during === 'save'))
+    )
+      return;
+    const operation = beginTemplateMutation({ kind: 'save', label: name });
+    if (!operation) {
+      setAttempt({ status: 'unavailable', during: 'save' });
+      return;
+    }
+    lastMutationRef.current = operation;
     const requestId = requestIdRef.current;
     busyRef.current = true;
     setNotice(null);
@@ -269,17 +316,24 @@ export function useSaveAsTemplate({
         name,
         description,
       });
+      if (result.status !== 'unresolvedWriteOutcome') finishTemplateMutation(operation);
       if (requestId !== requestIdRef.current) return;
+      if (result.status === 'unresolvedWriteOutcome' && wasTemplateMutationResolved(operation)) {
+        setAttempt({ status: 'resolvedElsewhere' });
+        return;
+      }
       applySaveResult(result);
     } catch {
       if (requestId !== requestIdRef.current) return;
       // A transport failure says nothing about whether the write landed, so
       // the outcome stays unknown instead of being reported as a failure.
-      setAttempt({ status: 'requestFailed' });
+      setAttempt({
+        status: wasTemplateMutationResolved(operation) ? 'resolvedElsewhere' : 'requestFailed',
+      });
     } finally {
       busyRef.current = false;
     }
-  }, [applySaveResult, description, name, preview]);
+  }, [applySaveResult, attempt, blockedReason, description, name, preparing, preview]);
 
   const recheck = useCallback(async (): Promise<void> => {
     if (busyRef.current || !preview) return;
@@ -301,10 +355,10 @@ export function useSaveAsTemplate({
   }, [applyRecheckResult, preview]);
 
   const refresh = useCallback(async (): Promise<void> => {
-    if (busyRef.current) return;
+    if (busyRef.current || hasUnknownOutcome(attempt)) return;
     setAttempt(null);
     await runPrepare(name, description);
-  }, [description, name, runPrepare]);
+  }, [attempt, description, name, runPrepare]);
 
   const setName = useCallback(
     (value: string): void => {
@@ -344,7 +398,14 @@ export function useSaveAsTemplate({
   );
 
   useEffect(() => {
-    if (!open) return;
+    if (!open) {
+      sessionIsOpenRef.current = false;
+      return;
+    }
+    if (sessionIsOpenRef.current) return;
+    sessionIsOpenRef.current = true;
+    sessionSourceTeamRef.current = sourceTeamName;
+    lastMutationRef.current = null;
     // Any response that arrives after the dialog reopened belongs to a previous
     // session and must be dropped.
     requestIdRef.current += 1;
@@ -363,14 +424,11 @@ export function useSaveAsTemplate({
 
   const canSave =
     preview !== null &&
+    !libraryMutationPending &&
     blockedReason === null &&
     !preparing &&
-    // A confirmed absence and a store that refused the write are both safe to
-    // retry with the same content; a conflicting id is not (it needs a new
-    // name, description or preview), and an unavailable re-check stays unknown.
-    (attempt === null ||
-      attempt.status === 'notSaved' ||
-      (attempt.status === 'unavailable' && attempt.during === 'save'));
+    // Only a store that definitely refused the write is safe to retry here.
+    (attempt === null || (attempt.status === 'unavailable' && attempt.during === 'save'));
 
   const canRecheck =
     preview !== null &&
@@ -393,6 +451,8 @@ export function useSaveAsTemplate({
     attempt,
     canSave,
     canRecheck,
+    libraryMutationPending,
+    mutationStorageAvailable: storageAvailable,
     busy,
     setName,
     setDescription,

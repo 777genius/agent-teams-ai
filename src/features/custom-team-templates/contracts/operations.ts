@@ -68,7 +68,6 @@ export interface CustomTeamTemplatePreviewContent {
 export interface CustomTeamTemplatePreview extends CustomTeamTemplatePreviewContent {
   /**
    * Opaque token issued by the preview step and echoed by confirm-save.
-   * Generation, hashing and storage belong to later phases.
    */
   previewToken: string;
 }
@@ -101,7 +100,7 @@ export interface ConfirmCustomTeamTemplateSaveRequest {
    * Optional display-name override applied when the user confirms.
    *
    * The reviewed preview already carries a name, so this field exists only so a
-   * future UI can let the user edit the name before saving. It is validated by
+   * callers can edit the name before saving. It is validated by
    * the trusted layer exactly like the prepare-time name, and it can never
    * alter the reviewed team content or rebind the preview to another team.
    *
@@ -200,6 +199,18 @@ export interface CustomTeamTemplateUnreadableRecord {
  */
 export type ListCustomTeamTemplatesResult =
   | { status: 'empty' }
+  | {
+      status: 'recoveryRequired' | 'recoveryInterrupted';
+      storageDirectory: string;
+      markerPath: string;
+      interruptedMarkerPath: string;
+      markerWriteFailed?: true;
+    }
+  | {
+      status: 'storageVerificationRequired' | 'storageSafetyUnavailable';
+      storageDirectory: string;
+      databasePath: string;
+    }
   | { status: 'ready'; templates: readonly CustomTeamTemplateV1[] }
   | {
       status: 'hasUnreadableRecords';

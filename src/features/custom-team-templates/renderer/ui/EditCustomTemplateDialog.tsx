@@ -276,6 +276,12 @@ export const EditCustomTemplateDialog = ({
             </div>
           ) : null}
 
+          {status === 'resolvedElsewhere' ? (
+            <p role="status" data-testid="edit-template-resolved-elsewhere">
+              {t('customTemplates.states.resolvedElsewhere')}
+            </p>
+          ) : null}
+
           {status === 'requestFailed' || status === 'requestSizeValidationFailed' ? (
             <div
               role="alert"
