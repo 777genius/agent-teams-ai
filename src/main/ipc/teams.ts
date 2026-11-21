@@ -13,7 +13,7 @@ import { readNativeInboxAttachmentCapability } from '@features/member-work-sync/
 import { createReviewFlowFeature, registerReviewFlowIpc, removeReviewFlowIpc } from '@features/review-flow/main';
 import { parseNewTeamProjectContextMode } from '@features/team-project-context/core';
 import {
-  projectTeamSummaries,
+  projectPublicProvisioningProgress, projectTeamSummaries, resolveProjectRunDiagnosticsTeam,
   registerTeamProjectContextViewHandler,
   unregisterTeamProjectContextViewHandler,
 } from '@features/team-project-context/main';
@@ -212,7 +212,6 @@ import { createMessagesPageHandler } from './teams/teamMessagesPageHandler';
 import { TeamPermanentDeletionTransactionCoordinator } from './teams/TeamPermanentDeletionTransactionCoordinator';
 import { createTeamWithProjectContext } from './teams/teamProjectContextCreate';
 import { buildTeamProgressReporter, withPreparedContextLaunch } from './teams/teamProjectContextLaunch';
-import { projectPublicProvisioningProgress, resolveProjectRunDiagnosticsTeam } from './teams/teamProjectContextProgressIdentity';
 import * as projectEdit from './teams/teamProjectDefinitionEdit';
 import { discardQueuedUserMessages, listQueuedUserMessages } from './teams/teamQueuedUserMessages';
 import { createTeamSoftDeleteRequests } from './teams/teamSoftDeleteFlow';

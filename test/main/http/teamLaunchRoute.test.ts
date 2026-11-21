@@ -128,7 +128,6 @@ describe('POST /api/teams/:team/launch of a team with separate history per proje
         useCaseRequest = request;
         return launcher.invoke({ ...request, teamName: 'ptc-copy', cwd: project });
       }),
-      publicProgress: (progress) => progress,
     };
     const { instance, launch, createTeam } = app({
       projectTeamLaunch: () => port,

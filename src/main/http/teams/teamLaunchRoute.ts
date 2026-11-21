@@ -87,28 +87,34 @@ function projectLaunchRefusalCode(error: unknown): string | null {
 
 const ignoreProgress: Progress = () => undefined;
 
+/** What a parsed draft launch (a create request) shares with a launch request. */
+type DraftLaunchKey = Exclude<
+  Extract<keyof TeamCreateRequest, keyof TeamLaunchRequest>,
+  'teamName' | 'cwd'
+>;
+
+/** `satisfies` keeps the list equal to the shared keys of the two request types. */
+const DRAFT_LAUNCH_KEYS = Object.keys({
+  runtimeSelectionVersion: true,
+  prompt: true,
+  providerId: true,
+  providerBackendId: true,
+  model: true,
+  effort: true,
+  fastMode: true,
+  syncModelsWithLead: true,
+  limitContext: true,
+  skipPermissions: true,
+  worktree: true,
+  extraCliArgs: true,
+  allowExperimentalLocalModels: true,
+} satisfies Record<DraftLaunchKey, true>) as DraftLaunchKey[];
+
 /** The launch fields of a parsed draft launch, without the keys it left unset. */
-function draftLaunchRequest(
-  create: TeamCreateRequest
-): Omit<TeamLaunchRequest, 'teamName' | 'cwd'> {
-  const fields: Omit<TeamLaunchRequest, 'teamName' | 'cwd'> = {
-    runtimeSelectionVersion: create.runtimeSelectionVersion,
-    prompt: create.prompt,
-    providerId: create.providerId,
-    providerBackendId: create.providerBackendId,
-    model: create.model,
-    effort: create.effort,
-    fastMode: create.fastMode,
-    syncModelsWithLead: create.syncModelsWithLead,
-    limitContext: create.limitContext,
-    skipPermissions: create.skipPermissions,
-    worktree: create.worktree,
-    extraCliArgs: create.extraCliArgs,
-    allowExperimentalLocalModels: create.allowExperimentalLocalModels,
-  };
+function draftLaunchRequest(create: TeamCreateRequest): Pick<TeamLaunchRequest, DraftLaunchKey> {
   return Object.fromEntries(
-    Object.entries(fields).filter(([, value]) => typeof value !== 'undefined')
-  ) as typeof fields;
+    DRAFT_LAUNCH_KEYS.filter((key) => create[key] !== undefined).map((key) => [key, create[key]])
+  ) as Pick<TeamLaunchRequest, DraftLaunchKey>;
 }
 
 export function registerTeamLaunchRoute(
@@ -125,15 +131,23 @@ export function registerTeamLaunchRoute(
     return apis;
   }
 
-  /** The existing launch of one physical team: a draft is created, a configured team launched. */
+  /**
+   * The existing launch of one physical team: a draft is created, a configured
+   * team launched. `savedProviderId` is the provider an effort is checked
+   * against when the body names none (the team's, for a project copy).
+   */
   async function launchByName(
     name: string,
     body: unknown,
-    onProgress: Progress
+    onProgress: Progress,
+    savedProviderId?: TeamLaunchRequest['providerId']
   ): Promise<LaunchResponse> {
     const savedDraft = await deps.getDraftSavedRequest(name);
     if (!savedDraft) {
-      return teamApis().provisioningStart.launchTeam(parseLaunchRequest(name, body), onProgress);
+      return teamApis().provisioningStart.launchTeam(
+        parseLaunchRequest(name, body, savedProviderId),
+        onProgress
+      );
     }
     const createRequest = parseDraftLaunchCreateRequest(savedDraft, body);
     requireTeamRuntimeSelection(createRequest);
@@ -162,24 +176,29 @@ export function registerTeamLaunchRoute(
     port: ProjectTeamLaunch,
     teamName: string,
     copyBody: Record<string, unknown>
-  ): Promise<TeamLaunchRequest> {
+  ): Promise<{ request: TeamLaunchRequest; savedProviderId: TeamLaunchRequest['providerId'] }> {
     const cwd = assertAbsoluteCwd(copyBody.cwd);
     if (!(await stat(cwd).catch(() => null))?.isDirectory()) {
       throw new HttpBadRequestError('cwd must be an existing project folder');
     }
+    const definition = await deps.getTeamDataApi().getSavedRequest(teamName);
+    if (!definition) {
+      throw new TeamProjectContextLaunchRefusedError('The team configuration is unavailable');
+    }
+    // The launch settings belong to the definition: its provider is the one the copy inherits.
+    const savedProviderId = definition.providerId;
     const copyName = (await port.inspectCopy(teamName, cwd))?.executionTeamName;
-    let draft = copyName ? await deps.getDraftSavedRequest(copyName) : null;
-    if (!draft && copyName && (await deps.getTeamDataApi().getSavedRequest(copyName))) {
-      return { ...parseLaunchRequest(copyName, copyBody), teamName, cwd };
+    const copyDraft = copyName ? await deps.getDraftSavedRequest(copyName) : null;
+    if (!copyDraft && copyName && (await deps.getTeamDataApi().getSavedRequest(copyName))) {
+      const parsed = parseLaunchRequest(copyName, copyBody, savedProviderId);
+      return { request: { ...parsed, teamName, cwd }, savedProviderId };
     }
-    if (!draft) {
-      const definition = await deps.getTeamDataApi().getSavedRequest(teamName);
-      if (!definition) throw new Error('The team configuration is unavailable');
-      draft = { ...definition, projectContextMode: 'shared' };
-    }
-    const create = parseDraftLaunchCreateRequest(draft, copyBody);
+    const create = parseDraftLaunchCreateRequest(
+      copyDraft ?? { ...definition, projectContextMode: 'shared' },
+      copyBody
+    );
     requireTeamRuntimeSelection(create);
-    return { ...draftLaunchRequest(create), teamName, cwd };
+    return { request: { ...draftLaunchRequest(create), teamName, cwd }, savedProviderId };
   }
 
   /** A failed run of a copy (or a failed confirmation of its readiness) has no client to tell. */
@@ -205,12 +224,15 @@ export function registerTeamLaunchRoute(
     }
     // A team name in the body would rename the draft of the copy.
     const copyBody = Object.fromEntries(Object.entries(body).filter(([key]) => key !== 'teamName'));
-    const request = await admitProjectLaunch(port, teamName, copyBody);
+    const { request, savedProviderId } = await admitProjectLaunch(port, teamName, copyBody);
     const launched = await port.launch<LaunchResponse>(request, {
       invoke: (copy, mapProgress) =>
         // The progress mapper confirms the project context once the copy is ready.
-        launchByName(copy.teamName, { ...copyBody, cwd: copy.cwd }, (progress) =>
-          mapProgress?.(progress, reportCopyProgress(teamName, copy.cwd))
+        launchByName(
+          copy.teamName,
+          { ...copyBody, cwd: copy.cwd },
+          (progress) => mapProgress?.(progress, reportCopyProgress(teamName, copy.cwd)),
+          savedProviderId
         ),
       started: (response) => response,
     });

@@ -1898,18 +1898,20 @@ describe('MCP team tools over the local REST control API', () => {
     }
   });
 
-  // A team created without a mode gets the default of the app (separate history per project) and
-  // launches over MCP/HTTP through the same project-context launch as the app. Catches: the copy's
+  // A team created over MCP with separate history per project (the mode is required) launches over
+  // MCP/HTTP through the same project-context launch as the app. Catches: the copy's
   // readiness never confirmed (the team would read as "launching" forever), a refused request
   // leaving a reservation (it blocks the team in every other project), a second copy for the same
   // project, a draft rename reaching the copy, and a copy launched by its own name.
-  it('creates a per-project team by default and launches it in a project through MCP like the app', async () => {
+  it('creates a per-project team over MCP and launches it in a project like the app', async () => {
     const root = await realpath(await mkdtemp(path.join(tmpdir(), 'TEST-per-project-launch-')));
     setClaudeBasePathOverride(root);
     const projectA = path.join(root, 'project-a');
     const projectB = path.join(root, 'project-b');
     await mkdir(projectA);
     await mkdir(projectB);
+    const projectKey = (value: string) =>
+      process.platform === 'win32' ? path.normalize(value).toLowerCase() : value;
     const app = Fastify();
     const { services, teamDataService, createTeamCalls, launching } = createServices(root);
     const { context } = enableManagement(services, teamDataService, root);
@@ -1945,8 +1947,9 @@ describe('MCP team tools over the local REST control API', () => {
       expect(createTeamCalls).toHaveLength(1);
       const copy = createTeamCalls[0];
       expect(copy.teamName).toMatch(/^ptc-[a-f0-9]{24}$/);
+      // The contexts index keys a Windows project folder in lower case.
+      expect(projectKey(copy.cwd)).toBe(projectKey(projectA));
       expect(copy).toMatchObject({
-        cwd: projectA,
         projectContextMode: 'shared',
         providerId: 'codex',
         members: [expect.objectContaining({ name: 'builder', role: 'Engineer' })],
@@ -2107,6 +2110,23 @@ describe('MCP team tools over the local REST control API', () => {
       }
       expect(await metaOf(settled)).toMatchObject({ model: 'gpt-5.4' });
       expect(await metaOf(settledCopy)).toMatchObject({ model: 'gpt-5.4' });
+
+      // An effort only Codex knows is checked against the provider of the team on every launch in
+      // a project: the first one (its copy is a draft) and the next (the copy is configured).
+      const xhigh = 'per-project-xhigh';
+      expect((await createOver(xhigh)).statusCode).toBe(201);
+      const firstXhigh = await launchTeam(xhigh, { cwd: projectA, effort: 'xhigh' });
+      expect(firstXhigh.statusCode, firstXhigh.body).toBe(200);
+      const againXhigh = await launchTeam(xhigh, { cwd: projectA, effort: 'xhigh' });
+      expect(againXhigh.statusCode, againXhigh.body).toBe(200);
+      expect(createTeamCalls.at(-1)).toMatchObject({ effort: 'xhigh' });
+      // A provider stated by the request is still the one its effort is checked against.
+      const anthropicXhigh = await launchTeam(xhigh, {
+        cwd: projectA,
+        providerId: 'anthropic',
+        effort: 'xhigh',
+      });
+      expect(anthropicXhigh.statusCode).toBe(400);
     } finally {
       restoreFetch();
       await app.close();
@@ -2133,7 +2153,7 @@ describe('MCP team tools over the local REST control API', () => {
           claudeDir: claudeRoot,
           controlUrl,
           teamName: 'mcp-e2e-team',
-          // The shared history mode is chosen explicitly: the default is per project, like the app.
+          // The history mode is required over MCP; this flow is the one of a shared team.
           projectContextMode: 'shared',
           displayName: 'MCP E2E Team',
           description: 'Created by MCP integration test',

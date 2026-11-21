@@ -306,7 +306,15 @@ export function parseCreateMembers(
   });
 }
 
-export function parseLaunchRequest(teamName: string, body: unknown): TeamLaunchRequest {
+/**
+ * `savedProviderId` is the provider the team has saved: an explicit effort is
+ * checked against it when the request names no provider (the launch inherits it).
+ */
+export function parseLaunchRequest(
+  teamName: string,
+  body: unknown,
+  savedProviderId?: TeamLaunchRequest['providerId']
+): TeamLaunchRequest {
   const payload = body && typeof body === 'object' ? (body as Record<string, unknown>) : {};
   const bootstrapError = validateBootstrapOnlyLaunchRequest(payload);
   if (bootstrapError) throw new TeamRequestValidationError(bootstrapError);
@@ -314,7 +322,7 @@ export function parseLaunchRequest(teamName: string, body: unknown): TeamLaunchR
   const prompt = assertOptionalString(payload.prompt, 'prompt');
   const providerBackendId = parseLaunchProviderBackendId(providerId, payload.providerBackendId);
   const model = assertOptionalString(payload.model, 'model');
-  const effort = assertOptionalEffort(payload.effort, providerId ?? 'anthropic');
+  const effort = assertOptionalEffort(payload.effort, providerId ?? savedProviderId ?? 'anthropic');
   const fastMode = assertOptionalFastMode(payload.fastMode);
   const limitContext = assertOptionalBoolean(payload.limitContext, 'limitContext');
   const clearContext = assertOptionalBoolean(payload.clearContext, 'clearContext');

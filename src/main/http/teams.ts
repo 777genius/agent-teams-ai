@@ -1,4 +1,5 @@
 import { readNativeWorkSyncCurrentRuntimeInstanceId } from '@features/member-work-sync/main';
+import { projectPublicProvisioningProgress } from '@features/team-project-context/main';
 import { validateMemberName, validateTeamName } from '@main/services/team/TeamIdentifierValidation';
 import { getTeamsBasePath } from '@main/utils/pathDecoder';
 import { getErrorMessage } from '@shared/utils/errorHandling';
@@ -356,8 +357,11 @@ export function registerTeamRoutes(app: FastifyInstance, services: HttpServices)
         }
 
         // A run of a project copy reports its team, like the progress the app shows.
-        const progress = await getTeamProvisioningStatusApi(services).getProvisioningStatus(runId);
-        return reply.send(services.projectTeamLaunch?.().publicProgress(progress) ?? progress);
+        return reply.send(
+          projectPublicProvisioningProgress(
+            await getTeamProvisioningStatusApi(services).getProvisioningStatus(runId)
+          )
+        );
       } catch (error) {
         const message = getErrorMessage(error);
         const statusCode = message === 'Unknown runId' ? 404 : getStatusCode(error);

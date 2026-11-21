@@ -2,6 +2,7 @@ import {
   classifyTeamKind,
   launchInProjectContext,
   recordLaunchSettings,
+  rememberProjectRunIdentity,
   TeamProjectContextLaunchConflictError,
 } from '@features/team-project-context/main';
 import { TeamMetaStore } from '@main/services/team/TeamMetaStore';
@@ -9,7 +10,6 @@ import { createLogger } from '@shared/utils/logger';
 import { isFreshLaunch } from '@shared/utils/teamLaunchResponse';
 
 import { createProjectContextRuntimeParts } from './teamProjectContextCreate';
-import { rememberProjectRunIdentity } from './teamProjectContextProgressIdentity';
 
 import type { ProjectTeamRuntimePorts } from './teamProjectContextCreate';
 import type {
@@ -82,7 +82,7 @@ export async function prepareTeamContextLaunch(
     );
     const physical = await parts.materializer.ensureProjectDraft(canonicalAddress);
     if (physical.executionTeamName !== reserved.executionTeamName) {
-      throw new Error('Project context changed during launch admission');
+      throw new TeamProjectContextLaunchConflictError('Project context changed during launch admission');
     }
     return {
       request: { ...request, cwd: reserved.projectPath, teamName: physical.executionTeamName },

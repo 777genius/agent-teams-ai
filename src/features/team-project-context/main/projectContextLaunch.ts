@@ -75,15 +75,6 @@ export async function launchInProjectContext<T>(
 }
 
 /**
- * A launch of a per-project team was refused by an invariant of its project
- * copy (an unowned or nested copy, missing settings, a copy that changed during
- * admission). The app shows the message; HTTP answers 409 with this code.
- */
-export class TeamProjectContextLaunchRefusedError extends Error {
-  readonly code = 'TEAM_PROJECT_CONTEXT_REFUSED';
-}
-
-/**
  * What an external transport (HTTP, MCP) needs to launch a team in a project,
  * bound to the runtime of this app. Build one per request: the Claude root can
  * change while the app runs, and the parts are then shared by every step.
@@ -99,6 +90,4 @@ export interface ProjectTeamLaunch {
   /** The configuration lock of a team, the one the app holds while it launches. */
   withTeamLock<T>(teamName: string, operation: () => Promise<T>): Promise<T>;
   launch<T>(request: TeamLaunchRequest, launcher: ProjectCopyLauncher<T>): Promise<T | null>;
-  /** The progress of a copy's run, named after its team. */
-  publicProgress(progress: TeamProvisioningProgress): TeamProvisioningProgress;
 }

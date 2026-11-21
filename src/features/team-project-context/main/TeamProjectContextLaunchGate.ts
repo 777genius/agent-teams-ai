@@ -15,6 +15,15 @@ interface RuntimeStateReader {
 /** Why a project context blocks an edit, for callers that map it to their own error codes. */
 export type TeamProjectContextConflictReason = 'unreconciled' | 'launching' | 'running';
 
+/**
+ * A launch of a per-project team was refused by the state of its project copy
+ * (an unowned or nested copy, missing settings). The app shows the message;
+ * HTTP answers 409 with this code.
+ */
+export class TeamProjectContextLaunchRefusedError extends Error {
+  readonly code = 'TEAM_PROJECT_CONTEXT_REFUSED';
+}
+
 export class TeamProjectContextLaunchConflictError extends Error {
   readonly code = 'TEAM_PROJECT_CONTEXT_RUNNING';
 

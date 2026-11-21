@@ -133,7 +133,7 @@ async function fixture() {
   await new Promise((resolve) => probe.close(resolve));
   await json(path.join(claudeRoot, 'agent-teams-config.json'), {
     general: { appLocale: 'en', agentLanguage: 'en', theme: 'dark', defaultTab: 'teams' },
-    httpServer: { enabled: false, port: controlPort, host: '127.0.0.1' },
+    httpServer: { enabled: false, port: controlPort },
   });
   await json(path.join(logicalDir, 'team.meta.json'), {
     version: 1, createdAt: joinedAt, cwd: projectA, displayName: 'History fixture',
@@ -1305,7 +1305,15 @@ async function run() {
       'Unexpected native model/provider lifecycle call: ' + JSON.stringify(commandHeads));
     // After the strict audit above: the launches of these sections reach the denying runtime on purpose.
     await verifyLaunchSettings(f);
-    const auditBeforeHttp = (await readAudit()).length;
+    // The runtime child writes its audit line a moment after a launch: wait until the audit of the
+    // previous section stops growing, so a late line of it is not counted for the HTTP section.
+    let auditBeforeHttp = (await readAudit()).length;
+    for (let stableSince = Date.now(), giveUpAt = Date.now() + 60_000; Date.now() - stableSince < 5_000;) {
+      assert(Date.now() < giveUpAt, 'The runtime audit kept growing after the launch settings section');
+      await pause(500);
+      const length = (await readAudit()).length;
+      if (length !== auditBeforeHttp) [auditBeforeHttp, stableSince] = [length, Date.now()];
+    }
     const httpLaunch = await verifyHttpCreateAndLaunch(f);
     const afterHttp = (await readAudit()).slice(auditBeforeHttp);
     assert(afterHttp.filter(isLaunch).length <= 2,

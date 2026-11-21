@@ -45,13 +45,18 @@ export type {
   ProjectCopyLauncher,
   ProjectTeamLaunch,
 } from './projectContextLaunch';
-export { launchInProjectContext, TeamProjectContextLaunchRefusedError } from './projectContextLaunch';
+export { launchInProjectContext } from './projectContextLaunch';
 export type { TeamModeMetaReader } from './projectContextMode';
 export {
   readTeamProjectContextMode,
   TeamMetadataUnreadableError,
 } from './projectContextMode';
 export { projectDefinitionToAlias } from './projectDefinitionToAlias';
+export {
+  projectPublicProvisioningProgress,
+  rememberProjectRunIdentity,
+  resolveProjectRunDiagnosticsTeam,
+} from './projectRunIdentity';
 export { projectTeamSummaries } from './projectTeamSummaries';
 export type { ContextGroup, ResolvedTeamTarget, TeamTargetPorts } from './resolveTeamTarget';
 export {
@@ -68,6 +73,7 @@ export {
   isStoppedTeamRuntime,
   TeamProjectContextLaunchConflictError,
   TeamProjectContextLaunchGate,
+  TeamProjectContextLaunchRefusedError,
 } from './TeamProjectContextLaunchGate';
 export type {
   OwnedExecutionAlias,

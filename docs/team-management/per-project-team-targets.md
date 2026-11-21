@@ -116,6 +116,8 @@ This is **not additive**: before, HTTP always created `shared` (and refused an e
 
 An ordinary team, or a draft of one, launches exactly as before.
 
+What differs from a launch in the app, for every HTTP launch and not only for a per-project team: the app marks the launched team as watched (`markTeamEngaged`, live file updates in its window) and creates a draft inside the backup identity fence (`withTeamIdentityFence`); HTTP does neither. The project-context part (reservation, gate, copy, launch settings, run identity) is the same use case.
+
 Refusals of the project context carry their reason in `code`, next to `error`.
 
 | Answer | When |
