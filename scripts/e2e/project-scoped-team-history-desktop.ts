@@ -83,6 +83,15 @@ async function fixture() {
     '}',
     "if (args.length === 1 && args[0] === '--help') { console.log('Usage: synthetic'); process.exit(0); }",
     'fs.appendFileSync(' + JSON.stringify(audit) + ", JSON.stringify(args) + '\\n');",
+    // The only thing answered: Windows' start-up cleanup of OpenCode hosts (nothing to clean).
+    // Without it the app refuses every launch of the session there. All else is denied below.
+    'const { answerStartupCleanup } = require(' + JSON.stringify(
+      path.join(repoRoot, 'scripts', 'e2e', 'lib', 'opencodeStartupCleanupReply.cjs')) + ');',
+    'const cleanupReply = answerStartupCleanup(args);',
+    'if (cleanupReply) {',
+    "  if (cleanupReply.outputPath) fs.writeFileSync(cleanupReply.outputPath, cleanupReply.line + '\\n');",
+    "  process.stdout.write(cleanupReply.line + '\\n'); process.exit(0);",
+    '}',
     "process.stderr.write('Disposable smoke denies all real agent execution\\n'); process.exit(77);",
   ].join('\n') + '\n');
   if (process.platform === 'win32') {
@@ -301,10 +310,18 @@ async function selectProject(f: Fixture, id: 'project-a' | 'project-b' | 'projec
     }) + '); return true; })()', 'select project ' + id, 60_000);
 }
 
-async function verifyNative(f: Fixture) {
+interface NativeState {
+  teamNames: string[];
+  a: { state: string; executionTeamName?: string };
+  b: { state: string; executionTeamName?: string };
+  empty: { state: string };
+  taskA: string[]; taskB: string[]; messagesA: string[]; messagesB: string[];
+}
+
+async function readNativeState(f: Fixture): Promise<NativeState> {
   assert(cdp);
   const input = JSON.stringify(f);
-  const state = await cdp.evaluate('(async () => { const f = ' + input + ';' +
+  return await cdp.evaluate('(async () => { const f = ' + input + ';' +
     'const teams = await window.electronAPI.teams.list();' +
     'const a = await window.electronAPI.teams.getProjectContextView(f.logical, f.projectA);' +
     'const b = await window.electronAPI.teams.getProjectContextView(f.logical, f.projectB);' +
@@ -318,25 +335,42 @@ async function verifyNative(f: Fixture) {
       'a, b, empty,' +
       'taskA: aa.tasks.map(t => t.subject), taskB: bb.tasks.map(t => t.subject),' +
       'messagesA: ma.messages.map(m => m.text), messagesB: mb.messages.map(m => m.text)' +
-    '}; })()') as {
-    teamNames: string[];
-    a: { state: string; executionTeamName?: string };
-    b: { state: string; executionTeamName?: string };
-    empty: { state: string };
-    taskA: string[]; taskB: string[]; messagesA: string[]; messagesB: string[];
-  };
-  assert(state.teamNames.includes(f.logical), 'Logical team absent from renderer team list');
-  assert(!state.teamNames.includes(f.nativeA) && !state.teamNames.includes(f.nativeB),
-    'Verified owned aliases leaked into visible team list');
-  assert.equal(state.a.state, 'ready', `Project A native view: ${JSON.stringify(state.a)}`);
-  assert.equal(state.a.executionTeamName, f.nativeA);
-  assert.equal(state.b.state, 'ready', `Project B native view: ${JSON.stringify(state.b)}`);
-  assert.equal(state.b.executionTeamName, f.nativeB);
-  assert.equal(state.empty.state, 'empty');
-  assert(state.taskA.includes('PROJECT_A_TASK_ONLY') && !state.taskA.includes('PROJECT_B_TASK_ONLY'));
-  assert(state.taskB.includes('PROJECT_B_TASK_ONLY') && !state.taskB.includes('PROJECT_A_TASK_ONLY'));
-  assert(state.messagesA.includes('PROJECT_A_CHAT_ONLY') && !state.messagesA.includes('PROJECT_B_CHAT_ONLY'));
-  assert(state.messagesB.includes('PROJECT_B_CHAT_ONLY') && !state.messagesB.includes('PROJECT_A_CHAT_ONLY'));
+    '}; })()') as NativeState;
+}
+
+/**
+ * Isolation is asserted on EVERY read and fails at once: another project's data must never be
+ * seen, not even once. What is only a read of the project's own data (a view or a feed that is
+ * still warming up and answers empty) is read again until it is complete, for up to 30 s; the
+ * failure then says exactly what the last read returned.
+ */
+async function verifyNative(f: Fixture) {
+  const deadline = Date.now() + 30_000;
+  let state = await readNativeState(f);
+  for (let reads = 1; ; reads += 1) {
+    const shown = () => JSON.stringify(state);
+    assert(!state.teamNames.includes(f.nativeA) && !state.teamNames.includes(f.nativeB),
+      'Verified owned aliases leaked into visible team list: ' + shown());
+    assert(!state.taskA.includes('PROJECT_B_TASK_ONLY') && !state.taskB.includes('PROJECT_A_TASK_ONLY'),
+      'A task of another project is visible: ' + shown());
+    assert(!state.messagesA.includes('PROJECT_B_CHAT_ONLY') && !state.messagesB.includes('PROJECT_A_CHAT_ONLY'),
+      'A chat message of another project is visible: ' + shown());
+    const missing: string[] = [];
+    if (!state.teamNames.includes(f.logical)) missing.push('logical team in the team list');
+    if (state.a.state !== 'ready' || state.a.executionTeamName !== f.nativeA) missing.push('project A view');
+    if (state.b.state !== 'ready' || state.b.executionTeamName !== f.nativeB) missing.push('project B view');
+    if (state.empty.state !== 'empty') missing.push('empty project view');
+    if (!state.taskA.includes('PROJECT_A_TASK_ONLY')) missing.push('task of project A');
+    if (!state.taskB.includes('PROJECT_B_TASK_ONLY')) missing.push('task of project B');
+    if (!state.messagesA.includes('PROJECT_A_CHAT_ONLY')) missing.push('chat message of project A');
+    if (!state.messagesB.includes('PROJECT_B_CHAT_ONLY')) missing.push('chat message of project B');
+    if (missing.length === 0) return;
+    assert(Date.now() < deadline,
+      'Own data of the native projects is still missing after ' + reads + ' reads over 30 s (' +
+      missing.join(', ') + '): ' + shown());
+    await pause(1_000);
+    state = await readNativeState(f);
+  }
 }
 
 async function verifyUi(f: Fixture) {
@@ -435,13 +469,30 @@ async function waitForJson<T = Record<string, unknown>>(
   throw new Error('Timed out: ' + label + ' (last: ' + JSON.stringify(last)?.slice(0, 400) + ')');
 }
 
-async function ipcOutcome(expression: string): Promise<{ ok: boolean; error?: string }> {
+async function ipcOutcome(
+  expression: string
+): Promise<{ ok: boolean; error?: string; value?: Record<string, unknown> }> {
   assert(cdp);
-  return await cdp.evaluate('(async () => { try { await (' + expression + '); return { ok: true }; }' +
+  return await cdp.evaluate('(async () => { try { const value = await (' + expression + ');' +
+    ' return { ok: true, value: value && typeof value === "object" ? value : undefined }; }' +
     ' catch (e) { return { ok: false, error: String(e && e.message ? e.message : e) }; } })()') as {
-    ok: boolean; error?: string;
+    ok: boolean; error?: string; value?: Record<string, unknown>;
   };
 }
+
+/**
+ * The app's own sign-in check of the runtime (CLI installer status and provider status, run at
+ * start-up and whenever a status panel refreshes): it reads the state and starts nothing. When it
+ * runs is timing-dependent (earlier on Windows), so every audit of the denying runtime allows it.
+ */
+const isAuthStatusQuery = (args: string[]): boolean => args[0] === 'auth' && args[1] === 'status';
+
+/**
+ * A scheduled run on a runtime that denies agents ends only after the dispatcher has waited for
+ * the agent to become ready (45 checks, 2 s apart: 90 s and a little more, longer on slow CI
+ * runners). Every wait for the final status of such a run must be longer than that.
+ */
+const SCHEDULED_RUN_SETTLE_MS = 180_000;
 
 async function clickSelector(selector: string, label: string) {
   assert(cdp);
@@ -782,7 +833,7 @@ async function verifySchedules(f: Fixture) {
   const runs = await waitForJson<StoredRun[]>(
     runsFile,
     (list) => list.length > 0 && !['pending', 'warming_up', 'warm', 'running'].includes(list[0].status),
-    'the scheduled run is recorded', 90_000
+    'the scheduled run is recorded', SCHEDULED_RUN_SETTLE_MS
   );
   const recorded = runs[0];
   assert.equal(recorded.teamName, f.logical, 'The run belongs to the logical team');
@@ -858,6 +909,196 @@ async function verifySchedules(f: Fixture) {
   return recorded;
 }
 
+/**
+ * Launch settings belong to the team, not to one project copy. Requests have the shape the launch
+ * dialog sends (every key, unset ones explicitly undefined). What is chosen for a launch in one
+ * project is what the team shows and uses in the others; a provider change drops what belonged to
+ * the old provider; an explicit unset clears; trust (skipPermissions) and runtime arguments
+ * (extraCliArgs) stay with the project; a schedule runs the settings of the team, not the older
+ * ones of its project copy. The fixture runtime denies agents: a launch is accepted, then refused
+ * there, and nothing is executed.
+ *
+ * No lead here uses the OpenCode or Codex provider: on Windows the app runs an OpenCode startup
+ * cleanup through the runtime bridge at start-up, the denying fixture fails it, and the app then
+ * refuses every OpenCode lead launch for the session (fail closed); Codex needs credentials.
+ * Launch settings are provider-agnostic, so the launches here use the Anthropic provider, which
+ * the denying runtime accepts and then refuses.
+ */
+async function verifyLaunchSettings(f: Fixture) {
+  assert(cdp);
+  const readAuditLength = async () => (await readFile(f.audit, 'utf8')).split('\n').filter(Boolean).length;
+  const auditStart = await readAuditLength();
+  const metaPath = (name: string) => path.join(f.rootTeams, name, 'team.meta.json');
+  const metaOf = (name: string) => readJsonFile<Record<string, unknown>>(metaPath(name));
+  const savedByDialog = async () => await cdp!.evaluate(
+    'window.electronAPI.teams.getSavedRequest(' + JSON.stringify(f.logical) + ')'
+  ) as Record<string, unknown> | null;
+  // IPC keeps keys whose value is undefined, JSON does not: write the object literal by hand.
+  const literal = (value: Record<string, unknown>) => '{' + Object.entries(value).map(([key, item]) =>
+    JSON.stringify(key) + ':' + (item === undefined ? 'undefined' : JSON.stringify(item))).join(',') + '}';
+  const dialogRequest = (cwd: string, chosen: Record<string, unknown>, omit: string[]) => {
+    const request: Record<string, unknown> = {
+      runtimeSelectionVersion: undefined, teamName: f.logical, cwd, prompt: undefined,
+      providerId: undefined, providerBackendId: undefined, model: undefined, effort: undefined,
+      fastMode: undefined, syncModelsWithLead: undefined, limitContext: undefined,
+      skipPermissions: undefined, worktree: undefined, extraCliArgs: undefined, ...chosen,
+    };
+    for (const key of omit) delete request[key];
+    return request;
+  };
+  // A launch that found the team already starting or running applied nothing: wait and repeat it,
+  // so a step never counts as done (or as accepted) because of a race with the previous one.
+  const launch = async (cwd: string, chosen: Record<string, unknown>, omit: string[] = []) => {
+    const deadline = Date.now() + SCHEDULED_RUN_SETTLE_MS;
+    for (;;) {
+      const outcome = await ipcOutcome('window.electronAPI.teams.launchTeam(' +
+        literal(dialogRequest(cwd, chosen, omit)) + ')');
+      const response = outcome.value ?? {};
+      const appliedNothing = outcome.ok && (
+        response.launchStatus === 'already_running' || response.launchStatus === 'already_launching' ||
+        response.alreadyRunning === true || response.alreadyLaunching === true);
+      const transient = appliedNothing ||
+        (!outcome.ok && /running|starting|launching|stop|reconcil/i.test(outcome.error ?? ''));
+      if (!transient || Date.now() > deadline) {
+        return appliedNothing ? { ok: false, error: 'applied nothing: ' + JSON.stringify(response) } : outcome;
+      }
+      await pause(1_000);
+    }
+  };
+  const definitionWhere = (predicate: (meta: Record<string, unknown>) => boolean, label: string) =>
+    waitForJson(metaPath(f.logical), predicate, label);
+
+  // Older copies carry settings of their own from earlier launches; the definition has none yet.
+  const before = await metaOf(f.logical);
+  assert(!('model' in before) && !('effort' in before), 'The fixture definition starts without launch settings');
+  for (const alias of [f.nativeA, f.nativeB]) {
+    const { launchIdentity: _identity, ...rest } = await metaOf(alias);
+    await json(metaPath(alias), {
+      ...rest, providerId: 'anthropic', model: 'stale-model', effort: 'low',
+      ...(alias === f.nativeB ? { extraCliArgs: '--own-to-project-b' } : {}),
+    });
+  }
+
+  // 1. A launch in project A: the team keeps what was chosen, but not trust or runtime arguments.
+  const first = await launch(f.projectA, {
+    providerId: 'anthropic', model: 'opus', effort: 'high', limitContext: true,
+    skipPermissions: true, extraCliArgs: '--max-turns 5',
+  });
+  assert(first.ok, 'The launch in project A must be accepted: ' + JSON.stringify(first));
+  const afterFirst = await definitionWhere((meta) => meta.model === 'opus',
+    'launch settings saved into the team definition');
+  assert.equal(afterFirst.effort, 'high');
+  assert.equal(afterFirst.limitContext, true);
+  assert.equal(afterFirst.providerId, 'anthropic');
+  assert(!('skipPermissions' in afterFirst), 'Trust of one project must not enter the team definition');
+  assert(!('extraCliArgs' in afterFirst), 'Runtime arguments of one project must not enter the team definition');
+  assert.equal(afterFirst.projectContextMode, 'per_project', 'The definition keeps its history mode');
+  assert.equal((await savedByDialog())?.model, 'opus',
+    'The launch dialog reads the saved settings of the team, so it shows what project A chose');
+  // What is project-owned went to the copy that was launched (a schedule of project A reads it there).
+  const copyA = await waitForJson(metaPath(f.nativeA),
+    (meta) => meta.extraCliArgs === '--max-turns 5' && meta.skipPermissions === true,
+    'trust and runtime arguments are saved in the launched copy of project A');
+  assert.equal(copyA.model, 'opus', 'and so are the team settings');
+
+  // 2. A launch in project B that changes them: the team and the launched copy follow, the
+  // runtime arguments of project B stay its own, and the copy of project A is now behind the team.
+  const second = await launch(f.projectB, {
+    providerId: 'anthropic', model: 'sonnet', effort: 'medium', limitContext: true,
+    extraCliArgs: '--own-to-project-b', skipPermissions: false,
+  });
+  assert(second.ok, 'The launch in project B must be accepted: ' + JSON.stringify(second));
+  await definitionWhere((meta) => meta.model === 'sonnet' && meta.effort === 'medium',
+    'the change made in project B is saved into the team');
+  assert.equal((await savedByDialog())?.model, 'sonnet');
+  const copyB = await waitForJson(metaPath(f.nativeB),
+    (meta) => meta.model === 'sonnet' && meta.effort === 'medium',
+    'the launched copy of project B has the settings it was launched with');
+  assert.notEqual(copyB.skipPermissions, true, 'Trust of project A must not reach project B');
+  assert.equal(copyB.extraCliArgs, '--own-to-project-b', 'Project B keeps its own runtime arguments');
+  assert(!('extraCliArgs' in await metaOf(f.logical)), 'Runtime arguments still must not be in the team');
+  assert.equal((await metaOf(f.nativeA)).model, 'opus', 'The copy of project A is behind the team');
+
+  // 3. An explicit unset goes back to the default for the whole team; the rest is kept.
+  const third = await launch(f.projectB, {
+    providerId: 'anthropic', model: 'sonnet', effort: undefined, limitContext: true,
+    extraCliArgs: '--own-to-project-b', skipPermissions: false,
+  });
+  assert(third.ok, 'The launch that unsets the effort must be accepted: ' + JSON.stringify(third));
+  const unset = await definitionWhere((meta) => !('effort' in meta) && meta.model === 'sonnet',
+    'the unset effort is cleared in the team');
+  assert.equal(unset.limitContext, true);
+
+  // 4. A schedule in project A runs the settings of the team, not the older ones of its copy. The
+  // runtime records what it was launched with in the copy: with the stale model of the copy
+  // ("opus") it would write that back; the model of the team is "sonnet".
+  const { launchIdentity: _staleIdentity, ...copyABehind } = await metaOf(f.nativeA);
+  await json(metaPath(f.nativeA), copyABehind);
+  const schedule = await ipcOutcome('window.electronAPI.schedules.create(' + JSON.stringify({
+    teamName: f.logical, executionMode: 'agent', taskFirst: true, reviewedSavedPrompt: true,
+    label: 'SCHEDULE_AFTER_B', cronExpression: '0 9 * * 1-5', timezone: 'UTC',
+    launchConfig: { cwd: f.projectA, prompt: 'SCHEDULED_AFTER_B_PROMPT', providerId: 'anthropic' },
+  }) + ')');
+  assert(schedule.ok, 'The schedule for project A must be accepted: ' + JSON.stringify(schedule));
+  const schedulesFile = path.join(f.claudeRoot, 'agent-teams-schedules', 'schedules.json');
+  const isOurs = (item: StoredSchedule) => (item as { label?: string }).label === 'SCHEDULE_AFTER_B';
+  const stored = (await waitForJson<StoredSchedule[]>(schedulesFile, (list) => list.some(isOurs),
+    'the schedule is stored')).find(isOurs);
+  assert(stored);
+  const copyAMeta = await waitForScheduledLaunch(f, stored.id, metaPath(f.nativeA));
+  assert.equal(copyAMeta.model, 'sonnet',
+    'The scheduled launch must run the model of the team: ' + JSON.stringify(copyAMeta).slice(0, 300));
+  assert(!('effort' in copyAMeta), 'and its unset effort, not the older one of the copy');
+  assert.equal(copyAMeta.extraCliArgs, '--max-turns 5',
+    'The schedule of project A runs with the runtime arguments that project A launched with');
+
+  // 5. A provider change drops what belonged to the old provider even where the request does not
+  // state it (model and effort are left out, limitContext is unset as the dialog sends it for
+  // another provider). Another provider cannot be launched here without credentials, so the team
+  // is seeded as if its last launch had been on one: the part under test is what a launch does to
+  // the saved settings it finds.
+  await json(metaPath(f.logical), {
+    ...(await metaOf(f.logical)), providerId: 'codex', model: 'codex-model', effort: 'medium',
+    limitContext: true,
+  });
+  const changed = await launch(f.projectB, { providerId: 'anthropic' }, ['model', 'effort']);
+  assert(changed.ok, 'The launch that changes the provider must be accepted: ' + JSON.stringify(changed));
+  const afterChange = await definitionWhere((meta) => meta.providerId === 'anthropic',
+    'the provider change is saved into the team');
+  for (const key of ['model', 'effort', 'limitContext']) {
+    assert(!(key in afterChange), key + ' of the old provider must be dropped: ' + JSON.stringify(afterChange));
+  }
+
+  // Nothing but launches of the copies and read-only runtime queries reached the denying runtime.
+  const audit = (await readFile(f.audit, 'utf8')).split('\n').filter(Boolean)
+    .slice(auditStart).map((line) => JSON.parse(line) as string[]);
+  const allowed = (args: string[]) => (args.includes('--print') && args.includes('stream-json')) ||
+    (args[0] === 'runtime' && ['status', 'providers', 'opencode-command'].includes(args[1])) ||
+    isAuthStatusQuery(args) || (args[0] === 'model' && args[1] === 'list');
+  const unexpected = audit.filter((args) => !allowed(args));
+  assert.equal(unexpected.length, 0, 'Unexpected runtime calls in the launch settings section: ' +
+    JSON.stringify(unexpected.map((args) => args.slice(0, 2))));
+}
+
+/** Fire the schedule until a run reaches the copy of project A (it may meet a copy still stopping). */
+async function waitForScheduledLaunch(f: Fixture, scheduleId: string, copyMeta: string) {
+  const runsFile = path.join(f.claudeRoot, 'agent-teams-schedules', 'runs', scheduleId + '.json');
+  const deadline = Date.now() + 3 * SCHEDULED_RUN_SETTLE_MS;
+  let attempts = 0;
+  while (Date.now() < deadline) {
+    attempts += 1;
+    await ipcOutcome('window.electronAPI.schedules.triggerNow(' + JSON.stringify(scheduleId) + ')');
+    const runs = await waitForJson<StoredRun[]>(runsFile,
+      (list) => list.length >= attempts && !['pending', 'warming_up', 'warm', 'running'].includes(list[0].status),
+      'the scheduled run is recorded', SCHEDULED_RUN_SETTLE_MS);
+    const meta = await readJsonFile<Record<string, unknown>>(copyMeta);
+    if (runs[0].executionTeamName === f.nativeA && meta.launchIdentity) return meta;
+    await pause(4_000);
+  }
+  throw new Error('The scheduled run never reached the copy of project A');
+}
+
+
 async function run() {
   const f = await fixture();
   let success = false;
@@ -898,7 +1139,7 @@ async function run() {
     const isLaunch = (args: string[]) => args.includes('--print') && args.includes('stream-json');
     const isReadOnly = (args: string[]) =>
       (args[0] === 'runtime' && ['status', 'providers', 'opencode-command'].includes(args[1])) ||
-      (args[0] === 'auth' && args[1] === 'status') || (args[0] === 'model' && args[1] === 'list');
+      isAuthStatusQuery(args) || (args[0] === 'model' && args[1] === 'list');
     assert.equal(afterSchedule.filter(isLaunch).length, 1,
       'The scheduled run must reach the runtime with exactly one launch of the project copy');
     const unexpectedAfter = afterSchedule.filter((args) => !isLaunch(args) && !isReadOnly(args));
@@ -907,8 +1148,8 @@ async function run() {
         /^(?:--?)?[a-zA-Z][a-zA-Z0-9-]{0,32}$/.test(token) ? token : '[redacted]'))));
     // Startup probes may query runtime read-only capabilities; any provider or
     // team launch command is forbidden by the synthetic runtime fixture.
-    const unexpected = audit.filter((args) =>
-      args[0] !== 'runtime' || !['status', 'providers', 'opencode-command'].includes(args[1])
+    const unexpected = audit.filter((args) => !isAuthStatusQuery(args) &&
+      (args[0] !== 'runtime' || !['status', 'providers', 'opencode-command'].includes(args[1]))
     );
     // Preserve the strict deny policy. Report only command/subcommand tokens,
     // never full argv, user paths, provider settings or possible credentials.
@@ -918,9 +1159,11 @@ async function run() {
     );
     assert.equal(unexpected.length, 0,
       'Unexpected native model/provider lifecycle call: ' + JSON.stringify(commandHeads));
+    // After the strict audit above: the launches of this section reach the denying runtime on purpose.
+    await verifyLaunchSettings(f);
     success = true;
     console.log(JSON.stringify({
-      ok: true, scope: 'real Electron / typed preload / main / native task + inbox / A-B-A / renderer reload / edit the per-project team definition / schedules of a per-project team',
+      ok: true, scope: 'real Electron / typed preload / main / native task + inbox / A-B-A / renderer reload / edit the per-project team definition / schedules of a per-project team / launch settings kept by the team',
       team: f.logical, sandbox: f.root, screenshotDir: f.screenshots,
       providerExecution: false, scheduledRun: { status: scheduledRun.status, summary: scheduledRun.summary },
     }, null, 2));

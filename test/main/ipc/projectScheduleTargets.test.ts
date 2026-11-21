@@ -48,6 +48,7 @@ function makePorts(
       request: { ...request, teamName: 'ptc-x-a', cwd: '/work/a' },
       mapProgress: vi.fn(),
     })),
+    readDefinitionLaunchSettings: vi.fn(async () => ({})),
     launchPhysical: vi.fn(async () => ({ runId: 'run-1' }) as TeamLaunchResponse),
     rememberRunIdentity: vi.fn(),
     ...overrides,
@@ -321,6 +322,35 @@ describe('ProjectScheduleTargets.launch', () => {
       expect.any(Function)
     );
     expect(ports.rememberRunIdentity).toHaveBeenCalledWith('run-1', 'builders', 'ptc-x-a');
+  });
+
+  it('runs the launch settings of the team, not the older ones of the copy the request was built from', async () => {
+    const ports = makePorts({
+      readDefinitionLaunchSettings: vi.fn(async () => ({
+        providerId: 'codex' as const,
+        model: 'gpt-y',
+        effort: undefined,
+      })),
+    });
+    const stale = {
+      ...launchRequest,
+      providerId: 'anthropic',
+      model: 'opus-x',
+      effort: 'high',
+      skipPermissions: false,
+      extraCliArgs: '--project-a',
+    } as TeamLaunchRequest;
+    await targetsOf(ports).launch(schedule, stale);
+    expect(ports.readDefinitionLaunchSettings).toHaveBeenCalledWith('builders');
+    const sent = vi.mocked(ports.launchPhysical).mock.calls[0]?.[0];
+    expect(sent).toMatchObject({
+      teamName: 'ptc-x-a',
+      providerId: 'codex',
+      model: 'gpt-y',
+      skipPermissions: false,
+      extraCliArgs: '--project-a',
+    });
+    expect(sent?.effort).toBeUndefined();
   });
 
   it('turns a refusal of the launch admission into a recorded refusal, not a failure', async () => {
