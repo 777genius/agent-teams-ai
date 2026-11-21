@@ -32,9 +32,10 @@ export function formatNextRun(isoString?: string, locale?: string): string {
       });
     }
     if (hours > 0) {
-      const remaining = minutes > 0
-        ? ` ${new Intl.NumberFormat(locale, { style: 'unit', unit: 'minute', unitDisplay: 'short' }).format(minutes)}`
-        : '';
+      const remaining =
+        minutes > 0
+          ? ` ${new Intl.NumberFormat(locale, { style: 'unit', unit: 'minute', unitDisplay: 'short' }).format(minutes)}`
+          : '';
       return `${relative.format(hours, 'hour')}${remaining}`;
     }
     return relative.format(minutes, 'minute');
@@ -44,12 +45,21 @@ export function formatNextRun(isoString?: string, locale?: string): string {
 }
 
 /**
+ * Map an app locale to a cronstrue locale. cronstrue has no bare `zh`, only `zh_CN` and `zh_TW`.
+ */
+export function toCronstrueLocale(locale = 'en'): string {
+  if (locale === 'zh-TW') return 'zh_TW';
+  const primary = locale.split('-')[0];
+  return primary === 'zh' ? 'zh_CN' : primary;
+}
+
+/**
  * Convert a cron expression to a human-readable description.
  */
 export function getCronDescription(expression: string, locale = 'en'): string {
   try {
     return cronstrue.toString(expression, {
-      locale: locale.split('-')[0],
+      locale: toCronstrueLocale(locale),
       use24HourTimeFormat: true,
     });
   } catch {

@@ -19,7 +19,7 @@
 
   <sub>Check also:
   - [universal-agent-plugins](https://universal-agent-plugins.com) - Multi-agent CLI to install, update, repair, and remove Agent Plugins 1.0 and Agent Skills across Codex/ChatGPT, Claude, Cursor, Gemini, Copilot, Qoder, Pi, OpenCode, and more. 1,500+ plugins. SDK for universal plugins (hooks, detect, install/manage) 
-  - [review-router-ai](https://github.com/777genius/review-router-ai) - Free, open source CodeRabbit. Powerfull AI code review that runs inside your CI/CD (privacy) using your Claude/Codex/other subscription accounts (pool)/API. Free/self-hosted deployment. Ready github integration. Built using OpenCodeReview. Claude/Codex/OpenRouter/Grok/Kimi/Glm/MiniMax/MiMo...
+  - [review-router-ai](https://github.com/777genius/review-router-ai) - Fast, cost-effective, secure code review that runs inside your CI/CD using your Claude/Codex/other subscription accounts (pool)/API. Free/self-hosted deployment. Ready github integration. Built using OpenCodeReview. Claude/Codex/OpenRouter/Grok/Kimi/Glm/MiniMax/MiMo...
   - [agent-notifications](https://agent-notifications.com) - 🔔 Cross-platform smart notifications for Claude/Codex/OpenCode/Cursor/Gemini/Qoder/Pi. Desktop alerts, sounds, click-to-focus, and webhooks. macOS, Linux, and Windows.
   </sub>
 </p>
@@ -38,7 +38,7 @@
 <tr>
 <td width="50%">
   <a href="docs/screenshots/task-detail-animated.gif">
-    <img src="docs/screenshots/previews/task-detail-animated.gif" alt="Agent Teams AI product demo" width="100%" loading="lazy" />
+    <img src="docs/screenshots/previews/task-detail-animated.gif" alt="Agent graph showing messages, activity, and task progress" width="100%" loading="lazy" />
   </a>
 </td>
 <td width="50%">
@@ -61,8 +61,8 @@
 </tr>
 <tr>
 <td width="50%">
-  <a href="docs/screenshots/12.png">
-    <img src="docs/screenshots/previews/12.webp" alt="Full-screen team chat with replies, attachments, mentions, and drafts" width="100%" loading="lazy" />
+  <a href="docs/screenshots/team-chat.png">
+    <img src="docs/screenshots/previews/team-chat.webp" alt="Group chats with replies, attachments, an inline chart, and archived conversations" width="100%" loading="lazy" />
   </a>
 </td>
 <td width="50%">
@@ -79,14 +79,14 @@
 </td>
 <td width="50%">
   <a href="docs/screenshots/4.png">
-    <img src="docs/screenshots/previews/4.webp" alt="Team members with roles, runtimes, and models" width="100%" loading="lazy" />
+    <img src="docs/screenshots/previews/4.webp" alt="Built-in terminal running checks and a local development server" width="100%" loading="lazy" />
   </a>
 </td>
 </tr>
 <tr>
 <td width="50%">
   <a href="docs/screenshots/13.png">
-    <img src="docs/screenshots/previews/13.webp" alt="Connected AI coding providers and subscription limits" width="100%" loading="lazy" />
+    <img src="docs/screenshots/previews/13.webp" alt="Provider settings with connected AI coding services and available plans" width="100%" loading="lazy" />
   </a>
 </td>
 <td width="50%">

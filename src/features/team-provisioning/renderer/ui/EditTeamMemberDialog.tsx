@@ -26,6 +26,7 @@ import {
   fingerprintResolvedMember,
   hasEditableMemberSettingsValueChanges,
 } from '../utils/memberSettingsPresentation';
+import { MEMBER_SETTINGS_REFUSAL_KEYS } from '../utils/memberSettingsRefusal';
 
 import type { MemberSettingsRelaunchDraft } from '../utils/memberSettingsRelaunch';
 import type { MemberDraft } from '@renderer/components/team/members/MembersEditorSection';
@@ -234,6 +235,12 @@ export const EditTeamMemberDialog = ({
     if (result.outcome === 'busy') {
       resetIdentity();
       setError(t('editTeam.errors.saveFailed'));
+      return;
+    }
+    if (result.outcome === 'refused') {
+      // Nothing was written; the main process said why with a code.
+      resetIdentity();
+      setError(t(MEMBER_SETTINGS_REFUSAL_KEYS[result.reason]));
       return;
     }
     if (result.outcome === 'target_conflict') {

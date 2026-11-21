@@ -9,18 +9,16 @@ import { isTeamEffortLevel } from '@shared/utils/effortLevels';
 import { isLeadMember } from '@shared/utils/leadDetection';
 import { migrateProviderBackendId } from '@shared/utils/providerBackend';
 import { normalizeTeamMemberMcpPolicy } from '@shared/utils/teamMemberMcpPolicy';
-import { normalizeOptionalTeamProviderId } from '@shared/utils/teamProvider';
 import * as fs from 'fs';
 import * as path from 'path';
 
 import { MemberSettingsPersistenceFailedError } from '../../../core/application/ports/UpdateMemberSettingsPorts';
 import { createMemberSettingsFingerprint } from '../../../core/domain/memberSettingsPolicy';
 
+import { backendId, effort, fastMode, optionalText, providerId } from './memberSettingsValues';
+
 import type {
   EditableMemberSettings,
-  MemberSettingsEffort,
-  MemberSettingsFastMode,
-  MemberSettingsProviderBackendId,
   MemberSettingsProviderId,
 } from '../../../contracts/memberSettings';
 import type {
@@ -93,42 +91,6 @@ function isPersistedLeadMember(member: JsonMember | TeamMember): boolean {
   const name = optionalText(member.name)?.toLowerCase();
   const role = optionalText(member.role)?.toLowerCase();
   return name === 'lead' || role === 'lead' || role === 'team lead' || role === 'team-lead';
-}
-
-function optionalText(value: unknown): string | null {
-  return typeof value === 'string' && value.trim() ? value.trim() : null;
-}
-
-function providerId(value: unknown): MemberSettingsProviderId | null {
-  return normalizeOptionalTeamProviderId(value) ?? null;
-}
-
-function backendId(value: unknown): MemberSettingsProviderBackendId | null {
-  return value === 'auto' ||
-    value === 'adapter' ||
-    value === 'api' ||
-    value === 'cli-sdk' ||
-    value === 'codex-native' ||
-    value === 'opencode-cli'
-    ? value
-    : null;
-}
-
-function effort(value: unknown): MemberSettingsEffort | null {
-  return value === 'none' ||
-    value === 'minimal' ||
-    value === 'low' ||
-    value === 'medium' ||
-    value === 'high' ||
-    value === 'xhigh' ||
-    value === 'max' ||
-    value === 'ultra'
-    ? value
-    : null;
-}
-
-function fastMode(value: unknown): MemberSettingsFastMode | null {
-  return value === 'inherit' || value === 'on' || value === 'off' ? value : null;
 }
 
 function preferred(meta: TeamMember | null, config: JsonMember | null, field: string): unknown {

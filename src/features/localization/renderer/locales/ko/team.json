@@ -260,7 +260,10 @@
       "settingsSavedMembersFailed": "팀 설정이 저장되었지만 회원은 실패했습니다. {{message}}",
       "settingsSavedRefreshFailed": "팀 설정이 저장되었지만 최신보기를 새로 고침하지 못했습니다. {{message}}",
       "teamNameEmpty": "팀 이름은 비어있을 수 없습니다",
-      "unsupportedMixedPrimaryMutation": "혼합 OpenCode 팀의 주요 팀원에 대한 라이브 편집은 아직 지원되지 않습니다. 팀을 중지, 로스터를 편집, 다음 다시 시작. 감염된: {{names}}"
+      "unsupportedMixedPrimaryMutation": "혼합 OpenCode 팀의 주요 팀원에 대한 라이브 편집은 아직 지원되지 않습니다. 팀을 중지, 로스터를 편집, 다음 다시 시작. 감염된: {{names}}",
+      "refusedProjectCopy": "이것은 팀의 프로젝트 사본입니다. 설정은 팀 자체에서 변경하세요.",
+      "refusedProjectUnreconciled": "이 팀의 프로젝트가 아직 준비 중이거나 마지막 시작이 중단되었습니다. 해당 프로젝트에서 팀을 다시 시작한 다음 편집하세요.",
+      "refusedTeamUnreadable": "이 팀의 저장된 설정을 읽을 수 없어 아무것도 변경되지 않았습니다."
     },
     "fields": {
       "colorOptional": "(선택) 색깔",
@@ -417,6 +420,11 @@
       "member_other": "이름 *",
       "title": "아직 출시되지 않은 팀"
     },
+    "editDefinition": {
+      "loadFailed": "팀 설정을 불러올 수 없습니다",
+      "notFound": "팀 설정을 찾을 수 없습니다",
+      "memberNotFound": "이 멤버는 더 이상 팀 설정에 없습니다. 현재 멤버를 보려면 팀을 다시 여세요."
+    },
     "stopFailed": {
       "title": "팀을 중지할 수 없음",
       "message": "팀이 아직 실행 중입니다. 상태를 확인한 후 중지를 다시 누르세요."
@@ -458,6 +466,7 @@
       "deleteTeam": "팀 삭제",
       "editTeam": "편집 팀",
       "editUnavailableProvisioning": "팀 편집은 아직 진행중인 동안 사용할 수 없습니다.",
+      "editUnavailableRunningProject": "편집하려면 모든 프로젝트에서 이 팀을 중지하세요",
       "openBuiltInEditor": "내장 편집기에서 프로젝트 열기",
       "openTeamGraph": "열린 팀 그래프",
       "stopTeam": "정지 팀",
@@ -2569,6 +2578,7 @@
       "allFlagsValid": "모든 플래그 유효한",
       "unknownFlags": "알려진: {{flags}}",
       "protectedFlags": "보호하는: {{flags}}",
+      "missingValue": "값 누락: {{flags}}",
       "failed": "유효성 검사"
     },
     "placeholders": {

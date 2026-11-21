@@ -531,6 +531,56 @@ describe('TeamTaskActivityIntervalService', () => {
     ]);
   });
 
+  it('does not reopen a reviewer interval after the lead sign-off request replaced their cycle', async () => {
+    await writeTask('alpha', {
+      id: 'handoff-task',
+      subject: 'Handoff',
+      owner: 'alice',
+      status: 'completed',
+      reviewIntervals: [
+        {
+          reviewer: 'carol',
+          startedAt: '2026-05-08T10:06:00.000Z',
+          completedAt: '2026-05-08T10:08:00.000Z',
+        },
+      ],
+      historyEvents: [
+        {
+          id: 'event-review-started',
+          type: 'review_started',
+          timestamp: '2026-05-08T10:06:00.000Z',
+          actor: 'carol',
+        },
+        {
+          id: 'event-signoff-requested',
+          type: 'review_requested',
+          from: 'review',
+          to: 'review',
+          reviewer: 'lead',
+          stage: 'lead_signoff',
+          timestamp: '2026-05-08T10:08:00.000Z',
+          actor: 'carol',
+        },
+      ],
+    });
+
+    const result = new TeamTaskActivityIntervalService().resumeActiveIntervalsForMember(
+      'alpha',
+      'carol',
+      '2026-05-08T10:20:00.000Z'
+    );
+    const task = await readTask('alpha', 'handoff-task');
+
+    expect(result.changedTasks).toBe(0);
+    expect(task.reviewIntervals).toEqual([
+      {
+        reviewer: 'carol',
+        startedAt: '2026-05-08T10:06:00.000Z',
+        completedAt: '2026-05-08T10:08:00.000Z',
+      },
+    ]);
+  });
+
   it('resumes active intervals for multiple members in a single pass', async () => {
     await writeTask('alpha', {
       id: 'bob-task',

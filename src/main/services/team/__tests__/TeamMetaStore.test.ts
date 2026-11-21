@@ -77,4 +77,32 @@ describe('TeamMetaStore', () => {
       syncModelsWithLead: false,
     });
   });
+  it('persists an explicit project history mode without rewriting legacy metadata', async () => {
+    await new TeamMetaStore().writeMeta('alpha', {
+      cwd: '/sandbox/team',
+      projectContextMode: 'per_project',
+      createdAt: 1,
+    });
+    const persisted = JSON.parse(atomicWriteAsync.mock.calls[0]?.[1]);
+    expect(persisted.projectContextMode).toBe('per_project');
+  });
+
+  it('preserves project history mode when a later launch updates other metadata', async () => {
+    const updatingStore = new TeamMetaStore();
+    vi.spyOn(updatingStore, 'getMeta').mockResolvedValue({
+      ...initialMeta,
+      projectContextMode: 'per_project',
+    });
+
+    await updatingStore.writeMeta('alpha', {
+      cwd: '/sandbox/new-project',
+      createdAt: 1,
+    });
+
+    expect(JSON.parse(atomicWriteAsync.mock.calls[0]?.[1])).toMatchObject({
+      cwd: '/sandbox/new-project',
+      projectContextMode: 'per_project',
+    });
+  });
+
 });

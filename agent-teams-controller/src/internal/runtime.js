@@ -27,6 +27,10 @@ const DEFAULT_WAIT_TIMEOUT_MS = 120000;
 const MIN_WAIT_TIMEOUT_MS = 1000;
 const MAX_WAIT_TIMEOUT_MS = 10 * 60 * 1000;
 const POLL_INTERVAL_MS = 1000;
+// The app escalates a stop that does not confirm for up to 120s per team, and stops the
+// project copies of a per-project team one after another, so the default 10s request
+// timeout would abort a stop that is still doing its work.
+const STOP_REQUEST_TIMEOUT_MS = 5 * 60 * 1000;
 const TEAM_CONTROL_API_STATE_FILE = 'team-control-api.json';
 const RETRYABLE_CONTROL_ERROR = 'retryableControlError';
 const BOOTSTRAP_CHECKIN_MAX_ATTEMPTS = 3;
@@ -171,7 +175,14 @@ async function requestJson(baseUrl, pathname, options = {}) {
           { kind: 'status', statusCode: response.status }
         );
       }
-      throw new Error(detail || 'Team control API request failed');
+      const failure = new Error(detail || 'Team control API request failed');
+      // A structured refusal (for example an incomplete stop) keeps its machine-readable
+      // parts for programmatic callers; the message already names what went wrong.
+      if (payload && typeof payload.code === 'string') failure.code = payload.code;
+      if (payload && payload.outcome && typeof payload.outcome === 'object') {
+        failure.outcome = payload.outcome;
+      }
+      throw failure;
     }
 
     if (payload == null) {
@@ -211,6 +222,11 @@ async function requestJsonWithFallback(baseUrls, pathname, options = {}) {
       return await requestJson(baseUrl, pathname, options);
     } catch (error) {
       lastError = error;
+      // A request that timed out may still be running on that server (a stop that
+      // outlasted its budget): asking another address would start a second one.
+      if (options.fallbackOnTimeout === false && error?.retryableKind === 'timeout') {
+        throw error;
+      }
       if (!isRetryableControlError(error) || index === baseUrls.length - 1) {
         throw error;
       }
@@ -523,6 +539,48 @@ async function getTeam(context, flags = {}) {
   );
 }
 
+/**
+ * Cross-team routing is decided by the app, one rule for every sender. `null`
+ * means the app cannot be reached (no published address, network error or
+ * timeout), so the caller keeps its offline behaviour. Any answer of the app is
+ * used or thrown: a refusal, a server error, and also a 404 (an app without the
+ * route must not silently get the old behaviour).
+ */
+async function requestCrossTeamRouting(context, pathname) {
+  let baseUrls;
+  try {
+    baseUrls = resolveControlBaseUrls(context);
+  } catch (error) {
+    if (error && error.code === 'APP_CONTEXT_MISMATCH') throw error;
+    return null;
+  }
+  try {
+    return await requestJsonWithFallback(baseUrls, pathname);
+  } catch (error) {
+    const unreachable =
+      isRetryableControlError(error) &&
+      (error.retryableKind === 'network' || error.retryableKind === 'timeout');
+    if (unreachable) return null;
+    throw error;
+  }
+}
+
+/** The physical team that receives a message from this team to `toTeam`. */
+function getCrossTeamRecipient(context, toTeam) {
+  return requestCrossTeamRouting(
+    context,
+    `/api/teams/${encodeURIComponent(context.teamName)}/cross-team/recipient?toTeam=${encodeURIComponent(toTeam)}`
+  );
+}
+
+/** The teams this team can message, as the app lists them (project copies folded). */
+function getCrossTeamTargets(context) {
+  return requestCrossTeamRouting(
+    context,
+    `/api/teams/${encodeURIComponent(context.teamName)}/cross-team/targets`
+  );
+}
+
 async function updateTeam(context, flags = {}) {
   desktopBinding.assertManagementExpectation(flags);
   return requestJson(
@@ -564,6 +622,7 @@ async function createTeam(context, flags = {}) {
       teamName: context.teamName,
       ...compactBody(flags, [
         'runtimeSelectionVersion',
+        'projectContextMode',
         'expectedContext',
         'syncModelsWithLead',
         'displayName',
@@ -594,6 +653,8 @@ async function stopTeam(context, flags = {}) {
     `/api/teams/${encodeURIComponent(context.teamName)}/stop`,
     {
       method: 'POST',
+      timeoutMs: normalizeTimeoutMs(flags.stopRequestTimeoutMs || STOP_REQUEST_TIMEOUT_MS),
+      fallbackOnTimeout: false,
     }
   );
 
@@ -704,6 +765,8 @@ module.exports = {
   listTeams,
   getConnectionInfo,
   getTeam,
+  getCrossTeamRecipient,
+  getCrossTeamTargets,
   createTeam,
   updateTeam,
   trashTeam,

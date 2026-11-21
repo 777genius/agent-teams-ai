@@ -260,7 +260,10 @@
       "settingsSavedMembersFailed": "Les paramètres de l'équipe ont été sauvegardés, mais les modifications des membres ont échoué : {{message}}",
       "settingsSavedRefreshFailed": "Les paramètres de l'équipe ont été sauvegardés, mais n'ont pas réussi à rafraîchir la dernière vue : {{message}}",
       "teamNameEmpty": "Le nom de l'équipe ne peut pas être vide",
-      "unsupportedMixedPrimaryMutation": "Les modifications en direct aux coéquipiers de premier plan dans les équipes mixtes OpenCode ne sont pas encore prises en charge. Arrêtez l'équipe, modifiez la liste, puis relancez. Affectés : {{names}}"
+      "unsupportedMixedPrimaryMutation": "Les modifications en direct aux coéquipiers de premier plan dans les équipes mixtes OpenCode ne sont pas encore prises en charge. Arrêtez l'équipe, modifiez la liste, puis relancez. Affectés : {{names}}",
+      "refusedProjectCopy": "Ceci est une copie de projet d'une équipe. Modifiez ses paramètres dans l'équipe elle-même.",
+      "refusedProjectUnreconciled": "Un projet de cette équipe est encore en préparation ou son dernier démarrage a été interrompu. Relancez l'équipe dans ce projet, puis modifiez-la.",
+      "refusedTeamUnreadable": "Les paramètres enregistrés de cette équipe sont illisibles, donc rien n'a été modifié."
     },
     "fields": {
       "colorOptional": "Couleur (facultatif)",
@@ -417,6 +420,11 @@
       "member_other": "membres",
       "title": "Équipe non encore lancée"
     },
+    "editDefinition": {
+      "loadFailed": "Impossible de charger les paramètres de l'équipe",
+      "notFound": "Les paramètres de l'équipe sont introuvables",
+      "memberNotFound": "Ce membre ne fait plus partie des paramètres de l'équipe. Rouvrez l'équipe pour voir ses membres actuels."
+    },
     "stopFailed": {
       "title": "Impossible d'arrêter l'équipe",
       "message": "L'équipe est toujours en cours d'exécution. Vérifiez son état et appuyez de nouveau sur Arrêter."
@@ -458,6 +466,7 @@
       "deleteTeam": "Supprimer l'équipe",
       "editTeam": "Éditer l'équipe",
       "editUnavailableProvisioning": "L'équipe d'édition n'est pas disponible pendant que la fourniture est toujours en cours",
+      "editUnavailableRunningProject": "Arrêtez cette équipe dans chaque projet pour la modifier",
       "openBuiltInEditor": "Ouvrir le projet dans l'éditeur intégré",
       "openTeamGraph": "Ouvrir le graphique de l'équipe",
       "stopTeam": "Arrêter l'équipe",
@@ -2569,6 +2578,7 @@
       "allFlagsValid": "Tous les drapeaux valides",
       "unknownFlags": "Inconnu: {{flags}}",
       "protectedFlags": "Protégé: {{flags}}",
+      "missingValue": "Valeur manquante: {{flags}}",
       "failed": "La validation a échoué"
     },
     "placeholders": {

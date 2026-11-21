@@ -91,7 +91,8 @@
       "uk": "Ukraina",
       "ur": "Urdu",
       "vi": "Vietnam",
-      "zh": "Tionghoa"
+      "zh": "Tionghoa",
+      "zh-TW": "Tionghoa (Tradisional)"
     },
     "searchPlaceholder": "Cari bahasa...",
     "selectPlaceholder": "Pilih bahasa aplikasi...",

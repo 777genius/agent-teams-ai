@@ -415,7 +415,6 @@ export class TeamGraphAdapter {
     const parsed = Date.parse(timestamp);
     return Number.isFinite(parsed) && parsed < cutoffMs;
   }
-
   static #getRuntimeLabel(
     providerId: ResolvedTeamMember['providerId'],
     model: ResolvedTeamMember['model'],
@@ -1299,7 +1298,6 @@ export class TeamGraphAdapter {
       this.#seenCommentCounts.set(task.id, currentCount);
     }
   }
-
   static #ensureTaskCommentEdges(
     data: TeamGraphData,
     teamName: string,
@@ -1434,12 +1432,14 @@ export class TeamGraphAdapter {
     }
   }
 
-  static #mapReviewState(state: string | undefined): 'none' | 'review' | 'needsFix' | 'approved' {
+  static #mapReviewState(state: string | undefined): 'none' | 'review' | 'needsFix' | 'reviewed' | 'approved' {
     switch (state) {
       case 'review':
         return 'review';
       case 'needsFix':
         return 'needsFix';
+      case 'reviewed':
+        return 'reviewed';
       case 'approved':
         return 'approved';
       default:

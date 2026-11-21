@@ -1,11 +1,13 @@
 import { validateMemberName, validateTeamName } from '@main/ipc/guards';
 import { isReservedLeadRole } from '@shared/utils/leadDetection';
 
-import { TEAM_UPDATE_MEMBER_SETTINGS } from '../../../contracts';
+import { TEAM_GET_MEMBER_SETTINGS_TARGET, TEAM_UPDATE_MEMBER_SETTINGS } from '../../../contracts';
 
 import type {
   EditableMemberSettings,
+  GetMemberSettingsTargetRequest,
   MemberSettingsMcpPolicy,
+  MemberSettingsTarget,
   UpdateMemberSettingsRequest,
   UpdateMemberSettingsResult,
 } from '../../../contracts/memberSettings';
@@ -223,6 +225,16 @@ export function parseUpdateMemberSettingsRequest(value: unknown): UpdateMemberSe
   return { ...base, targetKind, settings: parseSettings(value.settings) };
 }
 
+export function parseGetMemberSettingsTargetRequest(
+  value: unknown
+): GetMemberSettingsTargetRequest {
+  if (!isPlainObject(value)) throw new TypeError('request must be a plain object');
+  return {
+    teamName: validatedIdentifier(value.teamName, 'teamName', validateTeamName),
+    memberName: validatedIdentifier(value.memberName, 'memberName', validateMemberName),
+  };
+}
+
 export function registerTeamMemberSettingsIpc(
   ipcMain: IpcMain,
   feature: TeamMemberSettingsFeatureApi
@@ -241,8 +253,25 @@ export function registerTeamMemberSettingsIpc(
       }
     }
   );
+  ipcMain.handle(
+    TEAM_GET_MEMBER_SETTINGS_TARGET,
+    async (
+      _event: IpcMainInvokeEvent,
+      value: unknown
+    ): Promise<IpcResult<MemberSettingsTarget | null>> => {
+      try {
+        const data = await feature.getMemberSettingsTarget(
+          parseGetMemberSettingsTargetRequest(value)
+        );
+        return { success: true, data };
+      } catch (error) {
+        return { success: false, error: error instanceof Error ? error.message : String(error) };
+      }
+    }
+  );
 }
 
 export function removeTeamMemberSettingsIpc(ipcMain: IpcMain): void {
   ipcMain.removeHandler(TEAM_UPDATE_MEMBER_SETTINGS);
+  ipcMain.removeHandler(TEAM_GET_MEMBER_SETTINGS_TARGET);
 }

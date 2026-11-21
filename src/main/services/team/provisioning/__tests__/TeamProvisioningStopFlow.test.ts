@@ -1,3 +1,4 @@
+import { EventEmitter } from 'node:events';
 import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
@@ -15,9 +16,11 @@ import {
   createTeamProvisioningTransientRunStatePorts,
   TeamProvisioningTransientRunState,
 } from '../TeamProvisioningTransientRunState';
+import { stopOriginalWindowsDirectMembers } from '../TeamProvisioningWindowsMemberStopAdapter';
 
 import type { AnthropicTeamApiKeyHelperMaterial } from '../../../runtime/anthropicTeamApiKeyHelper';
 import type { TeamProvisioningProgress } from '@shared/types';
+import type { ChildProcess } from 'node:child_process';
 
 interface StopFlowRun {
   runId: string;
@@ -123,6 +126,7 @@ function makePorts(
         child.killed = true;
       }
     }),
+    stopOriginalWindowsDirectMembers: vi.fn(async () => undefined),
     updateProgress: vi.fn((run: StopFlowRun, state, message) => {
       const next = { ...progress(run.runId, run.teamName), state, message };
       return next;
@@ -173,6 +177,109 @@ function makeLockPorts() {
 }
 
 describe('team provisioning stop flow', () => {
+  function originalChild(pid: number, behavior: 'exit' | 'refuse') {
+    const emitter = new EventEmitter();
+    const kill = vi.fn((signal: NodeJS.Signals) => {
+      if (behavior === 'exit') queueMicrotask(() => emitter.emit('exit', null, signal));
+      else queueMicrotask(() => emitter.emit('error', new Error('Test refusal')));
+      return behavior === 'exit';
+    });
+    const child = Object.assign(emitter, { pid, exitCode: null, signalCode: null, kill });
+    return { child: child as unknown as ChildProcess, kill };
+  }
+
+  it('stops the original Windows app-managed member handle and waits for exit', async () => {
+    const bob = originalChild(6200, 'exit');
+    await expect(stopOriginalWindowsDirectMembers(new Set([bob.child]), 'win32', async () => undefined))
+      .resolves.toBeUndefined();
+    expect(bob.kill).toHaveBeenCalledExactlyOnceWith('SIGKILL');
+  });
+
+  it('attempts every original Windows member even if another handle refuses', async () => {
+    const alice = originalChild(7100, 'refuse');
+    const bob = originalChild(7200, 'exit');
+    await expect(stopOriginalWindowsDirectMembers(new Set([alice.child, bob.child]), 'win32', async () => undefined))
+      .rejects.toThrow('Original Windows teammate process failed on exit');
+    expect(alice.kill).toHaveBeenCalledExactlyOnceWith('SIGKILL');
+    expect(bob.kill).toHaveBeenCalledExactlyOnceWith('SIGKILL');
+  });
+
+  it('fails closed without a verified Job wrapper while killing the original handle', async () => {
+    const bob = originalChild(8222, 'exit');
+    await expect(stopOriginalWindowsDirectMembers(new Set([bob.child]), 'win32'))
+      .rejects.toThrow('lacks verified owned Job wrapper');
+    expect(bob.kill).toHaveBeenCalledExactlyOnceWith('SIGKILL');
+  });
+
+  it('does not claim unwrapped Job containment just because the root already exited', async () => {
+    const bob = originalChild(8223, 'exit');
+    Object.defineProperty(bob.child, 'exitCode', { value: 0, configurable: true });
+    await expect(stopOriginalWindowsDirectMembers(new Set([bob.child]), 'win32'))
+      .rejects.toThrow('lacks verified owned Job wrapper');
+    expect(bob.kill).not.toHaveBeenCalled();
+  });
+
+  it('awaits custody verification before killing the original Windows handle', async () => {
+    const bob = originalChild(8300, 'exit');
+    let finishTree!: () => void;
+    const stopTree = vi.fn(() => new Promise<void>((resolve) => { finishTree = resolve; }));
+    const stopping = stopOriginalWindowsDirectMembers(new Set([bob.child]), 'win32', stopTree);
+    expect(stopTree).toHaveBeenCalledWith(bob.child);
+    expect(bob.kill).not.toHaveBeenCalled();
+    finishTree();
+    await expect(stopping).resolves.toBeUndefined();
+    expect(bob.kill).toHaveBeenCalledExactlyOnceWith('SIGKILL');
+  });
+
+  it('fails closed on tree failure but still retires the original Windows member', async () => {
+    const bob = originalChild(8400, 'exit');
+    const stopTree = vi.fn(async () => { throw new Error('tree stop failed'); });
+    await expect(stopOriginalWindowsDirectMembers(new Set([bob.child]), 'win32', stopTree))
+      .rejects.toThrow('tree stop failed');
+    expect(bob.kill).toHaveBeenCalledExactlyOnceWith('SIGKILL');
+  });
+
+  it('defers legacy tree discovery until owned Windows member stops settle', async () => {
+    // Original handle is already exited; no native taskkill is invoked on the
+    // test host. Holding the lead stop proves dispatch is strictly serialized.
+    const bob = originalChild(8600, 'exit');
+    Object.defineProperty(bob.child, 'exitCode', { value: 0, configurable: true });
+    const run = Object.assign(makeRun('owned-win-run'), {
+      directMemberProcesses: new Set([bob.child]),
+    });
+    const ports = makePorts(
+      run.teamName,
+      new Map([[run.runId, run]]),
+      new Map([[run.teamName, run.runId]])
+    );
+    let releaseLead!: () => void;
+    ports.killTeamProcessAndWait.mockImplementation(
+      () => new Promise<void>((resolve) => { releaseLead = resolve; })
+    );
+    const originalPlatform = Object.getOwnPropertyDescriptor(process, 'platform');
+    if (!originalPlatform) throw new Error('process.platform descriptor missing');
+    Object.defineProperty(process, 'platform', { ...originalPlatform, value: 'win32' });
+    try {
+      const stopping = stopTeamFlow(run.teamName, ports);
+      await vi.waitFor(() => expect(ports.killTeamProcessAndWait).toHaveBeenCalled());
+      expect(ports.stopPersistentTeamMembers).not.toHaveBeenCalled();
+      expect(ports.stopOriginalWindowsDirectMembers).toHaveBeenCalledWith(run.directMemberProcesses);
+      releaseLead();
+      await stopping;
+      expect(ports.stopPersistentTeamMembers).toHaveBeenCalledExactlyOnceWith(run.teamName);
+      expect(ports.cleanupRun).toHaveBeenCalledWith(run);
+    } finally {
+      Object.defineProperty(process, 'platform', originalPlatform);
+    }
+  });
+
+  it('does not alter non-Windows member Stop behavior', async () => {
+    const bob = originalChild(8200, 'exit');
+    await expect(stopOriginalWindowsDirectMembers(new Set([bob.child]), 'linux'))
+      .resolves.toBeUndefined();
+    expect(bob.kill).not.toHaveBeenCalled();
+  });
+
   it.each([false, true])(
     'holds the team lock after ledger failure until runtime settles (runtime fails: %s)',
     async (runtimeFails) => {

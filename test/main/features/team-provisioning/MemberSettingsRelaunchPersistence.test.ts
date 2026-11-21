@@ -327,6 +327,7 @@ it('rejects a lead-only configuring successor under the existing mutation gate w
   });
   f.deps.hasProvisioningRun = name => { expect(mutationLocked).toBe(true); return projection.hasProvisioningRun(name); };
   await expect(executeTeamRelaunch({
+    rosterReadOnly: false,
     teamName: 'sandbox', isTeamAlive: true, request: { teamName: 'sandbox', cwd: '/sandbox/test-only' },
     members: [], memberSettingsRelaunch: intent,
     stopTeam: async () => {

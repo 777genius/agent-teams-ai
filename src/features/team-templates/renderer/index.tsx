@@ -23,8 +23,12 @@ import { useStore } from '@renderer/store';
 
 import { applyTeamTemplate, TEAM_TEMPLATES } from '../core';
 
+import { TEAM_TEMPLATE_ICONS } from './templateIcons';
+
 import type { TeamCreateConfigRequest } from '@shared/types';
 import type { TeamProviderId } from '@shared/types';
+
+export { TEAM_TEMPLATE_ICONS } from './templateIcons';
 
 export const TeamTemplatePicker = ({
   onApply,
@@ -64,11 +68,20 @@ export const TeamTemplatePicker = ({
           <SelectValue placeholder={t('templates.placeholder')} />
         </SelectTrigger>
         <SelectContent>
-          {TEAM_TEMPLATES.map((template) => (
-            <SelectItem key={template.id} value={template.id}>
-              {t(`templates.names.${template.id}`)}
-            </SelectItem>
-          ))}
+          {TEAM_TEMPLATES.map((template) => {
+            const Icon = TEAM_TEMPLATE_ICONS[template.id];
+            return (
+              <SelectItem key={template.id} value={template.id}>
+                <span className="flex items-center gap-2">
+                  <Icon
+                    className="size-4 shrink-0 text-[var(--color-text-muted)]"
+                    aria-hidden="true"
+                  />
+                  {t(`templates.names.${template.id}`)}
+                </span>
+              </SelectItem>
+            );
+          })}
         </SelectContent>
       </Select>
       <AlertDialog

@@ -4247,6 +4247,58 @@ describe('TeamDataService', () => {
     });
   });
 
+  it('routes an interrupted human rejection back to the trusted retry path after disabling the policy', async () => {
+    const requestChangesAsHuman = vi.fn();
+    const requestChanges = vi.fn();
+    const taskBoard = {
+      getTask: vi.fn(() => ({
+        id: 'task-1',
+        status: 'completed',
+        reviewState: 'needsFix',
+        historyEvents: [
+          {
+            id: 'decision-1',
+            type: 'review_changes_requested',
+            from: 'reviewed',
+            to: 'needsFix',
+            actor: 'user',
+            timestamp: '2026-11-16T01:00:00.000Z',
+            note: 'Original human feedback',
+          },
+        ],
+      })),
+      getKanbanState: vi.fn(() => ({
+        teamName: 'my-team', reviewers: [], tasks: {}, reviewFlow: 'agent_approval', reviewFlowSource: 'default',
+      })),
+      requestChangesAsHuman,
+      requestChanges,
+    };
+    const service = new TeamDataService(
+      {
+        listTeams: vi.fn(),
+        getConfig: vi.fn(async () => ({ name: 'My team', members: [] })),
+      } as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      () => ({ taskBoard }) as never
+    );
+
+    await service.updateKanban('my-team', 'task-1', {
+      op: 'request_changes', comment: 'Retry with retained original feedback',
+    });
+    expect(requestChangesAsHuman).toHaveBeenCalledWith('task-1', {
+      comment: 'Retry with retained original feedback',
+    });
+    expect(requestChanges).not.toHaveBeenCalled();
+  });
+
   it('uses direct kanban approval for completed tasks that are not in review', async () => {
     const approveReviewMock = vi.fn();
     const setKanbanColumnMock = vi.fn();

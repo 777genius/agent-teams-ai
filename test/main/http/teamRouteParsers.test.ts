@@ -33,8 +33,37 @@ describe('HTTP team route parsers', () => {
       () => assertOptionalExtraCliArgs('--dangerously-skip-permissions=1'),
       'app-managed flags'
     );
+    // A long option after a short flag cluster is read by the CLI as its own option.
+    expectBadRequest(
+      () => assertOptionalExtraCliArgs('-p-resume=other-session'),
+      'app-managed flags'
+    );
+    expectBadRequest(
+      () => assertOptionalExtraCliArgs(`-p-settings='{"env":{"FOO":"bar"}}'`),
+      'app-managed flags'
+    );
     // A genuinely user-safe flag (not app-managed) passes through untouched.
+    for (const raw of ['--max-turns=', '--max-turns ""', '-p-max-turns=']) {
+      expectBadRequest(
+        () => assertOptionalExtraCliArgs(raw),
+        'ends with --max-turns but no value'
+      );
+    }
     expect(assertOptionalExtraCliArgs('--max-turns=5')).toBe('--max-turns=5');
+    expect(assertOptionalExtraCliArgs('--max-turns=5 --teammate-mode tmux')).toBe(
+      '--max-turns=5 --teammate-mode tmux'
+    );
+    expect(assertOptionalExtraCliArgs('--teammate-mode=in-process')).toBe(
+      '--teammate-mode=in-process'
+    );
+    expectBadRequest(
+      () => assertOptionalExtraCliArgs('--teammate-mode unsupported'),
+      'app-managed flags'
+    );
+    expectBadRequest(
+      () => assertOptionalExtraCliArgs('--teammate-mode tmux --teammate-mode auto'),
+      'app-managed flags'
+    );
   });
 
   it('validates common string and cwd fields with the route error messages', () => {
@@ -143,6 +172,7 @@ describe('HTTP team route parsers', () => {
       })
     ).toEqual({
       teamName: 'new-team',
+      projectContextMode: 'per_project',
       displayName: 'New Team',
       description: 'Saved draft',
       members: [
@@ -167,6 +197,14 @@ describe('HTTP team route parsers', () => {
       limitContext: false,
     });
 
+    expect(parseCreateTeamRequest({ teamName: 'new-team', projectContextMode: 'shared' })).toMatchObject({
+      projectContextMode: 'shared',
+    });
+    expectBadRequest(
+      () => parseCreateTeamRequest({ teamName: 'new-team', projectContextMode: 'invalid' }),
+      'projectContextMode must be shared or per_project'
+    );
+
     expectBadRequest(
       () => parseCreateTeamRequest({ teamName: 'new-team', members: 'builder' }),
       'members must be an array'
@@ -179,6 +217,7 @@ describe('HTTP team route parsers', () => {
 
     expect(parseCreateTeamRequest({ teamName: 'new-team' })).toEqual({
       teamName: 'new-team',
+      projectContextMode: 'per_project',
       members: [],
     });
 
@@ -219,6 +258,7 @@ describe('HTTP team route parsers', () => {
 
     expect(request).toMatchObject({
       teamName: 'draft-team',
+      projectContextMode: 'shared',
       displayName: 'Draft Team',
       description: 'Saved draft',
       color: '#3366ff',
@@ -240,6 +280,12 @@ describe('HTTP team route parsers', () => {
       parseDraftLaunchCreateRequest({ ...savedRequest, allowExperimentalLocalModels: true }, {})
         .allowExperimentalLocalModels
     ).toBeUndefined();
+    expect(parseDraftLaunchCreateRequest({
+      ...savedRequest, projectContextMode: 'per_project',
+    }, {}).projectContextMode).toBe('per_project');
+    expect(parseDraftLaunchCreateRequest({
+      ...savedRequest, projectContextMode: 'shared',
+    }, { projectContextMode: 'per_project' }).projectContextMode).toBe('shared');
 
     expectBadRequest(
       () =>

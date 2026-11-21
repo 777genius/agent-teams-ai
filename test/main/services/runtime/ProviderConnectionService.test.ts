@@ -3377,6 +3377,7 @@ describe('ProviderConnectionService', () => {
       staleAt: '2026-04-28T00:10:00.000Z',
       defaultModelId: 'gpt-5.4-mini',
       defaultLaunchModel: 'gpt-5.4-mini',
+      configuredReasoningEffort: 'xhigh',
       models: [],
       diagnostics: {
         configReadState: 'ready',
@@ -3461,7 +3462,8 @@ describe('ProviderConnectionService', () => {
       },
     });
 
-    expect(directCatalog).not.toHaveBeenCalled();
+    expect(directCatalog).toHaveBeenCalledOnce();
+    expect(enriched.modelCatalog?.configuredReasoningEffort).toBe('xhigh');
     expect(enriched.models).toEqual(['gpt-5.4']);
     expect(enriched.modelCatalog?.defaultLaunchModel).toBe('gpt-5.4');
     expect(enriched.runtimeCapabilities?.modelCatalog).toEqual({

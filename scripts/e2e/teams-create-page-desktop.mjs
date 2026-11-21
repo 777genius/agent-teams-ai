@@ -78,7 +78,8 @@ async function seedFixture() {
     xdgStateHome: path.join(root, 'xdg-state'),
     xdgRuntimeDir: path.join(root, 'xdg-runtime'),
     projectPath: path.join(root, 'sandbox-project'),
-    teamName: `teams-create-page-e2e-${randomUUID()}`,
+    // Keep a nonnumeric suffix: Copy Team treats trailing -digits as an existing copy index.
+    teamName: `teams-create-page-e2e-${randomUUID()}-seed`,
     memberName: 'team-lead',
     runtimeScriptPath: path.join(root, 'fixture-runtime-deny.cjs'),
     runtimeWrapperPath: path.join(
@@ -110,6 +111,10 @@ async function seedFixture() {
       `const args = process.argv.slice(2);\n` +
       `if (args.length === 1 && args[0] === '--version') {\n` +
       `  process.stdout.write(${JSON.stringify(`${runtimeLock.version}\n`)});\n` +
+      `  process.exit(0);\n` +
+      `}\n` +
+      `if (args.length === 1 && args[0] === '--help') {\n` +
+      `  process.stdout.write('Usage: fixture\\n  -p, --print\\n');\n` +
       `  process.exit(0);\n` +
       `}\n` +
       `fs.appendFileSync(${JSON.stringify(fixture.runtimeLedgerPath)}, JSON.stringify({ args, at: Date.now() }) + '\\n');\n` +
@@ -352,24 +357,24 @@ class CdpClient {
     this.listeners.set(method, listeners);
   }
 
-  send(method, params = {}) {
+  send(method, params = {}, timeoutMs = 30_000) {
     const id = ++this.nextId;
     return new Promise((resolve, reject) => {
       const timer = setTimeout(() => {
         this.pending.delete(id);
         reject(new Error(`CDP command timed out: ${method}`));
-      }, 30_000);
+      }, timeoutMs);
       this.pending.set(id, { resolve, reject, timer });
       this.socket.send(JSON.stringify({ id, method, params }));
     });
   }
 
-  async evaluate(expression) {
+  async evaluate(expression, timeoutMs = 30_000) {
     const response = await this.send('Runtime.evaluate', {
       expression,
       awaitPromise: true,
       returnByValue: true,
-    });
+    }, timeoutMs);
     if (response.exceptionDetails) {
       throw new Error(
         response.exceptionDetails.exception?.description ?? 'Renderer evaluation failed'
@@ -387,7 +392,7 @@ class CdpClient {
         lastTransientError = null;
       } catch (error) {
         if (
-          !/execution context was destroyed|cannot find (?:default )?execution context/i.test(
+          !/execution context was destroyed|cannot find (?:default )?execution context|CDP command timed out: Runtime\.evaluate/i.test(
             String(error)
           )
         ) {
@@ -936,6 +941,269 @@ async function exerciseScheduleUx(client, fixture, log, inspectorWebSocketDebugg
   return { scheduleLabel, scheduleId: scheduled.id, createdAndDeleted: true };
 }
 
+/**
+ * Real Electron zh-TW acceptance after the English create/launch/schedules
+ * scenarios. Use a fresh startup with a persisted locale setting, then exercise
+ * the actual member-row MCP selector, input, and screenshot through CDP.
+ * Never invoke a model or relax the normal create-page assertions.
+ */
+async function exerciseTraditionalChineseMcpUi(fixture, log) {
+  log('restart isolated native Electron in zh-TW for member MCP UI qualification');
+  await cleanup({ ...fixture, root: null });
+  const configPath = path.join(fixture.claudeRoot, 'agent-teams-config.json');
+  const config = JSON.parse(await readFile(configPath, 'utf8'));
+  assert(config.general && typeof config.general === 'object',
+    'Persistent native app config missing general settings');
+  config.general.appLocale = 'zh-TW';
+  await writeFile(configPath, JSON.stringify(config, null, 2) + '\n');
+
+  // A real task from the disposable on-disk team board is needed to inspect
+  // the translated task-detail dialog/tab. No provider or teammate is started.
+  const taskId = '77';
+  await json(path.join(fixture.claudeRoot, 'tasks', fixture.teamName, `${taskId}.json`), {
+    id: taskId,
+    displayId: taskId,
+    subject: 'TEST zh-TW task detail',
+    status: 'pending',
+    owner: 'team-lead',
+    createdBy: 'user',
+    createdAt: new Date().toISOString(),
+    projectPath: fixture.projectPath,
+    description: 'Disposable UI localization test. Do not run a model.',
+    prompt: 'No execution requested.',
+    blocks: [],
+    blockedBy: [],
+    related: [],
+    comments: [],
+    historyEvents: [],
+  });
+
+  const started = await startApp(fixture);
+  cdp = await CdpClient.connect(started.renderer.webSocketDebuggerUrl);
+  await initializeTeams(cdp, fixture, { afterRestart: true });
+  await cdp.waitFor("document.documentElement.lang === 'zh-TW'",
+    'persisted Traditional Chinese locale in real renderer', 45_000);
+
+  await cdp.evaluate('window.__agentTeamsDevStore.getState().openTeamsCreationPage()');
+  await cdp.waitFor("document.querySelector('[data-testid=create-team-page] #team-name')",
+    'native zh-TW create-team page', 45_000);
+  // The name input appears before asynchronous draft state is fully restored.
+  // Match the same enabled template-selector hydration gate as the original
+  // English E2E, using its actual Traditional Chinese accessible label.
+  await cdp.waitFor(
+    `(() => { const button = document.querySelector('[data-testid=create-team-page] button[aria-label="團隊範本"]'); return button && !button.disabled; })()`,
+    'hydrated native zh-TW create-team form', 45_000
+  );
+  // A previous config-only draft may persist Solo team; use the real toggle to
+  // make the member roster visible instead of mutating component state directly.
+  const solo = "document.querySelector('[data-testid=create-team-page] #solo-team')";
+  if (await cdp.evaluate(`${solo}?.getAttribute('data-state') === 'checked'`))
+    await cdp.click(solo);
+  const add = "document.querySelector('[data-testid=create-team-page] button[aria-label=\"新增成員\"]')";
+  await cdp.click(add);
+  const row = '[data-testid=create-team-page] [data-role=member-row]';
+  await cdp.waitFor(`document.querySelector(${JSON.stringify(row)})`,
+    'member row created through translated UI');
+  const mcpToggle = `Array.from(document.querySelectorAll(${JSON.stringify(row + ' button')}))
+    .find(button => button.getAttribute('aria-label')?.includes('MCP')
+      && !button.disabled && button.getBoundingClientRect().width > 0)`;
+  await cdp.click(mcpToggle);
+
+  const mode = `${row} [id$="-mcp-mode"]`;
+  await cdp.click(`document.querySelector(${JSON.stringify(mode)})`);
+  const strict = "Array.from(document.querySelectorAll('[role=option]'))" +
+    ".find(option => option.textContent?.includes('嚴格的許可名單'))";
+  await cdp.click(strict);
+
+  const servers = `${row} input[id$="-mcp-servers"]`;
+  await cdp.waitFor(
+    `document.querySelector(${JSON.stringify(servers)})?.placeholder === 'github, sentry'`,
+    'literal MCP server IDs and ASCII separator in rendered placeholder'
+  );
+  const label = await cdp.evaluate(`(() => {
+    const input = document.querySelector(${JSON.stringify(servers)});
+    const associated = input && document.querySelector('label[for="' + input.id + '"]');
+    return { label: associated?.textContent?.trim() ?? null,
+      placeholder: input?.placeholder ?? null };
+  })()`);
+  assert.equal(label.label, '伺服器名稱', 'Traditional Chinese MCP label not rendered');
+  assert.equal(label.placeholder, 'github, sentry', 'MCP IDs localized into invalid names');
+
+  await cdp.fill(servers, 'github, sentry');
+  await cdp.waitFor(
+    `document.querySelector(${JSON.stringify(servers)})?.value === 'github, sentry'`,
+    'controlled strict allowlist input retains two actual server IDs'
+  );
+  const enteredValue = await cdp.evaluate(
+    `document.querySelector(${JSON.stringify(servers)}).value`
+  );
+  assert.deepEqual(enteredValue.split(',').map(name => name.trim()), ['github', 'sentry'],
+    'Native controlled MCP input did not retain two literal server IDs');
+  await captureScreenshot(cdp, fixture, 'zh-tw-member-mcp-strict-allowlist');
+
+  log('inspect native zh-TW task detail dialog and separate task tab');
+  await cdp.evaluate(
+    `window.__agentTeamsDevStore.getState().openGlobalTaskDetail(${JSON.stringify(fixture.teamName)}, ${JSON.stringify(taskId)})`
+  );
+  await cdp.waitFor(
+    "document.querySelector('[role=dialog] [data-task-detail-open-tab]')?.textContent?.trim() === '在獨立分頁中開啟'",
+    'localized task detail dialog and open-tab action', 60_000
+  );
+  await captureScreenshot(cdp, fixture, 'zh-tw-task-detail-dialog');
+  await cdp.click("document.querySelector('[role=dialog] [data-task-detail-open-tab]')");
+  await cdp.waitFor(
+    `(() => {
+      const s = window.__agentTeamsDevStore.getState();
+      const activeTab = s.paneLayout.panes.some(p => p.tabs.some(t =>
+        t.id === p.activeTabId && t.taskDetail && t.teamName === ${JSON.stringify(fixture.teamName)}));
+      const page = document.querySelector('[data-task-detail-page][data-task-detail-task-id="77"]');
+      const visible = page && page.getClientRects().length > 0 && page.getBoundingClientRect().height > 0;
+      return !s.globalTaskDetail && activeTab && visible &&
+        page.getAttribute('data-task-detail-team') === ${JSON.stringify(fixture.teamName)} &&
+        page.getAttribute('data-origin-current') === 'true' &&
+        page.querySelector('h1')?.textContent?.includes('TEST zh-TW task detail');
+    })()`,
+    'fully hydrated visible localized task detail in active native tab', 60_000
+  );
+  await captureScreenshot(cdp, fixture, 'zh-tw-task-detail-tab');
+  const taskDetailUiEvidence = {
+    taskId,
+    locale: await cdp.evaluate('document.documentElement.lang'),
+    dialogOpenTabAction: '在獨立分頁中開啟',
+    dialogScreenshot: 'teams-create-zh-tw-task-detail-dialog.png',
+    tabScreenshot: 'teams-create-zh-tw-task-detail-tab.png',
+    nativeTaskTabVisible: true,
+  };
+  return {
+    locale: await cdp.evaluate('document.documentElement.lang'),
+    taskDetailUiEvidence,
+    strictAllowlistVisible: true,
+    placeholder: label.placeholder,
+    parsedServerNames: enteredValue.split(',').map(name => name.trim()),
+    screenshot: 'teams-create-zh-tw-member-mcp-strict-allowlist.png',
+    controlEditedThroughNativeCdp: true,
+  };
+}
+
+
+/**
+ * Windows-only native E2E: launch a disposable teammate-shaped process from
+ * the real Electron Main process while its BrowserWindow is visible.
+ * It spawns cmd/git/PowerShell without forcing windowsHide on the tool children.
+ * This verifies Main -> native process console inheritance, NOT actual provider
+ * inference or TeamProvisioningMemberLifecycle product launch.
+ */
+async function exerciseWindowsElectronConsoleProbe(inspectorUrl, client, fixture, log) {
+  assert.equal(process.platform, 'win32');
+  const inspector = await CdpClient.connect(inspectorUrl);
+  const nodeBinary = await realpath(process.execPath);
+  const scriptPath = path.join(repoRoot, 'scripts/e2e/windows-teammate-console-native.mjs');
+  const fixtureMarker = 'native-custody-' + randomUUID();
+  try {
+    await inspector.send('Runtime.enable');
+    // The native IPC/store can hydrate before React finishes rendering Teams.
+    // A skeleton-only screenshot must never qualify as a usable GUI.
+    await client.waitFor(
+      "Array.from(document.querySelectorAll('.team-row-zebra-card')).some(card => " +
+        "card.textContent?.includes(" + JSON.stringify(fixture.teamName) + ") && " +
+        "card.getBoundingClientRect().width > 0 && card.getBoundingClientRect().height > 0)",
+      'actual seeded team card visibly rendered', 60_000
+    );
+    const rendererFocusedBefore = await client.evaluate('document.hasFocus()');
+    const expression = [
+      '(async () => {',
+      "  const req = typeof require === 'function' ? require : process.mainModule?.require?.bind(process.mainModule);",
+      "  if (!req) throw new Error('Electron main module require unavailable');",
+      "  const { spawn, spawnSync } = req('node:child_process');",
+      "  const { BrowserWindow } = req('electron');",
+      "  const win = BrowserWindow.getAllWindows().find(w => w.webContents.getURL().startsWith('http://localhost:'));",
+      "  if (!win) throw new Error('Real Electron test BrowserWindow missing');",
+      '  const mainFocusedBefore = win.isFocused();',
+      '  let mainBlurEvents = 0;',
+      '  const onMainBlur = () => { mainBlurEvents++; };',
+      "  win.on('blur', onMainBlur);",
+      '  const child = spawn(' + JSON.stringify(nodeBinary) + ', [' +
+        JSON.stringify(scriptPath) + ", '--teammate-fixture', " + JSON.stringify(fixtureMarker) + "], " +
+        "{ detached: false, windowsHide: true, stdio: ['ignore', 'pipe', 'pipe', 'ipc'] });",
+      '  return await new Promise((resolve, reject) => {',
+      '    let settled = false, ready = false, stderr = ""; const tools = [];',
+      '    const finish = (error, value) => {',
+      '      if (settled) return; settled = true; clearTimeout(deadline);',
+      "      win.off('blur', onMainBlur);",
+      "      if (error && child.pid && child.exitCode === null && child.signalCode === null) {",
+      '        // Terminate only the original marker-bound fixture process tree.',
+      '        const result = spawnSync(' + JSON.stringify(nodeBinary) + ', [' +
+        JSON.stringify(scriptPath) + ", '--kill-owned-fixture', String(child.pid), " +
+        JSON.stringify(fixtureMarker) +
+        "], { windowsHide: true, timeout: 30000, encoding: 'utf8' });",
+      '        if (result.error || result.status !== 0) {',
+      '          child.kill("SIGKILL");',
+      '          error = new Error("Verified fixture cleanup failed: " + (error?.message || String(error)));',
+      '        }',
+      '      }',
+      '      if (error) reject(error); else resolve(value);',
+      '    };',
+      "    const deadline = setTimeout(() => finish(new Error('Electron-owned native teammate timeout')), 25000);",
+      "    child.stderr?.on('data', b => { stderr = (stderr + b.toString()).slice(-2000); });",
+      "    child.on('message', msg => {",
+      "      if (msg?.type === 'tool') tools.push(msg);",
+      "      if (msg?.type === 'ready') {",
+      "        if (msg.pid !== child.pid) return finish(new Error('Native teammate PID mismatch'));",
+      "        ready = true; child.send({ type: 'stop' });",
+      '      }',
+      '    });',
+      "    child.once('error', err => finish(err));",
+      "    child.once('close', (code, signal) => {",
+      "      if (!ready || code !== 0) return finish(new Error('Native teammate failed: ' + (signal || code) + ' ' + stderr));",
+      "      finish(null, { mainElectronPid: process.pid, teammatePid: child.pid,",
+      "        detached: false, windowsHide: true, mainFocusedBefore, mainFocusedAfter: win.isFocused(), mainBlurEvents, tools });",
+      '    });',
+      '  });',
+      '})()',
+    ].join('\n');
+    // This one evaluation may spend 25s in the child, followed by 30s of
+    // marker-verified cleanup. Other CDP calls retain their 30s default.
+    const evidence = await inspector.evaluate(expression, 70_000);
+    assert.equal(evidence.detached, false);
+    assert.equal(evidence.windowsHide, true);
+    assert.ok(evidence.mainElectronPid > 0 && evidence.teammatePid > 0);
+    assert.deepEqual(evidence.tools.map(tool => tool.name), ['cmd', 'git', 'powershell']);
+    assert.ok(evidence.tools.every(tool => tool.exitCode === 0 && tool.pid > 0));
+    const powershell = evidence.tools.find(tool => tool.name === 'powershell');
+    assert.equal(powershell?.consoleWindowVisible, false,
+      'Real Electron-owned PowerShell unexpectedly had a visible console');
+    assert.ok(['none', 'hidden'].includes(powershell.consoleState),
+      'Real Electron-owned PowerShell console state was not verified');
+    const rendererFocusedAfter = await client.evaluate('document.hasFocus()');
+    const focusObservable = evidence.mainFocusedBefore === true && rendererFocusedBefore === true;
+    if (focusObservable) {
+      assert.equal(evidence.mainFocusedAfter, true, 'Electron app lost native focus during tool calls');
+      assert.equal(evidence.mainBlurEvents, 0, 'Electron app temporarily lost focus during tool calls');
+      assert.equal(rendererFocusedAfter, true, 'Electron renderer lost focus during tool calls');
+    }
+    await captureScreenshot(client, fixture, 'windows-electron-console');
+    const result = {
+      schemaVersion: 1, success: true, scope: 'real Electron Main -> fixture teammate -> native tool calls',
+      realElectronMainHosted: true, hydratedTeamCardVerified: true,
+      realProductTeammateLaunch: false,
+      realVendorRuntimeOrModel: false, actualConsoleWindowsEnumerated: false,
+      cmdGitWindowVisibilityUnknown: true, powershellConsoleNotVisibleVerified: true,
+      powershellConsoleState: powershell.consoleState,
+      nativeFocusObservable: focusObservable, rendererFocusedBefore, rendererFocusedAfter,
+      ...evidence, screenshot: 'teams-create-windows-electron-console.png',
+    };
+    const outDir = process.env.TEAMS_CREATE_E2E_ARTIFACT_DIR || os.tmpdir();
+    await mkdir(outDir, { recursive: true });
+    await writeFile(path.join(outDir, 'teams-create-windows-console-result.json'),
+      JSON.stringify(result, null, 2) + '\n');
+    log('Windows Electron Main native console fixture completed');
+    process.stdout.write(JSON.stringify(result, null, 2) + '\n');
+    return result;
+  } finally {
+    inspector.close();
+  }
+}
+
 async function main() {
   const fixture = await seedFixture();
   const unique = `create-page-e2e-${randomUUID().slice(0, 8)}`;
@@ -958,6 +1226,10 @@ async function main() {
     let started = await startApp(fixture);
     cdp = await CdpClient.connect(started.renderer.webSocketDebuggerUrl);
     await initializeTeams(cdp, fixture);
+    if (process.argv.includes('--windows-console-only')) {
+      await exerciseWindowsElectronConsoleProbe(started.inspectorWebSocketDebuggerUrl, cdp, fixture, log);
+      return;
+    }
 
     log('click real Create Team button');
     await cdp.click(createButtonExpression('Create Team'));
@@ -1358,6 +1630,49 @@ async function main() {
     await cdp.click(createButtonExpression('Continue creating'));
     await cdp.waitFor(`document.querySelector('#team-name')?.value === ${JSON.stringify(unique)}`,
       'restored creation draft for config-only save');
+    // Verify the documented debug override survives actual renderer -> IPC ->
+    // persisted metadata. The fixture never launches tmux or a paid provider.
+    await cdp.waitFor(
+      `(() => { const button = document.querySelector('[data-testid=create-team-page] button[aria-label="Team template"]'); return button && !button.disabled; })()`,
+      'hydrated form before native teammate-mode override'
+    );
+    const overrideSettingsExpanded = await cdp.evaluate(
+      `${optionalSettingsButton}?.getAttribute('aria-expanded') === 'true'`
+    );
+    if (!overrideSettingsExpanded) await cdp.click(optionalSettingsButton);
+    await expandCreateAdvancedCli(cdp, createAdvancedToggle, customArgsSelector);
+    const allowedTeammateArgs = '--max-turns 5 --teammate-mode tmux';
+    await cdp.fill(customArgsSelector, allowedTeammateArgs);
+    await cdp.waitFor(
+      `document.querySelector(${JSON.stringify(customArgsSelector)})?.value === ${JSON.stringify(allowedTeammateArgs)}`,
+      'documented teammate override in real Advanced CLI editor'
+    );
+    await captureScreenshot(cdp, fixture, 'teammate-mode-override');
+    // Press the real optional Validate control; the isolated runtime supplies
+    // --help only, never a paid provider or a lifecycle command.
+    const validateButton = `Array.from(document.querySelectorAll('[data-testid=create-team-page] button'))
+      .find(button => button.textContent?.trim() === 'Validate' &&
+        button.getClientRects().length > 0)`;
+    await cdp.click(validateButton);
+    await cdp.waitFor(
+      "Array.from(document.querySelectorAll('[data-testid=create-team-page] .text-emerald-400'))" +
+        ".some(el => el.textContent?.includes('All flags valid') && el.getClientRects().length > 0)",
+      'supported teammate override accepted by real Validate IPC'
+    );
+    await captureScreenshot(cdp, fixture, 'teammate-mode-validated');
+    await cdp.fill(customArgsSelector, '--max-turns=');
+    await cdp.click(validateButton);
+    await cdp.waitFor(
+      "Array.from(document.querySelectorAll('[data-testid=create-team-page] span'))" +
+        ".some(span => span.textContent?.trim() === 'Missing value: --max-turns' && span.getClientRects().length > 0)",
+      'required-value error returned through real Validate IPC'
+    );
+    await captureScreenshot(cdp, fixture, 'missing-cli-value-validated');
+    await cdp.fill(customArgsSelector, allowedTeammateArgs);
+    await cdp.waitFor(
+      `document.querySelector(${JSON.stringify(customArgsSelector)})?.value === ${JSON.stringify(allowedTeammateArgs)}`,
+      'restore admitted extra args after real Validate error'
+    );
     // The fixture has no project-list entries. Choose the disposable path
     // through the real UI rather than relying on the app's config-only fallback.
     await cdp.click(createButtonExpression('Custom path'));
@@ -1405,12 +1720,25 @@ async function main() {
     const createdMembers = JSON.parse(await readFile(path.join(teamDir, 'members.meta.json'), 'utf8'));
     assert.equal(createdMeta.version, 1, 'Native team metadata has the wrong schema');
     assert.equal(createdMeta.cwd, fixture.projectPath, 'Saved working directory differs');
+    assert.equal(createdMeta.extraCliArgs, allowedTeammateArgs,
+      'Native create IPC rejected or dropped the documented teammate-mode override');
     // A config-only team may use the implicit lead without additional members.
     // Prove the typed roster metadata exists, not that it contains extra agents.
     assert.equal(createdMembers.version, 1, 'Native roster metadata has the wrong schema');
     assert(Array.isArray(createdMembers.members),
       'Native config-only creation did not persist roster metadata');
     await captureScreenshot(cdp, fixture, 'config-only-created');
+
+    // A config-only team may open its Launch Team dialog when the newly
+    // created tab becomes active. Dismiss it via the real UI before clicking
+    // a different team's card; otherwise the modal intercepts pointer input.
+    const launchDialog = `Array.from(document.querySelectorAll('[role="dialog"]'))` +
+      `.find(dialog => dialog.textContent?.includes('Launch Team') && dialog.getClientRects().length > 0)`;
+    if (await cdp.evaluate(`Boolean(${launchDialog})`)) {
+      await cdp.click(launchDialog +
+        `?.querySelector('button[aria-label="Close"]') || Array.from(${launchDialog}?.querySelectorAll('button') ?? []).find(b => b.textContent?.trim() === 'Close')`);
+      await cdp.waitFor(`!${launchDialog}`, 'dismiss launch dialog before copying a team');
+    }
 
     log('copy an existing sandbox team using the real Teams card');
     await cdp.evaluate(
@@ -1421,11 +1749,39 @@ async function main() {
       ".find(card => card.textContent?.includes(" + JSON.stringify(fixture.teamName) + "))" +
       "?.querySelector('button[aria-label=\"Copy team\"]')";
     await cdp.click(copyTarget);
+    const copyStarted = `document.querySelector('[data-testid=create-team-page] #team-name')?.value?.startsWith(${JSON.stringify(fixture.teamName)})`;
+    const replaceDraftConfirm =
+      `Array.from(document.querySelectorAll('[role="dialog"] button'))` +
+      `.find(button => button.textContent?.trim() === 'Replace draft' && button.getClientRects().length > 0)`;
+    // The config-only team can open its Launch Team dialog after the
+    // earlier visibility check. It intercepts real pointer events on Copy.
+    // Recover only when that exact modal is present and copy has not begun.
     await cdp.waitFor(
-      `document.querySelector('[data-testid=create-team-page] #team-name')?.value?.startsWith(${JSON.stringify(fixture.teamName)})`,
-      'copy action initialized the new team identity from the selected card',
+      `${copyStarted} || Boolean(${replaceDraftConfirm}) || Boolean(${launchDialog})`,
+      'copy editor, replace-draft confirmation, or late launch dialog',
       30_000
     );
+    if (
+      !(await cdp.evaluate(`${copyStarted} || Boolean(${replaceDraftConfirm})`)) &&
+      (await cdp.evaluate(`Boolean(${launchDialog})`))
+    ) {
+      await cdp.click(
+        launchDialog +
+          `?.querySelector('button[aria-label="Close"]') || Array.from(${launchDialog}?.querySelectorAll('button') ?? []).find(b => b.textContent?.trim() === 'Close')`
+      );
+      await cdp.waitFor(`!${launchDialog}`, 'dismiss late launch dialog before copy');
+      await cdp.click(copyTarget);
+    }
+    await cdp.waitFor(
+      `${copyStarted} || Boolean(${replaceDraftConfirm})`,
+      'copy editor or explicit replace-draft confirmation',
+      30_000
+    );
+    if (await cdp.evaluate(`Boolean(${replaceDraftConfirm})`)) {
+      await cdp.click(replaceDraftConfirm);
+    }
+    await cdp.waitFor(copyStarted,
+      'copy action initialized the new team identity from the selected card', 30_000);
     const copiedName = await cdp.evaluate(
       "document.querySelector('[data-testid=create-team-page] #team-name')?.value"
     );
@@ -1671,16 +2027,21 @@ async function main() {
     await captureScreenshot(cdp, fixture, 'organization-created');
 
     const scheduleUiEvidence = await exerciseScheduleUx(cdp, fixture, log, started.inspectorWebSocketDebuggerUrl);
+    const zhTwMcpUiEvidence = await exerciseTraditionalChineseMcpUi(fixture, log);
 
     const results = {
       success: true,
       scheduleUiEvidence,
+      zhTwMcpUiEvidence,
       unique,
       retainedAcrossBack: true,
       retainedAcrossTabSwitch: true,
       manageProvidersNavigationRetainsDraft: true,
       retainedAcrossProcessRestart: true,
       advancedCliRetainedAcrossRename: true,
+      teammateModeOverridePersistedThroughNativeUi: true,
+      teammateModeOverrideValidatedThroughNativeUi: true,
+      missingRequiredCliValueRejectedThroughNativeUi: true,
       advancedCliRetainedAcrossPaneSplit: true,
       advancedCliRetainedAcrossBackRemount: true,
       advancedCliRestoresUneditedDefaults: true,

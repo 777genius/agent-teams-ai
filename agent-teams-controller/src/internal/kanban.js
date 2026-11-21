@@ -1,4 +1,5 @@
 const kanbanStore = require('./kanbanStore.js');
+const reviewFlow = require('./reviewFlow.js');
 const tasks = require('./tasks.js');
 const reviewStateHelpers = require('./reviewState.js');
 const runtimeHelpers = require('./runtimeHelpers.js');
@@ -36,6 +37,10 @@ function assertKanbanColumnAllowed(context, task, column, options = {}) {
   }
 
   if (column === 'approved') {
+    if (isHumanApprovalFlow(context) &&
+        (transition === 'manual_approve' || transition === 'approve_review')) {
+      throw new Error('Human approval required: use review_complete for AI review; only the app user may approve');
+    }
     if (transition === 'manual_approve') {
       if (reviewState !== 'none') {
         throw new Error(
@@ -88,7 +93,7 @@ function clearKanban(context, taskId, options) {
       return state;
     }
     const transition = options && typeof options.transition === 'string' ? options.transition : 'direct';
-    const allowedInternalTransitions = new Set(['request_changes', 'rollback', 'status_reset', 'delete', 'restore']);
+    const allowedInternalTransitions = new Set(['request_changes', 'review_complete', 'rollback', 'status_reset', 'delete', 'restore']);
     const reviewState = getEffectiveReviewState(context, task);
     if (transition === 'direct' && reviewState !== 'none') {
       throw new Error(
@@ -141,6 +146,45 @@ function removeReviewer(context, reviewer) {
   });
 }
 
+/** Effective review-flow policy of the team: its own override, otherwise the global default. */
+function getReviewFlowPolicy(context) {
+  return kanbanStore.resolveReviewFlowPolicy(context.paths, context.teamName);
+}
+
+function isHumanApprovalFlow(context) {
+  return reviewFlow.isHumanApproval(getReviewFlowPolicy(context));
+}
+
+function isLeadSignoffFlow(context) {
+  return reviewFlow.isLeadSignoff(getReviewFlowPolicy(context));
+}
+
+/**
+ * Kanban state as agents and policy checks must see it: the raw state plus the EFFECTIVE flow,
+ * prompt and where they come from. Never write this view back; writers use getKanbanState.
+ */
+function getEffectiveKanbanState(context) {
+  const policy = getReviewFlowPolicy(context);
+  return {
+    ...kanbanStore.withoutReviewFlowOverride(getKanbanState(context)),
+    reviewFlow: policy.reviewFlow,
+    ...(policy.reviewFlowPrompt ? { reviewFlowPrompt: policy.reviewFlowPrompt } : {}),
+    reviewFlowSource: policy.source,
+  };
+}
+
+/**
+ * Desktop user action only. `settings` is a COMPLETE override unit ({ reviewFlow, reviewFlowPrompt? });
+ * `null` removes the override so the team follows the global default again.
+ */
+function setReviewFlowSettings(context, settings) {
+  const next = settings === null ? null : reviewFlow.parseReviewFlowSettings(settings);
+  return withTeamBoardLock(context.paths, () => {
+    kanbanStore.replaceReviewFlowOverride(context.paths, context.teamName, next);
+    return getKanbanState(context);
+  });
+}
+
 function updateColumnOrder(context, columnId, orderedTaskIds) {
   return withTeamBoardLock(context.paths, () => {
     const canonicalIds = orderedTaskIds.map((taskId) => tasks.resolveTaskId(context, taskId));
@@ -151,6 +195,11 @@ function updateColumnOrder(context, columnId, orderedTaskIds) {
 module.exports = {
   getKanbanState,
   setKanbanColumn,
+  getReviewFlowPolicy,
+  getEffectiveKanbanState,
+  isHumanApprovalFlow,
+  isLeadSignoffFlow,
+  setReviewFlowSettings,
   clearKanban,
   listReviewers,
   addReviewer,

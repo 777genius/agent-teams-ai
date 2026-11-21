@@ -274,6 +274,24 @@ describe('agent-teams-mcp tools', () => {
     }
   );
 
+  it('accepts request-changes cycle IDs for human-only review decisions', () => {
+    const schema = getTool('review_request_changes').parameters;
+    expect(schema?.safeParse({
+      teamName: 'fixture', taskId: 'task-1', from: 'bob',
+      expectedReviewRequestId: 'original-review-id',
+    }).success).toBe(true);
+  });
+
+  it('requires the original review request ID and never exposes human acceptance tools', () => {
+    const schema = getTool('review_complete').parameters;
+    expect(schema?.safeParse({ teamName: 'fixture', taskId: 'task-1' }).success).toBe(false);
+    expect(schema?.safeParse({
+      teamName: 'fixture', taskId: 'task-1', expectedReviewRequestId: 'event-1', from: 'bob',
+    }).success).toBe(true);
+    expect([...tools.keys()]).not.toContain('review_approve_as_human');
+    expect([...tools.keys()]).not.toContain('set_human_only_approval');
+  });
+
   it('registers the full expected MCP tool surface', () => {
     expect([...tools.keys()].sort()).toEqual([...AGENT_TEAMS_REGISTERED_TOOL_NAMES].sort());
   });
@@ -370,10 +388,15 @@ describe('agent-teams-mcp tools', () => {
   it('accepts an omitted team_create roster while rejecting malformed provided rosters', () => {
     const parameters = getTool('team_create').parameters;
 
-    expect(parameters?.safeParse({ teamName: 'alpha' }).success).toBe(true);
-    expect(parameters?.safeParse({ teamName: 'alpha', members: 'builder' }).success).toBe(false);
-    expect(parameters?.safeParse({ teamName: 'alpha', members: null }).success).toBe(false);
-    expect(parameters?.safeParse({ teamName: 'alpha', members: [{}] }).success).toBe(false);
+    const team = { teamName: 'alpha', projectContextMode: 'shared' };
+    expect(parameters?.safeParse(team).success).toBe(true);
+    expect(parameters?.safeParse({ ...team, members: 'builder' }).success).toBe(false);
+    expect(parameters?.safeParse({ ...team, members: null }).success).toBe(false);
+    expect(parameters?.safeParse({ ...team, members: [{}] }).success).toBe(false);
+    // The history mode is required: no silent default until board tools support both modes.
+    expect(parameters?.safeParse({ teamName: 'alpha' }).success).toBe(false);
+    expect(parameters?.safeParse({ ...team, projectContextMode: 'per_project' }).success).toBe(true);
+    expect(parameters?.safeParse({ ...team, projectContextMode: 'project' }).success).toBe(false);
   });
 
   it('launches and stops teams through the runtime MCP tools', async () => {
@@ -479,6 +502,60 @@ describe('agent-teams-mcp tools', () => {
     }
   });
 
+  it('lets team_stop reach the desktop API for a per-project team that has no config.json', async () => {
+    const claudeDir = makeClaudeDir();
+    const teamDir = path.join(claudeDir, 'teams', 'builders');
+    fs.mkdirSync(teamDir, { recursive: true });
+    fs.writeFileSync(
+      path.join(teamDir, 'team.meta.json'),
+      JSON.stringify({ version: 1, cwd: '', createdAt: 1, projectContextMode: 'per_project' })
+    );
+    const calls: Array<{ method?: string; url?: string }> = [];
+    const server = await startControlServer(async ({ method, url }) => {
+      calls.push({ method, url });
+      if (method === 'POST' && url === '/api/teams/builders/stop') {
+        return { body: { teamName: 'builders', isAlive: false, runId: null, progress: null, contexts: [] } };
+      }
+      if (method === 'GET' && url === '/api/teams/builders/runtime') {
+        return { body: { teamName: 'builders', isAlive: false, runId: null, progress: null, contexts: [] } };
+      }
+      return { statusCode: 404, body: { error: `Unhandled ${method} ${url}` } };
+    });
+
+    try {
+      const stopped = parseJsonToolResult(
+        await getTool('team_stop').execute({
+          claudeDir,
+          teamName: 'builders',
+          controlUrl: server.baseUrl,
+        })
+      );
+      expect(stopped.isAlive).toBe(false);
+      expect(calls[0]).toEqual({ method: 'POST', url: '/api/teams/builders/stop' });
+    } finally {
+      await server.close();
+    }
+  });
+
+  it('still refuses team_stop for a team that is neither configured, a draft nor per-project', async () => {
+    const claudeDir = makeClaudeDir();
+    const sharedDir = path.join(claudeDir, 'teams', 'shared-meta-only');
+    fs.mkdirSync(sharedDir, { recursive: true });
+    // A meta file of the shared mode (or one without a mode) is not a definition that can run.
+    fs.writeFileSync(
+      path.join(sharedDir, 'team.meta.json'),
+      JSON.stringify({ version: 1, cwd: '', createdAt: 1, projectContextMode: 'shared' })
+    );
+
+    await expect(
+      getTool('team_stop').execute({ claudeDir, teamName: 'typo-team' })
+    ).rejects.toThrow('Unknown team "typo-team"');
+    await expect(
+      getTool('team_stop').execute({ claudeDir, teamName: 'shared-meta-only' })
+    ).rejects.toThrow('Unknown team "shared-meta-only"');
+    expect(fs.existsSync(path.join(claudeDir, 'teams', 'typo-team'))).toBe(false);
+  });
+
   it('lists, gets, and creates teams through the local control API', async () => {
     const claudeDir = makeClaudeDir();
     const calls: Array<{ method?: string; url?: string; body?: unknown }> = [];
@@ -570,6 +647,7 @@ describe('agent-teams-mcp tools', () => {
             },
           ],
           cwd: '/tmp/project',
+          projectContextMode: 'per_project',
           providerId: 'codex',
           model: 'gpt-5.2',
           effort: 'high',
@@ -614,6 +692,7 @@ describe('agent-teams-mcp tools', () => {
               },
             ],
             cwd: '/tmp/project',
+            projectContextMode: 'per_project',
             providerId: 'codex',
             model: 'gpt-5.2',
             effort: 'high',
@@ -2410,6 +2489,34 @@ describe('agent-teams-mcp tools', () => {
         process.env.AGENT_TEAMS_MCP_CLAUDE_DIR = previousForcedDir;
       }
     }
+  });
+
+  it('cross_team_send reports the team that received the message', async () => {
+    // Routing asks the app; none runs here, so the exact name is kept.
+    vi.stubEnv('CLAUDE_TEAM_CONTROL_URL', '');
+    const claudeDir = makeClaudeDir();
+    for (const teamName of ['sender-team', 'receiver-team']) {
+      writeTeamConfig(claudeDir, teamName, { members: [{ name: 'lead', role: 'team-lead' }] });
+    }
+    let result: unknown;
+    try {
+      result = parseJsonToolResult(
+        await getTool('cross_team_send').execute({
+          claudeDir,
+          teamName: 'sender-team',
+          toTeam: 'receiver-team',
+          text: 'Hello receiver',
+        })
+      );
+    } finally {
+      vi.unstubAllEnvs();
+    }
+    expect(result).toMatchObject({ deliveredToInbox: true, toTeam: 'receiver-team' });
+    expect(
+      JSON.parse(
+        fs.readFileSync(path.join(claudeDir, 'teams', 'receiver-team', 'inboxes', 'lead.json'), 'utf8')
+      )
+    ).toHaveLength(1);
   });
 
   it('rejects non-configured teams before MCP side-effect writes', async () => {

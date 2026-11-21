@@ -571,6 +571,98 @@ describe('EditTeamDialog', () => {
     });
   });
 
+  describe('lead instructions of a team definition', () => {
+    async function mountWithPrompt(currentLeadPrompt: string | undefined) {
+      vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+      vi.mocked(api.teams.updateConfig).mockResolvedValue({} as any);
+      const host = document.createElement('div');
+      document.body.appendChild(host);
+      const root = createRoot(host);
+      await act(async () => {
+        root.render(
+          React.createElement(EditTeamDialog, {
+            open: true,
+            teamName: 'builders',
+            currentName: 'Builders',
+            currentDescription: 'desc',
+            currentColor: 'blue',
+            ...(currentLeadPrompt === undefined ? {} : { currentLeadPrompt }),
+            currentMembers: [{ name: 'bob', role: 'Developer' }] as any,
+            leadMember: { name: 'team-lead', role: 'Team Lead' } as any,
+            projectPath: '/tmp/project',
+            onClose: vi.fn(),
+            onChangeLeadRuntime: vi.fn(),
+            onSaved: vi.fn(),
+          })
+        );
+        await Promise.resolve();
+      });
+      return { host, root };
+    }
+
+    async function save(host: HTMLElement) {
+      const saveButton = Array.from(host.querySelectorAll('button')).find(
+        (button) => button.textContent === 'Save'
+      ) as HTMLButtonElement;
+      await act(async () => {
+        saveButton.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+        await Promise.resolve();
+      });
+      await act(async () => {
+        await Promise.resolve();
+      });
+    }
+
+    it('hides the field for a team whose definition holds no lead instructions', async () => {
+      const { host, root } = await mountWithPrompt(undefined);
+      expect(host.querySelector('#edit-team-lead-prompt')).toBeNull();
+      await act(async () => {
+        root.unmount();
+        await Promise.resolve();
+      });
+    });
+
+    it('shows the saved instructions and writes a changed prompt with the other settings', async () => {
+      const { host, root } = await mountWithPrompt('Be brief');
+      const field = host.querySelector('#edit-team-lead-prompt') as HTMLTextAreaElement;
+      expect(field.value).toBe('Be brief');
+      await act(async () => {
+        const setValue = Object.getOwnPropertyDescriptor(
+          HTMLTextAreaElement.prototype,
+          'value'
+        )?.set;
+        setValue?.call(field, '  Be brief and cite sources  ');
+        field.dispatchEvent(new Event('input', { bubbles: true }));
+        await Promise.resolve();
+      });
+      await save(host);
+      expect(api.teams.updateConfig).toHaveBeenCalledWith('builders', {
+        name: 'Builders',
+        description: 'desc',
+        color: 'blue',
+        prompt: 'Be brief and cite sources',
+      });
+      await act(async () => {
+        root.unmount();
+        await Promise.resolve();
+      });
+    });
+
+    it('does not send an unchanged prompt, so a prompt edited elsewhere is never overwritten', async () => {
+      const { host, root } = await mountWithPrompt('Be brief');
+      await save(host);
+      expect(api.teams.updateConfig).toHaveBeenCalledWith('builders', {
+        name: 'Builders',
+        description: 'desc',
+        color: 'blue',
+      });
+      await act(async () => {
+        root.unmount();
+        await Promise.resolve();
+      });
+    });
+  });
+
   it('surfaces config-only refresh failures without reporting member changes', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     vi.mocked(api.teams.updateConfig).mockResolvedValue({} as any);

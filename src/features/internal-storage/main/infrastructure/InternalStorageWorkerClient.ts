@@ -20,6 +20,7 @@ import type {
   MemberWorkSyncReportJournalOpResult,
   MemberWorkSyncStatusCompareAndWriteInput,
   MemberWorkSyncStatusCompareAndWriteResult,
+  MemberWorkSyncStatusDeleteTarget,
   MemberWorkSyncStatusRecord,
   MemberWorkSyncTeamSnapshotRecords,
   StallJournalEntryRecord,
@@ -217,6 +218,13 @@ export class InternalStorageWorkerClient
 
   async statusList(teamName: string): Promise<MemberWorkSyncStatusRecord[]> {
     return (await this.call('mws.status.list', { teamName })) as MemberWorkSyncStatusRecord[];
+  }
+
+  async statusDeleteMatching(
+    teamName: string,
+    targets: MemberWorkSyncStatusDeleteTarget[]
+  ): Promise<number> {
+    return (await this.call('mws.status.deleteMatching', { teamName, targets })) as number;
   }
 
   async metricEventsList(teamName: string): Promise<MemberWorkSyncMetricEventRecord[]> {

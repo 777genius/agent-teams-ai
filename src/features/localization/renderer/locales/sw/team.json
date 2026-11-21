@@ -260,7 +260,10 @@
       "settingsSavedMembersFailed": "Mipangilio ya timu ilihifadhiwa, lakini mabadiliko ya mwanachama yameshindwa: {{message}}",
       "settingsSavedRefreshFailed": "Mipangilio ya timu ilihifadhiwa, lakini imeshindwa kuonyesha upya mwonekano wa hivi karibuni: {{message}}",
       "teamNameEmpty": "Jina la timu haliwezi kuwa tupu",
-      "unsupportedMixedPrimaryMutation": "Uhariri wa moja kwa moja kwa wenzako wa timu wanaomilikiwa na msingi katika timu mchanganyiko za OpenCode bado hauungwi mkono. Simamisha timu, hariri orodha, kisha uzindue tena. Walioathiriwa: {{names}}"
+      "unsupportedMixedPrimaryMutation": "Uhariri wa moja kwa moja kwa wenzako wa timu wanaomilikiwa na msingi katika timu mchanganyiko za OpenCode bado hauungwi mkono. Simamisha timu, hariri orodha, kisha uzindue tena. Walioathiriwa: {{names}}",
+      "refusedProjectCopy": "Hii ni nakala ya mradi ya timu. Badilisha mipangilio yake kwenye timu yenyewe.",
+      "refusedProjectUnreconciled": "Mradi mmoja wa timu hii bado unaandaliwa, au uzinduzi wake wa mwisho ulikatizwa. Zindua timu tena katika mradi huo, kisha uihariri.",
+      "refusedTeamUnreadable": "Mipangilio iliyohifadhiwa ya timu hii haiwezi kusomwa, kwa hivyo hakuna kilichobadilishwa."
     },
     "fields": {
       "colorOptional": "Rangi (hiari)",
@@ -417,6 +420,11 @@
       "member_other": "wanachama",
       "title": "Timu bado haijazinduliwa"
     },
+    "editDefinition": {
+      "loadFailed": "Imeshindwa kupakia mipangilio ya timu",
+      "notFound": "Mipangilio ya timu haikupatikana",
+      "memberNotFound": "Mwanachama huyu hayupo tena kwenye mipangilio ya timu. Fungua timu tena ili kuona wanachama wa sasa."
+    },
     "stopFailed": {
       "title": "Imeshindikana kusimamisha timu",
       "message": "Timu bado inaendelea. Angalia hali yake kisha ubofye Simamisha tena."
@@ -458,6 +466,7 @@
       "deleteTeam": "Futa timu",
       "editTeam": "Hariri timu",
       "editUnavailableProvisioning": "Hariri timu haipatikani wakati ugavi bado unaendelea",
+      "editUnavailableRunningProject": "Simamisha timu hii katika kila mradi ili uihariri",
       "openBuiltInEditor": "Fungua mradi katika kihariri kilichojengwa ndani",
       "openTeamGraph": "Fungua grafu ya timu",
       "stopTeam": "Simamisha timu",
@@ -2571,6 +2580,7 @@
       "allFlagsValid": "Bendera zote halali",
       "unknownFlags": "Zisizojulikana: {{flags}}",
       "protectedFlags": "Zilizolindwa: {{flags}}",
+      "missingValue": "Thamani inakosekana: {{flags}}",
       "failed": "Uthibitishaji umeshindwa"
     },
     "placeholders": {

@@ -68,6 +68,8 @@ export type PendingLeadSendMessage =
 export interface CrossTeamSendResultLike {
   deduplicated?: boolean;
   messageId: string;
+  /** The physical team that received it (a copy, for a per-project team). */
+  toTeam?: string;
 }
 
 export interface TeamProvisioningLeadSendMessageCaptureLogger {
@@ -319,7 +321,7 @@ function deliverCrossTeamLeadMessage(
         from: request.fromMember,
         to: recipient.startsWith('cross-team:')
           ? recipient
-          : `${request.toTeam}.${request.toMember}`,
+          : `${result.toTeam ?? request.toTeam}.${request.toMember}`,
         text: request.text,
         timestamp: request.timestamp,
         read: true,

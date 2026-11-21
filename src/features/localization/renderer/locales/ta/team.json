@@ -260,7 +260,10 @@
       "settingsSavedMembersFailed": "Team அமைப்புகள் சேமிக்கப்பட்டன, ஆனால் உறுப்பினர் மாற்றங்கள் தோல்வியடைந்தன: {{message}}",
       "settingsSavedRefreshFailed": "Team அமைப்புகள் சேமிக்கப்பட்டன, ஆனால் சமீபத்திய காட்சியைப் புதுப்பிக்க முடியவில்லை: {{message}}",
       "teamNameEmpty": "Team பெயர் காலியாக இருக்க முடியாது",
-      "unsupportedMixedPrimaryMutation": "கலப்பு OpenCode teams இல் primary-owned teammates க்கான live edits இன்னும் ஆதரிக்கப்படவில்லை. team ஐ நிறுத்தி, roster ஐத் திருத்தி, பிறகு மீண்டும் தொடங்கவும். பாதிக்கப்பட்டது: {{names}}"
+      "unsupportedMixedPrimaryMutation": "கலப்பு OpenCode teams இல் primary-owned teammates க்கான live edits இன்னும் ஆதரிக்கப்படவில்லை. team ஐ நிறுத்தி, roster ஐத் திருத்தி, பிறகு மீண்டும் தொடங்கவும். பாதிக்கப்பட்டது: {{names}}",
+      "refusedProjectCopy": "இது ஒரு குழுவின் திட்ட நகல். அதன் அமைப்புகளைக் குழுவிலேயே மாற்றுங்கள்.",
+      "refusedProjectUnreconciled": "இந்தக் குழுவின் ஒரு திட்டம் இன்னும் தயாராகிக்கொண்டிருக்கிறது, அல்லது அதன் கடைசித் தொடக்கம் இடையில் நின்றது. அந்தத் திட்டத்தில் குழுவை மீண்டும் தொடங்கி, பிறகு திருத்துங்கள்.",
+      "refusedTeamUnreadable": "இந்தக் குழுவின் சேமித்த அமைப்புகளைப் படிக்க முடியவில்லை, எனவே எதுவும் மாற்றப்படவில்லை."
     },
     "fields": {
       "colorOptional": "நிறம் (விருப்பத்திற்குரியது)",
@@ -417,6 +420,11 @@
       "member_other": "உறுப்பினர்கள்",
       "title": "Team இன்னும் தொடங்கப்படவில்லை"
     },
+    "editDefinition": {
+      "loadFailed": "குழு அமைப்புகளை ஏற்ற முடியவில்லை",
+      "notFound": "குழு அமைப்புகள் கிடைக்கவில்லை",
+      "memberNotFound": "இந்த உறுப்பினர் இனி குழு அமைப்புகளில் இல்லை. தற்போதைய உறுப்பினர்களைக் காண குழுவை மீண்டும் திறக்கவும்."
+    },
     "stopFailed": {
       "title": "குழுவை நிறுத்த முடியவில்லை",
       "message": "குழு இன்னும் இயங்குகிறது. அதன் நிலையைச் சரிபார்த்து மீண்டும் நிறுத்து என்பதை அழுத்தவும்."
@@ -458,6 +466,7 @@
       "deleteTeam": "team ஐ நீக்கு",
       "editTeam": "team ஐ திருத்து",
       "editUnavailableProvisioning": "provisioning இன்னும் முன்னேற்றத்தில் இருக்கும்போது team ஐ திருத்துவது கிடைக்காது",
+      "editUnavailableRunningProject": "திருத்த, ஒவ்வொரு திட்டத்திலும் இந்தக் குழுவை நிறுத்துங்கள்",
       "openBuiltInEditor": "project ஐ உள்ளமைந்த editor இல் திற",
       "openTeamGraph": "team graph ஐத் திற",
       "stopTeam": "team ஐ நிறுத்து",
@@ -2569,6 +2578,7 @@
       "allFlagsValid": "அனைத்து flags உம் செல்லுபடியாகும்",
       "unknownFlags": "தெரியாதது: {{flags}}",
       "protectedFlags": "பாதுகாக்கப்பட்டது: {{flags}}",
+      "missingValue": "மதிப்பு இல்லை: {{flags}}",
       "failed": "சரிபார்ப்பு தோல்வியடைந்தது"
     },
     "placeholders": {

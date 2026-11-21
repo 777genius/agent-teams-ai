@@ -1,3 +1,4 @@
+import type { KanbanState } from './kanbanReviewFlow';
 import type { NotificationTarget, TeamEventType } from './notifications';
 import type { OpenCodeStopHandshakeFailureFacts } from './openCodeStopHandshakeFailure';
 import type { TaskRef } from './teamBoardTask';
@@ -12,6 +13,7 @@ import type {
 import type { GroupChatEnvelope } from '@features/team-group-chats/contracts';
 import type { TeamManagementCommittedChange } from '@features/team-prompt-management/contracts';
 
+export type * from './kanbanReviewFlow';
 export type * from './teamBoardTask';
 export type * from './teamProvisioning';
 export type {
@@ -22,6 +24,8 @@ export type {
   ImageMimeType,
   NativeAttachmentDeliveryEnvelope,
 } from '@features/agent-attachments/contracts';
+
+export type TeamProjectContextMode = 'shared' | 'per_project';
 
 export interface TeamMember {
   name: string;
@@ -45,7 +49,6 @@ export interface TeamMember {
 }
 
 export type TeamMemberMcpScope = 'user' | 'project' | 'local';
-
 export type TeamMemberMcpMode = 'inheritLead' | 'inheritScopes' | 'strictAllowlist' | 'appOnly';
 
 export interface TeamMemberMcpPolicy {
@@ -73,6 +76,8 @@ export interface TeamUpdateConfigRequest {
   description?: string;
   color?: string;
   language?: string;
+  /** Saved lead instructions (team.meta.json), used by the next launch. */
+  prompt?: string;
 }
 
 export interface TeamSummaryMember {
@@ -85,6 +90,18 @@ export interface TeamSummaryMember {
 
 export interface TeamSummary {
   teamName: string;
+  /** Absent on old/foreign teams; never interpret as an isolated history. */
+  projectContextMode?: TeamProjectContextMode;
+  /** Verified, ready native histories folded into this logical row. For reads only, not authorization. */
+  projectHistoryContexts?: readonly {
+    executionTeamName: string;
+    projectPath: string;
+    /** Native teammate count, absent until the owned physical summary is available. */
+    memberCount?: number;
+    /** Native session associations, retained only for verified physical histories. */
+    leadSessionId?: string;
+    sessionHistory?: readonly string[];
+  }[];
   displayName: string;
   description: string;
   color?: string;
@@ -130,8 +147,7 @@ export interface TeamSummary {
 }
 
 export type TeamTaskStatus = 'pending' | 'in_progress' | 'completed' | 'deleted';
-export type TeamReviewState = 'none' | 'review' | 'needsFix' | 'approved';
-
+export type TeamReviewState = 'none' | 'review' | 'needsFix' | 'reviewed' | 'approved';
 export interface TaskWorkInterval {
   /** ISO timestamp when task entered in_progress */
   startedAt: string;
@@ -181,6 +197,10 @@ export interface TaskReviewRequestedEvent extends TaskHistoryEventBase {
   to: 'review';
   reviewer?: string;
   note?: string;
+  /** Set on the second review cycle of the lead_then_human flow: the lead signs off after the reviewer. */
+  stage?: 'lead_signoff';
+  /** The reviewer's request this lead sign-off follows. */
+  afterReviewRequestId?: string;
 }
 
 export interface TaskReviewChangesRequestedEvent extends TaskHistoryEventBase {
@@ -189,12 +209,27 @@ export interface TaskReviewChangesRequestedEvent extends TaskHistoryEventBase {
   to: 'needsFix';
   note?: string;
 }
-
 export interface TaskReviewApprovedEvent extends TaskHistoryEventBase {
   type: 'review_approved';
   from: TeamReviewState;
   to: 'approved';
   note?: string;
+}
+
+export interface TaskHumanApprovedEvent extends TaskHistoryEventBase {
+  type: 'human_approved';
+  from: TeamReviewState;
+  to: 'approved';
+}
+
+export interface TaskReviewCompletedEvent extends TaskHistoryEventBase {
+  type: 'review_completed';
+  from: 'review';
+  to: 'reviewed';
+  reviewRequestId: string;
+  note?: string;
+  /** lead_then_human only: why the lead's sign-off stage was skipped for this cycle. */
+  leadSignoffSkipped?: 'actor_is_lead' | 'work_by_lead' | 'no_lead';
 }
 
 export interface TaskReviewStartedEvent extends TaskHistoryEventBase {
@@ -210,6 +245,8 @@ export type TaskHistoryEvent =
   | TaskReviewRequestedEvent
   | TaskReviewChangesRequestedEvent
   | TaskReviewApprovedEvent
+  | TaskReviewCompletedEvent
+  | TaskHumanApprovedEvent
   | TaskReviewStartedEvent;
 
 export type TaskCommentType = 'regular' | 'review_request' | 'review_approved';
@@ -243,7 +280,6 @@ export interface SourceMessageSnapshot {
   /** IDs classified as generic file references in the original message. */
   fileReferenceIds?: string[];
 }
-
 export type InboxMessageKind =
   | 'default'
   | 'slash_command'
@@ -404,7 +440,6 @@ export interface ToolCallMeta {
   /** Optional runtime tool_use identifier when available. */
   toolUseId?: string;
 }
-
 export type ToolActivitySource = 'runtime' | 'member_log' | 'inbox';
 export type ToolActivityState = 'running' | 'complete' | 'error';
 
@@ -649,7 +684,6 @@ export interface QueuedUserMessageSummary {
   timestamp: string;
   summary?: string;
 }
-
 export interface QueuedUserMessagesSnapshot {
   member: string;
   messages: QueuedUserMessageSummary[];
@@ -683,27 +717,6 @@ export type TeamLaunchAggregateState =
   | 'partial_skipped';
 export type PersistedTeamLaunchPhase = 'active' | 'finished' | 'reconciled';
 
-export type KanbanColumnId = 'todo' | 'in_progress' | 'done' | 'review' | 'approved';
-
-export interface KanbanTaskState {
-  column: Extract<KanbanColumnId, 'review' | 'approved'>;
-  reviewer?: string | null;
-  errorDescription?: string;
-  movedAt: string;
-}
-
-export interface KanbanState {
-  teamName: string;
-  reviewers: string[];
-  tasks: Record<string, KanbanTaskState>;
-  /** Порядок id задач по колонкам для отображения на канбан-доске (drag-and-drop). */
-  columnOrder?: Partial<Record<KanbanColumnId, string[]>>;
-}
-
-export type UpdateKanbanPatch =
-  | { op: 'set_column'; column: Extract<KanbanColumnId, 'review' | 'approved'> }
-  | { op: 'remove' }
-  | { op: 'request_changes'; comment?: string; taskRefs?: TaskRef[] };
 export interface ResolvedTeamMember extends Pick<TeamMember, 'joinedAt'>, NativeMemberCapability {
   name: string;
   agentId?: string;
@@ -857,7 +870,6 @@ export type TeamProviderBackendId =
   | 'opencode-cli';
 export type ProviderBillingMode = 'api' | 'subscription' | 'free' | 'unknown';
 export type TeamFastMode = 'inherit' | 'on' | 'off';
-
 export interface ProviderModelLaunchIdentity {
   providerId: TeamProviderId;
   providerBackendId: TeamProviderBackendId | null;
@@ -946,7 +958,6 @@ export interface LeadActivitySnapshot {
   state: LeadActivityState;
   runId: string | null;
 }
-
 export interface LeadContextUsage {
   /** Prompt-side tokens currently occupying the context window. */
   promptInputTokens: number | null;
@@ -1003,7 +1014,6 @@ export interface OpenCodeAppManagedBootstrapCandidate {
 export type OpenCodeBootstrapEvidenceSource = 'runtime_bootstrap_checkin' | 'app_managed_bootstrap';
 
 export type OpenCodeBootstrapMode = 'model_tool_checkin' | 'app_managed_context';
-
 export interface PersistedTeamLaunchMemberState {
   name: string;
   providerId?: TeamProviderId;
@@ -1100,7 +1110,6 @@ export interface RetryFailedOpenCodeSecondaryLanesResult {
 export type MemberSpawnLivenessSource = 'heartbeat' | 'process';
 
 export type TeamAgentRuntimeBackendType = 'lead' | 'tmux' | 'iterm2' | 'in-process' | 'process';
-
 export type TeamAgentRuntimeLivenessKind =
   | 'confirmed_bootstrap'
   | 'runtime_process'
@@ -1189,7 +1198,6 @@ export interface TeamAgentRuntimeSnapshot {
   fastMode?: TeamFastMode;
   members: Record<string, TeamAgentRuntimeEntry>;
 }
-
 export interface TeamChangeEvent {
   management?: TeamManagementCommittedChange;
   type:
@@ -1322,25 +1330,11 @@ export interface TeamProvisioningMemberInput {
   mcpPolicy?: TeamMemberMcpPolicy;
 }
 
-export type TeamWorktreeGitBlockReason =
-  | 'invalid_project_path'
-  | 'not_git_repo'
-  | 'missing_head'
-  | 'git_unavailable'
-  | 'git_error';
-
-export interface TeamWorktreeGitStatus {
-  projectPath: string;
-  isGitRepo: boolean;
-  hasHead: boolean;
-  canUseWorktrees: boolean;
-  rootPath?: string;
-  branch?: string;
-  reason?: TeamWorktreeGitBlockReason;
-  message?: string;
-}
+export type { TeamWorktreeGitBlockReason, TeamWorktreeGitStatus } from './teamWorktree';
 
 export interface TeamCreateRequest extends TeamProvisioningTypes.LocalModelLaunchOptions {
+  /** New logical teams default to per-project history; missing legacy stored mode means shared. */
+  projectContextMode?: TeamProjectContextMode;
   /** Read-only saved defaults token returned by getSavedRequest. */
   savedSettingsFingerprint?: string;
   teamName: string;
@@ -1367,6 +1361,7 @@ export interface TeamCreateRequest extends TeamProvisioningTypes.LocalModelLaunc
 
 export interface TeamCreateConfigRequest extends TeamProvisioningTypes.RuntimeSelectionVersioned {
   teamName: string;
+  projectContextMode?: TeamProjectContextMode;
   displayName?: string;
   description?: string;
   color?: string;
@@ -1432,7 +1427,6 @@ export interface TeamProvisioningSupportDiagnostic {
   copyText: string;
   createdAt: string;
 }
-
 export interface TeamProvisioningPrepareResult {
   ready: boolean;
   message: string;
@@ -1530,7 +1524,6 @@ export interface GlobalTask extends TeamTaskWithKanban {
   /** True when the parent team has been soft-deleted. */
   teamDeleted?: boolean;
 }
-
 export interface MemberSubagentSummary {
   subagentId: string;
   sessionId: string;
@@ -1582,7 +1575,6 @@ export type MemberLogSummary =
   | MemberSubagentLogSummary
   | MemberLeadSessionLogSummary
   | MemberSessionLogSummary;
-
 export interface FileLineStats {
   added: number;
   removed: number;
@@ -1694,7 +1686,6 @@ export interface CrossTeamTargetMember {
   role?: string;
   color?: string;
 }
-
 export interface CrossTeamTarget {
   teamName: string;
   displayName: string;

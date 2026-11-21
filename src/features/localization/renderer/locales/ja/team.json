@@ -260,7 +260,10 @@
       "settingsSavedMembersFailed": "チームの設定は保存されていましたが、メンバーの変更は失敗しました:{{message}}",
       "settingsSavedRefreshFailed": "チーム設定は保存されましたが、最新のビューをリフレッシュできませんでした: {{message}}",
       "teamNameEmpty": "チーム名を空にすることはできません",
-      "unsupportedMixedPrimaryMutation": "混合されたOpenCodeチームで、プライマリ所有のチームメイトへのライブ編集はまだサポートされていません。 チームを停止し、ロスターを編集し、その後、再起動します。 影響される: {{names}}"
+      "unsupportedMixedPrimaryMutation": "混合されたOpenCodeチームで、プライマリ所有のチームメイトへのライブ編集はまだサポートされていません。 チームを停止し、ロスターを編集し、その後、再起動します。 影響される: {{names}}",
+      "refusedProjectCopy": "これはチームのプロジェクト用コピーです。設定はチーム本体で変更してください。",
+      "refusedProjectUnreconciled": "このチームのプロジェクトがまだ準備中か、前回の起動が中断されました。そのプロジェクトでチームをもう一度起動してから編集してください。",
+      "refusedTeamUnreadable": "このチームの保存済み設定を読み取れないため、何も変更されていません。"
     },
     "fields": {
       "colorOptional": "色(任意)",
@@ -417,6 +420,11 @@
       "member_other": "メンバー",
       "title": "チームはまだ起動しません"
     },
+    "editDefinition": {
+      "loadFailed": "チームの設定を読み込めませんでした",
+      "notFound": "チームの設定が見つかりませんでした",
+      "memberNotFound": "このメンバーはもうチームの設定にいません。現在のメンバーを見るにはチームを開き直してください。"
+    },
     "stopFailed": {
       "title": "チームを停止できません",
       "message": "チームはまだ実行中です。状態を確認して、もう一度「停止」を押してください。"
@@ -458,6 +466,7 @@
       "deleteTeam": "チーム削除",
       "editTeam": "チーム編集",
       "editUnavailableProvisioning": "暫定中にチームを編集することは利用できません。",
+      "editUnavailableRunningProject": "編集するには、すべてのプロジェクトでこのチームを停止してください",
       "openBuiltInEditor": "組み込みエディタでプロジェクトを開く",
       "openTeamGraph": "チームグラフを開く",
       "stopTeam": "チームの停止",
@@ -2569,6 +2578,7 @@
       "allFlagsValid": "すべてのフラグが有効",
       "unknownFlags": "不明: {{flags}}",
       "protectedFlags": "保護: {{flags}}",
+      "missingValue": "値がありません: {{flags}}",
       "failed": "検証失敗"
     },
     "placeholders": {

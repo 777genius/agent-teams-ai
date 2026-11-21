@@ -43,6 +43,24 @@ export interface EditableMemberSettings {
   mcpPolicy: MemberSettingsMcpPolicy | null;
 }
 
+/**
+ * The saved settings of one member as the settings mutation compares them
+ * (its fingerprint is taken from these fields). Read for a team whose members
+ * have no runtime snapshot, such as the definition of a per-project team.
+ */
+export interface MemberSettingsTarget {
+  name: string;
+  agentType: string | null;
+  agentId: string | null;
+  joinedAt: number | string | null;
+  settings: EditableMemberSettings;
+}
+
+export interface GetMemberSettingsTargetRequest {
+  teamName: string;
+  memberName: string;
+}
+
 export type UpdateMemberSettingsEffect =
   | 'no_changes'
   | 'persisted_only'
@@ -70,6 +88,22 @@ export type UpdateMemberSettingsRequest = UpdateMemberSettingsRequestBase &
       }
   );
 
+/**
+ * Why the main process refused a member settings change before anything was
+ * written. A stable code, so the app can explain it in the user's language.
+ * - `project_copy`: the team is the project copy of another team;
+ * - `project_running`, `project_launching`, `project_unreconciled`: a team
+ *   with separate history per project is edited only while every project is
+ *   stopped, and one is running, starting or stopping, or was interrupted;
+ * - `team_metadata_unreadable`: the team's saved settings cannot be read.
+ */
+export type MemberSettingsRefusalReason =
+  | 'project_copy'
+  | 'project_running'
+  | 'project_launching'
+  | 'project_unreconciled'
+  | 'team_metadata_unreadable';
+
 export type UpdateMemberSettingsResult =
   | {
       outcome: 'completed';
@@ -96,5 +130,13 @@ export type UpdateMemberSettingsResult =
       outcome: 'busy';
       teamName: string;
       memberName: string;
+      replayed: boolean;
+    }
+  | {
+      outcome: 'refused';
+      reason: MemberSettingsRefusalReason;
+      memberName: string;
+      /** English diagnostics for logs; the app shows the localized text of `reason`. */
+      message: string;
       replayed: boolean;
     };

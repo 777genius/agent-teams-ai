@@ -45,7 +45,7 @@ env:
 jobs:
   plan:
     name: ${{ github.event_name == 'pull_request' && github.event.action == 'edited' && !github.event.changes.base && (github.event.changes.title || github.event.changes.body) && 'Metadata CI plan' || 'plan' }}
-    runs-on: ${{ vars.CI_LINUX_RUNNER || 'ubicloud-standard-4' }}
+    runs-on: ${{ vars.CI_LINUX_RUNNER || 'ubuntu-latest' }}
     outputs:
       scope: ${{ steps.plan.outputs.scope }}
       full: ${{ steps.plan.outputs.full }}
@@ -69,7 +69,7 @@ jobs:
         id: plan
         env:
           GH_TOKEN: ${{ github.token }}
-          CI_LINUX_RUNNER: ${{ vars.CI_LINUX_RUNNER || 'ubicloud-standard-4' }}
+          CI_LINUX_RUNNER: ${{ vars.CI_LINUX_RUNNER || 'ubuntu-latest' }}
         run: |
           node --test test/scripts/ciOptionalWorkflows.test.mts
           node scripts/ci/ci-feedback.mts plan
@@ -81,7 +81,7 @@ jobs:
       ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
     needs: plan
     if: needs.plan.outputs.full == 'false' && needs.plan.outputs.metadata == 'false'
-    runs-on: ${{ vars.CI_LINUX_RUNNER || 'ubicloud-standard-4' }}
+    runs-on: ${{ vars.CI_LINUX_RUNNER || 'ubuntu-latest' }}
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -115,7 +115,7 @@ jobs:
       ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
     needs: plan
     if: needs.plan.outputs.full == 'true' && needs.plan.outputs.scope == 'full'
-    runs-on: ${{ vars.CI_LINUX_RUNNER || 'ubicloud-standard-4' }}
+    runs-on: ${{ vars.CI_LINUX_RUNNER || 'ubuntu-latest' }}
 
     steps:
       - name: Checkout
@@ -177,14 +177,14 @@ jobs:
     name: ${{ github.event_name == 'pull_request' && github.event.action == 'edited' && (needs.plan.result != 'success' || needs.plan.outputs.metadata != 'false') && 'Metadata test' || 'test' }} (${{ matrix.shard }}/4)
     needs: plan
     if: needs.plan.outputs.full == 'true' && (needs.plan.outputs.scope == 'full' || needs.plan.outputs.scope == 'source') && needs.plan.outputs.reuse != 'true'
-    runs-on: ${{ vars.CI_LINUX_RUNNER || 'ubicloud-standard-4' }}
+    runs-on: ${{ vars.CI_LINUX_RUNNER || 'ubuntu-latest' }}
     strategy:
       fail-fast: false
       matrix:
         shard: [1, 2, 3, 4]
 
     steps:
-      - name: "CI runner proof: ${{ runner.os }} | ${{ runner.arch }} | ${{ vars.CI_LINUX_RUNNER || 'ubicloud-standard-4' }}"
+      - name: "CI runner proof: ${{ runner.os }} | ${{ runner.arch }} | ${{ vars.CI_LINUX_RUNNER || 'ubuntu-latest' }}"
         run: echo 'Runner identity recorded in job metadata'
       - name: Checkout
         uses: actions/checkout@v6
@@ -266,7 +266,7 @@ jobs:
     name: ${{ github.event_name == 'pull_request' && github.event.action == 'edited' && (needs.plan.result != 'success' || needs.plan.outputs.metadata != 'false') && 'Metadata lint' || 'lint' }} (${{ matrix.scope }})
     needs: plan
     if: needs.plan.outputs.full == 'true' && needs.plan.outputs.scope == 'full' && needs.plan.outputs.reuse != 'true'
-    runs-on: ${{ vars.CI_LINUX_RUNNER || 'ubicloud-standard-4' }}
+    runs-on: ${{ vars.CI_LINUX_RUNNER || 'ubuntu-latest' }}
     strategy:
       fail-fast: false
       matrix:
@@ -279,7 +279,7 @@ jobs:
             paths: src/features
 
     steps:
-      - name: "CI runner proof: ${{ runner.os }} | ${{ runner.arch }} | ${{ vars.CI_LINUX_RUNNER || 'ubicloud-standard-4' }}"
+      - name: "CI runner proof: ${{ runner.os }} | ${{ runner.arch }} | ${{ vars.CI_LINUX_RUNNER || 'ubuntu-latest' }}"
         run: echo 'Runner identity recorded in job metadata'
       - name: Checkout
         uses: actions/checkout@v6
@@ -363,7 +363,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           MODE_REUSE: ${{ needs.plan.outputs.reuse }}
           SOURCE_RUN: ${{ needs.plan.outputs.source_run }}
-          CI_LINUX_RUNNER: ${{ vars.CI_LINUX_RUNNER || 'ubicloud-standard-4' }}
+          CI_LINUX_RUNNER: ${{ vars.CI_LINUX_RUNNER || 'ubuntu-latest' }}
           CI_LINUX_IMAGE: ${{ needs.plan.outputs.image }}
           CI_LINUX_ARCH: ${{ needs.plan.outputs.linux_arch }}
         run: node scripts/ci/ci-feedback.mts windows
@@ -438,7 +438,7 @@ jobs:
     name: Focused documentation and asset validation
     needs: plan
     if: needs.plan.outputs.full == 'true' && (needs.plan.outputs.scope == 'docs' || needs.plan.outputs.scope == 'assets' || needs.plan.outputs.scope == 'dmg')
-    runs-on: ${{ vars.CI_LINUX_RUNNER || 'ubicloud-standard-4' }}
+    runs-on: ${{ vars.CI_LINUX_RUNNER || 'ubuntu-latest' }}
     steps:
       - uses: actions/checkout@v6
         with:
@@ -463,7 +463,7 @@ jobs:
       ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
     needs: plan
     if: needs.plan.outputs.full == 'true' && needs.plan.outputs.scope == 'source'
-    runs-on: ${{ vars.CI_LINUX_RUNNER || 'ubicloud-standard-4' }}
+    runs-on: ${{ vars.CI_LINUX_RUNNER || 'ubuntu-latest' }}
     steps:
       - uses: actions/checkout@v6
       - uses: pnpm/action-setup@v6
@@ -511,7 +511,7 @@ jobs:
     name: Full qualification
     needs: [plan, validate, test, lint, task-change-ledger-windows, focused, source, dmg-artwork]
     if: always() && !cancelled()
-    runs-on: ${{ vars.CI_LINUX_RUNNER || 'ubicloud-standard-4' }}
+    runs-on: ${{ vars.CI_LINUX_RUNNER || 'ubuntu-latest' }}
     steps:
       - name: Checkout
         uses: actions/checkout@v6
