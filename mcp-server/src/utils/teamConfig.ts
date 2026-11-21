@@ -70,23 +70,48 @@ export function assertConfiguredTeam(teamName: string, claudeDir?: string): void
   }
 }
 
-function appUnreachableMessage(teamName: string): string {
-  return (
-    `Team "${teamName}" keeps a separate history per project. Its board in a project is chosen by ` +
-    'the Agent Teams app, which could not be reached. Start the app, or use the exact name of the ' +
-    'project team (projectHistoryContexts of team_list).'
-  );
+/**
+ * A team the app may resolve to a project copy: its metadata says it keeps a separate history per
+ * project, or the file is there but unreadable (the app then refuses with
+ * `TEAM_METADATA_UNREADABLE` instead of this server guessing an unknown team).
+ */
+function mayKeepProjectHistory(metaPath: string): boolean {
+  const meta = readJsonObject(metaPath);
+  return meta ? isPerProjectTeamMeta(meta) : fs.existsSync(metaPath);
+}
+
+function appUnreachableMessage(teamName: string, configured: boolean): string {
+  return configured
+    ? `projectPath was given for team "${teamName}", but the Agent Teams app, which checks it, ` +
+        'could not be reached. Start the app, or call without projectPath.'
+    : `Team "${teamName}" keeps a separate history per project. Its board in a project is chosen ` +
+        'by the Agent Teams app, which could not be reached. Start the app, or use the exact name ' +
+        'of the project team (projectHistoryContexts of team_list).';
+}
+
+/**
+ * MCP clients only see the text of a tool error, not its fields: a refusal of the app starts with
+ * its code, `[PROJECT_REQUIRED] ...`, so a client can act on it. The `code` field is kept.
+ */
+function withCodeInMessage(error: unknown): unknown {
+  const code = (error as { code?: unknown } | null)?.code;
+  if (!(error instanceof Error) || typeof code !== 'string' || !/^[A-Z][A-Z_]+$/.test(code)) {
+    return error;
+  }
+  return Object.assign(new Error(`[${code}] ${error.message}`), { code });
 }
 
 /**
  * The team whose board a board tool works on: one rule for every board tool, applied where the
  * tools are registered (`tools/projectBoard.ts`).
  *
- * - A configured team (an ordinary team, or a project copy named exactly) is itself; `projectPath`
- *   is ignored and the app is not asked, so these teams behave exactly as before.
+ * - A configured team (an ordinary team, or a project copy named exactly) without `projectPath` is
+ *   itself and the app is not asked, so these calls behave exactly as before.
+ * - With `projectPath`, the app checks it: an ordinary team keeps one history for every project;
+ *   a project copy must be the copy of that project and its launch must have finished.
  * - A team that keeps a separate history per project has no board of its own: the app resolves it
- *   with `projectPath` to its ready copy for that project, or refuses with what to do (the
- *   controller passes the refusal on with its `code`). No copy is ever created here.
+ *   with `projectPath` to its ready copy for that project, or refuses with a code and what to do.
+ *   No copy is ever created here.
  * - Anything else is an unknown team, as before.
  */
 export async function resolveBoardTeam(
@@ -95,13 +120,23 @@ export async function resolveBoardTeam(
   projectPath?: string
 ): Promise<string> {
   const { configPath, metaPath } = resolveTeamPaths(teamName, claudeDir);
-  if (isConfiguredTeamConfig(readJsonObject(configPath))) return teamName;
-  if (!isPerProjectTeamMeta(readJsonObject(metaPath))) {
+  const configured = isConfiguredTeamConfig(readJsonObject(configPath));
+  if (configured && !projectPath) return teamName;
+  if (!configured && !mayKeepProjectHistory(metaPath)) {
     throw new Error(unknownTeamMessage(teamName));
   }
-  const target = await getController(teamName, claudeDir).runtime.getBoardTarget(projectPath);
-  if (target === null) throw new Error(appUnreachableMessage(teamName));
+  let target: Record<string, unknown> | null;
+  try {
+    target = await getController(teamName, claudeDir).appRouting.getBoardTarget(projectPath);
+  } catch (error) {
+    throw withCodeInMessage(error);
+  }
+  if (target === null) throw new Error(appUnreachableMessage(teamName, configured));
   const board = typeof target.teamName === 'string' ? target.teamName : '';
+  if (configured) {
+    if (board !== teamName) throw new Error(`The app named another board for team "${teamName}"`);
+    return teamName;
+  }
   // The app no longer sees a per-project team under this name: it has no board.
   if (!board || board === teamName) throw new Error(unknownTeamMessage(teamName));
   assertConfiguredTeam(board, claudeDir);

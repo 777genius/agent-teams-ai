@@ -1,25 +1,22 @@
-import { listOwnedContexts } from './ownedHistory';
-import { readTeamProjectContextMode } from './projectContextMode';
+import { getErrorMessage } from '@shared/utils/errorHandling';
+
+import {
+  createProjectCopyPorts,
+  findProjectCopyOwners,
+  projectContextModeOf,
+  ProjectContextRefusalError,
+  ProjectCopyUnavailableError,
+  resolveReadyProjectCopy,
+  withProjectCopyRefusal,
+} from './projectCopyRouting';
 
 import type { TeamModeMetaReader } from './projectContextMode';
-import type {
-  PersistedTeamWorkContext,
-  TeamProjectContextRegistry,
-} from './TeamProjectContextRegistry';
-import type { TeamProjectContextMode } from '@shared/types';
+import type { ProjectCopyPorts, ProjectCopyRefusal } from './projectCopyRouting';
+import type { PersistedTeamWorkContext } from './TeamProjectContextRegistry';
 
 const UNREADABLE_MESSAGE = 'Team metadata is unreadable; refusing to choose the board of a project';
 
-export interface ProjectBoardPorts {
-  getMode(teamName: string): Promise<TeamProjectContextMode>;
-  /** The context of a team for one project, a pending one included. Never creates one. */
-  inspectContext(
-    logicalTeamName: string,
-    projectPath: string
-  ): Promise<PersistedTeamWorkContext | null>;
-  /** Every context the team owns; only used to name the projects in a refusal. */
-  listContexts(logicalTeamName: string): Promise<readonly PersistedTeamWorkContext[]>;
-}
+export type ProjectBoardPorts = ProjectCopyPorts;
 
 export interface ProjectBoardRequest {
   teamName: string;
@@ -30,34 +27,27 @@ export interface ProjectBoardRequest {
 export interface ProjectBoardTarget {
   /** The physical team whose board (tasks, inboxes, kanban, processes) is used. */
   teamName: string;
-  /** Set when the requested name was a per-project team, resolved to one of its copies. */
+  /** Set when the board is a project copy: the team it belongs to and its project. */
   logicalTeamName?: string;
   projectPath?: string;
 }
 
-export type ProjectBoardRefusal =
-  | 'PROJECT_REQUIRED'
-  | 'NO_PROJECT_HISTORY'
-  | 'PROJECT_LAUNCH_PENDING'
-  | 'UNRESOLVED';
+export type ProjectBoardRefusal = ProjectCopyRefusal | 'PROJECT_REQUIRED' | 'PROJECT_MISMATCH';
 
 /** A board that cannot be chosen; the text says what to do instead. */
-export class ProjectBoardTargetError extends Error {
-  /** Understood by the HTTP error mapping. */
-  readonly statusCode = 409;
-
-  constructor(
-    readonly code: ProjectBoardRefusal,
-    message: string
-  ) {
-    super(message);
-    this.name = 'ProjectBoardTargetError';
-  }
+export class ProjectBoardTargetError extends ProjectContextRefusalError<ProjectBoardRefusal> {
+  override name = 'ProjectBoardTargetError';
 }
 
-function reasonOf(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
-}
+/** What a caller of a board tool does about a copy that cannot be used now. */
+const NEXT_STEP: Record<ProjectCopyRefusal, string> = {
+  NO_PROJECT_HISTORY:
+    'Launch it in that project first (team_launch with this cwd, or in the app), then call again.',
+  PROJECT_LAUNCH_PENDING: 'Call again when the launch has finished.',
+  PROJECT_LAUNCH_INCOMPLETE:
+    'Launch it again in that project (team_launch with this cwd, or in the app), then call again.',
+  UNRESOLVED: '',
+};
 
 async function projectRequiredMessage(ports: ProjectBoardPorts, teamName: string): Promise<string> {
   const head =
@@ -78,52 +68,53 @@ async function projectRequiredMessage(ports: ProjectBoardPorts, teamName: string
   return `${head}: ${projects.join(', ')}.`;
 }
 
-/**
- * The one rule for which physical team holds the board an MCP board tool works on.
- *
- * - An ordinary team, and a project copy named exactly, is its own board; a project is ignored.
- * - A per-project team has no board of its own. Its board in a project is the ready copy for
- *   that project, never another project's; no copy is created to provide one. Without a project,
- *   a project without history or a launch still pending there, it refuses with what to do.
- *
- * Unreadable metadata (`TeamMetadataUnreadableError`) and an index that cannot be used fail closed.
- */
-export async function resolveProjectBoardTarget(
+/** A name with a project: only a project copy has a project of its own, and it must be that one. */
+async function exactNameInProject(
   ports: ProjectBoardPorts,
-  { teamName, projectPath }: ProjectBoardRequest
+  teamName: string,
+  projectPath: string
 ): Promise<ProjectBoardTarget> {
-  if ((await ports.getMode(teamName)) !== 'per_project') return { teamName };
+  const copy = (await findProjectCopyOwners(ports, [teamName]))(teamName);
+  // An ordinary team keeps one history for every project.
+  if (!copy) return { teamName };
+  const logicalTeamName = copy.logicalTeamName;
+  let named: PersistedTeamWorkContext | null;
+  try {
+    named = await ports.inspectContext(logicalTeamName, projectPath);
+  } catch (error) {
+    throw new ProjectCopyUnavailableError(
+      'UNRESOLVED',
+      `Cannot find the history of team "${logicalTeamName}" in project ${projectPath}: ${getErrorMessage(error)}`
+    );
+  }
+  if (named?.executionTeamName !== teamName) {
+    throw new ProjectBoardTargetError(
+      'PROJECT_MISMATCH',
+      `"${teamName}" is the history of team "${logicalTeamName}" in project ` +
+        `${copy.context.projectPath}, not in ${projectPath}. Call with teamName "${logicalTeamName}" ` +
+        'and this projectPath, or without projectPath.'
+    );
+  }
+  const context = await resolveReadyProjectCopy(ports, logicalTeamName, projectPath);
+  return { teamName, logicalTeamName, projectPath: context.projectPath };
+}
 
-  const project = projectPath?.trim();
-  if (!project) {
+async function boardTarget(
+  ports: ProjectBoardPorts,
+  request: ProjectBoardRequest
+): Promise<ProjectBoardTarget> {
+  const { teamName } = request;
+  const projectPath = request.projectPath?.trim() || undefined;
+  if ((await projectContextModeOf(ports, teamName)) !== 'per_project') {
+    return projectPath ? exactNameInProject(ports, teamName, projectPath) : { teamName };
+  }
+  if (!projectPath) {
     throw new ProjectBoardTargetError(
       'PROJECT_REQUIRED',
       await projectRequiredMessage(ports, teamName)
     );
   }
-  let context: PersistedTeamWorkContext | null;
-  try {
-    context = await ports.inspectContext(teamName, project);
-  } catch (error) {
-    throw new ProjectBoardTargetError(
-      'UNRESOLVED',
-      `Cannot find the history of team "${teamName}" in project ${project}: ${reasonOf(error)}`
-    );
-  }
-  if (!context) {
-    throw new ProjectBoardTargetError(
-      'NO_PROJECT_HISTORY',
-      `Team "${teamName}" has no history in project ${project} yet. ` +
-        'Launch it in that project first (team_launch with this cwd, or in the app), then call again.'
-    );
-  }
-  if (context.state !== 'ready') {
-    throw new ProjectBoardTargetError(
-      'PROJECT_LAUNCH_PENDING',
-      `Team "${teamName}" is being launched in project ${project}. ` +
-        'Call again when the launch has finished.'
-    );
-  }
+  const context = await resolveReadyProjectCopy(ports, teamName, projectPath);
   return {
     teamName: context.executionTeamName,
     logicalTeamName: teamName,
@@ -131,17 +122,40 @@ export async function resolveProjectBoardTarget(
   };
 }
 
-type BoardRegistry = Pick<TeamProjectContextRegistry, 'inspect' | 'list' | 'listRetained'>;
+/**
+ * The one rule for which physical team holds the board an MCP board tool works on.
+ *
+ * - A per-project team has no board of its own. Its board in a project is the ready copy for
+ *   that project (`resolveReadyProjectCopy`), never another project's; no copy is created to
+ *   provide one. Without a project it refuses (`PROJECT_REQUIRED`, naming the projects).
+ * - An ordinary team is its own board for every project.
+ * - A project copy named exactly is its own board. With a project it must be the copy of that
+ *   project (`PROJECT_MISMATCH` otherwise) and pass the same checks (pending launch, trash).
+ *
+ * Unreadable metadata (`TeamMetadataUnreadableError`) and an index that cannot be used fail closed.
+ */
+export function resolveProjectBoardTarget(
+  ports: ProjectBoardPorts,
+  request: ProjectBoardRequest
+): Promise<ProjectBoardTarget> {
+  return withProjectCopyRefusal(
+    () => boardTarget(ports, request),
+    NEXT_STEP,
+    (code, message) => new ProjectBoardTargetError(code, message)
+  );
+}
 
-/** The ports over any metadata store and registry; tests inject a temp-dir registry. */
+/**
+ * The ports over any metadata store and registry; tests inject a temp-dir registry.
+ * `isLaunching` tells a launch in flight from one that failed (see `resolveReadyProjectCopy`).
+ */
 export function createProjectBoardPorts(
   meta: TeamModeMetaReader,
-  registry: BoardRegistry
+  registry: Parameters<typeof createProjectCopyPorts>[1],
+  isLaunching?: (executionTeamName: string) => boolean
 ): ProjectBoardPorts {
-  return {
-    getMode: (teamName) => readTeamProjectContextMode(meta, teamName, UNREADABLE_MESSAGE),
-    inspectContext: (logicalTeamName, projectPath) =>
-      registry.inspect(logicalTeamName, projectPath),
-    listContexts: (logicalTeamName) => listOwnedContexts(registry, logicalTeamName, 'per_project'),
-  };
+  return createProjectCopyPorts(meta, registry, {
+    unreadableMessage: UNREADABLE_MESSAGE,
+    isLaunching,
+  });
 }

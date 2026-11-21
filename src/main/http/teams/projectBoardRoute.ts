@@ -6,7 +6,7 @@
  * `resolveProjectBoardTarget`.
  */
 import {
-  ProjectBoardTargetError,
+  ProjectContextRefusalError,
   TeamMetadataUnreadableError,
 } from '@features/team-project-context/main';
 import { getErrorMessage } from '@shared/utils/errorHandling';
@@ -24,7 +24,7 @@ const logger = createLogger('HTTP:projectBoard');
 
 export function registerProjectBoardRoute(
   app: FastifyInstance,
-  services: Pick<HttpServices, 'projectContext'>
+  services: Pick<HttpServices, 'projectContext' | 'projectTeamLaunch'>
 ): void {
   app.get<{ Params: { teamName: string }; Querystring: { projectPath?: unknown } }>(
     '/api/teams/:teamName/board-target',
@@ -42,10 +42,16 @@ export function registerProjectBoardRoute(
       }
       try {
         const projectContext = createProjectContextHttp(services.projectContext);
-        return reply.send(await projectContext.boardTarget(teamName, projectPath));
+        // A pending copy with a launch in flight is told from one whose launch failed; the port
+        // is only built when a pending copy is met.
+        const launchPort = services.projectTeamLaunch;
+        const isLaunching = launchPort
+          ? (name: string) => launchPort().isLaunching(name)
+          : undefined;
+        return reply.send(await projectContext.boardTarget(teamName, projectPath, isLaunching));
       } catch (error) {
         if (
-          error instanceof ProjectBoardTargetError ||
+          error instanceof ProjectContextRefusalError ||
           error instanceof TeamMetadataUnreadableError
         ) {
           return reply.code(409).send({ code: error.code, error: error.message });

@@ -35,8 +35,8 @@ This closes gaps 2 and 3 of the [parity matrix](./per-project-parity-matrix.md) 
 | `GET /api/teams` and MCP `team_list` | one row with its contexts, copies folded away (same as the in-app list) | copies of a folded team are not listed |
 | Organization map | one candidate; tasks of all contexts, each marked with the copy that owns it | not a candidate |
 | `GET /api/teams/:team/cross-team/targets` (MCP `cross_team_list_targets`) | a per-project team is listed under its own name; the team of a copy that asks is not | copies are not listed |
-| `GET /api/teams/:team/board-target?projectPath=` (every MCP board tool, see [below](#board-tools-over-mcp)) | the ready copy for `projectPath`, or 409 with the reason (`PROJECT_REQUIRED`, `NO_PROJECT_HISTORY`, `PROJECT_LAUNCH_PENDING`, `UNRESOLVED`, `TEAM_METADATA_UNREADABLE`); a shared team with retained contexts is its own board | the exact name (the MCP tools do not ask for a configured team at all) |
-| `GET /api/teams/:team/cross-team/recipient?toTeam=` (MCP `cross_team_send`) | the ready copy for the sender's project, or 409 with the reason (`NO_PROJECT_HISTORY`, `PROJECT_LAUNCH_PENDING`, `SENDER_PROJECT_UNKNOWN`, `SENDER_IS_PROJECT_TEAM`, `SAME_TEAM`, `UNRESOLVED`, `TEAM_METADATA_UNREADABLE`) | the exact name; a copy of the sender's own team (`SAME_TEAM`), one whose launch never finished (`PROJECT_LAUNCH_PENDING`) or one whose team is being deleted or moved to trash (`UNRESOLVED`) is refused. The controller treats any answer, a 404 included, as the app's; only an unreachable app keeps the old exact-name behaviour |
+| `GET /api/teams/:team/board-target?projectPath=` (every MCP board tool, see [below](#board-tools-over-mcp)) | the ready copy for `projectPath`, or 409 with the reason (`PROJECT_REQUIRED`, `NO_PROJECT_HISTORY`, `PROJECT_LAUNCH_PENDING`, `PROJECT_LAUNCH_INCOMPLETE`, `UNRESOLVED`, `TEAM_METADATA_UNREADABLE`); a shared team with retained contexts is its own board | the exact name; with a `projectPath`, a copy must be the copy of that project (`PROJECT_MISMATCH`) and pass the same checks |
+| `GET /api/teams/:team/cross-team/recipient?toTeam=` (MCP `cross_team_send`) | the ready copy for the sender's project, or 409 with the reason (`NO_PROJECT_HISTORY`, `PROJECT_LAUNCH_PENDING`, `PROJECT_LAUNCH_INCOMPLETE`, `SENDER_PROJECT_UNKNOWN`, `SENDER_IS_PROJECT_TEAM`, `SAME_TEAM`, `UNRESOLVED`, `TEAM_METADATA_UNREADABLE`) | the exact name; a copy of the sender's own team (`SAME_TEAM`), one whose launch has not finished (`PROJECT_LAUNCH_PENDING` while it runs, `PROJECT_LAUNCH_INCOMPLETE` after it failed) or one whose team is being deleted or moved to trash (`UNRESOLVED`) is refused. The controller treats any answer, a 404 included, as the app's; only an unreachable app keeps the old exact-name behaviour |
 
 ## Contract for MCP and HTTP clients
 
@@ -146,33 +146,41 @@ Everything that can be checked without the copy is checked **before anything is 
 
 ## Board tools over MCP
 
-The board tools are every MCP tool except the ones that address a team as a whole (`team_list`, `team_get`, `team_create`, `team_update`, `team_trash`, `app_get_connection_info`, `team_launch`, `team_stop`): `task_*`, `member_briefing`, `lead_briefing`, `review_*`, `kanban_*`, `message_send`, `group_chat_*`, `cross_team_*`, `process_*`, `member_work_sync_*` and the `runtime_*` bridge. They read and write the files of one physical team. Each takes an optional **`projectPath`**, and its team is resolved once, before the tool runs, by one rule (`resolveBoardTeam` in `mcp-server/src/utils/teamConfig.ts`, applied to every board tool where the tools are registered, `mcp-server/src/tools/projectBoard.ts`):
+The board tools are the tools of the catalog groups marked `projectBoard` (`agent-teams-controller/src/mcpToolCatalog.js`, `AGENT_TEAMS_PROJECT_BOARD_TOOL_NAMES`): `task_*`, `member_briefing`, `lead_briefing`, `review_*`, `kanban_*`, `message_send`, `group_chat_*`, `cross_team_*`, `process_*` and `member_work_sync_*`. They read and write the files of one physical team. Not board tools: the team as a whole (`team_*`, `app_get_connection_info`), `team_launch` / `team_stop`, and the `runtime_*` bridge, which agents call by their physical team name.
 
-| `teamName` | What the tool works on |
-| --- | --- |
-| a configured team (`config.json`): an ordinary team, a shared team, a project copy named exactly | itself, as before; `projectPath` is ignored and the app is not asked |
-| a team that keeps a separate history per project (no `config.json`, `team.meta.json` in `per_project` mode) | the board the app names: `GET /api/teams/:team/board-target?projectPath=` (controller `runtime.getBoardTarget`), which applies `resolveProjectBoardTarget` (`src/features/team-project-context/main/projectBoardTarget.ts`) |
-| anything else | refused as an unknown team, as before |
+Each board tool takes an optional **`projectPath`**, and its team is resolved once, before the tool runs, by one rule: `resolveBoardTeam` (`mcp-server/src/utils/teamConfig.ts`), applied to every board tool where the tools are registered (`withProjectBoards`, `mcp-server/src/tools/projectBoard.ts`). The tool then gets the physical team as its `teamName` and never sees `projectPath`.
 
-`resolveProjectBoardTarget` answers the ready copy of that project. It never creates or reserves a copy; it does not choose a project for the caller. Refusals (HTTP 409, the MCP error keeps `code`):
+| `teamName` | `projectPath` | What the tool works on |
+| --- | --- | --- |
+| a configured team (`config.json`) | none | itself, as before; the app is not asked |
+| a configured team | given | the app checks it: an ordinary team keeps one history for every project (works as before); a project copy must be the copy of that project (`PROJECT_MISMATCH` otherwise) whose launch has finished and whose team is not in the trash |
+| a team that keeps a separate history per project (no `config.json`; `team.meta.json` in `per_project` mode, or unreadable) | required | the ready copy of that project, as the app answers |
+| anything else | any | refused as an unknown team, as before |
+
+The app answers at `GET /api/teams/:team/board-target?projectPath=` (controller `appRouting.getBoardTarget`) with `resolveProjectBoardTarget` (`src/features/team-project-context/main/projectBoardTarget.ts`). It is built on the same primitive as cross-team delivery, `resolveReadyProjectCopy` (`main/projectCopyRouting.ts`): only a ready copy, never another project's, never a new one. Refusals answer HTTP 409 with `code`. **MCP clients only see the text of a tool error**, so the MCP server starts it with the code: `[PROJECT_REQUIRED] Team "..." keeps a separate history per project. ...` (the error object keeps `code` for programmatic callers of the controller).
 
 | Code | When | What to do |
 | --- | --- | --- |
-| `PROJECT_REQUIRED` | no `projectPath` | pass one; the message lists the projects the team has a finished launch in |
+| `PROJECT_REQUIRED` | a per-project team without `projectPath` | pass one; the message lists the projects with a finished launch |
+| `PROJECT_MISMATCH` | a project copy named with another project | use the team's name with that `projectPath`, or the copy without one |
 | `NO_PROJECT_HISTORY` | the team never ran in that project | `team_launch` with that `cwd` (or launch it in the app) first |
-| `PROJECT_LAUNCH_PENDING` | the copy of that project is still `reserved` (a launch in progress, or a first launch that failed) | finish the launch there |
-| `UNRESOLVED` | the contexts index cannot be used (damaged, being deleted, the team is in the trash) | the message says why |
+| `PROJECT_LAUNCH_PENDING` | the copy of that project is still `reserved` and a launch of it is running in the app (provisioning run) | call again when the launch has finished |
+| `PROJECT_LAUNCH_INCOMPLETE` | the copy is still `reserved` and no launch of it runs (it failed or was interrupted): waiting does not help | launch the team again in that project |
+| `UNRESOLVED` | the contexts index cannot be used (damaged, being deleted, the team in the trash) | the message says why |
 | `TEAM_METADATA_UNREADABLE` | the team metadata cannot be read | repair it in the app |
 
-A relative `projectPath` answers 400. When the app cannot be reached (no published control address, network error, timeout), a per-project team is refused with a message that says so; configured teams never ask, so they work without the app as before.
+A relative `projectPath` answers 400. When the app cannot be reached (no published control address, network error, timeout), a per-project team, and any call with `projectPath`, is refused with a message that says so; a configured team without `projectPath` never asks, so it works without the app as before.
 
 What the caller sees:
 
-- The tool runs as if it had been called with the copy's name: results that carry a team name (task refs, a briefing, a comment instruction) name the copy (`ptc-…`). That name works directly in later calls, without `projectPath`.
+- The tool runs as if it had been called with the copy's name: results that carry a team name (task refs, a briefing, a comment instruction) name the copy (`ptc-…`). That name works directly in later calls.
 - `cross_team_send` with a per-project team and `projectPath` sends from that project's copy, so a message to another per-project team is routed by that project, like a send from the copy's own lead.
 - The board does not depend on whether the copy runs: like the app's project screen, a stopped copy's board can be read and written.
+
+Cost: the optional field is on 44 tools and every agent of every team loads it. Measured with the zod JSON Schema of the tools: 81 characters per tool, 3,564 characters in all, roughly 0.9k to 1.2k tokens per agent (it was about twice that before the description was shortened and the four `runtime_*` tools were left out).
 
 Deliberately not done (fail closed):
 
 - No implicit project. The MCP server does not take the project from its own working directory or environment (an external client's MCP server runs wherever it was configured; the desktop binding carries the app instance, not a project), and it does not pick the only ready project of a team (the same call would change meaning once the team runs in a second project).
 - The project copy names still appear in results and in agent prompts (gap 8 of the parity matrix).
+- OpenCode runtime delivery of a cross-team message (`routeCrossTeamTargetInApp`) has no provisioning-run evidence, so a pending copy reads as `PROJECT_LAUNCH_PENDING` there even after a failed launch; the app composer, `SendMessage` of a lead, the controller (HTTP) and the board tools tell the two apart.

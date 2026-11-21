@@ -75,6 +75,12 @@ export {
   readTeamProjectContextMode,
   TeamMetadataUnreadableError,
 } from './projectContextMode';
+export type { ProjectCopyPorts, ProjectCopyRefusal } from './projectCopyRouting';
+export {
+  ProjectContextRefusalError,
+  ProjectCopyUnavailableError,
+  resolveReadyProjectCopy,
+} from './projectCopyRouting';
 export { projectDefinitionToAlias } from './projectDefinitionToAlias';
 export {
   projectPublicProvisioningProgress,

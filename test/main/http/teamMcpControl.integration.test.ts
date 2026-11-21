@@ -2143,7 +2143,7 @@ describe('MCP team tools over the local REST control API', () => {
     setClaudeBasePathOverride(root);
     setAppDataBasePath(path.join(root, 'app-state'));
     const app = Fastify();
-    const { services, teamDataService } = createServices(root);
+    const { services, teamDataService, launching } = createServices(root);
     registerTeamRoutes(app, services);
     const controlUrl = 'http://per-project-board.test';
     const restoreFetch = installControlApiFetchMock(app, controlUrl);
@@ -2190,7 +2190,10 @@ describe('MCP team tools over the local REST control API', () => {
       };
       const copyA = await copyIn('a');
       const copyB = await copyIn('b');
+      // Project C: a copy whose launch has not finished; project D: no history at all.
       await mkdir(project('c'));
+      const pendingCopy = (await registry.reserve(teamName, project('c'))).executionTeamName;
+      await mkdir(project('d'));
       const indexPath = path.join(teamsBase, teamName, 'project-contexts.json');
       const index = await readFile(indexPath, 'utf8');
       const call = async (tool: string, args: Record<string, unknown>) =>
@@ -2228,14 +2231,41 @@ describe('MCP team tools over the local REST control API', () => {
       expect(await inbox(copyB)).toContain('MESSAGE_ONLY_IN_PROJECT_B');
       expect(await inbox(copyA)).not.toContain('MESSAGE_ONLY_IN_PROJECT_B');
 
-      // No project, a project without history, a relative path: refused, never guessed.
+      // A copy named with a project must be the copy of that project.
+      expect(await subjects({ teamName: copyA, projectPath: project('a') })).toContain(
+        'ONLY_IN_PROJECT_A'
+      );
+      const mismatch = call('task_list', { teamName: copyB, projectPath: project('a') });
+      await expect(mismatch).rejects.toMatchObject({ code: 'PROJECT_MISMATCH' });
+      await expect(mismatch).rejects.toThrow(/^\[PROJECT_MISMATCH\] /);
+
+      // No project, a project without history, a relative path: refused, never guessed. The code
+      // leads the text: an MCP client only sees the message.
       const required = getTool('task_list').execute({ claudeDir: root, teamName });
       await expect(required).rejects.toMatchObject({ code: 'PROJECT_REQUIRED' });
+      await expect(required).rejects.toThrow(/^\[PROJECT_REQUIRED\] /);
       await expect(required).rejects.toThrow(project('a'));
       await expect(
-        call('task_create', { projectPath: project('c'), subject: 'NO_HISTORY', createdBy: 'user' })
+        call('task_create', { projectPath: project('d'), subject: 'NO_HISTORY', createdBy: 'user' })
       ).rejects.toMatchObject({ code: 'NO_PROJECT_HISTORY' });
       await expect(call('task_list', { projectPath: 'project-a' })).rejects.toThrow(/absolute/);
+
+      // A pending copy: waiting helps only while its launch runs (the app's provisioning run).
+      await expect(call('task_list', { projectPath: project('c') })).rejects.toMatchObject({
+        code: 'PROJECT_LAUNCH_INCOMPLETE',
+      });
+      launching.add(pendingCopy);
+      await expect(call('task_list', { projectPath: project('c') })).rejects.toMatchObject({
+        code: 'PROJECT_LAUNCH_PENDING',
+      });
+      launching.delete(pendingCopy);
+
+      // Unreadable metadata of a team without config.json reaches the app, which refuses it.
+      await mkdir(path.join(teamsBase, 'broken-board'));
+      await writeFile(path.join(teamsBase, 'broken-board', 'team.meta.json'), '{ not json');
+      await expect(
+        getTool('task_list').execute({ claudeDir: root, teamName: 'broken-board' })
+      ).rejects.toThrow(/^\[TEAM_METADATA_UNREADABLE\] /);
 
       // Resolving never creates a copy, and the team itself never gets a board.
       expect(await readFile(indexPath, 'utf8')).toBe(index);

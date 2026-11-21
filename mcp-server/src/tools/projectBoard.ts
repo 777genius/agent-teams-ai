@@ -5,28 +5,15 @@ import agentTeamsControllerModule from 'agent-teams-controller';
 
 import { resolveBoardTeam } from '../utils/teamConfig';
 
-const { AGENT_TEAMS_MANAGEMENT_TOOL_NAMES } = agentTeamsControllerModule;
+const { AGENT_TEAMS_PROJECT_BOARD_TOOL_NAMES } = agentTeamsControllerModule;
 
 type ToolServer = Pick<FastMCP, 'addTool'>;
 
-/**
- * Tools that address a team as a whole: its definition (`team_*`, the management tools) or its
- * process (launch, stop). The app resolves a per-project team for them itself. Every other tool
- * works on the board of one team.
- */
-const TEAM_LEVEL_TOOL_NAMES: ReadonlySet<string> = new Set([
-  ...AGENT_TEAMS_MANAGEMENT_TOOL_NAMES,
-  'team_launch',
-  'team_stop',
-]);
+/** The tools that work on the board of one team (the catalog's `projectBoard` groups). */
+const PROJECT_BOARD_TOOL_NAMES: ReadonlySet<string> = new Set(AGENT_TEAMS_PROJECT_BOARD_TOOL_NAMES);
 
-const projectPathParameter = z
-  .string()
-  .min(1)
-  .optional()
-  .describe(
-    'Only for a team with a separate history per project: its project folder (team_launch cwd).'
-  );
+// Kept short on purpose: every agent of every team loads this field on every board tool.
+const projectPathParameter = z.string().optional().describe('Per-project team: project folder');
 
 interface BoardToolArgs {
   teamName: string;
@@ -40,12 +27,13 @@ interface BoardToolArgs {
  * tool gets an optional `projectPath`, and its team is resolved once, before the tool runs, by the
  * one rule in `resolveBoardTeam`: the tool then receives the physical team (an ordinary team, or
  * the project copy of a per-project team) as its `teamName`, and never sees `projectPath`.
- * Tools of the team as a whole are registered unchanged.
+ * The other tools (the team as a whole, launch and stop, the runtime bridge) are registered
+ * unchanged.
  */
 export function withProjectBoards(server: ToolServer): ToolServer {
   return {
     addTool(tool) {
-      if (TEAM_LEVEL_TOOL_NAMES.has(tool.name)) {
+      if (!PROJECT_BOARD_TOOL_NAMES.has(tool.name)) {
         server.addTool(tool);
         return;
       }
@@ -65,7 +53,11 @@ export function withProjectBoards(server: ToolServer): ToolServer {
         parameters: parameters.extend({ projectPath: projectPathParameter }),
         execute: async (args, context) => {
           const { projectPath, ...rest } = args as BoardToolArgs;
-          const teamName = await resolveBoardTeam(rest.teamName, rest.claudeDir, projectPath);
+          const teamName = await resolveBoardTeam(
+            rest.teamName,
+            rest.claudeDir,
+            projectPath?.trim() || undefined
+          );
           return execute({ ...rest, teamName } as Parameters<typeof execute>[0], context);
         },
       });

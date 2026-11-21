@@ -5,8 +5,10 @@ import * as path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import {
+  createCrossTeamRecipientPorts,
   createProjectBoardPorts,
-  ProjectBoardTargetError,
+  ProjectContextRefusalError,
+  resolveCrossTeamRecipient,
   resolveProjectBoardTarget,
   TeamMetadataUnreadableError,
   TeamProjectContextRegistry,
@@ -20,9 +22,9 @@ afterEach(async () => {
 });
 
 /**
- * A per-project team `builders` with ready copies in projects A and B, a launch in progress in
- * project C and nothing in project D; an ordinary team `partner`. Read through the real metadata
- * store and registry.
+ * A per-project team `builders` with ready copies in projects A and B, a pending copy in project C
+ * and nothing in project D; an ordinary team `partner`. Read through the real metadata store and
+ * registry.
  */
 async function world() {
   const root = await realpath(await mkdtemp(path.join(os.tmpdir(), 'project-board-target-')));
@@ -65,22 +67,20 @@ async function world() {
   const copies = { a: await copyOf('a'), b: await copyOf('b'), c: await copyOf('c', false) };
 
   const store = new TeamMetaStore();
-  const ports = createProjectBoardPorts(
-    {
-      getMeta: (name) => store.getMeta(name, teamsBasePath),
-      metadataFileExists: (name) => store.metadataFileExists(name, teamsBasePath),
-    },
-    registry
-  );
+  const metaReader = {
+    getMeta: (name: string) => store.getMeta(name, teamsBasePath),
+    metadataFileExists: (name: string) => store.metadataFileExists(name, teamsBasePath),
+  };
+  const ports = createProjectBoardPorts(metaReader, registry);
   const indexPath = path.join(teamsBasePath, 'builders', 'project-contexts.json');
-  return { teamsBasePath, registry, ports, project, copies, indexPath, writeMeta };
+  return { teamsBasePath, registry, metaReader, ports, project, copies, indexPath, writeMeta };
 }
 
 async function refusal(run: Promise<unknown>): Promise<{ code: string; message: string }> {
   try {
     await run;
   } catch (error) {
-    if (error instanceof ProjectBoardTargetError)
+    if (error instanceof ProjectContextRefusalError)
       return { code: error.code, message: error.message };
     throw error;
   }
@@ -88,7 +88,7 @@ async function refusal(run: Promise<unknown>): Promise<{ code: string; message: 
 }
 
 describe('resolveProjectBoardTarget', () => {
-  it('gives each project its own copy and keeps ordinary teams and copies by their name', async () => {
+  it('gives each project its own copy; a copy named with a project must be that one', async () => {
     const w = await world();
     const index = await readFile(w.indexPath, 'utf8');
     const resolve = (teamName: string, projectPath?: string) =>
@@ -102,9 +102,17 @@ describe('resolveProjectBoardTarget', () => {
     await expect(resolve('builders', w.project('b'))).resolves.toMatchObject({
       teamName: w.copies.b,
     });
-    // A project is never applied to a team with one history, nor to a copy named exactly.
+    // An ordinary team keeps one history for every project; a copy alone is its own board.
     await expect(resolve('partner', w.project('a'))).resolves.toEqual({ teamName: 'partner' });
-    await expect(resolve(w.copies.b, w.project('a'))).resolves.toEqual({ teamName: w.copies.b });
+    await expect(resolve(w.copies.b)).resolves.toEqual({ teamName: w.copies.b });
+    await expect(resolve(w.copies.b, w.project('b'))).resolves.toMatchObject({
+      teamName: w.copies.b,
+      logicalTeamName: 'builders',
+    });
+    // The copy of project B never becomes the board of project A.
+    const mismatch = await refusal(resolve(w.copies.b, w.project('a')));
+    expect(mismatch.code).toBe('PROJECT_MISMATCH');
+    expect(mismatch.message).toContain(w.project('b'));
     // Resolving only reads: no copy is reserved or created for a project.
     await refusal(resolve('builders', w.project('d')));
     expect(await readFile(w.indexPath, 'utf8')).toBe(index);
@@ -122,10 +130,51 @@ describe('resolveProjectBoardTarget', () => {
     const resolve = (projectPath: string) =>
       refusal(resolveProjectBoardTarget(w.ports, { teamName: 'builders', projectPath }));
     expect((await resolve(w.project('d'))).code).toBe('NO_PROJECT_HISTORY');
-    expect((await resolve(w.project('c'))).code).toBe('PROJECT_LAUNCH_PENDING');
 
     await w.registry.beginSoftDelete('builders');
     expect((await resolve(w.project('a'))).code).toBe('UNRESOLVED');
+    // A copy named exactly is refused the same way while its team goes to the trash.
+    const byCopy = await refusal(
+      resolveProjectBoardTarget(w.ports, { teamName: w.copies.a, projectPath: w.project('a') })
+    );
+    expect(byCopy.code).toBe('UNRESOLVED');
+  });
+
+  // One primitive: the board and cross-team delivery give the same verdict on a pending copy.
+  it('tells a launch in flight from one that did not finish, for the board and for messages', async () => {
+    const w = await world();
+    const verdicts = async (launching: boolean | undefined) => {
+      const isLaunching = launching === undefined ? undefined : () => launching;
+      const board = createProjectBoardPorts(w.metaReader, w.registry, isLaunching);
+      const messages = createCrossTeamRecipientPorts(w.metaReader, w.registry, isLaunching);
+      return {
+        board: await refusal(
+          resolveProjectBoardTarget(board, { teamName: 'builders', projectPath: w.project('c') })
+        ),
+        message: await refusal(
+          resolveCrossTeamRecipient(messages, {
+            fromTeam: 'partner',
+            toTeam: 'builders',
+            senderProjectPath: w.project('c'),
+          })
+        ),
+      };
+    };
+    const inFlight = await verdicts(true);
+    expect([inFlight.board.code, inFlight.message.code]).toEqual([
+      'PROJECT_LAUNCH_PENDING',
+      'PROJECT_LAUNCH_PENDING',
+    ]);
+    const failed = await verdicts(false);
+    expect([failed.board.code, failed.message.code]).toEqual([
+      'PROJECT_LAUNCH_INCOMPLETE',
+      'PROJECT_LAUNCH_INCOMPLETE',
+    ]);
+    // Waiting does not help after a failed launch: both say to launch again.
+    expect(failed.board.message).toMatch(/Launch it again/);
+    expect(failed.message.message).toMatch(/Launch the team again/);
+    // Without evidence of a launch, a pending copy reads as being launched (as before).
+    expect((await verdicts(undefined)).board.code).toBe('PROJECT_LAUNCH_PENDING');
   });
 
   it('refuses a team whose metadata cannot be read', async () => {

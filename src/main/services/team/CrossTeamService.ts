@@ -108,7 +108,9 @@ export class CrossTeamService {
   }
 
   private ports(): CrossTeamRecipientPorts {
-    return this.recipientPorts ?? createAppCrossTeamRecipientPorts();
+    // A pending copy with a launch in flight is told from one whose launch failed.
+    const isLaunching = this.messaging?.hasProvisioningRun?.bind(this.messaging);
+    return this.recipientPorts ?? createAppCrossTeamRecipientPorts(isLaunching);
   }
 
   private route(

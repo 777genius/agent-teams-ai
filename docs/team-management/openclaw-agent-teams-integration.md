@@ -550,7 +550,7 @@ Arguments:
 }
 ```
 
-`task_create` requires a configured team, so launch the team first. For a team created with `projectContextMode: "per_project"`, add `"projectPath"` with the `cwd` the team was launched in; the same holds for every board tool (`task_*`, `message_send`, `review_*`, `kanban_*`, ...).
+`task_create` requires a configured team, so launch the team first. For a team created with `projectContextMode: "per_project"`, add `"projectPath"` with the `cwd` the team was launched in; the same holds for every board tool (`task_*`, `message_send`, `review_*`, `kanban_*`, ...). A refusal starts with its code, for example `[PROJECT_REQUIRED]` or `[PROJECT_LAUNCH_INCOMPLETE]` (the launch in that folder failed: launch the team there again).
 
 This is the raw headless MCP payload. Headless calls do not receive the desktop UI's user
 defaults: `owner` by itself creates a `pending` task. If `createdBy`/`from` is also omitted,

@@ -108,7 +108,7 @@ Status words: **works**, **hidden** (the control is not shown), **refuses** (an 
 | --- | --- | --- | --- |
 | Hosted web / HTTP create and launch | works | works (create with a mode, launch in a project) | refused |
 | MCP team tools `team_get`, `team_update`, `team_trash`, `team_launch`, `team_stop`, `team_list` | work | read, update, launch, stop and list work; trash refuses (see B) | stop works |
-| MCP board tools (`task_*`, `message_send`, `review_*`, `kanban_*`, process, group chat, cross-team, work sync) | work | work in the project named by `projectPath`: the app resolves the team to its ready copy for that project, never another one and never a new one; refused with a code without a project, in a project without history or while a launch is pending there (see the last update) | work on the copy by its name, as before |
+| MCP board tools (`task_*`, `message_send`, `review_*`, `kanban_*`, process, group chat, cross-team, work sync) | work | work in the project named by `projectPath`: the app resolves the team to its ready copy for that project, never another one and never a new one; refused with a code without a project, in a project without history, while a launch runs there or after it failed (see the last update) | work on the copy by its name, as before; with a `projectPath` it must be that project's copy |
 
 ## 3. Ranked gaps
 
@@ -309,27 +309,25 @@ Still open: gap 6 (live edit).
 
 ## Update: MCP board tools
 
-Section F was updated in place. The board tools of the MCP server (every tool except `team_list`, `team_get`, `team_create`, `team_update`, `team_trash`, `app_get_connection_info`, `team_launch` and `team_stop`) work with a per-project team. Contract and refusals: [per-project-team-targets.md](./per-project-team-targets.md#board-tools-over-mcp).
+Section F was updated in place. The MCP board tools (the catalog groups marked `projectBoard`: task, lead briefing, kanban, review, message and group chat, process, work sync, cross-team) work with a per-project team. Contract and refusal codes: [per-project-team-targets.md](./per-project-team-targets.md#board-tools-over-mcp).
 
 | Row | Before | After |
 | --- | --- | --- |
-| MCP board tools on a per-project team | refused as `Unknown team` (the logical team has no `config.json`) | work in the project named by the new optional `projectPath`: the ready copy of that project is used; without a project, in a project without history or while a launch is pending there, refused with a code (`PROJECT_REQUIRED`, `NO_PROJECT_HISTORY`, `PROJECT_LAUNCH_PENDING`, `UNRESOLVED`, `TEAM_METADATA_UNREADABLE`) and nothing is written |
-| MCP board tools on a shared team or a project copy named exactly | work | unchanged: `projectPath` is ignored and the app is not asked, so they keep working without the app |
+| MCP board tools on a per-project team | refused as `Unknown team` (the team has no `config.json`) | work in the project named by the new optional `projectPath`, on the ready copy of that project. Refused with a code at the start of the message (`[PROJECT_REQUIRED]`, `[NO_PROJECT_HISTORY]`, `[PROJECT_LAUNCH_PENDING]`, `[PROJECT_LAUNCH_INCOMPLETE]`, `[UNRESOLVED]`, `[TEAM_METADATA_UNREADABLE]`); nothing is written |
+| MCP board tools on a shared team or a project copy named exactly | work | without `projectPath` unchanged (the app is not asked); with one the app checks it: a copy must be the copy of that project (`PROJECT_MISMATCH`), with the same launch and trash checks |
+| A pending copy (`reserved`) | `PROJECT_LAUNCH_PENDING`, also after a failed launch (a client waiting on it would wait forever) | `PROJECT_LAUNCH_PENDING` only while a launch of the copy runs in the app; otherwise `PROJECT_LAUNCH_INCOMPLETE` (launch again). The same for cross-team messages |
 
 How it is built:
 
-- One rule in the feature, `resolveProjectBoardTarget` (`src/features/team-project-context/main/projectBoardTarget.ts`), over `readTeamProjectContextMode`, the registry's read-only `inspect` and `listOwnedContexts`. The HTTP route `GET /api/teams/:team/board-target?projectPath=` serves it; the controller asks it with `runtime.getBoardTarget` through the same app-routing request as cross-team (`requestAppRouting`: only an unreachable app answers `null`, every answer of the app is used or passed on).
-- One place in the MCP server: `resolveBoardTeam` (`mcp-server/src/utils/teamConfig.ts`) decides whether to ask (only for a name without `config.json` whose metadata says `per_project`), and `withProjectBoards` (`mcp-server/src/tools/projectBoard.ts`) applies it to every board tool when the tools are registered. A tool receives the physical team as its `teamName` and never sees `projectPath`, so no tool resolves anything itself and a new board tool gets the rule without a change.
+- One primitive for "the copy of a team in a project", `resolveReadyProjectCopy` (`src/features/team-project-context/main/projectCopyRouting.ts`), with one set of ports, one refusal type and the shared reading of the mode and of copy owners. Cross-team delivery (`resolveCrossTeamRecipient`) and the board (`resolveProjectBoardTarget`) keep their own checks before it and map its refusal to their own codes and next step; the texts of cross-team refusals that existed are unchanged. A launch in flight is told from a failed one by the app's provisioning run (`hasProvisioningRun`), passed to the HTTP route through the launch port and to `CrossTeamService` through its messaging API.
+- The HTTP route `GET /api/teams/:team/board-target?projectPath=`; the controller asks it with `appRouting.getBoardTarget` (`agent-teams-controller/src/internal/appRouting.js`, together with the two cross-team routing calls; the control API client moved out of `runtime.js` into `controlApiClient.js`).
+- One place in the MCP server: `resolveBoardTeam` decides whether to ask the app, and `withProjectBoards` applies it to every tool of the catalog's board groups when the tools are registered. No tool resolves anything itself.
 
-Decisions:
-
-- **The project is explicit.** Not taken from the MCP server's working directory or environment (an external client's MCP server runs wherever it was configured; the desktop binding names the app instance, not a project) and not the team's only ready project (the same call would change meaning when the team runs in a second project). The refusal lists the projects that can be used.
-- **The board does not depend on the run state**, like the project screen of the app: a stopped copy's board is read and written. Schedules gate a launch on the other projects being stopped; a board write does not start anything.
-- **Results name the copy.** A tool runs as if called with the copy's name, so task refs and briefings carry `ptc-…`; that name works directly afterwards. Mapping results back to the team name would touch every tool.
-
-Verification: unit tests of the rule on a real temp-dir registry (isolation A/B, every refusal, unreadable metadata, the index never written); MCP tests (every board tool takes `projectPath` and no team-level tool does; a configured team never asks the app; an unreachable app refuses and writes nothing); an integration test through the real HTTP routes, controller and MCP tools (tasks and messages land in the named project only, a copy named exactly, every refusal); the real Electron E2E `verifyMcpBoardTools` (the MCP server's tools against the running app: isolation, refusals including a pending launch, an ordinary team unchanged, the task shown on the project A board, no runtime call).
+Decisions (owner, review of #1259): no implicit project (`PROJECT_REQUIRED` without one); the parameter is `projectPath`; it stays on the board tools with a minimal description and not on the `runtime_*` bridge; `team_create` keeps requiring `projectContextMode`; a board write is not gated on the run state of other projects (like the app's project screen).
 
 Known limits:
 
-- Every board tool of every agent now lists the optional `projectPath` (one short field per tool), also for agents of ordinary teams, where it is ignored.
-- When the app is not running, a per-project team cannot be used by name (configured teams can); its copies still can, by their exact name.
+- Every board tool of every agent lists the optional `projectPath`: 44 tools, about 3.6k characters, roughly 0.9k to 1.2k tokens per agent, also for agents of ordinary teams, where it is ignored.
+- Without the app, a per-project team cannot be used by its name and a `projectPath` cannot be checked; a configured team without `projectPath` (copies included) works as before.
+- OpenCode runtime delivery of cross-team messages has no provisioning-run evidence and still reads a pending copy as being launched.
+- Results name the copy (`ptc-…`): a tool runs as if called with the copy's name.

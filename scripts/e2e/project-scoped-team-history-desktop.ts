@@ -1352,7 +1352,12 @@ async function verifyMcpBoardTools(f: Fixture, http: { team: string; finalState:
     'A message for project B reached project A');
 
   // 2. Unchanged: a project copy by its exact name, and an ordinary team (a project is ignored).
+  // A copy named with a project must be the copy of that project.
   assert((await call('task_list', { teamName: f.nativeA })).includes('MCP_BOARD_PROJECT_A'));
+  assert((await call('task_list', { teamName: f.nativeA, projectPath: f.projectA }))
+    .includes('MCP_BOARD_PROJECT_A'));
+  const mismatch = await refusal('task_list', { teamName: f.nativeB, projectPath: f.projectA });
+  assert.equal(mismatch.code, 'PROJECT_MISMATCH', String(mismatch));
   await call('task_create', {
     teamName: f.partnerA, projectPath: f.projectB, subject: 'MCP_BOARD_SHARED_TEAM', createdBy: 'user',
   });
@@ -1361,6 +1366,8 @@ async function verifyMcpBoardTools(f: Fixture, http: { team: string; finalState:
   // 3. Refused, never guessed, and nothing written or reserved.
   const noProject = await refusal('task_create', { ...logical, subject: 'MCP_NO_PROJECT', createdBy: 'user' });
   assert.equal(noProject.code, 'PROJECT_REQUIRED', String(noProject));
+  // An MCP client only sees the text: the code leads it.
+  assert(noProject.message.startsWith('[PROJECT_REQUIRED] '), noProject.message);
   assert(noProject.message.includes(f.projectA) && noProject.message.includes(f.projectB),
     'The refusal must name the projects of the team: ' + noProject.message);
   const noHistory = await refusal('task_create', {
@@ -1368,9 +1375,10 @@ async function verifyMcpBoardTools(f: Fixture, http: { team: string; finalState:
   });
   assert.equal(noHistory.code, 'NO_PROJECT_HISTORY', String(noHistory));
   if (http.finalState !== 'ready') {
-    // The HTTP section left its first copy reserved: its launch never finished.
+    // The HTTP section left its copy reserved after a failed launch: no launch runs there now,
+    // so waiting would not help and the refusal says to launch again.
     const pending = await refusal('task_list', { teamName: http.team, projectPath: f.projectC });
-    assert.equal(pending.code, 'PROJECT_LAUNCH_PENDING', String(pending));
+    assert.equal(pending.code, 'PROJECT_LAUNCH_INCOMPLETE', String(pending));
   }
   assert.equal(await readFile(f.indexPath, 'utf8'), indexBefore, 'A board call changed the contexts index');
   assert.deepEqual(await taskFiles(f.logical), logicalTasksBefore, 'The per-project team got a task of its own');
@@ -1390,7 +1398,7 @@ async function verifyMcpBoardTools(f: Fixture, http: { team: string; finalState:
     JSON.stringify(f.logical) + ', ' + JSON.stringify(f.projectA) + '))()');
   await waitFor(visibleTask(f.nativeA, 'MCP_BOARD_PROJECT_A'), 'the MCP task on the project A board');
   await cdp.screenshot(path.join(f.screenshots, 'mcp-board-project-a.png'));
-  return { refusals: [noProject.code, noHistory.code] };
+  return { refusals: [noProject.code, noHistory.code, mismatch.code] };
 }
 
 /**

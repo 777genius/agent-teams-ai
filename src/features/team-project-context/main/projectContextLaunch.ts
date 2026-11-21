@@ -89,5 +89,7 @@ export interface ProjectTeamLaunch {
   ): Promise<PersistedTeamWorkContext | null>;
   /** The configuration lock of a team, the one the app holds while it launches. */
   withTeamLock<T>(teamName: string, operation: () => Promise<T>): Promise<T>;
+  /** Whether a launch (provisioning run) of a physical team is in flight in this app. */
+  isLaunching(teamName: string): boolean;
   launch<T>(request: TeamLaunchRequest, launcher: ProjectCopyLauncher<T>): Promise<T | null>;
 }
