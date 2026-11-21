@@ -312,21 +312,20 @@ export function useSaveAsTemplate({
     (value: string): void => {
       setNameState(value);
       setIssues((current) => current.filter((issue) => issue.field !== 'name'));
-      // If we had a name conflict and the user is changing the name, automatically
-      // refresh the preview with the new name so the next save works without a
-      // false expiry error or redundant confirmation. We only do this when the
-      // preview exists (content unchanged) and there was a nameConflict.
-      if (nameConflict && preview && value !== name) {
+      // A conflict may be returned by initial prepare (when no preview exists)
+      // or by confirm-save (when the preview still exists). Both require a
+      // fresh preview for the corrected name; do not clear a conflict without
+      // preparing a usable token.
+      if (nameConflict) {
+        if (value === name) return;
         setNameConflict(false);
         setAttempt(null);
-        // Trigger a fresh preview preparation with the new name
         void runPrepare(value, description);
-      } else {
-        setNameConflict(false);
-        setAttempt((current) => (current?.status === 'idConflict' ? null : current));
+        return;
       }
+      setAttempt((current) => (current?.status === 'idConflict' ? null : current));
     },
-    [description, name, nameConflict, preview, runPrepare]
+    [description, name, nameConflict, runPrepare]
   );
 
   const setDescription = useCallback(
