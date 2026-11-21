@@ -1581,11 +1581,11 @@ async function run() {
   let success = false;
   try {
     await start(f);
-    // On Windows the same real Electron renderer startup can exceed 60 s:
-    // the separate creation-page E2E reaches its first interaction after
-    // ~75 s on GitHub-hosted Windows. Do not misclassify a slow startup as
-    // a project-history regression. Keep one bounded, observed readiness gate.
-    const rendererStartupBudgetMs = process.platform === 'win32' ? 180_000 : 60_000;
+    // GitHub-hosted macOS and Windows can take longer than 60 seconds to
+    // expose the real Electron preload bridge after the DevTools page appears.
+    // Keep the readiness gate bounded, but do not classify slow native startup
+    // as a product regression while Linux/Windows/macOS creation E2E is healthy.
+    const rendererStartupBudgetMs = 180_000;
     await waitFor(
       'window.electronAPI?.teams && window.__agentTeamsDevStore',
       'renderer bridge',
