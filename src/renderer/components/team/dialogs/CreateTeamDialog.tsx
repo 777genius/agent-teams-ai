@@ -2701,7 +2701,7 @@ export const CreateTeamDialog = ({
               <CreateTeamTemplatePicker
                 open={open}
                 initialSelection={initialData ? '' : templateSelection.storedTemplateSelection.value}
-                initialSelectionReady={initialData ? true : templateSelection.templateSelectionDraft.isLoaded}
+                initialSelectionReady={draftLoaded && (initialData || templateSelection.templateSelectionDraft.isLoaded)}
                 onApply={(draft, source, value) =>
                   applyTemplateToCreateTeam(draft, source, value, {
                     templateSelection, descriptionDraft, promptDraft, promptChipDraft, setMembers,
