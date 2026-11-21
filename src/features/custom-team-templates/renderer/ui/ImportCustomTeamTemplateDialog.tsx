@@ -272,6 +272,8 @@ export const ImportCustomTeamTemplateDialog = ({
     async (event: React.ChangeEvent<HTMLInputElement>) => {
       const file = event.target.files?.[0];
       if (!file) return;
+      // Release the native input value even when validation or marker creation stops import.
+      resetFileInput();
       if (
         errorState === 'unresolvedWriteOutcome' ||
         errorState === 'resolvedElsewhere' ||

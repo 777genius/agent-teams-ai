@@ -401,6 +401,27 @@ describe('InMemoryCustomTeamTemplatePreviewStore', () => {
     if (resolved.status !== 'found') return;
     expect(resolved.state.sourceTeamName).toBe('alpha');
   });
+  it('pins unconfirmed in-flight previews and rejects parallel confirmation claims', () => {
+    let now = 0;
+    const store = new InMemoryCustomTeamTemplatePreviewStore({
+      now: () => now,
+      createToken: counterTokens(),
+      ttlMs: 5,
+      capacity: 1,
+    });
+    const pending = store.issue(baseInput);
+    expect(store.tryStartSave(pending.token)).toBe(true);
+    expect(store.tryStartSave(pending.token)).toBe(false);
+    now = 6;
+    expect(() => store.issue({ ...baseInput, templateId: 'tmpl-2' })).toThrow(
+      CustomTeamTemplatePreviewCapacityError
+    );
+    expect(store.resolve(pending.token).status).toBe('expired');
+    store.clearSaveInFlight(pending.token);
+    expect(store.tryStartSave(pending.token)).toBe(false);
+    expect(store.issue({ ...baseInput, templateId: 'tmpl-2' }).templateId).toBe('tmpl-2');
+  });
+
   it('retains unknown and in-flight saves when the preview store is full', () => {
     const store = new InMemoryCustomTeamTemplatePreviewStore({
       now: () => 0,

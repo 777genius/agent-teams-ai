@@ -52,6 +52,8 @@ export function useCustomTemplateLibrary(open: boolean): {
   state: TemplateLibraryState;
   /** Distinguishes a complete read from an incomplete snapshot or a failure. */
   reload: () => Promise<'complete' | 'partial' | 'failed'>;
+  /** Monotonic identity of the latest library read, including invalidated reads. */
+  getReadEpoch: () => number;
 } {
   const [state, setState] = useState<TemplateLibraryState>({ status: 'idle' });
   const requestIdRef = useRef(0);
@@ -104,5 +106,6 @@ export function useCustomTemplateLibrary(open: boolean): {
     void reload();
   }, [open, reload]);
 
-  return { state, reload };
+  const getReadEpoch = useCallback(() => requestIdRef.current, []);
+  return { state, reload, getReadEpoch };
 }

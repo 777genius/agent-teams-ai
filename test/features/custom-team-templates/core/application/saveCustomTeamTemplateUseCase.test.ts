@@ -1159,9 +1159,11 @@ describe('SaveCustomTeamTemplateUseCase', () => {
 
     // One request wins the frozen identity; the other is rejected outright.
     expect(first).toEqual({ status: 'created', template: storedTemplate() });
+    // A concurrent confirm cannot establish the first write outcome, so it
+    // returns a conservative unresolved identity rather than dispatching.
     expect(second).toEqual({
-      status: 'validationFailed',
-      issues: [{ code: 'previewTokenUnknown', field: 'previewToken' }],
+      status: 'unresolvedWriteOutcome',
+      templateId: preview.stateTemplateId,
     });
     expect(fixture.create).toHaveBeenCalledTimes(1);
     expect(fixture.requests[0].template.templateId).toBe(preview.stateTemplateId);

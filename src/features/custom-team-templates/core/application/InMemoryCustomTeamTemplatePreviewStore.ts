@@ -148,7 +148,7 @@ export class InMemoryCustomTeamTemplatePreviewStore {
       // reconciliation token. Prefer reclaiming settled operations.
       const victim = [...this.entries].find(([, state]) =>
         !state.saveInFlight && !state.hasUnresolvedWrite && Boolean(state.confirmedSave)
-      ) ?? [...this.entries].find(([, state]) => !state.confirmedSave);
+      ) ?? [...this.entries].find(([, state]) => !state.confirmedSave && !state.saveInFlight);
       if (!victim) throw new CustomTeamTemplatePreviewCapacityError('All preview slots have pending writes');
       this.entries.delete(victim[0]);
     }
@@ -176,7 +176,9 @@ export class InMemoryCustomTeamTemplatePreviewStore {
         // so no new save can be confirmed against this preview.
         return { status: 'expired', state: { ...state, confirmedSave: state.confirmedSave } };
       }
-      this.entries.delete(token);
+      // The current confirmation still owns an unconfirmed preview. Do not
+      // delete it until that call exits and releases the write fence.
+      if (!state.saveInFlight) this.entries.delete(token);
       return { status: 'expired' };
     }
     return { status: 'found', state };
@@ -273,6 +275,17 @@ export class InMemoryCustomTeamTemplatePreviewStore {
     }
   }
 
+  /**
+   * Claim a confirmation atomically, including async source verification, so
+   * parallel calls cannot dispatch a second create on the same preview.
+   */
+  tryStartSave(token: string): boolean {
+    const state = this.entries.get(token);
+    if (!state || state.saveInFlight || state.expiresAtMs <= this.options.now()) return false;
+    this.entries.set(token, { ...state, saveInFlight: true });
+    return true;
+  }
+
   /** Protect a confirmed operation only while its database write is dispatched. */
   markSaveInFlight(token: string): void {
     const state = this.entries.get(token);
@@ -309,7 +322,7 @@ export class InMemoryCustomTeamTemplatePreviewStore {
         // expiry so re-check can reconcile it. Once the outcome is settled the
         // entry is dropped, so it stops occupying capacity: re-check already
         // reported the definitive result and will not be offered again.
-        if (state.confirmedSave && (state.hasUnresolvedWrite || state.saveInFlight)) {
+        if (state.hasUnresolvedWrite || state.saveInFlight) {
           continue;
         }
         this.entries.delete(token);

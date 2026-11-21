@@ -3,6 +3,7 @@ import { isCanonicalSettingsLeadMember } from '@shared/utils/leadDetection';
 import {
   createCliAutoSuffixNameGuard,
   createCliProvisionerNameGuard,
+  parseNumericSuffixName,
   validateTeamMemberNameFormat,
 } from '@shared/utils/teamMemberName';
 
@@ -158,6 +159,7 @@ export function validateTemplateContent(
         validateTeamMemberNameFormat(name) ||
         isReservedName(name) ||
         !keepAutoSuffixedName(name) ||
+        (parseNumericSuffixName(name)?.suffix ?? 0) >= 2 ||
         !keepNonProvisionerName(name)
       ) {
         issues.push({ code: 'memberNameInvalid', field: `${baseField}.name` });

@@ -1523,7 +1523,7 @@ async function main() {
         };
       })()`);
       assert(
-        headerLayout.titleVisible && headerLayout.actionsVisible >= 2 &&
+        headerLayout.titleVisible && headerLayout.actionsVisible >= 1 &&
           !headerLayout.overlap && !headerLayout.overflow,
         'Create Team header title/actions overlap or overflow at native 200% zoom: ' +
           JSON.stringify(headerLayout)

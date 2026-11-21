@@ -131,7 +131,24 @@ export class SaveCustomTeamTemplateUseCase {
       return validationFailed([{ code: 'previewTokenExpired', field: 'previewToken' }]);
     }
     const state = resolution.state;
+    if (!this.deps.previewStore.tryStartSave(state.token)) {
+      // A parallel confirmation may already be writing. Do not dispatch again.
+      return {
+        status: 'unresolvedWriteOutcome',
+        templateId: state.confirmedSave?.templateId ?? state.templateId,
+      };
+    }
+    try {
+      return await this.executeClaimed(parsed, state);
+    } finally {
+      this.deps.previewStore.clearSaveInFlight(state.token);
+    }
+  }
 
+  private async executeClaimed(
+    parsed: ParsedConfirmRequest,
+    state: CustomTeamTemplatePreviewState
+  ): Promise<ConfirmCustomTeamTemplateSaveResult> {
     // Never dispatch a second write while the first outcome is unknown.
     // Re-check must resolve the original identity before a deliberate retry.
     if (this.deps.previewStore.hasUnresolvedWrite(state.token)) {
@@ -227,23 +244,18 @@ export class SaveCustomTeamTemplateUseCase {
     // settled). That uncertainty must survive into this attempt: a later
     // `not_started` failure proves nothing about the earlier writer.
     const hadPriorUnresolvedWrite = this.deps.previewStore.hasUnresolvedWrite(state.token);
-    this.deps.previewStore.markSaveInFlight(state.token);
-    try {
-      const result = await this.createWithRecovery(gateway, request, hadPriorUnresolvedWrite);
-      if (result.status === 'unresolvedWriteOutcome') {
-        this.deps.previewStore.markUnresolvedWrite(state.token);
-      } else if (
-        result.status === 'created' ||
-        result.status === 'alreadySaved' ||
-        result.status === 'nameConflict' ||
-        result.status === 'templateIdConflict'
-      ) {
-        this.deps.previewStore.clearUnresolvedWrite(state.token);
-      }
-      return result;
-    } finally {
-      this.deps.previewStore.clearSaveInFlight(state.token);
+    const result = await this.createWithRecovery(gateway, request, hadPriorUnresolvedWrite);
+    if (result.status === 'unresolvedWriteOutcome') {
+      this.deps.previewStore.markUnresolvedWrite(state.token);
+    } else if (
+      result.status === 'created' ||
+      result.status === 'alreadySaved' ||
+      result.status === 'nameConflict' ||
+      result.status === 'templateIdConflict'
+    ) {
+      this.deps.previewStore.clearUnresolvedWrite(state.token);
     }
+    return result;
   }
 
   /**

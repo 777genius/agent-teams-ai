@@ -178,7 +178,7 @@ describe('projectTemplateContent', () => {
     expect(result.warnings).toEqual([]);
   });
 
-  it('projects a lone dev-2 member when the base dev name is absent', () => {
+  it('projects but rejects a lone dev-2 name because creation reserves suffixes', () => {
     const result = projectTemplateContent({
       sourceTeamName: 'demo-team',
       teamPrompt: prompt,
@@ -192,7 +192,10 @@ describe('projectTemplateContent', () => {
     if (result.status !== 'ready') return;
     expect(result.content.members.map((member) => member.name)).toEqual(['dev-2']);
     expect(result.warnings).toEqual([]);
-    expect(validateTemplateContent(result.content)).toEqual([]);
+    expect(validateTemplateContent(result.content)).toContainEqual({
+      code: 'memberNameInvalid',
+      field: 'members[0].name',
+    });
   });
 
   it('drops only the auto-suffixed duplicate when both dev and dev-2 are present', () => {

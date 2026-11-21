@@ -61,6 +61,11 @@ function describeListResult(result: ListCustomTeamTemplatesResult): string {
       return `hasUnreadableRecords:${result.templates.length}/${result.unreadableRecords.length}`;
     case 'storageUnavailable':
       return 'storageUnavailable';
+    case 'recoveryRequired':
+    case 'recoveryInterrupted':
+    case 'storageVerificationRequired':
+    case 'storageSafetyUnavailable':
+      return result.status;
   }
 }
 

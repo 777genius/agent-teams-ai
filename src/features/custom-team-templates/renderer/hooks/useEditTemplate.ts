@@ -309,7 +309,6 @@ export function useEditTemplate({
         fields,
       });
     } catch (error) {
-      if (requestId !== requestIdRef.current) return false;
       // HTTP 413 is a pre-dispatch rejection: Fastify rejects oversized
       // payloads before the route handler runs, so the mutation was never
       // dispatched. Treat it as a definitive, known failure rather than an
@@ -319,8 +318,9 @@ export function useEditTemplate({
         error !== null &&
         'message' in error &&
         String((error as { message: string }).message).includes('HTTP 413');
+      if (isHttp413) finishTemplateMutation(operation);
+      if (requestId !== requestIdRef.current) return false;
       if (isHttp413) {
-        finishTemplateMutation(operation);
         setStatus('requestSizeValidationFailed');
         return false;
       }

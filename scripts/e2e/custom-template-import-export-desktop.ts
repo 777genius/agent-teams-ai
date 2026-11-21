@@ -174,7 +174,7 @@ async function click(expression: string) {
     e.scrollIntoView({block:'nearest'}); const r=e.getBoundingClientRect();
     const hit=document.elementFromPoint(r.x+r.width/2,r.y+r.height/2);
     return r.width>0 && r.height>0 && (hit===e || e.contains(hit)); })()`,
-    'unobstructed click target'
+    'unobstructed click target: ' + expression
   );
   const point = await evaluate<{ x: number; y: number }>(
     `(() => { const r = (${expression}).getBoundingClientRect(); return {x:r.x+r.width/2,y:r.y+r.height/2}; })()`
@@ -525,6 +525,7 @@ try {
   const createdFromTeam = (await library()).find(t => t.name === roundtripName);
   assert(createdFromTeam, 'Saved team template did not persist');
   assert.equal(createdFromTeam.teamPrompt, portable.teamPrompt);
+  assert.deepEqual(createdFromTeam.members, portable.members);
   await screenshot('12-save-created-team-as-template');
   checks.push('Real Create Team configuration-only submission followed by Save as Template persists the original team prompt and roster.');
 

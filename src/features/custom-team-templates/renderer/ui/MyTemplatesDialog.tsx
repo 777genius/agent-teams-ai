@@ -54,21 +54,20 @@ function formatCreatedAt(value?: string): string | null {
 export const MyTemplatesDialog = ({ open, onClose }: MyTemplatesDialogProps): React.JSX.Element => {
   const { t } = useAppTranslation('team');
   const { t: tCommon } = useAppTranslation('common');
-  const { state, reload } = useCustomTemplateLibrary(open);
+  const { state, reload, getReadEpoch } = useCustomTemplateLibrary(open);
   const management = useTemplateManagement({ onSuccess: async () => void (await reload()) });
   const { operations: pendingMutations, storageAvailable } = usePendingTemplateMutations();
   const pendingMutation = pendingMutations.length > 0;
+  // Stay read-only while a store error or recovery retry is being checked.
   const mutationsDisabled =
     pendingMutation ||
     !storageAvailable ||
-    state.status === 'recoveryRequired' ||
-    state.status === 'recoveryInterrupted' ||
-    state.status === 'storageVerificationRequired' ||
-    state.status === 'storageSafetyUnavailable';
+    (state.status !== 'ready' && state.status !== 'partial' && state.status !== 'empty');
   const [checkingMutation, setCheckingMutation] = useState(false);
   const [reviewed, setReviewed] = useState<{
     operations: readonly PendingTemplateMutation[];
     completeness: 'complete' | 'partial';
+    readEpoch: number;
   } | null>(null);
   const [tab, setTab] = useState<TemplateLibraryTab>('my-templates');
 
@@ -102,7 +101,7 @@ export const MyTemplatesDialog = ({ open, onClose }: MyTemplatesDialogProps): Re
       const completeness = await reload();
       // A read is only a snapshot. It never proves the earlier writer stopped.
       if (completeness !== 'failed' && getPendingTemplateMutations() === pending) {
-        setReviewed({ operations: pending, completeness });
+        setReviewed({ operations: pending, completeness, readEpoch: getReadEpoch() });
       }
     } finally {
       setCheckingMutation(false);
@@ -110,7 +109,8 @@ export const MyTemplatesDialog = ({ open, onClose }: MyTemplatesDialogProps): Re
   };
 
   const reloadAfterUnknown = (): void => {
-    if (getPendingTemplateMutations().length) void reload();
+    // A different window may have retired the marker, but the list still changed.
+    void reload();
   };
 
   const mutationLabels: Record<PendingTemplateMutation['kind'], string> = {
@@ -178,7 +178,7 @@ export const MyTemplatesDialog = ({ open, onClose }: MyTemplatesDialogProps): Re
             >
               {t('customTemplates.actions.recheck')}
             </Button>
-            {reviewed?.operations === pendingMutations ? (
+            {reviewed?.operations === pendingMutations && reviewed.readEpoch === getReadEpoch() ? (
               <div className="space-y-2">
                 <p>{t('customTemplates.states.snapshotWarning')}</p>
                 {reviewed.completeness === 'partial' ? (
@@ -188,7 +188,10 @@ export const MyTemplatesDialog = ({ open, onClose }: MyTemplatesDialogProps): Re
                   type="button"
                   variant="outline"
                   onClick={() => {
-                    if (getPendingTemplateMutations() === reviewed.operations) {
+                    if (
+                      getPendingTemplateMutations() === reviewed.operations &&
+                      getReadEpoch() === reviewed.readEpoch
+                    ) {
                       for (const operation of reviewed.operations) {
                         if (!resolveTemplateMutation(operation)) break;
                       }
