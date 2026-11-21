@@ -5,6 +5,8 @@ import path from 'node:path';
 
 import { afterEach, describe, expect, it } from 'vitest';
 
+import { OpenCodeWindowsStartupCleanup } from '../../src/main/services/team/opencode/bridge/OpenCodeWindowsStartupCleanup';
+import { whenOpenCodeStartupRuntimeSweepSettled } from '../../src/main/services/team/opencode/bridge/OpenCodeStartupSweepGate';
 import { OpenCodeBridgeCommandClient } from '../../src/main/services/team/opencode/bridge/OpenCodeBridgeCommandClient';
 import {
   isStartupCleanupData,
@@ -70,6 +72,28 @@ describe('the fixture runtime answer to the Windows OpenCode startup cleanup', (
     expect(result.data).toMatchObject({ cleaned: 0, remaining: 0, hosts: [] });
     // It is the documented bridge invocation, the one the audit already allows.
     expect(runner.seen[0].slice(0, 3)).toEqual(['runtime', 'opencode-command', '--json']);
+  });
+
+  it('lets the real Windows startup cleanup finish complete, with no warning, and opens the launch gate', async () => {
+    const { client } = await clientFor('win32');
+    const warnings: string[] = [];
+    const cleanup = new OpenCodeWindowsStartupCleanup({
+      appStartedAtMs: Date.now(),
+      profileScope: 'test-profile',
+      logWarning: (message) => warnings.push(message),
+      // The process scan is the only part that touches the machine; nothing is running here.
+      sweep: async () => ({ scanned: 0, killed: 0, candidates: [], diagnostics: [] }) as never,
+      waitMs: async () => undefined,
+    });
+    await cleanup.preflight();
+    await cleanup.finish({
+      cleanupOpenCodeStartupHosts: (budget, appStartedAtMs, canDispatch, requestId) =>
+        executeOpenCodeStartupCleanup(client, budget, appStartedAtMs, canDispatch, requestId),
+    });
+    expect(warnings).toEqual([]);
+    expect(cleanup.getStatus().state).toBe('complete');
+    // Settled: a launch is no longer refused (on Windows it would have thrown the busy error).
+    await expect(whenOpenCodeStartupRuntimeSweepSettled({ timeoutMs: 50 })).resolves.toBeUndefined();
   });
 
   it('answers on Windows only: Linux and macOS keep denying it', async () => {
