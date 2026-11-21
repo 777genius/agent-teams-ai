@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+const storeListeners = vi.hoisted(() => new Set<() => void>());
 const getSavedRequest = vi.hoisted(() => vi.fn());
 const getData = vi.hoisted(() => vi.fn());
 const aliveList = vi.hoisted(() => vi.fn());
@@ -73,16 +74,34 @@ const storeState = vi.hoisted(() => {
     currentProvisioningRunIdByTeam: {},
     leadActivityByTeam: {},
     openSettingsTab: noop,
-    getAllPaneTabs: () => paneLayout.panes.flatMap((pane) => pane.tabs),
+    getAllPaneTabs: () => storeState.paneLayout.panes.flatMap((pane) => pane.tabs),
     teamByName: {},
     paneLayout,
     openTeamsCreationPage: vi.fn((seed?: { copyData?: unknown }) => {
-      paneLayout.panes[0].tabs[0].teamsCreationPage = true;
-      paneLayout.panes[0].tabs[0].teamsCreationSeed = seed ?? null;
+      storeState.paneLayout = {
+        panes: storeState.paneLayout.panes.map((pane) => ({
+          ...pane,
+          tabs: pane.tabs.map((tab) => ({
+            ...tab,
+            teamsCreationPage: true,
+            teamsCreationSeed: seed ?? null,
+          })),
+        })),
+      };
+      storeListeners.forEach((notify) => notify());
     }),
     closeTeamsCreationPage: vi.fn(() => {
-      paneLayout.panes[0].tabs[0].teamsCreationPage = false;
-      paneLayout.panes[0].tabs[0].teamsCreationSeed = null;
+      storeState.paneLayout = {
+        panes: storeState.paneLayout.panes.map((pane) => ({
+          ...pane,
+          tabs: pane.tabs.map((tab) => ({
+            ...tab,
+            teamsCreationPage: false,
+            teamsCreationSeed: null,
+          })),
+        })),
+      };
+      storeListeners.forEach((notify) => notify());
     }),
   };
 });
@@ -96,8 +115,17 @@ vi.mock('@renderer/api', () => ({
 }));
 vi.mock('@renderer/store', () => ({
   useStore: Object.assign(
-    (selector?: (state: typeof storeState) => unknown) =>
-      typeof selector === 'function' ? selector(storeState) : storeState,
+    (selector?: (state: typeof storeState) => unknown) => {
+      // Real Zustand subscriptions rerender the memoized list on store writes.
+      const [, notify] = React.useReducer((tick: number) => tick + 1, 0);
+      React.useEffect(() => {
+        storeListeners.add(notify);
+        return () => {
+          storeListeners.delete(notify);
+        };
+      }, [notify]);
+      return typeof selector === 'function' ? selector(storeState) : storeState;
+    },
     { getState: () => storeState }
   ),
 }));
@@ -303,9 +331,10 @@ describe('TeamListView custom team template actions', () => {
     await flush();
     expect(getSavedRequest).toHaveBeenCalledWith('alpha');
     await vi.waitFor(() => expect(storeState.openTeamsCreationPage).toHaveBeenCalledTimes(1));
-    // The real store notifies subscribers; this static fixture needs a rerender.
-    await renderView();
-    expect(host.querySelector('[data-testid="create-team-dialog"]')).not.toBeNull();
+    // The mocked store emits the same subscription update as real Zustand.
+    await vi.waitFor(() =>
+      expect(host.querySelector('[data-testid="create-team-dialog"]')).not.toBeNull()
+    );
     expect(preparePreview).toHaveBeenCalledTimes(1);
     expect(storeState.openTeamTab).not.toHaveBeenCalled();
   });

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
 import { Button } from '@renderer/components/ui/button';
@@ -43,6 +43,8 @@ export const DuplicateCustomTemplateDialog = ({
     : '';
 
   const [name, setName] = useState(defaultProposedName);
+  const [nameEdited, setNameEdited] = useState(false);
+  const activeSourceRef = useRef<string | null>(null);
   const [nameConflict, setNameConflict] = useState(false);
   const [errorState, setErrorState] = useState<
     | 'sourceNotFound'
@@ -56,13 +58,22 @@ export const DuplicateCustomTemplateDialog = ({
   const [issues, setIssues] = useState<readonly CustomTeamTemplateValidationIssue[]>([]);
 
   useEffect(() => {
-    if (open && template) {
+    if (!open || !template) {
+      activeSourceRef.current = null;
+      return;
+    }
+    if (activeSourceRef.current !== template.templateId) {
+      activeSourceRef.current = template.templateId;
       setName(defaultProposedName);
+      setNameEdited(false);
       setNameConflict(false);
       setErrorState(null);
       setIssues([]);
+    } else if (!nameEdited) {
+      // Follow locale changes only until the user enters their own duplicate name.
+      setName(defaultProposedName);
     }
-  }, [open, template, defaultProposedName]);
+  }, [open, template, defaultProposedName, nameEdited]);
 
   useEffect(() => {
     if (resolvedElsewhere && errorState === 'unresolvedWriteOutcome')
@@ -244,6 +255,7 @@ export const DuplicateCustomTemplateDialog = ({
               aria-describedby={nameIssues.length > 0 ? 'duplicate-name-error' : undefined}
               onChange={(e) => {
                 setName(e.target.value);
+                setNameEdited(true);
                 setNameConflict(false);
                 setIssues([]);
               }}
