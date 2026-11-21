@@ -123,7 +123,10 @@ export class SavedTeamConfigurationSnapshotAdapter implements CustomTeamTemplate
     if (probe.teamMeta.status === 'unreadable') {
       return null;
     }
-    const teamMeta = await this.readTeamMeta(teamName, teamsBasePath);
+    const teamMeta =
+      probe.teamMeta.status === 'file'
+        ? await this.readTeamMeta(teamName, teamsBasePath, probe.teamMeta.content)
+        : null;
     if (probe.teamMeta.status === 'file' && !teamMeta) {
       return null;
     }
@@ -152,10 +155,14 @@ export class SavedTeamConfigurationSnapshotAdapter implements CustomTeamTemplate
 
   private async readTeamMeta(
     teamName: string,
-    teamsBasePath: string
+    teamsBasePath: string,
+    authoritativeContent: string
   ): Promise<TeamMetaFile | null> {
     try {
-      return await this.metaStore.getMeta(teamName, teamsBasePath, { requireCompleteFields: true });
+      return await this.metaStore.getMeta(teamName, teamsBasePath, {
+        requireCompleteFields: true,
+        authoritativeContent,
+      });
     } catch {
       // Presence was already established by the probe, so an unreadable file is
       // reported as an unavailable source rather than as a missing one.
@@ -193,6 +200,7 @@ export class SavedTeamConfigurationSnapshotAdapter implements CustomTeamTemplate
           // must not make the whole roster unreadable. Real corruption and
           // missing required fields still fail the strict read.
           allowCliAutoSuffixArtifacts: true,
+          authoritativeContent: membersProbe.content,
         },
         teamsBasePath
       );

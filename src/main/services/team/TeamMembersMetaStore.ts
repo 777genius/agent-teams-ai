@@ -113,38 +113,39 @@ function buildActiveNameGuard(membersByName: Map<string, TeamMember>): (name: st
 }
 
 export class TeamMembersMetaStore {
-  private getMetaPath(teamName: string): string {
-    return path.join(getTeamsBasePath(), teamName, 'members.meta.json');
+  private getMetaPath(teamName: string, teamsBasePath = getTeamsBasePath()): string {
+    return path.join(teamsBasePath, teamName, 'members.meta.json');
   }
 
   /** Management replacement requires every recognized member value to survive canonical read. */
   async getMeta(
     teamName: string,
-    options?: { requireCompleteMembers?: boolean }
+    options?: {
+      requireCompleteMembers?: boolean;
+      allowCliAutoSuffixArtifacts?: boolean;
+      /** Bounded bytes from the snapshot probe; avoid a second racy read. */
+      authoritativeContent?: string;
+    },
+    teamsBasePath = getTeamsBasePath()
   ): Promise<TeamMembersMetaFile | null> {
-    const metaPath = this.getMetaPath(teamName);
-    try {
-      const stat = await fs.promises.stat(metaPath);
-      if (!stat.isFile()) {
-        return null;
+    let raw = options?.authoritativeContent;
+    if (raw === undefined) {
+      const metaPath = this.getMetaPath(teamName, teamsBasePath);
+      try {
+        const stat = await fs.promises.stat(metaPath);
+        if (!stat.isFile() || stat.size > MAX_TEAM_METADATA_BYTES) return null;
+      } catch {
+        // The file read below distinguishes ENOENT from other failures.
       }
-      if (stat.isFile() && stat.size > MAX_TEAM_METADATA_BYTES) {
-        return null;
+      try {
+        raw = await readFileUtf8WithTimeout(metaPath, 5_000);
+      } catch (error) {
+        if (
+          (error as NodeJS.ErrnoException).code === 'ENOENT' ||
+          error instanceof FileReadTimeoutError
+        ) return null;
+        throw error;
       }
-    } catch {
-      // ignore - readFile below will handle ENOENT and throw on other errors
-    }
-    let raw: string;
-    try {
-      raw = await readFileUtf8WithTimeout(metaPath, 5_000);
-    } catch (error) {
-      if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
-        return null;
-      }
-      if (error instanceof FileReadTimeoutError) {
-        return null;
-      }
-      throw error;
     }
 
     let parsed: unknown;
@@ -195,7 +196,7 @@ export class TeamMembersMetaStore {
     const keepName = buildActiveNameGuard(deduped);
     for (const name of allNames) {
       if (!keepName(name)) {
-        if (options?.requireCompleteMembers) return null;
+        if (options?.requireCompleteMembers && !options.allowCliAutoSuffixArtifacts) return null;
         deduped.delete(name);
       }
     }

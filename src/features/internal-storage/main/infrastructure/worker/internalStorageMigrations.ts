@@ -210,17 +210,18 @@ export function readSchemaVersion(db: SqliteDatabase): number {
 }
 
 export function runInternalStorageMigrations(db: SqliteDatabase): void {
-  const current = readSchemaVersion(db);
   for (const migration of MIGRATIONS) {
-    if (migration.version <= current) {
-      continue;
-    }
+    // Acquire the SQLite write lock *before* checking the schema. Another
+    // process can finish an upgrade while this process is waiting for it.
+    // A deferred transaction using a version read outside the lock can replay
+    // ALTER TABLE and regress user_version on an already-upgraded database.
     const apply = db.transaction(() => {
+      if (readSchemaVersion(db) >= migration.version) return;
       for (const statement of migration.statements) {
         db.exec(statement);
       }
       db.pragma(`user_version = ${migration.version}`);
     });
-    apply();
+    apply.immediate();
   }
 }

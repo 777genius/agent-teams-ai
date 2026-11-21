@@ -345,6 +345,12 @@ export function useSaveAsTemplate({
         previewToken: preview.previewToken,
       });
       if (requestId !== requestIdRef.current) return;
+      if (result.status === 'saved' && lastMutationRef.current) {
+        // A read-only recheck confirmed the original create. Clearing the
+        // durable fence is safe here; absence or conflicts are not proof.
+        finishTemplateMutation(lastMutationRef.current);
+        lastMutationRef.current = null;
+      }
       applyRecheckResult(result);
     } catch {
       if (requestId !== requestIdRef.current) return;

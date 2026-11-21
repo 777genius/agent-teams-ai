@@ -85,11 +85,13 @@ export class RecheckCustomTeamTemplateSaveUseCase {
         this.deps.previewStore.clearUnresolvedWrite(token);
         return { status: 'saved', template: check.template };
       case 'conflict':
-        this.deps.previewStore.clearUnresolvedWrite(token);
-        return { status: 'templateIdConflict', templateId: check.templateId };
       case 'absent':
-        this.deps.previewStore.clearUnresolvedWrite(token);
-        return { status: 'notSaved', templateId: check.templateId };
+        // A queued read can run before an earlier busy writer's retry, and a
+        // successfully created row can subsequently be edited or deleted.
+        // Neither the current row nor its absence proves the original save
+        // failed. Preserve the operation fence until a positive identity
+        // match (or an independently durable settlement record) exists.
+        return { status: 'unresolved', templateId: check.templateId };
       case 'unresolved':
         return { status: 'unresolved', templateId: check.templateId };
     }

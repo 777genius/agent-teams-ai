@@ -421,6 +421,10 @@ export function useEditTemplate({
 
     if (requestId !== requestIdRef.current || !stored) return false;
 
+    // The exact next revision and payload prove that this write committed.
+    // Retire its durable unknown-write fence before allowing another edit.
+    if (lastMutationRef.current) finishTemplateMutation(lastMutationRef.current);
+    lastMutationRef.current = null;
     pendingUpdateRef.current = null;
     setStatus('saved');
     setExpectedRevision(resolveTemplateRevision(stored));

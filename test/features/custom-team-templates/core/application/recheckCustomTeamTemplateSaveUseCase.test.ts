@@ -133,25 +133,27 @@ describe('RecheckCustomTeamTemplateSaveUseCase', () => {
     });
   });
 
-  it('reports a conflicting record under the same id instead of overwriting it', async () => {
+  it('keeps a conflicting current row unresolved because an earlier save could have been edited', async () => {
     const fixture = operation({
       read: { status: 'found', template: stored({ teamPrompt: 'Something else.' }) },
     });
 
     await expect(fixture.useCase.execute({ previewToken: fixture.token })).resolves.toEqual({
-      status: 'templateIdConflict',
+      status: 'unresolved',
       templateId: TEMPLATE_ID,
     });
     expect(fixture.create).not.toHaveBeenCalled();
+    expect(fixture.store.resolve(fixture.token).state.confirmedSave).toBeDefined();
   });
 
-  it('reports confirmed absence as a safely retryable state', async () => {
+  it('keeps absence unresolved while the confirmed save may still be completing', async () => {
     const fixture = operation({ read: { status: 'notFound' } });
 
     await expect(fixture.useCase.execute({ previewToken: fixture.token })).resolves.toEqual({
-      status: 'notSaved',
+      status: 'unresolved',
       templateId: TEMPLATE_ID,
     });
+    expect(fixture.store.resolve(fixture.token).state.confirmedSave).toBeDefined();
   });
 
   it('never reports an unreadable existing record as confirmed absence', async () => {

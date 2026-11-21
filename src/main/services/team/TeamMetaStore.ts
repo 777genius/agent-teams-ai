@@ -188,29 +188,26 @@ export class TeamMetaStore {
   async getMeta(
     teamName: string,
     teamsBasePath = getTeamsBasePath(),
-    options?: { requireCompleteFields?: boolean }
+    options?: { requireCompleteFields?: boolean; authoritativeContent?: string }
   ): Promise<TeamMetaFile | null> {
-    const metaPath = this.getMetaPath(teamName, teamsBasePath);
-    try {
-      const stat = await fs.promises.stat(metaPath);
-      if (!stat.isFile() || stat.size > MAX_TEAM_METADATA_BYTES) {
+    let raw = options?.authoritativeContent;
+    if (raw === undefined) {
+      const metaPath = this.getMetaPath(teamName, teamsBasePath);
+      try {
+        const stat = await fs.promises.stat(metaPath);
+        if (!stat.isFile() || stat.size > MAX_TEAM_METADATA_BYTES) return null;
+      } catch {
         return null;
       }
-    } catch {
-      return null;
-    }
-
-    let raw: string;
-    try {
-      raw = await readFileUtf8WithTimeout(metaPath, 5_000);
-    } catch (error) {
-      if (
-        (error as NodeJS.ErrnoException).code === 'ENOENT' ||
-        error instanceof FileReadTimeoutError
-      ) {
-        return null;
+      try {
+        raw = await readFileUtf8WithTimeout(metaPath, 5_000);
+      } catch (error) {
+        if (
+          (error as NodeJS.ErrnoException).code === 'ENOENT' ||
+          error instanceof FileReadTimeoutError
+        ) return null;
+        throw error;
       }
-      throw error;
     }
 
     let parsed: unknown;
