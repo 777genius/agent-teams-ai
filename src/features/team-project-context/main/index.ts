@@ -60,10 +60,7 @@ export type {
 } from './projectContextLaunch';
 export { launchInProjectContext } from './projectContextLaunch';
 export type { TeamModeMetaReader } from './projectContextMode';
-export {
-  readTeamProjectContextMode,
-  TeamMetadataUnreadableError,
-} from './projectContextMode';
+export { readTeamProjectContextMode, TeamMetadataUnreadableError } from './projectContextMode';
 export { projectDefinitionToAlias } from './projectDefinitionToAlias';
 export {
   projectPublicProvisioningProgress,
@@ -114,3 +111,4 @@ export {
   recoverMissingProjectTeamDefinitions,
 } from './TeamProjectDefinitionBackup';
 export { TeamProjectDefinitionEditor } from './TeamProjectDefinitionEditor';
+export { TeamProjectLiveEditJournal } from './TeamProjectLiveEditJournal';

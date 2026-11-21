@@ -7,18 +7,11 @@ export interface ChangeRuntimeLaunchState {
   mode: TeamLaunchDialogMode;
   memberSettingsDraft?: MemberSettingsRelaunchDraft;
   baselineMembers: ResolvedTeamMember[];
+  memberSettingsCommandId?: string;
+  memberSettingsCommitted?: boolean;
 }
 
-/**
- * Launch-dialog state for "change the lead runtime".
- *
- * A per-project team keeps its roster in the team definition, which only the
- * team edit flow writes. Launch mode saves the roster of the open project
- * copy before launching, so it must not be used for such a team, and a member
- * settings draft is a relaunch of one project's roster that the definition
- * does not support. A per-project team therefore always opens relaunch mode
- * without a draft.
- */
+/** Preserve a member-settings intent across a project team's confirmed relaunch. */
 export function buildChangeRuntimeLaunchState(input: {
   logicalTeamName: string | undefined;
   isAlive: boolean;
@@ -30,7 +23,10 @@ export function buildChangeRuntimeLaunchState(input: {
   return {
     open: true,
     mode: perProject || (input.isAlive && !input.isProvisioning) ? 'relaunch' : 'launch',
-    memberSettingsDraft: perProject ? undefined : input.memberSettingsDraft,
+    memberSettingsDraft: input.memberSettingsDraft,
     baselineMembers: input.baselineMembers,
+    ...(perProject && input.memberSettingsDraft
+      ? { memberSettingsCommandId: crypto.randomUUID() }
+      : {}),
   };
 }

@@ -1,0 +1,52 @@
+import * as fs from 'node:fs/promises';
+import * as path from 'node:path';
+
+import { validateTeamName } from '@main/services/team/TeamIdentifierValidation';
+import { syncDirectoryDurably } from '@main/utils/atomicWrite';
+import { getTeamsBasePath } from '@main/utils/pathDecoder';
+
+/**
+ * Presence means an edit may have reached only one of the definition and runtime.
+ * The caller holds the logical-team operation lock and has proved team ownership.
+ * The marker contains no roster data; the saved definition remains authoritative.
+ */
+export class TeamProjectLiveEditJournal {
+  private marker(teamName: string): string {
+    const valid = validateTeamName(teamName);
+    if (!valid.valid || !valid.value) throw new Error('Invalid team identifier');
+    return path.join(getTeamsBasePath(), valid.value, 'project-live-edit.pending');
+  }
+
+  async hasPending(teamName: string): Promise<boolean> {
+    try {
+      // Treat every existing entry, including a corrupt file or symlink, as pending.
+      await fs.lstat(this.marker(teamName));
+      return true;
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT') return false;
+      throw error;
+    }
+  }
+
+  async begin(teamName: string): Promise<void> {
+    // Exclusive creation prevents replacing a prior incomplete operation.
+    const marker = this.marker(teamName);
+    const file = await fs.open(marker, 'wx', 0o600);
+    try {
+      await file.sync();
+    } finally {
+      await file.close();
+    }
+    await syncDirectoryDurably(path.dirname(marker));
+  }
+
+  async clear(teamName: string): Promise<void> {
+    const marker = this.marker(teamName);
+    const stat = await fs.lstat(marker);
+    if (!stat.isFile() || stat.isSymbolicLink() || stat.size !== 0) {
+      throw new Error('The project team edit marker is unreadable; restore it before retrying');
+    }
+    await fs.unlink(marker);
+    await syncDirectoryDurably(path.dirname(marker));
+  }
+}

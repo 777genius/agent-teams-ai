@@ -1,6 +1,7 @@
 import {
   isConfirmedStoppedTeamRuntime,
   TeamProjectDefinitionEditor,
+  TeamProjectLiveEditJournal,
 } from '@features/team-project-context/main';
 import { validateTeamName } from '@main/services/team/TeamIdentifierValidation';
 import { TeamMetaStore } from '@main/services/team/TeamMetaStore';
@@ -126,19 +127,91 @@ export function runLogicalDefinitionWrite<R>(
 }
 
 /**
+ * A live edit writes the definition first and then applies the same native operation to its one
+ * active copy. The durable marker makes an interrupted or partially failed edit visible: no new
+ * edit or launch is admitted until the runtime has stopped, after which launch projection repairs
+ * the copy from the authoritative definition.
+ */
+async function runLogicalLiveDefinitionWrite<R>(
+  ports: Pick<DefinitionEditPorts, 'data'>,
+  editor: TeamProjectDefinitionEditor,
+  journal: Pick<TeamProjectLiveEditJournal, 'hasPending' | 'begin' | 'clear'>,
+  logicalName: string,
+  write: (target: string) => Promise<IpcResult<R>>
+): Promise<IpcResult<R>> {
+  return ports.data().runConfigurationOperation(logicalName, async () => {
+    const running = await editor.findRunningContextForEdit(logicalName);
+    if (await journal.hasPending(logicalName)) {
+      await editor.assertEditable(logicalName);
+      await journal.clear(logicalName);
+    }
+    if (!running) {
+      const result = await write(logicalName);
+      if (result.success) await refreshProjectCopies(editor, logicalName);
+      return result;
+    }
+    // The native roster/stop gate is reentrant for the same operation. Hold it across both
+    // writes so an app-mediated stop cannot split the definition and active runtime updates.
+    return ports.data().runConfigurationOperation(running.executionTeamName, async () => {
+      const current = await editor.findRunningContextForEdit(logicalName);
+      if (
+        current?.executionTeamName !== running.executionTeamName ||
+        current.runId !== running.runId
+      ) {
+        throw new Error('The project runtime changed while preparing this edit; retry');
+      }
+      await journal.begin(logicalName);
+      try {
+        const definition = await write(logicalName);
+        if (!definition.success) {
+          return {
+            success: false,
+            error: `${definition.error ?? 'Edit failed'}. Stop the team before retrying so the project copy can be reconciled.`,
+          };
+        }
+        const stillRunning = await editor.findRunningContextForEdit(logicalName);
+        if (
+          stillRunning?.executionTeamName !== running.executionTeamName ||
+          stillRunning.runId !== running.runId
+        ) {
+          throw new Error('The project runtime changed during the edit');
+        }
+        const active = await write(running.executionTeamName);
+        if (!active.success) {
+          return {
+            success: false,
+            error: `The team definition was saved, but its running project could not be updated (${active.error ?? 'unknown error'}). Stop the team before retrying; its project copy will be reconciled at the next launch.`,
+          };
+        }
+        await journal.clear(logicalName);
+        await refreshProjectCopies(editor, logicalName, running.executionTeamName);
+        return definition;
+      } catch (error) {
+        return {
+          success: false,
+          error: `The edit may be partially applied (${error instanceof Error ? error.message : String(error)}). Stop the team before retrying; its project copy will be reconciled at the next launch.`,
+        };
+      }
+    });
+  });
+}
+
+/**
  * Route every ordinary team definition writer (name/description/color, add,
  * replace, remove, restore and role of members) by what the team name means:
- * - a per-project (logical) team: under the same logical-team operation lock
- *   that launch admission takes, refuse while any project runs, run the
- *   ordinary handler against the logical definition and refresh stopped
- *   copies, so a context cannot start between the check and the write;
+ * - a per-project (logical) team: hold the launch admission lock, write the
+ *   definition and, when one ready project runs, apply the same handler under
+ *   its runtime gate; then refresh stopped copies. A durable marker fences
+ *   incomplete live edits until the runtime has stopped;
  * - a project copy (alias): refused, the definition lives in the logical team;
  * - anything else: the handler runs exactly as before;
  * - unreadable team metadata: refused (fail closed).
  */
 export function createProjectDefinitionEditRouting(
   ports: DefinitionEditPorts,
-  createEditor: (ports: DefinitionEditPorts) => TeamProjectDefinitionEditor = buildEditor
+  createEditor: (ports: DefinitionEditPorts) => TeamProjectDefinitionEditor = buildEditor,
+  createJournal: () => Pick<TeamProjectLiveEditJournal, 'hasPending' | 'begin' | 'clear'> = () =>
+    new TeamProjectLiveEditJournal()
 ) {
   /**
    * `refuseNative` lets a handler name the writes that exist only for a
@@ -166,12 +239,12 @@ export function createProjectDefinitionEditRouting(
       if (refusal) return { success: false, error: refusal };
       if (target === 'native') return handler(event, teamName, ...rest);
       try {
-        return await runLogicalDefinitionWrite(
+        return await runLogicalLiveDefinitionWrite(
           ports,
           editor,
+          createJournal(),
           logicalName,
-          () => handler(event, teamName, ...rest),
-          (result) => result.success
+          (destination) => handler(event, destination, ...rest)
         );
       } catch (error) {
         return failure(error);
@@ -183,10 +256,13 @@ export function createProjectDefinitionEditRouting(
 /** Best effort: the definition is already saved, and a launch repeats the projection. */
 export async function refreshProjectCopies(
   editor: TeamProjectDefinitionEditor,
-  logicalName: string
+  logicalName: string,
+  excludedAlias?: string
 ): Promise<void> {
   try {
-    const report = await editor.projectToAliases(logicalName);
+    const report = excludedAlias
+      ? await editor.projectToAliases(logicalName, excludedAlias)
+      : await editor.projectToAliases(logicalName);
     for (const failed of report.failed) {
       logger.warn(
         `Could not refresh project copy ${failed.executionTeamName} of ${logicalName}: ${failed.message}`

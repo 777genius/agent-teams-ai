@@ -71,12 +71,19 @@ export type UpdateMemberSettingsEffect =
   | 'team_relaunch_required'
   | 'recovery_required';
 
+export interface MemberSettingsRelaunchGuard {
+  expectedTeamSettingsFingerprint: string;
+  baseline: { memberName: string; expectedFingerprint: string }[];
+}
+
 interface UpdateMemberSettingsRequestBase {
   commandId: string;
   idempotencyKey: string;
   teamName: string;
   memberName: string;
   expectedFingerprint: string;
+  /** Compare the complete logical-team baseline when committing a confirmed relaunch. */
+  relaunchGuard?: MemberSettingsRelaunchGuard;
 }
 
 export type UpdateMemberSettingsRequest = UpdateMemberSettingsRequestBase &
@@ -93,8 +100,8 @@ export type UpdateMemberSettingsRequest = UpdateMemberSettingsRequestBase &
  * written. A stable code, so the app can explain it in the user's language.
  * - `project_copy`: the team is the project copy of another team;
  * - `project_running`, `project_launching`, `project_unreconciled`: a team
- *   with separate history per project is edited only while every project is
- *   stopped, and one is running, starting or stopping, or was interrupted;
+ *   a project runtime is incompatible with the requested edit, still starting
+ *   or stopping, or its state requires reconciliation;
  * - `team_metadata_unreadable`: the team's saved settings cannot be read.
  */
 export type MemberSettingsRefusalReason =

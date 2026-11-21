@@ -1,24 +1,25 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
 import * as fs from 'node:fs/promises';
 import * as os from 'node:os';
 import * as path from 'node:path';
 
-import { createTeamWithProjectContext } from '../../../src/main/ipc/teams/teamProjectContextCreate';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+
+import { TeamProjectContextRegistry, TeamProjectLiveEditJournal } from '../../../src/features/team-project-context/main';
 import { createProjectScheduleTargets } from '../../../src/main/ipc/teams/projectScheduleTargets';
+import { createTeamWithProjectContext } from '../../../src/main/ipc/teams/teamProjectContextCreate';
 import { prepareTeamContextLaunch, withPreparedContextLaunch } from '../../../src/main/ipc/teams/teamProjectContextLaunch';
+import { claimTeamForThisProfile } from '../../../src/main/services/team/provisioning/TeamProvisioningProfileOwnership';
 import {
   getTasksBasePath,
   getTeamsBasePath,
   setAppDataBasePath,
   setClaudeBasePathOverride,
 } from '../../../src/main/utils/pathDecoder';
-import { claimTeamForThisProfile } from '../../../src/main/services/team/provisioning/TeamProvisioningProfileOwnership';
-import { TeamProjectContextRegistry } from '../../../src/features/team-project-context/main';
 
 import type {
-  TeamLaunchRequest,
   TeamCreateConfigRequest,
   TeamCreateRequest,
+  TeamLaunchRequest,
   TeamProvisioningProgress,
   TeamRuntimeState,
 } from '../../../src/shared/types/team';
@@ -183,6 +184,31 @@ describe('project-scoped desktop team creation boundary (sandbox disk + fake nat
       teamName: alias, cwd: f.projectPath,
     }, f.ports)).rejects.toThrow('cannot launch directly');
     expect(f.started).toHaveLength(1);
+  });
+
+  it('blocks launch after an interrupted live edit until the previous runtime is stopped', async () => {
+    const f = await fixture();
+    await createTeamWithProjectContext({
+      teamName: 'builders', cwd: f.projectPath, members: [], projectContextMode: 'per_project',
+    }, f.onProgress, f.ports);
+    const registry = TeamProjectContextRegistry.fromCurrentApp();
+    const alias = await vi.waitFor(async () => {
+      const row = await registry.find('builders', f.projectPath);
+      expect(row?.state).toBe('ready');
+      return row!.executionTeamName;
+    });
+    const journal = new TeamProjectLiveEditJournal();
+    await journal.begin('builders');
+    f.ports.runtime.getRuntimeState = async (name) => ({
+      teamName: name, isAlive: name === alias, runId: name === alias ? 'live' : null, progress: null,
+    });
+    await expect(prepareTeamContextLaunch({ teamName: 'builders', cwd: f.projectPath }, f.ports))
+      .rejects.toThrow(/running/);
+    expect(await journal.hasPending('builders')).toBe(true);
+    f.ports.runtime.getRuntimeState = async (name) => ({ teamName: name, isAlive: false, runId: null, progress: null });
+    const prepared = await prepareTeamContextLaunch({ teamName: 'builders', cwd: f.projectPath }, f.ports);
+    expect(prepared.request.teamName).toBe(alias);
+    expect(await journal.hasPending('builders')).toBe(false);
   });
 
   it('preserves the native team name and paths in shared mode', async () => {

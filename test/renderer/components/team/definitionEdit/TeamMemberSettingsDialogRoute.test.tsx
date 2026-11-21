@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const teams = vi.hoisted(() => ({
   getSavedRequest: vi.fn(),
+  processAlive: vi.fn(),
   getMemberSettingsTarget: vi.fn(),
   updateMemberSettings: vi.fn(),
 }));
@@ -136,7 +137,11 @@ beforeEach(() => {
     members: [{ name: 'alice', role: 'Developer' }],
     savedSettingsFingerprint: 'definition-settings',
   });
-  teams.getMemberSettingsTarget.mockReset().mockResolvedValue(leadTarget);
+  teams.processAlive.mockReset().mockResolvedValue(false);
+  teams.getMemberSettingsTarget.mockReset().mockImplementation(async ({ memberName }: { memberName: string }) =>
+    memberName === 'alice' ? { ...leadTarget, name: 'alice', agentType: 'developer',
+      settings: { ...leadTarget.settings, role: 'Developer' } } : leadTarget
+  );
   teams.updateMemberSettings.mockReset().mockResolvedValue({
     outcome: 'completed',
     effect: 'persisted_only',
