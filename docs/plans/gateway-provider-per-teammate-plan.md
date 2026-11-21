@@ -1,7 +1,7 @@
 # План: Gateway-провайдер с выбором и учётом на каждого тиммейта
 
 **Статус:** v9 — замечания ревью PR 942 закрыты: approval snapshot в usage source и durable неполнота при правке секрета; реализация начинается с §8
-**Тестовый стенд:** локальный [agent-teams-ai/sub2api-standalone](https://github.com/agent-teams-ai/sub2api-standalone) (с 2026-11-21 вместо архивного форка `agent-teams-ai/sub2api`, история та же)
+**Тестовый стенд:** локальный [agent-teams-ai/sub2api-standalone](https://github.com/agent-teams-ai/sub2api-standalone) (с 2026-11-21 вместо старого форка `agent-teams-ai/sub2api`, который архивируется; история `main` та же)
 
 ## 1. Цель
 
