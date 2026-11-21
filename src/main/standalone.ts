@@ -97,8 +97,8 @@ const sshConnectionManagerStub = {
 let localContext: ServiceContext;
 let notificationManager: NotificationManager;
 let httpServer: HttpServer;
-let internalStorageFeature: ReturnType<typeof createInternalStorageFeature> | null = null;
-let customTeamTemplatesFeature: CustomTeamTemplatesFeature | null = null;
+let internalStorageFeature: ReturnType<typeof createInternalStorageFeature> | undefined;
+let customTeamTemplatesFeature: CustomTeamTemplatesFeature | undefined;
 
 // =============================================================================
 // Lifecycle
