@@ -410,6 +410,18 @@ export function useSaveAsTemplate({
     }
     if (sessionIsOpenRef.current) return;
     sessionIsOpenRef.current = true;
+    const pending = lastMutationRef.current;
+    if (
+      pending &&
+      sessionSourceTeamRef.current === sourceTeamName &&
+      getPendingTemplateMutation()?.id === pending.id &&
+      hasUnknownOutcome(attempt) &&
+      preview !== null
+    ) {
+      // Closing and reopening the same team row must not discard a dispatched
+      // unknown write. The retained token is the only safe re-check target.
+      return;
+    }
     sessionSourceTeamRef.current = sourceTeamName;
     lastMutationRef.current = null;
     // Any response that arrives after the dialog reopened belongs to a previous
@@ -426,7 +438,7 @@ export function useSaveAsTemplate({
     setNotice(null);
     setAttempt(null);
     void runPrepare(initialName, '');
-  }, [initialName, open, runPrepare, sourceTeamName]);
+  }, [attempt, initialName, open, preview, runPrepare, sourceTeamName]);
 
   const canSave =
     preview !== null &&

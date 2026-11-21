@@ -42,6 +42,7 @@ vi.mock('@renderer/components/ui/dialog', () => ({
 
 import { TooltipProvider } from '@renderer/components/ui/tooltip';
 
+import { setPendingTemplateMutation, getPendingTemplateMutations } from '../hooks/pendingTemplateMutation';
 import { SaveAsTemplateAction } from './SaveAsTemplateAction';
 
 const preview = {
@@ -91,6 +92,10 @@ beforeEach(() => {
   preparePreview.mockReset();
   saveTemplate.mockReset();
   recheckSave.mockReset();
+  recheckSave.mockResolvedValue({ status: 'saved', template: {
+    templateId: 'template-1', name: 'Alpha', schemaVersion: 1,
+    teamPrompt: 'Lead the work.', members: [{ name: 'ann', role: 'Developer' }],
+  } });
   listTemplates.mockReset();
   preparePreview.mockResolvedValue({ status: 'previewReady', preview });
   onRowClick = vi.fn();
@@ -101,6 +106,7 @@ beforeEach(() => {
 
 afterEach(() => {
   act(() => root.unmount());
+  setPendingTemplateMutation(null);
   host.remove();
   vi.restoreAllMocks();
 });
@@ -131,6 +137,34 @@ describe('SaveAsTemplateAction', () => {
       host.querySelector('button[aria-label="customTemplates.actions.saveAsTemplate"]')
     ).toBeNull();
     expect(preparePreview).not.toHaveBeenCalled();
+  });
+
+  it('reopens an unknown save with the original preview and safe re-check', async () => {
+    saveTemplate.mockResolvedValue({ status: 'unresolvedWriteOutcome', templateId: 'template-1' });
+    await renderAction({ teamName: 'alpha', displayName: 'Alpha' });
+    await act(async () => actionButton().click());
+    await flush();
+    const find = (part: string): HTMLButtonElement => {
+      const button = Array.from(host.querySelectorAll('button')).find((x) =>
+        x.textContent?.includes(part)
+      );
+      if (!button) throw new Error('missing button: ' + part);
+      return button;
+    };
+    await act(async () => find('customTemplates.actions.save').click());
+    expect(getPendingTemplateMutations()).toHaveLength(1);
+    expect(saveTemplate).toHaveBeenCalledTimes(1);
+
+    await act(async () => find('actions.close').click());
+    expect(host.querySelector('[role="dialog"]')).toBeNull();
+    await act(async () => actionButton().click());
+    await flush();
+    expect(preparePreview).toHaveBeenCalledTimes(1);
+    expect(host.textContent).toContain('customTemplates.states.unresolvedTitle');
+    await act(async () => find('customTemplates.actions.recheck').click());
+    expect(recheckSave).toHaveBeenCalledWith({ previewToken: 'token-1' });
+    expect(getPendingTemplateMutations()).toHaveLength(0);
+    expect(saveTemplate).toHaveBeenCalledTimes(1);
   });
 
   it('does not prepare again on a parent re-render', async () => {
