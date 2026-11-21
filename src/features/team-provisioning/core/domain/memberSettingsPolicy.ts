@@ -7,6 +7,7 @@ import { normalizeTeamMemberMcpPolicy } from '@shared/utils/teamMemberMcpPolicy'
 import type {
   EditableMemberSettings,
   MemberSettingsProviderId,
+  MemberSettingsTarget,
 } from '../../contracts/memberSettings';
 
 export type MemberSettingsRuntimeLane = 'primary' | 'opencode_secondary';
@@ -80,6 +81,17 @@ export function normalizeEditableMemberSettings(
 
 export function isCanonicalLeadTarget(target: MemberSettingsTargetSnapshot): boolean {
   return isCanonicalSettingsLeadMember({ name: target.name, agentType: target.agentType, role: target.settings.role });
+}
+
+/** What a caller needs to show the saved settings and to send the matching fingerprint. */
+export function toMemberSettingsTarget(target: MemberSettingsTargetSnapshot): MemberSettingsTarget {
+  return {
+    name: target.name,
+    agentType: target.agentType,
+    agentId: target.agentId,
+    joinedAt: target.joinedAt,
+    settings: target.settings,
+  };
 }
 
 export function createMemberSettingsFingerprint(target: MemberSettingsTargetSnapshot): string {

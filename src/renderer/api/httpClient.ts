@@ -32,6 +32,7 @@ import {
   type UpsertOrganizationUnitRequest,
 } from '@features/organizations/contracts';
 import { createHttpTeamGroupChatsAPI } from '@features/team-group-chats';
+import { DESKTOP_ONLY_TEAM_MEMBER_SETTINGS_API } from '@features/team-provisioning/contracts';
 import {
   TOKEN_USAGE_BUDGET_SETTINGS_ROUTE,
   TOKEN_USAGE_BUDGET_STATUS_CHANGED,
@@ -1319,8 +1320,7 @@ export class HttpAPIClient implements ElectronAPI {
     updateMemberRole: async (): Promise<void> => {
       throw new Error('Team member management is not available in browser mode');
     },
-    updateMemberSettings: async () =>
-      Promise.reject(new Error('Team member settings updates require the desktop app')),
+    ...DESKTOP_ONLY_TEAM_MEMBER_SETTINGS_API,
     getProjectBranch: async (_projectPath: string): Promise<string | null> => null,
     setProjectBranchTracking: async (): Promise<void> => {
       // Not available in browser mode — no-op.

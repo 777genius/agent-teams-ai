@@ -763,7 +763,7 @@ export function registerTeamHandlers(ipcMain: IpcMain): void {
   ipcMain.handle(TEAM_GET_ALL_TASKS, handleGetAllTasks);
   ipcMain.handle(TEAM_ADD_TASK_COMMENT, handleAddTaskComment);
   ipcMain.handle(TEAM_ADD_MEMBER, projectEdit.route(handleAddMember));
-  ipcMain.handle(TEAM_REPLACE_MEMBERS, projectEdit.route(handleReplaceMembers));
+  ipcMain.handle(TEAM_REPLACE_MEMBERS, projectEdit.route(handleReplaceMembers, undefined, projectEdit.refuseSettingsRelaunchOfDefinition));
   ipcMain.handle(TEAM_REMOVE_MEMBER, projectEdit.route(handleRemoveMember));
   ipcMain.handle(TEAM_RESTORE_MEMBER, projectEdit.route(handleRestoreMember));
   ipcMain.handle(TEAM_UPDATE_MEMBER_ROLE, projectEdit.route(handleUpdateMemberRole));

@@ -1,4 +1,10 @@
 import {
+  findProjectCopyOwner,
+  formatProjectCopyLabel,
+  type ProjectCopyCatalogTeam,
+} from '@features/team-project-context/core';
+
+import {
   areReviewFlowSettingsEqual,
   resolveReviewFlowPolicy,
 } from '../../core/domain/reviewFlowPolicy';
@@ -54,6 +60,29 @@ export function scopeToValue(scope: ReviewFlowScope): string {
 
 export function scopeFromValue(value: string): ReviewFlowScope {
   return value === DEFAULT_SCOPE_VALUE ? { kind: 'default' } : { kind: 'team', teamName: value };
+}
+
+/**
+ * The boards a review flow can be set for. The setting lives with a board: a
+ * team with separate history per project has no board of its own, each of its
+ * projects has one (its project copy), so it is listed once per project as
+ * "Team · project" and has no entry before its first launch in a project. An
+ * ordinary team is its own board; copies it retained from an earlier period
+ * keep their boards and are named the same way.
+ */
+export function reviewFlowBoardsOf(teams: readonly ProjectCopyCatalogTeam[]): TeamIdentity[] {
+  return teams.flatMap((team): TeamIdentity[] => {
+    const copies = (team.projectHistoryContexts ?? []).map((context) => {
+      const owner = findProjectCopyOwner(teams, context.executionTeamName);
+      return {
+        teamName: context.executionTeamName,
+        displayName: owner ? formatProjectCopyLabel(owner) : context.executionTeamName,
+      };
+    });
+    return team.projectContextMode === 'per_project'
+      ? copies
+      : [{ teamName: team.teamName, displayName: team.displayName }, ...copies];
+  });
 }
 
 function teamLabel(team: TeamIdentity): string {

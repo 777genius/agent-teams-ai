@@ -79,6 +79,37 @@ function failure(error: unknown): { success: false; error: string } {
   return { success: false, error: error instanceof Error ? error.message : String(error) };
 }
 
+/** Where a definition write goes; a project copy is refused (throws) here. */
+export async function classifyDefinitionWrite(
+  editor: TeamProjectDefinitionEditor,
+  teamName: string
+): Promise<'native' | 'logical'> {
+  const target = await editor.classify(teamName);
+  if (target === 'alias') throw new Error(PROJECT_COPY_EDIT_MESSAGE);
+  return target;
+}
+
+/**
+ * A write to the definition of a per-project (logical) team: under the
+ * logical-team operation lock that launch admission takes, refused unless every
+ * project is confirmed stopped, then the stopped project copies are refreshed
+ * when the write changed something.
+ */
+export function runLogicalDefinitionWrite<R>(
+  ports: Pick<DefinitionEditPorts, 'data'>,
+  editor: TeamProjectDefinitionEditor,
+  logicalName: string,
+  write: () => Promise<R>,
+  changed: (result: R) => boolean
+): Promise<R> {
+  return ports.data().runConfigurationOperation(logicalName, async () => {
+    await editor.assertEditable(logicalName);
+    const result = await write();
+    if (changed(result)) await refreshProjectCopies(editor, logicalName);
+    return result;
+  });
+}
+
 /**
  * Route every ordinary team definition writer (name/description/color, add,
  * replace, remove, restore and role of members) by what the team name means:
@@ -102,31 +133,31 @@ export function createProjectDefinitionEditRouting(
    */
   return function withProjectDefinitionEdit<R>(
     handler: EditHandler<R>,
-    refuseNative?: (...rest: unknown[]) => string | null
+    refuseNative?: (...rest: unknown[]) => string | null,
+    refuseLogical?: (...rest: unknown[]) => string | null
   ): EditHandler<R> {
     return async (event, teamName, ...rest) => {
       const name = validateTeamName(teamName);
       if (!name.valid || !name.value) return handler(event, teamName, ...rest);
       const logicalName = name.value;
       const editor = createEditor(ports);
-      let target: TeamKind;
+      let target: Exclude<TeamKind, 'alias'>;
       try {
-        target = await editor.classify(logicalName);
+        target = await classifyDefinitionWrite(editor, logicalName);
       } catch (error) {
         return failure(error);
       }
-      if (target === 'native') {
-        const refusal = refuseNative?.(...rest) ?? null;
-        return refusal ? { success: false, error: refusal } : handler(event, teamName, ...rest);
-      }
-      if (target === 'alias') return { success: false, error: PROJECT_COPY_EDIT_MESSAGE };
+      const refusal = (target === 'native' ? refuseNative : refuseLogical)?.(...rest) ?? null;
+      if (refusal) return { success: false, error: refusal };
+      if (target === 'native') return handler(event, teamName, ...rest);
       try {
-        return await ports.data().runConfigurationOperation(logicalName, async () => {
-          await editor.assertEditable(logicalName);
-          const result = await handler(event, teamName, ...rest);
-          if (result.success) await refreshProjectCopies(editor, logicalName);
-          return result;
-        });
+        return await runLogicalDefinitionWrite(
+          ports,
+          editor,
+          logicalName,
+          () => handler(event, teamName, ...rest),
+          (result) => result.success
+        );
       } catch (error) {
         return failure(error);
       }
@@ -196,6 +227,32 @@ export function refuseLeadPromptOfNativeTeam(updates: unknown): string | null {
     'prompt' in updates &&
     updates.prompt !== undefined
     ? NATIVE_LEAD_PROMPT_MESSAGE
+    : null;
+}
+
+/**
+ * The lead of a per-project team has no member row in the definition: its
+ * provider, model and effort are the team's launch settings, chosen in the
+ * launch dialog and saved for every project when a launch is accepted.
+ */
+export const PROJECT_TEAM_LEAD_SETTINGS_MESSAGE =
+  'The lead of a team with separate history per project takes its model and effort from the team launch settings. Change them with Change runtime; they are saved for every project.';
+
+/**
+ * A settings-originated relaunch persists settings into the team it relaunches.
+ * A per-project team keeps them in its definition, which changes only while every
+ * project is stopped, so the relaunch of one project must not write them.
+ */
+export const PROJECT_TEAM_SETTINGS_RELAUNCH_MESSAGE =
+  'A team with separate history per project saves member settings in the team itself while every project is stopped; it cannot change them as part of a relaunch.';
+
+/** Refusal for replace-members of a per-project team: a settings-originated relaunch. */
+export function refuseSettingsRelaunchOfDefinition(request: unknown): string | null {
+  return request &&
+    typeof request === 'object' &&
+    'memberSettingsRelaunch' in request &&
+    request.memberSettingsRelaunch !== undefined
+    ? PROJECT_TEAM_SETTINGS_RELAUNCH_MESSAGE
     : null;
 }
 
