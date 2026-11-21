@@ -15,6 +15,7 @@ import {
   resolveCodexFastMode,
   resolveCodexRuntimeSelection,
 } from '@features/codex-runtime-profile/renderer';
+import { CreateTeamTemplatePicker } from '@features/custom-team-templates/renderer';
 import { useAppTranslation } from '@features/localization/renderer';
 import {
   useWorkspaceTrustStatus,
@@ -36,7 +37,6 @@ import { Button } from '@renderer/components/ui/button';
 import { Checkbox } from '@renderer/components/ui/checkbox';
 import { Input } from '@renderer/components/ui/input';
 import { Label } from '@renderer/components/ui/label';
-import { MentionableTextarea } from '@renderer/components/ui/MentionableTextarea';
 import {
   Select,
   SelectContent,
@@ -120,7 +120,10 @@ import {
   validateRequest,
   validateTeamNameInline,
 } from './createTeamSubmissionValidation';
+import { CreateTeamNameField } from './CreateTeamNameField';
+import { CreateTeamPromptField } from './CreateTeamPromptField';
 import { CreateTeamSurface } from './CreateTeamSurface';
+import { useCreateTeamTemplateSelection } from './useCreateTeamTemplateSelection';
 import {
   buildProviderModelChecksMap,
   collectDialogMemberProviderIds,
@@ -321,7 +324,6 @@ export const CreateTeamDialog = ({
       ),
     [effectiveCliStatus?.providers]
   );
-
   // ── Persisted draft state (survives tab navigation) ──────────────────
   const createTeamDraft = useCreateTeamDraft();
   const {
@@ -373,6 +375,13 @@ export const CreateTeamDialog = ({
   const descriptionDraft = useDraftPersistence({ key: 'createTeam:description' });
   const promptDraft = useDraftPersistence({ key: 'createTeam:prompt' });
   const promptChipDraft = useChipDraftPersistence('createTeam:prompt:chips');
+  const {
+    templateSelectionDraft,
+    appliedTemplateSource,
+    setAppliedTemplateSource,
+    storedTemplateSelection,
+    clearTemplateSelection,
+  } = useCreateTeamTemplateSelection({ initialData: Boolean(initialData) });
   const [projects, setProjects] = useState<ProjectPathProject[]>([]);
   const [projectsLoading, setProjectsLoading] = useState(false);
   const [projectsError, setProjectsError] = useState<string | null>(null);
@@ -480,7 +489,6 @@ export const CreateTeamDialog = ({
           setOrganizationStructureLoading(false);
         }
       });
-
     return () => {
       cancelled = true;
     };
@@ -564,6 +572,7 @@ export const CreateTeamDialog = ({
     descriptionDraft.clearDraft();
     promptDraft.clearDraft();
     promptChipDraft.clearChipDraft();
+    clearTemplateSelection();
     resetUIState();
     if (presentation === 'page') await resetCreateTeamDraft();
   };
@@ -863,7 +872,6 @@ export const CreateTeamDialog = ({
     if (!isTeamProviderId(providerId)) {
       return;
     }
-
     lastPrepareProviderSignatureByIdRef.current.delete(providerId);
     pendingPrepareProviderSignatureByIdRef.current.delete(providerId);
     prepareProviderRequestSeqByIdRef.current.set(
@@ -896,7 +904,6 @@ export const CreateTeamDialog = ({
       prepareWarningsByProviderIdRef.current.clear();
     }
   }, [open]);
-
   useEffect(() => {
     const generation = ++prepareUnmountGenerationRef.current;
     const idleHandles = prepareIdleHandlesRef.current;
@@ -920,7 +927,6 @@ export const CreateTeamDialog = ({
       });
     };
   }, []);
-
   const selectedEffortForCurrentSelection = useMemo(
     () =>
       getAvailableTeamEffortValue({
@@ -938,7 +944,6 @@ export const CreateTeamDialog = ({
       selectedProviderId,
     ]
   );
-
   const selectedModelChecksByProvider = useMemo(() => {
     const leadEffort = (selectedEffortForCurrentSelection as EffortLevel | '') || undefined;
     const leadModel = effectiveSelectedModel.trim()
@@ -985,7 +990,6 @@ export const CreateTeamDialog = ({
     const modelUnavailableReasonByProvider: Partial<
       Record<TeamProviderId, Record<string, string>>
     > = {};
-
     for (const providerId of selectedMemberProviders) {
       const backendSummary = runtimeBackendSummaryByProvider.get(providerId) ?? null;
       const providerRuntimeStatusSignature = buildProviderPrepareRuntimeStatusSignature(
@@ -1017,7 +1021,6 @@ export const CreateTeamDialog = ({
         modelUnavailableReasonByProvider[providerId] = issueReasons.modelUnavailableReasonByValue;
       }
     }
-
     return {
       modelAdvisoryReasonByProvider,
       modelIssueReasonByProvider,
@@ -1034,7 +1037,6 @@ export const CreateTeamDialog = ({
     selectedModelChecksByProviderSignature,
     selectedMemberProviders,
   ]);
-
   useEffect(() => {
     if (multimodelEnabled) {
       return;
@@ -1049,9 +1051,7 @@ export const CreateTeamDialog = ({
       setMembers(nextMembers);
     }
   }, [members, multimodelEnabled, selectedProviderId, setMembers]);
-
   useProviderReadinessRevalidation(open, selectedMemberProviders, cliStatus);
-
   const handleCodexReconnect = useCallback(
     (mode: 'browser' | 'device_code' = 'browser') => {
       void (async () => {
@@ -1060,7 +1060,6 @@ export const CreateTeamDialog = ({
     },
     [codexAccount]
   );
-
   useEffect(() => {
     if (
       submissionFence.busy ||
@@ -1083,7 +1082,6 @@ export const CreateTeamDialog = ({
     submissionFence,
     t,
   ]);
-
   useEffect(() => {
     if (submissionFence.busy || (open && !active)) return;
     if (
@@ -2667,41 +2665,43 @@ export const CreateTeamDialog = ({
             </p>
           ) : null}
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            <div className="w-full max-w-[24rem] space-y-1.5 md:col-span-2">
-              <Label htmlFor="team-name">{t('create.fields.teamName')}</Label>
-              <Input
-                id="team-name"
-                className={cn(
-                  'h-8 text-xs',
-                  (fieldErrors.teamName || teamNameInlineError || isNameTakenByExistingTeam) &&
-                    'border-[var(--field-error-border)] bg-[var(--field-error-bg)] focus-visible:ring-[var(--field-error-border)]'
-                )}
-                value={teamName}
-                onChange={(event) => handleTeamNameChange(event.target.value)}
-                placeholder={suggestedTeamName}
+            <CreateTeamNameField
+              teamName={teamName}
+              suggestedTeamName={suggestedTeamName}
+              fieldError={fieldErrors.teamName}
+              teamNameInlineError={teamNameInlineError}
+              isNameTakenByExistingTeam={isNameTakenByExistingTeam}
+              isNameProvisioning={isNameProvisioning}
+              sanitizedTeamName={sanitizedTeamName}
+              onTeamNameChange={handleTeamNameChange}
+            />
+            <div className="md:col-span-2">
+              <CreateTeamTemplatePicker
+                open={open}
+                initialSelection={initialData ? '' : storedTemplateSelection.value}
+                initialSelectionReady={initialData ? true : templateSelectionDraft.isLoaded !== false}
+                onApply={(draft, source, selectionValue) => {
+                  setAppliedTemplateSource(source);
+                  templateSelectionDraft.setValue(
+                    JSON.stringify({ source, value: selectionValue ?? '' })
+                  );
+                  if (source !== 'none') {
+                    setRuntimeSelection(1);
+                    setLaunchTeam(false);
+                    setSoloTeam(false);
+                    setSyncModelsWithLead(true, { persistStoredPreference: false });
+                  }
+                  descriptionDraft.setValue(draft.description ?? '');
+                  promptDraft.setValue(draft.prompt ?? '');
+                  promptChipDraft.clearChipDraft();
+                  setMembers(
+                    buildInitialRosterMemberDrafts({
+                      copiedMembers: draft.members,
+                      multimodelEnabled,
+                    })
+                  );
+                }}
               />
-              {isNameTakenByExistingTeam ? (
-                <p className="text-[11px]" style={{ color: 'var(--field-error-text)' }}>
-                  {t('create.errors.nameExists')}
-                </p>
-              ) : teamNameInlineError ? (
-                <p className="text-[11px]" style={{ color: 'var(--field-error-text)' }}>
-                  {teamNameInlineError}
-                </p>
-              ) : isNameProvisioning ? (
-                <p className="text-[11px]" style={{ color: 'var(--warning-text)' }}>
-                  {t('create.errors.nameLaunching')}
-                </p>
-              ) : fieldErrors.teamName ? (
-                <p className="text-[11px]" style={{ color: 'var(--field-error-text)' }}>
-                  {fieldErrors.teamName}
-                </p>
-              ) : null}
-              {sanitizedTeamName && sanitizedTeamName !== teamName.trim() ? (
-                <p className="text-[11px] text-[var(--color-text-muted)]">
-                  {t('create.onDisk')} <span className="font-mono">{sanitizedTeamName}</span>
-                </p>
-              ) : null}
             </div>
             <div className="space-y-4 pt-4 md:col-span-2">
               <TeamRosterEditorSection
@@ -2775,6 +2775,21 @@ export const CreateTeamDialog = ({
                 launchTeam={launchTeam}
                 onLaunchTeamChange={setLaunchTeam}
               />
+              {!launchTeam && appliedTemplateSource !== 'none' ? (
+                <div className="mt-4">
+                  <CreateTeamPromptField
+                    promptDraft={promptDraft}
+                    chipDraft={promptChipDraft}
+                    soloTeam={soloTeam}
+                    mentionSuggestions={mentionSuggestions}
+                    teamSuggestions={teamMentionSuggestions}
+                    taskSuggestions={taskSuggestions}
+                    projectPath={effectiveCwd || null}
+                    onSuggestionsNeeded={enableWorkflowMentionSuggestions}
+                    id="team-prompt-template"
+                  />
+                </div>
+              ) : null}
               <div className="mt-4 space-y-4">
                 {launchTeam ? (
                   <ProjectPathSelector
@@ -2859,34 +2874,16 @@ export const CreateTeamDialog = ({
                             ) : null}
                           </div>
                         ) : null}
-                        <div className="space-y-1.5">
-                          <Label htmlFor="team-prompt">
-                            {t('create.fields.prompt')}
-                          </Label>
-                          <MentionableTextarea
-                            id="team-prompt"
-                            className="text-xs"
-                            minRows={3}
-                            maxRows={12}
-                            value={prompt}
-                            onValueChange={promptDraft.setValue}
-                            suggestions={soloTeam ? [] : mentionSuggestions}
-                            teamSuggestions={teamMentionSuggestions}
-                            taskSuggestions={taskSuggestions}
-                            projectPath={effectiveCwd || null}
-                            chips={promptChipDraft.chips}
-                            onChipRemove={promptChipDraft.removeChip}
-                            onFileChipInsert={promptChipDraft.addChip}
-                            placeholder={t('create.placeholders.prompt')}
-                            footerRight={
-                              promptDraft.isSaved ? (
-                                <span className="text-[10px] text-[var(--color-text-muted)]">
-                                  {t('create.saved')}
-                                </span>
-                              ) : null
-                            }
-                          />
-                        </div>
+                        <CreateTeamPromptField
+                          promptDraft={promptDraft}
+                          chipDraft={promptChipDraft}
+                          soloTeam={soloTeam}
+                          mentionSuggestions={mentionSuggestions}
+                          teamSuggestions={teamMentionSuggestions}
+                          taskSuggestions={taskSuggestions}
+                          projectPath={effectiveCwd || null}
+                          onSuggestionsNeeded={enableWorkflowMentionSuggestions}
+                        />
                         <SkipPermissionsCheckbox
                           id="create-skip-permissions"
                           checked={skipPermissions}

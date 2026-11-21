@@ -9,6 +9,9 @@
  * - HOST: Bind address (default '0.0.0.0')
  * - PORT: Listen port (default 3456)
  * - CLAUDE_ROOT: Path to .claude directory (default ~/.claude)
+ * - APP_DATA_DIR: App data root for internal storage (the saved template
+ *   library and friends; default ~/.agent-teams-ai outside Electron). Point it
+ *   at a mounted volume so the data survives container replacement.
  * - CORS_ORIGIN: CORS origin policy (default '*')
  */
 
@@ -16,17 +19,24 @@
 // runtime which is unavailable in standalone (pure Node.js) mode. Standalone
 // error tracking can be added later with @sentry/node if needed.
 
+import {
+  createCustomTeamTemplatesFeature,
+  type CustomTeamTemplatesFeature,
+} from '@features/custom-team-templates/main';
+import { createInternalStorageFeature } from '@features/internal-storage/main';
 import { createRecentProjectsFeature } from '@features/recent-projects/main';
 import { createWorkspaceTrustFeatures } from '@features/workspace-trust/main';
 import { createLogger } from '@shared/utils/logger';
 
 import { LocalFileSystemProvider } from './services/infrastructure/LocalFileSystemProvider';
 import {
+  getAppDataBasePath,
   getAutoDetectedClaudeBasePath,
   getClaudeBasePath,
   getHomeDir,
   getProjectsBasePath,
   getTodosBasePath,
+  setAppDataBasePath,
   setClaudeBasePathOverride,
 } from './utils/pathDecoder';
 
@@ -46,6 +56,7 @@ const logger = createLogger('Standalone');
 const HOST = process.env.HOST ?? '0.0.0.0';
 const PORT = parseInt(process.env.PORT ?? '3456', 10);
 const CLAUDE_ROOT = process.env.CLAUDE_ROOT;
+const APP_DATA_DIR = process.env.APP_DATA_DIR;
 
 // Default CORS to allow all in standalone mode (Docker isolation replaces CORS)
 if (!process.env.CORS_ORIGIN) {
@@ -92,6 +103,8 @@ const sshConnectionManagerStub = {
 let localContext: ServiceContext;
 let notificationManager: NotificationManager;
 let httpServer: HttpServer;
+let internalStorageFeature: ReturnType<typeof createInternalStorageFeature>;
+let customTeamTemplatesFeature: CustomTeamTemplatesFeature;
 
 // =============================================================================
 // Lifecycle
@@ -104,6 +117,14 @@ async function start(): Promise<void> {
   if (CLAUDE_ROOT) {
     setClaudeBasePathOverride(CLAUDE_ROOT);
     logger.info(`Using CLAUDE_ROOT: ${CLAUDE_ROOT}`);
+  }
+
+  // Apply the app-data root if set. In Docker this points at the mounted
+  // volume, so the internal-storage database (e.g. the saved template library)
+  // is persisted instead of living in the replaceable container filesystem.
+  if (APP_DATA_DIR) {
+    setAppDataBasePath(APP_DATA_DIR);
+    logger.info(`Using APP_DATA_DIR: ${APP_DATA_DIR}`);
   }
 
   // Import services after applying CLAUDE_ROOT so ConfigManager picks up the correct base path.
@@ -132,6 +153,19 @@ async function start(): Promise<void> {
   // Initialize notification manager
   notificationManager = NotificationManager.getInstance();
   localContext.fileWatcher.setNotificationManager(notificationManager);
+
+  // Start internal storage (SQLite backend for custom team templates)
+  const userDataPath = getAppDataBasePath();
+  logger.info(`Internal storage database path: ${userDataPath}`);
+  internalStorageFeature = createInternalStorageFeature({ userDataPath });
+  const backendKind = await internalStorageFeature.probeBackend();
+  logger.info(`Internal storage backend: ${backendKind}`);
+
+  // Start custom team templates feature with the internal storage backend
+  customTeamTemplatesFeature = createCustomTeamTemplatesFeature({
+    backend: internalStorageFeature.customTeamTemplatesBackend,
+  });
+  logger.info('Custom team templates feature initialized');
 
   // Create HTTP server
   httpServer = new HttpServer();
@@ -175,6 +209,7 @@ async function start(): Promise<void> {
     }).status,
     updaterService: updaterServiceStub,
     sshConnectionManager: sshConnectionManagerStub,
+    customTeamTemplatesFeature,
   };
 
   // No-op mode switch handler (no SSH in standalone)
@@ -191,6 +226,14 @@ async function shutdown(): Promise<void> {
 
   if (httpServer?.isRunning()) {
     await httpServer.stop();
+  }
+
+  if (customTeamTemplatesFeature) {
+    customTeamTemplatesFeature.dispose();
+  }
+
+  if (internalStorageFeature) {
+    await internalStorageFeature.dispose();
   }
 
   if (localContext) {

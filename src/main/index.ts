@@ -227,6 +227,7 @@ import { isReviewPickupEscalationMessage } from '@shared/utils/teamAutomationMes
 import { isTeamInternalControlMessageEnvelope } from '@shared/utils/teamInternalControlMessages';
 import { app, BrowserWindow, dialog, ipcMain, shell } from 'electron';
 import { AnnouncementsLifecycle } from './announcementsLifecycle';
+import { startCustomTeamTemplatesFeature } from './startCustomTeamTemplatesFeature';
 import { composeTeamMemberSettings } from './composeTeamMemberSettings';
 import { registerWindowZoomHandler } from '@features/appearance/main';
 import {
@@ -958,6 +959,7 @@ let codexAccountFeature: CodexAccountFeatureFacade | null = null;
 let codexModelCatalogFeature: CodexModelCatalogFeatureFacade | null = null;
 let recentProjectsFeature: RecentProjectsFeatureFacade;
 let teamGroupChatsFeature: TeamGroupChatsFeature;
+let customTeamTemplatesFeature: ReturnType<typeof startCustomTeamTemplatesFeature> | null = null;
 let teamImportFeature: TeamImportFeatureFacade;
 let organizationsFeature: OrganizationsFeatureFacade;
 let runtimeProviderManagementFeature: RuntimeProviderManagementFeatureFacade;
@@ -1916,6 +1918,7 @@ async function initializeServices(): Promise<void> {
   if (process.env.AGENT_TEAMS_PACKAGED_SMOKE?.trim() === '1') {
     void internalStorageFeature.probeBackend();
   }
+  customTeamTemplatesFeature = startCustomTeamTemplatesFeature(internalStorageFeature);
   teamDataService = new TeamDataService();
   void teamDataService
     .listTeams()
@@ -2985,6 +2988,7 @@ async function startHttpServer(
         dataCache: activeContext.dataCache,
         recentProjectsFeature,
         teamGroupChatsFeature,
+        customTeamTemplatesFeature: customTeamTemplatesFeature ?? undefined,
         organizationsFeature,
         workspaceTrust: workspaceTrustStatus,
         tokenUsageFeature: tokenUsageFeature ?? undefined,
@@ -3187,6 +3191,8 @@ async function shutdownServices(): Promise<void> {
       removeIpcHandlers();
       removeCodexAccountIpc(ipcMain);
       removeRecentProjectsIpc(ipcMain);
+      customTeamTemplatesFeature?.dispose();
+      customTeamTemplatesFeature = null;
       workspaceTrustFeature.removeWorkspaceTrustIpc(ipcMain);
       projectFolderFeature.removeProjectFolderIpc(ipcMain);
       removeTeamImportIpc(ipcMain);
