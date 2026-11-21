@@ -215,21 +215,26 @@ export class SaveCustomTeamTemplateUseCase {
     };
     // A previous writer may still commit after an IPC timeout. Its unconfirmed
     // absence must never authorize a second dispatch for this token.
-    if (this.deps.previewStore.hasUnresolvedWrite(state.token)) {
+    if (!this.deps.previewStore.tryBeginSave(state.token)) {
+      // A writer is already active or unresolved; never dispatch a second save.
       return { status: 'unresolvedWriteOutcome', templateId };
     }
-    const result = await this.createWithRecovery(gateway, request, state.token);
-    if (result.status === 'unresolvedWriteOutcome') {
-      this.deps.previewStore.markUnresolvedWrite(state.token);
-    } else if (
-      result.status === 'created' ||
-      result.status === 'alreadySaved' ||
-      result.status === 'nameConflict' ||
-      result.status === 'templateIdConflict'
-    ) {
-      this.deps.previewStore.clearUnresolvedWrite(state.token);
+    try {
+      const result = await this.createWithRecovery(gateway, request, state.token);
+      if (result.status === 'unresolvedWriteOutcome') {
+        this.deps.previewStore.markUnresolvedWrite(state.token);
+      } else if (
+        result.status === 'created' ||
+        result.status === 'alreadySaved' ||
+        result.status === 'nameConflict' ||
+        result.status === 'templateIdConflict'
+      ) {
+        this.deps.previewStore.clearUnresolvedWrite(state.token);
+      }
+      return result;
+    } finally {
+      this.deps.previewStore.finishSave(state.token);
     }
-    return result;
   }
 
   /**

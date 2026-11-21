@@ -287,6 +287,33 @@ function useCase(
 }
 
 describe('SaveCustomTeamTemplateUseCase', () => {
+  it('dispatches only one write for simultaneous confirmations of the same token', async () => {
+    let begin!: () => void;
+    let finish!: (result: CreateCustomTeamTemplateRecordResult) => void;
+    const started = new Promise<void>((resolve) => { begin = resolve; });
+    const writing = new Promise<CreateCustomTeamTemplateRecordResult>((resolve) => { finish = resolve; });
+    const fixture = gatewayFixture({ create: [{ status: 'created', template: storedTemplate(PREVIEW_ID) }] });
+    const write = vi.fn(() => { begin(); return writing; });
+    const gateway = { ...fixture.gateway, customTeamTemplateCreate: write };
+    const preview = await preparedPreview({ gateway });
+    const save = useCase({ gateway }, preview.store);
+
+    const first = save.execute({ previewToken: preview.token });
+    await started;
+    expect(preview.store.isSaveInFlight(preview.token)).toBe(true);
+    await expect(save.execute({ previewToken: preview.token })).resolves.toEqual({
+      status: 'unresolvedWriteOutcome', templateId: preview.stateTemplateId,
+    });
+    expect(write).toHaveBeenCalledTimes(1);
+
+    finish({ status: 'created', template: storedTemplate(PREVIEW_ID) });
+    await expect(first).resolves.toEqual({
+      status: 'created', template: storedTemplate(PREVIEW_ID),
+    });
+    expect(preview.store.isSaveInFlight(preview.token)).toBe(false);
+    expect(preview.store.hasUnresolvedWrite(preview.token)).toBe(false);
+  });
+
   it('saves the confirmed projection under the stable preview identity', async () => {
     const fixture = gatewayFixture({ create: [{ status: 'created', template: storedTemplate() }] });
     const preview = await preparedPreview({ gateway: fixture.gateway });

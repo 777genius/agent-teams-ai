@@ -129,6 +129,8 @@ export interface InMemoryCustomTeamTemplatePreviewStoreOptions {
 
 export class InMemoryCustomTeamTemplatePreviewStore {
   private readonly entries = new Map<string, CustomTeamTemplatePreviewState>();
+  /** Only one confirmation may dispatch a write for a token at a time. */
+  private readonly inFlightSaves = new Set<string>();
   /** A failed worker can settle after the bounded save wait has timed out. */
   private readonly unsettledWriters = new Map<string, Set<Promise<void>>>();
   private readonly trackedWriterTokens = new Set<string>();
@@ -150,8 +152,8 @@ export class InMemoryCustomTeamTemplatePreviewStore {
       // unresolved operation, even if it has expired or is the oldest entry.
       const entries = [...this.entries];
       const candidate =
-        entries.find(([, state]) => state.confirmedSave && !state.hasUnresolvedWrite) ??
-        entries.find(([, state]) => !state.confirmedSave);
+        entries.find(([token, state]) => state.confirmedSave && !state.hasUnresolvedWrite && !this.inFlightSaves.has(token)) ??
+        entries.find(([token, state]) => !state.confirmedSave && !this.inFlightSaves.has(token));
       if (!candidate) {
         throw new CustomTemplatePreviewCapacityError('All retained template saves are unresolved');
       }
@@ -261,6 +263,23 @@ export class InMemoryCustomTeamTemplatePreviewStore {
    * still commit. The flag is cleared when a save or re-check establishes a
    * definitive outcome.
    */
+  /** Atomically fences a save against concurrent confirmations and unresolved writers. */
+  tryBeginSave(token: string): boolean {
+    if (!this.entries.has(token) || this.inFlightSaves.has(token) || this.hasUnresolvedWrite(token)) {
+      return false;
+    }
+    this.inFlightSaves.add(token);
+    return true;
+  }
+
+  finishSave(token: string): void {
+    this.inFlightSaves.delete(token);
+  }
+
+  isSaveInFlight(token: string): boolean {
+    return this.inFlightSaves.has(token);
+  }
+
   markUnresolvedWrite(token: string, settled?: Promise<void>): void {
     const state = this.entries.get(token);
     if (!state) return;
@@ -304,6 +323,7 @@ export class InMemoryCustomTeamTemplatePreviewStore {
   /** Drops every retained preview and confirmed operation (used on shutdown). */
   clear(): void {
     this.entries.clear();
+    this.inFlightSaves.clear();
     this.unsettledWriters.clear();
     this.trackedWriterTokens.clear();
   }
@@ -319,7 +339,7 @@ export class InMemoryCustomTeamTemplatePreviewStore {
         // expiry so re-check can reconcile it. Once the outcome is settled the
         // entry is dropped, so it stops occupying capacity: re-check already
         // reported the definitive result and will not be offered again.
-        if (state.confirmedSave && state.hasUnresolvedWrite) {
+        if (this.inFlightSaves.has(token) || (state.confirmedSave && state.hasUnresolvedWrite)) {
           continue;
         }
         this.entries.delete(token);

@@ -90,6 +90,9 @@ export class RecheckCustomTeamTemplateSaveUseCase {
       case 'absent':
         // A read that races an earlier unconfirmed writer is only a snapshot.
         // Never present it as safe to retry until the write settles conclusively.
+        if (this.deps.previewStore.isSaveInFlight(token)) {
+          return { status: 'unresolved', templateId: check.templateId };
+        }
         if (this.deps.previewStore.hasUnresolvedWrite(token)) {
           if (!this.deps.previewStore.canConfirmAbsenceAfterUnresolvedWrite(token)) {
             return { status: 'unresolved', templateId: check.templateId };

@@ -23,6 +23,28 @@ const baseInput = {
 };
 
 describe('InMemoryCustomTeamTemplatePreviewStore', () => {
+  it('never evicts an in-flight confirmed token under capacity or after expiry', () => {
+    let now = 0;
+    const store = new InMemoryCustomTeamTemplatePreviewStore({
+      now: () => now,
+      createToken: counterTokens(),
+      ttlMs: 100,
+      capacity: 1,
+    });
+    const pending = store.issue(baseInput);
+    store.confirmSave(pending.token, { templateId: 'tmpl-1', name: 'Template', nameKey: 'template' });
+    expect(store.tryBeginSave(pending.token)).toBe(true);
+    expect(store.tryBeginSave(pending.token)).toBe(false);
+    now = 200;
+    expect(() => store.issue({ ...baseInput, templateId: 'tmpl-2' })).toThrow(
+      'All retained template saves are unresolved'
+    );
+    expect(store.resolve(pending.token).status).toBe('expired');
+    store.finishSave(pending.token);
+    expect(store.isSaveInFlight(pending.token)).toBe(false);
+    expect(store.issue({ ...baseInput, templateId: 'tmpl-2' }).token).toBe('token-2');
+  });
+
   it('retains the reviewed state behind an opaque token', () => {
     const store = new InMemoryCustomTeamTemplatePreviewStore({
       now: () => 1_000,
