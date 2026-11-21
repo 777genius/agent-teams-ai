@@ -307,7 +307,6 @@ export class HttpAPIClient implements ElectronAPI {
       throw new Error('Team import is only available in the desktop app');
     },
   };
-
   constructor(baseUrl: string) {
     this.baseUrl = baseUrl;
     this.initEventSource();
@@ -338,7 +337,6 @@ export class HttpAPIClient implements ElectronAPI {
       }) as EventListener);
     }
     this.eventListeners.get(channel)!.add(callback);
-
     return () => {
       this.eventListeners.get(channel)?.delete(callback);
     };
@@ -356,7 +354,6 @@ export class HttpAPIClient implements ElectronAPI {
    */
   // eslint-disable-next-line security/detect-unsafe-regex -- anchored pattern with bounded quantifier; no backtracking risk
   private static readonly ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,9})?Z?$/;
-
   private static reviveDates(_key: string, value: unknown): unknown {
     if (typeof value === 'string' && HttpAPIClient.ISO_DATE_RE.test(value)) {
       const d = new Date(value);
@@ -441,7 +438,6 @@ export class HttpAPIClient implements ElectronAPI {
   // ---------------------------------------------------------------------------
 
   getAppVersion = (): Promise<string> => this.get<string>('/api/version');
-
   getWindowsElevationStatus = async (): Promise<WindowsElevationStatus> => ({
     platform: 'browser',
     isWindows: false,
@@ -449,10 +445,8 @@ export class HttpAPIClient implements ElectronAPI {
     checkFailed: false,
     error: null,
   });
-
   getCodexAccountSnapshot = (): Promise<CodexAccountSnapshotDto> =>
     Promise.reject(new Error('Codex account bridge is unavailable in browser mode'));
-
   refreshCodexAccountSnapshot = (_options?: {
     includeRateLimits?: boolean;
     forceRefreshToken?: boolean;

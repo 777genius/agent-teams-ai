@@ -28,7 +28,6 @@ import { createWorkspaceTrustBridge } from '@features/workspace-trust/preload';
 import { WINDOW_SET_ZOOM_FACTOR_CHANNEL, WINDOW_ZOOM_FACTOR_CHANGED_CHANNEL } from '@shared/constants';
 import { parseTeamMemberRestartResult } from '@shared/types/teamMemberRestart';
 import { contextBridge, ipcRenderer, webUtils } from 'electron';
-
 import {
   API_KEYS_DELETE,
   API_KEYS_LIST,
@@ -295,7 +294,6 @@ import {
 import { installRendererLogForwarding } from './installRendererLogForwarding';
 import { installSentryRendererIpcBridge } from './installSentryRendererIpcBridge';
 import { createOpenCodeStartupCleanupAPI } from './openCodeStartupCleanup';
-
 import type {
   ReviewDraftHistoryConflictCandidateSummary,
   ReviewDraftHistoryEntry,
@@ -463,7 +461,6 @@ import type {
 } from '@shared/types/extensions';
 import type { PtySpawnOptions } from '@shared/types/terminal';
 import type { CliArgsValidationResult } from '@shared/utils/cliArgsParser';
-
 // Expose Sentry's classic IPC bridge so packaged renderers do not fall back to sentry-ipc:// fetch.
 try {
   installSentryRendererIpcBridge();
@@ -492,7 +489,6 @@ async function invokeIpcWithResult<T>(channel: string, ...args: unknown[]): Prom
 }
 
 installRendererLogForwarding();
-
 // Signal that preload executed (helps diagnose "UI stuck" with no logs).
 ipcRenderer.send(RENDERER_BOOT);
 

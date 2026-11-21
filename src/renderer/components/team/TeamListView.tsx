@@ -551,14 +551,12 @@ export const TeamListView = memo(function TeamListView({
     () => ({ currentProvisioningRunIdByTeam, provisioningRuns }),
     [currentProvisioningRunIdByTeam, provisioningRuns]
   );
-
   /** Team names currently in active provisioning — prevents name conflicts in create dialog. */
   const provisioningTeamNames = useMemo(() => {
     return Object.keys(currentProvisioningRunIdByTeam).filter((teamName) =>
       isTeamProvisioningActive(provisioningState, teamName)
     );
   }, [currentProvisioningRunIdByTeam, provisioningState]);
-
   /** Merge real teams with synthetic launching cards for active provisioning. */
   const teamsWithProvisioning = useMemo(() => {
     const existingNames = new Set(teams.map((t) => t.teamName));
@@ -576,7 +574,6 @@ export const TeamListView = memo(function TeamListView({
       return null;
     }
   }, [electronMode]);
-
   // Fetch alive teams on mount and when teams list changes.
   useEffect(() => {
     let cancelled = false;
@@ -602,7 +599,6 @@ export const TeamListView = memo(function TeamListView({
       .filter((item): item is string => Boolean(item))
       .join('|');
   }, [currentProvisioningRunIdByTeam, provisioningRuns]);
-
   // Terminal launch progress can arrive before aliveList catches up.
   useEffect(() => {
     if (!readyProgressRefreshKey) return;

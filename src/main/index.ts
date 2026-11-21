@@ -624,7 +624,6 @@ async function createOpenCodeRuntimeAdapterRegistry(
     );
   }
   await startupStage(() => ensureOpenCodeLocalMcpLaunchEnv(bridgeEnv, { emitProgress: true }));
-
   reportProgress('runtime-bridge', 'Preparing OpenCode bridge...');
 
   const bridgeControlDir = join(app.getPath('userData'), 'opencode-bridge');
@@ -762,7 +761,6 @@ async function resolveTeamDisplayName(teamName: string): Promise<string> {
 async function notifyNewInboxMessages(teamName: string, detail: string): Promise<void> {
   logger.debug(`[inbox-notify] called: team=${teamName} detail=${detail}`);
   const config = configManager.getConfig();
-
   // Skip orphaned team directories without config.json (e.g., "default").
   // Claude Code may write to these when its internal teamContext is lost after session resume.
   // Our stdout capture in TeamProvisioningService already persists these messages under the
@@ -777,13 +775,11 @@ async function notifyNewInboxMessages(teamName: string, detail: string): Promise
   const match = /^inboxes\/(.+)\.json$/.exec(detail);
   if (!match) return;
   const memberName = match[1];
-
   // Determine inbox type and per-type toggle state.
   // Storage is always unconditional; toggles only suppress the OS toast.
   const leadName = teamDataService ? await teamDataService.getLeadMemberName(teamName) : null;
   const isLeadInbox = leadName !== null && memberName === leadName;
   const isUserInbox = memberName === 'user';
-
   if (!isLeadInbox && !isUserInbox) return;
 
   const suppressToast =
@@ -792,12 +788,10 @@ async function notifyNewInboxMessages(teamName: string, detail: string): Promise
     (isUserInbox && !config.notifications.notifyOnUserInbox);
 
   const key = `${teamName}:${memberName}`;
-
   try {
     const messages = await teamInboxReader.getMessagesFor(teamName, memberName);
     const isFirstLoad = !inboxMessageCounts.has(key);
     const prevCount = inboxMessageCounts.get(key) ?? 0;
-
     if (isFirstLoad) {
       // First load — seed count, don't notify for pre-existing messages
       logger.debug(`[inbox-notify] first load for ${key}: seeding count=${messages.length}`);
@@ -813,11 +807,9 @@ async function notifyNewInboxMessages(teamName: string, detail: string): Promise
     // Messages are sorted newest-first, so new ones are at the beginning
     const newMessages = messages.slice(0, messages.length - prevCount);
     inboxMessageCounts.set(key, messages.length);
-
     logger.debug(
       `[inbox-notify] ${key}: prevCount=${prevCount} newCount=${messages.length} newMessages=${newMessages.length} suppressToast=${String(suppressToast)}`
     );
-
     const teamDisplayName = await resolveTeamDisplayName(teamName);
 
     for (let i = 0; i < newMessages.length; i++) {
