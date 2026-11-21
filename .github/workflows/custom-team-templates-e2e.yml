@@ -33,7 +33,6 @@ jobs:
     timeout-minutes: 45
     env:
       AGENT_TEAMS_INSTALL_PROFILE: node-ci
-      CUSTOM_TEMPLATE_E2E_OUTPUT_DIR: ${{ runner.temp }}/custom-template-evidence
     steps:
       - uses: actions/checkout@v6
         with:
@@ -53,6 +52,8 @@ jobs:
       - name: Verify Electron installation
         run: node ./scripts/ensure-electron-install.cjs --strict
       - name: Native renderer, SQLite, import/export and Create Team picker
+        env:
+          CUSTOM_TEMPLATE_E2E_OUTPUT_DIR: ${{ runner.temp }}/custom-template-evidence
         run: xvfb-run -a pnpm test:e2e:custom-template-import-export
       - name: Upload evidence and failure screenshots
         if: always()
