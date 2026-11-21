@@ -2136,6 +2136,121 @@ describe('MCP team tools over the local REST control API', () => {
     }
   });
 
+  // The board tools of an external MCP client on a per-project team: the app picks the copy of
+  // the project the caller names, never the copy of another project, and refuses to guess.
+  it('works on the board of a per-project team in the project the MCP caller names', async () => {
+    const root = await realpath(await mkdtemp(path.join(tmpdir(), 'TEST-per-project-board-')));
+    setClaudeBasePathOverride(root);
+    setAppDataBasePath(path.join(root, 'app-state'));
+    const app = Fastify();
+    const { services, teamDataService } = createServices(root);
+    registerTeamRoutes(app, services);
+    const controlUrl = 'http://per-project-board.test';
+    const restoreFetch = installControlApiFetchMock(app, controlUrl);
+    // Board tools take no controlUrl: the controller finds the app as an agent's controller does.
+    await writeFile(path.join(root, 'team-control-api.json'), JSON.stringify({ baseUrl: controlUrl }));
+    const teamName = 'per-project-board';
+    const teamsBase = path.join(root, 'teams');
+    const project = (id: string) => path.join(root, `project-${id}`);
+    const registry = TeamProjectContextRegistry.fromCurrentApp();
+    try {
+      await teamDataService.createTeamConfig(
+        {
+          projectContextMode: 'per_project',
+          teamName,
+          cwd: root,
+          members: [{ name: 'builder', role: 'Engineer' }],
+        },
+        { claimOwnerOnCreate: true }
+      );
+      const copyIn = async (id: string) => {
+        await mkdir(project(id));
+        const { executionTeamName } = await registry.reserve(teamName, project(id));
+        await mkdir(path.join(teamsBase, executionTeamName), { recursive: true });
+        await writeFile(
+          path.join(teamsBase, executionTeamName, 'config.json'),
+          JSON.stringify({
+            name: executionTeamName,
+            projectPath: project(id),
+            members: [
+              { name: 'team-lead', role: 'team-lead', agentType: 'team-lead' },
+              { name: 'builder', role: 'Engineer', agentType: 'teammate' },
+            ],
+          }),
+          'utf8'
+        );
+        await claimTeamForThisProfile({
+          teamsBasePath: teamsBase,
+          teamName: executionTeamName,
+          reason: 'create',
+        });
+        await registry.confirmReady(teamName, project(id), executionTeamName);
+        return executionTeamName;
+      };
+      const copyA = await copyIn('a');
+      const copyB = await copyIn('b');
+      await mkdir(project('c'));
+      const indexPath = path.join(teamsBase, teamName, 'project-contexts.json');
+      const index = await readFile(indexPath, 'utf8');
+      const call = async (tool: string, args: Record<string, unknown>) =>
+        parseJsonToolResult(await getTool(tool).execute({ claudeDir: root, teamName, ...args }));
+      const subjects = async (args: Record<string, unknown>) =>
+        JSON.stringify(await call('task_list', args));
+
+      await call('task_create', {
+        projectPath: project('a'),
+        subject: 'ONLY_IN_PROJECT_A',
+        createdBy: 'user',
+      });
+      await call('task_create', {
+        projectPath: project('b'),
+        subject: 'ONLY_IN_PROJECT_B',
+        createdBy: 'user',
+      });
+      const inA = await subjects({ projectPath: project('a') });
+      const inB = await subjects({ projectPath: project('b') });
+      expect(inA).toContain('ONLY_IN_PROJECT_A');
+      expect(inA).not.toContain('ONLY_IN_PROJECT_B');
+      expect(inB).toContain('ONLY_IN_PROJECT_B');
+      expect(inB).not.toContain('ONLY_IN_PROJECT_A');
+      // The exact name of a copy keeps working without a project.
+      expect(await subjects({ teamName: copyA })).toContain('ONLY_IN_PROJECT_A');
+
+      await call('message_send', {
+        projectPath: project('b'),
+        from: 'team-lead',
+        to: 'builder',
+        text: 'MESSAGE_ONLY_IN_PROJECT_B',
+      });
+      const inbox = (copy: string) =>
+        readFile(path.join(teamsBase, copy, 'inboxes', 'builder.json'), 'utf8').catch(() => '');
+      expect(await inbox(copyB)).toContain('MESSAGE_ONLY_IN_PROJECT_B');
+      expect(await inbox(copyA)).not.toContain('MESSAGE_ONLY_IN_PROJECT_B');
+
+      // No project, a project without history, a relative path: refused, never guessed.
+      const required = getTool('task_list').execute({ claudeDir: root, teamName });
+      await expect(required).rejects.toMatchObject({ code: 'PROJECT_REQUIRED' });
+      await expect(required).rejects.toThrow(project('a'));
+      await expect(
+        call('task_create', { projectPath: project('c'), subject: 'NO_HISTORY', createdBy: 'user' })
+      ).rejects.toMatchObject({ code: 'NO_PROJECT_HISTORY' });
+      await expect(call('task_list', { projectPath: 'project-a' })).rejects.toThrow(/absolute/);
+
+      // Resolving never creates a copy, and the team itself never gets a board.
+      expect(await readFile(indexPath, 'utf8')).toBe(index);
+      await expect(readFile(path.join(teamsBase, teamName, 'config.json'))).rejects.toMatchObject({
+        code: 'ENOENT',
+      });
+    } finally {
+      restoreFetch();
+      await app.close();
+      setAppDataBasePath(null);
+      setClaudeBasePathOverride(null);
+      TeamConfigReader.clearCacheForTests();
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it('creates, gets, launches, and lists a team through MCP and REST end to end', async () => {
     const claudeRoot = await mkdtemp(path.join(tmpdir(), 'agent-teams-control-e2e-'));
     const projectDir = await mkdtemp(path.join(tmpdir(), 'agent-teams-project-e2e-'));

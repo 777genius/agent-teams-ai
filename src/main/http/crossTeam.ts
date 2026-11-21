@@ -10,9 +10,10 @@ import {
   CrossTeamRecipientError,
   TeamMetadataUnreadableError,
 } from '@features/team-project-context/main';
-import { validateTeamName } from '@main/services/team/TeamIdentifierValidation';
 import { getErrorMessage } from '@shared/utils/errorHandling';
 import { createLogger } from '@shared/utils/logger';
+
+import { exactTeamName } from './teamRouteParsers';
 
 import type { CrossTeamService } from '../services/team/CrossTeamService';
 import type { FastifyInstance, FastifyReply } from 'fastify';
@@ -20,11 +21,6 @@ import type { FastifyInstance, FastifyReply } from 'fastify';
 const logger = createLogger('HTTP:crossTeam');
 
 export type CrossTeamHttpApi = Pick<CrossTeamService, 'listAvailableTargets' | 'resolveRecipient'>;
-
-function exactTeamName(value: unknown): string | null {
-  const validation = validateTeamName(value);
-  return typeof value === 'string' && validation.valid && validation.value === value ? value : null;
-}
 
 function sendRefusal(reply: FastifyReply, error: unknown): FastifyReply {
   if (error instanceof CrossTeamRecipientError || error instanceof TeamMetadataUnreadableError) {

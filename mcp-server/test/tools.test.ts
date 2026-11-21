@@ -556,6 +556,109 @@ describe('agent-teams-mcp tools', () => {
     expect(fs.existsSync(path.join(claudeDir, 'teams', 'typo-team'))).toBe(false);
   });
 
+  describe('board tools and a team that keeps a separate history per project', () => {
+    // Tools that address a team as a whole; the app resolves a per-project team for them itself.
+    const teamLevelTools = new Set([
+      'app_get_connection_info',
+      'team_list',
+      'team_get',
+      'team_create',
+      'team_update',
+      'team_trash',
+      'team_launch',
+      'team_stop',
+    ]);
+    const shapeOf = (name: string) =>
+      (getTool(name).parameters as unknown as { shape?: Record<string, unknown> }).shape;
+    const writePerProjectTeam = (claudeDir: string, teamName: string) => {
+      const teamDir = path.join(claudeDir, 'teams', teamName);
+      fs.mkdirSync(teamDir, { recursive: true });
+      fs.writeFileSync(
+        path.join(teamDir, 'team.meta.json'),
+        JSON.stringify({ version: 1, cwd: '', createdAt: 1, projectContextMode: 'per_project' })
+      );
+    };
+
+    it('takes projectPath on every board tool and never on a tool of the team as a whole', () => {
+      for (const name of teamLevelTools) {
+        expect(AGENT_TEAMS_REGISTERED_TOOL_NAMES).toContain(name);
+        expect(shapeOf(name)?.projectPath, name).toBeUndefined();
+      }
+      const boardTools = AGENT_TEAMS_REGISTERED_TOOL_NAMES.filter((name) => !teamLevelTools.has(name));
+      expect(boardTools.length).toBeGreaterThan(40);
+      for (const name of boardTools) expect(shapeOf(name)?.projectPath, name).toBeDefined();
+    });
+
+    // Legacy teams unchanged: a configured team (and a project copy named exactly) is used as is,
+    // the projectPath is ignored and the app is never asked.
+    it('does not ask the app for a configured team, even with a projectPath', async () => {
+      const claudeDir = makeClaudeDir();
+      writeTeamConfig(claudeDir, 'shared-team', {
+        members: [
+          { name: 'lead', role: 'team-lead' },
+          { name: 'alice', role: 'developer' },
+        ],
+      });
+      const boardLookups: string[] = [];
+      const server = await startControlServer(({ url }) => {
+        if (String(url).includes('/board-target')) boardLookups.push(String(url));
+        return { statusCode: 500, body: { error: 'The board of a configured team is never asked' } };
+      });
+      fs.writeFileSync(
+        path.join(claudeDir, 'team-control-api.json'),
+        JSON.stringify({ baseUrl: server.baseUrl })
+      );
+      try {
+        const created = parseJsonToolResult(
+          await getTool('task_create').execute({
+            claudeDir,
+            teamName: 'shared-team',
+            projectPath: path.join(claudeDir, 'another-project'),
+            subject: 'Shared board task',
+            createdBy: 'user',
+          })
+        );
+        expect(
+          fs.existsSync(path.join(claudeDir, 'tasks', 'shared-team', `${created.id}.json`))
+        ).toBe(true);
+        const listed = parseJsonToolResult(
+          await getTool('task_list').execute({ claudeDir, teamName: 'shared-team' })
+        );
+        expect(JSON.stringify(listed)).toContain('Shared board task');
+        expect(boardLookups).toEqual([]);
+      } finally {
+        await server.close();
+      }
+    });
+
+    it('refuses a per-project team when the app cannot be reached and writes nothing', async () => {
+      const claudeDir = makeClaudeDir();
+      writePerProjectTeam(claudeDir, 'builders');
+
+      await expect(
+        getTool('task_create').execute({
+          claudeDir,
+          teamName: 'builders',
+          projectPath: path.join(claudeDir, 'project-a'),
+          subject: 'Must not be written',
+          createdBy: 'user',
+        })
+      ).rejects.toThrow(/separate history per project.*could not be reached/s);
+      await expect(
+        getTool('message_send').execute({
+          claudeDir,
+          teamName: 'builders',
+          to: 'alice',
+          from: 'lead',
+          text: 'Must not be written',
+        })
+      ).rejects.toThrow(/could not be reached/);
+      expect(fs.existsSync(path.join(claudeDir, 'tasks', 'builders'))).toBe(false);
+      expect(fs.existsSync(path.join(claudeDir, 'teams', 'builders', 'inboxes'))).toBe(false);
+      expect(fs.existsSync(path.join(claudeDir, 'teams', 'builders', 'config.json'))).toBe(false);
+    });
+  });
+
   it('lists, gets, and creates teams through the local control API', async () => {
     const claudeDir = makeClaudeDir();
     const calls: Array<{ method?: string; url?: string; body?: unknown }> = [];

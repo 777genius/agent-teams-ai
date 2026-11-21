@@ -70,6 +70,44 @@ export function assertConfiguredTeam(teamName: string, claudeDir?: string): void
   }
 }
 
+function appUnreachableMessage(teamName: string): string {
+  return (
+    `Team "${teamName}" keeps a separate history per project. Its board in a project is chosen by ` +
+    'the Agent Teams app, which could not be reached. Start the app, or use the exact name of the ' +
+    'project team (projectHistoryContexts of team_list).'
+  );
+}
+
+/**
+ * The team whose board a board tool works on: one rule for every board tool, applied where the
+ * tools are registered (`tools/projectBoard.ts`).
+ *
+ * - A configured team (an ordinary team, or a project copy named exactly) is itself; `projectPath`
+ *   is ignored and the app is not asked, so these teams behave exactly as before.
+ * - A team that keeps a separate history per project has no board of its own: the app resolves it
+ *   with `projectPath` to its ready copy for that project, or refuses with what to do (the
+ *   controller passes the refusal on with its `code`). No copy is ever created here.
+ * - Anything else is an unknown team, as before.
+ */
+export async function resolveBoardTeam(
+  teamName: string,
+  claudeDir?: string,
+  projectPath?: string
+): Promise<string> {
+  const { configPath, metaPath } = resolveTeamPaths(teamName, claudeDir);
+  if (isConfiguredTeamConfig(readJsonObject(configPath))) return teamName;
+  if (!isPerProjectTeamMeta(readJsonObject(metaPath))) {
+    throw new Error(unknownTeamMessage(teamName));
+  }
+  const target = await getController(teamName, claudeDir).runtime.getBoardTarget(projectPath);
+  if (target === null) throw new Error(appUnreachableMessage(teamName));
+  const board = typeof target.teamName === 'string' ? target.teamName : '';
+  // The app no longer sees a per-project team under this name: it has no board.
+  if (!board || board === teamName) throw new Error(unknownTeamMessage(teamName));
+  assertConfiguredTeam(board, claudeDir);
+  return board;
+}
+
 export function assertConfiguredTaskActor(
   teamName: string,
   actor: string,

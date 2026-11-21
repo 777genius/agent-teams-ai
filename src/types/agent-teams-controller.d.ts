@@ -229,6 +229,8 @@ declare module 'agent-teams-controller' {
     ): string;
     listTeams(flags?: Record<string, unknown>): Promise<unknown>;
     getTeam(flags?: Record<string, unknown>): Promise<unknown>;
+    /** The team holding this team's board in a project, as the app answers; null if unreachable. */
+    getBoardTarget(projectPath?: string): Promise<Record<string, unknown> | null>;
     createTeam(flags: Record<string, unknown>): Promise<unknown>;
     updateTeam(flags: Record<string, unknown>): Promise<unknown>;
     trashTeam(flags: Record<string, unknown>): Promise<unknown>;

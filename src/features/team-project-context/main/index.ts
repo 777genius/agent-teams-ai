@@ -52,6 +52,17 @@ export {
 } from './logicalTeamRuntime';
 export { listOwnedContexts, ownsProjectHistory } from './ownedHistory';
 export type {
+  ProjectBoardPorts,
+  ProjectBoardRefusal,
+  ProjectBoardRequest,
+  ProjectBoardTarget,
+} from './projectBoardTarget';
+export {
+  createProjectBoardPorts,
+  ProjectBoardTargetError,
+  resolveProjectBoardTarget,
+} from './projectBoardTarget';
+export type {
   PreparedProjectContextLaunch,
   ProjectContextLaunchPorts,
   ProjectContextProgressMapper,

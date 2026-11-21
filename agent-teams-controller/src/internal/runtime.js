@@ -540,13 +540,14 @@ async function getTeam(context, flags = {}) {
 }
 
 /**
- * Cross-team routing is decided by the app, one rule for every sender. `null`
- * means the app cannot be reached (no published address, network error or
- * timeout), so the caller keeps its offline behaviour. Any answer of the app is
- * used or thrown: a refusal, a server error, and also a 404 (an app without the
- * route must not silently get the old behaviour).
+ * Which physical team a name stands for (cross-team delivery, the board of a
+ * project) is decided by the app, one rule for every caller. `null` means the
+ * app cannot be reached (no published address, network error or timeout), so
+ * the caller applies its offline behaviour. Any answer of the app is used or
+ * thrown: a refusal, a server error, and also a 404 (an app without the route
+ * must not silently get the old behaviour).
  */
-async function requestCrossTeamRouting(context, pathname) {
+async function requestAppRouting(context, pathname) {
   let baseUrls;
   try {
     baseUrls = resolveControlBaseUrls(context);
@@ -567,7 +568,7 @@ async function requestCrossTeamRouting(context, pathname) {
 
 /** The physical team that receives a message from this team to `toTeam`. */
 function getCrossTeamRecipient(context, toTeam) {
-  return requestCrossTeamRouting(
+  return requestAppRouting(
     context,
     `/api/teams/${encodeURIComponent(context.teamName)}/cross-team/recipient?toTeam=${encodeURIComponent(toTeam)}`
   );
@@ -575,9 +576,18 @@ function getCrossTeamRecipient(context, toTeam) {
 
 /** The teams this team can message, as the app lists them (project copies folded). */
 function getCrossTeamTargets(context) {
-  return requestCrossTeamRouting(
+  return requestAppRouting(
     context,
     `/api/teams/${encodeURIComponent(context.teamName)}/cross-team/targets`
+  );
+}
+
+/** The physical team that holds the board of this team in `projectPath` (MCP board tools). */
+function getBoardTarget(context, projectPath) {
+  const query = projectPath ? `?projectPath=${encodeURIComponent(projectPath)}` : '';
+  return requestAppRouting(
+    context,
+    `/api/teams/${encodeURIComponent(context.teamName)}/board-target${query}`
   );
 }
 
@@ -767,6 +777,7 @@ module.exports = {
   getTeam,
   getCrossTeamRecipient,
   getCrossTeamTargets,
+  getBoardTarget,
   createTeam,
   updateTeam,
   trashTeam,
