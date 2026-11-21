@@ -2,16 +2,24 @@ import { useStore } from '@renderer/store';
 
 import { findProjectCopyOwner, formatProjectCopyLabel } from '../../core';
 
+import type { ProjectCopyCatalogTeam } from '../../core';
+
+/** "Team · project" for a project copy in the folded team list; null for any other name. */
+export function projectCopyLabel(
+  teams: readonly ProjectCopyCatalogTeam[],
+  teamName: string
+): string | null {
+  const owner = findProjectCopyOwner(teams, teamName);
+  return owner ? formatProjectCopyLabel(owner) : null;
+}
+
 /**
  * How a physical team name is shown to a person. A project copy (`ptc-…`) of a
  * per-project team reads as the team and its project; any other name is shown
  * as is. Routing keeps the physical name: only the label changes.
  */
 export function useTeamDisplayLabel(teamName: string): string {
-  return useStore((state) => {
-    const owner = findProjectCopyOwner(state.teams, teamName);
-    return owner ? formatProjectCopyLabel(owner) : teamName;
-  });
+  return useStore((state) => projectCopyLabel(state.teams, teamName) ?? teamName);
 }
 
 /** The per-project team a project copy belongs to, so a copy does not offer its own team. */

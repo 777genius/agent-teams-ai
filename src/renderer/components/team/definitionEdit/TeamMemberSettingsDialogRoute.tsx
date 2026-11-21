@@ -2,6 +2,8 @@ import { useCallback, useEffect, useState } from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
 import {
+  applyCommittedLeadRuntime,
+  isCanonicalSettingsLead,
   type MemberSettingsRelaunchDraft,
   memberSettingsTargetToMember,
   refreshTeamMemberSettings,
@@ -74,20 +76,22 @@ export const TeamMemberSettingsDialogRoute = ({
 async function loadDefinitionMembers(
   logicalTeamName: string,
   memberName: string
-): Promise<ResolvedTeamMember[] | null> {
+): Promise<ResolvedTeamMember[] | 'team_missing' | 'member_missing'> {
   const [saved, target] = await Promise.all([
     api.teams.getSavedRequest(logicalTeamName),
     api.teams.getMemberSettingsTarget({ teamName: logicalTeamName, memberName }),
   ]);
-  if (!saved || !target) return null;
+  if (!saved) return 'team_missing';
+  // The open project may still show a member that the definition no longer has.
+  if (!target) return 'member_missing';
   const input = buildDefinitionEditorInput(saved, logicalTeamName);
   const edited = memberSettingsTargetToMember(target);
   const key = edited.name.toLowerCase();
-  return [
-    input.leadMember,
-    ...input.currentMembers.filter((member) => member.name.toLowerCase() !== key),
-    edited,
-  ];
+  const others = input.currentMembers.filter((member) => member.name.toLowerCase() !== key);
+  // The lead is edited as itself (its launch settings); otherwise it is the lead of the others.
+  return isCanonicalSettingsLead(edited)
+    ? [edited, ...others]
+    : [input.leadMember, ...others, edited];
 }
 
 const DefinitionMemberSettingsDialog = ({
@@ -109,7 +113,8 @@ const DefinitionMemberSettingsDialog = ({
 
   const load = useCallback(async (): Promise<ResolvedTeamMember[]> => {
     const next = await loadDefinitionMembers(logicalTeamName, memberName);
-    if (!next) throw new Error(t('detail.editDefinition.notFound'));
+    if (next === 'team_missing') throw new Error(t('detail.editDefinition.notFound'));
+    if (next === 'member_missing') throw new Error(t('detail.editDefinition.memberNotFound'));
     return next;
   }, [logicalTeamName, memberName, t]);
 
@@ -141,7 +146,9 @@ const DefinitionMemberSettingsDialog = ({
       isTeamProvisioning={false}
       projectPath={projectPath}
       onClose={onClose}
-      onRefresh={async () => {
+      onRefresh={async (committedLeadRuntime) => {
+        // The launch dialog of a per-project team is keyed by the team, not by the copy.
+        applyCommittedLeadRuntime(logicalTeamName, committedLeadRuntime);
         setMembers(await load());
         await refreshAfterDefinitionEdit(visibleTeamName);
       }}

@@ -260,7 +260,10 @@
       "settingsSavedMembersFailed": "Cài đặt đội ngũ đã được lưu, nhưng các thay đổi thành viên thất bại: {{message}}",
       "settingsSavedRefreshFailed": "Cài đặt đội ngũ đã được lưu, nhưng không thể làm mới chế độ xem mới nhất: {{message}}",
       "teamNameEmpty": "Tên đội ngũ không được để trống",
-      "unsupportedMixedPrimaryMutation": "Chỉnh sửa trực tiếp các thành viên do tiến trình chính sở hữu trong các đội ngũ OpenCode hỗn hợp chưa được hỗ trợ. Hãy dừng đội ngũ, chỉnh sửa danh sách, rồi khởi chạy lại. Bị ảnh hưởng: {{names}}"
+      "unsupportedMixedPrimaryMutation": "Chỉnh sửa trực tiếp các thành viên do tiến trình chính sở hữu trong các đội ngũ OpenCode hỗn hợp chưa được hỗ trợ. Hãy dừng đội ngũ, chỉnh sửa danh sách, rồi khởi chạy lại. Bị ảnh hưởng: {{names}}",
+      "refusedProjectCopy": "Đây là bản sao dự án của một nhóm. Hãy thay đổi cài đặt trong chính nhóm đó.",
+      "refusedProjectUnreconciled": "Một dự án của nhóm này vẫn đang được chuẩn bị, hoặc lần khởi động gần nhất đã bị gián đoạn. Hãy khởi chạy lại nhóm trong dự án đó, rồi chỉnh sửa.",
+      "refusedTeamUnreadable": "Không đọc được cài đặt đã lưu của nhóm này, nên không có gì thay đổi."
     },
     "fields": {
       "colorOptional": "Màu (tùy chọn)",

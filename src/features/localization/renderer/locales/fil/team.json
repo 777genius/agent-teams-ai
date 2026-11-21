@@ -260,7 +260,10 @@
       "settingsSavedMembersFailed": "Na-save ang mga setting ng team, ngunit nabigo ang mga pagbabago sa miyembro: {{message}}",
       "settingsSavedRefreshFailed": "Na-save ang mga setting ng team, ngunit nabigong i-refresh ang pinakabagong view: {{message}}",
       "teamNameEmpty": "Hindi maaaring blangko ang pangalan ng team",
-      "unsupportedMixedPrimaryMutation": "Hindi pa sinusuportahan ang mga live na pag-edit sa mga primary-owned na teammate sa mga mixed na OpenCode team. Ihinto ang team, i-edit ang roster, pagkatapos ay ilunsad muli. Apektado: {{names}}"
+      "unsupportedMixedPrimaryMutation": "Hindi pa sinusuportahan ang mga live na pag-edit sa mga primary-owned na teammate sa mga mixed na OpenCode team. Ihinto ang team, i-edit ang roster, pagkatapos ay ilunsad muli. Apektado: {{names}}",
+      "refusedProjectCopy": "Isa itong project copy ng isang team. Baguhin ang settings nito sa mismong team.",
+      "refusedProjectUnreconciled": "May project ng team na ito na inihahanda pa, o naputol ang huling pagsisimula nito. Ilunsad muli ang team sa project na iyon, saka i-edit.",
+      "refusedTeamUnreadable": "Hindi mabasa ang naka-save na settings ng team na ito, kaya walang binago."
     },
     "fields": {
       "colorOptional": "Kulay (opsyonal)",

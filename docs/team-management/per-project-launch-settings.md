@@ -44,7 +44,7 @@ One owner, two directions, one store:
 - A copy created before this change keeps its old values until its next launch; those values were never shown in the UI.
 - Settings are saved when a launch is **accepted**, not when the agents become ready. A launch that is accepted and later fails still leaves its settings in the definition (an ordinary team behaves the same).
 - A failure to save the definition, or the copy, never fails an accepted launch. It is logged as an error and the next launch records again. The copy failing leaves it one launch behind until then.
-- The per-member settings dialog edits teammates in the definition (see [Editing a per-project team](./per-project-team-editing.md)); the lead's model and effort are changed with Change runtime, a launch. The member settings write of a project copy is refused, so no settings path writes a copy alone any more.
+- The per-member settings dialog edits teammates in the definition (see [Editing a per-project team](./per-project-team-editing.md)); the lead's model and effort are saved into the definition by the same dialog while every project is stopped (`DefinitionLaunchSettingsStore.save`, then the ordinary projection), and the provider with Change runtime, a launch. The member settings write of a project copy is refused, so no settings path writes a copy alone any more.
 - Because `extraCliArgs` and `skipPermissions` stay with the copy, the launch dialog of a per-project team still seeds them from its own storage, not from the team.
 - The native launch prefers the `launchIdentity` of the copy over its saved model when a request omits the model. The launch dialog and the scheduler always state it, so this matters only for a hand-made partial request.
 

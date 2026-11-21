@@ -260,7 +260,10 @@
       "settingsSavedMembersFailed": "チームの設定は保存されていましたが、メンバーの変更は失敗しました:{{message}}",
       "settingsSavedRefreshFailed": "チーム設定は保存されましたが、最新のビューをリフレッシュできませんでした: {{message}}",
       "teamNameEmpty": "チーム名を空にすることはできません",
-      "unsupportedMixedPrimaryMutation": "混合されたOpenCodeチームで、プライマリ所有のチームメイトへのライブ編集はまだサポートされていません。 チームを停止し、ロスターを編集し、その後、再起動します。 影響される: {{names}}"
+      "unsupportedMixedPrimaryMutation": "混合されたOpenCodeチームで、プライマリ所有のチームメイトへのライブ編集はまだサポートされていません。 チームを停止し、ロスターを編集し、その後、再起動します。 影響される: {{names}}",
+      "refusedProjectCopy": "これはチームのプロジェクト用コピーです。設定はチーム本体で変更してください。",
+      "refusedProjectUnreconciled": "このチームのプロジェクトがまだ準備中か、前回の起動が中断されました。そのプロジェクトでチームをもう一度起動してから編集してください。",
+      "refusedTeamUnreadable": "このチームの保存済み設定を読み取れないため、何も変更されていません。"
     },
     "fields": {
       "colorOptional": "色(任意)",

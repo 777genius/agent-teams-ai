@@ -260,7 +260,10 @@
       "settingsSavedMembersFailed": "Ekip ayarları kaydedildi, ancak üye değişiklikleri başarısız oldu: {{message}}",
       "settingsSavedRefreshFailed": "Ekip ayarları kaydedildi, ancak en son görünüm yenilenemedi: {{message}}",
       "teamNameEmpty": "Ekip adı boş olamaz",
-      "unsupportedMixedPrimaryMutation": "Karışık OpenCode ekiplerinde birincil sahipli takım arkadaşlarında canlı düzenlemeler henüz desteklenmiyor. Ekibi durdurun, kadroyu düzenleyin, ardından yeniden başlatın. Etkilenenler: {{names}}"
+      "unsupportedMixedPrimaryMutation": "Karışık OpenCode ekiplerinde birincil sahipli takım arkadaşlarında canlı düzenlemeler henüz desteklenmiyor. Ekibi durdurun, kadroyu düzenleyin, ardından yeniden başlatın. Etkilenenler: {{names}}",
+      "refusedProjectCopy": "Bu, bir ekibin proje kopyasıdır. Ayarlarını ekibin kendisinde değiştirin.",
+      "refusedProjectUnreconciled": "Bu ekibin bir projesi hâlâ hazırlanıyor veya son başlatması yarıda kesildi. Ekibi o projede yeniden başlatın, ardından düzenleyin.",
+      "refusedTeamUnreadable": "Bu ekibin kayıtlı ayarları okunamıyor, bu yüzden hiçbir şey değiştirilmedi."
     },
     "fields": {
       "colorOptional": "Renk (isteğe bağlı)",

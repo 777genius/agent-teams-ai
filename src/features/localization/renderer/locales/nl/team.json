@@ -260,7 +260,10 @@
       "settingsSavedMembersFailed": "Teaminstellingen zijn opgeslagen, maar ledenwijzigingen zijn mislukt: {{message}}",
       "settingsSavedRefreshFailed": "Teaminstellingen zijn opgeslagen, maar het vernieuwen van de nieuwste weergave is mislukt: {{message}}",
       "teamNameEmpty": "Teamnaam mag niet leeg zijn",
-      "unsupportedMixedPrimaryMutation": "Live bewerkingen van door primair beheerde teamleden in gemengde OpenCode-teams worden nog niet ondersteund. Stop het team, bewerk de samenstelling en start opnieuw. Betrokken: {{names}}"
+      "unsupportedMixedPrimaryMutation": "Live bewerkingen van door primair beheerde teamleden in gemengde OpenCode-teams worden nog niet ondersteund. Stop het team, bewerk de samenstelling en start opnieuw. Betrokken: {{names}}",
+      "refusedProjectCopy": "Dit is een projectkopie van een team. Wijzig de instellingen in het team zelf.",
+      "refusedProjectUnreconciled": "Een project van dit team wordt nog voorbereid of de laatste start is onderbroken. Start het team opnieuw in dat project en bewerk het daarna.",
+      "refusedTeamUnreadable": "De opgeslagen instellingen van dit team kunnen niet worden gelezen, dus er is niets gewijzigd."
     },
     "fields": {
       "colorOptional": "Kleur (optioneel)",

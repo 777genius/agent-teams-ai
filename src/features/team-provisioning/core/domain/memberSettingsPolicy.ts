@@ -94,6 +94,25 @@ export function toMemberSettingsTarget(target: MemberSettingsTargetSnapshot): Me
   };
 }
 
+/** The fingerprint the settings mutation compares, for a saved target read through the API. */
+export function fingerprintMemberSettingsTarget(target: MemberSettingsTarget): string {
+  return createMemberSettingsFingerprint({
+    ...target,
+    teamIsAlive: false,
+    leadProviderId: null,
+    teamIsMixed: false,
+    runtimeLane: 'primary',
+  });
+}
+
+export function isLeadMemberSettingsTarget(target: MemberSettingsTarget): boolean {
+  return isCanonicalSettingsLeadMember({
+    name: target.name,
+    agentType: target.agentType,
+    role: target.settings.role,
+  });
+}
+
 export function createMemberSettingsFingerprint(target: MemberSettingsTargetSnapshot): string {
   return JSON.stringify({
     memberName: normalizeIdentityText(target.name),

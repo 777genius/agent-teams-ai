@@ -260,7 +260,10 @@
       "settingsSavedMembersFailed": "Les paramètres de l'équipe ont été sauvegardés, mais les modifications des membres ont échoué : {{message}}",
       "settingsSavedRefreshFailed": "Les paramètres de l'équipe ont été sauvegardés, mais n'ont pas réussi à rafraîchir la dernière vue : {{message}}",
       "teamNameEmpty": "Le nom de l'équipe ne peut pas être vide",
-      "unsupportedMixedPrimaryMutation": "Les modifications en direct aux coéquipiers de premier plan dans les équipes mixtes OpenCode ne sont pas encore prises en charge. Arrêtez l'équipe, modifiez la liste, puis relancez. Affectés : {{names}}"
+      "unsupportedMixedPrimaryMutation": "Les modifications en direct aux coéquipiers de premier plan dans les équipes mixtes OpenCode ne sont pas encore prises en charge. Arrêtez l'équipe, modifiez la liste, puis relancez. Affectés : {{names}}",
+      "refusedProjectCopy": "Ceci est une copie de projet d'une équipe. Modifiez ses paramètres dans l'équipe elle-même.",
+      "refusedProjectUnreconciled": "Un projet de cette équipe est encore en préparation ou son dernier démarrage a été interrompu. Relancez l'équipe dans ce projet, puis modifiez-la.",
+      "refusedTeamUnreadable": "Les paramètres enregistrés de cette équipe sont illisibles, donc rien n'a été modifié."
     },
     "fields": {
       "colorOptional": "Couleur (facultatif)",

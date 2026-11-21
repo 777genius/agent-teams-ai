@@ -260,7 +260,10 @@
       "settingsSavedMembersFailed": "Setările echipei au fost salvate, dar modificările membrilor au eșuat: {{message}}",
       "settingsSavedRefreshFailed": "Setările echipei au fost salvate, dar reîmprospătarea celei mai recente vizualizări a eșuat: {{message}}",
       "teamNameEmpty": "Numele echipei nu poate fi gol",
-      "unsupportedMixedPrimaryMutation": "Editările live ale coechipierilor deținuți de procesul primar în echipele OpenCode mixte nu sunt încă acceptate. Oprește echipa, editează lista, apoi relansează. Afectați: {{names}}"
+      "unsupportedMixedPrimaryMutation": "Editările live ale coechipierilor deținuți de procesul primar în echipele OpenCode mixte nu sunt încă acceptate. Oprește echipa, editează lista, apoi relansează. Afectați: {{names}}",
+      "refusedProjectCopy": "Aceasta este o copie de proiect a unei echipe. Modifică setările în echipa însăși.",
+      "refusedProjectUnreconciled": "Un proiect al acestei echipe este încă în pregătire sau ultima lui pornire a fost întreruptă. Pornește din nou echipa în acel proiect, apoi editeaz-o.",
+      "refusedTeamUnreadable": "Setările salvate ale acestei echipe nu pot fi citite, așa că nu s-a schimbat nimic."
     },
     "fields": {
       "colorOptional": "Culoare (opțional)",
