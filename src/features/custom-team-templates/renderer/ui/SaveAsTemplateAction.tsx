@@ -1,6 +1,7 @@
 import { lazy, Suspense, useState } from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
+import { Button } from '@renderer/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
 import { BookmarkPlus } from 'lucide-react';
 
@@ -41,9 +42,11 @@ export const SaveAsTemplateAction = ({
     <>
       <Tooltip>
         <TooltipTrigger asChild>
-          <button
+          <Button
             type="button"
-            className="shrink-0 rounded p-1 text-[var(--color-text-muted)] opacity-0 transition-opacity hover:bg-violet-500/10 hover:text-violet-300 focus-visible:opacity-100 group-hover:opacity-100"
+            size="icon"
+            variant="ghost"
+            className="size-6 shrink-0 text-[var(--color-text-muted)] opacity-0 transition-opacity hover:bg-violet-500/10 hover:text-violet-300 focus-visible:opacity-100 group-hover:opacity-100"
             aria-label={label}
             onClick={(event) => {
               event.stopPropagation();
@@ -52,7 +55,7 @@ export const SaveAsTemplateAction = ({
             onKeyDown={(event) => event.stopPropagation()}
           >
             <BookmarkPlus size={14} />
-          </button>
+          </Button>
         </TooltipTrigger>
         <TooltipContent side="bottom">{label}</TooltipContent>
       </Tooltip>
