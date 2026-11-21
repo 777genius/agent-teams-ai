@@ -2173,7 +2173,7 @@ describe('MCP team tools over the local REST control API', () => {
       await mkdir(project('e'));
       const start = services.teamApis!.provisioningStart;
       const createCopy = start.createTeam;
-      const launchedAtStart: Array<[string, boolean]> = [];
+      const launchedAtStart: [string, boolean][] = [];
       start.createTeam = (request, onProgress) => {
         launchedAtStart.push([request.teamName, isProjectCopyLaunching(request.teamName)]);
         return createCopy(request, onProgress);

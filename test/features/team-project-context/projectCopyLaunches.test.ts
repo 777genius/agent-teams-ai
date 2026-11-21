@@ -58,7 +58,7 @@ describe('launches of project copies', () => {
   // Window at the start: the copy is reserved and materialized before its provisioning run exists.
   it('counts a created copy as launched from its reservation until its run failed', async () => {
     const materializing = gate();
-    const reports: Array<(next: TeamProvisioningProgress) => void> = [];
+    const reports: ((next: TeamProvisioningProgress) => void)[] = [];
     const seen: boolean[] = [];
     const address = { logicalTeamName: 'team', projectPath: '/work/a' };
     const reserved = {

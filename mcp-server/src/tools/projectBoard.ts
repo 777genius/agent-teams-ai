@@ -30,7 +30,11 @@ interface BoardToolArgs {
  */
 function asClientRefusal(error: unknown): unknown {
   const refusal = error as { appRefusal?: unknown; code?: unknown } | null;
-  if (!(error instanceof Error) || refusal?.appRefusal !== true || typeof refusal.code !== 'string') {
+  if (
+    !(error instanceof Error) ||
+    refusal?.appRefusal !== true ||
+    typeof refusal.code !== 'string'
+  ) {
     return error;
   }
   const { code } = refusal;

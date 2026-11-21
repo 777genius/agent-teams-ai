@@ -81,7 +81,10 @@ function readHistoryMode(metaPath: string): 'per_project' | 'unreadable' | null 
   return fs.existsSync(metaPath) ? 'unreadable' : null;
 }
 
-function appUnreachableMessage(teamName: string, reason: 'projectPath' | 'per_project' | 'unreadable'): string {
+function appUnreachableMessage(
+  teamName: string,
+  reason: 'projectPath' | 'per_project' | 'unreadable'
+): string {
   const head = {
     projectPath: `projectPath was given for team "${teamName}", and the Agent Teams app checks it`,
     per_project:

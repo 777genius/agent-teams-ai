@@ -10,7 +10,12 @@ import type { ProjectContextProgressMapper } from './projectContextLaunch';
 const launches = new Map<string, number>();
 
 /** States after which a run of a copy no longer changes on its own. */
-const SETTLED_STATES: ReadonlySet<string> = new Set(['ready', 'failed', 'cancelled', 'disconnected']);
+const SETTLED_STATES: ReadonlySet<string> = new Set([
+  'ready',
+  'failed',
+  'cancelled',
+  'disconnected',
+]);
 
 export interface ProjectCopyLaunch {
   /** Ends this launch; later calls do nothing. */
