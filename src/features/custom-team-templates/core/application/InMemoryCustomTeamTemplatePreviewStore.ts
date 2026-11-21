@@ -209,7 +209,6 @@ export class InMemoryCustomTeamTemplatePreviewStore {
       if (!isSameConfirmedSaveIdentity(recorded, identity)) {
         return { status: 'identityMismatch', recorded };
       }
-      this.entries.set(token, { ...state, saveInFlight: true });
       return { status: 'alreadyRecorded' };
     }
     this.entries.set(token, {
@@ -218,7 +217,6 @@ export class InMemoryCustomTeamTemplatePreviewStore {
       name: identity.name,
       nameKey: identity.nameKey,
       description: identity.description,
-      saveInFlight: true,
       confirmedSave: {
         templateId: identity.templateId,
         name: identity.name,
@@ -273,6 +271,12 @@ export class InMemoryCustomTeamTemplatePreviewStore {
       const { hasUnresolvedWrite: _removed, ...rest } = state;
       this.entries.set(token, rest);
     }
+  }
+
+  /** Protect a confirmed operation only while its database write is dispatched. */
+  markSaveInFlight(token: string): void {
+    const state = this.entries.get(token);
+    if (state?.confirmedSave) this.entries.set(token, { ...state, saveInFlight: true });
   }
 
   /** Release the write-in-flight fence once the attempt has settled. */

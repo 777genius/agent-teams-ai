@@ -413,6 +413,7 @@ describe('InMemoryCustomTeamTemplatePreviewStore', () => {
     store.clearSaveInFlight(uncertain.token);
     const running = store.issue({ ...baseInput, templateId: 'tmpl-2' });
     store.confirmSave(running.token, { templateId: 'tmpl-2', name: 'Two', nameKey: 'two' });
+    store.markSaveInFlight(running.token);
 
     expect(() => store.issue(baseInput)).toThrow(CustomTeamTemplatePreviewCapacityError);
     expect(store.resolve(uncertain.token).status).toBe('found');

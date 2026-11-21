@@ -227,6 +227,7 @@ export class SaveCustomTeamTemplateUseCase {
     // settled). That uncertainty must survive into this attempt: a later
     // `not_started` failure proves nothing about the earlier writer.
     const hadPriorUnresolvedWrite = this.deps.previewStore.hasUnresolvedWrite(state.token);
+    this.deps.previewStore.markSaveInFlight(state.token);
     try {
       const result = await this.createWithRecovery(gateway, request, hadPriorUnresolvedWrite);
       if (result.status === 'unresolvedWriteOutcome') {
