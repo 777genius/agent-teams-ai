@@ -1,0 +1,75 @@
+import type { CustomTeamTemplatesBrowserFileApi } from './browserFile';
+import type { CustomTeamTemplatesDesktopFileApi } from './desktopFile';
+import type {
+  ConfirmCustomTeamTemplateSaveRequest,
+  ConfirmCustomTeamTemplateSaveResult,
+  CopyBuiltinTemplateRequest,
+  CopyBuiltinTemplateResult,
+  DeleteCustomTeamTemplateRequest,
+  DeleteCustomTeamTemplateResult,
+  DuplicateCustomTeamTemplateRequest,
+  DuplicateCustomTeamTemplateResult,
+  ExportCustomTeamTemplateRequest,
+  ExportCustomTeamTemplateResult,
+  ImportCustomTeamTemplateRequest,
+  ImportCustomTeamTemplateResult,
+  ListCustomTeamTemplatesResult,
+  PrepareCustomTeamTemplatePreviewRequest,
+  PrepareCustomTeamTemplatePreviewResult,
+  RecheckCustomTeamTemplateSaveRequest,
+  RecheckCustomTeamTemplateSaveResult,
+  UpdateCustomTeamTemplateRequest,
+  UpdateCustomTeamTemplateResult,
+} from './operations';
+
+/**
+ * Renderer-facing custom-team-templates API.
+ *
+ * The renderer calls exactly four operations, and every one of them answers
+ * with a closed typed outcome instead of throwing: prepare a preview, confirm
+ * (save) it, list the library, and re-check an unresolved save. The source team
+ * identity, the reviewed content, the stable template id and the content digest
+ * never travel from the renderer: only the preview token, an optional
+ * name/description edit, and the re-check token do.
+ *
+ * Both the preload bridge and the browser HTTP adapter implement this type, so
+ * a renderer caller cannot tell IPC and HTTP apart.
+ */
+export interface CustomTeamTemplatesApi {
+  preparePreview(
+    request: PrepareCustomTeamTemplatePreviewRequest
+  ): Promise<PrepareCustomTeamTemplatePreviewResult>;
+  saveTemplate(
+    request: ConfirmCustomTeamTemplateSaveRequest
+  ): Promise<ConfirmCustomTeamTemplateSaveResult>;
+  recheckSave(
+    request: RecheckCustomTeamTemplateSaveRequest
+  ): Promise<RecheckCustomTeamTemplateSaveResult>;
+  listTemplates(): Promise<ListCustomTeamTemplatesResult>;
+  updateTemplate(request: UpdateCustomTeamTemplateRequest): Promise<UpdateCustomTeamTemplateResult>;
+  deleteTemplate(request: DeleteCustomTeamTemplateRequest): Promise<DeleteCustomTeamTemplateResult>;
+  duplicateTemplate(
+    request: DuplicateCustomTeamTemplateRequest
+  ): Promise<DuplicateCustomTeamTemplateResult>;
+  copyBuiltinTemplate(request: CopyBuiltinTemplateRequest): Promise<CopyBuiltinTemplateResult>;
+  exportTemplate(request: ExportCustomTeamTemplateRequest): Promise<ExportCustomTeamTemplateResult>;
+  importTemplate(request: ImportCustomTeamTemplateRequest): Promise<ImportCustomTeamTemplateResult>;
+  /**
+   * Native file operations, implemented only by the Electron preload bridge.
+   *
+   * The browser HTTP adapter leaves this undefined: browser file selection and
+   * download are transport-specific and are not simulated through HTTP. Callers
+   * must feature-detect before offering file actions.
+   */
+  readonly desktopFile?: CustomTeamTemplatesDesktopFileApi;
+
+  /**
+   * Browser-specific file import/export operations, implemented only by the
+   * browser HTTP adapter.
+   *
+   * The Electron preload bridge leaves this undefined: native file dialogs and
+   * filesystem access are not available through the browser API. Callers must
+   * feature-detect before offering file actions.
+   */
+  readonly browserFile?: CustomTeamTemplatesBrowserFileApi;
+}

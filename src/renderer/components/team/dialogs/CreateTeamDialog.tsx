@@ -15,6 +15,7 @@ import {
   resolveCodexFastMode,
   resolveCodexRuntimeSelection,
 } from '@features/codex-runtime-profile/renderer';
+import { CreateTeamTemplatePicker } from '@features/custom-team-templates/renderer';
 import { useAppTranslation } from '@features/localization/renderer';
 import {
   useWorkspaceTrustStatus,
@@ -107,6 +108,7 @@ import { CodexReconnectPrompt, shouldShowCodexReconnectPrompt } from './CodexRec
 import { consumeTeamCopySeedOnce } from './createTeamCopySeed';
 import { buildDefaultTeamDescription } from './createTeamDescription';
 import { CreateTeamHeaderActions } from './CreateTeamHeaderActions';
+import { CreateTeamPromptField } from './CreateTeamPromptField';
 import { buildInitialRosterMemberDrafts } from './createTeamInitialRoster';
 import { buildLaunchOptionalSummary } from './createTeamOptionalSummary';
 import {
@@ -204,6 +206,7 @@ import { computeEffectiveTeamModel } from './TeamModelSelector';
 import { getNextSuggestedTeamName } from './teamNameSets';
 import { useCustomProjectFolder } from './useCustomProjectFolder';
 import { useDialogMemberModelScope } from './useDialogMemberModelScope';
+import { useCreateTeamTemplateSelection } from './useCreateTeamTemplateSelection';
 import { useMemberWorkspaceInfo } from './useMemberWorkspaceInfo';
 import { useOpenCodeProviderScopedDialogModelState } from './useOpenCodeProviderScopedModelAuthority';
 import { useProjectScopedRuntimeProviderStatuses } from './useProjectScopedRuntimeProviderStatuses';
@@ -373,6 +376,13 @@ export const CreateTeamDialog = ({
   const descriptionDraft = useDraftPersistence({ key: 'createTeam:description' });
   const promptDraft = useDraftPersistence({ key: 'createTeam:prompt' });
   const promptChipDraft = useChipDraftPersistence('createTeam:prompt:chips');
+  const {
+    templateSelectionDraft,
+    appliedTemplateSource,
+    setAppliedTemplateSource,
+    storedTemplateSelection,
+    clearTemplateSelection,
+  } = useCreateTeamTemplateSelection({ initialData: Boolean(initialData) });
   const [projects, setProjects] = useState<ProjectPathProject[]>([]);
   const [projectsLoading, setProjectsLoading] = useState(false);
   const [projectsError, setProjectsError] = useState<string | null>(null);
@@ -564,6 +574,7 @@ export const CreateTeamDialog = ({
     descriptionDraft.clearDraft();
     promptDraft.clearDraft();
     promptChipDraft.clearChipDraft();
+    clearTemplateSelection();
     resetUIState();
     if (presentation === 'page') await resetCreateTeamDraft();
   };
@@ -2704,6 +2715,23 @@ export const CreateTeamDialog = ({
               ) : null}
             </div>
             <div className="space-y-4 pt-4 md:col-span-2">
+              <CreateTeamTemplatePicker
+                open={open}
+                initialSelection={initialData ? '' : storedTemplateSelection.value}
+                initialSelectionReady={initialData ? true : templateSelectionDraft.isLoaded !== false}
+                onApply={(draft, source, selectionValue) => {
+                  setAppliedTemplateSource(source);
+                  templateSelectionDraft.setValue(JSON.stringify({ source, value: selectionValue ?? '' }));
+                  if (source !== 'none') {
+                    setLaunchTeam(false);
+                    setSoloTeam(false);
+                  }
+                  descriptionDraft.setValue(draft.description ?? '');
+                  promptDraft.setValue(draft.prompt ?? '');
+                  promptChipDraft.clearChipDraft();
+                  setMembers(buildInitialRosterMemberDrafts({ copiedMembers: draft.members, multimodelEnabled: true }));
+                }}
+              />
               <TeamRosterEditorSection
                 runtimeSelectionUnresolved={runtimeSelectionUnresolved}
                 members={members}
@@ -2775,6 +2803,20 @@ export const CreateTeamDialog = ({
                 launchTeam={launchTeam}
                 onLaunchTeamChange={setLaunchTeam}
               />
+              {!launchTeam && appliedTemplateSource !== 'none' ? (
+                <div className="mt-4">
+                  <CreateTeamPromptField
+                    promptDraft={promptDraft}
+                    chipDraft={promptChipDraft}
+                    soloTeam={soloTeam}
+                    mentionSuggestions={mentionSuggestions}
+                    teamSuggestions={teamMentionSuggestions}
+                    taskSuggestions={taskSuggestions}
+                    projectPath={effectiveCwd || null}
+                    onSuggestionsNeeded={enableWorkflowMentionSuggestions}
+                  />
+                </div>
+              ) : null}
               <div className="mt-4 space-y-4">
                 {launchTeam ? (
                   <ProjectPathSelector
